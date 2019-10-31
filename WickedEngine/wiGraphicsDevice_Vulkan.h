@@ -61,10 +61,6 @@ namespace wiGraphics
 		VkFence copyFence;
 		std::mutex copyQueueLock;
 
-		VkCommandPool transitionCommandPool;
-		VkCommandBuffer transitionCommandBuffer;
-		std::vector<VkImageMemoryBarrier> loadedimagetransitions;
-
 		VkSemaphore imageAvailableSemaphore;
 		VkSemaphore renderFinishedSemaphore;
 
@@ -93,6 +89,10 @@ namespace wiGraphics
 			VkCommandBuffer commandBuffers[COMMANDLIST_COUNT];
 			VkImageView swapChainImageView;
 			VkFramebuffer swapChainFramebuffer;
+
+			VkCommandPool transitionCommandPool;
+			VkCommandBuffer transitionCommandBuffer;
+			std::vector<VkImageMemoryBarrier> loadedimagetransitions;
 
 			struct DescriptorTableFrameAllocator
 			{

@@ -1855,6 +1855,8 @@ namespace wiGraphics
 
 		}
 
+		QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
+
 		// Create frame resources:
 		{
 			for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
@@ -1905,6 +1907,36 @@ namespace wiGraphics
 						throw std::runtime_error("failed to create framebuffer!");
 					}
 				}
+
+				// Create resources for transition command buffer:
+				{
+					VkCommandPoolCreateInfo poolInfo = {};
+					poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+					poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+					poolInfo.flags = 0; // Optional
+
+					if (vkCreateCommandPool(device, &poolInfo, nullptr, &frames[fr].transitionCommandPool) != VK_SUCCESS) {
+						throw std::runtime_error("failed to create command pool!");
+					}
+
+					VkCommandBufferAllocateInfo commandBufferInfo = {};
+					commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+					commandBufferInfo.commandBufferCount = 1;
+					commandBufferInfo.commandPool = frames[fr].transitionCommandPool;
+					commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+					if (vkAllocateCommandBuffers(device, &commandBufferInfo, &frames[fr].transitionCommandBuffer) != VK_SUCCESS) {
+						throw std::runtime_error("failed to create command buffers!");
+					}
+
+					VkCommandBufferBeginInfo beginInfo = {};
+					beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+					beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+					beginInfo.pInheritanceInfo = nullptr; // Optional
+
+					VkResult res = vkBeginCommandBuffer(frames[fr].transitionCommandBuffer, &beginInfo);
+					assert(res == VK_SUCCESS);
+				}
 			}
 		}
 
@@ -1919,8 +1951,6 @@ namespace wiGraphics
 				throw std::runtime_error("failed to create semaphores!");
 			}
 		}
-
-		QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
 
 		// Create resources for copy (transfer) queue:
 		{
@@ -1957,37 +1987,6 @@ namespace wiGraphics
 			fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 			//fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 			vkCreateFence(device, &fenceInfo, nullptr, &copyFence);
-		}
-
-
-		// Create resources for transition command buffer:
-		{
-			VkCommandPoolCreateInfo poolInfo = {};
-			poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-			poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
-			poolInfo.flags = 0; // Optional
-
-			if (vkCreateCommandPool(device, &poolInfo, nullptr, &transitionCommandPool) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create command pool!");
-			}
-
-			VkCommandBufferAllocateInfo commandBufferInfo = {};
-			commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-			commandBufferInfo.commandBufferCount = 1;
-			commandBufferInfo.commandPool = transitionCommandPool;
-			commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-
-			if (vkAllocateCommandBuffers(device, &commandBufferInfo, &transitionCommandBuffer) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create command buffers!");
-			}
-
-			VkCommandBufferBeginInfo beginInfo = {};
-			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-			beginInfo.pInheritanceInfo = nullptr; // Optional
-
-			VkResult res = vkBeginCommandBuffer(transitionCommandBuffer, &beginInfo);
-			assert(res == VK_SUCCESS);
 		}
 
 
@@ -2451,6 +2450,40 @@ namespace wiGraphics
 		assert(SUCCEEDED(hr));
 
 
+		VkImageLayout transition_layout;
+		switch (pTexture2D->desc.layout)
+		{
+		default:
+		case IMAGE_LAYOUT_UNDEFINED:
+			transition_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+			break;
+		case IMAGE_LAYOUT_GENERAL:
+			transition_layout = VK_IMAGE_LAYOUT_GENERAL;
+			break;
+		case IMAGE_LAYOUT_ATTACHMENT:
+			if (pTexture2D->desc.BindFlags & BIND_DEPTH_STENCIL)
+			{
+				transition_layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			}
+			else
+			{
+				transition_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			}
+			break;
+		case IMAGE_LAYOUT_DEPTHSTENCIL_READONLY:
+			transition_layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+			break;
+		case IMAGE_LAYOUT_SHADER_READONLY:
+			transition_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			break;
+		case IMAGE_LAYOUT_COPY_SRC:
+			transition_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			break;
+		case IMAGE_LAYOUT_COPY_DST:
+			transition_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			break;
+		}
+
 
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
@@ -2531,11 +2564,11 @@ namespace wiGraphics
 				vkCmdCopyBufferToImage(copyCommandBuffer, textureUploader->resource, (VkImage)pTexture2D->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)copyRegions.size(), copyRegions.data());
 
 				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-				barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+				barrier.newLayout = transition_layout;
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 
-				loadedimagetransitions.push_back(barrier);
+				GetFrameResources().loadedimagetransitions.push_back(barrier);
 
 			}
 			copyQueueLock.unlock();
@@ -2548,7 +2581,7 @@ namespace wiGraphics
 			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 			barrier.image = (VkImage)pTexture2D->resource;
 			barrier.oldLayout = imageInfo.initialLayout;
-			barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+			barrier.newLayout = transition_layout;
 			barrier.srcAccessMask = 0;
 			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 			if (pTexture2D->desc.BindFlags & BIND_DEPTH_STENCIL)
@@ -2569,7 +2602,7 @@ namespace wiGraphics
 			barrier.subresourceRange.levelCount = pDesc->MipLevels;
 			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			loadedimagetransitions.push_back(barrier);
+			GetFrameResources().loadedimagetransitions.push_back(barrier);
 
 			copyQueueLock.unlock();
 		}
@@ -3517,8 +3550,6 @@ namespace wiGraphics
 
 			attachmentDescriptions[validAttachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			attachmentDescriptions[validAttachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 			if (desc.attachments[i].type == RenderPassAttachment::RENDERTARGET)
 			{
@@ -3536,8 +3567,54 @@ namespace wiGraphics
 					continue;
 				}
 
-				colorAttachmentRefs[validAttachmentCount].attachment = validAttachmentCount;
-				colorAttachmentRefs[validAttachmentCount].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				switch(desc.attachments[i].initial_layout)
+				{
+				default:
+				case IMAGE_LAYOUT_UNDEFINED:
+					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+					break;
+				case IMAGE_LAYOUT_GENERAL:
+					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_GENERAL;
+					break;
+				case IMAGE_LAYOUT_ATTACHMENT:
+					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+					break;
+				case IMAGE_LAYOUT_SHADER_READONLY:
+					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+					break;
+				case IMAGE_LAYOUT_COPY_SRC:
+					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+					break;
+				case IMAGE_LAYOUT_COPY_DST:
+					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+					break;
+				}
+
+				switch (desc.attachments[i].final_layout)
+				{
+				default:
+				case IMAGE_LAYOUT_UNDEFINED:
+					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+					break;
+				case IMAGE_LAYOUT_GENERAL:
+					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+					break;
+				case IMAGE_LAYOUT_ATTACHMENT:
+					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+					break;
+				case IMAGE_LAYOUT_SHADER_READONLY:
+					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+					break;
+				case IMAGE_LAYOUT_COPY_SRC:
+					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+					break;
+				case IMAGE_LAYOUT_COPY_DST:
+					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+					break;
+				}
+
+				colorAttachmentRefs[subpass.colorAttachmentCount].attachment = validAttachmentCount;
+				colorAttachmentRefs[subpass.colorAttachmentCount].layout = attachmentDescriptions[validAttachmentCount].initialLayout;
 				subpass.colorAttachmentCount++;
 				subpass.pColorAttachments = colorAttachmentRefs;
 			}
@@ -3585,8 +3662,60 @@ namespace wiGraphics
 					}
 				}
 
+				switch (desc.attachments[i].initial_layout)
+				{
+				default:
+				case IMAGE_LAYOUT_UNDEFINED:
+					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+					break;
+				case IMAGE_LAYOUT_GENERAL:
+					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_GENERAL;
+					break;
+				case IMAGE_LAYOUT_ATTACHMENT:
+					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+					break;
+				case IMAGE_LAYOUT_DEPTHSTENCIL_READONLY:
+					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+					break;
+				case IMAGE_LAYOUT_SHADER_READONLY:
+					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+					break;
+				case IMAGE_LAYOUT_COPY_SRC:
+					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+					break;
+				case IMAGE_LAYOUT_COPY_DST:
+					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+					break;
+				}
+
+				switch (desc.attachments[i].final_layout)
+				{
+				default:
+				case IMAGE_LAYOUT_UNDEFINED:
+					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+					break;
+				case IMAGE_LAYOUT_GENERAL:
+					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+					break;
+				case IMAGE_LAYOUT_ATTACHMENT:
+					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+					break;
+				case IMAGE_LAYOUT_DEPTHSTENCIL_READONLY:
+					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+					break;
+				case IMAGE_LAYOUT_SHADER_READONLY:
+					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+					break;
+				case IMAGE_LAYOUT_COPY_SRC:
+					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+					break;
+				case IMAGE_LAYOUT_COPY_DST:
+					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+					break;
+				}
+
 				depthAttachmentRef.attachment = validAttachmentCount;
-				depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+				depthAttachmentRef.layout = attachmentDescriptions[validAttachmentCount].initialLayout;
 				subpass.pDepthStencilAttachment = &depthAttachmentRef;
 			}
 			else
@@ -4100,10 +4229,12 @@ namespace wiGraphics
 
 			// Transitions:
 			{
-				for (auto& barrier : loadedimagetransitions)
+				auto& frame = GetFrameResources();
+
+				for (auto& barrier : frame.loadedimagetransitions)
 				{
 					vkCmdPipelineBarrier(
-						transitionCommandBuffer,
+						frame.transitionCommandBuffer,
 						VK_PIPELINE_STAGE_TRANSFER_BIT,
 						VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 						0,
@@ -4112,31 +4243,20 @@ namespace wiGraphics
 						1, &barrier
 					);
 				}
-				loadedimagetransitions.clear();
+				frame.loadedimagetransitions.clear();
 
-				if (vkEndCommandBuffer(transitionCommandBuffer) != VK_SUCCESS) {
+				if (vkEndCommandBuffer(frame.transitionCommandBuffer) != VK_SUCCESS) {
 					throw std::runtime_error("failed to record transition command buffer!");
 				}
 
 				VkSubmitInfo submitInfo = {};
 				submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 				submitInfo.commandBufferCount = 1;
-				submitInfo.pCommandBuffers = &transitionCommandBuffer;
+				submitInfo.pCommandBuffers = &frame.transitionCommandBuffer;
 
 				if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, nullptr) != VK_SUCCESS) {
 					throw std::runtime_error("failed to submit copy command buffer!");
 				}
-
-				res = vkResetCommandPool(device, transitionCommandPool, 0);
-				assert(res == VK_SUCCESS);
-
-				VkCommandBufferBeginInfo beginInfo = {};
-				beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-				beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-				beginInfo.pInheritanceInfo = nullptr; // Optional
-
-				res = vkBeginCommandBuffer(transitionCommandBuffer, &beginInfo);
-				assert(res == VK_SUCCESS);
 			}
 		}
 		copyQueueLock.unlock();
@@ -4263,6 +4383,22 @@ namespace wiGraphics
 			}
 		}
 		destroylocker.unlock();
+
+		// Restart transition command buffers:
+		{
+			auto& frame = GetFrameResources();
+
+			res = vkResetCommandPool(device, frame.transitionCommandPool, 0);
+			assert(res == VK_SUCCESS);
+
+			VkCommandBufferBeginInfo beginInfo = {};
+			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+			beginInfo.pInheritanceInfo = nullptr; // Optional
+
+			res = vkBeginCommandBuffer(frame.transitionCommandBuffer, &beginInfo);
+			assert(res == VK_SUCCESS);
+		}
 
 
 		RESOLUTIONCHANGED = false;

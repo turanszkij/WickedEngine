@@ -230,6 +230,7 @@ void RenderPath3D::ResizeBuffers()
 		desc.Format = wiRenderer::DSFormat_small;
 		desc.Width = wiRenderer::GetInternalResolution().x / 4;
 		desc.Height = wiRenderer::GetInternalResolution().y / 4;
+		desc.layout = IMAGE_LAYOUT_DEPTHSTENCIL_READONLY;
 		device->CreateTexture2D(&desc, nullptr, &smallDepth);
 		device->SetName(&smallDepth, "smallDepth");
 	}
@@ -238,7 +239,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		RenderPassDesc desc;
 		desc.numAttachments = 1;
-		desc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&smallDepth,-1,RenderPassAttachment::STOREOP_DONTCARE };
+		desc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&smallDepth,-1,RenderPassAttachment::STOREOP_DONTCARE,IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,IMAGE_LAYOUT_ATTACHMENT };
 
 		device->CreateRenderPass(&desc, &renderpass_occlusionculling);
 	}
@@ -253,7 +254,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		RenderPassDesc desc;
 		desc.numAttachments = 1;
-		desc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_DONTCARE,&smallDepth,-1 };
+		desc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_DONTCARE,&smallDepth,-1,RenderPassAttachment::STOREOP_STORE,IMAGE_LAYOUT_ATTACHMENT,IMAGE_LAYOUT_DEPTHSTENCIL_READONLY };
 
 		device->CreateRenderPass(&desc, &renderpass_downsampledepthbuffer);
 	}
@@ -325,8 +326,6 @@ void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
 
 	device->BindResource(CS, &depthBuffer_Copy, TEXSLOT_DEPTH, cmd);
 	wiRenderer::UpdateRenderData(cmd);
-
-	device->RenderPassBegin(&renderpass_occlusionculling, cmd);
 	
 	ViewPort viewPort;
 	viewPort.Width = (float)smallDepth.GetDesc().Width;
@@ -335,6 +334,8 @@ void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
 
 	const GPUResource* dsv[] = { &smallDepth };
 	device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_DEPTH_READ, cmd);
+
+	device->RenderPassBegin(&renderpass_occlusionculling, cmd);
 
 	wiRenderer::OcclusionCulling_Render(cmd);
 
@@ -420,8 +421,6 @@ void RenderPath3D::DownsampleDepthBuffer(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	device->RenderPassBegin(&renderpass_downsampledepthbuffer, cmd);
-
 	ViewPort viewPort;
 	viewPort.Width = (float)smallDepth.GetDesc().Width;
 	viewPort.Height = (float)smallDepth.GetDesc().Height;
@@ -429,6 +428,8 @@ void RenderPath3D::DownsampleDepthBuffer(CommandList cmd) const
 
 	const GPUResource* dsv[] = { &smallDepth };
 	device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, cmd);
+
+	device->RenderPassBegin(&renderpass_downsampledepthbuffer, cmd);
 
 	wiRenderer::DownsampleDepthBuffer(depthBuffer_Copy, cmd);
 

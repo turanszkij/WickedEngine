@@ -319,6 +319,16 @@ namespace wiGraphics
 		RESOURCE_STATE_VIDEO_PROCESS_READ = 0x40000,
 		RESOURCE_STATE_VIDEO_PROCESS_WRITE = 0x80000
 	};
+	enum IMAGE_LAYOUT
+	{
+		IMAGE_LAYOUT_UNDEFINED,					// don't care about contents
+		IMAGE_LAYOUT_GENERAL,					// supports everything
+		IMAGE_LAYOUT_ATTACHMENT,				// render target or depth stencil, depending on texture format, write enabled
+		IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,		// depth stencil, read only
+		IMAGE_LAYOUT_SHADER_READONLY,			// shader resource, read only
+		IMAGE_LAYOUT_COPY_SRC,					// copy from
+		IMAGE_LAYOUT_COPY_DST,					// copy to
+	};
 
 	// Structs /////////////////////////////////////////////
 
@@ -371,6 +381,7 @@ namespace wiGraphics
 		UINT CPUAccessFlags = 0;
 		UINT MiscFlags = 0;
 		ClearValue clear = {};
+		IMAGE_LAYOUT layout = IMAGE_LAYOUT_GENERAL;
 	};
 	struct SamplerDesc
 	{
@@ -494,6 +505,8 @@ namespace wiGraphics
 			STOREOP_STORE,
 			STOREOP_DONTCARE,
 		} storeop = STOREOP_STORE;
+		IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_GENERAL;
+		IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_GENERAL;
 	};
 	struct RenderPassDesc
 	{
