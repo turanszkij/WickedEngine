@@ -321,25 +321,22 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		};
 		device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), cmd);
 
-		GPUResource* indres[] = {
-			indirectBuffers.get()
-		};
-		device->TransitionBarrier(indres, 1, RESOURCE_STATE_INDIRECT_ARGUMENT, RESOURCE_STATE_UNORDERED_ACCESS, cmd);
+		device->Barrier(&GPUBarrier::Buffer(indirectBuffers.get(), BUFFER_STATE_INDIRECT_ARGUMENT, BUFFER_STATE_UNORDERED_ACCESS), 1, cmd);
 
 		// kick off updating, set up state
 		device->EventBegin("KickOff Update", cmd);
 		device->BindComputeShader(kickoffUpdateCS, cmd);
 		device->Dispatch(1, 1, 1, cmd);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		device->EventEnd(cmd);
 
-		device->TransitionBarrier(indres, 1, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT, cmd);
+		device->Barrier(&GPUBarrier::Buffer(indirectBuffers.get(), BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDIRECT_ARGUMENT), 1, cmd);
 
 		// emit the required amount if there are free slots in dead list
 		device->EventBegin("Emit", cmd);
 		device->BindComputeShader(mesh == nullptr ? emitCS : emitCS_FROMMESH, cmd);
 		device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHEMIT, cmd);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		device->EventEnd(cmd);
 
 		if (IsSPHEnabled())
@@ -365,7 +362,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 			};
 			device->BindUAVs(CS, uav_partition, 0, ARRAYSIZE(uav_partition), cmd);
 			device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
-			device->UAVBarrier(uav_partition, ARRAYSIZE(uav_partition), cmd);
+			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 			device->EventEnd(cmd);
 
 			// 2.) Sort particle index list based on partition grid cell index:
@@ -380,7 +377,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 			};
 			device->BindUAVs(CS, uav_partitionoffsets, 0, ARRAYSIZE(uav_partitionoffsets), cmd);
 			device->Dispatch((UINT)ceilf((float)SPH_PARTITION_BUCKET_COUNT / (float)THREADCOUNT_SIMULATION), 1, 1, cmd);
-			device->UAVBarrier(uav_partitionoffsets, ARRAYSIZE(uav_partitionoffsets), cmd);
+			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 			device->EventEnd(cmd);
 
 			// 4.) Assemble grid cell offsets from the sorted particle index list <--> grid cell index list connection:
@@ -393,7 +390,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 			};
 			device->BindResources(CS, res_partitionoffsets, 0, ARRAYSIZE(res_partitionoffsets), cmd);
 			device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
-			device->UAVBarrier(uav_partitionoffsets, ARRAYSIZE(uav_partitionoffsets), cmd);
+			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 			device->EventEnd(cmd);
 
 #endif // SPH_USE_ACCELERATION_GRID
@@ -415,7 +412,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 			};
 			device->BindUAVs(CS, uav_density, 0, ARRAYSIZE(uav_density), cmd);
 			device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
-			device->UAVBarrier(uav_density, ARRAYSIZE(uav_density), cmd);
+			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 			device->EventEnd(cmd);
 
 			// 6.) Compute particle pressure forces:
@@ -435,7 +432,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 			};
 			device->BindUAVs(CS, uav_force, 0, ARRAYSIZE(uav_force), cmd);
 			device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
-			device->UAVBarrier(uav_force, ARRAYSIZE(uav_force), cmd);
+			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 			device->EventEnd(cmd);
 
 			device->UnbindResources(0, 3, cmd);
@@ -474,7 +471,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 			}
 		}
 		device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		device->EventEnd(cmd);
 
 
@@ -570,7 +567,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 		device->Dispatch(1, 1, 1, cmd);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 
 		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 		device->UnbindResources(0, ARRAYSIZE(res), cmd);
@@ -598,11 +595,16 @@ void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialCompon
 	device->BindConstantBuffer(VS, constantBuffer.get(), CB_GETBINDSLOT(EmittedParticleCB), cmd);
 	device->BindConstantBuffer(PS, constantBuffer.get(), CB_GETBINDSLOT(EmittedParticleCB), cmd);
 
-	GPUResource* res[] = {
+	GPUBarrier barriers[] = {
+		GPUBarrier::Buffer(particleBuffer.get(), BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
+		GPUBarrier::Buffer(aliveList[1].get(), BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
+	};
+	device->Barrier(barriers, ARRAYSIZE(barriers), cmd);
+
+	const GPUResource* res[] = {
 		particleBuffer.get(),
 		aliveList[1].get() // NEW aliveList
 	};
-	device->TransitionBarrier(res, ARRAYSIZE(res), RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, cmd);
 	device->BindResources(VS, res, 0, ARRAYSIZE(res), cmd);
 
 	device->DrawInstancedIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, cmd);

@@ -88,6 +88,7 @@ void RenderPath3D::ResizeBuffers()
 		desc.Format = wiRenderer::RTFormat_hdr;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
+		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
 		device->CreateTexture2D(&desc, nullptr, &rtReflection);
 		device->SetName(&rtReflection, "rtReflection");
 	}
@@ -239,14 +240,14 @@ void RenderPath3D::ResizeBuffers()
 	{
 		RenderPassDesc desc;
 		desc.numAttachments = 1;
-		desc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&smallDepth,-1,RenderPassAttachment::STOREOP_DONTCARE,IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,IMAGE_LAYOUT_ATTACHMENT };
+		desc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&smallDepth,-1,RenderPassAttachment::STOREOP_DONTCARE,IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,IMAGE_LAYOUT_DEPTHSTENCIL };
 
 		device->CreateRenderPass(&desc, &renderpass_occlusionculling);
 	}
 	{
 		RenderPassDesc desc;
 		desc.numAttachments = 2;
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_DONTCARE,&rtReflection,-1 };
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_DONTCARE,&rtReflection,-1,RenderPassAttachment::STOREOP_STORE,IMAGE_LAYOUT_RENDERTARGET,IMAGE_LAYOUT_SHADER_RESOURCE };
 		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_CLEAR,&depthBuffer,-1,RenderPassAttachment::STOREOP_DONTCARE };
 
 		device->CreateRenderPass(&desc, &renderpass_reflection);
@@ -254,7 +255,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		RenderPassDesc desc;
 		desc.numAttachments = 1;
-		desc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_DONTCARE,&smallDepth,-1,RenderPassAttachment::STOREOP_STORE,IMAGE_LAYOUT_ATTACHMENT,IMAGE_LAYOUT_DEPTHSTENCIL_READONLY };
+		desc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_DONTCARE,&smallDepth,-1,RenderPassAttachment::STOREOP_STORE,IMAGE_LAYOUT_DEPTHSTENCIL,IMAGE_LAYOUT_DEPTHSTENCIL_READONLY };
 
 		device->CreateRenderPass(&desc, &renderpass_downsampledepthbuffer);
 	}
@@ -332,9 +333,6 @@ void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
 	viewPort.Height = (float)smallDepth.GetDesc().Height;
 	device->BindViewports(1, &viewPort, cmd);
 
-	const GPUResource* dsv[] = { &smallDepth };
-	device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_DEPTH_READ, cmd);
-
 	device->RenderPassBegin(&renderpass_occlusionculling, cmd);
 
 	wiRenderer::OcclusionCulling_Render(cmd);
@@ -350,8 +348,6 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		wiRenderer::UpdateCameraCB(wiRenderer::GetRefCamera(), cmd);
-
-		device->RenderPassBegin(&renderpass_reflection, cmd);
 
 		ViewPort vp;
 		vp.Width = (float)depthBuffer.GetDesc().Width;
@@ -369,6 +365,10 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 		}
 
 		wiRenderer::SetClipPlane(water, cmd);
+
+		device->Barrier(&GPUBarrier::Image(&rtReflection, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_RENDERTARGET), 1, cmd);
+
+		device->RenderPassBegin(&renderpass_reflection, cmd);
 
 		wiRenderer::DrawScene(wiRenderer::GetRefCamera(), false, cmd, RENDERPASS_TEXTURE, getHairParticlesReflectionEnabled(), false);
 		wiRenderer::DrawSky(cmd);
@@ -425,9 +425,6 @@ void RenderPath3D::DownsampleDepthBuffer(CommandList cmd) const
 	viewPort.Width = (float)smallDepth.GetDesc().Width;
 	viewPort.Height = (float)smallDepth.GetDesc().Height;
 	device->BindViewports(1, &viewPort, cmd);
-
-	const GPUResource* dsv[] = { &smallDepth };
-	device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, cmd);
 
 	device->RenderPassBegin(&renderpass_downsampledepthbuffer, cmd);
 

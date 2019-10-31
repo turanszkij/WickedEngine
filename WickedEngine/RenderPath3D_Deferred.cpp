@@ -155,8 +155,7 @@ void RenderPath3D_Deferred::Render() const
 
 		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 
-		const GPUResource* dsv[] = { &depthBuffer };
-		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, cmd);
+		device->Barrier(&GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_DEPTHSTENCIL), 1, cmd);
 
 		{
 			auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
@@ -176,9 +175,9 @@ void RenderPath3D_Deferred::Render() const
 			wiProfiler::EndRange(range); // Opaque Scene
 		}
 
-		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, cmd);
+		device->Barrier(&GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL, IMAGE_LAYOUT_COPY_SRC), 1, cmd);
 		device->CopyTexture2D(&depthBuffer_Copy, &depthBuffer, cmd);
-		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, cmd);
+		device->Barrier(&GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_COPY_SRC, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY), 1, cmd);
 
 		RenderLinearDepth(cmd);
 

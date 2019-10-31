@@ -279,7 +279,7 @@ void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time,
 	UINT group_count_x = (params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
 	UINT group_count_y = (params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
 	device->Dispatch(group_count_x, group_count_y, 1, cmd);
-	device->UAVBarrier(cs0_uavs, ARRAYSIZE(cs0_uavs), cmd);
+	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 
 	device->UnbindUAVs(0, 1, cmd);
 	device->UnbindResources(TEXSLOT_ONDEMAND0, 2, cmd);
@@ -301,7 +301,7 @@ void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time,
 	const GPUResource* cs_srvs[1] = { &m_pBuffer_Float_Dxyz };
 	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
 	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, cmd);
-	device->UAVBarrier(cs_uavs, ARRAYSIZE(cs_uavs), cmd);
+	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 
 	// Update gradient map:
 	device->BindComputeShader(m_pUpdateGradientFoldingCS, cmd);
@@ -310,7 +310,7 @@ void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time,
 	cs_srvs[0] = &m_pDisplacementMap;
 	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
 	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, cmd);
-	device->UAVBarrier(cs_uavs, ARRAYSIZE(cs_uavs), cmd);
+	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 
 	// Unbind
 	device->UnbindUAVs(0, 1, cmd);

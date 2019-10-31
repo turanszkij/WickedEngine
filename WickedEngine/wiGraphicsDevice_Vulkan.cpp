@@ -21,7 +21,7 @@ namespace wiGraphics
 
 
 	// Converters:
-	inline VkFormat _ConvertFormat(FORMAT value)
+	constexpr VkFormat _ConvertFormat(FORMAT value)
 	{
 		switch (value)
 		{
@@ -232,7 +232,7 @@ namespace wiGraphics
 		}
 		return VK_FORMAT_UNDEFINED;
 	}
-	inline VkCompareOp _ConvertComparisonFunc(COMPARISON_FUNC value)
+	constexpr VkCompareOp _ConvertComparisonFunc(COMPARISON_FUNC value)
 	{
 		switch (value)
 		{
@@ -265,7 +265,7 @@ namespace wiGraphics
 		}
 		return VK_COMPARE_OP_NEVER;
 	}
-	inline VkBlendFactor _ConvertBlend(BLEND value)
+	constexpr VkBlendFactor _ConvertBlend(BLEND value)
 	{
 		switch (value)
 		{
@@ -325,7 +325,7 @@ namespace wiGraphics
 		}
 		return VK_BLEND_FACTOR_ZERO;
 	}
-	inline VkBlendOp _ConvertBlendOp(BLEND_OP value)
+	constexpr VkBlendOp _ConvertBlendOp(BLEND_OP value)
 	{
 		switch (value)
 		{
@@ -349,7 +349,7 @@ namespace wiGraphics
 		}
 		return VK_BLEND_OP_ADD;
 	}
-	inline VkSamplerAddressMode _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
+	constexpr VkSamplerAddressMode _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
 	{
 		switch (value)
 		{
@@ -373,7 +373,7 @@ namespace wiGraphics
 		}
 		return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 	}
-	inline VkStencilOp _ConvertStencilOp(STENCIL_OP value)
+	constexpr VkStencilOp _ConvertStencilOp(STENCIL_OP value)
 	{
 		switch (value)
 		{
@@ -405,6 +405,127 @@ namespace wiGraphics
 			break;
 		}
 		return VK_STENCIL_OP_KEEP;
+	}
+	constexpr VkImageLayout _ConvertImageLayout(IMAGE_LAYOUT value)
+	{
+		switch (value)
+		{
+		case wiGraphics::IMAGE_LAYOUT_GENERAL:
+			return VK_IMAGE_LAYOUT_GENERAL;
+		case wiGraphics::IMAGE_LAYOUT_RENDERTARGET:
+			return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		case wiGraphics::IMAGE_LAYOUT_DEPTHSTENCIL:
+			return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		case wiGraphics::IMAGE_LAYOUT_DEPTHSTENCIL_READONLY:
+			return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE:
+			return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		case wiGraphics::IMAGE_LAYOUT_UNORDERED_ACCESS:
+			return VK_IMAGE_LAYOUT_GENERAL;
+		case wiGraphics::IMAGE_LAYOUT_COPY_SRC:
+			return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		case wiGraphics::IMAGE_LAYOUT_COPY_DST:
+			return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		}
+		return VK_IMAGE_LAYOUT_UNDEFINED;
+	}
+
+
+	inline VkAccessFlags _ParseImageLayout(IMAGE_LAYOUT value)
+	{
+		VkAccessFlags flags = 0;
+
+		switch (value)
+		{
+		case wiGraphics::IMAGE_LAYOUT_GENERAL:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			flags |= VK_ACCESS_SHADER_WRITE_BIT;
+			flags |= VK_ACCESS_TRANSFER_READ_BIT;
+			flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
+			flags |= VK_ACCESS_MEMORY_READ_BIT;
+			flags |= VK_ACCESS_MEMORY_WRITE_BIT;
+			break;
+		case wiGraphics::IMAGE_LAYOUT_RENDERTARGET:
+			flags |= VK_ACCESS_SHADER_WRITE_BIT;
+			break;
+		case wiGraphics::IMAGE_LAYOUT_DEPTHSTENCIL:
+			flags |= VK_ACCESS_SHADER_WRITE_BIT;
+			break;
+		case wiGraphics::IMAGE_LAYOUT_DEPTHSTENCIL_READONLY:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			break;
+		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			break;
+		case wiGraphics::IMAGE_LAYOUT_UNORDERED_ACCESS:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			flags |= VK_ACCESS_SHADER_WRITE_BIT;
+			break;
+		case wiGraphics::IMAGE_LAYOUT_COPY_SRC:
+			flags |= VK_ACCESS_TRANSFER_READ_BIT;
+			break;
+		case wiGraphics::IMAGE_LAYOUT_COPY_DST:
+			flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
+			break;
+		}
+
+		return flags;
+	}
+	inline VkAccessFlags _ParseBufferState(BUFFER_STATE value)
+	{
+		VkAccessFlags flags = 0;
+
+		switch (value)
+		{
+		case wiGraphics::BUFFER_STATE_GENERAL:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			flags |= VK_ACCESS_SHADER_WRITE_BIT;
+			flags |= VK_ACCESS_TRANSFER_READ_BIT;
+			flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
+			flags |= VK_ACCESS_HOST_READ_BIT;
+			flags |= VK_ACCESS_HOST_WRITE_BIT;
+			flags |= VK_ACCESS_MEMORY_READ_BIT;
+			flags |= VK_ACCESS_MEMORY_WRITE_BIT;
+			flags |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+			flags |= VK_ACCESS_INDEX_READ_BIT;
+			flags |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+			flags |= VK_ACCESS_UNIFORM_READ_BIT;
+			break;
+		case wiGraphics::BUFFER_STATE_VERTEX_BUFFER:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			flags |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+			break;
+		case wiGraphics::BUFFER_STATE_INDEX_BUFFER:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			flags |= VK_ACCESS_INDEX_READ_BIT;
+			break;
+		case wiGraphics::BUFFER_STATE_CONSTANT_BUFFER:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			flags |= VK_ACCESS_UNIFORM_READ_BIT;
+			break;
+		case wiGraphics::BUFFER_STATE_INDIRECT_ARGUMENT:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			flags |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+			break;
+		case wiGraphics::BUFFER_STATE_SHADER_RESOURCE:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			flags |= VK_ACCESS_UNIFORM_READ_BIT;
+			break;
+		case wiGraphics::BUFFER_STATE_UNORDERED_ACCESS:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			flags |= VK_ACCESS_SHADER_WRITE_BIT;
+			break;
+		case wiGraphics::BUFFER_STATE_COPY_SRC:
+			flags |= VK_ACCESS_TRANSFER_READ_BIT;
+			break;
+		case wiGraphics::BUFFER_STATE_COPY_DST:
+			flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
+			break;
+		default:
+			break;
+		}
+
+		return flags;
 	}
 	
 	// Extension functions:
@@ -2449,42 +2570,6 @@ namespace wiGraphics
 		hr = res == VK_SUCCESS; 
 		assert(SUCCEEDED(hr));
 
-
-		VkImageLayout transition_layout;
-		switch (pTexture2D->desc.layout)
-		{
-		default:
-		case IMAGE_LAYOUT_UNDEFINED:
-			transition_layout = VK_IMAGE_LAYOUT_UNDEFINED;
-			break;
-		case IMAGE_LAYOUT_GENERAL:
-			transition_layout = VK_IMAGE_LAYOUT_GENERAL;
-			break;
-		case IMAGE_LAYOUT_ATTACHMENT:
-			if (pTexture2D->desc.BindFlags & BIND_DEPTH_STENCIL)
-			{
-				transition_layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			}
-			else
-			{
-				transition_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			}
-			break;
-		case IMAGE_LAYOUT_DEPTHSTENCIL_READONLY:
-			transition_layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-			break;
-		case IMAGE_LAYOUT_SHADER_READONLY:
-			transition_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			break;
-		case IMAGE_LAYOUT_COPY_SRC:
-			transition_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-			break;
-		case IMAGE_LAYOUT_COPY_DST:
-			transition_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-			break;
-		}
-
-
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
@@ -2564,7 +2649,7 @@ namespace wiGraphics
 				vkCmdCopyBufferToImage(copyCommandBuffer, textureUploader->resource, (VkImage)pTexture2D->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)copyRegions.size(), copyRegions.data());
 
 				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-				barrier.newLayout = transition_layout;
+				barrier.newLayout = _ConvertImageLayout(pTexture2D->desc.layout);;
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 
@@ -2581,7 +2666,7 @@ namespace wiGraphics
 			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 			barrier.image = (VkImage)pTexture2D->resource;
 			barrier.oldLayout = imageInfo.initialLayout;
-			barrier.newLayout = transition_layout;
+			barrier.newLayout = _ConvertImageLayout(pTexture2D->desc.layout);;
 			barrier.srcAccessMask = 0;
 			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 			if (pTexture2D->desc.BindFlags & BIND_DEPTH_STENCIL)
@@ -3551,6 +3636,9 @@ namespace wiGraphics
 			attachmentDescriptions[validAttachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			attachmentDescriptions[validAttachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
+			attachmentDescriptions[validAttachmentCount].initialLayout = _ConvertImageLayout(desc.attachments[i].initial_layout);
+			attachmentDescriptions[validAttachmentCount].finalLayout = _ConvertImageLayout(desc.attachments[i].final_layout);
+
 			if (desc.attachments[i].type == RenderPassAttachment::RENDERTARGET)
 			{
 				if (subresource < 0 || texture->subresourceRTVs.empty())
@@ -3565,52 +3653,6 @@ namespace wiGraphics
 				if (attachments[validAttachmentCount] == VK_NULL_HANDLE)
 				{
 					continue;
-				}
-
-				switch(desc.attachments[i].initial_layout)
-				{
-				default:
-				case IMAGE_LAYOUT_UNDEFINED:
-					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-					break;
-				case IMAGE_LAYOUT_GENERAL:
-					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_GENERAL;
-					break;
-				case IMAGE_LAYOUT_ATTACHMENT:
-					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-					break;
-				case IMAGE_LAYOUT_SHADER_READONLY:
-					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-					break;
-				case IMAGE_LAYOUT_COPY_SRC:
-					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-					break;
-				case IMAGE_LAYOUT_COPY_DST:
-					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-					break;
-				}
-
-				switch (desc.attachments[i].final_layout)
-				{
-				default:
-				case IMAGE_LAYOUT_UNDEFINED:
-					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-					break;
-				case IMAGE_LAYOUT_GENERAL:
-					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-					break;
-				case IMAGE_LAYOUT_ATTACHMENT:
-					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-					break;
-				case IMAGE_LAYOUT_SHADER_READONLY:
-					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-					break;
-				case IMAGE_LAYOUT_COPY_SRC:
-					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-					break;
-				case IMAGE_LAYOUT_COPY_DST:
-					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-					break;
 				}
 
 				colorAttachmentRefs[subpass.colorAttachmentCount].attachment = validAttachmentCount;
@@ -3660,58 +3702,6 @@ namespace wiGraphics
 						attachmentDescriptions[validAttachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 						break;
 					}
-				}
-
-				switch (desc.attachments[i].initial_layout)
-				{
-				default:
-				case IMAGE_LAYOUT_UNDEFINED:
-					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-					break;
-				case IMAGE_LAYOUT_GENERAL:
-					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_GENERAL;
-					break;
-				case IMAGE_LAYOUT_ATTACHMENT:
-					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-					break;
-				case IMAGE_LAYOUT_DEPTHSTENCIL_READONLY:
-					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-					break;
-				case IMAGE_LAYOUT_SHADER_READONLY:
-					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-					break;
-				case IMAGE_LAYOUT_COPY_SRC:
-					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-					break;
-				case IMAGE_LAYOUT_COPY_DST:
-					attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-					break;
-				}
-
-				switch (desc.attachments[i].final_layout)
-				{
-				default:
-				case IMAGE_LAYOUT_UNDEFINED:
-					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-					break;
-				case IMAGE_LAYOUT_GENERAL:
-					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-					break;
-				case IMAGE_LAYOUT_ATTACHMENT:
-					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-					break;
-				case IMAGE_LAYOUT_DEPTHSTENCIL_READONLY:
-					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-					break;
-				case IMAGE_LAYOUT_SHADER_READONLY:
-					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-					break;
-				case IMAGE_LAYOUT_COPY_SRC:
-					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-					break;
-				case IMAGE_LAYOUT_COPY_DST:
-					attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-					break;
 				}
 
 				depthAttachmentRef.attachment = validAttachmentCount;
@@ -4864,7 +4854,6 @@ namespace wiGraphics
 		}
 
 	}
-
 	void GraphicsDevice_Vulkan::QueryBegin(const GPUQuery *query, CommandList cmd)
 	{
 	}
@@ -4875,166 +4864,88 @@ namespace wiGraphics
 	{
 		return true;
 	}
-
-	void GraphicsDevice_Vulkan::UAVBarrier(const GPUResource *const* uavs, UINT NumBarriers, CommandList cmd)
+	void GraphicsDevice_Vulkan::Barrier(const GPUBarrier* barriers, UINT numBarriers, CommandList cmd)
 	{
-		for (UINT i = 0; i < NumBarriers; ++i)
+		VkMemoryBarrier memorybarriers[8];
+		VkImageMemoryBarrier imagebarriers[8];
+		VkBufferMemoryBarrier bufferbarriers[8];
+		uint32_t memorybarrier_count = 0;
+		uint32_t imagebarrier_count = 0;
+		uint32_t bufferbarrier_count = 0;
+
+		for (UINT i = 0; i < numBarriers; ++i)
 		{
-			if (uavs == nullptr)
-			{
-				// Barrier for all writes to complete:
-				VkMemoryBarrier barrier = {};
-				barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-				barrier.pNext = nullptr;
-				barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-				barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
+			const GPUBarrier& barrier = barriers[i];
 
-				vkCmdPipelineBarrier(GetDirectCommandList(cmd),
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					0,
-					1, &barrier,
-					0, nullptr,
-					0, nullptr
-				);
+			switch (barrier.type)
+			{
+			default:
+			case GPUBarrier::MEMORY_BARRIER:
+			{
+				VkMemoryBarrier& barrierdesc = memorybarriers[memorybarrier_count++];
+				barrierdesc.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+				barrierdesc.pNext = nullptr;
+				barrierdesc.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+				barrierdesc.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
 			}
-			else
+			break;
+			case GPUBarrier::IMAGE_BARRIER:
 			{
-				// Barrier for specific resource:
-				const GPUResource* uav = uavs[i];
+				const TextureDesc& desc = barrier.image.texture->GetDesc();
 
-				if (uav->IsTexture())
+				VkImageMemoryBarrier& barrierdesc = imagebarriers[imagebarrier_count++];
+				barrierdesc.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				barrierdesc.pNext = nullptr;
+				barrierdesc.image = (VkImage)barrier.image.texture->resource;
+				barrierdesc.oldLayout = _ConvertImageLayout(barrier.image.layout_before);
+				barrierdesc.newLayout = _ConvertImageLayout(barrier.image.layout_after);
+				barrierdesc.srcAccessMask = _ParseImageLayout(barrier.image.layout_before);
+				barrierdesc.dstAccessMask = _ParseImageLayout(barrier.image.layout_after);
+				if (desc.BindFlags & BIND_DEPTH_STENCIL)
 				{
-					const TextureDesc& desc = ((const Texture*)uav)->GetDesc();
-
-					VkImageMemoryBarrier barrier = {};
-					barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-					barrier.image = (VkImage)uav->resource;
-					barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-					barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-					barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-					barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-					barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-					barrier.subresourceRange.baseArrayLayer = 0;
-					barrier.subresourceRange.layerCount = desc.ArraySize;
-					barrier.subresourceRange.baseMipLevel = 0;
-					barrier.subresourceRange.levelCount = desc.MipLevels;
-					barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-					barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-					vkCmdPipelineBarrier(GetDirectCommandList(cmd),
-						VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-						VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-						0,
-						0, nullptr,
-						0, nullptr,
-						1, &barrier
-					);
+					barrierdesc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+					if (IsFormatStencilSupport(desc.Format))
+					{
+						barrierdesc.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+					}
 				}
 				else
 				{
-					VkBufferMemoryBarrier barrier = {};
-					barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-					barrier.pNext = nullptr;
-					barrier.buffer = (VkBuffer)uav->resource;
-					barrier.size = ((const GPUBuffer*)uav)->GetDesc().ByteWidth;
-					barrier.offset = 0;
-					barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-					barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
-					barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-					barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-					vkCmdPipelineBarrier(GetDirectCommandList(cmd),
-						VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-						VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-						0,
-						0, nullptr,
-						1, &barrier,
-						0, nullptr
-					);
+					barrierdesc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				}
+				barrierdesc.subresourceRange.baseArrayLayer = 0;
+				barrierdesc.subresourceRange.layerCount = desc.ArraySize;
+				barrierdesc.subresourceRange.baseMipLevel = 0;
+				barrierdesc.subresourceRange.levelCount = desc.MipLevels;
+				barrierdesc.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrierdesc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			}
+			break;
+			case GPUBarrier::BUFFER_BARRIER:
+			{
+				VkBufferMemoryBarrier& barrierdesc = bufferbarriers[bufferbarrier_count++];
+				barrierdesc.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+				barrierdesc.pNext = nullptr;
+				barrierdesc.buffer = (VkBuffer)barrier.buffer.buffer->resource;
+				barrierdesc.size = barrier.buffer.buffer->GetDesc().ByteWidth;
+				barrierdesc.offset = 0;
+				barrierdesc.srcAccessMask = _ParseBufferState(barrier.buffer.state_before);
+				barrierdesc.dstAccessMask = _ParseBufferState(barrier.buffer.state_after);
+				barrierdesc.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrierdesc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			}
+			break;
 			}
 		}
-	}
-	void GraphicsDevice_Vulkan::TransitionBarrier(const GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, CommandList cmd)
-	{
 
-		//if (stateBefore == RESOURCE_STATE_UNORDERED_ACCESS && stateAfter == RESOURCE_STATE_GENERIC_READ)
-		//{
-		//	VkBufferMemoryBarrier barrier = {};
-		//	barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		//	barrier.pNext = nullptr;
-		//	barrier.buffer = static_cast<VkBuffer>(resources[0]->resource);
-		//	barrier.size = ((GPUBuffer*)resources[0])->desc.ByteWidth;
-		//	barrier.offset = 0;
-		//	barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-		//	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-		//	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		//	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		//	vkCmdPipelineBarrier(GetDirectCommandList(cmd),
-		//		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-		//		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-		//		0,
-		//		0, nullptr,
-		//		1, &barrier,
-		//		0, nullptr);
-		//}
-		//else if (stateBefore == RESOURCE_STATE_UNORDERED_ACCESS && stateAfter == RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER)
-		//{
-		//	VkBufferMemoryBarrier barrier = {};
-		//	barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		//	barrier.pNext = nullptr;
-		//	barrier.buffer = static_cast<VkBuffer>(resources[0]->resource);
-		//	barrier.size = ((GPUBuffer*)resources[0])->desc.ByteWidth;
-		//	barrier.offset = 0;
-		//	barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-		//	barrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-		//	vkCmdPipelineBarrier(GetDirectCommandList(cmd),
-		//		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-		//		VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-		//		0,
-		//		0, nullptr,
-		//		1, &barrier,
-		//		0, nullptr);
-		//}
-
-
-
-		//for (UINT i = 0; i < NumBarriers; ++i)
-		//{
-
-		//	if (stateBefore == RESOURCE_STATE_RENDER_TARGET)
-		//	{
-		//		Texture* tex = dynamic_cast<Texture*>(resources[i]);
-
-		//		if (tex != nullptr)
-		//		{
-		//			VkImageMemoryBarrier barrier = {};
-		//			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		//			barrier.image = static_cast<VkImage>(tex->resource);
-		//			barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		//			barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-		//			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		//			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-		//			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		//			barrier.subresourceRange.baseArrayLayer = 0;
-		//			barrier.subresourceRange.layerCount = 1;
-		//			barrier.subresourceRange.baseMipLevel = 0;
-		//			barrier.subresourceRange.levelCount = 1;
-		//			vkCmdPipelineBarrier(
-		//				GetDirectCommandList(cmd),
-		//				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-		//				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-		//				VK_DEPENDENCY_BY_REGION_BIT,
-		//				0, nullptr,
-		//				0, nullptr,
-		//				1, &barrier
-		//			);
-		//		}
-		//	}
-
-		//}
-
+		vkCmdPipelineBarrier(GetDirectCommandList(cmd),
+			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			0,
+			memorybarrier_count, memorybarriers,
+			bufferbarrier_count, bufferbarriers,
+			imagebarrier_count, imagebarriers
+		);
 	}
 
 	GraphicsDevice::GPUAllocation GraphicsDevice_Vulkan::AllocateGPU(size_t dataSize, CommandList cmd)

@@ -4248,7 +4248,8 @@ void UpdateRenderData(CommandList cmd)
 
 		if (streamOutSetUp)
 		{
-			device->UAVBarrier(nullptr, 1, cmd); // wait all skinning to finish (but they can overlap)
+			// wait all skinning to finish (but they can overlap)
+			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 			device->UnbindUAVs(0, 2, cmd);
 			device->UnbindResources(SKINNINGSLOT_IN_VERTEX_POS, 2, cmd);
 		}
@@ -6534,7 +6535,7 @@ void RefreshEnvProbes(CommandList cmd)
 					6,
 					cmd);
 
-				device->UAVBarrier((GPUResource**)&texture, 1, cmd);
+				device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 
 				desc.Width *= 2;
 				desc.Height *= 2;
@@ -7035,7 +7036,7 @@ void ComputeTiledLightCulling(
 
 		device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, cmd);
 		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	}
 
 	if (textures[TEXTYPE_2D_DEBUGUAV] == nullptr || _resolutionChanged)
@@ -7112,7 +7113,7 @@ void ComputeTiledLightCulling(
 			BindEnvironmentTextures(CS, cmd);
 
 			device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, cmd);
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		}
 		else
 		{
@@ -7123,7 +7124,7 @@ void ComputeTiledLightCulling(
 			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 			device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, cmd);
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		}
 
 		device->UnbindUAVs(0, 8, cmd); // this unbinds pretty much every uav
@@ -7235,7 +7236,7 @@ void GenerateMipChain(const Texture2D& texture, MIPGENFILTER filter, CommandList
 					6,
 					cmd);
 
-				device->UAVBarrier(nullptr, 1, cmd);
+				device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 			}
 		}
 		else
@@ -7280,7 +7281,7 @@ void GenerateMipChain(const Texture2D& texture, MIPGENFILTER filter, CommandList
 					6,
 					cmd);
 
-				device->UAVBarrier(nullptr, 1, cmd);
+				device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 			}
 		}
 
@@ -7335,7 +7336,7 @@ void GenerateMipChain(const Texture2D& texture, MIPGENFILTER filter, CommandList
 				1,
 				cmd);
 
-			device->UAVBarrier(nullptr, 1, cmd);
+			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		}
 	}
 
@@ -7399,7 +7400,7 @@ void GenerateMipChain(const Texture3D& texture, MIPGENFILTER filter, CommandList
 			std::max(1u, (desc.Depth + GENERATEMIPCHAIN_3D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_3D_BLOCK_SIZE),
 			cmd);
 
-		device->UAVBarrier(nullptr, 1, cmd);
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	}
 
 	device->UnbindResources(TEXSLOT_UNIQUE0, 1, cmd);
@@ -7576,7 +7577,7 @@ RayBuffers* GenerateScreenRayBuffers(const CameraComponent& camera, CommandList 
 			(_height + RAYTRACING_LAUNCH_BLOCKSIZE - 1) / RAYTRACING_LAUNCH_BLOCKSIZE,
 			1, 
 			cmd);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 
 		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
@@ -7668,14 +7669,10 @@ void RayTraceScene(
 			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 			device->Dispatch(1, 1, 1, cmd);
-
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 			device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
-			const GPUResource* trans[] = {
-				&indirectBuffer
-			};
-			device->TransitionBarrier(trans, 1, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT, cmd);
+			device->Barrier(&GPUBarrier::Buffer(&indirectBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDIRECT_ARGUMENT), 1, cmd);
 		}
 		device->EventEnd(cmd);
 
@@ -7712,7 +7709,7 @@ void RayTraceScene(
 
 				device->DispatchIndirect(&indirectBuffer, 0, cmd);
 
-				device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+				device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 				device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
 				if (bounce == 1)
@@ -7756,7 +7753,7 @@ void RayTraceScene(
 
 			device->DispatchIndirect(&indirectBuffer, 0, cmd);
 
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 			device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
 			if (bounce == 0 || bounce == 1)
@@ -8511,8 +8508,7 @@ const Texture2D* ComputeLuminance(const Texture2D& sourceImage, CommandList cmd)
 				device->BindResource(CS, luminance_map.get(), TEXSLOT_ONDEMAND0, cmd);
 			}
 			device->Dispatch(luminance_avg_desc.Width, luminance_avg_desc.Height, 1, cmd);
-
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		}
 
 
@@ -8624,7 +8620,7 @@ void Postprocess_Blur_Gaussian(
 			cmd
 		);
 
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 	}
 
@@ -8656,7 +8652,7 @@ void Postprocess_Blur_Gaussian(
 			cmd
 		);
 
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 	}
 
@@ -8733,7 +8729,7 @@ void Postprocess_Blur_Bilateral(
 			cmd
 		);
 
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 	}
 
@@ -8766,7 +8762,7 @@ void Postprocess_Blur_Bilateral(
 			cmd
 		);
 
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 	}
 
@@ -8819,7 +8815,7 @@ void Postprocess_SSAO(
 		cmd
 	);
 
-	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
 	Postprocess_Blur_Bilateral(output, lineardepth, temp, output, cmd, blur, blur, 1.2f);
@@ -8872,7 +8868,7 @@ void Postprocess_SSR(
 		cmd
 	);
 
-	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
 	if (desc.MipLevels > 1)
@@ -9013,7 +9009,7 @@ void Postprocess_LightShafts(
 		cmd
 	);
 
-	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
 	wiProfiler::EndRange(range);
@@ -9063,7 +9059,7 @@ void Postprocess_DepthOfField(
 		cmd
 	);
 
-	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
 	wiProfiler::EndRange(range);
@@ -9116,7 +9112,7 @@ void Postprocess_Outline(
 		cmd
 	);
 
-	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
 	wiProfiler::EndRange(range);
@@ -9162,7 +9158,7 @@ void Postprocess_MotionBlur(
 		cmd
 	);
 
-	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
 	wiProfiler::EndRange(range);
@@ -9207,7 +9203,7 @@ void Postprocess_BloomSeparate(
 		cmd
 	);
 
-	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
 	device->EventEnd(cmd);
@@ -9250,7 +9246,7 @@ void Postprocess_FXAA(
 		cmd
 	);
 
-	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
 	wiProfiler::EndRange(range);
@@ -9298,7 +9294,7 @@ void Postprocess_TemporalAA(
 		cmd
 	);
 
-	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
 	wiProfiler::EndRange(range);
@@ -9343,7 +9339,7 @@ void Postprocess_Colorgrade(
 		cmd
 	);
 
-	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
 	device->EventEnd(cmd);
@@ -9385,7 +9381,7 @@ void Postprocess_Lineardepth(
 		cmd
 	);
 
-	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
 	device->EventEnd(cmd);
@@ -9429,7 +9425,7 @@ void Postprocess_Sharpen(
 		cmd
 	);
 
-	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
 	device->EventEnd(cmd);
@@ -9477,7 +9473,7 @@ void Postprocess_Tonemap(
 		cmd
 	);
 
-	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
 	device->EventEnd(cmd);
@@ -9521,7 +9517,7 @@ void Postprocess_Chromatic_Aberration(
 		cmd
 	);
 
-	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
 	device->EventEnd(cmd);

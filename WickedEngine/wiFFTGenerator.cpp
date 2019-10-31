@@ -26,11 +26,11 @@ void radix008A(
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	// Buffers
-	const GPUResource* cs_srvs[1] = { &pSRV_Src };
-	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
+	const GPUResource* srvs[1] = { &pSRV_Src };
+	device->BindResources(CS, srvs, TEXSLOT_ONDEMAND0, 1, cmd);
 
-	const GPUResource* cs_uavs[1] = { &pUAV_Dst };
-	device->BindUAVs(CS, cs_uavs, 0, ARRAYSIZE(cs_uavs), cmd);
+	const GPUResource* uavs[1] = { &pUAV_Dst };
+	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 	// Shader
 	if (istride > 1)
@@ -44,8 +44,7 @@ void radix008A(
 
 	// Execute
 	device->Dispatch(grid, 1, 1, cmd);
-
-	device->UAVBarrier(cs_uavs, ARRAYSIZE(cs_uavs), cmd);
+	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 
 	// Unbind resource
 	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);

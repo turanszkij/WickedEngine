@@ -154,8 +154,7 @@ namespace wiGraphics
 		virtual void QueryBegin(const GPUQuery *query, CommandList cmd) = 0;
 		virtual void QueryEnd(const GPUQuery *query, CommandList cmd) = 0;
 		virtual bool QueryRead(const GPUQuery *query, GPUQueryResult* result) = 0;
-		virtual void UAVBarrier(const GPUResource *const* uavs, UINT NumBarriers, CommandList cmd) = 0;
-		virtual void TransitionBarrier(const GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, CommandList cmd) = 0;
+		virtual void Barrier(const GPUBarrier* barriers, UINT numBarriers, CommandList cmd) = 0;
 
 		struct GPUAllocation
 		{

@@ -54,11 +54,7 @@ namespace wiGraphics
 		return _flag;
 	}
 
-	inline D3D12_RESOURCE_STATES _ConvertResourceStates(RESOURCE_STATES value)
-	{
-		return static_cast<D3D12_RESOURCE_STATES>(value);
-	}
-	inline D3D12_FILTER _ConvertFilter(FILTER value)
+	constexpr D3D12_FILTER _ConvertFilter(FILTER value)
 	{
 		switch (value)
 		{
@@ -175,7 +171,7 @@ namespace wiGraphics
 		}
 		return D3D12_FILTER_MIN_MAG_MIP_POINT;
 	}
-	inline D3D12_TEXTURE_ADDRESS_MODE _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
+	constexpr D3D12_TEXTURE_ADDRESS_MODE _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
 	{
 		switch (value)
 		{
@@ -199,7 +195,7 @@ namespace wiGraphics
 		}
 		return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 	}
-	inline D3D12_COMPARISON_FUNC _ConvertComparisonFunc(COMPARISON_FUNC value)
+	constexpr D3D12_COMPARISON_FUNC _ConvertComparisonFunc(COMPARISON_FUNC value)
 	{
 		switch (value)
 		{
@@ -232,7 +228,7 @@ namespace wiGraphics
 		}
 		return D3D12_COMPARISON_FUNC_NEVER;
 	}
-	inline D3D12_FILL_MODE _ConvertFillMode(FILL_MODE value)
+	constexpr D3D12_FILL_MODE _ConvertFillMode(FILL_MODE value)
 	{
 		switch (value)
 		{
@@ -247,7 +243,7 @@ namespace wiGraphics
 		}
 		return D3D12_FILL_MODE_WIREFRAME;
 	}
-	inline D3D12_CULL_MODE _ConvertCullMode(CULL_MODE value)
+	constexpr D3D12_CULL_MODE _ConvertCullMode(CULL_MODE value)
 	{
 		switch (value)
 		{
@@ -265,7 +261,7 @@ namespace wiGraphics
 		}
 		return D3D12_CULL_MODE_NONE;
 	}
-	inline D3D12_DEPTH_WRITE_MASK _ConvertDepthWriteMask(DEPTH_WRITE_MASK value)
+	constexpr D3D12_DEPTH_WRITE_MASK _ConvertDepthWriteMask(DEPTH_WRITE_MASK value)
 	{
 		switch (value)
 		{
@@ -280,7 +276,7 @@ namespace wiGraphics
 		}
 		return D3D12_DEPTH_WRITE_MASK_ZERO;
 	}
-	inline D3D12_STENCIL_OP _ConvertStencilOp(STENCIL_OP value)
+	constexpr D3D12_STENCIL_OP _ConvertStencilOp(STENCIL_OP value)
 	{
 		switch (value)
 		{
@@ -313,7 +309,7 @@ namespace wiGraphics
 		}
 		return D3D12_STENCIL_OP_KEEP;
 	}
-	inline D3D12_BLEND _ConvertBlend(BLEND value)
+	constexpr D3D12_BLEND _ConvertBlend(BLEND value)
 	{
 		switch (value)
 		{
@@ -373,7 +369,7 @@ namespace wiGraphics
 		}
 		return D3D12_BLEND_ZERO;
 	}
-	inline D3D12_BLEND_OP _ConvertBlendOp(BLEND_OP value)
+	constexpr D3D12_BLEND_OP _ConvertBlendOp(BLEND_OP value)
 	{
 		switch (value)
 		{
@@ -397,7 +393,7 @@ namespace wiGraphics
 		}
 		return D3D12_BLEND_OP_ADD;
 	}
-	inline D3D12_INPUT_CLASSIFICATION _ConvertInputClassification(INPUT_CLASSIFICATION value)
+	constexpr D3D12_INPUT_CLASSIFICATION _ConvertInputClassification(INPUT_CLASSIFICATION value)
 	{
 		switch (value)
 		{
@@ -412,7 +408,7 @@ namespace wiGraphics
 		}
 		return D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 	}
-	inline DXGI_FORMAT _ConvertFormat(FORMAT value)
+	constexpr DXGI_FORMAT _ConvertFormat(FORMAT value)
 	{
 		switch (value)
 		{
@@ -626,10 +622,61 @@ namespace wiGraphics
 
 		return data;
 	}
+	constexpr D3D12_RESOURCE_STATES _ConvertImageLayout(IMAGE_LAYOUT value)
+	{
+		switch (value)
+		{
+		case wiGraphics::IMAGE_LAYOUT_UNDEFINED:
+		case wiGraphics::IMAGE_LAYOUT_GENERAL:
+			return D3D12_RESOURCE_STATE_COMMON;
+		case wiGraphics::IMAGE_LAYOUT_RENDERTARGET:
+			return D3D12_RESOURCE_STATE_RENDER_TARGET;
+		case wiGraphics::IMAGE_LAYOUT_DEPTHSTENCIL:
+			return D3D12_RESOURCE_STATE_DEPTH_WRITE;
+		case wiGraphics::IMAGE_LAYOUT_DEPTHSTENCIL_READONLY:
+			return D3D12_RESOURCE_STATE_DEPTH_READ;
+		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE:
+			return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		case wiGraphics::IMAGE_LAYOUT_UNORDERED_ACCESS:
+			return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+		case wiGraphics::IMAGE_LAYOUT_COPY_SRC:
+			return D3D12_RESOURCE_STATE_COPY_SOURCE;
+		case wiGraphics::IMAGE_LAYOUT_COPY_DST:
+			return D3D12_RESOURCE_STATE_COPY_DEST;
+		}
+
+		return D3D12_RESOURCE_STATE_COMMON;
+	}
+	constexpr D3D12_RESOURCE_STATES _ConvertBufferState(BUFFER_STATE value)
+	{
+		switch (value)
+		{
+		case wiGraphics::BUFFER_STATE_GENERAL:
+			return D3D12_RESOURCE_STATE_COMMON;
+		case wiGraphics::BUFFER_STATE_VERTEX_BUFFER:
+			return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+		case wiGraphics::BUFFER_STATE_INDEX_BUFFER:
+			return D3D12_RESOURCE_STATE_INDEX_BUFFER;
+		case wiGraphics::BUFFER_STATE_CONSTANT_BUFFER:
+			return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+		case wiGraphics::BUFFER_STATE_INDIRECT_ARGUMENT:
+			return D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
+		case wiGraphics::BUFFER_STATE_SHADER_RESOURCE:
+			return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		case wiGraphics::BUFFER_STATE_UNORDERED_ACCESS:
+			return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+		case wiGraphics::BUFFER_STATE_COPY_SRC:
+			return D3D12_RESOURCE_STATE_COPY_SOURCE;
+		case wiGraphics::BUFFER_STATE_COPY_DST:
+			return D3D12_RESOURCE_STATE_COPY_DEST;
+		}
+
+		return D3D12_RESOURCE_STATE_COMMON;
+	}
 
 	// Native -> Engine converters
 
-	inline FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
+	constexpr FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
 	{
 		switch (value)
 		{
@@ -834,12 +881,8 @@ namespace wiGraphics
 		}
 		return FORMAT_UNKNOWN;
 	}
-	inline RESOURCE_STATES _ConvertResourceStates_Inv(D3D12_RESOURCE_STATES value)
-	{
-		return static_cast<RESOURCE_STATES>(value);
-	}
 	
-	inline TextureDesc _ConvertTextureDesc_Inv(const D3D12_RESOURCE_DESC& desc)
+	constexpr TextureDesc _ConvertTextureDesc_Inv(const D3D12_RESOURCE_DESC& desc)
 	{
 		TextureDesc retVal;
 
@@ -3189,6 +3232,8 @@ namespace wiGraphics
 
 	void GraphicsDevice_DX12::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 	{
+		prev_renderpass[cmd] = renderpass;
+
 		const RenderPassDesc& desc = renderpass->GetDesc();
 
 #ifdef DX12_REAL_RENDERPASS
@@ -3364,6 +3409,35 @@ namespace wiGraphics
 #else
 		GetDirectCommandList(cmd)->OMSetRenderTargets(0, nullptr, FALSE, nullptr);
 #endif // DX12_REAL_RENDERPASS
+
+
+
+		// Perform render pass transitions:
+		D3D12_RESOURCE_BARRIER barrierdescs[9];
+		UINT numBarriers = 0;
+		for (UINT i = 0; i < prev_renderpass[cmd]->desc.numAttachments; ++i)
+		{
+			const RenderPassAttachment& attachment = prev_renderpass[cmd]->desc.attachments[i];
+			if (attachment.initial_layout == attachment.final_layout)
+			{
+				continue;
+			}
+
+			D3D12_RESOURCE_BARRIER& barrierdesc = barrierdescs[numBarriers++];
+
+			barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			barrierdesc.Transition.pResource = (ID3D12Resource*)attachment.texture->resource;
+			barrierdesc.Transition.StateBefore = _ConvertImageLayout(attachment.initial_layout);
+			barrierdesc.Transition.StateAfter = _ConvertImageLayout(attachment.final_layout);
+			barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		}
+		if (numBarriers > 0)
+		{
+			GetDirectCommandList(cmd)->ResourceBarrier(numBarriers, barrierdescs);
+		}
+
+		prev_renderpass[cmd] = nullptr;
 	}
 	void GraphicsDevice_DX12::BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) {
 		assert(rects != nullptr);
@@ -3689,7 +3763,6 @@ namespace wiGraphics
 		}
 
 	}
-
 	void GraphicsDevice_DX12::QueryBegin(const GPUQuery *query, CommandList cmd)
 	{
 	}
@@ -3700,34 +3773,49 @@ namespace wiGraphics
 	{
 		return true;
 	}
+	void GraphicsDevice_DX12::Barrier(const GPUBarrier* barriers, UINT numBarriers, CommandList cmd)
+	{
+		D3D12_RESOURCE_BARRIER barrierdescs[8];
 
-	void GraphicsDevice_DX12::UAVBarrier(const GPUResource *const* uavs, UINT NumBarriers, CommandList cmd)
-	{
-		D3D12_RESOURCE_BARRIER barriers[8];
-		for (UINT i = 0; i < NumBarriers; ++i)
+		for (UINT i = 0; i < numBarriers; ++i)
 		{
-			barriers[i].Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-			barriers[i].Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-			barriers[i].UAV.pResource = (uavs == nullptr ? nullptr : (ID3D12Resource*)uavs[i]->resource);
-		}
-		GetDirectCommandList(cmd)->ResourceBarrier(NumBarriers, barriers);
-	}
-	void GraphicsDevice_DX12::TransitionBarrier(const GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, CommandList cmd)
-	{
-		if (resources != nullptr)
-		{
-			D3D12_RESOURCE_BARRIER barriers[8];
-			for (UINT i = 0; i < NumBarriers; ++i)
+			const GPUBarrier& barrier = barriers[i];
+			D3D12_RESOURCE_BARRIER& barrierdesc = barrierdescs[i];
+
+			switch (barrier.type)
 			{
-				barriers[i].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-				barriers[i].Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-				barriers[i].Transition.pResource = (ID3D12Resource*)resources[i]->resource;
-				barriers[i].Transition.StateBefore = _ConvertResourceStates(stateBefore);
-				barriers[i].Transition.StateAfter = _ConvertResourceStates(stateAfter);
-				barriers[i].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			default:
+			case GPUBarrier::MEMORY_BARRIER:
+			{
+				barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+				barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+				barrierdesc.UAV.pResource = barrier.memory.resource == nullptr ? nullptr : (ID3D12Resource*)barrier.memory.resource->resource;
 			}
-			GetDirectCommandList(cmd)->ResourceBarrier(NumBarriers, barriers);
+			break;
+			case GPUBarrier::IMAGE_BARRIER:
+			{
+				barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+				barrierdesc.Transition.pResource = (ID3D12Resource*)barrier.image.texture->resource;
+				barrierdesc.Transition.StateBefore = _ConvertImageLayout(barrier.image.layout_before);
+				barrierdesc.Transition.StateAfter = _ConvertImageLayout(barrier.image.layout_after);
+				barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			}
+			break;
+			case GPUBarrier::BUFFER_BARRIER:
+			{
+				barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+				barrierdesc.Transition.pResource = (ID3D12Resource*)barrier.buffer.buffer->resource;
+				barrierdesc.Transition.StateBefore = _ConvertBufferState(barrier.buffer.state_before);
+				barrierdesc.Transition.StateAfter = _ConvertBufferState(barrier.buffer.state_after);
+				barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			}
+			break;
+			}
 		}
+
+		GetDirectCommandList(cmd)->ResourceBarrier(numBarriers, barrierdescs);
 	}
 
 	GraphicsDevice::GPUAllocation GraphicsDevice_DX12::AllocateGPU(size_t dataSize, CommandList cmd)

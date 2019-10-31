@@ -16,7 +16,7 @@ namespace wiGraphics
 {
 // Engine -> Native converters
 
-inline UINT _ParseBindFlags(UINT value)
+constexpr UINT _ParseBindFlags(UINT value)
 {
 	UINT _flag = 0;
 
@@ -39,7 +39,7 @@ inline UINT _ParseBindFlags(UINT value)
 
 	return _flag;
 }
-inline UINT _ParseCPUAccessFlags(UINT value)
+constexpr UINT _ParseCPUAccessFlags(UINT value)
 {
 	UINT _flag = 0;
 
@@ -50,7 +50,7 @@ inline UINT _ParseCPUAccessFlags(UINT value)
 
 	return _flag;
 }
-inline UINT _ParseResourceMiscFlags(UINT value)
+constexpr UINT _ParseResourceMiscFlags(UINT value)
 {
 	UINT _flag = 0;
 
@@ -69,7 +69,7 @@ inline UINT _ParseResourceMiscFlags(UINT value)
 
 	return _flag;
 }
-inline UINT _ParseColorWriteMask(UINT value)
+constexpr UINT _ParseColorWriteMask(UINT value)
 {
 	UINT _flag = 0;
 
@@ -92,7 +92,7 @@ inline UINT _ParseColorWriteMask(UINT value)
 	return _flag;
 }
 
-inline D3D11_FILTER _ConvertFilter(FILTER value)
+constexpr D3D11_FILTER _ConvertFilter(FILTER value)
 {
 	switch (value)
 	{
@@ -209,7 +209,7 @@ inline D3D11_FILTER _ConvertFilter(FILTER value)
 	}
 	return D3D11_FILTER_MIN_MAG_MIP_POINT;
 }
-inline D3D11_TEXTURE_ADDRESS_MODE _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
+constexpr D3D11_TEXTURE_ADDRESS_MODE _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
 {
 	switch (value)
 	{
@@ -233,7 +233,7 @@ inline D3D11_TEXTURE_ADDRESS_MODE _ConvertTextureAddressMode(TEXTURE_ADDRESS_MOD
 	}
 	return D3D11_TEXTURE_ADDRESS_WRAP;
 }
-inline D3D11_COMPARISON_FUNC _ConvertComparisonFunc(COMPARISON_FUNC value)
+constexpr D3D11_COMPARISON_FUNC _ConvertComparisonFunc(COMPARISON_FUNC value)
 {
 	switch (value)
 	{
@@ -266,7 +266,7 @@ inline D3D11_COMPARISON_FUNC _ConvertComparisonFunc(COMPARISON_FUNC value)
 	}
 	return D3D11_COMPARISON_NEVER;
 }
-inline D3D11_FILL_MODE _ConvertFillMode(FILL_MODE value)
+constexpr D3D11_FILL_MODE _ConvertFillMode(FILL_MODE value)
 {
 	switch (value)
 	{
@@ -281,7 +281,7 @@ inline D3D11_FILL_MODE _ConvertFillMode(FILL_MODE value)
 	}
 	return D3D11_FILL_WIREFRAME;
 }
-inline D3D11_CULL_MODE _ConvertCullMode(CULL_MODE value)
+constexpr D3D11_CULL_MODE _ConvertCullMode(CULL_MODE value)
 {
 	switch (value)
 	{
@@ -299,7 +299,7 @@ inline D3D11_CULL_MODE _ConvertCullMode(CULL_MODE value)
 	}
 	return D3D11_CULL_NONE;
 }
-inline D3D11_DEPTH_WRITE_MASK _ConvertDepthWriteMask(DEPTH_WRITE_MASK value)
+constexpr D3D11_DEPTH_WRITE_MASK _ConvertDepthWriteMask(DEPTH_WRITE_MASK value)
 {
 	switch (value)
 	{
@@ -314,7 +314,7 @@ inline D3D11_DEPTH_WRITE_MASK _ConvertDepthWriteMask(DEPTH_WRITE_MASK value)
 	}
 	return D3D11_DEPTH_WRITE_MASK_ZERO;
 }
-inline D3D11_STENCIL_OP _ConvertStencilOp(STENCIL_OP value)
+constexpr D3D11_STENCIL_OP _ConvertStencilOp(STENCIL_OP value)
 {
 	switch (value)
 	{
@@ -347,7 +347,7 @@ inline D3D11_STENCIL_OP _ConvertStencilOp(STENCIL_OP value)
 	}
 	return D3D11_STENCIL_OP_KEEP;
 }
-inline D3D11_BLEND _ConvertBlend(BLEND value)
+constexpr D3D11_BLEND _ConvertBlend(BLEND value)
 {
 	switch (value)
 	{
@@ -407,7 +407,7 @@ inline D3D11_BLEND _ConvertBlend(BLEND value)
 	}
 	return D3D11_BLEND_ZERO;
 }
-inline D3D11_BLEND_OP _ConvertBlendOp(BLEND_OP value)
+constexpr D3D11_BLEND_OP _ConvertBlendOp(BLEND_OP value)
 {
 	switch (value)
 	{
@@ -431,7 +431,7 @@ inline D3D11_BLEND_OP _ConvertBlendOp(BLEND_OP value)
 	}
 	return D3D11_BLEND_OP_ADD;
 }
-inline D3D11_USAGE _ConvertUsage(USAGE value)
+constexpr D3D11_USAGE _ConvertUsage(USAGE value)
 {
 	switch (value)
 	{
@@ -452,7 +452,7 @@ inline D3D11_USAGE _ConvertUsage(USAGE value)
 	}
 	return D3D11_USAGE_DEFAULT;
 }
-inline D3D11_INPUT_CLASSIFICATION _ConvertInputClassification(INPUT_CLASSIFICATION value)
+constexpr D3D11_INPUT_CLASSIFICATION _ConvertInputClassification(INPUT_CLASSIFICATION value)
 {
 	switch (value)
 	{
@@ -467,7 +467,7 @@ inline D3D11_INPUT_CLASSIFICATION _ConvertInputClassification(INPUT_CLASSIFICATI
 	}
 	return D3D11_INPUT_PER_VERTEX_DATA;
 }
-inline DXGI_FORMAT _ConvertFormat(FORMAT value)
+constexpr DXGI_FORMAT _ConvertFormat(FORMAT value)
 {
 	switch (value)
 	{
@@ -738,7 +738,7 @@ inline D3D11_SUBRESOURCE_DATA _ConvertSubresourceData(const SubresourceData& pIn
 
 // Native -> Engine converters
 
-inline UINT _ParseBindFlags_Inv(UINT value)
+constexpr UINT _ParseBindFlags_Inv(UINT value)
 {
 	UINT _flag = 0;
 
@@ -761,7 +761,7 @@ inline UINT _ParseBindFlags_Inv(UINT value)
 
 	return _flag;
 }
-inline UINT _ParseCPUAccessFlags_Inv(UINT value)
+constexpr UINT _ParseCPUAccessFlags_Inv(UINT value)
 {
 	UINT _flag = 0;
 
@@ -772,7 +772,7 @@ inline UINT _ParseCPUAccessFlags_Inv(UINT value)
 
 	return _flag;
 }
-inline UINT _ParseResourceMiscFlags_Inv(UINT value)
+constexpr UINT _ParseResourceMiscFlags_Inv(UINT value)
 {
 	UINT _flag = 0;
 
@@ -792,7 +792,7 @@ inline UINT _ParseResourceMiscFlags_Inv(UINT value)
 	return _flag;
 }
 
-inline FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
+constexpr FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
 {
 	switch (value)
 	{
@@ -1003,7 +1003,7 @@ inline FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
 	}
 	return FORMAT_UNKNOWN;
 }
-inline USAGE _ConvertUsage_Inv(D3D11_USAGE value)
+constexpr USAGE _ConvertUsage_Inv(D3D11_USAGE value)
 {
 	switch (value)
 	{

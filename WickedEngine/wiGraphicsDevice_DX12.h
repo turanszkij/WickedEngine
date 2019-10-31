@@ -180,6 +180,7 @@ namespace wiGraphics
 		ViewPort					viewPort;
 
 		PRIMITIVETOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
+		const RenderPass* prev_renderpass[COMMANDLIST_COUNT] = {};
 
 		std::atomic<uint8_t> commandlist_count{ 0 };
 		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> free_commandlists;
@@ -303,8 +304,7 @@ namespace wiGraphics
 		void QueryBegin(const GPUQuery *query, CommandList cmd) override;
 		void QueryEnd(const GPUQuery *query, CommandList cmd) override;
 		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
-		void UAVBarrier(const GPUResource *const* uavs, UINT NumBarriers, CommandList cmd) override;
-		void TransitionBarrier(const GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, CommandList cmd) override;
+		void Barrier(const GPUBarrier* barriers, UINT numBarriers, CommandList cmd) override;
 
 		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
 
