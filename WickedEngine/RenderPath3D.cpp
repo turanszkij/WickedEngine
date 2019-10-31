@@ -11,8 +11,6 @@ using namespace wiGraphics;
 
 void RenderPath3D::ResizeBuffers()
 {
-	RenderPath2D::ResizeBuffers();
-
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	FORMAT defaultTextureFormat = device->GetBackBufferFormat();
@@ -88,8 +86,9 @@ void RenderPath3D::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = wiRenderer::RTFormat_hdr;
-		desc.Width = wiRenderer::GetInternalResolution().x / 2;
-		desc.Height = wiRenderer::GetInternalResolution().y / 2;
+		desc.Width = wiRenderer::GetInternalResolution().x;
+		desc.Height = wiRenderer::GetInternalResolution().y;
+		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
 		device->CreateTexture2D(&desc, nullptr, &rtReflection);
 		device->SetName(&rtReflection, "rtReflection");
 	}
@@ -232,18 +231,66 @@ void RenderPath3D::ResizeBuffers()
 		desc.Format = wiRenderer::DSFormat_small;
 		desc.Width = wiRenderer::GetInternalResolution().x / 4;
 		desc.Height = wiRenderer::GetInternalResolution().y / 4;
+		desc.layout = IMAGE_LAYOUT_DEPTHSTENCIL_READONLY;
 		device->CreateTexture2D(&desc, nullptr, &smallDepth);
 		device->SetName(&smallDepth, "smallDepth");
 	}
+
+	// Render passes:
 	{
-		TextureDesc desc;
-		desc.BindFlags = BIND_DEPTH_STENCIL;
-		desc.Format = wiRenderer::DSFormat_small;
-		desc.Width = wiRenderer::GetInternalResolution().x / 2;
-		desc.Height = wiRenderer::GetInternalResolution().y / 2;
-		device->CreateTexture2D(&desc, nullptr, &depthBuffer_reflection);
-		device->SetName(&depthBuffer_reflection, "depthBuffer_reflection");
+		RenderPassDesc desc;
+		desc.numAttachments = 1;
+		desc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&smallDepth,-1,RenderPassAttachment::STOREOP_DONTCARE,IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,IMAGE_LAYOUT_DEPTHSTENCIL };
+
+		device->CreateRenderPass(&desc, &renderpass_occlusionculling);
 	}
+	{
+		RenderPassDesc desc;
+		desc.numAttachments = 2;
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_DONTCARE,&rtReflection,-1,RenderPassAttachment::STOREOP_STORE,IMAGE_LAYOUT_RENDERTARGET,IMAGE_LAYOUT_SHADER_RESOURCE };
+		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_CLEAR,&depthBuffer,-1,RenderPassAttachment::STOREOP_DONTCARE };
+
+		device->CreateRenderPass(&desc, &renderpass_reflection);
+	}
+	{
+		RenderPassDesc desc;
+		desc.numAttachments = 1;
+		desc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_DONTCARE,&smallDepth,-1,RenderPassAttachment::STOREOP_STORE,IMAGE_LAYOUT_DEPTHSTENCIL,IMAGE_LAYOUT_DEPTHSTENCIL_READONLY };
+
+		device->CreateRenderPass(&desc, &renderpass_downsampledepthbuffer);
+	}
+	{
+		RenderPassDesc desc;
+		desc.numAttachments = 2;
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,&rtSun[0],-1 };
+		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&depthBuffer,-1 };
+
+		device->CreateRenderPass(&desc, &renderpass_lightshafts);
+	}
+	{
+		RenderPassDesc desc;
+		desc.numAttachments = 1;
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,&rtVolumetricLights,-1 };
+
+		device->CreateRenderPass(&desc, &renderpass_volumetriclight);
+	}
+	{
+		RenderPassDesc desc;
+		desc.numAttachments = 2;
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,&rtParticle,-1 };
+		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&depthBuffer,-1 };
+
+		device->CreateRenderPass(&desc, &renderpass_particles);
+	}
+	{
+		RenderPassDesc desc;
+		desc.numAttachments = 1;
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,&rtWaterRipple,-1 };
+
+		device->CreateRenderPass(&desc, &renderpass_waterripples);
+	}
+
+	RenderPath2D::ResizeBuffers();
 }
 
 void RenderPath3D::Update(float dt)
@@ -285,12 +332,12 @@ void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
 	viewPort.Width = (float)smallDepth.GetDesc().Width;
 	viewPort.Height = (float)smallDepth.GetDesc().Height;
 	device->BindViewports(1, &viewPort, cmd);
-	device->BindRenderTargets(0, nullptr, &smallDepth, cmd);
 
-	const GPUResource* dsv[] = { &smallDepth };
-	device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_DEPTH_READ, cmd);
+	device->RenderPassBegin(&renderpass_occlusionculling, cmd);
 
 	wiRenderer::OcclusionCulling_Render(cmd);
+
+	device->RenderPassEnd(cmd);
 }
 void RenderPath3D::RenderReflections(CommandList cmd) const
 {
@@ -298,39 +345,37 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 
 	if (wiRenderer::IsRequestedReflectionRendering())
 	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
+
 		wiRenderer::UpdateCameraCB(wiRenderer::GetRefCamera(), cmd);
 
+		ViewPort vp;
+		vp.Width = (float)depthBuffer.GetDesc().Width;
+		vp.Height = (float)depthBuffer.GetDesc().Height;
+		device->BindViewports(1, &vp, cmd);
+
+		// reverse clipping if underwater
+		XMFLOAT4 water = wiRenderer::GetWaterPlane();
+		float d = XMVectorGetX(XMPlaneDotCoord(XMLoadFloat4(&water), wiRenderer::GetCamera().GetEye()));
+		if (d < 0)
 		{
-			GraphicsDevice* device = wiRenderer::GetDevice();
-
-			const Texture2D* rts[] = { &rtReflection };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer_reflection, cmd);
-			float clear[] = { 0,0,0,0 };
-			device->ClearRenderTarget(rts[0], clear, cmd);
-			device->ClearDepthStencil(&depthBuffer_reflection, CLEAR_DEPTH, 0, 0, cmd);
-
-			ViewPort vp;
-			vp.Width = (float)rts[0]->GetDesc().Width;
-			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, cmd);
-
-			// reverse clipping if underwater
-			XMFLOAT4 water = wiRenderer::GetWaterPlane();
-			float d = XMVectorGetX(XMPlaneDotCoord(XMLoadFloat4(&water), wiRenderer::GetCamera().GetEye()));
-			if (d < 0)
-			{
-				water.x *= -1;
-				water.y *= -1;
-				water.z *= -1;
-			}
-
-			wiRenderer::SetClipPlane(water, cmd);
-
-			wiRenderer::DrawScene(wiRenderer::GetRefCamera(), false, cmd, RENDERPASS_TEXTURE, getHairParticlesReflectionEnabled(), false);
-			wiRenderer::DrawSky(cmd);
-
-			wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), cmd);
+			water.x *= -1;
+			water.y *= -1;
+			water.z *= -1;
 		}
+
+		wiRenderer::SetClipPlane(water, cmd);
+
+		device->Barrier(&GPUBarrier::Image(&rtReflection, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_RENDERTARGET), 1, cmd);
+
+		device->RenderPassBegin(&renderpass_reflection, cmd);
+
+		wiRenderer::DrawScene(wiRenderer::GetRefCamera(), false, cmd, RENDERPASS_TEXTURE, getHairParticlesReflectionEnabled(), false);
+		wiRenderer::DrawSky(cmd);
+
+		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), cmd);
+
+		device->RenderPassEnd(cmd);
 	}
 
 	wiProfiler::EndRange(range); // Reflection Rendering
@@ -380,13 +425,12 @@ void RenderPath3D::DownsampleDepthBuffer(CommandList cmd) const
 	viewPort.Width = (float)smallDepth.GetDesc().Width;
 	viewPort.Height = (float)smallDepth.GetDesc().Height;
 	device->BindViewports(1, &viewPort, cmd);
-	device->BindRenderTargets(0, nullptr, &smallDepth, cmd);
-	// This depth buffer is not cleared because we don't have to (we overwrite it anyway because depthfunc is ALWAYS)
 
-	const GPUResource* dsv[] = { &smallDepth };
-	device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, cmd);
+	device->RenderPassBegin(&renderpass_downsampledepthbuffer, cmd);
 
 	wiRenderer::DownsampleDepthBuffer(depthBuffer_Copy, cmd);
+
+	device->RenderPassEnd(cmd);
 }
 void RenderPath3D::RenderOutline(const Texture2D& dstSceneRT, CommandList cmd) const
 {
@@ -407,17 +451,16 @@ void RenderPath3D::RenderLightShafts(CommandList cmd) const
 
 		// Render sun stencil cutout:
 		{
-			const Texture2D* rts[] = { &rtSun[0] };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
-			float clear[] = { 0,0,0,0 };
-			device->ClearRenderTarget(rts[0], clear, cmd);
+			device->RenderPassBegin(&renderpass_lightshafts, cmd);
 
 			ViewPort vp;
-			vp.Width = (float)rts[0]->GetDesc().Width;
-			vp.Height = (float)rts[0]->GetDesc().Height;
+			vp.Width = (float)depthBuffer.GetDesc().Width;
+			vp.Height = (float)depthBuffer.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
 			wiRenderer::DrawSun(cmd);
+
+			device->RenderPassEnd(cmd);
 		}
 
 		const Texture2D* sunSource = &rtSun[0];
@@ -447,17 +490,16 @@ void RenderPath3D::RenderVolumetrics(CommandList cmd) const
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		const Texture2D* rts[] = { &rtVolumetricLights };
-		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
-		float clear[] = { 0,0,0,0 };
-		device->ClearRenderTarget(rts[0], clear, cmd);
+		device->RenderPassBegin(&renderpass_volumetriclight, cmd);
 
 		ViewPort vp;
-		vp.Width = (float)rts[0]->GetDesc().Width;
-		vp.Height = (float)rts[0]->GetDesc().Height;
+		vp.Width = (float)rtVolumetricLights.GetDesc().Width;
+		vp.Height = (float)rtVolumetricLights.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
 
 		wiRenderer::DrawVolumeLights(wiRenderer::GetCamera(), depthBuffer_Copy, cmd);
+
+		device->RenderPassEnd(cmd);
 	}
 }
 void RenderPath3D::RenderParticles(bool isDistrortionPass, CommandList cmd) const
@@ -466,17 +508,16 @@ void RenderPath3D::RenderParticles(bool isDistrortionPass, CommandList cmd) cons
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		const Texture2D* rts[] = { &rtParticle };
-		device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
-		float clear[] = { 0,0,0,0 };
-		device->ClearRenderTarget(rts[0], clear, cmd);
+		device->RenderPassBegin(&renderpass_particles, cmd);
 
 		ViewPort vp;
-		vp.Width = (float)rts[0]->GetDesc().Width;
-		vp.Height = (float)rts[0]->GetDesc().Height;
+		vp.Width = (float)rtParticle.GetDesc().Width;
+		vp.Height = (float)rtParticle.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
 
 		wiRenderer::DrawSoftParticles(wiRenderer::GetCamera(), rtLinearDepth, isDistrortionPass, cmd);
+
+		device->RenderPassEnd(cmd);
 	}
 }
 void RenderPath3D::RenderRefractionSource(const Texture2D& srcSceneRT, CommandList cmd) const
@@ -493,35 +534,33 @@ void RenderPath3D::RenderRefractionSource(const Texture2D& srcSceneRT, CommandLi
 	}
 	device->EventEnd(cmd);
 }
-void RenderPath3D::RenderTransparents(const Texture2D& dstSceneRT, RENDERPASS renderPass, CommandList cmd) const
+void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, RENDERPASS renderPass, CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	// Water ripple rendering:
 	{
 		// todo: refactor water ripples and avoid clear if there is none!
-		const Texture2D* rts[] = { &rtWaterRipple };
-		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
-		float clear[] = { 0,0,0,0 };
-		device->ClearRenderTarget(rts[0], clear, cmd);
+		device->RenderPassBegin(&renderpass_waterripples, cmd);
 
 		ViewPort vp;
-		vp.Width = (float)rts[0]->GetDesc().Width;
-		vp.Height = (float)rts[0]->GetDesc().Height;
+		vp.Width = (float)rtWaterRipple.GetDesc().Width;
+		vp.Height = (float)rtWaterRipple.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
 
 		wiRenderer::DrawWaterRipples(cmd);
+
+		device->RenderPassEnd(cmd);
 	}
 
 	device->UnbindResources(TEXSLOT_GBUFFER0, 1, cmd);
 	device->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, cmd);
 
-	const Texture2D* rts[] = { &dstSceneRT };
-	device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
+	device->RenderPassBegin(&renderpass_transparent, cmd);
 
 	ViewPort vp;
-	vp.Width = (float)rts[0]->GetDesc().Width;
-	vp.Height = (float)rts[0]->GetDesc().Height;
+	vp.Width = (float)renderpass_transparent.desc.attachments[0].texture->GetDesc().Width;
+	vp.Height = (float)renderpass_transparent.desc.attachments[0].texture->GetDesc().Height;
 	device->BindViewports(1, &vp, cmd);
 
 	// Transparent scene
@@ -541,6 +580,9 @@ void RenderPath3D::RenderTransparents(const Texture2D& dstSceneRT, RENDERPASS re
 	wiImageParams fx;
 	fx.enableFullScreen();
 	fx.enableHDR();
+
+	// Note set a stencilmode that always passes, because pipeline state with depthbuffer will be used in this render pass (shuts up warnings):
+	fx.stencilComp = STENCILMODE_ALWAYS;
 
 	if (getEmittedParticlesEnabled())
 	{
@@ -572,8 +614,7 @@ void RenderPath3D::RenderTransparents(const Texture2D& dstSceneRT, RENDERPASS re
 
 	wiRenderer::DrawDebugWorld(wiRenderer::GetCamera(), cmd);
 
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
-
+	device->RenderPassEnd(cmd);
 
 
 	RenderParticles(true, cmd);
@@ -592,7 +633,7 @@ void RenderPath3D::TemporalAAResolve(const Texture2D& srcdstSceneRT, const Textu
 		device->EventEnd(cmd);
 	}
 }
-void RenderPath3D::RenderBloom(const Texture2D& srcdstSceneRT, CommandList cmd) const
+void RenderPath3D::RenderBloom(const RenderPass& renderpass_bloom, CommandList cmd) const
 {
 	if (getBloomEnabled())
 	{
@@ -601,7 +642,7 @@ void RenderPath3D::RenderBloom(const Texture2D& srcdstSceneRT, CommandList cmd) 
 		device->EventBegin("Bloom", cmd);
 		auto range = wiProfiler::BeginRangeGPU("Bloom", cmd);
 
-		wiRenderer::Postprocess_BloomSeparate(srcdstSceneRT, rtBloom, cmd, getBloomThreshold());
+		wiRenderer::Postprocess_BloomSeparate(*renderpass_bloom.desc.attachments[0].texture, rtBloom, cmd, getBloomThreshold());
 
 		wiRenderer::GenerateMipChain(rtBloom, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd);
 
@@ -609,19 +650,17 @@ void RenderPath3D::RenderBloom(const Texture2D& srcdstSceneRT, CommandList cmd) 
 		{
 			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 
-			const Texture2D* rts[] = { &srcdstSceneRT };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
+			device->RenderPassBegin(&renderpass_bloom, cmd);
 
 			ViewPort vp;
-			vp.Width = (float)rts[0]->GetDesc().Width;
-			vp.Height = (float)rts[0]->GetDesc().Height;
+			vp.Width = (float)renderpass_bloom.desc.attachments[0].texture->GetDesc().Width;
+			vp.Height = (float)renderpass_bloom.desc.attachments[0].texture->GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
 			wiImageParams fx;
 			fx.enableHDR();
 			fx.enableFullScreen();
 			fx.blendFlag = BLENDMODE_ADDITIVE;
-			//fx.quality = QUALITY_BICUBIC;
 
 			fx.mipLevel = 1.5f;
 			wiImage::Draw(&rtBloom, fx, cmd);
@@ -630,6 +669,8 @@ void RenderPath3D::RenderBloom(const Texture2D& srcdstSceneRT, CommandList cmd) 
 			fx.mipLevel = 5.5f;
 			wiImage::Draw(&rtBloom, fx, cmd);
 			fx.quality = QUALITY_LINEAR;
+
+			device->RenderPassEnd(cmd);
 		}
 
 		wiProfiler::EndRange(range);

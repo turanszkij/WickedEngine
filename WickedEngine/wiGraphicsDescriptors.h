@@ -13,7 +13,10 @@ namespace wiGraphics
 	struct RasterizerState;
 	struct DepthStencilState;
 	struct VertexLayout;
+	struct GPUResource;
+	struct GPUBuffer;
 	struct Texture;
+	struct Texture2D;
 
 	enum SHADERSTAGE
 	{
@@ -269,11 +272,6 @@ namespace wiGraphics
 	};
 
 	// Flags ////////////////////////////////////////////
-	enum CLEAR_FLAG
-	{
-		CLEAR_DEPTH = 0x1L,
-		CLEAR_STENCIL = 0x2L,
-	};
 	enum BIND_FLAG
 	{
 		BIND_VERTEX_BUFFER = 0x1L,
@@ -294,35 +292,34 @@ namespace wiGraphics
 	{
 		RESOURCE_MISC_SHARED = 0x2L,
 		RESOURCE_MISC_TEXTURECUBE = 0x4L,
-		RESOURCE_MISC_DRAWINDIRECT_ARGS = 0x10L,
+		RESOURCE_MISC_INDIRECT_ARGS = 0x10L,
 		RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS = 0x20L,
 		RESOURCE_MISC_BUFFER_STRUCTURED = 0x40L,
 		RESOURCE_MISC_TILED = 0x40000L,
 	};
-	enum RESOURCE_STATES
+	enum IMAGE_LAYOUT
 	{
-		RESOURCE_STATE_COMMON = 0,
-		RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER = 0x1,
-		RESOURCE_STATE_INDEX_BUFFER = 0x2,
-		RESOURCE_STATE_RENDER_TARGET = 0x4,
-		RESOURCE_STATE_UNORDERED_ACCESS = 0x8,
-		RESOURCE_STATE_DEPTH_WRITE = 0x10,
-		RESOURCE_STATE_DEPTH_READ = 0x20,
-		RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE = 0x40,
-		RESOURCE_STATE_PIXEL_SHADER_RESOURCE = 0x80,
-		RESOURCE_STATE_STREAM_OUT = 0x100,
-		RESOURCE_STATE_INDIRECT_ARGUMENT = 0x200,
-		RESOURCE_STATE_COPY_DEST = 0x400,
-		RESOURCE_STATE_COPY_SOURCE = 0x800,
-		RESOURCE_STATE_RESOLVE_DEST = 0x1000,
-		RESOURCE_STATE_RESOLVE_SOURCE = 0x2000,
-		RESOURCE_STATE_GENERIC_READ = (((((0x1 | 0x2) | 0x40) | 0x80) | 0x200) | 0x800),
-		RESOURCE_STATE_PRESENT = 0,
-		RESOURCE_STATE_PREDICATION = 0x200,
-		RESOURCE_STATE_VIDEO_DECODE_READ = 0x10000,
-		RESOURCE_STATE_VIDEO_DECODE_WRITE = 0x20000,
-		RESOURCE_STATE_VIDEO_PROCESS_READ = 0x40000,
-		RESOURCE_STATE_VIDEO_PROCESS_WRITE = 0x80000
+		IMAGE_LAYOUT_UNDEFINED,					// discard contents
+		IMAGE_LAYOUT_GENERAL,					// supports everything
+		IMAGE_LAYOUT_RENDERTARGET,				// render target, write enabled
+		IMAGE_LAYOUT_DEPTHSTENCIL,				// depth stencil, write enabled
+		IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,		// depth stencil, read only
+		IMAGE_LAYOUT_SHADER_RESOURCE,			// shader resource, read only
+		IMAGE_LAYOUT_UNORDERED_ACCESS,			// shader resource, write enabled
+		IMAGE_LAYOUT_COPY_SRC,					// copy from
+		IMAGE_LAYOUT_COPY_DST,					// copy to
+	};
+	enum BUFFER_STATE
+	{
+		BUFFER_STATE_GENERAL,					// supports everything
+		BUFFER_STATE_VERTEX_BUFFER,				// vertex buffer, read only
+		BUFFER_STATE_INDEX_BUFFER,				// index buffer, read only
+		BUFFER_STATE_CONSTANT_BUFFER,			// constant buffer, read only
+		BUFFER_STATE_INDIRECT_ARGUMENT,			// argument buffer to DrawIndirect() or DispatchIndirect()
+		BUFFER_STATE_SHADER_RESOURCE,			// shader resource, read only
+		BUFFER_STATE_UNORDERED_ACCESS,			// shader resource, write enabled
+		BUFFER_STATE_COPY_SRC,					// copy from
+		BUFFER_STATE_COPY_DST,					// copy to
 	};
 
 	// Structs /////////////////////////////////////////////
@@ -353,6 +350,15 @@ namespace wiGraphics
 		UINT Count = 1;
 		UINT Quality = 0;
 	};
+	union ClearValue
+	{
+		float color[4];
+		struct ClearDepthStencil
+		{
+			float depth;
+			UINT stencil;
+		} depthstencil;
+	};
 	struct TextureDesc
 	{
 		UINT Width = 0;
@@ -366,6 +372,8 @@ namespace wiGraphics
 		UINT BindFlags = 0;
 		UINT CPUAccessFlags = 0;
 		UINT MiscFlags = 0;
+		ClearValue clear = {};
+		IMAGE_LAYOUT layout = IMAGE_LAYOUT_GENERAL;
 	};
 	struct SamplerDesc
 	{
@@ -468,6 +476,88 @@ namespace wiGraphics
 		FORMAT						DSFormat = FORMAT_UNKNOWN;
 		SampleDesc					sampleDesc; 
 		UINT						sampleMask = 0xFFFFFFFF;
+	};
+	struct GPUBarrier
+	{
+		enum TYPE
+		{
+			MEMORY_BARRIER,		// UAV accesses
+			IMAGE_BARRIER,		// image layout transition
+			BUFFER_BARRIER,		// buffer state transition
+		} type = MEMORY_BARRIER;
+		union
+		{
+			struct Memory
+			{
+				const GPUResource* resource;
+			} memory;
+			struct Image
+			{
+				const Texture* texture;
+				IMAGE_LAYOUT layout_before;
+				IMAGE_LAYOUT layout_after;
+			} image;
+			struct Buffer
+			{
+				const GPUBuffer* buffer;
+				BUFFER_STATE state_before;
+				BUFFER_STATE state_after;
+			} buffer;
+		};
+
+		static GPUBarrier Memory(const GPUResource* resource = nullptr)
+		{
+			GPUBarrier barrier;
+			barrier.type = MEMORY_BARRIER;
+			barrier.memory.resource = resource;
+			return barrier;
+		}
+		static GPUBarrier Image(const Texture* texture, IMAGE_LAYOUT before, IMAGE_LAYOUT after)
+		{
+			GPUBarrier barrier;
+			barrier.type = IMAGE_BARRIER;
+			barrier.image.texture = texture;
+			barrier.image.layout_before = before;
+			barrier.image.layout_after = after;
+			return barrier;
+		}
+		static GPUBarrier Buffer(const GPUBuffer* buffer, BUFFER_STATE before, BUFFER_STATE after)
+		{
+			GPUBarrier barrier;
+			barrier.type = BUFFER_BARRIER;
+			barrier.buffer.buffer = buffer;
+			barrier.buffer.state_before = before;
+			barrier.buffer.state_after = after;
+			return barrier;
+		}
+	};
+	struct RenderPassAttachment
+	{
+		enum TYPE
+		{
+			RENDERTARGET,
+			DEPTH_STENCIL,
+		} type = RENDERTARGET;
+		enum LOAD_OPERATION
+		{
+			LOADOP_LOAD,
+			LOADOP_CLEAR,
+			LOADOP_DONTCARE,
+		} loadop = LOADOP_LOAD;
+		const Texture2D* texture = nullptr;
+		int subresource = -1;
+		enum STORE_OPERATION
+		{
+			STOREOP_STORE,
+			STOREOP_DONTCARE,
+		} storeop = STOREOP_STORE;
+		IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_GENERAL;
+		IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_GENERAL;
+	};
+	struct RenderPassDesc
+	{
+		UINT numAttachments = 0;
+		RenderPassAttachment attachments[9] = {};
 	};
 	struct IndirectDrawArgsInstanced
 	{

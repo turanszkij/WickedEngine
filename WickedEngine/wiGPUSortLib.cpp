@@ -29,7 +29,7 @@ namespace wiGPUSortLib
 		bd.Usage = USAGE_DEFAULT;
 		bd.CPUAccessFlags = 0;
 		bd.BindFlags = BIND_UNORDERED_ACCESS;
-		bd.MiscFlags = RESOURCE_MISC_DRAWINDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		bd.MiscFlags = RESOURCE_MISC_INDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 		bd.ByteWidth = sizeof(IndirectDispatchArgs);
 		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &indirectBuffer);
 
@@ -94,14 +94,18 @@ namespace wiGPUSortLib
 			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 			device->Dispatch(1, 1, 1, cmd);
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 
 			device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
-			GPUResource* trans[] = {
-				&indirectBuffer
-			};
-			device->TransitionBarrier(trans, 1, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT, cmd);
+			{
+				GPUBarrier barrier;
+				barrier.type = GPUBarrier::BUFFER_BARRIER;
+				barrier.buffer.buffer = &indirectBuffer;
+				barrier.buffer.state_before = BUFFER_STATE_UNORDERED_ACCESS;
+				barrier.buffer.state_after = BUFFER_STATE_INDIRECT_ARGUMENT;
+				device->Barrier(&barrier, 1, cmd);
+			}
 		}
 
 
@@ -136,7 +140,7 @@ namespace wiGPUSortLib
 			// sort all buffers of size 512 (and presort bigger ones)
 			device->BindComputeShader(sortCS, cmd);
 			device->DispatchIndirect(&indirectBuffer, 0, cmd);
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		}
 
 		int presorted = 512;
@@ -182,12 +186,12 @@ namespace wiGPUSortLib
 				device->BindConstantBuffer(CS, &sortCB, CB_GETBINDSLOT(SortConstants), cmd);
 
 				device->Dispatch(numThreadGroups, 1, 1, cmd);
-				device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+				device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 			}
 
 			device->BindComputeShader(sortInnerCS, cmd);
 			device->Dispatch(numThreadGroups, 1, 1, cmd);
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 
 			presorted *= 2;
 		}

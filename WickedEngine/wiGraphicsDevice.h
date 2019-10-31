@@ -46,6 +46,7 @@ namespace wiGraphics
 		virtual HRESULT CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) = 0;
 		virtual HRESULT CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) = 0;
 		virtual HRESULT CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) = 0;
+		virtual HRESULT CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) = 0;
 
 		virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount) = 0;
 
@@ -67,6 +68,7 @@ namespace wiGraphics
 		virtual void DestroySamplerState(Sampler *pSamplerState) = 0;
 		virtual void DestroyQuery(GPUQuery *pQuery) = 0;
 		virtual void DestroyPipelineState(PipelineState* pso) = 0;
+		virtual void DestroyRenderPass(RenderPass* renderpass) = 0;
 
 		virtual bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) = 0;
 
@@ -105,6 +107,7 @@ namespace wiGraphics
 		uint32_t GetFormatStride(FORMAT value) const;
 		bool IsFormatUnorm(FORMAT value) const;
 		bool IsFormatBlockCompressed(FORMAT value) const;
+		bool IsFormatStencilSupport(FORMAT value) const;
 
 		inline XMMATRIX GetScreenProjection() const
 		{
@@ -118,11 +121,10 @@ namespace wiGraphics
 
 		///////////////Thread-sensitive////////////////////////
 
+		virtual void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) = 0;
+		virtual void RenderPassEnd(CommandList cmd) = 0;
 		virtual void BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) = 0;
 		virtual void BindViewports(UINT NumViewports, const ViewPort *pViewports, CommandList cmd) = 0;
-		virtual void BindRenderTargets(UINT NumViews, const Texture2D* const * ppRenderTargets, const Texture2D* depthStencilTexture, CommandList cmd, int subresource = -1) = 0;
-		virtual void ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], CommandList cmd, int subresource = -1) = 0;
-		virtual void ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, CommandList cmd, int subresource = -1) = 0;
 		virtual void BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource = -1) = 0;
 		virtual void BindResources(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd) = 0;
 		virtual void BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource = -1) = 0;
@@ -152,8 +154,7 @@ namespace wiGraphics
 		virtual void QueryBegin(const GPUQuery *query, CommandList cmd) = 0;
 		virtual void QueryEnd(const GPUQuery *query, CommandList cmd) = 0;
 		virtual bool QueryRead(const GPUQuery *query, GPUQueryResult* result) = 0;
-		virtual void UAVBarrier(const GPUResource *const* uavs, UINT NumBarriers, CommandList cmd) = 0;
-		virtual void TransitionBarrier(const GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, CommandList cmd) = 0;
+		virtual void Barrier(const GPUBarrier* barriers, UINT numBarriers, CommandList cmd) = 0;
 
 		struct GPUAllocation
 		{

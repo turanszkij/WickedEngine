@@ -74,10 +74,10 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, simulationBuffer.get());
 			}
 
-			bd.Usage = USAGE_DYNAMIC;
+			bd.Usage = USAGE_DEFAULT;
 			bd.ByteWidth = sizeof(HairParticleCB);
 			bd.BindFlags = BIND_CONSTANT_BUFFER;
-			bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+			bd.CPUAccessFlags = 0;
 			bd.MiscFlags = 0;
 			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, cb.get());
 		}
@@ -257,10 +257,12 @@ void wiHairParticle::LoadShaders()
 				desc.RTFormats[1] = wiRenderer::RTFormat_gbuffer_1;
 				break;
 			case RENDERPASS_DEFERRED:
-				desc.numRTs = 3;
+				desc.numRTs = 5;
 				desc.RTFormats[0] = wiRenderer::RTFormat_gbuffer_0;
 				desc.RTFormats[1] = wiRenderer::RTFormat_gbuffer_1;
 				desc.RTFormats[2] = wiRenderer::RTFormat_gbuffer_2;
+				desc.RTFormats[3] = wiRenderer::RTFormat_deferred_lightbuffer;
+				desc.RTFormats[4] = wiRenderer::RTFormat_deferred_lightbuffer;
 			default:
 				break;
 			}

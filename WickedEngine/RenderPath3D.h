@@ -67,7 +67,14 @@ protected:
 	wiGraphics::Texture2D depthBuffer_Copy; // used for shader resource, single sample
 	wiGraphics::Texture2D rtLinearDepth; // linear depth result
 	wiGraphics::Texture2D smallDepth; // downsampled depth buffer
-	wiGraphics::Texture2D depthBuffer_reflection; // depth-test for reflection rendering
+
+	wiGraphics::RenderPass renderpass_occlusionculling;
+	wiGraphics::RenderPass renderpass_reflection;
+	wiGraphics::RenderPass renderpass_downsampledepthbuffer;
+	wiGraphics::RenderPass renderpass_lightshafts;
+	wiGraphics::RenderPass renderpass_volumetriclight;
+	wiGraphics::RenderPass renderpass_particles;
+	wiGraphics::RenderPass renderpass_waterripples;
 
 	// Post-processes are ping-ponged, this function helps to obtain the last postprocess render target that was written
 	const wiGraphics::Texture2D* GetLastPostprocessRT() const
@@ -96,89 +103,89 @@ protected:
 	virtual void RenderVolumetrics(wiGraphics::CommandList cmd) const;
 	virtual void RenderParticles(bool isDistrortionPass, wiGraphics::CommandList cmd) const;
 	virtual void RenderRefractionSource(const wiGraphics::Texture2D& srcSceneRT, wiGraphics::CommandList cmd) const;
-	virtual void RenderTransparents(const wiGraphics::Texture2D& dstSceneRT, RENDERPASS renderPass, wiGraphics::CommandList cmd) const;
+	virtual void RenderTransparents(const wiGraphics::RenderPass& renderpass_transparent, RENDERPASS renderPass, wiGraphics::CommandList cmd) const;
 	virtual void TemporalAAResolve(const wiGraphics::Texture2D& srcdstSceneRT, const wiGraphics::Texture2D& srcGbuffer1, wiGraphics::CommandList cmd) const;
-	virtual void RenderBloom(const wiGraphics::Texture2D& srcdstSceneRT, wiGraphics::CommandList cmd) const;
+	virtual void RenderBloom(const wiGraphics::RenderPass& renderpass_bloom, wiGraphics::CommandList cmd) const;
 	virtual void RenderPostprocessChain(const wiGraphics::Texture2D& srcSceneRT, const wiGraphics::Texture2D& srcGbuffer1, wiGraphics::CommandList cmd) const;
 	
 public:
 	const wiGraphics::Texture2D* GetDepthStencil() const override { return &depthBuffer; }
 
-	inline float getExposure() const { return exposure; }
-	inline float getBloomThreshold() const { return bloomThreshold; }
-	inline float getSSAOBlur() const { return ssaoBlur; }
-	inline float getDepthOfFieldFocus() const { return dofFocus; }
-	inline float getDepthOfFieldStrength() const { return dofStrength; }
-	inline float getSharpenFilterAmount() const { return sharpenFilterAmount; }
-	inline float getOutlineThreshold() const { return outlineThreshold; }
-	inline float getOutlineThickness() const { return outlineThickness; }
-	inline XMFLOAT4 getOutlineColor() const { return outlineColor; }
-	inline float getSSAORange() const { return ssaoRange; }
-	inline UINT getSSAOSampleCount() const { return ssaoSampleCount; }
-	inline float getChromaticAberrationAmount() const { return chromaticAberrationAmount; }
+	constexpr float getExposure() const { return exposure; }
+	constexpr float getBloomThreshold() const { return bloomThreshold; }
+	constexpr float getSSAOBlur() const { return ssaoBlur; }
+	constexpr float getDepthOfFieldFocus() const { return dofFocus; }
+	constexpr float getDepthOfFieldStrength() const { return dofStrength; }
+	constexpr float getSharpenFilterAmount() const { return sharpenFilterAmount; }
+	constexpr float getOutlineThreshold() const { return outlineThreshold; }
+	constexpr float getOutlineThickness() const { return outlineThickness; }
+	constexpr XMFLOAT4 getOutlineColor() const { return outlineColor; }
+	constexpr float getSSAORange() const { return ssaoRange; }
+	constexpr UINT getSSAOSampleCount() const { return ssaoSampleCount; }
+	constexpr float getChromaticAberrationAmount() const { return chromaticAberrationAmount; }
 
-	inline bool getSSAOEnabled() const { return ssaoEnabled; }
-	inline bool getSSREnabled() const { return ssrEnabled; }
-	inline bool getShadowsEnabled() const { return shadowsEnabled; }
-	inline bool getReflectionsEnabled() const { return reflectionsEnabled; }
-	inline bool getFXAAEnabled() const { return fxaaEnabled; }
-	inline bool getBloomEnabled() const { return bloomEnabled; }
-	inline bool getColorGradingEnabled() const { return colorGradingEnabled; }
-	inline bool getEmittedParticlesEnabled() const { return emittedParticlesEnabled; }
-	inline bool getHairParticlesEnabled() const { return hairParticlesEnabled; }
-	inline bool getHairParticlesReflectionEnabled() const { return hairParticlesReflectionEnabled; }
-	inline bool getVolumeLightsEnabled() const { return volumeLightsEnabled; }
-	inline bool getLightShaftsEnabled() const { return lightShaftsEnabled; }
-	inline bool getLensFlareEnabled() const { return lensFlareEnabled; }
-	inline bool getMotionBlurEnabled() const { return motionBlurEnabled; }
-	inline bool getSSSEnabled() const { return sssEnabled; }
-	inline bool getDepthOfFieldEnabled() const { return depthOfFieldEnabled; }
-	inline bool getEyeAdaptionEnabled() const { return eyeAdaptionEnabled; }
-	inline bool getTessellationEnabled() const { return tessellationEnabled && wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION); }
-	inline bool getSharpenFilterEnabled() const { return sharpenFilterEnabled && getSharpenFilterAmount() > 0; }
-	inline bool getOutlineEnabled() const { return outlineEnabled; }
-	inline bool getChromaticAberrationEnabled() const { return chromaticAberrationEnabled; }
+	constexpr bool getSSAOEnabled() const { return ssaoEnabled; }
+	constexpr bool getSSREnabled() const { return ssrEnabled; }
+	constexpr bool getShadowsEnabled() const { return shadowsEnabled; }
+	constexpr bool getReflectionsEnabled() const { return reflectionsEnabled; }
+	constexpr bool getFXAAEnabled() const { return fxaaEnabled; }
+	constexpr bool getBloomEnabled() const { return bloomEnabled; }
+	constexpr bool getColorGradingEnabled() const { return colorGradingEnabled; }
+	constexpr bool getEmittedParticlesEnabled() const { return emittedParticlesEnabled; }
+	constexpr bool getHairParticlesEnabled() const { return hairParticlesEnabled; }
+	constexpr bool getHairParticlesReflectionEnabled() const { return hairParticlesReflectionEnabled; }
+	constexpr bool getVolumeLightsEnabled() const { return volumeLightsEnabled; }
+	constexpr bool getLightShaftsEnabled() const { return lightShaftsEnabled; }
+	constexpr bool getLensFlareEnabled() const { return lensFlareEnabled; }
+	constexpr bool getMotionBlurEnabled() const { return motionBlurEnabled; }
+	constexpr bool getSSSEnabled() const { return sssEnabled; }
+	constexpr bool getDepthOfFieldEnabled() const { return depthOfFieldEnabled; }
+	constexpr bool getEyeAdaptionEnabled() const { return eyeAdaptionEnabled; }
+	constexpr bool getTessellationEnabled() const { return tessellationEnabled && wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION); }
+	constexpr bool getSharpenFilterEnabled() const { return sharpenFilterEnabled && getSharpenFilterAmount() > 0; }
+	constexpr bool getOutlineEnabled() const { return outlineEnabled; }
+	constexpr bool getChromaticAberrationEnabled() const { return chromaticAberrationEnabled; }
 
-	inline const wiGraphics::Texture2D* getColorGradingTexture() const { return colorGradingTex; }
+	constexpr const wiGraphics::Texture2D* getColorGradingTexture() const { return colorGradingTex; }
 
-	inline UINT getMSAASampleCount() const { return msaaSampleCount; }
+	constexpr UINT getMSAASampleCount() const { return msaaSampleCount; }
 
-	inline void setExposure(float value) { exposure = value; }
-	inline void setBloomThreshold(float value){ bloomThreshold = value; }
-	inline void setSSAOBlur(float value){ ssaoBlur = value; }
-	inline void setDepthOfFieldFocus(float value){ dofFocus = value; }
-	inline void setDepthOfFieldStrength(float value){ dofStrength = value; }
-	inline void setSharpenFilterAmount(float value) { sharpenFilterAmount = value; }
-	inline void setOutlineThreshold(float value) { outlineThreshold = value; }
-	inline void setOutlineThickness(float value) { outlineThickness = value; }
-	inline void setOutlineColor(const XMFLOAT4& value) { outlineColor = value; }
-	inline void setSSAORange(float value) { ssaoRange = value; }
-	inline void setSSAOSampleCount(UINT value) { ssaoSampleCount = value; }
-	inline void setChromaticAberrationAmount(float value) { chromaticAberrationAmount = value; }
+	constexpr void setExposure(float value) { exposure = value; }
+	constexpr void setBloomThreshold(float value){ bloomThreshold = value; }
+	constexpr void setSSAOBlur(float value){ ssaoBlur = value; }
+	constexpr void setDepthOfFieldFocus(float value){ dofFocus = value; }
+	constexpr void setDepthOfFieldStrength(float value){ dofStrength = value; }
+	constexpr void setSharpenFilterAmount(float value) { sharpenFilterAmount = value; }
+	constexpr void setOutlineThreshold(float value) { outlineThreshold = value; }
+	constexpr void setOutlineThickness(float value) { outlineThickness = value; }
+	constexpr void setOutlineColor(const XMFLOAT4& value) { outlineColor = value; }
+	constexpr void setSSAORange(float value) { ssaoRange = value; }
+	constexpr void setSSAOSampleCount(UINT value) { ssaoSampleCount = value; }
+	constexpr void setChromaticAberrationAmount(float value) { chromaticAberrationAmount = value; }
 
-	inline void setSSAOEnabled(bool value){ ssaoEnabled = value; }
-	inline void setSSREnabled(bool value){ ssrEnabled = value; }
-	inline void setShadowsEnabled(bool value){ shadowsEnabled = value; }
-	inline void setReflectionsEnabled(bool value){ reflectionsEnabled = value; }
-	inline void setFXAAEnabled(bool value){ fxaaEnabled = value; }
-	inline void setBloomEnabled(bool value){ bloomEnabled = value; }
-	inline void setColorGradingEnabled(bool value){ colorGradingEnabled = value; }
-	inline void setEmitterParticlesEnabled(bool value){ emittedParticlesEnabled = value; }
-	inline void setHairParticlesEnabled(bool value) { hairParticlesEnabled = value; }
-	inline void setHairParticlesReflectionEnabled(bool value) { hairParticlesReflectionEnabled = value; }
-	inline void setVolumeLightsEnabled(bool value){ volumeLightsEnabled = value; }
-	inline void setLightShaftsEnabled(bool value){ lightShaftsEnabled = value; }
-	inline void setLensFlareEnabled(bool value){ lensFlareEnabled = value; }
-	inline void setMotionBlurEnabled(bool value){ motionBlurEnabled = value; }
-	inline void setSSSEnabled(bool value){ sssEnabled = value; }
-	inline void setDepthOfFieldEnabled(bool value){ depthOfFieldEnabled = value; }
-	inline void setEyeAdaptionEnabled(bool value) { eyeAdaptionEnabled = value; }
-	inline void setTessellationEnabled(bool value) { tessellationEnabled = value; }
-	inline void setSharpenFilterEnabled(bool value) { sharpenFilterEnabled = value; }
-	inline void setOutlineEnabled(bool value) { outlineEnabled = value; }
-	inline void setChromaticAberrationEnabled(bool value) { chromaticAberrationEnabled = value; }
+	constexpr void setSSAOEnabled(bool value){ ssaoEnabled = value; }
+	constexpr void setSSREnabled(bool value){ ssrEnabled = value; }
+	constexpr void setShadowsEnabled(bool value){ shadowsEnabled = value; }
+	constexpr void setReflectionsEnabled(bool value){ reflectionsEnabled = value; }
+	constexpr void setFXAAEnabled(bool value){ fxaaEnabled = value; }
+	constexpr void setBloomEnabled(bool value){ bloomEnabled = value; }
+	constexpr void setColorGradingEnabled(bool value){ colorGradingEnabled = value; }
+	constexpr void setEmitterParticlesEnabled(bool value){ emittedParticlesEnabled = value; }
+	constexpr void setHairParticlesEnabled(bool value) { hairParticlesEnabled = value; }
+	constexpr void setHairParticlesReflectionEnabled(bool value) { hairParticlesReflectionEnabled = value; }
+	constexpr void setVolumeLightsEnabled(bool value){ volumeLightsEnabled = value; }
+	constexpr void setLightShaftsEnabled(bool value){ lightShaftsEnabled = value; }
+	constexpr void setLensFlareEnabled(bool value){ lensFlareEnabled = value; }
+	constexpr void setMotionBlurEnabled(bool value){ motionBlurEnabled = value; }
+	constexpr void setSSSEnabled(bool value){ sssEnabled = value; }
+	constexpr void setDepthOfFieldEnabled(bool value){ depthOfFieldEnabled = value; }
+	constexpr void setEyeAdaptionEnabled(bool value) { eyeAdaptionEnabled = value; }
+	constexpr void setTessellationEnabled(bool value) { tessellationEnabled = value; }
+	constexpr void setSharpenFilterEnabled(bool value) { sharpenFilterEnabled = value; }
+	constexpr void setOutlineEnabled(bool value) { outlineEnabled = value; }
+	constexpr void setChromaticAberrationEnabled(bool value) { chromaticAberrationEnabled = value; }
 
-	inline void setColorGradingTexture(const wiGraphics::Texture2D* tex) { colorGradingTex = tex; }
+	constexpr void setColorGradingTexture(const wiGraphics::Texture2D* tex) { colorGradingTex = tex; }
 
 	virtual void setMSAASampleCount(UINT value) { if (msaaSampleCount != value) { msaaSampleCount = value; ResizeBuffers(); } }
 

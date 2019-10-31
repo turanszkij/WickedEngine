@@ -226,12 +226,11 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd
 	);
 	void Postprocess_SSS(
-		const wiGraphics::Texture2D& depthbuffer,
 		const wiGraphics::Texture2D& lineardepth,
 		const wiGraphics::Texture2D& gbuffer0,
-		const wiGraphics::Texture2D& input_output_lightbuffer_diffuse,
-		const wiGraphics::Texture2D& input_output_temp1,
-		const wiGraphics::Texture2D& input_output_temp2,
+		const wiGraphics::RenderPass& input_output_lightbuffer_diffuse,
+		const wiGraphics::RenderPass& input_output_temp1,
+		const wiGraphics::RenderPass& input_output_temp2,
 		wiGraphics::CommandList cmd
 	);
 	void Postprocess_LightShafts(

@@ -14,6 +14,14 @@
 #include <atomic>
 #include <mutex>
 
+
+//#define DX12_REAL_RENDERPASS
+#ifdef DX12_REAL_RENDERPASS
+typedef ID3D12GraphicsCommandList4 DX12_CommandList;
+#else
+typedef ID3D12GraphicsCommandList DX12_CommandList;
+#endif // DX12_REAL_RENDERPASS
+
 namespace wiGraphics
 {
 
@@ -141,7 +149,7 @@ namespace wiGraphics
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
-		inline ID3D12GraphicsCommandList* GetDirectCommandList(CommandList cmd) { return static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[cmd]); }
+		inline DX12_CommandList* GetDirectCommandList(CommandList cmd) { return static_cast<DX12_CommandList*>(GetFrameResources().commandLists[cmd]); }
 
 		struct DynamicResourceState
 		{
@@ -172,6 +180,7 @@ namespace wiGraphics
 		ViewPort					viewPort;
 
 		PRIMITIVETOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
+		const RenderPass* prev_renderpass[COMMANDLIST_COUNT] = {};
 
 		std::atomic<uint8_t> commandlist_count{ 0 };
 		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> free_commandlists;
@@ -221,6 +230,7 @@ namespace wiGraphics
 		HRESULT CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) override;
 		HRESULT CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) override;
 		HRESULT CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
+		HRESULT CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
 
 		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount) override;
 
@@ -242,6 +252,7 @@ namespace wiGraphics
 		void DestroySamplerState(Sampler *pSamplerState) override;
 		void DestroyQuery(GPUQuery *pQuery) override;
 		void DestroyPipelineState(PipelineState* pso) override;
+		void DestroyRenderPass(RenderPass* renderpass) override;
 
 		bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) override;
 
@@ -260,11 +271,10 @@ namespace wiGraphics
 
 		///////////////Thread-sensitive////////////////////////
 
+		void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) override;
+		void RenderPassEnd(CommandList cmd) override;
 		void BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) override;
 		void BindViewports(UINT NumViewports, const ViewPort *pViewports, CommandList cmd) override;
-		void BindRenderTargets(UINT NumViews, const Texture2D* const *ppRenderTargets, const Texture2D* depthStencilTexture, CommandList cmd, int subresource = -1) override;
-		void ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], CommandList cmd, int subresource = -1) override;
-		void ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, CommandList cmd, int subresource = -1) override;
 		void BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource = -1) override;
 		void BindResources(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd) override;
 		void BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource = -1) override;
@@ -294,8 +304,7 @@ namespace wiGraphics
 		void QueryBegin(const GPUQuery *query, CommandList cmd) override;
 		void QueryEnd(const GPUQuery *query, CommandList cmd) override;
 		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
-		void UAVBarrier(const GPUResource *const* uavs, UINT NumBarriers, CommandList cmd) override;
-		void TransitionBarrier(const GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, CommandList cmd) override;
+		void Barrier(const GPUBarrier* barriers, UINT numBarriers, CommandList cmd) override;
 
 		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
 

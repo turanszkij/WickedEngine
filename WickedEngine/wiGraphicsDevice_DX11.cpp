@@ -16,7 +16,7 @@ namespace wiGraphics
 {
 // Engine -> Native converters
 
-inline UINT _ParseBindFlags(UINT value)
+constexpr UINT _ParseBindFlags(UINT value)
 {
 	UINT _flag = 0;
 
@@ -39,7 +39,7 @@ inline UINT _ParseBindFlags(UINT value)
 
 	return _flag;
 }
-inline UINT _ParseCPUAccessFlags(UINT value)
+constexpr UINT _ParseCPUAccessFlags(UINT value)
 {
 	UINT _flag = 0;
 
@@ -50,7 +50,7 @@ inline UINT _ParseCPUAccessFlags(UINT value)
 
 	return _flag;
 }
-inline UINT _ParseResourceMiscFlags(UINT value)
+constexpr UINT _ParseResourceMiscFlags(UINT value)
 {
 	UINT _flag = 0;
 
@@ -58,7 +58,7 @@ inline UINT _ParseResourceMiscFlags(UINT value)
 		_flag |= D3D11_RESOURCE_MISC_SHARED;
 	if (value & RESOURCE_MISC_TEXTURECUBE)
 		_flag |= D3D11_RESOURCE_MISC_TEXTURECUBE;
-	if (value & RESOURCE_MISC_DRAWINDIRECT_ARGS)
+	if (value & RESOURCE_MISC_INDIRECT_ARGS)
 		_flag |= D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
 	if (value & RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS)
 		_flag |= D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
@@ -69,7 +69,7 @@ inline UINT _ParseResourceMiscFlags(UINT value)
 
 	return _flag;
 }
-inline UINT _ParseColorWriteMask(UINT value)
+constexpr UINT _ParseColorWriteMask(UINT value)
 {
 	UINT _flag = 0;
 
@@ -92,7 +92,7 @@ inline UINT _ParseColorWriteMask(UINT value)
 	return _flag;
 }
 
-inline D3D11_FILTER _ConvertFilter(FILTER value)
+constexpr D3D11_FILTER _ConvertFilter(FILTER value)
 {
 	switch (value)
 	{
@@ -209,7 +209,7 @@ inline D3D11_FILTER _ConvertFilter(FILTER value)
 	}
 	return D3D11_FILTER_MIN_MAG_MIP_POINT;
 }
-inline D3D11_TEXTURE_ADDRESS_MODE _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
+constexpr D3D11_TEXTURE_ADDRESS_MODE _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
 {
 	switch (value)
 	{
@@ -233,7 +233,7 @@ inline D3D11_TEXTURE_ADDRESS_MODE _ConvertTextureAddressMode(TEXTURE_ADDRESS_MOD
 	}
 	return D3D11_TEXTURE_ADDRESS_WRAP;
 }
-inline D3D11_COMPARISON_FUNC _ConvertComparisonFunc(COMPARISON_FUNC value)
+constexpr D3D11_COMPARISON_FUNC _ConvertComparisonFunc(COMPARISON_FUNC value)
 {
 	switch (value)
 	{
@@ -266,7 +266,7 @@ inline D3D11_COMPARISON_FUNC _ConvertComparisonFunc(COMPARISON_FUNC value)
 	}
 	return D3D11_COMPARISON_NEVER;
 }
-inline D3D11_FILL_MODE _ConvertFillMode(FILL_MODE value)
+constexpr D3D11_FILL_MODE _ConvertFillMode(FILL_MODE value)
 {
 	switch (value)
 	{
@@ -281,7 +281,7 @@ inline D3D11_FILL_MODE _ConvertFillMode(FILL_MODE value)
 	}
 	return D3D11_FILL_WIREFRAME;
 }
-inline D3D11_CULL_MODE _ConvertCullMode(CULL_MODE value)
+constexpr D3D11_CULL_MODE _ConvertCullMode(CULL_MODE value)
 {
 	switch (value)
 	{
@@ -299,7 +299,7 @@ inline D3D11_CULL_MODE _ConvertCullMode(CULL_MODE value)
 	}
 	return D3D11_CULL_NONE;
 }
-inline D3D11_DEPTH_WRITE_MASK _ConvertDepthWriteMask(DEPTH_WRITE_MASK value)
+constexpr D3D11_DEPTH_WRITE_MASK _ConvertDepthWriteMask(DEPTH_WRITE_MASK value)
 {
 	switch (value)
 	{
@@ -314,7 +314,7 @@ inline D3D11_DEPTH_WRITE_MASK _ConvertDepthWriteMask(DEPTH_WRITE_MASK value)
 	}
 	return D3D11_DEPTH_WRITE_MASK_ZERO;
 }
-inline D3D11_STENCIL_OP _ConvertStencilOp(STENCIL_OP value)
+constexpr D3D11_STENCIL_OP _ConvertStencilOp(STENCIL_OP value)
 {
 	switch (value)
 	{
@@ -347,7 +347,7 @@ inline D3D11_STENCIL_OP _ConvertStencilOp(STENCIL_OP value)
 	}
 	return D3D11_STENCIL_OP_KEEP;
 }
-inline D3D11_BLEND _ConvertBlend(BLEND value)
+constexpr D3D11_BLEND _ConvertBlend(BLEND value)
 {
 	switch (value)
 	{
@@ -407,7 +407,7 @@ inline D3D11_BLEND _ConvertBlend(BLEND value)
 	}
 	return D3D11_BLEND_ZERO;
 }
-inline D3D11_BLEND_OP _ConvertBlendOp(BLEND_OP value)
+constexpr D3D11_BLEND_OP _ConvertBlendOp(BLEND_OP value)
 {
 	switch (value)
 	{
@@ -431,7 +431,7 @@ inline D3D11_BLEND_OP _ConvertBlendOp(BLEND_OP value)
 	}
 	return D3D11_BLEND_OP_ADD;
 }
-inline D3D11_USAGE _ConvertUsage(USAGE value)
+constexpr D3D11_USAGE _ConvertUsage(USAGE value)
 {
 	switch (value)
 	{
@@ -452,7 +452,7 @@ inline D3D11_USAGE _ConvertUsage(USAGE value)
 	}
 	return D3D11_USAGE_DEFAULT;
 }
-inline D3D11_INPUT_CLASSIFICATION _ConvertInputClassification(INPUT_CLASSIFICATION value)
+constexpr D3D11_INPUT_CLASSIFICATION _ConvertInputClassification(INPUT_CLASSIFICATION value)
 {
 	switch (value)
 	{
@@ -467,7 +467,7 @@ inline D3D11_INPUT_CLASSIFICATION _ConvertInputClassification(INPUT_CLASSIFICATI
 	}
 	return D3D11_INPUT_PER_VERTEX_DATA;
 }
-inline DXGI_FORMAT _ConvertFormat(FORMAT value)
+constexpr DXGI_FORMAT _ConvertFormat(FORMAT value)
 {
 	switch (value)
 	{
@@ -738,7 +738,7 @@ inline D3D11_SUBRESOURCE_DATA _ConvertSubresourceData(const SubresourceData& pIn
 
 // Native -> Engine converters
 
-inline UINT _ParseBindFlags_Inv(UINT value)
+constexpr UINT _ParseBindFlags_Inv(UINT value)
 {
 	UINT _flag = 0;
 
@@ -761,7 +761,7 @@ inline UINT _ParseBindFlags_Inv(UINT value)
 
 	return _flag;
 }
-inline UINT _ParseCPUAccessFlags_Inv(UINT value)
+constexpr UINT _ParseCPUAccessFlags_Inv(UINT value)
 {
 	UINT _flag = 0;
 
@@ -772,7 +772,7 @@ inline UINT _ParseCPUAccessFlags_Inv(UINT value)
 
 	return _flag;
 }
-inline UINT _ParseResourceMiscFlags_Inv(UINT value)
+constexpr UINT _ParseResourceMiscFlags_Inv(UINT value)
 {
 	UINT _flag = 0;
 
@@ -781,7 +781,7 @@ inline UINT _ParseResourceMiscFlags_Inv(UINT value)
 	if (value & D3D11_RESOURCE_MISC_TEXTURECUBE)
 		_flag |= RESOURCE_MISC_TEXTURECUBE;
 	if (value & D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS)
-		_flag |= RESOURCE_MISC_DRAWINDIRECT_ARGS;
+		_flag |= RESOURCE_MISC_INDIRECT_ARGS;
 	if (value & D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS)
 		_flag |= RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 	if (value & D3D11_RESOURCE_MISC_BUFFER_STRUCTURED)
@@ -792,7 +792,7 @@ inline UINT _ParseResourceMiscFlags_Inv(UINT value)
 	return _flag;
 }
 
-inline FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
+constexpr FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
 {
 	switch (value)
 	{
@@ -1003,7 +1003,7 @@ inline FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
 	}
 	return FORMAT_UNKNOWN;
 }
-inline USAGE _ConvertUsage_Inv(D3D11_USAGE value)
+constexpr USAGE _ConvertUsage_Inv(D3D11_USAGE value)
 {
 	switch (value)
 	{
@@ -1841,6 +1841,15 @@ HRESULT GraphicsDevice_DX11::CreatePipelineState(const PipelineStateDesc* pDesc,
 
 	return S_OK;
 }
+HRESULT GraphicsDevice_DX11::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
+{
+	DestroyRenderPass(renderpass);
+	renderpass->Register(this);
+
+	renderpass->desc = *pDesc;
+
+	return S_OK;
+}
 
 int GraphicsDevice_DX11::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount)
 {
@@ -2431,6 +2440,10 @@ void GraphicsDevice_DX11::DestroyQuery(GPUQuery *pQuery)
 void GraphicsDevice_DX11::DestroyPipelineState(PipelineState* pso)
 {
 }
+void GraphicsDevice_DX11::DestroyRenderPass(RenderPass* renderpass)
+{
+
+}
 
 bool GraphicsDevice_DX11::DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest)
 {
@@ -2615,23 +2628,6 @@ void GraphicsDevice_DX11::WaitForGPU()
 }
 
 
-void GraphicsDevice_DX11::validate_raster_uavs(CommandList cmd) 
-{
-	// This is a helper function to defer the graphics stage UAV bindings to OMSetRenderTargetsAndUnorderedAccessViews (if there was an update)
-	//	It is intended to be called before graphics stage executions (eg. Draw)
-	//	It is also explicitly maintained in BindRenderTargets function, because in that case, we will also bind some render targets in the same call
-
-	if(raster_uavs_count[cmd] > 0)
-	{
-		const UINT count = raster_uavs_count[cmd];
-		const UINT slot = raster_uavs_slot[cmd];
-
-		deviceContexts[cmd]->OMSetRenderTargetsAndUnorderedAccessViews(0, nullptr, nullptr, slot, count, &raster_uavs[cmd][slot], nullptr);
-
-		raster_uavs_count[cmd] = 0;
-		raster_uavs_slot[cmd] = 8;
-	}
-}
 void GraphicsDevice_DX11::commit_allocations(CommandList cmd)
 {
 	// DX11 needs to unmap allocations before it can execute safely
@@ -2643,6 +2639,81 @@ void GraphicsDevice_DX11::commit_allocations(CommandList cmd)
 	}
 }
 
+
+void GraphicsDevice_DX11::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
+{
+	const RenderPassDesc& desc = renderpass->GetDesc();
+
+	UINT rt_count = 0;
+	ID3D11RenderTargetView* RTVs[8] = {};
+	ID3D11DepthStencilView* DSV = nullptr;
+	for (UINT i = 0; i < desc.numAttachments; ++i)
+	{
+		const RenderPassAttachment& attachment = desc.attachments[i];
+		const Texture2D* texture = attachment.texture;
+		int subresource = attachment.subresource;
+
+		if (attachment.type == RenderPassAttachment::RENDERTARGET)
+		{
+			if (subresource < 0 || texture->subresourceRTVs.empty())
+			{
+				RTVs[rt_count] = (ID3D11RenderTargetView*)texture->RTV;
+			}
+			else
+			{
+				assert(texture->subresourceRTVs.size() > size_t(subresource) && "Invalid RTV subresource!");
+				RTVs[rt_count] = (ID3D11RenderTargetView*)texture->subresourceRTVs[subresource];
+			}
+
+			if (attachment.loadop == RenderPassAttachment::LOADOP_CLEAR)
+			{
+				deviceContexts[cmd]->ClearRenderTargetView(RTVs[rt_count], texture->desc.clear.color);
+			}
+
+			rt_count++;
+		}
+		else
+		{
+			if (subresource < 0 || texture->subresourceDSVs.empty())
+			{
+				DSV = (ID3D11DepthStencilView*)texture->DSV;
+			}
+			else
+			{
+				assert(texture->subresourceDSVs.size() > size_t(subresource) && "Invalid DSV subresource!");
+				DSV = (ID3D11DepthStencilView*)texture->subresourceDSVs[subresource];
+			}
+
+			if (attachment.loadop == RenderPassAttachment::LOADOP_CLEAR)
+			{
+				UINT _flags = D3D11_CLEAR_DEPTH;
+				if (IsFormatStencilSupport(texture->desc.Format))
+					_flags |= D3D11_CLEAR_STENCIL;
+				deviceContexts[cmd]->ClearDepthStencilView(DSV, _flags, texture->desc.clear.depthstencil.depth, texture->desc.clear.depthstencil.stencil);
+			}
+		}
+	}
+
+	if (raster_uavs_count[cmd] > 0)
+	{
+		// UAVs:
+		const UINT count = raster_uavs_count[cmd];
+		const UINT slot = raster_uavs_slot[cmd];
+
+		deviceContexts[cmd]->OMSetRenderTargetsAndUnorderedAccessViews(rt_count, RTVs, DSV, slot, count, &raster_uavs[cmd][slot], nullptr);
+
+		raster_uavs_count[cmd] = 0;
+		raster_uavs_slot[cmd] = 8;
+	}
+	else
+	{
+		deviceContexts[cmd]->OMSetRenderTargets(rt_count, RTVs, DSV);
+	}
+}
+void GraphicsDevice_DX11::RenderPassEnd(CommandList cmd)
+{
+	deviceContexts[cmd]->OMSetRenderTargets(0, nullptr, nullptr);
+}
 void GraphicsDevice_DX11::BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) {
 	assert(rects != nullptr);
 	assert(numRects <= 8);
@@ -2669,84 +2740,6 @@ void GraphicsDevice_DX11::BindViewports(UINT NumViewports, const ViewPort *pView
 		d3dViewPorts[i].MaxDepth = pViewports[i].MaxDepth;
 	}
 	deviceContexts[cmd]->RSSetViewports(NumViewports, d3dViewPorts);
-}
-void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, const Texture2D* const *ppRenderTargets, const Texture2D* depthStencilTexture, CommandList cmd, int subresource)
-{
-	// RTVs:
-	ID3D11RenderTargetView* renderTargetViews[8] = {};
-	for (UINT i = 0; i < std::min(NumViews, 8u); ++i)
-	{
-		if (subresource < 0 || ppRenderTargets[i]->subresourceRTVs.empty())
-		{
-			renderTargetViews[i] = (ID3D11RenderTargetView*)ppRenderTargets[i]->RTV;
-		}
-		else
-		{
-			assert(ppRenderTargets[i]->subresourceRTVs.size() > static_cast<size_t>(subresource) && "Invalid RTV subresource!");
-			renderTargetViews[i] = (ID3D11RenderTargetView*)ppRenderTargets[i]->subresourceRTVs[subresource];
-		}
-	}
-
-	// DSVs:
-	ID3D11DepthStencilView* depthStencilView = nullptr;
-	if (depthStencilTexture != nullptr)
-	{
-		if (subresource < 0 || depthStencilTexture->subresourceDSVs.empty())
-		{
-			depthStencilView = (ID3D11DepthStencilView*)depthStencilTexture->DSV;
-		}
-		else
-		{
-			assert(depthStencilTexture->subresourceDSVs.size() > static_cast<size_t>(subresource) && "Invalid DSV subresource!");
-			depthStencilView = (ID3D11DepthStencilView*)depthStencilTexture->subresourceDSVs[subresource];
-		}
-	}
-
-	if(raster_uavs_count[cmd] > 0)
-	{
-		// UAVs:
-		const UINT count = raster_uavs_count[cmd];
-		const UINT slot = raster_uavs_slot[cmd];
-
-		deviceContexts[cmd]->OMSetRenderTargetsAndUnorderedAccessViews(NumViews, renderTargetViews, depthStencilView, slot, count, &raster_uavs[cmd][slot], nullptr);
-
-		raster_uavs_count[cmd] = 0;
-		raster_uavs_slot[cmd] = 8;
-	}
-	else 		
-	{
-		deviceContexts[cmd]->OMSetRenderTargets(NumViews, renderTargetViews, depthStencilView);
-	}
-}
-void GraphicsDevice_DX11::ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], CommandList cmd, int subresource)
-{
-	if (subresource < 0)
-	{
-		deviceContexts[cmd]->ClearRenderTargetView((ID3D11RenderTargetView*)pTexture->RTV, ColorRGBA);
-	}
-	else
-	{
-		assert(pTexture->subresourceRTVs.size() > static_cast<size_t>(subresource) && "Invalid subresource!");
-		deviceContexts[cmd]->ClearRenderTargetView((ID3D11RenderTargetView*)pTexture->subresourceRTVs[subresource], ColorRGBA);
-	}
-}
-void GraphicsDevice_DX11::ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, CommandList cmd, int subresource)
-{
-	UINT _flags = 0;
-	if (ClearFlags & CLEAR_DEPTH)
-		_flags |= D3D11_CLEAR_DEPTH;
-	if (ClearFlags & CLEAR_STENCIL)
-		_flags |= D3D11_CLEAR_STENCIL;
-
-	if (subresource < 0)
-	{
-		deviceContexts[cmd]->ClearDepthStencilView((ID3D11DepthStencilView*)pTexture->DSV, _flags, Depth, Stencil);
-	}
-	else
-	{
-		assert(pTexture->subresourceDSVs.size() > static_cast<size_t>(subresource) && "Invalid subresource!");
-		deviceContexts[cmd]->ClearDepthStencilView((ID3D11DepthStencilView*)pTexture->subresourceDSVs[subresource], _flags, Depth, Stencil);
-	}
 }
 void GraphicsDevice_DX11::BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource)
 {
@@ -3089,42 +3082,36 @@ void GraphicsDevice_DX11::BindComputeShader(const ComputeShader* cs, CommandList
 }
 void GraphicsDevice_DX11::Draw(UINT vertexCount, UINT startVertexLocation, CommandList cmd) 
 {
-	validate_raster_uavs(cmd);
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->Draw(vertexCount, startVertexLocation);
 }
 void GraphicsDevice_DX11::DrawIndexed(UINT indexCount, UINT startIndexLocation, UINT baseVertexLocation, CommandList cmd)
 {
-	validate_raster_uavs(cmd);
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->DrawIndexed(indexCount, startIndexLocation, baseVertexLocation);
 }
 void GraphicsDevice_DX11::DrawInstanced(UINT vertexCount, UINT instanceCount, UINT startVertexLocation, UINT startInstanceLocation, CommandList cmd) 
 {
-	validate_raster_uavs(cmd);
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->DrawInstanced(vertexCount, instanceCount, startVertexLocation, startInstanceLocation);
 }
 void GraphicsDevice_DX11::DrawIndexedInstanced(UINT indexCount, UINT instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, CommandList cmd)
 {
-	validate_raster_uavs(cmd);
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->DrawIndexedInstanced(indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
 }
 void GraphicsDevice_DX11::DrawInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
 {
-	validate_raster_uavs(cmd);
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->DrawInstancedIndirect((ID3D11Buffer*)args->resource, args_offset);
 }
 void GraphicsDevice_DX11::DrawIndexedInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
 {
-	validate_raster_uavs(cmd);
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->DrawIndexedInstancedIndirect((ID3D11Buffer*)args->resource, args_offset);

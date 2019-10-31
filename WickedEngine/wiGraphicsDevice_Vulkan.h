@@ -82,45 +82,6 @@ namespace wiGraphics
 		VkSampler		nullSampler;
 
 
-		struct RenderPassManager
-		{
-			bool dirty = true;
-
-			uint32_t attachmentCount = 0;
-			uint32_t colorAttachmentCount = 0;
-			VkFormat attachmentFormats[9] = {};
-			VkImageView attachments[9] = {};
-			VkExtent2D attachmentsExtents = {};
-			uint32_t attachmentLayers = 0;
-			VkClearValue clearColor[9] = {};
-
-			struct RenderPassAndFramebuffer
-			{
-				VkRenderPass renderPass = VK_NULL_HANDLE;
-				VkFramebuffer frameBuffer = VK_NULL_HANDLE;
-			};
-			// RTFormats hash <-> renderpass+framebuffer
-			std::unordered_map<uint64_t, RenderPassAndFramebuffer> renderPassCollection;
-			size_t activeRTHash = 0;
-
-			VkRenderPass overrideRenderPass = VK_NULL_HANDLE;
-			VkFramebuffer overrideFramebuffer = VK_NULL_HANDLE;
-
-			struct ClearRequest
-			{
-				VkImageView attachment = VK_NULL_HANDLE;
-				VkClearValue clearValue = {};
-				uint32_t clearFlags = 0;
-			};
-			std::vector<ClearRequest> clearRequests;
-
-			void reset();
-			void disable(VkCommandBuffer commandBuffer);
-			void validate(VkDevice device, VkCommandBuffer commandBuffer);
-		};
-		RenderPassManager renderPass[COMMANDLIST_COUNT];
-
-
 		struct FrameResources
 		{
 			VkFence frameFence;
@@ -128,6 +89,10 @@ namespace wiGraphics
 			VkCommandBuffer commandBuffers[COMMANDLIST_COUNT];
 			VkImageView swapChainImageView;
 			VkFramebuffer swapChainFramebuffer;
+
+			VkCommandPool transitionCommandPool;
+			VkCommandBuffer transitionCommandBuffer;
+			std::vector<VkImageMemoryBarrier> loadedimagetransitions;
 
 			struct DescriptorTableFrameAllocator
 			{
@@ -254,6 +219,8 @@ namespace wiGraphics
 				BUFFERVIEW,
 				SAMPLER,
 				PIPELINE,
+				RENDERPASS,
+				FRAMEBUFFER,
 			} type;
 			uint64_t frame;
 			wiCPUHandle handle;
@@ -288,6 +255,7 @@ namespace wiGraphics
 		HRESULT CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) override;
 		HRESULT CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) override;
 		HRESULT CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
+		HRESULT CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
 
 		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount) override;
 
@@ -309,6 +277,7 @@ namespace wiGraphics
 		void DestroySamplerState(Sampler *pSamplerState) override;
 		void DestroyQuery(GPUQuery *pQuery) override;
 		void DestroyPipelineState(PipelineState* pso) override;
+		void DestroyRenderPass(RenderPass* renderpass) override;
 
 		bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) override;
 
@@ -327,11 +296,10 @@ namespace wiGraphics
 
 		///////////////Thread-sensitive////////////////////////
 
+		void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) override;
+		void RenderPassEnd(CommandList cmd) override;
 		void BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) override;
 		void BindViewports(UINT NumViewports, const ViewPort *pViewports, CommandList cmd) override;
-		void BindRenderTargets(UINT NumViews, const Texture2D* const *ppRenderTargets, const Texture2D* depthStencilTexture, CommandList cmd, int subresource = -1) override;
-		void ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], CommandList cmd, int subresource = -1) override;
-		void ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, CommandList cmd, int subresource = -1) override;
 		void BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource = -1) override;
 		void BindResources(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd) override;
 		void BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource = -1) override;
@@ -361,8 +329,7 @@ namespace wiGraphics
 		void QueryBegin(const GPUQuery *query, CommandList cmd) override;
 		void QueryEnd(const GPUQuery *query, CommandList cmd) override;
 		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
-		void UAVBarrier(const GPUResource *const* uavs, UINT NumBarriers, CommandList cmd) override;
-		void TransitionBarrier(const GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, CommandList cmd) override;
+		void Barrier(const GPUBarrier* barriers, UINT numBarriers, CommandList cmd) override;
 
 		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
 

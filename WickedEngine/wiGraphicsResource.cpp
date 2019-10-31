@@ -147,4 +147,12 @@ namespace wiGraphics
 			device->DestroyPipelineState(this);
 		}
 	}
+
+	RenderPass::~RenderPass()
+	{
+		if (device != nullptr)
+		{
+			device->DestroyRenderPass(this);
+		}
+	}
 }

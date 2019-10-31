@@ -388,6 +388,10 @@ namespace wiImage
 			dsd.FrontFace.StencilFunc = COMPARISON_NOT_EQUAL;
 			dsd.BackFace.StencilFunc = COMPARISON_NOT_EQUAL;
 			device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_NOT][i]);
+
+			dsd.FrontFace.StencilFunc = COMPARISON_ALWAYS;
+			dsd.BackFace.StencilFunc = COMPARISON_ALWAYS;
+			device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_ALWAYS][i]);
 		}
 
 

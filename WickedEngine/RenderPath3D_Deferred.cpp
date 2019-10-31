@@ -59,13 +59,80 @@ void RenderPath3D_Deferred::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.Format = wiRenderer::RTFormat_hdr;
+		desc.Format = wiRenderer::RTFormat_deferred_lightbuffer;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture2D(&desc, nullptr, &rtSSS[0]);
 		device->SetName(&rtSSS[0], "rtSSS[0]");
 		device->CreateTexture2D(&desc, nullptr, &rtSSS[1]);
 		device->SetName(&rtSSS[1], "rtSSS[1]");
+	}
+
+	{
+		RenderPassDesc desc;
+		desc.numAttachments = 6;
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_DONTCARE,&rtGBuffer[0],-1 };
+		desc.attachments[1] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,&rtGBuffer[1],-1 };
+		desc.attachments[2] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_DONTCARE,&rtGBuffer[2],-1 };
+		desc.attachments[3] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_DONTCARE,&lightbuffer_diffuse,-1 };
+		desc.attachments[4] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_DONTCARE,&lightbuffer_specular,-1 };
+		desc.attachments[5] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_CLEAR,&depthBuffer,-1 };
+
+		device->CreateRenderPass(&desc, &renderpass_gbuffer);
+	}
+	{
+		RenderPassDesc desc;
+		desc.numAttachments = 3;
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&lightbuffer_diffuse,-1 };
+		desc.attachments[1] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&lightbuffer_specular,-1 };
+		desc.attachments[2] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&depthBuffer,-1 };
+
+		device->CreateRenderPass(&desc, &renderpass_lights);
+	}
+	{
+		RenderPassDesc desc;
+		desc.numAttachments = 2;
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&rtGBuffer[0],-1 };
+		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&depthBuffer,-1 };
+
+		device->CreateRenderPass(&desc, &renderpass_decals);
+	}
+	{
+		RenderPassDesc desc;
+		desc.numAttachments = 2;
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&rtDeferred,-1 };
+		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&depthBuffer,-1 };
+
+		device->CreateRenderPass(&desc, &renderpass_deferredcomposition);
+	}
+	{
+		RenderPassDesc desc;
+		desc.numAttachments = 2;
+		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&depthBuffer,-1 };
+
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&lightbuffer_diffuse,-1 };
+		device->CreateRenderPass(&desc, &renderpass_SSS[0]);
+
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&rtSSS[0],-1 };
+		device->CreateRenderPass(&desc, &renderpass_SSS[1]);
+
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&rtSSS[1],-1 };
+		device->CreateRenderPass(&desc, &renderpass_SSS[2]);
+	}
+	{
+		RenderPassDesc desc;
+		desc.numAttachments = 2;
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&rtDeferred,-1 };
+		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&depthBuffer,-1,RenderPassAttachment::STOREOP_DONTCARE };
+
+		device->CreateRenderPass(&desc, &renderpass_transparent);
+	}
+	{
+		RenderPassDesc desc;
+		desc.numAttachments = 1;
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&rtDeferred,-1 };
+
+		device->CreateRenderPass(&desc, &renderpass_bloom);
 	}
 }
 
@@ -88,37 +155,29 @@ void RenderPath3D_Deferred::Render() const
 
 		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 
-		const GPUResource* dsv[] = { &depthBuffer };
-		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, cmd);
+		device->Barrier(&GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_DEPTHSTENCIL), 1, cmd);
 
 		{
 			auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
 
-			const Texture2D* rts[] = {
-				&rtGBuffer[0],
-				&rtGBuffer[1],
-				&rtGBuffer[2],
-				&lightbuffer_diffuse,
-				&lightbuffer_specular,
-			};
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
-			float clear[] = { 0,0,0,0 };
-			device->ClearRenderTarget(rts[1], clear, cmd);
-			device->ClearDepthStencil(&depthBuffer, CLEAR_DEPTH | CLEAR_STENCIL, 0, 0, cmd);
+			device->RenderPassBegin(&renderpass_gbuffer, cmd);
+
 			ViewPort vp;
-			vp.Width = (float)rts[0]->GetDesc().Width;
-			vp.Height = (float)rts[0]->GetDesc().Height;
+			vp.Width = (float)depthBuffer.GetDesc().Width;
+			vp.Height = (float)depthBuffer.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
 			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
 			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_DEFERRED, getHairParticlesEnabled(), true);
 
+			device->RenderPassEnd(cmd);
+
 			wiProfiler::EndRange(range); // Opaque Scene
 		}
 
-		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, cmd);
+		device->Barrier(&GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL, IMAGE_LAYOUT_COPY_SRC), 1, cmd);
 		device->CopyTexture2D(&depthBuffer_Copy, &depthBuffer, cmd);
-		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, cmd);
+		device->Barrier(&GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_COPY_SRC, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY), 1, cmd);
 
 		RenderLinearDepth(cmd);
 
@@ -134,19 +193,18 @@ void RenderPath3D_Deferred::Render() const
 
 		// Deferred lights:
 		{
-			const Texture2D* rts[] = {
-				&lightbuffer_diffuse,
-				&lightbuffer_specular,
-			};
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
+			device->RenderPassBegin(&renderpass_lights, cmd);
+
 			ViewPort vp;
-			vp.Width = (float)rts[0]->GetDesc().Width;
-			vp.Height = (float)rts[0]->GetDesc().Height;
+			vp.Width = (float)depthBuffer.GetDesc().Width;
+			vp.Height = (float)depthBuffer.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
 			device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, cmd);
 			device->BindResource(PS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
 			wiRenderer::DrawDeferredLights(wiRenderer::GetCamera(), depthBuffer_Copy, rtGBuffer[0], rtGBuffer[1], rtGBuffer[2], cmd);
+
+			device->RenderPassEnd(cmd);
 		}
 
 		RenderSSS(cmd);
@@ -171,13 +229,13 @@ void RenderPath3D_Deferred::Render() const
 
 		RenderRefractionSource(rtDeferred, cmd);
 
-		RenderTransparents(rtDeferred, RENDERPASS_FORWARD, cmd);
+		RenderTransparents(renderpass_transparent, RENDERPASS_FORWARD, cmd);
 
 		RenderParticles(true, cmd);
 
 		TemporalAAResolve(rtDeferred, rtGBuffer[1], cmd);
 
-		RenderBloom(rtDeferred, cmd);
+		RenderBloom(renderpass_bloom, cmd);
 
 		RenderPostprocessChain(rtDeferred, rtGBuffer[1], cmd);
 
@@ -193,12 +251,11 @@ void RenderPath3D_Deferred::RenderSSS(CommandList cmd) const
 	if (getSSSEnabled())
 	{
 		wiRenderer::Postprocess_SSS(
-			depthBuffer,
 			rtLinearDepth,
 			rtGBuffer[0],
-			lightbuffer_diffuse,
-			rtSSS[0],
-			rtSSS[1],
+			renderpass_SSS[0],
+			renderpass_SSS[1],
+			renderpass_SSS[2],
 			cmd
 		);
 	}
@@ -207,28 +264,26 @@ void RenderPath3D_Deferred::RenderDecals(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	const Texture2D* rts[] = { &rtGBuffer[0] };
-	device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
+	device->RenderPassBegin(&renderpass_decals, cmd);
 
 	ViewPort vp;
-	vp.Width = (float)rts[0]->GetDesc().Width;
-	vp.Height = (float)rts[0]->GetDesc().Height;
+	vp.Width = (float)depthBuffer.GetDesc().Width;
+	vp.Height = (float)depthBuffer.GetDesc().Height;
 	device->BindViewports(1, &vp, cmd);
 
 	wiRenderer::DrawDeferredDecals(wiRenderer::GetCamera(), depthBuffer_Copy, cmd);
 
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
+	device->RenderPassEnd(cmd);
 }
 void RenderPath3D_Deferred::RenderDeferredComposition(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	const Texture2D* rts[] = { &rtDeferred };
-	device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
+	device->RenderPassBegin(&renderpass_deferredcomposition, cmd);
 
 	ViewPort vp;
-	vp.Width = (float)rts[0]->GetDesc().Width;
-	vp.Height = (float)rts[0]->GetDesc().Height;
+	vp.Width = (float)depthBuffer.GetDesc().Width;
+	vp.Height = (float)depthBuffer.GetDesc().Height;
 	device->BindViewports(1, &vp, cmd);
 
 	wiRenderer::DeferredComposition(
@@ -242,4 +297,6 @@ void RenderPath3D_Deferred::RenderDeferredComposition(CommandList cmd) const
 		cmd
 	);
 	wiRenderer::DrawSky(cmd);
+
+	device->RenderPassEnd(cmd);
 }

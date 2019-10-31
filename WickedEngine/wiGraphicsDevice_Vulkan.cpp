@@ -21,7 +21,7 @@ namespace wiGraphics
 
 
 	// Converters:
-	inline VkFormat _ConvertFormat(FORMAT value)
+	constexpr VkFormat _ConvertFormat(FORMAT value)
 	{
 		switch (value)
 		{
@@ -232,7 +232,7 @@ namespace wiGraphics
 		}
 		return VK_FORMAT_UNDEFINED;
 	}
-	inline VkCompareOp _ConvertComparisonFunc(COMPARISON_FUNC value)
+	constexpr VkCompareOp _ConvertComparisonFunc(COMPARISON_FUNC value)
 	{
 		switch (value)
 		{
@@ -265,7 +265,7 @@ namespace wiGraphics
 		}
 		return VK_COMPARE_OP_NEVER;
 	}
-	inline VkBlendFactor _ConvertBlend(BLEND value)
+	constexpr VkBlendFactor _ConvertBlend(BLEND value)
 	{
 		switch (value)
 		{
@@ -325,7 +325,7 @@ namespace wiGraphics
 		}
 		return VK_BLEND_FACTOR_ZERO;
 	}
-	inline VkBlendOp _ConvertBlendOp(BLEND_OP value)
+	constexpr VkBlendOp _ConvertBlendOp(BLEND_OP value)
 	{
 		switch (value)
 		{
@@ -349,7 +349,7 @@ namespace wiGraphics
 		}
 		return VK_BLEND_OP_ADD;
 	}
-	inline VkSamplerAddressMode _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
+	constexpr VkSamplerAddressMode _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
 	{
 		switch (value)
 		{
@@ -373,7 +373,7 @@ namespace wiGraphics
 		}
 		return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 	}
-	inline VkStencilOp _ConvertStencilOp(STENCIL_OP value)
+	constexpr VkStencilOp _ConvertStencilOp(STENCIL_OP value)
 	{
 		switch (value)
 		{
@@ -405,6 +405,127 @@ namespace wiGraphics
 			break;
 		}
 		return VK_STENCIL_OP_KEEP;
+	}
+	constexpr VkImageLayout _ConvertImageLayout(IMAGE_LAYOUT value)
+	{
+		switch (value)
+		{
+		case wiGraphics::IMAGE_LAYOUT_GENERAL:
+			return VK_IMAGE_LAYOUT_GENERAL;
+		case wiGraphics::IMAGE_LAYOUT_RENDERTARGET:
+			return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		case wiGraphics::IMAGE_LAYOUT_DEPTHSTENCIL:
+			return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		case wiGraphics::IMAGE_LAYOUT_DEPTHSTENCIL_READONLY:
+			return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE:
+			return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		case wiGraphics::IMAGE_LAYOUT_UNORDERED_ACCESS:
+			return VK_IMAGE_LAYOUT_GENERAL;
+		case wiGraphics::IMAGE_LAYOUT_COPY_SRC:
+			return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		case wiGraphics::IMAGE_LAYOUT_COPY_DST:
+			return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		}
+		return VK_IMAGE_LAYOUT_UNDEFINED;
+	}
+
+
+	inline VkAccessFlags _ParseImageLayout(IMAGE_LAYOUT value)
+	{
+		VkAccessFlags flags = 0;
+
+		switch (value)
+		{
+		case wiGraphics::IMAGE_LAYOUT_GENERAL:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			flags |= VK_ACCESS_SHADER_WRITE_BIT;
+			flags |= VK_ACCESS_TRANSFER_READ_BIT;
+			flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
+			flags |= VK_ACCESS_MEMORY_READ_BIT;
+			flags |= VK_ACCESS_MEMORY_WRITE_BIT;
+			break;
+		case wiGraphics::IMAGE_LAYOUT_RENDERTARGET:
+			flags |= VK_ACCESS_SHADER_WRITE_BIT;
+			break;
+		case wiGraphics::IMAGE_LAYOUT_DEPTHSTENCIL:
+			flags |= VK_ACCESS_SHADER_WRITE_BIT;
+			break;
+		case wiGraphics::IMAGE_LAYOUT_DEPTHSTENCIL_READONLY:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			break;
+		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			break;
+		case wiGraphics::IMAGE_LAYOUT_UNORDERED_ACCESS:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			flags |= VK_ACCESS_SHADER_WRITE_BIT;
+			break;
+		case wiGraphics::IMAGE_LAYOUT_COPY_SRC:
+			flags |= VK_ACCESS_TRANSFER_READ_BIT;
+			break;
+		case wiGraphics::IMAGE_LAYOUT_COPY_DST:
+			flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
+			break;
+		}
+
+		return flags;
+	}
+	inline VkAccessFlags _ParseBufferState(BUFFER_STATE value)
+	{
+		VkAccessFlags flags = 0;
+
+		switch (value)
+		{
+		case wiGraphics::BUFFER_STATE_GENERAL:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			flags |= VK_ACCESS_SHADER_WRITE_BIT;
+			flags |= VK_ACCESS_TRANSFER_READ_BIT;
+			flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
+			flags |= VK_ACCESS_HOST_READ_BIT;
+			flags |= VK_ACCESS_HOST_WRITE_BIT;
+			flags |= VK_ACCESS_MEMORY_READ_BIT;
+			flags |= VK_ACCESS_MEMORY_WRITE_BIT;
+			flags |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+			flags |= VK_ACCESS_INDEX_READ_BIT;
+			flags |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+			flags |= VK_ACCESS_UNIFORM_READ_BIT;
+			break;
+		case wiGraphics::BUFFER_STATE_VERTEX_BUFFER:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			flags |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+			break;
+		case wiGraphics::BUFFER_STATE_INDEX_BUFFER:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			flags |= VK_ACCESS_INDEX_READ_BIT;
+			break;
+		case wiGraphics::BUFFER_STATE_CONSTANT_BUFFER:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			flags |= VK_ACCESS_UNIFORM_READ_BIT;
+			break;
+		case wiGraphics::BUFFER_STATE_INDIRECT_ARGUMENT:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			flags |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+			break;
+		case wiGraphics::BUFFER_STATE_SHADER_RESOURCE:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			flags |= VK_ACCESS_UNIFORM_READ_BIT;
+			break;
+		case wiGraphics::BUFFER_STATE_UNORDERED_ACCESS:
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+			flags |= VK_ACCESS_SHADER_WRITE_BIT;
+			break;
+		case wiGraphics::BUFFER_STATE_COPY_SRC:
+			flags |= VK_ACCESS_TRANSFER_READ_BIT;
+			break;
+		case wiGraphics::BUFFER_STATE_COPY_DST:
+			flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
+			break;
+		default:
+			break;
+		}
+
+		return flags;
 	}
 	
 	// Extension functions:
@@ -1315,236 +1436,6 @@ namespace wiGraphics
 	}
 
 
-
-	void GraphicsDevice_Vulkan::RenderPassManager::reset()
-	{
-		dirty = true;
-
-		memset(attachments, 0, sizeof(attachments));
-		attachmentCount = 0;
-		attachmentLayers = 1;
-
-		memset(clearColor, 0, sizeof(clearColor));
-
-		activeRTHash = 0;
-
-		overrideRenderPass = VK_NULL_HANDLE;
-		overrideFramebuffer = VK_NULL_HANDLE;
-
-		clearRequests.clear();
-	}
-	void GraphicsDevice_Vulkan::RenderPassManager::disable(VkCommandBuffer commandBuffer)
-	{
-		if (activeRTHash)
-		{
-			vkCmdEndRenderPass(commandBuffer);
-		}
-		activeRTHash = 0;
-		dirty = true;
-	}
-	void GraphicsDevice_Vulkan::RenderPassManager::validate(VkDevice device, VkCommandBuffer commandBuffer)
-	{
-		if (!dirty || attachmentCount == 0)
-		{
-			return;
-		}
-
-		size_t requestRTHash = 0;
-
-		if (!overrideRenderPass && !overrideFramebuffer)
-		{
-			for (uint32_t i = 0; i < attachmentCount; ++i)
-			{
-				wiHelper::hash_combine(requestRTHash, attachments[i]);
-			}
-		}
-		else
-		{
-			requestRTHash = 0xFFFFFFFF; // override setrendertarget hashing with custom renderpass (eg. presentation render pass because it has some custom setup)
-		}
-
-		if (activeRTHash == 0 || activeRTHash != requestRTHash)
-		{
-			VkRenderPass renderPass = overrideRenderPass;
-			VkFramebuffer frameBuffer = overrideFramebuffer;
-
-			if (renderPass == VK_NULL_HANDLE || frameBuffer == VK_NULL_HANDLE)
-			{
-				RenderPassAndFramebuffer& states = renderPassCollection[requestRTHash];
-
-				if (states.renderPass == VK_NULL_HANDLE)
-				{
-					VkAttachmentDescription attachmentDescriptions[9];
-					VkAttachmentReference colorAttachmentRefs[9];
-
-					for (UINT i = 0; i < colorAttachmentCount; ++i)
-					{
-						VkAttachmentDescription attachment = {};
-						attachment.format = attachmentFormats[i];
-						attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-						attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-						attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-						attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-						attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-						attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-						attachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-						attachmentDescriptions[i] = attachment;
-
-						VkAttachmentReference ref = {};
-						ref.attachment = i;
-						ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-						colorAttachmentRefs[i] = ref;
-					}
-
-
-					VkSubpassDescription subpass = {};
-					subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-					subpass.colorAttachmentCount = colorAttachmentCount;
-					subpass.pColorAttachments = colorAttachmentRefs;
-
-					VkAttachmentDescription depthAttachment = {};
-					VkAttachmentReference depthAttachmentRef = {};
-					if (attachmentCount > colorAttachmentCount)
-					{
-						depthAttachment.format = attachmentFormats[colorAttachmentCount];
-						depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-						depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-						depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-						depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-						depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-						depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-						depthAttachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-						attachmentDescriptions[colorAttachmentCount] = depthAttachment;
-
-						depthAttachmentRef.attachment = colorAttachmentCount;
-						depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-						subpass.pDepthStencilAttachment = &depthAttachmentRef;
-					}
-
-					VkRenderPassCreateInfo renderPassInfo = {};
-					renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-					renderPassInfo.attachmentCount = attachmentCount;
-					renderPassInfo.pAttachments = attachmentDescriptions;
-					renderPassInfo.subpassCount = 1;
-					renderPassInfo.pSubpasses = &subpass;
-
-					if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &states.renderPass) != VK_SUCCESS) {
-						throw std::runtime_error("failed to create render pass!");
-					}
-				}
-				if (states.frameBuffer == VK_NULL_HANDLE)
-				{
-					VkFramebufferCreateInfo framebufferInfo = {};
-					framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-					framebufferInfo.renderPass = states.renderPass;
-					framebufferInfo.attachmentCount = attachmentCount;
-					framebufferInfo.pAttachments = attachments;
-					framebufferInfo.width = attachmentsExtents.width;
-					framebufferInfo.height = attachmentsExtents.height;
-					framebufferInfo.layers = attachmentLayers;
-
-					if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &states.frameBuffer) != VK_SUCCESS) {
-						throw std::runtime_error("failed to create framebuffer!");
-					}
-				}
-
-				renderPass = states.renderPass;
-				frameBuffer = states.frameBuffer;
-			}
-
-			if (activeRTHash)
-			{
-				vkCmdEndRenderPass(commandBuffer);
-			}
-
-			VkRenderPassBeginInfo renderPassInfo = {};
-			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass = renderPass;
-			renderPassInfo.framebuffer = frameBuffer;
-			renderPassInfo.renderArea.offset = { 0, 0 };
-			renderPassInfo.renderArea.extent = attachmentsExtents;
-			renderPassInfo.clearValueCount = attachmentCount;
-			renderPassInfo.pClearValues = clearColor;
-			vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-			activeRTHash = requestRTHash;
-			dirty = false;
-
-		}
-
-		// Performing texture clear requests if needed:
-		if (!clearRequests.empty())
-		{
-			VkClearAttachment clearInfos[9];
-			UINT realClearCount = 0;
-			bool remainingClearRequests = false;
-			for (UINT i = 0; i < clearRequests.size(); ++i)
-			{
-				if (clearRequests[i].attachment == VK_NULL_HANDLE)
-				{
-					continue;
-				}
-				remainingClearRequests = true;
-
-				for (UINT j = 0; j < attachmentCount; ++j)
-				{
-					if (clearRequests[i].attachment == attachments[j])
-					{
-						if (clearRequests[i].clearFlags == 0)
-						{
-							clearInfos[realClearCount].aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-							clearInfos[realClearCount].clearValue = clearRequests[i].clearValue;
-							clearInfos[realClearCount].colorAttachment = j;
-
-							realClearCount++;
-							clearRequests[i].attachment = VK_NULL_HANDLE;
-						}
-						else
-						{
-							clearInfos[realClearCount].aspectMask = 0;
-							if (clearRequests[i].clearFlags & CLEAR_DEPTH)
-							{
-								clearInfos[realClearCount].aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
-							}
-							if (clearRequests[i].clearFlags & CLEAR_STENCIL)
-							{
-								clearInfos[realClearCount].aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-							}
-							clearInfos[realClearCount].clearValue = clearRequests[i].clearValue;
-							clearInfos[realClearCount].colorAttachment = j;
-
-							realClearCount++;
-							clearRequests[i].attachment = VK_NULL_HANDLE;
-						}
-
-						remainingClearRequests = false;
-						break;
-					}
-				}
-			}
-			if (realClearCount > 0)
-			{
-				VkClearRect rect = {};
-				rect.baseArrayLayer = 0;
-				rect.layerCount = 1;
-				rect.rect.offset.x = 0;
-				rect.rect.offset.y = 0;
-				rect.rect.extent.width = attachmentsExtents.width;
-				rect.rect.extent.height = attachmentsExtents.height;
-
-				vkCmdClearAttachments(commandBuffer, realClearCount, clearInfos, 1, &rect);
-			}
-
-			if (!remainingClearRequests)
-			{
-				clearRequests.clear();
-			}
-		}
-	}
-
-
-
 	// Engine functions
 	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer)
 	{
@@ -2045,7 +1936,7 @@ namespace wiGraphics
 			VkAttachmentDescription colorAttachment = {};
 			colorAttachment.format = swapChainImageFormat;
 			colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-			colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 			colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 			colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -2084,6 +1975,8 @@ namespace wiGraphics
 			}
 
 		}
+
+		QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
 
 		// Create frame resources:
 		{
@@ -2135,6 +2028,36 @@ namespace wiGraphics
 						throw std::runtime_error("failed to create framebuffer!");
 					}
 				}
+
+				// Create resources for transition command buffer:
+				{
+					VkCommandPoolCreateInfo poolInfo = {};
+					poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+					poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+					poolInfo.flags = 0; // Optional
+
+					if (vkCreateCommandPool(device, &poolInfo, nullptr, &frames[fr].transitionCommandPool) != VK_SUCCESS) {
+						throw std::runtime_error("failed to create command pool!");
+					}
+
+					VkCommandBufferAllocateInfo commandBufferInfo = {};
+					commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+					commandBufferInfo.commandBufferCount = 1;
+					commandBufferInfo.commandPool = frames[fr].transitionCommandPool;
+					commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+					if (vkAllocateCommandBuffers(device, &commandBufferInfo, &frames[fr].transitionCommandBuffer) != VK_SUCCESS) {
+						throw std::runtime_error("failed to create command buffers!");
+					}
+
+					VkCommandBufferBeginInfo beginInfo = {};
+					beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+					beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+					beginInfo.pInheritanceInfo = nullptr; // Optional
+
+					VkResult res = vkBeginCommandBuffer(frames[fr].transitionCommandBuffer, &beginInfo);
+					assert(res == VK_SUCCESS);
+				}
 			}
 		}
 
@@ -2150,12 +2073,8 @@ namespace wiGraphics
 			}
 		}
 
-
 		// Create resources for copy (transfer) queue:
 		{
-			QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface); // redundant!!
-
-
 			VkCommandPoolCreateInfo poolInfo = {};
 			poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 			poolInfo.queueFamilyIndex = queueFamilyIndices.copyFamily;
@@ -2407,6 +2326,10 @@ namespace wiGraphics
 				bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
 			}
 		}
+		if (pBuffer->desc.MiscFlags & RESOURCE_MISC_INDIRECT_ARGS)
+		{
+			bufferInfo.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+		}
 		bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
 		bufferInfo.flags = 0;
@@ -2647,8 +2570,6 @@ namespace wiGraphics
 		hr = res == VK_SUCCESS; 
 		assert(SUCCEEDED(hr));
 
-
-
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
@@ -2727,27 +2648,47 @@ namespace wiGraphics
 
 				vkCmdCopyBufferToImage(copyCommandBuffer, textureUploader->resource, (VkImage)pTexture2D->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)copyRegions.size(), copyRegions.data());
 
-
 				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-				barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+				barrier.newLayout = _ConvertImageLayout(pTexture2D->desc.layout);;
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 
-				// transfer queue-ownership from copy to graphics:
-				barrier.srcQueueFamilyIndex = queueIndices.copyFamily;
-				barrier.dstQueueFamilyIndex = queueIndices.graphicsFamily;
-
-				vkCmdPipelineBarrier(
-					copyCommandBuffer,
-					VK_PIPELINE_STAGE_TRANSFER_BIT,
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					0,
-					0, nullptr,
-					0, nullptr,
-					1, &barrier
-				);
+				GetFrameResources().loadedimagetransitions.push_back(barrier);
 
 			}
+			copyQueueLock.unlock();
+		}
+		else
+		{
+			copyQueueLock.lock();
+
+			VkImageMemoryBarrier barrier = {};
+			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			barrier.image = (VkImage)pTexture2D->resource;
+			barrier.oldLayout = imageInfo.initialLayout;
+			barrier.newLayout = _ConvertImageLayout(pTexture2D->desc.layout);;
+			barrier.srcAccessMask = 0;
+			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+			if (pTexture2D->desc.BindFlags & BIND_DEPTH_STENCIL)
+			{
+				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				if (IsFormatStencilSupport(pTexture2D->desc.Format))
+				{
+					barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+				}
+			}
+			else
+			{
+				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			}
+			barrier.subresourceRange.baseArrayLayer = 0;
+			barrier.subresourceRange.layerCount = pDesc->ArraySize;
+			barrier.subresourceRange.baseMipLevel = 0;
+			barrier.subresourceRange.levelCount = pDesc->MipLevels;
+			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			GetFrameResources().loadedimagetransitions.push_back(barrier);
+
 			copyQueueLock.unlock();
 		}
 
@@ -3617,6 +3558,201 @@ namespace wiGraphics
 
 		return hr;
 	}
+	HRESULT GraphicsDevice_Vulkan::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
+	{
+		DestroyRenderPass(renderpass);
+		renderpass->Register(this);
+
+		renderpass->desc = *pDesc;
+
+		VkImageView attachments[9] = {};
+		VkAttachmentDescription attachmentDescriptions[9] = {};
+		VkAttachmentReference colorAttachmentRefs[8] = {};
+		VkAttachmentReference depthAttachmentRef = {};
+
+		VkSubpassDescription subpass = {};
+		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+
+		const RenderPassDesc& desc = renderpass->desc;
+
+		uint32_t validAttachmentCount = 0;
+		for (UINT i = 0; i < renderpass->desc.numAttachments; ++i)
+		{
+			const Texture2D* texture = desc.attachments[i].texture;
+			const TextureDesc& texdesc = texture->desc;
+			int subresource = desc.attachments[i].subresource;
+
+			attachmentDescriptions[validAttachmentCount].format = _ConvertFormat(texdesc.Format);
+			switch (texdesc.SampleDesc.Count)
+			{
+			case 2:
+				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_2_BIT;
+				break;
+			case 4:
+				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_4_BIT;
+				break;
+			case 8:
+				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_8_BIT;
+				break;
+			case 16:
+				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_16_BIT;
+				break;
+			case 32:
+				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_32_BIT;
+				break;
+			case 64:
+				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_64_BIT;
+				break;
+			default:
+				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_1_BIT;
+				break;
+			}
+
+			switch (desc.attachments[i].loadop)
+			{
+			default:
+			case RenderPassAttachment::LOADOP_LOAD:
+				attachmentDescriptions[validAttachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+				break;
+			case RenderPassAttachment::LOADOP_CLEAR:
+				attachmentDescriptions[validAttachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+				break;
+			case RenderPassAttachment::LOADOP_DONTCARE:
+				attachmentDescriptions[validAttachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				break;
+			}
+
+			switch (desc.attachments[i].storeop)
+			{
+			default:
+			case RenderPassAttachment::STOREOP_STORE:
+				attachmentDescriptions[validAttachmentCount].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				break;
+			case RenderPassAttachment::STOREOP_DONTCARE:
+				attachmentDescriptions[validAttachmentCount].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				break;
+			}
+
+			attachmentDescriptions[validAttachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			attachmentDescriptions[validAttachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+			attachmentDescriptions[validAttachmentCount].initialLayout = _ConvertImageLayout(desc.attachments[i].initial_layout);
+			attachmentDescriptions[validAttachmentCount].finalLayout = _ConvertImageLayout(desc.attachments[i].final_layout);
+
+			if (desc.attachments[i].type == RenderPassAttachment::RENDERTARGET)
+			{
+				if (subresource < 0 || texture->subresourceRTVs.empty())
+				{
+					attachments[validAttachmentCount] = (VkImageView)texture->RTV;
+				}
+				else
+				{
+					assert(texture->subresourceRTVs.size() > size_t(subresource) && "Invalid RTV subresource!");
+					attachments[validAttachmentCount] = (VkImageView)texture->subresourceRTVs[subresource];
+				}
+				if (attachments[validAttachmentCount] == VK_NULL_HANDLE)
+				{
+					continue;
+				}
+
+				colorAttachmentRefs[subpass.colorAttachmentCount].attachment = validAttachmentCount;
+				colorAttachmentRefs[subpass.colorAttachmentCount].layout = attachmentDescriptions[validAttachmentCount].initialLayout;
+				subpass.colorAttachmentCount++;
+				subpass.pColorAttachments = colorAttachmentRefs;
+			}
+			else if (desc.attachments[i].type == RenderPassAttachment::DEPTH_STENCIL)
+			{
+				if (subresource < 0 || texture->subresourceDSVs.empty())
+				{
+					attachments[validAttachmentCount] = (VkImageView)texture->DSV;
+				}
+				else
+				{
+					assert(texture->subresourceDSVs.size() > size_t(subresource) && "Invalid DSV subresource!");
+					attachments[validAttachmentCount] = (VkImageView)texture->subresourceDSVs[subresource];
+				}
+				if (attachments[validAttachmentCount] == VK_NULL_HANDLE)
+				{
+					continue;
+				}
+
+				if (IsFormatStencilSupport(texdesc.Format))
+				{
+					switch (desc.attachments[i].loadop)
+					{
+					default:
+					case RenderPassAttachment::LOADOP_LOAD:
+						attachmentDescriptions[validAttachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+						break;
+					case RenderPassAttachment::LOADOP_CLEAR:
+						attachmentDescriptions[validAttachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+						break;
+					case RenderPassAttachment::LOADOP_DONTCARE:
+						attachmentDescriptions[validAttachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+						break;
+					}
+
+					switch (desc.attachments[i].storeop)
+					{
+					default:
+					case RenderPassAttachment::STOREOP_STORE:
+						attachmentDescriptions[validAttachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+						break;
+					case RenderPassAttachment::STOREOP_DONTCARE:
+						attachmentDescriptions[validAttachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+						break;
+					}
+				}
+
+				depthAttachmentRef.attachment = validAttachmentCount;
+				depthAttachmentRef.layout = attachmentDescriptions[validAttachmentCount].initialLayout;
+				subpass.pDepthStencilAttachment = &depthAttachmentRef;
+			}
+			else
+			{
+				assert(0);
+			}
+
+			validAttachmentCount++;
+		}
+		renderpass->desc.numAttachments = validAttachmentCount;
+
+		VkRenderPassCreateInfo renderPassInfo = {};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		renderPassInfo.attachmentCount = renderpass->desc.numAttachments;
+		renderPassInfo.pAttachments = attachmentDescriptions;
+		renderPassInfo.subpassCount = 1;
+		renderPassInfo.pSubpasses = &subpass;
+
+		VkRenderPass renderpass_handle = VK_NULL_HANDLE;
+		if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderpass_handle) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create render pass!");
+		}
+
+		VkFramebufferCreateInfo framebufferInfo = {};
+		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass = renderpass_handle;
+		framebufferInfo.attachmentCount = renderpass->desc.numAttachments;
+		framebufferInfo.pAttachments = attachments;
+
+		if (desc.numAttachments > 0)
+		{
+			const TextureDesc& texdesc = desc.attachments[0].texture->desc;
+			framebufferInfo.width = texdesc.Width;
+			framebufferInfo.height = texdesc.Height;
+			framebufferInfo.layers = texdesc.MiscFlags & RESOURCE_MISC_TEXTURECUBE ? 6 : 1; // todo figure out better! can't use ArraySize here, it will crash!
+		}
+
+		VkFramebuffer framebuffer_handle = VK_NULL_HANDLE;
+		if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer_handle) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create framebuffer!");
+		}
+
+		renderpass->renderpass = (wiCPUHandle)renderpass_handle;
+		renderpass->framebuffer = (wiCPUHandle)framebuffer_handle;
+
+		return S_OK;
+	}
 
 	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount)
 	{
@@ -3979,6 +4115,13 @@ namespace wiGraphics
 		DeferredDestroy({ DestroyItem::PIPELINE, pso->pipeline });
 		pso->pipeline = WI_NULL_HANDLE;
 	}
+	void GraphicsDevice_Vulkan::DestroyRenderPass(RenderPass* renderpass)
+	{
+		DeferredDestroy({ DestroyItem::RENDERPASS, renderpass->renderpass });
+		renderpass->renderpass = WI_NULL_HANDLE;
+		DeferredDestroy({ DestroyItem::FRAMEBUFFER, renderpass->framebuffer });
+		renderpass->framebuffer = WI_NULL_HANDLE;
+	}
 
 	bool GraphicsDevice_Vulkan::DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest)
 	{
@@ -4007,36 +4150,17 @@ namespace wiGraphics
 
 	void GraphicsDevice_Vulkan::PresentBegin(CommandList cmd)
 	{
-		renderPass[cmd].disable(GetDirectCommandList(cmd));
-
 		VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-		
-		renderPass[cmd].dirty = true;
-		renderPass[cmd].attachmentCount = 1;
-		renderPass[cmd].attachments[0] = GetFrameResources().swapChainImageView;
-		renderPass[cmd].attachmentsExtents = swapChainExtent;
-		renderPass[cmd].clearColor[0] = clearColor;
-		renderPass[cmd].overrideRenderPass = defaultRenderPass;
-		renderPass[cmd].overrideFramebuffer = GetFrameResources().swapChainFramebuffer;
 
-		renderPass[cmd].validate(device, GetDirectCommandList(cmd));
-
-
-		VkClearAttachment clearInfo = {};
-		clearInfo.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		clearInfo.clearValue = clearColor;
-		clearInfo.colorAttachment = 0;
-
-		VkClearRect rect = {};
-		rect.baseArrayLayer = 0;
-		rect.layerCount = 1;
-		rect.rect.offset.x = 0;
-		rect.rect.offset.y = 0;
-		rect.rect.extent.width = SCREENWIDTH;
-		rect.rect.extent.height = SCREENHEIGHT;
-
-		vkCmdClearAttachments(GetDirectCommandList(cmd), 1, &clearInfo, 1, &rect);
-
+		VkRenderPassBeginInfo renderPassInfo = {};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = defaultRenderPass;
+		renderPassInfo.framebuffer = GetFrameResources().swapChainFramebuffer;
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent = swapChainExtent;
+		renderPassInfo.clearValueCount = 1;
+		renderPassInfo.pClearValues = &clearColor;
+		vkCmdBeginRenderPass(GetDirectCommandList(cmd), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 	}
 	void GraphicsDevice_Vulkan::PresentEnd(CommandList cmd)
@@ -4048,50 +4172,82 @@ namespace wiGraphics
 		vkAcquireNextImageKHR(device, swapChain, 0xFFFFFFFFFFFFFFFF, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 		assert(imageIndex == currentframe);
 
+		vkCmdEndRenderPass(GetDirectCommandList(cmd));
 
 
-		// ...end presentation render pass
-		renderPass[cmd].disable(GetDirectCommandList(cmd));
-
-
-		// Sync up copy queue:
+		// Sync up copy queue and transitions:
 		copyQueueLock.lock();
 		{
-			if (vkEndCommandBuffer(copyCommandBuffer) != VK_SUCCESS) {
-				throw std::runtime_error("failed to record copy command buffer!");
+			// Copies:
+			{
+				if (vkEndCommandBuffer(copyCommandBuffer) != VK_SUCCESS) {
+					throw std::runtime_error("failed to record copy command buffer!");
+				}
+
+				VkSubmitInfo submitInfo = {};
+				submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+				submitInfo.commandBufferCount = 1;
+				submitInfo.pCommandBuffers = &copyCommandBuffer;
+
+				if (vkQueueSubmit(copyQueue, 1, &submitInfo, copyFence) != VK_SUCCESS) {
+					throw std::runtime_error("failed to submit copy command buffer!");
+				}
+
+				//vkQueueWaitIdle(copyQueue);
+
+				res = vkWaitForFences(device, 1, &copyFence, true, 0xFFFFFFFFFFFFFFFF);
+				assert(res == VK_SUCCESS);
+
+				res = vkResetFences(device, 1, &copyFence);
+				assert(res == VK_SUCCESS);
+
+
+				res = vkResetCommandPool(device, copyCommandPool, 0);
+				assert(res == VK_SUCCESS);
+
+				VkCommandBufferBeginInfo beginInfo = {};
+				beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+				beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+				beginInfo.pInheritanceInfo = nullptr; // Optional
+
+				res = vkBeginCommandBuffer(copyCommandBuffer, &beginInfo);
+				assert(res == VK_SUCCESS);
+
+				bufferUploader->clear();
+				textureUploader->clear();
 			}
 
-			VkSubmitInfo submitInfo = {};
-			submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-			submitInfo.commandBufferCount = 1;
-			submitInfo.pCommandBuffers = &copyCommandBuffer;
+			// Transitions:
+			{
+				auto& frame = GetFrameResources();
 
-			if (vkQueueSubmit(copyQueue, 1, &submitInfo, copyFence) != VK_SUCCESS) {
-				throw std::runtime_error("failed to submit copy command buffer!");
+				for (auto& barrier : frame.loadedimagetransitions)
+				{
+					vkCmdPipelineBarrier(
+						frame.transitionCommandBuffer,
+						VK_PIPELINE_STAGE_TRANSFER_BIT,
+						VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+						0,
+						0, nullptr,
+						0, nullptr,
+						1, &barrier
+					);
+				}
+				frame.loadedimagetransitions.clear();
+
+				if (vkEndCommandBuffer(frame.transitionCommandBuffer) != VK_SUCCESS) {
+					throw std::runtime_error("failed to record transition command buffer!");
+				}
+
+				VkSubmitInfo submitInfo = {};
+				submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+				submitInfo.commandBufferCount = 1;
+				submitInfo.pCommandBuffers = &frame.transitionCommandBuffer;
+
+				if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, nullptr) != VK_SUCCESS) {
+					throw std::runtime_error("failed to submit copy command buffer!");
+				}
 			}
-
-			//vkQueueWaitIdle(copyQueue);
-
-			res = vkWaitForFences(device, 1, &copyFence, true, 0xFFFFFFFFFFFFFFFF);
-			assert(res == VK_SUCCESS);
-
-			res = vkResetFences(device, 1, &copyFence);
-			assert(res == VK_SUCCESS);
-
-
-			res = vkResetCommandPool(device, copyCommandPool, 0);
-			assert(res == VK_SUCCESS);
-
-			VkCommandBufferBeginInfo beginInfo = {};
-			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-			beginInfo.pInheritanceInfo = nullptr; // Optional
-
-			res = vkBeginCommandBuffer(copyCommandBuffer, &beginInfo);
-			assert(res == VK_SUCCESS);
-
-			bufferUploader->clear();
-			textureUploader->clear();
 		}
 		copyQueueLock.unlock();
 
@@ -4107,8 +4263,6 @@ namespace wiGraphics
 			CommandList cmd;
 			while (active_commandlists.pop_front(cmd))
 			{
-				renderPass[cmd].disable(GetDirectCommandList(cmd));
-
 				if (vkEndCommandBuffer(GetDirectCommandList(cmd)) != VK_SUCCESS) {
 					throw std::runtime_error("failed to record command buffer!");
 				}
@@ -4203,6 +4357,12 @@ namespace wiGraphics
 				case DestroyItem::PIPELINE:
 					vkDestroyPipeline(device, (VkPipeline)item.handle, nullptr);
 					break;
+				case DestroyItem::RENDERPASS:
+					vkDestroyRenderPass(device, (VkRenderPass)item.handle, nullptr);
+					break;
+				case DestroyItem::FRAMEBUFFER:
+					vkDestroyFramebuffer(device, (VkFramebuffer)item.handle, nullptr);
+					break;
 				default:
 					break;
 				}
@@ -4213,6 +4373,22 @@ namespace wiGraphics
 			}
 		}
 		destroylocker.unlock();
+
+		// Restart transition command buffers:
+		{
+			auto& frame = GetFrameResources();
+
+			res = vkResetCommandPool(device, frame.transitionCommandPool, 0);
+			assert(res == VK_SUCCESS);
+
+			VkCommandBufferBeginInfo beginInfo = {};
+			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+			beginInfo.pInheritanceInfo = nullptr; // Optional
+
+			res = vkBeginCommandBuffer(frame.transitionCommandBuffer, &beginInfo);
+			assert(res == VK_SUCCESS);
+		}
 
 
 		RESOLUTIONCHANGED = false;
@@ -4298,9 +4474,6 @@ namespace wiGraphics
 		// reset immediate resource allocators:
 		GetFrameResources().resourceBuffer[cmd]->clear();
 
-		renderPass[cmd].reset();
-
-
 		active_commandlists.push_back(cmd);
 		return cmd;
 	}
@@ -4311,6 +4484,54 @@ namespace wiGraphics
 	}
 
 
+	void GraphicsDevice_Vulkan::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
+	{
+		VkRenderPassBeginInfo renderPassInfo = {};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = (VkRenderPass)renderpass->renderpass;
+		renderPassInfo.framebuffer = (VkFramebuffer)renderpass->framebuffer;
+
+		const RenderPassDesc& desc = renderpass->desc;
+
+		VkClearValue clearColors[9] = {};
+		if (renderpass->desc.numAttachments > 0)
+		{
+			const TextureDesc& texdesc = desc.attachments[0].texture->desc;
+
+			renderPassInfo.renderArea.offset = { 0, 0 };
+			renderPassInfo.renderArea.extent.width = texdesc.Width;
+			renderPassInfo.renderArea.extent.height = texdesc.Height;
+			renderPassInfo.clearValueCount = renderpass->desc.numAttachments;
+			renderPassInfo.pClearValues = clearColors;
+
+			for (UINT i = 0; i < desc.numAttachments; ++i)
+			{
+				const ClearValue& clear = desc.attachments[i].texture->desc.clear;
+				if (desc.attachments[i].type == RenderPassAttachment::RENDERTARGET)
+				{
+					clearColors[i].color.float32[0] = clear.color[0];
+					clearColors[i].color.float32[1] = clear.color[1];
+					clearColors[i].color.float32[2] = clear.color[2];
+					clearColors[i].color.float32[3] = clear.color[3];
+				}
+				else if(desc.attachments[i].type == RenderPassAttachment::DEPTH_STENCIL)
+				{
+					clearColors[i].depthStencil.depth = clear.depthstencil.depth;
+					clearColors[i].depthStencil.stencil = clear.depthstencil.stencil;
+				}
+				else
+				{
+					assert(0);
+				}
+			}
+		}
+
+		vkCmdBeginRenderPass(GetDirectCommandList(cmd), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+	}
+	void GraphicsDevice_Vulkan::RenderPassEnd(CommandList cmd)
+	{
+		vkCmdEndRenderPass(GetDirectCommandList(cmd));
+	}
 	void GraphicsDevice_Vulkan::BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) {
 		assert(rects != nullptr);
 		assert(numRects <= 8);
@@ -4337,89 +4558,6 @@ namespace wiGraphics
 			viewports[i].maxDepth = pViewports[i].MaxDepth;
 		}
 		vkCmdSetViewport(GetDirectCommandList(cmd), 0, NumViewports, viewports);
-	}
-	void GraphicsDevice_Vulkan::BindRenderTargets(UINT NumViews, const Texture2D* const *ppRenderTargets, const Texture2D* depthStencilTexture, CommandList cmd, int subresource)
-	{
-		assert(NumViews <= 8);
-		for (UINT i = 0; i < NumViews; ++i)
-		{
-			if (subresource < 0 || ppRenderTargets[i]->subresourceRTVs.empty())
-			{
-				renderPass[cmd].attachments[i] = (VkImageView)ppRenderTargets[i]->RTV;
-			}
-			else
-			{
-				assert(ppRenderTargets[i]->subresourceRTVs.size() > static_cast<size_t>(subresource) && "Invalid RTV subresource!");
-				renderPass[cmd].attachments[i] = (VkImageView)ppRenderTargets[i]->subresourceRTVs[subresource];
-			}
-
-			renderPass[cmd].attachmentFormats[i] = _ConvertFormat(ppRenderTargets[i]->desc.Format);
-			renderPass[cmd].attachmentsExtents.width = ppRenderTargets[i]->desc.Width;
-			renderPass[cmd].attachmentsExtents.height = ppRenderTargets[i]->desc.Height;
-			renderPass[cmd].attachmentLayers = ppRenderTargets[i]->desc.ArraySize;
-		}
-		renderPass[cmd].colorAttachmentCount = NumViews;
-		renderPass[cmd].attachmentCount = NumViews;
-
-		if (depthStencilTexture != nullptr)
-		{
-			if (subresource < 0 || depthStencilTexture->subresourceDSVs.empty())
-			{
-				renderPass[cmd].attachments[renderPass[cmd].attachmentCount] = (VkImageView)depthStencilTexture->DSV;
-			}
-			else
-			{
-				assert(depthStencilTexture->subresourceDSVs.size() > static_cast<size_t>(subresource) && "Invalid DSV subresource!");
-				renderPass[cmd].attachments[renderPass[cmd].attachmentCount] = (VkImageView)depthStencilTexture->subresourceDSVs[subresource];
-			}
-			renderPass[cmd].attachmentFormats[renderPass[cmd].attachmentCount] = _ConvertFormat(depthStencilTexture->desc.Format);
-			renderPass[cmd].attachmentCount++;
-
-			renderPass[cmd].attachmentsExtents.width = depthStencilTexture->desc.Width;
-			renderPass[cmd].attachmentsExtents.height = depthStencilTexture->desc.Height;
-			renderPass[cmd].attachmentLayers = depthStencilTexture->desc.ArraySize;
-		}
-
-		renderPass[cmd].dirty = true;
-
-	}
-	void GraphicsDevice_Vulkan::ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], CommandList cmd, int subresource)
-	{
-		RenderPassManager::ClearRequest clear;
-
-		if (subresource < 0 || pTexture->subresourceRTVs.empty())
-		{
-			clear.attachment = (VkImageView)pTexture->RTV;
-		}
-		else
-		{
-			assert(pTexture->subresourceRTVs.size() > static_cast<size_t>(subresource) && "Invalid subresource!");
-			clear.attachment = (VkImageView)pTexture->subresourceRTVs[subresource];
-		}
-		clear.clearValue = { ColorRGBA[0], ColorRGBA[1], ColorRGBA[2], ColorRGBA[3] };
-
-		renderPass[cmd].clearRequests.push_back(clear);
-		renderPass[cmd].dirty = true;
-	}
-	void GraphicsDevice_Vulkan::ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, CommandList cmd, int subresource)
-	{
-		RenderPassManager::ClearRequest clear;
-
-		if (subresource < 0 || pTexture->subresourceDSVs.empty())
-		{
-			clear.attachment = (VkImageView)pTexture->DSV;
-		}
-		else
-		{
-			assert(pTexture->subresourceDSVs.size() > static_cast<size_t>(subresource) && "Invalid subresource!");
-			clear.attachment = (VkImageView)pTexture->subresourceDSVs[subresource];
-		}
-		clear.clearValue.depthStencil.depth = Depth;
-		clear.clearValue.depthStencil.stencil = Stencil;
-		clear.clearFlags = ClearFlags;
-
-		renderPass[cmd].clearRequests.push_back(clear);
-		renderPass[cmd].dirty = true;
 	}
 	void GraphicsDevice_Vulkan::BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource)
 	{
@@ -4531,43 +4669,43 @@ namespace wiGraphics
 	}
 	void GraphicsDevice_Vulkan::Draw(UINT vertexCount, UINT startVertexLocation, CommandList cmd)
 	{
-		renderPass[cmd].validate(device, GetDirectCommandList(cmd));
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		vkCmdDraw(GetDirectCommandList(cmd), static_cast<uint32_t>(vertexCount), 1, startVertexLocation, 0);
 	}
 	void GraphicsDevice_Vulkan::DrawIndexed(UINT indexCount, UINT startIndexLocation, UINT baseVertexLocation, CommandList cmd)
 	{
-		renderPass[cmd].validate(device, GetDirectCommandList(cmd));
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		vkCmdDrawIndexed(GetDirectCommandList(cmd), static_cast<uint32_t>(indexCount), 1, startIndexLocation, baseVertexLocation, 0);
 	}
 	void GraphicsDevice_Vulkan::DrawInstanced(UINT vertexCount, UINT instanceCount, UINT startVertexLocation, UINT startInstanceLocation, CommandList cmd)
 	{
-		renderPass[cmd].validate(device, GetDirectCommandList(cmd));
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		vkCmdDraw(GetDirectCommandList(cmd), static_cast<uint32_t>(vertexCount), static_cast<uint32_t>(instanceCount), startVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_Vulkan::DrawIndexedInstanced(UINT indexCount, UINT instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, CommandList cmd)
 	{
-		renderPass[cmd].validate(device, GetDirectCommandList(cmd));
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		vkCmdDrawIndexed(GetDirectCommandList(cmd), static_cast<uint32_t>(indexCount), static_cast<uint32_t>(instanceCount), startIndexLocation, baseVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_Vulkan::DrawInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
 	{
+		GetFrameResources().descriptors[cmd]->validate(cmd);
+		vkCmdDrawIndirect(GetDirectCommandList(cmd), (VkBuffer)args->resource, (VkDeviceSize)args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsInstanced));
 	}
 	void GraphicsDevice_Vulkan::DrawIndexedInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
 	{
+		GetFrameResources().descriptors[cmd]->validate(cmd);
+		vkCmdDrawIndexedIndirect(GetDirectCommandList(cmd), (VkBuffer)args->resource, (VkDeviceSize)args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsIndexedInstanced));
 	}
 	void GraphicsDevice_Vulkan::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, CommandList cmd)
 	{
-		renderPass[cmd].disable(GetDirectCommandList(cmd));
-
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		vkCmdDispatch(GetDirectCommandList(cmd), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 	}
 	void GraphicsDevice_Vulkan::DispatchIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
 	{
+		GetFrameResources().descriptors[cmd]->validate(cmd);
+		vkCmdDispatchIndirect(GetDirectCommandList(cmd), (VkBuffer)args->resource, (VkDeviceSize)args_offset);
 	}
 	void GraphicsDevice_Vulkan::CopyTexture2D(const Texture2D* pDst, const Texture2D* pSrc, CommandList cmd)
 	{
@@ -4637,9 +4775,6 @@ namespace wiGraphics
 		else
 		{
 			// Contents will be transferred to device memory:
-
-			renderPass[cmd].disable(GetDirectCommandList(cmd));
-
 
 			// barrier to transfer:
 
@@ -4719,7 +4854,6 @@ namespace wiGraphics
 		}
 
 	}
-
 	void GraphicsDevice_Vulkan::QueryBegin(const GPUQuery *query, CommandList cmd)
 	{
 	}
@@ -4730,167 +4864,88 @@ namespace wiGraphics
 	{
 		return true;
 	}
-
-	void GraphicsDevice_Vulkan::UAVBarrier(const GPUResource *const* uavs, UINT NumBarriers, CommandList cmd)
+	void GraphicsDevice_Vulkan::Barrier(const GPUBarrier* barriers, UINT numBarriers, CommandList cmd)
 	{
-		for (UINT i = 0; i < NumBarriers; ++i)
+		VkMemoryBarrier memorybarriers[8];
+		VkImageMemoryBarrier imagebarriers[8];
+		VkBufferMemoryBarrier bufferbarriers[8];
+		uint32_t memorybarrier_count = 0;
+		uint32_t imagebarrier_count = 0;
+		uint32_t bufferbarrier_count = 0;
+
+		for (UINT i = 0; i < numBarriers; ++i)
 		{
-			if (uavs == nullptr)
-			{
-				// Barrier for all writes to complete:
-				VkMemoryBarrier barrier = {};
-				barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-				barrier.pNext = nullptr;
-				barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-				barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
+			const GPUBarrier& barrier = barriers[i];
 
-				vkCmdPipelineBarrier(GetDirectCommandList(cmd),
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					0,
-					1, &barrier,
-					0, nullptr,
-					0, nullptr
-				);
+			switch (barrier.type)
+			{
+			default:
+			case GPUBarrier::MEMORY_BARRIER:
+			{
+				VkMemoryBarrier& barrierdesc = memorybarriers[memorybarrier_count++];
+				barrierdesc.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+				barrierdesc.pNext = nullptr;
+				barrierdesc.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+				barrierdesc.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
 			}
-			else
+			break;
+			case GPUBarrier::IMAGE_BARRIER:
 			{
-				// Barrier for specific resource:
-				const GPUResource* uav = uavs[i];
+				const TextureDesc& desc = barrier.image.texture->GetDesc();
 
-				if (uav->IsTexture())
+				VkImageMemoryBarrier& barrierdesc = imagebarriers[imagebarrier_count++];
+				barrierdesc.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				barrierdesc.pNext = nullptr;
+				barrierdesc.image = (VkImage)barrier.image.texture->resource;
+				barrierdesc.oldLayout = _ConvertImageLayout(barrier.image.layout_before);
+				barrierdesc.newLayout = _ConvertImageLayout(barrier.image.layout_after);
+				barrierdesc.srcAccessMask = _ParseImageLayout(barrier.image.layout_before);
+				barrierdesc.dstAccessMask = _ParseImageLayout(barrier.image.layout_after);
+				if (desc.BindFlags & BIND_DEPTH_STENCIL)
 				{
-					const TextureDesc& desc = ((const Texture*)uav)->GetDesc();
-
-					VkImageMemoryBarrier barrier = {};
-					barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-					barrier.image = (VkImage)uav->resource;
-					barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-					barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-					barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-					barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-					barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-					barrier.subresourceRange.baseArrayLayer = 0;
-					barrier.subresourceRange.layerCount = desc.ArraySize;
-					barrier.subresourceRange.baseMipLevel = 0;
-					barrier.subresourceRange.levelCount = desc.MipLevels;
-					barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-					barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-					vkCmdPipelineBarrier(GetDirectCommandList(cmd),
-						VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-						VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-						0,
-						0, nullptr,
-						0, nullptr,
-						1, &barrier
-					);
+					barrierdesc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+					if (IsFormatStencilSupport(desc.Format))
+					{
+						barrierdesc.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+					}
 				}
 				else
 				{
-					VkBufferMemoryBarrier barrier = {};
-					barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-					barrier.pNext = nullptr;
-					barrier.buffer = (VkBuffer)uav->resource;
-					barrier.size = ((const GPUBuffer*)uav)->GetDesc().ByteWidth;
-					barrier.offset = 0;
-					barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-					barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
-					barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-					barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-					vkCmdPipelineBarrier(GetDirectCommandList(cmd),
-						VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-						VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-						0,
-						0, nullptr,
-						1, &barrier,
-						0, nullptr
-					);
+					barrierdesc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				}
+				barrierdesc.subresourceRange.baseArrayLayer = 0;
+				barrierdesc.subresourceRange.layerCount = desc.ArraySize;
+				barrierdesc.subresourceRange.baseMipLevel = 0;
+				barrierdesc.subresourceRange.levelCount = desc.MipLevels;
+				barrierdesc.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrierdesc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			}
+			break;
+			case GPUBarrier::BUFFER_BARRIER:
+			{
+				VkBufferMemoryBarrier& barrierdesc = bufferbarriers[bufferbarrier_count++];
+				barrierdesc.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+				barrierdesc.pNext = nullptr;
+				barrierdesc.buffer = (VkBuffer)barrier.buffer.buffer->resource;
+				barrierdesc.size = barrier.buffer.buffer->GetDesc().ByteWidth;
+				barrierdesc.offset = 0;
+				barrierdesc.srcAccessMask = _ParseBufferState(barrier.buffer.state_before);
+				barrierdesc.dstAccessMask = _ParseBufferState(barrier.buffer.state_after);
+				barrierdesc.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrierdesc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			}
+			break;
 			}
 		}
-	}
-	void GraphicsDevice_Vulkan::TransitionBarrier(const GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, CommandList cmd)
-	{
-		renderPass[cmd].disable(GetDirectCommandList(cmd));
 
-		//if (stateBefore == RESOURCE_STATE_UNORDERED_ACCESS && stateAfter == RESOURCE_STATE_GENERIC_READ)
-		//{
-		//	VkBufferMemoryBarrier barrier = {};
-		//	barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		//	barrier.pNext = nullptr;
-		//	barrier.buffer = static_cast<VkBuffer>(resources[0]->resource);
-		//	barrier.size = ((GPUBuffer*)resources[0])->desc.ByteWidth;
-		//	barrier.offset = 0;
-		//	barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-		//	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-		//	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		//	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		//	vkCmdPipelineBarrier(GetDirectCommandList(cmd),
-		//		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-		//		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-		//		0,
-		//		0, nullptr,
-		//		1, &barrier,
-		//		0, nullptr);
-		//}
-		//else if (stateBefore == RESOURCE_STATE_UNORDERED_ACCESS && stateAfter == RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER)
-		//{
-		//	VkBufferMemoryBarrier barrier = {};
-		//	barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		//	barrier.pNext = nullptr;
-		//	barrier.buffer = static_cast<VkBuffer>(resources[0]->resource);
-		//	barrier.size = ((GPUBuffer*)resources[0])->desc.ByteWidth;
-		//	barrier.offset = 0;
-		//	barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-		//	barrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-		//	vkCmdPipelineBarrier(GetDirectCommandList(cmd),
-		//		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-		//		VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-		//		0,
-		//		0, nullptr,
-		//		1, &barrier,
-		//		0, nullptr);
-		//}
-
-
-
-		//for (UINT i = 0; i < NumBarriers; ++i)
-		//{
-
-		//	if (stateBefore == RESOURCE_STATE_RENDER_TARGET)
-		//	{
-		//		Texture* tex = dynamic_cast<Texture*>(resources[i]);
-
-		//		if (tex != nullptr)
-		//		{
-		//			VkImageMemoryBarrier barrier = {};
-		//			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		//			barrier.image = static_cast<VkImage>(tex->resource);
-		//			barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		//			barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-		//			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		//			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-		//			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		//			barrier.subresourceRange.baseArrayLayer = 0;
-		//			barrier.subresourceRange.layerCount = 1;
-		//			barrier.subresourceRange.baseMipLevel = 0;
-		//			barrier.subresourceRange.levelCount = 1;
-		//			vkCmdPipelineBarrier(
-		//				GetDirectCommandList(cmd),
-		//				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-		//				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-		//				VK_DEPENDENCY_BY_REGION_BIT,
-		//				0, nullptr,
-		//				0, nullptr,
-		//				1, &barrier
-		//			);
-		//		}
-		//	}
-
-		//}
-
+		vkCmdPipelineBarrier(GetDirectCommandList(cmd),
+			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			0,
+			memorybarrier_count, memorybarriers,
+			bufferbarrier_count, bufferbarriers,
+			imagebarrier_count, imagebarriers
+		);
 	}
 
 	GraphicsDevice::GPUAllocation GraphicsDevice_Vulkan::AllocateGPU(size_t dataSize, CommandList cmd)
