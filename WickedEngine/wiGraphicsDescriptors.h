@@ -321,7 +321,7 @@ namespace wiGraphics
 	};
 	enum IMAGE_LAYOUT
 	{
-		IMAGE_LAYOUT_UNDEFINED,					// don't care about contents
+		IMAGE_LAYOUT_UNDEFINED,					// discard contents
 		IMAGE_LAYOUT_GENERAL,					// supports everything
 		IMAGE_LAYOUT_ATTACHMENT,				// render target or depth stencil, depending on texture format, write enabled
 		IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,		// depth stencil, read only

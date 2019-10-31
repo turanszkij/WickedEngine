@@ -257,10 +257,12 @@ void wiHairParticle::LoadShaders()
 				desc.RTFormats[1] = wiRenderer::RTFormat_gbuffer_1;
 				break;
 			case RENDERPASS_DEFERRED:
-				desc.numRTs = 3;
+				desc.numRTs = 5;
 				desc.RTFormats[0] = wiRenderer::RTFormat_gbuffer_0;
 				desc.RTFormats[1] = wiRenderer::RTFormat_gbuffer_1;
 				desc.RTFormats[2] = wiRenderer::RTFormat_gbuffer_2;
+				desc.RTFormats[3] = wiRenderer::RTFormat_deferred_lightbuffer;
+				desc.RTFormats[4] = wiRenderer::RTFormat_deferred_lightbuffer;
 			default:
 				break;
 			}
