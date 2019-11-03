@@ -141,7 +141,7 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	objectWnd.reset(new ObjectWindow(this));
 	meshWnd.reset(new MeshWindow(&GetGUI()));
 	cameraWnd.reset(new CameraWindow(&GetGUI()));
-	rendererWnd.reset(new RendererWindow(&GetGUI(), renderPath));
+	rendererWnd.reset(new RendererWindow(&GetGUI(), this, renderPath));
 	envProbeWnd.reset(new EnvProbeWindow(&GetGUI()));
 	soundWnd.reset(new SoundWindow(&GetGUI()));
 	decalWnd.reset(new DecalWindow(&GetGUI()));
@@ -169,6 +169,13 @@ void EditorComponent::ResizeBuffers()
 
 		desc.Format = wiRenderer::GetDevice()->GetBackBufferFormat(); // todo: smaller format, but then somehow need to specify custom rt format for wiImage PSO!
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		if (renderPath->getMSAASampleCount() > 1)
+		{
+			desc.SampleDesc.Count = renderPath->getMSAASampleCount();
+			hr = device->CreateTexture2D(&desc, nullptr, &rt_selectionOutline_MSAA);
+			assert(SUCCEEDED(hr));
+			desc.SampleDesc.Count = 1;
+		}
 		hr = device->CreateTexture2D(&desc, nullptr, &rt_selectionOutline[0]);
 		assert(SUCCEEDED(hr));
 
@@ -182,6 +189,10 @@ void EditorComponent::ResizeBuffers()
 		RenderPassDesc desc;
 		desc.numAttachments = 2;
 		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::LOADOP_CLEAR, &rt_selectionOutline[0], -1 };
+		if (renderPath->getMSAASampleCount() > 1)
+		{
+			desc.attachments[0].texture = &rt_selectionOutline_MSAA;
+		}
 		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::LOADOP_LOAD, renderPath->GetDepthStencil(), -1 };
 		hr = device->CreateRenderPass(&desc, &renderpass_selectionOutline[0]);
 		assert(SUCCEEDED(hr));
@@ -1606,6 +1617,11 @@ void EditorComponent::Render() const
 
 			device->RenderPassEnd(cmd);
 
+			if (renderPath->getMSAASampleCount() > 1)
+			{
+				device->MSAAResolve(&rt_selectionOutline[0], &rt_selectionOutline_MSAA, cmd);
+			}
+
 			// Outline the solid blocks:
 			wiRenderer::BindCommonResources(cmd);
 			wiRenderer::Postprocess_Outline(rt_selectionOutline[0], rt_selectionOutline[1], cmd, 0.1f, 1, selectionColor2);
@@ -1620,6 +1636,11 @@ void EditorComponent::Render() const
 			wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
 
 			device->RenderPassEnd(cmd);
+
+			if (renderPath->getMSAASampleCount() > 1)
+			{
+				device->MSAAResolve(&rt_selectionOutline[0], &rt_selectionOutline_MSAA, cmd);
+			}
 
 			// Outline the solid blocks:
 			wiRenderer::BindCommonResources(cmd);

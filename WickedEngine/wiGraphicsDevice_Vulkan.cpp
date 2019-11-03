@@ -3656,7 +3656,7 @@ namespace wiGraphics
 				}
 
 				colorAttachmentRefs[subpass.colorAttachmentCount].attachment = validAttachmentCount;
-				colorAttachmentRefs[subpass.colorAttachmentCount].layout = attachmentDescriptions[validAttachmentCount].initialLayout;
+				colorAttachmentRefs[subpass.colorAttachmentCount].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 				subpass.colorAttachmentCount++;
 				subpass.pColorAttachments = colorAttachmentRefs;
 			}
@@ -3705,7 +3705,11 @@ namespace wiGraphics
 				}
 
 				depthAttachmentRef.attachment = validAttachmentCount;
-				depthAttachmentRef.layout = attachmentDescriptions[validAttachmentCount].initialLayout;
+				depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+				if (attachmentDescriptions[validAttachmentCount].initialLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
+				{
+					depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+				}
 				subpass.pDepthStencilAttachment = &depthAttachmentRef;
 			}
 			else

@@ -1,5 +1,7 @@
 #pragma once
 
+class EditorComponent;
+
 class wiGUI;
 class wiWindow;
 class wiLabel;
@@ -25,7 +27,7 @@ enum PICKTYPE
 class RendererWindow
 {
 public:
-	RendererWindow(wiGUI* gui, RenderPath3D* path);
+	RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, RenderPath3D* path);
 	~RendererWindow();
 
 	wiGUI* GUI;

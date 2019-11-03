@@ -86,6 +86,7 @@ public:
 		EDITORSTENCILREF_HIGHLIGHT_MATERIAL = 0x02,
 		EDITORSTENCILREF_LAST = 0x0F,
 	};
+	wiGraphics::Texture2D rt_selectionOutline_MSAA;
 	wiGraphics::Texture2D rt_selectionOutline[2];
 	wiGraphics::RenderPass renderpass_selectionOutline[2];
 	float selectionOutlineTimer = 0;

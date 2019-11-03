@@ -168,15 +168,18 @@ void RenderPath3D_Forward::Render() const
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, device, cmd] {
 
+		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 		wiRenderer::BindCommonResources(cmd);
 
-		RenderSSR(*GetSceneRT_Read(0), rtMain[1], cmd);
+		if (getMSAASampleCount() > 1)
+		{
+			device->MSAAResolve(GetSceneRT_Read(0), &rtMain[0], cmd);
+			device->MSAAResolve(GetSceneRT_Read(1), &rtMain[1], cmd);
+		}
+
+		RenderSSR(*GetSceneRT_Read(0), *GetSceneRT_Read(1), cmd);
 
 		DownsampleDepthBuffer(cmd);
-
-		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
-
-		RenderOutline(rtMain[0], cmd);
 
 		RenderLightShafts(cmd);
 
@@ -192,6 +195,8 @@ void RenderPath3D_Forward::Render() const
 		{
 			device->MSAAResolve(GetSceneRT_Read(0), &rtMain[0], cmd);
 		}
+
+		RenderOutline(*GetSceneRT_Read(0), cmd);
 
 		RenderParticles(true, cmd);
 

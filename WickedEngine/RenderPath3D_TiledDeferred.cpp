@@ -60,6 +60,7 @@ void RenderPath3D_TiledDeferred::Render() const
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, device, cmd] {
 
+		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 		wiRenderer::BindCommonResources(cmd);
 
 		RenderDecals(cmd);
@@ -85,10 +86,6 @@ void RenderPath3D_TiledDeferred::Render() const
 
 		DownsampleDepthBuffer(cmd);
 
-		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
-
-		RenderOutline(rtDeferred, cmd);
-
 		RenderLightShafts(cmd);
 
 		RenderVolumetrics(cmd);
@@ -98,6 +95,8 @@ void RenderPath3D_TiledDeferred::Render() const
 		RenderRefractionSource(rtDeferred, cmd);
 
 		RenderTransparents(renderpass_transparent, RENDERPASS_TILEDFORWARD, cmd);
+
+		RenderOutline(rtDeferred, cmd);
 
 		RenderParticles(true, cmd);
 

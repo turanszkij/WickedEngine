@@ -86,8 +86,8 @@ void RenderPath3D::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = wiRenderer::RTFormat_hdr;
-		desc.Width = wiRenderer::GetInternalResolution().x;
-		desc.Height = wiRenderer::GetInternalResolution().y;
+		desc.Width = wiRenderer::GetInternalResolution().x / 4;
+		desc.Height = wiRenderer::GetInternalResolution().y / 4;
 		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
 		device->CreateTexture2D(&desc, nullptr, &rtReflection);
 		device->SetName(&rtReflection, "rtReflection");
@@ -218,6 +218,16 @@ void RenderPath3D::ResizeBuffers()
 	}
 	{
 		TextureDesc desc;
+		desc.BindFlags = BIND_DEPTH_STENCIL;
+		desc.Format = wiRenderer::DSFormat_full;
+		desc.Width = wiRenderer::GetInternalResolution().x / 4;
+		desc.Height = wiRenderer::GetInternalResolution().y / 4;
+		desc.layout = IMAGE_LAYOUT_DEPTHSTENCIL;
+		device->CreateTexture2D(&desc, nullptr, &depthBuffer_Reflection);
+		device->SetName(&depthBuffer_Reflection, "depthBuffer_Reflection");
+	}
+	{
+		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Format = wiRenderer::RTFormat_lineardepth;
 		desc.Width = wiRenderer::GetInternalResolution().x;
@@ -248,7 +258,7 @@ void RenderPath3D::ResizeBuffers()
 		RenderPassDesc desc;
 		desc.numAttachments = 2;
 		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_DONTCARE,&rtReflection,-1,RenderPassAttachment::STOREOP_STORE,IMAGE_LAYOUT_RENDERTARGET,IMAGE_LAYOUT_SHADER_RESOURCE };
-		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_CLEAR,&depthBuffer,-1,RenderPassAttachment::STOREOP_DONTCARE };
+		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_CLEAR,&depthBuffer_Reflection,-1,RenderPassAttachment::STOREOP_DONTCARE,IMAGE_LAYOUT_DEPTHSTENCIL,IMAGE_LAYOUT_DEPTHSTENCIL };
 
 		device->CreateRenderPass(&desc, &renderpass_reflection);
 	}
@@ -350,8 +360,8 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 		wiRenderer::UpdateCameraCB(wiRenderer::GetRefCamera(), cmd);
 
 		ViewPort vp;
-		vp.Width = (float)depthBuffer.GetDesc().Width;
-		vp.Height = (float)depthBuffer.GetDesc().Height;
+		vp.Width = (float)depthBuffer_Reflection.GetDesc().Width;
+		vp.Height = (float)depthBuffer_Reflection.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
 
 		// reverse clipping if underwater

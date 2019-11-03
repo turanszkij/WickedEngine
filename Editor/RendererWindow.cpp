@@ -1,9 +1,10 @@
 #include "stdafx.h"
 #include "RendererWindow.h"
 #include "RenderPath3D.h"
+#include "Editor.h"
 
 
-RendererWindow::RendererWindow(wiGUI* gui, RenderPath3D* path) : GUI(gui)
+RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, RenderPath3D* path) : GUI(gui)
 {
 	assert(GUI && "Invalid GUI!");
 
@@ -324,6 +325,7 @@ RendererWindow::RendererWindow(wiGUI* gui, RenderPath3D* path) : GUI(gui)
 		default:
 			break;
 		}
+		editorcomponent->ResizeBuffers();
 	});
 	MSAAComboBox->SetSelected(0);
 	MSAAComboBox->SetEnabled(true);
