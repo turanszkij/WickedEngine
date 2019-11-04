@@ -124,8 +124,8 @@ wiAudio::Play(&mySoundInstance); // Play the sound instance
 wiAudio::SetVolume(0.6, &mySoundInstance); // Set the volume of this soundinstance
 wiAudio::SetVolume(0.2); // Set the master volume
 
-if (wiInputManager::press(VK_SPACE)) { soundEffect.Stop(); } // You can check if a button is pressed or not (this only triggers once)
-if (wiInputManager::down(VK_SPACE)) { soundEffect.Play(); } // You can check if a button is pushed down or not (this triggers repeatedly)
+if (wiInputManager::press(VK_SPACE)) { wiAudio::Stop(&mySoundInstance); } // You can check if a button is pressed or not (this only triggers once)
+if (wiInputManager::down(VK_SPACE)) { wiAudio::Play(&mySoundInstance); } // You can check if a button is pushed down or not (this triggers repeatedly)
 ```
 
 Some scripting examples (LUA):
@@ -170,7 +170,7 @@ audio.SetVolume(0.2)  -- sets the master volume
 
 -- Check for input:
 if(input.press(VK_LEFT)) then
-   sound.Play(); -- this will play the sound if you press the left arrow on the keyboard
+   audio.Play(soundinstance); -- this will play the sound if you press the left arrow on the keyboard
 end
 ```
 <i>(You can enter lua scripts into the backlog (HOME button), or the startup.lua script which is always executed on application startup if it is found near the app, or load a script via dofile("script.lua") command)</i>
