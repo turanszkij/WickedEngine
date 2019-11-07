@@ -239,7 +239,7 @@ void wiWidget::LoadShaders()
 	desc.ps = wiRenderer::GetPixelShader(PSTYPE_LINE);
 	desc.il = wiRenderer::GetVertexLayout(VLTYPE_LINE);
 	desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
-	desc.bs = wiRenderer::GetBlendState(BSTYPE_OPAQUE);
+	desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
 	desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
 	desc.numRTs = 1;
 	desc.RTFormats[0] = wiRenderer::GetDevice()->GetBackBufferFormat();
@@ -1618,9 +1618,9 @@ wiColorPicker::wiColorPicker(wiGUI* gui, const std::string& name) :wiWindow(gui,
 	RemoveWidget(resizeDragger_UpperLeft);
 }
 static const float colorpicker_center = 120;
-static const float colorpicker_radius_triangle = 75;
-static const float colorpicker_radius = 80;
-static const float colorpicker_width = 16;
+static const float colorpicker_radius_triangle = 68;
+static const float colorpicker_radius = 75;
+static const float colorpicker_width = 22;
 void wiColorPicker::Update(wiGUI* gui, float dt)
 {
 	wiWindow::Update(gui, dt);
@@ -1762,7 +1762,8 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	};
 	static wiGraphics::GPUBuffer vb_saturation;
 	static wiGraphics::GPUBuffer vb_hue;
-	static wiGraphics::GPUBuffer vb_picker;
+	static wiGraphics::GPUBuffer vb_picker_saturation;
+	static wiGraphics::GPUBuffer vb_picker_hue;
 	static wiGraphics::GPUBuffer vb_preview;
 
 	static std::vector<Vertex> vertices_saturation;
@@ -1780,6 +1781,18 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 			vertices_saturation.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(0,0,0,1) });	// black
 			wiMath::ConstructTriangleEquilateral(colorpicker_radius_triangle, vertices_saturation[0].pos, vertices_saturation[1].pos, vertices_saturation[2].pos);
 
+			// create alpha blended edge:
+			vertices_saturation.push_back(vertices_saturation[0]); // outer
+			vertices_saturation.push_back(vertices_saturation[0]); // inner
+			vertices_saturation.push_back(vertices_saturation[1]); // outer
+			vertices_saturation.push_back(vertices_saturation[1]); // inner
+			vertices_saturation.push_back(vertices_saturation[2]); // outer
+			vertices_saturation.push_back(vertices_saturation[2]); // inner
+			vertices_saturation.push_back(vertices_saturation[0]); // outer
+			vertices_saturation.push_back(vertices_saturation[0]); // inner
+			wiMath::ConstructTriangleEquilateral(colorpicker_radius_triangle + 4, vertices_saturation[3].pos, vertices_saturation[5].pos, vertices_saturation[7].pos); // extrude outer
+			vertices_saturation[9].pos = vertices_saturation[3].pos; // last outer
+
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
 			desc.ByteWidth = (UINT)(vertices_saturation.size() * sizeof(Vertex));
@@ -1793,10 +1806,30 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 		}
 		// hue
 		{
+			const float edge = 2.0f;
 			std::vector<Vertex> vertices;
-			for (float i = 0; i <= 100; i += 1.0f)
+			uint32_t segment_count = 100;
+			// inner alpha blended edge
+			for (uint32_t i = 0; i <= segment_count; ++i)
 			{
-				float p = i / 100;
+				float p = float(i) / segment_count;
+				float t = p * XM_2PI;
+				float x = cos(t);
+				float y = -sin(t);
+				hsv source;
+				source.h = p * 360.0f;
+				source.s = 1;
+				source.v = 1;
+				rgb result = hsv2rgb(source);
+				XMFLOAT4 color = XMFLOAT4(result.r, result.g, result.b, 1);
+				XMFLOAT4 coloralpha = XMFLOAT4(result.r, result.g, result.b, 0);
+				vertices.push_back({ XMFLOAT4((colorpicker_radius - edge) * x, (colorpicker_radius - edge) * y, 0, 1), coloralpha });
+				vertices.push_back({ XMFLOAT4(colorpicker_radius * x, colorpicker_radius * y, 0, 1), color });
+			}
+			// middle hue
+			for (uint32_t i = 0; i <= segment_count; ++i)
+			{
+				float p = float(i) / segment_count;
 				float t = p * XM_2PI;
 				float x = cos(t);
 				float y = -sin(t);
@@ -1808,6 +1841,23 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 				XMFLOAT4 color = XMFLOAT4(result.r, result.g, result.b, 1);
 				vertices.push_back({ XMFLOAT4(colorpicker_radius * x, colorpicker_radius * y, 0, 1), color });
 				vertices.push_back({ XMFLOAT4((colorpicker_radius + colorpicker_width) * x, (colorpicker_radius + colorpicker_width) * y, 0, 1), color });
+			}
+			// outer alpha blended edge
+			for (uint32_t i = 0; i <= segment_count; ++i)
+			{
+				float p = float(i) / segment_count;
+				float t = p * XM_2PI;
+				float x = cos(t);
+				float y = -sin(t);
+				hsv source;
+				source.h = p * 360.0f;
+				source.s = 1;
+				source.v = 1;
+				rgb result = hsv2rgb(source);
+				XMFLOAT4 color = XMFLOAT4(result.r, result.g, result.b, 1);
+				XMFLOAT4 coloralpha = XMFLOAT4(result.r, result.g, result.b, 0);
+				vertices.push_back({ XMFLOAT4((colorpicker_radius + colorpicker_width) * x, (colorpicker_radius + colorpicker_width) * y, 0, 1), color });
+				vertices.push_back({ XMFLOAT4((colorpicker_radius + colorpicker_width + edge) * x, (colorpicker_radius + colorpicker_width + edge) * y, 0, 1), coloralpha });
 			}
 
 			GPUBufferDesc desc;
@@ -1821,14 +1871,15 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 			data.pSysMem = vertices.data();
 			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_hue);
 		}
-		// picker
+		// saturation picker (small circle)
 		{
 			float _radius = 3;
 			float _width = 3;
 			std::vector<Vertex> vertices;
-			for (float i = 0; i <= 100; i += 1.0f)
+			uint32_t segment_count = 100;
+			for (uint32_t i = 0; i <= segment_count; ++i)
 			{
-				float p = i / 100;
+				float p = float(i) / 100;
 				float t = p * XM_2PI;
 				float x = cos(t);
 				float y = -sin(t);
@@ -1845,7 +1896,48 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 			desc.Usage = USAGE_IMMUTABLE;
 			SubresourceData data;
 			data.pSysMem = vertices.data();
-			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_picker);
+			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_picker_saturation);
+		}
+		// hue picker (rectangle)
+		{
+			float boldness = 4.0f;
+			float halfheight = 8.0f;
+			Vertex vertices[] = {
+				// left side:
+				{ XMFLOAT4(colorpicker_radius - boldness, -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+				{ XMFLOAT4(colorpicker_radius, -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+				{ XMFLOAT4(colorpicker_radius - boldness, halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+				{ XMFLOAT4(colorpicker_radius, halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+
+				// bottom side:
+				{ XMFLOAT4(colorpicker_radius - boldness, halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+				{ XMFLOAT4(colorpicker_radius - boldness, halfheight - boldness, 0, 1),XMFLOAT4(1,1,1,1) },
+				{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+				{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, halfheight - boldness, 0, 1),XMFLOAT4(1,1,1,1) },
+
+				// right side:
+				{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+				{ XMFLOAT4(colorpicker_radius + colorpicker_width, halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+				{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+				{ XMFLOAT4(colorpicker_radius + colorpicker_width, -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+
+				// top side:
+				{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+				{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, -halfheight + boldness, 0, 1),XMFLOAT4(1,1,1,1) },
+				{ XMFLOAT4(colorpicker_radius - boldness, -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+				{ XMFLOAT4(colorpicker_radius - boldness, -halfheight + boldness, 0, 1),XMFLOAT4(1,1,1,1) },
+			};
+
+			GPUBufferDesc desc;
+			desc.BindFlags = BIND_VERTEX_BUFFER;
+			desc.ByteWidth = (UINT)sizeof(vertices);
+			desc.CPUAccessFlags = 0;
+			desc.MiscFlags = 0;
+			desc.StructureByteStride = 0;
+			desc.Usage = USAGE_IMMUTABLE;
+			SubresourceData data;
+			data.pSysMem = vertices;
+			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_picker_hue);
 		}
 		// preview
 		{
@@ -1861,7 +1953,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.ByteWidth = (UINT)(ARRAYSIZE(vertices) * sizeof(Vertex));
+			desc.ByteWidth = (UINT)sizeof(vertices);
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
@@ -1893,6 +1985,16 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 			source.v = 1;
 			rgb result = hsv2rgb(source);
 			vertices_saturation[0].col = XMFLOAT4(result.r, result.g, result.b, 1);
+
+			vertices_saturation[3].col = vertices_saturation[0].col; vertices_saturation[3].col.w = 0;
+			vertices_saturation[4].col = vertices_saturation[0].col;
+			vertices_saturation[5].col = vertices_saturation[1].col; vertices_saturation[5].col.w = 0;
+			vertices_saturation[6].col = vertices_saturation[1].col;
+			vertices_saturation[7].col = vertices_saturation[2].col; vertices_saturation[7].col.w = 0;
+			vertices_saturation[8].col = vertices_saturation[2].col;
+			vertices_saturation[9].col = vertices_saturation[0].col; vertices_saturation[9].col.w = 0;
+			vertices_saturation[10].col = vertices_saturation[0].col;
+
 			wiRenderer::GetDevice()->UpdateBuffer(&vb_saturation, vertices_saturation.data(), cmd, vb_saturation.GetDesc().ByteWidth);
 		}
 
@@ -1934,10 +2036,9 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	// render hue picker
 	if(IsEnabled())
 	{
-		const float angle = hue / 360.0f * XM_2PI;
-		const float r = colorpicker_radius + colorpicker_width * 0.5f;
-		XMStoreFloat4x4(&cb.g_xTransform, 
-			XMMatrixTranslation(translation.x + colorpicker_center + r * cos(angle), translation.y + colorpicker_center + r * -sin(angle), 0) *
+		XMStoreFloat4x4(&cb.g_xTransform,
+			XMMatrixRotationZ(-hue / 360.0f * XM_2PI)*
+			XMMatrixTranslation(translation.x + colorpicker_center, translation.y + colorpicker_center, 0) *
 			Projection
 		);
 
@@ -1947,15 +2048,16 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 		source.v = 1;
 		rgb result = hsv2rgb(source);
 		cb.g_xColor = float4(1 - result.r, 1 - result.g, 1 - result.b, 1);
+
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
 		const GPUBuffer* vbs[] = {
-			&vb_picker,
+			&vb_picker_hue,
 		};
 		const UINT strides[] = {
 			sizeof(Vertex),
 		};
 		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
-		wiRenderer::GetDevice()->Draw(vb_picker.GetDesc().ByteWidth / sizeof(Vertex), 0, cmd);
+		wiRenderer::GetDevice()->Draw(vb_picker_hue.GetDesc().ByteWidth / sizeof(Vertex), 0, cmd);
 	}
 
 	// render saturation picker
@@ -2000,13 +2102,13 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 		cb.g_xColor = float4(1 - final_color.toFloat3().x, 1 - final_color.toFloat3().y, 1 - final_color.toFloat3().z, 1);
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
 		const GPUBuffer* vbs[] = {
-			&vb_picker,
+			&vb_picker_saturation,
 		};
 		const UINT strides[] = {
 			sizeof(Vertex),
 		};
 		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
-		wiRenderer::GetDevice()->Draw(vb_picker.GetDesc().ByteWidth / sizeof(Vertex), 0, cmd);
+		wiRenderer::GetDevice()->Draw(vb_picker_saturation.GetDesc().ByteWidth / sizeof(Vertex), 0, cmd);
 	}
 
 	// render preview
