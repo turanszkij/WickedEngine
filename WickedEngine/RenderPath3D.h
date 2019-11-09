@@ -49,6 +49,7 @@ protected:
 	wiGraphics::Texture2D rtSceneCopy; // contains the rendered scene that can be fed into transparent pass for distortion effect
 	wiGraphics::Texture2D rtWaterRipple; // water ripple sprite normal maps are rendered into this
 	wiGraphics::Texture2D rtParticleDistortion; // contains distortive particles
+	wiGraphics::Texture2D rtParticleDistortion_Resolved; // contains distortive particles
 	wiGraphics::Texture2D rtVolumetricLights; // contains the volumetric light results
 	wiGraphics::Texture2D rtDof[2]; // depth of field blurred out-of focus part
 	wiGraphics::Texture2D rtTemporalAA[2]; // temporal AA history buffer
@@ -71,7 +72,7 @@ protected:
 	wiGraphics::RenderPass renderpass_downsampledepthbuffer;
 	wiGraphics::RenderPass renderpass_lightshafts;
 	wiGraphics::RenderPass renderpass_volumetriclight;
-	wiGraphics::RenderPass renderpass_particles;
+	wiGraphics::RenderPass renderpass_particledistortion;
 	wiGraphics::RenderPass renderpass_waterripples;
 
 	// Post-processes are ping-ponged, this function helps to obtain the last postprocess render target that was written

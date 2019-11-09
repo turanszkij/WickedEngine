@@ -42,8 +42,15 @@ void RenderPath3D::ResizeBuffers()
 		desc.Format = wiRenderer::RTFormat_hdr;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
+		desc.SampleDesc.Count = getMSAASampleCount();
 		device->CreateTexture2D(&desc, nullptr, &rtParticleDistortion);
-		device->SetName(&rtParticleDistortion, "rtParticle");
+		device->SetName(&rtParticleDistortion, "rtParticleDistortion");
+		if (getMSAASampleCount() > 1)
+		{
+			desc.SampleDesc.Count = 1;
+			device->CreateTexture2D(&desc, nullptr, &rtParticleDistortion_Resolved);
+			device->SetName(&rtParticleDistortion_Resolved, "rtParticleDistortion_Resolved");
+		}
 	}
 	{
 		TextureDesc desc;
@@ -288,9 +295,9 @@ void RenderPath3D::ResizeBuffers()
 		RenderPassDesc desc;
 		desc.numAttachments = 2;
 		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,&rtParticleDistortion,-1 };
-		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&depthBuffer,-1 };
+		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&depthBuffer,-1,RenderPassAttachment::STOREOP_DONTCARE };
 
-		device->CreateRenderPass(&desc, &renderpass_particles);
+		device->CreateRenderPass(&desc, &renderpass_particledistortion);
 	}
 	{
 		RenderPassDesc desc;
@@ -605,7 +612,7 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 
 	// Distortion particles:
 	{
-		device->RenderPassBegin(&renderpass_particles, cmd);
+		device->RenderPassBegin(&renderpass_particledistortion, cmd);
 
 		ViewPort vp;
 		vp.Width = (float)rtParticleDistortion.GetDesc().Width;
@@ -615,6 +622,11 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 		wiRenderer::DrawSoftParticles(wiRenderer::GetCamera(), rtLinearDepth, true, cmd);
 
 		device->RenderPassEnd(cmd);
+
+		if (getMSAASampleCount() > 1)
+		{
+			device->MSAAResolve(&rtParticleDistortion_Resolved, &rtParticleDistortion, cmd);
+		}
 	}
 }
 void RenderPath3D::TemporalAAResolve(const Texture2D& srcdstSceneRT, const Texture2D& srcGbuffer1, CommandList cmd) const
@@ -716,7 +728,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Tex
 		wiRenderer::Postprocess_Tonemap(
 			*rt_read,
 			getEyeAdaptionEnabled() ? *wiRenderer::ComputeLuminance(srcSceneRT, cmd) : *wiTextureHelper::getColor(wiColor::Gray()),
-			rtParticleDistortion,
+			getMSAASampleCount() > 1 ? rtParticleDistortion_Resolved : rtParticleDistortion,
 			*rt_write,
 			cmd,
 			getExposure()
