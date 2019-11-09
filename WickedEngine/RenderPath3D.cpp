@@ -625,9 +625,6 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 	wiRenderer::DrawDebugWorld(wiRenderer::GetCamera(), cmd);
 
 	device->RenderPassEnd(cmd);
-
-
-	RenderParticles(true, cmd);
 }
 void RenderPath3D::TemporalAAResolve(const Texture2D& srcdstSceneRT, const Texture2D& srcGbuffer1, CommandList cmd) const
 {
