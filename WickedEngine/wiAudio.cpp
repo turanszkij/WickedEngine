@@ -302,6 +302,8 @@ namespace wiAudio
 		instanceinternal->buffer.pAudioData = soundinternal->audioData.data();
 		instanceinternal->buffer.Flags = XAUDIO2_END_OF_STREAM;
 		instanceinternal->buffer.LoopCount = XAUDIO2_LOOP_INFINITE;
+		instanceinternal->buffer.LoopBegin = UINT32(instance->loop_begin * masteringVoiceDetails.InputSampleRate);
+		instanceinternal->buffer.LoopLength = UINT32(instance->loop_length * masteringVoiceDetails.InputSampleRate);
 
 		hr = instanceinternal->sourceVoice->SubmitSourceBuffer(&instanceinternal->buffer);
 		if (FAILED(hr))

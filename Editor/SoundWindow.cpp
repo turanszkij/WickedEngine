@@ -142,7 +142,7 @@ SoundWindow::SoundWindow(wiGUI* gui) : GUI(gui)
 	loopedCheckbox->SetEnabled(false);
 
 	volumeSlider = new wiSlider(0, 1, 1, 1000, "Volume: ");
-	volumeSlider->SetTooltip("Enable looping for the selected sound instance.");
+	volumeSlider->SetTooltip("Set volume level for the selected sound instance.");
 	volumeSlider->SetPos(XMFLOAT2(x + 60, y += step));
 	volumeSlider->SetSize(XMFLOAT2(240, 30));
 	volumeSlider->OnSlide([&](wiEventArgs args) {
