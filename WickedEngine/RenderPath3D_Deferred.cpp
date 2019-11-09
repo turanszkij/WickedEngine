@@ -168,7 +168,7 @@ void RenderPath3D_Deferred::Render() const
 			device->BindViewports(1, &vp, cmd);
 
 			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
-			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_DEFERRED, getHairParticlesEnabled(), true);
+			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_DEFERRED, true, true);
 
 			device->RenderPassEnd(cmd);
 
@@ -222,15 +222,11 @@ void RenderPath3D_Deferred::Render() const
 
 		RenderVolumetrics(cmd);
 
-		RenderParticles(false, cmd);
-
 		RenderRefractionSource(rtDeferred, cmd);
 
 		RenderTransparents(renderpass_transparent, RENDERPASS_FORWARD, cmd);
 
 		RenderOutline(rtDeferred, cmd);
-
-		RenderParticles(true, cmd);
 
 		TemporalAAResolve(rtDeferred, rtGBuffer[1], cmd);
 

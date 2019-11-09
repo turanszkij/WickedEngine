@@ -39,7 +39,7 @@ void RenderPath3D_TiledForward::Render() const
 			vp.Height = (float)depthBuffer.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
-			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_DEPTHONLY, getHairParticlesEnabled(), true);
+			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_DEPTHONLY, true, true);
 
 			device->RenderPassEnd(cmd);
 
@@ -117,8 +117,6 @@ void RenderPath3D_TiledForward::Render() const
 
 		RenderVolumetrics(cmd);
 
-		RenderParticles(false, cmd);
-
 		RenderRefractionSource(*GetSceneRT_Read(0), cmd);
 
 		RenderTransparents(renderpass_transparent, RENDERPASS_TILEDFORWARD, cmd);
@@ -129,8 +127,6 @@ void RenderPath3D_TiledForward::Render() const
 		}
 
 		RenderOutline(*GetSceneRT_Read(0), cmd);
-
-		RenderParticles(true, cmd);
 
 		TemporalAAResolve(*GetSceneRT_Read(0), *GetSceneRT_Read(1), cmd);
 

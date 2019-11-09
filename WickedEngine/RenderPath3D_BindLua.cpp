@@ -35,9 +35,6 @@ Luna<RenderPath3D_BindLua>::FunctionType RenderPath3D_BindLua::methods[] = {
 	lunamethod(RenderPath3D_BindLua, SetBloomEnabled),
 	lunamethod(RenderPath3D_BindLua, SetColorGradingEnabled),
 	lunamethod(RenderPath3D_BindLua, SetColorGradingTexture),
-	lunamethod(RenderPath3D_BindLua, SetEmitterParticlesEnabled),
-	lunamethod(RenderPath3D_BindLua, SetHairParticlesEnabled),
-	lunamethod(RenderPath3D_BindLua, SetHairParticlesReflectionEnabled),
 	lunamethod(RenderPath3D_BindLua, SetVolumeLightsEnabled),
 	lunamethod(RenderPath3D_BindLua, SetLightShaftsEnabled),
 	lunamethod(RenderPath3D_BindLua, SetLensFlareEnabled),
@@ -181,45 +178,6 @@ int RenderPath3D_BindLua::SetColorGradingTexture(lua_State* L)
 	else
 		wiLua::SError(L, "SetColorGradingTexture(Texture texture2D) not enough arguments!");
 
-	return 0;
-}
-int RenderPath3D_BindLua::SetEmitterParticlesEnabled(lua_State* L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "SetEmitterParticlesEnabled(bool value) component is null!");
-		return 0;
-	}
-	if (wiLua::SGetArgCount(L) > 0)
-		((RenderPath3D*)component)->setEmitterParticlesEnabled(wiLua::SGetBool(L, 1));
-	else
-		wiLua::SError(L, "SetEmitterParticlesEnabled(bool value) not enough arguments!");
-	return 0;
-}
-int RenderPath3D_BindLua::SetHairParticlesEnabled(lua_State* L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "SetHairParticlesEnabled(bool value) component is null!");
-		return 0;
-	}
-	if (wiLua::SGetArgCount(L) > 0)
-		((RenderPath3D*)component)->setHairParticlesEnabled(wiLua::SGetBool(L, 1));
-	else
-		wiLua::SError(L, "SetHairParticlesEnabled(bool value) not enough arguments!");
-	return 0;
-}
-int RenderPath3D_BindLua::SetHairParticlesReflectionEnabled(lua_State* L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "SetHairParticlesReflectionEnabled(bool value) component is null!");
-		return 0;
-	}
-	if (wiLua::SGetArgCount(L) > 0)
-		((RenderPath3D*)component)->setHairParticlesReflectionEnabled(wiLua::SGetBool(L, 1));
-	else
-		wiLua::SError(L, "SetHairParticlesReflectionEnabled(bool value) not enough arguments!");
 	return 0;
 }
 int RenderPath3D_BindLua::SetVolumeLightsEnabled(lua_State* L)

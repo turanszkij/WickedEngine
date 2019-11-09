@@ -42,8 +42,8 @@ void RenderPath3D::ResizeBuffers()
 		desc.Format = wiRenderer::RTFormat_hdr;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
-		device->CreateTexture2D(&desc, nullptr, &rtParticle);
-		device->SetName(&rtParticle, "rtParticle");
+		device->CreateTexture2D(&desc, nullptr, &rtParticleDistortion);
+		device->SetName(&rtParticleDistortion, "rtParticle");
 	}
 	{
 		TextureDesc desc;
@@ -287,7 +287,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		RenderPassDesc desc;
 		desc.numAttachments = 2;
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,&rtParticle,-1 };
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,&rtParticleDistortion,-1 };
 		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&depthBuffer,-1 };
 
 		device->CreateRenderPass(&desc, &renderpass_particles);
@@ -380,7 +380,7 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 
 		device->RenderPassBegin(&renderpass_reflection, cmd);
 
-		wiRenderer::DrawScene(wiRenderer::GetRefCamera(), false, cmd, RENDERPASS_TEXTURE, getHairParticlesReflectionEnabled(), false);
+		wiRenderer::DrawScene(wiRenderer::GetRefCamera(), false, cmd, RENDERPASS_TEXTURE, false, false);
 		wiRenderer::DrawSky(cmd);
 
 		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), cmd);
@@ -512,24 +512,6 @@ void RenderPath3D::RenderVolumetrics(CommandList cmd) const
 		device->RenderPassEnd(cmd);
 	}
 }
-void RenderPath3D::RenderParticles(bool isDistrortionPass, CommandList cmd) const
-{
-	if (getEmittedParticlesEnabled())
-	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
-
-		device->RenderPassBegin(&renderpass_particles, cmd);
-
-		ViewPort vp;
-		vp.Width = (float)rtParticle.GetDesc().Width;
-		vp.Height = (float)rtParticle.GetDesc().Height;
-		device->BindViewports(1, &vp, cmd);
-
-		wiRenderer::DrawSoftParticles(wiRenderer::GetCamera(), rtLinearDepth, isDistrortionPass, cmd);
-
-		device->RenderPassEnd(cmd);
-	}
-}
 void RenderPath3D::RenderRefractionSource(const Texture2D& srcSceneRT, CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -580,12 +562,14 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 		device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
 		device->BindResource(PS, &rtSceneCopy, TEXSLOT_RENDERPATH_REFRACTION, cmd);
 		device->BindResource(PS, &rtWaterRipple, TEXSLOT_RENDERPATH_WATERRIPPLES, cmd);
-		wiRenderer::DrawScene_Transparent(wiRenderer::GetCamera(), rtLinearDepth, renderPass, cmd, getHairParticlesEnabled(), true);
+		wiRenderer::DrawScene_Transparent(wiRenderer::GetCamera(), rtLinearDepth, renderPass, cmd, true, true);
 
 		wiProfiler::EndRange(range); // Transparent Scene
 	}
 
 	wiRenderer::DrawLightVisualizers(wiRenderer::GetCamera(), cmd);
+
+	wiRenderer::DrawSoftParticles(wiRenderer::GetCamera(), rtLinearDepth, false, cmd);
 
 	wiImageParams fx;
 	fx.enableFullScreen();
@@ -594,17 +578,10 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 	// Note set a stencilmode that always passes, because pipeline state with depthbuffer will be used in this render pass (shuts up warnings):
 	fx.stencilComp = STENCILMODE_ALWAYS;
 
-	if (getEmittedParticlesEnabled())
-	{
-		device->EventBegin("Contribute Emitters", cmd);
-		fx.blendFlag = BLENDMODE_PREMULTIPLIED;
-		wiImage::Draw(&rtParticle, fx, cmd);
-		device->EventEnd(cmd);
-	}
-
 	if (getVolumeLightsEnabled())
 	{
 		device->EventBegin("Contribute Volumetric Lights", cmd);
+		fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 		wiImage::Draw(&rtVolumetricLights, fx, cmd);
 		device->EventEnd(cmd);
 	}
@@ -625,6 +602,20 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 	wiRenderer::DrawDebugWorld(wiRenderer::GetCamera(), cmd);
 
 	device->RenderPassEnd(cmd);
+
+	// Distortion particles:
+	{
+		device->RenderPassBegin(&renderpass_particles, cmd);
+
+		ViewPort vp;
+		vp.Width = (float)rtParticleDistortion.GetDesc().Width;
+		vp.Height = (float)rtParticleDistortion.GetDesc().Height;
+		device->BindViewports(1, &vp, cmd);
+
+		wiRenderer::DrawSoftParticles(wiRenderer::GetCamera(), rtLinearDepth, true, cmd);
+
+		device->RenderPassEnd(cmd);
+	}
 }
 void RenderPath3D::TemporalAAResolve(const Texture2D& srcdstSceneRT, const Texture2D& srcGbuffer1, CommandList cmd) const
 {
@@ -725,7 +716,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Tex
 		wiRenderer::Postprocess_Tonemap(
 			*rt_read,
 			getEyeAdaptionEnabled() ? *wiRenderer::ComputeLuminance(srcSceneRT, cmd) : *wiTextureHelper::getColor(wiColor::Gray()),
-			rtParticle,
+			rtParticleDistortion,
 			*rt_write,
 			cmd,
 			getExposure()

@@ -27,9 +27,6 @@ private:
 	bool shadowsEnabled = true;
 	bool bloomEnabled = true;
 	bool colorGradingEnabled = false;
-	bool emittedParticlesEnabled = true;
-	bool hairParticlesEnabled = true;
-	bool hairParticlesReflectionEnabled = false;
 	bool volumeLightsEnabled = true;
 	bool lightShaftsEnabled = false;
 	bool lensFlareEnabled = true;
@@ -51,7 +48,7 @@ protected:
 	wiGraphics::Texture2D rtSSR; // screen-space reflection results
 	wiGraphics::Texture2D rtSceneCopy; // contains the rendered scene that can be fed into transparent pass for distortion effect
 	wiGraphics::Texture2D rtWaterRipple; // water ripple sprite normal maps are rendered into this
-	wiGraphics::Texture2D rtParticle; // contains off-screen particles
+	wiGraphics::Texture2D rtParticleDistortion; // contains distortive particles
 	wiGraphics::Texture2D rtVolumetricLights; // contains the volumetric light results
 	wiGraphics::Texture2D rtDof[2]; // depth of field blurred out-of focus part
 	wiGraphics::Texture2D rtTemporalAA[2]; // temporal AA history buffer
@@ -102,7 +99,6 @@ protected:
 	virtual void RenderOutline(const wiGraphics::Texture2D& dstSceneRT, wiGraphics::CommandList cmd) const;
 	virtual void RenderLightShafts(wiGraphics::CommandList cmd) const;
 	virtual void RenderVolumetrics(wiGraphics::CommandList cmd) const;
-	virtual void RenderParticles(bool isDistrortionPass, wiGraphics::CommandList cmd) const;
 	virtual void RenderRefractionSource(const wiGraphics::Texture2D& srcSceneRT, wiGraphics::CommandList cmd) const;
 	virtual void RenderTransparents(const wiGraphics::RenderPass& renderpass_transparent, RENDERPASS renderPass, wiGraphics::CommandList cmd) const;
 	virtual void TemporalAAResolve(const wiGraphics::Texture2D& srcdstSceneRT, const wiGraphics::Texture2D& srcGbuffer1, wiGraphics::CommandList cmd) const;
@@ -132,9 +128,6 @@ public:
 	constexpr bool getFXAAEnabled() const { return fxaaEnabled; }
 	constexpr bool getBloomEnabled() const { return bloomEnabled; }
 	constexpr bool getColorGradingEnabled() const { return colorGradingEnabled; }
-	constexpr bool getEmittedParticlesEnabled() const { return emittedParticlesEnabled; }
-	constexpr bool getHairParticlesEnabled() const { return hairParticlesEnabled; }
-	constexpr bool getHairParticlesReflectionEnabled() const { return hairParticlesReflectionEnabled; }
 	constexpr bool getVolumeLightsEnabled() const { return volumeLightsEnabled; }
 	constexpr bool getLightShaftsEnabled() const { return lightShaftsEnabled; }
 	constexpr bool getLensFlareEnabled() const { return lensFlareEnabled; }
@@ -171,9 +164,6 @@ public:
 	constexpr void setFXAAEnabled(bool value){ fxaaEnabled = value; }
 	constexpr void setBloomEnabled(bool value){ bloomEnabled = value; }
 	constexpr void setColorGradingEnabled(bool value){ colorGradingEnabled = value; }
-	constexpr void setEmitterParticlesEnabled(bool value){ emittedParticlesEnabled = value; }
-	constexpr void setHairParticlesEnabled(bool value) { hairParticlesEnabled = value; }
-	constexpr void setHairParticlesReflectionEnabled(bool value) { hairParticlesReflectionEnabled = value; }
 	constexpr void setVolumeLightsEnabled(bool value){ volumeLightsEnabled = value; }
 	constexpr void setLightShaftsEnabled(bool value){ lightShaftsEnabled = value; }
 	constexpr void setLensFlareEnabled(bool value){ lensFlareEnabled = value; }
