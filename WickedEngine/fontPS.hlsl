@@ -12,5 +12,5 @@ struct VertextoPixel
 
 float4 main(VertextoPixel PSIn) : SV_TARGET
 {
-	return texture_font.Sample(sampler_font, PSIn.tex).rrrr * g_xFont_Color;
+	return texture_font.SampleLevel(sampler_font, PSIn.tex, 0).rrrr * g_xFont_Color;
 }

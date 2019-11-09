@@ -270,7 +270,7 @@ void wiFont::Initialize()
 	device->CreateBlendState(&bd, &blendState);
 
 	SamplerDesc samplerDesc;
-	samplerDesc.Filter = FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.Filter = FILTER_MIN_MAG_LINEAR_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_BORDER;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_BORDER;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_BORDER;
