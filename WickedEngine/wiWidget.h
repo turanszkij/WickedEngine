@@ -224,13 +224,17 @@ protected:
 		COMBOSTATE_INACTIVE,	// When the list is just being dropped down, or the widget is not active
 		COMBOSTATE_HOVER,		// The widget is in drop-down state with the last item hovered highlited
 		COMBOSTATE_SELECTING,	// The hovered item is clicked
+		COMBOSTATE_SCROLLBAR_HOVER,		// scrollbar is to be selected
+		COMBOSTATE_SCROLLBAR_GRABBED,	// scrollbar is moved
 		COMBOSTATE_COUNT,
 	} combostate = COMBOSTATE_INACTIVE;
 	int hovered = -1;
 
+	float scrollbar_delta = 0;
+
 	std::vector<std::string> items;
 
-	const float _GetItemOffset(int index) const;
+	float GetItemOffset(int index) const;
 public:
 	wiComboBox(const std::string& name = "");
 	virtual ~wiComboBox();
@@ -239,6 +243,7 @@ public:
 	void RemoveItem(int index);
 	void ClearItems();
 	void SetMaxVisibleItemCount(int value);
+	bool HasScrollbar() const;
 
 	void SetSelected(int index);
 	int GetSelected();

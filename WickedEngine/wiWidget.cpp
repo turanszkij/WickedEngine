@@ -956,10 +956,14 @@ wiComboBox::~wiComboBox()
 {
 
 }
-const float wiComboBox::_GetItemOffset(int index) const
+float wiComboBox::GetItemOffset(int index) const
 {
 	index = std::max(firstItemVisible, index) - firstItemVisible;
 	return scale.y * (index + 1) + 1;
+}
+bool wiComboBox::HasScrollbar() const
+{
+	return maxVisibleItemCount < (int)items.size();
 }
 void wiComboBox::Update(wiGUI* gui, float dt)
 {
@@ -1016,8 +1020,10 @@ void wiComboBox::Update(wiGUI* gui, float dt)
 		clicked = true;
 	}
 
+	bool click_down = false;
 	if (wiInputManager::down(VK_LBUTTON))
 	{
+		click_down = true;
 		if (state == DEACTIVATING)
 		{
 			// Keep pressed until mouse is released
@@ -1031,9 +1037,37 @@ void wiComboBox::Update(wiGUI* gui, float dt)
 		gui->ActivateWidget(this);
 	}
 
+	const float scrollbar_begin = translation.y + scale.y + 1 + scale.y * 0.5f;
+	const float scrollbar_end = scrollbar_begin + std::max(0.0f, (float)std::min(maxVisibleItemCount, (int)items.size()) - 1) * scale.y;
 
 	if (state == ACTIVE)
 	{
+		if (HasScrollbar())
+		{
+			if (combostate != COMBOSTATE_SELECTING && combostate != COMBOSTATE_INACTIVE)
+			{
+				if (combostate == COMBOSTATE_SCROLLBAR_GRABBED || pointerHitbox.intersects(Hitbox2D(XMFLOAT2(translation.x + scale.x + 1, translation.y + scale.y + 1), XMFLOAT2(scale.y, (float)std::min(maxVisibleItemCount, (int)items.size()) * scale.y))))
+				{
+					if (click_down)
+					{
+						combostate = COMBOSTATE_SCROLLBAR_GRABBED;
+						scrollbar_delta = wiMath::Clamp(pointerHitbox.pos.y, scrollbar_begin, scrollbar_end) - scrollbar_begin;
+						const float scrollbar_value = wiMath::InverseLerp(scrollbar_begin, scrollbar_end, scrollbar_begin + scrollbar_delta);
+						firstItemVisible = int(float(std::max(0, (int)items.size() - maxVisibleItemCount)) * scrollbar_value + 0.5f);
+						firstItemVisible = std::max(0, std::min((int)items.size() - maxVisibleItemCount, firstItemVisible));
+					}
+					else
+					{
+						combostate = COMBOSTATE_SCROLLBAR_HOVER;
+					}
+				}
+				else if (!click_down)
+				{
+					combostate = COMBOSTATE_HOVER;
+				}
+			}
+		}
+
 		if (combostate == COMBOSTATE_INACTIVE)
 		{
 			combostate = COMBOSTATE_HOVER;
@@ -1043,28 +1077,28 @@ void wiComboBox::Update(wiGUI* gui, float dt)
 			gui->DeactivateWidget(this);
 			combostate = COMBOSTATE_INACTIVE;
 		}
-		else
+		else if (combostate == COMBOSTATE_HOVER)
 		{
 			int scroll = (int)wiInputManager::getpointer().z;
 			firstItemVisible -= scroll;
 			firstItemVisible = std::max(0, std::min((int)items.size() - maxVisibleItemCount, firstItemVisible));
+			if (scroll)
+			{
+				const float scrollbar_value = wiMath::InverseLerp(0, float(std::max(0, (int)items.size() - maxVisibleItemCount)), float(firstItemVisible));
+				scrollbar_delta = wiMath::Lerp(scrollbar_begin, scrollbar_end, scrollbar_value) - scrollbar_begin;
+			}
 
 			hovered = -1;
-			for (size_t i = 0; i < items.size(); ++i)
+			for (int i = firstItemVisible; i < (firstItemVisible + std::min(maxVisibleItemCount, (int)items.size())); ++i)
 			{
-				if ((int)i<firstItemVisible || (int)i>firstItemVisible + maxVisibleItemCount)
-				{
-					continue;
-				}
-
 				Hitbox2D itembox;
 				itembox.pos.x = translation.x;
-				itembox.pos.y = translation.y + _GetItemOffset((int)i);
+				itembox.pos.y = translation.y + GetItemOffset(i);
 				itembox.siz.x = scale.x;
 				itembox.siz.y = scale.y;
 				if (pointerHitbox.intersects(itembox))
 				{
-					hovered = (int)i;
+					hovered = i;
 					break;
 				}
 			}
@@ -1075,8 +1109,6 @@ void wiComboBox::Update(wiGUI* gui, float dt)
 				if (hovered >= 0)
 				{
 					SetSelected(hovered);
-					//gui->DeactivateWidget(this);
-					//combostate = COMBOSTATE_INACTIVE;
 				}
 			}
 		}
@@ -1103,12 +1135,12 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 	// control-base
 	wiImage::Draw(wiTextureHelper::getWhite()
 		, wiImageParams(translation.x, translation.y, scale.x, scale.y, color.toFloat4()), cmd);
+
 	// control-arrow
 	wiImage::Draw(wiTextureHelper::getWhite()
 		, wiImageParams(translation.x + scale.x + 1, translation.y, scale.y, scale.y, color.toFloat4()), cmd);
 	wiFont("V", wiFontParams((int)(translation.x + scale.x + scale.y*0.5f), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
 		textColor, textShadowColor)).Draw(cmd);
-
 
 	if (parent != gui)
 	{
@@ -1126,18 +1158,37 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 	// drop-down
 	if (state == ACTIVE)
 	{
+		if (HasScrollbar())
+		{
+			// control-scrollbar-base
+			{
+				wiColor col = colors[IDLE];
+				col.setA(col.getA() / 2);
+				wiImage::Draw(wiTextureHelper::getWhite()
+					, wiImageParams(translation.x + scale.x + 1, translation.y + scale.y + 1, scale.y, scale.y * maxVisibleItemCount, col.toFloat4()), cmd);
+			}
+
+			// control-scrollbar-grab
+			{
+				wiColor col = colors[IDLE];
+				if (combostate == COMBOSTATE_SCROLLBAR_HOVER)
+				{
+					col = colors[FOCUS];
+				}
+				else if (combostate == COMBOSTATE_SCROLLBAR_GRABBED)
+				{
+					col = colors[ACTIVE];
+				}
+				wiImage::Draw(wiTextureHelper::getWhite()
+					, wiImageParams(translation.x + scale.x + 1, translation.y + scale.y + 1 + scrollbar_delta, scale.y, scale.y, col.toFloat4()), cmd);
+			}
+		}
+
 		gui->ResetScissor(cmd);
 
 		// control-list
-		int i = 0;
-		for (auto& x : items)
+		for (int i = firstItemVisible; i < (firstItemVisible + std::min(maxVisibleItemCount, (int)items.size())); ++i)
 		{
-			if (i<firstItemVisible || i>firstItemVisible + maxVisibleItemCount)
-			{
-				i++;
-				continue;
-			}
-
 			wiColor col = colors[IDLE];
 			if (hovered == i)
 			{
@@ -1151,10 +1202,9 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 				}
 			}
 			wiImage::Draw(wiTextureHelper::getWhite()
-				, wiImageParams(translation.x, translation.y + _GetItemOffset(i), scale.x, scale.y, col.toFloat4()), cmd);
-			wiFont(x, wiFontParams((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f + _GetItemOffset(i)), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
+				, wiImageParams(translation.x, translation.y + GetItemOffset(i), scale.x, scale.y, col.toFloat4()), cmd);
+			wiFont(items[i], wiFontParams((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f + GetItemOffset(i)), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
 				textColor, textShadowColor)).Draw(cmd);
-			i++;
 		}
 	}
 }
