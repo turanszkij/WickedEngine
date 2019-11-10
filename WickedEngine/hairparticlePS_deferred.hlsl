@@ -4,9 +4,7 @@
 
 GBUFFEROutputType main(VertexToPixel input)
 {
-#ifdef GRASS_FADE_DITHER
 	clip(dither(input.pos.xy) - input.fade);
-#endif
 
 	float4 color = texture_0.Sample(sampler_linear_clamp, input.tex);
 	color.rgb = DEGAMMA(color.rgb);

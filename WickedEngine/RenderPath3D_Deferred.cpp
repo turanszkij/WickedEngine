@@ -207,14 +207,20 @@ void RenderPath3D_Deferred::Render() const
 
 			device->RenderPassEnd(cmd);
 		}
+	});
+
+
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, device, cmd] {
+
+		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
+		wiRenderer::BindCommonResources(cmd);
 
 		RenderSSS(cmd);
 
 		RenderDeferredComposition(cmd);
 
 		RenderSSR(rtDeferred, rtGBuffer[1], cmd);
-
-		wiRenderer::BindCommonResources(cmd);
 
 		DownsampleDepthBuffer(cmd);
 

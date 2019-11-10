@@ -138,6 +138,20 @@ HairParticleWindow::HairParticleWindow(wiGUI* gui) : GUI(gui)
 	randomSeedSlider->SetTooltip("Set hair system-wide random seed value. This will affect hair patch placement randomization.");
 	hairWindow->AddWidget(randomSeedSlider);
 
+	viewDistanceSlider = new wiSlider(0, 1000, 100, 10000, "View distance: ");
+	viewDistanceSlider->SetSize(XMFLOAT2(360, 30));
+	viewDistanceSlider->SetPos(XMFLOAT2(x, y += step));
+	viewDistanceSlider->OnSlide([&](wiEventArgs args) {
+		auto hair = GetHair();
+		if (hair != nullptr)
+		{
+			hair->viewDistance = args.fValue;
+		}
+		});
+	viewDistanceSlider->SetEnabled(false);
+	viewDistanceSlider->SetTooltip("Set view distance. After this, particles will be faded out.");
+	hairWindow->AddWidget(viewDistanceSlider);
+
 
 	hairWindow->Translate(XMFLOAT3(200, 50, 0));
 	hairWindow->SetVisible(false);
@@ -166,6 +180,7 @@ void HairParticleWindow::SetEntity(Entity entity)
 		countSlider->SetValue((float)hair->strandCount);
 		segmentcountSlider->SetValue((float)hair->segmentCount);
 		randomSeedSlider->SetValue((float)hair->randomSeed);
+		viewDistanceSlider->SetValue(hair->viewDistance);
 	}
 	else
 	{

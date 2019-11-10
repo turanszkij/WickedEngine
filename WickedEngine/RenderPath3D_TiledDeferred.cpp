@@ -70,13 +70,20 @@ void RenderPath3D_TiledDeferred::Render() const
 
 		wiRenderer::ComputeTiledLightCulling(
 			depthBuffer_Copy,
-			cmd, 
+			cmd,
 			&rtGBuffer[0],
 			&rtGBuffer[1],
 			&rtGBuffer[2],
 			&lightbuffer_diffuse,
 			&lightbuffer_specular
 		);
+	});
+
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, device, cmd] {
+
+		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
+		wiRenderer::BindCommonResources(cmd);
 
 		RenderSSS(cmd);
 

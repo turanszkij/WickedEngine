@@ -255,6 +255,7 @@ void wiHairParticle::LoadShaders()
 				desc.numRTs = 2;
 				desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
 				desc.RTFormats[1] = wiRenderer::RTFormat_gbuffer_1;
+				desc.dss = &dss_equal; // opaque
 				break;
 			case RENDERPASS_DEFERRED:
 				desc.numRTs = 5;
@@ -265,11 +266,6 @@ void wiHairParticle::LoadShaders()
 				desc.RTFormats[4] = wiRenderer::RTFormat_deferred_lightbuffer;
 			default:
 				break;
-			}
-
-			if (i == RENDERPASS_TILEDFORWARD)
-			{
-				desc.dss = &dss_equal; // opaque
 			}
 
 			if (j == 1)

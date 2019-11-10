@@ -76,9 +76,6 @@ void MainComponent::Initialize()
 
 
 	wiInitializer::InitializeComponentsAsync();
-
-	wiLua::GetGlobal()->RegisterObject(MainComponent_BindLua::className, "main", new MainComponent_BindLua(this));
-	wiLua::GetGlobal()->RunFile("startup.lua");
 }
 
 void MainComponent::ActivatePath(RenderPath* component, float fadeSeconds, wiColor fadeColor)
@@ -120,6 +117,14 @@ void MainComponent::Run()
 		wiFont(wiBackLog::getText(), wiFontParams(4, 4, infoDisplay.size)).Draw(cmd);
 		wiRenderer::GetDevice()->PresentEnd(cmd);
 		return;
+	}
+
+	static bool startup_script = false;
+	if (!startup_script)
+	{
+		startup_script = true;
+		wiLua::GetGlobal()->RegisterObject(MainComponent_BindLua::className, "main", new MainComponent_BindLua(this));
+		wiLua::GetGlobal()->RunFile("startup.lua");
 	}
 
 	wiProfiler::BeginFrame();

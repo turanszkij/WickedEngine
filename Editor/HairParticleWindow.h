@@ -36,6 +36,7 @@ public:
 	wiSlider* countSlider;
 	wiSlider* segmentcountSlider;
 	wiSlider* randomSeedSlider;
+	wiSlider* viewDistanceSlider;
 
 };
 

@@ -1,12 +1,10 @@
 #include "globals.hlsli"
 #include "hairparticleHF.hlsli"
 
-void main(VertexToPixel PSIn)
+void main(VertexToPixel input)
 {
-#ifdef GRASS_FADE_DITHER
-	clip(dither(PSIn.pos.xy) - PSIn.fade);
-#endif
+	clip(dither(input.pos.xy) - input.fade);
 
-	float4 color = texture_0.Sample(sampler_linear_clamp,PSIn.tex);
+	float4 color = texture_0.Sample(sampler_linear_clamp,input.tex);
 	ALPHATEST(color.a)
 }
