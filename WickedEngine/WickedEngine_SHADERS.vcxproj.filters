@@ -810,6 +810,12 @@
     <FxCompile Include="chromatic_aberrationCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="hairparticlePS_forward_transparent.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="hairparticlePS_tiledforward_transparent.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

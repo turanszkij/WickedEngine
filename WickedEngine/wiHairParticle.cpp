@@ -19,7 +19,12 @@ namespace wiSceneSystem
 {
 
 static const VertexShader *vs = nullptr;
-static const PixelShader *ps[RENDERPASS_COUNT] = {};
+static const PixelShader* ps_alphatestonly = nullptr;
+static const PixelShader* ps_deferred = nullptr;
+static const PixelShader* ps_forward = nullptr;
+static const PixelShader* ps_forward_transparent = nullptr;
+static const PixelShader* ps_tiledforward = nullptr;
+static const PixelShader* ps_tiledforward_transparent = nullptr;
 static const PixelShader *ps_simplest = nullptr;
 static const ComputeShader *cs_simulate = nullptr;
 static DepthStencilState dss_default, dss_equal, dss_rejectopaque_keeptransparent;
@@ -213,68 +218,91 @@ void wiHairParticle::LoadShaders()
 
 	vs = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticleVS.cso", wiResourceManager::VERTEXSHADER));
 
-	ps[RENDERPASS_DEPTHONLY] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
-	ps[RENDERPASS_DEFERRED] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_deferred.cso", wiResourceManager::PIXELSHADER));
-	ps[RENDERPASS_FORWARD] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_forward.cso", wiResourceManager::PIXELSHADER));
-	ps[RENDERPASS_TILEDFORWARD] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_tiledforward.cso", wiResourceManager::PIXELSHADER));
+	ps_alphatestonly = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
+	ps_deferred = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_deferred.cso", wiResourceManager::PIXELSHADER));
+	ps_forward = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_forward.cso", wiResourceManager::PIXELSHADER));
+	ps_forward_transparent = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_forward_transparent.cso", wiResourceManager::PIXELSHADER));
+	ps_tiledforward = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_tiledforward.cso", wiResourceManager::PIXELSHADER));
+	ps_tiledforward_transparent = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_tiledforward_transparent.cso", wiResourceManager::PIXELSHADER));
 
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	for (int i = 0; i < RENDERPASS_COUNT; ++i)
 	{
-		if (ps[i] == nullptr)
+		if (i == RENDERPASS_DEPTHONLY || i == RENDERPASS_DEFERRED || i == RENDERPASS_FORWARD || i == RENDERPASS_TILEDFORWARD)
 		{
-			continue;
-		}
-
-		for (int j = 0; j < 2; ++j)
-		{
-			if ((i == RENDERPASS_DEPTHONLY || i == RENDERPASS_DEFERRED) && j == 1)
+			for (int j = 0; j < 2; ++j)
 			{
-				continue;
+				if ((i == RENDERPASS_DEPTHONLY || i == RENDERPASS_DEFERRED) && j == 1)
+				{
+					continue;
+				}
+
+				PipelineStateDesc desc;
+				desc.vs = vs;
+				desc.bs = &bs[j];
+				desc.rs = &ncrs;
+				desc.dss = &dss_default;
+
+				desc.DSFormat = wiRenderer::DSFormat_full;
+
+				switch (i)
+				{
+				case RENDERPASS_DEPTHONLY:
+					desc.ps = ps_alphatestonly;
+					break;
+				case RENDERPASS_DEFERRED:
+					desc.ps = ps_deferred;
+					break;
+				case RENDERPASS_FORWARD:
+					if (j == 0)
+					{
+						desc.ps = ps_forward;
+					}
+					else
+					{
+						desc.ps = ps_forward_transparent;
+					}
+					break;
+				case RENDERPASS_TILEDFORWARD:
+					if (j == 0)
+					{
+						desc.ps = ps_tiledforward;
+					}
+					else
+					{
+						desc.ps = ps_tiledforward_transparent;
+					}
+					break;
+				}
+
+				switch (i)
+				{
+				case RENDERPASS_FORWARD:
+				case RENDERPASS_TILEDFORWARD:
+					desc.numRTs = 2;
+					desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
+					desc.RTFormats[1] = wiRenderer::RTFormat_gbuffer_1;
+					desc.dss = &dss_equal; // opaque
+					break;
+				case RENDERPASS_DEFERRED:
+					desc.numRTs = 5;
+					desc.RTFormats[0] = wiRenderer::RTFormat_gbuffer_0;
+					desc.RTFormats[1] = wiRenderer::RTFormat_gbuffer_1;
+					desc.RTFormats[2] = wiRenderer::RTFormat_gbuffer_2;
+					desc.RTFormats[3] = wiRenderer::RTFormat_deferred_lightbuffer;
+					desc.RTFormats[4] = wiRenderer::RTFormat_deferred_lightbuffer;
+				}
+
+				if (j == 1)
+				{
+					desc.dss = &dss_rejectopaque_keeptransparent; // transparent
+					desc.numRTs = 1;
+				}
+
+				device->CreatePipelineState(&desc, &PSO[i][j]);
 			}
-
-			PipelineStateDesc desc;
-			desc.vs = vs;
-			desc.ps = ps[i];
-			desc.bs = &bs[j];
-			desc.rs = &ncrs;
-			desc.dss = &dss_default;
-
-			desc.DSFormat = wiRenderer::DSFormat_full;
-
-			switch (i)
-			{
-			case RENDERPASS_TEXTURE:
-				desc.numRTs = 1;
-				desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
-				break;
-			case RENDERPASS_FORWARD:
-			case RENDERPASS_TILEDFORWARD:
-				desc.numRTs = 2;
-				desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
-				desc.RTFormats[1] = wiRenderer::RTFormat_gbuffer_1;
-				desc.dss = &dss_equal; // opaque
-				break;
-			case RENDERPASS_DEFERRED:
-				desc.numRTs = 5;
-				desc.RTFormats[0] = wiRenderer::RTFormat_gbuffer_0;
-				desc.RTFormats[1] = wiRenderer::RTFormat_gbuffer_1;
-				desc.RTFormats[2] = wiRenderer::RTFormat_gbuffer_2;
-				desc.RTFormats[3] = wiRenderer::RTFormat_deferred_lightbuffer;
-				desc.RTFormats[4] = wiRenderer::RTFormat_deferred_lightbuffer;
-			default:
-				break;
-			}
-
-			if (j == 1)
-			{
-				desc.dss = &dss_rejectopaque_keeptransparent; // transparent
-				desc.numRTs = 1;
-			}
-
-			device->CreatePipelineState(&desc, &PSO[i][j]);
 		}
 	}
 
