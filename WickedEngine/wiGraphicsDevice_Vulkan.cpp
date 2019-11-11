@@ -1584,10 +1584,17 @@ namespace wiGraphics
 			vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
 
 			assert(deviceFeatures.imageCubeArray == VK_TRUE);
+			assert(deviceFeatures.independentBlend == VK_TRUE);
 			assert(deviceFeatures.geometryShader == VK_TRUE);
 			assert(deviceFeatures.samplerAnisotropy == VK_TRUE);
 			assert(deviceFeatures.shaderClipDistance == VK_TRUE);
+			assert(deviceFeatures.textureCompressionBC == VK_TRUE);
 			TESSELLATION = deviceFeatures.tessellationShader == VK_TRUE;
+			UAV_LOAD_FORMAT_COMMON = deviceFeatures.shaderStorageImageExtendedFormats == VK_TRUE;
+			
+			VkFormatProperties formatProperties = { 0 };
+			vkGetPhysicalDeviceFormatProperties(physicalDevice, _ConvertFormat(FORMAT_R11G11B10_FLOAT), &formatProperties);
+			UAV_LOAD_FORMAT_R11G11B10_FLOAT = formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
 
 			VkDeviceCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

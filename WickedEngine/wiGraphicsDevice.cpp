@@ -8,16 +8,14 @@ bool GraphicsDevice::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const
 	{
 	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION:
 		return TESSELLATION;
-		break;
-	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_MULTITHREADED_RENDERING:
-		return true;
-		break;
 	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION:
 		return CONSERVATIVE_RASTERIZATION;
-		break;
 	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RASTERIZER_ORDERED_VIEWS:
 		return RASTERIZER_ORDERED_VIEWS;
-		break;
+	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_COMMON:
+		return UAV_LOAD_FORMAT_COMMON;
+	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT:
+		return UAV_LOAD_FORMAT_R11G11B10_FLOAT;
 	}
 	return false;
 }

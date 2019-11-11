@@ -162,6 +162,7 @@ void EditorComponent::ResizeBuffers()
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	HRESULT hr;
 
+	if(renderPath->GetDepthStencil() != nullptr)
 	{
 		TextureDesc desc;
 		desc.Width = wiRenderer::GetInternalResolution().x;
@@ -1584,7 +1585,7 @@ void EditorComponent::Render() const
 	renderPath->Render();
 
 	// Selection outline:
-	if(!selected.empty())
+	if(renderPath->GetDepthStencil() != nullptr && !selected.empty())
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		CommandList cmd = device->BeginCommandList();
@@ -1664,7 +1665,7 @@ void EditorComponent::Compose(CommandList cmd) const
 
 	// Compose the selection outline to the screen:
 	const float selectionColorIntensity = std::sinf(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f;
-	if (!selected.empty())
+	if (renderPath->GetDepthStencil() != nullptr && !selected.empty())
 	{
 		wiImageParams fx;
 		fx.enableFullScreen();

@@ -1206,7 +1206,19 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	hr = device->CheckFeatureSupport(D3D11_FEATURE_D3D11_OPTIONS2, &features_2, sizeof(features_2));
 	CONSERVATIVE_RASTERIZATION = features_2.ConservativeRasterizationTier >= D3D11_CONSERVATIVE_RASTERIZATION_TIER_1;
 	RASTERIZER_ORDERED_VIEWS = features_2.ROVsSupported == TRUE;
-	UNORDEREDACCESSTEXTURE_LOAD_EXT = features_2.TypedUAVLoadAdditionalFormats == TRUE;
+
+	if (features_2.TypedUAVLoadAdditionalFormats)
+	{
+		// More info about UAV format load support: https://docs.microsoft.com/en-us/windows/win32/direct3d12/typed-unordered-access-view-loads
+		UAV_LOAD_FORMAT_COMMON = true;
+
+		D3D11_FEATURE_DATA_FORMAT_SUPPORT FormatSupport = { DXGI_FORMAT_R11G11B10_FLOAT, 0 };
+		hr = device->CheckFeatureSupport(D3D11_FEATURE_FORMAT_SUPPORT, &FormatSupport, sizeof(FormatSupport));
+		if (SUCCEEDED(hr) && (FormatSupport.OutFormatSupport & D3D11_FORMAT_SUPPORT2_UAV_TYPED_LOAD) != 0)
+		{
+			UAV_LOAD_FORMAT_R11G11B10_FLOAT = true;
+		}
+	}
 
 	//D3D11_FEATURE_DATA_D3D11_OPTIONS3 features_3;
 	//hr = device->CheckFeatureSupport(D3D11_FEATURE_D3D11_OPTIONS3, &features_3, sizeof(features_3));

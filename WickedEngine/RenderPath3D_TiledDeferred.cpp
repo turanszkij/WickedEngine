@@ -6,8 +6,33 @@
 #include "wiSprite.h"
 #include "ResourceMapping.h"
 #include "wiProfiler.h"
+#include "wiBackLog.h"
 
 using namespace wiGraphics;
+
+void RenderPath3D_TiledDeferred::ResizeBuffers()
+{
+	RenderPath3D_Deferred::ResizeBuffers();
+
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	// Workaround textures if R11G11B10 UAV loads are not supported by the GPU:
+	if(!device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT))
+	{
+		wiBackLog::post("\nWARNING: GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT not supported, Tiled deferred will be using workaround slow path!\n");
+
+		TextureDesc desc;
+		desc = lightbuffer_diffuse.GetDesc();
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		device->CreateTexture2D(&desc, nullptr, &lightbuffer_diffuse_noR11G11B10supportavailable);
+		device->SetName(&lightbuffer_diffuse_noR11G11B10supportavailable, "lightbuffer_diffuse_noR11G11B10supportavailable");
+
+		desc = lightbuffer_specular.GetDesc();
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		device->CreateTexture2D(&desc, nullptr, &lightbuffer_specular_noR11G11B10supportavailable);
+		device->SetName(&lightbuffer_specular_noR11G11B10supportavailable, "lightbuffer_specular_noR11G11B10supportavailable");
+	}
+}
 
 void RenderPath3D_TiledDeferred::Render() const
 {
@@ -68,15 +93,43 @@ void RenderPath3D_TiledDeferred::Render() const
 		device->BindResource(CS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, cmd);
 		device->BindResource(CS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
 
-		wiRenderer::ComputeTiledLightCulling(
-			depthBuffer_Copy,
-			cmd,
-			&rtGBuffer[0],
-			&rtGBuffer[1],
-			&rtGBuffer[2],
-			&lightbuffer_diffuse,
-			&lightbuffer_specular
-		);
+
+		if (device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT))
+		{
+			wiRenderer::ComputeTiledLightCulling(
+				depthBuffer_Copy,
+				cmd,
+				&rtGBuffer[0],
+				&rtGBuffer[1],
+				&rtGBuffer[2],
+				&lightbuffer_diffuse,
+				&lightbuffer_specular
+			);
+		}
+		else
+		{
+			// This workaround if R11G11B10_FLOAT can't be used with UAV loads copies into R16G16B16A16_FLOAT, does the tiled deferred then copies back:
+			device->EventBegin("WARNING: GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT not supported workaround!", cmd);
+
+			wiRenderer::CopyTexture2D(lightbuffer_diffuse_noR11G11B10supportavailable, 0, 0, 0, lightbuffer_diffuse, 0, cmd);
+			wiRenderer::CopyTexture2D(lightbuffer_specular_noR11G11B10supportavailable, 0, 0, 0, lightbuffer_specular, 0, cmd);
+
+			wiRenderer::ComputeTiledLightCulling(
+				depthBuffer_Copy,
+				cmd,
+				&rtGBuffer[0],
+				&rtGBuffer[1],
+				&rtGBuffer[2],
+				&lightbuffer_diffuse_noR11G11B10supportavailable,
+				&lightbuffer_specular_noR11G11B10supportavailable
+			);
+
+			wiRenderer::CopyTexture2D(lightbuffer_diffuse, 0, 0, 0, lightbuffer_diffuse_noR11G11B10supportavailable, 0, cmd);
+			wiRenderer::CopyTexture2D(lightbuffer_specular, 0, 0, 0, lightbuffer_specular_noR11G11B10supportavailable, 0, cmd);
+
+			device->EventEnd(cmd);
+		}
+
 	});
 
 	cmd = device->BeginCommandList();

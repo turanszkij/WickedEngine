@@ -6,6 +6,8 @@
 
 #include "Utility/d3dx12.h"
 
+#include <pix.h>
+
 #pragma comment(lib,"d3d12.lib")
 #pragma comment(lib,"Dxgi.lib")
 #pragma comment(lib,"dxguid.lib")
@@ -1561,7 +1563,19 @@ namespace wiGraphics
 		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &features_0, sizeof(features_0));
 		CONSERVATIVE_RASTERIZATION = features_0.ConservativeRasterizationTier >= D3D12_CONSERVATIVE_RASTERIZATION_TIER_1;
 		RASTERIZER_ORDERED_VIEWS = features_0.ROVsSupported == TRUE;
-		UNORDEREDACCESSTEXTURE_LOAD_EXT = features_0.TypedUAVLoadAdditionalFormats == TRUE;
+
+		if (features_0.TypedUAVLoadAdditionalFormats)
+		{
+			// More info about UAV format load support: https://docs.microsoft.com/en-us/windows/win32/direct3d12/typed-unordered-access-view-loads
+			UAV_LOAD_FORMAT_COMMON = true;
+
+			D3D12_FEATURE_DATA_FORMAT_SUPPORT FormatSupport = { DXGI_FORMAT_R32G32_FLOAT, D3D12_FORMAT_SUPPORT1_NONE, D3D12_FORMAT_SUPPORT2_NONE };
+			hr = device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &FormatSupport, sizeof(FormatSupport));
+			if (SUCCEEDED(hr) && (FormatSupport.Support2 & D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD) != 0)
+			{
+				UAV_LOAD_FORMAT_R11G11B10_FLOAT = true;
+			}
+		}
 
 		// Setup the main viewport
 		viewPort.Width = (FLOAT)SCREENWIDTH;
@@ -3843,12 +3857,15 @@ namespace wiGraphics
 
 	void GraphicsDevice_DX12::EventBegin(const std::string& name, CommandList cmd)
 	{
+		PIXBeginEvent(GetDirectCommandList(cmd), 0xFF000000, wstring(name.begin(), name.end()).c_str());
 	}
 	void GraphicsDevice_DX12::EventEnd(CommandList cmd)
 	{
+		PIXEndEvent(GetDirectCommandList(cmd));
 	}
 	void GraphicsDevice_DX12::SetMarker(const std::string& name, CommandList cmd)
 	{
+		PIXSetMarker(GetDirectCommandList(cmd), 0xFFFF0000, wstring(name.begin(), name.end()).c_str());
 	}
 
 
