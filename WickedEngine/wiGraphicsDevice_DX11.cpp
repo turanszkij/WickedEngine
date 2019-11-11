@@ -1212,9 +1212,10 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 		// More info about UAV format load support: https://docs.microsoft.com/en-us/windows/win32/direct3d12/typed-unordered-access-view-loads
 		UAV_LOAD_FORMAT_COMMON = true;
 
-		D3D11_FEATURE_DATA_FORMAT_SUPPORT FormatSupport = { DXGI_FORMAT_R11G11B10_FLOAT, 0 };
-		hr = device->CheckFeatureSupport(D3D11_FEATURE_FORMAT_SUPPORT, &FormatSupport, sizeof(FormatSupport));
-		if (SUCCEEDED(hr) && (FormatSupport.OutFormatSupport & D3D11_FORMAT_SUPPORT2_UAV_TYPED_LOAD) != 0)
+		D3D11_FEATURE_DATA_FORMAT_SUPPORT2 FormatSupport = {};
+		FormatSupport.InFormat = DXGI_FORMAT_R11G11B10_FLOAT;
+		hr = device->CheckFeatureSupport(D3D11_FEATURE_FORMAT_SUPPORT2, &FormatSupport, sizeof(FormatSupport));
+		if (SUCCEEDED(hr) && (FormatSupport.OutFormatSupport2 & D3D11_FORMAT_SUPPORT2_UAV_TYPED_LOAD) != 0)
 		{
 			UAV_LOAD_FORMAT_R11G11B10_FLOAT = true;
 		}
