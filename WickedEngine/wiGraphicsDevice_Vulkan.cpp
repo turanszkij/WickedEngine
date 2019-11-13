@@ -716,6 +716,7 @@ namespace wiGraphics
 		}
 
 		assert(0);
+		return ~0;
 	}
 
 	// Device selection helpers:
