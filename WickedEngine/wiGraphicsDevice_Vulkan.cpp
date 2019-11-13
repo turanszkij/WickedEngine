@@ -715,7 +715,7 @@ namespace wiGraphics
 			}
 		}
 
-		throw std::runtime_error("failed to find suitable memory type!");
+		assert(0);
 	}
 
 	// Device selection helpers:
@@ -776,9 +776,8 @@ namespace wiGraphics
 		allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-		if (vkAllocateMemory(device, &allocInfo, nullptr, (VkDeviceMemory*)&buffer.resourceMemory) != VK_SUCCESS) {
-			throw std::runtime_error("failed to allocate staging memory!");
-		}
+		res = vkAllocateMemory(device, &allocInfo, nullptr, (VkDeviceMemory*)&buffer.resourceMemory);
+		assert(res == VK_SUCCESS);
 
 		res = vkBindBufferMemory(device, (VkBuffer)buffer.resource, (VkDeviceMemory)buffer.resourceMemory, 0);
 		assert(res == VK_SUCCESS);
@@ -856,9 +855,8 @@ namespace wiGraphics
 		allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, 
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-		if (vkAllocateMemory(device, &allocInfo, nullptr, &resourceMemory) != VK_SUCCESS) {
-			throw std::runtime_error("failed to allocate staging memory!");
-		}
+		res = vkAllocateMemory(device, &allocInfo, nullptr, &resourceMemory);
+		assert(res == VK_SUCCESS);
 
 		res = vkBindBufferMemory(device, resource, resourceMemory, 0);
 		assert(res == VK_SUCCESS);
@@ -911,6 +909,8 @@ namespace wiGraphics
 
 	GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::DescriptorTableFrameAllocator(GraphicsDevice_Vulkan* device, UINT maxRenameCount) : device(device)
 	{
+		VkResult res;
+
 		// Create descriptor pool:
 		{
 			uint32_t numTables = SHADERSTAGE_COUNT * (maxRenameCount + 1); // (gpu * maxRenameCount) + (1 * cpu staging table)
@@ -960,9 +960,8 @@ namespace wiGraphics
 			poolInfo.maxSets = numTables;
 			//poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
-			if (vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create descriptor pool!");
-			}
+			res = vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &descriptorPool);
+			assert(res == VK_SUCCESS);
 
 		}
 
@@ -983,9 +982,8 @@ namespace wiGraphics
 
 				for (uint32_t i = 0; i < maxRenameCount; ++i)
 				{
-					if (vkAllocateDescriptorSets(device->device, &allocInfo, &table.descriptorSet_GPU[i]) != VK_SUCCESS) {
-						throw std::runtime_error("failed to allocate descriptor set!");
-					}
+					res = vkAllocateDescriptorSets(device->device, &allocInfo, &table.descriptorSet_GPU[i]);
+					assert(res == VK_SUCCESS);
 				}
 			}
 
@@ -1449,6 +1447,7 @@ namespace wiGraphics
 		SCREENWIDTH = rect.right - rect.left;
 		SCREENHEIGHT = rect.bottom - rect.top;
 
+		VkResult res;
 
 
 		// Fill out application info:
@@ -1479,7 +1478,6 @@ namespace wiGraphics
 		bool enableValidationLayers = debuglayer;
 		
 		if (enableValidationLayers && !checkValidationLayerSupport()) {
-			//throw std::runtime_error("validation layers requested, but not available!");
 			wiHelper::messageBox("Vulkan validation layer requested but not available!");
 			enableValidationLayers = false;
 		}
@@ -1501,9 +1499,8 @@ namespace wiGraphics
 				createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
 				createInfo.ppEnabledLayerNames = validationLayers.data();
 			}
-			if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create instance!");
-			}
+			res = vkCreateInstance(&createInfo, nullptr, &instance);
+			assert(res == VK_SUCCESS);
 		}
 
 		// Register validation layer callback:
@@ -1513,9 +1510,8 @@ namespace wiGraphics
 			createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
 			createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
 			createInfo.pfnCallback = debugCallback;
-			if (CreateDebugReportCallbackEXT(instance, &createInfo, nullptr, &callback) != VK_SUCCESS) {
-				throw std::runtime_error("failed to set up debug callback!");
-			}
+			res = CreateDebugReportCallbackEXT(instance, &createInfo, nullptr, &callback);
+			assert(res == VK_SUCCESS);
 		}
 
 
@@ -1530,7 +1526,7 @@ namespace wiGraphics
 			auto CreateWin32SurfaceKHR = (PFN_vkCreateWin32SurfaceKHR)vkGetInstanceProcAddr(instance, "vkCreateWin32SurfaceKHR");
 
 			if (!CreateWin32SurfaceKHR || CreateWin32SurfaceKHR(instance, &createInfo, nullptr, &surface) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create window surface!");
+				assert(0);
 			}
 #else
 #error WICKEDENGINE VULKAN DEVICE ERROR: PLATFORM NOT SUPPORTED
@@ -1544,7 +1540,8 @@ namespace wiGraphics
 			vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 
 			if (deviceCount == 0) {
-				throw std::runtime_error("failed to find GPUs with Vulkan support!");
+				wiHelper::messageBox("failed to find GPUs with Vulkan support!");
+				assert(0);
 			}
 
 			std::vector<VkPhysicalDevice> devices(deviceCount);
@@ -1560,7 +1557,8 @@ namespace wiGraphics
 			}
 
 			if (physicalDevice == VK_NULL_HANDLE) {
-				throw std::runtime_error("failed to find a suitable GPU!");
+				wiHelper::messageBox("failed to find a suitable GPU!");
+				assert(0);
 			}
 
 			queueIndices = findQueueFamilies(physicalDevice, surface);
@@ -1615,9 +1613,8 @@ namespace wiGraphics
 				createInfo.enabledLayerCount = 0;
 			}
 
-			if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create logical device!");
-			}
+			res = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
+			assert(res == VK_SUCCESS);
 
 			vkGetDeviceQueue(device, queueIndices.graphicsFamily, 0, &graphicsQueue);
 			vkGetDeviceQueue(device, queueIndices.presentFamily, 0, &presentQueue);
@@ -1831,9 +1828,8 @@ namespace wiGraphics
 				descriptorSetlayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 				descriptorSetlayoutInfo.pBindings = layoutBindings.data();
 				descriptorSetlayoutInfo.bindingCount = static_cast<uint32_t>(layoutBindings.size());
-				if (vkCreateDescriptorSetLayout(device, &descriptorSetlayoutInfo, nullptr, &defaultDescriptorSetlayouts[stage]) != VK_SUCCESS) {
-					throw std::runtime_error("failed to create descriptor set layout!");
-				}
+				res = vkCreateDescriptorSetLayout(device, &descriptorSetlayoutInfo, nullptr, &defaultDescriptorSetlayouts[stage]);
+				assert(res == VK_SUCCESS);
 			}
 
 			// Graphics:
@@ -1844,9 +1840,8 @@ namespace wiGraphics
 				pipelineLayoutInfo.setLayoutCount = 5; // vs, gs, hs, ds, ps
 				pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-				if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &defaultPipelineLayout_Graphics) != VK_SUCCESS) {
-					throw std::runtime_error("failed to create graphics pipeline layout!");
-				}
+				res = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &defaultPipelineLayout_Graphics);
+				assert(res == VK_SUCCESS);
 			}
 
 			// Compute:
@@ -1857,9 +1852,8 @@ namespace wiGraphics
 				pipelineLayoutInfo.setLayoutCount = 1; // cs
 				pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-				if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &defaultPipelineLayout_Compute) != VK_SUCCESS) {
-					throw std::runtime_error("failed to create compute pipeline layout!");
-				}
+				res = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &defaultPipelineLayout_Compute);
+				assert(res == VK_SUCCESS);
 			}
 		}
 
@@ -1911,9 +1905,8 @@ namespace wiGraphics
 			createInfo.clipped = VK_TRUE;
 			createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-			if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create swap chain!");
-			}
+			res = vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain);
+			assert(res == VK_SUCCESS);
 
 			vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
 			assert(imageCount == BACKBUFFER_COUNT);
@@ -1929,7 +1922,7 @@ namespace wiGraphics
 			{
 				info.objectHandle = (uint64_t)x;
 
-				VkResult res = setDebugUtilsObjectNameEXT(device, &info);
+				res = setDebugUtilsObjectNameEXT(device, &info);
 				assert(res == VK_SUCCESS);
 			}
 
@@ -1977,9 +1970,8 @@ namespace wiGraphics
 			renderPassInfo.dependencyCount = 1;
 			renderPassInfo.pDependencies = &dependency;
 
-			if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &defaultRenderPass) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create render pass!");
-			}
+			res = vkCreateRenderPass(device, &renderPassInfo, nullptr, &defaultRenderPass);
+			assert(res == VK_SUCCESS);
 
 		}
 
@@ -2014,9 +2006,8 @@ namespace wiGraphics
 					createInfo.subresourceRange.baseArrayLayer = 0;
 					createInfo.subresourceRange.layerCount = 1;
 
-					if (vkCreateImageView(device, &createInfo, nullptr, &frames[fr].swapChainImageView) != VK_SUCCESS) {
-						throw std::runtime_error("failed to create image views!");
-					}
+					res = vkCreateImageView(device, &createInfo, nullptr, &frames[fr].swapChainImageView);
+					assert(res == VK_SUCCESS);
 
 					VkImageView attachments[] = {
 						frames[fr].swapChainImageView
@@ -2031,9 +2022,8 @@ namespace wiGraphics
 					framebufferInfo.height = swapChainExtent.height;
 					framebufferInfo.layers = 1;
 
-					if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &frames[fr].swapChainFramebuffer) != VK_SUCCESS) {
-						throw std::runtime_error("failed to create framebuffer!");
-					}
+					res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &frames[fr].swapChainFramebuffer);
+					assert(res == VK_SUCCESS);
 				}
 
 				// Create resources for transition command buffer:
@@ -2043,9 +2033,8 @@ namespace wiGraphics
 					poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
 					poolInfo.flags = 0; // Optional
 
-					if (vkCreateCommandPool(device, &poolInfo, nullptr, &frames[fr].transitionCommandPool) != VK_SUCCESS) {
-						throw std::runtime_error("failed to create command pool!");
-					}
+					res = vkCreateCommandPool(device, &poolInfo, nullptr, &frames[fr].transitionCommandPool);
+					assert(res == VK_SUCCESS);
 
 					VkCommandBufferAllocateInfo commandBufferInfo = {};
 					commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -2053,16 +2042,15 @@ namespace wiGraphics
 					commandBufferInfo.commandPool = frames[fr].transitionCommandPool;
 					commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
-					if (vkAllocateCommandBuffers(device, &commandBufferInfo, &frames[fr].transitionCommandBuffer) != VK_SUCCESS) {
-						throw std::runtime_error("failed to create command buffers!");
-					}
+					res = vkAllocateCommandBuffers(device, &commandBufferInfo, &frames[fr].transitionCommandBuffer);
+					assert(res == VK_SUCCESS);
 
 					VkCommandBufferBeginInfo beginInfo = {};
 					beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 					beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 					beginInfo.pInheritanceInfo = nullptr; // Optional
 
-					VkResult res = vkBeginCommandBuffer(frames[fr].transitionCommandBuffer, &beginInfo);
+					res = vkBeginCommandBuffer(frames[fr].transitionCommandBuffer, &beginInfo);
 					assert(res == VK_SUCCESS);
 				}
 			}
@@ -2073,11 +2061,10 @@ namespace wiGraphics
 			VkSemaphoreCreateInfo semaphoreInfo = {};
 			semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-			if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
-				vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS) {
-
-				throw std::runtime_error("failed to create semaphores!");
-			}
+			res = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore);
+			assert(res == VK_SUCCESS);
+			res = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore);
+			assert(res == VK_SUCCESS);
 		}
 
 		// Create resources for copy (transfer) queue:
@@ -2087,9 +2074,8 @@ namespace wiGraphics
 			poolInfo.queueFamilyIndex = queueFamilyIndices.copyFamily;
 			poolInfo.flags = 0; // Optional
 
-			if (vkCreateCommandPool(device, &poolInfo, nullptr, &copyCommandPool) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create command pool!");
-			}
+			res = vkCreateCommandPool(device, &poolInfo, nullptr, &copyCommandPool);
+			assert(res == VK_SUCCESS);
 
 			VkCommandBufferAllocateInfo commandBufferInfo = {};
 			commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -2097,16 +2083,15 @@ namespace wiGraphics
 			commandBufferInfo.commandPool = copyCommandPool;
 			commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
-			if (vkAllocateCommandBuffers(device, &commandBufferInfo, &copyCommandBuffer) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create command buffers!");
-			}
+			res = vkAllocateCommandBuffers(device, &commandBufferInfo, &copyCommandBuffer);
+			assert(res == VK_SUCCESS);
 
 			VkCommandBufferBeginInfo beginInfo = {};
 			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 			beginInfo.pInheritanceInfo = nullptr; // Optional
 
-			VkResult res = vkBeginCommandBuffer(copyCommandBuffer, &beginInfo);
+			res = vkBeginCommandBuffer(copyCommandBuffer, &beginInfo);
 			assert(res == VK_SUCCESS);
 
 
@@ -2131,7 +2116,7 @@ namespace wiGraphics
 			bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 			bufferInfo.flags = 0;
 
-			VkResult res = vkCreateBuffer(device, &bufferInfo, nullptr, &nullBuffer);
+			res = vkCreateBuffer(device, &bufferInfo, nullptr, &nullBuffer);
 			assert(res == VK_SUCCESS);
 
 
@@ -2145,9 +2130,8 @@ namespace wiGraphics
 			allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 			VkDeviceMemory mem;
-			if (vkAllocateMemory(device, &allocInfo, nullptr, &mem) != VK_SUCCESS) {
-				throw std::runtime_error("failed to allocate buffer memory!");
-			}
+			res = vkAllocateMemory(device, &allocInfo, nullptr, &mem);
+			assert(res == VK_SUCCESS);
 
 			res = vkBindBufferMemory(device, nullBuffer, mem, 0);
 			assert(res == VK_SUCCESS);
@@ -2177,7 +2161,7 @@ namespace wiGraphics
 			imageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
 			imageInfo.flags = 0;
 
-			VkResult res = vkCreateImage(device, &imageInfo, nullptr, &nullImage);
+			res = vkCreateImage(device, &imageInfo, nullptr, &nullImage);
 			assert(res == VK_SUCCESS);
 
 
@@ -2191,9 +2175,8 @@ namespace wiGraphics
 			allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 			VkDeviceMemory mem;
-			if (vkAllocateMemory(device, &allocInfo, nullptr, &mem) != VK_SUCCESS) {
-				throw std::runtime_error("failed to allocate image memory!");
-			}
+			res = vkAllocateMemory(device, &allocInfo, nullptr, &mem);
+			assert(res == VK_SUCCESS);
 
 			res = vkBindImageMemory(device, nullImage, mem, 0);
 			assert(res == VK_SUCCESS);
@@ -2217,7 +2200,7 @@ namespace wiGraphics
 			VkSamplerCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 
-			VkResult res = vkCreateSampler(device, &createInfo, nullptr, &nullSampler);
+			res = vkCreateSampler(device, &createInfo, nullptr, &nullSampler);
 			assert(res == VK_SUCCESS);
 		}
 
@@ -2291,8 +2274,6 @@ namespace wiGraphics
 		pBuffer->type = GPUResource::BUFFER;
 		pBuffer->Register(this);
 
-		HRESULT hr = E_FAIL;
-
 		pBuffer->desc = *pDesc;
 
 		VkBufferCreateInfo bufferInfo = {};
@@ -2347,8 +2328,7 @@ namespace wiGraphics
 
 		VkResult res;
 		res = vkCreateBuffer(device, &bufferInfo, nullptr, reinterpret_cast<VkBuffer*>(&pBuffer->resource));
-		hr = res == VK_SUCCESS;
-		assert(SUCCEEDED(hr));
+		assert(res == VK_SUCCESS);
 
 
 
@@ -2361,13 +2341,11 @@ namespace wiGraphics
 		allocInfo.allocationSize = memRequirements.size;
 		allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT /*| VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT*/);
 
-		if (vkAllocateMemory(device, &allocInfo, nullptr, reinterpret_cast<VkDeviceMemory*>(&pBuffer->resourceMemory)) != VK_SUCCESS) {
-			throw std::runtime_error("failed to allocate buffer memory!");
-		}
+		res = vkAllocateMemory(device, &allocInfo, nullptr, reinterpret_cast<VkDeviceMemory*>(&pBuffer->resourceMemory));
+		assert(res == VK_SUCCESS);
 
 		res = vkBindBufferMemory(device, (VkBuffer)pBuffer->resource, (VkDeviceMemory)pBuffer->resourceMemory, 0);
-		hr = res == VK_SUCCESS;
-		assert(SUCCEEDED(hr));
+		assert(res == VK_SUCCESS);
 
 
 
@@ -2481,7 +2459,7 @@ namespace wiGraphics
 
 
 
-		return hr;
+		return res == VK_SUCCESS ? S_OK : E_FAIL;
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D *pTexture1D)
 	{
@@ -2509,9 +2487,6 @@ namespace wiGraphics
 		{
 			pTexture2D->desc.MipLevels = static_cast<UINT>(log2(std::max(pTexture2D->desc.Width, pTexture2D->desc.Height)));
 		}
-
-
-		HRESULT hr = E_FAIL;
 
 		VkImageCreateInfo imageInfo = {};
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -2555,8 +2530,7 @@ namespace wiGraphics
 
 		VkResult res;
 		res = vkCreateImage(device, &imageInfo, nullptr, reinterpret_cast<VkImage*>(&pTexture2D->resource));
-		hr = res == VK_SUCCESS;
-		assert(SUCCEEDED(hr));
+		assert(res == VK_SUCCESS);
 
 
 
@@ -2569,13 +2543,11 @@ namespace wiGraphics
 		allocInfo.allocationSize = memRequirements.size;
 		allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-		if (vkAllocateMemory(device, &allocInfo, nullptr, reinterpret_cast<VkDeviceMemory*>(&pTexture2D->resourceMemory)) != VK_SUCCESS) {
-			throw std::runtime_error("failed to allocate image memory!");
-		}
+		res = vkAllocateMemory(device, &allocInfo, nullptr, reinterpret_cast<VkDeviceMemory*>(&pTexture2D->resourceMemory));
+		assert(res == VK_SUCCESS);
 
 		res = vkBindImageMemory(device, (VkImage)pTexture2D->resource, (VkDeviceMemory)pTexture2D->resourceMemory, 0);
-		hr = res == VK_SUCCESS; 
-		assert(SUCCEEDED(hr));
+		assert(res == VK_SUCCESS);
 
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
@@ -2716,7 +2688,7 @@ namespace wiGraphics
 			CreateSubresource(pTexture2D, UAV, 0, -1, 0, -1);
 		}
 
-		return hr;
+		return res == VK_SUCCESS ? S_OK : E_FAIL;
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D *pTexture3D)
 	{
@@ -2808,6 +2780,8 @@ namespace wiGraphics
 		memcpy(pComputeShader->code.data, pShaderBytecode, BytecodeLength);
 		pComputeShader->code.size = BytecodeLength;
 
+		VkResult res;
+
 		VkComputePipelineCreateInfo pipelineInfo = {};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 		pipelineInfo.layout = defaultPipelineLayout_Compute;
@@ -2826,9 +2800,8 @@ namespace wiGraphics
 		VkShaderModule shaderModule = {};
 		moduleInfo.codeSize = pComputeShader->code.size;
 		moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pComputeShader->code.data);
-		if (vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create shader module!");
-		}
+		res = vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule);
+		assert(res == VK_SUCCESS);
 
 		stageInfo.module = shaderModule;
 		stageInfo.pName = "main";
@@ -2836,11 +2809,10 @@ namespace wiGraphics
 		pipelineInfo.stage = stageInfo;
 
 
-		VkResult res = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, reinterpret_cast<VkPipeline*>(&pComputeShader->resource));
-		HRESULT hr = res == VK_SUCCESS ? S_OK : E_FAIL;
-		assert(SUCCEEDED(hr));
+		res = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, reinterpret_cast<VkPipeline*>(&pComputeShader->resource));
+		assert(res == VK_SUCCESS);
 
-		return hr;
+		return res == VK_SUCCESS ? S_OK : E_FAIL;
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
 	{
@@ -3045,11 +3017,10 @@ namespace wiGraphics
 		createInfo.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
 		createInfo.unnormalizedCoordinates = VK_FALSE;
 
-		if (vkCreateSampler(device, &createInfo, nullptr, reinterpret_cast<VkSampler*>(&pSamplerState->resource)) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create sampler!");
-		}
+		VkResult res = vkCreateSampler(device, &createInfo, nullptr, reinterpret_cast<VkSampler*>(&pSamplerState->resource));
+		assert(res == VK_SUCCESS);
 
-		return S_OK;
+		return res == VK_SUCCESS ? S_OK : E_FAIL;
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
 	{
@@ -3065,6 +3036,8 @@ namespace wiGraphics
 		pso->Register(this);
 
 		pso->desc = *pDesc;
+
+		VkResult res;
 
 		std::vector<VkAttachmentDescription> attachments;
 		std::vector<VkAttachmentReference> colorAttachmentRefs;
@@ -3132,9 +3105,8 @@ namespace wiGraphics
 			renderPassInfo.subpassCount = 1;
 			renderPassInfo.pSubpasses = &subpass;
 
-			if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create render pass!");
-			}
+			res = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
+			assert(res == VK_SUCCESS);
 		}
 
 
@@ -3158,9 +3130,8 @@ namespace wiGraphics
 			moduleInfo.codeSize = pDesc->vs->code.size;
 			moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pDesc->vs->code.data);
 			VkShaderModule shaderModule;
-			if (vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create shader module!");
-			}
+			res = vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule);
+			assert(res == VK_SUCCESS);
 
 			VkPipelineShaderStageCreateInfo stageInfo = {}; 
 			stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -3178,9 +3149,8 @@ namespace wiGraphics
 			moduleInfo.codeSize = pDesc->hs->code.size;
 			moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pDesc->hs->code.data);
 			VkShaderModule shaderModule;
-			if (vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create shader module!");
-			}
+			res = vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule);
+			assert(res == VK_SUCCESS);
 
 			VkPipelineShaderStageCreateInfo stageInfo = {};
 			stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -3198,9 +3168,8 @@ namespace wiGraphics
 			moduleInfo.codeSize = pDesc->ds->code.size;
 			moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pDesc->ds->code.data);
 			VkShaderModule shaderModule;
-			if (vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create shader module!");
-			}
+			res = vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule);
+			assert(res == VK_SUCCESS);
 
 			VkPipelineShaderStageCreateInfo stageInfo = {};
 			stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -3218,9 +3187,8 @@ namespace wiGraphics
 			moduleInfo.codeSize = pDesc->gs->code.size;
 			moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pDesc->gs->code.data);
 			VkShaderModule shaderModule;
-			if (vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create shader module!");
-			}
+			res = vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule);
+			assert(res == VK_SUCCESS);
 
 			VkPipelineShaderStageCreateInfo stageInfo = {};
 			stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -3238,9 +3206,8 @@ namespace wiGraphics
 			moduleInfo.codeSize = pDesc->ps->code.size;
 			moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pDesc->ps->code.data);
 			VkShaderModule shaderModule;
-			if (vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create shader module!");
-			}
+			res = vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule);
+			assert(res == VK_SUCCESS);
 
 			VkPipelineShaderStageCreateInfo stageInfo = {};
 			stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -3555,15 +3522,14 @@ namespace wiGraphics
 		pipelineInfo.pDynamicState = &dynamicState;
 
 
-		VkResult res = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, reinterpret_cast<VkPipeline*>(&pso->pipeline));
-		HRESULT hr = res == VK_SUCCESS ? S_OK : E_FAIL;
-		assert(SUCCEEDED(hr));
+		res = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, reinterpret_cast<VkPipeline*>(&pso->pipeline));
+		assert(res == VK_SUCCESS);
 
 
 		// Dummy render pass no longer needed:
 		vkDestroyRenderPass(device, renderPass, nullptr);
 
-		return hr;
+		return res == VK_SUCCESS ? S_OK : E_FAIL;
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
 	{
@@ -3571,6 +3537,8 @@ namespace wiGraphics
 		renderpass->Register(this);
 
 		renderpass->desc = *pDesc;
+
+		VkResult res;
 
 		VkImageView attachments[9] = {};
 		VkAttachmentDescription attachmentDescriptions[9] = {};
@@ -3736,9 +3704,8 @@ namespace wiGraphics
 		renderPassInfo.pSubpasses = &subpass;
 
 		VkRenderPass renderpass_handle = VK_NULL_HANDLE;
-		if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderpass_handle) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create render pass!");
-		}
+		res = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderpass_handle);
+		assert(res == VK_SUCCESS);
 
 		VkFramebufferCreateInfo framebufferInfo = {};
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -3755,14 +3722,13 @@ namespace wiGraphics
 		}
 
 		VkFramebuffer framebuffer_handle = VK_NULL_HANDLE;
-		if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer_handle) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create framebuffer!");
-		}
+		res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer_handle);
+		assert(res == VK_SUCCESS);
 
 		renderpass->renderpass = (wiCPUHandle)renderpass_handle;
 		renderpass->framebuffer = (wiCPUHandle)framebuffer_handle;
 
-		return S_OK;
+		return res == VK_SUCCESS ? S_OK : E_FAIL;
 	}
 
 	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount)
@@ -4191,18 +4157,16 @@ namespace wiGraphics
 		{
 			// Copies:
 			{
-				if (vkEndCommandBuffer(copyCommandBuffer) != VK_SUCCESS) {
-					throw std::runtime_error("failed to record copy command buffer!");
-				}
+				res = vkEndCommandBuffer(copyCommandBuffer);
+				assert(res == VK_SUCCESS);
 
 				VkSubmitInfo submitInfo = {};
 				submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 				submitInfo.commandBufferCount = 1;
 				submitInfo.pCommandBuffers = &copyCommandBuffer;
 
-				if (vkQueueSubmit(copyQueue, 1, &submitInfo, copyFence) != VK_SUCCESS) {
-					throw std::runtime_error("failed to submit copy command buffer!");
-				}
+				res = vkQueueSubmit(copyQueue, 1, &submitInfo, copyFence);
+				assert(res == VK_SUCCESS);
 
 				//vkQueueWaitIdle(copyQueue);
 
@@ -4211,7 +4175,6 @@ namespace wiGraphics
 
 				res = vkResetFences(device, 1, &copyFence);
 				assert(res == VK_SUCCESS);
-
 
 				res = vkResetCommandPool(device, copyCommandPool, 0);
 				assert(res == VK_SUCCESS);
@@ -4246,18 +4209,16 @@ namespace wiGraphics
 				}
 				frame.loadedimagetransitions.clear();
 
-				if (vkEndCommandBuffer(frame.transitionCommandBuffer) != VK_SUCCESS) {
-					throw std::runtime_error("failed to record transition command buffer!");
-				}
+				res = vkEndCommandBuffer(frame.transitionCommandBuffer);
+				assert(res == VK_SUCCESS);
 
 				VkSubmitInfo submitInfo = {};
 				submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 				submitInfo.commandBufferCount = 1;
 				submitInfo.pCommandBuffers = &frame.transitionCommandBuffer;
 
-				if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, nullptr) != VK_SUCCESS) {
-					throw std::runtime_error("failed to submit copy command buffer!");
-				}
+				res = vkQueueSubmit(graphicsQueue, 1, &submitInfo, nullptr);
+				assert(res == VK_SUCCESS);
 			}
 		}
 		copyQueueLock.unlock();
@@ -4274,9 +4235,8 @@ namespace wiGraphics
 			CommandList cmd;
 			while (active_commandlists.pop_front(cmd))
 			{
-				if (vkEndCommandBuffer(GetDirectCommandList(cmd)) != VK_SUCCESS) {
-					throw std::runtime_error("failed to record command buffer!");
-				}
+				res = vkEndCommandBuffer(GetDirectCommandList(cmd));
+				assert(res == VK_SUCCESS);
 
 				cmdLists[counter] = GetDirectCommandList(cmd);
 				cmds[counter] = cmd;
@@ -4298,9 +4258,8 @@ namespace wiGraphics
 			submitInfo.signalSemaphoreCount = 1;
 			submitInfo.pSignalSemaphores = signalSemaphores;
 
-			if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, GetFrameResources().frameFence) != VK_SUCCESS) {
-				throw std::runtime_error("failed to submit graphics command buffer!");
-			}
+			res = vkQueueSubmit(graphicsQueue, 1, &submitInfo, GetFrameResources().frameFence);
+			assert(res == VK_SUCCESS);
 		}
 
 
@@ -4407,6 +4366,8 @@ namespace wiGraphics
 
 	CommandList GraphicsDevice_Vulkan::BeginCommandList()
 	{
+		VkResult res;
+
 		CommandList cmd;
 		if (!free_commandlists.pop_front(cmd))
 		{
@@ -4423,9 +4384,8 @@ namespace wiGraphics
 				poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
 				poolInfo.flags = 0; // Optional
 
-				if (vkCreateCommandPool(device, &poolInfo, nullptr, &frame.commandPools[cmd]) != VK_SUCCESS) {
-					throw std::runtime_error("failed to create command pool!");
-				}
+				res = vkCreateCommandPool(device, &poolInfo, nullptr, &frame.commandPools[cmd]);
+				assert(res == VK_SUCCESS);
 
 				VkCommandBufferAllocateInfo commandBufferInfo = {};
 				commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -4433,16 +4393,13 @@ namespace wiGraphics
 				commandBufferInfo.commandPool = frame.commandPools[cmd];
 				commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
-				if (vkAllocateCommandBuffers(device, &commandBufferInfo, &frame.commandBuffers[cmd]) != VK_SUCCESS) {
-					throw std::runtime_error("failed to create command buffers!");
-				}
+				res = vkAllocateCommandBuffers(device, &commandBufferInfo, &frame.commandBuffers[cmd]);
+				assert(res == VK_SUCCESS);
 
 				frame.resourceBuffer[cmd] = new FrameResources::ResourceFrameAllocator(physicalDevice, device, 4 * 1024 * 1024);
 				frame.descriptors[cmd] = new FrameResources::DescriptorTableFrameAllocator(this, 1024);
 			}
 		}
-
-		VkResult res;
 		res = vkResetCommandPool(device, GetFrameResources().commandPools[cmd], 0);
 		assert(res == VK_SUCCESS);
 
