@@ -2358,141 +2358,7 @@ namespace wiGraphics
 
 		pso->desc = *pDesc;
 
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = {};
-
-		if (pDesc->vs != nullptr)
-		{
-			desc.VS.pShaderBytecode = pDesc->vs->code.data;
-			desc.VS.BytecodeLength = pDesc->vs->code.size;
-		}
-		if (pDesc->hs != nullptr)
-		{
-			desc.HS.pShaderBytecode = pDesc->hs->code.data;
-			desc.HS.BytecodeLength = pDesc->hs->code.size;
-		}
-		if (pDesc->ds != nullptr)
-		{
-			desc.DS.pShaderBytecode = pDesc->ds->code.data;
-			desc.DS.BytecodeLength = pDesc->ds->code.size;
-		}
-		if (pDesc->gs != nullptr)
-		{
-			desc.GS.pShaderBytecode = pDesc->gs->code.data;
-			desc.GS.BytecodeLength = pDesc->gs->code.size;
-		}
-		if (pDesc->ps != nullptr)
-		{
-			desc.PS.BytecodeLength = pDesc->ps->code.size;
-			desc.PS.pShaderBytecode = pDesc->ps->code.data;
-		}
-
-		RasterizerStateDesc pRasterizerStateDesc = pDesc->rs != nullptr ? pDesc->rs->GetDesc() : RasterizerStateDesc();
-		desc.RasterizerState.FillMode = _ConvertFillMode(pRasterizerStateDesc.FillMode);
-		desc.RasterizerState.CullMode = _ConvertCullMode(pRasterizerStateDesc.CullMode);
-		desc.RasterizerState.FrontCounterClockwise = pRasterizerStateDesc.FrontCounterClockwise;
-		desc.RasterizerState.DepthBias = pRasterizerStateDesc.DepthBias;
-		desc.RasterizerState.DepthBiasClamp = pRasterizerStateDesc.DepthBiasClamp;
-		desc.RasterizerState.SlopeScaledDepthBias = pRasterizerStateDesc.SlopeScaledDepthBias;
-		desc.RasterizerState.DepthClipEnable = pRasterizerStateDesc.DepthClipEnable;
-		desc.RasterizerState.MultisampleEnable = pRasterizerStateDesc.MultisampleEnable;
-		desc.RasterizerState.AntialiasedLineEnable = pRasterizerStateDesc.AntialiasedLineEnable;
-		desc.RasterizerState.ConservativeRaster = ((CONSERVATIVE_RASTERIZATION && pRasterizerStateDesc.ConservativeRasterizationEnable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
-		desc.RasterizerState.ForcedSampleCount = pRasterizerStateDesc.ForcedSampleCount;
-
-
-		DepthStencilStateDesc pDepthStencilStateDesc = pDesc->dss != nullptr ? pDesc->dss->GetDesc() : DepthStencilStateDesc();
-		desc.DepthStencilState.DepthEnable = pDepthStencilStateDesc.DepthEnable;
-		desc.DepthStencilState.DepthWriteMask = _ConvertDepthWriteMask(pDepthStencilStateDesc.DepthWriteMask);
-		desc.DepthStencilState.DepthFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.DepthFunc);
-		desc.DepthStencilState.StencilEnable = pDepthStencilStateDesc.StencilEnable;
-		desc.DepthStencilState.StencilReadMask = pDepthStencilStateDesc.StencilReadMask;
-		desc.DepthStencilState.StencilWriteMask = pDepthStencilStateDesc.StencilWriteMask;
-		desc.DepthStencilState.FrontFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilDepthFailOp);
-		desc.DepthStencilState.FrontFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilFailOp);
-		desc.DepthStencilState.FrontFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.FrontFace.StencilFunc);
-		desc.DepthStencilState.FrontFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilPassOp);
-		desc.DepthStencilState.BackFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilDepthFailOp);
-		desc.DepthStencilState.BackFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilFailOp);
-		desc.DepthStencilState.BackFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.BackFace.StencilFunc);
-		desc.DepthStencilState.BackFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilPassOp);
-
-
-		BlendStateDesc pBlendStateDesc = pDesc->bs != nullptr ? pDesc->bs->GetDesc() : BlendStateDesc();
-		desc.BlendState.AlphaToCoverageEnable = pBlendStateDesc.AlphaToCoverageEnable;
-		desc.BlendState.IndependentBlendEnable = pBlendStateDesc.IndependentBlendEnable;
-		for (int i = 0; i < 8; ++i)
-		{
-			desc.BlendState.RenderTarget[i].BlendEnable = pBlendStateDesc.RenderTarget[i].BlendEnable;
-			desc.BlendState.RenderTarget[i].SrcBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlend);
-			desc.BlendState.RenderTarget[i].DestBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlend);
-			desc.BlendState.RenderTarget[i].BlendOp = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOp);
-			desc.BlendState.RenderTarget[i].SrcBlendAlpha = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlendAlpha);
-			desc.BlendState.RenderTarget[i].DestBlendAlpha = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlendAlpha);
-			desc.BlendState.RenderTarget[i].BlendOpAlpha = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOpAlpha);
-			desc.BlendState.RenderTarget[i].RenderTargetWriteMask = _ParseColorWriteMask(pBlendStateDesc.RenderTarget[i].RenderTargetWriteMask);
-		}
-
-		D3D12_INPUT_ELEMENT_DESC* elements = nullptr;
-		if (pDesc->il != nullptr)
-		{
-			desc.InputLayout.NumElements = (UINT)pDesc->il->desc.size();
-			elements = new D3D12_INPUT_ELEMENT_DESC[desc.InputLayout.NumElements];
-			for (UINT i = 0; i < desc.InputLayout.NumElements; ++i)
-			{
-				elements[i].SemanticName = pDesc->il->desc[i].SemanticName;
-				elements[i].SemanticIndex = pDesc->il->desc[i].SemanticIndex;
-				elements[i].Format = _ConvertFormat(pDesc->il->desc[i].Format);
-				elements[i].InputSlot = pDesc->il->desc[i].InputSlot;
-				elements[i].AlignedByteOffset = pDesc->il->desc[i].AlignedByteOffset;
-				if (elements[i].AlignedByteOffset == VertexLayoutDesc::APPEND_ALIGNED_ELEMENT)
-					elements[i].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-				elements[i].InputSlotClass = _ConvertInputClassification(pDesc->il->desc[i].InputSlotClass);
-				elements[i].InstanceDataStepRate = pDesc->il->desc[i].InstanceDataStepRate;
-			}
-		}
-		desc.InputLayout.pInputElementDescs = elements;
-
-		desc.NumRenderTargets = pDesc->numRTs;
-		for (UINT i = 0; i < desc.NumRenderTargets; ++i)
-		{
-			desc.RTVFormats[i] = _ConvertFormat(pDesc->RTFormats[i]);
-		}
-		desc.DSVFormat = _ConvertFormat(pDesc->DSFormat);
-
-		desc.SampleDesc.Count = pDesc->sampleDesc.Count;
-		desc.SampleDesc.Quality = pDesc->sampleDesc.Quality;
-		desc.SampleMask = pDesc->sampleMask;
-
-		switch (pDesc->pt)
-		{
-		case POINTLIST:
-			desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-			break;
-		case LINELIST:
-			desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-			break;
-		case TRIANGLELIST:
-		case TRIANGLESTRIP:
-			desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-			break;
-		case PATCHLIST:
-			desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
-			break;
-		default:
-			desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
-			break;
-		}
-
-		desc.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
-
-		desc.pRootSignature = graphicsRootSig;
-
-		HRESULT hr = device->CreateGraphicsPipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&pso->pipeline);
-		assert(SUCCEEDED(hr));
-
-		SAFE_DELETE_ARRAY(elements);
-
-		return hr;
+		return S_OK;
 	}
 	HRESULT GraphicsDevice_DX12::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
 	{
@@ -3229,6 +3095,13 @@ namespace wiGraphics
 		}
 		GetDirectCommandList((CommandList)cmd)->RSSetScissorRects(8, pRects);
 
+		for (auto& x : pipelines_worker[cmd])
+		{
+			pipelines_global[x.first] = x.second;
+		}
+		pipelines_worker[cmd].clear();
+		prev_pipeline_hash[cmd] = 0;
+		active_renderpass[cmd] = nullptr;
 
 		active_commandlists.push_back(cmd);
 		return cmd;
@@ -3246,7 +3119,7 @@ namespace wiGraphics
 
 	void GraphicsDevice_DX12::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 	{
-		prev_renderpass[cmd] = renderpass;
+		active_renderpass[cmd] = renderpass;
 
 		const RenderPassDesc& desc = renderpass->GetDesc();
 
@@ -3429,9 +3302,9 @@ namespace wiGraphics
 		// Perform render pass transitions:
 		D3D12_RESOURCE_BARRIER barrierdescs[9];
 		UINT numBarriers = 0;
-		for (UINT i = 0; i < prev_renderpass[cmd]->desc.numAttachments; ++i)
+		for (UINT i = 0; i < active_renderpass[cmd]->desc.numAttachments; ++i)
 		{
-			const RenderPassAttachment& attachment = prev_renderpass[cmd]->desc.attachments[i];
+			const RenderPassAttachment& attachment = active_renderpass[cmd]->desc.attachments[i];
 			if (attachment.initial_layout == attachment.final_layout)
 			{
 				continue;
@@ -3451,7 +3324,7 @@ namespace wiGraphics
 			GetDirectCommandList(cmd)->ResourceBarrier(numBarriers, barrierdescs);
 		}
 
-		prev_renderpass[cmd] = nullptr;
+		active_renderpass[cmd] = nullptr;
 	}
 	void GraphicsDevice_DX12::BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) {
 		assert(rects != nullptr);
@@ -3590,7 +3463,174 @@ namespace wiGraphics
 	}
 	void GraphicsDevice_DX12::BindPipelineState(const PipelineState* pso, CommandList cmd)
 	{
-		GetDirectCommandList(cmd)->SetPipelineState((ID3D12PipelineState*)pso->pipeline);
+		size_t pipeline_hash = 0;
+		wiHelper::hash_combine(pipeline_hash, size_t(pso));
+		wiHelper::hash_combine(pipeline_hash, size_t(active_renderpass[cmd]));
+		if (prev_pipeline_hash[cmd] == pipeline_hash)
+		{
+			return;
+		}
+		prev_pipeline_hash[cmd] = pipeline_hash;
+
+		ID3D12PipelineState* pipeline = nullptr;
+		auto it = pipelines_global.find(pipeline_hash);
+		if (it == pipelines_global.end())
+		{
+			for (auto& x : pipelines_worker[cmd])
+			{
+				if (pipeline_hash == x.first)
+				{
+					pipeline = x.second;
+					break;
+				}
+			}
+
+			if (pipeline == nullptr)
+			{
+				D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = {};
+
+				if (pso->desc.vs != nullptr)
+				{
+					desc.VS.pShaderBytecode = pso->desc.vs->code.data;
+					desc.VS.BytecodeLength = pso->desc.vs->code.size;
+				}
+				if (pso->desc.hs != nullptr)
+				{
+					desc.HS.pShaderBytecode = pso->desc.hs->code.data;
+					desc.HS.BytecodeLength = pso->desc.hs->code.size;
+				}
+				if (pso->desc.ds != nullptr)
+				{
+					desc.DS.pShaderBytecode = pso->desc.ds->code.data;
+					desc.DS.BytecodeLength = pso->desc.ds->code.size;
+				}
+				if (pso->desc.gs != nullptr)
+				{
+					desc.GS.pShaderBytecode = pso->desc.gs->code.data;
+					desc.GS.BytecodeLength = pso->desc.gs->code.size;
+				}
+				if (pso->desc.ps != nullptr)
+				{
+					desc.PS.BytecodeLength = pso->desc.ps->code.size;
+					desc.PS.pShaderBytecode = pso->desc.ps->code.data;
+				}
+
+				RasterizerStateDesc pRasterizerStateDesc = pso->desc.rs != nullptr ? pso->desc.rs->GetDesc() : RasterizerStateDesc();
+				desc.RasterizerState.FillMode = _ConvertFillMode(pRasterizerStateDesc.FillMode);
+				desc.RasterizerState.CullMode = _ConvertCullMode(pRasterizerStateDesc.CullMode);
+				desc.RasterizerState.FrontCounterClockwise = pRasterizerStateDesc.FrontCounterClockwise;
+				desc.RasterizerState.DepthBias = pRasterizerStateDesc.DepthBias;
+				desc.RasterizerState.DepthBiasClamp = pRasterizerStateDesc.DepthBiasClamp;
+				desc.RasterizerState.SlopeScaledDepthBias = pRasterizerStateDesc.SlopeScaledDepthBias;
+				desc.RasterizerState.DepthClipEnable = pRasterizerStateDesc.DepthClipEnable;
+				desc.RasterizerState.MultisampleEnable = pRasterizerStateDesc.MultisampleEnable;
+				desc.RasterizerState.AntialiasedLineEnable = pRasterizerStateDesc.AntialiasedLineEnable;
+				desc.RasterizerState.ConservativeRaster = ((CONSERVATIVE_RASTERIZATION && pRasterizerStateDesc.ConservativeRasterizationEnable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+				desc.RasterizerState.ForcedSampleCount = pRasterizerStateDesc.ForcedSampleCount;
+
+
+				DepthStencilStateDesc pDepthStencilStateDesc = pso->desc.dss != nullptr ? pso->desc.dss->GetDesc() : DepthStencilStateDesc();
+				desc.DepthStencilState.DepthEnable = pDepthStencilStateDesc.DepthEnable;
+				desc.DepthStencilState.DepthWriteMask = _ConvertDepthWriteMask(pDepthStencilStateDesc.DepthWriteMask);
+				desc.DepthStencilState.DepthFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.DepthFunc);
+				desc.DepthStencilState.StencilEnable = pDepthStencilStateDesc.StencilEnable;
+				desc.DepthStencilState.StencilReadMask = pDepthStencilStateDesc.StencilReadMask;
+				desc.DepthStencilState.StencilWriteMask = pDepthStencilStateDesc.StencilWriteMask;
+				desc.DepthStencilState.FrontFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilDepthFailOp);
+				desc.DepthStencilState.FrontFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilFailOp);
+				desc.DepthStencilState.FrontFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.FrontFace.StencilFunc);
+				desc.DepthStencilState.FrontFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilPassOp);
+				desc.DepthStencilState.BackFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilDepthFailOp);
+				desc.DepthStencilState.BackFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilFailOp);
+				desc.DepthStencilState.BackFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.BackFace.StencilFunc);
+				desc.DepthStencilState.BackFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilPassOp);
+
+
+				BlendStateDesc pBlendStateDesc = pso->desc.bs != nullptr ? pso->desc.bs->GetDesc() : BlendStateDesc();
+				desc.BlendState.AlphaToCoverageEnable = pBlendStateDesc.AlphaToCoverageEnable;
+				desc.BlendState.IndependentBlendEnable = pBlendStateDesc.IndependentBlendEnable;
+				for (int i = 0; i < 8; ++i)
+				{
+					desc.BlendState.RenderTarget[i].BlendEnable = pBlendStateDesc.RenderTarget[i].BlendEnable;
+					desc.BlendState.RenderTarget[i].SrcBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlend);
+					desc.BlendState.RenderTarget[i].DestBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlend);
+					desc.BlendState.RenderTarget[i].BlendOp = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOp);
+					desc.BlendState.RenderTarget[i].SrcBlendAlpha = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlendAlpha);
+					desc.BlendState.RenderTarget[i].DestBlendAlpha = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlendAlpha);
+					desc.BlendState.RenderTarget[i].BlendOpAlpha = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOpAlpha);
+					desc.BlendState.RenderTarget[i].RenderTargetWriteMask = _ParseColorWriteMask(pBlendStateDesc.RenderTarget[i].RenderTargetWriteMask);
+				}
+
+				D3D12_INPUT_ELEMENT_DESC* elements = nullptr;
+				if (pso->desc.il != nullptr)
+				{
+					desc.InputLayout.NumElements = (UINT)pso->desc.il->desc.size();
+					elements = new D3D12_INPUT_ELEMENT_DESC[desc.InputLayout.NumElements];
+					for (UINT i = 0; i < desc.InputLayout.NumElements; ++i)
+					{
+						elements[i].SemanticName = pso->desc.il->desc[i].SemanticName;
+						elements[i].SemanticIndex = pso->desc.il->desc[i].SemanticIndex;
+						elements[i].Format = _ConvertFormat(pso->desc.il->desc[i].Format);
+						elements[i].InputSlot = pso->desc.il->desc[i].InputSlot;
+						elements[i].AlignedByteOffset = pso->desc.il->desc[i].AlignedByteOffset;
+						if (elements[i].AlignedByteOffset == VertexLayoutDesc::APPEND_ALIGNED_ELEMENT)
+							elements[i].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+						elements[i].InputSlotClass = _ConvertInputClassification(pso->desc.il->desc[i].InputSlotClass);
+						elements[i].InstanceDataStepRate = pso->desc.il->desc[i].InstanceDataStepRate;
+					}
+				}
+				desc.InputLayout.pInputElementDescs = elements;
+
+				desc.NumRenderTargets = pso->desc.numRTs;
+				for (UINT i = 0; i < desc.NumRenderTargets; ++i)
+				{
+					desc.RTVFormats[i] = _ConvertFormat(pso->desc.RTFormats[i]);
+				}
+				desc.DSVFormat = _ConvertFormat(pso->desc.DSFormat);
+
+				desc.SampleDesc.Count = pso->desc.sampleDesc.Count;
+				desc.SampleDesc.Quality = pso->desc.sampleDesc.Quality;
+				desc.SampleMask = pso->desc.sampleMask;
+
+				switch (pso->desc.pt)
+				{
+				case POINTLIST:
+					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+					break;
+				case LINELIST:
+					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+					break;
+				case TRIANGLELIST:
+				case TRIANGLESTRIP:
+					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+					break;
+				case PATCHLIST:
+					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
+					break;
+				default:
+					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
+					break;
+				}
+
+				desc.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
+
+				desc.pRootSignature = graphicsRootSig;
+
+				HRESULT hr = device->CreateGraphicsPipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&pipeline);
+				assert(SUCCEEDED(hr));
+
+				SAFE_DELETE_ARRAY(elements);
+
+				pipelines_worker[cmd].push_back(std::make_pair(pipeline_hash, pipeline));
+			}
+		}
+		else
+		{
+			pipeline = it->second;
+		}
+		assert(pipeline != nullptr);
+
+		GetDirectCommandList(cmd)->SetPipelineState(pipeline);
 
 		if (prev_pt[cmd] != pso->desc.pt)
 		{

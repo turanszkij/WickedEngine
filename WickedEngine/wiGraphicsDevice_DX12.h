@@ -180,7 +180,11 @@ namespace wiGraphics
 		ViewPort					viewPort;
 
 		PRIMITIVETOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
-		const RenderPass* prev_renderpass[COMMANDLIST_COUNT] = {};
+
+		std::unordered_map<size_t, ID3D12PipelineState*> pipelines_global;
+		std::vector<std::pair<size_t, ID3D12PipelineState*>> pipelines_worker[COMMANDLIST_COUNT];
+		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
+		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 
 		std::atomic<uint8_t> commandlist_count{ 0 };
 		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> free_commandlists;
