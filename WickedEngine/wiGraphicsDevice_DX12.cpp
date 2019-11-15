@@ -3766,6 +3766,7 @@ namespace wiGraphics
 	}
 	void GraphicsDevice_DX12::BindComputeShader(const ComputeShader* cs, CommandList cmd)
 	{
+		prev_pipeline_hash[cmd] = 0; // note: invalidate graphics pipeline (avoid eg. stencilref setting itself on compute pipeline)
 		GetDirectCommandList(cmd)->SetPipelineState((ID3D12PipelineState*)cs->resource);
 	}
 	void GraphicsDevice_DX12::Draw(UINT vertexCount, UINT startVertexLocation, CommandList cmd)
