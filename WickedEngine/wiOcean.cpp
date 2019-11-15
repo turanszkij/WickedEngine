@@ -28,7 +28,7 @@ namespace wiOcean_Internal
 
 	PipelineState PSO, PSO_wire;
 
-	CSFFT512x512_Plan m_fft_plan;
+	wiFFTGenerator::CSFFT512x512_Plan m_fft_plan;
 }
 using namespace wiOcean_Internal;
 
@@ -393,9 +393,6 @@ void wiOcean::LoadShaders()
 		desc.bs = &blendState;
 		desc.rs = &rasterizerState;
 		desc.dss = &depthStencilState;
-		desc.numRTs = 1;
-		desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
-		desc.DSFormat = wiRenderer::DSFormat_full;
 		device->CreatePipelineState(&desc, &PSO);
 
 		desc.ps = g_pWireframePS;
@@ -459,7 +456,7 @@ void wiOcean::Initialize()
 
 
 	LoadShaders();
-	CSFFT_512x512_Data_t::LoadShaders();
+	wiFFTGenerator::LoadShaders();
 	fft512x512_create_plan(m_fft_plan, 3);
 
 	wiBackLog::post("wiOcean Initialized");

@@ -63,8 +63,7 @@ struct wiImageParams
 		DRAWRECT2 = 1 << 1,
 		MIRROR = 1 << 2,
 		EXTRACT_NORMALMAP = 1 << 3,
-		HDR = 1 << 4,
-		FULLSCREEN = 1 << 5,
+		FULLSCREEN = 1 << 4,
 	};
 	uint32_t _flags = EMPTY;
 
@@ -130,7 +129,6 @@ struct wiImageParams
 	constexpr bool isDrawRect2Enabled() const { return _flags & DRAWRECT2; }
 	constexpr bool isMirrorEnabled() const { return _flags & MIRROR; }
 	constexpr bool isExtractNormalMapEnabled() const { return _flags & EXTRACT_NORMALMAP; }
-	constexpr bool isHDREnabled() const { return _flags & HDR; }
 	constexpr bool isFullScreenEnabled() const { return _flags & FULLSCREEN; }
 
 	// enables draw rectangle for base texture (cutout texture outside draw rectangle)
@@ -141,8 +139,6 @@ struct wiImageParams
 	void enableMirror() { _flags |= MIRROR; }
 	// enable normal map extraction shader that will perform texcolor * 2 - 1 (preferably onto a signed render target)
 	void enableExtractNormalMap() { _flags |= EXTRACT_NORMALMAP; }
-	// enable HDR blending to float render target
-	void enableHDR() { _flags |= HDR; }
 	// enable full screen override. It just draws texture onto the full screen, disabling any other setup except sampler and stencil)
 	void enableFullScreen() { _flags |= FULLSCREEN; }
 
@@ -154,8 +150,6 @@ struct wiImageParams
 	void disableMirror() { _flags &= ~MIRROR; }
 	// disable normal map extraction shader
 	void disableExtractNormalMap() { _flags &= ~EXTRACT_NORMALMAP; }
-	// if you want to render onto normalized render target
-	void disableHDR() { _flags &= ~HDR; }
 	// disable full screen override
 	void disableFullScreen() { _flags &= ~FULLSCREEN; }
 

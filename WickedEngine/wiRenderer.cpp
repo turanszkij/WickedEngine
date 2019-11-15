@@ -457,7 +457,7 @@ void ReloadShaders(const std::string& path)
 		GetShaderPath() = path;
 	}
 
-	GetDevice()->WaitForGPU();
+	GetDevice()->ClearPipelineStateCache();
 
 	wiResourceManager::GetShaderManager().Clear();
 	LoadShaders();
@@ -466,7 +466,7 @@ void ReloadShaders(const std::string& path)
 	wiFont::LoadShaders();
 	wiImage::LoadShaders();
 	wiOcean::LoadShaders();
-	CSFFT_512x512_Data_t::LoadShaders();
+	wiFFTGenerator::LoadShaders();
 	wiWidget::LoadShaders();
 	wiGPUSortLib::LoadShaders();
 	wiGPUBVH::LoadShaders();
@@ -2306,78 +2306,6 @@ void LoadShaders()
 											break;
 										}
 
-										switch (renderPass)
-										{
-										case RENDERPASS_TEXTURE:
-											desc.numRTs = 1;
-											desc.RTFormats[0] = RTFormat_hdr;
-											desc.DSFormat = DSFormat_full;
-											break;
-										case RENDERPASS_DEFERRED:
-											desc.numRTs = 5;
-											desc.RTFormats[0] = RTFormat_gbuffer_0;
-											desc.RTFormats[1] = RTFormat_gbuffer_1;
-											desc.RTFormats[2] = RTFormat_gbuffer_2;
-											desc.RTFormats[3] = RTFormat_deferred_lightbuffer;
-											desc.RTFormats[4] = RTFormat_deferred_lightbuffer;
-											desc.DSFormat = DSFormat_full;
-											break;
-										case RENDERPASS_FORWARD:
-											if (transparency)
-											{
-												desc.numRTs = 1;
-											}
-											else
-											{
-												desc.numRTs = 2;
-											}
-											desc.RTFormats[0] = RTFormat_hdr;
-											desc.RTFormats[1] = RTFormat_gbuffer_1;
-											desc.DSFormat = DSFormat_full;
-											break;
-										case RENDERPASS_TILEDFORWARD:
-											if (transparency)
-											{
-												desc.numRTs = 1;
-											}
-											else
-											{
-												desc.numRTs = 2;
-											}
-											desc.RTFormats[0] = RTFormat_hdr;
-											desc.RTFormats[1] = RTFormat_gbuffer_1;
-											desc.DSFormat = DSFormat_full;
-											break;
-										case RENDERPASS_DEPTHONLY:
-											desc.numRTs = 0;
-											desc.DSFormat = DSFormat_full;
-											break;
-										case RENDERPASS_ENVMAPCAPTURE:
-											desc.numRTs = 1;
-											desc.RTFormats[0] = RTFormat_envprobe;
-											desc.DSFormat = DSFormat_small;
-											break;
-										case RENDERPASS_SHADOW:
-											if (transparency)
-											{
-												desc.numRTs = 1;
-												desc.RTFormats[0] = RTFormat_ldr;
-											}
-											else
-											{
-												desc.numRTs = 0;
-											}
-											desc.DSFormat = DSFormat_small;
-											break;
-										case RENDERPASS_SHADOWCUBE:
-											desc.numRTs = 0;
-											desc.DSFormat = DSFormat_small;
-											break;
-										case RENDERPASS_VOXELIZE:
-											desc.numRTs = 0;
-											break;
-										}
-
 										if (tessellation)
 										{
 											desc.pt = PATCHLIST;
@@ -2416,10 +2344,6 @@ void LoadShaders()
 		desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 		desc.pt = TRIANGLELIST;
 
-		desc.numRTs = 1;
-		desc.RTFormats[0] = RTFormat_hdr;
-		desc.DSFormat = DSFormat_full;
-
 		device->CreatePipelineState(&desc, &PSO_object_hologram);
 
 		CustomShader customShader;
@@ -2437,10 +2361,6 @@ void LoadShaders()
 		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
 		desc.il = &vertexLayouts[VLTYPE_OBJECT_POS_TEX];
-
-		desc.numRTs = 1;
-		desc.RTFormats[0] = RTFormat_hdr;
-		desc.DSFormat = DSFormat_full;
 
 		desc.ps = pixelShaders[PSTYPE_OBJECT_FORWARD_WATER];
 		device->CreatePipelineState(&desc, &PSO_object_water[RENDERPASS_FORWARD]);
@@ -2465,10 +2385,6 @@ void LoadShaders()
 		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
 		desc.il = &vertexLayouts[VLTYPE_OBJECT_POS_TEX];
 
-		desc.numRTs = 1;
-		desc.RTFormats[0] = RTFormat_hdr;
-		desc.DSFormat = DSFormat_full;
-
 		device->CreatePipelineState(&desc, &PSO_object_wire);
 	});
 	wiJobSystem::Execute(ctx, [device] {
@@ -2480,10 +2396,6 @@ void LoadShaders()
 		desc.dss = &depthStencils[DSSTYPE_DEFERREDLIGHT];
 		desc.pt = TRIANGLESTRIP;
 
-		desc.numRTs = 1;
-		desc.RTFormats[0] = RTFormat_gbuffer_0;
-		//desc.RTFormats[1] = RTFormat_gbuffer_1;
-
 		device->CreatePipelineState(&desc, &PSO_decal);
 	});
 	wiJobSystem::Execute(ctx, [device] {
@@ -2493,8 +2405,6 @@ void LoadShaders()
 		desc.bs = &blendStates[BSTYPE_COLORWRITEDISABLE];
 		desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 		desc.pt = TRIANGLESTRIP;
-
-		desc.DSFormat = DSFormat_small;
 
 		device->CreatePipelineState(&desc, &PSO_occlusionquery);
 	});
@@ -2520,24 +2430,14 @@ void LoadShaders()
 		case RENDERPASS_DEFERRED:
 			desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
 			desc.ps = pixelShaders[PSTYPE_IMPOSTOR_DEFERRED];
-			desc.numRTs = 3;
-			desc.RTFormats[0] = RTFormat_gbuffer_0;
-			desc.RTFormats[1] = RTFormat_gbuffer_1;
-			desc.RTFormats[2] = RTFormat_gbuffer_2;
 			break;
 		case RENDERPASS_FORWARD:
 			desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
 			desc.ps = pixelShaders[PSTYPE_IMPOSTOR_FORWARD];
-			desc.numRTs = 2;
-			desc.RTFormats[0] = RTFormat_hdr;
-			desc.RTFormats[1] = RTFormat_gbuffer_1;
 			break;
 		case RENDERPASS_TILEDFORWARD:
 			desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
 			desc.ps = pixelShaders[PSTYPE_IMPOSTOR_TILEDFORWARD];
-			desc.numRTs = 2;
-			desc.RTFormats[0] = RTFormat_hdr;
-			desc.RTFormats[1] = RTFormat_gbuffer_1;
 			break;
 		case RENDERPASS_DEPTHONLY:
 			desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
@@ -2546,11 +2446,8 @@ void LoadShaders()
 		default:
 			desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
 			desc.ps = pixelShaders[PSTYPE_IMPOSTOR_SIMPLE];
-			desc.numRTs = 1;
-			desc.RTFormats[0] = RTFormat_hdr;
 			break;
 		}
-		desc.DSFormat = DSFormat_full;
 
 		device->CreatePipelineState(&desc, &PSO_impostor[args.jobIndex]);
 	});
@@ -2563,10 +2460,6 @@ void LoadShaders()
 		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
 		desc.il = nullptr;
 
-		desc.numRTs = 1;
-		desc.RTFormats[0] = RTFormat_hdr;
-		desc.DSFormat = DSFormat_full;
-
 		device->CreatePipelineState(&desc, &PSO_impostor_wire);
 	});
 	wiJobSystem::Execute(ctx, [device] {
@@ -2576,10 +2469,6 @@ void LoadShaders()
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
 		desc.dss = &depthStencils[DSSTYPE_CAPTUREIMPOSTOR];
 		desc.il = &vertexLayouts[VLTYPE_OBJECT_ALL];
-
-		desc.numRTs = 1;
-		desc.RTFormats[0] = RTFormat_impostor;
-		desc.DSFormat = DSFormat_small;
 
 		desc.ps = pixelShaders[PSTYPE_CAPTUREIMPOSTOR_ALBEDO];
 		device->CreatePipelineState(&desc, &PSO_captureimpostor_albedo);
@@ -2633,11 +2522,6 @@ void LoadShaders()
 			break;
 		}
 
-		desc.numRTs = 2;
-		desc.RTFormats[0] = RTFormat_deferred_lightbuffer;
-		desc.RTFormats[1] = RTFormat_deferred_lightbuffer;
-		desc.DSFormat = DSFormat_full;
-
 		device->CreatePipelineState(&desc, &PSO_deferredlight[args.jobIndex]);
 
 
@@ -2683,10 +2567,6 @@ void LoadShaders()
 				break;
 			}
 
-			desc.numRTs = 1;
-			desc.RTFormats[0] = RTFormat_hdr;
-			desc.DSFormat = DSFormat_full;
-
 			device->CreatePipelineState(&desc, &PSO_lightvisualizer[args.jobIndex]);
 		}
 
@@ -2714,10 +2594,6 @@ void LoadShaders()
 				break;
 			}
 
-			desc.numRTs = 1;
-			desc.RTFormats[0] = RTFormat_hdr;
-			desc.DSFormat = FORMAT_UNKNOWN;
-
 			device->CreatePipelineState(&desc, &PSO_volumetriclight[args.jobIndex]);
 		}
 
@@ -2731,11 +2607,6 @@ void LoadShaders()
 		desc.bs = &blendStates[BSTYPE_ENVIRONMENTALLIGHT];
 		desc.dss = &depthStencils[DSSTYPE_DEFERREDLIGHT];
 
-		desc.numRTs = 2;
-		desc.RTFormats[0] = RTFormat_deferred_lightbuffer;
-		desc.RTFormats[1] = RTFormat_deferred_lightbuffer;
-		desc.DSFormat = DSFormat_full;
-
 		device->CreatePipelineState(&desc, &PSO_enviromentallight);
 	});
 	wiJobSystem::Execute(ctx, [device] {
@@ -2747,10 +2618,6 @@ void LoadShaders()
 		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 		desc.dss = &depthStencils[DSSTYPE_XRAY];
 
-		desc.numRTs = 1;
-		desc.RTFormats[0] = RTFormat_lightmap_object;
-		desc.DSFormat = FORMAT_UNKNOWN;
-
 		device->CreatePipelineState(&desc, &PSO_renderlightmap);
 		});
 	wiJobSystem::Execute(ctx, [device] {
@@ -2760,8 +2627,6 @@ void LoadShaders()
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
 		desc.dss = &depthStencils[DSSTYPE_WRITEONLY];
-
-		desc.DSFormat = DSFormat_small;
 
 		device->CreatePipelineState(&desc, &PSO_downsampledepthbuffer);
 		});
@@ -2773,10 +2638,6 @@ void LoadShaders()
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
 		desc.dss = &depthStencils[DSSTYPE_DEFERREDCOMPOSITION];
 
-		desc.numRTs = 1;
-		desc.RTFormats[0] = RTFormat_hdr;
-		desc.DSFormat = DSFormat_full;
-
 		device->CreatePipelineState(&desc, &PSO_deferredcomposition);
 		});
 	wiJobSystem::Execute(ctx, [device] {
@@ -2786,10 +2647,6 @@ void LoadShaders()
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
 		desc.dss = &depthStencils[DSSTYPE_SSS];
-
-		desc.numRTs = 1;
-		desc.RTFormats[0] = RTFormat_deferred_lightbuffer;
-		desc.DSFormat = DSFormat_full;
 
 		device->CreatePipelineState(&desc, &PSO_sss);
 		});
@@ -2802,8 +2659,6 @@ void LoadShaders()
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 		desc.dss = &depthStencils[DSSTYPE_XRAY];
 		desc.pt = POINTLIST;
-		desc.numRTs = 1;
-		desc.RTFormats[0] = RTFormat_hdr;
 
 		device->CreatePipelineState(&desc, &PSO_lensflare);
 		});
@@ -2818,45 +2673,28 @@ void LoadShaders()
 			desc.bs = &blendStates[BSTYPE_OPAQUE];
 			desc.vs = vertexShaders[VSTYPE_SKY];
 			desc.ps = pixelShaders[PSTYPE_SKY_STATIC];
-			desc.numRTs = 2;
-			desc.RTFormats[0] = RTFormat_hdr;
-			desc.RTFormats[1] = RTFormat_gbuffer_1;
-			desc.DSFormat = DSFormat_full;
 			break;
 		case SKYRENDERING_DYNAMIC:
 			desc.bs = &blendStates[BSTYPE_OPAQUE];
 			desc.vs = vertexShaders[VSTYPE_SKY];
 			desc.ps = pixelShaders[PSTYPE_SKY_DYNAMIC];
-			desc.numRTs = 2;
-			desc.RTFormats[0] = RTFormat_hdr;
-			desc.RTFormats[1] = RTFormat_gbuffer_1;
-			desc.DSFormat = DSFormat_full;
 			break;
 		case SKYRENDERING_SUN:
 			desc.bs = &blendStates[BSTYPE_ADDITIVE];
 			desc.vs = vertexShaders[VSTYPE_SKY];
 			desc.ps = pixelShaders[PSTYPE_SUN];
-			desc.numRTs = 1;
-			desc.RTFormats[0] = RTFormat_hdr;
-			desc.DSFormat = DSFormat_full;
 			break;
 		case SKYRENDERING_ENVMAPCAPTURE_STATIC:
 			desc.bs = &blendStates[BSTYPE_OPAQUE];
 			desc.vs = vertexShaders[VSTYPE_ENVMAP_SKY];
 			desc.ps = pixelShaders[PSTYPE_ENVMAP_SKY_STATIC];
 			desc.gs = geometryShaders[GSTYPE_ENVMAP_SKY];
-			desc.numRTs = 1;
-			desc.RTFormats[0] = RTFormat_hdr;
-			desc.DSFormat = DSFormat_small;
 			break;
 		case SKYRENDERING_ENVMAPCAPTURE_DYNAMIC:
 			desc.bs = &blendStates[BSTYPE_OPAQUE];
 			desc.vs = vertexShaders[VSTYPE_ENVMAP_SKY];
 			desc.ps = pixelShaders[PSTYPE_ENVMAP_SKY_DYNAMIC];
 			desc.gs = geometryShaders[GSTYPE_ENVMAP_SKY];
-			desc.numRTs = 1;
-			desc.RTFormats[0] = RTFormat_hdr;
-			desc.DSFormat = DSFormat_small;
 			break;
 		}
 
@@ -2864,10 +2702,6 @@ void LoadShaders()
 	});
 	wiJobSystem::Dispatch(ctx, DEBUGRENDERING_COUNT, 1, [device](wiJobDispatchArgs args) {
 		PipelineStateDesc desc;
-
-		desc.numRTs = 1;
-		desc.RTFormats[0] = RTFormat_hdr;
-		desc.DSFormat = DSFormat_full;
 
 		switch (args.jobIndex)
 		{
@@ -2947,8 +2781,6 @@ void LoadShaders()
 			desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 			desc.pt = TRIANGLELIST;
-			desc.DSFormat = FORMAT_UNKNOWN;
-			desc.RTFormats[0] = FORMAT_R32G32B32A32_FLOAT;
 			break;
 		}
 
@@ -5867,7 +5699,7 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 	}
 
 
-	if (debugEnvProbes)
+	if (debugEnvProbes && textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] != nullptr)
 	{
 		device->EventBegin("Debug EnvProbes", cmd);
 		// Envmap spheres:
@@ -6265,6 +6097,10 @@ void DrawDeferredDecals(
 }
 
 static const UINT envmapCount = 16;
+static const UINT envmapRes = 128;
+static const UINT envmapMIPs = 8;
+static Texture2D envrenderingDepthBuffer;
+static std::vector<RenderPass> renderpasses_envmap;
 vector<uint32_t> probesToRefresh(envmapCount);
 void ManageEnvProbes()
 {
@@ -6320,23 +6156,12 @@ void ManageEnvProbes()
 
 		probesToRefresh.push_back((uint32_t)probeIndex);
 	}
-}
-void RefreshEnvProbes(CommandList cmd)
-{
-	const Scene& scene = GetScene();
 
-	GraphicsDevice* device = GetDevice();
-	device->EventBegin("EnvironmentProbe Refresh", cmd);
-
-	static const UINT envmapRes = 128;
-	static const UINT envmapMIPs = 8;
-	static Texture2D envrenderingDepthBuffer;
-	static std::vector<RenderPass> renderpasses_envmap;
-
-	if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] == nullptr)
+	if (!probesToRefresh.empty() && textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] == nullptr)
 	{
-		TextureDesc desc;
+		GraphicsDevice* device = GetDevice();
 
+		TextureDesc desc;
 		desc.ArraySize = 6;
 		desc.BindFlags = BIND_DEPTH_STENCIL;
 		desc.CPUAccessFlags = 0;
@@ -6395,6 +6220,18 @@ void RefreshEnvProbes(CommandList cmd)
 			assert(subresource_index == textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->GetDesc().MipLevels + i);
 		}
 	}
+}
+void RefreshEnvProbes(CommandList cmd)
+{
+	if (probesToRefresh.empty())
+	{
+		return;
+	}
+
+	const Scene& scene = GetScene();
+
+	GraphicsDevice* device = GetDevice();
+	device->EventBegin("EnvironmentProbe Refresh", cmd);
 
 	ViewPort VP;
 	VP.Height = envmapRes;
@@ -6407,7 +6244,6 @@ void RefreshEnvProbes(CommandList cmd)
 
 	const float zNearP = GetCamera().zNearP;
 	const float zFarP = GetCamera().zFarP;
-
 
 	for (uint32_t probeIndex : probesToRefresh)
 	{
@@ -6550,6 +6386,10 @@ void RefreshEnvProbes(CommandList cmd)
 }
 
 static const UINT maxImpostorCount = 8;
+static const UINT impostorTextureArraySize = maxImpostorCount * impostorCaptureAngles * 3;
+static const UINT impostorTextureDim = 128;
+static Texture2D impostorDepthStencil;
+static std::vector<RenderPass> renderpasses_impostor;
 vector<uint32_t> impostorsToRefresh(maxImpostorCount);
 void ManageImpostors()
 {
@@ -6568,191 +6408,190 @@ void ManageImpostors()
 
 		impostorsToRefresh.push_back((uint32_t)impostorIndex);
 	}
+
+	if (!impostorsToRefresh.empty() && textures[TEXTYPE_2D_IMPOSTORARRAY] == nullptr)
+	{
+		GraphicsDevice* device = GetDevice();
+
+		TextureDesc desc;
+		desc.Width = impostorTextureDim;
+		desc.Height = impostorTextureDim;
+
+		desc.BindFlags = BIND_DEPTH_STENCIL;
+		desc.ArraySize = 1;
+		desc.Format = DSFormat_small;
+		HRESULT hr = device->CreateTexture2D(&desc, nullptr, &impostorDepthStencil);
+		assert(SUCCEEDED(hr));
+		device->SetName(&impostorDepthStencil, "impostorDepthStencil");
+
+		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.ArraySize = impostorTextureArraySize;
+		desc.Format = RTFormat_impostor;
+
+		textures[TEXTYPE_2D_IMPOSTORARRAY] = new Texture2D;
+		hr = device->CreateTexture2D(&desc, nullptr, (Texture2D*)textures[TEXTYPE_2D_IMPOSTORARRAY]);
+		assert(SUCCEEDED(hr));
+		device->SetName(textures[TEXTYPE_2D_IMPOSTORARRAY], "ImpostorTarget");
+
+		renderpasses_impostor.resize(desc.ArraySize);
+
+		for (UINT i = 0; i < desc.ArraySize; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(textures[TEXTYPE_2D_IMPOSTORARRAY], RTV, i, 1, 0, 1);
+			assert(subresource_index == i);
+
+			RenderPassDesc renderpassdesc;
+			renderpassdesc.numAttachments = 2;
+			renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,(Texture2D*)textures[TEXTYPE_2D_IMPOSTORARRAY], subresource_index };
+			renderpassdesc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_CLEAR,&impostorDepthStencil, subresource_index };
+			hr = device->CreateRenderPass(&renderpassdesc, &renderpasses_impostor[subresource_index]);
+		}
+	}
 }
 void RefreshImpostors(CommandList cmd)
 {
+	if (impostorsToRefresh.empty())
+	{
+		return;
+	}
+
 	const Scene& scene = GetScene();
 
-	if (!impostorsToRefresh.empty())
+	GraphicsDevice* device = GetDevice();
+	device->EventBegin("Impostor Refresh", cmd);
+
+	BindConstantBuffers(VS, cmd);
+	BindConstantBuffers(PS, cmd);
+
+	struct InstBuf
 	{
-		GraphicsDevice* device = GetDevice();
-		device->EventBegin("Impostor Refresh", cmd);
+		Instance instance;
+		InstancePrev instancePrev;
+		InstanceAtlas instanceAtlas;
+	};
+	GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(InstBuf), cmd);
+	volatile InstBuf* buff = (volatile InstBuf*)mem.data;
+	buff->instance.Create(IDENTITYMATRIX);
+	buff->instancePrev.Create(IDENTITYMATRIX);
+	buff->instanceAtlas.Create(XMFLOAT4(1, 1, 0, 0));
 
-		BindConstantBuffers(VS, cmd);
-		BindConstantBuffers(PS, cmd);
+	for (uint32_t impostorIndex : impostorsToRefresh)
+	{
+		const ImpostorComponent& impostor = scene.impostors[impostorIndex];
 
-		static const UINT textureArraySize = maxImpostorCount * impostorCaptureAngles * 3;
-		static const UINT textureDim = 128;
-		static Texture2D depthStencil;
-		static std::vector<RenderPass> renderpasses_impostor;
+		Entity entity = scene.impostors.GetEntity(impostorIndex);
+		const MeshComponent& mesh = *scene.meshes.GetComponent(entity);
 
-		if (textures[TEXTYPE_2D_IMPOSTORARRAY] == nullptr)
-		{
-			TextureDesc desc;
-			desc.Width = textureDim;
-			desc.Height = textureDim;
+		const AABB& bbox = mesh.aabb;
+		const XMFLOAT3 extents = bbox.getHalfWidth();
 
-			desc.BindFlags = BIND_DEPTH_STENCIL;
-			desc.ArraySize = 1;
-			desc.Format = DSFormat_small;
-			HRESULT hr = device->CreateTexture2D(&desc, nullptr, &depthStencil);
-			assert(SUCCEEDED(hr));
-			device->SetName(&depthStencil, "ImpostorDepthTarget");
-
-			desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-			desc.ArraySize = textureArraySize;
-			desc.Format = RTFormat_impostor;
-
-			textures[TEXTYPE_2D_IMPOSTORARRAY] = new Texture2D;
-			hr = device->CreateTexture2D(&desc, nullptr, (Texture2D*)textures[TEXTYPE_2D_IMPOSTORARRAY]);
-			assert(SUCCEEDED(hr));
-			device->SetName(textures[TEXTYPE_2D_IMPOSTORARRAY], "ImpostorTarget");
-
-			renderpasses_impostor.resize(desc.ArraySize);
-
-			for (UINT i = 0; i < desc.ArraySize; ++i)
-			{
-				int subresource_index;
-				subresource_index = device->CreateSubresource(textures[TEXTYPE_2D_IMPOSTORARRAY], RTV, i, 1, 0, 1);
-				assert(subresource_index == i);
-
-				RenderPassDesc renderpassdesc;
-				renderpassdesc.numAttachments = 2;
-				renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,(Texture2D*)textures[TEXTYPE_2D_IMPOSTORARRAY], subresource_index };
-				renderpassdesc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_CLEAR,&depthStencil, subresource_index };
-				hr = device->CreateRenderPass(&renderpassdesc, &renderpasses_impostor[subresource_index]);
-			}
-		}
-
-		struct InstBuf
-		{
-			Instance instance;
-			InstancePrev instancePrev;
-			InstanceAtlas instanceAtlas;
+		const GPUBuffer* vbs[] = {
+			mesh.IsSkinned() ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
+			mesh.vertexBuffer_UV0.get(),
+			mesh.vertexBuffer_UV1.get(),
+			mesh.vertexBuffer_ATL.get(),
+			mesh.vertexBuffer_COL.get(),
+			mesh.IsSkinned() ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
+			mem.buffer
 		};
-		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(InstBuf), cmd);
-		volatile InstBuf* buff = (volatile InstBuf*)mem.data;
-		buff->instance.Create(IDENTITYMATRIX);
-		buff->instancePrev.Create(IDENTITYMATRIX);
-		buff->instanceAtlas.Create(XMFLOAT4(1, 1, 0, 0));
+		UINT strides[] = {
+			sizeof(MeshComponent::Vertex_POS),
+			sizeof(MeshComponent::Vertex_TEX),
+			sizeof(MeshComponent::Vertex_TEX),
+			sizeof(MeshComponent::Vertex_TEX),
+			sizeof(MeshComponent::Vertex_COL),
+			sizeof(MeshComponent::Vertex_POS),
+			sizeof(InstBuf)
+		};
+		UINT offsets[] = {
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			mem.offset
+		};
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, cmd);
 
-		for (uint32_t impostorIndex : impostorsToRefresh)
+		device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, cmd);
+
+		for (int prop = 0; prop < 3; ++prop)
 		{
-			const ImpostorComponent& impostor = scene.impostors[impostorIndex];
-
-			Entity entity = scene.impostors.GetEntity(impostorIndex);
-			const MeshComponent& mesh = *scene.meshes.GetComponent(entity);
-
-			const AABB& bbox = mesh.aabb;
-			const XMFLOAT3 extents = bbox.getHalfWidth();
-
-			const GPUBuffer* vbs[] = {
-				mesh.IsSkinned() ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
-				mesh.vertexBuffer_UV0.get(),
-				mesh.vertexBuffer_UV1.get(),
-				mesh.vertexBuffer_ATL.get(),
-				mesh.vertexBuffer_COL.get(),
-				mesh.IsSkinned() ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
-				mem.buffer
-			};
-			UINT strides[] = {
-				sizeof(MeshComponent::Vertex_POS),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_COL),
-				sizeof(MeshComponent::Vertex_POS),
-				sizeof(InstBuf)
-			};
-			UINT offsets[] = {
-				0,
-				0,
-				0,
-				0,
-				0,
-				0,
-				mem.offset
-			};
-			device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, cmd);
-
-			device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, cmd);
-
-			for (int prop = 0; prop < 3; ++prop)
+			switch (prop)
 			{
-				switch (prop)
-				{
-				case 0:
-					device->BindPipelineState(&PSO_captureimpostor_albedo, cmd);
-					break;
-				case 1:
-					device->BindPipelineState(&PSO_captureimpostor_normal, cmd);
-					break;
-				case 2:
-					device->BindPipelineState(&PSO_captureimpostor_surface, cmd);
-					break;
-				}
-
-				for (size_t i = 0; i < impostorCaptureAngles; ++i)
-				{
-					int textureIndex = (int)(impostorIndex * impostorCaptureAngles * 3 + prop * impostorCaptureAngles + i);
-					device->RenderPassBegin(&renderpasses_impostor[textureIndex], cmd);
-
-					ViewPort viewPort;
-					viewPort.Height = (float)textureDim;
-					viewPort.Width = (float)textureDim;
-					viewPort.TopLeftX = 0;
-					viewPort.TopLeftY = 0;
-					viewPort.MinDepth = 0;
-					viewPort.MaxDepth = 1;
-					device->BindViewports(1, &viewPort, cmd);
-
-
-					CameraComponent impostorcamera;
-					TransformComponent camera_transform;
-
-					camera_transform.ClearTransform();
-					camera_transform.Translate(bbox.getCenter());
-
-					XMMATRIX P = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
-					XMStoreFloat4x4(&impostorcamera.Projection, P);
-					camera_transform.RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * (float)i / (float)impostorCaptureAngles, 0));
-
-					camera_transform.UpdateTransform();
-					impostorcamera.TransformCamera(camera_transform);
-					impostorcamera.UpdateCamera();
-					UpdateCameraCB(impostorcamera, cmd);
-
-					for (auto& subset : mesh.subsets)
-					{
-						if (subset.indexCount == 0)
-						{
-							continue;
-						}
-						const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
-
-						device->BindConstantBuffer(VS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), cmd);
-						device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), cmd);
-
-						const GPUResource* res[] = {
-							material.GetBaseColorMap(),
-							material.GetNormalMap(),
-							material.GetSurfaceMap(),
-						};
-						device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
-
-						device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
-					}
-
-					device->RenderPassEnd(cmd);
-				}
+			case 0:
+				device->BindPipelineState(&PSO_captureimpostor_albedo, cmd);
+				break;
+			case 1:
+				device->BindPipelineState(&PSO_captureimpostor_normal, cmd);
+				break;
+			case 2:
+				device->BindPipelineState(&PSO_captureimpostor_surface, cmd);
+				break;
 			}
 
+			for (size_t i = 0; i < impostorCaptureAngles; ++i)
+			{
+				int textureIndex = (int)(impostorIndex * impostorCaptureAngles * 3 + prop * impostorCaptureAngles + i);
+				device->RenderPassBegin(&renderpasses_impostor[textureIndex], cmd);
+
+				ViewPort viewPort;
+				viewPort.Height = (float)impostorTextureDim;
+				viewPort.Width = (float)impostorTextureDim;
+				viewPort.TopLeftX = 0;
+				viewPort.TopLeftY = 0;
+				viewPort.MinDepth = 0;
+				viewPort.MaxDepth = 1;
+				device->BindViewports(1, &viewPort, cmd);
+
+
+				CameraComponent impostorcamera;
+				TransformComponent camera_transform;
+
+				camera_transform.ClearTransform();
+				camera_transform.Translate(bbox.getCenter());
+
+				XMMATRIX P = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
+				XMStoreFloat4x4(&impostorcamera.Projection, P);
+				camera_transform.RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * (float)i / (float)impostorCaptureAngles, 0));
+
+				camera_transform.UpdateTransform();
+				impostorcamera.TransformCamera(camera_transform);
+				impostorcamera.UpdateCamera();
+				UpdateCameraCB(impostorcamera, cmd);
+
+				for (auto& subset : mesh.subsets)
+				{
+					if (subset.indexCount == 0)
+					{
+						continue;
+					}
+					const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
+
+					device->BindConstantBuffer(VS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), cmd);
+					device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), cmd);
+
+					const GPUResource* res[] = {
+						material.GetBaseColorMap(),
+						material.GetNormalMap(),
+						material.GetSurfaceMap(),
+					};
+					device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
+
+					device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
+				}
+
+				device->RenderPassEnd(cmd);
+			}
 		}
 
-		UpdateCameraCB(GetCamera(), cmd);
-
-		device->EventEnd(cmd);
 	}
+
+	UpdateCameraCB(GetCamera(), cmd);
+
+	device->EventEnd(cmd);
 }
 
 void VoxelRadiance(CommandList cmd)

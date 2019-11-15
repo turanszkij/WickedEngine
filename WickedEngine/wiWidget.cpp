@@ -241,8 +241,6 @@ void wiWidget::LoadShaders()
 	desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
 	desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
 	desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
-	desc.numRTs = 1;
-	desc.RTFormats[0] = wiRenderer::GetDevice()->GetBackBufferFormat();
 	desc.pt = TRIANGLESTRIP;
 	HRESULT hr = wiRenderer::GetDevice()->CreatePipelineState(&desc, &PSO_colorpicker);
 	assert(SUCCEEDED(hr));

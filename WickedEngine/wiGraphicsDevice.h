@@ -81,6 +81,7 @@ namespace wiGraphics
 		virtual CommandList BeginCommandList() = 0;
 
 		virtual void WaitForGPU() = 0;
+		virtual void ClearPipelineStateCache() {};
 
 		inline bool GetVSyncEnabled() const { return VSYNC; }
 		inline void SetVSyncEnabled(bool value) { VSYNC = value; }

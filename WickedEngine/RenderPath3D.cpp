@@ -226,7 +226,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_DEPTH_STENCIL;
-		desc.Format = wiRenderer::DSFormat_full;
+		desc.Format = wiRenderer::DSFormat_small;
 		desc.Width = wiRenderer::GetInternalResolution().x / 4;
 		desc.Height = wiRenderer::GetInternalResolution().y / 4;
 		desc.layout = IMAGE_LAYOUT_DEPTHSTENCIL;
@@ -580,10 +580,6 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 
 	wiImageParams fx;
 	fx.enableFullScreen();
-	fx.enableHDR();
-
-	// Note set a stencilmode that always passes, because pipeline state with depthbuffer will be used in this render pass (shuts up warnings):
-	fx.stencilComp = STENCILMODE_ALWAYS;
 
 	if (getVolumeLightsEnabled())
 	{
@@ -668,7 +664,6 @@ void RenderPath3D::RenderBloom(const RenderPass& renderpass_bloom, CommandList c
 			device->BindViewports(1, &vp, cmd);
 
 			wiImageParams fx;
-			fx.enableHDR();
 			fx.enableFullScreen();
 			fx.blendFlag = BLENDMODE_ADDITIVE;
 

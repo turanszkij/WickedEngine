@@ -252,11 +252,6 @@ void wiFont::Initialize()
 	rs.AntialiasedLineEnable = false;
 	device->CreateRasterizerState(&rs, &rasterizerState);
 
-	DepthStencilStateDesc dsd;
-	dsd.DepthEnable = false;
-	dsd.StencilEnable = false;
-	device->CreateDepthStencilState(&dsd, &depthStencilState);
-
 	BlendStateDesc bd;
 	bd.RenderTarget[0].BlendEnable = true;
 	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
@@ -268,6 +263,11 @@ void wiFont::Initialize()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.IndependentBlendEnable = false;
 	device->CreateBlendState(&bd, &blendState);
+
+	DepthStencilStateDesc dsd;
+	dsd.DepthEnable = false;
+	dsd.StencilEnable = false;
+	device->CreateDepthStencilState(&dsd, &depthStencilState);
 
 	SamplerDesc samplerDesc;
 	samplerDesc.Filter = FILTER_MIN_MAG_LINEAR_MIP_POINT;
@@ -321,10 +321,8 @@ void wiFont::LoadShaders()
 	desc.ps = pixelShader;
 	desc.il = &vertexLayout;
 	desc.bs = &blendState;
-	desc.rs = &rasterizerState;
 	desc.dss = &depthStencilState;
-	desc.numRTs = 1;
-	desc.RTFormats[0] = wiRenderer::GetDevice()->GetBackBufferFormat();
+	desc.rs = &rasterizerState;
 	wiRenderer::GetDevice()->CreatePipelineState(&desc, &PSO);
 }
 

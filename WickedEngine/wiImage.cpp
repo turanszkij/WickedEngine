@@ -24,12 +24,6 @@ namespace wiImage
 		IMAGE_SHADER_FULLSCREEN,
 		IMAGE_SHADER_COUNT
 	};
-	enum IMAGE_HDR
-	{
-		IMAGE_HDR_DISABLED,
-		IMAGE_HDR_ENABLED,
-		IMAGE_HDR_COUNT
-	};
 	enum IMAGE_SAMPLING
 	{
 		IMAGE_SAMPLING_SIMPLE,
@@ -44,7 +38,7 @@ namespace wiImage
 	BlendState				blendStates[BLENDMODE_COUNT];
 	RasterizerState			rasterizerState;
 	DepthStencilState		depthStencilStates[STENCILMODE_COUNT][STENCILREFMODE_COUNT];
-	PipelineState			imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT][IMAGE_HDR_COUNT][IMAGE_SAMPLING_COUNT];
+	PipelineState			imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT][IMAGE_SAMPLING_COUNT];
 
 	std::atomic_bool initialized{ false };
 
@@ -112,7 +106,7 @@ namespace wiImage
 
 		if (params.isFullScreenEnabled())
 		{
-			device->BindPipelineState(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.stencilRefMode][params.isHDREnabled()][sampling_type], cmd);
+			device->BindPipelineState(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.stencilRefMode][sampling_type], cmd);
 			device->UpdateBuffer(&constantBuffer, &cb, cmd);
 			device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
 			device->Draw(3, 0, cmd);
@@ -225,7 +219,7 @@ namespace wiImage
 			}
 		}
 
-		device->BindPipelineState(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.stencilRefMode][params.isHDREnabled()][sampling_type], cmd);
+		device->BindPipelineState(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.stencilRefMode][sampling_type], cmd);
 
 		device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
 		device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
@@ -282,22 +276,7 @@ namespace wiImage
 						{
 							desc.dss = &depthStencilStates[k][m];
 
-							if (k == STENCILMODE_DISABLED)
-							{
-								desc.DSFormat = FORMAT_UNKNOWN;
-							}
-							else
-							{
-								desc.DSFormat = wiRenderer::DSFormat_full;
-							}
-
-							desc.numRTs = 1;
-
-							desc.RTFormats[0] = device->GetBackBufferFormat();
-							device->CreatePipelineState(&desc, &imagePSO[i][j][k][m][0][l]);
-
-							desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
-							device->CreatePipelineState(&desc, &imagePSO[i][j][k][m][1][l]);
+							device->CreatePipelineState(&desc, &imagePSO[i][j][k][m][l]);
 
 						}
 					}

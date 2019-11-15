@@ -3,9 +3,6 @@
 #define COS_PI_4_16 0.70710678118654752440084436210485f
 #define TWIDDLE_1_8 COS_PI_4_16, -COS_PI_4_16
 #define TWIDDLE_3_8 -COS_PI_4_16, -COS_PI_4_16
-
-#define COHERENCY_GRANULARITY 128
-
  
 void FT2(inout float2 a, inout float2 b)
 {

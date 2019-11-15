@@ -196,7 +196,7 @@ namespace wiGraphics
 
 	struct PipelineState : public GraphicsDeviceChild
 	{
-		wiCPUHandle	pipeline = WI_NULL_HANDLE;
+		size_t hash = 0;
 		PipelineStateDesc desc;
 
 		const PipelineStateDesc& GetDesc() const { return desc; }
@@ -207,6 +207,7 @@ namespace wiGraphics
 
 	struct RenderPass : public GraphicsDeviceChild
 	{
+		size_t hash = 0;
 		wiCPUHandle	framebuffer = WI_NULL_HANDLE;
 		wiCPUHandle	renderpass = WI_NULL_HANDLE;
 		RenderPassDesc desc;

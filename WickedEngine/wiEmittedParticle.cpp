@@ -648,9 +648,6 @@ void wiEmittedParticle::LoadShaders()
 		desc.bs = &blendStates[i];
 		desc.rs = &rasterizerState;
 		desc.dss = &depthStencilState;
-		desc.numRTs = 1;
-		desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
-		desc.DSFormat = wiRenderer::DSFormat_full;
 
 		desc.ps = pixelShader[SOFT];
 		device->CreatePipelineState(&desc, &PSO[i][SOFT]);
@@ -667,9 +664,6 @@ void wiEmittedParticle::LoadShaders()
 		desc.bs = &blendStates[BLENDMODE_ALPHA];
 		desc.rs = &wireFrameRS;
 		desc.dss = &depthStencilState;
-		desc.numRTs = 1;
-		desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
-		desc.DSFormat = wiRenderer::DSFormat_full;
 
 		device->CreatePipelineState(&desc, &PSO_wire);
 	}
