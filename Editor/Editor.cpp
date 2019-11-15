@@ -168,7 +168,7 @@ void EditorComponent::ResizeBuffers()
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 
-		desc.Format = wiRenderer::GetDevice()->GetBackBufferFormat(); // todo: smaller format, but then somehow need to specify custom rt format for wiImage PSO!
+		desc.Format = FORMAT_R8_UNORM;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		if (renderPath->getMSAASampleCount() > 1)
 		{

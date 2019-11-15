@@ -2206,6 +2206,7 @@ namespace wiGraphics
 		DestroyInputLayout(pInputLayout);
 		pInputLayout->Register(this);
 
+		pInputLayout->desc.clear();
 		pInputLayout->desc.reserve((size_t)NumElements);
 		for (UINT i = 0; i < NumElements; ++i)
 		{
@@ -2358,6 +2359,19 @@ namespace wiGraphics
 
 		pso->desc = *pDesc;
 
+		pso->hash = 0;
+		wiHelper::hash_combine(pso->hash, pDesc->vs);
+		wiHelper::hash_combine(pso->hash, pDesc->ps);
+		wiHelper::hash_combine(pso->hash, pDesc->hs);
+		wiHelper::hash_combine(pso->hash, pDesc->ds);
+		wiHelper::hash_combine(pso->hash, pDesc->gs);
+		wiHelper::hash_combine(pso->hash, pDesc->il);
+		wiHelper::hash_combine(pso->hash, pDesc->rs);
+		wiHelper::hash_combine(pso->hash, pDesc->bs);
+		wiHelper::hash_combine(pso->hash, pDesc->dss);
+		wiHelper::hash_combine(pso->hash, pDesc->pt);
+		wiHelper::hash_combine(pso->hash, pDesc->sampleMask);
+
 		return S_OK;
 	}
 	HRESULT GraphicsDevice_DX12::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
@@ -2366,6 +2380,15 @@ namespace wiGraphics
 		renderpass->Register(this);
 
 		renderpass->desc = *pDesc;
+
+		renderpass->hash = 0;
+		wiHelper::hash_combine(renderpass->hash, pDesc->numAttachments);
+		for (UINT i = 0; i < pDesc->numAttachments; ++i)
+		{
+			wiHelper::hash_combine(renderpass->hash, pDesc->attachments[i].texture->desc.Format);
+			wiHelper::hash_combine(renderpass->hash, pDesc->attachments[i].texture->desc.SampleDesc.Count);
+			wiHelper::hash_combine(renderpass->hash, pDesc->attachments[i].texture->desc.SampleDesc.Quality);
+		}
 
 		return S_OK;
 	}
@@ -2858,11 +2881,7 @@ namespace wiGraphics
 	}
 	void GraphicsDevice_DX12::DestroyPipelineState(PipelineState* pso)
 	{
-		if (pso->pipeline != WI_NULL_HANDLE)
-		{
-			DeferredDestroy({ DestroyItem::PIPELINE, FRAMECOUNT, pso->pipeline });
-			pso->pipeline = WI_NULL_HANDLE;
-		}
+		pso->hash = 0;
 	}
 	void GraphicsDevice_DX12::DestroyRenderPass(RenderPass* renderpass)
 	{
@@ -2970,6 +2989,19 @@ namespace wiGraphics
 				counter++;
 
 				free_commandlists.push_back(cmd);
+
+				for (auto& x : pipelines_worker[cmd])
+				{
+					if (pipelines_global.count(x.first) == 0)
+					{
+						pipelines_global[x.first] = x.second;
+					}
+					else
+					{
+						DeferredDestroy({ DestroyItem::PIPELINE, FRAMECOUNT, (wiCPUHandle)x.second });
+					}
+				}
+				pipelines_worker[cmd].clear();
 			}
 
 			directQueue->ExecuteCommandLists(counter, cmdLists);
@@ -3095,11 +3127,6 @@ namespace wiGraphics
 		}
 		GetDirectCommandList((CommandList)cmd)->RSSetScissorRects(8, pRects);
 
-		for (auto& x : pipelines_worker[cmd])
-		{
-			pipelines_global[x.first] = x.second;
-		}
-		pipelines_worker[cmd].clear();
 		prev_pipeline_hash[cmd] = 0;
 		active_renderpass[cmd] = nullptr;
 
@@ -3115,7 +3142,23 @@ namespace wiGraphics
 			WaitForSingleObject(frameFenceEvent, INFINITE);
 		}
 	}
+	void GraphicsDevice_DX12::ClearPipelineStateCache()
+	{
+		for (auto& x : pipelines_global)
+		{
+			DeferredDestroy({ DestroyItem::PIPELINE, FRAMECOUNT, (wiCPUHandle)x.second });
+		}
+		pipelines_global.clear();
 
+		for (int i = 0; i < ARRAYSIZE(pipelines_worker); ++i)
+		{
+			for (auto& x : pipelines_worker[i])
+			{
+				DeferredDestroy({ DestroyItem::PIPELINE, FRAMECOUNT, (wiCPUHandle)x.second });
+			}
+			pipelines_worker[i].clear();
+		}
+	}
 
 	void GraphicsDevice_DX12::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 	{
@@ -3464,8 +3507,11 @@ namespace wiGraphics
 	void GraphicsDevice_DX12::BindPipelineState(const PipelineState* pso, CommandList cmd)
 	{
 		size_t pipeline_hash = 0;
-		wiHelper::hash_combine(pipeline_hash, size_t(pso));
-		wiHelper::hash_combine(pipeline_hash, size_t(active_renderpass[cmd]));
+		wiHelper::hash_combine(pipeline_hash, pso->hash);
+		if (active_renderpass[cmd] != nullptr)
+		{
+			wiHelper::hash_combine(pipeline_hash, active_renderpass[cmd]->hash);
+		}
 		if (prev_pipeline_hash[cmd] == pipeline_hash)
 		{
 			return;
@@ -3581,15 +3627,73 @@ namespace wiGraphics
 				}
 				desc.InputLayout.pInputElementDescs = elements;
 
-				desc.NumRenderTargets = pso->desc.numRTs;
-				for (UINT i = 0; i < desc.NumRenderTargets; ++i)
+				desc.NumRenderTargets = 0;
+				desc.DSVFormat = DXGI_FORMAT_UNKNOWN;
+				desc.SampleDesc.Count = 1;
+				desc.SampleDesc.Quality = 0;
+				if (active_renderpass[cmd] == nullptr)
 				{
-					desc.RTVFormats[i] = _ConvertFormat(pso->desc.RTFormats[i]);
+					desc.NumRenderTargets = 1;
+					desc.RTVFormats[0] = _ConvertFormat(BACKBUFFER_FORMAT);
 				}
-				desc.DSVFormat = _ConvertFormat(pso->desc.DSFormat);
+				else
+				{
+					for (UINT i = 0; i < active_renderpass[cmd]->desc.numAttachments; ++i)
+					{
+						const RenderPassAttachment& attachment = active_renderpass[cmd]->desc.attachments[i];
 
-				desc.SampleDesc.Count = pso->desc.sampleDesc.Count;
-				desc.SampleDesc.Quality = pso->desc.sampleDesc.Quality;
+						switch (attachment.type)
+						{
+						case RenderPassAttachment::RENDERTARGET:
+							switch (attachment.texture->desc.Format)
+							{
+							case FORMAT_R16_TYPELESS:
+								desc.RTVFormats[desc.NumRenderTargets] = DXGI_FORMAT_R16_UNORM;
+								break;
+							case FORMAT_R32_TYPELESS:
+								desc.RTVFormats[desc.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT;
+								break;
+							case FORMAT_R24G8_TYPELESS:
+								desc.RTVFormats[desc.NumRenderTargets] = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+								break;
+							case FORMAT_R32G8X24_TYPELESS:
+								desc.RTVFormats[desc.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+								break;
+							default:
+								desc.RTVFormats[desc.NumRenderTargets] = _ConvertFormat(attachment.texture->desc.Format);
+								break;
+							}
+							desc.NumRenderTargets++;
+							break;
+						case RenderPassAttachment::DEPTH_STENCIL:
+							switch (attachment.texture->desc.Format)
+							{
+							case FORMAT_R16_TYPELESS:
+								desc.DSVFormat = DXGI_FORMAT_D16_UNORM;
+								break;
+							case FORMAT_R32_TYPELESS:
+								desc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+								break;
+							case FORMAT_R24G8_TYPELESS:
+								desc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+								break;
+							case FORMAT_R32G8X24_TYPELESS:
+								desc.DSVFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+								break;
+							default:
+								desc.DSVFormat = _ConvertFormat(attachment.texture->desc.Format);
+								break;
+							}
+							break;
+						default:
+							assert(0);
+							break;
+						}
+
+						desc.SampleDesc.Count = attachment.texture->desc.SampleDesc.Count;
+						desc.SampleDesc.Quality = attachment.texture->desc.SampleDesc.Quality;
+					}
+				}
 				desc.SampleMask = pso->desc.sampleMask;
 
 				switch (pso->desc.pt)

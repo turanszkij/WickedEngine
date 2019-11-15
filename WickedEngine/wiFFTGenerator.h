@@ -2,46 +2,29 @@
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 
-
-//Memory access coherency (in threads)
-#define COHERENCY_GRANULARITY 128
-
-
-///////////////////////////////////////////////////////////////////////////////
-// Common types
-///////////////////////////////////////////////////////////////////////////////
-
-typedef struct CSFFT_512x512_Data_t
+namespace wiFFTGenerator
 {
-	// More than one array can be transformed at same time
-	UINT slices;
 
-	// For 512x512 config, we need 6 constant buffers
-	wiGraphics::GPUBuffer pRadix008A_CB[6];
+	struct CSFFT512x512_Plan
+	{
+		// More than one array can be transformed at same time
+		UINT slices;
 
-	wiGraphics::GPUBuffer pBuffer_Tmp;
+		// For 512x512 config, we need 6 constant buffers
+		wiGraphics::GPUBuffer pRadix008A_CB[6];
 
-	static void LoadShaders();
-} CSFFT512x512_Plan;
-
-////////////////////////////////////////////////////////////////////////////////
-// Common constants
-////////////////////////////////////////////////////////////////////////////////
-#define TWO_PI 6.283185307179586476925286766559
-
-#define FFT_DIMENSIONS 3U
-#define FFT_PLAN_SIZE_LIMIT (1U << 27)
-
-#define FFT_FORWARD -1
-#define FFT_INVERSE 1
+		wiGraphics::GPUBuffer pBuffer_Tmp;
+	};
 
 
-void fft512x512_create_plan(CSFFT512x512_Plan& plan, UINT slices);
+	void fft512x512_create_plan(CSFFT512x512_Plan& plan, UINT slices);
 
-void fft_512x512_c2c(
-	const CSFFT512x512_Plan& fft_plan,
-	const wiGraphics::GPUResource& pUAV_Dst,
-	const wiGraphics::GPUResource& pSRV_Dst,
-	const wiGraphics::GPUResource& pSRV_Src, 
-	wiGraphics::CommandList cmd);
+	void fft_512x512_c2c(
+		const CSFFT512x512_Plan& fft_plan,
+		const wiGraphics::GPUResource& pUAV_Dst,
+		const wiGraphics::GPUResource& pSRV_Dst,
+		const wiGraphics::GPUResource& pSRV_Src,
+		wiGraphics::CommandList cmd);
 
+	void LoadShaders();
+}

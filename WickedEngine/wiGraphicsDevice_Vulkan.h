@@ -204,6 +204,11 @@ namespace wiGraphics
 		UploadBuffer* bufferUploader;
 		UploadBuffer* textureUploader;
 
+		std::unordered_map<size_t, VkPipeline> pipelines_global;
+		std::vector<std::pair<size_t, VkPipeline>> pipelines_worker[COMMANDLIST_COUNT];
+		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
+		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
+
 		std::atomic<uint8_t> commandlist_count{ 0 };
 		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> free_commandlists;
 		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> active_commandlists;
@@ -289,6 +294,7 @@ namespace wiGraphics
 		virtual CommandList BeginCommandList() override;
 
 		void WaitForGPU() override;
+		void ClearPipelineStateCache() override;
 
 		void SetResolution(int width, int height) override;
 

@@ -268,6 +268,7 @@ namespace wiGraphics
 		virtual CommandList BeginCommandList() override;
 
 		void WaitForGPU() override;
+		void ClearPipelineStateCache() override;
 
 		void SetResolution(int width, int height) override;
 

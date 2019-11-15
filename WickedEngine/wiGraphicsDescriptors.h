@@ -471,10 +471,6 @@ namespace wiGraphics
 		const DepthStencilState*	dss = nullptr;
 		const VertexLayout*			il = nullptr;
 		PRIMITIVETOPOLOGY			pt = TRIANGLELIST;
-		UINT						numRTs = 0;
-		FORMAT						RTFormats[8] = {};
-		FORMAT						DSFormat = FORMAT_UNKNOWN;
-		SampleDesc					sampleDesc; 
 		UINT						sampleMask = 0xFFFFFFFF;
 	};
 	struct GPUBarrier

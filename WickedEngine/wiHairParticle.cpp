@@ -245,8 +245,6 @@ void wiHairParticle::LoadShaders()
 				desc.rs = &ncrs;
 				desc.dss = &dss_default;
 
-				desc.DSFormat = wiRenderer::DSFormat_full;
-
 				switch (i)
 				{
 				case RENDERPASS_DEPTHONLY:
@@ -259,6 +257,7 @@ void wiHairParticle::LoadShaders()
 					if (j == 0)
 					{
 						desc.ps = ps_forward;
+						desc.dss = &dss_equal;
 					}
 					else
 					{
@@ -269,6 +268,7 @@ void wiHairParticle::LoadShaders()
 					if (j == 0)
 					{
 						desc.ps = ps_tiledforward;
+						desc.dss = &dss_equal;
 					}
 					else
 					{
@@ -277,28 +277,9 @@ void wiHairParticle::LoadShaders()
 					break;
 				}
 
-				switch (i)
-				{
-				case RENDERPASS_FORWARD:
-				case RENDERPASS_TILEDFORWARD:
-					desc.numRTs = 2;
-					desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
-					desc.RTFormats[1] = wiRenderer::RTFormat_gbuffer_1;
-					desc.dss = &dss_equal; // opaque
-					break;
-				case RENDERPASS_DEFERRED:
-					desc.numRTs = 5;
-					desc.RTFormats[0] = wiRenderer::RTFormat_gbuffer_0;
-					desc.RTFormats[1] = wiRenderer::RTFormat_gbuffer_1;
-					desc.RTFormats[2] = wiRenderer::RTFormat_gbuffer_2;
-					desc.RTFormats[3] = wiRenderer::RTFormat_deferred_lightbuffer;
-					desc.RTFormats[4] = wiRenderer::RTFormat_deferred_lightbuffer;
-				}
-
 				if (j == 1)
 				{
 					desc.dss = &dss_rejectopaque_keeptransparent; // transparent
-					desc.numRTs = 1;
 				}
 
 				device->CreatePipelineState(&desc, &PSO[i][j]);
@@ -315,9 +296,6 @@ void wiHairParticle::LoadShaders()
 		desc.bs = &bs[0];
 		desc.rs = &wirers;
 		desc.dss = &dss_default;
-		desc.numRTs = 1;
-		desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
-		desc.DSFormat = wiRenderer::DSFormat_full;
 		device->CreatePipelineState(&desc, &PSO_wire);
 	}
 
