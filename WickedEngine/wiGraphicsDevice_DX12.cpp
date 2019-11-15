@@ -2082,7 +2082,7 @@ namespace wiGraphics
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 		}
-		else
+		else if(desc.SampleDesc.Count == 1)
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
 		}

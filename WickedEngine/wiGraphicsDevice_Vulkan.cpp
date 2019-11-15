@@ -2498,7 +2498,7 @@ namespace wiGraphics
 		imageInfo.format = _ConvertFormat(pTexture2D->desc.Format);
 		imageInfo.arrayLayers = pTexture2D->desc.ArraySize;
 		imageInfo.mipLevels = pTexture2D->desc.MipLevels;
-		imageInfo.samples = static_cast<VkSampleCountFlagBits>(pTexture2D->desc.SampleDesc.Count);
+		imageInfo.samples = (VkSampleCountFlagBits)pTexture2D->desc.SampleDesc.Count;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.usage = 0;
@@ -3089,30 +3089,7 @@ namespace wiGraphics
 			int subresource = desc.attachments[i].subresource;
 
 			attachmentDescriptions[validAttachmentCount].format = _ConvertFormat(texdesc.Format);
-			switch (texdesc.SampleDesc.Count)
-			{
-			case 2:
-				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_2_BIT;
-				break;
-			case 4:
-				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_4_BIT;
-				break;
-			case 8:
-				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_8_BIT;
-				break;
-			case 16:
-				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_16_BIT;
-				break;
-			case 32:
-				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_32_BIT;
-				break;
-			case 64:
-				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_64_BIT;
-				break;
-			default:
-				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_1_BIT;
-				break;
-			}
+			attachmentDescriptions[validAttachmentCount].samples = (VkSampleCountFlagBits)texdesc.SampleDesc.Count;
 
 			switch (desc.attachments[i].loadop)
 			{
@@ -4552,9 +4529,13 @@ namespace wiGraphics
 				VkPipelineMultisampleStateCreateInfo multisampling = {};
 				multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 				multisampling.sampleShadingEnable = VK_FALSE;
-				multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+				if (active_renderpass[cmd] != nullptr && active_renderpass[cmd]->desc.numAttachments > 0)
+				{
+					multisampling.rasterizationSamples = (VkSampleCountFlagBits)active_renderpass[cmd]->desc.attachments[0].texture->desc.SampleDesc.Count;
+				}
 				multisampling.minSampleShading = 1.0f;
-				multisampling.pSampleMask = nullptr;
+				VkSampleMask samplemask = pso->desc.sampleMask;
+				multisampling.pSampleMask = &samplemask;
 				multisampling.alphaToCoverageEnable = VK_FALSE;
 				multisampling.alphaToOneEnable = VK_FALSE;
 
