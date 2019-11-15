@@ -2076,6 +2076,8 @@ namespace wiGraphics
 		desc.MipLevels = pDesc->MipLevels;
 		desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 		desc.DepthOrArraySize = (UINT16)pDesc->ArraySize;
+		desc.SampleDesc.Count = pDesc->SampleDesc.Count;
+		desc.SampleDesc.Quality = pDesc->SampleDesc.Quality;
 		desc.Alignment = 0;
 		desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 		if (pDesc->BindFlags & BIND_DEPTH_STENCIL)
@@ -2098,8 +2100,6 @@ namespace wiGraphics
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 		}
-		desc.SampleDesc.Count = pDesc->SampleDesc.Count;
-		desc.SampleDesc.Quality = pDesc->SampleDesc.Quality;
 
 		D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_COMMON;
 
