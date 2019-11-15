@@ -34,6 +34,7 @@ namespace wiFont_Internal
 	GPUBuffer			constantBuffer;
 	BlendState			blendState;
 	RasterizerState		rasterizerState;
+	DepthStencilState	depthStencilState;
 	Sampler				sampler;
 
 	VertexLayout		vertexLayout;
@@ -263,6 +264,11 @@ void wiFont::Initialize()
 	bd.IndependentBlendEnable = false;
 	device->CreateBlendState(&bd, &blendState);
 
+	DepthStencilStateDesc dsd;
+	dsd.DepthEnable = false;
+	dsd.StencilEnable = false;
+	device->CreateDepthStencilState(&dsd, &depthStencilState);
+
 	SamplerDesc samplerDesc;
 	samplerDesc.Filter = FILTER_MIN_MAG_LINEAR_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_BORDER;
@@ -315,6 +321,7 @@ void wiFont::LoadShaders()
 	desc.ps = pixelShader;
 	desc.il = &vertexLayout;
 	desc.bs = &blendState;
+	desc.dss = &depthStencilState;
 	desc.rs = &rasterizerState;
 	wiRenderer::GetDevice()->CreatePipelineState(&desc, &PSO);
 }
