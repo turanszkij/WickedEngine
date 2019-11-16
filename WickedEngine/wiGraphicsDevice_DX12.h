@@ -15,13 +15,6 @@
 #include <mutex>
 
 
-//#define DX12_REAL_RENDERPASS
-#ifdef DX12_REAL_RENDERPASS
-typedef ID3D12GraphicsCommandList4 DX12_CommandList;
-#else
-typedef ID3D12GraphicsCommandList DX12_CommandList;
-#endif // DX12_REAL_RENDERPASS
-
 namespace wiGraphics
 {
 
@@ -149,7 +142,7 @@ namespace wiGraphics
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
-		inline DX12_CommandList* GetDirectCommandList(CommandList cmd) { return static_cast<DX12_CommandList*>(GetFrameResources().commandLists[cmd]); }
+		inline ID3D12GraphicsCommandList4* GetDirectCommandList(CommandList cmd) { return static_cast<ID3D12GraphicsCommandList4*>(GetFrameResources().commandLists[cmd]); }
 
 		struct DynamicResourceState
 		{
@@ -177,7 +170,6 @@ namespace wiGraphics
 		UploadBuffer* textureUploader = nullptr;
 
 		IDXGISwapChain3*			swapChain = nullptr;
-		ViewPort					viewPort;
 
 		PRIMITIVETOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
 

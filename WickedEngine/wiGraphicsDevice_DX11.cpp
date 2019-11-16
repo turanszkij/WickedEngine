@@ -2528,15 +2528,6 @@ void GraphicsDevice_DX11::SetName(GPUResource* pResource, const std::string& nam
 
 void GraphicsDevice_DX11::PresentBegin(CommandList cmd)
 {
-	ViewPort viewPort;
-	viewPort.Width = (float)SCREENWIDTH;
-	viewPort.Height = (float)SCREENHEIGHT;
-	viewPort.MinDepth = 0.0f;
-	viewPort.MaxDepth = 1.0f;
-	viewPort.TopLeftX = 0;
-	viewPort.TopLeftY = 0;
-	BindViewports(1, &viewPort, cmd);
-
 	deviceContexts[cmd]->OMSetRenderTargets(1, &renderTargetView, 0);
 	float ClearColor[4] = { 0, 0, 0, 1.0f }; // red,green,blue,alpha
 	deviceContexts[cmd]->ClearRenderTargetView(renderTargetView, ClearColor);
@@ -2551,9 +2542,6 @@ void GraphicsDevice_DX11::PresentEnd(CommandList cmd)
 			deviceContexts[cmd]->FinishCommandList(false, &commandLists[cmd]);
 			immediateContext->ExecuteCommandList(commandLists[cmd], false);
 			commandLists[cmd]->Release();
-			commandLists[cmd] = nullptr;
-			deviceContexts[cmd]->ClearState();
-			BindPipelineState(nullptr, (CommandList)cmd);
 
 			free_commandlists.push_back(cmd);
 		}
@@ -2562,7 +2550,6 @@ void GraphicsDevice_DX11::PresentEnd(CommandList cmd)
 	swapChain->Present(VSYNC, 0);
 
 
-	immediateContext->OMSetRenderTargets(0, nullptr, nullptr);
 	immediateContext->ClearState();
 
 	memset(prev_vs, 0, sizeof(prev_vs));
@@ -2621,6 +2608,15 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 
 	BindPipelineState(nullptr, cmd);
 	BindComputeShader(nullptr, cmd);
+
+	D3D11_VIEWPORT vp = {};
+	vp.Width = (FLOAT)SCREENWIDTH;
+	vp.Height = (FLOAT)SCREENHEIGHT;
+	vp.MinDepth = 0.0f;
+	vp.MaxDepth = 1.0f;
+	vp.TopLeftX = 0;
+	vp.TopLeftY = 0;
+	deviceContexts[cmd]->RSSetViewports(1, &vp);
 
 	D3D11_RECT pRects[8];
 	for (UINT i = 0; i < 8; ++i)

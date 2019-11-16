@@ -20,6 +20,9 @@
 #include <algorithm>
 #include <wincodec.h>
 
+// Uncomment this to enable DX12 renderpass feature:
+//#define DX12_REAL_RENDERPASS
+
 using namespace std;
 
 namespace wiGraphics
@@ -1577,14 +1580,6 @@ namespace wiGraphics
 			}
 		}
 
-		// Setup the main viewport
-		viewPort.Width = (FLOAT)SCREENWIDTH;
-		viewPort.Height = (FLOAT)SCREENHEIGHT;
-		viewPort.MinDepth = 0.0f;
-		viewPort.MaxDepth = 1.0f;
-		viewPort.TopLeftX = 0;
-		viewPort.TopLeftY = 0;
-
 
 		// Generate default root signature:
 
@@ -2901,11 +2896,6 @@ namespace wiGraphics
 
 	void GraphicsDevice_DX12::PresentBegin(CommandList cmd)
 	{
-		BindViewports(1, &viewPort, cmd);
-
-
-		// Record commands in the command list now.
-		// Start by setting the resource barrier.
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 		barrier.Transition.pResource = GetFrameResources().backBuffer;
@@ -2915,23 +2905,34 @@ namespace wiGraphics
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 		GetDirectCommandList(cmd)->ResourceBarrier(1, &barrier);
 
+		const float clearcolor[] = { 0,0,0,1 };
 
-		// Set the back buffer as the render target.
-		GetDirectCommandList(cmd)->OMSetRenderTargets(1, &GetFrameResources().backBufferRTV, FALSE, NULL);
+#ifdef DX12_REAL_RENDERPASS
 
+		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTV = {};
+		RTV.cpuDescriptor = GetFrameResources().backBufferRTV;
+		RTV.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+		RTV.BeginningAccess.Clear.ClearValue.Color[0] = clearcolor[0];
+		RTV.BeginningAccess.Clear.ClearValue.Color[1] = clearcolor[1];
+		RTV.BeginningAccess.Clear.ClearValue.Color[2] = clearcolor[2];
+		RTV.BeginningAccess.Clear.ClearValue.Color[3] = clearcolor[3];
+		RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+		GetDirectCommandList(cmd)->BeginRenderPass(1, &RTV, nullptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
 
-		// Then set the color to clear the window to.
-		float color[4];
-		color[0] = 0.0;
-		color[1] = 0.0;
-		color[2] = 0.0;
-		color[3] = 1.0;
-		GetDirectCommandList(cmd)->ClearRenderTargetView(GetFrameResources().backBufferRTV, color, 0, NULL);
+#else
 
+		GetDirectCommandList(cmd)->OMSetRenderTargets(1, &GetFrameResources().backBufferRTV, FALSE, nullptr);
+		GetDirectCommandList(cmd)->ClearRenderTargetView(GetFrameResources().backBufferRTV, clearcolor, 0, nullptr);
+
+#endif // DX12_REAL_RENDERPASS
 
 	}
 	void GraphicsDevice_DX12::PresentEnd(CommandList cmd)
 	{
+#ifdef DX12_REAL_RENDERPASS
+		GetDirectCommandList(cmd)->EndRenderPass();
+#endif // DX12_REAL_RENDERPASS
+
 		HRESULT result;
 
 		// Indicate that the back buffer will now be used to present.
@@ -3089,8 +3090,8 @@ namespace wiGraphics
 			for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 			{
 				hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&frames[fr].commandAllocators[cmd]);
-				hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[fr].commandAllocators[cmd], nullptr, __uuidof(DX12_CommandList), (void**)&frames[fr].commandLists[cmd]);
-				hr = static_cast<DX12_CommandList*>(frames[fr].commandLists[cmd])->Close();
+				hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[fr].commandAllocators[cmd], nullptr, __uuidof(ID3D12GraphicsCommandList4), (void**)&frames[fr].commandLists[cmd]);
+				hr = static_cast<ID3D12GraphicsCommandList4*>(frames[fr].commandLists[cmd])->Close();
 
 				frames[fr].descriptors[cmd] = new FrameResources::DescriptorTableFrameAllocator(this, 1024, 16);
 				frames[fr].resourceBuffer[cmd] = new FrameResources::ResourceFrameAllocator(device, 1024 * 1024 * 4);
@@ -3105,7 +3106,6 @@ namespace wiGraphics
 		hr = GetDirectCommandList(cmd)->Reset(GetFrameResources().commandAllocators[cmd], nullptr);
 		assert(SUCCEEDED(hr));
 
-
 		ID3D12DescriptorHeap* heaps[] = {
 			GetFrameResources().descriptors[cmd]->resource_heap_GPU, GetFrameResources().descriptors[cmd]->sampler_heap_GPU
 		};
@@ -3116,6 +3116,15 @@ namespace wiGraphics
 
 		GetFrameResources().descriptors[cmd]->reset();
 		GetFrameResources().resourceBuffer[cmd]->clear();
+
+		D3D12_VIEWPORT vp = {};
+		vp.Width = (FLOAT)SCREENWIDTH;
+		vp.Height = (FLOAT)SCREENHEIGHT;
+		vp.MinDepth = 0.0f;
+		vp.MaxDepth = 1.0f;
+		vp.TopLeftX = 0;
+		vp.TopLeftY = 0;
+		GetDirectCommandList(cmd)->RSSetViewports(1, &vp);
 
 		D3D12_RECT pRects[8];
 		for (UINT i = 0; i < 8; ++i)
