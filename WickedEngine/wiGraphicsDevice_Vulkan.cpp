@@ -1455,7 +1455,7 @@ namespace wiGraphics
 		VkApplicationInfo appInfo = {};
 		appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 		appInfo.pApplicationName = "Wicked Engine Application";
-		appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+		appInfo.applicationVersion = VK_MAKE_VERSION(wiVersion::GetMajor(), wiVersion::GetMinor(), wiVersion::GetRevision());
 		appInfo.pEngineName = "Wicked Engine";
 		appInfo.engineVersion = VK_MAKE_VERSION(wiVersion::GetMajor(), wiVersion::GetMinor(), wiVersion::GetRevision());
 		appInfo.apiVersion = VK_API_VERSION_1_1;
@@ -4529,6 +4529,7 @@ namespace wiGraphics
 				VkPipelineMultisampleStateCreateInfo multisampling = {};
 				multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 				multisampling.sampleShadingEnable = VK_FALSE;
+				multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 				if (active_renderpass[cmd] != nullptr && active_renderpass[cmd]->desc.numAttachments > 0)
 				{
 					multisampling.rasterizationSamples = (VkSampleCountFlagBits)active_renderpass[cmd]->desc.attachments[0].texture->desc.SampleDesc.Count;
@@ -4946,29 +4947,38 @@ namespace wiGraphics
 
 	void GraphicsDevice_Vulkan::EventBegin(const std::string& name, CommandList cmd)
 	{
-		VkDebugUtilsLabelEXT label = {};
-		label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
-		label.pLabelName = name.c_str();
-		label.color[0] = 0;
-		label.color[1] = 0;
-		label.color[2] = 0;
-		label.color[3] = 1;
-		cmdBeginDebugUtilsLabelEXT(GetDirectCommandList(cmd), &label);
+		if (cmdBeginDebugUtilsLabelEXT != nullptr)
+		{
+			VkDebugUtilsLabelEXT label = {};
+			label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+			label.pLabelName = name.c_str();
+			label.color[0] = 0;
+			label.color[1] = 0;
+			label.color[2] = 0;
+			label.color[3] = 1;
+			cmdBeginDebugUtilsLabelEXT(GetDirectCommandList(cmd), &label);
+		}
 	}
 	void GraphicsDevice_Vulkan::EventEnd(CommandList cmd)
 	{
-		cmdEndDebugUtilsLabelEXT(GetDirectCommandList(cmd));
+		if (cmdEndDebugUtilsLabelEXT != nullptr)
+		{
+			cmdEndDebugUtilsLabelEXT(GetDirectCommandList(cmd));
+		}
 	}
 	void GraphicsDevice_Vulkan::SetMarker(const std::string& name, CommandList cmd)
 	{
-		VkDebugUtilsLabelEXT label = {};
-		label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
-		label.pLabelName = name.c_str();
-		label.color[0] = 0;
-		label.color[1] = 0;
-		label.color[2] = 0;
-		label.color[3] = 1;
-		cmdInsertDebugUtilsLabelEXT(GetDirectCommandList(cmd), &label);
+		if (cmdInsertDebugUtilsLabelEXT != nullptr)
+		{
+			VkDebugUtilsLabelEXT label = {};
+			label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+			label.pLabelName = name.c_str();
+			label.color[0] = 0;
+			label.color[1] = 0;
+			label.color[2] = 0;
+			label.color[3] = 1;
+			cmdInsertDebugUtilsLabelEXT(GetDirectCommandList(cmd), &label);
+		}
 	}
 
 }
