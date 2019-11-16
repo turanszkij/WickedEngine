@@ -2096,7 +2096,7 @@ namespace wiGraphics
 			desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 		}
 
-		D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_COMMON;
+		D3D12_RESOURCE_STATES resourceState = _ConvertImageLayout(pTexture2D->desc.layout);
 
 		D3D12_CLEAR_VALUE optimizedClearValue = {};
 		optimizedClearValue.Color[0] = pTexture2D->desc.clear.color[0];
@@ -3083,7 +3083,7 @@ namespace wiGraphics
 		if (!free_commandlists.pop_front(cmd))
 		{
 			// need to create one more command list:
-			cmd = (CommandList)commandlist_count.fetch_add(1);
+			cmd = commandlist_count.fetch_add(1);
 			assert(cmd < COMMANDLIST_COUNT);
 
 			HRESULT hr;
@@ -3109,10 +3109,10 @@ namespace wiGraphics
 		ID3D12DescriptorHeap* heaps[] = {
 			GetFrameResources().descriptors[cmd]->resource_heap_GPU, GetFrameResources().descriptors[cmd]->sampler_heap_GPU
 		};
-		GetDirectCommandList((CommandList)cmd)->SetDescriptorHeaps(ARRAYSIZE(heaps), heaps);
+		GetDirectCommandList(cmd)->SetDescriptorHeaps(ARRAYSIZE(heaps), heaps);
 
-		GetDirectCommandList((CommandList)cmd)->SetGraphicsRootSignature(graphicsRootSig);
-		GetDirectCommandList((CommandList)cmd)->SetComputeRootSignature(computeRootSig);
+		GetDirectCommandList(cmd)->SetGraphicsRootSignature(graphicsRootSig);
+		GetDirectCommandList(cmd)->SetComputeRootSignature(computeRootSig);
 
 		GetFrameResources().descriptors[cmd]->reset();
 		GetFrameResources().resourceBuffer[cmd]->clear();
@@ -3134,7 +3134,7 @@ namespace wiGraphics
 			pRects[i].right = INT32_MAX;
 			pRects[i].top = INT32_MIN;
 		}
-		GetDirectCommandList((CommandList)cmd)->RSSetScissorRects(8, pRects);
+		GetDirectCommandList(cmd)->RSSetScissorRects(8, pRects);
 
 		prev_pipeline_hash[cmd] = 0;
 		active_renderpass[cmd] = nullptr;
