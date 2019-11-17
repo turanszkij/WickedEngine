@@ -6,6 +6,8 @@
 #include "wiContainers.h"
 #include "wiGraphicsDevice_SharedInternals.h"
 
+#include "Utility/D3D12MemAlloc.h"
+
 #include <dxgi1_4.h>
 #include <d3d12.h>
 
@@ -25,6 +27,7 @@ namespace wiGraphics
 		ID3D12CommandQueue*			directQueue = nullptr;
 		ID3D12Fence*				frameFence = nullptr;
 		HANDLE						frameFenceEvent;
+		D3D12MA::Allocator*			allocator = nullptr;
 
 		ID3D12CommandQueue*			copyQueue = nullptr;
 		ID3D12CommandAllocator*		copyAllocator = nullptr;
@@ -126,12 +129,14 @@ namespace wiGraphics
 
 			struct ResourceFrameAllocator
 			{
+				GraphicsDevice_DX12*	device = nullptr;
 				GPUBuffer				buffer;
+				D3D12MA::Allocation*	allocation = nullptr;
 				uint8_t*				dataBegin = nullptr;
 				uint8_t*				dataCur = nullptr;
 				uint8_t*				dataEnd = nullptr;
 
-				ResourceFrameAllocator(ID3D12Device* device, size_t size);
+				ResourceFrameAllocator(GraphicsDevice_DX12* device, size_t size);
 				~ResourceFrameAllocator();
 
 				uint8_t* allocate(size_t dataSize, size_t alignment);
@@ -153,13 +158,15 @@ namespace wiGraphics
 
 		struct UploadBuffer
 		{
+			GraphicsDevice_DX12*	device = nullptr;
 			ID3D12Resource*			resource = nullptr;
+			D3D12MA::Allocation*	allocation = nullptr;
 			uint8_t*				dataBegin = nullptr;
 			uint8_t*				dataCur = nullptr;
 			uint8_t*				dataEnd = nullptr;
 			wiSpinLock				lock;
 
-			UploadBuffer(ID3D12Device* device, size_t size);
+			UploadBuffer(GraphicsDevice_DX12* device, size_t size);
 			~UploadBuffer();
 
 			uint8_t* allocate(size_t dataSize, size_t alignment);
@@ -204,6 +211,7 @@ namespace wiGraphics
 			destroyer.push_back(item);
 			destroylocker.unlock();
 		}
+		std::unordered_map<wiCPUHandle, D3D12MA::Allocation*> mem_allocations;
 
 	public:
 		GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen = false, bool debuglayer = false);

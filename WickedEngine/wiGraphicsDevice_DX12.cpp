@@ -5,6 +5,7 @@
 #include "wiBackLog.h"
 
 #include "Utility/d3dx12.h"
+#include "Utility/D3D12MemAlloc.h"
 
 #include <pix.h>
 
@@ -1232,21 +1233,26 @@ namespace wiGraphics
 	}
 
 
-	GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::ResourceFrameAllocator(ID3D12Device* device, size_t size)
+	GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::ResourceFrameAllocator(GraphicsDevice_DX12* device, size_t size) : device(device)
 	{
-		HRESULT hr = device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(size),
-			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-			__uuidof(ID3D12Resource), (void**)&buffer.resource);
+		HRESULT hr;
 
+		D3D12MA::ALLOCATION_DESC allocationDesc = {};
+		allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+
+		ID3D12Resource* resource;
+		hr = device->allocator->CreateResource(
+			&allocationDesc,
+			&CD3DX12_RESOURCE_DESC::Buffer(size),
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			&allocation,
+			IID_PPV_ARGS(&resource)
+		);
 		assert(SUCCEEDED(hr));
+		buffer.resource = (wiCPUHandle)resource;
 
 		void* pData;
-		//
-		// No CPU reads will be done from the resource.
-		//
 		CD3DX12_RANGE readRange(0, 0);
 		((ID3D12Resource*)buffer.resource)->Map(0, &readRange, &pData);
 		dataCur = dataBegin = reinterpret_cast<uint8_t*>(pData);
@@ -1262,8 +1268,8 @@ namespace wiGraphics
 	{
 		if (buffer.resource != WI_NULL_HANDLE)
 		{
+			SAFE_RELEASE(allocation);
 			((ID3D12Resource*)buffer.resource)->Release();
-			buffer.resource = WI_NULL_HANDLE;
 		}
 	}
 	uint8_t* GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::allocate(size_t dataSize, size_t alignment)
@@ -1293,21 +1299,24 @@ namespace wiGraphics
 
 
 
-	GraphicsDevice_DX12::UploadBuffer::UploadBuffer(ID3D12Device* device, size_t size)
+	GraphicsDevice_DX12::UploadBuffer::UploadBuffer(GraphicsDevice_DX12* device, size_t size) : device(device)
 	{
-		HRESULT hr = device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(size),
-			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-			__uuidof(ID3D12Resource), (void**)&resource);
+		HRESULT hr;
 
+		D3D12MA::ALLOCATION_DESC allocationDesc = {};
+		allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+
+		hr = device->allocator->CreateResource(
+			&allocationDesc,
+			&CD3DX12_RESOURCE_DESC::Buffer(size),
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			&allocation,
+			IID_PPV_ARGS(&resource)
+		);
 		assert(SUCCEEDED(hr));
 
 		void* pData;
-		//
-		// No CPU reads will be done from the resource.
-		//
 		CD3DX12_RANGE readRange(0, 0);
 		resource->Map(0, &readRange, &pData);
 		dataCur = dataBegin = reinterpret_cast< UINT8* >(pData);
@@ -1316,6 +1325,7 @@ namespace wiGraphics
 	GraphicsDevice_DX12::UploadBuffer::~UploadBuffer()
 	{
 		SAFE_RELEASE(resource);
+		SAFE_RELEASE(allocation);
 	}
 	uint8_t* GraphicsDevice_DX12::UploadBuffer::allocate(size_t dataSize, size_t alignment)
 	{
@@ -1390,8 +1400,15 @@ namespace wiGraphics
 			stringstream ss("");
 			ss << "Failed to create the graphics device! ERROR: " << std::hex << hr;
 			wiHelper::messageBox(ss.str(), "Error!");
+			assert(0);
 			exit(1);
 		}
+
+		D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
+		allocatorDesc.pDevice = device;
+
+		hr = D3D12MA::CreateAllocator(&allocatorDesc, &allocator);
+		assert(SUCCEEDED(hr));
 
 		// Create command queue
 		D3D12_COMMAND_QUEUE_DESC directQueueDesc = {};
@@ -1400,9 +1417,11 @@ namespace wiGraphics
 		directQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 		directQueueDesc.NodeMask = 0;
 		hr = device->CreateCommandQueue(&directQueueDesc, __uuidof(ID3D12CommandQueue), (void**)&directQueue);
+		assert(SUCCEEDED(hr));
 
 		// Create fences for command queue:
 		hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&frameFence);
+		assert(SUCCEEDED(hr));
 		frameFenceEvent = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
 
 
@@ -1411,6 +1430,7 @@ namespace wiGraphics
 
 		IDXGIFactory4 * pIDXGIFactory;
 		hr = CreateDXGIFactory1(IID_PPV_ARGS(&pIDXGIFactory));
+		assert(SUCCEEDED(hr));
 
 		IDXGISwapChain1* _swapChain;
 
@@ -1447,18 +1467,20 @@ namespace wiGraphics
 		if (FAILED(hr))
 		{
 			wiHelper::messageBox("Failed to create a swapchain for the graphics device!", "Error!");
+			assert(0);
 			exit(1);
 		}
 
 		hr = _swapChain->QueryInterface(__uuidof(IDXGISwapChain3), (void**)&swapChain);
+		assert(SUCCEEDED(hr));
 
 		SAFE_RELEASE(pIDXGIFactory);
 
 
 
 		// Create common descriptor heaps
-		RTAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 128);
-		DSAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 128);
+		RTAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1024);
+		DSAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1024);
 		ResourceAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 16384);
 		SamplerAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 64);
 
@@ -1525,14 +1547,15 @@ namespace wiGraphics
 		}
 
 		// Create resource upload buffer
-		bufferUploader = new UploadBuffer(device, 256 * 1024 * 1024);
-		textureUploader = new UploadBuffer(device, 256 * 1024 * 1024);
+		bufferUploader = new UploadBuffer(this, 256 * 1024 * 1024);
+		textureUploader = new UploadBuffer(this, 256 * 1024 * 1024);
 
 
 		// Create frame-resident resources:
 		for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 		{
 			hr = swapChain->GetBuffer(fr, __uuidof(ID3D12Resource), (void**)&frames[fr].backBuffer);
+			assert(SUCCEEDED(hr));
 			frames[fr].backBufferRTV.ptr = RTAllocator->allocate(); 
 			device->CreateRenderTargetView(frames[fr].backBuffer, nullptr, frames[fr].backBufferRTV);
 		}
@@ -1829,6 +1852,7 @@ namespace wiGraphics
 		SAFE_DELETE(textureUploader);
 
 		SAFE_RELEASE(directQueue);
+		SAFE_RELEASE(allocator);
 		SAFE_RELEASE(device);
 	}
 
@@ -1886,15 +1910,6 @@ namespace wiGraphics
 		}
 		UINT64 alignedSize = Align(pDesc->ByteWidth, alignment);
 
-		D3D12_HEAP_PROPERTIES heapDesc = {};
-		heapDesc.Type = D3D12_HEAP_TYPE_DEFAULT;
-		heapDesc.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-		heapDesc.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-		heapDesc.CreationNodeMask = 0;
-		heapDesc.VisibleNodeMask = 0;
-
-		D3D12_HEAP_FLAGS heapFlags = D3D12_HEAP_FLAG_NONE;
-
 		D3D12_RESOURCE_DESC desc;
 		desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 		desc.Format = DXGI_FORMAT_UNKNOWN;
@@ -1913,14 +1928,25 @@ namespace wiGraphics
 		desc.SampleDesc.Quality = 0;
 
 		D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_COMMON;
-	
-		// Issue main resource creation:
-		hr = device->CreateCommittedResource(&heapDesc, heapFlags, &desc, resourceState, 
-			nullptr, __uuidof(ID3D12Resource), (void**)&pBuffer->resource);
-		assert(SUCCEEDED(hr));
-		if (FAILED(hr))
-			return hr;
 
+		D3D12MA::ALLOCATION_DESC allocationDesc = {};
+		allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+		ID3D12Resource* resource;
+		D3D12MA::Allocation* allocation;
+		hr = allocator->CreateResource(
+			&allocationDesc,
+			&desc,
+			resourceState,
+			nullptr,
+			&allocation,
+			IID_PPV_ARGS(&resource)
+		);
+		assert(SUCCEEDED(hr));
+		pBuffer->resource = (wiCPUHandle)resource;
+		destroylocker.lock();
+		mem_allocations[pBuffer->resource] = allocation;
+		destroylocker.unlock();
 		
 
 		// Issue data copy on request:
@@ -2054,6 +2080,9 @@ namespace wiGraphics
 
 		HRESULT hr = E_FAIL;
 
+		D3D12MA::ALLOCATION_DESC allocationDesc = {};
+		allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
 		D3D12_HEAP_PROPERTIES heapDesc = {};
 		heapDesc.Type = D3D12_HEAP_TYPE_DEFAULT;
 		heapDesc.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
@@ -2078,6 +2107,7 @@ namespace wiGraphics
 		if (pDesc->BindFlags & BIND_DEPTH_STENCIL)
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+			allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
 		}
 		else if(desc.SampleDesc.Count == 1)
 		{
@@ -2086,6 +2116,7 @@ namespace wiGraphics
 		if (pDesc->BindFlags & BIND_RENDER_TARGET)
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+			allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
 		}
 		if (pDesc->BindFlags & BIND_UNORDERED_ACCESS)
 		{
@@ -2120,13 +2151,21 @@ namespace wiGraphics
 		}
 		bool useClearValue = pDesc->BindFlags & BIND_RENDER_TARGET || pDesc->BindFlags & BIND_DEPTH_STENCIL;
 
-		// Issue main resource creation:
-		hr = device->CreateCommittedResource(&heapDesc, heapFlags, &desc, resourceState, 
-			useClearValue ? &optimizedClearValue : nullptr, 
-			__uuidof(ID3D12Resource), (void**)&pTexture2D->resource);
+		ID3D12Resource* resource;
+		D3D12MA::Allocation* allocation;
+		hr = allocator->CreateResource(
+			&allocationDesc,
+			&desc,
+			resourceState,
+			useClearValue ? &optimizedClearValue : nullptr,
+			&allocation,
+			IID_PPV_ARGS(&resource)
+		);
 		assert(SUCCEEDED(hr));
-		if (FAILED(hr))
-			return hr;
+		pTexture2D->resource = (wiCPUHandle)resource;
+		destroylocker.lock();
+		mem_allocations[pTexture2D->resource] = allocation;
+		destroylocker.unlock();
 
 		if (pTexture2D->desc.MipLevels == 0)
 		{
@@ -3046,6 +3085,8 @@ namespace wiGraphics
 				switch (item.type)
 				{
 				case DestroyItem::RESOURCE:
+					mem_allocations[item.handle]->Release();
+					mem_allocations.erase(item.handle);
 					((ID3D12Resource*)item.handle)->Release();
 					break;
 				case DestroyItem::RESOURCEVIEW:
@@ -3094,7 +3135,7 @@ namespace wiGraphics
 				hr = static_cast<ID3D12GraphicsCommandList4*>(frames[fr].commandLists[cmd])->Close();
 
 				frames[fr].descriptors[cmd] = new FrameResources::DescriptorTableFrameAllocator(this, 1024, 16);
-				frames[fr].resourceBuffer[cmd] = new FrameResources::ResourceFrameAllocator(device, 1024 * 1024 * 4);
+				frames[fr].resourceBuffer[cmd] = new FrameResources::ResourceFrameAllocator(this, 1024 * 1024 * 4);
 			}
 		}
 

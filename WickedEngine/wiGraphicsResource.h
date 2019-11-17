@@ -100,7 +100,6 @@ namespace wiGraphics
 		std::vector<wiCPUHandle> subresourceUAVs;
 
 		wiCPUHandle resource = WI_NULL_HANDLE;
-		wiCPUHandle resourceMemory = WI_NULL_HANDLE;
 
 		virtual ~GPUResource();
 	};

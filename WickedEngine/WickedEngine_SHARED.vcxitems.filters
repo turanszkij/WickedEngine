@@ -1128,6 +1128,12 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\tinyddsloader.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\vk_mem_alloc.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\D3D12MemAlloc.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1894,6 +1900,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_UWP.cpp">
       <Filter>ENGINE\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\D3D12MemAlloc.cpp">
+      <Filter>UTILITY</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

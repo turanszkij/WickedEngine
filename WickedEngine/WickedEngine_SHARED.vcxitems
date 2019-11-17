@@ -253,11 +253,13 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledDeferred_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward_BindLua.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\D3D12MemAlloc.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\d3dx12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image_write.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_truetype.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\tinyddsloader.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\vk_mem_alloc.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAllocators.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAudio.h" />
@@ -518,6 +520,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledDeferred_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward_BindLua.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\D3D12MemAlloc.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\utility_common.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArchive.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiAudio.cpp" />

@@ -1,9 +1,16 @@
 #include "wiGraphicsDevice_Vulkan.h"
+
+#ifdef WICKEDENGINE_BUILD_VULKAN
+#pragma comment(lib,"vulkan-1.lib")
+
 #include "wiGraphicsDevice_SharedInternals.h"
 #include "wiHelper.h"
 #include "ShaderInterop_Vulkan.h"
 #include "wiBackLog.h"
 #include "wiVersion.h"
+
+#define VMA_IMPLEMENTATION
+#include "Utility/vk_mem_alloc.h"
 
 #include <sstream>
 #include <vector>
@@ -11,10 +18,6 @@
 #include <iostream>
 #include <set>
 #include <algorithm>
-
-
-#ifdef WICKEDENGINE_BUILD_VULKAN
-#pragma comment(lib,"vulkan-1.lib")
 
 namespace wiGraphics
 {
@@ -751,7 +754,7 @@ namespace wiGraphics
 
 
 
-	GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::ResourceFrameAllocator(VkPhysicalDevice physicalDevice, VkDevice device, size_t size) : device(device)
+	GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::ResourceFrameAllocator(GraphicsDevice_Vulkan* device, size_t size) : device(device)
 	{
 		VkBufferCreateInfo bufferInfo = {};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -763,46 +766,30 @@ namespace wiGraphics
 		bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 		bufferInfo.flags = 0;
 
-		VkResult res = vkCreateBuffer(device, &bufferInfo, nullptr, (VkBuffer*)&buffer.resource);
+		VkResult res;
+
+		VmaAllocationCreateInfo allocInfo = {};
+		allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+		allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+		VkBuffer buffer;
+		res = vmaCreateBuffer(device->allocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr);
 		assert(res == VK_SUCCESS);
+		this->buffer.resource = (wiCPUHandle)buffer;
 
-
-		// Allocate resource backing memory:
-		VkMemoryRequirements memRequirements;
-		vkGetBufferMemoryRequirements(device, (VkBuffer)buffer.resource, &memRequirements);
-
-		VkMemoryAllocateInfo allocInfo = {};
-		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocInfo.allocationSize = memRequirements.size;
-		allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-		res = vkAllocateMemory(device, &allocInfo, nullptr, (VkDeviceMemory*)&buffer.resourceMemory);
-		assert(res == VK_SUCCESS);
-
-		res = vkBindBufferMemory(device, (VkBuffer)buffer.resource, (VkDeviceMemory)buffer.resourceMemory, 0);
-		assert(res == VK_SUCCESS);
-
-
-
-
-		void* pData;
-		//
-		// No CPU reads will be done from the resource.
-		//
-		vkMapMemory(device, (VkDeviceMemory)buffer.resourceMemory, 0, bufferInfo.size, 0, &pData);
+		void* pData = allocation->GetMappedData();
 		dataCur = dataBegin = reinterpret_cast<uint8_t*>(pData);
 		dataEnd = dataBegin + size;
 
 		// Because the "buffer" is created by hand in this, fill the desc to indicate how it can be used:
-		buffer.desc.ByteWidth = (UINT)((size_t)dataEnd - (size_t)dataBegin);
-		buffer.desc.Usage = USAGE_DYNAMIC;
-		buffer.desc.BindFlags = BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
-		buffer.desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		this->buffer.desc.ByteWidth = (UINT)((size_t)dataEnd - (size_t)dataBegin);
+		this->buffer.desc.Usage = USAGE_DYNAMIC;
+		this->buffer.desc.BindFlags = BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
+		this->buffer.desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 	}
 	GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::~ResourceFrameAllocator()
 	{
-		vkDestroyBuffer(device, (VkBuffer)buffer.resource, nullptr);
+		vmaDestroyBuffer(device->allocator, (VkBuffer)this->buffer.resource, allocation);
 	}
 	uint8_t* GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::allocate(size_t dataSize, size_t alignment)
 	{
@@ -831,7 +818,7 @@ namespace wiGraphics
 
 
 
-	GraphicsDevice_Vulkan::UploadBuffer::UploadBuffer(VkPhysicalDevice physicalDevice, VkDevice device, const QueueFamilyIndices& queueIndices, size_t size) : device(device)
+	GraphicsDevice_Vulkan::UploadBuffer::UploadBuffer(GraphicsDevice_Vulkan* device, const QueueFamilyIndices& queueIndices, size_t size) : device(device)
 	{
 		VkBufferCreateInfo bufferInfo = {};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -841,41 +828,22 @@ namespace wiGraphics
 
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
+		VkResult res;
 
-		VkResult res = vkCreateBuffer(device, &bufferInfo, nullptr, &resource);
+		VmaAllocationCreateInfo allocInfo = {};
+		allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+		allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+		res = vmaCreateBuffer(device->allocator, &bufferInfo, &allocInfo, &resource, &allocation, nullptr);
 		assert(res == VK_SUCCESS);
 
-
-		// Allocate resource backing memory:
-		VkMemoryRequirements memRequirements;
-		vkGetBufferMemoryRequirements(device, resource, &memRequirements);
-
-		VkMemoryAllocateInfo allocInfo = {};
-		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocInfo.allocationSize = memRequirements.size;
-		allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, 
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-		res = vkAllocateMemory(device, &allocInfo, nullptr, &resourceMemory);
-		assert(res == VK_SUCCESS);
-
-		res = vkBindBufferMemory(device, resource, resourceMemory, 0);
-		assert(res == VK_SUCCESS);
-
-
-
-
-		void* pData;
-		//
-		// No CPU reads will be done from the resource.
-		//
-		vkMapMemory(device, resourceMemory, 0, bufferInfo.size, 0, &pData);
+		void* pData = allocation->GetMappedData();
 		dataCur = dataBegin = reinterpret_cast< UINT8* >(pData);
 		dataEnd = dataBegin + size;
 	}
 	GraphicsDevice_Vulkan::UploadBuffer::~UploadBuffer()
 	{
-		vkDestroyBuffer(device, resource, nullptr);
+		vmaDestroyBuffer(device->allocator, resource, allocation);
 	}
 	uint8_t* GraphicsDevice_Vulkan::UploadBuffer::allocate(size_t dataSize, size_t alignment)
 	{
@@ -1622,6 +1590,13 @@ namespace wiGraphics
 			vkGetDeviceQueue(device, queueIndices.copyFamily, 0, &copyQueue);
 		}
 
+		// Initialize Vulkan Memory Allocator helper:
+		VmaAllocatorCreateInfo allocatorInfo = {};
+		allocatorInfo.physicalDevice = physicalDevice;
+		allocatorInfo.device = device;
+		res = vmaCreateAllocator(&allocatorInfo, &allocator);
+		assert(res == VK_SUCCESS);
+
 		// Extension functions:
 		setDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetDeviceProcAddr(device, "vkSetDebugUtilsObjectNameEXT");
 		cmdBeginDebugUtilsLabelEXT = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdBeginDebugUtilsLabelEXT");
@@ -2105,8 +2080,8 @@ namespace wiGraphics
 
 
 		// Create resource upload buffers
-		bufferUploader = new UploadBuffer(physicalDevice, device, queueIndices, 256 * 1024 * 1024);
-		textureUploader = new UploadBuffer(physicalDevice, device, queueIndices, 256 * 1024 * 1024);
+		bufferUploader = new UploadBuffer(this, queueIndices, 256 * 1024 * 1024);
+		textureUploader = new UploadBuffer(this, queueIndices, 256 * 1024 * 1024);
 
 
 		// Create default null descriptors:
@@ -2117,26 +2092,13 @@ namespace wiGraphics
 			bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 			bufferInfo.flags = 0;
 
-			res = vkCreateBuffer(device, &bufferInfo, nullptr, &nullBuffer);
+
+			VmaAllocationCreateInfo allocInfo = {};
+			allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+			VmaAllocation allocation;
+			res = vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &nullBuffer, &allocation, nullptr);
 			assert(res == VK_SUCCESS);
-
-
-			// Allocate resource backing memory:
-			VkMemoryRequirements memRequirements;
-			vkGetBufferMemoryRequirements(device, nullBuffer, &memRequirements);
-
-			VkMemoryAllocateInfo allocInfo = {};
-			allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-			allocInfo.allocationSize = memRequirements.size;
-			allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-			VkDeviceMemory mem;
-			res = vkAllocateMemory(device, &allocInfo, nullptr, &mem);
-			assert(res == VK_SUCCESS);
-
-			res = vkBindBufferMemory(device, nullBuffer, mem, 0);
-			assert(res == VK_SUCCESS);
-
 			
 			VkBufferViewCreateInfo viewInfo = {};
 			viewInfo.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
@@ -2162,26 +2124,12 @@ namespace wiGraphics
 			imageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
 			imageInfo.flags = 0;
 
-			res = vkCreateImage(device, &imageInfo, nullptr, &nullImage);
+			VmaAllocationCreateInfo allocInfo = {};
+			allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+			VmaAllocation allocation;
+			res = vmaCreateImage(allocator, &imageInfo, &allocInfo, &nullImage, &allocation, nullptr);
 			assert(res == VK_SUCCESS);
-
-
-			// Allocate resource backing memory:
-			VkMemoryRequirements memRequirements;
-			vkGetImageMemoryRequirements(device, nullImage, &memRequirements);
-
-			VkMemoryAllocateInfo allocInfo = {};
-			allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-			allocInfo.allocationSize = memRequirements.size;
-			allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-			VkDeviceMemory mem;
-			res = vkAllocateMemory(device, &allocInfo, nullptr, &mem);
-			assert(res == VK_SUCCESS);
-
-			res = vkBindImageMemory(device, nullImage, mem, 0);
-			assert(res == VK_SUCCESS);
-
 
 			VkImageViewCreateInfo viewInfo = {};
 			viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -2247,6 +2195,9 @@ namespace wiGraphics
 			vkDestroyImage(device, x, nullptr);
 		}
 		vkDestroySwapchainKHR(device, swapChain, nullptr);
+
+		vmaDestroyAllocator(allocator);
+
 		vkDestroyDevice(device, nullptr);
 		DestroyDebugReportCallbackEXT(instance, callback, nullptr);
 		vkDestroyInstance(instance, nullptr);
@@ -2328,34 +2279,25 @@ namespace wiGraphics
 
 
 		VkResult res;
-		res = vkCreateBuffer(device, &bufferInfo, nullptr, reinterpret_cast<VkBuffer*>(&pBuffer->resource));
+
+		VmaAllocationCreateInfo allocInfo = {};
+		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+		VkBuffer buffer;
+		VmaAllocation allocation;
+		res = vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr);
 		assert(res == VK_SUCCESS);
-
-
-
-		// Allocate resource backing memory:
-		VkMemoryRequirements memRequirements;
-		vkGetBufferMemoryRequirements(device, (VkBuffer)pBuffer->resource, &memRequirements);
-
-		VkMemoryAllocateInfo allocInfo = {};
-		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocInfo.allocationSize = memRequirements.size;
-		allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT /*| VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT*/);
-
-		res = vkAllocateMemory(device, &allocInfo, nullptr, reinterpret_cast<VkDeviceMemory*>(&pBuffer->resourceMemory));
-		assert(res == VK_SUCCESS);
-
-		res = vkBindBufferMemory(device, (VkBuffer)pBuffer->resource, (VkDeviceMemory)pBuffer->resourceMemory, 0);
-		assert(res == VK_SUCCESS);
-
-
+		pBuffer->resource = (wiCPUHandle)buffer;
+		destroylocker.lock();
+		vma_allocations[pBuffer->resource] = allocation;
+		destroylocker.unlock();
 
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
 			copyQueueLock.lock();
 			{
-				uint8_t* dest = bufferUploader->allocate(static_cast<size_t>(memRequirements.size), static_cast<size_t>(memRequirements.alignment));
+				uint8_t* dest = bufferUploader->allocate((size_t)allocation->GetSize(), (size_t)allocation->GetAlignment());
 				memcpy(dest, pInitialData->pSysMem, pBuffer->desc.ByteWidth);
 
 				VkBufferCopy copyRegion = {};
@@ -2489,6 +2431,9 @@ namespace wiGraphics
 			pTexture2D->desc.MipLevels = static_cast<UINT>(log2(std::max(pTexture2D->desc.Width, pTexture2D->desc.Height)));
 		}
 
+		VmaAllocationCreateInfo allocInfo = {};
+		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
 		VkImageCreateInfo imageInfo = {};
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -2513,10 +2458,12 @@ namespace wiGraphics
 		if (pTexture2D->desc.BindFlags & BIND_RENDER_TARGET)
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+			allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 		}
 		if (pTexture2D->desc.BindFlags & BIND_DEPTH_STENCIL)
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+			allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 		}
 		imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 		imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
@@ -2530,32 +2477,22 @@ namespace wiGraphics
 		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 		VkResult res;
-		res = vkCreateImage(device, &imageInfo, nullptr, reinterpret_cast<VkImage*>(&pTexture2D->resource));
+
+		VkImage image;
+		VmaAllocation allocation;
+		res = vmaCreateImage(allocator, &imageInfo, &allocInfo, &image, &allocation, nullptr);
 		assert(res == VK_SUCCESS);
-
-
-
-		// Allocate resource backing memory:
-		VkMemoryRequirements memRequirements;
-		vkGetImageMemoryRequirements(device, (VkImage)pTexture2D->resource, &memRequirements);
-
-		VkMemoryAllocateInfo allocInfo = {};
-		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocInfo.allocationSize = memRequirements.size;
-		allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-		res = vkAllocateMemory(device, &allocInfo, nullptr, reinterpret_cast<VkDeviceMemory*>(&pTexture2D->resourceMemory));
-		assert(res == VK_SUCCESS);
-
-		res = vkBindImageMemory(device, (VkImage)pTexture2D->resource, (VkDeviceMemory)pTexture2D->resourceMemory, 0);
-		assert(res == VK_SUCCESS);
+		pTexture2D->resource = (wiCPUHandle)image;
+		destroylocker.lock();
+		vma_allocations[pTexture2D->resource] = allocation;
+		destroylocker.unlock();
 
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
 			copyQueueLock.lock();
 			{
-				uint8_t* dest = textureUploader->allocate(static_cast<size_t>(memRequirements.size), static_cast<size_t>(memRequirements.alignment));
+				uint8_t* dest = textureUploader->allocate((size_t)allocation->GetSize(), (size_t)allocation->GetAlignment());
 
 				std::vector<VkBufferImageCopy> copyRegions;
 
@@ -3427,8 +3364,6 @@ namespace wiGraphics
 
 	void GraphicsDevice_Vulkan::DestroyResource(GPUResource* pResource)
 	{
-		DeferredDestroy({ DestroyItem::DEVICEMEMORY, FRAMECOUNT, pResource->resourceMemory });
-		pResource->resourceMemory = WI_NULL_HANDLE;
 	}
 	void GraphicsDevice_Vulkan::DestroyBuffer(GPUBuffer *pBuffer)
 	{
@@ -3826,17 +3761,16 @@ namespace wiGraphics
 
 				switch (item.type)
 				{
-				case DestroyItem::DEVICEMEMORY:
-					vkFreeMemory(device, (VkDeviceMemory)item.handle, nullptr);
-					break;
 				case DestroyItem::IMAGE:
-					vkDestroyImage(device, (VkImage)item.handle, nullptr);
+					vmaDestroyImage(allocator, (VkImage)item.handle, vma_allocations[item.handle]);
+					vma_allocations.erase(item.handle);
 					break;
 				case DestroyItem::IMAGEVIEW:
 					vkDestroyImageView(device, (VkImageView)item.handle, nullptr);
 					break;
 				case DestroyItem::BUFFER:
-					vkDestroyBuffer(device, (VkBuffer)item.handle, nullptr);
+					vmaDestroyBuffer(allocator, (VkBuffer)item.handle, vma_allocations[item.handle]);
+					vma_allocations.erase(item.handle);
 					break;
 				case DestroyItem::BUFFERVIEW:
 					vkDestroyBufferView(device, (VkBufferView)item.handle, nullptr);
@@ -3916,7 +3850,7 @@ namespace wiGraphics
 				res = vkAllocateCommandBuffers(device, &commandBufferInfo, &frame.commandBuffers[cmd]);
 				assert(res == VK_SUCCESS);
 
-				frame.resourceBuffer[cmd] = new FrameResources::ResourceFrameAllocator(physicalDevice, device, 4 * 1024 * 1024);
+				frame.resourceBuffer[cmd] = new FrameResources::ResourceFrameAllocator(this, 4 * 1024 * 1024);
 				frame.descriptors[cmd] = new FrameResources::DescriptorTableFrameAllocator(this, 1024);
 			}
 		}
@@ -4146,10 +4080,17 @@ namespace wiGraphics
 		assert(count <= 8);
 		for (UINT i = 0; i < count; ++i)
 		{
-			vbuffers[i] = (vertexBuffers[i] == nullptr ? nullBuffer : (VkBuffer)vertexBuffers[i]->resource);
-			if (offsets != nullptr)
+			if (vertexBuffers[i] == nullptr)
 			{
-				voffsets[i] = offsets[i];
+				vbuffers[i] = nullBuffer;
+			}
+			else
+			{
+				vbuffers[i] = (VkBuffer)vertexBuffers[i]->resource;
+				if (offsets != nullptr)
+				{
+					voffsets[i] = (VkDeviceSize)offsets[i];
+				}
 			}
 		}
 
@@ -4159,7 +4100,7 @@ namespace wiGraphics
 	{
 		if (indexBuffer != nullptr)
 		{
-			vkCmdBindIndexBuffer(GetDirectCommandList(cmd), (VkBuffer)indexBuffer->resource, offset, format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+			vkCmdBindIndexBuffer(GetDirectCommandList(cmd), (VkBuffer)indexBuffer->resource, (VkDeviceSize)offset, format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
 		}
 	}
 	void GraphicsDevice_Vulkan::BindStencilRef(UINT value, CommandList cmd)

@@ -8,14 +8,13 @@
 #ifdef WICKEDENGINE_BUILD_VULKAN
 #include "wiGraphicsDevice_SharedInternals.h"
 
-
 #ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
 #endif // WIN32
 
-#ifdef WICKEDENGINE_BUILD_VULKAN
 #include <vulkan/vulkan.h>
-#endif // WICKEDENGINE_BUILD_VULKAN
+
+#include "Utility/vk_mem_alloc.h"
 
 #include <vector>
 #include <unordered_map>
@@ -52,6 +51,7 @@ namespace wiGraphics
 		QueueFamilyIndices queueIndices;
 		VkQueue graphicsQueue;
 		VkQueue presentQueue;
+		VmaAllocator allocator;
 
 		VkPhysicalDeviceProperties physicalDeviceProperties;
 
@@ -157,13 +157,14 @@ namespace wiGraphics
 
 			struct ResourceFrameAllocator
 			{
-				VkDevice				device;
+				GraphicsDevice_Vulkan*	device = nullptr;
 				GPUBuffer				buffer;
-				uint8_t*				dataBegin;
-				uint8_t*				dataCur;
-				uint8_t*				dataEnd;
+				VmaAllocation			allocation;
+				uint8_t*				dataBegin = nullptr;
+				uint8_t*				dataCur = nullptr;
+				uint8_t*				dataEnd = nullptr;
 
-				ResourceFrameAllocator(VkPhysicalDevice physicalDevice, VkDevice device, size_t size);
+				ResourceFrameAllocator(GraphicsDevice_Vulkan* device, size_t size);
 				~ResourceFrameAllocator();
 
 				uint8_t* allocate(size_t dataSize, size_t alignment);
@@ -186,15 +187,15 @@ namespace wiGraphics
 
 		struct UploadBuffer
 		{
-			VkDevice				device;
-			VkBuffer				resource;
-			VkDeviceMemory			resourceMemory;
-			uint8_t*				dataBegin;
-			uint8_t*				dataCur;
-			uint8_t*				dataEnd;
+			GraphicsDevice_Vulkan*	device = nullptr;
+			VkBuffer				resource = VK_NULL_HANDLE;
+			VmaAllocation			allocation;
+			uint8_t*				dataBegin = nullptr;
+			uint8_t*				dataCur = nullptr;
+			uint8_t*				dataEnd = nullptr;
 			wiSpinLock				lock;
 
-			UploadBuffer(VkPhysicalDevice physicalDevice, VkDevice device, const QueueFamilyIndices& queueIndices, size_t size);
+			UploadBuffer(GraphicsDevice_Vulkan* device, const QueueFamilyIndices& queueIndices, size_t size);
 			~UploadBuffer();
 
 			uint8_t* allocate(size_t dataSize, size_t alignment);
@@ -209,6 +210,8 @@ namespace wiGraphics
 		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 
+		std::unordered_map<wiCPUHandle, VmaAllocation> vma_allocations;
+
 		std::atomic<uint8_t> commandlist_count{ 0 };
 		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> free_commandlists;
 		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> active_commandlists;
@@ -217,7 +220,6 @@ namespace wiGraphics
 		{
 			enum TYPE
 			{
-				DEVICEMEMORY,
 				IMAGE,
 				IMAGEVIEW,
 				BUFFER,
