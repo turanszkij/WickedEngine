@@ -44,6 +44,17 @@ namespace wiGraphics
 		ID3D12CommandSignature*		drawInstancedIndirectCommandSignature = nullptr;
 		ID3D12CommandSignature*		drawIndexedInstancedIndirectCommandSignature = nullptr;
 
+		ID3D12QueryHeap* querypool_timestamp = nullptr;
+		ID3D12QueryHeap* querypool_occlusion = nullptr;
+		static const size_t timestamp_query_count = 1024;
+		static const size_t occlusion_query_count = 1024;
+		wiContainers::ThreadSafeRingBuffer<UINT, timestamp_query_count> free_timestampqueries;
+		wiContainers::ThreadSafeRingBuffer<UINT, occlusion_query_count> free_occlusionqueries;
+		ID3D12Resource* querypool_timestamp_readback = nullptr;
+		ID3D12Resource* querypool_occlusion_readback = nullptr;
+		D3D12MA::Allocation* allocation_querypool_timestamp_readback = nullptr;
+		D3D12MA::Allocation* allocation_querypool_occlusion_readback = nullptr;
+
 		struct DescriptorAllocator
 		{
 			ID3D12DescriptorHeap*	heap = nullptr;
@@ -199,6 +210,8 @@ namespace wiGraphics
 				DEPTHSTENCILVIEW,
 				SAMPLER,
 				PIPELINE,
+				QUERY_TIMESTAMP,
+				QUERY_OCCLUSION,
 			} type;
 			uint64_t frame;
 			wiCPUHandle handle;

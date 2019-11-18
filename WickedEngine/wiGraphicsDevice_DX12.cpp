@@ -887,7 +887,7 @@ namespace wiGraphics
 		}
 		return FORMAT_UNKNOWN;
 	}
-	
+
 	constexpr TextureDesc _ConvertTextureDesc_Inv(const D3D12_RESOURCE_DESC& desc)
 	{
 		TextureDesc retVal;
@@ -1089,7 +1089,7 @@ namespace wiGraphics
 							cbv.BufferLocation = ((ID3D12Resource*)state.allocation.buffer->resource)->GetGPUVirtualAddress();
 							cbv.BufferLocation += (D3D12_GPU_VIRTUAL_ADDRESS)state.allocation.offset;
 							cbv.SizeInBytes = (UINT)Align((size_t)buffer->desc.ByteWidth, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-								
+
 							// Instead of copying like usually, here we create a CBV in place into the GPU-visible table:
 							device->device->CreateConstantBufferView(&cbv, dst);
 							continue;
@@ -1319,7 +1319,7 @@ namespace wiGraphics
 		void* pData;
 		CD3DX12_RANGE readRange(0, 0);
 		resource->Map(0, &readRange, &pData);
-		dataCur = dataBegin = reinterpret_cast< UINT8* >(pData);
+		dataCur = dataBegin = reinterpret_cast<UINT8*>(pData);
 		dataEnd = dataBegin + size;
 	}
 	GraphicsDevice_DX12::UploadBuffer::~UploadBuffer()
@@ -1428,7 +1428,7 @@ namespace wiGraphics
 
 		// Create swapchain
 
-		IDXGIFactory4 * pIDXGIFactory;
+		IDXGIFactory4* pIDXGIFactory;
 		hr = CreateDXGIFactory1(IID_PPV_ARGS(&pIDXGIFactory));
 		assert(SUCCEEDED(hr));
 
@@ -1486,7 +1486,7 @@ namespace wiGraphics
 
 		resource_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		sampler_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-		
+
 		// Create "null descriptor" heaps:
 		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
 		heapDesc.NodeMask = 0;
@@ -1556,7 +1556,7 @@ namespace wiGraphics
 		{
 			hr = swapChain->GetBuffer(fr, __uuidof(ID3D12Resource), (void**)&frames[fr].backBuffer);
 			assert(SUCCEEDED(hr));
-			frames[fr].backBufferRTV.ptr = RTAllocator->allocate(); 
+			frames[fr].backBufferRTV.ptr = RTAllocator->allocate();
 			device->CreateRenderTargetView(frames[fr].backBuffer, nullptr, frames[fr].backBufferRTV);
 		}
 
@@ -1571,7 +1571,7 @@ namespace wiGraphics
 			hr = device->CreateCommandQueue(&copyQueueDesc, __uuidof(ID3D12CommandQueue), (void**)&copyQueue);
 			hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, __uuidof(ID3D12CommandAllocator), (void**)&copyAllocator);
 			hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, copyAllocator, nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&copyCommandList);
-		
+
 			hr = static_cast<ID3D12GraphicsCommandList*>(copyCommandList)->Close();
 			hr = copyAllocator->Reset();
 			hr = static_cast<ID3D12GraphicsCommandList*>(copyCommandList)->Reset(copyAllocator, nullptr);
@@ -1803,6 +1803,54 @@ namespace wiGraphics
 		hr = device->CreateCommandSignature(&cmd_desc, nullptr, __uuidof(ID3D12CommandSignature), (void**)&drawIndexedInstancedIndirectCommandSignature);
 		assert(SUCCEEDED(hr));
 
+		// GPU Queries:
+		{
+			D3D12_QUERY_HEAP_DESC queryheapdesc = {};
+			queryheapdesc.NodeMask = 0;
+
+			for (UINT i = 0; i < timestamp_query_count; ++i)
+			{
+				free_timestampqueries.push_back(i);
+			}
+			queryheapdesc.Count = timestamp_query_count;
+			queryheapdesc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
+			hr = device->CreateQueryHeap(&queryheapdesc, __uuidof(ID3D12QueryHeap), (void**)&querypool_timestamp);
+			assert(SUCCEEDED(hr));
+
+			for (UINT i = 0; i < occlusion_query_count; ++i)
+			{
+				free_occlusionqueries.push_back(i);
+			}
+			queryheapdesc.Count = occlusion_query_count;
+			queryheapdesc.Type = D3D12_QUERY_HEAP_TYPE_OCCLUSION;
+			hr = device->CreateQueryHeap(&queryheapdesc, __uuidof(ID3D12QueryHeap), (void**)&querypool_occlusion);
+			assert(SUCCEEDED(hr));
+
+
+			D3D12MA::ALLOCATION_DESC allocationDesc = {};
+			allocationDesc.HeapType = D3D12_HEAP_TYPE_READBACK;
+
+			hr = allocator->CreateResource(
+				&allocationDesc,
+				&CD3DX12_RESOURCE_DESC::Buffer(timestamp_query_count * sizeof(UINT64)),
+				D3D12_RESOURCE_STATE_COPY_DEST,
+				nullptr,
+				&allocation_querypool_timestamp_readback,
+				IID_PPV_ARGS(&querypool_timestamp_readback)
+			);
+			assert(SUCCEEDED(hr));
+
+			hr = allocator->CreateResource(
+				&allocationDesc,
+				&CD3DX12_RESOURCE_DESC::Buffer(occlusion_query_count * sizeof(UINT64)),
+				D3D12_RESOURCE_STATE_COPY_DEST,
+				nullptr,
+				&allocation_querypool_occlusion_readback,
+				IID_PPV_ARGS(&querypool_occlusion_readback)
+			);
+			assert(SUCCEEDED(hr));
+		}
+
 		wiBackLog::post("Created GraphicsDevice_DX12");
 	}
 	GraphicsDevice_DX12::~GraphicsDevice_DX12()
@@ -1851,6 +1899,13 @@ namespace wiGraphics
 		SAFE_DELETE(bufferUploader);
 		SAFE_DELETE(textureUploader);
 
+		SAFE_RELEASE(querypool_timestamp);
+		SAFE_RELEASE(querypool_occlusion);
+		SAFE_RELEASE(querypool_timestamp_readback);
+		SAFE_RELEASE(querypool_occlusion_readback);
+		SAFE_RELEASE(allocation_querypool_timestamp_readback);
+		SAFE_RELEASE(allocation_querypool_occlusion_readback);
+
 		SAFE_RELEASE(directQueue);
 		SAFE_RELEASE(allocator);
 		SAFE_RELEASE(device);
@@ -1892,7 +1947,7 @@ namespace wiGraphics
 		return result;
 	}
 
-	HRESULT GraphicsDevice_DX12::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer)
+	HRESULT GraphicsDevice_DX12::CreateBuffer(const GPUBufferDesc* pDesc, const SubresourceData* pInitialData, GPUBuffer* pBuffer)
 	{
 		DestroyBuffer(pBuffer);
 		DestroyResource(pBuffer);
@@ -1947,7 +2002,7 @@ namespace wiGraphics
 		destroylocker.lock();
 		mem_allocations[pBuffer->resource] = allocation;
 		destroylocker.unlock();
-		
+
 
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
@@ -2053,7 +2108,7 @@ namespace wiGraphics
 
 		return hr;
 	}
-	HRESULT GraphicsDevice_DX12::CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D *pTexture1D)
+	HRESULT GraphicsDevice_DX12::CreateTexture1D(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture1D* pTexture1D)
 	{
 		DestroyTexture1D(pTexture1D);
 		DestroyResource(pTexture1D);
@@ -2068,7 +2123,7 @@ namespace wiGraphics
 
 		return hr;
 	}
-	HRESULT GraphicsDevice_DX12::CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D *pTexture2D)
+	HRESULT GraphicsDevice_DX12::CreateTexture2D(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture2D* pTexture2D)
 	{
 		DestroyTexture2D(pTexture2D);
 		DestroyResource(pTexture2D);
@@ -2109,7 +2164,7 @@ namespace wiGraphics
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 			allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
 		}
-		else if(desc.SampleDesc.Count == 1)
+		else if (desc.SampleDesc.Count == 1)
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
 		}
@@ -2220,7 +2275,7 @@ namespace wiGraphics
 
 		return hr;
 	}
-	HRESULT GraphicsDevice_DX12::CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D *pTexture3D)
+	HRESULT GraphicsDevice_DX12::CreateTexture3D(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture3D* pTexture3D)
 	{
 		DestroyTexture3D(pTexture3D);
 		DestroyResource(pTexture3D);
@@ -2235,7 +2290,7 @@ namespace wiGraphics
 
 		return hr;
 	}
-	HRESULT GraphicsDevice_DX12::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout)
+	HRESULT GraphicsDevice_DX12::CreateInputLayout(const VertexLayoutDesc* pInputElementDescs, UINT NumElements, const ShaderByteCode* shaderCode, VertexLayout* pInputLayout)
 	{
 		DestroyInputLayout(pInputLayout);
 		pInputLayout->Register(this);
@@ -2249,7 +2304,7 @@ namespace wiGraphics
 
 		return S_OK;
 	}
-	HRESULT GraphicsDevice_DX12::CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, VertexShader *pVertexShader)
+	HRESULT GraphicsDevice_DX12::CreateVertexShader(const void* pShaderBytecode, SIZE_T BytecodeLength, VertexShader* pVertexShader)
 	{
 		DestroyVertexShader(pVertexShader);
 		pVertexShader->Register(this);
@@ -2260,7 +2315,7 @@ namespace wiGraphics
 
 		return (pVertexShader->code.data != nullptr && pVertexShader->code.size > 0 ? S_OK : E_FAIL);
 	}
-	HRESULT GraphicsDevice_DX12::CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, PixelShader *pPixelShader)
+	HRESULT GraphicsDevice_DX12::CreatePixelShader(const void* pShaderBytecode, SIZE_T BytecodeLength, PixelShader* pPixelShader)
 	{
 		DestroyPixelShader(pPixelShader);
 		pPixelShader->Register(this);
@@ -2271,7 +2326,7 @@ namespace wiGraphics
 
 		return (pPixelShader->code.data != nullptr && pPixelShader->code.size > 0 ? S_OK : E_FAIL);
 	}
-	HRESULT GraphicsDevice_DX12::CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, GeometryShader *pGeometryShader)
+	HRESULT GraphicsDevice_DX12::CreateGeometryShader(const void* pShaderBytecode, SIZE_T BytecodeLength, GeometryShader* pGeometryShader)
 	{
 		DestroyGeometryShader(pGeometryShader);
 		pGeometryShader->Register(this);
@@ -2282,7 +2337,7 @@ namespace wiGraphics
 
 		return (pGeometryShader->code.data != nullptr && pGeometryShader->code.size > 0 ? S_OK : E_FAIL);
 	}
-	HRESULT GraphicsDevice_DX12::CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, HullShader *pHullShader)
+	HRESULT GraphicsDevice_DX12::CreateHullShader(const void* pShaderBytecode, SIZE_T BytecodeLength, HullShader* pHullShader)
 	{
 		DestroyHullShader(pHullShader);
 		pHullShader->Register(this);
@@ -2293,7 +2348,7 @@ namespace wiGraphics
 
 		return (pHullShader->code.data != nullptr && pHullShader->code.size > 0 ? S_OK : E_FAIL);
 	}
-	HRESULT GraphicsDevice_DX12::CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, DomainShader *pDomainShader)
+	HRESULT GraphicsDevice_DX12::CreateDomainShader(const void* pShaderBytecode, SIZE_T BytecodeLength, DomainShader* pDomainShader)
 	{
 		DestroyDomainShader(pDomainShader);
 		pDomainShader->Register(this);
@@ -2304,7 +2359,7 @@ namespace wiGraphics
 
 		return (pDomainShader->code.data != nullptr && pDomainShader->code.size > 0 ? S_OK : E_FAIL);
 	}
-	HRESULT GraphicsDevice_DX12::CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ComputeShader *pComputeShader)
+	HRESULT GraphicsDevice_DX12::CreateComputeShader(const void* pShaderBytecode, SIZE_T BytecodeLength, ComputeShader* pComputeShader)
 	{
 		DestroyComputeShader(pComputeShader);
 		pComputeShader->Register(this);
@@ -2323,7 +2378,7 @@ namespace wiGraphics
 
 		return hr;
 	}
-	HRESULT GraphicsDevice_DX12::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
+	HRESULT GraphicsDevice_DX12::CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState)
 	{
 		DestroyBlendState(pBlendState);
 		pBlendState->Register(this);
@@ -2331,7 +2386,7 @@ namespace wiGraphics
 		pBlendState->desc = *pBlendStateDesc;
 		return S_OK;
 	}
-	HRESULT GraphicsDevice_DX12::CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState)
+	HRESULT GraphicsDevice_DX12::CreateDepthStencilState(const DepthStencilStateDesc* pDepthStencilStateDesc, DepthStencilState* pDepthStencilState)
 	{
 		DestroyDepthStencilState(pDepthStencilState);
 		pDepthStencilState->Register(this);
@@ -2339,7 +2394,7 @@ namespace wiGraphics
 		pDepthStencilState->desc = *pDepthStencilStateDesc;
 		return S_OK;
 	}
-	HRESULT GraphicsDevice_DX12::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
+	HRESULT GraphicsDevice_DX12::CreateRasterizerState(const RasterizerStateDesc* pRasterizerStateDesc, RasterizerState* pRasterizerState)
 	{
 		DestroyRasterizerState(pRasterizerState);
 		pRasterizerState->Register(this);
@@ -2347,7 +2402,7 @@ namespace wiGraphics
 		pRasterizerState->desc = *pRasterizerStateDesc;
 		return S_OK;
 	}
-	HRESULT GraphicsDevice_DX12::CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
+	HRESULT GraphicsDevice_DX12::CreateSamplerState(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState)
 	{
 		DestroySamplerState(pSamplerState);
 		pSamplerState->Register(this);
@@ -2374,15 +2429,48 @@ namespace wiGraphics
 
 		return S_OK;
 	}
-	HRESULT GraphicsDevice_DX12::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
+	HRESULT GraphicsDevice_DX12::CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery)
 	{
-		// TODO!
-		//DestroyQuery(pQuery);
-		//pQuery->Register(this);
+		DestroyQuery(pQuery);
+		pQuery->Register(this);
 
 		HRESULT hr = E_FAIL;
 
 		pQuery->desc = *pDesc;
+
+		uint32_t query_index;
+
+		switch (pDesc->Type)
+		{
+		case GPU_QUERY_TYPE_TIMESTAMP:
+			if (free_timestampqueries.pop_front(query_index))
+			{
+				pQuery->resource = (wiCPUHandle)query_index;
+				hr = S_OK;
+			}
+			else
+			{
+				assert(0);
+			}
+			break;
+		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
+			hr = S_OK;
+			break;
+		case GPU_QUERY_TYPE_OCCLUSION:
+		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+			if (free_occlusionqueries.pop_front(query_index))
+			{
+				pQuery->resource = (wiCPUHandle)query_index;
+				hr = S_OK;
+			}
+			else
+			{
+				assert(0);
+			}
+			break;
+		}
+
+		assert(SUCCEEDED(hr));
 
 		return hr;
 	}
@@ -2818,12 +2906,12 @@ namespace wiGraphics
 		}
 		pResource->subresourceUAVs.clear();
 	}
-	void GraphicsDevice_DX12::DestroyBuffer(GPUBuffer *pBuffer)
+	void GraphicsDevice_DX12::DestroyBuffer(GPUBuffer* pBuffer)
 	{
 		DeferredDestroy({ DestroyItem::RESOURCEVIEW, FRAMECOUNT, pBuffer->CBV });
 		pBuffer->CBV = WI_NULL_HANDLE;
 	}
-	void GraphicsDevice_DX12::DestroyTexture1D(Texture1D *pTexture1D)
+	void GraphicsDevice_DX12::DestroyTexture1D(Texture1D* pTexture1D)
 	{
 		DeferredDestroy({ DestroyItem::RENDERTARGETVIEW, FRAMECOUNT, pTexture1D->RTV });
 		pTexture1D->RTV = WI_NULL_HANDLE;
@@ -2833,7 +2921,7 @@ namespace wiGraphics
 		}
 		pTexture1D->subresourceRTVs.clear();
 	}
-	void GraphicsDevice_DX12::DestroyTexture2D(Texture2D *pTexture2D)
+	void GraphicsDevice_DX12::DestroyTexture2D(Texture2D* pTexture2D)
 	{
 		DeferredDestroy({ DestroyItem::RENDERTARGETVIEW, FRAMECOUNT, pTexture2D->RTV });
 		pTexture2D->RTV = WI_NULL_HANDLE;
@@ -2851,7 +2939,7 @@ namespace wiGraphics
 		}
 		pTexture2D->subresourceDSVs.clear();
 	}
-	void GraphicsDevice_DX12::DestroyTexture3D(Texture3D *pTexture3D)
+	void GraphicsDevice_DX12::DestroyTexture3D(Texture3D* pTexture3D)
 	{
 		DeferredDestroy({ DestroyItem::RENDERTARGETVIEW, FRAMECOUNT, pTexture3D->RTV });
 		pTexture3D->RTV = WI_NULL_HANDLE;
@@ -2861,31 +2949,31 @@ namespace wiGraphics
 		}
 		pTexture3D->subresourceRTVs.clear();
 	}
-	void GraphicsDevice_DX12::DestroyInputLayout(VertexLayout *pInputLayout)
+	void GraphicsDevice_DX12::DestroyInputLayout(VertexLayout* pInputLayout)
 	{
 
 	}
-	void GraphicsDevice_DX12::DestroyVertexShader(VertexShader *pVertexShader)
+	void GraphicsDevice_DX12::DestroyVertexShader(VertexShader* pVertexShader)
 	{
 
 	}
-	void GraphicsDevice_DX12::DestroyPixelShader(PixelShader *pPixelShader)
+	void GraphicsDevice_DX12::DestroyPixelShader(PixelShader* pPixelShader)
 	{
 
 	}
-	void GraphicsDevice_DX12::DestroyGeometryShader(GeometryShader *pGeometryShader)
+	void GraphicsDevice_DX12::DestroyGeometryShader(GeometryShader* pGeometryShader)
 	{
 
 	}
-	void GraphicsDevice_DX12::DestroyHullShader(HullShader *pHullShader)
+	void GraphicsDevice_DX12::DestroyHullShader(HullShader* pHullShader)
 	{
 
 	}
-	void GraphicsDevice_DX12::DestroyDomainShader(DomainShader *pDomainShader)
+	void GraphicsDevice_DX12::DestroyDomainShader(DomainShader* pDomainShader)
 	{
 
 	}
-	void GraphicsDevice_DX12::DestroyComputeShader(ComputeShader *pComputeShader)
+	void GraphicsDevice_DX12::DestroyComputeShader(ComputeShader* pComputeShader)
 	{
 		if (pComputeShader->resource != WI_NULL_HANDLE)
 		{
@@ -2893,25 +2981,37 @@ namespace wiGraphics
 			pComputeShader->resource = WI_NULL_HANDLE;
 		}
 	}
-	void GraphicsDevice_DX12::DestroyBlendState(BlendState *pBlendState)
+	void GraphicsDevice_DX12::DestroyBlendState(BlendState* pBlendState)
 	{
 
 	}
-	void GraphicsDevice_DX12::DestroyDepthStencilState(DepthStencilState *pDepthStencilState)
+	void GraphicsDevice_DX12::DestroyDepthStencilState(DepthStencilState* pDepthStencilState)
 	{
 
 	}
-	void GraphicsDevice_DX12::DestroyRasterizerState(RasterizerState *pRasterizerState)
+	void GraphicsDevice_DX12::DestroyRasterizerState(RasterizerState* pRasterizerState)
 	{
 
 	}
-	void GraphicsDevice_DX12::DestroySamplerState(Sampler *pSamplerState)
+	void GraphicsDevice_DX12::DestroySamplerState(Sampler* pSamplerState)
 	{
 		DeferredDestroy({ DestroyItem::SAMPLER, FRAMECOUNT, pSamplerState->resource });
 	}
-	void GraphicsDevice_DX12::DestroyQuery(GPUQuery *pQuery)
+	void GraphicsDevice_DX12::DestroyQuery(GPUQuery* pQuery)
 	{
-
+		if (pQuery != nullptr)
+		{
+			switch (pQuery->desc.Type)
+			{
+			case GPU_QUERY_TYPE_TIMESTAMP:
+				DeferredDestroy({ DestroyItem::QUERY_TIMESTAMP, FRAMECOUNT, pQuery->resource });
+				break;
+			case GPU_QUERY_TYPE_OCCLUSION:
+			case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+				DeferredDestroy({ DestroyItem::QUERY_OCCLUSION, FRAMECOUNT, pQuery->resource });
+				break;
+			}
+		}
 	}
 	void GraphicsDevice_DX12::DestroyPipelineState(PipelineState* pso)
 	{
@@ -3103,6 +3203,12 @@ namespace wiGraphics
 					break;
 				case DestroyItem::PIPELINE:
 					((ID3D12PipelineState*)item.handle)->Release();
+					break;
+				case DestroyItem::QUERY_TIMESTAMP:
+					free_timestampqueries.push_back((UINT)item.handle);
+					break;
+				case DestroyItem::QUERY_OCCLUSION:
+					free_timestampqueries.push_back((UINT)item.handle);
 					break;
 				default:
 					break;
@@ -3423,7 +3529,7 @@ namespace wiGraphics
 		assert(rects != nullptr);
 		assert(numRects <= 8);
 		D3D12_RECT pRects[8];
-		for(UINT i = 0; i < numRects; ++i) {
+		for (UINT i = 0; i < numRects; ++i) {
 			pRects[i].bottom = rects[i].bottom;
 			pRects[i].left = rects[i].left;
 			pRects[i].right = rects[i].right;
@@ -3431,7 +3537,7 @@ namespace wiGraphics
 		}
 		GetDirectCommandList(cmd)->RSSetScissorRects(numRects, pRects);
 	}
-	void GraphicsDevice_DX12::BindViewports(UINT NumViewports, const ViewPort *pViewports, CommandList cmd)
+	void GraphicsDevice_DX12::BindViewports(UINT NumViewports, const ViewPort* pViewports, CommandList cmd)
 	{
 		assert(NumViewports <= 6);
 		D3D12_VIEWPORT d3dViewPorts[6];
@@ -3457,7 +3563,7 @@ namespace wiGraphics
 			table.dirty_resources = true;
 		}
 	}
-	void GraphicsDevice_DX12::BindResources(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd)
+	void GraphicsDevice_DX12::BindResources(SHADERSTAGE stage, const GPUResource* const* resources, UINT slot, UINT count, CommandList cmd)
 	{
 		if (resources != nullptr)
 		{
@@ -3478,7 +3584,7 @@ namespace wiGraphics
 			table.dirty_resources = true;
 		}
 	}
-	void GraphicsDevice_DX12::BindUAVs(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd)
+	void GraphicsDevice_DX12::BindUAVs(SHADERSTAGE stage, const GPUResource* const* resources, UINT slot, UINT count, CommandList cmd)
 	{
 		if (resources != nullptr)
 		{
@@ -3514,7 +3620,7 @@ namespace wiGraphics
 			table.dirty_resources = true;
 		}
 	}
-	void GraphicsDevice_DX12::BindVertexBuffers(const GPUBuffer *const* vertexBuffers, UINT slot, UINT count, const UINT* strides, const UINT* offsets, CommandList cmd)
+	void GraphicsDevice_DX12::BindVertexBuffers(const GPUBuffer* const* vertexBuffers, UINT slot, UINT count, const UINT* strides, const UINT* offsets, CommandList cmd)
 	{
 		assert(count <= 8);
 		D3D12_VERTEX_BUFFER_VIEW res[8] = { 0 };
@@ -3972,14 +4078,73 @@ namespace wiGraphics
 		}
 
 	}
-	void GraphicsDevice_DX12::QueryBegin(const GPUQuery *query, CommandList cmd)
+	void GraphicsDevice_DX12::QueryBegin(const GPUQuery* query, CommandList cmd)
 	{
+		switch (query->desc.Type)
+		{
+		case GPU_QUERY_TYPE_TIMESTAMP:
+			GetDirectCommandList(cmd)->BeginQuery(querypool_timestamp, D3D12_QUERY_TYPE_TIMESTAMP, (UINT)query->resource);
+			break;
+		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+			GetDirectCommandList(cmd)->BeginQuery(querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION, (UINT)query->resource);
+			break;
+		case GPU_QUERY_TYPE_OCCLUSION:
+			GetDirectCommandList(cmd)->BeginQuery(querypool_occlusion, D3D12_QUERY_TYPE_OCCLUSION, (UINT)query->resource);
+			break;
+		}
 	}
-	void GraphicsDevice_DX12::QueryEnd(const GPUQuery *query, CommandList cmd)
+	void GraphicsDevice_DX12::QueryEnd(const GPUQuery* query, CommandList cmd)
 	{
+		switch (query->desc.Type)
+		{
+		case GPU_QUERY_TYPE_TIMESTAMP:
+			GetDirectCommandList(cmd)->EndQuery(querypool_timestamp, D3D12_QUERY_TYPE_TIMESTAMP, (UINT)query->resource);
+			GetDirectCommandList(cmd)->ResolveQueryData(querypool_timestamp, D3D12_QUERY_TYPE_TIMESTAMP, (UINT)query->resource, 1, querypool_timestamp_readback, (UINT64)query->resource * sizeof(UINT64));
+			break;
+		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+			GetDirectCommandList(cmd)->EndQuery(querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION, (UINT)query->resource);
+			GetDirectCommandList(cmd)->ResolveQueryData(querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION, (UINT)query->resource, 1, querypool_occlusion_readback, (UINT64)query->resource * sizeof(UINT64));
+			break;
+		case GPU_QUERY_TYPE_OCCLUSION:
+			GetDirectCommandList(cmd)->EndQuery(querypool_occlusion, D3D12_QUERY_TYPE_OCCLUSION, (UINT)query->resource);
+			GetDirectCommandList(cmd)->ResolveQueryData(querypool_occlusion, D3D12_QUERY_TYPE_OCCLUSION, (UINT)query->resource, 1, querypool_occlusion_readback, (UINT64)query->resource * sizeof(UINT64));
+			break;
+		}
 	}
 	bool GraphicsDevice_DX12::QueryRead(const GPUQuery* query, GPUQueryResult* result)
 	{
+		D3D12_RANGE range;
+		range.Begin = (SIZE_T)query->resource * sizeof(SIZE_T);
+		range.End = range.Begin + sizeof(UINT64);
+		D3D12_RANGE nullrange = {};
+		void* data = nullptr;
+
+		switch (query->desc.Type)
+		{
+		case GPU_QUERY_TYPE_EVENT:
+			assert(0); // not implemented yet
+			break;
+		case GPU_QUERY_TYPE_TIMESTAMP:
+			querypool_timestamp_readback->Map(0, &range, &data);
+			result->result_timestamp = *(UINT64*)((SIZE_T)data + range.Begin);
+			querypool_timestamp_readback->Unmap(0, &nullrange);
+			break;
+		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
+			directQueue->GetTimestampFrequency(&result->result_timestamp_frequency);
+			result->result_disjoint = FALSE;
+			break;
+		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+			querypool_occlusion_readback->Map(0, &range, &data);
+			result->result_passed = *(BOOL*)((SIZE_T)data + range.Begin);
+			querypool_occlusion_readback->Unmap(0, &nullrange);
+			break;
+		case GPU_QUERY_TYPE_OCCLUSION:
+			querypool_occlusion_readback->Map(0, &range, &data);
+			result->result_passed_sample_count = *(UINT64*)((SIZE_T)data + range.Begin);
+			querypool_occlusion_readback->Unmap(0, &nullrange);
+			break;
+		}
+
 		return true;
 	}
 	void GraphicsDevice_DX12::Barrier(const GPUBarrier* barriers, UINT numBarriers, CommandList cmd)
