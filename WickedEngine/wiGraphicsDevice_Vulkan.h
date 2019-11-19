@@ -81,6 +81,17 @@ namespace wiGraphics
 		VkImageView		nullImageView;
 		VkSampler		nullSampler;
 
+		uint64_t timestamp_frequency = 0;
+		VkQueryPool querypool_timestamp;
+		VkQueryPool querypool_occlusion;
+		static const size_t timestamp_query_count = 1024;
+		static const size_t occlusion_query_count = 1024;
+		wiContainers::ThreadSafeRingBuffer<uint32_t, timestamp_query_count> free_timestampqueries;
+		wiContainers::ThreadSafeRingBuffer<uint32_t, occlusion_query_count> free_occlusionqueries;
+		bool initial_querypool_reset = false;
+		std::vector<uint32_t> timestamps_to_reset;
+		std::vector<uint32_t> occlusions_to_reset;
+
 
 		struct FrameResources
 		{
@@ -228,6 +239,8 @@ namespace wiGraphics
 				PIPELINE,
 				RENDERPASS,
 				FRAMEBUFFER,
+				QUERY_TIMESTAMP,
+				QUERY_OCCLUSION,
 			} type;
 			uint64_t frame;
 			wiCPUHandle handle;

@@ -252,6 +252,7 @@ namespace wiGraphics
 	};
 	enum GPU_QUERY_TYPE
 	{
+		GPU_QUERY_TYPE_INVALID,				// do not use! Indicates if query was not created.
 		GPU_QUERY_TYPE_EVENT,				// has the GPU reached this point?
 		GPU_QUERY_TYPE_OCCLUSION,			// how many samples passed depthstencil test?
 		GPU_QUERY_TYPE_OCCLUSION_PREDICATE, // are there any samples that passed depthstencil test
@@ -449,7 +450,7 @@ namespace wiGraphics
 	};
 	struct GPUQueryDesc
 	{
-		GPU_QUERY_TYPE Type = GPU_QUERY_TYPE_EVENT;
+		GPU_QUERY_TYPE Type = GPU_QUERY_TYPE_INVALID;
 	};
 	struct GPUQueryResult
 	{

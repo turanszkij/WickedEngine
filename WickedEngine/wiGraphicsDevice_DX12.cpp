@@ -2438,7 +2438,7 @@ namespace wiGraphics
 
 		pQuery->desc = *pDesc;
 
-		uint32_t query_index;
+		UINT query_index;
 
 		switch (pDesc->Type)
 		{
@@ -3011,6 +3011,7 @@ namespace wiGraphics
 				DeferredDestroy({ DestroyItem::QUERY_OCCLUSION, FRAMECOUNT, pQuery->resource });
 				break;
 			}
+			pQuery->desc.Type = GPU_QUERY_TYPE_INVALID;
 		}
 	}
 	void GraphicsDevice_DX12::DestroyPipelineState(PipelineState* pso)
@@ -4142,6 +4143,7 @@ namespace wiGraphics
 			querypool_occlusion_readback->Map(0, &range, &data);
 			result->result_passed_sample_count = *(UINT64*)((SIZE_T)data + range.Begin);
 			querypool_occlusion_readback->Unmap(0, &nullrange);
+			result->result_passed = result->result_passed_sample_count > 0 ? 1 : 0;
 			break;
 		}
 

@@ -1547,6 +1547,8 @@ namespace wiGraphics
 
 			vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
 
+			assert(physicalDeviceProperties.limits.timestampComputeAndGraphics == VK_TRUE);
+
 			VkPhysicalDeviceFeatures deviceFeatures = {};
 			vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
 
@@ -1556,6 +1558,7 @@ namespace wiGraphics
 			assert(deviceFeatures.samplerAnisotropy == VK_TRUE);
 			assert(deviceFeatures.shaderClipDistance == VK_TRUE);
 			assert(deviceFeatures.textureCompressionBC == VK_TRUE);
+			assert(deviceFeatures.occlusionQueryPrecise == VK_TRUE);
 			TESSELLATION = deviceFeatures.tessellationShader == VK_TRUE;
 			UAV_LOAD_FORMAT_COMMON = deviceFeatures.shaderStorageImageExtendedFormats == VK_TRUE;
 			
@@ -2153,6 +2156,34 @@ namespace wiGraphics
 			assert(res == VK_SUCCESS);
 		}
 
+		// GPU Queries:
+		{
+			timestamp_frequency = uint64_t(1.0 / double(physicalDeviceProperties.limits.timestampPeriod) * 1000 * 1000 * 1000);
+
+			VkQueryPoolCreateInfo poolInfo = {};
+			poolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+
+			for (UINT i = 0; i < timestamp_query_count; ++i)
+			{
+				free_timestampqueries.push_back(i);
+			}
+			poolInfo.queryCount = timestamp_query_count;
+			poolInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
+			res = vkCreateQueryPool(device, &poolInfo, nullptr, &querypool_timestamp);
+			assert(res == VK_SUCCESS);
+			timestamps_to_reset.reserve(timestamp_query_count);
+
+			for (UINT i = 0; i < occlusion_query_count; ++i)
+			{
+				free_occlusionqueries.push_back(i);
+			}
+			poolInfo.queryCount = occlusion_query_count;
+			poolInfo.queryType = VK_QUERY_TYPE_OCCLUSION;
+			res = vkCreateQueryPool(device, &poolInfo, nullptr, &querypool_occlusion);
+			assert(res == VK_SUCCESS);
+			occlusions_to_reset.reserve(occlusion_query_count);
+		}
+
 		wiBackLog::post("Created GraphicsDevice_Vulkan");
 	}
 	GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
@@ -2195,6 +2226,9 @@ namespace wiGraphics
 			vkDestroyImage(device, x, nullptr);
 		}
 		vkDestroySwapchainKHR(device, swapChain, nullptr);
+
+		vkDestroyQueryPool(device, querypool_timestamp, nullptr);
+		vkDestroyQueryPool(device, querypool_occlusion, nullptr);
 
 		vmaDestroyAllocator(allocator);
 
@@ -2963,11 +2997,48 @@ namespace wiGraphics
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
 	{
-		// TODO!
-		//DestroyQuery(pQuery);
-		//pQuery->Register(this);
+		DestroyQuery(pQuery);
+		pQuery->Register(this);
 
-		return E_FAIL;
+		HRESULT hr = E_FAIL;
+
+		pQuery->desc = *pDesc;
+
+		uint32_t query_index;
+
+		switch (pDesc->Type)
+		{
+		case GPU_QUERY_TYPE_TIMESTAMP:
+			if (free_timestampqueries.pop_front(query_index))
+			{
+				pQuery->resource = (wiCPUHandle)query_index;
+				hr = S_OK;
+			}
+			else
+			{
+				assert(0);
+			}
+			break;
+		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
+			hr = S_OK;
+			break;
+		case GPU_QUERY_TYPE_OCCLUSION:
+		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+			if (free_occlusionqueries.pop_front(query_index))
+			{
+				pQuery->resource = (wiCPUHandle)query_index;
+				hr = S_OK;
+			}
+			else
+			{
+				assert(0);
+			}
+			break;
+		}
+
+		assert(SUCCEEDED(hr));
+
+		return hr;
 	}
 	HRESULT GraphicsDevice_Vulkan::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
 	{
@@ -3528,7 +3599,20 @@ namespace wiGraphics
 	}
 	void GraphicsDevice_Vulkan::DestroyQuery(GPUQuery *pQuery)
 	{
-
+		if (pQuery != nullptr)
+		{
+			switch (pQuery->desc.Type)
+			{
+			case GPU_QUERY_TYPE_TIMESTAMP:
+				DeferredDestroy({ DestroyItem::QUERY_TIMESTAMP, FRAMECOUNT, pQuery->resource });
+				break;
+			case GPU_QUERY_TYPE_OCCLUSION:
+			case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+				DeferredDestroy({ DestroyItem::QUERY_OCCLUSION, FRAMECOUNT, pQuery->resource });
+				break;
+			}
+			pQuery->desc.Type = GPU_QUERY_TYPE_INVALID;
+		}
 	}
 	void GraphicsDevice_Vulkan::DestroyPipelineState(PipelineState* pso)
 	{
@@ -3787,6 +3871,12 @@ namespace wiGraphics
 				case DestroyItem::FRAMEBUFFER:
 					vkDestroyFramebuffer(device, (VkFramebuffer)item.handle, nullptr);
 					break;
+				case DestroyItem::QUERY_TIMESTAMP:
+					free_timestampqueries.push_back((UINT)item.handle);
+					break;
+				case DestroyItem::QUERY_OCCLUSION:
+					free_timestampqueries.push_back((UINT)item.handle);
+					break;
 				default:
 					break;
 				}
@@ -3870,12 +3960,12 @@ namespace wiGraphics
 		{
 			viewports[i].x = 0;
 			viewports[i].y = 0;
-			viewports[i].width = static_cast<float>(SCREENWIDTH);
-			viewports[i].height = static_cast<float>(SCREENHEIGHT);
+			viewports[i].width = (float)SCREENWIDTH;
+			viewports[i].height = (float)SCREENHEIGHT;
 			viewports[i].minDepth = 0;
 			viewports[i].maxDepth = 1;
 		}
-		vkCmdSetViewport(GetDirectCommandList(static_cast<CommandList>(cmd)), 0, ARRAYSIZE(viewports), viewports);
+		vkCmdSetViewport(GetDirectCommandList(cmd), 0, ARRAYSIZE(viewports), viewports);
 
 		VkRect2D scissors[8];
 		for (int i = 0; i < ARRAYSIZE(scissors); ++i)
@@ -3885,16 +3975,33 @@ namespace wiGraphics
 			scissors[i].extent.width = 65535;
 			scissors[i].extent.height = 65535;
 		}
-		vkCmdSetScissor(GetDirectCommandList(static_cast<CommandList>(cmd)), 0, ARRAYSIZE(scissors), scissors);
+		vkCmdSetScissor(GetDirectCommandList(cmd), 0, ARRAYSIZE(scissors), scissors);
 
 		float blendConstants[] = { 1,1,1,1 };
-		vkCmdSetBlendConstants(GetDirectCommandList(static_cast<CommandList>(cmd)), blendConstants);
+		vkCmdSetBlendConstants(GetDirectCommandList(cmd), blendConstants);
 
 		// reset descriptor allocators:
 		GetFrameResources().descriptors[cmd]->reset();
 
 		// reset immediate resource allocators:
 		GetFrameResources().resourceBuffer[cmd]->clear();
+
+		if (!initial_querypool_reset)
+		{
+			initial_querypool_reset = true;
+			vkCmdResetQueryPool(GetDirectCommandList(cmd), querypool_timestamp, 0, timestamp_query_count);
+			vkCmdResetQueryPool(GetDirectCommandList(cmd), querypool_occlusion, 0, occlusion_query_count);
+		}
+		for (auto& x : timestamps_to_reset)
+		{
+			vkCmdResetQueryPool(GetDirectCommandList(cmd), querypool_timestamp, x, 1);
+		}
+		timestamps_to_reset.clear();
+		for (auto& x : occlusions_to_reset)
+		{
+			vkCmdResetQueryPool(GetDirectCommandList(cmd), querypool_occlusion, x, 1);
+		}
+		occlusions_to_reset.clear();
 
 		prev_pipeline_hash[cmd] = 0;
 		active_renderpass[cmd] = VK_NULL_HANDLE;
@@ -4771,13 +4878,59 @@ namespace wiGraphics
 	}
 	void GraphicsDevice_Vulkan::QueryBegin(const GPUQuery *query, CommandList cmd)
 	{
+		switch (query->desc.Type)
+		{
+		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+			vkCmdBeginQuery(GetDirectCommandList(cmd), querypool_occlusion, (uint32_t)query->resource, 0);
+			break;
+		case GPU_QUERY_TYPE_OCCLUSION:
+			vkCmdBeginQuery(GetDirectCommandList(cmd), querypool_occlusion, (uint32_t)query->resource, VK_QUERY_CONTROL_PRECISE_BIT);
+			break;
+		}
 	}
 	void GraphicsDevice_Vulkan::QueryEnd(const GPUQuery *query, CommandList cmd)
 	{
+		switch (query->desc.Type)
+		{
+		case GPU_QUERY_TYPE_TIMESTAMP:
+			vkCmdWriteTimestamp(GetDirectCommandList(cmd), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, querypool_timestamp, (uint32_t)query->resource);
+			break;
+		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+			vkCmdEndQuery(GetDirectCommandList(cmd), querypool_occlusion, (uint32_t)query->resource);
+			break;
+		case GPU_QUERY_TYPE_OCCLUSION:
+			vkCmdEndQuery(GetDirectCommandList(cmd), querypool_occlusion, (uint32_t)query->resource);
+			break;
+		}
 	}
 	bool GraphicsDevice_Vulkan::QueryRead(const GPUQuery* query, GPUQueryResult* result)
 	{
-		return true;
+		VkResult res = VK_SUCCESS;
+
+		switch (query->desc.Type)
+		{
+		case GPU_QUERY_TYPE_EVENT:
+			assert(0); // not implemented yet
+			break;
+		case GPU_QUERY_TYPE_TIMESTAMP:
+			res = vkGetQueryPoolResults(device, querypool_timestamp, (uint32_t)query->resource, 1, sizeof(UINT64),
+				&result->result_timestamp, sizeof(UINT64), VK_QUERY_RESULT_64_BIT);
+			timestamps_to_reset.push_back((uint32_t)query->resource);
+			break;
+		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
+			result->result_timestamp_frequency = timestamp_frequency;
+			result->result_disjoint = FALSE;
+			break;
+		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+		case GPU_QUERY_TYPE_OCCLUSION:
+			res = vkGetQueryPoolResults(device, querypool_occlusion, (uint32_t)query->resource, 1, sizeof(UINT64),
+				&result->result_passed_sample_count, sizeof(UINT64), VK_QUERY_RESULT_64_BIT);
+			result->result_passed = result->result_passed_sample_count > 0 ? 1 : 0;
+			occlusions_to_reset.push_back((uint32_t)query->resource);
+			break;
+		}
+
+		return res == VK_SUCCESS;
 	}
 	void GraphicsDevice_Vulkan::Barrier(const GPUBarrier* barriers, UINT numBarriers, CommandList cmd)
 	{
