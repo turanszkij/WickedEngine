@@ -7,7 +7,7 @@ struct wiImageParams;
 
 namespace wiImage
 {
-	void Draw(const wiGraphics::Texture2D* texture, const wiImageParams& params, wiGraphics::CommandList cmd);
+	void Draw(const wiGraphics::Texture* texture, const wiImageParams& params, wiGraphics::CommandList cmd);
 
 	void LoadShaders();
 	void Initialize();
@@ -91,9 +91,9 @@ struct wiImageParams
 	SAMPLEMODE sampleFlag;
 	QUALITY quality;
 
-	const wiGraphics::Texture2D* maskMap;
+	const wiGraphics::Texture* maskMap;
 	// Generic texture
-	void setMaskMap(const wiGraphics::Texture2D* tex) { maskMap = tex; }
+	void setMaskMap(const wiGraphics::Texture* tex) { maskMap = tex; }
 
 	void init() 
 	{

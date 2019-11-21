@@ -13,9 +13,7 @@ private:
 public:
 	enum Data_Type{
 		DYNAMIC,
-		IMAGE_1D,
-		IMAGE_2D,
-		IMAGE_3D,
+		IMAGE,
 		SOUND,
 		VERTEXSHADER,
 		PIXELSHADER,

@@ -65,7 +65,7 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 
 	bool repackAtlas = false;
 	const int atlasWrapBorder = 1;
-	for (const Texture2D* tex : sceneTextures)
+	for (const Texture* tex : sceneTextures)
 	{
 		if (tex == nullptr)
 		{
@@ -104,14 +104,13 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 			desc.MipLevels = 1;
 			desc.ArraySize = 1;
 			desc.Format = FORMAT_R8G8B8A8_UNORM;
-			desc.SampleDesc.Count = 1;
-			desc.SampleDesc.Quality = 0;
+			desc.SampleCount = 1;
 			desc.Usage = USAGE_DEFAULT;
 			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 
-			device->CreateTexture2D(&desc, nullptr, &globalMaterialAtlas);
+			device->CreateTexture(&desc, nullptr, &globalMaterialAtlas);
 			device->SetName(&globalMaterialAtlas, "globalMaterialAtlas");
 
 			for (auto& it : storedTextures)

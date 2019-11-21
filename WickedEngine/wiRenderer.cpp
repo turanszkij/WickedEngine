@@ -120,7 +120,7 @@ UINT entityArrayOffset_ForceFields = 0;
 UINT entityArrayCount_ForceFields = 0;
 UINT entityArrayOffset_EnvProbes = 0;
 UINT entityArrayCount_EnvProbes = 0;
-Texture2D* enviroMap = nullptr;
+Texture* enviroMap = nullptr;
 float GameSpeed = 1;
 bool debugLightCulling = false;
 bool occlusionCulling = false;
@@ -148,9 +148,9 @@ struct VoxelizedSceneData
 
 std::unique_ptr<wiOcean> ocean;
 
-Texture2D shadowMapArray_2D;
-Texture2D shadowMapArray_Cube;
-Texture2D shadowMapArray_Transparent;
+Texture shadowMapArray_2D;
+Texture shadowMapArray_Cube;
+Texture shadowMapArray_Transparent;
 std::vector<RenderPass> renderpasses_shadow2D;
 std::vector<RenderPass> renderpasses_shadow2DTransparent;
 std::vector<RenderPass> renderpasses_shadowCube;
@@ -164,18 +164,18 @@ std::vector<RenderablePoint> renderablePoints;
 XMFLOAT4 waterPlane = XMFLOAT4(0, 1, 0, 0);
 
 wiSpinLock deferredMIPGenLock;
-unordered_set<const Texture2D*> deferredMIPGens;
+unordered_set<const Texture*> deferredMIPGens;
 
 wiGPUBVH sceneBVH;
 
 
 static const int atlasClampBorder = 1;
 
-static Texture2D decalAtlas;
-static unordered_map<const Texture2D*, wiRectPacker::rect_xywh> packedDecals;
+static Texture decalAtlas;
+static unordered_map<const Texture*, wiRectPacker::rect_xywh> packedDecals;
 
-Texture2D globalLightmap;
-unordered_map<const Texture2D*, wiRectPacker::rect_xywh> packedLightmaps;
+Texture globalLightmap;
+unordered_map<const Texture*, wiRectPacker::rect_xywh> packedLightmaps;
 
 
 
@@ -4346,7 +4346,7 @@ void DrawWaterRipples(CommandList cmd)
 
 void DrawSoftParticles(
 	const CameraComponent& camera,
-	const Texture2D& lineardepth,
+	const Texture& lineardepth,
 	bool distortion, 
 	CommandList cmd
 )
@@ -4397,10 +4397,10 @@ void DrawSoftParticles(
 }
 void DrawDeferredLights(
 	const CameraComponent& camera,
-	const Texture2D& depthbuffer,
-	const Texture2D& gbuffer0,
-	const Texture2D& gbuffer1,
-	const Texture2D& gbuffer2,
+	const Texture& depthbuffer,
+	const Texture& gbuffer0,
+	const Texture& gbuffer1,
+	const Texture& gbuffer2,
 	CommandList cmd
 )
 {
@@ -4619,7 +4619,7 @@ void DrawLightVisualizers(
 }
 void DrawVolumeLights(
 	const CameraComponent& camera,
-	const Texture2D& depthbuffer,
+	const Texture& depthbuffer,
 	CommandList cmd
 )
 {
@@ -4716,7 +4716,7 @@ void DrawVolumeLights(
 }
 void DrawLensFlares(
 	const CameraComponent& camera,
-	const Texture2D& depthbuffer,
+	const Texture& depthbuffer,
 	CommandList cmd
 )
 {
@@ -4767,7 +4767,7 @@ void DrawLensFlares(
 				device->BindConstantBuffer(GS, &constantBuffers[CBTYPE_LENSFLARE], CB_GETBINDSLOT(LensFlareCB), cmd);
 
 				UINT i = 0;
-				for (const Texture2D* x : light.lensFlareRimTextures)
+				for (const Texture* x : light.lensFlareRimTextures)
 				{
 					if (x != nullptr)
 					{
@@ -4816,15 +4816,14 @@ void SetShadowProps2D(int resolution, int count, int softShadowQuality)
 		desc.Height = SHADOWRES_2D;
 		desc.MipLevels = 1;
 		desc.ArraySize = SHADOWCOUNT_2D;
-		desc.SampleDesc.Count = 1;
-		desc.SampleDesc.Quality = 0;
+		desc.SampleCount = 1;
 		desc.Usage = USAGE_DEFAULT;
 		desc.CPUAccessFlags = 0;
 		desc.MiscFlags = 0;
 
 		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 		desc.Format = DSFormat_small_alias;
-		device->CreateTexture2D(&desc, nullptr, &shadowMapArray_2D);
+		device->CreateTexture(&desc, nullptr, &shadowMapArray_2D);
 
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = RTFormat_ldr;
@@ -4833,7 +4832,7 @@ void SetShadowProps2D(int resolution, int count, int softShadowQuality)
 		desc.clear.color[1] = 1;
 		desc.clear.color[2] = 1;
 		desc.clear.color[3] = 0;
-		device->CreateTexture2D(&desc, nullptr, &shadowMapArray_Transparent);
+		device->CreateTexture(&desc, nullptr, &shadowMapArray_Transparent);
 
 		renderpasses_shadow2D.resize(SHADOWCOUNT_2D);
 		renderpasses_shadow2DTransparent.resize(SHADOWCOUNT_2D);
@@ -4881,13 +4880,12 @@ void SetShadowPropsCube(int resolution, int count)
 		desc.MipLevels = 1;
 		desc.ArraySize = 6 * SHADOWCOUNT_CUBE;
 		desc.Format = DSFormat_small_alias;
-		desc.SampleDesc.Count = 1;
-		desc.SampleDesc.Quality = 0;
+		desc.SampleCount = 1;
 		desc.Usage = USAGE_DEFAULT;
 		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 		desc.CPUAccessFlags = 0;
 		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
-		device->CreateTexture2D(&desc, nullptr, &shadowMapArray_Cube);
+		device->CreateTexture(&desc, nullptr, &shadowMapArray_Cube);
 
 		renderpasses_shadowCube.resize(SHADOWCOUNT_CUBE);
 
@@ -5264,7 +5262,7 @@ void DrawScene(const CameraComponent& camera, bool tessellation, CommandList cmd
 
 }
 
-void DrawScene_Transparent(const CameraComponent& camera, const Texture2D& lineardepth, RENDERPASS renderPass, CommandList cmd, bool grass, bool occlusionCulling)
+void DrawScene_Transparent(const CameraComponent& camera, const Texture& lineardepth, RENDERPASS renderPass, CommandList cmd, bool grass, bool occlusionCulling)
 {
 	GraphicsDevice* device = GetDevice();
 	const Scene& scene = GetScene();
@@ -6034,7 +6032,7 @@ void DrawSun(CommandList cmd)
 
 void DrawDeferredDecals(
 	const CameraComponent& camera,
-	const Texture2D& depthbuffer,
+	const Texture& depthbuffer,
 	CommandList cmd
 )
 {
@@ -6099,7 +6097,7 @@ void DrawDeferredDecals(
 static const UINT envmapCount = 16;
 static const UINT envmapRes = 128;
 static const UINT envmapMIPs = 8;
-static Texture2D envrenderingDepthBuffer;
+static Texture envrenderingDepthBuffer;
 static std::vector<RenderPass> renderpasses_envmap;
 vector<uint32_t> probesToRefresh(envmapCount);
 void ManageEnvProbes()
@@ -6172,7 +6170,7 @@ void ManageEnvProbes()
 		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 		desc.Usage = USAGE_DEFAULT;
 
-		HRESULT hr = device->CreateTexture2D(&desc, nullptr, &envrenderingDepthBuffer);
+		HRESULT hr = device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
 		assert(SUCCEEDED(hr));
 
 		desc.ArraySize = envmapCount * 6;
@@ -6185,8 +6183,8 @@ void ManageEnvProbes()
 		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 		desc.Usage = USAGE_DEFAULT;
 
-		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] = new Texture2D;
-		hr = device->CreateTexture2D(&desc, nullptr, (Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
+		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] = new Texture;
+		hr = device->CreateTexture(&desc, nullptr, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
 		assert(SUCCEEDED(hr));
 
 		renderpasses_envmap.resize(envmapCount);
@@ -6199,7 +6197,7 @@ void ManageEnvProbes()
 
 			RenderPassDesc renderpassdesc;
 			renderpassdesc.numAttachments = 2;
-			renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::LOADOP_DONTCARE,(Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], subresource_index };
+			renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::LOADOP_DONTCARE,textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], subresource_index };
 			renderpassdesc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::LOADOP_CLEAR,&envrenderingDepthBuffer, -1 };
 			device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap[subresource_index]);
 		}
@@ -6334,7 +6332,7 @@ void RefreshEnvProbes(CommandList cmd)
 
 		device->RenderPassEnd(cmd);
 
-		GenerateMipChain(*(Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], MIPGENFILTER_LINEAR, cmd, probe.textureIndex);
+		GenerateMipChain(*textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], MIPGENFILTER_LINEAR, cmd, probe.textureIndex);
 
 		// Filter the enviroment map mip chain according to BRDF:
 		//	A bit similar to MIP chain generation, but its input is the MIP-mapped texture,
@@ -6388,7 +6386,7 @@ void RefreshEnvProbes(CommandList cmd)
 static const UINT maxImpostorCount = 8;
 static const UINT impostorTextureArraySize = maxImpostorCount * impostorCaptureAngles * 3;
 static const UINT impostorTextureDim = 128;
-static Texture2D impostorDepthStencil;
+static Texture impostorDepthStencil;
 static std::vector<RenderPass> renderpasses_impostor;
 vector<uint32_t> impostorsToRefresh(maxImpostorCount);
 void ManageImpostors()
@@ -6420,7 +6418,7 @@ void ManageImpostors()
 		desc.BindFlags = BIND_DEPTH_STENCIL;
 		desc.ArraySize = 1;
 		desc.Format = DSFormat_small;
-		HRESULT hr = device->CreateTexture2D(&desc, nullptr, &impostorDepthStencil);
+		HRESULT hr = device->CreateTexture(&desc, nullptr, &impostorDepthStencil);
 		assert(SUCCEEDED(hr));
 		device->SetName(&impostorDepthStencil, "impostorDepthStencil");
 
@@ -6428,8 +6426,8 @@ void ManageImpostors()
 		desc.ArraySize = impostorTextureArraySize;
 		desc.Format = RTFormat_impostor;
 
-		textures[TEXTYPE_2D_IMPOSTORARRAY] = new Texture2D;
-		hr = device->CreateTexture2D(&desc, nullptr, (Texture2D*)textures[TEXTYPE_2D_IMPOSTORARRAY]);
+		textures[TEXTYPE_2D_IMPOSTORARRAY] = new Texture;
+		hr = device->CreateTexture(&desc, nullptr, textures[TEXTYPE_2D_IMPOSTORARRAY]);
 		assert(SUCCEEDED(hr));
 		device->SetName(textures[TEXTYPE_2D_IMPOSTORARRAY], "ImpostorTarget");
 
@@ -6443,7 +6441,7 @@ void ManageImpostors()
 
 			RenderPassDesc renderpassdesc;
 			renderpassdesc.numAttachments = 2;
-			renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,(Texture2D*)textures[TEXTYPE_2D_IMPOSTORARRAY], subresource_index };
+			renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,textures[TEXTYPE_2D_IMPOSTORARRAY], subresource_index };
 			renderpassdesc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_CLEAR,&impostorDepthStencil, subresource_index };
 			hr = device->CreateRenderPass(&renderpassdesc, &renderpasses_impostor[subresource_index]);
 		}
@@ -6613,6 +6611,7 @@ void VoxelRadiance(CommandList cmd)
 	if (textures[TEXTYPE_3D_VOXELRADIANCE] == nullptr)
 	{
 		TextureDesc desc;
+		desc.type = TextureDesc::TEXTURE_3D;
 		desc.Width = voxelSceneData.res;
 		desc.Height = voxelSceneData.res;
 		desc.Depth = voxelSceneData.res;
@@ -6623,8 +6622,8 @@ void VoxelRadiance(CommandList cmd)
 		desc.CPUAccessFlags = 0;
 		desc.MiscFlags = 0;
 
-		textures[TEXTYPE_3D_VOXELRADIANCE] = new Texture3D;
-		HRESULT hr = device->CreateTexture3D(&desc, nullptr, (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE]);
+		textures[TEXTYPE_3D_VOXELRADIANCE] = new Texture;
+		HRESULT hr = device->CreateTexture(&desc, nullptr, textures[TEXTYPE_3D_VOXELRADIANCE]);
 		assert(SUCCEEDED(hr));
 
 		for (UINT i = 0; i < textures[TEXTYPE_3D_VOXELRADIANCE]->GetDesc().MipLevels; ++i)
@@ -6642,9 +6641,9 @@ void VoxelRadiance(CommandList cmd)
 	}
 	if (voxelSceneData.secondaryBounceEnabled && textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] == nullptr)
 	{
-		TextureDesc desc = ((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE])->GetDesc();
-		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] = new Texture3D;
-		HRESULT hr = device->CreateTexture3D(&desc, nullptr, (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
+		TextureDesc desc = textures[TEXTYPE_3D_VOXELRADIANCE]->GetDesc();
+		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] = new Texture;
+		HRESULT hr = device->CreateTexture(&desc, nullptr, textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
 		assert(SUCCEEDED(hr));
 
 		for (UINT i = 0; i < textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->GetDesc().MipLevels; ++i)
@@ -6670,7 +6669,7 @@ void VoxelRadiance(CommandList cmd)
 		assert(SUCCEEDED(hr));
 	}
 
-	Texture3D* result = (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE];
+	Texture* result = textures[TEXTYPE_3D_VOXELRADIANCE];
 
 	AABB bbox;
 	XMFLOAT3 extents = voxelSceneData.extents;
@@ -6741,7 +6740,7 @@ void VoxelRadiance(CommandList cmd)
 			device->EventBegin("Voxel Radiance Secondary Bounce", cmd);
 			device->UnbindUAVs(1, 1, cmd);
 			// Pre-integrate the voxel texture by creating blurred mip levels:
-			GenerateMipChain(*(Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, cmd);
+			GenerateMipChain(*textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, cmd);
 			device->BindUAV(CS, textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, cmd);
 			device->BindResource(CS, textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
 			device->BindResource(CS, &resourceBuffers[RBTYPE_VOXELSCENE], 1, cmd);
@@ -6756,7 +6755,7 @@ void VoxelRadiance(CommandList cmd)
 			device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, cmd);
 			device->EventEnd(cmd);
 
-			result = (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE_HELPER];
+			result = textures[TEXTYPE_3D_VOXELRADIANCE_HELPER];
 		}
 
 		device->UnbindUAVs(0, 2, cmd);
@@ -6782,13 +6781,13 @@ inline XMUINT3 GetEntityCullingTileCount()
 		1);
 }
 void ComputeTiledLightCulling(
-	const Texture2D& depthbuffer,
+	const Texture& depthbuffer,
 	CommandList cmd, 
-	const Texture2D* gbuffer0,
-	const Texture2D* gbuffer1,
-	const Texture2D* gbuffer2,
-	const Texture2D* lightbuffer_diffuse,
-	const Texture2D* lightbuffer_specular
+	const Texture* gbuffer0,
+	const Texture* gbuffer1,
+	const Texture* gbuffer2,
+	const Texture* lightbuffer_diffuse,
+	const Texture* lightbuffer_specular
 )
 {
 	const bool deferred = lightbuffer_diffuse != nullptr && lightbuffer_specular != nullptr;
@@ -6888,15 +6887,14 @@ void ComputeTiledLightCulling(
 		desc.MipLevels = 1;
 		desc.ArraySize = 1;
 		desc.Format = FORMAT_R8G8B8A8_UNORM;
-		desc.SampleDesc.Count = 1;
-		desc.SampleDesc.Quality = 0;
+		desc.SampleCount = 1;
 		desc.Usage = USAGE_DEFAULT;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.CPUAccessFlags = 0;
 		desc.MiscFlags = 0;
 
-		textures[TEXTYPE_2D_DEBUGUAV] = new Texture2D;
-		device->CreateTexture2D(&desc, nullptr, (Texture2D*)textures[TEXTYPE_2D_DEBUGUAV]);
+		textures[TEXTYPE_2D_DEBUGUAV] = new Texture;
+		device->CreateTexture(&desc, nullptr, textures[TEXTYPE_2D_DEBUGUAV]);
 	}
 
 	// Perform the culling
@@ -6975,7 +6973,7 @@ void ComputeTiledLightCulling(
 }
 
 
-void ResolveMSAADepthBuffer(const Texture2D& dst, const Texture2D& src, CommandList cmd)
+void ResolveMSAADepthBuffer(const Texture& dst, const Texture& src, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 	device->EventBegin("ResolveMSAADepthBuffer", cmd);
@@ -6994,7 +6992,7 @@ void ResolveMSAADepthBuffer(const Texture2D& dst, const Texture2D& src, CommandL
 
 	device->EventEnd(cmd);
 }
-void DownsampleDepthBuffer(const wiGraphics::Texture2D& src, wiGraphics::CommandList cmd)
+void DownsampleDepthBuffer(const wiGraphics::Texture& src, wiGraphics::CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 	device->EventBegin("DownsampleDepthBuffer", cmd);
@@ -7010,11 +7008,7 @@ void DownsampleDepthBuffer(const wiGraphics::Texture2D& src, wiGraphics::Command
 	device->EventEnd(cmd);
 }
 
-void GenerateMipChain(const Texture1D& texture, MIPGENFILTER filter, CommandList cmd, int arrayIndex)
-{
-	assert(0 && "Not implemented!");
-}
-void GenerateMipChain(const Texture2D& texture, MIPGENFILTER filter, CommandList cmd, int arrayIndex)
+void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList cmd, int arrayIndex)
 {
 	GraphicsDevice* device = GetDevice();
 	TextureDesc desc = texture.GetDesc();
@@ -7028,25 +7022,132 @@ void GenerateMipChain(const Texture2D& texture, MIPGENFILTER filter, CommandList
 
 	bool hdr = !device->IsFormatUnorm(desc.Format);
 
-	if (desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+	if (desc.type == TextureDesc::TEXTURE_1D)
+	{
+		assert(0); // not implemented
+	}
+	else if (desc.type == TextureDesc::TEXTURE_2D)
 	{
 
-		if (desc.ArraySize > 6)
+		if (desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 		{
-			// Cubearray
-			assert(arrayIndex >= 0 && "You should only filter a specific cube in the array for now, so provide its index!");
 
+			if (desc.ArraySize > 6)
+			{
+				// Cubearray
+				assert(arrayIndex >= 0 && "You should only filter a specific cube in the array for now, so provide its index!");
+
+				switch (filter)
+				{
+				case MIPGENFILTER_POINT:
+					device->EventBegin("GenerateMipChain CubeArray - PointFilter", cmd);
+					device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], cmd);
+					device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
+					break;
+				case MIPGENFILTER_LINEAR:
+					device->EventBegin("GenerateMipChain CubeArray - LinearFilter", cmd);
+					device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], cmd);
+					device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
+					break;
+				default:
+					assert(0);
+					break;
+				}
+
+				for (UINT i = 0; i < desc.MipLevels - 1; ++i)
+				{
+					device->BindUAV(CS, &texture, 0, cmd, i + 1);
+					device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
+					desc.Width = std::max(1u, desc.Width / 2);
+					desc.Height = std::max(1u, desc.Height / 2);
+
+					GenerateMIPChainCB cb;
+					cb.outputResolution.x = desc.Width;
+					cb.outputResolution.y = desc.Height;
+					cb.outputResolution_rcp.x = 1.0f / cb.outputResolution.x;
+					cb.outputResolution_rcp.y = 1.0f / cb.outputResolution.y;
+					cb.arrayIndex = arrayIndex;
+					device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
+					device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
+
+					device->Dispatch(
+						std::max(1u, (desc.Width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
+						std::max(1u, (desc.Height + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
+						6,
+						cmd);
+
+					device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+				}
+			}
+			else
+			{
+				// Cubemap
+				switch (filter)
+				{
+				case MIPGENFILTER_POINT:
+					device->EventBegin("GenerateMipChain Cube - PointFilter", cmd);
+					device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], cmd);
+					device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
+					break;
+				case MIPGENFILTER_LINEAR:
+					device->EventBegin("GenerateMipChain Cube - LinearFilter", cmd);
+					device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], cmd);
+					device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
+					break;
+				default:
+					assert(0); // not implemented
+					break;
+				}
+
+				for (UINT i = 0; i < desc.MipLevels - 1; ++i)
+				{
+					device->BindUAV(CS, &texture, 0, cmd, i + 1);
+					device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
+					desc.Width = std::max(1u, desc.Width / 2);
+					desc.Height = std::max(1u, desc.Height / 2);
+
+					GenerateMIPChainCB cb;
+					cb.outputResolution.x = desc.Width;
+					cb.outputResolution.y = desc.Height;
+					cb.outputResolution_rcp.x = 1.0f / cb.outputResolution.x;
+					cb.outputResolution_rcp.y = 1.0f / cb.outputResolution.y;
+					cb.arrayIndex = 0;
+					device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
+					device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
+
+					device->Dispatch(
+						std::max(1u, (desc.Width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
+						std::max(1u, (desc.Height + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
+						6,
+						cmd);
+
+					device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+				}
+			}
+
+		}
+		else
+		{
+			// Texture
 			switch (filter)
 			{
 			case MIPGENFILTER_POINT:
-				device->EventBegin("GenerateMipChain CubeArray - PointFilter", cmd);
-				device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], cmd);
+				device->EventBegin("GenerateMipChain 2D - PointFilter", cmd);
+				device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], cmd);
 				device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
 				break;
 			case MIPGENFILTER_LINEAR:
-				device->EventBegin("GenerateMipChain CubeArray - LinearFilter", cmd);
-				device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], cmd);
+				device->EventBegin("GenerateMipChain 2D - LinearFilter", cmd);
+				device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], cmd);
 				device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
+				break;
+			case MIPGENFILTER_GAUSSIAN:
+				device->EventBegin("GenerateMipChain 2D - GaussianFilter", cmd);
+				device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_GAUSSIAN : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_GAUSSIAN], cmd);
+				break;
+			case MIPGENFILTER_BICUBIC:
+				device->EventBegin("GenerateMipChain 2D - BicubicFilter", cmd);
+				device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_BICUBIC : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_BICUBIC], cmd);
 				break;
 			default:
 				assert(0);
@@ -7065,91 +7166,41 @@ void GenerateMipChain(const Texture2D& texture, MIPGENFILTER filter, CommandList
 				cb.outputResolution.y = desc.Height;
 				cb.outputResolution_rcp.x = 1.0f / cb.outputResolution.x;
 				cb.outputResolution_rcp.y = 1.0f / cb.outputResolution.y;
-				cb.arrayIndex = arrayIndex;
+				cb.arrayIndex = arrayIndex >= 0 ? (uint)arrayIndex : 0;
 				device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
 				device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
 
 				device->Dispatch(
 					std::max(1u, (desc.Width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
 					std::max(1u, (desc.Height + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
-					6,
-					cmd);
-
-				device->Barrier(&GPUBarrier::Memory(), 1, cmd);
-			}
-		}
-		else
-		{
-			// Cubemap
-			switch (filter)
-			{
-			case MIPGENFILTER_POINT:
-				device->EventBegin("GenerateMipChain Cube - PointFilter", cmd);
-				device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], cmd);
-				device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
-				break;
-			case MIPGENFILTER_LINEAR:
-				device->EventBegin("GenerateMipChain Cube - LinearFilter", cmd);
-				device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], cmd);
-				device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
-				break;
-			default:
-				assert(0); // not implemented
-				break;
-			}
-
-			for (UINT i = 0; i < desc.MipLevels - 1; ++i)
-			{
-				device->BindUAV(CS, &texture, 0, cmd, i + 1);
-				device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
-				desc.Width = std::max(1u, desc.Width / 2);
-				desc.Height = std::max(1u, desc.Height / 2);
-
-				GenerateMIPChainCB cb;
-				cb.outputResolution.x = desc.Width;
-				cb.outputResolution.y = desc.Height;
-				cb.outputResolution_rcp.x = 1.0f / cb.outputResolution.x;
-				cb.outputResolution_rcp.y = 1.0f / cb.outputResolution.y;
-				cb.arrayIndex = 0;
-				device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
-				device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
-
-				device->Dispatch(
-					std::max(1u, (desc.Width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
-					std::max(1u, (desc.Height + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
-					6,
+					1,
 					cmd);
 
 				device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 			}
 		}
 
+		device->UnbindResources(TEXSLOT_UNIQUE0, 1, cmd);
+		device->UnbindUAVs(0, 1, cmd);
+
+		device->EventEnd(cmd);
 	}
-	else
+	else if (desc.type == TextureDesc::TEXTURE_3D)
 	{
-		// Texture2D
 		switch (filter)
 		{
 		case MIPGENFILTER_POINT:
-			device->EventBegin("GenerateMipChain 2D - PointFilter", cmd);
-			device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], cmd);
+			device->EventBegin("GenerateMipChain 3D - PointFilter", cmd);
+			device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], cmd);
 			device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
 			break;
 		case MIPGENFILTER_LINEAR:
-			device->EventBegin("GenerateMipChain 2D - LinearFilter", cmd);
-			device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], cmd);
+			device->EventBegin("GenerateMipChain 3D - LinearFilter", cmd);
+			device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], cmd);
 			device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
 			break;
-		case MIPGENFILTER_GAUSSIAN:
-			device->EventBegin("GenerateMipChain 2D - GaussianFilter", cmd);
-			device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_GAUSSIAN : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_GAUSSIAN], cmd);
-			break;
-		case MIPGENFILTER_BICUBIC:
-			device->EventBegin("GenerateMipChain 2D - BicubicFilter", cmd);
-			device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_BICUBIC : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_BICUBIC], cmd);
-			break;
 		default:
-			assert(0);
+			assert(0); // not implemented
 			break;
 		}
 
@@ -7159,96 +7210,40 @@ void GenerateMipChain(const Texture2D& texture, MIPGENFILTER filter, CommandList
 			device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
 			desc.Width = std::max(1u, desc.Width / 2);
 			desc.Height = std::max(1u, desc.Height / 2);
+			desc.Depth = std::max(1u, desc.Depth / 2);
 
 			GenerateMIPChainCB cb;
 			cb.outputResolution.x = desc.Width;
 			cb.outputResolution.y = desc.Height;
+			cb.outputResolution.z = desc.Depth;
 			cb.outputResolution_rcp.x = 1.0f / cb.outputResolution.x;
 			cb.outputResolution_rcp.y = 1.0f / cb.outputResolution.y;
+			cb.outputResolution_rcp.z = 1.0f / cb.outputResolution.z;
 			cb.arrayIndex = arrayIndex >= 0 ? (uint)arrayIndex : 0;
 			device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
 			device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
 
 			device->Dispatch(
-				std::max(1u, (desc.Width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
-				std::max(1u, (desc.Height + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
-				1,
+				std::max(1u, (desc.Width + GENERATEMIPCHAIN_3D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_3D_BLOCK_SIZE),
+				std::max(1u, (desc.Height + GENERATEMIPCHAIN_3D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_3D_BLOCK_SIZE),
+				std::max(1u, (desc.Depth + GENERATEMIPCHAIN_3D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_3D_BLOCK_SIZE),
 				cmd);
 
 			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		}
+
+		device->UnbindResources(TEXSLOT_UNIQUE0, 1, cmd);
+		device->UnbindUAVs(0, 1, cmd);
+
+		device->EventEnd(cmd);
 	}
-
-	device->UnbindResources(TEXSLOT_UNIQUE0, 1, cmd);
-	device->UnbindUAVs(0, 1, cmd);
-
-	device->EventEnd(cmd);
-}
-void GenerateMipChain(const Texture3D& texture, MIPGENFILTER filter, CommandList cmd, int arrayIndex)
-{
-	GraphicsDevice* device = GetDevice();
-	TextureDesc desc = texture.GetDesc();
-
-	if (desc.MipLevels < 2)
+	else
 	{
 		assert(0);
-		return;
 	}
-
-	bool hdr = !device->IsFormatUnorm(desc.Format);
-
-	switch (filter)
-	{
-	case MIPGENFILTER_POINT:
-		device->EventBegin("GenerateMipChain 3D - PointFilter", cmd);
-		device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], cmd);
-		device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
-		break;
-	case MIPGENFILTER_LINEAR:
-		device->EventBegin("GenerateMipChain 3D - LinearFilter", cmd);
-		device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], cmd);
-		device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
-		break;
-	default:
-		assert(0); // not implemented
-		break;
-	}
-
-	for (UINT i = 0; i < desc.MipLevels - 1; ++i)
-	{
-		device->BindUAV(CS, &texture, 0, cmd, i + 1);
-		device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
-		desc.Width = std::max(1u, desc.Width / 2);
-		desc.Height = std::max(1u, desc.Height / 2);
-		desc.Depth = std::max(1u, desc.Depth / 2);
-
-		GenerateMIPChainCB cb;
-		cb.outputResolution.x = desc.Width;
-		cb.outputResolution.y = desc.Height;
-		cb.outputResolution.z = desc.Depth;
-		cb.outputResolution_rcp.x = 1.0f / cb.outputResolution.x;
-		cb.outputResolution_rcp.y = 1.0f / cb.outputResolution.y;
-		cb.outputResolution_rcp.z = 1.0f / cb.outputResolution.z;
-		cb.arrayIndex = arrayIndex >= 0 ? (uint)arrayIndex : 0;
-		device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
-
-		device->Dispatch(
-			std::max(1u, (desc.Width + GENERATEMIPCHAIN_3D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_3D_BLOCK_SIZE), 
-			std::max(1u, (desc.Height + GENERATEMIPCHAIN_3D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_3D_BLOCK_SIZE),
-			std::max(1u, (desc.Depth + GENERATEMIPCHAIN_3D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_3D_BLOCK_SIZE),
-			cmd);
-
-		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
-	}
-
-	device->UnbindResources(TEXSLOT_UNIQUE0, 1, cmd);
-	device->UnbindUAVs(0, 1, cmd);
-
-	device->EventEnd(cmd);
 }
 
-void CopyTexture2D(const Texture2D& dst, UINT DstMIP, UINT DstX, UINT DstY, const Texture2D& src, UINT SrcMIP, CommandList cmd, BORDEREXPANDSTYLE borderExpand)
+void CopyTexture2D(const Texture& dst, UINT DstMIP, UINT DstX, UINT DstY, const Texture& src, UINT SrcMIP, CommandList cmd, BORDEREXPANDSTYLE borderExpand)
 {
 	GraphicsDevice* device = GetDevice();
 
@@ -7264,12 +7259,12 @@ void CopyTexture2D(const Texture2D& dst, UINT DstMIP, UINT DstX, UINT DstY, cons
 	{
 		if (hdr)
 		{
-			device->EventBegin("CopyTexture2D_FLOAT4", cmd);
+			device->EventBegin("CopyTexture_FLOAT4", cmd);
 			device->BindComputeShader(computeShaders[CSTYPE_COPYTEXTURE2D_FLOAT4], cmd);
 		}
 		else
 		{
-			device->EventBegin("CopyTexture2D_UNORM4", cmd);
+			device->EventBegin("CopyTexture_UNORM4", cmd);
 			device->BindComputeShader(computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4], cmd);
 		}
 	}
@@ -7277,12 +7272,12 @@ void CopyTexture2D(const Texture2D& dst, UINT DstMIP, UINT DstX, UINT DstY, cons
 	{
 		if (hdr)
 		{
-			device->EventBegin("CopyTexture2D_BORDEREXPAND_FLOAT4", cmd);
+			device->EventBegin("CopyTexture_BORDEREXPAND_FLOAT4", cmd);
 			device->BindComputeShader(computeShaders[CSTYPE_COPYTEXTURE2D_FLOAT4_BORDEREXPAND], cmd);
 		}
 		else
 		{
-			device->EventBegin("CopyTexture2D_BORDEREXPAND_UNORM4", cmd);
+			device->EventBegin("CopyTexture_BORDEREXPAND_UNORM4", cmd);
 			device->BindComputeShader(computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4_BORDEREXPAND], cmd);
 		}
 	}
@@ -7429,7 +7424,7 @@ RayBuffers* GenerateScreenRayBuffers(const CameraComponent& camera, CommandList 
 }
 void RayTraceScene(
 	const RayBuffers* rayBuffers, 
-	const Texture2D* result, 
+	const Texture* result, 
 	int accumulation_sample, 
 	CommandList cmd
 )
@@ -7672,14 +7667,13 @@ void ManageDecalAtlas()
 			desc.MipLevels = 0;
 			desc.ArraySize = 1;
 			desc.Format = FORMAT_R8G8B8A8_UNORM;
-			desc.SampleDesc.Count = 1;
-			desc.SampleDesc.Quality = 0;
+			desc.SampleCount = 1;
 			desc.Usage = USAGE_DEFAULT;
 			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 
-			device->CreateTexture2D(&desc, nullptr, &decalAtlas);
+			device->CreateTexture(&desc, nullptr, &decalAtlas);
 			device->SetName(&decalAtlas, "decalAtlas");
 
 			for (UINT i = 0; i < decalAtlas.GetDesc().MipLevels; ++i)
@@ -7798,8 +7792,8 @@ void ManageLightmapAtlas()
 				//	But the global atlas will have less precision for good bandwidth for sampling
 				desc.Format = RTFormat_lightmap_object;
 
-				object.lightmap = std::make_unique<Texture2D>();
-				HRESULT hr = device->CreateTexture2D(&desc, nullptr, object.lightmap.get());
+				object.lightmap = std::make_unique<Texture>();
+				HRESULT hr = device->CreateTexture(&desc, nullptr, object.lightmap.get());
 				assert(SUCCEEDED(hr));
 				device->SetName(object.lightmap.get(), "objectLightmap");
 
@@ -7822,7 +7816,7 @@ void ManageLightmapAtlas()
 		{
 			refresh = true;
 			// Create a GPU-side per object lighmap if there is none yet, so that copying into atlas can be done efficiently:
-			object.lightmap.reset(new Texture2D);
+			object.lightmap.reset(new Texture);
 			wiTextureHelper::CreateTexture(*object.lightmap.get(), object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.GetLightmapFormat());
 		}
 
@@ -7870,14 +7864,13 @@ void ManageLightmapAtlas()
 			desc.MipLevels = 1;
 			desc.ArraySize = 1;
 			desc.Format = RTFormat_lightmap_global;
-			desc.SampleDesc.Count = 1;
-			desc.SampleDesc.Quality = 0;
+			desc.SampleCount = 1;
 			desc.Usage = USAGE_DEFAULT;
 			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 
-			device->CreateTexture2D(&desc, nullptr, &globalLightmap);
+			device->CreateTexture(&desc, nullptr, &globalLightmap);
 			device->SetName(&globalLightmap, "globalLightmap");
 		}
 		else
@@ -8056,7 +8049,7 @@ void RefreshLightmapAtlas(CommandList cmd)
 	}
 }
 
-const Texture2D* GetGlobalLightmap()
+const Texture* GetGlobalLightmap()
 {
 	if (globalLightmap.IsValid())
 	{
@@ -8138,7 +8131,7 @@ void UpdateFrameCB(CommandList cmd)
 	}
 	if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] != nullptr)
 	{
-		cb.g_xFrame_EnvProbeMipCount = static_cast<Texture2D*>(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY])->GetDesc().MipLevels;
+		cb.g_xFrame_EnvProbeMipCount = static_cast<Texture*>(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY])->GetDesc().MipLevels;
 		cb.g_xFrame_EnvProbeMipCount_rcp = 1.0f / (float)cb.g_xFrame_EnvProbeMipCount;
 	}
 
@@ -8247,7 +8240,7 @@ void SetAlphaRef(float alphaRef, CommandList cmd)
 		GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_API], &apiCB[cmd], cmd);
 	}
 }
-void BindGBufferTextures(const Texture2D* slot0, const Texture2D* slot1, const Texture2D* slot2, CommandList cmd)
+void BindGBufferTextures(const Texture* slot0, const Texture* slot1, const Texture* slot2, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 
@@ -8259,7 +8252,7 @@ void BindGBufferTextures(const Texture2D* slot0, const Texture2D* slot1, const T
 	device->BindResource(CS, slot1, TEXSLOT_GBUFFER1, cmd);
 	device->BindResource(CS, slot2, TEXSLOT_GBUFFER2, cmd);
 }
-void BindDepthTextures(const Texture2D* depth, const Texture2D* linearDepth, CommandList cmd)
+void BindDepthTextures(const Texture* depth, const Texture* linearDepth, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 
@@ -8274,12 +8267,12 @@ void BindDepthTextures(const Texture2D* depth, const Texture2D* linearDepth, Com
 	device->BindResource(CS, linearDepth, TEXSLOT_LINEARDEPTH, cmd);
 }
 
-const Texture2D* ComputeLuminance(const Texture2D& sourceImage, CommandList cmd)
+const Texture* ComputeLuminance(const Texture& sourceImage, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 
-	static std::unique_ptr<Texture2D> luminance_map;
-	static std::vector<Texture2D*> luminance_avg(0);
+	static std::unique_ptr<Texture> luminance_map;
+	static std::vector<Texture*> luminance_avg(0);
 	if (luminance_map == nullptr)
 	{
 		for (auto& x : luminance_avg)
@@ -8294,23 +8287,22 @@ const Texture2D* ComputeLuminance(const Texture2D& sourceImage, CommandList cmd)
 		desc.MipLevels = 1;
 		desc.ArraySize = 1;
 		desc.Format = FORMAT_R32_FLOAT;
-		desc.SampleDesc.Count = 1;
-		desc.SampleDesc.Quality = 0;
+		desc.SampleCount = 1;
 		desc.Usage = USAGE_DEFAULT;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.CPUAccessFlags = 0;
 		desc.MiscFlags = 0;
 
-		luminance_map.reset(new Texture2D);
-		device->CreateTexture2D(&desc, nullptr, luminance_map.get());
+		luminance_map.reset(new Texture);
+		device->CreateTexture(&desc, nullptr, luminance_map.get());
 
 		while (desc.Width > 1)
 		{
 			desc.Width = std::max(desc.Width / 16, 1u);
 			desc.Height = desc.Width;
 
-			Texture2D* tex = new Texture2D;
-			device->CreateTexture2D(&desc, nullptr, tex);
+			Texture* tex = new Texture;
+			device->CreateTexture(&desc, nullptr, tex);
 
 			luminance_avg.push_back(tex);
 		}
@@ -8363,13 +8355,13 @@ const Texture2D* ComputeLuminance(const Texture2D& sourceImage, CommandList cmd)
 
 
 void DeferredComposition(
-	const Texture2D& gbuffer0,
-	const Texture2D& gbuffer1,
-	const Texture2D& gbuffer2,
-	const Texture2D& lightmap_diffuse,
-	const Texture2D& lightmap_specular,
-	const Texture2D& ao,
-	const Texture2D& lineardepth,
+	const Texture& gbuffer0,
+	const Texture& gbuffer1,
+	const Texture& gbuffer2,
+	const Texture& lightmap_diffuse,
+	const Texture& lightmap_specular,
+	const Texture& ao,
+	const Texture& lineardepth,
 	CommandList cmd
 )
 {
@@ -8393,9 +8385,9 @@ void DeferredComposition(
 }
 
 void Postprocess_Blur_Gaussian(
-	const Texture2D& input,
-	const Texture2D& temp,
-	const Texture2D& output,
+	const Texture& input,
+	const Texture& temp,
+	const Texture& output,
 	CommandList cmd,
 	float amountX,
 	float amountY,
@@ -8498,10 +8490,10 @@ void Postprocess_Blur_Gaussian(
 	device->EventEnd(cmd);
 }
 void Postprocess_Blur_Bilateral(
-	const Texture2D& input,
-	const Texture2D& lineardepth,
-	const Texture2D& temp,
-	const Texture2D& output,
+	const Texture& input,
+	const Texture& lineardepth,
+	const Texture& temp,
+	const Texture& output,
 	CommandList cmd,
 	float amountX,
 	float amountY,
@@ -8608,10 +8600,10 @@ void Postprocess_Blur_Bilateral(
 	device->EventEnd(cmd);
 }
 void Postprocess_SSAO(
-	const Texture2D& depthbuffer,
-	const Texture2D& lineardepth,
-	const Texture2D& temp,
-	const Texture2D& output,
+	const Texture& depthbuffer,
+	const Texture& lineardepth,
+	const Texture& temp,
+	const Texture& output,
 	CommandList cmd,
 	float range,
 	uint32_t samplecount,
@@ -8663,11 +8655,11 @@ void Postprocess_SSAO(
 	device->EventEnd(cmd);
 }
 void Postprocess_SSR(
-	const Texture2D& input,
-	const Texture2D& depthbuffer,
-	const Texture2D& lineardepth,
-	const Texture2D& gbuffer1,
-	const Texture2D& output,
+	const Texture& input,
+	const Texture& depthbuffer,
+	const Texture& lineardepth,
+	const Texture& gbuffer1,
+	const Texture& output,
 	CommandList cmd
 )
 {
@@ -8719,8 +8711,8 @@ void Postprocess_SSR(
 	device->EventEnd(cmd);
 }
 void Postprocess_SSS(
-	const Texture2D& lineardepth,
-	const Texture2D& gbuffer0,
+	const Texture& lineardepth,
+	const Texture& gbuffer0,
 	const RenderPass& input_output_lightbuffer_diffuse,
 	const RenderPass& input_output_temp1,
 	const RenderPass& input_output_temp2,
@@ -8804,8 +8796,8 @@ void Postprocess_SSS(
 	device->EventEnd(cmd);
 }
 void Postprocess_LightShafts(
-	const Texture2D& input,
-	const Texture2D& output,
+	const Texture& input,
+	const Texture& output,
 	CommandList cmd,
 	const XMFLOAT2& center
 )
@@ -8855,10 +8847,10 @@ void Postprocess_LightShafts(
 	device->EventEnd(cmd);
 }
 void Postprocess_DepthOfField(
-	const Texture2D& input_sharp,
-	const Texture2D& input_blurred,
-	const Texture2D& output,
-	const Texture2D& lineardepth,
+	const Texture& input_sharp,
+	const Texture& input_blurred,
+	const Texture& output,
+	const Texture& lineardepth,
 	CommandList cmd,
 	float focus
 )
@@ -8905,8 +8897,8 @@ void Postprocess_DepthOfField(
 	device->EventEnd(cmd);
 }
 void Postprocess_Outline(
-	const Texture2D& input,
-	const Texture2D& output,
+	const Texture& input,
+	const Texture& output,
 	CommandList cmd,
 	float threshold,
 	float thickness,
@@ -8958,9 +8950,9 @@ void Postprocess_Outline(
 	device->EventEnd(cmd);
 }
 void Postprocess_MotionBlur(
-	const Texture2D& input,
-	const Texture2D& velocity,
-	const Texture2D& output,
+	const Texture& input,
+	const Texture& velocity,
+	const Texture& output,
 	CommandList cmd
 )
 {
@@ -9004,8 +8996,8 @@ void Postprocess_MotionBlur(
 	device->EventEnd(cmd);
 }
 void Postprocess_BloomSeparate(
-	const Texture2D& input,
-	const Texture2D& output,
+	const Texture& input,
+	const Texture& output,
 	CommandList cmd,
 	float threshold
 )
@@ -9048,8 +9040,8 @@ void Postprocess_BloomSeparate(
 	device->EventEnd(cmd);
 }
 void Postprocess_FXAA(
-	const Texture2D& input,
-	const Texture2D& output,
+	const Texture& input,
+	const Texture& output,
 	CommandList cmd
 )
 {
@@ -9092,10 +9084,10 @@ void Postprocess_FXAA(
 	device->EventEnd(cmd);
 }
 void Postprocess_TemporalAA(
-	const Texture2D& input_current,
-	const Texture2D& input_history,
-	const Texture2D& velocity,
-	const Texture2D& output,
+	const Texture& input_current,
+	const Texture& input_history,
+	const Texture& velocity,
+	const Texture& output,
 	CommandList cmd
 )
 {
@@ -9140,9 +9132,9 @@ void Postprocess_TemporalAA(
 	device->EventEnd(cmd);
 }
 void Postprocess_Colorgrade(
-	const Texture2D& input,
-	const Texture2D& lookuptable,
-	const Texture2D& output,
+	const Texture& input,
+	const Texture& lookuptable,
+	const Texture& output,
 	CommandList cmd
 )
 {
@@ -9184,8 +9176,8 @@ void Postprocess_Colorgrade(
 	device->EventEnd(cmd);
 }
 void Postprocess_Lineardepth(
-	const Texture2D& input,
-	const Texture2D& output,
+	const Texture& input,
+	const Texture& output,
 	CommandList cmd
 )
 {
@@ -9226,8 +9218,8 @@ void Postprocess_Lineardepth(
 	device->EventEnd(cmd);
 }
 void Postprocess_Sharpen(
-	const Texture2D& input,
-	const Texture2D& output,
+	const Texture& input,
+	const Texture& output,
 	CommandList cmd,
 	float amount
 )
@@ -9270,10 +9262,10 @@ void Postprocess_Sharpen(
 	device->EventEnd(cmd);
 }
 void Postprocess_Tonemap(
-	const Texture2D& input,
-	const Texture2D& input_luminance,
-	const Texture2D& input_distortion,
-	const Texture2D& output,
+	const Texture& input,
+	const Texture& input_luminance,
+	const Texture& input_distortion,
+	const Texture& output,
 	CommandList cmd,
 	float exposure
 )
@@ -9318,8 +9310,8 @@ void Postprocess_Tonemap(
 	device->EventEnd(cmd);
 }
 void Postprocess_Chromatic_Aberration(
-	const Texture2D& input,
-	const Texture2D& output,
+	const Texture& input,
+	const Texture& output,
 	CommandList cmd,
 	float amount
 )
@@ -9393,7 +9385,7 @@ void AddRenderablePoint(const RenderablePoint& point)
 	renderablePoints.push_back(point);
 }
 
-void AddDeferredMIPGen(const Texture2D* tex)
+void AddDeferredMIPGen(const Texture* tex)
 {
 	deferredMIPGenLock.lock();
 	deferredMIPGens.insert(tex);
@@ -9497,8 +9489,8 @@ float GetSpecularAAParam() { return SPECULARAA; }
 void SetAdvancedRefractionsEnabled(bool value) { advancedRefractions = value; }
 bool GetAdvancedRefractionsEnabled() { return advancedRefractions; }
 bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
-void SetEnvironmentMap(wiGraphics::Texture2D* tex) { enviroMap = tex; }
-const Texture2D* GetEnvironmentMap() { return enviroMap; }
+void SetEnvironmentMap(wiGraphics::Texture* tex) { enviroMap = tex; }
+const Texture* GetEnvironmentMap() { return enviroMap; }
 void SetGameSpeed(float value) { GameSpeed = std::max(0.0f, value); }
 float GetGameSpeed() { return GameSpeed; }
 void SetOceanEnabled(bool enabled)

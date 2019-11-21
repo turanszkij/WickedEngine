@@ -6,11 +6,11 @@ class RenderPath3D_Deferred :
 	public RenderPath3D
 {
 protected:
-	wiGraphics::Texture2D rtGBuffer[3];
-	wiGraphics::Texture2D rtDeferred;
-	wiGraphics::Texture2D rtSSS[2];
-	wiGraphics::Texture2D lightbuffer_diffuse;
-	wiGraphics::Texture2D lightbuffer_specular;
+	wiGraphics::Texture rtGBuffer[3];
+	wiGraphics::Texture rtDeferred;
+	wiGraphics::Texture rtSSS[2];
+	wiGraphics::Texture lightbuffer_diffuse;
+	wiGraphics::Texture lightbuffer_specular;
 
 	wiGraphics::RenderPass renderpass_gbuffer;
 	wiGraphics::RenderPass renderpass_lights;

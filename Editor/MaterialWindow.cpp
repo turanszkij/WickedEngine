@@ -419,7 +419,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 
 			if (result.ok) {
 				string fileName = result.filenames.front();
-				material->baseColorMap = (Texture2D*)wiResourceManager::GetGlobal().add(fileName);
+				material->baseColorMap = (Texture*)wiResourceManager::GetGlobal().add(fileName);
 				material->baseColorMapName = fileName;
 				material->SetDirty();
 				fileName = wiHelper::GetFileNameFromPath(fileName);
@@ -481,7 +481,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 
 			if (result.ok) {
 				string fileName = result.filenames.front();
-				material->normalMap = (Texture2D*)wiResourceManager::GetGlobal().add(fileName);
+				material->normalMap = (Texture*)wiResourceManager::GetGlobal().add(fileName);
 				material->normalMapName = fileName;
 				material->SetDirty();
 				fileName = wiHelper::GetFileNameFromPath(fileName);
@@ -543,7 +543,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 
 			if (result.ok) {
 				string fileName = result.filenames.front();
-				material->surfaceMap = (Texture2D*)wiResourceManager::GetGlobal().add(fileName);
+				material->surfaceMap = (Texture*)wiResourceManager::GetGlobal().add(fileName);
 				material->surfaceMapName = fileName;
 				material->SetDirty();
 				fileName = wiHelper::GetFileNameFromPath(fileName);
@@ -605,7 +605,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 
 			if (result.ok) {
 				string fileName = result.filenames.front();
-				material->displacementMap = (Texture2D*)wiResourceManager::GetGlobal().add(fileName);
+				material->displacementMap = (Texture*)wiResourceManager::GetGlobal().add(fileName);
 				material->displacementMapName = fileName;
 				material->SetDirty();
 				fileName = wiHelper::GetFileNameFromPath(fileName);
@@ -667,7 +667,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 
 			if (result.ok) {
 				string fileName = result.filenames.front();
-				material->emissiveMap = (Texture2D*)wiResourceManager::GetGlobal().add(fileName);
+				material->emissiveMap = (Texture*)wiResourceManager::GetGlobal().add(fileName);
 				material->emissiveMapName = fileName;
 				material->SetDirty();
 				fileName = wiHelper::GetFileNameFromPath(fileName);
@@ -730,7 +730,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 
 			if (result.ok) {
 				string fileName = result.filenames.front();
-				material->occlusionMap = (Texture2D*)wiResourceManager::GetGlobal().add(fileName);
+				material->occlusionMap = (Texture*)wiResourceManager::GetGlobal().add(fileName);
 				material->occlusionMapName = fileName;
 				material->SetDirty();
 				fileName = wiHelper::GetFileNameFromPath(fileName);

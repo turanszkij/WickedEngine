@@ -25,27 +25,27 @@ void RenderPath3D_Forward::ResizeBuffers()
 		}
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
-		desc.SampleDesc.Count = getMSAASampleCount();
+		desc.SampleCount = getMSAASampleCount();
 
 		desc.Format = wiRenderer::RTFormat_hdr;
-		device->CreateTexture2D(&desc, nullptr, &rtMain[0]);
+		device->CreateTexture(&desc, nullptr, &rtMain[0]);
 		device->SetName(&rtMain[0], "rtMain[0]");
 
 		desc.Format = wiRenderer::RTFormat_gbuffer_1;
-		device->CreateTexture2D(&desc, nullptr, &rtMain[1]);
+		device->CreateTexture(&desc, nullptr, &rtMain[1]);
 		device->SetName(&rtMain[1], "rtMain[1]");
 
 		if (getMSAASampleCount() > 1)
 		{
-			desc.SampleDesc.Count = 1;
+			desc.SampleCount = 1;
 			desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 
 			desc.Format = wiRenderer::RTFormat_hdr;
-			device->CreateTexture2D(&desc, nullptr, &rtMain_resolved[0]);
+			device->CreateTexture(&desc, nullptr, &rtMain_resolved[0]);
 			device->SetName(&rtMain_resolved[0], "rtMain_resolved[0]");
 
 			desc.Format = wiRenderer::RTFormat_gbuffer_1;
-			device->CreateTexture2D(&desc, nullptr, &rtMain_resolved[1]);
+			device->CreateTexture(&desc, nullptr, &rtMain_resolved[1]);
 			device->SetName(&rtMain_resolved[1], "rtMain_resolved[1]");
 		}
 	}
@@ -127,9 +127,23 @@ void RenderPath3D_Forward::Render() const
 		}
 		else
 		{
-			device->Barrier(&GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL, IMAGE_LAYOUT_COPY_SRC), 1, cmd);
-			device->CopyTexture2D(&depthBuffer_Copy, &depthBuffer, cmd);
-			device->Barrier(&GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_COPY_SRC, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY), 1, cmd);
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL, IMAGE_LAYOUT_COPY_SRC),
+					GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_COPY_DST)
+				};
+				device->Barrier(barriers, ARRAYSIZE(barriers), cmd);
+			}
+
+			device->CopyResource(&depthBuffer_Copy, &depthBuffer, cmd);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_COPY_SRC, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY),
+					GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_COPY_DST, IMAGE_LAYOUT_SHADER_RESOURCE)
+				};
+				device->Barrier(barriers, ARRAYSIZE(barriers), cmd);
+			}
 		}
 
 		RenderLinearDepth(cmd);

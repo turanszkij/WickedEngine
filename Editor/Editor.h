@@ -34,7 +34,7 @@ class Editor;
 class EditorComponent : public RenderPath2D
 {
 private:
-	wiGraphics::Texture2D pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex, soundTex;
+	wiGraphics::Texture pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex, soundTex;
 public:
 	std::unique_ptr<MaterialWindow>			materialWnd;
 	std::unique_ptr<PostprocessWindow>		postprocessWnd;
@@ -86,8 +86,8 @@ public:
 		EDITORSTENCILREF_HIGHLIGHT_MATERIAL = 0x02,
 		EDITORSTENCILREF_LAST = 0x0F,
 	};
-	wiGraphics::Texture2D rt_selectionOutline_MSAA;
-	wiGraphics::Texture2D rt_selectionOutline[2];
+	wiGraphics::Texture rt_selectionOutline_MSAA;
+	wiGraphics::Texture rt_selectionOutline[2];
 	wiGraphics::RenderPass renderpass_selectionOutline[2];
 	float selectionOutlineTimer = 0;
 	const XMFLOAT4 selectionColor = XMFLOAT4(1, 0.6f, 0, 1);

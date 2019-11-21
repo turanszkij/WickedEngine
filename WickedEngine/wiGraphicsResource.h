@@ -82,16 +82,14 @@ namespace wiGraphics
 
 	struct GPUResource : public GraphicsDeviceChild
 	{
-		enum GPU_RESOURCE_TYPE
+		enum class GPU_RESOURCE_TYPE
 		{
 			BUFFER,
-			TEXTURE_1D,
-			TEXTURE_2D,
-			TEXTURE_3D,
+			TEXTURE,
 			UNKNOWN_TYPE,
-		} type = UNKNOWN_TYPE;
-		inline bool IsTexture() const { return type == TEXTURE_1D || type == TEXTURE_2D || type == TEXTURE_3D; }
-		inline bool IsBuffer() const { return type == BUFFER; }
+		} type = GPU_RESOURCE_TYPE::UNKNOWN_TYPE;
+		inline bool IsTexture() const { return type == GPU_RESOURCE_TYPE::TEXTURE; }
+		inline bool IsBuffer() const { return type == GPU_RESOURCE_TYPE::BUFFER; }
 
 		wiCPUHandle SRV = WI_NULL_HANDLE;
 		std::vector<wiCPUHandle> subresourceSRVs;
@@ -161,22 +159,9 @@ namespace wiGraphics
 		wiCPUHandle	DSV = WI_NULL_HANDLE;
 		std::vector<wiCPUHandle> subresourceDSVs;
 
+		~Texture();
+
 		const TextureDesc& GetDesc() const { return desc; }
-	};
-
-	struct Texture1D : public Texture
-	{
-		virtual ~Texture1D();
-	};
-
-	struct Texture2D : public Texture
-	{
-		virtual ~Texture2D();
-	};
-
-	struct Texture3D : public Texture
-	{
-		virtual ~Texture3D();
 	};
 
 

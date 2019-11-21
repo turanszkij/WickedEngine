@@ -73,7 +73,7 @@ namespace wiHelper
 		assert(result);
 	}
 
-	bool saveTextureToFile(wiGraphics::Texture2D& texture, const string& fileName)
+	bool saveTextureToFile(wiGraphics::Texture& texture, const string& fileName)
 	{
 		using namespace wiGraphics;
 
@@ -88,13 +88,13 @@ namespace wiHelper
 
 		vector<uint8_t> data(data_size);
 
-		Texture2D stagingTex;
+		Texture stagingTex;
 		TextureDesc staging_desc = desc;
 		staging_desc.Usage = USAGE_STAGING;
 		staging_desc.CPUAccessFlags = CPU_ACCESS_READ;
 		staging_desc.BindFlags = 0;
 		staging_desc.MiscFlags = 0;
-		HRESULT hr = device->CreateTexture2D(&staging_desc, nullptr, &stagingTex);
+		HRESULT hr = device->CreateTexture(&staging_desc, nullptr, &stagingTex);
 		assert(SUCCEEDED(hr));
 
 		bool download_success = device->DownloadResource(&texture, &stagingTex, data.data());

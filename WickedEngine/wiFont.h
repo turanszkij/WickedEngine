@@ -39,7 +39,7 @@ public:
 	static void CleanUp();
 
 	static void LoadShaders();
-	static const wiGraphics::Texture2D* GetAtlas();
+	static const wiGraphics::Texture* GetAtlas();
 
 	// Returns the font path that can be modified
 	static std::string& GetFontPath();

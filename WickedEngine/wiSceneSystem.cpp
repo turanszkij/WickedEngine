@@ -226,7 +226,7 @@ namespace wiSceneSystem
 		XMStoreFloat3(&scale_local, S);
 	}
 
-	const Texture2D* MaterialComponent::GetBaseColorMap() const
+	const Texture* MaterialComponent::GetBaseColorMap() const
 	{
 		if (baseColorMap != nullptr)
 		{
@@ -234,7 +234,7 @@ namespace wiSceneSystem
 		}
 		return wiTextureHelper::getWhite();
 	}
-	const Texture2D* MaterialComponent::GetNormalMap() const
+	const Texture* MaterialComponent::GetNormalMap() const
 	{
 		return normalMap;
 		//if (normalMap != nullptr)
@@ -243,7 +243,7 @@ namespace wiSceneSystem
 		//}
 		//return wiTextureHelper::getNormalMapDefault();
 	}
-	const Texture2D* MaterialComponent::GetSurfaceMap() const
+	const Texture* MaterialComponent::GetSurfaceMap() const
 	{
 		if (surfaceMap != nullptr)
 		{
@@ -251,7 +251,7 @@ namespace wiSceneSystem
 		}
 		return wiTextureHelper::getWhite();
 	}
-	const Texture2D* MaterialComponent::GetDisplacementMap() const
+	const Texture* MaterialComponent::GetDisplacementMap() const
 	{
 		if (displacementMap != nullptr)
 		{
@@ -259,7 +259,7 @@ namespace wiSceneSystem
 		}
 		return wiTextureHelper::getWhite();
 	}
-	const Texture2D* MaterialComponent::GetEmissiveMap() const
+	const Texture* MaterialComponent::GetEmissiveMap() const
 	{
 		if (emissiveMap != nullptr)
 		{
@@ -267,7 +267,7 @@ namespace wiSceneSystem
 		}
 		return wiTextureHelper::getWhite();
 	}
-	const Texture2D* MaterialComponent::GetOcclusionMap() const
+	const Texture* MaterialComponent::GetOcclusionMap() const
 	{
 		if (occlusionMap != nullptr)
 		{
@@ -895,8 +895,8 @@ namespace wiSceneSystem
 		staging_desc.BindFlags = 0;
 		staging_desc.MiscFlags = 0;
 
-		Texture2D stagingTex;
-		hr = device->CreateTexture2D(&staging_desc, nullptr, &stagingTex);
+		Texture stagingTex;
+		hr = device->CreateTexture(&staging_desc, nullptr, &stagingTex);
 		assert(SUCCEEDED(hr));
 
 		bool download_success = device->DownloadResource(lightmap.get(), &stagingTex, lightmapTextureData.data());
@@ -1329,12 +1329,12 @@ namespace wiSceneSystem
 		if (!textureName.empty())
 		{
 			material.baseColorMapName = textureName;
-			material.baseColorMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.baseColorMapName);
+			material.baseColorMap = (Texture*)wiResourceManager::GetGlobal().add(material.baseColorMapName);
 		}
 		if (!normalMapName.empty())
 		{
 			material.normalMapName = normalMapName;
-			material.normalMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.normalMapName);
+			material.normalMap = (Texture*)wiResourceManager::GetGlobal().add(material.normalMapName);
 		}
 
 		return entity;

@@ -9,8 +9,8 @@ class wiSprite
 {
 private:
 	std::string texture, mask;
-	const wiGraphics::Texture2D* texturePointer = nullptr;
-	const wiGraphics::Texture2D* maskPointer = nullptr;
+	const wiGraphics::Texture* texturePointer = nullptr;
+	const wiGraphics::Texture* maskPointer = nullptr;
 public:
 	wiSprite(const std::string& newTexture = "", const std::string& newMask = "");
 	void Destroy();
@@ -80,7 +80,7 @@ public:
 	};
 	Anim anim;
 	
-	const wiGraphics::Texture2D* getTexture() { return texturePointer; }
-	void setTexture(const wiGraphics::Texture2D* value) { texturePointer = value; }
+	const wiGraphics::Texture* getTexture() { return texturePointer; }
+	void setTexture(const wiGraphics::Texture* value) { texturePointer = value; }
 };
 

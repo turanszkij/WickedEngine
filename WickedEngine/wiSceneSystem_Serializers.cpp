@@ -131,27 +131,27 @@ namespace wiSceneSystem
 
 			if (!baseColorMapName.empty())
 			{
-				baseColorMap = (wiGraphics::Texture2D*)wiResourceManager::GetGlobal().add(dir + baseColorMapName);
+				baseColorMap = (wiGraphics::Texture*)wiResourceManager::GetGlobal().add(dir + baseColorMapName);
 			}
 			if (!surfaceMapName.empty())
 			{
-				surfaceMap = (wiGraphics::Texture2D*)wiResourceManager::GetGlobal().add(dir + surfaceMapName);
+				surfaceMap = (wiGraphics::Texture*)wiResourceManager::GetGlobal().add(dir + surfaceMapName);
 			}
 			if (!normalMapName.empty())
 			{
-				normalMap = (wiGraphics::Texture2D*)wiResourceManager::GetGlobal().add(dir + normalMapName);
+				normalMap = (wiGraphics::Texture*)wiResourceManager::GetGlobal().add(dir + normalMapName);
 			}
 			if (!displacementMapName.empty())
 			{
-				displacementMap = (wiGraphics::Texture2D*)wiResourceManager::GetGlobal().add(dir + displacementMapName);
+				displacementMap = (wiGraphics::Texture*)wiResourceManager::GetGlobal().add(dir + displacementMapName);
 			}
 			if (!emissiveMapName.empty())
 			{
-				emissiveMap = (wiGraphics::Texture2D*)wiResourceManager::GetGlobal().add(dir + emissiveMapName);
+				emissiveMap = (wiGraphics::Texture*)wiResourceManager::GetGlobal().add(dir + emissiveMapName);
 			}
 			if (!occlusionMapName.empty())
 			{
-				occlusionMap = (wiGraphics::Texture2D*)wiResourceManager::GetGlobal().add(dir + occlusionMapName);
+				occlusionMap = (wiGraphics::Texture*)wiResourceManager::GetGlobal().add(dir + occlusionMapName);
 			}
 
 		}
@@ -489,7 +489,7 @@ namespace wiSceneSystem
 			{
 				if (!lensFlareNames[i].empty())
 				{
-					lensFlareRimTextures[i] = (wiGraphics::Texture2D*)wiResourceManager::GetGlobal().add(dir + lensFlareNames[i]);
+					lensFlareRimTextures[i] = (wiGraphics::Texture*)wiResourceManager::GetGlobal().add(dir + lensFlareNames[i]);
 				}
 			}
 		}

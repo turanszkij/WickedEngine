@@ -24,12 +24,12 @@ void RenderPath3D_TiledDeferred::ResizeBuffers()
 		TextureDesc desc;
 		desc = lightbuffer_diffuse.GetDesc();
 		desc.Format = FORMAT_R16G16B16A16_FLOAT;
-		device->CreateTexture2D(&desc, nullptr, &lightbuffer_diffuse_noR11G11B10supportavailable);
+		device->CreateTexture(&desc, nullptr, &lightbuffer_diffuse_noR11G11B10supportavailable);
 		device->SetName(&lightbuffer_diffuse_noR11G11B10supportavailable, "lightbuffer_diffuse_noR11G11B10supportavailable");
 
 		desc = lightbuffer_specular.GetDesc();
 		desc.Format = FORMAT_R16G16B16A16_FLOAT;
-		device->CreateTexture2D(&desc, nullptr, &lightbuffer_specular_noR11G11B10supportavailable);
+		device->CreateTexture(&desc, nullptr, &lightbuffer_specular_noR11G11B10supportavailable);
 		device->SetName(&lightbuffer_specular_noR11G11B10supportavailable, "lightbuffer_specular_noR11G11B10supportavailable");
 	}
 }
@@ -73,9 +73,23 @@ void RenderPath3D_TiledDeferred::Render() const
 			wiProfiler::EndRange(range); // Opaque Scene
 		}
 
-		device->Barrier(&GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL, IMAGE_LAYOUT_COPY_SRC), 1, cmd);
-		device->CopyTexture2D(&depthBuffer_Copy, &depthBuffer, cmd);
-		device->Barrier(&GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_COPY_SRC, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY), 1, cmd);
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL, IMAGE_LAYOUT_COPY_SRC),
+				GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_COPY_DST)
+			};
+			device->Barrier(barriers, ARRAYSIZE(barriers), cmd);
+		}
+
+		device->CopyResource(&depthBuffer_Copy, &depthBuffer, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_COPY_SRC, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY),
+				GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_COPY_DST, IMAGE_LAYOUT_SHADER_RESOURCE)
+			};
+			device->Barrier(barriers, ARRAYSIZE(barriers), cmd);
+		}
 
 		RenderLinearDepth(cmd);
 

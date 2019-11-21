@@ -26,10 +26,10 @@ private:
 
 	// Scene material resources:
 	wiGraphics::GPUBuffer globalMaterialBuffer;
-	wiGraphics::Texture2D globalMaterialAtlas;
+	wiGraphics::Texture globalMaterialAtlas;
 	std::vector<ShaderMaterial> materialArray;
-	std::unordered_map<const wiGraphics::Texture2D*, wiRectPacker::rect_xywh> storedTextures;
-	std::unordered_set<const wiGraphics::Texture2D*> sceneTextures;
+	std::unordered_map<const wiGraphics::Texture*, wiRectPacker::rect_xywh> storedTextures;
+	std::unordered_set<const wiGraphics::Texture*> sceneTextures;
 	void UpdateGlobalMaterialResources(const wiSceneSystem::Scene& scene, wiGraphics::CommandList cmd);
 
 public:

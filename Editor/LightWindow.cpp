@@ -277,7 +277,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 
 				if (result.ok) {
 					std::string fileName = result.filenames.front();
-					light->lensFlareRimTextures[i] = (Texture2D*)wiResourceManager::GetGlobal().add(fileName);
+					light->lensFlareRimTextures[i] = (Texture*)wiResourceManager::GetGlobal().add(fileName);
 					light->lensFlareNames[i] = fileName;
 					fileName = wiHelper::GetFileNameFromPath(fileName);
 					lensflare_Button[i]->SetText(fileName);

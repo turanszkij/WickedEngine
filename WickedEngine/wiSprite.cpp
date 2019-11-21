@@ -12,11 +12,11 @@ wiSprite::wiSprite(const std::string& newTexture, const std::string& newMask)
 	if (!newTexture.empty())
 	{
 		texture = newTexture;
-		texturePointer = (Texture2D*)wiResourceManager::GetGlobal().add(newTexture);
+		texturePointer = (Texture*)wiResourceManager::GetGlobal().add(newTexture);
 	}
 	if (!newMask.empty())
 	{
-		maskPointer = (Texture2D*)wiResourceManager::GetGlobal().add(newMask);
+		maskPointer = (Texture*)wiResourceManager::GetGlobal().add(newMask);
 		params.setMaskMap(maskPointer);
 		mask = newMask;
 	}

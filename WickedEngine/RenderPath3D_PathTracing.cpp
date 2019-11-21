@@ -26,7 +26,7 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 		desc.Format = FORMAT_R32G32B32A32_FLOAT;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
-		device->CreateTexture2D(&desc, nullptr, &traceResult);
+		device->CreateTexture(&desc, nullptr, &traceResult);
 		device->SetName(&traceResult, "traceResult");
 	}
 	{
@@ -35,7 +35,7 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 		desc.Format = defaultTextureFormat;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
-		device->CreateTexture2D(&desc, nullptr, &rtPostprocess_LDR[0]);
+		device->CreateTexture(&desc, nullptr, &rtPostprocess_LDR[0]);
 		device->SetName(&rtPostprocess_LDR[0], "rtPostprocess_LDR[0]");
 	}
 

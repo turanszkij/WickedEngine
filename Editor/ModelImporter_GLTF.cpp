@@ -91,7 +91,7 @@ namespace tinygltf
 	}
 }
 
-void RegisterTexture2D(tinygltf::Image *image, const string& type_name)
+void RegisterTexture(tinygltf::Image *image, const string& type_name)
 {
 	// We will load the texture2d by hand here and register to the resource manager (if it was not already registered)
 	if (wiResourceManager::GetGlobal().get(wiHashString(image->uri)).data == nullptr)
@@ -124,8 +124,8 @@ void RegisterTexture2D(tinygltf::Image *image, const string& type_name)
 				mipwidth = std::max(1u, mipwidth / 2);
 			}
 
-			Texture2D* tex = new Texture2D;
-			HRESULT hr = device->CreateTexture2D(&desc, InitData.data(), tex);
+			Texture* tex = new Texture;
+			HRESULT hr = device->CreateTexture(&desc, InitData.data(), tex);
 			assert(SUCCEEDED(hr));
 
 			for (UINT i = 0; i < tex->GetDesc().MipLevels; ++i)
@@ -155,7 +155,7 @@ void RegisterTexture2D(tinygltf::Image *image, const string& type_name)
 				}
 
 				// We loaded the texture2d, so register to the resource manager to be retrieved later:
-				wiResourceManager::GetGlobal().Register(image->uri, tex, wiResourceManager::IMAGE_2D);
+				wiResourceManager::GetGlobal().Register(image->uri, tex, wiResourceManager::IMAGE);
 			}
 		}
 	}
@@ -347,7 +347,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		{
 			auto& tex = state.gltfModel.textures[baseColorTexture->second.TextureIndex()];
 			auto& img = state.gltfModel.images[tex.source];
-			RegisterTexture2D(&img, "basecolor");
+			RegisterTexture(&img, "basecolor");
 			material.baseColorMapName = img.uri;
 			material.uvset_baseColorMap = baseColorTexture->second.TextureTexCoord();
 		}
@@ -355,7 +355,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		{
 			auto& tex = state.gltfModel.textures[normalTexture->second.TextureIndex()];
 			auto& img = state.gltfModel.images[tex.source];
-			RegisterTexture2D(&img, "normal");
+			RegisterTexture(&img, "normal");
 			material.normalMapName = img.uri;
 			material.SetFlipNormalMap(true); // gltf import will always flip normal map by default
 			material.uvset_normalMap = normalTexture->second.TextureTexCoord();
@@ -364,7 +364,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		{
 			auto& tex = state.gltfModel.textures[metallicRoughnessTexture->second.TextureIndex()];
 			auto& img = state.gltfModel.images[tex.source];
-			RegisterTexture2D(&img, "roughness_metallic");
+			RegisterTexture(&img, "roughness_metallic");
 			material.surfaceMapName = img.uri;
 			material.uvset_surfaceMap = metallicRoughnessTexture->second.TextureTexCoord();
 		}
@@ -372,7 +372,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		{
 			auto& tex = state.gltfModel.textures[emissiveTexture->second.TextureIndex()];
 			auto& img = state.gltfModel.images[tex.source];
-			RegisterTexture2D(&img, "emissive");
+			RegisterTexture(&img, "emissive");
 			material.emissiveMapName = img.uri;
 			material.uvset_emissiveMap = emissiveTexture->second.TextureTexCoord();
 		}
@@ -380,7 +380,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		{
 			auto& tex = state.gltfModel.textures[occlusionTexture->second.TextureIndex()];
 			auto& img = state.gltfModel.images[tex.source];
-			RegisterTexture2D(&img, "occlusion");
+			RegisterTexture(&img, "occlusion");
 			material.occlusionMapName = img.uri;
 			material.uvset_occlusionMap = occlusionTexture->second.TextureTexCoord();
 			material.SetOcclusionEnabled_Secondary(true);
@@ -431,7 +431,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				int index = specularGlossinessWorkflow->second.Get("diffuseTexture").Get("index").Get<int>();
 				auto& tex = state.gltfModel.textures[index];
 				auto& img = state.gltfModel.images[tex.source];
-				RegisterTexture2D(&img, "diffuse");
+				RegisterTexture(&img, "diffuse");
 				material.baseColorMapName = img.uri;
 				material.uvset_baseColorMap = (uint32_t)specularGlossinessWorkflow->second.Get("diffuseTexture").Get("texCoord").Get<int>();
 			}
@@ -440,7 +440,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				int index = specularGlossinessWorkflow->second.Get("specularGlossinessTexture").Get("index").Get<int>();
 				auto& tex = state.gltfModel.textures[index];
 				auto& img = state.gltfModel.images[tex.source];
-				RegisterTexture2D(&img, "specular_glossiness");
+				RegisterTexture(&img, "specular_glossiness");
 				material.surfaceMapName = img.uri;
 				material.uvset_surfaceMap = (uint32_t)specularGlossinessWorkflow->second.Get("specularGlossinessTexture").Get("texCoord").Get<int>();
 			}
@@ -473,15 +473,15 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 		// Retrieve textures by name:
 		if (!material.baseColorMapName.empty())
-			material.baseColorMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.baseColorMapName);
+			material.baseColorMap = (Texture*)wiResourceManager::GetGlobal().add(material.baseColorMapName);
 		if (!material.normalMapName.empty())
-			material.normalMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.normalMapName);
+			material.normalMap = (Texture*)wiResourceManager::GetGlobal().add(material.normalMapName);
 		if (!material.surfaceMapName.empty())
-			material.surfaceMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.surfaceMapName);
+			material.surfaceMap = (Texture*)wiResourceManager::GetGlobal().add(material.surfaceMapName);
 		if (!material.emissiveMapName.empty())
-			material.emissiveMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.emissiveMapName);
+			material.emissiveMap = (Texture*)wiResourceManager::GetGlobal().add(material.emissiveMapName);
 		if (!material.occlusionMapName.empty())
-			material.occlusionMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.occlusionMapName);
+			material.occlusionMap = (Texture*)wiResourceManager::GetGlobal().add(material.occlusionMapName);
 
 	}
 

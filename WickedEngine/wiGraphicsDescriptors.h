@@ -16,7 +16,6 @@ namespace wiGraphics
 	struct GPUResource;
 	struct GPUBuffer;
 	struct Texture;
-	struct Texture2D;
 
 	enum SHADERSTAGE
 	{
@@ -271,6 +270,30 @@ namespace wiGraphics
 		RTV,
 		DSV,
 	};
+	enum IMAGE_LAYOUT
+	{
+		IMAGE_LAYOUT_UNDEFINED,					// discard contents
+		IMAGE_LAYOUT_GENERAL,					// supports everything
+		IMAGE_LAYOUT_RENDERTARGET,				// render target, write enabled
+		IMAGE_LAYOUT_DEPTHSTENCIL,				// depth stencil, write enabled
+		IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,		// depth stencil, read only
+		IMAGE_LAYOUT_SHADER_RESOURCE,			// shader resource, read only
+		IMAGE_LAYOUT_UNORDERED_ACCESS,			// shader resource, write enabled
+		IMAGE_LAYOUT_COPY_SRC,					// copy from
+		IMAGE_LAYOUT_COPY_DST,					// copy to
+	};
+	enum BUFFER_STATE
+	{
+		BUFFER_STATE_GENERAL,					// supports everything
+		BUFFER_STATE_VERTEX_BUFFER,				// vertex buffer, read only
+		BUFFER_STATE_INDEX_BUFFER,				// index buffer, read only
+		BUFFER_STATE_CONSTANT_BUFFER,			// constant buffer, read only
+		BUFFER_STATE_INDIRECT_ARGUMENT,			// argument buffer to DrawIndirect() or DispatchIndirect()
+		BUFFER_STATE_SHADER_RESOURCE,			// shader resource, read only
+		BUFFER_STATE_UNORDERED_ACCESS,			// shader resource, write enabled
+		BUFFER_STATE_COPY_SRC,					// copy from
+		BUFFER_STATE_COPY_DST,					// copy to
+	};
 
 	// Flags ////////////////////////////////////////////
 	enum BIND_FLAG
@@ -298,30 +321,6 @@ namespace wiGraphics
 		RESOURCE_MISC_BUFFER_STRUCTURED = 0x40L,
 		RESOURCE_MISC_TILED = 0x40000L,
 	};
-	enum IMAGE_LAYOUT
-	{
-		IMAGE_LAYOUT_UNDEFINED,					// discard contents
-		IMAGE_LAYOUT_GENERAL,					// supports everything
-		IMAGE_LAYOUT_RENDERTARGET,				// render target, write enabled
-		IMAGE_LAYOUT_DEPTHSTENCIL,				// depth stencil, write enabled
-		IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,		// depth stencil, read only
-		IMAGE_LAYOUT_SHADER_RESOURCE,			// shader resource, read only
-		IMAGE_LAYOUT_UNORDERED_ACCESS,			// shader resource, write enabled
-		IMAGE_LAYOUT_COPY_SRC,					// copy from
-		IMAGE_LAYOUT_COPY_DST,					// copy to
-	};
-	enum BUFFER_STATE
-	{
-		BUFFER_STATE_GENERAL,					// supports everything
-		BUFFER_STATE_VERTEX_BUFFER,				// vertex buffer, read only
-		BUFFER_STATE_INDEX_BUFFER,				// index buffer, read only
-		BUFFER_STATE_CONSTANT_BUFFER,			// constant buffer, read only
-		BUFFER_STATE_INDIRECT_ARGUMENT,			// argument buffer to DrawIndirect() or DispatchIndirect()
-		BUFFER_STATE_SHADER_RESOURCE,			// shader resource, read only
-		BUFFER_STATE_UNORDERED_ACCESS,			// shader resource, write enabled
-		BUFFER_STATE_COPY_SRC,					// copy from
-		BUFFER_STATE_COPY_DST,					// copy to
-	};
 
 	// Structs /////////////////////////////////////////////
 
@@ -346,11 +345,6 @@ namespace wiGraphics
 		INPUT_CLASSIFICATION InputSlotClass = INPUT_CLASSIFICATION::INPUT_PER_VERTEX_DATA;
 		UINT InstanceDataStepRate = 0;
 	};
-	struct SampleDesc
-	{
-		UINT Count = 1;
-		UINT Quality = 0;
-	};
 	union ClearValue
 	{
 		float color[4];
@@ -362,13 +356,19 @@ namespace wiGraphics
 	};
 	struct TextureDesc
 	{
+		enum TEXTURE_TYPE
+		{
+			TEXTURE_1D,
+			TEXTURE_2D,
+			TEXTURE_3D,
+		} type = TEXTURE_2D;
 		UINT Width = 0;
 		UINT Height = 0;
 		UINT Depth = 0;
 		UINT ArraySize = 1;
 		UINT MipLevels = 1;
 		FORMAT Format = FORMAT_UNKNOWN;
-		SampleDesc SampleDesc;
+		UINT SampleCount = 1;
 		USAGE Usage = USAGE_DEFAULT;
 		UINT BindFlags = 0;
 		UINT CPUAccessFlags = 0;
@@ -541,7 +541,7 @@ namespace wiGraphics
 			LOADOP_CLEAR,
 			LOADOP_DONTCARE,
 		} loadop = LOADOP_LOAD;
-		const Texture2D* texture = nullptr;
+		const Texture* texture = nullptr;
 		int subresource = -1;
 		enum STORE_OPERATION
 		{

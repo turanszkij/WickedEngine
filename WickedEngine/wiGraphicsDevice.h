@@ -31,9 +31,7 @@ namespace wiGraphics
 	public:
 
 		virtual HRESULT CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) = 0;
-		virtual HRESULT CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D *pTexture1D) = 0;
-		virtual HRESULT CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D *pTexture2D) = 0;
-		virtual HRESULT CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D *pTexture3D) = 0;
+		virtual HRESULT CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) = 0;
 		virtual HRESULT CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout) = 0;
 		virtual HRESULT CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, VertexShader *pVertexShader) = 0;
 		virtual HRESULT CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, PixelShader *pPixelShader) = 0;
@@ -53,9 +51,7 @@ namespace wiGraphics
 
 		virtual void DestroyResource(GPUResource* pResource) = 0;
 		virtual void DestroyBuffer(GPUBuffer *pBuffer) = 0;
-		virtual void DestroyTexture1D(Texture1D *pTexture1D) = 0;
-		virtual void DestroyTexture2D(Texture2D *pTexture2D) = 0;
-		virtual void DestroyTexture3D(Texture3D *pTexture3D) = 0;
+		virtual void DestroyTexture(Texture *pTexture) = 0;
 		virtual void DestroyInputLayout(VertexLayout *pInputLayout) = 0;
 		virtual void DestroyVertexShader(VertexShader *pVertexShader) = 0;
 		virtual void DestroyPixelShader(PixelShader *pPixelShader) = 0;
@@ -94,7 +90,7 @@ namespace wiGraphics
 
 		virtual void SetResolution(int width, int height) = 0;
 
-		virtual Texture2D GetBackBuffer() = 0;
+		virtual Texture GetBackBuffer() = 0;
 
 		enum GRAPHICSDEVICE_CAPABILITY
 		{
@@ -150,9 +146,9 @@ namespace wiGraphics
 		virtual void DrawIndexedInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd) = 0;
 		virtual void Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, CommandList cmd) = 0;
 		virtual void DispatchIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd) = 0;
-		virtual void CopyTexture2D(const Texture2D* pDst, const Texture2D* pSrc, CommandList cmd) = 0;
-		virtual void CopyTexture2D_Region(const Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture2D* pSrc, UINT srcMip, CommandList cmd) = 0;
-		virtual void MSAAResolve(const Texture2D* pDst, const Texture2D* pSrc, CommandList cmd) = 0;
+		virtual void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) = 0;
+		virtual void CopyTexture2D_Region(const Texture* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture* pSrc, UINT srcMip, CommandList cmd) = 0;
+		virtual void MSAAResolve(const Texture* pDst, const Texture* pSrc, CommandList cmd) = 0;
 		virtual void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) = 0;
 		virtual void QueryBegin(const GPUQuery *query, CommandList cmd) = 0;
 		virtual void QueryEnd(const GPUQuery *query, CommandList cmd) = 0;

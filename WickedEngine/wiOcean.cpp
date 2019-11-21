@@ -85,7 +85,7 @@ void createBufferAndUAV(void* data, UINT byte_width, UINT byte_stride, GPUBuffer
 
 }
 
-void createTextureAndViews(UINT width, UINT height, FORMAT format, Texture2D* pTex)
+void createTextureAndViews(UINT width, UINT height, FORMAT format, Texture* pTex)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -95,13 +95,12 @@ void createTextureAndViews(UINT width, UINT height, FORMAT format, Texture2D* pT
 	tex_desc.MipLevels = 0;
 	tex_desc.ArraySize = 1;
 	tex_desc.Format = format;
-	tex_desc.SampleDesc.Count = 1;
-	tex_desc.SampleDesc.Quality = 0;
+	tex_desc.SampleCount = 1;
 	tex_desc.Usage = USAGE_DEFAULT;
 	tex_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS | BIND_RENDER_TARGET;
 	tex_desc.CPUAccessFlags = 0;
 
-	device->CreateTexture2D(&tex_desc, nullptr, pTex);
+	device->CreateTexture(&tex_desc, nullptr, pTex);
 
 	for (UINT i = 0; i < pTex->GetDesc().MipLevels; ++i)
 	{
@@ -462,12 +461,12 @@ void wiOcean::Initialize()
 	wiBackLog::post("wiOcean Initialized");
 }
 
-const Texture2D* wiOcean::getDisplacementMap() const
+const Texture* wiOcean::getDisplacementMap() const
 {
 	return &m_pDisplacementMap;
 }
 
-const Texture2D* wiOcean::getGradientMap() const
+const Texture* wiOcean::getGradientMap() const
 {
 	return &m_pGradientMap;
 }

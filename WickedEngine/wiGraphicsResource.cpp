@@ -107,27 +107,11 @@ namespace wiGraphics
 		}
 	}
 
-	Texture1D::~Texture1D()
+	Texture::~Texture()
 	{
 		if (device != nullptr)
 		{
-			device->DestroyTexture1D(this);
-		}
-	}
-
-	Texture2D::~Texture2D()
-	{
-		if (device != nullptr)
-		{
-			device->DestroyTexture2D(this);
-		}
-	}
-
-	Texture3D::~Texture3D()
-	{
-		if (device != nullptr)
-		{
-			device->DestroyTexture3D(this);
+			device->DestroyTexture(this);
 		}
 	}
 

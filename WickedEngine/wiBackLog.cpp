@@ -38,7 +38,7 @@ namespace wiBackLog
 	wiFont font;
 	wiSpinLock logLock;
 
-	std::unique_ptr<Texture2D> backgroundTex;
+	std::unique_ptr<Texture> backgroundTex;
 
 	void Toggle() 
 	{
@@ -86,7 +86,7 @@ namespace wiBackLog
 			if (backgroundTex == nullptr)
 			{
 				const uint8_t colorData[] = { 0, 0, 43, 200, 43, 31, 141, 223 };
-				backgroundTex.reset(new Texture2D);
+				backgroundTex.reset(new Texture);
 				HRESULT hr = wiTextureHelper::CreateTexture(*backgroundTex.get(), colorData, 1, 2);
 				assert(SUCCEEDED(hr));
 			}
@@ -181,7 +181,7 @@ namespace wiBackLog
 		}
 	}
 
-	void setBackground(Texture2D* texture)
+	void setBackground(Texture* texture)
 	{
 		backgroundTex.reset(texture);
 	}

@@ -20,8 +20,8 @@ namespace wiTextureHelper
 		HELPERTEXTURE_BLACKCUBEMAP,
 		HELPERTEXTURE_COUNT
 	};
-	wiGraphics::Texture2D helperTextures[HELPERTEXTURE_COUNT] = {};
-	std::unordered_map<unsigned long, wiGraphics::Texture2D*> colorTextures;
+	wiGraphics::Texture helperTextures[HELPERTEXTURE_COUNT];
+	std::unordered_map<unsigned long, wiGraphics::Texture*> colorTextures;
 	wiSpinLock colorlock;
 
 	void Initialize()
@@ -91,8 +91,7 @@ namespace wiTextureHelper
 			texDesc.ArraySize = 6;
 			texDesc.Format = FORMAT_R8G8B8A8_UNORM;
 			texDesc.CPUAccessFlags = 0;
-			texDesc.SampleDesc.Count = 1;
-			texDesc.SampleDesc.Quality = 0;
+			texDesc.SampleCount = 1;
 			texDesc.Usage = USAGE_DEFAULT;
 			texDesc.BindFlags = BIND_SHADER_RESOURCE;
 			texDesc.CPUAccessFlags = 0;
@@ -114,7 +113,7 @@ namespace wiTextureHelper
 				pData[cubeMapFaceIndex].SysMemSlicePitch = 0;
 			}
 
-			HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&texDesc, &pData[0], &helperTextures[HELPERTEXTURE_BLACKCUBEMAP]);
+			HRESULT hr = wiRenderer::GetDevice()->CreateTexture(&texDesc, &pData[0], &helperTextures[HELPERTEXTURE_BLACKCUBEMAP]);
 			assert(SUCCEEDED(hr));
 			wiRenderer::GetDevice()->SetName(&helperTextures[HELPERTEXTURE_BLACKCUBEMAP], "HELPERTEXTURE_BLACKCUBEMAP");
 		}
@@ -122,42 +121,42 @@ namespace wiTextureHelper
 		wiBackLog::post("wiTextureHelper Initialized");
 	}
 
-	const Texture2D* getRandom64x64()
+	const Texture* getRandom64x64()
 	{
 		return &helperTextures[HELPERTEXTURE_RANDOM64X64];
 	}
 
-	const Texture2D* getColorGradeDefault()
+	const Texture* getColorGradeDefault()
 	{
 		return &helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT];
 	}
 
-	const Texture2D* getNormalMapDefault()
+	const Texture* getNormalMapDefault()
 	{
 		return getColor(wiColor(127, 127, 255, 255));
 	}
 
-	const Texture2D* getBlackCubeMap()
+	const Texture* getBlackCubeMap()
 	{
 		return &helperTextures[HELPERTEXTURE_BLACKCUBEMAP];
 	}
 
-	const Texture2D* getWhite()
+	const Texture* getWhite()
 	{
 		return getColor(wiColor(255, 255, 255, 255));
 	}
 
-	const Texture2D* getBlack()
+	const Texture* getBlack()
 	{
 		return getColor(wiColor(0, 0, 0, 255));
 	}
 
-	const Texture2D* getTransparent()
+	const Texture* getTransparent()
 	{
 		return getColor(wiColor(0, 0, 0, 0));
 	}
 
-	const Texture2D* getColor(wiColor color)
+	const Texture* getColor(wiColor color)
 	{
 		colorlock.lock();
 		auto it = colorTextures.find(color.rgba);
@@ -180,7 +179,7 @@ namespace wiTextureHelper
 			data[i + 3] = color.getA();
 		}
 
-		Texture2D* texture = new Texture2D;
+		Texture* texture = new Texture;
 		if (FAILED(CreateTexture(*texture, data, dim, dim)))
 		{
 			delete texture;
@@ -196,7 +195,7 @@ namespace wiTextureHelper
 	}
 
 
-	HRESULT CreateTexture(wiGraphics::Texture2D& texture, const uint8_t* data, UINT width, UINT height, FORMAT format)
+	HRESULT CreateTexture(wiGraphics::Texture& texture, const uint8_t* data, UINT width, UINT height, FORMAT format)
 	{
 		if (data == nullptr)
 		{
@@ -210,8 +209,7 @@ namespace wiTextureHelper
 		textureDesc.MipLevels = 1;
 		textureDesc.ArraySize = 1;
 		textureDesc.Format = format;
-		textureDesc.SampleDesc.Count = 1;
-		textureDesc.SampleDesc.Quality = 0;
+		textureDesc.SampleCount = 1;
 		textureDesc.Usage = USAGE_IMMUTABLE;
 		textureDesc.BindFlags = BIND_SHADER_RESOURCE;
 		textureDesc.CPUAccessFlags = 0;
@@ -222,7 +220,7 @@ namespace wiTextureHelper
 		InitData.SysMemPitch = width * device->GetFormatStride(format);
 
 		HRESULT hr;
-		hr = device->CreateTexture2D(&textureDesc, &InitData, &texture);
+		hr = device->CreateTexture(&textureDesc, &InitData, &texture);
 
 		return hr;
 	}

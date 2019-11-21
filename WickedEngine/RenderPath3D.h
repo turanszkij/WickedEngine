@@ -39,33 +39,33 @@ private:
 	bool outlineEnabled = false;
 	bool chromaticAberrationEnabled = false;
 
-	const wiGraphics::Texture2D* colorGradingTex = nullptr;
+	const wiGraphics::Texture* colorGradingTex = nullptr;
 
 	UINT msaaSampleCount = 1;
 
 protected:
-	wiGraphics::Texture2D rtReflection; // conains the scene rendered for planar reflections
-	wiGraphics::Texture2D rtSSR; // screen-space reflection results
-	wiGraphics::Texture2D rtSceneCopy; // contains the rendered scene that can be fed into transparent pass for distortion effect
-	wiGraphics::Texture2D rtWaterRipple; // water ripple sprite normal maps are rendered into this
-	wiGraphics::Texture2D rtParticleDistortion; // contains distortive particles
-	wiGraphics::Texture2D rtParticleDistortion_Resolved; // contains distortive particles
-	wiGraphics::Texture2D rtVolumetricLights; // contains the volumetric light results
-	wiGraphics::Texture2D rtDof[2]; // depth of field blurred out-of focus part
-	wiGraphics::Texture2D rtTemporalAA[2]; // temporal AA history buffer
-	wiGraphics::Texture2D rtBloom; // contains the bright parts of the image + mipchain
-	wiGraphics::Texture2D rtSSAO[2]; // ping-pong when rendering and blurring SSAO
-	wiGraphics::Texture2D rtSun[2]; // 0: sun render target used for lightshafts (can be MSAA), 1: radial blurred lightshafts
-	wiGraphics::Texture2D rtSun_resolved; // sun render target, but the resolved version if MSAA is enabled
+	wiGraphics::Texture rtReflection; // conains the scene rendered for planar reflections
+	wiGraphics::Texture rtSSR; // screen-space reflection results
+	wiGraphics::Texture rtSceneCopy; // contains the rendered scene that can be fed into transparent pass for distortion effect
+	wiGraphics::Texture rtWaterRipple; // water ripple sprite normal maps are rendered into this
+	wiGraphics::Texture rtParticleDistortion; // contains distortive particles
+	wiGraphics::Texture rtParticleDistortion_Resolved; // contains distortive particles
+	wiGraphics::Texture rtVolumetricLights; // contains the volumetric light results
+	wiGraphics::Texture rtDof[2]; // depth of field blurred out-of focus part
+	wiGraphics::Texture rtTemporalAA[2]; // temporal AA history buffer
+	wiGraphics::Texture rtBloom; // contains the bright parts of the image + mipchain
+	wiGraphics::Texture rtSSAO[2]; // ping-pong when rendering and blurring SSAO
+	wiGraphics::Texture rtSun[2]; // 0: sun render target used for lightshafts (can be MSAA), 1: radial blurred lightshafts
+	wiGraphics::Texture rtSun_resolved; // sun render target, but the resolved version if MSAA is enabled
 
-	wiGraphics::Texture2D rtPostprocess_HDR; // ping-pong with main scene RT in HDR post-process chain
-	wiGraphics::Texture2D rtPostprocess_LDR[2]; // ping-pong with itself in LDR post-process chain
+	wiGraphics::Texture rtPostprocess_HDR; // ping-pong with main scene RT in HDR post-process chain
+	wiGraphics::Texture rtPostprocess_LDR[2]; // ping-pong with itself in LDR post-process chain
 
-	wiGraphics::Texture2D depthBuffer; // used for depth-testing, can be MSAA
-	wiGraphics::Texture2D depthBuffer_Copy; // used for shader resource, single sample
-	wiGraphics::Texture2D depthBuffer_Reflection; // used for reflection, single sample
-	wiGraphics::Texture2D rtLinearDepth; // linear depth result
-	wiGraphics::Texture2D smallDepth; // downsampled depth buffer
+	wiGraphics::Texture depthBuffer; // used for depth-testing, can be MSAA
+	wiGraphics::Texture depthBuffer_Copy; // used for shader resource, single sample
+	wiGraphics::Texture depthBuffer_Reflection; // used for reflection, single sample
+	wiGraphics::Texture rtLinearDepth; // linear depth result
+	wiGraphics::Texture smallDepth; // downsampled depth buffer
 
 	wiGraphics::RenderPass renderpass_occlusionculling;
 	wiGraphics::RenderPass renderpass_reflection;
@@ -76,7 +76,7 @@ protected:
 	wiGraphics::RenderPass renderpass_waterripples;
 
 	// Post-processes are ping-ponged, this function helps to obtain the last postprocess render target that was written
-	const wiGraphics::Texture2D* GetLastPostprocessRT() const
+	const wiGraphics::Texture* GetLastPostprocessRT() const
 	{
 		int ldr_postprocess_count = 0;
 		ldr_postprocess_count += sharpenFilterEnabled ? 1 : 0;
@@ -95,19 +95,19 @@ protected:
 
 	virtual void RenderLinearDepth(wiGraphics::CommandList cmd) const;
 	virtual void RenderSSAO(wiGraphics::CommandList cmd) const;
-	virtual void RenderSSR(const wiGraphics::Texture2D& srcSceneRT, const wiGraphics::Texture2D& gbuffer1, wiGraphics::CommandList cmd) const;
+	virtual void RenderSSR(const wiGraphics::Texture& srcSceneRT, const wiGraphics::Texture& gbuffer1, wiGraphics::CommandList cmd) const;
 	virtual void DownsampleDepthBuffer(wiGraphics::CommandList cmd) const;
-	virtual void RenderOutline(const wiGraphics::Texture2D& dstSceneRT, wiGraphics::CommandList cmd) const;
+	virtual void RenderOutline(const wiGraphics::Texture& dstSceneRT, wiGraphics::CommandList cmd) const;
 	virtual void RenderLightShafts(wiGraphics::CommandList cmd) const;
 	virtual void RenderVolumetrics(wiGraphics::CommandList cmd) const;
-	virtual void RenderRefractionSource(const wiGraphics::Texture2D& srcSceneRT, wiGraphics::CommandList cmd) const;
+	virtual void RenderRefractionSource(const wiGraphics::Texture& srcSceneRT, wiGraphics::CommandList cmd) const;
 	virtual void RenderTransparents(const wiGraphics::RenderPass& renderpass_transparent, RENDERPASS renderPass, wiGraphics::CommandList cmd) const;
-	virtual void TemporalAAResolve(const wiGraphics::Texture2D& srcdstSceneRT, const wiGraphics::Texture2D& srcGbuffer1, wiGraphics::CommandList cmd) const;
+	virtual void TemporalAAResolve(const wiGraphics::Texture& srcdstSceneRT, const wiGraphics::Texture& srcGbuffer1, wiGraphics::CommandList cmd) const;
 	virtual void RenderBloom(const wiGraphics::RenderPass& renderpass_bloom, wiGraphics::CommandList cmd) const;
-	virtual void RenderPostprocessChain(const wiGraphics::Texture2D& srcSceneRT, const wiGraphics::Texture2D& srcGbuffer1, wiGraphics::CommandList cmd) const;
+	virtual void RenderPostprocessChain(const wiGraphics::Texture& srcSceneRT, const wiGraphics::Texture& srcGbuffer1, wiGraphics::CommandList cmd) const;
 	
 public:
-	const wiGraphics::Texture2D* GetDepthStencil() const override { return &depthBuffer; }
+	const wiGraphics::Texture* GetDepthStencil() const override { return &depthBuffer; }
 
 	constexpr float getExposure() const { return exposure; }
 	constexpr float getBloomThreshold() const { return bloomThreshold; }
@@ -141,7 +141,7 @@ public:
 	constexpr bool getOutlineEnabled() const { return outlineEnabled; }
 	constexpr bool getChromaticAberrationEnabled() const { return chromaticAberrationEnabled; }
 
-	constexpr const wiGraphics::Texture2D* getColorGradingTexture() const { return colorGradingTex; }
+	constexpr const wiGraphics::Texture* getColorGradingTexture() const { return colorGradingTex; }
 
 	constexpr UINT getMSAASampleCount() const { return msaaSampleCount; }
 
@@ -177,7 +177,7 @@ public:
 	constexpr void setOutlineEnabled(bool value) { outlineEnabled = value; }
 	constexpr void setChromaticAberrationEnabled(bool value) { chromaticAberrationEnabled = value; }
 
-	constexpr void setColorGradingTexture(const wiGraphics::Texture2D* tex) { colorGradingTex = tex; }
+	constexpr void setColorGradingTexture(const wiGraphics::Texture* tex) { colorGradingTex = tex; }
 
 	virtual void setMSAASampleCount(UINT value) { if (msaaSampleCount != value) { msaaSampleCount = value; ResizeBuffers(); } }
 

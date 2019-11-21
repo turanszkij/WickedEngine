@@ -217,7 +217,7 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 
 				if (result.ok) {
 					string fileName = result.filenames.front();
-					component->setColorGradingTexture((Texture2D*)wiResourceManager::GetGlobal().add(fileName));
+					component->setColorGradingTexture((Texture*)wiResourceManager::GetGlobal().add(fileName));
 					if (component->getColorGradingTexture() != nullptr)
 					{
 						colorGradingButton->SetText(fileName);

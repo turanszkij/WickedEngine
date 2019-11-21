@@ -9,14 +9,14 @@ private:
 	int sam = -1;
 
 protected:
-	wiGraphics::Texture2D traceResult;
+	wiGraphics::Texture traceResult;
 
 	wiGraphics::RenderPass renderpass_debugbvh;
 
 	void ResizeBuffers() override;
 
 public:
-	const wiGraphics::Texture2D* GetDepthStencil() const override { return nullptr; };
+	const wiGraphics::Texture* GetDepthStencil() const override { return nullptr; };
 
 	void Update(float dt) override;
 	void Render() const override;

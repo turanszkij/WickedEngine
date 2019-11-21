@@ -108,7 +108,7 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 
 			if (result.ok) {
 				string fileName = result.filenames.front();
-				wiRenderer::SetEnvironmentMap((Texture2D*)wiResourceManager::GetGlobal().add(fileName));
+				wiRenderer::SetEnvironmentMap((Texture*)wiResourceManager::GetGlobal().add(fileName));
 				skyButton->SetText(fileName);
 			}
 		}

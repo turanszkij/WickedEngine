@@ -44,7 +44,7 @@ namespace wiFont_Internal
 
 	atomic_bool initialized = false;
 
-	Texture2D texture;
+	Texture texture;
 
 	struct Glyph
 	{
@@ -432,7 +432,7 @@ void UpdatePendingGlyphs()
 		}
 	}
 }
-const Texture2D* wiFont::GetAtlas()
+const Texture* wiFont::GetAtlas()
 {
 	return &texture;
 }

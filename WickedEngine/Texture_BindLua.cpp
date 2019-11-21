@@ -11,7 +11,7 @@ Luna<Texture_BindLua>::PropertyType Texture_BindLua::properties[] = {
 	{ NULL, NULL }
 };
 
-Texture_BindLua::Texture_BindLua(Texture2D* texture) :texture(texture)
+Texture_BindLua::Texture_BindLua(Texture* texture) :texture(texture)
 {
 }
 Texture_BindLua::Texture_BindLua(lua_State *L)

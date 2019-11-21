@@ -49,8 +49,8 @@ int wiResourceManager_BindLua::Get(lua_State *L)
 		{
 			switch (data.type)
 			{
-			case wiResourceManager::Data_Type::IMAGE_2D:
-				Luna<Texture_BindLua>::push(L, new Texture_BindLua((Texture2D*)data.data));
+			case wiResourceManager::Data_Type::IMAGE:
+				Luna<Texture_BindLua>::push(L, new Texture_BindLua((Texture*)data.data));
 				return 1;
 				break;
 			case wiResourceManager::Data_Type::SOUND:

@@ -54,9 +54,23 @@ void RenderPath3D_TiledForward::Render() const
 		}
 		else
 		{
-			device->Barrier(&GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL, IMAGE_LAYOUT_COPY_SRC), 1, cmd);
-			device->CopyTexture2D(&depthBuffer_Copy, &depthBuffer, cmd);
-			device->Barrier(&GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_COPY_SRC, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY), 1, cmd);
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL, IMAGE_LAYOUT_COPY_SRC),
+					GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_COPY_DST)
+				};
+				device->Barrier(barriers, ARRAYSIZE(barriers), cmd);
+			}
+
+			device->CopyResource(&depthBuffer_Copy, &depthBuffer, cmd);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_COPY_SRC, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY),
+					GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_COPY_DST, IMAGE_LAYOUT_SHADER_RESOURCE)
+				};
+				device->Barrier(barriers, ARRAYSIZE(barriers), cmd);
+			}
 		}
 
 		RenderLinearDepth(cmd);

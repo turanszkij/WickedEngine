@@ -28,7 +28,7 @@ void RenderPath2D::ResizeBuffers()
 		desc.Format = defaultTextureFormat;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
-		device->CreateTexture2D(&desc, nullptr, &rtStenciled);
+		device->CreateTexture(&desc, nullptr, &rtStenciled);
 		device->SetName(&rtStenciled, "rtStenciled");
 	}
 	{
@@ -37,11 +37,11 @@ void RenderPath2D::ResizeBuffers()
 		desc.Format = defaultTextureFormat;
 		desc.Width = device->GetScreenWidth();
 		desc.Height = device->GetScreenHeight();
-		device->CreateTexture2D(&desc, nullptr, &rtFinal);
+		device->CreateTexture(&desc, nullptr, &rtFinal);
 		device->SetName(&rtFinal, "rtFinal");
 	}
 
-	const Texture2D* dsv = GetDepthStencil();
+	const Texture* dsv = GetDepthStencil();
 	if (dsv != nullptr && wiRenderer::GetResolutionScale() != 1.0f)
 	{
 		RenderPassDesc desc;

@@ -172,17 +172,17 @@ void EditorComponent::ResizeBuffers()
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		if (renderPath->getMSAASampleCount() > 1)
 		{
-			desc.SampleDesc.Count = renderPath->getMSAASampleCount();
-			hr = device->CreateTexture2D(&desc, nullptr, &rt_selectionOutline_MSAA);
+			desc.SampleCount = renderPath->getMSAASampleCount();
+			hr = device->CreateTexture(&desc, nullptr, &rt_selectionOutline_MSAA);
 			assert(SUCCEEDED(hr));
-			desc.SampleDesc.Count = 1;
+			desc.SampleCount = 1;
 		}
-		hr = device->CreateTexture2D(&desc, nullptr, &rt_selectionOutline[0]);
+		hr = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[0]);
 		assert(SUCCEEDED(hr));
 
 		desc.Format = wiRenderer::RTFormat_hdr;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		hr = device->CreateTexture2D(&desc, nullptr, &rt_selectionOutline[1]);
+		hr = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[1]);
 		assert(SUCCEEDED(hr));
 	}
 
@@ -719,17 +719,17 @@ void EditorComponent::Load()
 
 	
 
-	pointLightTex = *(Texture2D*)Content.add("images/pointlight.dds");
-	spotLightTex = *(Texture2D*)Content.add("images/spotlight.dds");
-	dirLightTex = *(Texture2D*)Content.add("images/directional_light.dds");
-	areaLightTex = *(Texture2D*)Content.add("images/arealight.dds");
-	decalTex = *(Texture2D*)Content.add("images/decal.dds");
-	forceFieldTex = *(Texture2D*)Content.add("images/forcefield.dds");
-	emitterTex = *(Texture2D*)Content.add("images/emitter.dds");
-	hairTex = *(Texture2D*)Content.add("images/hair.dds");
-	cameraTex = *(Texture2D*)Content.add("images/camera.dds");
-	armatureTex = *(Texture2D*)Content.add("images/armature.dds");
-	soundTex = *(Texture2D*)Content.add("images/sound.dds");
+	pointLightTex = *(Texture*)Content.add("images/pointlight.dds");
+	spotLightTex = *(Texture*)Content.add("images/spotlight.dds");
+	dirLightTex = *(Texture*)Content.add("images/directional_light.dds");
+	areaLightTex = *(Texture*)Content.add("images/arealight.dds");
+	decalTex = *(Texture*)Content.add("images/decal.dds");
+	forceFieldTex = *(Texture*)Content.add("images/forcefield.dds");
+	emitterTex = *(Texture*)Content.add("images/emitter.dds");
+	hairTex = *(Texture*)Content.add("images/hair.dds");
+	cameraTex = *(Texture*)Content.add("images/camera.dds");
+	armatureTex = *(Texture*)Content.add("images/armature.dds");
+	soundTex = *(Texture*)Content.add("images/sound.dds");
 }
 void EditorComponent::Start()
 {

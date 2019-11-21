@@ -15,15 +15,15 @@ public:
 	void UpdateDisplacementMap(const wiSceneSystem::WeatherComponent& weather, float time, wiGraphics::CommandList cmd) const;
 	void Render(const wiSceneSystem::CameraComponent& camera, const wiSceneSystem::WeatherComponent& weather, float time, wiGraphics::CommandList cmd) const;
 
-	const wiGraphics::Texture2D* getDisplacementMap() const;
-	const wiGraphics::Texture2D* getGradientMap() const;
+	const wiGraphics::Texture* getDisplacementMap() const;
+	const wiGraphics::Texture* getGradientMap() const;
 
 	static void Initialize();
 	static void LoadShaders();
 
 protected:
-	wiGraphics::Texture2D m_pDisplacementMap;		// (RGBA32F)
-	wiGraphics::Texture2D m_pGradientMap;			// (RGBA16F)
+	wiGraphics::Texture m_pDisplacementMap;		// (RGBA32F)
+	wiGraphics::Texture m_pGradientMap;			// (RGBA16F)
 
 
 	void initHeightMap(const wiSceneSystem::WeatherComponent& weather, XMFLOAT2* out_h0, float* out_omega);

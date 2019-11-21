@@ -259,9 +259,7 @@ namespace wiGraphics
 		virtual ~GraphicsDevice_Vulkan();
 
 		HRESULT CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) override;
-		HRESULT CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D *pTexture1D) override;
-		HRESULT CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D *pTexture2D) override;
-		HRESULT CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D *pTexture3D) override;
+		HRESULT CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) override;
 		HRESULT CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout) override;
 		HRESULT CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, VertexShader *pVertexShader) override;
 		HRESULT CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, PixelShader *pPixelShader) override;
@@ -281,9 +279,7 @@ namespace wiGraphics
 
 		void DestroyResource(GPUResource* pResource) override;
 		void DestroyBuffer(GPUBuffer *pBuffer) override;
-		void DestroyTexture1D(Texture1D *pTexture1D) override;
-		void DestroyTexture2D(Texture2D *pTexture2D) override;
-		void DestroyTexture3D(Texture3D *pTexture3D) override;
+		void DestroyTexture(Texture *pTexture) override;
 		void DestroyInputLayout(VertexLayout *pInputLayout) override;
 		void DestroyVertexShader(VertexShader *pVertexShader) override;
 		void DestroyPixelShader(PixelShader *pPixelShader) override;
@@ -313,7 +309,7 @@ namespace wiGraphics
 
 		void SetResolution(int width, int height) override;
 
-		Texture2D GetBackBuffer() override;
+		Texture GetBackBuffer() override;
 
 		///////////////Thread-sensitive////////////////////////
 
@@ -343,9 +339,9 @@ namespace wiGraphics
 		void DrawIndexedInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd) override;
 		void Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, CommandList cmd) override;
 		void DispatchIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd) override;
-		void CopyTexture2D(const Texture2D* pDst, const Texture2D* pSrc, CommandList cmd) override;
-		void CopyTexture2D_Region(const Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture2D* pSrc, UINT srcMip, CommandList cmd) override;
-		void MSAAResolve(const Texture2D* pDst, const Texture2D* pSrc, CommandList cmd) override;
+		void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) override;
+		void CopyTexture2D_Region(const Texture* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture* pSrc, UINT srcMip, CommandList cmd) override;
+		void MSAAResolve(const Texture* pDst, const Texture* pSrc, CommandList cmd) override;
 		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) override;
 		void QueryBegin(const GPUQuery *query, CommandList cmd) override;
 		void QueryEnd(const GPUQuery *query, CommandList cmd) override;

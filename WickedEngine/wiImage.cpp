@@ -43,7 +43,7 @@ namespace wiImage
 	std::atomic_bool initialized{ false };
 
 
-	void Draw(const Texture2D* texture, const wiImageParams& params, CommandList cmd)
+	void Draw(const Texture* texture, const wiImageParams& params, CommandList cmd)
 	{
 		if (!initialized.load())
 		{

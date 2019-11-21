@@ -151,12 +151,12 @@ namespace wiSceneSystem
 		uint32_t uvset_occlusionMap = 0;
 
 		// Non-serialized attributes:
-		const wiGraphics::Texture2D* baseColorMap = nullptr;
-		const wiGraphics::Texture2D* surfaceMap = nullptr;
-		const wiGraphics::Texture2D* normalMap = nullptr;
-		const wiGraphics::Texture2D* displacementMap = nullptr;
-		const wiGraphics::Texture2D* emissiveMap = nullptr;
-		const wiGraphics::Texture2D* occlusionMap = nullptr;
+		const wiGraphics::Texture* baseColorMap = nullptr;
+		const wiGraphics::Texture* surfaceMap = nullptr;
+		const wiGraphics::Texture* normalMap = nullptr;
+		const wiGraphics::Texture* displacementMap = nullptr;
+		const wiGraphics::Texture* emissiveMap = nullptr;
+		const wiGraphics::Texture* occlusionMap = nullptr;
 		std::unique_ptr<wiGraphics::GPUBuffer> constantBuffer;
 
 		int customShaderID = -1; // for now, this is not serialized; need to consider actual proper use case first
@@ -172,12 +172,12 @@ namespace wiSceneSystem
 			return wiRenderer::CombineStencilrefs(engineStencilRef, userStencilRef);
 		}
 
-		const wiGraphics::Texture2D* GetBaseColorMap() const;
-		const wiGraphics::Texture2D* GetNormalMap() const;
-		const wiGraphics::Texture2D* GetSurfaceMap() const;
-		const wiGraphics::Texture2D* GetDisplacementMap() const;
-		const wiGraphics::Texture2D* GetEmissiveMap() const;
-		const wiGraphics::Texture2D* GetOcclusionMap() const;
+		const wiGraphics::Texture* GetBaseColorMap() const;
+		const wiGraphics::Texture* GetNormalMap() const;
+		const wiGraphics::Texture* GetSurfaceMap() const;
+		const wiGraphics::Texture* GetDisplacementMap() const;
+		const wiGraphics::Texture* GetEmissiveMap() const;
+		const wiGraphics::Texture* GetOcclusionMap() const;
 
 		inline float GetOpacity() const { return baseColor.w; }
 		inline float GetEmissiveStrength() const { return emissiveColor.w; }
@@ -470,7 +470,7 @@ namespace wiSceneSystem
 		// Non-serialized attributes:
 
 		XMFLOAT4 globalLightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
-		std::unique_ptr<wiGraphics::Texture2D> lightmap;
+		std::unique_ptr<wiGraphics::Texture> lightmap;
 		std::unique_ptr<wiGraphics::RenderPass> renderpass_lightmap_clear;
 		std::unique_ptr<wiGraphics::RenderPass> renderpass_lightmap_accumulate;
 		uint32_t lightmapIterationCount = 0;
@@ -688,7 +688,7 @@ namespace wiSceneSystem
 		XMFLOAT3 right;
 		int shadowMap_index = -1;
 
-		std::vector<const wiGraphics::Texture2D*> lensFlareRimTextures;
+		std::vector<const wiGraphics::Texture*> lensFlareRimTextures;
 
 		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
 		inline void SetVolumetricsEnabled(bool value) { if (value) { _flags |= VOLUMETRICS; } else { _flags &= ~VOLUMETRICS; } }
@@ -836,8 +836,8 @@ namespace wiSceneSystem
 		XMFLOAT4 atlasMulAdd;
 		XMFLOAT4X4 world;
 
-		const wiGraphics::Texture2D* texture = nullptr;
-		const wiGraphics::Texture2D* normal = nullptr;
+		const wiGraphics::Texture* texture = nullptr;
+		const wiGraphics::Texture* normal = nullptr;
 
 		inline float GetOpacity() const { return color.w; }
 

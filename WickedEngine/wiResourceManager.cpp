@@ -13,10 +13,10 @@ using namespace std;
 using namespace wiGraphics;
 
 static const std::unordered_map<std::string, wiResourceManager::Data_Type> types = {
-	make_pair("JPG", wiResourceManager::IMAGE_2D),
-	make_pair("PNG", wiResourceManager::IMAGE_2D),
-	make_pair("DDS", wiResourceManager::IMAGE_2D),
-	make_pair("TGA", wiResourceManager::IMAGE_2D),
+	make_pair("JPG", wiResourceManager::IMAGE),
+	make_pair("PNG", wiResourceManager::IMAGE),
+	make_pair("DDS", wiResourceManager::IMAGE),
+	make_pair("TGA", wiResourceManager::IMAGE),
 	make_pair("WAV", wiResourceManager::SOUND)
 };
 
@@ -73,9 +73,7 @@ const void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 
 		switch(type)
 		{
-		case Data_Type::IMAGE_1D:
-		case Data_Type::IMAGE_2D:
-		case Data_Type::IMAGE_3D:
+		case Data_Type::IMAGE:
 		{
 			if (!ext.compare(std::string("DDS")))
 			{
@@ -191,38 +189,29 @@ const void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 					{
 					case tinyddsloader::DDSFile::TextureDimension::Texture1D:
 					{
-						Texture1D* image = new Texture1D;
-						HRESULT hr = wiRenderer::GetDevice()->CreateTexture1D(&desc, InitData.data(), image);
-						assert(SUCCEEDED(hr));
-						wiRenderer::GetDevice()->SetName(image, nameStr);
-						success = image;
-						type = Data_Type::IMAGE_1D;
+						desc.type = TextureDesc::TEXTURE_1D;
 					}
 					break;
 					case tinyddsloader::DDSFile::TextureDimension::Texture2D:
 					{
-						Texture2D* image = new Texture2D;
-						HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData.data(), image);
-						assert(SUCCEEDED(hr));
-						wiRenderer::GetDevice()->SetName(image, nameStr);
-						success = image;
-						type = Data_Type::IMAGE_2D;
+						desc.type = TextureDesc::TEXTURE_2D;
 					}
 					break;
 					case tinyddsloader::DDSFile::TextureDimension::Texture3D:
 					{
-						Texture3D* image = new Texture3D;
-						HRESULT hr = wiRenderer::GetDevice()->CreateTexture3D(&desc, InitData.data(), image);
-						assert(SUCCEEDED(hr));
-						wiRenderer::GetDevice()->SetName(image, nameStr);
-						success = image;
-						type = Data_Type::IMAGE_3D;
+						desc.type = TextureDesc::TEXTURE_3D;
 					}
 					break;
 					default:
 						assert(0);
 						break;
 					}
+
+					Texture* image = new Texture;
+					HRESULT hr = wiRenderer::GetDevice()->CreateTexture(&desc, InitData.data(), image);
+					assert(SUCCEEDED(hr));
+					wiRenderer::GetDevice()->SetName(image, nameStr);
+					success = image;
 				}
 				else assert(0); // failed to load DDS
 
@@ -259,8 +248,8 @@ const void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 						mipwidth = std::max(1u, mipwidth / 2);
 					}
 
-					Texture2D* image = new Texture2D;
-					HRESULT hr = device->CreateTexture2D(&desc, InitData.data(), image);
+					Texture* image = new Texture;
+					HRESULT hr = device->CreateTexture(&desc, InitData.data(), image);
 					assert(SUCCEEDED(hr));
 					device->SetName(image, nameStr);
 
@@ -396,14 +385,8 @@ bool wiResourceManager::del(const wiHashString& name, bool forceDelete)
 
 		switch (res.type) 
 		{
-		case Data_Type::IMAGE_1D:
-			SAFE_DELETE(reinterpret_cast<const Texture1D*&>(res.data));
-			break;
-		case Data_Type::IMAGE_2D:
-			SAFE_DELETE(reinterpret_cast<const Texture2D*&>(res.data));
-			break;
-		case Data_Type::IMAGE_3D:
-			SAFE_DELETE(reinterpret_cast<const Texture3D*&>(res.data));
+		case Data_Type::IMAGE:
+			SAFE_DELETE(reinterpret_cast<const Texture*&>(res.data));
 			break;
 		case Data_Type::VERTEXSHADER:
 			SAFE_DELETE(reinterpret_cast<const VertexShader*&>(res.data));

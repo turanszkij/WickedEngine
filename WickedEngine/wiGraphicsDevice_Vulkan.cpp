@@ -2248,16 +2248,16 @@ namespace wiGraphics
 		}
 	}
 
-	Texture2D GraphicsDevice_Vulkan::GetBackBuffer()
+	Texture GraphicsDevice_Vulkan::GetBackBuffer()
 	{
-		return Texture2D();
+		return Texture();
 	}
 
 	HRESULT GraphicsDevice_Vulkan::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer)
 	{
 		DestroyBuffer(pBuffer);
 		DestroyResource(pBuffer);
-		pBuffer->type = GPUResource::BUFFER;
+		pBuffer->type = GPUResource::GPU_RESOURCE_TYPE::BUFFER;
 		pBuffer->Register(this);
 
 		pBuffer->desc = *pDesc;
@@ -2438,31 +2438,18 @@ namespace wiGraphics
 
 		return res == VK_SUCCESS ? S_OK : E_FAIL;
 	}
-	HRESULT GraphicsDevice_Vulkan::CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D *pTexture1D)
+	HRESULT GraphicsDevice_Vulkan::CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture)
 	{
-		DestroyTexture1D(pTexture1D);
-		DestroyResource(pTexture1D);
-		pTexture1D->type = GPUResource::TEXTURE_1D;
-		pTexture1D->Register(this);
+		DestroyTexture(pTexture);
+		DestroyResource(pTexture);
+		pTexture->type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
+		pTexture->Register(this);
 
-		pTexture1D->desc = *pDesc;
+		pTexture->desc = *pDesc;
 
-		// TODO
-
-		return E_FAIL;
-	}
-	HRESULT GraphicsDevice_Vulkan::CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D *pTexture2D)
-	{
-		DestroyTexture2D(pTexture2D);
-		DestroyResource(pTexture2D);
-		pTexture2D->type = GPUResource::TEXTURE_2D;
-		pTexture2D->Register(this);
-
-		pTexture2D->desc = *pDesc;
-
-		if (pTexture2D->desc.MipLevels == 0)
+		if (pTexture->desc.MipLevels == 0)
 		{
-			pTexture2D->desc.MipLevels = static_cast<UINT>(log2(std::max(pTexture2D->desc.Width, pTexture2D->desc.Height)));
+			pTexture->desc.MipLevels = static_cast<UINT>(log2(std::max(pTexture->desc.Width, pTexture->desc.Height)));
 		}
 
 		VmaAllocationCreateInfo allocInfo = {};
@@ -2470,31 +2457,30 @@ namespace wiGraphics
 
 		VkImageCreateInfo imageInfo = {};
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-		imageInfo.imageType = VK_IMAGE_TYPE_2D;
-		imageInfo.extent.width = pTexture2D->desc.Width;
-		imageInfo.extent.height = pTexture2D->desc.Height;
+		imageInfo.extent.width = pTexture->desc.Width;
+		imageInfo.extent.height = pTexture->desc.Height;
 		imageInfo.extent.depth = 1;
-		imageInfo.format = _ConvertFormat(pTexture2D->desc.Format);
-		imageInfo.arrayLayers = pTexture2D->desc.ArraySize;
-		imageInfo.mipLevels = pTexture2D->desc.MipLevels;
-		imageInfo.samples = (VkSampleCountFlagBits)pTexture2D->desc.SampleDesc.Count;
+		imageInfo.format = _ConvertFormat(pTexture->desc.Format);
+		imageInfo.arrayLayers = pTexture->desc.ArraySize;
+		imageInfo.mipLevels = pTexture->desc.MipLevels;
+		imageInfo.samples = (VkSampleCountFlagBits)pTexture->desc.SampleCount;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.usage = 0;
-		if (pTexture2D->desc.BindFlags & BIND_SHADER_RESOURCE)
+		if (pTexture->desc.BindFlags & BIND_SHADER_RESOURCE)
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
 		}
-		if (pTexture2D->desc.BindFlags & BIND_UNORDERED_ACCESS)
+		if (pTexture->desc.BindFlags & BIND_UNORDERED_ACCESS)
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
 		}
-		if (pTexture2D->desc.BindFlags & BIND_RENDER_TARGET)
+		if (pTexture->desc.BindFlags & BIND_RENDER_TARGET)
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 			allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 		}
-		if (pTexture2D->desc.BindFlags & BIND_DEPTH_STENCIL)
+		if (pTexture->desc.BindFlags & BIND_DEPTH_STENCIL)
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 			allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
@@ -2503,12 +2489,29 @@ namespace wiGraphics
 		imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
 		imageInfo.flags = 0;
-		if (pTexture2D->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+		if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 		}
 
 		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		switch (pTexture->desc.type)
+		{
+		case TextureDesc::TEXTURE_1D:
+			imageInfo.imageType = VK_IMAGE_TYPE_1D;
+			break;
+		case TextureDesc::TEXTURE_2D:
+			imageInfo.imageType = VK_IMAGE_TYPE_2D;
+			break;
+		case TextureDesc::TEXTURE_3D:
+			imageInfo.imageType = VK_IMAGE_TYPE_3D;
+			imageInfo.extent.depth = pTexture->desc.Depth;
+			break;
+		default:
+			assert(0);
+			break;
+		}
 
 		VkResult res;
 
@@ -2516,9 +2519,9 @@ namespace wiGraphics
 		VmaAllocation allocation;
 		res = vmaCreateImage(allocator, &imageInfo, &allocInfo, &image, &allocation, nullptr);
 		assert(res == VK_SUCCESS);
-		pTexture2D->resource = (wiCPUHandle)image;
+		pTexture->resource = (wiCPUHandle)image;
 		destroylocker.lock();
-		vma_allocations[pTexture2D->resource] = allocation;
+		vma_allocations[pTexture->resource] = allocation;
 		destroylocker.unlock();
 
 		// Issue data copy on request:
@@ -2574,7 +2577,7 @@ namespace wiGraphics
 
 				VkImageMemoryBarrier barrier = {};
 				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-				barrier.image = (VkImage)pTexture2D->resource;
+				barrier.image = (VkImage)pTexture->resource;
 				barrier.oldLayout = imageInfo.initialLayout;
 				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 				barrier.srcAccessMask = 0;
@@ -2597,10 +2600,10 @@ namespace wiGraphics
 					1, &barrier
 				);
 
-				vkCmdCopyBufferToImage(copyCommandBuffer, textureUploader->resource, (VkImage)pTexture2D->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)copyRegions.size(), copyRegions.data());
+				vkCmdCopyBufferToImage(copyCommandBuffer, textureUploader->resource, (VkImage)pTexture->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)copyRegions.size(), copyRegions.data());
 
 				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-				barrier.newLayout = _ConvertImageLayout(pTexture2D->desc.layout);;
+				barrier.newLayout = _ConvertImageLayout(pTexture->desc.layout);;
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 
@@ -2615,15 +2618,15 @@ namespace wiGraphics
 
 			VkImageMemoryBarrier barrier = {};
 			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			barrier.image = (VkImage)pTexture2D->resource;
+			barrier.image = (VkImage)pTexture->resource;
 			barrier.oldLayout = imageInfo.initialLayout;
-			barrier.newLayout = _ConvertImageLayout(pTexture2D->desc.layout);;
+			barrier.newLayout = _ConvertImageLayout(pTexture->desc.layout);;
 			barrier.srcAccessMask = 0;
 			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-			if (pTexture2D->desc.BindFlags & BIND_DEPTH_STENCIL)
+			if (pTexture->desc.BindFlags & BIND_DEPTH_STENCIL)
 			{
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-				if (IsFormatStencilSupport(pTexture2D->desc.Format))
+				if (IsFormatStencilSupport(pTexture->desc.Format))
 				{
 					barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 				}
@@ -2643,37 +2646,24 @@ namespace wiGraphics
 			copyQueueLock.unlock();
 		}
 
-		if (pTexture2D->desc.BindFlags & BIND_RENDER_TARGET)
+		if (pTexture->desc.BindFlags & BIND_RENDER_TARGET)
 		{
-			CreateSubresource(pTexture2D, RTV, 0, -1, 0, -1);
+			CreateSubresource(pTexture, RTV, 0, -1, 0, -1);
 		}
-		if (pTexture2D->desc.BindFlags & BIND_DEPTH_STENCIL)
+		if (pTexture->desc.BindFlags & BIND_DEPTH_STENCIL)
 		{
-			CreateSubresource(pTexture2D, DSV, 0, -1, 0, -1);
+			CreateSubresource(pTexture, DSV, 0, -1, 0, -1);
 		}
-		if (pTexture2D->desc.BindFlags & BIND_SHADER_RESOURCE)
+		if (pTexture->desc.BindFlags & BIND_SHADER_RESOURCE)
 		{
-			CreateSubresource(pTexture2D, SRV, 0, -1, 0, -1);
+			CreateSubresource(pTexture, SRV, 0, -1, 0, -1);
 		}
-		if (pTexture2D->desc.BindFlags & BIND_UNORDERED_ACCESS)
+		if (pTexture->desc.BindFlags & BIND_UNORDERED_ACCESS)
 		{
-			CreateSubresource(pTexture2D, UAV, 0, -1, 0, -1);
+			CreateSubresource(pTexture, UAV, 0, -1, 0, -1);
 		}
 
 		return res == VK_SUCCESS ? S_OK : E_FAIL;
-	}
-	HRESULT GraphicsDevice_Vulkan::CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D *pTexture3D)
-	{
-		DestroyTexture3D(pTexture3D);
-		DestroyResource(pTexture3D);
-		pTexture3D->type = GPUResource::TEXTURE_3D;
-		pTexture3D->Register(this);
-
-		pTexture3D->desc = *pDesc;
-
-		// TODO
-
-		return E_FAIL;
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout)
 	{
@@ -3074,7 +3064,7 @@ namespace wiGraphics
 		for (UINT i = 0; i < pDesc->numAttachments; ++i)
 		{
 			wiHelper::hash_combine(renderpass->hash, pDesc->attachments[i].texture->desc.Format);
-			wiHelper::hash_combine(renderpass->hash, pDesc->attachments[i].texture->desc.SampleDesc.Count);
+			wiHelper::hash_combine(renderpass->hash, pDesc->attachments[i].texture->desc.SampleCount);
 		}
 
 		VkResult res;
@@ -3092,12 +3082,12 @@ namespace wiGraphics
 		uint32_t validAttachmentCount = 0;
 		for (UINT i = 0; i < renderpass->desc.numAttachments; ++i)
 		{
-			const Texture2D* texture = desc.attachments[i].texture;
+			const Texture* texture = desc.attachments[i].texture;
 			const TextureDesc& texdesc = texture->desc;
 			int subresource = desc.attachments[i].subresource;
 
 			attachmentDescriptions[validAttachmentCount].format = _ConvertFormat(texdesc.Format);
-			attachmentDescriptions[validAttachmentCount].samples = (VkSampleCountFlagBits)texdesc.SampleDesc.Count;
+			attachmentDescriptions[validAttachmentCount].samples = (VkSampleCountFlagBits)texdesc.SampleCount;
 
 			switch (desc.attachments[i].loadop)
 			{
@@ -3260,7 +3250,7 @@ namespace wiGraphics
 		view_desc.subresourceRange.levelCount = mipCount;
 		view_desc.format = _ConvertFormat(texture->desc.Format);
 
-		if (texture->type == GPUResource::TEXTURE_1D)
+		if (texture->desc.type == TextureDesc::TEXTURE_1D)
 		{
 			if (texture->desc.ArraySize > 1)
 			{
@@ -3271,7 +3261,7 @@ namespace wiGraphics
 				view_desc.viewType = VK_IMAGE_VIEW_TYPE_1D;
 			}
 		}
-		else if (texture->type == GPUResource::TEXTURE_2D)
+		else if (texture->desc.type == TextureDesc::TEXTURE_2D)
 		{
 			if (texture->desc.ArraySize > 1)
 			{
@@ -3296,7 +3286,7 @@ namespace wiGraphics
 				view_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
 			}
 		}
-		else if (texture->type == GPUResource::TEXTURE_3D)
+		else if (texture->desc.type == TextureDesc::TEXTURE_3D)
 		{
 			view_desc.viewType = VK_IMAGE_VIEW_TYPE_3D;
 		}
@@ -3457,100 +3447,42 @@ namespace wiGraphics
 		}
 		pBuffer->subresourceUAVs.clear();
 	}
-	void GraphicsDevice_Vulkan::DestroyTexture1D(Texture1D *pTexture1D)
+	void GraphicsDevice_Vulkan::DestroyTexture(Texture *pTexture)
 	{
-		DeferredDestroy({ DestroyItem::IMAGE, FRAMECOUNT, pTexture1D->resource });
-		pTexture1D->resource = WI_NULL_HANDLE;
+		DeferredDestroy({ DestroyItem::IMAGE, pTexture->resource });
+		pTexture->resource = WI_NULL_HANDLE;
 
-		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture1D->RTV });
-		pTexture1D->RTV = WI_NULL_HANDLE;
-		for (auto& x : pTexture1D->subresourceRTVs)
+		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture->RTV });
+		pTexture->RTV = WI_NULL_HANDLE;
+		for (auto& x : pTexture->subresourceRTVs)
 		{
 			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
-		pTexture1D->subresourceRTVs.clear();
+		pTexture->subresourceRTVs.clear();
 
-		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture1D->SRV });
-		pTexture1D->SRV = WI_NULL_HANDLE;
-		for (auto& x : pTexture1D->subresourceSRVs)
+		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture->DSV });
+		pTexture->DSV = WI_NULL_HANDLE;
+		for (auto& x : pTexture->subresourceDSVs)
 		{
 			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
-		pTexture1D->subresourceSRVs.clear();
+		pTexture->subresourceDSVs.clear();
 
-		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture1D->UAV });
-		pTexture1D->UAV = WI_NULL_HANDLE;
-		for (auto& x : pTexture1D->subresourceUAVs)
+		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture->SRV });
+		pTexture->SRV = WI_NULL_HANDLE;
+		for (auto& x : pTexture->subresourceSRVs)
 		{
 			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
-		pTexture1D->subresourceUAVs.clear();
-	}
-	void GraphicsDevice_Vulkan::DestroyTexture2D(Texture2D *pTexture2D)
-	{
-		DeferredDestroy({ DestroyItem::IMAGE, pTexture2D->resource });
-		pTexture2D->resource = WI_NULL_HANDLE;
+		pTexture->subresourceSRVs.clear();
 
-		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture2D->RTV });
-		pTexture2D->RTV = WI_NULL_HANDLE;
-		for (auto& x : pTexture2D->subresourceRTVs)
+		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture->UAV });
+		pTexture->UAV = WI_NULL_HANDLE;
+		for (auto& x : pTexture->subresourceUAVs)
 		{
 			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
-		pTexture2D->subresourceRTVs.clear();
-
-		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture2D->DSV });
-		pTexture2D->DSV = WI_NULL_HANDLE;
-		for (auto& x : pTexture2D->subresourceDSVs)
-		{
-			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
-		}
-		pTexture2D->subresourceDSVs.clear();
-
-		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture2D->SRV });
-		pTexture2D->SRV = WI_NULL_HANDLE;
-		for (auto& x : pTexture2D->subresourceSRVs)
-		{
-			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
-		}
-		pTexture2D->subresourceSRVs.clear();
-
-		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture2D->UAV });
-		pTexture2D->UAV = WI_NULL_HANDLE;
-		for (auto& x : pTexture2D->subresourceUAVs)
-		{
-			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
-		}
-		pTexture2D->subresourceUAVs.clear();
-	}
-	void GraphicsDevice_Vulkan::DestroyTexture3D(Texture3D *pTexture3D)
-	{
-		DeferredDestroy({ DestroyItem::IMAGE, pTexture3D->resource });
-		pTexture3D->resource = WI_NULL_HANDLE;
-
-		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture3D->RTV });
-		pTexture3D->RTV = WI_NULL_HANDLE;
-		for (auto& x : pTexture3D->subresourceRTVs)
-		{
-			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
-		}
-		pTexture3D->subresourceRTVs.clear();
-
-		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture3D->SRV });
-		pTexture3D->SRV = WI_NULL_HANDLE;
-		for (auto& x : pTexture3D->subresourceSRVs)
-		{
-			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
-		}
-		pTexture3D->subresourceSRVs.clear();
-
-		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture3D->UAV });
-		pTexture3D->UAV = WI_NULL_HANDLE;
-		for (auto& x : pTexture3D->subresourceUAVs)
-		{
-			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
-		}
-		pTexture3D->subresourceUAVs.clear();
+		pTexture->subresourceUAVs.clear();
 	}
 	void GraphicsDevice_Vulkan::DestroyInputLayout(VertexLayout *pInputLayout)
 	{
@@ -4580,7 +4512,7 @@ namespace wiGraphics
 				multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 				if (active_renderpass[cmd] != nullptr && active_renderpass[cmd]->desc.numAttachments > 0)
 				{
-					multisampling.rasterizationSamples = (VkSampleCountFlagBits)active_renderpass[cmd]->desc.attachments[0].texture->desc.SampleDesc.Count;
+					multisampling.rasterizationSamples = (VkSampleCountFlagBits)active_renderpass[cmd]->desc.attachments[0].texture->desc.SampleCount;
 				}
 				multisampling.minSampleShading = 1.0f;
 				VkSampleMask samplemask = pso->desc.sampleMask;
@@ -4729,40 +4661,72 @@ namespace wiGraphics
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		vkCmdDispatchIndirect(GetDirectCommandList(cmd), (VkBuffer)args->resource, (VkDeviceSize)args_offset);
 	}
-	void GraphicsDevice_Vulkan::CopyTexture2D(const Texture2D* pDst, const Texture2D* pSrc, CommandList cmd)
+	void GraphicsDevice_Vulkan::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 	{
-		VkImageCopy copy;
-		copy.extent.width = pDst->desc.Width;
-		copy.extent.height = pDst->desc.Height;
-		copy.extent.depth = 1;
+		if (pDst->type == GPUResource::GPU_RESOURCE_TYPE::TEXTURE && pSrc->type == GPUResource::GPU_RESOURCE_TYPE::TEXTURE)
+		{
+			const TextureDesc& dst_desc = ((Texture*)pDst)->GetDesc();
+			const TextureDesc& src_desc = ((Texture*)pSrc)->GetDesc();
 
-		copy.srcOffset.x = 0;
-		copy.srcOffset.y = 0;
-		copy.srcOffset.z = 0;
+			VkImageCopy copy;
+			copy.extent.width = dst_desc.Width;
+			copy.extent.height = src_desc.Height;
+			copy.extent.depth = 1;
 
-		copy.dstOffset.x = 0;
-		copy.dstOffset.y = 0;
-		copy.dstOffset.z = 0;
+			copy.srcOffset.x = 0;
+			copy.srcOffset.y = 0;
+			copy.srcOffset.z = 0;
 
-		copy.srcSubresource.aspectMask = pSrc->desc.BindFlags & BIND_DEPTH_STENCIL ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-		copy.srcSubresource.baseArrayLayer = 0;
-		copy.srcSubresource.layerCount = 1;
-		copy.srcSubresource.mipLevel = 0;
+			copy.dstOffset.x = 0;
+			copy.dstOffset.y = 0;
+			copy.dstOffset.z = 0;
 
-		copy.dstSubresource.aspectMask = pDst->desc.BindFlags & BIND_DEPTH_STENCIL ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-		copy.dstSubresource.baseArrayLayer = 0;
-		copy.dstSubresource.layerCount = 1;
-		copy.dstSubresource.mipLevel = 0;
+			if (src_desc.BindFlags & BIND_DEPTH_STENCIL)
+			{
+				copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				if (IsFormatStencilSupport(src_desc.Format))
+				{
+					copy.srcSubresource.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+				}
+			}
+			else
+			{
+				copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			}
+			copy.srcSubresource.baseArrayLayer = 0;
+			copy.srcSubresource.layerCount = 1;
+			copy.srcSubresource.mipLevel = 0;
 
-		vkCmdCopyImage(GetDirectCommandList(cmd),
-			(VkImage)pSrc->resource, VK_IMAGE_LAYOUT_GENERAL,
-			(VkImage)pDst->resource, VK_IMAGE_LAYOUT_GENERAL,
-			1, &copy);
+			if (dst_desc.BindFlags & BIND_DEPTH_STENCIL)
+			{
+				copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				if (IsFormatStencilSupport(dst_desc.Format))
+				{
+					copy.dstSubresource.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+				}
+			}
+			else
+			{
+				copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			}
+			copy.dstSubresource.baseArrayLayer = 0;
+			copy.dstSubresource.layerCount = 1;
+			copy.dstSubresource.mipLevel = 0;
+
+			vkCmdCopyImage(GetDirectCommandList(cmd),
+				(VkImage)pSrc->resource, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				(VkImage)pDst->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				1, &copy);
+		}
+		else
+		{
+			assert(0); // todo
+		}
 	}
-	void GraphicsDevice_Vulkan::CopyTexture2D_Region(const Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture2D* pSrc, UINT srcMip, CommandList cmd)
+	void GraphicsDevice_Vulkan::CopyTexture2D_Region(const Texture* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture* pSrc, UINT srcMip, CommandList cmd)
 	{
 	}
-	void GraphicsDevice_Vulkan::MSAAResolve(const Texture2D* pDst, const Texture2D* pSrc, CommandList cmd)
+	void GraphicsDevice_Vulkan::MSAAResolve(const Texture* pDst, const Texture* pSrc, CommandList cmd)
 	{
 	}
 	void GraphicsDevice_Vulkan::UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize)
