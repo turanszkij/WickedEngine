@@ -3824,6 +3824,7 @@ namespace wiGraphics
 					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
 					break;
 				case LINELIST:
+				case LINESTRIP:
 					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
 					break;
 				case TRIANGLELIST:
@@ -3876,6 +3877,9 @@ namespace wiGraphics
 				break;
 			case LINELIST:
 				d3dType = D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+				break;
+			case LINESTRIP:
+				d3dType = D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
 				break;
 			case PATCHLIST:
 				d3dType = D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
