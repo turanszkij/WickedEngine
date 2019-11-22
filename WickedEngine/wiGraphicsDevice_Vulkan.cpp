@@ -4371,6 +4371,9 @@ namespace wiGraphics
 				case LINELIST:
 					inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 					break;
+				case LINESTRIP:
+					inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+					break;
 				case TRIANGLESTRIP:
 					inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 					break;

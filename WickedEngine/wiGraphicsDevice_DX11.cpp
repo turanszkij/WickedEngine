@@ -2943,6 +2943,9 @@ void GraphicsDevice_DX11::BindPipelineState(const PipelineState* pso, CommandLis
 		case LINELIST:
 			d3dType = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
 			break;
+		case LINESTRIP:
+			d3dType = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP;
+			break;
 		case PATCHLIST:
 			d3dType = D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
 			break;
