@@ -2304,6 +2304,7 @@ namespace wiGraphics
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
 		}
+		bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
 		bufferInfo.flags = 0;
@@ -4668,7 +4669,7 @@ namespace wiGraphics
 			const TextureDesc& dst_desc = ((Texture*)pDst)->GetDesc();
 			const TextureDesc& src_desc = ((Texture*)pSrc)->GetDesc();
 
-			VkImageCopy copy;
+			VkImageCopy copy = {};
 			copy.extent.width = dst_desc.Width;
 			copy.extent.height = src_desc.Height;
 			copy.extent.depth = 1;
@@ -4716,11 +4717,24 @@ namespace wiGraphics
 			vkCmdCopyImage(GetDirectCommandList(cmd),
 				(VkImage)pSrc->resource, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				(VkImage)pDst->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				1, &copy);
+				1, &copy
+			);
 		}
-		else
+		else if (pDst->type == GPUResource::GPU_RESOURCE_TYPE::BUFFER && pSrc->type == GPUResource::GPU_RESOURCE_TYPE::BUFFER)
 		{
-			assert(0); // todo
+			const GPUBufferDesc& dst_desc = ((GPUBuffer*)pDst)->GetDesc();
+			const GPUBufferDesc& src_desc = ((GPUBuffer*)pSrc)->GetDesc();
+
+			VkBufferCopy copy = {};
+			copy.srcOffset = 0;
+			copy.dstOffset = 0;
+			copy.size = (VkDeviceSize)std::min(src_desc.ByteWidth, dst_desc.ByteWidth);
+
+			vkCmdCopyBuffer(GetDirectCommandList(cmd),
+				(VkBuffer)pSrc->resource,
+				(VkBuffer)pDst->resource,
+				1, &copy
+			);
 		}
 	}
 	void GraphicsDevice_Vulkan::CopyTexture2D_Region(const Texture* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture* pSrc, UINT srcMip, CommandList cmd)

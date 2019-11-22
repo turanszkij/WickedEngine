@@ -1943,7 +1943,7 @@ namespace wiGraphics
 	{
 		Texture result;
 		result.resource = (wiCPUHandle)GetFrameResources().backBuffer;
-		result.RTV - (wiCPUHandle)GetFrameResources().backBufferRTV.ptr;
+		result.RTV = (wiCPUHandle)GetFrameResources().backBufferRTV.ptr;
 		return result;
 	}
 
