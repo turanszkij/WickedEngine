@@ -120,7 +120,7 @@ void RenderPath3D_PathTracing::Render() const
 		{
 			device->RenderPassBegin(&renderpass_debugbvh, cmd);
 
-			ViewPort vp;
+			Viewport vp;
 			vp.Width = (float)traceResult.GetDesc().Width;
 			vp.Height = (float)traceResult.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);

@@ -782,7 +782,7 @@ namespace wiGraphics
 		dataEnd = dataBegin + size;
 
 		// Because the "buffer" is created by hand in this, fill the desc to indicate how it can be used:
-		this->buffer.desc.ByteWidth = (UINT)((size_t)dataEnd - (size_t)dataBegin);
+		this->buffer.desc.ByteWidth = (uint32_t)((size_t)dataEnd - (size_t)dataBegin);
 		this->buffer.desc.Usage = USAGE_DYNAMIC;
 		this->buffer.desc.BindFlags = BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
 		this->buffer.desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
@@ -876,7 +876,7 @@ namespace wiGraphics
 
 
 
-	GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::DescriptorTableFrameAllocator(GraphicsDevice_Vulkan* device, UINT maxRenameCount) : device(device)
+	GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::DescriptorTableFrameAllocator(GraphicsDevice_Vulkan* device, uint32_t maxRenameCount) : device(device)
 	{
 		VkResult res;
 
@@ -1958,7 +1958,7 @@ namespace wiGraphics
 
 		// Create frame resources:
 		{
-			for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+			for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 			{
 				// Fence:
 				{
@@ -2163,7 +2163,7 @@ namespace wiGraphics
 			VkQueryPoolCreateInfo poolInfo = {};
 			poolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
 
-			for (UINT i = 0; i < timestamp_query_count; ++i)
+			for (uint32_t i = 0; i < timestamp_query_count; ++i)
 			{
 				free_timestampqueries.push_back(i);
 			}
@@ -2173,7 +2173,7 @@ namespace wiGraphics
 			assert(res == VK_SUCCESS);
 			timestamps_to_reset.reserve(timestamp_query_count);
 
-			for (UINT i = 0; i < occlusion_query_count; ++i)
+			for (uint32_t i = 0; i < occlusion_query_count; ++i)
 			{
 				free_occlusionqueries.push_back(i);
 			}
@@ -2450,7 +2450,7 @@ namespace wiGraphics
 
 		if (pTexture->desc.MipLevels == 0)
 		{
-			pTexture->desc.MipLevels = static_cast<UINT>(log2(std::max(pTexture->desc.Width, pTexture->desc.Height)));
+			pTexture->desc.MipLevels = static_cast<uint32_t>(log2(std::max(pTexture->desc.Width, pTexture->desc.Height)));
 		}
 
 		VmaAllocationCreateInfo allocInfo = {};
@@ -2535,12 +2535,12 @@ namespace wiGraphics
 				std::vector<VkBufferImageCopy> copyRegions;
 
 				size_t cpyoffset = 0;
-				UINT initDataIdx = 0;
-				for (UINT slice = 0; slice < pDesc->ArraySize; ++slice)
+				uint32_t initDataIdx = 0;
+				for (uint32_t slice = 0; slice < pDesc->ArraySize; ++slice)
 				{
 					uint32_t width = pDesc->Width;
 					uint32_t height = pDesc->Height;
-					for (UINT mip = 0; mip < pDesc->MipLevels; ++mip)
+					for (uint32_t mip = 0; mip < pDesc->MipLevels; ++mip)
 					{
 						const SubresourceData& subresourceData = pInitialData[initDataIdx++];
 						size_t cpysize = subresourceData.SysMemPitch * height;
@@ -2666,14 +2666,14 @@ namespace wiGraphics
 
 		return res == VK_SUCCESS ? S_OK : E_FAIL;
 	}
-	HRESULT GraphicsDevice_Vulkan::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout)
+	HRESULT GraphicsDevice_Vulkan::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, uint32_t NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout)
 	{
 		DestroyInputLayout(pInputLayout);
 		pInputLayout->Register(this);
 
 		pInputLayout->desc.clear();
 		pInputLayout->desc.reserve((size_t)NumElements);
-		for (UINT i = 0; i < NumElements; ++i)
+		for (uint32_t i = 0; i < NumElements; ++i)
 		{
 			pInputLayout->desc.push_back(pInputElementDescs[i]);
 		}
@@ -3062,7 +3062,7 @@ namespace wiGraphics
 
 		renderpass->hash = 0;
 		wiHelper::hash_combine(renderpass->hash, pDesc->numAttachments);
-		for (UINT i = 0; i < pDesc->numAttachments; ++i)
+		for (uint32_t i = 0; i < pDesc->numAttachments; ++i)
 		{
 			wiHelper::hash_combine(renderpass->hash, pDesc->attachments[i].texture->desc.Format);
 			wiHelper::hash_combine(renderpass->hash, pDesc->attachments[i].texture->desc.SampleCount);
@@ -3081,7 +3081,7 @@ namespace wiGraphics
 		const RenderPassDesc& desc = renderpass->desc;
 
 		uint32_t validAttachmentCount = 0;
-		for (UINT i = 0; i < renderpass->desc.numAttachments; ++i)
+		for (uint32_t i = 0; i < renderpass->desc.numAttachments; ++i)
 		{
 			const Texture* texture = desc.attachments[i].texture;
 			const TextureDesc& texdesc = texture->desc;
@@ -3238,7 +3238,7 @@ namespace wiGraphics
 		return res == VK_SUCCESS ? S_OK : E_FAIL;
 	}
 
-	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount)
+	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount)
 	{
 		VkImageViewCreateInfo view_desc = {};
 		view_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -3805,10 +3805,10 @@ namespace wiGraphics
 					vkDestroyFramebuffer(device, (VkFramebuffer)item.handle, nullptr);
 					break;
 				case DestroyItem::QUERY_TIMESTAMP:
-					free_timestampqueries.push_back((UINT)item.handle);
+					free_timestampqueries.push_back((uint32_t)item.handle);
 					break;
 				case DestroyItem::QUERY_OCCLUSION:
-					free_timestampqueries.push_back((UINT)item.handle);
+					free_timestampqueries.push_back((uint32_t)item.handle);
 					break;
 				default:
 					break;
@@ -3889,7 +3889,7 @@ namespace wiGraphics
 		assert(res == VK_SUCCESS);
 
 		VkViewport viewports[6];
-		for (UINT i = 0; i < ARRAYSIZE(viewports); ++i)
+		for (uint32_t i = 0; i < ARRAYSIZE(viewports); ++i)
 		{
 			viewports[i].x = 0;
 			viewports[i].y = 0;
@@ -3988,7 +3988,7 @@ namespace wiGraphics
 			renderPassInfo.clearValueCount = renderpass->desc.numAttachments;
 			renderPassInfo.pClearValues = clearColors;
 
-			for (UINT i = 0; i < desc.numAttachments; ++i)
+			for (uint32_t i = 0; i < desc.numAttachments; ++i)
 			{
 				const ClearValue& clear = desc.attachments[i].texture->desc.clear;
 				if (desc.attachments[i].type == RenderPassAttachment::RENDERTARGET)
@@ -4018,23 +4018,23 @@ namespace wiGraphics
 
 		active_renderpass[cmd] = VK_NULL_HANDLE;
 	}
-	void GraphicsDevice_Vulkan::BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) {
+	void GraphicsDevice_Vulkan::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) {
 		assert(rects != nullptr);
 		assert(numRects <= 8);
 		VkRect2D scissors[8];
-		for(UINT i = 0; i < numRects; ++i) {
+		for(uint32_t i = 0; i < numRects; ++i) {
 			scissors[i].extent.width = abs(rects[i].right - rects[i].left);
 			scissors[i].extent.height = abs(rects[i].top - rects[i].bottom);
-			scissors[i].offset.x = std::max(0l, rects[i].left);
-			scissors[i].offset.y = std::max(0l, rects[i].top);
+			scissors[i].offset.x = std::max(0, rects[i].left);
+			scissors[i].offset.y = std::max(0, rects[i].top);
 		}
 		vkCmdSetScissor(GetDirectCommandList(cmd), 0, numRects, scissors);
 	}
-	void GraphicsDevice_Vulkan::BindViewports(UINT NumViewports, const ViewPort *pViewports, CommandList cmd)
+	void GraphicsDevice_Vulkan::BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd)
 	{
 		assert(NumViewports <= 6);
 		VkViewport viewports[6];
-		for (UINT i = 0; i < NumViewports; ++i)
+		for (uint32_t i = 0; i < NumViewports; ++i)
 		{
 			viewports[i].x = pViewports[i].TopLeftX;
 			viewports[i].y = pViewports[i].TopLeftY;
@@ -4045,7 +4045,7 @@ namespace wiGraphics
 		}
 		vkCmdSetViewport(GetDirectCommandList(cmd), 0, NumViewports, viewports);
 	}
-	void GraphicsDevice_Vulkan::BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource)
+	void GraphicsDevice_Vulkan::BindResource(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_SRV_COUNT);
 		auto& table = GetFrameResources().descriptors[cmd]->tables[stage];
@@ -4056,17 +4056,17 @@ namespace wiGraphics
 			table.dirty = true;
 		}
 	}
-	void GraphicsDevice_Vulkan::BindResources(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd)
+	void GraphicsDevice_Vulkan::BindResources(SHADERSTAGE stage, const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd)
 	{
 		if (resources != nullptr)
 		{
-			for (UINT i = 0; i < count; ++i)
+			for (uint32_t i = 0; i < count; ++i)
 			{
 				BindResource(stage, resources[i], slot + i, cmd, -1);
 			}
 		}
 	}
-	void GraphicsDevice_Vulkan::BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource)
+	void GraphicsDevice_Vulkan::BindUAV(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_UAV_COUNT);
 		auto& table = GetFrameResources().descriptors[cmd]->tables[stage];
@@ -4077,23 +4077,23 @@ namespace wiGraphics
 			table.dirty = true;
 		}
 	}
-	void GraphicsDevice_Vulkan::BindUAVs(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd)
+	void GraphicsDevice_Vulkan::BindUAVs(SHADERSTAGE stage, const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd)
 	{
 		if (resources != nullptr)
 		{
-			for (UINT i = 0; i < count; ++i)
+			for (uint32_t i = 0; i < count; ++i)
 			{
 				BindUAV(stage, resources[i], slot + i, cmd, -1);
 			}
 		}
 	}
-	void GraphicsDevice_Vulkan::UnbindResources(UINT slot, UINT num, CommandList cmd)
+	void GraphicsDevice_Vulkan::UnbindResources(uint32_t slot, uint32_t num, CommandList cmd)
 	{
 	}
-	void GraphicsDevice_Vulkan::UnbindUAVs(UINT slot, UINT num, CommandList cmd)
+	void GraphicsDevice_Vulkan::UnbindUAVs(uint32_t slot, uint32_t num, CommandList cmd)
 	{
 	}
-	void GraphicsDevice_Vulkan::BindSampler(SHADERSTAGE stage, const Sampler* sampler, UINT slot, CommandList cmd)
+	void GraphicsDevice_Vulkan::BindSampler(SHADERSTAGE stage, const Sampler* sampler, uint32_t slot, CommandList cmd)
 	{
 		assert(slot < GPU_SAMPLER_HEAP_COUNT);
 		auto& table = GetFrameResources().descriptors[cmd]->tables[stage];
@@ -4103,7 +4103,7 @@ namespace wiGraphics
 			table.dirty = true;
 		}
 	}
-	void GraphicsDevice_Vulkan::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, UINT slot, CommandList cmd)
+	void GraphicsDevice_Vulkan::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_CBV_COUNT);
 		auto& table = GetFrameResources().descriptors[cmd]->tables[stage];
@@ -4113,12 +4113,12 @@ namespace wiGraphics
 			table.dirty = true;
 		}
 	}
-	void GraphicsDevice_Vulkan::BindVertexBuffers(const GPUBuffer *const* vertexBuffers, UINT slot, UINT count, const UINT* strides, const UINT* offsets, CommandList cmd)
+	void GraphicsDevice_Vulkan::BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd)
 	{
 		VkDeviceSize voffsets[8] = {};
 		VkBuffer vbuffers[8] = {};
 		assert(count <= 8);
-		for (UINT i = 0; i < count; ++i)
+		for (uint32_t i = 0; i < count; ++i)
 		{
 			if (vertexBuffers[i] == nullptr)
 			{
@@ -4136,14 +4136,14 @@ namespace wiGraphics
 
 		vkCmdBindVertexBuffers(GetDirectCommandList(cmd), static_cast<uint32_t>(slot), static_cast<uint32_t>(count), vbuffers, voffsets);
 	}
-	void GraphicsDevice_Vulkan::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, CommandList cmd)
+	void GraphicsDevice_Vulkan::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd)
 	{
 		if (indexBuffer != nullptr)
 		{
 			vkCmdBindIndexBuffer(GetDirectCommandList(cmd), (VkBuffer)indexBuffer->resource, (VkDeviceSize)offset, format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
 		}
 	}
-	void GraphicsDevice_Vulkan::BindStencilRef(UINT value, CommandList cmd)
+	void GraphicsDevice_Vulkan::BindStencilRef(uint32_t value, CommandList cmd)
 	{
 		vkCmdSetStencilReference(GetDirectCommandList(cmd), VK_STENCIL_FRONT_AND_BACK, value);
 	}
@@ -4527,8 +4527,8 @@ namespace wiGraphics
 				// Blending:
 				uint32_t numBlendAttachments = 0;
 				VkPipelineColorBlendAttachmentState colorBlendAttachments[8];
-				const UINT blend_loopCount = active_renderpass[cmd] == nullptr ? 1 : active_renderpass[cmd]->desc.numAttachments;
-				for (UINT i = 0; i < blend_loopCount; ++i)
+				const uint32_t blend_loopCount = active_renderpass[cmd] == nullptr ? 1 : active_renderpass[cmd]->desc.numAttachments;
+				for (uint32_t i = 0; i < blend_loopCount; ++i)
 				{
 					if (active_renderpass[cmd] != nullptr && active_renderpass[cmd]->desc.attachments[i].type != RenderPassAttachment::RENDERTARGET)
 					{
@@ -4622,42 +4622,42 @@ namespace wiGraphics
 	{
 		vkCmdBindPipeline(GetDirectCommandList(cmd), VK_PIPELINE_BIND_POINT_COMPUTE, (VkPipeline)cs->resource);
 	}
-	void GraphicsDevice_Vulkan::Draw(UINT vertexCount, UINT startVertexLocation, CommandList cmd)
+	void GraphicsDevice_Vulkan::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd)
 	{
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		vkCmdDraw(GetDirectCommandList(cmd), static_cast<uint32_t>(vertexCount), 1, startVertexLocation, 0);
 	}
-	void GraphicsDevice_Vulkan::DrawIndexed(UINT indexCount, UINT startIndexLocation, UINT baseVertexLocation, CommandList cmd)
+	void GraphicsDevice_Vulkan::DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, CommandList cmd)
 	{
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		vkCmdDrawIndexed(GetDirectCommandList(cmd), static_cast<uint32_t>(indexCount), 1, startIndexLocation, baseVertexLocation, 0);
 	}
-	void GraphicsDevice_Vulkan::DrawInstanced(UINT vertexCount, UINT instanceCount, UINT startVertexLocation, UINT startInstanceLocation, CommandList cmd)
+	void GraphicsDevice_Vulkan::DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		vkCmdDraw(GetDirectCommandList(cmd), static_cast<uint32_t>(vertexCount), static_cast<uint32_t>(instanceCount), startVertexLocation, startInstanceLocation);
 	}
-	void GraphicsDevice_Vulkan::DrawIndexedInstanced(UINT indexCount, UINT instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, CommandList cmd)
+	void GraphicsDevice_Vulkan::DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		vkCmdDrawIndexed(GetDirectCommandList(cmd), static_cast<uint32_t>(indexCount), static_cast<uint32_t>(instanceCount), startIndexLocation, baseVertexLocation, startInstanceLocation);
 	}
-	void GraphicsDevice_Vulkan::DrawInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
+	void GraphicsDevice_Vulkan::DrawInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 	{
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		vkCmdDrawIndirect(GetDirectCommandList(cmd), (VkBuffer)args->resource, (VkDeviceSize)args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsInstanced));
 	}
-	void GraphicsDevice_Vulkan::DrawIndexedInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
+	void GraphicsDevice_Vulkan::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 	{
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		vkCmdDrawIndexedIndirect(GetDirectCommandList(cmd), (VkBuffer)args->resource, (VkDeviceSize)args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsIndexedInstanced));
 	}
-	void GraphicsDevice_Vulkan::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, CommandList cmd)
+	void GraphicsDevice_Vulkan::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		vkCmdDispatch(GetDirectCommandList(cmd), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 	}
-	void GraphicsDevice_Vulkan::DispatchIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
+	void GraphicsDevice_Vulkan::DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 	{
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		vkCmdDispatchIndirect(GetDirectCommandList(cmd), (VkBuffer)args->resource, (VkDeviceSize)args_offset);
@@ -4737,7 +4737,7 @@ namespace wiGraphics
 			);
 		}
 	}
-	void GraphicsDevice_Vulkan::CopyTexture2D_Region(const Texture* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture* pSrc, UINT srcMip, CommandList cmd)
+	void GraphicsDevice_Vulkan::CopyTexture2D_Region(const Texture* pDst, uint32_t dstMip, uint32_t dstX, uint32_t dstY, const Texture* pSrc, uint32_t srcMip, CommandList cmd)
 	{
 	}
 	void GraphicsDevice_Vulkan::MSAAResolve(const Texture* pDst, const Texture* pSrc, CommandList cmd)
@@ -4891,8 +4891,8 @@ namespace wiGraphics
 			assert(0); // not implemented yet
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			res = vkGetQueryPoolResults(device, querypool_timestamp, (uint32_t)query->resource, 1, sizeof(UINT64),
-				&result->result_timestamp, sizeof(UINT64), VK_QUERY_RESULT_64_BIT);
+			res = vkGetQueryPoolResults(device, querypool_timestamp, (uint32_t)query->resource, 1, sizeof(uint64_t),
+				&result->result_timestamp, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
 			timestamps_to_reset.push_back((uint32_t)query->resource);
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
@@ -4901,8 +4901,8 @@ namespace wiGraphics
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
 		case GPU_QUERY_TYPE_OCCLUSION:
-			res = vkGetQueryPoolResults(device, querypool_occlusion, (uint32_t)query->resource, 1, sizeof(UINT64),
-				&result->result_passed_sample_count, sizeof(UINT64), VK_QUERY_RESULT_64_BIT);
+			res = vkGetQueryPoolResults(device, querypool_occlusion, (uint32_t)query->resource, 1, sizeof(uint64_t),
+				&result->result_passed_sample_count, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
 			result->result_passed = result->result_passed_sample_count > 0 ? 1 : 0;
 			occlusions_to_reset.push_back((uint32_t)query->resource);
 			break;
@@ -4910,7 +4910,7 @@ namespace wiGraphics
 
 		return res == VK_SUCCESS;
 	}
-	void GraphicsDevice_Vulkan::Barrier(const GPUBarrier* barriers, UINT numBarriers, CommandList cmd)
+	void GraphicsDevice_Vulkan::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
 		VkMemoryBarrier memorybarriers[8];
 		VkImageMemoryBarrier imagebarriers[8];
@@ -4919,7 +4919,7 @@ namespace wiGraphics
 		uint32_t imagebarrier_count = 0;
 		uint32_t bufferbarrier_count = 0;
 
-		for (UINT i = 0; i < numBarriers; ++i)
+		for (uint32_t i = 0; i < numBarriers; ++i)
 		{
 			const GPUBarrier& barrier = barriers[i];
 
@@ -5012,7 +5012,7 @@ namespace wiGraphics
 		assert(dest != nullptr); // todo: this needs to be handled as well
 
 		result.buffer = &allocator.buffer;
-		result.offset = (UINT)allocator.calculateOffset(dest);
+		result.offset = (uint32_t)allocator.calculateOffset(dest);
 		result.data = (void*)dest;
 		return result;
 	}

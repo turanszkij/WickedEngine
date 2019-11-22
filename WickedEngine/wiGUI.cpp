@@ -99,10 +99,10 @@ void wiGUI::Render(CommandList cmd) const
 void wiGUI::ResetScissor(CommandList cmd) const
 {
 	wiGraphics::Rect scissor[1];
-	scissor[0].bottom = (LONG)(wiRenderer::GetDevice()->GetScreenHeight());
-	scissor[0].left = (LONG)(0);
-	scissor[0].right = (LONG)(wiRenderer::GetDevice()->GetScreenWidth());
-	scissor[0].top = (LONG)(0);
+	scissor[0].bottom = (int32_t)(wiRenderer::GetDevice()->GetScreenHeight());
+	scissor[0].left = (int32_t)(0);
+	scissor[0].right = (int32_t)(wiRenderer::GetDevice()->GetScreenWidth());
+	scissor[0].top = (int32_t)(0);
 	wiRenderer::GetDevice()->BindScissorRects(1, scissor, cmd);
 }
 

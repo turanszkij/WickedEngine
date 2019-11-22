@@ -195,7 +195,7 @@ namespace wiTextureHelper
 	}
 
 
-	HRESULT CreateTexture(wiGraphics::Texture& texture, const uint8_t* data, UINT width, UINT height, FORMAT format)
+	HRESULT CreateTexture(wiGraphics::Texture& texture, const uint8_t* data, uint32_t width, uint32_t height, FORMAT format)
 	{
 		if (data == nullptr)
 		{

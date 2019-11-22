@@ -27,7 +27,7 @@ protected:
 	virtual void RenderDeferredComposition(wiGraphics::CommandList cmd) const;
 
 public:
-	void setMSAASampleCount(UINT value) override { /*disable MSAA for deferred*/ }
+	void setMSAASampleCount(uint32_t value) override { /*disable MSAA for deferred*/ }
 
 	void Render() const override;
 };

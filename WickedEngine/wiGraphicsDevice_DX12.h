@@ -48,8 +48,8 @@ namespace wiGraphics
 		ID3D12QueryHeap* querypool_occlusion = nullptr;
 		static const size_t timestamp_query_count = 1024;
 		static const size_t occlusion_query_count = 1024;
-		wiContainers::ThreadSafeRingBuffer<UINT, timestamp_query_count> free_timestampqueries;
-		wiContainers::ThreadSafeRingBuffer<UINT, occlusion_query_count> free_occlusionqueries;
+		wiContainers::ThreadSafeRingBuffer<uint32_t, timestamp_query_count> free_timestampqueries;
+		wiContainers::ThreadSafeRingBuffer<uint32_t, occlusion_query_count> free_occlusionqueries;
 		ID3D12Resource* querypool_timestamp_readback = nullptr;
 		ID3D12Resource* querypool_occlusion_readback = nullptr;
 		D3D12MA::Allocation* allocation_querypool_timestamp_readback = nullptr;
@@ -60,13 +60,13 @@ namespace wiGraphics
 			ID3D12DescriptorHeap*	heap = nullptr;
 			size_t					heap_begin;
 			uint32_t				itemCount;
-			UINT					maxCount;
-			UINT					itemSize;
+			uint32_t					maxCount;
+			uint32_t					itemSize;
 			bool*					itemsAlive = nullptr;
 			uint32_t				lastAlloc;
 			wiSpinLock				lock;
 
-			DescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxCount);
+			DescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t maxCount);
 			~DescriptorAllocator();
 
 			size_t allocate();
@@ -82,8 +82,8 @@ namespace wiGraphics
 		ID3D12DescriptorHeap*	null_sampler_heap_CPU = nullptr;
 		D3D12_CPU_DESCRIPTOR_HANDLE null_resource_heap_cpu_start = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE null_sampler_heap_cpu_start = {};
-		UINT resource_descriptor_size = 0;
-		UINT sampler_descriptor_size = 0;
+		uint32_t resource_descriptor_size = 0;
+		uint32_t sampler_descriptor_size = 0;
 
 		struct FrameResources
 		{
@@ -101,8 +101,8 @@ namespace wiGraphics
 				D3D12_GPU_DESCRIPTOR_HANDLE resource_heap_gpu_start = {};
 				D3D12_CPU_DESCRIPTOR_HANDLE sampler_heap_cpu_start = {};
 				D3D12_GPU_DESCRIPTOR_HANDLE sampler_heap_gpu_start = {};
-				UINT ringOffset_resources = 0;
-				UINT ringOffset_samplers = 0;
+				uint32_t ringOffset_resources = 0;
+				uint32_t ringOffset_samplers = 0;
 
 				struct Table
 				{
@@ -130,7 +130,7 @@ namespace wiGraphics
 
 				} tables[SHADERSTAGE_COUNT];
 
-				DescriptorTableFrameAllocator(GraphicsDevice_DX12* device, UINT maxRenameCount_resources, UINT maxRenameCount_samplers);
+				DescriptorTableFrameAllocator(GraphicsDevice_DX12* device, uint32_t maxRenameCount_resources, uint32_t maxRenameCount_samplers);
 				~DescriptorTableFrameAllocator();
 
 				void reset();
@@ -232,7 +232,7 @@ namespace wiGraphics
 
 		HRESULT CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) override;
 		HRESULT CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) override;
-		HRESULT CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout) override;
+		HRESULT CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, uint32_t NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout) override;
 		HRESULT CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, VertexShader *pVertexShader) override;
 		HRESULT CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, PixelShader *pPixelShader) override;
 		HRESULT CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, GeometryShader *pGeometryShader) override;
@@ -247,7 +247,7 @@ namespace wiGraphics
 		HRESULT CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
 		HRESULT CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
 
-		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount) override;
+		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
 
 		void DestroyResource(GPUResource* pResource) override;
 		void DestroyBuffer(GPUBuffer *pBuffer) override;
@@ -287,38 +287,38 @@ namespace wiGraphics
 
 		void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) override;
 		void RenderPassEnd(CommandList cmd) override;
-		void BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) override;
-		void BindViewports(UINT NumViewports, const ViewPort *pViewports, CommandList cmd) override;
-		void BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource = -1) override;
-		void BindResources(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd) override;
-		void BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource = -1) override;
-		void BindUAVs(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd) override;
-		void UnbindResources(UINT slot, UINT num, CommandList cmd) override;
-		void UnbindUAVs(UINT slot, UINT num, CommandList cmd) override;
-		void BindSampler(SHADERSTAGE stage, const Sampler* sampler, UINT slot, CommandList cmd) override;
-		void BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, UINT slot, CommandList cmd) override;
-		void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, UINT slot, UINT count, const UINT* strides, const UINT* offsets, CommandList cmd) override;
-		void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, CommandList cmd) override;
-		void BindStencilRef(UINT value, CommandList cmd) override;
+		void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) override;
+		void BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd) override;
+		void BindResource(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
+		void BindResources(SHADERSTAGE stage, const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
+		void BindUAV(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
+		void BindUAVs(SHADERSTAGE stage, const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
+		void UnbindResources(uint32_t slot, uint32_t num, CommandList cmd) override;
+		void UnbindUAVs(uint32_t slot, uint32_t num, CommandList cmd) override;
+		void BindSampler(SHADERSTAGE stage, const Sampler* sampler, uint32_t slot, CommandList cmd) override;
+		void BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd) override;
+		void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd) override;
+		void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd) override;
+		void BindStencilRef(uint32_t value, CommandList cmd) override;
 		void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) override;
 		void BindPipelineState(const PipelineState* pso, CommandList cmd) override;
 		void BindComputeShader(const ComputeShader* cs, CommandList cmd) override;
-		void Draw(UINT vertexCount, UINT startVertexLocation, CommandList cmd) override;
-		void DrawIndexed(UINT indexCount, UINT startIndexLocation, UINT baseVertexLocation, CommandList cmd) override;
-		void DrawInstanced(UINT vertexCount, UINT instanceCount, UINT startVertexLocation, UINT startInstanceLocation, CommandList cmd) override;
-		void DrawIndexedInstanced(UINT indexCount, UINT instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, CommandList cmd) override;
-		void DrawInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd) override;
-		void DrawIndexedInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd) override;
-		void Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, CommandList cmd) override;
-		void DispatchIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd) override;
+		void Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) override;
+		void DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, CommandList cmd) override;
+		void DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd) override;
+		void DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd) override;
+		void DrawInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
+		void DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
+		void Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) override;
+		void DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
 		void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) override;
-		void CopyTexture2D_Region(const Texture* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture* pSrc, UINT srcMip, CommandList cmd) override;
+		void CopyTexture2D_Region(const Texture* pDst, uint32_t dstMip, uint32_t dstX, uint32_t dstY, const Texture* pSrc, uint32_t srcMip, CommandList cmd) override;
 		void MSAAResolve(const Texture* pDst, const Texture* pSrc, CommandList cmd) override;
 		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) override;
 		void QueryBegin(const GPUQuery *query, CommandList cmd) override;
 		void QueryEnd(const GPUQuery *query, CommandList cmd) override;
 		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
-		void Barrier(const GPUBarrier* barriers, UINT numBarriers, CommandList cmd) override;
+		void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) override;
 
 		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
 

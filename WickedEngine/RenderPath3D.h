@@ -17,7 +17,7 @@ private:
 	float outlineThickness = 1.0f;
 	XMFLOAT4 outlineColor = XMFLOAT4(0, 0, 0, 1);
 	float ssaoRange = 1.0f;
-	UINT ssaoSampleCount = 16;
+	uint32_t ssaoSampleCount = 16;
 	float chromaticAberrationAmount = 2.0f;
 
 	bool fxaaEnabled = false;
@@ -41,7 +41,7 @@ private:
 
 	const wiGraphics::Texture* colorGradingTex = nullptr;
 
-	UINT msaaSampleCount = 1;
+	uint32_t msaaSampleCount = 1;
 
 protected:
 	wiGraphics::Texture rtReflection; // conains the scene rendered for planar reflections
@@ -119,7 +119,7 @@ public:
 	constexpr float getOutlineThickness() const { return outlineThickness; }
 	constexpr XMFLOAT4 getOutlineColor() const { return outlineColor; }
 	constexpr float getSSAORange() const { return ssaoRange; }
-	constexpr UINT getSSAOSampleCount() const { return ssaoSampleCount; }
+	constexpr uint32_t getSSAOSampleCount() const { return ssaoSampleCount; }
 	constexpr float getChromaticAberrationAmount() const { return chromaticAberrationAmount; }
 
 	constexpr bool getSSAOEnabled() const { return ssaoEnabled; }
@@ -143,7 +143,7 @@ public:
 
 	constexpr const wiGraphics::Texture* getColorGradingTexture() const { return colorGradingTex; }
 
-	constexpr UINT getMSAASampleCount() const { return msaaSampleCount; }
+	constexpr uint32_t getMSAASampleCount() const { return msaaSampleCount; }
 
 	constexpr void setExposure(float value) { exposure = value; }
 	constexpr void setBloomThreshold(float value){ bloomThreshold = value; }
@@ -155,7 +155,7 @@ public:
 	constexpr void setOutlineThickness(float value) { outlineThickness = value; }
 	constexpr void setOutlineColor(const XMFLOAT4& value) { outlineColor = value; }
 	constexpr void setSSAORange(float value) { ssaoRange = value; }
-	constexpr void setSSAOSampleCount(UINT value) { ssaoSampleCount = value; }
+	constexpr void setSSAOSampleCount(uint32_t value) { ssaoSampleCount = value; }
 	constexpr void setChromaticAberrationAmount(float value) { chromaticAberrationAmount = value; }
 
 	constexpr void setSSAOEnabled(bool value){ ssaoEnabled = value; }
@@ -179,7 +179,7 @@ public:
 
 	constexpr void setColorGradingTexture(const wiGraphics::Texture* tex) { colorGradingTex = tex; }
 
-	virtual void setMSAASampleCount(UINT value) { if (msaaSampleCount != value) { msaaSampleCount = value; ResizeBuffers(); } }
+	virtual void setMSAASampleCount(uint32_t value) { if (msaaSampleCount != value) { msaaSampleCount = value; ResizeBuffers(); } }
 
 	void Update(float dt) override;
 	void Render() const override = 0;

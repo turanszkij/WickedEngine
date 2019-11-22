@@ -171,9 +171,9 @@ const void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 					}
 
 					std::vector<SubresourceData> InitData;
-					for (UINT arrayIndex = 0; arrayIndex < desc.ArraySize; ++arrayIndex)
+					for (uint32_t arrayIndex = 0; arrayIndex < desc.ArraySize; ++arrayIndex)
 					{
-						for (UINT mip = 0; mip < desc.MipLevels; ++mip)
+						for (uint32_t mip = 0; mip < desc.MipLevels; ++mip)
 						{
 							auto imageData = dds.GetImageData(mip, arrayIndex);
 							SubresourceData subresourceData;
@@ -235,16 +235,16 @@ const void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 					desc.Format = FORMAT_R8G8B8A8_UNORM;
 					desc.Height = static_cast<uint32_t>(height);
 					desc.Width = static_cast<uint32_t>(width);
-					desc.MipLevels = (UINT)log2(std::max(width, height));
+					desc.MipLevels = (uint32_t)log2(std::max(width, height));
 					desc.MiscFlags = 0;
 					desc.Usage = USAGE_DEFAULT;
 
-					UINT mipwidth = width;
+					uint32_t mipwidth = width;
 					std::vector<SubresourceData> InitData(desc.MipLevels);
-					for (UINT mip = 0; mip < desc.MipLevels; ++mip)
+					for (uint32_t mip = 0; mip < desc.MipLevels; ++mip)
 					{
 						InitData[mip].pSysMem = rgb; // attention! we don't fill the mips here correctly, just always point to the mip0 data by default. Mip levels will be created using compute shader when needed!
-						InitData[mip].SysMemPitch = static_cast<UINT>(mipwidth * channelCount);
+						InitData[mip].SysMemPitch = static_cast<uint32_t>(mipwidth * channelCount);
 						mipwidth = std::max(1u, mipwidth / 2);
 					}
 
@@ -253,7 +253,7 @@ const void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 					assert(SUCCEEDED(hr));
 					device->SetName(image, nameStr);
 
-					for (UINT i = 0; i < image->GetDesc().MipLevels; ++i)
+					for (uint32_t i = 0; i < image->GetDesc().MipLevels; ++i)
 					{
 						int subresource_index;
 						subresource_index = device->CreateSubresource(image, SRV, 0, 1, i, 1);

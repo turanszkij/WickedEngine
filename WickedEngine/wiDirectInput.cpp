@@ -27,7 +27,7 @@ BOOL IsXInputDevice(const GUID* pGuidProductFromDirectInput)
 	BSTR                    bstrClassName = NULL;
 	DWORD                   uReturned = 0;
 	bool                    bIsXinputDevice = false;
-	UINT                    iDevice = 0;
+	uint32_t                    iDevice = 0;
 	VARIANT                 var;
 	HRESULT                 hr;
 

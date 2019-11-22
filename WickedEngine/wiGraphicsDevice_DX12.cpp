@@ -37,9 +37,9 @@ namespace wiGraphics
 		return native;
 	}
 
-	inline UINT _ParseColorWriteMask(UINT value)
+	inline uint32_t _ParseColorWriteMask(uint32_t value)
 	{
-		UINT _flag = 0;
+		uint32_t _flag = 0;
 
 		if (value == D3D12_COLOR_WRITE_ENABLE_ALL)
 		{
@@ -893,7 +893,7 @@ namespace wiGraphics
 		TextureDesc retVal;
 
 		retVal.Format = _ConvertFormat_Inv(desc.Format);
-		retVal.Width = (UINT)desc.Width;
+		retVal.Width = (uint32_t)desc.Width;
 		retVal.Height = desc.Height;
 		retVal.MipLevels = desc.MipLevels;
 
@@ -915,7 +915,7 @@ namespace wiGraphics
 
 	// Allocator heaps:
 
-	GraphicsDevice_DX12::DescriptorAllocator::DescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxCount)
+	GraphicsDevice_DX12::DescriptorAllocator::DescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t maxCount)
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
 		heapDesc.NodeMask = 0;
@@ -998,7 +998,7 @@ namespace wiGraphics
 
 
 
-	GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::DescriptorTableFrameAllocator(GraphicsDevice_DX12* device, UINT maxRenameCount_resources, UINT maxRenameCount_samplers) : device(device)
+	GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::DescriptorTableFrameAllocator(GraphicsDevice_DX12* device, uint32_t maxRenameCount_resources, uint32_t maxRenameCount_samplers) : device(device)
 	{
 		HRESULT hr;
 
@@ -1067,7 +1067,7 @@ namespace wiGraphics
 						D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 				}
 
-				for (UINT slot = 0; slot < GPU_RESOURCE_HEAP_CBV_COUNT; ++slot)
+				for (uint32_t slot = 0; slot < GPU_RESOURCE_HEAP_CBV_COUNT; ++slot)
 				{
 					const GPUBuffer* buffer = table.CBV[slot];
 					if (buffer == nullptr)
@@ -1088,7 +1088,7 @@ namespace wiGraphics
 							D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
 							cbv.BufferLocation = ((ID3D12Resource*)state.allocation.buffer->resource)->GetGPUVirtualAddress();
 							cbv.BufferLocation += (D3D12_GPU_VIRTUAL_ADDRESS)state.allocation.offset;
-							cbv.SizeInBytes = (UINT)Align((size_t)buffer->desc.ByteWidth, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+							cbv.SizeInBytes = (uint32_t)Align((size_t)buffer->desc.ByteWidth, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
 							// Instead of copying like usually, here we create a CBV in place into the GPU-visible table:
 							device->device->CreateConstantBufferView(&cbv, dst);
@@ -1101,7 +1101,7 @@ namespace wiGraphics
 						device->device->CopyDescriptorsSimple(1, dst, src, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 					}
 				}
-				for (UINT slot = 0; slot < GPU_RESOURCE_HEAP_SRV_COUNT; ++slot)
+				for (uint32_t slot = 0; slot < GPU_RESOURCE_HEAP_SRV_COUNT; ++slot)
 				{
 					const GPUResource* resource = table.SRV[slot];
 					const int subresource = table.SRV_index[slot];
@@ -1130,7 +1130,7 @@ namespace wiGraphics
 
 					device->device->CopyDescriptorsSimple(1, dst, src, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 				}
-				for (UINT slot = 0; slot < GPU_RESOURCE_HEAP_UAV_COUNT; ++slot)
+				for (uint32_t slot = 0; slot < GPU_RESOURCE_HEAP_UAV_COUNT; ++slot)
 				{
 					const GPUResource* resource = table.UAV[slot];
 					const int subresource = table.UAV_index[slot];
@@ -1193,7 +1193,7 @@ namespace wiGraphics
 						D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 				}
 
-				for (UINT slot = 0; slot < GPU_SAMPLER_HEAP_COUNT; ++slot)
+				for (uint32_t slot = 0; slot < GPU_SAMPLER_HEAP_COUNT; ++slot)
 				{
 					const Sampler* sampler = table.SAM[slot];
 					if (sampler == nullptr || sampler->resource == WI_NULL_HANDLE)
@@ -1259,7 +1259,7 @@ namespace wiGraphics
 		dataEnd = dataBegin + size;
 
 		// Because the "buffer" is created by hand in this, fill the desc to indicate how it can be used:
-		buffer.desc.ByteWidth = (UINT)((size_t)dataEnd - (size_t)dataBegin);
+		buffer.desc.ByteWidth = (uint32_t)((size_t)dataEnd - (size_t)dataBegin);
 		buffer.desc.Usage = USAGE_DYNAMIC;
 		buffer.desc.BindFlags = BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
 		buffer.desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
@@ -1509,7 +1509,7 @@ namespace wiGraphics
 		D3D12_CPU_DESCRIPTOR_HANDLE null_resource_heap_dest = null_resource_heap_cpu_start;
 
 		D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
-		for (UINT slot = 0; slot < GPU_RESOURCE_HEAP_CBV_COUNT; ++slot)
+		for (uint32_t slot = 0; slot < GPU_RESOURCE_HEAP_CBV_COUNT; ++slot)
 		{
 			device->CreateConstantBufferView(&cbv_desc, null_resource_heap_dest);
 			null_resource_heap_dest.ptr += resource_descriptor_size;
@@ -1519,7 +1519,7 @@ namespace wiGraphics
 		srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		srv_desc.Format = DXGI_FORMAT_R32_UINT;
 		srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-		for (UINT slot = 0; slot < GPU_RESOURCE_HEAP_SRV_COUNT; ++slot)
+		for (uint32_t slot = 0; slot < GPU_RESOURCE_HEAP_SRV_COUNT; ++slot)
 		{
 			device->CreateShaderResourceView(nullptr, &srv_desc, null_resource_heap_dest);
 			null_resource_heap_dest.ptr += resource_descriptor_size;
@@ -1528,7 +1528,7 @@ namespace wiGraphics
 		D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
 		uav_desc.Format = DXGI_FORMAT_R32_UINT;
 		uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-		for (UINT slot = 0; slot < GPU_RESOURCE_HEAP_UAV_COUNT; ++slot)
+		for (uint32_t slot = 0; slot < GPU_RESOURCE_HEAP_UAV_COUNT; ++slot)
 		{
 			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, null_resource_heap_dest);
 			null_resource_heap_dest.ptr += resource_descriptor_size;
@@ -1540,7 +1540,7 @@ namespace wiGraphics
 		sampler_desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 		sampler_desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
 		sampler_desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-		for (UINT slot = 0; slot < GPU_SAMPLER_HEAP_COUNT; ++slot)
+		for (uint32_t slot = 0; slot < GPU_SAMPLER_HEAP_COUNT; ++slot)
 		{
 			device->CreateSampler(&sampler_desc, null_sampler_heap_dest);
 			null_sampler_heap_dest.ptr += sampler_descriptor_size;
@@ -1552,7 +1552,7 @@ namespace wiGraphics
 
 
 		// Create frame-resident resources:
-		for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+		for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 		{
 			hr = swapChain->GetBuffer(fr, __uuidof(ID3D12Resource), (void**)&frames[fr].backBuffer);
 			assert(SUCCEEDED(hr));
@@ -1614,7 +1614,7 @@ namespace wiGraphics
 		samplerRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
 		{
-			UINT descriptorRangeCount = 3;
+			uint32_t descriptorRangeCount = 3;
 			D3D12_DESCRIPTOR_RANGE* descriptorRanges = new D3D12_DESCRIPTOR_RANGE[descriptorRangeCount];
 
 			descriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
@@ -1638,7 +1638,7 @@ namespace wiGraphics
 
 
 
-			UINT paramCount = 2 * (SHADERSTAGE_COUNT - 1); // 2: resource,sampler;   5: vs,hs,ds,gs,ps;
+			uint32_t paramCount = 2 * (SHADERSTAGE_COUNT - 1); // 2: resource,sampler;   5: vs,hs,ds,gs,ps;
 			D3D12_ROOT_PARAMETER* params = new D3D12_ROOT_PARAMETER[paramCount];
 			params[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 			params[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
@@ -1713,7 +1713,7 @@ namespace wiGraphics
 			SAFE_DELETE_ARRAY(params);
 		}
 		{
-			UINT descriptorRangeCount = 3;
+			uint32_t descriptorRangeCount = 3;
 			D3D12_DESCRIPTOR_RANGE* descriptorRanges = new D3D12_DESCRIPTOR_RANGE[descriptorRangeCount];
 
 			descriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
@@ -1736,7 +1736,7 @@ namespace wiGraphics
 
 
 
-			UINT paramCount = 2;
+			uint32_t paramCount = 2;
 			D3D12_ROOT_PARAMETER* params = new D3D12_ROOT_PARAMETER[paramCount];
 			params[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 			params[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
@@ -1808,7 +1808,7 @@ namespace wiGraphics
 			D3D12_QUERY_HEAP_DESC queryheapdesc = {};
 			queryheapdesc.NodeMask = 0;
 
-			for (UINT i = 0; i < timestamp_query_count; ++i)
+			for (uint32_t i = 0; i < timestamp_query_count; ++i)
 			{
 				free_timestampqueries.push_back(i);
 			}
@@ -1817,7 +1817,7 @@ namespace wiGraphics
 			hr = device->CreateQueryHeap(&queryheapdesc, __uuidof(ID3D12QueryHeap), (void**)&querypool_timestamp);
 			assert(SUCCEEDED(hr));
 
-			for (UINT i = 0; i < occlusion_query_count; ++i)
+			for (uint32_t i = 0; i < occlusion_query_count; ++i)
 			{
 				free_occlusionqueries.push_back(i);
 			}
@@ -1832,7 +1832,7 @@ namespace wiGraphics
 
 			hr = allocator->CreateResource(
 				&allocationDesc,
-				&CD3DX12_RESOURCE_DESC::Buffer(timestamp_query_count * sizeof(UINT64)),
+				&CD3DX12_RESOURCE_DESC::Buffer(timestamp_query_count * sizeof(uint64_t)),
 				D3D12_RESOURCE_STATE_COPY_DEST,
 				nullptr,
 				&allocation_querypool_timestamp_readback,
@@ -1842,7 +1842,7 @@ namespace wiGraphics
 
 			hr = allocator->CreateResource(
 				&allocationDesc,
-				&CD3DX12_RESOURCE_DESC::Buffer(occlusion_query_count * sizeof(UINT64)),
+				&CD3DX12_RESOURCE_DESC::Buffer(occlusion_query_count * sizeof(uint64_t)),
 				D3D12_RESOURCE_STATE_COPY_DEST,
 				nullptr,
 				&allocation_querypool_occlusion_readback,
@@ -1859,7 +1859,7 @@ namespace wiGraphics
 
 		SAFE_RELEASE(swapChain);
 
-		for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+		for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 		{
 			SAFE_RELEASE(frames[fr].backBuffer);
 
@@ -1920,7 +1920,7 @@ namespace wiGraphics
 
 			WaitForGPU();
 
-			for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+			for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 			{
 				SAFE_RELEASE(frames[fr].backBuffer);
 			}
@@ -1928,7 +1928,7 @@ namespace wiGraphics
 			HRESULT hr = swapChain->ResizeBuffers(GetBackBufferCount(), width, height, _ConvertFormat(GetBackBufferFormat()), 0);
 			assert(SUCCEEDED(hr));
 
-			for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+			for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 			{
 				hr = swapChain->GetBuffer(fr, __uuidof(ID3D12Resource), (void**)&frames[fr].backBuffer);
 				assert(SUCCEEDED(hr));
@@ -1963,12 +1963,12 @@ namespace wiGraphics
 		{
 			alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
 		}
-		UINT64 alignedSize = Align(pDesc->ByteWidth, alignment);
+		size_t alignedSize = Align(pDesc->ByteWidth, alignment);
 
 		D3D12_RESOURCE_DESC desc;
 		desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 		desc.Format = DXGI_FORMAT_UNKNOWN;
-		desc.Width = alignedSize;
+		desc.Width = (UINT64)alignedSize;
 		desc.Height = 1;
 		desc.MipLevels = 1;
 		desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
@@ -2022,7 +2022,7 @@ namespace wiGraphics
 		if (pDesc->BindFlags & BIND_CONSTANT_BUFFER)
 		{
 			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
-			cbv_desc.SizeInBytes = (UINT)alignedSize;
+			cbv_desc.SizeInBytes = (uint32_t)alignedSize;
 			cbv_desc.BufferLocation = ((ID3D12Resource*)pBuffer->resource)->GetGPUVirtualAddress();
 
 			pBuffer->CBV = ResourceAllocator->allocate();
@@ -2225,21 +2225,21 @@ namespace wiGraphics
 
 		if (pTexture->desc.MipLevels == 0)
 		{
-			pTexture->desc.MipLevels = (UINT)log2(std::max(pTexture->desc.Width, pTexture->desc.Height));
+			pTexture->desc.MipLevels = (uint32_t)log2(std::max(pTexture->desc.Width, pTexture->desc.Height));
 		}
 
 
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
-			UINT dataCount = pDesc->ArraySize * std::max(1u, pDesc->MipLevels);
+			uint32_t dataCount = pDesc->ArraySize * std::max(1u, pDesc->MipLevels);
 			D3D12_SUBRESOURCE_DATA* data = new D3D12_SUBRESOURCE_DATA[dataCount];
-			for (UINT slice = 0; slice < dataCount; ++slice)
+			for (uint32_t slice = 0; slice < dataCount; ++slice)
 			{
 				data[slice] = _ConvertSubresourceData(pInitialData[slice]);
 			}
 
-			UINT FirstSubresource = 0;
+			uint32_t FirstSubresource = 0;
 
 			UINT64 RequiredSize = 0;
 			device->GetCopyableFootprints(&desc, 0, dataCount, 0, nullptr, nullptr, nullptr, &RequiredSize);
@@ -2276,14 +2276,14 @@ namespace wiGraphics
 
 		return hr;
 	}
-	HRESULT GraphicsDevice_DX12::CreateInputLayout(const VertexLayoutDesc* pInputElementDescs, UINT NumElements, const ShaderByteCode* shaderCode, VertexLayout* pInputLayout)
+	HRESULT GraphicsDevice_DX12::CreateInputLayout(const VertexLayoutDesc* pInputElementDescs, uint32_t NumElements, const ShaderByteCode* shaderCode, VertexLayout* pInputLayout)
 	{
 		DestroyInputLayout(pInputLayout);
 		pInputLayout->Register(this);
 
 		pInputLayout->desc.clear();
 		pInputLayout->desc.reserve((size_t)NumElements);
-		for (UINT i = 0; i < NumElements; ++i)
+		for (uint32_t i = 0; i < NumElements; ++i)
 		{
 			pInputLayout->desc.push_back(pInputElementDescs[i]);
 		}
@@ -2424,7 +2424,7 @@ namespace wiGraphics
 
 		pQuery->desc = *pDesc;
 
-		UINT query_index;
+		uint32_t query_index;
 
 		switch (pDesc->Type)
 		{
@@ -2491,7 +2491,7 @@ namespace wiGraphics
 
 		renderpass->hash = 0;
 		wiHelper::hash_combine(renderpass->hash, pDesc->numAttachments);
-		for (UINT i = 0; i < pDesc->numAttachments; ++i)
+		for (uint32_t i = 0; i < pDesc->numAttachments; ++i)
 		{
 			wiHelper::hash_combine(renderpass->hash, pDesc->attachments[i].texture->desc.Format);
 			wiHelper::hash_combine(renderpass->hash, pDesc->attachments[i].texture->desc.SampleCount);
@@ -2500,7 +2500,7 @@ namespace wiGraphics
 		return S_OK;
 	}
 
-	int GraphicsDevice_DX12::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount)
+	int GraphicsDevice_DX12::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount)
 	{
 		switch (type)
 		{
@@ -3171,10 +3171,10 @@ namespace wiGraphics
 					((ID3D12PipelineState*)item.handle)->Release();
 					break;
 				case DestroyItem::QUERY_TIMESTAMP:
-					free_timestampqueries.push_back((UINT)item.handle);
+					free_timestampqueries.push_back((uint32_t)item.handle);
 					break;
 				case DestroyItem::QUERY_OCCLUSION:
-					free_timestampqueries.push_back((UINT)item.handle);
+					free_timestampqueries.push_back((uint32_t)item.handle);
 					break;
 				default:
 					break;
@@ -3200,7 +3200,7 @@ namespace wiGraphics
 			assert(cmd < COMMANDLIST_COUNT);
 
 			HRESULT hr;
-			for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+			for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 			{
 				hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&frames[fr].commandAllocators[cmd]);
 				hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[fr].commandAllocators[cmd], nullptr, __uuidof(ID3D12GraphicsCommandList4), (void**)&frames[fr].commandLists[cmd]);
@@ -3231,8 +3231,8 @@ namespace wiGraphics
 		GetFrameResources().resourceBuffer[cmd]->clear();
 
 		D3D12_VIEWPORT vp = {};
-		vp.Width = (FLOAT)SCREENWIDTH;
-		vp.Height = (FLOAT)SCREENHEIGHT;
+		vp.Width = (float)SCREENWIDTH;
+		vp.Height = (float)SCREENHEIGHT;
 		vp.MinDepth = 0.0f;
 		vp.MaxDepth = 1.0f;
 		vp.TopLeftX = 0;
@@ -3240,7 +3240,7 @@ namespace wiGraphics
 		GetDirectCommandList(cmd)->RSSetViewports(1, &vp);
 
 		D3D12_RECT pRects[8];
-		for (UINT i = 0; i < 8; ++i)
+		for (uint32_t i = 0; i < 8; ++i)
 		{
 			pRects[i].bottom = INT32_MAX;
 			pRects[i].left = INT32_MIN;
@@ -3290,11 +3290,11 @@ namespace wiGraphics
 
 #ifdef DX12_REAL_RENDERPASS
 
-		UINT rt_count = 0;
+		uint32_t rt_count = 0;
 		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTVs[8] = {};
 		bool dsv = false;
 		D3D12_RENDER_PASS_DEPTH_STENCIL_DESC DSV = {};
-		for (UINT i = 0; i < desc.numAttachments; ++i)
+		for (uint32_t i = 0; i < desc.numAttachments; ++i)
 		{
 			const RenderPassAttachment& attachment = desc.attachments[i];
 			const Texture2D* texture = attachment.texture;
@@ -3400,10 +3400,10 @@ namespace wiGraphics
 
 #else
 
-		UINT rt_count = 0;
+		uint32_t rt_count = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE RTVs[8] = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE* DSV = nullptr;
-		for (UINT i = 0; i < desc.numAttachments; ++i)
+		for (uint32_t i = 0; i < desc.numAttachments; ++i)
 		{
 			const RenderPassAttachment& attachment = desc.attachments[i];
 			const Texture* texture = attachment.texture;
@@ -3442,7 +3442,7 @@ namespace wiGraphics
 
 				if (attachment.loadop == RenderPassAttachment::LOADOP_CLEAR)
 				{
-					UINT _flags = D3D12_CLEAR_FLAG_DEPTH;
+					uint32_t _flags = D3D12_CLEAR_FLAG_DEPTH;
 					if (IsFormatStencilSupport(texture->desc.Format))
 						_flags |= D3D12_CLEAR_FLAG_STENCIL;
 					GetDirectCommandList(cmd)->ClearDepthStencilView(*DSV, (D3D12_CLEAR_FLAGS)_flags, texture->desc.clear.depthstencil.depth, texture->desc.clear.depthstencil.stencil, 0, nullptr);
@@ -3466,8 +3466,8 @@ namespace wiGraphics
 
 		// Perform render pass transitions:
 		D3D12_RESOURCE_BARRIER barrierdescs[9];
-		UINT numBarriers = 0;
-		for (UINT i = 0; i < active_renderpass[cmd]->desc.numAttachments; ++i)
+		uint32_t numBarriers = 0;
+		for (uint32_t i = 0; i < active_renderpass[cmd]->desc.numAttachments; ++i)
 		{
 			const RenderPassAttachment& attachment = active_renderpass[cmd]->desc.attachments[i];
 			if (attachment.initial_layout == attachment.final_layout)
@@ -3491,23 +3491,23 @@ namespace wiGraphics
 
 		active_renderpass[cmd] = nullptr;
 	}
-	void GraphicsDevice_DX12::BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) {
+	void GraphicsDevice_DX12::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) {
 		assert(rects != nullptr);
 		assert(numRects <= 8);
 		D3D12_RECT pRects[8];
-		for (UINT i = 0; i < numRects; ++i) {
-			pRects[i].bottom = rects[i].bottom;
-			pRects[i].left = rects[i].left;
-			pRects[i].right = rects[i].right;
-			pRects[i].top = rects[i].top;
+		for (uint32_t i = 0; i < numRects; ++i) {
+			pRects[i].bottom = (LONG)rects[i].bottom;
+			pRects[i].left = (LONG)rects[i].left;
+			pRects[i].right = (LONG)rects[i].right;
+			pRects[i].top = (LONG)rects[i].top;
 		}
 		GetDirectCommandList(cmd)->RSSetScissorRects(numRects, pRects);
 	}
-	void GraphicsDevice_DX12::BindViewports(UINT NumViewports, const ViewPort* pViewports, CommandList cmd)
+	void GraphicsDevice_DX12::BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd)
 	{
 		assert(NumViewports <= 6);
 		D3D12_VIEWPORT d3dViewPorts[6];
-		for (UINT i = 0; i < NumViewports; ++i)
+		for (uint32_t i = 0; i < NumViewports; ++i)
 		{
 			d3dViewPorts[i].TopLeftX = pViewports[i].TopLeftX;
 			d3dViewPorts[i].TopLeftY = pViewports[i].TopLeftY;
@@ -3518,7 +3518,7 @@ namespace wiGraphics
 		}
 		GetDirectCommandList(cmd)->RSSetViewports(NumViewports, d3dViewPorts);
 	}
-	void GraphicsDevice_DX12::BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource)
+	void GraphicsDevice_DX12::BindResource(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_SRV_COUNT);
 		auto& table = GetFrameResources().descriptors[cmd]->tables[stage];
@@ -3529,17 +3529,17 @@ namespace wiGraphics
 			table.dirty_resources = true;
 		}
 	}
-	void GraphicsDevice_DX12::BindResources(SHADERSTAGE stage, const GPUResource* const* resources, UINT slot, UINT count, CommandList cmd)
+	void GraphicsDevice_DX12::BindResources(SHADERSTAGE stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
 	{
 		if (resources != nullptr)
 		{
-			for (UINT i = 0; i < count; ++i)
+			for (uint32_t i = 0; i < count; ++i)
 			{
 				BindResource(stage, resources[i], slot + i, cmd, -1);
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource)
+	void GraphicsDevice_DX12::BindUAV(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_UAV_COUNT);
 		auto& table = GetFrameResources().descriptors[cmd]->tables[stage];
@@ -3550,23 +3550,23 @@ namespace wiGraphics
 			table.dirty_resources = true;
 		}
 	}
-	void GraphicsDevice_DX12::BindUAVs(SHADERSTAGE stage, const GPUResource* const* resources, UINT slot, UINT count, CommandList cmd)
+	void GraphicsDevice_DX12::BindUAVs(SHADERSTAGE stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
 	{
 		if (resources != nullptr)
 		{
-			for (UINT i = 0; i < count; ++i)
+			for (uint32_t i = 0; i < count; ++i)
 			{
 				BindUAV(stage, resources[i], slot + i, cmd, -1);
 			}
 		}
 	}
-	void GraphicsDevice_DX12::UnbindResources(UINT slot, UINT num, CommandList cmd)
+	void GraphicsDevice_DX12::UnbindResources(uint32_t slot, uint32_t num, CommandList cmd)
 	{
 	}
-	void GraphicsDevice_DX12::UnbindUAVs(UINT slot, UINT num, CommandList cmd)
+	void GraphicsDevice_DX12::UnbindUAVs(uint32_t slot, uint32_t num, CommandList cmd)
 	{
 	}
-	void GraphicsDevice_DX12::BindSampler(SHADERSTAGE stage, const Sampler* sampler, UINT slot, CommandList cmd)
+	void GraphicsDevice_DX12::BindSampler(SHADERSTAGE stage, const Sampler* sampler, uint32_t slot, CommandList cmd)
 	{
 		assert(slot < GPU_SAMPLER_HEAP_COUNT);
 		auto& table = GetFrameResources().descriptors[cmd]->tables[stage];
@@ -3576,7 +3576,7 @@ namespace wiGraphics
 			table.dirty_samplers = true;
 		}
 	}
-	void GraphicsDevice_DX12::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, UINT slot, CommandList cmd)
+	void GraphicsDevice_DX12::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_CBV_COUNT);
 		auto& table = GetFrameResources().descriptors[cmd]->tables[stage];
@@ -3586,11 +3586,11 @@ namespace wiGraphics
 			table.dirty_resources = true;
 		}
 	}
-	void GraphicsDevice_DX12::BindVertexBuffers(const GPUBuffer* const* vertexBuffers, UINT slot, UINT count, const UINT* strides, const UINT* offsets, CommandList cmd)
+	void GraphicsDevice_DX12::BindVertexBuffers(const GPUBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd)
 	{
 		assert(count <= 8);
 		D3D12_VERTEX_BUFFER_VIEW res[8] = { 0 };
-		for (UINT i = 0; i < count; ++i)
+		for (uint32_t i = 0; i < count; ++i)
 		{
 			if (vertexBuffers[i] != nullptr)
 			{
@@ -3604,9 +3604,9 @@ namespace wiGraphics
 				res[i].StrideInBytes = strides[i];
 			}
 		}
-		GetDirectCommandList(cmd)->IASetVertexBuffers(static_cast<UINT>(slot), static_cast<UINT>(count), res);
+		GetDirectCommandList(cmd)->IASetVertexBuffers(static_cast<uint32_t>(slot), static_cast<uint32_t>(count), res);
 	}
-	void GraphicsDevice_DX12::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, CommandList cmd)
+	void GraphicsDevice_DX12::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd)
 	{
 		D3D12_INDEX_BUFFER_VIEW res = {};
 		if (indexBuffer != nullptr)
@@ -3617,7 +3617,7 @@ namespace wiGraphics
 		}
 		GetDirectCommandList(cmd)->IASetIndexBuffer(&res);
 	}
-	void GraphicsDevice_DX12::BindStencilRef(UINT value, CommandList cmd)
+	void GraphicsDevice_DX12::BindStencilRef(uint32_t value, CommandList cmd)
 	{
 		GetDirectCommandList(cmd)->OMSetStencilRef(value);
 	}
@@ -3732,9 +3732,9 @@ namespace wiGraphics
 				D3D12_INPUT_ELEMENT_DESC* elements = nullptr;
 				if (pso->desc.il != nullptr)
 				{
-					desc.InputLayout.NumElements = (UINT)pso->desc.il->desc.size();
+					desc.InputLayout.NumElements = (uint32_t)pso->desc.il->desc.size();
 					elements = new D3D12_INPUT_ELEMENT_DESC[desc.InputLayout.NumElements];
-					for (UINT i = 0; i < desc.InputLayout.NumElements; ++i)
+					for (uint32_t i = 0; i < desc.InputLayout.NumElements; ++i)
 					{
 						elements[i].SemanticName = pso->desc.il->desc[i].SemanticName;
 						elements[i].SemanticIndex = pso->desc.il->desc[i].SemanticIndex;
@@ -3760,7 +3760,7 @@ namespace wiGraphics
 				}
 				else
 				{
-					for (UINT i = 0; i < active_renderpass[cmd]->desc.numAttachments; ++i)
+					for (uint32_t i = 0; i < active_renderpass[cmd]->desc.numAttachments; ++i)
 					{
 						const RenderPassAttachment& attachment = active_renderpass[cmd]->desc.attachments[i];
 
@@ -3891,42 +3891,42 @@ namespace wiGraphics
 		prev_pipeline_hash[cmd] = 0; // note: same bind point for compute and graphics in dx12!
 		GetDirectCommandList(cmd)->SetPipelineState((ID3D12PipelineState*)cs->resource);
 	}
-	void GraphicsDevice_DX12::Draw(UINT vertexCount, UINT startVertexLocation, CommandList cmd)
+	void GraphicsDevice_DX12::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd)
 	{
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		GetDirectCommandList(cmd)->DrawInstanced(vertexCount, 1, startVertexLocation, 0);
 	}
-	void GraphicsDevice_DX12::DrawIndexed(UINT indexCount, UINT startIndexLocation, UINT baseVertexLocation, CommandList cmd)
+	void GraphicsDevice_DX12::DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, CommandList cmd)
 	{
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		GetDirectCommandList(cmd)->DrawIndexedInstanced(indexCount, 1, startIndexLocation, baseVertexLocation, 0);
 	}
-	void GraphicsDevice_DX12::DrawInstanced(UINT vertexCount, UINT instanceCount, UINT startVertexLocation, UINT startInstanceLocation, CommandList cmd)
+	void GraphicsDevice_DX12::DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		GetDirectCommandList(cmd)->DrawInstanced(vertexCount, instanceCount, startVertexLocation, startInstanceLocation);
 	}
-	void GraphicsDevice_DX12::DrawIndexedInstanced(UINT indexCount, UINT instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, CommandList cmd)
+	void GraphicsDevice_DX12::DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		GetDirectCommandList(cmd)->DrawIndexedInstanced(indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
 	}
-	void GraphicsDevice_DX12::DrawInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
+	void GraphicsDevice_DX12::DrawInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 	{
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		GetDirectCommandList(cmd)->ExecuteIndirect(drawInstancedIndirectCommandSignature, 1, (ID3D12Resource*)args->resource, args_offset, nullptr, 0);
 	}
-	void GraphicsDevice_DX12::DrawIndexedInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
+	void GraphicsDevice_DX12::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 	{
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		GetDirectCommandList(cmd)->ExecuteIndirect(drawIndexedInstancedIndirectCommandSignature, 1, (ID3D12Resource*)args->resource, args_offset, nullptr, 0);
 	}
-	void GraphicsDevice_DX12::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, CommandList cmd)
+	void GraphicsDevice_DX12::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		GetDirectCommandList(cmd)->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 	}
-	void GraphicsDevice_DX12::DispatchIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
+	void GraphicsDevice_DX12::DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 	{
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		GetDirectCommandList(cmd)->ExecuteIndirect(dispatchIndirectCommandSignature, 1, (ID3D12Resource*)args->resource, args_offset, nullptr, 0);
@@ -3935,7 +3935,7 @@ namespace wiGraphics
 	{
 		GetDirectCommandList(cmd)->CopyResource((ID3D12Resource*)pDst->resource, (ID3D12Resource*)pSrc->resource);
 	}
-	void GraphicsDevice_DX12::CopyTexture2D_Region(const Texture* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture* pSrc, UINT srcMip, CommandList cmd)
+	void GraphicsDevice_DX12::CopyTexture2D_Region(const Texture* pDst, uint32_t dstMip, uint32_t dstX, uint32_t dstY, const Texture* pSrc, uint32_t srcMip, CommandList cmd)
 	{
 		D3D12_RESOURCE_DESC dst_desc = ((ID3D12Resource*)pDst->resource)->GetDesc();
 		D3D12_RESOURCE_DESC src_desc = ((ID3D12Resource*)pSrc->resource)->GetDesc();
@@ -4031,13 +4031,13 @@ namespace wiGraphics
 		switch (query->desc.Type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			GetDirectCommandList(cmd)->BeginQuery(querypool_timestamp, D3D12_QUERY_TYPE_TIMESTAMP, (UINT)query->resource);
+			GetDirectCommandList(cmd)->BeginQuery(querypool_timestamp, D3D12_QUERY_TYPE_TIMESTAMP, (uint32_t)query->resource);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-			GetDirectCommandList(cmd)->BeginQuery(querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION, (UINT)query->resource);
+			GetDirectCommandList(cmd)->BeginQuery(querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION, (uint32_t)query->resource);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
-			GetDirectCommandList(cmd)->BeginQuery(querypool_occlusion, D3D12_QUERY_TYPE_OCCLUSION, (UINT)query->resource);
+			GetDirectCommandList(cmd)->BeginQuery(querypool_occlusion, D3D12_QUERY_TYPE_OCCLUSION, (uint32_t)query->resource);
 			break;
 		}
 	}
@@ -4046,16 +4046,16 @@ namespace wiGraphics
 		switch (query->desc.Type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			GetDirectCommandList(cmd)->EndQuery(querypool_timestamp, D3D12_QUERY_TYPE_TIMESTAMP, (UINT)query->resource);
-			GetDirectCommandList(cmd)->ResolveQueryData(querypool_timestamp, D3D12_QUERY_TYPE_TIMESTAMP, (UINT)query->resource, 1, querypool_timestamp_readback, (UINT64)query->resource * sizeof(UINT64));
+			GetDirectCommandList(cmd)->EndQuery(querypool_timestamp, D3D12_QUERY_TYPE_TIMESTAMP, (uint32_t)query->resource);
+			GetDirectCommandList(cmd)->ResolveQueryData(querypool_timestamp, D3D12_QUERY_TYPE_TIMESTAMP, (uint32_t)query->resource, 1, querypool_timestamp_readback, (uint64_t)query->resource * sizeof(uint64_t));
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-			GetDirectCommandList(cmd)->EndQuery(querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION, (UINT)query->resource);
-			GetDirectCommandList(cmd)->ResolveQueryData(querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION, (UINT)query->resource, 1, querypool_occlusion_readback, (UINT64)query->resource * sizeof(UINT64));
+			GetDirectCommandList(cmd)->EndQuery(querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION, (uint32_t)query->resource);
+			GetDirectCommandList(cmd)->ResolveQueryData(querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION, (uint32_t)query->resource, 1, querypool_occlusion_readback, (uint64_t)query->resource * sizeof(uint64_t));
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
-			GetDirectCommandList(cmd)->EndQuery(querypool_occlusion, D3D12_QUERY_TYPE_OCCLUSION, (UINT)query->resource);
-			GetDirectCommandList(cmd)->ResolveQueryData(querypool_occlusion, D3D12_QUERY_TYPE_OCCLUSION, (UINT)query->resource, 1, querypool_occlusion_readback, (UINT64)query->resource * sizeof(UINT64));
+			GetDirectCommandList(cmd)->EndQuery(querypool_occlusion, D3D12_QUERY_TYPE_OCCLUSION, (uint32_t)query->resource);
+			GetDirectCommandList(cmd)->ResolveQueryData(querypool_occlusion, D3D12_QUERY_TYPE_OCCLUSION, (uint32_t)query->resource, 1, querypool_occlusion_readback, (uint64_t)query->resource * sizeof(uint64_t));
 			break;
 		}
 	}
@@ -4063,7 +4063,7 @@ namespace wiGraphics
 	{
 		D3D12_RANGE range;
 		range.Begin = (SIZE_T)query->resource * sizeof(SIZE_T);
-		range.End = range.Begin + sizeof(UINT64);
+		range.End = range.Begin + sizeof(uint64_t);
 		D3D12_RANGE nullrange = {};
 		void* data = nullptr;
 
@@ -4074,7 +4074,7 @@ namespace wiGraphics
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP:
 			querypool_timestamp_readback->Map(0, &range, &data);
-			result->result_timestamp = *(UINT64*)((SIZE_T)data + range.Begin);
+			result->result_timestamp = *(uint64_t*)((SIZE_T)data + range.Begin);
 			querypool_timestamp_readback->Unmap(0, &nullrange);
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
@@ -4088,7 +4088,7 @@ namespace wiGraphics
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
 			querypool_occlusion_readback->Map(0, &range, &data);
-			result->result_passed_sample_count = *(UINT64*)((SIZE_T)data + range.Begin);
+			result->result_passed_sample_count = *(uint64_t*)((SIZE_T)data + range.Begin);
 			querypool_occlusion_readback->Unmap(0, &nullrange);
 			result->result_passed = result->result_passed_sample_count > 0 ? 1 : 0;
 			break;
@@ -4096,11 +4096,11 @@ namespace wiGraphics
 
 		return true;
 	}
-	void GraphicsDevice_DX12::Barrier(const GPUBarrier* barriers, UINT numBarriers, CommandList cmd)
+	void GraphicsDevice_DX12::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
 		D3D12_RESOURCE_BARRIER barrierdescs[8];
 
-		for (UINT i = 0; i < numBarriers; ++i)
+		for (uint32_t i = 0; i < numBarriers; ++i)
 		{
 			const GPUBarrier& barrier = barriers[i];
 			D3D12_RESOURCE_BARRIER& barrierdesc = barrierdescs[i];
@@ -4159,7 +4159,7 @@ namespace wiGraphics
 		assert(dest != nullptr); // todo: this needs to be handled as well
 
 		result.buffer = &allocator.buffer;
-		result.offset = (UINT)allocator.calculateOffset(dest);
+		result.offset = (uint32_t)allocator.calculateOffset(dest);
 		result.data = (void*)dest;
 		return result;
 	}

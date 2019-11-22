@@ -27,7 +27,7 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateTexture(&desc, nullptr, &rtSSR);
 		device->SetName(&rtSSR, "rtSSR");
 
-		for (UINT i = 0; i < rtSSR.GetDesc().MipLevels; ++i)
+		for (uint32_t i = 0; i < rtSSR.GetDesc().MipLevels; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(&rtSSR, SRV, 0, 1, i, 1);
@@ -80,7 +80,7 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateTexture(&desc, nullptr, &rtSceneCopy);
 		device->SetName(&rtSceneCopy, "rtSceneCopy");
 
-		for (UINT i = 0; i < rtSceneCopy.GetDesc().MipLevels; ++i)
+		for (uint32_t i = 0; i < rtSceneCopy.GetDesc().MipLevels; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(&rtSceneCopy, SRV, 0, 1, i, 1);
@@ -157,7 +157,7 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateTexture(&desc, nullptr, &rtBloom);
 		device->SetName(&rtBloom, "rtBloom");
 
-		for (UINT i = 0; i < rtBloom.GetDesc().MipLevels; ++i)
+		for (uint32_t i = 0; i < rtBloom.GetDesc().MipLevels; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(&rtBloom, SRV, 0, 1, i, 1);
@@ -345,10 +345,10 @@ void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
 	device->BindResource(CS, &depthBuffer_Copy, TEXSLOT_DEPTH, cmd);
 	wiRenderer::UpdateRenderData(cmd);
 	
-	ViewPort viewPort;
-	viewPort.Width = (float)smallDepth.GetDesc().Width;
-	viewPort.Height = (float)smallDepth.GetDesc().Height;
-	device->BindViewports(1, &viewPort, cmd);
+	Viewport viewport;
+	viewport.Width = (float)smallDepth.GetDesc().Width;
+	viewport.Height = (float)smallDepth.GetDesc().Height;
+	device->BindViewports(1, &viewport, cmd);
 
 	device->RenderPassBegin(&renderpass_occlusionculling, cmd);
 
@@ -366,7 +366,7 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 
 		wiRenderer::UpdateCameraCB(wiRenderer::GetRefCamera(), cmd);
 
-		ViewPort vp;
+		Viewport vp;
 		vp.Width = (float)depthBuffer_Reflection.GetDesc().Width;
 		vp.Height = (float)depthBuffer_Reflection.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
@@ -438,10 +438,10 @@ void RenderPath3D::DownsampleDepthBuffer(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	ViewPort viewPort;
-	viewPort.Width = (float)smallDepth.GetDesc().Width;
-	viewPort.Height = (float)smallDepth.GetDesc().Height;
-	device->BindViewports(1, &viewPort, cmd);
+	Viewport viewport;
+	viewport.Width = (float)smallDepth.GetDesc().Width;
+	viewport.Height = (float)smallDepth.GetDesc().Height;
+	device->BindViewports(1, &viewport, cmd);
 
 	device->RenderPassBegin(&renderpass_downsampledepthbuffer, cmd);
 
@@ -470,7 +470,7 @@ void RenderPath3D::RenderLightShafts(CommandList cmd) const
 		{
 			device->RenderPassBegin(&renderpass_lightshafts, cmd);
 
-			ViewPort vp;
+			Viewport vp;
 			vp.Width = (float)depthBuffer.GetDesc().Width;
 			vp.Height = (float)depthBuffer.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
@@ -509,7 +509,7 @@ void RenderPath3D::RenderVolumetrics(CommandList cmd) const
 
 		device->RenderPassBegin(&renderpass_volumetriclight, cmd);
 
-		ViewPort vp;
+		Viewport vp;
 		vp.Width = (float)rtVolumetricLights.GetDesc().Width;
 		vp.Height = (float)rtVolumetricLights.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
@@ -542,7 +542,7 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 		// todo: refactor water ripples and avoid clear if there is none!
 		device->RenderPassBegin(&renderpass_waterripples, cmd);
 
-		ViewPort vp;
+		Viewport vp;
 		vp.Width = (float)rtWaterRipple.GetDesc().Width;
 		vp.Height = (float)rtWaterRipple.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
@@ -557,7 +557,7 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 
 	device->RenderPassBegin(&renderpass_transparent, cmd);
 
-	ViewPort vp;
+	Viewport vp;
 	vp.Width = (float)renderpass_transparent.desc.attachments[0].texture->GetDesc().Width;
 	vp.Height = (float)renderpass_transparent.desc.attachments[0].texture->GetDesc().Height;
 	device->BindViewports(1, &vp, cmd);
@@ -610,7 +610,7 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 	{
 		device->RenderPassBegin(&renderpass_particledistortion, cmd);
 
-		ViewPort vp;
+		Viewport vp;
 		vp.Width = (float)rtParticleDistortion.GetDesc().Width;
 		vp.Height = (float)rtParticleDistortion.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
@@ -658,7 +658,7 @@ void RenderPath3D::RenderBloom(const RenderPass& renderpass_bloom, CommandList c
 
 			device->RenderPassBegin(&renderpass_bloom, cmd);
 
-			ViewPort vp;
+			Viewport vp;
 			vp.Width = (float)renderpass_bloom.desc.attachments[0].texture->GetDesc().Width;
 			vp.Height = (float)renderpass_bloom.desc.attachments[0].texture->GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);

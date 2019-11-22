@@ -52,10 +52,10 @@ namespace wiGPUSortLib
 
 
 	void Sort(
-		UINT maxCount, 
+		uint32_t maxCount, 
 		const GPUBuffer& comparisonBuffer_read, 
 		const GPUBuffer& counterBuffer_read, 
-		UINT counterReadOffset, 
+		uint32_t counterReadOffset, 
 		const GPUBuffer& indexBuffer_write,
 		CommandList cmd)
 	{

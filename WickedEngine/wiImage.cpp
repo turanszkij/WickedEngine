@@ -57,7 +57,7 @@ namespace wiImage
 
 		device->BindResource(PS, texture, TEXSLOT_ONDEMAND0, cmd);
 
-		UINT stencilRef = params.stencilRef;
+		uint32_t stencilRef = params.stencilRef;
 		if (params.stencilRefMode == STENCILREFMODE_USER)
 		{
 			stencilRef = wiRenderer::CombineStencilrefs(STENCILREF_EMPTY, (uint8_t)stencilRef);
