@@ -3084,25 +3084,26 @@ bool GraphicsDevice_DX11::QueryRead(const GPUQuery* query, GPUQueryResult* resul
 	switch (query->desc.Type)
 	{
 	case GPU_QUERY_TYPE_TIMESTAMP:
-		hr = immediateContext->GetData(QUERY, &result->result_timestamp, sizeof(result->result_timestamp), _flags);
+		hr = immediateContext->GetData(QUERY, &result->result_timestamp, sizeof(uint64_t), _flags);
 		break;
 	case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
-		{
-			D3D11_QUERY_DATA_TIMESTAMP_DISJOINT _temp;
-			hr = immediateContext->GetData(QUERY, &_temp, sizeof(_temp), _flags);
-			result->result_disjoint = _temp.Disjoint;
-			result->result_timestamp_frequency = _temp.Frequency;
-		}
-		break;
-	case GPU_QUERY_TYPE_OCCLUSION:
-		hr = immediateContext->GetData(QUERY, &result->result_passed_sample_count, sizeof(result->result_passed_sample_count), _flags);
-		result->result_passed = result->result_passed_sample_count != 0;
-		break;
+	{
+		D3D11_QUERY_DATA_TIMESTAMP_DISJOINT _temp;
+		hr = immediateContext->GetData(QUERY, &_temp, sizeof(_temp), _flags);
+		result->result_timestamp_frequency = _temp.Frequency;
+	}
+	break;
 	case GPU_QUERY_TYPE_EVENT:
-	case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-	default:
-		hr = immediateContext->GetData(QUERY, &result->result_passed, sizeof(result->result_passed), _flags);
+	case GPU_QUERY_TYPE_OCCLUSION:
+		hr = immediateContext->GetData(QUERY, &result->result_passed_sample_count, sizeof(uint64_t), _flags);
 		break;
+	case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+	{
+		BOOL passed = FALSE;
+		hr = immediateContext->GetData(QUERY, &passed, sizeof(BOOL), _flags);
+		result->result_passed_sample_count = (uint64_t)passed;
+		break;
+	}
 	}
 
 	return hr != S_FALSE;

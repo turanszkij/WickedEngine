@@ -4900,13 +4900,11 @@ namespace wiGraphics
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
 			result->result_timestamp_frequency = timestamp_frequency;
-			result->result_disjoint = FALSE;
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
 		case GPU_QUERY_TYPE_OCCLUSION:
 			res = vkGetQueryPoolResults(device, querypool_occlusion, (uint32_t)query->resource, 1, sizeof(uint64_t),
 				&result->result_passed_sample_count, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
-			result->result_passed = result->result_passed_sample_count > 0 ? 1 : 0;
 			occlusions_to_reset.push_back((uint32_t)query->resource);
 			break;
 		}

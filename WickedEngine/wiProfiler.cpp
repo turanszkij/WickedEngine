@@ -77,29 +77,26 @@ namespace wiProfiler
 			while (!wiRenderer::GetDevice()->QueryRead(disjoint_query, &disjoint_result));
 		}
 
-		if (disjoint_result.result_disjoint == FALSE)
+		for (auto& x : ranges)
 		{
-			for (auto& x : ranges)
-			{
-				auto& range = x.second;
+			auto& range = x.second;
 
-				range->time = 0;
-				if (range->IsCPURange())
+			range->time = 0;
+			if (range->IsCPURange())
+			{
+				range->time = (float)abs(range->cpuEnd.elapsed() - range->cpuBegin.elapsed());
+			}
+			else
+			{
+				GPUQuery* begin_query = range->gpuBegin.Get_CPU();
+				GPUQuery* end_query = range->gpuEnd.Get_CPU();
+				GPUQueryResult begin_result, end_result;
+				if (begin_query != nullptr && end_query != nullptr)
 				{
-					range->time = (float)abs(range->cpuEnd.elapsed() - range->cpuBegin.elapsed());
+					while (!wiRenderer::GetDevice()->QueryRead(begin_query, &begin_result));
+					while (!wiRenderer::GetDevice()->QueryRead(end_query, &end_result));
 				}
-				else
-				{
-					GPUQuery* begin_query = range->gpuBegin.Get_CPU();
-					GPUQuery* end_query = range->gpuEnd.Get_CPU();
-					GPUQueryResult begin_result, end_result;
-					if (begin_query != nullptr && end_query != nullptr)
-					{
-						while (!wiRenderer::GetDevice()->QueryRead(begin_query, &begin_result));
-						while (!wiRenderer::GetDevice()->QueryRead(end_query, &end_result));
-					}
-					range->time = abs((float)(end_result.result_timestamp - begin_result.result_timestamp) / disjoint_result.result_timestamp_frequency * 1000.0f);
-				}
+				range->time = abs((float)(end_result.result_timestamp - begin_result.result_timestamp) / disjoint_result.result_timestamp_frequency * 1000.0f);
 			}
 		}
 	}

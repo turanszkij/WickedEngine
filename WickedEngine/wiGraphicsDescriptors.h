@@ -29,6 +29,7 @@ namespace wiGraphics
 	};
 	enum PRIMITIVETOPOLOGY
 	{
+		UNDEFINED,
 		TRIANGLELIST,
 		TRIANGLESTRIP,
 		POINTLIST,
@@ -394,7 +395,7 @@ namespace wiGraphics
 		FILL_MODE FillMode = FILL_SOLID;
 		CULL_MODE CullMode = CULL_NONE;
 		bool FrontCounterClockwise = false;
-		INT DepthBias = 0;
+		int32_t DepthBias = 0;
 		float DepthBiasClamp = 0.0f;
 		float SlopeScaledDepthBias = 0.0f;
 		bool DepthClipEnable = false;
@@ -416,8 +417,8 @@ namespace wiGraphics
 		DEPTH_WRITE_MASK DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 		COMPARISON_FUNC DepthFunc = COMPARISON_NEVER;
 		bool StencilEnable = false;
-		UINT8 StencilReadMask = 0xff;
-		UINT8 StencilWriteMask = 0xff;
+		uint8_t StencilReadMask = 0xff;
+		uint8_t StencilWriteMask = 0xff;
 		DepthStencilOpDesc FrontFace;
 		DepthStencilOpDesc BackFace;
 	};
@@ -430,7 +431,7 @@ namespace wiGraphics
 		BLEND SrcBlendAlpha = BLEND_ONE;
 		BLEND DestBlendAlpha = BLEND_ONE;
 		BLEND_OP BlendOpAlpha = BLEND_OP_ADD;
-		UINT8 RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
+		uint8_t RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	};
 	struct BlendStateDesc
 	{
@@ -454,11 +455,9 @@ namespace wiGraphics
 	};
 	struct GPUQueryResult
 	{
-		bool		result_passed = FALSE;
 		uint64_t	result_passed_sample_count = 0;
 		uint64_t	result_timestamp = 0;
 		uint64_t	result_timestamp_frequency = 0;
-		bool		result_disjoint = FALSE;
 	};
 	struct PipelineStateDesc
 	{
@@ -472,7 +471,7 @@ namespace wiGraphics
 		const DepthStencilState*	dss = nullptr;
 		const VertexLayout*			il = nullptr;
 		PRIMITIVETOPOLOGY			pt = TRIANGLELIST;
-		uint32_t						sampleMask = 0xFFFFFFFF;
+		uint32_t					sampleMask = 0xFFFFFFFF;
 	};
 	struct GPUBarrier
 	{
@@ -568,7 +567,7 @@ namespace wiGraphics
 		uint32_t IndexCountPerInstance = 0;
 		uint32_t InstanceCount = 0;
 		uint32_t StartIndexLocation = 0;
-		INT BaseVertexLocation = 0;
+		int32_t BaseVertexLocation = 0;
 		uint32_t StartInstanceLocation = 0;
 	};
 	struct IndirectDispatchArgs

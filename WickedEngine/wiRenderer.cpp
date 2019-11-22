@@ -4283,7 +4283,7 @@ void OcclusionCulling_Read()
 			GPUQueryResult query_result;
 			while (!device->QueryRead(query, &query_result)) {}
 
-			if (query_result.result_passed == TRUE)
+			if (query_result.result_passed_sample_count > 0)
 			{
 				object.occlusionHistory |= 1; // mark this frame as visible
 			}

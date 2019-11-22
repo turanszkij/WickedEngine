@@ -4083,18 +4083,20 @@ namespace wiGraphics
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
 			directQueue->GetTimestampFrequency(&result->result_timestamp_frequency);
-			result->result_disjoint = FALSE;
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+		{
+			BOOL passed = FALSE;
 			querypool_occlusion_readback->Map(0, &range, &data);
-			result->result_passed = *(BOOL*)((SIZE_T)data + range.Begin);
+			passed = *(BOOL*)((SIZE_T)data + range.Begin);
 			querypool_occlusion_readback->Unmap(0, &nullrange);
+			result->result_passed_sample_count = (uint64_t)passed;
 			break;
+		}
 		case GPU_QUERY_TYPE_OCCLUSION:
 			querypool_occlusion_readback->Map(0, &range, &data);
 			result->result_passed_sample_count = *(uint64_t*)((SIZE_T)data + range.Begin);
 			querypool_occlusion_readback->Unmap(0, &nullrange);
-			result->result_passed = result->result_passed_sample_count > 0 ? 1 : 0;
 			break;
 		}
 

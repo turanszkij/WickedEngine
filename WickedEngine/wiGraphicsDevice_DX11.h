@@ -26,7 +26,7 @@ namespace wiGraphics
 		ID3D11CommandList*			commandLists[COMMANDLIST_COUNT] = {};
 		ID3DUserDefinedAnnotation*	userDefinedAnnotations[COMMANDLIST_COUNT] = {};
 
-		uint32_t		stencilRef[COMMANDLIST_COUNT];
+		uint32_t	stencilRef[COMMANDLIST_COUNT];
 		XMFLOAT4	blendFactor[COMMANDLIST_COUNT];
 
 		ID3D11VertexShader* prev_vs[COMMANDLIST_COUNT] = {};
