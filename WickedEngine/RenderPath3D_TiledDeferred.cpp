@@ -60,7 +60,7 @@ void RenderPath3D_TiledDeferred::Render() const
 
 			device->RenderPassBegin(&renderpass_gbuffer, cmd);
 
-			ViewPort vp;
+			Viewport vp;
 			vp.Width = (float)depthBuffer.GetDesc().Width;
 			vp.Height = (float)depthBuffer.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);

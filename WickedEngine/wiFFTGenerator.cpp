@@ -27,12 +27,12 @@ namespace wiFFTGenerator
 		const CSFFT512x512_Plan& fft_plan,
 		const GPUResource& pUAV_Dst,
 		const GPUResource& pSRV_Src,
-		UINT thread_count,
-		UINT istride,
+		uint32_t thread_count,
+		uint32_t istride,
 		CommandList cmd)
 	{
 		// Setup execution configuration
-		UINT grid = thread_count / COHERENCY_GRANULARITY;
+		uint32_t grid = thread_count / COHERENCY_GRANULARITY;
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -69,11 +69,11 @@ namespace wiFFTGenerator
 		const GPUResource& pSRV_Src,
 		CommandList cmd)
 	{
-		const UINT thread_count = fft_plan.slices * (512 * 512) / 8;
+		const uint32_t thread_count = fft_plan.slices * (512 * 512) / 8;
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		const GPUBuffer* cs_cbs;
 
-		UINT istride = 512 * 512 / 8;
+		uint32_t istride = 512 * 512 / 8;
 		cs_cbs = &fft_plan.pRadix008A_CB[0];
 		device->BindConstantBuffer(CS, cs_cbs, CB_GETBINDSLOT(FFTGeneratorCB), cmd);
 		radix008A(fft_plan, fft_plan.pBuffer_Tmp, pSRV_Src, thread_count, istride, cmd);
@@ -104,7 +104,7 @@ namespace wiFFTGenerator
 		radix008A(fft_plan, pUAV_Dst, fft_plan.pBuffer_Tmp, thread_count, istride, cmd);
 	}
 
-	void create_cbuffers_512x512(CSFFT512x512_Plan& plan, GraphicsDevice* device, UINT slices)
+	void create_cbuffers_512x512(CSFFT512x512_Plan& plan, GraphicsDevice* device, uint32_t slices)
 	{
 		// Create 6 cbuffers for 512x512 transform.
 
@@ -121,9 +121,9 @@ namespace wiFFTGenerator
 		cb_data.SysMemSlicePitch = 0;
 
 		// Buffer 0
-		const UINT thread_count = slices * (512 * 512) / 8;
-		UINT ostride = 512 * 512 / 8;
-		UINT istride = ostride;
+		const uint32_t thread_count = slices * (512 * 512) / 8;
+		uint32_t ostride = 512 * 512 / 8;
+		uint32_t istride = ostride;
 		double phase_base = -TWO_PI / (512.0 * 512.0);
 
 		FFTGeneratorCB cb_data_buf0 = { thread_count, ostride, istride, 512, (float)phase_base };
@@ -178,7 +178,7 @@ namespace wiFFTGenerator
 		device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[5]);
 	}
 
-	void fft512x512_create_plan(CSFFT512x512_Plan& plan, UINT slices)
+	void fft512x512_create_plan(CSFFT512x512_Plan& plan, uint32_t slices)
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 

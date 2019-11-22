@@ -217,7 +217,7 @@ void wiFont::Initialize()
 
 		GPUBufferDesc bd;
 		bd.Usage = USAGE_IMMUTABLE;
-		bd.ByteWidth = UINT(sizeof(uint16_t) * indices.size());
+		bd.ByteWidth = uint32_t(sizeof(uint16_t) * indices.size());
 		bd.BindFlags = BIND_INDEX_BUFFER;
 		bd.CPUAccessFlags = 0;
 		SubresourceData InitData;
@@ -497,10 +497,10 @@ void wiFont::Draw(CommandList cmd) const
 	const GPUBuffer* vbs[] = {
 		mem.buffer,
 	};
-	const UINT strides[] = {
+	const uint32_t strides[] = {
 		sizeof(FontVertex),
 	};
-	const UINT offsets[] = {
+	const uint32_t offsets[] = {
 		mem.offset,
 	};
 	device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, cmd);

@@ -16,9 +16,9 @@ namespace wiGraphics
 {
 // Engine -> Native converters
 
-constexpr UINT _ParseBindFlags(UINT value)
+constexpr uint32_t _ParseBindFlags(uint32_t value)
 {
-	UINT _flag = 0;
+	uint32_t _flag = 0;
 
 	if (value & BIND_VERTEX_BUFFER)
 		_flag |= D3D11_BIND_VERTEX_BUFFER;
@@ -39,9 +39,9 @@ constexpr UINT _ParseBindFlags(UINT value)
 
 	return _flag;
 }
-constexpr UINT _ParseCPUAccessFlags(UINT value)
+constexpr uint32_t _ParseCPUAccessFlags(uint32_t value)
 {
-	UINT _flag = 0;
+	uint32_t _flag = 0;
 
 	if (value & CPU_ACCESS_WRITE)
 		_flag |= D3D11_CPU_ACCESS_WRITE;
@@ -50,9 +50,9 @@ constexpr UINT _ParseCPUAccessFlags(UINT value)
 
 	return _flag;
 }
-constexpr UINT _ParseResourceMiscFlags(UINT value)
+constexpr uint32_t _ParseResourceMiscFlags(uint32_t value)
 {
-	UINT _flag = 0;
+	uint32_t _flag = 0;
 
 	if (value & RESOURCE_MISC_SHARED)
 		_flag |= D3D11_RESOURCE_MISC_SHARED;
@@ -69,9 +69,9 @@ constexpr UINT _ParseResourceMiscFlags(UINT value)
 
 	return _flag;
 }
-constexpr UINT _ParseColorWriteMask(UINT value)
+constexpr uint32_t _ParseColorWriteMask(uint32_t value)
 {
-	UINT _flag = 0;
+	uint32_t _flag = 0;
 
 	if (value == D3D11_COLOR_WRITE_ENABLE_ALL)
 	{
@@ -738,9 +738,9 @@ inline D3D11_SUBRESOURCE_DATA _ConvertSubresourceData(const SubresourceData& pIn
 
 // Native -> Engine converters
 
-constexpr UINT _ParseBindFlags_Inv(UINT value)
+constexpr uint32_t _ParseBindFlags_Inv(uint32_t value)
 {
-	UINT _flag = 0;
+	uint32_t _flag = 0;
 
 	if (value & D3D11_BIND_VERTEX_BUFFER)
 		_flag |= BIND_VERTEX_BUFFER;
@@ -761,9 +761,9 @@ constexpr UINT _ParseBindFlags_Inv(UINT value)
 
 	return _flag;
 }
-constexpr UINT _ParseCPUAccessFlags_Inv(UINT value)
+constexpr uint32_t _ParseCPUAccessFlags_Inv(uint32_t value)
 {
-	UINT _flag = 0;
+	uint32_t _flag = 0;
 
 	if (value & D3D11_CPU_ACCESS_WRITE)
 		_flag |= CPU_ACCESS_WRITE;
@@ -772,9 +772,9 @@ constexpr UINT _ParseCPUAccessFlags_Inv(UINT value)
 
 	return _flag;
 }
-constexpr UINT _ParseResourceMiscFlags_Inv(UINT value)
+constexpr uint32_t _ParseResourceMiscFlags_Inv(uint32_t value)
 {
-	UINT _flag = 0;
+	uint32_t _flag = 0;
 
 	if (value & D3D11_RESOURCE_MISC_SHARED)
 		_flag |= RESOURCE_MISC_SHARED;
@@ -1102,7 +1102,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 		blendFactor[i] = XMFLOAT4(1, 1, 1, 1);
 	}
 
-	UINT createDeviceFlags = 0;
+	uint32_t createDeviceFlags = 0;
 
 	if (debuglayer)
 	{
@@ -1115,16 +1115,16 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 		D3D_DRIVER_TYPE_WARP,
 		D3D_DRIVER_TYPE_REFERENCE,
 	};
-	UINT numDriverTypes = ARRAYSIZE(driverTypes);
+	uint32_t numDriverTypes = ARRAYSIZE(driverTypes);
 
 	D3D_FEATURE_LEVEL featureLevels[] =
 	{
 		D3D_FEATURE_LEVEL_11_1,
 		D3D_FEATURE_LEVEL_11_0,
 	};
-	UINT numFeatureLevels = ARRAYSIZE(featureLevels);
+	uint32_t numFeatureLevels = ARRAYSIZE(featureLevels);
 
-	for (UINT driverTypeIndex = 0; driverTypeIndex < numDriverTypes; driverTypeIndex++)
+	for (uint32_t driverTypeIndex = 0; driverTypeIndex < numDriverTypes; driverTypeIndex++)
 	{
 		driverType = driverTypes[driverTypeIndex];
 		hr = D3D11CreateDevice(nullptr, driverType, nullptr, createDeviceFlags, featureLevels, numFeatureLevels, D3D11_SDK_VERSION, &device
@@ -1310,7 +1310,7 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subr
 	if (pInitialData != nullptr)
 	{
 		data = new D3D11_SUBRESOURCE_DATA[1];
-		for (UINT slice = 0; slice < 1; ++slice)
+		for (uint32_t slice = 0; slice < 1; ++slice)
 		{
 			data[slice] = _ConvertSubresourceData(pInitialData[slice]);
 		}
@@ -1413,9 +1413,9 @@ HRESULT GraphicsDevice_DX11::CreateTexture(const TextureDesc* pDesc, const Subre
 	std::vector<D3D11_SUBRESOURCE_DATA> data;
 	if (pInitialData != nullptr)
 	{
-		UINT dataCount = pDesc->ArraySize * std::max(1u, pDesc->MipLevels);
+		uint32_t dataCount = pDesc->ArraySize * std::max(1u, pDesc->MipLevels);
 		data.resize(dataCount);
-		for (UINT slice = 0; slice < dataCount; ++slice)
+		for (uint32_t slice = 0; slice < dataCount; ++slice)
 		{
 			data[slice] = _ConvertSubresourceData(pInitialData[slice]);
 		}
@@ -1454,7 +1454,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture(const TextureDesc* pDesc, const Subre
 
 	if (pTexture->desc.MipLevels == 0)
 	{
-		pTexture->desc.MipLevels = (UINT)log2(std::max(pTexture->desc.Width, pTexture->desc.Height));
+		pTexture->desc.MipLevels = (uint32_t)log2(std::max(pTexture->desc.Width, pTexture->desc.Height));
 	}
 
 	if (pTexture->desc.BindFlags & BIND_RENDER_TARGET)
@@ -1476,7 +1476,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture(const TextureDesc* pDesc, const Subre
 
 	return hr;
 }
-HRESULT GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout)
+HRESULT GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, uint32_t NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout)
 {
 	DestroyInputLayout(pInputLayout);
 	pInputLayout->Register(this);
@@ -1484,7 +1484,7 @@ HRESULT GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputEle
 	pInputLayout->desc.reserve((size_t)NumElements);
 
 	D3D11_INPUT_ELEMENT_DESC* desc = new D3D11_INPUT_ELEMENT_DESC[NumElements];
-	for (UINT i = 0; i < NumElements; ++i)
+	for (uint32_t i = 0; i < NumElements; ++i)
 	{
 		desc[i].SemanticName = pInputElementDescs[i].SemanticName;
 		desc[i].SemanticIndex = pInputElementDescs[i].SemanticIndex;
@@ -1770,7 +1770,7 @@ HRESULT GraphicsDevice_DX11::CreateRenderPass(const RenderPassDesc* pDesc, Rende
 	return S_OK;
 }
 
-int GraphicsDevice_DX11::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount)
+int GraphicsDevice_DX11::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount)
 {
 	switch (type)
 	{
@@ -2382,9 +2382,9 @@ bool GraphicsDevice_DX11::DownloadResource(const GPUResource* resourceToDownload
 			bool result = SUCCEEDED(hr);
 			if (result)
 			{
-				UINT cpycount = std::max(1u, textureToDownload->desc.Width) * std::max(1u, textureToDownload->desc.Height) * std::max(1u, textureToDownload->desc.Depth);
-				UINT cpystride = GetFormatStride(textureToDownload->desc.Format);
-				UINT cpysize = cpycount * cpystride;
+				uint32_t cpycount = std::max(1u, textureToDownload->desc.Width) * std::max(1u, textureToDownload->desc.Height) * std::max(1u, textureToDownload->desc.Depth);
+				uint32_t cpystride = GetFormatStride(textureToDownload->desc.Format);
+				uint32_t cpysize = cpycount * cpystride;
 				memcpy(dataDest, mappedResource.pData, cpysize);
 				immediateContext->Unmap((ID3D11Resource*)textureDest->resource, 0);
 			}
@@ -2398,7 +2398,7 @@ bool GraphicsDevice_DX11::DownloadResource(const GPUResource* resourceToDownload
 
 void GraphicsDevice_DX11::SetName(GPUResource* pResource, const std::string& name)
 {
-	((ID3D11Resource*)pResource->resource)->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)name.length(), name.c_str());
+	((ID3D11Resource*)pResource->resource)->SetPrivateData(WKPDID_D3DDebugObjectName, (uint32_t)name.length(), name.c_str());
 }
 
 void GraphicsDevice_DX11::PresentBegin(CommandList cmd)
@@ -2485,8 +2485,8 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 	BindComputeShader(nullptr, cmd);
 
 	D3D11_VIEWPORT vp = {};
-	vp.Width = (FLOAT)SCREENWIDTH;
-	vp.Height = (FLOAT)SCREENHEIGHT;
+	vp.Width = (float)SCREENWIDTH;
+	vp.Height = (float)SCREENHEIGHT;
 	vp.MinDepth = 0.0f;
 	vp.MaxDepth = 1.0f;
 	vp.TopLeftX = 0;
@@ -2494,7 +2494,7 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 	deviceContexts[cmd]->RSSetViewports(1, &vp);
 
 	D3D11_RECT pRects[8];
-	for (UINT i = 0; i < 8; ++i)
+	for (uint32_t i = 0; i < 8; ++i)
 	{
 		pRects[i].bottom = INT32_MAX;
 		pRects[i].left = INT32_MIN;
@@ -2528,10 +2528,10 @@ void GraphicsDevice_DX11::RenderPassBegin(const RenderPass* renderpass, CommandL
 {
 	const RenderPassDesc& desc = renderpass->GetDesc();
 
-	UINT rt_count = 0;
+	uint32_t rt_count = 0;
 	ID3D11RenderTargetView* RTVs[8] = {};
 	ID3D11DepthStencilView* DSV = nullptr;
-	for (UINT i = 0; i < desc.numAttachments; ++i)
+	for (uint32_t i = 0; i < desc.numAttachments; ++i)
 	{
 		const RenderPassAttachment& attachment = desc.attachments[i];
 		const Texture* texture = attachment.texture;
@@ -2570,7 +2570,7 @@ void GraphicsDevice_DX11::RenderPassBegin(const RenderPass* renderpass, CommandL
 
 			if (attachment.loadop == RenderPassAttachment::LOADOP_CLEAR)
 			{
-				UINT _flags = D3D11_CLEAR_DEPTH;
+				uint32_t _flags = D3D11_CLEAR_DEPTH;
 				if (IsFormatStencilSupport(texture->desc.Format))
 					_flags |= D3D11_CLEAR_STENCIL;
 				deviceContexts[cmd]->ClearDepthStencilView(DSV, _flags, texture->desc.clear.depthstencil.depth, texture->desc.clear.depthstencil.stencil);
@@ -2581,8 +2581,8 @@ void GraphicsDevice_DX11::RenderPassBegin(const RenderPass* renderpass, CommandL
 	if (raster_uavs_count[cmd] > 0)
 	{
 		// UAVs:
-		const UINT count = raster_uavs_count[cmd];
-		const UINT slot = raster_uavs_slot[cmd];
+		const uint32_t count = raster_uavs_count[cmd];
+		const uint32_t slot = raster_uavs_slot[cmd];
 
 		deviceContexts[cmd]->OMSetRenderTargetsAndUnorderedAccessViews(rt_count, RTVs, DSV, slot, count, &raster_uavs[cmd][slot], nullptr);
 
@@ -2598,23 +2598,23 @@ void GraphicsDevice_DX11::RenderPassEnd(CommandList cmd)
 {
 	deviceContexts[cmd]->OMSetRenderTargets(0, nullptr, nullptr);
 }
-void GraphicsDevice_DX11::BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) {
+void GraphicsDevice_DX11::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) {
 	assert(rects != nullptr);
 	assert(numRects <= 8);
 	D3D11_RECT pRects[8];
-	for(UINT i = 0; i < numRects; ++i) {
-		pRects[i].bottom = rects[i].bottom;
-		pRects[i].left = rects[i].left;
-		pRects[i].right = rects[i].right;
-		pRects[i].top = rects[i].top;
+	for(uint32_t i = 0; i < numRects; ++i) {
+		pRects[i].bottom = (LONG)rects[i].bottom;
+		pRects[i].left = (LONG)rects[i].left;
+		pRects[i].right = (LONG)rects[i].right;
+		pRects[i].top = (LONG)rects[i].top;
 	}
 	deviceContexts[cmd]->RSSetScissorRects(numRects, pRects);
 }
-void GraphicsDevice_DX11::BindViewports(UINT NumViewports, const ViewPort *pViewports, CommandList cmd) 
+void GraphicsDevice_DX11::BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd)
 {
 	assert(NumViewports <= 6);
 	D3D11_VIEWPORT d3dViewPorts[6];
-	for (UINT i = 0; i < NumViewports; ++i)
+	for (uint32_t i = 0; i < NumViewports; ++i)
 	{
 		d3dViewPorts[i].TopLeftX = pViewports[i].TopLeftX;
 		d3dViewPorts[i].TopLeftY = pViewports[i].TopLeftY;
@@ -2625,7 +2625,7 @@ void GraphicsDevice_DX11::BindViewports(UINT NumViewports, const ViewPort *pView
 	}
 	deviceContexts[cmd]->RSSetViewports(NumViewports, d3dViewPorts);
 }
-void GraphicsDevice_DX11::BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource)
+void GraphicsDevice_DX11::BindResource(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 {
 	if (resource != nullptr)
 	{
@@ -2667,11 +2667,11 @@ void GraphicsDevice_DX11::BindResource(SHADERSTAGE stage, const GPUResource* res
 		}
 	}
 }
-void GraphicsDevice_DX11::BindResources(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd)
+void GraphicsDevice_DX11::BindResources(SHADERSTAGE stage, const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd)
 {
 	assert(count <= 16);
 	ID3D11ShaderResourceView* srvs[16];
-	for (UINT i = 0; i < count; ++i)
+	for (uint32_t i = 0; i < count; ++i)
 	{
 		srvs[i] = resources[i] != nullptr ? (ID3D11ShaderResourceView*)resources[i]->SRV : nullptr;
 	}
@@ -2701,7 +2701,7 @@ void GraphicsDevice_DX11::BindResources(SHADERSTAGE stage, const GPUResource *co
 		break;
 	}
 }
-void GraphicsDevice_DX11::BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource)
+void GraphicsDevice_DX11::BindUAV(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 {
 	if (resource != nullptr)
 	{
@@ -2729,11 +2729,11 @@ void GraphicsDevice_DX11::BindUAV(SHADERSTAGE stage, const GPUResource* resource
 		}
 	}
 }
-void GraphicsDevice_DX11::BindUAVs(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd)
+void GraphicsDevice_DX11::BindUAVs(SHADERSTAGE stage, const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd)
 {
 	assert(slot + count <= 8);
 	ID3D11UnorderedAccessView* uavs[8];
-	for (UINT i = 0; i < count; ++i)
+	for (uint32_t i = 0; i < count; ++i)
 	{
 		uavs[i] = resources[i] != nullptr ? (ID3D11UnorderedAccessView*)resources[i]->UAV : nullptr;
 
@@ -2745,7 +2745,7 @@ void GraphicsDevice_DX11::BindUAVs(SHADERSTAGE stage, const GPUResource *const* 
 
 	if(stage == CS)
 	{
-		deviceContexts[cmd]->CSSetUnorderedAccessViews(static_cast<UINT>(slot), static_cast<UINT>(count), uavs, nullptr);
+		deviceContexts[cmd]->CSSetUnorderedAccessViews(static_cast<uint32_t>(slot), static_cast<uint32_t>(count), uavs, nullptr);
 	}
 	else
 	{
@@ -2753,7 +2753,7 @@ void GraphicsDevice_DX11::BindUAVs(SHADERSTAGE stage, const GPUResource *const* 
 		raster_uavs_count[cmd] = std::max(raster_uavs_count[cmd], uint8_t(count));
 	}
 }
-void GraphicsDevice_DX11::UnbindResources(UINT slot, UINT num, CommandList cmd)
+void GraphicsDevice_DX11::UnbindResources(uint32_t slot, uint32_t num, CommandList cmd)
 {
 	assert(num <= ARRAYSIZE(__nullBlob) && "Extend nullBlob to support more resource unbinding!");
 	deviceContexts[cmd]->PSSetShaderResources(slot, num, (ID3D11ShaderResourceView**)__nullBlob);
@@ -2763,7 +2763,7 @@ void GraphicsDevice_DX11::UnbindResources(UINT slot, UINT num, CommandList cmd)
 	deviceContexts[cmd]->DSSetShaderResources(slot, num, (ID3D11ShaderResourceView**)__nullBlob);
 	deviceContexts[cmd]->CSSetShaderResources(slot, num, (ID3D11ShaderResourceView**)__nullBlob);
 }
-void GraphicsDevice_DX11::UnbindUAVs(UINT slot, UINT num, CommandList cmd)
+void GraphicsDevice_DX11::UnbindUAVs(uint32_t slot, uint32_t num, CommandList cmd)
 {
 	assert(num <= ARRAYSIZE(__nullBlob) && "Extend nullBlob to support more resource unbinding!");
 	deviceContexts[cmd]->CSSetUnorderedAccessViews(slot, num, (ID3D11UnorderedAccessView**)__nullBlob, 0);
@@ -2771,7 +2771,7 @@ void GraphicsDevice_DX11::UnbindUAVs(UINT slot, UINT num, CommandList cmd)
 	raster_uavs_count[cmd] = 0;
 	raster_uavs_slot[cmd] = 8;
 }
-void GraphicsDevice_DX11::BindSampler(SHADERSTAGE stage, const Sampler* sampler, UINT slot, CommandList cmd)
+void GraphicsDevice_DX11::BindSampler(SHADERSTAGE stage, const Sampler* sampler, uint32_t slot, CommandList cmd)
 {
 	ID3D11SamplerState* SAM = (ID3D11SamplerState*)sampler->resource;
 
@@ -2800,7 +2800,7 @@ void GraphicsDevice_DX11::BindSampler(SHADERSTAGE stage, const Sampler* sampler,
 		break;
 	}
 }
-void GraphicsDevice_DX11::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, UINT slot, CommandList cmd)
+void GraphicsDevice_DX11::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd)
 {
 	ID3D11Buffer* res = buffer ? (ID3D11Buffer*)buffer->resource : nullptr;
 	switch (stage)
@@ -2828,22 +2828,22 @@ void GraphicsDevice_DX11::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer*
 		break;
 	}
 }
-void GraphicsDevice_DX11::BindVertexBuffers(const GPUBuffer *const* vertexBuffers, UINT slot, UINT count, const UINT* strides, const UINT* offsets, CommandList cmd)
+void GraphicsDevice_DX11::BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd)
 {
 	assert(count <= 8);
 	ID3D11Buffer* res[8] = { 0 };
-	for (UINT i = 0; i < count; ++i)
+	for (uint32_t i = 0; i < count; ++i)
 	{
 		res[i] = vertexBuffers[i] != nullptr ? (ID3D11Buffer*)vertexBuffers[i]->resource : nullptr;
 	}
-	deviceContexts[cmd]->IASetVertexBuffers(slot, count, res, strides, (offsets != nullptr ? offsets : reinterpret_cast<const UINT*>(__nullBlob)));
+	deviceContexts[cmd]->IASetVertexBuffers(slot, count, res, strides, (offsets != nullptr ? offsets : reinterpret_cast<const uint32_t*>(__nullBlob)));
 }
-void GraphicsDevice_DX11::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, CommandList cmd)
+void GraphicsDevice_DX11::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd)
 {
 	ID3D11Buffer* res = indexBuffer != nullptr ? (ID3D11Buffer*)indexBuffer->resource : nullptr;
 	deviceContexts[cmd]->IASetIndexBuffer(res, (format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT), offset);
 }
-void GraphicsDevice_DX11::BindStencilRef(UINT value, CommandList cmd)
+void GraphicsDevice_DX11::BindStencilRef(uint32_t value, CommandList cmd)
 {
 	stencilRef[cmd] = value;
 }
@@ -2967,49 +2967,49 @@ void GraphicsDevice_DX11::BindComputeShader(const ComputeShader* cs, CommandList
 		prev_cs[cmd] = _cs;
 	}
 }
-void GraphicsDevice_DX11::Draw(UINT vertexCount, UINT startVertexLocation, CommandList cmd) 
+void GraphicsDevice_DX11::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) 
 {
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->Draw(vertexCount, startVertexLocation);
 }
-void GraphicsDevice_DX11::DrawIndexed(UINT indexCount, UINT startIndexLocation, UINT baseVertexLocation, CommandList cmd)
+void GraphicsDevice_DX11::DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, CommandList cmd)
 {
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->DrawIndexed(indexCount, startIndexLocation, baseVertexLocation);
 }
-void GraphicsDevice_DX11::DrawInstanced(UINT vertexCount, UINT instanceCount, UINT startVertexLocation, UINT startInstanceLocation, CommandList cmd) 
+void GraphicsDevice_DX11::DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd) 
 {
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->DrawInstanced(vertexCount, instanceCount, startVertexLocation, startInstanceLocation);
 }
-void GraphicsDevice_DX11::DrawIndexedInstanced(UINT indexCount, UINT instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, CommandList cmd)
+void GraphicsDevice_DX11::DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 {
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->DrawIndexedInstanced(indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
 }
-void GraphicsDevice_DX11::DrawInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
+void GraphicsDevice_DX11::DrawInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 {
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->DrawInstancedIndirect((ID3D11Buffer*)args->resource, args_offset);
 }
-void GraphicsDevice_DX11::DrawIndexedInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
+void GraphicsDevice_DX11::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 {
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->DrawIndexedInstancedIndirect((ID3D11Buffer*)args->resource, args_offset);
 }
-void GraphicsDevice_DX11::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, CommandList cmd)
+void GraphicsDevice_DX11::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 {
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 }
-void GraphicsDevice_DX11::DispatchIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
+void GraphicsDevice_DX11::DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 {
 	commit_allocations(cmd);
 
@@ -3019,7 +3019,7 @@ void GraphicsDevice_DX11::CopyResource(const GPUResource* pDst, const GPUResourc
 {
 	deviceContexts[cmd]->CopyResource((ID3D11Resource*)pDst->resource, (ID3D11Resource*)pSrc->resource);
 }
-void GraphicsDevice_DX11::CopyTexture2D_Region(const Texture* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture* pSrc, UINT srcMip, CommandList cmd)
+void GraphicsDevice_DX11::CopyTexture2D_Region(const Texture* pDst, uint32_t dstMip, uint32_t dstX, uint32_t dstY, const Texture* pSrc, uint32_t srcMip, CommandList cmd)
 {
 	deviceContexts[cmd]->CopySubresourceRegion((ID3D11Resource*)pDst->resource, D3D11CalcSubresource(dstMip, 0, pDst->GetDesc().MipLevels), dstX, dstY, 0,
 		(ID3D11Resource*)pSrc->resource, D3D11CalcSubresource(srcMip, 0, pSrc->GetDesc().MipLevels), nullptr);
@@ -3057,7 +3057,7 @@ void GraphicsDevice_DX11::UpdateBuffer(const GPUBuffer* buffer, const void* data
 	{
 		D3D11_BOX box = {};
 		box.left = 0;
-		box.right = static_cast<UINT>(dataSize);
+		box.right = static_cast<uint32_t>(dataSize);
 		box.top = 0;
 		box.bottom = 1;
 		box.front = 0;
@@ -3076,7 +3076,7 @@ void GraphicsDevice_DX11::QueryEnd(const GPUQuery* query, CommandList cmd)
 }
 bool GraphicsDevice_DX11::QueryRead(const GPUQuery* query, GPUQueryResult* result)
 {
-	const UINT _flags = D3D11_ASYNC_GETDATA_DONOTFLUSH;
+	const uint32_t _flags = D3D11_ASYNC_GETDATA_DONOTFLUSH;
 
 	ID3D11Query* QUERY = (ID3D11Query*)query->resource;
 
@@ -3139,7 +3139,7 @@ GraphicsDevice::GPUAllocation GraphicsDevice_DX11::AllocateGPU(size_t dataSize, 
 	allocator.residentFrame = FRAMECOUNT;
 
 	result.buffer = &allocator.buffer;
-	result.offset = (UINT)position;
+	result.offset = (uint32_t)position;
 	result.data = (void*)((size_t)mappedResource.pData + position);
 	return result;
 }

@@ -347,7 +347,7 @@ namespace wiSceneSystem
 
 			SubresourceData InitData;
 			InitData.pSysMem = gpuIndexData;
-			bd.ByteWidth = (UINT)(stride * indices.size());
+			bd.ByteWidth = (uint32_t)(stride * indices.size());
 			indexBuffer.reset(new GPUBuffer);
 			hr = device->CreateBuffer(&bd, &InitData, indexBuffer.get());
 			assert(SUCCEEDED(hr));
@@ -392,7 +392,7 @@ namespace wiSceneSystem
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices.size());
+			bd.ByteWidth = (uint32_t)(sizeof(Vertex_POS) * vertices.size());
 
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();
@@ -427,7 +427,7 @@ namespace wiSceneSystem
 			bd.BindFlags = BIND_SHADER_RESOURCE;
 			bd.CPUAccessFlags = 0;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-			bd.ByteWidth = (UINT)(sizeof(Vertex_BON) * vertices.size());
+			bd.ByteWidth = (uint32_t)(sizeof(Vertex_BON) * vertices.size());
 
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();
@@ -440,7 +440,7 @@ namespace wiSceneSystem
 			bd.CPUAccessFlags = 0;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 
-			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertex_positions.size());
+			bd.ByteWidth = (uint32_t)(sizeof(Vertex_POS) * vertex_positions.size());
 			streamoutBuffer_POS.reset(new GPUBuffer);
 			hr = device->CreateBuffer(&bd, nullptr, streamoutBuffer_POS.get());
 			assert(SUCCEEDED(hr));
@@ -461,7 +461,7 @@ namespace wiSceneSystem
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = 0;
 			bd.StructureByteStride = sizeof(Vertex_TEX);
-			bd.ByteWidth = (UINT)(bd.StructureByteStride * vertices.size());
+			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
 			bd.Format = Vertex_TEX::FORMAT;
 
 			SubresourceData InitData;
@@ -486,7 +486,7 @@ namespace wiSceneSystem
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = 0;
 			bd.StructureByteStride = sizeof(Vertex_TEX);
-			bd.ByteWidth = (UINT)(bd.StructureByteStride * vertices.size());
+			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
 			bd.Format = Vertex_TEX::FORMAT;
 
 			SubresourceData InitData;
@@ -505,7 +505,7 @@ namespace wiSceneSystem
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = 0;
 			bd.StructureByteStride = sizeof(Vertex_COL);
-			bd.ByteWidth = (UINT)(bd.StructureByteStride * vertex_colors.size());
+			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertex_colors.size());
 			bd.Format = FORMAT_R8G8B8A8_UNORM;
 
 			SubresourceData InitData;
@@ -530,7 +530,7 @@ namespace wiSceneSystem
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = 0;
 			bd.StructureByteStride = sizeof(Vertex_TEX);
-			bd.ByteWidth = (UINT)(bd.StructureByteStride * vertices.size());
+			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
 			bd.Format = Vertex_TEX::FORMAT;
 
 			SubresourceData InitData;
@@ -880,9 +880,9 @@ namespace wiSceneSystem
 		HRESULT hr;
 
 		TextureDesc desc = lightmap->GetDesc();
-		UINT data_count = desc.Width * desc.Height;
-		UINT data_stride = device->GetFormatStride(desc.Format);
-		UINT data_size = data_count * data_stride;
+		uint32_t data_count = desc.Width * desc.Height;
+		uint32_t data_stride = device->GetFormatStride(desc.Format);
+		uint32_t data_size = data_count * data_stride;
 
 		lightmapWidth = desc.Width;
 		lightmapHeight = desc.Height;
@@ -2236,7 +2236,7 @@ namespace wiSceneSystem
 		return INVALID_ENTITY;
 	}
 
-	PickResult Pick(const RAY& ray, UINT renderTypeMask, uint32_t layerMask, const Scene& scene)
+	PickResult Pick(const RAY& ray, uint32_t renderTypeMask, uint32_t layerMask, const Scene& scene)
 	{
 		PickResult result;
 

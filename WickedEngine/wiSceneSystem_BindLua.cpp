@@ -97,12 +97,12 @@ int Pick(lua_State* L)
 		Ray_BindLua* ray = Luna<Ray_BindLua>::lightcheck(L, 1);
 		if (ray != nullptr)
 		{
-			UINT renderTypeMask = RENDERTYPE_OPAQUE;
+			uint32_t renderTypeMask = RENDERTYPE_OPAQUE;
 			uint32_t layerMask = 0xFFFFFFFF;
 			Scene* scene = &wiSceneSystem::GetScene();
 			if (argc > 1)
 			{
-				renderTypeMask = (UINT)wiLua::SGetInt(L, 2);
+				renderTypeMask = (uint32_t)wiLua::SGetInt(L, 2);
 				if (argc > 2)
 				{
 					int mask = wiLua::SGetInt(L, 3);

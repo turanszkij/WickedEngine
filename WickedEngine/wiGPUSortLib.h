@@ -11,10 +11,10 @@ namespace wiGPUSortLib
 	//	counterReadOffset		-	Byte offset into the counter buffer to read the count value (Read Only)
 	//	indexBuffer_write		-	The index list which to sort. Contains index values which can index the sortBase_read buffer. This will be modified (Read + Write)
 	void Sort(
-		UINT maxCount, 
+		uint32_t maxCount, 
 		const wiGraphics::GPUBuffer& comparisonBuffer_read, 
 		const wiGraphics::GPUBuffer& counterBuffer_read, 
-		UINT counterReadOffset, 
+		uint32_t counterReadOffset, 
 		const wiGraphics::GPUBuffer& indexBuffer_write,
 		wiGraphics::CommandList cmd
 	);

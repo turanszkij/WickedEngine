@@ -99,8 +99,8 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 			assert(bins.size() == 1 && "The regions won't fit into the texture!");
 
 			TextureDesc desc;
-			desc.Width = (UINT)bins[0].size.w;
-			desc.Height = (UINT)bins[0].size.h;
+			desc.Width = (uint32_t)bins[0].size.w;
+			desc.Height = (uint32_t)bins[0].size.h;
 			desc.MipLevels = 1;
 			desc.ArraySize = 1;
 			desc.Format = FORMAT_R8G8B8A8_UNORM;
@@ -232,7 +232,7 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 
 		desc.BindFlags = BIND_SHADER_RESOURCE;
 		desc.StructureByteStride = sizeof(ShaderMaterial);
-		desc.ByteWidth = desc.StructureByteStride * (UINT)materialArray.size();
+		desc.ByteWidth = desc.StructureByteStride * (uint32_t)materialArray.size();
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;

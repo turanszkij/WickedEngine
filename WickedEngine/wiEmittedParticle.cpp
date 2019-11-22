@@ -268,8 +268,8 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 
 		EmittedParticleCB cb;
 		cb.xEmitterWorld = transform.world;
-		cb.xEmitCount = (UINT)emit;
-		cb.xEmitterMeshIndexCount = mesh == nullptr ? 0 : (UINT)mesh->indices.size();
+		cb.xEmitCount = (uint32_t)emit;
+		cb.xEmitterMeshIndexCount = mesh == nullptr ? 0 : (uint32_t)mesh->indices.size();
 		cb.xEmitterMeshVertexPositionStride = sizeof(MeshComponent::Vertex_POS);
 		cb.xEmitterRandomness = wiRandom::getRandom(0, 1000) * 0.001f;
 		cb.xParticleLifeSpan = life;
@@ -376,7 +376,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 				sphPartitionCellOffsets.get(),
 			};
 			device->BindUAVs(CS, uav_partitionoffsets, 0, ARRAYSIZE(uav_partitionoffsets), cmd);
-			device->Dispatch((UINT)ceilf((float)SPH_PARTITION_BUCKET_COUNT / (float)THREADCOUNT_SIMULATION), 1, 1, cmd);
+			device->Dispatch((uint32_t)ceilf((float)SPH_PARTITION_BUCKET_COUNT / (float)THREADCOUNT_SIMULATION), 1, 1, cmd);
 			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 			device->EventEnd(cmd);
 

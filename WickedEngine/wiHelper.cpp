@@ -82,9 +82,9 @@ namespace wiHelper
 		device->WaitForGPU();
 
 		TextureDesc desc = texture.GetDesc();
-		UINT data_count = desc.Width * desc.Height;
-		UINT data_stride = device->GetFormatStride(desc.Format);
-		UINT data_size = data_count * data_stride;
+		uint32_t data_count = desc.Width * desc.Height;
+		uint32_t data_stride = device->GetFormatStride(desc.Format);
+		uint32_t data_size = data_count * data_stride;
 
 		vector<uint8_t> data(data_size);
 
@@ -107,7 +107,7 @@ namespace wiHelper
 	{
 		using namespace wiGraphics;
 
-		UINT data_count = desc.Width * desc.Height;
+		uint32_t data_count = desc.Width * desc.Height;
 
 		if (desc.Format == FORMAT_R10G10B10A2_UNORM)
 		{
@@ -115,7 +115,7 @@ namespace wiHelper
 
 			uint32_t* data32 = (uint32_t*)textureData.data();
 
-			for (UINT i = 0; i < data_count; ++i)
+			for (uint32_t i = 0; i < data_count; ++i)
 			{
 				uint32_t pixel = data32[i];
 				float r = ((pixel >> 0) & 1023) / 1023.0f;

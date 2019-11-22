@@ -147,7 +147,7 @@ void RenderPath2D::Render() const
 	{
 		device->RenderPassBegin(&renderpass_stenciled, cmd);
 
-		ViewPort vp;
+		Viewport vp;
 		vp.Width = (float)rtStenciled.GetDesc().Width;
 		vp.Height = (float)rtStenciled.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
@@ -170,7 +170,7 @@ void RenderPath2D::Render() const
 
 	device->RenderPassBegin(&renderpass_final, cmd);
 
-	ViewPort vp;
+	Viewport vp;
 	vp.Width = (float)rtFinal.GetDesc().Width;
 	vp.Height = (float)rtFinal.GetDesc().Height;
 	device->BindViewports(1, &vp, cmd);

@@ -299,7 +299,7 @@ int RenderPath3D_BindLua::SetMSAASampleCount(lua_State* L)
 	}
 	if (wiLua::SGetArgCount(L) > 0)
 	{
-		((RenderPath3D*)component)->setMSAASampleCount((UINT)wiLua::SGetInt(L, 1));
+		((RenderPath3D*)component)->setMSAASampleCount((uint32_t)wiLua::SGetInt(L, 1));
 	}
 	else
 		wiLua::SError(L, "SetMSAASampleCount(int value) not enough arguments!");

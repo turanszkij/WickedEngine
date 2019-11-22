@@ -48,10 +48,10 @@ void wiWidget::Update(wiGUI* gui, float dt)
 	XMStoreFloat3(&translation, T);
 	XMStoreFloat3(&scale, S);
 
-	scissorRect.bottom = (LONG)(translation.y + scale.y);
-	scissorRect.left = (LONG)(translation.x);
-	scissorRect.right = (LONG)(translation.x + scale.x);
-	scissorRect.top = (LONG)(translation.y);
+	scissorRect.bottom = (int32_t)(translation.y + scale.y);
+	scissorRect.left = (int32_t)(translation.x);
+	scissorRect.right = (int32_t)(translation.x + scale.x);
+	scissorRect.top = (int32_t)(translation.y);
 }
 void wiWidget::AttachTo(TransformComponent* parent)
 {
@@ -1843,7 +1843,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.ByteWidth = (UINT)(vertices_saturation.size() * sizeof(Vertex));
+			desc.ByteWidth = (uint32_t)(vertices_saturation.size() * sizeof(Vertex));
 			desc.CPUAccessFlags = CPU_ACCESS_WRITE;
 			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
@@ -1910,7 +1910,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.ByteWidth = (UINT)(vertices.size() * sizeof(Vertex));
+			desc.ByteWidth = (uint32_t)(vertices.size() * sizeof(Vertex));
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
@@ -1937,7 +1937,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.ByteWidth = (UINT)(vertices.size() * sizeof(Vertex));
+			desc.ByteWidth = (uint32_t)(vertices.size() * sizeof(Vertex));
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
@@ -1978,7 +1978,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.ByteWidth = (UINT)sizeof(vertices);
+			desc.ByteWidth = (uint32_t)sizeof(vertices);
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
@@ -2001,7 +2001,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.ByteWidth = (UINT)sizeof(vertices);
+			desc.ByteWidth = (uint32_t)sizeof(vertices);
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
@@ -2056,7 +2056,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 		const GPUBuffer* vbs[] = {
 			&vb_saturation,
 		};
-		const UINT strides[] = {
+		const uint32_t strides[] = {
 			sizeof(Vertex),
 		};
 		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
@@ -2074,7 +2074,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 		const GPUBuffer* vbs[] = {
 			&vb_hue,
 		};
-		const UINT strides[] = {
+		const uint32_t strides[] = {
 			sizeof(Vertex),
 		};
 		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
@@ -2101,7 +2101,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 		const GPUBuffer* vbs[] = {
 			&vb_picker_hue,
 		};
-		const UINT strides[] = {
+		const uint32_t strides[] = {
 			sizeof(Vertex),
 		};
 		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
@@ -2152,7 +2152,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 		const GPUBuffer* vbs[] = {
 			&vb_picker_saturation,
 		};
-		const UINT strides[] = {
+		const uint32_t strides[] = {
 			sizeof(Vertex),
 		};
 		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
@@ -2170,7 +2170,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 		const GPUBuffer* vbs[] = {
 			&vb_preview,
 		};
-		const UINT strides[] = {
+		const uint32_t strides[] = {
 			sizeof(Vertex),
 		};
 		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);

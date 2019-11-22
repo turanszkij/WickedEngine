@@ -67,7 +67,7 @@ float Phillips(XMFLOAT2 K, XMFLOAT2 W, float v, float a, float dir_depend)
 	return phillips * expf(-Ksqr * w * w);
 }
 
-void createBufferAndUAV(void* data, UINT byte_width, UINT byte_stride, GPUBuffer* pBuffer)
+void createBufferAndUAV(void* data, uint32_t byte_width, uint32_t byte_stride, GPUBuffer* pBuffer)
 {
 	// Create buffer
 	GPUBufferDesc buf_desc;
@@ -85,7 +85,7 @@ void createBufferAndUAV(void* data, UINT byte_width, UINT byte_stride, GPUBuffer
 
 }
 
-void createTextureAndViews(UINT width, UINT height, FORMAT format, Texture* pTex)
+void createTextureAndViews(uint32_t width, uint32_t height, FORMAT format, Texture* pTex)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -102,7 +102,7 @@ void createTextureAndViews(UINT width, UINT height, FORMAT format, Texture* pTex
 
 	device->CreateTexture(&tex_desc, nullptr, pTex);
 
-	for (UINT i = 0; i < pTex->GetDesc().MipLevels; ++i)
+	for (uint32_t i = 0; i < pTex->GetDesc().MipLevels; ++i)
 	{
 		int subresource_index;
 		subresource_index = device->CreateSubresource(pTex, SRV, 0, 1, i, 1);
@@ -136,7 +136,7 @@ wiOcean::wiOcean(const WeatherComponent& weather)
 
 	// RW buffer allocations
 	// H0
-	UINT float2_stride = 2 * sizeof(float);
+	uint32_t float2_stride = 2 * sizeof(float);
 	createBufferAndUAV(h0_data, input_full_size * float2_stride, float2_stride, &m_pBuffer_Float2_H0);
 
 	// Notice: The following 3 buffers should be half sized buffer because of conjugate symmetric input. But
@@ -163,13 +163,13 @@ wiOcean::wiOcean(const WeatherComponent& weather)
 
 
 	// Constant buffers
-	UINT actual_dim = params.dmap_dim;
-	UINT input_width = actual_dim + 4;
+	uint32_t actual_dim = params.dmap_dim;
+	uint32_t input_width = actual_dim + 4;
 	// We use full sized data here. The value "output_width" should be actual_dim/2+1 though.
-	UINT output_width = actual_dim;
-	UINT output_height = actual_dim;
-	UINT dtx_offset = actual_dim * actual_dim;
-	UINT dty_offset = actual_dim * actual_dim * 2;
+	uint32_t output_width = actual_dim;
+	uint32_t output_height = actual_dim;
+	uint32_t dtx_offset = actual_dim * actual_dim;
+	uint32_t dty_offset = actual_dim * actual_dim * 2;
 	Ocean_Simulation_ImmutableCB immutable_consts = { actual_dim, input_width, output_width, output_height, dtx_offset, dty_offset };
 	SubresourceData init_cb0;
 	init_cb0.pSysMem = &immutable_consts;
@@ -275,8 +275,8 @@ void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time,
 	device->BindConstantBuffer(CS, &m_pPerFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), cmd);
 
 	// Run the CS
-	UINT group_count_x = (params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
-	UINT group_count_y = (params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
+	uint32_t group_count_x = (params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
+	uint32_t group_count_y = (params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
 	device->Dispatch(group_count_x, group_count_y, 1, cmd);
 	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 

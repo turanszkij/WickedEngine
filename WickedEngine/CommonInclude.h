@@ -3,7 +3,8 @@
 
 // This is a helper include file pasted into all engine headers try to keep it minimal!
 // Do not include engine features in this file!
-
+#include <stddef.h>
+#include <stdint.h>
 
 // Platform specific:
 #define NOMINMAX
@@ -34,7 +35,6 @@ using namespace DirectX::PackedVector;
 #define SAFE_DELETE(a) {delete (a);(a)=nullptr;}
 #define SAFE_DELETE_ARRAY(a) {delete[](a);(a)=nullptr;}
 #define GFX_STRUCT struct alignas(16)
-#define GFX_CLASS class alignas(16)
 
 static const XMFLOAT4X4 IDENTITYMATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 

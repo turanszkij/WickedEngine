@@ -32,7 +32,7 @@ namespace wiRenderer
 	static const wiGraphics::FORMAT DSFormat_small = wiGraphics::FORMAT_D16_UNORM;
 	static const wiGraphics::FORMAT DSFormat_small_alias = wiGraphics::FORMAT_R16_TYPELESS;
 
-	inline UINT CombineStencilrefs(STENCILREF engineStencilRef, uint8_t userStencilRef)
+	inline uint32_t CombineStencilrefs(STENCILREF engineStencilRef, uint8_t userStencilRef)
 	{
 		return (userStencilRef << 4) | static_cast<uint8_t>(engineStencilRef);
 	}
@@ -361,8 +361,8 @@ namespace wiRenderer
 	// Performs copy operation even between different texture formats
 	//	Can also expand border region according to desired sampler func
 	void CopyTexture2D(
-		const wiGraphics::Texture& dst, UINT DstMIP, UINT DstX, UINT DstY, 
-		const wiGraphics::Texture& src, UINT SrcMIP, 
+		const wiGraphics::Texture& dst, uint32_t DstMIP, uint32_t DstX, uint32_t DstY, 
+		const wiGraphics::Texture& src, uint32_t SrcMIP, 
 		wiGraphics::CommandList cmd,
 		BORDEREXPANDSTYLE borderExpand = BORDEREXPAND_DISABLE);
 

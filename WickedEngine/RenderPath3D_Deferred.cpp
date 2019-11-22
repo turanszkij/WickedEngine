@@ -162,7 +162,7 @@ void RenderPath3D_Deferred::Render() const
 
 			device->RenderPassBegin(&renderpass_gbuffer, cmd);
 
-			ViewPort vp;
+			Viewport vp;
 			vp.Width = (float)depthBuffer.GetDesc().Width;
 			vp.Height = (float)depthBuffer.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
@@ -210,7 +210,7 @@ void RenderPath3D_Deferred::Render() const
 		{
 			device->RenderPassBegin(&renderpass_lights, cmd);
 
-			ViewPort vp;
+			Viewport vp;
 			vp.Width = (float)depthBuffer.GetDesc().Width;
 			vp.Height = (float)depthBuffer.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
@@ -281,7 +281,7 @@ void RenderPath3D_Deferred::RenderDecals(CommandList cmd) const
 
 	device->RenderPassBegin(&renderpass_decals, cmd);
 
-	ViewPort vp;
+	Viewport vp;
 	vp.Width = (float)depthBuffer.GetDesc().Width;
 	vp.Height = (float)depthBuffer.GetDesc().Height;
 	device->BindViewports(1, &vp, cmd);
@@ -296,7 +296,7 @@ void RenderPath3D_Deferred::RenderDeferredComposition(CommandList cmd) const
 
 	device->RenderPassBegin(&renderpass_deferredcomposition, cmd);
 
-	ViewPort vp;
+	Viewport vp;
 	vp.Width = (float)depthBuffer.GetDesc().Width;
 	vp.Height = (float)depthBuffer.GetDesc().Height;
 	device->BindViewports(1, &vp, cmd);

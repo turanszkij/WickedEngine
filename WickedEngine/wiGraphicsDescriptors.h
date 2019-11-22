@@ -324,7 +324,7 @@ namespace wiGraphics
 
 	// Structs /////////////////////////////////////////////
 
-	struct ViewPort
+	struct Viewport
 	{
 		float TopLeftX = 0.0f;
 		float TopLeftY = 0.0f;
@@ -335,15 +335,15 @@ namespace wiGraphics
 	};
 	struct VertexLayoutDesc
 	{
-		static const UINT APPEND_ALIGNED_ELEMENT = 0xffffffff; // automatically figure out AlignedByteOffset depending on Format
+		static const uint32_t APPEND_ALIGNED_ELEMENT = 0xffffffff; // automatically figure out AlignedByteOffset depending on Format
 
 		char* SemanticName = nullptr;
-		UINT SemanticIndex = 0;
+		uint32_t SemanticIndex = 0;
 		FORMAT Format = FORMAT_UNKNOWN;
-		UINT InputSlot = 0;
-		UINT AlignedByteOffset = APPEND_ALIGNED_ELEMENT;
+		uint32_t InputSlot = 0;
+		uint32_t AlignedByteOffset = APPEND_ALIGNED_ELEMENT;
 		INPUT_CLASSIFICATION InputSlotClass = INPUT_CLASSIFICATION::INPUT_PER_VERTEX_DATA;
-		UINT InstanceDataStepRate = 0;
+		uint32_t InstanceDataStepRate = 0;
 	};
 	union ClearValue
 	{
@@ -351,7 +351,7 @@ namespace wiGraphics
 		struct ClearDepthStencil
 		{
 			float depth;
-			UINT stencil;
+			uint32_t stencil;
 		} depthstencil;
 	};
 	struct TextureDesc
@@ -362,17 +362,17 @@ namespace wiGraphics
 			TEXTURE_2D,
 			TEXTURE_3D,
 		} type = TEXTURE_2D;
-		UINT Width = 0;
-		UINT Height = 0;
-		UINT Depth = 0;
-		UINT ArraySize = 1;
-		UINT MipLevels = 1;
+		uint32_t Width = 0;
+		uint32_t Height = 0;
+		uint32_t Depth = 0;
+		uint32_t ArraySize = 1;
+		uint32_t MipLevels = 1;
 		FORMAT Format = FORMAT_UNKNOWN;
-		UINT SampleCount = 1;
+		uint32_t SampleCount = 1;
 		USAGE Usage = USAGE_DEFAULT;
-		UINT BindFlags = 0;
-		UINT CPUAccessFlags = 0;
-		UINT MiscFlags = 0;
+		uint32_t BindFlags = 0;
+		uint32_t CPUAccessFlags = 0;
+		uint32_t MiscFlags = 0;
 		ClearValue clear = {};
 		IMAGE_LAYOUT layout = IMAGE_LAYOUT_GENERAL;
 	};
@@ -383,7 +383,7 @@ namespace wiGraphics
 		TEXTURE_ADDRESS_MODE AddressV = TEXTURE_ADDRESS_CLAMP;
 		TEXTURE_ADDRESS_MODE AddressW = TEXTURE_ADDRESS_CLAMP;
 		float MipLODBias = 0.0f;
-		UINT MaxAnisotropy = 0;
+		uint32_t MaxAnisotropy = 0;
 		COMPARISON_FUNC ComparisonFunc = COMPARISON_NEVER;
 		float BorderColor[4] = { 0.0f,0.0f,0.0f,0.0f };
 		float MinLOD = 0.0f;
@@ -401,7 +401,7 @@ namespace wiGraphics
 		bool MultisampleEnable = false;
 		bool AntialiasedLineEnable = false;
 		bool ConservativeRasterizationEnable = false;
-		UINT ForcedSampleCount = 0;
+		uint32_t ForcedSampleCount = 0;
 	};
 	struct DepthStencilOpDesc
 	{
@@ -440,12 +440,12 @@ namespace wiGraphics
 	};
 	struct GPUBufferDesc
 	{
-		UINT ByteWidth = 0;
+		uint32_t ByteWidth = 0;
 		USAGE Usage = USAGE_DEFAULT;
-		UINT BindFlags = 0;
-		UINT CPUAccessFlags = 0;
-		UINT MiscFlags = 0;
-		UINT StructureByteStride = 0; // needed for typed and structured buffer types!
+		uint32_t BindFlags = 0;
+		uint32_t CPUAccessFlags = 0;
+		uint32_t MiscFlags = 0;
+		uint32_t StructureByteStride = 0; // needed for typed and structured buffer types!
 		FORMAT Format = FORMAT_UNKNOWN; // only needed for typed buffer!
 	};
 	struct GPUQueryDesc
@@ -454,11 +454,11 @@ namespace wiGraphics
 	};
 	struct GPUQueryResult
 	{
-		BOOL	result_passed = FALSE;
-		UINT64	result_passed_sample_count = 0;
-		UINT64	result_timestamp = 0;
-		UINT64	result_timestamp_frequency = 0;
-		BOOL	result_disjoint = FALSE;
+		bool		result_passed = FALSE;
+		uint64_t	result_passed_sample_count = 0;
+		uint64_t	result_timestamp = 0;
+		uint64_t	result_timestamp_frequency = 0;
+		bool		result_disjoint = FALSE;
 	};
 	struct PipelineStateDesc
 	{
@@ -472,7 +472,7 @@ namespace wiGraphics
 		const DepthStencilState*	dss = nullptr;
 		const VertexLayout*			il = nullptr;
 		PRIMITIVETOPOLOGY			pt = TRIANGLELIST;
-		UINT						sampleMask = 0xFFFFFFFF;
+		uint32_t						sampleMask = 0xFFFFFFFF;
 	};
 	struct GPUBarrier
 	{
@@ -553,42 +553,42 @@ namespace wiGraphics
 	};
 	struct RenderPassDesc
 	{
-		UINT numAttachments = 0;
+		uint32_t numAttachments = 0;
 		RenderPassAttachment attachments[9] = {};
 	};
 	struct IndirectDrawArgsInstanced
 	{
-		UINT VertexCountPerInstance = 0;
-		UINT InstanceCount = 0;
-		UINT StartVertexLocation = 0;
-		UINT StartInstanceLocation = 0;
+		uint32_t VertexCountPerInstance = 0;
+		uint32_t InstanceCount = 0;
+		uint32_t StartVertexLocation = 0;
+		uint32_t StartInstanceLocation = 0;
 	};
 	struct IndirectDrawArgsIndexedInstanced
 	{
-		UINT IndexCountPerInstance = 0;
-		UINT InstanceCount = 0;
-		UINT StartIndexLocation = 0;
+		uint32_t IndexCountPerInstance = 0;
+		uint32_t InstanceCount = 0;
+		uint32_t StartIndexLocation = 0;
 		INT BaseVertexLocation = 0;
-		UINT StartInstanceLocation = 0;
+		uint32_t StartInstanceLocation = 0;
 	};
 	struct IndirectDispatchArgs
 	{
-		UINT ThreadGroupCountX = 0;
-		UINT ThreadGroupCountY = 0;
-		UINT ThreadGroupCountZ = 0;
+		uint32_t ThreadGroupCountX = 0;
+		uint32_t ThreadGroupCountY = 0;
+		uint32_t ThreadGroupCountZ = 0;
 	};
 	struct SubresourceData
 	{
 		const void *pSysMem = nullptr;
-		UINT SysMemPitch = 0;
-		UINT SysMemSlicePitch = 0;
+		uint32_t SysMemPitch = 0;
+		uint32_t SysMemSlicePitch = 0;
 	};
 	struct Rect
 	{
-		LONG left = 0;
-		LONG top = 0;
-		LONG right = 0;
-		LONG bottom = 0;
+		int32_t left = 0;
+		int32_t top = 0;
+		int32_t right = 0;
+		int32_t bottom = 0;
 	};
 
 }

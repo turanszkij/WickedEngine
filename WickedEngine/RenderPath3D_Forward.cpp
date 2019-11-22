@@ -107,7 +107,7 @@ void RenderPath3D_Forward::Render() const
 
 			device->RenderPassBegin(&renderpass_depthprepass, cmd);
 
-			ViewPort vp;
+			Viewport vp;
 			vp.Width = (float)depthBuffer.GetDesc().Width;
 			vp.Height = (float)depthBuffer.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
@@ -162,7 +162,7 @@ void RenderPath3D_Forward::Render() const
 
 			device->RenderPassBegin(&renderpass_main, cmd);
 
-			ViewPort vp;
+			Viewport vp;
 			vp.Width = (float)depthBuffer.GetDesc().Width;
 			vp.Height = (float)depthBuffer.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);

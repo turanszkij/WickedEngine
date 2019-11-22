@@ -83,7 +83,7 @@ bool wiRawInput::RegisterKeyboardMouse(HWND hWnd)
 
 void wiRawInput::RetrieveData(LPARAM lParam)
 {
-	UINT dwSize;
+	uint32_t dwSize;
 
 	GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
 	LPBYTE lpb = new BYTE[dwSize];
@@ -113,7 +113,7 @@ void wiRawInput::RetrieveBufferedData()
 	//static uint64_t rawBuffer[1024 / 8];
 	//
 	//// Then in some function,
-	//UINT bytes = sizeof(rawBuffer);
+	//uint32_t bytes = sizeof(rawBuffer);
 	//// Loop through reading raw input until no events are left,
 	//while (1) {
 	//	// Fill up buffer,
@@ -133,7 +133,7 @@ void wiRawInput::RetrieveBufferedData()
 	//}
 
 	//////while (true){
-	////	UINT cbSize;
+	////	uint32_t cbSize;
 	////	//Sleep(1000);
 
 	////	GetRawInputBuffer(NULL, &cbSize, sizeof(RAWINPUTHEADER));
@@ -145,8 +145,8 @@ void wiRawInput::RetrieveBufferedData()
 	////	}
 	////	for (;;)
 	////	{
-	////		UINT cbSizeT = cbSize;
-	////		UINT nInput = GetRawInputBuffer(pRawInput, &cbSizeT, sizeof(RAWINPUTHEADER));
+	////		uint32_t cbSizeT = cbSize;
+	////		uint32_t nInput = GetRawInputBuffer(pRawInput, &cbSizeT, sizeof(RAWINPUTHEADER));
 	////		if (nInput == 0)
 	////		{
 	////			break;
@@ -158,7 +158,7 @@ void wiRawInput::RetrieveBufferedData()
 	////			break;
 	////		}
 	////		PRAWINPUT pri = pRawInput;
-	////		for (UINT i = 0; i < nInput; ++i)
+	////		for (uint32_t i = 0; i < nInput; ++i)
 	////		{
 	////			paRawInput[i] = pri;
 	////			pri = NEXTRAWINPUTBLOCK(pri);

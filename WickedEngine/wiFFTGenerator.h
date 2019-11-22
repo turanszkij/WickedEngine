@@ -8,7 +8,7 @@ namespace wiFFTGenerator
 	struct CSFFT512x512_Plan
 	{
 		// More than one array can be transformed at same time
-		UINT slices;
+		uint32_t slices;
 
 		// For 512x512 config, we need 6 constant buffers
 		wiGraphics::GPUBuffer pRadix008A_CB[6];
@@ -17,7 +17,7 @@ namespace wiFFTGenerator
 	};
 
 
-	void fft512x512_create_plan(CSFFT512x512_Plan& plan, UINT slices);
+	void fft512x512_create_plan(CSFFT512x512_Plan& plan, uint32_t slices);
 
 	void fft_512x512_c2c(
 		const CSFFT512x512_Plan& fft_plan,

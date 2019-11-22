@@ -1592,7 +1592,7 @@ void EditorComponent::Render() const
 
 		device->EventBegin("Editor - Selection Outline", cmd);
 
-		ViewPort vp;
+		Viewport vp;
 		vp.Width = (float)rt_selectionOutline[0].GetDesc().Width;
 		vp.Height = (float)rt_selectionOutline[0].GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);

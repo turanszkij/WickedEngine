@@ -112,14 +112,14 @@ XMFLOAT2 temporalAAJitter = XMFLOAT2(0, 0);
 XMFLOAT2 temporalAAJitterPrev = XMFLOAT2(0, 0);
 float RESOLUTIONSCALE = 1.0f;
 GPUQueryRing<2> occlusionQueries[256];
-UINT entityArrayOffset_Lights = 0;
-UINT entityArrayCount_Lights = 0;
-UINT entityArrayOffset_Decals = 0;
-UINT entityArrayCount_Decals = 0;
-UINT entityArrayOffset_ForceFields = 0;
-UINT entityArrayCount_ForceFields = 0;
-UINT entityArrayOffset_EnvProbes = 0;
-UINT entityArrayCount_EnvProbes = 0;
+uint32_t entityArrayOffset_Lights = 0;
+uint32_t entityArrayCount_Lights = 0;
+uint32_t entityArrayOffset_Decals = 0;
+uint32_t entityArrayCount_Decals = 0;
+uint32_t entityArrayOffset_ForceFields = 0;
+uint32_t entityArrayCount_ForceFields = 0;
+uint32_t entityArrayOffset_EnvProbes = 0;
+uint32_t entityArrayCount_EnvProbes = 0;
 Texture* enviroMap = nullptr;
 float GameSpeed = 1;
 bool debugLightCulling = false;
@@ -134,16 +134,16 @@ Entity cameraTransform = INVALID_ENTITY;
 struct VoxelizedSceneData
 {
 	bool enabled = false;
-	UINT res = 128;
+	uint32_t res = 128;
 	float voxelsize = 1;
 	XMFLOAT3 center = XMFLOAT3(0, 0, 0);
 	XMFLOAT3 extents = XMFLOAT3(0, 0, 0);
-	UINT numCones = 8;
+	uint32_t numCones = 8;
 	float rayStepSize = 0.5f;
 	bool secondaryBounceEnabled = true;
 	bool reflectionsEnabled = true;
 	bool centerChangedThisFrame = true;
-	UINT mips = 7;
+	uint32_t mips = 7;
 } voxelSceneData;
 
 std::unique_ptr<wiOcean> ocean;
@@ -1385,7 +1385,7 @@ void BindEnvironmentTextures(SHADERSTAGE stage, CommandList cmd)
 	}
 }
 
-void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT renderTypeFlags, CommandList cmd, bool tessellation = false)
+void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_t renderTypeFlags, CommandList cmd, bool tessellation = false)
 {
 	if (!renderQueue.empty())
 	{
@@ -1430,7 +1430,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 
 
 		// Pre-allocate space for all the instances in GPU-buffer:
-		const UINT instanceDataSize = advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
+		const uint32_t instanceDataSize = advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
 		const size_t alloc_size = renderQueue.batchCount * instanceDataSize;
 		GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
 
@@ -1657,11 +1657,11 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 							instances.buffer
 						};
-						UINT strides[] = {
+						uint32_t strides[] = {
 							sizeof(MeshComponent::Vertex_POS),
 							instanceDataSize
 						};
-						UINT offsets[] = {
+						uint32_t offsets[] = {
 							0,
 							instancedBatch.dataOffset
 						};
@@ -1676,13 +1676,13 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 							mesh.vertexBuffer_UV1.get(),
 							instances.buffer
 						};
-						UINT strides[] = {
+						uint32_t strides[] = {
 							sizeof(MeshComponent::Vertex_POS),
 							sizeof(MeshComponent::Vertex_TEX),
 							sizeof(MeshComponent::Vertex_TEX),
 							instanceDataSize
 						};
-						UINT offsets[] = {
+						uint32_t offsets[] = {
 							0,
 							0,
 							0,
@@ -1702,7 +1702,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 							mesh.vertexBuffer_PRE.get() != nullptr ? mesh.vertexBuffer_PRE.get() : mesh.vertexBuffer_POS.get(),
 							instances.buffer
 						};
-						UINT strides[] = {
+						uint32_t strides[] = {
 							sizeof(MeshComponent::Vertex_POS),
 							sizeof(MeshComponent::Vertex_TEX),
 							sizeof(MeshComponent::Vertex_TEX),
@@ -1711,7 +1711,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 							sizeof(MeshComponent::Vertex_POS),
 							instanceDataSize
 						};
-						UINT offsets[] = {
+						uint32_t offsets[] = {
 							0,
 							0,
 							0,
@@ -1734,7 +1734,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 
 				STENCILREF engineStencilRef = material.engineStencilRef;
 				uint8_t userStencilRef = userStencilRefOverride > 0 ? userStencilRefOverride : material.userStencilRef;
-				UINT stencilRef = CombineStencilrefs(engineStencilRef, userStencilRef);
+				uint32_t stencilRef = CombineStencilrefs(engineStencilRef, userStencilRef);
 				device->BindStencilRef(stencilRef, cmd);
 
 				device->BindPipelineState(pso, cmd);
@@ -1794,13 +1794,13 @@ void RenderImpostors(const CameraComponent& camera, RENDERPASS renderPass, Comma
 
 		device->EventBegin("RenderImpostors", cmd);
 
-		UINT instanceCount = 0;
+		uint32_t instanceCount = 0;
 		for (size_t impostorID = 0; impostorID < scene.impostors.GetCount(); ++impostorID)
 		{
 			const ImpostorComponent& impostor = scene.impostors[impostorID];
 			if (camera.frustum.CheckBox(impostor.aabb))
 			{
-				instanceCount += (UINT)impostor.instanceMatrices.size();
+				instanceCount += (uint32_t)impostor.instanceMatrices.size();
 			}
 		}
 
@@ -1810,11 +1810,11 @@ void RenderImpostors(const CameraComponent& camera, RENDERPASS renderPass, Comma
 		}
 
 		// Pre-allocate space for all the instances in GPU-buffer:
-		const UINT instanceDataSize = sizeof(Instance);
+		const uint32_t instanceDataSize = sizeof(Instance);
 		const size_t alloc_size = instanceCount * instanceDataSize;
 		GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
 
-		UINT drawableInstanceCount = 0;
+		uint32_t drawableInstanceCount = 0;
 		for (size_t impostorID = 0; impostorID < scene.impostors.GetCount(); ++impostorID)
 		{
 			const ImpostorComponent& impostor = scene.impostors[impostorID];
@@ -3458,7 +3458,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 					bd.Usage = USAGE_DYNAMIC;
 					bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
-					bd.ByteWidth = sizeof(ArmatureComponent::ShaderBoneType) * (UINT)armature.boneCollection.size();
+					bd.ByteWidth = sizeof(ArmatureComponent::ShaderBoneType) * (uint32_t)armature.boneCollection.size();
 					bd.BindFlags = BIND_SHADER_RESOURCE;
 					bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 					bd.StructureByteStride = sizeof(ArmatureComponent::ShaderBoneType);
@@ -3804,8 +3804,8 @@ void UpdateRenderData(CommandList cmd)
 
 		const XMMATRIX viewMatrix = GetCamera().GetView();
 
-		UINT entityCounter = 0;
-		UINT matrixCounter = 0;
+		uint32_t entityCounter = 0;
+		uint32_t matrixCounter = 0;
 
 		entityArrayOffset_Lights = 0;
 		entityArrayCount_Lights = 0;
@@ -4036,7 +4036,7 @@ void UpdateRenderData(CommandList cmd)
 					GPUBuffer* vbs[] = {
 						nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr
 					};
-					const UINT strides[] = {
+					const uint32_t strides[] = {
 						0,0,0,0,0,0,0,0
 					};
 					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
@@ -4073,7 +4073,7 @@ void UpdateRenderData(CommandList cmd)
 				device->BindResources(CS, vbs, SKINNINGSLOT_IN_VERTEX_POS, ARRAYSIZE(vbs), cmd);
 				device->BindUAVs(CS, so, 0, ARRAYSIZE(so), cmd);
 
-				device->Dispatch(((UINT)mesh.vertex_positions.size() + SKINNING_COMPUTE_THREADCOUNT - 1) / SKINNING_COMPUTE_THREADCOUNT, 1, 1, cmd);
+				device->Dispatch(((uint32_t)mesh.vertex_positions.size() + SKINNING_COMPUTE_THREADCOUNT - 1) / SKINNING_COMPUTE_THREADCOUNT, 1, 1, cmd);
 			}
 
 		}
@@ -4115,7 +4115,7 @@ void UpdateRenderData(CommandList cmd)
 			}
 		}
 
-		device->UpdateBuffer(mesh.vertexBuffer_POS.get(), vb, cmd, (UINT)vb_size);
+		device->UpdateBuffer(mesh.vertexBuffer_POS.get(), vb, cmd, (uint32_t)vb_size);
 
 		GetRenderFrameAllocator(cmd).free(vb_size);
 	}
@@ -4766,7 +4766,7 @@ void DrawLensFlares(
 				device->UpdateBuffer(&constantBuffers[CBTYPE_LENSFLARE], &cb, cmd);
 				device->BindConstantBuffer(GS, &constantBuffers[CBTYPE_LENSFLARE], CB_GETBINDSLOT(LensFlareCB), cmd);
 
-				UINT i = 0;
+				uint32_t i = 0;
 				for (const Texture* x : light.lensFlareRimTextures)
 				{
 					if (x != nullptr)
@@ -4837,7 +4837,7 @@ void SetShadowProps2D(int resolution, int count, int softShadowQuality)
 		renderpasses_shadow2D.resize(SHADOWCOUNT_2D);
 		renderpasses_shadow2DTransparent.resize(SHADOWCOUNT_2D);
 
-		for (UINT i = 0; i < SHADOWCOUNT_2D; ++i)
+		for (uint32_t i = 0; i < SHADOWCOUNT_2D; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(&shadowMapArray_2D, DSV, i, 1, 0, 1);
@@ -4889,7 +4889,7 @@ void SetShadowPropsCube(int resolution, int count)
 
 		renderpasses_shadowCube.resize(SHADOWCOUNT_CUBE);
 
-		for (UINT i = 0; i < SHADOWCOUNT_CUBE; ++i)
+		for (uint32_t i = 0; i < SHADOWCOUNT_CUBE; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(&shadowMapArray_Cube, DSV, i * 6, 6, 0, 1);
@@ -4921,7 +4921,7 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 		BindConstantBuffers(PS, cmd);
 
 
-		ViewPort vp;
+		Viewport vp;
 
 
 		const Scene& scene = GetScene();
@@ -5409,7 +5409,7 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 		const GPUBuffer* vbs[] = {
 			&wirecubeVB,
 		};
-		const UINT strides[] = {
+		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
@@ -5534,10 +5534,10 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 			const GPUBuffer* vbs[] = {
 				mem.buffer
 			};
-			const UINT strides[] = {
+			const uint32_t strides[] = {
 				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 			};
-			const UINT offsets[] = {
+			const uint32_t offsets[] = {
 				mem.offset,
 			};
 			device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, cmd);
@@ -5583,10 +5583,10 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 		const GPUBuffer* vbs[] = {
 			mem.buffer,
 		};
-		const UINT strides[] = {
+		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		const UINT offsets[] = {
+		const uint32_t offsets[] = {
 			mem.offset,
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, cmd);
@@ -5648,10 +5648,10 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 		const GPUBuffer* vbs[] = {
 			mem.buffer,
 		};
-		const UINT strides[] = {
+		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		const UINT offsets[] = {
+		const uint32_t offsets[] = {
 			mem.offset,
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, cmd);
@@ -5672,7 +5672,7 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 		const GPUBuffer* vbs[] = {
 			&wirecubeVB,
 		};
-		const UINT strides[] = {
+		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
@@ -5734,7 +5734,7 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 		const GPUBuffer* vbs[] = {
 			&wirecubeVB,
 		};
-		const UINT strides[] = {
+		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
@@ -5773,7 +5773,7 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_GRID], cmd);
 
 		static float col = 0.7f;
-		static UINT gridVertexCount = 0;
+		static uint32_t gridVertexCount = 0;
 		static GPUBuffer* grid = nullptr;
 		if (grid == nullptr)
 		{
@@ -5823,7 +5823,7 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 		GPUBuffer* vbs[] = {
 			grid,
 		};
-		const UINT strides[] = {
+		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
@@ -5880,7 +5880,7 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 				const GPUBuffer* vbs[] = {
 					&wirecubeVB,
 				};
-				const UINT strides[] = {
+				const uint32_t strides[] = {
 					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 				};
 				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
@@ -5894,13 +5894,13 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 				GPUBuffer* vbs[] = {
 					mesh->streamoutBuffer_POS != nullptr ? mesh->streamoutBuffer_POS.get() : mesh->vertexBuffer_POS.get(),
 				};
-				const UINT strides[] = {
+				const uint32_t strides[] = {
 					sizeof(MeshComponent::Vertex_POS),
 				};
 				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
 				device->BindIndexBuffer(mesh->indexBuffer.get(), mesh->GetIndexFormat(), 0, cmd);
 
-				device->DrawIndexed((UINT)mesh->indices.size(), 0, 0, cmd);
+				device->DrawIndexed((uint32_t)mesh->indices.size(), 0, 0, cmd);
 			}
 		}
 
@@ -5951,7 +5951,7 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 		const GPUBuffer* vbs[] = {
 			&wirecubeVB,
 		};
-		const UINT strides[] = {
+		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
@@ -6094,9 +6094,9 @@ void DrawDeferredDecals(
 	}
 }
 
-static const UINT envmapCount = 16;
-static const UINT envmapRes = 128;
-static const UINT envmapMIPs = 8;
+static const uint32_t envmapCount = 16;
+static const uint32_t envmapRes = 128;
+static const uint32_t envmapMIPs = 8;
 static Texture envrenderingDepthBuffer;
 static std::vector<RenderPass> renderpasses_envmap;
 vector<uint32_t> probesToRefresh(envmapCount);
@@ -6189,7 +6189,7 @@ void ManageEnvProbes()
 
 		renderpasses_envmap.resize(envmapCount);
 
-		for (UINT i = 0; i < envmapCount; ++i)
+		for (uint32_t i = 0; i < envmapCount; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], RTV, i * 6, 6, 0, 1);
@@ -6201,7 +6201,7 @@ void ManageEnvProbes()
 			renderpassdesc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::LOADOP_CLEAR,&envrenderingDepthBuffer, -1 };
 			device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap[subresource_index]);
 		}
-		for (UINT i = 0; i < textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->GetDesc().MipLevels; ++i)
+		for (uint32_t i = 0; i < textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->GetDesc().MipLevels; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], SRV, 0, desc.ArraySize, i, 1);
@@ -6211,7 +6211,7 @@ void ManageEnvProbes()
 		}
 
 		// debug probe views, individual cubes:
-		for (UINT i = 0; i < envmapCount; ++i)
+		for (uint32_t i = 0; i < envmapCount; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], SRV, i * 6, 6, 0, -1);
@@ -6231,14 +6231,10 @@ void RefreshEnvProbes(CommandList cmd)
 	GraphicsDevice* device = GetDevice();
 	device->EventBegin("EnvironmentProbe Refresh", cmd);
 
-	ViewPort VP;
-	VP.Height = envmapRes;
-	VP.Width = envmapRes;
-	VP.TopLeftX = 0;
-	VP.TopLeftY = 0;
-	VP.MinDepth = 0.0f;
-	VP.MaxDepth = 1.0f;
-	device->BindViewports(1, &VP, cmd);
+	Viewport vp;
+	vp.Height = envmapRes;
+	vp.Width = envmapRes;
+	device->BindViewports(1, &vp, cmd);
 
 	const float zNearP = GetCamera().zNearP;
 	const float zFarP = GetCamera().zFarP;
@@ -6347,7 +6343,7 @@ void RefreshEnvProbes(CommandList cmd)
 
 			desc.Width = 1;
 			desc.Height = 1;
-			for (UINT i = desc.MipLevels - 1; i > 0; --i)
+			for (uint32_t i = desc.MipLevels - 1; i > 0; --i)
 			{
 				device->BindUAV(CS, texture, 0, cmd, i);
 				device->BindResource(CS, texture, TEXSLOT_UNIQUE0, cmd, std::max(0, (int)i - 2));
@@ -6364,8 +6360,8 @@ void RefreshEnvProbes(CommandList cmd)
 				device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_FILTERENVMAP], CB_GETBINDSLOT(FilterEnvmapCB), cmd);
 
 				device->Dispatch(
-					std::max(1u, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
-					std::max(1u, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+					std::max(1u, (uint32_t)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+					std::max(1u, (uint32_t)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 					6,
 					cmd);
 
@@ -6383,9 +6379,9 @@ void RefreshEnvProbes(CommandList cmd)
 	device->EventEnd(cmd); // EnvironmentProbe Refresh
 }
 
-static const UINT maxImpostorCount = 8;
-static const UINT impostorTextureArraySize = maxImpostorCount * impostorCaptureAngles * 3;
-static const UINT impostorTextureDim = 128;
+static const uint32_t maxImpostorCount = 8;
+static const uint32_t impostorTextureArraySize = maxImpostorCount * impostorCaptureAngles * 3;
+static const uint32_t impostorTextureDim = 128;
 static Texture impostorDepthStencil;
 static std::vector<RenderPass> renderpasses_impostor;
 vector<uint32_t> impostorsToRefresh(maxImpostorCount);
@@ -6433,7 +6429,7 @@ void ManageImpostors()
 
 		renderpasses_impostor.resize(desc.ArraySize);
 
-		for (UINT i = 0; i < desc.ArraySize; ++i)
+		for (uint32_t i = 0; i < desc.ArraySize; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(textures[TEXTYPE_2D_IMPOSTORARRAY], RTV, i, 1, 0, 1);
@@ -6493,7 +6489,7 @@ void RefreshImpostors(CommandList cmd)
 			mesh.IsSkinned() ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 			mem.buffer
 		};
-		UINT strides[] = {
+		uint32_t strides[] = {
 			sizeof(MeshComponent::Vertex_POS),
 			sizeof(MeshComponent::Vertex_TEX),
 			sizeof(MeshComponent::Vertex_TEX),
@@ -6502,7 +6498,7 @@ void RefreshImpostors(CommandList cmd)
 			sizeof(MeshComponent::Vertex_POS),
 			sizeof(InstBuf)
 		};
-		UINT offsets[] = {
+		uint32_t offsets[] = {
 			0,
 			0,
 			0,
@@ -6535,14 +6531,10 @@ void RefreshImpostors(CommandList cmd)
 				int textureIndex = (int)(impostorIndex * impostorCaptureAngles * 3 + prop * impostorCaptureAngles + i);
 				device->RenderPassBegin(&renderpasses_impostor[textureIndex], cmd);
 
-				ViewPort viewPort;
-				viewPort.Height = (float)impostorTextureDim;
-				viewPort.Width = (float)impostorTextureDim;
-				viewPort.TopLeftX = 0;
-				viewPort.TopLeftY = 0;
-				viewPort.MinDepth = 0;
-				viewPort.MaxDepth = 1;
-				device->BindViewports(1, &viewPort, cmd);
+				Viewport viewport;
+				viewport.Height = (float)impostorTextureDim;
+				viewport.Width = (float)impostorTextureDim;
+				device->BindViewports(1, &viewport, cmd);
 
 
 				CameraComponent impostorcamera;
@@ -6626,7 +6618,7 @@ void VoxelRadiance(CommandList cmd)
 		HRESULT hr = device->CreateTexture(&desc, nullptr, textures[TEXTYPE_3D_VOXELRADIANCE]);
 		assert(SUCCEEDED(hr));
 
-		for (UINT i = 0; i < textures[TEXTYPE_3D_VOXELRADIANCE]->GetDesc().MipLevels; ++i)
+		for (uint32_t i = 0; i < textures[TEXTYPE_3D_VOXELRADIANCE]->GetDesc().MipLevels; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(textures[TEXTYPE_3D_VOXELRADIANCE], SRV, 0, 1, i, 1);
@@ -6646,7 +6638,7 @@ void VoxelRadiance(CommandList cmd)
 		HRESULT hr = device->CreateTexture(&desc, nullptr, textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
 		assert(SUCCEEDED(hr));
 
-		for (UINT i = 0; i < textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->GetDesc().MipLevels; ++i)
+		for (uint32_t i = 0; i < textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->GetDesc().MipLevels; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], SRV, 0, 1, i, 1);
@@ -6658,7 +6650,7 @@ void VoxelRadiance(CommandList cmd)
 	if (!resourceBuffers[RBTYPE_VOXELSCENE].IsValid())
 	{
 		GPUBufferDesc desc;
-		desc.StructureByteStride = sizeof(UINT) * 2;
+		desc.StructureByteStride = sizeof(uint32_t) * 2;
 		desc.ByteWidth = desc.StructureByteStride * voxelSceneData.res * voxelSceneData.res * voxelSceneData.res;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		desc.CPUAccessFlags = 0;
@@ -6696,14 +6688,10 @@ void VoxelRadiance(CommandList cmd)
 
 	if (!renderQueue.empty())
 	{
-		ViewPort VP;
-		VP.TopLeftX = 0;
-		VP.TopLeftY = 0;
-		VP.Width = (float)voxelSceneData.res;
-		VP.Height = (float)voxelSceneData.res;
-		VP.MinDepth = 0.0f;
-		VP.MaxDepth = 1.0f;
-		device->BindViewports(1, &VP, cmd);
+		Viewport vp;
+		vp.Width = (float)voxelSceneData.res;
+		vp.Height = (float)voxelSceneData.res;
+		device->BindViewports(1, &vp, cmd);
 
 		GPUResource* UAVs[] = { &resourceBuffers[RBTYPE_VOXELSCENE] };
 		device->BindUAVs(PS, UAVs, 0, 1, cmd);
@@ -6732,7 +6720,7 @@ void VoxelRadiance(CommandList cmd)
 		{
 			device->BindComputeShader(computeShaders[CSTYPE_VOXELSCENECOPYCLEAR], cmd);
 		}
-		device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, cmd);
+		device->Dispatch((uint32_t)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, cmd);
 		device->EventEnd(cmd);
 
 		if (voxelSceneData.secondaryBounceEnabled)
@@ -6745,14 +6733,14 @@ void VoxelRadiance(CommandList cmd)
 			device->BindResource(CS, textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
 			device->BindResource(CS, &resourceBuffers[RBTYPE_VOXELSCENE], 1, cmd);
 			device->BindComputeShader(computeShaders[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], cmd);
-			device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 64), 1, 1, cmd);
+			device->Dispatch((uint32_t)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 64), 1, 1, cmd);
 			device->EventEnd(cmd);
 
 			device->EventBegin("Voxel Scene Clear Normals", cmd);
 			device->UnbindResources(1, 1, cmd);
 			device->BindUAV(CS, &resourceBuffers[RBTYPE_VOXELSCENE], 0, cmd);
 			device->BindComputeShader(computeShaders[CSTYPE_VOXELCLEARONLYNORMAL], cmd);
-			device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, cmd);
+			device->Dispatch((uint32_t)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, cmd);
 			device->EventEnd(cmd);
 
 			result = textures[TEXTYPE_3D_VOXELRADIANCE_HELPER];
@@ -6882,8 +6870,8 @@ void ComputeTiledLightCulling(
 		SAFE_DELETE(textures[TEXTYPE_2D_DEBUGUAV]);
 
 		TextureDesc desc;
-		desc.Width = (UINT)_width;
-		desc.Height = (UINT)_height;
+		desc.Width = (uint32_t)_width;
+		desc.Height = (uint32_t)_height;
 		desc.MipLevels = 1;
 		desc.ArraySize = 1;
 		desc.Format = FORMAT_R8G8B8A8_UNORM;
@@ -6922,7 +6910,7 @@ void ComputeTiledLightCulling(
 		dispatchParams.xDispatchParams_numThreads.x = dispatchParams.xDispatchParams_numThreadGroups.x * TILED_CULLING_BLOCKSIZE;
 		dispatchParams.xDispatchParams_numThreads.y = dispatchParams.xDispatchParams_numThreadGroups.y * TILED_CULLING_BLOCKSIZE;
 		dispatchParams.xDispatchParams_numThreads.z = 1;
-		dispatchParams.xDispatchParams_value0 = (UINT)(frameCulling.culledLights.size() + frameCulling.culledEnvProbes.size() + frameCulling.culledDecals.size());
+		dispatchParams.xDispatchParams_value0 = (uint32_t)(frameCulling.culledLights.size() + frameCulling.culledEnvProbes.size() + frameCulling.culledDecals.size());
 		device->UpdateBuffer(&constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, cmd);
 		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), cmd);
 
@@ -7054,7 +7042,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 					break;
 				}
 
-				for (UINT i = 0; i < desc.MipLevels - 1; ++i)
+				for (uint32_t i = 0; i < desc.MipLevels - 1; ++i)
 				{
 					device->BindUAV(CS, &texture, 0, cmd, i + 1);
 					device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
@@ -7099,7 +7087,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 					break;
 				}
 
-				for (UINT i = 0; i < desc.MipLevels - 1; ++i)
+				for (uint32_t i = 0; i < desc.MipLevels - 1; ++i)
 				{
 					device->BindUAV(CS, &texture, 0, cmd, i + 1);
 					device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
@@ -7154,7 +7142,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				break;
 			}
 
-			for (UINT i = 0; i < desc.MipLevels - 1; ++i)
+			for (uint32_t i = 0; i < desc.MipLevels - 1; ++i)
 			{
 				device->BindUAV(CS, &texture, 0, cmd, i + 1);
 				device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
@@ -7204,7 +7192,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 			break;
 		}
 
-		for (UINT i = 0; i < desc.MipLevels - 1; ++i)
+		for (uint32_t i = 0; i < desc.MipLevels - 1; ++i)
 		{
 			device->BindUAV(CS, &texture, 0, cmd, i + 1);
 			device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
@@ -7243,7 +7231,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 	}
 }
 
-void CopyTexture2D(const Texture& dst, UINT DstMIP, UINT DstX, UINT DstY, const Texture& src, UINT SrcMIP, CommandList cmd, BORDEREXPANDSTYLE borderExpand)
+void CopyTexture2D(const Texture& dst, uint32_t DstMIP, uint32_t DstX, uint32_t DstY, const Texture& src, uint32_t SrcMIP, CommandList cmd, BORDEREXPANDSTYLE borderExpand)
 {
 	GraphicsDevice* device = GetDevice();
 
@@ -7662,8 +7650,8 @@ void ManageDecalAtlas()
 			assert(bins.size() == 1 && "The regions won't fit into the texture!");
 
 			TextureDesc desc;
-			desc.Width = (UINT)bins[0].size.w;
-			desc.Height = (UINT)bins[0].size.h;
+			desc.Width = (uint32_t)bins[0].size.w;
+			desc.Height = (uint32_t)bins[0].size.h;
 			desc.MipLevels = 0;
 			desc.ArraySize = 1;
 			desc.Format = FORMAT_R8G8B8A8_UNORM;
@@ -7676,7 +7664,7 @@ void ManageDecalAtlas()
 			device->CreateTexture(&desc, nullptr, &decalAtlas);
 			device->SetName(&decalAtlas, "decalAtlas");
 
-			for (UINT i = 0; i < decalAtlas.GetDesc().MipLevels; ++i)
+			for (uint32_t i = 0; i < decalAtlas.GetDesc().MipLevels; ++i)
 			{
 				int subresource_index;
 				subresource_index = device->CreateSubresource(&decalAtlas, UAV, 0, 1, i, 1);
@@ -7725,7 +7713,7 @@ void RefreshDecalAtlas(CommandList cmd)
 
 	if (repackAtlas_Decal)
 	{
-		for (UINT mip = 0; mip < decalAtlas.GetDesc().MipLevels; ++mip)
+		for (uint32_t mip = 0; mip < decalAtlas.GetDesc().MipLevels; ++mip)
 		{
 			for (auto& it : packedDecals)
 			{
@@ -7859,8 +7847,8 @@ void ManageLightmapAtlas()
 			assert(bins.size() == 1 && "The regions won't fit into the texture!");
 
 			TextureDesc desc;
-			desc.Width = (UINT)bins[0].size.w;
-			desc.Height = (UINT)bins[0].size.h;
+			desc.Width = (uint32_t)bins[0].size.w;
+			desc.Height = (uint32_t)bins[0].size.h;
 			desc.MipLevels = 1;
 			desc.ArraySize = 1;
 			desc.Format = RTFormat_lightmap_global;
@@ -7931,7 +7919,7 @@ void RenderObjectLightMap(const ObjectComponent& object, CommandList cmd)
 		device->RenderPassBegin(object.renderpass_lightmap_accumulate.get(), cmd);
 	}
 
-	ViewPort vp;
+	Viewport vp;
 	vp.Width = (float)desc.Width;
 	vp.Height = (float)desc.Height;
 	device->BindViewports(1, &vp, cmd);
@@ -7948,12 +7936,12 @@ void RenderObjectLightMap(const ObjectComponent& object, CommandList cmd)
 		mesh.vertexBuffer_ATL.get(),
 		mem.buffer,
 	};
-	UINT strides[] = {
+	uint32_t strides[] = {
 		sizeof(MeshComponent::Vertex_POS),
 		sizeof(MeshComponent::Vertex_TEX),
 		sizeof(InstancePrev),
 	};
-	UINT offsets[] = {
+	uint32_t offsets[] = {
 		0,
 		0,
 		mem.offset,
@@ -7979,7 +7967,7 @@ void RenderObjectLightMap(const ObjectComponent& object, CommandList cmd)
 	device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
 
 	device->BindPipelineState(&PSO_renderlightmap, cmd);
-	device->DrawIndexedInstanced((UINT)mesh.indices.size(), 1, 0, 0, 0, cmd);
+	device->DrawIndexedInstanced((uint32_t)mesh.indices.size(), 1, 0, 0, 0, cmd);
 
 	device->RenderPassEnd(cmd);
 
@@ -8748,7 +8736,7 @@ void Postprocess_SSS(
 
 		device->RenderPassBegin(rt_write, cmd);
 
-		ViewPort vp;
+		Viewport vp;
 		vp.Width = (float)desc.Width;
 		vp.Height = (float)desc.Height;
 		device->BindViewports(1, &vp, cmd);
@@ -9401,7 +9389,7 @@ int GetShadowRes2D() { return SHADOWRES_2D; }
 int GetShadowResCube() { return SHADOWRES_CUBE; }
 void SetTransparentShadowsEnabled(float value) { TRANSPARENTSHADOWSENABLED = value; }
 float GetTransparentShadowsEnabled() { return TRANSPARENTSHADOWSENABLED; }
-XMUINT2 GetInternalResolution() { return XMUINT2((UINT)ceilf(GetDevice()->GetScreenWidth()*GetResolutionScale()), (UINT)ceilf(GetDevice()->GetScreenHeight()*GetResolutionScale())); }
+XMUINT2 GetInternalResolution() { return XMUINT2((uint32_t)ceilf(GetDevice()->GetScreenWidth()*GetResolutionScale()), (uint32_t)ceilf(GetDevice()->GetScreenHeight()*GetResolutionScale())); }
 bool ResolutionChanged()
 {
 	//detect internal resolution change:

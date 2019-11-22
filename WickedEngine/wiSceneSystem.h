@@ -167,7 +167,7 @@ namespace wiSceneSystem
 			assert(value < 16);
 			userStencilRef = value & 0x0F;
 		}
-		inline UINT GetStencilRef() const
+		inline uint32_t GetStencilRef() const
 		{
 			return wiRenderer::CombineStencilrefs(engineStencilRef, userStencilRef);
 		}
@@ -1247,6 +1247,6 @@ namespace wiSceneSystem
 	//	renderTypeMask	:	filter based on render type
 	//	layerMask		:	filter based on layer
 	//	scene			:	the scene that will be traced against the ray
-	PickResult Pick(const RAY& ray, UINT renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
+	PickResult Pick(const RAY& ray, uint32_t renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
 }
 
