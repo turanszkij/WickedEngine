@@ -41,7 +41,7 @@ namespace wiFFTGenerator
 		device->BindResources(CS, srvs, TEXSLOT_ONDEMAND0, 1, cmd);
 
 		const GPUResource* uavs[1] = { &pUAV_Dst };
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 		// Shader
 		if (istride > 1)

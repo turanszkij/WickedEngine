@@ -29,7 +29,7 @@ namespace wiTextureHelper
 		// Random64x64
 		{
 			uint8_t data[64 * 64 * 4];
-			for (int i = 0; i < ARRAYSIZE(data); i += 4)
+			for (int i = 0; i < arraysize(data); i += 4)
 			{
 				data[i] = wiRandom::getRandom(0, 255);
 				data[i + 1] = wiRandom::getRandom(0, 255);

@@ -11,6 +11,7 @@
 using namespace DirectX;
 using namespace DirectX::PackedVector;
 
+#define arraysize(a) (sizeof(a) / sizeof(a[0]))
 #define ALIGN_16 void* operator new(size_t i){return _mm_malloc(i, 16);} void operator delete(void* p){_mm_free(p);}
 #define SAFE_RELEASE(a) if((a)!=nullptr){(a)->Release();(a)=nullptr;}
 #define SAFE_DELETE(a) {delete (a);(a)=nullptr;}
@@ -21,18 +22,5 @@ static const XMFLOAT4X4 IDENTITYMATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0
 
 typedef uint64_t wiCPUHandle;
 static const wiCPUHandle WI_NULL_HANDLE = 0;
-
-
-// Platform specific parts:
-
-#ifdef _WIN32
-#define NOMINMAX
-#include <SDKDDKVer.h>
-#include <windows.h>
-#endif // _WIN32
-
-#ifdef WINSTORE_SUPPORT
-#include <Windows.UI.Core.h>
-#endif // WINSTORE_SUPPORT
 
 #endif //WICKEDENGINE_COMMONINCLUDE_H

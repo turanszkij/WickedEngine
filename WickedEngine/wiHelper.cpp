@@ -181,7 +181,7 @@ namespace wiHelper
 		if (!initComplete)
 		{
 			CHAR fileName[1024] = {};
-			GetModuleFileNameA(NULL, fileName, ARRAYSIZE(fileName));
+			GetModuleFileNameA(NULL, fileName, arraysize(fileName));
 			appDir = GetDirectoryFromPath(fileName);
 			initComplete = true;
 		}

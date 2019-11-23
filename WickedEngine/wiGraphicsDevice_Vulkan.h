@@ -14,7 +14,7 @@
 
 #ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
-#endif // WIN32
+#endif // _WIN32
 
 #include <vulkan/vulkan.h>
 

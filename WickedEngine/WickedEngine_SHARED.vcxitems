@@ -229,6 +229,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)CommonInclude.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ConstantBufferMapping.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Platform.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_Deferred.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_Deferred_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_Forward.h" />

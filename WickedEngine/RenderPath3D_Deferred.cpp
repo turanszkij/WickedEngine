@@ -180,7 +180,7 @@ void RenderPath3D_Deferred::Render() const
 				GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL, IMAGE_LAYOUT_COPY_SRC),
 				GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_COPY_DST)
 			};
-			device->Barrier(barriers, ARRAYSIZE(barriers), cmd);
+			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
 		device->CopyResource(&depthBuffer_Copy, &depthBuffer, cmd);
@@ -190,7 +190,7 @@ void RenderPath3D_Deferred::Render() const
 				GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_COPY_SRC, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY),
 				GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_COPY_DST, IMAGE_LAYOUT_SHADER_RESOURCE)
 			};
-			device->Barrier(barriers, ARRAYSIZE(barriers), cmd);
+			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
 		RenderLinearDepth(cmd);

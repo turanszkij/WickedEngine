@@ -1134,6 +1134,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInput_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Platform.h">
+      <Filter>ENGINE\Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">

@@ -58,7 +58,7 @@ protected:
 		wiColor::White(),
 		wiColor::Gray(),
 	};
-	static_assert(ARRAYSIZE(colors) == WIDGETSTATE_COUNT, "Every WIDGETSTATE needs a default color!");
+	static_assert(arraysize(colors) == WIDGETSTATE_COUNT, "Every WIDGETSTATE needs a default color!");
 
 	wiColor textColor = wiColor(255, 255, 255, 255);
 	wiColor textShadowColor = wiColor(0, 0, 0, 255);

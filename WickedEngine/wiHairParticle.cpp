@@ -125,18 +125,18 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 		particleBuffer.get(),
 		simulationBuffer.get()
 	};
-	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 	GPUResource* res[] = {
 		mesh.indexBuffer.get(),
 		mesh.streamoutBuffer_POS != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 	};
-	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
+	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
 	device->Dispatch(hcb.xHairNumDispatchGroups, 1, 1, cmd);
 
-	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
-	device->UnbindResources(TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
+	device->UnbindUAVs(0, arraysize(uavs), cmd);
+	device->UnbindResources(TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
 	device->EventEnd(cmd);
 }
@@ -169,8 +169,8 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 		const GPUResource* res[] = {
 			material.GetBaseColorMap()
 		};
-		device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
-		device->BindResources(VS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
+		device->BindResources(PS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+		device->BindResources(VS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 	}
 
 	device->BindConstantBuffer(VS, cb.get(), CB_GETBINDSLOT(HairParticleCB), cmd);

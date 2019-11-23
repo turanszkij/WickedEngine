@@ -1,5 +1,4 @@
 #include "wiDirectInput.h"
-#include "CommonInclude.h"
 
 namespace wiInput
 {

@@ -239,7 +239,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	lensflare_Label->SetSize(XMFLOAT2(140, 20));
 	lightWindow->AddWidget(lensflare_Label);
 
-	for (size_t i = 0; i < ARRAYSIZE(lensflare_Button); ++i)
+	for (size_t i = 0; i < arraysize(lensflare_Button); ++i)
 	{
 		lensflare_Button[i] = new wiButton("LensFlareSlot");
 		lensflare_Button[i]->SetText("");
@@ -333,7 +333,7 @@ void LightWindow::SetEntity(Entity entity)
 		
 		SetLightType(light->GetType());
 
-		for (size_t i = 0; i < ARRAYSIZE(lensflare_Button); ++i)
+		for (size_t i = 0; i < arraysize(lensflare_Button); ++i)
 		{
 			if (light->lensFlareRimTextures.size() > i && light->lensFlareRimTextures[i] && !light->lensFlareNames[i].empty())
 			{
@@ -361,7 +361,7 @@ void LightWindow::SetEntity(Entity entity)
 		energySlider->SetEnabled(false);
 		colorPicker->SetEnabled(false);
 
-		for (size_t i = 0; i < ARRAYSIZE(lensflare_Button); ++i)
+		for (size_t i = 0; i < arraysize(lensflare_Button); ++i)
 		{
 			lensflare_Button[i]->SetEnabled(false);
 		}

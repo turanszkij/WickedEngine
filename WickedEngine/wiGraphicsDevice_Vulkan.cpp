@@ -912,10 +912,10 @@ namespace wiGraphics
 
 
 			std::vector<VkDescriptorPoolSize> poolSizes;
-			poolSizes.reserve(ARRAYSIZE(tableLayout) * numTables);
+			poolSizes.reserve(arraysize(tableLayout) * numTables);
 			for (uint32_t i = 0; i < numTables; ++i)
 			{
-				for (int j = 0; j < ARRAYSIZE(tableLayout); ++j)
+				for (int j = 0; j < arraysize(tableLayout); ++j)
 				{
 					poolSizes.push_back(tableLayout[j]);
 				}
@@ -959,23 +959,23 @@ namespace wiGraphics
 		}
 
 		// Create null descriptor fillers:
-		for (int slot = 0; slot < ARRAYSIZE(null_bufferInfos); ++slot)
+		for (int slot = 0; slot < arraysize(null_bufferInfos); ++slot)
 		{
 			null_bufferInfos[slot].buffer = device->nullBuffer;
 			null_bufferInfos[slot].offset = 0;
 			null_bufferInfos[slot].range = VK_WHOLE_SIZE;
 		}
-		for (int slot = 0; slot < ARRAYSIZE(null_imageInfos); ++slot)
+		for (int slot = 0; slot < arraysize(null_imageInfos); ++slot)
 		{
 			null_imageInfos[slot] = {};
 			null_imageInfos[slot].imageView = device->nullImageView;
 			null_imageInfos[slot].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 		}
-		for (int slot = 0; slot < ARRAYSIZE(null_texelBufferViews); ++slot)
+		for (int slot = 0; slot < arraysize(null_texelBufferViews); ++slot)
 		{
 			null_texelBufferViews[slot] = device->nullBufferView;
 		}
-		for (int slot = 0; slot < ARRAYSIZE(null_samplerInfos); ++slot)
+		for (int slot = 0; slot < arraysize(null_samplerInfos); ++slot)
 		{
 			null_samplerInfos[slot] = {};
 			null_samplerInfos[slot].imageView = VK_NULL_HANDLE;
@@ -3889,7 +3889,7 @@ namespace wiGraphics
 		assert(res == VK_SUCCESS);
 
 		VkViewport viewports[6];
-		for (uint32_t i = 0; i < ARRAYSIZE(viewports); ++i)
+		for (uint32_t i = 0; i < arraysize(viewports); ++i)
 		{
 			viewports[i].x = 0;
 			viewports[i].y = 0;
@@ -3898,17 +3898,17 @@ namespace wiGraphics
 			viewports[i].minDepth = 0;
 			viewports[i].maxDepth = 1;
 		}
-		vkCmdSetViewport(GetDirectCommandList(cmd), 0, ARRAYSIZE(viewports), viewports);
+		vkCmdSetViewport(GetDirectCommandList(cmd), 0, arraysize(viewports), viewports);
 
 		VkRect2D scissors[8];
-		for (int i = 0; i < ARRAYSIZE(scissors); ++i)
+		for (int i = 0; i < arraysize(scissors); ++i)
 		{
 			scissors[i].offset.x = 0;
 			scissors[i].offset.y = 0;
 			scissors[i].extent.width = 65535;
 			scissors[i].extent.height = 65535;
 		}
-		vkCmdSetScissor(GetDirectCommandList(cmd), 0, ARRAYSIZE(scissors), scissors);
+		vkCmdSetScissor(GetDirectCommandList(cmd), 0, arraysize(scissors), scissors);
 
 		float blendConstants[] = { 1,1,1,1 };
 		vkCmdSetBlendConstants(GetDirectCommandList(cmd), blendConstants);
@@ -3955,7 +3955,7 @@ namespace wiGraphics
 		}
 		pipelines_global.clear();
 
-		for (int i = 0; i < ARRAYSIZE(pipelines_worker); ++i)
+		for (int i = 0; i < arraysize(pipelines_worker); ++i)
 		{
 			for (auto& x : pipelines_worker[i])
 			{
@@ -4602,7 +4602,7 @@ namespace wiGraphics
 
 				VkPipelineDynamicStateCreateInfo dynamicState = {};
 				dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-				dynamicState.dynamicStateCount = ARRAYSIZE(dynamicStates);
+				dynamicState.dynamicStateCount = arraysize(dynamicStates);
 				dynamicState.pDynamicStates = dynamicStates;
 
 				pipelineInfo.pDynamicState = &dynamicState;

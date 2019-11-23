@@ -1,4 +1,5 @@
 #include "wiInput.h"
+#include "Platform.h"
 #include "wiXInput.h"
 #include "wiDirectInput.h"
 #include "wiRawInput.h"

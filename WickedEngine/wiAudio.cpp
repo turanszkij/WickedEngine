@@ -102,7 +102,7 @@ namespace wiAudio
 			assert(SUCCEEDED(hr));
 
 			XAUDIO2_EFFECT_DESCRIPTOR effects[] = { { reverbEffect, TRUE, 1 } };
-			XAUDIO2_EFFECT_CHAIN effectChain = { ARRAYSIZE(effects), effects };
+			XAUDIO2_EFFECT_CHAIN effectChain = { arraysize(effects), effects };
 			hr = audioEngine->CreateSubmixVoice(
 				&reverbSubmix,
 				1, // reverb is mono
@@ -279,7 +279,7 @@ namespace wiAudio
 			{ XAUDIO2_SEND_USEFILTER, submixVoices[instance->type] },
 			{ XAUDIO2_SEND_USEFILTER, reverbSubmix },
 		};
-		XAUDIO2_VOICE_SENDS SFXSendList = { ARRAYSIZE(SFXSend), SFXSend };
+		XAUDIO2_VOICE_SENDS SFXSendList = { arraysize(SFXSend), SFXSend };
 
 		hr = audioEngine->CreateSourceVoice(&instanceinternal->sourceVoice, &soundinternal->wfx, 
 			0, XAUDIO2_DEFAULT_FREQ_RATIO, NULL, &SFXSendList, NULL);

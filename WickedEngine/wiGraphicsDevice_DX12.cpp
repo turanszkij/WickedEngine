@@ -3222,7 +3222,7 @@ namespace wiGraphics
 		ID3D12DescriptorHeap* heaps[] = {
 			GetFrameResources().descriptors[cmd]->resource_heap_GPU, GetFrameResources().descriptors[cmd]->sampler_heap_GPU
 		};
-		GetDirectCommandList(cmd)->SetDescriptorHeaps(ARRAYSIZE(heaps), heaps);
+		GetDirectCommandList(cmd)->SetDescriptorHeaps(arraysize(heaps), heaps);
 
 		GetDirectCommandList(cmd)->SetGraphicsRootSignature(graphicsRootSig);
 		GetDirectCommandList(cmd)->SetComputeRootSignature(computeRootSig);
@@ -3272,7 +3272,7 @@ namespace wiGraphics
 		}
 		pipelines_global.clear();
 
-		for (int i = 0; i < ARRAYSIZE(pipelines_worker); ++i)
+		for (int i = 0; i < arraysize(pipelines_worker); ++i)
 		{
 			for (auto& x : pipelines_worker[i])
 			{

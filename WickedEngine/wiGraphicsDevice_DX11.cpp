@@ -1115,14 +1115,14 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 		D3D_DRIVER_TYPE_WARP,
 		D3D_DRIVER_TYPE_REFERENCE,
 	};
-	uint32_t numDriverTypes = ARRAYSIZE(driverTypes);
+	uint32_t numDriverTypes = arraysize(driverTypes);
 
 	D3D_FEATURE_LEVEL featureLevels[] =
 	{
 		D3D_FEATURE_LEVEL_11_1,
 		D3D_FEATURE_LEVEL_11_0,
 	};
-	uint32_t numFeatureLevels = ARRAYSIZE(featureLevels);
+	uint32_t numFeatureLevels = arraysize(featureLevels);
 
 	for (uint32_t driverTypeIndex = 0; driverTypeIndex < numDriverTypes; driverTypeIndex++)
 	{
@@ -2755,7 +2755,7 @@ void GraphicsDevice_DX11::BindUAVs(SHADERSTAGE stage, const GPUResource *const* 
 }
 void GraphicsDevice_DX11::UnbindResources(uint32_t slot, uint32_t num, CommandList cmd)
 {
-	assert(num <= ARRAYSIZE(__nullBlob) && "Extend nullBlob to support more resource unbinding!");
+	assert(num <= arraysize(__nullBlob) && "Extend nullBlob to support more resource unbinding!");
 	deviceContexts[cmd]->PSSetShaderResources(slot, num, (ID3D11ShaderResourceView**)__nullBlob);
 	deviceContexts[cmd]->VSSetShaderResources(slot, num, (ID3D11ShaderResourceView**)__nullBlob);
 	deviceContexts[cmd]->GSSetShaderResources(slot, num, (ID3D11ShaderResourceView**)__nullBlob);
@@ -2765,7 +2765,7 @@ void GraphicsDevice_DX11::UnbindResources(uint32_t slot, uint32_t num, CommandLi
 }
 void GraphicsDevice_DX11::UnbindUAVs(uint32_t slot, uint32_t num, CommandList cmd)
 {
-	assert(num <= ARRAYSIZE(__nullBlob) && "Extend nullBlob to support more resource unbinding!");
+	assert(num <= arraysize(__nullBlob) && "Extend nullBlob to support more resource unbinding!");
 	deviceContexts[cmd]->CSSetUnorderedAccessViews(slot, num, (ID3D11UnorderedAccessView**)__nullBlob, 0);
 
 	raster_uavs_count[cmd] = 0;

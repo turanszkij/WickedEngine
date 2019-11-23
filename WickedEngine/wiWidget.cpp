@@ -2057,7 +2057,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 		const uint32_t strides[] = {
 			sizeof(Vertex),
 		};
-		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
 		wiRenderer::GetDevice()->Draw(vb_saturation.GetDesc().ByteWidth / sizeof(Vertex), 0, cmd);
 	}
 
@@ -2075,7 +2075,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 		const uint32_t strides[] = {
 			sizeof(Vertex),
 		};
-		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
 		wiRenderer::GetDevice()->Draw(vb_hue.GetDesc().ByteWidth / sizeof(Vertex), 0, cmd);
 	}
 
@@ -2102,7 +2102,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 		const uint32_t strides[] = {
 			sizeof(Vertex),
 		};
-		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
 		wiRenderer::GetDevice()->Draw(vb_picker_hue.GetDesc().ByteWidth / sizeof(Vertex), 0, cmd);
 	}
 
@@ -2153,7 +2153,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 		const uint32_t strides[] = {
 			sizeof(Vertex),
 		};
-		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
 		wiRenderer::GetDevice()->Draw(vb_picker_saturation.GetDesc().ByteWidth / sizeof(Vertex), 0, cmd);
 	}
 
@@ -2171,7 +2171,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 		const uint32_t strides[] = {
 			sizeof(Vertex),
 		};
-		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
 		wiRenderer::GetDevice()->Draw(vb_preview.GetDesc().ByteWidth / sizeof(Vertex), 0, cmd);
 	}
 

@@ -84,7 +84,7 @@ Translator::Translator()
 				XMFLOAT4(0,0,0,1), XMFLOAT4(1,1,1,1),
 				XMFLOAT4(3,0,0,1), XMFLOAT4(1,1,1,1),
 			};
-			vertexCount_Axis = ARRAYSIZE(verts) / 2;
+			vertexCount_Axis = arraysize(verts) / 2;
 
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_DEFAULT;
@@ -112,7 +112,7 @@ Translator::Translator()
 				XMFLOAT4(1,1,0,1), XMFLOAT4(1,1,1,1),
 				XMFLOAT4(0,1,0,1), XMFLOAT4(1,1,1,1),
 			};
-			vertexCount_Plane = ARRAYSIZE(verts) / 2;
+			vertexCount_Plane = arraysize(verts) / 2;
 
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_DEFAULT;
@@ -169,7 +169,7 @@ Translator::Translator()
 				XMFLOAT4(edge,edge,edge,1),	   XMFLOAT4(1,1,1,1),
 				XMFLOAT4(-edge,edge,-edge,1),  XMFLOAT4(1,1,1,1),
 			};
-			vertexCount_Origin = ARRAYSIZE(verts) / 2;
+			vertexCount_Origin = arraysize(verts) / 2;
 
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_DEFAULT;
@@ -466,7 +466,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
 	}
 
 	// xy
@@ -502,7 +502,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
 	}
 
 	// x
@@ -538,7 +538,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
 		XMStoreFloat4x4(&sb.g_xTransform, mat);
 		sb.g_xColor = state == TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.25f, 0.25f, 0.25f, 1);
 		device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, cmd);

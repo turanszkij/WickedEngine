@@ -49,7 +49,6 @@
 #include "wiGUI.h"
 #include "wiWidget.h"
 #include "wiHashString.h"
-#include "wiWindowRegistration.h"
 #include "wiArchive.h"
 #include "wiSpinLock.h"
 #include "wiRectPacker.h"

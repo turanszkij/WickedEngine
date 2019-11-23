@@ -308,7 +308,7 @@ void wiFont::LoadShaders()
 	};
 	vertexShader = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(path + "fontVS.cso", wiResourceManager::VERTEXSHADER));
 	
-	wiRenderer::GetDevice()->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShader->code, &vertexLayout);
+	wiRenderer::GetDevice()->CreateInputLayout(layout, arraysize(layout), &vertexShader->code, &vertexLayout);
 
 
 	pixelShader = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "fontPS.cso", wiResourceManager::PIXELSHADER));
@@ -500,7 +500,7 @@ void wiFont::Draw(CommandList cmd) const
 	const uint32_t offsets[] = {
 		mem.offset,
 	};
-	device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, cmd);
+	device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 
 	assert(text.length() * 4 < 65536 && "The index buffer currently only supports so many characters!");
 	device->BindIndexBuffer(&indexBuffer, INDEXFORMAT_16BIT, 0, cmd);
@@ -610,13 +610,7 @@ wstring wiFont::GetText() const
 }
 string wiFont::GetTextA() const
 {
-#ifdef WIN32
-	if (text.empty()) return std::string();
-	int size_needed = WideCharToMultiByte(CP_UTF8, 0, text.c_str(), (int)text.size(), NULL, 0, NULL, NULL);
-	std::string strTo(size_needed, 0);
-	WideCharToMultiByte(CP_UTF8, 0, text.c_str(), (int)text.size(), &strTo[0], size_needed, NULL, NULL);
-	return strTo;
-#else
-	return string(text.begin(),text.end());
-#endif
+	string retval;
+	wiHelper::StringConvert(this->text, retval);
+	return retval;
 }

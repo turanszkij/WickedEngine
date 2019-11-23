@@ -260,10 +260,10 @@ void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time,
 		&m_pBuffer_Float2_H0, 
 		&m_pBuffer_Float_Omega
 	};
-	device->BindResources(CS, cs0_srvs, TEXSLOT_ONDEMAND0, ARRAYSIZE(cs0_srvs), cmd);
+	device->BindResources(CS, cs0_srvs, TEXSLOT_ONDEMAND0, arraysize(cs0_srvs), cmd);
 
 	const GPUResource* cs0_uavs[1] = { &m_pBuffer_Float2_Ht };
-	device->BindUAVs(CS, cs0_uavs, 0, ARRAYSIZE(cs0_uavs), cmd);
+	device->BindUAVs(CS, cs0_uavs, 0, arraysize(cs0_uavs), cmd);
 
 	Ocean_Simulation_PerFrameCB perFrameData;
 	perFrameData.g_Time = time * params.time_scale;

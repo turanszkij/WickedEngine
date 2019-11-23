@@ -2,6 +2,7 @@
 #include "wiSpinLock.h"
 #include "wiBackLog.h"
 #include "wiContainers.h"
+#include "Platform.h"
 
 #include <thread>
 #include <condition_variable>

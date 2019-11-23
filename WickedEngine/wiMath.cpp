@@ -413,7 +413,7 @@ namespace wiMath
 			XMFLOAT4(0.9960937500f, 0.1495198903f, 0.0432000000f, 0.4635568513f),
 			XMFLOAT4(0.0019531250f, 0.4828532236f, 0.2432000000f, 0.6064139942f),
 		};
-		return HALTON[idx % ARRAYSIZE(HALTON)];
+		return HALTON[idx % arraysize(HALTON)];
 	}
 
 	uint32_t CompressNormal(const XMFLOAT3& normal)

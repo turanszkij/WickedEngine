@@ -86,17 +86,17 @@ namespace wiGPUSortLib
 			const GPUResource* res[] = {
 				&counterBuffer_read,
 			};
-			device->BindResources(CS, res, 0, ARRAYSIZE(res), cmd);
+			device->BindResources(CS, res, 0, arraysize(res), cmd);
 
 			const GPUResource* uavs[] = {
 				&indirectBuffer,
 			};
-			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 			device->Dispatch(1, 1, 1, cmd);
 			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 
-			device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+			device->UnbindUAVs(0, arraysize(uavs), cmd);
 
 			{
 				GPUBarrier barrier;
@@ -112,13 +112,13 @@ namespace wiGPUSortLib
 		const GPUResource* uavs[] = {
 			&indexBuffer_write,
 		};
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 		const GPUResource* resources[] = {
 			&counterBuffer_read,
 			&comparisonBuffer_read,
 		};
-		device->BindResources(CS, resources, 0, ARRAYSIZE(resources), cmd);
+		device->BindResources(CS, resources, 0, arraysize(resources), cmd);
 
 		// initial sorting:
 		bool bDone = true;
@@ -196,8 +196,8 @@ namespace wiGPUSortLib
 			presorted *= 2;
 		}
 
-		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
-		device->UnbindResources(0, ARRAYSIZE(resources), cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->UnbindResources(0, arraysize(resources), cmd);
 
 
 		device->EventEnd(cmd);

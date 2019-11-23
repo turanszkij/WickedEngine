@@ -1,5 +1,6 @@
 #include "wiTimer.h"
 #include "wiHelper.h"
+#include "Platform.h"
 
 double wiTimer::PCFreq = 0;
 __int64 wiTimer::CounterStart = 0;
