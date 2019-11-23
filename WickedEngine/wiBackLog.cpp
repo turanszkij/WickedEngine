@@ -87,8 +87,7 @@ namespace wiBackLog
 			{
 				const uint8_t colorData[] = { 0, 0, 43, 200, 43, 31, 141, 223 };
 				backgroundTex.reset(new Texture);
-				HRESULT hr = wiTextureHelper::CreateTexture(*backgroundTex.get(), colorData, 1, 2);
-				assert(SUCCEEDED(hr));
+				wiTextureHelper::CreateTexture(*backgroundTex.get(), colorData, 1, 2);
 			}
 
 			wiImageParams fx = wiImageParams((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());

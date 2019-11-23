@@ -36,22 +36,22 @@ namespace wiNetwork
 	void CleanUp();
 
 	// Creates a socket that can be used to send or receive data
-	HRESULT CreateSocket(Socket* sock);
+	bool CreateSocket(Socket* sock);
 
 	// Destroys socket
-	HRESULT Destroy(Socket* sock);
+	bool Destroy(Socket* sock);
 
 	// Sends data packet to destination connection
 	//	sock		:	socket that sends the packet
 	//	connection	:	connection to the receiver, it is provided by the call site
 	//	data		:	buffer that contains data to send
 	//	dataSize	:	size of the data to send in bytes
-	HRESULT Send(const Socket* sock, const Connection* connection, const void* data, size_t dataSize);
+	bool Send(const Socket* sock, const Connection* connection, const void* data, size_t dataSize);
 
 	// Enables the socket to receive data on a port
 	//	sock		:	socket that receives packet
 	//	port		:	port number to open
-	HRESULT ListenPort(const Socket* sock, uint16_t port = DEFAULT_PORT);
+	bool ListenPort(const Socket* sock, uint16_t port = DEFAULT_PORT);
 
 	// Checks whether any data can be received at the moment, returns immediately
 	//	sock		:	socket that receives packet
@@ -64,5 +64,5 @@ namespace wiNetwork
 	//	connection	:	sender's connection data will be written to it when the function returns
 	//	data		:	buffer to hold received data, must be already allocated to a sufficient size
 	//	dataSize	:	expected data size in bytes
-	HRESULT Receive(const Socket* sock, Connection* connection, void* data, size_t dataSize);
+	bool Receive(const Socket* sock, Connection* connection, void* data, size_t dataSize);
 }

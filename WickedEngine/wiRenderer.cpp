@@ -2784,8 +2784,7 @@ void LoadShaders()
 			break;
 		}
 
-		HRESULT hr = device->CreatePipelineState(&desc, &PSO_debug[args.jobIndex]);
-		assert(SUCCEEDED(hr));
+		device->CreatePipelineState(&desc, &PSO_debug[args.jobIndex]);
 	});
 
 
@@ -3434,8 +3433,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 					desc.ByteWidth = sizeof(MaterialCB);
 
 					material.constantBuffer.reset(new GPUBuffer);
-					HRESULT hr = device->CreateBuffer(&desc, nullptr, material.constantBuffer.get());
-					assert(SUCCEEDED(hr));
+					device->CreateBuffer(&desc, nullptr, material.constantBuffer.get());
 				}
 			}
 		}
@@ -3464,14 +3462,12 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 					bd.StructureByteStride = sizeof(ArmatureComponent::ShaderBoneType);
 
 					armature.boneBuffer.reset(new GPUBuffer);
-					HRESULT hr = device->CreateBuffer(&bd, nullptr, armature.boneBuffer.get());
-					assert(SUCCEEDED(hr));
+					device->CreateBuffer(&bd, nullptr, armature.boneBuffer.get());
 				}
 				if (mesh.vertexBuffer_PRE == nullptr)
 				{
 					mesh.vertexBuffer_PRE.reset(new GPUBuffer);
-					HRESULT hr = device->CreateBuffer(&mesh.streamoutBuffer_POS->GetDesc(), nullptr, mesh.vertexBuffer_PRE.get());
-					assert(SUCCEEDED(hr));
+					device->CreateBuffer(&mesh.streamoutBuffer_POS->GetDesc(), nullptr, mesh.vertexBuffer_PRE.get());
 				}
 				mesh.streamoutBuffer_POS.swap(mesh.vertexBuffer_PRE);
 			}
@@ -3484,8 +3480,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 			if (mesh.vertexBuffer_PRE == nullptr)
 			{
 				mesh.vertexBuffer_PRE.reset(new GPUBuffer);
-				HRESULT hr = device->CreateBuffer(&mesh.vertexBuffer_POS->GetDesc(), nullptr, mesh.vertexBuffer_PRE.get());
-				assert(SUCCEEDED(hr));
+				device->CreateBuffer(&mesh.vertexBuffer_POS->GetDesc(), nullptr, mesh.vertexBuffer_PRE.get());
 			}
 			mesh.vertexBuffer_POS.swap(mesh.vertexBuffer_PRE);
 		}
@@ -6170,8 +6165,7 @@ void ManageEnvProbes()
 		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 		desc.Usage = USAGE_DEFAULT;
 
-		HRESULT hr = device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
-		assert(SUCCEEDED(hr));
+		device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
 
 		desc.ArraySize = envmapCount * 6;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
@@ -6184,8 +6178,7 @@ void ManageEnvProbes()
 		desc.Usage = USAGE_DEFAULT;
 
 		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] = new Texture;
-		hr = device->CreateTexture(&desc, nullptr, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
-		assert(SUCCEEDED(hr));
+		device->CreateTexture(&desc, nullptr, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
 
 		renderpasses_envmap.resize(envmapCount);
 
@@ -6414,8 +6407,7 @@ void ManageImpostors()
 		desc.BindFlags = BIND_DEPTH_STENCIL;
 		desc.ArraySize = 1;
 		desc.Format = DSFormat_small;
-		HRESULT hr = device->CreateTexture(&desc, nullptr, &impostorDepthStencil);
-		assert(SUCCEEDED(hr));
+		device->CreateTexture(&desc, nullptr, &impostorDepthStencil);
 		device->SetName(&impostorDepthStencil, "impostorDepthStencil");
 
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
@@ -6423,8 +6415,7 @@ void ManageImpostors()
 		desc.Format = RTFormat_impostor;
 
 		textures[TEXTYPE_2D_IMPOSTORARRAY] = new Texture;
-		hr = device->CreateTexture(&desc, nullptr, textures[TEXTYPE_2D_IMPOSTORARRAY]);
-		assert(SUCCEEDED(hr));
+		device->CreateTexture(&desc, nullptr, textures[TEXTYPE_2D_IMPOSTORARRAY]);
 		device->SetName(textures[TEXTYPE_2D_IMPOSTORARRAY], "ImpostorTarget");
 
 		renderpasses_impostor.resize(desc.ArraySize);
@@ -6439,7 +6430,7 @@ void ManageImpostors()
 			renderpassdesc.numAttachments = 2;
 			renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,textures[TEXTYPE_2D_IMPOSTORARRAY], subresource_index };
 			renderpassdesc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_CLEAR,&impostorDepthStencil, subresource_index };
-			hr = device->CreateRenderPass(&renderpassdesc, &renderpasses_impostor[subresource_index]);
+			device->CreateRenderPass(&renderpassdesc, &renderpasses_impostor[subresource_index]);
 		}
 	}
 }
@@ -6615,8 +6606,7 @@ void VoxelRadiance(CommandList cmd)
 		desc.MiscFlags = 0;
 
 		textures[TEXTYPE_3D_VOXELRADIANCE] = new Texture;
-		HRESULT hr = device->CreateTexture(&desc, nullptr, textures[TEXTYPE_3D_VOXELRADIANCE]);
-		assert(SUCCEEDED(hr));
+		device->CreateTexture(&desc, nullptr, textures[TEXTYPE_3D_VOXELRADIANCE]);
 
 		for (uint32_t i = 0; i < textures[TEXTYPE_3D_VOXELRADIANCE]->GetDesc().MipLevels; ++i)
 		{
@@ -6635,8 +6625,7 @@ void VoxelRadiance(CommandList cmd)
 	{
 		TextureDesc desc = textures[TEXTYPE_3D_VOXELRADIANCE]->GetDesc();
 		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] = new Texture;
-		HRESULT hr = device->CreateTexture(&desc, nullptr, textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
-		assert(SUCCEEDED(hr));
+		device->CreateTexture(&desc, nullptr, textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
 
 		for (uint32_t i = 0; i < textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->GetDesc().MipLevels; ++i)
 		{
@@ -6657,8 +6646,7 @@ void VoxelRadiance(CommandList cmd)
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
 
-		HRESULT hr = device->CreateBuffer(&desc, nullptr, &resourceBuffers[RBTYPE_VOXELSCENE]);
-		assert(SUCCEEDED(hr));
+		device->CreateBuffer(&desc, nullptr, &resourceBuffers[RBTYPE_VOXELSCENE]);
 	}
 
 	Texture* result = textures[TEXTYPE_3D_VOXELRADIANCE];
@@ -7313,7 +7301,6 @@ void RayBuffers::Create(GraphicsDevice* device, uint32_t newRayCapacity)
 	rayCapacity = newRayCapacity;
 
 	GPUBufferDesc desc;
-	HRESULT hr;
 
 	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 	desc.CPUAccessFlags = 0;
@@ -7323,36 +7310,29 @@ void RayBuffers::Create(GraphicsDevice* device, uint32_t newRayCapacity)
 
 	desc.StructureByteStride = sizeof(uint);
 	desc.ByteWidth = desc.StructureByteStride * rayCapacity;
-	hr = device->CreateBuffer(&desc, nullptr, &rayIndexBuffer[0]);
-	assert(SUCCEEDED(hr));
+	device->CreateBuffer(&desc, nullptr, &rayIndexBuffer[0]);
 	device->SetName(&rayIndexBuffer[0], "rayIndexBuffer[0]");
-	hr = device->CreateBuffer(&desc, nullptr, &rayIndexBuffer[1]);
-	assert(SUCCEEDED(hr));
+	device->CreateBuffer(&desc, nullptr, &rayIndexBuffer[1]);
 	device->SetName(&rayIndexBuffer[1], "rayIndexBuffer[1]");
 
 	desc.StructureByteStride = sizeof(float); // sorting needs float now
 	desc.ByteWidth = desc.StructureByteStride * rayCapacity;
-	hr = device->CreateBuffer(&desc, nullptr, &raySortBuffer);
-	assert(SUCCEEDED(hr));
+	device->CreateBuffer(&desc, nullptr, &raySortBuffer);
 	device->SetName(&raySortBuffer, "raySortBuffer");
 
 	desc.StructureByteStride = sizeof(RaytracingStoredRay);
 	desc.ByteWidth = desc.StructureByteStride * rayCapacity;
-	hr = device->CreateBuffer(&desc, nullptr, &rayBuffer[0]);
-	assert(SUCCEEDED(hr));
+	device->CreateBuffer(&desc, nullptr, &rayBuffer[0]);
 	device->SetName(&rayBuffer[0], "rayBuffer[0]");
-	hr = device->CreateBuffer(&desc, nullptr, &rayBuffer[1]);
-	assert(SUCCEEDED(hr));
+	device->CreateBuffer(&desc, nullptr, &rayBuffer[1]);
 	device->SetName(&rayBuffer[1], "rayBuffer[1]");
 
 	desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 	desc.StructureByteStride = sizeof(uint);
 	desc.ByteWidth = desc.StructureByteStride;
-	hr = device->CreateBuffer(&desc, nullptr, &rayCountBuffer[0]);
-	assert(SUCCEEDED(hr));
+	device->CreateBuffer(&desc, nullptr, &rayCountBuffer[0]);
 	device->SetName(&rayCountBuffer[0], "rayCountBuffer[0]");
-	hr = device->CreateBuffer(&desc, nullptr, &rayCountBuffer[1]);
-	assert(SUCCEEDED(hr));
+	device->CreateBuffer(&desc, nullptr, &rayCountBuffer[1]);
 	device->SetName(&rayCountBuffer[1], "rayCountBuffer[1]");
 }
 
@@ -7427,7 +7407,6 @@ void RayTraceScene(
 	if (!indirectBuffer.IsValid())
 	{
 		GPUBufferDesc desc;
-		HRESULT hr;
 
 		desc.BindFlags = BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(IndirectDispatchArgs);
@@ -7436,8 +7415,7 @@ void RayTraceScene(
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_INDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, &indirectBuffer);
-		assert(SUCCEEDED(hr));
+		device->CreateBuffer(&desc, nullptr, &indirectBuffer);
 		device->SetName(&indirectBuffer, "raytrace_indirectBuffer");
 	}
 
@@ -7781,8 +7759,7 @@ void ManageLightmapAtlas()
 				desc.Format = RTFormat_lightmap_object;
 
 				object.lightmap = std::make_unique<Texture>();
-				HRESULT hr = device->CreateTexture(&desc, nullptr, object.lightmap.get());
-				assert(SUCCEEDED(hr));
+				device->CreateTexture(&desc, nullptr, object.lightmap.get());
 				device->SetName(object.lightmap.get(), "objectLightmap");
 
 				RenderPassDesc renderpassdesc;
@@ -7790,12 +7767,12 @@ void ManageLightmapAtlas()
 				renderpassdesc.numAttachments = 1;
 				renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,object.lightmap.get(),-1 };
 				object.renderpass_lightmap_clear = std::make_unique<RenderPass>();
-				hr = device->CreateRenderPass(&renderpassdesc, object.renderpass_lightmap_clear.get());
+				device->CreateRenderPass(&renderpassdesc, object.renderpass_lightmap_clear.get());
 
 				renderpassdesc.numAttachments = 1;
 				renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,object.lightmap.get(),-1 };
 				object.renderpass_lightmap_accumulate = std::make_unique<RenderPass>();
-				hr = device->CreateRenderPass(&renderpassdesc, object.renderpass_lightmap_accumulate.get());
+				device->CreateRenderPass(&renderpassdesc, object.renderpass_lightmap_accumulate.get());
 			}
 			object.lightmapIterationCount++;
 		}

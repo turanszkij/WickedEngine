@@ -210,7 +210,7 @@ namespace wiAudio
 		return hr;
 	}
 
-	HRESULT CreateSound(const std::string& filename, Sound* sound)
+	bool CreateSound(const std::string& filename, Sound* sound)
 	{
 		Destroy(sound);
 
@@ -229,13 +229,13 @@ namespace wiAudio
 		if (INVALID_HANDLE_VALUE == hFile)
 		{
 			hr = HRESULT_FROM_WIN32(GetLastError());
-			return hr;
+			return false;
 		}
 
 		if (INVALID_SET_FILE_POINTER == SetFilePointerEx(hFile, LARGE_INTEGER(), NULL, FILE_BEGIN))
 		{
 			hr = HRESULT_FROM_WIN32(GetLastError());
-			return hr;
+			return false;
 		}
 
 		DWORD dwChunkSize;
@@ -264,9 +264,9 @@ namespace wiAudio
 
 		sound->handle = (wiCPUHandle)soundinternal;
 
-		return S_OK;
+		return true;
 	}
-	HRESULT CreateSoundInstance(const Sound* sound, SoundInstance* instance)
+	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance)
 	{
 		Destroy(instance);
 
@@ -286,7 +286,7 @@ namespace wiAudio
 		if (FAILED(hr))
 		{
 			assert(0);
-			return hr;
+			return false;
 		}
 
 		instanceinternal->sourceVoice->GetVoiceDetails(&instanceinternal->voiceDetails);
@@ -309,12 +309,12 @@ namespace wiAudio
 		if (FAILED(hr))
 		{
 			assert(0);
-			return hr;
+			return false;
 		}
 
 		instance->handle = (wiCPUHandle)instanceinternal;
 
-		return S_OK;
+		return true;
 	}
 	void Destroy(Sound* sound)
 	{

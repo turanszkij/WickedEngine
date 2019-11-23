@@ -36,7 +36,7 @@ namespace wiNetwork
 		WSACleanup();
 	}
 
-	HRESULT CreateSocket(Socket* sock)
+	bool CreateSocket(Socket* sock)
 	{
 		Destroy(sock);
 
@@ -47,14 +47,14 @@ namespace wiNetwork
 			std::stringstream ss;
 			ss << "wiNetwork error in CreateSocket: " << error;
 			wiBackLog::post(ss.str().c_str());
-			return E_FAIL;
+			return false;
 		}
 
 		sock->handle = (wiCPUHandle)handle;
 
-		return S_OK;
+		return true;
 	}
-	HRESULT Destroy(Socket* sock)
+	bool Destroy(Socket* sock)
 	{
 		if (socket != nullptr && sock->handle != WI_NULL_HANDLE)
 		{
@@ -65,16 +65,16 @@ namespace wiNetwork
 				std::stringstream ss;
 				ss << "wiNetwork error in Destroy: " << error;
 				wiBackLog::post(ss.str().c_str());
-				return E_FAIL;
+				return false;
 			}
 
 			sock->handle = WI_NULL_HANDLE;
-			return S_OK;
+			return true;
 		}
-		return E_FAIL;
+		return false;
 	}
 
-	HRESULT Send(const Socket* sock, const Connection* connection, const void* data, size_t dataSize)
+	bool Send(const Socket* sock, const Connection* connection, const void* data, size_t dataSize)
 	{
 		if (socket != nullptr && sock->handle != WI_NULL_HANDLE)
 		{
@@ -93,15 +93,15 @@ namespace wiNetwork
 				std::stringstream ss;
 				ss << "wiNetwork error in Send: " << error;
 				wiBackLog::post(ss.str().c_str());
-				return E_FAIL;
+				return false;
 			}
 
-			return S_OK;
+			return true;
 		}
-		return E_FAIL;
+		return false;
 	}
 
-	HRESULT ListenPort(const Socket* sock, uint16_t port)
+	bool ListenPort(const Socket* sock, uint16_t port)
 	{
 		if (socket != nullptr && sock->handle != WI_NULL_HANDLE)
 		{
@@ -117,12 +117,12 @@ namespace wiNetwork
 				std::stringstream ss;
 				ss << "wiNetwork error in ListenPort: " << error;
 				wiBackLog::post(ss.str().c_str());
-				return E_FAIL;
+				return false;
 			}
 
-			return S_OK;
+			return true;
 		}
-		return E_FAIL;
+		return false;
 	}
 
 	bool CanReceive(const Socket* sock, long timeout_microseconds)
@@ -150,7 +150,7 @@ namespace wiNetwork
 		return false;
 	}
 
-	HRESULT Receive(const Socket* sock, Connection* connection, void* data, size_t dataSize)
+	bool Receive(const Socket* sock, Connection* connection, void* data, size_t dataSize)
 	{
 		if (socket != nullptr && sock->handle != WI_NULL_HANDLE)
 		{
@@ -163,7 +163,7 @@ namespace wiNetwork
 				std::stringstream ss;
 				ss << "wiNetwork error in Receive: " << error;
 				wiBackLog::post(ss.str().c_str());
-				return E_FAIL;
+				return false;
 			}
 
 			connection->port = htons(sender.sin_port); // reverse byte order from network to host
@@ -172,9 +172,9 @@ namespace wiNetwork
 			connection->ipaddress[2] = sender.sin_addr.S_un.S_un_b.s_b3;
 			connection->ipaddress[3] = sender.sin_addr.S_un.S_un_b.s_b4;
 
-			return S_OK;
+			return true;
 		}
-		return E_FAIL;
+		return false;
 	}
 
 }

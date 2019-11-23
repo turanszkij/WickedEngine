@@ -52,7 +52,7 @@ namespace wiInputManager
 
 	wiXInput* xinput = nullptr;
 	wiDirectInput* dinput = nullptr;
-	wiRawInput* rawinput = nullptr;
+	//wiRawInput* rawinput = nullptr;
 	struct Controller
 	{
 		enum DeviceType
@@ -97,7 +97,7 @@ namespace wiInputManager
 
 		if(dinput != nullptr) dinput->Frame();
 		if(xinput != nullptr) xinput->UpdateControllerState();
-		if(rawinput != nullptr) rawinput->RetrieveBufferedData();
+		//if(rawinput != nullptr) rawinput->RetrieveBufferedData();
 
 		for (auto iter = inputs.begin(); iter != inputs.end();)
 		{

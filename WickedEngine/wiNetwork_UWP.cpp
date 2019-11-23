@@ -16,23 +16,23 @@ namespace wiNetwork
 	{
 	}
 
-	HRESULT CreateSocket(Socket* sock)
+	bool CreateSocket(Socket* sock)
 	{
-		return E_FAIL;
+		return false;
 	}
-	HRESULT Destroy(Socket* sock)
+	bool Destroy(Socket* sock)
 	{
-		return E_FAIL;
-	}
-
-	HRESULT Send(const Socket* sock, const Connection* connection, const void* data, size_t dataSize)
-	{
-		return E_FAIL;
+		return false;
 	}
 
-	HRESULT ListenPort(const Socket* sock, uint16_t port)
+	bool Send(const Socket* sock, const Connection* connection, const void* data, size_t dataSize)
 	{
-		return E_FAIL;
+		return false;
+	}
+
+	bool ListenPort(const Socket* sock, uint16_t port)
+	{
+		return false;
 	}
 
 	bool CanReceive(const Socket* sock, long timeout_microseconds)
@@ -40,9 +40,9 @@ namespace wiNetwork
 		return false;
 	}
 
-	HRESULT Receive(const Socket* sock, Connection* connection, void* data, size_t dataSize)
+	bool Receive(const Socket* sock, Connection* connection, void* data, size_t dataSize)
 	{
-		return E_FAIL;
+		return false;
 	}
 
 }

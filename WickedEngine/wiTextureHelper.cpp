@@ -37,8 +37,7 @@ namespace wiTextureHelper
 				data[i + 3] = 255;
 			}
 
-			HRESULT hr = CreateTexture(helperTextures[HELPERTEXTURE_RANDOM64X64], data, 64, 64);
-			assert(SUCCEEDED(hr));
+			CreateTexture(helperTextures[HELPERTEXTURE_RANDOM64X64], data, 64, 64);
 			wiRenderer::GetDevice()->SetName(&helperTextures[HELPERTEXTURE_RANDOM64X64], "HELPERTEXTURE_RANDOM64X64");
 		}
 
@@ -64,8 +63,7 @@ namespace wiTextureHelper
 				}
 			}
 
-			HRESULT hr = CreateTexture(helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT], data, 256, 16);
-			assert(SUCCEEDED(hr));
+			CreateTexture(helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT], data, 256, 16);
 			wiRenderer::GetDevice()->SetName(&helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT], "HELPERTEXTURE_COLORGRADEDEFAULT");
 		}
 
@@ -113,8 +111,7 @@ namespace wiTextureHelper
 				pData[cubeMapFaceIndex].SysMemSlicePitch = 0;
 			}
 
-			HRESULT hr = wiRenderer::GetDevice()->CreateTexture(&texDesc, &pData[0], &helperTextures[HELPERTEXTURE_BLACKCUBEMAP]);
-			assert(SUCCEEDED(hr));
+			wiRenderer::GetDevice()->CreateTexture(&texDesc, &pData[0], &helperTextures[HELPERTEXTURE_BLACKCUBEMAP]);
 			wiRenderer::GetDevice()->SetName(&helperTextures[HELPERTEXTURE_BLACKCUBEMAP], "HELPERTEXTURE_BLACKCUBEMAP");
 		}
 
@@ -180,7 +177,7 @@ namespace wiTextureHelper
 		}
 
 		Texture* texture = new Texture;
-		if (FAILED(CreateTexture(*texture, data, dim, dim)))
+		if (CreateTexture(*texture, data, dim, dim) == false)
 		{
 			delete texture;
 			return nullptr;
@@ -195,11 +192,11 @@ namespace wiTextureHelper
 	}
 
 
-	HRESULT CreateTexture(wiGraphics::Texture& texture, const uint8_t* data, uint32_t width, uint32_t height, FORMAT format)
+	bool CreateTexture(wiGraphics::Texture& texture, const uint8_t* data, uint32_t width, uint32_t height, FORMAT format)
 	{
 		if (data == nullptr)
 		{
-			return E_FAIL;
+			return false;
 		}
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -219,10 +216,7 @@ namespace wiTextureHelper
 		InitData.pSysMem = data;
 		InitData.SysMemPitch = width * device->GetFormatStride(format);
 
-		HRESULT hr;
-		hr = device->CreateTexture(&textureDesc, &InitData, &texture);
-
-		return hr;
+		return device->CreateTexture(&textureDesc, &InitData, &texture);
 	}
 
 }

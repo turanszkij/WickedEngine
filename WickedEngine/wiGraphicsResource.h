@@ -17,7 +17,7 @@ namespace wiGraphics
 
 	struct ShaderByteCode
 	{
-		BYTE* data = nullptr;
+		uint8_t* data = nullptr;
 		size_t size = 0;
 		~ShaderByteCode() { SAFE_DELETE_ARRAY(data); }
 	};

@@ -242,8 +242,7 @@ void wiWidget::LoadShaders()
 	desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
 	desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
 	desc.pt = TRIANGLESTRIP;
-	HRESULT hr = wiRenderer::GetDevice()->CreatePipelineState(&desc, &PSO_colorpicker);
-	assert(SUCCEEDED(hr));
+	wiRenderer::GetDevice()->CreatePipelineState(&desc, &PSO_colorpicker);
 }
 
 
@@ -1821,7 +1820,6 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	{
 		buffersComplete = true;
 
-		HRESULT hr = S_OK;
 		// saturation
 		{
 			vertices_saturation.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(1,0,0,1) });	// hue
@@ -1850,7 +1848,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 			desc.Usage = USAGE_DYNAMIC;
 			SubresourceData data;
 			data.pSysMem = vertices_saturation.data();
-			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_saturation);
+			wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_saturation);
 		}
 		// hue
 		{
@@ -1917,7 +1915,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 			desc.Usage = USAGE_IMMUTABLE;
 			SubresourceData data;
 			data.pSysMem = vertices.data();
-			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_hue);
+			wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_hue);
 		}
 		// saturation picker (small circle)
 		{
@@ -1944,7 +1942,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 			desc.Usage = USAGE_IMMUTABLE;
 			SubresourceData data;
 			data.pSysMem = vertices.data();
-			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_picker_saturation);
+			wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_picker_saturation);
 		}
 		// hue picker (rectangle)
 		{
@@ -1985,7 +1983,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 			desc.Usage = USAGE_IMMUTABLE;
 			SubresourceData data;
 			data.pSysMem = vertices;
-			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_picker_hue);
+			wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_picker_hue);
 		}
 		// preview
 		{
@@ -2008,7 +2006,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 			desc.Usage = USAGE_IMMUTABLE;
 			SubresourceData data;
 			data.pSysMem = vertices;
-			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_preview);
+			wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_preview);
 		}
 
 	}

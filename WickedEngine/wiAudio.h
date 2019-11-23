@@ -68,8 +68,8 @@ namespace wiAudio
 		~SoundInstance();
 	};
 
-	HRESULT CreateSound(const std::string& filename, Sound* sound);
-	HRESULT CreateSoundInstance(const Sound* sound, SoundInstance* instance);
+	bool CreateSound(const std::string& filename, Sound* sound);
+	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance);
 	void Destroy(Sound* sound);
 	void Destroy(SoundInstance* instance);
 

@@ -228,7 +228,6 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 	if (globalMaterialBuffer.GetDesc().ByteWidth != sizeof(ShaderMaterial) * materialArray.size())
 	{
 		GPUBufferDesc desc;
-		HRESULT hr;
 
 		desc.BindFlags = BIND_SHADER_RESOURCE;
 		desc.StructureByteStride = sizeof(ShaderMaterial);
@@ -238,8 +237,7 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
 
-		hr = device->CreateBuffer(&desc, nullptr, &globalMaterialBuffer);
-		assert(SUCCEEDED(hr));
+		device->CreateBuffer(&desc, nullptr, &globalMaterialBuffer);
 	}
 	device->UpdateBuffer(&globalMaterialBuffer, materialArray.data(), cmd, sizeof(ShaderMaterial) * (int)materialArray.size());
 
@@ -294,7 +292,6 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 		primitiveCapacity = std::max(2u, totalTriangles);
 
 		GPUBufferDesc desc;
-		HRESULT hr;
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(BVHNode);
@@ -303,8 +300,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, &bvhNodeBuffer);
-		assert(SUCCEEDED(hr));
+		device->CreateBuffer(&desc, nullptr, &bvhNodeBuffer);
 		device->SetName(&bvhNodeBuffer, "BVHNodeBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
@@ -314,8 +310,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, &bvhParentBuffer);
-		assert(SUCCEEDED(hr));
+		device->CreateBuffer(&desc, nullptr, &bvhParentBuffer);
 		device->SetName(&bvhParentBuffer, "BVHParentBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
@@ -325,8 +320,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, &bvhFlagBuffer);
-		assert(SUCCEEDED(hr));
+		device->CreateBuffer(&desc, nullptr, &bvhFlagBuffer);
 		device->SetName(&bvhFlagBuffer, "BVHFlagBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
@@ -336,8 +330,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, &primitiveIDBuffer);
-		assert(SUCCEEDED(hr));
+		device->CreateBuffer(&desc, nullptr, &primitiveIDBuffer);
 		device->SetName(&primitiveIDBuffer, "primitiveIDBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
@@ -347,8 +340,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, &primitiveBuffer);
-		assert(SUCCEEDED(hr));
+		device->CreateBuffer(&desc, nullptr, &primitiveBuffer);
 		device->SetName(&primitiveBuffer, "primitiveBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
@@ -358,8 +350,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, &primitiveDataBuffer);
-		assert(SUCCEEDED(hr));
+		device->CreateBuffer(&desc, nullptr, &primitiveDataBuffer);
 		device->SetName(&primitiveDataBuffer, "primitiveDataBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
@@ -369,9 +360,8 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
 		desc.StructureByteStride = sizeof(float); // morton buffer is float because sorting must be done and gpu sort operates on floats for now!
-		hr = device->CreateBuffer(&desc, nullptr, &primitiveMortonBuffer);
+		device->CreateBuffer(&desc, nullptr, &primitiveMortonBuffer);
 		device->SetName(&primitiveMortonBuffer, "primitiveMortonBuffer");
-		assert(SUCCEEDED(hr));
 	}
 
 

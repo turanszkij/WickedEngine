@@ -1499,7 +1499,7 @@ namespace wiGraphics
 			}
 #else
 #error WICKEDENGINE VULKAN DEVICE ERROR: PLATFORM NOT SUPPORTED
-#endif // WIN32
+#endif // _WIN32
 		}
 
 
@@ -2253,7 +2253,7 @@ namespace wiGraphics
 		return Texture();
 	}
 
-	HRESULT GraphicsDevice_Vulkan::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer)
+	bool GraphicsDevice_Vulkan::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer)
 	{
 		DestroyBuffer(pBuffer);
 		DestroyResource(pBuffer);
@@ -2437,9 +2437,9 @@ namespace wiGraphics
 
 
 
-		return res == VK_SUCCESS ? S_OK : E_FAIL;
+		return res == VK_SUCCESS ? true : false;
 	}
-	HRESULT GraphicsDevice_Vulkan::CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture)
+	bool GraphicsDevice_Vulkan::CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture)
 	{
 		DestroyTexture(pTexture);
 		DestroyResource(pTexture);
@@ -2664,9 +2664,9 @@ namespace wiGraphics
 			CreateSubresource(pTexture, UAV, 0, -1, 0, -1);
 		}
 
-		return res == VK_SUCCESS ? S_OK : E_FAIL;
+		return res == VK_SUCCESS ? true : false;
 	}
-	HRESULT GraphicsDevice_Vulkan::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, uint32_t NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout)
+	bool GraphicsDevice_Vulkan::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, uint32_t NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout)
 	{
 		DestroyInputLayout(pInputLayout);
 		pInputLayout->Register(this);
@@ -2678,9 +2678,9 @@ namespace wiGraphics
 			pInputLayout->desc.push_back(pInputElementDescs[i]);
 		}
 
-		return S_OK;
+		return true;
 	}
-	HRESULT GraphicsDevice_Vulkan::CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, VertexShader *pVertexShader)
+	bool GraphicsDevice_Vulkan::CreateVertexShader(const void *pShaderBytecode, size_t BytecodeLength, VertexShader *pVertexShader)
 	{
 		DestroyVertexShader(pVertexShader);
 		pVertexShader->Register(this);
@@ -2689,9 +2689,9 @@ namespace wiGraphics
 		memcpy(pVertexShader->code.data, pShaderBytecode, BytecodeLength);
 		pVertexShader->code.size = BytecodeLength;
 
-		return (pVertexShader->code.data != nullptr && pVertexShader->code.size > 0 ? S_OK : E_FAIL);
+		return (pVertexShader->code.data != nullptr && pVertexShader->code.size > 0 ? true : false);
 	}
-	HRESULT GraphicsDevice_Vulkan::CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, PixelShader *pPixelShader)
+	bool GraphicsDevice_Vulkan::CreatePixelShader(const void *pShaderBytecode, size_t BytecodeLength, PixelShader *pPixelShader)
 	{
 		DestroyPixelShader(pPixelShader);
 		pPixelShader->Register(this);
@@ -2700,9 +2700,9 @@ namespace wiGraphics
 		memcpy(pPixelShader->code.data, pShaderBytecode, BytecodeLength);
 		pPixelShader->code.size = BytecodeLength;
 
-		return (pPixelShader->code.data != nullptr && pPixelShader->code.size > 0 ? S_OK : E_FAIL);
+		return (pPixelShader->code.data != nullptr && pPixelShader->code.size > 0 ? true : false);
 	}
-	HRESULT GraphicsDevice_Vulkan::CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, GeometryShader *pGeometryShader)
+	bool GraphicsDevice_Vulkan::CreateGeometryShader(const void *pShaderBytecode, size_t BytecodeLength, GeometryShader *pGeometryShader)
 	{
 		DestroyGeometryShader(pGeometryShader);
 		pGeometryShader->Register(this);
@@ -2711,9 +2711,9 @@ namespace wiGraphics
 		memcpy(pGeometryShader->code.data, pShaderBytecode, BytecodeLength);
 		pGeometryShader->code.size = BytecodeLength;
 
-		return (pGeometryShader->code.data != nullptr && pGeometryShader->code.size > 0 ? S_OK : E_FAIL);
+		return (pGeometryShader->code.data != nullptr && pGeometryShader->code.size > 0 ? true : false);
 	}
-	HRESULT GraphicsDevice_Vulkan::CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, HullShader *pHullShader)
+	bool GraphicsDevice_Vulkan::CreateHullShader(const void *pShaderBytecode, size_t BytecodeLength, HullShader *pHullShader)
 	{
 		DestroyHullShader(pHullShader);
 		pHullShader->Register(this);
@@ -2722,9 +2722,9 @@ namespace wiGraphics
 		memcpy(pHullShader->code.data, pShaderBytecode, BytecodeLength);
 		pHullShader->code.size = BytecodeLength;
 
-		return (pHullShader->code.data != nullptr && pHullShader->code.size > 0 ? S_OK : E_FAIL);
+		return (pHullShader->code.data != nullptr && pHullShader->code.size > 0 ? true : false);
 	}
-	HRESULT GraphicsDevice_Vulkan::CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, DomainShader *pDomainShader)
+	bool GraphicsDevice_Vulkan::CreateDomainShader(const void *pShaderBytecode, size_t BytecodeLength, DomainShader *pDomainShader)
 	{
 		DestroyDomainShader(pDomainShader);
 		pDomainShader->Register(this);
@@ -2733,9 +2733,9 @@ namespace wiGraphics
 		memcpy(pDomainShader->code.data, pShaderBytecode, BytecodeLength);
 		pDomainShader->code.size = BytecodeLength;
 
-		return (pDomainShader->code.data != nullptr && pDomainShader->code.size > 0 ? S_OK : E_FAIL);
+		return (pDomainShader->code.data != nullptr && pDomainShader->code.size > 0 ? true : false);
 	}
-	HRESULT GraphicsDevice_Vulkan::CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ComputeShader *pComputeShader)
+	bool GraphicsDevice_Vulkan::CreateComputeShader(const void *pShaderBytecode, size_t BytecodeLength, ComputeShader *pComputeShader)
 	{
 		DestroyComputeShader(pComputeShader);
 		pComputeShader->Register(this);
@@ -2776,33 +2776,33 @@ namespace wiGraphics
 		res = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, reinterpret_cast<VkPipeline*>(&pComputeShader->resource));
 		assert(res == VK_SUCCESS);
 
-		return res == VK_SUCCESS ? S_OK : E_FAIL;
+		return res == VK_SUCCESS ? true : false;
 	}
-	HRESULT GraphicsDevice_Vulkan::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
+	bool GraphicsDevice_Vulkan::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
 	{
 		DestroyBlendState(pBlendState);
 		pBlendState->Register(this);
 
 		pBlendState->desc = *pBlendStateDesc;
-		return S_OK;
+		return true;
 	}
-	HRESULT GraphicsDevice_Vulkan::CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState)
+	bool GraphicsDevice_Vulkan::CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState)
 	{
 		DestroyDepthStencilState(pDepthStencilState);
 		pDepthStencilState->Register(this);
 
 		pDepthStencilState->desc = *pDepthStencilStateDesc;
-		return S_OK;
+		return true;
 	}
-	HRESULT GraphicsDevice_Vulkan::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
+	bool GraphicsDevice_Vulkan::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
 	{
 		DestroyRasterizerState(pRasterizerState);
 		pRasterizerState->Register(this);
 
 		pRasterizerState->desc = *pRasterizerStateDesc;
-		return S_OK;
+		return true;
 	}
-	HRESULT GraphicsDevice_Vulkan::CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
+	bool GraphicsDevice_Vulkan::CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
 	{
 		DestroySamplerState(pSamplerState);
 		pSamplerState->Register(this);
@@ -2984,14 +2984,14 @@ namespace wiGraphics
 		VkResult res = vkCreateSampler(device, &createInfo, nullptr, reinterpret_cast<VkSampler*>(&pSamplerState->resource));
 		assert(res == VK_SUCCESS);
 
-		return res == VK_SUCCESS ? S_OK : E_FAIL;
+		return res == VK_SUCCESS ? true : false;
 	}
-	HRESULT GraphicsDevice_Vulkan::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
+	bool GraphicsDevice_Vulkan::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
 	{
 		DestroyQuery(pQuery);
 		pQuery->Register(this);
 
-		HRESULT hr = E_FAIL;
+		bool hr = false;
 
 		pQuery->desc = *pDesc;
 
@@ -3003,7 +3003,7 @@ namespace wiGraphics
 			if (free_timestampqueries.pop_front(query_index))
 			{
 				pQuery->resource = (wiCPUHandle)query_index;
-				hr = S_OK;
+				hr = true;
 			}
 			else
 			{
@@ -3011,14 +3011,14 @@ namespace wiGraphics
 			}
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
-			hr = S_OK;
+			hr = true;
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
 			if (free_occlusionqueries.pop_front(query_index))
 			{
 				pQuery->resource = (wiCPUHandle)query_index;
-				hr = S_OK;
+				hr = true;
 			}
 			else
 			{
@@ -3027,11 +3027,11 @@ namespace wiGraphics
 			break;
 		}
 
-		assert(SUCCEEDED(hr));
+		assert(hr);
 
 		return hr;
 	}
-	HRESULT GraphicsDevice_Vulkan::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
+	bool GraphicsDevice_Vulkan::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
 	{
 		DestroyPipelineState(pso);
 		pso->Register(this);
@@ -3051,9 +3051,9 @@ namespace wiGraphics
 		wiHelper::hash_combine(pso->hash, pDesc->pt);
 		wiHelper::hash_combine(pso->hash, pDesc->sampleMask);
 
-		return S_OK;
+		return true;
 	}
-	HRESULT GraphicsDevice_Vulkan::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
+	bool GraphicsDevice_Vulkan::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
 	{
 		DestroyRenderPass(renderpass);
 		renderpass->Register(this);
@@ -3235,7 +3235,7 @@ namespace wiGraphics
 		renderpass->renderpass = (wiCPUHandle)renderpass_handle;
 		renderpass->framebuffer = (wiCPUHandle)framebuffer_handle;
 
-		return res == VK_SUCCESS ? S_OK : E_FAIL;
+		return res == VK_SUCCESS ? true : false;
 	}
 
 	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount)

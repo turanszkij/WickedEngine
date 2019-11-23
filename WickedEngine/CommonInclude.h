@@ -3,28 +3,9 @@
 
 // This is a helper include file pasted into all engine headers try to keep it minimal!
 // Do not include engine features in this file!
-#include <stddef.h>
-#include <stdint.h>
 
-// Platform specific:
-#define NOMINMAX
-#undef min
-#undef max
-#include <SDKDDKVer.h>
-#include <windows.h>
+#include <cstdint>
 
-#ifdef WINSTORE_SUPPORT
-#include <Windows.UI.Core.h>
-#endif // WINSTORE_SUPPORT
-
-#if __has_include("vulkan/vulkan.h")
-#define WICKEDENGINE_BUILD_VULKAN
-#endif // HAS VULKAN
-
-
-
-
-// Platform agnostic:
 #include <DirectXMath.h>
 #include <DirectXPackedVector.h>
 using namespace DirectX;
@@ -41,5 +22,17 @@ static const XMFLOAT4X4 IDENTITYMATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0
 typedef uint64_t wiCPUHandle;
 static const wiCPUHandle WI_NULL_HANDLE = 0;
 
+
+// Platform specific parts:
+
+#ifdef _WIN32
+#define NOMINMAX
+#include <SDKDDKVer.h>
+#include <windows.h>
+#endif // _WIN32
+
+#ifdef WINSTORE_SUPPORT
+#include <Windows.UI.Core.h>
+#endif // WINSTORE_SUPPORT
 
 #endif //WICKEDENGINE_COMMONINCLUDE_H

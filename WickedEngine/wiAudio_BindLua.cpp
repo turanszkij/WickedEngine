@@ -32,8 +32,8 @@ int wiAudio_BindLua::CreateSound(lua_State* L)
 		wiSound_BindLua* sound = Luna<wiSound_BindLua>::lightcheck(L, 2);
 		if (sound != nullptr)
 		{
-			HRESULT hr = wiAudio::CreateSound(wiLua::SGetString(L, 1), sound->sound);
-			wiLua::SSetBool(L, SUCCEEDED(hr));
+			bool result = wiAudio::CreateSound(wiLua::SGetString(L, 1), sound->sound);
+			wiLua::SSetBool(L, result);
 		}
 		else
 		{
@@ -53,8 +53,8 @@ int wiAudio_BindLua::CreateSoundInstance(lua_State* L)
 		wiSoundInstance_BindLua* soundinstance = Luna<wiSoundInstance_BindLua>::lightcheck(L, 2);
 		if (sound != nullptr && soundinstance != nullptr)
 		{
-			HRESULT hr = wiAudio::CreateSoundInstance(sound->sound, &soundinstance->soundinstance);
-			wiLua::SSetBool(L, SUCCEEDED(hr));
+			bool result = wiAudio::CreateSoundInstance(sound->sound, &soundinstance->soundinstance);
+			wiLua::SSetBool(L, result);
 			return 1;
 		}
 		else

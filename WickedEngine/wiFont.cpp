@@ -223,8 +223,7 @@ void wiFont::Initialize()
 		SubresourceData InitData;
 		InitData.pSysMem = indices.data();
 
-		HRESULT hr = device->CreateBuffer(&bd, &InitData, &indexBuffer);
-		assert(SUCCEEDED(hr));
+		device->CreateBuffer(&bd, &InitData, &indexBuffer);
 	}
 
 	{
@@ -234,8 +233,7 @@ void wiFont::Initialize()
 		bd.BindFlags = BIND_CONSTANT_BUFFER;
 		bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
-		HRESULT hr = device->CreateBuffer(&bd, nullptr, &constantBuffer);
-		assert(SUCCEEDED(hr));
+		device->CreateBuffer(&bd, nullptr, &constantBuffer);
 	}
 
 
@@ -427,8 +425,7 @@ void UpdatePendingGlyphs()
 			}
 
 			// Upload the CPU-side texture atlas bitmap to the GPU:
-			HRESULT hr = wiTextureHelper::CreateTexture(texture, bitmap.data(), bitmapWidth, bitmapHeight, FORMAT_R8_UNORM);
-			assert(SUCCEEDED(hr));
+			wiTextureHelper::CreateTexture(texture, bitmap.data(), bitmapWidth, bitmapHeight, FORMAT_R8_UNORM);
 		}
 	}
 }

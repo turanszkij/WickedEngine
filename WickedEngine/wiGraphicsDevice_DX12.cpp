@@ -33,7 +33,7 @@ namespace wiGraphics
 	inline D3D12_CPU_DESCRIPTOR_HANDLE ToNativeHandle(wiCPUHandle handle)
 	{
 		D3D12_CPU_DESCRIPTOR_HANDLE native;
-		native.ptr = (SIZE_T)handle;
+		native.ptr = (size_t)handle;
 		return native;
 	}
 
@@ -1947,7 +1947,7 @@ namespace wiGraphics
 		return result;
 	}
 
-	HRESULT GraphicsDevice_DX12::CreateBuffer(const GPUBufferDesc* pDesc, const SubresourceData* pInitialData, GPUBuffer* pBuffer)
+	bool GraphicsDevice_DX12::CreateBuffer(const GPUBufferDesc* pDesc, const SubresourceData* pInitialData, GPUBuffer* pBuffer)
 	{
 		DestroyBuffer(pBuffer);
 		DestroyResource(pBuffer);
@@ -2106,9 +2106,9 @@ namespace wiGraphics
 			device->CreateUnorderedAccessView((ID3D12Resource*)pBuffer->resource, nullptr, &uav_desc, ToNativeHandle(pBuffer->UAV));
 		}
 
-		return hr;
+		return SUCCEEDED(hr);
 	}
-	HRESULT GraphicsDevice_DX12::CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture)
+	bool GraphicsDevice_DX12::CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture)
 	{
 		DestroyTexture(pTexture);
 		DestroyResource(pTexture);
@@ -2274,9 +2274,9 @@ namespace wiGraphics
 			CreateSubresource(pTexture, UAV, 0, -1, 0, -1);
 		}
 
-		return hr;
+		return SUCCEEDED(hr);
 	}
-	HRESULT GraphicsDevice_DX12::CreateInputLayout(const VertexLayoutDesc* pInputElementDescs, uint32_t NumElements, const ShaderByteCode* shaderCode, VertexLayout* pInputLayout)
+	bool GraphicsDevice_DX12::CreateInputLayout(const VertexLayoutDesc* pInputElementDescs, uint32_t NumElements, const ShaderByteCode* shaderCode, VertexLayout* pInputLayout)
 	{
 		DestroyInputLayout(pInputLayout);
 		pInputLayout->Register(this);
@@ -2290,7 +2290,7 @@ namespace wiGraphics
 
 		return S_OK;
 	}
-	HRESULT GraphicsDevice_DX12::CreateVertexShader(const void* pShaderBytecode, SIZE_T BytecodeLength, VertexShader* pVertexShader)
+	bool GraphicsDevice_DX12::CreateVertexShader(const void* pShaderBytecode, size_t BytecodeLength, VertexShader* pVertexShader)
 	{
 		DestroyVertexShader(pVertexShader);
 		pVertexShader->Register(this);
@@ -2301,7 +2301,7 @@ namespace wiGraphics
 
 		return (pVertexShader->code.data != nullptr && pVertexShader->code.size > 0 ? S_OK : E_FAIL);
 	}
-	HRESULT GraphicsDevice_DX12::CreatePixelShader(const void* pShaderBytecode, SIZE_T BytecodeLength, PixelShader* pPixelShader)
+	bool GraphicsDevice_DX12::CreatePixelShader(const void* pShaderBytecode, size_t BytecodeLength, PixelShader* pPixelShader)
 	{
 		DestroyPixelShader(pPixelShader);
 		pPixelShader->Register(this);
@@ -2312,7 +2312,7 @@ namespace wiGraphics
 
 		return (pPixelShader->code.data != nullptr && pPixelShader->code.size > 0 ? S_OK : E_FAIL);
 	}
-	HRESULT GraphicsDevice_DX12::CreateGeometryShader(const void* pShaderBytecode, SIZE_T BytecodeLength, GeometryShader* pGeometryShader)
+	bool GraphicsDevice_DX12::CreateGeometryShader(const void* pShaderBytecode, size_t BytecodeLength, GeometryShader* pGeometryShader)
 	{
 		DestroyGeometryShader(pGeometryShader);
 		pGeometryShader->Register(this);
@@ -2323,7 +2323,7 @@ namespace wiGraphics
 
 		return (pGeometryShader->code.data != nullptr && pGeometryShader->code.size > 0 ? S_OK : E_FAIL);
 	}
-	HRESULT GraphicsDevice_DX12::CreateHullShader(const void* pShaderBytecode, SIZE_T BytecodeLength, HullShader* pHullShader)
+	bool GraphicsDevice_DX12::CreateHullShader(const void* pShaderBytecode, size_t BytecodeLength, HullShader* pHullShader)
 	{
 		DestroyHullShader(pHullShader);
 		pHullShader->Register(this);
@@ -2334,7 +2334,7 @@ namespace wiGraphics
 
 		return (pHullShader->code.data != nullptr && pHullShader->code.size > 0 ? S_OK : E_FAIL);
 	}
-	HRESULT GraphicsDevice_DX12::CreateDomainShader(const void* pShaderBytecode, SIZE_T BytecodeLength, DomainShader* pDomainShader)
+	bool GraphicsDevice_DX12::CreateDomainShader(const void* pShaderBytecode, size_t BytecodeLength, DomainShader* pDomainShader)
 	{
 		DestroyDomainShader(pDomainShader);
 		pDomainShader->Register(this);
@@ -2345,7 +2345,7 @@ namespace wiGraphics
 
 		return (pDomainShader->code.data != nullptr && pDomainShader->code.size > 0 ? S_OK : E_FAIL);
 	}
-	HRESULT GraphicsDevice_DX12::CreateComputeShader(const void* pShaderBytecode, SIZE_T BytecodeLength, ComputeShader* pComputeShader)
+	bool GraphicsDevice_DX12::CreateComputeShader(const void* pShaderBytecode, size_t BytecodeLength, ComputeShader* pComputeShader)
 	{
 		DestroyComputeShader(pComputeShader);
 		pComputeShader->Register(this);
@@ -2362,9 +2362,9 @@ namespace wiGraphics
 		HRESULT hr = device->CreateComputePipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&pComputeShader->resource);
 		assert(SUCCEEDED(hr));
 
-		return hr;
+		return SUCCEEDED(hr);
 	}
-	HRESULT GraphicsDevice_DX12::CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState)
+	bool GraphicsDevice_DX12::CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState)
 	{
 		DestroyBlendState(pBlendState);
 		pBlendState->Register(this);
@@ -2372,7 +2372,7 @@ namespace wiGraphics
 		pBlendState->desc = *pBlendStateDesc;
 		return S_OK;
 	}
-	HRESULT GraphicsDevice_DX12::CreateDepthStencilState(const DepthStencilStateDesc* pDepthStencilStateDesc, DepthStencilState* pDepthStencilState)
+	bool GraphicsDevice_DX12::CreateDepthStencilState(const DepthStencilStateDesc* pDepthStencilStateDesc, DepthStencilState* pDepthStencilState)
 	{
 		DestroyDepthStencilState(pDepthStencilState);
 		pDepthStencilState->Register(this);
@@ -2380,7 +2380,7 @@ namespace wiGraphics
 		pDepthStencilState->desc = *pDepthStencilStateDesc;
 		return S_OK;
 	}
-	HRESULT GraphicsDevice_DX12::CreateRasterizerState(const RasterizerStateDesc* pRasterizerStateDesc, RasterizerState* pRasterizerState)
+	bool GraphicsDevice_DX12::CreateRasterizerState(const RasterizerStateDesc* pRasterizerStateDesc, RasterizerState* pRasterizerState)
 	{
 		DestroyRasterizerState(pRasterizerState);
 		pRasterizerState->Register(this);
@@ -2388,7 +2388,7 @@ namespace wiGraphics
 		pRasterizerState->desc = *pRasterizerStateDesc;
 		return S_OK;
 	}
-	HRESULT GraphicsDevice_DX12::CreateSamplerState(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState)
+	bool GraphicsDevice_DX12::CreateSamplerState(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState)
 	{
 		DestroySamplerState(pSamplerState);
 		pSamplerState->Register(this);
@@ -2415,7 +2415,7 @@ namespace wiGraphics
 
 		return S_OK;
 	}
-	HRESULT GraphicsDevice_DX12::CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery)
+	bool GraphicsDevice_DX12::CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery)
 	{
 		DestroyQuery(pQuery);
 		pQuery->Register(this);
@@ -2458,9 +2458,9 @@ namespace wiGraphics
 
 		assert(SUCCEEDED(hr));
 
-		return hr;
+		return SUCCEEDED(hr);
 	}
-	HRESULT GraphicsDevice_DX12::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
+	bool GraphicsDevice_DX12::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
 	{
 		DestroyPipelineState(pso);
 		pso->Register(this);
@@ -2482,7 +2482,7 @@ namespace wiGraphics
 
 		return S_OK;
 	}
-	HRESULT GraphicsDevice_DX12::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
+	bool GraphicsDevice_DX12::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
 	{
 		DestroyRenderPass(renderpass);
 		renderpass->Register(this);
@@ -4066,7 +4066,7 @@ namespace wiGraphics
 	bool GraphicsDevice_DX12::QueryRead(const GPUQuery* query, GPUQueryResult* result)
 	{
 		D3D12_RANGE range;
-		range.Begin = (SIZE_T)query->resource * sizeof(SIZE_T);
+		range.Begin = (size_t)query->resource * sizeof(size_t);
 		range.End = range.Begin + sizeof(uint64_t);
 		D3D12_RANGE nullrange = {};
 		void* data = nullptr;
@@ -4078,7 +4078,7 @@ namespace wiGraphics
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP:
 			querypool_timestamp_readback->Map(0, &range, &data);
-			result->result_timestamp = *(uint64_t*)((SIZE_T)data + range.Begin);
+			result->result_timestamp = *(uint64_t*)((size_t)data + range.Begin);
 			querypool_timestamp_readback->Unmap(0, &nullrange);
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
@@ -4088,14 +4088,14 @@ namespace wiGraphics
 		{
 			BOOL passed = FALSE;
 			querypool_occlusion_readback->Map(0, &range, &data);
-			passed = *(BOOL*)((SIZE_T)data + range.Begin);
+			passed = *(BOOL*)((size_t)data + range.Begin);
 			querypool_occlusion_readback->Unmap(0, &nullrange);
 			result->result_passed_sample_count = (uint64_t)passed;
 			break;
 		}
 		case GPU_QUERY_TYPE_OCCLUSION:
 			querypool_occlusion_readback->Map(0, &range, &data);
-			result->result_passed_sample_count = *(uint64_t*)((SIZE_T)data + range.Begin);
+			result->result_passed_sample_count = *(uint64_t*)((size_t)data + range.Begin);
 			querypool_occlusion_readback->Unmap(0, &nullrange);
 			break;
 		}

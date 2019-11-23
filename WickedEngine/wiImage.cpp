@@ -297,8 +297,7 @@ namespace wiImage
 			bd.ByteWidth = sizeof(ImageCB);
 			bd.BindFlags = BIND_CONSTANT_BUFFER;
 			bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-			HRESULT hr = device->CreateBuffer(&bd, nullptr, &constantBuffer);
-			assert(SUCCEEDED(hr));
+			device->CreateBuffer(&bd, nullptr, &constantBuffer);
 		}
 
 		RasterizerStateDesc rs;

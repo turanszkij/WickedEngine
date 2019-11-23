@@ -65,13 +65,11 @@
 #include "wiNetwork.h"
 
 #ifdef _WIN32
-
 #ifdef WINSTORE_SUPPORT
 #pragma comment(lib,"WickedEngine_UWP.lib")
 #else
 #pragma comment(lib,"WickedEngine_Windows.lib")
 #endif // WINSTORE_SUPPORT
-
 #endif // _WIN32
 
 

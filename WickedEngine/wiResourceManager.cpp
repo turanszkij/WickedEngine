@@ -208,8 +208,7 @@ const void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 					}
 
 					Texture* image = new Texture;
-					HRESULT hr = wiRenderer::GetDevice()->CreateTexture(&desc, InitData.data(), image);
-					assert(SUCCEEDED(hr));
+					wiRenderer::GetDevice()->CreateTexture(&desc, InitData.data(), image);
 					wiRenderer::GetDevice()->SetName(image, nameStr);
 					success = image;
 				}
@@ -249,8 +248,7 @@ const void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 					}
 
 					Texture* image = new Texture;
-					HRESULT hr = device->CreateTexture(&desc, InitData.data(), image);
-					assert(SUCCEEDED(hr));
+					device->CreateTexture(&desc, InitData.data(), image);
 					device->SetName(image, nameStr);
 
 					for (uint32_t i = 0; i < image->GetDesc().MipLevels; ++i)
@@ -277,7 +275,7 @@ const void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 		case Data_Type::SOUND:
 		{
 			wiAudio::Sound* sound = new wiAudio::Sound;
-			if (SUCCEEDED(wiAudio::CreateSound(name.GetString(), sound)))
+			if (wiAudio::CreateSound(name.GetString(), sound))
 			{
 				success = sound;
 			}
