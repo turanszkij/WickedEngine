@@ -5,7 +5,7 @@
 #include "wiFont.h"
 #include "wiMath.h"
 #include "wiHelper.h"
-#include "wiInputManager.h"
+#include "wiInput.h"
 #include "wiRenderer.h"
 #include "ShaderInterop_Renderer.h"
 
@@ -314,7 +314,7 @@ void wiButton::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	if (wiInputManager::press(VK_LBUTTON))
+	if (wiInput::press(wiInput::MOUSE_BUTTON_LEFT))
 	{
 		if (state == FOCUS)
 		{
@@ -323,7 +323,7 @@ void wiButton::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	if (wiInputManager::down(VK_LBUTTON))
+	if (wiInput::down(wiInput::MOUSE_BUTTON_LEFT))
 	{
 		if (state == DEACTIVATING)
 		{
@@ -519,7 +519,7 @@ void wiTextInputField::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	if (wiInputManager::press(VK_LBUTTON))
+	if (wiInput::press(wiInput::MOUSE_BUTTON_LEFT))
 	{
 		if (state == FOCUS)
 		{
@@ -528,7 +528,7 @@ void wiTextInputField::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	if (wiInputManager::down(VK_LBUTTON))
+	if (wiInput::down(wiInput::MOUSE_BUTTON_LEFT))
 	{
 		if (state == DEACTIVATING)
 		{
@@ -546,7 +546,7 @@ void wiTextInputField::Update(wiGUI* gui, float dt)
 
 	if (state == ACTIVE)
 	{
-		if (wiInputManager::press(VK_RETURN))
+		if (wiInput::press(wiInput::KEYBOARD_BUTTON_ENTER))
 		{
 			// accept input...
 
@@ -561,8 +561,8 @@ void wiTextInputField::Update(wiGUI* gui, float dt)
 
 			gui->DeactivateWidget(this);
 		}
-		else if ((wiInputManager::press(VK_LBUTTON) && !intersectsPointer) ||
-			wiInputManager::press(VK_ESCAPE))
+		else if ((wiInput::press(wiInput::MOUSE_BUTTON_LEFT) && !intersectsPointer) ||
+			wiInput::press(wiInput::KEYBOARD_BUTTON_ESCAPE))
 		{
 			// cancel input 
 			value_new.clear();
@@ -697,7 +697,7 @@ void wiSlider::Update(wiGUI* gui, float dt)
 	}
 	if (state == ACTIVE)
 	{
-		if (wiInputManager::down(VK_LBUTTON))
+		if (wiInput::down(wiInput::MOUSE_BUTTON_LEFT))
 		{
 			if (state == ACTIVE)
 			{
@@ -730,7 +730,7 @@ void wiSlider::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	if (wiInputManager::press(VK_LBUTTON))
+	if (wiInput::press(wiInput::MOUSE_BUTTON_LEFT))
 	{
 		if (state == FOCUS)
 		{
@@ -863,7 +863,7 @@ void wiCheckBox::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	if (wiInputManager::press(VK_LBUTTON))
+	if (wiInput::press(wiInput::MOUSE_BUTTON_LEFT))
 	{
 		if (state == FOCUS)
 		{
@@ -872,7 +872,7 @@ void wiCheckBox::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	if (wiInputManager::down(VK_LBUTTON))
+	if (wiInput::down(wiInput::MOUSE_BUTTON_LEFT))
 	{
 		if (state == DEACTIVATING)
 		{
@@ -1011,14 +1011,14 @@ void wiComboBox::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	if (wiInputManager::press(VK_LBUTTON))
+	if (wiInput::press(wiInput::MOUSE_BUTTON_LEFT))
 	{
 		// activate
 		clicked = true;
 	}
 
 	bool click_down = false;
-	if (wiInputManager::down(VK_LBUTTON))
+	if (wiInput::down(wiInput::MOUSE_BUTTON_LEFT))
 	{
 		click_down = true;
 		if (state == DEACTIVATING)
@@ -1076,7 +1076,7 @@ void wiComboBox::Update(wiGUI* gui, float dt)
 		}
 		else if (combostate == COMBOSTATE_HOVER)
 		{
-			int scroll = (int)wiInputManager::getpointer().z;
+			int scroll = (int)wiInput::getpointer().z;
 			firstItemVisible -= scroll;
 			firstItemVisible = std::max(0, std::min((int)items.size() - maxVisibleItemCount, firstItemVisible));
 			if (scroll)
@@ -1723,7 +1723,7 @@ void wiColorPicker::Update(wiGUI* gui, float dt)
 
 	bool dragged = false;
 
-	if (wiInputManager::press(VK_LBUTTON))
+	if (wiInput::press(wiInput::MOUSE_BUTTON_LEFT))
 	{
 		if (state == FOCUS)
 		{
@@ -1732,7 +1732,7 @@ void wiColorPicker::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	if (wiInputManager::down(VK_LBUTTON))
+	if (wiInput::down(wiInput::MOUSE_BUTTON_LEFT))
 	{
 		if (state == ACTIVE)
 		{

@@ -1,17 +1,17 @@
 #pragma once
 #include "wiLua.h"
 #include "wiLuna.h"
-#include "wiInputManager.h"
+#include "wiInput.h"
 
-class wiInputManager_BindLua
+class wiInput_BindLua
 {
 public:
 	static const char className[];
-	static Luna<wiInputManager_BindLua>::FunctionType methods[];
-	static Luna<wiInputManager_BindLua>::PropertyType properties[];
+	static Luna<wiInput_BindLua>::FunctionType methods[];
+	static Luna<wiInput_BindLua>::PropertyType properties[];
 
-	wiInputManager_BindLua(lua_State* L){}
-	~wiInputManager_BindLua(){}
+	wiInput_BindLua(lua_State* L){}
+	~wiInput_BindLua(){}
 
 	int Down(lua_State* L);
 	int Press(lua_State* L);
@@ -28,13 +28,13 @@ public:
 class Touch_BindLua
 {
 public:
-	wiInputManager::Touch touch;
+	wiInput::Touch touch;
 	static const char className[];
 	static Luna<Touch_BindLua>::FunctionType methods[];
 	static Luna<Touch_BindLua>::PropertyType properties[];
 
 	Touch_BindLua(lua_State* L) {}
-	Touch_BindLua(const wiInputManager::Touch& touch) :touch(touch) {}
+	Touch_BindLua(const wiInput::Touch& touch) :touch(touch) {}
 	~Touch_BindLua() {}
 
 	int GetState(lua_State* L);

@@ -1,4 +1,4 @@
-#include "wiInputManager.h"
+#include "wiInput.h"
 #include "wiXInput.h"
 #include "wiDirectInput.h"
 #include "wiRawInput.h"
@@ -13,7 +13,7 @@
 
 using namespace std;
 
-namespace wiInputManager
+namespace wiInput
 {
 
 #ifndef WINSTORE_SUPPORT
@@ -29,21 +29,15 @@ namespace wiInputManager
 
 	struct Input 
 	{
-		INPUT_TYPE type;
-		uint32_t button;
-		short playerIndex;
+		BUTTON button = BUTTON_NONE;
+		short playerIndex = 0;
 
-		Input() {
-			type = INPUT_TYPE_KEYBOARD;
-			button = 0;
-			playerIndex = 0;
-		}
 		bool operator<(const Input other) {
-			return (button != other.button || type != other.type || playerIndex != other.playerIndex);
+			return (button != other.button || playerIndex != other.playerIndex);
 		}
 		struct LessComparer {
 			bool operator()(Input const& a, Input const& b) const {
-				return (a.button < b.button || a.type < b.type || a.playerIndex < b.playerIndex);
+				return (a.button < b.button || a.playerIndex < b.playerIndex);
 			}
 		};
 	};
@@ -84,7 +78,7 @@ namespace wiInputManager
 			controllers.push_back({ Controller::DIRECTINPUT, i });
 		}
 
-		wiBackLog::post("wiInputManager Initialized");
+		wiBackLog::post("wiInput Initialized");
 		initialized.store(true);
 	}
 
@@ -101,13 +95,12 @@ namespace wiInputManager
 
 		for (auto iter = inputs.begin(); iter != inputs.end();)
 		{
-			INPUT_TYPE type = iter->first.type;
-			uint32_t button = iter->first.button;
+			BUTTON button = iter->first.button;
 			short playerIndex = iter->first.playerIndex;
 
 			bool todelete = false;
 
-			if (down(button, type, playerIndex))
+			if (down(button, playerIndex))
 			{
 				iter->second++;
 			}
@@ -132,7 +125,7 @@ namespace wiInputManager
 
 	}
 
-	bool down(uint32_t button, INPUT_TYPE inputType, short playerindex)
+	bool down(BUTTON button, short playerindex)
 	{
 		if (!initialized.load())
 		{
@@ -143,18 +136,10 @@ namespace wiInputManager
 			return false;
 		}
 
-		switch (inputType)
+		if(button > GAMEPAD_RANGE_START)
 		{
-		case INPUT_TYPE_KEYBOARD:
-			if (playerindex == 0) // can't differentiate between keyboards now..
-			{
-				return KEY_DOWN(static_cast<int>(button)) | KEY_TOGGLE(static_cast<int>(button));
-			}
-			break;
-		case INPUT_TYPE_GAMEPAD:
 			if (playerindex < (int)controllers.size())
 			{
-
 				const Controller& controller = controllers[playerindex];
 
 				if (xinput != nullptr && controller.deviceType == Controller::XINPUT)
@@ -209,19 +194,111 @@ namespace wiInputManager
 				}
 
 			}
-			break;
-		default:break;
 		}
+		else if (playerindex == 0) // keyboard or mouse
+		{
+			int keycode = (int)button;
+
+			switch (button)
+			{
+			case wiInput::MOUSE_BUTTON_LEFT:
+				keycode = VK_LBUTTON;
+				break;
+			case wiInput::MOUSE_BUTTON_RIGHT:
+				keycode = VK_RBUTTON;
+				break;
+			case wiInput::MOUSE_BUTTON_MIDDLE:
+				keycode = VK_MBUTTON;
+				break;
+			case wiInput::KEYBOARD_BUTTON_UP:
+				keycode = VK_UP;
+				break;
+			case wiInput::KEYBOARD_BUTTON_DOWN:
+				keycode = VK_DOWN;
+				break;
+			case wiInput::KEYBOARD_BUTTON_LEFT:
+				keycode = VK_LEFT;
+				break;
+			case wiInput::KEYBOARD_BUTTON_RIGHT:
+				keycode = VK_RIGHT;
+				break;
+			case wiInput::KEYBOARD_BUTTON_SPACE:
+				keycode = VK_SPACE;
+				break;
+			case wiInput::KEYBOARD_BUTTON_RSHIFT:
+				keycode = VK_RSHIFT;
+				break;
+			case wiInput::KEYBOARD_BUTTON_LSHIFT:
+				keycode = VK_LSHIFT;
+				break;
+			case wiInput::KEYBOARD_BUTTON_F1:
+				keycode = VK_F1;
+				break;
+			case wiInput::KEYBOARD_BUTTON_F2:
+				keycode = VK_F2;
+				break;
+			case wiInput::KEYBOARD_BUTTON_F3:
+				keycode = VK_F3;
+				break;
+			case wiInput::KEYBOARD_BUTTON_F4:
+				keycode = VK_F4;
+				break;
+			case wiInput::KEYBOARD_BUTTON_F5:
+				keycode = VK_F5;
+				break;
+			case wiInput::KEYBOARD_BUTTON_F6:
+				keycode = VK_F6;
+				break;
+			case wiInput::KEYBOARD_BUTTON_F7:
+				keycode = VK_F7;
+				break;
+			case wiInput::KEYBOARD_BUTTON_F8:
+				keycode = VK_F8;
+				break;
+			case wiInput::KEYBOARD_BUTTON_F9:
+				keycode = VK_F9;
+				break;
+			case wiInput::KEYBOARD_BUTTON_F10:
+				keycode = VK_F10;
+				break;
+			case wiInput::KEYBOARD_BUTTON_F11:
+				keycode = VK_F11;
+				break;
+			case wiInput::KEYBOARD_BUTTON_F12:
+				keycode = VK_F12;
+				break;
+			case wiInput::KEYBOARD_BUTTON_ENTER:
+				keycode = VK_RETURN;
+				break;
+			case wiInput::KEYBOARD_BUTTON_ESCAPE:
+				keycode = VK_ESCAPE;
+				break;
+			case wiInput::KEYBOARD_BUTTON_HOME:
+				keycode = VK_HOME;
+				break;
+			case wiInput::KEYBOARD_BUTTON_LCONTROL:
+				keycode = VK_LCONTROL;
+				break;
+			case wiInput::KEYBOARD_BUTTON_RCONTROL:
+				keycode = VK_RCONTROL;
+				break;
+			case wiInput::KEYBOARD_BUTTON_DELETE:
+				keycode = VK_DELETE;
+				break;
+			}
+
+			return KEY_DOWN(keycode) | KEY_TOGGLE(keycode);
+		}
+
 		return false;
 	}
-	bool press(uint32_t button, INPUT_TYPE inputType, short playerindex)
+	bool press(BUTTON button, short playerindex)
 	{
-		if (!down(button, inputType, playerindex))
+		if (!down(button, playerindex))
 			return false;
 
-		Input input = Input();
+		Input input;
 		input.button = button;
-		input.type = inputType;
 		input.playerIndex = playerindex;
 		auto iter = inputs.find(input);
 		if (iter == inputs.end())
@@ -235,14 +312,13 @@ namespace wiInputManager
 		}
 		return false;
 	}
-	bool hold(uint32_t button, uint32_t frames, bool continuous, INPUT_TYPE inputType, short playerIndex)
+	bool hold(BUTTON button, uint32_t frames, bool continuous, short playerIndex)
 	{
-		if (!down(button, inputType, playerIndex))
+		if (!down(button, playerIndex))
 			return false;
 
-		Input input = Input();
+		Input input;
 		input.button = button;
-		input.type = inputType;
 		input.playerIndex = playerIndex;
 		auto iter = inputs.find(input);
 		if (iter == inputs.end())

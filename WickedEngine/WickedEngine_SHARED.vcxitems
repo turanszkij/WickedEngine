@@ -272,6 +272,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_SharedInternals.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_Vulkan.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiInput.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiInput_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersect.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiHashString.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreen.h" />
@@ -336,8 +338,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiImage.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiImageParams_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInitializer.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersect_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiJobSystem.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork.h" />
@@ -665,8 +665,8 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiImage.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiImageParams_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInitializer.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiInput.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiInput_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiIntersect.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiIntersect_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiJobSystem.cpp" />

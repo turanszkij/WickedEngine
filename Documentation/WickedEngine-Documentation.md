@@ -127,7 +127,7 @@ A collection of engine-level helper classes
 ## Input
 The input interface can be found here
 
-- wiInputManager
+- wiInput
 	- This manages all inputs
 	- There are several functions, such as down(), press(), etc. to check button states.
 

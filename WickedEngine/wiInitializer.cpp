@@ -26,7 +26,7 @@ namespace wiInitializer
 
 		wiJobSystem::Execute(ctx, [] { wiFont::Initialize(); });
 		wiJobSystem::Execute(ctx, [] { wiImage::Initialize(); });
-		wiJobSystem::Execute(ctx, [] { wiInputManager::Initialize(); });
+		wiJobSystem::Execute(ctx, [] { wiInput::Initialize(); });
 		wiJobSystem::Execute(ctx, [] { wiRenderer::Initialize(); wiWidget::LoadShaders(); });
 		wiJobSystem::Execute(ctx, [] { wiAudio::Initialize(); });
 		wiJobSystem::Execute(ctx, [] { wiNetwork::Initialize(); });

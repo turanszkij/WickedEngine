@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Translator.h"
 #include "wiRenderer.h"
-#include "wiInputManager.h"
+#include "wiInput.h"
 #include "wiMath.h"
 #include "ShaderInterop_Renderer.h"
 
@@ -203,7 +203,7 @@ void Translator::Update()
 	dragStarted = false;
 	dragEnded = false;
 
-	XMFLOAT4 pointer = wiInputManager::getpointer();
+	XMFLOAT4 pointer = wiInput::getpointer();
 	const CameraComponent& cam = wiRenderer::GetCamera();
 	XMVECTOR pos = transform.GetPositionV();
 
@@ -285,7 +285,7 @@ void Translator::Update()
 			}
 		}
 
-		if (dragging || (state != TRANSLATOR_IDLE && wiInputManager::down(VK_LBUTTON)))
+		if (dragging || (state != TRANSLATOR_IDLE && wiInput::down(wiInput::MOUSE_BUTTON_LEFT)))
 		{
 			XMVECTOR plane, planeNormal;
 			if (state == TRANSLATOR_X)
@@ -403,7 +403,7 @@ void Translator::Update()
 			dragging = true;
 		}
 
-		if (!wiInputManager::down(VK_LBUTTON))
+		if (!wiInput::down(wiInput::MOUSE_BUTTON_LEFT))
 		{
 			if (dragging)
 			{

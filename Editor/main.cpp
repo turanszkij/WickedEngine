@@ -214,9 +214,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_MOUSEWHEEL:
 		{
-		XMFLOAT4 pointer = wiInputManager::getpointer();
+		XMFLOAT4 pointer = wiInput::getpointer();
 		float delta = GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
-		wiInputManager::setpointer(XMFLOAT4(pointer.x, pointer.y, delta, 0));
+		wiInput::setpointer(XMFLOAT4(pointer.x, pointer.y, delta, 0));
 		}
 		break;
 	case WM_KEYDOWN:

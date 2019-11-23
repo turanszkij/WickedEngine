@@ -1428,15 +1428,15 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 		Input = function(self, playerindex)
 
 			-- read input:
-			local left = input.Down(string.byte('A'), INPUT_TYPE_KEYBOARD, playerindex) or input.Down(GAMEPAD_BUTTON_LEFT, INPUT_TYPE_GAMEPAD, playerindex)
-			local right = input.Down(string.byte('D'), INPUT_TYPE_KEYBOARD, playerindex) or input.Down(GAMEPAD_BUTTON_RIGHT, INPUT_TYPE_GAMEPAD, playerindex)
-			local up = input.Down(string.byte('W'), INPUT_TYPE_KEYBOARD, playerindex) or input.Down(GAMEPAD_BUTTON_UP, INPUT_TYPE_GAMEPAD, playerindex)
-			local down = input.Down(string.byte('S'), INPUT_TYPE_KEYBOARD, playerindex) or input.Down(GAMEPAD_BUTTON_DOWN, INPUT_TYPE_GAMEPAD, playerindex)
-			local A = input.Down(VK_RIGHT, INPUT_TYPE_KEYBOARD, playerindex) or input.Down(GAMEPAD_BUTTON_3, INPUT_TYPE_GAMEPAD, playerindex)
-			local B = input.Down(VK_UP, INPUT_TYPE_KEYBOARD, playerindex) or input.Down(GAMEPAD_BUTTON_4, INPUT_TYPE_GAMEPAD, playerindex)
-			local C = input.Down(VK_LEFT, INPUT_TYPE_KEYBOARD, playerindex) or input.Down(GAMEPAD_BUTTON_1, INPUT_TYPE_GAMEPAD, playerindex)
-			local D = input.Down(VK_DOWN, INPUT_TYPE_KEYBOARD, playerindex) or input.Down(GAMEPAD_BUTTON_2, INPUT_TYPE_GAMEPAD, playerindex)
-			local T = input.Down(string.byte('T'), INPUT_TYPE_KEYBOARD, playerindex) or input.Down(GAMEPAD_BUTTON_5, INPUT_TYPE_GAMEPAD, playerindex)
+			local left = input.Down(string.byte('A'), playerindex) or input.Down(GAMEPAD_BUTTON_LEFT, playerindex)
+			local right = input.Down(string.byte('D'), playerindex) or input.Down(GAMEPAD_BUTTON_RIGHT, playerindex)
+			local up = input.Down(string.byte('W'), playerindex) or input.Down(GAMEPAD_BUTTON_UP, playerindex)
+			local down = input.Down(string.byte('S'), playerindex) or input.Down(GAMEPAD_BUTTON_DOWN, playerindex)
+			local A = input.Down(KEYBOARD_BUTTON_RIGHT, playerindex) or input.Down(GAMEPAD_BUTTON_3, playerindex)
+			local B = input.Down(KEYBOARD_BUTTON_UP, playerindex) or input.Down(GAMEPAD_BUTTON_4, playerindex)
+			local C = input.Down(KEYBOARD_BUTTON_LEFT, playerindex) or input.Down(GAMEPAD_BUTTON_1, playerindex)
+			local D = input.Down(KEYBOARD_BUTTON_DOWN, playerindex) or input.Down(GAMEPAD_BUTTON_2, playerindex)
+			local T = input.Down(string.byte('T'), playerindex) or input.Down(GAMEPAD_BUTTON_5, playerindex)
 
 			-- swap left and right if facing the opposite side:
 			if(self.face < 0) then
@@ -1946,7 +1946,7 @@ runProcess(function()
 			player2.ai_state = "Attack"
 		elseif(input.Press(string.byte('H'))) then
 			debug_draw = not debug_draw
-		elseif(input.Press(GAMEPAD_BUTTON_10, INPUT_TYPE_GAMEPAD, 1)) then
+		elseif(input.Press(GAMEPAD_BUTTON_10, 1)) then
 			if(player2_control == "CPU") then
 				player2_control = "Controller2"
 			else
@@ -1984,7 +1984,7 @@ runProcess(function()
 		update()
 		
 	
-		if(input.Press(VK_ESCAPE)) then
+		if(input.Press(KEYBOARD_BUTTON_ESCAPE)) then
 			-- restore previous component
 			--	so if you loaded this script from the editor, you can go back to the editor with ESC
 			backlog_post("EXIT")

@@ -189,9 +189,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFont_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.h">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
@@ -912,9 +909,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRawInput.h">
       <Filter>ENGINE\Input</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager.h">
-      <Filter>ENGINE\Input</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiDirectInput.h">
       <Filter>ENGINE\Input</Filter>
     </ClInclude>
@@ -1134,6 +1128,12 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\D3D12MemAlloc.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiInput.h">
+      <Filter>ENGINE\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiInput_BindLua.h">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1266,9 +1266,6 @@
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFont_BindLua.cpp">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.cpp">
@@ -1757,9 +1754,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRawInput.cpp">
       <Filter>ENGINE\Input</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager.cpp">
-      <Filter>ENGINE\Input</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiDirectInput.cpp">
       <Filter>ENGINE\Input</Filter>
     </ClCompile>
@@ -1903,6 +1897,12 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\D3D12MemAlloc.cpp">
       <Filter>UTILITY</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiInput.cpp">
+      <Filter>ENGINE\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiInput_BindLua.cpp">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

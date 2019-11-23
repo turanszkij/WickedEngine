@@ -95,17 +95,17 @@ Character = {
 		
 		if(self.state==self.states.STAND) then
 			local lookDir = Vector()
-			if(input.Down(VK_LEFT) or input.Down(string.byte('A'))) then
+			if(input.Down(KEYBOARD_BUTTON_LEFT) or input.Down(string.byte('A'))) then
 				lookDir = lookDir:Add( Vector(-1) )
 			end
-			if(input.Down(VK_RIGHT) or input.Down(string.byte('D'))) then
+			if(input.Down(KEYBOARD_BUTTON_RIGHT) or input.Down(string.byte('D'))) then
 				lookDir = lookDir:Add( Vector(1) )
 			end
 		
-			if(input.Down(VK_UP) or input.Down(string.byte('W'))) then
+			if(input.Down(KEYBOARD_BUTTON_UP) or input.Down(string.byte('W'))) then
 				lookDir = lookDir:Add( Vector(0,0,1) )
 			end
-			if(input.Down(VK_DOWN) or input.Down(string.byte('S'))) then
+			if(input.Down(KEYBOARD_BUTTON_DOWN) or input.Down(string.byte('S'))) then
 				lookDir = lookDir:Add( Vector(0,0,-1) )
 			end
 
@@ -113,7 +113,7 @@ Character = {
 			lookDir = vector.Add(lookDir, Vector(analog.GetX(), 0, analog.GetY()))
 			
 			if(lookDir:Length()>0) then
-				if(input.Down(VK_LSHIFT) or input.Down(GAMEPAD_BUTTON_6, INPUT_TYPE_GAMEPAD)) then
+				if(input.Down(KEYBOARD_BUTTON_LSHIFT) or input.Down(GAMEPAD_BUTTON_6)) then
 					self:MoveDirection(lookDir,self.moveSpeed*2)
 				else
 					self:MoveDirection(lookDir,self.moveSpeed)
@@ -122,7 +122,7 @@ Character = {
 		
 		end
 		
-		if( input.Press(string.byte('J'))  or input.Press(VK_SPACE) or input.Press(GAMEPAD_BUTTON_2, INPUT_TYPE_GAMEPAD) ) then
+		if( input.Press(string.byte('J'))  or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_2) ) then
 			self:Jump(2000)
 		end
 
@@ -133,7 +133,7 @@ Character = {
 		diff = vector.Multiply(diff, getDeltaTime() * 4)
 		
 		-- read from mouse:
-		if(input.Down(VK_RBUTTON)) then
+		if(input.Down(MOUSE_BUTTON_RIGHT)) then
 			local mousePosNew = input.GetPointer()
 			local mouseDif = vector.Subtract(mousePosNew,self.savedPointerPos)
 			mouseDif = mouseDif:Multiply(getDeltaTime() * 0.3)
@@ -379,7 +379,7 @@ runProcess(function()
 
 
 	
-		if(input.Press(VK_ESCAPE)) then
+		if(input.Press(KEYBOARD_BUTTON_ESCAPE)) then
 			-- restore previous component
 			--	so if you loaded this script from the editor, you can go back to the editor with ESC
 			backlog_post("EXIT")

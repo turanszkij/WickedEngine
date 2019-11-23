@@ -39,7 +39,7 @@ end
 runProcess(function()
 	while true do
 
-		if(input.Press(VK_F8)) then
+		if(input.Press(KEYBOARD_BUTTON_F8)) then
 			ToggleCameraAnimation()
 		end
 		if(play) then

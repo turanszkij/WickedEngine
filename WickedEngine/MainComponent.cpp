@@ -3,7 +3,7 @@
 #include "wiRenderer.h"
 #include "wiHelper.h"
 #include "wiTimer.h"
-#include "wiInputManager.h"
+#include "wiInput.h"
 #include "wiBackLog.h"
 #include "MainComponent_BindLua.h"
 #include "wiVersion.h"
@@ -169,7 +169,7 @@ void MainComponent::Run()
 		// Variable-timed update:
 		Update(dt);
 
-		wiInputManager::Update();
+		wiInput::Update();
 
 		Render();
 	}

@@ -2,7 +2,7 @@
 #include "wiWidget.h"
 #include "wiHashString.h"
 #include "wiRenderer.h"
-#include "wiInputManager.h"
+#include "wiInput.h"
 
 using namespace std;
 using namespace wiGraphics;
@@ -36,7 +36,7 @@ void wiGUI::Update(float dt)
 		UpdateTransform();
 	}
 
-	XMFLOAT4 _p = wiInputManager::getpointer();
+	XMFLOAT4 _p = wiInput::getpointer();
 	pointerpos.x = _p.x;
 	pointerpos.y = _p.y;
 

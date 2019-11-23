@@ -698,10 +698,10 @@ Handles the network communication features.
 ### Input Handling
 These provide functions to check the state of the input devices.
 
-#### InputManager
+#### Input
 Query input devices
-- [outer]input : InputManager
-- [void-constructor]InputManager()
+- [outer]input : Input
+- [void-constructor]Input()
 - Down(int code, opt int type = INPUT_TYPE_KEYBOARD, opt int playerindex = 0) : bool result  -- Check whether a button is currently being held down
 - Press(int code, opt int type = INPUT_TYPE_KEYBOARD, opt int playerindex = 0) : bool result  -- Check whether a button has just been pushed that wasn't before
 - Hold(int code, opt int duration = 30, opt boolean continuous = false, opt int type = INPUT_TYPE_KEYBOARD, opt int playerindex = 0) : bool result  -- Check whether a button was being held down for a specific duration (nunmber of frames). If continuous == true, than it will also return true after the duration was reached
@@ -722,38 +722,38 @@ Describes a touch contact point
 - [outer]TOUCHSTATE_RELEASED : int
 - [outer]TOUCHSTATE_MOVED : int
 
-#### Input types
-- [outer]INPUT_TYPE_KEYBOARD : int  -- keyboard or mouse
-- [outer]INPUT_TYPE_GAMEPAD : int  -- xinput or directinput gamepad
-
 #### Keyboard Key codes
-- [outer]VK_UP : int
-- [outer]VK_DOWN : int
-- [outer]VK_LEFT : int
-- [outer]VK_RIGHT : int
-- [outer]VK_SPACE : int
-- [outer]VK_RETURN : int
-- [outer]VK_RSHIFT : int
-- [outer]VK_LSHIFT : int
-- [outer]VK_F1 : int
-- [outer]VK_F2 : int
-- [outer]VK_F3 : int
-- [outer]VK_F4 : int
-- [outer]VK_F5 : int
-- [outer]VK_F6 : int
-- [outer]VK_F7 : int
-- [outer]VK_F8 : int
-- [outer]VK_F9 : int
-- [outer]VK_F10 : int
-- [outer]VK_F11 : int
-- [outer]VK_F12 : int
-- [outer]VK_ESCAPE : int
+- [outer]KEYBOARD_BUTTON_UP				 : int
+- [outer]KEYBOARD_BUTTON_DOWN			 : int
+- [outer]KEYBOARD_BUTTON_LEFT			 : int
+- [outer]KEYBOARD_BUTTON_RIGHT			 : int
+- [outer]KEYBOARD_BUTTON_SPACE			 : int
+- [outer]KEYBOARD_BUTTON_RSHIFT			 : int
+- [outer]KEYBOARD_BUTTON_LSHIFT			 : int
+- [outer]KEYBOARD_BUTTON_F1				 : int
+- [outer]KEYBOARD_BUTTON_F2				 : int
+- [outer]KEYBOARD_BUTTON_F3				 : int
+- [outer]KEYBOARD_BUTTON_F4				 : int
+- [outer]KEYBOARD_BUTTON_F5				 : int
+- [outer]KEYBOARD_BUTTON_F6				 : int
+- [outer]KEYBOARD_BUTTON_F7				 : int
+- [outer]KEYBOARD_BUTTON_F8				 : int
+- [outer]KEYBOARD_BUTTON_F9				 : int
+- [outer]KEYBOARD_BUTTON_F10			 : int
+- [outer]KEYBOARD_BUTTON_F11			 : int
+- [outer]KEYBOARD_BUTTON_F12			 : int
+- [outer]KEYBOARD_BUTTON_ENTER			 : int
+- [outer]KEYBOARD_BUTTON_ESCAPE			 : int
+- [outer]KEYBOARD_BUTTON_HOME			 : int
+- [outer]KEYBOARD_BUTTON_RCONTROL		 : int
+- [outer]KEYBOARD_BUTTON_LCONTROL		 : int
+- [outer]KEYBOARD_BUTTON_DELETE			 : int
 - You can also generate a key code by calling string.byte(char uppercaseLetter) where the parameter represents the desired key of the keyboard
 
 #### Mouse Key Codes
-- [outer]VK_LBUTTON : int
-- [outer]VK_MBUTTON : int
-- [outer]VK_RBUTTON : int
+- [outer]MOUSE_BUTTON_LEFT	 : int
+- [outer]MOUSE_BUTTON_RIGHT	 : int
+- [outer]MOUSE_BUTTON_MIDDLE : int
 
 #### Gamepad Key Codes
 - [outer]GAMEPAD_BUTTON_UP : int
