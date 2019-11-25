@@ -702,9 +702,9 @@ These provide functions to check the state of the input devices.
 Query input devices
 - [outer]input : Input
 - [void-constructor]Input()
-- Down(int code, opt int type = INPUT_TYPE_KEYBOARD, opt int playerindex = 0) : bool result  -- Check whether a button is currently being held down
-- Press(int code, opt int type = INPUT_TYPE_KEYBOARD, opt int playerindex = 0) : bool result  -- Check whether a button has just been pushed that wasn't before
-- Hold(int code, opt int duration = 30, opt boolean continuous = false, opt int type = INPUT_TYPE_KEYBOARD, opt int playerindex = 0) : bool result  -- Check whether a button was being held down for a specific duration (nunmber of frames). If continuous == true, than it will also return true after the duration was reached
+- Down(int code, opt int playerindex = 0) : bool result  -- Check whether a button is currently being held down
+- Press(int code, opt int playerindex = 0) : bool result  -- Check whether a button has just been pushed that wasn't before
+- Hold(int code, opt int duration = 30, opt boolean continuous = false, opt int playerindex = 0) : bool result  -- Check whether a button was being held down for a specific duration (nunmber of frames). If continuous == true, than it will also return true after the duration was reached
 - GetPointer() : Vector result
 - SetPointer(Vector pos)
 - HidePointer(bool visible)
