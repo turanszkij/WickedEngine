@@ -19,9 +19,6 @@ PixelInputType main(Input_Object_POS_TEX input)
 	Out.uvsets = surface.uvsets;
 	Out.atl = 0;
 	Out.nor = surface.normal;
-	Out.nor2D = mul((float3x3)g_xCamera_View, Out.nor.xyz).xy;
-
-	Out.ReflectionMapSamplingPos = mul(g_xFrame_MainCamera_ReflVP, surface.position);
 
 	return Out;
 }

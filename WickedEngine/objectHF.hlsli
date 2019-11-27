@@ -57,11 +57,9 @@ struct PixelInputType
 	float4 uvsets							: UVSETS;
 	float2 atl								: ATLAS;
 	float3 nor								: NORMAL;
-	float4 pos2D							: SCREENPOSITION;
 	float3 pos3D							: WORLDPOSITION;
+	float4 pos2D							: SCREENPOSITION;
 	float4 pos2DPrev						: SCREENPOSITIONPREV;
-	float4 ReflectionMapSamplingPos			: PLANARREFLECTIONPOSITION;
-	float2 nor2D							: NORMAL2D;
 };
 
 struct GBUFFEROutputType
@@ -141,9 +139,12 @@ inline void SpecularAA(in float3 N, inout float roughness)
 	}
 }
 
-inline float3 PlanarReflection(in float2 reflectionUV, in float2 bumpColor)
+inline float3 PlanarReflection(in Surface surface, in float2 bumpColor)
 {
-	return texture_reflection.SampleLevel(sampler_linear_clamp, reflectionUV + bumpColor*g_xMaterial.normalMapStrength, 0).rgb;
+	float4 reflectionUV = mul(g_xFrame_MainCamera_ReflVP, float4(surface.P, 1));
+	reflectionUV.xy /= reflectionUV.w;
+	reflectionUV.xy = reflectionUV.xy * float2(0.5f, -0.5f) + 0.5f;
+	return texture_reflection.SampleLevel(sampler_linear_clamp, reflectionUV.xy + bumpColor*g_xMaterial.normalMapStrength, 0).rgb;
 }
 
 #define NUM_PARALLAX_OCCLUSION_STEPS 32
@@ -176,7 +177,7 @@ inline void Parallatexture_occlusionmapping(inout float4 uvsets, in float3 V, in
 	uvsets += difference.xyxy;
 }
 
-inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bumpColor, inout Surface surface, inout float4 color, inout Lighting lighting)
+inline void Refraction(in float2 ScreenCoord, inout Surface surface, inout float4 color, inout Lighting lighting)
 {
 	if (g_xMaterial.refractionIndex > 0)
 	{
@@ -184,7 +185,8 @@ inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bump
 		float mipLevels;
 		texture_refraction.GetDimensions(0, size.x, size.y, mipLevels);
 		const float sampled_mip = (g_xFrame_AdvancedRefractions ? surface.roughness * mipLevels : 0);
-		float2 perturbatedRefrTexCoords = ScreenCoord.xy + (normal2D + bumpColor.rg) * g_xMaterial.refractionIndex;
+		const float2 normal2D = mul((float3x3)g_xCamera_View, surface.N.xyz).xy;
+		float2 perturbatedRefrTexCoords = ScreenCoord.xy + normal2D * g_xMaterial.refractionIndex;
 		float4 refractiveColor = texture_refraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, sampled_mip);
 		surface.albedo.rgb = lerp(refractiveColor.rgb, surface.albedo.rgb, color.a);
 		lighting.direct.diffuse = lerp(1, lighting.direct.diffuse, color.a);
@@ -770,9 +772,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	const float lineardepth = input.pos2D.w;
 	input.pos2D.xy /= input.pos2D.w;
 	input.pos2DPrev.xy /= input.pos2DPrev.w;
-	input.ReflectionMapSamplingPos.xy /= input.ReflectionMapSamplingPos.w;
 
-	const float2 refUV = input.ReflectionMapSamplingPos.xy * float2(0.5f, -0.5f) + 0.5f;
 	const float2 ScreenCoord = input.pos2D.xy * float2(0.5f, -0.5f) + 0.5f;
 	const float2 velocity = ((input.pos2DPrev.xy - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
 	const float2 ReprojectedScreenCoord = ScreenCoord + velocity;
@@ -877,7 +877,10 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	bumpColor *= g_xMaterial.normalMapStrength;
 
 	//REFLECTION
-	float4 reflectiveColor = texture_reflection.SampleLevel(sampler_linear_mirror, refUV + bumpColor.rg, 0);
+	float4 reflectionUV = mul(g_xFrame_MainCamera_ReflVP, float4(surface.P, 1));
+	reflectionUV.xy /= reflectionUV.w;
+	reflectionUV.xy = reflectionUV.xy * float2(0.5f, -0.5f) + 0.5f;
+	float4 reflectiveColor = texture_reflection.SampleLevel(sampler_linear_mirror, reflectionUV + bumpColor.rg, 0);
 
 
 	//REFRACTION 
@@ -900,7 +903,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	ApplyEmissive(surface, lighting);
 
 #ifdef PLANARREFLECTION
-	lighting.indirect.specular += PlanarReflection(refUV, bumpColor.rg);
+	lighting.indirect.specular += PlanarReflection(surface, bumpColor.rg);
 #endif
 
 
@@ -920,7 +923,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #ifndef WATER
 #ifndef ENVMAPRENDERING
 #ifdef TRANSPARENT
-	Refraction(ScreenCoord, input.nor2D, bumpColor, surface, color, lighting);
+	Refraction(ScreenCoord, surface, color, lighting);
 #else
 	float4 ssr = texture_ssr.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, surface.roughness * 5);
 	lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb, ssr.a);

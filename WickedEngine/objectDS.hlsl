@@ -143,10 +143,6 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	Out.atl = vertexAtlas;
 	Out.color = vertexColor;
 	Out.nor = normalize(vertexNormal.xyz);
-	Out.nor2D = mul((float3x3)g_xCamera_View, Out.nor.xyz).xy;
-
-	Out.ReflectionMapSamplingPos = mul(g_xFrame_MainCamera_ReflVP, vertexPosition);
-
 
 	return Out;
 }
