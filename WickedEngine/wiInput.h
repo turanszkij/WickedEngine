@@ -74,6 +74,9 @@ namespace wiInput
 	// call once at app start
 	void Initialize();
 
+	// shutdown input
+	void CleanUp();
+
 	// call once per frame
 	void Update();
 	

@@ -1,19 +1,22 @@
 #include "wiDirectInput.h"
 
-namespace wiInput
-{
-
-	short wiDirectInput::connectedJoys = 0;
-
-#ifndef WINSTORE_SUPPORT
+#ifdef WICKEDENGINE_BUILD_DIRECTINPUT
 
 #pragma comment(lib,"dinput8.lib")
+
+#include "wiWindowRegistration.h"
 
 #include <stdio.h>
 
 #include <wbemidl.h>
 #include <oleauto.h>
-	//#include <wmsstd.h>
+
+namespace wiDirectInput
+{
+	IDirectInput8* directInput = nullptr;
+	IDirectInputDevice8* joysticks[4] = {};
+	DIJOYSTATE2 joystick_states[4] = {};
+	short connectedJoys = 0;
 
 	//-----------------------------------------------------------------------------
 	// Enum each PNP device using WMI and check each device ID to see if it contains 
@@ -31,7 +34,7 @@ namespace wiInput
 		BSTR                    bstrClassName = NULL;
 		DWORD                   uReturned = 0;
 		bool                    bIsXinputDevice = false;
-		uint32_t                    iDevice = 0;
+		uint32_t                iDevice = 0;
 		VARIANT                 var;
 		HRESULT                 hr;
 
@@ -126,23 +129,6 @@ namespace wiInput
 
 		return bIsXinputDevice;
 	}
-
-	wiDirectInput::wiDirectInput(HINSTANCE hinstance, HWND hwnd)
-	{
-		for (int i = 0; i < 256; ++i) {
-			m_keyboardState[i] = 0;
-		}
-		Initialize(hinstance, hwnd);
-	}
-	wiDirectInput::~wiDirectInput()
-	{
-		Shutdown();
-	}
-
-	IDirectInputDevice8* m_keyboard = 0;
-	IDirectInputDevice8* joystick[2] = { 0,0 };
-	IDirectInput8* m_directInput = 0;
-
 	BOOL CALLBACK enumCallback(const DIDEVICEINSTANCE* instance, VOID* context)
 	{
 		HRESULT hr;
@@ -152,7 +138,7 @@ namespace wiInput
 			return DIENUM_CONTINUE;
 
 		// Obtain an interface to the enumerated joystick.
-		hr = m_directInput->CreateDevice(instance->guidInstance, &joystick[wiDirectInput::connectedJoys], NULL);
+		hr = directInput->CreateDevice(instance->guidInstance, &joysticks[connectedJoys], NULL);
 
 		// If it failed, then we can't use this joystick. (Maybe the user unplugged
 		// it while we were in the middle of enumerating it.)
@@ -160,10 +146,8 @@ namespace wiInput
 			return DIENUM_CONTINUE;
 		}
 
-		// Stop enumeration. Note: we're just taking the first joystick we get. You
-		// could store all the enumerated joysticks and let the user pick.
-		wiDirectInput::connectedJoys++;
-		if (wiDirectInput::connectedJoys < 2)
+		connectedJoys++;
+		if (connectedJoys < arraysize(joysticks))
 			return DIENUM_CONTINUE;
 		else
 			return DIENUM_STOP;
@@ -181,68 +165,29 @@ namespace wiInput
 		propRange.lMax = +1000;
 
 		// Set the range for the axis
-		for (short i = 0; i < wiDirectInput::connectedJoys; i++)
-			if (FAILED(joystick[i]->SetProperty(DIPROP_RANGE, &propRange.diph))) {
+		for (short i = 0; i < connectedJoys; i++)
+		{
+			if (FAILED(joysticks[i]->SetProperty(DIPROP_RANGE, &propRange.diph))) 
+			{
 				return DIENUM_STOP;
 			}
+		}
 
 		return DIENUM_CONTINUE;
 	}
 
-
-	HRESULT wiDirectInput::Initialize(HINSTANCE hinstance, HWND hwnd)
+	void Initialize()
 	{
-		HRESULT result;
+		HRESULT hr;
 
+		hr = DirectInput8Create(wiWindowRegistration::GetRegisteredInstance(), DIRECTINPUT_VERSION, IID_IDirectInput8, (void**)&directInput, NULL);
+		assert(SUCCEEDED(hr));
 
-		// Initialize the main direct input interface.
-		result = DirectInput8Create(hinstance, DIRECTINPUT_VERSION, IID_IDirectInput8, (void**)&m_directInput, NULL);
-		if (FAILED(result))
+		hr = directInput->EnumDevices(DI8DEVCLASS_GAMECTRL, enumCallback, NULL, DIEDFL_ATTACHEDONLY);
+		assert(SUCCEEDED(hr));
+
+		for (short i = 0; i < connectedJoys; i++) 
 		{
-			return E_FAIL;
-		}
-
-		//// Initialize the direct input interface for the keyboard.
-		//result = m_directInput->CreateDevice(GUID_SysKeyboard, &m_keyboard, NULL);
-		//if(FAILED(result))
-		//{
-		//	return E_FAIL;
-		//}
-
-		//// Set the data format.  In this case since it is a keyboard we can use the predefined data format.
-		//result = m_keyboard->SetDataFormat(&c_dfDIKeyboard);
-		//if(FAILED(result))
-		//{
-		//	return E_FAIL;
-		//}
-
-		//// Set the cooperative level of the keyboard to not share with other programs.
-		//result = m_keyboard->SetCooperativeLevel(hwnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE);
-		//if(FAILED(result))
-		//{
-		//	return E_FAIL;
-		//}
-
-		//// Now acquire the keyboard.
-		//result = m_keyboard->Acquire();
-		//if(FAILED(result))
-		//{
-		//	return E_FAIL;
-		//}
-		//m_keyboard->GetDeviceState(sizeof(m_keyboardState), (LPVOID)&m_keyboardState);
-
-		InitJoy(hwnd);
-
-		return S_OK;
-	}
-	HRESULT wiDirectInput::InitJoy(HWND hwnd) {
-		HRESULT result;
-		// Look for the first simple joystick we can find.
-		if (FAILED(result = m_directInput->EnumDevices(DI8DEVCLASS_GAMECTRL, enumCallback, NULL, DIEDFL_ATTACHEDONLY))) {
-			return result;
-		}
-		for (short i = 0; i < connectedJoys; i++) {
-
 			DIDEVCAPS capabilities;
 
 			// Set the data format to "simple joystick" - a predefined data format 
@@ -250,171 +195,103 @@ namespace wiInput
 			// A data format specifies which controls on a device we are interested in,
 			// and how they should be reported. This tells DInput that we will be
 			// passing a DIJOYSTATE2 structure to IDirectInputDevice::GetDeviceState().
-			if (FAILED(result = joystick[i]->SetDataFormat(&c_dfDIJoystick2))) {
-				return result;
-			}
+			hr = joysticks[i]->SetDataFormat(&c_dfDIJoystick2);
+			assert(SUCCEEDED(hr));
 
 			// Set the cooperative level to let DInput know how this device should
 			// interact with the system and with other DInput applications.
-			if (FAILED(result = joystick[i]->SetCooperativeLevel(hwnd, DISCL_EXCLUSIVE | DISCL_FOREGROUND))) {
-				return result;
-			}
+			hr = joysticks[i]->SetCooperativeLevel(wiWindowRegistration::GetRegisteredWindow(), DISCL_EXCLUSIVE | DISCL_FOREGROUND);
+			assert(SUCCEEDED(hr));
 
 			// Determine how many axis the joystick has (so we don't error out setting
 			// properties for unavailable axis)
 			capabilities.dwSize = sizeof(DIDEVCAPS);
-			if (FAILED(result = joystick[i]->GetCapabilities(&capabilities))) {
-				return result;
-			}
+			hr = joysticks[i]->GetCapabilities(&capabilities);
+			assert(SUCCEEDED(hr));
 
 			// Enumerate the axes of the joyctick and set the range of each axis. Note:
 			// we could just use the defaults, but we're just trying to show an example
 			// of enumerating device objects (axes, buttons, etc.).
-			if (FAILED(result = joystick[i]->EnumObjects(enumAxesCallback, NULL, DIDFT_AXIS)))
-				return result;
+			hr = joysticks[i]->EnumObjects(enumAxesCallback, NULL, DIDFT_AXIS);
+			assert(SUCCEEDED(hr));
 		}
-
-
-
-		return S_OK;
 	}
-
-	void wiDirectInput::Shutdown()
+	void CleanUp()
 	{
-		// Release the keyboard.
-		if (m_keyboard)
+		if (joysticks != nullptr)
 		{
-			m_keyboard->Unacquire();
-			m_keyboard->Release();
-			m_keyboard = 0;
-		}
-		// Release Joypad
-		if (joystick) {
-			for (short i = 0; i < connectedJoys; i++)
-				if (joystick[i]) {
-					joystick[i]->Unacquire();
-					joystick[i]->Release();
-					joystick[i] = 0;
+			for (short i = 0; i < arraysize(joysticks); i++)
+			{
+				if (joysticks[i] != nullptr) 
+				{
+					joysticks[i]->Unacquire();
+					SAFE_RELEASE(joysticks[i]);
 				}
-		}
-		// Release the main interface to direct input.
-		if (m_directInput)
-		{
-			m_directInput->Release();
-			m_directInput = 0;
+			}
 		}
 
-
-		return;
+		SAFE_RELEASE(directInput);
 	}
 
-	bool wiDirectInput::Frame()
+	void Update()
 	{
-		//if(m_keyboard==nullptr)
-		//	return false;
-		//// Read the keyboard device.
-		//HRESULT result = m_keyboard->GetDeviceState(sizeof(m_keyboardState), (LPVOID)&m_keyboardState);
-		//if(FAILED(result))
-		//{
-		//	// If the keyboard lost focus or was not acquired then try to get control back.
-		//	if((result == DIERR_INPUTLOST) || (result == DIERR_NOTACQUIRED))
-		//	{
-		//		m_keyboard->Acquire();
-		//	}
-		//	else
-		//	{
-		//		return false;
-		//	}
-		//}
+		HRESULT hr;
 		for (short i = 0; i < connectedJoys; i++)
-			poll(joystick[i], &joyState[i]);
+		{
+			if (joysticks[i] == nullptr)
+			{
+				continue;
+			}
 
-		return true;
+			// Poll the device to read the current state
+			hr = joysticks[i]->Poll();
+			if (FAILED(hr)) 
+			{
+				// DInput is telling us that the input stream has been
+				// interrupted. We aren't tracking any state between polls, so
+				// we don't have any special reset that needs to be done. We
+				// just re-acquire and try again.
+				hr = joysticks[i]->Acquire();
+				while (hr == DIERR_INPUTLOST) 
+				{
+					hr = joysticks[i]->Acquire();
+				}
+
+				// If we encounter a fatal error, return failure.
+				if ((hr == DIERR_INVALIDPARAM) || (hr == DIERR_NOTINITIALIZED))
+				{
+					assert(0);
+					continue;
+				}
+
+				// If another application has control of this device, return successfully.
+				// We'll just have to wait our turn to use the joystick.
+				if (hr == DIERR_OTHERAPPHASPRIO)
+				{
+					continue;
+				}
+			}
+
+			// Get the input's device state
+			hr = joysticks[i]->GetDeviceState(sizeof(DIJOYSTATE2), &joystick_states[i]);
+			assert(SUCCEEDED(hr));
+		}
 	}
 
-	bool wiDirectInput::IsKeyDown(INT code)
+	short GetConnectedJoystickCount()
 	{
-		if (m_keyboardState[code] & 0x80)
+		return connectedJoys;
+	}
+	bool GetJoystickData(DIJOYSTATE2* result, short index)
+	{
+		if (index < connectedJoys)
 		{
+			*result = joystick_states[index];
 			return true;
 		}
-
 		return false;
 	}
-	int wiDirectInput::GetPressedKeys()
-	{
-		int ret = 0;
-		for (int i = 0; i < 256; i++)
-			if (m_keyboardState[i] & 0x80)
-			{
-				ret += i;
-			}
-
-		return ret;
-	}
-
-
-
-	HRESULT wiDirectInput::poll(IDirectInputDevice8* joy, DIJOYSTATE2* js)
-	{
-		HRESULT     hr;
-
-		if (joystick == NULL) {
-			return S_OK;
-		}
-
-
-		// Poll the device to read the current state
-		hr = joy->Poll();
-		if (FAILED(hr)) {
-			// DInput is telling us that the input stream has been
-			// interrupted. We aren't tracking any state between polls, so
-			// we don't have any special reset that needs to be done. We
-			// just re-acquire and try again.
-			hr = joy->Acquire();
-			while (hr == DIERR_INPUTLOST) {
-				hr = joy->Acquire();
-			}
-
-			// If we encounter a fatal error, return failure.
-			if ((hr == DIERR_INVALIDPARAM) || (hr == DIERR_NOTINITIALIZED)) {
-				return E_FAIL;
-			}
-
-			// If another application has control of this device, return successfully.
-			// We'll just have to wait our turn to use the joystick.
-			if (hr == DIERR_OTHERAPPHASPRIO) {
-				return S_OK;
-			}
-		}
-
-		// Get the input's device state
-		if (FAILED(hr = joy->GetDeviceState(sizeof(DIJOYSTATE2), js))) {
-			return hr; // The device should have been acquired during the Poll()
-		}
-
-		return S_OK;
-	}
-
-	bool wiDirectInput::isButtonDown(short pIndex, unsigned int buttoncode)
-	{
-		if (connectedJoys && buttoncode < 128)
-			if (joyState[pIndex].rgbButtons[buttoncode - 1] != 0)
-				return true;
-		return false;
-	}
-	DWORD wiDirectInput::getDirections(short pIndex)
-	{
-		DWORD buttons = 0;
-		if (connectedJoys)
-			for (short i = 0; i < 4; i++) {
-				//if((LOWORD(joyState[pIndex].rgdwPOV[i]) != 0xFFFF))
-				if (buttons += joyState[pIndex].rgdwPOV[i] != DIRECTINPUT_POV_IDLE)
-					buttons += joyState[pIndex].rgdwPOV[i];
-			}
-		return buttons;
-	}
-
-#endif
 
 }
+
+#endif // WICKEDENGINE_BUILD_DIRECTINPUT
