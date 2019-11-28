@@ -148,7 +148,7 @@ inline float3 PlanarReflection(in Surface surface, in float2 bumpColor)
 }
 
 #define NUM_PARALLAX_OCCLUSION_STEPS 32
-inline void Parallatexture_occlusionmapping(inout float4 uvsets, in float3 V, in float3x3 TBN)
+inline void ParallaxOcclusionMapping(inout float4 uvsets, in float3 V, in float3x3 TBN)
 {
 	V = mul(TBN, V);
 	float layerHeight = 1.0 / NUM_PARALLAX_OCCLUSION_STEPS;
@@ -746,7 +746,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #endif // SIMPLE_INPUT
 
 #ifdef POM
-	Parallatexture_occlusionmapping(input.uvsets, surface.V, TBN);
+	ParallaxOcclusionMapping(input.uvsets, surface.V, TBN);
 #endif // POM
 
 	float4 color;
@@ -880,7 +880,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	float4 reflectionUV = mul(g_xFrame_MainCamera_ReflVP, float4(surface.P, 1));
 	reflectionUV.xy /= reflectionUV.w;
 	reflectionUV.xy = reflectionUV.xy * float2(0.5f, -0.5f) + 0.5f;
-	float4 reflectiveColor = texture_reflection.SampleLevel(sampler_linear_mirror, reflectionUV + bumpColor.rg, 0);
+	float4 reflectiveColor = texture_reflection.SampleLevel(sampler_linear_mirror, reflectionUV.xy + bumpColor.rg, 0);
 
 
 	//REFRACTION 
