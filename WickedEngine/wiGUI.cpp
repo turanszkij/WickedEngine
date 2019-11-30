@@ -36,7 +36,7 @@ void wiGUI::Update(float dt)
 		UpdateTransform();
 	}
 
-	XMFLOAT4 _p = wiInput::getpointer();
+	XMFLOAT4 _p = wiInput::GetPointer();
 	pointerpos.x = _p.x;
 	pointerpos.y = _p.y;
 

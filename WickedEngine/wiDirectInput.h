@@ -2,8 +2,12 @@
 #include "CommonInclude.h"
 #include "Platform.h"
 
-#ifndef WINSTORE_SUPPORT
+#if __has_include("dinput.h") && !defined(WINSTORE_SUPPORT)
 #define WICKEDENGINE_BUILD_DIRECTINPUT
+#endif
+
+
+#ifdef WICKEDENGINE_BUILD_DIRECTINPUT
 
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
@@ -24,11 +28,19 @@ namespace wiDirectInput
 		POV_IDLE = 0xFFFFFFFF
 	};
 
+	// Create the DirectInput device, call this before calling any other functions here
 	void Initialize();
+
+	// Destroy the DirectInput device
 	void CleanUp();
+
+	// Update the connected devices
 	void Update();
 
+	// Returns how many joystick devices are connected
 	short GetConnectedJoystickCount();
-	bool GetJoystickData(DIJOYSTATE2* result, short index);
+
+	// Returns the state of the specified joystick
+	DIJOYSTATE2 GetJoystickData(short index);
 }
-#endif // WINSTORE_SUPPORT
+#endif // WICKEDENGINE_BUILD_DIRECTINPUT

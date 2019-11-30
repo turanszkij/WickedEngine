@@ -81,19 +81,19 @@ namespace wiInput
 	void Update();
 	
 	// check if a button is down
-	bool down(BUTTON button, short playerindex = 0);
+	bool Down(BUTTON button, short playerindex = 0);
 	// check if a button is pressed once
-	bool press(BUTTON button, short playerindex = 0);
+	bool Press(BUTTON button, short playerindex = 0);
 	// check if a button is held down
-	bool hold(BUTTON button, uint32_t frames = 30, bool continuous = false, short playerIndex = 0);
+	bool Hold(BUTTON button, uint32_t frames = 30, bool continuous = false, short playerIndex = 0);
 	// get pointer position (eg. mouse pointer) (.xy) + scroll delta (.z) + 1 unused (.w)
-	XMFLOAT4 getpointer();
+	XMFLOAT4 GetPointer();
 	// set pointer position (eg. mouse pointer) + scroll delta (.z)
-	void setpointer(const XMFLOAT4& props);
+	void SetPointer(const XMFLOAT4& props);
 	// hide pointer
-	void hidepointer(bool value);
+	void HidePointer(bool value);
 	// read analog input from controllers, like thumbsticks or triggers
-	XMFLOAT4 getanalog(GAMEPAD_ANALOG analog, short playerIndex = 0);
+	XMFLOAT4 GetAnalog(GAMEPAD_ANALOG analog, short playerIndex = 0);
 
 	struct Touch
 	{
@@ -107,7 +107,7 @@ namespace wiInput
 		// current position of touch
 		XMFLOAT2 pos;
 	};
-	const std::vector<Touch>& getTouches();
+	const std::vector<Touch>& GetTouches();
 
 };
 

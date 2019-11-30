@@ -1,37 +1,28 @@
 #pragma once
 #include "CommonInclude.h"
-#include <Xinput.h>
 
-// TODO REFACTOR
+#if __has_include("xinput.h")
+#define WICKEDENGINE_BUILD_XINPUT
+#endif
 
-namespace wiInput
+#ifdef WICKEDENGINE_BUILD_XINPUT
+
+#include <windows.h>
+#include <xinput.h>
+
+namespace wiXInput
 {
+	// Call once per frame to read and update controller states
+	void Update();
 
-#define MAX_CONTROLLERS 4  // XInput handles up to 4 controllers 
-#define INPUT_DEADZONE  ( 0.24f * FLOAT(0x7FFF) )  // Default to 24% of the +/- 32767 range.   This is a reasonable default value but can be altered if needed.
+	// Returns how many gamepads can Xinput handle
+	short GetMaxGamepadCount();
 
-	class wiXInput
-	{
-	private:
+	// Returns if the specified gamepad is connected or not
+	bool IsGamepadConnected(short index);
 
-		struct CONTROLLER_STATE
-		{
-			XINPUT_STATE state;
-			bool bConnected;
-		};
-
-	public:
-		wiXInput();
-		~wiXInput();
-		HRESULT UpdateControllerState();
-		DWORD	GetButtons(SHORT);
-		DWORD	GetDirections(short);
-		bool	isButtonDown(short, DWORD);
-		void	CleanUp();
-
-		CONTROLLER_STATE		controllers[MAX_CONTROLLERS];
-		WCHAR					g_szMessage[4][1024];
-		bool					g_bDeadZoneOn;
-	};
-
+	// Returns the specified gamepad's state
+	XINPUT_STATE GetGamepadData(short index);
 }
+
+#endif // WICKEDENGINE_BUILD_XINPUT

@@ -29,7 +29,7 @@ int wiInput_BindLua::Down(lua_State* L)
 		{
 			playerindex = (short)wiLua::SGetInt(L, 2);
 		}
-		wiLua::SSetBool(L, wiInput::down(button, playerindex));
+		wiLua::SSetBool(L, wiInput::Down(button, playerindex));
 		return 1;
 	}
 	else
@@ -47,7 +47,7 @@ int wiInput_BindLua::Press(lua_State* L)
 		{
 			playerindex = (short)wiLua::SGetInt(L, 2);
 		}
-		wiLua::SSetBool(L, wiInput::press(code, playerindex));
+		wiLua::SSetBool(L, wiInput::Press(code, playerindex));
 		return 1;
 	}
 	else
@@ -75,7 +75,7 @@ int wiInput_BindLua::Hold(lua_State* L)
 		{
 			playerindex = (short)wiLua::SGetInt(L, 4);
 		}
-		wiLua::SSetBool(L, wiInput::hold(button, duration, continuous, playerindex));
+		wiLua::SSetBool(L, wiInput::Hold(button, duration, continuous, playerindex));
 		return 1;
 	}
 	else
@@ -84,7 +84,7 @@ int wiInput_BindLua::Hold(lua_State* L)
 }
 int wiInput_BindLua::GetPointer(lua_State* L)
 {
-	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&wiInput::getpointer())));
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&wiInput::GetPointer())));
 	return 1;
 }
 int wiInput_BindLua::SetPointer(lua_State* L)
@@ -97,7 +97,7 @@ int wiInput_BindLua::SetPointer(lua_State* L)
 		{
 			XMFLOAT4 props;
 			XMStoreFloat4(&props, vec->vector);
-			wiInput::setpointer(props);
+			wiInput::SetPointer(props);
 		}
 		else
 			wiLua::SError(L, "SetPointer(Vector props) argument is not a Vector!");
@@ -111,7 +111,7 @@ int wiInput_BindLua::HidePointer(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		wiInput::hidepointer(wiLua::SGetBool(L, 1));
+		wiInput::HidePointer(wiLua::SGetBool(L, 1));
 	}
 	else
 		wiLua::SError(L, "HidePointer(bool value) not enough arguments!");
@@ -130,7 +130,7 @@ int wiInput_BindLua::GetAnalog(lua_State* L)
 		{
 			playerindex = (short)wiLua::SGetInt(L, 2);
 		}
-		result = wiInput::getanalog(type, playerindex);
+		result = wiInput::GetAnalog(type, playerindex);
 	}
 	else
 		wiLua::SError(L, "GetAnalog(int type, opt int playerindex = 0) not enough arguments!");
@@ -140,7 +140,7 @@ int wiInput_BindLua::GetAnalog(lua_State* L)
 }
 int wiInput_BindLua::GetTouches(lua_State* L)
 {
-	auto& touches = wiInput::getTouches();
+	auto& touches = wiInput::GetTouches();
 	for (auto& touch : touches)
 	{
 		Luna<Touch_BindLua>::push(L, new Touch_BindLua(touch));

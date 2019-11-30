@@ -6,8 +6,7 @@
 
 #include "wiWindowRegistration.h"
 
-#include <stdio.h>
-
+#include <stdio.h> // cstdio doesn't work here!!
 #include <wbemidl.h>
 #include <oleauto.h>
 
@@ -15,7 +14,9 @@ namespace wiDirectInput
 {
 	IDirectInput8* directInput = nullptr;
 	IDirectInputDevice8* joysticks[4] = {};
-	DIJOYSTATE2 joystick_states[4] = {};
+	GUID joystick_guids[arraysize(joysticks)] = {};
+	bool joystick_initialized[arraysize(joysticks)] = {};
+	DIJOYSTATE2 joystick_states[arraysize(joysticks)] = {};
 	short connectedJoys = 0;
 
 	//-----------------------------------------------------------------------------
@@ -25,6 +26,17 @@ namespace wiDirectInput
 	//-----------------------------------------------------------------------------
 	BOOL IsXInputDevice(const GUID* pGuidProductFromDirectInput)
 	{
+		// Cache the GUIDs that were recognized as xinput, because this function is slow and it can be called frequently:
+		static GUID xinput_guids[16] = {};
+		static short xinput_count = 0;
+		for (short i = 0; i < xinput_count; ++i)
+		{
+			if (*pGuidProductFromDirectInput == xinput_guids[i])
+			{
+				return TRUE;
+			}
+		}
+
 		IWbemLocator* pIWbemLocator = NULL;
 		IEnumWbemClassObject* pEnumDevices = NULL;
 		IWbemClassObject* pDevices[20] = { 0 };
@@ -127,30 +139,54 @@ namespace wiDirectInput
 		if (bCleanupCOM)
 			CoUninitialize();
 
+		if (bIsXinputDevice)
+		{
+			xinput_guids[xinput_count++] = *pGuidProductFromDirectInput;
+		}
+
 		return bIsXinputDevice;
 	}
 	BOOL CALLBACK enumCallback(const DIDEVICEINSTANCE* instance, VOID* context)
 	{
-		HRESULT hr;
-
-		//SLOW!!!
-		if (IsXInputDevice(&instance->guidProduct))
-			return DIENUM_CONTINUE;
-
-		// Obtain an interface to the enumerated joystick.
-		hr = directInput->CreateDevice(instance->guidInstance, &joysticks[connectedJoys], NULL);
-
-		// If it failed, then we can't use this joystick. (Maybe the user unplugged
-		// it while we were in the middle of enumerating it.)
-		if (FAILED(hr)) {
+		if (connectedJoys >= arraysize(joysticks))
+		{
+			return DIENUM_STOP;
+		}
+		if (joystick_guids[connectedJoys] == instance->guidInstance)
+		{
+			// If joystick guid in this slot hasn't changed, we don't create it again:
+			connectedJoys++;
 			return DIENUM_CONTINUE;
 		}
 
-		connectedJoys++;
-		if (connectedJoys < arraysize(joysticks))
+		if (IsXInputDevice(&instance->guidProduct)) // <- Watch out, this is very slow!!!
+		{
 			return DIENUM_CONTINUE;
-		else
-			return DIENUM_STOP;
+		}
+
+		if (joysticks[connectedJoys] != nullptr)
+		{
+			// This slot GUID is changed, that means this is an other device now, so delete it:
+			joysticks[connectedJoys]->Unacquire();
+			SAFE_RELEASE(joysticks[connectedJoys]);
+		}
+
+		// Obtain an interface to the enumerated joystick.
+		HRESULT hr = directInput->CreateDevice(instance->guidInstance, &joysticks[connectedJoys], NULL);
+
+		// If it failed, then we can't use this joystick. (Maybe the user unplugged
+		// it while we were in the middle of enumerating it.)
+		if (FAILED(hr)) 
+		{
+			return DIENUM_CONTINUE;
+		}
+
+		// Save the joystick guid, so it will not be readded if hadn't changed:
+		joystick_guids[connectedJoys] = instance->guidInstance;
+		joystick_initialized[connectedJoys] = false;
+
+		connectedJoys++;
+		return DIENUM_CONTINUE;
 	}
 	BOOL CALLBACK enumAxesCallback(const DIDEVICEOBJECTINSTANCE* instance, VOID* context)
 	{
@@ -167,7 +203,7 @@ namespace wiDirectInput
 		// Set the range for the axis
 		for (short i = 0; i < connectedJoys; i++)
 		{
-			if (FAILED(joysticks[i]->SetProperty(DIPROP_RANGE, &propRange.diph))) 
+			if (FAILED(joysticks[i]->SetProperty(DIPROP_RANGE, &propRange.diph)))
 			{
 				return DIENUM_STOP;
 			}
@@ -182,39 +218,6 @@ namespace wiDirectInput
 
 		hr = DirectInput8Create(wiWindowRegistration::GetRegisteredInstance(), DIRECTINPUT_VERSION, IID_IDirectInput8, (void**)&directInput, NULL);
 		assert(SUCCEEDED(hr));
-
-		hr = directInput->EnumDevices(DI8DEVCLASS_GAMECTRL, enumCallback, NULL, DIEDFL_ATTACHEDONLY);
-		assert(SUCCEEDED(hr));
-
-		for (short i = 0; i < connectedJoys; i++) 
-		{
-			DIDEVCAPS capabilities;
-
-			// Set the data format to "simple joystick" - a predefined data format 
-			//
-			// A data format specifies which controls on a device we are interested in,
-			// and how they should be reported. This tells DInput that we will be
-			// passing a DIJOYSTATE2 structure to IDirectInputDevice::GetDeviceState().
-			hr = joysticks[i]->SetDataFormat(&c_dfDIJoystick2);
-			assert(SUCCEEDED(hr));
-
-			// Set the cooperative level to let DInput know how this device should
-			// interact with the system and with other DInput applications.
-			hr = joysticks[i]->SetCooperativeLevel(wiWindowRegistration::GetRegisteredWindow(), DISCL_EXCLUSIVE | DISCL_FOREGROUND);
-			assert(SUCCEEDED(hr));
-
-			// Determine how many axis the joystick has (so we don't error out setting
-			// properties for unavailable axis)
-			capabilities.dwSize = sizeof(DIDEVCAPS);
-			hr = joysticks[i]->GetCapabilities(&capabilities);
-			assert(SUCCEEDED(hr));
-
-			// Enumerate the axes of the joyctick and set the range of each axis. Note:
-			// we could just use the defaults, but we're just trying to show an example
-			// of enumerating device objects (axes, buttons, etc.).
-			hr = joysticks[i]->EnumObjects(enumAxesCallback, NULL, DIDFT_AXIS);
-			assert(SUCCEEDED(hr));
-		}
 	}
 	void CleanUp()
 	{
@@ -232,27 +235,59 @@ namespace wiDirectInput
 
 		SAFE_RELEASE(directInput);
 	}
-
 	void Update()
 	{
+		connectedJoys = 0;
+
 		HRESULT hr;
+
+		hr = directInput->EnumDevices(DI8DEVCLASS_GAMECTRL, enumCallback, NULL, DIEDFL_ATTACHEDONLY);
+		assert(SUCCEEDED(hr));
+
 		for (short i = 0; i < connectedJoys; i++)
 		{
-			if (joysticks[i] == nullptr)
+			if (!joystick_initialized[i])
 			{
-				continue;
+				joystick_initialized[i] = true;
+
+				DIDEVCAPS capabilities;
+
+				// Set the data format to "simple joystick" - a predefined data format 
+				//
+				// A data format specifies which controls on a device we are interested in,
+				// and how they should be reported. This tells DInput that we will be
+				// passing a DIJOYSTATE2 structure to IDirectInputDevice::GetDeviceState().
+				hr = joysticks[i]->SetDataFormat(&c_dfDIJoystick2);
+				assert(SUCCEEDED(hr));
+
+				// Set the cooperative level to let DInput know how this device should
+				// interact with the system and with other DInput applications.
+				hr = joysticks[i]->SetCooperativeLevel(wiWindowRegistration::GetRegisteredWindow(), DISCL_EXCLUSIVE | DISCL_FOREGROUND);
+				assert(SUCCEEDED(hr));
+
+				// Determine how many axis the joystick has (so we don't error out setting
+				// properties for unavailable axis)
+				capabilities.dwSize = sizeof(DIDEVCAPS);
+				hr = joysticks[i]->GetCapabilities(&capabilities);
+				assert(SUCCEEDED(hr));
+
+				// Enumerate the axes of the joyctick and set the range of each axis. Note:
+				// we could just use the defaults, but we're just trying to show an example
+				// of enumerating device objects (axes, buttons, etc.).
+				hr = joysticks[i]->EnumObjects(enumAxesCallback, NULL, DIDFT_AXIS);
+				assert(SUCCEEDED(hr));
 			}
 
 			// Poll the device to read the current state
 			hr = joysticks[i]->Poll();
-			if (FAILED(hr)) 
+			if (FAILED(hr))
 			{
 				// DInput is telling us that the input stream has been
 				// interrupted. We aren't tracking any state between polls, so
 				// we don't have any special reset that needs to be done. We
 				// just re-acquire and try again.
 				hr = joysticks[i]->Acquire();
-				while (hr == DIERR_INPUTLOST) 
+				while (hr == DIERR_INPUTLOST)
 				{
 					hr = joysticks[i]->Acquire();
 				}
@@ -274,7 +309,10 @@ namespace wiDirectInput
 
 			// Get the input's device state
 			hr = joysticks[i]->GetDeviceState(sizeof(DIJOYSTATE2), &joystick_states[i]);
-			assert(SUCCEEDED(hr));
+			if (FAILED(hr))
+			{
+				joystick_guids[i] = {};
+			}
 		}
 	}
 
@@ -282,14 +320,13 @@ namespace wiDirectInput
 	{
 		return connectedJoys;
 	}
-	bool GetJoystickData(DIJOYSTATE2* result, short index)
+	DIJOYSTATE2 GetJoystickData(short index)
 	{
 		if (index < connectedJoys)
 		{
-			*result = joystick_states[index];
-			return true;
+			return joystick_states[index];
 		}
-		return false;
+		return {};
 	}
 
 }

@@ -1,62 +1,52 @@
-#include <Windows.h>
 #include "wiXInput.h"
 
+#ifdef WICKEDENGINE_BUILD_XINPUT
 
 #pragma comment(lib,"xinput.lib")
 
-namespace wiInput
+namespace wiXInput
 {
+	XINPUT_STATE controllers[4] = {};
+	bool connected[arraysize(controllers)] = {};
 
-	wiXInput::wiXInput()
+	void Update()
 	{
-		g_bDeadZoneOn = true;
-		for (int i = 0; i < MAX_CONTROLLERS; ++i) {
-			controllers[i] = CONTROLLER_STATE();
-			controllers[i].bConnected = false;
-		}
-	}
-	wiXInput::~wiXInput()
-	{
-		CleanUp();
-	}
-
-	HRESULT wiXInput::UpdateControllerState()
-	{
-		DWORD dwResult = 0;
-		for (DWORD i = 0; i < MAX_CONTROLLERS; i++)
+		for (DWORD i = 0; i < arraysize(controllers); i++)
 		{
-			// Simply get the state of the controller from XInput.
-			dwResult = XInputGetState(i, &controllers[i].state);
+			controllers[i] = {};
+			DWORD dwResult = XInputGetState(i, &controllers[i]);
 
 			if (dwResult == ERROR_SUCCESS)
-				controllers[i].bConnected = true;
+			{
+				connected[i] = true;
+			}
 			else
-				controllers[i].bConnected = false;
+			{
+				connected[i] = false;
+			}
 		}
-
-
-		return S_OK;
 	}
 
-	DWORD wiXInput::GetButtons(SHORT newPlayerIndex)
+	short GetMaxGamepadCount()
 	{
-		if (controllers[newPlayerIndex].bConnected)
-			return controllers[newPlayerIndex].state.Gamepad.wButtons;
-		return 0;
+		return arraysize(controllers);
 	}
-	DWORD wiXInput::GetDirections(short newPlayerIndex) {
-		if (controllers[newPlayerIndex].bConnected)
-			return controllers[newPlayerIndex].state.Gamepad.wButtons;
-		return 0;
-	}
-	bool wiXInput::isButtonDown(short newPlayerIndex, DWORD checkforButton) {
-		if (controllers[newPlayerIndex].bConnected)
-			return (controllers[newPlayerIndex].state.Gamepad.wButtons & checkforButton) != 0;
+	bool IsGamepadConnected(short index)
+	{
+		if (index < arraysize(connected))
+		{
+			return connected[index];
+		}
 		return false;
 	}
-
-	void wiXInput::CleanUp()
+	XINPUT_STATE GetGamepadData(short index)
 	{
+		if (index < arraysize(controllers))
+		{
+			return controllers[index];
+		}
+		return {};
 	}
-
 }
+
+#endif // WICKEDENGINE_BUILD_XINPUT

@@ -752,7 +752,7 @@ void EditorComponent::Update(float dt)
 	selectionOutlineTimer += dt;
 
 	// Exit cinema mode:
-	if (wiInput::down(wiInput::KEYBOARD_BUTTON_ESCAPE))
+	if (wiInput::Down(wiInput::KEYBOARD_BUTTON_ESCAPE))
 	{
 		if (renderPath != nullptr)
 		{
@@ -773,49 +773,49 @@ void EditorComponent::Update(float dt)
 		static bool camControlStart = true;
 		if (camControlStart)
 		{
-			originalMouse = wiInput::getpointer();
+			originalMouse = wiInput::GetPointer();
 		}
 
-		XMFLOAT4 currentMouse = wiInput::getpointer();
+		XMFLOAT4 currentMouse = wiInput::GetPointer();
 		float xDif = 0, yDif = 0;
 
-		if (wiInput::down(wiInput::MOUSE_BUTTON_MIDDLE))
+		if (wiInput::Down(wiInput::MOUSE_BUTTON_MIDDLE))
 		{
 			camControlStart = false;
 			xDif = currentMouse.x - originalMouse.x;
 			yDif = currentMouse.y - originalMouse.y;
 			xDif = 0.1f*xDif*(1.0f / 60.0f);
 			yDif = 0.1f*yDif*(1.0f / 60.0f);
-			wiInput::setpointer(originalMouse);
-			wiInput::hidepointer(true);
+			wiInput::SetPointer(originalMouse);
+			wiInput::HidePointer(true);
 		}
 		else
 		{
 			camControlStart = true;
-			wiInput::hidepointer(false);
+			wiInput::HidePointer(false);
 		}
 
 		const float buttonrotSpeed = 2.0f / 60.0f;
-		if (wiInput::down(wiInput::KEYBOARD_BUTTON_LEFT))
+		if (wiInput::Down(wiInput::KEYBOARD_BUTTON_LEFT))
 		{
 			xDif -= buttonrotSpeed;
 		}
-		if (wiInput::down(wiInput::KEYBOARD_BUTTON_RIGHT))
+		if (wiInput::Down(wiInput::KEYBOARD_BUTTON_RIGHT))
 		{
 			xDif += buttonrotSpeed;
 		}
-		if (wiInput::down(wiInput::KEYBOARD_BUTTON_UP))
+		if (wiInput::Down(wiInput::KEYBOARD_BUTTON_UP))
 		{
 			yDif -= buttonrotSpeed;
 		}
-		if (wiInput::down(wiInput::KEYBOARD_BUTTON_DOWN))
+		if (wiInput::Down(wiInput::KEYBOARD_BUTTON_DOWN))
 		{
 			yDif += buttonrotSpeed;
 		}
 
-		const XMFLOAT4 leftStick = wiInput::getanalog(wiInput::GAMEPAD_ANALOG_THUMBSTICK_L, 0);
-		const XMFLOAT4 rightStick = wiInput::getanalog(wiInput::GAMEPAD_ANALOG_THUMBSTICK_R, 0);
-		const XMFLOAT4 rightTrigger = wiInput::getanalog(wiInput::GAMEPAD_ANALOG_TRIGGER_R, 0);
+		const XMFLOAT4 leftStick = wiInput::GetAnalog(wiInput::GAMEPAD_ANALOG_THUMBSTICK_L, 0);
+		const XMFLOAT4 rightStick = wiInput::GetAnalog(wiInput::GAMEPAD_ANALOG_THUMBSTICK_R, 0);
+		const XMFLOAT4 rightTrigger = wiInput::GetAnalog(wiInput::GAMEPAD_ANALOG_TRIGGER_R, 0);
 		
 		const float jostickrotspeed = 0.05f;
 		xDif += rightStick.x * jostickrotspeed;
@@ -830,19 +830,19 @@ void EditorComponent::Update(float dt)
 			// FPS Camera
 			const float clampedDT = min(dt, 0.1f); // if dt > 100 millisec, don't allow the camera to jump too far...
 
-			const float speed = ((wiInput::down(wiInput::KEYBOARD_BUTTON_LSHIFT) ? 10.0f : 1.0f) + rightTrigger.x * 10.0f) * cameraWnd->movespeedSlider->GetValue() * clampedDT;
+			const float speed = ((wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT) ? 10.0f : 1.0f) + rightTrigger.x * 10.0f) * cameraWnd->movespeedSlider->GetValue() * clampedDT;
 			static XMVECTOR move = XMVectorSet(0, 0, 0, 0);
 			XMVECTOR moveNew = XMVectorSet(leftStick.x, 0, leftStick.y, 0);
 
-			if (!wiInput::down(wiInput::KEYBOARD_BUTTON_LCONTROL))
+			if (!wiInput::Down(wiInput::KEYBOARD_BUTTON_LCONTROL))
 			{
 				// Only move camera if control not pressed
-				if (wiInput::down((wiInput::BUTTON)'A') || wiInput::down(wiInput::GAMEPAD_BUTTON_LEFT)) { moveNew += XMVectorSet(-1, 0, 0, 0); }
-				if (wiInput::down((wiInput::BUTTON)'D') || wiInput::down(wiInput::GAMEPAD_BUTTON_RIGHT)) { moveNew += XMVectorSet(1, 0, 0, 0);	 }
-				if (wiInput::down((wiInput::BUTTON)'W') || wiInput::down(wiInput::GAMEPAD_BUTTON_UP)) { moveNew += XMVectorSet(0, 0, 1, 0);	 }
-				if (wiInput::down((wiInput::BUTTON)'S') || wiInput::down(wiInput::GAMEPAD_BUTTON_DOWN)) { moveNew += XMVectorSet(0, 0, -1, 0); }
-				if (wiInput::down((wiInput::BUTTON)'E') || wiInput::down(wiInput::GAMEPAD_BUTTON_2)) { moveNew += XMVectorSet(0, 1, 0, 0);	 }
-				if (wiInput::down((wiInput::BUTTON)'Q') || wiInput::down(wiInput::GAMEPAD_BUTTON_1)) { moveNew += XMVectorSet(0, -1, 0, 0); }
+				if (wiInput::Down((wiInput::BUTTON)'A') || wiInput::Down(wiInput::GAMEPAD_BUTTON_LEFT)) { moveNew += XMVectorSet(-1, 0, 0, 0); }
+				if (wiInput::Down((wiInput::BUTTON)'D') || wiInput::Down(wiInput::GAMEPAD_BUTTON_RIGHT)) { moveNew += XMVectorSet(1, 0, 0, 0);	 }
+				if (wiInput::Down((wiInput::BUTTON)'W') || wiInput::Down(wiInput::GAMEPAD_BUTTON_UP)) { moveNew += XMVectorSet(0, 0, 1, 0);	 }
+				if (wiInput::Down((wiInput::BUTTON)'S') || wiInput::Down(wiInput::GAMEPAD_BUTTON_DOWN)) { moveNew += XMVectorSet(0, 0, -1, 0); }
+				if (wiInput::Down((wiInput::BUTTON)'E') || wiInput::Down(wiInput::GAMEPAD_BUTTON_2)) { moveNew += XMVectorSet(0, 1, 0, 0);	 }
+				if (wiInput::Down((wiInput::BUTTON)'Q') || wiInput::Down(wiInput::GAMEPAD_BUTTON_1)) { moveNew += XMVectorSet(0, -1, 0, 0); }
 				moveNew += XMVector3Normalize(moveNew);
 			}
 			moveNew *= speed;
@@ -872,14 +872,14 @@ void EditorComponent::Update(float dt)
 		{
 			// Orbital Camera
 
-			if (wiInput::down(wiInput::KEYBOARD_BUTTON_LSHIFT))
+			if (wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT))
 			{
 				XMVECTOR V = XMVectorAdd(camera.GetRight() * xDif, camera.GetUp() * yDif) * 10;
 				XMFLOAT3 vec;
 				XMStoreFloat3(&vec, V);
 				cameraWnd->camera_target.Translate(vec);
 			}
-			else if (wiInput::down(wiInput::KEYBOARD_BUTTON_LCONTROL) || currentMouse.z != 0.0f)
+			else if (wiInput::Down(wiInput::KEYBOARD_BUTTON_LCONTROL) || currentMouse.z != 0.0f)
 			{
 				cameraWnd->camera_transform.Translate(XMFLOAT3(0, 0, yDif * 4 + currentMouse.z));
 				cameraWnd->camera_transform.translation_local.z = std::min(0.0f, cameraWnd->camera_transform.translation_local.z);
@@ -1076,7 +1076,7 @@ void EditorComponent::Update(float dt)
 			{
 				if (object->GetRenderTypes() & RENDERTYPE_WATER)
 				{
-					if (wiInput::down(wiInput::MOUSE_BUTTON_LEFT))
+					if (wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
 					{
 						// if water, then put a water ripple onto it:
 						wiRenderer::PutWaterRipple(wiHelper::GetOriginalWorkingDirectory() + "images/ripple.png", hovered.position);
@@ -1084,10 +1084,10 @@ void EditorComponent::Update(float dt)
 				}
 				else
 				{
-					if (wiInput::press(wiInput::MOUSE_BUTTON_LEFT))
+					if (wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
 					{
 						SoftBodyPhysicsComponent* softBody = scene.softbodies.GetComponent(object->meshID);
-						if (softBody != nullptr && wiInput::down((wiInput::BUTTON)'P'))
+						if (softBody != nullptr && wiInput::Down((wiInput::BUTTON)'P'))
 						{
 							MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
 
@@ -1122,7 +1122,7 @@ void EditorComponent::Update(float dt)
 		}
 
 		// Visualize soft body pinning:
-		if (wiInput::down((wiInput::BUTTON)'P'))
+		if (wiInput::Down((wiInput::BUTTON)'P'))
 		{
 			for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
 			{
@@ -1155,7 +1155,7 @@ void EditorComponent::Update(float dt)
 
 		// Select...
 		static bool selectAll = false;
-		if (wiInput::press(wiInput::MOUSE_BUTTON_RIGHT) || selectAll)
+		if (wiInput::Press(wiInput::MOUSE_BUTTON_RIGHT) || selectAll)
 		{
 
 			wiArchive* archive = AdvanceHistory();
@@ -1193,7 +1193,7 @@ void EditorComponent::Update(float dt)
 			{
 				// Add the hovered item to the selection:
 
-				if (!selected.empty() && wiInput::down(wiInput::KEYBOARD_BUTTON_LSHIFT))
+				if (!selected.empty() && wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT))
 				{
 					// Union selection:
 					list<wiSceneSystem::PickResult> saved = selected;
@@ -1327,7 +1327,7 @@ void EditorComponent::Update(float dt)
 		}
 
 		// Delete
-		if (wiInput::press(wiInput::KEYBOARD_BUTTON_DELETE))
+		if (wiInput::Press(wiInput::KEYBOARD_BUTTON_DELETE))
 		{
 
 			wiArchive* archive = AdvanceHistory();
@@ -1352,15 +1352,15 @@ void EditorComponent::Update(float dt)
 		}
 
 		// Control operations...
-		if (wiInput::down(wiInput::KEYBOARD_BUTTON_LCONTROL))
+		if (wiInput::Down(wiInput::KEYBOARD_BUTTON_LCONTROL))
 		{
 			// Select All
-			if (wiInput::press((wiInput::BUTTON)'A'))
+			if (wiInput::Press((wiInput::BUTTON)'A'))
 			{
 				selectAll = true;
 			}
 			// Copy
-			if (wiInput::press((wiInput::BUTTON)'C'))
+			if (wiInput::Press((wiInput::BUTTON)'C'))
 			{
 				auto prevSel = selected;
 				EndTranslate();
@@ -1377,7 +1377,7 @@ void EditorComponent::Update(float dt)
 				BeginTranslate();
 			}
 			// Paste
-			if (wiInput::press((wiInput::BUTTON)'V'))
+			if (wiInput::Press((wiInput::BUTTON)'V'))
 			{
 				auto prevSel = selected;
 				EndTranslate();
@@ -1395,7 +1395,7 @@ void EditorComponent::Update(float dt)
 				BeginTranslate();
 			}
 			// Duplicate Instances
-			if (wiInput::press((wiInput::BUTTON)'D'))
+			if (wiInput::Press((wiInput::BUTTON)'D'))
 			{
 				auto prevSel = selected;
 				EndTranslate();
@@ -1408,7 +1408,7 @@ void EditorComponent::Update(float dt)
 				BeginTranslate();
 			}
 			// Put Instances
-			if (clipboard != nullptr && hovered.subsetIndex >= 0 && wiInput::down(wiInput::KEYBOARD_BUTTON_LSHIFT) && wiInput::press(wiInput::MOUSE_BUTTON_LEFT))
+			if (clipboard != nullptr && hovered.subsetIndex >= 0 && wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT) && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
 			{
 				XMMATRIX M = XMLoadFloat4x4(&hovered.orientation);
 
@@ -1427,12 +1427,12 @@ void EditorComponent::Update(float dt)
 				}
 			}
 			// Undo
-			if (wiInput::press((wiInput::BUTTON)'Z'))
+			if (wiInput::Press((wiInput::BUTTON)'Z'))
 			{
 				ConsumeHistoryOperation(true);
 			}
 			// Redo
-			if (wiInput::press((wiInput::BUTTON)'Y'))
+			if (wiInput::Press((wiInput::BUTTON)'Y'))
 			{
 				ConsumeHistoryOperation(false);
 			}
