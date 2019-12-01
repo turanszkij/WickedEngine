@@ -88,7 +88,7 @@ namespace wiInput
 	bool Hold(BUTTON button, uint32_t frames = 30, bool continuous = false, short playerIndex = 0);
 	// get pointer position (eg. mouse pointer) (.xy) + scroll delta (.z) + 1 unused (.w)
 	XMFLOAT4 GetPointer();
-	// set pointer position (eg. mouse pointer) + scroll delta (.z)
+	// set pointer position (eg. mouse pointer)
 	void SetPointer(const XMFLOAT4& props);
 	// hide pointer
 	void HidePointer(bool value);

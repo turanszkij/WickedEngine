@@ -25,7 +25,6 @@ namespace wiInput
 #define KEY_TOGGLE(vk_code) (((int)Windows::UI::Core::CoreWindow::GetForCurrentThread()->GetAsyncKeyState((Windows::System::VirtualKey)vk_code) & 1) != 0)
 #endif //WINSTORE_SUPPORT
 #define KEY_UP(vk_code) (!KEY_DOWN(vk_code))
-	static float mousewheel_scrolled = 0.0f;
 
 
 	struct Input 
@@ -63,6 +62,10 @@ namespace wiInput
 #ifdef WICKEDENGINE_BUILD_DIRECTINPUT
 		wiDirectInput::Initialize();
 #endif // WICKEDENGINE_BUILD_DIRECTINPUT
+
+#ifdef WICKEDENGINE_BUILD_RAWINPUT
+		wiRawInput::Initialize();
+#endif // WICKEDENGINE_BUILD_RAWINPUT
 
 		wiBackLog::post("wiInput Initialized");
 		initialized.store(true);
@@ -103,6 +106,10 @@ namespace wiInput
 		}
 #endif // WICKEDENGINE_BUILD_DIRECTINPUT
 
+#ifdef WICKEDENGINE_BUILD_RAWINPUT
+		wiRawInput::Update();
+#endif // WICKEDENGINE_BUILD_RAWINPUT
+
 		for (auto iter = inputs.begin(); iter != inputs.end();)
 		{
 			BUTTON button = iter->first.button;
@@ -130,8 +137,6 @@ namespace wiInput
 		}
 
 		touches.clear();
-
-		mousewheel_scrolled = 0.0f;
 
 	}
 
@@ -352,6 +357,11 @@ namespace wiInput
 	}
 	XMFLOAT4 GetPointer()
 	{
+		float mousewheel_scrolled = 0;
+#ifdef WICKEDENGINE_BUILD_RAWINPUT
+		mousewheel_scrolled = wiRawInput::GetMouseDelta_Wheel();
+#endif // WICKEDENGINE_BUILD_RAWINPUT
+
 #ifndef WINSTORE_SUPPORT
 		POINT p;
 		GetCursorPos(&p);
@@ -371,8 +381,6 @@ namespace wiInput
 		ClientToScreen(wiWindowRegistration::GetRegisteredWindow(), &p);
 		SetCursorPos(p.x, p.y);
 #endif
-
-		mousewheel_scrolled = props.z;
 	}
 	void HidePointer(bool value)
 	{
