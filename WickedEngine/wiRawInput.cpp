@@ -2,6 +2,11 @@
 
 #ifdef WICKEDENGINE_BUILD_RAWINPUT
 
+#include "wiHelper.h"
+
+#include <unordered_map>
+#include <string>
+
 #include <windows.h>
 #include <hidsdi.h>
 typedef UINT64 QWORD;
@@ -103,7 +108,34 @@ namespace wiRawInput
 					UINT result = GetRawInputDeviceInfo(raw->header.hDevice, RIDI_DEVICEINFO, &info, &bufferSize);
 					assert(result >= 0);
 
-					if (/*info.hid.dwProductId != 767 &&*/ info.hid.dwVendorId != 1118) // filter out xbox controller, that will be handled by xinput (todo: probably there is a better way)
+					bool is_xinput = false;
+					is_xinput = is_xinput || info.hid.dwVendorId == 1118; // this is definitely an xbox one controller
+					if (!is_xinput)
+					{
+						size_t deviceID = info.hid.dwVendorId;
+						wiHelper::hash_combine(deviceID, info.hid.dwProductId);
+
+						static std::unordered_map<size_t, bool> xinput_deviceIDs; // deviceID -> isxinput?
+						auto it = xinput_deviceIDs.find(deviceID);
+						if (it == xinput_deviceIDs.end())
+						{
+							// If this is the first time we see this deviceID, we check if it's an xinput device or not (xinput should have IG_ in its name).
+							result = GetRawInputDeviceInfo(raw->header.hDevice, RIDI_DEVICENAME, NULL, &bufferSize);
+							TCHAR devicename[256] = {};
+							assert(bufferSize < arraysize(devicename));
+							result = GetRawInputDeviceInfo(raw->header.hDevice, RIDI_DEVICENAME, devicename, &bufferSize);
+							assert(result >= 0);
+							std::wstring name = devicename;
+							is_xinput = name.find(L"IG_") != std::wstring::npos;
+							xinput_deviceIDs[deviceID] = is_xinput;
+						}
+						else
+						{
+							is_xinput = it->second;
+						}
+					}
+
+					if (!is_xinput) // xinput enabled controller will be handled by xinput API
 					{
 						result = GetRawInputDeviceInfo(raw->header.hDevice, RIDI_PREPARSEDDATA, NULL, &bufferSize);
 						assert(result == 0);
