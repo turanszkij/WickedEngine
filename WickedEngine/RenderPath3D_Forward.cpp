@@ -27,11 +27,11 @@ void RenderPath3D_Forward::ResizeBuffers()
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		desc.SampleCount = getMSAASampleCount();
 
-		desc.Format = wiRenderer::RTFormat_hdr;
+		desc.Format = FORMAT_R11G11B10_FLOAT;
 		device->CreateTexture(&desc, nullptr, &rtMain[0]);
 		device->SetName(&rtMain[0], "rtMain[0]");
 
-		desc.Format = wiRenderer::RTFormat_gbuffer_1;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
 		device->CreateTexture(&desc, nullptr, &rtMain[1]);
 		device->SetName(&rtMain[1], "rtMain[1]");
 
@@ -40,11 +40,11 @@ void RenderPath3D_Forward::ResizeBuffers()
 			desc.SampleCount = 1;
 			desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 
-			desc.Format = wiRenderer::RTFormat_hdr;
+			desc.Format = FORMAT_R11G11B10_FLOAT;
 			device->CreateTexture(&desc, nullptr, &rtMain_resolved[0]);
 			device->SetName(&rtMain_resolved[0], "rtMain_resolved[0]");
 
-			desc.Format = wiRenderer::RTFormat_gbuffer_1;
+			desc.Format = FORMAT_R16G16B16A16_FLOAT;
 			device->CreateTexture(&desc, nullptr, &rtMain_resolved[1]);
 			device->SetName(&rtMain_resolved[1], "rtMain_resolved[1]");
 		}

@@ -180,7 +180,7 @@ void EditorComponent::ResizeBuffers()
 		hr = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[0]);
 		assert(SUCCEEDED(hr));
 
-		desc.Format = wiRenderer::RTFormat_hdr;
+		desc.Format = FORMAT_R8G8B8A8_UNORM;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		hr = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[1]);
 		assert(SUCCEEDED(hr));

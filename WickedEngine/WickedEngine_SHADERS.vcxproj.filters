@@ -753,9 +753,6 @@
     <FxCompile Include="depthoffieldCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="outlineCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="motionblurCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -815,6 +812,12 @@
     </FxCompile>
     <FxCompile Include="hairparticlePS_tiledforward_transparent.hlsl">
       <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="outlineCS_unorm4.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="outlineCS_float4.hlsl">
+      <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

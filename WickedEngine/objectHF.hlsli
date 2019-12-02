@@ -76,10 +76,10 @@ inline GBUFFEROutputType CreateGbuffer(in float4 color, in Surface surface, in f
 
 	GBUFFEROutputType Out;
 	Out.g0 = float4(color.rgb, surface.sss);														/*FORMAT_R8G8B8A8_UNORM*/
-	Out.g1 = float4(encodeNormal(surface.N), velocity);													/*FORMAT_R16G16B16A16_FLOAT*/
+	Out.g1 = float4(encodeNormal(surface.N), velocity);												/*FORMAT_R16G16B16A16_FLOAT*/
 	Out.g2 = float4(surface.occlusion, surface.roughness, surface.metalness, surface.reflectance);	/*FORMAT_R8G8B8A8_UNORM*/
-	Out.diffuse = float4(combined_lighting.diffuse, 1);												/*wiRenderer::RTFormat_deferred_lightbuffer*/
-	Out.specular = float4(combined_lighting.specular, 1);											/*wiRenderer::RTFormat_deferred_lightbuffer*/
+	Out.diffuse = float4(combined_lighting.diffuse, 1);												/*FORMAT_R11G11B10_FLOAT*/
+	Out.specular = float4(combined_lighting.specular, 1);											/*FORMAT_R11G11B10_FLOAT*/
 	return Out;
 }
 
@@ -91,8 +91,8 @@ struct GBUFFEROutputType_Thin
 inline GBUFFEROutputType_Thin CreateGbuffer_Thin(in float4 color, in Surface surface, in float2 velocity)
 {
 	GBUFFEROutputType_Thin Out;
-	Out.g0 = color;																		/*FORMAT_R16G16B16A16_FLOAT*/
-	Out.g1 = float4(encodeNormal(surface.N), velocity);										/*FORMAT_R16G16B16A16_FLOAT*/
+	Out.g0 = color;																		/*FORMAT_R11G11B10_FLOAT*/
+	Out.g1 = float4(encodeNormal(surface.N), velocity);									/*FORMAT_R16G16B16A16_FLOAT*/
 	return Out;
 }
 

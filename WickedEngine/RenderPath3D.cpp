@@ -20,7 +20,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = wiRenderer::RTFormat_hdr;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
 		desc.Width = wiRenderer::GetInternalResolution().x / 2;
 		desc.Height = wiRenderer::GetInternalResolution().y / 2;
 		desc.MipLevels = 5;
@@ -39,7 +39,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.Format = wiRenderer::RTFormat_hdr;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		desc.SampleCount = getMSAASampleCount();
@@ -55,7 +55,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.Format = wiRenderer::RTFormat_hdr;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
 		desc.Width = wiRenderer::GetInternalResolution().x / 4;
 		desc.Height = wiRenderer::GetInternalResolution().y / 4;
 		device->CreateTexture(&desc, nullptr, &rtVolumetricLights);
@@ -64,7 +64,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.Format = wiRenderer::RTFormat_waterripple;
+		desc.Format = FORMAT_R8G8B8A8_SNORM;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture(&desc, nullptr, &rtWaterRipple);
@@ -73,7 +73,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = wiRenderer::RTFormat_hdr;
+		desc.Format = FORMAT_R11G11B10_FLOAT;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		desc.MipLevels = 8;
@@ -92,7 +92,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.Format = wiRenderer::RTFormat_hdr;
+		desc.Format = FORMAT_R11G11B10_FLOAT;
 		desc.Width = wiRenderer::GetInternalResolution().x / 4;
 		desc.Height = wiRenderer::GetInternalResolution().y / 4;
 		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
@@ -102,7 +102,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = wiRenderer::RTFormat_hdr;
+		desc.Format = FORMAT_R11G11B10_FLOAT;
 		desc.Width = wiRenderer::GetInternalResolution().x / 2;
 		desc.Height = wiRenderer::GetInternalResolution().y / 2;
 		device->CreateTexture(&desc, nullptr, &rtDof[0]);
@@ -113,7 +113,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = wiRenderer::RTFormat_ssao;
+		desc.Format = FORMAT_R8_UNORM;
 		desc.Width = wiRenderer::GetInternalResolution().x / 2;
 		desc.Height = wiRenderer::GetInternalResolution().y / 2;
 		device->CreateTexture(&desc, nullptr, &rtSSAO[0]);
@@ -169,7 +169,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = wiRenderer::RTFormat_hdr;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture(&desc, nullptr, &rtTemporalAA[0]);
@@ -180,7 +180,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = wiRenderer::RTFormat_hdr;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture(&desc, nullptr, &rtPostprocess_HDR);
@@ -204,7 +204,7 @@ void RenderPath3D::ResizeBuffers()
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 
-		desc.Format = wiRenderer::DSFormat_full_alias;
+		desc.Format = FORMAT_R32G8X24_TYPELESS;
 		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 		desc.SampleCount = getMSAASampleCount();
 		device->CreateTexture(&desc, nullptr, &depthBuffer);
@@ -217,7 +217,7 @@ void RenderPath3D::ResizeBuffers()
 		}
 		else
 		{
-			desc.Format = wiRenderer::DSFormat_full_alias;
+			desc.Format = FORMAT_R32G8X24_TYPELESS;
 		}
 		desc.SampleCount = 1;
 		device->CreateTexture(&desc, nullptr, &depthBuffer_Copy);
@@ -226,7 +226,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_DEPTH_STENCIL;
-		desc.Format = wiRenderer::DSFormat_small;
+		desc.Format = FORMAT_D16_UNORM;
 		desc.Width = wiRenderer::GetInternalResolution().x / 4;
 		desc.Height = wiRenderer::GetInternalResolution().y / 4;
 		desc.layout = IMAGE_LAYOUT_DEPTHSTENCIL;
@@ -236,7 +236,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = wiRenderer::RTFormat_lineardepth;
+		desc.Format = FORMAT_R16_UNORM;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture(&desc, nullptr, &rtLinearDepth);
@@ -245,7 +245,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_DEPTH_STENCIL;
-		desc.Format = wiRenderer::DSFormat_small;
+		desc.Format = FORMAT_D16_UNORM;
 		desc.Width = wiRenderer::GetInternalResolution().x / 4;
 		desc.Height = wiRenderer::GetInternalResolution().y / 4;
 		desc.layout = IMAGE_LAYOUT_DEPTHSTENCIL_READONLY;

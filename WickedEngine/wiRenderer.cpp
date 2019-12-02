@@ -2169,7 +2169,8 @@ void LoadShaders()
 	computeShaders[CSTYPE_POSTPROCESS_SSR] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "ssrCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_POSTPROCESS_LIGHTSHAFTS] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "lightshaftsCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "depthoffieldCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_POSTPROCESS_OUTLINE] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "outlineCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_OUTLINE_FLOAT4] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "outlineCS_float4.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_OUTLINE_UNORM4] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "outlineCS_unorm4.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "motionblurCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bloomseparateCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_POSTPROCESS_FXAA] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "fxaaCS.cso", wiResourceManager::COMPUTESHADER));
@@ -4817,11 +4818,11 @@ void SetShadowProps2D(int resolution, int count, int softShadowQuality)
 		desc.MiscFlags = 0;
 
 		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
-		desc.Format = DSFormat_small_alias;
+		desc.Format = FORMAT_R16_TYPELESS;
 		device->CreateTexture(&desc, nullptr, &shadowMapArray_2D);
 
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.Format = RTFormat_ldr;
+		desc.Format = FORMAT_R8G8B8A8_UNORM;
 		// RGB: Shadow tint (multiplicative), A: Refraction caustics(additive)
 		desc.clear.color[0] = 1;
 		desc.clear.color[1] = 1;
@@ -4874,7 +4875,7 @@ void SetShadowPropsCube(int resolution, int count)
 		desc.Height = SHADOWRES_CUBE;
 		desc.MipLevels = 1;
 		desc.ArraySize = 6 * SHADOWCOUNT_CUBE;
-		desc.Format = DSFormat_small_alias;
+		desc.Format = FORMAT_R16_TYPELESS;
 		desc.SampleCount = 1;
 		desc.Usage = USAGE_DEFAULT;
 		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
@@ -6158,7 +6159,7 @@ void ManageEnvProbes()
 		desc.ArraySize = 6;
 		desc.BindFlags = BIND_DEPTH_STENCIL;
 		desc.CPUAccessFlags = 0;
-		desc.Format = DSFormat_small;
+		desc.Format = FORMAT_D16_UNORM;
 		desc.Height = envmapRes;
 		desc.Width = envmapRes;
 		desc.MipLevels = 1;
@@ -6170,7 +6171,7 @@ void ManageEnvProbes()
 		desc.ArraySize = envmapCount * 6;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
 		desc.CPUAccessFlags = 0;
-		desc.Format = RTFormat_envprobe;
+		desc.Format = FORMAT_R11G11B10_FLOAT;
 		desc.Height = envmapRes;
 		desc.Width = envmapRes;
 		desc.MipLevels = envmapMIPs;
@@ -6406,13 +6407,13 @@ void ManageImpostors()
 
 		desc.BindFlags = BIND_DEPTH_STENCIL;
 		desc.ArraySize = 1;
-		desc.Format = DSFormat_small;
+		desc.Format = FORMAT_D16_UNORM;
 		device->CreateTexture(&desc, nullptr, &impostorDepthStencil);
 		device->SetName(&impostorDepthStencil, "impostorDepthStencil");
 
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.ArraySize = impostorTextureArraySize;
-		desc.Format = RTFormat_impostor;
+		desc.Format = FORMAT_R8G8B8A8_UNORM;
 
 		textures[TEXTYPE_2D_IMPOSTORARRAY] = new Texture;
 		device->CreateTexture(&desc, nullptr, textures[TEXTYPE_2D_IMPOSTORARRAY]);
@@ -6599,7 +6600,7 @@ void VoxelRadiance(CommandList cmd)
 		desc.Height = voxelSceneData.res;
 		desc.Depth = voxelSceneData.res;
 		desc.MipLevels = 0;
-		desc.Format = RTFormat_voxelradiance;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		desc.Usage = USAGE_DEFAULT;
 		desc.CPUAccessFlags = 0;
@@ -7743,7 +7744,6 @@ void ManageLightmapAtlas()
 					packedLightmaps.erase(object.lightmap.get());
 				}
 
-				if (RTFormat_lightmap_object == FORMAT_R32G32B32A32_FLOAT)
 				{
 					// Unfortunately, fp128 format only correctly downloads from GPU if it is pow2 size:
 					object.lightmapWidth = wiMath::GetNextPowerOfTwo(object.lightmapWidth + 1) / 2;
@@ -7756,7 +7756,7 @@ void ManageLightmapAtlas()
 				desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 				// Note: we need the full precision format to achieve correct accumulative blending! 
 				//	But the global atlas will have less precision for good bandwidth for sampling
-				desc.Format = RTFormat_lightmap_object;
+				desc.Format = FORMAT_R32G32B32A32_FLOAT;
 
 				object.lightmap = std::make_unique<Texture>();
 				device->CreateTexture(&desc, nullptr, object.lightmap.get());
@@ -7828,7 +7828,7 @@ void ManageLightmapAtlas()
 			desc.Height = (uint32_t)bins[0].size.h;
 			desc.MipLevels = 1;
 			desc.ArraySize = 1;
-			desc.Format = RTFormat_lightmap_global;
+			desc.Format = FORMAT_R11G11B10_FLOAT;
 			desc.SampleCount = 1;
 			desc.Usage = USAGE_DEFAULT;
 			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
@@ -8875,11 +8875,18 @@ void Postprocess_Outline(
 	device->EventBegin("Postprocess_Outline", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Outline", cmd);
 
-	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_OUTLINE], cmd);
+	const TextureDesc& desc = output.GetDesc();
+
+	if (device->IsFormatUnorm(desc.Format))
+	{
+		device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_OUTLINE_UNORM4], cmd);
+	}
+	else
+	{
+		device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_OUTLINE_FLOAT4], cmd);
+	}
 
 	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
-
-	const TextureDesc& desc = output.GetDesc();
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width;

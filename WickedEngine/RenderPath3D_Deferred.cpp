@@ -24,22 +24,22 @@ void RenderPath3D_Deferred::ResizeBuffers()
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 
-		desc.Format = wiRenderer::RTFormat_gbuffer_0;
+		desc.Format = FORMAT_R8G8B8A8_UNORM;
 		device->CreateTexture(&desc, nullptr, &rtGBuffer[0]);
 		device->SetName(&rtGBuffer[0], "rtGBuffer[0]");
 
-		desc.Format = wiRenderer::RTFormat_gbuffer_1;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
 		device->CreateTexture(&desc, nullptr, &rtGBuffer[1]);
 		device->SetName(&rtGBuffer[1], "rtGBuffer[1]");
 
-		desc.Format = wiRenderer::RTFormat_gbuffer_2;
+		desc.Format = FORMAT_R8G8B8A8_UNORM;
 		device->CreateTexture(&desc, nullptr, &rtGBuffer[2]);
 		device->SetName(&rtGBuffer[2], "rtGBuffer[2]");
 	}
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = wiRenderer::RTFormat_hdr;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture(&desc, nullptr, &rtDeferred);
@@ -48,7 +48,7 @@ void RenderPath3D_Deferred::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = wiRenderer::RTFormat_deferred_lightbuffer;
+		desc.Format = FORMAT_R11G11B10_FLOAT;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture(&desc, nullptr, &lightbuffer_diffuse);
@@ -59,7 +59,7 @@ void RenderPath3D_Deferred::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.Format = wiRenderer::RTFormat_deferred_lightbuffer;
+		desc.Format = FORMAT_R11G11B10_FLOAT;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture(&desc, nullptr, &rtSSS[0]);

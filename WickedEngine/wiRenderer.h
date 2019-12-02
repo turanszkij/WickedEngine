@@ -9,29 +9,6 @@ struct RAY;
 
 namespace wiRenderer
 {
-	// Common render target formats:
-	static const wiGraphics::FORMAT RTFormat_ldr = wiGraphics::FORMAT_R8G8B8A8_UNORM;
-	static const wiGraphics::FORMAT RTFormat_hdr = wiGraphics::FORMAT_R16G16B16A16_FLOAT;
-	static const wiGraphics::FORMAT RTFormat_gbuffer_0 = wiGraphics::FORMAT_R8G8B8A8_UNORM;
-	static const wiGraphics::FORMAT RTFormat_gbuffer_1 = wiGraphics::FORMAT_R16G16B16A16_FLOAT;
-	static const wiGraphics::FORMAT RTFormat_gbuffer_2 = wiGraphics::FORMAT_R8G8B8A8_UNORM;
-	static const wiGraphics::FORMAT RTFormat_deferred_lightbuffer = wiGraphics::FORMAT_R11G11B10_FLOAT;
-	static const wiGraphics::FORMAT RTFormat_lineardepth = wiGraphics::FORMAT_R16_UNORM;
-	static const wiGraphics::FORMAT RTFormat_ssao = wiGraphics::FORMAT_R8_UNORM;
-	static const wiGraphics::FORMAT RTFormat_waterripple = wiGraphics::FORMAT_R8G8B8A8_SNORM;
-	static const wiGraphics::FORMAT RTFormat_normalmaps = wiGraphics::FORMAT_R8G8B8A8_SNORM;
-	static const wiGraphics::FORMAT RTFormat_depthresolve = wiGraphics::FORMAT_R32_FLOAT;
-	static const wiGraphics::FORMAT RTFormat_voxelradiance = wiGraphics::FORMAT_R16G16B16A16_FLOAT;
-	static const wiGraphics::FORMAT RTFormat_envprobe = wiGraphics::FORMAT_R11G11B10_FLOAT;
-	static const wiGraphics::FORMAT RTFormat_impostor = wiGraphics::FORMAT_R8G8B8A8_UNORM;
-	static const wiGraphics::FORMAT RTFormat_lightmap_object = wiGraphics::FORMAT_R32G32B32A32_FLOAT;
-	static const wiGraphics::FORMAT RTFormat_lightmap_global = wiGraphics::FORMAT_R11G11B10_FLOAT;
-
-	static const wiGraphics::FORMAT DSFormat_full = wiGraphics::FORMAT_D32_FLOAT_S8X24_UINT;
-	static const wiGraphics::FORMAT DSFormat_full_alias = wiGraphics::FORMAT_R32G8X24_TYPELESS;
-	static const wiGraphics::FORMAT DSFormat_small = wiGraphics::FORMAT_D16_UNORM;
-	static const wiGraphics::FORMAT DSFormat_small_alias = wiGraphics::FORMAT_R16_TYPELESS;
-
 	inline uint32_t CombineStencilrefs(STENCILREF engineStencilRef, uint8_t userStencilRef)
 	{
 		return (userStencilRef << 4) | static_cast<uint8_t>(engineStencilRef);

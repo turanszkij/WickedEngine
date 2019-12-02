@@ -1,9 +1,13 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+#ifndef OUTLINE_OUTPUT_FORMAT
+#define OUTLINE_OUTPUT_FORMAT float4
+#endif // OUTLINE_OUTPUT_FORMAT
+
 TEXTURE2D(input, float, TEXSLOT_ONDEMAND0);
 
-RWTEXTURE2D(output, float4, 0);
+RWTEXTURE2D(output, OUTLINE_OUTPUT_FORMAT, 0);
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
