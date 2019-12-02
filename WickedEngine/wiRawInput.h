@@ -15,18 +15,44 @@ namespace wiRawInput
 	// Updates the state of raw input devices
 	void Update();
 
-	// Returns relative mouse pointer movement
-	XMINT2 GetMouseDelta_XY();
+	struct KeyboardState
+	{
+		bool buttons[128] = {};
+	};
+	struct MouseState
+	{
+		XMINT2 delta_position = XMINT2(0, 0);
+		float delta_wheel = 0;
+	};
 
-	// Returns the mouse wheel delta.
-	//	0: not scrolled
-	//	1: scrolled 1 detent (positive direction)
-	//	-1: scrolled 1 detent (negative direction)
-	//	other: scrolled via more fine grained method (such as a touchpad for example)
-	float GetMouseDelta_Wheel();
+	enum POV
+	{
+		POV_UP = 0,
+		POV_UPRIGHT = 1,
+		POV_RIGHT = 2,
+		POV_RIGHTDOWN = 3,
+		POV_DOWN = 4,
+		POV_DOWNLEFT = 5,
+		POV_LEFT = 6,
+		POV_LEFTUP = 7,
+		POV_IDLE = 8,
+	};
+	struct ControllerState
+	{
+		bool buttons[32] = {};
+		POV pov = POV_IDLE;
+		XMFLOAT2 thumbstick_L = XMFLOAT2(0, 0);
+		XMFLOAT2 thumbstick_R = XMFLOAT2(0, 0);
+		float trigger_L = 0;
+		float trigger_R = 0;
+	};
 
-	// Returns whether a specific keycode is currently pressed or not
-	bool IsKeyDown(unsigned char keycode);
+	KeyboardState GetKeyboardState();
+
+	MouseState GetMouseState();
+
+	short GetControllerCount();
+	ControllerState GetControllerState(short index);
 }
 
 #endif // WICKEDENGINE_BUILD_RAWINPUT

@@ -909,9 +909,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRawInput.h">
       <Filter>ENGINE\Input</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiDirectInput.h">
-      <Filter>ENGINE\Input</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBackLog.h">
       <Filter>ENGINE\Tools</Filter>
     </ClInclude>
@@ -1755,9 +1752,6 @@
       <Filter>ENGINE\Input</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRawInput.cpp">
-      <Filter>ENGINE\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiDirectInput.cpp">
       <Filter>ENGINE\Input</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiBackLog.cpp">

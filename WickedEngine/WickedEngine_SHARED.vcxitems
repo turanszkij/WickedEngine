@@ -323,7 +323,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBackLog_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)WickedEngine.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiColor.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiDirectInput.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiEmittedParticle.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiEnums.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFadeManager.h" />
@@ -653,7 +652,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Vector_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiBackLog.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiBackLog_BindLua.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiDirectInput.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiEmittedParticle.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFadeManager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFont.cpp" />

@@ -52,6 +52,5 @@ namespace wiInitializer
 		wiAudio::CleanUp();
 		wiNetwork::CleanUp();
 		wiPhysicsEngine::CleanUp();
-		wiInput::CleanUp();
 	}
 }

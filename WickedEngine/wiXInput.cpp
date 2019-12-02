@@ -27,11 +27,11 @@ namespace wiXInput
 		}
 	}
 
-	short GetMaxGamepadCount()
+	short GetMaxControllerCount()
 	{
 		return arraysize(controllers);
 	}
-	bool IsGamepadConnected(short index)
+	bool IsControllerConnected(short index)
 	{
 		if (index < arraysize(connected))
 		{
@@ -39,7 +39,7 @@ namespace wiXInput
 		}
 		return false;
 	}
-	XINPUT_STATE GetGamepadData(short index)
+	XINPUT_STATE GetControllerState(short index)
 	{
 		if (index < arraysize(controllers))
 		{

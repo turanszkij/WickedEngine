@@ -16,13 +16,13 @@ namespace wiXInput
 	void Update();
 
 	// Returns how many gamepads can Xinput handle
-	short GetMaxGamepadCount();
+	short GetMaxControllerCount();
 
 	// Returns if the specified gamepad is connected or not
-	bool IsGamepadConnected(short index);
+	bool IsControllerConnected(short index);
 
 	// Returns the specified gamepad's state
-	XINPUT_STATE GetGamepadData(short index);
+	XINPUT_STATE GetControllerState(short index);
 }
 
 #endif // WICKEDENGINE_BUILD_XINPUT
