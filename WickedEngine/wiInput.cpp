@@ -5,6 +5,7 @@
 #include "wiHelper.h"
 #include "wiBackLog.h"
 #include "wiWindowRegistration.h"
+#include "wiProfiler.h"
 
 #include <algorithm>
 #include <map>
@@ -73,6 +74,8 @@ namespace wiInput
 			return;
 		}
 
+		auto range = wiProfiler::BeginRangeCPU("Input");
+
 		controllers.clear();
 
 #ifdef WICKEDENGINE_BUILD_XINPUT
@@ -122,6 +125,7 @@ namespace wiInput
 
 		touches.clear();
 
+		wiProfiler::EndRange(range);
 	}
 
 	bool Down(BUTTON button, short playerindex)

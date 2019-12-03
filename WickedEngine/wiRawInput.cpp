@@ -9,7 +9,6 @@
 
 #include <windows.h>
 #include <hidsdi.h>
-typedef UINT64 QWORD;
 
 #pragma comment(lib,"Hid.lib")
 
@@ -65,32 +64,37 @@ namespace wiRawInput
 		}
 		controller_count = 0;
 
-		static RAWINPUT rawBuffer[128];
-		UINT rawBufferSize = sizeof(rawBuffer);
-
-		// Loop through reading raw input until no events are left,
+		// Loop through reading raw input until no events are left
 		while (true)
 		{
-			// Fill up buffer,
-			UINT count = GetRawInputBuffer((PRAWINPUT)rawBuffer, &rawBufferSize, sizeof(RAWINPUTHEADER));
+			static RAWINPUT rawBuffer[128];
+			UINT rawBufferSize;
+			UINT count = GetRawInputBuffer(NULL, &rawBufferSize, sizeof(RAWINPUTHEADER));
+			assert(count == 0);
+			rawBufferSize *= 8;
+			assert(rawBufferSize <= sizeof(rawBuffer));
+
+			// Fill up buffer:
+			count = GetRawInputBuffer((PRAWINPUT)rawBuffer, &rawBufferSize, sizeof(RAWINPUTHEADER));
 			if (count <= 0)
 			{
 				return;
 			}
 
-			// Process all the events, 
-			const RAWINPUT* raw = (const RAWINPUT*)rawBuffer;
-			while (true) 
+			// Process all the events:
+			for (UINT current_raw = 0; current_raw < count; ++current_raw)
 			{
-				if (raw->header.dwType == RIM_TYPEKEYBOARD)
+				const RAWINPUT& raw = rawBuffer[current_raw];
+
+				if (raw.header.dwType == RIM_TYPEKEYBOARD)
 				{
-					const RAWKEYBOARD& rawkeyboard = raw->data.keyboard;
+					const RAWKEYBOARD& rawkeyboard = raw.data.keyboard;
 					keyboard.buttons[rawkeyboard.VKey] = true;
 				}
-				else if (raw->header.dwType == RIM_TYPEMOUSE)
+				else if (raw.header.dwType == RIM_TYPEMOUSE)
 				{
-					const RAWMOUSE& rawmouse = raw->data.mouse;
-					if (raw->data.mouse.usFlags == MOUSE_MOVE_RELATIVE)
+					const RAWMOUSE& rawmouse = raw.data.mouse;
+					if (raw.data.mouse.usFlags == MOUSE_MOVE_RELATIVE)
 					{
 						mouse.delta_position.x += rawmouse.lLastX;
 						mouse.delta_position.y += rawmouse.lLastY;
@@ -100,12 +104,12 @@ namespace wiRawInput
 						}
 					}
 				}
-				else if(raw->header.dwType == RIM_TYPEHID && controller_count < arraysize(controllers))
+				else if (raw.header.dwType == RIM_TYPEHID && controller_count < arraysize(controllers))
 				{
 					RID_DEVICE_INFO info;
 					info.cbSize = sizeof(RID_DEVICE_INFO);
 					UINT bufferSize = sizeof(RID_DEVICE_INFO);
-					UINT result = GetRawInputDeviceInfo(raw->header.hDevice, RIDI_DEVICEINFO, &info, &bufferSize);
+					UINT result = GetRawInputDeviceInfo(raw.header.hDevice, RIDI_DEVICEINFO, &info, &bufferSize);
 					assert(result >= 0);
 
 					bool is_xinput = false;
@@ -120,10 +124,10 @@ namespace wiRawInput
 						if (it == xinput_deviceIDs.end())
 						{
 							// If this is the first time we see this deviceID, we check if it's an xinput device or not (xinput should have IG_ in its name).
-							result = GetRawInputDeviceInfo(raw->header.hDevice, RIDI_DEVICENAME, NULL, &bufferSize);
+							result = GetRawInputDeviceInfo(raw.header.hDevice, RIDI_DEVICENAME, NULL, &bufferSize);
 							TCHAR devicename[256] = {};
 							assert(bufferSize < arraysize(devicename));
-							result = GetRawInputDeviceInfo(raw->header.hDevice, RIDI_DEVICENAME, devicename, &bufferSize);
+							result = GetRawInputDeviceInfo(raw.header.hDevice, RIDI_DEVICENAME, devicename, &bufferSize);
 							assert(result >= 0);
 							std::wstring name = devicename;
 							is_xinput = name.find(L"IG_") != std::wstring::npos;
@@ -137,13 +141,13 @@ namespace wiRawInput
 
 					if (!is_xinput) // xinput enabled controller will be handled by xinput API
 					{
-						result = GetRawInputDeviceInfo(raw->header.hDevice, RIDI_PREPARSEDDATA, NULL, &bufferSize);
+						result = GetRawInputDeviceInfo(raw.header.hDevice, RIDI_PREPARSEDDATA, NULL, &bufferSize);
 						assert(result == 0);
 
 						static uint8_t preparsed_data_buffer[1024 * 16]; // 16 KB scratch buffer
 						assert(bufferSize < arraysize(preparsed_data_buffer)); // data must fit into scratch buffer!
 						PHIDP_PREPARSED_DATA pPreparsedData = (PHIDP_PREPARSED_DATA)preparsed_data_buffer;
-						result = GetRawInputDeviceInfo(raw->header.hDevice, RIDI_PREPARSEDDATA, pPreparsedData, &bufferSize);
+						result = GetRawInputDeviceInfo(raw.header.hDevice, RIDI_PREPARSEDDATA, pPreparsedData, &bufferSize);
 						assert(result >= 0);
 
 						HIDP_CAPS Caps;
@@ -170,7 +174,7 @@ namespace wiRawInput
 						status = HidP_GetUsages(
 							HidP_Input, pButtonCaps->UsagePage, 0, usage,
 							&numberOfButtons, pPreparsedData,
-							(PCHAR)raw->data.hid.bRawData, raw->data.hid.dwSizeHid
+							(PCHAR)raw.data.hid.bRawData, raw.data.hid.dwSizeHid
 						);
 						assert(status == HIDP_STATUS_SUCCESS);
 
@@ -191,7 +195,7 @@ namespace wiRawInput
 							status = HidP_GetUsageValue(
 								HidP_Input, pValueCaps[i].UsagePage, 0,
 								pValueCaps[i].Range.UsageMin, &value, pPreparsedData,
-								(PCHAR)raw->data.hid.bRawData, raw->data.hid.dwSizeHid
+								(PCHAR)raw.data.hid.bRawData, raw.data.hid.dwSizeHid
 							);
 							assert(status == HIDP_STATUS_SUCCESS);
 
@@ -225,13 +229,6 @@ namespace wiRawInput
 					}
 				}
 
-				// Go to next raw event.
-				count--;
-				if (count <= 0)
-				{
-					break;
-				}
-				raw = NEXTRAWINPUTBLOCK(raw);
 			}
 		}
 	}
