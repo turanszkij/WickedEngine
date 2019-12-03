@@ -110,7 +110,8 @@ TestsRenderer::TestsRenderer()
 	testSelector->AddItem("Sprite Test");
 	testSelector->AddItem("Lightmap Bake Test");
 	testSelector->AddItem("Network Test");
-	testSelector->SetMaxVisibleItemCount(100);
+	testSelector->AddItem("Controller Test");
+	testSelector->SetMaxVisibleItemCount(10);
 	testSelector->OnSelect([=](wiEventArgs args) {
 
 		// Reset all state that tests might have modified:
@@ -203,6 +204,22 @@ TestsRenderer::TestsRenderer()
 		case 15:
 			RunNetworkTest();
 			break;
+		case 16:
+		{
+			static wiFont font("This test plays a vibration on the first controller's left motor (if device supports it) \n and changes the LED to a random color (if device supports it)");
+			font.params.h_align = WIFALIGN_CENTER;
+			font.params.v_align = WIFALIGN_CENTER;
+			font.params.size = 20;
+			font.params.posX = (int)screenW / 2;
+			font.params.posY = (int)screenH / 2;
+			addFont(&font);
+
+			wiInput::ControllerFeedback feedback;
+			feedback.led_color.rgba = wiRandom::getRandom(0xFFFFFF);
+			feedback.motor_left = 0.9f;
+			wiInput::SetControllerFeedback(feedback, 0);
+		}
+		break;
 		default:
 			assert(0);
 			break;

@@ -2,11 +2,11 @@
 
 #ifdef WICKEDENGINE_BUILD_RAWINPUT
 
-#include "wiHelper.h"
-
+#include <vector>
 #include <unordered_map>
 #include <string>
 
+#define NOMINMAX
 #include <windows.h>
 #include <hidsdi.h>
 
@@ -16,8 +16,15 @@ namespace wiRawInput
 {
 	KeyboardState keyboard;
 	MouseState mouse;
-	ControllerState controllers[8];
-	short controller_count = 0;
+
+	struct Internal_ControllerState
+	{
+		bool is_xinput = false;
+		std::wstring name;
+		ControllerState state;
+	};
+	std::unordered_map<HANDLE, Internal_ControllerState> controller_lookup;
+	std::vector<HANDLE> controller_handles;
 
 	void Initialize()
 	{
@@ -58,11 +65,43 @@ namespace wiRawInput
 	{
 		keyboard = KeyboardState();
 		mouse = MouseState();
-		for (int i = 0; i < arraysize(controllers); ++i)
+		for (auto& internal_controller : controller_lookup)
 		{
-			controllers[i] = ControllerState();
+			internal_controller.second.state = ControllerState();
 		}
-		controller_count = 0;
+
+		// Enumerate devices to detect lost devices:
+		UINT numDevices;
+		UINT listResult = GetRawInputDeviceList(NULL, &numDevices, sizeof(RAWINPUTDEVICELIST));
+		assert(listResult >= 0);
+
+		static RAWINPUTDEVICELIST devicelist[64];
+		listResult = GetRawInputDeviceList(devicelist, &numDevices, sizeof(RAWINPUTDEVICELIST));
+		assert(listResult >= 0);
+		assert(numDevices <= arraysize(devicelist));
+
+		for (auto& handle : controller_handles)
+		{
+			if (handle)
+			{
+				bool connected = false;
+				for (UINT i = 0; i < numDevices; ++i)
+				{
+					const RAWINPUTDEVICELIST& device = devicelist[i];
+					if (device.hDevice == handle)
+					{
+						// device that was previously registered is still connected, nothing to do here:
+						connected = true;
+						break;
+					}
+				}
+				if (!connected)
+				{
+					// device was not found among connected devices, this slot is now marked free:
+					handle = NULL;
+				}
+			}
+		}
 
 		// Loop through reading raw input until no events are left
 		while (true)
@@ -104,7 +143,7 @@ namespace wiRawInput
 						}
 					}
 				}
-				else if (raw.header.dwType == RIM_TYPEHID && controller_count < arraysize(controllers))
+				else if (raw.header.dwType == RIM_TYPEHID)
 				{
 					RID_DEVICE_INFO info;
 					info.cbSize = sizeof(RID_DEVICE_INFO);
@@ -112,34 +151,35 @@ namespace wiRawInput
 					UINT result = GetRawInputDeviceInfo(raw.header.hDevice, RIDI_DEVICEINFO, &info, &bufferSize);
 					assert(result >= 0);
 
-					bool is_xinput = false;
-					is_xinput = is_xinput || info.hid.dwVendorId == 1118; // this is definitely an xbox one controller
-					if (!is_xinput)
+					Internal_ControllerState& controller_internal = controller_lookup[raw.header.hDevice];
+					if (controller_internal.name.empty())
 					{
-						size_t deviceID = info.hid.dwVendorId;
-						wiHelper::hash_combine(deviceID, info.hid.dwProductId);
+						// lost controler slots can be retaken, otherwise create a new slot:
+						bool create_slot = true;
+						for (auto& handle : controller_handles)
+						{
+							if (handle == NULL)
+							{
+								create_slot = false;
+								handle = raw.header.hDevice;
+								break;
+							}
+						}
+						if (create_slot)
+						{
+							controller_handles.push_back(raw.header.hDevice);
+						}
 
-						static std::unordered_map<size_t, bool> xinput_deviceIDs; // deviceID -> isxinput?
-						auto it = xinput_deviceIDs.find(deviceID);
-						if (it == xinput_deviceIDs.end())
-						{
-							// If this is the first time we see this deviceID, we check if it's an xinput device or not (xinput should have IG_ in its name).
-							result = GetRawInputDeviceInfo(raw.header.hDevice, RIDI_DEVICENAME, NULL, &bufferSize);
-							TCHAR devicename[256] = {};
-							assert(bufferSize < arraysize(devicename));
-							result = GetRawInputDeviceInfo(raw.header.hDevice, RIDI_DEVICENAME, devicename, &bufferSize);
-							assert(result >= 0);
-							std::wstring name = devicename;
-							is_xinput = name.find(L"IG_") != std::wstring::npos;
-							xinput_deviceIDs[deviceID] = is_xinput;
-						}
-						else
-						{
-							is_xinput = it->second;
-						}
+						// If this is the first time we see this device handle, we check if it's an xinput device or not (xinput should have IG_ in its name).
+						result = GetRawInputDeviceInfo(raw.header.hDevice, RIDI_DEVICENAME, NULL, &bufferSize);
+						assert(result == 0);
+						controller_internal.name.resize(bufferSize + 1);
+						result = GetRawInputDeviceInfo(raw.header.hDevice, RIDI_DEVICENAME, (void*)controller_internal.name.data(), &bufferSize);
+						assert(result >= 0);
+						controller_internal.is_xinput = controller_internal.name.find(L"IG_") != std::wstring::npos;
 					}
 
-					if (!is_xinput) // xinput enabled controller will be handled by xinput API
+					if (!controller_internal.is_xinput) // xinput enabled controller will be handled by xinput API
 					{
 						result = GetRawInputDeviceInfo(raw.header.hDevice, RIDI_PREPARSEDDATA, NULL, &bufferSize);
 						assert(result == 0);
@@ -178,7 +218,7 @@ namespace wiRawInput
 						);
 						assert(status == HIDP_STATUS_SUCCESS);
 
-						ControllerState& controller = controllers[controller_count];
+						ControllerState& controller = controller_internal.state;
 
 						for (ULONG i = 0; i < numberOfButtons; i++)
 						{
@@ -202,22 +242,22 @@ namespace wiRawInput
 							switch (pValueCaps[i].Range.UsageMin)
 							{
 							case 0x30:  // X-axis
-								controller.thumbstick_L.x = ((float)value - 128) / 128.0f;
+								controller.thumbstick_L.x += ((float)value - 128) / 128.0f;
 								break;
 							case 0x31:  // Y-axis
-								controller.thumbstick_L.y = -((float)value - 128) / 128.0f;
+								controller.thumbstick_L.y += -((float)value - 128) / 128.0f;
 								break;
 							case 0x32: // Z-axis
-								controller.thumbstick_R.x = ((float)value - 128) / 128.0f;
+								controller.thumbstick_R.x += ((float)value - 128) / 128.0f;
 								break;
 							case 0x33: // Rotate-X
-								controller.trigger_L = (float)value / 256.0f;
+								controller.trigger_L += (float)value / 256.0f;
 								break;
 							case 0x34: // Rotate-Y
-								controller.trigger_R = (float)value / 256.0f;
+								controller.trigger_R += (float)value / 256.0f;
 								break;
 							case 0x35: // Rotate-Z
-								controller.thumbstick_R.y = ((float)value - 128) / 128.0f;
+								controller.thumbstick_R.y += ((float)value - 128) / 128.0f;
 								break;
 							case 0x39:  // Hat Switch
 								controller.pov = (POV)value;
@@ -225,7 +265,6 @@ namespace wiRawInput
 							}
 						}
 
-						controller_count++;
 					}
 				}
 
@@ -245,11 +284,37 @@ namespace wiRawInput
 
 	short GetControllerCount()
 	{
-		return controller_count;
+		return (short)controller_handles.size();
 	}
 	ControllerState GetControllerState(short index)
 	{
-		return controllers[index];
+		if (index < controller_handles.size())
+		{
+			return controller_lookup[controller_handles[index]].state;
+		}
+		return {};
+	}
+	void SetControllerFeedback(const wiInput::ControllerFeedback data, short index)
+	{
+		if (index < controller_handles.size())
+		{
+			HANDLE hid_device = CreateFile(controller_lookup[controller_handles[index]].name.c_str(), GENERIC_READ | GENERIC_WRITE,
+				FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+				OPEN_EXISTING, 0, NULL);
+			assert(hid_device != INVALID_HANDLE_VALUE);
+			uint8_t buf[32] = {};
+			buf[0] = 0x05;
+			buf[1] = 0xFF;
+			buf[4] = uint8_t(std::max(0.0f, std::min(1.0f, data.motor_right)) * 255);
+			buf[5] = uint8_t(std::max(0.0f, std::min(1.0f, data.motor_left)) * 255);
+			buf[6] = data.led_color.getR();
+			buf[7] = data.led_color.getG();
+			buf[8] = data.led_color.getB();
+			DWORD bytes_written;
+			assert(WriteFile(hid_device, buf, sizeof(buf), &bytes_written, NULL));
+			assert(bytes_written == arraysize(buf));
+			CloseHandle(hid_device);
+		}
 	}
 }
 

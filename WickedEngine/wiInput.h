@@ -1,5 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiColor.h"
 
 #include <vector>
 
@@ -91,6 +92,14 @@ namespace wiInput
 	void HidePointer(bool value);
 	// read analog input from controllers, like thumbsticks or triggers
 	XMFLOAT4 GetAnalog(GAMEPAD_ANALOG analog, short playerIndex = 0);
+
+	struct ControllerFeedback
+	{
+		float motor_left = 0;	// left vibration motor (0: no vibration, 1: maximum vibration)
+		float motor_right = 0;	// right vibration motor (0: no vibration, 1: maximum vibration)
+		wiColor led_color;		// led color
+	};
+	void SetControllerFeedback(const ControllerFeedback& data, short playerindex = 0);
 
 	struct Touch
 	{

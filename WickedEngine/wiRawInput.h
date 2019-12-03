@@ -1,5 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiInput.h"
 
 #ifndef WINSTORE_SUPPORT
 #define WICKEDENGINE_BUILD_RAWINPUT
@@ -53,6 +54,7 @@ namespace wiRawInput
 
 	short GetControllerCount();
 	ControllerState GetControllerState(short index);
+	void SetControllerFeedback(const wiInput::ControllerFeedback data, short index);
 }
 
 #endif // WICKEDENGINE_BUILD_RAWINPUT

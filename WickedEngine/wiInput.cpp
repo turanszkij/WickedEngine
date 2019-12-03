@@ -6,6 +6,7 @@
 #include "wiBackLog.h"
 #include "wiWindowRegistration.h"
 #include "wiProfiler.h"
+#include "wiColor.h"
 
 #include <algorithm>
 #include <map>
@@ -141,7 +142,7 @@ namespace wiInput
 
 		if(button > GAMEPAD_RANGE_START)
 		{
-			if (playerindex < (int)controllers.size())
+			if (playerindex < (short)controllers.size())
 			{
 				const Controller& controller = controllers[playerindex];
 
@@ -438,6 +439,28 @@ namespace wiInput
 		return XMFLOAT4(0, 0, 0, 0);
 	}
 
+	void SetControllerFeedback(const ControllerFeedback& data, short playerindex)
+	{
+		if (playerindex < (short)controllers.size())
+		{
+			const Controller& controller = controllers[playerindex];
+
+#ifdef WICKEDENGINE_BUILD_XINPUT
+			if (controller.deviceType == Controller::XINPUT)
+			{
+				wiXInput::SetControllerFeedback(data, controller.deviceIndex);
+			}
+#endif // WICKEDENGINE_BUILD_XINPUT
+
+#ifdef WICKEDENGINE_BUILD_RAWINPUT
+			if (controller.deviceType == Controller::RAWINPUT)
+			{
+				wiRawInput::SetControllerFeedback(data, controller.deviceIndex);
+			}
+#endif // WICKEDENGINE_BUILD_RAWINPUT
+
+		}
+	}
 
 	void AddTouch(const Touch& touch)
 	{

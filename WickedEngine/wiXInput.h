@@ -1,5 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiInput.h"
 
 #if __has_include("xinput.h")
 #define WICKEDENGINE_BUILD_XINPUT
@@ -7,6 +8,7 @@
 
 #ifdef WICKEDENGINE_BUILD_XINPUT
 
+#define NOMINMAX
 #include <windows.h>
 #include <xinput.h>
 
@@ -23,6 +25,8 @@ namespace wiXInput
 
 	// Returns the specified gamepad's state
 	XINPUT_STATE GetControllerState(short index);
+
+	void SetControllerFeedback(const wiInput::ControllerFeedback data, short index);
 }
 
 #endif // WICKEDENGINE_BUILD_XINPUT

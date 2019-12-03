@@ -47,6 +47,16 @@ namespace wiXInput
 		}
 		return {};
 	}
+	void SetControllerFeedback(const wiInput::ControllerFeedback data, short index)
+	{
+		if (index < arraysize(controllers))
+		{
+			XINPUT_VIBRATION vibration = {};
+			vibration.wLeftMotorSpeed = (WORD)(std::max(0.0f, std::min(1.0f, data.motor_left)) * 65535);
+			vibration.wRightMotorSpeed = (WORD)(std::max(0.0f, std::min(1.0f, data.motor_right)) * 65535);
+			XInputSetState((DWORD)index, &vibration);
+		}
+	}
 }
 
 #endif // WICKEDENGINE_BUILD_XINPUT
