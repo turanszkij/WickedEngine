@@ -3,7 +3,6 @@
 #ifdef WICKEDENGINE_BUILD_RAWINPUT
 
 #include <vector>
-#include <unordered_map>
 #include <string>
 
 #define NOMINMAX
@@ -19,12 +18,12 @@ namespace wiRawInput
 
 	struct Internal_ControllerState
 	{
+		HANDLE handle = NULL;
 		bool is_xinput = false;
 		std::wstring name;
 		ControllerState state;
 	};
-	std::unordered_map<HANDLE, Internal_ControllerState> controller_lookup;
-	std::vector<HANDLE> controller_handles;
+	std::vector<Internal_ControllerState> controllers;
 
 	void Initialize()
 	{
@@ -65,9 +64,9 @@ namespace wiRawInput
 	{
 		keyboard = KeyboardState();
 		mouse = MouseState();
-		for (auto& internal_controller : controller_lookup)
+		for (auto& internal_controller : controllers)
 		{
-			internal_controller.second.state = ControllerState();
+			internal_controller.state = ControllerState();
 		}
 
 		// Enumerate devices to detect lost devices:
@@ -80,15 +79,15 @@ namespace wiRawInput
 		assert(listResult >= 0);
 		assert(numDevices <= arraysize(devicelist));
 
-		for (auto& handle : controller_handles)
+		for (auto& internal_controller : controllers)
 		{
-			if (handle)
+			if (internal_controller.handle)
 			{
 				bool connected = false;
 				for (UINT i = 0; i < numDevices; ++i)
 				{
 					const RAWINPUTDEVICELIST& device = devicelist[i];
-					if (device.hDevice == handle)
+					if (device.hDevice == internal_controller.handle)
 					{
 						// device that was previously registered is still connected, nothing to do here:
 						connected = true;
@@ -98,7 +97,7 @@ namespace wiRawInput
 				if (!connected)
 				{
 					// device was not found among connected devices, this slot is now marked free:
-					handle = NULL;
+					internal_controller = Internal_ControllerState();
 				}
 			}
 		}
@@ -163,35 +162,42 @@ namespace wiRawInput
 					assert(result != -1);
 					assert(info.dwType == raw.header.dwType);
 
-					Internal_ControllerState& controller_internal = controller_lookup[raw.header.hDevice];
-					if (controller_internal.name.empty())
+					// Try to find if this input device was already registered into a slot:
+					int slot = -1;
+					for (int i = 0; i < (int)controllers.size(); ++i)
 					{
-						// lost controller slots can be retaken, otherwise create a new slot:
-						bool create_slot = true;
-						for (auto& handle : controller_handles)
+						const Internal_ControllerState& internal_controller = controllers[i];
+						if (slot == -1 && internal_controller.handle == NULL)
 						{
-							if (handle == NULL)
-							{
-								create_slot = false;
-								handle = raw.header.hDevice;
-								break;
-							}
+							slot = i; // take the first empty slot but keep looking for matching device slot
 						}
-						if (create_slot)
+						if (internal_controller.handle == raw.header.hDevice)
 						{
-							controller_handles.push_back(raw.header.hDevice);
+							slot = i; // take the matching device slot and accept it
+							break;
 						}
+					}
+					if (slot == -1)
+					{
+						// No empty or matching slot was found, create a new one:
+						slot = (int)controllers.size();
+						controllers.emplace_back();
+					}
+					Internal_ControllerState& internal_controller = controllers[slot];
 
+					if (internal_controller.name.empty())
+					{
 						// If this is the first time we see this device handle, we check if it's an xinput device or not (xinput should have IG_ in its name).
 						result = GetRawInputDeviceInfo(raw.header.hDevice, RIDI_DEVICENAME, NULL, &bufferSize);
 						assert(result == 0);
-						controller_internal.name.resize(bufferSize + 1);
-						result = GetRawInputDeviceInfo(raw.header.hDevice, RIDI_DEVICENAME, (void*)controller_internal.name.data(), &bufferSize);
+						internal_controller.name.resize(bufferSize + 1);
+						result = GetRawInputDeviceInfo(raw.header.hDevice, RIDI_DEVICENAME, (void*)internal_controller.name.data(), &bufferSize);
 						assert(result != -1);
-						controller_internal.is_xinput = controller_internal.name.find(L"IG_") != std::wstring::npos;
+						internal_controller.is_xinput = internal_controller.name.find(L"IG_") != std::wstring::npos;
+						internal_controller.handle = raw.header.hDevice;
 					}
 
-					if (!controller_internal.is_xinput) // xinput enabled controller will be handled by xinput API
+					if (!internal_controller.is_xinput) // xinput enabled controller will be handled by xinput API
 					{
 						result = GetRawInputDeviceInfo(raw.header.hDevice, RIDI_PREPARSEDDATA, NULL, &bufferSize);
 						assert(result == 0);
@@ -230,7 +236,7 @@ namespace wiRawInput
 						);
 						assert(status == HIDP_STATUS_SUCCESS);
 
-						ControllerState& controller = controller_internal.state;
+						ControllerState& controller = internal_controller.state;
 
 						for (ULONG i = 0; i < numberOfButtons; i++)
 						{
@@ -294,24 +300,28 @@ namespace wiRawInput
 		return mouse;
 	}
 
-	short GetControllerCount()
+	short GetMaxControllerCount()
 	{
-		return (short)controller_handles.size();
+		return (short)controllers.size();
+	}
+	bool IsControllerConnected(short index)
+	{
+		return index < controllers.size() && controllers[index].handle;
 	}
 	ControllerState GetControllerState(short index)
 	{
-		if (index < controller_handles.size())
+		if (index < controllers.size() && controllers[index].handle)
 		{
-			return controller_lookup[controller_handles[index]].state;
+			return controllers[index].state;
 		}
-		return {};
+		return ControllerState();
 	}
 	void SetControllerFeedback(const wiInput::ControllerFeedback data, short index)
 	{
-		if (index < controller_handles.size())
+		if (index < controllers.size() && controllers[index].handle)
 		{
 			HANDLE hid_device = CreateFile(
-				controller_lookup[controller_handles[index]].name.c_str(), 
+				controllers[index].name.c_str(), 
 				GENERIC_READ | GENERIC_WRITE,
 				FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
 				OPEN_EXISTING, 0, NULL

@@ -92,9 +92,12 @@ namespace wiInput
 
 #ifdef WICKEDENGINE_BUILD_RAWINPUT
 		wiRawInput::Update();
-		for (int i = 0; i < wiRawInput::GetControllerCount(); ++i)
+		for (short i = 0; i < wiRawInput::GetMaxControllerCount(); ++i)
 		{
-			controllers.push_back({ Controller::RAWINPUT, i });
+			if (wiRawInput::IsControllerConnected(i))
+			{
+				controllers.push_back({ Controller::RAWINPUT, i });
+			}
 		}
 #endif // WICKEDENGINE_BUILD_RAWINPUT
 

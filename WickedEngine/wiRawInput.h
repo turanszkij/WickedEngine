@@ -53,7 +53,8 @@ namespace wiRawInput
 
 	MouseState GetMouseState();
 
-	short GetControllerCount();
+	short GetMaxControllerCount();
+	bool IsControllerConnected(short index);
 	ControllerState GetControllerState(short index);
 	void SetControllerFeedback(const wiInput::ControllerFeedback data, short index);
 }
