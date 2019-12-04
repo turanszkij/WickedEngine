@@ -107,16 +107,22 @@ namespace wiRawInput
 		while (true)
 		{
 			static RAWINPUT rawBuffer[128];
-			UINT rawBufferSize;
+			UINT rawBufferSize = 0;
 			UINT count = GetRawInputBuffer(NULL, &rawBufferSize, sizeof(RAWINPUTHEADER));
 			assert(count == 0);
 			rawBufferSize *= 8;
 			assert(rawBufferSize <= sizeof(rawBuffer));
+			if (rawBufferSize == 0)
+			{
+				return;
+			}
 
 			// Fill up buffer:
-			count = GetRawInputBuffer((PRAWINPUT)rawBuffer, &rawBufferSize, sizeof(RAWINPUTHEADER));
-			if (count <= 0)
+			count = GetRawInputBuffer(rawBuffer, &rawBufferSize, sizeof(RAWINPUTHEADER));
+			if (count == -1)
 			{
+				HRESULT error = HRESULT_FROM_WIN32(GetLastError());
+				assert(0);
 				return;
 			}
 
@@ -139,8 +145,13 @@ namespace wiRawInput
 						mouse.delta_position.y += rawmouse.lLastY;
 						if (rawmouse.usButtonFlags == RI_MOUSE_WHEEL)
 						{
-							mouse.delta_wheel += float(*(SHORT*)&rawmouse.usButtonData) / float(WHEEL_DELTA);
+							mouse.delta_wheel += float((SHORT)rawmouse.usButtonData) / float(WHEEL_DELTA);
 						}
+					}
+					else if (raw.data.mouse.usFlags == MOUSE_MOVE_ABSOLUTE)
+					{
+						mouse.position.x += rawmouse.lLastX;
+						mouse.position.y += rawmouse.lLastY;
 					}
 				}
 				else if (raw.header.dwType == RIM_TYPEHID)
@@ -149,12 +160,13 @@ namespace wiRawInput
 					info.cbSize = sizeof(RID_DEVICE_INFO);
 					UINT bufferSize = sizeof(RID_DEVICE_INFO);
 					UINT result = GetRawInputDeviceInfo(raw.header.hDevice, RIDI_DEVICEINFO, &info, &bufferSize);
-					assert(result >= 0);
+					assert(result != -1);
+					assert(info.dwType == raw.header.dwType);
 
 					Internal_ControllerState& controller_internal = controller_lookup[raw.header.hDevice];
 					if (controller_internal.name.empty())
 					{
-						// lost controler slots can be retaken, otherwise create a new slot:
+						// lost controller slots can be retaken, otherwise create a new slot:
 						bool create_slot = true;
 						for (auto& handle : controller_handles)
 						{
@@ -175,7 +187,7 @@ namespace wiRawInput
 						assert(result == 0);
 						controller_internal.name.resize(bufferSize + 1);
 						result = GetRawInputDeviceInfo(raw.header.hDevice, RIDI_DEVICENAME, (void*)controller_internal.name.data(), &bufferSize);
-						assert(result >= 0);
+						assert(result != -1);
 						controller_internal.is_xinput = controller_internal.name.find(L"IG_") != std::wstring::npos;
 					}
 
@@ -188,7 +200,7 @@ namespace wiRawInput
 						assert(bufferSize < arraysize(preparsed_data_buffer)); // data must fit into scratch buffer!
 						PHIDP_PREPARSED_DATA pPreparsedData = (PHIDP_PREPARSED_DATA)preparsed_data_buffer;
 						result = GetRawInputDeviceInfo(raw.header.hDevice, RIDI_PREPARSEDDATA, pPreparsedData, &bufferSize);
-						assert(result >= 0);
+						assert(result != -1);
 
 						HIDP_CAPS Caps;
 						NTSTATUS status = HidP_GetCaps(pPreparsedData, &Caps);
