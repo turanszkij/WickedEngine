@@ -298,9 +298,12 @@ namespace wiRawInput
 	{
 		if (index < controller_handles.size())
 		{
-			HANDLE hid_device = CreateFile(controller_lookup[controller_handles[index]].name.c_str(), GENERIC_READ | GENERIC_WRITE,
+			HANDLE hid_device = CreateFile(
+				controller_lookup[controller_handles[index]].name.c_str(), 
+				GENERIC_READ | GENERIC_WRITE,
 				FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-				OPEN_EXISTING, 0, NULL);
+				OPEN_EXISTING, 0, NULL
+			);
 			assert(hid_device != INVALID_HANDLE_VALUE);
 			uint8_t buf[32] = {};
 			buf[0] = 0x05;
@@ -311,7 +314,8 @@ namespace wiRawInput
 			buf[7] = data.led_color.getG();
 			buf[8] = data.led_color.getB();
 			DWORD bytes_written;
-			assert(WriteFile(hid_device, buf, sizeof(buf), &bytes_written, NULL));
+			BOOL result = WriteFile(hid_device, buf, sizeof(buf), &bytes_written, NULL);
+			assert(result == TRUE);
 			assert(bytes_written == arraysize(buf));
 			CloseHandle(hid_device);
 		}
