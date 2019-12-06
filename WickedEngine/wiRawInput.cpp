@@ -358,7 +358,7 @@ namespace wiRawInput
 	}
 	bool GetControllerState(wiInput::ControllerState* state, int index)
 	{
-		if (index < controllers.size() && controllers[index].handle)
+		if (index < controllers.size() && controllers[index].handle && !controllers[index].is_xinput)
 		{
 			if (state != nullptr)
 			{
@@ -370,7 +370,7 @@ namespace wiRawInput
 	}
 	void SetControllerFeedback(const wiInput::ControllerFeedback& data, int index)
 	{
-		if (index < controllers.size() && controllers[index].handle)
+		if (index < controllers.size() && controllers[index].handle && !controllers[index].is_xinput)
 		{
 			HANDLE hid_device = CreateFile(
 				controllers[index].name.c_str(), 
