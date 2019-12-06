@@ -2,61 +2,25 @@
 #include "CommonInclude.h"
 #include "wiInput.h"
 
-#ifndef WINSTORE_SUPPORT
-#define WICKEDENGINE_BUILD_RAWINPUT
-#endif // WINSTORE_SUPPORT
-
-#ifdef WICKEDENGINE_BUILD_RAWINPUT
-
 namespace wiRawInput
 {
-	// Call this once to initialize raw input devices
+	// Call this once to register raw input devices
 	void Initialize();
 
-	// Updates the state of raw input devices
+	// Updates the state of raw input devices, call once per frame
 	void Update();
 
-	struct KeyboardState
-	{
-		bool buttons[128] = {};
-	};
-	struct MouseState
-	{
-		XMINT2 position = XMINT2(0, 0);
-		XMINT2 delta_position = XMINT2(0, 0);
-		float delta_wheel = 0;
-	};
+	// Writes the keyboard state into state parameter
+	void GetKeyboardState(wiInput::KeyboardState* state);
 
-	enum POV
-	{
-		POV_UP = 0,
-		POV_UPRIGHT = 1,
-		POV_RIGHT = 2,
-		POV_RIGHTDOWN = 3,
-		POV_DOWN = 4,
-		POV_DOWNLEFT = 5,
-		POV_LEFT = 6,
-		POV_LEFTUP = 7,
-		POV_IDLE = 8,
-	};
-	struct ControllerState
-	{
-		bool buttons[32] = {};
-		POV pov = POV_IDLE;
-		XMFLOAT2 thumbstick_L = XMFLOAT2(0, 0);
-		XMFLOAT2 thumbstick_R = XMFLOAT2(0, 0);
-		float trigger_L = 0;
-		float trigger_R = 0;
-	};
+	// Writes the mouse state into state parameter
+	void GetMouseState(wiInput::MouseState* state);
 
-	KeyboardState GetKeyboardState();
-
-	MouseState GetMouseState();
-
-	short GetMaxControllerCount();
-	bool IsControllerConnected(short index);
-	ControllerState GetControllerState(short index);
-	void SetControllerFeedback(const wiInput::ControllerFeedback data, short index);
+	// Returns how many controller devices have received input ever. This doesn't correlate with which ones are currently available
+	int GetMaxControllerCount();
+	// Returns whether the controller identified by index parameter is available or not
+	//	Id state parameter is not nullptr, and the controller is available, the state will be written into it
+	bool GetControllerState(wiInput::ControllerState* state, int index);
+	// Sends feedback data for the controller identified by index parameter to output
+	void SetControllerFeedback(const wiInput::ControllerFeedback& data, int index);
 }
-
-#endif // WICKEDENGINE_BUILD_RAWINPUT
