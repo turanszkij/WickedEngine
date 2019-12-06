@@ -109,54 +109,59 @@ void RegisterTexture(tinygltf::Image *image, const string& type_name)
 			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 			desc.CPUAccessFlags = 0;
 			desc.Format = FORMAT_R8G8B8A8_UNORM;
-			desc.Height = static_cast<uint32_t>(height);
-			desc.Width = static_cast<uint32_t>(width);
-			desc.MipLevels = (UINT)log2(max(width, height));
+			desc.Height = uint32_t(height);
+			desc.Width = uint32_t(width);
+			desc.MipLevels = (uint32_t)log2(max(width, height));
 			desc.MiscFlags = 0;
 			desc.Usage = USAGE_DEFAULT;
 
-			UINT mipwidth = width;
+			uint32_t mipwidth = width;
 			vector<SubresourceData> InitData(desc.MipLevels);
-			for (UINT mip = 0; mip < desc.MipLevels; ++mip)
+			for (uint32_t mip = 0; mip < desc.MipLevels; ++mip)
 			{
 				InitData[mip].pSysMem = image->image.data();
-				InitData[mip].SysMemPitch = static_cast<UINT>(mipwidth * channelCount);
+				InitData[mip].SysMemPitch = uint32_t(mipwidth * channelCount);
 				mipwidth = std::max(1u, mipwidth / 2);
 			}
 
 			Texture* tex = new Texture;
-			HRESULT hr = device->CreateTexture(&desc, InitData.data(), tex);
-			assert(SUCCEEDED(hr));
-
-			for (UINT i = 0; i < tex->GetDesc().MipLevels; ++i)
+			if (device->CreateTexture(&desc, InitData.data(), tex))
 			{
-				int subresource_index;
-				subresource_index = device->CreateSubresource(tex, SRV, 0, 1, i, 1);
-				assert(subresource_index == i);
-				subresource_index = device->CreateSubresource(tex, UAV, 0, 1, i, 1);
-				assert(subresource_index == i);
-			}
-
-			if (tex != nullptr)
-			{
-				wiRenderer::AddDeferredMIPGen(tex);
-
-				if (image->uri.empty())
+				for (uint32_t i = 0; i < tex->GetDesc().MipLevels; ++i)
 				{
-					// If the texture was embedded, export it as a file:
-					stringstream ss;
-					do {
-						ss.str("");
-						ss << "gltfimport_" << type_name << "_" << wiRandom::getRandom(INT_MAX) << ".png";
-					} while (wiHelper::FileExists(ss.str())); // this is to avoid overwriting an existing exported image
-					image->uri = ss.str();
-					bool success = wiHelper::saveTextureToFile(image->image, desc, ss.str());
-					assert(success);
+					int subresource_index;
+					subresource_index = device->CreateSubresource(tex, SRV, 0, 1, i, 1);
+					assert(subresource_index == i);
+					subresource_index = device->CreateSubresource(tex, UAV, 0, 1, i, 1);
+					assert(subresource_index == i);
 				}
 
-				// We loaded the texture2d, so register to the resource manager to be retrieved later:
-				wiResourceManager::GetGlobal().Register(image->uri, tex, wiResourceManager::IMAGE);
+				if (tex != nullptr)
+				{
+					wiRenderer::AddDeferredMIPGen(tex);
+
+					if (image->uri.empty())
+					{
+						// If the texture was embedded, export it as a file:
+						stringstream ss;
+						do {
+							ss.str("");
+							ss << "gltfimport_" << type_name << "_" << wiRandom::getRandom(INT_MAX) << ".png";
+						} while (wiHelper::FileExists(ss.str())); // this is to avoid overwriting an existing exported image
+						image->uri = ss.str();
+						bool success = wiHelper::saveTextureToFile(image->image, desc, ss.str());
+						assert(success);
+					}
+
+					// We loaded the texture2d, so register to the resource manager to be retrieved later:
+					wiResourceManager::GetGlobal().Register(image->uri, tex, wiResourceManager::IMAGE);
+				}
 			}
+			else
+			{
+				assert(0);
+			}
+
 		}
 	}
 }
@@ -388,29 +393,29 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 		if (baseColorFactor != x.values.end())
 		{
-			material.baseColor.x = static_cast<float>(baseColorFactor->second.ColorFactor()[0]);
-			material.baseColor.y = static_cast<float>(baseColorFactor->second.ColorFactor()[1]);
-			material.baseColor.z = static_cast<float>(baseColorFactor->second.ColorFactor()[2]);
-			material.baseColor.w = static_cast<float>(baseColorFactor->second.ColorFactor()[3]);
+			material.baseColor.x = float(baseColorFactor->second.ColorFactor()[0]);
+			material.baseColor.y = float(baseColorFactor->second.ColorFactor()[1]);
+			material.baseColor.z = float(baseColorFactor->second.ColorFactor()[2]);
+			material.baseColor.w = float(baseColorFactor->second.ColorFactor()[3]);
 		}
 		if (roughnessFactor != x.values.end())
 		{
-			material.roughness = static_cast<float>(roughnessFactor->second.Factor());
+			material.roughness = float(roughnessFactor->second.Factor());
 		}
 		if (metallicFactor != x.values.end())
 		{
-			material.metalness = static_cast<float>(metallicFactor->second.Factor());
+			material.metalness = float(metallicFactor->second.Factor());
 		}
 		if (emissiveFactor != x.additionalValues.end())
 		{
-			material.emissiveColor.x = static_cast<float>(emissiveFactor->second.ColorFactor()[0]);
-			material.emissiveColor.y = static_cast<float>(emissiveFactor->second.ColorFactor()[1]);
-			material.emissiveColor.z = static_cast<float>(emissiveFactor->second.ColorFactor()[2]);
-			material.emissiveColor.w = static_cast<float>(emissiveFactor->second.ColorFactor()[3]);
+			material.emissiveColor.x = float(emissiveFactor->second.ColorFactor()[0]);
+			material.emissiveColor.y = float(emissiveFactor->second.ColorFactor()[1]);
+			material.emissiveColor.z = float(emissiveFactor->second.ColorFactor()[2]);
+			material.emissiveColor.w = float(emissiveFactor->second.ColorFactor()[3]);
 		}
 		if (alphaCutoff != x.additionalValues.end())
 		{
-			material.alphaRef = 1 - static_cast<float>(alphaCutoff->second.Factor());
+			material.alphaRef = 1 - float(alphaCutoff->second.Factor());
 		}
 		if (alphaMode != x.additionalValues.end())
 		{
