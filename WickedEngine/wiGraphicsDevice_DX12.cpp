@@ -193,9 +193,6 @@ namespace wiGraphics
 		case TEXTURE_ADDRESS_BORDER:
 			return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
 			break;
-		case TEXTURE_ADDRESS_MIRROR_ONCE:
-			return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
-			break;
 		default:
 			break;
 		}

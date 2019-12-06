@@ -368,9 +368,6 @@ namespace wiGraphics
 		case TEXTURE_ADDRESS_BORDER:
 			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
 			break;
-		case TEXTURE_ADDRESS_MIRROR_ONCE:
-			return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
-			break;
 		default:
 			break;
 		}

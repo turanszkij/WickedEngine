@@ -225,9 +225,6 @@ constexpr D3D11_TEXTURE_ADDRESS_MODE _ConvertTextureAddressMode(TEXTURE_ADDRESS_
 	case TEXTURE_ADDRESS_BORDER:
 		return D3D11_TEXTURE_ADDRESS_BORDER;
 		break;
-	case TEXTURE_ADDRESS_MIRROR_ONCE:
-		return D3D11_TEXTURE_ADDRESS_MIRROR_ONCE;
-		break;
 	default:
 		break;
 	}
