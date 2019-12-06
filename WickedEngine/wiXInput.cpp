@@ -62,20 +62,20 @@ namespace wiXInput
 						bool down = false;
 						switch (button)
 						{
-						case wiInput::GAMEPAD_BUTTON_UP: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP;
-						case wiInput::GAMEPAD_BUTTON_LEFT: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT;
-						case wiInput::GAMEPAD_BUTTON_DOWN: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN;
-						case wiInput::GAMEPAD_BUTTON_RIGHT: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT;
-						case wiInput::GAMEPAD_BUTTON_1: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_X;
-						case wiInput::GAMEPAD_BUTTON_2: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_A;
-						case wiInput::GAMEPAD_BUTTON_3: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_B;
-						case wiInput::GAMEPAD_BUTTON_4: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_Y;
-						case wiInput::GAMEPAD_BUTTON_5: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER;
-						case wiInput::GAMEPAD_BUTTON_6: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER;
-						case wiInput::GAMEPAD_BUTTON_7: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB;
-						case wiInput::GAMEPAD_BUTTON_8: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB;
-						case wiInput::GAMEPAD_BUTTON_9: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_BACK;
-						case wiInput::GAMEPAD_BUTTON_10: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_START;
+						case wiInput::GAMEPAD_BUTTON_UP: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP; break;
+						case wiInput::GAMEPAD_BUTTON_LEFT: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT; break;
+						case wiInput::GAMEPAD_BUTTON_DOWN: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN; break;
+						case wiInput::GAMEPAD_BUTTON_RIGHT: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT; break;
+						case wiInput::GAMEPAD_BUTTON_1: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_X; break;
+						case wiInput::GAMEPAD_BUTTON_2: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_A; break;
+						case wiInput::GAMEPAD_BUTTON_3: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_B; break;
+						case wiInput::GAMEPAD_BUTTON_4: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_Y; break;
+						case wiInput::GAMEPAD_BUTTON_5: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER; break;
+						case wiInput::GAMEPAD_BUTTON_6: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER; break;
+						case wiInput::GAMEPAD_BUTTON_7: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB; break;
+						case wiInput::GAMEPAD_BUTTON_8: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB; break;
+						case wiInput::GAMEPAD_BUTTON_9: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_BACK; break;
+						case wiInput::GAMEPAD_BUTTON_10: down = xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_START; break;
 						}
 
 						if (down)
@@ -109,4 +109,12 @@ namespace wiXInput
 	}
 }
 
+#else
+namespace wiXInput
+{
+	void Update() {}
+	int GetMaxControllerCount() { return 0; }
+	bool GetControllerState(wiInput::ControllerState* state, int index) { return false; }
+	void SetControllerFeedback(const wiInput::ControllerFeedback& data, int index) {}
+}
 #endif // __has_include("xinput.h")

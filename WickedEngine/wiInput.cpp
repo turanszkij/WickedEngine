@@ -369,19 +369,17 @@ namespace wiInput
 	}
 	XMFLOAT4 GetPointer()
 	{
-		float mousewheel_scrolled = 0;
-#ifdef WICKEDENGINE_BUILD_RAWINPUT
-		mousewheel_scrolled = wiRawInput::GetMouseState().delta_wheel;
-#endif // WICKEDENGINE_BUILD_RAWINPUT
+		MouseState state;
+		wiRawInput::GetMouseState(&state); // currently only the relative data can be used
 
 #ifndef WINSTORE_SUPPORT
 		POINT p;
 		GetCursorPos(&p);
 		ScreenToClient(wiWindowRegistration::GetRegisteredWindow(), &p);
-		return XMFLOAT4((float)p.x, (float)p.y, mousewheel_scrolled, 0);
+		return XMFLOAT4((float)p.x, (float)p.y, state.delta_wheel, 0);
 #else
 		auto& p = Windows::UI::Core::CoreWindow::GetForCurrentThread()->PointerPosition;
-		return XMFLOAT4(p.X, p.Y, mousewheel_scrolled, 0);
+		return XMFLOAT4(p.X, p.Y, 0, 0);
 #endif
 	}
 	void SetPointer(const XMFLOAT4& props)
@@ -432,20 +430,14 @@ namespace wiInput
 		{
 			const Controller& controller = controllers[playerindex];
 
-#ifdef WICKEDENGINE_BUILD_XINPUT
 			if (controller.deviceType == Controller::XINPUT)
 			{
 				wiXInput::SetControllerFeedback(data, controller.deviceIndex);
 			}
-#endif // WICKEDENGINE_BUILD_XINPUT
-
-#ifdef WICKEDENGINE_BUILD_RAWINPUT
-			if (controller.deviceType == Controller::RAWINPUT)
+			else if (controller.deviceType == Controller::RAWINPUT)
 			{
 				wiRawInput::SetControllerFeedback(data, controller.deviceIndex);
 			}
-#endif // WICKEDENGINE_BUILD_RAWINPUT
-
 		}
 	}
 	
