@@ -1,6 +1,6 @@
 #include "wiRawInput.h"
 
-#ifdef WICKEDENGINE_BUILD_RAWINPUT
+#if defined(_WIN32) && !defined(WINSTORE_SUPPORT)
 
 #include <vector>
 #include <string>
@@ -13,15 +13,15 @@
 
 namespace wiRawInput
 {
-	KeyboardState keyboard;
-	MouseState mouse;
+	wiInput::KeyboardState keyboard;
+	wiInput::MouseState mouse;
 
 	struct Internal_ControllerState
 	{
 		HANDLE handle = NULL;
 		bool is_xinput = false;
 		std::wstring name;
-		ControllerState state;
+		wiInput::ControllerState state;
 	};
 	std::vector<Internal_ControllerState> controllers;
 
@@ -60,13 +60,23 @@ namespace wiRawInput
 		}
 	}
 
+	constexpr float deadzone(float x)
+	{
+		if ((x) > -0.26f && (x) < 0.26f)
+			x = 0;
+		if (x < -1.0f)
+			x = -1.0f;
+		if (x > 1.0f)
+			x = 1.0f;
+		return x;
+	}
 	void Update()
 	{
-		keyboard = KeyboardState();
-		mouse = MouseState();
+		keyboard = wiInput::KeyboardState();
+		mouse = wiInput::MouseState();
 		for (auto& internal_controller : controllers)
 		{
-			internal_controller.state = ControllerState();
+			internal_controller.state = wiInput::ControllerState();
 		}
 
 		// Enumerate devices to detect lost devices:
@@ -236,15 +246,12 @@ namespace wiRawInput
 						);
 						assert(status == HIDP_STATUS_SUCCESS);
 
-						ControllerState& controller = internal_controller.state;
+						wiInput::ControllerState& controller = internal_controller.state;
 
 						for (ULONG i = 0; i < numberOfButtons; i++)
 						{
 							int button = usage[i] - pButtonCaps->Range.UsageMin;
-							if (button < arraysize(controller.buttons))
-							{
-								controller.buttons[button] = true;
-							}
+							controller.buttons |= 1 << (button + wiInput::GAMEPAD_BUTTON_1 - wiInput::GAMEPAD_RANGE_START - 1);
 						}
 
 						for (USHORT i = 0; i < Caps.NumberInputValueCaps; i++)
@@ -260,26 +267,71 @@ namespace wiRawInput
 							switch (pValueCaps[i].Range.UsageMin)
 							{
 							case 0x30:  // X-axis
-								controller.thumbstick_L.x += ((float)value - 128) / 128.0f;
+								controller.thumbstick_L.x += deadzone(((float)value - 128) / 128.0f);
 								break;
 							case 0x31:  // Y-axis
-								controller.thumbstick_L.y += -((float)value - 128) / 128.0f;
+								controller.thumbstick_L.y += deadzone(-((float)value - 128) / 128.0f);
 								break;
 							case 0x32: // Z-axis
-								controller.thumbstick_R.x += ((float)value - 128) / 128.0f;
+								controller.thumbstick_R.x += deadzone(((float)value - 128) / 128.0f);
 								break;
 							case 0x33: // Rotate-X
-								controller.trigger_L += (float)value / 256.0f;
+								controller.trigger_L += deadzone((float)value / 256.0f);
 								break;
 							case 0x34: // Rotate-Y
-								controller.trigger_R += (float)value / 256.0f;
+								controller.trigger_R += deadzone((float)value / 256.0f);
 								break;
 							case 0x35: // Rotate-Z
-								controller.thumbstick_R.y += ((float)value - 128) / 128.0f;
+								controller.thumbstick_R.y += deadzone(((float)value - 128) / 128.0f);
 								break;
 							case 0x39:  // Hat Switch
-								controller.pov = (POV)value;
-								break;
+							{
+								enum POV
+								{
+									POV_UP = 0,
+									POV_UPRIGHT = 1,
+									POV_RIGHT = 2,
+									POV_RIGHTDOWN = 3,
+									POV_DOWN = 4,
+									POV_DOWNLEFT = 5,
+									POV_LEFT = 6,
+									POV_LEFTUP = 7,
+									POV_IDLE = 8,
+								} pov = (POV)value;
+								switch (pov)
+								{
+								case POV_UP:
+								case POV_UPRIGHT:
+								case POV_LEFTUP:
+									controller.buttons |= 1 << (wiInput::GAMEPAD_BUTTON_UP - wiInput::GAMEPAD_RANGE_START - 1);
+									break;
+								}
+								switch (pov)
+								{
+								case POV_RIGHT:
+								case POV_UPRIGHT:
+								case POV_RIGHTDOWN:
+									controller.buttons |= 1 << (wiInput::GAMEPAD_BUTTON_RIGHT - wiInput::GAMEPAD_RANGE_START - 1);
+									break;
+								}
+								switch (pov)
+								{
+								case POV_DOWN:
+								case POV_RIGHTDOWN:
+								case POV_DOWNLEFT:
+									controller.buttons |= 1 << (wiInput::GAMEPAD_BUTTON_DOWN - wiInput::GAMEPAD_RANGE_START - 1);
+									break;
+								}
+								switch (pov)
+								{
+								case POV_LEFT:
+								case POV_DOWNLEFT:
+								case POV_LEFTUP:
+									controller.buttons |= 1 << (wiInput::GAMEPAD_BUTTON_LEFT - wiInput::GAMEPAD_RANGE_START - 1);
+									break;
+								}
+							}
+							break;
 							}
 						}
 
@@ -290,33 +342,33 @@ namespace wiRawInput
 		}
 	}
 
-	KeyboardState GetKeyboardState()
+	void GetKeyboardState(wiInput::KeyboardState* state)
 	{
-		return keyboard;
+		*state = keyboard;
 	}
 
-	MouseState GetMouseState()
+	void GetMouseState(wiInput::MouseState* state)
 	{
-		return mouse;
+		*state = mouse;
 	}
 
-	short GetMaxControllerCount()
+	int GetMaxControllerCount()
 	{
-		return (short)controllers.size();
+		return (int)controllers.size();
 	}
-	bool IsControllerConnected(short index)
-	{
-		return index < controllers.size() && controllers[index].handle;
-	}
-	ControllerState GetControllerState(short index)
+	bool GetControllerState(wiInput::ControllerState* state, int index)
 	{
 		if (index < controllers.size() && controllers[index].handle)
 		{
-			return controllers[index].state;
+			if (state != nullptr)
+			{
+				*state = controllers[index].state;
+			}
+			return true;
 		}
-		return ControllerState();
+		return false;
 	}
-	void SetControllerFeedback(const wiInput::ControllerFeedback data, short index)
+	void SetControllerFeedback(const wiInput::ControllerFeedback& data, int index)
 	{
 		if (index < controllers.size() && controllers[index].handle)
 		{
@@ -344,4 +396,15 @@ namespace wiRawInput
 	}
 }
 
-#endif // WICKEDENGINE_BUILD_RAWINPUT
+#else
+namespace wiRawInput
+{
+	void Initialize() {}
+	void Update() {}
+	void GetKeyboardState(wiInput::KeyboardState* state) {}
+	void GetMouseState(wiInput::MouseState* state) {}
+	int GetMaxControllerCount() { return 0; }
+	bool GetControllerState(wiInput::ControllerState* state, int index) { return false; }
+	void SetControllerFeedback(const wiInput::ControllerFeedback& data, int index) {}
+}
+#endif // _WIN32

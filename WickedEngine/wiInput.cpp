@@ -31,7 +31,7 @@ namespace wiInput
 	struct Input 
 	{
 		BUTTON button = BUTTON_NONE;
-		short playerIndex = 0;
+		int playerIndex = 0;
 
 		bool operator<(const Input other) {
 			return (button != other.button || playerIndex != other.playerIndex);
@@ -49,20 +49,20 @@ namespace wiInput
 	{
 		enum DeviceType
 		{
+			DISCONNECTED,
 			XINPUT,
 			RAWINPUT,
 		};
 		DeviceType deviceType;
 		int deviceIndex;
+		ControllerState state;
 	};
 	std::vector<Controller> controllers;
 	std::atomic_bool initialized{ false };
 
 	void Initialize()
 	{
-#ifdef WICKEDENGINE_BUILD_RAWINPUT
 		wiRawInput::Initialize();
-#endif // WICKEDENGINE_BUILD_RAWINPUT
 
 		wiBackLog::post("wiInput Initialized");
 		initialized.store(true);
@@ -77,34 +77,95 @@ namespace wiInput
 
 		auto range = wiProfiler::BeginRangeCPU("Input");
 
-		controllers.clear();
-
-#ifdef WICKEDENGINE_BUILD_XINPUT
 		wiXInput::Update();
-		for (short i = 0; i < wiXInput::GetMaxControllerCount(); ++i)
-		{
-			if (wiXInput::IsControllerConnected(i))
-			{
-				controllers.push_back({ Controller::XINPUT, i });
-			}
-		}
-#endif // WICKEDENGINE_BUILD_XINPUT
-
-#ifdef WICKEDENGINE_BUILD_RAWINPUT
 		wiRawInput::Update();
-		for (short i = 0; i < wiRawInput::GetMaxControllerCount(); ++i)
+
+		// Check if low-level XINPUT controller is not registered for playerindex slot and register:
+		for (int i = 0; i < wiXInput::GetMaxControllerCount(); ++i)
 		{
-			if (wiRawInput::IsControllerConnected(i))
+			if (wiXInput::GetControllerState(nullptr, i))
 			{
-				controllers.push_back({ Controller::RAWINPUT, i });
+				int slot = -1;
+				for (int j = 0; j < (int)controllers.size(); ++j)
+				{
+					if (slot < 0 && controllers[j].deviceType == Controller::DISCONNECTED)
+					{
+						// take the first disconnected slot
+						slot = j;
+					}
+					if (controllers[j].deviceType == Controller::XINPUT && controllers[j].deviceIndex == i)
+					{
+						// it is already registered to this slot
+						slot = j;
+						break;
+					}
+				}
+				if (slot == -1)
+				{
+					// no disconnected slot was found, and it was not registered
+					slot = (int)controllers.size();
+					controllers.emplace_back();
+				}
+				controllers[slot].deviceType = Controller::XINPUT;
+				controllers[slot].deviceIndex = i;
 			}
 		}
-#endif // WICKEDENGINE_BUILD_RAWINPUT
+
+		// Check if low-level RAWINPUT controller is not registered for playerindex slot and register:
+		for (int i = 0; i < wiRawInput::GetMaxControllerCount(); ++i)
+		{
+			if (wiRawInput::GetControllerState(nullptr, i))
+			{
+				int slot = -1;
+				for (int j = 0; j < (int)controllers.size(); ++j)
+				{
+					if (slot < 0 && controllers[j].deviceType == Controller::DISCONNECTED)
+					{
+						// take the first disconnected slot
+						slot = j;
+					}
+					if (controllers[j].deviceType == Controller::RAWINPUT && controllers[j].deviceIndex == i)
+					{
+						// it is already registered to this slot
+						slot = j;
+						break;
+					}
+				}
+				if (slot == -1)
+				{
+					// no disconnected slot was found, and it was not registered
+					slot = (int)controllers.size();
+					controllers.emplace_back();
+				}
+				controllers[slot].deviceType = Controller::RAWINPUT;
+				controllers[slot].deviceIndex = i;
+			}
+		}
+
+		// Read low-level controllers:
+		for (auto& controller : controllers)
+		{
+			bool connected = false;
+			switch (controller.deviceType)
+			{
+			case Controller::XINPUT:
+				connected = wiXInput::GetControllerState(&controller.state, controller.deviceIndex);
+				break;
+			case Controller::RAWINPUT:
+				connected = wiRawInput::GetControllerState(&controller.state, controller.deviceIndex);
+				break;
+			}
+
+			if (!connected)
+			{
+				controller.deviceType = Controller::DISCONNECTED;
+			}
+		}
 
 		for (auto iter = inputs.begin(); iter != inputs.end();)
 		{
 			BUTTON button = iter->first.button;
-			short playerIndex = iter->first.playerIndex;
+			int playerIndex = iter->first.playerIndex;
 
 			bool todelete = false;
 
@@ -132,7 +193,7 @@ namespace wiInput
 		wiProfiler::EndRange(range);
 	}
 
-	bool Down(BUTTON button, short playerindex)
+	bool Down(BUTTON button, int playerindex)
 	{
 		if (!initialized.load())
 		{
@@ -145,67 +206,27 @@ namespace wiInput
 
 		if(button > GAMEPAD_RANGE_START)
 		{
-			if (playerindex < (short)controllers.size())
+			if (playerindex < (int)controllers.size())
 			{
-				const Controller& controller = controllers[playerindex];
+				const ControllerState& state = controllers[playerindex].state;
 
-#ifdef WICKEDENGINE_BUILD_XINPUT
-				if (controller.deviceType == Controller::XINPUT)
+				switch (button)
 				{
-					XINPUT_STATE state = wiXInput::GetControllerState(controller.deviceIndex);
-
-					switch (button)
-					{
-					case GAMEPAD_BUTTON_UP: return state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP;
-					case GAMEPAD_BUTTON_LEFT: return state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT;
-					case GAMEPAD_BUTTON_DOWN: return state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN;
-					case GAMEPAD_BUTTON_RIGHT: return state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT;
-					case GAMEPAD_BUTTON_1: return state.Gamepad.wButtons & XINPUT_GAMEPAD_X;
-					case GAMEPAD_BUTTON_2: return state.Gamepad.wButtons & XINPUT_GAMEPAD_A;
-					case GAMEPAD_BUTTON_3: return state.Gamepad.wButtons & XINPUT_GAMEPAD_B;
-					case GAMEPAD_BUTTON_4: return state.Gamepad.wButtons & XINPUT_GAMEPAD_Y;
-					case GAMEPAD_BUTTON_5: return state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER;
-					case GAMEPAD_BUTTON_6: return state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER;
-					case GAMEPAD_BUTTON_7: return state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB;
-					case GAMEPAD_BUTTON_8: return state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB;
-					case GAMEPAD_BUTTON_9: return state.Gamepad.wButtons & XINPUT_GAMEPAD_BACK;
-					case GAMEPAD_BUTTON_10: return state.Gamepad.wButtons & XINPUT_GAMEPAD_START;
-					default:
-						break;
-					}
+				case GAMEPAD_BUTTON_UP: return state.buttons & (1 << (GAMEPAD_BUTTON_UP - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_LEFT: return state.buttons & (1 << (GAMEPAD_BUTTON_LEFT - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_DOWN: return state.buttons & (1 << (GAMEPAD_BUTTON_DOWN - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_RIGHT: return state.buttons & (1 << (GAMEPAD_BUTTON_RIGHT - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_1: return state.buttons & (1 << (GAMEPAD_BUTTON_1 - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_2: return state.buttons & (1 << (GAMEPAD_BUTTON_2 - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_3: return state.buttons & (1 << (GAMEPAD_BUTTON_3 - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_4: return state.buttons & (1 << (GAMEPAD_BUTTON_4 - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_5: return state.buttons & (1 << (GAMEPAD_BUTTON_5 - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_6: return state.buttons & (1 << (GAMEPAD_BUTTON_6 - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_7: return state.buttons & (1 << (GAMEPAD_BUTTON_7 - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_8: return state.buttons & (1 << (GAMEPAD_BUTTON_8 - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_9: return state.buttons & (1 << (GAMEPAD_BUTTON_9 - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_10: return state.buttons & (1 << (GAMEPAD_BUTTON_10 - GAMEPAD_RANGE_START - 1));
 				}
-#endif // WICKEDENGINE_BUILD_XINPUT
-
-#ifdef WICKEDENGINE_BUILD_RAWINPUT
-				if (controller.deviceType == Controller::RAWINPUT)
-				{
-					wiRawInput::ControllerState state = wiRawInput::GetControllerState(controller.deviceIndex);
-
-					switch (button)
-					{
-					case GAMEPAD_BUTTON_UP: return state.pov == wiRawInput::POV_UP || state.pov == wiRawInput::POV_LEFTUP || state.pov == wiRawInput::POV_UPRIGHT;
-					case GAMEPAD_BUTTON_LEFT: return state.pov == wiRawInput::POV_LEFT || state.pov == wiRawInput::POV_LEFTUP || state.pov == wiRawInput::POV_DOWNLEFT;
-					case GAMEPAD_BUTTON_DOWN: return state.pov == wiRawInput::POV_DOWN || state.pov == wiRawInput::POV_DOWNLEFT || state.pov == wiRawInput::POV_RIGHTDOWN;
-					case GAMEPAD_BUTTON_RIGHT: return state.pov == wiRawInput::POV_RIGHT || state.pov == wiRawInput::POV_RIGHTDOWN || state.pov == wiRawInput::POV_UPRIGHT;
-					case GAMEPAD_BUTTON_1: return state.buttons[0];
-					case GAMEPAD_BUTTON_2: return state.buttons[1];
-					case GAMEPAD_BUTTON_3: return state.buttons[2];
-					case GAMEPAD_BUTTON_4: return state.buttons[3];
-					case GAMEPAD_BUTTON_5: return state.buttons[4];
-					case GAMEPAD_BUTTON_6: return state.buttons[5];
-					case GAMEPAD_BUTTON_7: return state.buttons[6];
-					case GAMEPAD_BUTTON_8: return state.buttons[7];
-					case GAMEPAD_BUTTON_9: return state.buttons[8];
-					case GAMEPAD_BUTTON_10: return state.buttons[9];
-					case GAMEPAD_BUTTON_11: return state.buttons[10];
-					case GAMEPAD_BUTTON_12: return state.buttons[11];
-					case GAMEPAD_BUTTON_13: return state.buttons[12];
-					case GAMEPAD_BUTTON_14: return state.buttons[13];
-					default:
-						break;
-					}
-				}
-#endif // WICKEDENGINE_BUILD_RAWINPUT
 
 			}
 		}
@@ -306,7 +327,7 @@ namespace wiInput
 
 		return false;
 	}
-	bool Press(BUTTON button, short playerindex)
+	bool Press(BUTTON button, int playerindex)
 	{
 		if (!Down(button, playerindex))
 			return false;
@@ -326,7 +347,7 @@ namespace wiInput
 		}
 		return false;
 	}
-	bool Hold(BUTTON button, uint32_t frames, bool continuous, short playerIndex)
+	bool Hold(BUTTON button, uint32_t frames, bool continuous, int playerIndex)
 	{
 		if (!Down(button, playerIndex))
 			return false;
@@ -348,19 +369,17 @@ namespace wiInput
 	}
 	XMFLOAT4 GetPointer()
 	{
-		float mousewheel_scrolled = 0;
-#ifdef WICKEDENGINE_BUILD_RAWINPUT
-		mousewheel_scrolled = wiRawInput::GetMouseState().delta_wheel;
-#endif // WICKEDENGINE_BUILD_RAWINPUT
+		MouseState state;
+		wiRawInput::GetMouseState(&state); // currently only the relative data can be used
 
 #ifndef WINSTORE_SUPPORT
 		POINT p;
 		GetCursorPos(&p);
 		ScreenToClient(wiWindowRegistration::GetRegisteredWindow(), &p);
-		return XMFLOAT4((float)p.x, (float)p.y, mousewheel_scrolled, 0);
+		return XMFLOAT4((float)p.x, (float)p.y, state.delta_wheel, 0);
 #else
 		auto& p = Windows::UI::Core::CoreWindow::GetForCurrentThread()->PointerPosition;
-		return XMFLOAT4(p.X, p.Y, mousewheel_scrolled, 0);
+		return XMFLOAT4(p.X, p.Y, 0, 0);
 #endif
 	}
 	void SetPointer(const XMFLOAT4& props)
@@ -387,89 +406,41 @@ namespace wiInput
 #endif
 	}
 
-	inline float deadzone(float x)
-	{
-		if ((x) > -0.24f && (x) < 0.24f)
-			x = 0;
-		if (x < -1.0f)
-			x = -1.0f;
-		if (x > 1.0f)
-			x = 1.0f;
-		return x;
-	}
-	XMFLOAT4 GetAnalog(GAMEPAD_ANALOG analog, short playerindex)
+	XMFLOAT4 GetAnalog(GAMEPAD_ANALOG analog, int playerindex)
 	{
 		if (playerindex < (int)controllers.size())
 		{
-			const Controller& controller = controllers[playerindex];
+			const ControllerState& state = controllers[playerindex].state;
 
-#ifdef WICKEDENGINE_BUILD_XINPUT
-			if (controller.deviceType == Controller::XINPUT)
+			switch (analog)
 			{
-				XINPUT_STATE state = wiXInput::GetControllerState(controller.deviceIndex);
-
-				switch (analog)
-				{
-				case GAMEPAD_ANALOG_THUMBSTICK_L: return XMFLOAT4(deadzone((float)state.Gamepad.sThumbLX / 32767.0f), deadzone((float)state.Gamepad.sThumbLY / 32767.0f), 0, 0);
-				case GAMEPAD_ANALOG_THUMBSTICK_R: return XMFLOAT4(deadzone((float)state.Gamepad.sThumbRX / 32767.0f), -deadzone((float)state.Gamepad.sThumbRY / 32767.0f), 0, 0);
-				case GAMEPAD_ANALOG_TRIGGER_L: return XMFLOAT4((float)state.Gamepad.bLeftTrigger / 255.0f, 0, 0, 0);
-				case GAMEPAD_ANALOG_TRIGGER_R: return XMFLOAT4((float)state.Gamepad.bRightTrigger / 255.0f, 0, 0, 0);
-				default:
-					break;
-				}
+			case GAMEPAD_ANALOG_THUMBSTICK_L: return XMFLOAT4(state.thumbstick_L.x, state.thumbstick_L.y, 0, 0);
+			case GAMEPAD_ANALOG_THUMBSTICK_R: return XMFLOAT4(state.thumbstick_R.x, state.thumbstick_R.y, 0, 0);
+			case GAMEPAD_ANALOG_TRIGGER_L: return XMFLOAT4(state.trigger_L, 0, 0, 0);
+			case GAMEPAD_ANALOG_TRIGGER_R: return XMFLOAT4(state.trigger_R, 0, 0, 0);
 			}
-#endif // WICKEDENGINE_BUILD_XINPUT
-
-#ifdef WICKEDENGINE_BUILD_RAWINPUT
-			if (controller.deviceType == Controller::RAWINPUT)
-			{
-				wiRawInput::ControllerState state = wiRawInput::GetControllerState(controller.deviceIndex);
-
-				switch (analog)
-				{
-				case GAMEPAD_ANALOG_THUMBSTICK_L: return XMFLOAT4(deadzone(state.thumbstick_L.x), deadzone(state.thumbstick_L.y), 0, 0);
-				case GAMEPAD_ANALOG_THUMBSTICK_R: return XMFLOAT4(deadzone(state.thumbstick_R.x), deadzone(state.thumbstick_R.y), 0, 0);
-				case GAMEPAD_ANALOG_TRIGGER_L: return XMFLOAT4(state.trigger_L, 0, 0, 0);
-				case GAMEPAD_ANALOG_TRIGGER_R: return XMFLOAT4(state.trigger_R, 0, 0, 0);
-				default:
-					break;
-				}
-			}
-#endif // WICKEDENGINE_BUILD_RAWINPUT
-
 		}
 
 		return XMFLOAT4(0, 0, 0, 0);
 	}
 
-	void SetControllerFeedback(const ControllerFeedback& data, short playerindex)
+	void SetControllerFeedback(const ControllerFeedback& data, int playerindex)
 	{
-		if (playerindex < (short)controllers.size())
+		if (playerindex < (int)controllers.size())
 		{
 			const Controller& controller = controllers[playerindex];
 
-#ifdef WICKEDENGINE_BUILD_XINPUT
 			if (controller.deviceType == Controller::XINPUT)
 			{
 				wiXInput::SetControllerFeedback(data, controller.deviceIndex);
 			}
-#endif // WICKEDENGINE_BUILD_XINPUT
-
-#ifdef WICKEDENGINE_BUILD_RAWINPUT
-			if (controller.deviceType == Controller::RAWINPUT)
+			else if (controller.deviceType == Controller::RAWINPUT)
 			{
 				wiRawInput::SetControllerFeedback(data, controller.deviceIndex);
 			}
-#endif // WICKEDENGINE_BUILD_RAWINPUT
-
 		}
 	}
-
-	void AddTouch(const Touch& touch)
-	{
-		touches.push_back(touch);
-	}
-
+	
 #ifdef WINSTORE_SUPPORT
 	using namespace Windows::ApplicationModel;
 	using namespace Windows::ApplicationModel::Core;
@@ -486,7 +457,7 @@ namespace wiInput
 		Touch touch;
 		touch.state = Touch::TOUCHSTATE_PRESSED;
 		touch.pos = XMFLOAT2(p->Position.X, p->Position.Y);
-		AddTouch(touch);
+		touches.push_back(touch);
 	}
 	void _OnPointerReleased(CoreWindow^ window, PointerEventArgs^ pointer)
 	{
@@ -495,7 +466,7 @@ namespace wiInput
 		Touch touch;
 		touch.state = Touch::TOUCHSTATE_RELEASED;
 		touch.pos = XMFLOAT2(p->Position.X, p->Position.Y);
-		AddTouch(touch);
+		touches.push_back(touch);
 	}
 	void _OnPointerMoved(CoreWindow^ window, PointerEventArgs^ pointer)
 	{
@@ -504,7 +475,7 @@ namespace wiInput
 		Touch touch;
 		touch.state = Touch::TOUCHSTATE_MOVED;
 		touch.pos = XMFLOAT2(p->Position.X, p->Position.Y);
-		AddTouch(touch);
+		touches.push_back(touch);
 	}
 #endif // WINSTORE_SUPPORT
 

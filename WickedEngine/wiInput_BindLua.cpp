@@ -24,10 +24,10 @@ int wiInput_BindLua::Down(lua_State* L)
 	if (argc > 0)
 	{
 		wiInput::BUTTON button = (wiInput::BUTTON)wiLua::SGetInt(L, 1);
-		short playerindex = 0;
+		int playerindex = 0;
 		if (argc > 1)
 		{
-			playerindex = (short)wiLua::SGetInt(L, 2);
+			playerindex = wiLua::SGetInt(L, 2);
 		}
 		wiLua::SSetBool(L, wiInput::Down(button, playerindex));
 		return 1;
@@ -42,10 +42,10 @@ int wiInput_BindLua::Press(lua_State* L)
 	if (argc > 0)
 	{
 		wiInput::BUTTON code = (wiInput::BUTTON)wiLua::SGetInt(L, 1);
-		short playerindex = 0;
+		int playerindex = 0;
 		if (argc > 1)
 		{
-			playerindex = (short)wiLua::SGetInt(L, 2);
+			playerindex = wiLua::SGetInt(L, 2);
 		}
 		wiLua::SSetBool(L, wiInput::Press(code, playerindex));
 		return 1;
@@ -70,10 +70,10 @@ int wiInput_BindLua::Hold(lua_State* L)
 		{
 			continuous = wiLua::SGetBool(L, 3);
 		}
-		short playerindex = 0;
+		int playerindex = 0;
 		if (argc > 3)
 		{
-			playerindex = (short)wiLua::SGetInt(L, 4);
+			playerindex = wiLua::SGetInt(L, 4);
 		}
 		wiLua::SSetBool(L, wiInput::Hold(button, duration, continuous, playerindex));
 		return 1;
@@ -125,10 +125,10 @@ int wiInput_BindLua::GetAnalog(lua_State* L)
 	if (argc > 0)
 	{
 		wiInput::GAMEPAD_ANALOG type = (wiInput::GAMEPAD_ANALOG)wiLua::SGetInt(L, 1);
-		short playerindex = 0;
+		int playerindex = 0;
 		if (argc > 1)
 		{
-			playerindex = (short)wiLua::SGetInt(L, 2);
+			playerindex = wiLua::SGetInt(L, 2);
 		}
 		result = wiInput::GetAnalog(type, playerindex);
 	}

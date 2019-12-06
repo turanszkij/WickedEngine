@@ -63,6 +63,8 @@ namespace wiInput
 		GAMEPAD_BUTTON_12,
 		GAMEPAD_BUTTON_13,
 		GAMEPAD_BUTTON_14,
+
+		GAMEPAD_RANGE_END, // do not use!
 	};
 	enum GAMEPAD_ANALOG
 	{
@@ -72,6 +74,31 @@ namespace wiInput
 		GAMEPAD_ANALOG_TRIGGER_R,
 	};
 
+	struct KeyboardState
+	{
+		bool buttons[128] = {};
+	};
+	struct MouseState
+	{
+		XMINT2 position = XMINT2(0, 0);
+		XMINT2 delta_position = XMINT2(0, 0);
+		float delta_wheel = 0;
+	};
+	struct ControllerState
+	{
+		uint32_t buttons = 0;
+		XMFLOAT2 thumbstick_L = XMFLOAT2(0, 0);
+		XMFLOAT2 thumbstick_R = XMFLOAT2(0, 0);
+		float trigger_L = 0;
+		float trigger_R = 0;
+	};
+	struct ControllerFeedback
+	{
+		float motor_left = 0;	// left vibration motor (0: no vibration, 1: maximum vibration)
+		float motor_right = 0;	// right vibration motor (0: no vibration, 1: maximum vibration)
+		wiColor led_color;		// led color
+	};
+
 	// call once at app start
 	void Initialize();
 
@@ -79,11 +106,11 @@ namespace wiInput
 	void Update();
 	
 	// check if a button is down
-	bool Down(BUTTON button, short playerindex = 0);
+	bool Down(BUTTON button, int playerindex = 0);
 	// check if a button is pressed once
-	bool Press(BUTTON button, short playerindex = 0);
+	bool Press(BUTTON button, int playerindex = 0);
 	// check if a button is held down
-	bool Hold(BUTTON button, uint32_t frames = 30, bool continuous = false, short playerIndex = 0);
+	bool Hold(BUTTON button, uint32_t frames = 30, bool continuous = false, int playerIndex = 0);
 	// get pointer position (eg. mouse pointer) (.xy) + scroll delta (.z) + 1 unused (.w)
 	XMFLOAT4 GetPointer();
 	// set pointer position (eg. mouse pointer)
@@ -91,15 +118,9 @@ namespace wiInput
 	// hide pointer
 	void HidePointer(bool value);
 	// read analog input from controllers, like thumbsticks or triggers
-	XMFLOAT4 GetAnalog(GAMEPAD_ANALOG analog, short playerIndex = 0);
-
-	struct ControllerFeedback
-	{
-		float motor_left = 0;	// left vibration motor (0: no vibration, 1: maximum vibration)
-		float motor_right = 0;	// right vibration motor (0: no vibration, 1: maximum vibration)
-		wiColor led_color;		// led color
-	};
-	void SetControllerFeedback(const ControllerFeedback& data, short playerindex = 0);
+	XMFLOAT4 GetAnalog(GAMEPAD_ANALOG analog, int playerIndex = 0);
+	// send various feedback to the controller
+	void SetControllerFeedback(const ControllerFeedback& data, int playerindex = 0);
 
 	struct Touch
 	{
