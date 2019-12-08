@@ -43,6 +43,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 		sprite_hpbar_pattern = Sprite(),
 		sprite_hpbar_pattern2 = Sprite(),
 		sprite_hpbar_border = Sprite(),
+		controller_feedback = ControllerFeedback(),
 		face = 1, -- face direction (X)
 		request_face = 1, -- the suggested facing of this player, it might not be the actual facing if the player haven't been able to turn yet (for example an other action hasn't finished yet)
 		position = Vector(), -- the absolute position of this player in the world, a 2D Vector
@@ -1402,6 +1403,34 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 				renderPath.AddSprite(self.sprite_timer)
 			end
 
+			-- Controller vibration process:
+			runProcess(function()
+				local fb = ControllerFeedback()
+				local playerindex = 0
+				local signal = ""
+				
+				if(self.face > 0) then
+					fb.SetLEDColor(Vector(1,0,0))
+					playerindex = 0
+					signal = "vibrate_player1"
+				else
+					fb.SetLEDColor(Vector(0,0,1))
+					playerindex = 1
+					signal = "vibrate_player2"
+				end
+				input.SetControllerFeedback(fb, playerindex)
+
+				while(true) do
+					waitSignal(signal) -- wait until specific signal arrives
+					fb.SetVibrationLeft(0.8)
+					fb.SetVibrationRight(0.8)
+					input.SetControllerFeedback(fb, playerindex) -- start vibrating controller
+					waitSeconds(0.1) -- only vibrate for short time
+					fb.SetVibrationLeft(0)
+					fb.SetVibrationRight(0)
+					input.SetControllerFeedback(fb, playerindex) -- stop vibrating controller
+				end
+			end)
 
 			self:StartState(self.state)
 
@@ -1742,6 +1771,7 @@ local ResolveCharacters = function(player1, player2)
 					else
 						player2.hp = math.max(0, player2.hp - 10)
 					end
+					signal("vibrate_player1")
 					break
 				end
 			end
@@ -1757,6 +1787,7 @@ local ResolveCharacters = function(player1, player2)
 					else
 						player1.hp = math.max(0, player1.hp - 10)
 					end
+					signal("vibrate_player2")
 					break
 				end
 			end
