@@ -43,7 +43,6 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 		sprite_hpbar_pattern = Sprite(),
 		sprite_hpbar_pattern2 = Sprite(),
 		sprite_hpbar_border = Sprite(),
-		controller_feedback = ControllerFeedback(),
 		face = 1, -- face direction (X)
 		request_face = 1, -- the suggested facing of this player, it might not be the actual facing if the player haven't been able to turn yet (for example an other action hasn't finished yet)
 		position = Vector(), -- the absolute position of this player in the world, a 2D Vector
