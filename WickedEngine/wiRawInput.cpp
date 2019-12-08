@@ -468,8 +468,8 @@ namespace wiRawInput
 			uint8_t buf[32] = {};
 			buf[0] = 0x05;
 			buf[1] = 0xFF;
-			buf[4] = uint8_t(std::max(0.0f, std::min(1.0f, data.motor_right)) * 255);
-			buf[5] = uint8_t(std::max(0.0f, std::min(1.0f, data.motor_left)) * 255);
+			buf[4] = uint8_t(std::max(0.0f, std::min(1.0f, data.vibration_right)) * 255);
+			buf[5] = uint8_t(std::max(0.0f, std::min(1.0f, data.vibration_left)) * 255);
 			buf[6] = data.led_color.getR();
 			buf[7] = data.led_color.getG();
 			buf[8] = data.led_color.getB();

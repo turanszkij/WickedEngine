@@ -710,6 +710,15 @@ Query input devices
 - HidePointer(bool visible)
 - GetAnalog(int type, opt int playerindex = 0) : Vector result  -- read analog data from gamepad. type parameter must be from GAMEPAD_ANALOG values
 - GetTouches() : Touch result[]
+- SetControllerFeedback(ControllerFeedback feedback, opt int playerindex = 0) -- sets controller feedback such as vibration or LED color
+
+#### ControllerFeedback
+Describes controller feedback such as touch and LED color which can be replayed on a controller
+- [constructor]ControllerFeedback()
+- SetVibrationLeft(float value)  -- vibration amount of left motor (0: no vibration, 1: max vibration)
+- SetVibrationRight(float value)  -- vibration amount of right motor (0: no vibration, 1: max vibration)
+- SetLEDColor(Vector color)  -- sets the colored LED color if controller has one
+- SetLEDColor(int hexcolor)  -- sets the colored LED color if controller has one (ABGR hex color code)
 
 #### Touch
 Describes a touch contact point

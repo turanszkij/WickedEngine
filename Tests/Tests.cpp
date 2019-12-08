@@ -216,7 +216,7 @@ TestsRenderer::TestsRenderer()
 
 			wiInput::ControllerFeedback feedback;
 			feedback.led_color.rgba = wiRandom::getRandom(0xFFFFFF);
-			feedback.motor_left = 0.9f;
+			feedback.vibration_left = 0.9f;
 			wiInput::SetControllerFeedback(feedback, 0);
 		}
 		break;

@@ -97,9 +97,9 @@ namespace wiInput
 	};
 	struct ControllerFeedback
 	{
-		float motor_left = 0;	// left vibration motor (0: no vibration, 1: maximum vibration)
-		float motor_right = 0;	// right vibration motor (0: no vibration, 1: maximum vibration)
-		wiColor led_color;		// led color
+		float vibration_left = 0;	// left vibration motor (0: no vibration, 1: maximum vibration)
+		float vibration_right = 0;	// right vibration motor (0: no vibration, 1: maximum vibration)
+		wiColor led_color;			// led color
 	};
 
 	// call once at app start

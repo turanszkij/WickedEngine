@@ -12,6 +12,7 @@ Luna<wiInput_BindLua>::FunctionType wiInput_BindLua::methods[] = {
 	lunamethod(wiInput_BindLua, HidePointer),
 	lunamethod(wiInput_BindLua, GetAnalog),
 	lunamethod(wiInput_BindLua, GetTouches),
+	lunamethod(wiInput_BindLua, SetControllerFeedback),
 	{ NULL, NULL }
 };
 Luna<wiInput_BindLua>::PropertyType wiInput_BindLua::properties[] = {
@@ -147,6 +148,30 @@ int wiInput_BindLua::GetTouches(lua_State* L)
 	}
 	return (int)touches.size();
 }
+int wiInput_BindLua::SetControllerFeedback(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		ControllerFeedback_BindLua* fb = Luna<ControllerFeedback_BindLua>::lightcheck(L, 1); // Ferdinand Braun
+		if (fb != nullptr)
+		{
+			int playerindex = 0;
+			if (argc > 1)
+			{
+				playerindex = wiLua::SGetInt(L, 2);
+			}
+			wiInput::SetControllerFeedback(fb->feedback, playerindex);
+		}
+		else
+		{
+			wiLua::SError(L, "SetControllerFeedback(ControllerFeedback feedback, opt int playerindex = 0) first argument is not a ControllerFeedback!");
+		}
+	}
+	else
+		wiLua::SError(L, "SetControllerFeedback(ControllerFeedback feedback, opt int playerindex = 0) not enough arguments!");
+	return 0;
+}
 
 void wiInput_BindLua::Bind()
 {
@@ -222,6 +247,7 @@ void wiInput_BindLua::Bind()
 	}
 
 	Touch_BindLua::Bind();
+	ControllerFeedback_BindLua::Bind();
 }
 
 
@@ -259,5 +285,83 @@ void Touch_BindLua::Bind()
 	{
 		initialized = true;
 		Luna<Touch_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+	}
+}
+
+
+
+
+
+
+
+const char ControllerFeedback_BindLua::className[] = "ControllerFeedback";
+
+Luna<ControllerFeedback_BindLua>::FunctionType ControllerFeedback_BindLua::methods[] = {
+	lunamethod(ControllerFeedback_BindLua, SetVibrationRight),
+	lunamethod(ControllerFeedback_BindLua, SetVibrationLeft),
+	lunamethod(ControllerFeedback_BindLua, SetLEDColor),
+	{ NULL, NULL }
+};
+Luna<ControllerFeedback_BindLua>::PropertyType ControllerFeedback_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+int ControllerFeedback_BindLua::SetVibrationLeft(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		feedback.vibration_left = wiLua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetVibrationLeft(float value) not enough arguments!");
+	}
+	return 0;
+}
+int ControllerFeedback_BindLua::SetVibrationRight(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		feedback.vibration_right = wiLua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetVibrationRight(float value) not enough arguments!");
+	}
+	return 0;
+}
+int ControllerFeedback_BindLua::SetLEDColor(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (vec != nullptr)
+		{
+			XMFLOAT4 col;
+			XMStoreFloat4(&col, vec->vector);
+			feedback.led_color = wiColor::fromFloat4(col);
+		}
+		else
+		{
+			feedback.led_color.rgba = wiLua::SGetInt(L, 1);
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "SetLEDColor(int hexcolor) not enough arguments!");
+	}
+	return 0;
+}
+
+void ControllerFeedback_BindLua::Bind()
+{
+	static bool initialized = false;
+	if (!initialized)
+	{
+		initialized = true;
+		Luna<ControllerFeedback_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
 	}
 }

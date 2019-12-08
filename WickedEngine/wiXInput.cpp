@@ -102,8 +102,8 @@ namespace wiXInput
 		if (index < arraysize(controllers))
 		{
 			XINPUT_VIBRATION vibration = {};
-			vibration.wLeftMotorSpeed = (WORD)(std::max(0.0f, std::min(1.0f, data.motor_left)) * 65535);
-			vibration.wRightMotorSpeed = (WORD)(std::max(0.0f, std::min(1.0f, data.motor_right)) * 65535);
+			vibration.wLeftMotorSpeed = (WORD)(std::max(0.0f, std::min(1.0f, data.vibration_left)) * 65535);
+			vibration.wRightMotorSpeed = (WORD)(std::max(0.0f, std::min(1.0f, data.vibration_right)) * 65535);
 			XInputSetState((DWORD)index, &vibration);
 		}
 	}

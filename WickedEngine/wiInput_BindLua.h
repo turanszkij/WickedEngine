@@ -21,6 +21,7 @@ public:
 	int HidePointer(lua_State* L);
 	int GetAnalog(lua_State* L);
 	int GetTouches(lua_State* L);
+	int SetControllerFeedback(lua_State* L);
 
 	static void Bind();
 };
@@ -39,6 +40,24 @@ public:
 
 	int GetState(lua_State* L);
 	int GetPos(lua_State* L);
+
+	static void Bind();
+};
+
+class ControllerFeedback_BindLua
+{
+public:
+	wiInput::ControllerFeedback feedback;
+	static const char className[];
+	static Luna<ControllerFeedback_BindLua>::FunctionType methods[];
+	static Luna<ControllerFeedback_BindLua>::PropertyType properties[];
+
+	ControllerFeedback_BindLua(lua_State* L) {}
+	ControllerFeedback_BindLua(const wiInput::ControllerFeedback& feedback) :feedback(feedback) {}
+
+	int SetVibrationLeft(lua_State* L);
+	int SetVibrationRight(lua_State* L);
+	int SetLEDColor(lua_State* L);
 
 	static void Bind();
 };
