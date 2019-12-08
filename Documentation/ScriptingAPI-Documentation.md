@@ -748,6 +748,9 @@ Describes a touch contact point
 - [outer]KEYBOARD_BUTTON_RCONTROL		 : int
 - [outer]KEYBOARD_BUTTON_LCONTROL		 : int
 - [outer]KEYBOARD_BUTTON_DELETE			 : int
+- [outer]KEYBOARD_BUTTON_BACKSPACE		 : int
+- [outer]KEYBOARD_BUTTON_PAGEDOWN		 : int
+- [outer]KEYBOARD_BUTTON_PAGEUP			 : int
 - You can also generate a key code by calling string.byte(char uppercaseLetter) where the parameter represents the desired key of the keyboard
 
 #### Mouse Key Codes

@@ -40,6 +40,9 @@ namespace wiInput
 		KEYBOARD_BUTTON_RCONTROL,
 		KEYBOARD_BUTTON_LCONTROL,
 		KEYBOARD_BUTTON_DELETE,
+		KEYBOARD_BUTTON_BACKSPACE,
+		KEYBOARD_BUTTON_PAGEDOWN,
+		KEYBOARD_BUTTON_PAGEUP,
 
 		CHARACTER_RANGE_START = 65, // letter A
 
@@ -76,7 +79,7 @@ namespace wiInput
 
 	struct KeyboardState
 	{
-		bool buttons[128] = {};
+		bool buttons[256] = {};
 	};
 	struct MouseState
 	{

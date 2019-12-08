@@ -186,6 +186,9 @@ void wiInput_BindLua::Bind()
 		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_RCONTROL	= 26");
 		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_LCONTROL	= 27");
 		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_DELETE		= 28");
+		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_BACK		= 29");
+		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_PAGEDOWN	= 30");
+		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_PAGEUP		= 31");
 
 		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_UP			= 257");
 		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_LEFT		= 258");

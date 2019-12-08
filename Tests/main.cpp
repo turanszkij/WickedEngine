@@ -216,6 +216,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 		}
 		break;
+	case WM_INPUT:
+		wiRawInput::ParseMessage((void*)lParam);
+		break;
     case WM_PAINT:
         {
             PAINTSTRUCT ps;

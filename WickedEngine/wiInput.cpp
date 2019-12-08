@@ -28,6 +28,9 @@ namespace wiInput
 #define KEY_UP(vk_code) (!KEY_DOWN(vk_code))
 
 
+	KeyboardState keyboard;
+	MouseState mouse;
+
 	struct Input 
 	{
 		BUTTON button = BUTTON_NONE;
@@ -79,6 +82,9 @@ namespace wiInput
 
 		wiXInput::Update();
 		wiRawInput::Update();
+
+		wiRawInput::GetMouseState(&mouse); // currently only the relative data can be used from this
+		wiRawInput::GetKeyboardState(&keyboard); // it contains pressed buttons as "keyboard/typewriter" like, so no continuous presses
 
 		// Check if low-level XINPUT controller is not registered for playerindex slot and register:
 		for (int i = 0; i < wiXInput::GetMaxControllerCount(); ++i)
@@ -232,7 +238,7 @@ namespace wiInput
 		}
 		else if (playerindex == 0) // keyboard or mouse
 		{
-			int keycode = (int)button;
+			uint8_t keycode = (uint8_t)button;
 
 			switch (button)
 			{
@@ -320,6 +326,15 @@ namespace wiInput
 			case wiInput::KEYBOARD_BUTTON_DELETE:
 				keycode = VK_DELETE;
 				break;
+			case wiInput::KEYBOARD_BUTTON_BACKSPACE:
+				keycode = VK_BACK;
+				break;
+			case wiInput::KEYBOARD_BUTTON_PAGEDOWN:
+				keycode = VK_NEXT;
+				break;
+			case wiInput::KEYBOARD_BUTTON_PAGEUP:
+				keycode = VK_PRIOR;
+				break;
 			}
 
 			return KEY_DOWN(keycode) | KEY_TOGGLE(keycode);
@@ -370,7 +385,7 @@ namespace wiInput
 	XMFLOAT4 GetPointer()
 	{
 		MouseState state;
-		wiRawInput::GetMouseState(&state); // currently only the relative data can be used
+		wiRawInput::GetMouseState(&state); 
 
 #ifndef WINSTORE_SUPPORT
 		POINT p;
@@ -440,6 +455,7 @@ namespace wiInput
 			}
 		}
 	}
+
 	
 #ifdef WINSTORE_SUPPORT
 	using namespace Windows::ApplicationModel;
