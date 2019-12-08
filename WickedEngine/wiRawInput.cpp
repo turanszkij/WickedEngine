@@ -118,7 +118,10 @@ namespace wiRawInput
 			info.cbSize = sizeof(RID_DEVICE_INFO);
 			UINT bufferSize = sizeof(RID_DEVICE_INFO);
 			UINT result = GetRawInputDeviceInfo(raw.header.hDevice, RIDI_DEVICEINFO, &info, &bufferSize);
-			assert(result != -1);
+			if (result == -1)
+			{
+				return;
+			}
 			assert(info.dwType == raw.header.dwType);
 
 			// Try to find if this input device was already registered into a slot:
@@ -321,17 +324,12 @@ namespace wiRawInput
 		// Enumerate devices to detect lost devices:
 		UINT numDevices;
 		UINT listResult = GetRawInputDeviceList(NULL, &numDevices, sizeof(RAWINPUTDEVICELIST));
-		assert(listResult != -1);
+		assert(listResult == 0);
 
-		PRAWINPUTDEVICELIST devicelist = (PRAWINPUTDEVICELIST)allocator.allocate(sizeof(RAWINPUTDEVICELIST) * (size_t)numDevices);
-		if (devicelist == nullptr)
-		{
-			assert(0);
-			allocator.reset();
-			return;
-		}
+		static RAWINPUTDEVICELIST devicelist[64];
 		listResult = GetRawInputDeviceList(devicelist, &numDevices, sizeof(RAWINPUTDEVICELIST));
-		assert(listResult != -1);
+		assert(listResult >= 0);
+		assert(numDevices <= arraysize(devicelist));
 
 		for (auto& internal_controller : controllers)
 		{
