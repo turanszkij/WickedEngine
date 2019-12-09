@@ -48,7 +48,6 @@ namespace wiInitializer
 	void CleanUp()
 	{
 		wiFont::CleanUp();
-		wiRenderer::CleanUp();
 		wiAudio::CleanUp();
 		wiNetwork::CleanUp();
 		wiPhysicsEngine::CleanUp();

@@ -32,10 +32,8 @@ namespace wiRenderer
 
 
 	void Initialize();
-	void CleanUp();
-	void LoadBuffers();
-	void LoadShaders();
-	void SetUpStates();
+
+	// Clears the global scene and the associated renderable resources
 	void ClearWorld();
 
 	// Set the main graphics device globally:
