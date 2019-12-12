@@ -1,6 +1,6 @@
 #pragma once
 #include "wiECS.h"
-#include "wiSceneSystem_Decl.h"
+#include "wiScene_Decl.h"
 #include "wiJobSystem.h"
 
 namespace wiPhysicsEngine
@@ -13,13 +13,13 @@ namespace wiPhysicsEngine
 
 	void RunPhysicsUpdateSystem(
 		wiJobSystem::context& ctx,
-		const wiSceneSystem::WeatherComponent& weather,
-		const wiECS::ComponentManager<wiSceneSystem::ArmatureComponent>& armatures,
-		wiECS::ComponentManager<wiSceneSystem::TransformComponent>& transforms,
-		wiECS::ComponentManager<wiSceneSystem::MeshComponent>& meshes,
-		wiECS::ComponentManager<wiSceneSystem::ObjectComponent>& objects,
-		wiECS::ComponentManager<wiSceneSystem::RigidBodyPhysicsComponent>& rigidbodies,
-		wiECS::ComponentManager<wiSceneSystem::SoftBodyPhysicsComponent>& softbodies,
+		const wiScene::WeatherComponent& weather,
+		const wiECS::ComponentManager<wiScene::ArmatureComponent>& armatures,
+		wiECS::ComponentManager<wiScene::TransformComponent>& transforms,
+		wiECS::ComponentManager<wiScene::MeshComponent>& meshes,
+		wiECS::ComponentManager<wiScene::ObjectComponent>& objects,
+		wiECS::ComponentManager<wiScene::RigidBodyPhysicsComponent>& rigidbodies,
+		wiECS::ComponentManager<wiScene::SoftBodyPhysicsComponent>& softbodies,
 		float dt
 	);
 }

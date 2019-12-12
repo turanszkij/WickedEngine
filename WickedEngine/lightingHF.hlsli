@@ -154,11 +154,12 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 {
 	float3 L = light.positionWS - surface.P;
 	const float dist2 = dot(L, L);
-	const float dist = sqrt(dist2);
+	const float range2 = light.range * light.range;
 
 	[branch]
-	if (dist < light.range)
+	if (dist2 < range2)
 	{
+		const float dist = sqrt(dist2);
 		L /= dist;
 
 		SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
@@ -180,7 +181,6 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 			{
 				float3 lightColor = light.GetColor().rgb * light.energy * sh;
 
-				const float range2 = light.range * light.range;
 				const float att = saturate(1.0 - (dist2 / range2));
 				const float attenuation = att * att;
 				lightColor *= attenuation;
@@ -195,11 +195,12 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 {
 	float3 L = light.positionWS - surface.P;
 	const float dist2 = dot(L, L);
-	const float dist = sqrt(dist2);
+	const float range2 = light.range * light.range;
 
 	[branch]
-	if (dist < light.range)
+	if (dist2 < range2)
 	{
+		const float dist = sqrt(dist2);
 		L /= dist;
 
 		SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
@@ -235,7 +236,6 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 				{
 					float3 lightColor = light.GetColor().rgb * light.energy * sh;
 
-					const float range2 = light.range * light.range;
 					const float att = saturate(1.0 - (dist2 / range2));
 					float attenuation = att * att;
 					attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));

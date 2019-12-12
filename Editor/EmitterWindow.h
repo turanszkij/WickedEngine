@@ -22,7 +22,7 @@ public:
 
 	void UpdateData();
 
-	wiSceneSystem::wiEmittedParticle* GetEmitter();
+	wiScene::wiEmittedParticle* GetEmitter();
 
 	wiGUI* GUI;
 

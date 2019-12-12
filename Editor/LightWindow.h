@@ -20,7 +20,7 @@ public:
 	wiECS::Entity entity;
 	void SetEntity(wiECS::Entity entity);
 
-	void SetLightType(wiSceneSystem::LightComponent::LightType type);
+	void SetLightType(wiScene::LightComponent::LightType type);
 
 	wiWindow*	lightWindow;
 	wiSlider*	energySlider;

@@ -1,7 +1,7 @@
 #include "wiHelper.h"
+#include "wiPlatform.h"
 #include "wiRenderer.h"
 #include "wiBackLog.h"
-#include "wiWindowRegistration.h"
 
 #include "Utility/stb_image_write.h"
 
@@ -49,9 +49,10 @@ namespace wiHelper
 		return false;
 	}
 
-	void messageBox(const std::string& msg, const std::string& caption){
+	void messageBox(const std::string& msg, const std::string& caption)
+	{
 #ifndef WINSTORE_SUPPORT
-		MessageBoxA(wiWindowRegistration::GetRegisteredWindow(), msg.c_str(), caption.c_str(), 0);
+		MessageBoxA(wiPlatform::GetWindow(), msg.c_str(), caption.c_str(), 0);
 #else
 		wstring wmsg;
 		StringConvert(msg, wmsg);

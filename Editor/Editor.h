@@ -34,7 +34,7 @@ class Editor;
 class EditorComponent : public RenderPath2D
 {
 private:
-	wiGraphics::Texture pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex, soundTex;
+	std::shared_ptr<wiResource> pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex, soundTex;
 public:
 	std::unique_ptr<MaterialWindow>			materialWnd;
 	std::unique_ptr<PostprocessWindow>		postprocessWnd;
@@ -94,13 +94,13 @@ public:
 	const XMFLOAT4 selectionColor2 = XMFLOAT4(0, 1, 0.6f, 0.35f);
 
 	Translator translator;
-	std::list<wiSceneSystem::PickResult> selected;
-	wiECS::ComponentManager<wiSceneSystem::HierarchyComponent> savedHierarchy;
-	wiSceneSystem::PickResult hovered;
+	std::list<wiScene::PickResult> selected;
+	wiECS::ComponentManager<wiScene::HierarchyComponent> savedHierarchy;
+	wiScene::PickResult hovered;
 
 	void BeginTranslate();
 	void EndTranslate();
-	void AddSelected(const wiSceneSystem::PickResult& picked);
+	void AddSelected(const wiScene::PickResult& picked);
 
 
 

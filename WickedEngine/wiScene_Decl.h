@@ -1,7 +1,7 @@
 #pragma once
 
 
-namespace wiSceneSystem
+namespace wiScene
 {
 	struct NameComponent;
 	struct LayerComponent;

@@ -22,7 +22,6 @@ public:
 	int SetFXAAEnabled(lua_State* L);
 	int SetBloomEnabled(lua_State* L);
 	int SetColorGradingEnabled(lua_State* L);
-	int SetColorGradingTexture(lua_State* L);
 	int SetVolumeLightsEnabled(lua_State* L);
 	int SetLightShaftsEnabled(lua_State* L);
 	int SetLensFlareEnabled(lua_State* L);

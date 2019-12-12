@@ -1,12 +1,10 @@
 #include "RenderPath_BindLua.h"
-#include "wiResourceManager_BindLua.h"
 
 using namespace std;
 
 const char RenderPath_BindLua::className[] = "RenderPath";
 
 Luna<RenderPath_BindLua>::FunctionType RenderPath_BindLua::methods[] = {
-	lunamethod(RenderPath_BindLua, GetContent),
 	lunamethod(RenderPath_BindLua, Initialize),
 	lunamethod(RenderPath_BindLua, OnStart),
 	lunamethod(RenderPath_BindLua, OnStop),
@@ -30,17 +28,6 @@ RenderPath_BindLua::RenderPath_BindLua(lua_State *L)
 
 RenderPath_BindLua::~RenderPath_BindLua()
 {
-}
-
-int RenderPath_BindLua::GetContent(lua_State *L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "GetContent() component is empty!");
-		return 0;
-	}
-	Luna<wiResourceManager_BindLua>::push(L, new wiResourceManager_BindLua(&component->Content));
-	return 1;
 }
 
 int RenderPath_BindLua::Initialize(lua_State* L)

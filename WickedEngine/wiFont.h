@@ -41,8 +41,10 @@ public:
 	static void LoadShaders();
 	static const wiGraphics::Texture* GetAtlas();
 
-	// Returns the font path that can be modified
-	static std::string& GetFontPath();
+	// Returns the font directory
+	static const std::string& GetFontPath();
+	// Sets the font directory
+	static void SetFontPath(const std::string& path);
 
 	// Create a font. Returns fontStyleID that is reusable. If font already exists, just return its ID
 	static int AddFontStyle(const std::string& fontName);

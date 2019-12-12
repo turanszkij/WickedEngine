@@ -16,8 +16,7 @@
 #include "wiSprite_BindLua.h"
 #include "wiImageParams_BindLua.h"
 #include "SpriteAnim_BindLua.h"
-#include "wiResourceManager_BindLua.h"
-#include "wiSceneSystem_BindLua.h"
+#include "wiScene_BindLua.h"
 #include "Vector_BindLua.h"
 #include "Matrix_BindLua.h"
 #include "wiInput_BindLua.h"
@@ -68,8 +67,7 @@ wiLua* wiLua::GetGlobal()
 		wiSprite_BindLua::Bind();
 		wiImageParams_BindLua::Bind();
 		SpriteAnim_BindLua::Bind();
-		wiResourceManager_BindLua::Bind();
-		wiSceneSystem_BindLua::Bind();
+		wiScene_BindLua::Bind();
 		Vector_BindLua::Bind();
 		Matrix_BindLua::Bind();
 		wiInput_BindLua::Bind();

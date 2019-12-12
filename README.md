@@ -86,8 +86,8 @@ Initialization example (C++):
 // Declare main component once per application:
 MainComponent main;
 
-// If you want to render, interface with Windows API like this:
-main.SetWindow(hWnd, hInst);
+// Set the window to render to like this:
+main.SetWindow(hWnd);
 
 // Run the application:
 while(true) {
@@ -100,13 +100,13 @@ Some basic usage examples (C++):
 RenderPath3D_Deferred myGame; // Declare a game screen component, aka "RenderPath" (you could also override its Update(), Render() etc. functions). This is a 3D, Deferred path for example, but there are others
 main.ActivatePath(&myGame); // Register your game to the application. It will call Start(), Update(), Render(), etc. from now on...
 
-wiSceneSystem::LoadModel("myModel.wiscene"); // Simply load a model into the current global scene
-wiSceneSystem::GetScene(); // Get the current global scene
+wiScene::LoadModel("myModel.wiscene"); // Simply load a model into the current global scene
+wiScene::GetScene(); // Get the current global scene
 wiRenderer::ClearWorld(); // Delete every model, etc. from the current global scene
 
-wiSceneSystem::Scene scene2; // create a separate scene
-wiSceneSystem::LoadModel(scene2, "myModel2.wiscene"); // Load model into a separate scene
-wiSceneSystem::GetScene().Merge(scene2); // Combine separate scene with global scene
+wiScene::Scene scene2; // create a separate scene
+wiScene::LoadModel(scene2, "myModel2.wiscene"); // Load model into a separate scene
+wiScene::GetScene().Merge(scene2); // Combine separate scene with global scene
 
 myGame.setSSAOEnabled(true); // You can enable post process effects this way...
 

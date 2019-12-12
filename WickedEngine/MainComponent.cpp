@@ -44,14 +44,14 @@ void MainComponent::Initialize()
 	// User can also create a graphics device if custom logic is desired, but he must do before this function!
 	if (wiRenderer::GetDevice() == nullptr)
 	{
-		auto window = wiWindowRegistration::GetRegisteredWindow();
+		auto window = wiPlatform::GetWindow();
 
 		bool debugdevice = wiStartupArguments::HasArgument("debugdevice");
 
 		if (wiStartupArguments::HasArgument("vulkan"))
 		{
 #ifdef WICKEDENGINE_BUILD_VULKAN
-			wiRenderer::GetShaderPath() += "spirv/";
+			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "spirv/");
 			wiRenderer::SetDevice(new GraphicsDevice_Vulkan(window, fullscreen, debugdevice));
 #else
 			wiHelper::messageBox("Vulkan SDK not found during building the application! Vulkan API disabled!", "Error");
@@ -61,7 +61,7 @@ void MainComponent::Initialize()
 		{
 			if (wiStartupArguments::HasArgument("hlsl6"))
 			{
-				wiRenderer::GetShaderPath() += "hlsl6/";
+				wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl6/");
 			}
 			wiRenderer::SetDevice(new GraphicsDevice_DX12(window, fullscreen, debugdevice));
 		}
@@ -132,7 +132,7 @@ void MainComponent::Run()
 	deltaTime = float(std::max(0.0, timer.elapsed() / 1000.0));
 	timer.record();
 
-	if (wiWindowRegistration::IsWindowActive())
+	if (wiPlatform::IsWindowActive())
 	{
 		// If the application is active, run Update loops:
 
@@ -316,16 +316,8 @@ void MainComponent::Compose(CommandList cmd)
 	wiProfiler::EndRange(range); // Compose
 }
 
-#ifndef WINSTORE_SUPPORT
-void MainComponent::SetWindow(wiWindowRegistration::window_type window, HINSTANCE hInst)
+void MainComponent::SetWindow(wiPlatform::window_type window)
 {
-	wiWindowRegistration::RegisterInstance(hInst);
-	wiWindowRegistration::RegisterWindow(window);
+	wiPlatform::GetWindow() = window;
 }
-#else
-void MainComponent::SetWindow(wiWindowRegistration::window_type window)
-{
-	wiWindowRegistration::RegisterWindow(window);
-}
-#endif
 

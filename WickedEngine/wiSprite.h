@@ -1,19 +1,19 @@
 #pragma once
 #include "wiImage.h"
 #include "wiGraphicsDevice.h"
+#include "wiResourceManager.h"
 #include "wiRandom.h"
 
-class wiResourceManager;
+#include <memory>
 
 class wiSprite
 {
 private:
-	std::string texture, mask;
-	const wiGraphics::Texture* texturePointer = nullptr;
-	const wiGraphics::Texture* maskPointer = nullptr;
+	std::string textureName, maskName;
+	std::shared_ptr<wiResource> textureResource;
+	std::shared_ptr<wiResource> maskResource;
 public:
 	wiSprite(const std::string& newTexture = "", const std::string& newMask = "");
-	void Destroy();
 
 	virtual void FixedUpdate(float speed);
 	virtual void Update(float dt);
@@ -80,7 +80,12 @@ public:
 	};
 	Anim anim;
 	
-	const wiGraphics::Texture* getTexture() { return texturePointer; }
-	void setTexture(const wiGraphics::Texture* value) { texturePointer = value; }
+	const wiGraphics::Texture* getTexture() { return textureResource->texture; }
+	void setTexture(const wiGraphics::Texture* texture)
+	{
+		textureResource = std::make_shared<wiResource>();
+		textureResource->texture = texture;
+		textureResource->type = wiResource::IMAGE;
+	}
 };
 

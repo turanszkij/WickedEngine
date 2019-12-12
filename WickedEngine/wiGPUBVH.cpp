@@ -1,5 +1,5 @@
 #include "wiGPUBVH.h"
-#include "wiSceneSystem.h"
+#include "wiScene.h"
 #include "wiRenderer.h"
 #include "ShaderInterop_BVH.h"
 #include "wiProfiler.h"
@@ -15,7 +15,7 @@
 
 using namespace std;
 using namespace wiGraphics;
-using namespace wiSceneSystem;
+using namespace wiScene;
 using namespace wiECS;
 
 enum CSTYPES_BVH
@@ -25,8 +25,7 @@ enum CSTYPES_BVH
 	CSTYPE_BVH_PROPAGATEAABB,
 	CSTYPE_BVH_COUNT
 };
-static const ComputeShader* computeShaders[CSTYPE_BVH_COUNT] = {};
-
+static ComputeShader computeShaders[CSTYPE_BVH_COUNT];
 static GPUBuffer constantBuffer;
 
 
@@ -374,7 +373,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 
 	device->EventBegin("BVH - Primitive Builder", cmd);
 	{
-		device->BindComputeShader(computeShaders[CSTYPE_BVH_PRIMITIVES], cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_BVH_PRIMITIVES], cmd);
 		GPUResource* uavs[] = {
 			&primitiveIDBuffer,
 			&primitiveBuffer,
@@ -436,7 +435,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 
 	device->EventBegin("BVH - Build Hierarchy", cmd);
 	{
-		device->BindComputeShader(computeShaders[CSTYPE_BVH_HIERARCHY], cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_BVH_HIERARCHY], cmd);
 		GPUResource* uavs[] = {
 			&bvhNodeBuffer,
 			&bvhParentBuffer,
@@ -462,7 +461,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 	{
 		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 
-		device->BindComputeShader(computeShaders[CSTYPE_BVH_PROPAGATEAABB], cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_BVH_PROPAGATEAABB], cmd);
 		GPUResource* uavs[] = {
 			&bvhNodeBuffer,
 			&bvhFlagBuffer,
@@ -591,7 +590,7 @@ void wiGPUBVH::LoadShaders()
 {
 	string SHADERPATH = wiRenderer::GetShaderPath();
 
-	computeShaders[CSTYPE_BVH_PRIMITIVES] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_primitivesCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_BVH_HIERARCHY] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_hierarchyCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_BVH_PROPAGATEAABB] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_propagateaabbCS.cso", wiResourceManager::COMPUTESHADER));
+	wiRenderer::LoadComputeShader(computeShaders[CSTYPE_BVH_PRIMITIVES], "bvh_primitivesCS.cso");
+	wiRenderer::LoadComputeShader(computeShaders[CSTYPE_BVH_HIERARCHY], "bvh_hierarchyCS.cso");
+	wiRenderer::LoadComputeShader(computeShaders[CSTYPE_BVH_PROPAGATEAABB], "bvh_propagateaabbCS.cso");
 }

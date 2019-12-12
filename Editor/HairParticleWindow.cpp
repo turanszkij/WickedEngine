@@ -3,7 +3,7 @@
 
 using namespace std;
 using namespace wiECS;
-using namespace wiSceneSystem;
+using namespace wiScene;
 
 HairParticleWindow::HairParticleWindow(wiGUI* gui) : GUI(gui)
 {
@@ -26,7 +26,7 @@ HairParticleWindow::HairParticleWindow(wiGUI* gui) : GUI(gui)
 	addButton->SetPos(XMFLOAT2(x, y += step));
 	addButton->SetSize(XMFLOAT2(200, 30));
 	addButton->OnClick([&](wiEventArgs args) {
-		Scene& scene = wiSceneSystem::GetScene();
+		Scene& scene = wiScene::GetScene();
 		scene.Entity_CreateHair("editorHair");
 	});
 	addButton->SetTooltip("Add new hair particle system.");
@@ -46,7 +46,7 @@ HairParticleWindow::HairParticleWindow(wiGUI* gui) : GUI(gui)
 			}
 			else
 			{
-				Scene& scene = wiSceneSystem::GetScene();
+				Scene& scene = wiScene::GetScene();
 				hair->meshID = scene.meshes.GetEntity(args.iValue - 1);
 			}
 		}
@@ -195,7 +195,7 @@ wiHairParticle* HairParticleWindow::GetHair()
 		return nullptr;
 	}
 
-	Scene& scene = wiSceneSystem::GetScene();
+	Scene& scene = wiScene::GetScene();
 	wiHairParticle* hair = scene.hairs.GetComponent(entity);
 
 	return hair;
@@ -209,7 +209,7 @@ void HairParticleWindow::UpdateData()
 		return;
 	}
 
-	Scene& scene = wiSceneSystem::GetScene();
+	Scene& scene = wiScene::GetScene();
 
 	meshComboBox->ClearItems();
 	meshComboBox->AddItem("NO MESH");

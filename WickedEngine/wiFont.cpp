@@ -29,7 +29,7 @@ using namespace wiRectPacker;
 
 namespace wiFont_Internal
 {
-	std::string			FONTPATH = "fonts/";
+	std::string			FONTPATH = "../WickedEngine/fonts/";
 	GPUBuffer			indexBuffer;
 	GPUBuffer			constantBuffer;
 	BlendState			blendState;
@@ -38,8 +38,8 @@ namespace wiFont_Internal
 	Sampler				sampler;
 
 	VertexLayout		vertexLayout;
-	const VertexShader	*vertexShader = nullptr;
-	const PixelShader	*pixelShader = nullptr;
+	VertexShader		vertexShader;
+	PixelShader			pixelShader;
 	PipelineState		PSO;
 
 	atomic_bool initialized = false;
@@ -306,17 +306,16 @@ void wiFont::LoadShaders()
 		{ "POSITION", 0, FORMAT_R16G16_SINT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, FORMAT_R16G16_FLOAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 	};
-	vertexShader = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(path + "fontVS.cso", wiResourceManager::VERTEXSHADER));
-	
-	wiRenderer::GetDevice()->CreateInputLayout(layout, arraysize(layout), &vertexShader->code, &vertexLayout);
+	wiRenderer::LoadVertexShader(vertexShader, "fontVS.cso");
+	wiRenderer::GetDevice()->CreateInputLayout(layout, arraysize(layout), &vertexShader.code, &vertexLayout);
 
 
-	pixelShader = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "fontPS.cso", wiResourceManager::PIXELSHADER));
+	wiRenderer::LoadPixelShader(pixelShader, "fontPS.cso");
 
 
 	PipelineStateDesc desc;
-	desc.vs = vertexShader;
-	desc.ps = pixelShader;
+	desc.vs = &vertexShader;
+	desc.ps = &pixelShader;
 	desc.il = &vertexLayout;
 	desc.bs = &blendState;
 	desc.dss = &depthStencilState;
@@ -433,9 +432,13 @@ const Texture* wiFont::GetAtlas()
 {
 	return &texture;
 }
-std::string& wiFont::GetFontPath()
+const std::string& wiFont::GetFontPath()
 {
 	return FONTPATH;
+}
+void wiFont::SetFontPath(const std::string& path)
+{
+	FONTPATH = path;
 }
 int wiFont::AddFontStyle(const string& fontName)
 {

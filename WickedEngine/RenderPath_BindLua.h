@@ -15,8 +15,6 @@ public:
 	RenderPath_BindLua(lua_State *L);
 	~RenderPath_BindLua();
 
-	virtual int GetContent(lua_State* L);
-
 	virtual int Initialize(lua_State* L);
 
 	virtual int OnStart(lua_State* L);

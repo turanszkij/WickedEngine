@@ -16,7 +16,7 @@ public:
 
 	void Update();
 
-	wiSceneSystem::WeatherComponent& GetWeather() const;
+	wiScene::WeatherComponent& GetWeather() const;
 	void InvalidateProbes() const;
 
 	wiGUI* GUI;

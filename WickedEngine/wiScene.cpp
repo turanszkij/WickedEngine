@@ -1,4 +1,4 @@
-#include "wiSceneSystem.h"
+#include "wiScene.h"
 #include "wiMath.h"
 #include "wiTextureHelper.h"
 #include "wiResourceManager.h"
@@ -16,7 +16,7 @@
 using namespace wiECS;
 using namespace wiGraphics;
 
-namespace wiSceneSystem
+namespace wiScene
 {
 
 	XMFLOAT3 TransformComponent::GetPosition() const
@@ -230,24 +230,23 @@ namespace wiSceneSystem
 	{
 		if (baseColorMap != nullptr)
 		{
-			return baseColorMap;
+			return baseColorMap->texture;
 		}
 		return wiTextureHelper::getWhite();
 	}
 	const Texture* MaterialComponent::GetNormalMap() const
 	{
-		return normalMap;
-		//if (normalMap != nullptr)
-		//{
-		//	return normalMap;
-		//}
-		//return wiTextureHelper::getNormalMapDefault();
+		if (normalMap != nullptr)
+		{
+			return normalMap->texture;
+		}
+		return nullptr;
 	}
 	const Texture* MaterialComponent::GetSurfaceMap() const
 	{
 		if (surfaceMap != nullptr)
 		{
-			return surfaceMap;
+			return surfaceMap->texture;
 		}
 		return wiTextureHelper::getWhite();
 	}
@@ -255,7 +254,7 @@ namespace wiSceneSystem
 	{
 		if (displacementMap != nullptr)
 		{
-			return displacementMap;
+			return displacementMap->texture;
 		}
 		return wiTextureHelper::getWhite();
 	}
@@ -263,7 +262,7 @@ namespace wiSceneSystem
 	{
 		if (emissiveMap != nullptr)
 		{
-			return emissiveMap;
+			return emissiveMap->texture;
 		}
 		return wiTextureHelper::getWhite();
 	}
@@ -271,7 +270,7 @@ namespace wiSceneSystem
 	{
 		if (occlusionMap != nullptr)
 		{
-			return occlusionMap;
+			return occlusionMap->texture;
 		}
 		return wiTextureHelper::getWhite();
 	}
@@ -1318,12 +1317,12 @@ namespace wiSceneSystem
 		if (!textureName.empty())
 		{
 			material.baseColorMapName = textureName;
-			material.baseColorMap = (Texture*)wiResourceManager::GetGlobal().add(material.baseColorMapName);
+			material.baseColorMap = wiResourceManager::Load(material.baseColorMapName);
 		}
 		if (!normalMapName.empty())
 		{
 			material.normalMapName = normalMapName;
-			material.normalMap = (Texture*)wiResourceManager::GetGlobal().add(material.normalMapName);
+			material.normalMap = wiResourceManager::Load(material.normalMapName);
 		}
 
 		return entity;
@@ -1396,8 +1395,8 @@ namespace wiSceneSystem
 
 		SoundComponent& sound = sounds.Create(entity);
 		sound.filename = filename;
-		sound.sound = (wiAudio::Sound*)wiResourceManager::GetGlobal().add(filename);
-		wiAudio::CreateSoundInstance(sound.sound, &sound.soundinstance);
+		sound.soundResource = wiResourceManager::Load(filename);
+		wiAudio::CreateSoundInstance(sound.soundResource->sound, &sound.soundinstance);
 
 		TransformComponent& transform = transforms.Create(entity);
 		transform.Translate(position);

@@ -2,7 +2,7 @@
 #include "DecalWindow.h"
 
 using namespace wiECS;
-using namespace wiSceneSystem;
+using namespace wiScene;
 
 
 DecalWindow::DecalWindow(wiGUI* gui) : GUI(gui)
@@ -23,7 +23,7 @@ DecalWindow::DecalWindow(wiGUI* gui) : GUI(gui)
 	decalNameField->SetPos(XMFLOAT2(10, 30));
 	decalNameField->SetSize(XMFLOAT2(300, 20));
 	decalNameField->OnInputAccepted([&](wiEventArgs args) {
-		NameComponent* name = wiSceneSystem::GetScene().names.GetComponent(entity);
+		NameComponent* name = wiScene::GetScene().names.GetComponent(entity);
 		if (name != nullptr)
 		{
 			*name = args.sValue;
@@ -49,7 +49,7 @@ void DecalWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
 
-	Scene& scene = wiSceneSystem::GetScene();
+	Scene& scene = wiScene::GetScene();
 	const DecalComponent* decal = scene.decals.GetComponent(entity);
 
 	if (decal != nullptr)

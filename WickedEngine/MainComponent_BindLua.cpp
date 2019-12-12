@@ -7,13 +7,11 @@
 #include "RenderPath3D_TiledForward_BindLua.h"
 #include "RenderPath3D_TiledDeferred_BindLua.h"
 #include "LoadingScreen_BindLua.h"
-#include "wiResourceManager_BindLua.h"
 #include "wiProfiler.h"
 
 const char MainComponent_BindLua::className[] = "MainComponent";
 
 Luna<MainComponent_BindLua>::FunctionType MainComponent_BindLua::methods[] = {
-	lunamethod(MainComponent_BindLua, GetContent),
 	lunamethod(MainComponent_BindLua, GetActivePath),
 	lunamethod(MainComponent_BindLua, SetActivePath),
 	lunamethod(MainComponent_BindLua, SetFrameSkip),
@@ -42,16 +40,6 @@ MainComponent_BindLua::~MainComponent_BindLua()
 {
 }
 
-int MainComponent_BindLua::GetContent(lua_State *L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "GetContent() component is empty!");
-		return 0;
-	}
-	Luna<wiResourceManager_BindLua>::push(L, new wiResourceManager_BindLua(&component->Content));
-	return 1;
-}
 int MainComponent_BindLua::GetActivePath(lua_State *L)
 {
 	if (component == nullptr)

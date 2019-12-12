@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "wiSceneSystem.h"
+#include "wiScene.h"
 #include "ModelImporter.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
@@ -9,7 +9,7 @@
 
 using namespace std;
 using namespace wiGraphics;
-using namespace wiSceneSystem;
+using namespace wiScene;
 using namespace wiECS;
 
 // Transform the data from OBJ space to engine-space:
@@ -66,19 +66,19 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 
 			if (!material.surfaceMapName.empty())
 			{
-				material.surfaceMap = (Texture*)wiResourceManager::GetGlobal().add(directory + material.surfaceMapName);
+				material.surfaceMap = wiResourceManager::Load(directory + material.surfaceMapName);
 			}
 			if (!material.baseColorMapName.empty())
 			{
-				material.baseColorMap = (Texture*)wiResourceManager::GetGlobal().add(directory + material.baseColorMapName);
+				material.baseColorMap = wiResourceManager::Load(directory + material.baseColorMapName);
 			}
 			if (!material.normalMapName.empty())
 			{
-				material.normalMap = (Texture*)wiResourceManager::GetGlobal().add(directory + material.normalMapName);
+				material.normalMap = wiResourceManager::Load(directory + material.normalMapName);
 			}
 			if (!material.displacementMapName.empty())
 			{
-				material.displacementMap = (Texture*)wiResourceManager::GetGlobal().add(directory + material.displacementMapName);
+				material.displacementMap = wiResourceManager::Load(directory + material.displacementMapName);
 			}
 
 			materialLibrary.push_back(materialEntity); // for subset-indexing...

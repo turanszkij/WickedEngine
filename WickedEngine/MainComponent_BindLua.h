@@ -16,7 +16,6 @@ public:
 	MainComponent_BindLua(lua_State *L);
 	~MainComponent_BindLua();
 
-	int GetContent(lua_State *L);
 	int GetActivePath(lua_State *L);
 	int SetActivePath(lua_State *L);
 	int SetFrameSkip(lua_State *L);

@@ -49,7 +49,7 @@ You can find out more about the Entity-Component system and other engine-level s
 	- Entity is a number, it can reference any number of different components through ComponentManager containers
 	- Component is not defined, it can be any data, that is stored inside a ComponentManager along entities
 
-- wiSceneSystem
+- wiScene
 	- This contains Scene, a class that is responsible of holding and managing everything in the world
 	- There are also all of the Component types, like TransformComponent, MeshComponent, etc.
 	- There are a number of systems here that can operate on collections of components

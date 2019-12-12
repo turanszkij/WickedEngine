@@ -86,7 +86,6 @@ void RenderPath2D::Unload()
 		{
 			if (y.sprite != nullptr)
 			{
-				y.sprite->Destroy();
 				delete y.sprite;
 			}
 			if (y.font != nullptr)

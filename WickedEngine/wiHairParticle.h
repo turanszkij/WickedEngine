@@ -3,14 +3,14 @@
 #include "wiGraphicsDevice.h"
 #include "wiEnums.h"
 #include "wiECS.h"
-#include "wiSceneSystem_Decl.h"
+#include "wiScene_Decl.h"
 #include "wiIntersect.h"
 
 #include <memory>
 
 class wiArchive;
 
-namespace wiSceneSystem
+namespace wiScene
 {
 
 class wiHairParticle

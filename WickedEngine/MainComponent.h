@@ -1,9 +1,9 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiPlatform.h"
 #include "wiResourceManager.h"
 #include "wiColor.h"
 #include "wiFadeManager.h"
-#include "wiWindowRegistration.h"
 
 class RenderPath;
 
@@ -34,9 +34,6 @@ public:
 	void ActivatePath(RenderPath* component, float fadeSeconds = 0, wiColor fadeColor = wiColor(0,0,0,255));
 	inline RenderPath* GetActivePath(){ return activePath; }
 
-	// You can use this as a self-contained resource manager if you want to avoid using the wiResourceManager::GetGlobal()
-	wiResourceManager Content;
-
 	// Set the desired target framerate for the FixedUpdate() loop (default = 60)
 	void	setTargetFrameRate(float value) { targetFrameRate = value; }
 	// Get the desired target framerate for the FixedUpdate() loop
@@ -61,13 +58,8 @@ public:
 	// This is where the application will render to the screen (backbuffer). It must render to the provided command list.
 	virtual void Compose(wiGraphics::CommandList cmd);
 
-#ifndef WINSTORE_SUPPORT
-	// You need to call this before calling Run() or Initialize() if you want to render to a Win32 window handle
-	void SetWindow(wiWindowRegistration::window_type window, HINSTANCE hInst = NULL);
-#else
-	// You need to call this before calling Run() or Initialize() if you want to render to a UWP window
-	void SetWindow(wiWindowRegistration::window_type window);
-#endif
+	// You need to call this before calling Run() or Initialize() if you want to render
+	void SetWindow(wiPlatform::window_type);
 
 
 	struct InfoDisplayer

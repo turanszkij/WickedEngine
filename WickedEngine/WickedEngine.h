@@ -27,7 +27,7 @@
 #include "wiImage.h"
 #include "wiSprite.h"
 #include "wiFont.h"
-#include "wiSceneSystem.h"
+#include "wiScene.h"
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"
 #include "wiRenderer.h"

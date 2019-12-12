@@ -1,5 +1,5 @@
-#include "wiSceneSystem_BindLua.h"
-#include "wiSceneSystem.h"
+#include "wiScene_BindLua.h"
+#include "wiScene.h"
 #include "Vector_BindLua.h"
 #include "Matrix_BindLua.h"
 #include "wiEmittedParticle.h"
@@ -8,10 +8,10 @@
 
 using namespace std;
 using namespace wiECS;
-using namespace wiSceneSystem;
+using namespace wiScene;
 using namespace wiIntersect_BindLua;
 
-namespace wiSceneSystem_BindLua
+namespace wiScene_BindLua
 {
 
 int CreateEntity_BindLua(lua_State* L)
@@ -23,7 +23,7 @@ int CreateEntity_BindLua(lua_State* L)
 
 int GetScene(lua_State* L)
 {
-	Luna<Scene_BindLua>::push(L, new Scene_BindLua(&wiSceneSystem::GetScene()));
+	Luna<Scene_BindLua>::push(L, new Scene_BindLua(&wiScene::GetScene()));
 	return 1;
 }
 int LoadModel(lua_State* L)
@@ -51,7 +51,7 @@ int LoadModel(lua_State* L)
 						wiLua::SError(L, "LoadModel(Scene scene, string fileName, opt Matrix transform) argument is not a matrix!");
 					}
 				}
-				Entity root = wiSceneSystem::LoadModel(*custom_scene->scene, fileName, transform, true);
+				Entity root = wiScene::LoadModel(*custom_scene->scene, fileName, transform, true);
 				wiLua::SSetInt(L, int(root));
 				return 1;
 			}
@@ -78,7 +78,7 @@ int LoadModel(lua_State* L)
 					wiLua::SError(L, "LoadModel(string fileName, opt Matrix transform) argument is not a matrix!");
 				}
 			}
-			Entity root = wiSceneSystem::LoadModel(fileName, transform, true);
+			Entity root = wiScene::LoadModel(fileName, transform, true);
 			wiLua::SSetInt(L, int(root));
 			return 1;
 		}
@@ -99,7 +99,7 @@ int Pick(lua_State* L)
 		{
 			uint32_t renderTypeMask = RENDERTYPE_OPAQUE;
 			uint32_t layerMask = 0xFFFFFFFF;
-			Scene* scene = &wiSceneSystem::GetScene();
+			Scene* scene = &wiScene::GetScene();
 			if (argc > 1)
 			{
 				renderTypeMask = (uint32_t)wiLua::SGetInt(L, 2);
@@ -122,7 +122,7 @@ int Pick(lua_State* L)
 					}
 				}
 			}
-			auto& pick = wiSceneSystem::Pick(ray->ray, renderTypeMask, layerMask, *scene);
+			auto& pick = wiScene::Pick(ray->ray, renderTypeMask, layerMask, *scene);
 			wiLua::SSetInt(L, (int)pick.entity);
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));

@@ -2,25 +2,25 @@
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
 #include "ShaderInterop_Ocean.h"
-#include "wiSceneSystem.h"
+#include "wiScene.h"
 #include "wiBackLog.h"
 
 #include <algorithm>
 
 using namespace std;
 using namespace wiGraphics;
-using namespace wiSceneSystem;
+using namespace wiScene;
 
 namespace wiOcean_Internal
 {
-	const ComputeShader*		m_pUpdateSpectrumCS = nullptr;
-	const ComputeShader*		m_pUpdateDisplacementMapCS = nullptr;
-	const ComputeShader*		m_pUpdateGradientFoldingCS = nullptr;
-	const VertexShader*		g_pOceanSurfVS = nullptr;
-	const PixelShader*		g_pWireframePS = nullptr;
-	const PixelShader*		g_pOceanSurfPS = nullptr;
+	ComputeShader		updateSpectrumCS;
+	ComputeShader		updateDisplacementMapCS;
+	ComputeShader		updateGradientFoldingCS;
+	VertexShader		oceanSurfVS;
+	PixelShader			wireframePS;
+	PixelShader			oceanSurfPS;
 
-	GPUBuffer			g_pShadingCB;
+	GPUBuffer			shadingCB;
 	RasterizerState		rasterizerState;
 	RasterizerState		wireRS;
 	DepthStencilState	depthStencilState;
@@ -253,7 +253,7 @@ void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time,
 
 	// ---------------------------- H(0) -> H(t), D(x, t), D(y, t) --------------------------------
 
-	device->BindComputeShader(m_pUpdateSpectrumCS, cmd);
+	device->BindComputeShader(&updateSpectrumCS, cmd);
 
 	// Buffers
 	const GPUResource* cs0_srvs[2] = { 
@@ -294,7 +294,7 @@ void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time,
 
 
 	// Update displacement map:
-	device->BindComputeShader(m_pUpdateDisplacementMapCS, cmd);
+	device->BindComputeShader(&updateDisplacementMapCS, cmd);
 	const GPUResource* cs_uavs[] = { &m_pDisplacementMap };
 	device->BindUAVs(CS, cs_uavs, 0, 1, cmd);
 	const GPUResource* cs_srvs[1] = { &m_pBuffer_Float_Dxyz };
@@ -303,7 +303,7 @@ void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time,
 	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 
 	// Update gradient map:
-	device->BindComputeShader(m_pUpdateGradientFoldingCS, cmd);
+	device->BindComputeShader(&updateGradientFoldingCS, cmd);
 	cs_uavs[0] = { &m_pGradientMap };
 	device->BindUAVs(CS, cs_uavs, 0, 1, cmd);
 	cs_srvs[0] = &m_pDisplacementMap;
@@ -353,10 +353,10 @@ void wiOcean::Render(const CameraComponent& camera, const WeatherComponent& weat
 	cb.xOceanWaterHeight = params.waterHeight;
 	cb.xOceanSurfaceDisplacementTolerance = std::max(1.0f, params.surfaceDisplacementTolerance);
 
-	device->UpdateBuffer(&g_pShadingCB, &cb, cmd);
+	device->UpdateBuffer(&shadingCB, &cb, cmd);
 
-	device->BindConstantBuffer(VS, &g_pShadingCB, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
-	device->BindConstantBuffer(PS, &g_pShadingCB, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
+	device->BindConstantBuffer(VS, &shadingCB, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
+	device->BindConstantBuffer(PS, &shadingCB, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
 
 	device->BindResource(VS, &m_pDisplacementMap, TEXSLOT_ONDEMAND0, cmd);
 	device->BindResource(PS, &m_pGradientMap, TEXSLOT_ONDEMAND0, cmd);
@@ -372,29 +372,28 @@ void wiOcean::LoadShaders()
 
 	std::string path = wiRenderer::GetShaderPath();
 
-	m_pUpdateSpectrumCS = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(path + "oceanSimulatorCS.cso", wiResourceManager::COMPUTESHADER));
-	m_pUpdateDisplacementMapCS = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(path + "oceanUpdateDisplacementMapCS.cso", wiResourceManager::COMPUTESHADER));
-	m_pUpdateGradientFoldingCS = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(path + "oceanUpdateGradientFoldingCS.cso", wiResourceManager::COMPUTESHADER));
+	wiRenderer::LoadComputeShader(updateSpectrumCS, "oceanSimulatorCS.cso");
+	wiRenderer::LoadComputeShader(updateDisplacementMapCS, "oceanUpdateDisplacementMapCS.cso");
+	wiRenderer::LoadComputeShader(updateGradientFoldingCS, "oceanUpdateGradientFoldingCS.cso");
 
+	wiRenderer::LoadVertexShader(oceanSurfVS, "oceanSurfaceVS.cso");
 
-	g_pOceanSurfVS = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(path + "oceanSurfaceVS.cso", wiResourceManager::VERTEXSHADER));
-
-	g_pOceanSurfPS = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "oceanSurfacePS.cso", wiResourceManager::PIXELSHADER));
-	g_pWireframePS = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "oceanSurfaceSimplePS.cso", wiResourceManager::PIXELSHADER));
+	wiRenderer::LoadPixelShader(oceanSurfPS, "oceanSurfacePS.cso");
+	wiRenderer::LoadPixelShader(wireframePS, "oceanSurfaceSimplePS.cso");
 
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	{
 		PipelineStateDesc desc;
-		desc.vs = g_pOceanSurfVS;
-		desc.ps = g_pOceanSurfPS;
+		desc.vs = &oceanSurfVS;
+		desc.ps = &oceanSurfPS;
 		desc.bs = &blendState;
 		desc.rs = &rasterizerState;
 		desc.dss = &depthStencilState;
 		device->CreatePipelineState(&desc, &PSO);
 
-		desc.ps = g_pWireframePS;
+		desc.ps = &wireframePS;
 		desc.rs = &wireRS;
 		device->CreatePipelineState(&desc, &PSO_wire);
 	}
@@ -411,7 +410,7 @@ void wiOcean::Initialize()
 	cb_desc.ByteWidth = sizeof(Ocean_RenderCB);
 	cb_desc.StructureByteStride = 0;
 	cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
-	device->CreateBuffer(&cb_desc, nullptr, &g_pShadingCB);
+	device->CreateBuffer(&cb_desc, nullptr, &shadingCB);
 
 
 	RasterizerStateDesc ras_desc;

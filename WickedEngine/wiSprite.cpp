@@ -1,37 +1,28 @@
 #include "wiSprite.h"
-#include "wiResourceManager.h"
 #include "wiImage.h"
 #include "wiRenderer.h"
 #include "wiRandom.h"
 
 using namespace wiGraphics;
 
-
 wiSprite::wiSprite(const std::string& newTexture, const std::string& newMask)
 {
 	if (!newTexture.empty())
 	{
-		texture = newTexture;
-		texturePointer = (Texture*)wiResourceManager::GetGlobal().add(newTexture);
+		textureName = newTexture;
+		textureResource = wiResourceManager::Load(newTexture);
 	}
 	if (!newMask.empty())
 	{
-		maskPointer = (Texture*)wiResourceManager::GetGlobal().add(newMask);
-		params.setMaskMap(maskPointer);
-		mask = newMask;
+		maskName = newMask;
+		maskResource = wiResourceManager::Load(newMask);
+		params.setMaskMap(maskResource->texture);
 	}
-}
-void wiSprite::Destroy()
-{
-	wiResourceManager::GetGlobal().del(texture);
-	wiResourceManager::GetGlobal().del(mask);
-	texturePointer = nullptr;
-	maskPointer = nullptr;
 }
 
 void wiSprite::Draw(CommandList cmd) const
 {
-	wiImage::Draw(texturePointer, params, cmd);
+	wiImage::Draw(textureResource->texture, params, cmd);
 }
 void wiSprite::DrawNormal(CommandList cmd) const
 {
@@ -40,7 +31,7 @@ void wiSprite::DrawNormal(CommandList cmd) const
 		wiImageParams effectsMod(params);
 		effectsMod.blendFlag = BLENDMODE_ADDITIVE;
 		effectsMod.enableExtractNormalMap();
-		wiImage::Draw(texturePointer, effectsMod, cmd);
+		wiImage::Draw(textureResource->texture, effectsMod, cmd);
 	}
 }
 

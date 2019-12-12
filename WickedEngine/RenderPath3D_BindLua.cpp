@@ -1,5 +1,4 @@
 #include "RenderPath3D_BindLua.h"
-#include "wiResourceManager_BindLua.h"
 #include "Texture_BindLua.h"
 
 const char RenderPath3D_BindLua::className[] = "RenderPath3D";
@@ -20,7 +19,6 @@ Luna<RenderPath3D_BindLua>::FunctionType RenderPath3D_BindLua::methods[] = {
 	lunamethod(RenderPath2D_BindLua, SetSpriteOrder),
 	lunamethod(RenderPath2D_BindLua, SetFontOrder),
 
-	lunamethod(RenderPath3D_BindLua, GetContent),
 	lunamethod(RenderPath3D_BindLua, Initialize),
 	lunamethod(RenderPath_BindLua, OnStart),
 	lunamethod(RenderPath_BindLua, OnStop),
@@ -34,7 +32,6 @@ Luna<RenderPath3D_BindLua>::FunctionType RenderPath3D_BindLua::methods[] = {
 	lunamethod(RenderPath3D_BindLua, SetFXAAEnabled),
 	lunamethod(RenderPath3D_BindLua, SetBloomEnabled),
 	lunamethod(RenderPath3D_BindLua, SetColorGradingEnabled),
-	lunamethod(RenderPath3D_BindLua, SetColorGradingTexture),
 	lunamethod(RenderPath3D_BindLua, SetVolumeLightsEnabled),
 	lunamethod(RenderPath3D_BindLua, SetLightShaftsEnabled),
 	lunamethod(RenderPath3D_BindLua, SetLensFlareEnabled),
@@ -160,24 +157,6 @@ int RenderPath3D_BindLua::SetColorGradingEnabled(lua_State* L)
 		((RenderPath3D*)component)->setColorGradingEnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetColorGradingEnabled(bool value) not enough arguments!");
-	return 0;
-}
-int RenderPath3D_BindLua::SetColorGradingTexture(lua_State* L)
-{
-	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		Texture_BindLua* tex = Luna<Texture_BindLua>::lightcheck(L, 1);
-		if (tex != nullptr)
-		{
-			((RenderPath3D*)component)->setColorGradingTexture(tex->texture);
-		}
-		else
-			wiLua::SError(L, "SetColorGradingTexture(Texture texture2D) argument is not a texture!");
-	}
-	else
-		wiLua::SError(L, "SetColorGradingTexture(Texture texture2D) not enough arguments!");
-
 	return 0;
 }
 int RenderPath3D_BindLua::SetVolumeLightsEnabled(lua_State* L)

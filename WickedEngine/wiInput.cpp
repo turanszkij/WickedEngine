@@ -1,10 +1,9 @@
 #include "wiInput.h"
-#include "Platform.h"
+#include "wiPlatform.h"
 #include "wiXInput.h"
 #include "wiRawInput.h"
 #include "wiHelper.h"
 #include "wiBackLog.h"
-#include "wiWindowRegistration.h"
 #include "wiProfiler.h"
 #include "wiColor.h"
 
@@ -205,7 +204,7 @@ namespace wiInput
 		{
 			return false;
 		}
-		if (!wiWindowRegistration::IsWindowActive())
+		if (!wiPlatform::IsWindowActive())
 		{
 			return false;
 		}
@@ -390,7 +389,7 @@ namespace wiInput
 #ifndef WINSTORE_SUPPORT
 		POINT p;
 		GetCursorPos(&p);
-		ScreenToClient(wiWindowRegistration::GetRegisteredWindow(), &p);
+		ScreenToClient(wiPlatform::GetWindow(), &p);
 		return XMFLOAT4((float)p.x, (float)p.y, state.delta_wheel, 0);
 #else
 		auto& p = Windows::UI::Core::CoreWindow::GetForCurrentThread()->PointerPosition;
@@ -403,7 +402,7 @@ namespace wiInput
 		POINT p;
 		p.x = (LONG)props.x;
 		p.y = (LONG)props.y;
-		ClientToScreen(wiWindowRegistration::GetRegisteredWindow(), &p);
+		ClientToScreen(wiPlatform::GetWindow(), &p);
 		SetCursorPos(p.x, p.y);
 #endif
 	}

@@ -44,7 +44,6 @@ The documentation completion is still pending....
 			3. LoadingScreen
 	9. Network
 	10. Input Handling
-	11. ResourceManager
 		
 ## Introduction and usage
 Scripting in Wicked Engine is powered by Lua, meaning that the user can make use of the 
@@ -114,7 +113,6 @@ You can use the Renderer with the following functions, all of which are in the g
 - GetRenderHeight(): float result
 - GetCamera() : Camera result		-- returns the main camera
 - AttachCamera(Entity entity)	-- attaches camera to an entity in the current frame
-- SetEnvironmentMap(Texture cubemap)
 - HairParticleSettings(opt int lod0, opt int lod1, opt int lod2)
 - SetAlphaCompositionEnabled(opt bool enabled)
 - SetShadowProps2D(int resolution, int count, int softShadowQuality)
@@ -784,12 +782,3 @@ Describes a touch contact point
 - [outer]GAMEPAD_ANALOG_THUMBSTICK_R : int
 - [outer]GAMEPAD_ANALOG_TRIGGER_L : int
 - [outer]GAMEPAD_ANALOG_TRIGGER_R : int
-
-### ResourceManager
-Stores and manages resources such as textures, audio and shaders.
-- [outer]globalResources : Resource
-- [void-constructor]Resource()
-- Get(string name)
-- Add(string name)
-- Del(string name)
-- List() : string result

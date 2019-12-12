@@ -199,7 +199,6 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	colorGradingButton->SetPos(XMFLOAT2(x + 35, y));
 	colorGradingButton->SetSize(XMFLOAT2(200, 18));
 	colorGradingButton->OnClick([=](wiEventArgs args) {
-		//auto x = wiRenderer::GetColorGrading();
 		auto x = component->getColorGradingTexture();
 
 		if (x == nullptr)
@@ -217,7 +216,7 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 
 				if (result.ok) {
 					string fileName = result.filenames.front();
-					component->setColorGradingTexture((Texture*)wiResourceManager::GetGlobal().add(fileName));
+					component->setColorGradingTexture(wiResourceManager::Load(fileName));
 					if (component->getColorGradingTexture() != nullptr)
 					{
 						colorGradingButton->SetText(fileName);

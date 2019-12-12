@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "wiSceneSystem.h"
+#include "wiScene.h"
 #include "ModelImporter.h"
 #include "wiRandom.h"
 
@@ -16,7 +16,7 @@
 
 using namespace std;
 using namespace wiGraphics;
-using namespace wiSceneSystem;
+using namespace wiScene;
 using namespace wiECS;
 
 
@@ -94,7 +94,7 @@ namespace tinygltf
 void RegisterTexture(tinygltf::Image *image, const string& type_name)
 {
 	// We will load the texture2d by hand here and register to the resource manager (if it was not already registered)
-	if (wiResourceManager::GetGlobal().get(wiHashString(image->uri)).data == nullptr)
+	if (!wiResourceManager::Contains(wiHashString(image->uri)))
 	{
 		int width = image->width;
 		int height = image->height;
@@ -154,7 +154,7 @@ void RegisterTexture(tinygltf::Image *image, const string& type_name)
 					}
 
 					// We loaded the texture2d, so register to the resource manager to be retrieved later:
-					wiResourceManager::GetGlobal().Register(image->uri, tex, wiResourceManager::IMAGE);
+					wiResourceManager::Register(image->uri, tex, wiResource::IMAGE);
 				}
 			}
 			else
@@ -478,15 +478,15 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 		// Retrieve textures by name:
 		if (!material.baseColorMapName.empty())
-			material.baseColorMap = (Texture*)wiResourceManager::GetGlobal().add(material.baseColorMapName);
+			material.baseColorMap = wiResourceManager::Load(material.baseColorMapName);
 		if (!material.normalMapName.empty())
-			material.normalMap = (Texture*)wiResourceManager::GetGlobal().add(material.normalMapName);
+			material.normalMap = wiResourceManager::Load(material.normalMapName);
 		if (!material.surfaceMapName.empty())
-			material.surfaceMap = (Texture*)wiResourceManager::GetGlobal().add(material.surfaceMapName);
+			material.surfaceMap = wiResourceManager::Load(material.surfaceMapName);
 		if (!material.emissiveMapName.empty())
-			material.emissiveMap = (Texture*)wiResourceManager::GetGlobal().add(material.emissiveMapName);
+			material.emissiveMap = wiResourceManager::Load(material.emissiveMapName);
 		if (!material.occlusionMapName.empty())
-			material.occlusionMap = (Texture*)wiResourceManager::GetGlobal().add(material.occlusionMapName);
+			material.occlusionMap = wiResourceManager::Load(material.occlusionMapName);
 
 	}
 

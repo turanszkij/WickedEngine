@@ -1353,7 +1353,7 @@ namespace wiGraphics
 	}
 
 	// Engine functions
-	GraphicsDevice_DX12::GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer)
+	GraphicsDevice_DX12::GraphicsDevice_DX12(wiPlatform::window_type window, bool fullscreen, bool debuglayer)
 	{
 		DEBUGDEVICE = debuglayer;
 		FULLSCREEN = fullscreen;

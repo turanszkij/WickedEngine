@@ -5,7 +5,7 @@
 
 using namespace std;
 using namespace wiECS;
-using namespace wiSceneSystem;
+using namespace wiScene;
 
 MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 {
@@ -34,7 +34,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	doubleSidedCheckBox->SetTooltip("If enabled, the inside of the mesh will be visible.");
 	doubleSidedCheckBox->SetPos(XMFLOAT2(x, y += step));
 	doubleSidedCheckBox->OnClick([&](wiEventArgs args) {
-		MeshComponent* mesh = wiSceneSystem::GetScene().meshes.GetComponent(entity);
+		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->SetDoubleSided(args.bValue);
@@ -47,7 +47,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	softbodyCheckBox->SetPos(XMFLOAT2(x, y += step));
 	softbodyCheckBox->OnClick([&](wiEventArgs args) {
 
-		Scene& scene = wiSceneSystem::GetScene();
+		Scene& scene = wiScene::GetScene();
 		SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(entity);
 
 		if (args.bValue)
@@ -75,7 +75,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	massSlider->SetSize(XMFLOAT2(100, 30));
 	massSlider->SetPos(XMFLOAT2(x, y += step));
 	massSlider->OnSlide([&](wiEventArgs args) {
-		SoftBodyPhysicsComponent* physicscomponent = wiSceneSystem::GetScene().softbodies.GetComponent(entity);
+		SoftBodyPhysicsComponent* physicscomponent = wiScene::GetScene().softbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
 		{
 			physicscomponent->mass = args.fValue;
@@ -88,7 +88,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	frictionSlider->SetSize(XMFLOAT2(100, 30));
 	frictionSlider->SetPos(XMFLOAT2(x, y += step));
 	frictionSlider->OnSlide([&](wiEventArgs args) {
-		SoftBodyPhysicsComponent* physicscomponent = wiSceneSystem::GetScene().softbodies.GetComponent(entity);
+		SoftBodyPhysicsComponent* physicscomponent = wiScene::GetScene().softbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
 		{
 			physicscomponent->friction = args.fValue;
@@ -101,10 +101,10 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	impostorCreateButton->SetSize(XMFLOAT2(240, 30));
 	impostorCreateButton->SetPos(XMFLOAT2(x - 50, y += step));
 	impostorCreateButton->OnClick([&](wiEventArgs args) {
-		MeshComponent* mesh = wiSceneSystem::GetScene().meshes.GetComponent(entity);
+		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
-			Scene& scene = wiSceneSystem::GetScene();
+			Scene& scene = wiScene::GetScene();
 			scene.impostors.Create(entity).swapInDistance = impostorDistanceSlider->GetValue();
 		}
 	});
@@ -115,7 +115,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	impostorDistanceSlider->SetSize(XMFLOAT2(100, 30));
 	impostorDistanceSlider->SetPos(XMFLOAT2(x, y += step));
 	impostorDistanceSlider->OnSlide([&](wiEventArgs args) {
-		ImpostorComponent* impostor = wiSceneSystem::GetScene().impostors.GetComponent(entity);
+		ImpostorComponent* impostor = wiScene::GetScene().impostors.GetComponent(entity);
 		if (impostor != nullptr)
 		{
 			impostor->swapInDistance = args.fValue;
@@ -128,7 +128,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	tessellationFactorSlider->SetSize(XMFLOAT2(100, 30));
 	tessellationFactorSlider->SetPos(XMFLOAT2(x, y += step));
 	tessellationFactorSlider->OnSlide([&](wiEventArgs args) {
-		MeshComponent* mesh = wiSceneSystem::GetScene().meshes.GetComponent(entity);
+		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->tessellationFactor = args.fValue;
@@ -141,7 +141,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	flipCullingButton->SetSize(XMFLOAT2(240, 30));
 	flipCullingButton->SetPos(XMFLOAT2(x - 50, y += step));
 	flipCullingButton->OnClick([&](wiEventArgs args) {
-		MeshComponent* mesh = wiSceneSystem::GetScene().meshes.GetComponent(entity);
+		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->FlipCulling();
@@ -155,7 +155,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	flipNormalsButton->SetSize(XMFLOAT2(240, 30));
 	flipNormalsButton->SetPos(XMFLOAT2(x - 50, y += step));
 	flipNormalsButton->OnClick([&](wiEventArgs args) {
-		MeshComponent* mesh = wiSceneSystem::GetScene().meshes.GetComponent(entity);
+		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->FlipNormals();
@@ -169,7 +169,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	computeNormalsSmoothButton->SetSize(XMFLOAT2(240, 30));
 	computeNormalsSmoothButton->SetPos(XMFLOAT2(x - 50, y += step));
 	computeNormalsSmoothButton->OnClick([&](wiEventArgs args) {
-		MeshComponent* mesh = wiSceneSystem::GetScene().meshes.GetComponent(entity);
+		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->ComputeNormals(true);
@@ -183,7 +183,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	computeNormalsHardButton->SetSize(XMFLOAT2(240, 30));
 	computeNormalsHardButton->SetPos(XMFLOAT2(x - 50, y += step));
 	computeNormalsHardButton->OnClick([&](wiEventArgs args) {
-		MeshComponent* mesh = wiSceneSystem::GetScene().meshes.GetComponent(entity);
+		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->ComputeNormals(false);
@@ -197,7 +197,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	recenterButton->SetSize(XMFLOAT2(240, 30));
 	recenterButton->SetPos(XMFLOAT2(x - 50, y += step));
 	recenterButton->OnClick([&](wiEventArgs args) {
-		MeshComponent* mesh = wiSceneSystem::GetScene().meshes.GetComponent(entity);
+		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->Recenter();
@@ -211,7 +211,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	recenterToBottomButton->SetSize(XMFLOAT2(240, 30));
 	recenterToBottomButton->SetPos(XMFLOAT2(x - 50, y += step));
 	recenterToBottomButton->OnClick([&](wiEventArgs args) {
-		MeshComponent* mesh = wiSceneSystem::GetScene().meshes.GetComponent(entity);
+		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->RecenterToBottom();
@@ -241,7 +241,7 @@ void MeshWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
 
-	Scene&scene = wiSceneSystem::GetScene();
+	Scene&scene = wiScene::GetScene();
 
 	const MeshComponent* mesh = scene.meshes.GetComponent(entity);
 
@@ -276,7 +276,7 @@ void MeshWindow::SetEntity(Entity entity)
 
 		softbodyCheckBox->SetCheck(false);
 
-		SoftBodyPhysicsComponent* physicscomponent = wiSceneSystem::GetScene().softbodies.GetComponent(entity);
+		SoftBodyPhysicsComponent* physicscomponent = wiScene::GetScene().softbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
 		{
 			softbodyCheckBox->SetCheck(true);

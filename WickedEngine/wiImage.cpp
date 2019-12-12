@@ -4,7 +4,7 @@
 #include "wiHelper.h"
 #include "SamplerMapping.h"
 #include "ResourceMapping.h"
-#include "wiSceneSystem.h"
+#include "wiScene.h"
 #include "ShaderInterop_Image.h"
 #include "wiBackLog.h"
 
@@ -32,9 +32,9 @@ namespace wiImage
 	};
 
 	GPUBuffer				constantBuffer;
-	const VertexShader*		vertexShader = nullptr;
-	const VertexShader*		screenVS = nullptr;
-	const PixelShader*		imagePS[IMAGE_SHADER_COUNT][IMAGE_SAMPLING_COUNT];
+	VertexShader			vertexShader;
+	VertexShader			screenVS;
+	PixelShader				imagePS[IMAGE_SHADER_COUNT][IMAGE_SAMPLING_COUNT];
 	BlendState				blendStates[BLENDMODE_COUNT];
 	RasterizerState			rasterizerState;
 	DepthStencilState		depthStencilStates[STENCILMODE_COUNT][STENCILREFMODE_COUNT];
@@ -236,18 +236,18 @@ namespace wiImage
 	{
 		std::string path = wiRenderer::GetShaderPath();
 
-		vertexShader = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(path + "imageVS.cso", wiResourceManager::VERTEXSHADER));
-		screenVS = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(path + "screenVS.cso", wiResourceManager::VERTEXSHADER));
+		wiRenderer::LoadVertexShader(vertexShader, "imageVS.cso");
+		wiRenderer::LoadVertexShader(screenVS, "screenVS.cso");
 
-		imagePS[IMAGE_SHADER_STANDARD][IMAGE_SAMPLING_SIMPLE] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS.cso", wiResourceManager::PIXELSHADER));
-		imagePS[IMAGE_SHADER_SEPARATENORMALMAP][IMAGE_SAMPLING_SIMPLE] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_separatenormalmap.cso", wiResourceManager::PIXELSHADER));
-		imagePS[IMAGE_SHADER_MASKED][IMAGE_SAMPLING_SIMPLE] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_masked.cso", wiResourceManager::PIXELSHADER));
-		imagePS[IMAGE_SHADER_FULLSCREEN][IMAGE_SAMPLING_SIMPLE] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "screenPS.cso", wiResourceManager::PIXELSHADER));
+		wiRenderer::LoadPixelShader(imagePS[IMAGE_SHADER_STANDARD][IMAGE_SAMPLING_SIMPLE], "imagePS.cso");
+		wiRenderer::LoadPixelShader(imagePS[IMAGE_SHADER_SEPARATENORMALMAP][IMAGE_SAMPLING_SIMPLE], "imagePS_separatenormalmap.cso");
+		wiRenderer::LoadPixelShader(imagePS[IMAGE_SHADER_MASKED][IMAGE_SAMPLING_SIMPLE],"imagePS_masked.cso");
+		wiRenderer::LoadPixelShader(imagePS[IMAGE_SHADER_FULLSCREEN][IMAGE_SAMPLING_SIMPLE], "screenPS.cso");
 
-		imagePS[IMAGE_SHADER_STANDARD][IMAGE_SAMPLING_BICUBIC] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_bicubic.cso", wiResourceManager::PIXELSHADER));
-		imagePS[IMAGE_SHADER_SEPARATENORMALMAP][IMAGE_SAMPLING_BICUBIC] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_separatenormalmap_bicubic.cso", wiResourceManager::PIXELSHADER));
-		imagePS[IMAGE_SHADER_MASKED][IMAGE_SAMPLING_BICUBIC] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_masked_bicubic.cso", wiResourceManager::PIXELSHADER));
-		imagePS[IMAGE_SHADER_FULLSCREEN][IMAGE_SAMPLING_BICUBIC] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "screenPS_bicubic.cso", wiResourceManager::PIXELSHADER));
+		wiRenderer::LoadPixelShader(imagePS[IMAGE_SHADER_STANDARD][IMAGE_SAMPLING_BICUBIC], "imagePS_bicubic.cso");
+		wiRenderer::LoadPixelShader(imagePS[IMAGE_SHADER_SEPARATENORMALMAP][IMAGE_SAMPLING_BICUBIC], "imagePS_separatenormalmap_bicubic.cso");
+		wiRenderer::LoadPixelShader(imagePS[IMAGE_SHADER_MASKED][IMAGE_SAMPLING_BICUBIC], "imagePS_masked_bicubic.cso");
+		wiRenderer::LoadPixelShader(imagePS[IMAGE_SHADER_FULLSCREEN][IMAGE_SAMPLING_BICUBIC], "screenPS_bicubic.cso");
 
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
@@ -255,17 +255,17 @@ namespace wiImage
 		for (int i = 0; i < IMAGE_SHADER_COUNT; ++i)
 		{
 			PipelineStateDesc desc;
-			desc.vs = vertexShader;
+			desc.vs = &vertexShader;
 			if (i == IMAGE_SHADER_FULLSCREEN)
 			{
-				desc.vs = screenVS;
+				desc.vs = &screenVS;
 			}
 			desc.rs = &rasterizerState;
 			desc.pt = TRIANGLESTRIP;
 
 			for (int l = 0; l < IMAGE_SAMPLING_COUNT; ++l)
 			{
-				desc.ps = imagePS[i][l];
+				desc.ps = &imagePS[i][l];
 
 				for (int j = 0; j < BLENDMODE_COUNT; ++j)
 				{

@@ -14,8 +14,6 @@ protected:
 	// create resolution dependant resources
 	virtual void ResizeBuffers() {}
 public:
-	wiResourceManager Content;
-
 	std::function<void()> onStart;
 	std::function<void()> onStop;
 

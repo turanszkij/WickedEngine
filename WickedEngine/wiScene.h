@@ -8,16 +8,18 @@
 #include "wiJobSystem.h"
 #include "wiAudio.h"
 #include "wiRenderer.h"
+#include "wiResourceManager.h"
 
 #include "wiECS.h"
-#include "wiSceneSystem_Decl.h"
+#include "wiScene_Decl.h"
 
 #include <string>
 #include <vector>
+#include <memory>
 
 class wiArchive;
 
-namespace wiSceneSystem
+namespace wiScene
 {
 	struct NameComponent
 	{
@@ -151,12 +153,12 @@ namespace wiSceneSystem
 		uint32_t uvset_occlusionMap = 0;
 
 		// Non-serialized attributes:
-		const wiGraphics::Texture* baseColorMap = nullptr;
-		const wiGraphics::Texture* surfaceMap = nullptr;
-		const wiGraphics::Texture* normalMap = nullptr;
-		const wiGraphics::Texture* displacementMap = nullptr;
-		const wiGraphics::Texture* emissiveMap = nullptr;
-		const wiGraphics::Texture* occlusionMap = nullptr;
+		std::shared_ptr<wiResource> baseColorMap;
+		std::shared_ptr<wiResource> surfaceMap;
+		std::shared_ptr<wiResource> normalMap;
+		std::shared_ptr<wiResource> displacementMap;
+		std::shared_ptr<wiResource> emissiveMap;
+		std::shared_ptr<wiResource> occlusionMap;
 		std::unique_ptr<wiGraphics::GPUBuffer> constantBuffer;
 
 		int customShaderID = -1; // for now, this is not serialized; need to consider actual proper use case first
@@ -688,7 +690,7 @@ namespace wiSceneSystem
 		XMFLOAT3 right;
 		int shadowMap_index = -1;
 
-		std::vector<const wiGraphics::Texture*> lensFlareRimTextures;
+		std::vector<std::shared_ptr<wiResource>> lensFlareRimTextures;
 
 		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
 		inline void SetVolumetricsEnabled(bool value) { if (value) { _flags |= VOLUMETRICS; } else { _flags &= ~VOLUMETRICS; } }
@@ -964,6 +966,9 @@ namespace wiSceneSystem
 		};
 		OceanParameters oceanParameters;
 
+		std::string skyMapName;
+		std::shared_ptr<wiResource> skyMap;
+
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
@@ -978,7 +983,7 @@ namespace wiSceneSystem
 		uint32_t _flags = LOOPED;
 
 		std::string filename;
-		wiAudio::Sound* sound = nullptr;
+		std::shared_ptr<wiResource> soundResource;
 		wiAudio::SoundInstance soundinstance;
 		float volume = 1;
 

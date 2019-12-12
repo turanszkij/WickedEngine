@@ -1401,7 +1401,7 @@ namespace wiGraphics
 
 
 	// Engine functions
-	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer)
+	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wiPlatform::window_type window, bool fullscreen, bool debuglayer)
 	{
 		DEBUGDEVICE = debuglayer;
 		BACKBUFFER_FORMAT = FORMAT::FORMAT_B8G8R8A8_UNORM;
@@ -4191,7 +4191,7 @@ namespace wiGraphics
 
 				std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 
-				if (pso->desc.vs != nullptr)
+				if (pso->desc.vs != nullptr && pso->desc.vs->code.data != nullptr)
 				{
 					VkShaderModuleCreateInfo moduleInfo = {};
 					moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -4210,7 +4210,7 @@ namespace wiGraphics
 					shaderStages.push_back(stageInfo);
 				}
 
-				if (pso->desc.hs != nullptr)
+				if (pso->desc.hs != nullptr && pso->desc.hs->code.data != nullptr)
 				{
 					VkShaderModuleCreateInfo moduleInfo = {};
 					moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -4229,7 +4229,7 @@ namespace wiGraphics
 					shaderStages.push_back(stageInfo);
 				}
 
-				if (pso->desc.ds != nullptr)
+				if (pso->desc.ds != nullptr && pso->desc.ds->code.data != nullptr)
 				{
 					VkShaderModuleCreateInfo moduleInfo = {};
 					moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -4248,7 +4248,7 @@ namespace wiGraphics
 					shaderStages.push_back(stageInfo);
 				}
 
-				if (pso->desc.gs != nullptr)
+				if (pso->desc.gs != nullptr && pso->desc.gs->code.data != nullptr)
 				{
 					VkShaderModuleCreateInfo moduleInfo = {};
 					moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -4267,7 +4267,7 @@ namespace wiGraphics
 					shaderStages.push_back(stageInfo);
 				}
 
-				if (pso->desc.ps != nullptr)
+				if (pso->desc.ps != nullptr && pso->desc.ps->code.data != nullptr)
 				{
 					VkShaderModuleCreateInfo moduleInfo = {};
 					moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

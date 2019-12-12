@@ -2,6 +2,9 @@
 #include "RenderPath2D.h"
 #include "wiRenderer.h"
 #include "wiGraphicsDevice.h"
+#include "wiResourceManager.h"
+
+#include <memory>
 
 class RenderPath3D :
 	public RenderPath2D
@@ -39,7 +42,7 @@ private:
 	bool outlineEnabled = false;
 	bool chromaticAberrationEnabled = false;
 
-	const wiGraphics::Texture* colorGradingTex = nullptr;
+	std::shared_ptr<wiResource> colorGradingTex;
 
 	uint32_t msaaSampleCount = 1;
 
@@ -141,7 +144,7 @@ public:
 	constexpr bool getOutlineEnabled() const { return outlineEnabled; }
 	constexpr bool getChromaticAberrationEnabled() const { return chromaticAberrationEnabled; }
 
-	constexpr const wiGraphics::Texture* getColorGradingTexture() const { return colorGradingTex; }
+	constexpr const std::shared_ptr<wiResource>& getColorGradingTexture() const { return colorGradingTex; }
 
 	constexpr uint32_t getMSAASampleCount() const { return msaaSampleCount; }
 
@@ -177,7 +180,7 @@ public:
 	constexpr void setOutlineEnabled(bool value) { outlineEnabled = value; }
 	constexpr void setChromaticAberrationEnabled(bool value) { chromaticAberrationEnabled = value; }
 
-	constexpr void setColorGradingTexture(const wiGraphics::Texture* tex) { colorGradingTex = tex; }
+	void setColorGradingTexture(std::shared_ptr<wiResource> resource) { colorGradingTex = resource; }
 
 	virtual void setMSAASampleCount(uint32_t value) { if (msaaSampleCount != value) { msaaSampleCount = value; ResizeBuffers(); } }
 

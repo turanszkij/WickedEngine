@@ -6,10 +6,10 @@
 #include "wiSprite.h"
 #include "ResourceMapping.h"
 #include "wiProfiler.h"
-#include "wiSceneSystem.h"
+#include "wiScene.h"
 
 using namespace wiGraphics;
-using namespace wiSceneSystem;
+using namespace wiScene;
 
 
 void RenderPath3D_PathTracing::ResizeBuffers()
@@ -53,7 +53,7 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 void RenderPath3D_PathTracing::Update(float dt)
 {
-	const Scene& scene = wiSceneSystem::GetScene();
+	const Scene& scene = wiScene::GetScene();
 
 	if (wiRenderer::GetCamera().IsDirty())
 	{

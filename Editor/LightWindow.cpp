@@ -5,7 +5,7 @@
 
 using namespace wiECS;
 using namespace wiGraphics;
-using namespace wiSceneSystem;
+using namespace wiScene;
 
 
 LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
@@ -27,7 +27,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	energySlider->SetSize(XMFLOAT2(100, 30));
 	energySlider->SetPos(XMFLOAT2(x, y += step));
 	energySlider->OnSlide([&](wiEventArgs args) {
-		LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
+		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->energy = args.fValue;
@@ -41,7 +41,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	rangeSlider->SetSize(XMFLOAT2(100, 30));
 	rangeSlider->SetPos(XMFLOAT2(x, y += step));
 	rangeSlider->OnSlide([&](wiEventArgs args) {
-		LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
+		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->range_local = args.fValue;
@@ -55,7 +55,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	radiusSlider->SetSize(XMFLOAT2(100, 30));
 	radiusSlider->SetPos(XMFLOAT2(x, y += step));
 	radiusSlider->OnSlide([&](wiEventArgs args) {
-		LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
+		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->radius = args.fValue;
@@ -69,7 +69,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	widthSlider->SetSize(XMFLOAT2(100, 30));
 	widthSlider->SetPos(XMFLOAT2(x, y += step));
 	widthSlider->OnSlide([&](wiEventArgs args) {
-		LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
+		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->width = args.fValue;
@@ -83,7 +83,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	heightSlider->SetSize(XMFLOAT2(100, 30));
 	heightSlider->SetPos(XMFLOAT2(x, y += step));
 	heightSlider->OnSlide([&](wiEventArgs args) {
-		LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
+		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->height = args.fValue;
@@ -97,7 +97,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	fovSlider->SetSize(XMFLOAT2(100, 30));
 	fovSlider->SetPos(XMFLOAT2(x, y += step));
 	fovSlider->OnSlide([&](wiEventArgs args) {
-		LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
+		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->fov = args.fValue;
@@ -111,7 +111,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	biasSlider->SetSize(XMFLOAT2(100, 30));
 	biasSlider->SetPos(XMFLOAT2(x, y += step));
 	biasSlider->OnSlide([&](wiEventArgs args) {
-		LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
+		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->shadowBias = args.fValue;
@@ -124,7 +124,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	shadowCheckBox = new wiCheckBox("Shadow: ");
 	shadowCheckBox->SetPos(XMFLOAT2(x, y += step));
 	shadowCheckBox->OnClick([&](wiEventArgs args) {
-		LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
+		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->SetCastShadow(args.bValue);
@@ -137,7 +137,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	volumetricsCheckBox = new wiCheckBox("Volumetric Scattering: ");
 	volumetricsCheckBox->SetPos(XMFLOAT2(x, y += step));
 	volumetricsCheckBox->OnClick([&](wiEventArgs args) {
-		LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
+		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->SetVolumetricsEnabled(args.bValue);
@@ -150,7 +150,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	haloCheckBox = new wiCheckBox("Visualizer: ");
 	haloCheckBox->SetPos(XMFLOAT2(x, y += step));
 	haloCheckBox->OnClick([&](wiEventArgs args) {
-		LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
+		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->SetVisualizerEnabled(args.bValue);
@@ -163,7 +163,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	staticCheckBox = new wiCheckBox("Static: ");
 	staticCheckBox->SetPos(XMFLOAT2(x, y += step));
 	staticCheckBox->OnClick([&](wiEventArgs args) {
-		LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
+		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->SetStatic(args.bValue);
@@ -177,8 +177,8 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	addLightButton->SetPos(XMFLOAT2(x, y += step));
 	addLightButton->SetSize(XMFLOAT2(150, 30));
 	addLightButton->OnClick([&](wiEventArgs args) {
-		Entity entity = wiSceneSystem::GetScene().Entity_CreateLight("editorLight", XMFLOAT3(0, 3, 0), XMFLOAT3(1, 1, 1), 2, 60);
-		LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
+		Entity entity = wiScene::GetScene().Entity_CreateLight("editorLight", XMFLOAT3(0, 3, 0), XMFLOAT3(1, 1, 1), 2, 60);
+		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->type = (LightComponent::LightType)typeSelectorComboBox->GetSelected();
@@ -198,7 +198,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	colorPicker->SetVisible(true);
 	colorPicker->SetEnabled(false);
 	colorPicker->OnColorChanged([&](wiEventArgs args) {
-		LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
+		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->color = args.color.toFloat3();
@@ -209,7 +209,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	typeSelectorComboBox = new wiComboBox("Type: ");
 	typeSelectorComboBox->SetPos(XMFLOAT2(x, y += step));
 	typeSelectorComboBox->OnSelect([&](wiEventArgs args) {
-		LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
+		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr && args.iValue >= 0)
 		{
 			light->SetType((LightComponent::LightType)args.iValue);
@@ -247,7 +247,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 		lensflare_Button[i]->SetPos(XMFLOAT2(x, y += step));
 		lensflare_Button[i]->SetSize(XMFLOAT2(260, 20));
 		lensflare_Button[i]->OnClick([=](wiEventArgs args) {
-			LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
+			LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
 			if (light == nullptr)
 				return;
 
@@ -277,7 +277,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 
 				if (result.ok) {
 					std::string fileName = result.filenames.front();
-					light->lensFlareRimTextures[i] = (Texture*)wiResourceManager::GetGlobal().add(fileName);
+					light->lensFlareRimTextures[i] = wiResourceManager::Load(fileName);
 					light->lensFlareNames[i] = fileName;
 					fileName = wiHelper::GetFileNameFromPath(fileName);
 					lensflare_Button[i]->SetText(fileName);
@@ -306,7 +306,7 @@ void LightWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
 
-	const LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
+	const LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
 
 	if (light != nullptr)
 	{

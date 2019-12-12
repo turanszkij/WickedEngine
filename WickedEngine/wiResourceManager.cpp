@@ -1,6 +1,5 @@
 #include "wiResourceManager.h"
 #include "wiRenderer.h"
-#include "wiAudio.h"
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
 
@@ -9,71 +8,72 @@
 
 #include <algorithm>
 
-using namespace std;
 using namespace wiGraphics;
 
-static const std::unordered_map<std::string, wiResourceManager::Data_Type> types = {
-	make_pair("JPG", wiResourceManager::IMAGE),
-	make_pair("PNG", wiResourceManager::IMAGE),
-	make_pair("DDS", wiResourceManager::IMAGE),
-	make_pair("TGA", wiResourceManager::IMAGE),
-	make_pair("WAV", wiResourceManager::SOUND)
-};
-
-
-wiResourceManager& wiResourceManager::GetGlobal()
+wiResource::~wiResource()
 {
-	static wiResourceManager globalResources;
-	return globalResources;
-}
-wiResourceManager& wiResourceManager::GetShaderManager()
-{
-	static wiResourceManager shaderManager;
-	return shaderManager;
-}
-
-
-wiResourceManager::Resource wiResourceManager::get(const wiHashString& name, bool incRefCount)
-{
-	lock.lock();
-	auto& it = resources.find(name);
-	if (it != resources.end())
+	if (data != nullptr)
 	{
-		if(incRefCount)
-			it->second.refCount++;
-		lock.unlock();
-		return it->second;
+		switch (type)
+		{
+		case wiResource::IMAGE:
+			SAFE_DELETE(texture);
+			break;
+		case wiResource::SOUND:
+			SAFE_DELETE(sound);
+			break;
+		};
 	}
-
-	lock.unlock();
-	return Resource();
 }
 
-const void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
+namespace wiResourceManager
 {
-	Resource res = get(name,true);
-	if(res.type == EMPTY)
+	std::mutex locker;
+	std::unordered_map<wiHashString, std::weak_ptr<wiResource>> resources;
+
+	static const std::unordered_map<std::string, wiResource::DATA_TYPE> types = {
+		std::make_pair("JPG", wiResource::IMAGE),
+		std::make_pair("PNG", wiResource::IMAGE),
+		std::make_pair("DDS", wiResource::IMAGE),
+		std::make_pair("TGA", wiResource::IMAGE),
+		std::make_pair("WAV", wiResource::SOUND)
+	};
+
+	std::shared_ptr<wiResource> Load(const wiHashString& name)
 	{
-		string nameStr = name.GetString();
-		string ext = wiHelper::toUpper(nameStr.substr(nameStr.length() - 3, nameStr.length()));
-		Data_Type type;
+		locker.lock();
+		auto it = resources.find(name);
+		bool found = it != resources.end() && !it->second.expired();
+		locker.unlock();
+
+		if (found)
+		{
+			return it->second.lock();
+		}
+
+
+		std::string nameStr = name.GetString();
+		std::string ext = wiHelper::toUpper(nameStr.substr(nameStr.length() - 3, nameStr.length()));
+		wiResource::DATA_TYPE type;
 
 		// dynamic type selection:
-		if(newType==Data_Type::DYNAMIC){
+		{
 			auto& it = types.find(ext);
-			if(it!=types.end())
+			if (it != types.end())
+			{
 				type = it->second;
-			else 
+			}
+			else
+			{
 				return nullptr;
+			}
 		}
-		else 
-			type = newType;
 
 		void* success = nullptr;
 
-		switch(type)
+		switch (type)
 		{
-		case Data_Type::IMAGE:
+		case wiResource::IMAGE:
 		{
 			if (!ext.compare(std::string("DDS")))
 			{
@@ -272,7 +272,7 @@ const void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 			}
 		}
 		break;
-		case Data_Type::SOUND:
+		case wiResource::SOUND:
 		{
 			wiAudio::Sound* sound = new wiAudio::Sound;
 			if (wiAudio::CreateSound(name.GetString(), sound))
@@ -281,186 +281,53 @@ const void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 			}
 		}
 		break;
-		case Data_Type::VERTEXSHADER:
-		{
-			vector<uint8_t> buffer;
-			if (wiHelper::readByteData(nameStr, buffer)) {
-				VertexShader* shader = new VertexShader;
-				wiRenderer::GetDevice()->CreateVertexShader(buffer.data(), buffer.size(), shader);
-				success = shader;
-			}
-		}
-		break;
-		case Data_Type::PIXELSHADER:
-		{
-			vector<uint8_t> buffer;
-			if (wiHelper::readByteData(nameStr, buffer)){
-				PixelShader* shader = new PixelShader;
-				wiRenderer::GetDevice()->CreatePixelShader(buffer.data(), buffer.size(), shader);
-				success = shader;
-			}
-		}
-		break;
-		case Data_Type::GEOMETRYSHADER:
-		{
-			vector<uint8_t> buffer;
-			if (wiHelper::readByteData(nameStr, buffer)){
-				GeometryShader* shader = new GeometryShader;
-				wiRenderer::GetDevice()->CreateGeometryShader(buffer.data(), buffer.size(), shader);
-				success = shader;
-			}
-		}
-		break;
-		case Data_Type::HULLSHADER:
-		{
-			vector<uint8_t> buffer;
-			if (wiHelper::readByteData(nameStr, buffer)){
-				HullShader* shader = new HullShader;
-				wiRenderer::GetDevice()->CreateHullShader(buffer.data(), buffer.size(), shader);
-				success = shader;
-			}
-		}
-		break;
-		case Data_Type::DOMAINSHADER:
-		{
-			vector<uint8_t> buffer;
-			if (wiHelper::readByteData(nameStr, buffer)){
-				DomainShader* shader = new DomainShader;
-				wiRenderer::GetDevice()->CreateDomainShader(buffer.data(), buffer.size(), shader);
-				success = shader;
-			}
-		}
-		break;
-		case Data_Type::COMPUTESHADER:
-		{
-			vector<uint8_t> buffer;
-			if (wiHelper::readByteData(nameStr, buffer)) {
-				ComputeShader* shader = new ComputeShader;
-				wiRenderer::GetDevice()->CreateComputeShader(buffer.data(), buffer.size(), shader);
-				success = shader;
-			}
-		}
-		break;
-		default:
-			break;
 		};
 
 		if (success != nullptr)
 		{
-			lock.lock();
-			Resource resource;
-			resource.data = success;
-			resource.type = type;
-			resource.refCount = 1;
+			locker.lock();
+			std::shared_ptr<wiResource> resource = std::make_shared<wiResource>();
+			resource->data = success;
+			resource->type = type;
 			resources.insert(make_pair(name, resource));
-			lock.unlock();
+			locker.unlock();
+			return resource;
 		}
 
-		return success;
+		return nullptr;
 	}
 
-	return res.data;
-}
-
-bool wiResourceManager::del(const wiHashString& name, bool forceDelete)
-{
-	lock.lock();
-	Resource res;
-	auto& it = resources.find(name);
-	if (it != resources.end())
-		res = it->second;
-	else
+	bool Contains(const wiHashString& name)
 	{
-		lock.unlock();
-		return false;
-	}
-	lock.unlock();
-
-	if (res.data != nullptr && (res.refCount <= 1 || forceDelete))
-	{
-		lock.lock();
-		bool success = true;
-
-		switch (res.type) 
+		bool result = false;
+		locker.lock();
+		auto it = resources.find(name);
+		if (it != resources.end())
 		{
-		case Data_Type::IMAGE:
-			SAFE_DELETE(reinterpret_cast<const Texture*&>(res.data));
-			break;
-		case Data_Type::VERTEXSHADER:
-			SAFE_DELETE(reinterpret_cast<const VertexShader*&>(res.data));
-			break;
-		case Data_Type::PIXELSHADER:
-			SAFE_DELETE(reinterpret_cast<const PixelShader*&>(res.data));
-			break;
-		case Data_Type::GEOMETRYSHADER:
-			SAFE_DELETE(reinterpret_cast<const GeometryShader*&>(res.data));
-			break;
-		case Data_Type::HULLSHADER:
-			SAFE_DELETE(reinterpret_cast<const HullShader*&>(res.data));
-			break;
-		case Data_Type::DOMAINSHADER:
-			SAFE_DELETE(reinterpret_cast<const DomainShader*&>(res.data));
-			break;
-		case Data_Type::COMPUTESHADER:
-			SAFE_DELETE(reinterpret_cast<const ComputeShader*&>(res.data));
-			break;
-		case Data_Type::SOUND:
-			SAFE_DELETE(reinterpret_cast<const wiAudio::Sound*&>(res.data));
-			break;
-		default:
-			success = false;
-			break;
-		};
-
-		resources.erase(name);
-
-		lock.unlock();
-
-		return success;
+			result = it->second.lock()->data != nullptr;
+		}
+		locker.unlock();
+		return result;
 	}
-	else if (res.data != nullptr)
+
+	void Register(const wiHashString& name, void* data, wiResource::DATA_TYPE data_type)
 	{
-		lock.lock();
-		resources[name].refCount--;
-		lock.unlock();
+		locker.lock();
+		if (resources.find(name) == resources.end())
+		{
+			std::shared_ptr<wiResource> res = std::make_shared<wiResource>();
+			res->data = data;
+			res->type = data_type;
+			resources.insert(make_pair(name, res));
+		}
+		locker.unlock();
 	}
-	return false;
-}
 
-bool wiResourceManager::Register(const wiHashString& name, void* resource, Data_Type newType)
-{
-	lock.lock();
-	if (resources.find(name) == resources.end())
+	void Clear()
 	{
-		Resource res;
-		res.data = resource;
-		res.type = newType;
-		res.refCount = 1;
-		resources.insert(make_pair(name, res));
-		lock.unlock();
-		return true;
+		locker.lock();
+		resources.clear();
+		locker.unlock();
 	}
-	lock.unlock();
 
-	return false;
-}
-
-bool wiResourceManager::Clear()
-{
-	wiRenderer::GetDevice()->WaitForGPU();
-
-	std::vector<wiHashString> resNames;
-	resNames.reserve(resources.size());
-	for (auto& x : resources)
-	{
-		resNames.push_back(x.first);
-	}
-	for (auto& x : resNames)
-	{
-		del(x);
-	}
-	lock.lock();
-	resources.clear();
-	lock.unlock();
-	return true;
 }

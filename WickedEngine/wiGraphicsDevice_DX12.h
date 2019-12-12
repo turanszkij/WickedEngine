@@ -1,7 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
-#include "wiWindowRegistration.h"
+#include "wiPlatform.h"
 #include "wiSpinLock.h"
 #include "wiContainers.h"
 #include "wiGraphicsDevice_SharedInternals.h"
@@ -227,7 +227,7 @@ namespace wiGraphics
 		std::unordered_map<wiCPUHandle, D3D12MA::Allocation*> mem_allocations;
 
 	public:
-		GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen = false, bool debuglayer = false);
+		GraphicsDevice_DX12(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false);
 		virtual ~GraphicsDevice_DX12();
 
 		bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) override;

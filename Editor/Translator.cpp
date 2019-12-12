@@ -7,7 +7,7 @@
 
 using namespace wiGraphics;
 using namespace wiECS;
-using namespace wiSceneSystem;
+using namespace wiScene;
 
 PipelineState pso_solidpart;
 PipelineState pso_wirepart;
@@ -191,7 +191,7 @@ Translator::~Translator()
 
 void Translator::Update()
 {
-	Scene& scene = wiSceneSystem::GetScene();
+	Scene& scene = wiScene::GetScene();
 
 	if (!scene.transforms.Contains(entityID))
 	{
@@ -428,7 +428,7 @@ void Translator::Update()
 }
 void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 {
-	Scene& scene = wiSceneSystem::GetScene();
+	Scene& scene = wiScene::GetScene();
 
 	if (!scene.transforms.Contains(entityID))
 	{

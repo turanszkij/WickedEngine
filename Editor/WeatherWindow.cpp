@@ -5,7 +5,7 @@
 
 using namespace std;
 using namespace wiECS;
-using namespace wiSceneSystem;
+using namespace wiScene;
 using namespace wiGraphics;
 
 WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
@@ -95,9 +95,9 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	skyButton->SetSize(XMFLOAT2(240, 30));
 	skyButton->SetPos(XMFLOAT2(x-100, y += step));
 	skyButton->OnClick([=](wiEventArgs args) {
-		auto x = wiRenderer::GetEnvironmentMap();
+		auto& weather = GetWeather();
 
-		if (x == nullptr)
+		if (weather.skyMap == nullptr)
 		{
 			wiHelper::FileDialogParams params;
 			wiHelper::FileDialogResult result;
@@ -108,13 +108,15 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 
 			if (result.ok) {
 				string fileName = result.filenames.front();
-				wiRenderer::SetEnvironmentMap((Texture*)wiResourceManager::GetGlobal().add(fileName));
+				weather.skyMapName = fileName;
+				weather.skyMap = wiResourceManager::Load(fileName);
 				skyButton->SetText(fileName);
 			}
 		}
 		else
 		{
-			wiRenderer::SetEnvironmentMap(nullptr);
+			weather.skyMap.reset();
+			weather.skyMapName.clear();
 			skyButton->SetText("Load Sky");
 		}
 
@@ -134,7 +136,7 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	preset0Button->SetPos(XMFLOAT2(x - 100, y += step * 2));
 	preset0Button->OnClick([=](wiEventArgs args) {
 
-		Scene& scene = wiSceneSystem::GetScene();
+		Scene& scene = wiScene::GetScene();
 		scene.weathers.Clear();
 		scene.weather = WeatherComponent();
 
@@ -230,7 +232,7 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	eliminateCoarseCascadesButton->SetPos(XMFLOAT2(x - 100, y += step * 3));
 	eliminateCoarseCascadesButton->OnClick([=](wiEventArgs args) {
 
-		Scene& scene = wiSceneSystem::GetScene();
+		Scene& scene = wiScene::GetScene();
 		for (size_t i = 0; i < scene.objects.GetCount(); ++i)
 		{
 			scene.objects[i].cascadeMask = 1;
@@ -292,7 +294,7 @@ WeatherWindow::~WeatherWindow()
 
 void WeatherWindow::Update()
 {
-	Scene& scene = wiSceneSystem::GetScene();
+	Scene& scene = wiScene::GetScene();
 	if (scene.weathers.GetCount() > 0)
 	{
 		auto& weather = scene.weathers[0];
@@ -313,7 +315,7 @@ void WeatherWindow::Update()
 
 WeatherComponent& WeatherWindow::GetWeather() const
 {
-	Scene& scene = wiSceneSystem::GetScene();
+	Scene& scene = wiScene::GetScene();
 	if (scene.weathers.GetCount() == 0)
 	{
 		scene.weathers.Create(CreateEntity());
@@ -323,7 +325,7 @@ WeatherComponent& WeatherWindow::GetWeather() const
 
 void WeatherWindow::InvalidateProbes() const
 {
-	Scene& scene = wiSceneSystem::GetScene();
+	Scene& scene = wiScene::GetScene();
 
 	// Also, we invalidate all environment probes to reflect the sky changes.
 	for (size_t i = 0; i < scene.probes.GetCount(); ++i)

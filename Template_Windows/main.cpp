@@ -43,10 +43,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_TEMPLATEWINDOWS));
 
-	wiRenderer::GetShaderPath() = "../WickedEngine/shaders/"; // search for shaders elsewhere
-	wiFont::GetFontPath() = "../WickedEngine/fonts/"; // search for fonts elsewhere
-	main.infoDisplay.active = true; // just show some basic info...
-
+	// just show some basic info:
+	main.infoDisplay.active = true;
+	main.infoDisplay.watermark = true;
+	main.infoDisplay.resolution = true;
+	main.infoDisplay.fpsinfo = true;
 
 	MSG msg = { 0 };
 	while (msg.message != WM_QUIT)
@@ -119,7 +120,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    UpdateWindow(hWnd);
 
 
-   main.SetWindow(hWnd, hInst); // assign window handle (mandatory)
+   main.SetWindow(hWnd); // assign window handle (mandatory)
 
 
    return TRUE;

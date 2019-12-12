@@ -1,4 +1,4 @@
-#include "wiSceneSystem.h"
+#include "wiScene.h"
 #include "wiResourceManager.h"
 #include "wiArchive.h"
 #include "wiRandom.h"
@@ -6,7 +6,7 @@
 
 using namespace wiECS;
 
-namespace wiSceneSystem
+namespace wiScene
 {
 
 	void NameComponent::Serialize(wiArchive& archive, uint32_t seed)
@@ -131,27 +131,27 @@ namespace wiSceneSystem
 
 			if (!baseColorMapName.empty())
 			{
-				baseColorMap = (wiGraphics::Texture*)wiResourceManager::GetGlobal().add(dir + baseColorMapName);
+				baseColorMap = wiResourceManager::Load(dir + baseColorMapName);
 			}
 			if (!surfaceMapName.empty())
 			{
-				surfaceMap = (wiGraphics::Texture*)wiResourceManager::GetGlobal().add(dir + surfaceMapName);
+				surfaceMap = wiResourceManager::Load(dir + surfaceMapName);
 			}
 			if (!normalMapName.empty())
 			{
-				normalMap = (wiGraphics::Texture*)wiResourceManager::GetGlobal().add(dir + normalMapName);
+				normalMap = wiResourceManager::Load(dir + normalMapName);
 			}
 			if (!displacementMapName.empty())
 			{
-				displacementMap = (wiGraphics::Texture*)wiResourceManager::GetGlobal().add(dir + displacementMapName);
+				displacementMap = wiResourceManager::Load(dir + displacementMapName);
 			}
 			if (!emissiveMapName.empty())
 			{
-				emissiveMap = (wiGraphics::Texture*)wiResourceManager::GetGlobal().add(dir + emissiveMapName);
+				emissiveMap = wiResourceManager::Load(dir + emissiveMapName);
 			}
 			if (!occlusionMapName.empty())
 			{
-				occlusionMap = (wiGraphics::Texture*)wiResourceManager::GetGlobal().add(dir + occlusionMapName);
+				occlusionMap = wiResourceManager::Load(dir + occlusionMapName);
 			}
 
 		}
@@ -489,7 +489,7 @@ namespace wiSceneSystem
 			{
 				if (!lensFlareNames[i].empty())
 				{
-					lensFlareRimTextures[i] = (wiGraphics::Texture*)wiResourceManager::GetGlobal().add(dir + lensFlareNames[i]);
+					lensFlareRimTextures[i] = wiResourceManager::Load(dir + lensFlareNames[i]);
 				}
 			}
 		}
@@ -645,6 +645,8 @@ namespace wiSceneSystem
 	}
 	void WeatherComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
+		std::string dir = archive.GetSourceDirectory();
+
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
@@ -675,6 +677,13 @@ namespace wiSceneSystem
 			archive >> oceanParameters.waterHeight;
 			archive >> oceanParameters.surfaceDetail;
 			archive >> oceanParameters.surfaceDisplacementTolerance;
+
+			if (archive.GetVersion() >= 32)
+			{
+				archive >> skyMapName;
+				skyMap = wiResourceManager::Load(dir + skyMapName);
+			}
+
 		}
 		else
 		{
@@ -706,6 +715,21 @@ namespace wiSceneSystem
 			archive << oceanParameters.waterHeight;
 			archive << oceanParameters.surfaceDetail;
 			archive << oceanParameters.surfaceDisplacementTolerance;
+
+			if (archive.GetVersion() >= 32)
+			{
+				// If detecting an absolute path in textures, remove it and convert to relative:
+				if (!dir.empty())
+				{
+					size_t found = skyMapName.rfind(dir);
+					if (found != std::string::npos)
+					{
+						skyMapName = skyMapName.substr(found + dir.length());
+					}
+				}
+				archive << skyMapName;
+			}
+
 		}
 	}
 	void SoundComponent::Serialize(wiArchive& archive, uint32_t seed)
@@ -721,8 +745,8 @@ namespace wiSceneSystem
 
 			if (!filename.empty())
 			{
-				sound = (wiAudio::Sound*)wiResourceManager::GetGlobal().add(dir + filename);
-				wiAudio::CreateSoundInstance(sound, &soundinstance);
+				soundResource = wiResourceManager::Load(dir + filename);
+				wiAudio::CreateSoundInstance(soundResource->sound, &soundinstance);
 			}
 
 		}

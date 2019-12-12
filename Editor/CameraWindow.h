@@ -19,8 +19,8 @@ public:
 	void SetEntity(wiECS::Entity entity);
 
 
-	wiSceneSystem::TransformComponent camera_transform;
-	wiSceneSystem::TransformComponent camera_target;
+	wiScene::TransformComponent camera_transform;
+	wiScene::TransformComponent camera_target;
 
 	wiGUI* GUI;
 

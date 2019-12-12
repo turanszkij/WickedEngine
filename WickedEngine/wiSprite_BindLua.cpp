@@ -112,7 +112,6 @@ int wiSprite_BindLua::Destroy(lua_State* L)
 {
 	if (sprite != nullptr)
 	{
-		sprite->Destroy();
 		delete sprite;
 		sprite = nullptr;
 	}

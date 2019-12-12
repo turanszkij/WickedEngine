@@ -4,14 +4,14 @@
 #include "wiIntersect.h"
 #include "ShaderInterop_EmittedParticle.h"
 #include "wiEnums.h"
-#include "wiSceneSystem_Decl.h"
+#include "wiScene_Decl.h"
 #include "wiECS.h"
 
 #include <memory>
 
 class wiArchive;
 
-namespace wiSceneSystem
+namespace wiScene
 {
 
 class wiEmittedParticle

@@ -195,9 +195,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderer_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiResourceManager_BindLua.h">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
@@ -996,12 +993,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiECS.h">
       <Filter>ENGINE\System</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiSceneSystem.h">
-      <Filter>ENGINE\System</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiSceneSystem_Decl.h">
-      <Filter>ENGINE\System</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_HairParticle.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
@@ -1013,9 +1004,6 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPhysicsEngine.h">
       <Filter>ENGINE\Physics</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiSceneSystem_BindLua.h">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGPUBVH.h">
       <Filter>ENGINE\Graphics</Filter>
@@ -1083,9 +1071,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInitializer.h">
       <Filter>ENGINE\System</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiWindowRegistration.h">
-      <Filter>ENGINE\System</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiContainers.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
@@ -1131,8 +1116,17 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInput_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Platform.h">
-      <Filter>ENGINE\Common</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiScene.h">
+      <Filter>ENGINE\System</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiScene_Decl.h">
+      <Filter>ENGINE\System</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiScene_BindLua.h">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiPlatform.h">
+      <Filter>ENGINE\System</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1272,9 +1266,6 @@
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderer_BindLua.cpp">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiResourceManager_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.cpp">
@@ -1796,17 +1787,8 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\utility_common.cpp">
       <Filter>UTILITY</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneSystem.cpp">
-      <Filter>ENGINE\System</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneSystem_Serializers.cpp">
-      <Filter>ENGINE\System</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysicsEngine_Bullet.cpp">
       <Filter>ENGINE\Physics</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneSystem_BindLua.cpp">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUBVH.cpp">
       <Filter>ENGINE\Graphics</Filter>
@@ -1868,9 +1850,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInitializer.cpp">
       <Filter>ENGINE\System</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiWindowRegistration.cpp">
-      <Filter>ENGINE\System</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiImageParams_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
@@ -1899,6 +1878,15 @@
       <Filter>ENGINE\Input</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInput_BindLua.cpp">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiScene.cpp">
+      <Filter>ENGINE\System</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiScene_Serializers.cpp">
+      <Filter>ENGINE\System</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiScene_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
   </ItemGroup>

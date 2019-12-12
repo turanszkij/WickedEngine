@@ -9,10 +9,10 @@ namespace wiGPUSortLib
 {
 	static GPUBuffer indirectBuffer;
 	static GPUBuffer sortCB;
-	static const ComputeShader* kickoffSortCS = nullptr;
-	static const ComputeShader* sortCS = nullptr;
-	static const ComputeShader* sortInnerCS = nullptr;
-	static const ComputeShader* sortStepCS = nullptr;
+	static ComputeShader kickoffSortCS;
+	static ComputeShader sortCS;
+	static ComputeShader sortInnerCS;
+	static ComputeShader sortStepCS;
 
 	void Initialize()
 	{
@@ -39,10 +39,10 @@ namespace wiGPUSortLib
 	{
 		std::string path = wiRenderer::GetShaderPath();
 
-		kickoffSortCS = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(path + "gpusortlib_kickoffSortCS.cso", wiResourceManager::COMPUTESHADER));
-		sortCS = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(path + "gpusortlib_sortCS.cso", wiResourceManager::COMPUTESHADER));
-		sortInnerCS = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(path + "gpusortlib_sortInnerCS.cso", wiResourceManager::COMPUTESHADER));
-		sortStepCS = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(path + "gpusortlib_sortStepCS.cso", wiResourceManager::COMPUTESHADER));
+		wiRenderer::LoadComputeShader(kickoffSortCS, "gpusortlib_kickoffSortCS.cso");
+		wiRenderer::LoadComputeShader(sortCS,  "gpusortlib_sortCS.cso");
+		wiRenderer::LoadComputeShader(sortInnerCS, "gpusortlib_sortInnerCS.cso");
+		wiRenderer::LoadComputeShader(sortStepCS, "gpusortlib_sortStepCS.cso");
 
 	}
 
@@ -81,7 +81,7 @@ namespace wiGPUSortLib
 
 		// initialize sorting arguments:
 		{
-			device->BindComputeShader(kickoffSortCS, cmd);
+			device->BindComputeShader(&kickoffSortCS, cmd);
 
 			const GPUResource* res[] = {
 				&counterBuffer_read,
@@ -138,7 +138,7 @@ namespace wiGPUSortLib
 			}
 
 			// sort all buffers of size 512 (and presort bigger ones)
-			device->BindComputeShader(sortCS, cmd);
+			device->BindComputeShader(&sortCS, cmd);
 			device->DispatchIndirect(&indirectBuffer, 0, cmd);
 			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		}
@@ -149,7 +149,7 @@ namespace wiGPUSortLib
 			// Incremental sorting:
 
 			bDone = true;
-			device->BindComputeShader(sortStepCS, cmd);
+			device->BindComputeShader(&sortStepCS, cmd);
 
 			// prepare thread group description data
 			uint32_t numThreadGroups = 0;
@@ -189,7 +189,7 @@ namespace wiGPUSortLib
 				device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 			}
 
-			device->BindComputeShader(sortInnerCS, cmd);
+			device->BindComputeShader(&sortInnerCS, cmd);
 			device->Dispatch(numThreadGroups, 1, 1, cmd);
 			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 

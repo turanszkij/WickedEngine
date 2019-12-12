@@ -7,7 +7,7 @@
 using namespace std;
 using namespace wiGraphics;
 using namespace wiECS;
-using namespace wiSceneSystem;
+using namespace wiScene;
 
 SoundWindow::SoundWindow(wiGUI* gui) : GUI(gui)
 {
@@ -94,10 +94,10 @@ SoundWindow::SoundWindow(wiGUI* gui) : GUI(gui)
 	nameField->SetPos(XMFLOAT2(x, y += step));
 	nameField->SetSize(XMFLOAT2(300, 20));
 	nameField->OnInputAccepted([&](wiEventArgs args) {
-		NameComponent* name = wiSceneSystem::GetScene().names.GetComponent(entity);
+		NameComponent* name = wiScene::GetScene().names.GetComponent(entity);
 		if (name == nullptr)
 		{
-			name = &wiSceneSystem::GetScene().names.Create(entity);
+			name = &wiScene::GetScene().names.Create(entity);
 		}
 		*name = args.sValue;
 	});
@@ -174,7 +174,7 @@ void SoundWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
 
-	Scene& scene = wiSceneSystem::GetScene();
+	Scene& scene = wiScene::GetScene();
 	SoundComponent* sound = scene.sounds.GetComponent(entity);
 	NameComponent* name = scene.names.GetComponent(entity);
 

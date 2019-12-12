@@ -3,7 +3,7 @@
 #include "wiImage.h"
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
-#include "wiSceneSystem.h"
+#include "wiScene.h"
 #include "ResourceMapping.h"
 #include "wiProfiler.h"
 
@@ -458,7 +458,7 @@ void RenderPath3D::RenderOutline(const Texture& dstSceneRT, CommandList cmd) con
 }
 void RenderPath3D::RenderLightShafts(CommandList cmd) const
 {
-	XMVECTOR sunDirection = XMLoadFloat3(&wiSceneSystem::GetScene().weather.sunDirection);
+	XMVECTOR sunDirection = XMLoadFloat3(&wiScene::GetScene().weather.sunDirection);
 	if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, wiRenderer::GetCamera().GetAt())) > 0)
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
@@ -748,7 +748,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 		{
 			wiRenderer::Postprocess_Colorgrade(
 				*rt_read, 
-				colorGradingTex != nullptr ? *colorGradingTex : *wiTextureHelper::getColorGradeDefault(), 
+				colorGradingTex != nullptr ? *colorGradingTex->texture : *wiTextureHelper::getColorGradeDefault(), 
 				*rt_write, 
 				cmd
 			);

@@ -1,5 +1,5 @@
 #include "wiPhysicsEngine.h"
-#include "wiSceneSystem.h"
+#include "wiScene.h"
 #include "wiProfiler.h"
 #include "wiBackLog.h"
 #include "wiJobSystem.h"
@@ -14,7 +14,7 @@
 
 using namespace std;
 using namespace wiECS;
-using namespace wiSceneSystem;
+using namespace wiScene;
 
 
 namespace wiPhysicsEngine
@@ -78,7 +78,7 @@ namespace wiPhysicsEngine
 	bool IsEnabled() { return ENABLED; }
 	void SetEnabled(bool value) { ENABLED = value; }
 
-	void AddRigidBody(Entity entity, wiSceneSystem::RigidBodyPhysicsComponent& physicscomponent, const wiSceneSystem::MeshComponent& mesh, const wiSceneSystem::TransformComponent& transform)
+	void AddRigidBody(Entity entity, wiScene::RigidBodyPhysicsComponent& physicscomponent, const wiScene::MeshComponent& mesh, const wiScene::TransformComponent& transform)
 	{
 		btVector3 S(transform.scale_local.x, transform.scale_local.y, transform.scale_local.z);
 
@@ -195,7 +195,7 @@ namespace wiPhysicsEngine
 			physicscomponent.physicsobject = rigidbody;
 		}
 	}
-	void AddSoftBody(Entity entity, wiSceneSystem::SoftBodyPhysicsComponent& physicscomponent, const wiSceneSystem::MeshComponent& mesh)
+	void AddSoftBody(Entity entity, wiScene::SoftBodyPhysicsComponent& physicscomponent, const wiScene::MeshComponent& mesh)
 	{
 		physicscomponent.CreateFromMesh(mesh);
 

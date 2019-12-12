@@ -1,5 +1,4 @@
 #include "RenderPath2D_BindLua.h"
-#include "wiResourceManager_BindLua.h"
 #include "wiSprite_BindLua.h"
 #include "wiFont_BindLua.h"
 
@@ -10,7 +9,6 @@ using namespace std;
 const char RenderPath2D_BindLua::className[] = "RenderPath2D";
 
 Luna<RenderPath2D_BindLua>::FunctionType RenderPath2D_BindLua::methods[] = {
-	lunamethod(RenderPath2D_BindLua, GetContent),
 	lunamethod(RenderPath2D_BindLua, AddSprite),
 	lunamethod(RenderPath2D_BindLua, AddFont),
 	lunamethod(RenderPath2D_BindLua, RemoveSprite),

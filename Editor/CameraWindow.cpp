@@ -2,11 +2,11 @@
 #include "CameraWindow.h"
 
 using namespace wiECS;
-using namespace wiSceneSystem;
+using namespace wiScene;
 
 void CameraWindow::ResetCam()
 {
-	Scene& scene = wiSceneSystem::GetScene();
+	Scene& scene = wiScene::GetScene();
 
 	camera_transform.ClearTransform();
 	camera_transform.Translate(XMFLOAT3(0, 2, -10));
@@ -40,7 +40,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	farPlaneSlider->SetPos(XMFLOAT2(x, y += inc));
 	farPlaneSlider->SetValue(wiRenderer::GetCamera().zFarP);
 	farPlaneSlider->OnSlide([&](wiEventArgs args) {
-		Scene& scene = wiSceneSystem::GetScene();
+		Scene& scene = wiScene::GetScene();
 		CameraComponent& camera = wiRenderer::GetCamera();
 		camera.zFarP = args.fValue;
 		camera.UpdateCamera();
@@ -52,7 +52,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	nearPlaneSlider->SetPos(XMFLOAT2(x, y += inc));
 	nearPlaneSlider->SetValue(wiRenderer::GetCamera().zNearP);
 	nearPlaneSlider->OnSlide([&](wiEventArgs args) {
-		Scene& scene = wiSceneSystem::GetScene();
+		Scene& scene = wiScene::GetScene();
 		CameraComponent& camera = wiRenderer::GetCamera();
 		camera.zNearP = args.fValue;
 		camera.UpdateCamera();
@@ -63,7 +63,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	fovSlider->SetSize(XMFLOAT2(100, 30));
 	fovSlider->SetPos(XMFLOAT2(x, y += inc));
 	fovSlider->OnSlide([&](wiEventArgs args) {
-		Scene& scene = wiSceneSystem::GetScene();
+		Scene& scene = wiScene::GetScene();
 		CameraComponent& camera = wiRenderer::GetCamera();
 		camera.fov = args.fValue / 180.f * XM_PI;
 		camera.UpdateCamera();
@@ -103,7 +103,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 
 		const CameraComponent& camera = wiRenderer::GetCamera();
 
-		Scene& scene = wiSceneSystem::GetScene();
+		Scene& scene = wiScene::GetScene();
 
 		Entity entity = scene.Entity_CreateCamera("cam", camera.width, camera.height, camera.zNearP, camera.zFarP, camera.fov);
 
@@ -116,7 +116,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	proxyNameField->SetSize(XMFLOAT2(140, 30));
 	proxyNameField->SetPos(XMFLOAT2(x + 200, y));
 	proxyNameField->OnInputAccepted([&](wiEventArgs args) {
-		Scene& scene = wiSceneSystem::GetScene();
+		Scene& scene = wiScene::GetScene();
 		NameComponent* camera = scene.names.GetComponent(proxy);
 		if (camera != nullptr)
 		{
@@ -156,7 +156,7 @@ void CameraWindow::SetEntity(Entity entity)
 {
 	proxy = entity;
 
-	Scene& scene = wiSceneSystem::GetScene();
+	Scene& scene = wiScene::GetScene();
 
 	if (scene.cameras.GetComponent(entity) != nullptr)
 	{

@@ -22,7 +22,7 @@ public:
 
 	void UpdateData();
 
-	wiSceneSystem::wiHairParticle* GetHair();
+	wiScene::wiHairParticle* GetHair();
 
 	wiGUI* GUI;
 

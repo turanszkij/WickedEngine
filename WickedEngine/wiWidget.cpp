@@ -15,7 +15,7 @@
 
 using namespace std;
 using namespace wiGraphics;
-using namespace wiSceneSystem;
+using namespace wiScene;
 
 
 static wiGraphics::PipelineState PSO_colorpicker;

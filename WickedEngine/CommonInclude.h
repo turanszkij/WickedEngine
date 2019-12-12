@@ -17,6 +17,7 @@ using namespace DirectX::PackedVector;
 #define SAFE_DELETE(a) {delete (a);(a)=nullptr;}
 #define SAFE_DELETE_ARRAY(a) {delete[](a);(a)=nullptr;}
 #define GFX_STRUCT struct alignas(16)
+#define NOMINMAX
 
 static const XMFLOAT4X4 IDENTITYMATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 

@@ -4,7 +4,7 @@
 #include "wiColor.h"
 #include "wiGraphicsDevice.h"
 #include "wiIntersect.h"
-#include "wiSceneSystem.h"
+#include "wiScene.h"
 
 #include <string>
 #include <list>
@@ -25,7 +25,7 @@ struct wiEventArgs
 	std::string sValue;
 };
 
-class wiWidget : public wiSceneSystem::TransformComponent
+class wiWidget : public wiScene::TransformComponent
 {
 	friend class wiGUI;
 public:
@@ -92,9 +92,9 @@ public:
 
 	Hitbox2D hitBox;
 
-	wiSceneSystem::TransformComponent* parent = nullptr;
+	wiScene::TransformComponent* parent = nullptr;
 	XMFLOAT4X4 world_parent_bind = IDENTITYMATRIX;
-	void AttachTo(wiSceneSystem::TransformComponent* parent);
+	void AttachTo(wiScene::TransformComponent* parent);
 	void Detach();
 
 	static void LoadShaders();

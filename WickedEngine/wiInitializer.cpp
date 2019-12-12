@@ -31,8 +31,8 @@ namespace wiInitializer
 		wiJobSystem::Execute(ctx, [] { wiAudio::Initialize(); });
 		wiJobSystem::Execute(ctx, [] { wiNetwork::Initialize(); });
 		wiJobSystem::Execute(ctx, [] { wiTextureHelper::Initialize(); });
-		wiJobSystem::Execute(ctx, [] { wiSceneSystem::wiHairParticle::Initialize(); });
-		wiJobSystem::Execute(ctx, [] { wiSceneSystem::wiEmittedParticle::Initialize(); });
+		wiJobSystem::Execute(ctx, [] { wiScene::wiHairParticle::Initialize(); });
+		wiJobSystem::Execute(ctx, [] { wiScene::wiEmittedParticle::Initialize(); });
 		wiJobSystem::Execute(ctx, [] { wiOcean::Initialize(); });
 		wiJobSystem::Execute(ctx, [] { wiGPUSortLib::LoadShaders(); });
 		wiJobSystem::Execute(ctx, [] { wiGPUBVH::LoadShaders(); });

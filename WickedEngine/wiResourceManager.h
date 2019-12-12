@@ -1,48 +1,40 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
+#include "wiAudio.h"
 #include "wiHashString.h"
 
+#include <memory>
 #include <mutex>
 #include <unordered_map>
 
-class wiResourceManager
+struct wiResource
 {
-private:
-	std::mutex lock;
-public:
-	enum Data_Type{
-		DYNAMIC,
-		IMAGE,
-		SOUND,
-		VERTEXSHADER,
-		PIXELSHADER,
-		GEOMETRYSHADER,
-		HULLSHADER,
-		DOMAINSHADER,
-		COMPUTESHADER,
-		EMPTY,
-	};
-
-	struct Resource
+	union
 	{
 		const void* data = nullptr;
-		Data_Type type = EMPTY;
-		long refCount = 0;
+		const wiGraphics::Texture* texture;
+		const wiAudio::Sound* sound;
 	};
-	std::unordered_map<wiHashString, Resource> resources;
 
+	enum DATA_TYPE
+	{
+		EMPTY,
+		IMAGE,
+		SOUND,
+	} type = EMPTY;
 
-public:
-	~wiResourceManager() { Clear(); }
-	static wiResourceManager& GetGlobal();
-	static wiResourceManager& GetShaderManager();
-
-	Resource get(const wiHashString& name, bool IncRefCount = false);
-	//specify datatype for shaders
-	const void* add(const wiHashString& name, Data_Type newType = Data_Type::DYNAMIC);
-	bool del(const wiHashString& name, bool forceDelete = false);
-	bool Register(const wiHashString& name, void* resource, Data_Type newType);
-	bool Clear();
+	~wiResource();
 };
 
+namespace wiResourceManager
+{
+	// Load a resource
+	std::shared_ptr<wiResource> Load(const wiHashString& name);
+	// Check if a resource is currently loaded
+	bool Contains(const wiHashString& name);
+	// Register a pre-created resource
+	void Register(const wiHashString& name, void* data, wiResource::DATA_TYPE data_type);
+	// Invalidate all resources
+	void Clear();
+};

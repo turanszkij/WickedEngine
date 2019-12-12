@@ -18,7 +18,6 @@ Luna<RenderPath3D_TiledForward_BindLua>::FunctionType RenderPath3D_TiledForward_
 	lunamethod(RenderPath2D_BindLua, SetSpriteOrder),
 	lunamethod(RenderPath2D_BindLua, SetFontOrder),
 
-	lunamethod(RenderPath_BindLua, GetContent),
 	lunamethod(RenderPath_BindLua, Initialize),
 	lunamethod(RenderPath_BindLua, OnStart),
 	lunamethod(RenderPath_BindLua, OnStop),
@@ -32,7 +31,6 @@ Luna<RenderPath3D_TiledForward_BindLua>::FunctionType RenderPath3D_TiledForward_
 	lunamethod(RenderPath3D_BindLua, SetFXAAEnabled),
 	lunamethod(RenderPath3D_BindLua, SetBloomEnabled),
 	lunamethod(RenderPath3D_BindLua, SetColorGradingEnabled),
-	lunamethod(RenderPath3D_BindLua, SetColorGradingTexture),
 	lunamethod(RenderPath3D_BindLua, SetVolumeLightsEnabled),
 	lunamethod(RenderPath3D_BindLua, SetLightShaftsEnabled),
 	lunamethod(RenderPath3D_BindLua, SetLensFlareEnabled),

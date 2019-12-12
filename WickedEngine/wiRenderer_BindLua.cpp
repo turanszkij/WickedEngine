@@ -1,8 +1,8 @@
 #include "wiRenderer_BindLua.h"
 #include "wiRenderer.h"
 #include "wiHelper.h"
-#include "wiSceneSystem.h"
-#include "wiSceneSystem_BindLua.h"
+#include "wiScene.h"
+#include "wiScene_BindLua.h"
 #include "Vector_BindLua.h"
 #include "Matrix_BindLua.h"
 #include "Texture_BindLua.h"
@@ -12,8 +12,8 @@
 using namespace std;
 using namespace wiECS;
 using namespace wiGraphics;
-using namespace wiSceneSystem;
-using namespace wiSceneSystem_BindLua;
+using namespace wiScene;
+using namespace wiScene_BindLua;
 
 namespace wiRenderer_BindLua
 {
@@ -93,23 +93,6 @@ namespace wiRenderer_BindLua
 		return 0;
 	}
 
-	int SetEnvironmentMap(lua_State* L)
-	{
-		int argc = wiLua::SGetArgCount(L);
-		if (argc > 0)
-		{
-			Texture_BindLua* tex = Luna<Texture_BindLua>::lightcheck(L, 1);
-			if (tex != nullptr)
-			{
-				wiRenderer::SetEnvironmentMap(tex->texture);
-			}
-			else
-				wiLua::SError(L, "SetEnvironmentMap(Texture cubemap) argument is not a texture!");
-		}
-		else
-			wiLua::SError(L, "SetEnvironmentMap(Texture cubemap) not enough arguments!");
-		return 0;
-	}
 	int SetAlphaCompositionEnabled(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
@@ -352,14 +335,7 @@ namespace wiRenderer_BindLua
 	}
 	int ReloadShaders(lua_State* L)
 	{
-		if (wiLua::SGetArgCount(L) > 0)
-		{
-			wiRenderer::ReloadShaders(wiLua::SGetString(L, 1));
-		}
-		else 
-		{
-			wiRenderer::ReloadShaders();
-		}
+		wiRenderer::ReloadShaders();
 		return 0;
 	}
 
@@ -381,7 +357,6 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("GetCamera", GetCamera);
 			wiLua::GetGlobal()->RegisterFunc("AttachCamera", AttachCamera);
 
-			wiLua::GetGlobal()->RegisterFunc("SetEnvironmentMap", SetEnvironmentMap);
 			wiLua::GetGlobal()->RegisterFunc("SetAlphaCompositionEnabled", SetAlphaCompositionEnabled);
 			wiLua::GetGlobal()->RegisterFunc("SetShadowProps2D", SetShadowProps2D);
 			wiLua::GetGlobal()->RegisterFunc("SetShadowPropsCube", SetShadowPropsCube);

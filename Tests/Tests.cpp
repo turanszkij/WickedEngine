@@ -5,15 +5,11 @@
 #include <sstream>
 #include <fstream>
 
-using namespace wiSceneSystem;
+using namespace wiScene;
 
 void Tests::Initialize()
 {
-	// Call this before Maincomponent::Initialize if you want to load shaders from an other directory!
-	// otherwise, shaders will be loaded from the working directory
-	wiRenderer::GetShaderPath() = "../WickedEngine/shaders/";
-	wiFont::GetFontPath() = "../WickedEngine/fonts/"; // search for fonts elsewhere
-	MainComponent::Initialize();
+	__super::Initialize();
 
 	infoDisplay.active = true;
 	infoDisplay.watermark = true;
@@ -119,7 +115,7 @@ TestsRenderer::TestsRenderer()
 		wiRenderer::SetToDrawGridHelper(false);
 		wiRenderer::SetTemporalAAEnabled(false);
 		wiRenderer::ClearWorld();
-		wiSceneSystem::GetScene().weather = WeatherComponent();
+		wiScene::GetScene().weather = WeatherComponent();
 		this->clearSprites();
 		this->clearFonts();
 		wiLua::GetGlobal()->KillProcesses();
@@ -153,16 +149,16 @@ TestsRenderer::TestsRenderer()
 		}
 		case 1:
 			wiRenderer::SetTemporalAAEnabled(true);
-			wiSceneSystem::LoadModel("../models/teapot.wiscene");
+			wiScene::LoadModel("../models/teapot.wiscene");
 			break;
 		case 2:
-			wiSceneSystem::LoadModel("../models/emitter_smoke.wiscene");
+			wiScene::LoadModel("../models/emitter_smoke.wiscene");
 			break;
 		case 3:
-			wiSceneSystem::LoadModel("../models/emitter_skinned.wiscene");
+			wiScene::LoadModel("../models/emitter_skinned.wiscene");
 			break;
 		case 4:
-			wiSceneSystem::LoadModel("../models/hairparticle_torus.wiscene", XMMatrixTranslation(0, 1, 0));
+			wiScene::LoadModel("../models/hairparticle_torus.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
 		case 5:
 			wiRenderer::SetToDrawGridHelper(true);
@@ -170,18 +166,18 @@ TestsRenderer::TestsRenderer()
 			break;
 		case 6:
 			wiRenderer::SetTemporalAAEnabled(true);
-			wiSceneSystem::LoadModel("../models/water_test.wiscene", XMMatrixTranslation(0, 1, 0));
+			wiScene::LoadModel("../models/water_test.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
 		case 7:
 			wiRenderer::SetTemporalAAEnabled(true);
-			wiSceneSystem::LoadModel("../models/shadows_test.wiscene", XMMatrixTranslation(0, 1, 0));
+			wiScene::LoadModel("../models/shadows_test.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
 		case 8:
 			wiRenderer::SetTemporalAAEnabled(true);
-			wiSceneSystem::LoadModel("../models/physics_test.wiscene");
+			wiScene::LoadModel("../models/physics_test.wiscene");
 			break;
 		case 9:
-			wiSceneSystem::LoadModel("../models/cloth_test.wiscene", XMMatrixTranslation(0, 3, 4));
+			wiScene::LoadModel("../models/cloth_test.wiscene", XMMatrixTranslation(0, 3, 4));
 			break;
 		case 10:
 			RunJobSystemTest();
@@ -191,7 +187,7 @@ TestsRenderer::TestsRenderer()
 			break;
 		case 12:
 			wiRenderer::SetTemporalAAEnabled(true);
-			wiSceneSystem::LoadModel("../models/volumetric_test.wiscene", XMMatrixTranslation(0, 0, 4));
+			wiScene::LoadModel("../models/volumetric_test.wiscene", XMMatrixTranslation(0, 0, 4));
 			break;
 		case 13:
 			RunSpriteTest();
@@ -199,7 +195,7 @@ TestsRenderer::TestsRenderer()
 		case 14:
 			wiRenderer::GetDevice()->SetVSyncEnabled(false); // turn off vsync if we can to accelerate the baking
 			wiRenderer::SetTemporalAAEnabled(true);
-			wiSceneSystem::LoadModel("../models/lightmap_bake_test.wiscene", XMMatrixTranslation(0, 0, 4));
+			wiScene::LoadModel("../models/lightmap_bake_test.wiscene", XMMatrixTranslation(0, 0, 4));
 			break;
 		case 15:
 			RunNetworkTest();
@@ -275,7 +271,7 @@ void TestsRenderer::RunJobSystemTest()
 
 	// Simple loop test:
 	{
-		std::vector<wiSceneSystem::CameraComponent> dataSet(itemCount);
+		std::vector<wiScene::CameraComponent> dataSet(itemCount);
 		timer.record();
 		for (uint32_t i = 0; i < itemCount; ++i)
 		{
@@ -287,7 +283,7 @@ void TestsRenderer::RunJobSystemTest()
 
 	// Dispatch test:
 	{
-		std::vector<wiSceneSystem::CameraComponent> dataSet(itemCount);
+		std::vector<wiScene::CameraComponent> dataSet(itemCount);
 		timer.record();
 		wiJobSystem::Dispatch(ctx, itemCount, 1000, [&](wiJobDispatchArgs args) {
 			dataSet[args.jobIndex].UpdateCamera();

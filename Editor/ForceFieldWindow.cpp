@@ -2,7 +2,7 @@
 #include "ForceFieldWindow.h"
 
 using namespace wiECS;
-using namespace wiSceneSystem;
+using namespace wiScene;
 
 
 ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
@@ -25,7 +25,7 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 	typeComboBox->SetPos(XMFLOAT2(x, y += step));
 	typeComboBox->SetSize(XMFLOAT2(300, 25));
 	typeComboBox->OnSelect([&](wiEventArgs args) {
-		ForceFieldComponent* force = wiSceneSystem::GetScene().forces.GetComponent(entity);
+		ForceFieldComponent* force = wiScene::GetScene().forces.GetComponent(entity);
 		if (force != nullptr && args.iValue >= 0)
 		{
 			switch (args.iValue)
@@ -53,7 +53,7 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 	gravitySlider->SetSize(XMFLOAT2(200, 30));
 	gravitySlider->SetPos(XMFLOAT2(x, y += step));
 	gravitySlider->OnSlide([&](wiEventArgs args) {
-		ForceFieldComponent* force = wiSceneSystem::GetScene().forces.GetComponent(entity);
+		ForceFieldComponent* force = wiScene::GetScene().forces.GetComponent(entity);
 		if (force != nullptr)
 		{
 			force->gravity = args.fValue;
@@ -68,7 +68,7 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 	rangeSlider->SetSize(XMFLOAT2(200, 30));
 	rangeSlider->SetPos(XMFLOAT2(x, y += step));
 	rangeSlider->OnSlide([&](wiEventArgs args) {
-		ForceFieldComponent* force = wiSceneSystem::GetScene().forces.GetComponent(entity);
+		ForceFieldComponent* force = wiScene::GetScene().forces.GetComponent(entity);
 		if (force != nullptr)
 		{
 			force->range_local = args.fValue;
@@ -83,8 +83,8 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 	addButton->SetSize(XMFLOAT2(150, 30));
 	addButton->SetPos(XMFLOAT2(x, y += step * 2));
 	addButton->OnClick([&](wiEventArgs args) {
-		Entity entity = wiSceneSystem::GetScene().Entity_CreateForce("editorForce");
-		ForceFieldComponent* force = wiSceneSystem::GetScene().forces.GetComponent(entity);
+		Entity entity = wiScene::GetScene().Entity_CreateForce("editorForce");
+		ForceFieldComponent* force = wiScene::GetScene().forces.GetComponent(entity);
 		if (force != nullptr)
 		{
 			switch (typeComboBox->GetSelected())
@@ -129,7 +129,7 @@ void ForceFieldWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
 
-	const ForceFieldComponent* force = wiSceneSystem::GetScene().forces.GetComponent(entity);
+	const ForceFieldComponent* force = wiScene::GetScene().forces.GetComponent(entity);
 
 	if (force != nullptr)
 	{

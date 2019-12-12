@@ -2,7 +2,7 @@
 #include "CommonInclude.h"
 #include "wiEnums.h"
 #include "wiGraphicsDevice.h"
-#include "wiSceneSystem_Decl.h"
+#include "wiScene_Decl.h"
 #include "wiECS.h"
 
 struct RAY;
@@ -41,17 +41,26 @@ namespace wiRenderer
 	// Retrieve the main graphics device:
 	wiGraphics::GraphicsDevice* GetDevice();
 
-	// Returns the shader path that you can also modify
-	std::string& GetShaderPath();
-	// Reload shaders, use the argument to modify the shader path. If the argument is empty, the shader path will not be modified
-	void ReloadShaders(const std::string& path = "");
+	// Returns the shader loading directory
+	const std::string& GetShaderPath();
+	// Sets the shader loading directory
+	void SetShaderPath(const std::string& path);
+	// Reload shaders
+	void ReloadShaders();
+
+	bool LoadVertexShader(wiGraphics::VertexShader& shader, const std::string& filename);
+	bool LoadHullShader(wiGraphics::HullShader& shader, const std::string& filename);
+	bool LoadDomainShader(wiGraphics::DomainShader& shader, const std::string& filename);
+	bool LoadGeometryShader(wiGraphics::GeometryShader& shader, const std::string& filename);
+	bool LoadPixelShader(wiGraphics::PixelShader& shader, const std::string& filename);
+	bool LoadComputeShader(wiGraphics::ComputeShader& shader, const std::string& filename);
 
 	// Returns the main camera that is currently being used in rendering (and also for post processing)
-	wiSceneSystem::CameraComponent& GetCamera();
+	wiScene::CameraComponent& GetCamera();
 	// Returns the previous frame's camera that is currently being used in rendering to reproject
-	wiSceneSystem::CameraComponent& GetPrevCamera();
+	wiScene::CameraComponent& GetPrevCamera();
 	// Returns the planar reflection camera that is currently being used in rendering
-	wiSceneSystem::CameraComponent& GetRefCamera();
+	wiScene::CameraComponent& GetRefCamera();
 	// Attach camera to entity for the current frame
 	void AttachCamera(wiECS::Entity entity);
 
@@ -65,7 +74,7 @@ namespace wiRenderer
 	// Updates the per frame constant buffer (need to call at least once per frame)
 	void UpdateFrameCB(wiGraphics::CommandList cmd);
 	// Updates the per camera constant buffer need to call for each different camera that is used when calling DrawScene() and the like
-	void UpdateCameraCB(const wiSceneSystem::CameraComponent& camera, wiGraphics::CommandList cmd);
+	void UpdateCameraCB(const wiScene::CameraComponent& camera, wiGraphics::CommandList cmd);
 	// Set a global clipping plane state that is available to use in any shader (access as float4 g_xClipPlane)
 	void SetClipPlane(const XMFLOAT4& clipPlane, wiGraphics::CommandList cmd);
 	// Set a global alpha reference value that can be used by any shaders to perform alpha-testing (access as float g_xAlphaRef)
@@ -73,28 +82,28 @@ namespace wiRenderer
 	// Resets the global shader alpha reference value to float g_xAlphaRef = 0.75f
 	inline void ResetAlphaRef(wiGraphics::CommandList cmd) { SetAlphaRef(0.75f, cmd); }
 
-	// Draw skydome centered to camera. Its color will be either dynamically computed, or the global environment map will be used if you called SetEnvironmentMap()
+	// Draw skydome centered to camera.
 	void DrawSky(wiGraphics::CommandList cmd);
 	// A black skydome will be draw with only the sun being visible on it
 	void DrawSun(wiGraphics::CommandList cmd);
 	// Draw the world from a camera. You must call UpdateCameraCB() at least once in this frame prior to this
-	void DrawScene(const wiSceneSystem::CameraComponent& camera, bool tessellation, wiGraphics::CommandList cmd, RENDERPASS renderPass, bool grass, bool occlusionCulling);
+	void DrawScene(const wiScene::CameraComponent& camera, bool tessellation, wiGraphics::CommandList cmd, RENDERPASS renderPass, bool grass, bool occlusionCulling);
 	// Draw the transparent world from a camera. You must call UpdateCameraCB() at least once in this frame prior to this
-	void DrawScene_Transparent(const wiSceneSystem::CameraComponent& camera, const wiGraphics::Texture& lineardepth, RENDERPASS renderPass, wiGraphics::CommandList cmd, bool grass, bool occlusionCulling);
+	void DrawScene_Transparent(const wiScene::CameraComponent& camera, const wiGraphics::Texture& lineardepth, RENDERPASS renderPass, wiGraphics::CommandList cmd, bool grass, bool occlusionCulling);
 	// Draw shadow maps for each visible light that has associated shadow maps
-	void DrawShadowmaps(const wiSceneSystem::CameraComponent& camera, wiGraphics::CommandList cmd, uint32_t layerMask = ~0);
+	void DrawShadowmaps(const wiScene::CameraComponent& camera, wiGraphics::CommandList cmd, uint32_t layerMask = ~0);
 	// Draw debug world. You must also enable what parts to draw, eg. SetToDrawGridHelper, etc, see implementation for details what can be enabled.
-	void DrawDebugWorld(const wiSceneSystem::CameraComponent& camera, wiGraphics::CommandList cmd);
+	void DrawDebugWorld(const wiScene::CameraComponent& camera, wiGraphics::CommandList cmd);
 	// Draw Soft offscreen particles. Linear depth should be already readable (see BindDepthTextures())
 	void DrawSoftParticles(
-		const wiSceneSystem::CameraComponent& camera, 
+		const wiScene::CameraComponent& camera, 
 		const wiGraphics::Texture& lineardepth,
 		bool distortion, 
 		wiGraphics::CommandList cmd
 	);
 	// Draw deferred lights. Gbuffer and depth textures should already be readable (see BindGBufferTextures(), BindDepthTextures())
 	void DrawDeferredLights(
-		const wiSceneSystem::CameraComponent& camera,
+		const wiScene::CameraComponent& camera,
 		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture& gbuffer0,
 		const wiGraphics::Texture& gbuffer1,
@@ -103,24 +112,24 @@ namespace wiRenderer
 	);
 	// Draw simple light visualizer geometries
 	void DrawLightVisualizers(
-		const wiSceneSystem::CameraComponent& camera, 
+		const wiScene::CameraComponent& camera, 
 		wiGraphics::CommandList cmd
 	);
 	// Draw volumetric light scattering effects
 	void DrawVolumeLights(
-		const wiSceneSystem::CameraComponent& camera,
+		const wiScene::CameraComponent& camera,
 		const wiGraphics::Texture& depthbuffer,
 		wiGraphics::CommandList cmd
 	);
 	// Draw Lens Flares for lights that have them enabled
 	void DrawLensFlares(
-		const wiSceneSystem::CameraComponent& camera,
+		const wiScene::CameraComponent& camera,
 		const wiGraphics::Texture& depthbuffer,
 		wiGraphics::CommandList cmd
 	);
 	// Draw deferred decals
 	void DrawDeferredDecals(
-		const wiSceneSystem::CameraComponent& camera,
+		const wiScene::CameraComponent& camera,
 		const wiGraphics::Texture& depthbuffer,
 		wiGraphics::CommandList cmd
 	);
@@ -299,7 +308,7 @@ namespace wiRenderer
 		void Create(wiGraphics::GraphicsDevice* device, uint32_t newRayCapacity);
 	};
 	// Generate rays for every pixel of the internal resolution
-	RayBuffers* GenerateScreenRayBuffers(const wiSceneSystem::CameraComponent& camera, wiGraphics::CommandList cmd);
+	RayBuffers* GenerateScreenRayBuffers(const wiScene::CameraComponent& camera, wiGraphics::CommandList cmd);
 	// Render the scene with ray tracing. You provide the ray buffer, where each ray maps to one pixel of the result testure
 	void RayTraceScene(
 		const RayBuffers* rayBuffers,
@@ -428,8 +437,6 @@ namespace wiRenderer
 	void SetAdvancedRefractionsEnabled(bool value);
 	bool GetAdvancedRefractionsEnabled();
 	bool IsRequestedReflectionRendering();
-	void SetEnvironmentMap(wiGraphics::Texture* tex);
-	const wiGraphics::Texture* GetEnvironmentMap();
 	const XMFLOAT4& GetWaterPlane();
 	void SetGameSpeed(float value);
 	float GetGameSpeed();

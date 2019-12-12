@@ -11,9 +11,8 @@ using namespace wiGraphics;
 
 namespace wiFFTGenerator
 {
-
-	static const ComputeShader* pRadix008A_CS = nullptr;
-	static const ComputeShader* pRadix008A_CS2 = nullptr;
+	ComputeShader radix008A_CS;
+	ComputeShader radix008A_CS2;
 
 #define TWO_PI 6.283185307179586476925286766559
 
@@ -46,11 +45,11 @@ namespace wiFFTGenerator
 		// Shader
 		if (istride > 1)
 		{
-			device->BindComputeShader(pRadix008A_CS, cmd);
+			device->BindComputeShader(&radix008A_CS, cmd);
 		}
 		else
 		{
-			device->BindComputeShader(pRadix008A_CS2, cmd);
+			device->BindComputeShader(&radix008A_CS2, cmd);
 		}
 
 		// Execute
@@ -204,8 +203,8 @@ namespace wiFFTGenerator
 	{
 		std::string path = wiRenderer::GetShaderPath();
 
-		pRadix008A_CS = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(path + "fft_512x512_c2c_CS.cso", wiResourceManager::COMPUTESHADER));
-		pRadix008A_CS2 = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(path + "fft_512x512_c2c_v2_CS.cso", wiResourceManager::COMPUTESHADER));
+		wiRenderer::LoadComputeShader(radix008A_CS, "fft_512x512_c2c_CS.cso");
+		wiRenderer::LoadComputeShader(radix008A_CS2, "fft_512x512_c2c_v2_CS.cso");
 	}
 
 }

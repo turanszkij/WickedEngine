@@ -1,7 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
-#include "wiSceneSystem_Decl.h"
+#include "wiScene_Decl.h"
 #include "wiRectPacker.h"
 #include "ShaderInterop_Renderer.h"
 
@@ -30,10 +30,10 @@ private:
 	std::vector<ShaderMaterial> materialArray;
 	std::unordered_map<const wiGraphics::Texture*, wiRectPacker::rect_xywh> storedTextures;
 	std::unordered_set<const wiGraphics::Texture*> sceneTextures;
-	void UpdateGlobalMaterialResources(const wiSceneSystem::Scene& scene, wiGraphics::CommandList cmd);
+	void UpdateGlobalMaterialResources(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 
 public:
-	void Build(const wiSceneSystem::Scene& scene, wiGraphics::CommandList cmd);
+	void Build(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 	void Bind(wiGraphics::SHADERSTAGE stage, wiGraphics::CommandList cmd) const;
 
 	static void LoadShaders();
