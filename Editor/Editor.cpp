@@ -204,6 +204,20 @@ void EditorComponent::Load()
 {
 	__super::Load();
 
+	wiJobSystem::context ctx;
+	wiJobSystem::Execute(ctx, [this] { pointLightTex = wiResourceManager::Load("images/pointlight.dds"); });
+	wiJobSystem::Execute(ctx, [this] { spotLightTex = wiResourceManager::Load("images/spotlight.dds"); });
+	wiJobSystem::Execute(ctx, [this] { dirLightTex = wiResourceManager::Load("images/directional_light.dds"); });
+	wiJobSystem::Execute(ctx, [this] { areaLightTex = wiResourceManager::Load("images/arealight.dds"); });
+	wiJobSystem::Execute(ctx, [this] { decalTex = wiResourceManager::Load("images/decal.dds"); });
+	wiJobSystem::Execute(ctx, [this] { forceFieldTex = wiResourceManager::Load("images/forcefield.dds"); });
+	wiJobSystem::Execute(ctx, [this] { emitterTex = wiResourceManager::Load("images/emitter.dds"); });
+	wiJobSystem::Execute(ctx, [this] { hairTex = wiResourceManager::Load("images/hair.dds"); });
+	wiJobSystem::Execute(ctx, [this] { cameraTex = wiResourceManager::Load("images/camera.dds"); });
+	wiJobSystem::Execute(ctx, [this] { armatureTex = wiResourceManager::Load("images/armature.dds"); });
+	wiJobSystem::Execute(ctx, [this] { soundTex = wiResourceManager::Load("images/sound.dds"); });
+	// wait for ctx is at the end of this function!
+
 	translator.enabled = false;
 
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
@@ -713,19 +727,7 @@ void EditorComponent::Load()
 
 	cameraWnd->ResetCam();
 
-	
-
-	pointLightTex = wiResourceManager::Load("images/pointlight.dds");
-	spotLightTex = wiResourceManager::Load("images/spotlight.dds");
-	dirLightTex = wiResourceManager::Load("images/directional_light.dds");
-	areaLightTex = wiResourceManager::Load("images/arealight.dds");
-	decalTex = wiResourceManager::Load("images/decal.dds");
-	forceFieldTex = wiResourceManager::Load("images/forcefield.dds");
-	emitterTex = wiResourceManager::Load("images/emitter.dds");
-	hairTex = wiResourceManager::Load("images/hair.dds");
-	cameraTex = wiResourceManager::Load("images/camera.dds");
-	armatureTex = wiResourceManager::Load("images/armature.dds");
-	soundTex = wiResourceManager::Load("images/sound.dds");
+	wiJobSystem::Wait(ctx);
 }
 void EditorComponent::Start()
 {

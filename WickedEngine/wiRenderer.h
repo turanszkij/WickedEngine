@@ -16,11 +16,11 @@ namespace wiRenderer
 
 	const wiGraphics::Sampler* GetSampler(int slot);
 	const wiGraphics::VertexShader* GetVertexShader(VSTYPES id);
-	const wiGraphics::HullShader* GetHullShader(VSTYPES id);
-	const wiGraphics::DomainShader* GetDomainShader(VSTYPES id);
-	const wiGraphics::GeometryShader* GetGeometryShader(VSTYPES id);
+	const wiGraphics::HullShader* GetHullShader(HSTYPES id);
+	const wiGraphics::DomainShader* GetDomainShader(DSTYPES id);
+	const wiGraphics::GeometryShader* GetGeometryShader(GSTYPES id);
 	const wiGraphics::PixelShader* GetPixelShader(PSTYPES id);
-	const wiGraphics::ComputeShader* GetComputeShader(PSTYPES id);
+	const wiGraphics::ComputeShader* GetComputeShader(CSTYPES id);
 	const wiGraphics::VertexLayout* GetVertexLayout(VLTYPES id);
 	const wiGraphics::RasterizerState* GetRasterizerState(RSTYPES id);
 	const wiGraphics::DepthStencilState* GetDepthStencilState(DSSTYPES id);
