@@ -41,6 +41,8 @@ void MainComponent::Initialize()
 	}
 	initialized = true;
 
+	wiHelper::GetOriginalWorkingDirectory();
+
 	// User can also create a graphics device if custom logic is desired, but he must do before this function!
 	if (wiRenderer::GetDevice() == nullptr)
 	{
