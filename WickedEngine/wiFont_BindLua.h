@@ -34,9 +34,6 @@ public:
 	int GetColor(lua_State* L);
 	int GetShadowColor(lua_State* L);
 
-	int Destroy(lua_State* L);
-
-
 	static void Bind();
 };
 

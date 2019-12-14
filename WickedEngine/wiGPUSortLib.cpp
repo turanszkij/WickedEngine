@@ -46,10 +46,6 @@ namespace wiGPUSortLib
 
 	}
 
-	void CleanUp()
-	{
-	}
-
 
 	void Sort(
 		uint32_t maxCount, 

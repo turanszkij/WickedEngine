@@ -25,7 +25,6 @@ Luna<wiFont_BindLua>::FunctionType wiFont_BindLua::methods[] = {
 	lunamethod(wiFont_BindLua, GetColor),
 	lunamethod(wiFont_BindLua, GetShadowColor),
 
-	lunamethod(wiFont_BindLua, Destroy),
 	{ NULL, NULL }
 };
 Luna<wiFont_BindLua>::PropertyType wiFont_BindLua::properties[] = {
@@ -220,17 +219,6 @@ int wiFont_BindLua::GetShadowColor(lua_State* L)
 {
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&font->params.color.toFloat4())));
 	return 1;
-}
-
-int wiFont_BindLua::Destroy(lua_State* L)
-{
-	if (font != nullptr)
-	{
-		font->CleanUp();
-		delete font;
-		font = nullptr;
-	}
-	return 0;
 }
 
 void wiFont_BindLua::Bind()

@@ -36,7 +36,6 @@ class wiFont
 {
 public:
 	static void Initialize();
-	static void CleanUp();
 
 	static void LoadShaders();
 	static const wiGraphics::Texture* GetAtlas();

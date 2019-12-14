@@ -31,10 +31,6 @@ namespace wiNetwork
 
 		wiBackLog::post("wiNetwork Initialized");
 	}
-	void CleanUp()
-	{
-		WSACleanup();
-	}
 
 	bool CreateSocket(Socket* sock)
 	{

@@ -25,14 +25,6 @@
 using namespace std;
 using namespace wiGraphics;
 
-MainComponent::~MainComponent()
-{
-	// This means application is terminating. Wait for GPU to finish rendering.
-	wiRenderer::GetDevice()->WaitForGPU();
-
-	wiInitializer::CleanUp();
-}
-
 void MainComponent::Initialize()
 {
 	if (initialized)

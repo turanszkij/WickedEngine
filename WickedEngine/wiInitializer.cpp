@@ -44,12 +44,4 @@ namespace wiInitializer
 	{
 		return initializationStarted && !wiJobSystem::IsBusy(ctx);
 	}
-
-	void CleanUp()
-	{
-		wiFont::CleanUp();
-		wiAudio::CleanUp();
-		wiNetwork::CleanUp();
-		wiPhysicsEngine::CleanUp();
-	}
 }

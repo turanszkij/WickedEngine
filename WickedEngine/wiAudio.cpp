@@ -3,6 +3,7 @@
 #include "wiHelper.h"
 
 #include <vector>
+#include <memory>
 
 #include <xaudio2.h>
 #include <xaudio2fx.h>
@@ -29,13 +30,132 @@
 
 namespace wiAudio
 {
-	IXAudio2* audioEngine = nullptr;
-	IXAudio2MasteringVoice* masteringVoice = nullptr;
-	XAUDIO2_VOICE_DETAILS masteringVoiceDetails = {};
-	IXAudio2SubmixVoice* submixVoices[SUBMIX_TYPE_COUNT] = {};
-	X3DAUDIO_HANDLE audio3D = {};
-	IUnknown* reverbEffect = nullptr;
-	IXAudio2SubmixVoice* reverbSubmix = nullptr;
+	static const XAUDIO2FX_REVERB_I3DL2_PARAMETERS reverbPresets[] =
+	{
+		XAUDIO2FX_I3DL2_PRESET_DEFAULT,
+		XAUDIO2FX_I3DL2_PRESET_GENERIC,
+		XAUDIO2FX_I3DL2_PRESET_FOREST,
+		XAUDIO2FX_I3DL2_PRESET_PADDEDCELL,
+		XAUDIO2FX_I3DL2_PRESET_ROOM,
+		XAUDIO2FX_I3DL2_PRESET_BATHROOM,
+		XAUDIO2FX_I3DL2_PRESET_LIVINGROOM,
+		XAUDIO2FX_I3DL2_PRESET_STONEROOM,
+		XAUDIO2FX_I3DL2_PRESET_AUDITORIUM,
+		XAUDIO2FX_I3DL2_PRESET_CONCERTHALL,
+		XAUDIO2FX_I3DL2_PRESET_CAVE,
+		XAUDIO2FX_I3DL2_PRESET_ARENA,
+		XAUDIO2FX_I3DL2_PRESET_HANGAR,
+		XAUDIO2FX_I3DL2_PRESET_CARPETEDHALLWAY,
+		XAUDIO2FX_I3DL2_PRESET_HALLWAY,
+		XAUDIO2FX_I3DL2_PRESET_STONECORRIDOR,
+		XAUDIO2FX_I3DL2_PRESET_ALLEY,
+		XAUDIO2FX_I3DL2_PRESET_CITY,
+		XAUDIO2FX_I3DL2_PRESET_MOUNTAINS,
+		XAUDIO2FX_I3DL2_PRESET_QUARRY,
+		XAUDIO2FX_I3DL2_PRESET_PLAIN,
+		XAUDIO2FX_I3DL2_PRESET_PARKINGLOT,
+		XAUDIO2FX_I3DL2_PRESET_SEWERPIPE,
+		XAUDIO2FX_I3DL2_PRESET_UNDERWATER,
+		XAUDIO2FX_I3DL2_PRESET_SMALLROOM,
+		XAUDIO2FX_I3DL2_PRESET_MEDIUMROOM,
+		XAUDIO2FX_I3DL2_PRESET_LARGEROOM,
+		XAUDIO2FX_I3DL2_PRESET_MEDIUMHALL,
+		XAUDIO2FX_I3DL2_PRESET_LARGEHALL,
+		XAUDIO2FX_I3DL2_PRESET_PLATE,
+	};
+
+	struct AudioInternal
+	{
+		bool success = false;
+		IXAudio2* audioEngine = nullptr;
+		IXAudio2MasteringVoice* masteringVoice = nullptr;
+		XAUDIO2_VOICE_DETAILS masteringVoiceDetails = {};
+		IXAudio2SubmixVoice* submixVoices[SUBMIX_TYPE_COUNT] = {};
+		X3DAUDIO_HANDLE audio3D = {};
+		IUnknown* reverbEffect = nullptr;
+		IXAudio2SubmixVoice* reverbSubmix = nullptr;
+
+		AudioInternal()
+		{
+			HRESULT hr;
+			hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+			assert(SUCCEEDED(hr));
+
+			hr = XAudio2Create(&audioEngine, 0, XAUDIO2_DEFAULT_PROCESSOR);
+			assert(SUCCEEDED(hr));
+
+#ifdef _DEBUG
+			XAUDIO2_DEBUG_CONFIGURATION debugConfig = {};
+			debugConfig.TraceMask = XAUDIO2_LOG_ERRORS | XAUDIO2_LOG_WARNINGS;
+			debugConfig.BreakMask = XAUDIO2_LOG_ERRORS | XAUDIO2_LOG_WARNINGS;
+			audioEngine->SetDebugConfiguration(&debugConfig);
+#endif // _DEBUG
+
+			hr = audioEngine->CreateMasteringVoice(&masteringVoice);
+			assert(SUCCEEDED(hr));
+
+			masteringVoice->GetVoiceDetails(&masteringVoiceDetails);
+
+			for (int i = 0; i < SUBMIX_TYPE_COUNT; ++i)
+			{
+				hr = audioEngine->CreateSubmixVoice(
+					&submixVoices[i],
+					masteringVoiceDetails.InputChannels,
+					masteringVoiceDetails.InputSampleRate,
+					0, 0, 0, 0);
+				assert(SUCCEEDED(hr));
+			}
+
+			DWORD channelMask;
+			masteringVoice->GetChannelMask(&channelMask);
+			hr = X3DAudioInitialize(channelMask, X3DAUDIO_SPEED_OF_SOUND, audio3D);
+			assert(SUCCEEDED(hr));
+
+			// Reverb setup:
+			{
+				hr = XAudio2CreateReverb(&reverbEffect);
+				assert(SUCCEEDED(hr));
+
+				XAUDIO2_EFFECT_DESCRIPTOR effects[] = { { reverbEffect, TRUE, 1 } };
+				XAUDIO2_EFFECT_CHAIN effectChain = { arraysize(effects), effects };
+				hr = audioEngine->CreateSubmixVoice(
+					&reverbSubmix,
+					1, // reverb is mono
+					masteringVoiceDetails.InputSampleRate,
+					0, 0, nullptr, &effectChain);
+				assert(SUCCEEDED(hr));
+
+				XAUDIO2FX_REVERB_PARAMETERS native;
+				ReverbConvertI3DL2ToNative(&reverbPresets[REVERB_PRESET_DEFAULT], &native);
+				HRESULT hr = reverbSubmix->SetEffectParameters(0, &native, sizeof(native));
+				assert(SUCCEEDED(hr));
+			}
+
+			success = SUCCEEDED(hr);
+		}
+		~AudioInternal()
+		{
+			SAFE_RELEASE(reverbEffect);
+
+			if (reverbSubmix != nullptr)
+				reverbSubmix->DestroyVoice();
+
+			for (int i = 0; i < SUBMIX_TYPE_COUNT; ++i)
+			{
+				if (submixVoices[i] != nullptr)
+					submixVoices[i]->DestroyVoice();
+			}
+
+			if (masteringVoice != nullptr)
+				masteringVoice->DestroyVoice();
+
+			audioEngine->StopEngine();
+			SAFE_RELEASE(audioEngine);
+
+			CoUninitialize();
+		}
+	};
+	std::shared_ptr<AudioInternal> audio;
 
 	Sound::~Sound()
 	{
@@ -47,11 +167,13 @@ namespace wiAudio
 	}
 	struct SoundInternal
 	{
+		std::shared_ptr<AudioInternal> audio;
 		WAVEFORMATEX wfx = {};
 		std::vector<uint8_t> audioData;
 	};
 	struct SoundInstanceInternal
 	{
+		std::shared_ptr<AudioInternal> audio;
 		IXAudio2SourceVoice* sourceVoice = nullptr;
 		XAUDIO2_VOICE_DETAILS voiceDetails = {};
 		std::vector<float> outputMatrix;
@@ -62,82 +184,12 @@ namespace wiAudio
 
 	void Initialize()
 	{
-		HRESULT hr;
-		hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-		assert(SUCCEEDED(hr));
+		audio = std::make_shared<AudioInternal>();
 
-		hr = XAudio2Create(&audioEngine, 0, XAUDIO2_DEFAULT_PROCESSOR);
-		assert(SUCCEEDED(hr));
-
-#ifdef _DEBUG
-		XAUDIO2_DEBUG_CONFIGURATION debugConfig = {};
-		debugConfig.TraceMask = XAUDIO2_LOG_ERRORS | XAUDIO2_LOG_WARNINGS;
-		debugConfig.BreakMask = XAUDIO2_LOG_ERRORS | XAUDIO2_LOG_WARNINGS;
-		audioEngine->SetDebugConfiguration(&debugConfig);
-#endif // _DEBUG
-
-		hr = audioEngine->CreateMasteringVoice(&masteringVoice);
-		assert(SUCCEEDED(hr));
-
-		masteringVoice->GetVoiceDetails(&masteringVoiceDetails);
-
-		for (int i = 0; i < SUBMIX_TYPE_COUNT; ++i)
-		{
-			hr = audioEngine->CreateSubmixVoice(
-				&submixVoices[i], 
-				masteringVoiceDetails.InputChannels,
-				masteringVoiceDetails.InputSampleRate,
-				0, 0, 0, 0);
-			assert(SUCCEEDED(hr));
-		}
-
-		DWORD channelMask;
-		masteringVoice->GetChannelMask(&channelMask);
-		hr = X3DAudioInitialize(channelMask, X3DAUDIO_SPEED_OF_SOUND, audio3D);
-		assert(SUCCEEDED(hr));
-
-		// Reverb setup:
-		{
-			hr = XAudio2CreateReverb(&reverbEffect);
-			assert(SUCCEEDED(hr));
-
-			XAUDIO2_EFFECT_DESCRIPTOR effects[] = { { reverbEffect, TRUE, 1 } };
-			XAUDIO2_EFFECT_CHAIN effectChain = { arraysize(effects), effects };
-			hr = audioEngine->CreateSubmixVoice(
-				&reverbSubmix,
-				1, // reverb is mono
-				masteringVoiceDetails.InputSampleRate,
-				0, 0, nullptr, &effectChain);
-			assert(SUCCEEDED(hr));
-
-			SetReverb(REVERB_PRESET_DEFAULT);
-		}
-
-		if (SUCCEEDED(hr))
+		if (audio->success)
 		{
 			wiBackLog::post("wiAudio Initialized");
 		}
-	}
-	void CleanUp()
-	{
-		SAFE_RELEASE(reverbEffect);
-
-		if (reverbSubmix != nullptr) 
-			reverbSubmix->DestroyVoice();
-
-		for (int i = 0; i < SUBMIX_TYPE_COUNT; ++i)
-		{
-			if (submixVoices[i] != nullptr) 
-				submixVoices[i]->DestroyVoice();
-		}
-
-		if (masteringVoice != nullptr) 
-			masteringVoice->DestroyVoice();
-
-		audioEngine->StopEngine();
-		SAFE_RELEASE(audioEngine);
-
-		CoUninitialize();
 	}
 
 	HRESULT FindChunk(HANDLE hFile, DWORD fourcc, DWORD& dwChunkSize, DWORD& dwChunkDataPosition)
@@ -248,6 +300,7 @@ namespace wiAudio
 		assert(filetype == fourccWAVE);
 
 		SoundInternal* soundinternal = new SoundInternal;
+		soundinternal->audio = audio;
 
 		hr = FindChunk(hFile, fourccFMT, dwChunkSize, dwChunkPosition);
 		assert(SUCCEEDED(hr));
@@ -273,15 +326,16 @@ namespace wiAudio
 		HRESULT hr;
 		const SoundInternal* soundinternal = (const SoundInternal*)sound->handle;
 		SoundInstanceInternal* instanceinternal = new SoundInstanceInternal;
+		instanceinternal->audio = audio;
 		instanceinternal->soundinternal = soundinternal;
 
 		XAUDIO2_SEND_DESCRIPTOR SFXSend[] = { 
-			{ XAUDIO2_SEND_USEFILTER, submixVoices[instance->type] },
-			{ XAUDIO2_SEND_USEFILTER, reverbSubmix },
+			{ XAUDIO2_SEND_USEFILTER, audio->submixVoices[instance->type] },
+			{ XAUDIO2_SEND_USEFILTER, audio->reverbSubmix },
 		};
 		XAUDIO2_VOICE_SENDS SFXSendList = { arraysize(SFXSend), SFXSend };
 
-		hr = audioEngine->CreateSourceVoice(&instanceinternal->sourceVoice, &soundinternal->wfx, 
+		hr = audio->audioEngine->CreateSourceVoice(&instanceinternal->sourceVoice, &soundinternal->wfx, 
 			0, XAUDIO2_DEFAULT_FREQ_RATIO, NULL, &SFXSendList, NULL);
 		if (FAILED(hr))
 		{
@@ -291,7 +345,7 @@ namespace wiAudio
 
 		instanceinternal->sourceVoice->GetVoiceDetails(&instanceinternal->voiceDetails);
 		
-		instanceinternal->outputMatrix.resize(size_t(instanceinternal->voiceDetails.InputChannels) * size_t(masteringVoiceDetails.InputChannels));
+		instanceinternal->outputMatrix.resize(size_t(instanceinternal->voiceDetails.InputChannels) * size_t(audio->masteringVoiceDetails.InputChannels));
 		instanceinternal->channelAzimuths.resize(instanceinternal->voiceDetails.InputChannels);
 		for (size_t i = 0; i < instanceinternal->channelAzimuths.size(); ++i)
 		{
@@ -302,8 +356,8 @@ namespace wiAudio
 		instanceinternal->buffer.pAudioData = soundinternal->audioData.data();
 		instanceinternal->buffer.Flags = XAUDIO2_END_OF_STREAM;
 		instanceinternal->buffer.LoopCount = XAUDIO2_LOOP_INFINITE;
-		instanceinternal->buffer.LoopBegin = UINT32(instance->loop_begin * masteringVoiceDetails.InputSampleRate);
-		instanceinternal->buffer.LoopLength = UINT32(instance->loop_length * masteringVoiceDetails.InputSampleRate);
+		instanceinternal->buffer.LoopBegin = UINT32(instance->loop_begin * audio->masteringVoiceDetails.InputSampleRate);
+		instanceinternal->buffer.LoopLength = UINT32(instance->loop_length * audio->masteringVoiceDetails.InputSampleRate);
 
 		hr = instanceinternal->sourceVoice->SubmitSourceBuffer(&instanceinternal->buffer);
 		if (FAILED(hr))
@@ -371,7 +425,7 @@ namespace wiAudio
 	{
 		if (instance == nullptr || instance->handle == WI_NULL_HANDLE)
 		{
-			HRESULT hr = masteringVoice->SetVolume(volume);
+			HRESULT hr = audio->masteringVoice->SetVolume(volume);
 			assert(SUCCEEDED(hr));
 		}
 		else
@@ -386,7 +440,7 @@ namespace wiAudio
 		float volume = 0;
 		if (instance == nullptr || instance->handle == WI_NULL_HANDLE)
 		{
-			masteringVoice->GetVolume(&volume);
+			audio->masteringVoice->GetVolume(&volume);
 		}
 		else
 		{
@@ -407,13 +461,13 @@ namespace wiAudio
 
 	void SetSubmixVolume(SUBMIX_TYPE type, float volume)
 	{
-		HRESULT hr = submixVoices[type]->SetVolume(volume);
+		HRESULT hr = audio->submixVoices[type]->SetVolume(volume);
 		assert(SUCCEEDED(hr));
 	}
 	float GetSubmixVolume(SUBMIX_TYPE type)
 	{
 		float volume;
-		submixVoices[type]->GetVolume(&volume);
+		audio->submixVoices[type]->GetVolume(&volume);
 		return volume;
 	}
 
@@ -455,10 +509,10 @@ namespace wiAudio
 
 			X3DAUDIO_DSP_SETTINGS settings = {};
 			settings.SrcChannelCount = instanceinternal->voiceDetails.InputChannels;
-			settings.DstChannelCount = masteringVoiceDetails.InputChannels;
+			settings.DstChannelCount = audio->masteringVoiceDetails.InputChannels;
 			settings.pMatrixCoefficients = instanceinternal->outputMatrix.data();
 
-			X3DAudioCalculate(audio3D, &listener, &emitter, flags, &settings);
+			X3DAudioCalculate(audio->audio3D, &listener, &emitter, flags, &settings);
 
 			HRESULT hr;
 
@@ -466,63 +520,30 @@ namespace wiAudio
 			assert(SUCCEEDED(hr));
 
 			hr = instanceinternal->sourceVoice->SetOutputMatrix(
-				submixVoices[instance->type],
+				audio->submixVoices[instance->type],
 				settings.SrcChannelCount, 
 				settings.DstChannelCount, 
 				settings.pMatrixCoefficients
 			);
 			assert(SUCCEEDED(hr));
 
-			hr = instanceinternal->sourceVoice->SetOutputMatrix(reverbSubmix, settings.SrcChannelCount, 1, &settings.ReverbLevel);
+			hr = instanceinternal->sourceVoice->SetOutputMatrix(audio->reverbSubmix, settings.SrcChannelCount, 1, &settings.ReverbLevel);
 			assert(SUCCEEDED(hr));
 			
 			XAUDIO2_FILTER_PARAMETERS FilterParametersDirect = { LowPassFilter, 2.0f * sinf(X3DAUDIO_PI / 6.0f * settings.LPFDirectCoefficient), 1.0f };
-			hr = instanceinternal->sourceVoice->SetOutputFilterParameters(submixVoices[instance->type], &FilterParametersDirect);
+			hr = instanceinternal->sourceVoice->SetOutputFilterParameters(audio->submixVoices[instance->type], &FilterParametersDirect);
 			assert(SUCCEEDED(hr));
 			XAUDIO2_FILTER_PARAMETERS FilterParametersReverb = { LowPassFilter, 2.0f * sinf(X3DAUDIO_PI / 6.0f * settings.LPFReverbCoefficient), 1.0f };
-			hr = instanceinternal->sourceVoice->SetOutputFilterParameters(reverbSubmix, &FilterParametersReverb);
+			hr = instanceinternal->sourceVoice->SetOutputFilterParameters(audio->reverbSubmix, &FilterParametersReverb);
 			assert(SUCCEEDED(hr));
 		}
 	}
 
-	static const XAUDIO2FX_REVERB_I3DL2_PARAMETERS reverbPresets[] =
-	{
-		XAUDIO2FX_I3DL2_PRESET_DEFAULT,
-		XAUDIO2FX_I3DL2_PRESET_GENERIC,
-		XAUDIO2FX_I3DL2_PRESET_FOREST,
-		XAUDIO2FX_I3DL2_PRESET_PADDEDCELL,
-		XAUDIO2FX_I3DL2_PRESET_ROOM,
-		XAUDIO2FX_I3DL2_PRESET_BATHROOM,
-		XAUDIO2FX_I3DL2_PRESET_LIVINGROOM,
-		XAUDIO2FX_I3DL2_PRESET_STONEROOM,
-		XAUDIO2FX_I3DL2_PRESET_AUDITORIUM,
-		XAUDIO2FX_I3DL2_PRESET_CONCERTHALL,
-		XAUDIO2FX_I3DL2_PRESET_CAVE,
-		XAUDIO2FX_I3DL2_PRESET_ARENA,
-		XAUDIO2FX_I3DL2_PRESET_HANGAR,
-		XAUDIO2FX_I3DL2_PRESET_CARPETEDHALLWAY,
-		XAUDIO2FX_I3DL2_PRESET_HALLWAY,
-		XAUDIO2FX_I3DL2_PRESET_STONECORRIDOR,
-		XAUDIO2FX_I3DL2_PRESET_ALLEY,
-		XAUDIO2FX_I3DL2_PRESET_CITY,
-		XAUDIO2FX_I3DL2_PRESET_MOUNTAINS,
-		XAUDIO2FX_I3DL2_PRESET_QUARRY,
-		XAUDIO2FX_I3DL2_PRESET_PLAIN,
-		XAUDIO2FX_I3DL2_PRESET_PARKINGLOT,
-		XAUDIO2FX_I3DL2_PRESET_SEWERPIPE,
-		XAUDIO2FX_I3DL2_PRESET_UNDERWATER,
-		XAUDIO2FX_I3DL2_PRESET_SMALLROOM,
-		XAUDIO2FX_I3DL2_PRESET_MEDIUMROOM,
-		XAUDIO2FX_I3DL2_PRESET_LARGEROOM,
-		XAUDIO2FX_I3DL2_PRESET_MEDIUMHALL,
-		XAUDIO2FX_I3DL2_PRESET_LARGEHALL,
-		XAUDIO2FX_I3DL2_PRESET_PLATE,
-	};
 	void SetReverb(REVERB_PRESET preset)
 	{
 		XAUDIO2FX_REVERB_PARAMETERS native;
 		ReverbConvertI3DL2ToNative(&reverbPresets[preset], &native);
-		HRESULT hr = reverbSubmix->SetEffectParameters(0, &native, sizeof(native));
+		HRESULT hr = audio->reverbSubmix->SetEffectParameters(0, &native, sizeof(native));
 		assert(SUCCEEDED(hr));
 	}
 }

@@ -6,7 +6,6 @@
 namespace wiAudio
 {
 	void Initialize();
-	void CleanUp();
 
 	enum SUBMIX_TYPE
 	{

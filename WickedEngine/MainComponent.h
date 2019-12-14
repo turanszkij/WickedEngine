@@ -22,8 +22,6 @@ protected:
 	float deltaTimeAccumulator = 0;
 	wiTimer timer;
 public:
-	virtual ~MainComponent();
-
 	bool fullscreen = false;
 
 	// Runs the main engine loop

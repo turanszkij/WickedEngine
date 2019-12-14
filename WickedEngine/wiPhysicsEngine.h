@@ -6,7 +6,6 @@
 namespace wiPhysicsEngine
 {
 	void Initialize();
-	void CleanUp();
 
 	bool IsEnabled();
 	void SetEnabled(bool value);

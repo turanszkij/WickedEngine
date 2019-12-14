@@ -158,7 +158,6 @@ Gives you the ability to render text with a custom font.
 - GetAlign() : WIFALIGN halign,valign
 - GetColor() : Vector result
 - GetShadowColor() : Vector result
-- Destroy()
 
 ### Sprite
 Render images on the screen.

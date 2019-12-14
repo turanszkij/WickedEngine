@@ -33,7 +33,6 @@ namespace wiNetwork
 	};
 
 	void Initialize();
-	void CleanUp();
 
 	// Creates a socket that can be used to send or receive data
 	bool CreateSocket(Socket* sock);

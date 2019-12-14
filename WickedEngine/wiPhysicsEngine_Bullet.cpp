@@ -11,6 +11,7 @@
 #include "BulletSoftBody/btSoftBodyRigidBodyCollisionConfiguration.h"
 
 #include <mutex>
+#include <memory>
 
 using namespace std;
 using namespace wiECS;
@@ -24,30 +25,28 @@ namespace wiPhysicsEngine
 
 	btVector3 gravity(0, -10, 0);
 	int softbodyIterationCount = 5;
-	btCollisionConfiguration* collisionConfiguration = nullptr;
-	btCollisionDispatcher* dispatcher = nullptr;
-	btBroadphaseInterface* overlappingPairCache = nullptr;
-	btSequentialImpulseConstraintSolver* solver = nullptr;
-	btDynamicsWorld* dynamicsWorld = nullptr;
+	std::unique_ptr<btCollisionConfiguration> collisionConfiguration;
+	std::unique_ptr<btCollisionDispatcher> dispatcher;
+	std::unique_ptr<btBroadphaseInterface> overlappingPairCache;
+	std::unique_ptr<btSequentialImpulseConstraintSolver> solver;
+	std::unique_ptr<btDynamicsWorld> dynamicsWorld;
 
 
 	void Initialize()
 	{
 		// collision configuration contains default setup for memory, collision setup. Advanced users can create their own configuration.
-		collisionConfiguration = new btSoftBodyRigidBodyCollisionConfiguration;
+		collisionConfiguration = std::make_unique<btSoftBodyRigidBodyCollisionConfiguration>();
 
 		// use the default collision dispatcher. For parallel processing you can use a diffent dispatcher (see Extras/BulletMultiThreaded)
-		dispatcher = new btCollisionDispatcher(collisionConfiguration);
+		dispatcher = std::make_unique<btCollisionDispatcher>(collisionConfiguration.get());
 
 		// btDbvtBroadphase is a good general purpose broadphase. You can also try out btAxis3Sweep.
-		overlappingPairCache = new btDbvtBroadphase;
+		overlappingPairCache = std::make_unique<btDbvtBroadphase>();
 
 		// the default constraint solver. For parallel processing you can use a different solver (see Extras/BulletMultiThreaded)
-		solver = new btSequentialImpulseConstraintSolver;
+		solver = std::make_unique<btSequentialImpulseConstraintSolver>();
 
-		//dynamicsWorld = new btSimpleDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
-		//dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher,overlappingPairCache,solver,collisionConfiguration);
-		dynamicsWorld = new btSoftRigidDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
+		dynamicsWorld = std::make_unique<btSoftRigidDynamicsWorld>(dispatcher.get(), overlappingPairCache.get(), solver.get(), collisionConfiguration.get());
 
 		dynamicsWorld->getSolverInfo().m_solverMode |= SOLVER_RANDMIZE_ORDER;
 		dynamicsWorld->getDispatchInfo().m_enableSatConvex = true;
@@ -55,7 +54,7 @@ namespace wiPhysicsEngine
 
 		dynamicsWorld->setGravity(gravity);
 
-		btSoftRigidDynamicsWorld* softRigidWorld = (btSoftRigidDynamicsWorld*)dynamicsWorld;
+		btSoftRigidDynamicsWorld* softRigidWorld = (btSoftRigidDynamicsWorld*)dynamicsWorld.get();
 		btSoftBodyWorldInfo& softWorldInfo = softRigidWorld->getWorldInfo();
 		softWorldInfo.air_density = btScalar(1.2f);
 		softWorldInfo.water_density = 0;
@@ -65,14 +64,6 @@ namespace wiPhysicsEngine
 		softWorldInfo.m_sparsesdf.Initialize();
 
 		wiBackLog::post("wiPhysicsEngine_Bullet Initialized");
-	}
-	void CleanUp()
-	{
-		delete dynamicsWorld;
-		delete solver;
-		delete overlappingPairCache;
-		delete dispatcher;
-		delete collisionConfiguration;
 	}
 
 	bool IsEnabled() { return ENABLED; }
@@ -228,7 +219,7 @@ namespace wiPhysicsEngine
 		}
 
 		btSoftBody* softbody = btSoftBodyHelpers::CreateFromTriMesh(
-			((btSoftRigidDynamicsWorld*)dynamicsWorld)->getWorldInfo()
+			((btSoftRigidDynamicsWorld*)dynamicsWorld.get())->getWorldInfo()
 			, btVerts
 			, btInd
 			, tCount
@@ -287,7 +278,7 @@ namespace wiPhysicsEngine
 
 			softbody->setPose(true, true);
 
-			((btSoftRigidDynamicsWorld*)dynamicsWorld)->addSoftBody(softbody);
+			((btSoftRigidDynamicsWorld*)dynamicsWorld.get())->addSoftBody(softbody);
 			physicscomponent.physicsobject = softbody;
 		}
 	}
@@ -458,7 +449,7 @@ namespace wiPhysicsEngine
 					SoftBodyPhysicsComponent* physicscomponent = softbodies.GetComponent(entity);
 					if (physicscomponent == nullptr)
 					{
-						((btSoftRigidDynamicsWorld*)dynamicsWorld)->removeSoftBody(softbody);
+						((btSoftRigidDynamicsWorld*)dynamicsWorld.get())->removeSoftBody(softbody);
 						i--;
 						continue;
 					}

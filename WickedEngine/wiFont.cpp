@@ -76,8 +76,9 @@ namespace wiFont_Internal
 		vector<uint8_t> fontBuffer;
 		stbtt_fontinfo fontInfo;
 		int ascent, descent, lineGap;
-		wiFontStyle(const string& newName) : name(newName)
+		void Create(const string& newName)
 		{
+			name = newName;
 			wiHelper::readByteData(newName, fontBuffer);
 
 			int offset = stbtt_GetFontOffsetForIndex(fontBuffer.data(), 0);
@@ -92,7 +93,7 @@ namespace wiFont_Internal
 			stbtt_GetFontVMetrics(&fontInfo, &ascent, &descent, &lineGap);
 		}
 	};
-	std::vector<wiFontStyle*> fontStyles;
+	std::vector<wiFontStyle> fontStyles;
 
 	struct FontVertex
 	{
@@ -288,14 +289,6 @@ void wiFont::Initialize()
 	wiBackLog::post("wiFont Initialized");
 	initialized.store(true);
 }
-void wiFont::CleanUp()
-{
-	for (auto& x : fontStyles)
-	{
-		SAFE_DELETE(x);
-	}
-	fontStyles.clear();
-}
 
 void wiFont::LoadShaders()
 {
@@ -336,7 +329,7 @@ void UpdatePendingGlyphs()
 			const int code = codefromhash(hash);
 			const int style = stylefromhash(hash);
 			const int height = heightfromhash(hash);
-			wiFontStyle& fontStyle = *fontStyles[style];
+			wiFontStyle& fontStyle = fontStyles[style];
 
 			float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, float(height));
 
@@ -389,7 +382,7 @@ void UpdatePendingGlyphs()
 				const wchar_t code = codefromhash(hash);
 				const int style = stylefromhash(hash);
 				const int height = heightfromhash(hash);
-				wiFontStyle& fontStyle = *fontStyles[style];
+				wiFontStyle& fontStyle = fontStyles[style];
 				rect_xywh& rect = it.second;
 				Glyph& glyph = glyph_lookup[hash];
 
@@ -444,13 +437,14 @@ int wiFont::AddFontStyle(const string& fontName)
 {
 	for (size_t i = 0; i < fontStyles.size(); i++)
 	{
-		const wiFontStyle& fontStyle = *fontStyles[i];
+		const wiFontStyle& fontStyle = fontStyles[i];
 		if (!fontStyle.name.compare(fontName))
 		{
 			return int(i);
 		}
 	}
-	fontStyles.push_back(new wiFontStyle(fontName));
+	fontStyles.emplace_back();
+	fontStyles.back().Create(fontName);
 	return int(fontStyles.size() - 1);
 }
 

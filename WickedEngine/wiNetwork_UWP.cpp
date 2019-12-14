@@ -12,9 +12,6 @@ namespace wiNetwork
 	{
 		wiBackLog::post("TODO wiNetwork_UWP");
 	}
-	void CleanUp()
-	{
-	}
 
 	bool CreateSocket(Socket* sock)
 	{
