@@ -42,7 +42,7 @@ using namespace wiAllocators;
 namespace wiRenderer
 {
 
-GraphicsDevice*			graphicsDevice = nullptr;
+std::shared_ptr<GraphicsDevice> graphicsDevice;
 
 VertexShader			vertexShaders[VSTYPE_COUNT];
 PixelShader				pixelShaders[PSTYPE_COUNT];
@@ -178,13 +178,13 @@ unordered_map<const Texture*, wiRectPacker::rect_xywh> packedLightmaps;
 
 
 
-void SetDevice(GraphicsDevice* newDevice)
+void SetDevice(std::shared_ptr<GraphicsDevice> newDevice)
 {
 	graphicsDevice = newDevice;
 }
 GraphicsDevice* GetDevice()
 {
-	return graphicsDevice;
+	return graphicsDevice.get();
 }
 
 // Direct reference to a renderable instance:

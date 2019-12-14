@@ -1949,7 +1949,7 @@ namespace wiGraphics
 		DestroyBuffer(pBuffer);
 		DestroyResource(pBuffer);
 		pBuffer->type = GPUResource::GPU_RESOURCE_TYPE::BUFFER;
-		pBuffer->Register(this);
+		pBuffer->Register(shared_from_this());
 
 		HRESULT hr = E_FAIL;
 
@@ -2110,7 +2110,7 @@ namespace wiGraphics
 		DestroyTexture(pTexture);
 		DestroyResource(pTexture);
 		pTexture->type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
-		pTexture->Register(this);
+		pTexture->Register(shared_from_this());
 
 		pTexture->desc = *pDesc;
 
@@ -2276,7 +2276,7 @@ namespace wiGraphics
 	bool GraphicsDevice_DX12::CreateInputLayout(const VertexLayoutDesc* pInputElementDescs, uint32_t NumElements, const ShaderByteCode* shaderCode, VertexLayout* pInputLayout)
 	{
 		DestroyInputLayout(pInputLayout);
-		pInputLayout->Register(this);
+		pInputLayout->Register(shared_from_this());
 
 		pInputLayout->desc.clear();
 		pInputLayout->desc.reserve((size_t)NumElements);
@@ -2290,7 +2290,7 @@ namespace wiGraphics
 	bool GraphicsDevice_DX12::CreateVertexShader(const void* pShaderBytecode, size_t BytecodeLength, VertexShader* pVertexShader)
 	{
 		DestroyVertexShader(pVertexShader);
-		pVertexShader->Register(this);
+		pVertexShader->Register(shared_from_this());
 
 		pVertexShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pVertexShader->code.data, pShaderBytecode, BytecodeLength);
@@ -2301,7 +2301,7 @@ namespace wiGraphics
 	bool GraphicsDevice_DX12::CreatePixelShader(const void* pShaderBytecode, size_t BytecodeLength, PixelShader* pPixelShader)
 	{
 		DestroyPixelShader(pPixelShader);
-		pPixelShader->Register(this);
+		pPixelShader->Register(shared_from_this());
 
 		pPixelShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pPixelShader->code.data, pShaderBytecode, BytecodeLength);
@@ -2312,7 +2312,7 @@ namespace wiGraphics
 	bool GraphicsDevice_DX12::CreateGeometryShader(const void* pShaderBytecode, size_t BytecodeLength, GeometryShader* pGeometryShader)
 	{
 		DestroyGeometryShader(pGeometryShader);
-		pGeometryShader->Register(this);
+		pGeometryShader->Register(shared_from_this());
 
 		pGeometryShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pGeometryShader->code.data, pShaderBytecode, BytecodeLength);
@@ -2323,7 +2323,7 @@ namespace wiGraphics
 	bool GraphicsDevice_DX12::CreateHullShader(const void* pShaderBytecode, size_t BytecodeLength, HullShader* pHullShader)
 	{
 		DestroyHullShader(pHullShader);
-		pHullShader->Register(this);
+		pHullShader->Register(shared_from_this());
 
 		pHullShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pHullShader->code.data, pShaderBytecode, BytecodeLength);
@@ -2334,7 +2334,7 @@ namespace wiGraphics
 	bool GraphicsDevice_DX12::CreateDomainShader(const void* pShaderBytecode, size_t BytecodeLength, DomainShader* pDomainShader)
 	{
 		DestroyDomainShader(pDomainShader);
-		pDomainShader->Register(this);
+		pDomainShader->Register(shared_from_this());
 
 		pDomainShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pDomainShader->code.data, pShaderBytecode, BytecodeLength);
@@ -2345,7 +2345,7 @@ namespace wiGraphics
 	bool GraphicsDevice_DX12::CreateComputeShader(const void* pShaderBytecode, size_t BytecodeLength, ComputeShader* pComputeShader)
 	{
 		DestroyComputeShader(pComputeShader);
-		pComputeShader->Register(this);
+		pComputeShader->Register(shared_from_this());
 
 		pComputeShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pComputeShader->code.data, pShaderBytecode, BytecodeLength);
@@ -2364,7 +2364,7 @@ namespace wiGraphics
 	bool GraphicsDevice_DX12::CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState)
 	{
 		DestroyBlendState(pBlendState);
-		pBlendState->Register(this);
+		pBlendState->Register(shared_from_this());
 
 		pBlendState->desc = *pBlendStateDesc;
 		return S_OK;
@@ -2372,7 +2372,7 @@ namespace wiGraphics
 	bool GraphicsDevice_DX12::CreateDepthStencilState(const DepthStencilStateDesc* pDepthStencilStateDesc, DepthStencilState* pDepthStencilState)
 	{
 		DestroyDepthStencilState(pDepthStencilState);
-		pDepthStencilState->Register(this);
+		pDepthStencilState->Register(shared_from_this());
 
 		pDepthStencilState->desc = *pDepthStencilStateDesc;
 		return S_OK;
@@ -2380,7 +2380,7 @@ namespace wiGraphics
 	bool GraphicsDevice_DX12::CreateRasterizerState(const RasterizerStateDesc* pRasterizerStateDesc, RasterizerState* pRasterizerState)
 	{
 		DestroyRasterizerState(pRasterizerState);
-		pRasterizerState->Register(this);
+		pRasterizerState->Register(shared_from_this());
 
 		pRasterizerState->desc = *pRasterizerStateDesc;
 		return S_OK;
@@ -2388,7 +2388,7 @@ namespace wiGraphics
 	bool GraphicsDevice_DX12::CreateSamplerState(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState)
 	{
 		DestroySamplerState(pSamplerState);
-		pSamplerState->Register(this);
+		pSamplerState->Register(shared_from_this());
 
 		D3D12_SAMPLER_DESC desc;
 		desc.Filter = _ConvertFilter(pSamplerDesc->Filter);
@@ -2415,7 +2415,7 @@ namespace wiGraphics
 	bool GraphicsDevice_DX12::CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery)
 	{
 		DestroyQuery(pQuery);
-		pQuery->Register(this);
+		pQuery->Register(shared_from_this());
 
 		HRESULT hr = E_FAIL;
 
@@ -2460,7 +2460,7 @@ namespace wiGraphics
 	bool GraphicsDevice_DX12::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
 	{
 		DestroyPipelineState(pso);
-		pso->Register(this);
+		pso->Register(shared_from_this());
 
 		pso->desc = *pDesc;
 
@@ -2482,7 +2482,7 @@ namespace wiGraphics
 	bool GraphicsDevice_DX12::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
 	{
 		DestroyRenderPass(renderpass);
-		renderpass->Register(this);
+		renderpass->Register(shared_from_this());
 
 		renderpass->desc = *pDesc;
 

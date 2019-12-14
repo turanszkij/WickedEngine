@@ -54,7 +54,7 @@ void MainComponent::Initialize()
 		{
 #ifdef WICKEDENGINE_BUILD_VULKAN
 			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "spirv/");
-			wiRenderer::SetDevice(new GraphicsDevice_Vulkan(window, fullscreen, debugdevice));
+			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_Vulkan>(window, fullscreen, debugdevice));
 #else
 			wiHelper::messageBox("Vulkan SDK not found during building the application! Vulkan API disabled!", "Error");
 #endif
@@ -65,13 +65,13 @@ void MainComponent::Initialize()
 			{
 				wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl6/");
 			}
-			wiRenderer::SetDevice(new GraphicsDevice_DX12(window, fullscreen, debugdevice));
+			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX12>(window, fullscreen, debugdevice));
 		}
 
 		// default graphics device:
 		if (wiRenderer::GetDevice() == nullptr)
 		{
-			wiRenderer::SetDevice(new GraphicsDevice_DX11(window, fullscreen, debugdevice));
+			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX11>(window, fullscreen, debugdevice));
 		}
 
 	}

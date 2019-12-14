@@ -1293,7 +1293,7 @@ bool GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subreso
 	DestroyBuffer(pBuffer);
 	DestroyResource(pBuffer);
 	pBuffer->type = GPUResource::GPU_RESOURCE_TYPE::BUFFER;
-	pBuffer->Register(this);
+	pBuffer->Register(shared_from_this());
 
 	D3D11_BUFFER_DESC desc; 
 	desc.ByteWidth = pDesc->ByteWidth;
@@ -1403,7 +1403,7 @@ bool GraphicsDevice_DX11::CreateTexture(const TextureDesc* pDesc, const Subresou
 	DestroyTexture(pTexture);
 	DestroyResource(pTexture);
 	pTexture->type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
-	pTexture->Register(this);
+	pTexture->Register(shared_from_this());
 
 	pTexture->desc = *pDesc;
 
@@ -1476,7 +1476,7 @@ bool GraphicsDevice_DX11::CreateTexture(const TextureDesc* pDesc, const Subresou
 bool GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, uint32_t NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout)
 {
 	DestroyInputLayout(pInputLayout);
-	pInputLayout->Register(this);
+	pInputLayout->Register(shared_from_this());
 
 	pInputLayout->desc.reserve((size_t)NumElements);
 
@@ -1505,7 +1505,7 @@ bool GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputElemen
 bool GraphicsDevice_DX11::CreateVertexShader(const void *pShaderBytecode, size_t BytecodeLength, VertexShader *pVertexShader)
 {
 	DestroyVertexShader(pVertexShader);
-	pVertexShader->Register(this);
+	pVertexShader->Register(shared_from_this());
 
 	pVertexShader->code.data = new BYTE[BytecodeLength];
 	memcpy(pVertexShader->code.data, pShaderBytecode, BytecodeLength);
@@ -1515,7 +1515,7 @@ bool GraphicsDevice_DX11::CreateVertexShader(const void *pShaderBytecode, size_t
 bool GraphicsDevice_DX11::CreatePixelShader(const void *pShaderBytecode, size_t BytecodeLength, PixelShader *pPixelShader)
 {
 	DestroyPixelShader(pPixelShader);
-	pPixelShader->Register(this);
+	pPixelShader->Register(shared_from_this());
 
 	pPixelShader->code.data = new BYTE[BytecodeLength];
 	memcpy(pPixelShader->code.data, pShaderBytecode, BytecodeLength);
@@ -1525,7 +1525,7 @@ bool GraphicsDevice_DX11::CreatePixelShader(const void *pShaderBytecode, size_t 
 bool GraphicsDevice_DX11::CreateGeometryShader(const void *pShaderBytecode, size_t BytecodeLength, GeometryShader *pGeometryShader)
 {
 	DestroyGeometryShader(pGeometryShader);
-	pGeometryShader->Register(this);
+	pGeometryShader->Register(shared_from_this());
 
 	pGeometryShader->code.data = new BYTE[BytecodeLength];
 	memcpy(pGeometryShader->code.data, pShaderBytecode, BytecodeLength);
@@ -1535,7 +1535,7 @@ bool GraphicsDevice_DX11::CreateGeometryShader(const void *pShaderBytecode, size
 bool GraphicsDevice_DX11::CreateHullShader(const void *pShaderBytecode, size_t BytecodeLength, HullShader *pHullShader)
 {
 	DestroyHullShader(pHullShader);
-	pHullShader->Register(this);
+	pHullShader->Register(shared_from_this());
 
 	pHullShader->code.data = new BYTE[BytecodeLength];
 	memcpy(pHullShader->code.data, pShaderBytecode, BytecodeLength);
@@ -1545,7 +1545,7 @@ bool GraphicsDevice_DX11::CreateHullShader(const void *pShaderBytecode, size_t B
 bool GraphicsDevice_DX11::CreateDomainShader(const void *pShaderBytecode, size_t BytecodeLength, DomainShader *pDomainShader)
 {
 	DestroyDomainShader(pDomainShader);
-	pDomainShader->Register(this);
+	pDomainShader->Register(shared_from_this());
 
 	pDomainShader->code.data = new BYTE[BytecodeLength];
 	memcpy(pDomainShader->code.data, pShaderBytecode, BytecodeLength);
@@ -1555,7 +1555,7 @@ bool GraphicsDevice_DX11::CreateDomainShader(const void *pShaderBytecode, size_t
 bool GraphicsDevice_DX11::CreateComputeShader(const void *pShaderBytecode, size_t BytecodeLength, ComputeShader *pComputeShader)
 {
 	DestroyComputeShader(pComputeShader);
-	pComputeShader->Register(this);
+	pComputeShader->Register(shared_from_this());
 
 	pComputeShader->code.data = new BYTE[BytecodeLength];
 	memcpy(pComputeShader->code.data, pShaderBytecode, BytecodeLength);
@@ -1565,7 +1565,7 @@ bool GraphicsDevice_DX11::CreateComputeShader(const void *pShaderBytecode, size_
 bool GraphicsDevice_DX11::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
 {
 	DestroyBlendState(pBlendState);
-	pBlendState->Register(this);
+	pBlendState->Register(shared_from_this());
 
 	D3D11_BLEND_DESC desc;
 	desc.AlphaToCoverageEnable = pBlendStateDesc->AlphaToCoverageEnable;
@@ -1588,7 +1588,7 @@ bool GraphicsDevice_DX11::CreateBlendState(const BlendStateDesc *pBlendStateDesc
 bool GraphicsDevice_DX11::CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState)
 {
 	DestroyDepthStencilState(pDepthStencilState);
-	pDepthStencilState->Register(this);
+	pDepthStencilState->Register(shared_from_this());
 
 	D3D11_DEPTH_STENCIL_DESC desc;
 	desc.DepthEnable = pDepthStencilStateDesc->DepthEnable;
@@ -1612,7 +1612,7 @@ bool GraphicsDevice_DX11::CreateDepthStencilState(const DepthStencilStateDesc *p
 bool GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
 {
 	DestroyRasterizerState(pRasterizerState);
-	pRasterizerState->Register(this);
+	pRasterizerState->Register(shared_from_this());
 
 	pRasterizerState->desc = *pRasterizerStateDesc;
 
@@ -1690,7 +1690,7 @@ bool GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc *pRast
 bool GraphicsDevice_DX11::CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
 {
 	DestroySamplerState(pSamplerState);
-	pSamplerState->Register(this);
+	pSamplerState->Register(shared_from_this());
 
 	D3D11_SAMPLER_DESC desc;
 	desc.Filter = _ConvertFilter(pSamplerDesc->Filter);
@@ -1713,7 +1713,7 @@ bool GraphicsDevice_DX11::CreateSamplerState(const SamplerDesc *pSamplerDesc, Sa
 bool GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
 {
 	DestroyQuery(pQuery);
-	pQuery->Register(this);
+	pQuery->Register(shared_from_this());
 
 	HRESULT hr = E_FAIL;
 
@@ -1751,7 +1751,7 @@ bool GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuer
 bool GraphicsDevice_DX11::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
 {
 	DestroyPipelineState(pso);
-	pso->Register(this);
+	pso->Register(shared_from_this());
 
 	pso->desc = *pDesc;
 
@@ -1760,7 +1760,7 @@ bool GraphicsDevice_DX11::CreatePipelineState(const PipelineStateDesc* pDesc, Pi
 bool GraphicsDevice_DX11::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
 {
 	DestroyRenderPass(renderpass);
-	renderpass->Register(this);
+	renderpass->Register(shared_from_this());
 
 	renderpass->desc = *pDesc;
 

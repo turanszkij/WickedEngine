@@ -2,6 +2,7 @@
 #include "CommonInclude.h"
 #include "wiGraphicsDescriptors.h"
 
+#include <memory>
 #include <vector>
 
 namespace wiGraphics
@@ -10,8 +11,8 @@ namespace wiGraphics
 
 	struct GraphicsDeviceChild
 	{
-		GraphicsDevice* device = nullptr;
-		inline void Register(GraphicsDevice* dev) { device = dev; }
+		std::shared_ptr<GraphicsDevice> device;
+		inline void Register(std::shared_ptr<GraphicsDevice> dev) { device = dev; }
 		inline bool IsValid() const { return device != nullptr; }
 	};
 

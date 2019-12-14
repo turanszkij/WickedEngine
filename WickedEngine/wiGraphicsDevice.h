@@ -4,13 +4,14 @@
 #include "wiGraphicsResource.h"
 
 #include <string>
+#include <memory>
 
 namespace wiGraphics
 {
 	typedef uint8_t CommandList;
 	static const CommandList COMMANDLIST_COUNT = 16;
 
-	class GraphicsDevice
+	class GraphicsDevice : public std::enable_shared_from_this<GraphicsDevice>
 	{
 	protected:
 		uint64_t FRAMECOUNT = 0;

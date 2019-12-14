@@ -5,6 +5,8 @@
 #include "wiScene_Decl.h"
 #include "wiECS.h"
 
+#include <memory>
+
 struct RAY;
 
 namespace wiRenderer
@@ -37,7 +39,7 @@ namespace wiRenderer
 	void ClearWorld();
 
 	// Set the main graphics device globally:
-	void SetDevice(wiGraphics::GraphicsDevice* newDevice);
+	void SetDevice(std::shared_ptr<wiGraphics::GraphicsDevice> newDevice);
 	// Retrieve the main graphics device:
 	wiGraphics::GraphicsDevice* GetDevice();
 
