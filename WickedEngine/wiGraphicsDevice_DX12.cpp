@@ -995,55 +995,94 @@ namespace wiGraphics
 
 
 
-	GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::DescriptorTableFrameAllocator(GraphicsDevice_DX12* device, uint32_t maxRenameCount_resources, uint32_t maxRenameCount_samplers) : device(device)
+	GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::DescriptorTableFrameAllocator(GraphicsDevice_DX12* device) : device(device)
 	{
-		HRESULT hr;
-
-		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
-		heapDesc.NodeMask = 0;
-
-		// Resource descriptor heap:
-		heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		heapDesc.NumDescriptors = (GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT) * SHADERSTAGE_COUNT * maxRenameCount_resources;
-		hr = device->device->CreateDescriptorHeap(&heapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&resource_heap_GPU);
-		assert(SUCCEEDED(hr));
-
-		// Sampler descriptor heap:
-		heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-		heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		heapDesc.NumDescriptors = GPU_SAMPLER_HEAP_COUNT * SHADERSTAGE_COUNT * maxRenameCount_samplers;
-		hr = device->device->CreateDescriptorHeap(&heapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&sampler_heap_GPU);
-		assert(SUCCEEDED(hr));
-
-
-		// Save heap properties:
-		resource_heap_cpu_start = resource_heap_GPU->GetCPUDescriptorHandleForHeapStart();
-		resource_heap_gpu_start = resource_heap_GPU->GetGPUDescriptorHandleForHeapStart();
-
-		sampler_heap_cpu_start = sampler_heap_GPU->GetCPUDescriptorHandleForHeapStart();
-		sampler_heap_gpu_start = sampler_heap_GPU->GetGPUDescriptorHandleForHeapStart();
-
-
 		// Reset state to empty:
 		reset();
 	}
 	GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::~DescriptorTableFrameAllocator()
 	{
-		SAFE_RELEASE(resource_heap_GPU);
-		SAFE_RELEASE(sampler_heap_GPU);
+		for (DescriptorHeap& heap : heaps_resource)
+		{
+			SAFE_RELEASE(heap.heap_GPU);
+		}
+		for (DescriptorHeap& heap : heaps_sampler)
+		{
+			SAFE_RELEASE(heap.heap_GPU);
+		}
 	}
 	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::reset()
 	{
-		ringOffset_resources = 0;
-		ringOffset_samplers = 0;
+		heaps_bound = false;
+		currentheap_resource = 0;
+		currentheap_sampler = 0;
+		for (DescriptorHeap& heap : heaps_resource)
+		{
+			heap.ringOffset = 0;
+		}
+		for (DescriptorHeap& heap : heaps_sampler)
+		{
+			heap.ringOffset = 0;
+		}
 		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
 		{
 			tables[stage].reset();
 		}
 	}
+	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::create_or_bind_heaps_on_demand(CommandList cmd)
+	{
+		// Create new heaps if needed:
+		if (currentheap_resource >= heaps_resource.size())
+		{
+			heaps_resource.emplace_back();
+			DescriptorHeap& heap = heaps_resource.back();
+
+			heap.heapDesc.NodeMask = 0;
+			heap.heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+			heap.heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+			heap.heapDesc.NumDescriptors = (GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT) * SHADERSTAGE_COUNT * 1024;
+			HRESULT hr = device->device->CreateDescriptorHeap(&heap.heapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&heap.heap_GPU);
+			assert(SUCCEEDED(hr));
+
+
+			// Save heap properties:
+			heap.start_cpu = heap.heap_GPU->GetCPUDescriptorHandleForHeapStart();
+			heap.start_gpu = heap.heap_GPU->GetGPUDescriptorHandleForHeapStart();
+
+			heaps_bound = false;
+		}
+		if (currentheap_sampler >= heaps_sampler.size())
+		{
+			heaps_sampler.emplace_back();
+			DescriptorHeap& heap = heaps_sampler.back();
+
+			heap.heapDesc.NodeMask = 0;
+			heap.heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+			heap.heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+			heap.heapDesc.NumDescriptors = GPU_SAMPLER_HEAP_COUNT * SHADERSTAGE_COUNT * 16;
+			HRESULT hr = device->device->CreateDescriptorHeap(&heap.heapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&heap.heap_GPU);
+			assert(SUCCEEDED(hr));
+
+
+			// Save heap properties:
+			heap.start_cpu = heap.heap_GPU->GetCPUDescriptorHandleForHeapStart();
+			heap.start_gpu = heap.heap_GPU->GetGPUDescriptorHandleForHeapStart();
+
+			heaps_bound = false;
+		}
+
+		if (!heaps_bound)
+		{
+			ID3D12DescriptorHeap* heaps[] = {
+				heaps_resource[currentheap_resource].heap_GPU, heaps_sampler[currentheap_sampler].heap_GPU
+			};
+			device->GetDirectCommandList(cmd)->SetDescriptorHeaps(arraysize(heaps), heaps);
+		}
+	}
 	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::validate(CommandList cmd)
 	{
+		create_or_bind_heaps_on_demand(cmd);
+
 		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
 		{
 			Table& table = tables[stage];
@@ -1051,11 +1090,13 @@ namespace wiGraphics
 			if (table.dirty_resources)
 			{
 				table.dirty_resources = false;
+				create_or_bind_heaps_on_demand(cmd);
+				DescriptorHeap& heap = heaps_resource[currentheap_resource];
 
 				// First, reset table with null descriptors:
 				{
-					D3D12_CPU_DESCRIPTOR_HANDLE dst = resource_heap_cpu_start;
-					dst.ptr += ringOffset_resources;
+					D3D12_CPU_DESCRIPTOR_HANDLE dst = heap.start_cpu;
+					dst.ptr += heap.ringOffset * device->resource_descriptor_size;
 
 					device->device->CopyDescriptorsSimple(
 						GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT,
@@ -1072,8 +1113,8 @@ namespace wiGraphics
 						continue;
 					}
 
-					D3D12_CPU_DESCRIPTOR_HANDLE dst = resource_heap_cpu_start;
-					dst.ptr += ringOffset_resources + slot * device->resource_descriptor_size;
+					D3D12_CPU_DESCRIPTOR_HANDLE dst = heap.start_cpu;
+					dst.ptr += (heap.ringOffset + slot) * device->resource_descriptor_size;
 
 					if (buffer->desc.Usage == USAGE_DYNAMIC)
 					{
@@ -1122,8 +1163,8 @@ namespace wiGraphics
 						continue;
 					}
 
-					D3D12_CPU_DESCRIPTOR_HANDLE dst = resource_heap_cpu_start;
-					dst.ptr += ringOffset_resources + (GPU_RESOURCE_HEAP_CBV_COUNT + slot) * device->resource_descriptor_size;
+					D3D12_CPU_DESCRIPTOR_HANDLE dst = heap.start_cpu;
+					dst.ptr += (heap.ringOffset + (GPU_RESOURCE_HEAP_CBV_COUNT + slot)) * device->resource_descriptor_size;
 
 					device->device->CopyDescriptorsSimple(1, dst, src, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 				}
@@ -1151,15 +1192,15 @@ namespace wiGraphics
 						continue;
 					}
 
-					D3D12_CPU_DESCRIPTOR_HANDLE dst = resource_heap_cpu_start;
-					dst.ptr += ringOffset_resources + (GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot) * device->resource_descriptor_size;
+					D3D12_CPU_DESCRIPTOR_HANDLE dst = heap.start_cpu;
+					dst.ptr += (heap.ringOffset + (GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot)) * device->resource_descriptor_size;
 
 					device->device->CopyDescriptorsSimple(1, dst, src, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 				}
 
 				// bind table to root sig
-				D3D12_GPU_DESCRIPTOR_HANDLE binding_table = resource_heap_gpu_start;
-				binding_table.ptr += ringOffset_resources;
+				D3D12_GPU_DESCRIPTOR_HANDLE binding_table = heap.start_gpu;
+				binding_table.ptr += heap.ringOffset * device->resource_descriptor_size;
 
 				if (stage == CS)
 				{
@@ -1171,17 +1212,25 @@ namespace wiGraphics
 				}
 
 				// allocate next chunk
-				ringOffset_resources += (GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT) * device->resource_descriptor_size;
+				heap.ringOffset += (GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT);
+				if (heap.ringOffset >= heap.heapDesc.NumDescriptors)
+				{
+					// start new heap if the current one is full
+					currentheap_resource++;
+					heaps_bound = false;
+				}
 			}
 
 			if (table.dirty_samplers)
 			{
 				table.dirty_samplers = false;
+				create_or_bind_heaps_on_demand(cmd);
+				DescriptorHeap& heap = heaps_sampler[currentheap_sampler];
 
 				// First, reset table with null descriptors:
 				{
-					D3D12_CPU_DESCRIPTOR_HANDLE dst = sampler_heap_cpu_start;
-					dst.ptr += ringOffset_samplers;
+					D3D12_CPU_DESCRIPTOR_HANDLE dst = heap.start_cpu;
+					dst.ptr += heap.ringOffset * device->sampler_descriptor_size;
 
 					device->device->CopyDescriptorsSimple(
 						GPU_SAMPLER_HEAP_COUNT,
@@ -1200,15 +1249,15 @@ namespace wiGraphics
 
 					D3D12_CPU_DESCRIPTOR_HANDLE src = ToNativeHandle(sampler->resource);
 
-					D3D12_CPU_DESCRIPTOR_HANDLE dst = sampler_heap_cpu_start;
-					dst.ptr += ringOffset_samplers + slot * device->sampler_descriptor_size;
+					D3D12_CPU_DESCRIPTOR_HANDLE dst = heap.start_cpu;
+					dst.ptr += (heap.ringOffset + slot) * device->sampler_descriptor_size;
 
 					device->device->CopyDescriptorsSimple(1, dst, src, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 				}
 
 				// bind table to root sig
-				D3D12_GPU_DESCRIPTOR_HANDLE binding_table = sampler_heap_gpu_start;
-				binding_table.ptr += ringOffset_samplers;
+				D3D12_GPU_DESCRIPTOR_HANDLE binding_table = heap.start_gpu;
+				binding_table.ptr += heap.ringOffset * device->sampler_descriptor_size;
 
 				if (stage == CS)
 				{
@@ -1222,7 +1271,13 @@ namespace wiGraphics
 				}
 
 				// allocate next chunk
-				ringOffset_samplers += GPU_SAMPLER_HEAP_COUNT * device->sampler_descriptor_size;
+				heap.ringOffset += GPU_SAMPLER_HEAP_COUNT;
+				if (heap.ringOffset >= heap.heapDesc.NumDescriptors)
+				{
+					// start new heap if the current one is full
+					currentheap_sampler++;
+					heaps_bound = false;
+				}
 			}
 
 
@@ -3203,7 +3258,7 @@ namespace wiGraphics
 				hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[fr].commandAllocators[cmd], nullptr, __uuidof(ID3D12GraphicsCommandList4), (void**)&frames[fr].commandLists[cmd]);
 				hr = static_cast<ID3D12GraphicsCommandList4*>(frames[fr].commandLists[cmd])->Close();
 
-				frames[fr].descriptors[cmd] = new FrameResources::DescriptorTableFrameAllocator(this, 1024, 16);
+				frames[fr].descriptors[cmd] = new FrameResources::DescriptorTableFrameAllocator(this);
 				frames[fr].resourceBuffer[cmd] = new FrameResources::ResourceFrameAllocator(this, 1024 * 1024 * 4);
 			}
 		}
@@ -3215,11 +3270,6 @@ namespace wiGraphics
 		assert(SUCCEEDED(hr));
 		hr = GetDirectCommandList(cmd)->Reset(GetFrameResources().commandAllocators[cmd], nullptr);
 		assert(SUCCEEDED(hr));
-
-		ID3D12DescriptorHeap* heaps[] = {
-			GetFrameResources().descriptors[cmd]->resource_heap_GPU, GetFrameResources().descriptors[cmd]->sampler_heap_GPU
-		};
-		GetDirectCommandList(cmd)->SetDescriptorHeaps(arraysize(heaps), heaps);
 
 		GetDirectCommandList(cmd)->SetGraphicsRootSignature(graphicsRootSig);
 		GetDirectCommandList(cmd)->SetComputeRootSignature(computeRootSig);
@@ -3294,7 +3344,7 @@ namespace wiGraphics
 		for (uint32_t i = 0; i < desc.numAttachments; ++i)
 		{
 			const RenderPassAttachment& attachment = desc.attachments[i];
-			const Texture2D* texture = attachment.texture;
+			const Texture* texture = attachment.texture;
 			int subresource = attachment.subresource;
 
 			D3D12_CLEAR_VALUE clear_value;

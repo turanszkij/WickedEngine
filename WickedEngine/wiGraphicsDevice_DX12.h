@@ -95,14 +95,19 @@ namespace wiGraphics
 			struct DescriptorTableFrameAllocator
 			{
 				GraphicsDevice_DX12*	device = nullptr;
-				ID3D12DescriptorHeap*	resource_heap_GPU = nullptr;
-				ID3D12DescriptorHeap*	sampler_heap_GPU = nullptr;
-				D3D12_CPU_DESCRIPTOR_HANDLE resource_heap_cpu_start = {};
-				D3D12_GPU_DESCRIPTOR_HANDLE resource_heap_gpu_start = {};
-				D3D12_CPU_DESCRIPTOR_HANDLE sampler_heap_cpu_start = {};
-				D3D12_GPU_DESCRIPTOR_HANDLE sampler_heap_gpu_start = {};
-				uint32_t ringOffset_resources = 0;
-				uint32_t ringOffset_samplers = 0;
+				struct DescriptorHeap
+				{
+					D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+					ID3D12DescriptorHeap* heap_GPU = nullptr;
+					D3D12_CPU_DESCRIPTOR_HANDLE start_cpu = {};
+					D3D12_GPU_DESCRIPTOR_HANDLE start_gpu = {};
+					uint32_t ringOffset = 0;
+				};
+				std::vector<DescriptorHeap> heaps_resource;
+				std::vector<DescriptorHeap> heaps_sampler;
+				size_t currentheap_resource = 0;
+				size_t currentheap_sampler = 0;
+				bool heaps_bound = false;
 
 				struct Table
 				{
@@ -130,11 +135,12 @@ namespace wiGraphics
 
 				} tables[SHADERSTAGE_COUNT];
 
-				DescriptorTableFrameAllocator(GraphicsDevice_DX12* device, uint32_t maxRenameCount_resources, uint32_t maxRenameCount_samplers);
+				DescriptorTableFrameAllocator(GraphicsDevice_DX12* device);
 				~DescriptorTableFrameAllocator();
 
 				void reset();
 				void validate(CommandList cmd);
+				void create_or_bind_heaps_on_demand(CommandList cmd);
 			};
 			DescriptorTableFrameAllocator*		descriptors[COMMANDLIST_COUNT] = {};
 

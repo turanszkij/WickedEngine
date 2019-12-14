@@ -873,88 +873,8 @@ namespace wiGraphics
 
 
 
-	GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::DescriptorTableFrameAllocator(GraphicsDevice_Vulkan* device, uint32_t maxRenameCount) : device(device)
+	GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::DescriptorTableFrameAllocator(GraphicsDevice_Vulkan* device) : device(device)
 	{
-		VkResult res;
-
-		// Create descriptor pool:
-		{
-			uint32_t numTables = SHADERSTAGE_COUNT * (maxRenameCount + 1); // (gpu * maxRenameCount) + (1 * cpu staging table)
-
-			VkDescriptorPoolSize tableLayout[8] = {};
-
-			tableLayout[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			tableLayout[0].descriptorCount = GPU_RESOURCE_HEAP_CBV_COUNT;
-
-			tableLayout[1].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-			tableLayout[1].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT;
-
-			tableLayout[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-			tableLayout[2].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT;
-
-			tableLayout[3].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-			tableLayout[3].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT;
-
-			tableLayout[4].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-			tableLayout[4].descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT;
-
-			tableLayout[5].type = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-			tableLayout[5].descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT;
-
-			tableLayout[6].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-			tableLayout[6].descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT;
-
-			tableLayout[7].type = VK_DESCRIPTOR_TYPE_SAMPLER;
-			tableLayout[7].descriptorCount = GPU_SAMPLER_HEAP_COUNT;
-
-
-			std::vector<VkDescriptorPoolSize> poolSizes;
-			poolSizes.reserve(arraysize(tableLayout) * numTables);
-			for (uint32_t i = 0; i < numTables; ++i)
-			{
-				for (int j = 0; j < arraysize(tableLayout); ++j)
-				{
-					poolSizes.push_back(tableLayout[j]);
-				}
-			}
-
-
-			VkDescriptorPoolCreateInfo poolInfo = {};
-			poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-			poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-			poolInfo.pPoolSizes = poolSizes.data();
-			poolInfo.maxSets = numTables;
-			//poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-
-			res = vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &descriptorPool);
-			assert(res == VK_SUCCESS);
-
-		}
-
-		// Create GPU-visible descriptor tables:
-		{
-			VkDescriptorSetAllocateInfo allocInfo = {};
-			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-			allocInfo.descriptorPool = descriptorPool;
-			allocInfo.descriptorSetCount = 1;
-
-
-			for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
-			{
-				Table& table = tables[stage];
-
-				allocInfo.pSetLayouts = &device->defaultDescriptorSetlayouts[stage];
-				table.descriptorSet_GPU.resize(maxRenameCount);
-
-				for (uint32_t i = 0; i < maxRenameCount; ++i)
-				{
-					res = vkAllocateDescriptorSets(device->device, &allocInfo, &table.descriptorSet_GPU[i]);
-					assert(res == VK_SUCCESS);
-				}
-			}
-
-		}
-
 		// Create null descriptor fillers:
 		for (int slot = 0; slot < arraysize(null_bufferInfos); ++slot)
 		{
@@ -984,13 +904,106 @@ namespace wiGraphics
 	}
 	GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::~DescriptorTableFrameAllocator()
 	{
-		vkDestroyDescriptorPool(device->device, descriptorPool, nullptr);
+		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
+		{
+			for (DescriptorHeap& heap : heaps[stage])
+			{
+				vkDestroyDescriptorPool(device->device, heap.descriptorPool, nullptr);
+			}
+		}
 	}
 	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::reset()
 	{
 		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
 		{
+			for (DescriptorHeap& heap : heaps[stage])
+			{
+				heap.ringOffset = 0;
+			}
+			currentheap[stage] = 0;
 			tables[stage].reset();
+		}
+	}
+	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::create_heaps_on_demand(SHADERSTAGE stage)
+	{
+		if (currentheap[stage] >= heaps[stage].size())
+		{
+			heaps[stage].emplace_back();
+			DescriptorHeap& heap = heaps[stage].back();
+
+			uint32_t renameCount = 1024;
+
+			VkResult res;
+
+			// Create descriptor pool:
+			{
+				VkDescriptorPoolSize tableLayout[8] = {};
+
+				tableLayout[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+				tableLayout[0].descriptorCount = GPU_RESOURCE_HEAP_CBV_COUNT;
+
+				tableLayout[1].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+				tableLayout[1].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT;
+
+				tableLayout[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+				tableLayout[2].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT;
+
+				tableLayout[3].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+				tableLayout[3].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT;
+
+				tableLayout[4].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+				tableLayout[4].descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT;
+
+				tableLayout[5].type = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+				tableLayout[5].descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT;
+
+				tableLayout[6].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+				tableLayout[6].descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT;
+
+				tableLayout[7].type = VK_DESCRIPTOR_TYPE_SAMPLER;
+				tableLayout[7].descriptorCount = GPU_SAMPLER_HEAP_COUNT;
+
+
+				std::vector<VkDescriptorPoolSize> poolSizes;
+				poolSizes.reserve(arraysize(tableLayout) * renameCount);
+				for (uint32_t i = 0; i < renameCount; ++i)
+				{
+					for (int j = 0; j < arraysize(tableLayout); ++j)
+					{
+						poolSizes.push_back(tableLayout[j]);
+					}
+				}
+
+
+				VkDescriptorPoolCreateInfo poolInfo = {};
+				poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+				poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+				poolInfo.pPoolSizes = poolSizes.data();
+				poolInfo.maxSets = renameCount;
+				//poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+
+				res = vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &heap.descriptorPool);
+				assert(res == VK_SUCCESS);
+
+			}
+
+			// Create GPU-visible descriptor tables:
+			{
+				heap.descriptorSet_GPU.resize(renameCount);
+
+				std::vector<VkDescriptorSetLayout> layouts(renameCount);
+				std::fill(layouts.begin(), layouts.end(), device->defaultDescriptorSetlayouts[stage]);
+
+				VkDescriptorSetAllocateInfo allocInfo = {};
+				allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+				allocInfo.descriptorPool = heap.descriptorPool;
+				allocInfo.descriptorSetCount = renameCount;
+				allocInfo.pSetLayouts = layouts.data();
+
+				res = vkAllocateDescriptorSets(device->device, &allocInfo, heap.descriptorSet_GPU.data());
+				assert(res == VK_SUCCESS);
+
+			}
 		}
 	}
 	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::validate(CommandList cmd)
@@ -1001,6 +1014,8 @@ namespace wiGraphics
 			if (table.dirty)
 			{
 				table.dirty = false;
+				create_heaps_on_demand((SHADERSTAGE)stage);
+				DescriptorHeap& heap = heaps[stage][currentheap[stage]];
 
 				int writeCount = 0;
 
@@ -1010,7 +1025,7 @@ namespace wiGraphics
 					{
 						descriptorWrites[writeCount] = {};
 						descriptorWrites[writeCount].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-						descriptorWrites[writeCount].dstSet = table.descriptorSet_GPU[table.ringOffset];
+						descriptorWrites[writeCount].dstSet = heap.descriptorSet_GPU[heap.ringOffset];
 						descriptorWrites[writeCount].dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_CBV;
 						descriptorWrites[writeCount].dstArrayElement = 0;
 						descriptorWrites[writeCount].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1024,7 +1039,7 @@ namespace wiGraphics
 					{
 						descriptorWrites[writeCount] = {};
 						descriptorWrites[writeCount].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-						descriptorWrites[writeCount].dstSet = table.descriptorSet_GPU[table.ringOffset];
+						descriptorWrites[writeCount].dstSet = heap.descriptorSet_GPU[heap.ringOffset];
 						descriptorWrites[writeCount].dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE;
 						descriptorWrites[writeCount].dstArrayElement = 0;
 						descriptorWrites[writeCount].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -1038,7 +1053,7 @@ namespace wiGraphics
 					{
 						descriptorWrites[writeCount] = {};
 						descriptorWrites[writeCount].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-						descriptorWrites[writeCount].dstSet = table.descriptorSet_GPU[table.ringOffset];
+						descriptorWrites[writeCount].dstSet = heap.descriptorSet_GPU[heap.ringOffset];
 						descriptorWrites[writeCount].dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TYPEDBUFFER;
 						descriptorWrites[writeCount].dstArrayElement = 0;
 						descriptorWrites[writeCount].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
@@ -1052,7 +1067,7 @@ namespace wiGraphics
 					{
 						descriptorWrites[writeCount] = {};
 						descriptorWrites[writeCount].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-						descriptorWrites[writeCount].dstSet = table.descriptorSet_GPU[table.ringOffset];
+						descriptorWrites[writeCount].dstSet = heap.descriptorSet_GPU[heap.ringOffset];
 						descriptorWrites[writeCount].dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_UNTYPEDBUFFER;
 						descriptorWrites[writeCount].dstArrayElement = 0;
 						descriptorWrites[writeCount].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -1066,7 +1081,7 @@ namespace wiGraphics
 					{
 						descriptorWrites[writeCount] = {};
 						descriptorWrites[writeCount].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-						descriptorWrites[writeCount].dstSet = table.descriptorSet_GPU[table.ringOffset];
+						descriptorWrites[writeCount].dstSet = heap.descriptorSet_GPU[heap.ringOffset];
 						descriptorWrites[writeCount].dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE;
 						descriptorWrites[writeCount].dstArrayElement = 0;
 						descriptorWrites[writeCount].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -1080,7 +1095,7 @@ namespace wiGraphics
 					{
 						descriptorWrites[writeCount] = {};
 						descriptorWrites[writeCount].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-						descriptorWrites[writeCount].dstSet = table.descriptorSet_GPU[table.ringOffset];
+						descriptorWrites[writeCount].dstSet = heap.descriptorSet_GPU[heap.ringOffset];
 						descriptorWrites[writeCount].dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TYPEDBUFFER;
 						descriptorWrites[writeCount].dstArrayElement = 0;
 						descriptorWrites[writeCount].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
@@ -1094,7 +1109,7 @@ namespace wiGraphics
 					{
 						descriptorWrites[writeCount] = {};
 						descriptorWrites[writeCount].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-						descriptorWrites[writeCount].dstSet = table.descriptorSet_GPU[table.ringOffset];
+						descriptorWrites[writeCount].dstSet = heap.descriptorSet_GPU[heap.ringOffset];
 						descriptorWrites[writeCount].dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER;
 						descriptorWrites[writeCount].dstArrayElement = 0;
 						descriptorWrites[writeCount].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -1108,7 +1123,7 @@ namespace wiGraphics
 					{
 						descriptorWrites[writeCount] = {};
 						descriptorWrites[writeCount].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-						descriptorWrites[writeCount].dstSet = table.descriptorSet_GPU[table.ringOffset];
+						descriptorWrites[writeCount].dstSet = heap.descriptorSet_GPU[heap.ringOffset];
 						descriptorWrites[writeCount].dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER;
 						descriptorWrites[writeCount].dstArrayElement = 0;
 						descriptorWrites[writeCount].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
@@ -1158,7 +1173,7 @@ namespace wiGraphics
 
 						descriptorWrites[writeCount] = {};
 						descriptorWrites[writeCount].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-						descriptorWrites[writeCount].dstSet = table.descriptorSet_GPU[table.ringOffset];
+						descriptorWrites[writeCount].dstSet = heap.descriptorSet_GPU[heap.ringOffset];
 						descriptorWrites[writeCount].dstBinding = binding;
 						descriptorWrites[writeCount].dstArrayElement = 0;
 						descriptorWrites[writeCount].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1193,7 +1208,7 @@ namespace wiGraphics
 
 							descriptorWrites[writeCount] = {};
 							descriptorWrites[writeCount].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-							descriptorWrites[writeCount].dstSet = table.descriptorSet_GPU[table.ringOffset];
+							descriptorWrites[writeCount].dstSet = heap.descriptorSet_GPU[heap.ringOffset];
 							descriptorWrites[writeCount].dstBinding = binding;
 							descriptorWrites[writeCount].dstArrayElement = 0;
 							descriptorWrites[writeCount].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -1222,7 +1237,7 @@ namespace wiGraphics
 
 								descriptorWrites[writeCount] = {};
 								descriptorWrites[writeCount].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-								descriptorWrites[writeCount].dstSet = table.descriptorSet_GPU[table.ringOffset];
+								descriptorWrites[writeCount].dstSet = heap.descriptorSet_GPU[heap.ringOffset];
 								descriptorWrites[writeCount].dstBinding = binding;
 								descriptorWrites[writeCount].dstArrayElement = 0;
 								descriptorWrites[writeCount].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -1243,7 +1258,7 @@ namespace wiGraphics
 
 								descriptorWrites[writeCount] = {};
 								descriptorWrites[writeCount].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-								descriptorWrites[writeCount].dstSet = table.descriptorSet_GPU[table.ringOffset];
+								descriptorWrites[writeCount].dstSet = heap.descriptorSet_GPU[heap.ringOffset];
 								descriptorWrites[writeCount].dstBinding = binding;
 								descriptorWrites[writeCount].dstArrayElement = 0;
 								descriptorWrites[writeCount].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
@@ -1280,7 +1295,7 @@ namespace wiGraphics
 
 							descriptorWrites[writeCount] = {};
 							descriptorWrites[writeCount].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-							descriptorWrites[writeCount].dstSet = table.descriptorSet_GPU[table.ringOffset];
+							descriptorWrites[writeCount].dstSet = heap.descriptorSet_GPU[heap.ringOffset];
 							descriptorWrites[writeCount].dstBinding = binding;
 							descriptorWrites[writeCount].dstArrayElement = 0;
 							descriptorWrites[writeCount].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -1309,7 +1324,7 @@ namespace wiGraphics
 
 								descriptorWrites[writeCount] = {};
 								descriptorWrites[writeCount].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-								descriptorWrites[writeCount].dstSet = table.descriptorSet_GPU[table.ringOffset];
+								descriptorWrites[writeCount].dstSet = heap.descriptorSet_GPU[heap.ringOffset];
 								descriptorWrites[writeCount].dstBinding = binding;
 								descriptorWrites[writeCount].dstArrayElement = 0;
 								descriptorWrites[writeCount].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -1330,7 +1345,7 @@ namespace wiGraphics
 
 								descriptorWrites[writeCount] = {};
 								descriptorWrites[writeCount].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-								descriptorWrites[writeCount].dstSet = table.descriptorSet_GPU[table.ringOffset];
+								descriptorWrites[writeCount].dstSet = heap.descriptorSet_GPU[heap.ringOffset];
 								descriptorWrites[writeCount].dstBinding = binding;
 								descriptorWrites[writeCount].dstArrayElement = 0;
 								descriptorWrites[writeCount].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
@@ -1360,7 +1375,7 @@ namespace wiGraphics
 
 						descriptorWrites[writeCount] = {};
 						descriptorWrites[writeCount].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-						descriptorWrites[writeCount].dstSet = table.descriptorSet_GPU[table.ringOffset];
+						descriptorWrites[writeCount].dstSet = heap.descriptorSet_GPU[heap.ringOffset];
 						descriptorWrites[writeCount].dstBinding = binding;
 						descriptorWrites[writeCount].dstArrayElement = 0;
 						descriptorWrites[writeCount].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
@@ -1378,21 +1393,19 @@ namespace wiGraphics
 				// 2.) Bind GPU visible descriptor table which we just updated:
 				if (stage == CS)
 				{
-					vkCmdBindDescriptorSets(device->GetDirectCommandList(cmd), VK_PIPELINE_BIND_POINT_COMPUTE, device->defaultPipelineLayout_Compute, 0, 1, &table.descriptorSet_GPU[table.ringOffset], 0, nullptr);
+					vkCmdBindDescriptorSets(device->GetDirectCommandList(cmd), VK_PIPELINE_BIND_POINT_COMPUTE, device->defaultPipelineLayout_Compute, 0, 1, &heap.descriptorSet_GPU[heap.ringOffset], 0, nullptr);
 				}
 				else
 				{
-					vkCmdBindDescriptorSets(device->GetDirectCommandList(cmd), VK_PIPELINE_BIND_POINT_GRAPHICS, device->defaultPipelineLayout_Graphics, stage, 1, &table.descriptorSet_GPU[table.ringOffset], 0, nullptr);
+					vkCmdBindDescriptorSets(device->GetDirectCommandList(cmd), VK_PIPELINE_BIND_POINT_GRAPHICS, device->defaultPipelineLayout_Graphics, stage, 1, &heap.descriptorSet_GPU[heap.ringOffset], 0, nullptr);
 				}
 
 				// allocate next chunk for GPU visible descriptor table:
-				table.ringOffset++;
+				heap.ringOffset++;
 
-				if (table.ringOffset >= table.descriptorSet_GPU.size())
+				if (heap.ringOffset >= heap.descriptorSet_GPU.size())
 				{
-					// ran out of descriptor allocation space, stall CPU and wrap the ring buffer:
-					assert(0 && "TODO Stall");
-					table.ringOffset = 0;
+					currentheap[stage]++;
 				}
 
 			}
@@ -3871,7 +3884,7 @@ namespace wiGraphics
 				assert(res == VK_SUCCESS);
 
 				frame.resourceBuffer[cmd] = new FrameResources::ResourceFrameAllocator(this, 4 * 1024 * 1024);
-				frame.descriptors[cmd] = new FrameResources::DescriptorTableFrameAllocator(this, 1024);
+				frame.descriptors[cmd] = new FrameResources::DescriptorTableFrameAllocator(this);
 			}
 		}
 		res = vkResetCommandPool(device, GetFrameResources().commandPools[cmd], 0);

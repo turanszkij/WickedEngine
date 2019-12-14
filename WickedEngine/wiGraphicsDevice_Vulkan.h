@@ -1,15 +1,15 @@
 #pragma once
-#include "CommonInclude.h"
-#include "wiGraphicsDevice.h"
-#include "wiPlatform.h"
-#include "wiSpinLock.h"
-#include "wiContainers.h"
 
 #if __has_include("vulkan/vulkan.h")
 #define WICKEDENGINE_BUILD_VULKAN
 #endif // HAS VULKAN
 
 #ifdef WICKEDENGINE_BUILD_VULKAN
+#include "CommonInclude.h"
+#include "wiGraphicsDevice.h"
+#include "wiPlatform.h"
+#include "wiSpinLock.h"
+#include "wiContainers.h"
 #include "wiGraphicsDevice_SharedInternals.h"
 
 #ifdef _WIN32
@@ -112,7 +112,6 @@ namespace wiGraphics
 			struct DescriptorTableFrameAllocator
 			{
 				GraphicsDevice_Vulkan* device;
-				VkDescriptorPool descriptorPool;
 
 				static const int writeCapacity =
 					1 +									// null		CBV
@@ -134,6 +133,15 @@ namespace wiGraphics
 				VkBufferView null_texelBufferViews[max_null_resource_capacity];
 				VkDescriptorImageInfo null_samplerInfos[GPU_SAMPLER_HEAP_COUNT];
 
+				struct DescriptorHeap
+				{
+					VkDescriptorPool descriptorPool;
+					std::vector<VkDescriptorSet> descriptorSet_GPU;
+					uint32_t ringOffset;
+				};
+				std::vector<DescriptorHeap> heaps[SHADERSTAGE_COUNT];
+				size_t currentheap[SHADERSTAGE_COUNT] = {};
+
 				struct Table
 				{
 					const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
@@ -143,8 +151,6 @@ namespace wiGraphics
 					int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
 					const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
 
-					std::vector<VkDescriptorSet> descriptorSet_GPU;
-					uint32_t ringOffset;
 					bool dirty;
 
 					void reset()
@@ -155,17 +161,17 @@ namespace wiGraphics
 						memset(UAV, 0, sizeof(UAV));
 						memset(UAV_index, -1, sizeof(UAV_index));
 						memset(SAM, 0, sizeof(SAM));
-						ringOffset = 0;
 						dirty = true;
 					}
 
 				} tables[SHADERSTAGE_COUNT];
 
-				DescriptorTableFrameAllocator(GraphicsDevice_Vulkan* device, uint32_t maxRenameCount);
+				DescriptorTableFrameAllocator(GraphicsDevice_Vulkan* device);
 				~DescriptorTableFrameAllocator();
 
 				void reset();
 				void validate(CommandList cmd);
+				void create_heaps_on_demand(SHADERSTAGE stage);
 			};
 			DescriptorTableFrameAllocator*		descriptors[COMMANDLIST_COUNT];
 
