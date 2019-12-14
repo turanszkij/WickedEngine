@@ -2701,8 +2701,6 @@ void Initialize()
 }
 void ClearWorld()
 {
-	GetDevice()->WaitForGPU();
-
 	for (wiSprite* x : waterRipples)
 	{
 		delete x;

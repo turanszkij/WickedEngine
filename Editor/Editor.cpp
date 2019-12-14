@@ -656,7 +656,6 @@ void EditorComponent::Load()
 	exitButton->SetColor(wiColor(190, 0, 0, 200), wiWidget::WIDGETSTATE::IDLE);
 	exitButton->SetColor(wiColor(255, 0, 0, 255), wiWidget::WIDGETSTATE::FOCUS);
 	exitButton->OnClick([](wiEventArgs args) {
-		wiRenderer::GetDevice()->WaitForGPU();
 		exit(0);
 	});
 	GetGUI().AddWidget(exitButton);

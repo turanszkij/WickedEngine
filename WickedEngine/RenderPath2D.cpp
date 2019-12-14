@@ -17,8 +17,6 @@ void RenderPath2D::ResizeBuffers()
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	wiRenderer::GetDevice()->WaitForGPU();
-
 	FORMAT defaultTextureFormat = device->GetBackBufferFormat();
 
 	if(GetDepthStencil() != nullptr && wiRenderer::GetResolutionScale() != 1.0f)

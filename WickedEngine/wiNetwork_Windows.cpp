@@ -9,6 +9,18 @@
 
 namespace wiNetwork
 {
+	struct wiNetwork_Internal_Cleanup
+	{
+		bool initialized = false;
+		~wiNetwork_Internal_Cleanup()
+		{
+			if (initialized)
+			{
+				WSACleanup();
+			}
+		}
+	} cleanup;
+
 	Socket::~Socket()
 	{
 		Destroy(this);
@@ -28,6 +40,7 @@ namespace wiNetwork
 			WSACleanup();
 			assert(0);
 		}
+		cleanup.initialized = true; // it will auto cleanup
 
 		wiBackLog::post("wiNetwork Initialized");
 	}
