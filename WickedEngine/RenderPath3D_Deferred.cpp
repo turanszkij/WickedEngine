@@ -39,7 +39,7 @@ void RenderPath3D_Deferred::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		desc.Format = FORMAT_R11G11B10_FLOAT;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture(&desc, nullptr, &rtDeferred);
