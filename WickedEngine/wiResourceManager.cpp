@@ -42,13 +42,19 @@ namespace wiResourceManager
 	std::shared_ptr<wiResource> Load(const wiHashString& name)
 	{
 		locker.lock();
-		auto it = resources.find(name);
-		bool found = it != resources.end() && !it->second.expired();
-		locker.unlock();
+		std::weak_ptr<wiResource>& weak_resource = resources[name];
+		std::shared_ptr<wiResource> resource = weak_resource.lock();
 
-		if (found)
+		if (resource == nullptr)
 		{
-			return it->second.lock();
+			resource = std::make_shared<wiResource>();
+			resources[name] = resource;
+			locker.unlock();
+		}
+		else
+		{
+			locker.unlock();
+			return resource;
 		}
 
 
@@ -285,12 +291,8 @@ namespace wiResourceManager
 
 		if (success != nullptr)
 		{
-			locker.lock();
-			std::shared_ptr<wiResource> resource = std::make_shared<wiResource>();
 			resource->data = success;
 			resource->type = type;
-			resources.insert(make_pair(name, resource));
-			locker.unlock();
 			return resource;
 		}
 
