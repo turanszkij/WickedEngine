@@ -492,6 +492,18 @@ namespace wiScene
 					lensFlareRimTextures[i] = wiResourceManager::Load(dir + lensFlareNames[i]);
 				}
 			}
+
+			if (archive.GetVersion() < 33 && 
+				(GetType() == POINT ||
+					GetType() == SPHERE ||
+					GetType() == DISC ||
+					GetType() == RECTANGLE ||
+					GetType() == TUBE)
+			)
+			{
+				shadowBias = 0.0001f;
+			}
+
 		}
 		else
 		{

@@ -8,7 +8,6 @@ struct GS_CUBEMAP_IN
 struct PS_CUBEMAP_IN
 {
 	float4 pos		: SV_POSITION;
-	float3 pos3D	: POSITION3D;
 	float2 uv		: UV;
 	uint RTIndex	: SV_RenderTargetArrayIndex;
 };
@@ -25,7 +24,6 @@ void main(triangle GS_CUBEMAP_IN input[3], inout TriangleStream<PS_CUBEMAP_IN> C
 		for (int v = 0; v < 3; v++)
 		{
 			output.pos = mul(xCubeShadowVP[f], input[v].pos);
-			output.pos3D = input[v].pos.xyz;
 			output.uv = input[v].uv;
 			CubeMapStream.Append(output);
 		}

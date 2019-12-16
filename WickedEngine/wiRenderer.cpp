@@ -937,11 +937,11 @@ PSTYPES GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, bool 
 	case RENDERPASS_SHADOWCUBE:
 		if (alphatest)
 		{
-			realPS = PSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
+			realPS = PSTYPE_SHADOW_ALPHATEST;
 		}
 		else
 		{
-			realPS = PSTYPE_SHADOWCUBEMAPRENDER;
+			realPS = PSTYPE_COUNT;
 		}
 		break;
 	case RENDERPASS_ENVMAPCAPTURE:
@@ -1352,8 +1352,6 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, []{ LoadPixelShader(pixelShaders[PSTYPE_SHADOW_ALPHATEST], "shadowPS_alphatest.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadPixelShader(pixelShaders[PSTYPE_SHADOW_TRANSPARENT], "shadowPS_transparent.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadPixelShader(pixelShaders[PSTYPE_SHADOW_WATER], "shadowPS_water.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadPixelShader(pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER], "cubeShadowPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadPixelShader(pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST], "cubeShadowPS_alphatest.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadPixelShader(pixelShaders[PSTYPE_TRAIL], "trailPS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadPixelShader(pixelShaders[PSTYPE_VOXELIZER], "objectPS_voxelizer.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadPixelShader(pixelShaders[PSTYPE_VOXEL], "voxelPS.cso"); });

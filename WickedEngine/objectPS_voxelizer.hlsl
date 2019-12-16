@@ -110,14 +110,15 @@ void main(PSInput input)
 					{
 						float3 L = light.positionWS - P;
 						const float dist2 = dot(L, L);
-						const float dist = sqrt(dist2);
+						const float range2 = light.range * light.range;
 
 						[branch]
-						if (dist < light.range)
+						if (dist2 < range2)
 						{
+							const float3 Lunnormalized = L;
+							const float dist = sqrt(dist2);
 							L /= dist;
 
-							const float range2 = light.range * light.range;
 							const float att = saturate(1.0 - (dist2 / range2));
 							const float attenuation = att * att;
 
@@ -125,7 +126,7 @@ void main(PSInput input)
 
 							[branch]
 							if (light.IsCastingShadow() >= 0) {
-								lightColor *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.GetShadowMapIndex()), 1 - dist / light.range * (1 - light.shadowBias)).r;
+								lightColor *= shadowCube(Lunnormalized, light.range, light.shadowBias, light.GetShadowMapIndex());
 							}
 
 							lighting.direct.diffuse += lightColor;

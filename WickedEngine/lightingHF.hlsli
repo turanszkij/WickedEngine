@@ -87,6 +87,19 @@ inline float3 shadowCascade(float3 shadowPos, float2 ShTex, float shadowKernel, 
 	return shadow;
 }
 
+inline float shadowCube(float3 Lunnormalized, float range, float bias, uint slice)
+{
+	float projectedDistance = max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z));
+	float FarZ = 0.1f;	// watch out: reversed depth buffer! Also, light near plane is constant for simplicity, this should match on cpu side!
+	float NearZ = max(1, range); // watch out: reversed depth buffer!
+	float fRange = FarZ / (FarZ - NearZ);
+	float a = fRange;
+	float b = -fRange * NearZ;
+	float z = projectedDistance * a + b;
+	float dbDistance = z / projectedDistance;
+	return texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-Lunnormalized, slice), dbDistance + bias).r;
+}
+
 
 inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
@@ -159,6 +172,7 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 	[branch]
 	if (dist2 < range2)
 	{
+		const float3 Lunnormalized = L;
 		const float dist = sqrt(dist2);
 		L /= dist;
 
@@ -172,7 +186,7 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 #ifndef DISABLE_SHADOWMAPS
 			[branch]
 			if (light.IsCastingShadow()) {
-				sh *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.GetShadowMapIndex()), 1 - dist / light.range * (1 - light.shadowBias)).r;
+				sh *= shadowCube(Lunnormalized, light.range, light.shadowBias, light.GetShadowMapIndex());
 			}
 #endif // DISABLE_SHADOWMAPS
 
@@ -417,22 +431,22 @@ float illuminanceSphereOrDisk(float cosTheta, float sinSigmaSqr)
 
 inline void SphereLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
-	float3 Lunormalized = light.positionWS - surface.P;
-	float dist = length(Lunormalized);
-	float3 L = Lunormalized / dist;
+	float3 Lunnormalized = light.positionWS - surface.P;
+	float dist = length(Lunnormalized);
+	float3 L = Lunnormalized / dist;
 	float fLight = 1;
 
 #ifndef DISABLE_SHADOWMAPS
 	[branch]
 	if (light.IsCastingShadow()) {
-		fLight = texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.GetShadowMapIndex()), 1 - dist / light.range * (1 - light.shadowBias)).r;
+		fLight = shadowCube(Lunnormalized, light.range, light.shadowBias, light.GetShadowMapIndex());
 	}
 #endif
 
 	[branch]
 	if (fLight > 0)
 	{
-		float sqrDist = dot(Lunormalized, Lunormalized);
+		float sqrDist = dot(Lunnormalized, Lunnormalized);
 
 		float cosTheta = clamp(dot(surface.N, L), -0.999, 0.999); // Clamp to avoid edge case 
 																// We need to prevent the object penetrating into the surface 
@@ -449,8 +463,8 @@ inline void SphereLight(in ShaderEntity light, in Surface surface, inout Lightin
 				float3 r = surface.R;
 				r = getSpecularDominantDirArea(surface.N, r, surface.roughness);
 
-				float3 centerToRay = dot(Lunormalized, r) * r - Lunormalized;
-				float3 closestPoint = Lunormalized + centerToRay * saturate(light.GetRadius() / length(centerToRay));
+				float3 centerToRay = dot(Lunnormalized, r) * r - Lunnormalized;
+				float3 closestPoint = Lunnormalized + centerToRay * saturate(light.GetRadius() / length(centerToRay));
 				L = normalize(closestPoint);
 			}
 
@@ -466,22 +480,22 @@ inline void SphereLight(in ShaderEntity light, in Surface surface, inout Lightin
 }
 inline void DiscLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
-	float3 Lunormalized = light.positionWS - surface.P;
-	float dist = length(Lunormalized);
-	float3 L = Lunormalized / dist;
+	float3 Lunnormalized = light.positionWS - surface.P;
+	float dist = length(Lunnormalized);
+	float3 L = Lunnormalized / dist;
 	float fLight = 1;
 
 #ifndef DISABLE_SHADOWMAPS
 	[branch]
 	if (light.IsCastingShadow()) {
-		fLight = texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.GetShadowMapIndex()), 1 - dist / light.range * (1 - light.shadowBias)).r;
+		fLight = shadowCube(Lunnormalized, light.range, light.shadowBias, light.GetShadowMapIndex());
 	}
 #endif
 
 	[branch]
 	if (fLight > 0)
 	{
-		float sqrDist = dot(Lunormalized, Lunormalized);
+		float sqrDist = dot(Lunnormalized, Lunnormalized);
 
 		float3 lightPlaneNormal = light.GetFront();
 
@@ -506,7 +520,7 @@ inline void DiscLight(in ShaderEntity light, in Surface surface, inout Lighting 
 				float t = Trace_plane(surface.P, r, light.positionWS, lightPlaneNormal);
 				float3 p = surface.P + r * t;
 				float3 centerToRay = p - light.positionWS;
-				float3 closestPoint = Lunormalized + centerToRay * saturate(light.GetRadius() / length(centerToRay));
+				float3 closestPoint = Lunnormalized + centerToRay * saturate(light.GetRadius() / length(centerToRay));
 				L = normalize(closestPoint);
 			}
 
@@ -522,6 +536,7 @@ inline void DiscLight(in ShaderEntity light, in Surface surface, inout Lighting 
 inline void RectangleLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
 	float3 L = light.positionWS - surface.P;
+	const float3 Lunnormalized = L;
 	float dist = length(L);
 	L /= dist;
 	float fLight = 1;
@@ -529,7 +544,7 @@ inline void RectangleLight(in ShaderEntity light, in Surface surface, inout Ligh
 #ifndef DISABLE_SHADOWMAPS
 	[branch]
 	if (light.IsCastingShadow()) {
-		fLight = texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.GetShadowMapIndex()), 1 - dist / light.range * (1 - light.shadowBias)).r;
+		fLight = shadowCube(Lunnormalized, light.range, light.shadowBias, light.GetShadowMapIndex());
 	}
 #endif
 
@@ -636,22 +651,22 @@ inline void RectangleLight(in ShaderEntity light, in Surface surface, inout Ligh
 }
 inline void TubeLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
-	float3 Lunormalized = light.positionWS - surface.P;
-	float dist = length(Lunormalized);
-	float3 L = Lunormalized / dist;
+	float3 Lunnormalized = light.positionWS - surface.P;
+	float dist = length(Lunnormalized);
+	float3 L = Lunnormalized / dist;
 	float fLight = 1;
 
 #ifndef DISABLE_SHADOWMAPS
 	[branch]
 	if (light.IsCastingShadow()) {
-		fLight = texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.GetShadowMapIndex()), 1 - dist / light.range * (1 - light.shadowBias)).r;
+		fLight = shadowCube(Lunnormalized, light.range, light.shadowBias, light.GetShadowMapIndex());
 	}
 #endif
 
 	[branch]
 	if (fLight > 0)
 	{
-		float sqrDist = dot(Lunormalized, Lunormalized);
+		float sqrDist = dot(Lunnormalized, Lunnormalized);
 
 		float3 lightLeft = light.GetRight();
 		float lightWidth = light.GetWidth();

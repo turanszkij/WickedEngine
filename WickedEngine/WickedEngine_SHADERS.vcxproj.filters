@@ -111,9 +111,6 @@
     <FxCompile Include="circlePS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="cubeShadowPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="decalPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -385,9 +382,6 @@
       <Filter>GS</Filter>
     </FxCompile>
     <FxCompile Include="shadowPS_alphatest.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="cubeShadowPS_alphatest.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="objectVS_positionstream.hlsl">

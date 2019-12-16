@@ -31,6 +31,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	for(uint i = 0; i < sampleCount; ++i)
 	{
 		float3 L = light.positionWS - P;
+		const float3 Lunnormalized = L;
 		const float dist2 = dot(L, L);
 		const float dist = sqrt(dist2);
 		L /= dist;
@@ -41,7 +42,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 		[branch]
 		if (light.IsCastingShadow()) {
-			attenuation *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.GetShadowMapIndex()), 1 - dist / light.range * (1 - light.shadowBias)).r;
+			attenuation *= shadowCube(Lunnormalized, light.range, light.shadowBias, light.GetShadowMapIndex());
 		}
 
 		attenuation *= GetFog(cameraDistance - marchedDistance);

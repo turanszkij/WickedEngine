@@ -706,21 +706,6 @@ namespace wiScene
 
 		inline void SetType(LightType val) {
 			type = val;
-			switch (type)
-			{
-			case DIRECTIONAL:
-			case SPOT:
-				shadowBias = 0.0001f;
-				break;
-			case POINT:
-			case SPHERE:
-			case DISC:
-			case RECTANGLE:
-			case TUBE:
-			case LIGHTTYPE_COUNT:
-				shadowBias = 0.1f;
-				break;
-			}
 		}
 		inline LightType GetType() const { return type; }
 
