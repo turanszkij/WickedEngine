@@ -42,7 +42,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 			[branch]if (is_saturated(ShTex))
 			{
-				float3 attenuation = shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex() + cascade);
+				float3 attenuation = shadowCascade(light, ShPos, ShTex.xy, cascade);
 
 				attenuation *= GetFog(cameraDistance - marchedDistance);
 

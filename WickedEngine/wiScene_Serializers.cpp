@@ -493,15 +493,18 @@ namespace wiScene
 				}
 			}
 
-			if (archive.GetVersion() < 33 && 
-				(GetType() == POINT ||
-					GetType() == SPHERE ||
-					GetType() == DISC ||
-					GetType() == RECTANGLE ||
-					GetType() == TUBE)
-			)
+			if (archive.GetVersion() < 33)
 			{
-				shadowBias = 0.0001f;
+				switch (GetType())
+				{
+				case LightComponent::POINT:
+				case LightComponent::SPHERE:
+				case LightComponent::DISC:
+				case LightComponent::RECTANGLE:
+				case LightComponent::TUBE:
+					shadowBias = 0.0001f;
+					break;
+				}
 			}
 
 		}

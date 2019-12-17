@@ -112,6 +112,10 @@ struct ShaderEntity
 	inline float GetWidth() { return texMulAdd.y; }
 	inline float GetHeight() { return texMulAdd.z; }
 
+	// Load cubemap depth remap props:
+	inline float GetCubemapDepthRemapNear() { return texMulAdd.w; }
+	inline float GetCubemapDepthRemapFar() { return coneAngleCos; }
+
 	// Load decal props:
 	inline float GetEmissive() { return energy; }
 };

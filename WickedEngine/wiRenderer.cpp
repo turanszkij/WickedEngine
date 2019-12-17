@@ -3995,6 +3995,25 @@ void UpdateRenderData(CommandList cmd)
 			break;
 			}
 
+			switch (light.GetType())
+			{
+			case LightComponent::POINT:
+			case LightComponent::SPHERE:
+			case LightComponent::DISC:
+			case LightComponent::RECTANGLE:
+			case LightComponent::TUBE:
+			{
+				const float FarZ = 0.1f;	// watch out: reversed depth buffer! Also, light near plane is constant for simplicity, this should match on cpu side!
+				const float NearZ = std::max(1.0f, entityArray[entityCounter].range); // watch out: reversed depth buffer!
+				const float fRange = FarZ / (FarZ - NearZ);
+				const float cubemapDepthRemapNear = fRange;
+				const float cubemapDepthRemapFar = -fRange * NearZ;
+				entityArray[entityCounter].texMulAdd.w = cubemapDepthRemapNear;
+				entityArray[entityCounter].coneAngleCos = cubemapDepthRemapFar;
+			}
+			break;
+			}
+
 			if (light.IsStatic())
 			{
 				entityArray[entityCounter].SetFlags(ENTITY_FLAG_LIGHT_STATIC);
@@ -5155,7 +5174,7 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 					if (!renderQueue.empty())
 					{
 						MiscCB miscCb;
-						miscCb.g_xColor = float4(light.position.x, light.position.y, light.position.z, 1.0f / light.GetRange()); // reciprocal range, to avoid division in shader
+						miscCb.g_xColor = float4(light.position.x, light.position.y, light.position.z, 0);
 						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
 						device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 						device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);

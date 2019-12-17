@@ -99,7 +99,7 @@ void main(PSInput input)
 
 							[branch]if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y) && (saturate(ShTex.z) == ShTex.z))
 							{
-								lightColor *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex() + cascade);
+								lightColor *= shadowCascade(light, ShPos, ShTex.xy, cascade);
 							}
 						}
 
@@ -126,7 +126,7 @@ void main(PSInput input)
 
 							[branch]
 							if (light.IsCastingShadow() >= 0) {
-								lightColor *= shadowCube(Lunnormalized, light.range, light.shadowBias, light.GetShadowMapIndex());
+								lightColor *= shadowCube(light, Lunnormalized);
 							}
 
 							lighting.direct.diffuse += lightColor;
@@ -166,7 +166,7 @@ void main(PSInput input)
 									[branch]
 									if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
 									{
-										lightColor *= shadowCascade(ShPos.xyz, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex());
+										lightColor *= shadowCascade(light, ShPos.xyz, ShTex.xy, 0);
 									}
 								}
 

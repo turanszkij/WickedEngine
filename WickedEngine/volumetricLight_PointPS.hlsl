@@ -42,7 +42,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 		[branch]
 		if (light.IsCastingShadow()) {
-			attenuation *= shadowCube(Lunnormalized, light.range, light.shadowBias, light.GetShadowMapIndex());
+			attenuation *= shadowCube(light, Lunnormalized);
 		}
 
 		attenuation *= GetFog(cameraDistance - marchedDistance);

@@ -45,9 +45,9 @@ inline LightingPart CombineLighting(in Surface surface, in Lighting lighting)
 
 
 
-inline float3 shadowCascade(float3 shadowPos, float2 ShTex, float shadowKernel, float bias, float slice) 
+inline float3 shadowCascade(in ShaderEntity light, in float3 shadowPos, in float2 shadowUV, in uint cascade) 
 {
-	const float realDistance = shadowPos.z + bias;
+	const float realDistance = shadowPos.z + light.shadowBias;
 	float3 shadow = 0;
 #ifndef DISABLE_SHADOWMAPS
 #ifndef DISABLE_SOFT_SHADOWS
@@ -58,13 +58,13 @@ inline float3 shadowCascade(float3 shadowPos, float2 ShTex, float shadowKernel, 
 		[loop]
 		for (float x = -range; x <= range; x += 1.0f)
 		{
-			shadow.x += texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(ShTex + float2(x, y) * shadowKernel, slice), realDistance).r;
+			shadow.x += texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(shadowUV + float2(x, y) * light.shadowKernel, light.GetShadowMapIndex() + cascade), realDistance).r;
 			shadow.y++;
 		}
 	}
 	shadow = shadow.x / shadow.y;
 #else
-	shadow = texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(ShTex, slice), realDistance).r;
+	shadow = texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(shadowUV, light.GetShadowMapIndex() + cascade), realDistance).r;
 #endif
 
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
@@ -73,7 +73,7 @@ inline float3 shadowCascade(float3 shadowPos, float2 ShTex, float shadowKernel, 
 		// unfortunately transparents will not receive transparent shadow map
 		// because we cannot distinguish without using secondary depth buffer for transparents
 		// but I don't wanna do that, not overly important for now
-		float4 transparent_shadowmap = texture_shadowarray_transparent.SampleLevel(sampler_linear_clamp, float3(ShTex, slice), 0).rgba;
+		float4 transparent_shadowmap = texture_shadowarray_transparent.SampleLevel(sampler_linear_clamp, float3(shadowUV, light.GetShadowMapIndex() + cascade), 0).rgba;
 		// Tint the shadow:
 		shadow *= transparent_shadowmap.rgb;
 		// Reduce shadow by caustics (caustics can also increase total light above maximum):
@@ -87,17 +87,10 @@ inline float3 shadowCascade(float3 shadowPos, float2 ShTex, float shadowKernel, 
 	return shadow;
 }
 
-inline float shadowCube(float3 Lunnormalized, float range, float bias, uint slice)
+inline float shadowCube(in ShaderEntity light, float3 Lunnormalized)
 {
-	float projectedDistance = max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z));
-	float FarZ = 0.1f;	// watch out: reversed depth buffer! Also, light near plane is constant for simplicity, this should match on cpu side!
-	float NearZ = max(1, range); // watch out: reversed depth buffer!
-	float fRange = FarZ / (FarZ - NearZ);
-	float a = fRange;
-	float b = -fRange * NearZ;
-	float z = projectedDistance * a + b;
-	float dbDistance = z / projectedDistance;
-	return texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-Lunnormalized, slice), dbDistance + bias).r;
+	const float remappedDistance = light.GetCubemapDepthRemapNear() + light.GetCubemapDepthRemapFar() / max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z));
+	return texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-Lunnormalized, light.GetShadowMapIndex()), remappedDistance + light.shadowBias).r;
 }
 
 
@@ -127,7 +120,7 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 				[branch]
 				if (is_saturated(ShTex))
 				{
-					const float3 shadow_main = shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex() + cascade);
+					const float3 shadow_main = shadowCascade(light, ShPos, ShTex.xy, cascade);
 					const float3 cascade_edgefactor = saturate(saturate(abs(ShPos)) - 0.8f) * 5.0f; // fade will be on edge and inwards 20%
 					const float cascade_fade = max(cascade_edgefactor.x, max(cascade_edgefactor.y, cascade_edgefactor.z));
 
@@ -139,7 +132,7 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 						cascade += 1;
 						ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + cascade], float4(surface.P, 1)).xyz;
 						ShTex = ShPos * float3(0.5f, -0.5f, 0.5f) + 0.5f;
-						const float3 shadow_fallback = shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex() + cascade);
+						const float3 shadow_fallback = shadowCascade(light, ShPos, ShTex.xy, cascade);
 
 						sh *= lerp(shadow_main, shadow_fallback, cascade_fade);
 					}
@@ -186,7 +179,7 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 #ifndef DISABLE_SHADOWMAPS
 			[branch]
 			if (light.IsCastingShadow()) {
-				sh *= shadowCube(Lunnormalized, light.range, light.shadowBias, light.GetShadowMapIndex());
+				sh *= shadowCube(light, Lunnormalized);
 			}
 #endif // DISABLE_SHADOWMAPS
 
@@ -240,7 +233,7 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 					[branch]
 					if (is_saturated(ShTex))
 					{
-						sh *= shadowCascade(ShPos.xyz, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex());
+						sh *= shadowCascade(light, ShPos.xyz, ShTex.xy, 0);
 					}
 				}
 #endif // DISABLE_SHADOWMAPS
@@ -439,7 +432,7 @@ inline void SphereLight(in ShaderEntity light, in Surface surface, inout Lightin
 #ifndef DISABLE_SHADOWMAPS
 	[branch]
 	if (light.IsCastingShadow()) {
-		fLight = shadowCube(Lunnormalized, light.range, light.shadowBias, light.GetShadowMapIndex());
+		fLight = shadowCube(light, Lunnormalized);
 	}
 #endif
 
@@ -488,7 +481,7 @@ inline void DiscLight(in ShaderEntity light, in Surface surface, inout Lighting 
 #ifndef DISABLE_SHADOWMAPS
 	[branch]
 	if (light.IsCastingShadow()) {
-		fLight = shadowCube(Lunnormalized, light.range, light.shadowBias, light.GetShadowMapIndex());
+		fLight = shadowCube(light, Lunnormalized);
 	}
 #endif
 
@@ -544,7 +537,7 @@ inline void RectangleLight(in ShaderEntity light, in Surface surface, inout Ligh
 #ifndef DISABLE_SHADOWMAPS
 	[branch]
 	if (light.IsCastingShadow()) {
-		fLight = shadowCube(Lunnormalized, light.range, light.shadowBias, light.GetShadowMapIndex());
+		fLight = shadowCube(light, Lunnormalized);
 	}
 #endif
 
@@ -659,7 +652,7 @@ inline void TubeLight(in ShaderEntity light, in Surface surface, inout Lighting 
 #ifndef DISABLE_SHADOWMAPS
 	[branch]
 	if (light.IsCastingShadow()) {
-		fLight = shadowCube(Lunnormalized, light.range, light.shadowBias, light.GetShadowMapIndex());
+		fLight = shadowCube(light, Lunnormalized);
 	}
 #endif
 
