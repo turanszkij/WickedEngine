@@ -10,6 +10,7 @@ struct VSOut_EnvmapRendering
 	float4 uvsets : UVSETS;
 	float2 atl : ATLAS;
 	float3 nor : NORMAL;
+	uint faceIndex : FACEINDEX;
 };
 
 struct PSIn_EnvmapRendering

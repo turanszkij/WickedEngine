@@ -24,12 +24,12 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 	instance.mat0 = asfloat(instanceBuffer.Load4(byteOffset + 0));
 	instance.mat1 = asfloat(instanceBuffer.Load4(byteOffset + 16));
 	instance.mat2 = asfloat(instanceBuffer.Load4(byteOffset + 32));
-	instance.color = asfloat(instanceBuffer.Load4(byteOffset + 48));
+	instance.userdata = instanceBuffer.Load(byteOffset + 48);
 
 	float4x4 WORLD = MakeWorldMatrixFromInstance(instance);
 
 	float3 pos = BILLBOARD[vertexID];
-	float3 tex = float3(pos.xy * float2(0.5f, -0.5f) + 0.5f, instance.color.x); // here color.x is texture arrayindex for now...
+	float3 tex = float3(pos.xy * float2(0.5f, -0.5f) + 0.5f, instance.userdata.y);
 
 	// We rotate the billboard to face camera, but unlike emitted particles, 
 	//	they don't rotate according to camera rotation, but the camera position relative
@@ -53,7 +53,7 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 	Out.pos3D = mul(WORLD, float4(pos, 1)).xyz;
 	Out.pos = mul(g_xCamera_VP, float4(Out.pos3D, 1));
 	Out.tex = tex;
-	Out.dither = 1 - instance.color.a;
+	Out.dither = 1 - unpack_rgba(instance.userdata.x).a;
 	Out.instanceColor = 0xFFFFFFFF; // todo
 	Out.pos2D = Out.pos;
 	Out.pos2DPrev = mul(g_xFrame_MainCamera_PrevVP, float4(Out.pos3D, 1));

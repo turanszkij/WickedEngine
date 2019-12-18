@@ -4,7 +4,8 @@
 
 struct GS_CUBEMAP_IN
 {
-	float4 pos : SV_POSITION;    // World position 
+	float4 pos : SV_POSITION;    // World position
+	uint faceIndex	: FACEINDEX;
 	float2 uv : UV;
 };
 
@@ -16,6 +17,7 @@ GS_CUBEMAP_IN main(Input_Object_POS_TEX input)
 	VertexSurface surface = MakeVertexSurfaceFromInput(input);
 
 	Out.pos = mul(WORLD, surface.position);
+	Out.faceIndex = input.inst.userdata.y;
 	Out.uv = g_xMaterial.uvset_baseColorMap == 0 ? surface.uvsets.xy : surface.uvsets.zw;
 
 	return Out;

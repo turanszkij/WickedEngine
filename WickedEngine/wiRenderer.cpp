@@ -301,13 +301,14 @@ GFX_STRUCT Instance
 	XMFLOAT4A mat0;
 	XMFLOAT4A mat1;
 	XMFLOAT4A mat2;
-	XMFLOAT4A color;
+	XMUINT4 userdata;
 
 	Instance(){}
-	Instance(const XMFLOAT4X4& matIn, const XMFLOAT4& colorIn = XMFLOAT4(1, 1, 1, 1), float dither = 0){
-		Create(matIn, colorIn, dither);
+	Instance(const XMFLOAT4X4& matIn, const XMFLOAT4& colorIn = XMFLOAT4(1, 1, 1, 1), float dither = 0, uint32_t subInstance = 0)
+	{
+		Create(matIn, colorIn, dither, subInstance);
 	}
-	inline void Create(const XMFLOAT4X4& matIn, const XMFLOAT4& colorIn = XMFLOAT4(1, 1, 1, 1), float dither = 0) volatile
+	inline void Create(const XMFLOAT4X4& matIn, const XMFLOAT4& colorIn = XMFLOAT4(1, 1, 1, 1), float dither = 0, uint32_t subInstance = 0) volatile
 	{
 		mat0.x = matIn._11;
 		mat0.y = matIn._21;
@@ -324,12 +325,13 @@ GFX_STRUCT Instance
 		mat2.z = matIn._33;
 		mat2.w = matIn._43;
 
-		color.x = colorIn.x;
-		color.y = colorIn.y;
-		color.z = colorIn.z;
-		color.w = colorIn.w;
-
+		XMFLOAT4 color = colorIn;
 		color.w *= 1 - dither;
+		userdata.x = wiMath::CompressColor(color);
+		userdata.y = subInstance;
+
+		userdata.z = 0;
+		userdata.w = 0;
 	}
 
 	ALIGN_16
@@ -1136,7 +1138,7 @@ void LoadShaders()
 			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 6, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 6, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 6, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCECOLOR",			0, FORMAT_R32G32B32A32_FLOAT, 6, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 6, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "INSTANCEMATRIXPREV",		0, FORMAT_R32G32B32A32_FLOAT, 6, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "INSTANCEMATRIXPREV",		1, FORMAT_R32G32B32A32_FLOAT, 6, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "INSTANCEMATRIXPREV",		2, FORMAT_R32G32B32A32_FLOAT, 6, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
@@ -1154,7 +1156,7 @@ void LoadShaders()
 			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCECOLOR",			0, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		LoadVertexShader(vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM], "objectVS_positionstream.cso");
 		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM].code, &vertexLayouts[VLTYPE_OBJECT_POS]);
@@ -1171,7 +1173,7 @@ void LoadShaders()
 			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCECOLOR",			0, FORMAT_R32G32B32A32_FLOAT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		LoadVertexShader(vertexShaders[VSTYPE_OBJECT_SIMPLE], "objectVS_simple.cso");
 		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_OBJECT_SIMPLE].code, &vertexLayouts[VLTYPE_OBJECT_POS_TEX]);
@@ -1186,7 +1188,7 @@ void LoadShaders()
 			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCECOLOR",			0, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		LoadVertexShader(vertexShaders[VSTYPE_SHADOW], "shadowVS.cso");
 		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_SHADOW].code, &vertexLayouts[VLTYPE_SHADOW_POS]);
@@ -1203,7 +1205,7 @@ void LoadShaders()
 			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCECOLOR",			0, FORMAT_R32G32B32A32_FLOAT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		LoadVertexShader(vertexShaders[VSTYPE_SHADOW_ALPHATEST], "shadowVS_alphatest.cso");
 		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_SHADOW_ALPHATEST].code, &vertexLayouts[VLTYPE_SHADOW_POS_TEX]);
@@ -2723,10 +2725,10 @@ void ClearWorld()
 }
 
 static const uint32_t CASCADE_COUNT = 3;
+// Don't store this structure on heap!
 struct SHCAM
 {
-	XMFLOAT4X4 View;
-	XMFLOAT4X4 Projection;
+	XMMATRIX VP;
 	AABB boundingbox;
 	Frustum frustum;
 
@@ -2738,14 +2740,9 @@ struct SHCAM
 		const XMVECTOR up = XMVector3TransformNormal(XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rot);
 		const XMMATRIX V = XMMatrixLookToLH(eyePos, to, up);
 		const XMMATRIX P = XMMatrixPerspectiveFovLH(fov, 1, farPlane, nearPlane);
-		const XMMATRIX VP = XMMatrixMultiply(V, P);
-		XMStoreFloat4x4(&View, V);
-		XMStoreFloat4x4(&Projection, P);
+		VP = XMMatrixMultiply(V, P);
 		frustum.Create(VP);
 	};
-	XMMATRIX getVP() const {
-		return XMLoadFloat4x4(&View) * XMLoadFloat4x4(&Projection);
-	}
 };
 inline void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
 {
@@ -2846,8 +2843,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 
 		const XMMATRIX lightProjection = XMMatrixOrthographicOffCenterLH(_min.x, _max.x, _min.y, _max.y, _max.z, _min.z); // notice reversed Z!
 
-		XMStoreFloat4x4(&shcams[cascade].View, lightView);
-		XMStoreFloat4x4(&shcams[cascade].Projection, lightProjection);
+		shcams[cascade].VP = XMMatrixMultiply(lightView, lightProjection);
 	}
 
 }
@@ -2945,7 +2941,9 @@ void BindEnvironmentTextures(SHADERSTAGE stage, CommandList cmd)
 	}
 }
 
-void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_t renderTypeFlags, CommandList cmd, bool tessellation = false)
+void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_t renderTypeFlags, CommandList cmd, 
+	bool tessellation = false,
+	const SHCAM* shcams = nullptr)
 {
 	if (!renderQueue.empty())
 	{
@@ -2988,10 +2986,17 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 			renderPass == RENDERPASS_ENVMAPCAPTURE ||
 			renderPass == RENDERPASS_VOXELIZE;
 
+		// Do we render to cubemaps in this pass?
+		const bool cubemapRenderRequest =
+			renderPass == RENDERPASS_SHADOWCUBE ||
+			renderPass == RENDERPASS_ENVMAPCAPTURE;
+
+		// If we will be rendering to cubemaps, we will further replicate instances to each visible cubemap face:
+		const uint32_t instanceReplicator = cubemapRenderRequest ? 6 : 1;
 
 		// Pre-allocate space for all the instances in GPU-buffer:
 		const uint32_t instanceDataSize = advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
-		const size_t alloc_size = renderQueue.batchCount * instanceDataSize;
+		size_t alloc_size = renderQueue.batchCount * instanceReplicator * instanceDataSize;
 		GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
 
 		// Purpose of InstancedBatch:
@@ -3011,6 +3016,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 
 		size_t prevMeshIndex = ~0;
 		uint8_t prevUserStencilRefOverride = 0;
+		uint32_t instanceCount = 0;
 		for (uint32_t batchID = 0; batchID < renderQueue.batchCount; ++batchID) // Do not break out of this loop!
 		{
 			const RenderBatch& batch = renderQueue.batchArray[batchID];
@@ -3029,7 +3035,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 				InstancedBatch* instancedBatch = (InstancedBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(InstancedBatch));
 				instancedBatch->meshIndex = meshIndex;
 				instancedBatch->instanceCount = 0;
-				instancedBatch->dataOffset = instances.offset + batchID * instanceDataSize;
+				instancedBatch->dataOffset = instances.offset + instanceCount * instanceDataSize;
 				instancedBatch->userStencilRefOverride = userStencilRefOverride;
 				instancedBatch->forceAlphatestForDithering = 0;
 				instancedBatch->aabb = AABB();
@@ -3056,29 +3062,41 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 				current_batch.forceAlphatestForDithering = 1;
 			}
 
+			const AABB& instanceAABB = scene.aabb_objects[instanceIndex];
+
 			if (forwardLightmaskRequest)
 			{
-				const AABB& instanceAABB = scene.aabb_objects[instanceIndex];
 				current_batch.aabb = AABB::Merge(current_batch.aabb, instanceAABB);
 			}
 
 			const XMFLOAT4X4& worldMatrix = instance.transform_index >= 0 ? scene.transforms[instance.transform_index].world : IDENTITYMATRIX;
 
-			// Write into actual GPU-buffer:
-			if (advancedVBRequest)
+			for (uint32_t subInstance = 0; subInstance < instanceReplicator; ++subInstance)
 			{
-				((volatile InstBuf*)instances.data)[batchID].instance.Create(worldMatrix, instance.color, dither);
+				if (shcams != nullptr && !shcams[subInstance].frustum.CheckBox(instanceAABB))
+				{
+					// In case shadow cameras were provided and no intersection detected with frustum, we don't add the instance for the face:
+					continue;
+				}
 
-				const XMFLOAT4X4& prev_worldMatrix = instance.prev_transform_index >= 0 ? scene.prev_transforms[instance.prev_transform_index].world_prev : IDENTITYMATRIX;
-				((volatile InstBuf*)instances.data)[batchID].instancePrev.Create(prev_worldMatrix);
-				((volatile InstBuf*)instances.data)[batchID].instanceAtlas.Create(instance.globalLightMapMulAdd);
-			}
-			else
-			{
-				((volatile Instance*)instances.data)[batchID].Create(worldMatrix, instance.color, dither);
+				// Write into actual GPU-buffer:
+				if (advancedVBRequest)
+				{
+					((volatile InstBuf*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, subInstance);
+
+					const XMFLOAT4X4& prev_worldMatrix = instance.prev_transform_index >= 0 ? scene.prev_transforms[instance.prev_transform_index].world_prev : IDENTITYMATRIX;
+					((volatile InstBuf*)instances.data)[instanceCount].instancePrev.Create(prev_worldMatrix);
+					((volatile InstBuf*)instances.data)[instanceCount].instanceAtlas.Create(instance.globalLightMapMulAdd);
+				}
+				else
+				{
+					((volatile Instance*)instances.data)[instanceCount].Create(worldMatrix, instance.color, dither, subInstance);
+				}
+
+				current_batch.instanceCount++; // next instance in current InstancedBatch
+				instanceCount++;
 			}
 
-			current_batch.instanceCount++; // next instance in current InstancedBatch
 		}
 
 
@@ -3395,7 +3413,7 @@ void RenderImpostors(const CameraComponent& camera, RENDERPASS renderPass, Comma
 
 				float dither = std::max(0.0f, impostor.swapInDistance - distance) / impostor.fadeThresholdRadius;
 
-				((volatile Instance*)instances.data)[drawableInstanceCount].Create(mat, XMFLOAT4((float)impostorID * impostorCaptureAngles * 3, 1, 1, 1), dither);
+				((volatile Instance*)instances.data)[drawableInstanceCount].Create(mat, XMFLOAT4(1, 1, 1, 1), dither, uint32_t(impostorID * impostorCaptureAngles * 3));
 
 				drawableInstanceCount++;
 			}
@@ -3955,9 +3973,9 @@ void UpdateRenderData(CommandList cmd)
 				{
 					std::array<SHCAM, CASCADE_COUNT> shcams;
 					CreateDirLightShadowCams(light, GetCamera(), shcams);
-					matrixArray[matrixCounter++] = shcams[0].getVP();
-					matrixArray[matrixCounter++] = shcams[1].getVP();
-					matrixArray[matrixCounter++] = shcams[2].getVP();
+					matrixArray[matrixCounter++] = shcams[0].VP;
+					matrixArray[matrixCounter++] = shcams[1].VP;
+					matrixArray[matrixCounter++] = shcams[2].VP;
 				}
 			}
 			break;
@@ -3972,7 +3990,7 @@ void UpdateRenderData(CommandList cmd)
 				{
 					SHCAM shcam;
 					CreateSpotLightShadowCam(light, shcam);
-					matrixArray[matrixCounter++] = shcam.getVP();
+					matrixArray[matrixCounter++] = shcam.VP;
 				}
 			}
 			break;
@@ -5062,7 +5080,7 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 						if (!renderQueue.empty())
 						{
 							CameraCB cb;
-							XMStoreFloat4x4(&cb.g_xCamera_VP, shcams[cascade].getVP());
+							XMStoreFloat4x4(&cb.g_xCamera_VP, shcams[cascade].VP);
 							device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
 
 							device->RenderPassBegin(&renderpasses_shadow2D[light.shadowMap_index + cascade], cmd);
@@ -5120,7 +5138,7 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 					if (!renderQueue.empty())
 					{
 						CameraCB cb;
-						XMStoreFloat4x4(&cb.g_xCamera_VP, shcam.getVP());
+						XMStoreFloat4x4(&cb.g_xCamera_VP, shcam.VP);
 						device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
 
 						device->RenderPassBegin(&renderpasses_shadow2D[light.shadowMap_index], cmd);
@@ -5194,12 +5212,12 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 						CubemapRenderCB cb;
 						for (int shcam = 0; shcam < arraysize(cameras); ++shcam)
 						{
-							XMStoreFloat4x4(&cb.xCubeShadowVP[shcam], cameras[shcam].getVP());
+							XMStoreFloat4x4(&cb.xCubeShadowVP[shcam], cameras[shcam].VP);
 						}
 						device->UpdateBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, cmd);
 
 						device->RenderPassBegin(&renderpasses_shadowCube[light.shadowMap_index], cmd);
-						RenderMeshes(renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, cmd);
+						RenderMeshes(renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, cmd, false, cameras);
 						device->RenderPassEnd(cmd);
 
 						GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
@@ -6297,7 +6315,7 @@ void RefreshEnvProbes(CommandList cmd)
 		CubemapRenderCB cb;
 		for (int i = 0; i < arraysize(cameras); ++i)
 		{
-			XMStoreFloat4x4(&cb.xCubeShadowVP[i], cameras[i].getVP());
+			XMStoreFloat4x4(&cb.xCubeShadowVP[i], cameras[i].VP);
 		}
 
 		device->UpdateBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, cmd);
@@ -6344,7 +6362,7 @@ void RefreshEnvProbes(CommandList cmd)
 		{
 			BindShadowmaps(PS, cmd);
 
-			RenderMeshes(renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_OPAQUE | RENDERTYPE_TRANSPARENT, cmd);
+			RenderMeshes(renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_OPAQUE | RENDERTYPE_TRANSPARENT, cmd, false, cameras);
 
 			GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 		}

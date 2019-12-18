@@ -1,24 +1,19 @@
 #include "envMapHF.hlsli"
 
-[maxvertexcount(18)]
+[maxvertexcount(3)]
 void main(triangle VSOut_EnvmapRendering input[3], inout TriangleStream<PSIn_EnvmapRendering> CubeMapStream)
 {
 	[unroll]
-	for (int f = 0; f < 6; ++f)
+	for (uint v = 0; v < 3; v++)
 	{
 		PSIn_EnvmapRendering output;
-		output.RTIndex = f;
-		[unroll]
-		for (uint v = 0; v < 3; v++)
-		{
-			output.pos = mul(xCubeShadowVP[f], input[v].pos);
-			output.color = input[v].color;
-			output.uvsets = input[v].uvsets;
-			output.atl = input[v].atl;
-			output.nor = input[v].nor;
-			output.pos3D = input[v].pos.xyz;
-			CubeMapStream.Append(output);
-		}
-		CubeMapStream.RestartStrip();
+		output.RTIndex = input[v].faceIndex;
+		output.pos = mul(xCubeShadowVP[output.RTIndex], input[v].pos);
+		output.color = input[v].color;
+		output.uvsets = input[v].uvsets;
+		output.atl = input[v].atl;
+		output.nor = input[v].nor;
+		output.pos3D = input[v].pos.xyz;
+		CubeMapStream.Append(output);
 	}
 }

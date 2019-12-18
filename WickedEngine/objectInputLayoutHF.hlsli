@@ -1,5 +1,6 @@
 #ifndef WI_MESH_INPUT_LAYOUT_HF
 #define WI_MESH_INPUT_LAYOUT_HF
+#include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 
 struct Input_Instance
@@ -7,7 +8,7 @@ struct Input_Instance
 	float4 mat0 : INSTANCEMATRIX0;
 	float4 mat1 : INSTANCEMATRIX1;
 	float4 mat2 : INSTANCEMATRIX2;
-	float4 color : INSTANCECOLOR;
+	uint4 userdata : INSTANCEUSERDATA;
 };
 struct Input_InstancePrev
 {
@@ -80,7 +81,7 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_POS input)
 
 	surface.position = float4(input.pos.xyz, 1);
 
-	surface.color = g_xMaterial.baseColor * input.inst.color;
+	surface.color = g_xMaterial.baseColor * unpack_rgba(input.inst.userdata.x);
 
 	uint normal_subsetIndex = asuint(input.pos.w);
 	surface.normal.x = (float)((normal_subsetIndex >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
@@ -96,7 +97,7 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_POS_TEX input)
 
 	surface.position = float4(input.pos.xyz, 1);
 
-	surface.color = g_xMaterial.baseColor * input.inst.color;
+	surface.color = g_xMaterial.baseColor * unpack_rgba(input.inst.userdata.x);
 
 	uint normal_subsetIndex = asuint(input.pos.w);
 	surface.normal.x = (float)((normal_subsetIndex >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
@@ -114,7 +115,7 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_ALL input)
 
 	surface.position = float4(input.pos.xyz, 1);
 
-	surface.color = g_xMaterial.baseColor * input.inst.color;
+	surface.color = g_xMaterial.baseColor * unpack_rgba(input.inst.userdata.x);
 
 	if (g_xMaterial.useVertexColors)
 	{

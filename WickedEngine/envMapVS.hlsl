@@ -14,6 +14,7 @@ VSOut_EnvmapRendering main(Input_Object_ALL input)
 	Out.uvsets = surface.uvsets;
 	Out.atl = surface.atlas;
 	Out.nor = normalize(mul((float3x3)WORLD, surface.normal));
+	Out.faceIndex = input.inst.userdata.y;
 
 	return Out;
 }
