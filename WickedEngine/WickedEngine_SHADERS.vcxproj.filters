@@ -96,15 +96,6 @@
     <FxCompile Include="luminancePass2CS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="cubeShadowGS.hlsl">
-      <Filter>GS</Filter>
-    </FxCompile>
-    <FxCompile Include="envMap_skyGS.hlsl">
-      <Filter>GS</Filter>
-    </FxCompile>
-    <FxCompile Include="envMapGS.hlsl">
-      <Filter>GS</Filter>
-    </FxCompile>
     <FxCompile Include="lensFlareGS.hlsl">
       <Filter>GS</Filter>
     </FxCompile>
@@ -377,9 +368,6 @@
     </FxCompile>
     <FxCompile Include="shadowVS_alphatest.hlsl">
       <Filter>VS</Filter>
-    </FxCompile>
-    <FxCompile Include="cubeShadowGS_alphatest.hlsl">
-      <Filter>GS</Filter>
     </FxCompile>
     <FxCompile Include="shadowPS_alphatest.hlsl">
       <Filter>PS</Filter>

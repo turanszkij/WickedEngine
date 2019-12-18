@@ -1217,8 +1217,9 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 		}
 	}
 
-	//D3D11_FEATURE_DATA_D3D11_OPTIONS3 features_3;
-	//hr = device->CheckFeatureSupport(D3D11_FEATURE_D3D11_OPTIONS3, &features_3, sizeof(features_3));
+	D3D11_FEATURE_DATA_D3D11_OPTIONS3 features_3;
+	hr = device->CheckFeatureSupport(D3D11_FEATURE_D3D11_OPTIONS3, &features_3, sizeof(features_3));
+	RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS = features_3.VPAndRTArrayIndexFromAnyShaderFeedingRasterizer == TRUE;
 
 	CreateBackBufferResources();
 

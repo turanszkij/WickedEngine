@@ -1,24 +1,23 @@
 #include "globals.hlsli"
 #include "objectInputLayoutHF.hlsli"
 
-
-struct GS_CUBEMAP_IN
+struct VertexOut
 {
-	float4 pos : SV_POSITION;    // World position
-	uint faceIndex	: FACEINDEX;
-	float2 uv : UV;
+	float4 pos		: SV_POSITION;
+	float2 uv		: UV;
+	uint RTIndex	: SV_RenderTargetArrayIndex;
 };
 
-GS_CUBEMAP_IN main(Input_Object_POS_TEX input)
+VertexOut main(Input_Object_POS_TEX input)
 {
-	GS_CUBEMAP_IN Out;
+	VertexOut output;
 
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.inst);
 	VertexSurface surface = MakeVertexSurfaceFromInput(input);
 
-	Out.pos = mul(WORLD, surface.position);
-	Out.faceIndex = input.inst.userdata.y;
-	Out.uv = g_xMaterial.uvset_baseColorMap == 0 ? surface.uvsets.xy : surface.uvsets.zw;
+	output.RTIndex = input.inst.userdata.y;
+	output.pos = mul(xCubeShadowVP[output.RTIndex], mul(WORLD, surface.position));
+	output.uv = g_xMaterial.uvset_baseColorMap == 0 ? surface.uvsets.xy : surface.uvsets.zw;
 
-	return Out;
+	return output;
 }

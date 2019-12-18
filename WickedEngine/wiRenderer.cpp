@@ -303,11 +303,6 @@ GFX_STRUCT Instance
 	XMFLOAT4A mat2;
 	XMUINT4 userdata;
 
-	Instance(){}
-	Instance(const XMFLOAT4X4& matIn, const XMFLOAT4& colorIn = XMFLOAT4(1, 1, 1, 1), float dither = 0, uint32_t subInstance = 0)
-	{
-		Create(matIn, colorIn, dither, subInstance);
-	}
 	inline void Create(const XMFLOAT4X4& matIn, const XMFLOAT4& colorIn = XMFLOAT4(1, 1, 1, 1), float dither = 0, uint32_t subInstance = 0) volatile
 	{
 		mat0.x = matIn._11;
@@ -342,11 +337,6 @@ GFX_STRUCT InstancePrev
 	XMFLOAT4A mat1;
 	XMFLOAT4A mat2;
 
-	InstancePrev(){}
-	InstancePrev(const XMFLOAT4X4& matIn)
-	{
-		Create(matIn);
-	}
 	inline void Create(const XMFLOAT4X4& matIn) volatile
 	{
 		mat0.x = matIn._11;
@@ -683,31 +673,6 @@ GSTYPES GetGSTYPE(RENDERPASS renderPass, bool alphatest)
 
 	switch (renderPass)
 	{
-	case RENDERPASS_TEXTURE:
-		break;
-	case RENDERPASS_DEFERRED:
-		break;
-	case RENDERPASS_FORWARD:
-		break;
-	case RENDERPASS_TILEDFORWARD:
-		break;
-	case RENDERPASS_DEPTHONLY:
-		break;
-	case RENDERPASS_ENVMAPCAPTURE:
-		realGS = GSTYPE_ENVMAP;
-		break;
-	case RENDERPASS_SHADOW:
-		break;
-	case RENDERPASS_SHADOWCUBE:
-		if (alphatest)
-		{
-			realGS = GSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
-		}
-		else
-		{
-			realGS = GSTYPE_SHADOWCUBEMAPRENDER;
-		}
-		break;
 	case RENDERPASS_VOXELIZE:
 		realGS = GSTYPE_VOXELIZER;
 		break;
@@ -1365,10 +1330,6 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, []{ LoadPixelShader(pixelShaders[PSTYPE_POSTPROCESS_SSS], "sssPS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadPixelShader(pixelShaders[PSTYPE_LENSFLARE], "lensFlarePS.cso"); });
 
-	wiJobSystem::Execute(ctx, []{ LoadGeometryShader(geometryShaders[GSTYPE_ENVMAP], "envMapGS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadGeometryShader(geometryShaders[GSTYPE_ENVMAP_SKY], "envMap_skyGS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadGeometryShader(geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER], "cubeShadowGS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadGeometryShader(geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST], "cubeShadowGS_alphatest.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadGeometryShader(geometryShaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadGeometryShader(geometryShaders[GSTYPE_VOXEL], "voxelGS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadGeometryShader(geometryShaders[GSTYPE_LENSFLARE], "lensFlareGS.cso"); });
@@ -1935,13 +1896,11 @@ void LoadShaders()
 			desc.bs = &blendStates[BSTYPE_OPAQUE];
 			desc.vs = &vertexShaders[VSTYPE_ENVMAP_SKY];
 			desc.ps = &pixelShaders[PSTYPE_ENVMAP_SKY_STATIC];
-			desc.gs = &geometryShaders[GSTYPE_ENVMAP_SKY];
 			break;
 		case SKYRENDERING_ENVMAPCAPTURE_DYNAMIC:
 			desc.bs = &blendStates[BSTYPE_OPAQUE];
 			desc.vs = &vertexShaders[VSTYPE_ENVMAP_SKY];
 			desc.ps = &pixelShaders[PSTYPE_ENVMAP_SKY_DYNAMIC];
-			desc.gs = &geometryShaders[GSTYPE_ENVMAP_SKY];
 			break;
 		}
 
@@ -2729,7 +2688,6 @@ static const uint32_t CASCADE_COUNT = 3;
 struct SHCAM
 {
 	XMMATRIX VP;
-	AABB boundingbox;
 	Frustum frustum;
 
 	SHCAM() {}
@@ -2838,12 +2796,10 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 		_min.z = std::min(_min.z, -farPlane * 0.5f);
 		_max.z = std::max(_max.z, farPlane * 0.5f);
 
-		// Compute bounding box used for culling, conservatively transformed by the light transform:
-		shcams[cascade].boundingbox = AABB(_min, _max).transform(XMMatrixInverse(nullptr, lightView));
-
 		const XMMATRIX lightProjection = XMMatrixOrthographicOffCenterLH(_min.x, _max.x, _min.y, _max.y, _max.z, _min.z); // notice reversed Z!
 
 		shcams[cascade].VP = XMMatrixMultiply(lightView, lightProjection);
+		shcams[cascade].frustum.Create(shcams[cascade].VP);
 	}
 
 }
@@ -4984,137 +4940,36 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 		BindConstantBuffers(VS, cmd);
 		BindConstantBuffers(PS, cmd);
 
-
-		Viewport vp;
-
-
 		const Scene& scene = GetScene();
 
 		device->UnbindResources(TEXSLOT_SHADOWARRAY_2D, 2, cmd);
 
-		for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
+		for (uint32_t lightIndex : culling.culledLights)
 		{
-			switch (type)
+			const LightComponent& light = scene.lights[lightIndex];
+			if (light.shadowMap_index < 0 || !light.IsCastingShadow() || light.IsStatic())
+			{
+				continue;
+			}
+
+			switch (light.GetType())
 			{
 			case LightComponent::DIRECTIONAL:
-			case LightComponent::SPOT:
 			{
-				vp.TopLeftX = 0;
-				vp.TopLeftY = 0;
-				vp.Width = (float)SHADOWRES_2D;
-				vp.Height = (float)SHADOWRES_2D;
-				vp.MinDepth = 0.0f;
-				vp.MaxDepth = 1.0f;
-				device->BindViewports(1, &vp, cmd);
-				break;
-			}
-			break;
-			case LightComponent::POINT:
-			case LightComponent::SPHERE:
-			case LightComponent::DISC:
-			case LightComponent::RECTANGLE:
-			case LightComponent::TUBE:
-			{
-				vp.TopLeftX = 0;
-				vp.TopLeftY = 0;
-				vp.Width = (float)SHADOWRES_CUBE;
-				vp.Height = (float)SHADOWRES_CUBE;
-				vp.MinDepth = 0.0f;
-				vp.MaxDepth = 1.0f;
-				device->BindViewports(1, &vp, cmd);
+				std::array<SHCAM, CASCADE_COUNT> shcams;
+				CreateDirLightShadowCams(light, camera, shcams);
 
-				device->BindConstantBuffer(GS, &constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), cmd);
-				break;
-			}
-			break;
-			default:
-				break;
-			}
-
-			for (uint32_t lightIndex : culling.culledLights)
-			{
-				const LightComponent& light = scene.lights[lightIndex];
-				if (light.shadowMap_index < 0 || light.GetType() != type || !light.IsCastingShadow() || light.IsStatic())
+				for (uint32_t cascade = 0; cascade < CASCADE_COUNT; ++cascade)
 				{
-					continue;
-				}
-
-				switch (type)
-				{
-				case LightComponent::DIRECTIONAL:
-				{
-					std::array<SHCAM, CASCADE_COUNT> shcams;
-					CreateDirLightShadowCams(light, camera, shcams);
-
-					for (uint32_t cascade = 0; cascade < CASCADE_COUNT; ++cascade)
-					{
-						RenderQueue renderQueue;
-						bool transparentShadowsRequested = false;
-						for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
-						{
-							const AABB& aabb = scene.aabb_objects[i];
-							if (shcams[cascade].boundingbox.intersects(aabb))
-							{
-								const ObjectComponent& object = scene.objects[i];
-								if (object.IsRenderable() && cascade >= object.cascadeMask && object.IsCastingShadow())
-								{
-									Entity cullable_entity = scene.aabb_objects.GetEntity(i);
-									const LayerComponent* layer = scene.layers.GetComponent(cullable_entity);
-									if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
-									{
-										continue;
-									}
-
-									RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
-									size_t meshIndex = scene.meshes.GetIndex(object.meshID);
-									batch->Create(meshIndex, i, 0);
-									renderQueue.add(batch);
-
-									if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
-									{
-										transparentShadowsRequested = true;
-									}
-								}
-							}
-						}
-						if (!renderQueue.empty())
-						{
-							CameraCB cb;
-							XMStoreFloat4x4(&cb.g_xCamera_VP, shcams[cascade].VP);
-							device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
-
-							device->RenderPassBegin(&renderpasses_shadow2D[light.shadowMap_index + cascade], cmd);
-							RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
-							device->RenderPassEnd(cmd);
-
-							// Transparent renderpass will always be started so that it is clear:
-							device->RenderPassBegin(&renderpasses_shadow2DTransparent[light.shadowMap_index + cascade], cmd);
-							if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
-							{
-								RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
-							}
-							device->RenderPassEnd(cmd);
-
-							GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
-						}
-
-					}
-				}
-				break;
-				case LightComponent::SPOT:
-				{
-					SHCAM shcam;
-					CreateSpotLightShadowCam(light, shcam);
-
 					RenderQueue renderQueue;
 					bool transparentShadowsRequested = false;
 					for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 					{
 						const AABB& aabb = scene.aabb_objects[i];
-						if (shcam.frustum.CheckBox(aabb))
+						if (shcams[cascade].frustum.CheckBox(aabb))
 						{
 							const ObjectComponent& object = scene.objects[i];
-							if (object.IsRenderable() && object.IsCastingShadow())
+							if (object.IsRenderable() && cascade >= object.cascadeMask && object.IsCastingShadow())
 							{
 								Entity cullable_entity = scene.aabb_objects.GetEntity(i);
 								const LayerComponent* layer = scene.layers.GetComponent(cullable_entity);
@@ -5138,15 +4993,24 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 					if (!renderQueue.empty())
 					{
 						CameraCB cb;
-						XMStoreFloat4x4(&cb.g_xCamera_VP, shcam.VP);
+						XMStoreFloat4x4(&cb.g_xCamera_VP, shcams[cascade].VP);
 						device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
 
-						device->RenderPassBegin(&renderpasses_shadow2D[light.shadowMap_index], cmd);
+						Viewport vp;
+						vp.TopLeftX = 0;
+						vp.TopLeftY = 0;
+						vp.Width = (float)SHADOWRES_2D;
+						vp.Height = (float)SHADOWRES_2D;
+						vp.MinDepth = 0.0f;
+						vp.MaxDepth = 1.0f;
+						device->BindViewports(1, &vp, cmd);
+
+						device->RenderPassBegin(&renderpasses_shadow2D[light.shadowMap_index + cascade], cmd);
 						RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
 						device->RenderPassEnd(cmd);
 
 						// Transparent renderpass will always be started so that it is clear:
-						device->RenderPassBegin(&renderpasses_shadow2DTransparent[light.shadowMap_index], cmd);
+						device->RenderPassBegin(&renderpasses_shadow2DTransparent[light.shadowMap_index + cascade], cmd);
 						if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 						{
 							RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
@@ -5157,79 +5021,155 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 					}
 
 				}
-				break;
-				case LightComponent::POINT:
-				case LightComponent::SPHERE:
-				case LightComponent::DISC:
-				case LightComponent::RECTANGLE:
-				case LightComponent::TUBE:
+			}
+			break;
+			case LightComponent::SPOT:
+			{
+				SHCAM shcam;
+				CreateSpotLightShadowCam(light, shcam);
+
+				RenderQueue renderQueue;
+				bool transparentShadowsRequested = false;
+				for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 				{
-					SPHERE boundingsphere = SPHERE(light.position, light.GetRange());
-
-					RenderQueue renderQueue;
-					for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
+					const AABB& aabb = scene.aabb_objects[i];
+					if (shcam.frustum.CheckBox(aabb))
 					{
-						const AABB& aabb = scene.aabb_objects[i];
-						if (boundingsphere.intersects(aabb))
+						const ObjectComponent& object = scene.objects[i];
+						if (object.IsRenderable() && object.IsCastingShadow())
 						{
-							const ObjectComponent& object = scene.objects[i];
-							if (object.IsRenderable() && object.IsCastingShadow() && object.GetRenderTypes() == RENDERTYPE_OPAQUE)
+							Entity cullable_entity = scene.aabb_objects.GetEntity(i);
+							const LayerComponent* layer = scene.layers.GetComponent(cullable_entity);
+							if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 							{
-								Entity cullable_entity = scene.aabb_objects.GetEntity(i);
-								const LayerComponent* layer = scene.layers.GetComponent(cullable_entity);
-								if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
-								{
-									continue;
-								}
+								continue;
+							}
 
-								RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
-								size_t meshIndex = scene.meshes.GetIndex(object.meshID);
-								batch->Create(meshIndex, i, 0);
-								renderQueue.add(batch);
+							RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
+							size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+							batch->Create(meshIndex, i, 0);
+							renderQueue.add(batch);
+
+							if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
+							{
+								transparentShadowsRequested = true;
 							}
 						}
 					}
-					if (!renderQueue.empty())
-					{
-						MiscCB miscCb;
-						miscCb.g_xColor = float4(light.position.x, light.position.y, light.position.z, 0);
-						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
-						device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-						device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-
-						const float zNearP = 0.1f;
-						const float zFarP = std::max(1.0f, light.GetRange());
-						const XMVECTOR lightPos = XMLoadFloat3(&light.position);
-						const SHCAM cameras[] = {
-							SHCAM(lightPos, XMVectorSet(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
-							SHCAM(lightPos, XMVectorSet(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //-x
-							SHCAM(lightPos, XMVectorSet(1, 0, 0, -0), zNearP, zFarP, XM_PIDIV2), //+y
-							SHCAM(lightPos, XMVectorSet(0, 0, 0, -1), zNearP, zFarP, XM_PIDIV2), //-y
-							SHCAM(lightPos, XMVectorSet(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2), //+z
-							SHCAM(lightPos, XMVectorSet(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2), //-z
-						};
-
-						CubemapRenderCB cb;
-						for (int shcam = 0; shcam < arraysize(cameras); ++shcam)
-						{
-							XMStoreFloat4x4(&cb.xCubeShadowVP[shcam], cameras[shcam].VP);
-						}
-						device->UpdateBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, cmd);
-
-						device->RenderPassBegin(&renderpasses_shadowCube[light.shadowMap_index], cmd);
-						RenderMeshes(renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, cmd, false, cameras);
-						device->RenderPassEnd(cmd);
-
-						GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
-					}
-
 				}
-				break;
-				} // terminate switch
+				if (!renderQueue.empty())
+				{
+					CameraCB cb;
+					XMStoreFloat4x4(&cb.g_xCamera_VP, shcam.VP);
+					device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
+
+					device->RenderPassBegin(&renderpasses_shadow2D[light.shadowMap_index], cmd);
+					RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
+					device->RenderPassEnd(cmd);
+
+					Viewport vp;
+					vp.TopLeftX = 0;
+					vp.TopLeftY = 0;
+					vp.Width = (float)SHADOWRES_2D;
+					vp.Height = (float)SHADOWRES_2D;
+					vp.MinDepth = 0.0f;
+					vp.MaxDepth = 1.0f;
+					device->BindViewports(1, &vp, cmd);
+
+					// Transparent renderpass will always be started so that it is clear:
+					device->RenderPassBegin(&renderpasses_shadow2DTransparent[light.shadowMap_index], cmd);
+					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
+					{
+						RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
+					}
+					device->RenderPassEnd(cmd);
+
+					GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
+				}
+
 			}
+			break;
+			case LightComponent::POINT:
+			case LightComponent::SPHERE:
+			case LightComponent::DISC:
+			case LightComponent::RECTANGLE:
+			case LightComponent::TUBE:
+			{
+				assert(device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS));
 
+				SPHERE boundingsphere = SPHERE(light.position, light.GetRange());
+
+				RenderQueue renderQueue;
+				for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
+				{
+					const AABB& aabb = scene.aabb_objects[i];
+					if (boundingsphere.intersects(aabb))
+					{
+						const ObjectComponent& object = scene.objects[i];
+						if (object.IsRenderable() && object.IsCastingShadow() && object.GetRenderTypes() == RENDERTYPE_OPAQUE)
+						{
+							Entity cullable_entity = scene.aabb_objects.GetEntity(i);
+							const LayerComponent* layer = scene.layers.GetComponent(cullable_entity);
+							if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+							{
+								continue;
+							}
+
+							RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
+							size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+							batch->Create(meshIndex, i, 0);
+							renderQueue.add(batch);
+						}
+					}
+				}
+				if (!renderQueue.empty())
+				{
+					MiscCB miscCb;
+					miscCb.g_xColor = float4(light.position.x, light.position.y, light.position.z, 0);
+					device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
+					device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+
+					const float zNearP = 0.1f;
+					const float zFarP = std::max(1.0f, light.GetRange());
+					const XMVECTOR lightPos = XMLoadFloat3(&light.position);
+					const SHCAM cameras[] = {
+						SHCAM(lightPos, XMVectorSet(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
+						SHCAM(lightPos, XMVectorSet(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //-x
+						SHCAM(lightPos, XMVectorSet(1, 0, 0, -0), zNearP, zFarP, XM_PIDIV2), //+y
+						SHCAM(lightPos, XMVectorSet(0, 0, 0, -1), zNearP, zFarP, XM_PIDIV2), //-y
+						SHCAM(lightPos, XMVectorSet(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2), //+z
+						SHCAM(lightPos, XMVectorSet(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2), //-z
+					};
+
+					CubemapRenderCB cb;
+					for (int shcam = 0; shcam < arraysize(cameras); ++shcam)
+					{
+						XMStoreFloat4x4(&cb.xCubeShadowVP[shcam], cameras[shcam].VP);
+					}
+					device->UpdateBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, cmd);
+					device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), cmd);
+
+					Viewport vp;
+					vp.TopLeftX = 0;
+					vp.TopLeftY = 0;
+					vp.Width = (float)SHADOWRES_CUBE;
+					vp.Height = (float)SHADOWRES_CUBE;
+					vp.MinDepth = 0.0f;
+					vp.MaxDepth = 1.0f;
+					device->BindViewports(1, &vp, cmd);
+
+					device->RenderPassBegin(&renderpasses_shadowCube[light.shadowMap_index], cmd);
+					RenderMeshes(renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, cmd, false, cameras);
+					device->RenderPassEnd(cmd);
+
+					GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
+				}
+
+			}
+			break;
+			} // terminate switch
 		}
-
 
 		wiProfiler::EndRange(range); // Shadow Rendering
 		device->EventEnd(cmd);
@@ -6287,6 +6227,8 @@ void RefreshEnvProbes(CommandList cmd)
 	GraphicsDevice* device = GetDevice();
 	device->EventBegin("EnvironmentProbe Refresh", cmd);
 
+	assert(device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS));
+
 	Viewport vp;
 	vp.Height = envmapRes;
 	vp.Width = envmapRes;
@@ -6319,7 +6261,7 @@ void RefreshEnvProbes(CommandList cmd)
 		}
 
 		device->UpdateBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, cmd);
-		device->BindConstantBuffer(GS, &constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), cmd);
+		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), cmd);
 
 
 		CameraCB camcb;
@@ -6379,7 +6321,7 @@ void RefreshEnvProbes(CommandList cmd)
 				device->BindPipelineState(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_DYNAMIC], cmd);
 			}
 
-			device->Draw(240, 0, cmd);
+			device->DrawInstanced(240, 6, 0, 0, cmd); // 6 instances so it will be replicated for every cubemap face
 		}
 
 		device->RenderPassEnd(cmd);

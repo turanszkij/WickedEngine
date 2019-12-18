@@ -1571,6 +1571,7 @@ namespace wiGraphics
 			assert(deviceFeatures.occlusionQueryPrecise == VK_TRUE);
 			TESSELLATION = deviceFeatures.tessellationShader == VK_TRUE;
 			UAV_LOAD_FORMAT_COMMON = deviceFeatures.shaderStorageImageExtendedFormats == VK_TRUE;
+			RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS = true; // let's hope for the best...
 			
 			VkFormatProperties formatProperties = { 0 };
 			vkGetPhysicalDeviceFormatProperties(physicalDevice, _ConvertFormat(FORMAT_R11G11B10_FLOAT), &formatProperties);

@@ -2,19 +2,21 @@
 #include "envMapHF.hlsli"
 
 
-VSOut_EnvmapRendering main(Input_Object_ALL input)
+PSIn_EnvmapRendering main(Input_Object_ALL input)
 {
-	VSOut_EnvmapRendering Out;
+	PSIn_EnvmapRendering output;
 
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.inst);
 	VertexSurface surface = MakeVertexSurfaceFromInput(input);
 
-	Out.pos = mul(WORLD, surface.position);
-	Out.color = surface.color;
-	Out.uvsets = surface.uvsets;
-	Out.atl = surface.atlas;
-	Out.nor = normalize(mul((float3x3)WORLD, surface.normal));
-	Out.faceIndex = input.inst.userdata.y;
+	output.RTIndex = input.inst.userdata.y;
+	output.pos = mul(WORLD, surface.position);
+	output.pos3D = output.pos.xyz;
+	output.pos = mul(xCubeShadowVP[output.RTIndex], output.pos);
+	output.color = surface.color;
+	output.uvsets = surface.uvsets;
+	output.atl = surface.atlas;
+	output.nor = normalize(mul((float3x3)WORLD, surface.normal));
 
-	return Out;
+	return output;
 }

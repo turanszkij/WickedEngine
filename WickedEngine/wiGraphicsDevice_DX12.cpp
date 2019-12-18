@@ -1641,6 +1641,7 @@ namespace wiGraphics
 		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &features_0, sizeof(features_0));
 		CONSERVATIVE_RASTERIZATION = features_0.ConservativeRasterizationTier >= D3D12_CONSERVATIVE_RASTERIZATION_TIER_1;
 		RASTERIZER_ORDERED_VIEWS = features_0.ROVsSupported == TRUE;
+		RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS = features_0.VPAndRTArrayIndexFromAnyShaderFeedingRasterizerSupportedWithoutGSEmulation == TRUE;
 
 		if (features_0.TypedUAVLoadAdditionalFormats)
 		{
