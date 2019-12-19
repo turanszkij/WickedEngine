@@ -5063,10 +5063,6 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 					XMStoreFloat4x4(&cb.g_xCamera_VP, shcam.VP);
 					device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
 
-					device->RenderPassBegin(&renderpasses_shadow2D[light.shadowMap_index], cmd);
-					RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
-					device->RenderPassEnd(cmd);
-
 					Viewport vp;
 					vp.TopLeftX = 0;
 					vp.TopLeftY = 0;
@@ -5075,6 +5071,10 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 					vp.MinDepth = 0.0f;
 					vp.MaxDepth = 1.0f;
 					device->BindViewports(1, &vp, cmd);
+
+					device->RenderPassBegin(&renderpasses_shadow2D[light.shadowMap_index], cmd);
+					RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
+					device->RenderPassEnd(cmd);
 
 					// Transparent renderpass will always be started so that it is clear:
 					device->RenderPassBegin(&renderpasses_shadow2DTransparent[light.shadowMap_index], cmd);
