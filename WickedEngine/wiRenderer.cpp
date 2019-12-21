@@ -136,9 +136,9 @@ struct VoxelizedSceneData
 	float voxelsize = 1;
 	XMFLOAT3 center = XMFLOAT3(0, 0, 0);
 	XMFLOAT3 extents = XMFLOAT3(0, 0, 0);
-	uint32_t numCones = 8;
-	float rayStepSize = 0.5f;
-	bool secondaryBounceEnabled = true;
+	uint32_t numCones = 4;
+	float rayStepSize = 0.75f;
+	bool secondaryBounceEnabled = false;
 	bool reflectionsEnabled = true;
 	bool centerChangedThisFrame = true;
 	uint32_t mips = 7;
@@ -6685,6 +6685,7 @@ void VoxelRadiance(CommandList cmd)
 		GPUResource* UAVs[] = { &resourceBuffers[RBTYPE_VOXELSCENE] };
 		device->BindUAVs(PS, UAVs, 0, 1, cmd);
 
+		BindCommonResources(cmd);
 		BindShadowmaps(PS, cmd);
 		BindConstantBuffers(VS, cmd);
 		BindConstantBuffers(PS, cmd);

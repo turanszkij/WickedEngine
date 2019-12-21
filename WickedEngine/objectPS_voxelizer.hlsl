@@ -48,9 +48,7 @@ void main(PSInput input)
 			emissiveColor *= emissiveMap;
 		}
 
-		// fake normals are good enough because it's only coarse diffuse light, no need to normalize:
-		//	(just uncomment if there are any noticable artifacts)
-		//N = normalize(N);
+		N = normalize(N);
 
 		Lighting lighting = CreateLighting(0, 0, 0, 0);
 
