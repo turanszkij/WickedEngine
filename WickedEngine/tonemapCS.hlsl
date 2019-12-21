@@ -27,5 +27,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	ldr.rgb = GAMMA(ldr.rgb);
 
+	// dithering before outputting to SDR will reduce color banding:
+	ldr.rgb += dither((float2)DTid.xy) / 64.0f;
+
 	output[DTid.xy] = ldr;
 }
