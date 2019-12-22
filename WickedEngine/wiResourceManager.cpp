@@ -312,17 +312,26 @@ namespace wiResourceManager
 		return result;
 	}
 
-	void Register(const wiHashString& name, void* data, wiResource::DATA_TYPE data_type)
+	std::shared_ptr<wiResource> Register(const wiHashString& name, void* data, wiResource::DATA_TYPE data_type)
 	{
+		std::shared_ptr<wiResource> resource;
+
 		locker.lock();
-		if (resources.find(name) == resources.end())
+		auto it = resources.find(name);
+		if (it == resources.end() || it->second.lock() == nullptr)
 		{
-			std::shared_ptr<wiResource> res = std::make_shared<wiResource>();
-			res->data = data;
-			res->type = data_type;
-			resources.insert(make_pair(name, res));
+			resource = std::make_shared<wiResource>();
+			resource->data = data;
+			resource->type = data_type;
+			resources.insert(make_pair(name, resource));
+		}
+		else
+		{
+			resource = it->second.lock();
 		}
 		locker.unlock();
+
+		return resource;
 	}
 
 	void Clear()

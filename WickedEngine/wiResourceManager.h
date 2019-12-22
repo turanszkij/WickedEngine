@@ -34,7 +34,7 @@ namespace wiResourceManager
 	// Check if a resource is currently loaded
 	bool Contains(const wiHashString& name);
 	// Register a pre-created resource
-	void Register(const wiHashString& name, void* data, wiResource::DATA_TYPE data_type);
+	std::shared_ptr<wiResource> Register(const wiHashString& name, void* data, wiResource::DATA_TYPE data_type);
 	// Invalidate all resources
 	void Clear();
 };
