@@ -127,15 +127,15 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 	});
 	rendererWindow->AddWidget(voxelRadianceRayStepSizeSlider);
 
-	specularAASlider = new wiSlider(0, 1, 1, 10000, "Specular Antialiasing: ");
-	specularAASlider->SetTooltip("Adjust specular antialiasing strength. This can reduce flickering of specular highlights.");
-	specularAASlider->SetSize(XMFLOAT2(100, 30));
-	specularAASlider->SetPos(XMFLOAT2(x, y += 30));
-	specularAASlider->SetValue(wiRenderer::GetSpecularAAParam());
-	specularAASlider->OnSlide([&](wiEventArgs args) {
-		wiRenderer::SetSpecularAAParam(args.fValue);
+	voxelRadianceMaxDistanceSlider = new wiSlider(0, 100, 10, 10000, "Voxel GI Max Distance: ");
+	voxelRadianceMaxDistanceSlider->SetTooltip("Adjust max raymarching distance for voxel GI.");
+	voxelRadianceMaxDistanceSlider->SetSize(XMFLOAT2(100, 30));
+	voxelRadianceMaxDistanceSlider->SetPos(XMFLOAT2(x, y += 30));
+	voxelRadianceMaxDistanceSlider->SetValue(wiRenderer::GetVoxelRadianceMaxDistance());
+	voxelRadianceMaxDistanceSlider->OnSlide([&](wiEventArgs args) {
+		wiRenderer::SetVoxelRadianceMaxDistance(args.fValue);
 	});
-	rendererWindow->AddWidget(specularAASlider);
+	rendererWindow->AddWidget(voxelRadianceMaxDistanceSlider);
 
 	wireFrameCheckBox = new wiCheckBox("Render Wireframe: ");
 	wireFrameCheckBox->SetTooltip("Visualize the scene as a wireframe");

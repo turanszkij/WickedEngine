@@ -44,7 +44,7 @@ public:
 	wiSlider*	voxelRadianceVoxelSizeSlider;
 	wiSlider*	voxelRadianceConeTracingSlider;
 	wiSlider*	voxelRadianceRayStepSizeSlider;
-	wiSlider*	specularAASlider;
+	wiSlider*	voxelRadianceMaxDistanceSlider;
 	wiCheckBox* partitionBoxesCheckBox;
 	wiCheckBox* boneLinesCheckBox;
 	wiCheckBox* debugEmittersCheckBox;

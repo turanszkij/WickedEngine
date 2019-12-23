@@ -22,8 +22,6 @@ static const float3 CONES[] =
 	float3(0.182696, -0.388844, 0.903007)
 };
 
-static const float MAX_DIST = 100;
-
 // voxels:			3D Texture containing voxel scene with direct diffuse lighting (or direct + secondary indirect bounce)
 // P:				world-space position of receiving surface
 // N:				world-space normal vector of receiving surface
@@ -40,9 +38,7 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 	float3 startPos = P + N * g_xFrame_VoxelRadianceDataSize * 2 * SQRT2; // sqrt2 is diagonal voxel half-extent
 
 	// We will break off the loop if the sampling distance is too far for performance reasons:
-	const float maxDistance = MAX_DIST * g_xFrame_VoxelRadianceDataSize;
-
-	while (dist < maxDistance && alpha < 1)
+	while (dist < g_xFrame_VoxelRadianceMaxDistance && alpha < 1)
 	{
 		float diameter = max(g_xFrame_VoxelRadianceDataSize, 2 * coneAperture * dist);
 		float mip = log2(diameter * g_xFrame_VoxelRadianceDataSize_rcp);

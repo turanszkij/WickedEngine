@@ -171,7 +171,7 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_Cloudiness;
 
 	float3		g_xFrame_Fog;								// Fog Start,End,Height
-	float		g_xFrame_SpecularAA;
+	float		g_xFrame_VoxelRadianceMaxDistance;			// maximum raymarch distance for voxel GI in world-space
 
 	float		g_xFrame_VoxelRadianceDataSize;				// voxel half-extent in world space units
 	float		g_xFrame_VoxelRadianceDataSize_rcp;			// 1.0 / voxel-half extent

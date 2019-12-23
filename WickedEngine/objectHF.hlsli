@@ -127,18 +127,6 @@ inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, in float3x3
 	bumpColor *= g_xMaterial.normalMapStrength;
 }
 
-inline void SpecularAA(in float3 N, inout float roughness)
-{
-	[branch]
-	if (g_xFrame_SpecularAA > 0)
-	{
-		float3 ddxN = ddx_coarse(N);
-		float3 ddyN = ddy_coarse(N);
-		float curve = pow(max(dot(ddxN, ddxN), dot(ddyN, ddyN)), 1 - g_xFrame_SpecularAA);
-		roughness = max(roughness, curve);
-	}
-}
-
 inline float3 PlanarReflection(in Surface surface, in float2 bumpColor)
 {
 	float4 reflectionUV = mul(g_xFrame_MainCamera_ReflVP, float4(surface.P, 1));
@@ -895,8 +883,6 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #endif // WATER
 
 
-
-	SpecularAA(surface.N, surface.roughness);
 
 	LightMapping(input.atl, lighting);
 

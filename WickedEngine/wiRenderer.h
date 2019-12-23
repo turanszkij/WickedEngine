@@ -429,13 +429,13 @@ namespace wiRenderer
 	bool GetVoxelRadianceReflectionsEnabled();
 	void SetVoxelRadianceVoxelSize(float value);
 	float GetVoxelRadianceVoxelSize();
+	void SetVoxelRadianceMaxDistance(float value);
+	float GetVoxelRadianceMaxDistance();
 	int GetVoxelRadianceResolution();
 	void SetVoxelRadianceNumCones(int value);
 	int GetVoxelRadianceNumCones();
 	float GetVoxelRadianceRayStepSize();
 	void SetVoxelRadianceRayStepSize(float value);
-	void SetSpecularAAParam(float value);
-	float GetSpecularAAParam();
 	void SetAdvancedRefractionsEnabled(bool value);
 	bool GetAdvancedRefractionsEnabled();
 	bool IsRequestedReflectionRendering();

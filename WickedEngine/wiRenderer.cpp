@@ -103,7 +103,6 @@ bool advancedLightCulling = true;
 bool advancedRefractions = false;
 bool ldsSkinningEnabled = true;
 bool scene_bvh_invalid = true;
-float SPECULARAA = 0.0f;
 float renderTime = 0;
 float renderTime_Prev = 0;
 float deltaTime = 0;
@@ -136,8 +135,9 @@ struct VoxelizedSceneData
 	float voxelsize = 1;
 	XMFLOAT3 center = XMFLOAT3(0, 0, 0);
 	XMFLOAT3 extents = XMFLOAT3(0, 0, 0);
-	uint32_t numCones = 4;
+	uint32_t numCones = 2;
 	float rayStepSize = 0.75f;
+	float maxDistance = 20.0f;
 	bool secondaryBounceEnabled = false;
 	bool reflectionsEnabled = true;
 	bool centerChangedThisFrame = true;
@@ -8071,7 +8071,7 @@ void UpdateFrameCB(CommandList cmd)
 	cb.g_xFrame_Fog = float3(scene.weather.fogStart, scene.weather.fogEnd, scene.weather.fogHeight);
 	cb.g_xFrame_Horizon = scene.weather.horizon;
 	cb.g_xFrame_Zenith = scene.weather.zenith;
-	cb.g_xFrame_SpecularAA = SPECULARAA;
+	cb.g_xFrame_VoxelRadianceMaxDistance = voxelSceneData.maxDistance;
 	cb.g_xFrame_VoxelRadianceDataSize = voxelSceneData.voxelsize;
 	cb.g_xFrame_VoxelRadianceDataSize_rcp = 1.0f / (float)cb.g_xFrame_VoxelRadianceDataSize;
 	cb.g_xFrame_VoxelRadianceDataRes = GetVoxelRadianceEnabled() ? (uint)voxelSceneData.res : 0;
@@ -9449,13 +9449,13 @@ void SetVoxelRadianceReflectionsEnabled(bool enabled) { voxelSceneData.reflectio
 bool GetVoxelRadianceReflectionsEnabled() { return voxelSceneData.reflectionsEnabled; }
 void SetVoxelRadianceVoxelSize(float value) { voxelSceneData.voxelsize = value; }
 float GetVoxelRadianceVoxelSize() { return voxelSceneData.voxelsize; }
+void SetVoxelRadianceMaxDistance(float value) { voxelSceneData.maxDistance = value; }
+float GetVoxelRadianceMaxDistance() { return voxelSceneData.maxDistance; }
 int GetVoxelRadianceResolution() { return voxelSceneData.res; }
 void SetVoxelRadianceNumCones(int value) { voxelSceneData.numCones = value; }
 int GetVoxelRadianceNumCones() { return voxelSceneData.numCones; }
 float GetVoxelRadianceRayStepSize() { return voxelSceneData.rayStepSize; }
 void SetVoxelRadianceRayStepSize(float value) { voxelSceneData.rayStepSize = value; }
-void SetSpecularAAParam(float value) { SPECULARAA = value; }
-float GetSpecularAAParam() { return SPECULARAA; }
 void SetAdvancedRefractionsEnabled(bool value) { advancedRefractions = value; }
 bool GetAdvancedRefractionsEnabled() { return advancedRefractions; }
 bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
