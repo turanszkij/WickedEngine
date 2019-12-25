@@ -1381,7 +1381,8 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD], "depthoffieldCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_OUTLINE_FLOAT4], "outlineCS_float4.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_OUTLINE_UNORM4], "outlineCS_unorm4.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY], "motionblur_tileMaxVelocityCS.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY_HORIZONTAL], "motionblur_tileMaxVelocity_horizontalCS.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY_VERTICAL], "motionblur_tileMaxVelocity_verticalCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_NEIGHBORHOODMAXVELOCITY], "motionblur_neighborhoodMaxVelocityCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR], "motionblurCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE], "bloomseparateCS.cso"); });
@@ -8940,27 +8941,67 @@ void Postprocess_MotionBlur(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	static uint2 tile_capacity = uint2(0, 0);
+	static bool init = false;
+	static uint32_t required_height = 0;
+	static Texture texture_tilemax_horizontal;
 	static Texture texture_tilemax;
 	static Texture texture_neighborhoodmax;
 
-	if (tile_capacity.x < desc.Width || tile_capacity.y < desc.Height)
+	if (!init)
 	{
-		tile_capacity = uint2(desc.Width, desc.Height);
-
+		init = true;
 		TextureDesc tile_desc;
 		tile_desc.type = TextureDesc::TEXTURE_2D;
-		tile_desc.Width = (desc.Width + MOTIONBLUR_TILESIZE - 1) / MOTIONBLUR_TILESIZE;
-		tile_desc.Height = (desc.Height + MOTIONBLUR_TILESIZE - 1) / MOTIONBLUR_TILESIZE;
+		tile_desc.Width = MOTIONBLUR_TILECOUNT;
+		tile_desc.Height = MOTIONBLUR_TILECOUNT;
 		tile_desc.Format = FORMAT_R16G16_FLOAT;
 		tile_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		device->CreateTexture(&tile_desc, nullptr, &texture_tilemax);
 		device->CreateTexture(&tile_desc, nullptr, &texture_neighborhoodmax);
 	}
-
-	// Compute tile max velocities (todo separable):
+	if (required_height < desc.Height)
 	{
-		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY], cmd);
+		required_height = desc.Height;
+		TextureDesc tile_desc = texture_tilemax.GetDesc();
+		tile_desc.Height = required_height;
+		device->CreateTexture(&tile_desc, nullptr, &texture_tilemax_horizontal);
+	}
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	// Compute tile max velocities (horizontal):
+	{
+		device->EventBegin("TileMax - Horizontal", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY_HORIZONTAL], cmd);
+
+		const GPUResource* uavs[] = {
+			&texture_tilemax_horizontal,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(texture_tilemax_horizontal.GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(texture_tilemax_horizontal.GetDesc().Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
+
+	// Compute tile max velocities (vertical):
+	{
+		device->EventBegin("TileMax - Vertical", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY_VERTICAL], cmd);
+
+		device->BindResource(CS, &texture_tilemax_horizontal, TEXSLOT_ONDEMAND0, cmd);
 
 		const GPUResource* uavs[] = {
 			&texture_tilemax,
@@ -8975,10 +9016,12 @@ void Postprocess_MotionBlur(
 		);
 		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
 	}
 
 	// Compute max velocities for each tiles' neighborhood
 	{
+		device->EventBegin("NeighborhoodMax", cmd);
 		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_NEIGHBORHOODMAXVELOCITY], cmd);
 
 		device->BindResource(CS, &texture_tilemax, TEXSLOT_ONDEMAND0, cmd);
@@ -8996,22 +9039,16 @@ void Postprocess_MotionBlur(
 		);
 		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
 	}
 
 	// Perform motion blur:
 	{
+		device->EventBegin("MotionBlur", cmd);
 		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR], cmd);
 
 		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, &texture_neighborhoodmax, TEXSLOT_ONDEMAND1, cmd);
-
-		PostProcessCB cb;
-		cb.xPPResolution.x = desc.Width;
-		cb.xPPResolution.y = desc.Height;
-		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
@@ -9028,6 +9065,7 @@ void Postprocess_MotionBlur(
 
 		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
 	}
 
 	wiProfiler::EndRange(range);
@@ -9044,6 +9082,7 @@ void Postprocess_Bloom(
 	GraphicsDevice* device = GetDevice();
 
 	device->EventBegin("Postprocess_Bloom", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Bloom", cmd);
 
 	// Separate bright parts of image to bloom texture:
 	{
@@ -9121,6 +9160,7 @@ void Postprocess_Bloom(
 		device->EventEnd(cmd);
 	}
 
+	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
 }
 void Postprocess_FXAA(

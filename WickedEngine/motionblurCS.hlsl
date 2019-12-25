@@ -47,7 +47,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
 
 	float seed = 12345;
-	const float2 random_direction = (float2(rand(seed, uv), rand(seed, uv)) - 0.5f) * xPPResolution_rcp * 0.35f;
+	const float2 random_direction = (float2(rand(seed, uv), rand(seed, uv)) - 0.5f) * xPPResolution_rcp * 0.5f;
 
 	const float strength = 0.025f;
 	const float2 sampling_direction = neighborhood_velocity * strength + random_direction;
@@ -60,7 +60,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, uv2, 0);
 		const float2 velocity = texture_gbuffer1.SampleLevel(sampler_linear_clamp, uv2, 0).zw;
 		const float velocity_magnitude = length(velocity);
-		const float weight = SampleWeight(center_depth, depth, neighborhood_velocity_magnitude * 10, center_velocity_magnitude, velocity_magnitude, 10, g_xCamera_ZFarP);
+		const float weight = SampleWeight(center_depth, depth, neighborhood_velocity_magnitude * 100, center_velocity_magnitude, velocity_magnitude, 1000, g_xCamera_ZFarP);
 		sum.rgb += input.SampleLevel(sampler_linear_clamp, uv2, 0).rgb * weight;
 		sum.w += weight;
 		numSampling++;
