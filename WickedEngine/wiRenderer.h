@@ -248,11 +248,12 @@ namespace wiRenderer
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
-	void Postprocess_BloomSeparate(
+	void Postprocess_Bloom(
 		const wiGraphics::Texture& input,
+		const wiGraphics::Texture& bloom,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
-		float threshold
+		float threshold = 1.0f
 	);
 	void Postprocess_FXAA(
 		const wiGraphics::Texture& input,

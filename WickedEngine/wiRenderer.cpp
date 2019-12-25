@@ -1385,6 +1385,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_NEIGHBORHOODMAXVELOCITY], "motionblur_neighborhoodMaxVelocityCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR], "motionblurCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE], "bloomseparateCS.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_BLOOMCOMBINE], "bloomcombineCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_FXAA], "fxaaCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_TEMPORALAA], "temporalaaCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_COLORGRADE], "colorgradeCS.cso"); });
@@ -9032,8 +9033,9 @@ void Postprocess_MotionBlur(
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
 }
-void Postprocess_BloomSeparate(
+void Postprocess_Bloom(
 	const Texture& input,
+	const Texture& bloom,
 	const Texture& output,
 	CommandList cmd,
 	float threshold
@@ -9041,38 +9043,83 @@ void Postprocess_BloomSeparate(
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->EventBegin("Postprocess_BloomSeparate", cmd);
+	device->EventBegin("Postprocess_Bloom", cmd);
 
-	device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE], cmd);
+	// Separate bright parts of image to bloom texture:
+	{
+		device->EventBegin("Bloom Separate", cmd);
 
-	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+		const TextureDesc& desc = bloom.GetDesc();
 
-	const TextureDesc& desc = output.GetDesc();
+		PostProcessCB cb;
+		cb.xPPResolution.x = desc.Width;
+		cb.xPPResolution.y = desc.Height;
+		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+		cb.xPPParams0.x = threshold;
+		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.xPPParams0.x = threshold;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE], cmd);
 
-	const GPUResource* uavs[] = {
-		&output,
-	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
 
+		const GPUResource* uavs[] = {
+			&bloom,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
-	device->Dispatch(
-		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-		1,
-		cmd
-	);
+		device->Dispatch(
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
 
-	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
+
+	device->EventBegin("Bloom Mipchain", cmd);
+	wiRenderer::GenerateMipChain(bloom, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd);
+	device->EventEnd(cmd);
+
+	// Combine image with bloom
+	{
+		device->EventBegin("Bloom Combine", cmd);
+
+		const TextureDesc& desc = output.GetDesc();
+
+		PostProcessCB cb;
+		cb.xPPResolution.x = desc.Width;
+		cb.xPPResolution.y = desc.Height;
+		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_BLOOMCOMBINE], cmd);
+
+		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &bloom, TEXSLOT_ONDEMAND1, cmd);
+
+		const GPUResource* uavs[] = {
+			&output,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
 
 	device->EventEnd(cmd);
 }

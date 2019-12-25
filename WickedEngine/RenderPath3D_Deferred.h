@@ -18,7 +18,6 @@ protected:
 	wiGraphics::RenderPass renderpass_deferredcomposition;
 	wiGraphics::RenderPass renderpass_SSS[3];
 	wiGraphics::RenderPass renderpass_transparent;
-	wiGraphics::RenderPass renderpass_bloom;
 
 	void ResizeBuffers() override;
 

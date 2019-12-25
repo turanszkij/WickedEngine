@@ -13,7 +13,6 @@ protected:
 	wiGraphics::RenderPass renderpass_depthprepass;
 	wiGraphics::RenderPass renderpass_main;
 	wiGraphics::RenderPass renderpass_transparent;
-	wiGraphics::RenderPass renderpass_bloom;
 
 	const constexpr wiGraphics::Texture* GetSceneRT_Read(int i) const
 	{

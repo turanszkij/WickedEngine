@@ -807,6 +807,9 @@
     <FxCompile Include="motionblur_neighborhoodMaxVelocityCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="bloomcombineCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

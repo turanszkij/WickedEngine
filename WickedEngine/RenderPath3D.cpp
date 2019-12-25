@@ -639,49 +639,6 @@ void RenderPath3D::TemporalAAResolve(const Texture& srcdstSceneRT, const Texture
 		device->EventEnd(cmd);
 	}
 }
-void RenderPath3D::RenderBloom(const RenderPass& renderpass_bloom, CommandList cmd) const
-{
-	if (getBloomEnabled())
-	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
-
-		device->EventBegin("Bloom", cmd);
-		auto range = wiProfiler::BeginRangeGPU("Bloom", cmd);
-
-		wiRenderer::Postprocess_BloomSeparate(*renderpass_bloom.desc.attachments[0].texture, rtBloom, cmd, getBloomThreshold());
-
-		wiRenderer::GenerateMipChain(rtBloom, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd);
-
-		// add to the scene
-		{
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
-
-			device->RenderPassBegin(&renderpass_bloom, cmd);
-
-			Viewport vp;
-			vp.Width = (float)renderpass_bloom.desc.attachments[0].texture->GetDesc().Width;
-			vp.Height = (float)renderpass_bloom.desc.attachments[0].texture->GetDesc().Height;
-			device->BindViewports(1, &vp, cmd);
-
-			wiImageParams fx;
-			fx.enableFullScreen();
-			fx.blendFlag = BLENDMODE_ADDITIVE;
-
-			fx.mipLevel = 1.5f;
-			wiImage::Draw(&rtBloom, fx, cmd);
-			fx.mipLevel = 3.5f;
-			wiImage::Draw(&rtBloom, fx, cmd);
-			fx.mipLevel = 5.5f;
-			wiImage::Draw(&rtBloom, fx, cmd);
-			fx.quality = QUALITY_LINEAR;
-
-			device->RenderPassEnd(cmd);
-		}
-
-		wiProfiler::EndRange(range);
-		device->EventEnd(cmd);
-	}
-}
 void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Texture& srcGbuffer1, CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -713,6 +670,14 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 				device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 			}
 			device->EventEnd(cmd);
+		}
+
+		if (getBloomEnabled())
+		{
+			wiRenderer::Postprocess_Bloom(*rt_read, rtBloom, *rt_write, cmd, getBloomThreshold());
+
+			std::swap(rt_read, rt_write);
+			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 	}
 

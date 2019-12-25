@@ -71,13 +71,6 @@ void RenderPath3D_Forward::ResizeBuffers()
 
 		device->CreateRenderPass(&desc, &renderpass_transparent);
 	}
-	{
-		RenderPassDesc desc;
-		desc.numAttachments = 1;
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,GetSceneRT_Read(0),-1 };
-
-		device->CreateRenderPass(&desc, &renderpass_bloom);
-	}
 }
 
 void RenderPath3D_Forward::Render() const
@@ -211,8 +204,6 @@ void RenderPath3D_Forward::Render() const
 		RenderOutline(*GetSceneRT_Read(0), cmd);
 
 		TemporalAAResolve(*GetSceneRT_Read(0), *GetSceneRT_Read(1), cmd);
-
-		RenderBloom(renderpass_bloom, cmd);
 
 		RenderPostprocessChain(*GetSceneRT_Read(0), *GetSceneRT_Read(1), cmd);
 

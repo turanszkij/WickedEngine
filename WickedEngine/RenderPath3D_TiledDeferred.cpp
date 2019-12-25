@@ -172,8 +172,6 @@ void RenderPath3D_TiledDeferred::Render() const
 
 		TemporalAAResolve(rtDeferred, rtGBuffer[1], cmd);
 
-		RenderBloom(renderpass_bloom, cmd);
-
 		RenderPostprocessChain(rtDeferred, rtGBuffer[1], cmd);
 
 	});

@@ -106,7 +106,6 @@ protected:
 	virtual void RenderRefractionSource(const wiGraphics::Texture& srcSceneRT, wiGraphics::CommandList cmd) const;
 	virtual void RenderTransparents(const wiGraphics::RenderPass& renderpass_transparent, RENDERPASS renderPass, wiGraphics::CommandList cmd) const;
 	virtual void TemporalAAResolve(const wiGraphics::Texture& srcdstSceneRT, const wiGraphics::Texture& srcGbuffer1, wiGraphics::CommandList cmd) const;
-	virtual void RenderBloom(const wiGraphics::RenderPass& renderpass_bloom, wiGraphics::CommandList cmd) const;
 	virtual void RenderPostprocessChain(const wiGraphics::Texture& srcSceneRT, const wiGraphics::Texture& srcGbuffer1, wiGraphics::CommandList cmd) const;
 	
 public:

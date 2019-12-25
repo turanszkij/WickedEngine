@@ -127,13 +127,6 @@ void RenderPath3D_Deferred::ResizeBuffers()
 
 		device->CreateRenderPass(&desc, &renderpass_transparent);
 	}
-	{
-		RenderPassDesc desc;
-		desc.numAttachments = 1;
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&rtDeferred,-1 };
-
-		device->CreateRenderPass(&desc, &renderpass_bloom);
-	}
 }
 
 void RenderPath3D_Deferred::Render() const
@@ -249,8 +242,6 @@ void RenderPath3D_Deferred::Render() const
 		RenderOutline(rtDeferred, cmd);
 
 		TemporalAAResolve(rtDeferred, rtGBuffer[1], cmd);
-
-		RenderBloom(renderpass_bloom, cmd);
 
 		RenderPostprocessChain(rtDeferred, rtGBuffer[1], cmd);
 
