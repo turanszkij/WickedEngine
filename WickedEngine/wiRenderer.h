@@ -244,6 +244,7 @@ namespace wiRenderer
 	void Postprocess_MotionBlur(
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& velocity,
+		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);

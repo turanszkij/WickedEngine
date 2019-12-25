@@ -693,7 +693,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 	{
 		if (getMotionBlurEnabled())
 		{
-			wiRenderer::Postprocess_MotionBlur(*rt_read, srcGbuffer1, *rt_write, cmd);
+			wiRenderer::Postprocess_MotionBlur(*rt_read, srcGbuffer1, rtLinearDepth, *rt_write, cmd);
 
 			std::swap(rt_read, rt_write);
 			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);

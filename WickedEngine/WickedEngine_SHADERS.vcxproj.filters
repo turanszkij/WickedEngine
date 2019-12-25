@@ -801,6 +801,12 @@
     <FxCompile Include="outlineCS_float4.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="motionblur_tileMaxVelocityCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="motionblur_neighborhoodMaxVelocityCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">
