@@ -142,8 +142,6 @@ void RenderPath3D_TiledForward::Render() const
 
 		RenderOutline(*GetSceneRT_Read(0), cmd);
 
-		TemporalAAResolve(*GetSceneRT_Read(0), *GetSceneRT_Read(1), cmd);
-
 		RenderPostprocessChain(*GetSceneRT_Read(0), *GetSceneRT_Read(1), cmd);
 	});
 

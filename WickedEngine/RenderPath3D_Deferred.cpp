@@ -241,8 +241,6 @@ void RenderPath3D_Deferred::Render() const
 
 		RenderOutline(rtDeferred, cmd);
 
-		TemporalAAResolve(rtDeferred, rtGBuffer[1], cmd);
-
 		RenderPostprocessChain(rtDeferred, rtGBuffer[1], cmd);
 
 	});

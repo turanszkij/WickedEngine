@@ -625,20 +625,6 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 		}
 	}
 }
-void RenderPath3D::TemporalAAResolve(const Texture& srcdstSceneRT, const Texture& srcGbuffer1, CommandList cmd) const
-{
-	if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
-	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
-
-		int output = device->GetFrameCount() % 2;
-		int history = 1 - output;
-		wiRenderer::Postprocess_TemporalAA(srcdstSceneRT, rtTemporalAA[history], srcGbuffer1, rtTemporalAA[output], cmd);
-		wiRenderer::CopyTexture2D(srcdstSceneRT, 0, 0, 0, rtTemporalAA[output], 0, cmd); // todo: remove and do better ping pong
-
-		device->EventEnd(cmd);
-	}
-}
 void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Texture& srcGbuffer1, CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -648,6 +634,16 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 
 	// 1.) HDR post process chain
 	{
+		if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
+		{
+			GraphicsDevice* device = wiRenderer::GetDevice();
+
+			int output = device->GetFrameCount() % 2;
+			int history = 1 - output;
+			wiRenderer::Postprocess_TemporalAA(*rt_read, rtTemporalAA[history], srcGbuffer1, rtTemporalAA[output], cmd);
+			rt_read = &rtTemporalAA[output];
+		}
+
 		if (getMotionBlurEnabled())
 		{
 			wiRenderer::Postprocess_MotionBlur(*rt_read, srcGbuffer1, rtLinearDepth, *rt_write, cmd);
