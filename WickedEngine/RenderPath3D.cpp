@@ -629,6 +629,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
+	const Texture* rt_first = nullptr; // not ping-ponged with read / write
 	const Texture* rt_read = &srcSceneRT;
 	const Texture* rt_write = &rtPostprocess_HDR;
 
@@ -641,12 +642,13 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 			int output = device->GetFrameCount() % 2;
 			int history = 1 - output;
 			wiRenderer::Postprocess_TemporalAA(*rt_read, rtTemporalAA[history], srcGbuffer1, rtTemporalAA[output], cmd);
-			rt_read = &rtTemporalAA[output];
+			rt_first = &rtTemporalAA[output];
 		}
 
 		if (getMotionBlurEnabled())
 		{
-			wiRenderer::Postprocess_MotionBlur(*rt_read, srcGbuffer1, rtLinearDepth, *rt_write, cmd);
+			wiRenderer::Postprocess_MotionBlur(rt_first == nullptr ? *rt_read : *rt_first, srcGbuffer1, rtLinearDepth, *rt_write, cmd);
+			rt_first = nullptr;
 
 			std::swap(rt_read, rt_write);
 			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
@@ -656,11 +658,12 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 		{
 			device->EventBegin("Depth Of Field", cmd);
 
-			wiRenderer::Postprocess_Blur_Gaussian(*rt_read, rtDof[0], rtDof[1], cmd, getDepthOfFieldStrength(), getDepthOfFieldStrength());
+			wiRenderer::Postprocess_Blur_Gaussian(rt_first == nullptr ? *rt_read : *rt_first, rtDof[0], rtDof[1], cmd, getDepthOfFieldStrength(), getDepthOfFieldStrength());
 
 			// depth of field compose pass
 			{
-				wiRenderer::Postprocess_DepthOfField(*rt_read, rtDof[1], *rt_write, rtLinearDepth, cmd, getDepthOfFieldFocus());
+				wiRenderer::Postprocess_DepthOfField(rt_first == nullptr ? *rt_read : *rt_first, rtDof[1], *rt_write, rtLinearDepth, cmd, getDepthOfFieldFocus());
+				rt_first = nullptr;
 
 				std::swap(rt_read, rt_write);
 				device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
@@ -670,7 +673,8 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 
 		if (getBloomEnabled())
 		{
-			wiRenderer::Postprocess_Bloom(*rt_read, rtBloom, *rt_write, cmd, getBloomThreshold());
+			wiRenderer::Postprocess_Bloom(rt_first == nullptr ? *rt_read : *rt_first, rtBloom, *rt_write, cmd, getBloomThreshold());
+			rt_first = nullptr;
 
 			std::swap(rt_read, rt_write);
 			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
