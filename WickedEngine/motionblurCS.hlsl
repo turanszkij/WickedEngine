@@ -24,7 +24,6 @@ inline float SampleWeight(
 {
 	const float2 depthCmp = DepthCmp(centerDepth, sampleDepth, depthScale);
 	const float2 spreadCmp = SpreadCmp(offsetLen, float2(centerSpreadLen, sampleSpreadLen), pixelToSampleUnitsScale);
-	//return spreadCmp.x;
 	return dot(depthCmp, spreadCmp);
 }
 
@@ -47,7 +46,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
 
 	float seed = 12345;
-	const float2 random_direction = (float2(rand(seed, uv), rand(seed, uv)) - 0.5f) * xPPResolution_rcp * 0.5f;
+	const float2 random_direction = (float2(rand(seed, uv), rand(seed, uv)) - 0.5f) * xPPResolution_rcp * neighborhood_velocity_magnitude * 10;
 
 	const float strength = 0.025f;
 	const float2 sampling_direction = neighborhood_velocity * strength + random_direction;
