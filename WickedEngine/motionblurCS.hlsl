@@ -51,18 +51,35 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float strength = 0.025f;
 	const float2 sampling_direction = neighborhood_velocity * strength + random_direction;
 
+	const float offsetLen = neighborhood_velocity_magnitude * 100;
+	const float range = 7.5f;
 	float4 sum = 0;
 	float numSampling = 0;
-	for (float i = -7.5f; i <= 7.5f; i += 1.0f)
+	float2 uv2 = uv - range * sampling_direction;
+	for (float i = -range; i <= range; i += 2.0f)
 	{
-		const float2 uv2 = saturate(uv + sampling_direction * i);
-		const float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, uv2, 0);
-		const float2 velocity = texture_gbuffer1.SampleLevel(sampler_linear_clamp, uv2, 0).zw;
-		const float velocity_magnitude = length(velocity);
-		const float weight = SampleWeight(center_depth, depth, neighborhood_velocity_magnitude * 100, center_velocity_magnitude, velocity_magnitude, 1000, g_xCamera_ZFarP);
-		sum.rgb += input.SampleLevel(sampler_linear_clamp, uv2, 0).rgb * weight;
-		sum.w += weight;
-		numSampling++;
+		const float depth1 = texture_lineardepth.SampleLevel(sampler_point_clamp, uv2, 0);
+		const float2 velocity1 = texture_gbuffer1.SampleLevel(sampler_point_clamp, uv2, 0).zw;
+		const float velocity_magnitude1 = length(velocity1);
+		const float3 color1 = input.SampleLevel(sampler_point_clamp, uv2, 0).rgb;
+		uv2 += sampling_direction;
+		const float depth2 = texture_lineardepth.SampleLevel(sampler_point_clamp, uv2, 0);
+		const float2 velocity2 = texture_gbuffer1.SampleLevel(sampler_point_clamp, uv2, 0).zw;
+		const float velocity_magnitude2 = length(velocity2);
+		const float3 color2 = input.SampleLevel(sampler_point_clamp, uv2, 0).rgb;
+		uv2 += sampling_direction;
+
+		float weight1 = SampleWeight(center_depth, depth1, offsetLen, center_velocity_magnitude, velocity_magnitude1, 1000, g_xCamera_ZFarP);
+		float weight2 = SampleWeight(center_depth, depth2, offsetLen, center_velocity_magnitude, velocity_magnitude2, 1000, g_xCamera_ZFarP);
+		
+		bool2 mirror = bool2(depth1 > depth2, velocity_magnitude2 > velocity_magnitude1);
+		weight1 = all(mirror) ? weight2 : weight1;
+		weight2 = any(mirror) ? weight2 : weight1;
+
+		sum += weight1 * float4(color1, 1);
+		sum += weight2 * float4(color2, 1);
+
+		numSampling += 2;
 	}
 	sum /= numSampling;
 
