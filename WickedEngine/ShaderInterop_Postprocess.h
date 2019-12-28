@@ -12,7 +12,10 @@ CBUFFER(PostProcessCB, CBSLOT_RENDERER_POSTPROCESS)
 	float4		xPPParams1;
 };
 
-static const uint MOTIONBLUR_TILECOUNT = 24;
-#define MOTIONBLUR_TILESIZE ((xPPResolution + MOTIONBLUR_TILECOUNT - 1) / MOTIONBLUR_TILECOUNT)
+static const uint MOTIONBLUR_TILESIZE = 32;
+
+static const uint DEPTHOFFIELD_TILESIZE = 32;
+#define dof_focus xPPParams0.x
+#define dof_scale xPPParams0.y
 
 #endif // WI_SHADERINTEROP_POSTPROCESS_H

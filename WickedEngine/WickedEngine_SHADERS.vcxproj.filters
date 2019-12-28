@@ -813,6 +813,18 @@
     <FxCompile Include="motionblur_tileMaxVelocity_verticalCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="depthoffield_tileMaxCOC_horizontalCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="depthoffield_tileMaxCOC_verticalCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="depthoffield_neighborhoodMaxCOCCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="depthoffield_presortCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

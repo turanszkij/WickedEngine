@@ -226,12 +226,12 @@ namespace wiRenderer
 		const XMFLOAT2& center
 	);
 	void Postprocess_DepthOfField(
-		const wiGraphics::Texture& input_sharp,
-		const wiGraphics::Texture& input_blurred,
+		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& output,
 		const wiGraphics::Texture& lineardepth,
 		wiGraphics::CommandList cmd,
-		float focus = 10.0f
+		float focus = 10.0f,
+		float scale = 1.0f
 	);
 	void Postprocess_Outline(
 		const wiGraphics::Texture& input,

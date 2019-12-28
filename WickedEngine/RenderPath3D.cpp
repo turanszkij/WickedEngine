@@ -102,17 +102,6 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = FORMAT_R11G11B10_FLOAT;
-		desc.Width = wiRenderer::GetInternalResolution().x / 2;
-		desc.Height = wiRenderer::GetInternalResolution().y / 2;
-		device->CreateTexture(&desc, nullptr, &rtDof[0]);
-		device->SetName(&rtDof[0], "rtDof[0]");
-		device->CreateTexture(&desc, nullptr, &rtDof[1]);
-		device->SetName(&rtDof[1], "rtDof[1]");
-	}
-	{
-		TextureDesc desc;
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Format = FORMAT_R8_UNORM;
 		desc.Width = wiRenderer::GetInternalResolution().x / 2;
 		desc.Height = wiRenderer::GetInternalResolution().y / 2;
@@ -656,19 +645,11 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 
 		if (getDepthOfFieldEnabled())
 		{
-			device->EventBegin("Depth Of Field", cmd);
+			wiRenderer::Postprocess_DepthOfField(rt_first == nullptr ? *rt_read : *rt_first, *rt_write, rtLinearDepth, cmd, getDepthOfFieldFocus(), getDepthOfFieldStrength());
+			rt_first = nullptr;
 
-			wiRenderer::Postprocess_Blur_Gaussian(rt_first == nullptr ? *rt_read : *rt_first, rtDof[0], rtDof[1], cmd, getDepthOfFieldStrength(), getDepthOfFieldStrength());
-
-			// depth of field compose pass
-			{
-				wiRenderer::Postprocess_DepthOfField(rt_first == nullptr ? *rt_read : *rt_first, rtDof[1], *rt_write, rtLinearDepth, cmd, getDepthOfFieldFocus());
-				rt_first = nullptr;
-
-				std::swap(rt_read, rt_write);
-				device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
-			}
-			device->EventEnd(cmd);
+			std::swap(rt_read, rt_write);
+			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 
 		if (getBloomEnabled())

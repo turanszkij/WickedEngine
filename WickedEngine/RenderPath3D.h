@@ -14,7 +14,7 @@ private:
 	float bloomThreshold = 1.0f;
 	float ssaoBlur = 2.3f;
 	float dofFocus = 10.0f;
-	float dofStrength = 2.2f;
+	float dofStrength = 1.0f;
 	float sharpenFilterAmount = 0.28f;
 	float outlineThreshold = 0.2f;
 	float outlineThickness = 1.0f;
@@ -54,7 +54,6 @@ protected:
 	wiGraphics::Texture rtParticleDistortion; // contains distortive particles
 	wiGraphics::Texture rtParticleDistortion_Resolved; // contains distortive particles
 	wiGraphics::Texture rtVolumetricLights; // contains the volumetric light results
-	wiGraphics::Texture rtDof[2]; // depth of field blurred out-of focus part
 	wiGraphics::Texture rtTemporalAA[2]; // temporal AA history buffer
 	wiGraphics::Texture rtBloom; // contains the bright parts of the image + mipchain
 	wiGraphics::Texture rtSSAO[2]; // ping-pong when rendering and blurring SSAO

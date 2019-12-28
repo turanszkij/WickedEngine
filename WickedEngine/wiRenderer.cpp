@@ -59,7 +59,7 @@ GPUBuffer				constantBuffers[CBTYPE_COUNT];
 GPUBuffer				resourceBuffers[RBTYPE_COUNT];
 Sampler					samplers[SSLOT_COUNT];
 
-string SHADERPATH = "../WickedEngine/shaders/";
+string SHADERPATH = wiHelper::GetOriginalWorkingDirectory() + "../WickedEngine/shaders/";
 
 LinearAllocator updateFrameAllocator; // can be used by an update thread
 LinearAllocator renderFrameAllocators[COMMANDLIST_COUNT]; // can be used by graphics threads
@@ -1378,6 +1378,10 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_SSAO], "ssaoCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_SSR], "ssrCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_LIGHTSHAFTS], "lightshaftsCS.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_HORIZONTAL], "depthoffield_tileMaxCOC_horizontalCS.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_VERTICAL], "depthoffield_tileMaxCOC_verticalCS.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_NEIGHBORHOODMAXCOC], "depthoffield_neighborhoodMaxCOCCS.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PRESORT], "depthoffield_presortCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD], "depthoffieldCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_OUTLINE_FLOAT4], "outlineCS_float4.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_OUTLINE_UNORM4], "outlineCS_unorm4.cso"); });
@@ -1399,6 +1403,8 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, []{ LoadHullShader(hullShaders[HSTYPE_OBJECT], "objectHS.cso"); });
 
 	wiJobSystem::Execute(ctx, []{ LoadDomainShader(domainShaders[DSTYPE_OBJECT], "objectDS.cso"); });
+
+	wiJobSystem::Wait(ctx);
 
 	// default objectshaders:
 	for (int renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
@@ -8814,12 +8820,12 @@ void Postprocess_LightShafts(
 	device->EventEnd(cmd);
 }
 void Postprocess_DepthOfField(
-	const Texture& input_sharp,
-	const Texture& input_blurred,
+	const Texture& input,
 	const Texture& output,
 	const Texture& lineardepth,
 	CommandList cmd,
-	float focus
+	float focus,
+	float scale
 )
 {
 	GraphicsDevice* device = GetDevice();
@@ -8827,38 +8833,174 @@ void Postprocess_DepthOfField(
 	device->EventBegin("Postprocess_DepthOfField", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Depth of Field", cmd);
 
-	device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD], cmd);
-
-	device->BindResource(CS, &input_sharp, TEXSLOT_ONDEMAND0, cmd);
-	device->BindResource(CS, &input_blurred, TEXSLOT_ONDEMAND1, cmd);
 	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
+
+	static bool init = false;
+	static Texture texture_tilemax_horizontal;
+	static Texture texture_tilemax;
+	static Texture texture_neighborhoodmax;
+	static Texture texture_presort;
+
+	if (!init)
+	{
+		init = true;
+		TextureDesc tile_desc;
+		tile_desc.type = TextureDesc::TEXTURE_2D;
+		tile_desc.Width = (desc.Width + DEPTHOFFIELD_TILESIZE - 1) / DEPTHOFFIELD_TILESIZE;
+		tile_desc.Height = (desc.Height + DEPTHOFFIELD_TILESIZE - 1) / DEPTHOFFIELD_TILESIZE;
+		tile_desc.Format = FORMAT_R16G16_FLOAT;
+		tile_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		device->CreateTexture(&tile_desc, nullptr, &texture_tilemax);
+		device->CreateTexture(&tile_desc, nullptr, &texture_neighborhoodmax);
+	}
+	if (texture_tilemax_horizontal.GetDesc().Height < desc.Height)
+	{
+		TextureDesc tile_desc = texture_tilemax.GetDesc();
+		tile_desc.Height = desc.Height;
+		device->CreateTexture(&tile_desc, nullptr, &texture_tilemax_horizontal);
+	}
+	if (texture_presort.GetDesc().Width < desc.Width || texture_presort.GetDesc().Height < desc.Height)
+	{
+		TextureDesc presort_desc;
+		presort_desc.type = TextureDesc::TEXTURE_2D;
+		presort_desc.Width = desc.Width;
+		presort_desc.Height = desc.Height;
+		presort_desc.Format = FORMAT_R11G11B10_FLOAT;
+		presort_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		device->CreateTexture(&presort_desc, nullptr, &texture_presort);
+	}
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width;
 	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.xPPParams0.x = focus;
+	cb.dof_focus = focus;
+	cb.dof_scale = scale;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-	const GPUResource* uavs[] = {
-		&output,
-	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	// Compute tile max COC (horizontal):
+	{
+		device->EventBegin("TileMax - Horizontal", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_HORIZONTAL], cmd);
 
+		const GPUResource* uavs[] = {
+			&texture_tilemax_horizontal,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
-	device->Dispatch(
-		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-		1,
-		cmd
-	);
+		device->Dispatch(
+			(texture_tilemax_horizontal.GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(texture_tilemax_horizontal.GetDesc().Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
 
-	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
+	// Compute tile max COC (vertical):
+	{
+		device->EventBegin("TileMax - Vertical", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_VERTICAL], cmd);
+
+		device->BindResource(CS, &texture_tilemax_horizontal, TEXSLOT_ONDEMAND0, cmd);
+
+		const GPUResource* uavs[] = {
+			&texture_tilemax,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(texture_tilemax.GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(texture_tilemax.GetDesc().Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
+
+	// Compute max COC for each tiles' neighborhood
+	{
+		device->EventBegin("NeighborhoodMax", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_NEIGHBORHOODMAXCOC], cmd);
+
+		device->BindResource(CS, &texture_tilemax, TEXSLOT_ONDEMAND0, cmd);
+
+		const GPUResource* uavs[] = {
+			&texture_neighborhoodmax,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(texture_neighborhoodmax.GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(texture_neighborhoodmax.GetDesc().Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
+
+	// Presort pass:
+	{
+		device->EventBegin("Presort", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PRESORT], cmd);
+
+		device->BindResource(CS, &texture_neighborhoodmax, TEXSLOT_ONDEMAND0, cmd);
+
+		const GPUResource* uavs[] = {
+			&texture_presort,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(texture_presort.GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(texture_presort.GetDesc().Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
+
+	// Main pass:
+	{
+		device->EventBegin("DepthOfField", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD], cmd);
+
+		const GPUResource* res[] = {
+			&input,
+			&texture_neighborhoodmax,
+			&texture_presort
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+
+		const GPUResource* uavs[] = {
+			&output,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
 
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -8942,7 +9084,6 @@ void Postprocess_MotionBlur(
 	const TextureDesc& desc = output.GetDesc();
 
 	static bool init = false;
-	static uint32_t required_height = 0;
 	static Texture texture_tilemax_horizontal;
 	static Texture texture_tilemax;
 	static Texture texture_neighborhoodmax;
@@ -8952,18 +9093,17 @@ void Postprocess_MotionBlur(
 		init = true;
 		TextureDesc tile_desc;
 		tile_desc.type = TextureDesc::TEXTURE_2D;
-		tile_desc.Width = MOTIONBLUR_TILECOUNT;
-		tile_desc.Height = MOTIONBLUR_TILECOUNT;
+		tile_desc.Width = (desc.Width + MOTIONBLUR_TILESIZE - 1) / MOTIONBLUR_TILESIZE;
+		tile_desc.Height = (desc.Height + MOTIONBLUR_TILESIZE - 1) / MOTIONBLUR_TILESIZE;
 		tile_desc.Format = FORMAT_R16G16_FLOAT;
 		tile_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		device->CreateTexture(&tile_desc, nullptr, &texture_tilemax);
 		device->CreateTexture(&tile_desc, nullptr, &texture_neighborhoodmax);
 	}
-	if (required_height < desc.Height)
+	if (texture_tilemax_horizontal.GetDesc().Height < desc.Height)
 	{
-		required_height = desc.Height;
 		TextureDesc tile_desc = texture_tilemax.GetDesc();
-		tile_desc.Height = required_height;
+		tile_desc.Height = desc.Height;
 		device->CreateTexture(&tile_desc, nullptr, &texture_tilemax_horizontal);
 	}
 

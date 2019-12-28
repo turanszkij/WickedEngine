@@ -8,12 +8,12 @@ RWTEXTURE2D(output, float2, 0);
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const uint2 tile_upperleft = uint2(DTid.x, DTid.y * MOTIONBLUR_TILESIZE.y);
+	const uint2 tile_upperleft = uint2(DTid.x, DTid.y * MOTIONBLUR_TILESIZE);
 	float max_magnitude = 0;
 	float2 max_velocity = 0;
 
 	[loop]
-	for (uint i = 0; i < MOTIONBLUR_TILESIZE.y; ++i)
+	for (uint i = 0; i < MOTIONBLUR_TILESIZE; ++i)
 	{
 		const uint2 pixel = uint2(tile_upperleft.x, tile_upperleft.y + i);
 		const float2 velocity = tilemax_horizontal[pixel];

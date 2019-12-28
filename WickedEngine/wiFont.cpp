@@ -29,7 +29,7 @@ using namespace wiRectPacker;
 
 namespace wiFont_Internal
 {
-	std::string			FONTPATH = "../WickedEngine/fonts/";
+	std::string			FONTPATH = wiHelper::GetOriginalWorkingDirectory() + "../WickedEngine/fonts/";
 	GPUBuffer			indexBuffer;
 	GPUBuffer			constantBuffer;
 	BlendState			blendState;
