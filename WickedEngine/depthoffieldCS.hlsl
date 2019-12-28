@@ -120,8 +120,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
     const float maxcoc = neighborhood_mindepth_maxcoc[DTid.xy / DEPTHOFFIELD_TILESIZE].y;
 
-    const float spreadScale = DOF_RING_COUNT / maxcoc;
-    const float2 scale = maxcoc * xPPResolution_rcp;
+    const uint ringCount = clamp(ceil(pow(maxcoc, 0.5f) * DOF_RING_COUNT), 1, DOF_RING_COUNT);
+    const float spreadScale = ringCount / maxcoc;
+    const float2 ringScale = float(ringCount) / float(DOF_RING_COUNT) * maxcoc * xPPResolution_rcp;
 
     const float4 center_color = input[DTid.xy];
     const float3 center_presort = texture_presort[DTid.xy].rgb;
@@ -133,12 +134,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
     float4 background = center_backgroundWeight * float4(center_color.rgb, 1);
     float4 foreground = center_foregroundWeight * float4(center_color.rgb, 1);
-    for (uint j = 0; j < DOF_RING_COUNT; ++j)
+    for (uint j = 0; j < ringCount; ++j)
     {
         for (uint i = ringSampleCount[j]; i < ringSampleCount[j + 1]; ++i)
         {
             const float offsetCoc = disc[i].z;
-            const float2 uv2 = uv + scale * disc[i].xy;
+            const float2 uv2 = uv + ringScale * disc[i].xy;
             const float4 color = float4(input.SampleLevel(sampler_point_clamp, uv2, 0).rgb, 1);
             const float3 presort = texture_presort.SampleLevel(sampler_point_clamp, uv2, 0).rgb;
             const float coc = presort.r;
@@ -152,9 +153,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
     background.rgb *= rcp(max(0.00001, background.a));
     foreground.rgb *= rcp(max(0.00001, foreground.a));
 
-    float alpha = saturate(2 * ringNormFactor[DOF_RING_COUNT] * rcp(SampleAlpha(maxcoc)) * foreground.a);
+    float alpha = saturate(2 * ringNormFactor[ringCount] * rcp(SampleAlpha(maxcoc)) * foreground.a);
     float4 color = float4(lerp(background.rgb, foreground.rgb, alpha), center_color.a);
 
     output[DTid.xy] = color;
     //output[DTid.xy] = alpha;
+    //output[DTid.xy] = maxcoc;
+    //output[DTid.xy] = float(ringCount) / float(DOF_RING_COUNT);
 }
