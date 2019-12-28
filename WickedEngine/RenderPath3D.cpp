@@ -634,18 +634,18 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 			rt_first = &rtTemporalAA[output];
 		}
 
-		if (getMotionBlurEnabled())
+		if (getDepthOfFieldEnabled())
 		{
-			wiRenderer::Postprocess_MotionBlur(rt_first == nullptr ? *rt_read : *rt_first, srcGbuffer1, rtLinearDepth, *rt_write, cmd);
+			wiRenderer::Postprocess_DepthOfField(rt_first == nullptr ? *rt_read : *rt_first, *rt_write, rtLinearDepth, cmd, getDepthOfFieldFocus(), getDepthOfFieldStrength());
 			rt_first = nullptr;
 
 			std::swap(rt_read, rt_write);
 			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 
-		if (getDepthOfFieldEnabled())
+		if (getMotionBlurEnabled())
 		{
-			wiRenderer::Postprocess_DepthOfField(rt_first == nullptr ? *rt_read : *rt_first, *rt_write, rtLinearDepth, cmd, getDepthOfFieldFocus(), getDepthOfFieldStrength());
+			wiRenderer::Postprocess_MotionBlur(rt_first == nullptr ? *rt_read : *rt_first, srcGbuffer1, rtLinearDepth, *rt_write, cmd);
 			rt_first = nullptr;
 
 			std::swap(rt_read, rt_write);
