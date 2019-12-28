@@ -32,10 +32,11 @@ inline float SampleWeight(
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const float2 neighborhood_velocity = neighborhoodmax[(DTid.xy + (dither((float2)DTid.xy) - 0.5f) * 16) / MOTIONBLUR_TILESIZE]; // dither to reduce tile artifact
+	const float scale = 100;
+	const float2 neighborhood_velocity = neighborhoodmax[(DTid.xy + (dither((float2)DTid.xy) - 0.5f) * 16) / MOTIONBLUR_TILESIZE] * scale; // dither to reduce tile artifact
 	const float neighborhood_velocity_magnitude = length(neighborhood_velocity);
 	const float4 center_color = input[DTid.xy];
-	if (neighborhood_velocity_magnitude < 0.000001f)
+	if (neighborhood_velocity_magnitude < 0.0001f)
 	{
 		output[DTid.xy] = center_color;
 		return;
@@ -48,12 +49,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
 
 	float seed = 12345;
-	const float2 random_direction = (float2(rand(seed, uv), rand(seed, uv)) - 0.5f) * xPPResolution_rcp * neighborhood_velocity_magnitude * 10;
+	const float2 random_direction = rand(seed, uv) * 0.5f + 0.5f;
 
-	const float strength = 0.025f;
-	const float2 sampling_direction = neighborhood_velocity * strength + random_direction;
+	const float2 sampling_direction = neighborhood_velocity * random_direction * xPPResolution_rcp;
 
-	const float offsetLen = neighborhood_velocity_magnitude * 100;
 	const float range = 7.5f;
 	float4 sum = 0;
 	float numSampling = 0;
@@ -71,8 +70,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const float3 color2 = input.SampleLevel(sampler_point_clamp, uv2, 0).rgb;
 		uv2 += sampling_direction;
 
-		float weight1 = SampleWeight(center_depth, depth1, offsetLen, center_velocity_magnitude, velocity_magnitude1, 1000, g_xCamera_ZFarP);
-		float weight2 = SampleWeight(center_depth, depth2, offsetLen, center_velocity_magnitude, velocity_magnitude2, 1000, g_xCamera_ZFarP);
+		float weight1 = SampleWeight(center_depth, depth1, neighborhood_velocity_magnitude, center_velocity_magnitude, velocity_magnitude1, 1000, g_xCamera_ZFarP);
+		float weight2 = SampleWeight(center_depth, depth2, neighborhood_velocity_magnitude, center_velocity_magnitude, velocity_magnitude2, 1000, g_xCamera_ZFarP);
 		
 		bool2 mirror = bool2(depth1 > depth2, velocity_magnitude2 > velocity_magnitude1);
 		weight1 = all(mirror) ? weight2 : weight1;
