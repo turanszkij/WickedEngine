@@ -132,7 +132,7 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	});
 	ppWindow->AddWidget(depthOfFieldCheckBox);
 
-	depthOfFieldFocusSlider = new wiSlider(0.01f, 600, 100, 10000, "Focus: ");
+	depthOfFieldFocusSlider = new wiSlider(0.1f, 100, 10, 10000, "Focus: ");
 	depthOfFieldFocusSlider->SetTooltip("Set the focus distance from the camera. The picture will be sharper near the focus, and blurrier further from it.");
 	depthOfFieldFocusSlider->SetScriptTip("RenderPath3D::SetDepthOfFieldFocus(float value)");
 	depthOfFieldFocusSlider->SetSize(XMFLOAT2(100, 20));
@@ -143,16 +143,16 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	});
 	ppWindow->AddWidget(depthOfFieldFocusSlider);
 
-	depthOfFieldStrengthSlider = new wiSlider(0.01f, 4, 100, 1000, "Strength: ");
-	depthOfFieldStrengthSlider->SetTooltip("Set depth of field blur strength.");
-	depthOfFieldStrengthSlider->SetScriptTip("RenderPath3D::SetDepthOfFieldStrength(float value)");
-	depthOfFieldStrengthSlider->SetSize(XMFLOAT2(100, 20));
-	depthOfFieldStrengthSlider->SetPos(XMFLOAT2(x + 100, y += 35));
-	depthOfFieldStrengthSlider->SetValue(component->getDepthOfFieldStrength());
-	depthOfFieldStrengthSlider->OnSlide([&](wiEventArgs args) {
+	depthOfFieldScaleSlider = new wiSlider(0.01f, 4, 100, 1000, "Scale: ");
+	depthOfFieldScaleSlider->SetTooltip("Set depth of field scale/falloff.");
+	depthOfFieldScaleSlider->SetScriptTip("RenderPath3D::SetDepthOfFieldStrength(float value)");
+	depthOfFieldScaleSlider->SetSize(XMFLOAT2(100, 20));
+	depthOfFieldScaleSlider->SetPos(XMFLOAT2(x + 100, y += 35));
+	depthOfFieldScaleSlider->SetValue(component->getDepthOfFieldStrength());
+	depthOfFieldScaleSlider->OnSlide([&](wiEventArgs args) {
 		component->setDepthOfFieldStrength(args.fValue);
 	});
-	ppWindow->AddWidget(depthOfFieldStrengthSlider);
+	ppWindow->AddWidget(depthOfFieldScaleSlider);
 
 	bloomCheckBox = new wiCheckBox("Bloom: ");
 	bloomCheckBox->SetTooltip("Enable bloom. The effect adds color bleeding to the brightest parts of the scene.");

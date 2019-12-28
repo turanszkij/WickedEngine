@@ -31,7 +31,7 @@ public:
 	wiCheckBox* motionBlurCheckBox;
 	wiCheckBox* depthOfFieldCheckBox;
 	wiSlider*	depthOfFieldFocusSlider;
-	wiSlider*	depthOfFieldStrengthSlider;
+	wiSlider*	depthOfFieldScaleSlider;
 	wiCheckBox* bloomCheckBox;
 	wiSlider*	bloomStrengthSlider;
 	wiCheckBox* fxaaCheckBox;

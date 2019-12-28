@@ -49,7 +49,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
 
 	float seed = 12345;
-	const float2 random_direction = rand(seed, uv) * 0.5f + 0.5f;
+	const float random_direction = rand(seed, uv) * 0.5f + 0.5f;
 
 	const float2 sampling_direction = neighborhood_velocity * random_direction * xPPResolution_rcp;
 

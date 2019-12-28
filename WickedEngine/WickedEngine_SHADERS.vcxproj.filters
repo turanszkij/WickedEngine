@@ -82,6 +82,9 @@
     <None Include="raytracingHF.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="depthoffieldHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="objectHS.hlsl">
@@ -732,9 +735,6 @@
     <FxCompile Include="lightShaftsCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="depthoffieldCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="motionblurCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -822,7 +822,16 @@
     <FxCompile Include="depthoffield_neighborhoodMaxCOCCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="depthoffield_presortCS.hlsl">
+    <FxCompile Include="depthoffield_prepassCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="depthoffield_mainCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="depthoffield_upsampleCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="depthoffield_postfilterCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

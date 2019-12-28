@@ -1381,8 +1381,10 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_HORIZONTAL], "depthoffield_tileMaxCOC_horizontalCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_VERTICAL], "depthoffield_tileMaxCOC_verticalCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_NEIGHBORHOODMAXCOC], "depthoffield_neighborhoodMaxCOCCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PRESORT], "depthoffield_presortCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD], "depthoffieldCS.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS], "depthoffield_prepassCS.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN], "depthoffield_mainCS.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_POSTFILTER], "depthoffield_postfilterCS.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_UPSAMPLE], "depthoffield_upsampleCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_OUTLINE_FLOAT4], "outlineCS_float4.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_OUTLINE_UNORM4], "outlineCS_unorm4.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY_HORIZONTAL], "motionblur_tileMaxVelocity_horizontalCS.cso"); });
@@ -8842,6 +8844,10 @@ void Postprocess_DepthOfField(
 	static Texture texture_tilemax;
 	static Texture texture_neighborhoodmax;
 	static Texture texture_presort;
+	static Texture texture_prefilter;
+	static Texture texture_main;
+	static Texture texture_postfilter;
+	static Texture texture_alpha;
 
 	if (!init)
 	{
@@ -8861,15 +8867,20 @@ void Postprocess_DepthOfField(
 		tile_desc.Height = desc.Height;
 		device->CreateTexture(&tile_desc, nullptr, &texture_tilemax_horizontal);
 	}
-	if (texture_presort.GetDesc().Width < desc.Width || texture_presort.GetDesc().Height < desc.Height)
+	if (texture_presort.GetDesc().Width != desc.Width/2 || texture_presort.GetDesc().Height != desc.Height/2)
 	{
 		TextureDesc presort_desc;
 		presort_desc.type = TextureDesc::TEXTURE_2D;
-		presort_desc.Width = desc.Width;
-		presort_desc.Height = desc.Height;
+		presort_desc.Width = desc.Width/2;
+		presort_desc.Height = desc.Height/2;
 		presort_desc.Format = FORMAT_R11G11B10_FLOAT;
 		presort_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		device->CreateTexture(&presort_desc, nullptr, &texture_presort);
+		device->CreateTexture(&presort_desc, nullptr, &texture_prefilter);
+		device->CreateTexture(&presort_desc, nullptr, &texture_main);
+		device->CreateTexture(&presort_desc, nullptr, &texture_postfilter);
+		presort_desc.Format = FORMAT_R8_UNORM;
+		device->CreateTexture(&presort_desc, nullptr, &texture_alpha);
 	}
 
 	PostProcessCB cb;
@@ -8949,15 +8960,28 @@ void Postprocess_DepthOfField(
 		device->EventEnd(cmd);
 	}
 
-	// Presort pass:
-	{
-		device->EventBegin("Presort", cmd);
-		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PRESORT], cmd);
+	// Switch to half res:
+	cb.xPPResolution.x = desc.Width / 2;
+	cb.xPPResolution.y = desc.Height / 2;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-		device->BindResource(CS, &texture_neighborhoodmax, TEXSLOT_ONDEMAND0, cmd);
+	// Prepass:
+	{
+		device->EventBegin("Prepass", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS], cmd);
+
+		const GPUResource* res[] = {
+			&input,
+			&texture_neighborhoodmax
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
 		const GPUResource* uavs[] = {
 			&texture_presort,
+			&texture_prefilter,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
@@ -8975,13 +8999,79 @@ void Postprocess_DepthOfField(
 
 	// Main pass:
 	{
-		device->EventBegin("DepthOfField", cmd);
-		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD], cmd);
+		device->EventBegin("Main pass", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN], cmd);
+
+		const GPUResource* res[] = {
+			&texture_neighborhoodmax,
+			&texture_presort,
+			&texture_prefilter
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+
+		const GPUResource* uavs[] = {
+			&texture_main,
+			&texture_alpha
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(texture_main.GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(texture_main.GetDesc().Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
+
+	// Post filter:
+	{
+		device->EventBegin("Post filter", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_POSTFILTER], cmd);
+
+		const GPUResource* res[] = {
+			&texture_main,
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+
+		const GPUResource* uavs[] = {
+			&texture_postfilter
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(texture_postfilter.GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(texture_postfilter.GetDesc().Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
+
+	// Switch to full res:
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	// Upsample pass:
+	{
+		device->EventBegin("Upsample pass", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_UPSAMPLE], cmd);
 
 		const GPUResource* res[] = {
 			&input,
-			&texture_neighborhoodmax,
-			&texture_presort
+			&texture_postfilter,
+			&texture_alpha,
+			&texture_neighborhoodmax
 		};
 		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
