@@ -15,15 +15,19 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
 
 	const float center_depth = texture_lineardepth[DTid.xy];
-	const float maxcoc = neighborhood_mindepth_maxcoc[DTid.xy / DEPTHOFFIELD_TILESIZE].y;
+	const float2 mindepth_maxcoc = neighborhood_mindepth_maxcoc[DTid.xy / DEPTHOFFIELD_TILESIZE];
+	const float mindepth = mindepth_maxcoc.x;
+	const float maxcoc = mindepth_maxcoc.y;
 	float4 fullres = input[DTid.xy];
 	const float3 halfres = texture_postfilter.SampleLevel(sampler_linear_clamp, uv, 0);
 	const float alpha = texture_alpha.SampleLevel(sampler_linear_clamp, uv, 0);
 
 	const float coc = dof_scale * abs(1 - dof_focus / (center_depth * g_xCamera_ZFarP));
 
+	float depthDelta = saturate(1.0 - g_xCamera_ZFarP * 0.2 * (center_depth - mindepth));
+
 	const float backgroundFactor = coc;
-	const float foregroundFactor = maxcoc;
+	const float foregroundFactor = lerp(maxcoc, coc, pow(depthDelta, 1.0f / 2.2f));
 
 	const float combinedFactor = saturate(lerp(backgroundFactor, foregroundFactor, alpha));
 

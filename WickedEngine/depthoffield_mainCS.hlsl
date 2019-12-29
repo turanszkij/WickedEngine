@@ -20,13 +20,15 @@ void main(uint3 DTid : SV_DispatchThreadID)
     const float spreadScale = ringCount / maxcoc;
     const float2 ringScale = float(ringCount) / float(DOF_RING_COUNT) * maxcoc * xPPResolution_rcp;
 
-    const float3 center_color = texture_prefilter[DTid.xy];
+    const float3 center_color = max(0, texture_prefilter[DTid.xy]);
     const float3 center_presort = texture_presort[DTid.xy];
     const float center_coc = center_presort.r;
     const float center_backgroundWeight = center_presort.g;
     const float center_foregroundWeight = center_presort.b;
 
     const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
+
+    float seed = 12345;
 
     float4 background = center_backgroundWeight * float4(center_color.rgb, 1);
     float4 foreground = center_foregroundWeight * float4(center_color.rgb, 1);
@@ -35,8 +37,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
         for (uint i = ringSampleCount[j]; i < ringSampleCount[j + 1]; ++i)
         {
             const float offsetCoc = disc[i].z;
-            const float2 uv2 = uv + ringScale * disc[i].xy;
-            const float4 color = float4(texture_prefilter.SampleLevel(sampler_point_clamp, uv2, 0), 1);
+            const float2 uv2 = uv + ringScale * disc[i].xy * (1 + rand(seed, uv) * 0.15);
+            const float4 color = float4(max(0, texture_prefilter.SampleLevel(sampler_point_clamp, uv2, 0)), 1);
             const float3 presort = texture_presort.SampleLevel(sampler_point_clamp, uv2, 0).rgb;
             const float coc = presort.r;
             const float spreadCmp = SpreadCmp(offsetCoc, coc, spreadScale);

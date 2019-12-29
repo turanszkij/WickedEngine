@@ -25,6 +25,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	output_presort[DTid.xy] = float3(coc, alpha * depthcmp.x, alpha * depthcmp.y);
 
+    float seed = 54321;
 
     const float2 ringScale = 2 * coc * xPPResolution_rcp;
     const float3 center_color = input.SampleLevel(sampler_point_clamp, uv, 0).rgb;
@@ -32,7 +33,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     for (uint i = ringSampleCount[0]; i < ringSampleCount[1]; ++i)
     {
         const float offsetCoc = disc[i].z;
-        const float2 uv2 = uv + ringScale * disc[i].xy;
+        const float2 uv2 = uv + ringScale * disc[i].xy * (1 + rand(seed, uv) * 0.1);
         const float depth = texture_lineardepth.SampleLevel(sampler_linear_clamp, uv2, 0);
         const float3 color = input.SampleLevel(sampler_point_clamp, uv2, 0).rgb;
         const float weight = saturate(abs(depth - center_depth) * g_xCamera_ZFarP * 2);
