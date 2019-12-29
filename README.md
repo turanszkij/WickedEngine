@@ -255,7 +255,7 @@ Sponza scene with voxel GI enabled:
 Damaged Helmet GLTF sample model:
 ![Sponza](https://turanszkij.files.wordpress.com/2019/03/damagedhelmet.png)
 
-Bokeh Depth of Field:
+Bokeh Depth of Field (Lain model by <a href="https://sketchfab.com/3d-models/lain-20-bf255be16da34df08d48abb5443a6706">woopoodle at Sketchfab</a>):
 ![DepthOfField1](https://turanszkij.files.wordpress.com/2019/12/dof1_small.png)
 ![DepthOfField2](https://turanszkij.files.wordpress.com/2019/12/dof2_small.png)
 
@@ -265,7 +265,7 @@ Motion blur:
 Path tracing in the living room:
 ![LivingRoom](https://turanszkij.files.wordpress.com/2019/09/livingroom.jpg)
 
-City scene with a light map, model from <a href="https://www.cgtrader.com/michaelmilesgallie">Michael Gallie</a>:
+City scene with a light map (model by <a href="https://www.cgtrader.com/michaelmilesgallie">Michael Gallie at CgTrader</a>):
 ![City](https://turanszkij.files.wordpress.com/2019/01/city1.png)
 
 Path tracing in the city:
@@ -283,7 +283,7 @@ Lots of boxes path traced in the editor:
 Bloom and post processing:
 ![Bloom](https://turanszkij.files.wordpress.com/2019/01/bloom.png)
 
-Bistro scene from Amazon Lumberyard (from <a href="http://casual-effects.com/data/index.html">Morgan McGuire's graphics archive</a>):
+Bistro scene from Amazon Lumberyard (model from <a href="http://casual-effects.com/data/index.html">Morgan McGuire's graphics archive</a>):
 ![Bistro_out](https://turanszkij.files.wordpress.com/2019/01/bistro_out_0.png)
 
 Bistro scene from the inside:
