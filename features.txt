@@ -25,7 +25,7 @@ Edge outline
 Motion Blur
 Lens Flare
 Light shafts
-Depth of field
+Bokeh Depth of Field
 Chromatic aberration
 Multithreaded rendering
 Tessellation (silhouette smoothing, displacement mapping)

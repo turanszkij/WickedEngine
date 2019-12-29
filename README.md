@@ -255,6 +255,13 @@ Sponza scene with voxel GI enabled:
 Damaged Helmet GLTF sample model:
 ![Sponza](https://turanszkij.files.wordpress.com/2019/03/damagedhelmet.png)
 
+Bokeh Depth of Field:
+![DepthOfField1](https://turanszkij.files.wordpress.com/2019/12/dof1.png)
+![DepthOfField2](https://turanszkij.files.wordpress.com/2019/12/dof2.png)
+
+Motion blur:
+![MotionBlur](https://turanszkij.files.wordpress.com/2019/12/motionblur.png)
+
 Path tracing in the living room:
 ![LivingRoom](https://turanszkij.files.wordpress.com/2019/09/livingroom.jpg)
 
