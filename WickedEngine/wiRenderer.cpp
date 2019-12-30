@@ -8839,7 +8839,7 @@ void Postprocess_DepthOfField(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	static bool init = false;
+	static TextureDesc initialized_desc;
 	static Texture texture_tilemax_horizontal;
 	static Texture texture_tilemax;
 	static Texture texture_neighborhoodmax;
@@ -8849,9 +8849,10 @@ void Postprocess_DepthOfField(
 	static Texture texture_postfilter;
 	static Texture texture_alpha;
 
-	if (!init)
+	if (initialized_desc.Width != desc.Width || initialized_desc.Height != desc.Height)
 	{
-		init = true;
+		initialized_desc = desc;
+
 		TextureDesc tile_desc;
 		tile_desc.type = TextureDesc::TEXTURE_2D;
 		tile_desc.Width = (desc.Width + DEPTHOFFIELD_TILESIZE - 1) / DEPTHOFFIELD_TILESIZE;
@@ -8860,19 +8861,14 @@ void Postprocess_DepthOfField(
 		tile_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		device->CreateTexture(&tile_desc, nullptr, &texture_tilemax);
 		device->CreateTexture(&tile_desc, nullptr, &texture_neighborhoodmax);
-	}
-	if (texture_tilemax_horizontal.GetDesc().Height < desc.Height)
-	{
-		TextureDesc tile_desc = texture_tilemax.GetDesc();
+
 		tile_desc.Height = desc.Height;
 		device->CreateTexture(&tile_desc, nullptr, &texture_tilemax_horizontal);
-	}
-	if (texture_presort.GetDesc().Width != desc.Width/2 || texture_presort.GetDesc().Height != desc.Height/2)
-	{
+
 		TextureDesc presort_desc;
 		presort_desc.type = TextureDesc::TEXTURE_2D;
-		presort_desc.Width = desc.Width/2;
-		presort_desc.Height = desc.Height/2;
+		presort_desc.Width = desc.Width / 2;
+		presort_desc.Height = desc.Height / 2;
 		presort_desc.Format = FORMAT_R11G11B10_FLOAT;
 		presort_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		device->CreateTexture(&presort_desc, nullptr, &texture_presort);
@@ -9173,14 +9169,15 @@ void Postprocess_MotionBlur(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	static bool init = false;
+	static TextureDesc initialized_desc;
 	static Texture texture_tilemax_horizontal;
 	static Texture texture_tilemax;
 	static Texture texture_neighborhoodmax;
 
-	if (!init)
+	if (initialized_desc.Width != desc.Width || initialized_desc.Height != desc.Height)
 	{
-		init = true;
+		initialized_desc = desc;
+
 		TextureDesc tile_desc;
 		tile_desc.type = TextureDesc::TEXTURE_2D;
 		tile_desc.Width = (desc.Width + MOTIONBLUR_TILESIZE - 1) / MOTIONBLUR_TILESIZE;
@@ -9189,10 +9186,7 @@ void Postprocess_MotionBlur(
 		tile_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		device->CreateTexture(&tile_desc, nullptr, &texture_tilemax);
 		device->CreateTexture(&tile_desc, nullptr, &texture_neighborhoodmax);
-	}
-	if (texture_tilemax_horizontal.GetDesc().Height < desc.Height)
-	{
-		TextureDesc tile_desc = texture_tilemax.GetDesc();
+
 		tile_desc.Height = desc.Height;
 		device->CreateTexture(&tile_desc, nullptr, &texture_tilemax_horizontal);
 	}
