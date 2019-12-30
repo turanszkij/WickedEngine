@@ -3,8 +3,18 @@
 
 // Implementation based on Jorge Jimenez Siggraph 2014 Next Generation Post Processing in Call of Duty Advanced Warfare
 
+//#define DEBUG_TILING
+
 TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
 TEXTURE2D(neighborhoodmax, float2, TEXSLOT_ONDEMAND1);
+
+#if defined(MOTIONBLUR_EARLYEXIT)
+STRUCTUREDBUFFER(tiles, uint, TEXSLOT_ONDEMAND2);
+#elif defined(MOTIONBLUR_CHEAP)
+STRUCTUREDBUFFER(tiles, uint, TEXSLOT_ONDEMAND3);
+#else
+STRUCTUREDBUFFER(tiles, uint, TEXSLOT_ONDEMAND4);
+#endif // MOTIONBLUR_EARLYEXIT
 
 RWTEXTURE2D(output, float4, 0);
 
@@ -29,29 +39,44 @@ inline float SampleWeight(
 	return dot(depthCmp, spreadCmp);
 }
 
-[numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
-void main(uint3 DTid : SV_DispatchThreadID)
+[numthreads(POSTPROCESS_BLOCKSIZE * POSTPROCESS_BLOCKSIZE, 1, 1)]
+void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 {
+	const uint tile_replicate = sqr(MOTIONBLUR_TILESIZE / POSTPROCESS_BLOCKSIZE);
+	const uint tile_idx = Gid.x / tile_replicate;
+	const uint tile_packed = tiles[tile_idx];
+	const uint2 tile = uint2(tile_packed & 0xFFFF, (tile_packed >> 16) & 0xFFFF);
+	const uint subtile_idx = Gid.x % tile_replicate;
+	const uint2 subtile = unflatten2D(subtile_idx, MOTIONBLUR_TILESIZE / POSTPROCESS_BLOCKSIZE);
+	const uint2 subtile_upperleft = tile * MOTIONBLUR_TILESIZE + subtile * POSTPROCESS_BLOCKSIZE;
+	const uint2 pixel = subtile_upperleft + unflatten2D(GTid.x, POSTPROCESS_BLOCKSIZE);
+
+	float4 color;
+
+#ifdef MOTIONBLUR_EARLYEXIT
+	color = input[pixel];
+
+#else
+
 	const float scale = 100;
-	const float2 neighborhood_velocity = neighborhoodmax[(DTid.xy + (dither((float2)DTid.xy) - 0.5f) * 16) / MOTIONBLUR_TILESIZE] * scale; // dither to reduce tile artifact
+	const float2 neighborhood_velocity = neighborhoodmax[(pixel + (dither((float2)pixel) - 0.5f) * 16) / MOTIONBLUR_TILESIZE] * scale; // dither to reduce tile artifact
 	const float neighborhood_velocity_magnitude = length(neighborhood_velocity);
-	const float4 center_color = input[DTid.xy];
-	if (neighborhood_velocity_magnitude < 0.0001f)
-	{
-		output[DTid.xy] = center_color;
-		return;
-	}
+	const float4 center_color = input[pixel];
 
-	const float2 center_velocity = texture_gbuffer1[DTid.xy].zw;
+	const float2 center_velocity = texture_gbuffer1[pixel].zw;
 	const float center_velocity_magnitude = length(center_velocity);
-	const float center_depth = texture_lineardepth[DTid.xy];
+	const float center_depth = texture_lineardepth[pixel];
 
-	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
+	const float2 uv = (pixel + 0.5f) * xPPResolution_rcp;
 
 	float seed = 12345;
 	const float random_direction = rand(seed, uv) * 0.5f + 0.5f;
 
+#ifdef MOTIONBLUR_CHEAP
+	const float2 sampling_direction = center_velocity * random_direction * xPPResolution_rcp;
+#else
 	const float2 sampling_direction = neighborhood_velocity * random_direction * xPPResolution_rcp;
+#endif // MOTIONBLUR_CHEAP
 
 	const float range = 7.5f;
 	float4 sum = 0;
@@ -70,6 +95,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const float3 color2 = input.SampleLevel(sampler_point_clamp, uv2, 0).rgb;
 		uv2 += sampling_direction;
 
+#ifdef MOTIONBLUR_CHEAP
+		sum += float4(color1, 1);
+		sum += float4(color2, 1);
+#else
 		float weight1 = SampleWeight(center_depth, depth1, neighborhood_velocity_magnitude, center_velocity_magnitude, velocity_magnitude1, 1000, g_xCamera_ZFarP);
 		float weight2 = SampleWeight(center_depth, depth2, neighborhood_velocity_magnitude, center_velocity_magnitude, velocity_magnitude2, 1000, g_xCamera_ZFarP);
 		
@@ -79,16 +108,30 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 		sum += weight1 * float4(color1, 1);
 		sum += weight2 * float4(color2, 1);
+#endif // MOTIONBLUR_CHEAP
 
 		numSampling += 2;
 	}
 	sum /= numSampling;
 
-	float4 color;
 	color.rgb = sum.rgb + (1 - sum.w) * center_color.rgb;
 	color.a = center_color.a;
 
-	output[DTid.xy] = color;
-	//output[DTid.xy] = float4(sum.www, 1);
-	//output[DTid.xy] = float4(neighborhood_velocity * 10, 0, 1);
+	//color = float4(sum.www, 1);
+	//color = float4(neighborhood_velocity * 10, 0, 1);
+
+#endif // MOTIONBLUR_EARLYEXIT
+
+
+#ifdef DEBUG_TILING
+#if defined(MOTIONBLUR_EARLYEXIT)
+	color *= float4(0, 0, 1, 1);
+#elif defined(MOTIONBLUR_CHEAP)
+	color *= float4(0, 1, 0, 1);
+#else
+	color *= float4(1, 0, 0, 1);
+#endif // MOTIONBLUR_EARLYEXIT
+#endif // DEBUG_TILING
+
+	output[pixel] = color;
 }

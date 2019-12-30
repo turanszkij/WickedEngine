@@ -1390,7 +1390,10 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY_HORIZONTAL], "motionblur_tileMaxVelocity_horizontalCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY_VERTICAL], "motionblur_tileMaxVelocity_verticalCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_NEIGHBORHOODMAXVELOCITY], "motionblur_neighborhoodMaxVelocityCS.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_KICKJOBS], "motionblur_kickjobsCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR], "motionblurCS.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_EARLYEXIT], "motionblur_earlyexitCS.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_CHEAP], "motionblur_cheapCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE], "bloomseparateCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_BLOOMCOMBINE], "bloomcombineCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_FXAA], "fxaaCS.cso"); });
@@ -9170,9 +9173,15 @@ void Postprocess_MotionBlur(
 	const TextureDesc& desc = output.GetDesc();
 
 	static TextureDesc initialized_desc;
+	static Texture texture_tilemin_horizontal;
 	static Texture texture_tilemax_horizontal;
 	static Texture texture_tilemax;
+	static Texture texture_tilemin;
 	static Texture texture_neighborhoodmax;
+	static GPUBuffer buffer_tile_statistics;
+	static GPUBuffer buffer_tiles_earlyexit;
+	static GPUBuffer buffer_tiles_cheap;
+	static GPUBuffer buffer_tiles_expensive;
 
 	if (initialized_desc.Width != desc.Width || initialized_desc.Height != desc.Height)
 	{
@@ -9184,11 +9193,28 @@ void Postprocess_MotionBlur(
 		tile_desc.Height = (desc.Height + MOTIONBLUR_TILESIZE - 1) / MOTIONBLUR_TILESIZE;
 		tile_desc.Format = FORMAT_R16G16_FLOAT;
 		tile_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		device->CreateTexture(&tile_desc, nullptr, &texture_tilemin);
 		device->CreateTexture(&tile_desc, nullptr, &texture_tilemax);
 		device->CreateTexture(&tile_desc, nullptr, &texture_neighborhoodmax);
 
 		tile_desc.Height = desc.Height;
 		device->CreateTexture(&tile_desc, nullptr, &texture_tilemax_horizontal);
+		device->CreateTexture(&tile_desc, nullptr, &texture_tilemin_horizontal);
+
+
+		GPUBufferDesc bufferdesc;
+		bufferdesc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+
+		bufferdesc.ByteWidth = TILE_STATISTICS_CAPACITY;
+		bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS | RESOURCE_MISC_INDIRECT_ARGS;
+		device->CreateBuffer(&bufferdesc, nullptr, &buffer_tile_statistics);
+
+		bufferdesc.ByteWidth = tile_desc.Width * tile_desc.Height;
+		bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bufferdesc.StructureByteStride = sizeof(uint);
+		device->CreateBuffer(&bufferdesc, nullptr, &buffer_tiles_earlyexit);
+		device->CreateBuffer(&bufferdesc, nullptr, &buffer_tiles_cheap);
+		device->CreateBuffer(&bufferdesc, nullptr, &buffer_tiles_expensive);
 	}
 
 	PostProcessCB cb;
@@ -9206,6 +9232,7 @@ void Postprocess_MotionBlur(
 
 		const GPUResource* uavs[] = {
 			&texture_tilemax_horizontal,
+			&texture_tilemin_horizontal,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
@@ -9229,6 +9256,7 @@ void Postprocess_MotionBlur(
 
 		const GPUResource* uavs[] = {
 			&texture_tilemax,
+			&texture_tilemin,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
@@ -9248,10 +9276,18 @@ void Postprocess_MotionBlur(
 		device->EventBegin("NeighborhoodMax", cmd);
 		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_NEIGHBORHOODMAXVELOCITY], cmd);
 
-		device->BindResource(CS, &texture_tilemax, TEXSLOT_ONDEMAND0, cmd);
+		const GPUResource* res[] = {
+			&texture_tilemax,
+			&texture_tilemin
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
 		const GPUResource* uavs[] = {
-			&texture_neighborhoodmax,
+			&buffer_tile_statistics,
+			&buffer_tiles_earlyexit,
+			&buffer_tiles_cheap,
+			&buffer_tiles_expensive,
+			&texture_neighborhoodmax
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
@@ -9266,26 +9302,56 @@ void Postprocess_MotionBlur(
 		device->EventEnd(cmd);
 	}
 
-	// Perform motion blur:
+	// Kick indirect tile jobs:
 	{
-		device->EventBegin("MotionBlur", cmd);
-		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR], cmd);
+		device->EventBegin("Kickjobs", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_KICKJOBS], cmd);
 
-		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &texture_neighborhoodmax, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &texture_tilemax, TEXSLOT_ONDEMAND0, cmd);
+
+		const GPUResource* uavs[] = {
+			&buffer_tile_statistics,
+			&buffer_tiles_earlyexit,
+			&buffer_tiles_cheap,
+			&buffer_tiles_expensive
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(1, 1, 1, cmd);
+
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
+
+	// Tile jobs:
+	{
+		device->EventBegin("MotionBlur Jobs", cmd);
+
+		const GPUResource* res[] = {
+			&input,
+			&texture_neighborhoodmax,
+			&buffer_tiles_earlyexit,
+			&buffer_tiles_cheap,
+			&buffer_tiles_expensive,
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
+		device->Barrier(&GPUBarrier::Buffer(&buffer_tile_statistics, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDIRECT_ARGUMENT), 1, cmd);
 
-		device->Dispatch(
-			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			1,
-			cmd
-		);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_EARLYEXIT], cmd);
+		device->DispatchIndirect(&buffer_tile_statistics, INDIRECT_OFFSET_EARLYEXIT, cmd);
+
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_CHEAP], cmd);
+		device->DispatchIndirect(&buffer_tile_statistics, INDIRECT_OFFSET_CHEAP, cmd);
+
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR], cmd);
+		device->DispatchIndirect(&buffer_tile_statistics, INDIRECT_OFFSET_EXPENSIVE, cmd);
 
 		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		device->UnbindUAVs(0, arraysize(uavs), cmd);

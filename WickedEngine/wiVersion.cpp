@@ -9,7 +9,7 @@ namespace wiVersion
 	// minor features, major updates
 	const int minor = 36;
 	// minor bug fixes, alterations, refactors, updates
-	const int revision = 32;
+	const int revision = 33;
 
 
 	long GetVersion()

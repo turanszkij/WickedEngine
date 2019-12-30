@@ -834,6 +834,15 @@
     <FxCompile Include="depthoffield_postfilterCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="motionblur_earlyexitCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="motionblur_kickjobsCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="motionblur_cheapCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">
