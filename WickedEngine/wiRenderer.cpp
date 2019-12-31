@@ -8902,13 +8902,13 @@ void Postprocess_DepthOfField(
 		GPUBufferDesc bufferdesc;
 		bufferdesc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 
-		bufferdesc.ByteWidth = TILE_STATISTICS_CAPACITY;
+		bufferdesc.ByteWidth = TILE_STATISTICS_CAPACITY * sizeof(uint);
 		bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS | RESOURCE_MISC_INDIRECT_ARGS;
 		device->CreateBuffer(&bufferdesc, nullptr, &buffer_tile_statistics);
 
-		bufferdesc.ByteWidth = tile_desc.Width * tile_desc.Height;
 		bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		bufferdesc.StructureByteStride = sizeof(uint);
+		bufferdesc.ByteWidth = tile_desc.Width * tile_desc.Height * bufferdesc.StructureByteStride;
 		device->CreateBuffer(&bufferdesc, nullptr, &buffer_tiles_earlyexit);
 		device->CreateBuffer(&bufferdesc, nullptr, &buffer_tiles_cheap);
 		device->CreateBuffer(&bufferdesc, nullptr, &buffer_tiles_expensive);
@@ -9285,13 +9285,13 @@ void Postprocess_MotionBlur(
 		GPUBufferDesc bufferdesc;
 		bufferdesc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 
-		bufferdesc.ByteWidth = TILE_STATISTICS_CAPACITY;
+		bufferdesc.ByteWidth = TILE_STATISTICS_CAPACITY * sizeof(uint);
 		bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS | RESOURCE_MISC_INDIRECT_ARGS;
 		device->CreateBuffer(&bufferdesc, nullptr, &buffer_tile_statistics);
 
-		bufferdesc.ByteWidth = tile_desc.Width * tile_desc.Height;
 		bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		bufferdesc.StructureByteStride = sizeof(uint);
+		bufferdesc.ByteWidth = tile_desc.Width * tile_desc.Height * bufferdesc.StructureByteStride;
 		device->CreateBuffer(&bufferdesc, nullptr, &buffer_tiles_earlyexit);
 		device->CreateBuffer(&bufferdesc, nullptr, &buffer_tiles_cheap);
 		device->CreateBuffer(&bufferdesc, nullptr, &buffer_tiles_expensive);
