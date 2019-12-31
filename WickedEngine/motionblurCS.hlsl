@@ -82,6 +82,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 	float4 sum = 0;
 	float numSampling = 0;
 	float2 uv2 = uv - range * sampling_direction;
+	[unroll]
 	for (float i = -range; i <= range; i += 2.0f)
 	{
 		const float depth1 = texture_lineardepth.SampleLevel(sampler_point_clamp, uv2, 0);

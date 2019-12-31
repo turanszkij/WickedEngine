@@ -60,8 +60,10 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 
 #ifdef DEPTHOFFIELD_CHEAP
     color = center_color;
+    [unroll]
     for (uint j = 0; j < ringCount; ++j)
     {
+        [unroll]
         for (uint i = ringSampleCount[j]; i < ringSampleCount[j + 1]; ++i)
         {
             const float offsetCoc = disc[i].z;
@@ -75,8 +77,10 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 #else
     float4 background = center_backgroundWeight * float4(center_color.rgb, 1);
     float4 foreground = center_foregroundWeight * float4(center_color.rgb, 1);
+    [unroll]
     for (uint j = 0; j < ringCount; ++j)
     {
+        [unroll]
         for (uint i = ringSampleCount[j]; i < ringSampleCount[j + 1]; ++i)
         {
             const float offsetCoc = disc[i].z;

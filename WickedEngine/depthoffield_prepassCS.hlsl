@@ -54,6 +54,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
         float seed = 54321;
 
         const float2 ringScale = 2 * coc * xPPResolution_rcp;
+        [unroll]
         for (uint i = ringSampleCount[0]; i < ringSampleCount[1]; ++i)
         {
             const float offsetCoc = disc[i].z;
