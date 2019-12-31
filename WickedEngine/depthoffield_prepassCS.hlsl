@@ -4,42 +4,69 @@
 
 TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
 TEXTURE2D(neighborhood_mindepth_maxcoc, float2, TEXSLOT_ONDEMAND1);
+STRUCTUREDBUFFER(tiles, uint, TEXSLOT_ONDEMAND2);
 
 RWTEXTURE2D(output_presort, float3, 0);
 RWTEXTURE2D(output_prefilter, float3, 1);
 
-[numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
-void main(uint3 DTid : SV_DispatchThreadID)
+[numthreads(POSTPROCESS_BLOCKSIZE * POSTPROCESS_BLOCKSIZE, 1, 1)]
+void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 {
-	const float mindepth = neighborhood_mindepth_maxcoc[2 * DTid.xy / DEPTHOFFIELD_TILESIZE].x;
-    const float depth0 = texture_lineardepth[2 * DTid.xy + uint2(0, 0)];
-    const float depth1 = texture_lineardepth[2 * DTid.xy + uint2(1, 0)];
-    const float depth2 = texture_lineardepth[2 * DTid.xy + uint2(0, 1)];
-    const float depth3 = texture_lineardepth[2 * DTid.xy + uint2(1, 1)];
+    const uint tile_replicate = sqr(DEPTHOFFIELD_TILESIZE / 2 / POSTPROCESS_BLOCKSIZE);
+    const uint tile_idx = Gid.x / tile_replicate;
+    const uint tile_packed = tiles[tile_idx];
+    const uint2 tile = uint2(tile_packed & 0xFFFF, (tile_packed >> 16) & 0xFFFF);
+    const uint subtile_idx = Gid.x % tile_replicate;
+    const uint2 subtile = unflatten2D(subtile_idx, DEPTHOFFIELD_TILESIZE / 2 / POSTPROCESS_BLOCKSIZE);
+    const uint2 subtile_upperleft = tile * DEPTHOFFIELD_TILESIZE / 2 + subtile * POSTPROCESS_BLOCKSIZE;
+    const uint2 pixel = subtile_upperleft + unflatten2D(GTid.x, POSTPROCESS_BLOCKSIZE);
+
+    float3 prefilter;
+
+    const float2 uv = (pixel + 0.5f) * xPPResolution_rcp;
+
+#ifdef DEPTHOFFIELD_EARLYEXIT
+    prefilter = max(0, input.SampleLevel(sampler_point_clamp, uv, 0).rgb);
+
+#else
+
+	const float mindepth = neighborhood_mindepth_maxcoc[2 * pixel / DEPTHOFFIELD_TILESIZE].x;
+    const float depth0 = texture_lineardepth[2 * pixel + uint2(0, 0)];
+    const float depth1 = texture_lineardepth[2 * pixel + uint2(1, 0)];
+    const float depth2 = texture_lineardepth[2 * pixel + uint2(0, 1)];
+    const float depth3 = texture_lineardepth[2 * pixel + uint2(1, 1)];
     const float center_depth = max(depth0, max(depth1, max(depth2, depth3)));
-	const float coc = dof_scale * abs(1 - dof_focus / (center_depth * g_xCamera_ZFarP));
+	const float coc = min(dof_maxcoc, dof_scale * abs(1 - dof_focus / (center_depth * g_xCamera_ZFarP)));
 	const float alpha = SampleAlpha(coc);
 	const float2 depthcmp = DepthCmp2(center_depth, mindepth);
 
-	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
+    const float backgroundFactor = alpha * depthcmp.x;
+    const float foregroundFactor = alpha * depthcmp.y;
 
-	output_presort[DTid.xy] = float3(coc, alpha * depthcmp.x, alpha * depthcmp.y);
+	output_presort[pixel] = float3(coc, backgroundFactor, foregroundFactor);
 
-    float seed = 54321;
+    const float3 center_color = max(0, input.SampleLevel(sampler_point_clamp, uv, 0).rgb);
+    prefilter = center_color;
 
-    const float2 ringScale = 2 * coc * xPPResolution_rcp;
-    const float3 center_color = input.SampleLevel(sampler_point_clamp, uv, 0).rgb;
-    float3 prefilter = center_color;
-    for (uint i = ringSampleCount[0]; i < ringSampleCount[1]; ++i)
+    [branch]
+    if (backgroundFactor < 1.0f)
     {
-        const float offsetCoc = disc[i].z;
-        const float2 uv2 = uv + ringScale * disc[i].xy * (1 + rand(seed, uv) * 0.1);
-        const float depth = texture_lineardepth.SampleLevel(sampler_linear_clamp, uv2, 0);
-        const float3 color = input.SampleLevel(sampler_point_clamp, uv2, 0).rgb;
-        const float weight = saturate(abs(depth - center_depth) * g_xCamera_ZFarP * 2);
-        prefilter += lerp(color, center_color, weight);
-    }
-    prefilter *= ringNormFactor[1];
+        float seed = 54321;
 
-	output_prefilter[DTid.xy] = prefilter;
+        const float2 ringScale = 2 * coc * xPPResolution_rcp;
+        for (uint i = ringSampleCount[0]; i < ringSampleCount[1]; ++i)
+        {
+            const float offsetCoc = disc[i].z;
+            const float2 uv2 = uv + ringScale * disc[i].xy * (1 + rand(seed, uv) * 0.1);
+            const float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, uv2, 0);
+            const float3 color = max(0, input.SampleLevel(sampler_point_clamp, uv2, 0).rgb);
+            const float weight = saturate(abs(depth - center_depth) * g_xCamera_ZFarP * 2);
+            prefilter += lerp(color, center_color, weight);
+        }
+        prefilter *= ringNormFactor[1];
+    }
+
+#endif // DEPTHOFFIELD_EARLYEXIT
+
+	output_prefilter[pixel] = prefilter;
 }

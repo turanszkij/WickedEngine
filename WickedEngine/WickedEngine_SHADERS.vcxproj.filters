@@ -834,13 +834,25 @@
     <FxCompile Include="depthoffield_postfilterCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="motionblur_earlyexitCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="motionblur_kickjobsCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="motionblur_cheapCS.hlsl">
+    <FxCompile Include="depthoffield_kickjobsCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="depthoffield_prepassCS_earlyexit.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="depthoffield_mainCS_earlyexit.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="depthoffield_mainCS_cheap.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="motionblurCS_earlyexit.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="motionblurCS_cheap.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

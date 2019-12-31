@@ -1381,8 +1381,12 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_HORIZONTAL], "depthoffield_tileMaxCOC_horizontalCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_VERTICAL], "depthoffield_tileMaxCOC_verticalCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_NEIGHBORHOODMAXCOC], "depthoffield_neighborhoodMaxCOCCS.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_KICKJOBS], "depthoffield_kickjobsCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS], "depthoffield_prepassCS.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS_EARLYEXIT], "depthoffield_prepassCS_earlyexit.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN], "depthoffield_mainCS.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN_EARLYEXIT], "depthoffield_mainCS_earlyexit.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN_CHEAP], "depthoffield_mainCS_cheap.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_POSTFILTER], "depthoffield_postfilterCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_UPSAMPLE], "depthoffield_upsampleCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_OUTLINE_FLOAT4], "outlineCS_float4.cso"); });
@@ -1392,8 +1396,8 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_NEIGHBORHOODMAXVELOCITY], "motionblur_neighborhoodMaxVelocityCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_KICKJOBS], "motionblur_kickjobsCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR], "motionblurCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_EARLYEXIT], "motionblur_earlyexitCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_CHEAP], "motionblur_cheapCS.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_EARLYEXIT], "motionblurCS_earlyexit.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_CHEAP], "motionblurCS_cheap.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE], "bloomseparateCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_BLOOMCOMBINE], "bloomcombineCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_FXAA], "fxaaCS.cso"); });
@@ -8844,13 +8848,20 @@ void Postprocess_DepthOfField(
 
 	static TextureDesc initialized_desc;
 	static Texture texture_tilemax_horizontal;
+	static Texture texture_tilemin_horizontal;
 	static Texture texture_tilemax;
+	static Texture texture_tilemin;
 	static Texture texture_neighborhoodmax;
 	static Texture texture_presort;
 	static Texture texture_prefilter;
 	static Texture texture_main;
 	static Texture texture_postfilter;
-	static Texture texture_alpha;
+	static Texture texture_alpha1;
+	static Texture texture_alpha2;
+	static GPUBuffer buffer_tile_statistics;
+	static GPUBuffer buffer_tiles_earlyexit;
+	static GPUBuffer buffer_tiles_cheap;
+	static GPUBuffer buffer_tiles_expensive;
 
 	if (initialized_desc.Width != desc.Width || initialized_desc.Height != desc.Height)
 	{
@@ -8864,9 +8875,14 @@ void Postprocess_DepthOfField(
 		tile_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		device->CreateTexture(&tile_desc, nullptr, &texture_tilemax);
 		device->CreateTexture(&tile_desc, nullptr, &texture_neighborhoodmax);
+		tile_desc.Format = FORMAT_R16_FLOAT;
+		device->CreateTexture(&tile_desc, nullptr, &texture_tilemin);
 
 		tile_desc.Height = desc.Height;
+		tile_desc.Format = FORMAT_R16G16_FLOAT;
 		device->CreateTexture(&tile_desc, nullptr, &texture_tilemax_horizontal);
+		tile_desc.Format = FORMAT_R16_FLOAT;
+		device->CreateTexture(&tile_desc, nullptr, &texture_tilemin_horizontal);
 
 		TextureDesc presort_desc;
 		presort_desc.type = TextureDesc::TEXTURE_2D;
@@ -8879,7 +8895,23 @@ void Postprocess_DepthOfField(
 		device->CreateTexture(&presort_desc, nullptr, &texture_main);
 		device->CreateTexture(&presort_desc, nullptr, &texture_postfilter);
 		presort_desc.Format = FORMAT_R8_UNORM;
-		device->CreateTexture(&presort_desc, nullptr, &texture_alpha);
+		device->CreateTexture(&presort_desc, nullptr, &texture_alpha1);
+		device->CreateTexture(&presort_desc, nullptr, &texture_alpha2);
+
+
+		GPUBufferDesc bufferdesc;
+		bufferdesc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+
+		bufferdesc.ByteWidth = TILE_STATISTICS_CAPACITY;
+		bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS | RESOURCE_MISC_INDIRECT_ARGS;
+		device->CreateBuffer(&bufferdesc, nullptr, &buffer_tile_statistics);
+
+		bufferdesc.ByteWidth = tile_desc.Width * tile_desc.Height;
+		bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bufferdesc.StructureByteStride = sizeof(uint);
+		device->CreateBuffer(&bufferdesc, nullptr, &buffer_tiles_earlyexit);
+		device->CreateBuffer(&bufferdesc, nullptr, &buffer_tiles_cheap);
+		device->CreateBuffer(&bufferdesc, nullptr, &buffer_tiles_expensive);
 	}
 
 	PostProcessCB cb;
@@ -8889,6 +8921,7 @@ void Postprocess_DepthOfField(
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.dof_focus = focus;
 	cb.dof_scale = scale;
+	cb.dof_maxcoc = 18; // todo input param
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
@@ -8899,6 +8932,7 @@ void Postprocess_DepthOfField(
 
 		const GPUResource* uavs[] = {
 			&texture_tilemax_horizontal,
+			&texture_tilemin_horizontal,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
@@ -8918,10 +8952,15 @@ void Postprocess_DepthOfField(
 		device->EventBegin("TileMax - Vertical", cmd);
 		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_VERTICAL], cmd);
 
-		device->BindResource(CS, &texture_tilemax_horizontal, TEXSLOT_ONDEMAND0, cmd);
+		const GPUResource* res[] = {
+			&texture_tilemax_horizontal,
+			&texture_tilemin_horizontal
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
 		const GPUResource* uavs[] = {
 			&texture_tilemax,
+			&texture_tilemin,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
@@ -8941,10 +8980,18 @@ void Postprocess_DepthOfField(
 		device->EventBegin("NeighborhoodMax", cmd);
 		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_NEIGHBORHOODMAXCOC], cmd);
 
-		device->BindResource(CS, &texture_tilemax, TEXSLOT_ONDEMAND0, cmd);
+		const GPUResource* res[] = {
+			&texture_tilemax,
+			&texture_tilemin
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
 		const GPUResource* uavs[] = {
-			&texture_neighborhoodmax,
+			&buffer_tile_statistics,
+			&buffer_tiles_earlyexit,
+			&buffer_tiles_cheap,
+			&buffer_tiles_expensive,
+			&texture_neighborhoodmax
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
@@ -8955,6 +9002,29 @@ void Postprocess_DepthOfField(
 			cmd
 		);
 		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
+
+	// Kick indirect tile jobs:
+	{
+		device->EventBegin("Kickjobs", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_KICKJOBS], cmd);
+
+		device->BindResource(CS, &texture_tilemax, TEXSLOT_ONDEMAND0, cmd);
+
+		const GPUResource* uavs[] = {
+			&buffer_tile_statistics,
+			&buffer_tiles_earlyexit,
+			&buffer_tiles_cheap,
+			&buffer_tiles_expensive
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(1, 1, 1, cmd);
+
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->Barrier(&GPUBarrier::Buffer(&buffer_tile_statistics, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDIRECT_ARGUMENT), 1, cmd);
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
@@ -8970,7 +9040,6 @@ void Postprocess_DepthOfField(
 	// Prepass:
 	{
 		device->EventBegin("Prepass", cmd);
-		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS], cmd);
 
 		const GPUResource* res[] = {
 			&input,
@@ -8984,12 +9053,17 @@ void Postprocess_DepthOfField(
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
-		device->Dispatch(
-			(texture_presort.GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(texture_presort.GetDesc().Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			1,
-			cmd
-		);
+		device->BindResource(CS, &buffer_tiles_earlyexit, TEXSLOT_ONDEMAND2, cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS_EARLYEXIT], cmd);
+		device->DispatchIndirect(&buffer_tile_statistics, INDIRECT_OFFSET_EARLYEXIT, cmd);
+
+		device->BindResource(CS, &buffer_tiles_cheap, TEXSLOT_ONDEMAND2, cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS], cmd);
+		device->DispatchIndirect(&buffer_tile_statistics, INDIRECT_OFFSET_CHEAP, cmd);
+
+		device->BindResource(CS, &buffer_tiles_expensive, TEXSLOT_ONDEMAND2, cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS], cmd);
+		device->DispatchIndirect(&buffer_tile_statistics, INDIRECT_OFFSET_EXPENSIVE, cmd);
 
 		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
@@ -8999,27 +9073,31 @@ void Postprocess_DepthOfField(
 	// Main pass:
 	{
 		device->EventBegin("Main pass", cmd);
-		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN], cmd);
 
 		const GPUResource* res[] = {
 			&texture_neighborhoodmax,
 			&texture_presort,
-			&texture_prefilter
+			&texture_prefilter,
+			&buffer_tiles_earlyexit,
+			&buffer_tiles_cheap,
+			&buffer_tiles_expensive
 		};
 		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
 		const GPUResource* uavs[] = {
 			&texture_main,
-			&texture_alpha
+			&texture_alpha1
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
-		device->Dispatch(
-			(texture_main.GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(texture_main.GetDesc().Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			1,
-			cmd
-		);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN_EARLYEXIT], cmd);
+		device->DispatchIndirect(&buffer_tile_statistics, INDIRECT_OFFSET_EARLYEXIT, cmd);
+
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN_CHEAP], cmd);
+		device->DispatchIndirect(&buffer_tile_statistics, INDIRECT_OFFSET_CHEAP, cmd);
+
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN], cmd);
+		device->DispatchIndirect(&buffer_tile_statistics, INDIRECT_OFFSET_EXPENSIVE, cmd);
 
 		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
@@ -9033,11 +9111,13 @@ void Postprocess_DepthOfField(
 
 		const GPUResource* res[] = {
 			&texture_main,
+			&texture_alpha1
 		};
 		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
 		const GPUResource* uavs[] = {
-			&texture_postfilter
+			&texture_postfilter,
+			&texture_alpha2
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
@@ -9069,7 +9149,7 @@ void Postprocess_DepthOfField(
 		const GPUResource* res[] = {
 			&input,
 			&texture_postfilter,
-			&texture_alpha,
+			&texture_alpha2,
 			&texture_neighborhoodmax
 		};
 		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
@@ -9320,6 +9400,7 @@ void Postprocess_MotionBlur(
 		device->Dispatch(1, 1, 1, cmd);
 
 		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->Barrier(&GPUBarrier::Buffer(&buffer_tile_statistics, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDIRECT_ARGUMENT), 1, cmd);
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
@@ -9341,8 +9422,6 @@ void Postprocess_MotionBlur(
 			&output,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-		device->Barrier(&GPUBarrier::Buffer(&buffer_tile_statistics, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDIRECT_ARGUMENT), 1, cmd);
 
 		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_EARLYEXIT], cmd);
 		device->DispatchIndirect(&buffer_tile_statistics, INDIRECT_OFFSET_EARLYEXIT, cmd);
