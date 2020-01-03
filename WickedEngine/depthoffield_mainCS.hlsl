@@ -46,7 +46,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 
     const uint ringCount = clamp(ceil(pow(maxcoc, 0.5f) * DOF_RING_COUNT), 1, DOF_RING_COUNT);
     const float spreadScale = ringCount / maxcoc;
-    const float2 ringScale = float(ringCount) / float(DOF_RING_COUNT) * maxcoc * xPPResolution_rcp;
+    const float2 ringScale = float(ringCount) / float(DOF_RING_COUNT) * maxcoc * float2(max(1, dof_aspect), max(1, 2 - dof_aspect)) * xPPResolution_rcp;
 
     const float3 center_color = texture_prefilter[pixel];
     const float3 center_presort = texture_presort[pixel];

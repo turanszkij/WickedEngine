@@ -29,8 +29,8 @@ float SpreadCmp(float offsetCoc, float sampleCoc, float pixelToSampleUnitsScale)
     return SpreadToe(offsetCoc, saturate(pixelToSampleUnitsScale * sampleCoc - offsetCoc + 1.0));
 }
 
-#define DOF_RING_COUNT 4
-
+#define DOF_MAX_RING_COUNT 4
+#define DOF_RING_COUNT 3
 static const float3 disc[] =
 {
     {  0.2310, -0.0957, 1.0 },

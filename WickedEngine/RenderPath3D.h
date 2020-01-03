@@ -13,8 +13,10 @@ private:
 	float exposure = 1.0f;
 	float bloomThreshold = 1.0f;
 	float ssaoBlur = 2.3f;
+	float motionBlurStrength = 100.0f;
 	float dofFocus = 10.0f;
 	float dofStrength = 1.0f;
+	float dofAspect = 1.0f;
 	float sharpenFilterAmount = 0.28f;
 	float outlineThreshold = 0.2f;
 	float outlineThickness = 1.0f;
@@ -112,8 +114,10 @@ public:
 	constexpr float getExposure() const { return exposure; }
 	constexpr float getBloomThreshold() const { return bloomThreshold; }
 	constexpr float getSSAOBlur() const { return ssaoBlur; }
+	constexpr float getMotionBlurStrength() const { return motionBlurStrength; }
 	constexpr float getDepthOfFieldFocus() const { return dofFocus; }
 	constexpr float getDepthOfFieldStrength() const { return dofStrength; }
+	constexpr float getDepthOfFieldAspect() const { return dofAspect; }
 	constexpr float getSharpenFilterAmount() const { return sharpenFilterAmount; }
 	constexpr float getOutlineThreshold() const { return outlineThreshold; }
 	constexpr float getOutlineThickness() const { return outlineThickness; }
@@ -148,8 +152,10 @@ public:
 	constexpr void setExposure(float value) { exposure = value; }
 	constexpr void setBloomThreshold(float value){ bloomThreshold = value; }
 	constexpr void setSSAOBlur(float value){ ssaoBlur = value; }
+	constexpr void setMotionBlurStrength(float value) { motionBlurStrength = value; }
 	constexpr void setDepthOfFieldFocus(float value){ dofFocus = value; }
-	constexpr void setDepthOfFieldStrength(float value){ dofStrength = value; }
+	constexpr void setDepthOfFieldStrength(float value) { dofStrength = value; }
+	constexpr void setDepthOfFieldAspect(float value){ dofAspect = value; }
 	constexpr void setSharpenFilterAmount(float value) { sharpenFilterAmount = value; }
 	constexpr void setOutlineThreshold(float value) { outlineThreshold = value; }
 	constexpr void setOutlineThickness(float value) { outlineThickness = value; }

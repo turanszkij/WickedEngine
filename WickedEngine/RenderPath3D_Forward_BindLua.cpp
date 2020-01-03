@@ -42,9 +42,10 @@ Luna<RenderPath3D_Forward_BindLua>::FunctionType RenderPath3D_Forward_BindLua::m
 	lunamethod(RenderPath3D_BindLua, SetMSAASampleCount),
 	lunamethod(RenderPath3D_BindLua, SetSharpenFilterEnabled),
 	lunamethod(RenderPath3D_BindLua, SetSharpenFilterAmount),
-
+	lunamethod(RenderPath3D_BindLua, SetMotionBlurStrength),
 	lunamethod(RenderPath3D_BindLua, SetDepthOfFieldFocus),
 	lunamethod(RenderPath3D_BindLua, SetDepthOfFieldStrength),
+	lunamethod(RenderPath3D_BindLua, SetDepthOfFieldAspect),
 	{ NULL, NULL }
 };
 Luna<RenderPath3D_Forward_BindLua>::PropertyType RenderPath3D_Forward_BindLua::properties[] = {

@@ -41,9 +41,10 @@ Luna<RenderPath3D_TiledDeferred_BindLua>::FunctionType RenderPath3D_TiledDeferre
 	lunamethod(RenderPath3D_BindLua, SetTessellationEnabled),
 	lunamethod(RenderPath3D_BindLua, SetSharpenFilterEnabled),
 	lunamethod(RenderPath3D_BindLua, SetSharpenFilterAmount),
-
+	lunamethod(RenderPath3D_BindLua, SetMotionBlurStrength),
 	lunamethod(RenderPath3D_BindLua, SetDepthOfFieldFocus),
 	lunamethod(RenderPath3D_BindLua, SetDepthOfFieldStrength),
+	lunamethod(RenderPath3D_BindLua, SetDepthOfFieldAspect),
 
 	{ NULL, NULL }
 };

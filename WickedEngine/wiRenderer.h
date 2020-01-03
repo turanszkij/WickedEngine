@@ -231,7 +231,9 @@ namespace wiRenderer
 		const wiGraphics::Texture& lineardepth,
 		wiGraphics::CommandList cmd,
 		float focus = 10.0f,
-		float scale = 1.0f
+		float scale = 1.0f,
+		float aspect = 1.0f,
+		float max_coc = 18.0f
 	);
 	void Postprocess_Outline(
 		const wiGraphics::Texture& input,
@@ -246,7 +248,8 @@ namespace wiRenderer
 		const wiGraphics::Texture& velocity,
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& output,
-		wiGraphics::CommandList cmd
+		wiGraphics::CommandList cmd,
+		float strength = 100.0f
 	);
 	void Postprocess_Bloom(
 		const wiGraphics::Texture& input,

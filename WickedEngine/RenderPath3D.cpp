@@ -636,7 +636,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 
 		if (getDepthOfFieldEnabled())
 		{
-			wiRenderer::Postprocess_DepthOfField(rt_first == nullptr ? *rt_read : *rt_first, *rt_write, rtLinearDepth, cmd, getDepthOfFieldFocus(), getDepthOfFieldStrength());
+			wiRenderer::Postprocess_DepthOfField(rt_first == nullptr ? *rt_read : *rt_first, *rt_write, rtLinearDepth, cmd, getDepthOfFieldFocus(), getDepthOfFieldStrength(), getDepthOfFieldAspect());
 			rt_first = nullptr;
 
 			std::swap(rt_read, rt_write);
@@ -645,7 +645,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 
 		if (getMotionBlurEnabled())
 		{
-			wiRenderer::Postprocess_MotionBlur(rt_first == nullptr ? *rt_read : *rt_first, srcGbuffer1, rtLinearDepth, *rt_write, cmd);
+			wiRenderer::Postprocess_MotionBlur(rt_first == nullptr ? *rt_read : *rt_first, srcGbuffer1, rtLinearDepth, *rt_write, cmd, getMotionBlurStrength());
 			rt_first = nullptr;
 
 			std::swap(rt_read, rt_write);

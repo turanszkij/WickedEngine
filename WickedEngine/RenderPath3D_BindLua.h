@@ -34,9 +34,10 @@ public:
 	int SetSharpenFilterEnabled(lua_State* L);
 	int SetSharpenFilterAmount(lua_State* L);
 	int SetExposure(lua_State* L);
-
+	int SetMotionBlurStrength(lua_State* L);
 	int SetDepthOfFieldFocus(lua_State* L);
 	int SetDepthOfFieldStrength(lua_State* L);
+	int SetDepthOfFieldAspect(lua_State* L);
 
 	static void Bind();
 };

@@ -8834,7 +8834,9 @@ void Postprocess_DepthOfField(
 	const Texture& lineardepth,
 	CommandList cmd,
 	float focus,
-	float scale
+	float scale,
+	float aspect,
+	float max_coc
 )
 {
 	GraphicsDevice* device = GetDevice();
@@ -8921,7 +8923,8 @@ void Postprocess_DepthOfField(
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.dof_focus = focus;
 	cb.dof_scale = scale;
-	cb.dof_maxcoc = 18; // todo input param
+	cb.dof_aspect = aspect;
+	cb.dof_maxcoc = max_coc;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
@@ -9239,7 +9242,8 @@ void Postprocess_MotionBlur(
 	const Texture& velocity,
 	const Texture& lineardepth,
 	const Texture& output,
-	CommandList cmd
+	CommandList cmd,
+	float strength
 )
 {
 	GraphicsDevice* device = GetDevice();
@@ -9302,6 +9306,7 @@ void Postprocess_MotionBlur(
 	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	cb.motionblur_strength = strength;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 

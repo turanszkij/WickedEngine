@@ -44,9 +44,10 @@ Luna<RenderPath3D_BindLua>::FunctionType RenderPath3D_BindLua::methods[] = {
 	lunamethod(RenderPath3D_BindLua, SetSharpenFilterEnabled),
 	lunamethod(RenderPath3D_BindLua, SetSharpenFilterAmount),
 	lunamethod(RenderPath3D_BindLua, SetExposure),
-
+	lunamethod(RenderPath3D_BindLua, SetMotionBlurStrength),
 	lunamethod(RenderPath3D_BindLua, SetDepthOfFieldFocus),
 	lunamethod(RenderPath3D_BindLua, SetDepthOfFieldStrength),
+	lunamethod(RenderPath3D_BindLua, SetDepthOfFieldAspect),
 	{ NULL, NULL }
 };
 Luna<RenderPath3D_BindLua>::PropertyType RenderPath3D_BindLua::properties[] = {
@@ -331,6 +332,21 @@ int RenderPath3D_BindLua::SetExposure(lua_State* L)
 }
 
 
+int RenderPath3D_BindLua::SetMotionBlurStrength(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetMotionBlurStrength(float value) component is null!");
+		return 0;
+	}
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		((RenderPath3D*)component)->setMotionBlurStrength(wiLua::SGetFloat(L, 1));
+	}
+	else
+		wiLua::SError(L, "SetMotionBlurStrength(float value) not enough arguments!");
+	return 0;
+}
 int RenderPath3D_BindLua::SetDepthOfFieldFocus(lua_State* L)
 {
 	if (component == nullptr)
@@ -359,6 +375,21 @@ int RenderPath3D_BindLua::SetDepthOfFieldStrength(lua_State* L)
 	}
 	else
 		wiLua::SError(L, "SetDepthOfFieldStrength(float value) not enough arguments!");
+	return 0;
+}
+int RenderPath3D_BindLua::SetDepthOfFieldAspect(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetDepthOfFieldAspect(float value) component is null!");
+		return 0;
+	}
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		((RenderPath3D*)component)->setDepthOfFieldAspect(wiLua::SGetFloat(L, 1));
+	}
+	else
+		wiLua::SError(L, "SetDepthOfFieldAspect(float value) not enough arguments!");
 	return 0;
 }
 

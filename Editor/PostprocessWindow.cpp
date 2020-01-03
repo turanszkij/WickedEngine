@@ -16,7 +16,7 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	ppWindow = new wiWindow(GUI, "PostProcess Window");
-	ppWindow->SetSize(XMFLOAT2(400, 660));
+	ppWindow->SetSize(XMFLOAT2(400, 720));
 	GUI->AddWidget(ppWindow);
 
 	float x = 150;
@@ -122,6 +122,17 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	});
 	ppWindow->AddWidget(motionBlurCheckBox);
 
+	motionBlurStrengthSlider = new wiSlider(0.1f, 400, 100, 10000, "Strength: ");
+	motionBlurStrengthSlider->SetTooltip("Set the camera shutter speed for motion blur (higher value means stronger blur).");
+	motionBlurStrengthSlider->SetScriptTip("RenderPath3D::SetMotionBlurStrength(float value)");
+	motionBlurStrengthSlider->SetSize(XMFLOAT2(100, 20));
+	motionBlurStrengthSlider->SetPos(XMFLOAT2(x + 100, y));
+	motionBlurStrengthSlider->SetValue(component->getMotionBlurStrength());
+	motionBlurStrengthSlider->OnSlide([&](wiEventArgs args) {
+		component->setMotionBlurStrength(args.fValue);
+		});
+	ppWindow->AddWidget(motionBlurStrengthSlider);
+
 	depthOfFieldCheckBox = new wiCheckBox("DepthOfField: ");
 	depthOfFieldCheckBox->SetTooltip("Enable Depth of field effect. Additional focus and strength setup required.");
 	depthOfFieldCheckBox->SetScriptTip("RenderPath3D::SetDepthOfFieldEnabled(bool value)");
@@ -153,6 +164,17 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 		component->setDepthOfFieldStrength(args.fValue);
 	});
 	ppWindow->AddWidget(depthOfFieldScaleSlider);
+
+	depthOfFieldAspectSlider = new wiSlider(0.01f, 2, 1, 1000, "Aspect: ");
+	depthOfFieldAspectSlider->SetTooltip("Set depth of field bokeh aspect ratio (width/height).");
+	depthOfFieldAspectSlider->SetScriptTip("RenderPath3D::SetDepthOfFieldAspect(float value)");
+	depthOfFieldAspectSlider->SetSize(XMFLOAT2(100, 20));
+	depthOfFieldAspectSlider->SetPos(XMFLOAT2(x + 100, y += 35));
+	depthOfFieldAspectSlider->SetValue(component->getDepthOfFieldAspect());
+	depthOfFieldAspectSlider->OnSlide([&](wiEventArgs args) {
+		component->setDepthOfFieldAspect(args.fValue);
+		});
+	ppWindow->AddWidget(depthOfFieldAspectSlider);
 
 	bloomCheckBox = new wiCheckBox("Bloom: ");
 	bloomCheckBox->SetTooltip("Enable bloom. The effect adds color bleeding to the brightest parts of the scene.");
