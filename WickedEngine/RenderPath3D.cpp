@@ -630,7 +630,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 
 			int output = device->GetFrameCount() % 2;
 			int history = 1 - output;
-			wiRenderer::Postprocess_TemporalAA(*rt_read, rtTemporalAA[history], srcGbuffer1, rtTemporalAA[output], cmd);
+			wiRenderer::Postprocess_TemporalAA(*rt_read, rtTemporalAA[history], srcGbuffer1, rtLinearDepth, rtTemporalAA[output], cmd);
 			rt_first = &rtTemporalAA[output];
 		}
 

@@ -267,6 +267,7 @@ namespace wiRenderer
 		const wiGraphics::Texture& input_current,
 		const wiGraphics::Texture& input_history,
 		const wiGraphics::Texture& velocity,
+		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);

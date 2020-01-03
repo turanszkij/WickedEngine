@@ -9585,6 +9585,7 @@ void Postprocess_TemporalAA(
 	const Texture& input_current,
 	const Texture& input_history,
 	const Texture& velocity,
+	const Texture& lineardepth,
 	const Texture& output,
 	CommandList cmd
 )
@@ -9598,6 +9599,7 @@ void Postprocess_TemporalAA(
 
 	device->BindResource(CS, &input_current, TEXSLOT_ONDEMAND0, cmd);
 	device->BindResource(CS, &input_history, TEXSLOT_ONDEMAND1, cmd);
+	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 	device->BindResource(CS, &velocity, TEXSLOT_GBUFFER1, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
