@@ -12,6 +12,10 @@ CBUFFER(PostProcessCB, CBSLOT_RENDERER_POSTPROCESS)
 	float4		xPPParams1;
 };
 
+#define ssao_range xPPParams0.x
+#define ssao_samplecount xPPParams0.y
+#define ssao_power xPPParams0.z
+
 static const uint MOTIONBLUR_TILESIZE = 32;
 #define motionblur_strength xPPParams0.x
 

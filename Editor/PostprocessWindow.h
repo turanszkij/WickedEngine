@@ -25,6 +25,7 @@ public:
 	wiCheckBox* ssaoCheckBox;
 	wiSlider*	ssaoRangeSlider;
 	wiSlider*	ssaoSampleCountSlider;
+	wiSlider*	ssaoPowerSlider;
 	wiCheckBox* ssrCheckBox;
 	wiCheckBox* sssCheckBox;
 	wiCheckBox* eyeAdaptionCheckBox;

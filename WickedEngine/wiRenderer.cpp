@@ -8589,7 +8589,8 @@ void Postprocess_SSAO(
 	CommandList cmd,
 	float range,
 	uint32_t samplecount,
-	float blur
+	float blur,
+	float power
 )
 {
 	GraphicsDevice* device = GetDevice();
@@ -8611,8 +8612,9 @@ void Postprocess_SSAO(
 	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.xPPParams0.x = range;
-	cb.xPPParams0.y = (float)samplecount;
+	cb.ssao_range = range;
+	cb.ssao_samplecount = (float)samplecount;
+	cb.ssao_power = power;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 

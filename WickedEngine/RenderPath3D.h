@@ -23,6 +23,7 @@ private:
 	XMFLOAT4 outlineColor = XMFLOAT4(0, 0, 0, 1);
 	float ssaoRange = 1.0f;
 	uint32_t ssaoSampleCount = 16;
+	float ssaoPower = 2.0f;
 	float chromaticAberrationAmount = 2.0f;
 
 	bool fxaaEnabled = false;
@@ -124,6 +125,7 @@ public:
 	constexpr XMFLOAT4 getOutlineColor() const { return outlineColor; }
 	constexpr float getSSAORange() const { return ssaoRange; }
 	constexpr uint32_t getSSAOSampleCount() const { return ssaoSampleCount; }
+	constexpr float getSSAOPower() const { return ssaoPower; }
 	constexpr float getChromaticAberrationAmount() const { return chromaticAberrationAmount; }
 
 	constexpr bool getSSAOEnabled() const { return ssaoEnabled; }
@@ -162,6 +164,7 @@ public:
 	constexpr void setOutlineColor(const XMFLOAT4& value) { outlineColor = value; }
 	constexpr void setSSAORange(float value) { ssaoRange = value; }
 	constexpr void setSSAOSampleCount(uint32_t value) { ssaoSampleCount = value; }
+	constexpr void setSSAOPower(float value) { ssaoPower = value; }
 	constexpr void setChromaticAberrationAmount(float value) { chromaticAberrationAmount = value; }
 
 	constexpr void setSSAOEnabled(bool value){ ssaoEnabled = value; }

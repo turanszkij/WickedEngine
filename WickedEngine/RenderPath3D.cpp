@@ -412,7 +412,8 @@ void RenderPath3D::RenderSSAO(CommandList cmd) const
 			cmd,
 			getSSAORange(),
 			getSSAOSampleCount(),
-			getSSAOBlur()
+			getSSAOBlur(),
+			getSSAOPower()
 		);
 	}
 }

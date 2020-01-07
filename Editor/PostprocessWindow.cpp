@@ -16,7 +16,7 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	ppWindow = new wiWindow(GUI, "PostProcess Window");
-	ppWindow->SetSize(XMFLOAT2(400, 720));
+	ppWindow->SetSize(XMFLOAT2(400, 740));
 	GUI->AddWidget(ppWindow);
 
 	float x = 150;
@@ -82,6 +82,16 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 		component->setSSAOSampleCount((UINT)args.iValue);
 	});
 	ppWindow->AddWidget(ssaoSampleCountSlider);
+
+	ssaoPowerSlider = new wiSlider(0.25f, 8.0f, 2, 1000, "Power: ");
+	ssaoPowerSlider->SetTooltip("Set SSAO Power. Higher values produce darker, more pronounced effect");
+	ssaoPowerSlider->SetSize(XMFLOAT2(100, 20));
+	ssaoPowerSlider->SetPos(XMFLOAT2(x + 100, y += 35));
+	ssaoPowerSlider->SetValue((float)component->getSSAOPower());
+	ssaoPowerSlider->OnSlide([&](wiEventArgs args) {
+		component->setSSAOPower(args.fValue);
+		});
+	ppWindow->AddWidget(ssaoPowerSlider);
 
 	ssrCheckBox = new wiCheckBox("SSR: ");
 	ssrCheckBox->SetTooltip("Enable Screen Space Reflections.");

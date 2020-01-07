@@ -201,7 +201,8 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd,
 		float range = 1.0f,
 		uint32_t samplecount = 16,
-		float blur = 2.3f
+		float blur = 2.3f,
+		float power = 2.0f
 	);
 	void Postprocess_SSR(
 		const wiGraphics::Texture& input,

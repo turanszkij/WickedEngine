@@ -74,8 +74,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	const float3 normal = normalize(cross(p2 - P, p1 - P));
 
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
-	const float range = xPPParams0.x;
-	const uint sampleCount = xPPParams0.y;
 
 	float seed = 1;
 	const float3 noise = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1;
@@ -85,12 +83,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	const float3x3 tangentSpace = float3x3(tangent, bitangent, normal);
 
 	float ao = 0;
-	for (uint i = 0; i < sampleCount; ++i)
+	for (uint i = 0; i < (uint)ssao_samplecount; ++i)
 	{
-		const float2 hamm = hammersley2d(i, sampleCount);
+		const float2 hamm = hammersley2d(i, ssao_samplecount);
 		const float3 hemisphere = hemispherepoint_uniform(hamm.x, hamm.y);
 		const float3 cone = mul(hemisphere, tangentSpace);
-		const float ray_range = range * lerp(0.2f, 1.0f, rand(seed, uv)); // modulate ray-length a bit to avoid uniform look
+		const float ray_range = ssao_range * lerp(0.2f, 1.0f, rand(seed, uv)); // modulate ray-length a bit to avoid uniform look
 		const float3 sam = P + cone * ray_range;
 
 		float4 vProjectedCoord = mul(g_xCamera_Proj, float4(sam, 1.0f));
@@ -112,7 +110,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 #endif // USE_LINEARDEPTH
 		}
 	}
-	ao /= (float)sampleCount;
+	ao /= ssao_samplecount;
 
-	output[DTid.xy] = saturate(1 - ao);
+	output[DTid.xy] = pow(saturate(1 - ao), ssao_power);
 }
