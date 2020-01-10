@@ -39,6 +39,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	{
 		mindepth = min(tile_min[GTid.x][GTid.y], min(tile_min[GTid.x + 1][GTid.y], min(tile_min[GTid.x][GTid.y + 1], tile_min[GTid.x + 1][GTid.y+ 1])));
 		maxdepth = max(tile_max[GTid.x][GTid.y], max(tile_max[GTid.x + 1][GTid.y], max(tile_max[GTid.x][GTid.y + 1], tile_max[GTid.x + 1][GTid.y+ 1])));
+		tile_min[GTid.x][GTid.y] = mindepth;
+		tile_max[GTid.x][GTid.y] = maxdepth;
 		output_minmax_mip1[DTid.xy / 2] = float2(mindepth, maxdepth);
 	}
 	GroupMemoryBarrierWithGroupSync();
@@ -47,6 +49,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	{
 		mindepth = min(tile_min[GTid.x][GTid.y], min(tile_min[GTid.x + 2][GTid.y], min(tile_min[GTid.x][GTid.y + 2], tile_min[GTid.x + 2][GTid.y + 2])));
 		maxdepth = max(tile_max[GTid.x][GTid.y], max(tile_max[GTid.x + 2][GTid.y], max(tile_max[GTid.x][GTid.y + 2], tile_max[GTid.x + 2][GTid.y + 2])));
+		tile_min[GTid.x][GTid.y] = mindepth;
+		tile_max[GTid.x][GTid.y] = maxdepth;
 		output_minmax_mip2[DTid.xy / 4] = float2(mindepth, maxdepth);
 	}
 	GroupMemoryBarrierWithGroupSync();
@@ -55,6 +59,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	{
 		mindepth = min(tile_min[GTid.x][GTid.y], min(tile_min[GTid.x + 4][GTid.y], min(tile_min[GTid.x][GTid.y + 4], tile_min[GTid.x + 4][GTid.y + 4])));
 		maxdepth = max(tile_max[GTid.x][GTid.y], max(tile_max[GTid.x + 4][GTid.y], max(tile_max[GTid.x][GTid.y + 4], tile_max[GTid.x + 4][GTid.y + 4])));
+		tile_min[GTid.x][GTid.y] = mindepth;
+		tile_max[GTid.x][GTid.y] = maxdepth;
 		output_minmax_mip3[DTid.xy / 8] = float2(mindepth, maxdepth);
 	}
 }
