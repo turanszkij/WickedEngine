@@ -230,6 +230,22 @@ void RenderPath3D::ResizeBuffers()
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture(&desc, nullptr, &rtLinearDepth);
 		device->SetName(&rtLinearDepth, "rtLinearDepth");
+
+		desc.Width = (desc.Width + 1) / 2;
+		desc.Height = (desc.Height + 1) / 2;
+		desc.MipLevels = 4;
+		desc.Format = FORMAT_R16G16_UNORM;
+		device->CreateTexture(&desc, nullptr, &rtLinearDepth_minmax);
+		device->SetName(&rtLinearDepth_minmax, "rtLinearDepth_minmax");
+
+		for (uint32_t i = 0; i < desc.MipLevels; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(&rtLinearDepth_minmax, SRV, 0, 1, i, 1);
+			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(&rtLinearDepth_minmax, UAV, 0, 1, i, 1);
+			assert(subresource_index == i);
+		}
 	}
 	{
 		TextureDesc desc;
@@ -398,7 +414,7 @@ void RenderPath3D::RenderShadows(CommandList cmd) const
 
 void RenderPath3D::RenderLinearDepth(CommandList cmd) const
 {
-	wiRenderer::Postprocess_Lineardepth(depthBuffer_Copy, rtLinearDepth, cmd);
+	wiRenderer::Postprocess_Lineardepth(depthBuffer_Copy, rtLinearDepth, rtLinearDepth_minmax, cmd);
 }
 void RenderPath3D::RenderSSAO(CommandList cmd) const
 {
@@ -406,7 +422,8 @@ void RenderPath3D::RenderSSAO(CommandList cmd) const
 	{
 		wiRenderer::Postprocess_SSAO(
 			depthBuffer_Copy, 
-			rtLinearDepth, 
+			rtLinearDepth,
+			rtLinearDepth_minmax,
 			rtSSAO[1],
 			rtSSAO[0],
 			cmd,
@@ -421,7 +438,7 @@ void RenderPath3D::RenderSSR(const Texture& srcSceneRT, const wiGraphics::Textur
 {
 	if (getSSREnabled())
 	{
-		wiRenderer::Postprocess_SSR(srcSceneRT, depthBuffer_Copy, rtLinearDepth, gbuffer1, rtSSR, cmd);
+		wiRenderer::Postprocess_SSR(srcSceneRT, depthBuffer_Copy, rtLinearDepth_minmax, gbuffer1, rtSSR, cmd);
 	}
 }
 void RenderPath3D::DownsampleDepthBuffer(CommandList cmd) const

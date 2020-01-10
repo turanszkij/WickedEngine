@@ -2,6 +2,7 @@
 #include "ShaderInterop_Postprocess.h"
 
 TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
+TEXTURE2D(texture_lineardepth_minmax, float2, TEXSLOT_ONDEMAND1);
 
 RWTEXTURE2D(output, float4, 0);
 
@@ -18,7 +19,7 @@ float4 SSRBinarySearch(in float3 origin, in float3 direction)
 		coord.xy /= coord.w;
 		coord.xy = coord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
-		const float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, coord.xy, 0) * g_xCamera_ZFarP;
+		const float depth = texture_lineardepth_minmax.SampleLevel(sampler_point_clamp, coord.xy, 0).g * g_xCamera_ZFarP;
 
 		if (abs(origin.z - depth) < tolerance)
 			return float4(coord.xy, depth, 1);
@@ -43,7 +44,7 @@ float4 SSRRayMarch(in float3 origin, in float3 direction)
 		coord.xy /= coord.w;
 		coord.xy = coord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
-		const float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, coord.xy, 0) * g_xCamera_ZFarP;
+		const float depth = texture_lineardepth_minmax.SampleLevel(sampler_point_clamp, coord.xy, 0).r * g_xCamera_ZFarP;
 
 		if (origin.z > depth)
 			return SSRBinarySearch(origin, direction);

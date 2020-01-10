@@ -70,6 +70,7 @@ protected:
 	wiGraphics::Texture depthBuffer_Copy; // used for shader resource, single sample
 	wiGraphics::Texture depthBuffer_Reflection; // used for reflection, single sample
 	wiGraphics::Texture rtLinearDepth; // linear depth result
+	wiGraphics::Texture rtLinearDepth_minmax; // linear depth result (halfres minmax, mipchain)
 	wiGraphics::Texture smallDepth; // downsampled depth buffer
 
 	wiGraphics::RenderPass renderpass_occlusionculling;

@@ -195,7 +195,8 @@ namespace wiRenderer
 	);
 	void Postprocess_SSAO(
 		const wiGraphics::Texture& depthbuffer, 
-		const wiGraphics::Texture& lineardepth, 
+		const wiGraphics::Texture& lineardepth,
+		const wiGraphics::Texture& lineardepth_minmax,
 		const wiGraphics::Texture& temp,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
@@ -207,7 +208,7 @@ namespace wiRenderer
 	void Postprocess_SSR(
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& depthbuffer,
-		const wiGraphics::Texture& lineardepth,
+		const wiGraphics::Texture& lineardepth_minmax,
 		const wiGraphics::Texture& gbuffer1,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
@@ -280,7 +281,8 @@ namespace wiRenderer
 	);
 	void Postprocess_Lineardepth(
 		const wiGraphics::Texture& input,
-		const wiGraphics::Texture& output,
+		const wiGraphics::Texture& output_fullres,
+		const wiGraphics::Texture& output_minmax,
 		wiGraphics::CommandList cmd
 	);
 	void Postprocess_Sharpen(
