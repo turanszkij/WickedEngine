@@ -233,7 +233,7 @@ void RenderPath3D::ResizeBuffers()
 
 		desc.Width = (desc.Width + 1) / 2;
 		desc.Height = (desc.Height + 1) / 2;
-		desc.MipLevels = 4;
+		desc.MipLevels = 5;
 		desc.Format = FORMAT_R16G16_UNORM;
 		device->CreateTexture(&desc, nullptr, &rtLinearDepth_minmax);
 		device->SetName(&rtLinearDepth_minmax, "rtLinearDepth_minmax");
@@ -654,7 +654,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 
 		if (getDepthOfFieldEnabled())
 		{
-			wiRenderer::Postprocess_DepthOfField(rt_first == nullptr ? *rt_read : *rt_first, *rt_write, rtLinearDepth, cmd, getDepthOfFieldFocus(), getDepthOfFieldStrength(), getDepthOfFieldAspect());
+			wiRenderer::Postprocess_DepthOfField(rt_first == nullptr ? *rt_read : *rt_first, *rt_write, rtLinearDepth, rtLinearDepth_minmax, cmd, getDepthOfFieldFocus(), getDepthOfFieldStrength(), getDepthOfFieldAspect());
 			rt_first = nullptr;
 
 			std::swap(rt_read, rt_write);

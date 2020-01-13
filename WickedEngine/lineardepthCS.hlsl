@@ -9,20 +9,20 @@ RWTEXTURE2D(output_minmax_mip0, unorm float2, 1);
 RWTEXTURE2D(output_minmax_mip1, unorm float2, 2);
 RWTEXTURE2D(output_minmax_mip2, unorm float2, 3);
 RWTEXTURE2D(output_minmax_mip3, unorm float2, 4);
+RWTEXTURE2D(output_minmax_mip4, unorm float2, 5);
 
-groupshared float tile_min[POSTPROCESS_BLOCKSIZE][POSTPROCESS_BLOCKSIZE];
-groupshared float tile_max[POSTPROCESS_BLOCKSIZE][POSTPROCESS_BLOCKSIZE];
+groupshared float tile_min[POSTPROCESS_LINEARDEPTH_BLOCKSIZE][POSTPROCESS_LINEARDEPTH_BLOCKSIZE];
+groupshared float tile_max[POSTPROCESS_LINEARDEPTH_BLOCKSIZE][POSTPROCESS_LINEARDEPTH_BLOCKSIZE];
 
-[numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
+[numthreads(POSTPROCESS_LINEARDEPTH_BLOCKSIZE, POSTPROCESS_LINEARDEPTH_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 {
-	// (Using GatherRed would be nicer but getting weird artifact for fullres, sample order somehow doesn't match up)
-	const float4 lineardepths = {
-		getLinearDepth(input[DTid.xy * 2 + uint2(0, 0)]) * g_xCamera_ZFarP_rcp,
-		getLinearDepth(input[DTid.xy * 2 + uint2(1, 0)]) * g_xCamera_ZFarP_rcp,
-		getLinearDepth(input[DTid.xy * 2 + uint2(0, 1)]) * g_xCamera_ZFarP_rcp,
-		getLinearDepth(input[DTid.xy * 2 + uint2(1, 1)]) * g_xCamera_ZFarP_rcp,
-	};
+	const float4 lineardepths = float4(
+		getLinearDepth(input[clamp(DTid.xy * 2 + uint2(0, 0), 0, lineardepth_inputresolution - 1)]),
+		getLinearDepth(input[clamp(DTid.xy * 2 + uint2(1, 0), 0, lineardepth_inputresolution - 1)]),
+		getLinearDepth(input[clamp(DTid.xy * 2 + uint2(0, 1), 0, lineardepth_inputresolution - 1)]),
+		getLinearDepth(input[clamp(DTid.xy * 2 + uint2(1, 1), 0, lineardepth_inputresolution - 1)])
+	) * g_xCamera_ZFarP_rcp;
 	output_fullres[DTid.xy * 2 + uint2(0, 0)] = lineardepths.x;
 	output_fullres[DTid.xy * 2 + uint2(1, 0)] = lineardepths.y;
 	output_fullres[DTid.xy * 2 + uint2(0, 1)] = lineardepths.z;
@@ -62,5 +62,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 		tile_min[GTid.x][GTid.y] = mindepth;
 		tile_max[GTid.x][GTid.y] = maxdepth;
 		output_minmax_mip3[DTid.xy / 8] = float2(mindepth, maxdepth);
+	}
+	GroupMemoryBarrierWithGroupSync();
+
+	if (GTid.x % 16 == 0 && GTid.y % 16 == 0)
+	{
+		mindepth = min(tile_min[GTid.x][GTid.y], min(tile_min[GTid.x + 8][GTid.y], min(tile_min[GTid.x][GTid.y + 8], tile_min[GTid.x + 8][GTid.y + 8])));
+		maxdepth = max(tile_max[GTid.x][GTid.y], max(tile_max[GTid.x + 8][GTid.y], max(tile_max[GTid.x][GTid.y + 8], tile_max[GTid.x + 8][GTid.y + 8])));
+		output_minmax_mip4[DTid.xy / 16] = float2(mindepth, maxdepth);
 	}
 }

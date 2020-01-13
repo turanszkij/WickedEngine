@@ -8838,6 +8838,7 @@ void Postprocess_DepthOfField(
 	const Texture& input,
 	const Texture& output,
 	const Texture& lineardepth,
+	const Texture& lineardepth_minmax,
 	CommandList cmd,
 	float focus,
 	float scale,
@@ -9052,25 +9053,26 @@ void Postprocess_DepthOfField(
 
 		const GPUResource* res[] = {
 			&input,
-			&texture_neighborhoodmax
+			&texture_neighborhoodmax,
+			&lineardepth_minmax
 		};
 		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
 		const GPUResource* uavs[] = {
 			&texture_presort,
-			&texture_prefilter,
+			&texture_prefilter
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
-		device->BindResource(CS, &buffer_tiles_earlyexit, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(CS, &buffer_tiles_earlyexit, TEXSLOT_ONDEMAND3, cmd);
 		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS_EARLYEXIT], cmd);
 		device->DispatchIndirect(&buffer_tile_statistics, INDIRECT_OFFSET_EARLYEXIT, cmd);
 
-		device->BindResource(CS, &buffer_tiles_cheap, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(CS, &buffer_tiles_cheap, TEXSLOT_ONDEMAND3, cmd);
 		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS], cmd);
 		device->DispatchIndirect(&buffer_tile_statistics, INDIRECT_OFFSET_CHEAP, cmd);
 
-		device->BindResource(CS, &buffer_tiles_expensive, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(CS, &buffer_tiles_expensive, TEXSLOT_ONDEMAND3, cmd);
 		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS], cmd);
 		device->DispatchIndirect(&buffer_tile_statistics, INDIRECT_OFFSET_EXPENSIVE, cmd);
 
@@ -9699,6 +9701,10 @@ void Postprocess_Lineardepth(
 	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	cb.xPPParams0.x = (float)input.GetDesc().Width;
+	cb.xPPParams0.y = (float)input.GetDesc().Height;
+	cb.xPPParams0.z = 1.0f / cb.xPPParams0.x;
+	cb.xPPParams0.w = 1.0f / cb.xPPParams0.y;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
@@ -9709,17 +9715,18 @@ void Postprocess_Lineardepth(
 	device->BindUAV(CS, &output_minmax, 2, cmd, 1);
 	device->BindUAV(CS, &output_minmax, 3, cmd, 2);
 	device->BindUAV(CS, &output_minmax, 4, cmd, 3);
+	device->BindUAV(CS, &output_minmax, 5, cmd, 4);
 
 	device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_LINEARDEPTH], cmd);
 	device->Dispatch(
-		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(desc.Width + POSTPROCESS_LINEARDEPTH_BLOCKSIZE - 1) / POSTPROCESS_LINEARDEPTH_BLOCKSIZE,
+		(desc.Height + POSTPROCESS_LINEARDEPTH_BLOCKSIZE - 1) / POSTPROCESS_LINEARDEPTH_BLOCKSIZE,
 		1,
 		cmd
 	);
 
 	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
-	device->UnbindUAVs(0, 5, cmd);
+	device->UnbindUAVs(0, 6, cmd);
 
 	device->EventEnd(cmd);
 }

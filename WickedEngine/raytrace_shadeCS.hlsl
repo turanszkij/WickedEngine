@@ -1,3 +1,4 @@
+#define RAYTRACE_STACK_SHARED
 #include "globals.hlsli"
 #include "raytracingHF.hlsli"
 
@@ -8,7 +9,7 @@ RWSTRUCTUREDBUFFER(rayBuffer, RaytracingStoredRay, 0);
 RWTEXTURE2D(resultTexture, float4, 1);
 
 [numthreads(RAYTRACING_TRACE_GROUPSIZE, 1, 1)]
-void main(uint3 DTid : SV_DispatchThreadID)
+void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
 	if (DTid.x >= counterBuffer_READ.Load(0))
 		return;
@@ -268,7 +269,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				newRay.direction = L + sampling_offset * 0.025f;
 				newRay.direction_rcp = rcp(newRay.direction);
 				newRay.energy = 0;
-				bool hit = TraceRay_Any(newRay, dist);
+				bool hit = TraceRay_Any(newRay, dist, groupIndex);
 				bounceResult += (hit ? 0 : NdotL) * (lighting.direct.diffuse + lighting.direct.specular);
 			}
 		}

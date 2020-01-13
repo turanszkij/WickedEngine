@@ -1,4 +1,5 @@
 #define RAY_BACKFACE_CULLING
+#define RAYTRACE_STACK_SHARED
 #include "globals.hlsli"
 #include "raytracingHF.hlsli"
 
@@ -11,8 +12,8 @@ RWSTRUCTUREDBUFFER(rayIndexBuffer_WRITE, uint, 1);
 RWSTRUCTUREDBUFFER(raySortBuffer_WRITE, float, 2);
 RWSTRUCTUREDBUFFER(rayBuffer_WRITE, RaytracingStoredRay, 3);
 
-// This enables reduced atomics into global memory
-#define ADVANCED_ALLOCATION
+// This enables reduced atomics into global memory.
+//#define ADVANCED_ALLOCATION
 
 #ifdef ADVANCED_ALLOCATION
 static const uint GroupActiveRayMaskBucketCount = RAYTRACING_TRACE_GROUPSIZE / 32;
@@ -55,7 +56,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 
 		if (ray_active)
 		{
-			RayHit hit = TraceRay_Closest(ray);
+			RayHit hit = TraceRay_Closest(ray, groupIndex);
 			if (hit.distance >= INFINITE_RAYHIT - 1)
 			{
 				float3 envColor;

@@ -16,7 +16,7 @@ groupshared float tile_Z[TILE_SIZE*TILE_SIZE];
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
 	[branch]
-	if (texture_lineardepth_minmax.Load(uint3(Gid.xy, 3)).r == 1.0f)
+	if (texture_lineardepth_minmax.Load(uint3(Gid.xy, log2(POSTPROCESS_BLOCKSIZE))).r == 1.0f)
 	{
 		// early exit when tile min (mip3) is the farplane
 		output[DTid.xy] = 1;
@@ -51,6 +51,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	};
 
 	const float center_Z = tile_Z[cross_idx[0]];
+
+	[branch]
 	if (center_Z >= g_xCamera_ZFarP) 
 		return;
 
@@ -104,6 +106,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		vProjectedCoord.xyz /= vProjectedCoord.w;
 		vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
+		[branch]
 		if (is_saturated(vProjectedCoord.xy))
 		{
 #ifdef USE_LINEARDEPTH

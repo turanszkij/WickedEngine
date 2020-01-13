@@ -231,6 +231,7 @@ namespace wiRenderer
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& output,
 		const wiGraphics::Texture& lineardepth,
+		const wiGraphics::Texture& lineardepth_minmax,
 		wiGraphics::CommandList cmd,
 		float focus = 10.0f,
 		float scale = 1.0f,

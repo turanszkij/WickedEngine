@@ -3,6 +3,7 @@
 #include "ShaderInterop.h"
 
 static const uint POSTPROCESS_BLOCKSIZE = 8;
+static const uint POSTPROCESS_LINEARDEPTH_BLOCKSIZE = 16;
 
 CBUFFER(PostProcessCB, CBSLOT_RENDERER_POSTPROCESS)
 {
@@ -11,6 +12,9 @@ CBUFFER(PostProcessCB, CBSLOT_RENDERER_POSTPROCESS)
 	float4		xPPParams0;
 	float4		xPPParams1;
 };
+
+#define lineardepth_inputresolution xPPParams0.xy
+#define lineardepth_inputresolution_rcp xPPParams0.zw
 
 #define ssao_range xPPParams0.x
 #define ssao_samplecount xPPParams0.y

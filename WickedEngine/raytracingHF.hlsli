@@ -276,6 +276,11 @@ inline bool IntersectNode(in Ray ray, in BVHNode box)
 #define RAYTRACE_STACKSIZE 32
 #endif // RAYTRACE_STACKSIZE
 
+// have the stack in shared memory instead of registers:
+#ifdef RAYTRACE_STACK_SHARED
+groupshared uint stack[RAYTRACE_STACKSIZE][RAYTRACING_TRACE_GROUPSIZE];
+#endif // RAYTRACE_STACK_SHARED
+
 STRUCTUREDBUFFER(materialBuffer, ShaderMaterial, TEXSLOT_ONDEMAND0);
 TEXTURE2D(materialTextureAtlas, float4, TEXSLOT_ONDEMAND1);
 RAWBUFFER(primitiveCounterBuffer, TEXSLOT_ONDEMAND2);
@@ -285,23 +290,25 @@ STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND5);
 
 
 // Returns the closest hit primitive if any (useful for generic trace). If nothing was hit, then rayHit.distance will be equal to INFINITE_RAYHIT
-inline RayHit TraceRay_Closest(Ray ray)
+inline RayHit TraceRay_Closest(Ray ray, uint groupIndex = 0)
 {
 	RayHit bestHit = CreateRayHit();
 
+#ifndef RAYTRACE_STACK_SHARED
 	// Emulated stack for tree traversal:
-	uint stack[RAYTRACE_STACKSIZE];
+	uint stack[RAYTRACE_STACKSIZE][1];
+#endif // RAYTRACE_STACK_SHARED
 	uint stackpos = 0;
 
 	const uint primitiveCount = primitiveCounterBuffer.Load(0);
 	const uint leafNodeOffset = primitiveCount - 1;
 
 	// push root node
-	stack[stackpos++] = 0;
+	stack[stackpos++][groupIndex] = 0;
 
 	do {
 		// pop untraversed node
-		const uint nodeIndex = stack[--stackpos];
+		const uint nodeIndex = stack[--stackpos][groupIndex];
 
 		BVHNode node = bvhNodeBuffer[nodeIndex];
 
@@ -320,9 +327,9 @@ inline RayHit TraceRay_Closest(Ray ray)
 				if (stackpos < RAYTRACE_STACKSIZE - 1)
 				{
 					// push left child
-					stack[stackpos++] = node.LeftChildIndex;
+					stack[stackpos++][groupIndex] = node.LeftChildIndex;
 					// push right child
-					stack[stackpos++] = node.RightChildIndex;
+					stack[stackpos++][groupIndex] = node.RightChildIndex;
 				}
 				else
 				{
@@ -340,23 +347,25 @@ inline RayHit TraceRay_Closest(Ray ray)
 }
 
 // Returns true immediately if any primitives were hit, flase if nothing was hit (useful for opaque shadows):
-inline bool TraceRay_Any(Ray ray, float maxDistance)
+inline bool TraceRay_Any(Ray ray, float maxDistance, uint groupIndex = 0)
 {
 	bool shadow = false;
 
+#ifndef RAYTRACE_STACK_SHARED
 	// Emulated stack for tree traversal:
-	uint stack[RAYTRACE_STACKSIZE];
+	uint stack[RAYTRACE_STACKSIZE][1];
+#endif // RAYTRACE_STACK_SHARED
 	uint stackpos = 0;
 
 	const uint primitiveCount = primitiveCounterBuffer.Load(0);
 	const uint leafNodeOffset = primitiveCount - 1;
 
 	// push root node
-	stack[stackpos++] = 0;
+	stack[stackpos++][groupIndex] = 0;
 
 	do {
 		// pop untraversed node
-		const uint nodeIndex = stack[--stackpos];
+		const uint nodeIndex = stack[--stackpos][groupIndex];
 
 		BVHNode node = bvhNodeBuffer[nodeIndex];
 
@@ -380,9 +389,9 @@ inline bool TraceRay_Any(Ray ray, float maxDistance)
 				if (stackpos < RAYTRACE_STACKSIZE - 1)
 				{
 					// push left child
-					stack[stackpos++] = node.LeftChildIndex;
+					stack[stackpos++][groupIndex] = node.LeftChildIndex;
 					// push right child
-					stack[stackpos++] = node.RightChildIndex;
+					stack[stackpos++][groupIndex] = node.RightChildIndex;
 				}
 				else
 				{
