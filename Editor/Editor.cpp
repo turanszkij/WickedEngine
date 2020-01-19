@@ -1175,9 +1175,15 @@ void EditorComponent::Update(float dt)
 				selectAll = false;
 				EndTranslate();
 
-				for (size_t i = 0; i < scene.names.GetCount(); ++i)
+				for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
 				{
-					Entity entity = scene.names.GetEntity(i);
+					Entity entity = scene.transforms.GetEntity(i);
+
+					if (scene.hierarchy.Contains(entity))
+					{
+						// Parented animated objects don't work properly when attached to translator in bulk
+						continue;
+					}
 
 					wiScene::PickResult picked;
 					picked.entity = entity;
