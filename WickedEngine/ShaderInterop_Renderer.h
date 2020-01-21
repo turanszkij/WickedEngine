@@ -231,6 +231,9 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float3		g_xFrame_WorldBoundsExtents;			float pad2_frameCB;		// world enclosing AABB abs(max - min)
 	float3		g_xFrame_WorldBoundsExtents_rcp;								// world enclosing AABB 1.0f / abs(max - min)
 	float		g_xFrame_CloudSpeed;
+	
+	uint		g_xFrame_TemporalAAEnabled;
+	float3		padding;
 };
 
 CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
