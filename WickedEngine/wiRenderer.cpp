@@ -8164,6 +8164,7 @@ void UpdateFrameCB(CommandList cmd)
 	}
 	cb.g_xFrame_TemporalAAJitter = temporalAAJitter;
 	cb.g_xFrame_TemporalAAJitterPrev = temporalAAJitterPrev;
+	cb.g_xFrame_TemporalAAEnabled = GetTemporalAAEnabled();
 
 	const auto& prevCam = GetPrevCamera();
 	const auto& reflCam = GetRefCamera();
