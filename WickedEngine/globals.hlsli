@@ -147,6 +147,17 @@ inline float2 hammersley2d(uint idx, uint num) {
 	return float2(float(idx) / float(num), radicalInverse_VdC);
 }
 
+// "Next Generation Post Processing in Call of Duty: Advanced Warfare"
+// http://advances.realtimerendering.com/s2014/index.html
+float InterleavedGradientNoise(float2 uv, uint frameCount)
+{
+	const float2 magicFrameScale = float2(47, 17) * 0.695f;
+	uv += frameCount * magicFrameScale;
+
+	const float3 magic = float3(0.06711056f, 0.00583715f, 52.9829189f);
+	return frac(magic.z * frac(dot(uv, magic.xy)));
+}
+
 // 2D array index to flattened 1D array index
 inline uint flatten2D(uint2 coord, uint2 dim)
 {

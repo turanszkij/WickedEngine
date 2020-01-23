@@ -13,7 +13,7 @@ struct LDS_ForceField
 	uint type;
 	float3 position;
 	float gravity;
-	float range_inverse;
+	float range_rcp;
 	float3 normal;
 };
 groupshared LDS_ForceField forceFields[NUM_LDS_FORCEFIELDS];
@@ -31,7 +31,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		forceFields[groupIndex].type = (uint)forceField.GetType();
 		forceFields[groupIndex].position = forceField.positionWS;
 		forceFields[groupIndex].gravity = forceField.energy;
-		forceFields[groupIndex].range_inverse = forceField.range;
+		forceFields[groupIndex].range_rcp = forceField.range; // it is actually uploaded from CPU as 1.0f / range
 		forceFields[groupIndex].normal = forceField.directionWS;
 	}
 
@@ -136,7 +136,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
                 dir = forceField.normal;
             }
 
-            force += dir * forceField.gravity * (1 - saturate(dist * forceField.range_inverse));
+            force += dir * forceField.gravity * (1 - saturate(dist * forceField.range_rcp));
         }
 
 		// Pull back to rest position:

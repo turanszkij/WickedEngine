@@ -150,10 +150,10 @@ static const int impostorCaptureAngles = 12;
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {
 	float2		g_xFrame_ScreenWidthHeight;
-	float2		g_xFrame_ScreenWidthHeight_Inverse;
+	float2		g_xFrame_ScreenWidthHeight_rcp;
 
 	float2		g_xFrame_InternalResolution;
-	float2		g_xFrame_InternalResolution_Inverse;
+	float2		g_xFrame_InternalResolution_rcp;
 
 	float3		g_xFrame_SunColor;
 	float		g_xFrame_Gamma;
@@ -213,7 +213,7 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_WindWaveSize;
 
 	float		g_xFrame_WindRandomness;
-	float		g_xFrame_StaticSkyGamma;					// possible values (0: no static sky; 1: hdr static sky; other: actual gamma when ldr)
+	float		g_xFrame_StaticSkyGamma;			// possible values (0: no static sky; 1: hdr static sky; other: actual gamma when ldr)
 	uint		g_xFrame_VoxelRadianceRetargetted;
 	uint		g_xFrame_TemporalAASampleRotation;
 
@@ -226,10 +226,13 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float4x4	g_xFrame_MainCamera_PrevInvVP;		// Inverse(PrevView*PrevProjection)
 	float4x4	g_xFrame_MainCamera_ReflVP;			// ReflectionView*ReflectionProjection
 
-	float3		g_xFrame_WorldBoundsMin;				uint g_xFrame_TemporalAAEnabled;// world enclosing AABB min
-	float3		g_xFrame_WorldBoundsMax;				float pad1_frameCB;		// world enclosing AABB max
-	float3		g_xFrame_WorldBoundsExtents;				float pad2_frameCB;		// world enclosing AABB abs(max - min)
-	float3		g_xFrame_WorldBoundsExtents_rcp;								// world enclosing AABB 1.0f / abs(max - min)
+	float3		g_xFrame_WorldBoundsMin;			// world enclosing AABB min
+	uint		g_xFrame_TemporalAAEnabled;
+	float3		g_xFrame_WorldBoundsMax;			// world enclosing AABB max
+	float		_padding1_frameCB;
+	float3		g_xFrame_WorldBoundsExtents;		// world enclosing AABB abs(max - min)
+	float		_padding2_frameCB;
+	float3		g_xFrame_WorldBoundsExtents_rcp;	// world enclosing AABB 1.0f / abs(max - min)
 	float		g_xFrame_CloudSpeed;
 };
 

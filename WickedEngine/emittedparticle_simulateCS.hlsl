@@ -14,7 +14,7 @@ struct LDS_ForceField
 	uint type;
 	float3 position;
 	float gravity;
-	float range_inverse;
+	float range_rcp;
 	float3 normal;
 };
 groupshared LDS_ForceField forceFields[NUM_LDS_FORCEFIELDS];
@@ -39,7 +39,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		forceFields[Gid].type = (uint)forceField.GetType();
 		forceFields[Gid].position = forceField.positionWS;
 		forceFields[Gid].gravity = forceField.energy;
-		forceFields[Gid].range_inverse = forceField.range;
+		forceFields[Gid].range_rcp = forceField.range; // it is actually uploaded from CPU as 1.0f / range
 		forceFields[Gid].normal = forceField.directionWS;
 	}
 
@@ -73,7 +73,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 					dir = forceField.normal;
 				}
 
-				particle.force += dir * forceField.gravity * (1 - saturate(dist * forceField.range_inverse));
+				particle.force += dir * forceField.gravity * (1 - saturate(dist * forceField.range_rcp));
 			}
 
 
@@ -104,8 +104,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 					float depth2 = texture_depth[pixel + uint2(0, -1)];
 
 					float3 p0 = reconstructPosition(uv, depth0, g_xFrame_MainCamera_PrevInvVP);
-					float3 p1 = reconstructPosition(uv + float2(1, 0) * g_xFrame_InternalResolution_Inverse, depth1, g_xFrame_MainCamera_PrevInvVP);
-					float3 p2 = reconstructPosition(uv + float2(0, -1) * g_xFrame_InternalResolution_Inverse, depth2, g_xFrame_MainCamera_PrevInvVP);
+					float3 p1 = reconstructPosition(uv + float2(1, 0) * g_xFrame_InternalResolution_rcp, depth1, g_xFrame_MainCamera_PrevInvVP);
+					float3 p2 = reconstructPosition(uv + float2(0, -1) * g_xFrame_InternalResolution_rcp, depth2, g_xFrame_MainCamera_PrevInvVP);
 
 					float3 surfaceNormal = normalize(cross(p2 - p0, p1 - p0));
 

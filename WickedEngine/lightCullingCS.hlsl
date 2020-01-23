@@ -337,7 +337,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		float3 ld = deferred_Diffuse[pixel].rgb;
 		float3 ls = deferred_Specular[pixel].rgb;
 		float3 N = decodeNormal(g1.xy);
-		float2 ScreenCoord = (float2)pixel * g_xFrame_InternalResolution_Inverse;
+		float2 ScreenCoord = (pixel + 0.5f) * g_xFrame_InternalResolution_rcp;
 		float3 P = reconstructPosition(ScreenCoord, depth[granularity]);
 		float3 V = normalize(g_xCamera_CamPos - P);
 		Surface surface = CreateSurface(P, N, V, float4(g0.rgb, 1), g2.r, g2.g, g2.b, g2.a);

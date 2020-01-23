@@ -135,7 +135,7 @@ bool ScreenSpaceRayTrace(float3 csOrig, float3 csDir, float jitter, out float2 h
         alpha = yAlpha;
     }
 
-    // P0 must be in bounds
+    // P1 must be in bounds
     if (P1.x > xDelta.x || P1.x < xDelta.y) 
     {
         float xClip = (P1.x > xDelta.x) ? xDelta.x : xDelta.y;
@@ -251,18 +251,6 @@ float CalculateBlendIntersection(float iterationCount, float2 hitPixel, bool hit
     return blend;
 }
 
-// Todo: Move to globals.hlsli for other cases?
-// "Next Generation Post Processing in Call of Duty: Advanced Warfare"
-// http://advances.realtimerendering.com/s2014/index.html
-float InterleavedGradientNoise(float2 uv, uint frameCount)
-{
-    const float2 magicFrameScale = float2(47, 17) * 0.695f;
-    uv += frameCount * magicFrameScale;
-
-    const float3 magic = float3(0.06711056f, 0.00583715f, 52.9829189f);
-    return frac(magic.z * frac(dot(uv, magic.xy)));
-}
-
 #endif
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
@@ -311,7 +299,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     
     bool hit = ScreenSpaceRayTrace(P, R, jitter, hitPixel, hitPoint, iterationCount);
     
-    if (hitPixel.x > 1.0f || hitPixel.x < 0.0f || hitPixel.y > 1.0f || hitPixel.y < 0.0f)
+    if (!is_saturated(hitPixel))
     {
         hit = false;
     }
