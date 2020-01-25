@@ -9,10 +9,10 @@ RWTEXTURE2D(output, float4, 0);
 //#define USE_RAYMARCH
 
 #ifdef USE_RAYMARCH
-static const uint	coarseStepCount = 16; // primary ray march step count (higher will find more in distance, but slower)
+static const uint	coarseStepCount = 16;       // primary ray march step count (higher will find more in distance, but slower)
 static const float	coarseStepIncrease = 1.18f; // primary ray march step increase (higher will travel more distance, but can miss details)
-static const uint	fineStepCount = 16;	// binary step count (higher is nicer but slower)
-static const float  tolerance = 0.9f; // early exit factor for binary search (smaller is nicer but slower)
+static const uint	fineStepCount = 16;	    // binary step count (higher is nicer but slower)
+static const float  tolerance = 0.9f;		    // early exit factor for binary search (smaller is nicer but slower)
 
 float4 SSRBinarySearch(in float3 origin, in float3 direction)
 {
@@ -63,7 +63,7 @@ float4 SSRRayMarch(in float3 origin, in float3 direction)
 static const float rayTraceStride = 0.0f;           // Step in horizontal or vertical pixels between samples.
 static const float rayTraceMaxStep = 900.0f;        // Maximum number of iterations. Higher gives better images but may be slow.
 static const float rayTraceHitThickness = 1.5f;     // Thickness to ascribe to each pixel in the depth buffer.
-static const float rayTraceHitThicknessBias = 5.0f; // Bias to control the thickness along distance.
+static const float rayTraceHitThicknessBias = 7.0f; // Bias to control the thickness along distance.
 static const float rayTraceMaxDistance = 1000.0f;   // Maximum camera-space distance to trace before returning a miss.
 static const float rayTraceStrideCutoff = 100.0f;   // More distant pixels are smaller in screen space. This value tells at what point to
 							// start relaxing the stride to give higher quality reflections for objects far from the camera.
@@ -78,15 +78,16 @@ float DistanceSquared(float2 a, float2 b)
 }
 
 bool intersectsDepthBuffer(float z, float minZ, float maxZ)
-{   
-    // Effectively remove line/tiny artifacts, mostly caused by Zbuffers precision.
-    z += 0.01f;
-    
+{
     // Increase thickness along distance. 
     // This will help objects from dissapering in the distance.
-    const float distanceDifference = 0.0001f;
-    float thickness = lerp(rayTraceHitThickness, 100.0f, saturate(z * rayTraceHitThicknessBias * distanceDifference));
-    thickness = max(thickness, rayTraceHitThickness);
+    float thicknessScale = min(1.0f, z / rayTraceStrideCutoff);
+    float thickness = rayTraceHitThickness * rayTraceHitThicknessBias * thicknessScale;
+    thickness = clamp(thickness, rayTraceHitThickness, 10.0f);
+    
+    // Effectively remove line/tiny artifacts, mostly caused by Zbuffers precision.
+    float depthScale = min(1.0f, z / rayTraceStrideCutoff);
+    z += lerp(0.05f, 0.0f, depthScale);
     
     return (minZ >= z) && (maxZ - thickness <= z);
 }
