@@ -19,7 +19,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 #ifdef TEMPORAL_SMOOTHING
 		// Blend voxels with the previous frame's data to avoid popping artifacts for dynamic objects:
 		[branch]
-		if (g_xFrame_VoxelRadianceRetargetted)
+		if (g_xFrame_Options & OPTION_BIT_VOXELGI_RETARGETTED)
 		{
 			// Do not perform the blend if an offset happened to the voxel grid's center. 
 			// The offset is not accounted for in the blend operation which can introduce severe light leaking.

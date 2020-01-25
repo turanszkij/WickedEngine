@@ -8099,11 +8099,8 @@ void UpdateFrameCB(CommandList cmd)
 	cb.g_xFrame_VoxelRadianceNumCones = std::max(std::min(voxelSceneData.numCones, 16u), 1u);
 	cb.g_xFrame_VoxelRadianceNumCones_rcp = 1.0f / (float)cb.g_xFrame_VoxelRadianceNumCones;
 	cb.g_xFrame_VoxelRadianceRayStepSize = voxelSceneData.rayStepSize;
-	cb.g_xFrame_VoxelRadianceReflectionsEnabled = voxelSceneData.reflectionsEnabled;
 	cb.g_xFrame_VoxelRadianceDataCenter = voxelSceneData.center;
-	cb.g_xFrame_AdvancedRefractions = GetAdvancedRefractionsEnabled() ? 1 : 0;
 	cb.g_xFrame_EntityCullingTileCount = GetEntityCullingTileCount();
-	cb.g_xFrame_TransparentShadowsEnabled = TRANSPARENTSHADOWSENABLED;
 	cb.g_xFrame_GlobalEnvProbeIndex = -1;
 	cb.g_xFrame_EnvProbeMipCount = 0;
 	cb.g_xFrame_EnvProbeMipCount_rcp = 1.0f;
@@ -8128,7 +8125,6 @@ void UpdateFrameCB(CommandList cmd)
 	cb.g_xFrame_ForceFieldArrayCount = entityArrayCount_ForceFields;
 	cb.g_xFrame_EnvProbeArrayOffset = entityArrayOffset_EnvProbes;
 	cb.g_xFrame_EnvProbeArrayCount = entityArrayCount_EnvProbes;
-	cb.g_xFrame_VoxelRadianceRetargetted = voxelSceneData.centerChangedThisFrame ? 1 : 0;
 	cb.g_xFrame_WindRandomness = scene.weather.windRandomness;
 	cb.g_xFrame_WindWaveSize = scene.weather.windWaveSize;
 	cb.g_xFrame_WindDirection = scene.weather.windDirection;
@@ -8164,7 +8160,6 @@ void UpdateFrameCB(CommandList cmd)
 	}
 	cb.g_xFrame_TemporalAAJitter = temporalAAJitter;
 	cb.g_xFrame_TemporalAAJitterPrev = temporalAAJitterPrev;
-	cb.g_xFrame_TemporalAAEnabled = GetTemporalAAEnabled();
 
 	const auto& prevCam = GetPrevCamera();
 	const auto& reflCam = GetRefCamera();
@@ -8182,6 +8177,32 @@ void UpdateFrameCB(CommandList cmd)
 	cb.g_xFrame_WorldBoundsExtents_rcp.x = 1.0f / cb.g_xFrame_WorldBoundsExtents.x;
 	cb.g_xFrame_WorldBoundsExtents_rcp.y = 1.0f / cb.g_xFrame_WorldBoundsExtents.y;
 	cb.g_xFrame_WorldBoundsExtents_rcp.z = 1.0f / cb.g_xFrame_WorldBoundsExtents.z;
+
+	cb.g_xFrame_Options = 0;
+	if (GetTemporalAAEnabled())
+	{
+		cb.g_xFrame_Options |= OPTION_BIT_TEMPORALAA_ENABLED;
+	}
+	if (GetAdvancedRefractionsEnabled())
+	{
+		cb.g_xFrame_Options |= OPTION_BIT_ADVANCEDREFRACTIONS_ENABLED;
+	}
+	if (GetTransparentShadowsEnabled())
+	{
+		cb.g_xFrame_Options |= OPTION_BIT_TRANSPARENTSHADOWS_ENABLED;
+	}
+	if (GetVoxelRadianceEnabled())
+	{
+		cb.g_xFrame_Options |= OPTION_BIT_VOXELGI_ENABLED;
+	}
+	if (GetVoxelRadianceReflectionsEnabled())
+	{
+		cb.g_xFrame_Options |= OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED;
+	}
+	if (voxelSceneData.centerChangedThisFrame)
+	{
+		cb.g_xFrame_Options |= OPTION_BIT_VOXELGI_RETARGETTED;
+	}
 
 	GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &cb, cmd);
 }

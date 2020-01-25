@@ -145,6 +145,14 @@ static const uint TILED_CULLING_GRANULARITY = TILED_CULLING_BLOCKSIZE / TILED_CU
 
 static const int impostorCaptureAngles = 12;
 
+// These option bits can be read from g_xFrame_Options constant buffer value:
+static const uint OPTION_BIT_TEMPORALAA_ENABLED = 1 << 0;
+static const uint OPTION_BIT_ADVANCEDREFRACTIONS_ENABLED = 1 << 1;
+static const uint OPTION_BIT_TRANSPARENTSHADOWS_ENABLED = 1 << 2;
+static const uint OPTION_BIT_VOXELGI_ENABLED = 1 << 3;
+static const uint OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED = 1 << 4;
+static const uint OPTION_BIT_VOXELGI_RETARGETTED = 1 << 5;
+
 // ---------- Common Constant buffers: -----------------
 
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
@@ -184,18 +192,17 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_VoxelRadianceRayStepSize;			// raymarch step size in voxel space units
 
 	float3		g_xFrame_VoxelRadianceDataCenter;			// center of the voxel grid in world space units
-	uint		g_xFrame_VoxelRadianceReflectionsEnabled;	// are voxel gi reflections enabled or not
+	uint		g_xFrame_Options;							// wiRenderer bool options packed into bitmask
 
 	uint3		g_xFrame_EntityCullingTileCount;
-	uint		g_xFrame_AdvancedRefractions;
-
-	uint		g_xFrame_TransparentShadowsEnabled;
 	int			g_xFrame_GlobalEnvProbeIndex;
+
 	uint		g_xFrame_EnvProbeMipCount;
 	float		g_xFrame_EnvProbeMipCount_rcp;
-
 	float		g_xFrame_Time;
 	float		g_xFrame_TimePrev;
+
+	float2		_padding0_frameCB;
 	float		g_xFrame_DeltaTime;
 	uint		g_xFrame_FrameCount;
 
@@ -212,9 +219,16 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float3		g_xFrame_WindDirection;
 	float		g_xFrame_WindWaveSize;
 
+	float3		g_xFrame_WorldBoundsMin;			// world enclosing AABB min
+	float		g_xFrame_CloudSpeed;
+
+	float3		g_xFrame_WorldBoundsMax;			// world enclosing AABB max
 	float		g_xFrame_WindRandomness;
+
+	float3		g_xFrame_WorldBoundsExtents;		// world enclosing AABB abs(max - min)
 	float		g_xFrame_StaticSkyGamma;			// possible values (0: no static sky; 1: hdr static sky; other: actual gamma when ldr)
-	uint		g_xFrame_VoxelRadianceRetargetted;
+
+	float3		g_xFrame_WorldBoundsExtents_rcp;	// world enclosing AABB 1.0f / abs(max - min)
 	uint		g_xFrame_TemporalAASampleRotation;
 
 	float2		g_xFrame_TemporalAAJitter;
@@ -226,14 +240,6 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float4x4	g_xFrame_MainCamera_PrevInvVP;		// Inverse(PrevView*PrevProjection)
 	float4x4	g_xFrame_MainCamera_ReflVP;			// ReflectionView*ReflectionProjection
 
-	float3		g_xFrame_WorldBoundsMin;			// world enclosing AABB min
-	uint		g_xFrame_TemporalAAEnabled;
-	float3		g_xFrame_WorldBoundsMax;			// world enclosing AABB max
-	float		_padding1_frameCB;
-	float3		g_xFrame_WorldBoundsExtents;		// world enclosing AABB abs(max - min)
-	float		_padding2_frameCB;
-	float3		g_xFrame_WorldBoundsExtents_rcp;	// world enclosing AABB 1.0f / abs(max - min)
-	float		g_xFrame_CloudSpeed;
 };
 
 CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)

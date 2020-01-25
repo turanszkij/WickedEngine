@@ -296,7 +296,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
     float2 uv2 = (DTid.xy + 0.5f);
     //float jitter = 1.0f + rand(uv2 + g_xFrame_Time);
-    float jitter = 1.0f + InterleavedGradientNoise(uv2, (g_xFrame_FrameCount % 8) * g_xFrame_TemporalAAEnabled) * 0.5f; // Seems like a more stable noise
+    float jitter = 1.0f + InterleavedGradientNoise(uv2, (g_xFrame_FrameCount % 8) * (g_xFrame_Options & OPTION_BIT_TEMPORALAA_ENABLED)) * 0.5f; // Seems like a more stable noise
     
     bool hit = ScreenSpaceRayTrace(P, R, jitter, hitPixel, hitPoint, iterationCount);
     

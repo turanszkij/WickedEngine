@@ -172,7 +172,7 @@ inline void Refraction(in float2 ScreenCoord, inout Surface surface, inout float
 		float2 size;
 		float mipLevels;
 		texture_refraction.GetDimensions(0, size.x, size.y, mipLevels);
-		const float sampled_mip = (g_xFrame_AdvancedRefractions ? surface.roughness * mipLevels : 0);
+		const float sampled_mip = ((g_xFrame_Options & OPTION_BIT_ADVANCEDREFRACTIONS_ENABLED) ? surface.roughness * mipLevels : 0);
 		const float2 normal2D = mul((float3x3)g_xCamera_View, surface.N.xyz).xy;
 		float2 perturbatedRefrTexCoords = ScreenCoord.xy + normal2D * g_xMaterial.refractionIndex;
 		float4 refractiveColor = texture_refraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, sampled_mip);

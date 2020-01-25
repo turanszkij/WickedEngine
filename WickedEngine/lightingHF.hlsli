@@ -68,7 +68,7 @@ inline float3 shadowCascade(in ShaderEntity light, in float3 shadowPos, in float
 #endif
 
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
-	if (g_xFrame_TransparentShadowsEnabled)
+	if (g_xFrame_Options & OPTION_BIT_TRANSPARENTSHADOWS_ENABLED)
 	{
 		// unfortunately transparents will not receive transparent shadow map
 		// because we cannot distinguish without using secondary depth buffer for transparents
@@ -758,7 +758,7 @@ inline LightingContribution VoxelGI(in Surface surface, inout Lighting lighting)
 
 
 		[branch]
-		if (g_xFrame_VoxelRadianceReflectionsEnabled)
+		if (g_xFrame_Options & OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED)
 		{
 			float4 reflection = ConeTraceReflection(texture_voxelradiance, surface.P, surface.N, surface.V, surface.roughness);
 
