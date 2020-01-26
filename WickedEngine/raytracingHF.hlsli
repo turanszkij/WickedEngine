@@ -36,26 +36,6 @@ struct Ray
 	}
 };
 
-inline float CreateRaySortCode(in Ray ray)
-{
-	// Sorting purely based on morton code works best so far:
-	return (float)morton3D((ray.origin - g_xFrame_WorldBoundsMin) * g_xFrame_WorldBoundsExtents_rcp);
-
-	//uint hash = 0;
-
-	//// quantize direction [-1; 1] on 8x4x8 grid (3 + 2 + 3 = 8 bits):
-	//hash |= (uint)clamp(ray.direction.x * 4 + 4, 0, 7) << 0;
-	//hash |= (uint)clamp(ray.direction.y * 2 + 2, 0, 3) << 3;
-	//hash |= (uint)clamp(ray.direction.z * 4 + 4, 0, 7) << 5;
-
-	//// quantize origin [0, 1] on 256x256x256 grid (8 bits per component):
-	//const float3 origin = (ray.origin - g_xFrame_WorldBoundsMin) * g_xFrame_WorldBoundsExtents_rcp;
-	//hash |= ((uint)abs(origin.x * 255) % 256) << 8;
-	//hash |= ((uint)abs(origin.x * 255) % 256) << 16;
-	//hash |= ((uint)abs(origin.x * 255) % 256) << 24;
-
-	//return (float)hash;
-}
 inline RaytracingStoredRay CreateStoredRay(in Ray ray)
 {
 	RaytracingStoredRay storedray;

@@ -8,9 +8,7 @@ STRUCTUREDBUFFER(rayIndexBuffer_READ, uint, TEXSLOT_ONDEMAND8);
 STRUCTUREDBUFFER(rayBuffer_READ, RaytracingStoredRay, TEXSLOT_ONDEMAND9);
 
 RWRAWBUFFER(counterBuffer_WRITE, 0);
-RWSTRUCTUREDBUFFER(rayIndexBuffer_WRITE, uint, 1);
-RWSTRUCTUREDBUFFER(raySortBuffer_WRITE, float, 2);
-RWSTRUCTUREDBUFFER(rayBuffer_WRITE, RaytracingStoredRay, 3);
+RWSTRUCTUREDBUFFER(rayBuffer_WRITE, RaytracingStoredRay, 1);
 
 // This enables reduced atomics into global memory.
 //#define ADVANCED_ALLOCATION
@@ -84,8 +82,6 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 			// Naive strategy to allocate active rays. Global memory atomics will be performed for every thread:
 			uint dest;
 			counterBuffer_WRITE.InterlockedAdd(0, 1, dest);
-			rayIndexBuffer_WRITE[dest] = dest;
-			raySortBuffer_WRITE[dest] = CreateRaySortCode(ray);
 			rayBuffer_WRITE[dest] = CreateStoredRay(ray);
 #endif // ADVANCED_ALLOCATION
 		}
@@ -139,8 +135,6 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 		}
 
 		const uint dest = GroupRayWriteOffset + activePrefixSum - 1; // -1 because activePrefixSum includes current thread, but arrays start from 0!
-		rayIndexBuffer_WRITE[dest] = dest;
-		raySortBuffer_WRITE[dest] = CreateRaySortCode(ray);
 		rayBuffer_WRITE[dest] = CreateStoredRay(ray);
 	}
 #endif // ADVANCED_ALLOCATION

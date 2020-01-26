@@ -1366,6 +1366,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_RAYTRACE_KICKJOBS], "raytrace_kickjobsCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_RAYTRACE_CLOSESTHIT], "raytrace_closesthitCS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_RAYTRACE_SHADE], "raytrace_shadeCS.cso"); });
+	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_RAYTRACE_TILESORT], "raytrace_tilesortCS.cso"); });
 
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT1], "blur_gaussian_float1CS.cso"); });
 	wiJobSystem::Execute(ctx, []{ LoadComputeShader(computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT4], "blur_gaussian_float4CS.cso"); });
@@ -7333,11 +7334,6 @@ void RayBuffers::Create(GraphicsDevice* device, uint32_t newRayCapacity)
 	device->CreateBuffer(&desc, nullptr, &rayIndexBuffer[1]);
 	device->SetName(&rayIndexBuffer[1], "rayIndexBuffer[1]");
 
-	desc.StructureByteStride = sizeof(float); // sorting needs float now
-	desc.ByteWidth = desc.StructureByteStride * rayCapacity;
-	device->CreateBuffer(&desc, nullptr, &raySortBuffer);
-	device->SetName(&raySortBuffer, "raySortBuffer");
-
 	desc.StructureByteStride = sizeof(RaytracingStoredRay);
 	desc.ByteWidth = desc.StructureByteStride * rayCapacity;
 	device->CreateBuffer(&desc, nullptr, &rayBuffer[0]);
@@ -7427,7 +7423,7 @@ void RayTraceScene(
 		GPUBufferDesc desc;
 
 		desc.BindFlags = BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(IndirectDispatchArgs);
+		desc.StructureByteStride = sizeof(IndirectDispatchArgs) * 2;
 		desc.ByteWidth = desc.StructureByteStride;
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
@@ -7498,9 +7494,27 @@ void RayTraceScene(
 		if (bounce > 0)
 		{
 			// Sort rays to achieve more coherency:
-			device->EventBegin("Ray Sorting", cmd);
-			wiGPUSortLib::Sort(rayBuffers->rayCapacity, rayBuffers->raySortBuffer, rayBuffers->rayCountBuffer[__readBufferID], 0, rayBuffers->rayIndexBuffer[__readBufferID], cmd);
-			device->EventEnd(cmd);
+			{
+				device->EventBegin("Ray Sorting", cmd);
+				device->BindComputeShader(&computeShaders[CSTYPE_RAYTRACE_TILESORT], cmd);
+
+				const GPUResource* res[] = {
+					&rayBuffers->rayCountBuffer[__readBufferID],
+					&rayBuffers->rayBuffer[__readBufferID],
+				};
+				device->BindResources(CS, res, TEXSLOT_ONDEMAND7, arraysize(res), cmd);
+				const GPUResource* uavs[] = {
+					&rayBuffers->rayIndexBuffer[__readBufferID],
+				};
+				device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+				device->DispatchIndirect(&indirectBuffer, RAYTRACE_INDIRECT_OFFSET_SORT, cmd);
+
+				device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+				device->UnbindUAVs(0, arraysize(uavs), cmd);
+
+				device->EventEnd(cmd);
+			}
 
 			// Shade
 			{
@@ -7525,7 +7539,7 @@ void RayTraceScene(
 				};
 				device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
-				device->DispatchIndirect(&indirectBuffer, 0, cmd);
+				device->DispatchIndirect(&indirectBuffer, RAYTRACE_INDIRECT_OFFSET_TRACE, cmd);
 
 				device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 				device->UnbindUAVs(0, arraysize(uavs), cmd);
@@ -7563,13 +7577,11 @@ void RayTraceScene(
 			device->BindResources(CS, res, TEXSLOT_ONDEMAND7, arraysize(res), cmd);
 			const GPUResource* uavs[] = {
 				&rayBuffers->rayCountBuffer[__writeBufferID],
-				&rayBuffers->rayIndexBuffer[__writeBufferID],
-				&rayBuffers->raySortBuffer,
 				&rayBuffers->rayBuffer[__writeBufferID],
 			};
 			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
-			device->DispatchIndirect(&indirectBuffer, 0, cmd);
+			device->DispatchIndirect(&indirectBuffer, RAYTRACE_INDIRECT_OFFSET_TRACE, cmd);
 
 			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 			device->UnbindUAVs(0, arraysize(uavs), cmd);

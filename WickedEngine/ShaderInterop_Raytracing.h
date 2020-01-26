@@ -5,6 +5,10 @@
 
 static const uint RAYTRACING_LAUNCH_BLOCKSIZE = 8;
 static const uint RAYTRACING_TRACE_GROUPSIZE = 64;
+static const uint RAYTRACING_SORT_GROUPSIZE = 1024;
+
+static const uint RAYTRACE_INDIRECT_OFFSET_TRACE = 0;
+static const uint RAYTRACE_INDIRECT_OFFSET_SORT = 4 * 3;
 
 
 CBUFFER(RaytracingCB, CBSLOT_RENDERER_TRACED)

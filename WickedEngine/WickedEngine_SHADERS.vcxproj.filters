@@ -855,6 +855,9 @@
     <FxCompile Include="motionblurCS_cheap.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="raytrace_tilesortCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">
