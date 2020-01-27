@@ -695,10 +695,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiXInput.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="$(MSBuildThisFileDirectory)..\Documentation\information_sheet.png" />
-    <Image Include="$(MSBuildThisFileDirectory)..\Documentation\orderofexecution.png" />
-  </ItemGroup>
-  <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)..\features.txt" />
     <Text Include="$(MSBuildThisFileDirectory)..\other_licenses.txt" />
     <Text Include="$(MSBuildThisFileDirectory)ArchiveVersionHistory.txt" />
@@ -721,9 +717,6 @@
     <None Include="$(MSBuildThisFileDirectory)..\scripts\rotate_model.lua" />
     <None Include="$(MSBuildThisFileDirectory)..\scripts\set_material_color.lua" />
     <None Include="$(MSBuildThisFileDirectory)..\scripts\set_material_emissive.lua" />
-  </ItemGroup>
-  <ItemGroup>
-    <Xml Include="$(MSBuildThisFileDirectory)..\Documentation\OrderOfExecution.xml" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="$(MSBuildThisFileDirectory)fonts\arial.ttf" />

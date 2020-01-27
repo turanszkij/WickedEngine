@@ -918,9 +918,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRectPacker.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiProfiler.h">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
@@ -1127,6 +1124,9 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPlatform.h">
       <Filter>ENGINE\System</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiProfiler.h">
+      <Filter>ENGINE\Tools</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1754,9 +1754,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRectPacker.cpp">
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiProfiler.cpp">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.cpp">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClCompile>
@@ -1889,14 +1886,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiScene_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="$(MSBuildThisFileDirectory)..\Documentation\orderofexecution.png">
-      <Filter>Documentation</Filter>
-    </Image>
-    <Image Include="$(MSBuildThisFileDirectory)..\Documentation\information_sheet.png">
-      <Filter>Documentation</Filter>
-    </Image>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiProfiler.cpp">
+      <Filter>ENGINE\Tools</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)..\features.txt" />
@@ -1949,11 +1941,6 @@
     <None Include="$(MSBuildThisFileDirectory)..\scripts\fighting_game.lua">
       <Filter>scripts</Filter>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Xml Include="$(MSBuildThisFileDirectory)..\Documentation\OrderOfExecution.xml">
-      <Filter>Documentation</Filter>
-    </Xml>
   </ItemGroup>
   <ItemGroup>
     <Font Include="$(MSBuildThisFileDirectory)fonts\arial.ttf">

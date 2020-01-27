@@ -1,62 +1,56 @@
 # Wicked Engine Scripting API Documentation
-This is a collection and explanation of scripting features in Wicked Engine.
-The documentation completion is still pending....
+This is a reference and explanation of Lua scripting features in Wicked Engine.
 
 ## Contents
-1. Introduction and usage
-2. Common Tools
-3. Engine manipulation
-	1. BackLog (Console)
-	2. Renderer
-4. Utility Tools
-	1. Font
-	2. Sprite
-		1. ImageParams
-		2. SpriteAnim
-		3. MovingTexAnim
-		4. DrawRecAnim
-	3. Texture
-	4. Audio
-		1. Sound
-		2. SoundInstance
-		3. SoundInstance3D
-	5. Vector
-	6. Matrix
-	7. Scene System (using entity-component system)
-		1. Entity
-		2. Scene
-		3. NameComponent
-		4. LayerComponent
-		5. TransformComponent
-		6. CameraComponent
-		7. AnimationComponent
-		8. MaterialComponent
-		9. EmitterComponent
-		10. LightComponent
-		11. ObjectComponent
-	8. High Level Interface
-		1. MainComponent
-		2. RenderPath
-			1. RenderPath2D
-			2. RenderPath3D
-				1. RenderPath3D_Forward
-				2. RenderPath3D_Deferred
-			3. LoadingScreen
-	9. Network
-	10. Input Handling
+1. [Introduction and usage](#introduction-and-usage)
+2. [Utility Tools](#utility-tools)
+4. [Engine Bindings](#engine-bindings)
+	1. [BackLog (Console)](#backlog)
+	2. [Renderer](#renderer)
+	3. [Font](#font)
+	4. [Sprite](#sprite)
+		1. [ImageParams](#imageparams)
+		2. [SpriteAnim](#spriteanim)
+		3. [MovingTexAnim](#movingtexanim)
+		4. [DrawRecAnim](#drawrecanim)
+	5. [Texture](#texture)
+	6. [Audio](#audio)
+		1. [Sound](#sound)
+		2. [SoundInstance](#soundinstance)
+		3. [SoundInstance3D](#soundinstance3d)
+	7. [Vector](#vector)
+	8. [Matrix](#matrix)
+	9. [Scene](#scene)
+		1. [Entity](#entity)
+		2. [Scene](#scene)
+		3. [NameComponent](#namecomponent)
+		4. [LayerComponent](#layercomponent)
+		5. [TransformComponent](#transformcomponent)
+		6. [CameraComponent](#cameracomponent)
+		7. [AnimationComponent](#animationcomponent)
+		8. [MaterialComponent](#materialcomponent)
+		9. [EmitterComponent](#emittercomponent)
+		10. [LightComponent](#lightcomponent)
+		11. [ObjectComponent](#objectcomponent)
+	10. [High Level Interface](#high-level-interface)
+		1. [MainComponent](#maincomponent)
+		2. [RenderPath](#renderpath)
+			1. [RenderPath2D](#renderpath2d)
+			2. [RenderPath3D](#renderpath3d)
+			3. [LoadingScreen](#loadingscreen)
+	11. [Input](#input)
 		
 ## Introduction and usage
 Scripting in Wicked Engine is powered by Lua, meaning that the user can make use of the 
-syntax and features of the widely used Lua language, accompanied by its fast interpreter.
+syntax and features of the flexible and powerful Lua language.
 Apart from the common features, certain engine features are also available to use.
 You can load lua script files and execute them, or the engine scripting console (also known as the BackLog)
 can also be used to execute single line scripts (or you can execute file scripts by the dofile command here).
 Upon startup, the engine will try to load a startup script file named startup.lua in the root directory of 
-the application. If not found, an error message will be thrown follwed by the normal execution by the program.
+the application. If not found, an error message will be thrown followed by the normal execution by the program.
 In the startup file, you can specify any startup logic, for example loading content or anything.
 
-The setting up and usage of the BackLog is the responsibility of the target application, but the recommended way to set it up
-is included in all of the demo projects. It is mapped to te HOME button by default.
+The Backlog is mapped to the HOME button on the keyboard. This will bring down an interface where lua commands can be entered with the keyboard. The ENTER button will execute the command that was entered. Pressing the HOME button again will exit the Backlog.
 
 - Tip: You can inspect any object's functionality by calling 
 getprops(YourObject) on them (where YourObject is the object which is to be inspected). The result will be displayed on the BackLog.
@@ -67,7 +61,7 @@ getprops(YourObject) on them (where YourObject is the object which is to be insp
 	- [outer]					: The method or value is in the global scope, so not a method of any objects.
 
 
-## Common Tools
+## Utility Tools
 This section describes the common tools for scripting which are not necessarily engine features.
 - signal(string name)  -- send a signal globally. This can wake up processes if there are any waiting on the same signal name
 - waitSignal(string name)  -- wait until a specified signal arrives
@@ -86,7 +80,7 @@ This section describes the common tools for scripting which are not necessarily 
 - math.saturate(float x)  -- clamp x between 0 and 1
 - math.round(float x)  -- round x to nearest integer
 
-## Engine manipulation
+## Engine Bindings
 The scripting API provides functions for the developer to manipulate engine behaviour or query it for information.
 
 ### BackLog
@@ -690,14 +684,7 @@ Sphere defined by center Vector and radius. Can be intersected with other primit
 - GetCenter() : Vector result
 - GetRadius() : float result
 
-### Network
-Handles the network communication features.
-- [outer]network : Network
-
-### Input Handling
-These provide functions to check the state of the input devices.
-
-#### Input
+### Input
 Query input devices
 - [outer]input : Input
 - [void-constructor]Input()

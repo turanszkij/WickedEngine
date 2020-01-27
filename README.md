@@ -31,7 +31,6 @@ Latest builds:
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/gltfanim.gif"/>
 Wicked Engine is an open-source game engine written in C++. It is easy to use, high performance and feature rich. There are no external dependencies, but some free libraries are included as part of the source code. The MIT license means that anyone is free to download, modify, share or do anything with it. <br/>
 This project is hosted on GitHub. For any questions, please open an issue at: https://github.com/turanszkij/WickedEngine<br/>
-Because everything is changing rapidly, the documentation is sparse at the moment. <br/>
 
 [Documentation](Documentation/WickedEngine-Documentation.md)<br/>
 [Scripting API Documentation](Documentation/ScriptingAPI-Documentation.md)<br/>
@@ -199,7 +198,7 @@ The preferred workflow is to import models into the Editor, and save them as <b>
 
 ### Graphics API:
 
-The default renderer is DirectX 11. There is also a DirectX12 renderer (experimental) and Vulkan renderer (experimental).
+The default renderer is DirectX 11. There is also a DirectX12 renderer and Vulkan renderer.
 You can specify command line arguments to switch between render devices or other settings. Currently the list of options:
 <table>
   <tr>
@@ -208,15 +207,15 @@ You can specify command line arguments to switch between render devices or other
   </tr>
   <tr>
     <td>dx12</td>
-    <td>Create DirectX 12 rendering device (Windows 10 required)</td>
+    <td>Use DirectX 12 rendering device</td>
   </tr>
   <tr>
     <td>vulkan</td>
-    <td>Create Vulkan rendering device*. (Only if engine was built with Vulkan SDK installed)</td>
+    <td>Use Vulkan rendering device*. (Only if engine was built with Vulkan SDK installed)</td>
   </tr>
   <tr>
     <td>debugdevice</td>
-    <td>Create rendering device with debug layer enabled for validation. Performance will be degraded.</td>
+    <td>Use debug layer for graphics API validation. Performance will be degraded, but graphics warnings and errors will be written to "Output" window</td>
   </tr>
   <tr>
     <td>hlsl6</td>
@@ -229,10 +228,9 @@ You can specify command line arguments to switch between render devices or other
 * *Before enabling the Vulkan API, you must first also compile SPIR-V shaders. This step is not yet included in the standard build process. First, run the "generate_shader_buildtask_spirv.py"
 Python script which will generate the SPIR-V shader building program "build_SPIRV.bat". Run "build_SPIRV.bat" to build all HLSL shaders as SPIR-V bytecode format for Vulkan. Shader loading after this 
 is automatic if you start the application with Vulkan support.
-This feature is experimental, not tested thoroughly yet.
 
-* **To load HLSL 6 shaders, replicate the exact steps as with SPIR-V above(*), but the python script you should run is called "generate_shader_buildtask_hlsl6.py" which will generate "build_HLSL6.bat". 
-This feature is experimental, not tested thoroughly yet.
+* **To load HLSL 6 shaders, first, run the "generate_shader_buildtask_hlsl6.py"
+Python script which will generate the HLSL6 shader building program "build_HLSL6.bat". Run "build_HLSL6.bat" to build all HLSL shaders as HLSL6 bytecode format for DirectX12.
 
 <br/>
 
