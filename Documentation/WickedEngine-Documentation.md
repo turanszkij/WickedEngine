@@ -125,6 +125,7 @@ The high level interface consists of classes that allow for extending the engine
 ### MainComponent
 [[Header]](../WickedEngine/MainComponent.h) [[Cpp]](../WickedEngine/MainComponent.cpp)
 This is the main runtime component that has the Run() function. It should be included in the application entry point while calling Run() in an infinite loop. <br/>
+The MainComponent has many uses that the user is not necessarily interested in. The most important part is that it manages the RenderPaths. There can be one active RenderPath at a time, which will be updated and rendered to the screen every frame. However, because a RenderPath is a highly customizable class, there is no limitation what can be done within the RenderPath, for example supporting multiple concurrent RenderPaths if required. RenderPaths can be switched wit ha Fade out screen easily. Loading Screen can be activated as an active Renderpath and it will load and switch to an other RenderPath if desired. A RenderPath can be simply activated with the MainComponent::ActivatePath() function.<br/>
 The MainComponent does the following every frame while it is running:<br/>
 1. FixedUpdate() <br/>
 Calls FixedUpdate for the active RenderPath and wakes up scripts that are waiting for fixedupdate(). The frequency off calls will be determined by MainComponent::setTargetFrameRate(float framespersecond). By default (parameter = 60), FixedUpdate will be called 60 times per second.
@@ -146,6 +147,19 @@ This will be called once per frame, and the elapsed time in seconds since the la
 This will be called once per frame. It is const, so it shouldn't modify state. When running this, it is not defined which thread it is running on. Multiple threads and job system can be used within this. The main purpose is to record mass rendering commands in multiple threads and command lists. Command list can be safely retrieved at this point from the graphics device. 
 4. Compose(CommandList cmd) const <br/>
 It is called once per frame. It is running on a single command list that it receives as a parameter. These rendering commands will directly record onto the last submitted command list in the frame. The render target is the back buffer at this point, so rendering will happen to the screen.
+
+Apart from the functions that will be run every frame, the RenderPath has the following functions:
+1. Initialize() <br/>
+This is an optional function, that the user can call when something needs to be initialized before Load() function will be triggered.
+2. Load() <br/> 
+Intended for loading resources before the first time the RenderPath will be used.
+3. Start() <br/>
+Start will always be called when a RenderPath is activated by the MainComponent
+4. Stop() <br/>
+Stop will be always called when the current RenderPath was the active one in MainComponent, but an other one was activated.
+5. Unload() <br/>
+Before a RenderPath is destroyed, Unload will be called, so deleting resources can take place if required.
+
 ### RenderPath2D
 [[Header]](../WickedEngine/RenderPath2D.h) [[Cpp]](../WickedEngine/RenderPath2D.cpp)
 Capable of handling 2D rendering to offscreen buffer in Render() function, or just the screen in Compose() function. It has some functionality to render wiSprite and wiFont onto rendering layers and stenciling with 3D rendered scene.
@@ -190,7 +204,7 @@ There are two flavours to this. One of them immediately loads into the global sc
 Allows to pick the closest object with a RAY (closest ray intersection hit to the ray origin). The user can provide a custom scene or layermask to filter the objects to be checked.
 #### NameComponent
 [[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
-A string to identify an entity. with a name.
+A string to identify an entity with a human readable name.
 #### LayerComponent
 [[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
 A bitmask that can be used to filter entities.
@@ -214,32 +228,41 @@ A mesh is an array of triangles. A mesh can have multiple parts, called MeshSubs
 Supports efficient rendering of the same mesh multiple times (but as an approximation, such as a billboard cutout). A mesh can be rendered as impostors for example when it is not important, but has a large number of copies.
 #### ObjectComponent
 [[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
-An ObjectComponent is an instance of a mesh that has physical location in a 3D world. Multiple ObjectComponents can have the same mesh, and in this case the mesh will be rendered multiple times efficiently.
+An ObjectComponent is an instance of a mesh that has physical location in a 3D world. Multiple ObjectComponents can have the same mesh, and in this case the mesh will be rendered multiple times efficiently. It is expected that an entity that has ObjectComponent, also has TransformComponent and [AABB](#aabb) (axis aligned bounding box) component.
 #### RigidBodyPhysicsComponent
 [[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
+Stores properties required for rigid body physics simulation and a handle that will be used by the physicsengine internally.
 #### SoftBodyPhysicsComponent
 [[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
+Stores properties required for soft body physics simulation and a handle that will be used by the physicsengine internally.
 #### ArmatureComponent
 [[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
+A skeleton used for skinning deformation of meshes.
 #### LightComponent
 [[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
+A light in the scene that can shine in the darkness. It is expected that an entity that has LightComponent, also has TransformComponent and [AABB](#aabb) (axis aligned bounding box) component.
 #### CameraComponent
 [[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
-#### EnvironemntProbeComponent
+#### EnvironmentProbeComponent
 [[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
+It is expected that an entity that has EnvironmentProbeComponent, also has TransformComponent and [AABB](#aabb) (axis aligned bounding box) component.
 #### ForceFieldComponent
 [[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
 #### DecalComponent
 [[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
+It is expected that an entity that has DecalComponent, also has TransformComponent and [AABB](#aabb) (axis aligned bounding box) component.
 #### AnimationComponent
 [[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
 #### WeatherComponent
 [[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
 #### SoundComponent
 [[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
+Holds a Sound and a SoundInstance, and it can be placed into the scene via a TransformComponent. It can have a 3D audio effect it has a TransformComponent.
 #### Scene
 [[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
-A scene is a collection of component arrays. The scene is updating all the components in an efficient manner using the job system. It can be serialized and saved/loaded from disk efficiently.
+A scene is a collection of component arrays. The scene is updating all the components in an efficient manner using the [job system](#wijobsystem). It can be serialized and saved/loaded from disk efficiently.
+- Update(float deltatime) <br/>
+This function runs all the requied systems to update all components contained within the Scene.
 ### wiJobSystem
 [[Header]](../WickedEngine/wiJobSystem.h) [[Cpp]](../WickedEngine/wiJobSystem.cpp)
 Manages the execution of concurrent tasks
@@ -253,10 +276,10 @@ This will schedule a task for execution on multiple parallel threads for a given
 This function will block until all jobs have finished for a given workload. The current thread starts working on any work left to be finished.
 ### wiInitializer
 [[Header]](../WickedEngine/wiInitializer.h) [[Cpp]](../WickedEngine/wiInitializer.cpp)
-Initializes all engine systems either in a blocking or an asynchronous way
+Initializes all engine systems either in a blocking or an asynchronous way.
 ### wiPlatform
 [[Header]](../WickedEngine/wiPlatform.h)
-You can get native platform specific handles here, such as window handle
+You can get native platform specific handles here, such as window handle.
 - GetWindow <br/>
 Returns the platform specific window handle
 - IsWindowActive <br/>
@@ -314,20 +337,44 @@ Shader Interop is used for declaring shared structures or values between C++ Eng
 The ShaderInterop also contains the resource macros to help share code between C++ and HLSL, and portability between shader compilers. Read more about macros in the [Shaders section](#shaders)
 ### wiRenderer
 [[Header]](../WickedEngine/wiRenderer.h) [[Cpp]](../WickedEngine/wiRenderer.cpp)
-This is a collection of graphics technique implentations and functions to draw a scene, shadows, post processes and other things. It is also the manager of the GraphicsDevice instance, and provides other helper functions to load shaders and other things.
+This is a collection of graphics technique implentations and functions to draw a scene, shadows, post processes and other things. It is also the manager of the GraphicsDevice instance, and provides other helper functions to load shaders from files on disk.<br/>
+Apart from graphics helper functions that are mostly independent of each other, the renderer also provides facilities to render a Scene. This can be done via the high level DrawScene, DrawSceneTransparent, etc. functions. These don't set up render passes or viewports by themselves, but they expect that they are set up from outside. Most other render state will be handled internally, such as constant buffers, stencil, blendstate, etc.. Please see how the scene rendering functions are used in the High level interface RenderPath3D implementations (for example [RenderPath3D_TiledForward.cpp](../WickedEngine/RenderPath3D_TiledForward.cpp)) <br/>
+Other points of interest here are utility graphics functions, such as CopyTexture2D, GenerateMipChain, and the like, which provide customizable operations, such as border expand mode, Gaussian mipchain generation, and things that wouldn't be supported by a graphics API.<br/>
+The renderer also hosts post process implementations. These functions are independent and have clear input/output parameters. They shouldn't rely on any other extra setup from outside.<br/>
 ### wiEnums
 [[Header]](../WickedEngine/wiEnums.h) [[Cpp]](../WickedEngine/wiEnums.cpp)
-This is a collection of enum values used by the wiRenderer to identify graphics resources
+This is a collection of enum values used by the wiRenderer to identify graphics resources. Usually arrays of the same resource type are declared and the XYZENUM_COUNT values tell the length of the array. The other XYZENUM_VALUE represents a single element within that array. This makes the code easy to manage, for example:
+```cpp
+enum CBTYPE
+{
+	CBTYPE_MESH, // = 0
+	CBTYPE_APPLESANDORANGES, // = 1
+	CBTYPE_TAKEITEASY, // = 2
+	CBTYPE_COUNT // = 3
+};
+GPUBuffer buffers[CBTYPE_COUNT]; // this example array contains 3 elements
+//...
+device->BindConstantBuffer(&buffers[CBTYPE_MESH], 0, 1, cmd); // makes it easy to reference an element
+```
+This is widely used to make code straight forward and easy to add new objects, without needing to create additional declarations, except for the enum values.
 ### wiImage
 [[Header]](../WickedEngine/wiImage.h) [[Cpp]](../WickedEngine/wiImage.cpp)
-This can render images to the screen in a simple manner. 
+This can render images to the screen in a simple manner. You can draw an image to the screen with a simple one liner:
+```cpp
+wiImage::Draw(myTexture, wiImageParams(10, 20, 256, 128), cmd);
+```
+The example will draw a 2D texture image to the position (10, 20), with a size of 256 x 128 pixels to the screen (or the curernt render pass). There are a lot of other parameters to customize the rendered image, for more information see wiImageParams structure.
 - wiImageParams <br/>
 Describe all parameters of how and where to draw the image on the screen. 
 ### wiFont
 [[Header]](../WickedEngine/wiFont.h) [[Cpp]](../WickedEngine/wiFont.cpp)
-This can render fonts to the screen in a simple manner.
+This can render fonts to the screen in a simple manner. You can render a font as simple as this:
+```cpp
+wiFont("write this!", wiFontParams(10, 20)).Draw(cmd);
+```
+Which will write the text <i>write this!</i> to 10, 20 pixel position onto the screen. There are many other parameters to describe the font's position, size, color, etc. See the wiFontParams structure for more details.
 - wiFontParams <br/>
-Describe all parameters of how and where to draw the font on the screen.
+Describe all parameters of how and where to draw the font on the screen. 
 ### wiEmittedParticle
 [[Header]](../WickedEngine/wiEmittedParticle.h) [[Cpp]](../WickedEngine/wiEmittedParticle.cpp)
 GPU driven emitter particle system, used to draw large amount of camera facing quad billboards. Supports simulation with force fields and fluid simulation based on Smooth Particle Hydrodynamics computation.
@@ -366,20 +413,28 @@ This will be sent to widget callbacks to provide event arguments in different fo
 The base widget interface can be extended with specific functionality. The GUI will store and process widgets by this interface. 
 #### wiButton
 [[Header]](../WickedEngine/wiWidget.h) [[Cpp]](../WickedEngine/wiWidget.cpp)
+A simple clickable button. Supports the OnClick event callback.
 #### wiLabel
 [[Header]](../WickedEngine/wiWidget.h) [[Cpp]](../WickedEngine/wiWidget.cpp)
+A simple static text field. 
 #### wiTextInputField
 [[Header]](../WickedEngine/wiWidget.h) [[Cpp]](../WickedEngine/wiWidget.cpp)
+Supports text input when activated. Pressing Enter will accept the input and fire the OnInputAccepted callback. Pressing the Escape key while active will cancel the text input and restoe the previous state. There can be only one active text input field at a time.
 #### wiSlider
 [[Header]](../WickedEngine/wiWidget.h) [[Cpp]](../WickedEngine/wiWidget.cpp)
+A slider, that can represent float or integer values. The slider also accepts text input to input number values. If the number input is outside of the slider's range, it will expand its range to support the newly assigned value. Upon changing the slider value, whether by text input or sliding, the OnSlide event callback will be fired. 
 #### wiCheckBox
 [[Header]](../WickedEngine/wiWidget.h) [[Cpp]](../WickedEngine/wiWidget.cpp)
+The checkbox is a two state item which can represent true/false state. The OnClick event callback will be fired upon changing the value (by clicking on it)
 #### wiComboBox
 [[Header]](../WickedEngine/wiWidget.h) [[Cpp]](../WickedEngine/wiWidget.cpp)
+Supports item selection from a list of text. Can set the maximum number of visible items. If the list of items is greater than the max allowed visible items, then a vertical scrollbar will be presented to allow showing hidden items. Upon selection, the OnSelect event callback will be triggered.
 #### wiWindow
 [[Header]](../WickedEngine/wiWidget.h) [[Cpp]](../WickedEngine/wiWidget.cpp)
+A window widget is able to hold any number of other widgets. It can be moved across the screen, minimized and resized by the user. If a window holds a widget, it will manage its lifetime, so if the window is destroyed, all its children will be destroyed as well.
 #### wiColorPicker
 [[Header]](../WickedEngine/wiWidget.h) [[Cpp]](../WickedEngine/wiWidget.cpp)
+Supports picking a HSV (or HSL) color, displaying its RGB values. On selection, the OnColorChanged event callback will be fired and the user can read the new RGB value from the event argument.
 
 
 ## Helpers
@@ -391,7 +446,7 @@ A collection of engine-level helper classes
 The linear allocator is used to allocate contiguous blocks of memory. The amount of maximum allocations is defined at creation time. Blocks then can be allocated from beginning to end until there is free space left. Blocks can be freed from the end until the allocator is not empty. This is not thread safe.
 ### wiArchive
 [[Header]](../WickedEngine/wiArchive.h) [[Cpp]](../WickedEngine/wiArchive.cpp)
-This is used for serializing binary data to disk or memory. 
+This is used for serializing binary data to disk or memory. An archive file always starts with the 64-bit version number that it was serialized with. An archive of greater version number than the current archive version of the engine can't be opened safely, so an error message will be shown if this happens. A certain archive version will not be forward compatible with the current engine version if the current archive version barrier number is greater than the archive's own version number.
 ### wiColor
 [[Header]](../WickedEngine/wiColor.h)
 Utility to convert to/from float color data to 32-bit RGBA data (stored in a uint32_t as RGBA, where each channel is 8 bits)
@@ -572,7 +627,7 @@ This is the place for the Lua scipt interface. For a complete reference about Lu
 The systems that are bound to Lua have the name of the system as their filename, postfixed by _BindLua.
 ### wiLua
 [[Header]](../WickedEngine/wiLua.h) [[Cpp]](../WickedEngine/wiLua.cpp)
-The Lua scripting interface
+The Lua scripting interface on the C++ side. This allows to execute lua commands from the C++ side and manipulate the lua stack, such as pushing values to lua and getting values from lua, among other things.
 ### wiLua_Globals
 [[Header]](../WickedEngine/wiLua_Globals.h)
 Hardcoded lua script in text format. This will be always executed and provides some commonly used helper functionality for lua scripts.
@@ -596,3 +651,25 @@ There is a separate project file for shaders in the solution. Shaders are writte
 - CBUFFER(name, slot) -> cbuffer name : register(b slot) <br/>
 
 You can see them all in [ShaderInterop.h](../WickedEngine/ShaderInterop.h)
+
+Note: When creating constant buffers, the structure must be strictly padded to 16-byte boundaries according to HLSL rules. Apart from that, the following limitation is in effect for Vulkan compatibility:
+
+Incorrect padding to 16-byte:
+```cpp
+struct cbuf
+{
+	float padding;
+	float3 value; // <- the larger type can start a new 16-byte slot, so the C++ and shader side structures could mismatch
+	float4 value2;
+};
+```
+
+Correct padding:
+```cpp
+struct cbuf
+{
+	float3 value; // <- the larger type must be placed before the padding
+	float padding;
+	float4 value2;
+};
+```
