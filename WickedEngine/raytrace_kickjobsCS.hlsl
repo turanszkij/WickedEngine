@@ -14,7 +14,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 
 	// write the indirect dispatch arguments:
 	indirectBuffer.Store3(RAYTRACE_INDIRECT_OFFSET_TRACE, uint3((rayCount + RAYTRACING_TRACE_GROUPSIZE - 1) / RAYTRACING_TRACE_GROUPSIZE, 1, 1));
-	indirectBuffer.Store3(RAYTRACE_INDIRECT_OFFSET_SORT, uint3((rayCount + RAYTRACING_SORT_GROUPSIZE - 1) / RAYTRACING_SORT_GROUPSIZE, 1, 1));
+	indirectBuffer.Store3(RAYTRACE_INDIRECT_OFFSET_TILESORT, uint3((rayCount + RAYTRACING_SORT_GROUPSIZE - 1) / RAYTRACING_SORT_GROUPSIZE, 1, 1));
 
 	// Reset counter buffer for this step:
 	counterBuffer_WRITE.Store(0, 0);

@@ -45,7 +45,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
     [branch]
     if (DTid.x < counterBuffer_READ.Load(0))
     {
-        sortcode = rayBuffer_READ[DTid.x].primitiveID;
+        sortcode = CreateRaySortCode(LoadRay(rayBuffer_READ[DTid.x]));
     }
 
     Array[groupIndex] = uint2(sortcode, DTid.x);

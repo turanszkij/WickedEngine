@@ -14,10 +14,11 @@ void main( uint3 DTid : SV_DispatchThreadID )
 
 		// Create starting ray:
 		Ray ray = CreateCameraRay(uv);
-		ray.pixelID = flatten2D(DTid.xy, xTraceResolution.xy);
+		ray.pixelID = (DTid.x & 0xFFFF) | ((DTid.y & 0xFFFF) << 16);
 
 		// The launch writes each ray to the pixel location:
-		rayIndexBuffer[ray.pixelID] = ray.pixelID;
-		rayBuffer[ray.pixelID] = CreateStoredRay(ray);
+		const uint rayIndex = flatten2D(DTid.xy, xTraceResolution.xy);
+		rayIndexBuffer[rayIndex] = rayIndex;
+		rayBuffer[rayIndex] = CreateStoredRay(ray);
 	}
 }

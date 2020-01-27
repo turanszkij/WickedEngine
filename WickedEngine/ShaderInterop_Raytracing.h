@@ -8,7 +8,11 @@ static const uint RAYTRACING_TRACE_GROUPSIZE = 64;
 static const uint RAYTRACING_SORT_GROUPSIZE = 1024;
 
 static const uint RAYTRACE_INDIRECT_OFFSET_TRACE = 0;
-static const uint RAYTRACE_INDIRECT_OFFSET_SORT = 4 * 3;
+static const uint RAYTRACE_INDIRECT_OFFSET_TILESORT = 4 * 3;
+
+// Whether to sort global ray buffer or only smaller bundles (tiles). 
+//  The global sorting is slower, but on some GPUs, it is still worth to to this because the raytracing will be faster (more coherent)
+#define RAYTRACING_SORT_GLOBAL
 
 
 CBUFFER(RaytracingCB, CBSLOT_RENDERER_TRACED)

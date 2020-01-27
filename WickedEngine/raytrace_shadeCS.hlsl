@@ -18,14 +18,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	const uint rayIndex = rayIndexBuffer_READ[DTid.x];
 	//const uint rayIndex = DTid.x;
 	Ray ray = LoadRay(rayBuffer[rayIndex]);
-
-	// Compute real pixel coords from flattened:
-	uint2 coords2D = unflatten2D(ray.pixelID, xTraceResolution.xy);
+	uint2 pixel = uint2(ray.pixelID & 0xFFFF, (ray.pixelID >> 16) & 0xFFFF);
 
 	if (any(ray.energy))
 	{
 		float3 bounceResult = 0;
-		float2 uv = float2((coords2D + xTracePixelOffset) * xTraceResolution_rcp.xy * 2.0f - 1.0f) * float2(1, -1);
+		float2 uv = float2((pixel + xTracePixelOffset) * xTraceResolution_rcp.xy * 2.0f - 1.0f) * float2(1, -1);
 		float seed = xTraceRandomSeed;
 
 		TriangleData tri = TriangleData_Unpack(primitiveBuffer[ray.primitiveID], primitiveDataBuffer[ray.primitiveID]);
@@ -282,12 +280,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	// Pre-clear result texture for first bounce and first accumulation sample:
 	if (xTraceUserData.x == 1)
 	{
-		resultTexture[coords2D] = 0;
+		resultTexture[pixel] = 0;
 	}
 	if (!any(ray.energy) || xTraceUserData.y == 1)
 	{
 		// If the ray is killed or last bounce, we write to accumulation texture:
-		resultTexture[coords2D] = lerp(resultTexture[coords2D], float4(ray.color, 1), xTraceAccumulationFactor);
+		resultTexture[pixel] = lerp(resultTexture[pixel], float4(ray.color, 1), xTraceAccumulationFactor);
 	}
 	else
 	{

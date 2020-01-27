@@ -9,9 +9,13 @@ STRUCTUREDBUFFER(rayBuffer_READ, RaytracingStoredRay, TEXSLOT_ONDEMAND9);
 
 RWRAWBUFFER(counterBuffer_WRITE, 0);
 RWSTRUCTUREDBUFFER(rayBuffer_WRITE, RaytracingStoredRay, 1);
+#ifdef RAYTRACING_SORT_GLOBAL
+RWSTRUCTUREDBUFFER(rayIndexBuffer_WRITE, uint, 2);
+RWSTRUCTUREDBUFFER(raySortBuffer_WRITE, float, 3);
+#endif // RAYTRACING_SORT_GLOBAL
 
 // This enables reduced atomics into global memory.
-//#define ADVANCED_ALLOCATION
+#define ADVANCED_ALLOCATION
 
 #ifdef ADVANCED_ALLOCATION
 static const uint GroupActiveRayMaskBucketCount = RAYTRACING_TRACE_GROUPSIZE / 32;
@@ -83,6 +87,10 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 			uint dest;
 			counterBuffer_WRITE.InterlockedAdd(0, 1, dest);
 			rayBuffer_WRITE[dest] = CreateStoredRay(ray);
+#ifdef RAYTRACING_SORT_GLOBAL
+			rayIndexBuffer_WRITE[dest] = dest;
+			raySortBuffer_WRITE[dest] = CreateRaySortCode(ray);
+#endif // RAYTRACING_SORT_GLOBAL
 #endif // ADVANCED_ALLOCATION
 		}
 	}
@@ -136,6 +144,10 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 
 		const uint dest = GroupRayWriteOffset + activePrefixSum - 1; // -1 because activePrefixSum includes current thread, but arrays start from 0!
 		rayBuffer_WRITE[dest] = CreateStoredRay(ray);
+#ifdef RAYTRACING_SORT_GLOBAL
+		rayIndexBuffer_WRITE[dest] = dest;
+		raySortBuffer_WRITE[dest] = CreateRaySortCode(ray);
+#endif // RAYTRACING_SORT_GLOBAL
 	}
 #endif // ADVANCED_ALLOCATION
 }

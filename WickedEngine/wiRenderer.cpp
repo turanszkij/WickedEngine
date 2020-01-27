@@ -7334,6 +7334,13 @@ void RayBuffers::Create(GraphicsDevice* device, uint32_t newRayCapacity)
 	device->CreateBuffer(&desc, nullptr, &rayIndexBuffer[1]);
 	device->SetName(&rayIndexBuffer[1], "rayIndexBuffer[1]");
 
+#ifdef RAYTRACING_SORT_GLOBAL
+	desc.StructureByteStride = sizeof(float); // sorting needs float now
+	desc.ByteWidth = desc.StructureByteStride * rayCapacity;
+	device->CreateBuffer(&desc, nullptr, &raySortBuffer);
+	device->SetName(&raySortBuffer, "raySortBuffer");
+#endif // RAYTRACING_SORT_GLOBAL
+
 	desc.StructureByteStride = sizeof(RaytracingStoredRay);
 	desc.ByteWidth = desc.StructureByteStride * rayCapacity;
 	device->CreateBuffer(&desc, nullptr, &rayBuffer[0]);
@@ -7496,6 +7503,10 @@ void RayTraceScene(
 			// Sort rays to achieve more coherency:
 			{
 				device->EventBegin("Ray Sorting", cmd);
+
+#ifdef RAYTRACING_SORT_GLOBAL
+				wiGPUSortLib::Sort(rayBuffers->rayCapacity, rayBuffers->raySortBuffer, rayBuffers->rayCountBuffer[__readBufferID], 0, rayBuffers->rayIndexBuffer[__readBufferID], cmd);
+#else
 				device->BindComputeShader(&computeShaders[CSTYPE_RAYTRACE_TILESORT], cmd);
 
 				const GPUResource* res[] = {
@@ -7508,10 +7519,11 @@ void RayTraceScene(
 				};
 				device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
-				device->DispatchIndirect(&indirectBuffer, RAYTRACE_INDIRECT_OFFSET_SORT, cmd);
+				device->DispatchIndirect(&indirectBuffer, RAYTRACE_INDIRECT_OFFSET_TILESORT, cmd);
 
 				device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 				device->UnbindUAVs(0, arraysize(uavs), cmd);
+#endif // RAYTRACING_SORT_GLOBAL
 
 				device->EventEnd(cmd);
 			}
@@ -7578,6 +7590,10 @@ void RayTraceScene(
 			const GPUResource* uavs[] = {
 				&rayBuffers->rayCountBuffer[__writeBufferID],
 				&rayBuffers->rayBuffer[__writeBufferID],
+#ifdef RAYTRACING_SORT_GLOBAL
+				&rayBuffers->rayIndexBuffer[__writeBufferID],
+				&rayBuffers->raySortBuffer,
+#endif // RAYTRACING_SORT_GLOBAL
 			};
 			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 

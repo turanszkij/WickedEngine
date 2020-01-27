@@ -1,6 +1,5 @@
 #include "globals.hlsli"
 #include "ShaderInterop_BVH.h"
-#include "ShaderInterop_Raytracing.h"
 
 // This shader builds scene triangle data and performs BVH classification:
 //	- This shader is run per object.
