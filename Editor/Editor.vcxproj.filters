@@ -64,9 +64,6 @@
     <ClInclude Include="ForceFieldWindow.h">
       <Filter>Code</Filter>
     </ClInclude>
-    <ClInclude Include="OceanWindow.h">
-      <Filter>Code</Filter>
-    </ClInclude>
     <ClInclude Include="ModelImporter.h">
       <Filter>Code</Filter>
     </ClInclude>
@@ -139,9 +136,6 @@
       <Filter>Code</Filter>
     </ClCompile>
     <ClCompile Include="ForceFieldWindow.cpp">
-      <Filter>Code</Filter>
-    </ClCompile>
-    <ClCompile Include="OceanWindow.cpp">
       <Filter>Code</Filter>
     </ClCompile>
     <ClCompile Include="ModelImporter_OBJ.cpp">

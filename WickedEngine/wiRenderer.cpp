@@ -3739,11 +3739,20 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 
 	// Ocean will override any current reflectors
 	waterPlane = scene.waterPlane;
-	if (ocean != nullptr)
+	if (scene.weather.IsOceanEnabled())
 	{
 		requestReflectionRendering = true; 
 		XMVECTOR _refPlane = XMPlaneFromPointNormal(XMVectorSet(0, scene.weather.oceanParameters.waterHeight, 0, 0), XMVectorSet(0, 1, 0, 0));
 		XMStoreFloat4(&waterPlane, _refPlane);
+
+		if (ocean == nullptr)
+		{
+			ocean = std::make_unique<wiOcean>(scene.weather);
+		}
+	}
+	else if (ocean != nullptr)
+	{
+		ocean.reset();
 	}
 
 	if (GetTemporalAAEnabled())
@@ -4192,7 +4201,7 @@ void UpdateRenderData(CommandList cmd)
 	}
 
 	// Compute water simulation:
-	if (ocean != nullptr)
+	if (scene.weather.IsOceanEnabled() && ocean != nullptr)
 	{
 		ocean->UpdateDisplacementMap(scene.weather, renderTime, cmd);
 	}
@@ -10054,19 +10063,6 @@ bool GetAdvancedRefractionsEnabled() { return advancedRefractions; }
 bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
 void SetGameSpeed(float value) { GameSpeed = std::max(0.0f, value); }
 float GetGameSpeed() { return GameSpeed; }
-void SetOceanEnabled(bool enabled)
-{
-	if (enabled)
-	{
-		const Scene& scene = GetScene();
-		ocean.reset(new wiOcean(scene.weather));
-	}
-	else
-	{
-		ocean.reset();
-	}
-}
-bool GetOceanEnabled() { return ocean != nullptr; }
 void InvalidateBVH() { scene_bvh_invalid = true; }
 void SetRaytraceBounceCount(uint32_t bounces)
 {

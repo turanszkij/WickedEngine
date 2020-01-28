@@ -15,7 +15,6 @@
 #include "EmitterWindow.h"
 #include "HairParticleWindow.h"
 #include "ForceFieldWindow.h"
-#include "OceanWindow.h"
 #include "SoundWindow.h"
 
 #include "ModelImporter.h"
@@ -146,7 +145,6 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	emitterWnd.reset(new EmitterWindow(&GetGUI()));
 	hairWnd.reset(new HairParticleWindow(&GetGUI()));
 	forceFieldWnd.reset(new ForceFieldWindow(&GetGUI()));
-	oceanWnd.reset(new OceanWindow(&GetGUI()));
 
 	ResizeBuffers();
 }
@@ -346,7 +344,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(emitterWnd_Toggle);
 
 	wiButton* hairWnd_Toggle = new wiButton("HairParticle");
-	hairWnd_Toggle->SetTooltip("Emitter Particle System properties");
+	hairWnd_Toggle->SetTooltip("Hair Particle System properties");
 	hairWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
 	hairWnd_Toggle->SetSize(option_size);
 	hairWnd_Toggle->OnClick([=](wiEventArgs args) {
@@ -362,15 +360,6 @@ void EditorComponent::Load()
 		forceFieldWnd->forceFieldWindow->SetVisible(!forceFieldWnd->forceFieldWindow->IsVisible());
 	});
 	GetGUI().AddWidget(forceFieldWnd_Toggle);
-
-	wiButton* oceanWnd_Toggle = new wiButton("Ocean");
-	oceanWnd_Toggle->SetTooltip("Ocean Simulator properties");
-	oceanWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
-	oceanWnd_Toggle->SetSize(option_size);
-	oceanWnd_Toggle->OnClick([=](wiEventArgs args) {
-		oceanWnd->oceanWindow->SetVisible(!oceanWnd->oceanWindow->IsVisible());
-	});
-	GetGUI().AddWidget(oceanWnd_Toggle);
 
 
 	////////////////////////////////////////////////////////////////////////////////////

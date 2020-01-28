@@ -904,8 +904,12 @@ namespace wiScene
 		enum FLAGS
 		{
 			EMPTY = 0,
+			OCEAN_ENABLED = 1 << 0
 		};
 		uint32_t _flags = EMPTY;
+
+		inline bool IsOceanEnabled() const { return _flags & OCEAN_ENABLED; }
+		inline void SetOceanEnabled(bool value = true) { if (value) { _flags |= OCEAN_ENABLED; } else { _flags &= ~OCEAN_ENABLED; } }
 
 		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);

@@ -34,5 +34,18 @@ public:
 	wiColorPicker*	ambientColorPicker;
 	wiColorPicker*	horizonColorPicker;
 	wiColorPicker*	zenithColorPicker;
+
+	// ocean params:
+	wiCheckBox* ocean_enabledCheckBox;
+	wiSlider* ocean_patchSizeSlider;
+	wiSlider* ocean_waveAmplitudeSlider;
+	wiSlider* ocean_choppyScaleSlider;
+	wiSlider* ocean_windDependencySlider;
+	wiSlider* ocean_timeScaleSlider;
+	wiSlider* ocean_heightSlider;
+	wiSlider* ocean_detailSlider;
+	wiSlider* ocean_toleranceSlider;
+	wiColorPicker* ocean_colorPicker;
+	wiButton* ocean_resetButton;
 };
 
