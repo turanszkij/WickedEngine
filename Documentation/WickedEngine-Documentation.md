@@ -189,7 +189,7 @@ Render path that can be easily used for loading screen. It is able to load conte
 You can find out more about the Entity-Component system and other engine-level systems under ENGINE/System filter in the solution.
 ### wiECS
 [[Header]](../WickedEngine/wiECS.h)
-#### ComponentMnager
+#### ComponentManager
 This is the core entity-component relationship handler class. The purpose of this is to efficiently store, remove, add and sort components. Components can be any movable C++ structure. The best components are simple POD (plain old data) structures.
 #### Entity
 Entity is a number, it can reference components through ComponentManager containers. An entity is always valid if it exists. It's not required that an entity has any components. An entity has a component, if there is a ComponentManager that has a component which is associated with the same entity.
@@ -202,6 +202,28 @@ Returns a global scene instance. The wiRenderer will use this scene instance to 
 There are two flavours to this. One of them immediately loads into the global scene. The other loads into a custom scene, which is usefult to manage the contents separately. This function will return an Entity that represents the root transform of the scene - if the attached parameter was true, otherwise it will return INVALID_ENTITY and no root transform will be created.
 - Pick <br/>
 Allows to pick the closest object with a RAY (closest ray intersection hit to the ray origin). The user can provide a custom scene or layermask to filter the objects to be checked.
+
+Below you will find the structures that make up the scene. These are intended to be simple strucutres that will be held in [ComponentManagers](#componentmanager). 
+
+<b>Note on bools: </b> using bool in C++ structures is inefficient, because they take up more space in memory than required. Instead, bitmasks will be used in every component that can store up to 32 bool values in each bit. This also makes it easier to add bool flags and not having to worry about serializing them, because the bitfields themselves are already serialized (but the order of flags must never change without handling possible side effects with serialization versioning!). C++ enums are used in the code to manage these bool flags, and the bitmask storing these is always called `uint32_t _flags;` For example:
+
+```cpp
+enum FLAGS
+{
+	EMPTY = 0, // always have empty as first flag (value of zero)
+	RENDERABLE = 1 << 0,
+	DOUBLE_SIDED = 1 << 1,
+	DYNAMIC = 1 << 2,
+};
+uint32_t _flags = EMPTY; // default value is usually EMPTY, indicating that no flags are set
+
+// How to query the "double sided" flag:
+bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
+
+// How to set the "double sided" flag
+void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
+```
+
 #### NameComponent
 [[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
 A string to identify an entity with a human readable name.
@@ -342,7 +364,7 @@ Apart from graphics helper functions that are mostly independent of each other, 
 Other points of interest here are utility graphics functions, such as CopyTexture2D, GenerateMipChain, and the like, which provide customizable operations, such as border expand mode, Gaussian mipchain generation, and things that wouldn't be supported by a graphics API.<br/>
 The renderer also hosts post process implementations. These functions are independent and have clear input/output parameters. They shouldn't rely on any other extra setup from outside.<br/>
 ### wiEnums
-[[Header]](../WickedEngine/wiEnums.h) [[Cpp]](../WickedEngine/wiEnums.cpp)
+[[Header]](../WickedEngine/wiEnums.h)
 This is a collection of enum values used by the wiRenderer to identify graphics resources. Usually arrays of the same resource type are declared and the XYZENUM_COUNT values tell the length of the array. The other XYZENUM_VALUE represents a single element within that array. This makes the code easy to manage, for example:
 ```cpp
 enum CBTYPE
