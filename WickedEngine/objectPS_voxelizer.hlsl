@@ -85,23 +85,28 @@ void main(PSInput input)
 					case ENTITY_TYPE_DIRECTIONALLIGHT:
 					{
 						float3 L = light.directionWS;
-
-						float3 lightColor = light.GetColor().rgb * light.energy * max(dot(N, L), 0);
+						const float NdotL = saturate(dot(L, N));
 
 						[branch]
-						if (light.IsCastingShadow() >= 0)
+						if (NdotL > 0)
 						{
-							const uint cascade = g_xFrame_ShadowCascadeCount - 1; // biggest cascade (coarsest resolution) will be used to voxelize
-							float3 ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + cascade], float4(P, 1)).xyz; // ortho matrix, no divide by .w
-							float3 ShTex = ShPos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+							float3 lightColor = light.GetColor().rgb * light.energy * NdotL;
 
-							[branch]if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y) && (saturate(ShTex.z) == ShTex.z))
+							[branch]
+							if (light.IsCastingShadow() >= 0)
 							{
-								lightColor *= shadowCascade(light, ShPos, ShTex.xy, cascade);
-							}
-						}
+								const uint cascade = g_xFrame_ShadowCascadeCount - 1; // biggest cascade (coarsest resolution) will be used to voxelize
+								float3 ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + cascade], float4(P, 1)).xyz; // ortho matrix, no divide by .w
+								float3 ShTex = ShPos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
-						lighting.direct.diffuse += lightColor;
+								[branch] if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y) && (saturate(ShTex.z) == ShTex.z))
+								{
+									lightColor *= shadowCascade(light, ShPos, ShTex.xy, cascade);
+								}
+							}
+
+							lighting.direct.diffuse += lightColor;
+						}
 					}
 					break;
 					case ENTITY_TYPE_POINTLIGHT:
@@ -116,18 +121,23 @@ void main(PSInput input)
 							const float3 Lunnormalized = L;
 							const float dist = sqrt(dist2);
 							L /= dist;
-
-							const float att = saturate(1.0 - (dist2 / range2));
-							const float attenuation = att * att;
-
-							float3 lightColor = light.GetColor().rgb * light.energy * max(dot(N, L), 0) * attenuation;
+							const float NdotL = saturate(dot(L, N));
 
 							[branch]
-							if (light.IsCastingShadow() >= 0) {
-								lightColor *= shadowCube(light, Lunnormalized);
-							}
+							if (NdotL > 0)
+							{
+								const float att = saturate(1.0 - (dist2 / range2));
+								const float attenuation = att * att;
 
-							lighting.direct.diffuse += lightColor;
+								float3 lightColor = light.GetColor().rgb * light.energy * NdotL * attenuation;
+
+								[branch]
+								if (light.IsCastingShadow() >= 0) {
+									lightColor *= shadowCube(light, Lunnormalized);
+								}
+
+								lighting.direct.diffuse += lightColor;
+							}
 						}
 					}
 					break;
@@ -135,40 +145,46 @@ void main(PSInput input)
 					{
 						float3 L = light.positionWS - P;
 						const float dist2 = dot(L, L);
-						const float dist = sqrt(dist2);
+						const float range2 = light.range * light.range;
 
 						[branch]
-						if (dist < light.range)
+						if (dist2 < range2)
 						{
+							const float dist = sqrt(dist2);
 							L /= dist;
-
-							const float SpotFactor = dot(L, light.directionWS);
-							const float spotCutOff = light.coneAngleCos;
+							const float NdotL = saturate(dot(L, N));
 
 							[branch]
-							if (SpotFactor > spotCutOff)
+							if (NdotL > 0)
 							{
-								const float range2 = light.range * light.range;
-								const float att = saturate(1.0 - (dist2 / range2));
-								float attenuation = att * att;
-								attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
-
-								float3 lightColor = light.GetColor().rgb * light.energy * max(dot(N, L), 0) * attenuation;
+								const float SpotFactor = dot(L, light.directionWS);
+								const float spotCutOff = light.coneAngleCos;
 
 								[branch]
-								if (light.IsCastingShadow() >= 0)
+								if (SpotFactor > spotCutOff)
 								{
-									float4 ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + 0], float4(P, 1));
-									ShPos.xyz /= ShPos.w;
-									float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
-									[branch]
-									if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
-									{
-										lightColor *= shadowCascade(light, ShPos.xyz, ShTex.xy, 0);
-									}
-								}
+									const float range2 = light.range * light.range;
+									const float att = saturate(1.0 - (dist2 / range2));
+									float attenuation = att * att;
+									attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
 
-								lighting.direct.diffuse += lightColor;
+									float3 lightColor = light.GetColor().rgb * light.energy * NdotL * attenuation;
+
+									[branch]
+									if (light.IsCastingShadow() >= 0)
+									{
+										float4 ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + 0], float4(P, 1));
+										ShPos.xyz /= ShPos.w;
+										float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
+										[branch]
+										if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
+										{
+											lightColor *= shadowCascade(light, ShPos.xyz, ShTex.xy, 0);
+										}
+									}
+
+									lighting.direct.diffuse += lightColor;
+								}
 							}
 						}
 					}

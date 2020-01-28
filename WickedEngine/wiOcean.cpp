@@ -6,6 +6,7 @@
 #include "wiBackLog.h"
 
 #include <algorithm>
+#include <vector>
 
 using namespace std;
 using namespace wiGraphics;
@@ -67,62 +68,19 @@ float Phillips(XMFLOAT2 K, XMFLOAT2 W, float v, float a, float dir_depend)
 	return phillips * expf(-Ksqr * w * w);
 }
 
-void createBufferAndUAV(void* data, uint32_t byte_width, uint32_t byte_stride, GPUBuffer* pBuffer)
-{
-	// Create buffer
-	GPUBufferDesc buf_desc;
-	buf_desc.ByteWidth = byte_width;
-	buf_desc.Usage = USAGE_DEFAULT;
-	buf_desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-	buf_desc.CPUAccessFlags = 0;
-	buf_desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	buf_desc.StructureByteStride = byte_stride;
-
-	SubresourceData init_data;
-	init_data.pSysMem = data;
-
-	wiRenderer::GetDevice()->CreateBuffer(&buf_desc, data != nullptr ? &init_data : nullptr, pBuffer);
-
-}
-
-void createTextureAndViews(uint32_t width, uint32_t height, FORMAT format, Texture* pTex)
-{
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
-	TextureDesc tex_desc;
-	tex_desc.Width = width;
-	tex_desc.Height = height;
-	tex_desc.MipLevels = 0;
-	tex_desc.ArraySize = 1;
-	tex_desc.Format = format;
-	tex_desc.SampleCount = 1;
-	tex_desc.Usage = USAGE_DEFAULT;
-	tex_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS | BIND_RENDER_TARGET;
-	tex_desc.CPUAccessFlags = 0;
-
-	device->CreateTexture(&tex_desc, nullptr, pTex);
-
-	for (uint32_t i = 0; i < pTex->GetDesc().MipLevels; ++i)
-	{
-		int subresource_index;
-		subresource_index = device->CreateSubresource(pTex, SRV, 0, 1, i, 1);
-		assert(subresource_index == i);
-		subresource_index = device->CreateSubresource(pTex, UAV, 0, 1, i, 1);
-		assert(subresource_index == i);
-	}
-}
-
 
 
 wiOcean::wiOcean(const WeatherComponent& weather)
 {
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
 	auto& params = weather.oceanParameters;
 
 	// Height map H(0)
 	int height_map_size = (params.dmap_dim + 4) * (params.dmap_dim + 1);
-	XMFLOAT2* h0_data = new XMFLOAT2[height_map_size * sizeof(XMFLOAT2)];
-	float* omega_data = new float[height_map_size * sizeof(float)];
-	initHeightMap(weather, h0_data, omega_data);
+	std::vector<XMFLOAT2> h0_data(height_map_size);
+	std::vector<float> omega_data(height_map_size);
+	initHeightMap(weather, h0_data.data(), omega_data.data());
 
 	int hmap_dim = params.dmap_dim;
 	int input_full_size = (hmap_dim + 4) * (hmap_dim + 1);
@@ -131,35 +89,71 @@ wiOcean::wiOcean(const WeatherComponent& weather)
 	int output_size = hmap_dim * hmap_dim;
 
 	// For filling the buffer with zeroes.
-	char* zero_data = new char[3 * output_size * sizeof(float) * 2];
-	memset(zero_data, 0, 3 * output_size * sizeof(float) * 2);
+	std::vector<char> zero_data(3 * output_size * sizeof(float) * 2);
+	std::fill(zero_data.begin(), zero_data.end(), 0);
+
+	GPUBufferDesc buf_desc;
+	buf_desc.Usage = USAGE_DEFAULT;
+	buf_desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+	buf_desc.CPUAccessFlags = 0;
+	buf_desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	SubresourceData init_data;
 
 	// RW buffer allocations
 	// H0
-	uint32_t float2_stride = 2 * sizeof(float);
-	createBufferAndUAV(h0_data, input_full_size * float2_stride, float2_stride, &m_pBuffer_Float2_H0);
+	buf_desc.StructureByteStride = sizeof(float2);
+	buf_desc.ByteWidth = buf_desc.StructureByteStride * input_full_size;
+	init_data.pSysMem = h0_data.data();
+	device->CreateBuffer(&buf_desc, &init_data, &buffer_Float2_H0);
 
 	// Notice: The following 3 buffers should be half sized buffer because of conjugate symmetric input. But
 	// we use full sized buffers due to the CS4.0 restriction.
 
 	// Put H(t), Dx(t) and Dy(t) into one buffer because CS4.0 allows only 1 UAV at a time
-	createBufferAndUAV(zero_data, 3 * input_half_size * float2_stride, float2_stride, &m_pBuffer_Float2_Ht);
+	buf_desc.StructureByteStride = sizeof(float2);
+	buf_desc.ByteWidth = buf_desc.StructureByteStride * 3 * input_half_size;
+	init_data.pSysMem = zero_data.data();
+	device->CreateBuffer(&buf_desc, &init_data, &buffer_Float2_Ht);
 
 	// omega
-	createBufferAndUAV(omega_data, input_full_size * sizeof(float), sizeof(float), &m_pBuffer_Float_Omega);
+	buf_desc.StructureByteStride = sizeof(float);
+	buf_desc.ByteWidth = buf_desc.StructureByteStride * input_full_size;
+	init_data.pSysMem = omega_data.data();
+	device->CreateBuffer(&buf_desc, &init_data, &buffer_Float_Omega);
 
 	// Notice: The following 3 should be real number data. But here we use the complex numbers and C2C FFT
 	// due to the CS4.0 restriction.
 	// Put Dz, Dx and Dy into one buffer because CS4.0 allows only 1 UAV at a time
-	createBufferAndUAV(zero_data, 3 * output_size * float2_stride, float2_stride, &m_pBuffer_Float_Dxyz);
+	buf_desc.StructureByteStride = sizeof(float2);
+	buf_desc.ByteWidth = buf_desc.StructureByteStride * 3 * output_size;
+	init_data.pSysMem = zero_data.data();
+	device->CreateBuffer(&buf_desc, &init_data, &buffer_Float_Dxyz);
 
-	SAFE_DELETE_ARRAY(zero_data);
-	SAFE_DELETE_ARRAY(h0_data);
-	SAFE_DELETE_ARRAY(omega_data);
+	TextureDesc tex_desc;
+	tex_desc.Width = hmap_dim;
+	tex_desc.Height = hmap_dim;
+	tex_desc.ArraySize = 1;
+	tex_desc.SampleCount = 1;
+	tex_desc.Usage = USAGE_DEFAULT;
+	tex_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS | BIND_RENDER_TARGET;
+	tex_desc.CPUAccessFlags = 0;
 
+	tex_desc.Format = FORMAT_R16G16B16A16_FLOAT;
+	tex_desc.MipLevels = 0;
+	device->CreateTexture(&tex_desc, nullptr, &gradientMap);
 
-	createTextureAndViews(hmap_dim, hmap_dim, FORMAT_R32G32B32A32_FLOAT, &m_pDisplacementMap);
-	createTextureAndViews(hmap_dim, hmap_dim, FORMAT_R16G16B16A16_FLOAT, &m_pGradientMap);
+	for (uint32_t i = 0; i < gradientMap.GetDesc().MipLevels; ++i)
+	{
+		int subresource_index;
+		subresource_index = device->CreateSubresource(&gradientMap, SRV, 0, 1, i, 1);
+		assert(subresource_index == i);
+		subresource_index = device->CreateSubresource(&gradientMap, UAV, 0, 1, i, 1);
+		assert(subresource_index == i);
+	}
+
+	tex_desc.Format = FORMAT_R32G32B32A32_FLOAT;
+	tex_desc.MipLevels = 1;
+	device->CreateTexture(&tex_desc, nullptr, &displacementMap);
 
 
 	// Constant buffers
@@ -180,18 +174,14 @@ wiOcean::wiOcean(const WeatherComponent& weather)
 	cb_desc.CPUAccessFlags = 0;
 	cb_desc.MiscFlags = 0;
 	cb_desc.ByteWidth = sizeof(Ocean_Simulation_ImmutableCB);
-	wiRenderer::GetDevice()->CreateBuffer(&cb_desc, &init_cb0, &m_pImmutableCB);
+	device->CreateBuffer(&cb_desc, &init_cb0, &immutableCB);
 
-	cb_desc.Usage = USAGE_DYNAMIC;
+	cb_desc.Usage = USAGE_DEFAULT;
 	cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
-	cb_desc.CPUAccessFlags = CPU_ACCESS_WRITE;
+	cb_desc.CPUAccessFlags = 0;
 	cb_desc.MiscFlags = 0;
 	cb_desc.ByteWidth = sizeof(Ocean_Simulation_PerFrameCB);
-	wiRenderer::GetDevice()->CreateBuffer(&cb_desc, nullptr, &m_pPerFrameCB);
-}
-
-wiOcean::~wiOcean()
-{
+	device->CreateBuffer(&cb_desc, nullptr, &perFrameCB);
 }
 
 
@@ -257,22 +247,22 @@ void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time,
 
 	// Buffers
 	const GPUResource* cs0_srvs[2] = { 
-		&m_pBuffer_Float2_H0, 
-		&m_pBuffer_Float_Omega
+		&buffer_Float2_H0, 
+		&buffer_Float_Omega
 	};
 	device->BindResources(CS, cs0_srvs, TEXSLOT_ONDEMAND0, arraysize(cs0_srvs), cmd);
 
-	const GPUResource* cs0_uavs[1] = { &m_pBuffer_Float2_Ht };
+	const GPUResource* cs0_uavs[1] = { &buffer_Float2_Ht };
 	device->BindUAVs(CS, cs0_uavs, 0, arraysize(cs0_uavs), cmd);
 
 	Ocean_Simulation_PerFrameCB perFrameData;
 	perFrameData.g_Time = time * params.time_scale;
 	perFrameData.g_ChoppyScale = params.choppy_scale;
 	perFrameData.g_GridLen = params.dmap_dim / params.patch_length;
-	device->UpdateBuffer(&m_pPerFrameCB, &perFrameData, cmd);
+	device->UpdateBuffer(&perFrameCB, &perFrameData, cmd);
 
-	device->BindConstantBuffer(CS, &m_pImmutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), cmd);
-	device->BindConstantBuffer(CS, &m_pPerFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), cmd);
+	device->BindConstantBuffer(CS, &immutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), cmd);
+	device->BindConstantBuffer(CS, &perFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), cmd);
 
 	// Run the CS
 	uint32_t group_count_x = (params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
@@ -285,28 +275,28 @@ void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time,
 
 
 	// ------------------------------------ Perform FFT -------------------------------------------
-	fft_512x512_c2c(m_fft_plan, m_pBuffer_Float_Dxyz, m_pBuffer_Float_Dxyz, m_pBuffer_Float2_Ht, cmd);
+	fft_512x512_c2c(m_fft_plan, buffer_Float_Dxyz, buffer_Float_Dxyz, buffer_Float2_Ht, cmd);
 
 
 
-	device->BindConstantBuffer(CS, &m_pImmutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), cmd);
-	device->BindConstantBuffer(CS, &m_pPerFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), cmd);
+	device->BindConstantBuffer(CS, &immutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), cmd);
+	device->BindConstantBuffer(CS, &perFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), cmd);
 
 
 	// Update displacement map:
 	device->BindComputeShader(&updateDisplacementMapCS, cmd);
-	const GPUResource* cs_uavs[] = { &m_pDisplacementMap };
+	const GPUResource* cs_uavs[] = { &displacementMap };
 	device->BindUAVs(CS, cs_uavs, 0, 1, cmd);
-	const GPUResource* cs_srvs[1] = { &m_pBuffer_Float_Dxyz };
+	const GPUResource* cs_srvs[1] = { &buffer_Float_Dxyz };
 	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
 	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, cmd);
 	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 
 	// Update gradient map:
 	device->BindComputeShader(&updateGradientFoldingCS, cmd);
-	cs_uavs[0] = { &m_pGradientMap };
+	cs_uavs[0] = { &gradientMap };
 	device->BindUAVs(CS, cs_uavs, 0, 1, cmd);
-	cs_srvs[0] = &m_pDisplacementMap;
+	cs_srvs[0] = &displacementMap;
 	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
 	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, cmd);
 	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
@@ -316,7 +306,7 @@ void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time,
 	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 
 
-	wiRenderer::GenerateMipChain(m_pGradientMap, wiRenderer::MIPGENFILTER_LINEAR, cmd);
+	wiRenderer::GenerateMipChain(gradientMap, wiRenderer::MIPGENFILTER_LINEAR, cmd);
 
 	device->EventEnd(cmd);
 }
@@ -358,8 +348,8 @@ void wiOcean::Render(const CameraComponent& camera, const WeatherComponent& weat
 	device->BindConstantBuffer(VS, &shadingCB, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
 	device->BindConstantBuffer(PS, &shadingCB, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
 
-	device->BindResource(VS, &m_pDisplacementMap, TEXSLOT_ONDEMAND0, cmd);
-	device->BindResource(PS, &m_pGradientMap, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(VS, &displacementMap, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(PS, &gradientMap, TEXSLOT_ONDEMAND0, cmd);
 
 	device->Draw(dim.x*dim.y*6, 0, cmd);
 
@@ -462,10 +452,10 @@ void wiOcean::Initialize()
 
 const Texture* wiOcean::getDisplacementMap() const
 {
-	return &m_pDisplacementMap;
+	return &displacementMap;
 }
 
 const Texture* wiOcean::getGradientMap() const
 {
-	return &m_pGradientMap;
+	return &gradientMap;
 }

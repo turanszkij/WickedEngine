@@ -157,6 +157,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 			float3 L = 0;
 			float dist = 0;
+			float NdotL = 0;
 
 			switch (light.GetType())
 			{
@@ -164,39 +165,50 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			{
 				dist = INFINITE_RAYHIT;
 
-				float3 lightColor = light.GetColor().rgb*light.energy;
-
 				L = light.directionWS.xyz;
 				SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+				NdotL = surfaceToLight.NdotL;
 
-				lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
-				lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
+				[branch]
+				if (NdotL > 0)
+				{
+					float3 lightColor = light.GetColor().rgb * light.energy;
+
+					lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
+					lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
+				}
 			}
 			break;
 			case ENTITY_TYPE_POINTLIGHT:
 			{
 				L = light.positionWS - P;
 				const float dist2 = dot(L, L);
-				dist = sqrt(dist2);
+				const float range2 = light.range * light.range;
 
 				[branch]
-				if (dist < light.range)
+				if (dist2 < range2)
 				{
+					dist = sqrt(dist2);
 					L /= dist;
 
-					const float3 lightColor = light.GetColor().rgb*light.energy;
-
 					SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+					NdotL = surfaceToLight.NdotL;
 
-					lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
-					lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
+					[branch]
+					if (NdotL > 0)
+					{
+						const float3 lightColor = light.GetColor().rgb * light.energy;
 
-					const float range2 = light.range * light.range;
-					const float att = saturate(1.0 - (dist2 / range2));
-					const float attenuation = att * att;
+						lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
+						lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
 
-					lighting.direct.diffuse *= attenuation;
-					lighting.direct.specular *= attenuation;
+						const float range2 = light.range * light.range;
+						const float att = saturate(1.0 - (dist2 / range2));
+						const float attenuation = att * att;
+
+						lighting.direct.diffuse *= attenuation;
+						lighting.direct.specular *= attenuation;
+					}
 				}
 			}
 			break;
@@ -204,33 +216,39 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			{
 				L = light.positionWS - surface.P;
 				const float dist2 = dot(L, L);
-				dist = sqrt(dist2);
+				const float range2 = light.range * light.range;
 
 				[branch]
-				if (dist < light.range)
+				if (dist2 < range2)
 				{
+					dist = sqrt(dist2);
 					L /= dist;
 
-					const float3 lightColor = light.GetColor().rgb*light.energy;
-
-					const float SpotFactor = dot(L, light.directionWS);
-					const float spotCutOff = light.coneAngleCos;
+					SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+					NdotL = surfaceToLight.NdotL;
 
 					[branch]
-					if (SpotFactor > spotCutOff)
+					if (NdotL > 0)
 					{
-						SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+						const float SpotFactor = dot(L, light.directionWS);
+						const float spotCutOff = light.coneAngleCos;
 
-						lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
-						lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
+						[branch]
+						if (SpotFactor > spotCutOff)
+						{
+							const float3 lightColor = light.GetColor().rgb * light.energy;
 
-						const float range2 = light.range * light.range;
-						const float att = saturate(1.0 - (dist2 / range2));
-						float attenuation = att * att;
-						attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
+							lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
+							lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
 
-						lighting.direct.diffuse *= attenuation;
-						lighting.direct.specular *= attenuation;
+							const float range2 = light.range * light.range;
+							const float att = saturate(1.0 - (dist2 / range2));
+							float attenuation = att * att;
+							attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
+
+							lighting.direct.diffuse *= attenuation;
+							lighting.direct.specular *= attenuation;
+						}
 					}
 				}
 			}
@@ -252,8 +270,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			}
 			break;
 			}
-
-			float NdotL = saturate(dot(L, N));
 
 			if (NdotL > 0 && dist > 0)
 			{

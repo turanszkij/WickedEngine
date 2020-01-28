@@ -38,6 +38,7 @@ float4 main(Input input) : SV_TARGET
 
 			float3 L = 0;
 			float dist = 0;
+			float NdotL = 0;
 
 			switch (light.GetType())
 			{
@@ -45,33 +46,44 @@ float4 main(Input input) : SV_TARGET
 			{
 				dist = INFINITE_RAYHIT;
 
-				float3 lightColor = light.GetColor().rgb*light.energy;
+				L = light.directionWS.xyz; 
+				NdotL = saturate(dot(L, N));
 
-				L = light.directionWS.xyz;
+				[branch]
+				if (NdotL > 0)
+				{
+					float3 lightColor = light.GetColor().rgb * light.energy;
 
-				lighting.direct.diffuse = lightColor;
+					lighting.direct.diffuse = lightColor;
+				}
 			}
 			break;
 			case ENTITY_TYPE_POINTLIGHT:
 			{
 				L = light.positionWS - P;
 				const float dist2 = dot(L, L);
-				dist = sqrt(dist2);
+				const float range2 = light.range * light.range;
 
 				[branch]
-				if (dist < light.range)
+				if (dist2 < range2)
 				{
-					L /= dist;
+					dist = sqrt(dist2);
+					L /= dist; 
+					NdotL = saturate(dot(L, N));
 
-					const float3 lightColor = light.GetColor().rgb*light.energy;
+					[branch]
+					if (NdotL > 0)
+					{
+						const float3 lightColor = light.GetColor().rgb * light.energy;
 
-					lighting.direct.diffuse = lightColor;
+						lighting.direct.diffuse = lightColor;
 
-					const float range2 = light.range * light.range;
-					const float att = saturate(1.0 - (dist2 / range2));
-					const float attenuation = att * att;
+						const float range2 = light.range * light.range;
+						const float att = saturate(1.0 - (dist2 / range2));
+						const float attenuation = att * att;
 
-					lighting.direct.diffuse *= attenuation;
+						lighting.direct.diffuse *= attenuation;
+					}
 				}
 			}
 			break;
@@ -79,29 +91,35 @@ float4 main(Input input) : SV_TARGET
 			{
 				L = light.positionWS - P;
 				const float dist2 = dot(L, L);
-				dist = sqrt(dist2);
+				const float range2 = light.range * light.range;
 
 				[branch]
-				if (dist < light.range)
+				if (dist2 < range2)
 				{
+					dist = sqrt(dist2);
 					L /= dist;
-
-					const float3 lightColor = light.GetColor().rgb*light.energy;
-
-					const float SpotFactor = dot(L, light.directionWS);
-					const float spotCutOff = light.coneAngleCos;
+					NdotL = saturate(dot(L, N));
 
 					[branch]
-					if (SpotFactor > spotCutOff)
+					if (NdotL > 0)
 					{
-						lighting.direct.diffuse = lightColor;
+						const float SpotFactor = dot(L, light.directionWS);
+						const float spotCutOff = light.coneAngleCos;
 
-						const float range2 = light.range * light.range;
-						const float att = saturate(1.0 - (dist2 / range2));
-						float attenuation = att * att;
-						attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
+						[branch]
+						if (SpotFactor > spotCutOff)
+						{
+							const float3 lightColor = light.GetColor().rgb * light.energy;
 
-						lighting.direct.diffuse *= attenuation;
+							lighting.direct.diffuse = lightColor;
+
+							const float range2 = light.range * light.range;
+							const float att = saturate(1.0 - (dist2 / range2));
+							float attenuation = att * att;
+							attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
+
+							lighting.direct.diffuse *= attenuation;
+						}
 					}
 				}
 			}
@@ -123,8 +141,6 @@ float4 main(Input input) : SV_TARGET
 			}
 			break;
 			}
-
-			float NdotL = saturate(dot(L, N));
 
 			if (NdotL > 0 && dist > 0)
 			{
