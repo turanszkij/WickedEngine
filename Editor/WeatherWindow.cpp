@@ -289,7 +289,11 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	ocean_enabledCheckBox->SetPos(XMFLOAT2(x + 100, y += step));
 	ocean_enabledCheckBox->OnClick([&](wiEventArgs args) {
 		auto& weather = GetWeather();
-		weather.SetOceanEnabled(args.bValue);
+		if (!weather.IsOceanEnabled())
+		{
+			weather.SetOceanEnabled(args.bValue);
+			wiRenderer::OceanRegenerate();
+		}
 		});
 	weatherWindow->AddWidget(ocean_enabledCheckBox);
 
@@ -303,7 +307,11 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 		if (wiScene::GetScene().weathers.GetCount() > 0)
 		{
 			WeatherComponent& weather = wiScene::GetScene().weathers[0];
-			weather.oceanParameters.patch_length = args.fValue;
+			if (std::abs(weather.oceanParameters.patch_length - args.fValue) > FLT_EPSILON)
+			{
+				weather.oceanParameters.patch_length = args.fValue;
+				wiRenderer::OceanRegenerate();
+			}
 		}
 		});
 	weatherWindow->AddWidget(ocean_patchSizeSlider);
@@ -317,7 +325,11 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 		if (wiScene::GetScene().weathers.GetCount() > 0)
 		{
 			WeatherComponent& weather = wiScene::GetScene().weathers[0];
-			weather.oceanParameters.wave_amplitude = args.fValue;
+			if (std::abs(weather.oceanParameters.wave_amplitude - args.fValue) > FLT_EPSILON)
+			{
+				weather.oceanParameters.wave_amplitude = args.fValue;
+				wiRenderer::OceanRegenerate();
+			}
 		}
 		});
 	weatherWindow->AddWidget(ocean_waveAmplitudeSlider);
@@ -345,7 +357,11 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 		if (wiScene::GetScene().weathers.GetCount() > 0)
 		{
 			WeatherComponent& weather = wiScene::GetScene().weathers[0];
-			weather.oceanParameters.wind_dependency = args.fValue;
+			if (std::abs(weather.oceanParameters.wind_dependency - args.fValue) > FLT_EPSILON)
+			{
+				weather.oceanParameters.wind_dependency = args.fValue;
+				wiRenderer::OceanRegenerate();
+			}
 		}
 		});
 	weatherWindow->AddWidget(ocean_windDependencySlider);
@@ -461,7 +477,6 @@ void WeatherWindow::Update()
 		cloudinessSlider->SetValue(weather.cloudiness);
 		cloudScaleSlider->SetValue(weather.cloudScale);
 		cloudSpeedSlider->SetValue(weather.cloudSpeed);
-		windSpeedSlider->SetValue(wiMath::Length(weather.windDirection));
 
 		ambientColorPicker->SetPickColor(wiColor::fromFloat3(weather.ambient));
 		horizonColorPicker->SetPickColor(wiColor::fromFloat3(weather.horizon));

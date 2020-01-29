@@ -452,6 +452,7 @@ namespace wiRenderer
 	const XMFLOAT4& GetWaterPlane();
 	void SetGameSpeed(float value);
 	float GetGameSpeed();
+	void OceanRegenerate(); // regeenrates ocean if it is already created
 	void InvalidateBVH(); // invalidates scene bvh so if something wants to use it, it will recompute and validate it
 	void SetRaytraceBounceCount(uint32_t bounces);
 	uint32_t GetRaytraceBounceCount();

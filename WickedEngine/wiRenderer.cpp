@@ -10063,6 +10063,7 @@ bool GetAdvancedRefractionsEnabled() { return advancedRefractions; }
 bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
 void SetGameSpeed(float value) { GameSpeed = std::max(0.0f, value); }
 float GetGameSpeed() { return GameSpeed; }
+void OceanRegenerate() { if (ocean != nullptr) ocean = std::make_unique<wiOcean>(GetScene().weather); }
 void InvalidateBVH() { scene_bvh_invalid = true; }
 void SetRaytraceBounceCount(uint32_t bounces)
 {
