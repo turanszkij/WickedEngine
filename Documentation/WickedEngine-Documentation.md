@@ -54,6 +54,13 @@ This is a reference for the C++ features of Wicked Engine
 			3. [SamplerMapping](#samplermapping)
 			4. [ShaderInterop](#shaderinterop)
 	2. [wiRenderer](#wirenderer)
+		1. [DrawScene](#drawscene)
+		2. [DrawScene_Transparent](#drawscene_transparent)
+		3. [Tessellation](#tessellation)
+		4. [Occlusion Culling](#occlusionculling)
+		5. [Shadow Maps](#shadowmaps)
+		6. [UpdatePerFrameData](#updateperframedata)
+		7. [UpdateRenderData](#updaterenderdata)
 	3. [wiEnums](#wienums)
 	4. [wiImage](#wiimage)
 	5. [wiFont](#wifont)
@@ -189,7 +196,7 @@ Implements an advanced method of Deferred rendering to be able to render many li
 
 ### RenderPath3D_PathTracing
 [[Header]](../WickedEngine/RenderPath3D_PathTracing.h) [[Cpp]](../WickedEngine/RenderPath3D_PathTracing.cpp)
-Implements a compute shader based path tracing solution. In a static scene, the rendering will converge to ground truth. When something changes in the scene (something moves, ot material changes, etc...), the convergence will be restarted from the beginning.
+Implements a compute shader based path tracing solution. In a static scene, the rendering will converge to ground truth. When something changes in the scene (something moves, ot material changes, etc...), the convergence will be restarted from the beginning. The raytracing is implemented in [wiRenderer](#wirenderer) and multiple [shaders](#shaders). The ray tracing is available on any GPU that supports compute shaders.
 
 ### LoadingScreen
 [[Header]](../WickedEngine/LoadingScreen.h) [[Cpp]](../WickedEngine/LoadingScreen.cpp)
@@ -409,10 +416,42 @@ The ShaderInterop also contains the resource macros to help share code between C
 
 ### wiRenderer
 [[Header]](../WickedEngine/wiRenderer.h) [[Cpp]](../WickedEngine/wiRenderer.cpp)
-This is a collection of graphics technique implentations and functions to draw a scene, shadows, post processes and other things. It is also the manager of the GraphicsDevice instance, and provides other helper functions to load shaders from files on disk.<br/>
-Apart from graphics helper functions that are mostly independent of each other, the renderer also provides facilities to render a Scene. This can be done via the high level DrawScene, DrawSceneTransparent, etc. functions. These don't set up render passes or viewports by themselves, but they expect that they are set up from outside. Most other render state will be handled internally, such as constant buffers, stencil, blendstate, etc.. Please see how the scene rendering functions are used in the High level interface RenderPath3D implementations (for example [RenderPath3D_TiledForward.cpp](../WickedEngine/RenderPath3D_TiledForward.cpp)) <br/>
-Other points of interest here are utility graphics functions, such as CopyTexture2D, GenerateMipChain, and the like, which provide customizable operations, such as border expand mode, Gaussian mipchain generation, and things that wouldn't be supported by a graphics API.<br/>
+This is a collection of graphics technique implentations and functions to draw a scene, shadows, post processes and other things. It is also the manager of the GraphicsDevice instance, and provides other helper functions to load shaders from files on disk.
+
+Apart from graphics helper functions that are mostly independent of each other, the renderer also provides facilities to render a Scene. This can be done via the high level DrawScene, DrawSceneTransparent, etc. functions. These don't set up render passes or viewports by themselves, but they expect that they are set up from outside. Most other render state will be handled internally, such as constant buffers, stencil, blendstate, etc.. Please see how the scene rendering functions are used in the High level interface RenderPath3D implementations (for example [RenderPath3D_TiledForward.cpp](../WickedEngine/RenderPath3D_TiledForward.cpp))
+
+Other points of interest here are utility graphics functions, such as CopyTexture2D, GenerateMipChain, and the like, which provide customizable operations, such as border expand mode, Gaussian mipchain generation, and things that wouldn't be supported by a graphics API.
+
 The renderer also hosts post process implementations. These functions are independent and have clear input/output parameters. They shouldn't rely on any other extra setup from outside.
+
+Read about the different features of the renderer in more detail below:
+
+#### DrawScene
+Renders the scene from the camera's point of view that was specified as parameter. Only the objects withing the camera [Frustum](#frustum) will be rendered. The objects will be sorted from front-to back. This is an optimization to reduce overdraw, because for opaque objects, only the closest pixel to the camera will contribute to the rendered image. Pixels behind the frontmost pixel will be culled by the GPU using the depth buffer and not be rendered. The sorting is implemented with RenderQueue internally. The RenderQueue is responsible to sort objects by distance and mesh index, so instaced rendering (batching multiple drawable objects into one draw call) and front-to back sorting can both work together. 
+
+The `renderPass` argument will specify what kind of render pass we are using and specifies shader complexity and rendering technique.
+
+In addition to rendering objects, [hair particle systems](#wihairparticle) will also be rendered, if there are any within the camera's view and the `grass` parameter is `true`.
+
+There are other parameters that can enable [tessellation](#tessellation) or [occlusion culling](#occlusionculling).
+
+#### DrawScene_Transparent
+Similar to [DrawScene](#drawscene), but the object sorting order is reversed, that is object will be rendered from back to front. This is because transparent objects will be using blending, to allow transparency. However, hardware blending requires that the blend destination (background pixel) is already present in the result when the source (foreground pixel) is rendered.
+
+#### Tessellation
+Tessellation can be used when rendering objects. Tessellation requires a GPU hardware feature and can enable displacement mapping on vertices or smoothing mesh silhouettes dynamically while rendering objects. Tessellation will be used when `tessellation` parameter to the [DrawScene](#drawscene) was set to `true` and the GPU supports the tessellation feature. Tessellation level can be specified per [MeshComponent](#meshcomponent)'s `tessellationFactor` parameter. Tessellation level will be modulated by distance from camera, so that tessellation factor will fade out on more distant objects. Greater tessellation factor means more detailed geometry will be generated.
+
+#### Occlusion Culling
+Occlusion culling is a technique to determine which objects are within the camera, but are completely behind an other objects, such that they wouldn't be rendered. The depth buffer already does occlusion culling on the GPU, however, we would like to perform this earlier than submitting the mesh to the GPU for drawing, so essentially do the occlusion culling on CPU. A hybrid approach is used here, which uses the results from a previously rendered frame (that was rendered by GPU) to determine if an object will be visible in the current frame. For this, we first render the object into the previous frame's depth buffer, and use the previous frame's camera matrices, however, the current position of the object. In fact, we only render bounding boxes instead of objects, for performance reasons. Occlusion queries are used while rendering, and the CPU can read the results of the queries in a later frame. We keep track of how many frames the object was not visible, and if it was not visible for a certain amount, we omit it from rendering. If it suddenly becomes visible later, we immediately enable rendering it again. This technique means that results will lag behind for a few frames (latency between cpu and gpu and latency of using previous frame's depth buffer). These are implemented in the functions `wiRenderer::OcclusionCulling_Render()` and `wiRenderer::OcclusionCulling_Read()`. 
+
+#### Shadow Maps
+The `DrawShadowmaps()` function will render shadow maps for each active dynamic light that are within the camera [frustum](#frustum). There are two types of shadow maps, 2D and Cube shadow maps. The maximum number of usable shadow maps are set up with calling `SetShadowProps2D()` or `SetShadowPropsCube()` functions, where the parameters will specify the maximum number of shadow maps and resolution. The shadow slots for each light must be already assigned, because this is a rendering function and is not allowed to modify the state of the [Scene](#scene) and [lights](#lightcomponent). The shadow slots will be set up in the [UpdatePerFrameData()](#updateperframedata) function that is called every frame by the `RenderPath3D`.
+
+#### UpdatePerFrameData
+This function prepares the scene for rendering. It must be called once every frame. It will modify the [Scene](#scene) and other rendering related resources. It is called after the [Scene](#scene) was updated. It performs frustum culling and other management tasks, such as packing decal rects into atlas and several other things.
+
+#### UpdateRenderData
+Begin rendering the frame on GPU. This means that GPU compute jobs are kicked, such as particle simulations, texture packing, mipmap generation tasks that were queued up, updating per frame GPU buffer data, animation vertex skinning and other things.
 
 ### wiEnums
 [[Header]](../WickedEngine/wiEnums.h)
