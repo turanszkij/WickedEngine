@@ -38,8 +38,8 @@ namespace wiFont_Internal
 	Sampler				sampler;
 
 	VertexLayout		vertexLayout;
-	VertexShader		vertexShader;
-	PixelShader			pixelShader;
+	Shader				vertexShader;
+	Shader				pixelShader;
 	PipelineState		PSO;
 
 	atomic_bool initialized = false;
@@ -299,11 +299,11 @@ void wiFont::LoadShaders()
 		{ "POSITION", 0, FORMAT_R16G16_SINT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, FORMAT_R16G16_FLOAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 	};
-	wiRenderer::LoadVertexShader(vertexShader, "fontVS.cso");
+	wiRenderer::LoadShader(VS, vertexShader, "fontVS.cso");
 	wiRenderer::GetDevice()->CreateInputLayout(layout, arraysize(layout), &vertexShader.code, &vertexLayout);
 
 
-	wiRenderer::LoadPixelShader(pixelShader, "fontPS.cso");
+	wiRenderer::LoadShader(PS, pixelShader, "fontPS.cso");
 
 
 	PipelineStateDesc desc;

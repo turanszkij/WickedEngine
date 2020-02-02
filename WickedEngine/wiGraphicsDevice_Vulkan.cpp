@@ -2691,103 +2691,52 @@ namespace wiGraphics
 
 		return true;
 	}
-	bool GraphicsDevice_Vulkan::CreateVertexShader(const void *pShaderBytecode, size_t BytecodeLength, VertexShader *pVertexShader)
+	bool GraphicsDevice_Vulkan::CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader)
 	{
-		DestroyVertexShader(pVertexShader);
-		pVertexShader->Register(shared_from_this());
+		DestroyShader(pShader);
+		pShader->Register(shared_from_this());
 
-		pVertexShader->code.data = new BYTE[BytecodeLength];
-		memcpy(pVertexShader->code.data, pShaderBytecode, BytecodeLength);
-		pVertexShader->code.size = BytecodeLength;
+		pShader->code.data = new BYTE[BytecodeLength];
+		std::memcpy(pShader->code.data, pShaderBytecode, BytecodeLength);
+		pShader->code.size = BytecodeLength;
+		pShader->stage = stage;
 
-		return (pVertexShader->code.data != nullptr && pVertexShader->code.size > 0 ? true : false);
-	}
-	bool GraphicsDevice_Vulkan::CreatePixelShader(const void *pShaderBytecode, size_t BytecodeLength, PixelShader *pPixelShader)
-	{
-		DestroyPixelShader(pPixelShader);
-		pPixelShader->Register(shared_from_this());
+		VkResult res = VK_SUCCESS;
 
-		pPixelShader->code.data = new BYTE[BytecodeLength];
-		memcpy(pPixelShader->code.data, pShaderBytecode, BytecodeLength);
-		pPixelShader->code.size = BytecodeLength;
-
-		return (pPixelShader->code.data != nullptr && pPixelShader->code.size > 0 ? true : false);
-	}
-	bool GraphicsDevice_Vulkan::CreateGeometryShader(const void *pShaderBytecode, size_t BytecodeLength, GeometryShader *pGeometryShader)
-	{
-		DestroyGeometryShader(pGeometryShader);
-		pGeometryShader->Register(shared_from_this());
-
-		pGeometryShader->code.data = new BYTE[BytecodeLength];
-		memcpy(pGeometryShader->code.data, pShaderBytecode, BytecodeLength);
-		pGeometryShader->code.size = BytecodeLength;
-
-		return (pGeometryShader->code.data != nullptr && pGeometryShader->code.size > 0 ? true : false);
-	}
-	bool GraphicsDevice_Vulkan::CreateHullShader(const void *pShaderBytecode, size_t BytecodeLength, HullShader *pHullShader)
-	{
-		DestroyHullShader(pHullShader);
-		pHullShader->Register(shared_from_this());
-
-		pHullShader->code.data = new BYTE[BytecodeLength];
-		memcpy(pHullShader->code.data, pShaderBytecode, BytecodeLength);
-		pHullShader->code.size = BytecodeLength;
-
-		return (pHullShader->code.data != nullptr && pHullShader->code.size > 0 ? true : false);
-	}
-	bool GraphicsDevice_Vulkan::CreateDomainShader(const void *pShaderBytecode, size_t BytecodeLength, DomainShader *pDomainShader)
-	{
-		DestroyDomainShader(pDomainShader);
-		pDomainShader->Register(shared_from_this());
-
-		pDomainShader->code.data = new BYTE[BytecodeLength];
-		memcpy(pDomainShader->code.data, pShaderBytecode, BytecodeLength);
-		pDomainShader->code.size = BytecodeLength;
-
-		return (pDomainShader->code.data != nullptr && pDomainShader->code.size > 0 ? true : false);
-	}
-	bool GraphicsDevice_Vulkan::CreateComputeShader(const void *pShaderBytecode, size_t BytecodeLength, ComputeShader *pComputeShader)
-	{
-		DestroyComputeShader(pComputeShader);
-		pComputeShader->Register(shared_from_this());
-
-		pComputeShader->code.data = new BYTE[BytecodeLength];
-		memcpy(pComputeShader->code.data, pShaderBytecode, BytecodeLength);
-		pComputeShader->code.size = BytecodeLength;
-
-		VkResult res;
-
-		VkComputePipelineCreateInfo pipelineInfo = {};
-		pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-		pipelineInfo.layout = defaultPipelineLayout_Compute;
-		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+		if (stage == CS)
+		{
+			VkComputePipelineCreateInfo pipelineInfo = {};
+			pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+			pipelineInfo.layout = defaultPipelineLayout_Compute;
+			pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
 
-		// Create compute pipeline state in place:
+			// Create compute pipeline state in place:
 
-		VkShaderModuleCreateInfo moduleInfo = {};
-		moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+			VkShaderModuleCreateInfo moduleInfo = {};
+			moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 
-		VkPipelineShaderStageCreateInfo stageInfo = {};
-		stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		stageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+			VkPipelineShaderStageCreateInfo stageInfo = {};
+			stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			stageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
 
-		VkShaderModule shaderModule = {};
-		moduleInfo.codeSize = pComputeShader->code.size;
-		moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pComputeShader->code.data);
-		res = vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule);
-		assert(res == VK_SUCCESS);
+			VkShaderModule shaderModule = {};
+			moduleInfo.codeSize = pShader->code.size;
+			moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pShader->code.data);
+			res = vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule);
+			assert(res == VK_SUCCESS);
 
-		stageInfo.module = shaderModule;
-		stageInfo.pName = "main";
+			stageInfo.module = shaderModule;
+			stageInfo.pName = "main";
 
-		pipelineInfo.stage = stageInfo;
+			pipelineInfo.stage = stageInfo;
 
 
-		res = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, reinterpret_cast<VkPipeline*>(&pComputeShader->resource));
-		assert(res == VK_SUCCESS);
+			res = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, reinterpret_cast<VkPipeline*>(&pShader->resource));
+			assert(res == VK_SUCCESS);
+		}
 
-		return res == VK_SUCCESS ? true : false;
+		return res == VK_SUCCESS;
 	}
 	bool GraphicsDevice_Vulkan::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
 	{
@@ -3500,30 +3449,13 @@ namespace wiGraphics
 	{
 
 	}
-	void GraphicsDevice_Vulkan::DestroyVertexShader(VertexShader *pVertexShader)
+	void GraphicsDevice_Vulkan::DestroyShader(Shader *pShader)
 	{
-
-	}
-	void GraphicsDevice_Vulkan::DestroyPixelShader(PixelShader *pPixelShader)
-	{
-
-	}
-	void GraphicsDevice_Vulkan::DestroyGeometryShader(GeometryShader *pGeometryShader)
-	{
-
-	}
-	void GraphicsDevice_Vulkan::DestroyHullShader(HullShader *pHullShader)
-	{
-
-	}
-	void GraphicsDevice_Vulkan::DestroyDomainShader(DomainShader *pDomainShader)
-	{
-
-	}
-	void GraphicsDevice_Vulkan::DestroyComputeShader(ComputeShader *pComputeShader)
-	{
-		DeferredDestroy({ DestroyItem::PIPELINE, pComputeShader->resource });
-		pComputeShader->resource = WI_NULL_HANDLE;
+		if (pShader->stage == CS && pShader->resource != WI_NULL_HANDLE)
+		{
+			DeferredDestroy({ DestroyItem::PIPELINE, pShader->resource });
+			pShader->resource = WI_NULL_HANDLE;
+		}
 	}
 	void GraphicsDevice_Vulkan::DestroyBlendState(BlendState *pBlendState)
 	{
@@ -4632,7 +4564,7 @@ namespace wiGraphics
 
 		vkCmdBindPipeline(GetDirectCommandList(cmd), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 	}
-	void GraphicsDevice_Vulkan::BindComputeShader(const ComputeShader* cs, CommandList cmd)
+	void GraphicsDevice_Vulkan::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
 		vkCmdBindPipeline(GetDirectCommandList(cmd), VK_PIPELINE_BIND_POINT_COMPUTE, (VkPipeline)cs->resource);
 	}

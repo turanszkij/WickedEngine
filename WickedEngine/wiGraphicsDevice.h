@@ -35,12 +35,7 @@ namespace wiGraphics
 		virtual bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) = 0;
 		virtual bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) = 0;
 		virtual bool CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, uint32_t NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout) = 0;
-		virtual bool CreateVertexShader(const void *pShaderBytecode, size_t BytecodeLength, VertexShader *pVertexShader) = 0;
-		virtual bool CreatePixelShader(const void *pShaderBytecode, size_t BytecodeLength, PixelShader *pPixelShader) = 0;
-		virtual bool CreateGeometryShader(const void *pShaderBytecode, size_t BytecodeLength, GeometryShader *pGeometryShader) = 0;
-		virtual bool CreateHullShader(const void *pShaderBytecode, size_t BytecodeLength, HullShader *pHullShader) = 0;
-		virtual bool CreateDomainShader(const void *pShaderBytecode, size_t BytecodeLength, DomainShader *pDomainShader) = 0;
-		virtual bool CreateComputeShader(const void *pShaderBytecode, size_t BytecodeLength, ComputeShader *pComputeShader) = 0;
+		virtual bool CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) = 0;
 		virtual bool CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState) = 0;
 		virtual bool CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState) = 0;
 		virtual bool CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState) = 0;
@@ -55,12 +50,7 @@ namespace wiGraphics
 		virtual void DestroyBuffer(GPUBuffer *pBuffer) = 0;
 		virtual void DestroyTexture(Texture *pTexture) = 0;
 		virtual void DestroyInputLayout(VertexLayout *pInputLayout) = 0;
-		virtual void DestroyVertexShader(VertexShader *pVertexShader) = 0;
-		virtual void DestroyPixelShader(PixelShader *pPixelShader) = 0;
-		virtual void DestroyGeometryShader(GeometryShader *pGeometryShader) = 0;
-		virtual void DestroyHullShader(HullShader *pHullShader) = 0;
-		virtual void DestroyDomainShader(DomainShader *pDomainShader) = 0;
-		virtual void DestroyComputeShader(ComputeShader *pComputeShader) = 0;
+		virtual void DestroyShader(Shader *pShader) = 0;
 		virtual void DestroyBlendState(BlendState *pBlendState) = 0;
 		virtual void DestroyDepthStencilState(DepthStencilState *pDepthStencilState) = 0;
 		virtual void DestroyRasterizerState(RasterizerState *pRasterizerState) = 0;
@@ -140,7 +130,7 @@ namespace wiGraphics
 		virtual void BindStencilRef(uint32_t value, CommandList cmd) = 0;
 		virtual void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) = 0;
 		virtual void BindPipelineState(const PipelineState* pso, CommandList cmd) = 0;
-		virtual void BindComputeShader(const ComputeShader* cs, CommandList cmd) = 0;
+		virtual void BindComputeShader(const Shader* cs, CommandList cmd) = 0;
 		virtual void Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) = 0;
 		virtual void DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, CommandList cmd) = 0;
 		virtual void DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd) = 0;

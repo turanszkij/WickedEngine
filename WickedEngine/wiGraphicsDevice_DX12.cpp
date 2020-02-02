@@ -2343,77 +2343,30 @@ namespace wiGraphics
 
 		return S_OK;
 	}
-	bool GraphicsDevice_DX12::CreateVertexShader(const void* pShaderBytecode, size_t BytecodeLength, VertexShader* pVertexShader)
+	bool GraphicsDevice_DX12::CreateShader(SHADERSTAGE stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader)
 	{
-		DestroyVertexShader(pVertexShader);
-		pVertexShader->Register(shared_from_this());
+		DestroyShader(pShader);
+		pShader->Register(shared_from_this());
 
-		pVertexShader->code.data = new BYTE[BytecodeLength];
-		memcpy(pVertexShader->code.data, pShaderBytecode, BytecodeLength);
-		pVertexShader->code.size = BytecodeLength;
+		pShader->code.data = new BYTE[BytecodeLength];
+		std::memcpy(pShader->code.data, pShaderBytecode, BytecodeLength);
+		pShader->code.size = BytecodeLength;
+		pShader->stage = stage;
 
-		return (pVertexShader->code.data != nullptr && pVertexShader->code.size > 0 ? S_OK : E_FAIL);
-	}
-	bool GraphicsDevice_DX12::CreatePixelShader(const void* pShaderBytecode, size_t BytecodeLength, PixelShader* pPixelShader)
-	{
-		DestroyPixelShader(pPixelShader);
-		pPixelShader->Register(shared_from_this());
-
-		pPixelShader->code.data = new BYTE[BytecodeLength];
-		memcpy(pPixelShader->code.data, pShaderBytecode, BytecodeLength);
-		pPixelShader->code.size = BytecodeLength;
-
-		return (pPixelShader->code.data != nullptr && pPixelShader->code.size > 0 ? S_OK : E_FAIL);
-	}
-	bool GraphicsDevice_DX12::CreateGeometryShader(const void* pShaderBytecode, size_t BytecodeLength, GeometryShader* pGeometryShader)
-	{
-		DestroyGeometryShader(pGeometryShader);
-		pGeometryShader->Register(shared_from_this());
-
-		pGeometryShader->code.data = new BYTE[BytecodeLength];
-		memcpy(pGeometryShader->code.data, pShaderBytecode, BytecodeLength);
-		pGeometryShader->code.size = BytecodeLength;
-
-		return (pGeometryShader->code.data != nullptr && pGeometryShader->code.size > 0 ? S_OK : E_FAIL);
-	}
-	bool GraphicsDevice_DX12::CreateHullShader(const void* pShaderBytecode, size_t BytecodeLength, HullShader* pHullShader)
-	{
-		DestroyHullShader(pHullShader);
-		pHullShader->Register(shared_from_this());
-
-		pHullShader->code.data = new BYTE[BytecodeLength];
-		memcpy(pHullShader->code.data, pShaderBytecode, BytecodeLength);
-		pHullShader->code.size = BytecodeLength;
-
-		return (pHullShader->code.data != nullptr && pHullShader->code.size > 0 ? S_OK : E_FAIL);
-	}
-	bool GraphicsDevice_DX12::CreateDomainShader(const void* pShaderBytecode, size_t BytecodeLength, DomainShader* pDomainShader)
-	{
-		DestroyDomainShader(pDomainShader);
-		pDomainShader->Register(shared_from_this());
-
-		pDomainShader->code.data = new BYTE[BytecodeLength];
-		memcpy(pDomainShader->code.data, pShaderBytecode, BytecodeLength);
-		pDomainShader->code.size = BytecodeLength;
-
-		return (pDomainShader->code.data != nullptr && pDomainShader->code.size > 0 ? S_OK : E_FAIL);
-	}
-	bool GraphicsDevice_DX12::CreateComputeShader(const void* pShaderBytecode, size_t BytecodeLength, ComputeShader* pComputeShader)
-	{
-		DestroyComputeShader(pComputeShader);
-		pComputeShader->Register(shared_from_this());
-
-		pComputeShader->code.data = new BYTE[BytecodeLength];
-		memcpy(pComputeShader->code.data, pShaderBytecode, BytecodeLength);
-		pComputeShader->code.size = BytecodeLength;
-
-		D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {};
-		desc.CS.pShaderBytecode = pComputeShader->code.data;
-		desc.CS.BytecodeLength = pComputeShader->code.size;
-		desc.pRootSignature = computeRootSig;
-
-		HRESULT hr = device->CreateComputePipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&pComputeShader->resource);
+		HRESULT hr = (pShader->code.data != nullptr && pShader->code.size > 0 ? S_OK : E_FAIL);
+		
 		assert(SUCCEEDED(hr));
+
+		if (stage == CS)
+		{
+			D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {};
+			desc.CS.pShaderBytecode = pShader->code.data;
+			desc.CS.BytecodeLength = pShader->code.size;
+			desc.pRootSignature = computeRootSig;
+
+			hr = device->CreateComputePipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&pShader->resource);
+			assert(SUCCEEDED(hr));
+		}
 
 		return SUCCEEDED(hr);
 	}
@@ -2971,32 +2924,12 @@ namespace wiGraphics
 	{
 
 	}
-	void GraphicsDevice_DX12::DestroyVertexShader(VertexShader* pVertexShader)
+	void GraphicsDevice_DX12::DestroyShader(Shader* pShader)
 	{
-
-	}
-	void GraphicsDevice_DX12::DestroyPixelShader(PixelShader* pPixelShader)
-	{
-
-	}
-	void GraphicsDevice_DX12::DestroyGeometryShader(GeometryShader* pGeometryShader)
-	{
-
-	}
-	void GraphicsDevice_DX12::DestroyHullShader(HullShader* pHullShader)
-	{
-
-	}
-	void GraphicsDevice_DX12::DestroyDomainShader(DomainShader* pDomainShader)
-	{
-
-	}
-	void GraphicsDevice_DX12::DestroyComputeShader(ComputeShader* pComputeShader)
-	{
-		if (pComputeShader->resource != WI_NULL_HANDLE)
+		if (pShader->stage == CS && pShader->resource != WI_NULL_HANDLE)
 		{
-			DeferredDestroy({ DestroyItem::PIPELINE, FRAMECOUNT, pComputeShader->resource });
-			pComputeShader->resource = WI_NULL_HANDLE;
+			DeferredDestroy({ DestroyItem::PIPELINE, FRAMECOUNT, pShader->resource });
+			pShader->resource = WI_NULL_HANDLE;
 		}
 	}
 	void GraphicsDevice_DX12::DestroyBlendState(BlendState* pBlendState)
@@ -3938,7 +3871,7 @@ namespace wiGraphics
 			GetDirectCommandList(cmd)->IASetPrimitiveTopology(d3dType);
 		}
 	}
-	void GraphicsDevice_DX12::BindComputeShader(const ComputeShader* cs, CommandList cmd)
+	void GraphicsDevice_DX12::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
 		prev_pipeline_hash[cmd] = 0; // note: same bind point for compute and graphics in dx12!
 		GetDirectCommandList(cmd)->SetPipelineState((ID3D12PipelineState*)cs->resource);

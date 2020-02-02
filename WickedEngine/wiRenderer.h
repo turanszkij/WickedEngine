@@ -17,12 +17,12 @@ namespace wiRenderer
 	}
 
 	const wiGraphics::Sampler* GetSampler(int slot);
-	const wiGraphics::VertexShader* GetVertexShader(VSTYPES id);
-	const wiGraphics::HullShader* GetHullShader(HSTYPES id);
-	const wiGraphics::DomainShader* GetDomainShader(DSTYPES id);
-	const wiGraphics::GeometryShader* GetGeometryShader(GSTYPES id);
-	const wiGraphics::PixelShader* GetPixelShader(PSTYPES id);
-	const wiGraphics::ComputeShader* GetComputeShader(CSTYPES id);
+	const wiGraphics::Shader* GetVertexShader(VSTYPES id);
+	const wiGraphics::Shader* GetHullShader(HSTYPES id);
+	const wiGraphics::Shader* GetDomainShader(DSTYPES id);
+	const wiGraphics::Shader* GetGeometryShader(GSTYPES id);
+	const wiGraphics::Shader* GetPixelShader(PSTYPES id);
+	const wiGraphics::Shader* GetComputeShader(CSTYPES id);
 	const wiGraphics::VertexLayout* GetVertexLayout(VLTYPES id);
 	const wiGraphics::RasterizerState* GetRasterizerState(RSTYPES id);
 	const wiGraphics::DepthStencilState* GetDepthStencilState(DSSTYPES id);
@@ -50,12 +50,7 @@ namespace wiRenderer
 	// Reload shaders
 	void ReloadShaders();
 
-	bool LoadVertexShader(wiGraphics::VertexShader& shader, const std::string& filename);
-	bool LoadHullShader(wiGraphics::HullShader& shader, const std::string& filename);
-	bool LoadDomainShader(wiGraphics::DomainShader& shader, const std::string& filename);
-	bool LoadGeometryShader(wiGraphics::GeometryShader& shader, const std::string& filename);
-	bool LoadPixelShader(wiGraphics::PixelShader& shader, const std::string& filename);
-	bool LoadComputeShader(wiGraphics::ComputeShader& shader, const std::string& filename);
+	bool LoadShader(wiGraphics::SHADERSTAGE stage, wiGraphics::Shader& shader, const std::string& filename);
 
 	// Returns the main camera that is currently being used in rendering (and also for post processing)
 	wiScene::CameraComponent& GetCamera();

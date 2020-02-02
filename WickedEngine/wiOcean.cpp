@@ -14,12 +14,12 @@ using namespace wiScene;
 
 namespace wiOcean_Internal
 {
-	ComputeShader		updateSpectrumCS;
-	ComputeShader		updateDisplacementMapCS;
-	ComputeShader		updateGradientFoldingCS;
-	VertexShader		oceanSurfVS;
-	PixelShader			wireframePS;
-	PixelShader			oceanSurfPS;
+	Shader		updateSpectrumCS;
+	Shader		updateDisplacementMapCS;
+	Shader		updateGradientFoldingCS;
+	Shader		oceanSurfVS;
+	Shader		wireframePS;
+	Shader		oceanSurfPS;
 
 	GPUBuffer			shadingCB;
 	RasterizerState		rasterizerState;
@@ -362,14 +362,14 @@ void wiOcean::LoadShaders()
 
 	std::string path = wiRenderer::GetShaderPath();
 
-	wiRenderer::LoadComputeShader(updateSpectrumCS, "oceanSimulatorCS.cso");
-	wiRenderer::LoadComputeShader(updateDisplacementMapCS, "oceanUpdateDisplacementMapCS.cso");
-	wiRenderer::LoadComputeShader(updateGradientFoldingCS, "oceanUpdateGradientFoldingCS.cso");
+	wiRenderer::LoadShader(CS, updateSpectrumCS, "oceanSimulatorCS.cso");
+	wiRenderer::LoadShader(CS, updateDisplacementMapCS, "oceanUpdateDisplacementMapCS.cso");
+	wiRenderer::LoadShader(CS, updateGradientFoldingCS, "oceanUpdateGradientFoldingCS.cso");
 
-	wiRenderer::LoadVertexShader(oceanSurfVS, "oceanSurfaceVS.cso");
+	wiRenderer::LoadShader(VS, oceanSurfVS, "oceanSurfaceVS.cso");
 
-	wiRenderer::LoadPixelShader(oceanSurfPS, "oceanSurfacePS.cso");
-	wiRenderer::LoadPixelShader(wireframePS, "oceanSurfaceSimplePS.cso");
+	wiRenderer::LoadShader(PS, oceanSurfPS, "oceanSurfacePS.cso");
+	wiRenderer::LoadShader(PS, wireframePS, "oceanSurfaceSimplePS.cso");
 
 
 	GraphicsDevice* device = wiRenderer::GetDevice();

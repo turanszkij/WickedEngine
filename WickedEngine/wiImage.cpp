@@ -32,9 +32,9 @@ namespace wiImage
 	};
 
 	GPUBuffer				constantBuffer;
-	VertexShader			vertexShader;
-	VertexShader			screenVS;
-	PixelShader				imagePS[IMAGE_SHADER_COUNT][IMAGE_SAMPLING_COUNT];
+	Shader					vertexShader;
+	Shader					screenVS;
+	Shader					imagePS[IMAGE_SHADER_COUNT][IMAGE_SAMPLING_COUNT];
 	BlendState				blendStates[BLENDMODE_COUNT];
 	RasterizerState			rasterizerState;
 	DepthStencilState		depthStencilStates[STENCILMODE_COUNT][STENCILREFMODE_COUNT];
@@ -236,18 +236,17 @@ namespace wiImage
 	{
 		std::string path = wiRenderer::GetShaderPath();
 
-		wiRenderer::LoadVertexShader(vertexShader, "imageVS.cso");
-		wiRenderer::LoadVertexShader(screenVS, "screenVS.cso");
+		wiRenderer::LoadShader(VS, vertexShader, "imageVS.cso");
+		wiRenderer::LoadShader(VS, screenVS, "screenVS.cso");
 
-		wiRenderer::LoadPixelShader(imagePS[IMAGE_SHADER_STANDARD][IMAGE_SAMPLING_SIMPLE], "imagePS.cso");
-		wiRenderer::LoadPixelShader(imagePS[IMAGE_SHADER_SEPARATENORMALMAP][IMAGE_SAMPLING_SIMPLE], "imagePS_separatenormalmap.cso");
-		wiRenderer::LoadPixelShader(imagePS[IMAGE_SHADER_MASKED][IMAGE_SAMPLING_SIMPLE],"imagePS_masked.cso");
-		wiRenderer::LoadPixelShader(imagePS[IMAGE_SHADER_FULLSCREEN][IMAGE_SAMPLING_SIMPLE], "screenPS.cso");
-
-		wiRenderer::LoadPixelShader(imagePS[IMAGE_SHADER_STANDARD][IMAGE_SAMPLING_BICUBIC], "imagePS_bicubic.cso");
-		wiRenderer::LoadPixelShader(imagePS[IMAGE_SHADER_SEPARATENORMALMAP][IMAGE_SAMPLING_BICUBIC], "imagePS_separatenormalmap_bicubic.cso");
-		wiRenderer::LoadPixelShader(imagePS[IMAGE_SHADER_MASKED][IMAGE_SAMPLING_BICUBIC], "imagePS_masked_bicubic.cso");
-		wiRenderer::LoadPixelShader(imagePS[IMAGE_SHADER_FULLSCREEN][IMAGE_SAMPLING_BICUBIC], "screenPS_bicubic.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_STANDARD][IMAGE_SAMPLING_SIMPLE], "imagePS.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_SEPARATENORMALMAP][IMAGE_SAMPLING_SIMPLE], "imagePS_separatenormalmap.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_MASKED][IMAGE_SAMPLING_SIMPLE],"imagePS_masked.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_FULLSCREEN][IMAGE_SAMPLING_SIMPLE], "screenPS.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_STANDARD][IMAGE_SAMPLING_BICUBIC], "imagePS_bicubic.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_SEPARATENORMALMAP][IMAGE_SAMPLING_BICUBIC], "imagePS_separatenormalmap_bicubic.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_MASKED][IMAGE_SAMPLING_BICUBIC], "imagePS_masked_bicubic.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_FULLSCREEN][IMAGE_SAMPLING_BICUBIC], "screenPS_bicubic.cso");
 
 
 		GraphicsDevice* device = wiRenderer::GetDevice();

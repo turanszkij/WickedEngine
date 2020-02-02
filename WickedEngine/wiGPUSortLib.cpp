@@ -9,10 +9,10 @@ namespace wiGPUSortLib
 {
 	static GPUBuffer indirectBuffer;
 	static GPUBuffer sortCB;
-	static ComputeShader kickoffSortCS;
-	static ComputeShader sortCS;
-	static ComputeShader sortInnerCS;
-	static ComputeShader sortStepCS;
+	static Shader kickoffSortCS;
+	static Shader sortCS;
+	static Shader sortInnerCS;
+	static Shader sortStepCS;
 
 	void Initialize()
 	{
@@ -39,10 +39,10 @@ namespace wiGPUSortLib
 	{
 		std::string path = wiRenderer::GetShaderPath();
 
-		wiRenderer::LoadComputeShader(kickoffSortCS, "gpusortlib_kickoffSortCS.cso");
-		wiRenderer::LoadComputeShader(sortCS,  "gpusortlib_sortCS.cso");
-		wiRenderer::LoadComputeShader(sortInnerCS, "gpusortlib_sortInnerCS.cso");
-		wiRenderer::LoadComputeShader(sortStepCS, "gpusortlib_sortStepCS.cso");
+		wiRenderer::LoadShader(CS, kickoffSortCS, "gpusortlib_kickoffSortCS.cso");
+		wiRenderer::LoadShader(CS, sortCS,  "gpusortlib_sortCS.cso");
+		wiRenderer::LoadShader(CS, sortInnerCS, "gpusortlib_sortInnerCS.cso");
+		wiRenderer::LoadShader(CS, sortStepCS, "gpusortlib_sortStepCS.cso");
 
 	}
 

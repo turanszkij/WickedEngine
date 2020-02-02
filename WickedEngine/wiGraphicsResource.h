@@ -23,50 +23,11 @@ namespace wiGraphics
 		~ShaderByteCode() { SAFE_DELETE_ARRAY(data); }
 	};
 
-	struct VertexShader : public GraphicsDeviceChild
+	struct Shader : public GraphicsDeviceChild
 	{
-		~VertexShader();
+		~Shader();
 
-		ShaderByteCode code;
-		wiCPUHandle resource = WI_NULL_HANDLE;
-	};
-
-	struct PixelShader : public GraphicsDeviceChild
-	{
-		~PixelShader();
-
-		ShaderByteCode code;
-		wiCPUHandle resource = WI_NULL_HANDLE;
-	};
-
-	struct GeometryShader : public GraphicsDeviceChild
-	{
-		~GeometryShader();
-
-		ShaderByteCode code;
-		wiCPUHandle resource = WI_NULL_HANDLE;
-	};
-
-	struct HullShader : public GraphicsDeviceChild
-	{
-		~HullShader();
-
-		ShaderByteCode code;
-		wiCPUHandle resource = WI_NULL_HANDLE;
-	};
-
-	struct DomainShader : public GraphicsDeviceChild
-	{
-		~DomainShader();
-
-		ShaderByteCode code;
-		wiCPUHandle resource = WI_NULL_HANDLE;
-	};
-
-	struct ComputeShader : public GraphicsDeviceChild
-	{
-		~ComputeShader();
-
+		SHADERSTAGE stage = SHADERSTAGE_COUNT;
 		ShaderByteCode code;
 		wiCPUHandle resource = WI_NULL_HANDLE;
 	};

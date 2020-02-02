@@ -239,12 +239,7 @@ namespace wiGraphics
 		bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) override;
 		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) override;
 		bool CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, uint32_t NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout) override;
-		bool CreateVertexShader(const void *pShaderBytecode, size_t BytecodeLength, VertexShader *pVertexShader) override;
-		bool CreatePixelShader(const void *pShaderBytecode, size_t BytecodeLength, PixelShader *pPixelShader) override;
-		bool CreateGeometryShader(const void *pShaderBytecode, size_t BytecodeLength, GeometryShader *pGeometryShader) override;
-		bool CreateHullShader(const void *pShaderBytecode, size_t BytecodeLength, HullShader *pHullShader) override;
-		bool CreateDomainShader(const void *pShaderBytecode, size_t BytecodeLength, DomainShader *pDomainShader) override;
-		bool CreateComputeShader(const void *pShaderBytecode, size_t BytecodeLength, ComputeShader *pComputeShader) override;
+		bool CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) override;
 		bool CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState) override;
 		bool CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState) override;
 		bool CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState) override;
@@ -259,12 +254,7 @@ namespace wiGraphics
 		void DestroyBuffer(GPUBuffer *pBuffer) override;
 		void DestroyTexture(Texture *pTexture) override;
 		void DestroyInputLayout(VertexLayout *pInputLayout) override;
-		void DestroyVertexShader(VertexShader *pVertexShader) override;
-		void DestroyPixelShader(PixelShader *pPixelShader) override;
-		void DestroyGeometryShader(GeometryShader *pGeometryShader) override;
-		void DestroyHullShader(HullShader *pHullShader) override;
-		void DestroyDomainShader(DomainShader *pDomainShader) override;
-		void DestroyComputeShader(ComputeShader *pComputeShader) override;
+		void DestroyShader(Shader *pShader) override;
 		void DestroyBlendState(BlendState *pBlendState) override;
 		void DestroyDepthStencilState(DepthStencilState *pDepthStencilState) override;
 		void DestroyRasterizerState(RasterizerState *pRasterizerState) override;
@@ -308,7 +298,7 @@ namespace wiGraphics
 		void BindStencilRef(uint32_t value, CommandList cmd) override;
 		void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) override;
 		void BindPipelineState(const PipelineState* pso, CommandList cmd) override;
-		void BindComputeShader(const ComputeShader* cs, CommandList cmd) override;
+		void BindComputeShader(const Shader* cs, CommandList cmd) override;
 		void Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) override;
 		void DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, CommandList cmd) override;
 		void DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd) override;

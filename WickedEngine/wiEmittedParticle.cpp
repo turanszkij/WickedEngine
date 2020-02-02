@@ -20,21 +20,21 @@ using namespace wiGraphics;
 namespace wiScene
 {
 
-static VertexShader			vertexShader;
-static PixelShader			pixelShader[wiEmittedParticle::PARTICLESHADERTYPE_COUNT];
-static ComputeShader		kickoffUpdateCS;
-static ComputeShader		finishUpdateCS;
-static ComputeShader		emitCS;
-static ComputeShader		emitCS_FROMMESH;
-static ComputeShader		sphpartitionCS;
-static ComputeShader		sphpartitionoffsetsCS;
-static ComputeShader		sphpartitionoffsetsresetCS;
-static ComputeShader		sphdensityCS;
-static ComputeShader		sphforceCS;
-static ComputeShader		simulateCS;
-static ComputeShader		simulateCS_SORTING;
-static ComputeShader		simulateCS_DEPTHCOLLISIONS;
-static ComputeShader		simulateCS_SORTING_DEPTHCOLLISIONS;
+static Shader		vertexShader;
+static Shader		pixelShader[wiEmittedParticle::PARTICLESHADERTYPE_COUNT];
+static Shader		kickoffUpdateCS;
+static Shader		finishUpdateCS;
+static Shader		emitCS;
+static Shader		emitCS_FROMMESH;
+static Shader		sphpartitionCS;
+static Shader		sphpartitionoffsetsCS;
+static Shader		sphpartitionoffsetsresetCS;
+static Shader		sphdensityCS;
+static Shader		sphforceCS;
+static Shader		simulateCS;
+static Shader		simulateCS_SORTING;
+static Shader		simulateCS_DEPTHCOLLISIONS;
+static Shader		simulateCS_SORTING_DEPTHCOLLISIONS;
 
 static BlendState			blendStates[BLENDMODE_COUNT];
 static RasterizerState		rasterizerState;
@@ -618,25 +618,25 @@ void wiEmittedParticle::LoadShaders()
 {
 	std::string path = wiRenderer::GetShaderPath();
 
-	wiRenderer::LoadVertexShader(vertexShader, "emittedparticleVS.cso");
+	wiRenderer::LoadShader(VS, vertexShader, "emittedparticleVS.cso");
 	
-	wiRenderer::LoadPixelShader(pixelShader[SOFT], "emittedparticlePS_soft.cso");
-	wiRenderer::LoadPixelShader(pixelShader[SOFT_DISTORTION], "emittedparticlePS_soft_distortion.cso");
-	wiRenderer::LoadPixelShader(pixelShader[SIMPLEST], "emittedparticlePS_simplest.cso");
+	wiRenderer::LoadShader(PS, pixelShader[SOFT], "emittedparticlePS_soft.cso");
+	wiRenderer::LoadShader(PS, pixelShader[SOFT_DISTORTION], "emittedparticlePS_soft_distortion.cso");
+	wiRenderer::LoadShader(PS, pixelShader[SIMPLEST], "emittedparticlePS_simplest.cso");
 	
-	wiRenderer::LoadComputeShader(kickoffUpdateCS, "emittedparticle_kickoffUpdateCS.cso");
-	wiRenderer::LoadComputeShader(finishUpdateCS, "emittedparticle_finishUpdateCS.cso");
-	wiRenderer::LoadComputeShader(emitCS, "emittedparticle_emitCS.cso");
-	wiRenderer::LoadComputeShader(emitCS_FROMMESH, "emittedparticle_emitCS_FROMMESH.cso");
-	wiRenderer::LoadComputeShader(sphpartitionCS, "emittedparticle_sphpartitionCS.cso");
-	wiRenderer::LoadComputeShader(sphpartitionoffsetsCS, "emittedparticle_sphpartitionoffsetsCS.cso");
-	wiRenderer::LoadComputeShader(sphpartitionoffsetsresetCS, "emittedparticle_sphpartitionoffsetsresetCS.cso");
-	wiRenderer::LoadComputeShader(sphdensityCS, "emittedparticle_sphdensityCS.cso");
-	wiRenderer::LoadComputeShader(sphforceCS, "emittedparticle_sphforceCS.cso");
-	wiRenderer::LoadComputeShader(simulateCS, "emittedparticle_simulateCS.cso");
-	wiRenderer::LoadComputeShader(simulateCS_SORTING, "emittedparticle_simulateCS_SORTING.cso");
-	wiRenderer::LoadComputeShader(simulateCS_DEPTHCOLLISIONS, "emittedparticle_simulateCS_DEPTHCOLLISIONS.cso");
-	wiRenderer::LoadComputeShader(simulateCS_SORTING_DEPTHCOLLISIONS, "emittedparticle_simulateCS_SORTING_DEPTHCOLLISIONS.cso");
+	wiRenderer::LoadShader(CS, kickoffUpdateCS, "emittedparticle_kickoffUpdateCS.cso");
+	wiRenderer::LoadShader(CS, finishUpdateCS, "emittedparticle_finishUpdateCS.cso");
+	wiRenderer::LoadShader(CS, emitCS, "emittedparticle_emitCS.cso");
+	wiRenderer::LoadShader(CS, emitCS_FROMMESH, "emittedparticle_emitCS_FROMMESH.cso");
+	wiRenderer::LoadShader(CS, sphpartitionCS, "emittedparticle_sphpartitionCS.cso");
+	wiRenderer::LoadShader(CS, sphpartitionoffsetsCS, "emittedparticle_sphpartitionoffsetsCS.cso");
+	wiRenderer::LoadShader(CS, sphpartitionoffsetsresetCS, "emittedparticle_sphpartitionoffsetsresetCS.cso");
+	wiRenderer::LoadShader(CS, sphdensityCS, "emittedparticle_sphdensityCS.cso");
+	wiRenderer::LoadShader(CS, sphforceCS, "emittedparticle_sphforceCS.cso");
+	wiRenderer::LoadShader(CS, simulateCS, "emittedparticle_simulateCS.cso");
+	wiRenderer::LoadShader(CS, simulateCS_SORTING, "emittedparticle_simulateCS_SORTING.cso");
+	wiRenderer::LoadShader(CS, simulateCS_DEPTHCOLLISIONS, "emittedparticle_simulateCS_DEPTHCOLLISIONS.cso");
+	wiRenderer::LoadShader(CS, simulateCS_SORTING_DEPTHCOLLISIONS, "emittedparticle_simulateCS_SORTING_DEPTHCOLLISIONS.cso");
 
 
 	GraphicsDevice* device = wiRenderer::GetDevice();

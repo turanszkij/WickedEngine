@@ -25,7 +25,7 @@ enum CSTYPES_BVH
 	CSTYPE_BVH_PROPAGATEAABB,
 	CSTYPE_BVH_COUNT
 };
-static ComputeShader computeShaders[CSTYPE_BVH_COUNT];
+static Shader computeShaders[CSTYPE_BVH_COUNT];
 static GPUBuffer constantBuffer;
 
 
@@ -590,7 +590,7 @@ void wiGPUBVH::LoadShaders()
 {
 	string SHADERPATH = wiRenderer::GetShaderPath();
 
-	wiRenderer::LoadComputeShader(computeShaders[CSTYPE_BVH_PRIMITIVES], "bvh_primitivesCS.cso");
-	wiRenderer::LoadComputeShader(computeShaders[CSTYPE_BVH_HIERARCHY], "bvh_hierarchyCS.cso");
-	wiRenderer::LoadComputeShader(computeShaders[CSTYPE_BVH_PROPAGATEAABB], "bvh_propagateaabbCS.cso");
+	wiRenderer::LoadShader(CS, computeShaders[CSTYPE_BVH_PRIMITIVES], "bvh_primitivesCS.cso");
+	wiRenderer::LoadShader(CS, computeShaders[CSTYPE_BVH_HIERARCHY], "bvh_hierarchyCS.cso");
+	wiRenderer::LoadShader(CS, computeShaders[CSTYPE_BVH_PROPAGATEAABB], "bvh_propagateaabbCS.cso");
 }

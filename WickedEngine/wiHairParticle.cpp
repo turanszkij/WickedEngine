@@ -18,15 +18,15 @@ using namespace wiGraphics;
 namespace wiScene
 {
 
-static VertexShader vs;
-static PixelShader ps_alphatestonly;
-static PixelShader ps_deferred;
-static PixelShader ps_forward;
-static PixelShader ps_forward_transparent;
-static PixelShader ps_tiledforward;
-static PixelShader ps_tiledforward_transparent;
-static PixelShader ps_simplest;
-static ComputeShader cs_simulate;
+static Shader vs;
+static Shader ps_alphatestonly;
+static Shader ps_deferred;
+static Shader ps_forward;
+static Shader ps_forward_transparent;
+static Shader ps_tiledforward;
+static Shader ps_tiledforward_transparent;
+static Shader ps_simplest;
+static Shader cs_simulate;
 static DepthStencilState dss_default, dss_equal, dss_rejectopaque_keeptransparent;
 static RasterizerState rs, ncrs, wirers;
 static BlendState bs[2]; 
@@ -216,17 +216,17 @@ void wiHairParticle::LoadShaders()
 {
 	std::string path = wiRenderer::GetShaderPath();
 
-	wiRenderer::LoadVertexShader(vs, "hairparticleVS.cso");
+	wiRenderer::LoadShader(VS, vs, "hairparticleVS.cso");
 
-	wiRenderer::LoadPixelShader(ps_simplest, "hairparticlePS_simplest.cso");
-	wiRenderer::LoadPixelShader(ps_alphatestonly, "hairparticlePS_alphatestonly.cso");
-	wiRenderer::LoadPixelShader(ps_deferred, "hairparticlePS_deferred.cso");
-	wiRenderer::LoadPixelShader(ps_forward, "hairparticlePS_forward.cso");
-	wiRenderer::LoadPixelShader(ps_forward_transparent, "hairparticlePS_forward_transparent.cso");
-	wiRenderer::LoadPixelShader(ps_tiledforward, "hairparticlePS_tiledforward.cso");
-	wiRenderer::LoadPixelShader(ps_tiledforward_transparent, "hairparticlePS_tiledforward_transparent.cso");
+	wiRenderer::LoadShader(PS, ps_simplest, "hairparticlePS_simplest.cso");
+	wiRenderer::LoadShader(PS, ps_alphatestonly, "hairparticlePS_alphatestonly.cso");
+	wiRenderer::LoadShader(PS, ps_deferred, "hairparticlePS_deferred.cso");
+	wiRenderer::LoadShader(PS, ps_forward, "hairparticlePS_forward.cso");
+	wiRenderer::LoadShader(PS, ps_forward_transparent, "hairparticlePS_forward_transparent.cso");
+	wiRenderer::LoadShader(PS, ps_tiledforward, "hairparticlePS_tiledforward.cso");
+	wiRenderer::LoadShader(PS, ps_tiledforward_transparent, "hairparticlePS_tiledforward_transparent.cso");
 
-	wiRenderer::LoadComputeShader(cs_simulate, "hairparticle_simulateCS.cso");
+	wiRenderer::LoadShader(CS, cs_simulate, "hairparticle_simulateCS.cso");
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
