@@ -4384,7 +4384,7 @@ namespace wiGraphics
 					}
 
 					rasterizer.frontFace = desc.FrontCounterClockwise ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
-					rasterizer.depthBiasEnable = desc.DepthBias != 0;
+					rasterizer.depthBiasEnable = desc.DepthBias != 0 || desc.SlopeScaledDepthBias != 0;
 					rasterizer.depthBiasConstantFactor = static_cast<float>(desc.DepthBias);
 					rasterizer.depthBiasClamp = desc.DepthBiasClamp;
 					rasterizer.depthBiasSlopeFactor = desc.SlopeScaledDepthBias;
