@@ -1996,6 +1996,7 @@ namespace wiGraphics
 	{
 		Texture result;
 		result.resource = (wiCPUHandle)GetFrameResources().backBuffer;
+		result.type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
 		result.RTV = (wiCPUHandle)GetFrameResources().backBufferRTV.ptr;
 		return result;
 	}
