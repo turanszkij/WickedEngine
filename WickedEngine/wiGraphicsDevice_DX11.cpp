@@ -1281,6 +1281,7 @@ Texture GraphicsDevice_DX11::GetBackBuffer()
 {
 	Texture result;
 	result.resource = (wiCPUHandle)backBuffer;
+	result.type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
 
 	D3D11_TEXTURE2D_DESC desc;
 	backBuffer->GetDesc(&desc);
