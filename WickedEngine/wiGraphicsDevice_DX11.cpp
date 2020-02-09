@@ -2319,10 +2319,28 @@ bool GraphicsDevice_DX11::DownloadResource(const GPUResource* resourceToDownload
 			bool result = SUCCEEDED(hr);
 			if (result)
 			{
-				uint32_t cpycount = std::max(1u, textureToDownload->desc.Width) * std::max(1u, textureToDownload->desc.Height) * std::max(1u, textureToDownload->desc.Depth);
 				uint32_t cpystride = GetFormatStride(textureToDownload->desc.Format);
-				uint32_t cpysize = cpycount * cpystride;
-				memcpy(dataDest, mappedResource.pData, cpysize);
+				if (mappedResource.RowPitch / cpystride != textureToDownload->desc.Width)
+				{
+					assert(textureToDownload->desc.type == TextureDesc::TEXTURE_2D); // padded copy only implemented for texture2D!
+					assert(textureToDownload->desc.MipLevels == 1); // padded copy only implemented for single mip!
+
+					// Copy row by row without padding:
+					const uint32_t cpysize = textureToDownload->desc.Width * cpystride;
+					for (uint32_t i = 0; i < textureToDownload->desc.Height; ++i)
+					{
+						void* src = (void*)((size_t)mappedResource.pData + size_t(i * mappedResource.RowPitch));
+						void* dst = (void*)((size_t)dataDest + size_t(i * cpysize));
+						memcpy(dst, src, cpysize);
+					}
+				}
+				else
+				{
+					// Texture is not padded, copy the whole thing in one go:
+					uint32_t cpycount = std::max(1u, textureToDownload->desc.Width) * std::max(1u, textureToDownload->desc.Height) * std::max(1u, textureToDownload->desc.Depth);
+					uint32_t cpysize = cpycount * cpystride;
+					memcpy(dataDest, mappedResource.pData, cpysize);
+				}
 				immediateContext->Unmap((ID3D11Resource*)textureDest->resource, 0);
 			}
 

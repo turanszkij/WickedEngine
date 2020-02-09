@@ -74,7 +74,7 @@ namespace wiHelper
 		assert(result);
 	}
 
-	bool saveTextureToFile(wiGraphics::Texture& texture, const string& fileName)
+	bool saveTextureToFile(const wiGraphics::Texture& texture, const string& fileName)
 	{
 		using namespace wiGraphics;
 
