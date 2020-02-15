@@ -43,6 +43,13 @@ This is a reference for the C++ features of Wicked Engine
 3. [Graphics](#graphics)
 	1. [wiGraphics](#wigraphics)
 		1. [GraphicsDevice](#wigraphicsdevice)
+			1. [Debug device](#debug-device)
+			2. [Creating resources](#creating-resources)
+			3. [Destroying resources](#destroying-resources)
+			4. [Work submission](#work-submission)
+			5. [Presenting to the screen](#presenting-to-the-screen)
+			6. [Resource binding](#resource-binding)
+			7. [Subresources](#subresources)
 		2. [GraphicsDevice_DX11](#wigraphicsdevice_dx11)
 		3. [GraphicsDevice_DX12](#wigraphicsdevice_dx12)
 		4. [GraphicsDevice_Vulkan](#wigraphicsdevice_vulkan)
@@ -65,6 +72,7 @@ This is a reference for the C++ features of Wicked Engine
 		9. [Scene BVH](#scene-bvh)
 		10. [Decals](#decals)
 		11. [Environment probes](#environment-probes)
+		12. [Post processing](#post-processing)
 	3. [wiEnums](#wienums)
 	4. [wiImage](#wiimage)
 	5. [wiFont](#wifont)
@@ -180,7 +188,17 @@ Capable of handling 2D rendering to offscreen buffer in Render() function, or ju
 
 ### RenderPath3D
 [[Header]](../WickedEngine/RenderPath3D.h) [[Cpp]](../WickedEngine/RenderPath3D.cpp)
-Base class for implementing 3D rendering paths. It supports everything that the Renderpath2D does.
+Base class for implementing 3D rendering paths. It supports everything that the Renderpath2D does. It is a base class that doesn't implement a particular 3D scene rendering algorithm, so it can't be used by itself. For specific algorithm, the user can choose between using [RenderPath3D_Forward](#renderpath3d_forward), [RenderPath3D_Deferred](#renderpath3d_deferred), [RenderPath3D_TiledForward](#renderpath3d_tiledforward), [RenderPath3D_TiledDeferred](#renderpath3d_tileddeferred) and [RenderPath3D_PathTracing](#renderpath3d_pathtracing), each with their own strengths and weaknesses.
+
+The post process chain is also implemented here. This means that the order of the post processes and the resources that they use are defined here, but the individual post process rendering on a lower level is implemented in the `wiRenderer` as core engine features. Read more about post process implementation in the [wiRenderer section](#post-processing). 
+
+The post process chain is implemented in `RenderPath3D::RenderPostprocessChain()` function and divided into multiple parts:
+- HDR<br/>
+These are using the HDR scene render targets, they happen before tone mapping. For example: Temporal AA, Motion blur, Depth of field
+- LDR<br/>
+These are running after tone mapping. For example: Color grading, FXAA, chromatic aberration
+- Other<br/>
+These are running in more specific locations, depending on the render path. For example: SSR, SSAO, cartoon outline
 
 ### RenderPath3D_Forward
 [[Header]](../WickedEngine/RenderPath3D_Forward.h) [[Cpp]](../WickedEngine/RenderPath3D_Forward.cpp)
@@ -363,15 +381,96 @@ Everything related to rendering graphics will be discussed below
 ### wiGraphics
 The graphics API wrappers
 
-#### wiGraphicsDevice
+#### GraphicsDevice
 [[Header]](../WickedEngine/wiGraphicsDevice.h) [[Cpp]](../WickedEngine/wiGraphicsDevice.cpp)
 This is the interface for the graphics API abstraction. It is higher level than a graphics API, but these are the lowest level of rendering commands the engine offers.
 
-#### wiGraphicsDevice_DX11
+##### Debug device
+When creating a graphics device, it can be created in special debug mode to assist development. For this, the user can specify `debugdevice` as command line argument to the application, or set the `debuglayer` argument of the graphics device constructor to `true` when creating the device. The errors will be posted to the Console Output window in the development environment.
+
+##### Creating resources
+Functions like `CreateTexture()`, `CreateBuffer()`, etc. can be used to create corresponding GPU resources. Using these functions is thread safe. The resources will not necessarily be created immediately, but by the time the GPU will want to use them. These functions imediately return `false` if there were any errors, such as wrong parameters being passed to the description parameters, and they will return `true` if everything is correct. If there was an error, please use the [debug device](#debug-device) functionality to get additional information. When passing a resource to these functions that is already created, it will be destroyed, then created again with the newly provided parameters.
+
+##### Destroying resources
+You can use the functions such as `DestroyTexture()` or `DestroyBuffer()`, etc. to destroy resources that are no longer needed. These are not necessary to be called, as GPU resources will also call this when their destructor is called. Destroying the resource might be delayed until the time the GPU is finished with them, but the user can immediately reuse the resource and doesn't need to care about this.
+
+##### Work submission
+Rendering commands that expect a `CommandList` as a parameter are not executed immediately. They will be recorded into command lists and submitted to the GPU for execution upon calling the `PresentEnd()` function. The `CommandList` is a simple handle that associates rendering commands to a CPU execution timeline. The `CommandList` is not thread safe, so every `CommandList` can be used by a single CPU thread at a time to record commands. In a multithreading scenario, each CPU thread should have its own `CommandList`. `CommandList`s can be retrieved from the [GraphicsDevice](#graphicsdevice) by calling `GraphicsDevice::BeginCommandList()` that will return a `CommandList` handle that is free to be used from that point by the calling thread. All such handles will be in use until `PresentEnd()` was called, where GPU submission takes place. The command lists will be submitted in the order they were retrieved with `GraphicsDevice::BeginCommandList()`. The order of submission correlates with the order of actual GPU execution. For example:
+
+```cpp
+CommandList cmd1 = device->BeginCommandList();
+CommandList cmd2 = device->BeginCommandList();
+
+Read_Shadowmaps(cmd2); // CPU executes these commands first
+Render_Shadowmaps(cmd1); // CPU executes these commands second
+
+//...
+
+CommandList cmd_present = device->BeginCommandList();
+device->PresentBegin(cmd_present);
+// ...
+device->PresentEnd(cmd_present); // CPU submits work for GPU
+// The GPU will execute the Render_Shadowmaps() commands first, then the Read_Shadowmaps() commands second
+// The GPU will execute the commands between PresentBegin() and PresentEnd() last.
+```
+
+##### Presenting to the screen
+The `PresentBegin()` and `PresentEnd()` functions are used to prepare for rendering to the back buffer. When the `PresentBegin()` is called, the back buffer will be set as the current active render target or render pass. This means, that rendering commands will draw directly to the screen. This is generally used to draw textures that were previously rendered to, or 2D GUI elements. For example, the `RenderPath3D::Compose()` function is used in the [High Level Interface](#high-level-interface) to draw the results of the `RenderPath3D::Render()` off screen rendered results, and the [GUI](#gui) elements. The rendering commands executed between `PresentBegin()` and `PresentEnd()` are still executed by the GPU in the command list beginning order described in the topic: [Work submission](#work-submission).
+
+##### Resource binding
+The resource binding model is based on DirectX 11. That means, resources are bound to slot numbers that are simple integers. This makes it easy to share binding information between shaders and C++ code, just define the bind slot number as global constants in [shared header files](#shaderinterop). For sharing, the bind slot numbers can be easily defined as compile time constants using:
+
+```cpp
+static const uint my_texture_bind_slot = 5;
+```
+Watch out that it must be defined as `static const`, otherwise the shader compiler can interpret it as a constant buffer member (uniform). In that case, the initial value might be lost because the shader expect the CPU to feed it at runtime from a buffer. Optionally, an other choice is to use macros to define the bind point constants:
+```cpp
+#define MY_TEXTURE_BIND_SLOT 5
+```
+After this, you can declare a texture in shader and put it to the desired bind point:
+```cpp
+TEXTURE2D(myTexture, float4, my_texture_bind_slot);
+```
+Note that using the TEXTURE2D() macro to declare the resource is a cross platform way to declare a texture resource on a specified slot. For information about other resource declaration macros like this, visit the [Shaders](#shaders) section.
+
+After this, the user can bind the texture resource from the CPU side:
+```cpp
+Texture myTexture;
+// after texture was created, etc:
+device->BindResource(PS, myTexture, my_texture_bind_slot, cmd);
+```
+
+Other than this, resources like `Texture` can have different subresources, so an extra parameter can be specified to the `BindResources()` function called `subresource`:
+```cpp
+Texture myTexture;
+// after texture was created, etc:
+device->BindResource(PS, myTexture, my_texture_bind_slot, 42);
+```
+By default, the `subresource` parameter is `-1`, which means that the entire resource will be bound. For more information about subresources, see the [Subresources](#subresources) section.
+
+There are different resource types regarding how to bind resources. These slots have separate binding points from each other, so they don't interfere between each other.
+- Shader resources<br/>
+These are read only resources. `GPUBuffer`s and `Texture`s can be bound as shader resources if they were created with a `BindFlags` in their description that has the `BIND_SHADER_RESOURCE` bit set. Use the `GraphicsDevice::BindResource()` function to bind a single shader resource, or the `GraphicsDevice::BindResources()` to bind a bundle of shader resources, occupying a number of slots starting from the bind slot. Use the `GraphicsDevice::UnbindResources()` function to unbind several shader resource slots manually, which is useful for removing debug device warnings.
+- UAV<br/>
+Unordered Access Views, in other words resources with read-write access. `GPUBuffer`s and `Texture`s can be bound as shader resources if they were created with a `BindFlags` in their description that has the `BIND_UNORDERED_ACCESS` bit set. Use the `GraphicsDevice::BindUAV()` function to bind a single UAV resource, or the `GraphicsDevice::BindUAVs()` to bind a bundle of UAV resources, occupying a number of slots starting from the bind slot. Use the `GraphicsDevice::UnbindUAVs()` function to unbind several UAV slots manually, which is useful for removing debug device warnings.
+- Constant buffers<br/>
+Only `GPUBuffer`s can be set as constant buffers if they were created with a `BindFlags` in their description that has the `BIND_CONSTANT_BUFFER` bit set. The resource can't be a constant buffer at the same time when it is also a shader resource or a UAV or a vertex buffer or an index buffer. Use the `GraphicsDevice::BindConstantBuffer()` function to bind constant buffers.
+- Samplers<br/>
+Only `Sampler` can be bound as sampler. Use the `GraphicsDevice::BindSampler()` function to bind samplers.
+
+There are some limitations on the maximum value of slots that can be used, these are defined as compile time constants in [Graphics device SharedInternals](../WickedEngine/wiGraphicsDevice_SharedInternals.h). The user can modify these and recompile the engine if the predefined slots are not enough. This could slightly affect performance.
+
+##### Subresources
+Resources like textures can have different views. For example, if a texture contains multiple mip levels, each mip level can be viewed as a separate texture with one mip level, or the whole texture can be viewed as a texture with multiple mip levels. When creating resources, a subresource that views the entire resource will be created. Functions that expect a subresource parameter can be provided with the value `-1` that means the whole resource. Usually, this parameter is optional.
+
+Other subresources can be create with the `GraphicsDevice::CreateSubresource()` function. The function will return an `int` value that can be used to refer to the subresource view that was created. In case the function returns `-1`, the subresource creation failed due to an incorrect parameter. Please use the [debug device](#debug-device) functionality to check for errors in this case.
+
+
+#### GraphicsDevice_DX11
 [[Header]](../WickedEngine/wiGraphicsDevice_DX11.h) [[Cpp]](../WickedEngine/wiGraphicsDevice_DX11.cpp)
 DirectX11 rendering interface
 
-#### wiGraphicsDevice_DX12
+#### GraphicsDevice_DX12
 [[Header]](../WickedEngine/wiGraphicsDevice_DX12.h) [[Cpp]](../WickedEngine/wiGraphicsDevice_DX12.cpp)
 DirectX12 rendering interface
 
@@ -401,7 +500,7 @@ Used to declare shared global sampler bind points between C++ code and shaders
 
 #### ShaderInterop
 [[Header]](../WickedEngine/ShaderInterop.h)
-Shader Interop is used for declaring shared structures or values between C++ Engine code and shader code. There are several ShaderInterop files, prefixed by the subsystem they are used for to keep them minimal and more readable: <br/>
+Shader Interop is used for declaring shared structures or values between C++ Engine code and shader code. There are several ShaderInterop files, postfixed by the subsystem they are used for to keep them minimal and more readable: <br/>
 [ShaderInterop_BVH.h](../WickedEngine/ShaderInterop_BVH.h) <br/>
 [ShaderInterop_EmittedParticle.h](../WickedEngine/ShaderInterop_EmittedParticle.h) <br/>
 [ShaderInterop_FFTGenerator.h](../WickedEngine/ShaderInterop_FFTGenerator.h) <br/>
@@ -478,6 +577,9 @@ The [DecalComponents](#decalcomponent) in the scene can be rendered differently 
 [EnvironmentProbeComponents](#environmentprobecomponent) can be placed into the scene and if they are tagged as invalid using the `EnvironmentProbeComponent::SetDirty(true)` flag, they will be rendered to a cubemap array that is accessible in all shaders. They will also be rendered in real time every frame if the `EnvironmentProbeComponent::SetRealTime(true)` flag is set. The cubemaps of these contain indirect specular information from a point source that can be used as approximate reflections for close by objects.
 
 The probes also must have [TransformComponent](#transformcomponent) associated to the same entity. This will be used to position the probes in the scene, but also to scale and rotate them. The scale/position/rotation defines an oriented bounding box (OBB) that will be used to perform parallax corrected environment mapping. This means that reflections inside the box volume will not appear as infinitely distant, but constrained inside the volume, to achieve more believable illusion.
+
+#### Post processing
+There are several post processing effects implemented in the `wiRenderer`. They are all implemented in a single function with their name starting with Postprocess_, like for example: `wiRenderer::Postprocess_SSAO()`. They are aimed to be stateless functions, with their function signature clearly indicating input-output parameters and resources.
 
 ### wiEnums
 [[Header]](../WickedEngine/wiEnums.h)
@@ -866,8 +968,216 @@ Used to time specific ranges in execution. Support CPU and GPU timing. Can write
 
 
 ## Shaders
-There is a separate project file for shaders in the solution. Shaders are written in pure HLSL, although there are some macros used to keep them more manageable and easier to build with different shader compilers. The macros are used to declare resources, for example:
-- CBUFFER(name, slot) -> cbuffer name : register(b slot) <br/>
+There is a separate project file for shaders in the solution. Shaders are written in pure HLSL, although there are some macros used to keep them more manageable and easier to build with different shader compilers. These macros are used to declare resources:
+
+- CBUFFER(name, slot)<br/>
+Declares a constant buffer
+```cpp
+CBUFFER(myCbuffer, 0);
+{
+	float4 values0;
+	uint4 values2;
+};
+
+// Load as if reading a global value
+float loaded_value = values0.y;
+```
+
+- RAWBUFFER(name, slot)<br/>
+Declares a raw buffer (ByteAddressBuffer) that can be indexed with byte offset and used to load uints
+```cpp
+RAWBUFFER(myRawbuffer, 0);
+
+// Load 4 uints in one go from byte 42:
+uint4 values = myRawBuffer.Load4(42);
+```
+
+- RWRAWBUFFER(name, slot)<br/>
+Declares a raw buffer (RWByteAddressBuffer) that can be indexed with byte offset and used to load/store uints. Supports atomic operations.
+```cpp
+RWRAWBUFFER(myRawbuffer, 0);
+
+// Store 4 uints in one go from byte 42:
+myRawBuffer.Store4(42, uint4(0,0,0,0));
+
+// Atomic add operation on an uint starting at byte 42:
+uint previous_value;
+myRawBuffer.InterlockedAdd(42, 1, previous_value);
+```
+
+- TYPEDBUFFER(name, type, slot)<br/>
+Declares a buffer which can do type conversion on oad, such as unorm
+```cpp
+TYPEDBUFFER(myTypedbuffer, float4, 0);
+
+// Load values as float4, while the values could go through
+//  type conversion from eg. uin32_t -> float4 (unorm)
+//  if the buffer was set up that way on the CPU side:
+float4 values = myTypedbuffer[42];
+```
+
+- RWTYPEDBUFFER(name, type, slot)<br/>
+Declares a buffer which can do type conversion on load/store, such as unorm
+```cpp
+RWTYPEDBUFFER(myTypedbuffer, float4, 0);
+
+// Store values as float4, while the values could go through
+//  type conversion from eg. uin32_t -> float4 (unorm)
+//  if the buffer was set up that way on the CPU side:
+myTypedbuffer[42] = float4(0, 0, 0, 0);
+```
+
+- STRUCTUREDBUFFER(name, structure, slot)<br/>
+Declares a buffer that can load user defined structures
+```cpp
+struct MyType
+{
+	float4 values;
+	uint3 values1;
+	uint value2;
+};
+STRUCTUREDBUFFER(myStructuredbuffer, myType, 0);
+
+MyType element = myStructuredbuffer[42];
+```
+
+- RWSTRUCTUREDBUFFER(name, structure, slot)<br/>
+Declares a buffer that can load/store user defined structures. Supports atomic operations on `uint` type
+```cpp
+struct MyType
+{
+	float4 values;
+	uint3 values1;
+	uint value2;
+};
+RWSTRUCTUREDBUFFER(myStructuredbuffer, myType, 0);
+
+myType element = {};
+myStructuredbuffer[42] = element;
+
+uint previous_value;
+InterlockedAdd(myStructuredbuffer[42].value2, 1, previous_value);
+```
+
+- SAMPLERSTATE(name, slot)<br/>
+Declares a sampler used to sample from textures
+```cpp
+SAMPLERSTATE(mySampler, 0);
+```
+
+- SAMPLERCOMPARISONSTATE(name, slot)<br/>
+Declares a sampler used to sample from textures and perform comparison against reference values
+```cpp
+SAMPLERSTATE(mySampler, 0);
+```
+
+- TEXTURE1D(name, type, slot)<br/>
+Declares a one dimensional texture
+```cpp
+TEXTURE1D(myTexture, float4, 0);
+
+// Load color from integer pixel coordinates:
+float4 color = myTexture[42];
+```
+
+- RWTEXTURE1D(name, type, slot)<br/>
+Declares a one dimensional texture with write access
+```cpp
+RWTEXTURE1D(myTexture, float4, 0);
+
+// Store color to integer pixel coordinates:
+myTexture[42] = float4(0, 0, 0, 0);
+```
+
+- TEXTURE1DARRAY(name, type, slot)<br/>
+Declares an array of one dimensional textures
+```cpp
+TEXTURE1DARRAY(myTexture, float4, 0);
+
+// Load color from integer pixel coordinates from the 66th texture:
+float4 color = myTexture[uint2(42, 66)];
+```
+
+- RWTEXTURE1DARRAY(name, type, slot)<br/>
+Declares an array of one dimensional textures with write access
+```cpp
+RWTEXTURE1DARRAY(myTexture, float4, 0);
+
+// Store color to integer pixel coordinates to the 66th texture:
+myTexture[uint2(42, 66)] = float4(0, 0, 0, 0);
+```
+
+- TEXTURE2D(name, type, slot)<br/>
+Declares a two dimensional texture
+```cpp
+TEXTURE2D(myTexture, float4, 0);
+
+// Load color from integer pixel coordinates:
+float4 color = myTexture[uint2(42, 24)];
+```
+
+- RWTEXTURE2D(name, type, slot)<br/>
+Declares a two dimensional texture with write access
+```cpp
+RWTEXTURE2D(myTexture, float4, 0);
+
+// Store color to integer pixel coordinates:
+myTexture[uint2(42, 24)] = float4(0, 0, 0, 0);
+```
+
+- TEXTURE2DARRAY(name, type, slot)<br/>
+Declares an array of two dimensional textures
+```cpp
+TEXTURE2DARRAY(myTextureArray, float4, 0);
+
+// Load color from integer pixel coordinates from the 66th texture:
+float4 color = myTexture[uint3(42, 24, 66)];
+```
+
+- RWTEXTURE2DARRAY(name, type, slot)<br/>
+Declares an array of two dimensional textures with write access
+```cpp
+RWTEXTURE2DARRAY(myTextureArray, float4, 0);
+
+// Store color to integer pixel coordinates to the 66th texture:
+myTexture[uint3(42, 24, 66)] = float4(0, 0, 0, 0);
+```
+
+- TEXTURE3D(name, type, slot)<br/>
+Declares a three dimensional texture
+```cpp
+TEXTURE3D(myTexture, float4, 0);
+
+// Load color from integer pixel coordinates:
+float4 color = myTexture[uint3(42, 24, 32)];
+```
+
+- RWTEXTURE3D(name, type, slot)<br/>
+Declares a three dimensional texture with write access
+```cpp
+RWTEXTURE3D(myTexture, float4, 0);
+
+// Store color to integer pixel coordinates:
+myTexture[uint3(42, 24, 32)] = float4(0, 0, 0, 0);
+```
+
+- TEXTURECUBE(name, type, slot)<br/>
+Declares a two dimensional texture with 6 faces
+```cpp
+TEXTURECUBE(myTexture, float4, 0);
+
+// Sample texture by direction vector:
+float4 color = myTexture.Sample(mySampler, float3(0,0,0));
+```
+
+- TEXTURECUBEARRAY(name, type, slot)<br/>
+Declares an array of two dimensional textures with 6 faces each
+```cpp
+TEXTURECUBEARRAY(myTextureArray, float4, 0);
+
+// Sample texture by direction vector from the 66th cube:
+float4 color = myTextureArray.Sample(mySampler, float4(0,0,0, 66));
+```
 
 You can see them all in [ShaderInterop.h](../WickedEngine/ShaderInterop.h)
 
@@ -875,7 +1185,7 @@ Note: When creating constant buffers, the structure must be strictly padded to 1
 
 Incorrect padding to 16-byte:
 ```cpp
-struct cbuf
+CBUFFER(cbuf, 0)
 {
 	float padding;
 	float3 value; // <- the larger type can start a new 16-byte slot, so the C++ and shader side structures could mismatch
@@ -885,7 +1195,7 @@ struct cbuf
 
 Correct padding:
 ```cpp
-struct cbuf
+CBUFFER(cbuf, 0)
 {
 	float3 value; // <- the larger type must be placed before the padding
 	float padding;
