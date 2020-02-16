@@ -29,13 +29,13 @@ Latest builds:
 
 <br/>
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/gltfanim.gif"/>
-Wicked Engine is an open-source game engine written in C++. It is easy to use, high performance and feature rich. There are no external dependencies, but some free libraries are included as part of the source code. The MIT license means that anyone is free to download, modify, and share it. This project is hosted on <a href="https://github.com/turanszkij/WickedEngine/">GitHub</a>
+Wicked Engine is an open-source game engine written in C++. It is easy to use, high performance and feature rich. There are no external dependencies, but some free libraries are included as part of the source code. The MIT license means that anyone is free to download, modify, and share it. This project is hosted on <a href="https://github.com/turanszkij/WickedEngine/">GitHub</a>.
 
-[Documentation](Documentation/WickedEngine-Documentation.md)<br/>
-[Scripting API Documentation](Documentation/ScriptingAPI-Documentation.md)<br/>
-[Features](features.txt)<br/>
-[Devblog](https://turanszkij.wordpress.com/)<br/>
-[Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
+- [Documentation](Documentation/WickedEngine-Documentation.md)<br/>
+- [Scripting API Documentation](Documentation/ScriptingAPI-Documentation.md)<br/>
+- [Features](features.txt)<br/>
+- [Devblog](https://turanszkij.wordpress.com/)<br/>
+- [Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
 
 You can download the engine by using Git and cloning the repository, or downloading it as zip. This will give you the full C++ source code that you must build for yourself. Building is simply pressing F5 in Visual Studio. You can also choose to download a pre-built version of the Editor or Tests applications, which will allow you to load content and write LUA scripts. <br/>
 
