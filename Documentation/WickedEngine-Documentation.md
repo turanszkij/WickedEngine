@@ -65,7 +65,7 @@ This is a reference for the C++ features of Wicked Engine
 		2. [DrawScene_Transparent](#drawscene_transparent)
 		3. [Tessellation](#tessellation)
 		4. [Occlusion Culling](#occlusion-culling)
-		5. [Shadow Maps](#shadowmaps)
+		5. [Shadow Maps](#shadow-maps)
 		6. [UpdatePerFrameData](#updateperframedata)
 		7. [UpdateRenderData](#updaterenderdata)
 		8. [Ray tracing](#ray-tracing)
@@ -196,9 +196,11 @@ The post process chain is implemented in `RenderPath3D::RenderPostprocessChain()
 - HDR<br/>
 These are using the HDR scene render targets, they happen before tone mapping. For example: Temporal AA, Motion blur, Depth of field
 - LDR<br/>
-These are running after tone mapping. For example: Color grading, FXAA, chromatic aberration
+These are running after tone mapping. For example: Color grading, FXAA, chromatic aberration. The last LDR post process result will be output to the back buffer in the `Compose()` function.
 - Other<br/>
 These are running in more specific locations, depending on the render path. For example: SSR, SSAO, cartoon outline
+
+The HDR and LDR post process chain are using the "ping-ponging" technique, which means when the first post process consumes texture1 and produces texture2, then the following post process will consume texture2 and produce texture1, until all post processes are rendered.
 
 ### RenderPath3D_Forward
 [[Header]](../WickedEngine/RenderPath3D_Forward.h) [[Cpp]](../WickedEngine/RenderPath3D_Forward.cpp)
@@ -414,6 +416,8 @@ device->PresentEnd(cmd_present); // CPU submits work for GPU
 // The GPU will execute the commands between PresentBegin() and PresentEnd() last.
 ```
 
+Furthermore, the `BeginCommandList()` is thread safe, so the user can call it from worker threads if ordering between command lists is not a requirement (such as when they are producing workloads that are independent of each other).
+
 ##### Presenting to the screen
 The `PresentBegin()` and `PresentEnd()` functions are used to prepare for rendering to the back buffer. When the `PresentBegin()` is called, the back buffer will be set as the current active render target or render pass. This means, that rendering commands will draw directly to the screen. This is generally used to draw textures that were previously rendered to, or 2D GUI elements. For example, the `RenderPath3D::Compose()` function is used in the [High Level Interface](#high-level-interface) to draw the results of the `RenderPath3D::Render()` off screen rendered results, and the [GUI](#gui) elements. The rendering commands executed between `PresentBegin()` and `PresentEnd()` are still executed by the GPU in the command list beginning order described in the topic: [Work submission](#work-submission).
 
@@ -580,6 +584,8 @@ The probes also must have [TransformComponent](#transformcomponent) associated t
 
 #### Post processing
 There are several post processing effects implemented in the `wiRenderer`. They are all implemented in a single function with their name starting with Postprocess_, like for example: `wiRenderer::Postprocess_SSAO()`. They are aimed to be stateless functions, with their function signature clearly indicating input-output parameters and resources.
+
+The chain/order of post processes is not implemented here, only the single effects themselves. The order of post proceses is more of a user responsibility, so it should be implemented in the [High Ievel Interface](#high-level-interface). For reference, a default post processchain is implemented in [RenderPath3D::RenderPostProcessChain()](#renderpath3d) function.
 
 ### wiEnums
 [[Header]](../WickedEngine/wiEnums.h)

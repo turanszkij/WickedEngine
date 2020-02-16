@@ -29,8 +29,7 @@ Latest builds:
 
 <br/>
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/gltfanim.gif"/>
-Wicked Engine is an open-source game engine written in C++. It is easy to use, high performance and feature rich. There are no external dependencies, but some free libraries are included as part of the source code. The MIT license means that anyone is free to download, modify, share or do anything with it. <br/>
-This project is hosted on GitHub. For any questions, please open an issue at: https://github.com/turanszkij/WickedEngine<br/>
+Wicked Engine is an open-source game engine written in C++. It is easy to use, high performance and feature rich. There are no external dependencies, but some free libraries are included as part of the source code. The MIT license means that anyone is free to download, modify, and share it. This project is hosted on <a href="https://github.com/turanszkij/WickedEngine/">GitHub</a>
 
 [Documentation](Documentation/WickedEngine-Documentation.md)<br/>
 [Scripting API Documentation](Documentation/ScriptingAPI-Documentation.md)<br/>
@@ -38,7 +37,7 @@ This project is hosted on GitHub. For any questions, please open an issue at: ht
 [Devblog](https://turanszkij.wordpress.com/)<br/>
 [Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
 
-You can download the engine by using Git and cloning the repository, or downloading it as zip, which will give you the full C++ source code that you must build for yourself. Building is simply pressing F5 in Visual Studio. You can also choose to download a pre-built version of the Editor or Tests applications, which will allow you to load content and write LUA scripts out of the box. <br/>
+You can download the engine by using Git and cloning the repository, or downloading it as zip. This will give you the full C++ source code that you must build for yourself. Building is simply pressing F5 in Visual Studio. You can also choose to download a pre-built version of the Editor or Tests applications, which will allow you to load content and write LUA scripts. <br/>
 
 ![Emitter](https://turanszkij.files.wordpress.com/2019/02/emitterskinned2.gif) ![Drone](https://turanszkij.files.wordpress.com/2018/11/drone_anim.gif) <br/>
 
@@ -70,7 +69,7 @@ If you wish to integrate Wicked Engine into your own project, you can use it as 
 	- Project settings -> C/C++ -> Code Generation -> Runtime Library -> Multi threaded
 5. If you want to create an UWP application, #define WINSTORE_SUPPORT preprocessor for the whole implementing project and link against the WickedEngine_UWP library.
 	
-When your project settings are set up, put #include "WickedEngine.h" in your source. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project.
+When your project settings are set up, put `#include "WickedEngine.h"` in your source. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project.
 
 If you have trouble, you can always look at or copy the project settings for Editor, Tests and Template projects to get an idea how to link with Wicked Engine.
 
@@ -257,7 +256,7 @@ Bokeh Depth of Field (Lain model by <a href="https://sketchfab.com/3d-models/lai
 ![DepthOfField1](https://turanszkij.files.wordpress.com/2019/12/dof1_small.png)
 ![DepthOfField2](https://turanszkij.files.wordpress.com/2019/12/dof2_small.png)
 
-Motion blur:
+Motion blur (fighting game sample):
 ![MotionBlur](https://turanszkij.files.wordpress.com/2019/12/motionblur.png)
 
 Path tracing in the living room:
