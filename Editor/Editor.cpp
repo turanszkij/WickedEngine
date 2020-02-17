@@ -713,6 +713,30 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(renderPathComboBox);
 
 
+	outliner = new wiTreeList("Scene outliner (WIP)");
+	outliner->SetPos(XMFLOAT2(0, screenH - 200));
+	outliner->SetSize(XMFLOAT2(260, 200));
+	outliner->OnSelect([this](wiEventArgs args) {
+
+		EndTranslate();
+		selected.clear(); // endtranslate would clear it, but not if translator is not enabled
+
+		for (int i = 0; i < outliner->GetItemCount(); ++i)
+		{
+			const wiTreeList::Item& item = outliner->GetItem(i);
+			if (item.selected)
+			{
+				wiScene::PickResult pick;
+				pick.entity = (Entity)item.userdata;
+				AddSelected(pick);
+			}
+		}
+
+		BeginTranslate();
+	});
+	GetGUI().AddWidget(outliner);
+
+
 	cameraWnd->ResetCam();
 
 	wiJobSystem::Wait(ctx);
@@ -727,8 +751,46 @@ void EditorComponent::FixedUpdate()
 
 	renderPath->FixedUpdate();
 }
+
+void EditorComponent::CreateOutlinerHierarchy(wiECS::Entity entity, int level)
+{
+	if (outliner_added_items.count(entity) != 0)
+	{
+		return;
+	}
+	const Scene& scene = wiScene::GetScene();
+
+	wiTreeList::Item item;
+	item.level = level;
+	item.userdata = entity;
+	item.selected = IsSelected(entity);
+	item.open = outliner_closed_items.count(entity) == 0;
+	item.name = "(" + std::to_string(entity) + ")";
+	const NameComponent* name = scene.names.GetComponent(entity);
+	if (name != nullptr)
+	{
+		item.name = name->name + " " + item.name;
+	}
+	if (entity == translator.entityID)
+	{
+		item.name = "[EDITOR_TRANSLATOR] " + item.name;
+	}
+	outliner->AddItem(item);
+
+	outliner_added_items.insert(entity);
+
+	for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
+	{
+		if (scene.hierarchy[i].parentID == entity)
+		{
+			CreateOutlinerHierarchy(scene.hierarchy.GetEntity(i), level + 1);
+		}
+	}
+}
 void EditorComponent::Update(float dt)
 {
+	wiProfiler::range_id profrange = wiProfiler::BeginRangeCPU("Editor Update");
+
 	Scene& scene = wiScene::GetScene();
 	CameraComponent& camera = wiRenderer::GetCamera();
 
@@ -736,6 +798,82 @@ void EditorComponent::Update(float dt)
 	weatherWnd->Update();
 
 	selectionOutlineTimer += dt;
+
+	// Update scene graph outliner:
+	if(outliner != nullptr)
+	{
+		for (int i = 0; i < outliner->GetItemCount(); ++i)
+		{
+			const wiTreeList::Item& item = outliner->GetItem(i);
+			if (!item.open)
+			{
+				outliner_closed_items.insert((Entity)item.userdata);
+			}
+		}
+
+		outliner->ClearItems();
+
+		// Add transforms:
+		for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
+		{
+			CreateOutlinerHierarchy(scene.hierarchy[i].parentID, 0);
+		}
+		for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
+		{
+			CreateOutlinerHierarchy(scene.transforms.GetEntity(i), 0);
+		}
+
+		// Add materials:
+		for (size_t i = 0; i < scene.materials.GetCount(); ++i)
+		{
+			Entity entity = scene.materials.GetEntity(i);
+			if (outliner_added_items.count(entity) != 0)
+			{
+				continue;
+			}
+
+			wiTreeList::Item item;
+			item.userdata = entity;
+			item.selected = IsSelected(entity);
+			item.open = outliner_closed_items.count(entity) == 0;
+			item.name = "(" + std::to_string(entity) + ")";
+			const NameComponent* name = scene.names.GetComponent(entity);
+			if (name != nullptr)
+			{
+				item.name = name->name + " " + item.name;
+			}
+			outliner->AddItem(item);
+
+			outliner_added_items.insert(entity);
+		}
+
+		// Add meshes:
+		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
+		{
+			Entity entity = scene.meshes.GetEntity(i);
+			if (outliner_added_items.count(entity) != 0)
+			{
+				continue;
+			}
+
+			wiTreeList::Item item;
+			item.userdata = entity;
+			item.selected = IsSelected(entity);
+			item.open = outliner_closed_items.count(entity) == 0;
+			item.name = "(" + std::to_string(entity) + ")";
+			const NameComponent* name = scene.names.GetComponent(entity);
+			if (name != nullptr)
+			{
+				item.name = name->name + " " + item.name;
+			}
+			outliner->AddItem(item);
+
+			outliner_added_items.insert(entity);
+		}
+
+		outliner_added_items.clear();
+		outliner_closed_items.clear();
+	}
 
 	// Exit cinema mode:
 	if (wiInput::Down(wiInput::KEYBOARD_BUTTON_ESCAPE))
@@ -1227,122 +1365,6 @@ void EditorComponent::Update(float dt)
 			savedHierarchy.Serialize(*archive);
 		}
 
-		// Update window data bindings...
-		if (selected.empty())
-		{
-			objectWnd->SetEntity(INVALID_ENTITY);
-			emitterWnd->SetEntity(INVALID_ENTITY);
-			hairWnd->SetEntity(INVALID_ENTITY);
-			meshWnd->SetEntity(INVALID_ENTITY);
-			materialWnd->SetEntity(INVALID_ENTITY);
-			lightWnd->SetEntity(INVALID_ENTITY);
-			soundWnd->SetEntity(INVALID_ENTITY);
-			decalWnd->SetEntity(INVALID_ENTITY);
-			envProbeWnd->SetEntity(INVALID_ENTITY);
-			forceFieldWnd->SetEntity(INVALID_ENTITY);
-			cameraWnd->SetEntity(INVALID_ENTITY);
-		}
-		else
-		{
-			const wiScene::PickResult& picked = selected.back();
-
-			assert(picked.entity != INVALID_ENTITY);
-
-			objectWnd->SetEntity(INVALID_ENTITY);
-			for (auto& x : selected)
-			{
-				if (scene.objects.GetComponent(x.entity) != nullptr)
-				{
-					objectWnd->SetEntity(x.entity);
-					break;
-				}
-			}
-
-			emitterWnd->SetEntity(picked.entity);
-			hairWnd->SetEntity(picked.entity);
-			lightWnd->SetEntity(picked.entity);
-			soundWnd->SetEntity(picked.entity);
-			decalWnd->SetEntity(picked.entity);
-			envProbeWnd->SetEntity(picked.entity);
-			forceFieldWnd->SetEntity(picked.entity);
-			cameraWnd->SetEntity(picked.entity);
-
-			if (picked.subsetIndex >= 0)
-			{
-				const ObjectComponent* object = scene.objects.GetComponent(picked.entity);
-				if (object != nullptr) // maybe it was deleted...
-				{
-					meshWnd->SetEntity(object->meshID);
-
-					const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
-					if (mesh != nullptr && (int)mesh->subsets.size() > picked.subsetIndex)
-					{
-						materialWnd->SetEntity(mesh->subsets[picked.subsetIndex].materialID);
-					}
-				}
-			}
-			else
-			{
-				materialWnd->SetEntity(picked.entity);
-			}
-
-		}
-
-		// Clear highlite state:
-		for (size_t i = 0; i < scene.materials.GetCount(); ++i)
-		{
-			scene.materials[i].SetUserStencilRef(EDITORSTENCILREF_CLEAR);
-		}
-		for (size_t i = 0; i < scene.objects.GetCount(); ++i)
-		{
-			scene.objects[i].SetUserStencilRef(EDITORSTENCILREF_CLEAR);
-		}
-		for (auto& x : selected)
-		{
-			if (x.subsetIndex >= 0)
-			{
-				ObjectComponent* object = scene.objects.GetComponent(x.entity);
-				if (object != nullptr) // maybe it was deleted...
-				{
-					object->SetUserStencilRef(EDITORSTENCILREF_HIGHLIGHT_OBJECT);
-					const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
-					if (mesh != nullptr && (int)mesh->subsets.size() > x.subsetIndex)
-					{
-						MaterialComponent* material = scene.materials.GetComponent(mesh->subsets[x.subsetIndex].materialID);
-						if (material != nullptr)
-						{
-							material->SetUserStencilRef(EDITORSTENCILREF_HIGHLIGHT_MATERIAL);
-						}
-					}
-				}
-			}
-		}
-
-		// Delete
-		if (wiInput::Press(wiInput::KEYBOARD_BUTTON_DELETE))
-		{
-
-			wiArchive* archive = AdvanceHistory();
-			*archive << HISTORYOP_DELETE;
-
-			*archive << selected.size();
-			for (auto& x : selected)
-			{
-				*archive << x.entity;
-			}
-			for (auto& x : selected)
-			{
-				scene.Entity_Serialize(*archive, x.entity);
-			}
-			for (auto& x : selected)
-			{
-				scene.Entity_Remove(x.entity);
-				savedHierarchy.Remove_KeepSorted(x.entity);
-			}
-
-			EndTranslate();
-		}
-
 		// Control operations...
 		if (wiInput::Down(wiInput::KEYBOARD_BUTTON_LCONTROL))
 		{
@@ -1432,6 +1454,123 @@ void EditorComponent::Update(float dt)
 
 	}
 
+
+	// Delete
+	if (wiInput::Press(wiInput::KEYBOARD_BUTTON_DELETE))
+	{
+
+		wiArchive* archive = AdvanceHistory();
+		*archive << HISTORYOP_DELETE;
+
+		*archive << selected.size();
+		for (auto& x : selected)
+		{
+			*archive << x.entity;
+		}
+		for (auto& x : selected)
+		{
+			scene.Entity_Serialize(*archive, x.entity);
+		}
+		for (auto& x : selected)
+		{
+			scene.Entity_Remove(x.entity);
+			savedHierarchy.Remove_KeepSorted(x.entity);
+		}
+
+		EndTranslate();
+	}
+
+	// Update window data bindings...
+	if (selected.empty())
+	{
+		objectWnd->SetEntity(INVALID_ENTITY);
+		emitterWnd->SetEntity(INVALID_ENTITY);
+		hairWnd->SetEntity(INVALID_ENTITY);
+		meshWnd->SetEntity(INVALID_ENTITY);
+		materialWnd->SetEntity(INVALID_ENTITY);
+		lightWnd->SetEntity(INVALID_ENTITY);
+		soundWnd->SetEntity(INVALID_ENTITY);
+		decalWnd->SetEntity(INVALID_ENTITY);
+		envProbeWnd->SetEntity(INVALID_ENTITY);
+		forceFieldWnd->SetEntity(INVALID_ENTITY);
+		cameraWnd->SetEntity(INVALID_ENTITY);
+	}
+	else
+	{
+		const wiScene::PickResult& picked = selected.back();
+
+		assert(picked.entity != INVALID_ENTITY);
+
+		objectWnd->SetEntity(INVALID_ENTITY);
+		for (auto& x : selected)
+		{
+			if (scene.objects.GetComponent(x.entity) != nullptr)
+			{
+				objectWnd->SetEntity(x.entity);
+				break;
+			}
+		}
+
+		emitterWnd->SetEntity(picked.entity);
+		hairWnd->SetEntity(picked.entity);
+		lightWnd->SetEntity(picked.entity);
+		soundWnd->SetEntity(picked.entity);
+		decalWnd->SetEntity(picked.entity);
+		envProbeWnd->SetEntity(picked.entity);
+		forceFieldWnd->SetEntity(picked.entity);
+		cameraWnd->SetEntity(picked.entity);
+
+		if (picked.subsetIndex >= 0)
+		{
+			const ObjectComponent* object = scene.objects.GetComponent(picked.entity);
+			if (object != nullptr) // maybe it was deleted...
+			{
+				meshWnd->SetEntity(object->meshID);
+
+				const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+				if (mesh != nullptr && (int)mesh->subsets.size() > picked.subsetIndex)
+				{
+					materialWnd->SetEntity(mesh->subsets[picked.subsetIndex].materialID);
+				}
+			}
+		}
+		else
+		{
+			materialWnd->SetEntity(picked.entity);
+		}
+
+	}
+
+	// Clear highlite state:
+	for (size_t i = 0; i < scene.materials.GetCount(); ++i)
+	{
+		scene.materials[i].SetUserStencilRef(EDITORSTENCILREF_CLEAR);
+	}
+	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+	{
+		scene.objects[i].SetUserStencilRef(EDITORSTENCILREF_CLEAR);
+	}
+	for (auto& x : selected)
+	{
+		ObjectComponent* object = scene.objects.GetComponent(x.entity);
+		if (object != nullptr) // maybe it was deleted...
+		{
+			object->SetUserStencilRef(EDITORSTENCILREF_HIGHLIGHT_OBJECT);
+			if (x.subsetIndex >= 0)
+			{
+				const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+				if (mesh != nullptr && (int)mesh->subsets.size() > x.subsetIndex)
+				{
+					MaterialComponent* material = scene.materials.GetComponent(mesh->subsets[x.subsetIndex].materialID);
+					if (material != nullptr)
+					{
+						material->SetUserStencilRef(EDITORSTENCILREF_HIGHLIGHT_MATERIAL);
+					}
+				}
+			}
+		}
+	}
+
 	translator.Update();
 
 	if (translator.IsDragEnded())
@@ -1458,6 +1597,8 @@ void EditorComponent::Update(float dt)
 
 	camera.TransformCamera(cameraWnd->camera_transform);
 	camera.UpdateCamera();
+
+	wiProfiler::EndRange(profrange);
 
 	__super::Update(dt);
 
@@ -1622,6 +1763,7 @@ void EditorComponent::Render() const
 
 		// Objects outline (orange):
 		{
+			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 			device->RenderPassBegin(&renderpass_selectionOutline[0], cmd);
 
 			// Draw solid blocks of selected objects
@@ -2095,6 +2237,17 @@ void EditorComponent::AddSelected(const wiScene::PickResult& picked)
 	}
 
 	selected.push_back(picked);
+}
+bool EditorComponent::IsSelected(Entity entity) const
+{
+	for (auto& x : selected)
+	{
+		if (x.entity == entity)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 void EditorComponent::ResetHistory()

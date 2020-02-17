@@ -23,6 +23,7 @@ struct wiEventArgs
 	int iValue;
 	wiColor color;
 	std::string sValue;
+	uint64_t userdata;
 };
 
 class wiWidget : public wiScene::TransformComponent
@@ -246,8 +247,8 @@ public:
 	bool HasScrollbar() const;
 
 	void SetSelected(int index);
-	int GetSelected();
-	std::string GetItemText(int index);
+	int GetSelected() const;
+	std::string GetItemText(int index) const;
 
 	virtual void Update(wiGUI* gui, float dt ) override;
 	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
@@ -303,5 +304,57 @@ public:
 	void SetPickColor(wiColor value);
 
 	void OnColorChanged(std::function<void(wiEventArgs args)> func);
+};
+
+// List of items in a tree (parent-child relationships)
+class wiTreeList :public wiWidget
+{
+public:
+	struct Item
+	{
+		std::string name;
+		int level = 0;
+		uint64_t userdata = 0;
+		bool open = true;
+		bool selected = false;
+	};
+protected:
+	std::function<void(wiEventArgs args)> onSelect;
+	float list_height = 0;
+	float list_offset = 0;
+
+	enum SCROLLBAR_STATE
+	{
+		SCROLLBAR_INACTIVE,
+		SCROLLBAR_HOVER,
+		SCROLLBAR_GRABBED,
+		TREESTATE_COUNT,
+	} scrollbar_state = SCROLLBAR_INACTIVE;
+
+	float scrollbar_delta = 0;
+	float scrollbar_height = 0;
+	float scrollbar_value = 0;
+
+	std::vector<Item> items;
+
+	float GetItemOffset(int index) const;
+public:
+	wiTreeList(const std::string& name = "");
+	virtual ~wiTreeList();
+
+	void AddItem(const Item& item);
+	void ClearItems();
+	bool HasScrollbar() const;
+
+	void ClearSelection();
+	void Select(int index);
+
+	int GetItemCount() const { return (int)items.size(); }
+	const Item& GetItem(int index) const;
+
+	virtual void Update(wiGUI* gui, float dt) override;
+	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+
+	void OnSelect(std::function<void(wiEventArgs args)> func);
 };
 
