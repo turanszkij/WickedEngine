@@ -306,9 +306,8 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(texMulSliderY);
 
 
-	baseColorPicker = new wiColorPicker(GUI, "Base Color");
+	baseColorPicker = new wiColorPicker(GUI, "Base Color", false);
 	baseColorPicker->SetPos(XMFLOAT2(10, 300));
-	baseColorPicker->RemoveWidgets();
 	baseColorPicker->SetVisible(true);
 	baseColorPicker->SetEnabled(true);
 	baseColorPicker->OnColorChanged([&](wiEventArgs args) {
@@ -322,9 +321,8 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(baseColorPicker);
 
 
-	emissiveColorPicker = new wiColorPicker(GUI, "Emissive Color");
+	emissiveColorPicker = new wiColorPicker(GUI, "Emissive Color", false);
 	emissiveColorPicker->SetPos(XMFLOAT2(10, 570));
-	emissiveColorPicker->RemoveWidgets();
 	emissiveColorPicker->SetVisible(true);
 	emissiveColorPicker->SetEnabled(true);
 	emissiveColorPicker->OnColorChanged([&](wiEventArgs args) {

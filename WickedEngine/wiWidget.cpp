@@ -2,7 +2,6 @@
 #include "wiGUI.h"
 #include "wiImage.h"
 #include "wiTextureHelper.h"
-#include "wiFont.h"
 #include "wiMath.h"
 #include "wiHelper.h"
 #include "wiInput.h"
@@ -255,6 +254,9 @@ wiButton::wiButton(const std::string& name) :wiWidget()
 	OnDrag([](wiEventArgs args) {});
 	OnDragEnd([](wiEventArgs args) {});
 	SetSize(XMFLOAT2(100, 30));
+
+	fontParams.h_align = WIFALIGN_CENTER;
+	fontParams.v_align = WIFALIGN_CENTER;
 }
 wiButton::~wiButton()
 {
@@ -370,8 +372,34 @@ void wiButton::Render(const wiGUI* gui, CommandList cmd) const
 	wiImage::Draw(wiTextureHelper::getWhite()
 		, wiImageParams(translation.x, translation.y, scale.x, scale.y, color.toFloat4()), cmd);
 
-	wiFont(text, wiFontParams((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
-		textColor, textShadowColor)).Draw(cmd);
+	wiFontParams fontparams = GetFontParams();
+	switch (fontparams.h_align)
+	{
+	case WIFALIGN_LEFT:
+		fontparams.posX = (int)(translation.x + 2);
+		break;
+	case WIFALIGN_RIGHT:
+		fontparams.posX = (int)(translation.x + scale.x - 2);
+		break;
+	case WIFALIGN_CENTER:
+	default:
+		fontparams.posX = (int)(translation.x + scale.x * 0.5f);
+		break;
+	}
+	switch (fontparams.v_align)
+	{
+	case WIFALIGN_TOP:
+		fontparams.posY = (int)(translation.y + 2);
+		break;
+	case WIFALIGN_BOTTOM:
+		fontparams.posY = (int)(translation.y + scale.y - 2);
+		break;
+	case WIFALIGN_CENTER:
+	default:
+		fontparams.posY = (int)(translation.y + scale.y * 0.5f);
+		break;
+	}
+	wiFont(text, fontparams).Draw(cmd);
 
 }
 void wiButton::OnClick(function<void(wiEventArgs args)> func)
@@ -437,7 +465,7 @@ void wiLabel::Render(const wiGUI* gui, CommandList cmd) const
 		, wiImageParams(translation.x, translation.y, scale.x, scale.y, color.toFloat4()), cmd);
 
 	wiFont(text, wiFontParams((int)translation.x + 2, (int)translation.y + 2, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0,
-		textColor, textShadowColor)).Draw(cmd);
+		fontParams.color, fontParams.shadowColor)).Draw(cmd);
 
 }
 
@@ -580,6 +608,9 @@ void wiTextInputField::Render(const wiGUI* gui, CommandList cmd) const
 
 	wiColor color = GetColor();
 
+	wiFont(description, wiFontParams((int)(translation.x - 2), (int)(translation.y + scale.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
+		fontParams.color, fontParams.shadowColor)).Draw(cmd);
+
 	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
 
 	wiImage::Draw(wiTextureHelper::getWhite()
@@ -595,7 +626,7 @@ void wiTextInputField::Render(const wiGUI* gui, CommandList cmd) const
 		activeText = value;
 	}
 	wiFont(activeText, wiFontParams((int)(translation.x + 2), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_CENTER, 0, 0,
-		textColor, textShadowColor)).Draw(cmd);
+		fontParams.color, fontParams.shadowColor)).Draw(cmd);
 
 }
 void wiTextInputField::OnInputAccepted(function<void(wiEventArgs args)> func)
@@ -664,8 +695,8 @@ void wiSlider::Update(wiGUI* gui, float dt)
 	{
 		valueInputField->SetColor(this->colors[i], (WIDGETSTATE)i);
 	}
-	valueInputField->SetTextColor(this->textColor);
-	valueInputField->SetTextShadowColor(this->textShadowColor);
+	valueInputField->SetTextColor(this->fontParams.color);
+	valueInputField->SetTextShadowColor(this->fontParams.shadowColor);
 	valueInputField->SetEnabled(IsEnabled());
 	valueInputField->Update(gui, dt);
 
@@ -763,7 +794,7 @@ void wiSlider::Render(const wiGUI* gui, CommandList cmd) const
 
 	// text
 	wiFont(text, wiFontParams((int)(translation.x - headWidth * 0.5f), (int)(translation.y + scale.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
-		textColor, textShadowColor)).Draw(cmd);
+		fontParams.color, fontParams.shadowColor)).Draw(cmd);
 
 	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
 
@@ -771,9 +802,10 @@ void wiSlider::Render(const wiGUI* gui, CommandList cmd) const
 	wiImage::Draw(wiTextureHelper::getWhite()
 		, wiImageParams(translation.x - headWidth * 0.5f, translation.y, scale.x + headWidth, scale.y, colors_base[state].toFloat4()), cmd);
 	// head
-	float headPosX = wiMath::Lerp(translation.x + 2, translation.x + scale.x - 2, wiMath::Clamp(wiMath::InverseLerp(start, end, value), 0, 1));
-	wiImage::Draw(wiTextureHelper::getWhite()
-		, wiImageParams(headPosX - headWidth * 0.5f, translation.y + 2, headWidth, scale.y - 4, color.toFloat4()), cmd);
+	float headPosX = wiMath::Lerp(translation.x + headWidth * 0.5f + 2, translation.x + scale.x - headWidth * 0.5f - 2, wiMath::Clamp(wiMath::InverseLerp(start, end, value), 0, 1));
+	wiImageParams fx(headPosX, translation.y + 2, headWidth, scale.y - 4, color.toFloat4());
+	fx.pivot = XMFLOAT2(0.5f, 0);
+	wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
 
 	valueInputField->Render(gui, cmd);
 }
@@ -896,7 +928,7 @@ void wiCheckBox::Render(const wiGUI* gui, CommandList cmd) const
 	wiColor color = GetColor();
 
 	wiFont(text, wiFontParams((int)(translation.x), (int)(translation.y + scale.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
-		textColor, textShadowColor)).Draw(cmd);
+		fontParams.color, fontParams.shadowColor)).Draw(cmd);
 
 	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
 
@@ -1116,13 +1148,13 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 	}
 
 	wiFont(text, wiFontParams((int)(translation.x), (int)(translation.y + scale.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
-		textColor, textShadowColor)).Draw(cmd);
+		fontParams.color, fontParams.shadowColor)).Draw(cmd);
 
 	// control-arrow
 	wiImage::Draw(wiTextureHelper::getWhite()
 		, wiImageParams(translation.x + scale.x + 1, translation.y, scale.y, scale.y, color.toFloat4()), cmd);
 	wiFont("V", wiFontParams((int)(translation.x + scale.x + scale.y * 0.5f), (int)(translation.y + scale.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
-		textColor, textShadowColor)).Draw(cmd);
+		fontParams.color, fontParams.shadowColor)).Draw(cmd);
 
 	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
 
@@ -1133,7 +1165,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 	if (selected >= 0)
 	{
 		wiFont(items[selected], wiFontParams((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
-			textColor, textShadowColor)).Draw(cmd);
+			fontParams.color, fontParams.shadowColor)).Draw(cmd);
 	}
 
 	// drop-down
@@ -1185,7 +1217,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 			wiImage::Draw(wiTextureHelper::getWhite()
 				, wiImageParams(translation.x, translation.y + GetItemOffset(i), scale.x, scale.y, col.toFloat4()), cmd);
 			wiFont(items[i], wiFontParams((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f + GetItemOffset(i)), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
-				textColor, textShadowColor)).Draw(cmd);
+				fontParams.color, fontParams.shadowColor)).Draw(cmd);
 		}
 	}
 }
@@ -1262,7 +1294,7 @@ int wiComboBox::GetSelected() const
 
 
 static const float windowcontrolSize = 20.0f;
-wiWindow::wiWindow(wiGUI* gui, const std::string& name) : gui(gui)
+wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : gui(gui)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
@@ -1271,80 +1303,85 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name) : gui(gui)
 	SetSize(XMFLOAT2(640, 480));
 
 	// Add controls
+	if (window_controls)
+	{
+		// Add a grabber onto the title bar
+		moveDragger = new wiButton(name + "_move_dragger");
+		moveDragger->SetText(name);
+		wiFontParams fontparams = moveDragger->GetFontParams();
+		fontparams.h_align = WIFALIGN_LEFT;
+		moveDragger->SetFontParams(fontparams);
+		moveDragger->SetSize(XMFLOAT2(scale.x - windowcontrolSize * 3, windowcontrolSize));
+		moveDragger->SetPos(XMFLOAT2(windowcontrolSize, 0));
+		moveDragger->OnDrag([this, gui](wiEventArgs args) {
+			this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
+			this->wiWidget::Update(gui, 0);
+			for (auto& x : this->childrenWidgets)
+			{
+				x->wiWidget::Update(gui, 0);
+			}
+			});
+		AddWidget(moveDragger);
 
-	// Add a grabber onto the title bar
-	moveDragger = new wiButton(name + "_move_dragger");
-	moveDragger->SetText("");
-	moveDragger->SetSize(XMFLOAT2(scale.x - windowcontrolSize * 3, windowcontrolSize));
-	moveDragger->SetPos(XMFLOAT2(windowcontrolSize, 0));
-	moveDragger->OnDrag([this, gui](wiEventArgs args) {
-		this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
-		this->wiWidget::Update(gui, 0);
-		for (auto& x : this->childrenWidgets)
-		{
-			x->wiWidget::Update(gui, 0);
-		}
-	});
-	AddWidget(moveDragger);
+		// Add close button to the top right corner
+		closeButton = new wiButton(name + "_close_button");
+		closeButton->SetText("x");
+		closeButton->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+		closeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y));
+		closeButton->OnClick([this](wiEventArgs args) {
+			this->SetVisible(false);
+			});
+		closeButton->SetTooltip("Close window");
+		AddWidget(closeButton);
 
-	// Add close button to the top right corner
-	closeButton = new wiButton(name + "_close_button");
-	closeButton->SetText("x");
-	closeButton->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
-	closeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y));
-	closeButton->OnClick([this](wiEventArgs args) {
-		this->SetVisible(false);
-	});
-	closeButton->SetTooltip("Close window");
-	AddWidget(closeButton);
+		// Add minimize button to the top right corner
+		minimizeButton = new wiButton(name + "_minimize_button");
+		minimizeButton->SetText("-");
+		minimizeButton->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+		minimizeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize * 2, translation.y));
+		minimizeButton->OnClick([this](wiEventArgs args) {
+			this->SetMinimized(!this->IsMinimized());
+			});
+		minimizeButton->SetTooltip("Minimize window");
+		AddWidget(minimizeButton);
 
-	// Add minimize button to the top right corner
-	minimizeButton = new wiButton(name + "_minimize_button");
-	minimizeButton->SetText("-");
-	minimizeButton->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
-	minimizeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize * 2, translation.y));
-	minimizeButton->OnClick([this](wiEventArgs args) {
-		this->SetMinimized(!this->IsMinimized());
-	});
-	minimizeButton->SetTooltip("Minimize window");
-	AddWidget(minimizeButton);
+		// Add a resizer control to the upperleft corner
+		resizeDragger_UpperLeft = new wiButton(name + "_resize_dragger_upper_left");
+		resizeDragger_UpperLeft->SetText("");
+		resizeDragger_UpperLeft->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+		resizeDragger_UpperLeft->SetPos(XMFLOAT2(0, 0));
+		resizeDragger_UpperLeft->OnDrag([this, gui](wiEventArgs args) {
+			XMFLOAT2 scaleDiff;
+			scaleDiff.x = (scale.x - args.deltaPos.x) / scale.x;
+			scaleDiff.y = (scale.y - args.deltaPos.y) / scale.y;
+			this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
+			this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
+			this->wiWidget::Update(gui, 0);
+			for (auto& x : this->childrenWidgets)
+			{
+				x->wiWidget::Update(gui, 0);
+			}
+			});
+		AddWidget(resizeDragger_UpperLeft);
 
-	// Add a resizer control to the upperleft corner
-	resizeDragger_UpperLeft = new wiButton(name + "_resize_dragger_upper_left");
-	resizeDragger_UpperLeft->SetText("");
-	resizeDragger_UpperLeft->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
-	resizeDragger_UpperLeft->SetPos(XMFLOAT2(0, 0));
-	resizeDragger_UpperLeft->OnDrag([this, gui](wiEventArgs args) {
-		XMFLOAT2 scaleDiff;
-		scaleDiff.x = (scale.x - args.deltaPos.x) / scale.x;
-		scaleDiff.y = (scale.y - args.deltaPos.y) / scale.y;
-		this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
-		this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
-		this->wiWidget::Update(gui, 0);
-		for (auto& x : this->childrenWidgets)
-		{
-			x->wiWidget::Update(gui, 0);
-		}
-	});
-	AddWidget(resizeDragger_UpperLeft);
-
-	// Add a resizer control to the bottom right corner
-	resizeDragger_BottomRight = new wiButton(name + "_resize_dragger_bottom_right");
-	resizeDragger_BottomRight->SetText("");
-	resizeDragger_BottomRight->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
-	resizeDragger_BottomRight->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y + scale.y - windowcontrolSize));
-	resizeDragger_BottomRight->OnDrag([this, gui](wiEventArgs args) {
-		XMFLOAT2 scaleDiff;
-		scaleDiff.x = (scale.x + args.deltaPos.x) / scale.x;
-		scaleDiff.y = (scale.y + args.deltaPos.y) / scale.y;
-		this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
-		this->wiWidget::Update(gui, 0);
-		for (auto& x : this->childrenWidgets)
-		{
-			x->wiWidget::Update(gui, 0);
-		}
-	});
-	AddWidget(resizeDragger_BottomRight);
+		// Add a resizer control to the bottom right corner
+		resizeDragger_BottomRight = new wiButton(name + "_resize_dragger_bottom_right");
+		resizeDragger_BottomRight->SetText("");
+		resizeDragger_BottomRight->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+		resizeDragger_BottomRight->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y + scale.y - windowcontrolSize));
+		resizeDragger_BottomRight->OnDrag([this, gui](wiEventArgs args) {
+			XMFLOAT2 scaleDiff;
+			scaleDiff.x = (scale.x + args.deltaPos.x) / scale.x;
+			scaleDiff.y = (scale.y + args.deltaPos.y) / scale.y;
+			this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
+			this->wiWidget::Update(gui, 0);
+			for (auto& x : this->childrenWidgets)
+			{
+				x->wiWidget::Update(gui, 0);
+			}
+			});
+		AddWidget(resizeDragger_BottomRight);
+	}
 
 
 	SetEnabled(true);
@@ -1440,10 +1477,6 @@ void wiWindow::Render(const wiGUI* gui, CommandList cmd) const
 		}
 	}
 
-	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
-	wiFont(text, wiFontParams((int)(translation.x + resizeDragger_UpperLeft->scale.x + 2), (int)(translation.y + resizeDragger_UpperLeft->scale.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_CENTER, 0, 0,
-		textColor, textShadowColor)).Draw(cmd);
-
 }
 void wiWindow::SetVisible(bool value)
 {
@@ -1504,13 +1537,11 @@ struct rgb {
 	float g;       // a fraction between 0 and 1
 	float b;       // a fraction between 0 and 1
 };
-
 struct hsv {
 	float h;       // angle in degrees
 	float s;       // a fraction between 0 and 1
 	float v;       // a fraction between 0 and 1
 };
-
 hsv rgb2hsv(rgb in)
 {
 	hsv         out;
@@ -1555,8 +1586,6 @@ hsv rgb2hsv(rgb in)
 
 	return out;
 }
-
-
 rgb hsv2rgb(hsv in)
 {
 	float		hh, p, q, t, ff;
@@ -1615,12 +1644,102 @@ rgb hsv2rgb(hsv in)
 	return out;
 }
 
-wiColorPicker::wiColorPicker(wiGUI* gui, const std::string& name) :wiWindow(gui, name)
+wiColorPicker::wiColorPicker(wiGUI* gui, const std::string& name, bool window_controls) :wiWindow(gui, name, window_controls)
 {
 	SetSize(XMFLOAT2(300, 260));
 	SetColor(wiColor::Ghost());
-	RemoveWidget(resizeDragger_BottomRight);
-	RemoveWidget(resizeDragger_UpperLeft);
+
+	if (resizeDragger_BottomRight != nullptr)
+	{
+		RemoveWidget(resizeDragger_BottomRight);
+	}
+	if (resizeDragger_UpperLeft != nullptr)
+	{
+		RemoveWidget(resizeDragger_UpperLeft);
+	}
+
+	float x = 250;
+	float y = 110;
+	float step = 20;
+
+	text_R = new wiTextInputField("");
+	text_R->SetPos(XMFLOAT2(x, y += step));
+	text_R->SetSize(XMFLOAT2(40, 18));
+	text_R->SetText("");
+	text_R->SetTooltip("Enter value for RED channel (0-255)");
+	text_R->SetDescription("R: ");
+	text_R->OnInputAccepted([this](wiEventArgs args) {
+		wiColor color = GetPickColor();
+		color.setR((uint8_t)args.iValue);
+		SetPickColor(color);
+		FireEvents();
+		});
+	AddWidget(text_R);
+
+	text_G = new wiTextInputField("");
+	text_G->SetPos(XMFLOAT2(x, y += step));
+	text_G->SetSize(XMFLOAT2(40, 18));
+	text_G->SetText("");
+	text_G->SetTooltip("Enter value for GREEN channel (0-255)");
+	text_G->SetDescription("G: ");
+	text_G->OnInputAccepted([this](wiEventArgs args) {
+		wiColor color = GetPickColor();
+		color.setG((uint8_t)args.iValue);
+		SetPickColor(color);
+		FireEvents();
+		});
+	AddWidget(text_G);
+
+	text_B = new wiTextInputField("");
+	text_B->SetPos(XMFLOAT2(x, y += step));
+	text_B->SetSize(XMFLOAT2(40, 18));
+	text_B->SetText("");
+	text_B->SetTooltip("Enter value for BLUE channel (0-255)");
+	text_B->SetDescription("B: ");
+	text_B->OnInputAccepted([this](wiEventArgs args) {
+		wiColor color = GetPickColor();
+		color.setB((uint8_t)args.iValue);
+		SetPickColor(color);
+		FireEvents();
+		});
+	AddWidget(text_B);
+
+
+	text_H = new wiTextInputField("");
+	text_H->SetPos(XMFLOAT2(x, y += step));
+	text_H->SetSize(XMFLOAT2(40, 18));
+	text_H->SetText("");
+	text_H->SetTooltip("Enter value for HUE channel (0-360)");
+	text_H->SetDescription("H: ");
+	text_H->OnInputAccepted([this](wiEventArgs args) {
+		hue = wiMath::Clamp(args.fValue, 0, 360.0f);
+		FireEvents();
+		});
+	AddWidget(text_H);
+
+	text_S = new wiTextInputField("");
+	text_S->SetPos(XMFLOAT2(x, y += step));
+	text_S->SetSize(XMFLOAT2(40, 18));
+	text_S->SetText("");
+	text_S->SetTooltip("Enter value for SATURATION channel (0-100)");
+	text_S->SetDescription("S: ");
+	text_S->OnInputAccepted([this](wiEventArgs args) {
+		saturation = wiMath::Clamp(args.fValue / 100.0f, 0, 1);
+		FireEvents();
+		});
+	AddWidget(text_S);
+
+	text_V = new wiTextInputField("");
+	text_V->SetPos(XMFLOAT2(x, y += step));
+	text_V->SetSize(XMFLOAT2(40, 18));
+	text_V->SetText("");
+	text_V->SetTooltip("Enter value for LUMINANCE channel (0-100)");
+	text_V->SetDescription("V: ");
+	text_V->OnInputAccepted([this](wiEventArgs args) {
+		luminance = wiMath::Clamp(args.fValue / 100.0f, 0, 1);
+		FireEvents();
+		});
+	AddWidget(text_V);
 }
 static const float colorpicker_center = 120;
 static const float colorpicker_radius_triangle = 68;
@@ -1742,12 +1861,17 @@ void wiColorPicker::Update(wiGUI* gui, float dt)
 		gui->DeactivateWidget(this);
 	}
 
+	wiColor color = GetPickColor();
+	text_R->SetValue((int)color.getR());
+	text_G->SetValue((int)color.getG());
+	text_B->SetValue((int)color.getB());
+	text_H->SetValue(int(hue));
+	text_S->SetValue(int(saturation * 100));
+	text_V->SetValue(int(luminance * 100));
+
 	if (dragged)
 	{
-		wiEventArgs args;
-		args.clickPos = pointer;
-		args.color = GetPickColor();
-		onColorChanged(args);
+		FireEvents();
 	}
 }
 void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
@@ -1977,6 +2101,8 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	wiRenderer::GetDevice()->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CBSLOT_RENDERER_MISC, cmd);
 	wiRenderer::GetDevice()->BindPipelineState(&PSO_colored, cmd);
 
+	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
+
 	MiscCB cb;
 
 	// render saturation triangle
@@ -2132,19 +2258,6 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
 		wiRenderer::GetDevice()->Draw(vb_preview.GetDesc().ByteWidth / sizeof(Vertex), 0, cmd);
 	}
-
-	// RGB values:
-	stringstream ss("");
-	ss << "R: " << int(final_color.getR()) << endl;
-	ss << "G: " << int(final_color.getG()) << endl;
-	ss << "B: " << int(final_color.getB()) << endl;
-	ss << endl;
-	ss << "H: " << int(hue) << endl;
-	ss << "S: " << int(saturation * 100) << endl;
-	ss << "V: " << int(luminance * 100) << endl;
-	wiFont(ss.str(), wiFontParams((int)(translation.x + 240), (int)(translation.y + 80), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0,
-		textColor, textShadowColor)).Draw(cmd);
-
 }
 wiColor wiColorPicker::GetPickColor() const
 {
@@ -2171,6 +2284,12 @@ void wiColorPicker::SetPickColor(wiColor value)
 	}
 	saturation = result.s;
 	luminance = result.v;
+}
+void wiColorPicker::FireEvents()
+{
+	wiEventArgs args;
+	args.color = GetPickColor();
+	onColorChanged(args);
 }
 void wiColorPicker::OnColorChanged(function<void(wiEventArgs args)> func)
 {
@@ -2390,7 +2509,7 @@ void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 		, wiImageParams(translation.x, translation.y, scale.x, item_height, colors[state == IDLE ? IDLE : FOCUS].toFloat4()), cmd);
 
 	wiFont(text, wiFontParams((int)(translation.x) + 1, (int)(translation.y) + 1, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0,
-		textColor, textShadowColor)).Draw(cmd);
+		fontParams.color, fontParams.shadowColor)).Draw(cmd);
 
 	// scrollbar background
 	wiImage::Draw(wiTextureHelper::getWhite()
@@ -2489,7 +2608,7 @@ void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 		
 		// Item name text:
 		wiFont(item.name, wiFontParams((int)pos.x + int(item_height * 0.5f) + 2, (int)pos.y, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_CENTER, 0, 0,
-			textColor, textShadowColor)).Draw(cmd);
+			fontParams.color, fontParams.shadowColor)).Draw(cmd);
 	}
 }
 void wiTreeList::OnSelect(function<void(wiEventArgs args)> func)

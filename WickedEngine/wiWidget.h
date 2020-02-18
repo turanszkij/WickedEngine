@@ -5,6 +5,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiIntersect.h"
 #include "wiScene.h"
+#include "wiFont.h"
 
 #include <string>
 #include <list>
@@ -61,8 +62,7 @@ protected:
 	};
 	static_assert(arraysize(colors) == WIDGETSTATE_COUNT, "Every WIDGETSTATE needs a default color!");
 
-	wiColor textColor = wiColor(255, 255, 255, 255);
-	wiColor textShadowColor = wiColor(0, 0, 0, 255);
+	wiFontParams fontParams = wiFontParams(0, 0, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor::White(), wiColor::Black());
 public:
 	const wiHashString& GetName() const;
 	void SetName(const std::string& value);
@@ -81,8 +81,10 @@ public:
 	void SetColor(wiColor color, WIDGETSTATE state = WIDGETSTATE_COUNT);
 	wiColor GetColor() const;
 	void SetScissorRect(const wiGraphics::Rect& rect);
-	void SetTextColor(wiColor value) { textColor = value; }
-	void SetTextShadowColor(wiColor value) { textShadowColor = value; }
+	void SetTextColor(wiColor value) { fontParams.color = value; }
+	void SetTextShadowColor(wiColor value) { fontParams.shadowColor = value; }
+	void SetFontParams(wiFontParams params) { fontParams = params; }
+	const wiFontParams& GetFontParams() const { return fontParams; }
 
 	virtual void Update(wiGUI* gui, float dt);
 	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const = 0;
@@ -144,6 +146,8 @@ protected:
 
 	std::string value;
 	static std::string value_new;
+
+	std::string description;
 public:
 	wiTextInputField(const std::string& name = "");
 	virtual ~wiTextInputField();
@@ -152,6 +156,8 @@ public:
 	void SetValue(int newValue);
 	void SetValue(float newValue);
 	const std::string& GetValue();
+	void SetDescription(const std::string& desc) { description = desc; }
+	const std::string& GetDescription() const { return description; }
 
 	// There can only be ONE active text input field, so these methods modify the active one
 	static void AddInput(const char inputChar);
@@ -285,7 +291,7 @@ protected:
 	std::list<wiWidget*> childrenWidgets;
 	bool minimized = false;
 public:
-	wiWindow(wiGUI* gui, const std::string& name = "");
+	wiWindow(wiGUI* gui, const std::string& name = "", bool window_controls = true);
 	virtual ~wiWindow();
 
 	void AddWidget(wiWidget* widget);
@@ -310,8 +316,17 @@ protected:
 	float hue = 0.0f;			// [0, 360] degrees
 	float saturation = 0.0f;	// [0, 1]
 	float luminance = 1.0f;		// [0, 1]
+
+	wiTextInputField* text_R = nullptr;
+	wiTextInputField* text_G = nullptr;
+	wiTextInputField* text_B = nullptr;
+	wiTextInputField* text_H = nullptr;
+	wiTextInputField* text_S = nullptr;
+	wiTextInputField* text_V = nullptr;
+
+	void FireEvents();
 public:
-	wiColorPicker(wiGUI* gui, const std::string& name = "");
+	wiColorPicker(wiGUI* gui, const std::string& name = "", bool window_controls  = true);
 
 	virtual void Update(wiGUI* gui, float dt ) override;
 	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;

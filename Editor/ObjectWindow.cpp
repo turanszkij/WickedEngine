@@ -305,9 +305,8 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	objectWindow->AddWidget(cascadeMaskSlider);
 
 
-	colorPicker = new wiColorPicker(GUI, "Object Color");
+	colorPicker = new wiColorPicker(GUI, "Object Color", false);
 	colorPicker->SetPos(XMFLOAT2(10, 30));
-	colorPicker->RemoveWidgets();
 	colorPicker->SetVisible(true);
 	colorPicker->SetEnabled(true);
 	colorPicker->OnColorChanged([&](wiEventArgs args) {

@@ -192,9 +192,8 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	lightWindow->AddWidget(addLightButton);
 
 
-	colorPicker = new wiColorPicker(GUI, "Light Color");
+	colorPicker = new wiColorPicker(GUI, "Light Color", false);
 	colorPicker->SetPos(XMFLOAT2(10, 30));
-	colorPicker->RemoveWidgets();
 	colorPicker->SetVisible(true);
 	colorPicker->SetEnabled(false);
 	colorPicker->OnColorChanged([&](wiEventArgs args) {
