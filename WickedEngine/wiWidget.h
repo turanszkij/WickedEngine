@@ -172,6 +172,17 @@ protected:
 	float step = 1000;
 	float value = 0;
 
+	wiColor colors_base[WIDGETSTATE_COUNT] = {
+		wiColor(60, 60, 60, 200),
+		wiColor(50, 50, 50, 200),
+		wiColor(50, 50, 50, 200),
+		wiColor(60, 60, 60, 200),
+	};
+	static_assert(arraysize(colors_base) == WIDGETSTATE_COUNT, "Every WIDGETSTATE needs a default color!");
+
+	// width of the head of the slider that can be grabbed:
+	float headWidth = 16;
+
 	wiTextInputField* valueInputField;
 public:
 	// start : slider minimum value
@@ -187,6 +198,11 @@ public:
 
 	virtual void Update(wiGUI* gui, float dt ) override;
 	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+
+	// Sets colors for the base (or "path") of the slider
+	// last param default: set color for all states
+	void SetBaseColor(wiColor color, WIDGETSTATE state = WIDGETSTATE_COUNT);
+	void SetHeadWidth(float value) { headWidth = value; }
 
 	void OnSlide(std::function<void(wiEventArgs args)> func);
 };
@@ -322,6 +338,8 @@ protected:
 	std::function<void(wiEventArgs args)> onSelect;
 	float list_height = 0;
 	float list_offset = 0;
+	int item_highlight = -1;
+	int opener_highlight = -1;
 
 	enum SCROLLBAR_STATE
 	{

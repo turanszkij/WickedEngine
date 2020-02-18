@@ -19,7 +19,7 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 	rendererWindow->SetSize(XMFLOAT2(640, 790));
 	GUI->AddWidget(rendererWindow);
 
-	float x = 260, y = 20, step = 30;
+	float x = 260, y = 20, step = 30, sliderheight = 26;
 
 	vsyncCheckBox = new wiCheckBox("VSync: ");
 	vsyncCheckBox->SetTooltip("Toggle vertical sync");
@@ -43,8 +43,8 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 
 	resolutionScaleSlider = new wiSlider(0.25f, 2.0f, 1.0f, 7.0f, "Resolution Scale: ");
 	resolutionScaleSlider->SetTooltip("Adjust the internal rendering resolution.");
-	resolutionScaleSlider->SetSize(XMFLOAT2(100, 30));
-	resolutionScaleSlider->SetPos(XMFLOAT2(x, y += 30));
+	resolutionScaleSlider->SetSize(XMFLOAT2(100, sliderheight));
+	resolutionScaleSlider->SetPos(XMFLOAT2(x, y += step));
 	resolutionScaleSlider->SetValue(wiRenderer::GetResolutionScale());
 	resolutionScaleSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::SetResolutionScale(args.fValue);
@@ -53,8 +53,8 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 
 	gammaSlider = new wiSlider(1.0f, 3.0f, 2.2f, 1000.0f, "Gamma: ");
 	gammaSlider->SetTooltip("Adjust the gamma correction for the display device.");
-	gammaSlider->SetSize(XMFLOAT2(100, 30));
-	gammaSlider->SetPos(XMFLOAT2(x, y += 30));
+	gammaSlider->SetSize(XMFLOAT2(100, sliderheight));
+	gammaSlider->SetPos(XMFLOAT2(x, y += step));
 	gammaSlider->SetValue(wiRenderer::GetGamma());
 	gammaSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::SetGamma(args.fValue);
@@ -99,8 +99,8 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 
 	voxelRadianceVoxelSizeSlider = new wiSlider(0.25, 2, 1, 7, "Voxel GI Voxel Size: ");
 	voxelRadianceVoxelSizeSlider->SetTooltip("Adjust the voxel size for Voxel GI calculations.");
-	voxelRadianceVoxelSizeSlider->SetSize(XMFLOAT2(100, 30));
-	voxelRadianceVoxelSizeSlider->SetPos(XMFLOAT2(x, y += 30));
+	voxelRadianceVoxelSizeSlider->SetSize(XMFLOAT2(100, sliderheight));
+	voxelRadianceVoxelSizeSlider->SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceVoxelSizeSlider->SetValue(wiRenderer::GetVoxelRadianceVoxelSize());
 	voxelRadianceVoxelSizeSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::SetVoxelRadianceVoxelSize(args.fValue);
@@ -109,8 +109,8 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 
 	voxelRadianceConeTracingSlider = new wiSlider(1, 16, 8, 15, "Voxel GI NumCones: ");
 	voxelRadianceConeTracingSlider->SetTooltip("Adjust the number of cones sampled in the radiance gathering phase.");
-	voxelRadianceConeTracingSlider->SetSize(XMFLOAT2(100, 30));
-	voxelRadianceConeTracingSlider->SetPos(XMFLOAT2(x, y += 30));
+	voxelRadianceConeTracingSlider->SetSize(XMFLOAT2(100, sliderheight));
+	voxelRadianceConeTracingSlider->SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceConeTracingSlider->SetValue((float)wiRenderer::GetVoxelRadianceNumCones());
 	voxelRadianceConeTracingSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::SetVoxelRadianceNumCones(args.iValue);
@@ -119,8 +119,8 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 
 	voxelRadianceRayStepSizeSlider = new wiSlider(0.5f, 2.0f, 0.5f, 10000, "Voxel GI Ray Step Size: ");
 	voxelRadianceRayStepSizeSlider->SetTooltip("Adjust the precision of ray marching for cone tracing step. Lower values = more precision but slower performance.");
-	voxelRadianceRayStepSizeSlider->SetSize(XMFLOAT2(100, 30));
-	voxelRadianceRayStepSizeSlider->SetPos(XMFLOAT2(x, y += 30));
+	voxelRadianceRayStepSizeSlider->SetSize(XMFLOAT2(100, sliderheight));
+	voxelRadianceRayStepSizeSlider->SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceRayStepSizeSlider->SetValue(wiRenderer::GetVoxelRadianceRayStepSize());
 	voxelRadianceRayStepSizeSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::SetVoxelRadianceRayStepSize(args.fValue);
@@ -129,8 +129,8 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 
 	voxelRadianceMaxDistanceSlider = new wiSlider(0, 100, 10, 10000, "Voxel GI Max Distance: ");
 	voxelRadianceMaxDistanceSlider->SetTooltip("Adjust max raymarching distance for voxel GI.");
-	voxelRadianceMaxDistanceSlider->SetSize(XMFLOAT2(100, 30));
-	voxelRadianceMaxDistanceSlider->SetPos(XMFLOAT2(x, y += 30));
+	voxelRadianceMaxDistanceSlider->SetSize(XMFLOAT2(100, sliderheight));
+	voxelRadianceMaxDistanceSlider->SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceMaxDistanceSlider->SetValue(wiRenderer::GetVoxelRadianceMaxDistance());
 	voxelRadianceMaxDistanceSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::SetVoxelRadianceMaxDistance(args.fValue);
@@ -194,8 +194,8 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 
 	speedMultiplierSlider = new wiSlider(0, 4, 1, 100000, "Speed: ");
 	speedMultiplierSlider->SetTooltip("Adjust the global speed (time multiplier)");
-	speedMultiplierSlider->SetSize(XMFLOAT2(100, 30));
-	speedMultiplierSlider->SetPos(XMFLOAT2(x, y += 30));
+	speedMultiplierSlider->SetSize(XMFLOAT2(100, sliderheight));
+	speedMultiplierSlider->SetPos(XMFLOAT2(x, y += step));
 	speedMultiplierSlider->SetValue(wiRenderer::GetGameSpeed());
 	speedMultiplierSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::SetGameSpeed(args.fValue);
@@ -389,8 +389,8 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 
 	mipLodBiasSlider = new wiSlider(-2, 2, 0, 100000, "MipLOD Bias: ");
 	mipLodBiasSlider->SetTooltip("Bias the rendered mip map level of the material textures.");
-	mipLodBiasSlider->SetSize(XMFLOAT2(100, 30));
-	mipLodBiasSlider->SetPos(XMFLOAT2(x, y += 30));
+	mipLodBiasSlider->SetSize(XMFLOAT2(100, sliderheight));
+	mipLodBiasSlider->SetPos(XMFLOAT2(x, y += step));
 	mipLodBiasSlider->OnSlide([&](wiEventArgs args) {
 		wiGraphics::SamplerDesc desc = wiRenderer::GetSampler(SSLOT_OBJECTSHADER)->GetDesc();
 		desc.MipLODBias = args.fValue;
@@ -400,8 +400,8 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 
 	raytraceBounceCountSlider = new wiSlider(0, 10, 1, 10, "Raytrace Bounces: ");
 	raytraceBounceCountSlider->SetTooltip("How many indirect light bounces to compute when doing ray tracing.");
-	raytraceBounceCountSlider->SetSize(XMFLOAT2(100, 30));
-	raytraceBounceCountSlider->SetPos(XMFLOAT2(x, y += 30));
+	raytraceBounceCountSlider->SetSize(XMFLOAT2(100, sliderheight));
+	raytraceBounceCountSlider->SetPos(XMFLOAT2(x, y += step));
 	raytraceBounceCountSlider->SetValue((float)wiRenderer::GetRaytraceBounceCount());
 	raytraceBounceCountSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::SetRaytraceBounceCount((uint32_t)args.iValue);

@@ -813,11 +813,16 @@ void EditorComponent::Update(float dt)
 
 		outliner->ClearItems();
 
-		// Add transforms:
-		for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
+		// Add hierarchy:
+		if (translator.entityID == INVALID_ENTITY)
 		{
-			CreateOutlinerHierarchy(scene.hierarchy[i].parentID, 0);
+			for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
+			{
+				CreateOutlinerHierarchy(scene.hierarchy[i].parentID, 0);
+			}
 		}
+
+		// Any transform left that is not part of a hierarchy:
 		for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
 		{
 			CreateOutlinerHierarchy(scene.transforms.GetEntity(i), 0);

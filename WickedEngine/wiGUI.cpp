@@ -78,12 +78,14 @@ void wiGUI::Render(CommandList cmd) const
 		if (x->parent == this && x != activeWidget)
 		{
 			// the contained child widgets will be rendered by the containers
+			ResetScissor(cmd);
 			x->Render(this, cmd);
 		}
 	}
 	if (activeWidget != nullptr)
 	{
 		// render the active widget on top of everything
+		ResetScissor(cmd);
 		activeWidget->Render(this, cmd);
 	}
 

@@ -289,9 +289,9 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	ocean_enabledCheckBox->SetPos(XMFLOAT2(x + 100, y += step));
 	ocean_enabledCheckBox->OnClick([&](wiEventArgs args) {
 		auto& weather = GetWeather();
+		weather.SetOceanEnabled(args.bValue);
 		if (!weather.IsOceanEnabled())
 		{
-			weather.SetOceanEnabled(args.bValue);
 			wiRenderer::OceanRegenerate();
 		}
 		});
