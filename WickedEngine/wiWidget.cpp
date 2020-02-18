@@ -1173,6 +1173,13 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 	{
 		if (HasScrollbar())
 		{
+			Rect rect;
+			rect.left = int(translation.x + scale.x + 1);
+			rect.right = int(translation.x + scale.x + 1 + scale.y);
+			rect.top = int(translation.y + scale.y + 1);
+			rect.bottom = int(translation.y + scale.y + 1 + scale.y * maxVisibleItemCount);
+			wiRenderer::GetDevice()->BindScissorRects(1, &rect, cmd);
+
 			// control-scrollbar-base
 			{
 				wiColor col = colors[IDLE];
@@ -1197,7 +1204,12 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 			}
 		}
 
-		gui->ResetScissor(cmd);
+		Rect rect;
+		rect.left = int(translation.x);
+		rect.right = rect.left + int(scale.x);
+		rect.top = int(translation.y + scale.y + 1);
+		rect.bottom = rect.top + int(scale.y * maxVisibleItemCount);
+		wiRenderer::GetDevice()->BindScissorRects(1, &rect, cmd);
 
 		// control-list
 		for (int i = firstItemVisible; i < (firstItemVisible + std::min(maxVisibleItemCount, (int)items.size())); ++i)
