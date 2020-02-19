@@ -713,17 +713,17 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(renderPathComboBox);
 
 
-	outliner = new wiTreeList("Scene outliner (WIP)");
-	outliner->SetPos(XMFLOAT2(0, screenH - 200));
-	outliner->SetSize(XMFLOAT2(260, 200));
-	outliner->OnSelect([this](wiEventArgs args) {
+	sceneGraphView = new wiTreeList("Scene graph view (WIP)");
+	sceneGraphView->SetPos(XMFLOAT2(0, screenH - 200));
+	sceneGraphView->SetSize(XMFLOAT2(260, 200));
+	sceneGraphView->OnSelect([this](wiEventArgs args) {
 
 		EndTranslate();
 		selected.clear(); // endtranslate would clear it, but not if translator is not enabled
 
-		for (int i = 0; i < outliner->GetItemCount(); ++i)
+		for (int i = 0; i < sceneGraphView->GetItemCount(); ++i)
 		{
-			const wiTreeList::Item& item = outliner->GetItem(i);
+			const wiTreeList::Item& item = sceneGraphView->GetItem(i);
 			if (item.selected)
 			{
 				wiScene::PickResult pick;
@@ -734,7 +734,7 @@ void EditorComponent::Load()
 
 		BeginTranslate();
 	});
-	GetGUI().AddWidget(outliner);
+	GetGUI().AddWidget(sceneGraphView);
 
 
 	cameraWnd->ResetCam();
@@ -752,9 +752,9 @@ void EditorComponent::FixedUpdate()
 	renderPath->FixedUpdate();
 }
 
-void EditorComponent::CreateOutlinerHierarchy(wiECS::Entity entity, int level)
+void EditorComponent::PushToSceneGraphView(wiECS::Entity entity, int level)
 {
-	if (outliner_added_items.count(entity) != 0)
+	if (scenegraphview_added_items.count(entity) != 0)
 	{
 		return;
 	}
@@ -764,7 +764,7 @@ void EditorComponent::CreateOutlinerHierarchy(wiECS::Entity entity, int level)
 	item.level = level;
 	item.userdata = entity;
 	item.selected = IsSelected(entity);
-	item.open = outliner_closed_items.count(entity) == 0;
+	item.open = scenegraphview_closed_items.count(entity) == 0;
 	item.name = "(" + std::to_string(entity) + ")";
 	const NameComponent* name = scene.names.GetComponent(entity);
 	if (name != nullptr)
@@ -775,15 +775,15 @@ void EditorComponent::CreateOutlinerHierarchy(wiECS::Entity entity, int level)
 	{
 		item.name = "[EDITOR_TRANSLATOR] " + item.name;
 	}
-	outliner->AddItem(item);
+	sceneGraphView->AddItem(item);
 
-	outliner_added_items.insert(entity);
+	scenegraphview_added_items.insert(entity);
 
 	for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
 	{
 		if (scene.hierarchy[i].parentID == entity)
 		{
-			CreateOutlinerHierarchy(scene.hierarchy.GetEntity(i), level + 1);
+			PushToSceneGraphView(scene.hierarchy.GetEntity(i), level + 1);
 		}
 	}
 }
@@ -799,40 +799,37 @@ void EditorComponent::Update(float dt)
 
 	selectionOutlineTimer += dt;
 
-	// Update scene graph outliner:
-	if(outliner != nullptr)
+	// Update scene graph view:
+	if(sceneGraphView != nullptr)
 	{
-		for (int i = 0; i < outliner->GetItemCount(); ++i)
+		for (int i = 0; i < sceneGraphView->GetItemCount(); ++i)
 		{
-			const wiTreeList::Item& item = outliner->GetItem(i);
+			const wiTreeList::Item& item = sceneGraphView->GetItem(i);
 			if (!item.open)
 			{
-				outliner_closed_items.insert((Entity)item.userdata);
+				scenegraphview_closed_items.insert((Entity)item.userdata);
 			}
 		}
 
-		outliner->ClearItems();
+		sceneGraphView->ClearItems();
 
 		// Add hierarchy:
-		if (translator.entityID == INVALID_ENTITY)
+		for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
 		{
-			for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
-			{
-				CreateOutlinerHierarchy(scene.hierarchy[i].parentID, 0);
-			}
+			PushToSceneGraphView(scene.hierarchy[i].parentID, 0);
 		}
 
 		// Any transform left that is not part of a hierarchy:
 		for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
 		{
-			CreateOutlinerHierarchy(scene.transforms.GetEntity(i), 0);
+			PushToSceneGraphView(scene.transforms.GetEntity(i), 0);
 		}
 
 		// Add materials:
 		for (size_t i = 0; i < scene.materials.GetCount(); ++i)
 		{
 			Entity entity = scene.materials.GetEntity(i);
-			if (outliner_added_items.count(entity) != 0)
+			if (scenegraphview_added_items.count(entity) != 0)
 			{
 				continue;
 			}
@@ -840,23 +837,23 @@ void EditorComponent::Update(float dt)
 			wiTreeList::Item item;
 			item.userdata = entity;
 			item.selected = IsSelected(entity);
-			item.open = outliner_closed_items.count(entity) == 0;
+			item.open = scenegraphview_closed_items.count(entity) == 0;
 			item.name = "(" + std::to_string(entity) + ")";
 			const NameComponent* name = scene.names.GetComponent(entity);
 			if (name != nullptr)
 			{
 				item.name = name->name + " " + item.name;
 			}
-			outliner->AddItem(item);
+			sceneGraphView->AddItem(item);
 
-			outliner_added_items.insert(entity);
+			scenegraphview_added_items.insert(entity);
 		}
 
 		// Add meshes:
 		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
 		{
 			Entity entity = scene.meshes.GetEntity(i);
-			if (outliner_added_items.count(entity) != 0)
+			if (scenegraphview_added_items.count(entity) != 0)
 			{
 				continue;
 			}
@@ -864,20 +861,20 @@ void EditorComponent::Update(float dt)
 			wiTreeList::Item item;
 			item.userdata = entity;
 			item.selected = IsSelected(entity);
-			item.open = outliner_closed_items.count(entity) == 0;
+			item.open = scenegraphview_closed_items.count(entity) == 0;
 			item.name = "(" + std::to_string(entity) + ")";
 			const NameComponent* name = scene.names.GetComponent(entity);
 			if (name != nullptr)
 			{
 				item.name = name->name + " " + item.name;
 			}
-			outliner->AddItem(item);
+			sceneGraphView->AddItem(item);
 
-			outliner_added_items.insert(entity);
+			scenegraphview_added_items.insert(entity);
 		}
 
-		outliner_added_items.clear();
-		outliner_closed_items.clear();
+		scenegraphview_added_items.clear();
+		scenegraphview_closed_items.clear();
 	}
 
 	// Exit cinema mode:

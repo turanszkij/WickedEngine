@@ -55,10 +55,10 @@ public:
 
 	wiCheckBox*				cinemaModeCheckBox = nullptr;
 
-	wiTreeList*				outliner = nullptr;
-	std::unordered_set<wiECS::Entity> outliner_added_items;
-	std::unordered_set<wiECS::Entity> outliner_closed_items;
-	void CreateOutlinerHierarchy(wiECS::Entity entity, int level);
+	wiTreeList*				sceneGraphView = nullptr;
+	std::unordered_set<wiECS::Entity> scenegraphview_added_items;
+	std::unordered_set<wiECS::Entity> scenegraphview_closed_items;
+	void PushToSceneGraphView(wiECS::Entity entity, int level);
 
 	EditorLoadingScreen*	loader = nullptr;
 	RenderPath3D*	renderPath = nullptr;
