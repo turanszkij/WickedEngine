@@ -972,6 +972,7 @@ PipelineState PSO_lensflare;
 PipelineState PSO_downsampledepthbuffer;
 PipelineState PSO_deferredcomposition;
 PipelineState PSO_sss;
+PipelineState PSO_upsample_bilateral;
 
 enum SKYRENDERING
 {
@@ -1169,205 +1170,210 @@ void LoadShaders()
 		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_RENDERLIGHTMAP].code, &vertexLayouts[VLTYPE_RENDERLIGHTMAP]);
 		});
 
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_OBJECT_COMMON_TESSELLATION], "objectVS_common_tessellation.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_OBJECT_SIMPLE_TESSELLATION], "objectVS_simple_tessellation.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_IMPOSTOR], "impostorVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_DIRLIGHT], "dirLightVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_POINTLIGHT], "pointLightVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_SPOTLIGHT], "spotLightVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_SPOTLIGHT], "vSpotLightVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_POINTLIGHT], "vPointLightVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_SPHERELIGHT], "vSphereLightVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_DISCLIGHT], "vDiscLightVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_RECTANGLELIGHT], "vRectangleLightVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_TUBELIGHT], "vTubeLightVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_DECAL], "decalVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_ENVMAP], "envMapVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_ENVMAP_SKY], "envMap_skyVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_SPHERE], "sphereVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_CUBE], "cubeVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER], "cubeShadowVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST], "cubeShadowVS_alphatest.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_SKY], "skyVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_WATER], "waterVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_VOXELIZER], "objectVS_voxelizer.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_VOXEL], "voxelVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_POINT], "forceFieldPointVisualizerVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_PLANE], "forceFieldPlaneVisualizerVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_RAYTRACE_SCREEN], "raytrace_screenVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_SCREEN], "screenVS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(VS, vertexShaders[VSTYPE_LENSFLARE], "lensFlareVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_OBJECT_COMMON_TESSELLATION], "objectVS_common_tessellation.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_OBJECT_SIMPLE_TESSELLATION], "objectVS_simple_tessellation.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_IMPOSTOR], "impostorVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_DIRLIGHT], "dirLightVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_POINTLIGHT], "pointLightVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_SPOTLIGHT], "spotLightVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_SPOTLIGHT], "vSpotLightVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_POINTLIGHT], "vPointLightVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_SPHERELIGHT], "vSphereLightVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_DISCLIGHT], "vDiscLightVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_RECTANGLELIGHT], "vRectangleLightVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_TUBELIGHT], "vTubeLightVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_DECAL], "decalVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_ENVMAP], "envMapVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_ENVMAP_SKY], "envMap_skyVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_SPHERE], "sphereVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_CUBE], "cubeVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER], "cubeShadowVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST], "cubeShadowVS_alphatest.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_SKY], "skyVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_WATER], "waterVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_VOXELIZER], "objectVS_voxelizer.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_VOXEL], "voxelVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_POINT], "forceFieldPointVisualizerVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_PLANE], "forceFieldPlaneVisualizerVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_RAYTRACE_SCREEN], "raytrace_screenVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_SCREEN], "screenVS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_LENSFLARE], "lensFlareVS.cso"); });
 
 
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED], "objectPS_deferred.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP], "objectPS_deferred_normalmap.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_POM], "objectPS_deferred_pom.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_PLANARREFLECTION], "objectPS_deferred_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP_POM], "objectPS_deferred_normalmap_pom.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP_PLANARREFLECTION], "objectPS_deferred_normalmap_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_DEFERRED], "impostorPS_deferred.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED], "objectPS_deferred.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP], "objectPS_deferred_normalmap.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_POM], "objectPS_deferred_pom.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_PLANARREFLECTION], "objectPS_deferred_planarreflection.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP_POM], "objectPS_deferred_normalmap_pom.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP_PLANARREFLECTION], "objectPS_deferred_normalmap_planarreflection.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_DEFERRED], "impostorPS_deferred.cso"); });
 
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD], "objectPS_forward.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP], "objectPS_forward_normalmap.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT], "objectPS_forward_transparent.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP], "objectPS_forward_transparent_normalmap.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_PLANARREFLECTION], "objectPS_forward_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP_PLANARREFLECTION], "objectPS_forward_normalmap_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_PLANARREFLECTION], "objectPS_forward_transparent_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION], "objectPS_forward_transparent_normalmap_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_POM], "objectPS_forward_pom.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP_POM], "objectPS_forward_normalmap_pom.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_POM], "objectPS_forward_transparent_pom.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_POM], "objectPS_forward_transparent_normalmap_pom.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_WATER], "objectPS_forward_water.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_FORWARD], "impostorPS_forward.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD], "objectPS_forward.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP], "objectPS_forward_normalmap.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT], "objectPS_forward_transparent.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP], "objectPS_forward_transparent_normalmap.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_PLANARREFLECTION], "objectPS_forward_planarreflection.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP_PLANARREFLECTION], "objectPS_forward_normalmap_planarreflection.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_PLANARREFLECTION], "objectPS_forward_transparent_planarreflection.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION], "objectPS_forward_transparent_normalmap_planarreflection.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_POM], "objectPS_forward_pom.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP_POM], "objectPS_forward_normalmap_pom.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_POM], "objectPS_forward_transparent_pom.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_POM], "objectPS_forward_transparent_normalmap_pom.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_WATER], "objectPS_forward_water.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_FORWARD], "impostorPS_forward.cso"); });
 
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD], "objectPS_tiledforward.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP], "objectPS_tiledforward_normalmap.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT], "objectPS_tiledforward_transparent.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP], "objectPS_tiledforward_transparent_normalmap.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_PLANARREFLECTION], "objectPS_tiledforward_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_PLANARREFLECTION], "objectPS_tiledforward_normalmap_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_PLANARREFLECTION], "objectPS_tiledforward_transparent_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION], "objectPS_tiledforward_transparent_normalmap_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_POM], "objectPS_tiledforward_pom.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_POM], "objectPS_tiledforward_normalmap_pom.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_POM], "objectPS_tiledforward_transparent_pom.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_POM], "objectPS_tiledforward_transparent_normalmap_pom.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_WATER], "objectPS_tiledforward_water.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_TILEDFORWARD], "impostorPS_tiledforward.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD], "objectPS_tiledforward.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP], "objectPS_tiledforward_normalmap.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT], "objectPS_tiledforward_transparent.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP], "objectPS_tiledforward_transparent_normalmap.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_PLANARREFLECTION], "objectPS_tiledforward_planarreflection.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_PLANARREFLECTION], "objectPS_tiledforward_normalmap_planarreflection.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_PLANARREFLECTION], "objectPS_tiledforward_transparent_planarreflection.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION], "objectPS_tiledforward_transparent_normalmap_planarreflection.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_POM], "objectPS_tiledforward_pom.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_POM], "objectPS_tiledforward_normalmap_pom.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_POM], "objectPS_tiledforward_transparent_pom.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_POM], "objectPS_tiledforward_transparent_normalmap_pom.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_WATER], "objectPS_tiledforward_water.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_TILEDFORWARD], "impostorPS_tiledforward.cso"); });
 
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_HOLOGRAM], "objectPS_hologram.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_HOLOGRAM], "objectPS_hologram.cso"); });
 
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEBUG], "objectPS_debug.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_SIMPLEST], "objectPS_simplest.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_BLACKOUT], "objectPS_blackout.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TEXTUREONLY], "objectPS_textureonly.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_OBJECT_ALPHATESTONLY], "objectPS_alphatestonly.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_ALPHATESTONLY], "impostorPS_alphatestonly.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_SIMPLE], "impostorPS_simple.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_WIRE], "impostorPS_wire.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_ENVIRONMENTALLIGHT], "environmentalLightPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_DIRLIGHT], "dirLightPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_POINTLIGHT], "pointLightPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_SPOTLIGHT], "spotLightPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_SPHERELIGHT], "sphereLightPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_DISCLIGHT], "discLightPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_RECTANGLELIGHT], "rectangleLightPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_TUBELIGHT], "tubeLightPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_LIGHTVISUALIZER], "lightVisualizerPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_VOLUMETRICLIGHT_DIRECTIONAL], "volumetricLight_DirectionalPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_VOLUMETRICLIGHT_POINT], "volumetricLight_PointPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_VOLUMETRICLIGHT_SPOT], "volumetricLight_SpotPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_DECAL], "decalPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_ENVMAP], "envMapPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_ENVMAP_SKY_STATIC], "envMap_skyPS_static.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_ENVMAP_SKY_DYNAMIC], "envMap_skyPS_dynamic.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_CAPTUREIMPOSTOR_ALBEDO], "captureImpostorPS_albedo.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_CAPTUREIMPOSTOR_NORMAL], "captureImpostorPS_normal.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_CAPTUREIMPOSTOR_SURFACE], "captureImpostorPS_surface.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_CUBEMAP], "cubemapPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_LINE], "linesPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_SKY_STATIC], "skyPS_static.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_SKY_DYNAMIC], "skyPS_dynamic.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_SUN], "sunPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_SHADOW_ALPHATEST], "shadowPS_alphatest.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_SHADOW_TRANSPARENT], "shadowPS_transparent.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_SHADOW_WATER], "shadowPS_water.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_TRAIL], "trailPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_VOXELIZER], "objectPS_voxelizer.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_VOXEL], "voxelPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_FORCEFIELDVISUALIZER], "forceFieldVisualizerPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_RENDERLIGHTMAP], "renderlightmapPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_RAYTRACE_DEBUGBVH], "raytrace_debugbvhPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_DOWNSAMPLEDEPTHBUFFER], "downsampleDepthBuffer4xPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_DEFERREDCOMPOSITION], "deferredPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_POSTPROCESS_SSS], "sssPS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(PS, pixelShaders[PSTYPE_LENSFLARE], "lensFlarePS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEBUG], "objectPS_debug.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_SIMPLEST], "objectPS_simplest.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_BLACKOUT], "objectPS_blackout.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TEXTUREONLY], "objectPS_textureonly.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_ALPHATESTONLY], "objectPS_alphatestonly.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_ALPHATESTONLY], "impostorPS_alphatestonly.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_SIMPLE], "impostorPS_simple.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_WIRE], "impostorPS_wire.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_ENVIRONMENTALLIGHT], "environmentalLightPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_DIRLIGHT], "dirLightPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_POINTLIGHT], "pointLightPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_SPOTLIGHT], "spotLightPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_SPHERELIGHT], "sphereLightPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_DISCLIGHT], "discLightPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_RECTANGLELIGHT], "rectangleLightPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_TUBELIGHT], "tubeLightPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_LIGHTVISUALIZER], "lightVisualizerPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_VOLUMETRICLIGHT_DIRECTIONAL], "volumetricLight_DirectionalPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_VOLUMETRICLIGHT_POINT], "volumetricLight_PointPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_VOLUMETRICLIGHT_SPOT], "volumetricLight_SpotPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_DECAL], "decalPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_ENVMAP], "envMapPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_ENVMAP_SKY_STATIC], "envMap_skyPS_static.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_ENVMAP_SKY_DYNAMIC], "envMap_skyPS_dynamic.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_CAPTUREIMPOSTOR_ALBEDO], "captureImpostorPS_albedo.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_CAPTUREIMPOSTOR_NORMAL], "captureImpostorPS_normal.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_CAPTUREIMPOSTOR_SURFACE], "captureImpostorPS_surface.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_CUBEMAP], "cubemapPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_LINE], "linesPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_SKY_STATIC], "skyPS_static.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_SKY_DYNAMIC], "skyPS_dynamic.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_SUN], "sunPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_SHADOW_ALPHATEST], "shadowPS_alphatest.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_SHADOW_TRANSPARENT], "shadowPS_transparent.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_SHADOW_WATER], "shadowPS_water.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_TRAIL], "trailPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_VOXELIZER], "objectPS_voxelizer.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_VOXEL], "voxelPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_FORCEFIELDVISUALIZER], "forceFieldVisualizerPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_RENDERLIGHTMAP], "renderlightmapPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_RAYTRACE_DEBUGBVH], "raytrace_debugbvhPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_DOWNSAMPLEDEPTHBUFFER], "downsampleDepthBuffer4xPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_DEFERREDCOMPOSITION], "deferredPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_POSTPROCESS_SSS], "sssPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL], "upsample_bilateralPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_LENSFLARE], "lensFlarePS.cso"); });
 
-	wiJobSystem::Execute(ctx, []{ LoadShader(GS, geometryShaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(GS, geometryShaders[GSTYPE_VOXEL], "voxelGS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(GS, geometryShaders[GSTYPE_LENSFLARE], "lensFlareGS.cso"); });
-
-
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_LUMINANCE_PASS1], "luminancePass1CS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_LUMINANCE_PASS2], "luminancePass2CS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_TILEFRUSTUMS], "tileFrustumsCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL], "resolveMSAADepthStencilCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_VOXELSCENECOPYCLEAR], "voxelSceneCopyClearCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING], "voxelSceneCopyClear_TemporalSmoothing.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], "voxelRadianceSecondaryBounceCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_VOXELCLEARONLYNORMAL], "voxelClearOnlyNormalCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], "generateMIPChain2D_unorm4_SimpleFilterCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER], "generateMIPChain2D_float4_SimpleFilterCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN2D_UNORM4_GAUSSIAN], "generateMIPChain2D_unorm4_GaussianCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_GAUSSIAN], "generateMIPChain2D_float4_GaussianCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN2D_UNORM4_BICUBIC], "generateMIPChain2D_unorm4_BicubicCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_BICUBIC], "generateMIPChain2D_float4_BicubicCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], "generateMIPChain3D_unorm4_SimpleFilterCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER], "generateMIPChain3D_float4_SimpleFilterCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], "generateMIPChainCube_unorm4_SimpleFilterCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER], "generateMIPChainCube_float4_SimpleFilterCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], "generateMIPChainCubeArray_unorm4_SimpleFilterCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER], "generateMIPChainCubeArray_float4_SimpleFilterCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_FILTERENVMAP], "filterEnvMapCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4], "copytexture2D_unorm4CS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_COPYTEXTURE2D_FLOAT4], "copytexture2D_float4CS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4_BORDEREXPAND], "copytexture2D_unorm4_borderexpandCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_COPYTEXTURE2D_FLOAT4_BORDEREXPAND], "copytexture2D_float4_borderexpandCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_SKINNING], "skinningCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_SKINNING_LDS], "skinningCS_LDS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_RAYTRACE_LAUNCH], "raytrace_launchCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_RAYTRACE_KICKJOBS], "raytrace_kickjobsCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_RAYTRACE_CLOSESTHIT], "raytrace_closesthitCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_RAYTRACE_SHADE], "raytrace_shadeCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_RAYTRACE_TILESORT], "raytrace_tilesortCS.cso"); });
-
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT1], "blur_gaussian_float1CS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT4], "blur_gaussian_float4CS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM1], "blur_gaussian_unorm1CS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM4], "blur_gaussian_unorm4CS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_FLOAT1], "blur_bilateral_float1CS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_FLOAT4], "blur_bilateral_float4CS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM1], "blur_bilateral_unorm1CS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM4], "blur_bilateral_unorm4CS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SSAO], "ssaoCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SSR], "ssrCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_LIGHTSHAFTS], "lightshaftsCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_HORIZONTAL], "depthoffield_tileMaxCOC_horizontalCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_VERTICAL], "depthoffield_tileMaxCOC_verticalCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_NEIGHBORHOODMAXCOC], "depthoffield_neighborhoodMaxCOCCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_KICKJOBS], "depthoffield_kickjobsCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS], "depthoffield_prepassCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS_EARLYEXIT], "depthoffield_prepassCS_earlyexit.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN], "depthoffield_mainCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN_EARLYEXIT], "depthoffield_mainCS_earlyexit.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN_CHEAP], "depthoffield_mainCS_cheap.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_POSTFILTER], "depthoffield_postfilterCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_UPSAMPLE], "depthoffield_upsampleCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_OUTLINE_FLOAT4], "outlineCS_float4.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_OUTLINE_UNORM4], "outlineCS_unorm4.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY_HORIZONTAL], "motionblur_tileMaxVelocity_horizontalCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY_VERTICAL], "motionblur_tileMaxVelocity_verticalCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_NEIGHBORHOODMAXVELOCITY], "motionblur_neighborhoodMaxVelocityCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_KICKJOBS], "motionblur_kickjobsCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR], "motionblurCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_EARLYEXIT], "motionblurCS_earlyexit.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_CHEAP], "motionblurCS_cheap.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE], "bloomseparateCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLOOMCOMBINE], "bloomcombineCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_FXAA], "fxaaCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_TEMPORALAA], "temporalaaCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_COLORGRADE], "colorgradeCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_LINEARDEPTH], "lineardepthCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SHARPEN], "sharpenCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_TONEMAP], "tonemapCS.cso"); });
-	wiJobSystem::Execute(ctx, []{ LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_CHROMATIC_ABERRATION], "chromatic_aberrationCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(GS, geometryShaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(GS, geometryShaders[GSTYPE_VOXEL], "voxelGS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(GS, geometryShaders[GSTYPE_LENSFLARE], "lensFlareGS.cso"); });
 
 
-	wiJobSystem::Execute(ctx, []{ LoadShader(HS, hullShaders[HSTYPE_OBJECT], "objectHS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_LUMINANCE_PASS1], "luminancePass1CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_LUMINANCE_PASS2], "luminancePass2CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_TILEFRUSTUMS], "tileFrustumsCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL], "resolveMSAADepthStencilCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_VOXELSCENECOPYCLEAR], "voxelSceneCopyClearCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING], "voxelSceneCopyClear_TemporalSmoothing.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], "voxelRadianceSecondaryBounceCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_VOXELCLEARONLYNORMAL], "voxelClearOnlyNormalCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], "generateMIPChain2D_unorm4_SimpleFilterCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER], "generateMIPChain2D_float4_SimpleFilterCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN2D_UNORM4_GAUSSIAN], "generateMIPChain2D_unorm4_GaussianCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_GAUSSIAN], "generateMIPChain2D_float4_GaussianCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN2D_UNORM4_BICUBIC], "generateMIPChain2D_unorm4_BicubicCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_BICUBIC], "generateMIPChain2D_float4_BicubicCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], "generateMIPChain3D_unorm4_SimpleFilterCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER], "generateMIPChain3D_float4_SimpleFilterCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], "generateMIPChainCube_unorm4_SimpleFilterCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER], "generateMIPChainCube_float4_SimpleFilterCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], "generateMIPChainCubeArray_unorm4_SimpleFilterCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER], "generateMIPChainCubeArray_float4_SimpleFilterCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_FILTERENVMAP], "filterEnvMapCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4], "copytexture2D_unorm4CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_COPYTEXTURE2D_FLOAT4], "copytexture2D_float4CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4_BORDEREXPAND], "copytexture2D_unorm4_borderexpandCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_COPYTEXTURE2D_FLOAT4_BORDEREXPAND], "copytexture2D_float4_borderexpandCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_SKINNING], "skinningCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_SKINNING_LDS], "skinningCS_LDS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_RAYTRACE_LAUNCH], "raytrace_launchCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_RAYTRACE_KICKJOBS], "raytrace_kickjobsCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_RAYTRACE_CLOSESTHIT], "raytrace_closesthitCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_RAYTRACE_SHADE], "raytrace_shadeCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_RAYTRACE_TILESORT], "raytrace_tilesortCS.cso"); });
 
-	wiJobSystem::Execute(ctx, []{ LoadShader(DS, domainShaders[DSTYPE_OBJECT], "objectDS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT1], "blur_gaussian_float1CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT4], "blur_gaussian_float4CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM1], "blur_gaussian_unorm1CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM4], "blur_gaussian_unorm4CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_FLOAT1], "blur_bilateral_float1CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_FLOAT4], "blur_bilateral_float4CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM1], "blur_bilateral_unorm1CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM4], "blur_bilateral_unorm4CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SSAO], "ssaoCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SSR], "ssrCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_LIGHTSHAFTS], "lightshaftsCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_HORIZONTAL], "depthoffield_tileMaxCOC_horizontalCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_VERTICAL], "depthoffield_tileMaxCOC_verticalCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_NEIGHBORHOODMAXCOC], "depthoffield_neighborhoodMaxCOCCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_KICKJOBS], "depthoffield_kickjobsCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS], "depthoffield_prepassCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS_EARLYEXIT], "depthoffield_prepassCS_earlyexit.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN], "depthoffield_mainCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN_EARLYEXIT], "depthoffield_mainCS_earlyexit.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN_CHEAP], "depthoffield_mainCS_cheap.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_POSTFILTER], "depthoffield_postfilterCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_UPSAMPLE], "depthoffield_upsampleCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_OUTLINE_FLOAT4], "outlineCS_float4.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_OUTLINE_UNORM4], "outlineCS_unorm4.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY_HORIZONTAL], "motionblur_tileMaxVelocity_horizontalCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY_VERTICAL], "motionblur_tileMaxVelocity_verticalCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_NEIGHBORHOODMAXVELOCITY], "motionblur_neighborhoodMaxVelocityCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_KICKJOBS], "motionblur_kickjobsCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR], "motionblurCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_EARLYEXIT], "motionblurCS_earlyexit.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_CHEAP], "motionblurCS_cheap.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE], "bloomseparateCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLOOMCOMBINE], "bloomcombineCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_FXAA], "fxaaCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_TEMPORALAA], "temporalaaCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_COLORGRADE], "colorgradeCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_LINEARDEPTH], "lineardepthCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SHARPEN], "sharpenCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_TONEMAP], "tonemapCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_CHROMATIC_ABERRATION], "chromatic_aberrationCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_FLOAT1], "upsample_bilateral_float1CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_UNORM1], "upsample_bilateral_unorm1CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_FLOAT4], "upsample_bilateral_float4CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_UNORM4], "upsample_bilateral_unorm4CS.cso"); });
+
+
+	wiJobSystem::Execute(ctx, [] { LoadShader(HS, hullShaders[HSTYPE_OBJECT], "objectHS.cso"); });
+
+	wiJobSystem::Execute(ctx, [] { LoadShader(DS, domainShaders[DSTYPE_OBJECT], "objectDS.cso"); });
 
 	wiJobSystem::Wait(ctx);
 
@@ -1832,6 +1838,16 @@ void LoadShaders()
 		desc.dss = &depthStencils[DSSTYPE_SSS];
 
 		device->CreatePipelineState(&desc, &PSO_sss);
+		});
+	wiJobSystem::Execute(ctx, [device] {
+		PipelineStateDesc desc;
+		desc.vs = &vertexShaders[VSTYPE_SCREEN];
+		desc.ps = &pixelShaders[PSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL];
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+		desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
+		desc.dss = &depthStencils[DSSTYPE_XRAY];
+
+		device->CreatePipelineState(&desc, &PSO_upsample_bilateral);
 		});
 	wiJobSystem::Execute(ctx, [device] {
 		PipelineStateDesc desc;
@@ -8408,6 +8424,7 @@ void Postprocess_Blur_Gaussian(
 	case FORMAT_R8G8B8A8_UNORM:
 		cs = CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM4;
 		break;
+	case FORMAT_R11G11B10_FLOAT:
 	case FORMAT_R16G16B16A16_FLOAT:
 	case FORMAT_R32G32B32A32_FLOAT:
 		cs = CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT4;
@@ -8516,6 +8533,7 @@ void Postprocess_Blur_Bilateral(
 	case FORMAT_R8G8B8A8_UNORM:
 		cs = CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM4;
 		break;
+	case FORMAT_R11G11B10_FLOAT:
 	case FORMAT_R16G16B16A16_FLOAT:
 	case FORMAT_R32G32B32A32_FLOAT:
 		cs = CSTYPE_POSTPROCESS_BLUR_BILATERAL_FLOAT4;
@@ -9877,6 +9895,98 @@ void Postprocess_Chromatic_Aberration(
 
 	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	device->UnbindUAVs(0, arraysize(uavs), cmd);
+
+	device->EventEnd(cmd);
+}
+void Postprocess_Upsample_Bilateral(
+	const Texture& input,
+	const Texture& lineardepth,
+	const Texture& lineardepth_minmax,
+	const Texture& output,
+	CommandList cmd,
+	bool pixelshader,
+	float threshold
+)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("Postprocess_Upsample_Bilateral", cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	cb.xPPParams0.x = threshold;
+	cb.xPPParams0.y = cb.xPPResolution_rcp.x * (float)desc.Width / (float)input.GetDesc().Width;
+	cb.xPPParams0.z = cb.xPPResolution_rcp.y * (float)desc.Height / (float)input.GetDesc().Height;
+	// select mip from lowres depth mipchain:
+	cb.xPPParams0.w = floorf(std::max(0.0f, log2f(std::max((float)desc.Width / (float)input.GetDesc().Width, (float)desc.Height / (float)input.GetDesc().Height)) - 1));
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+
+	if (pixelshader)
+	{
+		device->BindPipelineState(&PSO_upsample_bilateral, cmd);
+
+		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+		device->BindResource(PS, &input, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(PS, &lineardepth_minmax, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(PS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+
+		device->Draw(3, 0, cmd);
+	}
+	else
+	{
+		CSTYPES cs = CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_FLOAT4;
+		switch (desc.Format)
+		{
+		case FORMAT_R16_UNORM:
+		case FORMAT_R8_UNORM:
+			cs = CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_UNORM1;
+			break;
+		case FORMAT_R16_FLOAT:
+		case FORMAT_R32_FLOAT:
+			cs = CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_FLOAT1;
+			break;
+		case FORMAT_R16G16B16A16_UNORM:
+		case FORMAT_R8G8B8A8_UNORM:
+			cs = CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_UNORM4;
+			break;
+		case FORMAT_R11G11B10_FLOAT:
+		case FORMAT_R16G16B16A16_FLOAT:
+		case FORMAT_R32G32B32A32_FLOAT:
+			cs = CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_FLOAT4;
+			break;
+		default:
+			assert(0); // implement format!
+			break;
+		}
+		device->BindComputeShader(&computeShaders[cs], cmd);
+
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &lineardepth_minmax, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+
+		const GPUResource* uavs[] = {
+			&output,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+	}
 
 	device->EventEnd(cmd);
 }

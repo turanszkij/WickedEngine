@@ -54,8 +54,8 @@ void RenderPath3D::ResizeBuffers()
 	}
 	{
 		TextureDesc desc;
-		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Width = wiRenderer::GetInternalResolution().x / 4;
 		desc.Height = wiRenderer::GetInternalResolution().y / 4;
 		device->CreateTexture(&desc, nullptr, &rtVolumetricLights);
@@ -591,8 +591,8 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 	if (getVolumeLightsEnabled())
 	{
 		device->EventBegin("Contribute Volumetric Lights", cmd);
-		fx.blendFlag = BLENDMODE_PREMULTIPLIED;
-		wiImage::Draw(&rtVolumetricLights, fx, cmd);
+		wiRenderer::Postprocess_Upsample_Bilateral(rtVolumetricLights, rtLinearDepth, rtLinearDepth_minmax, 
+			*renderpass_transparent.desc.attachments[0].texture, cmd, true, 1.5f);
 		device->EventEnd(cmd);
 	}
 

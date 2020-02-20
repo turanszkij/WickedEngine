@@ -301,6 +301,15 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd,
 		float amount = 1.0f
 	);
+	void Postprocess_Upsample_Bilateral(
+		const wiGraphics::Texture& input,
+		const wiGraphics::Texture& lineardepth,
+		const wiGraphics::Texture& lineardepth_minmax,
+		const wiGraphics::Texture& output,
+		wiGraphics::CommandList cmd,
+		bool is_pixelshader = false,
+		float threshold = 1.0f
+	);
 
 	// Build the scene BVH on GPU that can be used by ray traced rendering
 	void BuildSceneBVH(wiGraphics::CommandList cmd);
