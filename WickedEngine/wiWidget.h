@@ -368,6 +368,10 @@ protected:
 	float scrollbar_height = 0;
 	float scrollbar_value = 0;
 
+	Hitbox2D GetHitbox_ListArea() const;
+	Hitbox2D GetHitbox_Item(int visible_count, int level) const;
+	Hitbox2D GetHitbox_ItemOpener(int visible_count, int level) const;
+
 	std::vector<Item> items;
 
 	float GetItemOffset(int index) const;

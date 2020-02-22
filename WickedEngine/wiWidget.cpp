@@ -1140,6 +1140,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 	{
 		return;
 	}
+	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	wiColor color = GetColor();
 	if (combostate != COMBOSTATE_INACTIVE)
@@ -1150,13 +1151,58 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 	wiFont(text, wiFontParams((int)(translation.x), (int)(translation.y + scale.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
 		fontParams.color, fontParams.shadowColor)).Draw(cmd);
 
-	// control-arrow
+	struct Vertex
+	{
+		XMFLOAT4 pos;
+		XMFLOAT4 col;
+	};
+	static GPUBuffer vb_triangle;
+	if (!vb_triangle.IsValid())
+	{
+		Vertex vertices[3];
+		vertices[0].col = XMFLOAT4(1, 1, 1, 1);
+		vertices[1].col = XMFLOAT4(1, 1, 1, 1);
+		vertices[2].col = XMFLOAT4(1, 1, 1, 1);
+		wiMath::ConstructTriangleEquilateral(1, vertices[0].pos, vertices[1].pos, vertices[2].pos);
+
+		GPUBufferDesc desc;
+		desc.BindFlags = BIND_VERTEX_BUFFER;
+		desc.ByteWidth = sizeof(vertices);
+		SubresourceData initdata;
+		initdata.pSysMem = vertices;
+		device->CreateBuffer(&desc, &initdata, &vb_triangle);
+	}
+	const XMMATRIX Projection = device->GetScreenProjection();
+
+	// control-arrow-background
 	wiImage::Draw(wiTextureHelper::getWhite()
 		, wiImageParams(translation.x + scale.x + 1, translation.y, scale.y, scale.y, color.toFloat4()), cmd);
-	wiFont("V", wiFontParams((int)(translation.x + scale.x + scale.y * 0.5f), (int)(translation.y + scale.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
-		fontParams.color, fontParams.shadowColor)).Draw(cmd);
 
-	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
+	// control-arrow-triangle
+	{
+		device->BindPipelineState(&PSO_colored, cmd);
+
+		MiscCB cb;
+		cb.g_xColor = colors[ACTIVE].toFloat4();
+		XMStoreFloat4x4(&cb.g_xTransform, XMMatrixScaling(scale.y * 0.25f, scale.y * 0.25f, 1) *
+			XMMatrixRotationZ(XM_PIDIV2) *
+			XMMatrixTranslation(translation.x + scale.x + 1 + scale.y * 0.5f, translation.y + scale.y * 0.5f, 0) *
+			Projection
+		);
+		device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
+		device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CBSLOT_RENDERER_MISC, cmd);
+		const GPUBuffer* vbs[] = {
+			&vb_triangle,
+		};
+		const uint32_t strides[] = {
+			sizeof(Vertex),
+		};
+		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
+
+		device->Draw(3, 0, cmd);
+	}
+
+	device->BindScissorRects(1, &scissorRect, cmd);
 
 	// control-base
 	wiImage::Draw(wiTextureHelper::getWhite()
@@ -1178,7 +1224,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 			rect.right = int(translation.x + scale.x + 1 + scale.y);
 			rect.top = int(translation.y + scale.y + 1);
 			rect.bottom = int(translation.y + scale.y + 1 + scale.y * maxVisibleItemCount);
-			wiRenderer::GetDevice()->BindScissorRects(1, &rect, cmd);
+			device->BindScissorRects(1, &rect, cmd);
 
 			// control-scrollbar-base
 			{
@@ -1209,7 +1255,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 		rect.right = rect.left + int(scale.x);
 		rect.top = int(translation.y + scale.y + 1);
 		rect.bottom = rect.top + int(scale.y * maxVisibleItemCount);
-		wiRenderer::GetDevice()->BindScissorRects(1, &rect, cmd);
+		device->BindScissorRects(1, &rect, cmd);
 
 		// control-list
 		for (int i = firstItemVisible; i < (firstItemVisible + std::min(maxVisibleItemCount, (int)items.size())); ++i)
@@ -2330,6 +2376,23 @@ float wiTreeList::GetItemOffset(int index) const
 {
 	return 2 + list_offset + index * item_height;
 }
+Hitbox2D wiTreeList::GetHitbox_ListArea() const
+{
+	return Hitbox2D(XMFLOAT2(translation.x, translation.y + item_height + 1), XMFLOAT2(scale.x - tree_scrollbar_width - 1, scale.y - item_height - 1));
+}
+Hitbox2D wiTreeList::GetHitbox_Item(int visible_count, int level) const
+{
+	XMFLOAT2 pos = XMFLOAT2(translation.x + 2 + level * item_height, translation.y + GetItemOffset(visible_count) + item_height * 0.5f);
+	Hitbox2D hitbox;
+	hitbox.pos = XMFLOAT2(pos.x + item_height * 0.5f + 2, pos.y - item_height * 0.5f);
+	hitbox.siz = XMFLOAT2(scale.x - 2 - item_height * 0.5f - 2 - level * item_height - tree_scrollbar_width - 2, item_height);
+	return hitbox;
+}
+Hitbox2D wiTreeList::GetHitbox_ItemOpener(int visible_count, int level) const
+{
+	XMFLOAT2 pos = XMFLOAT2(translation.x + 2 + level * item_height, translation.y + GetItemOffset(visible_count) + item_height * 0.5f);
+	return Hitbox2D(XMFLOAT2(pos.x, pos.y - item_height * 0.25f), XMFLOAT2(item_height * 0.5f, item_height * 0.5f));
+}
 bool wiTreeList::HasScrollbar() const
 {
 	return scale.y < (int)items.size() * item_height;
@@ -2447,6 +2510,8 @@ void wiTreeList::Update(wiGUI* gui, float dt)
 
 	list_offset = -scrollbar_value * list_height;
 
+	Hitbox2D itemlist_box = GetHitbox_ListArea();
+
 	// control-list
 	item_highlight = -1;
 	opener_highlight = -1;
@@ -2467,12 +2532,15 @@ void wiTreeList::Update(wiGUI* gui, float dt)
 			parent_open = item.open;
 			parent_level = item.level;
 
-			XMFLOAT2 pos = XMFLOAT2(translation.x + 2 + item.level * item_height, translation.y + GetItemOffset(visible_count) + item_height * 0.5f);
+			Hitbox2D open_box = GetHitbox_ItemOpener(visible_count, item.level);
+			if (!open_box.intersects(itemlist_box))
+			{
+				continue;
+			}
 
-			// opened flag box:
-			Hitbox2D open_box = Hitbox2D(XMFLOAT2(pos.x, pos.y - item_height * 0.25f), XMFLOAT2(item_height * 0.5f, item_height * 0.5f));
 			if (open_box.intersects(pointerHitbox))
 			{
+				// Opened flag box:
 				opener_highlight = i;
 				if (clicked)
 				{
@@ -2483,9 +2551,7 @@ void wiTreeList::Update(wiGUI* gui, float dt)
 			else
 			{
 				// Item name box:
-				Hitbox2D name_box;
-				name_box.pos = XMFLOAT2(pos.x + item_height * 0.5f + 2, pos.y - item_height * 0.5f);
-				name_box.siz = XMFLOAT2(scale.x - 2 - item_height * 0.5f - 2 - item.level * item_height - tree_scrollbar_width - 2, item_height);
+				Hitbox2D name_box = GetHitbox_Item(visible_count, item.level);
 				if (name_box.intersects(pointerHitbox))
 				{
 					item_highlight = i;
@@ -2541,8 +2607,9 @@ void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 		, wiImageParams(translation.x + scale.x - tree_scrollbar_width, translation.y + item_height + 1 + scrollbar_delta, tree_scrollbar_width, scrollbar_height, scrollbar_color.toFloat4()), cmd);
 
 	// list background
+	Hitbox2D itemlist_box = GetHitbox_ListArea();
 	wiImage::Draw(wiTextureHelper::getWhite()
-		, wiImageParams(translation.x, translation.y + item_height + 1, scale.x - tree_scrollbar_width - 1, scale.y - item_height - 1, colors[IDLE].toFloat4()), cmd);
+		, wiImageParams(itemlist_box.pos.x, itemlist_box.pos.y, itemlist_box.siz.x, itemlist_box.siz.y, colors[IDLE].toFloat4()), cmd);
 
 	Rect rect_without_scrollbar = scissorRect;
 	rect_without_scrollbar.top += (int32_t)item_height + 1;
@@ -2570,7 +2637,7 @@ void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 		initdata.pSysMem = vertices;
 		device->CreateBuffer(&desc, &initdata, &vb_triangle);
 	}
-	const XMMATRIX Projection = wiRenderer::GetDevice()->GetScreenProjection();
+	const XMMATRIX Projection = device->GetScreenProjection();
 
 	// control-list
 	int i = -1;
@@ -2588,13 +2655,19 @@ void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 		parent_open = item.open;
 		parent_level = item.level;
 
-		XMFLOAT2 pos = XMFLOAT2(translation.x + 2 + item.level * item_height, translation.y + GetItemOffset(visible_count) + item_height * 0.5f);
+		Hitbox2D open_box = GetHitbox_ItemOpener(visible_count, item.level);
+		if (!open_box.intersects(itemlist_box))
+		{
+			continue;
+		}
+
+		Hitbox2D name_box = GetHitbox_Item(visible_count, item.level);
 
 		// selected box:
 		if (item.selected || item_highlight == i)
 		{
 			wiImage::Draw(wiTextureHelper::getWhite()
-				, wiImageParams(pos.x + item_height * 0.5f + 2, pos.y - item_height * 0.5f, scale.x - item_height * 0.5f - 2 - tree_scrollbar_width, item_height,
+				, wiImageParams(name_box.pos.x, name_box.pos.y, name_box.siz.x, name_box.siz.y,
 					colors[item.selected ? FOCUS : IDLE].toFloat4()), cmd);
 		}
 		
@@ -2604,8 +2677,12 @@ void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 
 			MiscCB cb;
 			cb.g_xColor = colors[opener_highlight == i ? ACTIVE : FOCUS].toFloat4();
-			XMStoreFloat4x4(&cb.g_xTransform, XMMatrixScaling(item_height * 0.3f, item_height * 0.3f, 1) * XMMatrixRotationZ(item.open ? XM_PIDIV2 : 0) * XMMatrixTranslation(pos.x + 5, pos.y - 2, 0) * Projection);
-			wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
+			XMStoreFloat4x4(&cb.g_xTransform, XMMatrixScaling(item_height * 0.3f, item_height * 0.3f, 1) * 
+				XMMatrixRotationZ(item.open ? XM_PIDIV2 : 0) * 
+				XMMatrixTranslation(open_box.pos.x + open_box.siz.x * 0.5f, open_box.pos.y + open_box.siz.y * 0.25f, 0) *
+				Projection
+			);
+			device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
 			device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CBSLOT_RENDERER_MISC, cmd);
 			const GPUBuffer* vbs[] = {
 				&vb_triangle,
@@ -2613,13 +2690,13 @@ void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 			const uint32_t strides[] = {
 				sizeof(Vertex),
 			};
-			wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
+			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
 
 			device->Draw(3, 0, cmd);
 		}
 		
 		// Item name text:
-		wiFont(item.name, wiFontParams((int)pos.x + int(item_height * 0.5f) + 2, (int)pos.y, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_CENTER, 0, 0,
+		wiFont(item.name, wiFontParams((int)name_box.pos.x + 1, (int)(name_box.pos.y + name_box.siz.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_CENTER, 0, 0,
 			fontParams.color, fontParams.shadowColor)).Draw(cmd);
 	}
 }
