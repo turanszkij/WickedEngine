@@ -50,6 +50,13 @@ This is a reference for the C++ features of Wicked Engine
 			5. [Presenting to the screen](#presenting-to-the-screen)
 			6. [Resource binding](#resource-binding)
 			7. [Subresources](#subresources)
+			8. [Pipeline States](#pipeline-states)
+			9. [Render Passes](#render-passes)
+			10. [GPU Barriers](#gpu-barriers)
+			11. [Textures](#textures)
+			12. [GPU Buffers](#gpu-buffers)
+			13. [Updating GPU buffers](#updating-gpu-buffers)
+			14. [GPU Queries](#gpu-queries)
 		2. [GraphicsDevice_DX11](#wigraphicsdevice_dx11)
 		3. [GraphicsDevice_DX12](#wigraphicsdevice_dx12)
 		4. [GraphicsDevice_Vulkan](#wigraphicsdevice_vulkan)
@@ -468,6 +475,75 @@ There are some limitations on the maximum value of slots that can be used, these
 Resources like textures can have different views. For example, if a texture contains multiple mip levels, each mip level can be viewed as a separate texture with one mip level, or the whole texture can be viewed as a texture with multiple mip levels. When creating resources, a subresource that views the entire resource will be created. Functions that expect a subresource parameter can be provided with the value `-1` that means the whole resource. Usually, this parameter is optional.
 
 Other subresources can be create with the `GraphicsDevice::CreateSubresource()` function. The function will return an `int` value that can be used to refer to the subresource view that was created. In case the function returns `-1`, the subresource creation failed due to an incorrect parameter. Please use the [debug device](#debug-device) functionality to check for errors in this case.
+
+##### Pipeline States
+`PipelineState`s are used to define the graphics pipeline state, that includes which shaders are used, which blend mode, rasterizer state, input layout, depth stencil state and primitive topology, as well as sample mask are in effect. These states can only be bound atomically in a single call to `GraphicsDevice::SetPipelineState()`. This does not include compute shaders, which do not participate in the graphics pipeline state and can be bound individually using `GraphicsDevice::BindComputeShader()` method.
+
+The pipeline states are subject to shader compilations. Shader compilation will happen when a pipeline state is bound inside a render pass for the first time. This is required because the render target formats are necessary information for compilation, but they are not part of the pipeline state description. This choice was made for increased flexibility of defining pipeline states. However, unlike APIs where state subsets (like RasterizerDesc, or BlendStateDesc) can be bound individually, the grouping of states is more optimal regarding CPU time, because state hashes are computed only once for the whole pipeline state at creation time, as opposed to binding time for each individual state. This approach is also less prone to user error when the developer might forget setting any subset of state and the leftover state from previous render passes are incorrect. 
+
+##### Render Passes
+Render passes are defining regions in GPU execution where a number of render targets or depth buffers will be used to render into them. Render targets and depth buffers are defined as `RenderPassAttachment`s. The `RenderPassAttachment`s have a pointer to the texture, state the resource type (`RENDER_TARGET` or `DEPTH_STENCIL`), state the [subresource](#subresources) index, the load and store operations, and the layout transitions for the textures.
+
+- Load Operation: <br/>
+Defines how the texture contents are initialized at the start of the render pass. `LOADOP_LOAD` says that the previous texture content will be retained. `LOADOP_CLEAR` says that the previous contents of the texture will be lost and instead the texture clear color will be used to fill the texture. `LOADOP_DONTCARE` says that the texture contents are undefined, so this should only be used when the developer can ensure that the whole texture will be rendered to and not leaving any region empty (in which case, undefined results will be present in the texture).
+- Store operation: <br/>
+Defines how the texture contents are handled after the render pass ends. `STOREOP_STORE` means that the contents will be preserved. `STOREOP_DONTCARE` means that the contents won't be necessarily preserved, they are only temporarily valid within the duration of the render pass, which can save some memory bandwidth on some platforms (specifically tile based rendering architectures, like mobile GPUs).
+- Layout transition: <br/>
+Define the `intial_layout` and `final_layout` members to have an implicit transition performed as part of the render pass, that works like an [IMAGE_BARRIER](#gpu-barriers), but can be more optimal.
+
+##### GPU Barriers
+`GPUBarrier`s can be used to state dependencies between GPU workloads. There are different kinds of barriers:
+
+- MEMORY_BARRIER <br/>
+Memory barriers are used to wait for UAV writes to finish, or in other words to wait for shaders to finish that are writing to a BIND_UNORDERED_ACCESS resource. The `GPUBarrier::memory.resource` member is a pointer to the GPUResource to wait on. If it is nullptr, than the barrier means "wait for every UAV write that is in flight to finish".
+- IMAGE_BARRIER <br/>
+Image barriers are stating resource state transition for [textures](#textures). The most common use case for example is to transition from `IMAGE_LAYOUT_RENDERTARGET` to `IMAGE_LAYOUT_SHADER_RESOURCE`, which means that the [RenderPass](#renderpass) that writes to the texture as render target must finish before the barrier, and the texture can be used as a read only shader resource after the barrier. There are other cases that can be indicated using the `GPUBarrier::image.layout_before` and `GPUBarrier::image.layout_after` states. The `GPUBarrier::image.resource` is a pointer to the resource which will have its state changed.
+- BUFFER_BARRIER <br/>
+Similar to `IMAGE_BARRIER`, but for [GPU Buffer](#gpu-buffers) state transitions.
+
+It is very important to place barriers to the right places if using low level graphics devices APIs like [DirectX 12](#graphicsdevice_dx12) or [Vulkan](#graphicsdevice_vulkan). Missing a barrier could lead to corruption of rendered results, crashes and generally undefined behaviour. However, barriers don't have an effect for [DirectX 11](#graphicsdevice_dx11), they are handled automatically. The [debug layer](#debug-device) will help to detect errors and missing barriers.
+
+##### Textures
+`Texture` type resources are used to store images which will be sampled or written by the GPU efficiently. There are a lot of texture types, such as `Texture1D`, `Texture2D`, `TextureCube`, `Texture3D`, etc. used in [shaders](#shaders), that correspond to the simple `Texture` type on the CPU. The texture type will be determined when creating the resource with `GraphicsDevice::CreateTexture(const TextureDesc*, const SubresourceData*, Texture*)` function. The first argument is the `TextureDesc` that determines the dimensions, size, format and other properties of the texture resource. The `SubresourceData` is used to initialize the texture contents, it can be left as `nullptr`, when the texture contents don't need to be initialized, such as for textures that will be rendered into. The `Texture` is the texture that will be initialized.
+
+`SubresourceData` usage: 
+- The `SubresourceData` parameter points to an array of `SubresourceData` structs. The array size is determined by the `TextureDesc::ArraySize` * `TextureDesc::MipLevels`, so one structure for every subresource. 
+- The `SubresourceData::pSysMem` pointer should point to the texture contents on the CPU that will be uploaded to the GPU.
+- The `SubresourceData::SysMemPitch` member is indicating the distance (in bytes) from the beginning of one line of a texture to the next line.
+System-memory pitch is used only for 2D and 3D texture data as it is has no meaning for the other resource types. Specify the distance from the first pixel of one 2D slice of a 3D texture to the first pixel of the next 2D slice in that texture in the `SysMemSlicePitch` member.
+- The `SubresourcData::SysMemSlicePitch` member is indicating the distance (in bytes) from the beginning of one depth level to the next.
+System-memory-slice pitch is only used for 3D texture data as it has no meaning for the other resource types.
+- For more complete information, refer to the [DirectX 11 documentation](https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ns-d3d11-d3d11_subresource_data) on this topic, which should closely match.
+
+Related topics: [Creating Resources](#creating-resources), [Destroying Resources](#destroying-resources), [Binding resources](#resource-binding), [Subresources](#subresources)
+
+##### GPU Buffers
+`GPUBuffer` type resources are used to store linear data which will be read or written by the GPU. There are a lot of buffer types, such as structured buffers, raw buffers, vertex buffers, index buffers, typed buffers, etc. used in [shaders](#shaders), that correspond to the simple `GPUBuffer` type on the CPU. The buffer type will be determined when creating the buffer with `GraphicsDevice::CreateBuffer(const GPUBufferDesc*, const SubresourceData*, GPUBuffer*)` function. The first argument is the `GPUBufferDesc` that determines the dimensions, size, format and other properties of the texture resource. The `SubresourceData` is used to initialize the texture contents, it can be left as `nullptr`, when the texture contents don't need to be initialized, such as for textures that will be rendered into. The `GPUBuffer` is the texture that will be initialized.
+
+`SubresourceData` usage: 
+- The `SubresourceData::pSysMem` pointer should point to the buffer contents on the CPU that will be uploaded to the GPU Buffer. The size of the data is determined by the `GPUBufferDesc::ByteWidth` value that was passed to the `GraphicsDevice::CreateBuffer()` function. The buffer contents will be readily available by the time the GPU first accesses the buffer.
+
+Related topics: [Creating Resources](#creating-resources), [Destroying Resources](#destroying-resources), [Binding resources](#resource-binding), [Subresources](#subresources), [Updating GPU Buffers](#updating-gpu-buffers)
+
+##### Updating GPU buffers
+A common scenario is updating buffers, when the developer wants to make data visible from the CPU to the GPU. The simplest way is to use the `GraphicsDevice::UpdateBuffer()` function. To use this successfully, the buffer must have been created with a `Usage` that is either `USAGE_DEFAULT` or `USAGE_DYNAMIC`. The `USAGE_IMMUTABLE` buffers cannot be updated after having been created. If the `USAGE_DEFAULT` is in effect, the buffer updating can be heavier on the CPU, and introduce additional [GPUBarriers](#gpu-barriers), but they can have superior GPU read performance, or can be writable by the GPU. On the other hand, `USAGE_DYNAMIC` type buffers will be lighter weight on the CPU side, but they could have worse GPU performance. If `USAGE_DYNAMIC` was specified, the buffer must also have been created with `CPUAccessFlags` member of the `GPUBufferDesc` that contains the value `CPU_ACCESS_WRITE` in order to be successfully updated. 
+
+`GraphicsDevice::UpdateBuffer()` function can either take the dataSize parameter, or if it is left as default, the `GPUBufferDesc::ByteWidth` (that was specified at buffer creation time) number of bytes will be read from the `data` parameter and uploaded to the buffer.
+
+An other case is to dynamically allocate a temporary buffer using the `GraphicsDevice::AllocateGPU()` function. The developer has to specify the amount of space that needs to be allocated, and the function will return a `GPUAllocation` struct that has a `buffer` member that can be used for [resource binding](#resource-binding), a `data` pointer member that the application can write into, and an offset value, that indicates an offset that the new data will start from in the temporary buffer. Buffers that were allocated like this can be only used as index buffers, vertex buffers, instance buffers, or raw buffers. Attempting to use these as constant buffers, structured buffers, or typed buffers is not supported.
+
+##### GPU Queries
+The `GPUQuery` can be used to get information from the GPU to the CPU. The GPUQuery can be created for different purposes:
+- `GPU_QUERY_TYPE_EVENT` query whether the GPU reached this point or not. Use with `GraphicsDevice::QueryEnd()` to issue. When the query is read, the result of the `GraphicsDevice::QueryRead()` will be either true or false depending on whether the GPU reached that point or not.
+- `GPU_QUERY_TYPE_OCCLUSION` query how many pixels have been rendered by a range of draw calls. Use with `GraphicsDevice::QueryBegin()` and `GraphicsDevice::QueryEnd()` to mark a range of draw calls to check. When the results are retrieved, the number of rendered samples will be written to `GPUQueryResult::result_passed_sample_count`.
+- `GPU_QUERY_TYPE_OCCLUSION_PREDICATE` query whether any pixels have been rendered by a range of draw calls. Use with `GraphicsDevice::QueryBegin()` and `GraphicsDevice::QueryEnd()` to mark a range of draw calls to check. When the results are retrieved, either `1` or `0` will be written to `GPUQueryResult::result_passed_sample_count`, depending on whether there were any rendered samples or not.
+- `GPU_QUERY_TYPE_TIMESTAMP` store a timestamp when the GPU reaches this point. Use with `GraphicsDevice::QueryEnd()` to issue. When the results are retrieved, the timestamp will be written to `GPUQueryResult::result_timestamp`.
+- `GPU_QUERY_TYPE_TIMESTAMP_DISJOINT` store the GPU clock frequency at this point. Use with `GraphicsDevice::QueryEnd()` to issue. When the results are retrieved, the timestamp will be written to `GPUQueryResult::result_timestamp_frequency`. The frequency can be used to retrieve time values from timestamps like this: 
+```cpp
+float time_range_milliseconds = float(b.result_timestamp - a.result_timestamp) / disjoint_result.result_timestamp_frequency * 1000.0f);
+```
+
+Use the `GraphicsDevice::QueryRead()` function to retrieve results. However, note that the GPU Queries are designed to be running on the GPU timeline, so they shouldn't be read by the CPU immediately, but only after some frames of latency. The `wiRenderer::GPUQueryRing` helper can be used for this purpose.
 
 
 #### GraphicsDevice_DX11
