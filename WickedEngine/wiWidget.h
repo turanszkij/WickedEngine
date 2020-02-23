@@ -1,5 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiGUI.h"
 #include "wiHashString.h"
 #include "wiColor.h"
 #include "wiGraphicsDevice.h"
@@ -10,8 +11,6 @@
 #include <string>
 #include <list>
 #include <functional>
-
-class wiGUI;
 
 struct wiEventArgs
 {
@@ -27,7 +26,7 @@ struct wiEventArgs
 	uint64_t userdata;
 };
 
-class wiWidget : public wiScene::TransformComponent
+class wiWidget : public wiGUIElement
 {
 	friend class wiGUI;
 public:
@@ -52,7 +51,6 @@ protected:
 	WIDGETSTATE state = IDLE;
 	void Activate();
 	void Deactivate();
-	wiGraphics::Rect scissorRect;
 
 	wiColor colors[WIDGETSTATE_COUNT] = {
 		wiColor::Booger(),
@@ -63,6 +61,9 @@ protected:
 	static_assert(arraysize(colors) == WIDGETSTATE_COUNT, "Every WIDGETSTATE needs a default color!");
 
 	wiFontParams fontParams = wiFontParams(0, 0, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor::White(), wiColor::Black());
+
+	void ApplyScissor(const wiGraphics::Rect rect, wiGraphics::CommandList cmd) const;
+
 public:
 	const wiHashString& GetName() const;
 	void SetName(const std::string& value);
@@ -80,7 +81,6 @@ public:
 	// last param default: set color for all states
 	void SetColor(wiColor color, WIDGETSTATE state = WIDGETSTATE_COUNT);
 	wiColor GetColor() const;
-	void SetScissorRect(const wiGraphics::Rect& rect);
 	void SetTextColor(wiColor value) { fontParams.color = value; }
 	void SetTextShadowColor(wiColor value) { fontParams.shadowColor = value; }
 	void SetFontParams(wiFontParams params) { fontParams = params; }
@@ -88,16 +88,16 @@ public:
 
 	virtual void Update(wiGUI* gui, float dt);
 	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const = 0;
-	void RenderTooltip(const wiGUI* gui, wiGraphics::CommandList cmd) const;
+	virtual void RenderTooltip(const wiGUI* gui, wiGraphics::CommandList cmd) const;
 
 	XMFLOAT3 translation = XMFLOAT3(0, 0, 0);
 	XMFLOAT3 scale = XMFLOAT3(1, 1, 1);
 
 	Hitbox2D hitBox;
 
-	wiScene::TransformComponent* parent = nullptr;
+	wiGUIElement* parent = nullptr;
 	XMFLOAT4X4 world_parent_bind = IDENTITYMATRIX;
-	void AttachTo(wiScene::TransformComponent* parent);
+	void AttachTo(wiGUIElement* parent);
 	void Detach();
 
 	static void LoadShaders();
@@ -202,8 +202,9 @@ public:
 	float GetValue();
 	void SetRange(float start, float end);
 
-	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+	void Update(wiGUI* gui, float dt ) override;
+	void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+	void RenderTooltip(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
 
 	// Sets colors for the base (or "path") of the slider
 	// last param default: set color for all states

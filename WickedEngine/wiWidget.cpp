@@ -26,7 +26,7 @@ void wiWidget::Update(wiGUI* gui, float dt)
 	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
 	hitBox = Hitbox2D(XMFLOAT2(translation.x, translation.y), XMFLOAT2(scale.x, scale.y));
 
-	if (GetState() != WIDGETSTATE::ACTIVE && !tooltip.empty() && pointerHitbox.intersects(hitBox))
+	if (IsEnabled() && GetState() != WIDGETSTATE::ACTIVE && !tooltip.empty() && pointerHitbox.intersects(hitBox))
 	{
 		tooltipTimer++;
 	}
@@ -52,7 +52,7 @@ void wiWidget::Update(wiGUI* gui, float dt)
 	scissorRect.right = (int32_t)(translation.x + scale.x);
 	scissorRect.top = (int32_t)(translation.y);
 }
-void wiWidget::AttachTo(TransformComponent* parent)
+void wiWidget::AttachTo(wiGUIElement* parent)
 {
 	this->parent = parent;
 
@@ -75,8 +75,6 @@ void wiWidget::RenderTooltip(const wiGUI* gui, CommandList cmd) const
 
 	if (tooltipTimer > 25)
 	{
-		gui->ResetScissor(cmd);
-
 		XMFLOAT2 tooltipPos = XMFLOAT2(gui->pointerpos.x, gui->pointerpos.y);
 		if (tooltipPos.y > wiRenderer::GetDevice()->GetScreenHeight()*0.8f)
 		{
@@ -219,17 +217,19 @@ wiColor wiWidget::GetColor() const
 	}
 	return retVal;
 }
-void wiWidget::SetScissorRect(const wiGraphics::Rect& rect)
+void wiWidget::ApplyScissor(const Rect rect, CommandList cmd) const
 {
-	scissorRect = rect;
-	if (scissorRect.bottom>0)
-		scissorRect.bottom -= 1;
-	if (scissorRect.left>0)
-		scissorRect.left += 1;
-	if (scissorRect.right>0)
-		scissorRect.right -= 1;
-	if (scissorRect.top>0)
-		scissorRect.top += 1;
+	Rect scissor = rect;
+
+	if (parent != nullptr)
+	{
+		scissor.bottom = std::min(scissor.bottom, parent->scissorRect.bottom);
+		scissor.top = std::min(scissor.top, parent->scissorRect.top);
+		scissor.left = std::min(scissor.left, parent->scissorRect.left);
+		scissor.right = std::min(scissor.right, parent->scissorRect.right);
+	}
+
+	wiRenderer::GetDevice()->BindScissorRects(1, &scissor, cmd);
 }
 void wiWidget::LoadShaders()
 {
@@ -367,7 +367,7 @@ void wiButton::Render(const wiGUI* gui, CommandList cmd) const
 
 	wiColor color = GetColor();
 
-	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
+	ApplyScissor(scissorRect, cmd);
 
 	wiImage::Draw(wiTextureHelper::getWhite()
 		, wiImageParams(translation.x, translation.y, scale.x, scale.y, color.toFloat4()), cmd);
@@ -457,9 +457,7 @@ void wiLabel::Render(const wiGUI* gui, CommandList cmd) const
 
 	wiColor color = GetColor();
 
-	gui->ResetScissor(cmd);
-
-	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
+	ApplyScissor(scissorRect, cmd);
 
 	wiImage::Draw(wiTextureHelper::getWhite()
 		, wiImageParams(translation.x, translation.y, scale.x, scale.y, color.toFloat4()), cmd);
@@ -611,7 +609,7 @@ void wiTextInputField::Render(const wiGUI* gui, CommandList cmd) const
 	wiFont(description, wiFontParams((int)(translation.x - 2), (int)(translation.y + scale.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
 		fontParams.color, fontParams.shadowColor)).Draw(cmd);
 
-	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
+	ApplyScissor(scissorRect, cmd);
 
 	wiImage::Draw(wiTextureHelper::getWhite()
 		, wiImageParams(translation.x, translation.y, scale.x, scale.y, color.toFloat4()), cmd);
@@ -657,13 +655,25 @@ wiSlider::wiSlider(float start, float end, float defaultValue, float step, const
 	SetSize(XMFLOAT2(200, 40));
 
 	valueInputField = new wiTextInputField(name + "_endInputField");
+	valueInputField->SetTooltip("Enter number to modify value even outside slider limits. Enter \"reset\" to reset slider to initial state.");
 	valueInputField->SetSize(XMFLOAT2(scale.y * 2, scale.y));
 	valueInputField->SetPos(XMFLOAT2(scale.x + 20, 0));
 	valueInputField->SetValue(end);
-	valueInputField->OnInputAccepted([&](wiEventArgs args) {
-		this->value = args.fValue;
-		this->start = std::min(this->start, args.fValue);
-		this->end = std::max(this->end, args.fValue);
+	valueInputField->OnInputAccepted([this, start,end,defaultValue](wiEventArgs args) {
+		if (args.sValue.compare("reset") != string::npos)
+		{
+			this->value = defaultValue;
+			this->start = start;
+			this->end = end;
+			args.fValue = this->value;
+			args.iValue = (int)this->value;
+		}
+		else
+		{
+			this->value = args.fValue;
+			this->start = std::min(this->start, args.fValue);
+			this->end = std::max(this->end, args.fValue);
+		}
 		onSlide(args);
 	});
 	valueInputField->parent = this;
@@ -796,7 +806,7 @@ void wiSlider::Render(const wiGUI* gui, CommandList cmd) const
 	wiFont(text, wiFontParams((int)(translation.x - headWidth * 0.5f), (int)(translation.y + scale.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
 		fontParams.color, fontParams.shadowColor)).Draw(cmd);
 
-	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
+	ApplyScissor(scissorRect, cmd);
 
 	// trail
 	wiImage::Draw(wiTextureHelper::getWhite()
@@ -808,6 +818,11 @@ void wiSlider::Render(const wiGUI* gui, CommandList cmd) const
 	wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
 
 	valueInputField->Render(gui, cmd);
+}
+void wiSlider::RenderTooltip(const wiGUI* gui, wiGraphics::CommandList cmd) const
+{
+	wiWidget::RenderTooltip(gui, cmd);
+	valueInputField->RenderTooltip(gui, cmd);
 }
 void wiSlider::SetBaseColor(wiColor color, WIDGETSTATE state)
 {
@@ -930,7 +945,7 @@ void wiCheckBox::Render(const wiGUI* gui, CommandList cmd) const
 	wiFont(text, wiFontParams((int)(translation.x), (int)(translation.y + scale.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
 		fontParams.color, fontParams.shadowColor)).Draw(cmd);
 
-	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
+	ApplyScissor(scissorRect, cmd);
 
 	// control
 	wiImage::Draw(wiTextureHelper::getWhite()
@@ -1202,7 +1217,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 		device->Draw(3, 0, cmd);
 	}
 
-	device->BindScissorRects(1, &scissorRect, cmd);
+	ApplyScissor(scissorRect, cmd);
 
 	// control-base
 	wiImage::Draw(wiTextureHelper::getWhite()
@@ -1224,7 +1239,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 			rect.right = int(translation.x + scale.x + 1 + scale.y);
 			rect.top = int(translation.y + scale.y + 1);
 			rect.bottom = int(translation.y + scale.y + 1 + scale.y * maxVisibleItemCount);
-			device->BindScissorRects(1, &rect, cmd);
+			ApplyScissor(rect, cmd);
 
 			// control-scrollbar-base
 			{
@@ -1255,7 +1270,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 		rect.right = rect.left + int(scale.x);
 		rect.top = int(translation.y + scale.y + 1);
 		rect.bottom = rect.top + int(scale.y * maxVisibleItemCount);
-		device->BindScissorRects(1, &rect, cmd);
+		ApplyScissor(rect, cmd);
 
 		// control-list
 		for (int i = firstItemVisible; i < (firstItemVisible + std::min(maxVisibleItemCount, (int)items.size())); ++i)
@@ -1516,7 +1531,7 @@ void wiWindow::Render(const wiGUI* gui, CommandList cmd) const
 
 	wiColor color = GetColor();
 
-	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
+	ApplyScissor(scissorRect, cmd);
 
 	// body
 	if (!IsMinimized())
@@ -1530,7 +1545,7 @@ void wiWindow::Render(const wiGUI* gui, CommandList cmd) const
 		if (x != gui->GetActiveWidget())
 		{
 			// the gui will render the active on on top of everything!
-			wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
+			ApplyScissor(scissorRect, cmd);
 			x->Render(gui, cmd);
 		}
 	}
@@ -2159,7 +2174,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	wiRenderer::GetDevice()->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CBSLOT_RENDERER_MISC, cmd);
 	wiRenderer::GetDevice()->BindPipelineState(&PSO_colored, cmd);
 
-	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
+	ApplyScissor(scissorRect, cmd);
 
 	MiscCB cb;
 
@@ -2580,7 +2595,7 @@ void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 	}
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	device->BindScissorRects(1, &scissorRect, cmd);
+	ApplyScissor(scissorRect, cmd);
 
 	// control-base
 	wiImage::Draw(wiTextureHelper::getWhite()
@@ -2614,7 +2629,7 @@ void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 	Rect rect_without_scrollbar = scissorRect;
 	rect_without_scrollbar.top += (int32_t)item_height + 1;
 	rect_without_scrollbar.right -= (int32_t)tree_scrollbar_width + 1;
-	device->BindScissorRects(1, &rect_without_scrollbar, cmd);
+	ApplyScissor(rect_without_scrollbar, cmd);
 
 	struct Vertex
 	{

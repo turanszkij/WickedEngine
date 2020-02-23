@@ -9,7 +9,13 @@ class wiHashString;
 
 class wiWidget;
 
-class wiGUI : public wiScene::TransformComponent
+class wiGUIElement : public wiScene::TransformComponent
+{
+public:
+	wiGraphics::Rect scissorRect;
+};
+
+class wiGUI : public wiGUIElement
 {
 	friend class wiWidget;
 private:
@@ -41,8 +47,6 @@ public:
 
 	void SetVisible(bool value) { visible = value; }
 	bool IsVisible() { return visible; }
-
-	void ResetScissor(wiGraphics::CommandList cmd) const;
 
 
 	const XMFLOAT2& GetPointerPos() const
