@@ -676,7 +676,6 @@ wiSlider::wiSlider(float start, float end, float defaultValue, float step, const
 		}
 		onSlide(args);
 	});
-	valueInputField->parent = this;
 	valueInputField->AttachTo(this);
 }
 wiSlider::~wiSlider()
@@ -700,6 +699,11 @@ void wiSlider::SetRange(float start, float end)
 void wiSlider::Update(wiGUI* gui, float dt)
 {
 	wiWidget::Update(gui, dt);
+
+	scissorRect.bottom = (int32_t)(translation.y + scale.y);
+	scissorRect.left = (int32_t)(translation.x);
+	scissorRect.right = (int32_t)(translation.x + scale.x + 20 + scale.y * 2); // include the valueInputField
+	scissorRect.top = (int32_t)(translation.y);
 
 	for (int i = 0; i < WIDGETSTATE_COUNT; ++i)
 	{
