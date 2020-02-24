@@ -7,6 +7,48 @@
 using namespace std;
 using namespace wiGraphics;
 
+void wiGUIElement::AttachTo(wiGUIElement* parent)
+{
+	this->parent = parent;
+
+	this->parent->UpdateTransform();
+	XMStoreFloat4x4(&world_parent_bind, XMMatrixInverse(nullptr, XMLoadFloat4x4(&parent->world)));
+}
+void wiGUIElement::Detach()
+{
+	this->parent = nullptr;
+	ApplyTransform();
+}
+void wiGUIElement::ApplyScissor(const Rect rect, CommandList cmd, bool constrain_to_parent) const
+{
+	Rect scissor = rect;
+
+	if (constrain_to_parent && parent != nullptr)
+	{
+		wiGUIElement* recurse_parent = parent;
+		while (recurse_parent != nullptr)
+		{
+			scissor.bottom = std::min(scissor.bottom, recurse_parent->scissorRect.bottom);
+			scissor.top = std::max(scissor.top, recurse_parent->scissorRect.top);
+			scissor.left = std::max(scissor.left, recurse_parent->scissorRect.left);
+			scissor.right = std::min(scissor.right, recurse_parent->scissorRect.right);
+
+			recurse_parent = recurse_parent->parent;
+		}
+	}
+
+	if (scissor.left > scissor.right)
+	{
+		scissor.left = scissor.right;
+	}
+	if (scissor.top > scissor.bottom)
+	{
+		scissor.top = scissor.bottom;
+	}
+
+	wiRenderer::GetDevice()->BindScissorRects(1, &scissor, cmd);
+}
+
 wiGUI::wiGUI() : activeWidget(nullptr), focus(false), visible(true), pointerpos(XMFLOAT2(0,0))
 {
 	SetDirty();
@@ -83,18 +125,18 @@ void wiGUI::Render(CommandList cmd) const
 		if (x->parent == this && x != activeWidget)
 		{
 			// the contained child widgets will be rendered by the containers
-			wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
+			ApplyScissor(scissorRect, cmd);
 			x->Render(this, cmd);
 		}
 	}
 	if (activeWidget != nullptr)
 	{
 		// render the active widget on top of everything
-		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
+		ApplyScissor(scissorRect, cmd);
 		activeWidget->Render(this, cmd);
 	}
 
-	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
+	ApplyScissor(scissorRect, cmd);
 
 	for (auto&x : widgets)
 	{

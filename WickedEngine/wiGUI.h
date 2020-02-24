@@ -11,8 +11,15 @@ class wiWidget;
 
 class wiGUIElement : public wiScene::TransformComponent
 {
+protected:
+	void ApplyScissor(const wiGraphics::Rect rect, wiGraphics::CommandList cmd, bool constrain_to_parent = true) const;
 public:
 	wiGraphics::Rect scissorRect;
+
+	wiGUIElement* parent = nullptr;
+	XMFLOAT4X4 world_parent_bind = IDENTITYMATRIX;
+	void AttachTo(wiGUIElement* parent);
+	void Detach();
 };
 
 class wiGUI : public wiGUIElement

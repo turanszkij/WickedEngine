@@ -52,18 +52,6 @@ void wiWidget::Update(wiGUI* gui, float dt)
 	scissorRect.right = (int32_t)(translation.x + scale.x);
 	scissorRect.top = (int32_t)(translation.y);
 }
-void wiWidget::AttachTo(wiGUIElement* parent)
-{
-	this->parent = parent;
-
-	this->parent->UpdateTransform();
-	XMStoreFloat4x4(&world_parent_bind, XMMatrixInverse(nullptr, XMLoadFloat4x4(&parent->world)));
-}
-void wiWidget::Detach()
-{
-	this->parent = nullptr;
-	ApplyTransform();
-}
 void wiWidget::RenderTooltip(const wiGUI* gui, CommandList cmd) const
 {
 	if (!IsVisible())
@@ -216,20 +204,6 @@ wiColor wiWidget::GetColor() const
 		retVal = wiColor::lerp(wiColor::Transparent(), retVal, 0.5f);
 	}
 	return retVal;
-}
-void wiWidget::ApplyScissor(const Rect rect, CommandList cmd) const
-{
-	Rect scissor = rect;
-
-	if (parent != nullptr)
-	{
-		scissor.bottom = std::min(scissor.bottom, parent->scissorRect.bottom);
-		scissor.top = std::min(scissor.top, parent->scissorRect.top);
-		scissor.left = std::min(scissor.left, parent->scissorRect.left);
-		scissor.right = std::min(scissor.right, parent->scissorRect.right);
-	}
-
-	wiRenderer::GetDevice()->BindScissorRects(1, &scissor, cmd);
 }
 void wiWidget::LoadShaders()
 {
@@ -606,7 +580,7 @@ void wiTextInputField::Render(const wiGUI* gui, CommandList cmd) const
 
 	wiColor color = GetColor();
 
-	wiFont(description, wiFontParams((int)(translation.x - 2), (int)(translation.y + scale.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
+	wiFont(description, wiFontParams((int)(translation.x), (int)(translation.y + scale.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
 		fontParams.color, fontParams.shadowColor)).Draw(cmd);
 
 	ApplyScissor(scissorRect, cmd);
@@ -807,14 +781,14 @@ void wiSlider::Render(const wiGUI* gui, CommandList cmd) const
 	wiColor color = GetColor();
 
 	// text
-	wiFont(text, wiFontParams((int)(translation.x - headWidth * 0.5f), (int)(translation.y + scale.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
+	wiFont(text, wiFontParams((int)(translation.x), (int)(translation.y + scale.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
 		fontParams.color, fontParams.shadowColor)).Draw(cmd);
 
 	ApplyScissor(scissorRect, cmd);
 
 	// trail
 	wiImage::Draw(wiTextureHelper::getWhite()
-		, wiImageParams(translation.x - headWidth * 0.5f, translation.y, scale.x + headWidth, scale.y, colors_base[state].toFloat4()), cmd);
+		, wiImageParams(translation.x, translation.y, scale.x, scale.y, colors_base[state].toFloat4()), cmd);
 	// head
 	float headPosX = wiMath::Lerp(translation.x + headWidth * 0.5f + 2, translation.x + scale.x - headWidth * 0.5f - 2, wiMath::Clamp(wiMath::InverseLerp(start, end, value), 0, 1));
 	wiImageParams fx(headPosX, translation.y + 2, headWidth, scale.y - 4, color.toFloat4());
@@ -1243,7 +1217,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 			rect.right = int(translation.x + scale.x + 1 + scale.y);
 			rect.top = int(translation.y + scale.y + 1);
 			rect.bottom = int(translation.y + scale.y + 1 + scale.y * maxVisibleItemCount);
-			ApplyScissor(rect, cmd);
+			ApplyScissor(rect, cmd, false);
 
 			// control-scrollbar-base
 			{
@@ -1274,7 +1248,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 		rect.right = rect.left + int(scale.x);
 		rect.top = int(translation.y + scale.y + 1);
 		rect.bottom = rect.top + int(scale.y * maxVisibleItemCount);
-		ApplyScissor(rect, cmd);
+		ApplyScissor(rect, cmd, false);
 
 		// control-list
 		for (int i = firstItemVisible; i < (firstItemVisible + std::min(maxVisibleItemCount, (int)items.size())); ++i)
@@ -2630,9 +2604,11 @@ void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 	wiImage::Draw(wiTextureHelper::getWhite()
 		, wiImageParams(itemlist_box.pos.x, itemlist_box.pos.y, itemlist_box.siz.x, itemlist_box.siz.y, colors[IDLE].toFloat4()), cmd);
 
-	Rect rect_without_scrollbar = scissorRect;
-	rect_without_scrollbar.top += (int32_t)item_height + 1;
-	rect_without_scrollbar.right -= (int32_t)tree_scrollbar_width + 1;
+	Rect rect_without_scrollbar;
+	rect_without_scrollbar.left = (int)itemlist_box.pos.x;
+	rect_without_scrollbar.right = (int)(itemlist_box.pos.x + itemlist_box.siz.x);
+	rect_without_scrollbar.top = (int)itemlist_box.pos.y;
+	rect_without_scrollbar.bottom = (int)(itemlist_box.pos.y + itemlist_box.siz.y);
 	ApplyScissor(rect_without_scrollbar, cmd);
 
 	struct Vertex

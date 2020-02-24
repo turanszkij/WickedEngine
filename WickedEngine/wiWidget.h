@@ -62,8 +62,6 @@ protected:
 
 	wiFontParams fontParams = wiFontParams(0, 0, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor::White(), wiColor::Black());
 
-	void ApplyScissor(const wiGraphics::Rect rect, wiGraphics::CommandList cmd) const;
-
 public:
 	const wiHashString& GetName() const;
 	void SetName(const std::string& value);
@@ -94,11 +92,6 @@ public:
 	XMFLOAT3 scale = XMFLOAT3(1, 1, 1);
 
 	Hitbox2D hitBox;
-
-	wiGUIElement* parent = nullptr;
-	XMFLOAT4X4 world_parent_bind = IDENTITYMATRIX;
-	void AttachTo(wiGUIElement* parent);
-	void Detach();
 
 	static void LoadShaders();
 };
