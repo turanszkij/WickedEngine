@@ -70,32 +70,9 @@ namespace wiScene
 	}
 	void TransformComponent::UpdateTransform_Parented(const TransformComponent& parent, const XMFLOAT4X4& inverseParentBindMatrix)
 	{
-		XMMATRIX W;
+		SetDirty();
 
-		// Normally, every transform would be NOT dirty at this point, but...
-
-		if (parent.IsDirty())
-		{
-			// If parent is dirty, that means parent ws updated for some reason (anim system, physics or user...)
-			//	So we need to propagate the new parent matrix down to this child
-			SetDirty();
-
-			W = XMLoadFloat4x4(&world);
-		}
-		else
-		{
-			// If it is not dirty, then we still need to propagate parent's matrix to this, 
-			//	because every transform is marked as NOT dirty at the end of transform update system
-			//	but we look up the local matrix instead, because world matrix might contain 
-			//	results from previous run of the hierarchy system...
-			XMVECTOR S_local = XMLoadFloat3(&scale_local);
-			XMVECTOR R_local = XMLoadFloat4(&rotation_local);
-			XMVECTOR T_local = XMLoadFloat3(&translation_local);
-			W = XMMatrixScalingFromVector(S_local) *
-				XMMatrixRotationQuaternion(R_local) *
-				XMMatrixTranslationFromVector(T_local);
-		}
-
+		XMMATRIX W = XMLoadFloat4x4(&world);
 		XMMATRIX W_parent = XMLoadFloat4x4(&parent.world);
 		XMMATRIX B = XMLoadFloat4x4(&inverseParentBindMatrix);
 		W = W * B * W_parent;
@@ -1455,8 +1432,6 @@ namespace wiScene
 		{
 			transform_child = &transforms.Create(entity);
 		}
-		// Child updated immediately, to that it can be immediately attached to afterwards:
-		transform_child->UpdateTransform_Parented(*transform_parent, parentcomponent.world_parent_inverse_bind);
 
 		LayerComponent* layer_parent = layers.GetComponent(parent);
 		if (layer_parent == nullptr)
