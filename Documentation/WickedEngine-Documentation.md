@@ -80,6 +80,8 @@ This is a reference for the C++ features of Wicked Engine
 		10. [Decals](#decals)
 		11. [Environment probes](#environment-probes)
 		12. [Post processing](#post-processing)
+		13. [Instancing](#instancing)
+		14. [Stencil](#stencil)
 	3. [wiEnums](#wienums)
 	4. [wiImage](#wiimage)
 	5. [wiFont](#wifont)
@@ -426,7 +428,7 @@ device->PresentEnd(cmd_present); // CPU submits work for GPU
 Furthermore, the `BeginCommandList()` is thread safe, so the user can call it from worker threads if ordering between command lists is not a requirement (such as when they are producing workloads that are independent of each other).
 
 ##### Presenting to the screen
-The `PresentBegin()` and `PresentEnd()` functions are used to prepare for rendering to the back buffer. When the `PresentBegin()` is called, the back buffer will be set as the current active render target or render pass. This means, that rendering commands will draw directly to the screen. This is generally used to draw textures that were previously rendered to, or 2D GUI elements. For example, the `RenderPath3D::Compose()` function is used in the [High Level Interface](#high-level-interface) to draw the results of the `RenderPath3D::Render()` off screen rendered results, and the [GUI](#gui) elements. The rendering commands executed between `PresentBegin()` and `PresentEnd()` are still executed by the GPU in the command list beginning order described in the topic: [Work submission](#work-submission).
+The `PresentBegin()` and `PresentEnd()` functions are used to prepare for rendering to the back buffer. When the `PresentBegin()` is called, the back buffer will be set as the current active render target or render pass. This means, that rendering commands will draw directly to the screen. This is generally used to draw textures that were previously rendered to, or 2D GUI elements. For example, the `RenderPath3D::Compose()` function is used in the [High Level Interface](#high-level-interface) to draw the results of the `RenderPath3D::Render()`, and the [GUI](#gui) elements. The rendering commands executed between `PresentBegin()` and `PresentEnd()` are still executed by the GPU in the command list beginning order described in the topic: [Work submission](#work-submission).
 
 ##### Resource binding
 The resource binding model is based on DirectX 11. That means, resources are bound to slot numbers that are simple integers. This makes it easy to share binding information between shaders and C++ code, just define the bind slot number as global constants in [shared header files](#shaderinterop). For sharing, the bind slot numbers can be easily defined as compile time constants using:
@@ -662,6 +664,23 @@ The probes also must have [TransformComponent](#transformcomponent) associated t
 There are several post processing effects implemented in the `wiRenderer`. They are all implemented in a single function with their name starting with Postprocess_, like for example: `wiRenderer::Postprocess_SSAO()`. They are aimed to be stateless functions, with their function signature clearly indicating input-output parameters and resources.
 
 The chain/order of post processes is not implemented here, only the single effects themselves. The order of post proceses is more of a user responsibility, so it should be implemented in the [High Ievel Interface](#high-level-interface). For reference, a default post processchain is implemented in [RenderPath3D::RenderPostProcessChain()](#renderpath3d) function.
+
+#### Instancing
+Instanced rendering will be always used automatically when rendering objects. This means, that [ObjectComponents](#objectcomponent) that share the same [mesh](#meshcomponent) will be batched together into a single draw call, even if they have different transformations, colors, or dithering parameters. This can greatly reduce CPU overhead when lots of objects are duplicated (for example trees, rocks, props).
+
+[ObjectComponents](#objectcomponent) can override [stencil](#stencil) settings for the [material](#materialcomponent). In case multiple [ObjectComponents](#objectcomponent) share the same mesh, but some are using different stencil overrides, those could be removed from the instanced batch, so there is some overhead to modifying stencil overrides for objects.
+
+<i>Tip: to find out more about how instancing is used to batch objects together, take a look at the `RenderMeshes()` function inside [wiRenderer.cpp](../WickedEngine/wiRenderer.cpp)</i>
+
+#### Stencil
+If a depth stencil buffer is bound when using [DrawScene()](#drawscene), or [DrawScene_Transparent()](#drawscene_transparent), the stencil buffer will be written. The stencil is a 8-bit mask that can be used to achieve different kinds of screen space effects for different objects. [MaterialComponents](#materialcomponent) and [ObjectComponents](#objectcomponent) have the ability to set the stencil value that will be rendered. The 8-bit stencil value is separated into two parts:
+- The first 4 bits are reseved for engine-specific values, such as to separate skin, sky, common materials from each other. these values are contained in [wiEnums](#wienums) in the `STENCILREF` enum.
+- The last 4 bits are reserved for user stencil values. The application can decide what it wants to use these for.
+
+Please use the `wiRenderer::CombineStencilrefs()` function to specify stencil masks in a future-proof way.
+
+The [Pipeline States](#pipeline-states) have a `DepthStencilState` type member which will control how the stencil mask is used in the graphics pipeline for any custom rendering effect. The functionality is supposed to be equivalent and closely matching of what DirectX 11 provides, so for further information, refer to the [DirectX 11 documentation of Depth Stencil States](https://docs.microsoft.com/en-us/windows/win32/direct3d11/d3d10-graphics-programming-guide-depth-stencil).
+
 
 ### wiEnums
 [[Header]](../WickedEngine/wiEnums.h)
