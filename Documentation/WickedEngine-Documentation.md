@@ -50,7 +50,7 @@ This is a reference for the C++ features of Wicked Engine
 			5. [Presenting to the screen](#presenting-to-the-screen)
 			6. [Resource binding](#resource-binding)
 			7. [Subresources](#subresources)
-			8. [Pipeline States](#pipeline-states)
+			8. [Pipeline States and Shaders](#pipeline-states-and-shaders)
 			9. [Render Passes](#render-passes)
 			10. [GPU Barriers](#gpu-barriers)
 			11. [Textures](#textures)
@@ -82,6 +82,9 @@ This is a reference for the C++ features of Wicked Engine
 		12. [Post processing](#post-processing)
 		13. [Instancing](#instancing)
 		14. [Stencil](#stencil)
+		15. [Loading Shaders](#loading-shaders)
+		16. [Debug Draw](#debug-draw)
+		17. [Animation Skinning](#animation-skinning)
 	3. [wiEnums](#wienums)
 	4. [wiImage](#wiimage)
 	5. [wiFont](#wifont)
@@ -478,10 +481,20 @@ Resources like textures can have different views. For example, if a texture cont
 
 Other subresources can be create with the `GraphicsDevice::CreateSubresource()` function. The function will return an `int` value that can be used to refer to the subresource view that was created. In case the function returns `-1`, the subresource creation failed due to an incorrect parameter. Please use the [debug device](#debug-device) functionality to check for errors in this case.
 
-##### Pipeline States
+##### Pipeline States and Shaders
 `PipelineState`s are used to define the graphics pipeline state, that includes which shaders are used, which blend mode, rasterizer state, input layout, depth stencil state and primitive topology, as well as sample mask are in effect. These states can only be bound atomically in a single call to `GraphicsDevice::SetPipelineState()`. This does not include compute shaders, which do not participate in the graphics pipeline state and can be bound individually using `GraphicsDevice::BindComputeShader()` method.
 
 The pipeline states are subject to shader compilations. Shader compilation will happen when a pipeline state is bound inside a render pass for the first time. This is required because the render target formats are necessary information for compilation, but they are not part of the pipeline state description. This choice was made for increased flexibility of defining pipeline states. However, unlike APIs where state subsets (like RasterizerDesc, or BlendStateDesc) can be bound individually, the grouping of states is more optimal regarding CPU time, because state hashes are computed only once for the whole pipeline state at creation time, as opposed to binding time for each individual state. This approach is also less prone to user error when the developer might forget setting any subset of state and the leftover state from previous render passes are incorrect. 
+
+Shaders still need to be created with `GraphicsDevice::CreateShader()` in a similar to CreateTexture(), etc. This could result in shader compilation/hashing in some graphics APIs like DirectX 11. The CreateShader() function expects a `wiGraphics::SHADERSTAGE` enum value which will define the type of shader:
+- `VS`: Vertex Shader
+- `HS`: Hull Shader, or Tessellation Control Shader
+- `DS`: Domain Shader, or Tessellation Evaluation Shader
+- `GS`: Geometry Shader
+- `PS`: Pixel Shader
+- `CS`: Compute Shader
+
+Depending on the graphics device implementation, the shader code must be different format. For example, DirectX expects HLSL shaders, Vulkan expects SPIR-V shaders. The engine can only use precompiled shader bytecodes, shader compilation from high level source code is not supported. Usually shaders are compiled into bytecode and saved to files (with .cso extension) by Visual Studio if they are included in the project. These files can be loaded to memory and provided as input buffers to the CreateShader() function.
 
 ##### Render Passes
 Render passes are defining regions in GPU execution where a number of render targets or depth buffers will be used to render into them. Render targets and depth buffers are defined as `RenderPassAttachment`s. The `RenderPassAttachment`s have a pointer to the texture, state the resource type (`RENDER_TARGET` or `DEPTH_STENCIL`), state the [subresource](#subresources) index, the load and store operations, and the layout transitions for the textures.
@@ -680,6 +693,30 @@ If a depth stencil buffer is bound when using [DrawScene()](#drawscene), or [Dra
 Please use the `wiRenderer::CombineStencilrefs()` function to specify stencil masks in a future-proof way.
 
 The [Pipeline States](#pipeline-states) have a `DepthStencilState` type member which will control how the stencil mask is used in the graphics pipeline for any custom rendering effect. The functionality is supposed to be equivalent and closely matching of what DirectX 11 provides, so for further information, refer to the [DirectX 11 documentation of Depth Stencil States](https://docs.microsoft.com/en-us/windows/win32/direct3d11/d3d10-graphics-programming-guide-depth-stencil).
+
+#### Loading Shaders
+While the [GraphicsDevice is responsible of creating shaders and pipeline states](#pipeline-states-and-shaders), loading the shader files themselves are not handled by the graphics device. The `wiRenderer::LoadShader()` is a helper function that provides this feature. This is internally loading shaders from a common shader path, that is by default the "../WickedEngine/shaders" directory (relative to the application working directory), so the filename provided to this function must be relative to that path. Every system in the engine that loads shaders uses this function to load shaders from the same folder, which makes it very easy to reload shaders on demand with the `wiRenderer::ReloadShaders()` function. This is useful for when the developer modifies a shader and recompiles it, the engine can reload it while the application is running. The developer can modify the common shader path with the `wiRenderer::SetShaderPath()` to any path of preference. The developer is free to load shaders with a custom loader, from any path too, but the `wiRenderer::ReloadShaders()` functionality might not work in that case for those shaders.
+
+#### Debug Draw
+Debug geometry can be rendered by calling the `wiRenderer::DrawDebugWorld()` function and setting up debug geometries, or enabling debug features. The `DrawDebugWorld()` is already called by [RenderPath3D](#renderpath3d), so the developer can simply just worry about configure debug drawing features and add debug geometries and drawing will happen at the right place (if the developer decided to use [RenderPath3D](#renderpath3d) in their application). 
+
+The user provided debug geometry features at present are: 
+- `AddRenderableBox()`: provide a transformation matrix and color to render a wireframe box mesh with the desired transformation and color. The box will be only rendered for a single frame.
+- `AddRenderableLine()`: provide line segment begin, end positions and a color value. The line will be only rendered for a single frame.
+- `AddRenderablePoint()`: provide a position, size and color to render a point as a "X" line geometry that is always camera facing. The point will be only rendered for a single frame.
+
+Configuring other debug rendering functionality:
+- `SetToDrawDebugBoneLines()`: Bones will be rendered as lines
+- `SetToDrawDebugPartitionTree()`: Scene object bounding boxes will be rendered.
+- `SetToDrawDebugEnvProbes()`: Environment probes will be rendered as reflective spheres and their affection range as oriented bounding boxes.
+- `SetToDrawDebugEmitters()`: Emitter mesh geometries will be rendered as wireframe meshes.
+- `SetToDrawDebugForceFields()`: Force field volumes will be rendered.
+- `SetToDrawDebugCameras()`: Cameras will be rendered as oriented boxes.
+
+#### Animation Skinning
+[MeshComponents](#meshcomponent) that have their `armatureID` associated with an [ArmatureComponent](#armaturecomponent) will be skinned inside the `wiRenderer::UpdateRenderData()` function. This means that their vertex buffer will be animated with compute shaders, and the animated vertex buffer will be used throughout the rest of the frame. 
+
+If the [ArmatureComponent](#armaturecomponent) has less than `SKINNING_COMPUTE_THREADCOUNT` amount of bones, an optimized version of the skinning will be performed that uses shared memory. The user can disable this with the `wiRenderer::SetLDSSkinningEnabled()` function if the optimization proves to be worse on the target platform.
 
 
 ### wiEnums
