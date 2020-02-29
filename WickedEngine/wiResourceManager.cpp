@@ -306,7 +306,8 @@ namespace wiResourceManager
 		auto it = resources.find(name);
 		if (it != resources.end())
 		{
-			result = it->second.lock()->data != nullptr;
+			auto resource = it->second.lock();
+			result = resource != nullptr && resource->data != nullptr;
 		}
 		locker.unlock();
 		return result;
