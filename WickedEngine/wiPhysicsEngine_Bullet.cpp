@@ -361,7 +361,8 @@ namespace wiPhysicsEngine
 
 			SoftBodyPhysicsComponent& physicscomponent = softbodies[args.jobIndex];
 			Entity entity = softbodies.GetEntity(args.jobIndex);
-			MeshComponent& mesh = *meshes.GetComponent(entity);
+			MeshComponent& mesh = *meshes.GetComponent(entity); 
+			const ArmatureComponent* armature = mesh.IsSkinned() ? armatures.GetComponent(mesh.armatureID) : nullptr;
 			mesh.SetDynamic(true);
 
 			if (physicscomponent._flags & SoftBodyPhysicsComponent::SAFE_TO_REGISTER && physicscomponent.physicsobject == nullptr)
@@ -391,8 +392,21 @@ namespace wiPhysicsEngine
 						uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[ind];
 						XMFLOAT3 position = physicscomponent.restPose[graphicsInd];
 						XMVECTOR P = XMLoadFloat3(&position);
+
+						if (armature != nullptr)
+						{
+							const XMUINT4& ind = mesh.vertex_boneindices[graphicsInd];
+							const XMFLOAT4& wei = mesh.vertex_boneweights[graphicsInd];
+
+							XMVECTOR skinned_pos;
+							skinned_pos = XMVector3Transform(P, armature->boneData[ind.x].Load()) * wei.x;
+							skinned_pos += XMVector3Transform(P, armature->boneData[ind.y].Load()) * wei.y;
+							skinned_pos += XMVector3Transform(P, armature->boneData[ind.z].Load()) * wei.z;
+							skinned_pos += XMVector3Transform(P, armature->boneData[ind.w].Load()) * wei.w;
+							P = skinned_pos;
+						}
+
 						P = XMVector3Transform(P, worldMatrix);
-						// todo: here goes skinning...
 						XMStoreFloat3(&position, P);
 						node.m_x = btVector3(position.x, position.y, position.z);
 					}

@@ -3441,10 +3441,19 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 	wiJobSystem::Execute(ctx, [&] {
 		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
 		{
+			Entity entity = scene.meshes.GetEntity(i);
 			MeshComponent& mesh = scene.meshes[i];
 
 			if (mesh.IsSkinned() && scene.armatures.Contains(mesh.armatureID))
 			{
+				const SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(entity);
+				if (softbody != nullptr && softbody->physicsobject != nullptr)
+				{
+					// If soft body simulation is active, don't perform skinning.
+					//	(Soft body animated vertices are skinned in simulation phase by physics system)
+					continue;
+				}
+
 				ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
 
 				if (armature.boneBuffer == nullptr)
@@ -3476,10 +3485,12 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 
 			if (mesh.vertexBuffer_PRE == nullptr)
 			{
+				mesh.streamoutBuffer_POS.reset(new GPUBuffer);
+				device->CreateBuffer(&mesh.vertexBuffer_POS->GetDesc(), nullptr, mesh.streamoutBuffer_POS.get());
 				mesh.vertexBuffer_PRE.reset(new GPUBuffer);
 				device->CreateBuffer(&mesh.vertexBuffer_POS->GetDesc(), nullptr, mesh.vertexBuffer_PRE.get());
 			}
-			mesh.vertexBuffer_POS.swap(mesh.vertexBuffer_PRE);
+			mesh.streamoutBuffer_POS.swap(mesh.vertexBuffer_PRE);
 		}
 	});
 
@@ -4043,10 +4054,19 @@ void UpdateRenderData(CommandList cmd)
 
 		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
 		{
+			Entity entity = scene.meshes.GetEntity(i);
 			const MeshComponent& mesh = scene.meshes[i];
 
 			if (mesh.IsSkinned() && scene.armatures.Contains(mesh.armatureID))
 			{
+				const SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(entity);
+				if (softbody != nullptr && softbody->physicsobject != nullptr)
+				{
+					// If soft body simulation is active, don't perform skinning.
+					//	(Soft body animated vertices are skinned in simulation phase by physics system)
+					continue;
+				}
+
 				const ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
 
 				if (!streamOutSetUp)
@@ -4135,7 +4155,7 @@ void UpdateRenderData(CommandList cmd)
 			}
 		}
 
-		device->UpdateBuffer(mesh.vertexBuffer_POS.get(), vb, cmd, (uint32_t)vb_size);
+		device->UpdateBuffer(mesh.streamoutBuffer_POS.get(), vb, cmd, (uint32_t)vb_size);
 
 		GetRenderFrameAllocator(cmd).free(vb_size);
 	}

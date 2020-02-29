@@ -1005,8 +1005,6 @@ namespace wiScene
 
 		RunAnimationUpdateSystem(ctx, animations, transforms, dt);
 
-		wiPhysicsEngine::RunPhysicsUpdateSystem(ctx, weather, armatures, transforms, meshes, objects, rigidbodies, softbodies, dt);
-
 		RunTransformUpdateSystem(ctx, transforms);
 
 		wiJobSystem::Wait(ctx); // dependecies
@@ -1022,6 +1020,8 @@ namespace wiScene
 		wiJobSystem::Wait(ctx); // dependecies
 
 		RunObjectUpdateSystem(ctx, prev_transforms, transforms, meshes, materials, objects, aabb_objects, impostors, softbodies, bounds, waterPlane);
+
+		wiPhysicsEngine::RunPhysicsUpdateSystem(ctx, weather, armatures, transforms, meshes, objects, rigidbodies, softbodies, dt);
 
 		RunCameraUpdateSystem(ctx, transforms, cameras);
 
@@ -1862,7 +1862,7 @@ namespace wiScene
 						SoftBodyPhysicsComponent* softBody = softbodies.GetComponent(object.meshID);
 						if (softBody != nullptr)
 						{
-							softBody->_flags |= SoftBodyPhysicsComponent::SAFE_TO_REGISTER; // this will be registered as soft body in the next frame
+							softBody->_flags |= SoftBodyPhysicsComponent::SAFE_TO_REGISTER; // this will be registered as soft body in the next physics update
 							softBody->worldMatrix = transform.world;
 
 							if (wiPhysicsEngine::IsEnabled() && softBody->physicsobject != nullptr)
@@ -2266,28 +2266,25 @@ namespace wiScene
 							const XMFLOAT4& wei1 = mesh.vertex_boneweights[i1];
 							const XMFLOAT4& wei2 = mesh.vertex_boneweights[i2];
 
-							XMMATRIX sump;
+							XMVECTOR skinned_pos;
 
-							sump = armature->boneData[ind0.x].Load() * wei0.x;
-							sump += armature->boneData[ind0.y].Load() * wei0.y;
-							sump += armature->boneData[ind0.z].Load() * wei0.z;
-							sump += armature->boneData[ind0.w].Load() * wei0.w;
+							skinned_pos =  XMVector3Transform(p0, armature->boneData[ind0.x].Load()) * wei0.x;
+							skinned_pos += XMVector3Transform(p0, armature->boneData[ind0.y].Load()) * wei0.y;
+							skinned_pos += XMVector3Transform(p0, armature->boneData[ind0.z].Load()) * wei0.z;
+							skinned_pos += XMVector3Transform(p0, armature->boneData[ind0.w].Load()) * wei0.w;
+							p0 = skinned_pos;
 
-							p0 = XMVector3Transform(p0, sump);
+							skinned_pos =  XMVector3Transform(p1, armature->boneData[ind1.x].Load()) * wei1.x;
+							skinned_pos += XMVector3Transform(p1, armature->boneData[ind1.y].Load()) * wei1.y;
+							skinned_pos += XMVector3Transform(p1, armature->boneData[ind1.z].Load()) * wei1.z;
+							skinned_pos += XMVector3Transform(p1, armature->boneData[ind1.w].Load()) * wei1.w;
+							p1 = skinned_pos;
 
-							sump = armature->boneData[ind1.x].Load() * wei1.x;
-							sump += armature->boneData[ind1.y].Load() * wei1.y;
-							sump += armature->boneData[ind1.z].Load() * wei1.z;
-							sump += armature->boneData[ind1.w].Load() * wei1.w;
-
-							p1 = XMVector3Transform(p1, sump);
-
-							sump = armature->boneData[ind2.x].Load() * wei2.x;
-							sump += armature->boneData[ind2.y].Load() * wei2.y;
-							sump += armature->boneData[ind2.z].Load() * wei2.z;
-							sump += armature->boneData[ind2.w].Load() * wei2.w;
-
-							p2 = XMVector3Transform(p2, sump);
+							skinned_pos =  XMVector3Transform(p2, armature->boneData[ind2.x].Load()) * wei2.x;
+							skinned_pos += XMVector3Transform(p2, armature->boneData[ind2.y].Load()) * wei2.y;
+							skinned_pos += XMVector3Transform(p2, armature->boneData[ind2.z].Load()) * wei2.z;
+							skinned_pos += XMVector3Transform(p2, armature->boneData[ind2.w].Load()) * wei2.w;
+							p2 = skinned_pos;
 						}
 
 						float distance;
