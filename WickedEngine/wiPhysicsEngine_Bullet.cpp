@@ -198,7 +198,7 @@ namespace wiPhysicsEngine
 		{
 			uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[i];
 
-			XMFLOAT3 position = physicscomponent.restPose[graphicsInd];
+			XMFLOAT3 position = mesh.vertex_positions[graphicsInd];
 			XMVECTOR P = XMLoadFloat3(&position);
 			P = XMVector3Transform(P, worldMatrix);
 			XMStoreFloat3(&position, P);
@@ -365,6 +365,15 @@ namespace wiPhysicsEngine
 			const ArmatureComponent* armature = mesh.IsSkinned() ? armatures.GetComponent(mesh.armatureID) : nullptr;
 			mesh.SetDynamic(true);
 
+			if (physicscomponent._flags & SoftBodyPhysicsComponent::FORCE_RESET)
+			{
+				physicscomponent._flags &= ~SoftBodyPhysicsComponent::FORCE_RESET;
+				if (physicscomponent.physicsobject != nullptr)
+				{
+					((btSoftRigidDynamicsWorld*)dynamicsWorld.get())->removeSoftBody((btSoftBody*)physicscomponent.physicsobject);
+					physicscomponent.physicsobject = nullptr;
+				}
+			}
 			if (physicscomponent._flags & SoftBodyPhysicsComponent::SAFE_TO_REGISTER && physicscomponent.physicsobject == nullptr)
 			{
 				physicsLock.lock();
@@ -390,7 +399,7 @@ namespace wiPhysicsEngine
 					{
 						btSoftBody::Node& node = softbody->m_nodes[(uint32_t)ind];
 						uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[ind];
-						XMFLOAT3 position = physicscomponent.restPose[graphicsInd];
+						XMFLOAT3 position = mesh.vertex_positions[graphicsInd];
 						XMVECTOR P = XMLoadFloat3(&position);
 
 						if (armature != nullptr)
@@ -474,28 +483,26 @@ namespace wiPhysicsEngine
 					btVector3 aabb_min;
 					btVector3 aabb_max;
 					softbody->getAabb(aabb_min, aabb_max);
-					mesh.aabb = AABB(XMFLOAT3(aabb_min.x(), aabb_min.y(), aabb_min.z()), XMFLOAT3(aabb_max.x(), aabb_max.y(), aabb_max.z()));
+					physicscomponent->aabb = AABB(XMFLOAT3(aabb_min.x(), aabb_min.y(), aabb_min.z()), XMFLOAT3(aabb_max.x(), aabb_max.y(), aabb_max.z()));
 
 					// Soft body simulation nodes will update graphics mesh:
-					for (size_t ind = 0; ind < mesh.vertex_positions.size(); ++ind)
+					for (size_t ind = 0; ind < physicscomponent->vertex_positions_simulation.size(); ++ind)
 					{
 						uint32_t physicsInd = physicscomponent->graphicsToPhysicsVertexMapping[ind];
 						float weight = physicscomponent->weights[physicsInd];
 
 						btSoftBody::Node& node = softbody->m_nodes[physicsInd];
 
-						XMFLOAT3& position = mesh.vertex_positions[ind];
-						position.x = node.m_x.getX();
-						position.y = node.m_x.getY();
-						position.z = node.m_x.getZ();
+						MeshComponent::Vertex_POS& vertex = physicscomponent->vertex_positions_simulation[ind];
+						vertex.pos.x = node.m_x.getX();
+						vertex.pos.y = node.m_x.getY();
+						vertex.pos.z = node.m_x.getZ();
 
-						if (!mesh.vertex_normals.empty())
-						{
-							XMFLOAT3& normal = mesh.vertex_normals[ind];
-							normal.x = -node.m_n.getX();
-							normal.y = -node.m_n.getY();
-							normal.z = -node.m_n.getZ();
-						}
+						XMFLOAT3 normal;
+						normal.x = -node.m_n.getX();
+						normal.y = -node.m_n.getY();
+						normal.z = -node.m_n.getZ();
+						vertex.MakeFromParams(normal);
 					}
 				}
 			}

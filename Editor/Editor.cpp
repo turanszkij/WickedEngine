@@ -614,7 +614,7 @@ void EditorComponent::Load()
 			ss << "Paste: Ctrl + V" << endl;
 			ss << "Delete: DELETE button" << endl;
 			ss << "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)" << endl;
-			ss << "Pin soft body triangle: Hold P while nothing is selected and click on soft body with Left mouse button" << endl;
+			ss << "Pin soft body triangle: Hold P and click on soft body with Left mouse button" << endl;
 			ss << "Script Console / backlog: HOME button" << endl;
 			ss << endl;
 			ss << "You can find sample scenes in the models directory. Try to load one." << endl;
@@ -1195,12 +1195,27 @@ void EditorComponent::Update(float dt)
 
 
 		// Interact:
-		if (hovered.entity != INVALID_ENTITY && selected.empty())
+		if (hovered.entity != INVALID_ENTITY)
 		{
 			const ObjectComponent* object = scene.objects.GetComponent(hovered.entity);
 			if (object != nullptr)
 			{
-				if (object->GetRenderTypes() & RENDERTYPE_WATER)
+				if (wiInput::Down((wiInput::BUTTON)'P') && wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
+				{
+					SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(object->meshID);
+					if (softbody != nullptr)
+					{
+						// If softbody, pin the triangle:
+						uint32_t physicsIndex0 = softbody->graphicsToPhysicsVertexMapping[hovered.vertexID0];
+						uint32_t physicsIndex1 = softbody->graphicsToPhysicsVertexMapping[hovered.vertexID1];
+						uint32_t physicsIndex2 = softbody->graphicsToPhysicsVertexMapping[hovered.vertexID2];
+						softbody->weights[physicsIndex0] = 0;
+						softbody->weights[physicsIndex1] = 0;
+						softbody->weights[physicsIndex2] = 0;
+						softbody->_flags |= SoftBodyPhysicsComponent::FORCE_RESET;
+					}
+				}
+				else if (selected.empty() && object->GetRenderTypes() & RENDERTYPE_WATER)
 				{
 					if (wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
 					{
@@ -1208,40 +1223,17 @@ void EditorComponent::Update(float dt)
 						wiRenderer::PutWaterRipple(wiHelper::GetOriginalWorkingDirectory() + "images/ripple.png", hovered.position);
 					}
 				}
-				else
+				else if (selected.empty() && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
 				{
-					if (wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
-					{
-						SoftBodyPhysicsComponent* softBody = scene.softbodies.GetComponent(object->meshID);
-						if (softBody != nullptr && wiInput::Down((wiInput::BUTTON)'P'))
-						{
-							MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
-
-							// If softbody, pin the triangle:
-							if (softBody->graphicsToPhysicsVertexMapping.empty())
-							{
-								softBody->CreateFromMesh(*mesh);
-							}
-							uint32_t physicsIndex0 = softBody->graphicsToPhysicsVertexMapping[hovered.vertexID0];
-							uint32_t physicsIndex1 = softBody->graphicsToPhysicsVertexMapping[hovered.vertexID1];
-							uint32_t physicsIndex2 = softBody->graphicsToPhysicsVertexMapping[hovered.vertexID2];
-							softBody->weights[physicsIndex0] = 0;
-							softBody->weights[physicsIndex1] = 0;
-							softBody->weights[physicsIndex2] = 0;
-						}
-						else
-						{
-							// if not water or softbody, put a decal on it:
-							static int decalselector = 0;
-							decalselector = (decalselector + 1) % 2;
-							Entity entity = scene.Entity_CreateDecal("editorDecal", wiHelper::GetOriginalWorkingDirectory() + (decalselector == 0 ? "images/leaf.dds" : "images/blood1.png"));
-							TransformComponent& transform = *scene.transforms.GetComponent(entity);
-							transform.MatrixTransform(hovered.orientation);
-							transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
-							transform.Scale(XMFLOAT3(2, 2, 2));
-							scene.Component_Attach(entity, hovered.entity);
-						}
-					}
+					// if not water or softbody, put a decal on it:
+					static int decalselector = 0;
+					decalselector = (decalselector + 1) % 2;
+					Entity entity = scene.Entity_CreateDecal("editorDecal", wiHelper::GetOriginalWorkingDirectory() + (decalselector == 0 ? "images/leaf.dds" : "images/blood1.png"));
+					TransformComponent& transform = *scene.transforms.GetComponent(entity);
+					transform.MatrixTransform(hovered.orientation);
+					transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
+					transform.Scale(XMFLOAT3(2, 2, 2));
+					scene.Component_Attach(entity, hovered.entity);
 				}
 			}
 
@@ -1252,29 +1244,53 @@ void EditorComponent::Update(float dt)
 		{
 			for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
 			{
-				const SoftBodyPhysicsComponent& softbody = scene.softbodies[i];
+				SoftBodyPhysicsComponent& softbody = scene.softbodies[i];
 				Entity entity = scene.softbodies.GetEntity(i);
 				const MeshComponent& mesh = *scene.meshes.GetComponent(entity);
 
-				XMMATRIX W = XMLoadFloat4x4(&softbody.worldMatrix);
-				int physicsIndex = 0;
-				for (auto& weight : softbody.weights)
+				const XMMATRIX W = XMLoadFloat4x4(&softbody.worldMatrix);
+				for (size_t j = 0; j < mesh.indices.size(); j += 3)
 				{
-					if (weight == 0)
+					const uint32_t graphicsIndex0 = mesh.indices[j + 0];
+					const uint32_t graphicsIndex1 = mesh.indices[j + 1];
+					const uint32_t graphicsIndex2 = mesh.indices[j + 2];
+					const uint32_t physicsIndex0 = softbody.graphicsToPhysicsVertexMapping[graphicsIndex0];
+					const uint32_t physicsIndex1 = softbody.graphicsToPhysicsVertexMapping[graphicsIndex1];
+					const uint32_t physicsIndex2 = softbody.graphicsToPhysicsVertexMapping[graphicsIndex2];
+					const float weight0 = softbody.weights[physicsIndex0];
+					const float weight1 = softbody.weights[physicsIndex1];
+					const float weight2 = softbody.weights[physicsIndex2];
+					wiRenderer::RenderableTriangle tri;
+					if (softbody.vertex_positions_simulation.empty())
 					{
-						wiRenderer::RenderablePoint point;
-						point.color = XMFLOAT4(1, 0, 0, 1);
-						point.size = 0.2f;
-						point.position = mesh.vertex_positions[softbody.physicsToGraphicsVertexMapping[physicsIndex]];
-						if (!wiPhysicsEngine::IsEnabled()) // todo: better
-						{
-							XMVECTOR P = XMLoadFloat3(&point.position);
-							P = XMVector3Transform(P, W);
-							XMStoreFloat3(&point.position, P);
-						}
-						wiRenderer::AddRenderablePoint(point);
+						XMStoreFloat3(&tri.positionA, XMVector3Transform(XMLoadFloat3(&mesh.vertex_positions[graphicsIndex0]), W));
+						XMStoreFloat3(&tri.positionB, XMVector3Transform(XMLoadFloat3(&mesh.vertex_positions[graphicsIndex1]), W));
+						XMStoreFloat3(&tri.positionC, XMVector3Transform(XMLoadFloat3(&mesh.vertex_positions[graphicsIndex2]), W));
 					}
-					++physicsIndex;
+					else
+					{
+						tri.positionA = softbody.vertex_positions_simulation[graphicsIndex0].pos;
+						tri.positionB = softbody.vertex_positions_simulation[graphicsIndex1].pos;
+						tri.positionC = softbody.vertex_positions_simulation[graphicsIndex2].pos;
+					}
+					if (weight0 == 0)
+						tri.colorA = XMFLOAT4(1, 1, 0, 1);
+					else
+						tri.colorA = XMFLOAT4(1, 1, 1, 0.5f);
+					if (weight1 == 0)
+						tri.colorB = XMFLOAT4(1, 1, 0, 1);
+					else
+						tri.colorB = XMFLOAT4(1, 1, 1, 0.5f);
+					if (weight2 == 0)
+						tri.colorC = XMFLOAT4(1, 1, 0, 1);
+					else
+						tri.colorC = XMFLOAT4(1, 1, 1, 0.5f);
+					wiRenderer::DrawTriangle(tri, true);
+					if (weight0 == 0 && weight1 == 0 && weight2 == 0)
+					{
+						tri.colorA = tri.colorB = tri.colorC = XMFLOAT4(1, 0, 0, 0.8f);
+						wiRenderer::DrawTriangle(tri);
+					}
 				}
 			}
 		}
@@ -1622,7 +1638,7 @@ void EditorComponent::Render() const
 
 				XMFLOAT4X4 hoverBox;
 				XMStoreFloat4x4(&hoverBox, aabb.getAsBoxMatrix());
-				wiRenderer::AddRenderableBox(hoverBox, XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f));
+				wiRenderer::DrawBox(hoverBox, XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f));
 			}
 
 			const LightComponent* light = scene.lights.GetComponent(hovered.entity);
@@ -1632,13 +1648,13 @@ void EditorComponent::Render() const
 
 				XMFLOAT4X4 hoverBox;
 				XMStoreFloat4x4(&hoverBox, aabb.getAsBoxMatrix());
-				wiRenderer::AddRenderableBox(hoverBox, XMFLOAT4(0.5f, 0.5f, 0, 0.5f));
+				wiRenderer::DrawBox(hoverBox, XMFLOAT4(0.5f, 0.5f, 0, 0.5f));
 			}
 
 			const DecalComponent* decal = scene.decals.GetComponent(hovered.entity);
 			if (decal != nullptr)
 			{
-				wiRenderer::AddRenderableBox(decal->world, XMFLOAT4(0.5f, 0, 0.5f, 0.5f));
+				wiRenderer::DrawBox(decal->world, XMFLOAT4(0.5f, 0, 0.5f, 0.5f));
 			}
 
 			const EnvironmentProbeComponent* probe = scene.probes.GetComponent(hovered.entity);
@@ -1648,7 +1664,7 @@ void EditorComponent::Render() const
 
 				XMFLOAT4X4 hoverBox;
 				XMStoreFloat4x4(&hoverBox, aabb.getAsBoxMatrix());
-				wiRenderer::AddRenderableBox(hoverBox, XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f));
+				wiRenderer::DrawBox(hoverBox, XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f));
 			}
 
 			const wiHairParticle* hair = scene.hairs.GetComponent(hovered.entity);
@@ -1656,7 +1672,7 @@ void EditorComponent::Render() const
 			{
 				XMFLOAT4X4 hoverBox;
 				XMStoreFloat4x4(&hoverBox, hair->aabb.getAsBoxMatrix());
-				wiRenderer::AddRenderableBox(hoverBox, XMFLOAT4(0, 0.5f, 0, 0.5f));
+				wiRenderer::DrawBox(hoverBox, XMFLOAT4(0, 0.5f, 0, 0.5f));
 			}
 		}
 
@@ -1693,7 +1709,7 @@ void EditorComponent::Render() const
 					// also display decal OBB:
 					XMFLOAT4X4 selectionBox;
 					selectionBox = decal->world;
-					wiRenderer::AddRenderableBox(selectionBox, XMFLOAT4(1, 0, 1, 1));
+					wiRenderer::DrawBox(selectionBox, XMFLOAT4(1, 0, 1, 1));
 				}
 
 				const EnvironmentProbeComponent* probe = scene.probes.GetComponent(picked.entity);
@@ -1714,7 +1730,7 @@ void EditorComponent::Render() const
 
 		XMFLOAT4X4 selectionBox;
 		XMStoreFloat4x4(&selectionBox, selectedAABB.getAsBoxMatrix());
-		wiRenderer::AddRenderableBox(selectionBox, XMFLOAT4(1, 1, 1, 1));
+		wiRenderer::DrawBox(selectionBox, XMFLOAT4(1, 1, 1, 1));
 	}
 
 	renderPath->Render();

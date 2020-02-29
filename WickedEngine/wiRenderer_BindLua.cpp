@@ -234,7 +234,7 @@ namespace wiRenderer_BindLua
 					else
 						wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) one or more arguments are not vectors!");
 				}
-				wiRenderer::AddRenderableLine(line);
+				wiRenderer::DrawLine(line);
 			}
 			else
 				wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) one or more arguments are not vectors!");
@@ -264,7 +264,7 @@ namespace wiRenderer_BindLua
 						XMStoreFloat4(&point.color, color->vector);
 					}
 				}
-				wiRenderer::AddRenderablePoint(point);
+				wiRenderer::DrawPoint(point);
 			}
 			else
 				wiLua::SError(L, "DrawPoint(Vector origin, opt float size, opt Vector color) first argument must be a Vector type!");
@@ -292,12 +292,12 @@ namespace wiRenderer_BindLua
 					{
 						XMFLOAT4 col;
 						XMStoreFloat4(&col, color->vector);
-						wiRenderer::AddRenderableBox(mat, col);
+						wiRenderer::DrawBox(mat, col);
 						return 0;
 					}
 				}
 
-				wiRenderer::AddRenderableBox(mat);
+				wiRenderer::DrawBox(mat);
 			}
 			else
 				wiLua::SError(L, "DrawBox(Matrix boxMatrix, opt Vector color) first argument must be a Matrix type!");

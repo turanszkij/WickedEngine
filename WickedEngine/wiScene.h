@@ -575,6 +575,7 @@ namespace wiScene
 			EMPTY = 0,
 			SAFE_TO_REGISTER = 1 << 0,
 			DISABLE_DEACTIVATION = 1 << 1,
+			FORCE_RESET = 1 << 2,
 		};
 		uint32_t _flags = DISABLE_DEACTIVATION;
 
@@ -583,11 +584,12 @@ namespace wiScene
 		std::vector<uint32_t> physicsToGraphicsVertexMapping; // maps graphics vertex index to physics vertex index of the same position
 		std::vector<uint32_t> graphicsToPhysicsVertexMapping; // maps a physics vertex index to first graphics vertex index of the same position
 		std::vector<float> weights; // weight per physics vertex controlling the mass. (0: disable weight (no physics, only animation), 1: default weight)
-		std::vector<XMFLOAT3> restPose; // unsimulated vertex positions
 
 		// Non-serialized attributes:
 		void* physicsobject = nullptr;
 		XMFLOAT4X4 worldMatrix = IDENTITYMATRIX;
+		std::vector<MeshComponent::Vertex_POS> vertex_positions_simulation; // graphics vertices after simulation (world space)
+		AABB aabb;
 
 		inline void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
 

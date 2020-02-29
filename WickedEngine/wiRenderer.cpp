@@ -158,6 +158,8 @@ deque<wiSprite*> waterRipples;
 std::vector<pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
 std::vector<RenderableLine> renderableLines;
 std::vector<RenderablePoint> renderablePoints;
+std::vector<RenderableTriangle> renderableTriangles_solid;
+std::vector<RenderableTriangle> renderableTriangles_wireframe;
 
 XMFLOAT4 waterPlane = XMFLOAT4(0, 1, 0, 0);
 
@@ -991,6 +993,8 @@ enum DEBUGRENDERING
 	DEBUGRENDERING_GRID,
 	DEBUGRENDERING_CUBE,
 	DEBUGRENDERING_LINES,
+	DEBUGRENDERING_TRIANGLE_SOLID,
+	DEBUGRENDERING_TRIANGLE_WIREFRAME,
 	DEBUGRENDERING_EMITTER,
 	DEBUGRENDERING_VOXEL,
 	DEBUGRENDERING_FORCEFIELD_POINT,
@@ -1140,8 +1144,8 @@ void LoadShaders()
 			{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD", 0, FORMAT_R32G32B32A32_FLOAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
-		LoadShader(VS, vertexShaders[VSTYPE_LINE], "linesVS.cso");
-		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_LINE].code, &vertexLayouts[VLTYPE_LINE]);
+		LoadShader(VS, vertexShaders[VSTYPE_VERTEXCOLOR], "vertexcolorVS.cso");
+		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_VERTEXCOLOR].code, &vertexLayouts[VLTYPE_VERTEXCOLOR]);
 
 		});
 
@@ -1268,7 +1272,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_CAPTUREIMPOSTOR_NORMAL], "captureImpostorPS_normal.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_CAPTUREIMPOSTOR_SURFACE], "captureImpostorPS_surface.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_CUBEMAP], "cubemapPS.cso"); });
-	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_LINE], "linesPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_VERTEXCOLOR], "vertexcolorPS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_SKY_STATIC], "skyPS_static.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_SKY_DYNAMIC], "skyPS_dynamic.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_SUN], "sunPS.cso"); });
@@ -1911,31 +1915,49 @@ void LoadShaders()
 			desc.pt = TRIANGLELIST;
 			break;
 		case DEBUGRENDERING_GRID:
-			desc.vs = &vertexShaders[VSTYPE_LINE];
-			desc.ps = &pixelShaders[PSTYPE_LINE];
-			desc.il = &vertexLayouts[VLTYPE_LINE];
+			desc.vs = &vertexShaders[VSTYPE_VERTEXCOLOR];
+			desc.ps = &pixelShaders[PSTYPE_VERTEXCOLOR];
+			desc.il = &vertexLayouts[VLTYPE_VERTEXCOLOR];
 			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
 			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 			desc.pt = LINELIST;
 			break;
 		case DEBUGRENDERING_CUBE:
-			desc.vs = &vertexShaders[VSTYPE_LINE];
-			desc.ps = &pixelShaders[PSTYPE_LINE];
-			desc.il = &vertexLayouts[VLTYPE_LINE];
+			desc.vs = &vertexShaders[VSTYPE_VERTEXCOLOR];
+			desc.ps = &pixelShaders[PSTYPE_VERTEXCOLOR];
+			desc.il = &vertexLayouts[VLTYPE_VERTEXCOLOR];
 			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
 			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 			desc.pt = LINELIST;
 			break;
 		case DEBUGRENDERING_LINES:
-			desc.vs = &vertexShaders[VSTYPE_LINE];
-			desc.ps = &pixelShaders[PSTYPE_LINE];
-			desc.il = &vertexLayouts[VLTYPE_LINE];
+			desc.vs = &vertexShaders[VSTYPE_VERTEXCOLOR];
+			desc.ps = &pixelShaders[PSTYPE_VERTEXCOLOR];
+			desc.il = &vertexLayouts[VLTYPE_VERTEXCOLOR];
 			desc.dss = &depthStencils[DSSTYPE_XRAY];
 			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
 			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 			desc.pt = LINELIST;
+			break;
+		case DEBUGRENDERING_TRIANGLE_SOLID:
+			desc.vs = &vertexShaders[VSTYPE_VERTEXCOLOR];
+			desc.ps = &pixelShaders[PSTYPE_VERTEXCOLOR];
+			desc.il = &vertexLayouts[VLTYPE_VERTEXCOLOR];
+			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+			desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+			desc.pt = TRIANGLELIST;
+			break;
+		case DEBUGRENDERING_TRIANGLE_WIREFRAME:
+			desc.vs = &vertexShaders[VSTYPE_VERTEXCOLOR];
+			desc.ps = &pixelShaders[PSTYPE_VERTEXCOLOR];
+			desc.il = &vertexLayouts[VLTYPE_VERTEXCOLOR];
+			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
+			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+			desc.pt = TRIANGLELIST;
 			break;
 		case DEBUGRENDERING_EMITTER:
 			desc.vs = &vertexShaders[VSTYPE_OBJECT_DEBUG];
@@ -3447,7 +3469,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 			if (mesh.IsSkinned() && scene.armatures.Contains(mesh.armatureID))
 			{
 				const SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(entity);
-				if (softbody != nullptr && softbody->physicsobject != nullptr)
+				if (softbody != nullptr && !softbody->vertex_positions_simulation.empty())
 				{
 					// If soft body simulation is active, don't perform skinning.
 					//	(Soft body animated vertices are skinned in simulation phase by physics system)
@@ -3480,6 +3502,12 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 		}
 		for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
 		{
+			const SoftBodyPhysicsComponent& softbody = scene.softbodies[i];
+			if (softbody.vertex_positions_simulation.empty())
+			{
+				continue;
+			}
+
 			Entity entity = scene.softbodies.GetEntity(i);
 			MeshComponent& mesh = *scene.meshes.GetComponent(entity);
 
@@ -4133,31 +4161,17 @@ void UpdateRenderData(CommandList cmd)
 	// Update soft body vertex buffers:
 	for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
 	{
+		const SoftBodyPhysicsComponent& softbody = scene.softbodies[i];
+		if (softbody.vertex_positions_simulation.empty())
+		{
+			continue;
+		}
+
 		Entity entity = scene.softbodies.GetEntity(i);
 		const MeshComponent& mesh = *scene.meshes.GetComponent(entity);
 
-		// Copy new simulation data to vertex buffer
-		const size_t vb_size = sizeof(MeshComponent::Vertex_POS) * mesh.vertex_positions.size();
-		MeshComponent::Vertex_POS* vb = (MeshComponent::Vertex_POS*)GetRenderFrameAllocator(cmd).allocate(vb_size);
-
-		if (mesh.vertex_normals.empty())
-		{
-			for (size_t ind = 0; ind < mesh.vertex_positions.size(); ++ind)
-			{
-				vb[ind].FromFULL(mesh.vertex_positions[ind], XMFLOAT3(0, 0, 0), 0); // subsetindex??
-			}
-		}
-		else
-		{
-			for (size_t ind = 0; ind < mesh.vertex_positions.size(); ++ind)
-			{
-				vb[ind].FromFULL(mesh.vertex_positions[ind], mesh.vertex_normals[ind], 0); // subsetindex??
-			}
-		}
-
-		device->UpdateBuffer(mesh.streamoutBuffer_POS.get(), vb, cmd, (uint32_t)vb_size);
-
-		GetRenderFrameAllocator(cmd).free(vb_size);
+		device->UpdateBuffer(mesh.streamoutBuffer_POS.get(), softbody.vertex_positions_simulation.data(), cmd, 
+			(uint32_t)(sizeof(MeshComponent::Vertex_POS) * softbody.vertex_positions_simulation.size()));
 	}
 
 	// GPU Particle systems simulation/sorting/culling:
@@ -5569,6 +5583,112 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 			device->Draw(2 * j, 0, cmd);
 
 		}
+
+		device->EventEnd(cmd);
+	}
+
+	if (!renderableTriangles_solid.empty())
+	{
+		device->EventBegin("DebugTriangles (Solid)", cmd);
+
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_TRIANGLE_SOLID], cmd);
+
+		MiscCB sb;
+		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
+		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
+		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+
+		struct Vertex
+		{
+			XMFLOAT4 position;
+			XMFLOAT4 color;
+		};
+		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(Vertex) * renderableTriangles_solid.size() * 3, cmd);
+
+		int i = 0;
+		for (auto& triangle : renderableTriangles_solid)
+		{
+			Vertex vertices[3];
+			vertices[0].position = XMFLOAT4(triangle.positionA.x, triangle.positionA.y, triangle.positionA.z, 1);
+			vertices[0].color = triangle.colorA;
+			vertices[1].position = XMFLOAT4(triangle.positionB.x, triangle.positionB.y, triangle.positionB.z, 1);
+			vertices[1].color = triangle.colorB;
+			vertices[2].position = XMFLOAT4(triangle.positionC.x, triangle.positionC.y, triangle.positionC.z, 1);
+			vertices[2].color = triangle.colorC;
+
+			memcpy((void*)((size_t)mem.data + i * sizeof(vertices)), vertices, sizeof(vertices));
+			i++;
+		}
+
+		const GPUBuffer* vbs[] = {
+			mem.buffer,
+		};
+		const uint32_t strides[] = {
+			sizeof(Vertex),
+		};
+		const uint32_t offsets[] = {
+			mem.offset,
+		};
+		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+		device->Draw(3 * i, 0, cmd);
+
+		renderableTriangles_solid.clear();
+
+		device->EventEnd(cmd);
+	}
+
+	if (!renderableTriangles_wireframe.empty())
+	{
+		device->EventBegin("DebugTriangles (Wireframe)", cmd);
+
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_TRIANGLE_WIREFRAME], cmd);
+
+		MiscCB sb;
+		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
+		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
+		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+
+		struct Vertex
+		{
+			XMFLOAT4 position;
+			XMFLOAT4 color;
+		};
+		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(Vertex) * renderableTriangles_wireframe.size() * 3, cmd);
+
+		int i = 0;
+		for (auto& triangle : renderableTriangles_wireframe)
+		{
+			Vertex vertices[3];
+			vertices[0].position = XMFLOAT4(triangle.positionA.x, triangle.positionA.y, triangle.positionA.z, 1);
+			vertices[0].color = triangle.colorA;
+			vertices[1].position = XMFLOAT4(triangle.positionB.x, triangle.positionB.y, triangle.positionB.z, 1);
+			vertices[1].color = triangle.colorB;
+			vertices[2].position = XMFLOAT4(triangle.positionC.x, triangle.positionC.y, triangle.positionC.z, 1);
+			vertices[2].color = triangle.colorC;
+
+			memcpy((void*)((size_t)mem.data + i * sizeof(vertices)), vertices, sizeof(vertices));
+			i++;
+		}
+
+		const GPUBuffer* vbs[] = {
+			mem.buffer,
+		};
+		const uint32_t strides[] = {
+			sizeof(Vertex),
+		};
+		const uint32_t offsets[] = {
+			mem.offset,
+		};
+		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+		device->Draw(3 * i, 0, cmd);
+
+		renderableTriangles_wireframe.clear();
 
 		device->EventEnd(cmd);
 	}
@@ -10029,17 +10149,28 @@ RAY GetPickRay(long cursorX, long cursorY)
 	return RAY(lineStart, rayDirection);
 }
 
-void AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color)
+void DrawBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color)
 {
 	renderableBoxes.push_back(pair<XMFLOAT4X4,XMFLOAT4>(boxMatrix,color));
 }
-void AddRenderableLine(const RenderableLine& line)
+void DrawLine(const RenderableLine& line)
 {
 	renderableLines.push_back(line);
 }
-void AddRenderablePoint(const RenderablePoint& point)
+void DrawPoint(const RenderablePoint& point)
 {
 	renderablePoints.push_back(point);
+}
+void DrawTriangle(const RenderableTriangle& triangle, bool wireframe)
+{
+	if (wireframe)
+	{
+		renderableTriangles_wireframe.push_back(triangle);
+	}
+	else
+	{
+		renderableTriangles_solid.push_back(triangle);
+	}
 }
 
 void AddDeferredMIPGen(const Texture* tex)

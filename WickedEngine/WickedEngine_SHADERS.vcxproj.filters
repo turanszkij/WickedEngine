@@ -126,9 +126,6 @@
     <FxCompile Include="lensFlarePS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="linesPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="objectPS_blackout.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -175,9 +172,6 @@
       <Filter>VS</Filter>
     </FxCompile>
     <FxCompile Include="lensFlareVS.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
-    <FxCompile Include="linesVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
     <FxCompile Include="pointLightVS.hlsl">
@@ -871,6 +865,12 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="upsample_bilateralPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="vertexcolorVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="vertexcolorPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>

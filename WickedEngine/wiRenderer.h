@@ -470,7 +470,7 @@ namespace wiRenderer
 
 
 	// Add box to render in next frame. It will be rendered in DrawDebugWorld()
-	void AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color = XMFLOAT4(1,1,1,1));
+	void DrawBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color = XMFLOAT4(1,1,1,1));
 
 	struct RenderableLine
 	{
@@ -479,7 +479,7 @@ namespace wiRenderer
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
 	};
 	// Add line to render in the next frame. It will be rendered in DrawDebugWorld()
-	void AddRenderableLine(const RenderableLine& line);
+	void DrawLine(const RenderableLine& line);
 
 	struct RenderablePoint
 	{
@@ -487,7 +487,18 @@ namespace wiRenderer
 		float size = 1.0f;
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
 	};
-	void AddRenderablePoint(const RenderablePoint& point);
+	void DrawPoint(const RenderablePoint& point);
+
+	struct RenderableTriangle
+	{
+		XMFLOAT3 positionA = XMFLOAT3(0, 0, 0);
+		XMFLOAT4 colorA = XMFLOAT4(1, 1, 1, 1);
+		XMFLOAT3 positionB = XMFLOAT3(0, 0, 0);
+		XMFLOAT4 colorB = XMFLOAT4(1, 1, 1, 1);
+		XMFLOAT3 positionC = XMFLOAT3(0, 0, 0);
+		XMFLOAT4 colorC = XMFLOAT4(1, 1, 1, 1);
+	};
+	void DrawTriangle(const RenderableTriangle& triangle, bool wireframe = false);
 
 	// Add a texture that should be mipmapped whenever it is feasible to do so
 	void AddDeferredMIPGen(const wiGraphics::Texture* tex);

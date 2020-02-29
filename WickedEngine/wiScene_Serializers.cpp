@@ -395,9 +395,10 @@ namespace wiScene
 			archive >> graphicsToPhysicsVertexMapping;
 			archive >> weights;
 
-			if (archive.GetVersion() >= 29)
+			if (archive.GetVersion() >= 29 && archive.GetVersion() < 34)
 			{
-				archive >> restPose;
+				std::vector<XMFLOAT3> temp;
+				archive >> temp;
 			}
 
 			_flags &= ~SAFE_TO_REGISTER;
@@ -410,11 +411,6 @@ namespace wiScene
 			archive << physicsToGraphicsVertexMapping;
 			archive << graphicsToPhysicsVertexMapping;
 			archive << weights;
-
-			if (archive.GetVersion() >= 29)
-			{
-				archive << restPose;
-			}
 		}
 	}
 	void ArmatureComponent::Serialize(wiArchive& archive, uint32_t seed)

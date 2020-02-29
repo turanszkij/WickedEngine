@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+34: Removed restPose from SoftBodyPhysicsComponent
 33: LightComponent shadow bias behaviour changed
 32: WeatherComponent::skyMapName serialized
 31: ObjectComponent::userStencilRef serialized

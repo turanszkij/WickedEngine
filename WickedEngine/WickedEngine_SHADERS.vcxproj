@@ -493,10 +493,10 @@
     <FxCompile Include="lineardepthCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
     </FxCompile>
-    <FxCompile Include="linesPS.hlsl">
+    <FxCompile Include="vertexcolorPS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="linesVS.hlsl">
+    <FxCompile Include="vertexcolorVS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
     </FxCompile>
     <FxCompile Include="luminancePass1CS.hlsl">

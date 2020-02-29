@@ -3,7 +3,7 @@
 struct VertexToPixel 
 {
 	float4 pos	: SV_POSITION;
-	centroid float4 col	: COLOR;
+	float4 col	: COLOR;
 };
 
 VertexToPixel main(float4 inPos : POSITION, float4 inCol : TEXCOORD0)

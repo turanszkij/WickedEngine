@@ -883,23 +883,46 @@ namespace wiScene
 
 	void SoftBodyPhysicsComponent::CreateFromMesh(const MeshComponent& mesh)
 	{
-		if (restPose.empty())
+		vertex_positions_simulation.resize(mesh.vertex_positions.size());
+
+		std::vector<uint8_t> vertex_subsetindices(mesh.vertex_positions.size());
+		uint32_t subsetCounter = 0;
+		for (auto& subset : mesh.subsets)
 		{
-			// Rest pose is saved:
-			restPose = mesh.vertex_positions;
+			for (uint32_t i = 0; i < subset.indexCount; ++i)
+			{
+				uint32_t index = mesh.indices[subset.indexOffset + i];
+				vertex_subsetindices[index] = subsetCounter;
+			}
+			subsetCounter++;
 		}
+		XMMATRIX W = XMLoadFloat4x4(&worldMatrix);
+		XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
+		XMFLOAT3 _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+		for (size_t i = 0; i < vertex_positions_simulation.size(); ++i)
+		{
+			XMFLOAT3 pos = mesh.vertex_positions[i];
+			XMStoreFloat3(&pos, XMVector3Transform(XMLoadFloat3(&pos), W));
+			XMFLOAT3 nor = mesh.vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : mesh.vertex_normals[i];
+			XMStoreFloat3(&nor, XMVector3Normalize(XMVector3TransformNormal(XMLoadFloat3(&nor), W)));
+			uint32_t subsetIndex = vertex_subsetindices[i];
+			vertex_positions_simulation[i].FromFULL(pos, nor, subsetIndex);
+			_min = wiMath::Min(_min, pos);
+			_max = wiMath::Max(_max, pos);
+		}
+		aabb = AABB(_min, _max);
 
 		if(physicsToGraphicsVertexMapping.empty())
 		{
 			// Create a mapping that maps unique vertex positions to all vertex indices that share that. Unique vertex positions will make up the physics mesh:
 			std::unordered_map<size_t, uint32_t> uniquePositions;
-			graphicsToPhysicsVertexMapping.resize(restPose.size());
+			graphicsToPhysicsVertexMapping.resize(mesh.vertex_positions.size());
 			physicsToGraphicsVertexMapping.clear();
 			weights.clear();
 
-			for (size_t i = 0; i < restPose.size(); ++i)
+			for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
 			{
-				const XMFLOAT3& position = restPose[i];
+				const XMFLOAT3& position = mesh.vertex_positions[i];
 
 				size_t hashes[] = {
 					std::hash<float>{}(position.x),
@@ -1859,22 +1882,26 @@ namespace wiScene
 							impostor->instanceMatrices.push_back(meshMatrix);
 						}
 
-						SoftBodyPhysicsComponent* softBody = softbodies.GetComponent(object.meshID);
-						if (softBody != nullptr)
+						SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(object.meshID);
+						if (softbody != nullptr)
 						{
-							softBody->_flags |= SoftBodyPhysicsComponent::SAFE_TO_REGISTER; // this will be registered as soft body in the next physics update
-							softBody->worldMatrix = transform.world;
+							// this will be registered as soft body in the next physics update
+							softbody->_flags |= SoftBodyPhysicsComponent::SAFE_TO_REGISTER;
+							
+							// soft body manipulated with the object matrix
+							softbody->worldMatrix = transform.world;
 
-							if (wiPhysicsEngine::IsEnabled() && softBody->physicsobject != nullptr)
+							if (softbody->graphicsToPhysicsVertexMapping.empty())
 							{
-								// If physics engine is enabled and this object was registered, it will update soft body vertices in world space, so after that they no longer need to be transformed:
-								object.transform_index = -1;
-								object.prev_transform_index = -1;
-
-								// mesh aabb will be used for soft bodies
-								aabb = mesh->aabb;
+								softbody->CreateFromMesh(*mesh);
 							}
 
+							// simulation aabb will be used for soft bodies
+							aabb = softbody->aabb;
+
+							// soft bodies have no transform, their vertices are simulated in world space
+							object.transform_index = -1;
+							object.prev_transform_index = -1;
 						}
 
 						sceneBounds = AABB::Merge(sceneBounds, aabb);
@@ -2234,6 +2261,8 @@ namespace wiScene
 				}
 
 				const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+				const SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(object.meshID);
+				const bool softbody_active = softbody != nullptr && !softbody->vertex_positions_simulation.empty();
 
 				const XMMATRIX objectMat = object.transform_index >= 0 ? XMLoadFloat4x4(&scene.transforms[object.transform_index].world) : XMMatrixIdentity();
 				const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
@@ -2252,39 +2281,52 @@ namespace wiScene
 						const uint32_t i1 = mesh.indices[subset.indexOffset + i + 1];
 						const uint32_t i2 = mesh.indices[subset.indexOffset + i + 2];
 
-						XMVECTOR p0 = XMLoadFloat3(&mesh.vertex_positions[i0]);
-						XMVECTOR p1 = XMLoadFloat3(&mesh.vertex_positions[i1]);
-						XMVECTOR p2 = XMLoadFloat3(&mesh.vertex_positions[i2]);
+						XMVECTOR p0;
+						XMVECTOR p1;
+						XMVECTOR p2;
 
-						if (armature != nullptr)
+						if (softbody_active)
 						{
-							const XMUINT4& ind0 = mesh.vertex_boneindices[i0];
-							const XMUINT4& ind1 = mesh.vertex_boneindices[i1];
-							const XMUINT4& ind2 = mesh.vertex_boneindices[i2];
+							p0 = softbody->vertex_positions_simulation[i0].LoadPOS();
+							p1 = softbody->vertex_positions_simulation[i1].LoadPOS();
+							p2 = softbody->vertex_positions_simulation[i2].LoadPOS();
+						}
+						else
+						{
+							p0 = XMLoadFloat3(&mesh.vertex_positions[i0]);
+							p1 = XMLoadFloat3(&mesh.vertex_positions[i1]);
+							p2 = XMLoadFloat3(&mesh.vertex_positions[i2]);
 
-							const XMFLOAT4& wei0 = mesh.vertex_boneweights[i0];
-							const XMFLOAT4& wei1 = mesh.vertex_boneweights[i1];
-							const XMFLOAT4& wei2 = mesh.vertex_boneweights[i2];
+							if (armature != nullptr)
+							{
+								const XMUINT4& ind0 = mesh.vertex_boneindices[i0];
+								const XMUINT4& ind1 = mesh.vertex_boneindices[i1];
+								const XMUINT4& ind2 = mesh.vertex_boneindices[i2];
 
-							XMVECTOR skinned_pos;
+								const XMFLOAT4& wei0 = mesh.vertex_boneweights[i0];
+								const XMFLOAT4& wei1 = mesh.vertex_boneweights[i1];
+								const XMFLOAT4& wei2 = mesh.vertex_boneweights[i2];
 
-							skinned_pos =  XMVector3Transform(p0, armature->boneData[ind0.x].Load()) * wei0.x;
-							skinned_pos += XMVector3Transform(p0, armature->boneData[ind0.y].Load()) * wei0.y;
-							skinned_pos += XMVector3Transform(p0, armature->boneData[ind0.z].Load()) * wei0.z;
-							skinned_pos += XMVector3Transform(p0, armature->boneData[ind0.w].Load()) * wei0.w;
-							p0 = skinned_pos;
+								XMVECTOR skinned_pos;
 
-							skinned_pos =  XMVector3Transform(p1, armature->boneData[ind1.x].Load()) * wei1.x;
-							skinned_pos += XMVector3Transform(p1, armature->boneData[ind1.y].Load()) * wei1.y;
-							skinned_pos += XMVector3Transform(p1, armature->boneData[ind1.z].Load()) * wei1.z;
-							skinned_pos += XMVector3Transform(p1, armature->boneData[ind1.w].Load()) * wei1.w;
-							p1 = skinned_pos;
+								skinned_pos = XMVector3Transform(p0, armature->boneData[ind0.x].Load()) * wei0.x;
+								skinned_pos += XMVector3Transform(p0, armature->boneData[ind0.y].Load()) * wei0.y;
+								skinned_pos += XMVector3Transform(p0, armature->boneData[ind0.z].Load()) * wei0.z;
+								skinned_pos += XMVector3Transform(p0, armature->boneData[ind0.w].Load()) * wei0.w;
+								p0 = skinned_pos;
 
-							skinned_pos =  XMVector3Transform(p2, armature->boneData[ind2.x].Load()) * wei2.x;
-							skinned_pos += XMVector3Transform(p2, armature->boneData[ind2.y].Load()) * wei2.y;
-							skinned_pos += XMVector3Transform(p2, armature->boneData[ind2.z].Load()) * wei2.z;
-							skinned_pos += XMVector3Transform(p2, armature->boneData[ind2.w].Load()) * wei2.w;
-							p2 = skinned_pos;
+								skinned_pos = XMVector3Transform(p1, armature->boneData[ind1.x].Load()) * wei1.x;
+								skinned_pos += XMVector3Transform(p1, armature->boneData[ind1.y].Load()) * wei1.y;
+								skinned_pos += XMVector3Transform(p1, armature->boneData[ind1.z].Load()) * wei1.z;
+								skinned_pos += XMVector3Transform(p1, armature->boneData[ind1.w].Load()) * wei1.w;
+								p1 = skinned_pos;
+
+								skinned_pos = XMVector3Transform(p2, armature->boneData[ind2.x].Load()) * wei2.x;
+								skinned_pos += XMVector3Transform(p2, armature->boneData[ind2.y].Load()) * wei2.y;
+								skinned_pos += XMVector3Transform(p2, armature->boneData[ind2.z].Load()) * wei2.z;
+								skinned_pos += XMVector3Transform(p2, armature->boneData[ind2.w].Load()) * wei2.w;
+								p2 = skinned_pos;
+							}
 						}
 
 						float distance;

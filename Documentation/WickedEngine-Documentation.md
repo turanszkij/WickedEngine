@@ -701,9 +701,10 @@ While the [GraphicsDevice is responsible of creating shaders and pipeline states
 Debug geometry can be rendered by calling the `wiRenderer::DrawDebugWorld()` function and setting up debug geometries, or enabling debug features. The `DrawDebugWorld()` is already called by [RenderPath3D](#renderpath3d), so the developer can simply just worry about configure debug drawing features and add debug geometries and drawing will happen at the right place (if the developer decided to use [RenderPath3D](#renderpath3d) in their application). 
 
 The user provided debug geometry features at present are: 
-- `AddRenderableBox()`: provide a transformation matrix and color to render a wireframe box mesh with the desired transformation and color. The box will be only rendered for a single frame.
-- `AddRenderableLine()`: provide line segment begin, end positions and a color value. The line will be only rendered for a single frame.
-- `AddRenderablePoint()`: provide a position, size and color to render a point as a "X" line geometry that is always camera facing. The point will be only rendered for a single frame.
+- `DrawBox()`: provide a transformation matrix and color to render a wireframe box mesh with the desired transformation and color. The box will be only rendered for a single frame.
+- `DrawLine()`: provide line segment begin, end positions and a color value. The line will be only rendered for a single frame.
+- `DrawPoint()`: provide a position, size and color to render a point as a "X" line geometry that is always camera facing. The point will be only rendered for a single frame.
+- `DrawTriangle()`: provide 3 positions and colors that represent a colored triangle. There is an option to draw the triangle in wireframe mode instead of solid. The triangle will be only rendered for a single frame.
 
 Configuring other debug rendering functionality:
 - `SetToDrawDebugBoneLines()`: Bones will be rendered as lines
