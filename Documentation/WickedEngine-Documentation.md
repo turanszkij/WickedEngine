@@ -137,6 +137,8 @@ This is a reference for the C++ features of Wicked Engine
 	6. [REVERB_PRESET](#reverb_preset)
 8. [Physics](#physics)
 	1. [wiPhysicsEngine](#wiphysicsengine)
+		1. [Rigid Body Physics](#rigid-body-physics)
+		2. [Soft Body Physics](#soft-body-physics)
 	2. [wiPhysicsEngine_BULLET](#wiphysicsengine_bullet)
 9. [Network](#network)
 	1. [wiNetwork](#winetwork)
@@ -1056,9 +1058,41 @@ It uses the entity-component system to perform updating all physics components i
 [[Header]](../WickedEngine/wiPhysicsEngine.h) [[Cpp]](../WickedEngine/wiPhysicsEngine.cpp)
 - Initialize<br/>
 This must be called before using the physics system, but it is automatically done by [wiInitializer](#wiinitializer)
-- IsEnabled
-- SetEnabled
-- RunPhysicsUpdateSystem
+- IsEnabled<br/>
+Is the physics system running?
+- SetEnabled<br/>
+Enable or disable physics system
+- RunPhysicsUpdateSystem<br/>
+Run physics simulation on input components.
+
+#### Rigid Body Physics
+Rigid body simulation requires [RigidBodyPhysicsComponent](#rigidbodyphysicscomponent) for entities and [TransformComponent](#transformcomponent). It will modify TransformComponents with physics simulation data, so after simulation, TransformComponents will contain absolute world matrix.
+
+<b>Kinematic</b> rigid bodies are those that are not simulated by the physics system, but they will affect the rest of the simulation. For example, an animated kinematic rigid body will strictly follow the animation, but affect any other rigid bodies it comes in contact with. Set a rigid body to kinematic by having the `RigidBodyPhysicsComponent::KINEMATIC` flag in the `RigidBodyPhysicsComponent::_flags` bitmask.
+
+<b>Deactivation</b> happens after a while for rigid bodies that participated in the simulation for a while, this means after that they will no longer participate in the simulation. This behaviour can be disabled with the `RigidBodyPhysicsComponent::DISABLE_DEACTIVATION` flag.
+
+There are multiple <b>Collision Shapes</b> of rigid bodies that can be used:
+- `BOX`: simple oriented bounding box, fast.
+- `SPHERE`: simple sphere, fast.
+- `CAPSULE`: Two spheres with a cylinder between them.
+- `CONVEX_HULL`: A simplified mesh.
+- `TRIANGLE_MESH`: The original mesh. It is always kinematic.
+
+#### Soft Body Physics
+Soft body simulation requires [SoftBodyPhysicsComponent](#softbodyphysicscomponent) for entities as well as [MeshComponent](#meshcomponent). When creating a soft body, the simulation mesh will be computed from the MeshComponent vertices and mapping tables from physics to graphics indices that associate graphics vertices with physics vertices. The physics vertices will be simulated in world space and copied to the `SoftBodyPhysicsComponent::vertex_positions_simulation` array as graphics vertices. This array can be uploaded as vertex buffer as is. 
+
+The [ObjectComponent](#objectcomponent)'s transform matrix is used as a manipulation matrix to the soft body, if the ObjectComponent's mesh has a soft body associated with it. The manipulation matrix means, that pinned soft body physics vertices will receive that transformation matrix. The simulated vertices will follow those manipulated vertices.
+
+<b>Pinning</b> the soft body vertices means that those physics vertices have zero weights, so they are not simulated, but instead drive the simulation, as in other vertices will follow them, a bit like how kinematic rigid bodies manipulate simulated rigid bodies.
+
+The pinned vertices can also be manipulated via <b>skinning animation</b>. If the soft body mesh is skinned and an animation is playing, then the pinned vertices will follow the animation.
+
+<b>Deactivation</b> happens after a while for soft bodies that participated in the simulation for a while, this means after that they will no longer participate in the simulation. This behaviour can be disabled with the `SoftBodyPhysicsComponent::DISABLE_DEACTIVATION` flag.
+
+<b>Resetting</b> a soft body can be accomplished by setting the `SoftBodyPhysicsComponent::FORCE_RESET` flag. This means that the next physics update will reset the soft body mesh to the initial pose.
+
+
 ### wiPhysicsEngine_Bullet
 [[Header]](../WickedEngine/wiPhysicsEngine_BULLET.h) [[Cpp]](../WickedEngine/wiPhysicsEngine_BULLET.cpp)
 Bullet physics engine implementation of the physics update system
