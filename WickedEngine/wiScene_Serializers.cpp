@@ -88,6 +88,10 @@ namespace wiScene
 			}
 			archive >> texMulAdd;
 			archive >> roughness;
+			if (archive.GetVersion() < 35)
+			{
+				roughness = roughness == 0 ? 0 : std::sqrtf(roughness);
+			}
 			archive >> reflectance;
 			archive >> metalness;
 			if (archive.GetVersion() < 25)

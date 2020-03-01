@@ -878,8 +878,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	refractiveColor = lerp(refractiveColor, surface.baseColor.rgb, mod).rgb;
 
 	//FRESNEL TERM
-	float3 fresnelTerm = F_Fresnel(surface.f0, surface.NdotV);
-	surface.albedo.rgb = lerp(refractiveColor, reflectiveColor.rgb, fresnelTerm);
+	surface.albedo.rgb = lerp(refractiveColor, reflectiveColor.rgb, surface.F);
 #endif // WATER
 
 

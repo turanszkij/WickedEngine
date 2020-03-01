@@ -41,11 +41,9 @@ float4 main(PSIn input) : SV_TARGET
 
 	//FRESNEL TERM
 	float NdotV = abs(dot(surface.N, surface.V));
-	float3 fresnelTerm = F_Fresnel(surface.f0, NdotV);
 	float ramp = pow(abs(1.0f / (1.0f + NdotV)), 16);
 	reflectiveColor.rgb = lerp(float3(0.38f, 0.45f, 0.56f), reflectiveColor.rgb, ramp); // skycolor hack
-	surface.albedo.rgb = lerp(refractiveColor, reflectiveColor.rgb, fresnelTerm);
-	surface.F = fresnelTerm;
+	surface.albedo.rgb = lerp(refractiveColor, reflectiveColor.rgb, surface.F);
 
 	TiledLighting(pixel, surface, lighting);
 
