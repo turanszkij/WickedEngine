@@ -921,16 +921,10 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDescriptors.h">
-      <Filter>ENGINE\Graphics\API</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.h">
-      <Filter>ENGINE\Graphics\API</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsResource.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_EmittedParticle.h">
@@ -1127,6 +1121,9 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiProfiler.h">
       <Filter>ENGINE\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\wiGraphics.h">
+      <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1758,9 +1755,6 @@
       <Filter>ENGINE\Graphics\API</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.cpp">
-      <Filter>ENGINE\Graphics\API</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsResource.cpp">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFFTGenerator.cpp">

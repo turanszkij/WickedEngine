@@ -37,7 +37,7 @@ namespace wiFont_Internal
 	DepthStencilState	depthStencilState;
 	Sampler				sampler;
 
-	VertexLayout		vertexLayout;
+	InputLayout		inputLayout;
 	Shader				vertexShader;
 	Shader				pixelShader;
 	PipelineState		PSO;
@@ -282,7 +282,7 @@ void wiFont::Initialize()
 	samplerDesc.BorderColor[3] = 0;
 	samplerDesc.MinLOD = 0;
 	samplerDesc.MaxLOD = FLT_MAX;
-	device->CreateSamplerState(&samplerDesc, &sampler);
+	device->CreateSampler(&samplerDesc, &sampler);
 
 	LoadShaders();
 
@@ -294,13 +294,13 @@ void wiFont::LoadShaders()
 {
 	std::string path = wiRenderer::GetShaderPath();
 
-	VertexLayoutDesc layout[] =
+	InputLayoutDesc layout[] =
 	{
-		{ "POSITION", 0, FORMAT_R16G16_SINT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, FORMAT_R16G16_FLOAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "POSITION", 0, FORMAT_R16G16_SINT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, FORMAT_R16G16_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 	};
 	wiRenderer::LoadShader(VS, vertexShader, "fontVS.cso");
-	wiRenderer::GetDevice()->CreateInputLayout(layout, arraysize(layout), &vertexShader.code, &vertexLayout);
+	wiRenderer::GetDevice()->CreateInputLayout(layout, arraysize(layout), &vertexShader, &inputLayout);
 
 
 	wiRenderer::LoadShader(PS, pixelShader, "fontPS.cso");
@@ -309,7 +309,7 @@ void wiFont::LoadShaders()
 	PipelineStateDesc desc;
 	desc.vs = &vertexShader;
 	desc.ps = &pixelShader;
-	desc.il = &vertexLayout;
+	desc.il = &inputLayout;
 	desc.bs = &blendState;
 	desc.dss = &depthStencilState;
 	desc.rs = &rasterizerState;

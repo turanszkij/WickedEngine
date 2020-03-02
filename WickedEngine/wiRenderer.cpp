@@ -51,7 +51,7 @@ Shader					hullShaders[HSTYPE_COUNT];
 Shader					domainShaders[DSTYPE_COUNT];
 Shader					computeShaders[CSTYPE_COUNT];
 Texture					textures[TEXTYPE_COUNT];
-VertexLayout			vertexLayouts[VLTYPE_COUNT];
+InputLayout				inputLayouts[ILTYPE_COUNT];
 RasterizerState			rasterizers[RSTYPE_COUNT];
 DepthStencilState		depthStencils[DSSTYPE_COUNT];
 BlendState				blendStates[BSTYPE_COUNT];
@@ -408,9 +408,9 @@ const Shader* GetComputeShader(CSTYPES id)
 {
 	return &computeShaders[id];
 }
-const VertexLayout* GetVertexLayout(VLTYPES id)
+const InputLayout* GetInputLayout(ILTYPES id)
 {
-	return &vertexLayouts[id];
+	return &inputLayouts[id];
 }
 const RasterizerState* GetRasterizerState(RSTYPES id)
 {
@@ -529,42 +529,42 @@ inline const PipelineState* GetCustomShaderPSO(RENDERPASS renderPass, uint32_t r
 	return nullptr;
 }
 
-VLTYPES GetVLTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool transparent)
+ILTYPES GetILTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool transparent)
 {
-	VLTYPES realVL = VLTYPE_OBJECT_POS_TEX;
+	ILTYPES realVL = ILTYPE_OBJECT_POS_TEX;
 
 	switch (renderPass)
 	{
 	case RENDERPASS_TEXTURE:
 		if (tessellation)
 		{
-			realVL = VLTYPE_OBJECT_ALL;
+			realVL = ILTYPE_OBJECT_ALL;
 		}
 		else
 		{
-			realVL = VLTYPE_OBJECT_POS_TEX;
+			realVL = ILTYPE_OBJECT_POS_TEX;
 		}
 		break;
 	case RENDERPASS_DEFERRED:
 	case RENDERPASS_FORWARD:
 	case RENDERPASS_TILEDFORWARD:
 	case RENDERPASS_ENVMAPCAPTURE:
-		realVL = VLTYPE_OBJECT_ALL;
+		realVL = ILTYPE_OBJECT_ALL;
 		break;
 	case RENDERPASS_DEPTHONLY:
 		if (tessellation)
 		{
-			realVL = VLTYPE_OBJECT_ALL;
+			realVL = ILTYPE_OBJECT_ALL;
 		}
 		else
 		{
 			if (alphatest)
 			{
-				realVL = VLTYPE_OBJECT_POS_TEX;
+				realVL = ILTYPE_OBJECT_POS_TEX;
 			}
 			else
 			{
-				realVL = VLTYPE_OBJECT_POS;
+				realVL = ILTYPE_OBJECT_POS;
 			}
 		}
 		break;
@@ -572,15 +572,15 @@ VLTYPES GetVLTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool
 	case RENDERPASS_SHADOWCUBE:
 		if (alphatest || transparent)
 		{
-			realVL = VLTYPE_OBJECT_POS_TEX;
+			realVL = ILTYPE_OBJECT_POS_TEX;
 		}
 		else
 		{
-			realVL = VLTYPE_OBJECT_POS;
+			realVL = ILTYPE_OBJECT_POS;
 		}
 		break;
 	case RENDERPASS_VOXELIZE:
-		realVL = VLTYPE_OBJECT_POS_TEX;
+		realVL = ILTYPE_OBJECT_POS_TEX;
 		break;
 	}
 
@@ -1042,136 +1042,136 @@ void LoadShaders()
 	wiJobSystem::context ctx;
 
 	wiJobSystem::Execute(ctx, [device] {
-		VertexLayoutDesc layout[] =
+		InputLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		LoadShader(VS, vertexShaders[VSTYPE_OBJECT_DEBUG], "objectVS_debug.cso");
-		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_OBJECT_DEBUG].code, &vertexLayouts[VLTYPE_OBJECT_DEBUG]);
+		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_OBJECT_DEBUG], &inputLayouts[ILTYPE_OBJECT_DEBUG]);
 		});
 
 	wiJobSystem::Execute(ctx, [device] {
-		VertexLayoutDesc layout[] =
+		InputLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "UVSET",					0, MeshComponent::Vertex_TEX::FORMAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "UVSET",					1, MeshComponent::Vertex_TEX::FORMAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "ATLAS",					0, MeshComponent::Vertex_TEX::FORMAT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "COLOR",					0, MeshComponent::Vertex_COL::FORMAT, 4, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, 5, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "UVSET",					0, MeshComponent::Vertex_TEX::FORMAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "UVSET",					1, MeshComponent::Vertex_TEX::FORMAT, 2, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "ATLAS",					0, MeshComponent::Vertex_TEX::FORMAT, 3, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "COLOR",					0, MeshComponent::Vertex_COL::FORMAT, 4, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, 5, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 6, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 6, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 6, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 6, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIXPREV",		0, FORMAT_R32G32B32A32_FLOAT, 6, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIXPREV",		1, FORMAT_R32G32B32A32_FLOAT, 6, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIXPREV",		2, FORMAT_R32G32B32A32_FLOAT, 6, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEATLAS",			0, FORMAT_R32G32B32A32_FLOAT, 6, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",		0, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",		1, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",		2, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEATLAS",			0, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		LoadShader(VS, vertexShaders[VSTYPE_OBJECT_COMMON], "objectVS_common.cso");
-		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_OBJECT_COMMON].code, &vertexLayouts[VLTYPE_OBJECT_ALL]);
+		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_OBJECT_COMMON], &inputLayouts[ILTYPE_OBJECT_ALL]);
 		});
 
 	wiJobSystem::Execute(ctx, [device] {
-		VertexLayoutDesc layout[] =
+		InputLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		LoadShader(VS, vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM], "objectVS_positionstream.cso");
-		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM].code, &vertexLayouts[VLTYPE_OBJECT_POS]);
+		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM], &inputLayouts[ILTYPE_OBJECT_POS]);
 
 		});
 
 	wiJobSystem::Execute(ctx, [device] {
-		VertexLayoutDesc layout[] =
+		InputLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "UVSET",					0, MeshComponent::Vertex_TEX::FORMAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "UVSET",					1, MeshComponent::Vertex_TEX::FORMAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "UVSET",					0, MeshComponent::Vertex_TEX::FORMAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "UVSET",					1, MeshComponent::Vertex_TEX::FORMAT, 2, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 3, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 3, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 3, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 3, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		LoadShader(VS, vertexShaders[VSTYPE_OBJECT_SIMPLE], "objectVS_simple.cso");
-		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_OBJECT_SIMPLE].code, &vertexLayouts[VLTYPE_OBJECT_POS_TEX]);
+		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_OBJECT_SIMPLE], &inputLayouts[ILTYPE_OBJECT_POS_TEX]);
 
 		});
 
 	wiJobSystem::Execute(ctx, [device] {
-		VertexLayoutDesc layout[] =
+		InputLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		LoadShader(VS, vertexShaders[VSTYPE_SHADOW], "shadowVS.cso");
-		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_SHADOW].code, &vertexLayouts[VLTYPE_SHADOW_POS]);
+		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_SHADOW], &inputLayouts[ILTYPE_SHADOW_POS]);
 
 		});
 
 	wiJobSystem::Execute(ctx, [device] {
-		VertexLayoutDesc layout[] =
+		InputLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "UVSET",					0, MeshComponent::Vertex_TEX::FORMAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "UVSET",					1, MeshComponent::Vertex_TEX::FORMAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "UVSET",					0, MeshComponent::Vertex_TEX::FORMAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "UVSET",					1, MeshComponent::Vertex_TEX::FORMAT, 2, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 3, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 3, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 3, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 3, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		LoadShader(VS, vertexShaders[VSTYPE_SHADOW_ALPHATEST], "shadowVS_alphatest.cso");
-		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_SHADOW_ALPHATEST].code, &vertexLayouts[VLTYPE_SHADOW_POS_TEX]);
+		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_SHADOW_ALPHATEST], &inputLayouts[ILTYPE_SHADOW_POS_TEX]);
 
 		LoadShader(VS, vertexShaders[VSTYPE_SHADOW_TRANSPARENT], "shadowVS_transparent.cso");
 		});
 
 	wiJobSystem::Execute(ctx, [device] {
-		VertexLayoutDesc layout[] =
+		InputLayoutDesc layout[] =
 		{
-			{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, FORMAT_R32G32B32A32_FLOAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, FORMAT_R32G32B32A32_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		LoadShader(VS, vertexShaders[VSTYPE_VERTEXCOLOR], "vertexcolorVS.cso");
-		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_VERTEXCOLOR].code, &vertexLayouts[VLTYPE_VERTEXCOLOR]);
+		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_VERTEXCOLOR], &inputLayouts[ILTYPE_VERTEXCOLOR]);
 
 		});
 
 	wiJobSystem::Execute(ctx, [device] {
-		VertexLayoutDesc layout[] =
+		InputLayoutDesc layout[] =
 		{
-			{ "POSITION", 0, FORMAT_R32G32B32_FLOAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, FORMAT_R32G32_FLOAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 1, FORMAT_R32G32B32A32_FLOAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION", 0, FORMAT_R32G32B32_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, FORMAT_R32G32_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 1, FORMAT_R32G32B32A32_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		LoadShader(VS, vertexShaders[VSTYPE_TRAIL], "trailVS.cso");
-		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_TRAIL].code, &vertexLayouts[VLTYPE_TRAIL]);
+		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_TRAIL], &inputLayouts[ILTYPE_TRAIL]);
 		});
 
 	wiJobSystem::Execute(ctx, [device] {
-		VertexLayoutDesc layout[] =
+		InputLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "ATLAS",						0, MeshComponent::Vertex_TEX::FORMAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "ATLAS",						0, MeshComponent::Vertex_TEX::FORMAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "INSTANCEMATRIXPREV",			0, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIXPREV",			1, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIXPREV",			2, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",			0, FORMAT_R32G32B32A32_FLOAT, 2, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",			1, FORMAT_R32G32B32A32_FLOAT, 2, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",			2, FORMAT_R32G32B32A32_FLOAT, 2, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		LoadShader(VS, vertexShaders[VSTYPE_RENDERLIGHTMAP], "renderlightmapVS.cso");
-		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_RENDERLIGHTMAP].code, &vertexLayouts[VLTYPE_RENDERLIGHTMAP]);
+		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_RENDERLIGHTMAP], &inputLayouts[ILTYPE_RENDERLIGHTMAP]);
 		});
 
 	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_OBJECT_COMMON_TESSELLATION], "objectVS_common_tessellation.cso"); });
@@ -1401,7 +1401,7 @@ void LoadShaders()
 									wiJobSystem::Execute(ctx, [device, renderPass, blendMode, doublesided, tessellation, alphatest, normalmap, planarreflection, pom] {
 										const bool transparency = blendMode != BLENDMODE_OPAQUE;
 										VSTYPES realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
-										VLTYPES realVL = GetVLTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
+										ILTYPES realVL = GetILTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
 										HSTYPES realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation);
 										DSTYPES realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation);
 										GSTYPES realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest);
@@ -1413,7 +1413,7 @@ void LoadShaders()
 										}
 
 										PipelineStateDesc desc;
-										desc.il = realVL < VLTYPE_COUNT ? &vertexLayouts[realVL] : nullptr;
+										desc.il = realVL < ILTYPE_COUNT ? &inputLayouts[realVL] : nullptr;
 										desc.vs = realVS < VSTYPE_COUNT ? &vertexShaders[realVS] : nullptr;
 										desc.hs = realHS < HSTYPE_COUNT ? &hullShaders[realHS] : nullptr;
 										desc.ds = realDS < DSTYPE_COUNT ? &domainShaders[realDS] : nullptr;
@@ -1525,11 +1525,11 @@ void LoadShaders()
 	// Hologram sample shader will be registered as custom shader:
 	wiJobSystem::Execute(ctx, [device] {
 		VSTYPES realVS = GetVSTYPE(RENDERPASS_FORWARD, false, false, true);
-		VLTYPES realVL = GetVLTYPE(RENDERPASS_FORWARD, false, false, true);
+		ILTYPES realVL = GetILTYPE(RENDERPASS_FORWARD, false, false, true);
 
 		PipelineStateDesc desc;
 		desc.vs = &vertexShaders[realVS];
-		desc.il = &vertexLayouts[realVL];
+		desc.il = &inputLayouts[realVL];
 		desc.ps = &pixelShaders[PSTYPE_OBJECT_HOLOGRAM];
 
 		desc.bs = &blendStates[BSTYPE_ADDITIVE];
@@ -1553,7 +1553,7 @@ void LoadShaders()
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
-		desc.il = &vertexLayouts[VLTYPE_OBJECT_POS_TEX];
+		desc.il = &inputLayouts[ILTYPE_OBJECT_POS_TEX];
 
 		desc.ps = &pixelShaders[PSTYPE_OBJECT_FORWARD_WATER];
 		device->CreatePipelineState(&desc, &PSO_object_water[RENDERPASS_FORWARD]);
@@ -1576,7 +1576,7 @@ void LoadShaders()
 		desc.rs = &rasterizers[RSTYPE_WIRE];
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
 		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
-		desc.il = &vertexLayouts[VLTYPE_OBJECT_POS_TEX];
+		desc.il = &inputLayouts[ILTYPE_OBJECT_POS_TEX];
 
 		device->CreatePipelineState(&desc, &PSO_object_wire);
 		});
@@ -1661,7 +1661,7 @@ void LoadShaders()
 		desc.rs = &rasterizers[RSTYPE_FRONT];
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
 		desc.dss = &depthStencils[DSSTYPE_CAPTUREIMPOSTOR];
-		desc.il = &vertexLayouts[VLTYPE_OBJECT_ALL];
+		desc.il = &inputLayouts[ILTYPE_OBJECT_ALL];
 
 		desc.ps = &pixelShaders[PSTYPE_CAPTUREIMPOSTOR_ALBEDO];
 		device->CreatePipelineState(&desc, &PSO_captureimpostor_albedo);
@@ -1804,7 +1804,7 @@ void LoadShaders()
 		});
 	wiJobSystem::Execute(ctx, [device] {
 		PipelineStateDesc desc;
-		desc.il = &vertexLayouts[VLTYPE_RENDERLIGHTMAP];
+		desc.il = &inputLayouts[ILTYPE_RENDERLIGHTMAP];
 		desc.vs = &vertexShaders[VSTYPE_RENDERLIGHTMAP];
 		desc.ps = &pixelShaders[PSTYPE_RENDERLIGHTMAP];
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
@@ -1917,7 +1917,7 @@ void LoadShaders()
 		case DEBUGRENDERING_GRID:
 			desc.vs = &vertexShaders[VSTYPE_VERTEXCOLOR];
 			desc.ps = &pixelShaders[PSTYPE_VERTEXCOLOR];
-			desc.il = &vertexLayouts[VLTYPE_VERTEXCOLOR];
+			desc.il = &inputLayouts[ILTYPE_VERTEXCOLOR];
 			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
 			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
@@ -1926,7 +1926,7 @@ void LoadShaders()
 		case DEBUGRENDERING_CUBE:
 			desc.vs = &vertexShaders[VSTYPE_VERTEXCOLOR];
 			desc.ps = &pixelShaders[PSTYPE_VERTEXCOLOR];
-			desc.il = &vertexLayouts[VLTYPE_VERTEXCOLOR];
+			desc.il = &inputLayouts[ILTYPE_VERTEXCOLOR];
 			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
 			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
@@ -1935,7 +1935,7 @@ void LoadShaders()
 		case DEBUGRENDERING_LINES:
 			desc.vs = &vertexShaders[VSTYPE_VERTEXCOLOR];
 			desc.ps = &pixelShaders[PSTYPE_VERTEXCOLOR];
-			desc.il = &vertexLayouts[VLTYPE_VERTEXCOLOR];
+			desc.il = &inputLayouts[ILTYPE_VERTEXCOLOR];
 			desc.dss = &depthStencils[DSSTYPE_XRAY];
 			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
 			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
@@ -1944,7 +1944,7 @@ void LoadShaders()
 		case DEBUGRENDERING_TRIANGLE_SOLID:
 			desc.vs = &vertexShaders[VSTYPE_VERTEXCOLOR];
 			desc.ps = &pixelShaders[PSTYPE_VERTEXCOLOR];
-			desc.il = &vertexLayouts[VLTYPE_VERTEXCOLOR];
+			desc.il = &inputLayouts[ILTYPE_VERTEXCOLOR];
 			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 			desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
@@ -1953,7 +1953,7 @@ void LoadShaders()
 		case DEBUGRENDERING_TRIANGLE_WIREFRAME:
 			desc.vs = &vertexShaders[VSTYPE_VERTEXCOLOR];
 			desc.ps = &pixelShaders[PSTYPE_VERTEXCOLOR];
-			desc.il = &vertexLayouts[VLTYPE_VERTEXCOLOR];
+			desc.il = &inputLayouts[ILTYPE_VERTEXCOLOR];
 			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
 			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
@@ -1962,7 +1962,7 @@ void LoadShaders()
 		case DEBUGRENDERING_EMITTER:
 			desc.vs = &vertexShaders[VSTYPE_OBJECT_DEBUG];
 			desc.ps = &pixelShaders[PSTYPE_OBJECT_DEBUG];
-			desc.il = &vertexLayouts[VLTYPE_OBJECT_DEBUG];
+			desc.il = &inputLayouts[ILTYPE_OBJECT_DEBUG];
 			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
 			desc.bs = &blendStates[BSTYPE_OPAQUE];
@@ -2158,66 +2158,66 @@ void SetUpStates()
 	samplerDesc.BorderColor[3] = 0;
 	samplerDesc.MinLOD = 0;
 	samplerDesc.MaxLOD = FLT_MAX;
-	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_LINEAR_MIRROR]);
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_LINEAR_MIRROR]);
 
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_LINEAR;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
-	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_LINEAR_CLAMP]);
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_LINEAR_CLAMP]);
 
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_LINEAR;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
-	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_LINEAR_WRAP]);
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_LINEAR_WRAP]);
 
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
-	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_POINT_MIRROR]);
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_POINT_MIRROR]);
 
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
-	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_POINT_WRAP]);
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_POINT_WRAP]);
 
 
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
-	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_POINT_CLAMP]);
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_POINT_CLAMP]);
 
 	samplerDesc.Filter = FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.MaxAnisotropy = 16;
-	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_ANISO_CLAMP]);
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_ANISO_CLAMP]);
 
 	samplerDesc.Filter = FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.MaxAnisotropy = 16;
-	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_ANISO_WRAP]);
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_ANISO_WRAP]);
 
 	samplerDesc.Filter = FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.MaxAnisotropy = 16;
-	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_ANISO_MIRROR]);
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_ANISO_MIRROR]);
 
 	samplerDesc.Filter = FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.MaxAnisotropy = 16;
-	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_OBJECTSHADER]);
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_OBJECTSHADER]);
 
 	samplerDesc.Filter = FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
@@ -2226,7 +2226,7 @@ void SetUpStates()
 	samplerDesc.MipLODBias = 0.0f;
 	samplerDesc.MaxAnisotropy = 0;
 	samplerDesc.ComparisonFunc = COMPARISON_GREATER_EQUAL;
-	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_CMP_DEPTH]);
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_CMP_DEPTH]);
 
 
 
@@ -2608,7 +2608,7 @@ void SetUpStates()
 
 void ModifySampler(const SamplerDesc& desc, int slot)
 {
-	GetDevice()->CreateSamplerState(&desc, &samplers[slot]);
+	GetDevice()->CreateSampler(&desc, &samplers[slot]);
 }
 
 const std::string& GetShaderPath()
@@ -3674,6 +3674,12 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 						{
 							continue;
 						}
+
+						const wiHairParticle& hair = scene.hairs[i];
+						if (hair.meshID == INVALID_ENTITY || !culling.frustum.CheckBox(hair.aabb))
+						{
+							continue;
+						}
 						culling.culledHairs.push_back((uint32_t)i);
 					}
 				});
@@ -4190,18 +4196,14 @@ void UpdateRenderData(CommandList cmd)
 	for (uint32_t hairIndex : mainCameraCulling.culledHairs)
 	{
 		const wiHairParticle& hair = scene.hairs[hairIndex];
+		const MeshComponent* mesh = scene.meshes.GetComponent(hair.meshID);
 
-		if (hair.meshID != INVALID_ENTITY && GetCamera().frustum.CheckBox(hair.aabb))
+		if (mesh != nullptr)
 		{
-			const MeshComponent* mesh = scene.meshes.GetComponent(hair.meshID);
+			Entity entity = scene.hairs.GetEntity(hairIndex);
+			const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
-			if (mesh != nullptr)
-			{
-				Entity entity = scene.hairs.GetEntity(hairIndex);
-				const MaterialComponent& material = *scene.materials.GetComponent(entity);
-
-				hair.UpdateGPU(*mesh, material, cmd);
-			}
+			hair.UpdateGPU(*mesh, material, cmd);
 		}
 	}
 
@@ -5246,21 +5248,17 @@ void DrawScene(const CameraComponent& camera, bool tessellation, CommandList cmd
 		for (uint32_t hairIndex : culling.culledHairs)
 		{
 			const wiHairParticle& hair = scene.hairs[hairIndex];
+			Entity entity = scene.hairs.GetEntity(hairIndex);
+			const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
-			if (camera.frustum.CheckBox(hair.aabb))
+			if (renderPass == RENDERPASS_FORWARD)
 			{
-				Entity entity = scene.hairs.GetEntity(hairIndex);
-				const MaterialComponent& material = *scene.materials.GetComponent(entity);
-
-				if (renderPass == RENDERPASS_FORWARD)
-				{
-					ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, hair.aabb, renderPass);
-					device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
-					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
-				}
-
-				hair.Draw(camera, material, renderPass, false, cmd);
+				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, hair.aabb, renderPass);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
+				device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
 			}
+
+			hair.Draw(camera, material, renderPass, false, cmd);
 		}
 	}
 
@@ -5338,21 +5336,17 @@ void DrawScene_Transparent(const CameraComponent& camera, const Texture& lineard
 		for (uint32_t hairIndex : culling.culledHairs)
 		{
 			const wiHairParticle& hair = scene.hairs[hairIndex];
+			Entity entity = scene.hairs.GetEntity(hairIndex);
+			const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
-			if (camera.frustum.CheckBox(hair.aabb))
+			if (renderPass == RENDERPASS_FORWARD)
 			{
-				Entity entity = scene.hairs.GetEntity(hairIndex);
-				const MaterialComponent& material = *scene.materials.GetComponent(entity);
-
-				if (renderPass == RENDERPASS_FORWARD)
-				{
-					ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, hair.aabb, renderPass);
-					device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
-					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
-				}
-
-				hair.Draw(camera, material, renderPass, true, cmd);
+				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, hair.aabb, renderPass);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
+				device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
 			}
+
+			hair.Draw(camera, material, renderPass, true, cmd);
 		}
 	}
 
@@ -5391,10 +5385,8 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 
 	static GPUBuffer wirecubeVB;
 	static GPUBuffer wirecubeIB;
-	static bool initialized = false;
-	if (!initialized)
+	if (!wirecubeVB.IsValid())
 	{
-
 		XMFLOAT4 min = XMFLOAT4(-1, -1, -1, 1);
 		XMFLOAT4 max = XMFLOAT4(1, 1, 1, 1);
 

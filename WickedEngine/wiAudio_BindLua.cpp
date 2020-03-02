@@ -7,7 +7,6 @@ const char wiAudio_BindLua::className[] = "Audio";
 Luna<wiAudio_BindLua>::FunctionType wiAudio_BindLua::methods[] = {
 	lunamethod(wiAudio_BindLua, CreateSound),
 	lunamethod(wiAudio_BindLua, CreateSoundInstance),
-	lunamethod(wiAudio_BindLua, Destroy),
 	lunamethod(wiAudio_BindLua, Play),
 	lunamethod(wiAudio_BindLua, Pause),
 	lunamethod(wiAudio_BindLua, Stop),
@@ -64,33 +63,6 @@ int wiAudio_BindLua::CreateSoundInstance(lua_State* L)
 	}
 	else
 		wiLua::SError(L, "CreateSoundInstance(Sound sound, SoundInstance soundinstance) not enough arguments!");
-	return 0;
-}
-int wiAudio_BindLua::Destroy(lua_State* L)
-{
-	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		wiSound_BindLua* sound = Luna<wiSound_BindLua>::lightcheck(L, 1);
-		if (sound != nullptr)
-		{
-			wiAudio::Destroy(sound->sound);
-		}
-		else
-		{
-			wiSoundInstance_BindLua* soundinstance = Luna<wiSoundInstance_BindLua>::lightcheck(L, 1);
-			if (soundinstance != nullptr)
-			{
-				wiAudio::Destroy(&soundinstance->soundinstance);
-			}
-			else
-			{
-				wiLua::SError(L, "Destroy(Sound sound); Destroy(SoundInstance soundinstance) argument types mismatch!");
-			}
-		}
-	}
-	else
-		wiLua::SError(L, "Destroy(Sound sound); Destroy(SoundInstance soundinstance) not enough arguments!");
 	return 0;
 }
 int wiAudio_BindLua::Play(lua_State* L)

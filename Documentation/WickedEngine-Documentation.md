@@ -395,6 +395,7 @@ Returns true if the current window is the topmost one, false if it is not in foc
 Everything related to rendering graphics will be discussed below
 
 ### wiGraphics
+[[Header]](../WickedEngine/wiGraphics.h)
 The graphics API wrappers
 
 #### GraphicsDevice
@@ -408,7 +409,7 @@ When creating a graphics device, it can be created in special debug mode to assi
 Functions like `CreateTexture()`, `CreateBuffer()`, etc. can be used to create corresponding GPU resources. Using these functions is thread safe. The resources will not necessarily be created immediately, but by the time the GPU will want to use them. These functions imediately return `false` if there were any errors, such as wrong parameters being passed to the description parameters, and they will return `true` if everything is correct. If there was an error, please use the [debug device](#debug-device) functionality to get additional information. When passing a resource to these functions that is already created, it will be destroyed, then created again with the newly provided parameters.
 
 ##### Destroying resources
-You can use the functions such as `DestroyTexture()` or `DestroyBuffer()`, etc. to destroy resources that are no longer needed. These are not necessary to be called, as GPU resources will also call this when their destructor is called. Destroying the resource might be delayed until the time the GPU is finished with them, but the user can immediately reuse the resource and doesn't need to care about this.
+Resources will be destroyed automatically by the graphics device when they are no longer used.
 
 ##### Work submission
 Rendering commands that expect a `CommandList` as a parameter are not executed immediately. They will be recorded into command lists and submitted to the GPU for execution upon calling the `PresentEnd()` function. The `CommandList` is a simple handle that associates rendering commands to a CPU execution timeline. The `CommandList` is not thread safe, so every `CommandList` can be used by a single CPU thread at a time to record commands. In a multithreading scenario, each CPU thread should have its own `CommandList`. `CommandList`s can be retrieved from the [GraphicsDevice](#graphicsdevice) by calling `GraphicsDevice::BeginCommandList()` that will return a `CommandList` handle that is free to be used from that point by the calling thread. All such handles will be in use until `PresentEnd()` was called, where GPU submission takes place. The command lists will be submitted in the order they were retrieved with `GraphicsDevice::BeginCommandList()`. The order of submission correlates with the order of actual GPU execution. For example:
@@ -998,7 +999,6 @@ Handles audio playback and spatial audio.
 The namespace that is a collection of audio related functionality. It is currently implemented with XAudio2
 - CreateSound
 - CreateSoundInstance
-- Destroy
 - Play
 - Pause
 - Stop
@@ -1104,7 +1104,6 @@ Bullet physics engine implementation of the physics update system
 Simple interface that provides UDP networking features.
 - Initialize
 - CreateSocket
-- Destroy
 - Send
 - ListenPort
 - CanReceive

@@ -23,7 +23,7 @@ namespace wiRenderer
 	const wiGraphics::Shader* GetGeometryShader(GSTYPES id);
 	const wiGraphics::Shader* GetPixelShader(PSTYPES id);
 	const wiGraphics::Shader* GetComputeShader(CSTYPES id);
-	const wiGraphics::VertexLayout* GetVertexLayout(VLTYPES id);
+	const wiGraphics::InputLayout* GetInputLayout(ILTYPES id);
 	const wiGraphics::RasterizerState* GetRasterizerState(RSTYPES id);
 	const wiGraphics::DepthStencilState* GetDepthStencilState(DSSTYPES id);
 	const wiGraphics::BlendState* GetBlendState(BSTYPES id);

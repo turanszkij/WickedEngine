@@ -28,6 +28,9 @@ using namespace std;
 
 namespace wiGraphics
 {
+
+namespace DX12_Internal
+{
 	// Engine -> Native converters
 
 	inline D3D12_CPU_DESCRIPTOR_HANDLE ToNativeHandle(wiCPUHandle handle)
@@ -909,6 +912,134 @@ namespace wiGraphics
 
 		return ((uLocation + (uAlign - 1)) & ~(uAlign - 1));
 	}
+
+
+	// Destroyers:
+	struct Internal_Buffer
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		GPUBuffer* resource = nullptr;
+
+		Internal_Buffer(std::shared_ptr<GraphicsDevice> device, GPUBuffer* resource) :device(device), resource(resource) {}
+		~Internal_Buffer()
+		{
+			device->DestroyBuffer(resource);
+			device->DestroyResource(resource);
+		}
+	};
+	struct Internal_Texture
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		Texture* resource = nullptr;
+
+		Internal_Texture(std::shared_ptr<GraphicsDevice> device, Texture* resource) :device(device), resource(resource) {}
+		~Internal_Texture()
+		{
+			device->DestroyTexture(resource);
+			device->DestroyResource(resource);
+		}
+	};
+	struct Internal_InputLayout
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		InputLayout* resource = nullptr;
+
+		Internal_InputLayout(std::shared_ptr<GraphicsDevice> device, InputLayout* resource) :device(device), resource(resource) {}
+		~Internal_InputLayout()
+		{
+			device->DestroyInputLayout(resource);
+		}
+	};
+	struct Internal_Shader
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		Shader* resource = nullptr;
+
+		Internal_Shader(std::shared_ptr<GraphicsDevice> device, Shader* resource) :device(device), resource(resource) {}
+		~Internal_Shader()
+		{
+			device->DestroyShader(resource);
+		}
+	};
+	struct Internal_BlendState
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		BlendState* resource = nullptr;
+
+		Internal_BlendState(std::shared_ptr<GraphicsDevice> device, BlendState* resource) :device(device), resource(resource) {}
+		~Internal_BlendState()
+		{
+			device->DestroyBlendState(resource);
+		}
+	};
+	struct Internal_DepthStencilState
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		DepthStencilState* resource = nullptr;
+
+		Internal_DepthStencilState(std::shared_ptr<GraphicsDevice> device, DepthStencilState* resource) :device(device), resource(resource) {}
+		~Internal_DepthStencilState()
+		{
+			device->DestroyDepthStencilState(resource);
+		}
+	};
+	struct Internal_RasterizerState
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		RasterizerState* resource = nullptr;
+
+		Internal_RasterizerState(std::shared_ptr<GraphicsDevice> device, RasterizerState* resource) :device(device), resource(resource) {}
+		~Internal_RasterizerState()
+		{
+			device->DestroyRasterizerState(resource);
+		}
+	};
+	struct Internal_Sampler
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		Sampler* resource = nullptr;
+
+		Internal_Sampler(std::shared_ptr<GraphicsDevice> device, Sampler* resource) :device(device), resource(resource) {}
+		~Internal_Sampler()
+		{
+			device->DestroySamplerState(resource);
+		}
+	};
+	struct Internal_Query
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		GPUQuery* resource = nullptr;
+
+		Internal_Query(std::shared_ptr<GraphicsDevice> device, GPUQuery* resource) :device(device), resource(resource) {}
+		~Internal_Query()
+		{
+			device->DestroyQuery(resource);
+		}
+	};
+	struct Internal_PipelineState
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		PipelineState* resource = nullptr;
+
+		Internal_PipelineState(std::shared_ptr<GraphicsDevice> device, PipelineState* resource) :device(device), resource(resource) {}
+		~Internal_PipelineState()
+		{
+			device->DestroyPipelineState(resource);
+		}
+	};
+	struct Internal_RenderPass
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		RenderPass* resource = nullptr;
+
+		Internal_RenderPass(std::shared_ptr<GraphicsDevice> device, RenderPass* resource) :device(device), resource(resource) {}
+		~Internal_RenderPass()
+		{
+			device->DestroyRenderPass(resource);
+		}
+	};
+}
+using namespace DX12_Internal;
 
 	// Allocator heaps:
 
@@ -2003,10 +2134,8 @@ namespace wiGraphics
 
 	bool GraphicsDevice_DX12::CreateBuffer(const GPUBufferDesc* pDesc, const SubresourceData* pInitialData, GPUBuffer* pBuffer)
 	{
-		DestroyBuffer(pBuffer);
-		DestroyResource(pBuffer);
+		pBuffer->internal_state = std::make_shared<Internal_Buffer>(shared_from_this(), pBuffer);
 		pBuffer->type = GPUResource::GPU_RESOURCE_TYPE::BUFFER;
-		pBuffer->Register(shared_from_this());
 
 		HRESULT hr = E_FAIL;
 
@@ -2164,10 +2293,8 @@ namespace wiGraphics
 	}
 	bool GraphicsDevice_DX12::CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture)
 	{
-		DestroyTexture(pTexture);
-		DestroyResource(pTexture);
+		pTexture->internal_state = std::make_shared<Internal_Texture>(shared_from_this(), pTexture);
 		pTexture->type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
-		pTexture->Register(shared_from_this());
 
 		pTexture->desc = *pDesc;
 
@@ -2330,10 +2457,9 @@ namespace wiGraphics
 
 		return SUCCEEDED(hr);
 	}
-	bool GraphicsDevice_DX12::CreateInputLayout(const VertexLayoutDesc* pInputElementDescs, uint32_t NumElements, const ShaderByteCode* shaderCode, VertexLayout* pInputLayout)
+	bool GraphicsDevice_DX12::CreateInputLayout(const InputLayoutDesc* pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout* pInputLayout)
 	{
-		DestroyInputLayout(pInputLayout);
-		pInputLayout->Register(shared_from_this());
+		pInputLayout->internal_state = std::make_shared<Internal_InputLayout>(shared_from_this(), pInputLayout);
 
 		pInputLayout->desc.clear();
 		pInputLayout->desc.reserve((size_t)NumElements);
@@ -2346,23 +2472,21 @@ namespace wiGraphics
 	}
 	bool GraphicsDevice_DX12::CreateShader(SHADERSTAGE stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader)
 	{
-		DestroyShader(pShader);
-		pShader->Register(shared_from_this());
+		pShader->internal_state = std::make_shared<Internal_Shader>(shared_from_this(), pShader);
 
-		pShader->code.data = new BYTE[BytecodeLength];
-		std::memcpy(pShader->code.data, pShaderBytecode, BytecodeLength);
-		pShader->code.size = BytecodeLength;
+		pShader->code.resize(BytecodeLength);
+		std::memcpy(pShader->code.data(), pShaderBytecode, BytecodeLength);
 		pShader->stage = stage;
 
-		HRESULT hr = (pShader->code.data != nullptr && pShader->code.size > 0 ? S_OK : E_FAIL);
+		HRESULT hr = (pShader->code.empty() ? E_FAIL : S_OK);
 		
 		assert(SUCCEEDED(hr));
 
 		if (stage == CS)
 		{
 			D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {};
-			desc.CS.pShaderBytecode = pShader->code.data;
-			desc.CS.BytecodeLength = pShader->code.size;
+			desc.CS.pShaderBytecode = pShader->code.data();
+			desc.CS.BytecodeLength = pShader->code.size();
 			desc.pRootSignature = computeRootSig;
 
 			hr = device->CreateComputePipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&pShader->resource);
@@ -2373,32 +2497,28 @@ namespace wiGraphics
 	}
 	bool GraphicsDevice_DX12::CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState)
 	{
-		DestroyBlendState(pBlendState);
-		pBlendState->Register(shared_from_this());
+		pBlendState->internal_state = std::make_shared<Internal_BlendState>(shared_from_this(), pBlendState);
 
 		pBlendState->desc = *pBlendStateDesc;
 		return S_OK;
 	}
 	bool GraphicsDevice_DX12::CreateDepthStencilState(const DepthStencilStateDesc* pDepthStencilStateDesc, DepthStencilState* pDepthStencilState)
 	{
-		DestroyDepthStencilState(pDepthStencilState);
-		pDepthStencilState->Register(shared_from_this());
+		pDepthStencilState->internal_state = std::make_shared<Internal_DepthStencilState>(shared_from_this(), pDepthStencilState);
 
 		pDepthStencilState->desc = *pDepthStencilStateDesc;
 		return S_OK;
 	}
 	bool GraphicsDevice_DX12::CreateRasterizerState(const RasterizerStateDesc* pRasterizerStateDesc, RasterizerState* pRasterizerState)
 	{
-		DestroyRasterizerState(pRasterizerState);
-		pRasterizerState->Register(shared_from_this());
+		pRasterizerState->internal_state = std::make_shared<Internal_RasterizerState>(shared_from_this(), pRasterizerState);
 
 		pRasterizerState->desc = *pRasterizerStateDesc;
 		return S_OK;
 	}
-	bool GraphicsDevice_DX12::CreateSamplerState(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState)
+	bool GraphicsDevice_DX12::CreateSampler(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState)
 	{
-		DestroySamplerState(pSamplerState);
-		pSamplerState->Register(shared_from_this());
+		pSamplerState->internal_state = std::make_shared<Internal_Sampler>(shared_from_this(), pSamplerState);
 
 		D3D12_SAMPLER_DESC desc;
 		desc.Filter = _ConvertFilter(pSamplerDesc->Filter);
@@ -2424,8 +2544,7 @@ namespace wiGraphics
 	}
 	bool GraphicsDevice_DX12::CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery)
 	{
-		DestroyQuery(pQuery);
-		pQuery->Register(shared_from_this());
+		pQuery->internal_state = std::make_shared<Internal_Query>(shared_from_this(), pQuery);
 
 		HRESULT hr = E_FAIL;
 
@@ -2469,8 +2588,7 @@ namespace wiGraphics
 	}
 	bool GraphicsDevice_DX12::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
 	{
-		DestroyPipelineState(pso);
-		pso->Register(shared_from_this());
+		pso->internal_state = std::make_shared<Internal_PipelineState>(shared_from_this(), pso);
 
 		pso->desc = *pDesc;
 
@@ -2491,8 +2609,7 @@ namespace wiGraphics
 	}
 	bool GraphicsDevice_DX12::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
 	{
-		DestroyRenderPass(renderpass);
-		renderpass->Register(shared_from_this());
+		renderpass->internal_state = std::make_shared<Internal_RenderPass>(shared_from_this(), renderpass);
 
 		renderpass->desc = *pDesc;
 
@@ -2921,7 +3038,7 @@ namespace wiGraphics
 		}
 		pTexture->subresourceDSVs.clear();
 	}
-	void GraphicsDevice_DX12::DestroyInputLayout(VertexLayout* pInputLayout)
+	void GraphicsDevice_DX12::DestroyInputLayout(InputLayout* pInputLayout)
 	{
 
 	}
@@ -3641,28 +3758,28 @@ namespace wiGraphics
 
 				if (pso->desc.vs != nullptr)
 				{
-					desc.VS.pShaderBytecode = pso->desc.vs->code.data;
-					desc.VS.BytecodeLength = pso->desc.vs->code.size;
+					desc.VS.pShaderBytecode = pso->desc.vs->code.data();
+					desc.VS.BytecodeLength = pso->desc.vs->code.size();
 				}
 				if (pso->desc.hs != nullptr)
 				{
-					desc.HS.pShaderBytecode = pso->desc.hs->code.data;
-					desc.HS.BytecodeLength = pso->desc.hs->code.size;
+					desc.HS.pShaderBytecode = pso->desc.hs->code.data();
+					desc.HS.BytecodeLength = pso->desc.hs->code.size();
 				}
 				if (pso->desc.ds != nullptr)
 				{
-					desc.DS.pShaderBytecode = pso->desc.ds->code.data;
-					desc.DS.BytecodeLength = pso->desc.ds->code.size;
+					desc.DS.pShaderBytecode = pso->desc.ds->code.data();
+					desc.DS.BytecodeLength = pso->desc.ds->code.size();
 				}
 				if (pso->desc.gs != nullptr)
 				{
-					desc.GS.pShaderBytecode = pso->desc.gs->code.data;
-					desc.GS.BytecodeLength = pso->desc.gs->code.size;
+					desc.GS.pShaderBytecode = pso->desc.gs->code.data();
+					desc.GS.BytecodeLength = pso->desc.gs->code.size();
 				}
 				if (pso->desc.ps != nullptr)
 				{
-					desc.PS.BytecodeLength = pso->desc.ps->code.size;
-					desc.PS.pShaderBytecode = pso->desc.ps->code.data;
+					desc.PS.BytecodeLength = pso->desc.ps->code.size();
+					desc.PS.pShaderBytecode = pso->desc.ps->code.data();
 				}
 
 				RasterizerStateDesc pRasterizerStateDesc = pso->desc.rs != nullptr ? pso->desc.rs->GetDesc() : RasterizerStateDesc();
@@ -3723,7 +3840,7 @@ namespace wiGraphics
 						elements[i].Format = _ConvertFormat(pso->desc.il->desc[i].Format);
 						elements[i].InputSlot = pso->desc.il->desc[i].InputSlot;
 						elements[i].AlignedByteOffset = pso->desc.il->desc[i].AlignedByteOffset;
-						if (elements[i].AlignedByteOffset == VertexLayoutDesc::APPEND_ALIGNED_ELEMENT)
+						if (elements[i].AlignedByteOffset == InputLayoutDesc::APPEND_ALIGNED_ELEMENT)
 							elements[i].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
 						elements[i].InputSlotClass = _ConvertInputClassification(pso->desc.il->desc[i].InputSlotClass);
 						elements[i].InstanceDataStepRate = pso->desc.il->desc[i].InstanceDataStepRate;

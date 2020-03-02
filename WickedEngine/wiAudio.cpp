@@ -3,7 +3,6 @@
 #include "wiHelper.h"
 
 #include <vector>
-#include <memory>
 
 #include <xaudio2.h>
 #include <xaudio2fx.h>
@@ -157,14 +156,6 @@ namespace wiAudio
 	};
 	std::shared_ptr<AudioInternal> audio;
 
-	Sound::~Sound()
-	{
-		Destroy(this);
-	}
-	SoundInstance::~SoundInstance()
-	{
-		Destroy(this);
-	}
 	struct SoundInternal
 	{
 		std::shared_ptr<AudioInternal> audio;
@@ -174,12 +165,18 @@ namespace wiAudio
 	struct SoundInstanceInternal
 	{
 		std::shared_ptr<AudioInternal> audio;
+		std::shared_ptr<SoundInternal> soundinternal;
 		IXAudio2SourceVoice* sourceVoice = nullptr;
 		XAUDIO2_VOICE_DETAILS voiceDetails = {};
 		std::vector<float> outputMatrix;
 		std::vector<float> channelAzimuths;
 		XAUDIO2_BUFFER buffer = {};
-		const SoundInternal* soundinternal = nullptr;
+
+		~SoundInstanceInternal()
+		{
+			sourceVoice->Stop();
+			sourceVoice->DestroyVoice();
+		}
 	};
 
 	void Initialize()
@@ -264,7 +261,8 @@ namespace wiAudio
 
 	bool CreateSound(const std::string& filename, Sound* sound)
 	{
-		Destroy(sound);
+		std::shared_ptr<SoundInternal> soundinternal = std::make_shared<SoundInternal>();
+		sound->internal_state = soundinternal;
 
 		std::wstring wfilename;
 		wiHelper::StringConvert(filename, wfilename);
@@ -299,7 +297,6 @@ namespace wiAudio
 		assert(SUCCEEDED(hr));
 		assert(filetype == fourccWAVE);
 
-		SoundInternal* soundinternal = new SoundInternal;
 		soundinternal->audio = audio;
 
 		hr = FindChunk(hFile, fourccFMT, dwChunkSize, dwChunkPosition);
@@ -315,17 +312,15 @@ namespace wiAudio
 		hr = ReadChunkData(hFile, soundinternal->audioData.data(), dwChunkSize, dwChunkPosition);
 		assert(SUCCEEDED(hr));
 
-		sound->handle = (wiCPUHandle)soundinternal;
-
 		return true;
 	}
 	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance)
 	{
-		Destroy(instance);
-
 		HRESULT hr;
-		const SoundInternal* soundinternal = (const SoundInternal*)sound->handle;
-		SoundInstanceInternal* instanceinternal = new SoundInstanceInternal;
+		std::shared_ptr<SoundInternal> soundinternal = std::static_pointer_cast<SoundInternal>(sound->internal_state);
+		std::shared_ptr<SoundInstanceInternal> instanceinternal = std::make_shared<SoundInstanceInternal>();
+		instance->internal_state = instanceinternal;
+
 		instanceinternal->audio = audio;
 		instanceinternal->soundinternal = soundinternal;
 
@@ -366,53 +361,31 @@ namespace wiAudio
 			return false;
 		}
 
-		instance->handle = (wiCPUHandle)instanceinternal;
-
 		return true;
-	}
-	void Destroy(Sound* sound)
-	{
-		if (sound != nullptr && sound->handle != WI_NULL_HANDLE)
-		{
-			SoundInternal* soundinternal = (SoundInternal*)sound->handle;
-			delete soundinternal;
-			sound->handle = WI_NULL_HANDLE;
-		}
-	}
-	void Destroy(SoundInstance* instance)
-	{
-		if (instance != nullptr && instance->handle != WI_NULL_HANDLE)
-		{
-			SoundInstanceInternal* instanceinternal = (SoundInstanceInternal*)instance->handle;
-			instanceinternal->sourceVoice->Stop();
-			instanceinternal->sourceVoice->DestroyVoice();
-			delete instanceinternal;
-			instance->handle = WI_NULL_HANDLE;
-		}
 	}
 	void Play(SoundInstance* instance)
 	{
-		if (instance != nullptr && instance->handle != WI_NULL_HANDLE)
+		if (instance != nullptr && instance->IsValid())
 		{
-			SoundInstanceInternal* instanceinternal = (SoundInstanceInternal*)instance->handle;
+			std::shared_ptr<SoundInstanceInternal> instanceinternal = std::static_pointer_cast<SoundInstanceInternal>(instance->internal_state);
 			HRESULT hr = instanceinternal->sourceVoice->Start();
 			assert(SUCCEEDED(hr));
 		}
 	}
 	void Pause(SoundInstance* instance)
 	{
-		if (instance != nullptr && instance->handle != WI_NULL_HANDLE)
+		if (instance != nullptr && instance->IsValid())
 		{
-			SoundInstanceInternal* instanceinternal = (SoundInstanceInternal*)instance->handle;
+			std::shared_ptr<SoundInstanceInternal> instanceinternal = std::static_pointer_cast<SoundInstanceInternal>(instance->internal_state);
 			HRESULT hr = instanceinternal->sourceVoice->Stop(); // preserves cursor position
 			assert(SUCCEEDED(hr));
 		}
 	}
 	void Stop(SoundInstance* instance)
 	{
-		if (instance != nullptr && instance->handle != WI_NULL_HANDLE)
+		if (instance != nullptr && instance->IsValid())
 		{
-			SoundInstanceInternal* instanceinternal = (SoundInstanceInternal*)instance->handle;
+			std::shared_ptr<SoundInstanceInternal> instanceinternal = std::static_pointer_cast<SoundInstanceInternal>(instance->internal_state);
 			HRESULT hr = instanceinternal->sourceVoice->Stop(); // preserves cursor position
 			assert(SUCCEEDED(hr)); 
 			hr = instanceinternal->sourceVoice->FlushSourceBuffers(); // reset submitted audio buffer
@@ -423,14 +396,14 @@ namespace wiAudio
 	}
 	void SetVolume(float volume, SoundInstance* instance)
 	{
-		if (instance == nullptr || instance->handle == WI_NULL_HANDLE)
+		if (instance == nullptr || !instance->IsValid())
 		{
 			HRESULT hr = audio->masteringVoice->SetVolume(volume);
 			assert(SUCCEEDED(hr));
 		}
 		else
 		{
-			SoundInstanceInternal* instanceinternal = (SoundInstanceInternal*)instance->handle;
+			std::shared_ptr<SoundInstanceInternal> instanceinternal = std::static_pointer_cast<SoundInstanceInternal>(instance->internal_state);
 			HRESULT hr = instanceinternal->sourceVoice->SetVolume(volume);
 			assert(SUCCEEDED(hr));
 		}
@@ -438,22 +411,22 @@ namespace wiAudio
 	float GetVolume(const SoundInstance* instance)
 	{
 		float volume = 0;
-		if (instance == nullptr || instance->handle == WI_NULL_HANDLE)
+		if (instance == nullptr || !instance->IsValid())
 		{
 			audio->masteringVoice->GetVolume(&volume);
 		}
 		else
 		{
-			const SoundInstanceInternal* instanceinternal = (const SoundInstanceInternal*)instance->handle;
+			std::shared_ptr<SoundInstanceInternal> instanceinternal = std::static_pointer_cast<SoundInstanceInternal>(instance->internal_state);
 			instanceinternal->sourceVoice->GetVolume(&volume);
 		}
 		return volume;
 	}
 	void ExitLoop(SoundInstance* instance)
 	{
-		if (instance != nullptr && instance->handle != WI_NULL_HANDLE)
+		if (instance != nullptr && instance->IsValid())
 		{
-			SoundInstanceInternal* instanceinternal = (SoundInstanceInternal*)instance->handle;
+			std::shared_ptr<SoundInstanceInternal> instanceinternal = std::static_pointer_cast<SoundInstanceInternal>(instance->internal_state);
 			HRESULT hr = instanceinternal->sourceVoice->ExitLoop();
 			assert(SUCCEEDED(hr));
 		}
@@ -473,9 +446,9 @@ namespace wiAudio
 
 	void Update3D(SoundInstance* instance, const SoundInstance3D& instance3D)
 	{
-		if (instance != nullptr && instance->handle != WI_NULL_HANDLE)
+		if (instance != nullptr && instance->IsValid())
 		{
-			SoundInstanceInternal* instanceinternal = (SoundInstanceInternal*)instance->handle;
+			std::shared_ptr<SoundInstanceInternal> instanceinternal = std::static_pointer_cast<SoundInstanceInternal>(instance->internal_state);
 
 			X3DAUDIO_LISTENER listener = {};
 			listener.Position = instance3D.listenerPos;

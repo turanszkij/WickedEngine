@@ -9,48 +9,60 @@
 
 namespace wiNetwork
 {
-	struct wiNetwork_Internal_Cleanup
+	struct wiNetworkInternal
 	{
-		bool initialized = false;
-		~wiNetwork_Internal_Cleanup()
+		WSAData wsadata;
+
+		~wiNetworkInternal()
 		{
-			if (initialized)
+			WSACleanup();
+		}
+	};
+	std::shared_ptr<wiNetworkInternal> networkinternal;
+
+	struct SocketInternal
+	{
+		std::shared_ptr<wiNetworkInternal> networkinternal;
+		SOCKET handle = NULL;
+
+		~SocketInternal()
+		{
+			int result = closesocket(handle);
+			if (result == SOCKET_ERROR)
 			{
-				WSACleanup();
+				int error = WSAGetLastError();
+				assert(0 && error);
 			}
 		}
-	} cleanup;
-
-	Socket::~Socket()
-	{
-		Destroy(this);
-	}
+	};
 
 	void Initialize()
 	{
 		int result;
-		WSAData wsadata;
-		result = WSAStartup(MAKEWORD(2, 2), &wsadata); 
+
+		networkinternal = std::make_shared<wiNetworkInternal>();
+
+		result = WSAStartup(MAKEWORD(2, 2), &networkinternal->wsadata); 
 		if (result)
 		{
 			int error = WSAGetLastError();
 			std::stringstream ss("");
 			ss << "wiNetwork Initialization FAILED with error: " << error;
 			wiBackLog::post(ss.str().c_str());
-			WSACleanup();
 			assert(0);
 		}
-		cleanup.initialized = true; // it will auto cleanup
 
 		wiBackLog::post("wiNetwork Initialized");
 	}
 
 	bool CreateSocket(Socket* sock)
 	{
-		Destroy(sock);
+		std::shared_ptr<SocketInternal> socketinternal = std::make_shared<SocketInternal>();
+		socketinternal->networkinternal = networkinternal;
+		sock->internal_state = socketinternal;
 
-		SOCKET handle = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-		if (handle == INVALID_SOCKET)
+		socketinternal->handle = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+		if (socketinternal->handle == INVALID_SOCKET)
 		{
 			int error = WSAGetLastError();
 			std::stringstream ss;
@@ -59,33 +71,12 @@ namespace wiNetwork
 			return false;
 		}
 
-		sock->handle = (wiCPUHandle)handle;
-
 		return true;
-	}
-	bool Destroy(Socket* sock)
-	{
-		if (socket != nullptr && sock->handle != WI_NULL_HANDLE)
-		{
-			int result = closesocket((SOCKET)sock->handle);
-			if (result == SOCKET_ERROR)
-			{
-				int error = WSAGetLastError();
-				std::stringstream ss;
-				ss << "wiNetwork error in Destroy: " << error;
-				wiBackLog::post(ss.str().c_str());
-				return false;
-			}
-
-			sock->handle = WI_NULL_HANDLE;
-			return true;
-		}
-		return false;
 	}
 
 	bool Send(const Socket* sock, const Connection* connection, const void* data, size_t dataSize)
 	{
-		if (socket != nullptr && sock->handle != WI_NULL_HANDLE)
+		if (socket != nullptr && sock->IsValid())
 		{
 			sockaddr_in target;
 			target.sin_family = AF_INET;
@@ -95,7 +86,9 @@ namespace wiNetwork
 			target.sin_addr.S_un.S_un_b.s_b3 = connection->ipaddress[2];
 			target.sin_addr.S_un.S_un_b.s_b4 = connection->ipaddress[3];
 
-			int result = sendto((SOCKET)sock->handle, (const char*)data, (int)dataSize, 0, (const sockaddr*)& target, sizeof(target));
+			std::shared_ptr<SocketInternal> socketinternal = std::static_pointer_cast<SocketInternal>(sock->internal_state);
+
+			int result = sendto(socketinternal->handle, (const char*)data, (int)dataSize, 0, (const sockaddr*)& target, sizeof(target));
 			if (result == SOCKET_ERROR)
 			{
 				int error = WSAGetLastError();
@@ -112,14 +105,16 @@ namespace wiNetwork
 
 	bool ListenPort(const Socket* sock, uint16_t port)
 	{
-		if (socket != nullptr && sock->handle != WI_NULL_HANDLE)
+		if (socket != nullptr && sock->IsValid())
 		{
 			sockaddr_in target;
 			target.sin_family = AF_INET;
 			target.sin_port = htons(port);
 			target.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
 
-			int result = bind((SOCKET)sock->handle, (const sockaddr*)& target, sizeof(target));
+			std::shared_ptr<SocketInternal> socketinternal = std::static_pointer_cast<SocketInternal>(sock->internal_state);
+
+			int result = bind(socketinternal->handle, (const sockaddr*)& target, sizeof(target));
 			if (result == SOCKET_ERROR)
 			{
 				int error = WSAGetLastError();
@@ -136,11 +131,13 @@ namespace wiNetwork
 
 	bool CanReceive(const Socket* sock, long timeout_microseconds)
 	{
-		if (socket != nullptr && sock->handle != WI_NULL_HANDLE)
+		if (socket != nullptr && sock->IsValid())
 		{
+			std::shared_ptr<SocketInternal> socketinternal = std::static_pointer_cast<SocketInternal>(sock->internal_state);
+
 			fd_set readfds;
 			FD_ZERO(&readfds);
-			FD_SET((SOCKET)sock->handle, &readfds);
+			FD_SET(socketinternal->handle, &readfds);
 			timeval timeout;
 			timeout.tv_sec = 0;
 			timeout.tv_usec = timeout_microseconds;
@@ -154,18 +151,20 @@ namespace wiNetwork
 				return false;
 			}
 
-			return FD_ISSET((SOCKET)sock->handle, &readfds);
+			return FD_ISSET(socketinternal->handle, &readfds);
 		}
 		return false;
 	}
 
 	bool Receive(const Socket* sock, Connection* connection, void* data, size_t dataSize)
 	{
-		if (socket != nullptr && sock->handle != WI_NULL_HANDLE)
+		if (socket != nullptr && sock->IsValid())
 		{
+			std::shared_ptr<SocketInternal> socketinternal = std::static_pointer_cast<SocketInternal>(sock->internal_state);
+
 			sockaddr_in sender;
 			int targetsize = sizeof(sender);
-			int result = recvfrom((SOCKET)sock->handle, (char*)data, (int)dataSize, 0, (sockaddr*)& sender, &targetsize);
+			int result = recvfrom(socketinternal->handle, (char*)data, (int)dataSize, 0, (sockaddr*)& sender, &targetsize);
 			if (result == SOCKET_ERROR)
 			{
 				int error = WSAGetLastError();

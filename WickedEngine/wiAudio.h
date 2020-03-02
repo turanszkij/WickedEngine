@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 
+#include <memory>
 #include <string>
 
 namespace wiAudio
@@ -20,57 +21,21 @@ namespace wiAudio
 
 	struct Sound
 	{
-		wiCPUHandle handle = WI_NULL_HANDLE;
-
-		void operator=(Sound&& other)
-		{
-			handle = other.handle;
-			other.handle = WI_NULL_HANDLE;
-		}
-
-		Sound() {}
-		Sound(Sound&& other)
-		{
-			handle = other.handle;
-
-			other.handle = WI_NULL_HANDLE;
-		}
-		~Sound();
+		std::shared_ptr<void> internal_state;
+		inline bool IsValid() const { return internal_state.get() != nullptr; }
 	};
 	struct SoundInstance
 	{
+		std::shared_ptr<void> internal_state;
+		inline bool IsValid() const { return internal_state.get() != nullptr; }
+
 		SUBMIX_TYPE type = SUBMIX_TYPE_SOUNDEFFECT;
 		float loop_begin = 0;	// loop region begin in seconds (0 = from beginning)
 		float loop_length = 0;	// loop region legth in seconds (0 = until the end)
-		wiCPUHandle handle = WI_NULL_HANDLE;
-
-		void operator=(SoundInstance&& other)
-		{
-			type = other.type;
-			loop_begin = other.loop_begin;
-			loop_length = other.loop_length;
-			handle = other.handle;
-
-			other.handle = WI_NULL_HANDLE;
-		}
-
-		SoundInstance() {}
-		SoundInstance(SoundInstance&& other)
-		{
-			type = other.type;
-			loop_begin = other.loop_begin;
-			loop_length = other.loop_length;
-			handle = other.handle;
-
-			other.handle = WI_NULL_HANDLE;
-		}
-		~SoundInstance();
 	};
 
 	bool CreateSound(const std::string& filename, Sound* sound);
 	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance);
-	void Destroy(Sound* sound);
-	void Destroy(SoundInstance* instance);
 
 	void Play(SoundInstance* instance);
 	void Pause(SoundInstance* instance);

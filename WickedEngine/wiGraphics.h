@@ -1,5 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
+#include <memory>
+#include <vector>
 
 namespace wiGraphics
 {
@@ -7,7 +9,7 @@ namespace wiGraphics
 	struct BlendState;
 	struct RasterizerState;
 	struct DepthStencilState;
-	struct VertexLayout;
+	struct InputLayout;
 	struct GPUResource;
 	struct GPUBuffer;
 	struct Texture;
@@ -317,7 +319,7 @@ namespace wiGraphics
 		RESOURCE_MISC_TILED = 0x40000L,
 	};
 
-	// Structs /////////////////////////////////////////////
+	// Descriptor structs:
 
 	struct Viewport
 	{
@@ -328,7 +330,7 @@ namespace wiGraphics
 		float MinDepth = 0.0f;
 		float MaxDepth = 1.0f;
 	};
-	struct VertexLayoutDesc
+	struct InputLayoutDesc
 	{
 		static const uint32_t APPEND_ALIGNED_ELEMENT = 0xffffffff; // automatically figure out AlignedByteOffset depending on Format
 
@@ -463,7 +465,7 @@ namespace wiGraphics
 		const BlendState*			bs = nullptr;
 		const RasterizerState*		rs = nullptr;
 		const DepthStencilState*	dss = nullptr;
-		const VertexLayout*			il = nullptr;
+		const InputLayout*			il = nullptr;
 		PRIMITIVETOPOLOGY			pt = TRIANGLELIST;
 		uint32_t					sampleMask = 0xFFFFFFFF;
 	};
@@ -584,4 +586,123 @@ namespace wiGraphics
 		int32_t bottom = 0;
 	};
 
+
+	// Resources:
+
+	struct GraphicsDeviceChild
+	{
+		std::shared_ptr<void> internal_state;
+		inline bool IsValid() const { return internal_state.get() != nullptr; }
+	};
+
+	struct Shader : public GraphicsDeviceChild
+	{
+		SHADERSTAGE stage = SHADERSTAGE_COUNT;
+		std::vector<uint8_t> code;
+		wiCPUHandle resource = WI_NULL_HANDLE;
+	};
+
+	struct Sampler : public GraphicsDeviceChild
+	{
+		wiCPUHandle resource = WI_NULL_HANDLE;
+		SamplerDesc desc;
+
+		const SamplerDesc& GetDesc() const { return desc; }
+	};
+
+	struct GPUResource : public GraphicsDeviceChild
+	{
+		enum class GPU_RESOURCE_TYPE
+		{
+			BUFFER,
+			TEXTURE,
+			UNKNOWN_TYPE,
+		} type = GPU_RESOURCE_TYPE::UNKNOWN_TYPE;
+		inline bool IsTexture() const { return type == GPU_RESOURCE_TYPE::TEXTURE; }
+		inline bool IsBuffer() const { return type == GPU_RESOURCE_TYPE::BUFFER; }
+
+		wiCPUHandle SRV = WI_NULL_HANDLE;
+		std::vector<wiCPUHandle> subresourceSRVs;
+
+		wiCPUHandle UAV = WI_NULL_HANDLE;
+		std::vector<wiCPUHandle> subresourceUAVs;
+
+		wiCPUHandle resource = WI_NULL_HANDLE;
+	};
+
+	struct GPUBuffer : public GPUResource
+	{
+		wiCPUHandle CBV = WI_NULL_HANDLE;
+		GPUBufferDesc desc;
+
+		const GPUBufferDesc& GetDesc() const { return desc; }
+	};
+
+	struct InputLayout : public GraphicsDeviceChild
+	{
+		wiCPUHandle	resource = WI_NULL_HANDLE;
+
+		std::vector<InputLayoutDesc> desc;
+	};
+
+	struct BlendState : public GraphicsDeviceChild
+	{
+		wiCPUHandle resource = WI_NULL_HANDLE;
+		BlendStateDesc desc;
+
+		const BlendStateDesc& GetDesc() const { return desc; }
+	};
+
+	struct DepthStencilState : public GraphicsDeviceChild
+	{
+		wiCPUHandle resource = WI_NULL_HANDLE;
+		DepthStencilStateDesc desc;
+
+		const DepthStencilStateDesc& GetDesc() const { return desc; }
+	};
+
+	struct RasterizerState : public GraphicsDeviceChild
+	{
+		wiCPUHandle resource = WI_NULL_HANDLE;
+		RasterizerStateDesc desc;
+
+		const RasterizerStateDesc& GetDesc() const { return desc; }
+	};
+
+	struct Texture : public GPUResource
+	{
+		TextureDesc	desc;
+		wiCPUHandle	RTV = WI_NULL_HANDLE;
+		std::vector<wiCPUHandle> subresourceRTVs;
+		wiCPUHandle	DSV = WI_NULL_HANDLE;
+		std::vector<wiCPUHandle> subresourceDSVs;
+
+		const TextureDesc& GetDesc() const { return desc; }
+	};
+
+	struct GPUQuery : public GraphicsDeviceChild
+	{
+		wiCPUHandle	resource = WI_NULL_HANDLE;
+		GPUQueryDesc desc;
+
+		const GPUQueryDesc& GetDesc() const { return desc; }
+	};
+
+	struct PipelineState : public GraphicsDeviceChild
+	{
+		size_t hash = 0;
+		PipelineStateDesc desc;
+
+		const PipelineStateDesc& GetDesc() const { return desc; }
+	};
+
+	struct RenderPass : public GraphicsDeviceChild
+	{
+		size_t hash = 0;
+		wiCPUHandle	framebuffer = WI_NULL_HANDLE;
+		wiCPUHandle	renderpass = WI_NULL_HANDLE;
+		RenderPassDesc desc;
+
+		const RenderPassDesc& GetDesc() const { return desc; }
+	};
 }

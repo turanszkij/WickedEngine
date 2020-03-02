@@ -281,8 +281,6 @@ Loads and plays an audio files.
 - [outer]audio : Audio  -- the audio device
 - CreateSound(string filename, Sound sound) : bool  -- Creates a sound file, returns true if successful, false otherwise
 - CreateSoundInstance(Sound sound, SoundInstance soundinstance) : bool  -- Creates a sound instance that can be replayed, returns true if successful, false otherwise
-- Destroy(Sound sound)
-- Destroy(SoundInsance soundinstance)
 - Play(SoundInsance soundinstance)
 - Pause(SoundInsance soundinstance)
 - Stop(SoundInsance soundinstance)

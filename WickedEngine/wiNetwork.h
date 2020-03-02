@@ -1,28 +1,15 @@
 #pragma once
 #include "CommonInclude.h"
 
+#include <memory>
 #include <array>
 
 namespace wiNetwork
 {
 	struct Socket
 	{
-		wiCPUHandle handle = WI_NULL_HANDLE;
-
-		void operator=(Socket&& other)
-		{
-			handle = other.handle;
-			other.handle = WI_NULL_HANDLE;
-		}
-
-		Socket() {}
-		Socket(Socket&& other)
-		{
-			handle = other.handle;
-
-			other.handle = WI_NULL_HANDLE;
-		}
-		~Socket();
+		std::shared_ptr<void> internal_state;
+		inline bool IsValid() const { return internal_state.get() != nullptr; }
 	};
 
 	static const uint16_t DEFAULT_PORT = 777;

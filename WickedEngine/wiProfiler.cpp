@@ -3,7 +3,6 @@
 #include "wiRenderer.h"
 #include "wiFont.h"
 #include "wiTimer.h"
-#include "wiGraphicsResource.h"
 
 #include <sstream>
 #include <unordered_map>

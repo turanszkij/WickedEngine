@@ -22,7 +22,8 @@
 namespace wiGraphics
 {
 
-
+namespace Vulkan_Internal
+{
 	// Converters:
 	constexpr VkFormat _ConvertFormat(FORMAT value)
 	{
@@ -749,6 +750,132 @@ namespace wiGraphics
 	}
 
 
+	// Destroyers:
+	struct Internal_Buffer
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		GPUBuffer* resource = nullptr;
+
+		Internal_Buffer(std::shared_ptr<GraphicsDevice> device, GPUBuffer* resource) :device(device), resource(resource) {}
+		~Internal_Buffer()
+		{
+			device->DestroyBuffer(resource);
+			device->DestroyResource(resource);
+		}
+	};
+	struct Internal_Texture
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		Texture* resource = nullptr;
+
+		Internal_Texture(std::shared_ptr<GraphicsDevice> device, Texture* resource) :device(device), resource(resource) {}
+		~Internal_Texture()
+		{
+			device->DestroyTexture(resource);
+			device->DestroyResource(resource);
+		}
+	};
+	struct Internal_InputLayout
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		InputLayout* resource = nullptr;
+
+		Internal_InputLayout(std::shared_ptr<GraphicsDevice> device, InputLayout* resource) :device(device), resource(resource) {}
+		~Internal_InputLayout()
+		{
+			device->DestroyInputLayout(resource);
+		}
+	};
+	struct Internal_Shader
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		Shader* resource = nullptr;
+
+		Internal_Shader(std::shared_ptr<GraphicsDevice> device, Shader* resource) :device(device), resource(resource) {}
+		~Internal_Shader()
+		{
+			device->DestroyShader(resource);
+		}
+	};
+	struct Internal_BlendState
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		BlendState* resource = nullptr;
+
+		Internal_BlendState(std::shared_ptr<GraphicsDevice> device, BlendState* resource) :device(device), resource(resource) {}
+		~Internal_BlendState()
+		{
+			device->DestroyBlendState(resource);
+		}
+	};
+	struct Internal_DepthStencilState
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		DepthStencilState* resource = nullptr;
+
+		Internal_DepthStencilState(std::shared_ptr<GraphicsDevice> device, DepthStencilState* resource) :device(device), resource(resource) {}
+		~Internal_DepthStencilState()
+		{
+			device->DestroyDepthStencilState(resource);
+		}
+	};
+	struct Internal_RasterizerState
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		RasterizerState* resource = nullptr;
+
+		Internal_RasterizerState(std::shared_ptr<GraphicsDevice> device, RasterizerState* resource) :device(device), resource(resource) {}
+		~Internal_RasterizerState()
+		{
+			device->DestroyRasterizerState(resource);
+		}
+	};
+	struct Internal_Sampler
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		Sampler* resource = nullptr;
+
+		Internal_Sampler(std::shared_ptr<GraphicsDevice> device, Sampler* resource) :device(device), resource(resource) {}
+		~Internal_Sampler()
+		{
+			device->DestroySamplerState(resource);
+		}
+	};
+	struct Internal_Query
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		GPUQuery* resource = nullptr;
+
+		Internal_Query(std::shared_ptr<GraphicsDevice> device, GPUQuery* resource) :device(device), resource(resource) {}
+		~Internal_Query()
+		{
+			device->DestroyQuery(resource);
+		}
+	};
+	struct Internal_PipelineState
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		PipelineState* resource = nullptr;
+
+		Internal_PipelineState(std::shared_ptr<GraphicsDevice> device, PipelineState* resource) :device(device), resource(resource) {}
+		~Internal_PipelineState()
+		{
+			device->DestroyPipelineState(resource);
+		}
+	};
+	struct Internal_RenderPass
+	{
+		std::shared_ptr<GraphicsDevice> device;
+		RenderPass* resource = nullptr;
+
+		Internal_RenderPass(std::shared_ptr<GraphicsDevice> device, RenderPass* resource) :device(device), resource(resource) {}
+		~Internal_RenderPass()
+		{
+			device->DestroyRenderPass(resource);
+		}
+	};
+}
+using namespace Vulkan_Internal;
 
 
 	GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::ResourceFrameAllocator(GraphicsDevice_Vulkan* device, size_t size) : device(device)
@@ -2266,10 +2393,8 @@ namespace wiGraphics
 
 	bool GraphicsDevice_Vulkan::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer)
 	{
-		DestroyBuffer(pBuffer);
-		DestroyResource(pBuffer);
+		pBuffer->internal_state = std::make_shared<Internal_Buffer>(shared_from_this(), pBuffer);
 		pBuffer->type = GPUResource::GPU_RESOURCE_TYPE::BUFFER;
-		pBuffer->Register(shared_from_this());
 
 		pBuffer->desc = *pDesc;
 
@@ -2452,10 +2577,8 @@ namespace wiGraphics
 	}
 	bool GraphicsDevice_Vulkan::CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture)
 	{
-		DestroyTexture(pTexture);
-		DestroyResource(pTexture);
+		pTexture->internal_state = std::make_shared<Internal_Texture>(shared_from_this(), pTexture);
 		pTexture->type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
-		pTexture->Register(shared_from_this());
 
 		pTexture->desc = *pDesc;
 
@@ -2677,10 +2800,9 @@ namespace wiGraphics
 
 		return res == VK_SUCCESS ? true : false;
 	}
-	bool GraphicsDevice_Vulkan::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, uint32_t NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout)
+	bool GraphicsDevice_Vulkan::CreateInputLayout(const InputLayoutDesc *pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout *pInputLayout)
 	{
-		DestroyInputLayout(pInputLayout);
-		pInputLayout->Register(shared_from_this());
+		pInputLayout->internal_state = std::make_shared<Internal_InputLayout>(shared_from_this(), pInputLayout);
 
 		pInputLayout->desc.clear();
 		pInputLayout->desc.reserve((size_t)NumElements);
@@ -2693,12 +2815,10 @@ namespace wiGraphics
 	}
 	bool GraphicsDevice_Vulkan::CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader)
 	{
-		DestroyShader(pShader);
-		pShader->Register(shared_from_this());
+		pShader->internal_state = std::make_shared<Internal_Shader>(shared_from_this(), pShader);
 
-		pShader->code.data = new BYTE[BytecodeLength];
-		std::memcpy(pShader->code.data, pShaderBytecode, BytecodeLength);
-		pShader->code.size = BytecodeLength;
+		pShader->code.resize(BytecodeLength);
+		std::memcpy(pShader->code.data(), pShaderBytecode, BytecodeLength);
 		pShader->stage = stage;
 
 		VkResult res = VK_SUCCESS;
@@ -2721,8 +2841,8 @@ namespace wiGraphics
 			stageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
 
 			VkShaderModule shaderModule = {};
-			moduleInfo.codeSize = pShader->code.size;
-			moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pShader->code.data);
+			moduleInfo.codeSize = pShader->code.size();
+			moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pShader->code.data());
 			res = vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule);
 			assert(res == VK_SUCCESS);
 
@@ -2740,32 +2860,28 @@ namespace wiGraphics
 	}
 	bool GraphicsDevice_Vulkan::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
 	{
-		DestroyBlendState(pBlendState);
-		pBlendState->Register(shared_from_this());
+		pBlendState->internal_state = std::make_shared<Internal_BlendState>(shared_from_this(), pBlendState);
 
 		pBlendState->desc = *pBlendStateDesc;
 		return true;
 	}
 	bool GraphicsDevice_Vulkan::CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState)
 	{
-		DestroyDepthStencilState(pDepthStencilState);
-		pDepthStencilState->Register(shared_from_this());
+		pDepthStencilState->internal_state = std::make_shared<Internal_DepthStencilState>(shared_from_this(), pDepthStencilState);
 
 		pDepthStencilState->desc = *pDepthStencilStateDesc;
 		return true;
 	}
 	bool GraphicsDevice_Vulkan::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
 	{
-		DestroyRasterizerState(pRasterizerState);
-		pRasterizerState->Register(shared_from_this());
+		pRasterizerState->internal_state = std::make_shared<Internal_RasterizerState>(shared_from_this(), pRasterizerState);
 
 		pRasterizerState->desc = *pRasterizerStateDesc;
 		return true;
 	}
-	bool GraphicsDevice_Vulkan::CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
+	bool GraphicsDevice_Vulkan::CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
 	{
-		DestroySamplerState(pSamplerState);
-		pSamplerState->Register(shared_from_this());
+		pSamplerState->internal_state = std::make_shared<Internal_Sampler>(shared_from_this(), pSamplerState);
 
 		pSamplerState->desc = *pSamplerDesc;
 
@@ -2948,8 +3064,7 @@ namespace wiGraphics
 	}
 	bool GraphicsDevice_Vulkan::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
 	{
-		DestroyQuery(pQuery);
-		pQuery->Register(shared_from_this());
+		pQuery->internal_state = std::make_shared<Internal_Query>(shared_from_this(), pQuery);
 
 		bool hr = false;
 
@@ -2993,8 +3108,7 @@ namespace wiGraphics
 	}
 	bool GraphicsDevice_Vulkan::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
 	{
-		DestroyPipelineState(pso);
-		pso->Register(shared_from_this());
+		pso->internal_state = std::make_shared<Internal_PipelineState>(shared_from_this(), pso);
 
 		pso->desc = *pDesc;
 
@@ -3015,8 +3129,7 @@ namespace wiGraphics
 	}
 	bool GraphicsDevice_Vulkan::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
 	{
-		DestroyRenderPass(renderpass);
-		renderpass->Register(shared_from_this());
+		renderpass->internal_state = std::make_shared<Internal_RenderPass>(shared_from_this(), renderpass);
 
 		renderpass->desc = *pDesc;
 
@@ -3445,7 +3558,7 @@ namespace wiGraphics
 		}
 		pTexture->subresourceUAVs.clear();
 	}
-	void GraphicsDevice_Vulkan::DestroyInputLayout(VertexLayout *pInputLayout)
+	void GraphicsDevice_Vulkan::DestroyInputLayout(InputLayout *pInputLayout)
 	{
 
 	}
@@ -4137,12 +4250,12 @@ namespace wiGraphics
 
 				std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 
-				if (pso->desc.vs != nullptr && pso->desc.vs->code.data != nullptr)
+				if (pso->desc.vs != nullptr && !pso->desc.vs->code.empty())
 				{
 					VkShaderModuleCreateInfo moduleInfo = {};
 					moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-					moduleInfo.codeSize = pso->desc.vs->code.size;
-					moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pso->desc.vs->code.data);
+					moduleInfo.codeSize = pso->desc.vs->code.size();
+					moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pso->desc.vs->code.data());
 					VkShaderModule shaderModule;
 					res = vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule);
 					assert(res == VK_SUCCESS);
@@ -4156,12 +4269,12 @@ namespace wiGraphics
 					shaderStages.push_back(stageInfo);
 				}
 
-				if (pso->desc.hs != nullptr && pso->desc.hs->code.data != nullptr)
+				if (pso->desc.hs != nullptr && !pso->desc.hs->code.empty())
 				{
 					VkShaderModuleCreateInfo moduleInfo = {};
 					moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-					moduleInfo.codeSize = pso->desc.hs->code.size;
-					moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pso->desc.hs->code.data);
+					moduleInfo.codeSize = pso->desc.hs->code.size();
+					moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pso->desc.hs->code.data());
 					VkShaderModule shaderModule;
 					res = vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule);
 					assert(res == VK_SUCCESS);
@@ -4175,12 +4288,12 @@ namespace wiGraphics
 					shaderStages.push_back(stageInfo);
 				}
 
-				if (pso->desc.ds != nullptr && pso->desc.ds->code.data != nullptr)
+				if (pso->desc.ds != nullptr && !pso->desc.ds->code.empty())
 				{
 					VkShaderModuleCreateInfo moduleInfo = {};
 					moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-					moduleInfo.codeSize = pso->desc.ds->code.size;
-					moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pso->desc.ds->code.data);
+					moduleInfo.codeSize = pso->desc.ds->code.size();
+					moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pso->desc.ds->code.data());
 					VkShaderModule shaderModule;
 					res = vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule);
 					assert(res == VK_SUCCESS);
@@ -4194,12 +4307,12 @@ namespace wiGraphics
 					shaderStages.push_back(stageInfo);
 				}
 
-				if (pso->desc.gs != nullptr && pso->desc.gs->code.data != nullptr)
+				if (pso->desc.gs != nullptr && !pso->desc.gs->code.empty())
 				{
 					VkShaderModuleCreateInfo moduleInfo = {};
 					moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-					moduleInfo.codeSize = pso->desc.gs->code.size;
-					moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pso->desc.gs->code.data);
+					moduleInfo.codeSize = pso->desc.gs->code.size();
+					moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pso->desc.gs->code.data());
 					VkShaderModule shaderModule;
 					res = vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule);
 					assert(res == VK_SUCCESS);
@@ -4213,12 +4326,12 @@ namespace wiGraphics
 					shaderStages.push_back(stageInfo);
 				}
 
-				if (pso->desc.ps != nullptr && pso->desc.ps->code.data != nullptr)
+				if (pso->desc.ps != nullptr && !pso->desc.ps->code.empty())
 				{
 					VkShaderModuleCreateInfo moduleInfo = {};
 					moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-					moduleInfo.codeSize = pso->desc.ps->code.size;
-					moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pso->desc.ps->code.data);
+					moduleInfo.codeSize = pso->desc.ps->code.size();
+					moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pso->desc.ps->code.data());
 					VkShaderModule shaderModule;
 					res = vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule);
 					assert(res == VK_SUCCESS);
@@ -4252,7 +4365,7 @@ namespace wiGraphics
 						bind.binding = x.InputSlot;
 						bind.inputRate = x.InputSlotClass == INPUT_PER_VERTEX_DATA ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
 						bind.stride = x.AlignedByteOffset;
-						if (bind.stride == VertexLayoutDesc::APPEND_ALIGNED_ELEMENT)
+						if (bind.stride == InputLayoutDesc::APPEND_ALIGNED_ELEMENT)
 						{
 							// need to manually resolve this from the format spec.
 							bind.stride = GetFormatStride(x.Format);
@@ -4284,7 +4397,7 @@ namespace wiGraphics
 						attr.format = _ConvertFormat(x.Format);
 						attr.location = i;
 						attr.offset = x.AlignedByteOffset;
-						if (attr.offset == VertexLayoutDesc::APPEND_ALIGNED_ELEMENT)
+						if (attr.offset == InputLayoutDesc::APPEND_ALIGNED_ELEMENT)
 						{
 							// need to manually resolve this from the format spec.
 							attr.offset = offset;

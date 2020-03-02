@@ -15,7 +15,6 @@ public:
 
 	int CreateSound(lua_State* L);
 	int CreateSoundInstance(lua_State* L);
-	int Destroy(lua_State* L);
 	int Play(lua_State* L);
 	int Pause(lua_State* L);
 	int Stop(lua_State* L);

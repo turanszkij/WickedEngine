@@ -70,12 +70,12 @@ namespace wiGraphics
 
 		bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) override;
 		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) override;
-		bool CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, uint32_t NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout) override;
+		bool CreateInputLayout(const InputLayoutDesc *pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout *pInputLayout) override;
 		bool CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) override;
 		bool CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState) override;
 		bool CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState) override;
 		bool CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState) override;
-		bool CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) override;
+		bool CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) override;
 		bool CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) override;
 		bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
 		bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
@@ -85,7 +85,7 @@ namespace wiGraphics
 		void DestroyResource(GPUResource* pResource) override;
 		void DestroyBuffer(GPUBuffer *pBuffer) override;
 		void DestroyTexture(Texture *pTexture) override;
-		void DestroyInputLayout(VertexLayout *pInputLayout) override;
+		void DestroyInputLayout(InputLayout *pInputLayout) override;
 		void DestroyShader(Shader *pShader) override;
 		void DestroyBlendState(BlendState *pBlendState) override;
 		void DestroyDepthStencilState(DepthStencilState *pDepthStencilState) override;
