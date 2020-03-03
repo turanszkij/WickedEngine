@@ -4,10 +4,6 @@
 
 namespace wiNetwork
 {
-	Socket::~Socket()
-	{
-	}
-
 	void Initialize()
 	{
 		wiBackLog::post("TODO wiNetwork_UWP");

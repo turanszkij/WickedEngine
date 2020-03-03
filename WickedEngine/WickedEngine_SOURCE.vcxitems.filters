@@ -1122,7 +1122,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiProfiler.h">
       <Filter>ENGINE\Tools</Filter>
     </ClInclude>
-    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\wiGraphics.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphics.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
   </ItemGroup>
