@@ -1077,7 +1077,7 @@ namespace DX11_Internal
 	const void* const __nullBlob[128] = {}; // this is initialized to nullptrs and used to unbind resources!
 
 
-	struct Internal_Resource
+	struct Resource_DX11
 	{
 		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11Resource> resource;
@@ -1086,69 +1086,69 @@ namespace DX11_Internal
 		std::vector<ComPtr<ID3D11ShaderResourceView>> subresources_srv;
 		std::vector<ComPtr<ID3D11UnorderedAccessView>> subresources_uav;
 	};
-	struct Internal_Texture : public Internal_Resource
+	struct Texture_DX11 : public Resource_DX11
 	{
 		ComPtr<ID3D11RenderTargetView> rtv;
 		ComPtr<ID3D11DepthStencilView> dsv;
 		std::vector<ComPtr<ID3D11RenderTargetView>> subresources_rtv;
 		std::vector<ComPtr<ID3D11DepthStencilView>> subresources_dsv;
 	};
-	struct Internal_InputLayout
+	struct InputLayout_DX11
 	{
 		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11InputLayout> resource;
 	};
-	struct Internal_VertexShader
+	struct VertexShader_DX11
 	{
 		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11VertexShader> resource;
 	};
-	struct Internal_HullShader
+	struct HullShader_DX11
 	{
 		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11HullShader> resource;
 	};
-	struct Internal_DomainShader
+	struct DomainShader_DX11
 	{
 		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11DomainShader> resource;
 	};
-	struct Internal_GeometryShader
+	struct GeometryShader_DX11
 	{
 		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11GeometryShader> resource;
 	};
-	struct Internal_PixelShader
+	struct PixelShader_DX11
 	{
 		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11PixelShader> resource;
 	};
-	struct Internal_ComputeShader
+	struct ComputeShader_DX11
 	{
 		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11ComputeShader> resource;
 	};
-	struct Internal_BlendState
+	struct BlendState_DX11
 	{
 		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11BlendState> resource;
 	};
-	struct Internal_DepthStencilState
+	struct DepthStencilState_DX11
 	{
 		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11DepthStencilState> resource;
 	};
-	struct Internal_RasterizerState
+	struct RasterizerState_DX11
 	{
 		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11RasterizerState> resource;
 	};
-	struct Internal_Sampler
+	struct Sampler_DX11
 	{
 		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11SamplerState> resource;
 	};
-	struct Internal_Query
+	struct Query_DX11
 	{
 		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11Query> resource;
@@ -1347,7 +1347,7 @@ void GraphicsDevice_DX11::SetResolution(int width, int height)
 
 Texture GraphicsDevice_DX11::GetBackBuffer()
 {
-	auto internal_state = std::make_shared<Internal_Texture>();
+	auto internal_state = std::make_shared<Texture_DX11>();
 	internal_state->resource = backBuffer;
 
 	Texture result;
@@ -1363,8 +1363,8 @@ Texture GraphicsDevice_DX11::GetBackBuffer()
 
 bool GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer)
 {
-	auto internal_state = std::make_shared<Internal_Resource>();
-	//internal_state->device = shared_from_this();
+	auto internal_state = std::make_shared<Resource_DX11>();
+	internal_state->device = shared_from_this();
 	pBuffer->internal_state = internal_state;
 	pBuffer->type = GPUResource::GPU_RESOURCE_TYPE::BUFFER;
 
@@ -1466,7 +1466,7 @@ bool GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subreso
 }
 bool GraphicsDevice_DX11::CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture)
 {
-	auto internal_state = std::make_shared<Internal_Texture>();
+	auto internal_state = std::make_shared<Texture_DX11>();
 	internal_state->device = shared_from_this();
 	pTexture->internal_state = internal_state;
 	pTexture->type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
@@ -1541,7 +1541,7 @@ bool GraphicsDevice_DX11::CreateTexture(const TextureDesc* pDesc, const Subresou
 }
 bool GraphicsDevice_DX11::CreateInputLayout(const InputLayoutDesc *pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout *pInputLayout)
 {
-	auto internal_state = std::make_shared<Internal_InputLayout>();
+	auto internal_state = std::make_shared<InputLayout_DX11>();
 	internal_state->device = shared_from_this();
 	pInputLayout->internal_state = internal_state;
 
@@ -1581,7 +1581,7 @@ bool GraphicsDevice_DX11::CreateShader(SHADERSTAGE stage, const void *pShaderByt
 	{
 	case wiGraphics::VS:
 	{
-		auto internal_state = std::make_shared<Internal_VertexShader>();
+		auto internal_state = std::make_shared<VertexShader_DX11>();
 		internal_state->device = shared_from_this();
 		pShader->internal_state = internal_state;
 		hr = device->CreateVertexShader(pShaderBytecode, BytecodeLength, nullptr, &internal_state->resource);
@@ -1589,7 +1589,7 @@ bool GraphicsDevice_DX11::CreateShader(SHADERSTAGE stage, const void *pShaderByt
 	break;
 	case wiGraphics::HS:
 	{
-		auto internal_state = std::make_shared<Internal_HullShader>();
+		auto internal_state = std::make_shared<HullShader_DX11>();
 		internal_state->device = shared_from_this();
 		pShader->internal_state = internal_state;
 		hr = device->CreateHullShader(pShaderBytecode, BytecodeLength, nullptr, &internal_state->resource);
@@ -1597,7 +1597,7 @@ bool GraphicsDevice_DX11::CreateShader(SHADERSTAGE stage, const void *pShaderByt
 	break;
 	case wiGraphics::DS:
 	{
-		auto internal_state = std::make_shared<Internal_DomainShader>();
+		auto internal_state = std::make_shared<DomainShader_DX11>();
 		internal_state->device = shared_from_this();
 		pShader->internal_state = internal_state;
 		hr = device->CreateDomainShader(pShaderBytecode, BytecodeLength, nullptr, &internal_state->resource);
@@ -1605,7 +1605,7 @@ bool GraphicsDevice_DX11::CreateShader(SHADERSTAGE stage, const void *pShaderByt
 	break;
 	case wiGraphics::GS:
 	{
-		auto internal_state = std::make_shared<Internal_GeometryShader>();
+		auto internal_state = std::make_shared<GeometryShader_DX11>();
 		internal_state->device = shared_from_this();
 		pShader->internal_state = internal_state;
 		hr = device->CreateGeometryShader(pShaderBytecode, BytecodeLength, nullptr, &internal_state->resource);
@@ -1613,7 +1613,7 @@ bool GraphicsDevice_DX11::CreateShader(SHADERSTAGE stage, const void *pShaderByt
 	break;
 	case wiGraphics::PS:
 	{
-		auto internal_state = std::make_shared<Internal_PixelShader>();
+		auto internal_state = std::make_shared<PixelShader_DX11>();
 		internal_state->device = shared_from_this();
 		pShader->internal_state = internal_state;
 		hr = device->CreatePixelShader(pShaderBytecode, BytecodeLength, nullptr, &internal_state->resource);
@@ -1621,7 +1621,7 @@ bool GraphicsDevice_DX11::CreateShader(SHADERSTAGE stage, const void *pShaderByt
 	break;
 	case wiGraphics::CS:
 	{
-		auto internal_state = std::make_shared<Internal_ComputeShader>();
+		auto internal_state = std::make_shared<ComputeShader_DX11>();
 		internal_state->device = shared_from_this();
 		pShader->internal_state = internal_state;
 		hr = device->CreateComputeShader(pShaderBytecode, BytecodeLength, nullptr, &internal_state->resource);
@@ -1635,7 +1635,7 @@ bool GraphicsDevice_DX11::CreateShader(SHADERSTAGE stage, const void *pShaderByt
 }
 bool GraphicsDevice_DX11::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
 {
-	auto internal_state = std::make_shared<Internal_BlendState>();
+	auto internal_state = std::make_shared<BlendState_DX11>();
 	internal_state->device = shared_from_this();
 	pBlendState->internal_state = internal_state;
 
@@ -1662,7 +1662,7 @@ bool GraphicsDevice_DX11::CreateBlendState(const BlendStateDesc *pBlendStateDesc
 }
 bool GraphicsDevice_DX11::CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState)
 {
-	auto internal_state = std::make_shared<Internal_DepthStencilState>();
+	auto internal_state = std::make_shared<DepthStencilState_DX11>();
 	internal_state->device = shared_from_this();
 	pDepthStencilState->internal_state = internal_state;
 
@@ -1690,7 +1690,7 @@ bool GraphicsDevice_DX11::CreateDepthStencilState(const DepthStencilStateDesc *p
 }
 bool GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
 {
-	auto internal_state = std::make_shared<Internal_RasterizerState>();
+	auto internal_state = std::make_shared<RasterizerState_DX11>();
 	internal_state->device = shared_from_this();
 	pRasterizerState->internal_state = internal_state;
 
@@ -1776,7 +1776,7 @@ bool GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc *pRast
 }
 bool GraphicsDevice_DX11::CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
 {
-	auto internal_state = std::make_shared<Internal_Sampler>();
+	auto internal_state = std::make_shared<Sampler_DX11>();
 	internal_state->device = shared_from_this();
 	pSamplerState->internal_state = internal_state;
 
@@ -1803,7 +1803,7 @@ bool GraphicsDevice_DX11::CreateSampler(const SamplerDesc *pSamplerDesc, Sampler
 }
 bool GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
 {
-	auto internal_state = std::make_shared<Internal_Query>();
+	auto internal_state = std::make_shared<Query_DX11>();
 	internal_state->device = shared_from_this();
 	pQuery->internal_state = internal_state;
 
@@ -1857,7 +1857,7 @@ bool GraphicsDevice_DX11::CreateRenderPass(const RenderPassDesc* pDesc, RenderPa
 
 int GraphicsDevice_DX11::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount)
 {
-	auto internal_state = static_pointer_cast<Internal_Texture>(texture->internal_state);
+	const auto& internal_state = static_pointer_cast<Texture_DX11>(texture->internal_state);
 
 	switch (type)
 	{
@@ -2254,8 +2254,8 @@ int GraphicsDevice_DX11::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE ty
 bool GraphicsDevice_DX11::DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest)
 {
 	assert(resourceToDownload->type == resourceDest->type);
-	auto internal_state_src = static_pointer_cast<Internal_Resource>(resourceToDownload->internal_state);
-	auto internal_state_dst = static_pointer_cast<Internal_Resource>(resourceDest->internal_state);
+	auto internal_state_src = static_pointer_cast<Resource_DX11>(resourceToDownload->internal_state);
+	auto internal_state_dst = static_pointer_cast<Resource_DX11>(resourceDest->internal_state);
 
 	if (resourceToDownload->IsBuffer())
 	{
@@ -2336,7 +2336,7 @@ bool GraphicsDevice_DX11::DownloadResource(const GPUResource* resourceToDownload
 
 void GraphicsDevice_DX11::SetName(GPUResource* pResource, const std::string& name)
 {
-	auto internal_state = static_pointer_cast<Internal_Resource>(pResource->internal_state);
+	const auto& internal_state = static_pointer_cast<Resource_DX11>(pResource->internal_state);
 	internal_state->resource->SetPrivateData(WKPDID_D3DDebugObjectName, (uint32_t)name.length(), name.c_str());
 }
 
@@ -2456,7 +2456,7 @@ void GraphicsDevice_DX11::commit_allocations(CommandList cmd)
 
 	if (frame_allocators[cmd].dirty)
 	{
-		auto internal_state = static_pointer_cast<Internal_Resource>(frame_allocators[cmd].buffer.internal_state);
+		const auto& internal_state = static_pointer_cast<Resource_DX11>(frame_allocators[cmd].buffer.internal_state);
 		deviceContexts[cmd]->Unmap(internal_state->resource.Get(), 0);
 		frame_allocators[cmd].dirty = false;
 	}
@@ -2476,7 +2476,7 @@ void GraphicsDevice_DX11::RenderPassBegin(const RenderPass* renderpass, CommandL
 		const RenderPassAttachment& attachment = desc.attachments[i];
 		const Texture* texture = attachment.texture;
 		int subresource = attachment.subresource;
-		auto internal_state = static_pointer_cast<Internal_Texture>(texture->internal_state);
+		const auto& internal_state = static_pointer_cast<Texture_DX11>(texture->internal_state);
 
 		if (attachment.type == RenderPassAttachment::RENDERTARGET)
 		{
@@ -2570,7 +2570,7 @@ void GraphicsDevice_DX11::BindResource(SHADERSTAGE stage, const GPUResource* res
 {
 	if (resource != nullptr && resource->IsValid())
 	{
-		auto internal_state = static_pointer_cast<Internal_Texture>(resource->internal_state);
+		const auto& internal_state = static_pointer_cast<Texture_DX11>(resource->internal_state);
 		ID3D11ShaderResourceView* SRV;
 
 		if (subresource < 0)
@@ -2615,7 +2615,7 @@ void GraphicsDevice_DX11::BindResources(SHADERSTAGE stage, const GPUResource *co
 	ID3D11ShaderResourceView* srvs[16];
 	for (uint32_t i = 0; i < count; ++i)
 	{
-		srvs[i] = resources[i] != nullptr && resources[i]->IsValid() ? static_pointer_cast<Internal_Texture>(resources[i]->internal_state)->srv.Get() : nullptr;
+		srvs[i] = resources[i] != nullptr && resources[i]->IsValid() ? static_pointer_cast<Texture_DX11>(resources[i]->internal_state)->srv.Get() : nullptr;
 	}
 
 	switch (stage)
@@ -2647,7 +2647,7 @@ void GraphicsDevice_DX11::BindUAV(SHADERSTAGE stage, const GPUResource* resource
 {
 	if (resource != nullptr && resource->IsValid())
 	{
-		auto internal_state = static_pointer_cast<Internal_Texture>(resource->internal_state);
+		const auto& internal_state = static_pointer_cast<Texture_DX11>(resource->internal_state);
 		ID3D11UnorderedAccessView* UAV;
 
 		if (subresource < 0)
@@ -2678,7 +2678,7 @@ void GraphicsDevice_DX11::BindUAVs(SHADERSTAGE stage, const GPUResource *const* 
 	ID3D11UnorderedAccessView* uavs[8];
 	for (uint32_t i = 0; i < count; ++i)
 	{
-		uavs[i] = resources[i] != nullptr && resources[i]->IsValid() ? static_pointer_cast<Internal_Texture>(resources[i]->internal_state)->uav.Get() : nullptr;
+		uavs[i] = resources[i] != nullptr && resources[i]->IsValid() ? static_pointer_cast<Texture_DX11>(resources[i]->internal_state)->uav.Get() : nullptr;
 
 		if(stage != CS)
 		{
@@ -2718,7 +2718,7 @@ void GraphicsDevice_DX11::BindSampler(SHADERSTAGE stage, const Sampler* sampler,
 {
 	if (sampler != nullptr && sampler->IsValid())
 	{
-		auto internal_state = static_pointer_cast<Internal_Sampler>(sampler->internal_state);
+		const auto& internal_state = static_pointer_cast<Sampler_DX11>(sampler->internal_state);
 		ID3D11SamplerState* SAM = internal_state->resource.Get();
 
 		switch (stage)
@@ -2749,7 +2749,7 @@ void GraphicsDevice_DX11::BindSampler(SHADERSTAGE stage, const Sampler* sampler,
 }
 void GraphicsDevice_DX11::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd)
 {
-	ID3D11Buffer* res = buffer != nullptr && buffer->IsValid() ? (ID3D11Buffer*)static_pointer_cast<Internal_Resource>(buffer->internal_state)->resource.Get() : nullptr;
+	ID3D11Buffer* res = buffer != nullptr && buffer->IsValid() ? (ID3D11Buffer*)static_pointer_cast<Resource_DX11>(buffer->internal_state)->resource.Get() : nullptr;
 	switch (stage)
 	{
 	case wiGraphics::VS:
@@ -2781,13 +2781,13 @@ void GraphicsDevice_DX11::BindVertexBuffers(const GPUBuffer *const* vertexBuffer
 	ID3D11Buffer* res[8] = { 0 };
 	for (uint32_t i = 0; i < count; ++i)
 	{
-		res[i] = vertexBuffers[i] != nullptr && vertexBuffers[i]->IsValid() ? (ID3D11Buffer*)static_pointer_cast<Internal_Resource>(vertexBuffers[i]->internal_state)->resource.Get() : nullptr;
+		res[i] = vertexBuffers[i] != nullptr && vertexBuffers[i]->IsValid() ? (ID3D11Buffer*)static_pointer_cast<Resource_DX11>(vertexBuffers[i]->internal_state)->resource.Get() : nullptr;
 	}
 	deviceContexts[cmd]->IASetVertexBuffers(slot, count, res, strides, (offsets != nullptr ? offsets : reinterpret_cast<const uint32_t*>(__nullBlob)));
 }
 void GraphicsDevice_DX11::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd)
 {
-	ID3D11Buffer* res = indexBuffer != nullptr && indexBuffer->IsValid() ? (ID3D11Buffer*)static_pointer_cast<Internal_Resource>(indexBuffer->internal_state)->resource.Get() : nullptr;
+	ID3D11Buffer* res = indexBuffer != nullptr && indexBuffer->IsValid() ? (ID3D11Buffer*)static_pointer_cast<Resource_DX11>(indexBuffer->internal_state)->resource.Get() : nullptr;
 	deviceContexts[cmd]->IASetIndexBuffer(res, (format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT), offset);
 }
 void GraphicsDevice_DX11::BindStencilRef(uint32_t value, CommandList cmd)
@@ -2805,38 +2805,38 @@ void GraphicsDevice_DX11::BindPipelineState(const PipelineState* pso, CommandLis
 {
 	const PipelineStateDesc& desc = pso != nullptr ? pso->GetDesc() : PipelineStateDesc();
 
-	ID3D11VertexShader* vs = desc.vs == nullptr ? nullptr : static_pointer_cast<Internal_VertexShader>(desc.vs->internal_state)->resource.Get();
+	ID3D11VertexShader* vs = desc.vs == nullptr ? nullptr : static_pointer_cast<VertexShader_DX11>(desc.vs->internal_state)->resource.Get();
 	if (vs != prev_vs[cmd])
 	{
 		deviceContexts[cmd]->VSSetShader(vs, nullptr, 0);
 		prev_vs[cmd] = vs;
 	}
-	ID3D11PixelShader* ps = desc.ps == nullptr ? nullptr : static_pointer_cast<Internal_PixelShader>(desc.ps->internal_state)->resource.Get();
+	ID3D11PixelShader* ps = desc.ps == nullptr ? nullptr : static_pointer_cast<PixelShader_DX11>(desc.ps->internal_state)->resource.Get();
 	if (ps != prev_ps[cmd])
 	{
 		deviceContexts[cmd]->PSSetShader(ps, nullptr, 0);
 		prev_ps[cmd] = ps;
 	}
-	ID3D11HullShader* hs = desc.hs == nullptr ? nullptr : static_pointer_cast<Internal_HullShader>(desc.hs->internal_state)->resource.Get();
+	ID3D11HullShader* hs = desc.hs == nullptr ? nullptr : static_pointer_cast<HullShader_DX11>(desc.hs->internal_state)->resource.Get();
 	if (hs != prev_hs[cmd])
 	{
 		deviceContexts[cmd]->HSSetShader(hs, nullptr, 0);
 		prev_hs[cmd] = hs;
 	}
-	ID3D11DomainShader* ds = desc.ds == nullptr ? nullptr : static_pointer_cast<Internal_DomainShader>(desc.ds->internal_state)->resource.Get();
+	ID3D11DomainShader* ds = desc.ds == nullptr ? nullptr : static_pointer_cast<DomainShader_DX11>(desc.ds->internal_state)->resource.Get();
 	if (ds != prev_ds[cmd])
 	{
 		deviceContexts[cmd]->DSSetShader(ds, nullptr, 0);
 		prev_ds[cmd] = ds;
 	}
-	ID3D11GeometryShader* gs = desc.gs == nullptr ? nullptr : static_pointer_cast<Internal_GeometryShader>(desc.gs->internal_state)->resource.Get();
+	ID3D11GeometryShader* gs = desc.gs == nullptr ? nullptr : static_pointer_cast<GeometryShader_DX11>(desc.gs->internal_state)->resource.Get();
 	if (gs != prev_gs[cmd])
 	{
 		deviceContexts[cmd]->GSSetShader(gs, nullptr, 0);
 		prev_gs[cmd] = gs;
 	}
 
-	ID3D11BlendState* bs = desc.bs == nullptr ? nullptr : static_pointer_cast<Internal_BlendState>(desc.bs->internal_state)->resource.Get();
+	ID3D11BlendState* bs = desc.bs == nullptr ? nullptr : static_pointer_cast<BlendState_DX11>(desc.bs->internal_state)->resource.Get();
 	if (bs != prev_bs[cmd] || desc.sampleMask != prev_samplemask[cmd] ||
 		blendFactor[cmd].x != prev_blendfactor[cmd].x ||
 		blendFactor[cmd].y != prev_blendfactor[cmd].y ||
@@ -2851,14 +2851,14 @@ void GraphicsDevice_DX11::BindPipelineState(const PipelineState* pso, CommandLis
 		prev_samplemask[cmd] = desc.sampleMask;
 	}
 
-	ID3D11RasterizerState* rs = desc.rs == nullptr ? nullptr : static_pointer_cast<Internal_RasterizerState>(desc.rs->internal_state)->resource.Get();
+	ID3D11RasterizerState* rs = desc.rs == nullptr ? nullptr : static_pointer_cast<RasterizerState_DX11>(desc.rs->internal_state)->resource.Get();
 	if (rs != prev_rs[cmd])
 	{
 		deviceContexts[cmd]->RSSetState(rs);
 		prev_rs[cmd] = rs;
 	}
 
-	ID3D11DepthStencilState* dss = desc.dss == nullptr ? nullptr : static_pointer_cast<Internal_DepthStencilState>(desc.dss->internal_state)->resource.Get();
+	ID3D11DepthStencilState* dss = desc.dss == nullptr ? nullptr : static_pointer_cast<DepthStencilState_DX11>(desc.dss->internal_state)->resource.Get();
 	if (dss != prev_dss[cmd] || stencilRef[cmd] != prev_stencilRef[cmd])
 	{
 		deviceContexts[cmd]->OMSetDepthStencilState(dss, stencilRef[cmd]);
@@ -2866,7 +2866,7 @@ void GraphicsDevice_DX11::BindPipelineState(const PipelineState* pso, CommandLis
 		prev_stencilRef[cmd] = stencilRef[cmd];
 	}
 
-	ID3D11InputLayout* il = desc.il == nullptr ? nullptr : static_pointer_cast<Internal_InputLayout>(desc.il->internal_state)->resource.Get();
+	ID3D11InputLayout* il = desc.il == nullptr ? nullptr : static_pointer_cast<InputLayout_DX11>(desc.il->internal_state)->resource.Get();
 	if (il != prev_il[cmd])
 	{
 		deviceContexts[cmd]->IASetInputLayout(il);
@@ -2908,7 +2908,7 @@ void GraphicsDevice_DX11::BindPipelineState(const PipelineState* pso, CommandLis
 void GraphicsDevice_DX11::BindComputeShader(const Shader* cs, CommandList cmd)
 {
 	assert(cs->stage == CS);
-	ID3D11ComputeShader* _cs = cs == nullptr ? nullptr : static_pointer_cast<Internal_ComputeShader>(cs->internal_state)->resource.Get();
+	ID3D11ComputeShader* _cs = cs == nullptr ? nullptr : static_pointer_cast<ComputeShader_DX11>(cs->internal_state)->resource.Get();
 	if (_cs != prev_cs[cmd])
 	{
 		deviceContexts[cmd]->CSSetShader(_cs, nullptr, 0);
@@ -2943,13 +2943,13 @@ void GraphicsDevice_DX11::DrawInstancedIndirect(const GPUBuffer* args, uint32_t 
 {
 	commit_allocations(cmd);
 
-	deviceContexts[cmd]->DrawInstancedIndirect((ID3D11Buffer*)static_pointer_cast<Internal_Resource>(args->internal_state)->resource.Get(), args_offset);
+	deviceContexts[cmd]->DrawInstancedIndirect((ID3D11Buffer*)static_pointer_cast<Resource_DX11>(args->internal_state)->resource.Get(), args_offset);
 }
 void GraphicsDevice_DX11::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 {
 	commit_allocations(cmd);
 
-	deviceContexts[cmd]->DrawIndexedInstancedIndirect((ID3D11Buffer*)static_pointer_cast<Internal_Resource>(args->internal_state)->resource.Get(), args_offset);
+	deviceContexts[cmd]->DrawIndexedInstancedIndirect((ID3D11Buffer*)static_pointer_cast<Resource_DX11>(args->internal_state)->resource.Get(), args_offset);
 }
 void GraphicsDevice_DX11::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 {
@@ -2961,28 +2961,28 @@ void GraphicsDevice_DX11::DispatchIndirect(const GPUBuffer* args, uint32_t args_
 {
 	commit_allocations(cmd);
 
-	deviceContexts[cmd]->DispatchIndirect((ID3D11Buffer*)static_pointer_cast<Internal_Resource>(args->internal_state)->resource.Get(), args_offset);
+	deviceContexts[cmd]->DispatchIndirect((ID3D11Buffer*)static_pointer_cast<Resource_DX11>(args->internal_state)->resource.Get(), args_offset);
 }
 void GraphicsDevice_DX11::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 {
 	assert(pDst != nullptr && pSrc != nullptr);
-	auto internal_state_src = static_pointer_cast<Internal_Resource>(pSrc->internal_state);
-	auto internal_state_dst = static_pointer_cast<Internal_Resource>(pDst->internal_state);
+	auto internal_state_src = static_pointer_cast<Resource_DX11>(pSrc->internal_state);
+	auto internal_state_dst = static_pointer_cast<Resource_DX11>(pDst->internal_state);
 	deviceContexts[cmd]->CopyResource(internal_state_dst->resource.Get(), internal_state_src->resource.Get());
 }
 void GraphicsDevice_DX11::CopyTexture2D_Region(const Texture* pDst, uint32_t dstMip, uint32_t dstX, uint32_t dstY, const Texture* pSrc, uint32_t srcMip, CommandList cmd)
 {
 	assert(pDst != nullptr && pSrc != nullptr);
-	auto internal_state_src = static_pointer_cast<Internal_Texture>(pSrc->internal_state);
-	auto internal_state_dst = static_pointer_cast<Internal_Texture>(pDst->internal_state);
+	auto internal_state_src = static_pointer_cast<Texture_DX11>(pSrc->internal_state);
+	auto internal_state_dst = static_pointer_cast<Texture_DX11>(pDst->internal_state);
 	deviceContexts[cmd]->CopySubresourceRegion(internal_state_dst->resource.Get(), D3D11CalcSubresource(dstMip, 0, pDst->GetDesc().MipLevels), dstX, dstY, 0,
 		internal_state_src->resource.Get(), D3D11CalcSubresource(srcMip, 0, pSrc->GetDesc().MipLevels), nullptr);
 }
 void GraphicsDevice_DX11::MSAAResolve(const Texture* pDst, const Texture* pSrc, CommandList cmd)
 {
 	assert(pDst != nullptr && pSrc != nullptr);
-	auto internal_state_src = static_pointer_cast<Internal_Texture>(pSrc->internal_state);
-	auto internal_state_dst = static_pointer_cast<Internal_Texture>(pDst->internal_state);
+	auto internal_state_src = static_pointer_cast<Texture_DX11>(pSrc->internal_state);
+	auto internal_state_dst = static_pointer_cast<Texture_DX11>(pDst->internal_state);
 	deviceContexts[cmd]->ResolveSubresource(internal_state_dst->resource.Get(), 0, internal_state_src->resource.Get(), 0, _ConvertFormat(pDst->desc.Format));
 }
 void GraphicsDevice_DX11::UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize)
@@ -2995,7 +2995,7 @@ void GraphicsDevice_DX11::UpdateBuffer(const GPUBuffer* buffer, const void* data
 		return;
 	}
 
-	auto internal_state = static_pointer_cast<Internal_Resource>(buffer->internal_state);
+	const auto& internal_state = static_pointer_cast<Resource_DX11>(buffer->internal_state);
 
 	dataSize = std::min((int)buffer->desc.ByteWidth, dataSize);
 
@@ -3026,19 +3026,19 @@ void GraphicsDevice_DX11::UpdateBuffer(const GPUBuffer* buffer, const void* data
 
 void GraphicsDevice_DX11::QueryBegin(const GPUQuery* query, CommandList cmd)
 {
-	auto internal_state = static_pointer_cast<Internal_Query>(query->internal_state);
+	const auto& internal_state = static_pointer_cast<Query_DX11>(query->internal_state);
 	deviceContexts[cmd]->Begin(internal_state->resource.Get());
 }
 void GraphicsDevice_DX11::QueryEnd(const GPUQuery* query, CommandList cmd)
 {
-	auto internal_state = static_pointer_cast<Internal_Query>(query->internal_state);
+	const auto& internal_state = static_pointer_cast<Query_DX11>(query->internal_state);
 	deviceContexts[cmd]->End(internal_state->resource.Get());
 }
 bool GraphicsDevice_DX11::QueryRead(const GPUQuery* query, GPUQueryResult* result)
 {
 	const uint32_t _flags = D3D11_ASYNC_GETDATA_DONOTFLUSH;
 
-	auto internal_state = static_pointer_cast<Internal_Query>(query->internal_state);
+	const auto& internal_state = static_pointer_cast<Query_DX11>(query->internal_state);
 	ID3D11Query* QUERY = internal_state->resource.Get();
 
 	HRESULT hr = S_OK;
@@ -3081,7 +3081,7 @@ GraphicsDevice::GPUAllocation GraphicsDevice_DX11::AllocateGPU(size_t dataSize, 
 	{
 		return result;
 	}
-	auto internal_state = static_pointer_cast<Internal_Resource>(allocator.buffer.internal_state);
+	const auto& internal_state = static_pointer_cast<Resource_DX11>(allocator.buffer.internal_state);
 
 	allocator.dirty = true;
 

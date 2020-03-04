@@ -86,7 +86,7 @@ namespace wiNetwork
 			target.sin_addr.S_un.S_un_b.s_b3 = connection->ipaddress[2];
 			target.sin_addr.S_un.S_un_b.s_b4 = connection->ipaddress[3];
 
-			std::shared_ptr<SocketInternal> socketinternal = std::static_pointer_cast<SocketInternal>(sock->internal_state);
+			const auto& socketinternal = std::static_pointer_cast<SocketInternal>(sock->internal_state);
 
 			int result = sendto(socketinternal->handle, (const char*)data, (int)dataSize, 0, (const sockaddr*)& target, sizeof(target));
 			if (result == SOCKET_ERROR)
@@ -112,7 +112,7 @@ namespace wiNetwork
 			target.sin_port = htons(port);
 			target.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
 
-			std::shared_ptr<SocketInternal> socketinternal = std::static_pointer_cast<SocketInternal>(sock->internal_state);
+			const auto& socketinternal = std::static_pointer_cast<SocketInternal>(sock->internal_state);
 
 			int result = bind(socketinternal->handle, (const sockaddr*)& target, sizeof(target));
 			if (result == SOCKET_ERROR)
@@ -133,7 +133,7 @@ namespace wiNetwork
 	{
 		if (socket != nullptr && sock->IsValid())
 		{
-			std::shared_ptr<SocketInternal> socketinternal = std::static_pointer_cast<SocketInternal>(sock->internal_state);
+			const auto& socketinternal = std::static_pointer_cast<SocketInternal>(sock->internal_state);
 
 			fd_set readfds;
 			FD_ZERO(&readfds);
@@ -160,7 +160,7 @@ namespace wiNetwork
 	{
 		if (socket != nullptr && sock->IsValid())
 		{
-			std::shared_ptr<SocketInternal> socketinternal = std::static_pointer_cast<SocketInternal>(sock->internal_state);
+			const auto& socketinternal = std::static_pointer_cast<SocketInternal>(sock->internal_state);
 
 			sockaddr_in sender;
 			int targetsize = sizeof(sender);

@@ -908,18 +908,18 @@ namespace DX12_Internal
 	}
 
 
-	struct Internal_Resource
+	struct Resource_DX12
 	{
 		std::shared_ptr<GraphicsDevice_DX12> device;
 		D3D12MA::Allocation* allocation = nullptr;
-		Microsoft::WRL::ComPtr<ID3D12Resource> resource;
+		ComPtr<ID3D12Resource> resource;
 		D3D12_CPU_DESCRIPTOR_HANDLE cbv;
 		D3D12_CPU_DESCRIPTOR_HANDLE srv;
 		D3D12_CPU_DESCRIPTOR_HANDLE uav;
 		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> subresources_srv;
 		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> subresources_uav;
 
-		virtual ~Internal_Resource()
+		virtual ~Resource_DX12()
 		{
 			uint64_t framecount = device->GetFrameCount();
 			device->destroylocker.lock();
@@ -939,14 +939,14 @@ namespace DX12_Internal
 			device->destroylocker.unlock();
 		}
 	};
-	struct Internal_Texture : public Internal_Resource
+	struct Texture_DX12 : public Resource_DX12
 	{
 		D3D12_CPU_DESCRIPTOR_HANDLE rtv;
 		D3D12_CPU_DESCRIPTOR_HANDLE dsv;
 		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> subresources_rtv;
 		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> subresources_dsv;
 
-		~Internal_Texture() override
+		~Texture_DX12() override
 		{
 			uint64_t framecount = device->GetFrameCount();
 			device->destroylocker.lock();
@@ -963,12 +963,12 @@ namespace DX12_Internal
 			device->destroylocker.unlock();
 		}
 	};
-	struct Internal_Sampler
+	struct Sampler_DX12
 	{
 		std::shared_ptr<GraphicsDevice_DX12> device;
 		D3D12_CPU_DESCRIPTOR_HANDLE descriptor;
 
-		~Internal_Sampler()
+		~Sampler_DX12()
 		{
 			uint64_t framecount = device->GetFrameCount();
 			device->destroylocker.lock();
@@ -976,13 +976,13 @@ namespace DX12_Internal
 			device->destroylocker.unlock();
 		}
 	};
-	struct Internal_Query
+	struct Query_DX12
 	{
 		std::shared_ptr<GraphicsDevice_DX12> device;
 		GPU_QUERY_TYPE query_type = GPU_QUERY_TYPE_INVALID;
 		uint32_t query_index = ~0;
 
-		~Internal_Query()
+		~Query_DX12()
 		{
 			uint64_t framecount = device->GetFrameCount();
 			if (query_index != ~0) 
@@ -1002,12 +1002,12 @@ namespace DX12_Internal
 			}
 		}
 	};
-	struct Internal_PipelineState
+	struct PipelineState_DX12
 	{
 		std::shared_ptr<GraphicsDevice_DX12> device;
-		Microsoft::WRL::ComPtr<ID3D12PipelineState> resource;
+		ComPtr<ID3D12PipelineState> resource;
 
-		~Internal_PipelineState()
+		~PipelineState_DX12()
 		{
 			uint64_t framecount = device->GetFrameCount();
 			device->destroylocker.lock();
@@ -1211,7 +1211,7 @@ using namespace DX12_Internal;
 					{
 						continue;
 					}
-					auto internal_state = static_pointer_cast<Internal_Resource>(buffer->internal_state);
+					const auto& internal_state = static_pointer_cast<Resource_DX12>(buffer->internal_state);
 
 					D3D12_CPU_DESCRIPTOR_HANDLE dst = heap.start_cpu;
 					dst.ptr += (heap.ringOffset + slot) * device->resource_descriptor_size;
@@ -1224,7 +1224,7 @@ using namespace DX12_Internal;
 							DynamicResourceState& state = it->second;
 							state.binding[stage] = true;
 							D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
-							cbv.BufferLocation = static_pointer_cast<Internal_Resource>(state.allocation.buffer->internal_state)->resource->GetGPUVirtualAddress();
+							cbv.BufferLocation = static_pointer_cast<Resource_DX12>(state.allocation.buffer->internal_state)->resource->GetGPUVirtualAddress();
 							cbv.BufferLocation += (D3D12_GPU_VIRTUAL_ADDRESS)state.allocation.offset;
 							cbv.SizeInBytes = (uint32_t)Align((size_t)buffer->desc.ByteWidth, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
@@ -1247,7 +1247,7 @@ using namespace DX12_Internal;
 					{
 						continue;
 					}
-					auto internal_state = static_pointer_cast<Internal_Resource>(resource->internal_state);
+					const auto& internal_state = static_pointer_cast<Resource_DX12>(resource->internal_state);
 
 					D3D12_CPU_DESCRIPTOR_HANDLE src = {};
 					if (subresource < 0)
@@ -1277,7 +1277,7 @@ using namespace DX12_Internal;
 					{
 						continue;
 					}
-					auto internal_state = static_pointer_cast<Internal_Resource>(resource->internal_state);
+					const auto& internal_state = static_pointer_cast<Resource_DX12>(resource->internal_state);
 
 					D3D12_CPU_DESCRIPTOR_HANDLE src = {};
 					if (subresource < 0)
@@ -1348,7 +1348,7 @@ using namespace DX12_Internal;
 					{
 						continue;
 					}
-					auto internal_state = static_pointer_cast<Internal_Sampler>(sampler->internal_state);
+					const auto& internal_state = static_pointer_cast<Sampler_DX12>(sampler->internal_state);
 
 					D3D12_CPU_DESCRIPTOR_HANDLE src = internal_state->descriptor;
 
@@ -1390,7 +1390,7 @@ using namespace DX12_Internal;
 
 	void GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::init(std::shared_ptr<GraphicsDevice_DX12> device, size_t size)
 	{
-		auto internal_state = std::make_shared<Internal_Resource>();
+		auto internal_state = std::make_shared<Resource_DX12>();
 		internal_state->device = device;
 		buffer.internal_state = internal_state;
 
@@ -2040,7 +2040,7 @@ using namespace DX12_Internal;
 
 	Texture GraphicsDevice_DX12::GetBackBuffer()
 	{
-		auto internal_state = std::make_shared<Internal_Texture>();
+		auto internal_state = std::make_shared<Texture_DX12>();
 		internal_state->device = shared_from_this();
 		internal_state->resource = GetFrameResources().backBuffer;
 		internal_state->rtv = GetFrameResources().backBufferRTV;
@@ -2053,7 +2053,7 @@ using namespace DX12_Internal;
 
 	bool GraphicsDevice_DX12::CreateBuffer(const GPUBufferDesc* pDesc, const SubresourceData* pInitialData, GPUBuffer* pBuffer)
 	{
-		auto internal_state = std::make_shared<Internal_Resource>();
+		auto internal_state = std::make_shared<Resource_DX12>();
 		internal_state->device = shared_from_this();
 		pBuffer->internal_state = internal_state;
 		pBuffer->type = GPUResource::GPU_RESOURCE_TYPE::BUFFER;
@@ -2208,7 +2208,7 @@ using namespace DX12_Internal;
 	}
 	bool GraphicsDevice_DX12::CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture)
 	{
-		auto internal_state = std::make_shared<Internal_Texture>();
+		auto internal_state = std::make_shared<Texture_DX12>();
 		internal_state->device = shared_from_this();
 		pTexture->internal_state = internal_state;
 		pTexture->type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
@@ -2395,7 +2395,7 @@ using namespace DX12_Internal;
 
 		if (stage == CS)
 		{
-			auto internal_state = std::make_shared<Internal_PipelineState>();
+			auto internal_state = std::make_shared<PipelineState_DX12>();
 			internal_state->device = shared_from_this();
 			pShader->internal_state = internal_state;
 
@@ -2433,7 +2433,7 @@ using namespace DX12_Internal;
 	}
 	bool GraphicsDevice_DX12::CreateSampler(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState)
 	{
-		auto internal_state = std::make_shared<Internal_Sampler>();
+		auto internal_state = std::make_shared<Sampler_DX12>();
 		internal_state->device = shared_from_this();
 		pSamplerState->internal_state = internal_state;
 
@@ -2461,7 +2461,7 @@ using namespace DX12_Internal;
 	}
 	bool GraphicsDevice_DX12::CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery)
 	{
-		auto internal_state = std::make_shared<Internal_Query>();
+		auto internal_state = std::make_shared<Query_DX12>();
 		internal_state->device = shared_from_this();
 		pQuery->internal_state = internal_state;
 
@@ -2545,7 +2545,7 @@ using namespace DX12_Internal;
 
 	int GraphicsDevice_DX12::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount)
 	{
-		auto internal_state = static_pointer_cast<Internal_Texture>(texture->internal_state);
+		const auto& internal_state = static_pointer_cast<Texture_DX12>(texture->internal_state);
 
 		switch (type)
 		{
@@ -2923,7 +2923,7 @@ using namespace DX12_Internal;
 
 	void GraphicsDevice_DX12::SetName(GPUResource* pResource, const std::string& name)
 	{
-		auto internal_state = static_pointer_cast<Internal_Resource>(pResource->internal_state);
+		const auto& internal_state = static_pointer_cast<Resource_DX12>(pResource->internal_state);
 		internal_state->resource->SetName(wstring(name.begin(), name.end()).c_str());
 	}
 
@@ -3301,7 +3301,7 @@ using namespace DX12_Internal;
 			const RenderPassAttachment& attachment = desc.attachments[i];
 			const Texture* texture = attachment.texture;
 			int subresource = attachment.subresource;
-			auto internal_state = static_pointer_cast<Internal_Texture>(texture->internal_state);
+			const auto& internal_state = static_pointer_cast<Texture_DX12>(texture->internal_state);
 
 			D3D12_CLEAR_VALUE clear_value;
 			clear_value.Format = _ConvertFormat(texture->desc.Format);
@@ -3411,7 +3411,7 @@ using namespace DX12_Internal;
 			const RenderPassAttachment& attachment = desc.attachments[i];
 			const Texture* texture = attachment.texture;
 			int subresource = attachment.subresource;
-			auto internal_state = static_pointer_cast<Internal_Texture>(texture->internal_state);
+			const auto& internal_state = static_pointer_cast<Texture_DX12>(texture->internal_state);
 
 			if (attachment.type == RenderPassAttachment::RENDERTARGET)
 			{
@@ -3478,7 +3478,7 @@ using namespace DX12_Internal;
 			{
 				continue;
 			}
-			auto internal_state = static_pointer_cast<Internal_Texture>(attachment.texture->internal_state);
+			const auto& internal_state = static_pointer_cast<Texture_DX12>(attachment.texture->internal_state);
 
 			D3D12_RESOURCE_BARRIER& barrierdesc = barrierdescs[numBarriers++];
 
@@ -3599,7 +3599,7 @@ using namespace DX12_Internal;
 		{
 			if (vertexBuffers[i] != nullptr)
 			{
-				res[i].BufferLocation = vertexBuffers[i]->IsValid() ? static_pointer_cast<Internal_Resource>(vertexBuffers[i]->internal_state)->resource->GetGPUVirtualAddress() : 0;
+				res[i].BufferLocation = vertexBuffers[i]->IsValid() ? static_pointer_cast<Resource_DX12>(vertexBuffers[i]->internal_state)->resource->GetGPUVirtualAddress() : 0;
 				res[i].SizeInBytes = vertexBuffers[i]->desc.ByteWidth;
 				if (offsets != nullptr)
 				{
@@ -3616,7 +3616,7 @@ using namespace DX12_Internal;
 		D3D12_INDEX_BUFFER_VIEW res = {};
 		if (indexBuffer != nullptr)
 		{
-			auto internal_state = static_pointer_cast<Internal_Resource>(indexBuffer->internal_state);
+			const auto& internal_state = static_pointer_cast<Resource_DX12>(indexBuffer->internal_state);
 
 			res.BufferLocation = internal_state->resource->GetGPUVirtualAddress() + (D3D12_GPU_VIRTUAL_ADDRESS)offset;
 			res.Format = (format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT);
@@ -3902,7 +3902,7 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
 		assert(cs->stage == CS);
-		auto internal_state = static_pointer_cast<Internal_PipelineState>(cs->internal_state);
+		const auto& internal_state = static_pointer_cast<PipelineState_DX12>(cs->internal_state);
 
 		prev_pipeline_hash[cmd] = 0; // note: same bind point for compute and graphics in dx12!
 		GetDirectCommandList(cmd)->SetPipelineState(internal_state->resource.Get());
@@ -3929,13 +3929,13 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::DrawInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 	{
-		auto internal_state = static_pointer_cast<Internal_Resource>(args->internal_state);
+		const auto& internal_state = static_pointer_cast<Resource_DX12>(args->internal_state);
 		GetFrameResources().descriptors[cmd].validate(cmd);
 		GetDirectCommandList(cmd)->ExecuteIndirect(drawInstancedIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
 	}
 	void GraphicsDevice_DX12::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 	{
-		auto internal_state = static_pointer_cast<Internal_Resource>(args->internal_state);
+		const auto& internal_state = static_pointer_cast<Resource_DX12>(args->internal_state);
 		GetFrameResources().descriptors[cmd].validate(cmd);
 		GetDirectCommandList(cmd)->ExecuteIndirect(drawIndexedInstancedIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
 	}
@@ -3946,20 +3946,20 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 	{
-		auto internal_state = static_pointer_cast<Internal_Resource>(args->internal_state);
+		const auto& internal_state = static_pointer_cast<Resource_DX12>(args->internal_state);
 		GetFrameResources().descriptors[cmd].validate(cmd);
 		GetDirectCommandList(cmd)->ExecuteIndirect(dispatchIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
 	}
 	void GraphicsDevice_DX12::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 	{
-		auto internal_state_src = static_pointer_cast<Internal_Resource>(pSrc->internal_state);
-		auto internal_state_dst = static_pointer_cast<Internal_Resource>(pDst->internal_state);
+		auto internal_state_src = static_pointer_cast<Resource_DX12>(pSrc->internal_state);
+		auto internal_state_dst = static_pointer_cast<Resource_DX12>(pDst->internal_state);
 		GetDirectCommandList(cmd)->CopyResource(internal_state_dst->resource.Get(), internal_state_src->resource.Get());
 	}
 	void GraphicsDevice_DX12::CopyTexture2D_Region(const Texture* pDst, uint32_t dstMip, uint32_t dstX, uint32_t dstY, const Texture* pSrc, uint32_t srcMip, CommandList cmd)
 	{
-		auto internal_state_src = static_pointer_cast<Internal_Texture>(pSrc->internal_state);
-		auto internal_state_dst = static_pointer_cast<Internal_Texture>(pDst->internal_state);
+		auto internal_state_src = static_pointer_cast<Texture_DX12>(pSrc->internal_state);
+		auto internal_state_dst = static_pointer_cast<Texture_DX12>(pDst->internal_state);
 
 		D3D12_RESOURCE_DESC src_desc = internal_state_src->resource->GetDesc();
 		D3D12_RESOURCE_DESC dst_desc = internal_state_dst->resource->GetDesc();
@@ -4017,8 +4017,8 @@ using namespace DX12_Internal;
 		else
 		{
 			// Contents will be transferred to device memory:
-			auto internal_state_src = static_pointer_cast<Internal_Resource>(GetFrameResources().resourceBuffer[cmd].buffer.internal_state);
-			auto internal_state_dst = static_pointer_cast<Internal_Resource>(buffer->internal_state);
+			auto internal_state_src = static_pointer_cast<Resource_DX12>(GetFrameResources().resourceBuffer[cmd].buffer.internal_state);
+			auto internal_state_dst = static_pointer_cast<Resource_DX12>(buffer->internal_state);
 
 			D3D12_RESOURCE_BARRIER barrier = {};
 			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
@@ -4054,7 +4054,7 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::QueryBegin(const GPUQuery* query, CommandList cmd)
 	{
-		auto internal_state = static_pointer_cast<Internal_Query>(query->internal_state);
+		const auto& internal_state = static_pointer_cast<Query_DX12>(query->internal_state);
 
 		switch (query->desc.Type)
 		{
@@ -4071,7 +4071,7 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::QueryEnd(const GPUQuery* query, CommandList cmd)
 	{
-		auto internal_state = static_pointer_cast<Internal_Query>(query->internal_state);
+		const auto& internal_state = static_pointer_cast<Query_DX12>(query->internal_state);
 
 		switch (query->desc.Type)
 		{
@@ -4091,7 +4091,7 @@ using namespace DX12_Internal;
 	}
 	bool GraphicsDevice_DX12::QueryRead(const GPUQuery* query, GPUQueryResult* result)
 	{
-		auto internal_state = static_pointer_cast<Internal_Query>(query->internal_state);
+		const auto& internal_state = static_pointer_cast<Query_DX12>(query->internal_state);
 
 		D3D12_RANGE range;
 		range.Begin = (size_t)internal_state->query_index * sizeof(size_t);
@@ -4146,14 +4146,14 @@ using namespace DX12_Internal;
 			{
 				barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
 				barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-				barrierdesc.UAV.pResource = barrier.memory.resource == nullptr ? nullptr : static_pointer_cast<Internal_Resource>(barrier.memory.resource->internal_state)->resource.Get();
+				barrierdesc.UAV.pResource = barrier.memory.resource == nullptr ? nullptr : static_pointer_cast<Resource_DX12>(barrier.memory.resource->internal_state)->resource.Get();
 			}
 			break;
 			case GPUBarrier::IMAGE_BARRIER:
 			{
 				barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 				barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-				barrierdesc.Transition.pResource = static_pointer_cast<Internal_Texture>(barrier.image.texture->internal_state)->resource.Get();
+				barrierdesc.Transition.pResource = static_pointer_cast<Texture_DX12>(barrier.image.texture->internal_state)->resource.Get();
 				barrierdesc.Transition.StateBefore = _ConvertImageLayout(barrier.image.layout_before);
 				barrierdesc.Transition.StateAfter = _ConvertImageLayout(barrier.image.layout_after);
 				barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
@@ -4163,7 +4163,7 @@ using namespace DX12_Internal;
 			{
 				barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 				barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-				barrierdesc.Transition.pResource = static_pointer_cast<Internal_Resource>(barrier.buffer.buffer->internal_state)->resource.Get();
+				barrierdesc.Transition.pResource = static_pointer_cast<Resource_DX12>(barrier.buffer.buffer->internal_state)->resource.Get();
 				barrierdesc.Transition.StateBefore = _ConvertBufferState(barrier.buffer.state_before);
 				barrierdesc.Transition.StateAfter = _ConvertBufferState(barrier.buffer.state_after);
 				barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
