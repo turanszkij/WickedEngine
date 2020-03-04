@@ -2907,6 +2907,7 @@ void GraphicsDevice_DX11::BindPipelineState(const PipelineState* pso, CommandLis
 }
 void GraphicsDevice_DX11::BindComputeShader(const Shader* cs, CommandList cmd)
 {
+	assert(cs->stage == CS);
 	ID3D11ComputeShader* _cs = cs == nullptr ? nullptr : static_pointer_cast<Internal_ComputeShader>(cs->internal_state)->resource.Get();
 	if (_cs != prev_cs[cmd])
 	{

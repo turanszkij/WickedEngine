@@ -985,9 +985,9 @@ namespace DX12_Internal
 		~Internal_Query()
 		{
 			uint64_t framecount = device->GetFrameCount();
-			device->destroylocker.lock();
 			if (query_index != ~0) 
 			{
+				device->destroylocker.lock();
 				switch (query_type)
 				{
 				case wiGraphics::GPU_QUERY_TYPE_OCCLUSION:
@@ -998,8 +998,8 @@ namespace DX12_Internal
 					device->destroyer_queries_timestamp.push_back(std::make_pair(query_index, framecount));
 					break;
 				}
+				device->destroylocker.unlock();
 			}
-			device->destroylocker.unlock();
 		}
 	};
 	struct Internal_PipelineState
