@@ -6,25 +6,26 @@
 
 #include <d3d11_3.h>
 #include <DXGI1_3.h>
+#include <wrl/client.h> // ComPtr
 
 #include <atomic>
 
 namespace wiGraphics
 {
 
-	class GraphicsDevice_DX11 : public GraphicsDevice
+	class GraphicsDevice_DX11 : public GraphicsDevice, public std::enable_shared_from_this<GraphicsDevice_DX11>
 	{
 	private:
-		ID3D11Device*				device = nullptr;
-		D3D_DRIVER_TYPE				driverType;
-		D3D_FEATURE_LEVEL			featureLevel;
-		IDXGISwapChain1*			swapChain = nullptr;
-		ID3D11RenderTargetView*		renderTargetView = nullptr;
-		ID3D11Texture2D*			backBuffer = nullptr;
-		ID3D11DeviceContext*		immediateContext = nullptr;
-		ID3D11DeviceContext*		deviceContexts[COMMANDLIST_COUNT] = {};
-		ID3D11CommandList*			commandLists[COMMANDLIST_COUNT] = {};
-		ID3DUserDefinedAnnotation*	userDefinedAnnotations[COMMANDLIST_COUNT] = {};
+		D3D_DRIVER_TYPE driverType;
+		D3D_FEATURE_LEVEL featureLevel;
+		Microsoft::WRL::ComPtr<ID3D11Device> device;
+		Microsoft::WRL::ComPtr<IDXGISwapChain1> swapChain;
+		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> renderTargetView;
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
+		Microsoft::WRL::ComPtr<ID3D11DeviceContext> immediateContext;
+		Microsoft::WRL::ComPtr<ID3D11DeviceContext> deviceContexts[COMMANDLIST_COUNT];
+		Microsoft::WRL::ComPtr<ID3D11CommandList> commandLists[COMMANDLIST_COUNT];
+		Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> userDefinedAnnotations[COMMANDLIST_COUNT];
 
 		uint32_t	stencilRef[COMMANDLIST_COUNT];
 		XMFLOAT4	blendFactor[COMMANDLIST_COUNT];
@@ -66,7 +67,6 @@ namespace wiGraphics
 
 	public:
 		GraphicsDevice_DX11(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false);
-		virtual ~GraphicsDevice_DX11();
 
 		bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) override;
 		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) override;
@@ -81,19 +81,6 @@ namespace wiGraphics
 		bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
 
 		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
-
-		void DestroyResource(GPUResource* pResource) override;
-		void DestroyBuffer(GPUBuffer *pBuffer) override;
-		void DestroyTexture(Texture *pTexture) override;
-		void DestroyInputLayout(InputLayout *pInputLayout) override;
-		void DestroyShader(Shader *pShader) override;
-		void DestroyBlendState(BlendState *pBlendState) override;
-		void DestroyDepthStencilState(DepthStencilState *pDepthStencilState) override;
-		void DestroyRasterizerState(RasterizerState *pRasterizerState) override;
-		void DestroySamplerState(Sampler *pSamplerState) override;
-		void DestroyQuery(GPUQuery *pQuery) override;
-		void DestroyPipelineState(PipelineState* pso) override;
-		void DestroyRenderPass(RenderPass* renderpass) override;
 
 		bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) override;
 

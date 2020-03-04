@@ -33,7 +33,7 @@ namespace wiProfiler
 
 		bool IsCPURange() const { return cmd == COMMANDLIST_COUNT; }
 	};
-	std::unordered_map<size_t, Range*> ranges;
+	std::unordered_map<size_t, Range> ranges;
 	wiRenderer::GPUQueryRing<4> disjoint;
 
 	void BeginFrame()
@@ -65,7 +65,7 @@ namespace wiProfiler
 			return;
 
 		// note: read the GPU Frame end range manually because it will be on a separate command list than start point:
-		wiRenderer::GetDevice()->QueryEnd(ranges[gpu_frame]->gpuEnd.Get_GPU(), cmd);
+		wiRenderer::GetDevice()->QueryEnd(ranges[gpu_frame].gpuEnd.Get_GPU(), cmd);
 
 		EndRange(cpu_frame);
 
@@ -80,22 +80,22 @@ namespace wiProfiler
 		{
 			auto& range = x.second;
 
-			range->time = 0;
-			if (range->IsCPURange())
+			range.time = 0;
+			if (range.IsCPURange())
 			{
-				range->time = (float)abs(range->cpuEnd.elapsed() - range->cpuBegin.elapsed());
+				range.time = (float)abs(range.cpuEnd.elapsed() - range.cpuBegin.elapsed());
 			}
 			else
 			{
-				GPUQuery* begin_query = range->gpuBegin.Get_CPU();
-				GPUQuery* end_query = range->gpuEnd.Get_CPU();
+				GPUQuery* begin_query = range.gpuBegin.Get_CPU();
+				GPUQuery* end_query = range.gpuEnd.Get_CPU();
 				GPUQueryResult begin_result, end_result;
 				if (begin_query != nullptr && end_query != nullptr)
 				{
 					while (!wiRenderer::GetDevice()->QueryRead(begin_query, &begin_result));
 					while (!wiRenderer::GetDevice()->QueryRead(end_query, &end_result));
 				}
-				range->time = abs((float)(end_result.result_timestamp - begin_result.result_timestamp) / disjoint_result.result_timestamp_frequency * 1000.0f);
+				range.time = abs((float)(end_result.result_timestamp - begin_result.result_timestamp) / disjoint_result.result_timestamp_frequency * 1000.0f);
 			}
 		}
 	}
@@ -110,17 +110,17 @@ namespace wiProfiler
 		lock.lock();
 		if (ranges.find(id) == ranges.end())
 		{
-			Range* range = new Range;
-			range->name = name.GetString();
-			range->time = 0;
+			Range range;
+			range.name = name.GetString();
+			range.time = 0;
 
-			range->cpuBegin.Start();
-			range->cpuEnd.Start();
+			range.cpuBegin.Start();
+			range.cpuEnd.Start();
 
 			ranges.insert(make_pair(id, range));
 		}
 
-		ranges[id]->cpuBegin.record();
+		ranges[id].cpuBegin.record();
 
 		lock.unlock();
 
@@ -136,20 +136,20 @@ namespace wiProfiler
 		lock.lock();
 		if (ranges.find(id) == ranges.end())
 		{
-			Range* range = new Range;
-			range->name = name.GetString();
-			range->time = 0;
+			Range range;
+			range.name = name.GetString();
+			range.time = 0;
 
 			GPUQueryDesc desc;
 			desc.Type = GPU_QUERY_TYPE_TIMESTAMP;
-			range->gpuBegin.Create(wiRenderer::GetDevice(), &desc);
-			range->gpuEnd.Create(wiRenderer::GetDevice(), &desc);
+			range.gpuBegin.Create(wiRenderer::GetDevice(), &desc);
+			range.gpuEnd.Create(wiRenderer::GetDevice(), &desc);
 
 			ranges.insert(make_pair(id, range));
 		}
 
-		ranges[id]->cmd = cmd;
-		wiRenderer::GetDevice()->QueryEnd(ranges[id]->gpuBegin.Get_GPU(), cmd);
+		ranges[id].cmd = cmd;
+		wiRenderer::GetDevice()->QueryEnd(ranges[id].gpuBegin.Get_GPU(), cmd);
 
 		lock.unlock();
 
@@ -165,13 +165,13 @@ namespace wiProfiler
 		auto& it = ranges.find(id);
 		if (it != ranges.end())
 		{
-			if (it->second->IsCPURange())
+			if (it->second.IsCPURange())
 			{
-				it->second->cpuEnd.record();
+				it->second.cpuEnd.record();
 			}
 			else
 			{
-				wiRenderer::GetDevice()->QueryEnd(it->second->gpuEnd.Get_GPU(), it->second->cmd);
+				wiRenderer::GetDevice()->QueryEnd(it->second.gpuEnd.Get_GPU(), it->second.cmd);
 			}
 		}
 		else
@@ -194,9 +194,9 @@ namespace wiProfiler
 		// Print CPU ranges:
 		for (auto& x : ranges)
 		{
-			if (x.second->IsCPURange())
+			if (x.second.IsCPURange())
 			{
-				ss << x.second->name << ": " << fixed << x.second->time << " ms" << endl;
+				ss << x.second.name << ": " << fixed << x.second.time << " ms" << endl;
 			}
 		}
 		ss << endl;
@@ -204,9 +204,9 @@ namespace wiProfiler
 		// Print GPU ranges:
 		for (auto& x : ranges)
 		{
-			if (!x.second->IsCPURange())
+			if (!x.second.IsCPURange())
 			{
-				ss << x.second->name << ": " << fixed << x.second->time << " ms" << endl;
+				ss << x.second.name << ": " << fixed << x.second.time << " ms" << endl;
 			}
 		}
 

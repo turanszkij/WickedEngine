@@ -4,6 +4,7 @@
 
 #include <vector>
 
+#include <wrl/client.h> // ComPtr
 #include <xaudio2.h>
 #include <xaudio2fx.h>
 #include <x3daudio.h>
@@ -66,12 +67,12 @@ namespace wiAudio
 	struct AudioInternal
 	{
 		bool success = false;
-		IXAudio2* audioEngine = nullptr;
+		Microsoft::WRL::ComPtr<IXAudio2> audioEngine;
 		IXAudio2MasteringVoice* masteringVoice = nullptr;
 		XAUDIO2_VOICE_DETAILS masteringVoiceDetails = {};
 		IXAudio2SubmixVoice* submixVoices[SUBMIX_TYPE_COUNT] = {};
 		X3DAUDIO_HANDLE audio3D = {};
-		IUnknown* reverbEffect = nullptr;
+		Microsoft::WRL::ComPtr<IUnknown> reverbEffect;
 		IXAudio2SubmixVoice* reverbSubmix = nullptr;
 
 		AudioInternal()
@@ -115,7 +116,7 @@ namespace wiAudio
 				hr = XAudio2CreateReverb(&reverbEffect);
 				assert(SUCCEEDED(hr));
 
-				XAUDIO2_EFFECT_DESCRIPTOR effects[] = { { reverbEffect, TRUE, 1 } };
+				XAUDIO2_EFFECT_DESCRIPTOR effects[] = { { reverbEffect.Get(), TRUE, 1 } };
 				XAUDIO2_EFFECT_CHAIN effectChain = { arraysize(effects), effects };
 				hr = audioEngine->CreateSubmixVoice(
 					&reverbSubmix,
@@ -134,7 +135,6 @@ namespace wiAudio
 		}
 		~AudioInternal()
 		{
-			SAFE_RELEASE(reverbEffect);
 
 			if (reverbSubmix != nullptr)
 				reverbSubmix->DestroyVoice();
@@ -149,7 +149,6 @@ namespace wiAudio
 				masteringVoice->DestroyVoice();
 
 			audioEngine->StopEngine();
-			SAFE_RELEASE(audioEngine);
 
 			CoUninitialize();
 		}

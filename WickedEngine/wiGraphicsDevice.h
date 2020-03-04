@@ -10,7 +10,7 @@ namespace wiGraphics
 	typedef uint8_t CommandList;
 	static const CommandList COMMANDLIST_COUNT = 16;
 
-	class GraphicsDevice : public std::enable_shared_from_this<GraphicsDevice>
+	class GraphicsDevice
 	{
 	protected:
 		uint64_t FRAMECOUNT = 0;
@@ -30,7 +30,6 @@ namespace wiGraphics
 		bool RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS = false;
 
 	public:
-
 		virtual bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) = 0;
 		virtual bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) = 0;
 		virtual bool CreateInputLayout(const InputLayoutDesc *pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout *pInputLayout) = 0;
@@ -44,19 +43,6 @@ namespace wiGraphics
 		virtual bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) = 0;
 
 		virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) = 0;
-
-		virtual void DestroyResource(GPUResource* pResource) = 0;
-		virtual void DestroyBuffer(GPUBuffer *pBuffer) = 0;
-		virtual void DestroyTexture(Texture *pTexture) = 0;
-		virtual void DestroyInputLayout(InputLayout *pInputLayout) = 0;
-		virtual void DestroyShader(Shader *pShader) = 0;
-		virtual void DestroyBlendState(BlendState *pBlendState) = 0;
-		virtual void DestroyDepthStencilState(DepthStencilState *pDepthStencilState) = 0;
-		virtual void DestroyRasterizerState(RasterizerState *pRasterizerState) = 0;
-		virtual void DestroySamplerState(Sampler *pSamplerState) = 0;
-		virtual void DestroyQuery(GPUQuery *pQuery) = 0;
-		virtual void DestroyPipelineState(PipelineState* pso) = 0;
-		virtual void DestroyRenderPass(RenderPass* renderpass) = 0;
 
 		virtual bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) = 0;
 

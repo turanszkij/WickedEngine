@@ -121,15 +121,15 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 
 	device->BindConstantBuffer(CS, cb.get(), CB_GETBINDSLOT(HairParticleCB), cmd);
 
-	GPUResource* uavs[] = {
+	const GPUResource* uavs[] = {
 		particleBuffer.get(),
 		simulationBuffer.get()
 	};
 	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
-	GPUResource* res[] = {
-		mesh.indexBuffer.get(),
-		mesh.streamoutBuffer_POS != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
+	const GPUResource* res[] = {
+		&mesh.indexBuffer,
+		mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
 	};
 	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 

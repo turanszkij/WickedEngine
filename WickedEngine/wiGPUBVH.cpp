@@ -404,13 +404,13 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 
 				device->BindConstantBuffer(CS, &constantBuffer, CB_GETBINDSLOT(BVHCB), cmd);
 
-				GPUResource* res[] = {
+				const GPUResource* res[] = {
 					&globalMaterialBuffer,
-					mesh.indexBuffer.get(),
-					mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
-					mesh.vertexBuffer_UV0.get(),
-					mesh.vertexBuffer_UV1.get(),
-					mesh.vertexBuffer_COL.get(),
+					&mesh.indexBuffer,
+					mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
+					&mesh.vertexBuffer_UV0,
+					&mesh.vertexBuffer_UV1,
+					&mesh.vertexBuffer_COL,
 				};
 				device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 

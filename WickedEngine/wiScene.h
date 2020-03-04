@@ -159,7 +159,7 @@ namespace wiScene
 		std::shared_ptr<wiResource> displacementMap;
 		std::shared_ptr<wiResource> emissiveMap;
 		std::shared_ptr<wiResource> occlusionMap;
-		std::unique_ptr<wiGraphics::GPUBuffer> constantBuffer;
+		wiGraphics::GPUBuffer constantBuffer;
 
 		int customShaderID = -1; // for now, this is not serialized; need to consider actual proper use case first
 
@@ -271,15 +271,15 @@ namespace wiScene
 
 		// Non-serialized attributes:
 		AABB aabb;
-		std::unique_ptr<wiGraphics::GPUBuffer>	indexBuffer;
-		std::unique_ptr<wiGraphics::GPUBuffer>	vertexBuffer_POS;
-		std::unique_ptr<wiGraphics::GPUBuffer>	vertexBuffer_UV0;
-		std::unique_ptr<wiGraphics::GPUBuffer>	vertexBuffer_UV1;
-		std::unique_ptr<wiGraphics::GPUBuffer>	vertexBuffer_BON;
-		std::unique_ptr<wiGraphics::GPUBuffer>	vertexBuffer_COL;
-		std::unique_ptr<wiGraphics::GPUBuffer>	vertexBuffer_ATL;
-		std::unique_ptr<wiGraphics::GPUBuffer>	vertexBuffer_PRE;
-		std::unique_ptr<wiGraphics::GPUBuffer>	streamoutBuffer_POS;
+		wiGraphics::GPUBuffer indexBuffer;
+		wiGraphics::GPUBuffer vertexBuffer_POS;
+		wiGraphics::GPUBuffer vertexBuffer_UV0;
+		wiGraphics::GPUBuffer vertexBuffer_UV1;
+		wiGraphics::GPUBuffer vertexBuffer_BON;
+		wiGraphics::GPUBuffer vertexBuffer_COL;
+		wiGraphics::GPUBuffer vertexBuffer_ATL;
+		wiGraphics::GPUBuffer vertexBuffer_PRE;
+		wiGraphics::GPUBuffer streamoutBuffer_POS;
 
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
@@ -472,9 +472,9 @@ namespace wiScene
 		// Non-serialized attributes:
 
 		XMFLOAT4 globalLightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
-		std::unique_ptr<wiGraphics::Texture> lightmap;
-		std::unique_ptr<wiGraphics::RenderPass> renderpass_lightmap_clear;
-		std::unique_ptr<wiGraphics::RenderPass> renderpass_lightmap_accumulate;
+		wiGraphics::Texture lightmap;
+		wiGraphics::RenderPass renderpass_lightmap_clear;
+		wiGraphics::RenderPass renderpass_lightmap_accumulate;
 		uint32_t lightmapIterationCount = 0;
 
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);
@@ -641,7 +641,7 @@ namespace wiScene
 			ALIGN_16
 		};
 		std::vector<ShaderBoneType> boneData;
-		std::unique_ptr<wiGraphics::GPUBuffer> boneBuffer;
+		wiGraphics::GPUBuffer boneBuffer;
 
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};

@@ -255,14 +255,14 @@ void MeshWindow::SetEntity(Entity entity)
 		ss << "Index count: " << mesh->indices.size() << endl;
 		ss << "Subset count: " << mesh->subsets.size() << endl;
 		ss << endl << "Vertex buffers: ";
-		if (mesh->vertexBuffer_POS != nullptr) ss << "position; ";
-		if (mesh->vertexBuffer_UV0 != nullptr) ss << "uvset_0; ";
-		if (mesh->vertexBuffer_UV1 != nullptr) ss << "uvset_1; ";
-		if (mesh->vertexBuffer_ATL != nullptr) ss << "atlas; ";
-		if (mesh->vertexBuffer_COL != nullptr) ss << "color; ";
-		if (mesh->vertexBuffer_PRE != nullptr) ss << "prevPos; ";
-		if (mesh->vertexBuffer_BON != nullptr) ss << "bone; ";
-		if (mesh->streamoutBuffer_POS != nullptr) ss << "streamout; ";
+		if (mesh->vertexBuffer_POS.IsValid()) ss << "position; ";
+		if (mesh->vertexBuffer_UV0.IsValid()) ss << "uvset_0; ";
+		if (mesh->vertexBuffer_UV1.IsValid()) ss << "uvset_1; ";
+		if (mesh->vertexBuffer_ATL.IsValid()) ss << "atlas; ";
+		if (mesh->vertexBuffer_COL.IsValid()) ss << "color; ";
+		if (mesh->vertexBuffer_PRE.IsValid()) ss << "prevPos; ";
+		if (mesh->vertexBuffer_BON.IsValid()) ss << "bone; ";
+		if (mesh->streamoutBuffer_POS.IsValid()) ss << "streamout; ";
 		meshInfoLabel->SetText(ss.str());
 
 		doubleSidedCheckBox->SetCheck(mesh->IsDoubleSided());

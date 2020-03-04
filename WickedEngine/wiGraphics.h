@@ -599,12 +599,10 @@ namespace wiGraphics
 	{
 		SHADERSTAGE stage = SHADERSTAGE_COUNT;
 		std::vector<uint8_t> code;
-		wiCPUHandle resource = WI_NULL_HANDLE;
 	};
 
 	struct Sampler : public GraphicsDeviceChild
 	{
-		wiCPUHandle resource = WI_NULL_HANDLE;
 		SamplerDesc desc;
 
 		const SamplerDesc& GetDesc() const { return desc; }
@@ -620,19 +618,10 @@ namespace wiGraphics
 		} type = GPU_RESOURCE_TYPE::UNKNOWN_TYPE;
 		inline bool IsTexture() const { return type == GPU_RESOURCE_TYPE::TEXTURE; }
 		inline bool IsBuffer() const { return type == GPU_RESOURCE_TYPE::BUFFER; }
-
-		wiCPUHandle SRV = WI_NULL_HANDLE;
-		std::vector<wiCPUHandle> subresourceSRVs;
-
-		wiCPUHandle UAV = WI_NULL_HANDLE;
-		std::vector<wiCPUHandle> subresourceUAVs;
-
-		wiCPUHandle resource = WI_NULL_HANDLE;
 	};
 
 	struct GPUBuffer : public GPUResource
 	{
-		wiCPUHandle CBV = WI_NULL_HANDLE;
 		GPUBufferDesc desc;
 
 		const GPUBufferDesc& GetDesc() const { return desc; }
@@ -640,14 +629,11 @@ namespace wiGraphics
 
 	struct InputLayout : public GraphicsDeviceChild
 	{
-		wiCPUHandle	resource = WI_NULL_HANDLE;
-
 		std::vector<InputLayoutDesc> desc;
 	};
 
 	struct BlendState : public GraphicsDeviceChild
 	{
-		wiCPUHandle resource = WI_NULL_HANDLE;
 		BlendStateDesc desc;
 
 		const BlendStateDesc& GetDesc() const { return desc; }
@@ -655,7 +641,6 @@ namespace wiGraphics
 
 	struct DepthStencilState : public GraphicsDeviceChild
 	{
-		wiCPUHandle resource = WI_NULL_HANDLE;
 		DepthStencilStateDesc desc;
 
 		const DepthStencilStateDesc& GetDesc() const { return desc; }
@@ -663,7 +648,6 @@ namespace wiGraphics
 
 	struct RasterizerState : public GraphicsDeviceChild
 	{
-		wiCPUHandle resource = WI_NULL_HANDLE;
 		RasterizerStateDesc desc;
 
 		const RasterizerStateDesc& GetDesc() const { return desc; }
@@ -672,17 +656,12 @@ namespace wiGraphics
 	struct Texture : public GPUResource
 	{
 		TextureDesc	desc;
-		wiCPUHandle	RTV = WI_NULL_HANDLE;
-		std::vector<wiCPUHandle> subresourceRTVs;
-		wiCPUHandle	DSV = WI_NULL_HANDLE;
-		std::vector<wiCPUHandle> subresourceDSVs;
 
 		const TextureDesc& GetDesc() const { return desc; }
 	};
 
 	struct GPUQuery : public GraphicsDeviceChild
 	{
-		wiCPUHandle	resource = WI_NULL_HANDLE;
 		GPUQueryDesc desc;
 
 		const GPUQueryDesc& GetDesc() const { return desc; }
@@ -699,8 +678,6 @@ namespace wiGraphics
 	struct RenderPass : public GraphicsDeviceChild
 	{
 		size_t hash = 0;
-		wiCPUHandle	framebuffer = WI_NULL_HANDLE;
-		wiCPUHandle	renderpass = WI_NULL_HANDLE;
 		RenderPassDesc desc;
 
 		const RenderPassDesc& GetDesc() const { return desc; }
