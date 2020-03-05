@@ -175,7 +175,7 @@ static Texture decalAtlas;
 static unordered_map<const Texture*, wiRectPacker::rect_xywh> packedDecals;
 
 Texture globalLightmap;
-unordered_map<const Texture*, wiRectPacker::rect_xywh> packedLightmaps;
+unordered_map<const void*, wiRectPacker::rect_xywh> packedLightmaps;
 
 
 
@@ -3098,7 +3098,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 				device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
 			}
 
-			device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, cmd);
+			device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
 
 			enum class BOUNDVERTEXBUFFERTYPE
 			{
@@ -3201,7 +3201,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 					case BOUNDVERTEXBUFFERTYPE::POSITION:
 					{
 						const GPUBuffer* vbs[] = {
-							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
+							mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
 							instances.buffer
 						};
 						uint32_t strides[] = {
@@ -3218,9 +3218,9 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 					case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
 					{
 						const GPUBuffer* vbs[] = {
-							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
-							mesh.vertexBuffer_UV0.get(),
-							mesh.vertexBuffer_UV1.get(),
+							mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
+							&mesh.vertexBuffer_UV0,
+							&mesh.vertexBuffer_UV1,
 							instances.buffer
 						};
 						uint32_t strides[] = {
@@ -3241,12 +3241,12 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 					case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
 					{
 						const GPUBuffer* vbs[] = {
-							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
-							mesh.vertexBuffer_UV0.get(),
-							mesh.vertexBuffer_UV1.get(),
-							mesh.vertexBuffer_ATL.get(),
-							mesh.vertexBuffer_COL.get(),
-							mesh.vertexBuffer_PRE.get() != nullptr ? mesh.vertexBuffer_PRE.get() : mesh.vertexBuffer_POS.get(),
+							mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
+							&mesh.vertexBuffer_UV0,
+							&mesh.vertexBuffer_UV1,
+							&mesh.vertexBuffer_ATL,
+							&mesh.vertexBuffer_COL,
+							mesh.vertexBuffer_PRE.IsValid() ? &mesh.vertexBuffer_PRE : &mesh.vertexBuffer_POS,
 							instances.buffer
 						};
 						uint32_t strides[] = {
@@ -3286,8 +3286,8 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 
 				device->BindPipelineState(pso, cmd);
 
-				device->BindConstantBuffer(VS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), cmd);
-				device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), cmd);
+				device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+				device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
 
 				if (easyTextureBind)
 				{
@@ -3315,7 +3315,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 						material.GetDisplacementMap(),
 					};
 					device->BindResources(DS, res, TEXSLOT_RENDERER_DISPLACEMENTMAP, arraysize(res), cmd);
-					device->BindConstantBuffer(DS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), cmd);
+					device->BindConstantBuffer(DS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
 				}
 
 				device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
@@ -3444,15 +3444,14 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 				material.SetDirty(false);
 				pendingMaterialUpdates.push_back(uint32_t(i));
 
-				if (material.constantBuffer == nullptr)
+				if (!material.constantBuffer.IsValid())
 				{
 					GPUBufferDesc desc;
 					desc.Usage = USAGE_DEFAULT;
 					desc.BindFlags = BIND_CONSTANT_BUFFER;
 					desc.ByteWidth = sizeof(MaterialCB);
 
-					material.constantBuffer.reset(new GPUBuffer);
-					device->CreateBuffer(&desc, nullptr, material.constantBuffer.get());
+					device->CreateBuffer(&desc, nullptr, &material.constantBuffer);
 				}
 			}
 		}
@@ -3478,7 +3477,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 
 				ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
 
-				if (armature.boneBuffer == nullptr)
+				if (!armature.boneBuffer.IsValid())
 				{
 					GPUBufferDesc bd;
 					bd.Usage = USAGE_DYNAMIC;
@@ -3489,15 +3488,13 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 					bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 					bd.StructureByteStride = sizeof(ArmatureComponent::ShaderBoneType);
 
-					armature.boneBuffer.reset(new GPUBuffer);
-					device->CreateBuffer(&bd, nullptr, armature.boneBuffer.get());
+					device->CreateBuffer(&bd, nullptr, &armature.boneBuffer);
 				}
-				if (mesh.vertexBuffer_PRE == nullptr)
+				if (!mesh.vertexBuffer_PRE.IsValid())
 				{
-					mesh.vertexBuffer_PRE.reset(new GPUBuffer);
-					device->CreateBuffer(&mesh.streamoutBuffer_POS->GetDesc(), nullptr, mesh.vertexBuffer_PRE.get());
+					device->CreateBuffer(&mesh.streamoutBuffer_POS.GetDesc(), nullptr, &mesh.vertexBuffer_PRE);
 				}
-				mesh.streamoutBuffer_POS.swap(mesh.vertexBuffer_PRE);
+				std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
 			}
 		}
 		for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
@@ -3511,14 +3508,12 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 			Entity entity = scene.softbodies.GetEntity(i);
 			MeshComponent& mesh = *scene.meshes.GetComponent(entity);
 
-			if (mesh.vertexBuffer_PRE == nullptr)
+			if (!mesh.vertexBuffer_PRE.IsValid())
 			{
-				mesh.streamoutBuffer_POS.reset(new GPUBuffer);
-				device->CreateBuffer(&mesh.vertexBuffer_POS->GetDesc(), nullptr, mesh.streamoutBuffer_POS.get());
-				mesh.vertexBuffer_PRE.reset(new GPUBuffer);
-				device->CreateBuffer(&mesh.vertexBuffer_POS->GetDesc(), nullptr, mesh.vertexBuffer_PRE.get());
+				device->CreateBuffer(&mesh.vertexBuffer_POS.GetDesc(), nullptr, &mesh.streamoutBuffer_POS);
+				device->CreateBuffer(&mesh.vertexBuffer_POS.GetDesc(), nullptr, &mesh.vertexBuffer_PRE);
 			}
-			mesh.streamoutBuffer_POS.swap(mesh.vertexBuffer_PRE);
+			std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
 		}
 	});
 
@@ -3835,7 +3830,7 @@ void UpdateRenderData(CommandList cmd)
 		{
 			const MaterialComponent& material = scene.materials[materialIndex];
 			ShaderMaterial materialGPUData = material.CreateShaderMaterial();
-			device->UpdateBuffer(material.constantBuffer.get(), &materialGPUData, cmd);
+			device->UpdateBuffer(&material.constantBuffer, &materialGPUData, cmd);
 		}
 	}
 
@@ -4132,16 +4127,16 @@ void UpdateRenderData(CommandList cmd)
 				}
 
 				// Upload bones for skinning to shader
-				device->UpdateBuffer(armature.boneBuffer.get(), armature.boneData.data(), cmd, (int)(sizeof(ArmatureComponent::ShaderBoneType) * armature.boneData.size()));
-				device->BindResource(CS, armature.boneBuffer.get(), SKINNINGSLOT_IN_BONEBUFFER, cmd);
+				device->UpdateBuffer(&armature.boneBuffer, armature.boneData.data(), cmd, (int)(sizeof(ArmatureComponent::ShaderBoneType) * armature.boneData.size()));
+				device->BindResource(CS, &armature.boneBuffer, SKINNINGSLOT_IN_BONEBUFFER, cmd);
 
 				// Do the skinning
-				GPUResource* vbs[] = {
-					mesh.vertexBuffer_POS.get(),
-					mesh.vertexBuffer_BON.get(),
+				const GPUResource* vbs[] = {
+					&mesh.vertexBuffer_POS,
+					&mesh.vertexBuffer_BON,
 				};
-				GPUResource* so[] = {
-					mesh.streamoutBuffer_POS.get(),
+				const GPUResource* so[] = {
+					&mesh.streamoutBuffer_POS,
 				};
 
 				device->BindResources(CS, vbs, SKINNINGSLOT_IN_VERTEX_POS, arraysize(vbs), cmd);
@@ -4176,7 +4171,7 @@ void UpdateRenderData(CommandList cmd)
 		Entity entity = scene.softbodies.GetEntity(i);
 		const MeshComponent& mesh = *scene.meshes.GetComponent(entity);
 
-		device->UpdateBuffer(mesh.streamoutBuffer_POS.get(), softbody.vertex_positions_simulation.data(), cmd, 
+		device->UpdateBuffer(&mesh.streamoutBuffer_POS, softbody.vertex_positions_simulation.data(), cmd, 
 			(uint32_t)(sizeof(MeshComponent::Vertex_POS) * softbody.vertex_positions_simulation.size()));
 	}
 
@@ -6027,14 +6022,14 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 			{
 				// Draw mesh wireframe:
 				device->BindPipelineState(&PSO_debug[DEBUGRENDERING_EMITTER], cmd);
-				GPUBuffer* vbs[] = {
-					mesh->streamoutBuffer_POS != nullptr ? mesh->streamoutBuffer_POS.get() : mesh->vertexBuffer_POS.get(),
+				const GPUBuffer* vbs[] = {
+					mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS,
 				};
 				const uint32_t strides[] = {
 					sizeof(MeshComponent::Vertex_POS),
 				};
 				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-				device->BindIndexBuffer(mesh->indexBuffer.get(), mesh->GetIndexFormat(), 0, cmd);
+				device->BindIndexBuffer(&mesh->indexBuffer, mesh->GetIndexFormat(), 0, cmd);
 
 				device->DrawIndexed((uint32_t)mesh->indices.size(), 0, 0, cmd);
 			}
@@ -6607,12 +6602,12 @@ void RefreshImpostors(CommandList cmd)
 		const XMFLOAT3 extents = bbox.getHalfWidth();
 
 		const GPUBuffer* vbs[] = {
-			mesh.IsSkinned() ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
-			mesh.vertexBuffer_UV0.get(),
-			mesh.vertexBuffer_UV1.get(),
-			mesh.vertexBuffer_ATL.get(),
-			mesh.vertexBuffer_COL.get(),
-			mesh.IsSkinned() ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
+			mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
+			&mesh.vertexBuffer_UV0,
+			&mesh.vertexBuffer_UV1,
+			&mesh.vertexBuffer_ATL,
+			&mesh.vertexBuffer_COL,
+			mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
 			mem.buffer
 		};
 		uint32_t strides[] = {
@@ -6635,7 +6630,7 @@ void RefreshImpostors(CommandList cmd)
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 
-		device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, cmd);
+		device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
 
 		for (int prop = 0; prop < 3; ++prop)
 		{
@@ -6686,8 +6681,8 @@ void RefreshImpostors(CommandList cmd)
 					}
 					const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
-					device->BindConstantBuffer(VS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), cmd);
-					device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), cmd);
+					device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+					device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
 
 					const GPUResource* res[] = {
 						material.GetBaseColorMap(),
@@ -6919,13 +6914,9 @@ void ComputeTiledLightCulling(
 		_savedHeight = _height;
 	}
 
-	static GPUBuffer* frustumBuffer = nullptr;
-	if (frustumBuffer == nullptr || _resolutionChanged)
+	static GPUBuffer frustumBuffer;
+	if (!frustumBuffer.IsValid() || _resolutionChanged)
 	{
-		SAFE_DELETE(frustumBuffer);
-
-		frustumBuffer = new GPUBuffer;
-
 		GPUBufferDesc bd;
 		bd.StructureByteStride = sizeof(XMFLOAT4) * 4; // storing 4 planes for every tile
 		bd.ByteWidth = bd.StructureByteStride * tileCount.x * tileCount.y;
@@ -6933,9 +6924,9 @@ void ComputeTiledLightCulling(
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		bd.Usage = USAGE_DEFAULT;
 		bd.CPUAccessFlags = 0;
-		device->CreateBuffer(&bd, nullptr, frustumBuffer);
+		device->CreateBuffer(&bd, nullptr, &frustumBuffer);
 
-		device->SetName(frustumBuffer, "FrustumBuffer");
+		device->SetName(&frustumBuffer, "FrustumBuffer");
 	}
 	if (_resolutionChanged)
 	{
@@ -6967,7 +6958,9 @@ void ComputeTiledLightCulling(
 	{
 		frustumsComplete = true;
 
-		GPUResource* uavs[] = { frustumBuffer };
+		const GPUResource* uavs[] = { 
+			&frustumBuffer 
+		};
 
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 		device->BindComputeShader(&computeShaders[CSTYPE_TILEFRUSTUMS], cmd);
@@ -7010,7 +7003,7 @@ void ComputeTiledLightCulling(
 
 		device->UnbindResources(SBSLOT_ENTITYTILES, 1, cmd);
 
-		device->BindResource(CS, frustumBuffer, SBSLOT_TILEFRUSTUMS, cmd);
+		device->BindResource(CS, &frustumBuffer, SBSLOT_TILEFRUSTUMS, cmd);
 
 		device->BindComputeShader(&tiledLightingCS[deferred][GetAdvancedLightCulling()][GetDebugLightCulling()], cmd);
 
@@ -7880,12 +7873,12 @@ void ManageLightmapAtlas()
 		ObjectComponent& object = scene.objects[objectIndex];
 		bool refresh = false;
 
-		if (object.lightmap != nullptr && object.lightmapWidth == 0)
+		if (object.lightmap.IsValid() && object.lightmapWidth == 0)
 		{
 			// If we get here, it means that the lightmap GPU texture contains the rendered lightmap, but the CPU-side data was erased.
 			//	In this case, we delete the GPU side lightmap data from the object and the atlas too.
-			packedLightmaps.erase(object.lightmap.get());
-			object.lightmap.reset(nullptr);
+			packedLightmaps.erase(object.lightmap.internal_state.get());
+			object.lightmap = Texture();
 			repackAtlas_Lightmap = true;
 			refresh = false;
 		}
@@ -7896,9 +7889,9 @@ void ManageLightmapAtlas()
 
 			if (object.lightmapIterationCount == 0)
 			{
-				if (object.lightmap != nullptr)
+				if (object.lightmap.IsValid())
 				{
-					packedLightmaps.erase(object.lightmap.get());
+					packedLightmaps.erase(object.lightmap.internal_state.get());
 				}
 
 				{
@@ -7915,40 +7908,40 @@ void ManageLightmapAtlas()
 				//	But the global atlas will have less precision for good bandwidth for sampling
 				desc.Format = FORMAT_R32G32B32A32_FLOAT;
 
-				object.lightmap = std::make_unique<Texture>();
-				device->CreateTexture(&desc, nullptr, object.lightmap.get());
-				device->SetName(object.lightmap.get(), "objectLightmap");
+				object.lightmap = Texture();
+				device->CreateTexture(&desc, nullptr, &object.lightmap);
+				device->SetName(&object.lightmap, "objectLightmap");
 
 				RenderPassDesc renderpassdesc;
 
 				renderpassdesc.numAttachments = 1;
-				renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,object.lightmap.get(),-1 };
-				object.renderpass_lightmap_clear = std::make_unique<RenderPass>();
-				device->CreateRenderPass(&renderpassdesc, object.renderpass_lightmap_clear.get());
+				renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,&object.lightmap,-1 };
+				object.renderpass_lightmap_clear = RenderPass();
+				device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_clear);
 
 				renderpassdesc.numAttachments = 1;
-				renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,object.lightmap.get(),-1 };
-				object.renderpass_lightmap_accumulate = std::make_unique<RenderPass>();
-				device->CreateRenderPass(&renderpassdesc, object.renderpass_lightmap_accumulate.get());
+				renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&object.lightmap,-1 };
+				object.renderpass_lightmap_accumulate = RenderPass();
+				device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_accumulate);
 			}
 			object.lightmapIterationCount++;
 		}
 
-		if (!object.lightmapTextureData.empty() && object.lightmap == nullptr)
+		if (!object.lightmapTextureData.empty() && !object.lightmap.IsValid())
 		{
 			refresh = true;
 			// Create a GPU-side per object lighmap if there is none yet, so that copying into atlas can be done efficiently:
-			object.lightmap.reset(new Texture);
-			wiTextureHelper::CreateTexture(*object.lightmap.get(), object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.GetLightmapFormat());
+			object.lightmap = Texture();
+			wiTextureHelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.GetLightmapFormat());
 		}
 
-		if (object.lightmap != nullptr)
+		if (object.lightmap.IsValid())
 		{
-			if (packedLightmaps.find(object.lightmap.get()) == packedLightmaps.end())
+			if (packedLightmaps.find(object.lightmap.internal_state.get()) == packedLightmaps.end())
 			{
 				// we need to pack this lightmap texture into the atlas
-				rect_xywh newRect = rect_xywh(0, 0, object.lightmap->GetDesc().Width + atlasClampBorder * 2, object.lightmap->GetDesc().Height + atlasClampBorder * 2);
-				packedLightmaps[object.lightmap.get()] = newRect;
+				rect_xywh newRect = rect_xywh(0, 0, object.lightmap.GetDesc().Width + atlasClampBorder * 2, object.lightmap.GetDesc().Height + atlasClampBorder * 2);
+				packedLightmaps[object.lightmap.internal_state.get()] = newRect;
 
 				repackAtlas_Lightmap = true;
 				refresh = true;
@@ -8008,11 +8001,11 @@ void ManageLightmapAtlas()
 		{
 			ObjectComponent& object = scene.objects[i];
 
-			if (object.lightmap != nullptr && packedLightmaps.count(object.lightmap.get()) > 0)
+			if (object.lightmap.IsValid() && packedLightmaps.count(object.lightmap.internal_state.get()) > 0)
 			{
 				const TextureDesc& desc = globalLightmap.GetDesc();
 
-				rect_xywh rect = packedLightmaps.at(object.lightmap.get());
+				rect_xywh rect = packedLightmaps.at(object.lightmap.internal_state.get());
 
 				// eliminate border expansion:
 				rect.x += atlasClampBorder;
@@ -8038,19 +8031,19 @@ void RenderObjectLightMap(const ObjectComponent& object, CommandList cmd)
 
 	const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
 	assert(!mesh.vertex_atlas.empty());
-	assert(mesh.vertexBuffer_ATL != nullptr);
+	assert(mesh.vertexBuffer_ATL.IsValid());
 
-	const TextureDesc& desc = object.lightmap->GetDesc();
+	const TextureDesc& desc = object.lightmap.GetDesc();
 
 	const uint32_t lightmapIterationCount = std::max(1u, object.lightmapIterationCount) - 1; // ManageLightMapAtlas incremented before refresh
 
 	if (lightmapIterationCount == 0)
 	{
-		device->RenderPassBegin(object.renderpass_lightmap_clear.get(), cmd);
+		device->RenderPassBegin(&object.renderpass_lightmap_clear, cmd);
 	}
 	else
 	{
-		device->RenderPassBegin(object.renderpass_lightmap_accumulate.get(), cmd);
+		device->RenderPassBegin(&object.renderpass_lightmap_accumulate, cmd);
 	}
 
 	Viewport vp;
@@ -8066,8 +8059,8 @@ void RenderObjectLightMap(const ObjectComponent& object, CommandList cmd)
 	instance->Create(transform.world);
 
 	const GPUBuffer* vbs[] = {
-		mesh.vertexBuffer_POS.get(),
-		mesh.vertexBuffer_ATL.get(),
+		&mesh.vertexBuffer_POS,
+		&mesh.vertexBuffer_ATL,
 		mem.buffer,
 	};
 	uint32_t strides[] = {
@@ -8081,7 +8074,7 @@ void RenderObjectLightMap(const ObjectComponent& object, CommandList cmd)
 		mem.offset,
 	};
 	device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
-	device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, cmd);
+	device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
 
 	RaytracingCB cb;
 	cb.xTraceResolution.x = desc.Width;
@@ -8146,10 +8139,10 @@ void RefreshLightmapAtlas(CommandList cmd)
 				for (size_t i = 0; i < scene.objects.GetCount(); ++i)
 				{
 					const ObjectComponent& object = scene.objects[i];
-					if (object.lightmap != nullptr)
+					if (object.lightmap.IsValid())
 					{
-						const auto& rec = packedLightmaps.at(object.lightmap.get());
-						CopyTexture2D(globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, *object.lightmap.get(), 0, cmd);
+						const auto& rec = packedLightmaps.at(object.lightmap.internal_state.get());
+						CopyTexture2D(globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap, 0, cmd);
 					}
 				}
 			}
@@ -8159,8 +8152,8 @@ void RefreshLightmapAtlas(CommandList cmd)
 				for (uint32_t objectIndex : lightmapsToRefresh)
 				{
 					const ObjectComponent& object = scene.objects[objectIndex];
-					const auto& rec = packedLightmaps.at(object.lightmap.get());
-					CopyTexture2D(globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, *object.lightmap.get(), 0, cmd);
+					const auto& rec = packedLightmaps.at(object.lightmap.internal_state.get());
+					CopyTexture2D(globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap, 0, cmd);
 				}
 			}
 			device->EventEnd(cmd);
@@ -8415,14 +8408,10 @@ const Texture* ComputeLuminance(const Texture& sourceImage, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 
-	static std::unique_ptr<Texture> luminance_map;
-	static std::vector<Texture*> luminance_avg(0);
-	if (luminance_map == nullptr)
+	static Texture luminance_map;
+	static std::vector<Texture> luminance_avg(0);
+	if (!luminance_map.IsValid())
 	{
-		for (auto& x : luminance_avg)
-		{
-			SAFE_DELETE(x);
-		}
 		luminance_avg.clear();
 
 		TextureDesc desc;
@@ -8437,50 +8426,49 @@ const Texture* ComputeLuminance(const Texture& sourceImage, CommandList cmd)
 		desc.CPUAccessFlags = 0;
 		desc.MiscFlags = 0;
 
-		luminance_map.reset(new Texture);
-		device->CreateTexture(&desc, nullptr, luminance_map.get());
+		device->CreateTexture(&desc, nullptr, &luminance_map);
 
 		while (desc.Width > 1)
 		{
 			desc.Width = std::max(desc.Width / 16, 1u);
 			desc.Height = desc.Width;
 
-			Texture* tex = new Texture;
-			device->CreateTexture(&desc, nullptr, tex);
+			Texture tex;
+			device->CreateTexture(&desc, nullptr, &tex);
 
 			luminance_avg.push_back(tex);
 		}
 	}
-	if (luminance_map != nullptr)
+	if (luminance_map.IsValid())
 	{
 		device->EventBegin("Compute Luminance", cmd);
 
 		// Pass 1 : Create luminance map from scene tex
-		TextureDesc luminance_map_desc = luminance_map->GetDesc();
+		TextureDesc luminance_map_desc = luminance_map.GetDesc();
 		device->BindComputeShader(&computeShaders[CSTYPE_LUMINANCE_PASS1], cmd);
 		device->BindResource(CS, &sourceImage, TEXSLOT_ONDEMAND0, cmd);
-		device->BindUAV(CS, luminance_map.get(), 0, cmd);
+		device->BindUAV(CS, &luminance_map, 0, cmd);
 		device->Dispatch(luminance_map_desc.Width/16, luminance_map_desc.Height/16, 1, cmd);
 
 		// Pass 2 : Reduce for average luminance until we got an 1x1 texture
 		TextureDesc luminance_avg_desc;
 		for (size_t i = 0; i < luminance_avg.size(); ++i)
 		{
-			luminance_avg_desc = luminance_avg[i]->GetDesc();
+			luminance_avg_desc = luminance_avg[i].GetDesc();
 			device->BindComputeShader(&computeShaders[CSTYPE_LUMINANCE_PASS2], cmd);
 
 			const GPUResource* uavs[] = {
-				luminance_avg[i]
+				&luminance_avg[i]
 			};
 			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 			if (i > 0)
 			{
-				device->BindResource(CS, luminance_avg[i-1], TEXSLOT_ONDEMAND0, cmd);
+				device->BindResource(CS, &luminance_avg[i-1], TEXSLOT_ONDEMAND0, cmd);
 			}
 			else
 			{
-				device->BindResource(CS, luminance_map.get(), TEXSLOT_ONDEMAND0, cmd);
+				device->BindResource(CS, &luminance_map, TEXSLOT_ONDEMAND0, cmd);
 			}
 			device->Dispatch(luminance_avg_desc.Width, luminance_avg_desc.Height, 1, cmd);
 			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
@@ -8491,7 +8479,7 @@ const Texture* ComputeLuminance(const Texture& sourceImage, CommandList cmd)
 
 		device->EventEnd(cmd);
 
-		return luminance_avg.back();
+		return &luminance_avg.back();
 	}
 
 	return nullptr;

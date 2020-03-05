@@ -58,21 +58,6 @@ void wiEmittedParticle::CreateSelfBuffers()
 	}
 	buffersUpToDate = true;
 
-	particleBuffer.reset(new GPUBuffer);
-	aliveList[0].reset(new GPUBuffer);
-	aliveList[1].reset(new GPUBuffer);
-	deadList.reset(new GPUBuffer);
-	distanceBuffer.reset(new GPUBuffer);
-	sphPartitionCellIndices.reset(new GPUBuffer);
-	sphPartitionCellOffsets.reset(new GPUBuffer);
-	densityBuffer.reset(new GPUBuffer);
-	counterBuffer.reset(new GPUBuffer);
-	indirectBuffers.reset(new GPUBuffer);
-	constantBuffer.reset(new GPUBuffer);
-	debugDataReadbackBuffer.reset(new GPUBuffer);
-	debugDataReadbackIndexBuffer.reset(new GPUBuffer);
-	debugDataReadbackDistanceBuffer.reset(new GPUBuffer);
-
 
 	// GPU-local buffer descriptors:
 	GPUBufferDesc bd;
@@ -85,23 +70,22 @@ void wiEmittedParticle::CreateSelfBuffers()
 	// Particle buffer:
 	bd.StructureByteStride = sizeof(Particle);
 	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, particleBuffer.get());
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &particleBuffer);
 
 	// Alive index lists (double buffered):
 	bd.StructureByteStride = sizeof(uint32_t);
 	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, aliveList[0].get());
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, aliveList[1].get());
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &aliveList[0]);
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &aliveList[1]);
 
 	// Dead index list:
-	uint32_t* indices = new uint32_t[MAX_PARTICLES];
+	std::vector<uint32_t> indices(MAX_PARTICLES);
 	for (uint32_t i = 0; i < MAX_PARTICLES; ++i)
 	{
 		indices[i] = i;
 	}
-	data.pSysMem = indices;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, deadList.get());
-	SAFE_DELETE_ARRAY(indices);
+	data.pSysMem = indices.data();
+	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, &deadList);
 	data.pSysMem = nullptr;
 
 	// Distance buffer:
@@ -113,24 +97,24 @@ void wiEmittedParticle::CreateSelfBuffers()
 		distances[i] = 0;
 	}
 	data.pSysMem = distances;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, distanceBuffer.get());
+	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, &distanceBuffer);
 	SAFE_DELETE_ARRAY(distances);
 	data.pSysMem = nullptr;
 
 	// SPH Partitioning grid indices per particle:
 	bd.StructureByteStride = sizeof(float); // really, it is uint, but sorting is performing comparisons on floats, so whateva
 	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, sphPartitionCellIndices.get());
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &sphPartitionCellIndices);
 
 	// SPH Partitioning grid cell offsets into particle index list:
 	bd.StructureByteStride = sizeof(uint32_t);
 	bd.ByteWidth = bd.StructureByteStride * SPH_PARTITION_BUCKET_COUNT;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, sphPartitionCellOffsets.get());
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &sphPartitionCellOffsets);
 
 	// Density buffer (for SPH simulation):
 	bd.StructureByteStride = sizeof(float);
 	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, densityBuffer.get());
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &densityBuffer);
 
 	// Particle System statistics:
 	ParticleCounters counters;
@@ -143,7 +127,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 	bd.ByteWidth = sizeof(counters);
 	bd.StructureByteStride = sizeof(counters);
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, counterBuffer.get());
+	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, &counterBuffer);
 	data.pSysMem = nullptr;
 
 	// Indirect Execution buffer:
@@ -153,7 +137,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 		sizeof(wiGraphics::IndirectDispatchArgs) + 
 		sizeof(wiGraphics::IndirectDispatchArgs) + 
 		sizeof(wiGraphics::IndirectDrawArgsInstanced);
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, indirectBuffers.get());
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &indirectBuffers);
 
 	// Constant buffer:
 	bd.Usage = USAGE_DEFAULT;
@@ -161,55 +145,55 @@ void wiEmittedParticle::CreateSelfBuffers()
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = 0;
 	bd.MiscFlags = 0;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, constantBuffer.get());
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &constantBuffer);
 
 	// Debug information CPU-readback buffer:
 	{
-		GPUBufferDesc debugBufDesc = counterBuffer->GetDesc();
+		GPUBufferDesc debugBufDesc = counterBuffer.GetDesc();
 		debugBufDesc.Usage = USAGE_STAGING;
 		debugBufDesc.CPUAccessFlags = CPU_ACCESS_READ;
 		debugBufDesc.BindFlags = 0;
 		debugBufDesc.MiscFlags = 0;
-		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, debugDataReadbackBuffer.get());
+		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, &debugDataReadbackBuffer);
 	}
 
 	// Sorting debug buffers:
 	{
-		GPUBufferDesc debugBufDesc = aliveList[0]->GetDesc();
+		GPUBufferDesc debugBufDesc = aliveList[0].GetDesc();
 		debugBufDesc.Usage = USAGE_STAGING;
 		debugBufDesc.CPUAccessFlags = CPU_ACCESS_READ;
 		debugBufDesc.BindFlags = 0;
 		debugBufDesc.MiscFlags = 0;
-		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, debugDataReadbackIndexBuffer.get());
+		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, &debugDataReadbackIndexBuffer);
 	}
 	{
-		GPUBufferDesc debugBufDesc = distanceBuffer->GetDesc();
+		GPUBufferDesc debugBufDesc = distanceBuffer.GetDesc();
 		debugBufDesc.Usage = USAGE_STAGING;
 		debugBufDesc.CPUAccessFlags = CPU_ACCESS_READ;
 		debugBufDesc.BindFlags = 0;
 		debugBufDesc.MiscFlags = 0;
-		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, debugDataReadbackDistanceBuffer.get());
+		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, &debugDataReadbackDistanceBuffer);
 	}
 }
 
 uint32_t wiEmittedParticle::GetMemorySizeInBytes() const
 {
-	if (particleBuffer == nullptr)
+	if (!particleBuffer.IsValid())
 		return 0;
 
 	uint32_t retVal = 0;
 
-	retVal += particleBuffer->GetDesc().ByteWidth;
-	retVal += aliveList[0]->GetDesc().ByteWidth;
-	retVal += aliveList[1]->GetDesc().ByteWidth;
-	retVal += deadList->GetDesc().ByteWidth;
-	retVal += distanceBuffer->GetDesc().ByteWidth;
-	retVal += sphPartitionCellIndices->GetDesc().ByteWidth;
-	retVal += sphPartitionCellOffsets->GetDesc().ByteWidth;
-	retVal += densityBuffer->GetDesc().ByteWidth;
-	retVal += counterBuffer->GetDesc().ByteWidth;
-	retVal += indirectBuffers->GetDesc().ByteWidth;
-	retVal += constantBuffer->GetDesc().ByteWidth;
+	retVal += particleBuffer.GetDesc().ByteWidth;
+	retVal += aliveList[0].GetDesc().ByteWidth;
+	retVal += aliveList[1].GetDesc().ByteWidth;
+	retVal += deadList.GetDesc().ByteWidth;
+	retVal += distanceBuffer.GetDesc().ByteWidth;
+	retVal += sphPartitionCellIndices.GetDesc().ByteWidth;
+	retVal += sphPartitionCellOffsets.GetDesc().ByteWidth;
+	retVal += densityBuffer.GetDesc().ByteWidth;
+	retVal += counterBuffer.GetDesc().ByteWidth;
+	retVal += indirectBuffers.GetDesc().ByteWidth;
+	retVal += constantBuffer.GetDesc().ByteWidth;
 
 	return retVal;
 }
@@ -231,12 +215,12 @@ void wiEmittedParticle::UpdateCPU(const TransformComponent& transform, float dt)
 	burst = 0;
 
 	// Swap CURRENT alivelist with NEW alivelist
-	aliveList[0].swap(aliveList[1]);
+	std::swap(aliveList[0], aliveList[1]);
 
 
 	if (IsDebug())
 	{
-		wiRenderer::GetDevice()->DownloadResource(counterBuffer.get(), debugDataReadbackBuffer.get(), &debugData);
+		wiRenderer::GetDevice()->DownloadResource(&counterBuffer, &debugDataReadbackBuffer, &debugData);
 	}
 }
 void wiEmittedParticle::Burst(int num)
@@ -255,7 +239,7 @@ void wiEmittedParticle::Restart()
 //#define DEBUG_SORTING // slow but great for debug!!
 void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const MaterialComponent& material, const MeshComponent* mesh, CommandList cmd) const
 {
-	if (particleBuffer == nullptr)
+	if (!particleBuffer.IsValid())
 	{
 		return;
 	}
@@ -301,27 +285,27 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		cb.xSPH_e = SPH_e;
 		cb.xSPH_ENABLED = IsSPHEnabled() ? 1 : 0;
 
-		device->UpdateBuffer(constantBuffer.get(), &cb, cmd);
-		device->BindConstantBuffer(CS, constantBuffer.get(), CB_GETBINDSLOT(EmittedParticleCB), cmd);
+		device->UpdateBuffer(&constantBuffer, &cb, cmd);
+		device->BindConstantBuffer(CS, &constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), cmd);
 
-		GPUResource* uavs[] = {
-			particleBuffer.get(),
-			aliveList[0].get(), // CURRENT alivelist
-			aliveList[1].get(), // NEW alivelist
-			deadList.get(),
-			counterBuffer.get(),
-			indirectBuffers.get(),
-			distanceBuffer.get(),
+		const GPUResource* uavs[] = {
+			&particleBuffer,
+			&aliveList[0], // CURRENT alivelist
+			&aliveList[1], // NEW alivelist
+			&deadList,
+			&counterBuffer,
+			&indirectBuffers,
+			&distanceBuffer,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
-		GPUResource* resources[] = {
-			mesh == nullptr ? nullptr : mesh->indexBuffer.get(),
-			mesh == nullptr ? nullptr : (mesh->streamoutBuffer_POS != nullptr ? mesh->streamoutBuffer_POS.get() : mesh->vertexBuffer_POS.get()),
+		const GPUResource* resources[] = {
+			mesh == nullptr ? nullptr : &mesh->indexBuffer,
+			mesh == nullptr ? nullptr : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
 		};
 		device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, arraysize(resources), cmd);
 
-		device->Barrier(&GPUBarrier::Buffer(indirectBuffers.get(), BUFFER_STATE_INDIRECT_ARGUMENT, BUFFER_STATE_UNORDERED_ACCESS), 1, cmd);
+		device->Barrier(&GPUBarrier::Buffer(&indirectBuffers, BUFFER_STATE_INDIRECT_ARGUMENT, BUFFER_STATE_UNORDERED_ACCESS), 1, cmd);
 
 		// kick off updating, set up state
 		device->EventBegin("KickOff Update", cmd);
@@ -330,12 +314,12 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		device->EventEnd(cmd);
 
-		device->Barrier(&GPUBarrier::Buffer(indirectBuffers.get(), BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDIRECT_ARGUMENT), 1, cmd);
+		device->Barrier(&GPUBarrier::Buffer(&indirectBuffers, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDIRECT_ARGUMENT), 1, cmd);
 
 		// emit the required amount if there are free slots in dead list
 		device->EventBegin("Emit", cmd);
 		device->BindComputeShader(mesh == nullptr ? &emitCS : &emitCS_FROMMESH, cmd);
-		device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHEMIT, cmd);
+		device->DispatchIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHEMIT, cmd);
 		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		device->EventEnd(cmd);
 
@@ -351,29 +335,29 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 			device->EventBegin("Partitioning", cmd);
 			device->BindComputeShader(&sphpartitionCS, cmd);
 			device->UnbindUAVs(0, 8, cmd);
-			GPUResource* res_partition[] = {
-				aliveList[0].get(), // CURRENT alivelist
-				counterBuffer.get(),
-				particleBuffer.get(),
+			const GPUResource* res_partition[] = {
+				&aliveList[0], // CURRENT alivelist
+				&counterBuffer,
+				&particleBuffer,
 			};
 			device->BindResources(CS, res_partition, 0, arraysize(res_partition), cmd);
-			GPUResource* uav_partition[] = {
-				sphPartitionCellIndices.get(),
+			const GPUResource* uav_partition[] = {
+				&sphPartitionCellIndices,
 			};
 			device->BindUAVs(CS, uav_partition, 0, arraysize(uav_partition), cmd);
-			device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
+			device->DispatchIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
 			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 			device->EventEnd(cmd);
 
 			// 2.) Sort particle index list based on partition grid cell index:
-			wiGPUSortLib::Sort(MAX_PARTICLES, *sphPartitionCellIndices.get(), *counterBuffer.get(), PARTICLECOUNTER_OFFSET_ALIVECOUNT, *aliveList[0].get(), cmd);
+			wiGPUSortLib::Sort(MAX_PARTICLES, sphPartitionCellIndices, counterBuffer, PARTICLECOUNTER_OFFSET_ALIVECOUNT, aliveList[0], cmd);
 
 			// 3.) Reset grid cell offset buffer with invalid offsets (max uint):
 			device->EventBegin("PartitionOffsetsReset", cmd);
 			device->BindComputeShader(&sphpartitionoffsetsresetCS, cmd);
 			device->UnbindUAVs(0, 8, cmd);
-			GPUResource* uav_partitionoffsets[] = {
-				sphPartitionCellOffsets.get(),
+			const GPUResource* uav_partitionoffsets[] = {
+				&sphPartitionCellOffsets,
 			};
 			device->BindUAVs(CS, uav_partitionoffsets, 0, arraysize(uav_partitionoffsets), cmd);
 			device->Dispatch((uint32_t)ceilf((float)SPH_PARTITION_BUCKET_COUNT / (float)THREADCOUNT_SIMULATION), 1, 1, cmd);
@@ -383,13 +367,13 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 			// 4.) Assemble grid cell offsets from the sorted particle index list <--> grid cell index list connection:
 			device->EventBegin("PartitionOffsets", cmd);
 			device->BindComputeShader(&sphpartitionoffsetsCS, cmd);
-			GPUResource* res_partitionoffsets[] = {
-				aliveList[0].get(), // CURRENT alivelist
-				counterBuffer.get(),
-				sphPartitionCellIndices.get(),
+			const GPUResource* res_partitionoffsets[] = {
+				&aliveList[0], // CURRENT alivelist
+				&counterBuffer,
+				&sphPartitionCellIndices,
 			};
 			device->BindResources(CS, res_partitionoffsets, 0, arraysize(res_partitionoffsets), cmd);
-			device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
+			device->DispatchIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
 			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 			device->EventEnd(cmd);
 
@@ -399,19 +383,19 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 			device->EventBegin("Density Evaluation", cmd);
 			device->BindComputeShader(&sphdensityCS, cmd);
 			device->UnbindUAVs(0, 8, cmd);
-			GPUResource* res_density[] = {
-				aliveList[0].get(), // CURRENT alivelist
-				counterBuffer.get(),
-				particleBuffer.get(),
-				sphPartitionCellIndices.get(),
-				sphPartitionCellOffsets.get(),
+			const GPUResource* res_density[] = {
+				&aliveList[0], // CURRENT alivelist
+				&counterBuffer,
+				&particleBuffer,
+				&sphPartitionCellIndices,
+				&sphPartitionCellOffsets,
 			};
 			device->BindResources(CS, res_density, 0, arraysize(res_density), cmd);
-			GPUResource* uav_density[] = {
-				densityBuffer.get()
+			const GPUResource* uav_density[] = {
+				&densityBuffer
 			};
 			device->BindUAVs(CS, uav_density, 0, arraysize(uav_density), cmd);
-			device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
+			device->DispatchIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
 			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 			device->EventEnd(cmd);
 
@@ -419,19 +403,19 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 			device->EventBegin("Force Evaluation", cmd);
 			device->BindComputeShader(&sphforceCS, cmd);
 			device->UnbindUAVs(0, 8, cmd);
-			GPUResource* res_force[] = {
-				aliveList[0].get(), // CURRENT alivelist
-				counterBuffer.get(),
-				densityBuffer.get(),
-				sphPartitionCellIndices.get(),
-				sphPartitionCellOffsets.get(),
+			const GPUResource* res_force[] = {
+				&aliveList[0], // CURRENT alivelist
+				&counterBuffer,
+				&densityBuffer,
+				&sphPartitionCellIndices,
+				&sphPartitionCellOffsets,
 			};
 			device->BindResources(CS, res_force, 0, arraysize(res_force), cmd);
-			GPUResource* uav_force[] = {
-				particleBuffer.get(),
+			const GPUResource* uav_force[] = {
+				&particleBuffer,
 			};
 			device->BindUAVs(CS, uav_force, 0, arraysize(uav_force), cmd);
-			device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
+			device->DispatchIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
 			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 			device->EventEnd(cmd);
 
@@ -470,7 +454,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 				device->BindComputeShader(&simulateCS, cmd);
 			}
 		}
-		device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
+		device->DispatchIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
 		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		device->EventEnd(cmd);
 
@@ -486,22 +470,23 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 	{
 #ifdef DEBUG_SORTING
 		vector<uint32_t> before(MAX_PARTICLES);
-		device->DownloadResource(aliveList[1].get(), debugDataReadbackIndexBuffer.get(), before.data());
+		device->DownloadResource(&aliveList[1], &debugDataReadbackIndexBuffer, before.data());
 
-		device->DownloadResource(counterBuffer.get(), debugDataReadbackBuffer.get(), &debugData);
-		uint32_t particleCount = debugData.aliveCount_afterSimulation;
+		ParticleCounters data;
+		device->DownloadResource(&counterBuffer, &debugDataReadbackBuffer, &data);
+		uint32_t particleCount = data.aliveCount_afterSimulation;
 #endif // DEBUG_SORTING
 
 
-		wiGPUSortLib::Sort(MAX_PARTICLES, *distanceBuffer.get(), *counterBuffer.get(), PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION, *aliveList[1].get(), cmd);
+		wiGPUSortLib::Sort(MAX_PARTICLES, distanceBuffer, counterBuffer, PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION, aliveList[1], cmd);
 
 
 #ifdef DEBUG_SORTING
 		vector<uint32_t> after(MAX_PARTICLES);
-		device->DownloadResource(aliveList[1].get(), debugDataReadbackIndexBuffer.get(), after.data());
+		device->DownloadResource(&aliveList[1], &debugDataReadbackIndexBuffer, after.data());
 
 		vector<float> distances(MAX_PARTICLES);
-		device->DownloadResource(distanceBuffer.get(), debugDataReadbackDistanceBuffer.get(), distances.data());
+		device->DownloadResource(&distanceBuffer, &debugDataReadbackDistanceBuffer, distances.data());
 
 		if (particleCount > 1)
 		{
@@ -544,7 +529,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 			// Also we can reupload CPU sorted particles to verify:
 			if (!valid)
 			{
-				device->UpdateBuffer(aliveList[1].get(), before.data(), cmd);
+				device->UpdateBuffer(&aliveList[1], before.data(), cmd);
 			}
 		}
 #endif // DEBUG_SORTING
@@ -556,13 +541,13 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		device->EventBegin("FinishUpdate", cmd);
 		device->BindComputeShader(&finishUpdateCS, cmd);
 
-		GPUResource* res[] = {
-			counterBuffer.get(),
+		const GPUResource* res[] = {
+			&counterBuffer,
 		};
 		device->BindResources(CS, res, 0, arraysize(res), cmd);
 
-		GPUResource* uavs[] = {
-			indirectBuffers.get(),
+		const GPUResource* uavs[] = {
+			&indirectBuffers,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
@@ -592,22 +577,22 @@ void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialCompon
 		device->BindResource(PS, material.GetBaseColorMap(), TEXSLOT_ONDEMAND0, cmd);
 	}
 
-	device->BindConstantBuffer(VS, constantBuffer.get(), CB_GETBINDSLOT(EmittedParticleCB), cmd);
-	device->BindConstantBuffer(PS, constantBuffer.get(), CB_GETBINDSLOT(EmittedParticleCB), cmd);
+	device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), cmd);
+	device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), cmd);
 
-	GPUBarrier barriers[] = {
-		GPUBarrier::Buffer(particleBuffer.get(), BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
-		GPUBarrier::Buffer(aliveList[1].get(), BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
+	const GPUBarrier barriers[] = {
+		GPUBarrier::Buffer(&particleBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
+		GPUBarrier::Buffer(&aliveList[1], BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
 	};
 	device->Barrier(barriers, arraysize(barriers), cmd);
 
 	const GPUResource* res[] = {
-		particleBuffer.get(),
-		aliveList[1].get() // NEW aliveList
+		&particleBuffer,
+		&aliveList[1] // NEW aliveList
 	};
 	device->BindResources(VS, res, 0, arraysize(res), cmd);
 
-	device->DrawInstancedIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, cmd);
+	device->DrawInstancedIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, cmd);
 
 	device->EventEnd(cmd);
 }

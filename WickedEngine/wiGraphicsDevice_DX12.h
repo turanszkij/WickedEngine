@@ -10,6 +10,7 @@
 
 #include <dxgi1_4.h>
 #include <d3d12.h>
+#include <wrl/client.h> // ComPtr
 
 #include <unordered_map>
 #include <deque>
@@ -19,67 +20,66 @@
 
 namespace wiGraphics
 {
-
-	class GraphicsDevice_DX12 : public GraphicsDevice
+	class GraphicsDevice_DX12 : public GraphicsDevice, public std::enable_shared_from_this<GraphicsDevice_DX12>
 	{
 	private:
-		ID3D12Device*				device = nullptr;
-		ID3D12CommandQueue*			directQueue = nullptr;
-		ID3D12Fence*				frameFence = nullptr;
-		HANDLE						frameFenceEvent;
-		D3D12MA::Allocator*			allocator = nullptr;
+		Microsoft::WRL::ComPtr<ID3D12Device> device;
+		Microsoft::WRL::ComPtr<ID3D12CommandQueue> directQueue;
+		Microsoft::WRL::ComPtr<ID3D12Fence> frameFence;
+		HANDLE frameFenceEvent;
+		D3D12MA::Allocator* allocator = nullptr;
 
-		ID3D12CommandQueue*			copyQueue = nullptr;
-		ID3D12CommandAllocator*		copyAllocator = nullptr;
-		ID3D12CommandList*			copyCommandList = nullptr;
-		ID3D12Fence*				copyFence = nullptr;
-		HANDLE						copyFenceEvent;
-		UINT64						copyFenceValue;
-		wiSpinLock					copyQueueLock;
+		Microsoft::WRL::ComPtr<ID3D12CommandQueue> copyQueue;
+		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> copyAllocator;
+		Microsoft::WRL::ComPtr<ID3D12CommandList> copyCommandList;
+		Microsoft::WRL::ComPtr<ID3D12Fence> copyFence;
+		HANDLE copyFenceEvent;
+		UINT64 copyFenceValue;
+		wiSpinLock copyQueueLock;
 
-		ID3D12RootSignature*		graphicsRootSig = nullptr;
-		ID3D12RootSignature*		computeRootSig = nullptr;
+		Microsoft::WRL::ComPtr<ID3D12RootSignature> graphicsRootSig;
+		Microsoft::WRL::ComPtr<ID3D12RootSignature> computeRootSig;
 
-		ID3D12CommandSignature*		dispatchIndirectCommandSignature = nullptr;
-		ID3D12CommandSignature*		drawInstancedIndirectCommandSignature = nullptr;
-		ID3D12CommandSignature*		drawIndexedInstancedIndirectCommandSignature = nullptr;
+		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchIndirectCommandSignature;
+		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawInstancedIndirectCommandSignature;
+		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawIndexedInstancedIndirectCommandSignature;
 
-		ID3D12QueryHeap* querypool_timestamp = nullptr;
-		ID3D12QueryHeap* querypool_occlusion = nullptr;
+		Microsoft::WRL::ComPtr<ID3D12QueryHeap> querypool_timestamp;
+		Microsoft::WRL::ComPtr<ID3D12QueryHeap> querypool_occlusion;
 		static const size_t timestamp_query_count = 1024;
 		static const size_t occlusion_query_count = 1024;
 		wiContainers::ThreadSafeRingBuffer<uint32_t, timestamp_query_count> free_timestampqueries;
 		wiContainers::ThreadSafeRingBuffer<uint32_t, occlusion_query_count> free_occlusionqueries;
-		ID3D12Resource* querypool_timestamp_readback = nullptr;
-		ID3D12Resource* querypool_occlusion_readback = nullptr;
+		Microsoft::WRL::ComPtr<ID3D12Resource> querypool_timestamp_readback;
+		Microsoft::WRL::ComPtr<ID3D12Resource> querypool_occlusion_readback;
 		D3D12MA::Allocation* allocation_querypool_timestamp_readback = nullptr;
 		D3D12MA::Allocation* allocation_querypool_occlusion_readback = nullptr;
 
 		struct DescriptorAllocator
 		{
-			ID3D12DescriptorHeap*	heap = nullptr;
+			Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> heap;
 			size_t					heap_begin;
 			uint32_t				itemCount;
-			uint32_t					maxCount;
-			uint32_t					itemSize;
+			uint32_t				maxCount;
+			uint32_t				itemSize;
 			bool*					itemsAlive = nullptr;
 			uint32_t				lastAlloc;
 			wiSpinLock				lock;
 
-			DescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t maxCount);
+			void init(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t maxCount);
 			~DescriptorAllocator();
 
-			size_t allocate();
+			D3D12_CPU_DESCRIPTOR_HANDLE allocate();
 			void clear();
-			void free(wiCPUHandle descriptorHandle);
+			void free(D3D12_CPU_DESCRIPTOR_HANDLE descriptorHandle);
 		};
-		DescriptorAllocator*		RTAllocator = nullptr;
-		DescriptorAllocator*		DSAllocator = nullptr;
-		DescriptorAllocator*		ResourceAllocator = nullptr;
-		DescriptorAllocator*		SamplerAllocator = nullptr;
+		DescriptorAllocator RTAllocator;
+		DescriptorAllocator DSAllocator;
+		DescriptorAllocator ResourceAllocator;
+		DescriptorAllocator SamplerAllocator;
 
-		ID3D12DescriptorHeap*	null_resource_heap_CPU = nullptr;
-		ID3D12DescriptorHeap*	null_sampler_heap_CPU = nullptr;
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> null_resource_heap_CPU;
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> null_sampler_heap_CPU;
 		D3D12_CPU_DESCRIPTOR_HANDLE null_resource_heap_cpu_start = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE null_sampler_heap_cpu_start = {};
 		uint32_t resource_descriptor_size = 0;
@@ -87,10 +87,10 @@ namespace wiGraphics
 
 		struct FrameResources
 		{
-			ID3D12Resource*					backBuffer = nullptr;
+			Microsoft::WRL::ComPtr<ID3D12Resource> backBuffer;
 			D3D12_CPU_DESCRIPTOR_HANDLE		backBufferRTV = {};
-			ID3D12CommandAllocator*			commandAllocators[COMMANDLIST_COUNT] = {};
-			ID3D12CommandList*				commandLists[COMMANDLIST_COUNT] = {};
+			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[COMMANDLIST_COUNT];
+			Microsoft::WRL::ComPtr<ID3D12CommandList> commandLists[COMMANDLIST_COUNT];
 
 			struct DescriptorTableFrameAllocator
 			{
@@ -98,7 +98,7 @@ namespace wiGraphics
 				struct DescriptorHeap
 				{
 					D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
-					ID3D12DescriptorHeap* heap_GPU = nullptr;
+					Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> heap_GPU;
 					D3D12_CPU_DESCRIPTOR_HANDLE start_cpu = {};
 					D3D12_GPU_DESCRIPTOR_HANDLE start_gpu = {};
 					uint32_t ringOffset = 0;
@@ -135,36 +135,32 @@ namespace wiGraphics
 
 				} tables[SHADERSTAGE_COUNT];
 
-				DescriptorTableFrameAllocator(GraphicsDevice_DX12* device);
-				~DescriptorTableFrameAllocator();
+				void init(GraphicsDevice_DX12* device);
 
 				void reset();
 				void validate(CommandList cmd);
 				void create_or_bind_heaps_on_demand(CommandList cmd);
 			};
-			DescriptorTableFrameAllocator*		descriptors[COMMANDLIST_COUNT] = {};
+			DescriptorTableFrameAllocator descriptors[COMMANDLIST_COUNT];
 
 			struct ResourceFrameAllocator
 			{
-				GraphicsDevice_DX12*	device = nullptr;
 				GPUBuffer				buffer;
-				D3D12MA::Allocation*	allocation = nullptr;
 				uint8_t*				dataBegin = nullptr;
 				uint8_t*				dataCur = nullptr;
 				uint8_t*				dataEnd = nullptr;
 
-				ResourceFrameAllocator(GraphicsDevice_DX12* device, size_t size);
-				~ResourceFrameAllocator();
+				void init(std::shared_ptr<GraphicsDevice_DX12> device, size_t size);
 
 				uint8_t* allocate(size_t dataSize, size_t alignment);
 				void clear();
 				uint64_t calculateOffset(uint8_t* address);
 			};
-			ResourceFrameAllocator* resourceBuffer[COMMANDLIST_COUNT] = {};
+			ResourceFrameAllocator resourceBuffer[COMMANDLIST_COUNT];
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
-		inline ID3D12GraphicsCommandList4* GetDirectCommandList(CommandList cmd) { return static_cast<ID3D12GraphicsCommandList4*>(GetFrameResources().commandLists[cmd]); }
+		inline ID3D12GraphicsCommandList4* GetDirectCommandList(CommandList cmd) { return static_cast<ID3D12GraphicsCommandList4*>(GetFrameResources().commandLists[cmd].Get()); }
 
 		struct DynamicResourceState
 		{
@@ -175,62 +171,39 @@ namespace wiGraphics
 
 		struct UploadBuffer
 		{
-			GraphicsDevice_DX12*	device = nullptr;
-			ID3D12Resource*			resource = nullptr;
+			GraphicsDevice_DX12* device = nullptr;
+			Microsoft::WRL::ComPtr<ID3D12Resource> resource;
 			D3D12MA::Allocation*	allocation = nullptr;
 			uint8_t*				dataBegin = nullptr;
 			uint8_t*				dataCur = nullptr;
 			uint8_t*				dataEnd = nullptr;
 			wiSpinLock				lock;
 
-			UploadBuffer(GraphicsDevice_DX12* device, size_t size);
-			~UploadBuffer();
+			void init(GraphicsDevice_DX12* device, size_t size);
+			~UploadBuffer()
+			{
+				if (allocation) allocation->Release();
+			}
 
 			uint8_t* allocate(size_t dataSize, size_t alignment);
 			void clear();
 			uint64_t calculateOffset(uint8_t* address);
 		};
-		UploadBuffer* bufferUploader = nullptr;
-		UploadBuffer* textureUploader = nullptr;
+		UploadBuffer bufferUploader;
+		UploadBuffer textureUploader;
 
-		IDXGISwapChain3*			swapChain = nullptr;
+		Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain;
 
 		PRIMITIVETOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
 
-		std::unordered_map<size_t, ID3D12PipelineState*> pipelines_global;
-		std::vector<std::pair<size_t, ID3D12PipelineState*>> pipelines_worker[COMMANDLIST_COUNT];
+		std::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_global;
+		std::vector<std::pair<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker[COMMANDLIST_COUNT];
 		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 
 		std::atomic<uint8_t> commandlist_count{ 0 };
 		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> free_commandlists;
 		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> active_commandlists;
-
-		struct DestroyItem
-		{
-			enum TYPE
-			{
-				RESOURCE,
-				RESOURCEVIEW,
-				RENDERTARGETVIEW,
-				DEPTHSTENCILVIEW,
-				SAMPLER,
-				PIPELINE,
-				QUERY_TIMESTAMP,
-				QUERY_OCCLUSION,
-			} type;
-			uint64_t frame;
-			wiCPUHandle handle;
-		};
-		std::deque<DestroyItem> destroyer;
-		std::mutex destroylocker;
-		inline void DeferredDestroy(const DestroyItem& item)
-		{
-			destroylocker.lock();
-			destroyer.push_back(item);
-			destroylocker.unlock();
-		}
-		std::unordered_map<wiCPUHandle, D3D12MA::Allocation*> mem_allocations;
 
 	public:
 		GraphicsDevice_DX12(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false);
@@ -249,19 +222,6 @@ namespace wiGraphics
 		bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
 
 		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
-
-		void DestroyResource(GPUResource* pResource) override;
-		void DestroyBuffer(GPUBuffer *pBuffer) override;
-		void DestroyTexture(Texture *pTexture) override;
-		void DestroyInputLayout(InputLayout *pInputLayout) override;
-		void DestroyShader(Shader *pShader) override;
-		void DestroyBlendState(BlendState *pBlendState) override;
-		void DestroyDepthStencilState(DepthStencilState *pDepthStencilState) override;
-		void DestroyRasterizerState(RasterizerState *pRasterizerState) override;
-		void DestroySamplerState(Sampler *pSamplerState) override;
-		void DestroyQuery(GPUQuery *pQuery) override;
-		void DestroyPipelineState(PipelineState* pso) override;
-		void DestroyRenderPass(RenderPass* renderpass) override;
 
 		bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) override;
 
@@ -321,6 +281,18 @@ namespace wiGraphics
 		void EventBegin(const std::string& name, CommandList cmd) override;
 		void EventEnd(CommandList cmd) override;
 		void SetMarker(const std::string& name, CommandList cmd) override;
+
+
+		std::mutex destroylocker;
+		std::deque<std::pair<D3D12MA::Allocation*, uint64_t>> destroyer_allocations;
+		std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, uint64_t>> destroyer_resources;
+		std::deque<std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, uint64_t>> destroyer_resourceviews;
+		std::deque<std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, uint64_t>> destroyer_rtvs;
+		std::deque<std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, uint64_t>> destroyer_dsvs;
+		std::deque<std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, uint64_t>> destroyer_samplers;
+		std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_timestamp;
+		std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_occlusion;
+		std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12PipelineState>, uint64_t>> destroyer_pipelines;
 
 	};
 

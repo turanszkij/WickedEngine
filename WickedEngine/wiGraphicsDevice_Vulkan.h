@@ -42,7 +42,7 @@ namespace wiGraphics
 		}
 	};
 
-	class GraphicsDevice_Vulkan : public GraphicsDevice
+	class GraphicsDevice_Vulkan : public GraphicsDevice, public std::enable_shared_from_this<GraphicsDevice_Vulkan>
 	{
 		friend struct DescriptorTableFrameAllocator;
 	private:
@@ -166,33 +166,30 @@ namespace wiGraphics
 
 				} tables[SHADERSTAGE_COUNT];
 
-				DescriptorTableFrameAllocator(GraphicsDevice_Vulkan* device);
+				void init(GraphicsDevice_Vulkan* device);
 				~DescriptorTableFrameAllocator();
 
 				void reset();
 				void validate(CommandList cmd);
 				void create_heaps_on_demand(SHADERSTAGE stage);
 			};
-			DescriptorTableFrameAllocator*		descriptors[COMMANDLIST_COUNT];
+			DescriptorTableFrameAllocator descriptors[COMMANDLIST_COUNT];
 
 
 			struct ResourceFrameAllocator
 			{
-				GraphicsDevice_Vulkan*	device = nullptr;
 				GPUBuffer				buffer;
-				VmaAllocation			allocation;
 				uint8_t*				dataBegin = nullptr;
 				uint8_t*				dataCur = nullptr;
 				uint8_t*				dataEnd = nullptr;
 
-				ResourceFrameAllocator(GraphicsDevice_Vulkan* device, size_t size);
-				~ResourceFrameAllocator();
+				void init(std::shared_ptr<GraphicsDevice_Vulkan> device, size_t size);
 
 				uint8_t* allocate(size_t dataSize, size_t alignment);
 				void clear();
 				uint64_t calculateOffset(uint8_t* address);
 			};
-			ResourceFrameAllocator* resourceBuffer[COMMANDLIST_COUNT];
+			ResourceFrameAllocator resourceBuffer[COMMANDLIST_COUNT];
 
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
@@ -216,53 +213,25 @@ namespace wiGraphics
 			uint8_t*				dataEnd = nullptr;
 			wiSpinLock				lock;
 
-			UploadBuffer(GraphicsDevice_Vulkan* device, const QueueFamilyIndices& queueIndices, size_t size);
+			void init(GraphicsDevice_Vulkan* device, const QueueFamilyIndices& queueIndices, size_t size);
 			~UploadBuffer();
 
 			uint8_t* allocate(size_t dataSize, size_t alignment);
 			void clear();
 			uint64_t calculateOffset(uint8_t* address);
 		};
-		UploadBuffer* bufferUploader;
-		UploadBuffer* textureUploader;
+		UploadBuffer bufferUploader;
+		UploadBuffer textureUploader;
 
 		std::unordered_map<size_t, VkPipeline> pipelines_global;
 		std::vector<std::pair<size_t, VkPipeline>> pipelines_worker[COMMANDLIST_COUNT];
 		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 
-		std::unordered_map<wiCPUHandle, VmaAllocation> vma_allocations;
-
 		std::atomic<uint8_t> commandlist_count{ 0 };
 		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> free_commandlists;
 		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> active_commandlists;
 
-		struct DestroyItem
-		{
-			enum TYPE
-			{
-				IMAGE,
-				IMAGEVIEW,
-				BUFFER,
-				BUFFERVIEW,
-				SAMPLER,
-				PIPELINE,
-				RENDERPASS,
-				FRAMEBUFFER,
-				QUERY_TIMESTAMP,
-				QUERY_OCCLUSION,
-			} type;
-			uint64_t frame;
-			wiCPUHandle handle;
-		};
-		std::deque<DestroyItem> destroyer;
-		std::mutex destroylocker;
-		inline void DeferredDestroy(const DestroyItem& item) 
-		{
-			destroylocker.lock();
-			destroyer.push_back(item);
-			destroylocker.unlock();
-		}
 
 	public:
 		GraphicsDevice_Vulkan(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false);
@@ -281,19 +250,6 @@ namespace wiGraphics
 		bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
 
 		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
-
-		void DestroyResource(GPUResource* pResource) override;
-		void DestroyBuffer(GPUBuffer *pBuffer) override;
-		void DestroyTexture(Texture *pTexture) override;
-		void DestroyInputLayout(InputLayout *pInputLayout) override;
-		void DestroyShader(Shader *pShader) override;
-		void DestroyBlendState(BlendState *pBlendState) override;
-		void DestroyDepthStencilState(DepthStencilState *pDepthStencilState) override;
-		void DestroyRasterizerState(RasterizerState *pRasterizerState) override;
-		void DestroySamplerState(Sampler *pSamplerState) override;
-		void DestroyQuery(GPUQuery *pQuery) override;
-		void DestroyPipelineState(PipelineState* pso) override;
-		void DestroyRenderPass(RenderPass* renderpass) override;
 
 		bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) override;
 
@@ -354,6 +310,19 @@ namespace wiGraphics
 		void EventEnd(CommandList cmd) override;
 		void SetMarker(const std::string& name, CommandList cmd) override;
 
+
+
+		std::mutex destroylocker;
+		std::deque<std::pair<std::pair<VkImage, VmaAllocation>, uint64_t>> destroyer_images;
+		std::deque<std::pair<VkImageView, uint64_t>> destroyer_imageviews;
+		std::deque<std::pair<std::pair<VkBuffer, VmaAllocation>, uint64_t>> destroyer_buffers;
+		std::deque<std::pair<VkBufferView, uint64_t>> destroyer_bufferviews;
+		std::deque<std::pair<VkSampler, uint64_t>> destroyer_samplers;
+		std::deque<std::pair<VkPipeline, uint64_t>> destroyer_pipelines;
+		std::deque<std::pair<VkRenderPass, uint64_t>> destroyer_renderpasses;
+		std::deque<std::pair<VkFramebuffer, uint64_t>> destroyer_framebuffers;
+		std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_occlusion;
+		std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_timestamp;
 	};
 }
 
