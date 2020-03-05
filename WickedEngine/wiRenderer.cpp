@@ -6914,13 +6914,9 @@ void ComputeTiledLightCulling(
 		_savedHeight = _height;
 	}
 
-	static GPUBuffer* frustumBuffer = nullptr;
-	if (frustumBuffer == nullptr || _resolutionChanged)
+	static GPUBuffer frustumBuffer;
+	if (!frustumBuffer.IsValid() || _resolutionChanged)
 	{
-		SAFE_DELETE(frustumBuffer);
-
-		frustumBuffer = new GPUBuffer;
-
 		GPUBufferDesc bd;
 		bd.StructureByteStride = sizeof(XMFLOAT4) * 4; // storing 4 planes for every tile
 		bd.ByteWidth = bd.StructureByteStride * tileCount.x * tileCount.y;
@@ -6928,9 +6924,9 @@ void ComputeTiledLightCulling(
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		bd.Usage = USAGE_DEFAULT;
 		bd.CPUAccessFlags = 0;
-		device->CreateBuffer(&bd, nullptr, frustumBuffer);
+		device->CreateBuffer(&bd, nullptr, &frustumBuffer);
 
-		device->SetName(frustumBuffer, "FrustumBuffer");
+		device->SetName(&frustumBuffer, "FrustumBuffer");
 	}
 	if (_resolutionChanged)
 	{
@@ -6962,7 +6958,9 @@ void ComputeTiledLightCulling(
 	{
 		frustumsComplete = true;
 
-		GPUResource* uavs[] = { frustumBuffer };
+		const GPUResource* uavs[] = { 
+			&frustumBuffer 
+		};
 
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 		device->BindComputeShader(&computeShaders[CSTYPE_TILEFRUSTUMS], cmd);
@@ -7005,7 +7003,7 @@ void ComputeTiledLightCulling(
 
 		device->UnbindResources(SBSLOT_ENTITYTILES, 1, cmd);
 
-		device->BindResource(CS, frustumBuffer, SBSLOT_TILEFRUSTUMS, cmd);
+		device->BindResource(CS, &frustumBuffer, SBSLOT_TILEFRUSTUMS, cmd);
 
 		device->BindComputeShader(&tiledLightingCS[deferred][GetAdvancedLightCulling()][GetDebugLightCulling()], cmd);
 
@@ -8410,14 +8408,10 @@ const Texture* ComputeLuminance(const Texture& sourceImage, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 
-	static std::unique_ptr<Texture> luminance_map;
-	static std::vector<Texture*> luminance_avg(0);
-	if (luminance_map == nullptr)
+	static Texture luminance_map;
+	static std::vector<Texture> luminance_avg(0);
+	if (!luminance_map.IsValid())
 	{
-		for (auto& x : luminance_avg)
-		{
-			SAFE_DELETE(x);
-		}
 		luminance_avg.clear();
 
 		TextureDesc desc;
@@ -8432,50 +8426,49 @@ const Texture* ComputeLuminance(const Texture& sourceImage, CommandList cmd)
 		desc.CPUAccessFlags = 0;
 		desc.MiscFlags = 0;
 
-		luminance_map.reset(new Texture);
-		device->CreateTexture(&desc, nullptr, luminance_map.get());
+		device->CreateTexture(&desc, nullptr, &luminance_map);
 
 		while (desc.Width > 1)
 		{
 			desc.Width = std::max(desc.Width / 16, 1u);
 			desc.Height = desc.Width;
 
-			Texture* tex = new Texture;
-			device->CreateTexture(&desc, nullptr, tex);
+			Texture tex;
+			device->CreateTexture(&desc, nullptr, &tex);
 
 			luminance_avg.push_back(tex);
 		}
 	}
-	if (luminance_map != nullptr)
+	if (luminance_map.IsValid())
 	{
 		device->EventBegin("Compute Luminance", cmd);
 
 		// Pass 1 : Create luminance map from scene tex
-		TextureDesc luminance_map_desc = luminance_map->GetDesc();
+		TextureDesc luminance_map_desc = luminance_map.GetDesc();
 		device->BindComputeShader(&computeShaders[CSTYPE_LUMINANCE_PASS1], cmd);
 		device->BindResource(CS, &sourceImage, TEXSLOT_ONDEMAND0, cmd);
-		device->BindUAV(CS, luminance_map.get(), 0, cmd);
+		device->BindUAV(CS, &luminance_map, 0, cmd);
 		device->Dispatch(luminance_map_desc.Width/16, luminance_map_desc.Height/16, 1, cmd);
 
 		// Pass 2 : Reduce for average luminance until we got an 1x1 texture
 		TextureDesc luminance_avg_desc;
 		for (size_t i = 0; i < luminance_avg.size(); ++i)
 		{
-			luminance_avg_desc = luminance_avg[i]->GetDesc();
+			luminance_avg_desc = luminance_avg[i].GetDesc();
 			device->BindComputeShader(&computeShaders[CSTYPE_LUMINANCE_PASS2], cmd);
 
 			const GPUResource* uavs[] = {
-				luminance_avg[i]
+				&luminance_avg[i]
 			};
 			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 			if (i > 0)
 			{
-				device->BindResource(CS, luminance_avg[i-1], TEXSLOT_ONDEMAND0, cmd);
+				device->BindResource(CS, &luminance_avg[i-1], TEXSLOT_ONDEMAND0, cmd);
 			}
 			else
 			{
-				device->BindResource(CS, luminance_map.get(), TEXSLOT_ONDEMAND0, cmd);
+				device->BindResource(CS, &luminance_map, TEXSLOT_ONDEMAND0, cmd);
 			}
 			device->Dispatch(luminance_avg_desc.Width, luminance_avg_desc.Height, 1, cmd);
 			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
@@ -8486,7 +8479,7 @@ const Texture* ComputeLuminance(const Texture& sourceImage, CommandList cmd)
 
 		device->EventEnd(cmd);
 
-		return luminance_avg.back();
+		return &luminance_avg.back();
 	}
 
 	return nullptr;

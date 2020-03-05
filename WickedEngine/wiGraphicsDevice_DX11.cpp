@@ -1547,7 +1547,7 @@ bool GraphicsDevice_DX11::CreateInputLayout(const InputLayoutDesc *pInputElement
 
 	pInputLayout->desc.reserve((size_t)NumElements);
 
-	D3D11_INPUT_ELEMENT_DESC* desc = new D3D11_INPUT_ELEMENT_DESC[NumElements];
+	std::vector<D3D11_INPUT_ELEMENT_DESC> desc(NumElements);
 	for (uint32_t i = 0; i < NumElements; ++i)
 	{
 		desc[i].SemanticName = pInputElementDescs[i].SemanticName;
@@ -1563,9 +1563,7 @@ bool GraphicsDevice_DX11::CreateInputLayout(const InputLayoutDesc *pInputElement
 		pInputLayout->desc.push_back(pInputElementDescs[i]);
 	}
 
-	HRESULT hr = device->CreateInputLayout(desc, NumElements, shader->code.data(), shader->code.size(), &internal_state->resource);
-
-	SAFE_DELETE_ARRAY(desc);
+	HRESULT hr = device->CreateInputLayout(desc.data(), NumElements, shader->code.data(), shader->code.size(), &internal_state->resource);
 
 	return SUCCEEDED(hr);
 }
@@ -2907,7 +2905,6 @@ void GraphicsDevice_DX11::BindPipelineState(const PipelineState* pso, CommandLis
 }
 void GraphicsDevice_DX11::BindComputeShader(const Shader* cs, CommandList cmd)
 {
-	assert(cs->stage == CS);
 	ID3D11ComputeShader* _cs = cs == nullptr ? nullptr : static_pointer_cast<ComputeShader_DX11>(cs->internal_state)->resource.Get();
 	if (_cs != prev_cs[cmd])
 	{

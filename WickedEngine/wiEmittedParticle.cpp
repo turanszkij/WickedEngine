@@ -79,14 +79,13 @@ void wiEmittedParticle::CreateSelfBuffers()
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &aliveList[1]);
 
 	// Dead index list:
-	uint32_t* indices = new uint32_t[MAX_PARTICLES];
+	std::vector<uint32_t> indices(MAX_PARTICLES);
 	for (uint32_t i = 0; i < MAX_PARTICLES; ++i)
 	{
 		indices[i] = i;
 	}
-	data.pSysMem = indices;
+	data.pSysMem = indices.data();
 	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, &deadList);
-	SAFE_DELETE_ARRAY(indices);
 	data.pSysMem = nullptr;
 
 	// Distance buffer:
