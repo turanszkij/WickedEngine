@@ -35,6 +35,10 @@ namespace wiNetwork
 			}
 		}
 	};
+	SocketInternal* to_internal(const Socket* param)
+	{
+		return static_cast<SocketInternal*>(param->internal_state.get());
+	}
 
 	void Initialize()
 	{
@@ -86,7 +90,7 @@ namespace wiNetwork
 			target.sin_addr.S_un.S_un_b.s_b3 = connection->ipaddress[2];
 			target.sin_addr.S_un.S_un_b.s_b4 = connection->ipaddress[3];
 
-			const auto& socketinternal = std::static_pointer_cast<SocketInternal>(sock->internal_state);
+			auto socketinternal = to_internal(sock);
 
 			int result = sendto(socketinternal->handle, (const char*)data, (int)dataSize, 0, (const sockaddr*)& target, sizeof(target));
 			if (result == SOCKET_ERROR)
@@ -112,7 +116,7 @@ namespace wiNetwork
 			target.sin_port = htons(port);
 			target.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
 
-			const auto& socketinternal = std::static_pointer_cast<SocketInternal>(sock->internal_state);
+			auto socketinternal = to_internal(sock);
 
 			int result = bind(socketinternal->handle, (const sockaddr*)& target, sizeof(target));
 			if (result == SOCKET_ERROR)
@@ -133,7 +137,7 @@ namespace wiNetwork
 	{
 		if (socket != nullptr && sock->IsValid())
 		{
-			const auto& socketinternal = std::static_pointer_cast<SocketInternal>(sock->internal_state);
+			auto socketinternal = to_internal(sock);
 
 			fd_set readfds;
 			FD_ZERO(&readfds);
@@ -160,7 +164,7 @@ namespace wiNetwork
 	{
 		if (socket != nullptr && sock->IsValid())
 		{
-			const auto& socketinternal = std::static_pointer_cast<SocketInternal>(sock->internal_state);
+			auto socketinternal = to_internal(sock);
 
 			sockaddr_in sender;
 			int targetsize = sizeof(sender);

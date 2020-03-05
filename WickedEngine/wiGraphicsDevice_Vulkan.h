@@ -318,6 +318,7 @@ namespace wiGraphics
 		std::deque<std::pair<std::pair<VkBuffer, VmaAllocation>, uint64_t>> destroyer_buffers;
 		std::deque<std::pair<VkBufferView, uint64_t>> destroyer_bufferviews;
 		std::deque<std::pair<VkSampler, uint64_t>> destroyer_samplers;
+		std::deque<std::pair<VkShaderModule, uint64_t>> destroyer_shadermodules;
 		std::deque<std::pair<VkPipeline, uint64_t>> destroyer_pipelines;
 		std::deque<std::pair<VkRenderPass, uint64_t>> destroyer_renderpasses;
 		std::deque<std::pair<VkFramebuffer, uint64_t>> destroyer_framebuffers;

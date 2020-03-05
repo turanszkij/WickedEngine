@@ -862,6 +862,22 @@ namespace Vulkan_Internal
 			}
 		}
 	};
+	struct Shader_Vulkan
+	{
+		std::shared_ptr<GraphicsDevice_Vulkan> device;
+		VkShaderModule shaderModule = VK_NULL_HANDLE;
+		VkPipeline pipeline_cs = VK_NULL_HANDLE;
+		VkPipelineShaderStageCreateInfo stageInfo = {};
+
+		~Shader_Vulkan()
+		{
+			uint64_t framecount = device->GetFrameCount();
+			device->destroylocker.lock();
+			if (shaderModule) device->destroyer_shadermodules.push_back(std::make_pair(shaderModule, framecount));
+			if (pipeline_cs) device->destroyer_pipelines.push_back(std::make_pair(pipeline_cs, framecount));
+			device->destroylocker.unlock();
+		}
+	};
 	struct PipelineState_Vulkan
 	{
 		std::shared_ptr<GraphicsDevice_Vulkan> device;
@@ -880,6 +896,8 @@ namespace Vulkan_Internal
 		std::shared_ptr<GraphicsDevice_Vulkan> device;
 		VkRenderPass renderpass = VK_NULL_HANDLE;
 		VkFramebuffer framebuffer = VK_NULL_HANDLE;
+		VkRenderPassBeginInfo beginInfo;
+		VkClearValue clearColors[9] = {};
 
 		~RenderPass_Vulkan()
 		{
@@ -890,6 +908,35 @@ namespace Vulkan_Internal
 			device->destroylocker.unlock();
 		}
 	};
+
+	Buffer_Vulkan* to_internal(const GPUBuffer* param)
+	{
+		return static_cast<Buffer_Vulkan*>(param->internal_state.get());
+	}
+	Texture_Vulkan* to_internal(const Texture* param)
+	{
+		return static_cast<Texture_Vulkan*>(param->internal_state.get());
+	}
+	Sampler_Vulkan* to_internal(const Sampler* param)
+	{
+		return static_cast<Sampler_Vulkan*>(param->internal_state.get());
+	}
+	Query_Vulkan* to_internal(const GPUQuery* param)
+	{
+		return static_cast<Query_Vulkan*>(param->internal_state.get());
+	}
+	Shader_Vulkan* to_internal(const Shader* param)
+	{
+		return static_cast<Shader_Vulkan*>(param->internal_state.get());
+	}
+	PipelineState_Vulkan* to_internal(const PipelineState* param)
+	{
+		return static_cast<PipelineState_Vulkan*>(param->internal_state.get());
+	}
+	RenderPass_Vulkan* to_internal(const RenderPass* param)
+	{
+		return static_cast<RenderPass_Vulkan*>(param->internal_state.get());
+	}
 }
 using namespace Vulkan_Internal;
 
@@ -1290,7 +1337,7 @@ using namespace Vulkan_Internal;
 						{
 							continue;
 						}
-						const auto& internal_state = std::static_pointer_cast<Buffer_Vulkan>(buffer->internal_state);
+						auto internal_state = to_internal(buffer);
 
 						bufferInfos[writeCount] = {};
 						bufferInfos[writeCount].range = buffer->desc.ByteWidth;
@@ -1301,7 +1348,7 @@ using namespace Vulkan_Internal;
 							if (it != device->dynamic_constantbuffers[cmd].end())
 							{
 								DynamicResourceState& state = it->second;
-								bufferInfos[writeCount].buffer = std::static_pointer_cast<Buffer_Vulkan>(state.allocation.buffer->internal_state)->resource;
+								bufferInfos[writeCount].buffer = to_internal(state.allocation.buffer)->resource;
 								bufferInfos[writeCount].offset = state.allocation.offset;
 								state.binding[stage] = true;
 							}
@@ -1343,7 +1390,8 @@ using namespace Vulkan_Internal;
 						if (resource->IsTexture())
 						{
 							// Texture:
-							const auto& internal_state = std::static_pointer_cast<Texture_Vulkan>(resource->internal_state);
+							const Texture* texture = (const Texture*)resource;
+							auto internal_state = to_internal(texture);
 
 							const uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot;
 
@@ -1368,7 +1416,7 @@ using namespace Vulkan_Internal;
 						{
 							// Buffer:
 							const GPUBuffer* buffer = (const GPUBuffer*)resource;
-							const auto& internal_state = std::static_pointer_cast<Buffer_Vulkan>(resource->internal_state);
+							auto internal_state = to_internal(buffer);
 
 							if (buffer->desc.Format == FORMAT_UNKNOWN)
 							{
@@ -1432,7 +1480,8 @@ using namespace Vulkan_Internal;
 						{
 							// Texture:
 							const uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE + slot;
-							const auto& internal_state = std::static_pointer_cast<Texture_Vulkan>(resource->internal_state);
+							const Texture* texture = (const Texture*)resource;
+							auto internal_state = to_internal(texture);
 
 							imageInfos[writeCount] = {};
 							imageInfos[writeCount].imageView = subresource < 0 ? internal_state->uav : internal_state->subresources_uav[subresource];
@@ -1455,7 +1504,7 @@ using namespace Vulkan_Internal;
 						{
 							// Buffer:
 							const GPUBuffer* buffer = (const GPUBuffer*)resource;
-							const auto& internal_state = std::static_pointer_cast<Buffer_Vulkan>(resource->internal_state);
+							auto internal_state = to_internal(buffer);
 
 							if (buffer->desc.Format == FORMAT_UNKNOWN)
 							{
@@ -1514,7 +1563,7 @@ using namespace Vulkan_Internal;
 						{
 							continue;
 						}
-						const auto& internal_state = std::static_pointer_cast<Sampler_Vulkan>(sampler->internal_state);
+						auto internal_state = to_internal(sampler);
 
 						imageInfos[writeCount] = {};
 						imageInfos[writeCount].imageView = VK_NULL_HANDLE;
@@ -2379,6 +2428,12 @@ using namespace Vulkan_Internal;
 		vkDestroyQueryPool(device, querypool_timestamp, nullptr);
 		vkDestroyQueryPool(device, querypool_occlusion, nullptr);
 
+		vkDestroyBuffer(device, nullBuffer, nullptr);
+		vkDestroyBufferView(device, nullBufferView, nullptr);
+		vkDestroyImage(device, nullImage, nullptr);
+		vkDestroyImageView(device, nullImageView, nullptr);
+		vkDestroySampler(device, nullSampler, nullptr);
+
 		vmaDestroyAllocator(allocator);
 
 		vkDestroyDevice(device, nullptr);
@@ -2818,7 +2873,9 @@ using namespace Vulkan_Internal;
 	}
 	bool GraphicsDevice_Vulkan::CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader)
 	{
-		pShader->internal_state = shared_from_this();
+		auto internal_state = std::make_shared<Shader_Vulkan>();
+		internal_state->device = shared_from_this();
+		pShader->internal_state = internal_state;
 
 		pShader->code.resize(BytecodeLength);
 		std::memcpy(pShader->code.data(), pShaderBytecode, BytecodeLength);
@@ -2826,12 +2883,43 @@ using namespace Vulkan_Internal;
 
 		VkResult res = VK_SUCCESS;
 
+		VkShaderModuleCreateInfo moduleInfo = {};
+		moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		moduleInfo.codeSize = pShader->code.size();
+		moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pShader->code.data());
+		res = vkCreateShaderModule(device, &moduleInfo, nullptr, &internal_state->shaderModule);
+		assert(res == VK_SUCCESS);
+
+		internal_state->stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		internal_state->stageInfo.module = internal_state->shaderModule;
+		internal_state->stageInfo.pName = "main";
+		switch (stage)
+		{
+		case wiGraphics::VS:
+			internal_state->stageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+			break;
+		case wiGraphics::HS:
+			internal_state->stageInfo.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+			break;
+		case wiGraphics::DS:
+			internal_state->stageInfo.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+			break;
+		case wiGraphics::GS:
+			internal_state->stageInfo.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
+			break;
+		case wiGraphics::PS:
+			internal_state->stageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+			break;
+		case wiGraphics::CS:
+			internal_state->stageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+			break;
+		default:
+			assert(0);
+			break;
+		}
+
 		if (stage == CS)
 		{
-			auto internal_state = std::make_shared<PipelineState_Vulkan>();
-			internal_state->device = shared_from_this();
-			pShader->internal_state = internal_state;
-
 			VkComputePipelineCreateInfo pipelineInfo = {};
 			pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 			pipelineInfo.layout = defaultPipelineLayout_Compute;
@@ -2839,27 +2927,10 @@ using namespace Vulkan_Internal;
 
 
 			// Create compute pipeline state in place:
-
-			VkShaderModuleCreateInfo moduleInfo = {};
-			moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-
-			VkPipelineShaderStageCreateInfo stageInfo = {};
-			stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			stageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-
-			VkShaderModule shaderModule = {};
-			moduleInfo.codeSize = pShader->code.size();
-			moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pShader->code.data());
-			res = vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule);
-			assert(res == VK_SUCCESS);
-
-			stageInfo.module = shaderModule;
-			stageInfo.pName = "main";
-
-			pipelineInfo.stage = stageInfo;
+			pipelineInfo.stage = internal_state->stageInfo;
 
 
-			res = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &internal_state->resource);
+			res = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &internal_state->pipeline_cs);
 			assert(res == VK_SUCCESS);
 		}
 
@@ -3171,7 +3242,7 @@ using namespace Vulkan_Internal;
 			const Texture* texture = desc.attachments[i].texture;
 			const TextureDesc& texdesc = texture->desc;
 			int subresource = desc.attachments[i].subresource;
-			auto texture_internal_state = std::static_pointer_cast<Texture_Vulkan>(texture->internal_state);
+			auto texture_internal_state = to_internal(texture);
 
 			attachmentDescriptions[validAttachmentCount].format = _ConvertFormat(texdesc.Format);
 			attachmentDescriptions[validAttachmentCount].samples = (VkSampleCountFlagBits)texdesc.SampleCount;
@@ -3316,12 +3387,49 @@ using namespace Vulkan_Internal;
 		res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &internal_state->framebuffer);
 		assert(res == VK_SUCCESS);
 
+
+		internal_state->beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		internal_state->beginInfo.renderPass = internal_state->renderpass;
+		internal_state->beginInfo.framebuffer = internal_state->framebuffer;
+
+		if (renderpass->desc.numAttachments > 0)
+		{
+			const TextureDesc& texdesc = desc.attachments[0].texture->desc;
+
+			internal_state->beginInfo.renderArea.offset = { 0, 0 };
+			internal_state->beginInfo.renderArea.extent.width = texdesc.Width;
+			internal_state->beginInfo.renderArea.extent.height = texdesc.Height;
+			internal_state->beginInfo.clearValueCount = renderpass->desc.numAttachments;
+			internal_state->beginInfo.pClearValues = internal_state->clearColors;
+
+			for (uint32_t i = 0; i < desc.numAttachments; ++i)
+			{
+				const ClearValue& clear = desc.attachments[i].texture->desc.clear;
+				if (desc.attachments[i].type == RenderPassAttachment::RENDERTARGET)
+				{
+					internal_state->clearColors[i].color.float32[0] = clear.color[0];
+					internal_state->clearColors[i].color.float32[1] = clear.color[1];
+					internal_state->clearColors[i].color.float32[2] = clear.color[2];
+					internal_state->clearColors[i].color.float32[3] = clear.color[3];
+				}
+				else if (desc.attachments[i].type == RenderPassAttachment::DEPTH_STENCIL)
+				{
+					internal_state->clearColors[i].depthStencil.depth = clear.depthstencil.depth;
+					internal_state->clearColors[i].depthStencil.stencil = clear.depthstencil.stencil;
+				}
+				else
+				{
+					assert(0);
+				}
+			}
+		}
+
 		return res == VK_SUCCESS ? true : false;
 	}
 
 	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount)
 	{
-		const auto& internal_state = std::static_pointer_cast<Texture_Vulkan>(texture->internal_state);
+		auto internal_state = to_internal(texture);
 
 		VkImageViewCreateInfo view_desc = {};
 		view_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -3521,12 +3629,12 @@ using namespace Vulkan_Internal;
 		if (pResource->IsTexture())
 		{
 			info.objectType = VK_OBJECT_TYPE_IMAGE;
-			info.objectHandle = (uint64_t)std::static_pointer_cast<Texture_Vulkan>(pResource->internal_state)->resource;
+			info.objectHandle = (uint64_t)to_internal((const Texture*)pResource)->resource;
 		}
 		else if (pResource->IsBuffer())
 		{
 			info.objectType = VK_OBJECT_TYPE_BUFFER;
-			info.objectHandle = (uint64_t)std::static_pointer_cast<Buffer_Vulkan>(pResource->internal_state)->resource;
+			info.objectHandle = (uint64_t)to_internal((const GPUBuffer*)pResource)->resource;
 		}
 
 		VkResult res = setDebugUtilsObjectNameEXT(device, &info);
@@ -3786,6 +3894,19 @@ using namespace Vulkan_Internal;
 				break;
 			}
 		}
+		while (!destroyer_shadermodules.empty())
+		{
+			if (destroyer_shadermodules.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+			{
+				auto item = destroyer_shadermodules.front();
+				destroyer_shadermodules.pop_front();
+				vkDestroyShaderModule(device, item.first, nullptr);
+			}
+			else
+			{
+				break;
+			}
+		}
 		while (!destroyer_pipelines.empty())
 		{
 			if (destroyer_pipelines.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
@@ -4002,51 +4123,10 @@ using namespace Vulkan_Internal;
 
 	void GraphicsDevice_Vulkan::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 	{
-		const auto& internal_state = std::static_pointer_cast<RenderPass_Vulkan>(renderpass->internal_state);
-
 		active_renderpass[cmd] = renderpass;
 
-		VkRenderPassBeginInfo renderPassInfo = {};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = internal_state->renderpass;
-		renderPassInfo.framebuffer = internal_state->framebuffer;
-
-		const RenderPassDesc& desc = renderpass->desc;
-
-		VkClearValue clearColors[9] = {};
-		if (renderpass->desc.numAttachments > 0)
-		{
-			const TextureDesc& texdesc = desc.attachments[0].texture->desc;
-
-			renderPassInfo.renderArea.offset = { 0, 0 };
-			renderPassInfo.renderArea.extent.width = texdesc.Width;
-			renderPassInfo.renderArea.extent.height = texdesc.Height;
-			renderPassInfo.clearValueCount = renderpass->desc.numAttachments;
-			renderPassInfo.pClearValues = clearColors;
-
-			for (uint32_t i = 0; i < desc.numAttachments; ++i)
-			{
-				const ClearValue& clear = desc.attachments[i].texture->desc.clear;
-				if (desc.attachments[i].type == RenderPassAttachment::RENDERTARGET)
-				{
-					clearColors[i].color.float32[0] = clear.color[0];
-					clearColors[i].color.float32[1] = clear.color[1];
-					clearColors[i].color.float32[2] = clear.color[2];
-					clearColors[i].color.float32[3] = clear.color[3];
-				}
-				else if(desc.attachments[i].type == RenderPassAttachment::DEPTH_STENCIL)
-				{
-					clearColors[i].depthStencil.depth = clear.depthstencil.depth;
-					clearColors[i].depthStencil.stencil = clear.depthstencil.stencil;
-				}
-				else
-				{
-					assert(0);
-				}
-			}
-		}
-
-		vkCmdBeginRenderPass(GetDirectCommandList(cmd), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+		auto internal_state = to_internal(renderpass);
+		vkCmdBeginRenderPass(GetDirectCommandList(cmd), &internal_state->beginInfo, VK_SUBPASS_CONTENTS_INLINE);
 	}
 	void GraphicsDevice_Vulkan::RenderPassEnd(CommandList cmd)
 	{
@@ -4162,7 +4242,7 @@ using namespace Vulkan_Internal;
 			}
 			else
 			{
-				const auto& internal_state = std::static_pointer_cast<Buffer_Vulkan>(vertexBuffers[i]->internal_state);
+				auto internal_state = to_internal(vertexBuffers[i]);
 				vbuffers[i] = internal_state->resource;
 				if (offsets != nullptr)
 				{
@@ -4177,7 +4257,7 @@ using namespace Vulkan_Internal;
 	{
 		if (indexBuffer != nullptr)
 		{
-			const auto& internal_state = std::static_pointer_cast<Buffer_Vulkan>(indexBuffer->internal_state);
+			auto internal_state = to_internal(indexBuffer);
 			vkCmdBindIndexBuffer(GetDirectCommandList(cmd), internal_state->resource, (VkDeviceSize)offset, format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
 		}
 	}
@@ -4224,111 +4304,36 @@ using namespace Vulkan_Internal;
 				VkGraphicsPipelineCreateInfo pipelineInfo = {};
 				pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 				pipelineInfo.layout = defaultPipelineLayout_Graphics;
-				pipelineInfo.renderPass = active_renderpass[cmd] == nullptr ? defaultRenderPass : std::static_pointer_cast<RenderPass_Vulkan>(active_renderpass[cmd]->internal_state)->renderpass;
+				pipelineInfo.renderPass = active_renderpass[cmd] == nullptr ? defaultRenderPass : to_internal(active_renderpass[cmd])->renderpass;
 				pipelineInfo.subpass = 0;
 				pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
 				// Shaders:
 
-				std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
-
-				if (pso->desc.vs != nullptr && !pso->desc.vs->code.empty())
+				uint32_t shaderStageCount = 0;
+				VkPipelineShaderStageCreateInfo shaderStages[SHADERSTAGE_COUNT - 1];
+				if (pso->desc.vs != nullptr && pso->desc.vs->IsValid())
 				{
-					VkShaderModuleCreateInfo moduleInfo = {};
-					moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-					moduleInfo.codeSize = pso->desc.vs->code.size();
-					moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pso->desc.vs->code.data());
-					VkShaderModule shaderModule;
-					res = vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule);
-					assert(res == VK_SUCCESS);
-
-					VkPipelineShaderStageCreateInfo stageInfo = {};
-					stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-					stageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-					stageInfo.module = shaderModule;
-					stageInfo.pName = "main";
-
-					shaderStages.push_back(stageInfo);
+					shaderStages[shaderStageCount++] = to_internal(pso->desc.vs)->stageInfo;
 				}
-
-				if (pso->desc.hs != nullptr && !pso->desc.hs->code.empty())
+				if (pso->desc.hs != nullptr && pso->desc.hs->IsValid())
 				{
-					VkShaderModuleCreateInfo moduleInfo = {};
-					moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-					moduleInfo.codeSize = pso->desc.hs->code.size();
-					moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pso->desc.hs->code.data());
-					VkShaderModule shaderModule;
-					res = vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule);
-					assert(res == VK_SUCCESS);
-
-					VkPipelineShaderStageCreateInfo stageInfo = {};
-					stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-					stageInfo.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-					stageInfo.module = shaderModule;
-					stageInfo.pName = "main";
-
-					shaderStages.push_back(stageInfo);
+					shaderStages[shaderStageCount++] = to_internal(pso->desc.hs)->stageInfo;
 				}
-
-				if (pso->desc.ds != nullptr && !pso->desc.ds->code.empty())
+				if (pso->desc.ds != nullptr && pso->desc.ds->IsValid())
 				{
-					VkShaderModuleCreateInfo moduleInfo = {};
-					moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-					moduleInfo.codeSize = pso->desc.ds->code.size();
-					moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pso->desc.ds->code.data());
-					VkShaderModule shaderModule;
-					res = vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule);
-					assert(res == VK_SUCCESS);
-
-					VkPipelineShaderStageCreateInfo stageInfo = {};
-					stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-					stageInfo.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-					stageInfo.module = shaderModule;
-					stageInfo.pName = "main";
-
-					shaderStages.push_back(stageInfo);
+					shaderStages[shaderStageCount++] = to_internal(pso->desc.ds)->stageInfo;
 				}
-
-				if (pso->desc.gs != nullptr && !pso->desc.gs->code.empty())
+				if (pso->desc.gs != nullptr && pso->desc.gs->IsValid())
 				{
-					VkShaderModuleCreateInfo moduleInfo = {};
-					moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-					moduleInfo.codeSize = pso->desc.gs->code.size();
-					moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pso->desc.gs->code.data());
-					VkShaderModule shaderModule;
-					res = vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule);
-					assert(res == VK_SUCCESS);
-
-					VkPipelineShaderStageCreateInfo stageInfo = {};
-					stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-					stageInfo.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
-					stageInfo.module = shaderModule;
-					stageInfo.pName = "main";
-
-					shaderStages.push_back(stageInfo);
+					shaderStages[shaderStageCount++] = to_internal(pso->desc.gs)->stageInfo;
 				}
-
-				if (pso->desc.ps != nullptr && !pso->desc.ps->code.empty())
+				if (pso->desc.ps != nullptr && pso->desc.ps->IsValid())
 				{
-					VkShaderModuleCreateInfo moduleInfo = {};
-					moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-					moduleInfo.codeSize = pso->desc.ps->code.size();
-					moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pso->desc.ps->code.data());
-					VkShaderModule shaderModule;
-					res = vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule);
-					assert(res == VK_SUCCESS);
-
-					VkPipelineShaderStageCreateInfo stageInfo = {};
-					stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-					stageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-					stageInfo.module = shaderModule;
-					stageInfo.pName = "main";
-
-					shaderStages.push_back(stageInfo);
+					shaderStages[shaderStageCount++] = to_internal(pso->desc.ps)->stageInfo;
 				}
-
-				pipelineInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
-				pipelineInfo.pStages = shaderStages.data();
+				pipelineInfo.stageCount = shaderStageCount;
+				pipelineInfo.pStages = shaderStages;
 
 
 				// Fixed function states:
@@ -4662,8 +4667,8 @@ using namespace Vulkan_Internal;
 	void GraphicsDevice_Vulkan::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
 		assert(cs->stage == CS);
-		const auto& internal_state = std::static_pointer_cast<PipelineState_Vulkan>(cs->internal_state);
-		vkCmdBindPipeline(GetDirectCommandList(cmd), VK_PIPELINE_BIND_POINT_COMPUTE, internal_state->resource);
+		auto internal_state = to_internal(cs);
+		vkCmdBindPipeline(GetDirectCommandList(cmd), VK_PIPELINE_BIND_POINT_COMPUTE, internal_state->pipeline_cs);
 	}
 	void GraphicsDevice_Vulkan::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd)
 	{
@@ -4688,13 +4693,13 @@ using namespace Vulkan_Internal;
 	void GraphicsDevice_Vulkan::DrawInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 	{
 		GetFrameResources().descriptors[cmd].validate(cmd);
-		const auto& internal_state = std::static_pointer_cast<Buffer_Vulkan>(args->internal_state);
+		auto internal_state = to_internal(args);
 		vkCmdDrawIndirect(GetDirectCommandList(cmd), internal_state->resource, (VkDeviceSize)args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsInstanced));
 	}
 	void GraphicsDevice_Vulkan::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 	{
 		GetFrameResources().descriptors[cmd].validate(cmd);
-		const auto& internal_state = std::static_pointer_cast<Buffer_Vulkan>(args->internal_state);
+		auto internal_state = to_internal(args);
 		vkCmdDrawIndexedIndirect(GetDirectCommandList(cmd), internal_state->resource, (VkDeviceSize)args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsIndexedInstanced));
 	}
 	void GraphicsDevice_Vulkan::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
@@ -4705,18 +4710,18 @@ using namespace Vulkan_Internal;
 	void GraphicsDevice_Vulkan::DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 	{
 		GetFrameResources().descriptors[cmd].validate(cmd);
-		const auto& internal_state = std::static_pointer_cast<Buffer_Vulkan>(args->internal_state);
+		auto internal_state = to_internal(args);
 		vkCmdDispatchIndirect(GetDirectCommandList(cmd), internal_state->resource, (VkDeviceSize)args_offset);
 	}
 	void GraphicsDevice_Vulkan::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 	{
 		if (pDst->type == GPUResource::GPU_RESOURCE_TYPE::TEXTURE && pSrc->type == GPUResource::GPU_RESOURCE_TYPE::TEXTURE)
 		{
-			auto internal_state_src = std::static_pointer_cast<Texture_Vulkan>(pSrc->internal_state);
-			auto internal_state_dst = std::static_pointer_cast<Texture_Vulkan>(pDst->internal_state);
+			auto internal_state_src = to_internal((const Texture*)pSrc);
+			auto internal_state_dst = to_internal((const Texture*)pDst);
 
-			const TextureDesc& src_desc = ((Texture*)pSrc)->GetDesc();
-			const TextureDesc& dst_desc = ((Texture*)pDst)->GetDesc();
+			const TextureDesc& src_desc = ((const Texture*)pSrc)->GetDesc();
+			const TextureDesc& dst_desc = ((const Texture*)pDst)->GetDesc();
 
 			VkImageCopy copy = {};
 			copy.extent.width = dst_desc.Width;
@@ -4771,11 +4776,11 @@ using namespace Vulkan_Internal;
 		}
 		else if (pDst->type == GPUResource::GPU_RESOURCE_TYPE::BUFFER && pSrc->type == GPUResource::GPU_RESOURCE_TYPE::BUFFER)
 		{
-			auto internal_state_src = std::static_pointer_cast<Buffer_Vulkan>(pSrc->internal_state);
-			auto internal_state_dst = std::static_pointer_cast<Buffer_Vulkan>(pDst->internal_state);
+			auto internal_state_src = to_internal((const GPUBuffer*)pSrc);
+			auto internal_state_dst = to_internal((const GPUBuffer*)pDst);
 
-			const GPUBufferDesc& src_desc = ((GPUBuffer*)pSrc)->GetDesc();
-			const GPUBufferDesc& dst_desc = ((GPUBuffer*)pDst)->GetDesc();
+			const GPUBufferDesc& src_desc = ((const GPUBuffer*)pSrc)->GetDesc();
+			const GPUBufferDesc& dst_desc = ((const GPUBuffer*)pDst)->GetDesc();
 
 			VkBufferCopy copy = {};
 			copy.srcOffset = 0;
@@ -4804,7 +4809,7 @@ using namespace Vulkan_Internal;
 		{
 			return;
 		}
-		const auto& internal_state = std::static_pointer_cast<Buffer_Vulkan>(buffer->internal_state);
+		auto internal_state = to_internal(buffer);
 
 		dataSize = std::min((int)buffer->desc.ByteWidth, dataSize);
 		dataSize = (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth);
@@ -4910,7 +4915,7 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::QueryBegin(const GPUQuery *query, CommandList cmd)
 	{
-		const auto& internal_state = std::static_pointer_cast<Query_Vulkan>(query->internal_state);
+		auto internal_state = to_internal(query);
 
 		switch (query->desc.Type)
 		{
@@ -4924,7 +4929,7 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::QueryEnd(const GPUQuery *query, CommandList cmd)
 	{
-		const auto& internal_state = std::static_pointer_cast<Query_Vulkan>(query->internal_state);
+		auto internal_state = to_internal(query);
 
 		switch (query->desc.Type)
 		{
@@ -4941,7 +4946,7 @@ using namespace Vulkan_Internal;
 	}
 	bool GraphicsDevice_Vulkan::QueryRead(const GPUQuery* query, GPUQueryResult* result)
 	{
-		const auto& internal_state = std::static_pointer_cast<Query_Vulkan>(query->internal_state);
+		auto internal_state = to_internal(query);
 
 		VkResult res = VK_SUCCESS;
 
@@ -4996,7 +5001,7 @@ using namespace Vulkan_Internal;
 			case GPUBarrier::IMAGE_BARRIER:
 			{
 				const TextureDesc& desc = barrier.image.texture->GetDesc();
-				const auto& internal_state = std::static_pointer_cast<Texture_Vulkan>(barrier.image.texture->internal_state);
+				auto internal_state = to_internal(barrier.image.texture);
 
 				VkImageMemoryBarrier& barrierdesc = imagebarriers[imagebarrier_count++];
 				barrierdesc.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -5028,7 +5033,7 @@ using namespace Vulkan_Internal;
 			break;
 			case GPUBarrier::BUFFER_BARRIER:
 			{
-				const auto& internal_state = std::static_pointer_cast<Buffer_Vulkan>(barrier.buffer.buffer->internal_state);
+				auto internal_state = to_internal(barrier.buffer.buffer);
 
 				VkBufferMemoryBarrier& barrierdesc = bufferbarriers[bufferbarrier_count++];
 				barrierdesc.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
