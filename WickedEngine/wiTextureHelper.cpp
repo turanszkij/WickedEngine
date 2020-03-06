@@ -21,7 +21,7 @@ namespace wiTextureHelper
 		HELPERTEXTURE_COUNT
 	};
 	wiGraphics::Texture helperTextures[HELPERTEXTURE_COUNT];
-	std::unordered_map<unsigned long, wiGraphics::Texture*> colorTextures;
+	std::unordered_map<unsigned long, wiGraphics::Texture> colorTextures;
 	wiSpinLock colorlock;
 
 	void Initialize()
@@ -162,7 +162,7 @@ namespace wiTextureHelper
 
 		if (it != end)
 		{
-			return it->second;
+			return &it->second;
 		}
 
 		static const int dim = 1;
@@ -176,19 +176,18 @@ namespace wiTextureHelper
 			data[i + 3] = color.getA();
 		}
 
-		Texture* texture = new Texture;
-		if (CreateTexture(*texture, data, dim, dim) == false)
+		Texture texture;
+		if (CreateTexture(texture, data, dim, dim) == false)
 		{
-			delete texture;
 			return nullptr;
 		}
-		wiRenderer::GetDevice()->SetName(texture, "HELPERTEXTURE_COLOR");
+		wiRenderer::GetDevice()->SetName(&texture, "HELPERTEXTURE_COLOR");
 
 		colorlock.lock();
 		colorTextures[color.rgba] = texture;
 		colorlock.unlock();
 
-		return texture;
+		return &colorTextures[color.rgba];
 	}
 
 

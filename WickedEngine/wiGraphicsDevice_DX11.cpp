@@ -2450,6 +2450,7 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 		bool success = CreateBuffer(&frameAllocatorDesc, nullptr, &frame_allocators[cmd].buffer);
 		assert(success);
 		SetName(&frame_allocators[cmd].buffer, "frame_allocator[deferred]");
+		to_internal(&frame_allocators[cmd].buffer)->device.reset(); // because this is member of device, we don't keep alive device from this
 	}
 
 
