@@ -49,6 +49,7 @@ void wiFadeManager::Update(float dt)
 	else if (state == FADE_FINISHED)
 	{
 		opacity = 0.0f;
+		onFade = [] {};
 	}
 
 }

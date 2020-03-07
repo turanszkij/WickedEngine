@@ -42,7 +42,7 @@ namespace wiGraphics
 		}
 	};
 
-	class GraphicsDevice_Vulkan : public GraphicsDevice, public std::enable_shared_from_this<GraphicsDevice_Vulkan>
+	class GraphicsDevice_Vulkan : public GraphicsDevice
 	{
 		friend struct DescriptorTableFrameAllocator;
 	private:
@@ -55,7 +55,6 @@ namespace wiGraphics
 		QueueFamilyIndices queueIndices;
 		VkQueue graphicsQueue;
 		VkQueue presentQueue;
-		VmaAllocator allocator;
 
 		VkPhysicalDeviceProperties physicalDeviceProperties;
 
@@ -80,8 +79,10 @@ namespace wiGraphics
 		uint32_t descriptorCount;
 
 		VkBuffer		nullBuffer;
+		VmaAllocation	nullBufferAllocation;
 		VkBufferView	nullBufferView;
 		VkImage			nullImage;
+		VmaAllocation	nullImageAllocation;
 		VkImageView		nullImageView;
 		VkSampler		nullSampler;
 
@@ -90,8 +91,6 @@ namespace wiGraphics
 		VkQueryPool querypool_occlusion;
 		static const size_t timestamp_query_count = 1024;
 		static const size_t occlusion_query_count = 1024;
-		wiContainers::ThreadSafeRingBuffer<uint32_t, timestamp_query_count> free_timestampqueries;
-		wiContainers::ThreadSafeRingBuffer<uint32_t, occlusion_query_count> free_occlusionqueries;
 		bool initial_querypool_reset = false;
 		std::vector<uint32_t> timestamps_to_reset;
 		std::vector<uint32_t> occlusions_to_reset;
@@ -100,8 +99,8 @@ namespace wiGraphics
 		struct FrameResources
 		{
 			VkFence frameFence;
-			VkCommandPool commandPools[COMMANDLIST_COUNT];
-			VkCommandBuffer commandBuffers[COMMANDLIST_COUNT];
+			VkCommandPool commandPools[COMMANDLIST_COUNT] = {};
+			VkCommandBuffer commandBuffers[COMMANDLIST_COUNT] = {};
 			VkImageView swapChainImageView;
 			VkFramebuffer swapChainFramebuffer;
 
@@ -183,7 +182,7 @@ namespace wiGraphics
 				uint8_t*				dataCur = nullptr;
 				uint8_t*				dataEnd = nullptr;
 
-				void init(std::shared_ptr<GraphicsDevice_Vulkan> device, size_t size);
+				void init(GraphicsDevice_Vulkan* device, size_t size);
 
 				uint8_t* allocate(size_t dataSize, size_t alignment);
 				void clear();
@@ -311,19 +310,188 @@ namespace wiGraphics
 		void SetMarker(const std::string& name, CommandList cmd) override;
 
 
+		struct AllocationHandler
+		{
+			VmaAllocator allocator = VK_NULL_HANDLE;
+			VkDevice device = VK_NULL_HANDLE;
+			VkInstance instance;
+			uint64_t framecount = 0;
+			std::mutex destroylocker;
+			std::deque<std::pair<std::pair<VkImage, VmaAllocation>, uint64_t>> destroyer_images;
+			std::deque<std::pair<VkImageView, uint64_t>> destroyer_imageviews;
+			std::deque<std::pair<std::pair<VkBuffer, VmaAllocation>, uint64_t>> destroyer_buffers;
+			std::deque<std::pair<VkBufferView, uint64_t>> destroyer_bufferviews;
+			std::deque<std::pair<VkSampler, uint64_t>> destroyer_samplers;
+			std::deque<std::pair<VkShaderModule, uint64_t>> destroyer_shadermodules;
+			std::deque<std::pair<VkPipeline, uint64_t>> destroyer_pipelines;
+			std::deque<std::pair<VkRenderPass, uint64_t>> destroyer_renderpasses;
+			std::deque<std::pair<VkFramebuffer, uint64_t>> destroyer_framebuffers;
+			std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_occlusion;
+			std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_timestamp;
 
-		std::mutex destroylocker;
-		std::deque<std::pair<std::pair<VkImage, VmaAllocation>, uint64_t>> destroyer_images;
-		std::deque<std::pair<VkImageView, uint64_t>> destroyer_imageviews;
-		std::deque<std::pair<std::pair<VkBuffer, VmaAllocation>, uint64_t>> destroyer_buffers;
-		std::deque<std::pair<VkBufferView, uint64_t>> destroyer_bufferviews;
-		std::deque<std::pair<VkSampler, uint64_t>> destroyer_samplers;
-		std::deque<std::pair<VkShaderModule, uint64_t>> destroyer_shadermodules;
-		std::deque<std::pair<VkPipeline, uint64_t>> destroyer_pipelines;
-		std::deque<std::pair<VkRenderPass, uint64_t>> destroyer_renderpasses;
-		std::deque<std::pair<VkFramebuffer, uint64_t>> destroyer_framebuffers;
-		std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_occlusion;
-		std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_timestamp;
+			wiContainers::ThreadSafeRingBuffer<uint32_t, timestamp_query_count> free_timestampqueries;
+			wiContainers::ThreadSafeRingBuffer<uint32_t, occlusion_query_count> free_occlusionqueries;
+
+			~AllocationHandler()
+			{
+				Update(~0, 0); // destroy all remaining
+				vmaDestroyAllocator(allocator);
+				vkDestroyDevice(device, nullptr);
+				vkDestroyInstance(instance, nullptr);
+			}
+
+			// Deferred destroy of resources that the GPU is already finished with:
+			void Update(uint64_t FRAMECOUNT, uint32_t BACKBUFFER_COUNT)
+			{
+				destroylocker.lock();
+				framecount = FRAMECOUNT;
+				while (!destroyer_images.empty())
+				{
+					if (destroyer_images.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_images.front();
+						destroyer_images.pop_front();
+						vmaDestroyImage(allocator, item.first.first, item.first.second);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_imageviews.empty())
+				{
+					if (destroyer_imageviews.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_imageviews.front();
+						destroyer_imageviews.pop_front();
+						vkDestroyImageView(device, item.first, nullptr);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_buffers.empty())
+				{
+					if (destroyer_buffers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_buffers.front();
+						destroyer_buffers.pop_front();
+						vmaDestroyBuffer(allocator, item.first.first, item.first.second);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_bufferviews.empty())
+				{
+					if (destroyer_bufferviews.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_bufferviews.front();
+						destroyer_bufferviews.pop_front();
+						vkDestroyBufferView(device, item.first, nullptr);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_samplers.empty())
+				{
+					if (destroyer_samplers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_samplers.front();
+						destroyer_samplers.pop_front();
+						vkDestroySampler(device, item.first, nullptr);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_shadermodules.empty())
+				{
+					if (destroyer_shadermodules.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_shadermodules.front();
+						destroyer_shadermodules.pop_front();
+						vkDestroyShaderModule(device, item.first, nullptr);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_pipelines.empty())
+				{
+					if (destroyer_pipelines.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_pipelines.front();
+						destroyer_pipelines.pop_front();
+						vkDestroyPipeline(device, item.first, nullptr);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_renderpasses.empty())
+				{
+					if (destroyer_renderpasses.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_renderpasses.front();
+						destroyer_renderpasses.pop_front();
+						vkDestroyRenderPass(device, item.first, nullptr);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_framebuffers.empty())
+				{
+					if (destroyer_framebuffers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_framebuffers.front();
+						destroyer_framebuffers.pop_front();
+						vkDestroyFramebuffer(device, item.first, nullptr);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_queries_occlusion.empty())
+				{
+					if (destroyer_queries_occlusion.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_queries_occlusion.front();
+						destroyer_queries_occlusion.pop_front();
+						free_occlusionqueries.push_back(item.first);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_queries_timestamp.empty())
+				{
+					if (destroyer_queries_timestamp.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_queries_timestamp.front();
+						destroyer_queries_timestamp.pop_front();
+						free_timestampqueries.push_back(item.first);
+					}
+					else
+					{
+						break;
+					}
+				}
+				destroylocker.unlock();
+			}
+		};
+		std::shared_ptr<AllocationHandler> allocationhandler;
 	};
 }
 

@@ -11,7 +11,6 @@ public:
 	static Luna<wiInput_BindLua>::PropertyType properties[];
 
 	wiInput_BindLua(lua_State* L){}
-	~wiInput_BindLua(){}
 
 	int Down(lua_State* L);
 	int Press(lua_State* L);
@@ -36,7 +35,6 @@ public:
 
 	Touch_BindLua(lua_State* L) {}
 	Touch_BindLua(const wiInput::Touch& touch) :touch(touch) {}
-	~Touch_BindLua() {}
 
 	int GetState(lua_State* L);
 	int GetPos(lua_State* L);

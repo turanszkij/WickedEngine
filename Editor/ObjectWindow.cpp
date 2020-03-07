@@ -248,10 +248,6 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	GUI = &editor->GetGUI();
 	assert(GUI && "Invalid GUI!");
 
-
-	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
-
 	objectWindow = new wiWindow(GUI, "Object Window");
 	objectWindow->SetSize(XMFLOAT2(600, 520));
 	GUI->AddWidget(objectWindow);
@@ -574,7 +570,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 
 
 
-	objectWindow->Translate(XMFLOAT3(screenW - 720, 120, 0));
+	objectWindow->Translate(XMFLOAT3(GUI->GetSize().x - 720, 120, 0));
 	objectWindow->SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

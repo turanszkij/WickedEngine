@@ -11,9 +11,6 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 {
 	assert(GUI && "Invalid GUI!");
 
-	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
-
 
 	meshWindow = new wiWindow(GUI, "Mesh Window");
 	meshWindow->SetSize(XMFLOAT2(800, 700));
@@ -223,7 +220,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 
 
 
-	meshWindow->Translate(XMFLOAT3(screenW - 910, 520, 0));
+	meshWindow->Translate(XMFLOAT3(gui->GetSize().x - 910, 520, 0));
 	meshWindow->SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

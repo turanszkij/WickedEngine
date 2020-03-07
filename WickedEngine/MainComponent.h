@@ -10,7 +10,7 @@ class RenderPath;
 class MainComponent
 {
 protected:
-	RenderPath* activePath = nullptr;
+	RenderPath* activePath;
 	float targetFrameRate = 60;
 	bool frameskip = true;
 	bool framerate_lock = false;

@@ -14,7 +14,6 @@ public:
 
 	wiImageParams_BindLua(const wiImageParams& params);
 	wiImageParams_BindLua(lua_State *L);
-	~wiImageParams_BindLua();
 
 	int GetPos(lua_State* L);
 	int GetSize(lua_State* L);

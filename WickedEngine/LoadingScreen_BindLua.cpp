@@ -33,20 +33,6 @@ Luna<LoadingScreen_BindLua>::PropertyType LoadingScreen_BindLua::properties[] = 
 	{ NULL, NULL }
 };
 
-LoadingScreen_BindLua::LoadingScreen_BindLua(LoadingScreen* component)
-{
-	this->component = component;
-}
-
-LoadingScreen_BindLua::LoadingScreen_BindLua(lua_State *L)
-{
-	component = new LoadingScreen();
-}
-
-LoadingScreen_BindLua::~LoadingScreen_BindLua()
-{
-}
-
 int LoadingScreen_BindLua::AddLoadingTask(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);

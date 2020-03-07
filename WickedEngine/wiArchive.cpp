@@ -26,10 +26,10 @@ wiArchive::wiArchive(const std::string& fileName, bool readMode) : fileName(file
 			ifstream file(fileName, ios::binary | ios::ate);
 			if (file.is_open())
 			{
-				dataSize = (size_t)file.tellg();
+				size_t dataSize = (size_t)file.tellg();
 				file.seekg(0, file.beg);
-				DATA = new uint8_t[(size_t)dataSize];
-				file.read((char*)DATA, dataSize);
+				DATA.resize((size_t)dataSize);
+				file.read((char*)DATA.data(), dataSize);
 				file.close();
 				(*this) >> version;
 				if (version < __archiveVersionBarrier)
@@ -56,20 +56,13 @@ wiArchive::wiArchive(const std::string& fileName, bool readMode) : fileName(file
 	}
 }
 
-
-wiArchive::~wiArchive()
-{
-	Close();
-}
-
 void wiArchive::CreateEmpty()
 {
 	readMode = false;
 	pos = 0;
 
 	version = __archiveVersion;
-	dataSize = 128; // this will grow if necessary anyway...
-	DATA = new uint8_t[dataSize];
+	DATA.resize(128); // starting size
 	(*this) << version;
 }
 
@@ -91,7 +84,7 @@ void wiArchive::SetReadModeAndResetPos(bool isReadMode)
 bool wiArchive::IsOpen()
 {
 	// when it is open, DATA is not null because it contains the version number at least!
-	return DATA != nullptr;
+	return !DATA.empty();
 }
 
 void wiArchive::Close()
@@ -100,7 +93,7 @@ void wiArchive::Close()
 	{
 		SaveFile(fileName);
 	}
-	SAFE_DELETE_ARRAY(DATA);
+	DATA.clear();
 }
 
 bool wiArchive::SaveFile(const std::string& fileName)
@@ -113,7 +106,7 @@ bool wiArchive::SaveFile(const std::string& fileName)
 	ofstream file(fileName, ios::binary | ios::trunc);
 	if (file.is_open())
 	{
-		file.write((const char*)DATA, (streamsize)pos);
+		file.write((const char*)DATA.data(), (streamsize)pos);
 		file.close();
 		return true;
 	}

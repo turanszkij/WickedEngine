@@ -52,21 +52,6 @@ Luna<RenderPath3D_Deferred_BindLua>::PropertyType RenderPath3D_Deferred_BindLua:
 	{ NULL, NULL }
 };
 
-RenderPath3D_Deferred_BindLua::RenderPath3D_Deferred_BindLua(RenderPath3D_Deferred* component)
-{
-	this->component = component;
-}
-
-RenderPath3D_Deferred_BindLua::RenderPath3D_Deferred_BindLua(lua_State *L)
-{
-	component = new RenderPath3D_Deferred();
-}
-
-
-RenderPath3D_Deferred_BindLua::~RenderPath3D_Deferred_BindLua()
-{
-}
-
 void RenderPath3D_Deferred_BindLua::Bind()
 {
 	static bool initialized = false;

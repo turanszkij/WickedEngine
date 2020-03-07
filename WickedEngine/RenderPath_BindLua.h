@@ -6,14 +6,22 @@
 class RenderPath_BindLua
 {
 public:
-	RenderPath* component;
+	RenderPath* component = nullptr;
+	bool owning = false;
 	static const char className[];
 	static Luna<RenderPath_BindLua>::FunctionType methods[];
 	static Luna<RenderPath_BindLua>::PropertyType properties[];
 
-	RenderPath_BindLua(RenderPath* component = nullptr);
-	RenderPath_BindLua(lua_State *L);
-	~RenderPath_BindLua();
+	RenderPath_BindLua() = default;
+	RenderPath_BindLua(RenderPath* component) :component(component) {}
+	RenderPath_BindLua(lua_State* L) {}
+	virtual ~RenderPath_BindLua()
+	{
+		if (owning)
+		{
+			delete component;
+		}
+	}
 
 	virtual int Initialize(lua_State* L);
 

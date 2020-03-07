@@ -14,7 +14,6 @@ public:
 
 	SpriteAnim_BindLua(const wiSprite::Anim& anim);
 	SpriteAnim_BindLua(lua_State *L);
-	~SpriteAnim_BindLua();
 
 	int SetRot(lua_State *L);
 	int SetRotation(lua_State *L);

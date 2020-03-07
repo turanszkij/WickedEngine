@@ -10,7 +10,6 @@ public:
 	static Luna<wiNetwork_BindLua>::PropertyType properties[];
 
 	wiNetwork_BindLua(lua_State* L) {}
-	~wiNetwork_BindLua() {}
 
 	static void Bind();
 };

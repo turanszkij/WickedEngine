@@ -21,9 +21,6 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 {
 	assert(GUI && "Invalid GUI!");
 
-	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
-
 	camera_transform.MatrixTransform(wiRenderer::GetCamera().GetInvView());
 	camera_transform.UpdateTransform();
 
@@ -140,7 +137,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	SetEntity(INVALID_ENTITY);
 
 
-	cameraWindow->Translate(XMFLOAT3(screenW - 720, 500, 0));
+	cameraWindow->Translate(XMFLOAT3(gui->GetSize().x - 720, 500, 0));
 	cameraWindow->SetVisible(false);
 }
 

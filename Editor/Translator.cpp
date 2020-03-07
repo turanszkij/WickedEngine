@@ -11,9 +11,9 @@ using namespace wiScene;
 
 PipelineState pso_solidpart;
 PipelineState pso_wirepart;
-std::unique_ptr<wiGraphics::GPUBuffer> vertexBuffer_Axis;
-std::unique_ptr<wiGraphics::GPUBuffer> vertexBuffer_Plane;
-std::unique_ptr<wiGraphics::GPUBuffer> vertexBuffer_Origin;
+GPUBuffer vertexBuffer_Axis;
+GPUBuffer vertexBuffer_Plane;
+GPUBuffer vertexBuffer_Origin;
 UINT vertexCount_Axis = 0;
 UINT vertexCount_Plane = 0;
 UINT vertexCount_Origin = 0;
@@ -77,7 +77,7 @@ Translator::Translator()
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	if (vertexBuffer_Axis == nullptr)
+	if (!vertexBuffer_Axis.IsValid())
 	{
 		{
 			XMFLOAT4 verts[] = {
@@ -95,12 +95,11 @@ Translator::Translator()
 			SubresourceData InitData;
 			InitData.pSysMem = verts;
 
-			vertexBuffer_Axis.reset(new GPUBuffer);
-			device->CreateBuffer(&bd, &InitData, vertexBuffer_Axis.get());
+			device->CreateBuffer(&bd, &InitData, &vertexBuffer_Axis);
 		}
 	}
 
-	if (vertexBuffer_Plane == nullptr)
+	if (!vertexBuffer_Plane.IsValid())
 	{
 		{
 			XMFLOAT4 verts[] = {
@@ -122,12 +121,11 @@ Translator::Translator()
 
 			SubresourceData InitData;
 			InitData.pSysMem = verts;
-			vertexBuffer_Plane.reset(new GPUBuffer);
-			device->CreateBuffer(&bd, &InitData, vertexBuffer_Plane.get());
+			device->CreateBuffer(&bd, &InitData, &vertexBuffer_Plane);
 		}
 	}
 
-	if (vertexBuffer_Origin == nullptr)
+	if (!vertexBuffer_Origin.IsValid())
 	{
 		{
 			float edge = 0.2f;
@@ -179,8 +177,7 @@ Translator::Translator()
 
 			SubresourceData InitData;
 			InitData.pSysMem = verts;
-			vertexBuffer_Origin.reset(new GPUBuffer);
-			device->CreateBuffer(&bd, &InitData, vertexBuffer_Origin.get());
+			device->CreateBuffer(&bd, &InitData, &vertexBuffer_Origin);
 		}
 	}
 }
@@ -461,7 +458,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 	{
 		device->BindPipelineState(&pso_solidpart, cmd);
 		const GPUBuffer* vbs[] = {
-			vertexBuffer_Plane.get(),
+			&vertexBuffer_Plane,
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
@@ -497,7 +494,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 	{
 		device->BindPipelineState(&pso_wirepart, cmd);
 		const GPUBuffer* vbs[] = {
-			vertexBuffer_Axis.get(),
+			&vertexBuffer_Axis,
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
@@ -533,7 +530,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 	{
 		device->BindPipelineState(&pso_solidpart, cmd);
 		const GPUBuffer* vbs[] = {
-			vertexBuffer_Origin.get(),
+			&vertexBuffer_Origin,
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),

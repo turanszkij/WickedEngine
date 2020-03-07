@@ -1,21 +1,19 @@
 #pragma once
 #include "wiLua.h"
 #include "wiLuna.h"
-
-class wiFont;
+#include "wiFont.h"
 
 class wiFont_BindLua
 {
 public:
-	wiFont* font;
+	wiFont font;
 
 	static const char className[];
 	static Luna<wiFont_BindLua>::FunctionType methods[];
 	static Luna<wiFont_BindLua>::PropertyType properties[];
 
-	wiFont_BindLua(wiFont* font);
+	wiFont_BindLua(const wiFont& font);
 	wiFont_BindLua(lua_State* L);
-	~wiFont_BindLua();
 
 	int SetStyle(lua_State* L);
 	int SetText(lua_State* L);

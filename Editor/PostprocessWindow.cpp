@@ -12,9 +12,6 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	assert(component && "PostprocessWnd invalid component!");
 	assert(GUI && "Invalid GUI!");
 
-	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
-
 	ppWindow = new wiWindow(GUI, "PostProcess Window");
 	ppWindow->SetSize(XMFLOAT2(400, 740));
 	GUI->AddWidget(ppWindow);
@@ -335,7 +332,7 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	ppWindow->AddWidget(chromaticaberrationSlider);
 
 
-	ppWindow->Translate(XMFLOAT3(screenW - 550, 50, 0));
+	ppWindow->Translate(XMFLOAT3(gui->GetSize().x - 550, 50, 0));
 	ppWindow->SetVisible(false);
 
 }

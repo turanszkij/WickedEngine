@@ -16,19 +16,6 @@ Luna<RenderPath_BindLua>::PropertyType RenderPath_BindLua::properties[] = {
 	{ NULL, NULL }
 };
 
-RenderPath_BindLua::RenderPath_BindLua(RenderPath* component) :component(component)
-{
-}
-
-RenderPath_BindLua::RenderPath_BindLua(lua_State *L)
-{
-	component = new RenderPath();
-}
-
-
-RenderPath_BindLua::~RenderPath_BindLua()
-{
-}
 
 int RenderPath_BindLua::Initialize(lua_State* L)
 {

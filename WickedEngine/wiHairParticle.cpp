@@ -54,13 +54,9 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 	if (dt > 0)
 	{
 		_flags &= ~REGENERATE_FRAME;
-		if (cb == nullptr || (strandCount * segmentCount) != particleBuffer->GetDesc().ByteWidth / sizeof(Patch))
+		if (!cb.IsValid() || (strandCount * segmentCount) != particleBuffer.GetDesc().ByteWidth / sizeof(Patch))
 		{
 			_flags |= REGENERATE_FRAME;
-
-			cb.reset(new GPUBuffer);
-			particleBuffer.reset(new GPUBuffer);
-			simulationBuffer.reset(new GPUBuffer);
 
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_DEFAULT;
@@ -72,11 +68,11 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			{
 				bd.StructureByteStride = sizeof(Patch);
 				bd.ByteWidth = bd.StructureByteStride * strandCount * segmentCount;
-				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, particleBuffer.get());
+				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &particleBuffer);
 
 				bd.StructureByteStride = sizeof(PatchSimulationData);
 				bd.ByteWidth = bd.StructureByteStride * strandCount * segmentCount;
-				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, simulationBuffer.get());
+				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &simulationBuffer);
 			}
 
 			bd.Usage = USAGE_DEFAULT;
@@ -84,14 +80,14 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			bd.BindFlags = BIND_CONSTANT_BUFFER;
 			bd.CPUAccessFlags = 0;
 			bd.MiscFlags = 0;
-			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, cb.get());
+			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &cb);
 		}
 	}
 
 }
 void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponent& material, CommandList cmd) const
 {
-	if (strandCount == 0 || particleBuffer == nullptr)
+	if (strandCount == 0 || !particleBuffer.IsValid())
 	{
 		return;
 	}
@@ -117,13 +113,13 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 	hcb.xHairBaseMeshVertexPositionStride = sizeof(MeshComponent::Vertex_POS);
 	// segmentCount will be loop in the shader, not a threadgroup so we don't need it here:
 	hcb.xHairNumDispatchGroups = (uint)ceilf((float)strandCount / (float)THREADCOUNT_SIMULATEHAIR);
-	device->UpdateBuffer(cb.get(), &hcb, cmd);
+	device->UpdateBuffer(&cb, &hcb, cmd);
 
-	device->BindConstantBuffer(CS, cb.get(), CB_GETBINDSLOT(HairParticleCB), cmd);
+	device->BindConstantBuffer(CS, &cb, CB_GETBINDSLOT(HairParticleCB), cmd);
 
 	const GPUResource* uavs[] = {
-		particleBuffer.get(),
-		simulationBuffer.get()
+		&particleBuffer,
+		&simulationBuffer
 	};
 	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
@@ -143,7 +139,7 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 
 void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent& material, RENDERPASS renderPass, bool transparent, CommandList cmd) const
 {
-	if (strandCount == 0 || cb == nullptr)
+	if (strandCount == 0 || !cb.IsValid())
 	{
 		return;
 	}
@@ -173,9 +169,9 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 		device->BindResources(VS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 	}
 
-	device->BindConstantBuffer(VS, cb.get(), CB_GETBINDSLOT(HairParticleCB), cmd);
+	device->BindConstantBuffer(VS, &cb, CB_GETBINDSLOT(HairParticleCB), cmd);
 
-	device->BindResource(VS, particleBuffer.get(), 0, cmd);
+	device->BindResource(VS, &particleBuffer, 0, cmd);
 
 	device->Draw(strandCount * 12 * std::max(segmentCount, 1u), 0, cmd);
 

@@ -11,7 +11,6 @@ public:
 	static Luna<wiAudio_BindLua>::PropertyType properties[];
 
 	wiAudio_BindLua(lua_State* L) {}
-	~wiAudio_BindLua() {}
 
 	int CreateSound(lua_State* L);
 	int CreateSoundInstance(lua_State* L);
@@ -34,16 +33,14 @@ public:
 class wiSound_BindLua
 {
 public:
-	wiAudio::Sound* sound = nullptr;
-	bool owned = false;
+	wiAudio::Sound sound;
 
 	static const char className[];
 	static Luna<wiSound_BindLua>::FunctionType methods[];
 	static Luna<wiSound_BindLua>::PropertyType properties[];
 
-	wiSound_BindLua(lua_State* L) { sound = new wiAudio::Sound; owned = true; }
-	wiSound_BindLua(wiAudio::Sound* sound) :sound(sound) {}
-	~wiSound_BindLua() { if (owned) delete sound; }
+	wiSound_BindLua(lua_State* L) {}
+	wiSound_BindLua(const wiAudio::Sound& sound) :sound(sound) {}
 
 	static void Bind();
 };
@@ -69,7 +66,6 @@ class wiSoundInstance3D_BindLua
 {
 public:
 	wiAudio::SoundInstance3D soundinstance3D;
-	bool owned = false;
 
 	static const char className[];
 	static Luna<wiSoundInstance3D_BindLua>::FunctionType methods[];

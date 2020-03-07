@@ -27,13 +27,15 @@ class wiGUI : public wiGUIElement
 	friend class wiWidget;
 private:
 	std::list<wiWidget*> widgets;
-	wiWidget* activeWidget;
-	bool focus;
-	bool visible;
-
-	XMFLOAT2 pointerpos;
+	wiWidget* activeWidget = nullptr;
+	bool focus = false;
+	bool visible = true;
+	XMFLOAT2 pointerpos = XMFLOAT2(0, 0);
 public:
-	wiGUI();
+	wiGUI()
+	{
+		SetSize(1920, 1080); // default size
+	}
 	~wiGUI();
 
 	void Update(float dt);
@@ -55,6 +57,14 @@ public:
 	void SetVisible(bool value) { visible = value; }
 	bool IsVisible() { return visible; }
 
+	XMFLOAT2 GetSize() const { return XMFLOAT2(scale_local.x, scale_local.y); }
+	void SetSize(float width, float height)
+	{
+		SetDirty();
+		scale_local.x = width;
+		scale_local.y = height;
+		UpdateTransform();
+	}
 
 	const XMFLOAT2& GetPointerPos() const
 	{

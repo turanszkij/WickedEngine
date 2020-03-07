@@ -40,9 +40,6 @@ SpriteAnim_BindLua::SpriteAnim_BindLua(lua_State *L)
 	anim = wiSprite::Anim();
 }
 
-SpriteAnim_BindLua::~SpriteAnim_BindLua()
-{
-}
 
 
 int SpriteAnim_BindLua::SetRot(lua_State *L)

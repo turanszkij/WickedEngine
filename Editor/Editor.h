@@ -60,8 +60,7 @@ public:
 	std::unordered_set<wiECS::Entity> scenegraphview_closed_items;
 	void PushToSceneGraphView(wiECS::Entity entity, int level);
 
-	EditorLoadingScreen*	loader = nullptr;
-	RenderPath3D*	renderPath = nullptr;
+	std::unique_ptr<RenderPath3D> renderPath;
 	enum RENDERPATH
 	{
 		RENDERPATH_FORWARD,
@@ -109,9 +108,9 @@ public:
 
 
 
-	wiArchive *clipboard = nullptr;
+	wiArchive clipboard;
 
-	std::vector<wiArchive*> history;
+	std::vector<wiArchive> history;
 	int historyPos = -1;
 	enum HistoryOperationType
 	{
@@ -122,18 +121,15 @@ public:
 	};
 
 	void ResetHistory();
-	wiArchive* AdvanceHistory();
+	wiArchive& AdvanceHistory();
 	void ConsumeHistoryOperation(bool undo);
 };
 
 class Editor : public MainComponent
 {
 public:
-	Editor() {}
-	~Editor() {}
-
-	EditorComponent*		renderComponent = nullptr;
-	EditorLoadingScreen*	loader = nullptr;
+	std::unique_ptr<EditorComponent> renderComponent;
+	std::unique_ptr<EditorLoadingScreen> loader;
 
 	void Initialize() override;
 };

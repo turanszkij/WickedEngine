@@ -16,11 +16,13 @@ void Tests::Initialize()
 	infoDisplay.fpsinfo = true;
 	infoDisplay.resolution = true;
 
-	ActivatePath(new TestsRenderer);
+	renderer.Load();
+
+	ActivatePath(&renderer);
 }
 
 
-TestsRenderer::TestsRenderer()
+void TestsRenderer::Load()
 {
 	setSSREnabled(false);
 	setSSAOEnabled(false);
@@ -29,6 +31,7 @@ TestsRenderer::TestsRenderer()
 
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
+	GetGUI().SetSize(screenW, screenH);
 
 	wiLabel* label = new wiLabel("Label1");
 	label->SetText("Wicked Engine Test Framework");
@@ -36,8 +39,8 @@ TestsRenderer::TestsRenderer()
 	label->SetPos(XMFLOAT2(screenW / 2.f - label->scale.x / 2.f, screenH*0.95f));
 	GetGUI().AddWidget(label);
 
-	static wiAudio::Sound* sound = nullptr;
-	static wiAudio::SoundInstance* soundinstance = nullptr;
+	static wiAudio::Sound sound;
+	static wiAudio::SoundInstance soundinstance;
 
 	wiButton* audioTest = new wiButton("AudioTest");
 	audioTest->SetText("Play Test Audio");
@@ -48,22 +51,20 @@ TestsRenderer::TestsRenderer()
 	audioTest->OnClick([=](wiEventArgs args) {
 		static bool playing = false;
 
-		if (sound == nullptr)
+		if (!sound.IsValid())
 		{
-			sound = new wiAudio::Sound;
-			wiAudio::CreateSound("sound/music.wav", sound);
-			soundinstance = new wiAudio::SoundInstance;
-			wiAudio::CreateSoundInstance(sound, soundinstance);
+			wiAudio::CreateSound("sound/music.wav", &sound);
+			wiAudio::CreateSoundInstance(&sound, &soundinstance);
 		}
 
 		if (playing)
 		{
-			wiAudio::Stop(soundinstance);
+			wiAudio::Stop(&soundinstance);
 			audioTest->SetText("Play Test Audio");
 		}
 		else
 		{
-			wiAudio::Play(soundinstance);
+			wiAudio::Play(&soundinstance);
 			audioTest->SetText("Stop Test Audio");
 		}
 
@@ -79,7 +80,7 @@ TestsRenderer::TestsRenderer()
 	volume->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
 	volume->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
 	volume->OnSlide([](wiEventArgs args) {
-		wiAudio::SetVolume(args.fValue / 100.0f, soundinstance);
+		wiAudio::SetVolume(args.fValue / 100.0f, &soundinstance);
 	});
 	GetGUI().AddWidget(volume);
 
@@ -116,8 +117,8 @@ TestsRenderer::TestsRenderer()
 		wiRenderer::SetTemporalAAEnabled(false);
 		wiRenderer::ClearWorld();
 		wiScene::GetScene().weather = WeatherComponent();
-		this->clearSprites();
-		this->clearFonts();
+		this->ClearSprites();
+		this->ClearFonts();
 		wiLua::GetGlobal()->KillProcesses();
 
 		// Reset camera position:
@@ -144,7 +145,7 @@ TestsRenderer::TestsRenderer()
 			sprite.anim.wobbleAnim.amount = XMFLOAT2(0.16f, 0.16f);
 			sprite.anim.movingTexAnim.speedX = 0;
 			sprite.anim.movingTexAnim.speedY = 3;
-			this->addSprite(&sprite);
+			this->AddSprite(&sprite);
 			break;
 		}
 		case 1:
@@ -208,7 +209,7 @@ TestsRenderer::TestsRenderer()
 			font.params.size = 20;
 			font.params.posX = (int)screenW / 2;
 			font.params.posY = (int)screenH / 2;
-			addFont(&font);
+			AddFont(&font);
 
 			wiInput::ControllerFeedback feedback;
 			feedback.led_color.rgba = wiRandom::getRandom(0xFFFFFF);
@@ -300,7 +301,7 @@ void TestsRenderer::RunJobSystemTest()
 	font.params.h_align = WIFALIGN_CENTER;
 	font.params.v_align = WIFALIGN_CENTER;
 	font.params.size = 24;
-	this->addFont(&font);
+	this->AddFont(&font);
 }
 void TestsRenderer::RunFontTest()
 {
@@ -323,8 +324,8 @@ void TestsRenderer::RunFontTest()
 	font_upscaled.params.size = 14;
 	font_upscaled.params.scaling = 32.0f / 14.0f;
 
-	addFont(&font);
-	addFont(&font_upscaled);
+	AddFont(&font);
+	AddFont(&font_upscaled);
 
 	static wiFont font_aligned;
 	font_aligned = font;
@@ -333,7 +334,7 @@ void TestsRenderer::RunFontTest()
 	font_aligned.params.shadowColor = wiColor::Red();
 	font_aligned.params.h_align = WIFALIGN_CENTER;
 	font_aligned.SetText("Center aligned, red shadow, bigger");
-	addFont(&font_aligned);
+	AddFont(&font_aligned);
 
 	static wiFont font_aligned2;
 	font_aligned2 = font_aligned;
@@ -341,7 +342,7 @@ void TestsRenderer::RunFontTest()
 	font_aligned2.params.shadowColor = wiColor::Purple();
 	font_aligned2.params.h_align = WIFALIGN_RIGHT;
 	font_aligned2.SetText("Right aligned, purple shadow");
-	addFont(&font_aligned2);
+	AddFont(&font_aligned2);
 
 	std::stringstream ss("");
 	std::ifstream file("font_test.txt");
@@ -362,7 +363,7 @@ void TestsRenderer::RunFontTest()
 	font_japanese.params.h_align = WIFALIGN_CENTER;
 	font_japanese.params.size = 34;
 	font_japanese.SetText(ss.str());
-	addFont(&font_japanese);
+	AddFont(&font_japanese);
 
 	static wiFont font_colored;
 	font_colored.params.color = wiColor::Cyan();
@@ -372,7 +373,7 @@ void TestsRenderer::RunFontTest()
 	font_colored.params.posX = wiRenderer::GetDevice()->GetScreenWidth() / 2;
 	font_colored.params.posY = font_japanese.params.posY + font_japanese.textHeight();
 	font_colored.SetText("Colored font");
-	addFont(&font_colored);
+	AddFont(&font_colored);
 }
 void TestsRenderer::RunSpriteTest()
 {
@@ -391,21 +392,21 @@ void TestsRenderer::RunSpriteTest()
 		static wiFont font("For more information, please see \nTests.cpp, RunSpriteTest() function.");
 		font.params.posX = 10;
 		font.params.posY = 200;
-		addFont(&font);
+		AddFont(&font);
 	}
 
 	// Simple sprite, no animation:
 	{
 		static wiSprite sprite("../images/logo_small.png");
 		sprite.params = params;
-		addSprite(&sprite);
+		AddSprite(&sprite);
 
 		static wiFont font("No animation: ");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);
 		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
-		addFont(&font);
+		AddFont(&font);
 
 		params.pos.x += sprite.params.siz.x + step;
 	}
@@ -417,14 +418,14 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim = wiSprite::Anim();
 		sprite.anim.fad = 1.2f; // (you can also do opacity animation with sprite.anim.opa)
 		sprite.anim.repeatable = true;
-		addSprite(&sprite);
+		AddSprite(&sprite);
 
 		static wiFont font("Fade animation: ");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);
 		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
-		addFont(&font);
+		AddFont(&font);
 
 		params.pos.x += sprite.params.siz.x + step;
 	}
@@ -436,14 +437,14 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim = wiSprite::Anim();
 		sprite.anim.wobbleAnim.amount = XMFLOAT2(0.11f, 0.18f);
 		sprite.anim.wobbleAnim.speed = 1.4f;
-		addSprite(&sprite);
+		AddSprite(&sprite);
 
 		static wiFont font("Wobble animation: ");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);
 		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
-		addFont(&font);
+		AddFont(&font);
 
 		params.pos.x += sprite.params.siz.x + step;
 	}
@@ -455,14 +456,14 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim = wiSprite::Anim();
 		sprite.anim.rot = 2.8f;
 		sprite.anim.repeatable = true;
-		addSprite(&sprite);
+		AddSprite(&sprite);
 
 		static wiFont font("Rotate animation: ");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);
 		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
-		addFont(&font);
+		AddFont(&font);
 
 		params.pos.x += sprite.params.siz.x + step;
 	}
@@ -478,14 +479,14 @@ void TestsRenderer::RunSpriteTest()
 		sprite.params.sampleFlag = SAMPLEMODE_MIRROR; // texcoords will be scrolled out of bounds, so set up a wrap mode other than clamp
 		sprite.anim.movingTexAnim.speedX = 0;
 		sprite.anim.movingTexAnim.speedY = 2; // scroll the texture vertically. This value is pixels/second. So because our texture here is 1x2 pixels, just scroll it once fully per second with a value of 2
-		addSprite(&sprite);
+		AddSprite(&sprite);
 
 		static wiFont font("MovingTex + mask: ");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);
 		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
-		addFont(&font);
+		AddFont(&font);
 
 		params.pos.x = startPos.x;
 		params.pos.y += sprite.params.siz.y + step * 1.5f;
@@ -498,14 +499,14 @@ void TestsRenderer::RunSpriteTest()
 	{
 		static wiSprite sprite("images/spritesheet_grid.png");
 		sprite.params = params; // nothing extra, just display the full spritesheet
-		addSprite(&sprite);
+		AddSprite(&sprite);
 
 		static wiFont font("Spritesheet: \n(without animation)");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);
 		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
-		addFont(&font);
+		AddFont(&font);
 
 		params.pos.x += sprite.params.siz.x + step;
 	}
@@ -519,14 +520,14 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim.repeatable = true; // enable looping
 		sprite.anim.drawRectAnim.frameRate = 3; // 3 FPS, to be easily readable
 		sprite.anim.drawRectAnim.frameCount = 4; // animate only a single line horizontally
-		addSprite(&sprite);
+		AddSprite(&sprite);
 
 		static wiFont font("single line anim: \n(4 frames)");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);
 		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
-		addFont(&font);
+		AddFont(&font);
 
 		params.pos.x += sprite.params.siz.x + step;
 	}
@@ -541,14 +542,14 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim.drawRectAnim.frameRate = 3; // 3 FPS, to be easily readable
 		sprite.anim.drawRectAnim.frameCount = 4; // again, specify 4 total frames to loop...
 		sprite.anim.drawRectAnim.horizontalFrameCount = 1; // ...but this time, limit the horizontal frame count. This way, we can get it to only animate vertically
-		addSprite(&sprite);
+		AddSprite(&sprite);
 
 		static wiFont font("single line: \n(4 vertical frames)");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);
 		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
-		addFont(&font);
+		AddFont(&font);
 
 		params.pos.x += sprite.params.siz.x + step;
 	}
@@ -563,14 +564,14 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim.drawRectAnim.frameRate = 3; // 3 FPS, to be easily readable
 		sprite.anim.drawRectAnim.frameCount = 16; // all frames
 		sprite.anim.drawRectAnim.horizontalFrameCount = 4; // all horizontal frames
-		addSprite(&sprite);
+		AddSprite(&sprite);
 
 		static wiFont font("multiline: \n(all 16 frames)");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);
 		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
-		addFont(&font);
+		AddFont(&font);
 
 		params.pos.x += sprite.params.siz.x + step;
 	}
@@ -585,14 +586,14 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim.drawRectAnim.frameRate = 3; // 3 FPS, to be easily readable
 		sprite.anim.drawRectAnim.frameCount = 14; // NOT all frames, which makes it irregular, so the last line will not contain all horizontal frames
 		sprite.anim.drawRectAnim.horizontalFrameCount = 4; // all horizontal frames
-		addSprite(&sprite);
+		AddSprite(&sprite);
 
 		static wiFont font("irregular multiline: \n(14 frames)");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);
 		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
-		addFont(&font);
+		AddFont(&font);
 
 		params.pos.x = startPos.x;
 		params.pos.y += sprite.params.siz.y + step * 1.5f;
@@ -612,13 +613,13 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim.drawRectAnim.horizontalFrameCount = 5; // this is a multiline spritesheet, so also set how many maximum frames there are in a line
 		sprite.anim.drawRectAnim.frameRate = 40; // animation frames per second
 		sprite.anim.repeatable = true; // looping
-		addSprite(&sprite);
+		AddSprite(&sprite);
 
 		static wiFont font("For the following spritesheets, credits belong to: https://mrbubblewand.wordpress.com/download/");
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x - sprite.params.siz.x * 0.5f);
 		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
-		addFont(&font);
+		AddFont(&font);
 
 		params.pos.x += sprite.params.siz.x + step;
 	}
@@ -632,7 +633,7 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim.drawRectAnim.horizontalFrameCount = 5;
 		sprite.anim.drawRectAnim.frameRate = 30;
 		sprite.anim.repeatable = true;
-		addSprite(&sprite);
+		AddSprite(&sprite);
 
 		params.pos.x += sprite.params.siz.x + step;
 	}
@@ -646,7 +647,7 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim.drawRectAnim.horizontalFrameCount = 5;
 		sprite.anim.drawRectAnim.frameRate = 27;
 		sprite.anim.repeatable = true;
-		addSprite(&sprite);
+		AddSprite(&sprite);
 
 		params.pos.x += sprite.params.siz.x + step;
 	}
@@ -660,7 +661,7 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim.drawRectAnim.horizontalFrameCount = 5;
 		sprite.anim.drawRectAnim.frameRate = 27;
 		sprite.anim.repeatable = true;
-		addSprite(&sprite);
+		AddSprite(&sprite);
 
 		params.pos.x += sprite.params.siz.x + step;
 	}
@@ -674,7 +675,7 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim.drawRectAnim.horizontalFrameCount = 5;
 		sprite.anim.drawRectAnim.frameRate = 27;
 		sprite.anim.repeatable = true;
-		addSprite(&sprite);
+		AddSprite(&sprite);
 
 		params.pos.x += sprite.params.siz.x + step;
 	}
@@ -756,5 +757,5 @@ void TestsRenderer::RunNetworkTest()
 	font.params.h_align = WIFALIGN_CENTER;
 	font.params.v_align = WIFALIGN_CENTER;
 	font.params.size = 24;
-	this->addFont(&font);
+	AddFont(&font);
 }

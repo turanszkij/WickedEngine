@@ -434,9 +434,6 @@ wiImageParams_BindLua::wiImageParams_BindLua(lua_State *L)
 	params = wiImageParams(x, y, w, h);
 }
 
-wiImageParams_BindLua::~wiImageParams_BindLua()
-{
-}
 
 void wiImageParams_BindLua::Bind()
 {

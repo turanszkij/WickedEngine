@@ -49,19 +49,15 @@ void wiGUIElement::ApplyScissor(const Rect rect, CommandList cmd, bool constrain
 	wiRenderer::GetDevice()->BindScissorRects(1, &scissor, cmd);
 }
 
-wiGUI::wiGUI() : activeWidget(nullptr), focus(false), visible(true), pointerpos(XMFLOAT2(0,0))
-{
-	SetDirty();
-	scale_local.x = (float)wiRenderer::GetDevice()->GetScreenWidth();
-	scale_local.y = (float)wiRenderer::GetDevice()->GetScreenHeight();
-	UpdateTransform();
-}
 
 
 wiGUI::~wiGUI()
 {
+	for (auto& widget : widgets)
+	{
+		delete widget;
+	}
 }
-
 
 void wiGUI::Update(float dt)
 {
@@ -70,13 +66,7 @@ void wiGUI::Update(float dt)
 		return;
 	}
 
-	if (wiRenderer::GetDevice()->ResolutionChanged())
-	{
-		SetDirty();
-		scale_local.x = (float)wiRenderer::GetDevice()->GetScreenWidth();
-		scale_local.y = (float)wiRenderer::GetDevice()->GetScreenHeight();
-		UpdateTransform();
-	}
+	SetSize((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 
 	XMFLOAT4 _p = wiInput::GetPointer();
 	pointerpos.x = _p.x;

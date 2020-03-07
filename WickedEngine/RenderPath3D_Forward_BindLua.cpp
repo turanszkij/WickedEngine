@@ -52,27 +52,12 @@ Luna<RenderPath3D_Forward_BindLua>::PropertyType RenderPath3D_Forward_BindLua::p
 	{ NULL, NULL }
 };
 
-RenderPath3D_Forward_BindLua::RenderPath3D_Forward_BindLua(RenderPath3D_Forward* component)
-{
-	this->component = component;
-}
-
-RenderPath3D_Forward_BindLua::RenderPath3D_Forward_BindLua(lua_State *L)
-{
-	component = new RenderPath3D_Forward();
-}
-
-
-RenderPath3D_Forward_BindLua::~RenderPath3D_Forward_BindLua()
-{
-}
-
 void RenderPath3D_Forward_BindLua::Bind()
 {
 	static bool initialized = false;
 	if (!initialized)
 	{
 		initialized = true;
-		//Luna<RenderPath3D_Forward_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<RenderPath3D_Forward_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
 	}
 }

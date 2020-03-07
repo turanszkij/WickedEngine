@@ -66,9 +66,6 @@ Vector_BindLua::Vector_BindLua(lua_State* L)
 	vector = XMVectorSet(x, y, z, w);
 }
 
-Vector_BindLua::~Vector_BindLua()
-{
-}
 
 
 int Vector_BindLua::GetX(lua_State* L)

@@ -12,9 +12,6 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 {
 	assert(GUI && "Invalid GUI!");
 
-	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
-
 	materialWindow = new wiWindow(GUI, "Material Window");
 	materialWindow->SetSize(XMFLOAT2(760, 890));
 	GUI->AddWidget(materialWindow);
@@ -753,7 +750,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(texture_occlusion_uvset_Field);
 
 
-	materialWindow->Translate(XMFLOAT3(screenW - 880, 120, 0));
+	materialWindow->Translate(XMFLOAT3(gui->GetSize().x - 880, 120, 0));
 	materialWindow->SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

@@ -11,8 +11,7 @@ private:
 	uint64_t version = 0;
 	bool readMode = false;
 	size_t pos = 0;
-	uint8_t* DATA = nullptr;
-	size_t dataSize = 0;
+	std::vector<uint8_t> DATA;
 
 	std::string fileName; // save to this file on closing if not empty
 
@@ -21,11 +20,16 @@ private:
 public:
 	// Create empty arhive for writing
 	wiArchive();
+	wiArchive(const wiArchive&) = default;
+	wiArchive(wiArchive&&) = default;
 	// Create archive and link to file
 	wiArchive(const std::string& fileName, bool readMode = true);
-	~wiArchive();
+	~wiArchive() { Close(); }
 
-	const uint8_t* GetData() const { return DATA; }
+	wiArchive& operator=(const wiArchive&) = default;
+	wiArchive& operator=(wiArchive&&) = default;
+
+	const uint8_t* GetData() const { return DATA.data(); }
 	size_t GetSize() const { return pos; }
 	uint64_t GetVersion() const { return version; }
 	bool IsReadMode() const { return readMode; }
@@ -318,15 +322,11 @@ private:
 	{
 		size_t _size = (size_t)(sizeof(data)*count);
 		size_t _right = pos + _size;
-		if (_right > dataSize)
+		if (_right > DATA.size())
 		{
-			uint8_t* NEWDATA = new uint8_t[_right * 2];
-			memcpy(NEWDATA, DATA, dataSize);
-			dataSize = _right * 2;
-			SAFE_DELETE_ARRAY(DATA);
-			DATA = NEWDATA;
+			DATA.resize(_right * 2);
 		}
-		memcpy(reinterpret_cast<void*>((uint64_t)DATA + (uint64_t)pos), &data, _size);
+		memcpy(reinterpret_cast<void*>((uint64_t)DATA.data() + (uint64_t)pos), &data, _size);
 		pos = _right;
 	}
 
@@ -334,7 +334,7 @@ private:
 	template<typename T>
 	inline void _read(T& data, uint64_t count = 1)
 	{
-		memcpy(&data, reinterpret_cast<void*>((uint64_t)DATA + (uint64_t)pos), (size_t)(sizeof(data)*count));
+		memcpy(&data, reinterpret_cast<void*>((uint64_t)DATA.data() + (uint64_t)pos), (size_t)(sizeof(data)*count));
 		pos += (size_t)(sizeof(data)*count);
 	}
 };

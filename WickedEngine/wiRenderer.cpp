@@ -5905,8 +5905,8 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 
 		static float col = 0.7f;
 		static uint32_t gridVertexCount = 0;
-		static GPUBuffer* grid = nullptr;
-		if (grid == nullptr)
+		static GPUBuffer grid;
+		if (!grid.IsValid())
 		{
 			const float h = 0.01f; // avoid z-fight with zero plane
 			const int a = 20;
@@ -5939,8 +5939,7 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 			bd.CPUAccessFlags = 0;
 			SubresourceData InitData;
 			InitData.pSysMem = verts;
-			grid = new GPUBuffer;
-			device->CreateBuffer(&bd, &InitData, grid);
+			device->CreateBuffer(&bd, &InitData, &grid);
 		}
 
 		MiscCB sb;
@@ -5951,8 +5950,8 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
-		GPUBuffer* vbs[] = {
-			grid,
+		const GPUBuffer* vbs[] = {
+			&grid,
 		};
 		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),

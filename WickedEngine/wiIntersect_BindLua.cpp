@@ -55,9 +55,6 @@ namespace wiIntersect_BindLua
 			wiLua::SError(L, "Ray(Vector origin,direction) not enough arguments!");
 		}
 	}
-	Ray_BindLua::~Ray_BindLua()
-	{
-	}
 
 	int Ray_BindLua::Intersects(lua_State* L)
 	{
@@ -145,9 +142,6 @@ namespace wiIntersect_BindLua
 		{
 			aabb = AABB();
 		}
-	}
-	AABB_BindLua::~AABB_BindLua()
-	{
 	}
 
 	int AABB_BindLua::Intersects(lua_State* L)
@@ -285,9 +279,6 @@ namespace wiIntersect_BindLua
 		{
 			wiLua::SError(L, "Sphere(Vector center, float radius) not enough arguments!");
 		}
-	}
-	Sphere_BindLua::~Sphere_BindLua()
-	{
 	}
 
 	int Sphere_BindLua::Intersects(lua_State* L)

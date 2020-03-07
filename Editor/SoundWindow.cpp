@@ -13,9 +13,6 @@ SoundWindow::SoundWindow(wiGUI* gui) : GUI(gui)
 {
 	assert(GUI && "Invalid GUI!");
 
-	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
-
 	soundWindow = new wiWindow(GUI, "Sound Window");
 	soundWindow->SetSize(XMFLOAT2(440, 340));
 	GUI->AddWidget(soundWindow);

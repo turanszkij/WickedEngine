@@ -19,7 +19,6 @@ namespace wiIntersect_BindLua
 
 		Ray_BindLua(const RAY& ray) : ray(ray) {}
 		Ray_BindLua(lua_State *L);
-		~Ray_BindLua();
 
 		int Intersects(lua_State* L);
 		int GetOrigin(lua_State* L);
@@ -37,7 +36,6 @@ namespace wiIntersect_BindLua
 
 		AABB_BindLua(const AABB& aabb) : aabb(aabb) {}
 		AABB_BindLua(lua_State *L);
-		~AABB_BindLua();
 
 		int Intersects(lua_State* L);
 		int Intersects2D(lua_State* L);
@@ -60,7 +58,6 @@ namespace wiIntersect_BindLua
 
 		Sphere_BindLua(const SPHERE& sphere) : sphere(sphere) {}
 		Sphere_BindLua(lua_State *L);
-		~Sphere_BindLua();
 
 		int Intersects(lua_State* L);
 		int GetCenter(lua_State* L);

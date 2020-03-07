@@ -6,7 +6,7 @@
 class MainComponent_BindLua
 {
 private:
-	MainComponent *component;
+	MainComponent* component = nullptr;
 public:
 	static const char className[];
 	static Luna<MainComponent_BindLua>::FunctionType methods[];
@@ -14,7 +14,6 @@ public:
 
 	MainComponent_BindLua(MainComponent* component = nullptr);
 	MainComponent_BindLua(lua_State *L);
-	~MainComponent_BindLua();
 
 	int GetActivePath(lua_State *L);
 	int SetActivePath(lua_State *L);

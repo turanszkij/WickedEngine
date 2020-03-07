@@ -9,10 +9,6 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 {
 	assert(GUI && "Invalid GUI!");
 
-
-	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
-
 	forceFieldWindow = new wiWindow(GUI, "Force Field Window");
 	forceFieldWindow->SetSize(XMFLOAT2(600, 300));
 	GUI->AddWidget(forceFieldWindow);
@@ -111,7 +107,7 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 
 
 
-	forceFieldWindow->Translate(XMFLOAT3(screenW - 720, 50, 0));
+	forceFieldWindow->Translate(XMFLOAT3(gui->GetSize().x - 720, 50, 0));
 	forceFieldWindow->SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

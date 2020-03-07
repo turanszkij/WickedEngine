@@ -8,9 +8,6 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 {
 	assert(GUI && "Invalid GUI!");
 
-	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
-
 	wiRenderer::SetToDrawDebugEnvProbes(true);
 	wiRenderer::SetToDrawGridHelper(true);
 	wiRenderer::SetToDrawDebugCameras(true);

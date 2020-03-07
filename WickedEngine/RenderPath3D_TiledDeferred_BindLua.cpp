@@ -52,27 +52,12 @@ Luna<RenderPath3D_TiledDeferred_BindLua>::PropertyType RenderPath3D_TiledDeferre
 	{ NULL, NULL }
 };
 
-RenderPath3D_TiledDeferred_BindLua::RenderPath3D_TiledDeferred_BindLua(RenderPath3D_TiledDeferred* component)
-{
-	this->component = component;
-}
-
-RenderPath3D_TiledDeferred_BindLua::RenderPath3D_TiledDeferred_BindLua(lua_State *L)
-{
-	component = new RenderPath3D_TiledDeferred();
-}
-
-
-RenderPath3D_TiledDeferred_BindLua::~RenderPath3D_TiledDeferred_BindLua()
-{
-}
-
 void RenderPath3D_TiledDeferred_BindLua::Bind()
 {
 	static bool initialized = false;
 	if (!initialized)
 	{
 		initialized = true;
-		//Luna<RenderPath3D_TiledDeferred_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<RenderPath3D_TiledDeferred_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
 	}
 }

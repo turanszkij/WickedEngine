@@ -74,21 +74,19 @@ void MainComponent::Initialize()
 
 void MainComponent::ActivatePath(RenderPath* component, float fadeSeconds, wiColor fadeColor)
 {
-	if (component == nullptr)
-	{
-		return;
-	}
-
 	// Fade manager will activate on fadeout
 	fadeManager.Clear();
 	fadeManager.Start(fadeSeconds, fadeColor, [this, component]() {
 
-		if (activePath != nullptr)
+		if (GetActivePath() != nullptr)
 		{
-			activePath->Stop();
+			GetActivePath()->Stop();
 		}
 
-		component->Start();
+		if (component != nullptr)
+		{
+			component->Start();
+		}
 		activePath = component;
 	});
 

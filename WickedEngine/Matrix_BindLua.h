@@ -14,7 +14,6 @@ public:
 
 	Matrix_BindLua(const DirectX::XMMATRIX& matrix);
 	Matrix_BindLua(lua_State* L);
-	~Matrix_BindLua();
 
 	int GetRow(lua_State* L);
 

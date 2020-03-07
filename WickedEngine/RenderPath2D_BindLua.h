@@ -11,9 +11,16 @@ public:
 	static Luna<RenderPath2D_BindLua>::FunctionType methods[];
 	static Luna<RenderPath2D_BindLua>::PropertyType properties[];
 
-	RenderPath2D_BindLua(RenderPath2D* component = nullptr);
-	RenderPath2D_BindLua(lua_State *L);
-	~RenderPath2D_BindLua();
+	RenderPath2D_BindLua() = default;
+	RenderPath2D_BindLua(RenderPath2D* component)
+	{
+		this->component = component;
+	}
+	RenderPath2D_BindLua(lua_State* L) 
+	{
+		component = new RenderPath2D;
+		owning = true;
+	}
 
 	int AddSprite(lua_State *L);
 	int AddFont(lua_State* L);

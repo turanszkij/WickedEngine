@@ -753,7 +753,7 @@ namespace Vulkan_Internal
 	// Destroyers:
 	struct Buffer_Vulkan
 	{
-		std::shared_ptr<GraphicsDevice_Vulkan> device;
+		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VmaAllocation allocation = nullptr;
 		VkBuffer resource = VK_NULL_HANDLE;
 		VkBufferView cbv = VK_NULL_HANDLE;
@@ -764,26 +764,26 @@ namespace Vulkan_Internal
 
 		~Buffer_Vulkan()
 		{
-			uint64_t framecount = device->GetFrameCount();
-			device->destroylocker.lock();
-			if (resource) device->destroyer_buffers.push_back(std::make_pair(std::make_pair(resource, allocation), framecount));
-			if (cbv) device->destroyer_bufferviews.push_back(std::make_pair(cbv, framecount));
-			if (srv) device->destroyer_bufferviews.push_back(std::make_pair(srv, framecount));
-			if (uav) device->destroyer_bufferviews.push_back(std::make_pair(uav, framecount));
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+			if (resource) allocationhandler->destroyer_buffers.push_back(std::make_pair(std::make_pair(resource, allocation), framecount));
+			if (cbv) allocationhandler->destroyer_bufferviews.push_back(std::make_pair(cbv, framecount));
+			if (srv) allocationhandler->destroyer_bufferviews.push_back(std::make_pair(srv, framecount));
+			if (uav) allocationhandler->destroyer_bufferviews.push_back(std::make_pair(uav, framecount));
 			for (auto x : subresources_srv)
 			{
-				device->destroyer_bufferviews.push_back(std::make_pair(x, framecount));
+				allocationhandler->destroyer_bufferviews.push_back(std::make_pair(x, framecount));
 			}
 			for (auto x : subresources_uav)
 			{
-				device->destroyer_bufferviews.push_back(std::make_pair(x, framecount));
+				allocationhandler->destroyer_bufferviews.push_back(std::make_pair(x, framecount));
 			}
-			device->destroylocker.unlock();
+			allocationhandler->destroylocker.unlock();
 		}
 	};
 	struct Texture_Vulkan
 	{
-		std::shared_ptr<GraphicsDevice_Vulkan> device;
+		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VmaAllocation allocation = nullptr;
 		VkImage resource = VK_NULL_HANDLE;
 		VkImageView srv = VK_NULL_HANDLE;
@@ -797,103 +797,103 @@ namespace Vulkan_Internal
 
 		~Texture_Vulkan()
 		{
-			uint64_t framecount = device->GetFrameCount();
-			device->destroylocker.lock();
-			if (resource) device->destroyer_images.push_back(std::make_pair(std::make_pair(resource, allocation), framecount));
-			if (srv) device->destroyer_imageviews.push_back(std::make_pair(srv, framecount));
-			if (uav) device->destroyer_imageviews.push_back(std::make_pair(uav, framecount));
-			if (srv) device->destroyer_imageviews.push_back(std::make_pair(rtv, framecount));
-			if (uav) device->destroyer_imageviews.push_back(std::make_pair(dsv, framecount));
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+			if (resource) allocationhandler->destroyer_images.push_back(std::make_pair(std::make_pair(resource, allocation), framecount));
+			if (srv) allocationhandler->destroyer_imageviews.push_back(std::make_pair(srv, framecount));
+			if (uav) allocationhandler->destroyer_imageviews.push_back(std::make_pair(uav, framecount));
+			if (srv) allocationhandler->destroyer_imageviews.push_back(std::make_pair(rtv, framecount));
+			if (uav) allocationhandler->destroyer_imageviews.push_back(std::make_pair(dsv, framecount));
 			for (auto x : subresources_srv)
 			{
-				device->destroyer_imageviews.push_back(std::make_pair(x, framecount));
+				allocationhandler->destroyer_imageviews.push_back(std::make_pair(x, framecount));
 			}
 			for (auto x : subresources_uav)
 			{
-				device->destroyer_imageviews.push_back(std::make_pair(x, framecount));
+				allocationhandler->destroyer_imageviews.push_back(std::make_pair(x, framecount));
 			}
 			for (auto x : subresources_rtv)
 			{
-				device->destroyer_imageviews.push_back(std::make_pair(x, framecount));
+				allocationhandler->destroyer_imageviews.push_back(std::make_pair(x, framecount));
 			}
 			for (auto x : subresources_dsv)
 			{
-				device->destroyer_imageviews.push_back(std::make_pair(x, framecount));
+				allocationhandler->destroyer_imageviews.push_back(std::make_pair(x, framecount));
 			}
-			device->destroylocker.unlock();
+			allocationhandler->destroylocker.unlock();
 		}
 	};
 	struct Sampler_Vulkan
 	{
-		std::shared_ptr<GraphicsDevice_Vulkan> device;
+		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VkSampler resource = VK_NULL_HANDLE;
 
 		~Sampler_Vulkan()
 		{
-			uint64_t framecount = device->GetFrameCount();
-			device->destroylocker.lock();
-			if (resource) device->destroyer_samplers.push_back(std::make_pair(resource, framecount));
-			device->destroylocker.unlock();
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+			if (resource) allocationhandler->destroyer_samplers.push_back(std::make_pair(resource, framecount));
+			allocationhandler->destroylocker.unlock();
 		}
 	};
 	struct Query_Vulkan
 	{
-		std::shared_ptr<GraphicsDevice_Vulkan> device;
+		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		GPU_QUERY_TYPE query_type = GPU_QUERY_TYPE_INVALID;
 		uint32_t query_index = ~0;
 
 		~Query_Vulkan()
 		{
-			uint64_t framecount = device->GetFrameCount();
 			if (query_index != ~0)
 			{
-				device->destroylocker.lock();
+				allocationhandler->destroylocker.lock();
+				uint64_t framecount = allocationhandler->framecount;
 				switch (query_type)
 				{
 				case wiGraphics::GPU_QUERY_TYPE_OCCLUSION:
 				case wiGraphics::GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-					device->destroyer_queries_occlusion.push_back(std::make_pair(query_index, framecount));
+					allocationhandler->destroyer_queries_occlusion.push_back(std::make_pair(query_index, framecount));
 					break;
 				case wiGraphics::GPU_QUERY_TYPE_TIMESTAMP:
-					device->destroyer_queries_timestamp.push_back(std::make_pair(query_index, framecount));
+					allocationhandler->destroyer_queries_timestamp.push_back(std::make_pair(query_index, framecount));
 					break;
 				}
-				device->destroylocker.unlock();
+				allocationhandler->destroylocker.unlock();
 			}
 		}
 	};
 	struct Shader_Vulkan
 	{
-		std::shared_ptr<GraphicsDevice_Vulkan> device;
+		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VkShaderModule shaderModule = VK_NULL_HANDLE;
 		VkPipeline pipeline_cs = VK_NULL_HANDLE;
 		VkPipelineShaderStageCreateInfo stageInfo = {};
 
 		~Shader_Vulkan()
 		{
-			uint64_t framecount = device->GetFrameCount();
-			device->destroylocker.lock();
-			if (shaderModule) device->destroyer_shadermodules.push_back(std::make_pair(shaderModule, framecount));
-			if (pipeline_cs) device->destroyer_pipelines.push_back(std::make_pair(pipeline_cs, framecount));
-			device->destroylocker.unlock();
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+			if (shaderModule) allocationhandler->destroyer_shadermodules.push_back(std::make_pair(shaderModule, framecount));
+			if (pipeline_cs) allocationhandler->destroyer_pipelines.push_back(std::make_pair(pipeline_cs, framecount));
+			allocationhandler->destroylocker.unlock();
 		}
 	};
 	struct PipelineState_Vulkan
 	{
-		std::shared_ptr<GraphicsDevice_Vulkan> device;
+		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VkPipeline resource = VK_NULL_HANDLE;
 
 		~PipelineState_Vulkan()
 		{
-			uint64_t framecount = device->GetFrameCount();
-			device->destroylocker.lock();
-			if (resource) device->destroyer_pipelines.push_back(std::make_pair(resource, framecount));
-			device->destroylocker.unlock();
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+			if (resource) allocationhandler->destroyer_pipelines.push_back(std::make_pair(resource, framecount));
+			allocationhandler->destroylocker.unlock();
 		}
 	};
 	struct RenderPass_Vulkan
 	{
-		std::shared_ptr<GraphicsDevice_Vulkan> device;
+		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VkRenderPass renderpass = VK_NULL_HANDLE;
 		VkFramebuffer framebuffer = VK_NULL_HANDLE;
 		VkRenderPassBeginInfo beginInfo;
@@ -901,11 +901,11 @@ namespace Vulkan_Internal
 
 		~RenderPass_Vulkan()
 		{
-			uint64_t framecount = device->GetFrameCount();
-			device->destroylocker.lock();
-			if (renderpass) device->destroyer_renderpasses.push_back(std::make_pair(renderpass, framecount));
-			if (framebuffer) device->destroyer_framebuffers.push_back(std::make_pair(framebuffer, framecount));
-			device->destroylocker.unlock();
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+			if (renderpass) allocationhandler->destroyer_renderpasses.push_back(std::make_pair(renderpass, framecount));
+			if (framebuffer) allocationhandler->destroyer_framebuffers.push_back(std::make_pair(framebuffer, framecount));
+			allocationhandler->destroylocker.unlock();
 		}
 	};
 
@@ -941,10 +941,10 @@ namespace Vulkan_Internal
 using namespace Vulkan_Internal;
 
 
-	void GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::init(std::shared_ptr<GraphicsDevice_Vulkan> device, size_t size)
+	void GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::init(GraphicsDevice_Vulkan* device, size_t size)
 	{
 		auto internal_state = std::make_shared<Buffer_Vulkan>();
-		internal_state->device = device;
+		internal_state->allocationhandler = device->allocationhandler;
 		buffer.internal_state = internal_state;
 
 		VkBufferCreateInfo bufferInfo = {};
@@ -963,7 +963,7 @@ using namespace Vulkan_Internal;
 		allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 		allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-		res = vmaCreateBuffer(device->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
+		res = vmaCreateBuffer(device->allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
 		assert(res == VK_SUCCESS);
 
 		void* pData = internal_state->allocation->GetMappedData();
@@ -1021,7 +1021,7 @@ using namespace Vulkan_Internal;
 		allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
 		allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-		res = vmaCreateBuffer(device->allocator, &bufferInfo, &allocInfo, &resource, &allocation, nullptr);
+		res = vmaCreateBuffer(device->allocationhandler->allocator, &bufferInfo, &allocInfo, &resource, &allocation, nullptr);
 		assert(res == VK_SUCCESS);
 
 		void* pData = allocation->GetMappedData();
@@ -1030,7 +1030,7 @@ using namespace Vulkan_Internal;
 	}
 	GraphicsDevice_Vulkan::UploadBuffer::~UploadBuffer()
 	{
-		vmaDestroyBuffer(device->allocator, resource, allocation);
+		vmaDestroyBuffer(device->allocationhandler->allocator, resource, allocation);
 	}
 	uint8_t* GraphicsDevice_Vulkan::UploadBuffer::allocate(size_t dataSize, size_t alignment)
 	{
@@ -1800,11 +1800,15 @@ using namespace Vulkan_Internal;
 			vkGetDeviceQueue(device, queueIndices.copyFamily, 0, &copyQueue);
 		}
 
+		allocationhandler = std::make_shared<AllocationHandler>();
+		allocationhandler->device = device;
+		allocationhandler->instance = instance;
+
 		// Initialize Vulkan Memory Allocator helper:
 		VmaAllocatorCreateInfo allocatorInfo = {};
 		allocatorInfo.physicalDevice = physicalDevice;
 		allocatorInfo.device = device;
-		res = vmaCreateAllocator(&allocatorInfo, &allocator);
+		res = vmaCreateAllocator(&allocatorInfo, &allocationhandler->allocator);
 		assert(res == VK_SUCCESS);
 
 		// Extension functions:
@@ -2306,8 +2310,7 @@ using namespace Vulkan_Internal;
 			VmaAllocationCreateInfo allocInfo = {};
 			allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
-			VmaAllocation allocation;
-			res = vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &nullBuffer, &allocation, nullptr);
+			res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &nullBuffer, &nullBufferAllocation, nullptr);
 			assert(res == VK_SUCCESS);
 			
 			VkBufferViewCreateInfo viewInfo = {};
@@ -2337,8 +2340,7 @@ using namespace Vulkan_Internal;
 			VmaAllocationCreateInfo allocInfo = {};
 			allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
-			VmaAllocation allocation;
-			res = vmaCreateImage(allocator, &imageInfo, &allocInfo, &nullImage, &allocation, nullptr);
+			res = vmaCreateImage(allocationhandler->allocator, &imageInfo, &allocInfo, &nullImage, &nullImageAllocation, nullptr);
 			assert(res == VK_SUCCESS);
 
 			VkImageViewCreateInfo viewInfo = {};
@@ -2372,7 +2374,7 @@ using namespace Vulkan_Internal;
 
 			for (uint32_t i = 0; i < timestamp_query_count; ++i)
 			{
-				free_timestampqueries.push_back(i);
+				allocationhandler->free_timestampqueries.push_back(i);
 			}
 			poolInfo.queryCount = timestamp_query_count;
 			poolInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
@@ -2382,7 +2384,7 @@ using namespace Vulkan_Internal;
 
 			for (uint32_t i = 0; i < occlusion_query_count; ++i)
 			{
-				free_occlusionqueries.push_back(i);
+				allocationhandler->free_occlusionqueries.push_back(i);
 			}
 			poolInfo.queryCount = occlusion_query_count;
 			poolInfo.queryType = VK_QUERY_TYPE_OCCLUSION;
@@ -2397,6 +2399,9 @@ using namespace Vulkan_Internal;
 	{
 		WaitForGPU();
 
+		vkDestroyFence(device, copyFence, nullptr);
+		vkDestroyCommandPool(device, copyCommandPool, nullptr);
+
 		for (auto& frame : frames)
 		{
 			vkDestroyFence(device, frame.frameFence, nullptr);
@@ -2406,10 +2411,23 @@ using namespace Vulkan_Internal;
 			{
 				vkDestroyCommandPool(device, commandPool, nullptr);
 			}
+			vkDestroyCommandPool(device, frame.transitionCommandPool, nullptr);
 		}
 
 		vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
 		vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
+
+		for (auto& x : pipelines_worker)
+		{
+			for (auto& y : x)
+			{
+				vkDestroyPipeline(device, y.second, nullptr);
+			}
+		}
+		for (auto& x : pipelines_global)
+		{
+			vkDestroyPipeline(device, x.second, nullptr);
+		}
 
 		for (int i = 0; i < SHADERSTAGE_COUNT; ++i)
 		{
@@ -2419,26 +2437,19 @@ using namespace Vulkan_Internal;
 		vkDestroyPipelineLayout(device, defaultPipelineLayout_Compute, nullptr);
 		vkDestroyRenderPass(device, defaultRenderPass, nullptr);
 
-		for (auto& x : swapChainImages)
-		{
-			vkDestroyImage(device, x, nullptr);
-		}
 		vkDestroySwapchainKHR(device, swapChain, nullptr);
 
 		vkDestroyQueryPool(device, querypool_timestamp, nullptr);
 		vkDestroyQueryPool(device, querypool_occlusion, nullptr);
 
-		vkDestroyBuffer(device, nullBuffer, nullptr);
+		vmaDestroyBuffer(allocationhandler->allocator, nullBuffer, nullBufferAllocation);
 		vkDestroyBufferView(device, nullBufferView, nullptr);
-		vkDestroyImage(device, nullImage, nullptr);
+		vmaDestroyImage(allocationhandler->allocator, nullImage, nullImageAllocation);
 		vkDestroyImageView(device, nullImageView, nullptr);
 		vkDestroySampler(device, nullSampler, nullptr);
 
-		vmaDestroyAllocator(allocator);
-
-		vkDestroyDevice(device, nullptr);
 		DestroyDebugReportCallbackEXT(instance, callback, nullptr);
-		vkDestroyInstance(instance, nullptr);
+		vkDestroySurfaceKHR(instance, surface, nullptr);
 	}
 
 	void GraphicsDevice_Vulkan::SetResolution(int width, int height)
@@ -2460,7 +2471,7 @@ using namespace Vulkan_Internal;
 	bool GraphicsDevice_Vulkan::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer)
 	{
 		auto internal_state = std::make_shared<Buffer_Vulkan>();
-		internal_state->device = shared_from_this();
+		internal_state->allocationhandler = allocationhandler;
 		pBuffer->internal_state = internal_state;
 		pBuffer->type = GPUResource::GPU_RESOURCE_TYPE::BUFFER;
 
@@ -2522,7 +2533,7 @@ using namespace Vulkan_Internal;
 		VmaAllocationCreateInfo allocInfo = {};
 		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
-		res = vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
+		res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
 		assert(res == VK_SUCCESS);
 
 		// Issue data copy on request:
@@ -2640,7 +2651,7 @@ using namespace Vulkan_Internal;
 	bool GraphicsDevice_Vulkan::CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture)
 	{
 		auto internal_state = std::make_shared<Texture_Vulkan>();
-		internal_state->device = shared_from_this();
+		internal_state->allocationhandler = allocationhandler;
 		pTexture->internal_state = internal_state;
 		pTexture->type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
 
@@ -2714,7 +2725,7 @@ using namespace Vulkan_Internal;
 
 		VkResult res;
 
-		res = vmaCreateImage(allocator, &imageInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
+		res = vmaCreateImage(allocationhandler->allocator, &imageInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
 		assert(res == VK_SUCCESS);
 
 		// Issue data copy on request:
@@ -2860,7 +2871,7 @@ using namespace Vulkan_Internal;
 	}
 	bool GraphicsDevice_Vulkan::CreateInputLayout(const InputLayoutDesc *pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout *pInputLayout)
 	{
-		pInputLayout->internal_state = shared_from_this();
+		pInputLayout->internal_state = allocationhandler;
 
 		pInputLayout->desc.clear();
 		pInputLayout->desc.reserve((size_t)NumElements);
@@ -2874,7 +2885,7 @@ using namespace Vulkan_Internal;
 	bool GraphicsDevice_Vulkan::CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader)
 	{
 		auto internal_state = std::make_shared<Shader_Vulkan>();
-		internal_state->device = shared_from_this();
+		internal_state->allocationhandler = allocationhandler;
 		pShader->internal_state = internal_state;
 
 		pShader->code.resize(BytecodeLength);
@@ -2938,21 +2949,21 @@ using namespace Vulkan_Internal;
 	}
 	bool GraphicsDevice_Vulkan::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
 	{
-		pBlendState->internal_state = shared_from_this();
+		pBlendState->internal_state = allocationhandler;
 
 		pBlendState->desc = *pBlendStateDesc;
 		return true;
 	}
 	bool GraphicsDevice_Vulkan::CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState)
 	{
-		pDepthStencilState->internal_state = shared_from_this();
+		pDepthStencilState->internal_state = allocationhandler;
 
 		pDepthStencilState->desc = *pDepthStencilStateDesc;
 		return true;
 	}
 	bool GraphicsDevice_Vulkan::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
 	{
-		pRasterizerState->internal_state = shared_from_this();
+		pRasterizerState->internal_state = allocationhandler;
 
 		pRasterizerState->desc = *pRasterizerStateDesc;
 		return true;
@@ -2960,7 +2971,7 @@ using namespace Vulkan_Internal;
 	bool GraphicsDevice_Vulkan::CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
 	{
 		auto internal_state = std::make_shared<Sampler_Vulkan>();
-		internal_state->device = shared_from_this();
+		internal_state->allocationhandler = allocationhandler;
 		pSamplerState->internal_state = internal_state;
 
 		pSamplerState->desc = *pSamplerDesc;
@@ -3145,7 +3156,7 @@ using namespace Vulkan_Internal;
 	bool GraphicsDevice_Vulkan::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
 	{
 		auto internal_state = std::make_shared<Query_Vulkan>();
-		internal_state->device = shared_from_this();
+		internal_state->allocationhandler = allocationhandler;
 		pQuery->internal_state = internal_state;
 
 		bool hr = false;
@@ -3156,7 +3167,7 @@ using namespace Vulkan_Internal;
 		switch (pDesc->Type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			if (free_timestampqueries.pop_front(internal_state->query_index))
+			if (allocationhandler->free_timestampqueries.pop_front(internal_state->query_index))
 			{
 				hr = true;
 			}
@@ -3171,7 +3182,7 @@ using namespace Vulkan_Internal;
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-			if (free_occlusionqueries.pop_front(internal_state->query_index))
+			if (allocationhandler->free_occlusionqueries.pop_front(internal_state->query_index))
 			{
 				hr = true;
 			}
@@ -3189,7 +3200,7 @@ using namespace Vulkan_Internal;
 	}
 	bool GraphicsDevice_Vulkan::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
 	{
-		pso->internal_state = shared_from_this();
+		pso->internal_state = allocationhandler;
 
 		pso->desc = *pDesc;
 
@@ -3211,7 +3222,7 @@ using namespace Vulkan_Internal;
 	bool GraphicsDevice_Vulkan::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
 	{
 		auto internal_state = std::make_shared<RenderPass_Vulkan>();
-		internal_state->device = shared_from_this();
+		internal_state->allocationhandler = allocationhandler;
 		renderpass->internal_state = internal_state;
 
 		renderpass->desc = *pDesc;
@@ -3769,9 +3780,9 @@ using namespace Vulkan_Internal;
 					}
 					else
 					{
-						destroylocker.lock();
-						destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
-						destroylocker.unlock();
+						allocationhandler->destroylocker.lock();
+						allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
+						allocationhandler->destroylocker.unlock();
 					}
 				}
 				pipelines_worker[cmd].clear();
@@ -3826,153 +3837,7 @@ using namespace Vulkan_Internal;
 			assert(res == VK_SUCCESS);
 		}
 
-
-		// Deferred destroy of resources that the GPU is already finished with:
-		destroylocker.lock();
-		while (!destroyer_images.empty())
-		{
-			if (destroyer_images.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-			{
-				auto item = destroyer_images.front();
-				destroyer_images.pop_front();
-				vmaDestroyImage(allocator, item.first.first, item.first.second);
-			}
-			else
-			{
-				break;
-			}
-		}
-		while (!destroyer_imageviews.empty())
-		{
-			if (destroyer_imageviews.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-			{
-				auto item = destroyer_imageviews.front();
-				destroyer_imageviews.pop_front();
-				vkDestroyImageView(device, item.first, nullptr);
-			}
-			else
-			{
-				break;
-			}
-		}
-		while (!destroyer_buffers.empty())
-		{
-			if (destroyer_buffers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-			{
-				auto item = destroyer_buffers.front();
-				destroyer_buffers.pop_front();
-				vmaDestroyBuffer(allocator, item.first.first, item.first.second);
-			}
-			else
-			{
-				break;
-			}
-		}
-		while (!destroyer_bufferviews.empty())
-		{
-			if (destroyer_bufferviews.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-			{
-				auto item = destroyer_bufferviews.front();
-				destroyer_bufferviews.pop_front();
-				vkDestroyBufferView(device, item.first, nullptr);
-			}
-			else
-			{
-				break;
-			}
-		}
-		while (!destroyer_samplers.empty())
-		{
-			if (destroyer_samplers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-			{
-				auto item = destroyer_samplers.front();
-				destroyer_samplers.pop_front();
-				vkDestroySampler(device, item.first, nullptr);
-			}
-			else
-			{
-				break;
-			}
-		}
-		while (!destroyer_shadermodules.empty())
-		{
-			if (destroyer_shadermodules.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-			{
-				auto item = destroyer_shadermodules.front();
-				destroyer_shadermodules.pop_front();
-				vkDestroyShaderModule(device, item.first, nullptr);
-			}
-			else
-			{
-				break;
-			}
-		}
-		while (!destroyer_pipelines.empty())
-		{
-			if (destroyer_pipelines.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-			{
-				auto item = destroyer_pipelines.front();
-				destroyer_pipelines.pop_front();
-				vkDestroyPipeline(device, item.first, nullptr);
-			}
-			else
-			{
-				break;
-			}
-		}
-		while (!destroyer_renderpasses.empty())
-		{
-			if (destroyer_renderpasses.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-			{
-				auto item = destroyer_renderpasses.front();
-				destroyer_renderpasses.pop_front();
-				vkDestroyRenderPass(device, item.first, nullptr);
-			}
-			else
-			{
-				break;
-			}
-		}
-		while (!destroyer_framebuffers.empty())
-		{
-			if (destroyer_framebuffers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-			{
-				auto item = destroyer_framebuffers.front();
-				destroyer_framebuffers.pop_front();
-				vkDestroyFramebuffer(device, item.first, nullptr);
-			}
-			else
-			{
-				break;
-			}
-		}
-		while (!destroyer_queries_occlusion.empty())
-		{
-			if (destroyer_queries_occlusion.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-			{
-				auto item = destroyer_queries_occlusion.front();
-				destroyer_queries_occlusion.pop_front();
-				free_occlusionqueries.push_back(item.first);
-			}
-			else
-			{
-				break;
-			}
-		}
-		while (!destroyer_queries_timestamp.empty())
-		{
-			if (destroyer_queries_timestamp.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-			{
-				auto item = destroyer_queries_timestamp.front();
-				destroyer_queries_timestamp.pop_front();
-				free_timestampqueries.push_back(item.first);
-			}
-			else
-			{
-				break;
-			}
-		}
-		destroylocker.unlock();
+		allocationhandler->Update(FRAMECOUNT, BACKBUFFER_COUNT);
 
 		// Restart transition command buffers:
 		{
@@ -4026,7 +3891,7 @@ using namespace Vulkan_Internal;
 				res = vkAllocateCommandBuffers(device, &commandBufferInfo, &frame.commandBuffers[cmd]);
 				assert(res == VK_SUCCESS);
 
-				frame.resourceBuffer[cmd].init(shared_from_this(), 4 * 1024 * 1024);
+				frame.resourceBuffer[cmd].init(this, 4 * 1024 * 1024);
 				frame.descriptors[cmd].init(this);
 			}
 		}
@@ -4102,10 +3967,10 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::ClearPipelineStateCache()
 	{
-		destroylocker.lock();
+		allocationhandler->destroylocker.lock();
 		for (auto& x : pipelines_global)
 		{
-			destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
+			allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
 		}
 		pipelines_global.clear();
 
@@ -4113,11 +3978,11 @@ using namespace Vulkan_Internal;
 		{
 			for (auto& x : pipelines_worker[i])
 			{
-				destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
+				allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
 			}
 			pipelines_worker[i].clear();
 		}
-		destroylocker.unlock();
+		allocationhandler->destroylocker.unlock();
 	}
 
 

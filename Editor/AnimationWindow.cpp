@@ -10,10 +10,6 @@ AnimationWindow::AnimationWindow(wiGUI* gui) :GUI(gui)
 {
 	assert(GUI && "Invalid GUI!");
 
-	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
-
-
 	animWindow = new wiWindow(GUI, "Animation Window");
 	animWindow->SetSize(XMFLOAT2(600, 450));
 	GUI->AddWidget(animWindow);

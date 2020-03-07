@@ -20,14 +20,13 @@
 
 namespace wiGraphics
 {
-	class GraphicsDevice_DX12 : public GraphicsDevice, public std::enable_shared_from_this<GraphicsDevice_DX12>
+	class GraphicsDevice_DX12 : public GraphicsDevice
 	{
 	private:
 		Microsoft::WRL::ComPtr<ID3D12Device> device;
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> directQueue;
 		Microsoft::WRL::ComPtr<ID3D12Fence> frameFence;
 		HANDLE frameFenceEvent;
-		D3D12MA::Allocator* allocator = nullptr;
 
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> copyQueue;
 		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> copyAllocator;
@@ -48,8 +47,6 @@ namespace wiGraphics
 		Microsoft::WRL::ComPtr<ID3D12QueryHeap> querypool_occlusion;
 		static const size_t timestamp_query_count = 1024;
 		static const size_t occlusion_query_count = 1024;
-		wiContainers::ThreadSafeRingBuffer<uint32_t, timestamp_query_count> free_timestampqueries;
-		wiContainers::ThreadSafeRingBuffer<uint32_t, occlusion_query_count> free_occlusionqueries;
 		Microsoft::WRL::ComPtr<ID3D12Resource> querypool_timestamp_readback;
 		Microsoft::WRL::ComPtr<ID3D12Resource> querypool_occlusion_readback;
 		D3D12MA::Allocation* allocation_querypool_timestamp_readback = nullptr;
@@ -73,10 +70,6 @@ namespace wiGraphics
 			void clear();
 			void free(D3D12_CPU_DESCRIPTOR_HANDLE descriptorHandle);
 		};
-		DescriptorAllocator RTAllocator;
-		DescriptorAllocator DSAllocator;
-		DescriptorAllocator ResourceAllocator;
-		DescriptorAllocator SamplerAllocator;
 
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> null_resource_heap_CPU;
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> null_sampler_heap_CPU;
@@ -150,7 +143,7 @@ namespace wiGraphics
 				uint8_t*				dataCur = nullptr;
 				uint8_t*				dataEnd = nullptr;
 
-				void init(std::shared_ptr<GraphicsDevice_DX12> device, size_t size);
+				void init(GraphicsDevice_DX12* device, size_t size);
 
 				uint8_t* allocate(size_t dataSize, size_t alignment);
 				void clear();
@@ -283,16 +276,158 @@ namespace wiGraphics
 		void SetMarker(const std::string& name, CommandList cmd) override;
 
 
-		std::mutex destroylocker;
-		std::deque<std::pair<D3D12MA::Allocation*, uint64_t>> destroyer_allocations;
-		std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, uint64_t>> destroyer_resources;
-		std::deque<std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, uint64_t>> destroyer_resourceviews;
-		std::deque<std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, uint64_t>> destroyer_rtvs;
-		std::deque<std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, uint64_t>> destroyer_dsvs;
-		std::deque<std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, uint64_t>> destroyer_samplers;
-		std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_timestamp;
-		std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_occlusion;
-		std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12PipelineState>, uint64_t>> destroyer_pipelines;
+		struct AllocationHandler
+		{
+			D3D12MA::Allocator* allocator = nullptr;
+			Microsoft::WRL::ComPtr<ID3D12Device> device;
+			uint64_t framecount = 0;
+			std::mutex destroylocker;
+			std::deque<std::pair<D3D12MA::Allocation*, uint64_t>> destroyer_allocations;
+			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, uint64_t>> destroyer_resources;
+			std::deque<std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, uint64_t>> destroyer_resourceviews;
+			std::deque<std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, uint64_t>> destroyer_rtvs;
+			std::deque<std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, uint64_t>> destroyer_dsvs;
+			std::deque<std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, uint64_t>> destroyer_samplers;
+			std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_timestamp;
+			std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_occlusion;
+			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12PipelineState>, uint64_t>> destroyer_pipelines;
+
+			DescriptorAllocator RTAllocator;
+			DescriptorAllocator DSAllocator;
+			DescriptorAllocator ResourceAllocator;
+			DescriptorAllocator SamplerAllocator;
+			wiContainers::ThreadSafeRingBuffer<uint32_t, timestamp_query_count> free_timestampqueries;
+			wiContainers::ThreadSafeRingBuffer<uint32_t, occlusion_query_count> free_occlusionqueries;
+
+			~AllocationHandler()
+			{
+				Update(~0, 0); // destroy all remaining
+				if(allocator) allocator->Release();
+			}
+
+			// Deferred destroy of resources that the GPU is already finished with:
+			void Update(uint64_t FRAMECOUNT, uint32_t BACKBUFFER_COUNT)
+			{
+				destroylocker.lock();
+				while (!destroyer_allocations.empty())
+				{
+					if (destroyer_allocations.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_allocations.front();
+						destroyer_allocations.pop_front();
+						item.first->Release();
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_resources.empty())
+				{
+					if (destroyer_resources.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						destroyer_resources.pop_front();
+						// comptr auto delete
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_resourceviews.empty())
+				{
+					if (destroyer_resourceviews.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_resourceviews.front();
+						destroyer_resourceviews.pop_front();
+						ResourceAllocator.free(item.first);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_rtvs.empty())
+				{
+					if (destroyer_rtvs.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_rtvs.front();
+						destroyer_rtvs.pop_front();
+						RTAllocator.free(item.first);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_dsvs.empty())
+				{
+					if (destroyer_dsvs.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_dsvs.front();
+						destroyer_dsvs.pop_front();
+						DSAllocator.free(item.first);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_samplers.empty())
+				{
+					if (destroyer_samplers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_samplers.front();
+						destroyer_samplers.pop_front();
+						SamplerAllocator.free(item.first);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_queries_occlusion.empty())
+				{
+					if (destroyer_queries_occlusion.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_queries_occlusion.front();
+						destroyer_queries_occlusion.pop_front();
+						free_occlusionqueries.push_back(item.first);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_queries_timestamp.empty())
+				{
+					if (destroyer_queries_timestamp.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_queries_timestamp.front();
+						destroyer_queries_timestamp.pop_front();
+						free_timestampqueries.push_back(item.first);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_pipelines.empty())
+				{
+					if (destroyer_pipelines.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						destroyer_pipelines.pop_front();
+						// comptr auto delete
+					}
+					else
+					{
+						break;
+					}
+				}
+				destroylocker.unlock();
+			}
+		};
+		std::shared_ptr<AllocationHandler> allocationhandler;
 
 	};
 

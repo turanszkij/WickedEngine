@@ -26,6 +26,7 @@
 #include "wiIntersect_BindLua.h"
 
 #include <sstream>
+#include <memory>
 
 using namespace std;
 
@@ -47,10 +48,10 @@ wiLua::~wiLua()
 
 wiLua* wiLua::GetGlobal()
 {
-	static wiLua* globalLua = nullptr;
+	static std::unique_ptr<wiLua> globalLua;
 	if (globalLua == nullptr)
 	{
-		globalLua = new wiLua();
+		globalLua = std::make_unique<wiLua>();
 
 		MainComponent_BindLua::Bind();
 		RenderPath_BindLua::Bind();
@@ -77,7 +78,7 @@ wiLua* wiLua::GetGlobal()
 		wiIntersect_BindLua::Bind();
 
 	}
-	return globalLua;
+	return globalLua.get();
 }
 
 bool wiLua::Success()

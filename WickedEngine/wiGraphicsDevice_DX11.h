@@ -13,7 +13,7 @@
 namespace wiGraphics
 {
 
-	class GraphicsDevice_DX11 : public GraphicsDevice, public std::enable_shared_from_this<GraphicsDevice_DX11>
+	class GraphicsDevice_DX11 : public GraphicsDevice
 	{
 	private:
 		D3D_DRIVER_TYPE driverType;
@@ -64,6 +64,9 @@ namespace wiGraphics
 		std::atomic<uint8_t> commandlist_count{ 0 };
 		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> free_commandlists;
 		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> active_commandlists;
+
+		struct EmptyResourceHandle {}; // only care about control-block
+		std::shared_ptr<EmptyResourceHandle> emptyresource;
 
 	public:
 		GraphicsDevice_DX11(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false);

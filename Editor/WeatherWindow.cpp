@@ -12,10 +12,6 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 {
 	assert(GUI && "Invalid GUI!");
 
-	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
-
-
 	weatherWindow = new wiWindow(GUI, "Weather Window");
 	weatherWindow->SetSize(XMFLOAT2(1000, 820));
 	GUI->AddWidget(weatherWindow);

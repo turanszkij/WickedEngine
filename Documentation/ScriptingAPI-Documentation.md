@@ -160,7 +160,6 @@ Render images on the screen.
 - GetParams() : ImageParams result
 - SetAnim(SpriteAnim anim)
 - GetAnim() : SpriteAnim result
-- Destroy()
 
 #### ImageParams
 Specify Sprite properties, like position, size, etc.

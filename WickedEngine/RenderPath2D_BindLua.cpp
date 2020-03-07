@@ -33,21 +33,6 @@ Luna<RenderPath2D_BindLua>::PropertyType RenderPath2D_BindLua::properties[] = {
 	{ NULL, NULL }
 };
 
-RenderPath2D_BindLua::RenderPath2D_BindLua(RenderPath2D* component)
-{
-	this->component = component;
-}
-
-RenderPath2D_BindLua::RenderPath2D_BindLua(lua_State *L)
-{
-	component = new RenderPath2D();
-}
-
-
-RenderPath2D_BindLua::~RenderPath2D_BindLua()
-{
-}
-
 int RenderPath2D_BindLua::AddSprite(lua_State *L)
 {
 	if (component == nullptr)
@@ -65,9 +50,9 @@ int RenderPath2D_BindLua::AddSprite(lua_State *L)
 			if (ccomp != nullptr)
 			{
 				if(argc>1)
-					ccomp->addSprite(sprite->sprite, wiLua::SGetString(L,2));
+					ccomp->AddSprite(&sprite->sprite, wiLua::SGetString(L,2));
 				else
-					ccomp->addSprite(sprite->sprite);
+					ccomp->AddSprite(&sprite->sprite);
 			}
 			else
 			{
@@ -100,9 +85,9 @@ int RenderPath2D_BindLua::AddFont(lua_State* L)
 			if (ccomp != nullptr)
 			{
 				if (argc > 1)
-					ccomp->addFont(font->font, wiLua::SGetString(L, 2));
+					ccomp->AddFont(&font->font, wiLua::SGetString(L, 2));
 				else
-					ccomp->addFont(font->font);
+					ccomp->AddFont(&font->font);
 			}
 			else
 			{
@@ -134,7 +119,7 @@ int RenderPath2D_BindLua::RemoveSprite(lua_State *L)
 			RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
 			if (ccomp != nullptr)
 			{
-				ccomp->removeSprite(sprite->sprite);
+				ccomp->RemoveSprite(&sprite->sprite);
 			}
 			else
 			{
@@ -166,7 +151,7 @@ int RenderPath2D_BindLua::RemoveFont(lua_State* L)
 			RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
 			if (ccomp != nullptr)
 			{
-				ccomp->removeFont(font->font);
+				ccomp->RemoveFont(&font->font);
 			}
 			else
 			{
@@ -192,7 +177,7 @@ int RenderPath2D_BindLua::ClearSprites(lua_State *L)
 	RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
 	if (ccomp != nullptr)
 	{
-		ccomp->clearSprites();
+		ccomp->ClearSprites();
 	}
 	else
 	{
@@ -210,7 +195,7 @@ int RenderPath2D_BindLua::ClearFonts(lua_State* L)
 	RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
 	if (ccomp != nullptr)
 	{
-		ccomp->clearFonts();
+		ccomp->ClearFonts();
 	}
 	else
 	{
@@ -234,7 +219,7 @@ int RenderPath2D_BindLua::GetSpriteOrder(lua_State* L)
 			RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
 			if (ccomp != nullptr)
 			{
-				wiLua::SSetInt(L, ccomp->getSpriteOrder(sprite->sprite));
+				wiLua::SSetInt(L, ccomp->GetSpriteOrder(&sprite->sprite));
 				return 1;
 			}
 			else
@@ -267,7 +252,7 @@ int RenderPath2D_BindLua::GetFontOrder(lua_State* L)
 			RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
 			if (ccomp != nullptr)
 			{
-				wiLua::SSetInt(L, ccomp->getFontOrder(font->font));
+				wiLua::SSetInt(L, ccomp->GetFontOrder(&font->font));
 				return 1;
 			}
 			else
@@ -298,7 +283,7 @@ int RenderPath2D_BindLua::AddLayer(lua_State* L)
 		RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
 		if (ccomp != nullptr)
 		{
-			ccomp->addLayer(wiLua::SGetString(L, 1));
+			ccomp->AddLayer(wiLua::SGetString(L, 1));
 		}
 		else
 		{
@@ -350,7 +335,7 @@ int RenderPath2D_BindLua::SetLayerOrder(lua_State* L)
 		RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
 		if (ccomp != nullptr)
 		{
-			ccomp->setLayerOrder(wiLua::SGetString(L, 1),wiLua::SGetInt(L,2));
+			ccomp->SetLayerOrder(wiLua::SGetString(L, 1),wiLua::SGetInt(L,2));
 		}
 		else
 		{
@@ -379,7 +364,7 @@ int RenderPath2D_BindLua::SetSpriteOrder(lua_State* L)
 			wiSprite_BindLua* sprite = Luna<wiSprite_BindLua>::lightcheck(L, 1);
 			if (sprite != nullptr)
 			{
-				ccomp->SetSpriteOrder(sprite->sprite, wiLua::SGetInt(L, 2));
+				ccomp->SetSpriteOrder(&sprite->sprite, wiLua::SGetInt(L, 2));
 			}
 			else
 			{
@@ -413,7 +398,7 @@ int RenderPath2D_BindLua::SetFontOrder(lua_State* L)
 			wiFont_BindLua* font = Luna<wiFont_BindLua>::lightcheck(L, 1);
 			if (font != nullptr)
 			{
-				ccomp->SetFontOrder(font->font, wiLua::SGetInt(L, 2));
+				ccomp->SetFontOrder(&font->font, wiLua::SGetInt(L, 2));
 			}
 			else
 			{

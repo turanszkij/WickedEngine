@@ -11,9 +11,16 @@ public:
 	static Luna<RenderPath3D_Forward_BindLua>::FunctionType methods[];
 	static Luna<RenderPath3D_Forward_BindLua>::PropertyType properties[];
 
-	RenderPath3D_Forward_BindLua(RenderPath3D_Forward* component = nullptr);
-	RenderPath3D_Forward_BindLua(lua_State *L);
-	~RenderPath3D_Forward_BindLua();
+	RenderPath3D_Forward_BindLua() = default;
+	RenderPath3D_Forward_BindLua(RenderPath3D_Forward* component)
+	{
+		this->component = component;
+	}
+	RenderPath3D_Forward_BindLua(lua_State* L)
+	{
+		component = new RenderPath3D_Forward;
+		owning = true;
+	}
 
 	static void Bind();
 };

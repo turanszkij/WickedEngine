@@ -198,7 +198,7 @@ Before a RenderPath is destroyed, Unload will be called, so deleting resources c
 
 ### RenderPath2D
 [[Header]](../WickedEngine/RenderPath2D.h) [[Cpp]](../WickedEngine/RenderPath2D.cpp)
-Capable of handling 2D rendering to offscreen buffer in Render() function, or just the screen in Compose() function. It has some functionality to render wiSprite and wiFont onto rendering layers and stenciling with 3D rendered scene.
+Capable of handling 2D rendering to offscreen buffer in Render() function, or just the screen in Compose() function. It has some functionality to render wiSprite and wiFont onto rendering layers and stenciling with 3D rendered scene. It has a [GUI](#gui) that is automatically updated and rendered if any elements have been added to it.
 
 ### RenderPath3D
 [[Header]](../WickedEngine/RenderPath3D.h) [[Cpp]](../WickedEngine/RenderPath3D.cpp)
@@ -798,7 +798,10 @@ The custom GUI, implemented with engine features
 
 ### wiGUI
 [[Header]](../WickedEngine/wiGUI.h) [[Cpp]](../WickedEngine/wiGUI.cpp)
-The wiGUI is responsible to run a GUI interface and manage widgets
+The wiGUI is responsible to run a GUI interface and manage widgets. 
+
+<b>GUI Scaling:</b> The wiGUI is created with a default size of (1920*1080), so by default, placing elements (widgets) onto the GUI will be relative to this resolution. This can be freely modified by calling the `wiGUI::SetSize()` function.
+When the GUI is updated (usually done by [RenderPath2D](#renderpath2d) automatically), the GUI size will take the current screen size, and scale the contents accordingly. When the application window is resized, the GUI scaling will take effect automatically. When adding widgets to the GUI, they are always placed relative to the current GUI size, which could be different from the starting GUI size, if the GUI was updated and the application resolution is different from the default GUI size.
 
 ### wiEventArgs
 [[Header]](../WickedEngine/wiWidget.h) [[Cpp]](../WickedEngine/wiWidget.cpp)

@@ -9,10 +9,6 @@ HairParticleWindow::HairParticleWindow(wiGUI* gui) : GUI(gui)
 {
 	assert(GUI && "Invalid GUI!");
 
-
-	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
-
 	hairWindow = new wiWindow(GUI, "Hair Particle System Window");
 	hairWindow->SetSize(XMFLOAT2(800, 600));
 	GUI->AddWidget(hairWindow);

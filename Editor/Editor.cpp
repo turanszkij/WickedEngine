@@ -28,7 +28,6 @@ using namespace wiRectPacker;
 using namespace wiScene;
 using namespace wiECS;
 
-
 void Editor::Initialize()
 {
 	__super::Initialize();
@@ -41,18 +40,17 @@ void Editor::Initialize()
 	wiRenderer::GetDevice()->SetVSyncEnabled(true);
 	wiRenderer::SetOcclusionCullingEnabled(true);
 
-	renderComponent = new EditorComponent;
+	renderComponent = std::make_unique<EditorComponent>();
 	renderComponent->Initialize();
-	loader = new EditorLoadingScreen;
+	loader = std::make_unique<EditorLoadingScreen>();
 	loader->Initialize();
 	loader->Load();
 
-	renderComponent->loader = loader;
 	renderComponent->main = this;
 
-	loader->addLoadingComponent(renderComponent, this, 0.2f);
+	loader->addLoadingComponent(renderComponent.get(), this, 0.2f);
 
-	ActivatePath(loader, 0.2f);
+	ActivatePath(loader.get(), 0.2f);
 
 }
 
@@ -60,7 +58,7 @@ void EditorLoadingScreen::Load()
 {
 	font = wiFont("Loading...", wiFontParams((int)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f), (int)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f), 36,
 		WIFALIGN_CENTER, WIFALIGN_CENTER));
-	addFont(&font);
+	AddFont(&font);
 
 	sprite = wiSprite("../images/logo_small.png");
 	sprite.anim.opa = 1;
@@ -70,7 +68,7 @@ void EditorLoadingScreen::Load()
 	sprite.params.pivot = XMFLOAT2(0.5f, 1.0f);
 	sprite.params.quality = QUALITY_LINEAR;
 	sprite.params.blendFlag = BLENDMODE_ALPHA;
-	addSprite(&sprite);
+	AddSprite(&sprite);
 
 	__super::Load();
 }
@@ -90,24 +88,22 @@ void EditorLoadingScreen::Unload()
 
 void EditorComponent::ChangeRenderPath(RENDERPATH path)
 {
-	SAFE_DELETE(renderPath);
-
 	switch (path)
 	{
 	case EditorComponent::RENDERPATH_FORWARD:
-		renderPath = new RenderPath3D_Forward;
+		renderPath = std::make_unique<RenderPath3D_Forward>();
 		break;
 	case EditorComponent::RENDERPATH_DEFERRED:
-		renderPath = new RenderPath3D_Deferred;
+		renderPath = std::make_unique<RenderPath3D_Deferred>();
 		break;
 	case EditorComponent::RENDERPATH_TILEDFORWARD:
-		renderPath = new RenderPath3D_TiledForward;
+		renderPath = std::make_unique<RenderPath3D_TiledForward>();
 		break;
 	case EditorComponent::RENDERPATH_TILEDDEFERRED:
-		renderPath = new RenderPath3D_TiledDeferred;
+		renderPath = std::make_unique<RenderPath3D_TiledDeferred>();
 		break;
 	case EditorComponent::RENDERPATH_PATHTRACING:
-		renderPath = new RenderPath3D_PathTracing;
+		renderPath = std::make_unique<RenderPath3D_PathTracing>();
 		break;
 	default:
 		assert(0);
@@ -130,21 +126,21 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	renderPath->Load();
 	renderPath->Update(0);
 
-	materialWnd.reset(new MaterialWindow(&GetGUI()));
-	postprocessWnd.reset(new PostprocessWindow(&GetGUI(), renderPath));
-	weatherWnd.reset(new WeatherWindow(&GetGUI()));
-	objectWnd.reset(new ObjectWindow(this));
-	meshWnd.reset(new MeshWindow(&GetGUI()));
-	cameraWnd.reset(new CameraWindow(&GetGUI()));
-	rendererWnd.reset(new RendererWindow(&GetGUI(), this, renderPath));
-	envProbeWnd.reset(new EnvProbeWindow(&GetGUI()));
-	soundWnd.reset(new SoundWindow(&GetGUI()));
-	decalWnd.reset(new DecalWindow(&GetGUI()));
-	lightWnd.reset(new LightWindow(&GetGUI()));
-	animWnd.reset(new AnimationWindow(&GetGUI()));
-	emitterWnd.reset(new EmitterWindow(&GetGUI()));
-	hairWnd.reset(new HairParticleWindow(&GetGUI()));
-	forceFieldWnd.reset(new ForceFieldWindow(&GetGUI()));
+	materialWnd = std::make_unique<MaterialWindow>(&GetGUI());
+	postprocessWnd = std::make_unique<PostprocessWindow>(&GetGUI(), renderPath.get());
+	weatherWnd = std::make_unique<WeatherWindow>(&GetGUI());
+	objectWnd = std::make_unique<ObjectWindow>(this);
+	meshWnd = std::make_unique<MeshWindow>(&GetGUI());
+	cameraWnd = std::make_unique<CameraWindow>(&GetGUI());
+	rendererWnd = std::make_unique<RendererWindow>(&GetGUI(), this, renderPath.get());
+	envProbeWnd = std::make_unique<EnvProbeWindow>(&GetGUI());
+	soundWnd = std::make_unique<SoundWindow>(&GetGUI());
+	decalWnd = std::make_unique<DecalWindow>(&GetGUI());
+	lightWnd = std::make_unique<LightWindow>(&GetGUI());
+	animWnd = std::make_unique<AnimationWindow>(&GetGUI());
+	emitterWnd = std::make_unique<EmitterWindow>(&GetGUI());
+	hairWnd = std::make_unique<HairParticleWindow>(&GetGUI());
+	forceFieldWnd = std::make_unique<ForceFieldWindow>(&GetGUI());
 
 	ResizeBuffers();
 }
@@ -220,6 +216,7 @@ void EditorComponent::Load()
 
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
+	GetGUI().SetSize(screenW, screenH);
 
 	XMFLOAT2 option_size = XMFLOAT2(100, 28);
 	float step = (option_size.y + 5) * -1, x = screenW - option_size.x, y = screenH - option_size.y;
@@ -483,7 +480,7 @@ void EditorComponent::Load()
 			{
 				string fileName = result.filenames.front();
 
-				loader->addLoadingFunction([=] {
+				main->loader->addLoadingFunction([=] {
 					string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(fileName));
 
 					if (!extension.compare("WISCENE")) // engine-serialized
@@ -509,11 +506,11 @@ void EditorComponent::Load()
 						wiScene::GetScene().Merge(scene);
 					}
 				});
-				loader->onFinished([=] {
+				main->loader->onFinished([=] {
 					main->ActivatePath(this, 0.2f, wiColor::Black());
 					weatherWnd->Update();
 				});
-				main->ActivatePath(loader, 0.2f, wiColor::Black());
+				main->ActivatePath(main->loader.get(), 0.2f, wiColor::Black());
 				ResetHistory();
 			}
 		}).detach();
@@ -644,7 +641,7 @@ void EditorComponent::Load()
 	exitButton->SetSize(XMFLOAT2(50, 40));
 	exitButton->SetColor(wiColor(190, 0, 0, 200), wiWidget::WIDGETSTATE::IDLE);
 	exitButton->SetColor(wiColor(255, 0, 0, 255), wiWidget::WIDGETSTATE::FOCUS);
-	exitButton->OnClick([](wiEventArgs args) {
+	exitButton->OnClick([this](wiEventArgs args) {
 		exit(0);
 	});
 	GetGUI().AddWidget(exitButton);
@@ -1300,19 +1297,19 @@ void EditorComponent::Update(float dt)
 		if (wiInput::Press(wiInput::MOUSE_BUTTON_RIGHT) || selectAll)
 		{
 
-			wiArchive* archive = AdvanceHistory();
-			*archive << HISTORYOP_SELECTION;
+			wiArchive& archive = AdvanceHistory();
+			archive << HISTORYOP_SELECTION;
 			// record PREVIOUS selection state...
-			*archive << selected.size();
+			archive << selected.size();
 			for (auto& x : selected)
 			{
-				*archive << x.entity;
-				*archive << x.position;
-				*archive << x.normal;
-				*archive << x.subsetIndex;
-				*archive << x.distance;
+				archive << x.entity;
+				archive << x.position;
+				archive << x.normal;
+				archive << x.subsetIndex;
+				archive << x.distance;
 			}
-			savedHierarchy.Serialize(*archive);
+			savedHierarchy.Serialize(archive);
 
 			if (selectAll)
 			{
@@ -1371,16 +1368,16 @@ void EditorComponent::Update(float dt)
 			}
 
 			// record NEW selection state...
-			*archive << selected.size();
+			archive << selected.size();
 			for (auto& x : selected)
 			{
-				*archive << x.entity;
-				*archive << x.position;
-				*archive << x.normal;
-				*archive << x.subsetIndex;
-				*archive << x.distance;
+				archive << x.entity;
+				archive << x.position;
+				archive << x.normal;
+				archive << x.subsetIndex;
+				archive << x.distance;
 			}
-			savedHierarchy.Serialize(*archive);
+			savedHierarchy.Serialize(archive);
 		}
 
 		// Control operations...
@@ -1397,12 +1394,11 @@ void EditorComponent::Update(float dt)
 				auto prevSel = selected;
 				EndTranslate();
 
-				SAFE_DELETE(clipboard);
-				clipboard = new wiArchive();
-				*clipboard << prevSel.size();
+				clipboard = wiArchive();
+				clipboard << prevSel.size();
 				for (auto& x : prevSel)
 				{
-					scene.Entity_Serialize(*clipboard, x.entity, 0);
+					scene.Entity_Serialize(clipboard, x.entity, 0);
 					AddSelected(x);
 				}
 
@@ -1414,13 +1410,13 @@ void EditorComponent::Update(float dt)
 				auto prevSel = selected;
 				EndTranslate();
 
-				clipboard->SetReadModeAndResetPos(true);
+				clipboard.SetReadModeAndResetPos(true);
 				size_t count;
-				*clipboard >> count;
+				clipboard >> count;
 				for (size_t i = 0; i < count; ++i)
 				{
 					wiScene::PickResult picked;
-					picked.entity = scene.Entity_Serialize(*clipboard, INVALID_ENTITY, wiRandom::getRandom(1, INT_MAX), false);
+					picked.entity = scene.Entity_Serialize(clipboard, INVALID_ENTITY, wiRandom::getRandom(1, INT_MAX), false);
 					AddSelected(picked);
 				}
 
@@ -1440,16 +1436,16 @@ void EditorComponent::Update(float dt)
 				BeginTranslate();
 			}
 			// Put Instances
-			if (clipboard != nullptr && hovered.subsetIndex >= 0 && wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT) && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
+			if (clipboard.IsOpen() && hovered.subsetIndex >= 0 && wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT) && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
 			{
 				XMMATRIX M = XMLoadFloat4x4(&hovered.orientation);
 
-				clipboard->SetReadModeAndResetPos(true);
+				clipboard.SetReadModeAndResetPos(true);
 				size_t count;
-				*clipboard >> count;
+				clipboard >> count;
 				for (size_t i = 0; i < count; ++i)
 				{
-					Entity entity = scene.Entity_Serialize(*clipboard, INVALID_ENTITY, wiRandom::getRandom(1, INT_MAX), false);
+					Entity entity = scene.Entity_Serialize(clipboard, INVALID_ENTITY, wiRandom::getRandom(1, INT_MAX), false);
 					TransformComponent* transform = scene.transforms.GetComponent(entity);
 					if (transform != nullptr)
 					{
@@ -1477,17 +1473,17 @@ void EditorComponent::Update(float dt)
 	if (wiInput::Press(wiInput::KEYBOARD_BUTTON_DELETE))
 	{
 
-		wiArchive* archive = AdvanceHistory();
-		*archive << HISTORYOP_DELETE;
+		wiArchive& archive = AdvanceHistory();
+		archive << HISTORYOP_DELETE;
 
-		*archive << selected.size();
+		archive << selected.size();
 		for (auto& x : selected)
 		{
-			*archive << x.entity;
+			archive << x.entity;
 		}
 		for (auto& x : selected)
 		{
-			scene.Entity_Serialize(*archive, x.entity);
+			scene.Entity_Serialize(archive, x.entity);
 		}
 		for (auto& x : selected)
 		{
@@ -1593,10 +1589,10 @@ void EditorComponent::Update(float dt)
 
 	if (translator.IsDragEnded())
 	{
-		wiArchive* archive = AdvanceHistory();
-		*archive << HISTORYOP_TRANSLATOR;
-		*archive << translator.GetDragStart();
-		*archive << translator.GetDragEnd();
+		wiArchive& archive = AdvanceHistory();
+		archive << HISTORYOP_TRANSLATOR;
+		archive << translator.GetDragStart();
+		archive << translator.GetDragEnd();
 	}
 
 	emitterWnd->UpdateData();
@@ -2271,28 +2267,21 @@ bool EditorComponent::IsSelected(Entity entity) const
 void EditorComponent::ResetHistory()
 {
 	historyPos = -1;
-
-	for(auto& x : history)
-	{
-		SAFE_DELETE(x);
-	}
 	history.clear();
 }
-wiArchive* EditorComponent::AdvanceHistory()
+wiArchive& EditorComponent::AdvanceHistory()
 {
 	historyPos++;
 
 	while (static_cast<int>(history.size()) > historyPos)
 	{
-		SAFE_DELETE(history.back());
 		history.pop_back();
 	}
 
-	wiArchive* archive = new wiArchive;
-	archive->SetReadModeAndResetPos(false);
-	history.push_back(archive);
+	history.emplace_back();
+	history.back().SetReadModeAndResetPos(false);
 
-	return archive;
+	return history.back();
 }
 void EditorComponent::ConsumeHistoryOperation(bool undo)
 {
@@ -2303,11 +2292,11 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 			historyPos++;
 		}
 
-		wiArchive* archive = history[historyPos];
-		archive->SetReadModeAndResetPos(true);
+		wiArchive& archive = history[historyPos];
+		archive.SetReadModeAndResetPos(true);
 
 		int temp;
-		*archive >> temp;
+		archive >> temp;
 		HistoryOperationType type = (HistoryOperationType)temp;
 
 		switch (type)
@@ -2315,7 +2304,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 		case HISTORYOP_TRANSLATOR:
 			{
 				XMFLOAT4X4 start, end;
-				*archive >> start >> end;
+				archive >> start >> end;
 				translator.enabled = true;
 
 				Scene& scene = wiScene::GetScene();
@@ -2337,18 +2326,18 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 				Scene& scene = wiScene::GetScene();
 
 				size_t count;
-				*archive >> count;
+				archive >> count;
 				vector<Entity> deletedEntities(count);
 				for (size_t i = 0; i < count; ++i)
 				{
-					*archive >> deletedEntities[i];
+					archive >> deletedEntities[i];
 				}
 
 				if (undo)
 				{
 					for (size_t i = 0; i < count; ++i)
 					{
-						scene.Entity_Serialize(*archive);
+						scene.Entity_Serialize(archive);
 					}
 				}
 				else
@@ -2369,37 +2358,37 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 
 				list<wiScene::PickResult> selectedBEFORE;
 				size_t selectionCountBEFORE;
-				*archive >> selectionCountBEFORE;
+				archive >> selectionCountBEFORE;
 				for (size_t i = 0; i < selectionCountBEFORE; ++i)
 				{
 					wiScene::PickResult sel;
-					*archive >> sel.entity;
-					*archive >> sel.position;
-					*archive >> sel.normal;
-					*archive >> sel.subsetIndex;
-					*archive >> sel.distance;
+					archive >> sel.entity;
+					archive >> sel.position;
+					archive >> sel.normal;
+					archive >> sel.subsetIndex;
+					archive >> sel.distance;
 
 					selectedBEFORE.push_back(sel);
 				}
 				ComponentManager<HierarchyComponent> savedHierarchyBEFORE;
-				savedHierarchyBEFORE.Serialize(*archive);
+				savedHierarchyBEFORE.Serialize(archive);
 
 				list<wiScene::PickResult> selectedAFTER;
 				size_t selectionCountAFTER;
-				*archive >> selectionCountAFTER;
+				archive >> selectionCountAFTER;
 				for (size_t i = 0; i < selectionCountAFTER; ++i)
 				{
 					wiScene::PickResult sel;
-					*archive >> sel.entity;
-					*archive >> sel.position;
-					*archive >> sel.normal;
-					*archive >> sel.subsetIndex;
-					*archive >> sel.distance;
+					archive >> sel.entity;
+					archive >> sel.position;
+					archive >> sel.normal;
+					archive >> sel.subsetIndex;
+					archive >> sel.distance;
 
 					selectedAFTER.push_back(sel);
 				}
 				ComponentManager<HierarchyComponent> savedHierarchyAFTER;
-				savedHierarchyAFTER.Serialize(*archive);
+				savedHierarchyAFTER.Serialize(archive);
 
 
 				// Restore proper selection state:

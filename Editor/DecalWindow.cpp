@@ -9,9 +9,6 @@ DecalWindow::DecalWindow(wiGUI* gui) : GUI(gui)
 {
 	assert(GUI && "Invalid GUI!");
 
-	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
-
 	decalWindow = new wiWindow(GUI, "Decal Window");
 	decalWindow->SetSize(XMFLOAT2(400, 300));
 	GUI->AddWidget(decalWindow);

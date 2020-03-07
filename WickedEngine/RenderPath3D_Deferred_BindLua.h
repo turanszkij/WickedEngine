@@ -11,9 +11,16 @@ public:
 	static Luna<RenderPath3D_Deferred_BindLua>::FunctionType methods[];
 	static Luna<RenderPath3D_Deferred_BindLua>::PropertyType properties[];
 
-	RenderPath3D_Deferred_BindLua(RenderPath3D_Deferred* component = nullptr);
-	RenderPath3D_Deferred_BindLua(lua_State *L);
-	~RenderPath3D_Deferred_BindLua();
+	RenderPath3D_Deferred_BindLua() = default;
+	RenderPath3D_Deferred_BindLua(RenderPath3D_Deferred* component)
+	{
+		this->component = component;
+	}
+	RenderPath3D_Deferred_BindLua(lua_State* L)
+	{
+		component = new RenderPath3D_Deferred;
+		owning = true;
+	}
 
 	static void Bind();
 };

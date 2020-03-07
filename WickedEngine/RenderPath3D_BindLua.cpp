@@ -54,20 +54,6 @@ Luna<RenderPath3D_BindLua>::PropertyType RenderPath3D_BindLua::properties[] = {
 	{ NULL, NULL }
 };
 
-RenderPath3D_BindLua::RenderPath3D_BindLua(RenderPath3D* component)
-{
-	this->component = component;
-}
-
-RenderPath3D_BindLua::RenderPath3D_BindLua(lua_State* L)
-{
-	component = nullptr;
-}
-
-RenderPath3D_BindLua::~RenderPath3D_BindLua()
-{
-}
-
 
 int RenderPath3D_BindLua::SetSSAOEnabled(lua_State* L)
 {

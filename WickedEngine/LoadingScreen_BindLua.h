@@ -11,9 +11,15 @@ public:
 	static Luna<LoadingScreen_BindLua>::FunctionType methods[];
 	static Luna<LoadingScreen_BindLua>::PropertyType properties[];
 
-	LoadingScreen_BindLua(LoadingScreen* component = nullptr);
-	LoadingScreen_BindLua(lua_State *L);
-	~LoadingScreen_BindLua();
+	LoadingScreen_BindLua(LoadingScreen* component)
+	{
+		this->component = component;
+	}
+	LoadingScreen_BindLua(lua_State* L)
+	{
+		component = new LoadingScreen;
+		owning = true;
+	}
 
 	int AddLoadingTask(lua_State* L);
 	int OnFinished(lua_State* L);

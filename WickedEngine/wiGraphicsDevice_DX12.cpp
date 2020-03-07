@@ -909,7 +909,7 @@ namespace DX12_Internal
 
 	struct Resource_DX12
 	{
-		std::shared_ptr<GraphicsDevice_DX12> device;
+		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		D3D12MA::Allocation* allocation = nullptr;
 		ComPtr<ID3D12Resource> resource;
 		D3D12_CPU_DESCRIPTOR_HANDLE cbv;
@@ -920,22 +920,22 @@ namespace DX12_Internal
 
 		virtual ~Resource_DX12()
 		{
-			uint64_t framecount = device->GetFrameCount();
-			device->destroylocker.lock();
-			if (allocation) device->destroyer_allocations.push_back(std::make_pair(allocation, framecount));
-			if (resource) device->destroyer_resources.push_back(std::make_pair(resource, framecount));
-			if (cbv.ptr) device->destroyer_resourceviews.push_back(std::make_pair(cbv, framecount));
-			if (srv.ptr) device->destroyer_resourceviews.push_back(std::make_pair(srv, framecount));
-			if (uav.ptr) device->destroyer_resourceviews.push_back(std::make_pair(uav, framecount));
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+			if (allocation) allocationhandler->destroyer_allocations.push_back(std::make_pair(allocation, framecount));
+			if (resource) allocationhandler->destroyer_resources.push_back(std::make_pair(resource, framecount));
+			if (cbv.ptr) allocationhandler->destroyer_resourceviews.push_back(std::make_pair(cbv, framecount));
+			if (srv.ptr) allocationhandler->destroyer_resourceviews.push_back(std::make_pair(srv, framecount));
+			if (uav.ptr) allocationhandler->destroyer_resourceviews.push_back(std::make_pair(uav, framecount));
 			for (auto x : subresources_srv)
 			{
-				device->destroyer_resourceviews.push_back(std::make_pair(x, framecount));
+				allocationhandler->destroyer_resourceviews.push_back(std::make_pair(x, framecount));
 			}
 			for (auto x : subresources_uav)
 			{
-				device->destroyer_resourceviews.push_back(std::make_pair(x, framecount));
+				allocationhandler->destroyer_resourceviews.push_back(std::make_pair(x, framecount));
 			}
-			device->destroylocker.unlock();
+			allocationhandler->destroylocker.unlock();
 		}
 	};
 	struct Texture_DX12 : public Resource_DX12
@@ -947,71 +947,71 @@ namespace DX12_Internal
 
 		~Texture_DX12() override
 		{
-			uint64_t framecount = device->GetFrameCount();
-			device->destroylocker.lock();
-			if (rtv.ptr) device->destroyer_rtvs.push_back(std::make_pair(rtv, framecount));
-			if (dsv.ptr) device->destroyer_dsvs.push_back(std::make_pair(dsv, framecount));
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+			if (rtv.ptr) allocationhandler->destroyer_rtvs.push_back(std::make_pair(rtv, framecount));
+			if (dsv.ptr) allocationhandler->destroyer_dsvs.push_back(std::make_pair(dsv, framecount));
 			for (auto x : subresources_rtv)
 			{
-				device->destroyer_rtvs.push_back(std::make_pair(x, framecount));
+				allocationhandler->destroyer_rtvs.push_back(std::make_pair(x, framecount));
 			}
 			for (auto x : subresources_dsv)
 			{
-				device->destroyer_dsvs.push_back(std::make_pair(x, framecount));
+				allocationhandler->destroyer_dsvs.push_back(std::make_pair(x, framecount));
 			}
-			device->destroylocker.unlock();
+			allocationhandler->destroylocker.unlock();
 		}
 	};
 	struct Sampler_DX12
 	{
-		std::shared_ptr<GraphicsDevice_DX12> device;
+		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		D3D12_CPU_DESCRIPTOR_HANDLE descriptor;
 
 		~Sampler_DX12()
 		{
-			uint64_t framecount = device->GetFrameCount();
-			device->destroylocker.lock();
-			if (descriptor.ptr) device->destroyer_samplers.push_back(std::make_pair(descriptor, framecount));
-			device->destroylocker.unlock();
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+			if (descriptor.ptr) allocationhandler->destroyer_samplers.push_back(std::make_pair(descriptor, framecount));
+			allocationhandler->destroylocker.unlock();
 		}
 	};
 	struct Query_DX12
 	{
-		std::shared_ptr<GraphicsDevice_DX12> device;
+		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		GPU_QUERY_TYPE query_type = GPU_QUERY_TYPE_INVALID;
 		uint32_t query_index = ~0;
 
 		~Query_DX12()
 		{
-			uint64_t framecount = device->GetFrameCount();
 			if (query_index != ~0) 
 			{
-				device->destroylocker.lock();
+				allocationhandler->destroylocker.lock();
+				uint64_t framecount = allocationhandler->framecount;
 				switch (query_type)
 				{
 				case wiGraphics::GPU_QUERY_TYPE_OCCLUSION:
 				case wiGraphics::GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-					device->destroyer_queries_occlusion.push_back(std::make_pair(query_index, framecount));
+					allocationhandler->destroyer_queries_occlusion.push_back(std::make_pair(query_index, framecount));
 					break;
 				case wiGraphics::GPU_QUERY_TYPE_TIMESTAMP:
-					device->destroyer_queries_timestamp.push_back(std::make_pair(query_index, framecount));
+					allocationhandler->destroyer_queries_timestamp.push_back(std::make_pair(query_index, framecount));
 					break;
 				}
-				device->destroylocker.unlock();
+				allocationhandler->destroylocker.unlock();
 			}
 		}
 	};
 	struct PipelineState_DX12
 	{
-		std::shared_ptr<GraphicsDevice_DX12> device;
+		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		ComPtr<ID3D12PipelineState> resource;
 
 		~PipelineState_DX12()
 		{
-			uint64_t framecount = device->GetFrameCount();
-			device->destroylocker.lock();
-			if (resource) device->destroyer_pipelines.push_back(std::make_pair(resource, framecount));
-			device->destroylocker.unlock();
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+			if (resource) allocationhandler->destroyer_pipelines.push_back(std::make_pair(resource, framecount));
+			allocationhandler->destroylocker.unlock();
 		}
 	};
 
@@ -1416,10 +1416,10 @@ using namespace DX12_Internal;
 	}
 
 
-	void GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::init(std::shared_ptr<GraphicsDevice_DX12> device, size_t size)
+	void GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::init(GraphicsDevice_DX12* device, size_t size)
 	{
 		auto internal_state = std::make_shared<Resource_DX12>();
-		internal_state->device = device;
+		internal_state->allocationhandler = device->allocationhandler;
 		buffer.internal_state = internal_state;
 
 		HRESULT hr;
@@ -1427,7 +1427,7 @@ using namespace DX12_Internal;
 		D3D12MA::ALLOCATION_DESC allocationDesc = {};
 		allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
 
-		hr = device->allocator->CreateResource(
+		hr = device->allocationhandler->allocator->CreateResource(
 			&allocationDesc,
 			&CD3DX12_RESOURCE_DESC::Buffer(size),
 			D3D12_RESOURCE_STATE_GENERIC_READ,
@@ -1485,7 +1485,7 @@ using namespace DX12_Internal;
 		D3D12MA::ALLOCATION_DESC allocationDesc = {};
 		allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
 
-		hr = device->allocator->CreateResource(
+		hr = device->allocationhandler->allocator->CreateResource(
 			&allocationDesc,
 			&CD3DX12_RESOURCE_DESC::Buffer(size),
 			D3D12_RESOURCE_STATE_GENERIC_READ,
@@ -1581,7 +1581,10 @@ using namespace DX12_Internal;
 		D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
 		allocatorDesc.pDevice = device.Get();
 
-		hr = D3D12MA::CreateAllocator(&allocatorDesc, &allocator);
+		allocationhandler = std::make_shared<AllocationHandler>();
+		allocationhandler->device = device;
+
+		hr = D3D12MA::CreateAllocator(&allocatorDesc, &allocationhandler->allocator);
 		assert(SUCCEEDED(hr));
 
 		// Create command queue
@@ -1651,10 +1654,10 @@ using namespace DX12_Internal;
 
 
 		// Create common descriptor heaps
-		RTAllocator.init(device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1024);
-		DSAllocator.init(device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1024);
-		ResourceAllocator.init(device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 16384);
-		SamplerAllocator.init(device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 64);
+		allocationhandler->RTAllocator.init(device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1024);
+		allocationhandler->DSAllocator.init(device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1024);
+		allocationhandler->ResourceAllocator.init(device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 16384);
+		allocationhandler->SamplerAllocator.init(device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 64);
 
 		resource_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		sampler_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
@@ -1728,7 +1731,7 @@ using namespace DX12_Internal;
 		{
 			hr = swapChain->GetBuffer(fr, IID_PPV_ARGS(&frames[fr].backBuffer));
 			assert(SUCCEEDED(hr));
-			frames[fr].backBufferRTV = RTAllocator.allocate();
+			frames[fr].backBufferRTV = allocationhandler->RTAllocator.allocate();
 			device->CreateRenderTargetView(frames[fr].backBuffer.Get(), nullptr, frames[fr].backBufferRTV);
 		}
 
@@ -1983,7 +1986,7 @@ using namespace DX12_Internal;
 
 			for (uint32_t i = 0; i < timestamp_query_count; ++i)
 			{
-				free_timestampqueries.push_back(i);
+				allocationhandler->free_timestampqueries.push_back(i);
 			}
 			queryheapdesc.Count = timestamp_query_count;
 			queryheapdesc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
@@ -1992,7 +1995,7 @@ using namespace DX12_Internal;
 
 			for (uint32_t i = 0; i < occlusion_query_count; ++i)
 			{
-				free_occlusionqueries.push_back(i);
+				allocationhandler->free_occlusionqueries.push_back(i);
 			}
 			queryheapdesc.Count = occlusion_query_count;
 			queryheapdesc.Type = D3D12_QUERY_HEAP_TYPE_OCCLUSION;
@@ -2003,7 +2006,7 @@ using namespace DX12_Internal;
 			D3D12MA::ALLOCATION_DESC allocationDesc = {};
 			allocationDesc.HeapType = D3D12_HEAP_TYPE_READBACK;
 
-			hr = allocator->CreateResource(
+			hr = allocationhandler->allocator->CreateResource(
 				&allocationDesc,
 				&CD3DX12_RESOURCE_DESC::Buffer(timestamp_query_count * sizeof(uint64_t)),
 				D3D12_RESOURCE_STATE_COPY_DEST,
@@ -2013,7 +2016,7 @@ using namespace DX12_Internal;
 			);
 			assert(SUCCEEDED(hr));
 
-			hr = allocator->CreateResource(
+			hr = allocationhandler->allocator->CreateResource(
 				&allocationDesc,
 				&CD3DX12_RESOURCE_DESC::Buffer(occlusion_query_count * sizeof(uint64_t)),
 				D3D12_RESOURCE_STATE_COPY_DEST,
@@ -2035,7 +2038,6 @@ using namespace DX12_Internal;
 
 		allocation_querypool_timestamp_readback->Release();
 		allocation_querypool_occlusion_readback->Release();
-		allocator->Release();
 	}
 
 	void GraphicsDevice_DX12::SetResolution(int width, int height)
@@ -2069,7 +2071,7 @@ using namespace DX12_Internal;
 	Texture GraphicsDevice_DX12::GetBackBuffer()
 	{
 		auto internal_state = std::make_shared<Texture_DX12>();
-		internal_state->device = shared_from_this();
+		internal_state->allocationhandler = allocationhandler;
 		internal_state->resource = GetFrameResources().backBuffer;
 		internal_state->rtv = GetFrameResources().backBufferRTV;
 
@@ -2082,7 +2084,7 @@ using namespace DX12_Internal;
 	bool GraphicsDevice_DX12::CreateBuffer(const GPUBufferDesc* pDesc, const SubresourceData* pInitialData, GPUBuffer* pBuffer)
 	{
 		auto internal_state = std::make_shared<Resource_DX12>();
-		internal_state->device = shared_from_this();
+		internal_state->allocationhandler = allocationhandler;
 		pBuffer->internal_state = internal_state;
 		pBuffer->type = GPUResource::GPU_RESOURCE_TYPE::BUFFER;
 
@@ -2119,7 +2121,7 @@ using namespace DX12_Internal;
 		D3D12MA::ALLOCATION_DESC allocationDesc = {};
 		allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
-		hr = allocator->CreateResource(
+		hr = allocationhandler->allocator->CreateResource(
 			&allocationDesc,
 			&desc,
 			resourceState,
@@ -2151,7 +2153,7 @@ using namespace DX12_Internal;
 			cbv_desc.SizeInBytes = (uint32_t)alignedSize;
 			cbv_desc.BufferLocation = internal_state->resource->GetGPUVirtualAddress();
 
-			internal_state->cbv = ResourceAllocator.allocate();
+			internal_state->cbv = allocationhandler->ResourceAllocator.allocate();
 			device->CreateConstantBufferView(&cbv_desc, internal_state->cbv);
 		}
 
@@ -2191,7 +2193,7 @@ using namespace DX12_Internal;
 				srv_desc.Buffer.NumElements = pDesc->ByteWidth / pDesc->StructureByteStride;
 			}
 
-			internal_state->srv = ResourceAllocator.allocate();
+			internal_state->srv = allocationhandler->ResourceAllocator.allocate();
 			device->CreateShaderResourceView(internal_state->resource.Get(), &srv_desc, internal_state->srv);
 		}
 
@@ -2228,7 +2230,7 @@ using namespace DX12_Internal;
 				uav_desc.Buffer.NumElements = pDesc->ByteWidth / pDesc->StructureByteStride;
 			}
 
-			internal_state->uav = ResourceAllocator.allocate();
+			internal_state->uav = allocationhandler->ResourceAllocator.allocate();
 			device->CreateUnorderedAccessView(internal_state->resource.Get(), nullptr, &uav_desc, internal_state->uav);
 		}
 
@@ -2237,7 +2239,7 @@ using namespace DX12_Internal;
 	bool GraphicsDevice_DX12::CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture)
 	{
 		auto internal_state = std::make_shared<Texture_DX12>();
-		internal_state->device = shared_from_this();
+		internal_state->allocationhandler = allocationhandler;
 		pTexture->internal_state = internal_state;
 		pTexture->type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
 
@@ -2333,7 +2335,7 @@ using namespace DX12_Internal;
 			break;
 		}
 
-		hr = allocator->CreateResource(
+		hr = allocationhandler->allocator->CreateResource(
 			&allocationDesc,
 			&desc,
 			resourceState,
@@ -2398,7 +2400,7 @@ using namespace DX12_Internal;
 	}
 	bool GraphicsDevice_DX12::CreateInputLayout(const InputLayoutDesc* pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout* pInputLayout)
 	{
-		pInputLayout->internal_state = shared_from_this();
+		pInputLayout->internal_state = allocationhandler;
 
 		pInputLayout->desc.clear();
 		pInputLayout->desc.reserve((size_t)NumElements);
@@ -2411,7 +2413,7 @@ using namespace DX12_Internal;
 	}
 	bool GraphicsDevice_DX12::CreateShader(SHADERSTAGE stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader)
 	{
-		pShader->internal_state = shared_from_this();
+		pShader->internal_state = allocationhandler;
 
 		pShader->code.resize(BytecodeLength);
 		std::memcpy(pShader->code.data(), pShaderBytecode, BytecodeLength);
@@ -2424,7 +2426,7 @@ using namespace DX12_Internal;
 		if (stage == CS)
 		{
 			auto internal_state = std::make_shared<PipelineState_DX12>();
-			internal_state->device = shared_from_this();
+			internal_state->allocationhandler = allocationhandler;
 			pShader->internal_state = internal_state;
 
 			D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {};
@@ -2440,21 +2442,21 @@ using namespace DX12_Internal;
 	}
 	bool GraphicsDevice_DX12::CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState)
 	{
-		pBlendState->internal_state = shared_from_this();
+		pBlendState->internal_state = allocationhandler;
 
 		pBlendState->desc = *pBlendStateDesc;
 		return S_OK;
 	}
 	bool GraphicsDevice_DX12::CreateDepthStencilState(const DepthStencilStateDesc* pDepthStencilStateDesc, DepthStencilState* pDepthStencilState)
 	{
-		pDepthStencilState->internal_state = shared_from_this();
+		pDepthStencilState->internal_state = allocationhandler;
 
 		pDepthStencilState->desc = *pDepthStencilStateDesc;
 		return S_OK;
 	}
 	bool GraphicsDevice_DX12::CreateRasterizerState(const RasterizerStateDesc* pRasterizerStateDesc, RasterizerState* pRasterizerState)
 	{
-		pRasterizerState->internal_state = shared_from_this();
+		pRasterizerState->internal_state = allocationhandler;
 
 		pRasterizerState->desc = *pRasterizerStateDesc;
 		return S_OK;
@@ -2462,7 +2464,7 @@ using namespace DX12_Internal;
 	bool GraphicsDevice_DX12::CreateSampler(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState)
 	{
 		auto internal_state = std::make_shared<Sampler_DX12>();
-		internal_state->device = shared_from_this();
+		internal_state->allocationhandler = allocationhandler;
 		pSamplerState->internal_state = internal_state;
 
 		D3D12_SAMPLER_DESC desc;
@@ -2482,7 +2484,7 @@ using namespace DX12_Internal;
 
 		pSamplerState->desc = *pSamplerDesc;
 
-		internal_state->descriptor = SamplerAllocator.allocate();
+		internal_state->descriptor = allocationhandler->SamplerAllocator.allocate();
 		device->CreateSampler(&desc, internal_state->descriptor);
 
 		return S_OK;
@@ -2490,7 +2492,7 @@ using namespace DX12_Internal;
 	bool GraphicsDevice_DX12::CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery)
 	{
 		auto internal_state = std::make_shared<Query_DX12>();
-		internal_state->device = shared_from_this();
+		internal_state->allocationhandler = allocationhandler;
 		pQuery->internal_state = internal_state;
 
 		HRESULT hr = E_FAIL;
@@ -2501,7 +2503,7 @@ using namespace DX12_Internal;
 		switch (pDesc->Type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			if (free_timestampqueries.pop_front(internal_state->query_index))
+			if (allocationhandler->free_timestampqueries.pop_front(internal_state->query_index))
 			{
 				hr = S_OK;
 			}
@@ -2516,7 +2518,7 @@ using namespace DX12_Internal;
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-			if (free_occlusionqueries.pop_front(internal_state->query_index))
+			if (allocationhandler->free_occlusionqueries.pop_front(internal_state->query_index))
 			{
 				hr = S_OK;
 			}
@@ -2534,8 +2536,7 @@ using namespace DX12_Internal;
 	}
 	bool GraphicsDevice_DX12::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
 	{
-		auto internal_state = shared_from_this();
-		pso->internal_state = internal_state;
+		pso->internal_state = allocationhandler;
 
 		pso->desc = *pDesc;
 
@@ -2556,7 +2557,7 @@ using namespace DX12_Internal;
 	}
 	bool GraphicsDevice_DX12::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
 	{
-		renderpass->internal_state = shared_from_this();
+		renderpass->internal_state = allocationhandler;
 
 		renderpass->desc = *pDesc;
 
@@ -2679,7 +2680,7 @@ using namespace DX12_Internal;
 				srv_desc.Texture3D.MipLevels = mipCount;
 			}
 
-			D3D12_CPU_DESCRIPTOR_HANDLE srv = ResourceAllocator.allocate();
+			D3D12_CPU_DESCRIPTOR_HANDLE srv = allocationhandler->ResourceAllocator.allocate();
 			device->CreateShaderResourceView(internal_state->resource.Get(), &srv_desc, srv);
 
 			if (internal_state->srv.ptr == NULL)
@@ -2753,7 +2754,7 @@ using namespace DX12_Internal;
 				uav_desc.Texture3D.WSize = -1;
 			}
 
-			D3D12_CPU_DESCRIPTOR_HANDLE uav = ResourceAllocator.allocate();
+			D3D12_CPU_DESCRIPTOR_HANDLE uav = allocationhandler->ResourceAllocator.allocate();
 			device->CreateUnorderedAccessView(internal_state->resource.Get(), nullptr, &uav_desc, uav);
 
 			if (internal_state->uav.ptr == NULL)
@@ -2843,7 +2844,7 @@ using namespace DX12_Internal;
 				rtv_desc.Texture3D.WSize = -1;
 			}
 
-			D3D12_CPU_DESCRIPTOR_HANDLE rtv = RTAllocator.allocate();
+			D3D12_CPU_DESCRIPTOR_HANDLE rtv = allocationhandler->RTAllocator.allocate();
 			device->CreateRenderTargetView(internal_state->resource.Get(), &rtv_desc, rtv);
 
 			if (internal_state->rtv.ptr == NULL)
@@ -2926,7 +2927,7 @@ using namespace DX12_Internal;
 				}
 			}
 
-			D3D12_CPU_DESCRIPTOR_HANDLE dsv = DSAllocator.allocate();
+			D3D12_CPU_DESCRIPTOR_HANDLE dsv = allocationhandler->DSAllocator.allocate();
 			device->CreateDepthStencilView(internal_state->resource.Get(), &dsv_desc, dsv);
 
 			if (internal_state->dsv.ptr == NULL)
@@ -3064,9 +3065,9 @@ using namespace DX12_Internal;
 					}
 					else
 					{
-						destroylocker.lock();
-						destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
-						destroylocker.unlock();
+						allocationhandler->destroylocker.lock();
+						allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
+						allocationhandler->destroylocker.unlock();
 					}
 				}
 				pipelines_worker[cmd].clear();
@@ -3100,125 +3101,7 @@ using namespace DX12_Internal;
 
 		memset(prev_pt, 0, sizeof(prev_pt));
 
-
-		// Deferred destroy of resources that the GPU is already finished with:
-		destroylocker.lock();
-		while (!destroyer_allocations.empty())
-		{
-			if (destroyer_allocations.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-			{
-				auto item = destroyer_allocations.front();
-				destroyer_allocations.pop_front();
-				item.first->Release();
-			}
-			else
-			{
-				break;
-			}
-		}
-		while (!destroyer_resources.empty())
-		{
-			if (destroyer_resources.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-			{
-				destroyer_resources.pop_front();
-				// comptr auto delete
-			}
-			else
-			{
-				break;
-			}
-		}
-		while (!destroyer_resourceviews.empty())
-		{
-			if (destroyer_resourceviews.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-			{
-				auto item = destroyer_resourceviews.front();
-				destroyer_resourceviews.pop_front();
-				ResourceAllocator.free(item.first);
-			}
-			else
-			{
-				break;
-			}
-		}
-		while (!destroyer_rtvs.empty())
-		{
-			if (destroyer_rtvs.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-			{
-				auto item = destroyer_rtvs.front();
-				destroyer_rtvs.pop_front();
-				RTAllocator.free(item.first);
-			}
-			else
-			{
-				break;
-			}
-		}
-		while (!destroyer_dsvs.empty())
-		{
-			if (destroyer_dsvs.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-			{
-				auto item = destroyer_dsvs.front();
-				destroyer_dsvs.pop_front();
-				DSAllocator.free(item.first);
-			}
-			else
-			{
-				break;
-			}
-		}
-		while (!destroyer_samplers.empty())
-		{
-			if (destroyer_samplers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-			{
-				auto item = destroyer_samplers.front();
-				destroyer_samplers.pop_front();
-				SamplerAllocator.free(item.first);
-			}
-			else
-			{
-				break;
-			}
-		}
-		while (!destroyer_queries_occlusion.empty())
-		{
-			if (destroyer_queries_occlusion.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-			{
-				auto item = destroyer_queries_occlusion.front();
-				destroyer_queries_occlusion.pop_front();
-				free_occlusionqueries.push_back(item.first);
-			}
-			else
-			{
-				break;
-			}
-		}
-		while (!destroyer_queries_timestamp.empty())
-		{
-			if (destroyer_queries_timestamp.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-			{
-				auto item = destroyer_queries_timestamp.front();
-				destroyer_queries_timestamp.pop_front();
-				free_timestampqueries.push_back(item.first);
-			}
-			else
-			{
-				break;
-			}
-		}
-		while (!destroyer_pipelines.empty())
-		{
-			if (destroyer_pipelines.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-			{
-				destroyer_pipelines.pop_front();
-				// comptr auto delete
-			}
-			else
-			{
-				break;
-			}
-		}
-		destroylocker.unlock();
+		allocationhandler->Update(FRAMECOUNT, BACKBUFFER_COUNT);
 
 		RESOLUTIONCHANGED = false;
 	}
@@ -3240,7 +3123,7 @@ using namespace DX12_Internal;
 				hr = static_cast<ID3D12GraphicsCommandList4*>(frames[fr].commandLists[cmd].Get())->Close();
 
 				frames[fr].descriptors[cmd].init(this);
-				frames[fr].resourceBuffer[cmd].init(shared_from_this(), 1024 * 1024 * 4);
+				frames[fr].resourceBuffer[cmd].init(this, 1024 * 1024 * 4);
 			}
 		}
 
@@ -3294,10 +3177,10 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::ClearPipelineStateCache()
 	{
-		destroylocker.lock();
+		allocationhandler->destroylocker.lock();
 		for (auto& x : pipelines_global)
 		{
-			destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
+			allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
 		}
 		pipelines_global.clear();
 
@@ -3305,11 +3188,11 @@ using namespace DX12_Internal;
 		{
 			for (auto& x : pipelines_worker[i])
 			{
-				destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
+				allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
 			}
 			pipelines_worker[i].clear();
 		}
-		destroylocker.unlock();
+		allocationhandler->destroylocker.unlock();
 	}
 
 	void GraphicsDevice_DX12::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)

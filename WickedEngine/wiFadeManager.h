@@ -21,7 +21,7 @@ public:
 		FADE_FINISHED,
 	} state = FADE_FINISHED;
 	wiColor color = wiColor(0, 0, 0, 255);
-	std::function<void()> onFade;
+	std::function<void()> onFade = [] {};
 
 	wiFadeManager()
 	{

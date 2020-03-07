@@ -11,9 +11,12 @@ public:
 	static Luna<RenderPath3D_BindLua>::FunctionType methods[];
 	static Luna<RenderPath3D_BindLua>::PropertyType properties[];
 
-	RenderPath3D_BindLua(RenderPath3D* component = nullptr);
-	RenderPath3D_BindLua(lua_State* L);
-	~RenderPath3D_BindLua();
+	RenderPath3D_BindLua() = default;
+	RenderPath3D_BindLua(RenderPath3D* component)
+	{
+		this->component = component;
+	}
+	RenderPath3D_BindLua(lua_State* L) {}
 
 	int SetSSAOEnabled(lua_State* L);
 	int SetSSREnabled(lua_State* L);

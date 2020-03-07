@@ -12,9 +12,6 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 {
 	assert(GUI && "Invalid GUI!");
 
-	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
-
 	lightWindow = new wiWindow(GUI, "Light Window");
 	lightWindow->SetSize(XMFLOAT2(650, 520));
 	GUI->AddWidget(lightWindow);

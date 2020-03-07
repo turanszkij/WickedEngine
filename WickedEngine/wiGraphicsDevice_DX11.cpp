@@ -1078,7 +1078,6 @@ namespace DX11_Internal
 
 	struct Resource_DX11
 	{
-		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11Resource> resource;
 		ComPtr<ID3D11ShaderResourceView> srv;
 		ComPtr<ID3D11UnorderedAccessView> uav;
@@ -1094,62 +1093,50 @@ namespace DX11_Internal
 	};
 	struct InputLayout_DX11
 	{
-		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11InputLayout> resource;
 	};
 	struct VertexShader_DX11
 	{
-		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11VertexShader> resource;
 	};
 	struct HullShader_DX11
 	{
-		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11HullShader> resource;
 	};
 	struct DomainShader_DX11
 	{
-		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11DomainShader> resource;
 	};
 	struct GeometryShader_DX11
 	{
-		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11GeometryShader> resource;
 	};
 	struct PixelShader_DX11
 	{
-		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11PixelShader> resource;
 	};
 	struct ComputeShader_DX11
 	{
-		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11ComputeShader> resource;
 	};
 	struct BlendState_DX11
 	{
-		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11BlendState> resource;
 	};
 	struct DepthStencilState_DX11
 	{
-		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11DepthStencilState> resource;
 	};
 	struct RasterizerState_DX11
 	{
-		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11RasterizerState> resource;
 	};
 	struct Sampler_DX11
 	{
-		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11SamplerState> resource;
 	};
 	struct Query_DX11
 	{
-		std::shared_ptr<GraphicsDevice_DX11> device;
 		ComPtr<ID3D11Query> resource;
 	};
 
@@ -1341,6 +1328,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 
 	CreateBackBufferResources();
 
+	emptyresource = std::make_shared<EmptyResourceHandle>();
 
 	wiBackLog::post("Created GraphicsDevice_DX11");
 }
@@ -1349,7 +1337,7 @@ void GraphicsDevice_DX11::CreateBackBufferResources()
 {
 	HRESULT hr;
 
-	hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backBuffer);
+	hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &backBuffer);
 	if (FAILED(hr)) {
 		wiHelper::messageBox("BackBuffer creation Failed!", "Error!");
 		exit(1);
@@ -1400,7 +1388,6 @@ Texture GraphicsDevice_DX11::GetBackBuffer()
 bool GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer)
 {
 	auto internal_state = std::make_shared<Resource_DX11>();
-	internal_state->device = shared_from_this();
 	pBuffer->internal_state = internal_state;
 	pBuffer->type = GPUResource::GPU_RESOURCE_TYPE::BUFFER;
 
@@ -1503,7 +1490,6 @@ bool GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subreso
 bool GraphicsDevice_DX11::CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture)
 {
 	auto internal_state = std::make_shared<Texture_DX11>();
-	internal_state->device = shared_from_this();
 	pTexture->internal_state = internal_state;
 	pTexture->type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
 
@@ -1578,7 +1564,6 @@ bool GraphicsDevice_DX11::CreateTexture(const TextureDesc* pDesc, const Subresou
 bool GraphicsDevice_DX11::CreateInputLayout(const InputLayoutDesc *pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout *pInputLayout)
 {
 	auto internal_state = std::make_shared<InputLayout_DX11>();
-	internal_state->device = shared_from_this();
 	pInputLayout->internal_state = internal_state;
 
 	pInputLayout->desc.reserve((size_t)NumElements);
@@ -1616,7 +1601,6 @@ bool GraphicsDevice_DX11::CreateShader(SHADERSTAGE stage, const void *pShaderByt
 	case wiGraphics::VS:
 	{
 		auto internal_state = std::make_shared<VertexShader_DX11>();
-		internal_state->device = shared_from_this();
 		pShader->internal_state = internal_state;
 		hr = device->CreateVertexShader(pShaderBytecode, BytecodeLength, nullptr, &internal_state->resource);
 	}
@@ -1624,7 +1608,6 @@ bool GraphicsDevice_DX11::CreateShader(SHADERSTAGE stage, const void *pShaderByt
 	case wiGraphics::HS:
 	{
 		auto internal_state = std::make_shared<HullShader_DX11>();
-		internal_state->device = shared_from_this();
 		pShader->internal_state = internal_state;
 		hr = device->CreateHullShader(pShaderBytecode, BytecodeLength, nullptr, &internal_state->resource);
 	}
@@ -1632,7 +1615,6 @@ bool GraphicsDevice_DX11::CreateShader(SHADERSTAGE stage, const void *pShaderByt
 	case wiGraphics::DS:
 	{
 		auto internal_state = std::make_shared<DomainShader_DX11>();
-		internal_state->device = shared_from_this();
 		pShader->internal_state = internal_state;
 		hr = device->CreateDomainShader(pShaderBytecode, BytecodeLength, nullptr, &internal_state->resource);
 	}
@@ -1640,7 +1622,6 @@ bool GraphicsDevice_DX11::CreateShader(SHADERSTAGE stage, const void *pShaderByt
 	case wiGraphics::GS:
 	{
 		auto internal_state = std::make_shared<GeometryShader_DX11>();
-		internal_state->device = shared_from_this();
 		pShader->internal_state = internal_state;
 		hr = device->CreateGeometryShader(pShaderBytecode, BytecodeLength, nullptr, &internal_state->resource);
 	}
@@ -1648,7 +1629,6 @@ bool GraphicsDevice_DX11::CreateShader(SHADERSTAGE stage, const void *pShaderByt
 	case wiGraphics::PS:
 	{
 		auto internal_state = std::make_shared<PixelShader_DX11>();
-		internal_state->device = shared_from_this();
 		pShader->internal_state = internal_state;
 		hr = device->CreatePixelShader(pShaderBytecode, BytecodeLength, nullptr, &internal_state->resource);
 	}
@@ -1656,7 +1636,6 @@ bool GraphicsDevice_DX11::CreateShader(SHADERSTAGE stage, const void *pShaderByt
 	case wiGraphics::CS:
 	{
 		auto internal_state = std::make_shared<ComputeShader_DX11>();
-		internal_state->device = shared_from_this();
 		pShader->internal_state = internal_state;
 		hr = device->CreateComputeShader(pShaderBytecode, BytecodeLength, nullptr, &internal_state->resource);
 	}
@@ -1670,7 +1649,6 @@ bool GraphicsDevice_DX11::CreateShader(SHADERSTAGE stage, const void *pShaderByt
 bool GraphicsDevice_DX11::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
 {
 	auto internal_state = std::make_shared<BlendState_DX11>();
-	internal_state->device = shared_from_this();
 	pBlendState->internal_state = internal_state;
 
 	D3D11_BLEND_DESC desc;
@@ -1697,7 +1675,6 @@ bool GraphicsDevice_DX11::CreateBlendState(const BlendStateDesc *pBlendStateDesc
 bool GraphicsDevice_DX11::CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState)
 {
 	auto internal_state = std::make_shared<DepthStencilState_DX11>();
-	internal_state->device = shared_from_this();
 	pDepthStencilState->internal_state = internal_state;
 
 	D3D11_DEPTH_STENCIL_DESC desc;
@@ -1725,7 +1702,6 @@ bool GraphicsDevice_DX11::CreateDepthStencilState(const DepthStencilStateDesc *p
 bool GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
 {
 	auto internal_state = std::make_shared<RasterizerState_DX11>();
-	internal_state->device = shared_from_this();
 	pRasterizerState->internal_state = internal_state;
 
 	pRasterizerState->desc = *pRasterizerStateDesc;
@@ -1811,7 +1787,6 @@ bool GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc *pRast
 bool GraphicsDevice_DX11::CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
 {
 	auto internal_state = std::make_shared<Sampler_DX11>();
-	internal_state->device = shared_from_this();
 	pSamplerState->internal_state = internal_state;
 
 	D3D11_SAMPLER_DESC desc;
@@ -1838,7 +1813,6 @@ bool GraphicsDevice_DX11::CreateSampler(const SamplerDesc *pSamplerDesc, Sampler
 bool GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
 {
 	auto internal_state = std::make_shared<Query_DX11>();
-	internal_state->device = shared_from_this();
 	pQuery->internal_state = internal_state;
 
 	pQuery->desc = *pDesc;
@@ -1874,7 +1848,7 @@ bool GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuer
 }
 bool GraphicsDevice_DX11::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
 {
-	pso->internal_state = shared_from_this();
+	pso->internal_state = emptyresource;
 
 	pso->desc = *pDesc;
 
@@ -1882,7 +1856,7 @@ bool GraphicsDevice_DX11::CreatePipelineState(const PipelineStateDesc* pDesc, Pi
 }
 bool GraphicsDevice_DX11::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
 {
-	renderpass->internal_state = shared_from_this();
+	renderpass->internal_state = emptyresource;
 
 	renderpass->desc = *pDesc;
 
@@ -2390,6 +2364,7 @@ void GraphicsDevice_DX11::PresentEnd(CommandList cmd)
 		{
 			deviceContexts[cmd]->FinishCommandList(false, &commandLists[cmd]);
 			immediateContext->ExecuteCommandList(commandLists[cmd].Get(), false);
+			commandLists[cmd].Reset();
 
 			free_commandlists.push_back(cmd);
 		}
@@ -2450,7 +2425,6 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 		bool success = CreateBuffer(&frameAllocatorDesc, nullptr, &frame_allocators[cmd].buffer);
 		assert(success);
 		SetName(&frame_allocators[cmd].buffer, "frame_allocator[deferred]");
-		to_internal(&frame_allocators[cmd].buffer)->device.reset(); // because this is member of device, we don't keep alive device from this
 	}
 
 

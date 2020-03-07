@@ -15,7 +15,6 @@ public:
 
 	Vector_BindLua(const DirectX::XMVECTOR& vector);
 	Vector_BindLua(lua_State* L);
-	~Vector_BindLua();
 
 	int GetX(lua_State* L);
 	int GetY(lua_State* L);

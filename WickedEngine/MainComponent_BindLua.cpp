@@ -36,10 +36,6 @@ MainComponent_BindLua::MainComponent_BindLua(lua_State *L)
 	component = nullptr;
 }
 
-MainComponent_BindLua::~MainComponent_BindLua()
-{
-}
-
 int MainComponent_BindLua::GetActivePath(lua_State *L)
 {
 	if (component == nullptr)

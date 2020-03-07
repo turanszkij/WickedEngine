@@ -52,21 +52,6 @@ Luna<RenderPath3D_TiledForward_BindLua>::PropertyType RenderPath3D_TiledForward_
 	{ NULL, NULL }
 };
 
-RenderPath3D_TiledForward_BindLua::RenderPath3D_TiledForward_BindLua(RenderPath3D_TiledForward* component)
-{
-	this->component = component;
-}
-
-RenderPath3D_TiledForward_BindLua::RenderPath3D_TiledForward_BindLua(lua_State *L)
-{
-	component = new RenderPath3D_TiledForward();
-}
-
-
-RenderPath3D_TiledForward_BindLua::~RenderPath3D_TiledForward_BindLua()
-{
-}
-
 void RenderPath3D_TiledForward_BindLua::Bind()
 {
 	static bool initialized = false;

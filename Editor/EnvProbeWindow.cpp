@@ -8,9 +8,6 @@ EnvProbeWindow::EnvProbeWindow(wiGUI* gui) : GUI(gui)
 {
 	assert(GUI && "Invalid GUI!");
 
-	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
-
 	envProbeWindow = new wiWindow(GUI, "Environment Probe Window");
 	envProbeWindow->SetSize(XMFLOAT2(600, 400));
 	GUI->AddWidget(envProbeWindow);

@@ -63,10 +63,6 @@ Matrix_BindLua::Matrix_BindLua(lua_State* L)
 
 }
 
-Matrix_BindLua::~Matrix_BindLua()
-{
-}
-
 int Matrix_BindLua::GetRow(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
