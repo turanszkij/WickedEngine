@@ -39,7 +39,7 @@ DecalWindow::~DecalWindow()
 {
 	decalWindow->RemoveWidgets(true);
 	GUI->RemoveWidget(decalWindow);
-	SAFE_DELETE(decalWindow);
+	delete decalWindow;
 }
 
 void DecalWindow::SetEntity(Entity entity)

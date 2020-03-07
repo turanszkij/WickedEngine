@@ -760,7 +760,7 @@ MaterialWindow::~MaterialWindow()
 {
 	materialWindow->RemoveWidgets(true);
 	GUI->RemoveWidget(materialWindow);
-	SAFE_DELETE(materialWindow);
+	delete materialWindow;
 }
 
 

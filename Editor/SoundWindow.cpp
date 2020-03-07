@@ -162,7 +162,7 @@ SoundWindow::~SoundWindow()
 {
 	soundWindow->RemoveWidgets(true);
 	GUI->RemoveWidget(soundWindow);
-	SAFE_DELETE(soundWindow);
+	delete soundWindow;
 }
 
 

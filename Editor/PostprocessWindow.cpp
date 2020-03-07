@@ -342,5 +342,5 @@ PostprocessWindow::~PostprocessWindow()
 {
 	ppWindow->RemoveWidgets(true);
 	GUI->RemoveWidget(ppWindow);
-	SAFE_DELETE(ppWindow);
+	delete ppWindow;
 }

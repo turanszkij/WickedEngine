@@ -1073,7 +1073,7 @@ using namespace DX12_Internal;
 	}
 	GraphicsDevice_DX12::DescriptorAllocator::~DescriptorAllocator()
 	{
-		SAFE_DELETE_ARRAY(itemsAlive);
+		delete[] itemsAlive;
 	}
 	D3D12_CPU_DESCRIPTOR_HANDLE GraphicsDevice_DX12::DescriptorAllocator::allocate()
 	{
@@ -1790,8 +1790,8 @@ using namespace DX12_Internal;
 		samplerRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
 		{
-			uint32_t descriptorRangeCount = 3;
-			D3D12_DESCRIPTOR_RANGE* descriptorRanges = new D3D12_DESCRIPTOR_RANGE[descriptorRangeCount];
+			const uint32_t descriptorRangeCount = 3;
+			D3D12_DESCRIPTOR_RANGE descriptorRanges[descriptorRangeCount];
 
 			descriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
 			descriptorRanges[0].BaseShaderRegister = 0;
@@ -1814,8 +1814,8 @@ using namespace DX12_Internal;
 
 
 
-			uint32_t paramCount = 2 * (SHADERSTAGE_COUNT - 1); // 2: resource,sampler;   5: vs,hs,ds,gs,ps;
-			D3D12_ROOT_PARAMETER* params = new D3D12_ROOT_PARAMETER[paramCount];
+			const uint32_t paramCount = 2 * (SHADERSTAGE_COUNT - 1); // 2: resource,sampler;   5: vs,hs,ds,gs,ps;
+			D3D12_ROOT_PARAMETER params[paramCount] = {};
 			params[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 			params[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 			params[0].DescriptorTable.NumDescriptorRanges = descriptorRangeCount;
@@ -1884,13 +1884,10 @@ using namespace DX12_Internal;
 			}
 			hr = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&graphicsRootSig));
 			assert(SUCCEEDED(hr));
-
-			SAFE_DELETE_ARRAY(descriptorRanges);
-			SAFE_DELETE_ARRAY(params);
 		}
 		{
-			uint32_t descriptorRangeCount = 3;
-			D3D12_DESCRIPTOR_RANGE* descriptorRanges = new D3D12_DESCRIPTOR_RANGE[descriptorRangeCount];
+			const uint32_t descriptorRangeCount = 3;
+			D3D12_DESCRIPTOR_RANGE descriptorRanges[descriptorRangeCount];
 
 			descriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
 			descriptorRanges[0].BaseShaderRegister = 0;
@@ -1912,8 +1909,8 @@ using namespace DX12_Internal;
 
 
 
-			uint32_t paramCount = 2;
-			D3D12_ROOT_PARAMETER* params = new D3D12_ROOT_PARAMETER[paramCount];
+			const uint32_t paramCount = 2;
+			D3D12_ROOT_PARAMETER params[paramCount];
 			params[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 			params[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 			params[0].DescriptorTable.NumDescriptorRanges = descriptorRangeCount;
@@ -1942,9 +1939,6 @@ using namespace DX12_Internal;
 			}
 			hr = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&computeRootSig));
 			assert(SUCCEEDED(hr));
-
-			SAFE_DELETE_ARRAY(descriptorRanges);
-			SAFE_DELETE_ARRAY(params);
 		}
 
 
@@ -2355,7 +2349,7 @@ using namespace DX12_Internal;
 		if (pInitialData != nullptr)
 		{
 			uint32_t dataCount = pDesc->ArraySize * std::max(1u, pDesc->MipLevels);
-			D3D12_SUBRESOURCE_DATA* data = new D3D12_SUBRESOURCE_DATA[dataCount];
+			std::vector<D3D12_SUBRESOURCE_DATA> data(dataCount);
 			for (uint32_t slice = 0; slice < dataCount; ++slice)
 			{
 				data[slice] = _ConvertSubresourceData(pInitialData[slice]);
@@ -2372,11 +2366,9 @@ using namespace DX12_Internal;
 				uint8_t* dest = textureUploader.allocate(static_cast<size_t>(RequiredSize), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 
 				UINT64 dataSize = UpdateSubresources(static_cast<ID3D12GraphicsCommandList*>(copyCommandList.Get()), internal_state->resource.Get(),
-					textureUploader.resource.Get(), textureUploader.calculateOffset(dest), 0, dataCount, data);
+					textureUploader.resource.Get(), textureUploader.calculateOffset(dest), 0, dataCount, data.data());
 			}
 			copyQueueLock.unlock();
-
-			SAFE_DELETE_ARRAY(data);
 		}
 
 		if (pTexture->desc.BindFlags & BIND_RENDER_TARGET)
@@ -3647,11 +3639,11 @@ using namespace DX12_Internal;
 					desc.BlendState.RenderTarget[i].RenderTargetWriteMask = _ParseColorWriteMask(pBlendStateDesc.RenderTarget[i].RenderTargetWriteMask);
 				}
 
-				D3D12_INPUT_ELEMENT_DESC* elements = nullptr;
+				std::vector<D3D12_INPUT_ELEMENT_DESC> elements;
 				if (pso->desc.il != nullptr)
 				{
 					desc.InputLayout.NumElements = (uint32_t)pso->desc.il->desc.size();
-					elements = new D3D12_INPUT_ELEMENT_DESC[desc.InputLayout.NumElements];
+					elements.resize(desc.InputLayout.NumElements);
 					for (uint32_t i = 0; i < desc.InputLayout.NumElements; ++i)
 					{
 						elements[i].SemanticName = pso->desc.il->desc[i].SemanticName;
@@ -3665,7 +3657,7 @@ using namespace DX12_Internal;
 						elements[i].InstanceDataStepRate = pso->desc.il->desc[i].InstanceDataStepRate;
 					}
 				}
-				desc.InputLayout.pInputElementDescs = elements;
+				desc.InputLayout.pInputElementDescs = elements.data();
 
 				desc.NumRenderTargets = 0;
 				desc.DSVFormat = DXGI_FORMAT_UNKNOWN;
@@ -3764,8 +3756,6 @@ using namespace DX12_Internal;
 				ComPtr<ID3D12PipelineState> newpso;
 				HRESULT hr = device->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&newpso));
 				assert(SUCCEEDED(hr));
-
-				SAFE_DELETE_ARRAY(elements);
 
 				pipelines_worker[cmd].push_back(std::make_pair(pipeline_hash, newpso));
 				pipeline = newpso.Get();

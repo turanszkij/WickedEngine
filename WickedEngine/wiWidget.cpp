@@ -654,7 +654,7 @@ wiSlider::wiSlider(float start, float end, float defaultValue, float step, const
 }
 wiSlider::~wiSlider()
 {
-	SAFE_DELETE(valueInputField);
+	delete valueInputField;
 }
 void wiSlider::SetValue(float value)
 {
@@ -1473,7 +1473,7 @@ void wiWindow::RemoveWidgets(bool alsoDelete)
 		gui->RemoveWidget(x);
 		if (alsoDelete)
 		{
-			SAFE_DELETE(x);
+			delete x;
 		}
 	}
 

@@ -325,7 +325,7 @@ namespace wiScene
 			bd.ByteWidth = (uint32_t)(stride * indices.size());
 			device->CreateBuffer(&bd, &InitData, &indexBuffer);
 
-			SAFE_DELETE_ARRAY(gpuIndexData);
+			delete[] gpuIndexData;
 		}
 
 

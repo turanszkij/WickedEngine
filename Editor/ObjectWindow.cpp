@@ -581,7 +581,7 @@ ObjectWindow::~ObjectWindow()
 {
 	objectWindow->RemoveWidgets(true);
 	GUI->RemoveWidget(objectWindow);
-	SAFE_DELETE(objectWindow);
+	delete objectWindow;
 }
 
 

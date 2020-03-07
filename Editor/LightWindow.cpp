@@ -295,7 +295,7 @@ LightWindow::~LightWindow()
 {
 	lightWindow->RemoveWidgets(true);
 	GUI->RemoveWidget(lightWindow);
-	SAFE_DELETE(lightWindow);
+	delete lightWindow;
 }
 
 void LightWindow::SetEntity(Entity entity)

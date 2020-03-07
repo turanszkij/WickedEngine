@@ -182,7 +182,7 @@ protected:
 	// width of the head of the slider that can be grabbed:
 	float headWidth = 16;
 
-	wiTextInputField* valueInputField;
+	wiTextInputField* valueInputField = nullptr;
 public:
 	// start : slider minimum value
 	// end : slider maximum value

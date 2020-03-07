@@ -424,7 +424,7 @@ EmitterWindow::~EmitterWindow()
 {
 	emitterWindow->RemoveWidgets(true);
 	GUI->RemoveWidget(emitterWindow);
-	SAFE_DELETE(emitterWindow);
+	delete emitterWindow;
 }
 
 void EmitterWindow::SetEntity(Entity entity)

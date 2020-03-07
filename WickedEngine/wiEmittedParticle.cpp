@@ -91,14 +91,10 @@ void wiEmittedParticle::CreateSelfBuffers()
 	// Distance buffer:
 	bd.StructureByteStride = sizeof(float);
 	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
-	float* distances = new float[MAX_PARTICLES];
-	for (uint32_t i = 0; i < MAX_PARTICLES; ++i)
-	{
-		distances[i] = 0;
-	}
-	data.pSysMem = distances;
+	std::vector<float> distances(MAX_PARTICLES);
+	std::fill(distances.begin(), distances.end(), 0.0f);
+	data.pSysMem = distances.data();
 	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, &distanceBuffer);
-	SAFE_DELETE_ARRAY(distances);
 	data.pSysMem = nullptr;
 
 	// SPH Partitioning grid indices per particle:

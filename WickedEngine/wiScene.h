@@ -614,19 +614,19 @@ namespace wiScene
 
 		// Non-serialized attributes:
 
-		GFX_STRUCT ShaderBoneType
+		struct ShaderBoneType
 		{
-			XMFLOAT4A pose0;
-			XMFLOAT4A pose1;
-			XMFLOAT4A pose2;
+			XMFLOAT4 pose0;
+			XMFLOAT4 pose1;
+			XMFLOAT4 pose2;
 
 			inline void Store(const XMMATRIX& M)
 			{
 				XMFLOAT4X4 mat;
 				XMStoreFloat4x4(&mat, M);
-				pose0 = XMFLOAT4A(mat._11, mat._21, mat._31, mat._41);
-				pose1 = XMFLOAT4A(mat._12, mat._22, mat._32, mat._42);
-				pose2 = XMFLOAT4A(mat._13, mat._23, mat._33, mat._43);
+				pose0 = XMFLOAT4(mat._11, mat._21, mat._31, mat._41);
+				pose1 = XMFLOAT4(mat._12, mat._22, mat._32, mat._42);
+				pose2 = XMFLOAT4(mat._13, mat._23, mat._33, mat._43);
 			}
 			inline XMMATRIX Load() const
 			{
@@ -637,8 +637,6 @@ namespace wiScene
 					pose0.w, pose1.w, pose2.w, 1
 				);
 			}
-
-			ALIGN_16
 		};
 		std::vector<ShaderBoneType> boneData;
 		wiGraphics::GPUBuffer boneBuffer;

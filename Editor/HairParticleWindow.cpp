@@ -159,7 +159,7 @@ HairParticleWindow::~HairParticleWindow()
 {
 	hairWindow->RemoveWidgets(true);
 	GUI->RemoveWidget(hairWindow);
-	SAFE_DELETE(hairWindow);
+	delete hairWindow;
 }
 
 void HairParticleWindow::SetEntity(Entity entity)

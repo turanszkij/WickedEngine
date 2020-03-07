@@ -99,7 +99,7 @@ AnimationWindow::~AnimationWindow()
 	animWindow->RemoveWidgets(true);
 
 	GUI->RemoveWidget(animWindow);
-	SAFE_DELETE(animWindow);
+	delete animWindow;
 }
 
 void AnimationWindow::Update()

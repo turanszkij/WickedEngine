@@ -75,7 +75,7 @@ EnvProbeWindow::~EnvProbeWindow()
 {
 	envProbeWindow->RemoveWidgets(true);
 	GUI->RemoveWidget(envProbeWindow);
-	SAFE_DELETE(envProbeWindow);
+	delete envProbeWindow;
 }
 
 void EnvProbeWindow::SetEntity(Entity entity)

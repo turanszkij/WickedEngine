@@ -570,7 +570,7 @@ RendererWindow::~RendererWindow()
 {
 	rendererWindow->RemoveWidgets(true);
 	GUI->RemoveWidget(rendererWindow);
-	SAFE_DELETE(rendererWindow);
+	delete rendererWindow;
 }
 
 UINT RendererWindow::GetPickType()

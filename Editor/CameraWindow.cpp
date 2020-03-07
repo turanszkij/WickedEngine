@@ -146,7 +146,7 @@ CameraWindow::~CameraWindow()
 {
 	cameraWindow->RemoveWidgets(true);
 	GUI->RemoveWidget(cameraWindow);
-	SAFE_DELETE(cameraWindow);
+	delete cameraWindow;
 }
 
 void CameraWindow::SetEntity(Entity entity)

@@ -231,7 +231,7 @@ MeshWindow::~MeshWindow()
 {
 	meshWindow->RemoveWidgets(true);
 	GUI->RemoveWidget(meshWindow);
-	SAFE_DELETE(meshWindow);
+	delete meshWindow;
 }
 
 void MeshWindow::SetEntity(Entity entity)

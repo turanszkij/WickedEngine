@@ -453,7 +453,7 @@ WeatherWindow::~WeatherWindow()
 {
 	weatherWindow->RemoveWidgets(true);
 	GUI->RemoveWidget(weatherWindow);
-	SAFE_DELETE(weatherWindow);
+	delete weatherWindow;
 }
 
 void WeatherWindow::Update()

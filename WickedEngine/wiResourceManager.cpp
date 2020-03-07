@@ -17,10 +17,10 @@ wiResource::~wiResource()
 		switch (type)
 		{
 		case wiResource::IMAGE:
-			SAFE_DELETE(texture);
+			delete texture;
 			break;
 		case wiResource::SOUND:
-			SAFE_DELETE(sound);
+			delete sound;
 			break;
 		};
 	}

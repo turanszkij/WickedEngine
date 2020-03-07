@@ -298,11 +298,11 @@ unordered_map<const CameraComponent*, FrameCulling> frameCullings;
 
 vector<uint32_t> pendingMaterialUpdates;
 
-GFX_STRUCT Instance
+struct Instance
 {
-	XMFLOAT4A mat0;
-	XMFLOAT4A mat1;
-	XMFLOAT4A mat2;
+	XMFLOAT4 mat0;
+	XMFLOAT4 mat1;
+	XMFLOAT4 mat2;
 	XMUINT4 userdata;
 
 	inline void Create(const XMFLOAT4X4& matIn, const XMFLOAT4& colorIn = XMFLOAT4(1, 1, 1, 1), float dither = 0, uint32_t subInstance = 0) volatile
@@ -330,14 +330,12 @@ GFX_STRUCT Instance
 		userdata.z = 0;
 		userdata.w = 0;
 	}
-
-	ALIGN_16
 };
-GFX_STRUCT InstancePrev
+struct InstancePrev
 {
-	XMFLOAT4A mat0;
-	XMFLOAT4A mat1;
-	XMFLOAT4A mat2;
+	XMFLOAT4 mat0;
+	XMFLOAT4 mat1;
+	XMFLOAT4 mat2;
 
 	inline void Create(const XMFLOAT4X4& matIn) volatile
 	{
@@ -356,12 +354,10 @@ GFX_STRUCT InstancePrev
 		mat2.z = matIn._33;
 		mat2.w = matIn._43;
 	}
-
-	ALIGN_16
 };
-GFX_STRUCT InstanceAtlas
+struct InstanceAtlas
 {
-	XMFLOAT4A atlasMulAdd;
+	XMFLOAT4 atlasMulAdd;
 
 	InstanceAtlas(){}
 	InstanceAtlas(const XMFLOAT4& atlasRemap)
@@ -375,8 +371,6 @@ GFX_STRUCT InstanceAtlas
 		atlasMulAdd.z = atlasRemap.z;
 		atlasMulAdd.w = atlasRemap.w;
 	}
-
-	ALIGN_16
 };
 
 
