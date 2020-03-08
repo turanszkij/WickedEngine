@@ -1034,7 +1034,7 @@ namespace wiScene
 
 		wiJobSystem::Wait(ctx); // dependecies
 
-		RunObjectUpdateSystem(ctx, prev_transforms, transforms, meshes, materials, objects, aabb_objects, impostors, softbodies, bounds, waterPlane);
+		RunObjectUpdateSystem(ctx, prev_transforms, transforms, meshes, materials, armatures, objects, aabb_objects, impostors, softbodies, bounds, waterPlane);
 
 		wiPhysicsEngine::RunPhysicsUpdateSystem(ctx, weather, armatures, transforms, meshes, objects, rigidbodies, softbodies, dt);
 
@@ -1710,6 +1710,9 @@ namespace wiScene
 				armature.boneData.resize(armature.boneCollection.size());
 			}
 
+			XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
+			XMFLOAT3 _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+
 			int boneIndex = 0;
 			for (Entity boneEntity : armature.boneCollection)
 			{
@@ -1720,7 +1723,13 @@ namespace wiScene
 				XMMATRIX M = B * W * R;
 
 				armature.boneData[boneIndex++].Store(M);
+
+				XMFLOAT3 bonepos = bone.GetPosition();
+				_min = wiMath::Min(_min, bonepos);
+				_max = wiMath::Max(_max, bonepos);
 			}
+
+			armature.aabb = AABB(_min, _max);
 
 		});
 	}
@@ -1766,6 +1775,7 @@ namespace wiScene
 		const ComponentManager<TransformComponent>& transforms,
 		const ComponentManager<MeshComponent>& meshes,
 		const ComponentManager<MaterialComponent>& materials,
+		const ComponentManager<ArmatureComponent>& armatures,
 		ComponentManager<ObjectComponent>& objects,
 		ComponentManager<AABB>& aabb_objects,
 		ComponentManager<ImpostorComponent>& impostors,
@@ -1819,6 +1829,11 @@ namespace wiScene
 						if (mesh->IsSkinned() || mesh->IsDynamic())
 						{
 							object.SetDynamic(true);
+							const ArmatureComponent* armature = armatures.GetComponent(mesh->armatureID);
+							if (armature != nullptr)
+							{
+								aabb = AABB::Merge(aabb, armature->aabb);
+							}
 						}
 
 						for (auto& subset : mesh->subsets)

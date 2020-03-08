@@ -613,6 +613,7 @@ namespace wiScene
 		std::vector<XMFLOAT4X4> inverseBindMatrices;
 
 		// Non-serialized attributes:
+		AABB aabb;
 
 		struct ShaderBoneType
 		{
@@ -1137,6 +1138,7 @@ namespace wiScene
 		const wiECS::ComponentManager<TransformComponent>& transforms,
 		const wiECS::ComponentManager<MeshComponent>& meshes,
 		const wiECS::ComponentManager<MaterialComponent>& materials,
+		const wiECS::ComponentManager<ArmatureComponent>& armatures,
 		wiECS::ComponentManager<ObjectComponent>& objects,
 		wiECS::ComponentManager<AABB>& aabb_objects,
 		wiECS::ComponentManager<ImpostorComponent>& impostors,
