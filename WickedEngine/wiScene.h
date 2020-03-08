@@ -66,6 +66,7 @@ namespace wiScene
 		XMVECTOR GetPositionV() const;
 		XMVECTOR GetRotationV() const;
 		XMVECTOR GetScaleV() const;
+		XMMATRIX GetLocalMatrix() const;
 		void UpdateTransform();
 		void UpdateTransform_Parented(const TransformComponent& parent, const XMFLOAT4X4& inverseParentBindMatrix = IDENTITYMATRIX);
 		void ApplyTransform();

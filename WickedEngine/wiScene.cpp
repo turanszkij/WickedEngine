@@ -51,28 +51,30 @@ namespace wiScene
 		XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&world));
 		return S;
 	}
+	XMMATRIX TransformComponent::GetLocalMatrix() const
+	{
+		XMVECTOR S_local = XMLoadFloat3(&scale_local);
+		XMVECTOR R_local = XMLoadFloat4(&rotation_local);
+		XMVECTOR T_local = XMLoadFloat3(&translation_local);
+		return
+			XMMatrixScalingFromVector(S_local) *
+			XMMatrixRotationQuaternion(R_local) *
+			XMMatrixTranslationFromVector(T_local);
+	}
 	void TransformComponent::UpdateTransform()
 	{
 		if (IsDirty())
 		{
 			SetDirty(false);
 
-			XMVECTOR S_local = XMLoadFloat3(&scale_local);
-			XMVECTOR R_local = XMLoadFloat4(&rotation_local);
-			XMVECTOR T_local = XMLoadFloat3(&translation_local);
-			XMMATRIX W =
-				XMMatrixScalingFromVector(S_local) *
-				XMMatrixRotationQuaternion(R_local) *
-				XMMatrixTranslationFromVector(T_local);
-
-			XMStoreFloat4x4(&world, W);
+			XMStoreFloat4x4(&world, GetLocalMatrix());
 		}
 	}
 	void TransformComponent::UpdateTransform_Parented(const TransformComponent& parent, const XMFLOAT4X4& inverseParentBindMatrix)
 	{
 		SetDirty();
 
-		XMMATRIX W = XMLoadFloat4x4(&world);
+		XMMATRIX W = GetLocalMatrix();
 		XMMATRIX W_parent = XMLoadFloat4x4(&parent.world);
 		XMMATRIX B = XMLoadFloat4x4(&inverseParentBindMatrix);
 		W = W * B * W_parent;
@@ -146,11 +148,7 @@ namespace wiScene
 		XMVECTOR S;
 		XMVECTOR R;
 		XMVECTOR T;
-		XMMatrixDecompose(&S, &R, &T, matrix);
-
-		S = XMLoadFloat3(&scale_local) * S;
-		R = XMQuaternionMultiply(XMLoadFloat4(&rotation_local), R);
-		T = XMLoadFloat3(&translation_local) + T;
+		XMMatrixDecompose(&S, &R, &T, GetLocalMatrix() * matrix);
 
 		XMStoreFloat3(&scale_local, S);
 		XMStoreFloat4(&rotation_local, R);
