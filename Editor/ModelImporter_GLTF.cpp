@@ -204,7 +204,7 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 			Entity objectEntity = scene.Entity_CreateObject(node.name);
 			ObjectComponent& object = *scene.objects.GetComponent(objectEntity);
 			object.meshID = scene.meshes.GetEntity(node.mesh);
-			scene.Component_Attach(objectEntity, entity);
+			scene.Component_Attach(objectEntity, entity, true);
 		}
 		else
 		{
@@ -270,14 +270,11 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 		transform.ApplyTransform(); // this creates S, R, T vectors from world matrix
 	}
 
-	// Important:
-	//	Do NOT call UpdateTransform, because Attach will query parent world matrix, and invert it for bind matrix
-	//	But here we load everything in bind space (relative to parent) already, so it must be IDENTITY!
-	transform.world = IDENTITYMATRIX;
+	transform.UpdateTransform();
 
 	if (parent != INVALID_ENTITY)
 	{
-		scene.Component_Attach(entity, parent);
+		scene.Component_Attach(entity, parent, true);
 	}
 
 	if (!node.children.empty())

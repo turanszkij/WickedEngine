@@ -12,7 +12,11 @@ void wiGUIElement::AttachTo(wiGUIElement* parent)
 	this->parent = parent;
 
 	this->parent->UpdateTransform();
-	XMStoreFloat4x4(&world_parent_bind, XMMatrixInverse(nullptr, XMLoadFloat4x4(&parent->world)));
+	XMMATRIX B = XMMatrixInverse(nullptr, XMLoadFloat4x4(&parent->world));
+
+	MatrixTransform(B);
+	UpdateTransform();
+	UpdateTransform_Parented(*parent);
 }
 void wiGUIElement::Detach()
 {
@@ -66,7 +70,15 @@ void wiGUI::Update(float dt)
 		return;
 	}
 
-	SetSize((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
+	XMFLOAT2 size_screen = XMFLOAT2((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
+	if (size_design.x == 0 || size_design.y == 0)
+	{
+		size_design = size_screen;
+	}
+	scale_local.x = size_screen.x / size_design.x;
+	scale_local.y = size_screen.y / size_design.y;
+	SetDirty();
+	UpdateTransform();
 
 	XMFLOAT4 _p = wiInput::GetPointer();
 	pointerpos.x = _p.x;

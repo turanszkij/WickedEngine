@@ -570,7 +570,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 
 
 
-	objectWindow->Translate(XMFLOAT3(GUI->GetSize().x - 720, 120, 0));
+	objectWindow->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 720, 120, 0));
 	objectWindow->SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

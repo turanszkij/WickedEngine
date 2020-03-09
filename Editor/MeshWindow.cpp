@@ -220,7 +220,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 
 
 
-	meshWindow->Translate(XMFLOAT3(gui->GetSize().x - 910, 520, 0));
+	meshWindow->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 910, 520, 0));
 	meshWindow->SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

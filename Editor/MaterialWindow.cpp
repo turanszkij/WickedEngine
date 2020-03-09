@@ -750,7 +750,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(texture_occlusion_uvset_Field);
 
 
-	materialWindow->Translate(XMFLOAT3(gui->GetSize().x - 880, 120, 0));
+	materialWindow->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 880, 120, 0));
 	materialWindow->SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

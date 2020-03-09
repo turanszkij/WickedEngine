@@ -31,7 +31,6 @@ void TestsRenderer::Load()
 
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
-	GetGUI().SetSize(screenW, screenH);
 
 	wiLabel* label = new wiLabel("Label1");
 	label->SetText("Wicked Engine Test Framework");

@@ -137,7 +137,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	SetEntity(INVALID_ENTITY);
 
 
-	cameraWindow->Translate(XMFLOAT3(gui->GetSize().x - 720, 500, 0));
+	cameraWindow->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 720, 500, 0));
 	cameraWindow->SetVisible(false);
 }
 

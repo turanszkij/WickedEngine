@@ -68,7 +68,7 @@ namespace wiScene
 		XMVECTOR GetScaleV() const;
 		XMMATRIX GetLocalMatrix() const;
 		void UpdateTransform();
-		void UpdateTransform_Parented(const TransformComponent& parent, const XMFLOAT4X4& inverseParentBindMatrix = IDENTITYMATRIX);
+		void UpdateTransform_Parented(const TransformComponent& parent);
 		void ApplyTransform();
 		void ClearTransform();
 		void Translate(const XMFLOAT3& value);
@@ -95,7 +95,6 @@ namespace wiScene
 	{
 		wiECS::Entity parentID = wiECS::INVALID_ENTITY;
 		uint32_t layerMask_bind; // saved child layermask at the time of binding
-		XMFLOAT4X4 world_parent_inverse_bind; // saved parent inverse worldmatrix at the time of binding
 
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
@@ -1090,7 +1089,8 @@ namespace wiScene
 		);
 
 		// Attaches an entity to a parent:
-		void Component_Attach(wiECS::Entity entity, wiECS::Entity parent);
+		//	child_already_in_local_space	:	child won't be transformed from world space to local space
+		void Component_Attach(wiECS::Entity entity, wiECS::Entity parent, bool child_already_in_local_space = false);
 		// Detaches the entity from its parent (if it is attached):
 		void Component_Detach(wiECS::Entity entity);
 		// Detaches all children from an entity (if there are any):

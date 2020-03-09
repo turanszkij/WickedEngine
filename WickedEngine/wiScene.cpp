@@ -70,14 +70,13 @@ namespace wiScene
 			XMStoreFloat4x4(&world, GetLocalMatrix());
 		}
 	}
-	void TransformComponent::UpdateTransform_Parented(const TransformComponent& parent, const XMFLOAT4X4& inverseParentBindMatrix)
+	void TransformComponent::UpdateTransform_Parented(const TransformComponent& parent)
 	{
-		SetDirty();
+		//SetDirty();
 
 		XMMATRIX W = GetLocalMatrix();
 		XMMATRIX W_parent = XMLoadFloat4x4(&parent.world);
-		XMMATRIX B = XMLoadFloat4x4(&inverseParentBindMatrix);
-		W = W * B * W_parent;
+		W = W * W_parent;
 
 		XMStoreFloat4x4(&world, W);
 	}
@@ -1395,7 +1394,7 @@ namespace wiScene
 		return entity;
 	}
 
-	void Scene::Component_Attach(Entity entity, Entity parent)
+	void Scene::Component_Attach(Entity entity, Entity parent, bool child_already_in_local_space)
 	{
 		assert(entity != parent);
 
@@ -1437,14 +1436,20 @@ namespace wiScene
 		{
 			transform_parent = &transforms.Create(parent);
 		}
-		// Save the parent's inverse worldmatrix:
-		XMStoreFloat4x4(&parentcomponent.world_parent_inverse_bind, XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent->world)));
 
 		TransformComponent* transform_child = transforms.GetComponent(entity);
 		if (transform_child == nullptr)
 		{
-			transform_child = &transforms.Create(entity);
+			transform_child = &transforms.Create(entity); 
+			transform_parent = transforms.GetComponent(parent); // after transforms.Create(), transform_parent pointer could have become invalidated!
 		}
+		if (!child_already_in_local_space)
+		{
+			XMMATRIX B = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent->world));
+			transform_child->MatrixTransform(B);
+			transform_child->UpdateTransform();
+		}
+		transform_child->UpdateTransform_Parented(*transform_parent);
 
 		LayerComponent* layer_parent = layers.GetComponent(parent);
 		if (layer_parent == nullptr)
@@ -1666,7 +1671,7 @@ namespace wiScene
 			TransformComponent* transform_parent = transforms.GetComponent(parentcomponent.parentID);
 			if (transform_child != nullptr && transform_parent != nullptr)
 			{
-				transform_child->UpdateTransform_Parented(*transform_parent, parentcomponent.world_parent_inverse_bind);
+				transform_child->UpdateTransform_Parented(*transform_parent);
 			}
 
 

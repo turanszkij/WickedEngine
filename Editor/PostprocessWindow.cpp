@@ -332,7 +332,7 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	ppWindow->AddWidget(chromaticaberrationSlider);
 
 
-	ppWindow->Translate(XMFLOAT3(gui->GetSize().x - 550, 50, 0));
+	ppWindow->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 550, 50, 0));
 	ppWindow->SetVisible(false);
 
 }

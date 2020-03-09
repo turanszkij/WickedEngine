@@ -63,12 +63,15 @@ namespace wiScene
 		if (archive.IsReadMode())
 		{
 			archive >> layerMask_bind;
-			archive >> world_parent_inverse_bind;
+			if (archive.GetVersion() < 36)
+			{
+				XMFLOAT4X4 world_parent_inverse_bind;
+				archive >> world_parent_inverse_bind;
+			}
 		}
 		else
 		{
 			archive << layerMask_bind;
-			archive << world_parent_inverse_bind;
 		}
 	}
 	void MaterialComponent::Serialize(wiArchive& archive, uint32_t seed)

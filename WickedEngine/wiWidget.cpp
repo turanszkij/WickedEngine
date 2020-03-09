@@ -39,7 +39,7 @@ void wiWidget::Update(wiGUI* gui, float dt)
 
 	if (parent != nullptr)
 	{
-		this->UpdateTransform_Parented(*parent, world_parent_bind);
+		this->UpdateTransform_Parented(*parent);
 	}
 
 	XMVECTOR S, R, T;
@@ -1365,12 +1365,15 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 		moveDragger->SetSize(XMFLOAT2(scale.x - windowcontrolSize * 3, windowcontrolSize));
 		moveDragger->SetPos(XMFLOAT2(windowcontrolSize, 0));
 		moveDragger->OnDrag([this, gui](wiEventArgs args) {
+			auto saved_parent = this->parent;
+			this->Detach();
 			this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
 			this->wiWidget::Update(gui, 0);
 			for (auto& x : this->childrenWidgets)
 			{
 				x->wiWidget::Update(gui, 0);
 			}
+			this->AttachTo(saved_parent);
 			});
 		AddWidget(moveDragger);
 
@@ -1402,6 +1405,8 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 		resizeDragger_UpperLeft->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
 		resizeDragger_UpperLeft->SetPos(XMFLOAT2(0, 0));
 		resizeDragger_UpperLeft->OnDrag([this, gui](wiEventArgs args) {
+			auto saved_parent = this->parent;
+			this->Detach();
 			XMFLOAT2 scaleDiff;
 			scaleDiff.x = (scale.x - args.deltaPos.x) / scale.x;
 			scaleDiff.y = (scale.y - args.deltaPos.y) / scale.y;
@@ -1412,6 +1417,7 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 			{
 				x->wiWidget::Update(gui, 0);
 			}
+			this->AttachTo(saved_parent);
 			});
 		AddWidget(resizeDragger_UpperLeft);
 
@@ -1421,6 +1427,8 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 		resizeDragger_BottomRight->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
 		resizeDragger_BottomRight->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y + scale.y - windowcontrolSize));
 		resizeDragger_BottomRight->OnDrag([this, gui](wiEventArgs args) {
+			auto saved_parent = this->parent;
+			this->Detach();
 			XMFLOAT2 scaleDiff;
 			scaleDiff.x = (scale.x + args.deltaPos.x) / scale.x;
 			scaleDiff.y = (scale.y + args.deltaPos.y) / scale.y;
@@ -1430,6 +1438,7 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 			{
 				x->wiWidget::Update(gui, 0);
 			}
+			this->AttachTo(saved_parent);
 			});
 		AddWidget(resizeDragger_BottomRight);
 	}

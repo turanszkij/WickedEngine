@@ -107,7 +107,7 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 
 
 
-	forceFieldWindow->Translate(XMFLOAT3(gui->GetSize().x - 720, 50, 0));
+	forceFieldWindow->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 720, 50, 0));
 	forceFieldWindow->SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

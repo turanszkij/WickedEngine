@@ -216,7 +216,6 @@ void EditorComponent::Load()
 
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
-	GetGUI().SetSize(screenW, screenH);
 
 	XMFLOAT2 option_size = XMFLOAT2(100, 28);
 	float step = (option_size.y + 5) * -1, x = screenW - option_size.x, y = screenH - option_size.y;
@@ -2190,52 +2189,21 @@ void EditorComponent::EndTranslate()
 
 	Scene& scene = wiScene::GetScene();
 
+	scene.Component_DetachChildren(translator.entityID);
+
 	// Remove translator from scene:
 	scene.Entity_Remove(translator.entityID);
 
-	// Translation ended, apply all final transformations as local pose:
-	for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
-	{
-		HierarchyComponent& parent = scene.hierarchy[i];
-
-		if (parent.parentID == translator.entityID) // only to entities that were attached to translator!
-		{
-			Entity entity = scene.hierarchy.GetEntity(i);
-			TransformComponent* transform = scene.transforms.GetComponent(entity);
-			if (transform != nullptr)
-			{
-				transform->ApplyTransform(); // (**)
-			}
-		}
-	}
-
-	// Restore scene hierarchy from before translation:
-	scene.hierarchy.Copy(savedHierarchy);
-
-	// If an attached entity got moved, then the world transform was applied to it (**),
-	//	so we need to reattach it properly to the parent matrix:
+	// Restore parents before selections were attached to translator:
 	for (const wiScene::PickResult& x : selected)
 	{
-		HierarchyComponent* parent = scene.hierarchy.GetComponent(x.entity);
-		if (parent != nullptr)
+		HierarchyComponent* hierarchy_prev = savedHierarchy.GetComponent(x.entity);
+		if (hierarchy_prev != nullptr)
 		{
-			TransformComponent* transform_parent = scene.transforms.GetComponent(parent->parentID);
-			if (transform_parent != nullptr)
-			{
-				// Save the parent's inverse worldmatrix:
-				XMStoreFloat4x4(&parent->world_parent_inverse_bind, XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent->world)));
-
-				TransformComponent* transform_child = scene.transforms.GetComponent(x.entity);
-				if (transform_child != nullptr)
-				{
-					// Child updated immediately, to that it can be immediately attached to afterwards:
-					transform_child->UpdateTransform_Parented(*transform_parent, parent->world_parent_inverse_bind);
-				}
-			}
-
+			scene.Component_Attach(x.entity, hierarchy_prev->parentID);
 		}
 	}
-
+	savedHierarchy.Clear();
 	selected.clear();
 }
 void EditorComponent::AddSelected(const wiScene::PickResult& picked)

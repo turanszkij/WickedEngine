@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+36: Removed HierarchyComponent::world_parent_inverse_bind
 35: Roughness remapped to corrected brdf
 34: Removed restPose from SoftBodyPhysicsComponent
 33: LightComponent shadow bias behaviour changed
