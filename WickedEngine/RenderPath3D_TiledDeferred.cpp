@@ -105,7 +105,7 @@ void RenderPath3D_TiledDeferred::Render() const
 		RenderDecals(cmd);
 
 		device->BindResource(CS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, cmd);
-		device->BindResource(CS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
+		device->BindResource(CS, getSSREnabled() ? &rtStochasticSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
 
 
 		if (device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT))
@@ -156,7 +156,7 @@ void RenderPath3D_TiledDeferred::Render() const
 
 		RenderDeferredComposition(cmd);
 
-		RenderSSR(rtDeferred, rtGBuffer[1], cmd);
+		RenderStochasticSSR(rtDeferred, rtGBuffer[0], rtGBuffer[1], rtGBuffer[2], cmd);
 
 		DownsampleDepthBuffer(cmd);
 

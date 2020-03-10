@@ -208,6 +208,16 @@ namespace wiRenderer
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
+	void Postprocess_StochasticSSR(
+		const wiGraphics::Texture& input,
+		const wiGraphics::Texture& depthbuffer,
+		const wiGraphics::Texture& lineardepth_minmax,
+		const wiGraphics::Texture& gbuffer0,
+		const wiGraphics::Texture& gbuffer1,
+		const wiGraphics::Texture& gbuffer2,
+		const wiGraphics::Texture& output,
+		wiGraphics::CommandList cmd
+	);
 	void Postprocess_SSS(
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& gbuffer0,
