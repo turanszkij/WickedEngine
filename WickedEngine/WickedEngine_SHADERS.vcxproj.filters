@@ -85,6 +85,9 @@
     <None Include="depthoffieldHF.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="stochasticSSRHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="objectHS.hlsl">
@@ -850,6 +853,21 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="raytrace_tilesortCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="stochasticSSRCS_raytrace.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="stochasticSSRCS_resolve.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="stochasticSSRCS_median.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="stochasticSSRCS_temporal.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="stochasticSSRCS_combine.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="upsample_bilateral_float4CS.hlsl">

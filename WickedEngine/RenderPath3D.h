@@ -51,7 +51,8 @@ private:
 
 protected:
 	wiGraphics::Texture rtReflection; // conains the scene rendered for planar reflections
-	wiGraphics::Texture rtSSR; // screen-space reflection results
+	wiGraphics::Texture rtSSR; // standard screen-space reflection results
+	wiGraphics::Texture rtStochasticSSR; // stochastic screen-space reflection results
 	wiGraphics::Texture rtSceneCopy; // contains the rendered scene that can be fed into transparent pass for distortion effect
 	wiGraphics::Texture rtWaterRipple; // water ripple sprite normal maps are rendered into this
 	wiGraphics::Texture rtParticleDistortion; // contains distortive particles
@@ -102,6 +103,7 @@ protected:
 	virtual void RenderLinearDepth(wiGraphics::CommandList cmd) const;
 	virtual void RenderSSAO(wiGraphics::CommandList cmd) const;
 	virtual void RenderSSR(const wiGraphics::Texture& srcSceneRT, const wiGraphics::Texture& gbuffer1, wiGraphics::CommandList cmd) const;
+	virtual void RenderStochasticSSR(const wiGraphics::Texture& srcSceneRT, const wiGraphics::Texture& gbuffer0, const wiGraphics::Texture& gbuffer1, const wiGraphics::Texture& gbuffer2, wiGraphics::CommandList cmd) const;
 	virtual void DownsampleDepthBuffer(wiGraphics::CommandList cmd) const;
 	virtual void RenderOutline(const wiGraphics::Texture& dstSceneRT, wiGraphics::CommandList cmd) const;
 	virtual void RenderLightShafts(wiGraphics::CommandList cmd) const;
