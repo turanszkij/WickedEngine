@@ -8887,9 +8887,10 @@ void Postprocess_StochasticSSR(
 		main_desc.Height = desc.Height;
 		main_desc.Format = FORMAT_R16G16B16A16_FLOAT;
 		main_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		main_desc.MipLevels = 11;
+		main_desc.MipLevels = 0; // full mip chain
 		device->CreateTexture(&main_desc, nullptr, &texture_main);
 
+		main_desc = texture_main.GetDesc(); // mip count was initialized in CreateTexture()
 		for (uint32_t i = 0; i < main_desc.MipLevels; ++i)
 		{
 			int subresource_index;

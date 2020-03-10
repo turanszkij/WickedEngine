@@ -19,5 +19,5 @@ float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_TARGET
 
 	ApplyFog(depth, color);
 
-	return color;
+	return max(0, color);
 }
