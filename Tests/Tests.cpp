@@ -5,6 +5,7 @@
 #include <sstream>
 #include <fstream>
 
+using namespace wiECS;
 using namespace wiScene;
 
 void Tests::Initialize()
@@ -84,9 +85,9 @@ void TestsRenderer::Load()
 	GetGUI().AddWidget(volume);
 
 
-	wiComboBox* testSelector = new wiComboBox("TestSelector");
+	testSelector = new wiComboBox("TestSelector");
 	testSelector->SetText("Demo: ");
-	testSelector->SetSize(XMFLOAT2(140, 20));
+	testSelector->SetSize(XMFLOAT2(160, 20));
 	testSelector->SetPos(XMFLOAT2(50, 140));
 	testSelector->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
 	testSelector->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
@@ -107,6 +108,7 @@ void TestsRenderer::Load()
 	testSelector->AddItem("Lightmap Bake Test");
 	testSelector->AddItem("Network Test");
 	testSelector->AddItem("Controller Test");
+	testSelector->AddItem("Inverse Kinematics Test");
 	testSelector->SetMaxVisibleItemCount(10);
 	testSelector->OnSelect([=](wiEventArgs args) {
 
@@ -216,6 +218,31 @@ void TestsRenderer::Load()
 			wiInput::SetControllerFeedback(feedback, 0);
 		}
 		break;
+		case 17:
+		{
+			Scene scene;
+			LoadModel(scene, "../models/girl.wiscene", XMMatrixScaling(0.7f, 0.7f, 0.7f));
+
+			ik_entity = scene.Entity_FindByName("mano_L"); // hand bone in girl.wiscene
+			if (ik_entity != INVALID_ENTITY)
+			{
+				InverseKinematicsComponent& ik = scene.inverse_kinematics.Create(ik_entity);
+				ik.chain_length = 2; // lower and upper arm included (two parents in hierarchy of hand)
+				//ik.iteration_count = 5;
+				ik.target = CreateEntity();
+				scene.transforms.Create(ik.target);
+			}
+
+			// Add some nice weather, not just black:
+			auto& weather = scene.weathers.Create(CreateEntity());
+			weather.ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
+			weather.horizon = XMFLOAT3(0.38f, 0.38f, 0.38f);
+			weather.zenith = XMFLOAT3(0.42f, 0.42f, 0.42f);
+			weather.cloudiness = 0.75f;
+
+			wiScene::GetScene().Merge(scene); // add lodaded scene to global scene
+		}
+		break;
 		default:
 			assert(0);
 			break;
@@ -225,6 +252,41 @@ void TestsRenderer::Load()
 	testSelector->SetSelected(0);
 	GetGUI().AddWidget(testSelector);
 
+}
+void TestsRenderer::Update(float dt)
+{
+	switch (testSelector->GetSelected())
+	{
+	case 17:
+	{
+		if (ik_entity != INVALID_ENTITY)
+		{
+			// Inverse kinematics test:
+			Scene& scene = wiScene::GetScene();
+			InverseKinematicsComponent& ik = *scene.inverse_kinematics.GetComponent(ik_entity);
+			TransformComponent& target = *scene.transforms.GetComponent(ik.target);
+
+			// place ik target on a plane intersected by mouse ray:
+			RAY ray = wiRenderer::GetPickRay((long)wiInput::GetPointer().x, (long)wiInput::GetPointer().y);
+			XMVECTOR plane = XMVectorSet(0, 0, 1, 0.2f);
+			XMVECTOR I = XMPlaneIntersectLine(plane, XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction) * 10000);
+			target.ClearTransform();
+			XMFLOAT3 _I;
+			XMStoreFloat3(&_I, I);
+			target.Translate(_I);
+			target.UpdateTransform();
+
+			// draw debug ik target position:
+			wiRenderer::RenderablePoint pp;
+			pp.position = target.GetPosition();
+			pp.color = XMFLOAT4(0, 1, 1, 1);
+			wiRenderer::DrawPoint(pp);
+		}
+	}
+	break;
+	}
+
+	__super::Update(dt);
 }
 
 void TestsRenderer::RunJobSystemTest()

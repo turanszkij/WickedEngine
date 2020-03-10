@@ -104,12 +104,18 @@ namespace wiScene
 		enum FLAGS
 		{
 			EMPTY = 0,
+			DISABLED = 1 << 0,
 		};
 		uint32_t _flags = EMPTY;
 
 		wiECS::Entity target = wiECS::INVALID_ENTITY; // which entity to follow (must have a transform component)
 		uint32_t chain_length = ~0; // ~0 means: compute until the root
 		uint32_t iteration_count = 1;
+
+		inline void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }
+		inline bool IsDisabled() const { return _flags & DISABLED; }
+
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
 	struct MaterialComponent
@@ -837,8 +843,8 @@ namespace wiScene
 		XMFLOAT4 atlasMulAdd;
 		XMFLOAT4X4 world;
 
-		const wiGraphics::Texture* texture = nullptr;
-		const wiGraphics::Texture* normal = nullptr;
+		std::shared_ptr<wiResource> texture;
+		std::shared_ptr<wiResource> normal;
 
 		inline float GetOpacity() const { return color.w; }
 

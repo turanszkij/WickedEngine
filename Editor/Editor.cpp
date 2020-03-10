@@ -790,38 +790,6 @@ void EditorComponent::Update(float dt)
 	Scene& scene = wiScene::GetScene();
 	CameraComponent& camera = wiRenderer::GetCamera();
 
-	// IK test
-	Entity hand = scene.Entity_FindByName("mano_R"); // in girl.wiscene
-	if (hand != INVALID_ENTITY)
-	{
-		if (scene.inverse_kinematics.GetCount() == 0)
-		{
-			// init ik
-			InverseKinematicsComponent& ik = scene.inverse_kinematics.Create(hand);
-			ik.chain_length = 2;
-			ik.iteration_count = 5;
-			ik.target = CreateEntity();
-			scene.transforms.Create(ik.target);
-		}
-
-		InverseKinematicsComponent& ik = *scene.inverse_kinematics.GetComponent(hand);
-		TransformComponent& target = *scene.transforms.GetComponent(ik.target);
-
-		RAY ray = wiRenderer::GetPickRay(wiInput::GetPointer().x, wiInput::GetPointer().y);
-		XMVECTOR plane = XMVectorSet(0, 0, 1, 0);
-		XMVECTOR I = XMPlaneIntersectLine(plane, XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction) * 10000);
-		target.ClearTransform();
-		XMFLOAT3 _I;
-		XMStoreFloat3(&_I, I);
-		target.Translate(_I);
-		target.UpdateTransform();
-
-		wiRenderer::RenderablePoint pp;
-		pp.position = target.GetPosition();
-		pp.color = XMFLOAT4(0, 1, 1, 1);
-		wiRenderer::DrawPoint(pp);
-	}
-
 	animWnd->Update();
 	weatherWnd->Update();
 
@@ -1503,7 +1471,6 @@ void EditorComponent::Update(float dt)
 	// Delete
 	if (wiInput::Press(wiInput::KEYBOARD_BUTTON_DELETE))
 	{
-
 		wiArchive& archive = AdvanceHistory();
 		archive << HISTORYOP_DELETE;
 
@@ -1523,6 +1490,7 @@ void EditorComponent::Update(float dt)
 		}
 
 		EndTranslate();
+		selected.clear();
 	}
 
 	// Update window data bindings...

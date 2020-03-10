@@ -1081,6 +1081,7 @@ namespace wiScene
 		hairs.Clear();
 		weathers.Clear();
 		sounds.Clear();
+		inverse_kinematics.Clear();
 	}
 	void Scene::Merge(Scene& other)
 	{
@@ -1110,6 +1111,7 @@ namespace wiScene
 		hairs.Merge(other.hairs);
 		weathers.Merge(other.weathers);
 		sounds.Merge(other.sounds);
+		inverse_kinematics.Merge(other.inverse_kinematics);
 
 		bounds = AABB::Merge(bounds, other.bounds);
 	}
@@ -1143,6 +1145,7 @@ namespace wiScene
 		hairs.Remove(entity);
 		weathers.Remove(entity);
 		sounds.Remove(entity);
+		inverse_kinematics.Remove(entity);
 	}
 	Entity Scene::Entity_FindByName(const std::string& name)
 	{
@@ -1693,68 +1696,77 @@ namespace wiScene
 	{
 		for (size_t i = 0; i < inverse_kinematics.GetCount(); ++i)
 		{
-			Entity entity = inverse_kinematics.GetEntity(i);
 			const InverseKinematicsComponent& ik = inverse_kinematics[i];
+			if (ik.IsDisabled())
+			{
+				continue;
+			}
+			Entity entity = inverse_kinematics.GetEntity(i);
 			TransformComponent* transform = transforms.GetComponent(entity);
 			TransformComponent* target = transforms.GetComponent(ik.target);
 			const HierarchyComponent* hier = hierarchy.GetComponent(entity);
-			assert(transform != nullptr && target != nullptr && hier != nullptr);
-
-			if (transform != nullptr && target != nullptr)
+			if (transform == nullptr || target == nullptr || hier == nullptr)
 			{
-				XMVECTOR target_pos = target->GetPositionV();
-				for (uint32_t iteration = 0; iteration < ik.iteration_count; ++iteration)
+				assert(0); // without any of the above, the IK simulation doesn't make sense
+				continue;
+			}
+
+			const XMVECTOR target_pos = target->GetPositionV();
+			for (uint32_t iteration = 0; iteration < ik.iteration_count; ++iteration)
+			{
+				TransformComponent* stack[32] = {};
+				Entity parent_entity = hier->parentID;
+				TransformComponent* child_transform = transform;
+				for (uint32_t chain = 0; chain < std::min(ik.chain_length, (uint32_t)arraysize(stack)); ++chain)
 				{
-					TransformComponent* stack[32] = {};
-					Entity parent_entity = hier->parentID;
-					TransformComponent* child_transform = transform;
-					for (uint32_t chain = 0; chain < std::min(ik.chain_length, (uint32_t)arraysize(stack)); ++chain)
+					// stack stores all traversed chain links so far:
+					stack[chain] = child_transform;
+
+					// Compute required parent rotation that moves ik transform closer to target transform:
+					TransformComponent* parent_transform = transforms.GetComponent(parent_entity);
+					const XMVECTOR parent_pos = parent_transform->GetPositionV();
+					const XMVECTOR dir_parent_to_ik = XMVector3Normalize(transform->GetPositionV() - parent_pos);
+					const XMVECTOR dir_parent_to_target = XMVector3Normalize(target_pos - parent_pos);
+					const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(dir_parent_to_ik, dir_parent_to_target));
+					const float angle = XMVectorGetX(XMVectorACos(XMVector3Dot(dir_parent_to_ik, dir_parent_to_target)));
+					XMFLOAT4 quaternion;
+					XMStoreFloat4(&quaternion, XMQuaternionNormalize(XMQuaternionRotationAxis(axis, angle)));
+
+					// parent to world space:
+					parent_transform->ApplyTransform();
+					// rotate parent:
+					parent_transform->Rotate(quaternion);
+					parent_transform->UpdateTransform();
+					// parent back to local space (if parent has parent):
+					const HierarchyComponent* hier_parent = hierarchy.GetComponent(parent_entity);
+					if (hier_parent != nullptr)
 					{
-						stack[chain] = child_transform;
-						TransformComponent* parent_transform = transforms.GetComponent(parent_entity);
-						const XMVECTOR parent_pos = parent_transform->GetPositionV();
-						const XMVECTOR dir_parent_to_child = XMVector3Normalize(child_transform->GetPositionV() - parent_pos);
-						const XMVECTOR dir_parent_to_target = XMVector3Normalize(target_pos - parent_pos);
-						const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(dir_parent_to_child, dir_parent_to_target)); // todo: check handedness!
-						const float angle = XMVectorGetX(XMVectorACos(XMVector3Dot(dir_parent_to_child, dir_parent_to_target)));
-						const XMVECTOR Q = XMQuaternionRotationAxis(axis, angle);
-						XMFLOAT4 quat;
-						XMStoreFloat4(&quat, Q);
-
-						// parent to world space:
-						parent_transform->ApplyTransform();
-						// rotate parent:
-						parent_transform->Rotate(quat);
-						parent_transform->UpdateTransform();
-						// parent back to local space (if parent has parent):
-						const HierarchyComponent* hier_parent = hierarchy.GetComponent(parent_entity);
-						if (hier_parent != nullptr)
-						{
-							Entity parent_of_parent_entity = hier_parent->parentID;
-							const TransformComponent* transform_parent_of_parent = transforms.GetComponent(parent_of_parent_entity);
-							XMMATRIX parent_of_parent_inverse = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent_of_parent->world));
-							parent_transform->MatrixTransform(parent_of_parent_inverse);
-						}
-
-						// update chain from parent to children:
-						const TransformComponent* recurse_parent = parent_transform;
-						for (int recurse_chain = (int)chain; recurse_chain >= 0; --recurse_chain)
-						{
-							stack[recurse_chain]->UpdateTransform_Parented(*recurse_parent);
-							recurse_parent = stack[recurse_chain];
-						}
-
-						if (hier_parent == nullptr)
-						{
-							break;
-						}
-						else
-						{
-							child_transform = parent_transform;
-							parent_entity = hier_parent->parentID;
-						}
-
+						Entity parent_of_parent_entity = hier_parent->parentID;
+						const TransformComponent* transform_parent_of_parent = transforms.GetComponent(parent_of_parent_entity);
+						XMMATRIX parent_of_parent_inverse = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent_of_parent->world));
+						parent_transform->MatrixTransform(parent_of_parent_inverse);
+						// Do not call UpdateTransform() here, to keep parent world matrix in world space!
 					}
+
+					// update chain from parent to children:
+					const TransformComponent* recurse_parent = parent_transform;
+					for (int recurse_chain = (int)chain; recurse_chain >= 0; --recurse_chain)
+					{
+						stack[recurse_chain]->UpdateTransform_Parented(*recurse_parent);
+						recurse_parent = stack[recurse_chain];
+					}
+
+					if (hier_parent == nullptr)
+					{
+						// chain root reached, exit
+						break;
+					}
+
+					// move up in the chain by one:
+					child_transform = parent_transform;
+					parent_entity = hier_parent->parentID;
+					assert(chain < (uint32_t)arraysize(stack) - 1); // if this is encountered, just extend stack array size
+
 				}
 			}
 		}
@@ -2050,8 +2062,8 @@ namespace wiScene
 			const MaterialComponent& material = *materials.GetComponent(entity);
 			decal.color = material.baseColor;
 			decal.emissive = material.GetEmissiveStrength();
-			decal.texture = material.GetBaseColorMap();
-			decal.normal = material.GetNormalMap();
+			decal.texture = material.baseColorMap;
+			decal.normal = material.normalMap;
 		});
 	}
 	void RunProbeUpdateSystem(

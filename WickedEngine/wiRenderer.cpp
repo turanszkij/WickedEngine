@@ -172,7 +172,7 @@ wiGPUBVH sceneBVH;
 static const int atlasClampBorder = 1;
 
 static Texture decalAtlas;
-static unordered_map<const Texture*, wiRectPacker::rect_xywh> packedDecals;
+static unordered_map<std::shared_ptr<wiResource>, wiRectPacker::rect_xywh> packedDecals;
 
 Texture globalLightmap;
 unordered_map<const void*, wiRectPacker::rect_xywh> packedLightmaps;
@@ -6181,8 +6181,8 @@ void DrawDeferredDecals(
 			if ((decal.texture != nullptr || decal.normal != nullptr) && camera.frustum.CheckBox(aabb)) 
 			{
 
-				device->BindResource(PS, decal.texture, TEXSLOT_ONDEMAND0, cmd);
-				device->BindResource(PS, decal.normal, TEXSLOT_ONDEMAND1, cmd);
+				device->BindResource(PS, decal.texture != nullptr ? decal.texture->texture : nullptr, TEXSLOT_ONDEMAND0, cmd);
+				device->BindResource(PS, decal.normal != nullptr ? decal.normal->texture : nullptr, TEXSLOT_ONDEMAND1, cmd);
 
 				XMMATRIX decalWorld = XMLoadFloat4x4(&decal.world);
 
@@ -7746,7 +7746,7 @@ void ManageDecalAtlas()
 			if (packedDecals.find(decal.texture) == packedDecals.end())
 			{
 				// we need to pack this decal texture into the atlas
-				rect_xywh newRect = rect_xywh(0, 0, decal.texture->GetDesc().Width + atlasClampBorder * 2, decal.texture->GetDesc().Height + atlasClampBorder * 2);
+				rect_xywh newRect = rect_xywh(0, 0, decal.texture->texture->GetDesc().Width + atlasClampBorder * 2, decal.texture->texture->GetDesc().Height + atlasClampBorder * 2);
 				packedDecals[decal.texture] = newRect;
 
 				repackAtlas_Decal = true;
@@ -7839,9 +7839,9 @@ void RefreshDecalAtlas(CommandList cmd)
 		{
 			for (auto& it : packedDecals)
 			{
-				if (mip < it.first->GetDesc().MipLevels)
+				if (mip < it.first->texture->GetDesc().MipLevels)
 				{
-					CopyTexture2D(decalAtlas, mip, (it.second.x >> mip) + atlasClampBorder, (it.second.y >> mip) + atlasClampBorder, *it.first, mip, cmd, BORDEREXPAND_CLAMP);
+					CopyTexture2D(decalAtlas, mip, (it.second.x >> mip) + atlasClampBorder, (it.second.y >> mip) + atlasClampBorder, *it.first->texture, mip, cmd, BORDEREXPAND_CLAMP);
 				}
 			}
 		}

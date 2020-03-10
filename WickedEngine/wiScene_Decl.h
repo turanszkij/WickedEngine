@@ -8,6 +8,7 @@ namespace wiScene
 	struct TransformComponent;
 	struct PreviousFrameTransformComponent;
 	struct HierarchyComponent;
+	struct InverseKinematicsComponent;
 	struct MaterialComponent;
 	struct MeshComponent;
 	struct ImpostorComponent;

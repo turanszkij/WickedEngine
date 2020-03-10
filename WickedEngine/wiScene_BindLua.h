@@ -34,6 +34,7 @@ namespace wiScene_BindLua
 		int Component_CreateTransform(lua_State* L);
 		int Component_CreateLight(lua_State* L);
 		int Component_CreateObject(lua_State* L);
+		int Component_CreateInverseKinematics(lua_State* L);
 
 		int Component_GetName(lua_State* L);
 		int Component_GetLayer(lua_State* L);
@@ -44,6 +45,7 @@ namespace wiScene_BindLua
 		int Component_GetEmitter(lua_State* L);
 		int Component_GetLight(lua_State* L);
 		int Component_GetObject(lua_State* L);
+		int Component_GetInverseKinematics(lua_State* L);
 
 		int Component_GetNameArray(lua_State* L);
 		int Component_GetLayerArray(lua_State* L);
@@ -54,6 +56,7 @@ namespace wiScene_BindLua
 		int Component_GetEmitterArray(lua_State* L);
 		int Component_GetLightArray(lua_State* L);
 		int Component_GetObjectArray(lua_State* L);
+		int Component_GetInverseKinematicsArray(lua_State* L);
 
 		int Entity_GetNameArray(lua_State* L);
 		int Entity_GetLayerArray(lua_State* L);
@@ -64,6 +67,7 @@ namespace wiScene_BindLua
 		int Entity_GetEmitterArray(lua_State* L);
 		int Entity_GetLightArray(lua_State* L);
 		int Entity_GetObjectArray(lua_State* L);
+		int Entity_GetInverseKinematicsArray(lua_State* L);
 
 		int Component_Attach(lua_State* L);
 		int Component_Detach(lua_State* L);
@@ -132,6 +136,30 @@ namespace wiScene_BindLua
 		int GetPosition(lua_State* L);
 		int GetRotation(lua_State* L);
 		int GetScale(lua_State* L);
+	};
+
+	class InverseKinematicsComponent_BindLua
+	{
+	public:
+		bool owning = false;
+		wiScene::InverseKinematicsComponent* component = nullptr;
+
+		static const char className[];
+		static Luna<InverseKinematicsComponent_BindLua>::FunctionType methods[];
+		static Luna<InverseKinematicsComponent_BindLua>::PropertyType properties[];
+
+		InverseKinematicsComponent_BindLua(wiScene::InverseKinematicsComponent* component) :component(component) {}
+		InverseKinematicsComponent_BindLua(lua_State* L);
+		~InverseKinematicsComponent_BindLua();
+
+		int SetTarget(lua_State* L);
+		int SetChainLength(lua_State* L);
+		int SetIterationCount(lua_State* L);
+		int SetDisabled(lua_State* L);
+		int GetTarget(lua_State* L);
+		int GetChainLength(lua_State* L);
+		int GetIterationCount(lua_State* L);
+		int IsDisabled(lua_State* L);
 	};
 
 	class CameraComponent_BindLua
