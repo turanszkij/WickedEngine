@@ -38,6 +38,15 @@ void RenderPath3D::ResizeBuffers()
 	}
 	{
 		TextureDesc desc;
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		desc.Width = wiRenderer::GetInternalResolution().x;
+		desc.Height = wiRenderer::GetInternalResolution().y;
+		device->CreateTexture(&desc, nullptr, &rtStochasticSSR);
+		device->SetName(&rtStochasticSSR, "rtStochasticSSR");
+	}
+	{
+		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = FORMAT_R16G16B16A16_FLOAT;
 		desc.Width = wiRenderer::GetInternalResolution().x;
@@ -439,6 +448,13 @@ void RenderPath3D::RenderSSR(const Texture& srcSceneRT, const wiGraphics::Textur
 	if (getSSREnabled())
 	{
 		wiRenderer::Postprocess_SSR(srcSceneRT, depthBuffer_Copy, rtLinearDepth_minmax, gbuffer1, rtSSR, cmd);
+	}
+}
+void RenderPath3D::RenderStochasticSSR(const Texture& srcSceneRT, const wiGraphics::Texture& gbuffer0, const wiGraphics::Texture& gbuffer1, const wiGraphics::Texture& gbuffer2, CommandList cmd) const
+{
+	if (getSSREnabled())
+	{
+		wiRenderer::Postprocess_StochasticSSR(srcSceneRT, depthBuffer_Copy, rtLinearDepth_minmax, gbuffer0, gbuffer1, gbuffer2, rtStochasticSSR, cmd);
 	}
 }
 void RenderPath3D::DownsampleDepthBuffer(CommandList cmd) const

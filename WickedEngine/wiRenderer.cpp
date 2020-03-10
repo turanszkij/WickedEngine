@@ -1333,6 +1333,11 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM4], "blur_bilateral_unorm4CS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SSAO], "ssaoCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SSR], "ssrCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_STOCHASTICSSR_RAYTRACE], "stochasticSSRCS_raytrace.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_STOCHASTICSSR_RESOLVE], "stochasticSSRCS_resolve.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_STOCHASTICSSR_TEMPORAL], "stochasticSSRCS_temporal.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_STOCHASTICSSR_MEDIAN], "stochasticSSRCS_median.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_STOCHASTICSSR_COMBINE], "stochasticSSRCS_combine.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_LIGHTSHAFTS], "lightshaftsCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_HORIZONTAL], "depthoffield_tileMaxCOC_horizontalCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_VERTICAL], "depthoffield_tileMaxCOC_verticalCS.cso"); });
@@ -8838,6 +8843,256 @@ void Postprocess_SSR(
 	if (desc.MipLevels > 1)
 	{
 		GenerateMipChain(output, MIPGENFILTER_GAUSSIAN, cmd);
+	}
+
+	wiProfiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+void Postprocess_StochasticSSR(
+	const Texture& input,
+	const Texture& depthbuffer,
+	const Texture& lineardepth_minmax,
+	const Texture& gbuffer0,
+	const Texture& gbuffer1,
+	const Texture& gbuffer2,
+	const Texture& output,
+	CommandList cmd
+)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("Postprocess_StochasticSSR", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Stochastic SSR", cmd);
+
+	device->UnbindResources(TEXSLOT_RENDERPATH_SSR, 1, cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	static TextureDesc initialized_desc;
+	static Texture texture_main;
+	static Texture texture_raytrace;
+	static Texture texture_mask;
+	static Texture texture_resolve;
+	static Texture texture_temporal[2];
+	static Texture texture_median;
+
+	// Initialize once
+	if (initialized_desc.Width != desc.Width || initialized_desc.Height != desc.Height)
+	{
+		initialized_desc = desc;
+
+		TextureDesc main_desc;
+		main_desc.type = TextureDesc::TEXTURE_2D;
+		main_desc.Width = desc.Width;
+		main_desc.Height = desc.Height;
+		main_desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		main_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		main_desc.MipLevels = 0; // full mip chain
+		device->CreateTexture(&main_desc, nullptr, &texture_main);
+
+		main_desc = texture_main.GetDesc(); // mip count was initialized in CreateTexture()
+		for (uint32_t i = 0; i < main_desc.MipLevels; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(&texture_main, SRV, 0, 1, i, 1);
+			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(&texture_main, UAV, 0, 1, i, 1);
+			assert(subresource_index == i);
+		}
+
+		TextureDesc cast_desc;
+		cast_desc.type = TextureDesc::TEXTURE_2D;
+		cast_desc.Width = desc.Width / 2;
+		cast_desc.Height = desc.Height / 2;
+		cast_desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		cast_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		device->CreateTexture(&cast_desc, nullptr, &texture_raytrace);
+		cast_desc.Format = FORMAT_R16G16_FLOAT;
+		device->CreateTexture(&cast_desc, nullptr, &texture_mask);
+
+		TextureDesc buffer_desc;
+		buffer_desc.type = TextureDesc::TEXTURE_2D;
+		buffer_desc.Width = desc.Width;
+		buffer_desc.Height = desc.Height;
+		buffer_desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		buffer_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		device->CreateTexture(&buffer_desc, nullptr, &texture_resolve);
+		device->CreateTexture(&buffer_desc, nullptr, &texture_temporal[0]);
+		device->CreateTexture(&buffer_desc, nullptr, &texture_temporal[1]);
+		device->CreateTexture(&buffer_desc, nullptr, &texture_median);
+	}
+
+	// This is very expensive. There is problably a better way of getting LOD of input. 
+	// For now I'm just making a copy of input, to stay on the safe side.
+
+	// Main buffer copy and mip:
+	{
+		device->EventBegin("Main buffer pass", cmd);
+
+		CopyTexture2D(texture_main, 0, 0, 0, input, 0, cmd);
+		GenerateMipChain(texture_main, MIPGENFILTER_GAUSSIAN, cmd);
+
+		device->EventEnd(cmd);
+	}
+
+	// Switch to half res
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width / 2;
+	cb.xPPResolution.y = desc.Height / 2;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	// Raytrace pass:
+	{
+		device->EventBegin("Stochastic Raytrace pass", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_STOCHASTICSSR_RAYTRACE], cmd);
+
+		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(CS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
+		device->BindResource(CS, &gbuffer2, TEXSLOT_GBUFFER2, cmd);
+		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &lineardepth_minmax, TEXSLOT_ONDEMAND1, cmd);
+
+		const GPUResource* uavs[] = {
+			&texture_raytrace,
+			&texture_mask,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(texture_raytrace.GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(texture_raytrace.GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
+
+	// Switch to full res
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	// Resolve pass:
+	{
+		device->EventBegin("Resolve pass", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_STOCHASTICSSR_RESOLVE], cmd);
+
+		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(CS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
+		device->BindResource(CS, &gbuffer2, TEXSLOT_GBUFFER2, cmd);
+		device->BindResource(CS, &texture_raytrace, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &texture_mask, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &texture_main, TEXSLOT_ONDEMAND2, cmd);
+
+		const GPUResource* uavs[] = {
+			&texture_resolve,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(texture_resolve.GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(texture_resolve.GetDesc().Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
+
+	int temporal_output = device->GetFrameCount() % 2;
+	int temporal_history = 1 - temporal_output;
+
+	// Temporal pass:
+	{
+		device->EventBegin("Temporal pass", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_STOCHASTICSSR_TEMPORAL], cmd);
+
+		device->BindResource(CS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
+		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(CS, &texture_resolve, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &texture_temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &texture_raytrace, TEXSLOT_ONDEMAND2, cmd);
+
+		const GPUResource* uavs[] = {
+			&texture_temporal[temporal_output],
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(texture_temporal[temporal_output].GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(texture_temporal[temporal_output].GetDesc().Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
+
+	// Median blur pass:
+	{
+		device->EventBegin("Median blur pass", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_STOCHASTICSSR_MEDIAN], cmd);
+
+		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(CS, &texture_temporal[temporal_output], TEXSLOT_ONDEMAND0, cmd);
+
+		const GPUResource* uavs[] = {
+			&texture_median,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(texture_median.GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(texture_median.GetDesc().Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
+	//Postprocess_Blur_Bilateral(texture_temporal[temporal_output], lineardepth, texture_temp, output, cmd, 0.85f, 0.85f, 1.2f);
+
+	// combine pass:
+	{
+		device->EventBegin("Combine pass", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_STOCHASTICSSR_COMBINE], cmd);
+
+		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(CS, &gbuffer0, TEXSLOT_GBUFFER0, cmd);
+		device->BindResource(CS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
+		device->BindResource(CS, &gbuffer2, TEXSLOT_GBUFFER2, cmd);
+		device->BindResource(CS, &texture_median, TEXSLOT_ONDEMAND0, cmd);
+
+		const GPUResource* uavs[] = {
+			&output,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
 	}
 
 	wiProfiler::EndRange(range);
