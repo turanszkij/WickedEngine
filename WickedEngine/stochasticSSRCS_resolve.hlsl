@@ -57,7 +57,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     // Everthing in view space:
     const float3 P = reconstructPosition(uv, depth, g_xCamera_InvP);
     const float3 N = mul((float3x3) g_xCamera_View, decodeNormal(texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy)).xyz;    
-    const float3 V = normalize(-P);
+    const float3 V = normalize(P);
     const float NdotV = saturate(dot(N, V));
     
     const float roughness = GetRoughness(texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).g);
