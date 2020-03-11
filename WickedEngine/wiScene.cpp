@@ -1694,6 +1694,7 @@ namespace wiScene
 		ComponentManager<TransformComponent>& transforms
 	)
 	{
+		bool recompute_hierarchy = false;
 		for (size_t i = 0; i < inverse_kinematics.GetCount(); ++i)
 		{
 			const InverseKinematicsComponent& ik = inverse_kinematics[i];
@@ -1719,6 +1720,8 @@ namespace wiScene
 				TransformComponent* child_transform = transform;
 				for (uint32_t chain = 0; chain < std::min(ik.chain_length, (uint32_t)arraysize(stack)); ++chain)
 				{
+					recompute_hierarchy = true; // any IK will trigger a full transform hierarchy recompute step at the end(**)
+
 					// stack stores all traversed chain links so far:
 					stack[chain] = child_transform;
 
@@ -1767,6 +1770,25 @@ namespace wiScene
 					parent_entity = hier_parent->parentID;
 					assert(chain < (uint32_t)arraysize(stack) - 1); // if this is encountered, just extend stack array size
 
+				}
+			}
+		}
+
+		if (recompute_hierarchy)
+		{
+			// (**)If there was IK, we need to recompute transform hierarchy. This is only necessary for transforms that have parent
+			//	transforms that are IK. Because the IK chain is computed from child to parent upwards, IK that have child would not update
+			//	its transform properly in some cases (such as if animation writes to that child)
+			for (size_t i = 0; i < hierarchy.GetCount(); ++i)
+			{
+				const HierarchyComponent& parentcomponent = hierarchy[i];
+				Entity entity = hierarchy.GetEntity(i);
+
+				TransformComponent* transform_child = transforms.GetComponent(entity);
+				TransformComponent* transform_parent = transforms.GetComponent(parentcomponent.parentID);
+				if (transform_child != nullptr && transform_parent != nullptr)
+				{
+					transform_child->UpdateTransform_Parented(*transform_parent);
 				}
 			}
 		}

@@ -87,7 +87,7 @@ void TestsRenderer::Load()
 
 	testSelector = new wiComboBox("TestSelector");
 	testSelector->SetText("Demo: ");
-	testSelector->SetSize(XMFLOAT2(160, 20));
+	testSelector->SetSize(XMFLOAT2(140, 20));
 	testSelector->SetPos(XMFLOAT2(50, 140));
 	testSelector->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
 	testSelector->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
@@ -108,7 +108,7 @@ void TestsRenderer::Load()
 	testSelector->AddItem("Lightmap Bake Test");
 	testSelector->AddItem("Network Test");
 	testSelector->AddItem("Controller Test");
-	testSelector->AddItem("Inverse Kinematics Test");
+	testSelector->AddItem("Inverse Kinematics");
 	testSelector->SetMaxVisibleItemCount(10);
 	testSelector->OnSelect([=](wiEventArgs args) {
 
@@ -228,9 +228,17 @@ void TestsRenderer::Load()
 			{
 				InverseKinematicsComponent& ik = scene.inverse_kinematics.Create(ik_entity);
 				ik.chain_length = 2; // lower and upper arm included (two parents in hierarchy of hand)
-				//ik.iteration_count = 5;
+				ik.iteration_count = 5; // precision of ik simulation
 				ik.target = CreateEntity();
 				scene.transforms.Create(ik.target);
+			}
+
+			// Play walk animation:
+			Entity walk = scene.Entity_FindByName("walk");
+			AnimationComponent* walk_anim = scene.animations.GetComponent(walk);
+			if (walk_anim != nullptr)
+			{
+				walk_anim->Play();
 			}
 
 			// Add some nice weather, not just black:
@@ -280,6 +288,12 @@ void TestsRenderer::Update(float dt)
 			wiRenderer::RenderablePoint pp;
 			pp.position = target.GetPosition();
 			pp.color = XMFLOAT4(0, 1, 1, 1);
+			pp.size = 0.2f;
+			wiRenderer::DrawPoint(pp);
+
+			pp.position = scene.transforms.GetComponent(ik_entity)->GetPosition();
+			pp.color = XMFLOAT4(1, 0, 0, 1);
+			pp.size = 0.1f;
 			wiRenderer::DrawPoint(pp);
 		}
 	}
