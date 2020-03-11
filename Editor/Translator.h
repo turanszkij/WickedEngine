@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiECS.h"
+
+#include <list>
 
 class Translator
 {
@@ -12,12 +13,17 @@ private:
 	bool dragEnded;
 public:
 	Translator();
-	~Translator();
 
 	void Update();
 	void Draw(const wiScene::CameraComponent& camera, wiGraphics::CommandList cmd) const;
 
-	wiECS::Entity entityID = wiECS::INVALID_ENTITY;
+	// Attach selection to translator temporarily
+	void PreTranslate();
+	// Apply translator to selection
+	void PostTranslate();
+
+	wiScene::TransformComponent transform;
+	std::list<wiScene::PickResult> selected;
 
 	bool enabled;
 

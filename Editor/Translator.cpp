@@ -53,8 +53,6 @@ void Translator::LoadShaders()
 
 Translator::Translator()
 {
-	entityID = CreateEntity();
-
 	prevPointer = XMFLOAT4(0, 0, 0, 0);
 
 	XMStoreFloat4x4(&dragStart, XMMatrixIdentity());
@@ -182,20 +180,12 @@ Translator::Translator()
 	}
 }
 
-Translator::~Translator()
-{
-}
-
 void Translator::Update()
 {
-	Scene& scene = wiScene::GetScene();
-
-	if (!scene.transforms.Contains(entityID))
+	if (selected.empty())
 	{
 		return;
 	}
-
-	TransformComponent& transform = *scene.transforms.GetComponent(entityID);
 
 	dragStarted = false;
 	dragEnded = false;
@@ -206,6 +196,7 @@ void Translator::Update()
 
 	if (enabled)
 	{
+		PreTranslate();
 
 		if (!dragging)
 		{
@@ -372,24 +363,23 @@ void Translator::Update()
 			}
 			XMStoreFloat3(&delta, deltaV);
 
-
-			XMMATRIX transf = XMMatrixIdentity();
-
 			if (isTranslator)
 			{
-				transf *= XMMatrixTranslation(delta.x, delta.y, delta.z);
+				transform.Translate(delta);
 			}
 			if (isRotator)
 			{
-				transf *= XMMatrixRotationRollPitchYaw(delta.x, delta.y, delta.z);
+				XMVECTOR Q = XMQuaternionRotationMatrix(XMMatrixRotationRollPitchYaw(delta.x, delta.y, delta.z));
+				XMFLOAT4 quat;
+				XMStoreFloat4(&quat, Q);
+				transform.Rotate(quat);
 			}
 			if (isScalator)
 			{
 				XMFLOAT3 scale = transform.GetScale();
-				transf *= XMMatrixScaling((1.0f / scale.x) * (scale.x + delta.x), (1.0f / scale.y) * (scale.y + delta.y), (1.0f / scale.z) * (scale.z + delta.z));
+				transform.Scale(XMFLOAT3((1.0f / scale.x) * (scale.x + delta.x), (1.0f / scale.y) * (scale.y + delta.y), (1.0f / scale.z) * (scale.z + delta.z)));
 			}
-
-			transform.MatrixTransform(transf);
+			transform.UpdateTransform();
 
 			if (!dragging)
 			{
@@ -410,6 +400,8 @@ void Translator::Update()
 			dragging = false;
 		}
 
+		PostTranslate();
+
 	}
 	else
 	{
@@ -425,9 +417,7 @@ void Translator::Update()
 }
 void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 {
-	Scene& scene = wiScene::GetScene();
-
-	if (!scene.transforms.Contains(entityID))
+	if (selected.empty())
 	{
 		return;
 	}
@@ -439,7 +429,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 		LoadShaders();
 	}
 
-	TransformComponent& transform = *scene.transforms.GetComponent(entityID);
+	Scene& scene = wiScene::GetScene();
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -545,6 +535,78 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 	}
 
 	device->EventEnd(cmd);
+}
+
+void Translator::PreTranslate()
+{
+	Scene& scene = wiScene::GetScene();
+
+	// Find the center of all the entities that are selected:
+	XMVECTOR centerV = XMVectorSet(0, 0, 0, 0);
+	float count = 0;
+	for (auto& x : selected)
+	{
+		TransformComponent* transform = scene.transforms.GetComponent(x.entity);
+		if (transform != nullptr)
+		{
+			centerV = XMVectorAdd(centerV, transform->GetPositionV());
+			count += 1.0f;
+		}
+	}
+
+	// Offset translator to center position and perform attachments:
+	if (count > 0)
+	{
+		centerV /= count;
+		XMFLOAT3 center;
+		XMStoreFloat3(&center, centerV);
+		transform.ClearTransform();
+		transform.Translate(center);
+		transform.UpdateTransform();
+	}
+
+	// translator "bind matrix"
+	XMMATRIX B = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform.world));
+
+	for (auto& x : selected)
+	{
+		TransformComponent* transform_selected = scene.transforms.GetComponent(x.entity);
+		if (transform_selected != nullptr)
+		{
+			// selected to world space:
+			transform_selected->ApplyTransform();
+
+			// selected to translator local space:
+			transform_selected->MatrixTransform(B);
+		}
+	}
+}
+void Translator::PostTranslate()
+{
+	Scene& scene = wiScene::GetScene();
+
+	for (auto& x : selected)
+	{
+		TransformComponent* transform_selected = scene.transforms.GetComponent(x.entity);
+		if (transform_selected != nullptr)
+		{
+			transform_selected->UpdateTransform_Parented(transform);
+
+			// selected to world space:
+			transform_selected->ApplyTransform();
+
+			// selected to parent local space (if has parent):
+			const HierarchyComponent* hier = scene.hierarchy.GetComponent(x.entity);
+			if (hier != nullptr)
+			{
+				const TransformComponent* transform_parent = scene.transforms.GetComponent(hier->parentID);
+				if (transform_parent != nullptr)
+				{
+					transform_selected->MatrixTransform(XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent->world)));
+				}
+			}
+		}
+	}
 }
 
 bool Translator::IsDragStarted()

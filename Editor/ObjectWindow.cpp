@@ -466,7 +466,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 		std::unordered_set<ObjectComponent*> gen_objects;
 		std::unordered_map<MeshComponent*, Atlas_Dim> gen_meshes;
 
-		for (auto& x : this->editor->selected)
+		for (auto& x : this->editor->translator.selected)
 		{
 			ObjectComponent* objectcomponent = scene.objects.GetComponent(x.entity);
 			if (objectcomponent != nullptr)
@@ -535,7 +535,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 
 		Scene& scene = wiScene::GetScene();
 
-		for (auto& x : this->editor->selected)
+		for (auto& x : this->editor->translator.selected)
 		{
 			ObjectComponent* objectcomponent = scene.objects.GetComponent(x.entity);
 			if (objectcomponent != nullptr)
@@ -556,7 +556,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 
 		Scene& scene = wiScene::GetScene();
 
-		for (auto& x : this->editor->selected)
+		for (auto& x : this->editor->translator.selected)
 		{
 			ObjectComponent* objectcomponent = scene.objects.GetComponent(x.entity);
 			if (objectcomponent != nullptr)

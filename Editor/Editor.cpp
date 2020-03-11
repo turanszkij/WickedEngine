@@ -365,9 +365,7 @@ void EditorComponent::Load()
 	translatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25, 0));
 	translatorCheckBox->SetSize(XMFLOAT2(18, 18));
 	translatorCheckBox->OnClick([&](wiEventArgs args) {
-		EndTranslate();
 		translator.enabled = args.bValue;
-		BeginTranslate();
 	});
 	GetGUI().AddWidget(translatorCheckBox);
 
@@ -423,7 +421,6 @@ void EditorComponent::Load()
 	saveButton->SetColor(wiColor(0, 198, 101, 200), wiWidget::WIDGETSTATE::IDLE);
 	saveButton->SetColor(wiColor(0, 255, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
 	saveButton->OnClick([=](wiEventArgs args) {
-		EndTranslate();
 
 		wiHelper::FileDialogParams params;
 		wiHelper::FileDialogResult result;
@@ -566,8 +563,7 @@ void EditorComponent::Load()
 	clearButton->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
 	clearButton->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
 	clearButton->OnClick([&](wiEventArgs args) {
-		selected.clear();
-		EndTranslate();
+		translator.selected.clear();
 		wiRenderer::ClearWorld();
 		objectWnd->SetEntity(INVALID_ENTITY);
 		meshWnd->SetEntity(INVALID_ENTITY);
@@ -714,8 +710,7 @@ void EditorComponent::Load()
 	sceneGraphView->SetSize(XMFLOAT2(260, 200));
 	sceneGraphView->OnSelect([this](wiEventArgs args) {
 
-		EndTranslate();
-		selected.clear(); // endtranslate would clear it, but not if translator is not enabled
+		translator.selected.clear();
 
 		for (int i = 0; i < sceneGraphView->GetItemCount(); ++i)
 		{
@@ -728,7 +723,6 @@ void EditorComponent::Load()
 			}
 		}
 
-		BeginTranslate();
 	});
 	GetGUI().AddWidget(sceneGraphView);
 
@@ -766,10 +760,6 @@ void EditorComponent::PushToSceneGraphView(wiECS::Entity entity, int level)
 	if (name != nullptr)
 	{
 		item.name = name->name + " " + item.name;
-	}
-	if (entity == translator.entityID)
-	{
-		item.name = "[EDITOR_TRANSLATOR] " + item.name;
 	}
 	sceneGraphView->AddItem(item);
 
@@ -1211,7 +1201,7 @@ void EditorComponent::Update(float dt)
 						softbody->_flags |= SoftBodyPhysicsComponent::FORCE_RESET;
 					}
 				}
-				else if (selected.empty() && object->GetRenderTypes() & RENDERTYPE_WATER)
+				else if (translator.selected.empty() && object->GetRenderTypes() & RENDERTYPE_WATER)
 				{
 					if (wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
 					{
@@ -1219,7 +1209,7 @@ void EditorComponent::Update(float dt)
 						wiRenderer::PutWaterRipple(wiHelper::GetOriginalWorkingDirectory() + "images/ripple.png", hovered.position);
 					}
 				}
-				else if (selected.empty() && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
+				else if (translator.selected.empty() && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
 				{
 					// if not water or softbody, put a decal on it:
 					static int decalselector = 0;
@@ -1299,8 +1289,8 @@ void EditorComponent::Update(float dt)
 			wiArchive& archive = AdvanceHistory();
 			archive << HISTORYOP_SELECTION;
 			// record PREVIOUS selection state...
-			archive << selected.size();
-			for (auto& x : selected)
+			archive << translator.selected.size();
+			for (auto& x : translator.selected)
 			{
 				archive << x.entity;
 				archive << x.position;
@@ -1308,13 +1298,11 @@ void EditorComponent::Update(float dt)
 				archive << x.subsetIndex;
 				archive << x.distance;
 			}
-			savedHierarchy.Serialize(archive);
 
 			if (selectAll)
 			{
 				// Add everything to selection:
 				selectAll = false;
-				EndTranslate();
 
 				for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
 				{
@@ -1330,19 +1318,16 @@ void EditorComponent::Update(float dt)
 					picked.entity = entity;
 					AddSelected(picked);
 				}
-
-				BeginTranslate();
 			}
 			else if (hovered.entity != INVALID_ENTITY)
 			{
 				// Add the hovered item to the selection:
 
-				if (!selected.empty() && wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT))
+				if (!translator.selected.empty() && wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT))
 				{
 					// Union selection:
-					list<wiScene::PickResult> saved = selected;
-					EndTranslate();
-					selected.clear(); // endtranslate would clear it, but not if translator is not enabled
+					list<wiScene::PickResult> saved = translator.selected;
+					translator.selected.clear(); 
 					for (const wiScene::PickResult& picked : saved)
 					{
 						AddSelected(picked);
@@ -1352,23 +1337,19 @@ void EditorComponent::Update(float dt)
 				else
 				{
 					// Replace selection:
-					EndTranslate();
-					selected.clear(); // endtranslate would clear it, but not if translator is not enabled
+					translator.selected.clear();
 					AddSelected(hovered);
 				}
-
-				BeginTranslate();
 			}
 			else
 			{
 				// Clear selection:
-				EndTranslate();
-				selected.clear(); // endtranslate would clear it, but not if translator is not enabled
+				translator.selected.clear();
 			}
 
 			// record NEW selection state...
-			archive << selected.size();
-			for (auto& x : selected)
+			archive << translator.selected.size();
+			for (auto& x : translator.selected)
 			{
 				archive << x.entity;
 				archive << x.position;
@@ -1376,7 +1357,6 @@ void EditorComponent::Update(float dt)
 				archive << x.subsetIndex;
 				archive << x.distance;
 			}
-			savedHierarchy.Serialize(archive);
 		}
 
 		// Control operations...
@@ -1390,24 +1370,20 @@ void EditorComponent::Update(float dt)
 			// Copy
 			if (wiInput::Press((wiInput::BUTTON)'C'))
 			{
-				auto prevSel = selected;
-				EndTranslate();
+				auto prevSel = translator.selected;
 
-				clipboard = wiArchive();
+				clipboard.SetReadModeAndResetPos(false);
 				clipboard << prevSel.size();
 				for (auto& x : prevSel)
 				{
 					scene.Entity_Serialize(clipboard, x.entity, 0);
-					AddSelected(x);
 				}
-
-				BeginTranslate();
 			}
 			// Paste
 			if (wiInput::Press((wiInput::BUTTON)'V'))
 			{
-				auto prevSel = selected;
-				EndTranslate();
+				auto prevSel = translator.selected;
+				translator.selected.clear();
 
 				clipboard.SetReadModeAndResetPos(true);
 				size_t count;
@@ -1418,26 +1394,24 @@ void EditorComponent::Update(float dt)
 					picked.entity = scene.Entity_Serialize(clipboard, INVALID_ENTITY, wiRandom::getRandom(1, INT_MAX), false);
 					AddSelected(picked);
 				}
-
-				BeginTranslate();
 			}
 			// Duplicate Instances
 			if (wiInput::Press((wiInput::BUTTON)'D'))
 			{
-				auto prevSel = selected;
-				EndTranslate();
+				auto prevSel = translator.selected;
+				translator.selected.clear();
 				for (auto& x : prevSel)
 				{
 					wiScene::PickResult picked;
 					picked.entity = scene.Entity_Duplicate(x.entity);
 					AddSelected(picked);
 				}
-				BeginTranslate();
 			}
 			// Put Instances
 			if (clipboard.IsOpen() && hovered.subsetIndex >= 0 && wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT) && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
 			{
-				XMMATRIX M = XMLoadFloat4x4(&hovered.orientation);
+				TransformComponent parent_transform;
+				parent_transform.world = hovered.orientation;
 
 				clipboard.SetReadModeAndResetPos(true);
 				size_t count;
@@ -1448,8 +1422,7 @@ void EditorComponent::Update(float dt)
 					TransformComponent* transform = scene.transforms.GetComponent(entity);
 					if (transform != nullptr)
 					{
-						transform->ClearTransform();
-						transform->MatrixTransform(M);
+						transform->UpdateTransform_Parented(parent_transform);
 					}
 				}
 			}
@@ -1474,27 +1447,25 @@ void EditorComponent::Update(float dt)
 		wiArchive& archive = AdvanceHistory();
 		archive << HISTORYOP_DELETE;
 
-		archive << selected.size();
-		for (auto& x : selected)
+		archive << translator.selected.size();
+		for (auto& x : translator.selected)
 		{
 			archive << x.entity;
 		}
-		for (auto& x : selected)
+		for (auto& x : translator.selected)
 		{
 			scene.Entity_Serialize(archive, x.entity);
 		}
-		for (auto& x : selected)
+		for (auto& x : translator.selected)
 		{
 			scene.Entity_Remove(x.entity);
-			savedHierarchy.Remove_KeepSorted(x.entity);
 		}
 
-		EndTranslate();
-		selected.clear();
+		translator.selected.clear();
 	}
 
 	// Update window data bindings...
-	if (selected.empty())
+	if (translator.selected.empty())
 	{
 		objectWnd->SetEntity(INVALID_ENTITY);
 		emitterWnd->SetEntity(INVALID_ENTITY);
@@ -1510,12 +1481,12 @@ void EditorComponent::Update(float dt)
 	}
 	else
 	{
-		const wiScene::PickResult& picked = selected.back();
+		const wiScene::PickResult& picked = translator.selected.back();
 
 		assert(picked.entity != INVALID_ENTITY);
 
 		objectWnd->SetEntity(INVALID_ENTITY);
-		for (auto& x : selected)
+		for (auto& x : translator.selected)
 		{
 			if (scene.objects.GetComponent(x.entity) != nullptr)
 			{
@@ -1563,7 +1534,7 @@ void EditorComponent::Update(float dt)
 	{
 		scene.objects[i].SetUserStencilRef(EDITORSTENCILREF_CLEAR);
 	}
-	for (auto& x : selected)
+	for (auto& x : translator.selected)
 	{
 		ObjectComponent* object = scene.objects.GetComponent(x.entity);
 		if (object != nullptr) // maybe it was deleted...
@@ -1674,10 +1645,10 @@ void EditorComponent::Render() const
 	}
 
 	// Selected items box:
-	if (!cinemaModeCheckBox->GetCheck() && !selected.empty())
+	if (!cinemaModeCheckBox->GetCheck() && !translator.selected.empty())
 	{
 		AABB selectedAABB = AABB(XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX), XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX));
-		for (auto& picked : selected)
+		for (auto& picked : translator.selected)
 		{
 			if (picked.entity != INVALID_ENTITY)
 			{
@@ -1731,7 +1702,7 @@ void EditorComponent::Render() const
 	renderPath->Render();
 
 	// Selection outline:
-	if(renderPath->GetDepthStencil() != nullptr && !selected.empty())
+	if(renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		CommandList cmd = device->BeginCommandList();
@@ -1812,7 +1783,7 @@ void EditorComponent::Compose(CommandList cmd) const
 
 	// Compose the selection outline to the screen:
 	const float selectionColorIntensity = std::sinf(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f;
-	if (renderPath->GetDepthStencil() != nullptr && !selected.empty())
+	if (renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
 	{
 		wiImageParams fx;
 		fx.enableFullScreen();
@@ -1847,7 +1818,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				fx.col = XMFLOAT4(1, 1, 1, 1);
 			}
-			for (auto& picked : selected)
+			for (auto& picked : translator.selected)
 			{
 				if (picked.entity == entity)
 				{
@@ -1895,7 +1866,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				fx.col = XMFLOAT4(1, 1, 1, 1);
 			}
-			for (auto& picked : selected)
+			for (auto& picked : translator.selected)
 			{
 				if (picked.entity == entity)
 				{
@@ -1930,7 +1901,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				fx.col = XMFLOAT4(1, 1, 1, 1);
 			}
-			for (auto& picked : selected)
+			for (auto& picked : translator.selected)
 			{
 				if (picked.entity == entity)
 				{
@@ -1965,7 +1936,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				fx.col = XMFLOAT4(1, 1, 1, 1);
 			}
-			for (auto& picked : selected)
+			for (auto& picked : translator.selected)
 			{
 				if (picked.entity == entity)
 				{
@@ -1999,7 +1970,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				fx.col = XMFLOAT4(1, 1, 1, 1);
 			}
-			for (auto& picked : selected)
+			for (auto& picked : translator.selected)
 			{
 				if (picked.entity == entity)
 				{
@@ -2033,7 +2004,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				fx.col = XMFLOAT4(1, 1, 1, 1);
 			}
-			for (auto& picked : selected)
+			for (auto& picked : translator.selected)
 			{
 				if (picked.entity == entity)
 				{
@@ -2067,7 +2038,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				fx.col = XMFLOAT4(1, 1, 1, 1);
 			}
-			for (auto& picked : selected)
+			for (auto& picked : translator.selected)
 			{
 				if (picked.entity == entity)
 				{
@@ -2101,7 +2072,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				fx.col = XMFLOAT4(1, 1, 1, 1);
 			}
-			for (auto& picked : selected)
+			for (auto& picked : translator.selected)
 			{
 				if (picked.entity == entity)
 				{
@@ -2116,7 +2087,7 @@ void EditorComponent::Compose(CommandList cmd) const
 	}
 
 
-	if (!selected.empty() && translator.enabled)
+	if (translator.enabled)
 	{
 		translator.Draw(camera, cmd);
 	}
@@ -2130,99 +2101,23 @@ void EditorComponent::Unload()
 	__super::Unload();
 }
 
-
-
-void EditorComponent::BeginTranslate()
-{
-	if (selected.empty() || !translator.enabled)
-	{
-		return;
-	}
-
-	Scene& scene = wiScene::GetScene();
-
-	// Insert translator into scene:
-	scene.transforms.Create(translator.entityID);
-
-	// Begin translation, save scene hierarchy from before:
-	savedHierarchy.Copy(scene.hierarchy);
-
-	// All selected entities will be attached to translator entity:
-	TransformComponent* translator_transform = wiScene::GetScene().transforms.GetComponent(translator.entityID);
-	translator_transform->ClearTransform();
-
-	// Find the center of all the entities that are selected:
-	XMVECTOR centerV = XMVectorSet(0, 0, 0, 0);
-	float count = 0;
-	for (auto& x : selected)
-	{
-		TransformComponent* transform = wiScene::GetScene().transforms.GetComponent(x.entity);
-		if (transform != nullptr)
-		{
-			centerV = XMVectorAdd(centerV, transform->GetPositionV());
-			count += 1.0f;
-		}
-	}
-
-	// Offset translator to center position and perform attachments:
-	if (count > 0)
-	{
-		centerV /= count;
-		XMFLOAT3 center;
-		XMStoreFloat3(&center, centerV);
-		translator_transform->ClearTransform();
-		translator_transform->Translate(center);
-		translator_transform->UpdateTransform();
-
-		for (auto& x : selected)
-		{
-			wiScene::GetScene().Component_Attach(x.entity, translator.entityID);
-		}
-	}
-}
-void EditorComponent::EndTranslate()
-{
-	if (selected.empty() || !translator.enabled)
-	{
-		return;
-	}
-
-	Scene& scene = wiScene::GetScene();
-
-	scene.Component_DetachChildren(translator.entityID);
-
-	// Remove translator from scene:
-	scene.Entity_Remove(translator.entityID);
-
-	// Restore parents before selections were attached to translator:
-	for (const wiScene::PickResult& x : selected)
-	{
-		HierarchyComponent* hierarchy_prev = savedHierarchy.GetComponent(x.entity);
-		if (hierarchy_prev != nullptr)
-		{
-			scene.Component_Attach(x.entity, hierarchy_prev->parentID);
-		}
-	}
-	savedHierarchy.Clear();
-	selected.clear();
-}
 void EditorComponent::AddSelected(const wiScene::PickResult& picked)
 {
-	for (auto it = selected.begin(); it != selected.end(); ++it)
+	for (auto it = translator.selected.begin(); it != translator.selected.end(); ++it)
 	{
 		if ((*it) == picked)
 		{
 			// If already selected, it will be deselected now:
-			selected.erase(it);
+			translator.selected.erase(it);
 			return;
 		}
 	}
 
-	selected.push_back(picked);
+	translator.selected.push_back(picked);
 }
 bool EditorComponent::IsSelected(Entity entity) const
 {
-	for (auto& x : selected)
+	for (auto& x : translator.selected)
 	{
 		if (x.entity == entity)
 		{
@@ -2277,16 +2172,18 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 
 				Scene& scene = wiScene::GetScene();
 
-				TransformComponent& transform = *scene.transforms.GetComponent(translator.entityID);
-				transform.ClearTransform();
+				translator.PreTranslate();
+				translator.transform.ClearTransform();
 				if (undo)
 				{
-					transform.MatrixTransform(XMLoadFloat4x4(&start));
+					translator.transform.MatrixTransform(XMLoadFloat4x4(&start));
 				}
 				else
 				{
-					transform.MatrixTransform(XMLoadFloat4x4(&end));
+					translator.transform.MatrixTransform(XMLoadFloat4x4(&end));
 				}
+				translator.transform.UpdateTransform();
+				translator.PostTranslate();
 			}
 			break;
 		case HISTORYOP_DELETE:
@@ -2320,8 +2217,6 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 			break;
 		case HISTORYOP_SELECTION:
 			{
-				EndTranslate();
-
 				// Read selections states from archive:
 
 				list<wiScene::PickResult> selectedBEFORE;
@@ -2338,8 +2233,6 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 
 					selectedBEFORE.push_back(sel);
 				}
-				ComponentManager<HierarchyComponent> savedHierarchyBEFORE;
-				savedHierarchyBEFORE.Serialize(archive);
 
 				list<wiScene::PickResult> selectedAFTER;
 				size_t selectionCountAFTER;
@@ -2355,24 +2248,17 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 
 					selectedAFTER.push_back(sel);
 				}
-				ComponentManager<HierarchyComponent> savedHierarchyAFTER;
-				savedHierarchyAFTER.Serialize(archive);
 
 
 				// Restore proper selection state:
-
 				if (undo)
 				{
-					selected = selectedBEFORE;
-					savedHierarchy.Copy(savedHierarchyBEFORE);
+					translator.selected = selectedBEFORE;
 				}
 				else
 				{
-					selected = selectedAFTER;
-					savedHierarchy.Copy(savedHierarchyAFTER);
+					translator.selected = selectedAFTER;
 				}
-
-				BeginTranslate();
 			}
 			break;
 		case HISTORYOP_NONE:

@@ -96,12 +96,8 @@ public:
 	const XMFLOAT4 selectionColor2 = XMFLOAT4(0, 1, 0.6f, 0.35f);
 
 	Translator translator;
-	std::list<wiScene::PickResult> selected;
-	wiECS::ComponentManager<wiScene::HierarchyComponent> savedHierarchy;
 	wiScene::PickResult hovered;
 
-	void BeginTranslate();
-	void EndTranslate();
 	void AddSelected(const wiScene::PickResult& picked);
 	bool IsSelected(wiECS::Entity entity) const;
 
