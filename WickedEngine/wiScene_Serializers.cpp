@@ -1098,7 +1098,7 @@ namespace wiScene
 					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
-			if (archive.GetVersion() >= 30)
+			if (archive.GetVersion() >= 37)
 			{
 				bool component_exists;
 				archive >> component_exists;
@@ -1425,7 +1425,7 @@ namespace wiScene
 					archive << false;
 				}
 			}
-			if (archive.GetVersion() >= 30)
+			if (archive.GetVersion() >= 37)
 			{
 				auto component = inverse_kinematics.GetComponent(entity);
 				if (component != nullptr)
