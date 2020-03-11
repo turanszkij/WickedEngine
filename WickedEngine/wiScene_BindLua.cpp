@@ -173,6 +173,7 @@ void Bind()
 		Luna<NameComponent_BindLua>::Register(L);
 		Luna<LayerComponent_BindLua>::Register(L);
 		Luna<TransformComponent_BindLua>::Register(L);
+		Luna<InverseKinematicsComponent_BindLua>::Register(L);
 		Luna<CameraComponent_BindLua>::Register(L);
 		Luna<AnimationComponent_BindLua>::Register(L);
 		Luna<MaterialComponent_BindLua>::Register(L);
@@ -198,6 +199,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_CreateTransform),
 	lunamethod(Scene_BindLua, Component_CreateLight),
 	lunamethod(Scene_BindLua, Component_CreateObject),
+	lunamethod(Scene_BindLua, Component_CreateInverseKinematics),
 
 	lunamethod(Scene_BindLua, Component_GetName),
 	lunamethod(Scene_BindLua, Component_GetLayer),
@@ -208,6 +210,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetEmitter),
 	lunamethod(Scene_BindLua, Component_GetLight),
 	lunamethod(Scene_BindLua, Component_GetObject),
+	lunamethod(Scene_BindLua, Component_GetInverseKinematics),
 
 	lunamethod(Scene_BindLua, Component_GetNameArray),
 	lunamethod(Scene_BindLua, Component_GetLayerArray),
@@ -218,6 +221,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetEmitterArray),
 	lunamethod(Scene_BindLua, Component_GetLightArray),
 	lunamethod(Scene_BindLua, Component_GetObjectArray),
+	lunamethod(Scene_BindLua, Component_GetInverseKinematicsArray),
 
 	lunamethod(Scene_BindLua, Entity_GetNameArray),
 	lunamethod(Scene_BindLua, Entity_GetLayerArray),
@@ -228,6 +232,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Entity_GetEmitterArray),
 	lunamethod(Scene_BindLua, Entity_GetLightArray),
 	lunamethod(Scene_BindLua, Entity_GetObjectArray),
+	lunamethod(Scene_BindLua, Entity_GetInverseKinematicsArray),
 
 	lunamethod(Scene_BindLua, Component_Attach),
 	lunamethod(Scene_BindLua, Component_Detach),
@@ -434,6 +439,23 @@ int Scene_BindLua::Component_CreateObject(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_CreateInverseKinematics(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+
+		InverseKinematicsComponent& component = scene->inverse_kinematics.Create(entity);
+		Luna<InverseKinematicsComponent_BindLua>::push(L, new InverseKinematicsComponent_BindLua(&component));
+		return 1;
+	}
+	else
+	{
+		wiLua::SError(L, "Scene::Component_CreateInverseKinematics(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 
 int Scene_BindLua::Component_GetName(lua_State* L)
 {
@@ -633,6 +655,28 @@ int Scene_BindLua::Component_GetObject(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_GetInverseKinematics(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+
+		InverseKinematicsComponent* component = scene->inverse_kinematics.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
+		Luna<InverseKinematicsComponent_BindLua>::push(L, new InverseKinematicsComponent_BindLua(component));
+		return 1;
+	}
+	else
+	{
+		wiLua::SError(L, "Scene::Component_GetInverseKinematics(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 
 int Scene_BindLua::Component_GetNameArray(lua_State* L)
 {
@@ -733,6 +777,17 @@ int Scene_BindLua::Component_GetObjectArray(lua_State* L)
 	}
 	return 1;
 }
+int Scene_BindLua::Component_GetInverseKinematicsArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->inverse_kinematics.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->inverse_kinematics.GetCount(); ++i)
+	{
+		Luna<InverseKinematicsComponent_BindLua>::push(L, new InverseKinematicsComponent_BindLua(&scene->inverse_kinematics[i]));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
 
 int Scene_BindLua::Entity_GetNameArray(lua_State* L)
 {
@@ -829,6 +884,17 @@ int Scene_BindLua::Entity_GetObjectArray(lua_State* L)
 	for (size_t i = 0; i < scene->objects.GetCount(); ++i)
 	{
 		wiLua::SSetInt(L, scene->objects.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Entity_GetInverseKinematicsArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->inverse_kinematics.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->inverse_kinematics.GetCount(); ++i)
+	{
+		wiLua::SSetInt(L, scene->inverse_kinematics.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -1224,6 +1290,118 @@ int TransformComponent_BindLua::GetScale(lua_State* L)
 {
 	XMVECTOR V = component->GetScaleV();
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(V));
+	return 1;
+}
+
+
+
+
+
+
+const char InverseKinematicsComponent_BindLua::className[] = "InverseKinematicsComponent";
+
+Luna<InverseKinematicsComponent_BindLua>::FunctionType InverseKinematicsComponent_BindLua::methods[] = {
+	lunamethod(InverseKinematicsComponent_BindLua, SetTarget),
+	lunamethod(InverseKinematicsComponent_BindLua, SetChainLength),
+	lunamethod(InverseKinematicsComponent_BindLua, SetIterationCount),
+	lunamethod(InverseKinematicsComponent_BindLua, SetDisabled),
+	lunamethod(InverseKinematicsComponent_BindLua, GetTarget),
+	lunamethod(InverseKinematicsComponent_BindLua, GetChainLength),
+	lunamethod(InverseKinematicsComponent_BindLua, GetIterationCount),
+	lunamethod(InverseKinematicsComponent_BindLua, IsDisabled),
+	{ NULL, NULL }
+};
+Luna<InverseKinematicsComponent_BindLua>::PropertyType InverseKinematicsComponent_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+InverseKinematicsComponent_BindLua::InverseKinematicsComponent_BindLua(lua_State* L)
+{
+	owning = true;
+	component = new InverseKinematicsComponent;
+}
+InverseKinematicsComponent_BindLua::~InverseKinematicsComponent_BindLua()
+{
+	if (owning)
+	{
+		delete component;
+	}
+}
+
+int InverseKinematicsComponent_BindLua::SetTarget(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		component->target = entity;
+	}
+	else
+	{
+		wiLua::SError(L, "SetTarget(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int InverseKinematicsComponent_BindLua::SetChainLength(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		uint32_t value = (uint32_t)wiLua::SGetInt(L, 1);
+		component->chain_length = value;
+	}
+	else
+	{
+		wiLua::SError(L, "SetChainLength(int value) not enough arguments!");
+	}
+	return 0;
+}
+int InverseKinematicsComponent_BindLua::SetIterationCount(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		uint32_t value = (uint32_t)wiLua::SGetInt(L, 1);
+		component->iteration_count = value;
+	}
+	else
+	{
+		wiLua::SError(L, "SetIterationCount(int value) not enough arguments!");
+	}
+	return 0;
+}
+int InverseKinematicsComponent_BindLua::SetDisabled(lua_State* L)
+{
+	bool value = true;
+
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		value = wiLua::SGetBool(L, 1);
+	}
+
+	component->SetDisabled(value);
+
+	return 0;
+}
+int InverseKinematicsComponent_BindLua::GetTarget(lua_State* L)
+{
+	wiLua::SSetInt(L, (int)component->target);
+	return 1;
+}
+int InverseKinematicsComponent_BindLua::GetChainLength(lua_State* L)
+{
+	wiLua::SSetInt(L, (int)component->chain_length);
+	return 1;
+}
+int InverseKinematicsComponent_BindLua::GetIterationCount(lua_State* L)
+{
+	wiLua::SSetInt(L, (int)component->iteration_count);
+	return 1;
+}
+int InverseKinematicsComponent_BindLua::IsDisabled(lua_State* L)
+{
+	wiLua::SSetBool(L, component->IsDisabled());
 	return 1;
 }
 

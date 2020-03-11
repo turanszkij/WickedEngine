@@ -1471,7 +1471,6 @@ void EditorComponent::Update(float dt)
 	// Delete
 	if (wiInput::Press(wiInput::KEYBOARD_BUTTON_DELETE))
 	{
-
 		wiArchive& archive = AdvanceHistory();
 		archive << HISTORYOP_DELETE;
 
@@ -1491,6 +1490,7 @@ void EditorComponent::Update(float dt)
 		}
 
 		EndTranslate();
+		selected.clear();
 	}
 
 	// Update window data bindings...

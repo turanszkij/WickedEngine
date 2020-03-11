@@ -99,6 +99,25 @@ namespace wiScene
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
+	struct InverseKinematicsComponent
+	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+			DISABLED = 1 << 0,
+		};
+		uint32_t _flags = EMPTY;
+
+		wiECS::Entity target = wiECS::INVALID_ENTITY; // which entity to follow (must have a transform component)
+		uint32_t chain_length = ~0; // ~0 means: compute until the root
+		uint32_t iteration_count = 1;
+
+		inline void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }
+		inline bool IsDisabled() const { return _flags & DISABLED; }
+
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
+	};
+
 	struct MaterialComponent
 	{
 		enum FLAGS
@@ -248,15 +267,15 @@ namespace wiScene
 		};
 		uint32_t _flags = RENDERABLE;
 
-		std::vector<XMFLOAT3>		vertex_positions;
-		std::vector<XMFLOAT3>		vertex_normals;
-		std::vector<XMFLOAT2>		vertex_uvset_0;
-		std::vector<XMFLOAT2>		vertex_uvset_1;
-		std::vector<XMUINT4>		vertex_boneindices;
-		std::vector<XMFLOAT4>		vertex_boneweights;
-		std::vector<XMFLOAT2>		vertex_atlas;
-		std::vector<uint32_t>		vertex_colors;
-		std::vector<uint32_t>		indices;
+		std::vector<XMFLOAT3> vertex_positions;
+		std::vector<XMFLOAT3> vertex_normals;
+		std::vector<XMFLOAT2> vertex_uvset_0;
+		std::vector<XMFLOAT2> vertex_uvset_1;
+		std::vector<XMUINT4> vertex_boneindices;
+		std::vector<XMFLOAT4> vertex_boneweights;
+		std::vector<XMFLOAT2> vertex_atlas;
+		std::vector<uint32_t> vertex_colors;
+		std::vector<uint32_t> indices;
 
 		struct MeshSubset
 		{
@@ -824,8 +843,8 @@ namespace wiScene
 		XMFLOAT4 atlasMulAdd;
 		XMFLOAT4X4 world;
 
-		const wiGraphics::Texture* texture = nullptr;
-		const wiGraphics::Texture* normal = nullptr;
+		std::shared_ptr<wiResource> texture;
+		std::shared_ptr<wiResource> normal;
 
 		inline float GetOpacity() const { return color.w; }
 
@@ -994,6 +1013,7 @@ namespace wiScene
 		wiECS::ComponentManager<TransformComponent> transforms;
 		wiECS::ComponentManager<PreviousFrameTransformComponent> prev_transforms;
 		wiECS::ComponentManager<HierarchyComponent> hierarchy;
+		wiECS::ComponentManager<InverseKinematicsComponent> inverse_kinematics;
 		wiECS::ComponentManager<MaterialComponent> materials;
 		wiECS::ComponentManager<MeshComponent> meshes;
 		wiECS::ComponentManager<ImpostorComponent> impostors;
@@ -1119,6 +1139,12 @@ namespace wiScene
 		const wiECS::ComponentManager<HierarchyComponent>& hierarchy,
 		wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<LayerComponent>& layers
+	);
+	void RunInverseKinematicsUpdateSystem(
+		wiJobSystem::context& ctx,
+		const wiECS::ComponentManager<InverseKinematicsComponent>& inverse_kinematics,
+		const wiECS::ComponentManager<HierarchyComponent>& hierarchy,
+		wiECS::ComponentManager<TransformComponent>& transforms
 	);
 	void RunArmatureUpdateSystem(
 		wiJobSystem::context& ctx,

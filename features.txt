@@ -82,3 +82,4 @@ Ray tracing, path tracing (on GPU)
 Entity-Component System (Data oriented design)
 Lightmap baking (with GPU path tracing)
 Job system
+Inverse Kinematics
