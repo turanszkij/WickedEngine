@@ -802,9 +802,6 @@
     <FxCompile Include="ssaoCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
     </FxCompile>
-    <FxCompile Include="stochasticSSRCS_combine.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
-    </FxCompile>
     <FxCompile Include="stochasticSSRCS_median.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
     </FxCompile>
