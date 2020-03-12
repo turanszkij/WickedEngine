@@ -160,10 +160,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
     float lumWeight = sqr(1.0f - lumDifference);
     float blendFinal = lerp(temporalResponseMin, temporalResponseMax, lumWeight);
 
-    // Reduce ghosting by refreshing the blend by velocity... but adds additional noise
-    //float2 velocityScreen = velocity * xPPResolution;
-    //float velocityBlend = sqrt(dot(velocityScreen, velocityScreen));
-    //blendFinal = lerp(blendFinal, 0.2f, saturate(velocityBlend / 100.0f));
+    // Reduce ghosting by refreshing the blend by velocity (Unreal)
+    float2 velocityScreen = standardVelocity * xPPResolution;
+    float velocityBlend = sqrt(dot(velocityScreen, velocityScreen));
+    blendFinal = lerp(blendFinal, 0.2f, saturate(velocityBlend / 100.0f));
 
     float4 result = lerp(current, previous, blendFinal);
     

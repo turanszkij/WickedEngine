@@ -224,7 +224,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     // Everything in view space:
     const float3 P = reconstructPosition(uv, depth, g_xCamera_InvP);
     const float3 N = mul((float3x3)g_xCamera_View, decodeNormal(texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy)).xyz;
-    const float3 V = normalize(P);
+    const float3 V = normalize(-P);
 
     const float roughness = GetRoughness(texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).g);
     
@@ -259,7 +259,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
             H = ImportanceSampleGGX(Xi, roughness);
             H = TangentToWorld(H, N);
         
-            RdotN = dot(N, reflect(V, H.xyz));
+            RdotN = dot(N, reflect(-V, H.xyz));
         }
     }
     else
@@ -267,7 +267,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
         H = float4(N.xyz, 1.0f);
     }
     
-    float3 dir = reflect(V, H.xyz);
+    float3 dir = reflect(-V, H.xyz);
     
     float2 hitPixel = float2(0.0f, 0.0f);
     float3 hitPoint = float3(0.0f, 0.0f, 0.0f);  
