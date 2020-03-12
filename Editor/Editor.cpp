@@ -1412,7 +1412,8 @@ void EditorComponent::Update(float dt)
 			if (clipboard.IsOpen() && hovered.subsetIndex >= 0 && wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT) && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
 			{
 				TransformComponent parent_transform;
-				parent_transform.world = hovered.orientation;
+				parent_transform.MatrixTransform(hovered.orientation);
+				parent_transform.UpdateTransform();
 
 				clipboard.SetReadModeAndResetPos(true);
 				size_t count;
