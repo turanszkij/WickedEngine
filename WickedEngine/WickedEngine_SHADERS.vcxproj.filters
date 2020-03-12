@@ -867,9 +867,6 @@
     <FxCompile Include="stochasticSSRCS_temporal.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="stochasticSSRCS_combine.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="upsample_bilateral_float4CS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
