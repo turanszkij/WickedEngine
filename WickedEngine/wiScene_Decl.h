@@ -8,7 +8,6 @@ namespace wiScene
 	struct TransformComponent;
 	struct PreviousFrameTransformComponent;
 	struct HierarchyComponent;
-	struct InverseKinematicsComponent;
 	struct MaterialComponent;
 	struct MeshComponent;
 	struct ImpostorComponent;
@@ -24,6 +23,8 @@ namespace wiScene
 	struct AnimationComponent;
 	struct WeatherComponent;
 	struct SoundComponent;
+	struct InverseKinematicsComponent;
+	struct SpringComponent;
 	struct Scene;
 
 	class wiEmittedParticle; // todo: rename

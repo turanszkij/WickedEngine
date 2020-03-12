@@ -99,25 +99,6 @@ namespace wiScene
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
-	struct InverseKinematicsComponent
-	{
-		enum FLAGS
-		{
-			EMPTY = 0,
-			DISABLED = 1 << 0,
-		};
-		uint32_t _flags = EMPTY;
-
-		wiECS::Entity target = wiECS::INVALID_ENTITY; // which entity to follow (must have a transform component)
-		uint32_t chain_length = ~0; // ~0 means: compute until the root
-		uint32_t iteration_count = 1;
-
-		inline void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }
-		inline bool IsDisabled() const { return _flags & DISABLED; }
-
-		void Serialize(wiArchive& archive, uint32_t seed = 0);
-	};
-
 	struct MaterialComponent
 	{
 		enum FLAGS
@@ -1006,6 +987,58 @@ namespace wiScene
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
+	struct InverseKinematicsComponent
+	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+			DISABLED = 1 << 0,
+		};
+		uint32_t _flags = EMPTY;
+
+		wiECS::Entity target = wiECS::INVALID_ENTITY; // which entity to follow (must have a transform component)
+		uint32_t chain_length = ~0; // ~0 means: compute until the root
+		uint32_t iteration_count = 1;
+
+		inline void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }
+		inline bool IsDisabled() const { return _flags & DISABLED; }
+
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
+	};
+
+	struct SpringComponent
+	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+			RESET = 1 << 0,
+			DISABLED = 1 << 1,
+			STRETCH_ENABLED = 1 << 2,
+			GRAVITY_ENABLED = 1 << 3,
+		};
+		uint32_t _flags = RESET;
+
+		float stiffness = 100;
+		float damping = 0.8f;
+		float wind_affection = 0;
+
+		// Non-serialized attributes:
+		XMFLOAT3 center_of_mass;
+		XMFLOAT3 velocity;
+
+		inline void Reset(bool value = true) { if (value) { _flags |= RESET; } else { _flags &= ~RESET; } }
+		inline void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }
+		inline void SetStretchEnabled(bool value) { if (value) { _flags |= STRETCH_ENABLED; } else { _flags &= ~STRETCH_ENABLED; } }
+		inline void SetGravityEnabled(bool value) { if (value) { _flags |= GRAVITY_ENABLED; } else { _flags &= ~GRAVITY_ENABLED; } }
+
+		inline bool IsResetting() const { return _flags & RESET; }
+		inline bool IsDisabled() const { return _flags & DISABLED; }
+		inline bool IsStretchEnabled() const { return _flags & STRETCH_ENABLED; }
+		inline bool IsGravityEnabled() const { return _flags & GRAVITY_ENABLED; }
+
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
+	};
+
 	struct Scene
 	{
 		wiECS::ComponentManager<NameComponent> names;
@@ -1013,7 +1046,6 @@ namespace wiScene
 		wiECS::ComponentManager<TransformComponent> transforms;
 		wiECS::ComponentManager<PreviousFrameTransformComponent> prev_transforms;
 		wiECS::ComponentManager<HierarchyComponent> hierarchy;
-		wiECS::ComponentManager<InverseKinematicsComponent> inverse_kinematics;
 		wiECS::ComponentManager<MaterialComponent> materials;
 		wiECS::ComponentManager<MeshComponent> meshes;
 		wiECS::ComponentManager<ImpostorComponent> impostors;
@@ -1035,6 +1067,8 @@ namespace wiScene
 		wiECS::ComponentManager<wiHairParticle> hairs;
 		wiECS::ComponentManager<WeatherComponent> weathers;
 		wiECS::ComponentManager<SoundComponent> sounds;
+		wiECS::ComponentManager<InverseKinematicsComponent> inverse_kinematics;
+		wiECS::ComponentManager<SpringComponent> springs;
 
 		// Non-serialized attributes:
 		AABB bounds;
@@ -1139,6 +1173,14 @@ namespace wiScene
 		const wiECS::ComponentManager<HierarchyComponent>& hierarchy,
 		wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<LayerComponent>& layers
+	);
+	void RunSpringUpdateSystem(
+		wiJobSystem::context& ctx,
+		const WeatherComponent& weather,
+		const wiECS::ComponentManager<HierarchyComponent>& hierarchy,
+		wiECS::ComponentManager<TransformComponent>& transforms,
+		wiECS::ComponentManager<SpringComponent>& springs,
+		float dt
 	);
 	void RunInverseKinematicsUpdateSystem(
 		wiJobSystem::context& ctx,

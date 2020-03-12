@@ -74,23 +74,6 @@ namespace wiScene
 			archive << layerMask_bind;
 		}
 	}
-	void InverseKinematicsComponent::Serialize(wiArchive& archive, uint32_t seed)
-	{
-		SerializeEntity(archive, target, seed);
-
-		if (archive.IsReadMode())
-		{
-			archive >> _flags;
-			archive >> chain_length;
-			archive >> iteration_count;
-		}
-		else
-		{
-			archive << _flags;
-			archive << chain_length;
-			archive << iteration_count;
-		}
-	}
 	void MaterialComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
 		std::string dir = archive.GetSourceDirectory();
@@ -803,6 +786,42 @@ namespace wiScene
 			archive << soundinstance.type;
 		}
 	}
+	void InverseKinematicsComponent::Serialize(wiArchive& archive, uint32_t seed)
+	{
+		SerializeEntity(archive, target, seed);
+
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+			archive >> chain_length;
+			archive >> iteration_count;
+		}
+		else
+		{
+			archive << _flags;
+			archive << chain_length;
+			archive << iteration_count;
+		}
+	}
+	void SpringComponent::Serialize(wiArchive& archive, uint32_t seed)
+	{
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+			archive >> stiffness;
+			archive >> damping;
+			archive >> wind_affection;
+
+			Reset();
+		}
+		else
+		{
+			archive << _flags;
+			archive << stiffness;
+			archive << damping;
+			archive << wind_affection;
+		}
+	}
 
 	void Scene::Serialize(wiArchive& archive)
 	{
@@ -852,6 +871,10 @@ namespace wiScene
 		if (archive.GetVersion() >= 37)
 		{
 			inverse_kinematics.Serialize(archive, seed);
+		}
+		if (archive.GetVersion() >= 38)
+		{
+			springs.Serialize(archive, seed);
 		}
 
 	}
@@ -1105,6 +1128,16 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = inverse_kinematics.Create(entity);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+				}
+			}
+			if (archive.GetVersion() >= 38)
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = springs.Create(entity);
 					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
@@ -1428,6 +1461,19 @@ namespace wiScene
 			if (archive.GetVersion() >= 37)
 			{
 				auto component = inverse_kinematics.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			if (archive.GetVersion() >= 37)
+			{
+				auto component = springs.GetComponent(entity);
 				if (component != nullptr)
 				{
 					archive << true;

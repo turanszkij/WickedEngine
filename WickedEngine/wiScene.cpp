@@ -1021,6 +1021,8 @@ namespace wiScene
 
 		RunHierarchyUpdateSystem(ctx, hierarchy, transforms, layers);
 
+		RunSpringUpdateSystem(ctx, weather, hierarchy, transforms, springs, dt);
+
 		RunInverseKinematicsUpdateSystem(ctx, inverse_kinematics, hierarchy, transforms);
 
 		RunArmatureUpdateSystem(ctx, transforms, armatures);
@@ -1082,6 +1084,7 @@ namespace wiScene
 		weathers.Clear();
 		sounds.Clear();
 		inverse_kinematics.Clear();
+		springs.Clear();
 	}
 	void Scene::Merge(Scene& other)
 	{
@@ -1112,6 +1115,7 @@ namespace wiScene
 		weathers.Merge(other.weathers);
 		sounds.Merge(other.sounds);
 		inverse_kinematics.Merge(other.inverse_kinematics);
+		springs.Merge(other.springs);
 
 		bounds = AABB::Merge(bounds, other.bounds);
 	}
@@ -1146,6 +1150,7 @@ namespace wiScene
 		weathers.Remove(entity);
 		sounds.Remove(entity);
 		inverse_kinematics.Remove(entity);
+		springs.Remove(entity);
 	}
 	Entity Scene::Entity_FindByName(const std::string& name)
 	{
@@ -1685,6 +1690,84 @@ namespace wiScene
 				layer_child->layerMask = parentcomponent.layerMask_bind & layer_parent->GetLayerMask();
 			}
 
+		}
+	}
+	void RunSpringUpdateSystem(
+		wiJobSystem::context& ctx,
+		const WeatherComponent& weather,
+		const ComponentManager<HierarchyComponent>& hierarchy,
+		ComponentManager<TransformComponent>& transforms,
+		ComponentManager<SpringComponent>& springs,
+		float dt
+	)
+	{
+		static float time = 0;
+		time += dt;
+		const XMVECTOR wind = XMLoadFloat3(&weather.windDirection);
+		const XMVECTOR gravity = XMVectorSet(0, -9.8f, 0, 0);
+
+		for (size_t i = 0; i < springs.GetCount(); ++i)
+		{
+			SpringComponent& spring = springs[i];
+			if (spring.IsDisabled())
+			{
+				continue;
+			}
+			Entity entity = springs.GetEntity(i);
+			TransformComponent* transform = transforms.GetComponent(entity);
+			if (transform == nullptr)
+			{
+				assert(0);
+				continue;
+			}
+
+			if (spring.IsResetting())
+			{
+				spring.Reset(false);
+				spring.center_of_mass = transform->GetPosition();
+				spring.velocity = XMFLOAT3(0, 0, 0);
+			}
+
+			const XMVECTOR position_current = transform->GetPositionV();
+			XMVECTOR position_prev = XMLoadFloat3(&spring.center_of_mass);
+			XMVECTOR force = (position_current - position_prev) * spring.stiffness;
+
+			if (spring.wind_affection > 0)
+			{
+				// todo: nicer wind calculation
+				force += spring.wind_affection * wind * XMVectorSin(position_current + XMVectorReplicate(time*XM_2PI)) * 0.5f + XMVectorReplicate(0.5f);
+			}
+			if (spring.IsGravityEnabled())
+			{
+				force += gravity;
+			}
+
+			XMVECTOR velocity = XMLoadFloat3(&spring.velocity);
+			velocity += force * dt;
+			XMVECTOR position_target = position_prev + velocity * dt;
+
+			if (!spring.IsStretchEnabled())
+			{
+				const HierarchyComponent* hier = hierarchy.GetComponent(entity);
+				if (hier != nullptr)
+				{
+					TransformComponent* parent_transform = transforms.GetComponent(hier->parentID);
+					if (transform != nullptr)
+					{
+						// Limit offset to keep distance from parent:
+						const XMVECTOR position_parent = parent_transform->GetPositionV();
+						const XMVECTOR parent_to_child = position_current - position_parent;
+						const XMVECTOR parent_to_target = position_target - position_parent;
+						const XMVECTOR len = XMVector3Length(parent_to_child);
+						position_target = position_parent + XMVector3Normalize(parent_to_target) * len;
+					}
+				}
+			}
+
+			XMStoreFloat3(&spring.center_of_mass, position_target);
+			velocity *= spring.damping;
+			XMStoreFloat3(&spring.velocity, velocity);
+			*((XMFLOAT3*)&transform->world._41) = spring.center_of_mass;
 		}
 	}
 	void RunInverseKinematicsUpdateSystem(

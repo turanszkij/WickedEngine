@@ -36,7 +36,9 @@ This is a reference for the C++ features of Wicked Engine
 		18. [AnimationComponent](#animationcomponent)
 		19. [WeatherComponent](#weathercomponent)
 		20. [SoundComponent](#soundcomponent)
-		21. [Scene](#scene)
+		21. [InverseKinematicsComponent](#inversekinematicscomponent)
+		22. [SpringComponent](#springcomponent)
+		23. [Scene](#scene)
 	3. [wiJobSystem](#wijobsystem)
 	4. [wiInitializer](#wiinitializer)
 	5. [wiPlatform](#wiplatform)
@@ -304,13 +306,6 @@ Absolute orientation in the previous frame (a matrix).
 [[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
 An entity can be part of a transform hierarchy by having this component. Some other properties can also be inherieted, such as layer bitmask. If an entity has a parent, then it has a HierarchyComponent, otherwise it's not part of a hierarchy.
 
-#### InverseKinematicsComponent
-[[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
-If an entity has an `InverseKinematicComponent` (IK), and part of a transform hierarchy (has both [TransformComponent](#transformcomponent) and a [HierarchyComponent](#hierarchycomponent)), then it can be targetted to an other [ThransformComponent](#transformcomponent). The parent transforms will be computed in order to let the IK reach the target if possible. The parent transforms will be only rotated. For example, if a hand tries to reach for an object, the hand and shoulder will move accordingly to let the hand reach.
-The `chain_length` can be specified to let the IK system know how many parents should be computed. It can be greater than the real chain length, in that case there will be no more simulation steps than the length of hierarchy chain.
-The `iteration_count` can be specified to increase accuracy of the computation.
-If animations are also playing on the affected entities, the IK system will override the animations.
-
 #### MaterialComponent
 [[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
 Several properties that define a material, like color, textures, etc...
@@ -366,6 +361,17 @@ It is expected that an entity that has DecalComponent, also has TransformCompone
 #### SoundComponent
 [[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
 Holds a Sound and a SoundInstance, and it can be placed into the scene via a TransformComponent. It can have a 3D audio effect it has a TransformComponent.
+
+#### InverseKinematicsComponent
+[[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
+If an entity has an `InverseKinematicComponent` (IK), and part of a transform hierarchy (has both [TransformComponent](#transformcomponent) and a [HierarchyComponent](#hierarchycomponent)), then it can be targetted to an other [ThransformComponent](#transformcomponent). The parent transforms will be computed in order to let the IK reach the target if possible. The parent transforms will be only rotated. For example, if a hand tries to reach for an object, the hand and shoulder will move accordingly to let the hand reach.
+The `chain_length` can be specified to let the IK system know how many parents should be computed. It can be greater than the real chain length, in that case there will be no more simulation steps than the length of hierarchy chain.
+The `iteration_count` can be specified to increase accuracy of the computation.
+If animations are also playing on the affected entities, the IK system will override the animations.
+
+#### SpringComponent
+[[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)
+An entity can have a `SpringComponent` to achieve a "jiggle" or "soft" animation effect programatically. The effect will work automatically if the transform is changed by animation system for example, or in any other way. The parameter `stiffness` specifies how fast the transform tries to go back to its initial position. The parameter `damping` specifies how fast the transform comes to rest position. The `wind_affection` parameter specifies how much the global wind applies to the spring.
 
 #### Scene
 [[Header]](../WickedEngine/wiScene.h) [[Cpp]](../WickedEngine/wiScene.cpp)

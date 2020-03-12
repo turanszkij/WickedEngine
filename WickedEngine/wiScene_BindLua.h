@@ -35,6 +35,7 @@ namespace wiScene_BindLua
 		int Component_CreateLight(lua_State* L);
 		int Component_CreateObject(lua_State* L);
 		int Component_CreateInverseKinematics(lua_State* L);
+		int Component_CreateSpring(lua_State* L);
 
 		int Component_GetName(lua_State* L);
 		int Component_GetLayer(lua_State* L);
@@ -46,6 +47,7 @@ namespace wiScene_BindLua
 		int Component_GetLight(lua_State* L);
 		int Component_GetObject(lua_State* L);
 		int Component_GetInverseKinematics(lua_State* L);
+		int Component_GetSpring(lua_State* L);
 
 		int Component_GetNameArray(lua_State* L);
 		int Component_GetLayerArray(lua_State* L);
@@ -57,6 +59,7 @@ namespace wiScene_BindLua
 		int Component_GetLightArray(lua_State* L);
 		int Component_GetObjectArray(lua_State* L);
 		int Component_GetInverseKinematicsArray(lua_State* L);
+		int Component_GetSpringArray(lua_State* L);
 
 		int Entity_GetNameArray(lua_State* L);
 		int Entity_GetLayerArray(lua_State* L);
@@ -68,6 +71,7 @@ namespace wiScene_BindLua
 		int Entity_GetLightArray(lua_State* L);
 		int Entity_GetObjectArray(lua_State* L);
 		int Entity_GetInverseKinematicsArray(lua_State* L);
+		int Entity_GetSpringArray(lua_State* L);
 
 		int Component_Attach(lua_State* L);
 		int Component_Detach(lua_State* L);
@@ -136,30 +140,6 @@ namespace wiScene_BindLua
 		int GetPosition(lua_State* L);
 		int GetRotation(lua_State* L);
 		int GetScale(lua_State* L);
-	};
-
-	class InverseKinematicsComponent_BindLua
-	{
-	public:
-		bool owning = false;
-		wiScene::InverseKinematicsComponent* component = nullptr;
-
-		static const char className[];
-		static Luna<InverseKinematicsComponent_BindLua>::FunctionType methods[];
-		static Luna<InverseKinematicsComponent_BindLua>::PropertyType properties[];
-
-		InverseKinematicsComponent_BindLua(wiScene::InverseKinematicsComponent* component) :component(component) {}
-		InverseKinematicsComponent_BindLua(lua_State* L);
-		~InverseKinematicsComponent_BindLua();
-
-		int SetTarget(lua_State* L);
-		int SetChainLength(lua_State* L);
-		int SetIterationCount(lua_State* L);
-		int SetDisabled(lua_State* L);
-		int GetTarget(lua_State* L);
-		int GetChainLength(lua_State* L);
-		int GetIterationCount(lua_State* L);
-		int IsDisabled(lua_State* L);
 	};
 
 	class CameraComponent_BindLua
@@ -305,6 +285,49 @@ namespace wiScene_BindLua
 		int SetMeshID(lua_State* L);
 		int SetColor(lua_State* L);
 		int SetUserStencilRef(lua_State* L);
+	};
+
+	class InverseKinematicsComponent_BindLua
+	{
+	public:
+		bool owning = false;
+		wiScene::InverseKinematicsComponent* component = nullptr;
+
+		static const char className[];
+		static Luna<InverseKinematicsComponent_BindLua>::FunctionType methods[];
+		static Luna<InverseKinematicsComponent_BindLua>::PropertyType properties[];
+
+		InverseKinematicsComponent_BindLua(wiScene::InverseKinematicsComponent* component) :component(component) {}
+		InverseKinematicsComponent_BindLua(lua_State* L);
+		~InverseKinematicsComponent_BindLua();
+
+		int SetTarget(lua_State* L);
+		int SetChainLength(lua_State* L);
+		int SetIterationCount(lua_State* L);
+		int SetDisabled(lua_State* L);
+		int GetTarget(lua_State* L);
+		int GetChainLength(lua_State* L);
+		int GetIterationCount(lua_State* L);
+		int IsDisabled(lua_State* L);
+	};
+
+	class SpringComponent_BindLua
+	{
+	public:
+		bool owning = false;
+		wiScene::SpringComponent* component = nullptr;
+
+		static const char className[];
+		static Luna<SpringComponent_BindLua>::FunctionType methods[];
+		static Luna<SpringComponent_BindLua>::PropertyType properties[];
+
+		SpringComponent_BindLua(wiScene::SpringComponent* component) :component(component) {}
+		SpringComponent_BindLua(lua_State* L);
+		~SpringComponent_BindLua();
+
+		int SetStiffness(lua_State* L);
+		int SetDamping(lua_State* L);
+		int SetWindAffection(lua_State* L);
 	};
 
 }

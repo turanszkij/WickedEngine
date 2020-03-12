@@ -591,12 +591,12 @@ void EditorComponent::Load()
 		if (helpLabel == nullptr)
 		{
 			stringstream ss("");
-			ss << "Help:   " << endl << "############" << endl << endl;
-			ss << "Move camera: WASD" << endl;
-			ss << "Look: Middle mouse button / arrow keys" << endl;
+			ss << "Help:   " << endl << "############" << endl;
+			ss << "Move camera: WASD, or Contoller left stick or D-pad" << endl;
+			ss << "Look: Middle mouse button / arrow keys / controller right stick" << endl;
 			ss << "Select: Right mouse button" << endl;
 			ss << "Place decal, interact with water: Left mouse button when nothing is selected" << endl;
-			ss << "Camera speed: SHIFT button" << endl;
+			ss << "Camera speed: SHIFT button or controller R2/RT" << endl;
 			ss << "Camera up: E, down: Q" << endl;
 			ss << "Duplicate entity: Ctrl + D" << endl;
 			ss << "Select All: Ctrl + A" << endl;
@@ -605,6 +605,7 @@ void EditorComponent::Load()
 			ss << "Copy: Ctrl + C" << endl;
 			ss << "Paste: Ctrl + V" << endl;
 			ss << "Delete: DELETE button" << endl;
+			ss << "Add Spring to selected transform: R button" << endl;
 			ss << "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)" << endl;
 			ss << "Pin soft body triangle: Hold P and click on soft body with Left mouse button" << endl;
 			ss << "Script Console / backlog: HOME button" << endl;
@@ -1438,6 +1439,28 @@ void EditorComponent::Update(float dt)
 			}
 		}
 
+	}
+
+	// Springs
+	if (wiInput::Press((wiInput::BUTTON)'R'))
+	{
+		for (auto& x : translator.selected)
+		{
+			bool has_spring = scene.springs.Contains(x.entity);
+			if (scene.transforms.Contains(x.entity) && !has_spring)
+			{
+				SpringComponent& spring = scene.springs.Create(x.entity);
+			}
+		}
+	}
+	for (size_t i = 0; i < scene.springs.GetCount(); ++i)
+	{
+		const SpringComponent& spring = scene.springs[i];
+		wiRenderer::RenderablePoint point;
+		point.position = spring.center_of_mass;
+		point.size = 0.1f;
+		point.color = XMFLOAT4(1, 1, 0, 1);
+		wiRenderer::DrawPoint(point);
 	}
 
 
