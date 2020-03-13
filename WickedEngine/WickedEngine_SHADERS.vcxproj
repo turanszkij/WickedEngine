@@ -802,22 +802,19 @@
     <FxCompile Include="ssaoCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
     </FxCompile>
-    <FxCompile Include="stochasticSSRCS_median.hlsl">
+    <FxCompile Include="ssr_medianCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
     </FxCompile>
-    <FxCompile Include="stochasticSSRCS_raytrace.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
-    </FxCompile>
-    <FxCompile Include="ssrCS.hlsl">
+    <FxCompile Include="ssr_raytraceCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
     </FxCompile>
     <FxCompile Include="sssPS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="stochasticSSRCS_resolve.hlsl">
+    <FxCompile Include="ssr_resolveCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
     </FxCompile>
-    <FxCompile Include="stochasticSSRCS_temporal.hlsl">
+    <FxCompile Include="ssr_temporalCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
     </FxCompile>
     <FxCompile Include="sunPS.hlsl">

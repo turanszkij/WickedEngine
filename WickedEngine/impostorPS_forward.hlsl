@@ -26,7 +26,7 @@ GBUFFEROutputType_Thin main(VSOut input)
 	float3 V = g_xCamera_CamPos - input.pos3D;
 	float dist = length(V);
 	V /= dist;
-	Surface surface = CreateSurface(input.pos3D, N, V, color, ao, roughness, reflectance, metalness);
+	Surface surface = CreateSurface(input.pos3D, N, V, color, roughness, ao, reflectance, metalness);
 	Lighting lighting = CreateLighting(0, 0, GetAmbient(surface.N), 0);
 	float2 pixel = input.pos.xy;
 	float depth = input.pos.z;

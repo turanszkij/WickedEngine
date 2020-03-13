@@ -171,15 +171,6 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 	rendererWindow->AddWidget(tessellationCheckBox);
 	tessellationCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION));
 
-	advancedRefractionsCheckBox = new wiCheckBox("Advanced Refractions: ");
-	advancedRefractionsCheckBox->SetTooltip("Enable advanced refraction rendering: rough transparent materials will be more matte.");
-	advancedRefractionsCheckBox->SetPos(XMFLOAT2(x, y += step));
-	advancedRefractionsCheckBox->OnClick([=](wiEventArgs args) {
-		wiRenderer::SetAdvancedRefractionsEnabled(args.bValue);
-	});
-	advancedRefractionsCheckBox->SetCheck(wiRenderer::GetAdvancedRefractionsEnabled());
-	rendererWindow->AddWidget(advancedRefractionsCheckBox);
-
 	alphaCompositionCheckBox = new wiCheckBox("Alpha Composition: ");
 	alphaCompositionCheckBox->SetTooltip("Enable Alpha Composition. Enables softer alpha blending on partly solid geometry (eg. vegetation) but rendering performance will be slower.");
 	alphaCompositionCheckBox->SetPos(XMFLOAT2(x, y += step));

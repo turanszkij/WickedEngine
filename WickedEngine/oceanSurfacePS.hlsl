@@ -19,7 +19,7 @@ float4 main(PSIn input) : SV_TARGET
 	float dist = length(V);
 	V /= dist;
 	float emissive = 0;
-	Surface surface = CreateSurface(input.pos3D, normalize(float3(gradient.x, xOceanTexelLength * 2, gradient.y)), V, color, 1, 0.001, 0, 0.02);
+	Surface surface = CreateSurface(input.pos3D, normalize(float3(gradient.x, xOceanTexelLength * 2, gradient.y)), V, color, 0.001, 1, 0, 0.02);
 	Lighting lighting = CreateLighting(0, 0, GetAmbient(surface.N), 0);
 	float2 pixel = input.pos.xy;
 	float depth = input.pos.z;

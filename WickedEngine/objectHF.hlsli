@@ -77,7 +77,7 @@ inline GBUFFEROutputType CreateGbuffer(in float4 color, in Surface surface, in f
 	GBUFFEROutputType Out;
 	Out.g0 = float4(color.rgb, surface.sss);														/*FORMAT_R8G8B8A8_UNORM*/
 	Out.g1 = float4(encodeNormal(surface.N), velocity);												/*FORMAT_R16G16B16A16_FLOAT*/
-	Out.g2 = float4(surface.occlusion, surface.roughness, surface.metalness, surface.reflectance);	/*FORMAT_R8G8B8A8_UNORM*/
+	Out.g2 = float4(surface.roughness, surface.occlusion, surface.metalness, surface.reflectance);	/*FORMAT_R8G8B8A8_UNORM*/
 	Out.diffuse = float4(combined_lighting.diffuse, 1);												/*FORMAT_R11G11B10_FLOAT*/
 	Out.specular = float4(combined_lighting.specular, 1);											/*FORMAT_R11G11B10_FLOAT*/
 	return Out;
@@ -87,12 +87,14 @@ struct GBUFFEROutputType_Thin
 {
 	float4 g0	: SV_Target0;		// texture_gbuffer0
 	float4 g1	: SV_Target1;		// texture_gbuffer1
+	float g2	: SV_Target2;		// texture_gbuffer2
 };
 inline GBUFFEROutputType_Thin CreateGbuffer_Thin(in float4 color, in Surface surface, in float2 velocity)
 {
 	GBUFFEROutputType_Thin Out;
-	Out.g0 = color;																		/*FORMAT_R11G11B10_FLOAT*/
-	Out.g1 = float4(encodeNormal(surface.N), velocity);									/*FORMAT_R16G16B16A16_FLOAT*/
+	Out.g0 = color;										/*FORMAT_R11G11B10_FLOAT*/
+	Out.g1 = float4(encodeNormal(surface.N), velocity);	/*FORMAT_R16G16B16A16_FLOAT*/
+	Out.g2 = surface.roughness;	/*FORMAT_R8_UNORM*/
 	return Out;
 }
 
@@ -172,10 +174,9 @@ inline void Refraction(in float2 ScreenCoord, inout Surface surface, inout float
 		float2 size;
 		float mipLevels;
 		texture_refraction.GetDimensions(0, size.x, size.y, mipLevels);
-		const float sampled_mip = ((g_xFrame_Options & OPTION_BIT_ADVANCEDREFRACTIONS_ENABLED) ? surface.roughness * mipLevels : 0);
 		const float2 normal2D = mul((float3x3)g_xCamera_View, surface.N.xyz).xy;
 		float2 perturbatedRefrTexCoords = ScreenCoord.xy + normal2D * g_xMaterial.refractionIndex;
-		float4 refractiveColor = texture_refraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, sampled_mip);
+		float4 refractiveColor = texture_refraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, surface.roughness * mipLevels);
 		surface.albedo.rgb = lerp(refractiveColor.rgb, surface.albedo.rgb, color.a);
 		lighting.direct.diffuse = lerp(1, lighting.direct.diffuse, color.a);
 		color.a = 1;
@@ -832,8 +833,8 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 		surface.N, 
 		surface.V, 
 		color,
-		surface_occlusion_roughness_metallic_reflectance.r,
 		g_xMaterial.roughness * surface_occlusion_roughness_metallic_reflectance.g,
+		surface_occlusion_roughness_metallic_reflectance.r,
 		g_xMaterial.metalness * surface_occlusion_roughness_metallic_reflectance.b,
 		g_xMaterial.reflectance * surface_occlusion_roughness_metallic_reflectance.a,
 		emissiveColor,
@@ -910,7 +911,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #ifdef TRANSPARENT
 	Refraction(ScreenCoord, surface, color, lighting);
 #else
-	float4 ssr = texture_ssr.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, surface.roughness * 5);
+	float4 ssr = texture_ssr.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
 	lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb, ssr.a);
 #endif // TRANSPARENT
 #endif // ENVMAPRENDERING

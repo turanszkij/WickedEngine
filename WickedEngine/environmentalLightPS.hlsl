@@ -13,7 +13,7 @@ LightOutputType main(VertexToPixel PSIn)
 
 	LightingContribution vxgi_contribution = VoxelGI(surface, lighting);
 
-	float4 ssr = texture_ssr.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, surface.roughness * 5);
+	float4 ssr = texture_ssr.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
 	lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb, ssr.a);
 
 	float ssao = texture_ssao.SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;

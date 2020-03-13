@@ -7,8 +7,8 @@ class RenderPath3D_Forward :
 {
 protected:
 
-	wiGraphics::Texture rtMain[2];
-	wiGraphics::Texture rtMain_resolved[2];
+	wiGraphics::Texture rtMain[3];
+	wiGraphics::Texture rtMain_resolved[3];
 
 	wiGraphics::RenderPass renderpass_depthprepass;
 	wiGraphics::RenderPass renderpass_main;

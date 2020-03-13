@@ -100,7 +100,6 @@ bool gridHelper = false;
 bool voxelHelper = false;
 bool requestReflectionRendering = false;
 bool advancedLightCulling = true;
-bool advancedRefractions = false;
 bool ldsSkinningEnabled = true;
 bool scene_bvh_invalid = true;
 float renderTime = 0;
@@ -1332,11 +1331,10 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM1], "blur_bilateral_unorm1CS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM4], "blur_bilateral_unorm4CS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SSAO], "ssaoCS.cso"); });
-	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SSR], "ssrCS.cso"); });
-	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_STOCHASTICSSR_RAYTRACE], "stochasticSSRCS_raytrace.cso"); });
-	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_STOCHASTICSSR_RESOLVE], "stochasticSSRCS_resolve.cso"); });
-	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_STOCHASTICSSR_TEMPORAL], "stochasticSSRCS_temporal.cso"); });
-	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_STOCHASTICSSR_MEDIAN], "stochasticSSRCS_median.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SSR_RAYTRACE], "ssr_raytraceCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SSR_RESOLVE], "ssr_resolveCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SSR_TEMPORAL], "ssr_temporalCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SSR_MEDIAN], "ssr_medianCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_LIGHTSHAFTS], "lightshaftsCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_HORIZONTAL], "depthoffield_tileMaxCOC_horizontalCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_VERTICAL], "depthoffield_tileMaxCOC_verticalCS.cso"); });
@@ -8313,10 +8311,6 @@ void UpdateFrameCB(CommandList cmd)
 	{
 		cb.g_xFrame_Options |= OPTION_BIT_TEMPORALAA_ENABLED;
 	}
-	if (GetAdvancedRefractionsEnabled())
-	{
-		cb.g_xFrame_Options |= OPTION_BIT_ADVANCEDREFRACTIONS_ENABLED;
-	}
 	if (GetTransparentShadowsEnabled())
 	{
 		cb.g_xFrame_Options |= OPTION_BIT_TRANSPARENTSHADOWS_ENABLED;
@@ -8796,6 +8790,7 @@ void Postprocess_SSR(
 	const Texture& depthbuffer,
 	const Texture& lineardepth_minmax,
 	const Texture& gbuffer1,
+	const Texture& gbuffer2,
 	const Texture& output,
 	CommandList cmd
 )
@@ -8807,68 +8802,9 @@ void Postprocess_SSR(
 
 	device->UnbindResources(TEXSLOT_RENDERPATH_SSR, 1, cmd);
 
-	device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_SSR], cmd);
-
-	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-	device->BindResource(CS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
-	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
-	device->BindResource(CS, &lineardepth_minmax, TEXSLOT_ONDEMAND1, cmd);
-
-	const TextureDesc& desc = output.GetDesc();
-
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
-
-	const GPUResource* uavs[] = {
-		&output,
-	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-	device->Dispatch(
-		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, 
-		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, 
-		1, 
-		cmd
-	);
-
-	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
-
-	if (desc.MipLevels > 1)
-	{
-		GenerateMipChain(output, MIPGENFILTER_GAUSSIAN, cmd);
-	}
-
-	wiProfiler::EndRange(range);
-	device->EventEnd(cmd);
-}
-void Postprocess_StochasticSSR(
-	const Texture& input,
-	const Texture& depthbuffer,
-	const Texture& lineardepth_minmax,
-	const Texture& gbuffer0,
-	const Texture& gbuffer1,
-	const Texture& gbuffer2,
-	const Texture& output,
-	CommandList cmd
-)
-{
-	GraphicsDevice* device = GetDevice();
-
-	device->EventBegin("Postprocess_StochasticSSR", cmd);
-	auto range = wiProfiler::BeginRangeGPU("Stochastic SSR", cmd);
-
-	device->UnbindResources(TEXSLOT_RENDERPATH_SSR, 1, cmd);
-
 	const TextureDesc& desc = output.GetDesc();
 
 	static TextureDesc initialized_desc;
-	static Texture texture_main;
 	static Texture texture_raytrace;
 	static Texture texture_mask;
 	static Texture texture_resolve;
@@ -8878,25 +8814,6 @@ void Postprocess_StochasticSSR(
 	if (initialized_desc.Width != desc.Width || initialized_desc.Height != desc.Height)
 	{
 		initialized_desc = desc;
-
-		TextureDesc main_desc;
-		main_desc.type = TextureDesc::TEXTURE_2D;
-		main_desc.Width = desc.Width;
-		main_desc.Height = desc.Height;
-		main_desc.Format = FORMAT_R16G16B16A16_FLOAT;
-		main_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		main_desc.MipLevels = 0; // full mip chain
-		device->CreateTexture(&main_desc, nullptr, &texture_main);
-
-		main_desc = texture_main.GetDesc(); // mip count was initialized in CreateTexture()
-		for (uint32_t i = 0; i < main_desc.MipLevels; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(&texture_main, SRV, 0, 1, i, 1);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&texture_main, UAV, 0, 1, i, 1);
-			assert(subresource_index == i);
-		}
 
 		TextureDesc cast_desc;
 		cast_desc.type = TextureDesc::TEXTURE_2D;
@@ -8919,19 +8836,6 @@ void Postprocess_StochasticSSR(
 		device->CreateTexture(&buffer_desc, nullptr, &texture_temporal[1]);
 	}
 
-	// This is very expensive. There is problably a better way of getting LOD of input. 
-	// For now I'm just making a copy of input, to stay on the safe side.
-
-	// Main buffer copy and mip:
-	{
-		device->EventBegin("Main buffer pass", cmd);
-
-		CopyTexture2D(texture_main, 0, 0, 0, input, 0, cmd);
-		GenerateMipChain(texture_main, MIPGENFILTER_GAUSSIAN, cmd);
-
-		device->EventEnd(cmd);
-	}
-
 	// Switch to half res
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width / 2;
@@ -8944,7 +8848,7 @@ void Postprocess_StochasticSSR(
 	// Raytrace pass:
 	{
 		device->EventBegin("Stochastic Raytrace pass", cmd);
-		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_STOCHASTICSSR_RAYTRACE], cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_SSR_RAYTRACE], cmd);
 
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(CS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
@@ -8981,14 +8885,14 @@ void Postprocess_StochasticSSR(
 	// Resolve pass:
 	{
 		device->EventBegin("Resolve pass", cmd);
-		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_STOCHASTICSSR_RESOLVE], cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_SSR_RESOLVE], cmd);
 
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(CS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
 		device->BindResource(CS, &gbuffer2, TEXSLOT_GBUFFER2, cmd);
 		device->BindResource(CS, &texture_raytrace, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, &texture_mask, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &texture_main, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(CS, &input, TEXSLOT_ONDEMAND2, cmd);
 
 		const GPUResource* uavs[] = {
 			&texture_resolve,
@@ -9013,7 +8917,7 @@ void Postprocess_StochasticSSR(
 	// Temporal pass:
 	{
 		device->EventBegin("Temporal pass", cmd);
-		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_STOCHASTICSSR_TEMPORAL], cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_SSR_TEMPORAL], cmd);
 
 		device->BindResource(CS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
@@ -9041,7 +8945,7 @@ void Postprocess_StochasticSSR(
 	// Median blur pass:
 	{
 		device->EventBegin("Median blur pass", cmd);
-		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_STOCHASTICSSR_MEDIAN], cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_SSR_MEDIAN], cmd);
 
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(CS, &texture_temporal[temporal_output], TEXSLOT_ONDEMAND0, cmd);
@@ -9062,7 +8966,6 @@ void Postprocess_StochasticSSR(
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
-	//Postprocess_Blur_Bilateral(texture_temporal[temporal_output], lineardepth, texture_temp, output, cmd, 0.85f, 0.85f, 1.2f);
 
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -10471,8 +10374,6 @@ void SetVoxelRadianceNumCones(int value) { voxelSceneData.numCones = value; }
 int GetVoxelRadianceNumCones() { return voxelSceneData.numCones; }
 float GetVoxelRadianceRayStepSize() { return voxelSceneData.rayStepSize; }
 void SetVoxelRadianceRayStepSize(float value) { voxelSceneData.rayStepSize = value; }
-void SetAdvancedRefractionsEnabled(bool value) { advancedRefractions = value; }
-bool GetAdvancedRefractionsEnabled() { return advancedRefractions; }
 bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
 void SetGameSpeed(float value) { GameSpeed = std::max(0.0f, value); }
 float GetGameSpeed() { return GameSpeed; }

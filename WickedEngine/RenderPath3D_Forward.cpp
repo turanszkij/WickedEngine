@@ -35,6 +35,10 @@ void RenderPath3D_Forward::ResizeBuffers()
 		device->CreateTexture(&desc, nullptr, &rtMain[1]);
 		device->SetName(&rtMain[1], "rtMain[1]");
 
+		desc.Format = FORMAT_R8_UNORM;
+		device->CreateTexture(&desc, nullptr, &rtMain[2]);
+		device->SetName(&rtMain[2], "rtMain[2]");
+
 		if (getMSAASampleCount() > 1)
 		{
 			desc.SampleCount = 1;
@@ -47,6 +51,10 @@ void RenderPath3D_Forward::ResizeBuffers()
 			desc.Format = FORMAT_R16G16B16A16_FLOAT;
 			device->CreateTexture(&desc, nullptr, &rtMain_resolved[1]);
 			device->SetName(&rtMain_resolved[1], "rtMain_resolved[1]");
+
+			desc.Format = FORMAT_R8_UNORM;
+			device->CreateTexture(&desc, nullptr, &rtMain_resolved[2]);
+			device->SetName(&rtMain_resolved[2], "rtMain_resolved[2]");
 		}
 	}
 
@@ -57,10 +65,11 @@ void RenderPath3D_Forward::ResizeBuffers()
 		desc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::LOADOP_CLEAR, &depthBuffer, -1 };
 		device->CreateRenderPass(&desc, &renderpass_depthprepass);
 
-		desc.numAttachments = 3;
+		desc.numAttachments = 4;
 		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::LOADOP_DONTCARE, &rtMain[0], -1 };
 		desc.attachments[1] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::LOADOP_CLEAR, &rtMain[1], -1 };
-		desc.attachments[2] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::LOADOP_LOAD, &depthBuffer, -1 };
+		desc.attachments[2] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::LOADOP_CLEAR, &rtMain[2], -1 };
+		desc.attachments[3] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::LOADOP_LOAD, &depthBuffer, -1 };
 		device->CreateRenderPass(&desc, &renderpass_main);
 	}
 	{
@@ -162,7 +171,7 @@ void RenderPath3D_Forward::Render() const
 
 			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
 			device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, cmd);
-			device->BindResource(PS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
+			device->BindResource(PS, getSSREnabled() ? &rtStochasticSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
 			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_FORWARD, true, true);
 			wiRenderer::DrawSky(cmd);
 
@@ -182,9 +191,8 @@ void RenderPath3D_Forward::Render() const
 		{
 			device->MSAAResolve(GetSceneRT_Read(0), &rtMain[0], cmd);
 			device->MSAAResolve(GetSceneRT_Read(1), &rtMain[1], cmd);
+			device->MSAAResolve(GetSceneRT_Read(2), &rtMain[2], cmd);
 		}
-
-		RenderSSR(*GetSceneRT_Read(0), *GetSceneRT_Read(1), cmd);
 
 		DownsampleDepthBuffer(cmd);
 
@@ -192,7 +200,9 @@ void RenderPath3D_Forward::Render() const
 
 		RenderVolumetrics(cmd);
 
-		RenderRefractionSource(*GetSceneRT_Read(0), cmd);
+		RenderSceneMIPChain(*GetSceneRT_Read(0), cmd);
+
+		RenderSSR(*GetSceneRT_Read(1), *GetSceneRT_Read(2), cmd);
 
 		RenderTransparents(renderpass_transparent, RENDERPASS_FORWARD, cmd);
 

@@ -147,11 +147,10 @@ static const int impostorCaptureAngles = 12;
 
 // These option bits can be read from g_xFrame_Options constant buffer value:
 static const uint OPTION_BIT_TEMPORALAA_ENABLED = 1 << 0;
-static const uint OPTION_BIT_ADVANCEDREFRACTIONS_ENABLED = 1 << 1;
-static const uint OPTION_BIT_TRANSPARENTSHADOWS_ENABLED = 1 << 2;
-static const uint OPTION_BIT_VOXELGI_ENABLED = 1 << 3;
-static const uint OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED = 1 << 4;
-static const uint OPTION_BIT_VOXELGI_RETARGETTED = 1 << 5;
+static const uint OPTION_BIT_TRANSPARENTSHADOWS_ENABLED = 1 << 1;
+static const uint OPTION_BIT_VOXELGI_ENABLED = 1 << 2;
+static const uint OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED = 1 << 3;
+static const uint OPTION_BIT_VOXELGI_RETARGETTED = 1 << 4;
 
 // ---------- Common Constant buffers: -----------------
 

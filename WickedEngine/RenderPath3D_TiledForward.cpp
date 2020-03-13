@@ -101,7 +101,7 @@ void RenderPath3D_TiledForward::Render() const
 
 			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
 			device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, cmd);
-			device->BindResource(PS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
+			device->BindResource(PS, getSSREnabled() ? &rtStochasticSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
 			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_TILEDFORWARD, true, true);
 			wiRenderer::DrawSky(cmd);
 
@@ -121,9 +121,8 @@ void RenderPath3D_TiledForward::Render() const
 		{
 			device->MSAAResolve(GetSceneRT_Read(0), &rtMain[0], cmd);
 			device->MSAAResolve(GetSceneRT_Read(1), &rtMain[1], cmd);
+			device->MSAAResolve(GetSceneRT_Read(2), &rtMain[2], cmd);
 		}
-
-		RenderSSR(*GetSceneRT_Read(0), *GetSceneRT_Read(1), cmd);
 
 		DownsampleDepthBuffer(cmd);
 
@@ -131,7 +130,9 @@ void RenderPath3D_TiledForward::Render() const
 
 		RenderVolumetrics(cmd);
 
-		RenderRefractionSource(*GetSceneRT_Read(0), cmd);
+		RenderSceneMIPChain(*GetSceneRT_Read(0), cmd);
+
+		RenderSSR(*GetSceneRT_Read(1), *GetSceneRT_Read(2), cmd);
 
 		RenderTransparents(renderpass_transparent, RENDERPASS_TILEDFORWARD, cmd);
 

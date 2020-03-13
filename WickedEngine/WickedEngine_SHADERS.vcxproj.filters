@@ -741,9 +741,6 @@
     <FxCompile Include="fxaaCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="ssrCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="colorgradeCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -855,18 +852,6 @@
     <FxCompile Include="raytrace_tilesortCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="stochasticSSRCS_raytrace.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="stochasticSSRCS_resolve.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="stochasticSSRCS_median.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="stochasticSSRCS_temporal.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="upsample_bilateral_float4CS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -887,6 +872,18 @@
     </FxCompile>
     <FxCompile Include="vertexcolorPS.hlsl">
       <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="ssr_medianCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="ssr_raytraceCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="ssr_resolveCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="ssr_temporalCS.hlsl">
+      <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

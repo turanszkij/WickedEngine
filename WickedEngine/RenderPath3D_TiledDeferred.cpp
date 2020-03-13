@@ -156,15 +156,15 @@ void RenderPath3D_TiledDeferred::Render() const
 
 		RenderDeferredComposition(cmd);
 
-		RenderStochasticSSR(rtDeferred, rtGBuffer[0], rtGBuffer[1], rtGBuffer[2], cmd);
-
 		DownsampleDepthBuffer(cmd);
 
 		RenderLightShafts(cmd);
 
 		RenderVolumetrics(cmd);
 
-		RenderRefractionSource(rtDeferred, cmd);
+		RenderSceneMIPChain(rtDeferred, cmd);
+
+		RenderSSR(rtGBuffer[1], rtGBuffer[2], cmd);
 
 		RenderTransparents(renderpass_transparent, RENDERPASS_TILEDFORWARD, cmd);
 

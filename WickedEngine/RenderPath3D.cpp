@@ -81,11 +81,11 @@ void RenderPath3D::ResizeBuffers()
 	}
 	{
 		TextureDesc desc;
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS | BIND_RENDER_TARGET;
 		desc.Format = FORMAT_R11G11B10_FLOAT;
-		desc.Width = wiRenderer::GetInternalResolution().x;
-		desc.Height = wiRenderer::GetInternalResolution().y;
-		desc.MipLevels = 8;
+		desc.Width = wiRenderer::GetInternalResolution().x / 2;
+		desc.Height = wiRenderer::GetInternalResolution().y / 2;
+		desc.MipLevels = std::min(8u, (uint32_t)std::log2(std::max(desc.Width, desc.Height)));
 		device->CreateTexture(&desc, nullptr, &rtSceneCopy);
 		device->SetName(&rtSceneCopy, "rtSceneCopy");
 
@@ -292,6 +292,13 @@ void RenderPath3D::ResizeBuffers()
 	}
 	{
 		RenderPassDesc desc;
+		desc.numAttachments = 1;
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_DONTCARE,&rtSceneCopy};
+
+		device->CreateRenderPass(&desc, &renderpass_downsamplescene);
+	}
+	{
+		RenderPassDesc desc;
 		desc.numAttachments = 2;
 		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,&rtSun[0],-1 };
 		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&depthBuffer,-1 };
@@ -443,18 +450,11 @@ void RenderPath3D::RenderSSAO(CommandList cmd) const
 		);
 	}
 }
-void RenderPath3D::RenderSSR(const Texture& srcSceneRT, const wiGraphics::Texture& gbuffer1, CommandList cmd) const
+void RenderPath3D::RenderSSR(const Texture& gbuffer1, const Texture& gbuffer2, CommandList cmd) const
 {
 	if (getSSREnabled())
 	{
-		wiRenderer::Postprocess_SSR(srcSceneRT, depthBuffer_Copy, rtLinearDepth_minmax, gbuffer1, rtSSR, cmd);
-	}
-}
-void RenderPath3D::RenderStochasticSSR(const Texture& srcSceneRT, const wiGraphics::Texture& gbuffer0, const wiGraphics::Texture& gbuffer1, const wiGraphics::Texture& gbuffer2, CommandList cmd) const
-{
-	if (getSSREnabled())
-	{
-		wiRenderer::Postprocess_StochasticSSR(srcSceneRT, depthBuffer_Copy, rtLinearDepth_minmax, gbuffer0, gbuffer1, gbuffer2, rtStochasticSSR, cmd);
+		wiRenderer::Postprocess_SSR(rtSceneCopy, depthBuffer_Copy, rtLinearDepth_minmax, gbuffer1, gbuffer2, rtStochasticSSR, cmd);
 	}
 }
 void RenderPath3D::DownsampleDepthBuffer(CommandList cmd) const
@@ -542,19 +542,32 @@ void RenderPath3D::RenderVolumetrics(CommandList cmd) const
 		device->RenderPassEnd(cmd);
 	}
 }
-void RenderPath3D::RenderRefractionSource(const Texture& srcSceneRT, CommandList cmd) const
+void RenderPath3D::RenderSceneMIPChain(const Texture& srcSceneRT, CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	device->EventBegin("Refraction Source", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Scene MIP Chain", cmd);
+	device->EventBegin("RenderSceneMIPChain", cmd);
 
-	wiRenderer::CopyTexture2D(rtSceneCopy, 0, 0, 0, srcSceneRT, 0, cmd);
+	device->RenderPassBegin(&renderpass_downsamplescene, cmd);
 
-	if (wiRenderer::GetAdvancedRefractionsEnabled())
-	{
-		wiRenderer::GenerateMipChain(rtSceneCopy, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd);
-	}
+	Viewport vp;
+	vp.Width = (float)rtSceneCopy.GetDesc().Width;
+	vp.Height = (float)rtSceneCopy.GetDesc().Height;
+	device->BindViewports(1, &vp, cmd);
+
+	wiImageParams fx;
+	fx.enableFullScreen();
+	fx.sampleFlag = SAMPLEMODE_CLAMP;
+	fx.quality = QUALITY_LINEAR;
+	wiImage::Draw(&srcSceneRT, fx, cmd);
+
+	device->RenderPassEnd(cmd);
+
+	wiRenderer::GenerateMipChain(rtSceneCopy, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd);
+
 	device->EventEnd(cmd);
+	wiProfiler::EndRange(range);
 }
 void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, RENDERPASS renderPass, CommandList cmd) const
 {

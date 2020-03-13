@@ -16,6 +16,7 @@ GBUFFEROutputType_Thin main(float4 pos : SV_POSITION, float2 clipspace : TEXCOOR
 	GBUFFEROutputType_Thin Out;
 	Out.g0 = color;
 	Out.g1 = float4(0, 0, velocity);
+	Out.g2 = 0;
 	return Out;
 }
 

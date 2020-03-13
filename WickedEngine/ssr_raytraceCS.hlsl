@@ -226,7 +226,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     const float3 N = mul((float3x3)g_xCamera_View, decodeNormal(texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy)).xyz;
     const float3 V = normalize(-P);
 
-    const float roughness = GetRoughness(texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).g);
+    const float roughness = GetRoughness(texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).r);
     
     const float roughnessFade = GetRoughnessFade(roughness, SSRMaxRoughness);
     if (roughnessFade <= 0.0f)

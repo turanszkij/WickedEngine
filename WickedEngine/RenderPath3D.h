@@ -77,6 +77,7 @@ protected:
 	wiGraphics::RenderPass renderpass_occlusionculling;
 	wiGraphics::RenderPass renderpass_reflection;
 	wiGraphics::RenderPass renderpass_downsampledepthbuffer;
+	wiGraphics::RenderPass renderpass_downsamplescene;
 	wiGraphics::RenderPass renderpass_lightshafts;
 	wiGraphics::RenderPass renderpass_volumetriclight;
 	wiGraphics::RenderPass renderpass_particledistortion;
@@ -102,13 +103,12 @@ protected:
 
 	virtual void RenderLinearDepth(wiGraphics::CommandList cmd) const;
 	virtual void RenderSSAO(wiGraphics::CommandList cmd) const;
-	virtual void RenderSSR(const wiGraphics::Texture& srcSceneRT, const wiGraphics::Texture& gbuffer1, wiGraphics::CommandList cmd) const;
-	virtual void RenderStochasticSSR(const wiGraphics::Texture& srcSceneRT, const wiGraphics::Texture& gbuffer0, const wiGraphics::Texture& gbuffer1, const wiGraphics::Texture& gbuffer2, wiGraphics::CommandList cmd) const;
+	virtual void RenderSSR(const wiGraphics::Texture& gbuffer1, const wiGraphics::Texture& gbuffer2, wiGraphics::CommandList cmd) const;
 	virtual void DownsampleDepthBuffer(wiGraphics::CommandList cmd) const;
 	virtual void RenderOutline(const wiGraphics::Texture& dstSceneRT, wiGraphics::CommandList cmd) const;
 	virtual void RenderLightShafts(wiGraphics::CommandList cmd) const;
 	virtual void RenderVolumetrics(wiGraphics::CommandList cmd) const;
-	virtual void RenderRefractionSource(const wiGraphics::Texture& srcSceneRT, wiGraphics::CommandList cmd) const;
+	virtual void RenderSceneMIPChain(const wiGraphics::Texture& srcSceneRT, wiGraphics::CommandList cmd) const;
 	virtual void RenderTransparents(const wiGraphics::RenderPass& renderpass_transparent, RENDERPASS renderPass, wiGraphics::CommandList cmd) const;
 	virtual void RenderPostprocessChain(const wiGraphics::Texture& srcSceneRT, const wiGraphics::Texture& srcGbuffer1, wiGraphics::CommandList cmd) const;
 	

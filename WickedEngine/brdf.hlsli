@@ -31,14 +31,14 @@ struct Surface
 	float3 N;				// world space normal
 	float3 V;				// world space view vector
 	float4 baseColor;		// base color [0 -> 1] (rgba)
-	float occlusion;		// occlusion [0 -> 1]
 	float roughness;		// roughness: [0:smooth -> 1:rough] (perceptual)
+	float occlusion;		// occlusion [0 -> 1]
 	float metalness;		// metalness [0:dielectric -> 1:metal]
 	float reflectance;		// reflectivity [0:diffuse -> 1:specular]
 	float4 emissiveColor;	// light emission [0 -> 1]
 	float sss;				// subsurface scattering [0 -> 1]
 
-	float alphaRoughness;	// roughness remapped from perceptual to a "more linear change in roughness" (proposed by [2])
+	float alphaRoughness;	// roughness remapped from perceptual to a "more linear change in roughness"
 	float alphaRoughnessSq;	// roughness input to brdf functions
 	float NdotV;			// cos(angle between normal and view vector)
 	float3 f0;				// fresnel value (rgb) (reflectance at incidence angle)
@@ -66,9 +66,9 @@ inline Surface CreateSurface(
 	in float3 P, 
 	in float3 N, 
 	in float3 V, 
-	in float4 baseColor, 
-	in float occlusion,
+	in float4 baseColor,
 	in float roughness,
+	in float occlusion,
 	in float metalness,
 	in float reflectance, 
 	in float4 emissiveColor = 0, 
@@ -80,8 +80,8 @@ inline Surface CreateSurface(
 	surface.N = N;
 	surface.V = V;
 	surface.baseColor = baseColor;
-	surface.occlusion = occlusion;
 	surface.roughness = roughness;
+	surface.occlusion = occlusion;
 	surface.metalness = metalness;
 	surface.reflectance = reflectance;
 	surface.emissiveColor = emissiveColor;

@@ -205,15 +205,6 @@ namespace wiRenderer
 		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture& lineardepth_minmax,
 		const wiGraphics::Texture& gbuffer1,
-		const wiGraphics::Texture& output,
-		wiGraphics::CommandList cmd
-	);
-	void Postprocess_StochasticSSR(
-		const wiGraphics::Texture& input,
-		const wiGraphics::Texture& depthbuffer,
-		const wiGraphics::Texture& lineardepth_minmax,
-		const wiGraphics::Texture& gbuffer0,
-		const wiGraphics::Texture& gbuffer1,
 		const wiGraphics::Texture& gbuffer2,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
@@ -460,8 +451,6 @@ namespace wiRenderer
 	int GetVoxelRadianceNumCones();
 	float GetVoxelRadianceRayStepSize();
 	void SetVoxelRadianceRayStepSize(float value);
-	void SetAdvancedRefractionsEnabled(bool value);
-	bool GetAdvancedRefractionsEnabled();
 	bool IsRequestedReflectionRendering();
 	const XMFLOAT4& GetWaterPlane();
 	void SetGameSpeed(float value);

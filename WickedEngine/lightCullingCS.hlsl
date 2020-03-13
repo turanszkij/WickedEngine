@@ -498,7 +498,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
 		float2 velocity = g1.zw;
 		float2 ReprojectedScreenCoord = ScreenCoord + velocity;
-		float4 ssr = texture_ssr.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, surface.roughness * 5);
+		float4 ssr = texture_ssr.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
 		lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb, ssr.a);
 
 		float ssao = texture_ssao.SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
