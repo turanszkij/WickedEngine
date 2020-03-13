@@ -1452,16 +1452,11 @@ void EditorComponent::Update(float dt)
 			{
 				SpringComponent& spring = scene.springs.Create(x.entity);
 			}
+			else if (has_spring)
+			{
+				scene.springs.Remove_KeepSorted(x.entity);
+			}
 		}
-	}
-	for (size_t i = 0; i < scene.springs.GetCount(); ++i)
-	{
-		const SpringComponent& spring = scene.springs[i];
-		wiRenderer::RenderablePoint point;
-		point.position = spring.center_of_mass;
-		point.size = 0.1f;
-		point.color = XMFLOAT4(1, 1, 0, 1);
-		wiRenderer::DrawPoint(point);
 	}
 
 
@@ -1666,6 +1661,16 @@ void EditorComponent::Render() const
 			}
 		}
 
+		// Spring visualizer:
+		for (size_t i = 0; i < scene.springs.GetCount(); ++i)
+		{
+			const SpringComponent& spring = scene.springs[i];
+			wiRenderer::RenderablePoint point;
+			point.position = spring.center_of_mass;
+			point.size = 0.05f;
+			point.color = XMFLOAT4(1, 1, 0, 1);
+			wiRenderer::DrawPoint(point);
+		}
 	}
 
 	// Selected items box:

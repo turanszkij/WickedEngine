@@ -1728,6 +1728,16 @@ namespace wiScene
 				spring.velocity = XMFLOAT3(0, 0, 0);
 			}
 
+			const HierarchyComponent* hier = hierarchy.GetComponent(entity);
+			TransformComponent* parent_transform = hier == nullptr ? nullptr : transforms.GetComponent(hier->parentID);
+			if (parent_transform != nullptr)
+			{
+				// Spring hierarchy resolve depends on spring component order!
+				//	It works best when parent spring is located before child spring!
+				//	It will work the other way, but results will be less convincing
+				transform->UpdateTransform_Parented(*parent_transform);
+			}
+
 			const XMVECTOR position_current = transform->GetPositionV();
 			XMVECTOR position_prev = XMLoadFloat3(&spring.center_of_mass);
 			XMVECTOR force = (position_current - position_prev) * spring.stiffness;
@@ -1746,22 +1756,31 @@ namespace wiScene
 			velocity += force * dt;
 			XMVECTOR position_target = position_prev + velocity * dt;
 
-			if (!spring.IsStretchEnabled())
+			if (parent_transform != nullptr)
 			{
-				const HierarchyComponent* hier = hierarchy.GetComponent(entity);
-				if (hier != nullptr)
+				const XMVECTOR position_parent = parent_transform->GetPositionV();
+				const XMVECTOR parent_to_child = position_current - position_parent;
+				const XMVECTOR parent_to_target = position_target - position_parent;
+
+				if (!spring.IsStretchEnabled())
 				{
-					TransformComponent* parent_transform = transforms.GetComponent(hier->parentID);
-					if (transform != nullptr)
-					{
-						// Limit offset to keep distance from parent:
-						const XMVECTOR position_parent = parent_transform->GetPositionV();
-						const XMVECTOR parent_to_child = position_current - position_parent;
-						const XMVECTOR parent_to_target = position_target - position_parent;
-						const XMVECTOR len = XMVector3Length(parent_to_child);
-						position_target = position_parent + XMVector3Normalize(parent_to_target) * len;
-					}
+					// Limit offset to keep distance from parent:
+					const XMVECTOR len = XMVector3Length(parent_to_child);
+					position_target = position_parent + XMVector3Normalize(parent_to_target) * len;
 				}
+
+				// Parent rotation to point to new child position:
+				const XMVECTOR dir_parent_to_child = XMVector3Normalize(parent_to_child);
+				const XMVECTOR dir_parent_to_target = XMVector3Normalize(parent_to_target);
+				const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(dir_parent_to_child, dir_parent_to_target));
+				const float angle = XMVectorGetX(XMVectorACos(XMVector3Dot(dir_parent_to_child, dir_parent_to_target))); // don't use std::acos!
+				XMFLOAT4 quaternion;
+				XMStoreFloat4(&quaternion, XMQuaternionNormalize(XMQuaternionRotationAxis(axis, angle)));
+				TransformComponent saved_parent = *parent_transform;
+				saved_parent.ApplyTransform();
+				saved_parent.Rotate(quaternion);
+				saved_parent.UpdateTransform();
+				std::swap(saved_parent.world, parent_transform->world); // only store temporary result, not modifying actual local space!
 			}
 
 			XMStoreFloat3(&spring.center_of_mass, position_target);
@@ -1814,7 +1833,7 @@ namespace wiScene
 					const XMVECTOR dir_parent_to_ik = XMVector3Normalize(transform->GetPositionV() - parent_pos);
 					const XMVECTOR dir_parent_to_target = XMVector3Normalize(target_pos - parent_pos);
 					const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(dir_parent_to_ik, dir_parent_to_target));
-					const float angle = XMVectorGetX(XMVectorACos(XMVector3Dot(dir_parent_to_ik, dir_parent_to_target)));
+					const float angle = XMVectorGetX(XMVectorACos(XMVector3Dot(dir_parent_to_ik, dir_parent_to_target))); // don't use std::acos!
 					XMFLOAT4 quaternion;
 					XMStoreFloat4(&quaternion, XMQuaternionNormalize(XMQuaternionRotationAxis(axis, angle)));
 
