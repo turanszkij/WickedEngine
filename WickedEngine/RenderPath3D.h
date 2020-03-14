@@ -12,7 +12,6 @@ class RenderPath3D :
 private:
 	float exposure = 1.0f;
 	float bloomThreshold = 1.0f;
-	float ssaoBlur = 2.3f;
 	float motionBlurStrength = 100.0f;
 	float dofFocus = 10.0f;
 	float dofStrength = 1.0f;
@@ -44,6 +43,7 @@ private:
 	bool sharpenFilterEnabled = false;
 	bool outlineEnabled = false;
 	bool chromaticAberrationEnabled = false;
+	bool ditherEnabled = true;
 
 	std::shared_ptr<wiResource> colorGradingTex;
 
@@ -52,14 +52,15 @@ private:
 protected:
 	wiGraphics::Texture rtReflection; // conains the scene rendered for planar reflections
 	wiGraphics::Texture rtSSR; // standard screen-space reflection results
-	wiGraphics::Texture rtStochasticSSR; // stochastic screen-space reflection results
 	wiGraphics::Texture rtSceneCopy; // contains the rendered scene that can be fed into transparent pass for distortion effect
+	wiGraphics::Texture rtSceneCopy_tmp; // temporary for gaussian mipchain
 	wiGraphics::Texture rtWaterRipple; // water ripple sprite normal maps are rendered into this
 	wiGraphics::Texture rtParticleDistortion; // contains distortive particles
 	wiGraphics::Texture rtParticleDistortion_Resolved; // contains distortive particles
 	wiGraphics::Texture rtVolumetricLights; // contains the volumetric light results
 	wiGraphics::Texture rtTemporalAA[2]; // temporal AA history buffer
 	wiGraphics::Texture rtBloom; // contains the bright parts of the image + mipchain
+	wiGraphics::Texture rtBloom_tmp; // temporary for bloom downsampling
 	wiGraphics::Texture rtSSAO[2]; // ping-pong when rendering and blurring SSAO
 	wiGraphics::Texture rtSun[2]; // 0: sun render target used for lightshafts (can be MSAA), 1: radial blurred lightshafts
 	wiGraphics::Texture rtSun_resolved; // sun render target, but the resolved version if MSAA is enabled
@@ -88,7 +89,6 @@ protected:
 	{
 		int ldr_postprocess_count = 0;
 		ldr_postprocess_count += sharpenFilterEnabled ? 1 : 0;
-		ldr_postprocess_count += colorGradingEnabled ? 1 : 0;
 		ldr_postprocess_count += fxaaEnabled ? 1 : 0;
 		ldr_postprocess_count += chromaticAberrationEnabled ? 1 : 0;
 		int rt_index = ldr_postprocess_count % 2;
@@ -117,7 +117,6 @@ public:
 
 	constexpr float getExposure() const { return exposure; }
 	constexpr float getBloomThreshold() const { return bloomThreshold; }
-	constexpr float getSSAOBlur() const { return ssaoBlur; }
 	constexpr float getMotionBlurStrength() const { return motionBlurStrength; }
 	constexpr float getDepthOfFieldFocus() const { return dofFocus; }
 	constexpr float getDepthOfFieldStrength() const { return dofStrength; }
@@ -149,6 +148,7 @@ public:
 	constexpr bool getSharpenFilterEnabled() const { return sharpenFilterEnabled && getSharpenFilterAmount() > 0; }
 	constexpr bool getOutlineEnabled() const { return outlineEnabled; }
 	constexpr bool getChromaticAberrationEnabled() const { return chromaticAberrationEnabled; }
+	constexpr bool getDitherEnabled() const { return ditherEnabled; }
 
 	constexpr const std::shared_ptr<wiResource>& getColorGradingTexture() const { return colorGradingTex; }
 
@@ -156,7 +156,6 @@ public:
 
 	constexpr void setExposure(float value) { exposure = value; }
 	constexpr void setBloomThreshold(float value){ bloomThreshold = value; }
-	constexpr void setSSAOBlur(float value){ ssaoBlur = value; }
 	constexpr void setMotionBlurStrength(float value) { motionBlurStrength = value; }
 	constexpr void setDepthOfFieldFocus(float value){ dofFocus = value; }
 	constexpr void setDepthOfFieldStrength(float value) { dofStrength = value; }
@@ -188,6 +187,7 @@ public:
 	constexpr void setSharpenFilterEnabled(bool value) { sharpenFilterEnabled = value; }
 	constexpr void setOutlineEnabled(bool value) { outlineEnabled = value; }
 	constexpr void setChromaticAberrationEnabled(bool value) { chromaticAberrationEnabled = value; }
+	constexpr void setDitherEnabled(bool value) { ditherEnabled = value; }
 
 	void setColorGradingTexture(std::shared_ptr<wiResource> resource) { colorGradingTex = resource; }
 

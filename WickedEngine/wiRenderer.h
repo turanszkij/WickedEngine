@@ -173,9 +173,8 @@ namespace wiRenderer
 		const wiGraphics::Texture& temp,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
-		float amountX = 1.0f,
-		float amountY = 1.0f,
-		float mip = 0.0f
+		int mip_src = -1,
+		int mip_dst = -1
 	);
 	void Postprocess_Blur_Bilateral(
 		const wiGraphics::Texture& input,
@@ -183,10 +182,9 @@ namespace wiRenderer
 		const wiGraphics::Texture& temp,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
-		float amountX = 1.0f,
-		float amountY = 1.0f,
 		float depth_threshold = 1.0f,
-		float mip = 0.0f
+		int mip_src = -1,
+		int mip_dst = -1
 	);
 	void Postprocess_SSAO(
 		const wiGraphics::Texture& depthbuffer, 
@@ -197,7 +195,6 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd,
 		float range = 1.0f,
 		uint32_t samplecount = 16,
-		float blur = 2.3f,
 		float power = 2.0f
 	);
 	void Postprocess_SSR(
@@ -253,6 +250,7 @@ namespace wiRenderer
 	void Postprocess_Bloom(
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& bloom,
+		const wiGraphics::Texture& bloom_tmp,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float threshold = 1.0f
@@ -267,12 +265,6 @@ namespace wiRenderer
 		const wiGraphics::Texture& input_history,
 		const wiGraphics::Texture& velocity,
 		const wiGraphics::Texture& lineardepth,
-		const wiGraphics::Texture& output,
-		wiGraphics::CommandList cmd
-	);
-	void Postprocess_Colorgrade(
-		const wiGraphics::Texture& input,
-		const wiGraphics::Texture& lookuptable,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
@@ -294,7 +286,9 @@ namespace wiRenderer
 		const wiGraphics::Texture& input_distortion,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
-		float exposure
+		float exposure,
+		bool dither,
+		const wiGraphics::Texture* colorgrade_lookuptable
 	);
 	void Postprocess_Chromatic_Aberration(
 		const wiGraphics::Texture& input,
@@ -351,7 +345,7 @@ namespace wiRenderer
 		MIPGENFILTER_GAUSSIAN,
 		MIPGENFILTER_BICUBIC,
 	};
-	void GenerateMipChain(const wiGraphics::Texture& texture, MIPGENFILTER filter, wiGraphics::CommandList cmd, int arrayIndex = -1);
+	void GenerateMipChain(const wiGraphics::Texture& texture, MIPGENFILTER filter, wiGraphics::CommandList cmd, int arrayIndex = -1, const wiGraphics::Texture* gaussian_temp = nullptr);
 
 	enum BORDEREXPANDSTYLE
 	{

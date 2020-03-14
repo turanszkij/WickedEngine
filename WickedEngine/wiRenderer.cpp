@@ -1299,8 +1299,6 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_VOXELCLEARONLYNORMAL], "voxelClearOnlyNormalCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], "generateMIPChain2D_unorm4_SimpleFilterCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER], "generateMIPChain2D_float4_SimpleFilterCS.cso"); });
-	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN2D_UNORM4_GAUSSIAN], "generateMIPChain2D_unorm4_GaussianCS.cso"); });
-	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_GAUSSIAN], "generateMIPChain2D_float4_GaussianCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN2D_UNORM4_BICUBIC], "generateMIPChain2D_unorm4_BicubicCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_BICUBIC], "generateMIPChain2D_float4_BicubicCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], "generateMIPChain3D_unorm4_SimpleFilterCS.cso"); });
@@ -1360,7 +1358,6 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLOOMCOMBINE], "bloomcombineCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_FXAA], "fxaaCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_TEMPORALAA], "temporalaaCS.cso"); });
-	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_COLORGRADE], "colorgradeCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_LINEARDEPTH], "lineardepthCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SHARPEN], "sharpenCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_TONEMAP], "tonemapCS.cso"); });
@@ -7103,7 +7100,7 @@ void DownsampleDepthBuffer(const wiGraphics::Texture& src, wiGraphics::CommandLi
 	device->EventEnd(cmd);
 }
 
-void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList cmd, int arrayIndex)
+void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList cmd, int arrayIndex, const Texture* gaussian_temp)
 {
 	GraphicsDevice* device = GetDevice();
 	TextureDesc desc = texture.GetDesc();
@@ -7237,8 +7234,17 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
 				break;
 			case MIPGENFILTER_GAUSSIAN:
+			{
+				assert(gaussian_temp != nullptr); // needed for separate filter!
 				device->EventBegin("GenerateMipChain 2D - GaussianFilter", cmd);
-				device->BindComputeShader(&computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_GAUSSIAN : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_GAUSSIAN], cmd);
+				// Gaussian filter is a bit different as we do it in a separable way:
+				for (uint32_t i = 0; i < desc.MipLevels - 1; ++i)
+				{
+					Postprocess_Blur_Gaussian(texture, *gaussian_temp, texture, cmd, i, i + 1);
+				}
+				device->EventEnd(cmd);
+				return;
+			}
 				break;
 			case MIPGENFILTER_BICUBIC:
 				device->EventBegin("GenerateMipChain 2D - BicubicFilter", cmd);
@@ -8512,9 +8518,8 @@ void Postprocess_Blur_Gaussian(
 	const Texture& temp,
 	const Texture& output,
 	CommandList cmd,
-	float amountX,
-	float amountY,
-	float mip
+	int mip_src,
+	int mip_dst
 )
 {
 	GraphicsDevice* device = GetDevice();
@@ -8533,6 +8538,7 @@ void Postprocess_Blur_Gaussian(
 		break;
 	case FORMAT_R16G16B16A16_UNORM:
 	case FORMAT_R8G8B8A8_UNORM:
+	case FORMAT_R10G10B10A2_UNORM:
 		cs = CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM4;
 		break;
 	case FORMAT_R11G11B10_FLOAT:
@@ -8554,29 +8560,29 @@ void Postprocess_Blur_Gaussian(
 		PostProcessCB cb;
 		cb.xPPResolution.x = desc.Width;
 		cb.xPPResolution.y = desc.Height;
+		if (mip_dst > 0)
+		{
+			cb.xPPResolution.x >>= mip_dst;
+			cb.xPPResolution.y >>= mip_dst;
+		}
 		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-		cb.xPPParams0.x = amountX;
+		cb.xPPParams0.x = 1;
 		cb.xPPParams0.y = 0;
-		cb.xPPParams0.z = mip;
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 
-		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
-
-		const GPUResource* uavs[] = {
-			&temp,
-		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd, mip_src);
+		device->BindUAV(CS, &temp, 0, cmd, mip_dst);
 
 		device->Dispatch(
-			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(cb.xPPResolution.x + POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT - 1) / POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT,
+			cb.xPPResolution.y,
 			1,
 			cmd
 		);
 
 		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->UnbindUAVs(0, 1, cmd);
 	}
 
 	// Vertical:
@@ -8586,29 +8592,29 @@ void Postprocess_Blur_Gaussian(
 		PostProcessCB cb;
 		cb.xPPResolution.x = desc.Width;
 		cb.xPPResolution.y = desc.Height;
+		if (mip_dst > 0)
+		{
+			cb.xPPResolution.x >>= mip_dst;
+			cb.xPPResolution.y >>= mip_dst;
+		}
 		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 		cb.xPPParams0.x = 0;
-		cb.xPPParams0.y = amountY;
-		cb.xPPParams0.z = mip;
+		cb.xPPParams0.y = 1;
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 
-		device->BindResource(CS, &temp, TEXSLOT_ONDEMAND0, cmd);
-
-		const GPUResource* uavs[] = {
-			&output,
-		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindResource(CS, &temp, TEXSLOT_ONDEMAND0, cmd, mip_dst); // <- also mip_dst because it's second pass!
+		device->BindUAV(CS, &output, 0, cmd, mip_dst);
 
 		device->Dispatch(
-			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			cb.xPPResolution.x,
+			(cb.xPPResolution.y + POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT - 1) / POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT,
 			1,
 			cmd
 		);
 
 		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->UnbindUAVs(0, 1, cmd);
 	}
 
 	device->EventEnd(cmd);
@@ -8619,10 +8625,9 @@ void Postprocess_Blur_Bilateral(
 	const Texture& temp,
 	const Texture& output,
 	CommandList cmd,
-	float amountX,
-	float amountY,
 	float depth_threshold,
-	float mip
+	int mip_src,
+	int mip_dst
 )
 {
 	GraphicsDevice* device = GetDevice();
@@ -8642,6 +8647,7 @@ void Postprocess_Blur_Bilateral(
 		break;
 	case FORMAT_R16G16B16A16_UNORM:
 	case FORMAT_R8G8B8A8_UNORM:
+	case FORMAT_R10G10B10A2_UNORM:
 		cs = CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM4;
 		break;
 	case FORMAT_R11G11B10_FLOAT:
@@ -8665,30 +8671,30 @@ void Postprocess_Blur_Bilateral(
 		PostProcessCB cb;
 		cb.xPPResolution.x = desc.Width;
 		cb.xPPResolution.y = desc.Height;
+		if (mip_dst > 0)
+		{
+			cb.xPPResolution.x >>= mip_dst;
+			cb.xPPResolution.y >>= mip_dst;
+		}
 		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-		cb.xPPParams0.x = amountX;
+		cb.xPPParams0.x = 1;
 		cb.xPPParams0.y = 0;
-		cb.xPPParams0.z = mip;
 		cb.xPPParams0.w = depth_threshold;
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 
-		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
-
-		const GPUResource* uavs[] = {
-			&temp,
-		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd, mip_src);
+		device->BindUAV(CS, &temp, 0, cmd, mip_dst);
 
 		device->Dispatch(
-			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(cb.xPPResolution.x + POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT - 1) / POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT,
+			cb.xPPResolution.y,
 			1,
 			cmd
 		);
 
 		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->UnbindUAVs(0, 1, cmd);
 	}
 
 	// Vertical:
@@ -8698,30 +8704,30 @@ void Postprocess_Blur_Bilateral(
 		PostProcessCB cb;
 		cb.xPPResolution.x = desc.Width;
 		cb.xPPResolution.y = desc.Height;
+		if (mip_dst > 0)
+		{
+			cb.xPPResolution.x >>= mip_dst;
+			cb.xPPResolution.y >>= mip_dst;
+		}
 		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 		cb.xPPParams0.x = 0;
-		cb.xPPParams0.y = amountY;
-		cb.xPPParams0.z = mip;
+		cb.xPPParams0.y = 1;
 		cb.xPPParams0.w = depth_threshold;
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 
-		device->BindResource(CS, &temp, TEXSLOT_ONDEMAND0, cmd);
-
-		const GPUResource* uavs[] = {
-			&output,
-		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindResource(CS, &temp, TEXSLOT_ONDEMAND0, cmd, mip_dst); // <- also mip_dst because it's second pass!
+		device->BindUAV(CS, &output, 0, cmd, mip_dst);
 
 		device->Dispatch(
-			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			cb.xPPResolution.x,
+			(cb.xPPResolution.y + POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT - 1) / POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT,
 			1,
 			cmd
 		);
 
 		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->UnbindUAVs(0, 1, cmd);
 	}
 
 	device->EventEnd(cmd);
@@ -8735,7 +8741,6 @@ void Postprocess_SSAO(
 	CommandList cmd,
 	float range,
 	uint32_t samplecount,
-	float blur,
 	float power
 )
 {
@@ -8780,7 +8785,7 @@ void Postprocess_SSAO(
 	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	device->UnbindUAVs(0, arraysize(uavs), cmd);
 
-	Postprocess_Blur_Bilateral(output, lineardepth, temp, output, cmd, blur, blur, 1.2f);
+	Postprocess_Blur_Bilateral(output, lineardepth, temp, output, cmd, 1.2f);
 
 	wiProfiler::EndRange(prof_range);
 	device->EventEnd(cmd);
@@ -9728,6 +9733,7 @@ void Postprocess_MotionBlur(
 void Postprocess_Bloom(
 	const Texture& input,
 	const Texture& bloom,
+	const Texture& bloom_tmp,
 	const Texture& output,
 	CommandList cmd,
 	float threshold
@@ -9775,7 +9781,7 @@ void Postprocess_Bloom(
 	}
 
 	device->EventBegin("Bloom Mipchain", cmd);
-	wiRenderer::GenerateMipChain(bloom, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd);
+	wiRenderer::GenerateMipChain(bloom, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd, -1, &bloom_tmp);
 	device->EventEnd(cmd);
 
 	// Combine image with bloom
@@ -9911,50 +9917,6 @@ void Postprocess_TemporalAA(
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
 }
-void Postprocess_Colorgrade(
-	const Texture& input,
-	const Texture& lookuptable,
-	const Texture& output,
-	CommandList cmd
-)
-{
-	GraphicsDevice* device = GetDevice();
-
-	device->EventBegin("Postprocess_Colorgrade", cmd);
-
-	device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_COLORGRADE], cmd);
-
-	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
-	device->BindResource(CS, &lookuptable, TEXSLOT_ONDEMAND1, cmd);
-
-	const TextureDesc& desc = output.GetDesc();
-
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
-
-	const GPUResource* uavs[] = {
-		&output,
-	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-
-	device->Dispatch(
-		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-		1,
-		cmd
-	);
-
-	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
-
-	device->EventEnd(cmd);
-}
 void Postprocess_Lineardepth(
 	const Texture& input,
 	const Texture& output_fullres,
@@ -10052,7 +10014,9 @@ void Postprocess_Tonemap(
 	const Texture& input_distortion,
 	const Texture& output,
 	CommandList cmd,
-	float exposure
+	float exposure,
+	bool dither,
+	const Texture* colorgrade_lookuptable
 )
 {
 	GraphicsDevice* device = GetDevice();
@@ -10064,6 +10028,7 @@ void Postprocess_Tonemap(
 	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
 	device->BindResource(CS, &input_luminance, TEXSLOT_ONDEMAND1, cmd);
 	device->BindResource(CS, &input_distortion, TEXSLOT_ONDEMAND2, cmd);
+	device->BindResource(CS, colorgrade_lookuptable, TEXSLOT_ONDEMAND3, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -10072,7 +10037,9 @@ void Postprocess_Tonemap(
 	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.xPPParams0.x = exposure;
+	cb.tonemap_exposure = exposure;
+	cb.tonemap_dither = dither ? 1.0f : 0.0f;
+	cb.tonemap_colorgrading = colorgrade_lookuptable == nullptr ? 0.0f : 1.0f;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 

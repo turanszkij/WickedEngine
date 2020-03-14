@@ -40,6 +40,7 @@ public:
 	wiCheckBox* fxaaCheckBox;
 	wiCheckBox* colorGradingCheckBox;
 	wiButton*	colorGradingButton;
+	wiCheckBox* ditherCheckBox;
 	wiCheckBox* sharpenFilterCheckBox;
 	wiSlider*	sharpenFilterAmountSlider;
 	wiCheckBox* outlineCheckBox;

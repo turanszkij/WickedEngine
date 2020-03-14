@@ -1,2 +1,2 @@
-#define UPSAMPLE_FORMAT unorm float
+#define BLUR_FORMAT unorm float
 #include "blur_bilateral_float4CS.hlsl"

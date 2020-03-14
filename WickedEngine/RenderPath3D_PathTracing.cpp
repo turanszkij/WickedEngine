@@ -149,7 +149,9 @@ void RenderPath3D_PathTracing::Render() const
 			*wiTextureHelper::getBlack(),
 			rtPostprocess_LDR[0],
 			cmd,
-			getExposure()
+			getExposure(),
+			false,
+			nullptr
 		);
 	});
 

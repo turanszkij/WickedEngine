@@ -21,29 +21,10 @@ void RenderPath3D::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Format = FORMAT_R16G16B16A16_FLOAT;
-		desc.Width = wiRenderer::GetInternalResolution().x / 2;
-		desc.Height = wiRenderer::GetInternalResolution().y / 2;
-		desc.MipLevels = 5;
-		device->CreateTexture(&desc, nullptr, &rtSSR);
-		device->SetName(&rtSSR, "rtSSR");
-
-		for (uint32_t i = 0; i < rtSSR.GetDesc().MipLevels; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(&rtSSR, SRV, 0, 1, i, 1);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&rtSSR, UAV, 0, 1, i, 1);
-			assert(subresource_index == i);
-		}
-	}
-	{
-		TextureDesc desc;
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = FORMAT_R16G16B16A16_FLOAT;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
-		device->CreateTexture(&desc, nullptr, &rtStochasticSSR);
-		device->SetName(&rtStochasticSSR, "rtStochasticSSR");
+		device->CreateTexture(&desc, nullptr, &rtSSR);
+		device->SetName(&rtSSR, "rtSSR");
 	}
 	{
 		TextureDesc desc;
@@ -88,13 +69,20 @@ void RenderPath3D::ResizeBuffers()
 		desc.MipLevels = std::min(8u, (uint32_t)std::log2(std::max(desc.Width, desc.Height)));
 		device->CreateTexture(&desc, nullptr, &rtSceneCopy);
 		device->SetName(&rtSceneCopy, "rtSceneCopy");
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		device->CreateTexture(&desc, nullptr, &rtSceneCopy_tmp);
+		device->SetName(&rtSceneCopy_tmp, "rtSceneCopy_tmp");
 
 		for (uint32_t i = 0; i < rtSceneCopy.GetDesc().MipLevels; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(&rtSceneCopy, SRV, 0, 1, i, 1);
 			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(&rtSceneCopy_tmp, SRV, 0, 1, i, 1);
+			assert(subresource_index == i);
 			subresource_index = device->CreateSubresource(&rtSceneCopy, UAV, 0, 1, i, 1);
+			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(&rtSceneCopy_tmp, UAV, 0, 1, i, 1);
 			assert(subresource_index == i);
 		}
 	}
@@ -148,19 +136,25 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = defaultTextureFormat;
+		desc.Format = FORMAT_R11G11B10_FLOAT;
 		desc.Width = wiRenderer::GetInternalResolution().x / 4;
 		desc.Height = wiRenderer::GetInternalResolution().y / 4;
-		desc.MipLevels = 5;
+		desc.MipLevels = std::min(5u, (uint32_t)std::log2(std::max(desc.Width, desc.Height)));
 		device->CreateTexture(&desc, nullptr, &rtBloom);
 		device->SetName(&rtBloom, "rtBloom");
+		device->CreateTexture(&desc, nullptr, &rtBloom_tmp);
+		device->SetName(&rtBloom_tmp, "rtBloom_tmp");
 
 		for (uint32_t i = 0; i < rtBloom.GetDesc().MipLevels; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(&rtBloom, SRV, 0, 1, i, 1);
 			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(&rtBloom_tmp, SRV, 0, 1, i, 1);
+			assert(subresource_index == i);
 			subresource_index = device->CreateSubresource(&rtBloom, UAV, 0, 1, i, 1);
+			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(&rtBloom_tmp, UAV, 0, 1, i, 1);
 			assert(subresource_index == i);
 		}
 	}
@@ -445,7 +439,6 @@ void RenderPath3D::RenderSSAO(CommandList cmd) const
 			cmd,
 			getSSAORange(),
 			getSSAOSampleCount(),
-			getSSAOBlur(),
 			getSSAOPower()
 		);
 	}
@@ -454,7 +447,7 @@ void RenderPath3D::RenderSSR(const Texture& gbuffer1, const Texture& gbuffer2, C
 {
 	if (getSSREnabled())
 	{
-		wiRenderer::Postprocess_SSR(rtSceneCopy, depthBuffer_Copy, rtLinearDepth_minmax, gbuffer1, gbuffer2, rtStochasticSSR, cmd);
+		wiRenderer::Postprocess_SSR(rtSceneCopy, depthBuffer_Copy, rtLinearDepth_minmax, gbuffer1, gbuffer2, rtSSR, cmd);
 	}
 }
 void RenderPath3D::DownsampleDepthBuffer(CommandList cmd) const
@@ -564,7 +557,7 @@ void RenderPath3D::RenderSceneMIPChain(const Texture& srcSceneRT, CommandList cm
 
 	device->RenderPassEnd(cmd);
 
-	wiRenderer::GenerateMipChain(rtSceneCopy, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd);
+	wiRenderer::GenerateMipChain(rtSceneCopy, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd, -1, &rtSceneCopy_tmp);
 
 	device->EventEnd(cmd);
 	wiProfiler::EndRange(range);
@@ -701,7 +694,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 
 		if (getBloomEnabled())
 		{
-			wiRenderer::Postprocess_Bloom(rt_first == nullptr ? *rt_read : *rt_first, rtBloom, *rt_write, cmd, getBloomThreshold());
+			wiRenderer::Postprocess_Bloom(rt_first == nullptr ? *rt_read : *rt_first, rtBloom, rtBloom_tmp, *rt_write, cmd, getBloomThreshold());
 			rt_first = nullptr;
 
 			std::swap(rt_read, rt_write);
@@ -719,7 +712,9 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 			getMSAASampleCount() > 1 ? rtParticleDistortion_Resolved : rtParticleDistortion,
 			*rt_write,
 			cmd,
-			getExposure()
+			getExposure(),
+			getDitherEnabled(),
+			getColorGradingEnabled() ? (colorGradingTex != nullptr ? colorGradingTex->texture : wiTextureHelper::getColorGradeDefault()) : nullptr
 		);
 
 		rt_read = rt_write;
@@ -732,19 +727,6 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 		if (getSharpenFilterEnabled())
 		{
 			wiRenderer::Postprocess_Sharpen(*rt_read, *rt_write, cmd, getSharpenFilterAmount());
-
-			std::swap(rt_read, rt_write);
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
-		}
-
-		if (getColorGradingEnabled())
-		{
-			wiRenderer::Postprocess_Colorgrade(
-				*rt_read, 
-				colorGradingTex != nullptr ? *colorGradingTex->texture : *wiTextureHelper::getColorGradeDefault(), 
-				*rt_write, 
-				cmd
-			);
 
 			std::swap(rt_read, rt_write);
 			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);

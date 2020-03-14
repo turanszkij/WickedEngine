@@ -4,13 +4,14 @@
 
 static const uint POSTPROCESS_BLOCKSIZE = 8;
 static const uint POSTPROCESS_LINEARDEPTH_BLOCKSIZE = 16;
+static const uint POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT = 256;
 
 CBUFFER(PostProcessCB, CBSLOT_RENDERER_POSTPROCESS)
 {
-	uint2		xPPResolution;
-	float2		xPPResolution_rcp;
-	float4		xPPParams0;
-	float4		xPPParams1;
+	uint2 xPPResolution;
+	float2 xPPResolution_rcp;
+	float4 xPPParams0;
+	float4 xPPParams1;
 };
 
 #define lineardepth_inputresolution xPPParams0.xy
@@ -28,6 +29,10 @@ static const uint DEPTHOFFIELD_TILESIZE = 32;
 #define dof_scale xPPParams0.y
 #define dof_aspect xPPParams0.z
 #define dof_maxcoc xPPParams0.w
+
+#define tonemap_exposure xPPParams0.x
+#define tonemap_dither xPPParams0.y
+#define tonemap_colorgrading xPPParams0.z
 
 static const uint TILE_STATISTICS_OFFSET_EARLYEXIT = 0;
 static const uint TILE_STATISTICS_OFFSET_CHEAP = TILE_STATISTICS_OFFSET_EARLYEXIT + 4;
