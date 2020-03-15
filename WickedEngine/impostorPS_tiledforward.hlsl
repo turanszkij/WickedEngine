@@ -11,7 +11,7 @@ GBUFFEROutputType_Thin main(VSOut input)
 	float3 uv_sur = uv_nor;
 	uv_sur.z += impostorCaptureAngles;
 
-	float4 color = impostorTex.Sample(sampler_linear_clamp, uv_col);
+	float4 color = impostorTex.Sample(sampler_linear_clamp, uv_col) * unpack_rgba(input.instanceColor);
 	float3 N = impostorTex.Sample(sampler_linear_clamp, uv_nor).rgb * 2 - 1;
 	float4 surfaceparams = impostorTex.Sample(sampler_linear_clamp, uv_sur);
 

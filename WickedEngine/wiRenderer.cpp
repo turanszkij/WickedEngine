@@ -1602,13 +1602,13 @@ void LoadShaders()
 			args.jobIndex != RENDERPASS_ENVMAPCAPTURE;
 		if (!impostorRequest)
 		{
-			return; // if no job, this must be continue!!
+			return;
 		}
 
 		PipelineStateDesc desc;
-		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED]; // well, we don't need double sided impostors, but might be helpful if something breaks
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
-		desc.dss = &depthStencils[args.jobIndex == RENDERPASS_TILEDFORWARD ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT];
+		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
 		desc.il = nullptr;
 
 		switch (args.jobIndex)
@@ -1618,10 +1618,12 @@ void LoadShaders()
 			desc.ps = &pixelShaders[PSTYPE_IMPOSTOR_DEFERRED];
 			break;
 		case RENDERPASS_FORWARD:
+			desc.dss = &depthStencils[DSSTYPE_DEPTHREADEQUAL];
 			desc.vs = &vertexShaders[VSTYPE_IMPOSTOR];
 			desc.ps = &pixelShaders[PSTYPE_IMPOSTOR_FORWARD];
 			break;
 		case RENDERPASS_TILEDFORWARD:
+			desc.dss = &depthStencils[DSSTYPE_DEPTHREADEQUAL];
 			desc.vs = &vertexShaders[VSTYPE_IMPOSTOR];
 			desc.ps = &pixelShaders[PSTYPE_IMPOSTOR_TILEDFORWARD];
 			break;
@@ -1641,7 +1643,7 @@ void LoadShaders()
 		PipelineStateDesc desc;
 		desc.vs = &vertexShaders[VSTYPE_IMPOSTOR];
 		desc.ps = &pixelShaders[PSTYPE_IMPOSTOR_WIRE];
-		desc.rs = &rasterizers[RSTYPE_WIRE];
+		desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED];
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
 		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
 		desc.il = nullptr;
@@ -3385,7 +3387,7 @@ void RenderImpostors(const CameraComponent& camera, RENDERPASS renderPass, Comma
 
 				float dither = std::max(0.0f, impostor.swapInDistance - distance) / impostor.fadeThresholdRadius;
 
-				((volatile Instance*)instances.data)[drawableInstanceCount].Create(mat, XMFLOAT4(1, 1, 1, 1), dither, uint32_t(impostorID * impostorCaptureAngles * 3));
+				((volatile Instance*)instances.data)[drawableInstanceCount].Create(mat, impostor.color, dither, uint32_t(impostorID * impostorCaptureAngles * 3));
 
 				drawableInstanceCount++;
 			}
@@ -6661,6 +6663,7 @@ void RefreshImpostors(CommandList cmd)
 
 
 				CameraComponent impostorcamera;
+				impostorcamera.SetCustomProjectionEnabled(true);
 				TransformComponent camera_transform;
 
 				camera_transform.ClearTransform();
@@ -6668,11 +6671,13 @@ void RefreshImpostors(CommandList cmd)
 
 				XMMATRIX P = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
 				XMStoreFloat4x4(&impostorcamera.Projection, P);
-				camera_transform.RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * (float)i / (float)impostorCaptureAngles, 0));
+				XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationAxis(XMVectorSet(0, 1, 0, 0), XM_2PI * (float)i / (float)impostorCaptureAngles));
+				XMStoreFloat4(&camera_transform.rotation_local, Q);
 
 				camera_transform.UpdateTransform();
 				impostorcamera.TransformCamera(camera_transform);
 				impostorcamera.UpdateCamera();
+
 				UpdateCameraCB(impostorcamera, cmd);
 
 				for (auto& subset : mesh.subsets)

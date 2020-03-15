@@ -435,6 +435,7 @@ namespace wiScene
 
 		// Non-serialized attributes:
 		AABB aabb;
+		XMFLOAT4 color;
 		float fadeThresholdRadius;
 		std::vector<XMFLOAT4X4> instanceMatrices;
 
@@ -719,6 +720,7 @@ namespace wiScene
 		{
 			EMPTY = 0,
 			DIRTY = 1 << 0,
+			CUSTOM_PROJECTION = 1 << 1,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -755,7 +757,9 @@ namespace wiScene
 		inline XMMATRIX GetInvViewProjection() const { return XMLoadFloat4x4(&InvVP); }
 
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
+		inline void SetCustomProjectionEnabled(bool value = true) { if (value) { _flags |= CUSTOM_PROJECTION; } else { _flags &= ~CUSTOM_PROJECTION; } }
 		inline bool IsDirty() const { return _flags & DIRTY; }
+		inline bool IsCustomProjectionEnabled() const { return _flags & CUSTOM_PROJECTION; }
 
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};

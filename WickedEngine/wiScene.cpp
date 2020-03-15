@@ -939,13 +939,18 @@ namespace wiScene
 		height = newHeight;
 		fov = newFOV;
 
+		SetCustomProjectionEnabled(false);
+
 		UpdateCamera();
 	}
 	void CameraComponent::UpdateCamera()
 	{
-		XMStoreFloat4x4(&Projection, XMMatrixPerspectiveFovLH(fov, width / height, zFarP, zNearP)); // reverse zbuffer!
-		Projection.m[2][0] = jitter.x;
-		Projection.m[2][1] = jitter.y;
+		if (!IsCustomProjectionEnabled())
+		{
+			XMStoreFloat4x4(&Projection, XMMatrixPerspectiveFovLH(fov, width / height, zFarP, zNearP)); // reverse zbuffer!
+			Projection.m[2][0] = jitter.x;
+			Projection.m[2][1] = jitter.y;
+		}
 
 		XMVECTOR _Eye = XMLoadFloat3(&Eye);
 		XMVECTOR _At = XMLoadFloat3(&At);
@@ -2099,6 +2104,7 @@ namespace wiScene
 							object.impostorFadeThresholdRadius = aabb.getRadius();
 
 							impostor->aabb = AABB::Merge(impostor->aabb, aabb);
+							impostor->color = object.color;
 							impostor->fadeThresholdRadius = object.impostorFadeThresholdRadius;
 							impostor->instanceMatrices.push_back(meshMatrix);
 						}
