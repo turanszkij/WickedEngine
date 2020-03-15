@@ -700,9 +700,7 @@ float4 main(PIXELINPUT input) : SV_TARGET
 float4 main(PSIn_EnvmapRendering input) : SV_TARGET
 #elif defined(DEFERRED)
 GBUFFEROutputType main(PIXELINPUT input)
-#elif defined(FORWARD)
-GBUFFEROutputType_Thin main(PIXELINPUT input)
-#elif defined(TILEDFORWARD)
+#elif defined(FORWARD) || defined(TILEDFORWARD)
 [earlydepthstencil]
 GBUFFEROutputType_Thin main(PIXELINPUT input)
 #endif // ALPHATESTONLY
