@@ -169,9 +169,6 @@ void EditorComponent::ResizeBuffers()
 		}
 		hr = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[0]);
 		assert(SUCCEEDED(hr));
-
-		desc.Format = FORMAT_R8G8B8A8_UNORM;
-		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		hr = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[1]);
 		assert(SUCCEEDED(hr));
 	}
@@ -188,8 +185,11 @@ void EditorComponent::ResizeBuffers()
 		hr = device->CreateRenderPass(&desc, &renderpass_selectionOutline[0]);
 		assert(SUCCEEDED(hr));
 
-		desc.numAttachments = 1;
 		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::LOADOP_CLEAR, &rt_selectionOutline[1], -1 };
+		if (renderPath->getMSAASampleCount() > 1)
+		{
+			desc.attachments[0].texture = &rt_selectionOutline_MSAA;
+		}
 		hr = device->CreateRenderPass(&desc, &renderpass_selectionOutline[1]);
 		assert(SUCCEEDED(hr));
 	}
@@ -1736,7 +1736,7 @@ void EditorComponent::Render() const
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		CommandList cmd = device->BeginCommandList();
 
-		device->EventBegin("Editor - Selection Outline", cmd);
+		device->EventBegin("Editor - Selection Outline Mask", cmd);
 
 		Viewport vp;
 		vp.Width = (float)rt_selectionOutline[0].GetDesc().Width;
@@ -1749,12 +1749,9 @@ void EditorComponent::Render() const
 
 		// We will specify the stencil ref in user-space, don't care about engine stencil refs here:
 		//	Otherwise would need to take into account engine ref and draw multiple permutations of stencil refs.
-		fx.stencilRefMode = STENCILREFMODE_USER; 
+		fx.stencilRefMode = STENCILREFMODE_USER;
 
-		device->RenderPassBegin(&renderpass_selectionOutline[1], cmd); // this renderpass just clears so its empty
-		device->RenderPassEnd(cmd);
-
-		// Materials outline (green):
+		// Materials outline:
 		{
 			device->RenderPassBegin(&renderpass_selectionOutline[0], cmd);
 
@@ -1768,16 +1765,12 @@ void EditorComponent::Render() const
 			{
 				device->MSAAResolve(&rt_selectionOutline[0], &rt_selectionOutline_MSAA, cmd);
 			}
-
-			// Outline the solid blocks:
-			wiRenderer::BindCommonResources(cmd);
-			wiRenderer::Postprocess_Outline(rt_selectionOutline[0], rt_selectionOutline[1], cmd, 0.1f, 1, selectionColor2);
 		}
 
-		// Objects outline (orange):
+		// Objects outline:
 		{
 			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
-			device->RenderPassBegin(&renderpass_selectionOutline[0], cmd);
+			device->RenderPassBegin(&renderpass_selectionOutline[1], cmd);
 
 			// Draw solid blocks of selected objects
 			fx.stencilRef = EDITORSTENCILREF_HIGHLIGHT_OBJECT;
@@ -1787,12 +1780,8 @@ void EditorComponent::Render() const
 
 			if (renderPath->getMSAASampleCount() > 1)
 			{
-				device->MSAAResolve(&rt_selectionOutline[0], &rt_selectionOutline_MSAA, cmd);
+				device->MSAAResolve(&rt_selectionOutline[1], &rt_selectionOutline_MSAA, cmd);
 			}
-
-			// Outline the solid blocks:
-			wiRenderer::BindCommonResources(cmd);
-			wiRenderer::Postprocess_Outline(rt_selectionOutline[0], rt_selectionOutline[1], cmd, 0.1f, 1, selectionColor);
 		}
 
 		device->EventEnd(cmd);
@@ -1810,14 +1799,21 @@ void EditorComponent::Compose(CommandList cmd) const
 		return;
 	}
 
-	// Compose the selection outline to the screen:
+	// Draw selection outline to the screen:
 	const float selectionColorIntensity = std::sinf(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f;
 	if (renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
 	{
-		wiImageParams fx;
-		fx.enableFullScreen();
-		fx.opacity = wiMath::Lerp(0.4f, 1.0f, selectionColorIntensity);
-		wiImage::Draw(&rt_selectionOutline[1], fx, cmd);
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		device->EventBegin("Editor - Selection Outline", cmd);
+		wiRenderer::BindCommonResources(cmd);
+		float opacity = wiMath::Lerp(0.4f, 1.0f, selectionColorIntensity);
+		XMFLOAT4 col = selectionColor2;
+		col.w *= opacity;
+		wiRenderer::Postprocess_Outline(rt_selectionOutline[0], cmd, 0.1f, 1, col);
+		col = selectionColor;
+		col.w *= opacity;
+		wiRenderer::Postprocess_Outline(rt_selectionOutline[1], cmd, 0.1f, 1, col);
+		device->EventEnd(cmd);
 	}
 
 	const CameraComponent& camera = wiRenderer::GetCamera();

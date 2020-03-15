@@ -1,19 +1,10 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-#ifndef OUTLINE_OUTPUT_FORMAT
-#define OUTLINE_OUTPUT_FORMAT float4
-#endif // OUTLINE_OUTPUT_FORMAT
-
 TEXTURE2D(input, float, TEXSLOT_ONDEMAND0);
 
-RWTEXTURE2D(output, OUTLINE_OUTPUT_FORMAT, 0);
-
-[numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
-void main(uint3 DTid : SV_DispatchThreadID)
+float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_TARGET
 {
-	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
-
 	const float middle = input.SampleLevel(sampler_linear_clamp, uv, 0);
 
 	const float outlineThickness = xPPParams0.y;
@@ -71,6 +62,5 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	float edge = dist > outlineThreshold ? 1 : 0;
 
-	float4 color_prev = output[DTid.xy];
-	output[DTid.xy] = lerp(color_prev, outlineColor, edge);
+	return float4(outlineColor.rgb, outlineColor.a * edge);
 }

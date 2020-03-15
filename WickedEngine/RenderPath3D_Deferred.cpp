@@ -239,8 +239,6 @@ void RenderPath3D_Deferred::Render() const
 
 		RenderTransparents(renderpass_transparent, RENDERPASS_FORWARD, cmd);
 
-		RenderOutline(rtDeferred, cmd);
-
 		RenderPostprocessChain(rtDeferred, rtGBuffer[1], cmd);
 
 	});
@@ -301,6 +299,8 @@ void RenderPath3D_Deferred::RenderDeferredComposition(CommandList cmd) const
 		cmd
 	);
 	wiRenderer::DrawSky(cmd);
+
+	RenderOutline(cmd);
 
 	device->RenderPassEnd(cmd);
 }

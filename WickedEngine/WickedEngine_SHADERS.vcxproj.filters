@@ -780,12 +780,6 @@
     <FxCompile Include="hairparticlePS_tiledforward_transparent.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="outlineCS_unorm4.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="outlineCS_float4.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="motionblur_neighborhoodMaxVelocityCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -875,6 +869,9 @@
     </FxCompile>
     <FxCompile Include="ssr_temporalCS.hlsl">
       <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="outlinePS.hlsl">
+      <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

@@ -168,8 +168,6 @@ void RenderPath3D_TiledDeferred::Render() const
 
 		RenderTransparents(renderpass_transparent, RENDERPASS_TILEDFORWARD, cmd);
 
-		RenderOutline(rtDeferred, cmd);
-
 		RenderPostprocessChain(rtDeferred, rtGBuffer[1], cmd);
 
 	});

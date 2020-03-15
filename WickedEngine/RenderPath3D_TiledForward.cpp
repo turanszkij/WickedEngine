@@ -105,6 +105,8 @@ void RenderPath3D_TiledForward::Render() const
 			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_TILEDFORWARD, true, true);
 			wiRenderer::DrawSky(cmd);
 
+			RenderOutline(cmd);
+
 			device->RenderPassEnd(cmd);
 
 			wiProfiler::EndRange(range); // Opaque Scene
@@ -140,8 +142,6 @@ void RenderPath3D_TiledForward::Render() const
 		{
 			device->MSAAResolve(GetSceneRT_Read(0), &rtMain[0], cmd);
 		}
-
-		RenderOutline(*GetSceneRT_Read(0), cmd);
 
 		RenderPostprocessChain(*GetSceneRT_Read(0), *GetSceneRT_Read(1), cmd);
 	});

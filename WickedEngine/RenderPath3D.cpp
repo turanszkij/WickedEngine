@@ -465,11 +465,11 @@ void RenderPath3D::DownsampleDepthBuffer(CommandList cmd) const
 
 	device->RenderPassEnd(cmd);
 }
-void RenderPath3D::RenderOutline(const Texture& dstSceneRT, CommandList cmd) const
+void RenderPath3D::RenderOutline(CommandList cmd) const
 {
 	if (getOutlineEnabled())
 	{
-		wiRenderer::Postprocess_Outline(rtLinearDepth, dstSceneRT, cmd, getOutlineThreshold(), getOutlineThickness(), getOutlineColor());
+		wiRenderer::Postprocess_Outline(rtLinearDepth, cmd, getOutlineThreshold(), getOutlineThickness(), getOutlineColor());
 	}
 }
 void RenderPath3D::RenderLightShafts(CommandList cmd) const

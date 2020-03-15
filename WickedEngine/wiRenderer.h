@@ -233,7 +233,6 @@ namespace wiRenderer
 	);
 	void Postprocess_Outline(
 		const wiGraphics::Texture& input,
-		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float threshold = 0.1f,
 		float thickness = 1.0f,

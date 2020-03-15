@@ -968,6 +968,7 @@ PipelineState PSO_downsampledepthbuffer;
 PipelineState PSO_deferredcomposition;
 PipelineState PSO_sss;
 PipelineState PSO_upsample_bilateral;
+PipelineState PSO_outline;
 
 enum SKYRENDERING
 {
@@ -1282,6 +1283,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_DEFERREDCOMPOSITION], "deferredPS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_POSTPROCESS_SSS], "sssPS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL], "upsample_bilateralPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_POSTPROCESS_OUTLINE], "outlinePS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_LENSFLARE], "lensFlarePS.cso"); });
 
 	wiJobSystem::Execute(ctx, [] { LoadShader(GS, geometryShaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
@@ -1345,8 +1347,6 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN_CHEAP], "depthoffield_mainCS_cheap.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_POSTFILTER], "depthoffield_postfilterCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_UPSAMPLE], "depthoffield_upsampleCS.cso"); });
-	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_OUTLINE_FLOAT4], "outlineCS_float4.cso"); });
-	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_OUTLINE_UNORM4], "outlineCS_unorm4.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY_HORIZONTAL], "motionblur_tileMaxVelocity_horizontalCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY_VERTICAL], "motionblur_tileMaxVelocity_verticalCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR_NEIGHBORHOODMAXVELOCITY], "motionblur_neighborhoodMaxVelocityCS.cso"); });
@@ -1845,6 +1845,16 @@ void LoadShaders()
 		desc.dss = &depthStencils[DSSTYPE_XRAY];
 
 		device->CreatePipelineState(&desc, &PSO_upsample_bilateral);
+		});
+	wiJobSystem::Execute(ctx, [device] {
+		PipelineStateDesc desc;
+		desc.vs = &vertexShaders[VSTYPE_SCREEN];
+		desc.ps = &pixelShaders[PSTYPE_POSTPROCESS_OUTLINE];
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+		desc.dss = &depthStencils[DSSTYPE_XRAY];
+
+		device->CreatePipelineState(&desc, &PSO_outline);
 		});
 	wiJobSystem::Execute(ctx, [device] {
 		PipelineStateDesc desc;
@@ -9464,7 +9474,6 @@ void Postprocess_DepthOfField(
 }
 void Postprocess_Outline(
 	const Texture& input,
-	const Texture& output,
 	CommandList cmd,
 	float threshold,
 	float thickness,
@@ -9476,22 +9485,13 @@ void Postprocess_Outline(
 	device->EventBegin("Postprocess_Outline", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Outline", cmd);
 
-	const TextureDesc& desc = output.GetDesc();
+	device->BindPipelineState(&PSO_outline, cmd);
 
-	if (device->IsFormatUnorm(desc.Format))
-	{
-		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_OUTLINE_UNORM4], cmd);
-	}
-	else
-	{
-		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_OUTLINE_FLOAT4], cmd);
-	}
-
-	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(PS, &input, TEXSLOT_ONDEMAND0, cmd);
 
 	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution.x = (uint)input.GetDesc().Width;
+	cb.xPPResolution.y = (uint)input.GetDesc().Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.xPPParams0.x = threshold;
@@ -9501,23 +9501,9 @@ void Postprocess_Outline(
 	cb.xPPParams1.z = color.z;
 	cb.xPPParams1.w = color.w;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-	const GPUResource* uavs[] = {
-		&output,
-	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-
-	device->Dispatch(
-		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-		1,
-		cmd
-	);
-
-	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
+	device->Draw(3, 0, cmd);
 
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);

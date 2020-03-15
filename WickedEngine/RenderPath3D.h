@@ -88,9 +88,9 @@ protected:
 	const wiGraphics::Texture* GetLastPostprocessRT() const
 	{
 		int ldr_postprocess_count = 0;
-		ldr_postprocess_count += sharpenFilterEnabled ? 1 : 0;
-		ldr_postprocess_count += fxaaEnabled ? 1 : 0;
-		ldr_postprocess_count += chromaticAberrationEnabled ? 1 : 0;
+		ldr_postprocess_count += getSharpenFilterEnabled() ? 1 : 0;
+		ldr_postprocess_count += getFXAAEnabled() ? 1 : 0;
+		ldr_postprocess_count += getChromaticAberrationEnabled() ? 1 : 0;
 		int rt_index = ldr_postprocess_count % 2;
 		return &rtPostprocess_LDR[rt_index];
 	}
@@ -105,7 +105,7 @@ protected:
 	virtual void RenderSSAO(wiGraphics::CommandList cmd) const;
 	virtual void RenderSSR(const wiGraphics::Texture& gbuffer1, const wiGraphics::Texture& gbuffer2, wiGraphics::CommandList cmd) const;
 	virtual void DownsampleDepthBuffer(wiGraphics::CommandList cmd) const;
-	virtual void RenderOutline(const wiGraphics::Texture& dstSceneRT, wiGraphics::CommandList cmd) const;
+	virtual void RenderOutline(wiGraphics::CommandList cmd) const;
 	virtual void RenderLightShafts(wiGraphics::CommandList cmd) const;
 	virtual void RenderVolumetrics(wiGraphics::CommandList cmd) const;
 	virtual void RenderSceneMIPChain(const wiGraphics::Texture& srcSceneRT, wiGraphics::CommandList cmd) const;
