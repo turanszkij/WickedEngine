@@ -1471,7 +1471,7 @@ namespace wiScene
 					archive << false;
 				}
 			}
-			if (archive.GetVersion() >= 37)
+			if (archive.GetVersion() >= 38)
 			{
 				auto component = springs.GetComponent(entity);
 				if (component != nullptr)

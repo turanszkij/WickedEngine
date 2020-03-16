@@ -519,7 +519,7 @@ void RenderPath3D::RenderLightShafts(CommandList cmd) const
 }
 void RenderPath3D::RenderVolumetrics(CommandList cmd) const
 {
-	if (getVolumeLightsEnabled())
+	if (getVolumeLightsEnabled() && wiRenderer::IsRequestedVolumetricLightRendering())
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -607,10 +607,7 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 
 	wiRenderer::DrawSoftParticles(wiRenderer::GetCamera(), rtLinearDepth, false, cmd);
 
-	wiImageParams fx;
-	fx.enableFullScreen();
-
-	if (getVolumeLightsEnabled())
+	if (getVolumeLightsEnabled() && wiRenderer::IsRequestedVolumetricLightRendering())
 	{
 		device->EventBegin("Contribute Volumetric Lights", cmd);
 		wiRenderer::Postprocess_Upsample_Bilateral(rtVolumetricLights, rtLinearDepth, rtLinearDepth_minmax, 
@@ -621,6 +618,8 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 	if (getLightShaftsEnabled())
 	{
 		device->EventBegin("Contribute LightShafts", cmd);
+		wiImageParams fx;
+		fx.enableFullScreen();
 		fx.blendFlag = BLENDMODE_ADDITIVE;
 		wiImage::Draw(&rtSun[1], fx, cmd);
 		device->EventEnd(cmd);

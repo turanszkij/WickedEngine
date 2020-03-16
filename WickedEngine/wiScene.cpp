@@ -102,6 +102,12 @@ namespace wiScene
 		translation_local.y += value.y;
 		translation_local.z += value.z;
 	}
+	void TransformComponent::Translate(const XMVECTOR& value)
+	{
+		XMFLOAT3 translation;
+		XMStoreFloat3(&translation, value);
+		Translate(translation);
+	}
 	void TransformComponent::RotateRollPitchYaw(const XMFLOAT3& value)
 	{
 		SetDirty();
@@ -127,12 +133,24 @@ namespace wiScene
 		result = XMQuaternionNormalize(result);
 		XMStoreFloat4(&rotation_local, result);
 	}
+	void TransformComponent::Rotate(const XMVECTOR& quaternion)
+	{
+		XMFLOAT4 rotation;
+		XMStoreFloat4(&rotation, quaternion);
+		Rotate(rotation);
+	}
 	void TransformComponent::Scale(const XMFLOAT3& value)
 	{
 		SetDirty();
 		scale_local.x *= value.x;
 		scale_local.y *= value.y;
 		scale_local.z *= value.z;
+	}
+	void TransformComponent::Scale(const XMVECTOR& value)
+	{
+		XMFLOAT3 scale;
+		XMStoreFloat3(&scale, value);
+		Scale(scale);
 	}
 	void TransformComponent::MatrixTransform(const XMFLOAT4X4& matrix)
 	{
@@ -1778,12 +1796,11 @@ namespace wiScene
 				const XMVECTOR dir_parent_to_child = XMVector3Normalize(parent_to_child);
 				const XMVECTOR dir_parent_to_target = XMVector3Normalize(parent_to_target);
 				const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(dir_parent_to_child, dir_parent_to_target));
-				const float angle = XMVectorGetX(XMVectorACos(XMVector3Dot(dir_parent_to_child, dir_parent_to_target))); // don't use std::acos!
-				XMFLOAT4 quaternion;
-				XMStoreFloat4(&quaternion, XMQuaternionNormalize(XMQuaternionRotationAxis(axis, angle)));
+				const float angle = XMScalarACos(XMVectorGetX(XMVector3Dot(dir_parent_to_child, dir_parent_to_target))); // don't use std::acos!
+				const XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, angle));
 				TransformComponent saved_parent = *parent_transform;
 				saved_parent.ApplyTransform();
-				saved_parent.Rotate(quaternion);
+				saved_parent.Rotate(Q);
 				saved_parent.UpdateTransform();
 				std::swap(saved_parent.world, parent_transform->world); // only store temporary result, not modifying actual local space!
 			}
@@ -1838,14 +1855,13 @@ namespace wiScene
 					const XMVECTOR dir_parent_to_ik = XMVector3Normalize(transform->GetPositionV() - parent_pos);
 					const XMVECTOR dir_parent_to_target = XMVector3Normalize(target_pos - parent_pos);
 					const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(dir_parent_to_ik, dir_parent_to_target));
-					const float angle = XMVectorGetX(XMVectorACos(XMVector3Dot(dir_parent_to_ik, dir_parent_to_target))); // don't use std::acos!
-					XMFLOAT4 quaternion;
-					XMStoreFloat4(&quaternion, XMQuaternionNormalize(XMQuaternionRotationAxis(axis, angle)));
+					const float angle = XMScalarACos(XMVectorGetX(XMVector3Dot(dir_parent_to_ik, dir_parent_to_target)));
+					const XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, angle));
 
 					// parent to world space:
 					parent_transform->ApplyTransform();
 					// rotate parent:
-					parent_transform->Rotate(quaternion);
+					parent_transform->Rotate(Q);
 					parent_transform->UpdateTransform();
 					// parent back to local space (if parent has parent):
 					const HierarchyComponent* hier_parent = hierarchy.GetComponent(parent_entity);

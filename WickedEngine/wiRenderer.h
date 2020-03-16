@@ -445,6 +445,7 @@ namespace wiRenderer
 	float GetVoxelRadianceRayStepSize();
 	void SetVoxelRadianceRayStepSize(float value);
 	bool IsRequestedReflectionRendering();
+	bool IsRequestedVolumetricLightRendering();
 	const XMFLOAT4& GetWaterPlane();
 	void SetGameSpeed(float value);
 	float GetGameSpeed();

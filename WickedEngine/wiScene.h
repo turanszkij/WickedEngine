@@ -72,9 +72,12 @@ namespace wiScene
 		void ApplyTransform();
 		void ClearTransform();
 		void Translate(const XMFLOAT3& value);
+		void Translate(const XMVECTOR& value);
 		void RotateRollPitchYaw(const XMFLOAT3& value);
 		void Rotate(const XMFLOAT4& quaternion);
+		void Rotate(const XMVECTOR& quaternion);
 		void Scale(const XMFLOAT3& value);
+		void Scale(const XMVECTOR& value);
 		void MatrixTransform(const XMFLOAT4X4& matrix);
 		void MatrixTransform(const XMMATRIX& matrix);
 		void Lerp(const TransformComponent& a, const TransformComponent& b, float t);

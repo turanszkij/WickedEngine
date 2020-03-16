@@ -99,6 +99,7 @@ bool debugCameras = false;
 bool gridHelper = false;
 bool voxelHelper = false;
 bool requestReflectionRendering = false;
+bool requestVolumetricLightRendering = false;
 bool advancedLightCulling = true;
 bool ldsSkinningEnabled = true;
 bool scene_bvh_invalid = true;
@@ -3544,6 +3545,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 
 	// Perform culling and obtain closest reflector:
 	requestReflectionRendering = false;
+	requestVolumetricLightRendering = false;
 	auto range = wiProfiler::BeginRangeCPU("Frustum Culling");
 	{
 		for (auto& x : frameCullings)
@@ -3707,6 +3709,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 				{
 					const uint32_t lightIndex = culling.culledLights[lightSortingHashes[i] & 0x0000FFFF];
 					LightComponent& light = scene.lights[lightIndex];
+					requestVolumetricLightRendering |= light.IsVolumetricsEnabled();
 
 					// Link shadowmaps to lights till there are free slots
 
@@ -10333,6 +10336,7 @@ int GetVoxelRadianceNumCones() { return voxelSceneData.numCones; }
 float GetVoxelRadianceRayStepSize() { return voxelSceneData.rayStepSize; }
 void SetVoxelRadianceRayStepSize(float value) { voxelSceneData.rayStepSize = value; }
 bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
+bool IsRequestedVolumetricLightRendering() { return requestVolumetricLightRendering; }
 void SetGameSpeed(float value) { GameSpeed = std::max(0.0f, value); }
 float GetGameSpeed() { return GameSpeed; }
 void OceanRegenerate() { if (ocean != nullptr) ocean = std::make_unique<wiOcean>(GetScene().weather); }
