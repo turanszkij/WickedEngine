@@ -8825,6 +8825,7 @@ void Postprocess_SSR(
 
 	device->UnbindResources(TEXSLOT_RENDERPATH_SSR, 1, cmd);
 
+	const TextureDesc& input_desc = input.GetDesc();
 	const TextureDesc& desc = output.GetDesc();
 
 	static TextureDesc initialized_desc;
@@ -8865,6 +8866,8 @@ void Postprocess_SSR(
 	cb.xPPResolution.y = desc.Height / 2;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	cb.ssr_input_maxmip = float(input_desc.MipLevels - 1);
+	cb.ssr_input_resolution_max = (float)std::max(input_desc.Width, input_desc.Height);
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 

@@ -74,7 +74,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
     float specularConeTangent = lerp(0.0, roughness * (1.0 - BRDFBias), NdotV * sqrt(roughness));
     specularConeTangent *= lerp(saturate(NdotV * 2), 1.0f, sqrt(roughness));
 
-    const float maxMipLevel = 11.0f - 1.0f;
     const uint2 Random = Rand3DPCG16(int3((DTid.xy + 0.5f), g_xFrame_FrameCount)).xy;
     
     float4 result = 0.0f;
@@ -87,7 +86,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
         float2 offsetRotation = (HammersleyRandom(i, NumResolve, Random) * 2.0 - 1.0) * roughnessSequenceSize;
         float2x2 offsetRotationMatrix = float2x2(offsetRotation.x, offsetRotation.y, -offsetRotation.y, offsetRotation.x);
         
-        float2 offsetUV = offset[i] * (1.0f / xPPResolution);
+        float2 offsetUV = offset[i] * xPPResolution_rcp;
         offsetUV = uv + mul(offsetRotationMatrix, offsetUV) * CalculateTailDirection(N);
         
         float4 raytraceSource = texture_raytrace.SampleLevel(sampler_point_clamp, offsetUV, 0);
@@ -100,7 +99,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
         float  iterationStep = maskSource.y;
 
         float intersectionCircleRadius = specularConeTangent * length(hitPixel - uv);
-        float sourceMip = clamp(log2(intersectionCircleRadius * max(xPPResolution.x, xPPResolution.y)), 0.0, maxMipLevel) * resolveMip;
+        float sourceMip = clamp(log2(intersectionCircleRadius * ssr_input_resolution_max), 0.0, ssr_input_maxmip) * resolveMip;
                 
         float4 sampleColor;
         sampleColor.rgb = texture_main.SampleLevel(sampler_linear_clamp, hitPixel, sourceMip).xyz;

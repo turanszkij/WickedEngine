@@ -17,6 +17,9 @@ CBUFFER(PostProcessCB, CBSLOT_RENDERER_POSTPROCESS)
 #define lineardepth_inputresolution xPPParams0.xy
 #define lineardepth_inputresolution_rcp xPPParams0.zw
 
+#define ssr_input_maxmip xPPParams0.x
+#define ssr_input_resolution_max xPPParams0.y
+
 #define ssao_range xPPParams0.x
 #define ssao_samplecount xPPParams0.y
 #define ssao_power xPPParams0.z
