@@ -9721,6 +9721,7 @@ void Postprocess_MotionBlur(
 
 		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->UnbindResources(TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 		device->EventEnd(cmd);
 	}
 

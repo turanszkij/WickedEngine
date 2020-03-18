@@ -50,14 +50,14 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
     {
         float seed = 54321;
 
-        const float2 ringScale = 2 * coc * float2(max(1, dof_aspect), max(1, 2 - dof_aspect)) * xPPResolution_rcp;
+        const float2 ringScale = 0.5f * coc * float2(max(1, dof_aspect), max(1, 2 - dof_aspect)) * xPPResolution_rcp;
         [unroll]
         for (uint i = ringSampleCount[0]; i < ringSampleCount[1]; ++i)
         {
             const float offsetCoc = disc[i].z;
-            const float2 uv2 = uv + ringScale * disc[i].xy * (1 + rand(seed, uv) * 0.1);
+            const float2 uv2 = uv + ringScale * disc[i].xy;
             const float depth = texture_lineardepth_minmax.SampleLevel(sampler_point_clamp, uv2, 0).g;
-            const float3 color = max(0, input.SampleLevel(sampler_point_clamp, uv2, 0).rgb);
+            const float3 color = max(0, input.SampleLevel(sampler_linear_clamp, uv2, 0).rgb);
             const float weight = saturate(abs(depth - center_depth) * g_xCamera_ZFarP * 2);
             prefilter += lerp(color, center_color, weight);
         }

@@ -1,10 +1,10 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-TEXTURE2D(input_current, float4, TEXSLOT_ONDEMAND0);
-TEXTURE2D(input_history, float4, TEXSLOT_ONDEMAND1);
+TEXTURE2D(input_current, float3, TEXSLOT_ONDEMAND0);
+TEXTURE2D(input_history, float3, TEXSLOT_ONDEMAND1);
 
-RWTEXTURE2D(output, float4, 0);
+RWTEXTURE2D(output, float3, 0);
 
 // Neighborhood load optimization:
 #define USE_LDS
@@ -120,7 +120,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 #endif
 
 	// do the temporal super sampling by linearly accumulating previous samples with the current one:
-	float4 resolved = float4(lerp(history.rgb, current.rgb, blendfactor), 1);
+	float3 resolved = lerp(history.rgb, current.rgb, blendfactor);
 
 #ifdef HDR_CORRECTION
 	resolved.rgb = inverseTonemap(resolved.rgb);
