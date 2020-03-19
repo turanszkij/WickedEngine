@@ -303,6 +303,7 @@ namespace wiScene
 		void FlipNormals();
 		void Recenter();
 		void RecenterToBottom();
+		SPHERE GetBoundingSphere() const;
 
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 

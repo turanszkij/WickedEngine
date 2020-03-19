@@ -831,6 +831,16 @@ namespace wiScene
 
 		CreateRenderData();
 	}
+	SPHERE MeshComponent::GetBoundingSphere() const
+	{
+		XMFLOAT3 halfwidth = aabb.getHalfWidth();
+
+		SPHERE sphere;
+		sphere.center = aabb.getCenter();
+		sphere.radius = std::max(halfwidth.x, std::max(halfwidth.y, halfwidth.z));
+
+		return sphere;
+	}
 
 	void ObjectComponent::ClearLightmap()
 	{
@@ -2122,7 +2132,15 @@ namespace wiScene
 							impostor->aabb = AABB::Merge(impostor->aabb, aabb);
 							impostor->color = object.color;
 							impostor->fadeThresholdRadius = object.impostorFadeThresholdRadius;
-							impostor->instanceMatrices.push_back(meshMatrix);
+							
+							const SPHERE boundingsphere = mesh->GetBoundingSphere();
+
+							impostor->instanceMatrices.emplace_back();
+							XMStoreFloat4x4(&impostor->instanceMatrices.back(), 
+								XMMatrixScaling(boundingsphere.radius, boundingsphere.radius, boundingsphere.radius) *
+								XMMatrixTranslation(boundingsphere.center.x, boundingsphere.center.y, boundingsphere.center.z) *
+								W
+								);
 						}
 
 						SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(object.meshID);

@@ -1654,7 +1654,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [device] {
 		PipelineStateDesc desc;
 		desc.vs = &vertexShaders[VSTYPE_OBJECT_COMMON];
-		desc.rs = &rasterizers[RSTYPE_FRONT];
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
 		desc.dss = &depthStencils[DSSTYPE_CAPTUREIMPOSTOR];
 		desc.il = &inputLayouts[ILTYPE_OBJECT_ALL];
@@ -6605,8 +6605,8 @@ void RefreshImpostors(CommandList cmd)
 		Entity entity = scene.impostors.GetEntity(impostorIndex);
 		const MeshComponent& mesh = *scene.meshes.GetComponent(entity);
 
-		const AABB& bbox = mesh.aabb;
-		const XMFLOAT3 extents = bbox.getHalfWidth();
+		// impostor camera will fit around mesh bounding sphere:
+		const SPHERE boundingsphere = mesh.GetBoundingSphere();
 
 		const GPUBuffer* vbs[] = {
 			mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
@@ -6670,9 +6670,9 @@ void RefreshImpostors(CommandList cmd)
 				TransformComponent camera_transform;
 
 				camera_transform.ClearTransform();
-				camera_transform.Translate(bbox.getCenter());
+				camera_transform.Translate(boundingsphere.center);
 
-				XMMATRIX P = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
+				XMMATRIX P = XMMatrixOrthographicOffCenterLH(-boundingsphere.radius, boundingsphere.radius, -boundingsphere.radius, boundingsphere.radius, -boundingsphere.radius, boundingsphere.radius);
 				XMStoreFloat4x4(&impostorcamera.Projection, P);
 				XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationAxis(XMVectorSet(0, 1, 0, 0), XM_2PI * (float)i / (float)impostorCaptureAngles));
 				XMStoreFloat4(&camera_transform.rotation_local, Q);
