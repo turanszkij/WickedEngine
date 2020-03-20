@@ -66,13 +66,13 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	}
 	GroupMemoryBarrierWithGroupSync();
 
-	const int2 pixel = tile_start + groupIndex * direction;
+	const uint2 pixel = tile_start + groupIndex * direction;
 	if (pixel.x >= xPPResolution.x || pixel.y >= xPPResolution.y)
 	{
 		return;
 	}
 	
-	const int center = TILE_BORDER + groupIndex;
+	const uint center = TILE_BORDER + groupIndex;
 
 #ifdef BILATERAL
 	const float depth_threshold = xPPParams0.w;
