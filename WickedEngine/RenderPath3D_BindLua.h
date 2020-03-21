@@ -19,6 +19,7 @@ public:
 	RenderPath3D_BindLua(lua_State* L) {}
 
 	int SetSSAOEnabled(lua_State* L);
+	int SetHBAOEnabled(lua_State* L);
 	int SetSSREnabled(lua_State* L);
 	int SetShadowsEnabled(lua_State* L);
 	int SetReflectionsEnabled(lua_State* L);

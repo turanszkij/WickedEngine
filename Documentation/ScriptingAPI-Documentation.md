@@ -627,6 +627,7 @@ A 3D scene can either be rendered by a Forward or Deferred render path, or path 
 It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - [void-constructor]RenderPath3D()
 - SetSSAOEnabled(bool value)
+- SetHBAOEnabled(bool value)
 - SetSSREnabled(bool value)
 - SetShadowsEnabled(bool value)
 - SetReflectionsEnabled(bool value)

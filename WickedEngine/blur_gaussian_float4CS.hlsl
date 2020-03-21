@@ -9,34 +9,112 @@ TEXTURE2D(input, BLUR_FORMAT, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(output, BLUR_FORMAT, 0);
 
-static const int TILE_BORDER = 4;
+// Calculate gaussian weights online: http://dev.theomader.com/gaussian-kernel-calculator/
+#ifdef BLUR_WIDE
+static const int GAUSS_KERNEL = 33;
+static const float gaussianWeightsNormalized[GAUSS_KERNEL] = {
+	0.004013,
+	0.005554,
+	0.007527,
+	0.00999,
+	0.012984,
+	0.016524,
+	0.020594,
+	0.025133,
+	0.030036,
+	0.035151,
+	0.040283,
+	0.045207,
+	0.049681,
+	0.053463,
+	0.056341,
+	0.058141,
+	0.058754,
+	0.058141,
+	0.056341,
+	0.053463,
+	0.049681,
+	0.045207,
+	0.040283,
+	0.035151,
+	0.030036,
+	0.025133,
+	0.020594,
+	0.016524,
+	0.012984,
+	0.00999,
+	0.007527,
+	0.005554,
+	0.004013
+};
+static const int gaussianOffsets[GAUSS_KERNEL] = {
+	-16,
+	-15,
+	-14,
+	-13,
+	-12,
+	-11,
+	-10,
+	-9,
+	-8,
+	-7,
+	-6,
+	-5,
+	-4,
+	-3,
+	-2,
+	-1,
+	0,
+	1,
+	2,
+	3,
+	4,
+	5,
+	6,
+	7,
+	8,
+	9,
+	10,
+	11,
+	12,
+	13,
+	14,
+	15,
+	16,
+};
+#else
+static const int GAUSS_KERNEL = 9;
+static const float gaussianWeightsNormalized[GAUSS_KERNEL] = {
+	0.004112,
+	0.026563,
+	0.100519,
+	0.223215,
+	0.29118,
+	0.223215,
+	0.100519,
+	0.026563,
+	0.004112
+};
+static const int gaussianOffsets[GAUSS_KERNEL] = {
+	-4,
+	-3,
+	-2,
+	-1,
+	0,
+	1,
+	2,
+	3,
+	4
+};
+#endif // BLUR_WIDE
+
+static const int TILE_BORDER = GAUSS_KERNEL / 2;
 static const int CACHE_SIZE = TILE_BORDER + POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT + TILE_BORDER;
 groupshared BLUR_FORMAT color_cache[CACHE_SIZE];
 
 #ifdef BILATERAL
 groupshared float depth_cache[CACHE_SIZE];
 #endif // BILATERAL
-
-static const float gaussWeight0 = 1.0f;
-static const float gaussWeight1 = 0.9f;
-static const float gaussWeight2 = 0.55f;
-static const float gaussWeight3 = 0.18f;
-static const float gaussWeight4 = 0.1f;
-static const float gaussNormalization = 1.0f / (gaussWeight0 + 2.0f * (gaussWeight1 + gaussWeight2 + gaussWeight3 + gaussWeight4));
-static const float gaussianWeightsNormalized[9] = {
-	gaussWeight4 * gaussNormalization,
-	gaussWeight3 * gaussNormalization,
-	gaussWeight2 * gaussNormalization,
-	gaussWeight1 * gaussNormalization,
-	gaussWeight0 * gaussNormalization,
-	gaussWeight1 * gaussNormalization,
-	gaussWeight2 * gaussNormalization,
-	gaussWeight3 * gaussNormalization,
-	gaussWeight4 * gaussNormalization,
-};
-static const int gaussianOffsets[9] = {
-	-4, -3, -2, -1, 0, 1, 2, 3, 4
-};
 
 [numthreads(POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT, 1, 1)]
 void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
@@ -81,7 +159,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 #endif // BILATERAL
 
 	BLUR_FORMAT color = 0;
-	for (i = 0; i < 9; ++i)
+	for (i = 0; i < GAUSS_KERNEL; ++i)
 	{
 		const uint sam = center + gaussianOffsets[i];
 		const BLUR_FORMAT color2 = color_cache[sam];

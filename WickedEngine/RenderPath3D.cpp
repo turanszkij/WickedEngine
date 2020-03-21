@@ -228,7 +228,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = FORMAT_R16_UNORM;
+		desc.Format = FORMAT_R32_FLOAT;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture(&desc, nullptr, &rtLinearDepth);
@@ -237,7 +237,7 @@ void RenderPath3D::ResizeBuffers()
 		desc.Width = (desc.Width + 1) / 2;
 		desc.Height = (desc.Height + 1) / 2;
 		desc.MipLevels = 5;
-		desc.Format = FORMAT_R16G16_UNORM;
+		desc.Format = FORMAT_R32G32_FLOAT;
 		device->CreateTexture(&desc, nullptr, &rtLinearDepth_minmax);
 		device->SetName(&rtLinearDepth_minmax, "rtLinearDepth_minmax");
 
@@ -428,10 +428,20 @@ void RenderPath3D::RenderLinearDepth(CommandList cmd) const
 }
 void RenderPath3D::RenderSSAO(CommandList cmd) const
 {
-	if (getSSAOEnabled())
+	if (getHBAOEnabled())
+	{
+		wiRenderer::Postprocess_HBAO(
+			rtLinearDepth_minmax,
+			rtSSAO[1],
+			rtSSAO[0],
+			cmd,
+			getSSAOPower()
+			);
+	}
+	else if(getSSAOEnabled())
 	{
 		wiRenderer::Postprocess_SSAO(
-			depthBuffer_Copy, 
+			depthBuffer_Copy,
 			rtLinearDepth,
 			rtLinearDepth_minmax,
 			rtSSAO[1],
@@ -440,7 +450,7 @@ void RenderPath3D::RenderSSAO(CommandList cmd) const
 			getSSAORange(),
 			getSSAOSampleCount(),
 			getSSAOPower()
-		);
+			);
 	}
 }
 void RenderPath3D::RenderSSR(const Texture& gbuffer1, const Texture& gbuffer2, CommandList cmd) const

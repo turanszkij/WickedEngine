@@ -208,7 +208,7 @@ void RenderPath3D_Deferred::Render() const
 			vp.Height = (float)depthBuffer.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
-			device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, cmd);
+			device->BindResource(PS, getAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, cmd);
 			device->BindResource(PS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
 			wiRenderer::DrawDeferredLights(wiRenderer::GetCamera(), depthBuffer_Copy, rtGBuffer[0], rtGBuffer[1], rtGBuffer[2], cmd);
 
@@ -294,7 +294,7 @@ void RenderPath3D_Deferred::RenderDeferredComposition(CommandList cmd) const
 		rtGBuffer[2],
 		lightbuffer_diffuse,
 		lightbuffer_specular,
-		getSSAOEnabled() ? rtSSAO[0] : *wiTextureHelper::getWhite(),
+		getAOEnabled() ? rtSSAO[0] : *wiTextureHelper::getWhite(),
 		rtLinearDepth,
 		cmd
 	);

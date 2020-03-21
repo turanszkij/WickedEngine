@@ -1324,14 +1324,27 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_RAYTRACE_TILESORT], "raytrace_tilesortCS.cso"); });
 
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT1], "blur_gaussian_float1CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT3], "blur_gaussian_float3CS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT4], "blur_gaussian_float4CS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM1], "blur_gaussian_unorm1CS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM4], "blur_gaussian_unorm4CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_WIDE_FLOAT1], "blur_gaussian_wide_float1CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_WIDE_FLOAT3], "blur_gaussian_wide_float3CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_WIDE_FLOAT4], "blur_gaussian_wide_float4CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_WIDE_UNORM1], "blur_gaussian_wide_unorm1CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_WIDE_UNORM4], "blur_gaussian_wide_unorm4CS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_FLOAT1], "blur_bilateral_float1CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_FLOAT3], "blur_bilateral_float3CS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_FLOAT4], "blur_bilateral_float4CS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM1], "blur_bilateral_unorm1CS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM4], "blur_bilateral_unorm4CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_WIDE_FLOAT1], "blur_bilateral_wide_float1CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_WIDE_FLOAT3], "blur_bilateral_wide_float3CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_WIDE_FLOAT4], "blur_bilateral_wide_float4CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_WIDE_UNORM1], "blur_bilateral_wide_unorm1CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_WIDE_UNORM4], "blur_bilateral_wide_unorm4CS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SSAO], "ssaoCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_HBAO], "hbaoCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SSR_RAYTRACE], "ssr_raytraceCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SSR_RESOLVE], "ssr_resolveCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SSR_TEMPORAL], "ssr_temporalCS.cso"); });
@@ -8537,7 +8550,8 @@ void Postprocess_Blur_Gaussian(
 	const Texture& output,
 	CommandList cmd,
 	int mip_src,
-	int mip_dst
+	int mip_dst,
+	bool wide
 )
 {
 	GraphicsDevice* device = GetDevice();
@@ -8548,21 +8562,23 @@ void Postprocess_Blur_Gaussian(
 	{
 	case FORMAT_R16_UNORM:
 	case FORMAT_R8_UNORM:
-		cs = CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM1; 
+		cs = wide ? CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_WIDE_UNORM1 : CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM1;
 		break;
 	case FORMAT_R16_FLOAT:
 	case FORMAT_R32_FLOAT:
-		cs = CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT1; 
+		cs = wide ? CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_WIDE_FLOAT1 : CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT1;
 		break;
 	case FORMAT_R16G16B16A16_UNORM:
 	case FORMAT_R8G8B8A8_UNORM:
 	case FORMAT_R10G10B10A2_UNORM:
-		cs = CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM4;
+		cs = wide ? CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_WIDE_UNORM4 : CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM4;
 		break;
 	case FORMAT_R11G11B10_FLOAT:
+		cs = wide ? CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_WIDE_FLOAT3 : CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT3;
+		break;
 	case FORMAT_R16G16B16A16_FLOAT:
 	case FORMAT_R32G32B32A32_FLOAT:
-		cs = CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT4;
+		cs = wide ? CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_WIDE_FLOAT4 : CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT4;
 		break;
 	default:
 		assert(0); // implement format!
@@ -8645,7 +8661,8 @@ void Postprocess_Blur_Bilateral(
 	CommandList cmd,
 	float depth_threshold,
 	int mip_src,
-	int mip_dst
+	int mip_dst,
+	bool wide
 )
 {
 	GraphicsDevice* device = GetDevice();
@@ -8657,21 +8674,23 @@ void Postprocess_Blur_Bilateral(
 	{
 	case FORMAT_R16_UNORM:
 	case FORMAT_R8_UNORM:
-		cs = CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM1;
+		cs = wide ? CSTYPE_POSTPROCESS_BLUR_BILATERAL_WIDE_UNORM1 : CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM1;
 		break;
 	case FORMAT_R16_FLOAT:
 	case FORMAT_R32_FLOAT:
-		cs = CSTYPE_POSTPROCESS_BLUR_BILATERAL_FLOAT1;
+		cs = wide ? CSTYPE_POSTPROCESS_BLUR_BILATERAL_WIDE_FLOAT1 : CSTYPE_POSTPROCESS_BLUR_BILATERAL_FLOAT1;
 		break;
 	case FORMAT_R16G16B16A16_UNORM:
 	case FORMAT_R8G8B8A8_UNORM:
 	case FORMAT_R10G10B10A2_UNORM:
-		cs = CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM4;
+		cs = wide ? CSTYPE_POSTPROCESS_BLUR_BILATERAL_WIDE_UNORM4 : CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM4;
 		break;
 	case FORMAT_R11G11B10_FLOAT:
+		cs = wide ? CSTYPE_POSTPROCESS_BLUR_BILATERAL_WIDE_FLOAT3 : CSTYPE_POSTPROCESS_BLUR_BILATERAL_FLOAT3;
+		break;
 	case FORMAT_R16G16B16A16_FLOAT:
 	case FORMAT_R32G32B32A32_FLOAT:
-		cs = CSTYPE_POSTPROCESS_BLUR_BILATERAL_FLOAT4;
+		cs = wide ? CSTYPE_POSTPROCESS_BLUR_BILATERAL_WIDE_FLOAT4 : CSTYPE_POSTPROCESS_BLUR_BILATERAL_FLOAT4;
 		break;
 	default:
 		assert(0); // implement format!
@@ -8803,7 +8822,103 @@ void Postprocess_SSAO(
 	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	device->UnbindUAVs(0, arraysize(uavs), cmd);
 
-	Postprocess_Blur_Bilateral(output, lineardepth, temp, output, cmd, 1.2f);
+	Postprocess_Blur_Bilateral(output, lineardepth_minmax, temp, output, cmd, 1.2f, -1, -1, true);
+
+	wiProfiler::EndRange(prof_range);
+	device->EventEnd(cmd);
+}
+void Postprocess_HBAO(
+	const Texture& lineardepth_minmax,
+	const Texture& temp,
+	const Texture& output,
+	CommandList cmd,
+	float power
+)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("Postprocess_HBAO", cmd);
+	auto prof_range = wiProfiler::BeginRangeGPU("HBAO", cmd);
+
+	device->UnbindResources(TEXSLOT_RENDERPATH_SSAO, 1, cmd);
+
+	device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_HBAO], cmd);
+
+	device->BindResource(CS, &lineardepth_minmax, TEXSLOT_ONDEMAND0, cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	cb.xPPParams0.x = 1;
+	cb.xPPParams0.y = 0;
+	cb.hbao_power = power;
+
+	const CameraComponent& camera = GetCamera();
+	const float FocalLenX = 1.0f / tanf(camera.fov * 0.5f) * ((float)cb.xPPResolution.y / (float)cb.xPPResolution.x);
+	const float FocalLenY = 1.0f / tanf(camera.fov * 0.5f);
+	const float InvFocalLenX = 1.0f / FocalLenX;
+	const float InvFocalLenY = 1.0f / FocalLenY;
+	const float UVToViewAX = 2.0f * InvFocalLenX;
+	const float UVToViewAY = -2.0f * InvFocalLenY;
+	const float UVToViewBX = -1.0f * InvFocalLenX;
+	const float UVToViewBY = 1.0f * InvFocalLenY;
+	cb.xPPParams1.x = UVToViewAX;
+	cb.xPPParams1.y = UVToViewAY;
+	cb.xPPParams1.z = UVToViewBX;
+	cb.xPPParams1.w = UVToViewBY;
+
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	// horizontal pass:
+	{
+		device->BindResource(CS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND1, cmd);
+		const GPUResource* uavs[] = {
+			&temp,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(cb.xPPResolution.x + POSTPROCESS_HBAO_THREADCOUNT - 1) / POSTPROCESS_HBAO_THREADCOUNT,
+			cb.xPPResolution.y,
+			1,
+			cmd
+			);
+
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+	}
+
+	// vertical pass:
+	{
+		cb.xPPParams0.x = 0;
+		cb.xPPParams0.y = 1;
+		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+		device->BindResource(CS, &temp, TEXSLOT_ONDEMAND1, cmd);
+		const GPUResource* uavs[] = {
+			&output,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			cb.xPPResolution.x,
+			(cb.xPPResolution.y + POSTPROCESS_HBAO_THREADCOUNT - 1) / POSTPROCESS_HBAO_THREADCOUNT,
+			1,
+			cmd
+			);
+
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->UnbindResources(TEXSLOT_ONDEMAND1, 1, cmd);
+	}
+
+	Postprocess_Blur_Bilateral(output, lineardepth_minmax, temp, output, cmd, 1.2f, -1, -1, true);
 
 	wiProfiler::EndRange(prof_range);
 	device->EventEnd(cmd);

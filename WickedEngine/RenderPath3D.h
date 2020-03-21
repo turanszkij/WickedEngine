@@ -27,6 +27,7 @@ private:
 
 	bool fxaaEnabled = false;
 	bool ssaoEnabled = false;
+	bool hbaoEnabled = false;
 	bool ssrEnabled = false;
 	bool reflectionsEnabled = true;
 	bool shadowsEnabled = true;
@@ -50,7 +51,7 @@ private:
 	uint32_t msaaSampleCount = 1;
 
 protected:
-	wiGraphics::Texture rtReflection; // conains the scene rendered for planar reflections
+	wiGraphics::Texture rtReflection; // contains the scene rendered for planar reflections
 	wiGraphics::Texture rtSSR; // standard screen-space reflection results
 	wiGraphics::Texture rtSceneCopy; // contains the rendered scene that can be fed into transparent pass for distortion effect
 	wiGraphics::Texture rtSceneCopy_tmp; // temporary for gaussian mipchain
@@ -131,6 +132,8 @@ public:
 	constexpr float getChromaticAberrationAmount() const { return chromaticAberrationAmount; }
 
 	constexpr bool getSSAOEnabled() const { return ssaoEnabled; }
+	constexpr bool getHBAOEnabled() const { return hbaoEnabled; }
+	constexpr bool getAOEnabled() const { return getSSAOEnabled() || getHBAOEnabled(); }
 	constexpr bool getSSREnabled() const { return ssrEnabled; }
 	constexpr bool getShadowsEnabled() const { return shadowsEnabled; }
 	constexpr bool getReflectionsEnabled() const { return reflectionsEnabled; }
@@ -169,7 +172,8 @@ public:
 	constexpr void setSSAOPower(float value) { ssaoPower = value; }
 	constexpr void setChromaticAberrationAmount(float value) { chromaticAberrationAmount = value; }
 
-	constexpr void setSSAOEnabled(bool value){ ssaoEnabled = value; }
+	constexpr void setSSAOEnabled(bool value) { ssaoEnabled = value; }
+	constexpr void setHBAOEnabled(bool value){ hbaoEnabled = value; }
 	constexpr void setSSREnabled(bool value){ ssrEnabled = value; }
 	constexpr void setShadowsEnabled(bool value){ shadowsEnabled = value; }
 	constexpr void setReflectionsEnabled(bool value){ reflectionsEnabled = value; }

@@ -174,7 +174,8 @@ namespace wiRenderer
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		int mip_src = -1,
-		int mip_dst = -1
+		int mip_dst = -1,
+		bool wide = false
 	);
 	void Postprocess_Blur_Bilateral(
 		const wiGraphics::Texture& input,
@@ -184,7 +185,8 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd,
 		float depth_threshold = 1.0f,
 		int mip_src = -1,
-		int mip_dst = -1
+		int mip_dst = -1,
+		bool wide = false
 	);
 	void Postprocess_SSAO(
 		const wiGraphics::Texture& depthbuffer, 
@@ -197,6 +199,13 @@ namespace wiRenderer
 		uint32_t samplecount = 16,
 		float power = 2.0f
 	);
+	void Postprocess_HBAO(
+		const wiGraphics::Texture& lineardepth_minmax,
+		const wiGraphics::Texture& temp,
+		const wiGraphics::Texture& output,
+		wiGraphics::CommandList cmd,
+		float power = 2.0f
+		);
 	void Postprocess_SSR(
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& depthbuffer,

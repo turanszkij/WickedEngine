@@ -24,6 +24,12 @@ CBUFFER(PostProcessCB, CBSLOT_RENDERER_POSTPROCESS)
 #define ssao_samplecount xPPParams0.y
 #define ssao_power xPPParams0.z
 
+static const uint POSTPROCESS_HBAO_THREADCOUNT = 256;
+#define hbao_direction xPPParams0.xy
+#define hbao_power xPPParams0.z
+#define hbao_uv_to_view_A xPPParams1.xy
+#define hbao_uv_to_view_B xPPParams1.zw
+
 static const uint MOTIONBLUR_TILESIZE = 32;
 #define motionblur_strength xPPParams0.x
 

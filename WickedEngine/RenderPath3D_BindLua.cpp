@@ -26,6 +26,7 @@ Luna<RenderPath3D_BindLua>::FunctionType RenderPath3D_BindLua::methods[] = {
 	lunamethod(RenderPath_BindLua, SetLayerMask),
 
 	lunamethod(RenderPath3D_BindLua, SetSSAOEnabled),
+	lunamethod(RenderPath3D_BindLua, SetHBAOEnabled),
 	lunamethod(RenderPath3D_BindLua, SetSSREnabled),
 	lunamethod(RenderPath3D_BindLua, SetShadowsEnabled),
 	lunamethod(RenderPath3D_BindLua, SetReflectionsEnabled),
@@ -66,6 +67,19 @@ int RenderPath3D_BindLua::SetSSAOEnabled(lua_State* L)
 		((RenderPath3D*)component)->setSSAOEnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetSSAOEnabled(bool value) not enough arguments!");
+	return 0;
+}
+int RenderPath3D_BindLua::SetHBAOEnabled(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetHBAOEnabled(bool value) component is null!");
+		return 0;
+	}
+	if (wiLua::SGetArgCount(L) > 0)
+		((RenderPath3D*)component)->setHBAOEnabled(wiLua::SGetBool(L, 1));
+	else
+		wiLua::SError(L, "SetHBAOEnabled(bool value) not enough arguments!");
 	return 0;
 }
 int RenderPath3D_BindLua::SetSSREnabled(lua_State* L)

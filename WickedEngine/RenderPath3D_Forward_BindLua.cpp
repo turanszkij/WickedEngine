@@ -25,6 +25,7 @@ Luna<RenderPath3D_Forward_BindLua>::FunctionType RenderPath3D_Forward_BindLua::m
 	lunamethod(RenderPath_BindLua, SetLayerMask),
 
 	lunamethod(RenderPath3D_BindLua, SetSSAOEnabled),
+	lunamethod(RenderPath3D_BindLua, SetHBAOEnabled),
 	lunamethod(RenderPath3D_BindLua, SetSSREnabled),
 	lunamethod(RenderPath3D_BindLua, SetShadowsEnabled),
 	lunamethod(RenderPath3D_BindLua, SetReflectionsEnabled),

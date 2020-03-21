@@ -49,7 +49,7 @@ Controller feedback (vibration, LED)
 Backlog: log,input,scripting
 Gamma correct, HDR rendering
 Resource Manager
-Screen Space Ambient Occlusion
+Screen Space Ambient Occlusion (SSAO, HBAO)
 Screen Space Reflections
 Skin shader (Subsurface scattering)
 Stencil layering

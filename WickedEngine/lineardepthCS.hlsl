@@ -4,12 +4,12 @@
 
 TEXTURE2D(input, float, TEXSLOT_ONDEMAND0);
 
-RWTEXTURE2D(output_fullres, unorm float, 0);
-RWTEXTURE2D(output_minmax_mip0, unorm float2, 1);
-RWTEXTURE2D(output_minmax_mip1, unorm float2, 2);
-RWTEXTURE2D(output_minmax_mip2, unorm float2, 3);
-RWTEXTURE2D(output_minmax_mip3, unorm float2, 4);
-RWTEXTURE2D(output_minmax_mip4, unorm float2, 5);
+RWTEXTURE2D(output_fullres, float, 0);
+RWTEXTURE2D(output_minmax_mip0, float2, 1);
+RWTEXTURE2D(output_minmax_mip1, float2, 2);
+RWTEXTURE2D(output_minmax_mip2, float2, 3);
+RWTEXTURE2D(output_minmax_mip3, float2, 4);
+RWTEXTURE2D(output_minmax_mip4, float2, 5);
 
 groupshared float tile_min[POSTPROCESS_LINEARDEPTH_BLOCKSIZE][POSTPROCESS_LINEARDEPTH_BLOCKSIZE];
 groupshared float tile_max[POSTPROCESS_LINEARDEPTH_BLOCKSIZE][POSTPROCESS_LINEARDEPTH_BLOCKSIZE];

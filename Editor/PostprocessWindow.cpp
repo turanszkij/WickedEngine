@@ -61,10 +61,20 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	});
 	ppWindow->AddWidget(ssaoCheckBox);
 
+	hbaoCheckBox = new wiCheckBox("HBAO: ");
+	hbaoCheckBox->SetTooltip("Special optimized version of Screen Space Ambient Occlusion. Range and Samplecount parameters don't apply.");
+	hbaoCheckBox->SetScriptTip("RenderPath3D::SetSSAOEnabled(bool value)");
+	hbaoCheckBox->SetPos(XMFLOAT2(x + 100, y));
+	hbaoCheckBox->SetCheck(component->getHBAOEnabled());
+	hbaoCheckBox->OnClick([&](wiEventArgs args) {
+		component->setHBAOEnabled(args.bValue);
+		});
+	ppWindow->AddWidget(hbaoCheckBox);
+
 	ssaoRangeSlider = new wiSlider(0, 2, 1, 1000, "Range: ");
 	ssaoRangeSlider->SetTooltip("Set SSAO Detection range.");
 	ssaoRangeSlider->SetSize(XMFLOAT2(100, 20));
-	ssaoRangeSlider->SetPos(XMFLOAT2(x + 100, y));
+	ssaoRangeSlider->SetPos(XMFLOAT2(x + 100, y += step));
 	ssaoRangeSlider->SetValue(component->getSSAORange());
 	ssaoRangeSlider->OnSlide([&](wiEventArgs args) {
 		component->setSSAORange(args.fValue);
