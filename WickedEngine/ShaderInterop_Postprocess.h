@@ -24,7 +24,7 @@ CBUFFER(PostProcessCB, CBSLOT_RENDERER_POSTPROCESS)
 #define ssao_samplecount xPPParams0.y
 #define ssao_power xPPParams0.z
 
-static const uint POSTPROCESS_HBAO_THREADCOUNT = 256;
+static const uint POSTPROCESS_HBAO_THREADCOUNT = 320;
 #define hbao_direction xPPParams0.xy
 #define hbao_power xPPParams0.z
 #define hbao_uv_to_view_A xPPParams1.xy

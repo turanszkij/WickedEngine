@@ -37,23 +37,11 @@ float Falloff(float sampleId)
 	return exp(-KERNEL_FALLOFF * r * r);
 }
 
-float2 MinDiff(float2 P, float2 Pr, float2 Pl)
-{
-	float2 V1 = Pr - P;
-	float2 V2 = P - Pl;
-	return (dot(V1, V1) < dot(V2, V2)) ? V1 : V2;
-}
-
-// Compute the HBAO contribution in a given direction on screen by fetching 2D 
+// Compute the HBAO contribution in a given direction on screen by fetching 2D (from Nvidia DX11 SDK)
 // view-space coordinates available in shared memory:
 // - (X,Z) for the horizontal directions (approximating Y by a constant).
 // - (Y,Z) for the vertical directions (approximating X by a constant).
-void IntegrateDirection(inout float ao,
-	float2 P,
-	float tanT,
-	int threadId,
-	int X0,
-	int deltaX)
+void IntegrateDirection(inout float ao, float2 P, float tanT, int threadId, int deltaX)
 {
 	float tanH = tanT;
 	float sinH = TanToSin(tanH);
@@ -62,7 +50,7 @@ void IntegrateDirection(inout float ao,
 	[unroll]
 	for (int sampleId = 0; sampleId < NUM_STEPS; ++sampleId)
 	{
-		float2 S = cache[threadId + sampleId * deltaX + X0];
+		float2 S = cache[threadId + sampleId * deltaX + deltaX];
 		float2 V = S - P;
 		float tanS = Tangent(V);
 		float d2 = dot(V, V);
@@ -79,16 +67,6 @@ void IntegrateDirection(inout float ao,
 			sinH = sinS;
 		}
 	}
-}
-
-// Bias tangent angle and compute HBAO in the +X/-X or +Y/-Y directions.
-float ComputeHBAO(float2 P, float2 T, int centerId)
-{
-	float ao = 0;
-	float tanT = Tangent(T);
-	IntegrateDirection(ao, P, tanT + TAN_ANGLE_BIAS, centerId, STEP_SIZE, STEP_SIZE);
-	IntegrateDirection(ao, P, -tanT + TAN_ANGLE_BIAS, centerId, -STEP_SIZE, -STEP_SIZE);
-	return ao;
 }
 
 [numthreads(POSTPROCESS_HBAO_THREADCOUNT, 1, 1)]
@@ -119,20 +97,23 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	GroupMemoryBarrierWithGroupSync();
 
 	const uint2 pixel = tile_start + groupIndex * hbao_direction;
-	if (pixel.x >= xPPResolution.x || pixel.y >= xPPResolution.y)
+	const int center = TILE_BORDER + groupIndex;
+	if (pixel.x >= xPPResolution.x || pixel.y >= xPPResolution.y || cache[center].y >= g_xCamera_ZFarP - 0.99)
 	{
 		return;
 	}
 
-	const int center = TILE_BORDER + groupIndex;
+	const float2 sample_left = cache[center - 1];
+	const float2 sample_center = cache[center];
+	const float2 sample_right = cache[center + 1];
 
-	float2 sample_left = cache[center - 1];
-	float2 sample_center = cache[center];
-	float2 sample_right = cache[center + 1];
+	const float2 V1 = sample_right - sample_center;
+	const float2 V2 = sample_center - sample_left;
+	const float tangent = Tangent((dot(V1, V1) < dot(V2, V2)) ? V1 : V2);
 
-	float2 T = MinDiff(sample_center, sample_right, sample_left);
-
-	float ao = ComputeHBAO(sample_center, T, center);
+	float ao = 0;
+	IntegrateDirection(ao, sample_center, tangent + TAN_ANGLE_BIAS, center, STEP_SIZE);
+	IntegrateDirection(ao, sample_center, -tangent + TAN_ANGLE_BIAS, center, -STEP_SIZE);
 
 	if (!horizontal)
 	{
