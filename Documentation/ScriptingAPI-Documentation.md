@@ -626,7 +626,11 @@ It can hold Sprites and Fonts and can sort them by layers, update and render the
 A 3D scene can either be rendered by a Forward or Deferred render path, or path tracing. 
 It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - [void-constructor]RenderPath3D()
-- SetSSAOEnabled(bool value)
+- SetAO(int value)  -- Sets up the ambient occlusion effect (possible values below)
+- AO_DISABLED : int  -- turn off AO computation (use in SetAO() function)
+- AO_SSAO : int  -- enable simple brute force screen space ambient occlusion (use in SetAO() function)
+- AO_HBAO : int  -- enable horizon based screen space ambient occlusion (use in SetAO() function)
+- AO_MSAO : int  -- enable multi scale screen space ambient occlusion (use in SetAO() function)
 - SetHBAOEnabled(bool value)
 - SetSSREnabled(bool value)
 - SetShadowsEnabled(bool value)

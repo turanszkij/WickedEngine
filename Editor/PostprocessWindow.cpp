@@ -51,55 +51,29 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	});
 	ppWindow->AddWidget(lightShaftsCheckBox);
 
-	ssaoCheckBox = new wiCheckBox("SSAO: ");
-	ssaoCheckBox->SetTooltip("Enable Screen Space Ambient Occlusion.");
-	ssaoCheckBox->SetScriptTip("RenderPath3D::SetSSAOEnabled(bool value)");
-	ssaoCheckBox->SetPos(XMFLOAT2(x, y += step));
-	ssaoCheckBox->SetCheck(component->getSSAOEnabled());
-	ssaoCheckBox->OnClick([&](wiEventArgs args) {
-		component->setSSAOEnabled(args.bValue);
+	aoComboBox = new wiComboBox("AO: ");
+	aoComboBox->SetTooltip("Choose Ambient Occlusion type");
+	aoComboBox->SetScriptTip("RenderPath3D::SetSSAOEnabled(bool value)");
+	aoComboBox->SetPos(XMFLOAT2(x, y += step));
+	aoComboBox->AddItem("Disabled");
+	aoComboBox->AddItem("SSAO");
+	aoComboBox->AddItem("HBAO");
+	aoComboBox->AddItem("MSAO");
+	aoComboBox->SetSelected(component->getAO());
+	aoComboBox->OnSelect([&](wiEventArgs args) {
+		component->setAO((RenderPath3D::AO)args.iValue);
 	});
-	ppWindow->AddWidget(ssaoCheckBox);
+	ppWindow->AddWidget(aoComboBox);
 
-	hbaoCheckBox = new wiCheckBox("HBAO: ");
-	hbaoCheckBox->SetTooltip("Special optimized version of Screen Space Ambient Occlusion. Range and Samplecount parameters don't apply.");
-	hbaoCheckBox->SetScriptTip("RenderPath3D::SetSSAOEnabled(bool value)");
-	hbaoCheckBox->SetPos(XMFLOAT2(x + 100, y));
-	hbaoCheckBox->SetCheck(component->getHBAOEnabled());
-	hbaoCheckBox->OnClick([&](wiEventArgs args) {
-		component->setHBAOEnabled(args.bValue);
+	aoPowerSlider = new wiSlider(0.25f, 8.0f, 2, 1000, "Power: ");
+	aoPowerSlider->SetTooltip("Set SSAO Power. Higher values produce darker, more pronounced effect");
+	aoPowerSlider->SetSize(XMFLOAT2(100, 20));
+	aoPowerSlider->SetPos(XMFLOAT2(x + 100, y += step));
+	aoPowerSlider->SetValue((float)component->getAOPower());
+	aoPowerSlider->OnSlide([&](wiEventArgs args) {
+		component->setAOPower(args.fValue);
 		});
-	ppWindow->AddWidget(hbaoCheckBox);
-
-	ssaoRangeSlider = new wiSlider(0, 2, 1, 1000, "Range: ");
-	ssaoRangeSlider->SetTooltip("Set SSAO Detection range.");
-	ssaoRangeSlider->SetSize(XMFLOAT2(100, 20));
-	ssaoRangeSlider->SetPos(XMFLOAT2(x + 100, y += step));
-	ssaoRangeSlider->SetValue(component->getSSAORange());
-	ssaoRangeSlider->OnSlide([&](wiEventArgs args) {
-		component->setSSAORange(args.fValue);
-	});
-	ppWindow->AddWidget(ssaoRangeSlider);
-
-	ssaoSampleCountSlider = new wiSlider(9, 64, 16, 64-9, "SampleCount: ");
-	ssaoSampleCountSlider->SetTooltip("Set SSAO Sample Count. Higher values produce better quality, but slower to compute");
-	ssaoSampleCountSlider->SetSize(XMFLOAT2(100, 20));
-	ssaoSampleCountSlider->SetPos(XMFLOAT2(x + 100, y += step));
-	ssaoSampleCountSlider->SetValue((float)component->getSSAOSampleCount());
-	ssaoSampleCountSlider->OnSlide([&](wiEventArgs args) {
-		component->setSSAOSampleCount((UINT)args.iValue);
-	});
-	ppWindow->AddWidget(ssaoSampleCountSlider);
-
-	ssaoPowerSlider = new wiSlider(0.25f, 8.0f, 2, 1000, "Power: ");
-	ssaoPowerSlider->SetTooltip("Set SSAO Power. Higher values produce darker, more pronounced effect");
-	ssaoPowerSlider->SetSize(XMFLOAT2(100, 20));
-	ssaoPowerSlider->SetPos(XMFLOAT2(x + 100, y += step));
-	ssaoPowerSlider->SetValue((float)component->getSSAOPower());
-	ssaoPowerSlider->OnSlide([&](wiEventArgs args) {
-		component->setSSAOPower(args.fValue);
-		});
-	ppWindow->AddWidget(ssaoPowerSlider);
+	ppWindow->AddWidget(aoPowerSlider);
 
 	ssrCheckBox = new wiCheckBox("SSR: ");
 	ssrCheckBox->SetTooltip("Enable Screen Space Reflections.");

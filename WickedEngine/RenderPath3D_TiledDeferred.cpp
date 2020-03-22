@@ -93,7 +93,7 @@ void RenderPath3D_TiledDeferred::Render() const
 
 		RenderLinearDepth(cmd);
 
-		RenderSSAO(cmd);
+		RenderAO(cmd);
 	});
 
 	cmd = device->BeginCommandList();
@@ -104,7 +104,7 @@ void RenderPath3D_TiledDeferred::Render() const
 
 		RenderDecals(cmd);
 
-		device->BindResource(CS, getAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, cmd);
+		device->BindResource(CS, getAOEnabled() ? &rtAO : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_AO, cmd);
 		device->BindResource(CS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
 
 

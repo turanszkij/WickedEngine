@@ -2,7 +2,7 @@
 #include "cullingShaderHF.hlsli"
 #include "lightingHF.hlsli"
 
-TEXTURE2D(texture_ssao, float, TEXSLOT_RENDERPATH_SSAO);
+TEXTURE2D(texture_ao, float, TEXSLOT_RENDERPATH_AO);
 TEXTURE2D(texture_ssr, float4, TEXSLOT_RENDERPATH_SSR);
 
 STRUCTUREDBUFFER(in_Frustums, Frustum, SBSLOT_TILEFRUSTUMS);
@@ -501,7 +501,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		float4 ssr = texture_ssr.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
 		lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb, ssr.a);
 
-		float ssao = texture_ssao.SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
+		float ssao = texture_ao.SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
 		surface.occlusion *= ssao;
 
 		LightingPart combined_lighting = CombineLighting(surface, lighting);

@@ -9,6 +9,15 @@
 class RenderPath3D :
 	public RenderPath2D
 {
+public:
+	enum AO 
+	{
+		AO_DISABLED,	// no ambient occlusion
+		AO_SSAO,		// simple brute force screen space ambient occlusion
+		AO_HBAO,		// horizon based screen space ambient occlusion
+		AO_MSAO,		// multi scale screen space ambient occlusion
+		// Don't alter order! (bound to lua manually)
+	};
 private:
 	float exposure = 1.0f;
 	float bloomThreshold = 1.0f;
@@ -20,14 +29,13 @@ private:
 	float outlineThreshold = 0.2f;
 	float outlineThickness = 1.0f;
 	XMFLOAT4 outlineColor = XMFLOAT4(0, 0, 0, 1);
-	float ssaoRange = 1.0f;
-	uint32_t ssaoSampleCount = 16;
-	float ssaoPower = 2.0f;
+	float aoRange = 1.0f;
+	uint32_t aoSampleCount = 16;
+	float aoPower = 2.0f;
 	float chromaticAberrationAmount = 2.0f;
 
+	AO ao = AO_DISABLED;
 	bool fxaaEnabled = false;
-	bool ssaoEnabled = false;
-	bool hbaoEnabled = false;
 	bool ssrEnabled = false;
 	bool reflectionsEnabled = true;
 	bool shadowsEnabled = true;
@@ -62,7 +70,7 @@ protected:
 	wiGraphics::Texture rtTemporalAA[2]; // temporal AA history buffer
 	wiGraphics::Texture rtBloom; // contains the bright parts of the image + mipchain
 	wiGraphics::Texture rtBloom_tmp; // temporary for bloom downsampling
-	wiGraphics::Texture rtSSAO[2]; // ping-pong when rendering and blurring SSAO
+	wiGraphics::Texture rtAO; // full res AO
 	wiGraphics::Texture rtSun[2]; // 0: sun render target used for lightshafts (can be MSAA), 1: radial blurred lightshafts
 	wiGraphics::Texture rtSun_resolved; // sun render target, but the resolved version if MSAA is enabled
 
@@ -103,7 +111,7 @@ protected:
 	virtual void RenderShadows(wiGraphics::CommandList cmd) const;
 
 	virtual void RenderLinearDepth(wiGraphics::CommandList cmd) const;
-	virtual void RenderSSAO(wiGraphics::CommandList cmd) const;
+	virtual void RenderAO(wiGraphics::CommandList cmd) const;
 	virtual void RenderSSR(const wiGraphics::Texture& gbuffer1, const wiGraphics::Texture& gbuffer2, wiGraphics::CommandList cmd) const;
 	virtual void DownsampleDepthBuffer(wiGraphics::CommandList cmd) const;
 	virtual void RenderOutline(wiGraphics::CommandList cmd) const;
@@ -126,14 +134,13 @@ public:
 	constexpr float getOutlineThreshold() const { return outlineThreshold; }
 	constexpr float getOutlineThickness() const { return outlineThickness; }
 	constexpr XMFLOAT4 getOutlineColor() const { return outlineColor; }
-	constexpr float getSSAORange() const { return ssaoRange; }
-	constexpr uint32_t getSSAOSampleCount() const { return ssaoSampleCount; }
-	constexpr float getSSAOPower() const { return ssaoPower; }
+	constexpr float getAORange() const { return aoRange; }
+	constexpr uint32_t getAOSampleCount() const { return aoSampleCount; }
+	constexpr float getAOPower() const { return aoPower; }
 	constexpr float getChromaticAberrationAmount() const { return chromaticAberrationAmount; }
 
-	constexpr bool getSSAOEnabled() const { return ssaoEnabled; }
-	constexpr bool getHBAOEnabled() const { return hbaoEnabled; }
-	constexpr bool getAOEnabled() const { return getSSAOEnabled() || getHBAOEnabled(); }
+	constexpr bool getAOEnabled() const { return ao != AO_DISABLED; }
+	constexpr AO getAO() const { return ao; }
 	constexpr bool getSSREnabled() const { return ssrEnabled; }
 	constexpr bool getShadowsEnabled() const { return shadowsEnabled; }
 	constexpr bool getReflectionsEnabled() const { return reflectionsEnabled; }
@@ -167,13 +174,12 @@ public:
 	constexpr void setOutlineThreshold(float value) { outlineThreshold = value; }
 	constexpr void setOutlineThickness(float value) { outlineThickness = value; }
 	constexpr void setOutlineColor(const XMFLOAT4& value) { outlineColor = value; }
-	constexpr void setSSAORange(float value) { ssaoRange = value; }
-	constexpr void setSSAOSampleCount(uint32_t value) { ssaoSampleCount = value; }
-	constexpr void setSSAOPower(float value) { ssaoPower = value; }
+	constexpr void setAORange(float value) { aoRange = value; }
+	constexpr void setAOSampleCount(uint32_t value) { aoSampleCount = value; }
+	constexpr void setAOPower(float value) { aoPower = value; }
 	constexpr void setChromaticAberrationAmount(float value) { chromaticAberrationAmount = value; }
 
-	constexpr void setSSAOEnabled(bool value) { ssaoEnabled = value; }
-	constexpr void setHBAOEnabled(bool value){ hbaoEnabled = value; }
+	constexpr void setAO(AO value) { ao = value; }
 	constexpr void setSSREnabled(bool value){ ssrEnabled = value; }
 	constexpr void setShadowsEnabled(bool value){ shadowsEnabled = value; }
 	constexpr void setReflectionsEnabled(bool value){ reflectionsEnabled = value; }

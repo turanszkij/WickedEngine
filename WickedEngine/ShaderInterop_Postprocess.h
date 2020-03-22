@@ -30,6 +30,26 @@ static const uint POSTPROCESS_HBAO_THREADCOUNT = 320;
 #define hbao_uv_to_view_A xPPParams1.xy
 #define hbao_uv_to_view_B xPPParams1.zw
 
+static const uint POSTPROCESS_MSAO_BLOCKSIZE = 16;
+CBUFFER(MSAOCB, CBSLOT_RENDERER_POSTPROCESS)
+{
+	float4 xInvThicknessTable[3];
+	float4 xSampleWeightTable[3];
+	float2 xInvSliceDimension;
+	float xRejectFadeoff;
+	float xRcpAccentuation;
+};
+//#define MSAO_SAMPLE_EXHAUSTIVELY
+CBUFFER(MSAO_UPSAMPLECB, CBSLOT_RENDERER_POSTPROCESS)
+{
+	float2 InvLowResolution;
+	float2 InvHighResolution;
+	float NoiseFilterStrength;
+	float StepSize;
+	float kBlurTolerance;
+	float kUpsampleTolerance;
+};
+
 static const uint MOTIONBLUR_TILESIZE = 32;
 #define motionblur_strength xPPParams0.x
 

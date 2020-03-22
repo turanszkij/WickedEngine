@@ -150,7 +150,7 @@ void RenderPath3D_Forward::Render() const
 
 		RenderLinearDepth(cmd);
 
-		RenderSSAO(cmd);
+		RenderAO(cmd);
 	});
 
 	cmd = device->BeginCommandList();
@@ -170,7 +170,7 @@ void RenderPath3D_Forward::Render() const
 			device->BindViewports(1, &vp, cmd);
 
 			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
-			device->BindResource(PS, getAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, cmd);
+			device->BindResource(PS, getAOEnabled() ? &rtAO : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_AO, cmd);
 			device->BindResource(PS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
 			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_FORWARD, true, true);
 			wiRenderer::DrawSky(cmd);

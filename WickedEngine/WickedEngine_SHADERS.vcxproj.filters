@@ -708,9 +708,6 @@
     <FxCompile Include="bvh_primitivesCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="ssaoCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="blur_gaussian_float4CS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -873,9 +870,6 @@
     <FxCompile Include="outlinePS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="hbaoCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="blur_bilateral_wide_float1CS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -910,6 +904,36 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="blur_bilateral_wide_float3CS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="hbaoCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="msaoCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="ssaoCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="msao_preparedepthbuffers1CS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="msao_preparedepthbuffers2CS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="msao_interleaveCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="msao_blurupsampleCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="msao_blurupsampleCS_premin_blendout.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="msao_blurupsampleCS_premin.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="msao_blurupsampleCS_blendout.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

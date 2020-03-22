@@ -100,12 +100,10 @@ void RenderPath3D::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Format = FORMAT_R8_UNORM;
-		desc.Width = wiRenderer::GetInternalResolution().x / 2;
-		desc.Height = wiRenderer::GetInternalResolution().y / 2;
-		device->CreateTexture(&desc, nullptr, &rtSSAO[0]);
-		device->SetName(&rtSSAO[0], "rtSSAO[0]");
-		device->CreateTexture(&desc, nullptr, &rtSSAO[1]);
-		device->SetName(&rtSSAO[1], "rtSSAO[1]");
+		desc.Width = wiRenderer::GetInternalResolution().x;
+		desc.Height = wiRenderer::GetInternalResolution().y;
+		device->CreateTexture(&desc, nullptr, &rtAO);
+		device->SetName(&rtAO, "rtAO");
 	}
 	{
 		TextureDesc desc;
@@ -426,31 +424,45 @@ void RenderPath3D::RenderLinearDepth(CommandList cmd) const
 {
 	wiRenderer::Postprocess_Lineardepth(depthBuffer_Copy, rtLinearDepth, rtLinearDepth_minmax, cmd);
 }
-void RenderPath3D::RenderSSAO(CommandList cmd) const
+void RenderPath3D::RenderAO(CommandList cmd) const
 {
-	if (getHBAOEnabled())
+	wiRenderer::GetDevice()->UnbindResources(TEXSLOT_RENDERPATH_AO, 1, cmd);
+
+	if (getAOEnabled())
 	{
-		wiRenderer::Postprocess_HBAO(
-			rtLinearDepth_minmax,
-			rtSSAO[1],
-			rtSSAO[0],
-			cmd,
-			getSSAOPower()
-			);
-	}
-	else if(getSSAOEnabled())
-	{
-		wiRenderer::Postprocess_SSAO(
-			depthBuffer_Copy,
-			rtLinearDepth,
-			rtLinearDepth_minmax,
-			rtSSAO[1],
-			rtSSAO[0],
-			cmd,
-			getSSAORange(),
-			getSSAOSampleCount(),
-			getSSAOPower()
-			);
+		switch (getAO())
+		{
+		case AO_SSAO:
+			wiRenderer::Postprocess_SSAO(
+				depthBuffer_Copy,
+				rtLinearDepth,
+				rtLinearDepth_minmax,
+				rtAO,
+				cmd,
+				getAORange(),
+				getAOSampleCount(),
+				getAOPower()
+				);
+			break;
+		case AO_HBAO:
+			wiRenderer::Postprocess_HBAO(
+				rtLinearDepth,
+				rtLinearDepth_minmax,
+				rtAO,
+				cmd,
+				getAOPower()
+				);
+			break;
+		case AO_MSAO:
+			wiRenderer::Postprocess_MSAO(
+				rtLinearDepth,
+				rtLinearDepth_minmax,
+				rtAO,
+				cmd,
+				getAOPower()
+				);
+			break;
+		}
 	}
 }
 void RenderPath3D::RenderSSR(const Texture& gbuffer1, const Texture& gbuffer2, CommandList cmd) const

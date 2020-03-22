@@ -8,6 +8,7 @@ class wiLabel;
 class wiCheckBox;
 class wiSlider;
 class wiButton;
+class wiComboBox;
 
 class PostprocessWindow
 {
@@ -22,11 +23,8 @@ public:
 	wiSlider*	exposureSlider;
 	wiCheckBox* lensFlareCheckBox;
 	wiCheckBox* lightShaftsCheckBox;
-	wiCheckBox* ssaoCheckBox;
-	wiCheckBox* hbaoCheckBox;
-	wiSlider*	ssaoRangeSlider;
-	wiSlider*	ssaoSampleCountSlider;
-	wiSlider*	ssaoPowerSlider;
+	wiComboBox* aoComboBox;
+	wiSlider*	aoPowerSlider;
 	wiCheckBox* ssrCheckBox;
 	wiCheckBox* sssCheckBox;
 	wiCheckBox* eyeAdaptionCheckBox;

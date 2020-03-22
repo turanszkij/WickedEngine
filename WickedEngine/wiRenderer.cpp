@@ -1345,6 +1345,14 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_WIDE_UNORM4], "blur_bilateral_wide_unorm4CS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SSAO], "ssaoCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_HBAO], "hbaoCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MSAO_PREPAREDEPTHBUFFERS1], "msao_preparedepthbuffers1CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MSAO_PREPAREDEPTHBUFFERS2], "msao_preparedepthbuffers2CS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MSAO_INTERLEAVE], "msao_interleaveCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MSAO], "msaoCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MSAO_BLURUPSAMPLE], "msao_blurupsampleCS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MSAO_BLURUPSAMPLE_BLENDOUT], "msao_blurupsampleCS_blendout.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MSAO_BLURUPSAMPLE_PREMIN], "msao_blurupsampleCS_premin.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_MSAO_BLURUPSAMPLE_PREMIN_BLENDOUT], "msao_blurupsampleCS_premin_blendout.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SSR_RAYTRACE], "ssr_raytraceCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SSR_RESOLVE], "ssr_resolveCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_SSR_TEMPORAL], "ssr_temporalCS.cso"); });
@@ -2152,6 +2160,14 @@ void LoadBuffers()
 	bd.ByteWidth = sizeof(PostProcessCB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_POSTPROCESS]);
 	device->SetName(&constantBuffers[CBTYPE_POSTPROCESS], "PostProcessCB");
+
+	bd.ByteWidth = sizeof(MSAOCB);
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_POSTPROCESS_MSAO]);
+	device->SetName(&constantBuffers[CBTYPE_POSTPROCESS_MSAO], "MSAOCB");
+
+	bd.ByteWidth = sizeof(MSAO_UPSAMPLECB);
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_POSTPROCESS_MSAO_UPSAMPLE]);
+	device->SetName(&constantBuffers[CBTYPE_POSTPROCESS_MSAO_UPSAMPLE], "MSAO_UPSAMPLECB");
 
 	bd.ByteWidth = sizeof(LensFlareCB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_LENSFLARE]);
@@ -8773,7 +8789,6 @@ void Postprocess_SSAO(
 	const Texture& depthbuffer,
 	const Texture& lineardepth,
 	const Texture& lineardepth_minmax,
-	const Texture& temp,
 	const Texture& output,
 	CommandList cmd,
 	float range,
@@ -8786,15 +8801,29 @@ void Postprocess_SSAO(
 	device->EventBegin("Postprocess_SSAO", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("SSAO", cmd);
 
-	device->UnbindResources(TEXSLOT_RENDERPATH_SSAO, 1, cmd);
+	static TextureDesc saved_desc;
+	static Texture temp0;
+	static Texture temp1;
+
+	const TextureDesc& lineardepth_desc = lineardepth.GetDesc();
+	if (saved_desc.Width != lineardepth_desc.Width || saved_desc.Height != lineardepth_desc.Height)
+	{
+		saved_desc = lineardepth_desc; // <- this must already have SRV and UAV request flags set up!
+
+		TextureDesc desc = saved_desc;
+		desc.Format = FORMAT_R8_UNORM;
+		desc.Width = (desc.Width + 1) / 2;
+		desc.Height = (desc.Height + 1) / 2;
+		device->CreateTexture(&desc, nullptr, &temp0);
+		device->CreateTexture(&desc, nullptr, &temp1);
+	}
 
 	device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_SSAO], cmd);
 
 	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 	device->BindResource(CS, &lineardepth_minmax, TEXSLOT_ONDEMAND0, cmd);
 
-	const TextureDesc& desc = output.GetDesc();
+	const TextureDesc& desc = temp0.GetDesc();
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width;
@@ -8808,7 +8837,7 @@ void Postprocess_SSAO(
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
-		&output,
+		&temp0,
 	};
 	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
@@ -8822,14 +8851,15 @@ void Postprocess_SSAO(
 	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	device->UnbindUAVs(0, arraysize(uavs), cmd);
 
-	Postprocess_Blur_Bilateral(output, lineardepth_minmax, temp, output, cmd, 1.2f, -1, -1, true);
+	Postprocess_Blur_Bilateral(temp0, lineardepth_minmax, temp1, temp0, cmd, 1.2f, -1, -1, true);
+	Postprocess_Upsample_Bilateral(temp0, lineardepth, lineardepth_minmax, output, cmd);
 
 	wiProfiler::EndRange(prof_range);
 	device->EventEnd(cmd);
 }
 void Postprocess_HBAO(
+	const Texture& lineardepth,
 	const Texture& lineardepth_minmax,
-	const Texture& temp,
 	const Texture& output,
 	CommandList cmd,
 	float power
@@ -8840,13 +8870,28 @@ void Postprocess_HBAO(
 	device->EventBegin("Postprocess_HBAO", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("HBAO", cmd);
 
-	device->UnbindResources(TEXSLOT_RENDERPATH_SSAO, 1, cmd);
+	static TextureDesc saved_desc;
+	static Texture temp0;
+	static Texture temp1;
+
+	const TextureDesc& lineardepth_desc = lineardepth.GetDesc();
+	if (saved_desc.Width != lineardepth_desc.Width || saved_desc.Height != lineardepth_desc.Height)
+	{
+		saved_desc = lineardepth_desc; // <- this must already have SRV and UAV request flags set up!
+
+		TextureDesc desc = saved_desc;
+		desc.Format = FORMAT_R8_UNORM;
+		desc.Width = (desc.Width + 1) / 2;
+		desc.Height = (desc.Height + 1) / 2;
+		device->CreateTexture(&desc, nullptr, &temp0);
+		device->CreateTexture(&desc, nullptr, &temp1);
+	}
 
 	device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_HBAO], cmd);
 
 	device->BindResource(CS, &lineardepth_minmax, TEXSLOT_ONDEMAND0, cmd);
 
-	const TextureDesc& desc = output.GetDesc();
+	const TextureDesc& desc = temp0.GetDesc();
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width;
@@ -8858,8 +8903,10 @@ void Postprocess_HBAO(
 	cb.hbao_power = power;
 
 	const CameraComponent& camera = GetCamera();
-	const float FocalLenX = 1.0f / tanf(camera.fov * 0.5f) * ((float)cb.xPPResolution.y / (float)cb.xPPResolution.x);
-	const float FocalLenY = 1.0f / tanf(camera.fov * 0.5f);
+	// Load first element of projection matrix which is the cotangent of the horizontal FOV divided by 2.
+	const float TanHalfFovH = 1.0f / camera.Projection.m[0][0];
+	const float FocalLenX = 1.0f / TanHalfFovH * ((float)cb.xPPResolution.y / (float)cb.xPPResolution.x);
+	const float FocalLenY = 1.0f / TanHalfFovH;
 	const float InvFocalLenX = 1.0f / FocalLenX;
 	const float InvFocalLenY = 1.0f / FocalLenY;
 	const float UVToViewAX = 2.0f * InvFocalLenX;
@@ -8878,7 +8925,7 @@ void Postprocess_HBAO(
 	{
 		device->BindResource(CS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND1, cmd);
 		const GPUResource* uavs[] = {
-			&temp,
+			&temp1,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
@@ -8900,9 +8947,9 @@ void Postprocess_HBAO(
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-		device->BindResource(CS, &temp, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &temp1, TEXSLOT_ONDEMAND1, cmd);
 		const GPUResource* uavs[] = {
-			&output,
+			&temp0,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
@@ -8918,7 +8965,419 @@ void Postprocess_HBAO(
 		device->UnbindResources(TEXSLOT_ONDEMAND1, 1, cmd);
 	}
 
-	Postprocess_Blur_Bilateral(output, lineardepth_minmax, temp, output, cmd, 1.2f, -1, -1, true);
+	Postprocess_Blur_Bilateral(temp0, lineardepth_minmax, temp1, temp0, cmd, 1.2f, -1, -1, true);
+	Postprocess_Upsample_Bilateral(temp0, lineardepth, lineardepth_minmax, output, cmd);
+
+	wiProfiler::EndRange(prof_range);
+	device->EventEnd(cmd);
+}
+void Postprocess_MSAO(
+	const Texture& lineardepth,
+	const Texture& lineardepth_minmax,
+	const Texture& output,
+	CommandList cmd,
+	float power
+	)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("Postprocess_MSAO", cmd);
+	auto prof_range = wiProfiler::BeginRangeGPU("MSAO", cmd);
+
+	static TextureDesc saved_desc;
+	static Texture texture_lineardepth_downsize1;
+	static Texture texture_lineardepth_tiled1;
+	static Texture texture_lineardepth_downsize2;
+	static Texture texture_lineardepth_tiled2;
+	static Texture texture_lineardepth_downsize3;
+	static Texture texture_lineardepth_tiled3;
+	static Texture texture_lineardepth_downsize4;
+	static Texture texture_lineardepth_tiled4;
+	static Texture texture_ao_merged1;
+	static Texture texture_ao_hq1;
+	static Texture texture_ao_smooth1;
+	static Texture texture_ao_merged2;
+	static Texture texture_ao_hq2;
+	static Texture texture_ao_smooth2;
+	static Texture texture_ao_merged3;
+	static Texture texture_ao_hq3;
+	static Texture texture_ao_smooth3;
+	static Texture texture_ao_merged4;
+	static Texture texture_ao_hq4;
+
+	const TextureDesc& lineardepth_desc = lineardepth.GetDesc();
+	if (saved_desc.Width != lineardepth_desc.Width || saved_desc.Height != lineardepth_desc.Height)
+	{
+		saved_desc = lineardepth_desc; // <- this must already have SRV and UAV request flags set up!
+
+		const uint32_t bufferWidth = saved_desc.Width;
+		const uint32_t bufferWidth1 = (bufferWidth + 1) / 2;
+		const uint32_t bufferWidth2 = (bufferWidth + 3) / 4;
+		const uint32_t bufferWidth3 = (bufferWidth + 7) / 8;
+		const uint32_t bufferWidth4 = (bufferWidth + 15) / 16;
+		const uint32_t bufferWidth5 = (bufferWidth + 31) / 32;
+		const uint32_t bufferWidth6 = (bufferWidth + 63) / 64;
+		const uint32_t bufferHeight = saved_desc.Height;
+		const uint32_t bufferHeight1 = (bufferHeight + 1) / 2;
+		const uint32_t bufferHeight2 = (bufferHeight + 3) / 4;
+		const uint32_t bufferHeight3 = (bufferHeight + 7) / 8;
+		const uint32_t bufferHeight4 = (bufferHeight + 15) / 16;
+		const uint32_t bufferHeight5 = (bufferHeight + 31) / 32;
+		const uint32_t bufferHeight6 = (bufferHeight + 63) / 64;
+
+		TextureDesc desc = saved_desc;
+		desc.Width = bufferWidth1;
+		desc.Height = bufferHeight1;
+		device->CreateTexture(&desc, nullptr, &texture_lineardepth_downsize1);
+		desc.Width = bufferWidth3;
+		desc.Height = bufferHeight3;
+		desc.ArraySize = 16;
+		desc.Format = FORMAT_R16_FLOAT;
+		device->CreateTexture(&desc, nullptr, &texture_lineardepth_tiled1);
+
+		desc = saved_desc;
+		desc.Width = bufferWidth2;
+		desc.Height = bufferHeight2;
+		device->CreateTexture(&desc, nullptr, &texture_lineardepth_downsize2);
+		desc.Width = bufferWidth4;
+		desc.Height = bufferHeight4;
+		desc.ArraySize = 16;
+		desc.Format = FORMAT_R16_FLOAT;
+		device->CreateTexture(&desc, nullptr, &texture_lineardepth_tiled2);
+
+		desc = saved_desc;
+		desc.Width = bufferWidth3;
+		desc.Height = bufferHeight3;
+		device->CreateTexture(&desc, nullptr, &texture_lineardepth_downsize3);
+		desc.Width = bufferWidth5;
+		desc.Height = bufferHeight5;
+		desc.ArraySize = 16;
+		desc.Format = FORMAT_R16_FLOAT;
+		device->CreateTexture(&desc, nullptr, &texture_lineardepth_tiled3);
+
+		desc = saved_desc;
+		desc.Width = bufferWidth4;
+		desc.Height = bufferHeight4;
+		device->CreateTexture(&desc, nullptr, &texture_lineardepth_downsize4);
+		desc.Width = bufferWidth6;
+		desc.Height = bufferHeight6;
+		desc.ArraySize = 16;
+		desc.Format = FORMAT_R16_FLOAT;
+		device->CreateTexture(&desc, nullptr, &texture_lineardepth_tiled4);
+
+		desc = saved_desc;
+		desc.Format = FORMAT_R8_UNORM;
+		desc.Width = bufferWidth1;
+		desc.Height = bufferHeight1;
+		device->CreateTexture(&desc, nullptr, &texture_ao_merged1);
+		device->CreateTexture(&desc, nullptr, &texture_ao_hq1);
+		device->CreateTexture(&desc, nullptr, &texture_ao_smooth1);
+		desc.Width = bufferWidth2;
+		desc.Height = bufferHeight2;
+		device->CreateTexture(&desc, nullptr, &texture_ao_merged2);
+		device->CreateTexture(&desc, nullptr, &texture_ao_hq2);
+		device->CreateTexture(&desc, nullptr, &texture_ao_smooth2);
+		desc.Width = bufferWidth3;
+		desc.Height = bufferHeight3;
+		device->CreateTexture(&desc, nullptr, &texture_ao_merged3);
+		device->CreateTexture(&desc, nullptr, &texture_ao_hq3);
+		device->CreateTexture(&desc, nullptr, &texture_ao_smooth3);
+		desc.Width = bufferWidth4;
+		desc.Height = bufferHeight4;
+		device->CreateTexture(&desc, nullptr, &texture_ao_merged4);
+		device->CreateTexture(&desc, nullptr, &texture_ao_hq4);
+	}
+
+	// Depth downsampling + deinterleaving pass1:
+	{
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_MSAO_PREPAREDEPTHBUFFERS1], cmd);
+
+		device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+
+		const GPUResource* uavs[] = {
+			&texture_lineardepth_downsize1,
+			&texture_lineardepth_tiled1,
+			&texture_lineardepth_downsize2,
+			&texture_lineardepth_tiled2,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		const TextureDesc& desc = texture_lineardepth_tiled2.GetDesc();
+		device->Dispatch(desc.Width, desc.Height, 1, cmd);
+
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+	}
+
+	// Depth downsampling + deinterleaving pass2:
+	{
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_MSAO_PREPAREDEPTHBUFFERS2], cmd);
+
+		device->BindResource(CS, &texture_lineardepth_downsize2, TEXSLOT_ONDEMAND0, cmd);
+
+		const GPUResource* uavs[] = {
+			&texture_lineardepth_downsize3,
+			&texture_lineardepth_tiled3,
+			&texture_lineardepth_downsize4,
+			&texture_lineardepth_tiled4,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		const TextureDesc& desc = texture_lineardepth_tiled4.GetDesc();
+		device->Dispatch(desc.Width, desc.Height, 1, cmd);
+
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+	}
+
+
+	float SampleThickness[12];
+	SampleThickness[0] = sqrt(1.0f - 0.2f * 0.2f);
+	SampleThickness[1] = sqrt(1.0f - 0.4f * 0.4f);
+	SampleThickness[2] = sqrt(1.0f - 0.6f * 0.6f);
+	SampleThickness[3] = sqrt(1.0f - 0.8f * 0.8f);
+	SampleThickness[4] = sqrt(1.0f - 0.2f * 0.2f - 0.2f * 0.2f);
+	SampleThickness[5] = sqrt(1.0f - 0.2f * 0.2f - 0.4f * 0.4f);
+	SampleThickness[6] = sqrt(1.0f - 0.2f * 0.2f - 0.6f * 0.6f);
+	SampleThickness[7] = sqrt(1.0f - 0.2f * 0.2f - 0.8f * 0.8f);
+	SampleThickness[8] = sqrt(1.0f - 0.4f * 0.4f - 0.4f * 0.4f);
+	SampleThickness[9] = sqrt(1.0f - 0.4f * 0.4f - 0.6f * 0.6f);
+	SampleThickness[10] = sqrt(1.0f - 0.4f * 0.4f - 0.8f * 0.8f);
+	SampleThickness[11] = sqrt(1.0f - 0.6f * 0.6f - 0.6f * 0.6f);
+	static float RejectionFalloff = 2.0f;
+	const float Accentuation = 0.1f * power;
+
+	// The msao_compute will be called repeatedly, so create a local lambda for it:
+	auto msao_compute = [&](const Texture& write_result, const Texture& read_depth) 
+	{
+		const TextureDesc& desc = read_depth.GetDesc();
+
+		MSAOCB cb;
+
+		const CameraComponent& camera = GetCamera();
+
+		// Load first element of projection matrix which is the cotangent of the horizontal FOV divided by 2.
+		const float TanHalfFovH = 1.0f / camera.Projection.m[0][0];
+
+		// Here we compute multipliers that convert the center depth value into (the reciprocal of)
+		// sphere thicknesses at each sample location.  This assumes a maximum sample radius of 5
+		// units, but since a sphere has no thickness at its extent, we don't need to sample that far
+		// out.  Only samples whole integer offsets with distance less than 25 are used.  This means
+		// that there is no sample at (3, 4) because its distance is exactly 25 (and has a thickness of 0.)
+
+		// The shaders are set up to sample a circular region within a 5-pixel radius.
+		const float ScreenspaceDiameter = 10.0f;
+
+		// SphereDiameter = CenterDepth * ThicknessMultiplier.  This will compute the thickness of a sphere centered
+		// at a specific depth.  The ellipsoid scale can stretch a sphere into an ellipsoid, which changes the
+		// characteristics of the AO.
+		// TanHalfFovH:  Radius of sphere in depth units if its center lies at Z = 1
+		// ScreenspaceDiameter:  Diameter of sample sphere in pixel units
+		// ScreenspaceDiameter / BufferWidth:  Ratio of the screen width that the sphere actually covers
+		// Note about the "2.0f * ":  Diameter = 2 * Radius
+		float ThicknessMultiplier = 2.0f * TanHalfFovH * ScreenspaceDiameter / desc.Width;
+		if (desc.ArraySize == 1)
+		{
+			ThicknessMultiplier *= 2.0f;
+		}
+
+		// This will transform a depth value from [0, thickness] to [0, 1].
+		float InverseRangeFactor = 1.0f / ThicknessMultiplier;
+
+		// The thicknesses are smaller for all off-center samples of the sphere.  Compute thicknesses relative
+		// to the center sample.
+		cb.xInvThicknessTable[0].x = InverseRangeFactor / SampleThickness[0];
+		cb.xInvThicknessTable[0].y = InverseRangeFactor / SampleThickness[1];
+		cb.xInvThicknessTable[0].z = InverseRangeFactor / SampleThickness[2];
+		cb.xInvThicknessTable[0].w = InverseRangeFactor / SampleThickness[3];
+		cb.xInvThicknessTable[1].x = InverseRangeFactor / SampleThickness[4];
+		cb.xInvThicknessTable[1].y = InverseRangeFactor / SampleThickness[5];
+		cb.xInvThicknessTable[1].z = InverseRangeFactor / SampleThickness[6];
+		cb.xInvThicknessTable[1].w = InverseRangeFactor / SampleThickness[7];
+		cb.xInvThicknessTable[2].x = InverseRangeFactor / SampleThickness[8];
+		cb.xInvThicknessTable[2].y = InverseRangeFactor / SampleThickness[9];
+		cb.xInvThicknessTable[2].z = InverseRangeFactor / SampleThickness[10];
+		cb.xInvThicknessTable[2].w = InverseRangeFactor / SampleThickness[11];
+
+		// These are the weights that are multiplied against the samples because not all samples are
+		// equally important.  The farther the sample is from the center location, the less they matter.
+		// We use the thickness of the sphere to determine the weight.  The scalars in front are the number
+		// of samples with this weight because we sum the samples together before multiplying by the weight,
+		// so as an aggregate all of those samples matter more.  After generating this table, the weights
+		// are normalized.
+		cb.xSampleWeightTable[0].x = 4.0f * SampleThickness[0];    // Axial
+		cb.xSampleWeightTable[0].y = 4.0f * SampleThickness[1];    // Axial
+		cb.xSampleWeightTable[0].z = 4.0f * SampleThickness[2];    // Axial
+		cb.xSampleWeightTable[0].w = 4.0f * SampleThickness[3];    // Axial
+		cb.xSampleWeightTable[1].x = 4.0f * SampleThickness[4];    // Diagonal
+		cb.xSampleWeightTable[1].y = 8.0f * SampleThickness[5];    // L-shaped
+		cb.xSampleWeightTable[1].z = 8.0f * SampleThickness[6];    // L-shaped
+		cb.xSampleWeightTable[1].w = 8.0f * SampleThickness[7];    // L-shaped
+		cb.xSampleWeightTable[2].x = 4.0f * SampleThickness[8];    // Diagonal
+		cb.xSampleWeightTable[2].y = 8.0f * SampleThickness[9];    // L-shaped
+		cb.xSampleWeightTable[2].z = 8.0f * SampleThickness[10];   // L-shaped
+		cb.xSampleWeightTable[2].w = 4.0f * SampleThickness[11];   // Diagonal
+
+		// If we aren't using all of the samples, delete their weights before we normalize.
+#ifndef MSAO_SAMPLE_EXHAUSTIVELY
+		cb.xSampleWeightTable[0].x = 0.0f;
+		cb.xSampleWeightTable[0].z = 0.0f;
+		cb.xSampleWeightTable[1].y = 0.0f;
+		cb.xSampleWeightTable[1].w = 0.0f;
+		cb.xSampleWeightTable[2].y = 0.0f;
+#endif
+
+		// Normalize the weights by dividing by the sum of all weights
+		float totalWeight = 0.0f;
+		totalWeight += cb.xSampleWeightTable[0].x;
+		totalWeight += cb.xSampleWeightTable[0].y;
+		totalWeight += cb.xSampleWeightTable[0].z;
+		totalWeight += cb.xSampleWeightTable[0].w;
+		totalWeight += cb.xSampleWeightTable[1].x;
+		totalWeight += cb.xSampleWeightTable[1].y;
+		totalWeight += cb.xSampleWeightTable[1].z;
+		totalWeight += cb.xSampleWeightTable[1].w;
+		totalWeight += cb.xSampleWeightTable[2].x;
+		totalWeight += cb.xSampleWeightTable[2].y;
+		totalWeight += cb.xSampleWeightTable[2].z;
+		totalWeight += cb.xSampleWeightTable[2].w;
+		cb.xSampleWeightTable[0].x /= totalWeight;
+		cb.xSampleWeightTable[0].y /= totalWeight;
+		cb.xSampleWeightTable[0].z /= totalWeight;
+		cb.xSampleWeightTable[0].w /= totalWeight;
+		cb.xSampleWeightTable[1].x /= totalWeight;
+		cb.xSampleWeightTable[1].y /= totalWeight;
+		cb.xSampleWeightTable[1].z /= totalWeight;
+		cb.xSampleWeightTable[1].w /= totalWeight;
+		cb.xSampleWeightTable[2].x /= totalWeight;
+		cb.xSampleWeightTable[2].y /= totalWeight;
+		cb.xSampleWeightTable[2].z /= totalWeight;
+		cb.xSampleWeightTable[2].w /= totalWeight;
+
+		cb.xInvSliceDimension.x = 1.0f / desc.Width;
+		cb.xInvSliceDimension.y = 1.0f / desc.Height;
+		cb.xRejectFadeoff = 1.0f / -RejectionFalloff;
+		cb.xRcpAccentuation = 1.0f / (1.0f + Accentuation);
+
+		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS_MSAO], &cb, cmd);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS_MSAO], CB_GETBINDSLOT(MSAOCB), cmd);
+
+		device->BindResource(CS, &read_depth, TEXSLOT_ONDEMAND0, cmd);
+
+		const GPUResource* uavs[] = {
+			&write_result,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		if (desc.ArraySize == 1)
+		{
+			device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_MSAO], cmd);
+			device->Dispatch((desc.Width + 15) / 16, (desc.Height + 15) / 16, 1, cmd);
+		}
+		else
+		{
+			device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_MSAO_INTERLEAVE], cmd);
+			device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, desc.ArraySize, cmd);
+		}
+
+		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+	}; // end of lambda: msao_compute
+
+	msao_compute(texture_ao_merged4, texture_lineardepth_tiled4);
+	msao_compute(texture_ao_hq4, texture_lineardepth_downsize4);
+
+	msao_compute(texture_ao_merged3, texture_lineardepth_tiled3);
+	msao_compute(texture_ao_hq3, texture_lineardepth_downsize3);
+
+	msao_compute(texture_ao_merged2, texture_lineardepth_tiled2);
+	msao_compute(texture_ao_hq2, texture_lineardepth_downsize2);
+
+	msao_compute(texture_ao_merged1, texture_lineardepth_tiled1);
+	msao_compute(texture_ao_hq1, texture_lineardepth_downsize1);
+
+	auto blur_and_upsample = [&](const Texture& Destination, const Texture& HiResDepth, const Texture& LoResDepth,
+		const Texture* InterleavedAO, const Texture* HighQualityAO, const Texture* HiResAO)
+	{
+		const uint32_t LoWidth = LoResDepth.GetDesc().Width;
+		const uint32_t LoHeight = LoResDepth.GetDesc().Height;
+		const uint32_t HiWidth = HiResDepth.GetDesc().Width;
+		const uint32_t HiHeight = HiResDepth.GetDesc().Height;
+
+		if (HiResAO == nullptr)
+		{
+			if (HighQualityAO == nullptr)
+			{
+				device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_MSAO_BLURUPSAMPLE], cmd);
+			}
+			else
+			{
+				device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_MSAO_BLURUPSAMPLE_PREMIN], cmd);
+			}
+		}
+		else
+		{
+			if (HighQualityAO == nullptr)
+			{
+				device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_MSAO_BLURUPSAMPLE_BLENDOUT], cmd);
+			}
+			else
+			{
+				device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_MSAO_BLURUPSAMPLE_PREMIN_BLENDOUT], cmd);
+			}
+		}
+
+		static float g_NoiseFilterTolerance = -3.0f;
+		static float g_BlurTolerance = -5.0f;
+		static float g_UpsampleTolerance = -7.0f;
+
+		float kBlurTolerance = 1.0f - powf(10.0f, g_BlurTolerance) * 1920.0f / (float)LoWidth;
+		kBlurTolerance *= kBlurTolerance;
+		float kUpsampleTolerance = powf(10.0f, g_UpsampleTolerance);
+		float kNoiseFilterWeight = 1.0f / (powf(10.0f, g_NoiseFilterTolerance) + kUpsampleTolerance);
+
+		MSAO_UPSAMPLECB cb;
+		cb.InvLowResolution = float2(1.0f / LoWidth, 1.0f / LoHeight);
+		cb.InvHighResolution = float2(1.0f / HiWidth, 1.0f / HiHeight);
+		cb.NoiseFilterStrength = kNoiseFilterWeight;
+		cb.StepSize = (float)lineardepth.GetDesc().Width / (float)LoWidth;
+		cb.kBlurTolerance = kBlurTolerance;
+		cb.kUpsampleTolerance = kUpsampleTolerance;
+
+		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS_MSAO_UPSAMPLE], &cb, cmd);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS_MSAO_UPSAMPLE], CB_GETBINDSLOT(MSAO_UPSAMPLECB), cmd);
+		
+		device->BindUAV(CS, &Destination, 0, cmd);
+		device->BindResource(CS, &LoResDepth, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &HiResDepth, TEXSLOT_ONDEMAND1, cmd);
+		if (InterleavedAO != nullptr)
+		{
+			device->BindResource(CS, InterleavedAO, TEXSLOT_ONDEMAND2, cmd);
+		}
+		if (HighQualityAO != nullptr)
+		{
+			device->BindResource(CS, HighQualityAO, TEXSLOT_ONDEMAND3, cmd);
+		}
+		if (HiResAO != nullptr)
+		{
+			device->BindResource(CS, HiResAO, TEXSLOT_ONDEMAND4, cmd);
+		}
+
+		device->Dispatch((HiWidth + 2 + 15) / 16, (HiHeight + 2 + 15) / 16, 1, cmd);
+		
+	};
+
+	blur_and_upsample(texture_ao_smooth3, texture_lineardepth_downsize3, texture_lineardepth_downsize4, &texture_ao_merged4,
+		&texture_ao_hq4, &texture_ao_merged3);
+
+	blur_and_upsample(texture_ao_smooth2, texture_lineardepth_downsize2, texture_lineardepth_downsize3, &texture_ao_smooth3,
+		&texture_ao_hq3, &texture_ao_merged2);
+
+	blur_and_upsample(texture_ao_smooth1, texture_lineardepth_downsize1, texture_lineardepth_downsize2, &texture_ao_smooth2,
+		&texture_ao_hq2, &texture_ao_merged1);
+
+	blur_and_upsample(output, lineardepth, texture_lineardepth_downsize1, &texture_ao_smooth1,
+		&texture_ao_hq1, nullptr);
 
 	wiProfiler::EndRange(prof_range);
 	device->EventEnd(cmd);

@@ -7,9 +7,9 @@ TEXTURE2D(texture_horizontalpass, float, TEXSLOT_ONDEMAND1);
 RWTEXTURE2D(output, unorm float, 0);
 
 // Step size in number of pixels
-#define STEP_SIZE 6
+#define STEP_SIZE 4
 // Number of shared-memory samples per direction
-#define NUM_STEPS 16
+#define NUM_STEPS 8
 // The last sample has weight = exp(-KERNEL_FALLOFF)
 #define KERNEL_FALLOFF 3.0f
 #define TAN_ANGLE_BIAS 0

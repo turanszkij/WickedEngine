@@ -25,8 +25,7 @@ Luna<RenderPath3D_BindLua>::FunctionType RenderPath3D_BindLua::methods[] = {
 	lunamethod(RenderPath_BindLua, GetLayerMask),
 	lunamethod(RenderPath_BindLua, SetLayerMask),
 
-	lunamethod(RenderPath3D_BindLua, SetSSAOEnabled),
-	lunamethod(RenderPath3D_BindLua, SetHBAOEnabled),
+	lunamethod(RenderPath3D_BindLua, SetAO),
 	lunamethod(RenderPath3D_BindLua, SetSSREnabled),
 	lunamethod(RenderPath3D_BindLua, SetShadowsEnabled),
 	lunamethod(RenderPath3D_BindLua, SetReflectionsEnabled),
@@ -56,30 +55,21 @@ Luna<RenderPath3D_BindLua>::PropertyType RenderPath3D_BindLua::properties[] = {
 };
 
 
-int RenderPath3D_BindLua::SetSSAOEnabled(lua_State* L)
+int RenderPath3D_BindLua::SetAO(lua_State* L)
 {
 	if (component == nullptr)
 	{
-		wiLua::SError(L, "SetSSAOEnabled(bool value) component is null!");
+		wiLua::SError(L, "SetAO(AO value) component is null!");
 		return 0;
 	}
 	if (wiLua::SGetArgCount(L) > 0)
-		((RenderPath3D*)component)->setSSAOEnabled(wiLua::SGetBool(L, 1));
-	else
-		wiLua::SError(L, "SetSSAOEnabled(bool value) not enough arguments!");
-	return 0;
-}
-int RenderPath3D_BindLua::SetHBAOEnabled(lua_State* L)
-{
-	if (component == nullptr)
 	{
-		wiLua::SError(L, "SetHBAOEnabled(bool value) component is null!");
-		return 0;
+		int value = wiLua::SGetInt(L, 1);
+		RenderPath3D::AO ao = (RenderPath3D::AO)value;
+		((RenderPath3D*)component)->setAO(ao);
 	}
-	if (wiLua::SGetArgCount(L) > 0)
-		((RenderPath3D*)component)->setHBAOEnabled(wiLua::SGetBool(L, 1));
 	else
-		wiLua::SError(L, "SetHBAOEnabled(bool value) not enough arguments!");
+		wiLua::SError(L, "SetAO(AO value) not enough arguments!");
 	return 0;
 }
 int RenderPath3D_BindLua::SetSSREnabled(lua_State* L)
@@ -400,5 +390,10 @@ void RenderPath3D_BindLua::Bind()
 	{
 		initialized = true;
 		Luna<RenderPath3D_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+
+		wiLua::GetGlobal()->RunText("AO_DISABLED = 0");
+		wiLua::GetGlobal()->RunText("AO_SSAO = 1");
+		wiLua::GetGlobal()->RunText("AO_HBAO = 2");
+		wiLua::GetGlobal()->RunText("AO_MSAO = 3");
 	}
 }

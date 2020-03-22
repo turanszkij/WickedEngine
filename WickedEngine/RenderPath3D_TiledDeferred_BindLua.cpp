@@ -24,8 +24,7 @@ Luna<RenderPath3D_TiledDeferred_BindLua>::FunctionType RenderPath3D_TiledDeferre
 	lunamethod(RenderPath_BindLua, GetLayerMask),
 	lunamethod(RenderPath_BindLua, SetLayerMask),
 
-	lunamethod(RenderPath3D_BindLua, SetSSAOEnabled),
-	lunamethod(RenderPath3D_BindLua, SetHBAOEnabled),
+	lunamethod(RenderPath3D_BindLua, SetAO),
 	lunamethod(RenderPath3D_BindLua, SetSSREnabled),
 	lunamethod(RenderPath3D_BindLua, SetShadowsEnabled),
 	lunamethod(RenderPath3D_BindLua, SetReflectionsEnabled),

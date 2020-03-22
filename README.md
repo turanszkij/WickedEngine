@@ -106,7 +106,7 @@ wiScene::Scene scene2; // create a separate scene
 wiScene::LoadModel(scene2, "myModel2.wiscene"); // Load model into a separate scene
 wiScene::GetScene().Merge(scene2); // Combine separate scene with global scene
 
-myGame.setSSAOEnabled(true); // You can enable post process effects this way...
+myGame.setFXAAEnabled(true); // You can enable post process effects this way...
 
 RenderPath2D myMenuScreen; // This is an other render path, but now a simple 2D one. It can only render 2D graphics by default (like a menu for example)
 main.ActivatePath(&myMenuScreen); // activate the menu, the previous path (myGame) will be stopped

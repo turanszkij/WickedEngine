@@ -189,10 +189,9 @@ namespace wiRenderer
 		bool wide = false
 	);
 	void Postprocess_SSAO(
-		const wiGraphics::Texture& depthbuffer, 
+		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& lineardepth_minmax,
-		const wiGraphics::Texture& temp,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float range = 1.0f,
@@ -200,8 +199,15 @@ namespace wiRenderer
 		float power = 2.0f
 	);
 	void Postprocess_HBAO(
+		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& lineardepth_minmax,
-		const wiGraphics::Texture& temp,
+		const wiGraphics::Texture& output,
+		wiGraphics::CommandList cmd,
+		float power = 2.0f
+		);
+	void Postprocess_MSAO(
+		const wiGraphics::Texture& lineardepth,
+		const wiGraphics::Texture& lineardepth_minmax,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float power = 2.0f

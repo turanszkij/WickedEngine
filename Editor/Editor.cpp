@@ -112,7 +112,7 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 
 	renderPath->setShadowsEnabled(true);
 	renderPath->setReflectionsEnabled(true);
-	renderPath->setSSAOEnabled(false);
+	renderPath->setAO(RenderPath3D::AO_DISABLED);
 	renderPath->setSSREnabled(false);
 	renderPath->setMotionBlurEnabled(false);
 	renderPath->setColorGradingEnabled(false);
