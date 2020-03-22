@@ -26,7 +26,6 @@ void Tests::Initialize()
 void TestsRenderer::Load()
 {
 	setSSREnabled(false);
-	setSSAOEnabled(false);
 	setReflectionsEnabled(true);
 	setFXAAEnabled(false);
 
