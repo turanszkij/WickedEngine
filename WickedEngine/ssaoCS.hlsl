@@ -3,7 +3,6 @@
 
 // Define this to use reduced precision, but faster depth buffer:
 #define USE_LINEARDEPTH
-TEXTURE2D(texture_lineardepth_minmax, float2, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(output, unorm float, 0);
 
@@ -15,14 +14,6 @@ groupshared float tile_Z[TILE_SIZE*TILE_SIZE];
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
-	[branch]
-	if (texture_lineardepth_minmax.Load(uint3(Gid.xy, log2(POSTPROCESS_BLOCKSIZE))).r == 1.0f)
-	{
-		// early exit when tile min (mip3) is the farplane
-		output[DTid.xy] = 1;
-		return;
-	}
-
 	const int2 tile_upperleft = Gid.xy * POSTPROCESS_BLOCKSIZE - TILE_BORDER;
 	for (uint t = groupIndex; t < TILE_SIZE * TILE_SIZE; t += POSTPROCESS_BLOCKSIZE * POSTPROCESS_BLOCKSIZE)
 	{
@@ -111,7 +102,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		{
 #ifdef USE_LINEARDEPTH
 			const float ray_depth_real = vProjectedCoord.w; // .w is also linear depth, could be also written as getLinearDepth(vProjectedCoord.z)
-			const float ray_depth_sample = texture_lineardepth_minmax.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0).g * g_xCamera_ZFarP;
+			const float ray_depth_sample = texture_lineardepth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0) * g_xCamera_ZFarP;
 			const float depth_fix = 1 - saturate(abs(ray_depth_real - ray_depth_sample) * 0.2f); // too much depth difference cancels the effect
 			ao += (ray_depth_sample < ray_depth_real) * depth_fix;
 #else

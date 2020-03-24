@@ -8788,7 +8788,6 @@ void Postprocess_Blur_Bilateral(
 void Postprocess_SSAO(
 	const Texture& depthbuffer,
 	const Texture& lineardepth,
-	const Texture& lineardepth_minmax,
 	const Texture& output,
 	CommandList cmd,
 	float range,
@@ -8809,6 +8808,7 @@ void Postprocess_SSAO(
 	if (saved_desc.Width != lineardepth_desc.Width || saved_desc.Height != lineardepth_desc.Height)
 	{
 		saved_desc = lineardepth_desc; // <- this must already have SRV and UAV request flags set up!
+		saved_desc.MipLevels = 1;
 
 		TextureDesc desc = saved_desc;
 		desc.Format = FORMAT_R8_UNORM;
@@ -8821,7 +8821,7 @@ void Postprocess_SSAO(
 	device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_SSAO], cmd);
 
 	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-	device->BindResource(CS, &lineardepth_minmax, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 	const TextureDesc& desc = temp0.GetDesc();
 
@@ -8851,15 +8851,14 @@ void Postprocess_SSAO(
 	device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 	device->UnbindUAVs(0, arraysize(uavs), cmd);
 
-	Postprocess_Blur_Bilateral(temp0, lineardepth_minmax, temp1, temp0, cmd, 1.2f, -1, -1, true);
-	Postprocess_Upsample_Bilateral(temp0, lineardepth, lineardepth_minmax, output, cmd);
+	Postprocess_Blur_Bilateral(temp0, lineardepth, temp1, temp0, cmd, 1.2f, -1, -1, true);
+	Postprocess_Upsample_Bilateral(temp0, lineardepth, output, cmd);
 
 	wiProfiler::EndRange(prof_range);
 	device->EventEnd(cmd);
 }
 void Postprocess_HBAO(
 	const Texture& lineardepth,
-	const Texture& lineardepth_minmax,
 	const Texture& output,
 	CommandList cmd,
 	float power
@@ -8878,6 +8877,7 @@ void Postprocess_HBAO(
 	if (saved_desc.Width != lineardepth_desc.Width || saved_desc.Height != lineardepth_desc.Height)
 	{
 		saved_desc = lineardepth_desc; // <- this must already have SRV and UAV request flags set up!
+		saved_desc.MipLevels = 1;
 
 		TextureDesc desc = saved_desc;
 		desc.Format = FORMAT_R8_UNORM;
@@ -8889,7 +8889,7 @@ void Postprocess_HBAO(
 
 	device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_HBAO], cmd);
 
-	device->BindResource(CS, &lineardepth_minmax, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 	const TextureDesc& desc = temp0.GetDesc();
 
@@ -8965,15 +8965,14 @@ void Postprocess_HBAO(
 		device->UnbindResources(TEXSLOT_ONDEMAND1, 1, cmd);
 	}
 
-	Postprocess_Blur_Bilateral(temp0, lineardepth_minmax, temp1, temp0, cmd, 1.2f, -1, -1, true);
-	Postprocess_Upsample_Bilateral(temp0, lineardepth, lineardepth_minmax, output, cmd);
+	Postprocess_Blur_Bilateral(temp0, lineardepth, temp1, temp0, cmd, 1.2f, -1, -1, true);
+	Postprocess_Upsample_Bilateral(temp0, lineardepth, output, cmd);
 
 	wiProfiler::EndRange(prof_range);
 	device->EventEnd(cmd);
 }
 void Postprocess_MSAO(
 	const Texture& lineardepth,
-	const Texture& lineardepth_minmax,
 	const Texture& output,
 	CommandList cmd,
 	float power
@@ -9009,6 +9008,7 @@ void Postprocess_MSAO(
 	if (saved_desc.Width != lineardepth_desc.Width || saved_desc.Height != lineardepth_desc.Height)
 	{
 		saved_desc = lineardepth_desc; // <- this must already have SRV and UAV request flags set up!
+		saved_desc.MipLevels = 1;
 
 		const uint32_t bufferWidth = saved_desc.Width;
 		const uint32_t bufferWidth1 = (bufferWidth + 1) / 2;
@@ -9385,7 +9385,7 @@ void Postprocess_MSAO(
 void Postprocess_SSR(
 	const Texture& input,
 	const Texture& depthbuffer,
-	const Texture& lineardepth_minmax,
+	const Texture& lineardepth,
 	const Texture& gbuffer1,
 	const Texture& gbuffer2,
 	const Texture& output,
@@ -9451,10 +9451,10 @@ void Postprocess_SSR(
 		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_SSR_RAYTRACE], cmd);
 
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 		device->BindResource(CS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
 		device->BindResource(CS, &gbuffer2, TEXSLOT_GBUFFER2, cmd);
 		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &lineardepth_minmax, TEXSLOT_ONDEMAND1, cmd);
 
 		const GPUResource* uavs[] = {
 			&texture_raytrace,
@@ -9710,7 +9710,6 @@ void Postprocess_DepthOfField(
 	const Texture& input,
 	const Texture& output,
 	const Texture& lineardepth,
-	const Texture& lineardepth_minmax,
 	CommandList cmd,
 	float focus,
 	float scale,
@@ -9926,7 +9925,6 @@ void Postprocess_DepthOfField(
 		const GPUResource* res[] = {
 			&input,
 			&texture_neighborhoodmax,
-			&lineardepth_minmax
 		};
 		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
@@ -9936,15 +9934,15 @@ void Postprocess_DepthOfField(
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
-		device->BindResource(CS, &buffer_tiles_earlyexit, TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(CS, &buffer_tiles_earlyexit, TEXSLOT_ONDEMAND2, cmd);
 		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS_EARLYEXIT], cmd);
 		device->DispatchIndirect(&buffer_tile_statistics, INDIRECT_OFFSET_EARLYEXIT, cmd);
 
-		device->BindResource(CS, &buffer_tiles_cheap, TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(CS, &buffer_tiles_cheap, TEXSLOT_ONDEMAND2, cmd);
 		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS], cmd);
 		device->DispatchIndirect(&buffer_tile_statistics, INDIRECT_OFFSET_CHEAP, cmd);
 
-		device->BindResource(CS, &buffer_tiles_expensive, TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(CS, &buffer_tiles_expensive, TEXSLOT_ONDEMAND2, cmd);
 		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS], cmd);
 		device->DispatchIndirect(&buffer_tile_statistics, INDIRECT_OFFSET_EXPENSIVE, cmd);
 
@@ -10491,8 +10489,7 @@ void Postprocess_TemporalAA(
 }
 void Postprocess_Lineardepth(
 	const Texture& input,
-	const Texture& output_fullres,
-	const Texture& output_minmax,
+	const Texture& output,
 	CommandList cmd
 )
 {
@@ -10500,11 +10497,11 @@ void Postprocess_Lineardepth(
 
 	device->EventBegin("Postprocess_Lineardepth", cmd);
 
-	const TextureDesc& desc = output_minmax.GetDesc();
+	const TextureDesc& desc = output.GetDesc();
 
 	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution.x = desc.Width / 2;  // downsample res
+	cb.xPPResolution.y = desc.Height / 2; // downsample res
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.xPPParams0.x = (float)input.GetDesc().Width;
@@ -10516,12 +10513,12 @@ void Postprocess_Lineardepth(
 
 	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
 
-	device->BindUAV(CS, &output_fullres, 0, cmd);
-	device->BindUAV(CS, &output_minmax, 1, cmd, 0);
-	device->BindUAV(CS, &output_minmax, 2, cmd, 1);
-	device->BindUAV(CS, &output_minmax, 3, cmd, 2);
-	device->BindUAV(CS, &output_minmax, 4, cmd, 3);
-	device->BindUAV(CS, &output_minmax, 5, cmd, 4);
+	device->BindUAV(CS, &output, 0, cmd, 0);
+	device->BindUAV(CS, &output, 1, cmd, 1);
+	device->BindUAV(CS, &output, 2, cmd, 2);
+	device->BindUAV(CS, &output, 3, cmd, 3);
+	device->BindUAV(CS, &output, 4, cmd, 4);
+	device->BindUAV(CS, &output, 5, cmd, 5);
 
 	device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_LINEARDEPTH], cmd);
 	device->Dispatch(
@@ -10680,7 +10677,6 @@ void Postprocess_Chromatic_Aberration(
 void Postprocess_Upsample_Bilateral(
 	const Texture& input,
 	const Texture& lineardepth,
-	const Texture& lineardepth_minmax,
 	const Texture& output,
 	CommandList cmd,
 	bool pixelshader,
@@ -10699,10 +10695,10 @@ void Postprocess_Upsample_Bilateral(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.xPPParams0.x = threshold;
-	cb.xPPParams0.y = cb.xPPResolution_rcp.x * (float)desc.Width / (float)input.GetDesc().Width;
-	cb.xPPParams0.z = cb.xPPResolution_rcp.y * (float)desc.Height / (float)input.GetDesc().Height;
+	cb.xPPParams0.y = 1.0f / (float)input.GetDesc().Width;
+	cb.xPPParams0.z = 1.0f / (float)input.GetDesc().Height;
 	// select mip from lowres depth mipchain:
-	cb.xPPParams0.w = floorf(std::max(0.0f, log2f(std::max((float)desc.Width / (float)input.GetDesc().Width, (float)desc.Height / (float)input.GetDesc().Height)) - 1));
+	cb.xPPParams0.w = floorf(std::max(1.0f, log2f(std::max((float)desc.Width / (float)input.GetDesc().Width, (float)desc.Height / (float)input.GetDesc().Height))));
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 
 	if (pixelshader)
@@ -10712,7 +10708,6 @@ void Postprocess_Upsample_Bilateral(
 		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		device->BindResource(PS, &input, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(PS, &lineardepth_minmax, TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(PS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 		device->Draw(3, 0, cmd);
@@ -10748,7 +10743,6 @@ void Postprocess_Upsample_Bilateral(
 		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &lineardepth_minmax, TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 		const GPUResource* uavs[] = {

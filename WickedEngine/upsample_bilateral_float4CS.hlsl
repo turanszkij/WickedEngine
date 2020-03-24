@@ -6,7 +6,6 @@
 #endif // UPSAMPLE_FORMAT
 
 TEXTURE2D(input, UPSAMPLE_FORMAT, TEXSLOT_ONDEMAND0);
-TEXTURE2D(lineardepth_minmax, float2, TEXSLOT_ONDEMAND1);
 
 // Note: this post process can be either a pixel shader or compute shader, depending on use case
 
@@ -34,26 +33,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float2 uv11 = uv00 + lowres_texel_size;
 
 	const float4 lineardepth_highres = texture_lineardepth.SampleLevel(sampler_point_clamp, uv, 0).xxxx;
-	const float2 lineardepth_lowres_minmax_00 = lineardepth_minmax.SampleLevel(sampler_point_clamp, uv00, lowres_depthchain_mip);
-	const float2 lineardepth_lowres_minmax_10 = lineardepth_minmax.SampleLevel(sampler_point_clamp, uv10, lowres_depthchain_mip);
-	const float2 lineardepth_lowres_minmax_01 = lineardepth_minmax.SampleLevel(sampler_point_clamp, uv01, lowres_depthchain_mip);
-	const float2 lineardepth_lowres_minmax_11 = lineardepth_minmax.SampleLevel(sampler_point_clamp, uv11, lowres_depthchain_mip);
-	const float4 lineardepth_lowres_min = float4(
-		lineardepth_lowres_minmax_00.x,
-		lineardepth_lowres_minmax_10.x,
-		lineardepth_lowres_minmax_01.x,
-		lineardepth_lowres_minmax_11.x
-		);
-	const float4 lineardepth_lowres_max = float4(
-		lineardepth_lowres_minmax_00.y,
-		lineardepth_lowres_minmax_10.y,
-		lineardepth_lowres_minmax_01.y,
-		lineardepth_lowres_minmax_11.y
-		);
+	const float4 lineardepth_lowres = float4(
+		texture_lineardepth.SampleLevel(sampler_point_clamp, uv00, lowres_depthchain_mip),
+		texture_lineardepth.SampleLevel(sampler_point_clamp, uv10, lowres_depthchain_mip),
+		texture_lineardepth.SampleLevel(sampler_point_clamp, uv01, lowres_depthchain_mip),
+		texture_lineardepth.SampleLevel(sampler_point_clamp, uv11, lowres_depthchain_mip)
+	);
 
-	const float4 depth_diff_min = abs(lineardepth_highres - lineardepth_lowres_min);
-	const float4 depth_diff_max = abs(lineardepth_highres - lineardepth_lowres_max);
-	const float4 depth_diff = max(depth_diff_min, depth_diff_max) * g_xCamera_ZFarP;
+	const float4 depth_diff = abs(lineardepth_highres - lineardepth_lowres) * g_xCamera_ZFarP;
 	const float accum_diff = dot(depth_diff, float4(1, 1, 1, 1));
 
 	UPSAMPLE_FORMAT color;

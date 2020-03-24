@@ -191,7 +191,6 @@ namespace wiRenderer
 	void Postprocess_SSAO(
 		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture& lineardepth,
-		const wiGraphics::Texture& lineardepth_minmax,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float range = 1.0f,
@@ -200,14 +199,12 @@ namespace wiRenderer
 	);
 	void Postprocess_HBAO(
 		const wiGraphics::Texture& lineardepth,
-		const wiGraphics::Texture& lineardepth_minmax,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float power = 2.0f
 		);
 	void Postprocess_MSAO(
 		const wiGraphics::Texture& lineardepth,
-		const wiGraphics::Texture& lineardepth_minmax,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float power = 2.0f
@@ -215,7 +212,7 @@ namespace wiRenderer
 	void Postprocess_SSR(
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& depthbuffer,
-		const wiGraphics::Texture& lineardepth_minmax,
+		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& gbuffer1,
 		const wiGraphics::Texture& gbuffer2,
 		const wiGraphics::Texture& output,
@@ -239,7 +236,6 @@ namespace wiRenderer
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& output,
 		const wiGraphics::Texture& lineardepth,
-		const wiGraphics::Texture& lineardepth_minmax,
 		wiGraphics::CommandList cmd,
 		float focus = 10.0f,
 		float scale = 1.0f,
@@ -284,8 +280,7 @@ namespace wiRenderer
 	);
 	void Postprocess_Lineardepth(
 		const wiGraphics::Texture& input,
-		const wiGraphics::Texture& output_fullres,
-		const wiGraphics::Texture& output_minmax,
+		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
 	void Postprocess_Sharpen(
@@ -313,7 +308,6 @@ namespace wiRenderer
 	void Postprocess_Upsample_Bilateral(
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& lineardepth,
-		const wiGraphics::Texture& lineardepth_minmax,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		bool is_pixelshader = false,

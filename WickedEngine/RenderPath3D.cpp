@@ -229,22 +229,16 @@ void RenderPath3D::ResizeBuffers()
 		desc.Format = FORMAT_R32_FLOAT;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
+		desc.MipLevels = 6;
 		device->CreateTexture(&desc, nullptr, &rtLinearDepth);
 		device->SetName(&rtLinearDepth, "rtLinearDepth");
-
-		desc.Width = (desc.Width + 1) / 2;
-		desc.Height = (desc.Height + 1) / 2;
-		desc.MipLevels = 5;
-		desc.Format = FORMAT_R32G32_FLOAT;
-		device->CreateTexture(&desc, nullptr, &rtLinearDepth_minmax);
-		device->SetName(&rtLinearDepth_minmax, "rtLinearDepth_minmax");
 
 		for (uint32_t i = 0; i < desc.MipLevels; ++i)
 		{
 			int subresource_index;
-			subresource_index = device->CreateSubresource(&rtLinearDepth_minmax, SRV, 0, 1, i, 1);
+			subresource_index = device->CreateSubresource(&rtLinearDepth, SRV, 0, 1, i, 1);
 			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&rtLinearDepth_minmax, UAV, 0, 1, i, 1);
+			subresource_index = device->CreateSubresource(&rtLinearDepth, UAV, 0, 1, i, 1);
 			assert(subresource_index == i);
 		}
 	}
@@ -422,7 +416,7 @@ void RenderPath3D::RenderShadows(CommandList cmd) const
 
 void RenderPath3D::RenderLinearDepth(CommandList cmd) const
 {
-	wiRenderer::Postprocess_Lineardepth(depthBuffer_Copy, rtLinearDepth, rtLinearDepth_minmax, cmd);
+	wiRenderer::Postprocess_Lineardepth(depthBuffer_Copy, rtLinearDepth, cmd);
 }
 void RenderPath3D::RenderAO(CommandList cmd) const
 {
@@ -436,7 +430,6 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 			wiRenderer::Postprocess_SSAO(
 				depthBuffer_Copy,
 				rtLinearDepth,
-				rtLinearDepth_minmax,
 				rtAO,
 				cmd,
 				getAORange(),
@@ -447,7 +440,6 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 		case AO_HBAO:
 			wiRenderer::Postprocess_HBAO(
 				rtLinearDepth,
-				rtLinearDepth_minmax,
 				rtAO,
 				cmd,
 				getAOPower()
@@ -456,7 +448,6 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 		case AO_MSAO:
 			wiRenderer::Postprocess_MSAO(
 				rtLinearDepth,
-				rtLinearDepth_minmax,
 				rtAO,
 				cmd,
 				getAOPower()
@@ -469,7 +460,7 @@ void RenderPath3D::RenderSSR(const Texture& gbuffer1, const Texture& gbuffer2, C
 {
 	if (getSSREnabled())
 	{
-		wiRenderer::Postprocess_SSR(rtSceneCopy, depthBuffer_Copy, rtLinearDepth_minmax, gbuffer1, gbuffer2, rtSSR, cmd);
+		wiRenderer::Postprocess_SSR(rtSceneCopy, depthBuffer_Copy, rtLinearDepth, gbuffer1, gbuffer2, rtSSR, cmd);
 	}
 }
 void RenderPath3D::DownsampleDepthBuffer(CommandList cmd) const
@@ -632,7 +623,7 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 	if (getVolumeLightsEnabled() && wiRenderer::IsRequestedVolumetricLightRendering())
 	{
 		device->EventBegin("Contribute Volumetric Lights", cmd);
-		wiRenderer::Postprocess_Upsample_Bilateral(rtVolumetricLights, rtLinearDepth, rtLinearDepth_minmax, 
+		wiRenderer::Postprocess_Upsample_Bilateral(rtVolumetricLights, rtLinearDepth, 
 			*renderpass_transparent.desc.attachments[0].texture, cmd, true, 1.5f);
 		device->EventEnd(cmd);
 	}
@@ -697,7 +688,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 
 		if (getDepthOfFieldEnabled())
 		{
-			wiRenderer::Postprocess_DepthOfField(rt_first == nullptr ? *rt_read : *rt_first, *rt_write, rtLinearDepth, rtLinearDepth_minmax, cmd, getDepthOfFieldFocus(), getDepthOfFieldStrength(), getDepthOfFieldAspect());
+			wiRenderer::Postprocess_DepthOfField(rt_first == nullptr ? *rt_read : *rt_first, *rt_write, rtLinearDepth, cmd, getDepthOfFieldFocus(), getDepthOfFieldStrength(), getDepthOfFieldAspect());
 			rt_first = nullptr;
 
 			std::swap(rt_read, rt_write);

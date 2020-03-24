@@ -3,7 +3,6 @@
 #include "ShaderInterop_Postprocess.h"
 
 TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
-TEXTURE2D(texture_lineardepth_minmax, float2, TEXSLOT_ONDEMAND1);
 
 RWTEXTURE2D(texture_raytrace, float4, 0);
 RWTEXTURE2D(texture_mask, float2, 1);
@@ -193,13 +192,13 @@ bool ScreenSpaceRayTrace(float3 csOrig, float3 csDir, float jitter, float roughn
         }
 
         // A simple HZB approach based on roughness
-        level += min(raytraceHZBBias / 10.0f, 5.0f) * roughness;
+        level += min(raytraceHZBBias / 10.0f, 6.0f) * roughness;
         
         hitPixel = permute ? PQk.yx : PQk.xy;
         hitPixel *= xPPResolution_rcp;
         
         #ifdef USE_LINEARDEPTH
-        sceneZMax = texture_lineardepth_minmax.SampleLevel(sampler_point_clamp, hitPixel, level).g * g_xCamera_ZFarP;
+        sceneZMax = texture_lineardepth.SampleLevel(sampler_point_clamp, hitPixel, level) * g_xCamera_ZFarP;
         #else
         sceneZMax = getLinearDepth(texture_depth.SampleLevel(sampler_point_clamp, hitPixel, 0).r);
         #endif        

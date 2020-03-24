@@ -1,8 +1,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-TEXTURE2D(texture_lineardepth_minmax, float2, TEXSLOT_ONDEMAND0);
-TEXTURE2D(texture_horizontalpass, float, TEXSLOT_ONDEMAND1);
+TEXTURE2D(texture_horizontalpass, float, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(output, unorm float, 0);
 
@@ -90,7 +89,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	{
 		const uint2 pixel = tile_start + hbao_direction * (i - TILE_BORDER);
 		const float2 uv = (pixel + 0.5f) * xPPResolution_rcp;
-		const float z = texture_lineardepth_minmax[tile_start + hbao_direction * (i - TILE_BORDER)].g * g_xCamera_ZFarP;
+		const float z = texture_lineardepth.Load(uint3(tile_start + hbao_direction * (i - TILE_BORDER), 1)) * g_xCamera_ZFarP;
 		const float2 xy = (hbao_uv_to_view_A * uv + hbao_uv_to_view_B) * z;
 		cache[i] = float2(horizontal ? xy.x : xy.y, z);
 	}
