@@ -317,6 +317,7 @@ protected:
 	wiTextInputField* text_H = nullptr;
 	wiTextInputField* text_S = nullptr;
 	wiTextInputField* text_V = nullptr;
+	wiSlider* alphaSlider = nullptr;
 
 	void FireEvents();
 public:

@@ -57,7 +57,6 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 
 		float len = (binormal_length >> 24) & 0x000000FF;
 		len /= 255.0f;
-		len += 1;
 		len *= xLength;
 
 		// expand the particle into a billboard cross section, the patch:

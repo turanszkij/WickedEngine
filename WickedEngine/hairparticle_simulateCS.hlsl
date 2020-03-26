@@ -6,6 +6,7 @@ RWSTRUCTUREDBUFFER(simulationBuffer, PatchSimulationData, 1);
 
 TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND0);
 RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND1);
+TYPEDBUFFER(meshVertexBuffer_length, float, TEXSLOT_ONDEMAND2);
 
 #define NUM_LDS_FORCEFIELDS 32
 struct LDS_ForceField
@@ -55,6 +56,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
     float3 nor0 = unpack_unitvector(asuint(pos_nor0.w));
     float3 nor1 = unpack_unitvector(asuint(pos_nor1.w));
     float3 nor2 = unpack_unitvector(asuint(pos_nor2.w));
+	float length0 = meshVertexBuffer_length[i0];
+	float length1 = meshVertexBuffer_length[i1];
+	float length2 = meshVertexBuffer_length[i2];
 
 	// random barycentric coords:
 	float f = rand(seed, uv);
@@ -71,6 +75,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	float3 target = normalize(nor0 + f * (nor1 - nor0) + g * (nor2 - nor0));
 	float3 tangent = normalize((rand(seed, uv) < 0.5f ? pos_nor0.xyz : pos_nor2.xyz) - pos_nor1.xyz);
 	float3 binormal = cross(target, tangent);
+	float strand_length = length0 + f * (length1 - length0) + g * (length2 - length0);
 
 	uint tangent_random = 0;
 	tangent_random |= (uint)((uint)(tangent.x * 127.5f + 127.5f) << 0);
@@ -82,7 +87,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	binormal_length |= (uint)((uint)(binormal.x * 127.5f + 127.5f) << 0);
 	binormal_length |= (uint)((uint)(binormal.y * 127.5f + 127.5f) << 8);
 	binormal_length |= (uint)((uint)(binormal.z * 127.5f + 127.5f) << 16);
-	binormal_length |= (uint)(rand(seed, uv) * 255 * saturate(xHairRandomness)) << 24;
+	binormal_length |= (uint)(lerp(1, rand(seed, uv), saturate(xHairRandomness)) * strand_length * 255) << 24;
 
 	// Identifies the hair strand root particle:
     const uint strandID = DTid.x * xHairSegmentCount;

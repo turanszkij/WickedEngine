@@ -107,8 +107,27 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 				}
 			}
 
+			if (!vertex_lengths.empty())
+			{
+				std::vector<uint8_t> ulengths;
+				ulengths.reserve(vertex_lengths.size());
+				for (auto& x : vertex_lengths)
+				{
+					ulengths.push_back(uint8_t(wiMath::Clamp(x, 0, 1) * 255.0f));
+				}
+
+				bd.MiscFlags = 0;
+				bd.BindFlags = BIND_SHADER_RESOURCE;
+				bd.Format = FORMAT_R8_UNORM;
+				bd.StructureByteStride = sizeof(uint8_t);
+				bd.ByteWidth = bd.StructureByteStride * (uint32_t)ulengths.size();
+				SubresourceData initData;
+				initData.pSysMem = ulengths.data();
+				device->CreateBuffer(&bd, &initData, &vertexBuffer_length);
+			}
 			if (!indices.empty())
 			{
+				bd.MiscFlags = 0;
 				bd.BindFlags = BIND_SHADER_RESOURCE;
 				bd.Format = FORMAT_R32_UINT;
 				bd.StructureByteStride = sizeof(uint32_t);
@@ -163,6 +182,7 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 	const GPUResource* res[] = {
 		indexBuffer.IsValid() ? &indexBuffer : &mesh.indexBuffer,
 		mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
+		&vertexBuffer_length
 	};
 	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 

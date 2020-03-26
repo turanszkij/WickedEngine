@@ -793,6 +793,7 @@ void EditorComponent::Update(float dt)
 
 	animWnd->Update();
 	weatherWnd->Update();
+	paintToolWnd->Update(dt);
 
 	selectionOutlineTimer += dt;
 
@@ -888,16 +889,8 @@ void EditorComponent::Update(float dt)
 		cinemaModeCheckBox->SetCheck(false);
 	}
 
-	// by default, paint tool is on center of screen, this makes it easy to tweak radius with GUI:
-	paintToolWnd->pos.x = wiRenderer::GetDevice()->GetScreenWidth() * 0.5f;
-	paintToolWnd->pos.y = wiRenderer::GetDevice()->GetScreenHeight() * 0.5f;
-
 	if (!wiBackLog::isActive() && !GetGUI().HasFocus())
 	{
-		XMFLOAT4 currentMouse = wiInput::GetPointer();
-		paintToolWnd->pos.x = currentMouse.x;
-		paintToolWnd->pos.y = currentMouse.y;
-
 		// Camera control:
 		static XMFLOAT4 originalMouse = XMFLOAT4(0, 0, 0, 0);
 		static bool camControlStart = true;
@@ -906,6 +899,7 @@ void EditorComponent::Update(float dt)
 			originalMouse = wiInput::GetPointer();
 		}
 
+		XMFLOAT4 currentMouse = wiInput::GetPointer();
 		float xDif = 0, yDif = 0;
 
 		if (wiInput::Down(wiInput::MOUSE_BUTTON_MIDDLE))
@@ -1195,189 +1189,8 @@ void EditorComponent::Update(float dt)
 
 		}
 
-		// Use Paint Tool or interact, but not both:
-		if (paintToolWnd->GetMode() != PaintToolWindow::MODE_DISABLED)
-		{
-			auto mode = paintToolWnd->GetMode();
-			switch (mode)
-			{
-			case PaintToolWindow::MODE_SOFTBODY_PINNING:
-			case PaintToolWindow::MODE_SOFTBODY_PHYSICS:
-			{
-				for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
-				{
-					SoftBodyPhysicsComponent& softbody = scene.softbodies[i];
-					if (softbody.vertex_positions_simulation.empty())
-						continue;
-
-					// Painting:
-					if (wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
-					{
-						const float radius = paintToolWnd->GetRadius();
-						const XMVECTOR C = XMLoadFloat2(&paintToolWnd->pos);
-						const XMMATRIX VP = camera.GetViewProjection();
-						const XMVECTOR MUL = XMVectorSet(0.5f, -0.5f, 1, 1);
-						const XMVECTOR ADD = XMVectorSet(0.5f, 0.5f, 0, 0);
-						const XMVECTOR SCREEN = XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 1, 1);
-						size_t j = 0;
-						for (auto& ind : softbody.physicsToGraphicsVertexMapping)
-						{
-							XMVECTOR P = softbody.vertex_positions_simulation[ind].LoadPOS();
-							P = XMVector3TransformCoord(P, VP);
-							P = P * MUL + ADD;
-							P = P * SCREEN;
-							const float z = XMVectorGetZ(P);
-							if (z >= 0 && z <= 1 && XMVectorGetX(XMVector2Length(C - P)) <= radius)
-							{
-								softbody.weights[j] = (mode == PaintToolWindow::MODE_SOFTBODY_PINNING ? 0.0f : 1.0f);
-								softbody._flags |= SoftBodyPhysicsComponent::FORCE_RESET;
-							}
-							j++;
-						}
-					}
-
-					// Visualizing:
-					Entity entity = scene.softbodies.GetEntity(i);
-					const MeshComponent& mesh = *scene.meshes.GetComponent(entity);
-					const XMMATRIX W = XMLoadFloat4x4(&softbody.worldMatrix);
-					for (size_t j = 0; j < mesh.indices.size(); j += 3)
-					{
-						const uint32_t graphicsIndex0 = mesh.indices[j + 0];
-						const uint32_t graphicsIndex1 = mesh.indices[j + 1];
-						const uint32_t graphicsIndex2 = mesh.indices[j + 2];
-						const uint32_t physicsIndex0 = softbody.graphicsToPhysicsVertexMapping[graphicsIndex0];
-						const uint32_t physicsIndex1 = softbody.graphicsToPhysicsVertexMapping[graphicsIndex1];
-						const uint32_t physicsIndex2 = softbody.graphicsToPhysicsVertexMapping[graphicsIndex2];
-						const float weight0 = softbody.weights[physicsIndex0];
-						const float weight1 = softbody.weights[physicsIndex1];
-						const float weight2 = softbody.weights[physicsIndex2];
-						wiRenderer::RenderableTriangle tri;
-						if (softbody.vertex_positions_simulation.empty())
-						{
-							XMStoreFloat3(&tri.positionA, XMVector3Transform(XMLoadFloat3(&mesh.vertex_positions[graphicsIndex0]), W));
-							XMStoreFloat3(&tri.positionB, XMVector3Transform(XMLoadFloat3(&mesh.vertex_positions[graphicsIndex1]), W));
-							XMStoreFloat3(&tri.positionC, XMVector3Transform(XMLoadFloat3(&mesh.vertex_positions[graphicsIndex2]), W));
-						}
-						else
-						{
-							tri.positionA = softbody.vertex_positions_simulation[graphicsIndex0].pos;
-							tri.positionB = softbody.vertex_positions_simulation[graphicsIndex1].pos;
-							tri.positionC = softbody.vertex_positions_simulation[graphicsIndex2].pos;
-						}
-						if (weight0 == 0)
-							tri.colorA = XMFLOAT4(1, 1, 0, 1);
-						else
-							tri.colorA = XMFLOAT4(1, 1, 1, 0.5f);
-						if (weight1 == 0)
-							tri.colorB = XMFLOAT4(1, 1, 0, 1);
-						else
-							tri.colorB = XMFLOAT4(1, 1, 1, 0.5f);
-						if (weight2 == 0)
-							tri.colorC = XMFLOAT4(1, 1, 0, 1);
-						else
-							tri.colorC = XMFLOAT4(1, 1, 1, 0.5f);
-						wiRenderer::DrawTriangle(tri, true);
-						if (weight0 == 0 && weight1 == 0 && weight2 == 0)
-						{
-							tri.colorA = tri.colorB = tri.colorC = XMFLOAT4(1, 0, 0, 0.8f);
-							wiRenderer::DrawTriangle(tri);
-						}
-					}
-				}
-			}
-			break;
-
-			case PaintToolWindow::MODE_HAIRPARTICLE_ADD_TRIANGLE:
-			case PaintToolWindow::MODE_HAIRPARTICLE_REMOVE_TRIANGLE:
-			{
-				for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
-				{
-					wiHairParticle& hair = scene.hairs[i];
-					if (hair.meshID == INVALID_ENTITY)
-						continue;
-
-					MeshComponent* mesh = scene.meshes.GetComponent(hair.meshID);
-					if (mesh == nullptr)
-						continue;
-
-					Entity entity = scene.hairs.GetEntity(i);
-					const TransformComponent* transform = scene.transforms.GetComponent(entity);
-					if (transform == nullptr)
-						continue;
-
-					const XMMATRIX W = XMLoadFloat4x4(&transform->world);
-					const bool painting = wiInput::Down(wiInput::MOUSE_BUTTON_LEFT);
-
-					const float radius = paintToolWnd->GetRadius();
-					const XMVECTOR C = XMLoadFloat2(&paintToolWnd->pos);
-					const XMMATRIX VP = camera.GetViewProjection();
-					const XMVECTOR MUL = XMVectorSet(0.5f, -0.5f, 1, 1);
-					const XMVECTOR ADD = XMVectorSet(0.5f, 0.5f, 0, 0);
-					const XMVECTOR SCREEN = XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 1, 1);
-					for (size_t j = 0; j < mesh->indices.size(); j += 3)
-					{
-						const uint32_t triangle[] = {
-							mesh->indices[j + 0],
-							mesh->indices[j + 1],
-							mesh->indices[j + 2],
-						};
-
-						if (painting)
-						{
-							bool hit = false;
-							for (int k = 0; k < arraysize(triangle); ++k)
-							{
-								const XMFLOAT3& pos = mesh->vertex_positions[triangle[k]];
-								XMVECTOR P = XMLoadFloat3(&pos);
-								P = XMVector3Transform(P, W);
-								P = XMVector3TransformCoord(P, VP);
-								P = P * MUL + ADD;
-								P = P * SCREEN;
-								const float z = XMVectorGetZ(P);
-								if (z >= 0 && z <= 1 && XMVectorGetX(XMVector2Length(C - P)) <= radius)
-								{
-									if (mode == PaintToolWindow::MODE_HAIRPARTICLE_ADD_TRIANGLE)
-									{
-										hair.vertex_lengths[triangle[k]] = 1.0f;
-									}
-									else if (mode == PaintToolWindow::MODE_HAIRPARTICLE_REMOVE_TRIANGLE)
-									{
-										hair.vertex_lengths[triangle[k]] = 0;
-									}
-									hair._flags |= wiHairParticle::REBUILD_BUFFERS;
-								}
-							}
-						}
-
-						wiRenderer::RenderableTriangle tri;
-						XMStoreFloat3(&tri.positionA, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[0]]), W));
-						XMStoreFloat3(&tri.positionB, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[1]]), W));
-						XMStoreFloat3(&tri.positionC, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[2]]), W));
-						wiRenderer::DrawTriangle(tri, true);
-					}
-					
-					for (size_t j = 0; j < hair.indices.size(); j += 3)
-					{
-						const uint32_t triangle[] = {
-							hair.indices[j + 0],
-							hair.indices[j + 1],
-							hair.indices[j + 2],
-						};
-
-						wiRenderer::RenderableTriangle tri;
-						XMStoreFloat3(&tri.positionA, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[0]]), W));
-						XMStoreFloat3(&tri.positionB, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[1]]), W));
-						XMStoreFloat3(&tri.positionC, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[2]]), W));
-						tri.colorA = tri.colorB = tri.colorC = XMFLOAT4(1, 0, 1, 0.9f);
-						wiRenderer::DrawTriangle(tri, false);
-					}
-				}
-			}
-			break;
-
-			}
-		}
-		else
+		// Interactions only when paint tool is disabled:
+		if (paintToolWnd->GetMode() == PaintToolWindow::MODE_DISABLED)
 		{
 			// Interact:
 			if (hovered.entity != INVALID_ENTITY)
@@ -1625,6 +1438,7 @@ void EditorComponent::Update(float dt)
 		envProbeWnd->SetEntity(INVALID_ENTITY);
 		forceFieldWnd->SetEntity(INVALID_ENTITY);
 		cameraWnd->SetEntity(INVALID_ENTITY);
+		paintToolWnd->SetEntity(INVALID_ENTITY);
 	}
 	else
 	{
@@ -1650,6 +1464,7 @@ void EditorComponent::Update(float dt)
 		envProbeWnd->SetEntity(picked.entity);
 		forceFieldWnd->SetEntity(picked.entity);
 		cameraWnd->SetEntity(picked.entity);
+		paintToolWnd->SetEntity(picked.entity);
 
 		if (picked.subsetIndex >= 0)
 		{

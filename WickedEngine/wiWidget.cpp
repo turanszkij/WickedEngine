@@ -1800,6 +1800,16 @@ wiColorPicker::wiColorPicker(wiGUI* gui, const std::string& name, bool window_co
 		FireEvents();
 		});
 	AddWidget(text_V);
+
+	alphaSlider = new wiSlider(0, 255, 255, 255, "");
+	alphaSlider->SetPos(XMFLOAT2(20, 230));
+	alphaSlider->SetSize(XMFLOAT2(150, 18));
+	alphaSlider->SetText("A: ");
+	alphaSlider->SetTooltip("Value for ALPHA - TRANSPARENCY channel (0-255)");
+	alphaSlider->OnSlide([this](wiEventArgs args) {
+		FireEvents();
+		});
+	AddWidget(alphaSlider);
 }
 static const float colorpicker_center = 120;
 static const float colorpicker_radius_triangle = 68;
@@ -2132,11 +2142,9 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 			float _width = 20;
 			Vertex vertices[] = {
 				{ XMFLOAT4(-_width, -_width, 0, 1),XMFLOAT4(1,1,1,1) },
+				{ XMFLOAT4(_width, -_width, 0, 1),XMFLOAT4(1,1,1,1) },
 				{ XMFLOAT4(-_width, _width, 0, 1),XMFLOAT4(1,1,1,1) },
 				{ XMFLOAT4(_width, _width, 0, 1),XMFLOAT4(1,1,1,1) },
-				{ XMFLOAT4(-_width, -_width, 0, 1),XMFLOAT4(1,1,1,1) },
-				{ XMFLOAT4(_width, _width, 0, 1),XMFLOAT4(1,1,1,1) },
-				{ XMFLOAT4(_width, -_width, 0, 1),XMFLOAT4(1,1,1,1) },
 			};
 
 			GPUBufferDesc desc;
@@ -2326,7 +2334,7 @@ wiColor wiColorPicker::GetPickColor() const
 	source.s = saturation;
 	source.v = luminance;
 	rgb result = hsv2rgb(source);
-	return wiColor::fromFloat3(XMFLOAT3(result.r, result.g, result.b));
+	return wiColor::fromFloat4(XMFLOAT4(result.r, result.g, result.b, alphaSlider->GetValue() / 255.0f));
 }
 void wiColorPicker::SetPickColor(wiColor value)
 {
@@ -2344,9 +2352,12 @@ void wiColorPicker::SetPickColor(wiColor value)
 	}
 	saturation = result.s;
 	luminance = result.v;
+	alphaSlider->SetValue((float)value.getA());
 }
 void wiColorPicker::FireEvents()
 {
+	if (onColorChanged == nullptr)
+		return;
 	wiEventArgs args;
 	args.color = GetPickColor();
 	onColorChanged(args);

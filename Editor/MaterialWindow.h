@@ -35,7 +35,6 @@ public:
 	wiSlider*	roughnessSlider;
 	wiSlider*	reflectanceSlider;
 	wiSlider*	metalnessSlider;
-	wiSlider*	alphaSlider;
 	wiSlider*	refractionIndexSlider;
 	wiSlider*	emissiveSlider;
 	wiSlider*	sssSlider;

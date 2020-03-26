@@ -158,17 +158,6 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	});
 	materialWindow->AddWidget(metalnessSlider);
 
-	alphaSlider = new wiSlider(0, 1, 1.0f, 1000, "Alpha: ");
-	alphaSlider->SetTooltip("Adjusts the overall transparency of the surface. No effect when BlendMode is set to OPAQUE.");
-	alphaSlider->SetSize(XMFLOAT2(100, 30));
-	alphaSlider->SetPos(XMFLOAT2(x, y += step));
-	alphaSlider->OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-			material->SetOpacity(args.fValue);
-	});
-	materialWindow->AddWidget(alphaSlider);
-
 	alphaRefSlider = new wiSlider(0, 1, 1.0f, 1000, "AlphaRef: ");
 	alphaRefSlider->SetTooltip("Adjust the alpha cutoff threshold. Some performance optimizations will be disabled.");
 	alphaRefSlider->SetSize(XMFLOAT2(100, 30));
@@ -311,8 +300,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
-			XMFLOAT3 col = args.color.toFloat3();
-			material->SetBaseColor(XMFLOAT4(col.x, col.y, col.z, material->GetOpacity()));
+			material->SetBaseColor(args.color.toFloat4());
 		}
 	});
 	materialWindow->AddWidget(baseColorPicker);
@@ -791,7 +779,6 @@ void MaterialWindow::SetEntity(Entity entity)
 		roughnessSlider->SetValue(material->roughness);
 		reflectanceSlider->SetValue(material->reflectance);
 		metalnessSlider->SetValue(material->metalness);
-		alphaSlider->SetValue(material->GetOpacity());
 		refractionIndexSlider->SetValue(material->refractionIndex);
 		emissiveSlider->SetValue(material->emissiveColor.w);
 		sssSlider->SetValue(material->subsurfaceScattering);
@@ -807,7 +794,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		baseColorPicker->SetEnabled(true);
 		baseColorPicker->SetPickColor(wiColor::fromFloat4(material->baseColor));
 		emissiveColorPicker->SetEnabled(true);
-		emissiveColorPicker->SetPickColor(wiColor::fromFloat4(material->emissiveColor));
+		emissiveColorPicker->SetPickColor(wiColor::fromFloat3(XMFLOAT3(material->emissiveColor.x, material->emissiveColor.y, material->emissiveColor.z)));
 		blendModeComboBox->SetSelected((int)material->userBlendMode);
 		shaderTypeComboBox->SetSelected(max(0, material->GetCustomShaderID() + 1));
 
