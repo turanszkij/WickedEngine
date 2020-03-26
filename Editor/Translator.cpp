@@ -53,26 +53,6 @@ void Translator::LoadShaders()
 
 Translator::Translator()
 {
-	prevPointer = XMFLOAT4(0, 0, 0, 0);
-
-	XMStoreFloat4x4(&dragStart, XMMatrixIdentity());
-	XMStoreFloat4x4(&dragEnd, XMMatrixIdentity());
-
-	dragging = false;
-	dragStarted = false;
-	dragEnded = false;
-
-	enabled = true;
-
-	state = TRANSLATOR_IDLE;
-
-	dist = 1;
-
-	isTranslator = true; 
-	isScalator = false; 
-	isRotator = false;
-
-
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	if (!vertexBuffer_Axis.IsValid())
@@ -275,6 +255,12 @@ void Translator::Update()
 
 		if (dragging || (state != TRANSLATOR_IDLE && wiInput::Down(wiInput::MOUSE_BUTTON_LEFT)))
 		{
+			if (!dragging)
+			{
+				dragStarted = true;
+				dragDeltaMatrix = IDENTITYMATRIX;
+			}
+
 			XMVECTOR plane, planeNormal;
 			if (state == TRANSLATOR_X)
 			{
@@ -365,11 +351,14 @@ void Translator::Update()
 
 			if (isTranslator)
 			{
+				XMStoreFloat4x4(&dragDeltaMatrix, XMMatrixTranslation(delta.x, delta.y, delta.z) * XMLoadFloat4x4(&dragDeltaMatrix));
 				transform.Translate(delta);
 			}
 			if (isRotator)
 			{
-				XMVECTOR Q = XMQuaternionRotationMatrix(XMMatrixRotationRollPitchYaw(delta.x, delta.y, delta.z));
+				XMMATRIX R = XMMatrixRotationRollPitchYaw(delta.x, delta.y, delta.z);
+				XMStoreFloat4x4(&dragDeltaMatrix, R * XMLoadFloat4x4(&dragDeltaMatrix));
+				XMVECTOR Q = XMQuaternionRotationMatrix(R);
 				XMFLOAT4 quat;
 				XMStoreFloat4(&quat, Q);
 				transform.Rotate(quat);
@@ -377,15 +366,11 @@ void Translator::Update()
 			if (isScalator)
 			{
 				XMFLOAT3 scale = transform.GetScale();
-				transform.Scale(XMFLOAT3((1.0f / scale.x) * (scale.x + delta.x), (1.0f / scale.y) * (scale.y + delta.y), (1.0f / scale.z) * (scale.z + delta.z)));
+				scale = XMFLOAT3((1.0f / scale.x) * (scale.x + delta.x), (1.0f / scale.y) * (scale.y + delta.y), (1.0f / scale.z) * (scale.z + delta.z));
+				XMStoreFloat4x4(&dragDeltaMatrix, XMMatrixScaling(scale.x, scale.y, scale.z) * XMLoadFloat4x4(&dragDeltaMatrix));
+				transform.Scale(scale);
 			}
 			transform.UpdateTransform();
-
-			if (!dragging)
-			{
-				dragStarted = true;
-				dragStart = transform.world;
-			}
 
 			dragging = true;
 		}
@@ -395,7 +380,6 @@ void Translator::Update()
 			if (dragging)
 			{
 				dragEnded = true;
-				dragEnd = transform.world;
 			}
 			dragging = false;
 		}
@@ -408,7 +392,6 @@ void Translator::Update()
 		if (dragging)
 		{
 			dragEnded = true;
-			dragEnd = transform.world;
 		}
 		dragging = false;
 	}
@@ -609,19 +592,3 @@ void Translator::PostTranslate()
 	}
 }
 
-bool Translator::IsDragStarted()
-{
-	return dragStarted;
-}
-XMFLOAT4X4 Translator::GetDragStart()
-{
-	return dragStart;
-}
-bool Translator::IsDragEnded()
-{
-	return dragEnded;
-}
-XMFLOAT4X4 Translator::GetDragEnd()
-{
-	return dragEnd;
-}

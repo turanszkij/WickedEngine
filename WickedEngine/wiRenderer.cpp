@@ -157,6 +157,7 @@ deque<wiSprite*> waterRipples;
 
 std::vector<pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
 std::vector<RenderableLine> renderableLines;
+std::vector<RenderableLine2D> renderableLines2D;
 std::vector<RenderablePoint> renderablePoints;
 std::vector<RenderableTriangle> renderableTriangles_solid;
 std::vector<RenderableTriangle> renderableTriangles_wireframe;
@@ -5742,7 +5743,8 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 			LineSegment segment;
 			segment.a = XMFLOAT4(line.start.x, line.start.y, line.start.z, 1);
 			segment.b = XMFLOAT4(line.end.x, line.end.y, line.end.z, 1);
-			segment.colorA = segment.colorB = line.color;
+			segment.colorA = line.color_start;
+			segment.colorB = line.color_end;
 
 			memcpy((void*)((size_t)mem.data + i * sizeof(LineSegment)), &segment, sizeof(LineSegment));
 			i++;
@@ -5762,6 +5764,56 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 		device->Draw(2 * i, 0, cmd);
 
 		renderableLines.clear();
+
+		device->EventEnd(cmd);
+	}
+
+	if (!renderableLines2D.empty())
+	{
+		device->EventBegin("DebugLines - 2D", cmd);
+
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_LINES], cmd);
+
+		MiscCB sb;
+		XMStoreFloat4x4(&sb.g_xTransform, device->GetScreenProjection());
+		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
+		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+
+		struct LineSegment
+		{
+			XMFLOAT4 a, colorA, b, colorB;
+		};
+		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(LineSegment) * renderableLines2D.size(), cmd);
+
+		int i = 0;
+		for (auto& line : renderableLines2D)
+		{
+			LineSegment segment;
+			segment.a = XMFLOAT4(line.start.x, line.start.y, 0, 1);
+			segment.b = XMFLOAT4(line.end.x, line.end.y, 0, 1);
+			segment.colorA = line.color_start;
+			segment.colorB = line.color_end;
+
+			memcpy((void*)((size_t)mem.data + i * sizeof(LineSegment)), &segment, sizeof(LineSegment));
+			i++;
+		}
+
+		const GPUBuffer* vbs[] = {
+			mem.buffer,
+		};
+		const uint32_t strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		const uint32_t offsets[] = {
+			mem.offset,
+		};
+		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+		device->Draw(2 * i, 0, cmd);
+
+		renderableLines2D.clear();
 
 		device->EventEnd(cmd);
 	}
@@ -10789,6 +10841,10 @@ void DrawBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color)
 void DrawLine(const RenderableLine& line)
 {
 	renderableLines.push_back(line);
+}
+void DrawLine(const RenderableLine2D& line)
+{
+	renderableLines2D.push_back(line);
 }
 void DrawPoint(const RenderablePoint& point)
 {

@@ -53,7 +53,7 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 
 	aoComboBox = new wiComboBox("AO: ");
 	aoComboBox->SetTooltip("Choose Ambient Occlusion type");
-	aoComboBox->SetScriptTip("RenderPath3D::SetSSAOEnabled(bool value)");
+	aoComboBox->SetScriptTip("RenderPath3D::SetAO(int value)");
 	aoComboBox->SetPos(XMFLOAT2(x, y += step));
 	aoComboBox->AddItem("Disabled");
 	aoComboBox->AddItem("SSAO");

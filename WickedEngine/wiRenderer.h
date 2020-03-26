@@ -478,10 +478,21 @@ namespace wiRenderer
 	{
 		XMFLOAT3 start = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 end = XMFLOAT3(0, 0, 0);
-		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
+		XMFLOAT4 color_start = XMFLOAT4(1, 1, 1, 1);
+		XMFLOAT4 color_end = XMFLOAT4(1, 1, 1, 1);
 	};
 	// Add line to render in the next frame. It will be rendered in DrawDebugWorld()
 	void DrawLine(const RenderableLine& line);
+
+	struct RenderableLine2D
+	{
+		XMFLOAT2 start = XMFLOAT2(0, 0);
+		XMFLOAT2 end = XMFLOAT2(0, 0);
+		XMFLOAT4 color_start = XMFLOAT4(1, 1, 1, 1);
+		XMFLOAT4 color_end = XMFLOAT4(1, 1, 1, 1);
+	};
+	// Add 2D line to render in the next frame. It will be rendered in DrawDebugWorld() in screen space
+	void DrawLine(const RenderableLine2D& line);
 
 	struct RenderablePoint
 	{

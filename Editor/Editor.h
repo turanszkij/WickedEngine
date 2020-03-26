@@ -17,6 +17,7 @@ class EmitterWindow;
 class HairParticleWindow;
 class ForceFieldWindow;
 class SoundWindow;
+class PaintToolWindow;
 
 class EditorLoadingScreen : public LoadingScreen
 {
@@ -50,6 +51,7 @@ public:
 	std::unique_ptr<EmitterWindow>			emitterWnd;
 	std::unique_ptr<HairParticleWindow>		hairWnd;
 	std::unique_ptr<ForceFieldWindow>		forceFieldWnd;
+	std::unique_ptr<PaintToolWindow>		paintToolWnd;
 
 	Editor*					main = nullptr;
 

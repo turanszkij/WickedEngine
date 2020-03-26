@@ -40,7 +40,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	meshWindow->AddWidget(doubleSidedCheckBox);
 
 	softbodyCheckBox = new wiCheckBox("Soft body: ");
-	softbodyCheckBox->SetTooltip("Enable soft body simulation.");
+	softbodyCheckBox->SetTooltip("Enable soft body simulation. Tip: Use the Paint Tool to control vertex pinning.");
 	softbodyCheckBox->SetPos(XMFLOAT2(x, y += step));
 	softbodyCheckBox->OnClick([&](wiEventArgs args) {
 

@@ -16,6 +16,7 @@
 #include "HairParticleWindow.h"
 #include "ForceFieldWindow.h"
 #include "SoundWindow.h"
+#include "PaintToolWindow.h"
 
 #include "ModelImporter.h"
 #include "Translator.h"
@@ -141,6 +142,7 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	emitterWnd = std::make_unique<EmitterWindow>(&GetGUI());
 	hairWnd = std::make_unique<HairParticleWindow>(&GetGUI());
 	forceFieldWnd = std::make_unique<ForceFieldWindow>(&GetGUI());
+	paintToolWnd = std::make_unique<PaintToolWindow>(&GetGUI());
 
 	ResizeBuffers();
 }
@@ -219,8 +221,17 @@ void EditorComponent::Load()
 
 	XMFLOAT2 option_size = XMFLOAT2(100, 28);
 	float step = (option_size.y + 5) * -1, x = screenW - option_size.x, y = screenH - option_size.y;
+	float hstep = (option_size.x + 5) * -1;
 
 
+	wiButton* paintToolWnd_Toggle = new wiButton("Paint Tool");
+	paintToolWnd_Toggle->SetTooltip("Paint tool window");
+	paintToolWnd_Toggle->SetPos(XMFLOAT2(x + hstep, y));
+	paintToolWnd_Toggle->SetSize(option_size);
+	paintToolWnd_Toggle->OnClick([=](wiEventArgs args) {
+		paintToolWnd->window->SetVisible(!paintToolWnd->window->IsVisible());
+		});
+	GetGUI().AddWidget(paintToolWnd_Toggle);
 
 	wiButton* rendererWnd_Toggle = new wiButton("Renderer");
 	rendererWnd_Toggle->SetTooltip("Renderer settings window");
@@ -607,7 +618,6 @@ void EditorComponent::Load()
 			ss << "Delete: DELETE button" << endl;
 			ss << "Add Spring to selected transform: R button" << endl;
 			ss << "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)" << endl;
-			ss << "Pin soft body triangle: Hold P and click on soft body with Left mouse button" << endl;
 			ss << "Script Console / backlog: HOME button" << endl;
 			ss << endl;
 			ss << "You can find sample scenes in the models directory. Try to load one." << endl;
@@ -878,8 +888,15 @@ void EditorComponent::Update(float dt)
 		cinemaModeCheckBox->SetCheck(false);
 	}
 
+	// by default, paint tool is on center of screen, this makes it easy to tweak radius with GUI:
+	paintToolWnd->pos.x = wiRenderer::GetDevice()->GetScreenWidth() * 0.5f;
+	paintToolWnd->pos.y = wiRenderer::GetDevice()->GetScreenHeight() * 0.5f;
+
 	if (!wiBackLog::isActive() && !GetGUI().HasFocus())
 	{
+		XMFLOAT4 currentMouse = wiInput::GetPointer();
+		paintToolWnd->pos.x = currentMouse.x;
+		paintToolWnd->pos.y = currentMouse.y;
 
 		// Camera control:
 		static XMFLOAT4 originalMouse = XMFLOAT4(0, 0, 0, 0);
@@ -889,7 +906,6 @@ void EditorComponent::Update(float dt)
 			originalMouse = wiInput::GetPointer();
 		}
 
-		XMFLOAT4 currentMouse = wiInput::GetPointer();
 		float xDif = 0, yDif = 0;
 
 		if (wiInput::Down(wiInput::MOUSE_BUTTON_MIDDLE))
@@ -1179,106 +1195,218 @@ void EditorComponent::Update(float dt)
 
 		}
 
-
-
-		// Interact:
-		if (hovered.entity != INVALID_ENTITY)
+		// Use Paint Tool or interact, but not both:
+		if (paintToolWnd->GetMode() != PaintToolWindow::MODE_DISABLED)
 		{
-			const ObjectComponent* object = scene.objects.GetComponent(hovered.entity);
-			if (object != nullptr)
+			auto mode = paintToolWnd->GetMode();
+			switch (mode)
 			{
-				if (wiInput::Down((wiInput::BUTTON)'P') && wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
+			case PaintToolWindow::MODE_SOFTBODY_PINNING:
+			case PaintToolWindow::MODE_SOFTBODY_PHYSICS:
+			{
+				for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
 				{
-					SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(object->meshID);
-					if (softbody != nullptr)
-					{
-						// If softbody, pin the triangle:
-						uint32_t physicsIndex0 = softbody->graphicsToPhysicsVertexMapping[hovered.vertexID0];
-						uint32_t physicsIndex1 = softbody->graphicsToPhysicsVertexMapping[hovered.vertexID1];
-						uint32_t physicsIndex2 = softbody->graphicsToPhysicsVertexMapping[hovered.vertexID2];
-						softbody->weights[physicsIndex0] = 0;
-						softbody->weights[physicsIndex1] = 0;
-						softbody->weights[physicsIndex2] = 0;
-						softbody->_flags |= SoftBodyPhysicsComponent::FORCE_RESET;
-					}
-				}
-				else if (translator.selected.empty() && object->GetRenderTypes() & RENDERTYPE_WATER)
-				{
+					SoftBodyPhysicsComponent& softbody = scene.softbodies[i];
+					if (softbody.vertex_positions_simulation.empty())
+						continue;
+
+					// Painting:
 					if (wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
 					{
-						// if water, then put a water ripple onto it:
-						wiRenderer::PutWaterRipple(wiHelper::GetOriginalWorkingDirectory() + "images/ripple.png", hovered.position);
+						const float radius = paintToolWnd->GetRadius();
+						const XMVECTOR C = XMLoadFloat2(&paintToolWnd->pos);
+						const XMMATRIX VP = camera.GetViewProjection();
+						const XMVECTOR MUL = XMVectorSet(0.5f, -0.5f, 1, 1);
+						const XMVECTOR ADD = XMVectorSet(0.5f, 0.5f, 0, 0);
+						const XMVECTOR SCREEN = XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 1, 1);
+						size_t j = 0;
+						for (auto& ind : softbody.physicsToGraphicsVertexMapping)
+						{
+							XMVECTOR P = softbody.vertex_positions_simulation[ind].LoadPOS();
+							P = XMVector3TransformCoord(P, VP);
+							P = P * MUL + ADD;
+							P = P * SCREEN;
+							const float z = XMVectorGetZ(P);
+							if (z >= 0 && z <= 1 && XMVectorGetX(XMVector2Length(C - P)) <= radius)
+							{
+								softbody.weights[j] = (mode == PaintToolWindow::MODE_SOFTBODY_PINNING ? 0.0f : 1.0f);
+								softbody._flags |= SoftBodyPhysicsComponent::FORCE_RESET;
+							}
+							j++;
+						}
 					}
-				}
-				else if (translator.selected.empty() && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
-				{
-					// if not water or softbody, put a decal on it:
-					static int decalselector = 0;
-					decalselector = (decalselector + 1) % 2;
-					Entity entity = scene.Entity_CreateDecal("editorDecal", wiHelper::GetOriginalWorkingDirectory() + (decalselector == 0 ? "images/leaf.dds" : "images/blood1.png"));
-					TransformComponent& transform = *scene.transforms.GetComponent(entity);
-					transform.MatrixTransform(hovered.orientation);
-					transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
-					transform.Scale(XMFLOAT3(2, 2, 2));
-					scene.Component_Attach(entity, hovered.entity);
+
+					// Visualizing:
+					Entity entity = scene.softbodies.GetEntity(i);
+					const MeshComponent& mesh = *scene.meshes.GetComponent(entity);
+					const XMMATRIX W = XMLoadFloat4x4(&softbody.worldMatrix);
+					for (size_t j = 0; j < mesh.indices.size(); j += 3)
+					{
+						const uint32_t graphicsIndex0 = mesh.indices[j + 0];
+						const uint32_t graphicsIndex1 = mesh.indices[j + 1];
+						const uint32_t graphicsIndex2 = mesh.indices[j + 2];
+						const uint32_t physicsIndex0 = softbody.graphicsToPhysicsVertexMapping[graphicsIndex0];
+						const uint32_t physicsIndex1 = softbody.graphicsToPhysicsVertexMapping[graphicsIndex1];
+						const uint32_t physicsIndex2 = softbody.graphicsToPhysicsVertexMapping[graphicsIndex2];
+						const float weight0 = softbody.weights[physicsIndex0];
+						const float weight1 = softbody.weights[physicsIndex1];
+						const float weight2 = softbody.weights[physicsIndex2];
+						wiRenderer::RenderableTriangle tri;
+						if (softbody.vertex_positions_simulation.empty())
+						{
+							XMStoreFloat3(&tri.positionA, XMVector3Transform(XMLoadFloat3(&mesh.vertex_positions[graphicsIndex0]), W));
+							XMStoreFloat3(&tri.positionB, XMVector3Transform(XMLoadFloat3(&mesh.vertex_positions[graphicsIndex1]), W));
+							XMStoreFloat3(&tri.positionC, XMVector3Transform(XMLoadFloat3(&mesh.vertex_positions[graphicsIndex2]), W));
+						}
+						else
+						{
+							tri.positionA = softbody.vertex_positions_simulation[graphicsIndex0].pos;
+							tri.positionB = softbody.vertex_positions_simulation[graphicsIndex1].pos;
+							tri.positionC = softbody.vertex_positions_simulation[graphicsIndex2].pos;
+						}
+						if (weight0 == 0)
+							tri.colorA = XMFLOAT4(1, 1, 0, 1);
+						else
+							tri.colorA = XMFLOAT4(1, 1, 1, 0.5f);
+						if (weight1 == 0)
+							tri.colorB = XMFLOAT4(1, 1, 0, 1);
+						else
+							tri.colorB = XMFLOAT4(1, 1, 1, 0.5f);
+						if (weight2 == 0)
+							tri.colorC = XMFLOAT4(1, 1, 0, 1);
+						else
+							tri.colorC = XMFLOAT4(1, 1, 1, 0.5f);
+						wiRenderer::DrawTriangle(tri, true);
+						if (weight0 == 0 && weight1 == 0 && weight2 == 0)
+						{
+							tri.colorA = tri.colorB = tri.colorC = XMFLOAT4(1, 0, 0, 0.8f);
+							wiRenderer::DrawTriangle(tri);
+						}
+					}
 				}
 			}
+			break;
 
-		}
-
-		// Visualize soft body pinning:
-		if (wiInput::Down((wiInput::BUTTON)'P'))
-		{
-			for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
+			case PaintToolWindow::MODE_HAIRPARTICLE_ADD_TRIANGLE:
+			case PaintToolWindow::MODE_HAIRPARTICLE_REMOVE_TRIANGLE:
 			{
-				SoftBodyPhysicsComponent& softbody = scene.softbodies[i];
-				Entity entity = scene.softbodies.GetEntity(i);
-				const MeshComponent& mesh = *scene.meshes.GetComponent(entity);
-
-				const XMMATRIX W = XMLoadFloat4x4(&softbody.worldMatrix);
-				for (size_t j = 0; j < mesh.indices.size(); j += 3)
+				for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 				{
-					const uint32_t graphicsIndex0 = mesh.indices[j + 0];
-					const uint32_t graphicsIndex1 = mesh.indices[j + 1];
-					const uint32_t graphicsIndex2 = mesh.indices[j + 2];
-					const uint32_t physicsIndex0 = softbody.graphicsToPhysicsVertexMapping[graphicsIndex0];
-					const uint32_t physicsIndex1 = softbody.graphicsToPhysicsVertexMapping[graphicsIndex1];
-					const uint32_t physicsIndex2 = softbody.graphicsToPhysicsVertexMapping[graphicsIndex2];
-					const float weight0 = softbody.weights[physicsIndex0];
-					const float weight1 = softbody.weights[physicsIndex1];
-					const float weight2 = softbody.weights[physicsIndex2];
-					wiRenderer::RenderableTriangle tri;
-					if (softbody.vertex_positions_simulation.empty())
+					wiHairParticle& hair = scene.hairs[i];
+					if (hair.meshID == INVALID_ENTITY)
+						continue;
+
+					MeshComponent* mesh = scene.meshes.GetComponent(hair.meshID);
+					if (mesh == nullptr)
+						continue;
+
+					Entity entity = scene.hairs.GetEntity(i);
+					const TransformComponent* transform = scene.transforms.GetComponent(entity);
+					if (transform == nullptr)
+						continue;
+
+					const XMMATRIX W = XMLoadFloat4x4(&transform->world);
+					const bool painting = wiInput::Down(wiInput::MOUSE_BUTTON_LEFT);
+
+					const float radius = paintToolWnd->GetRadius();
+					const XMVECTOR C = XMLoadFloat2(&paintToolWnd->pos);
+					const XMMATRIX VP = camera.GetViewProjection();
+					const XMVECTOR MUL = XMVectorSet(0.5f, -0.5f, 1, 1);
+					const XMVECTOR ADD = XMVectorSet(0.5f, 0.5f, 0, 0);
+					const XMVECTOR SCREEN = XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 1, 1);
+					for (size_t j = 0; j < mesh->indices.size(); j += 3)
 					{
-						XMStoreFloat3(&tri.positionA, XMVector3Transform(XMLoadFloat3(&mesh.vertex_positions[graphicsIndex0]), W));
-						XMStoreFloat3(&tri.positionB, XMVector3Transform(XMLoadFloat3(&mesh.vertex_positions[graphicsIndex1]), W));
-						XMStoreFloat3(&tri.positionC, XMVector3Transform(XMLoadFloat3(&mesh.vertex_positions[graphicsIndex2]), W));
+						const uint32_t triangle[] = {
+							mesh->indices[j + 0],
+							mesh->indices[j + 1],
+							mesh->indices[j + 2],
+						};
+
+						if (painting)
+						{
+							bool hit = false;
+							for (int k = 0; k < arraysize(triangle); ++k)
+							{
+								const XMFLOAT3& pos = mesh->vertex_positions[triangle[k]];
+								XMVECTOR P = XMLoadFloat3(&pos);
+								P = XMVector3Transform(P, W);
+								P = XMVector3TransformCoord(P, VP);
+								P = P * MUL + ADD;
+								P = P * SCREEN;
+								const float z = XMVectorGetZ(P);
+								if (z >= 0 && z <= 1 && XMVectorGetX(XMVector2Length(C - P)) <= radius)
+								{
+									if (mode == PaintToolWindow::MODE_HAIRPARTICLE_ADD_TRIANGLE)
+									{
+										hair.vertex_lengths[triangle[k]] = 1.0f;
+									}
+									else if (mode == PaintToolWindow::MODE_HAIRPARTICLE_REMOVE_TRIANGLE)
+									{
+										hair.vertex_lengths[triangle[k]] = 0;
+									}
+									hair._flags |= wiHairParticle::REBUILD_BUFFERS;
+								}
+							}
+						}
+
+						wiRenderer::RenderableTriangle tri;
+						XMStoreFloat3(&tri.positionA, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[0]]), W));
+						XMStoreFloat3(&tri.positionB, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[1]]), W));
+						XMStoreFloat3(&tri.positionC, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[2]]), W));
+						wiRenderer::DrawTriangle(tri, true);
 					}
-					else
+					
+					for (size_t j = 0; j < hair.indices.size(); j += 3)
 					{
-						tri.positionA = softbody.vertex_positions_simulation[graphicsIndex0].pos;
-						tri.positionB = softbody.vertex_positions_simulation[graphicsIndex1].pos;
-						tri.positionC = softbody.vertex_positions_simulation[graphicsIndex2].pos;
-					}
-					if (weight0 == 0)
-						tri.colorA = XMFLOAT4(1, 1, 0, 1);
-					else
-						tri.colorA = XMFLOAT4(1, 1, 1, 0.5f);
-					if (weight1 == 0)
-						tri.colorB = XMFLOAT4(1, 1, 0, 1);
-					else
-						tri.colorB = XMFLOAT4(1, 1, 1, 0.5f);
-					if (weight2 == 0)
-						tri.colorC = XMFLOAT4(1, 1, 0, 1);
-					else
-						tri.colorC = XMFLOAT4(1, 1, 1, 0.5f);
-					wiRenderer::DrawTriangle(tri, true);
-					if (weight0 == 0 && weight1 == 0 && weight2 == 0)
-					{
-						tri.colorA = tri.colorB = tri.colorC = XMFLOAT4(1, 0, 0, 0.8f);
-						wiRenderer::DrawTriangle(tri);
+						const uint32_t triangle[] = {
+							hair.indices[j + 0],
+							hair.indices[j + 1],
+							hair.indices[j + 2],
+						};
+
+						wiRenderer::RenderableTriangle tri;
+						XMStoreFloat3(&tri.positionA, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[0]]), W));
+						XMStoreFloat3(&tri.positionB, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[1]]), W));
+						XMStoreFloat3(&tri.positionC, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[2]]), W));
+						tri.colorA = tri.colorB = tri.colorC = XMFLOAT4(1, 0, 1, 0.9f);
+						wiRenderer::DrawTriangle(tri, false);
 					}
 				}
+			}
+			break;
+
+			}
+		}
+		else
+		{
+			// Interact:
+			if (hovered.entity != INVALID_ENTITY)
+			{
+				const ObjectComponent* object = scene.objects.GetComponent(hovered.entity);
+				if (object != nullptr)
+				{	
+					if (translator.selected.empty() && object->GetRenderTypes() & RENDERTYPE_WATER)
+					{
+						if (wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
+						{
+							// if water, then put a water ripple onto it:
+							wiRenderer::PutWaterRipple(wiHelper::GetOriginalWorkingDirectory() + "images/ripple.png", hovered.position);
+						}
+					}
+					else if (translator.selected.empty() && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
+					{
+						// if not water or softbody, put a decal on it:
+						static int decalselector = 0;
+						decalselector = (decalselector + 1) % 2;
+						Entity entity = scene.Entity_CreateDecal("editorDecal", wiHelper::GetOriginalWorkingDirectory() + (decalselector == 0 ? "images/leaf.dds" : "images/blood1.png"));
+						TransformComponent& transform = *scene.transforms.GetComponent(entity);
+						transform.MatrixTransform(hovered.orientation);
+						transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
+						transform.Scale(XMFLOAT3(2, 2, 2));
+						scene.Component_Attach(entity, hovered.entity);
+					}
+				}
+
 			}
 		}
 
@@ -1580,8 +1708,7 @@ void EditorComponent::Update(float dt)
 	{
 		wiArchive& archive = AdvanceHistory();
 		archive << HISTORYOP_TRANSLATOR;
-		archive << translator.GetDragStart();
-		archive << translator.GetDragEnd();
+		archive << translator.GetDragDeltaMatrix();
 	}
 
 	emitterWnd->UpdateData();
@@ -1727,6 +1854,8 @@ void EditorComponent::Render() const
 		XMStoreFloat4x4(&selectionBox, selectedAABB.getAsBoxMatrix());
 		wiRenderer::DrawBox(selectionBox, XMFLOAT4(1, 1, 1, 1));
 	}
+
+	paintToolWnd->DrawBrush();
 
 	renderPath->Render();
 
@@ -2180,6 +2309,8 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 			historyPos++;
 		}
 
+		Scene& scene = wiScene::GetScene();
+
 		wiArchive& archive = history[historyPos];
 		archive.SetReadModeAndResetPos(true);
 
@@ -2191,30 +2322,23 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 		{
 		case HISTORYOP_TRANSLATOR:
 			{
-				XMFLOAT4X4 start, end;
-				archive >> start >> end;
+				XMFLOAT4X4 delta;
+				archive >> delta;
 				translator.enabled = true;
 
-				Scene& scene = wiScene::GetScene();
-
 				translator.PreTranslate();
-				translator.transform.ClearTransform();
+				XMMATRIX W = XMLoadFloat4x4(&delta);
 				if (undo)
 				{
-					translator.transform.MatrixTransform(XMLoadFloat4x4(&start));
+					W = XMMatrixInverse(nullptr, W);
 				}
-				else
-				{
-					translator.transform.MatrixTransform(XMLoadFloat4x4(&end));
-				}
-				translator.transform.UpdateTransform();
+				W = W * XMLoadFloat4x4(&translator.transform.world);
+				XMStoreFloat4x4(&translator.transform.world, W);
 				translator.PostTranslate();
 			}
 			break;
 		case HISTORYOP_DELETE:
 			{
-				Scene& scene = wiScene::GetScene();
-
 				size_t count;
 				archive >> count;
 				vector<Entity> deletedEntities(count);

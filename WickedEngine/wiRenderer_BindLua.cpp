@@ -230,7 +230,10 @@ namespace wiRenderer_BindLua
 				{
 					Vector_BindLua* c = Luna<Vector_BindLua>::lightcheck(L, 3);
 					if (c)
-						XMStoreFloat4(&line.color, c->vector);
+					{
+						XMStoreFloat4(&line.color_start, c->vector);
+						XMStoreFloat4(&line.color_end, c->vector);
+					}
 					else
 						wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) one or more arguments are not vectors!");
 				}

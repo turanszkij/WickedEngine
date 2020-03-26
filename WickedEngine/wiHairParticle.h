@@ -19,6 +19,9 @@ private:
 	wiGraphics::GPUBuffer cb;
 	wiGraphics::GPUBuffer particleBuffer;
 	wiGraphics::GPUBuffer simulationBuffer;
+
+	wiGraphics::GPUBuffer indexBuffer;
+	wiGraphics::GPUBuffer vertexBuffer_length;
 public:
 
 	void UpdateCPU(const TransformComponent& transform, const MeshComponent& mesh, float dt);
@@ -29,6 +32,7 @@ public:
 	{
 		EMPTY = 0,
 		REGENERATE_FRAME = 1 << 0,
+		REBUILD_BUFFERS = 1 << 1,
 	};
 	uint32_t _flags = EMPTY;
 
@@ -41,11 +45,13 @@ public:
 	float stiffness = 10.0f;
 	float randomness = 0.2f;
 	float viewDistance = 200;
+	std::vector<float> vertex_lengths;
 
 	// Non-serialized attributes:
 	XMFLOAT4X4 world;
 	XMFLOAT4X4 worldPrev;
 	AABB aabb;
+	std::vector<uint32_t> indices;
 
 	void Serialize(wiArchive& archive, uint32_t seed = 0);
 

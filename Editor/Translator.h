@@ -6,11 +6,11 @@
 class Translator
 {
 private:
-	XMFLOAT4 prevPointer;
-	XMFLOAT4X4 dragStart, dragEnd;
-	bool dragging;
-	bool dragStarted;
-	bool dragEnded;
+	XMFLOAT4 prevPointer = XMFLOAT4(0, 0, 0, 0);
+	XMFLOAT4X4 dragDeltaMatrix = IDENTITYMATRIX;
+	bool dragging = false;
+	bool dragStarted = false;
+	bool dragEnded = false;
 public:
 	Translator();
 
@@ -25,7 +25,7 @@ public:
 	wiScene::TransformComponent transform;
 	std::list<wiScene::PickResult> selected;
 
-	bool enabled;
+	bool enabled = true;
 
 	enum TRANSLATOR_STATE
 	{
@@ -37,19 +37,19 @@ public:
 		TRANSLATOR_XZ,
 		TRANSLATOR_YZ,
 		TRANSLATOR_XYZ,
-	} state;
+	} state = TRANSLATOR_IDLE;
 
-	float dist;
+	float dist = 1;
 
-	bool isTranslator, isScalator, isRotator;
+	bool isTranslator = true, isScalator = false, isRotator = false;
 
 
 	// Check if the drag started in this exact frame
-	bool IsDragStarted();
-	XMFLOAT4X4 GetDragStart();
+	bool IsDragStarted() const { return dragStarted; };
 	// Check if the drag ended in this exact frame
-	bool IsDragEnded();
-	XMFLOAT4X4 GetDragEnd();
+	bool IsDragEnded() const { return dragEnded; };
+	// Delta matrix from beginning to end of drag operation
+	XMFLOAT4X4 GetDragDeltaMatrix() const { return dragDeltaMatrix; }
 
 	static void LoadShaders();
 };

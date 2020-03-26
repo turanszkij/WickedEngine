@@ -54,9 +54,12 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 	if (dt > 0)
 	{
 		_flags &= ~REGENERATE_FRAME;
-		if (!cb.IsValid() || (strandCount * segmentCount) != particleBuffer.GetDesc().ByteWidth / sizeof(Patch))
+		if (_flags & REBUILD_BUFFERS || !cb.IsValid() || (strandCount * segmentCount) != particleBuffer.GetDesc().ByteWidth / sizeof(Patch))
 		{
+			_flags &= ~REBUILD_BUFFERS;
 			_flags |= REGENERATE_FRAME;
+
+			GraphicsDevice* device = wiRenderer::GetDevice();
 
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_DEFAULT;
@@ -68,11 +71,11 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			{
 				bd.StructureByteStride = sizeof(Patch);
 				bd.ByteWidth = bd.StructureByteStride * strandCount * segmentCount;
-				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &particleBuffer);
+				device->CreateBuffer(&bd, nullptr, &particleBuffer);
 
 				bd.StructureByteStride = sizeof(PatchSimulationData);
 				bd.ByteWidth = bd.StructureByteStride * strandCount * segmentCount;
-				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &simulationBuffer);
+				device->CreateBuffer(&bd, nullptr, &simulationBuffer);
 			}
 
 			bd.Usage = USAGE_DEFAULT;
@@ -80,7 +83,41 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			bd.BindFlags = BIND_CONSTANT_BUFFER;
 			bd.CPUAccessFlags = 0;
 			bd.MiscFlags = 0;
-			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &cb);
+			device->CreateBuffer(&bd, nullptr, &cb);
+
+			if (vertex_lengths.empty())
+			{
+				vertex_lengths.resize(mesh.vertex_positions.size());
+				std::fill(vertex_lengths.begin(), vertex_lengths.end(), 1.0f);
+			}
+
+			indices.clear();
+			for (size_t j = 0; j < mesh.indices.size(); j += 3)
+			{
+				const uint32_t triangle[] = {
+					mesh.indices[j + 0],
+					mesh.indices[j + 1],
+					mesh.indices[j + 2],
+				};
+				if (vertex_lengths[triangle[0]] > 0 || vertex_lengths[triangle[1]] > 0 || vertex_lengths[triangle[2]] > 0)
+				{
+					indices.push_back(triangle[0]);
+					indices.push_back(triangle[1]);
+					indices.push_back(triangle[2]);
+				}
+			}
+
+			if (!indices.empty())
+			{
+				bd.BindFlags = BIND_SHADER_RESOURCE;
+				bd.Format = FORMAT_R32_UINT;
+				bd.StructureByteStride = sizeof(uint32_t);
+				bd.ByteWidth = bd.StructureByteStride * (uint32_t)indices.size();
+				SubresourceData initData;
+				initData.pSysMem = indices.data();
+				device->CreateBuffer(&bd, &initData, &indexBuffer);
+			}
+
 		}
 	}
 
@@ -109,7 +146,7 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 	hcb.xHairParticleCount = hcb.xHairStrandCount * hcb.xHairSegmentCount;
 	hcb.xHairRandomSeed = randomSeed;
 	hcb.xHairViewDistance = viewDistance;
-	hcb.xHairBaseMeshIndexCount = (uint)mesh.indices.size();
+	hcb.xHairBaseMeshIndexCount = (indices.empty() ? (uint)mesh.indices.size() : (uint)indices.size());
 	hcb.xHairBaseMeshVertexPositionStride = sizeof(MeshComponent::Vertex_POS);
 	// segmentCount will be loop in the shader, not a threadgroup so we don't need it here:
 	hcb.xHairNumDispatchGroups = (uint)ceilf((float)strandCount / (float)THREADCOUNT_SIMULATEHAIR);
@@ -124,7 +161,7 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 	const GPUResource* res[] = {
-		&mesh.indexBuffer,
+		indexBuffer.IsValid() ? &indexBuffer : &mesh.indexBuffer,
 		mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
 	};
 	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
@@ -192,6 +229,10 @@ void wiHairParticle::Serialize(wiArchive& archive, uint32_t seed)
 		archive >> stiffness;
 		archive >> randomness;
 		archive >> viewDistance;
+		if (archive.GetVersion() >= 39)
+		{
+			archive >> vertex_lengths;
+		}
 	}
 	else
 	{
@@ -204,6 +245,10 @@ void wiHairParticle::Serialize(wiArchive& archive, uint32_t seed)
 		archive << stiffness;
 		archive << randomness;
 		archive << viewDistance;
+		if (archive.GetVersion() >= 39)
+		{
+			archive << vertex_lengths;
+		}
 	}
 }
 
