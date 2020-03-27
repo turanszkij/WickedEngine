@@ -118,7 +118,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		float len = (binormal_length >> 24) & 0x000000FF;
 		len /= 255.0f;
-		len += 1;
 		len *= xLength;
 
 		float3 tip = base + normal * len;

@@ -436,8 +436,10 @@ void wiLabel::Render(const wiGUI* gui, CommandList cmd) const
 	wiImage::Draw(wiTextureHelper::getWhite()
 		, wiImageParams(translation.x, translation.y, scale.x, scale.y, color.toFloat4()), cmd);
 
-	wiFont(text, wiFontParams((int)translation.x + 2, (int)translation.y + 2, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0,
-		fontParams.color, fontParams.shadowColor)).Draw(cmd);
+	wiFontParams params((int)translation.x + 2, (int)translation.y + 2, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0,
+		fontParams.color, fontParams.shadowColor);
+	params.h_wrap = (int)scale.x;
+	wiFont(text, params).Draw(cmd);
 
 }
 

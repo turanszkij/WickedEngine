@@ -2430,6 +2430,21 @@ namespace wiScene
 	}
 
 
+	XMVECTOR SkinVertex(const MeshComponent& mesh, const ArmatureComponent& armature, uint32_t index)
+	{
+		XMVECTOR P = XMLoadFloat3(&mesh.vertex_positions[index]);
+		const XMUINT4& ind = mesh.vertex_boneindices[index];
+		const XMFLOAT4& wei = mesh.vertex_boneweights[index];
+
+		XMVECTOR skinned_pos;
+		skinned_pos = XMVector3Transform(P, armature.boneData[ind.x].Load()) * wei.x;
+		skinned_pos += XMVector3Transform(P, armature.boneData[ind.y].Load()) * wei.y;
+		skinned_pos += XMVector3Transform(P, armature.boneData[ind.z].Load()) * wei.z;
+		skinned_pos += XMVector3Transform(P, armature.boneData[ind.w].Load()) * wei.w;
+		P = skinned_pos;
+
+		return P;
+	}
 
 
 

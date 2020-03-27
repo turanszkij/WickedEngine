@@ -1272,6 +1272,8 @@ namespace wiScene
 		wiECS::ComponentManager<SoundComponent>& sounds
 	);
 
+	// Returns skinned vertex position in armature local space
+	XMVECTOR SkinVertex(const MeshComponent& mesh, const ArmatureComponent& armature, uint32_t index);
 
 
 	// Helper that manages a global scene

@@ -400,21 +400,7 @@ namespace wiPhysicsEngine
 						btSoftBody::Node& node = softbody->m_nodes[(uint32_t)ind];
 						uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[ind];
 						XMFLOAT3 position = mesh.vertex_positions[graphicsInd];
-						XMVECTOR P = XMLoadFloat3(&position);
-
-						if (armature != nullptr)
-						{
-							const XMUINT4& ind = mesh.vertex_boneindices[graphicsInd];
-							const XMFLOAT4& wei = mesh.vertex_boneweights[graphicsInd];
-
-							XMVECTOR skinned_pos;
-							skinned_pos = XMVector3Transform(P, armature->boneData[ind.x].Load()) * wei.x;
-							skinned_pos += XMVector3Transform(P, armature->boneData[ind.y].Load()) * wei.y;
-							skinned_pos += XMVector3Transform(P, armature->boneData[ind.z].Load()) * wei.z;
-							skinned_pos += XMVector3Transform(P, armature->boneData[ind.w].Load()) * wei.w;
-							P = skinned_pos;
-						}
-
+						XMVECTOR P = armature == nullptr ? XMLoadFloat3(&position) : wiScene::SkinVertex(mesh, *armature, graphicsInd);
 						P = XMVector3Transform(P, worldMatrix);
 						XMStoreFloat3(&position, P);
 						node.m_x = btVector3(position.x, position.y, position.z);

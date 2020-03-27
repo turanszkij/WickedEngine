@@ -587,6 +587,7 @@ void EditorComponent::Load()
 		hairWnd->SetEntity(INVALID_ENTITY);
 		forceFieldWnd->SetEntity(INVALID_ENTITY);
 		cameraWnd->SetEntity(INVALID_ENTITY);
+		paintToolWnd->SetEntity(INVALID_ENTITY);
 	});
 	GetGUI().AddWidget(clearButton);
 
@@ -1464,7 +1465,7 @@ void EditorComponent::Update(float dt)
 		envProbeWnd->SetEntity(picked.entity);
 		forceFieldWnd->SetEntity(picked.entity);
 		cameraWnd->SetEntity(picked.entity);
-		paintToolWnd->SetEntity(picked.entity);
+		paintToolWnd->SetEntity(picked.entity, picked.subsetIndex);
 
 		if (picked.subsetIndex >= 0)
 		{

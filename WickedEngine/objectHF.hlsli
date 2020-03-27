@@ -756,16 +756,12 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	float opacity = color.a;
 	float depth = input.pos.z;
 #ifndef ENVMAPRENDERING
-	const float lineardepth = input.pos2D.w;
 	input.pos2D.xy /= input.pos2D.w;
 	input.pos2DPrev.xy /= input.pos2DPrev.w;
 
 	const float2 ScreenCoord = input.pos2D.xy * float2(0.5f, -0.5f) + 0.5f;
 	const float2 velocity = ((input.pos2DPrev.xy - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
 	const float2 ReprojectedScreenCoord = ScreenCoord + velocity;
-
-	const float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord, 0) * g_xCamera_ZFarP;
-	const float depth_difference = sampled_lineardepth - lineardepth;
 #endif // ENVMAPRENDERING
 #endif // SIMPLE_INPUT
 
@@ -866,17 +862,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	float4 reflectionUV = mul(g_xFrame_MainCamera_ReflVP, float4(surface.P, 1));
 	reflectionUV.xy /= reflectionUV.w;
 	reflectionUV.xy = reflectionUV.xy * float2(0.5f, -0.5f) + 0.5f;
-	float4 reflectiveColor = texture_reflection.SampleLevel(sampler_linear_mirror, reflectionUV.xy + bumpColor.rg, 0);
-
-
-	//REFRACTION 
-	float2 perturbatedRefrTexCoords = ScreenCoord.xy + bumpColor.rg;
-	float3 refractiveColor = texture_refraction.SampleLevel(sampler_linear_mirror, perturbatedRefrTexCoords, 0).rgb;
-	float mod = saturate(0.05f * depth_difference);
-	refractiveColor = lerp(refractiveColor, surface.baseColor.rgb, mod).rgb;
-
-	//FRESNEL TERM
-	surface.albedo.rgb = lerp(refractiveColor, reflectiveColor.rgb, surface.F);
+	lighting.indirect.specular += texture_reflection.SampleLevel(sampler_linear_mirror, reflectionUV.xy + bumpColor.rg, 0).rgb;
 #endif // WATER
 
 
@@ -916,11 +902,18 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 	ApplyLighting(surface, lighting, color);
 
+
 #ifdef WATER
-	// SOFT EDGE
-	float fade = saturate(0.3 * depth_difference);
-	color.a *= fade;
+	// REFRACTION 
+	const float lineardepth = input.pos2D.w;
+	const float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + bumpColor.rg, 0) * g_xCamera_ZFarP;
+	const float depth_difference = max(0, sampled_lineardepth - lineardepth);
+	const float3 refractiveColor = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + bumpColor.rg * saturate(0.5 * depth_difference), 0).rgb;
+
+	// WATER FOG
+	color.rgb = lerp(refractiveColor, color.rgb, saturate(surface.baseColor.a * 0.1f * depth_difference));
 #endif // WATER
+
 
 	ApplyFog(dist, color);
 

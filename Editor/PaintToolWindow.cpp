@@ -10,7 +10,7 @@ PaintToolWindow::PaintToolWindow(wiGUI* gui) : GUI(gui)
 	assert(GUI && "Invalid GUI!");
 
 	window = new wiWindow(GUI, "Paint Tool Window");
-	window->SetSize(XMFLOAT2(400, 500));
+	window->SetSize(XMFLOAT2(400, 560));
 	GUI->AddWidget(window);
 
 	float x = 100;
@@ -23,15 +23,60 @@ PaintToolWindow::PaintToolWindow(wiGUI* gui) : GUI(gui)
 	modeComboBox->SetSize(XMFLOAT2(200, 28));
 	modeComboBox->AddItem("Disabled");
 	modeComboBox->AddItem("Vertexcolor");
+	modeComboBox->AddItem("Sculpting - Add");
+	modeComboBox->AddItem("Sculpting - Subtract");
 	modeComboBox->AddItem("Softbody - Pinning");
 	modeComboBox->AddItem("Softbody - Physics");
 	modeComboBox->AddItem("Hairparticle - Add Triangle");
 	modeComboBox->AddItem("Hairparticle - Remove Triangle");
 	modeComboBox->AddItem("Hairparticle - Length (Alpha)");
+	modeComboBox->SetMaxVisibleItemCount(16);
 	modeComboBox->SetSelected(0);
+	modeComboBox->OnSelect([&](wiEventArgs args) {
+		switch (args.iValue)
+		{
+		case MODE_DISABLED:
+			infoLabel->SetText("Paint Tool is disabled.");
+			break;
+		case MODE_VERTEXCOLOR:
+			infoLabel->SetText("In vertex color mode, you can paint colors on selected geometry (per vertex). \"Use vertex colors\" will be automatically enabled for the selected material, or all materials if the whole object is selected. If there is no vertexcolors vertex buffer, one will be created with white as default for every vertex.");
+			break;
+		case MODE_SCULPTING_ADD:
+			infoLabel->SetText("In sculpt - ADD mode, you can modify vertex positions by ADD operation along normal vector. Normals are not modified, so recompute them in MeshWindow if needed.");
+			break;
+		case MODE_SCULPTING_SUBTRACT:
+			infoLabel->SetText("In sculpt - SUBTRACT mode, you can modify vertex positions by SUBTRACT operation along normal vector. Normals are not modified, so recompute them in MeshWindow if needed.");
+			break;
+		case MODE_SOFTBODY_PINNING:
+			infoLabel->SetText("In soft body pinning mode, the selected object's soft body vertices can be pinned down (so they will be fixed and drive physics)");
+			break;
+		case MODE_SOFTBODY_PHYSICS:
+			infoLabel->SetText("In soft body physics mode, the selected object's soft body vertices can be unpinned (so they will be simulated by physics)");
+			break;
+		case MODE_HAIRPARTICLE_ADD_TRIANGLE:
+			infoLabel->SetText("In hair particle add triangle mode, you can add triangles to the hair base mesh.\nThis will modify random distribution of hair!");
+			break;
+		case MODE_HAIRPARTICLE_REMOVE_TRIANGLE:
+			infoLabel->SetText("In hair particle remove triangle mode, you can remove triangles from the hair base mesh.\nThis will modify random distribution of hair!");
+			break;
+		case MODE_HAIRPARTICLE_LENGTH:
+			infoLabel->SetText("In hair particle length mode, you can adjust length of hair particles with the colorpicker Alpha channel (A). The Alpha channel is 0-255, but the length will be normalized to 0-1 range.\nThis will NOT modify random distribution of hair!");
+			break;
+		default:
+			assert(0);
+			break;
+		}
+		});
 	window->AddWidget(modeComboBox);
 
-	y += step;
+	y += step + 5;
+
+	infoLabel = new wiLabel("Paint Tool is disabled.");
+	infoLabel->SetSize(XMFLOAT2(400 - 20, 80));
+	infoLabel->SetPos(XMFLOAT2(10, y));
+	infoLabel->SetColor(wiColor::Transparent());
+	window->AddWidget(infoLabel);
+	y += infoLabel->GetScale().y - step + 5;
 
 	radiusSlider = new wiSlider(1.0f, 500.0f, 50, 10000, "Brush Radius: ");
 	radiusSlider->SetTooltip("Set the brush radius in pixel units");
@@ -55,6 +100,12 @@ PaintToolWindow::PaintToolWindow(wiGUI* gui) : GUI(gui)
 	backfaceCheckBox->SetTooltip("Set whether to paint on backfaces of geometry or not");
 	backfaceCheckBox->SetPos(XMFLOAT2(x, y += step));
 	window->AddWidget(backfaceCheckBox);
+
+	wireCheckBox = new wiCheckBox("Wireframe: ");
+	wireCheckBox->SetTooltip("Set whether to draw wireframe on top of geometry or not");
+	wireCheckBox->SetPos(XMFLOAT2(x + 100, y));
+	wireCheckBox->SetCheck(true);
+	window->AddWidget(wireCheckBox);
 
 	colorPicker = new wiColorPicker(GUI, "Color", false);
 	colorPicker->SetPos(XMFLOAT2(10, y += step));
@@ -102,6 +153,7 @@ void PaintToolWindow::Update(float dt)
 	const wiColor color = colorPicker->GetPickColor();
 	const XMFLOAT4 color_float = color.toFloat4();
 	const bool backfaces = backfaceCheckBox->GetCheck();
+	const bool wireframe = wireCheckBox->GetCheck();
 
 	Scene& scene = wiScene::GetScene();
 	const CameraComponent& camera = wiRenderer::GetCamera();
@@ -123,6 +175,127 @@ void PaintToolWindow::Update(float dt)
 		if (mesh == nullptr)
 			break;
 
+		MaterialComponent* material = subset >= 0 && subset < (int)mesh->subsets.size() ? scene.materials.GetComponent(mesh->subsets[subset].materialID) : nullptr;
+		if (material == nullptr)
+		{
+			for (auto& x : mesh->subsets)
+			{
+				material = scene.materials.GetComponent(x.materialID);
+				if (material != nullptr)
+				{
+					material->SetUseVertexColors(true);
+				}
+			}
+			material = nullptr;
+		}
+		else
+		{
+			material->SetUseVertexColors(true);
+		}
+		
+		const ArmatureComponent* armature = mesh->IsSkinned() ? scene.armatures.GetComponent(mesh->armatureID) : nullptr;
+
+		const TransformComponent* transform = scene.transforms.GetComponent(entity);
+		if (transform == nullptr)
+			break;
+
+		const XMMATRIX W = XMLoadFloat4x4(&transform->world);
+
+		bool rebuild = false;
+		if (mesh->vertex_colors.empty())
+		{
+			mesh->vertex_colors.resize(mesh->vertex_positions.size());
+			std::fill(mesh->vertex_colors.begin(), mesh->vertex_colors.end(), 0xFFFFFFFF); // fill white
+			rebuild = true;
+		}
+
+		for (size_t j = 0; j < mesh->indices.size(); j += 3)
+		{
+			const uint32_t triangle[] = {
+				mesh->indices[j + 0],
+				mesh->indices[j + 1],
+				mesh->indices[j + 2],
+			};
+			const XMVECTOR P[arraysize(triangle)] = {
+				XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wiScene::SkinVertex(*mesh, *armature, triangle[0]), W),
+				XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wiScene::SkinVertex(*mesh, *armature, triangle[1]), W),
+				XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wiScene::SkinVertex(*mesh, *armature, triangle[2]), W),
+			};
+
+			if (painting)
+			{
+				XMVECTOR PT[arraysize(triangle)];
+				for (int k = 0; k < arraysize(triangle); ++k)
+				{
+					PT[k] = XMVector3TransformCoord(P[k], VP);
+					PT[k] = PT[k] * MUL + ADD;
+					PT[k] = PT[k] * SCREEN;
+				}
+
+				bool culled = false;
+				if (!backfaces)
+				{
+					const XMVECTOR N = XMVector3Normalize(XMVector3Cross(PT[1] - PT[0], PT[2] - PT[1]));
+					culled = XMVectorGetZ(N) > 0;
+				}
+
+				if (!culled)
+				{
+					for (int k = 0; k < arraysize(triangle); ++k)
+					{
+						if (subset >= 0 && subset < (int)mesh->subsets.size())
+						{
+							const MeshComponent::MeshSubset& sub = mesh->subsets[subset];
+							if (sub.indexOffset > triangle[k] || sub.indexOffset + sub.indexCount < triangle[k])
+								continue;
+						}
+						const float z = XMVectorGetZ(PT[k]);
+						const float dist = XMVectorGetX(XMVector2Length(C - PT[k]));
+						if (z >= 0 && z <= 1 && dist <= radius)
+						{
+							wiColor vcol = mesh->vertex_colors[triangle[k]];
+							const float affection = amount * std::powf(1 - (dist / radius), falloff);
+							vcol = wiColor::lerp(vcol, color, affection);
+							mesh->vertex_colors[triangle[k]] = vcol.rgba;
+							rebuild = true;
+						}
+					}
+				}
+			}
+
+			if (wireframe)
+			{
+				wiRenderer::RenderableTriangle tri;
+				XMStoreFloat3(&tri.positionA, P[0]);
+				XMStoreFloat3(&tri.positionB, P[1]);
+				XMStoreFloat3(&tri.positionC, P[2]);
+				tri.colorA.w = 0.8f;
+				tri.colorB.w = 0.8f;
+				tri.colorC.w = 0.8f;
+				wiRenderer::DrawTriangle(tri, true);
+			}
+		}
+
+		if (rebuild)
+		{
+			mesh->CreateRenderData();
+		}
+	}
+	break;
+
+	case MODE_SCULPTING_ADD:
+	case MODE_SCULPTING_SUBTRACT:
+	{
+		ObjectComponent* object = scene.objects.GetComponent(entity);
+		if (object == nullptr || object->meshID == INVALID_ENTITY)
+			break;
+
+		MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+		if (mesh == nullptr)
+			break;
+
+		const ArmatureComponent* armature = mesh->IsSkinned() ? scene.armatures.GetComponent(mesh->armatureID) : nullptr;
+
 		const TransformComponent* transform = scene.transforms.GetComponent(entity);
 		if (transform == nullptr)
 			break;
@@ -137,24 +310,26 @@ void PaintToolWindow::Update(float dt)
 				mesh->indices[j + 1],
 				mesh->indices[j + 2],
 			};
+			const XMVECTOR P[arraysize(triangle)] = {
+				XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wiScene::SkinVertex(*mesh, *armature, triangle[0]), W),
+				XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wiScene::SkinVertex(*mesh, *armature, triangle[1]), W),
+				XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wiScene::SkinVertex(*mesh, *armature, triangle[2]), W),
+			};
 
 			if (painting)
 			{
-				XMVECTOR P[arraysize(triangle)];
+				XMVECTOR PT[arraysize(triangle)];
 				for (int k = 0; k < arraysize(triangle); ++k)
 				{
-					const XMFLOAT3& pos = mesh->vertex_positions[triangle[k]];
-					P[k] = XMLoadFloat3(&pos);
-					P[k] = XMVector3Transform(P[k], W);
-					P[k] = XMVector3TransformCoord(P[k], VP);
-					P[k] = P[k] * MUL + ADD;
-					P[k] = P[k] * SCREEN;
+					PT[k] = XMVector3TransformCoord(P[k], VP);
+					PT[k] = PT[k] * MUL + ADD;
+					PT[k] = PT[k] * SCREEN;
 				}
 
 				bool culled = false;
 				if (!backfaces)
 				{
-					const XMVECTOR N = XMVector3Normalize(XMVector3Cross(P[1] - P[0], P[2] - P[1]));
+					const XMVECTOR N = XMVector3Normalize(XMVector3Cross(PT[1] - PT[0], PT[2] - PT[1]));
 					culled = XMVectorGetZ(N) > 0;
 				}
 
@@ -162,33 +337,40 @@ void PaintToolWindow::Update(float dt)
 				{
 					for (int k = 0; k < arraysize(triangle); ++k)
 					{
-						const float z = XMVectorGetZ(P[k]);
-						const float dist = XMVectorGetX(XMVector2Length(C - P[k]));
+						const float z = XMVectorGetZ(PT[k]);
+						const float dist = XMVectorGetX(XMVector2Length(C - PT[k]));
 						if (z >= 0 && z <= 1 && dist <= radius)
 						{
-							if (mesh->vertex_colors.empty())
-							{
-								mesh->vertex_colors.resize(mesh->vertex_positions.size());
-								std::fill(mesh->vertex_colors.begin(), mesh->vertex_colors.end(), 0xFFFFFFFF); // fill white
-							}
-							wiColor vcol = mesh->vertex_colors[triangle[k]];
+							XMVECTOR PL = XMLoadFloat3(&mesh->vertex_positions[triangle[k]]);
+							const XMVECTOR N = XMLoadFloat3(&mesh->vertex_normals[triangle[k]]);
 							const float affection = amount * std::powf(1 - (dist / radius), falloff);
-							vcol = wiColor::lerp(vcol, color, affection);
-							mesh->vertex_colors[triangle[k]] = vcol.rgba;
+							switch (mode)
+							{
+							case MODE_SCULPTING_ADD:
+								PL += N * affection;
+								break;
+							case MODE_SCULPTING_SUBTRACT:
+								PL -= N * affection;
+								break;
+							}
+							XMStoreFloat3(&mesh->vertex_positions[triangle[k]], PL);
 							rebuild = true;
 						}
 					}
 				}
 			}
 
-			wiRenderer::RenderableTriangle tri;
-			XMStoreFloat3(&tri.positionA, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[0]]), W));
-			XMStoreFloat3(&tri.positionB, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[1]]), W));
-			XMStoreFloat3(&tri.positionC, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[2]]), W));
-			tri.colorA.w = 0.8f;
-			tri.colorB.w = 0.8f;
-			tri.colorC.w = 0.8f;
-			wiRenderer::DrawTriangle(tri, true);
+			if (wireframe)
+			{
+				wiRenderer::RenderableTriangle tri;
+				XMStoreFloat3(&tri.positionA, P[0]);
+				XMStoreFloat3(&tri.positionB, P[1]);
+				XMStoreFloat3(&tri.positionC, P[2]);
+				tri.colorA.w = 0.8f;
+				tri.colorB.w = 0.8f;
+				tri.colorC.w = 0.8f;
+				wiRenderer::DrawTriangle(tri, true);
+			}
 		}
 
 		if (rebuild)
@@ -271,7 +453,10 @@ void PaintToolWindow::Update(float dt)
 				tri.colorC = XMFLOAT4(1, 1, 0, 1);
 			else
 				tri.colorC = XMFLOAT4(1, 1, 1, 1);
-			wiRenderer::DrawTriangle(tri, true);
+			if (wireframe)
+			{
+				wiRenderer::DrawTriangle(tri, true);
+			}
 			if (weight0 == 0 && weight1 == 0 && weight2 == 0)
 			{
 				tri.colorA = tri.colorB = tri.colorC = XMFLOAT4(1, 0, 0, 0.8f);
@@ -293,6 +478,8 @@ void PaintToolWindow::Update(float dt)
 		if (mesh == nullptr)
 			break;
 
+		const ArmatureComponent* armature = mesh->IsSkinned() ? scene.armatures.GetComponent(mesh->armatureID) : nullptr;
+
 		const TransformComponent* transform = scene.transforms.GetComponent(entity);
 		if (transform == nullptr)
 			break;
@@ -306,24 +493,26 @@ void PaintToolWindow::Update(float dt)
 				mesh->indices[j + 1],
 				mesh->indices[j + 2],
 			};
+			const XMVECTOR P[arraysize(triangle)] = {
+				XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wiScene::SkinVertex(*mesh, *armature, triangle[0]), W),
+				XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wiScene::SkinVertex(*mesh, *armature, triangle[1]), W),
+				XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wiScene::SkinVertex(*mesh, *armature, triangle[2]), W),
+			};
 
 			if (painting)
 			{
-				XMVECTOR P[arraysize(triangle)];
+				XMVECTOR PT[arraysize(triangle)];
 				for (int k = 0; k < arraysize(triangle); ++k)
 				{
-					const XMFLOAT3& pos = mesh->vertex_positions[triangle[k]];
-					P[k] = XMLoadFloat3(&pos);
-					P[k] = XMVector3Transform(P[k], W);
-					P[k] = XMVector3TransformCoord(P[k], VP);
-					P[k] = P[k] * MUL + ADD;
-					P[k] = P[k] * SCREEN;
+					PT[k] = XMVector3TransformCoord(P[k], VP);
+					PT[k] = PT[k] * MUL + ADD;
+					PT[k] = PT[k] * SCREEN;
 				}
 
 				bool culled = false;
 				if (!backfaces)
 				{
-					const XMVECTOR N = XMVector3Normalize(XMVector3Cross(P[1] - P[0], P[2] - P[1]));
+					const XMVECTOR N = XMVector3Normalize(XMVector3Cross(PT[1] - PT[0], PT[2] - PT[1]));
 					culled = XMVectorGetZ(N) > 0;
 				}
 
@@ -331,8 +520,8 @@ void PaintToolWindow::Update(float dt)
 				{
 					for (int k = 0; k < arraysize(triangle); ++k)
 					{
-						const float z = XMVectorGetZ(P[k]);
-						const float dist = XMVectorGetX(XMVector2Length(C - P[k]));
+						const float z = XMVectorGetZ(PT[k]);
+						const float dist = XMVectorGetX(XMVector2Length(C - PT[k]));
 						if (z >= 0 && z <= 1 && dist <= radius)
 						{
 							switch (mode)
@@ -357,14 +546,17 @@ void PaintToolWindow::Update(float dt)
 				}
 			}
 
-			wiRenderer::RenderableTriangle tri;
-			XMStoreFloat3(&tri.positionA, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[0]]), W));
-			XMStoreFloat3(&tri.positionB, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[1]]), W));
-			XMStoreFloat3(&tri.positionC, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[2]]), W));
-			wiRenderer::DrawTriangle(tri, true);
+			if (wireframe)
+			{
+				wiRenderer::RenderableTriangle tri;
+				XMStoreFloat3(&tri.positionA, P[0]);
+				XMStoreFloat3(&tri.positionB, P[1]);
+				XMStoreFloat3(&tri.positionC, P[2]);
+				wiRenderer::DrawTriangle(tri, true);
+			}
 		}
 
-		for (size_t j = 0; j < hair->indices.size(); j += 3)
+		for (size_t j = 0; j < hair->indices.size() && wireframe; j += 3)
 		{
 			const uint32_t triangle[] = {
 				hair->indices[j + 0],
@@ -421,7 +613,8 @@ PaintToolWindow::MODE PaintToolWindow::GetMode() const
 {
 	return (MODE)modeComboBox->GetSelected();
 }
-void PaintToolWindow::SetEntity(wiECS::Entity value)
+void PaintToolWindow::SetEntity(wiECS::Entity value, int subsetindex)
 {
 	entity = value;
+	subset = subsetindex;
 }

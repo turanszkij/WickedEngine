@@ -24,34 +24,29 @@ float4 main(PSIn input) : SV_TARGET
 	float2 pixel = input.pos.xy;
 	float depth = input.pos.z;
 
-	float lineardepth = input.pos2D.w;
 	float2 refUV = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w * 0.5f + 0.5f;
 	float2 ScreenCoord = float2(1, -1) * input.pos2D.xy / input.pos2D.w * 0.5f + 0.5f;
 
 	//REFLECTION
 	float2 RefTex = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w / 2.0f + 0.5f;
 	float4 reflectiveColor = texture_reflection.SampleLevel(sampler_linear_mirror, RefTex + surface.N.xz * 0.04f, 0);
-
-	//REFRACTION 
-	float2 perturbatedRefrTexCoords = ScreenCoord.xy + surface.N.xz * 0.04f;
-	float refDepth = texture_lineardepth.Sample(sampler_linear_mirror, ScreenCoord) * g_xCamera_ZFarP;
-	float3 refractiveColor = texture_refraction.SampleLevel(sampler_linear_mirror, perturbatedRefrTexCoords, 0).rgb;
-	float mod = saturate(0.05*(refDepth - lineardepth));
-	refractiveColor = lerp(refractiveColor, surface.baseColor.rgb, mod).rgb;
-
-	//FRESNEL TERM
 	float NdotV = abs(dot(surface.N, surface.V));
 	float ramp = pow(abs(1.0f / (1.0f + NdotV)), 16);
 	reflectiveColor.rgb = lerp(float3(0.38f, 0.45f, 0.56f), reflectiveColor.rgb, ramp); // skycolor hack
-	surface.albedo.rgb = lerp(refractiveColor, reflectiveColor.rgb, surface.F);
+	lighting.indirect.specular += reflectiveColor.rgb;
 
 	TiledLighting(pixel, surface, lighting);
 
 	ApplyLighting(surface, lighting, color);
 
-	//SOFT EDGE
-	float fade = saturate(0.3 * abs(refDepth - lineardepth));
-	color.a *= fade;
+	// REFRACTION 
+	const float lineardepth = input.pos2D.w;
+	const float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + surface.N.xz * 0.04f, 0) * g_xCamera_ZFarP;
+	const float depth_difference = max(0, sampled_lineardepth - lineardepth);
+	const float3 refractiveColor = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + surface.N.xz * 0.04f * saturate(0.5 * depth_difference), 0).rgb;
+
+	// WATER FOG
+	color.rgb = lerp(refractiveColor, color.rgb, saturate(0.1f * depth_difference));
 
 	ApplyFog(dist, color);
 

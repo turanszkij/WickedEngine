@@ -104,9 +104,28 @@ namespace wiFont_Internal
 	uint32_t WriteVertices(volatile FontVertex* vertexList, const std::wstring& text, wiFontParams params, int style)
 	{
 		uint32_t quadCount = 0;
-
 		int16_t line = 0;
 		int16_t pos = 0;
+		int16_t pos_last_letter = 0;
+		size_t last_word_begin = 0;
+		bool start_new_word = true;
+
+		auto word_wrap = [&] {
+			start_new_word = true;
+			if (params.h_wrap >= 0 && pos >= params.h_wrap - 1)
+			{
+				// Word ended and wrap detected, push down last word by one line:
+				int16_t word_offset = vertexList[last_word_begin].Pos.x;
+				for (size_t i = last_word_begin; i < quadCount * 4; ++i)
+				{
+					vertexList[i].Pos.x -= word_offset;
+					vertexList[i].Pos.y += LINEBREAK_SIZE;
+				}
+				line += LINEBREAK_SIZE;
+				pos -= word_offset;
+			}
+		};
+
 		for (auto& code : text)
 		{
 			const int32_t hash = glyphhash(code, style, params.size);
@@ -122,16 +141,21 @@ namespace wiFont_Internal
 
 			if (code == '\n')
 			{
+				word_wrap();
 				line += LINEBREAK_SIZE;
 				pos = 0;
 			}
 			else if (code == ' ')
 			{
+				word_wrap();
 				pos += WHITESPACE_SIZE;
+				start_new_word = true;
 			}
 			else if (code == '\t')
 			{
+				word_wrap();
 				pos += TAB_SIZE;
+				start_new_word = true;
 			}
 			else
 			{
@@ -142,6 +166,12 @@ namespace wiFont_Internal
 				const int16_t glyphOffsetY = int16_t(glyph.y * params.scaling);
 
 				const size_t vertexID = size_t(quadCount) * 4;
+
+				if (start_new_word)
+				{
+					last_word_begin = vertexID;
+				}
+				start_new_word = false;
 
 				const int16_t left = pos + glyphOffsetX;
 				const int16_t right = left + glyphWidth;
@@ -167,11 +197,14 @@ namespace wiFont_Internal
 				vertexList[vertexID + 3].Tex.y = glyph.tc_bottom;
 
 				pos += int16_t((glyph.width + params.spacingX) * params.scaling);
+				pos_last_letter = pos;
 
 				quadCount++;
 			}
 
 		}
+
+		word_wrap();
 
 		return quadCount;
 	}

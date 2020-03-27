@@ -20,13 +20,16 @@ public:
 
 	wiGUI* GUI;
 	wiECS::Entity entity = wiECS::INVALID_ENTITY;
+	int subset = -1;
 
 	wiWindow* window;
 	wiComboBox* modeComboBox;
+	wiLabel* infoLabel;
 	wiSlider* radiusSlider;
 	wiSlider* amountSlider;
 	wiSlider* falloffSlider;
 	wiCheckBox* backfaceCheckBox;
+	wiCheckBox* wireCheckBox;
 	wiColorPicker* colorPicker;
 
 	void Update(float dt);
@@ -38,6 +41,8 @@ public:
 	{
 		MODE_DISABLED,
 		MODE_VERTEXCOLOR,
+		MODE_SCULPTING_ADD,
+		MODE_SCULPTING_SUBTRACT,
 		MODE_SOFTBODY_PINNING,
 		MODE_SOFTBODY_PHYSICS,
 		MODE_HAIRPARTICLE_ADD_TRIANGLE,
@@ -45,5 +50,5 @@ public:
 		MODE_HAIRPARTICLE_LENGTH,
 	};
 	MODE GetMode() const;
-	void SetEntity(wiECS::Entity value);
+	void SetEntity(wiECS::Entity value, int subsetindex = -1);
 };
