@@ -632,8 +632,6 @@ wiSlider::wiSlider(float start, float end, float defaultValue, float step, const
 
 	valueInputField = new wiTextInputField(name + "_endInputField");
 	valueInputField->SetTooltip("Enter number to modify value even outside slider limits. Enter \"reset\" to reset slider to initial state.");
-	valueInputField->SetSize(XMFLOAT2(scale.y * 2, scale.y));
-	valueInputField->SetPos(XMFLOAT2(scale.x + 20, 0));
 	valueInputField->SetValue(end);
 	valueInputField->OnInputAccepted([this, start,end,defaultValue](wiEventArgs args) {
 		if (args.sValue.compare("reset") != string::npos)
@@ -652,7 +650,6 @@ wiSlider::wiSlider(float start, float end, float defaultValue, float step, const
 		}
 		onSlide(args);
 	});
-	valueInputField->AttachTo(this);
 }
 wiSlider::~wiSlider()
 {
@@ -675,6 +672,11 @@ void wiSlider::SetRange(float start, float end)
 void wiSlider::Update(wiGUI* gui, float dt)
 {
 	wiWidget::Update(gui, dt);
+
+	valueInputField->Detach();
+	valueInputField->SetSize(XMFLOAT2(40, scale.y));
+	valueInputField->SetPos(XMFLOAT2(translation.x + scale.x + 2, translation.y));
+	valueInputField->AttachTo(this);
 
 	scissorRect.bottom = (int32_t)(translation.y + scale.y);
 	scissorRect.left = (int32_t)(translation.x);
@@ -1364,8 +1366,6 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 		wiFontParams fontparams = moveDragger->GetFontParams();
 		fontparams.h_align = WIFALIGN_LEFT;
 		moveDragger->SetFontParams(fontparams);
-		moveDragger->SetSize(XMFLOAT2(scale.x - windowcontrolSize * 3, windowcontrolSize));
-		moveDragger->SetPos(XMFLOAT2(translation.x + windowcontrolSize, translation.y));
 		moveDragger->OnDrag([this, gui](wiEventArgs args) {
 			auto saved_parent = this->parent;
 			this->Detach();
@@ -1382,8 +1382,6 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 		// Add close button to the top right corner
 		closeButton = new wiButton(name + "_close_button");
 		closeButton->SetText("x");
-		closeButton->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
-		closeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y));
 		closeButton->OnClick([this](wiEventArgs args) {
 			this->SetVisible(false);
 			});
@@ -1393,8 +1391,6 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 		// Add minimize button to the top right corner
 		minimizeButton = new wiButton(name + "_minimize_button");
 		minimizeButton->SetText("-");
-		minimizeButton->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
-		minimizeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize * 2, translation.y));
 		minimizeButton->OnClick([this](wiEventArgs args) {
 			this->SetMinimized(!this->IsMinimized());
 			});
@@ -1404,8 +1400,6 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 		// Add a resizer control to the upperleft corner
 		resizeDragger_UpperLeft = new wiButton(name + "_resize_dragger_upper_left");
 		resizeDragger_UpperLeft->SetText("");
-		resizeDragger_UpperLeft->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
-		resizeDragger_UpperLeft->SetPos(XMFLOAT2(translation.x, translation.y));
 		resizeDragger_UpperLeft->OnDrag([this, gui](wiEventArgs args) {
 			auto saved_parent = this->parent;
 			this->Detach();
@@ -1426,8 +1420,6 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 		// Add a resizer control to the bottom right corner
 		resizeDragger_BottomRight = new wiButton(name + "_resize_dragger_bottom_right");
 		resizeDragger_BottomRight->SetText("");
-		resizeDragger_BottomRight->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
-		resizeDragger_BottomRight->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y + scale.y - windowcontrolSize));
 		resizeDragger_BottomRight->OnDrag([this, gui](wiEventArgs args) {
 			auto saved_parent = this->parent;
 			this->Detach();
@@ -1452,8 +1444,6 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 		wiFontParams fontparams = label->GetFontParams();
 		fontparams.h_align = WIFALIGN_LEFT;
 		label->SetFontParams(fontparams);
-		label->SetSize(XMFLOAT2(scale.x, windowcontrolSize));
-		label->SetPos(XMFLOAT2(translation.x, translation.y));
 		AddWidget(label);
 	}
 
