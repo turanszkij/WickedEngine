@@ -13,7 +13,7 @@ class wiButton;
 class PaintToolWindow
 {
 	float rot = 0;
-	XMFLOAT2 posPrev = XMFLOAT2(0, 0);
+	float stroke_dist = 0;
 public:
 	PaintToolWindow(wiGUI* gui);
 	~PaintToolWindow();
@@ -28,6 +28,7 @@ public:
 	wiSlider* radiusSlider;
 	wiSlider* amountSlider;
 	wiSlider* falloffSlider;
+	wiSlider* spacingSlider;
 	wiCheckBox* backfaceCheckBox;
 	wiCheckBox* wireCheckBox;
 	wiColorPicker* colorPicker;

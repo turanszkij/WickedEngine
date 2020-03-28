@@ -10,7 +10,7 @@ PaintToolWindow::PaintToolWindow(wiGUI* gui) : GUI(gui)
 	assert(GUI && "Invalid GUI!");
 
 	window = new wiWindow(GUI, "Paint Tool Window");
-	window->SetSize(XMFLOAT2(400, 560));
+	window->SetSize(XMFLOAT2(400, 580));
 	GUI->AddWidget(window);
 
 	float x = 100;
@@ -96,6 +96,12 @@ PaintToolWindow::PaintToolWindow(wiGUI* gui) : GUI(gui)
 	falloffSlider->SetPos(XMFLOAT2(x, y += step));
 	window->AddWidget(falloffSlider);
 
+	spacingSlider = new wiSlider(0, 500, 1, 500, "Brush Spacing: ");
+	spacingSlider->SetTooltip("Brush spacing means how much brush movement (in pixels) starts a new stroke. 0 = new stroke every frame, 100 = every 100 pixel movement since last stroke will start a new stroke.");
+	spacingSlider->SetSize(XMFLOAT2(200, 20));
+	spacingSlider->SetPos(XMFLOAT2(x, y += step));
+	window->AddWidget(spacingSlider);
+
 	backfaceCheckBox = new wiCheckBox("Backfaces: ");
 	backfaceCheckBox->SetTooltip("Set whether to paint on backfaces of geometry or not");
 	backfaceCheckBox->SetPos(XMFLOAT2(x, y += step));
@@ -125,26 +131,35 @@ void PaintToolWindow::Update(float dt)
 {
 	rot -= dt;
 	// by default, paint tool is on center of screen, this makes it easy to tweak radius with GUI:
-	pos.x = wiRenderer::GetDevice()->GetScreenWidth() * 0.5f;
-	pos.y = wiRenderer::GetDevice()->GetScreenHeight() * 0.5f;
+	XMFLOAT2 posNew;
+	posNew.x = wiRenderer::GetDevice()->GetScreenWidth() * 0.5f;
+	posNew.y = wiRenderer::GetDevice()->GetScreenHeight() * 0.5f;
 	if (GUI->HasFocus() || wiBackLog::isActive() || entity == INVALID_ENTITY)
+	{
+		pos = posNew;
 		return;
+	}
+
+	const bool pointer_down = wiInput::Down(wiInput::MOUSE_BUTTON_LEFT);
+	if (!pointer_down)
+	{
+		stroke_dist = FLT_MAX;
+	}
 
 	auto pointer = wiInput::GetPointer();
-	pos.x = pointer.x;
-	pos.y = pointer.y;
+	posNew = XMFLOAT2(pointer.x, pointer.y);
+	stroke_dist += wiMath::Distance(pos, posNew);
 
-	const bool pointer_moved = wiMath::Distance(pos, posPrev) > 1.0f;
-	const bool painting = pointer_moved && wiInput::Down(wiInput::MOUSE_BUTTON_LEFT);
+	const float spacing = spacingSlider->GetValue();
+	const bool pointer_moved = stroke_dist >= spacing;
+	const bool painting = pointer_moved && pointer_down;
 
-	if (wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
+	if (painting)
 	{
-		posPrev = pos;
+		stroke_dist = 0;
 	}
-	else
-	{
-		posPrev = XMFLOAT2(0, 0);
-	}
+
+	pos = posNew;
 
 	const MODE mode = GetMode();
 	const float radius = radiusSlider->GetValue();
