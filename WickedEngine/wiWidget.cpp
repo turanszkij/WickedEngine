@@ -1365,7 +1365,7 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 		fontparams.h_align = WIFALIGN_LEFT;
 		moveDragger->SetFontParams(fontparams);
 		moveDragger->SetSize(XMFLOAT2(scale.x - windowcontrolSize * 3, windowcontrolSize));
-		moveDragger->SetPos(XMFLOAT2(windowcontrolSize, 0));
+		moveDragger->SetPos(XMFLOAT2(translation.x + windowcontrolSize, translation.y));
 		moveDragger->OnDrag([this, gui](wiEventArgs args) {
 			auto saved_parent = this->parent;
 			this->Detach();
@@ -1405,7 +1405,7 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 		resizeDragger_UpperLeft = new wiButton(name + "_resize_dragger_upper_left");
 		resizeDragger_UpperLeft->SetText("");
 		resizeDragger_UpperLeft->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
-		resizeDragger_UpperLeft->SetPos(XMFLOAT2(0, 0));
+		resizeDragger_UpperLeft->SetPos(XMFLOAT2(translation.x, translation.y));
 		resizeDragger_UpperLeft->OnDrag([this, gui](wiEventArgs args) {
 			auto saved_parent = this->parent;
 			this->Detach();
@@ -1443,6 +1443,18 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 			this->AttachTo(saved_parent);
 			});
 		AddWidget(resizeDragger_BottomRight);
+	}
+	else
+	{
+		// Simple title bar
+		label = new wiLabel(name);
+		label->SetText(name);
+		wiFontParams fontparams = label->GetFontParams();
+		fontparams.h_align = WIFALIGN_LEFT;
+		label->SetFontParams(fontparams);
+		label->SetSize(XMFLOAT2(scale.x, windowcontrolSize));
+		label->SetPos(XMFLOAT2(translation.x, translation.y));
+		AddWidget(label);
 	}
 
 
@@ -1493,6 +1505,49 @@ void wiWindow::RemoveWidgets(bool alsoDelete)
 void wiWindow::Update(wiGUI* gui, float dt)
 {
 	wiWidget::Update(gui, dt);
+
+	if (moveDragger != nullptr)
+	{
+		moveDragger->Detach();
+		moveDragger->SetSize(XMFLOAT2(scale.x - windowcontrolSize * 3, windowcontrolSize));
+		moveDragger->SetPos(XMFLOAT2(translation.x + windowcontrolSize, translation.y));
+		moveDragger->AttachTo(this);
+	}
+	if (closeButton != nullptr)
+	{
+		closeButton->Detach();
+		closeButton->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+		closeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y));
+		closeButton->AttachTo(this);
+	}
+	if (minimizeButton != nullptr)
+	{
+		minimizeButton->Detach();
+		minimizeButton->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+		minimizeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize * 2, translation.y));
+		minimizeButton->AttachTo(this);
+	}
+	if (resizeDragger_UpperLeft != nullptr)
+	{
+		resizeDragger_UpperLeft->Detach();
+		resizeDragger_UpperLeft->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+		resizeDragger_UpperLeft->SetPos(XMFLOAT2(translation.x, translation.y));
+		resizeDragger_UpperLeft->AttachTo(this);
+	}
+	if (resizeDragger_BottomRight != nullptr)
+	{
+		resizeDragger_BottomRight->Detach();
+		resizeDragger_BottomRight->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+		resizeDragger_BottomRight->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y + scale.y - windowcontrolSize));
+		resizeDragger_BottomRight->AttachTo(this);
+	}
+	if (label != nullptr)
+	{
+		label->Detach();
+		label->SetSize(XMFLOAT2(scale.x, windowcontrolSize));
+		label->SetPos(XMFLOAT2(translation.x, translation.y));
+		label->AttachTo(this);
+	}
 
 	for (auto& x : childrenWidgets)
 	{

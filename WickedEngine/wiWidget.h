@@ -282,6 +282,7 @@ protected:
 	wiButton* resizeDragger_UpperLeft = nullptr;
 	wiButton* resizeDragger_BottomRight = nullptr;
 	wiButton* moveDragger = nullptr;
+	wiLabel* label = nullptr;
 	std::list<wiWidget*> childrenWidgets;
 	bool minimized = false;
 public:
