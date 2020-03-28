@@ -9,7 +9,7 @@ using namespace wiGraphics;
 PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 {
 	window = new wiWindow(&editor->GetGUI(), "Paint Tool Window");
-	window->SetSize(XMFLOAT2(400, 580));
+	window->SetSize(XMFLOAT2(400, 600));
 	editor->GetGUI().AddWidget(window);
 
 	float x = 100;
@@ -71,7 +71,7 @@ PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 	y += step + 5;
 
 	infoLabel = new wiLabel("Paint Tool is disabled.");
-	infoLabel->SetSize(XMFLOAT2(400 - 20, 80));
+	infoLabel->SetSize(XMFLOAT2(400 - 20, 100));
 	infoLabel->SetPos(XMFLOAT2(10, y));
 	infoLabel->SetColor(wiColor::Transparent());
 	window->AddWidget(infoLabel);
@@ -178,6 +178,7 @@ void PaintToolWindow::Update(float dt)
 	const XMVECTOR MUL = XMVectorSet(0.5f, -0.5f, 1, 1);
 	const XMVECTOR ADD = XMVectorSet(0.5f, 0.5f, 0, 0);
 	const XMVECTOR SCREEN = XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 1, 1);
+	const XMVECTOR F = camera.GetAt();
 
 	switch (mode)
 	{
@@ -225,63 +226,65 @@ void PaintToolWindow::Update(float dt)
 			rebuild = true;
 		}
 
-		for (size_t j = 0; j < mesh->indices.size(); j += 3)
+		if (painting)
 		{
-			const uint32_t triangle[] = {
-				mesh->indices[j + 0],
-				mesh->indices[j + 1],
-				mesh->indices[j + 2],
-			};
-			const XMVECTOR P[arraysize(triangle)] = {
-				XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wiScene::SkinVertex(*mesh, *armature, triangle[0]), W),
-				XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wiScene::SkinVertex(*mesh, *armature, triangle[1]), W),
-				XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wiScene::SkinVertex(*mesh, *armature, triangle[2]), W),
-			};
-
-			if (painting)
+			for (size_t j = 0; j < mesh->vertex_positions.size(); ++j)
 			{
-				XMVECTOR PT[arraysize(triangle)];
-				for (int k = 0; k < arraysize(triangle); ++k)
+				XMVECTOR P, N;
+				if (armature == nullptr)
 				{
-					PT[k] = XMVector3TransformCoord(P[k], VP);
-					PT[k] = PT[k] * MUL + ADD;
-					PT[k] = PT[k] * SCREEN;
+					P = XMLoadFloat3(&mesh->vertex_positions[j]);
+					N = XMLoadFloat3(&mesh->vertex_normals[j]);
 				}
-
-				bool culled = false;
-				if (!backfaces)
+				else
 				{
-					const XMVECTOR N = XMVector3Normalize(XMVector3Cross(PT[1] - PT[0], PT[2] - PT[1]));
-					culled = XMVectorGetZ(N) > 0;
+					P = wiScene::SkinVertex(*mesh, *armature, (uint32_t)j, &N);
 				}
+				P = XMVector3Transform(P, W);
+				N = XMVector3Normalize(XMVector3TransformNormal(N, W));
 
-				if (!culled)
+				if (!backfaces && XMVectorGetX(XMVector3Dot(F, N)) > 0)
+					continue;
+
+				P = XMVector3TransformCoord(P, VP);
+				P = P * MUL + ADD;
+				P = P * SCREEN;
+
+				if (subset >= 0 && mesh->vertex_subsets[j] != subset)
+					continue;
+
+				const float z = XMVectorGetZ(P);
+				const float dist = XMVectorGetX(XMVector2Length(C - P));
+				if (z >= 0 && z <= 1 && dist <= radius)
 				{
-					for (int k = 0; k < arraysize(triangle); ++k)
-					{
-						if (subset >= 0 && subset < (int)mesh->subsets.size())
-						{
-							const MeshComponent::MeshSubset& sub = mesh->subsets[subset];
-							if (sub.indexOffset > triangle[k] || sub.indexOffset + sub.indexCount < triangle[k])
-								continue;
-						}
-						const float z = XMVectorGetZ(PT[k]);
-						const float dist = XMVectorGetX(XMVector2Length(C - PT[k]));
-						if (z >= 0 && z <= 1 && dist <= radius)
-						{
-							RecordHistory(true);
-							wiColor vcol = mesh->vertex_colors[triangle[k]];
-							const float affection = amount * std::powf(1 - (dist / radius), falloff);
-							vcol = wiColor::lerp(vcol, color, affection);
-							mesh->vertex_colors[triangle[k]] = vcol.rgba;
-							rebuild = true;
-						}
-					}
+					RecordHistory(true);
+					wiColor vcol = mesh->vertex_colors[j];
+					const float affection = amount * std::powf(1 - (dist / radius), falloff);
+					vcol = wiColor::lerp(vcol, color, affection);
+					mesh->vertex_colors[j] = vcol.rgba;
+					rebuild = true;
 				}
 			}
+		}
 
-			if (wireframe)
+		if (wireframe)
+		{
+			for (size_t j = 0; j < mesh->indices.size(); j += 3)
 			{
+				const uint32_t triangle[] = {
+					mesh->indices[j + 0],
+					mesh->indices[j + 1],
+					mesh->indices[j + 2],
+				};
+				if (subset >= 0 && (mesh->vertex_subsets[triangle[0]] != subset|| mesh->vertex_subsets[triangle[1]] != subset|| mesh->vertex_subsets[triangle[2]] != subset))
+					continue;
+
+				const XMVECTOR P[arraysize(triangle)] = {
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wiScene::SkinVertex(*mesh, *armature, triangle[0]), W),
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wiScene::SkinVertex(*mesh, *armature, triangle[1]), W),
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wiScene::SkinVertex(*mesh, *armature, triangle[2]), W),
+				};
+
 				wiRenderer::RenderableTriangle tri;
 				XMStoreFloat3(&tri.positionA, P[0]);
 				XMStoreFloat3(&tri.positionB, P[1]);
@@ -320,66 +323,68 @@ void PaintToolWindow::Update(float dt)
 		const XMMATRIX W = XMLoadFloat4x4(&transform->world);
 
 		bool rebuild = false;
-		for (size_t j = 0; j < mesh->indices.size(); j += 3)
+		if (painting)
 		{
-			const uint32_t triangle[] = {
-				mesh->indices[j + 0],
-				mesh->indices[j + 1],
-				mesh->indices[j + 2],
-			};
-			const XMVECTOR P[arraysize(triangle)] = {
-				XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wiScene::SkinVertex(*mesh, *armature, triangle[0]), W),
-				XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wiScene::SkinVertex(*mesh, *armature, triangle[1]), W),
-				XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wiScene::SkinVertex(*mesh, *armature, triangle[2]), W),
-			};
-
-			if (painting)
+			for (size_t j = 0; j < mesh->vertex_positions.size(); ++j)
 			{
-				XMVECTOR PT[arraysize(triangle)];
-				for (int k = 0; k < arraysize(triangle); ++k)
+				XMVECTOR P, N;
+				if (armature == nullptr)
 				{
-					PT[k] = XMVector3TransformCoord(P[k], VP);
-					PT[k] = PT[k] * MUL + ADD;
-					PT[k] = PT[k] * SCREEN;
+					P = XMLoadFloat3(&mesh->vertex_positions[j]);
+					N = XMLoadFloat3(&mesh->vertex_normals[j]);
 				}
-
-				bool culled = false;
-				if (!backfaces)
+				else
 				{
-					const XMVECTOR N = XMVector3Normalize(XMVector3Cross(PT[1] - PT[0], PT[2] - PT[1]));
-					culled = XMVectorGetZ(N) > 0;
+					P = wiScene::SkinVertex(*mesh, *armature, (uint32_t)j, &N);
 				}
+				P = XMVector3Transform(P, W);
+				N = XMVector3Normalize(XMVector3TransformNormal(N, W));
 
-				if (!culled)
+				if (!backfaces && XMVectorGetX(XMVector3Dot(F, N)) > 0)
+					continue;
+
+				P = XMVector3TransformCoord(P, VP);
+				P = P * MUL + ADD;
+				P = P * SCREEN;
+
+				const float z = XMVectorGetZ(P);
+				const float dist = XMVectorGetX(XMVector2Length(C - P));
+				if (z >= 0 && z <= 1 && dist <= radius)
 				{
-					for (int k = 0; k < arraysize(triangle); ++k)
+					RecordHistory(true);
+					XMVECTOR PL = XMLoadFloat3(&mesh->vertex_positions[j]);
+					const XMVECTOR NL = XMLoadFloat3(&mesh->vertex_normals[j]);
+					const float affection = amount * std::powf(1 - (dist / radius), falloff);
+					switch (mode)
 					{
-						const float z = XMVectorGetZ(PT[k]);
-						const float dist = XMVectorGetX(XMVector2Length(C - PT[k]));
-						if (z >= 0 && z <= 1 && dist <= radius)
-						{
-							RecordHistory(true);
-							XMVECTOR PL = XMLoadFloat3(&mesh->vertex_positions[triangle[k]]);
-							const XMVECTOR N = XMLoadFloat3(&mesh->vertex_normals[triangle[k]]);
-							const float affection = amount * std::powf(1 - (dist / radius), falloff);
-							switch (mode)
-							{
-							case MODE_SCULPTING_ADD:
-								PL += N * affection;
-								break;
-							case MODE_SCULPTING_SUBTRACT:
-								PL -= N * affection;
-								break;
-							}
-							XMStoreFloat3(&mesh->vertex_positions[triangle[k]], PL);
-							rebuild = true;
-						}
+					case MODE_SCULPTING_ADD:
+						PL += NL * affection;
+						break;
+					case MODE_SCULPTING_SUBTRACT:
+						PL -= NL * affection;
+						break;
 					}
+					XMStoreFloat3(&mesh->vertex_positions[j], PL);
+					rebuild = true;
 				}
 			}
+		}
 
-			if (wireframe)
+		if (wireframe)
+		{
+			for (size_t j = 0; j < mesh->indices.size(); j += 3)
 			{
+				const uint32_t triangle[] = {
+					mesh->indices[j + 0],
+					mesh->indices[j + 1],
+					mesh->indices[j + 2],
+				};
+				const XMVECTOR P[arraysize(triangle)] = {
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wiScene::SkinVertex(*mesh, *armature, triangle[0]), W),
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wiScene::SkinVertex(*mesh, *armature, triangle[1]), W),
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wiScene::SkinVertex(*mesh, *armature, triangle[2]), W),
+				};
+
 				wiRenderer::RenderableTriangle tri;
 				XMStoreFloat3(&tri.positionA, P[0]);
 				XMStoreFloat3(&tri.positionB, P[1]);
@@ -505,91 +510,101 @@ void PaintToolWindow::Update(float dt)
 
 		const XMMATRIX W = XMLoadFloat4x4(&transform->world);
 
-		for (size_t j = 0; j < mesh->indices.size(); j += 3)
+		if (painting)
 		{
-			const uint32_t triangle[] = {
-				mesh->indices[j + 0],
-				mesh->indices[j + 1],
-				mesh->indices[j + 2],
-			};
-			const XMVECTOR P[arraysize(triangle)] = {
-				XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wiScene::SkinVertex(*mesh, *armature, triangle[0]), W),
-				XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wiScene::SkinVertex(*mesh, *armature, triangle[1]), W),
-				XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wiScene::SkinVertex(*mesh, *armature, triangle[2]), W),
-			};
-
-			if (painting)
+			for (size_t j = 0; j < mesh->vertex_positions.size(); ++j)
 			{
-				XMVECTOR PT[arraysize(triangle)];
-				for (int k = 0; k < arraysize(triangle); ++k)
+				XMVECTOR P, N;
+				if (armature == nullptr)
 				{
-					PT[k] = XMVector3TransformCoord(P[k], VP);
-					PT[k] = PT[k] * MUL + ADD;
-					PT[k] = PT[k] * SCREEN;
+					P = XMLoadFloat3(&mesh->vertex_positions[j]);
+					N = XMLoadFloat3(&mesh->vertex_normals[j]);
 				}
-
-				bool culled = false;
-				if (!backfaces)
+				else
 				{
-					const XMVECTOR N = XMVector3Normalize(XMVector3Cross(PT[1] - PT[0], PT[2] - PT[1]));
-					culled = XMVectorGetZ(N) > 0;
+					P = wiScene::SkinVertex(*mesh, *armature, (uint32_t)j, &N);
 				}
+				P = XMVector3Transform(P, W);
+				N = XMVector3Normalize(XMVector3TransformNormal(N, W));
 
-				if (!culled)
+				if (!backfaces && XMVectorGetX(XMVector3Dot(F, N)) > 0)
+					continue;
+
+				P = XMVector3TransformCoord(P, VP);
+				P = P * MUL + ADD;
+				P = P * SCREEN;
+
+				const float z = XMVectorGetZ(P);
+				const float dist = XMVectorGetX(XMVector2Length(C - P));
+				if (z >= 0 && z <= 1 && dist <= radius)
 				{
-					for (int k = 0; k < arraysize(triangle); ++k)
+					RecordHistory(true);
+					switch (mode)
 					{
-						const float z = XMVectorGetZ(PT[k]);
-						const float dist = XMVectorGetX(XMVector2Length(C - PT[k]));
-						if (z >= 0 && z <= 1 && dist <= radius)
+					case MODE_HAIRPARTICLE_ADD_TRIANGLE:
+						hair->vertex_lengths[j] = 1.0f;
+						break;
+					case MODE_HAIRPARTICLE_REMOVE_TRIANGLE:
+						hair->vertex_lengths[j] = 0;
+						break;
+					case MODE_HAIRPARTICLE_LENGTH:
+						if (hair->vertex_lengths[j] > 0) // don't change distribution
 						{
-							RecordHistory(true);
-							switch (mode)
-							{
-							case MODE_HAIRPARTICLE_ADD_TRIANGLE:
-								hair->vertex_lengths[triangle[k]] = 1.0f;
-								break;
-							case MODE_HAIRPARTICLE_REMOVE_TRIANGLE:
-								hair->vertex_lengths[triangle[k]] = 0;
-								break;
-							case MODE_HAIRPARTICLE_LENGTH:
-								const float affection = amount * std::powf(1 - (dist / radius), falloff);
-								hair->vertex_lengths[triangle[k]] = wiMath::Lerp(hair->vertex_lengths[triangle[k]], color_float.w, affection);
-								// don't let it "remove" the vertex by keeping its length above zero:
-								//	(because if removed, distribution also changes which might be distracting)
-								hair->vertex_lengths[triangle[k]] = wiMath::Clamp(hair->vertex_lengths[triangle[k]], 1.0f / 255.0f, 1.0f);
-								break;
-							}
-							hair->_flags |= wiHairParticle::REBUILD_BUFFERS;
+							const float affection = amount * std::powf(1 - (dist / radius), falloff);
+							hair->vertex_lengths[j] = wiMath::Lerp(hair->vertex_lengths[j], color_float.w, affection);
+							// don't let it "remove" the vertex by keeping its length above zero:
+							//	(because if removed, distribution also changes which might be distracting)
+							hair->vertex_lengths[j] = wiMath::Clamp(hair->vertex_lengths[j], 1.0f / 255.0f, 1.0f);
 						}
+						break;
 					}
+					hair->_flags |= wiHairParticle::REBUILD_BUFFERS;
 				}
 			}
+		}
 
-			if (wireframe)
+		if (wireframe)
+		{
+			for (size_t j = 0; j < mesh->indices.size(); j += 3)
 			{
+				const uint32_t triangle[] = {
+					mesh->indices[j + 0],
+					mesh->indices[j + 1],
+					mesh->indices[j + 2],
+				};
+				const XMVECTOR P[arraysize(triangle)] = {
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wiScene::SkinVertex(*mesh, *armature, triangle[0]), W),
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wiScene::SkinVertex(*mesh, *armature, triangle[1]), W),
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wiScene::SkinVertex(*mesh, *armature, triangle[2]), W),
+				};
+
 				wiRenderer::RenderableTriangle tri;
 				XMStoreFloat3(&tri.positionA, P[0]);
 				XMStoreFloat3(&tri.positionB, P[1]);
 				XMStoreFloat3(&tri.positionC, P[2]);
 				wiRenderer::DrawTriangle(tri, true);
 			}
-		}
 
-		for (size_t j = 0; j < hair->indices.size() && wireframe; j += 3)
-		{
-			const uint32_t triangle[] = {
-				hair->indices[j + 0],
-				hair->indices[j + 1],
-				hair->indices[j + 2],
-			};
+			for (size_t j = 0; j < hair->indices.size() && wireframe; j += 3)
+			{
+				const uint32_t triangle[] = {
+					hair->indices[j + 0],
+					hair->indices[j + 1],
+					hair->indices[j + 2],
+				};
+				const XMVECTOR P[arraysize(triangle)] = {
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wiScene::SkinVertex(*mesh, *armature, triangle[0]), W),
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wiScene::SkinVertex(*mesh, *armature, triangle[1]), W),
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wiScene::SkinVertex(*mesh, *armature, triangle[2]), W),
+				};
 
-			wiRenderer::RenderableTriangle tri;
-			XMStoreFloat3(&tri.positionA, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[0]]), W));
-			XMStoreFloat3(&tri.positionB, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[1]]), W));
-			XMStoreFloat3(&tri.positionC, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[triangle[2]]), W));
-			tri.colorA = tri.colorB = tri.colorC = XMFLOAT4(1, 0, 1, 0.9f);
-			wiRenderer::DrawTriangle(tri, false);
+				wiRenderer::RenderableTriangle tri;
+				XMStoreFloat3(&tri.positionA, P[0]);
+				XMStoreFloat3(&tri.positionB, P[1]);
+				XMStoreFloat3(&tri.positionC, P[2]);
+				tri.colorA = tri.colorB = tri.colorC = XMFLOAT4(1, 0, 1, 0.9f);
+				wiRenderer::DrawTriangle(tri, false);
+			}
 		}
 	}
 	break;

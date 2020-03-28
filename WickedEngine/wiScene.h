@@ -283,6 +283,7 @@ namespace wiScene
 		wiGraphics::GPUBuffer vertexBuffer_ATL;
 		wiGraphics::GPUBuffer vertexBuffer_PRE;
 		wiGraphics::GPUBuffer streamoutBuffer_POS;
+		std::vector<uint8_t> vertex_subsets;
 
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
@@ -1273,7 +1274,8 @@ namespace wiScene
 	);
 
 	// Returns skinned vertex position in armature local space
-	XMVECTOR SkinVertex(const MeshComponent& mesh, const ArmatureComponent& armature, uint32_t index);
+	//	N : normal (out, optional)
+	XMVECTOR SkinVertex(const MeshComponent& mesh, const ArmatureComponent& armature, uint32_t index, XMVECTOR* N = nullptr);
 
 
 	// Helper that manages a global scene

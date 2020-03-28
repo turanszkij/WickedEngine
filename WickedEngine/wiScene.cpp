@@ -347,7 +347,7 @@ namespace wiScene
 
 		// vertexBuffer - POSITION + NORMAL + SUBSETINDEX:
 		{
-			std::vector<uint8_t> vertex_subsetindices(vertex_positions.size());
+			vertex_subsets.resize(vertex_positions.size());
 
 			uint32_t subsetCounter = 0;
 			for (auto& subset : subsets)
@@ -355,7 +355,7 @@ namespace wiScene
 				for (uint32_t i = 0; i < subset.indexCount; ++i)
 				{
 					uint32_t index = indices[subset.indexOffset + i];
-					vertex_subsetindices[index] = subsetCounter;
+					vertex_subsets[index] = subsetCounter;
 				}
 				subsetCounter++;
 			}
@@ -366,7 +366,7 @@ namespace wiScene
 				const XMFLOAT3& pos = vertex_positions[i];
 				XMFLOAT3& nor = vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : vertex_normals[i];
 				XMStoreFloat3(&nor, XMVector3Normalize(XMLoadFloat3(&nor)));
-				uint32_t subsetIndex = vertex_subsetindices[i];
+				uint32_t subsetIndex = vertex_subsets[i];
 				vertices[i].FromFULL(pos, nor, subsetIndex);
 
 				_min = wiMath::Min(_min, pos);
@@ -900,17 +900,6 @@ namespace wiScene
 	{
 		vertex_positions_simulation.resize(mesh.vertex_positions.size());
 
-		std::vector<uint8_t> vertex_subsetindices(mesh.vertex_positions.size());
-		uint32_t subsetCounter = 0;
-		for (auto& subset : mesh.subsets)
-		{
-			for (uint32_t i = 0; i < subset.indexCount; ++i)
-			{
-				uint32_t index = mesh.indices[subset.indexOffset + i];
-				vertex_subsetindices[index] = subsetCounter;
-			}
-			subsetCounter++;
-		}
 		XMMATRIX W = XMLoadFloat4x4(&worldMatrix);
 		XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
 		XMFLOAT3 _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
@@ -920,7 +909,7 @@ namespace wiScene
 			XMStoreFloat3(&pos, XMVector3Transform(XMLoadFloat3(&pos), W));
 			XMFLOAT3 nor = mesh.vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : mesh.vertex_normals[i];
 			XMStoreFloat3(&nor, XMVector3Normalize(XMVector3TransformNormal(XMLoadFloat3(&nor), W)));
-			uint32_t subsetIndex = vertex_subsetindices[i];
+			uint32_t subsetIndex = mesh.vertex_subsets[i];
 			vertex_positions_simulation[i].FromFULL(pos, nor, subsetIndex);
 			_min = wiMath::Min(_min, pos);
 			_max = wiMath::Max(_max, pos);
@@ -2430,18 +2419,35 @@ namespace wiScene
 	}
 
 
-	XMVECTOR SkinVertex(const MeshComponent& mesh, const ArmatureComponent& armature, uint32_t index)
+	XMVECTOR SkinVertex(const MeshComponent& mesh, const ArmatureComponent& armature, uint32_t index, XMVECTOR* N)
 	{
 		XMVECTOR P = XMLoadFloat3(&mesh.vertex_positions[index]);
 		const XMUINT4& ind = mesh.vertex_boneindices[index];
 		const XMFLOAT4& wei = mesh.vertex_boneweights[index];
 
-		XMVECTOR skinned_pos;
-		skinned_pos = XMVector3Transform(P, armature.boneData[ind.x].Load()) * wei.x;
-		skinned_pos += XMVector3Transform(P, armature.boneData[ind.y].Load()) * wei.y;
-		skinned_pos += XMVector3Transform(P, armature.boneData[ind.z].Load()) * wei.z;
-		skinned_pos += XMVector3Transform(P, armature.boneData[ind.w].Load()) * wei.w;
-		P = skinned_pos;
+		const XMMATRIX M[] = {
+			armature.boneData[ind.x].Load(),
+			armature.boneData[ind.y].Load(),
+			armature.boneData[ind.z].Load(),
+			armature.boneData[ind.w].Load(),
+		};
+
+		XMVECTOR skinned;
+		skinned =  XMVector3Transform(P, M[0]) * wei.x;
+		skinned += XMVector3Transform(P, M[1]) * wei.y;
+		skinned += XMVector3Transform(P, M[2]) * wei.z;
+		skinned += XMVector3Transform(P, M[3]) * wei.w;
+		P = skinned;
+
+		if (N != nullptr)
+		{
+			*N = XMLoadFloat3(&mesh.vertex_normals[index]);
+			skinned =  XMVector3TransformNormal(*N, M[0]) * wei.x;
+			skinned += XMVector3TransformNormal(*N, M[1]) * wei.y;
+			skinned += XMVector3TransformNormal(*N, M[2]) * wei.z;
+			skinned += XMVector3TransformNormal(*N, M[3]) * wei.w;
+			*N = XMVector3Normalize(skinned);
+		}
 
 		return P;
 	}
