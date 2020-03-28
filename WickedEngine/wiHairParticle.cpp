@@ -85,7 +85,7 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			bd.MiscFlags = 0;
 			device->CreateBuffer(&bd, nullptr, &cb);
 
-			if (vertex_lengths.empty())
+			if (vertex_lengths.size() != mesh.vertex_positions.size())
 			{
 				vertex_lengths.resize(mesh.vertex_positions.size());
 				std::fill(vertex_lengths.begin(), vertex_lengths.end(), 1.0f);
