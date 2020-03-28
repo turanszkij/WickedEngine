@@ -10,15 +10,19 @@ class wiComboBox;
 class wiColorPicker;
 class wiButton;
 
+class EditorComponent;
+
 class PaintToolWindow
 {
 	float rot = 0;
 	float stroke_dist = 0;
+	bool history_needs_recording_start = false;
+	bool history_needs_recording_end = false;
 public:
-	PaintToolWindow(wiGUI* gui);
+	PaintToolWindow(EditorComponent* editor);
 	~PaintToolWindow();
 
-	wiGUI* GUI;
+	EditorComponent* editor = nullptr;
 	wiECS::Entity entity = wiECS::INVALID_ENTITY;
 	int subset = -1;
 
@@ -52,4 +56,8 @@ public:
 	};
 	MODE GetMode() const;
 	void SetEntity(wiECS::Entity value, int subsetindex = -1);
+
+	wiArchive* currentHistory = nullptr;
+	void RecordHistory(bool start);
+	void ConsumeHistoryOperation(wiArchive& archive, bool undo);
 };

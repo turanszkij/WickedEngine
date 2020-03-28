@@ -1,17 +1,16 @@
 #include "stdafx.h"
+#include "Editor.h"
 #include "PaintToolWindow.h"
 
 using namespace wiECS;
 using namespace wiScene;
 using namespace wiGraphics;
 
-PaintToolWindow::PaintToolWindow(wiGUI* gui) : GUI(gui)
+PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 {
-	assert(GUI && "Invalid GUI!");
-
-	window = new wiWindow(GUI, "Paint Tool Window");
+	window = new wiWindow(&editor->GetGUI(), "Paint Tool Window");
 	window->SetSize(XMFLOAT2(400, 580));
-	GUI->AddWidget(window);
+	editor->GetGUI().AddWidget(window);
 
 	float x = 100;
 	float y = 10;
@@ -113,7 +112,7 @@ PaintToolWindow::PaintToolWindow(wiGUI* gui) : GUI(gui)
 	wireCheckBox->SetCheck(true);
 	window->AddWidget(wireCheckBox);
 
-	colorPicker = new wiColorPicker(GUI, "Color", false);
+	colorPicker = new wiColorPicker(&editor->GetGUI(), "Color", false);
 	colorPicker->SetPos(XMFLOAT2(10, y += step));
 	window->AddWidget(colorPicker);
 
@@ -123,18 +122,20 @@ PaintToolWindow::PaintToolWindow(wiGUI* gui) : GUI(gui)
 PaintToolWindow::~PaintToolWindow()
 {
 	window->RemoveWidgets(true);
-	GUI->RemoveWidget(window);
+	editor->GetGUI().RemoveWidget(window);
 	delete window;
 }
 
 void PaintToolWindow::Update(float dt)
 {
+	RecordHistory(false);
+
 	rot -= dt;
 	// by default, paint tool is on center of screen, this makes it easy to tweak radius with GUI:
 	XMFLOAT2 posNew;
 	posNew.x = wiRenderer::GetDevice()->GetScreenWidth() * 0.5f;
 	posNew.y = wiRenderer::GetDevice()->GetScreenHeight() * 0.5f;
-	if (GUI->HasFocus() || wiBackLog::isActive() || entity == INVALID_ENTITY)
+	if (editor->GetGUI().HasFocus() || wiBackLog::isActive() || entity == INVALID_ENTITY)
 	{
 		pos = posNew;
 		return;
@@ -268,6 +269,7 @@ void PaintToolWindow::Update(float dt)
 						const float dist = XMVectorGetX(XMVector2Length(C - PT[k]));
 						if (z >= 0 && z <= 1 && dist <= radius)
 						{
+							RecordHistory(true);
 							wiColor vcol = mesh->vertex_colors[triangle[k]];
 							const float affection = amount * std::powf(1 - (dist / radius), falloff);
 							vcol = wiColor::lerp(vcol, color, affection);
@@ -356,6 +358,7 @@ void PaintToolWindow::Update(float dt)
 						const float dist = XMVectorGetX(XMVector2Length(C - PT[k]));
 						if (z >= 0 && z <= 1 && dist <= radius)
 						{
+							RecordHistory(true);
 							XMVECTOR PL = XMLoadFloat3(&mesh->vertex_positions[triangle[k]]);
 							const XMVECTOR N = XMLoadFloat3(&mesh->vertex_normals[triangle[k]]);
 							const float affection = amount * std::powf(1 - (dist / radius), falloff);
@@ -423,6 +426,7 @@ void PaintToolWindow::Update(float dt)
 				const float z = XMVectorGetZ(P);
 				if (z >= 0 && z <= 1 && XMVectorGetX(XMVector2Length(C - P)) <= radius)
 				{
+					RecordHistory(true);
 					softbody->weights[j] = (mode == MODE_SOFTBODY_PINNING ? 0.0f : 1.0f);
 					softbody->_flags |= SoftBodyPhysicsComponent::FORCE_RESET;
 				}
@@ -539,6 +543,7 @@ void PaintToolWindow::Update(float dt)
 						const float dist = XMVectorGetX(XMVector2Length(C - PT[k]));
 						if (z >= 0 && z <= 1 && dist <= radius)
 						{
+							RecordHistory(true);
 							switch (mode)
 							{
 							case MODE_HAIRPARTICLE_ADD_TRIANGLE:
@@ -632,4 +637,216 @@ void PaintToolWindow::SetEntity(wiECS::Entity value, int subsetindex)
 {
 	entity = value;
 	subset = subsetindex;
+}
+
+void PaintToolWindow::RecordHistory(bool start)
+{
+	if (start)
+	{
+		if (history_needs_recording_start)
+			return;
+		history_needs_recording_start = true;
+		history_needs_recording_end = true;
+
+		// Start history recording (undo)
+		currentHistory = &editor->AdvanceHistory();
+		wiArchive& archive = *currentHistory;
+		archive << EditorComponent::HISTORYOP_PAINTTOOL;
+		archive << (uint32_t)GetMode();
+		archive << entity;
+	}
+	else
+	{
+		if (!history_needs_recording_end || wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
+			return;
+		history_needs_recording_end = false;
+		history_needs_recording_start = false;
+
+		// End history recording (redo)
+	}
+
+	wiArchive& archive = *currentHistory;
+	Scene& scene = wiScene::GetScene();
+
+	switch (GetMode())
+	{
+	case PaintToolWindow::MODE_VERTEXCOLOR:
+	{
+		ObjectComponent* object = scene.objects.GetComponent(entity);
+		if (object == nullptr || object->meshID == INVALID_ENTITY)
+			break;
+
+		MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+		if (mesh == nullptr)
+			break;
+
+		archive << mesh->vertex_colors;
+	}
+	break;
+	case PaintToolWindow::MODE_SCULPTING_ADD:
+	case PaintToolWindow::MODE_SCULPTING_SUBTRACT:
+	{
+		ObjectComponent* object = scene.objects.GetComponent(entity);
+		if (object == nullptr || object->meshID == INVALID_ENTITY)
+			break;
+
+		MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+		if (mesh == nullptr)
+			break;
+
+		archive << mesh->vertex_positions;
+	}
+	break;
+	case PaintToolWindow::MODE_SOFTBODY_PINNING:
+	case PaintToolWindow::MODE_SOFTBODY_PHYSICS:
+	{
+		ObjectComponent* object = scene.objects.GetComponent(entity);
+		if (object == nullptr || object->meshID == INVALID_ENTITY)
+			break;
+
+		SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(object->meshID);
+		if (softbody == nullptr)
+			break;
+
+		archive << softbody->weights;
+	}
+	break;
+	case PaintToolWindow::MODE_HAIRPARTICLE_ADD_TRIANGLE:
+	case PaintToolWindow::MODE_HAIRPARTICLE_REMOVE_TRIANGLE:
+	case PaintToolWindow::MODE_HAIRPARTICLE_LENGTH:
+	{
+		wiHairParticle* hair = scene.hairs.GetComponent(entity);
+		if (hair == nullptr)
+			break;
+
+		archive << hair->vertex_lengths;
+	}
+	break;
+	default:
+		assert(0);
+		break;
+	}
+}
+void PaintToolWindow::ConsumeHistoryOperation(wiArchive& archive, bool undo)
+{
+	MODE historymode;
+	archive >> (uint32_t&)historymode;
+	archive >> entity;
+
+	Scene& scene = wiScene::GetScene();
+
+	switch (historymode)
+	{
+	case PaintToolWindow::MODE_VERTEXCOLOR:
+	{
+		ObjectComponent* object = scene.objects.GetComponent(entity);
+		if (object == nullptr || object->meshID == INVALID_ENTITY)
+			break;
+
+		MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+		if (mesh == nullptr)
+			break;
+
+		MeshComponent undo_mesh;
+		archive >> undo_mesh.vertex_colors;
+		MeshComponent redo_mesh;
+		archive >> redo_mesh.vertex_colors;
+
+		if (undo)
+		{
+			mesh->vertex_colors = undo_mesh.vertex_colors;
+		}
+		else
+		{
+			mesh->vertex_colors = redo_mesh.vertex_colors;
+		}
+
+		mesh->CreateRenderData();
+	}
+	break;
+	case PaintToolWindow::MODE_SCULPTING_ADD:
+	case PaintToolWindow::MODE_SCULPTING_SUBTRACT:
+	{
+		ObjectComponent* object = scene.objects.GetComponent(entity);
+		if (object == nullptr || object->meshID == INVALID_ENTITY)
+			break;
+
+		MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+		if (mesh == nullptr)
+			break;
+
+		MeshComponent undo_mesh;
+		archive >> undo_mesh.vertex_positions;
+		MeshComponent redo_mesh;
+		archive >> redo_mesh.vertex_positions;
+
+		if (undo)
+		{
+			mesh->vertex_positions = undo_mesh.vertex_positions;
+		}
+		else
+		{
+			mesh->vertex_positions = redo_mesh.vertex_positions;
+		}
+
+		mesh->CreateRenderData();
+	}
+	break;
+	case PaintToolWindow::MODE_SOFTBODY_PINNING:
+	case PaintToolWindow::MODE_SOFTBODY_PHYSICS:
+	{
+		ObjectComponent* object = scene.objects.GetComponent(entity);
+		if (object == nullptr || object->meshID == INVALID_ENTITY)
+			break;
+
+		SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(object->meshID);
+		if (softbody == nullptr)
+			break;
+
+		SoftBodyPhysicsComponent undo_softbody;
+		archive >> undo_softbody.weights;
+		SoftBodyPhysicsComponent redo_softbody;
+		archive >> redo_softbody.weights;
+
+		if (undo)
+		{
+			softbody->weights = undo_softbody.weights;
+		}
+		else
+		{
+			softbody->weights = redo_softbody.weights;
+		}
+
+		softbody->_flags |= SoftBodyPhysicsComponent::FORCE_RESET;
+	}
+	break;
+	case PaintToolWindow::MODE_HAIRPARTICLE_ADD_TRIANGLE:
+	case PaintToolWindow::MODE_HAIRPARTICLE_REMOVE_TRIANGLE:
+	case PaintToolWindow::MODE_HAIRPARTICLE_LENGTH:
+	{
+		wiHairParticle* hair = scene.hairs.GetComponent(entity);
+		if (hair == nullptr)
+			break;
+
+		wiHairParticle undo_hair;
+		archive >> undo_hair.vertex_lengths;
+		wiHairParticle redo_hair;
+		archive >> redo_hair.vertex_lengths;
+
+		if (undo)
+		{
+			hair->vertex_lengths = undo_hair.vertex_lengths;
+		}
+		else
+		{
+			hair->vertex_lengths = redo_hair.vertex_lengths;
+		}
+
+		hair->_flags |= wiHairParticle::REBUILD_BUFFERS;
+	}
+	break;
+	default:
+		assert(0);
+		break;
+	}
 }

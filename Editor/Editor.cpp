@@ -142,7 +142,7 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	emitterWnd = std::make_unique<EmitterWindow>(&GetGUI());
 	hairWnd = std::make_unique<HairParticleWindow>(&GetGUI());
 	forceFieldWnd = std::make_unique<ForceFieldWindow>(&GetGUI());
-	paintToolWnd = std::make_unique<PaintToolWindow>(&GetGUI());
+	paintToolWnd = std::make_unique<PaintToolWindow>(this);
 
 	ResizeBuffers();
 }
@@ -2225,6 +2225,9 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 					translator.selected = selectedAFTER;
 				}
 			}
+			break;
+		case HISTORYOP_PAINTTOOL:
+			paintToolWnd->ConsumeHistoryOperation(archive, undo);
 			break;
 		case HISTORYOP_NONE:
 			assert(0);
