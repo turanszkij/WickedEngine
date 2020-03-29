@@ -1225,8 +1225,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 
 			// control-scrollbar-base
 			{
-				wiColor col = colors[IDLE];
-				col.setA(col.getA() / 2);
+				wiColor col = wiColor(60, 60, 60, 255);
 				wiImage::Draw(wiTextureHelper::getWhite()
 					, wiImageParams(translation.x + scale.x + 1, translation.y + scale.y + 1, scale.y, scale.y * maxVisibleItemCount, col.toFloat4()), cmd);
 			}
@@ -1257,7 +1256,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 		// control-list
 		for (int i = firstItemVisible; i < (firstItemVisible + std::min(maxVisibleItemCount, (int)items.size())); ++i)
 		{
-			wiColor col = colors[IDLE];
+			wiColor col = wiColor(60, 60, 60, 255);
 			if (hovered == i)
 			{
 				if (combostate == COMBOSTATE_HOVER)

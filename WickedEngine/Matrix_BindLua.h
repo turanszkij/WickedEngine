@@ -1,7 +1,7 @@
 #pragma once
+#include "CommonInclude.h"
 #include "wiLua.h"
 #include "wiLuna.h"
-#include <DirectXMath.h>
 
 class Matrix_BindLua
 {

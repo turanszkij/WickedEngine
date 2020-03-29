@@ -1312,6 +1312,7 @@ namespace wiScene
 		int vertexID0 = -1;
 		int vertexID1 = -1;
 		int vertexID2 = -1;
+		XMFLOAT2 bary = XMFLOAT2(0, 0);
 		XMFLOAT4X4 orientation = IDENTITYMATRIX;
 
 		bool operator==(const PickResult& other)

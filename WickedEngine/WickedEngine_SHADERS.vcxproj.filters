@@ -936,6 +936,12 @@
     <FxCompile Include="msao_blurupsampleCS_blendout.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="paint_textureCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_paintradius.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

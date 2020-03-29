@@ -11,8 +11,6 @@
 #include <functional>
 #include <unordered_map>
 
-#include <DirectXCollision.h>
-
 using namespace wiECS;
 using namespace wiGraphics;
 
@@ -2575,44 +2573,23 @@ namespace wiScene
 						}
 						else
 						{
-							p0 = XMLoadFloat3(&mesh.vertex_positions[i0]);
-							p1 = XMLoadFloat3(&mesh.vertex_positions[i1]);
-							p2 = XMLoadFloat3(&mesh.vertex_positions[i2]);
-
-							if (armature != nullptr)
+							if (armature == nullptr)
 							{
-								const XMUINT4& ind0 = mesh.vertex_boneindices[i0];
-								const XMUINT4& ind1 = mesh.vertex_boneindices[i1];
-								const XMUINT4& ind2 = mesh.vertex_boneindices[i2];
-
-								const XMFLOAT4& wei0 = mesh.vertex_boneweights[i0];
-								const XMFLOAT4& wei1 = mesh.vertex_boneweights[i1];
-								const XMFLOAT4& wei2 = mesh.vertex_boneweights[i2];
-
-								XMVECTOR skinned_pos;
-
-								skinned_pos = XMVector3Transform(p0, armature->boneData[ind0.x].Load()) * wei0.x;
-								skinned_pos += XMVector3Transform(p0, armature->boneData[ind0.y].Load()) * wei0.y;
-								skinned_pos += XMVector3Transform(p0, armature->boneData[ind0.z].Load()) * wei0.z;
-								skinned_pos += XMVector3Transform(p0, armature->boneData[ind0.w].Load()) * wei0.w;
-								p0 = skinned_pos;
-
-								skinned_pos = XMVector3Transform(p1, armature->boneData[ind1.x].Load()) * wei1.x;
-								skinned_pos += XMVector3Transform(p1, armature->boneData[ind1.y].Load()) * wei1.y;
-								skinned_pos += XMVector3Transform(p1, armature->boneData[ind1.z].Load()) * wei1.z;
-								skinned_pos += XMVector3Transform(p1, armature->boneData[ind1.w].Load()) * wei1.w;
-								p1 = skinned_pos;
-
-								skinned_pos = XMVector3Transform(p2, armature->boneData[ind2.x].Load()) * wei2.x;
-								skinned_pos += XMVector3Transform(p2, armature->boneData[ind2.y].Load()) * wei2.y;
-								skinned_pos += XMVector3Transform(p2, armature->boneData[ind2.z].Load()) * wei2.z;
-								skinned_pos += XMVector3Transform(p2, armature->boneData[ind2.w].Load()) * wei2.w;
-								p2 = skinned_pos;
+								p0 = XMLoadFloat3(&mesh.vertex_positions[i0]);
+								p1 = XMLoadFloat3(&mesh.vertex_positions[i1]);
+								p2 = XMLoadFloat3(&mesh.vertex_positions[i2]);
+							}
+							else
+							{
+								p0 = SkinVertex(mesh, *armature, i0);
+								p1 = SkinVertex(mesh, *armature, i1);
+								p2 = SkinVertex(mesh, *armature, i2);
 							}
 						}
 
 						float distance;
-						if (TriangleTests::Intersects(rayOrigin_local, rayDirection_local, p0, p1, p2, distance))
+						XMFLOAT2 bary;
+						if (wiMath::RayTriangleIntersects(rayOrigin_local, rayDirection_local, p0, p1, p2, distance, bary))
 						{
 							const XMVECTOR pos = XMVector3Transform(XMVectorAdd(rayOrigin_local, rayDirection_local*distance), objectMat);
 							distance = wiMath::Distance(pos, rayOrigin);
@@ -2629,6 +2606,7 @@ namespace wiScene
 								result.vertexID0 = (int)i0;
 								result.vertexID1 = (int)i1;
 								result.vertexID2 = (int)i2;
+								result.bary = bary;
 							}
 						}
 					}

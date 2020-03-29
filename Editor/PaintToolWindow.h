@@ -18,6 +18,7 @@ class PaintToolWindow
 	float stroke_dist = 0;
 	bool history_needs_recording_start = false;
 	bool history_needs_recording_end = false;
+	wiGraphics::Texture* GetEditTextureSlot(const wiScene::MaterialComponent& material, int* uvset = nullptr);
 public:
 	PaintToolWindow(EditorComponent* editor);
 	~PaintToolWindow();
@@ -36,6 +37,7 @@ public:
 	wiCheckBox* backfaceCheckBox;
 	wiCheckBox* wireCheckBox;
 	wiColorPicker* colorPicker;
+	wiComboBox* textureDestComboBox;
 
 	void Update(float dt);
 	void DrawBrush() const;
@@ -45,6 +47,7 @@ public:
 	enum MODE
 	{
 		MODE_DISABLED,
+		MODE_TEXTURE,
 		MODE_VERTEXCOLOR,
 		MODE_SCULPTING_ADD,
 		MODE_SCULPTING_SUBTRACT,

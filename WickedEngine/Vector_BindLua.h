@@ -1,8 +1,7 @@
 #pragma once
+#include "CommonInclude.h"
 #include "wiLua.h"
 #include "wiLuna.h"
-#include <DirectXMath.h>
-#include "CommonInclude.h"
 
 class Vector_BindLua
 {

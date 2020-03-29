@@ -513,6 +513,16 @@ namespace wiRenderer
 	};
 	void DrawTriangle(const RenderableTriangle& triangle, bool wireframe = false);
 
+	struct PaintRadius
+	{
+		wiECS::Entity objectEntity = wiECS::INVALID_ENTITY;
+		int subset = -1;
+		uint32_t uvset = 0;
+		float radius = 0;
+		XMUINT2 center;
+	};
+	void DrawPaintRadius(const PaintRadius& paintrad);
+
 	// Add a texture that should be mipmapped whenever it is feasible to do so
 	void AddDeferredMIPGen(const wiGraphics::Texture* tex);
 

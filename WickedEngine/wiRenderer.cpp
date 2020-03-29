@@ -21,6 +21,7 @@
 #include "ShaderInterop_Raytracing.h"
 #include "ShaderInterop_BVH.h"
 #include "ShaderInterop_Utility.h"
+#include "ShaderInterop_Paint.h"
 #include "wiWidget.h"
 #include "wiGPUSortLib.h"
 #include "wiAllocators.h"
@@ -161,6 +162,7 @@ std::vector<RenderableLine2D> renderableLines2D;
 std::vector<RenderablePoint> renderablePoints;
 std::vector<RenderableTriangle> renderableTriangles_solid;
 std::vector<RenderableTriangle> renderableTriangles_wireframe;
+std::vector<PaintRadius> paintrads;
 
 XMFLOAT4 waterPlane = XMFLOAT4(0, 1, 0, 0);
 
@@ -992,6 +994,7 @@ enum DEBUGRENDERING
 	DEBUGRENDERING_TRIANGLE_SOLID,
 	DEBUGRENDERING_TRIANGLE_WIREFRAME,
 	DEBUGRENDERING_EMITTER,
+	DEBUGRENDERING_PAINTRADIUS,
 	DEBUGRENDERING_VOXEL,
 	DEBUGRENDERING_FORCEFIELD_POINT,
 	DEBUGRENDERING_FORCEFIELD_PLANE,
@@ -1241,6 +1244,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_HOLOGRAM], "objectPS_hologram.cso"); });
 
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEBUG], "objectPS_debug.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_PAINTRADIUS], "objectPS_paintradius.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_SIMPLEST], "objectPS_simplest.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_BLACKOUT], "objectPS_blackout.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TEXTUREONLY], "objectPS_textureonly.cso"); });
@@ -1323,6 +1327,8 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_RAYTRACE_CLOSESTHIT], "raytrace_closesthitCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_RAYTRACE_SHADE], "raytrace_shadeCS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_RAYTRACE_TILESORT], "raytrace_tilesortCS.cso"); });
+
+	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_PAINT_TEXTURE], "paint_textureCS.cso"); });
 
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT1], "blur_gaussian_float1CS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT3], "blur_gaussian_float3CS.cso"); });
@@ -1996,6 +2002,15 @@ void LoadShaders()
 			desc.bs = &blendStates[BSTYPE_OPAQUE];
 			desc.pt = TRIANGLELIST;
 			break;
+		case DEBUGRENDERING_PAINTRADIUS:
+			desc.vs = &vertexShaders[VSTYPE_OBJECT_SIMPLE];
+			desc.ps = &pixelShaders[PSTYPE_OBJECT_PAINTRADIUS];
+			desc.il = &inputLayouts[ILTYPE_OBJECT_POS_TEX];
+			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+			desc.rs = &rasterizers[RSTYPE_FRONT];
+			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+			desc.pt = TRIANGLELIST;
+			break;
 		case DEBUGRENDERING_VOXEL:
 			desc.vs = &vertexShaders[VSTYPE_VOXEL];
 			desc.ps = &pixelShaders[PSTYPE_VOXEL];
@@ -2173,6 +2188,10 @@ void LoadBuffers()
 	bd.ByteWidth = sizeof(LensFlareCB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_LENSFLARE]);
 	device->SetName(&constantBuffers[CBTYPE_LENSFLARE], "LensFlareCB");
+
+	bd.ByteWidth = sizeof(PaintRadiusCB);
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_PAINTRADIUS]);
+	device->SetName(&constantBuffers[CBTYPE_PAINTRADIUS], "PaintRadiusCB");
 
 
 }
@@ -6122,6 +6141,66 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 				device->DrawIndexed((uint32_t)mesh->indices.size(), 0, 0, cmd);
 			}
 		}
+
+		device->EventEnd(cmd);
+	}
+
+	if (!paintrads.empty())
+	{
+		device->EventBegin("Paint Radiuses", cmd);
+
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_PAINTRADIUS], cmd);
+
+		for (auto& x : paintrads)
+		{
+			const ObjectComponent& object = *scene.objects.GetComponent(x.objectEntity);
+			const TransformComponent& transform = *scene.transforms.GetComponent(x.objectEntity);
+			const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+			const MeshComponent::MeshSubset& subset = mesh.subsets[x.subset];
+			const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
+
+			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(Instance), cmd);
+			volatile Instance* buff = (volatile Instance*)mem.data;
+			buff->Create(transform.world);
+
+			const GPUBuffer* vbs[] = {
+				mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
+				&mesh.vertexBuffer_UV0,
+				&mesh.vertexBuffer_UV1,
+				mem.buffer
+			};
+			uint32_t strides[] = {
+				sizeof(MeshComponent::Vertex_POS),
+				sizeof(MeshComponent::Vertex_TEX),
+				sizeof(MeshComponent::Vertex_TEX),
+				sizeof(Instance)
+			};
+			uint32_t offsets[] = {
+				0,
+				0,
+				0,
+				mem.offset
+			};
+			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+			device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
+
+			device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+			device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+
+			PaintRadiusCB cb;
+			cb.xPaintRadResolution.x = material.GetBaseColorMap()->GetDesc().Width;
+			cb.xPaintRadResolution.y = material.GetBaseColorMap()->GetDesc().Height;
+			cb.xPaintRadCenter = x.center;
+			cb.xPaintRadRadius = x.radius;
+			cb.xPaintRadUVSET = x.uvset;
+			device->UpdateBuffer(&constantBuffers[CBTYPE_PAINTRADIUS], &cb, cmd);
+			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_PAINTRADIUS], CB_GETBINDSLOT(PaintRadiusCB), cmd);
+
+			device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
+		}
+
+		paintrads.clear();
 
 		device->EventEnd(cmd);
 	}
@@ -10860,6 +10939,10 @@ void DrawTriangle(const RenderableTriangle& triangle, bool wireframe)
 	{
 		renderableTriangles_solid.push_back(triangle);
 	}
+}
+void DrawPaintRadius(const PaintRadius& paintrad)
+{
+	paintrads.push_back(paintrad);
 }
 
 void AddDeferredMIPGen(const Texture* tex)

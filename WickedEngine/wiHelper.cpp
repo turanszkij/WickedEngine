@@ -74,7 +74,7 @@ namespace wiHelper
 		assert(result);
 	}
 
-	bool saveTextureToFile(const wiGraphics::Texture& texture, const string& fileName)
+	bool saveTextureToMemory(const wiGraphics::Texture& texture, std::vector<uint8_t>& data)
 	{
 		using namespace wiGraphics;
 
@@ -87,7 +87,7 @@ namespace wiHelper
 		uint32_t data_stride = device->GetFormatStride(desc.Format);
 		uint32_t data_size = data_count * data_stride;
 
-		vector<uint8_t> data(data_size);
+		data.resize(data_size);
 
 		Texture stagingTex;
 		TextureDesc staging_desc = desc;
@@ -101,7 +101,19 @@ namespace wiHelper
 		bool download_success = device->DownloadResource(&texture, &stagingTex, data.data());
 		assert(download_success);
 
-		return saveTextureToFile(data, desc, fileName);
+		return download_success;
+	}
+
+	bool saveTextureToFile(const wiGraphics::Texture& texture, const string& fileName)
+	{
+		using namespace wiGraphics;
+		TextureDesc desc = texture.GetDesc();
+		std::vector<uint8_t> data;
+		if (saveTextureToMemory(texture, data))
+		{
+			return saveTextureToFile(data, desc, fileName);
+		}
+		return false;
 	}
 
 	bool saveTextureToFile(const std::vector<uint8_t>& textureData, const wiGraphics::TextureDesc& desc, const std::string& fileName)

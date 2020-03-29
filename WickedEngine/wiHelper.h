@@ -22,6 +22,8 @@ namespace wiHelper
 
 	void screenshot(const std::string& name = "");
 
+	bool saveTextureToMemory(const wiGraphics::Texture& texture, std::vector<uint8_t>& data);
+
 	bool saveTextureToFile(const wiGraphics::Texture& texture, const std::string& fileName);
 
 	bool saveTextureToFile(const std::vector<uint8_t>& textureData, const wiGraphics::TextureDesc& desc, const std::string& fileName);

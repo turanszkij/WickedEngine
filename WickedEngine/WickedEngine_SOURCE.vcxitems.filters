@@ -1125,6 +1125,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphics.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Paint.h">
+      <Filter>ENGINE\Graphics\GPUMapping</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">

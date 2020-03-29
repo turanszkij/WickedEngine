@@ -166,5 +166,119 @@ namespace wiMath
 	uint32_t CompressNormal(const XMFLOAT3& normal);
 	uint32_t CompressColor(const XMFLOAT3& color);
 	uint32_t CompressColor(const XMFLOAT4& color);
+
+
+
+
+	//-----------------------------------------------------------------------------
+	// Compute the intersection of a ray (Origin, Direction) with a triangle 
+	// (V0, V1, V2).  Return true if there is an intersection and also set *pDist 
+	// to the distance along the ray to the intersection.
+	// 
+	// The algorithm is based on Moller, Tomas and Trumbore, "Fast, Minimum Storage 
+	// Ray-Triangle Intersection", Journal of Graphics Tools, vol. 2, no. 1, 
+	// pp 21-28, 1997.
+	//
+	//	Modified for WickedEngine to return barycentrics
+	//-----------------------------------------------------------------------------
+	_Use_decl_annotations_
+	inline bool XM_CALLCONV RayTriangleIntersects(FXMVECTOR Origin, FXMVECTOR Direction, FXMVECTOR V0, GXMVECTOR V1, HXMVECTOR V2, float& Dist, XMFLOAT2& bary)
+	{
+		const XMVECTOR g_RayEpsilon = XMVectorSet(1e-20f, 1e-20f, 1e-20f, 1e-20f);
+		const XMVECTOR g_RayNegEpsilon = XMVectorSet(-1e-20f, -1e-20f, -1e-20f, -1e-20f);
+
+		XMVECTOR Zero = XMVectorZero();
+
+		XMVECTOR e1 = XMVectorSubtract(V1, V0);
+		XMVECTOR e2 = XMVectorSubtract(V2, V0);
+
+		// p = Direction ^ e2;
+		XMVECTOR p = XMVector3Cross(Direction, e2);
+
+		// det = e1 * p;
+		XMVECTOR det = XMVector3Dot(e1, p);
+
+		XMVECTOR u, v, t;
+
+		if (XMVector3GreaterOrEqual(det, g_RayEpsilon))
+		{
+			// Determinate is positive (front side of the triangle).
+			XMVECTOR s = XMVectorSubtract(Origin, V0);
+
+			// u = s * p;
+			u = XMVector3Dot(s, p);
+
+			XMVECTOR NoIntersection = XMVectorLess(u, Zero);
+			NoIntersection = XMVectorOrInt(NoIntersection, XMVectorGreater(u, det));
+
+			// q = s ^ e1;
+			XMVECTOR q = XMVector3Cross(s, e1);
+
+			// v = Direction * q;
+			v = XMVector3Dot(Direction, q);
+
+			NoIntersection = XMVectorOrInt(NoIntersection, XMVectorLess(v, Zero));
+			NoIntersection = XMVectorOrInt(NoIntersection, XMVectorGreater(XMVectorAdd(u, v), det));
+
+			// t = e2 * q;
+			t = XMVector3Dot(e2, q);
+
+			NoIntersection = XMVectorOrInt(NoIntersection, XMVectorLess(t, Zero));
+
+			if (XMVector4EqualInt(NoIntersection, XMVectorTrueInt()))
+			{
+				Dist = 0.f;
+				return false;
+			}
+		}
+		else if (XMVector3LessOrEqual(det, g_RayNegEpsilon))
+		{
+			// Determinate is negative (back side of the triangle).
+			XMVECTOR s = XMVectorSubtract(Origin, V0);
+
+			// u = s * p;
+			u = XMVector3Dot(s, p);
+
+			XMVECTOR NoIntersection = XMVectorGreater(u, Zero);
+			NoIntersection = XMVectorOrInt(NoIntersection, XMVectorLess(u, det));
+
+			// q = s ^ e1;
+			XMVECTOR q = XMVector3Cross(s, e1);
+
+			// v = Direction * q;
+			v = XMVector3Dot(Direction, q);
+
+			NoIntersection = XMVectorOrInt(NoIntersection, XMVectorGreater(v, Zero));
+			NoIntersection = XMVectorOrInt(NoIntersection, XMVectorLess(XMVectorAdd(u, v), det));
+
+			// t = e2 * q;
+			t = XMVector3Dot(e2, q);
+
+			NoIntersection = XMVectorOrInt(NoIntersection, XMVectorGreater(t, Zero));
+
+			if (XMVector4EqualInt(NoIntersection, XMVectorTrueInt()))
+			{
+				Dist = 0.f;
+				return false;
+			}
+		}
+		else
+		{
+			// Parallel ray.
+			Dist = 0.f;
+			return false;
+		}
+
+		t = XMVectorDivide(t, det);
+
+		const XMVECTOR invdet = XMVectorReciprocal(det);
+		XMStoreFloat(&bary.x, u * invdet);
+		XMStoreFloat(&bary.y, v * invdet);
+
+		// Store the x-component to *pDist
+		XMStoreFloat(&Dist, t);
+
+		return true;
+	}
 };
 

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Editor.h"
 #include "PaintToolWindow.h"
+#include "ShaderInterop_Paint.h"
 
 using namespace wiECS;
 using namespace wiScene;
@@ -9,7 +10,7 @@ using namespace wiGraphics;
 PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 {
 	window = new wiWindow(&editor->GetGUI(), "Paint Tool Window");
-	window->SetSize(XMFLOAT2(400, 600));
+	window->SetSize(XMFLOAT2(400, 630));
 	editor->GetGUI().AddWidget(window);
 
 	float x = 100;
@@ -21,6 +22,7 @@ PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 	modeComboBox->SetPos(XMFLOAT2(x, y += step));
 	modeComboBox->SetSize(XMFLOAT2(200, 28));
 	modeComboBox->AddItem("Disabled");
+	modeComboBox->AddItem("Texture");
 	modeComboBox->AddItem("Vertexcolor");
 	modeComboBox->AddItem("Sculpting - Add");
 	modeComboBox->AddItem("Sculpting - Subtract");
@@ -29,13 +31,17 @@ PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 	modeComboBox->AddItem("Hairparticle - Add Triangle");
 	modeComboBox->AddItem("Hairparticle - Remove Triangle");
 	modeComboBox->AddItem("Hairparticle - Length (Alpha)");
-	modeComboBox->SetMaxVisibleItemCount(16);
 	modeComboBox->SetSelected(0);
 	modeComboBox->OnSelect([&](wiEventArgs args) {
+		textureDestComboBox->SetEnabled(false);
 		switch (args.iValue)
 		{
 		case MODE_DISABLED:
 			infoLabel->SetText("Paint Tool is disabled.");
+			break;
+		case MODE_TEXTURE:
+			infoLabel->SetText("In texture paint mode, you can paint on textures. Brush will be applied in texture space.\nWORK IN PROGRESS! EDITED TEXTURES ARE NOT SAVED YET!");
+			textureDestComboBox->SetEnabled(true);
 			break;
 		case MODE_VERTEXCOLOR:
 			infoLabel->SetText("In vertex color mode, you can paint colors on selected geometry (per vertex). \"Use vertex colors\" will be automatically enabled for the selected material, or all materials if the whole object is selected. If there is no vertexcolors vertex buffer, one will be created with white as default for every vertex.");
@@ -60,9 +66,6 @@ PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 			break;
 		case MODE_HAIRPARTICLE_LENGTH:
 			infoLabel->SetText("In hair particle length mode, you can adjust length of hair particles with the colorpicker Alpha channel (A). The Alpha channel is 0-255, but the length will be normalized to 0-1 range.\nThis will NOT modify random distribution of hair!");
-			break;
-		default:
-			assert(0);
 			break;
 		}
 		});
@@ -111,6 +114,20 @@ PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 	wireCheckBox->SetPos(XMFLOAT2(x + 100, y));
 	wireCheckBox->SetCheck(true);
 	window->AddWidget(wireCheckBox);
+
+	textureDestComboBox = new wiComboBox("Texture Dest: ");
+	textureDestComboBox->SetTooltip("Choose texture slot to paint (texture paint mode only)");
+	textureDestComboBox->SetPos(XMFLOAT2(x, y += step));
+	textureDestComboBox->SetSize(XMFLOAT2(200, 28));
+	textureDestComboBox->AddItem("BaseColor");
+	textureDestComboBox->AddItem("Normal");
+	textureDestComboBox->AddItem("SurfaceMap");
+	textureDestComboBox->AddItem("DisplacementMap");
+	textureDestComboBox->AddItem("EmissiveMap");
+	textureDestComboBox->AddItem("OcclusionMap");
+	textureDestComboBox->SetSelected(0);
+	textureDestComboBox->SetEnabled(false);
+	window->AddWidget(textureDestComboBox);
 
 	colorPicker = new wiColorPicker(&editor->GetGUI(), "Color", false);
 	colorPicker->SetPos(XMFLOAT2(10, y += step));
@@ -182,6 +199,94 @@ void PaintToolWindow::Update(float dt)
 
 	switch (mode)
 	{
+	case MODE_TEXTURE:
+	{
+		const wiScene::PickResult& intersect = editor->hovered;
+		if (intersect.entity != entity)
+			break;
+
+		ObjectComponent* object = scene.objects.GetComponent(entity);
+		if (object == nullptr || object->meshID == INVALID_ENTITY)
+			break;
+
+		MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+		if (mesh == nullptr || (mesh->vertex_uvset_0.empty() && mesh->vertex_uvset_1.empty()))
+			break;
+
+		MaterialComponent* material = subset >= 0 && subset < (int)mesh->subsets.size() ? scene.materials.GetComponent(mesh->subsets[subset].materialID) : nullptr;
+		if (material == nullptr)
+			break;
+
+		int uvset = 0;
+		const Texture* texture = GetEditTextureSlot(*material, &uvset);
+		const TextureDesc& desc = texture->GetDesc();
+		auto& vertex_uvset = uvset == 0 ? mesh->vertex_uvset_0 : mesh->vertex_uvset_1;
+
+		const float u = intersect.bary.x;
+		const float v = intersect.bary.y;
+		const float w = 1 - u - v;
+		XMFLOAT2 uv;
+		uv.x = vertex_uvset[intersect.vertexID0].x * w +
+			vertex_uvset[intersect.vertexID1].x * u +
+			vertex_uvset[intersect.vertexID2].x * v;
+		uv.y = vertex_uvset[intersect.vertexID0].y * w +
+			vertex_uvset[intersect.vertexID1].y * u +
+			vertex_uvset[intersect.vertexID2].y * v;
+		uint2 center = XMUINT2(uint32_t(uv.x * desc.Width), uint32_t(uv.y * desc.Height));
+
+		if (painting)
+		{
+			RecordHistory(true);
+
+			GraphicsDevice* device = wiRenderer::GetDevice();
+
+			static GPUBuffer cbuf;
+			if (!cbuf.IsValid())
+			{
+				GPUBufferDesc desc;
+				desc.BindFlags = BIND_CONSTANT_BUFFER;
+				desc.Usage = USAGE_DYNAMIC;
+				desc.CPUAccessFlags = CPU_ACCESS_WRITE;
+				desc.ByteWidth = sizeof(PaintTextureCB);
+				device->CreateBuffer(&desc, nullptr, &cbuf);
+			}
+
+			CommandList cmd = device->BeginCommandList();
+			device->BindComputeShader(wiRenderer::GetComputeShader(CSTYPE_PAINT_TEXTURE), cmd);
+
+			wiRenderer::BindCommonResources(cmd);
+			device->BindResource(CS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
+			device->BindUAV(CS, texture, 0, cmd);
+
+			PaintTextureCB cb;
+			cb.xPaintBrushCenter = center;
+			cb.xPaintBrushRadius = (uint32_t)radius;
+			cb.xPaintBrushAmount = amount;
+			cb.xPaintBrushFalloff = falloff;
+			cb.xPaintBrushColor = color.rgba;
+			device->UpdateBuffer(&cbuf, &cb, cmd);
+			device->BindConstantBuffer(CS, &cbuf, CB_GETBINDSLOT(PaintTextureCB), cmd);
+
+			const uint diameter = cb.xPaintBrushRadius * 2;
+			const uint dispatch_dim = (diameter + PAINT_TEXTURE_BLOCKSIZE - 1) / PAINT_TEXTURE_BLOCKSIZE;
+			device->Dispatch(dispatch_dim, dispatch_dim, 1, cmd);
+
+			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+			device->UnbindUAVs(0, 1, cmd);
+
+			wiRenderer::GenerateMipChain(*texture, wiRenderer::MIPGENFILTER::MIPGENFILTER_LINEAR, cmd);
+		}
+
+		wiRenderer::PaintRadius paintrad;
+		paintrad.objectEntity = entity;
+		paintrad.subset = subset;
+		paintrad.radius = radius;
+		paintrad.center = center;
+		paintrad.uvset = uvset;
+		wiRenderer::DrawPaintRadius(paintrad);
+	}
+	break;
+
 	case MODE_VERTEXCOLOR:
 	{
 		ObjectComponent* object = scene.objects.GetComponent(entity);
@@ -613,11 +718,13 @@ void PaintToolWindow::Update(float dt)
 }
 void PaintToolWindow::DrawBrush() const
 {
-	if (GetMode() == MODE_DISABLED || entity == INVALID_ENTITY || wiBackLog::isActive())
+	const MODE mode = GetMode();
+	if (mode == MODE_DISABLED || mode == MODE_TEXTURE || entity == INVALID_ENTITY || wiBackLog::isActive())
 		return;
 
-	const float radius = radiusSlider->GetValue();
 	const int segmentcount = 36;
+	const float radius = radiusSlider->GetValue();
+
 	for (int i = 0; i < segmentcount; i += 1)
 	{
 		const float angle0 = (float)i / (float)segmentcount * XM_2PI;
@@ -642,6 +749,7 @@ void PaintToolWindow::DrawBrush() const
 		line.end.y = pos.y + cosf(angle1) * radius;
 		wiRenderer::DrawLine(line);
 	}
+
 }
 
 PaintToolWindow::MODE PaintToolWindow::GetMode() const
@@ -685,6 +793,29 @@ void PaintToolWindow::RecordHistory(bool start)
 
 	switch (GetMode())
 	{
+	case PaintToolWindow::MODE_TEXTURE:
+	{
+		ObjectComponent* object = scene.objects.GetComponent(entity);
+		if (object == nullptr || object->meshID == INVALID_ENTITY)
+			break;
+
+		MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+		if (mesh == nullptr || (mesh->vertex_uvset_0.empty() && mesh->vertex_uvset_1.empty()))
+			break;
+
+		MaterialComponent* material = subset >= 0 && subset < (int)mesh->subsets.size() ? scene.materials.GetComponent(mesh->subsets[subset].materialID) : nullptr;
+		if (material == nullptr)
+			break;
+
+		const Texture* texture = GetEditTextureSlot(*material);
+
+		archive << textureDestComboBox->GetSelected();
+
+		std::vector<uint8_t> data;
+		wiHelper::saveTextureToMemory(*texture, data);
+		archive << data;
+	}
+	break;
 	case PaintToolWindow::MODE_VERTEXCOLOR:
 	{
 		ObjectComponent* object = scene.objects.GetComponent(entity);
@@ -748,10 +879,80 @@ void PaintToolWindow::ConsumeHistoryOperation(wiArchive& archive, bool undo)
 	archive >> (uint32_t&)historymode;
 	archive >> entity;
 
+	modeComboBox->SetSelected(historymode);
+
 	Scene& scene = wiScene::GetScene();
 
 	switch (historymode)
 	{
+	case PaintToolWindow::MODE_TEXTURE:
+	{
+		ObjectComponent* object = scene.objects.GetComponent(entity);
+		if (object == nullptr || object->meshID == INVALID_ENTITY)
+			break;
+
+		MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+		if (mesh == nullptr || (mesh->vertex_uvset_0.empty() && mesh->vertex_uvset_1.empty()))
+			break;
+
+		MaterialComponent* material = subset >= 0 && subset < (int)mesh->subsets.size() ? scene.materials.GetComponent(mesh->subsets[subset].materialID) : nullptr;
+		if (material == nullptr)
+			break;
+
+		int undo_dest;
+		archive >> undo_dest;
+		std::vector<uint8_t> undo_data;
+		archive >> undo_data;
+		int redo_dest;
+		archive >> redo_dest;
+		std::vector<uint8_t> redo_data;
+		archive >> redo_data;
+
+		if (undo)
+		{
+			textureDestComboBox->SetSelected(undo_dest);
+		}
+		else
+		{
+			textureDestComboBox->SetSelected(redo_dest);
+		}
+
+		GraphicsDevice* device = wiRenderer::GetDevice();
+
+		Texture* texture = GetEditTextureSlot(*material);
+		const TextureDesc& desc = texture->GetDesc();
+
+		std::vector<SubresourceData> InitData(desc.MipLevels);
+		uint32_t mipwidth = desc.Width;
+		for (uint32_t mip = 0; mip < desc.MipLevels; ++mip)
+		{
+			// attention! we don't fill the mips here correctly, just always point to the mip0 data by default. Mip levels will be created using compute shader when needed!
+			if (undo)
+			{
+				InitData[mip].pSysMem = undo_data.data();
+			}
+			else
+			{
+				InitData[mip].pSysMem = redo_data.data();
+			}
+			InitData[mip].SysMemPitch = static_cast<uint32_t>(mipwidth * 4);
+			mipwidth = std::max(1u, mipwidth / 2);
+		}
+		device->CreateTexture(&desc, InitData.data(), texture);
+
+		for (uint32_t i = 0; i < texture->GetDesc().MipLevels; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(texture, SRV, 0, 1, i, 1);
+			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(texture, UAV, 0, 1, i, 1);
+			assert(subresource_index == i);
+		}
+
+		wiRenderer::AddDeferredMIPGen(texture);
+
+	}
+	break;
 	case PaintToolWindow::MODE_VERTEXCOLOR:
 	{
 		ObjectComponent* object = scene.objects.GetComponent(entity);
@@ -863,5 +1064,32 @@ void PaintToolWindow::ConsumeHistoryOperation(wiArchive& archive, bool undo)
 	default:
 		assert(0);
 		break;
+	}
+}
+Texture* PaintToolWindow::GetEditTextureSlot(const MaterialComponent& material, int* uvset)
+{
+	// Think about refactoring this and remove const_casts!
+	int sel = textureDestComboBox->GetSelected();
+	switch (sel)
+	{
+	default:
+	case 0:
+		if (uvset) *uvset = material.uvset_baseColorMap;
+		return const_cast<Texture*>(material.GetBaseColorMap());
+	case 1:
+		if (uvset) *uvset = material.uvset_normalMap;
+		return const_cast<Texture*>(material.GetNormalMap());
+	case 2:
+		if (uvset) *uvset = material.uvset_surfaceMap;
+		return const_cast<Texture*>(material.GetSurfaceMap());
+	case 3:
+		if (uvset) *uvset = material.uvset_displacementMap;
+		return const_cast<Texture*>(material.GetDisplacementMap());
+	case 4:
+		if (uvset) *uvset = material.uvset_emissiveMap;
+		return const_cast<Texture*>(material.GetEmissiveMap());
+	case 5:
+		if (uvset) *uvset = material.uvset_occlusionMap;
+		return const_cast<Texture*>(material.GetOcclusionMap());
 	}
 }
