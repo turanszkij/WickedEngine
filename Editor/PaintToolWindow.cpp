@@ -3,6 +3,8 @@
 #include "PaintToolWindow.h"
 #include "ShaderInterop_Paint.h"
 
+#include <sstream>
+
 using namespace wiECS;
 using namespace wiScene;
 using namespace wiGraphics;
@@ -10,7 +12,7 @@ using namespace wiGraphics;
 PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 {
 	window = new wiWindow(&editor->GetGUI(), "Paint Tool Window");
-	window->SetSize(XMFLOAT2(400, 630));
+	window->SetSize(XMFLOAT2(400, 660));
 	editor->GetGUI().AddWidget(window);
 
 	float x = 100;
@@ -33,15 +35,17 @@ PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 	modeComboBox->AddItem("Hairparticle - Length (Alpha)");
 	modeComboBox->SetSelected(0);
 	modeComboBox->OnSelect([&](wiEventArgs args) {
-		textureDestComboBox->SetEnabled(false);
+		textureSlotComboBox->SetEnabled(false);
+		saveTextureButton->SetEnabled(false);
 		switch (args.iValue)
 		{
 		case MODE_DISABLED:
 			infoLabel->SetText("Paint Tool is disabled.");
 			break;
 		case MODE_TEXTURE:
-			infoLabel->SetText("In texture paint mode, you can paint on textures. Brush will be applied in texture space.\nWORK IN PROGRESS! EDITED TEXTURES ARE NOT SAVED YET!");
-			textureDestComboBox->SetEnabled(true);
+			infoLabel->SetText("In texture paint mode, you can paint on textures. Brush will be applied in texture space.\nREMEMBER to save texture when finished to save texture file!\nREMEMBER to save scene to retain new texture bindings on materials!");
+			textureSlotComboBox->SetEnabled(true);
+			saveTextureButton->SetEnabled(true);
 			break;
 		case MODE_VERTEXCOLOR:
 			infoLabel->SetText("In vertex color mode, you can paint colors on selected geometry (per vertex). \"Use vertex colors\" will be automatically enabled for the selected material, or all materials if the whole object is selected. If there is no vertexcolors vertex buffer, one will be created with white as default for every vertex.");
@@ -115,19 +119,78 @@ PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 	wireCheckBox->SetCheck(true);
 	window->AddWidget(wireCheckBox);
 
-	textureDestComboBox = new wiComboBox("Texture Dest: ");
-	textureDestComboBox->SetTooltip("Choose texture slot to paint (texture paint mode only)");
-	textureDestComboBox->SetPos(XMFLOAT2(x, y += step));
-	textureDestComboBox->SetSize(XMFLOAT2(200, 28));
-	textureDestComboBox->AddItem("BaseColor");
-	textureDestComboBox->AddItem("Normal");
-	textureDestComboBox->AddItem("SurfaceMap");
-	textureDestComboBox->AddItem("DisplacementMap");
-	textureDestComboBox->AddItem("EmissiveMap");
-	textureDestComboBox->AddItem("OcclusionMap");
-	textureDestComboBox->SetSelected(0);
-	textureDestComboBox->SetEnabled(false);
-	window->AddWidget(textureDestComboBox);
+	textureSlotComboBox = new wiComboBox("Texture Slot: ");
+	textureSlotComboBox->SetTooltip("Choose texture slot of the selected material to paint (texture paint mode only)");
+	textureSlotComboBox->SetPos(XMFLOAT2(x, y += step));
+	textureSlotComboBox->SetSize(XMFLOAT2(200, 28));
+	textureSlotComboBox->AddItem("BaseColor (RGBA)");
+	textureSlotComboBox->AddItem("Normal (RGB)");
+	textureSlotComboBox->AddItem("SurfaceMap (RGBA)");
+	textureSlotComboBox->AddItem("DisplacementMap (R)");
+	textureSlotComboBox->AddItem("EmissiveMap (RGBA)");
+	textureSlotComboBox->AddItem("OcclusionMap (R)");
+	textureSlotComboBox->SetSelected(0);
+	textureSlotComboBox->SetEnabled(false);
+	window->AddWidget(textureSlotComboBox);
+
+	saveTextureButton = new wiButton("Save Texture");
+	saveTextureButton->SetTooltip("Save edited texture. This will append _0 postfix to texture name and save as new PNG texture.");
+	saveTextureButton->SetSize(XMFLOAT2(200, 28));
+	saveTextureButton->SetPos(XMFLOAT2(x, y += step));
+	saveTextureButton->SetEnabled(false);
+	saveTextureButton->OnClick([this] (wiEventArgs args) {
+
+		Scene& scene = wiScene::GetScene();
+		ObjectComponent* object = scene.objects.GetComponent(entity);
+		if (object == nullptr || object->meshID == INVALID_ENTITY)
+			return;
+
+		MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+		if (mesh == nullptr || (mesh->vertex_uvset_0.empty() && mesh->vertex_uvset_1.empty()))
+			return;
+
+		MaterialComponent* material = subset >= 0 && subset < (int)mesh->subsets.size() ? scene.materials.GetComponent(mesh->subsets[subset].materialID) : nullptr;
+		if (material == nullptr)
+			return;
+
+		auto resource = GetEditTextureSlot(*material);
+
+		std::string* slotname = nullptr;
+
+		int sel = textureSlotComboBox->GetSelected();
+		switch (sel)
+		{
+		default:
+		case 0:
+			slotname = &material->baseColorMapName;
+			break;
+		case 1:
+			slotname = &material->normalMapName;
+			break;
+		case 2:
+			slotname = &material->surfaceMapName;
+			break;
+		case 3:
+			slotname = &material->displacementMapName;
+			break;
+		case 4:
+			slotname = &material->emissiveMapName;
+			break;
+		case 5:
+			slotname = &material->occlusionMapName;
+			break;
+		}
+
+		wiHelper::RemoveExtensionFromFileName(*slotname);
+		*slotname = *slotname + "_0.png";
+		std::string filename = wiHelper::GetWorkingDirectory() + *slotname;
+
+		if (!wiHelper::saveTextureToFile(*resource->texture, filename))
+		{
+			wiHelper::messageBox("Saving texture failed! Check filename of texture slot in the material!");
+		}
+	});
+	window->AddWidget(saveTextureButton);
 
 	colorPicker = new wiColorPicker(&editor->GetGUI(), "Color", false);
 	colorPicker->SetPos(XMFLOAT2(10, y += step));
@@ -218,8 +281,8 @@ void PaintToolWindow::Update(float dt)
 			break;
 
 		int uvset = 0;
-		const Texture* texture = GetEditTextureSlot(*material, &uvset);
-		const TextureDesc& desc = texture->GetDesc();
+		auto resource = GetEditTextureSlot(*material, &uvset);
+		const TextureDesc& desc = resource->texture->GetDesc();
 		auto& vertex_uvset = uvset == 0 ? mesh->vertex_uvset_0 : mesh->vertex_uvset_1;
 
 		const float u = intersect.bary.x;
@@ -236,9 +299,13 @@ void PaintToolWindow::Update(float dt)
 
 		if (painting)
 		{
-			RecordHistory(true);
-
 			GraphicsDevice* device = wiRenderer::GetDevice();
+			CommandList cmd = device->BeginCommandList();
+
+			RecordHistory(true, cmd);
+
+			// Need to requery this because RecordHistory might swap textures on material:
+			resource = GetEditTextureSlot(*material, &uvset);
 
 			static GPUBuffer cbuf;
 			if (!cbuf.IsValid())
@@ -251,12 +318,11 @@ void PaintToolWindow::Update(float dt)
 				device->CreateBuffer(&desc, nullptr, &cbuf);
 			}
 
-			CommandList cmd = device->BeginCommandList();
 			device->BindComputeShader(wiRenderer::GetComputeShader(CSTYPE_PAINT_TEXTURE), cmd);
 
 			wiRenderer::BindCommonResources(cmd);
 			device->BindResource(CS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
-			device->BindUAV(CS, texture, 0, cmd);
+			device->BindUAV(CS, resource->texture, 0, cmd);
 
 			PaintTextureCB cb;
 			cb.xPaintBrushCenter = center;
@@ -274,7 +340,7 @@ void PaintToolWindow::Update(float dt)
 			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 			device->UnbindUAVs(0, 1, cmd);
 
-			wiRenderer::GenerateMipChain(*texture, wiRenderer::MIPGENFILTER::MIPGENFILTER_LINEAR, cmd);
+			wiRenderer::GenerateMipChain(*resource->texture, wiRenderer::MIPGENFILTER::MIPGENFILTER_LINEAR, cmd);
 		}
 
 		wiRenderer::PaintRadius paintrad;
@@ -760,9 +826,18 @@ void PaintToolWindow::SetEntity(wiECS::Entity value, int subsetindex)
 {
 	entity = value;
 	subset = subsetindex;
+
+	if (entity == INVALID_ENTITY)
+	{
+		saveTextureButton->SetEnabled(false);
+	}
+	else if (GetMode() == MODE_TEXTURE)
+	{
+		saveTextureButton->SetEnabled(true);
+	}
 }
 
-void PaintToolWindow::RecordHistory(bool start)
+void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 {
 	if (start)
 	{
@@ -807,13 +882,41 @@ void PaintToolWindow::RecordHistory(bool start)
 		if (material == nullptr)
 			break;
 
-		const Texture* texture = GetEditTextureSlot(*material);
+		auto resource = GetEditTextureSlot(*material);
 
-		archive << textureDestComboBox->GetSelected();
+		archive << textureSlotComboBox->GetSelected();
 
-		std::vector<uint8_t> data;
-		wiHelper::saveTextureToMemory(*texture, data);
-		archive << data;
+		if (history_textureIndex >= history_textures.size())
+		{
+			history_textures.resize((history_textureIndex + 1) * 2);
+		}
+		history_textures[history_textureIndex] = resource;
+		archive << history_textureIndex;
+		history_textureIndex++;
+
+		if (start)
+		{
+			// Make a copy of texture to edit and replace material resource:
+			GraphicsDevice* device = wiRenderer::GetDevice();
+			Texture* newTex = new Texture;
+			TextureDesc desc = resource->texture->GetDesc();
+			desc.Format = FORMAT_R8G8B8A8_UNORM; // force format to one that is writable by GPU
+			device->CreateTexture(&desc, nullptr, newTex);
+			for (uint32_t i = 0; i < newTex->GetDesc().MipLevels; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(newTex, SRV, 0, 1, i, 1);
+				assert(subresource_index == i);
+				subresource_index = device->CreateSubresource(newTex, UAV, 0, 1, i, 1);
+				assert(subresource_index == i);
+			}
+			wiRenderer::CopyTexture2D(*newTex, 0, 0, 0, *resource->texture, 0, cmd);
+			std::stringstream ss("");
+			ss << "painttool_" << wiRandom::getRandom(INT_MAX);
+			auto newRes = wiResourceManager::Register(ss.str(), newTex, wiResource::DATA_TYPE::IMAGE);
+			ReplaceEditTextureSlot(*material, newRes);
+		}
+
 	}
 	break;
 	case PaintToolWindow::MODE_VERTEXCOLOR:
@@ -899,57 +1002,26 @@ void PaintToolWindow::ConsumeHistoryOperation(wiArchive& archive, bool undo)
 		if (material == nullptr)
 			break;
 
-		int undo_dest;
-		archive >> undo_dest;
-		std::vector<uint8_t> undo_data;
-		archive >> undo_data;
-		int redo_dest;
-		archive >> redo_dest;
-		std::vector<uint8_t> redo_data;
-		archive >> redo_data;
+		int undo_slot;
+		archive >> undo_slot;
+		size_t undo_textureindex;
+		archive >> undo_textureindex;
+		int redo_slot;
+		archive >> redo_slot;
+		size_t redo_textureindex;
+		archive >> redo_textureindex;
 
 		if (undo)
 		{
-			textureDestComboBox->SetSelected(undo_dest);
+			textureSlotComboBox->SetSelected(undo_slot);
+			history_textureIndex = undo_textureindex;
 		}
 		else
 		{
-			textureDestComboBox->SetSelected(redo_dest);
+			textureSlotComboBox->SetSelected(redo_slot);
+			history_textureIndex = redo_textureindex;
 		}
-
-		GraphicsDevice* device = wiRenderer::GetDevice();
-
-		Texture* texture = GetEditTextureSlot(*material);
-		const TextureDesc& desc = texture->GetDesc();
-
-		std::vector<SubresourceData> InitData(desc.MipLevels);
-		uint32_t mipwidth = desc.Width;
-		for (uint32_t mip = 0; mip < desc.MipLevels; ++mip)
-		{
-			// attention! we don't fill the mips here correctly, just always point to the mip0 data by default. Mip levels will be created using compute shader when needed!
-			if (undo)
-			{
-				InitData[mip].pSysMem = undo_data.data();
-			}
-			else
-			{
-				InitData[mip].pSysMem = redo_data.data();
-			}
-			InitData[mip].SysMemPitch = static_cast<uint32_t>(mipwidth * 4);
-			mipwidth = std::max(1u, mipwidth / 2);
-		}
-		device->CreateTexture(&desc, InitData.data(), texture);
-
-		for (uint32_t i = 0; i < texture->GetDesc().MipLevels; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(texture, SRV, 0, 1, i, 1);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(texture, UAV, 0, 1, i, 1);
-			assert(subresource_index == i);
-		}
-
-		wiRenderer::AddDeferredMIPGen(texture);
+		ReplaceEditTextureSlot(*material, history_textures[history_textureIndex]);
 
 	}
 	break;
@@ -1066,30 +1138,55 @@ void PaintToolWindow::ConsumeHistoryOperation(wiArchive& archive, bool undo)
 		break;
 	}
 }
-Texture* PaintToolWindow::GetEditTextureSlot(const MaterialComponent& material, int* uvset)
+std::shared_ptr<wiResource> PaintToolWindow::GetEditTextureSlot(const MaterialComponent& material, int* uvset)
 {
-	// Think about refactoring this and remove const_casts!
-	int sel = textureDestComboBox->GetSelected();
+	int sel = textureSlotComboBox->GetSelected();
 	switch (sel)
 	{
 	default:
 	case 0:
 		if (uvset) *uvset = material.uvset_baseColorMap;
-		return const_cast<Texture*>(material.GetBaseColorMap());
+		return material.baseColorMap;
 	case 1:
 		if (uvset) *uvset = material.uvset_normalMap;
-		return const_cast<Texture*>(material.GetNormalMap());
+		return material.normalMap;
 	case 2:
 		if (uvset) *uvset = material.uvset_surfaceMap;
-		return const_cast<Texture*>(material.GetSurfaceMap());
+		return material.surfaceMap;
 	case 3:
 		if (uvset) *uvset = material.uvset_displacementMap;
-		return const_cast<Texture*>(material.GetDisplacementMap());
+		return material.displacementMap;
 	case 4:
 		if (uvset) *uvset = material.uvset_emissiveMap;
-		return const_cast<Texture*>(material.GetEmissiveMap());
+		return material.emissiveMap;
 	case 5:
 		if (uvset) *uvset = material.uvset_occlusionMap;
-		return const_cast<Texture*>(material.GetOcclusionMap());
+		return material.occlusionMap;
+	}
+}
+void PaintToolWindow::ReplaceEditTextureSlot(wiScene::MaterialComponent& material, std::shared_ptr<wiResource> resource)
+{
+	int sel = textureSlotComboBox->GetSelected();
+	switch (sel)
+	{
+	default:
+	case 0:
+		material.baseColorMap = resource;
+		break;
+	case 1:
+		material.normalMap = resource;
+		break;
+	case 2:
+		material.surfaceMap = resource;
+		break;
+	case 3:
+		material.displacementMap = resource;
+		break;
+	case 4:
+		material.emissiveMap = resource;
+		break;
+	case 5:
+		material.occlusionMap = resource;
+		break;
 	}
 }

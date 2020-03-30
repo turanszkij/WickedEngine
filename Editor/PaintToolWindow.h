@@ -18,7 +18,10 @@ class PaintToolWindow
 	float stroke_dist = 0;
 	bool history_needs_recording_start = false;
 	bool history_needs_recording_end = false;
-	wiGraphics::Texture* GetEditTextureSlot(const wiScene::MaterialComponent& material, int* uvset = nullptr);
+	size_t history_textureIndex = 0;
+	std::vector<std::shared_ptr<wiResource>> history_textures; // we'd like to keep history tetures in GPU memory to avoid GPU readback
+	std::shared_ptr<wiResource> GetEditTextureSlot(const wiScene::MaterialComponent& material, int* uvset = nullptr);
+	void ReplaceEditTextureSlot(wiScene::MaterialComponent& material, std::shared_ptr<wiResource> resource);
 public:
 	PaintToolWindow(EditorComponent* editor);
 	~PaintToolWindow();
@@ -37,7 +40,8 @@ public:
 	wiCheckBox* backfaceCheckBox;
 	wiCheckBox* wireCheckBox;
 	wiColorPicker* colorPicker;
-	wiComboBox* textureDestComboBox;
+	wiComboBox* textureSlotComboBox;
+	wiButton* saveTextureButton;
 
 	void Update(float dt);
 	void DrawBrush() const;
@@ -61,6 +65,6 @@ public:
 	void SetEntity(wiECS::Entity value, int subsetindex = -1);
 
 	wiArchive* currentHistory = nullptr;
-	void RecordHistory(bool start);
+	void RecordHistory(bool start, wiGraphics::CommandList cmd = ~0);
 	void ConsumeHistoryOperation(wiArchive& archive, bool undo);
 };
