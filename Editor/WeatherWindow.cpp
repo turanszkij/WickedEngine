@@ -68,22 +68,37 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	});
 	weatherWindow->AddWidget(cloudSpeedSlider);
 
-	windSpeedSlider = new wiSlider(0.001f, 0.2f, 0.1f, 10000, "Wind Speed: ");
+	windSpeedSlider = new wiSlider(0.0f, 0.2f, 0.0f, 10000, "Wind Speed: ");
 	windSpeedSlider->SetSize(XMFLOAT2(100, 30));
 	windSpeedSlider->SetPos(XMFLOAT2(x, y += step));
+	windSpeedSlider->OnSlide([&](wiEventArgs args) {
+		UpdateWind();
+	});
 	weatherWindow->AddWidget(windSpeedSlider);
 
 	windDirectionSlider = new wiSlider(0, 1, 0, 10000, "Wind Direction: ");
 	windDirectionSlider->SetSize(XMFLOAT2(100, 30));
 	windDirectionSlider->SetPos(XMFLOAT2(x, y += step));
 	windDirectionSlider->OnSlide([&](wiEventArgs args) {
-		XMMATRIX rot = XMMatrixRotationY(args.fValue * XM_PI * 2);
-		XMVECTOR dir = XMVectorSet(1, 0, 0, 0);
-		dir = XMVector3TransformNormal(dir, rot);
-		dir *= windSpeedSlider->GetValue();
-		XMStoreFloat3(&GetWeather().windDirection, dir);
+		UpdateWind();
 	});
 	weatherWindow->AddWidget(windDirectionSlider);
+
+	windWaveSizeSlider = new wiSlider(0, 1, 0, 10000, "Wind Wave Size: ");
+	windWaveSizeSlider->SetSize(XMFLOAT2(100, 30));
+	windWaveSizeSlider->SetPos(XMFLOAT2(x, y += step));
+	windWaveSizeSlider->OnSlide([&](wiEventArgs args) {
+		GetWeather().windWaveSize = args.fValue;
+	});
+	weatherWindow->AddWidget(windWaveSizeSlider);
+
+	windRandomnessSlider = new wiSlider(0, 1, 0, 10000, "Wind Randomness: ");
+	windRandomnessSlider->SetSize(XMFLOAT2(100, 30));
+	windRandomnessSlider->SetPos(XMFLOAT2(x, y += step));
+	windRandomnessSlider->OnSlide([&](wiEventArgs args) {
+		GetWeather().windRandomness = args.fValue;
+	});
+	weatherWindow->AddWidget(windRandomnessSlider);
 
 
 	skyButton = new wiButton("Load Sky");
@@ -507,4 +522,13 @@ void WeatherWindow::InvalidateProbes() const
 	{
 		scene.probes[i].SetDirty();
 	}
+}
+
+void WeatherWindow::UpdateWind()
+{
+	XMMATRIX rot = XMMatrixRotationY(windDirectionSlider->GetValue() * XM_PI * 2);
+	XMVECTOR dir = XMVectorSet(1, 0, 0, 0);
+	dir = XMVector3TransformNormal(dir, rot);
+	dir *= windSpeedSlider->GetValue();
+	XMStoreFloat3(&GetWeather().windDirection, dir);
 }

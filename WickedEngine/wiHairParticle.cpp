@@ -168,7 +168,7 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 	hcb.xHairBaseMeshIndexCount = (indices.empty() ? (uint)mesh.indices.size() : (uint)indices.size());
 	hcb.xHairBaseMeshVertexPositionStride = sizeof(MeshComponent::Vertex_POS);
 	// segmentCount will be loop in the shader, not a threadgroup so we don't need it here:
-	hcb.xHairNumDispatchGroups = (uint)ceilf((float)strandCount / (float)THREADCOUNT_SIMULATEHAIR);
+	hcb.xHairNumDispatchGroups = (hcb.xHairParticleCount + THREADCOUNT_SIMULATEHAIR - 1) / THREADCOUNT_SIMULATEHAIR;
 	device->UpdateBuffer(&cb, &hcb, cmd);
 
 	device->BindConstantBuffer(CS, &cb, CB_GETBINDSLOT(HairParticleCB), cmd);

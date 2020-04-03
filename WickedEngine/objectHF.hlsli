@@ -753,7 +753,6 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 #ifndef SIMPLE_INPUT
 	float3 bumpColor = 0;
-	float opacity = color.a;
 	float depth = input.pos.z;
 #ifndef ENVMAPRENDERING
 	input.pos2D.xy /= input.pos2D.w;
@@ -900,9 +899,6 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #endif // ENVMAPRENDERING
 #endif // WATER
 
-	ApplyLighting(surface, lighting, color);
-
-
 #ifdef WATER
 	// REFRACTION 
 	const float lineardepth = input.pos2D.w;
@@ -911,9 +907,10 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	const float3 refractiveColor = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + bumpColor.rg * saturate(0.5 * depth_difference), 0).rgb;
 
 	// WATER FOG
-	color.rgb = lerp(refractiveColor, color.rgb, saturate(surface.baseColor.a * 0.1f * depth_difference));
+	surface.albedo = lerp(refractiveColor, color.rgb, saturate(surface.baseColor.a * 0.1f * depth_difference));
 #endif // WATER
 
+	ApplyLighting(surface, lighting, color);
 
 	ApplyFog(dist, color);
 

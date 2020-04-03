@@ -37,8 +37,6 @@ float4 main(PSIn input) : SV_TARGET
 
 	TiledLighting(pixel, surface, lighting);
 
-	ApplyLighting(surface, lighting, color);
-
 	// REFRACTION 
 	const float lineardepth = input.pos2D.w;
 	const float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + surface.N.xz * 0.04f, 0) * g_xCamera_ZFarP;
@@ -46,7 +44,9 @@ float4 main(PSIn input) : SV_TARGET
 	const float3 refractiveColor = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + surface.N.xz * 0.04f * saturate(0.5 * depth_difference), 0).rgb;
 
 	// WATER FOG
-	color.rgb = lerp(refractiveColor, color.rgb, saturate(0.1f * depth_difference));
+	surface.albedo = lerp(refractiveColor, color.rgb, saturate(0.1f * depth_difference));
+
+	ApplyLighting(surface, lighting, color);
 
 	ApplyFog(dist, color);
 

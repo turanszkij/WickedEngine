@@ -76,8 +76,9 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 		patchPos.xyz *= frame.xyx * 0.5f;
 
 		// simplistic wind effect only affects the top, but leaves the base as is:
-		float3 wind = sin(g_xFrame_Time + (position.x + position.y + position.z)) * g_xFrame_WindDirection.xyz * patchPos.y * 0.03f;
-		float3 windPrev = sin(g_xFrame_TimePrev + (position.x + position.y + position.z)) * g_xFrame_WindDirection.xyz * patchPos.y * 0.03f;
+		const float3 posrand = (position.x + position.y + position.z) * g_xFrame_WindRandomness;
+		float3 wind = sin(g_xFrame_Time * (1 + g_xFrame_WindWaveSize) + posrand) * g_xFrame_WindDirection * patchPos.y;
+		float3 windPrev = sin(g_xFrame_TimePrev * (1 + g_xFrame_WindWaveSize) + posrand) * g_xFrame_WindDirection * patchPos.y;
 
 		// rotate the patch into the tangent space of the emitting triangle:
 		float3x3 TBN = float3x3(tangent, normal, binormal); // don't derive binormal, because we want the shear!

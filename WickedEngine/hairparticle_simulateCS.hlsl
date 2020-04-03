@@ -17,7 +17,16 @@ struct LDS_ForceField
 	float range_rcp;
 	float3 normal;
 };
-groupshared LDS_ForceField forceFields[NUM_LDS_FORCEFIELDS];
+groupshared LDS_ForceField forceFields[NUM_LDS_FORCEFIELDS]; 
+
+// https://www.shadertoy.com/view/llGSzw
+float hash1(uint n)
+{
+	// integer hash copied from Hugo Elias
+	n = (n << 13U) ^ n;
+	n = n * (n * n * 15731U + 789221U) + 1376312589U;
+	return float(n & 0x7fffffffU) / float(0x7fffffff);
+}
 
 [numthreads(THREADCOUNT_SIMULATEHAIR, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
@@ -35,14 +44,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		forceFields[groupIndex].range_rcp = forceField.range; // it is actually uploaded from CPU as 1.0f / range
 		forceFields[groupIndex].normal = forceField.directionWS;
 	}
+	GroupMemoryBarrierWithGroupSync();
 
+	if (DTid.x >= xHairParticleCount)
+		return;
 
 	// Generate patch:
-	float2 uv = float2((Gid.x + 1.0f) / (float)xHairNumDispatchGroups, (DTid.x + 1.0f) / (float)THREADCOUNT_SIMULATEHAIR);
-	float seed = xHairRandomSeed;
 
 	// random triangle on emitter surface:
-	uint tri = (uint)((xHairBaseMeshIndexCount / 3) * rand(seed, uv));
+	//	(Note that the usual rand() function is not used because that introduces unnatural clustering with high triangle count)
+	uint tri = (uint)((xHairBaseMeshIndexCount / 3) * hash1(DTid.x));
 
 	// load indices of triangle from index buffer
 	uint i0 = meshIndexBuffer[tri * 3 + 0];
@@ -61,6 +72,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	float length2 = meshVertexBuffer_length[i2];
 
 	// random barycentric coords:
+	float2 uv = hammersley2d(DTid.x, xHairStrandCount);
+	float seed = xHairRandomSeed;
 	float f = rand(seed, uv);
 	float g = rand(seed, uv);
 	[flatten]
@@ -95,10 +108,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	// Transform particle by the emitter object matrix:
     float3 base = mul(xWorld, float4(position.xyz, 1)).xyz;
     target = normalize(mul((float3x3)xWorld, target));
+	const float3 root = base;
 
 	float3 normal = 0;
     
-    GroupMemoryBarrierWithGroupSync();
 	for (uint segmentID = 0; segmentID < xHairSegmentCount; ++segmentID)
 	{
 		// Identifies the hair strand segment particle:

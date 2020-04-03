@@ -10,6 +10,7 @@ class wiButton;
 
 class WeatherWindow
 {
+	void UpdateWind();
 public:
 	WeatherWindow(wiGUI* gui);
 	~WeatherWindow();
@@ -30,6 +31,8 @@ public:
 	wiSlider*		cloudSpeedSlider;
 	wiSlider*		windSpeedSlider;
 	wiSlider*		windDirectionSlider;
+	wiSlider*		windWaveSizeSlider;
+	wiSlider*		windRandomnessSlider;
 	wiButton*		skyButton;
 	wiColorPicker*	ambientColorPicker;
 	wiColorPicker*	horizonColorPicker;
