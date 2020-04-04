@@ -37,6 +37,7 @@ struct Surface
 	float reflectance;		// reflectivity [0:diffuse -> 1:specular]
 	float4 emissiveColor;	// light emission [0 -> 1]
 	float sss;				// subsurface scattering [0 -> 1]
+	float4 refraction;		// refraction color (rgb), refraction amount (a)
 
 	float alphaRoughness;	// roughness remapped from perceptual to a "more linear change in roughness"
 	float alphaRoughnessSq;	// roughness input to brdf functions
@@ -86,6 +87,7 @@ inline Surface CreateSurface(
 	surface.reflectance = reflectance;
 	surface.emissiveColor = emissiveColor;
 	surface.sss = sss;
+	surface.refraction = 0;
 
 	surface.Update();
 

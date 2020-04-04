@@ -177,8 +177,7 @@ inline void Refraction(in float2 ScreenCoord, inout Surface surface, inout float
 		const float2 normal2D = mul((float3x3)g_xCamera_View, surface.N.xyz).xy;
 		float2 perturbatedRefrTexCoords = ScreenCoord.xy + normal2D * g_xMaterial.refractionIndex;
 		float4 refractiveColor = texture_refraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, surface.roughness * mipLevels);
-		surface.albedo.rgb = lerp(refractiveColor.rgb, surface.albedo.rgb, color.a);
-		lighting.direct.diffuse = lerp(1, lighting.direct.diffuse, color.a);
+		surface.refraction = float4(refractiveColor.rgb, 1 - color.a);
 		color.a = 1;
 	}
 }
@@ -645,7 +644,7 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout Lighting
 inline void ApplyLighting(in Surface surface, in Lighting lighting, inout float4 color)
 {
 	LightingPart combined_lighting = CombineLighting(surface, lighting);
-	color.rgb = surface.albedo * combined_lighting.diffuse + combined_lighting.specular;
+	color.rgb = lerp(surface.albedo * combined_lighting.diffuse, surface.refraction.rgb, surface.refraction.a) + combined_lighting.specular;
 }
 
 inline void ApplyFog(in float dist, inout float4 color)
@@ -900,16 +899,12 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #endif // WATER
 
 #ifdef WATER
-	// REFRACTION 
+	// WATER REFRACTION
 	const float lineardepth = input.pos2D.w;
 	const float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + bumpColor.rg, 0) * g_xCamera_ZFarP;
 	const float depth_difference = max(0, sampled_lineardepth - lineardepth);
 	const float3 refractiveColor = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + bumpColor.rg * saturate(0.5 * depth_difference), 0).rgb;
-
-	// WATER FOG
-	const float fog_amount = saturate(surface.baseColor.a * 0.1f * depth_difference);
-	surface.albedo = lerp(refractiveColor, color.rgb, fog_amount);
-	lighting.direct.diffuse = lerp(1, lighting.direct.diffuse, fog_amount);
+	surface.refraction = float4(refractiveColor, 1 - saturate(surface.baseColor.a * 0.1f * depth_difference));
 #endif // WATER
 
 	ApplyLighting(surface, lighting, color);
