@@ -907,7 +907,9 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	const float3 refractiveColor = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + bumpColor.rg * saturate(0.5 * depth_difference), 0).rgb;
 
 	// WATER FOG
-	surface.albedo = lerp(refractiveColor, color.rgb, saturate(surface.baseColor.a * 0.1f * depth_difference));
+	const float fog_amount = saturate(surface.baseColor.a * 0.1f * depth_difference);
+	surface.albedo = lerp(refractiveColor, color.rgb, fog_amount);
+	lighting.direct.diffuse = lerp(1, lighting.direct.diffuse, fog_amount);
 #endif // WATER
 
 	ApplyLighting(surface, lighting, color);

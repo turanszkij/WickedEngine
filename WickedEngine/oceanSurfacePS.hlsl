@@ -44,7 +44,9 @@ float4 main(PSIn input) : SV_TARGET
 	const float3 refractiveColor = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + surface.N.xz * 0.04f * saturate(0.5 * depth_difference), 0).rgb;
 
 	// WATER FOG
-	surface.albedo = lerp(refractiveColor, color.rgb, saturate(0.1f * depth_difference));
+	const float fog_amount = saturate(0.1f * depth_difference);
+	surface.albedo = lerp(refractiveColor, color.rgb, fog_amount);
+	lighting.direct.diffuse = lerp(1, lighting.direct.diffuse, fog_amount);
 
 	ApplyLighting(surface, lighting, color);
 
