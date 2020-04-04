@@ -69,9 +69,7 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 		patchPos.y += 1;
 
 		// scale the billboard by the texture aspect:
-		float2 frame;
-		texture_0.GetDimensions(frame.x, frame.y);
-		frame.xy /= frame.y;
+		float2 frame = float2(xHairAspect, 1);
 		frame.xy *= len;
 		patchPos.xyz *= frame.xyx * 0.5f;
 

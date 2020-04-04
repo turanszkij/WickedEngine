@@ -117,7 +117,7 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_ALL input)
 
 	surface.color = g_xMaterial.baseColor * unpack_rgba(input.inst.userdata.x);
 
-	if (g_xMaterial.useVertexColors)
+	if (g_xMaterial.IsUsingVertexColors())
 	{
 		surface.color *= input.col;
 	}

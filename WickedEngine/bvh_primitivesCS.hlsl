@@ -70,7 +70,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		float4 c2 = color;
 
 		[branch]
-		if (material.useVertexColors)
+		if (material.IsUsingVertexColors())
 		{
 			c0 *= meshVertexBuffer_COL[i0];
 			c1 *= meshVertexBuffer_COL[i1];

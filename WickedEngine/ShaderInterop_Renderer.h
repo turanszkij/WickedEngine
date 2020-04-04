@@ -2,6 +2,12 @@
 #define WI_SHADERINTEROP_RENDERER_H
 #include "ShaderInterop.h"
 
+
+static const uint SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS = 1 << 0;
+static const uint SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW = 1 << 1;
+static const uint SHADERMATERIAL_OPTION_BIT_OCCLUSION_PRIMARY = 1 << 2;
+static const uint SHADERMATERIAL_OPTION_BIT_OCCLUSION_SECONDARY = 1 << 3;
+
 struct ShaderMaterial
 {
 	float4		baseColor;
@@ -19,24 +25,24 @@ struct ShaderMaterial
 	float		parallaxOcclusionMapping;
 
 	float		displacementMapping;
-	uint		useVertexColors;
 	int			uvset_baseColorMap;
 	int			uvset_surfaceMap;
-
 	int			uvset_normalMap;
+
 	int			uvset_displacementMap;
 	int			uvset_emissiveMap;
 	int			uvset_occlusionMap;
-
-	uint		specularGlossinessWorkflow;
-	uint		occlusion_primary;
-	uint		occlusion_secondary;
-	uint		padding;
+	uint		options;
 
 	float4		baseColorAtlasMulAdd;
 	float4		surfaceMapAtlasMulAdd;
 	float4		emissiveMapAtlasMulAdd;
 	float4		normalMapAtlasMulAdd;
+
+	inline bool IsUsingVertexColors() { return options & SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS; }
+	inline bool IsUsingSpecularGlossinessWorkflow() { return options & SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW; }
+	inline bool IsOcclusionEnabled_Primary() { return options & SHADERMATERIAL_OPTION_BIT_OCCLUSION_PRIMARY; }
+	inline bool IsOcclusionEnabled_Secondary() { return options & SHADERMATERIAL_OPTION_BIT_OCCLUSION_SECONDARY; }
 };
 
 struct ShaderEntity

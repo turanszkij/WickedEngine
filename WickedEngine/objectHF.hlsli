@@ -120,7 +120,7 @@ inline void LightMapping(in float2 ATLAS, inout Lighting lighting)
 	}
 }
 
-inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, in float3x3 TBN, inout float3 bumpColor)
+inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, in float3x3 TBN, out float3 bumpColor)
 {
 	float3 normalMap = texture_normalmap.Sample(sampler_objectshader, UV).rgb;
 	bumpColor = normalMap.rgb * 2 - 1;
@@ -775,11 +775,11 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	{
 		const float2 UV_surfaceMap = g_xMaterial.uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 		surface_occlusion_roughness_metallic_reflectance = texture_surfacemap.Sample(sampler_objectshader, UV_surfaceMap);
-		if (g_xMaterial.occlusion_primary == 0)
+		if (!g_xMaterial.IsOcclusionEnabled_Primary())
 		{
 			surface_occlusion_roughness_metallic_reflectance.r = 1;
 		}
-		if (g_xMaterial.specularGlossinessWorkflow)
+		if (g_xMaterial.IsUsingSpecularGlossinessWorkflow())
 		{
 			ConvertToSpecularGlossiness(surface_occlusion_roughness_metallic_reflectance);
 		}
@@ -802,7 +802,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 	// Secondary occlusion map:
 	[branch]
-	if (g_xMaterial.occlusion_secondary && g_xMaterial.uvset_occlusionMap >= 0)
+	if (g_xMaterial.IsOcclusionEnabled_Secondary() && g_xMaterial.uvset_occlusionMap >= 0)
 	{
 		const float2 UV_occlusionMap = g_xMaterial.uvset_occlusionMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 		surface_occlusion_roughness_metallic_reflectance.r *= texture_occlusionmap.Sample(sampler_objectshader, UV_occlusionMap).r;

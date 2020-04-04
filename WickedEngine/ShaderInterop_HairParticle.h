@@ -38,6 +38,9 @@ CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
 	uint xHairBaseMeshIndexCount;
 	uint xHairBaseMeshVertexPositionStride;
 	uint xHairNumDispatchGroups;
+
+	float xHairAspect;
+	float3 padding_xHair;
 };
 
 #endif // WI_SHADERINTEROP_HAIRPARTICLE_H

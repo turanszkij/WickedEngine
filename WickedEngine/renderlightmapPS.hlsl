@@ -221,7 +221,7 @@ float4 main(Input input) : SV_TARGET
 		{
 			const float2 UV_surfaceMap = material.uvset_surfaceMap == 0 ? uvsets.xy : uvsets.zw;
 			surface_occlusion_roughness_metallic_reflectance = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_surfaceMap * material.surfaceMapAtlasMulAdd.xy + material.surfaceMapAtlasMulAdd.zw, 0);
-			if (material.specularGlossinessWorkflow)
+			if (material.IsUsingSpecularGlossinessWorkflow())
 			{
 				ConvertToSpecularGlossiness(surface_occlusion_roughness_metallic_reflectance);
 			}
