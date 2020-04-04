@@ -39,10 +39,17 @@ float4 main(PSIn input) : SV_TARGET
 
 	// WATER REFRACTION 
 	const float lineardepth = input.pos2D.w;
-	const float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + surface.N.xz * 0.04f, 0) * g_xCamera_ZFarP;
-	const float depth_difference = max(0, sampled_lineardepth - lineardepth);
-	const float3 refractiveColor = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + surface.N.xz * 0.04f * saturate(0.5 * depth_difference), 0).rgb;
-	surface.refraction = float4(refractiveColor, 1 - saturate(0.1f * depth_difference));
+	float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + surface.N.xz * 0.04f, 0) * g_xCamera_ZFarP;
+	float depth_difference = sampled_lineardepth - lineardepth;
+	surface.refraction.rgb = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + surface.N.xz * 0.04f * saturate(0.5 * depth_difference), 0).rgb;
+	if (depth_difference < 0)
+	{
+		// Fix cutoff by taking unperturbed depth diff to fill the holes with fog:
+		sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy, 0) * g_xCamera_ZFarP;
+		depth_difference = sampled_lineardepth - lineardepth;
+	}
+	// WATER FOG:
+	surface.refraction.a = 1 - saturate(surface.baseColor.a * 0.1f * depth_difference);
 
 	ApplyLighting(surface, lighting, color);
 
