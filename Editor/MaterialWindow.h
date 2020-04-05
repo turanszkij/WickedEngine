@@ -10,10 +10,12 @@ class wiButton;
 class wiComboBox;
 class wiTextInputField;
 
+class EditorComponent;
+
 class MaterialWindow
 {
 public:
-	MaterialWindow(wiGUI* gui);
+	MaterialWindow(EditorComponent* editor);
 	~MaterialWindow();
 
 	wiECS::Entity entity;
@@ -23,6 +25,7 @@ public:
 
 	wiWindow*	materialWindow;
 	wiTextInputField*	materialNameField;
+	wiButton* newMaterialButton;
 	wiCheckBox* waterCheckBox;
 	wiCheckBox* planarReflCheckBox;
 	wiCheckBox* shadowCasterCheckBox;

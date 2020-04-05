@@ -500,6 +500,8 @@ inline const PipelineState* GetObjectPSO(RENDERPASS renderPass, bool doublesided
 	return &pso;
 }
 
+PipelineState PSO_terrain[RENDERPASS_COUNT];
+
 PipelineState PSO_object_hologram;
 std::vector<CustomShader> customShaders;
 int RegisterCustomShader(const CustomShader& customShader)
@@ -1209,6 +1211,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_PLANARREFLECTION], "objectPS_deferred_planarreflection.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP_POM], "objectPS_deferred_normalmap_pom.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP_PLANARREFLECTION], "objectPS_deferred_normalmap_planarreflection.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_TERRAIN], "objectPS_deferred_terrain.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_DEFERRED], "impostorPS_deferred.cso"); });
 
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD], "objectPS_forward.cso"); });
@@ -1224,6 +1227,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_POM], "objectPS_forward_transparent_pom.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_POM], "objectPS_forward_transparent_normalmap_pom.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_WATER], "objectPS_forward_water.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TERRAIN], "objectPS_forward_terrain.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_FORWARD], "impostorPS_forward.cso"); });
 
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD], "objectPS_tiledforward.cso"); });
@@ -1239,6 +1243,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_POM], "objectPS_tiledforward_transparent_pom.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_POM], "objectPS_tiledforward_transparent_normalmap_pom.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_WATER], "objectPS_tiledforward_water.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TERRAIN], "objectPS_tiledforward_terrain.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_TILEDFORWARD], "impostorPS_tiledforward.cso"); });
 
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_HOLOGRAM], "objectPS_hologram.cso"); });
@@ -1266,6 +1271,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_VOLUMETRICLIGHT_SPOT], "volumetricLight_SpotPS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_DECAL], "decalPS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_ENVMAP], "envMapPS.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_ENVMAP_TERRAIN], "envMapPS_terrain.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_ENVMAP_SKY_STATIC], "envMap_skyPS_static.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_ENVMAP_SKY_DYNAMIC], "envMap_skyPS_dynamic.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_CAPTUREIMPOSTOR_ALBEDO], "captureImpostorPS_albedo.cso"); });
@@ -1281,6 +1287,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_SHADOW_WATER], "shadowPS_water.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_TRAIL], "trailPS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_VOXELIZER], "objectPS_voxelizer.cso"); });
+	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_VOXELIZER_TERRAIN], "objectPS_voxelizer_terrain.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_VOXEL], "voxelPS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_FORCEFIELDVISUALIZER], "forceFieldVisualizerPS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(PS, pixelShaders[PSTYPE_RENDERLIGHTMAP], "renderlightmapPS.cso"); });
@@ -1540,6 +1547,58 @@ void LoadShaders()
 			}
 		}
 	}
+
+	wiJobSystem::Dispatch(ctx, RENDERPASS_COUNT, 1, [device](wiJobDispatchArgs args) {
+
+		VSTYPES realVS = GetVSTYPE((RENDERPASS)args.jobIndex, false, false, false);
+		ILTYPES realVL = GetILTYPE((RENDERPASS)args.jobIndex, false, false, false);
+
+		PipelineStateDesc desc;
+		desc.rs = &rasterizers[RSTYPE_FRONT];
+		desc.bs = &blendStates[BSTYPE_OPAQUE];
+		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
+		desc.il = &inputLayouts[realVL];
+		desc.vs = &vertexShaders[realVS];
+
+		switch (args.jobIndex)
+		{
+		case RENDERPASS_TEXTURE:
+			desc.ps = &pixelShaders[PSTYPE_OBJECT_TEXTUREONLY]; // textureonly doesn't have worldpos or normal inputs, so it will not use terrain blending
+			break;
+		case RENDERPASS_DEFERRED:
+			desc.ps = &pixelShaders[PSTYPE_OBJECT_DEFERRED_TERRAIN];
+			break;
+		case RENDERPASS_FORWARD:
+			desc.dss = &depthStencils[DSSTYPE_DEPTHREADEQUAL];
+			desc.ps = &pixelShaders[PSTYPE_OBJECT_FORWARD_TERRAIN];
+			break;
+		case RENDERPASS_TILEDFORWARD:
+			desc.dss = &depthStencils[DSSTYPE_DEPTHREADEQUAL];
+			desc.ps = &pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TERRAIN];
+			break;
+		case RENDERPASS_DEPTHONLY:
+			desc.ps = nullptr;
+			break;
+		case RENDERPASS_VOXELIZE:
+			desc.dss = nullptr;
+			desc.rs = &rasterizers[RSTYPE_VOXELIZE];
+			desc.ps = &pixelShaders[PSTYPE_VOXELIZER_TERRAIN];
+			break;
+		case RENDERPASS_ENVMAPCAPTURE:
+			desc.ps = &pixelShaders[PSTYPE_ENVMAP_TERRAIN];
+			break;
+		case RENDERPASS_SHADOW:
+		case RENDERPASS_SHADOWCUBE:
+			desc.dss = &depthStencils[DSSTYPE_SHADOW];
+			desc.rs = &rasterizers[RSTYPE_SHADOW_DOUBLESIDED];
+			desc.ps = nullptr;
+			break;
+		default:
+			return;
+		}
+
+		device->CreatePipelineState(&desc, &PSO_terrain[args.jobIndex]);
+	});
 
 	// Clear custom shaders (Custom shaders coming from user will need to be handled by the user in case of shader reload):
 	customShaders.clear();
@@ -3135,6 +3194,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 
 			const float tessF = mesh.GetTessellationFactor();
 			const bool tessellatorRequested = tessF > 0 && tessellation;
+			const bool terrain = mesh.IsTerrain();
 
 			if (tessellatorRequested)
 			{
@@ -3173,13 +3233,20 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
 				const PipelineState* pso = nullptr;
-				if (material.IsCustomShader())
+				if (terrain)
 				{
-					pso = GetCustomShaderPSO(renderPass, renderTypeFlags, material.GetCustomShaderID());
+					pso = &PSO_terrain[renderPass];
 				}
 				else
 				{
-					pso = GetObjectPSO(renderPass, mesh.IsDoubleSided(), tessellatorRequested, material, forceAlphaTestForDithering);
+					if (material.IsCustomShader())
+					{
+						pso = GetCustomShaderPSO(renderPass, renderTypeFlags, material.GetCustomShaderID());
+					}
+					else
+					{
+						pso = GetObjectPSO(renderPass, mesh.IsDoubleSided(), tessellatorRequested, material, forceAlphaTestForDithering);
+					}
 				}
 
 				if (pso == nullptr)
@@ -3371,6 +3438,75 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 					};
 					device->BindResources(DS, res, TEXSLOT_RENDERER_DISPLACEMENTMAP, arraysize(res), cmd);
 					device->BindConstantBuffer(DS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+				}
+
+				if (terrain)
+				{
+					if (mesh.terrain_material1 == INVALID_ENTITY || !scene.materials.Contains(mesh.terrain_material1))
+					{
+						const GPUResource* res[] = {
+							material.GetBaseColorMap(),
+							material.GetNormalMap(),
+							material.GetSurfaceMap(),
+						};
+						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, arraysize(res), cmd);
+						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
+					}
+					else
+					{
+						const MaterialComponent& blendmat = *scene.materials.GetComponent(mesh.terrain_material1);
+						const GPUResource* res[] = {
+							blendmat.GetBaseColorMap(),
+							blendmat.GetNormalMap(),
+							blendmat.GetSurfaceMap(),
+						};
+						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, arraysize(res), cmd);
+						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
+					}
+
+					if (mesh.terrain_material2 == INVALID_ENTITY || !scene.materials.Contains(mesh.terrain_material2))
+					{
+						const GPUResource* res[] = {
+							material.GetBaseColorMap(),
+							material.GetNormalMap(),
+							material.GetSurfaceMap(),
+						};
+						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, arraysize(res), cmd);
+						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
+					}
+					else
+					{
+						const MaterialComponent& blendmat = *scene.materials.GetComponent(mesh.terrain_material2);
+						const GPUResource* res[] = {
+							blendmat.GetBaseColorMap(),
+							blendmat.GetNormalMap(),
+							blendmat.GetSurfaceMap(),
+						};
+						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, arraysize(res), cmd);
+						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
+					}
+
+					if (mesh.terrain_material3 == INVALID_ENTITY || !scene.materials.Contains(mesh.terrain_material3))
+					{
+						const GPUResource* res[] = {
+							material.GetBaseColorMap(),
+							material.GetNormalMap(),
+							material.GetSurfaceMap(),
+						};
+						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, arraysize(res), cmd);
+						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
+					}
+					else
+					{
+						const MaterialComponent& blendmat = *scene.materials.GetComponent(mesh.terrain_material3);
+						const GPUResource* res[] = {
+							blendmat.GetBaseColorMap(),
+							blendmat.GetNormalMap(),
+							blendmat.GetSurfaceMap(),
+						};
+						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, arraysize(res), cmd);
+						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3) + 3, cmd);
+					}
 				}
 
 				device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);

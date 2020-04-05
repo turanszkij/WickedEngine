@@ -248,6 +248,7 @@ namespace wiScene
 			RENDERABLE = 1 << 0,
 			DOUBLE_SIDED = 1 << 1,
 			DYNAMIC = 1 << 2,
+			TERRAIN = 1 << 3,
 		};
 		uint32_t _flags = RENDERABLE;
 
@@ -272,6 +273,15 @@ namespace wiScene
 		float tessellationFactor = 0.0f;
 		wiECS::Entity armatureID = wiECS::INVALID_ENTITY;
 
+		// Terrain blend materials:
+		//	There are 4 blend materials, the first one (default) being the subset material
+		//	Must have TERRAIN flag enabled
+		//	Must have vertex colors to blend between materials
+		//	extra materials that are not set will use the base subset material
+		wiECS::Entity terrain_material1 = wiECS::INVALID_ENTITY;
+		wiECS::Entity terrain_material2 = wiECS::INVALID_ENTITY;
+		wiECS::Entity terrain_material3 = wiECS::INVALID_ENTITY;
+
 		// Non-serialized attributes:
 		AABB aabb;
 		wiGraphics::GPUBuffer indexBuffer;
@@ -289,10 +299,12 @@ namespace wiScene
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
 		inline void SetDynamic(bool value) { if (value) { _flags |= DYNAMIC; } else { _flags &= ~DYNAMIC; } }
+		inline void SetTerrain(bool value) { if (value) { _flags |= TERRAIN; } else { _flags &= ~TERRAIN; } }
 
 		inline bool IsRenderable() const { return _flags & RENDERABLE; }
 		inline bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
 		inline bool IsDynamic() const { return _flags & DYNAMIC; }
+		inline bool IsTerrain() const { return _flags & TERRAIN; }
 
 		inline float GetTessellationFactor() const { return tessellationFactor; }
 		inline wiGraphics::INDEXBUFFER_FORMAT GetIndexFormat() const { return vertex_positions.size() > 65535 ? wiGraphics::INDEXFORMAT_32BIT : wiGraphics::INDEXFORMAT_16BIT; }

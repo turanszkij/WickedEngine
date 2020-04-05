@@ -100,6 +100,8 @@ public:
 	Translator translator;
 	wiScene::PickResult hovered;
 
+	void ClearSelected();
+	void AddSelected(wiECS::Entity entity);
 	void AddSelected(const wiScene::PickResult& picked);
 	bool IsSelected(wiECS::Entity entity) const;
 

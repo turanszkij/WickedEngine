@@ -942,6 +942,21 @@
     <FxCompile Include="objectPS_paintradius.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="objectPS_deferred_terrain.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_terrain.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_tiledforward_terrain.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_voxelizer_terrain.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="envMapPS_terrain.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

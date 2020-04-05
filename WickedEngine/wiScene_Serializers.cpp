@@ -282,6 +282,13 @@ namespace wiScene
 				archive >> vertex_uvset_1;
 			}
 
+			if (archive.GetVersion() >= 41)
+			{
+				SerializeEntity(archive, terrain_material1, seed);
+				SerializeEntity(archive, terrain_material2, seed);
+				SerializeEntity(archive, terrain_material3, seed);
+			}
+
 			CreateRenderData();
 		}
 		else
@@ -310,6 +317,13 @@ namespace wiScene
 			if (archive.GetVersion() >= 28)
 			{
 				archive << vertex_uvset_1;
+			}
+
+			if (archive.GetVersion() >= 41)
+			{
+				SerializeEntity(archive, terrain_material1, seed);
+				SerializeEntity(archive, terrain_material2, seed);
+				SerializeEntity(archive, terrain_material3, seed);
 			}
 
 		}

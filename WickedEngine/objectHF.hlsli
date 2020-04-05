@@ -5,6 +5,10 @@
 #define DISABLE_ALPHATEST
 #endif
 
+#ifdef TERRAIN
+#define DISABLE_ALPHATEST
+#endif
+
 #ifdef TRANSPARENT
 #define DISABLE_TRANSPARENT_SHADOWMAP
 #endif
@@ -33,6 +37,18 @@ TEXTURE2D(texture_surfacemap, float4, TEXSLOT_RENDERER_SURFACEMAP);				// r: occ
 TEXTURE2D(texture_displacementmap, float, TEXSLOT_RENDERER_DISPLACEMENTMAP);	// r: heightmap
 TEXTURE2D(texture_emissivemap, float4, TEXSLOT_RENDERER_EMISSIVEMAP);			// rgba: emissive
 TEXTURE2D(texture_occlusionmap, float, TEXSLOT_RENDERER_OCCLUSIONMAP);			// r: occlusion
+
+TEXTURE2D(texture_blend1_basecolormap, float4, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP);	// rgb: baseColor, a: opacity
+TEXTURE2D(texture_blend1_normalmap, float3, TEXSLOT_RENDERER_BLEND1_NORMALMAP);			// rgb: normal
+TEXTURE2D(texture_blend1_surfacemap, float4, TEXSLOT_RENDERER_BLEND1_SURFACEMAP);		// r: occlusion, g: roughness, b: metallic, a: reflectance
+
+TEXTURE2D(texture_blend2_basecolormap, float4, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP);	// rgb: baseColor, a: opacity
+TEXTURE2D(texture_blend2_normalmap, float3, TEXSLOT_RENDERER_BLEND2_NORMALMAP);			// rgb: normal
+TEXTURE2D(texture_blend2_surfacemap, float4, TEXSLOT_RENDERER_BLEND2_SURFACEMAP);		// r: occlusion, g: roughness, b: metallic, a: reflectance
+
+TEXTURE2D(texture_blend3_basecolormap, float4, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP);	// rgb: baseColor, a: opacity
+TEXTURE2D(texture_blend3_normalmap, float3, TEXSLOT_RENDERER_BLEND3_NORMALMAP);			// rgb: normal
+TEXTURE2D(texture_blend3_surfacemap, float4, TEXSLOT_RENDERER_BLEND3_SURFACEMAP);		// r: occlusion, g: roughness, b: metallic, a: reflectance
 
 // These are bound by RenderPath (based on Render Path):
 TEXTURE2D(texture_reflection, float4, TEXSLOT_RENDERPATH_REFLECTION);		// rgba: scene color from reflected camera angle
@@ -671,6 +687,7 @@ inline void ApplyFog(in float dist, inout float4 color)
 //	POM					-	include parallax occlusion mapping computation
 //	WATER				-	include specialized water shader code
 //	BLACKOUT			-	include specialized blackout shader code
+//	TERRAIN				-	include specialized terrain material blending code
 
 #if defined(ALPHATESTONLY) || defined(TEXTUREONLY)
 #define SIMPLE_INPUT
@@ -788,6 +805,132 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	{
 		surface_occlusion_roughness_metallic_reflectance = 1;
 	}
+	surface_occlusion_roughness_metallic_reflectance *= float4(1, g_xMaterial.roughness, g_xMaterial.metalness, g_xMaterial.reflectance);
+
+#ifdef TERRAIN
+	color = 0;
+	surface_occlusion_roughness_metallic_reflectance = 0;
+	float3 triplanar_normal = 0;
+	float4 blend_weights = input.color;
+	blend_weights /= blend_weights.x + blend_weights.y + blend_weights.z + blend_weights.w;
+	float3 triplanar = abs(surface.N);
+	triplanar /= triplanar.x + triplanar.y + triplanar.z;
+	float4 sam_x, sam_y, sam_z;
+	float2 uv_x, uv_y, uv_z;
+
+	[branch]
+	if (blend_weights.x > 0)
+	{
+		uv_x = surface.P.yz * g_xMaterial.texMulAdd.xy + g_xMaterial.texMulAdd.zw;
+		uv_y = surface.P.xz * g_xMaterial.texMulAdd.xy + g_xMaterial.texMulAdd.zw;
+		uv_z = surface.P.xy * g_xMaterial.texMulAdd.xy + g_xMaterial.texMulAdd.zw;
+		sam_x = texture_basecolormap.Sample(sampler_objectshader, uv_x);
+		sam_y = texture_basecolormap.Sample(sampler_objectshader, uv_y);
+		sam_z = texture_basecolormap.Sample(sampler_objectshader, uv_z);
+		sam_x.rgb = DEGAMMA(sam_x.rgb);
+		sam_y.rgb = DEGAMMA(sam_y.rgb);
+		sam_z.rgb = DEGAMMA(sam_z.rgb);
+		color += (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z) * g_xMaterial.baseColor * blend_weights.x;
+		sam_x = texture_surfacemap.Sample(sampler_objectshader, uv_x);
+		sam_y = texture_surfacemap.Sample(sampler_objectshader, uv_y);
+		sam_z = texture_surfacemap.Sample(sampler_objectshader, uv_z);
+		surface_occlusion_roughness_metallic_reflectance += (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z) * 
+			float4(1, g_xMaterial.roughness, g_xMaterial.metalness, g_xMaterial.reflectance) * blend_weights.x;
+		sam_x.xyz = texture_normalmap.Sample(sampler_objectshader, uv_x).rgb;
+		sam_y.xyz = texture_normalmap.Sample(sampler_objectshader, uv_y).rgb;
+		sam_z.xyz = texture_normalmap.Sample(sampler_objectshader, uv_z).rgb;
+		bumpColor = (sam_x.xyz * triplanar.x + sam_y.xyz * triplanar.y + sam_z.xyz * triplanar.z);
+		bumpColor = bumpColor.rgb * 2 - 1;
+		bumpColor.g *= g_xMaterial.normalMapFlip;
+		triplanar_normal += normalize(lerp(surface.N, mul(bumpColor, TBN), g_xMaterial.normalMapStrength)) * blend_weights.x;
+	}
+
+	[branch]
+	if (blend_weights.y > 0)
+	{
+		uv_x = surface.P.yz * g_xMaterial_blend1.texMulAdd.xy + g_xMaterial_blend1.texMulAdd.zw;
+		uv_y = surface.P.xz * g_xMaterial_blend1.texMulAdd.xy + g_xMaterial_blend1.texMulAdd.zw;
+		uv_z = surface.P.xy * g_xMaterial_blend1.texMulAdd.xy + g_xMaterial_blend1.texMulAdd.zw;
+		sam_x = texture_blend1_basecolormap.Sample(sampler_objectshader, uv_x);
+		sam_y = texture_blend1_basecolormap.Sample(sampler_objectshader, uv_y);
+		sam_z = texture_blend1_basecolormap.Sample(sampler_objectshader, uv_z);
+		sam_x.rgb = DEGAMMA(sam_x.rgb);
+		sam_y.rgb = DEGAMMA(sam_y.rgb);
+		sam_z.rgb = DEGAMMA(sam_z.rgb);
+		color += (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z) * g_xMaterial_blend1.baseColor * blend_weights.y;
+		sam_x = texture_blend1_surfacemap.Sample(sampler_objectshader, uv_x);
+		sam_y = texture_blend1_surfacemap.Sample(sampler_objectshader, uv_y);
+		sam_z = texture_blend1_surfacemap.Sample(sampler_objectshader, uv_z);
+		surface_occlusion_roughness_metallic_reflectance += (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z) *
+			float4(1, g_xMaterial_blend1.roughness, g_xMaterial_blend1.metalness, g_xMaterial_blend1.reflectance) * blend_weights.y;
+		sam_x.xyz = texture_blend1_normalmap.Sample(sampler_objectshader, uv_x).rgb;
+		sam_y.xyz = texture_blend1_normalmap.Sample(sampler_objectshader, uv_y).rgb;
+		sam_z.xyz = texture_blend1_normalmap.Sample(sampler_objectshader, uv_z).rgb;
+		bumpColor = (sam_x.xyz * triplanar.x + sam_y.xyz * triplanar.y + sam_z.xyz * triplanar.z);
+		bumpColor = bumpColor.rgb * 2 - 1;
+		bumpColor.g *= g_xMaterial_blend1.normalMapFlip;
+		triplanar_normal += normalize(lerp(surface.N, mul(bumpColor, TBN), g_xMaterial_blend1.normalMapStrength)) * blend_weights.y;
+	}
+
+	[branch]
+	if (blend_weights.z > 0)
+	{
+		uv_x = surface.P.yz * g_xMaterial_blend2.texMulAdd.xy + g_xMaterial_blend2.texMulAdd.zw;
+		uv_y = surface.P.xz * g_xMaterial_blend2.texMulAdd.xy + g_xMaterial_blend2.texMulAdd.zw;
+		uv_z = surface.P.xy * g_xMaterial_blend2.texMulAdd.xy + g_xMaterial_blend2.texMulAdd.zw;
+		sam_x = texture_blend2_basecolormap.Sample(sampler_objectshader, uv_x);
+		sam_y = texture_blend2_basecolormap.Sample(sampler_objectshader, uv_y);
+		sam_z = texture_blend2_basecolormap.Sample(sampler_objectshader, uv_z);
+		sam_x.rgb = DEGAMMA(sam_x.rgb);
+		sam_y.rgb = DEGAMMA(sam_y.rgb);
+		sam_z.rgb = DEGAMMA(sam_z.rgb);
+		color += (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z) * g_xMaterial_blend2.baseColor * blend_weights.z;
+		sam_x = texture_blend2_surfacemap.Sample(sampler_objectshader, uv_x);
+		sam_y = texture_blend2_surfacemap.Sample(sampler_objectshader, uv_y);
+		sam_z = texture_blend2_surfacemap.Sample(sampler_objectshader, uv_z);
+		surface_occlusion_roughness_metallic_reflectance += (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z) *
+			float4(1, g_xMaterial_blend2.roughness, g_xMaterial_blend2.metalness, g_xMaterial_blend2.reflectance) * blend_weights.z;
+		sam_x.xyz = texture_blend2_normalmap.Sample(sampler_objectshader, uv_x).rgb;
+		sam_y.xyz = texture_blend2_normalmap.Sample(sampler_objectshader, uv_y).rgb;
+		sam_z.xyz = texture_blend2_normalmap.Sample(sampler_objectshader, uv_z).rgb;
+		bumpColor = (sam_x.xyz * triplanar.x + sam_y.xyz * triplanar.y + sam_z.xyz * triplanar.z);
+		bumpColor = bumpColor.rgb * 2 - 1;
+		bumpColor.g *= g_xMaterial_blend2.normalMapFlip;
+		triplanar_normal += normalize(lerp(surface.N, mul(bumpColor, TBN), g_xMaterial_blend2.normalMapStrength)) * blend_weights.z;
+	}
+
+	[branch]
+	if (blend_weights.w > 0)
+	{
+		uv_x = surface.P.yz * g_xMaterial_blend3.texMulAdd.xy + g_xMaterial_blend3.texMulAdd.zw;
+		uv_y = surface.P.xz * g_xMaterial_blend3.texMulAdd.xy + g_xMaterial_blend3.texMulAdd.zw;
+		uv_z = surface.P.xy * g_xMaterial_blend3.texMulAdd.xy + g_xMaterial_blend3.texMulAdd.zw;
+		sam_x = texture_blend3_basecolormap.Sample(sampler_objectshader, uv_x);
+		sam_y = texture_blend3_basecolormap.Sample(sampler_objectshader, uv_y);
+		sam_z = texture_blend3_basecolormap.Sample(sampler_objectshader, uv_z);
+		sam_x.rgb = DEGAMMA(sam_x.rgb);
+		sam_y.rgb = DEGAMMA(sam_y.rgb);
+		sam_z.rgb = DEGAMMA(sam_z.rgb);
+		color += (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z) * g_xMaterial_blend3.baseColor * blend_weights.w;
+		sam_x = texture_blend3_surfacemap.Sample(sampler_objectshader, uv_x);
+		sam_y = texture_blend3_surfacemap.Sample(sampler_objectshader, uv_y);
+		sam_z = texture_blend3_surfacemap.Sample(sampler_objectshader, uv_z);
+		surface_occlusion_roughness_metallic_reflectance += (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z) *
+			float4(1, g_xMaterial_blend3.roughness, g_xMaterial_blend3.metalness, g_xMaterial_blend3.reflectance) * blend_weights.w;
+		sam_x.xyz = texture_blend3_normalmap.Sample(sampler_objectshader, uv_x).rgb;
+		sam_y.xyz = texture_blend3_normalmap.Sample(sampler_objectshader, uv_y).rgb;
+		sam_z.xyz = texture_blend3_normalmap.Sample(sampler_objectshader, uv_z).rgb;
+		bumpColor = (sam_x.xyz * triplanar.x + sam_y.xyz * triplanar.y + sam_z.xyz * triplanar.z);
+		bumpColor = bumpColor.rgb * 2 - 1;
+		bumpColor.g *= g_xMaterial_blend3.normalMapFlip;
+		triplanar_normal += normalize(lerp(surface.N, mul(bumpColor, TBN), g_xMaterial_blend3.normalMapStrength)) * blend_weights.w;
+	}
+
+	color.a = 1;
+	surface.N = triplanar_normal;
+
+#endif // TERRAIN
+
 
 	// Emissive map:
 	float4 emissiveColor = g_xMaterial.emissiveColor;
@@ -824,10 +967,10 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 		surface.N, 
 		surface.V, 
 		color,
-		g_xMaterial.roughness * surface_occlusion_roughness_metallic_reflectance.g,
+		surface_occlusion_roughness_metallic_reflectance.g,
 		surface_occlusion_roughness_metallic_reflectance.r,
-		g_xMaterial.metalness * surface_occlusion_roughness_metallic_reflectance.b,
-		g_xMaterial.reflectance * surface_occlusion_roughness_metallic_reflectance.a,
+		surface_occlusion_roughness_metallic_reflectance.b,
+		surface_occlusion_roughness_metallic_reflectance.a,
 		emissiveColor,
 		g_xMaterial.subsurfaceScattering
 	);

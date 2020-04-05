@@ -127,11 +127,11 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	renderPath->Load();
 	renderPath->Update(0);
 
-	materialWnd = std::make_unique<MaterialWindow>(&GetGUI());
+	materialWnd = std::make_unique<MaterialWindow>(this);
 	postprocessWnd = std::make_unique<PostprocessWindow>(&GetGUI(), renderPath.get());
 	weatherWnd = std::make_unique<WeatherWindow>(&GetGUI());
 	objectWnd = std::make_unique<ObjectWindow>(this);
-	meshWnd = std::make_unique<MeshWindow>(&GetGUI());
+	meshWnd = std::make_unique<MeshWindow>(this);
 	cameraWnd = std::make_unique<CameraWindow>(&GetGUI());
 	rendererWnd = std::make_unique<RendererWindow>(&GetGUI(), this, renderPath.get());
 	envProbeWnd = std::make_unique<EnvProbeWindow>(&GetGUI());
@@ -1483,6 +1483,7 @@ void EditorComponent::Update(float dt)
 		}
 		else
 		{
+			meshWnd->SetEntity(picked.entity);
 			materialWnd->SetEntity(picked.entity);
 		}
 
@@ -2071,6 +2072,16 @@ void EditorComponent::Unload()
 	__super::Unload();
 }
 
+void EditorComponent::ClearSelected()
+{
+	translator.selected.clear();
+}
+void EditorComponent::AddSelected(wiECS::Entity entity)
+{
+	wiScene::PickResult res;
+	res.entity = entity;
+	AddSelected(res);
+}
 void EditorComponent::AddSelected(const wiScene::PickResult& picked)
 {
 	for (auto it = translator.selected.begin(); it != translator.selected.end(); ++it)

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "MaterialWindow.h"
+#include "Editor.h"
 
 #include <sstream>
 
@@ -8,7 +9,7 @@ using namespace wiGraphics;
 using namespace wiECS;
 using namespace wiScene;
 
-MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
+MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 {
 	assert(GUI && "Invalid GUI!");
 
@@ -364,8 +365,20 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 		{
 			*name = args.sValue;
 		}
-		});
+	});
 	materialWindow->AddWidget(materialNameField);
+
+	newMaterialButton = new wiButton("New Material");
+	newMaterialButton->SetPos(XMFLOAT2(10 + 5 + 300, y));
+	newMaterialButton->SetSize(XMFLOAT2(100, 25));
+	newMaterialButton->OnClick([=](wiEventArgs args) {
+		Scene& scene = wiScene::GetScene();
+		Entity entity = scene.Entity_CreateMaterial("editorMaterial");
+		editor->ClearSelected();
+		editor->AddSelected(entity);
+		SetEntity(entity);
+	});
+	materialWindow->AddWidget(newMaterialButton);
 
 	texture_baseColor_Label = new wiLabel("BaseColorMap: ");
 	texture_baseColor_Label->SetPos(XMFLOAT2(x, y += step));
@@ -846,4 +859,6 @@ void MaterialWindow::SetEntity(Entity entity)
 		texture_emissive_uvset_Field->SetText("");
 		texture_occlusion_uvset_Field->SetText("");
 	}
+
+	newMaterialButton->SetEnabled(true);
 }

@@ -289,6 +289,18 @@ CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
 {
 	ShaderMaterial g_xMaterial;
 };
+CBUFFER(MaterialCB_Blend1, CBSLOT_RENDERER_MATERIAL_BLEND1)
+{
+	ShaderMaterial g_xMaterial_blend1;
+};
+CBUFFER(MaterialCB_Blend2, CBSLOT_RENDERER_MATERIAL_BLEND2)
+{
+	ShaderMaterial g_xMaterial_blend2;
+};
+CBUFFER(MaterialCB_Blend3, CBSLOT_RENDERER_MATERIAL_BLEND3)
+{
+	ShaderMaterial g_xMaterial_blend3;
+};
 
 CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)
 {

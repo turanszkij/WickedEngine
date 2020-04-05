@@ -6,11 +6,14 @@ class wiLabel;
 class wiCheckBox;
 class wiSlider;
 class wiButton;
+class wiComboBox;
+
+class EditorComponent;
 
 class MeshWindow
 {
 public:
-	MeshWindow(wiGUI* gui);
+	MeshWindow(EditorComponent* editor);
 	~MeshWindow();
 
 	wiGUI* GUI;
@@ -33,5 +36,11 @@ public:
 	wiButton*	computeNormalsHardButton;
 	wiButton*	recenterButton;
 	wiButton*	recenterToBottomButton;
+
+	wiCheckBox* terrainCheckBox;
+	wiComboBox* terrainMat1Combo;
+	wiComboBox* terrainMat2Combo;
+	wiComboBox* terrainMat3Combo;
+	wiButton* terrainFromHeightMapButton;
 };
 

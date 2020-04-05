@@ -83,3 +83,5 @@ Entity-Component System (Data oriented design)
 Lightmap baking (with GPU path tracing)
 Job system
 Inverse Kinematics
+Springs
+Terrain Rendering (material blending)
