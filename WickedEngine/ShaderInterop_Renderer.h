@@ -207,7 +207,8 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_Time;
 	float		g_xFrame_TimePrev;
 
-	float2		_padding0_frameCB;
+	float		_padding0_frameCB;
+	float		g_xFrame_WindSpeed;
 	float		g_xFrame_DeltaTime;
 	uint		g_xFrame_FrameCount;
 

@@ -3,7 +3,7 @@
 
 float4 main(PixelInputType_Simple PSIn) : SV_TARGET
 {
-	const uint2 pixel = (xPaintRadUVSET == 0 ? PSIn.uvsets.xy : PSIn.uvsets.zw) * xPaintRadResolution;
+	const float2 pixel = (xPaintRadUVSET == 0 ? PSIn.uvsets.xy : PSIn.uvsets.zw) * xPaintRadResolution;
 	const float dist = distance(pixel, xPaintRadCenter);
 	float circle = dist - xPaintRadRadius;
 	float3 color = circle < 0 ? float3(0, 0, 0) : float3(1, 1, 1);

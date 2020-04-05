@@ -68,13 +68,21 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	});
 	weatherWindow->AddWidget(cloudSpeedSlider);
 
-	windSpeedSlider = new wiSlider(0.0f, 0.2f, 0.0f, 10000, "Wind Speed: ");
+	windSpeedSlider = new wiSlider(0.0f, 4.0f, 1.0f, 10000, "Wind Speed: ");
 	windSpeedSlider->SetSize(XMFLOAT2(100, 30));
 	windSpeedSlider->SetPos(XMFLOAT2(x, y += step));
 	windSpeedSlider->OnSlide([&](wiEventArgs args) {
-		UpdateWind();
+		GetWeather().windSpeed = args.fValue;
 	});
 	weatherWindow->AddWidget(windSpeedSlider);
+
+	windMagnitudeSlider = new wiSlider(0.0f, 0.2f, 0.0f, 10000, "Wind Magnitude: ");
+	windMagnitudeSlider->SetSize(XMFLOAT2(100, 30));
+	windMagnitudeSlider->SetPos(XMFLOAT2(x, y += step));
+	windMagnitudeSlider->OnSlide([&](wiEventArgs args) {
+		UpdateWind();
+		});
+	weatherWindow->AddWidget(windMagnitudeSlider);
 
 	windDirectionSlider = new wiSlider(0, 1, 0, 10000, "Wind Direction: ");
 	windDirectionSlider->SetSize(XMFLOAT2(100, 30));
@@ -92,7 +100,7 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	});
 	weatherWindow->AddWidget(windWaveSizeSlider);
 
-	windRandomnessSlider = new wiSlider(0, 1, 0, 10000, "Wind Randomness: ");
+	windRandomnessSlider = new wiSlider(0, 10, 5, 10000, "Wind Randomness: ");
 	windRandomnessSlider->SetSize(XMFLOAT2(100, 30));
 	windRandomnessSlider->SetPos(XMFLOAT2(x, y += step));
 	windRandomnessSlider->OnSlide([&](wiEventArgs args) {
@@ -484,6 +492,10 @@ void WeatherWindow::Update()
 		cloudinessSlider->SetValue(weather.cloudiness);
 		cloudScaleSlider->SetValue(weather.cloudScale);
 		cloudSpeedSlider->SetValue(weather.cloudSpeed);
+		windSpeedSlider->SetValue(weather.windSpeed);
+		windWaveSizeSlider->SetValue(weather.windWaveSize);
+		windRandomnessSlider->SetValue(weather.windRandomness);
+		windMagnitudeSlider->SetValue(XMVectorGetX(XMVector3Length(XMLoadFloat3(&weather.windDirection))));
 
 		ambientColorPicker->SetPickColor(wiColor::fromFloat3(weather.ambient));
 		horizonColorPicker->SetPickColor(wiColor::fromFloat3(weather.horizon));
@@ -529,6 +541,6 @@ void WeatherWindow::UpdateWind()
 	XMMATRIX rot = XMMatrixRotationY(windDirectionSlider->GetValue() * XM_PI * 2);
 	XMVECTOR dir = XMVectorSet(1, 0, 0, 0);
 	dir = XMVector3TransformNormal(dir, rot);
-	dir *= windSpeedSlider->GetValue();
+	dir *= windMagnitudeSlider->GetValue();
 	XMStoreFloat3(&GetWeather().windDirection, dir);
 }

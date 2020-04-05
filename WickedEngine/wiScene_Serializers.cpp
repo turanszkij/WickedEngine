@@ -701,6 +701,10 @@ namespace wiScene
 				archive >> skyMapName;
 				skyMap = wiResourceManager::Load(dir + skyMapName);
 			}
+			if (archive.GetVersion() >= 40)
+			{
+				archive >> windSpeed;
+			}
 
 		}
 		else
@@ -746,6 +750,10 @@ namespace wiScene
 					}
 				}
 				archive << skyMapName;
+			}
+			if (archive.GetVersion() >= 40)
+			{
+				archive << windSpeed;
 			}
 
 		}

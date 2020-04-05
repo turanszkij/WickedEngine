@@ -30,8 +30,8 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 	const uint segmentID = (fakeIndex / 12) % xHairSegmentCount;
 	const uint particleID = fakeIndex / 12;
 
-	float3 position = particleBuffer[particleID].position;
-	Out.fade = saturate(distance(position.xyz, g_xCamera_CamPos.xyz) / xHairViewDistance);
+	float3 rootposition = particleBuffer[particleID - segmentID].position;
+	Out.fade = saturate(distance(rootposition.xyz, g_xCamera_CamPos.xyz) / xHairViewDistance);
 	Out.fade = saturate(Out.fade - 0.8f) * 5.0f; // fade will be on edge and inwards 20%
 
 	[branch]
@@ -74,15 +74,17 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 		patchPos.xyz *= frame.xyx * 0.5f;
 
 		// simplistic wind effect only affects the top, but leaves the base as is:
-		const float3 posrand = (position.x + position.y + position.z) * g_xFrame_WindRandomness;
-		float3 wind = sin(g_xFrame_Time * (1 + g_xFrame_WindWaveSize) + posrand) * g_xFrame_WindDirection * patchPos.y;
-		float3 windPrev = sin(g_xFrame_TimePrev * (1 + g_xFrame_WindWaveSize) + posrand) * g_xFrame_WindDirection * patchPos.y;
+		const float waveoffset = dot(rootposition, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + rand / 255.0f * g_xFrame_WindRandomness;
+		const float3 wavedir = g_xFrame_WindDirection * (segmentID + patchPos.y);
+		const float3 wind = sin(g_xFrame_Time * g_xFrame_WindSpeed + waveoffset) * wavedir;
+		const float3 windPrev = sin(g_xFrame_TimePrev * g_xFrame_WindSpeed + waveoffset) * wavedir;
 
 		// rotate the patch into the tangent space of the emitting triangle:
 		float3x3 TBN = float3x3(tangent, normal, binormal); // don't derive binormal, because we want the shear!
 		patchPos = mul(patchPos, TBN);
 
 		// inset to the emitter a bit, to avoid disconnect:
+		float3 position = particleBuffer[particleID].position;
 		position.xyz -= normal * 0.1 * len;
 
 
@@ -94,7 +96,7 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 		Out.pos3D = Out.pos.xyz;
 		Out.pos = mul(g_xCamera_VP, Out.pos);
 
-		Out.nor = normal;
+		Out.nor = normalize(normal + wind);
 		Out.tex = uv;
 
 		Out.pos2D = Out.pos;

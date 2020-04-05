@@ -30,6 +30,7 @@ public:
 	wiSlider*		cloudScaleSlider;
 	wiSlider*		cloudSpeedSlider;
 	wiSlider*		windSpeedSlider;
+	wiSlider*		windMagnitudeSlider;
 	wiSlider*		windDirectionSlider;
 	wiSlider*		windWaveSizeSlider;
 	wiSlider*		windRandomnessSlider;

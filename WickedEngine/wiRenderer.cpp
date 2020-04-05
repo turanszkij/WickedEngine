@@ -8437,6 +8437,7 @@ void UpdateFrameCB(CommandList cmd)
 	cb.g_xFrame_ForceFieldArrayCount = entityArrayCount_ForceFields;
 	cb.g_xFrame_EnvProbeArrayOffset = entityArrayOffset_EnvProbes;
 	cb.g_xFrame_EnvProbeArrayCount = entityArrayCount_EnvProbes;
+	cb.g_xFrame_WindSpeed = scene.weather.windSpeed;
 	cb.g_xFrame_WindRandomness = scene.weather.windRandomness;
 	cb.g_xFrame_WindWaveSize = scene.weather.windWaveSize;
 	cb.g_xFrame_WindDirection = scene.weather.windDirection;

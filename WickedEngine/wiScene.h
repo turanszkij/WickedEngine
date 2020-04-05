@@ -935,6 +935,7 @@ namespace wiScene
 		XMFLOAT3 windDirection = XMFLOAT3(0, 0, 0);
 		float windRandomness = 5;
 		float windWaveSize = 1;
+		float windSpeed = 1;
 
 		struct OceanParameters
 		{

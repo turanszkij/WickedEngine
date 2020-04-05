@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+40: Serialized WeatherComponent::windSpeed
 39: Serialized indices and weights for Hair Particle
 38: Serialized SpringComponent
 37: Serialized InverseKinematicsComponent
