@@ -496,6 +496,16 @@ void PaintToolWindow::Update(float dt)
 		bool rebuild = false;
 		if (painting)
 		{
+			XMVECTOR averageNormal = XMVectorZero();
+			struct PaintVert
+			{
+				size_t ind;
+				float affection;
+			};
+			static std::vector<PaintVert> paintindices;
+			paintindices.clear();
+			paintindices.reserve(mesh->vertex_positions.size());
+
 			for (size_t j = 0; j < mesh->vertex_positions.size(); ++j)
 			{
 				XMVECTOR P, N;
@@ -522,22 +532,31 @@ void PaintToolWindow::Update(float dt)
 				const float dist = XMVectorGetX(XMVector2Length(C - P));
 				if (z >= 0 && z <= 1 && dist <= radius)
 				{
-					RecordHistory(true);
-					XMVECTOR PL = XMLoadFloat3(&mesh->vertex_positions[j]);
-					const XMVECTOR NL = XMLoadFloat3(&mesh->vertex_normals[j]);
+					averageNormal += N;
 					const float affection = amount * std::powf(1 - (dist / radius), falloff);
-					switch (mode)
-					{
-					case MODE_SCULPTING_ADD:
-						PL += NL * affection;
-						break;
-					case MODE_SCULPTING_SUBTRACT:
-						PL -= NL * affection;
-						break;
-					}
-					XMStoreFloat3(&mesh->vertex_positions[j], PL);
-					rebuild = true;
+					paintindices.push_back({ j, affection });
 				}
+			}
+
+			if (!paintindices.empty())
+			{
+				RecordHistory(true);
+				rebuild = true;
+				averageNormal = XMVector3Normalize(averageNormal);
+			}
+			for (auto& x : paintindices)
+			{
+				XMVECTOR PL = XMLoadFloat3(&mesh->vertex_positions[x.ind]);
+				switch (mode)
+				{
+				case MODE_SCULPTING_ADD:
+					PL += averageNormal * x.affection;
+					break;
+				case MODE_SCULPTING_SUBTRACT:
+					PL -= averageNormal * x.affection;
+					break;
+				}
+				XMStoreFloat3(&mesh->vertex_positions[x.ind], PL);
 			}
 		}
 
