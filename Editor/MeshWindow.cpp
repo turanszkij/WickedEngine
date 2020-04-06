@@ -166,28 +166,28 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	meshWindow->AddWidget(flipNormalsButton);
 
 	computeNormalsSmoothButton = new wiButton("Compute Normals [SMOOTH]");
-	computeNormalsSmoothButton->SetTooltip("Compute surface normals of the mesh. Resulting normals will be unique per vertex.");
+	computeNormalsSmoothButton->SetTooltip("Compute surface normals of the mesh. Resulting normals will be unique per vertex. This can reduce vertex count, but is slow.");
 	computeNormalsSmoothButton->SetSize(XMFLOAT2(240, hei));
 	computeNormalsSmoothButton->SetPos(XMFLOAT2(x - 50, y += step));
 	computeNormalsSmoothButton->OnClick([&](wiEventArgs args) {
 		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
-			mesh->ComputeNormals(true);
+			mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH);
 			SetEntity(entity);
 		}
 	});
 	meshWindow->AddWidget(computeNormalsSmoothButton);
 
 	computeNormalsHardButton = new wiButton("Compute Normals [HARD]");
-	computeNormalsHardButton->SetTooltip("Compute surface normals of the mesh. Resulting normals will be unique per face.");
+	computeNormalsHardButton->SetTooltip("Compute surface normals of the mesh. Resulting normals will be unique per face. This can increase vertex count.");
 	computeNormalsHardButton->SetSize(XMFLOAT2(240, hei));
 	computeNormalsHardButton->SetPos(XMFLOAT2(x - 50, y += step));
 	computeNormalsHardButton->OnClick([&](wiEventArgs args) {
 		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
-			mesh->ComputeNormals(false);
+			mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_HARD);
 			SetEntity(entity);
 		}
 	});
@@ -379,40 +379,12 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 					mesh.indices[counter++] = topRight;
 				}
 			}
-			for (size_t i = 0; i < mesh.indices.size() / 3; ++i)
-			{
-				uint32_t index1 = mesh.indices[i * 3];
-				uint32_t index2 = mesh.indices[i * 3 + 1];
-				uint32_t index3 = mesh.indices[i * 3 + 2];
-
-				XMVECTOR side1 = XMLoadFloat3(&mesh.vertex_positions[index1]) - XMLoadFloat3(&mesh.vertex_positions[index3]);
-				XMVECTOR side2 = XMLoadFloat3(&mesh.vertex_positions[index1]) - XMLoadFloat3(&mesh.vertex_positions[index2]);
-				XMVECTOR N = XMVector3Normalize(XMVector3Cross(side1, side2));
-				XMFLOAT3 normal;
-				XMStoreFloat3(&normal, N);
-
-				mesh.vertex_normals[index1].x += normal.x;
-				mesh.vertex_normals[index1].y += normal.y;
-				mesh.vertex_normals[index1].z += normal.z;
-
-				mesh.vertex_normals[index2].x += normal.x;
-				mesh.vertex_normals[index2].y += normal.y;
-				mesh.vertex_normals[index2].z += normal.z;
-
-				mesh.vertex_normals[index3].x += normal.x;
-				mesh.vertex_normals[index3].y += normal.y;
-				mesh.vertex_normals[index3].z += normal.z;
-			}
-			for (auto& normal : mesh.vertex_normals)
-			{
-				XMStoreFloat3(&normal, XMVector3Normalize(XMLoadFloat3(&normal)));
-			}
 			mesh.subsets.emplace_back();
 			mesh.subsets.back().materialID = scene.Entity_CreateMaterial("terrainMaterial");
 			mesh.subsets.back().indexOffset = 0;
 			mesh.subsets.back().indexCount = (uint32_t)mesh.indices.size();
 
-			mesh.CreateRenderData();
+			mesh.ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
 
 			editor->ClearSelected();
 			wiScene::PickResult pick;

@@ -527,11 +527,120 @@ namespace wiScene
 		vertexBuffer_PRE = GPUBuffer();
 
 	}
-	void MeshComponent::ComputeNormals(bool smooth)
+	void MeshComponent::ComputeNormals(COMPUTE_NORMALS compute)
 	{
 		// Start recalculating normals:
 
-		if (smooth)
+		switch (compute)
+		{
+		case wiScene::MeshComponent::COMPUTE_NORMALS_HARD: 
+		{
+			// Compute hard surface normals:
+
+			std::vector<uint32_t> newIndexBuffer;
+			std::vector<XMFLOAT3> newPositionsBuffer;
+			std::vector<XMFLOAT3> newNormalsBuffer;
+			std::vector<XMFLOAT2> newUV0Buffer;
+			std::vector<XMFLOAT2> newUV1Buffer;
+			std::vector<XMFLOAT2> newAtlasBuffer;
+			std::vector<XMUINT4> newBoneIndicesBuffer;
+			std::vector<XMFLOAT4> newBoneWeightsBuffer;
+			std::vector<uint32_t> newColorsBuffer;
+
+			for (size_t face = 0; face < indices.size() / 3; face++)
+			{
+				uint32_t i0 = indices[face * 3 + 0];
+				uint32_t i1 = indices[face * 3 + 1];
+				uint32_t i2 = indices[face * 3 + 2];
+
+				XMFLOAT3& p0 = vertex_positions[i0];
+				XMFLOAT3& p1 = vertex_positions[i1];
+				XMFLOAT3& p2 = vertex_positions[i2];
+
+				XMVECTOR U = XMLoadFloat3(&p2) - XMLoadFloat3(&p0);
+				XMVECTOR V = XMLoadFloat3(&p1) - XMLoadFloat3(&p0);
+
+				XMVECTOR N = XMVector3Cross(U, V);
+				N = XMVector3Normalize(N);
+
+				XMFLOAT3 normal;
+				XMStoreFloat3(&normal, N);
+
+				newPositionsBuffer.push_back(p0);
+				newPositionsBuffer.push_back(p1);
+				newPositionsBuffer.push_back(p2);
+
+				newNormalsBuffer.push_back(normal);
+				newNormalsBuffer.push_back(normal);
+				newNormalsBuffer.push_back(normal);
+
+				if (!vertex_uvset_0.empty())
+				{
+					newUV0Buffer.push_back(vertex_uvset_0[i0]);
+					newUV0Buffer.push_back(vertex_uvset_0[i1]);
+					newUV0Buffer.push_back(vertex_uvset_0[i2]);
+				}
+
+				if (!vertex_uvset_1.empty())
+				{
+					newUV1Buffer.push_back(vertex_uvset_1[i0]);
+					newUV1Buffer.push_back(vertex_uvset_1[i1]);
+					newUV1Buffer.push_back(vertex_uvset_1[i2]);
+				}
+
+				if (!vertex_atlas.empty())
+				{
+					newAtlasBuffer.push_back(vertex_atlas[i0]);
+					newAtlasBuffer.push_back(vertex_atlas[i1]);
+					newAtlasBuffer.push_back(vertex_atlas[i2]);
+				}
+
+				if (!vertex_boneindices.empty())
+				{
+					newBoneIndicesBuffer.push_back(vertex_boneindices[i0]);
+					newBoneIndicesBuffer.push_back(vertex_boneindices[i1]);
+					newBoneIndicesBuffer.push_back(vertex_boneindices[i2]);
+				}
+
+				if (!vertex_boneweights.empty())
+				{
+					newBoneWeightsBuffer.push_back(vertex_boneweights[i0]);
+					newBoneWeightsBuffer.push_back(vertex_boneweights[i1]);
+					newBoneWeightsBuffer.push_back(vertex_boneweights[i2]);
+				}
+
+				if (!vertex_colors.empty())
+				{
+					newColorsBuffer.push_back(vertex_colors[i0]);
+					newColorsBuffer.push_back(vertex_colors[i1]);
+					newColorsBuffer.push_back(vertex_colors[i2]);
+				}
+
+				newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
+				newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
+				newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
+			}
+
+			// For hard surface normals, we created a new mesh in the previous loop through faces, so swap data:
+			vertex_positions = newPositionsBuffer;
+			vertex_normals = newNormalsBuffer;
+			vertex_uvset_0 = newUV0Buffer;
+			vertex_uvset_1 = newUV1Buffer;
+			vertex_atlas = newAtlasBuffer;
+			vertex_colors = newColorsBuffer;
+			if (!vertex_boneindices.empty())
+			{
+				vertex_boneindices = newBoneIndicesBuffer;
+			}
+			if (!vertex_boneweights.empty())
+			{
+				vertex_boneweights = newBoneWeightsBuffer;
+			}
+			indices = newIndexBuffer;
+		}
+		break;
+
+		case wiScene::MeshComponent::COMPUTE_NORMALS_SMOOTH:
 		{
 			// Compute smooth surface normals:
 
@@ -687,107 +796,44 @@ namespace wiScene
 			}
 
 		}
-		else
+		break;
+
+		case wiScene::MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST:
 		{
-			// Compute hard surface normals:
-
-			std::vector<uint32_t> newIndexBuffer;
-			std::vector<XMFLOAT3> newPositionsBuffer;
-			std::vector<XMFLOAT3> newNormalsBuffer;
-			std::vector<XMFLOAT2> newUV0Buffer;
-			std::vector<XMFLOAT2> newUV1Buffer;
-			std::vector<XMFLOAT2> newAtlasBuffer;
-			std::vector<XMUINT4> newBoneIndicesBuffer;
-			std::vector<XMFLOAT4> newBoneWeightsBuffer;
-
-			for (size_t face = 0; face < indices.size() / 3; face++)
+			for (size_t i = 0; i < vertex_normals.size(); i++)
 			{
-				uint32_t i0 = indices[face * 3 + 0];
-				uint32_t i1 = indices[face * 3 + 1];
-				uint32_t i2 = indices[face * 3 + 2];
+				vertex_normals[i] = XMFLOAT3(0, 0, 0);
+			}
+			for (size_t i = 0; i < indices.size() / 3; ++i)
+			{
+				uint32_t index1 = indices[i * 3];
+				uint32_t index2 = indices[i * 3 + 1];
+				uint32_t index3 = indices[i * 3 + 2];
 
-				XMFLOAT3& p0 = vertex_positions[i0];
-				XMFLOAT3& p1 = vertex_positions[i1];
-				XMFLOAT3& p2 = vertex_positions[i2];
-
-				XMVECTOR U = XMLoadFloat3(&p2) - XMLoadFloat3(&p0);
-				XMVECTOR V = XMLoadFloat3(&p1) - XMLoadFloat3(&p0);
-
-				XMVECTOR N = XMVector3Cross(U, V);
-				N = XMVector3Normalize(N);
-
+				XMVECTOR side1 = XMLoadFloat3(&vertex_positions[index1]) - XMLoadFloat3(&vertex_positions[index3]);
+				XMVECTOR side2 = XMLoadFloat3(&vertex_positions[index1]) - XMLoadFloat3(&vertex_positions[index2]);
+				XMVECTOR N = XMVector3Normalize(XMVector3Cross(side1, side2));
 				XMFLOAT3 normal;
 				XMStoreFloat3(&normal, N);
 
-				newPositionsBuffer.push_back(p0);
-				newPositionsBuffer.push_back(p1);
-				newPositionsBuffer.push_back(p2);
+				vertex_normals[index1].x += normal.x;
+				vertex_normals[index1].y += normal.y;
+				vertex_normals[index1].z += normal.z;
 
-				newNormalsBuffer.push_back(normal);
-				newNormalsBuffer.push_back(normal);
-				newNormalsBuffer.push_back(normal);
+				vertex_normals[index2].x += normal.x;
+				vertex_normals[index2].y += normal.y;
+				vertex_normals[index2].z += normal.z;
 
-				if (!vertex_uvset_0.empty())
-				{
-					newUV0Buffer.push_back(vertex_uvset_0[i0]);
-					newUV0Buffer.push_back(vertex_uvset_0[i1]);
-					newUV0Buffer.push_back(vertex_uvset_0[i2]);
-				}
-
-				if (!vertex_uvset_1.empty())
-				{
-					newUV1Buffer.push_back(vertex_uvset_1[i0]);
-					newUV1Buffer.push_back(vertex_uvset_1[i1]);
-					newUV1Buffer.push_back(vertex_uvset_1[i2]);
-				}
-
-				if (!vertex_atlas.empty())
-				{
-					newAtlasBuffer.push_back(vertex_atlas[i0]);
-					newAtlasBuffer.push_back(vertex_atlas[i1]);
-					newAtlasBuffer.push_back(vertex_atlas[i2]);
-				}
-
-				if (!vertex_boneindices.empty())
-				{
-					newBoneIndicesBuffer.push_back(vertex_boneindices[i0]);
-					newBoneIndicesBuffer.push_back(vertex_boneindices[i1]);
-					newBoneIndicesBuffer.push_back(vertex_boneindices[i2]);
-				}
-
-				if (!vertex_boneweights.empty())
-				{
-					newBoneWeightsBuffer.push_back(vertex_boneweights[i0]);
-					newBoneWeightsBuffer.push_back(vertex_boneweights[i1]);
-					newBoneWeightsBuffer.push_back(vertex_boneweights[i2]);
-				}
-
-				newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
-				newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
-				newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
+				vertex_normals[index3].x += normal.x;
+				vertex_normals[index3].y += normal.y;
+				vertex_normals[index3].z += normal.z;
 			}
+		}
+		break;
 
-			// For hard surface normals, we created a new mesh in the previous loop through faces, so swap data:
-			vertex_positions = newPositionsBuffer;
-			vertex_normals = newNormalsBuffer;
-			vertex_uvset_0 = newUV0Buffer;
-			vertex_uvset_1 = newUV1Buffer;
-			vertex_atlas = newAtlasBuffer;
-			if (!vertex_boneindices.empty())
-			{
-				vertex_boneindices = newBoneIndicesBuffer;
-			}
-			if (!vertex_boneweights.empty())
-			{
-				vertex_boneweights = newBoneWeightsBuffer;
-			}
-			indices = newIndexBuffer;
 		}
 
-		// Restore subsets:
-
-
-		CreateRenderData();
+		CreateRenderData(); // <- normals will be normalized here!
 	}
 	void MeshComponent::FlipCulling()
 	{

@@ -311,7 +311,13 @@ namespace wiScene
 		inline bool IsSkinned() const { return armatureID != wiECS::INVALID_ENTITY; }
 
 		void CreateRenderData();
-		void ComputeNormals(bool smooth);
+		enum COMPUTE_NORMALS
+		{
+			COMPUTE_NORMALS_HARD,		// hard face normals, can result in additional vertices generated
+			COMPUTE_NORMALS_SMOOTH,		// smooth per vertex normals, this can remove/simplyfy geometry, but slow
+			COMPUTE_NORMALS_SMOOTH_FAST	// average normals, vertex count will be unchanged, fast
+		};
+		void ComputeNormals(COMPUTE_NORMALS compute);
 		void FlipCulling();
 		void FlipNormals();
 		void Recenter();

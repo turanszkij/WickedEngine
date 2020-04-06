@@ -51,10 +51,10 @@ PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 			infoLabel->SetText("In vertex color mode, you can paint colors on selected geometry (per vertex). \"Use vertex colors\" will be automatically enabled for the selected material, or all materials if the whole object is selected. If there is no vertexcolors vertex buffer, one will be created with white as default for every vertex.");
 			break;
 		case MODE_SCULPTING_ADD:
-			infoLabel->SetText("In sculpt - ADD mode, you can modify vertex positions by ADD operation along normal vector. Normals are not modified, so recompute them in MeshWindow if needed.");
+			infoLabel->SetText("In sculpt - ADD mode, you can modify vertex positions by ADD operation along normal vector (average normal of vertices touched by brush).");
 			break;
 		case MODE_SCULPTING_SUBTRACT:
-			infoLabel->SetText("In sculpt - SUBTRACT mode, you can modify vertex positions by SUBTRACT operation along normal vector. Normals are not modified, so recompute them in MeshWindow if needed.");
+			infoLabel->SetText("In sculpt - SUBTRACT mode, you can modify vertex positions by SUBTRACT operation along normal vector (average normal of vertices touched by brush).");
 			break;
 		case MODE_SOFTBODY_PINNING:
 			infoLabel->SetText("In soft body pinning mode, the selected object's soft body vertices can be pinned down (so they will be fixed and drive physics)");
@@ -72,7 +72,7 @@ PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 			infoLabel->SetText("In hair particle length mode, you can adjust length of hair particles with the colorpicker Alpha channel (A). The Alpha channel is 0-255, but the length will be normalized to 0-1 range.\nThis will NOT modify random distribution of hair!");
 			break;
 		}
-		});
+	});
 	window->AddWidget(modeComboBox);
 
 	y += step + 5;
@@ -543,20 +543,21 @@ void PaintToolWindow::Update(float dt)
 				RecordHistory(true);
 				rebuild = true;
 				averageNormal = XMVector3Normalize(averageNormal);
-			}
-			for (auto& x : paintindices)
-			{
-				XMVECTOR PL = XMLoadFloat3(&mesh->vertex_positions[x.ind]);
-				switch (mode)
+
+				for (auto& x : paintindices)
 				{
-				case MODE_SCULPTING_ADD:
-					PL += averageNormal * x.affection;
-					break;
-				case MODE_SCULPTING_SUBTRACT:
-					PL -= averageNormal * x.affection;
-					break;
+					XMVECTOR PL = XMLoadFloat3(&mesh->vertex_positions[x.ind]);
+					switch (mode)
+					{
+					case MODE_SCULPTING_ADD:
+						PL += averageNormal * x.affection;
+						break;
+					case MODE_SCULPTING_SUBTRACT:
+						PL -= averageNormal * x.affection;
+						break;
+					}
+					XMStoreFloat3(&mesh->vertex_positions[x.ind], PL);
 				}
-				XMStoreFloat3(&mesh->vertex_positions[x.ind], PL);
 			}
 		}
 
@@ -588,7 +589,7 @@ void PaintToolWindow::Update(float dt)
 
 		if (rebuild)
 		{
-			mesh->CreateRenderData();
+			mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
 		}
 	}
 	break;
@@ -963,6 +964,7 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 			break;
 
 		archive << mesh->vertex_positions;
+		archive << mesh->vertex_normals;
 	}
 	break;
 	case PaintToolWindow::MODE_SOFTBODY_PINNING:
@@ -1084,16 +1086,20 @@ void PaintToolWindow::ConsumeHistoryOperation(wiArchive& archive, bool undo)
 
 		MeshComponent undo_mesh;
 		archive >> undo_mesh.vertex_positions;
+		archive >> undo_mesh.vertex_normals;
 		MeshComponent redo_mesh;
 		archive >> redo_mesh.vertex_positions;
+		archive >> redo_mesh.vertex_normals;
 
 		if (undo)
 		{
 			mesh->vertex_positions = undo_mesh.vertex_positions;
+			mesh->vertex_normals = undo_mesh.vertex_normals;
 		}
 		else
 		{
 			mesh->vertex_positions = redo_mesh.vertex_positions;
+			mesh->vertex_normals = redo_mesh.vertex_normals;
 		}
 
 		mesh->CreateRenderData();
