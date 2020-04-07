@@ -318,48 +318,66 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	terrainMat3Combo->SetTooltip("Choose a sub terrain blend material.");
 	meshWindow->AddWidget(terrainMat3Combo);
 
-	terrainFromHeightMapButton = new wiButton("Create Terrain From Heightmap");
-	terrainFromHeightMapButton->SetTooltip("Load a heightmap texture, where the red channel corresponds to terrain height and the resolution to dimensions");
-	terrainFromHeightMapButton->SetSize(XMFLOAT2(200, 20));
-	terrainFromHeightMapButton->SetPos(XMFLOAT2(x + 180, y += step));
-	terrainFromHeightMapButton->OnClick([=](wiEventArgs args) {
+	terrainGenButton = new wiButton("Generate Terrain...");
+	terrainGenButton->SetTooltip("Generate terrain meshes.");
+	terrainGenButton->SetSize(XMFLOAT2(200, 20));
+	terrainGenButton->SetPos(XMFLOAT2(x + 180, y += step));
+	terrainGenButton->OnClick([=](wiEventArgs args) {
 
-		wiHelper::FileDialogParams params;
-		wiHelper::FileDialogResult result;
-		params.type = wiHelper::FileDialogParams::OPEN;
-		params.description = "Texture";
-		params.extensions.push_back("dds");
-		params.extensions.push_back("png");
-		params.extensions.push_back("jpg");
-		params.extensions.push_back("tga");
-		wiHelper::FileDialog(params, result);
+		if (terrainGenWindow != nullptr)
+		{
+			GUI->RemoveWidget(terrainGenWindow);
+			delete terrainGenWindow;
+			terrainGenWindow = nullptr;
+		}
+		if (this->rgb != nullptr)
+		{
+			stbi_image_free(this->rgb);
+			this->rgb = nullptr;
+		}
 
-		if (result.ok) {
-			string fileName = result.filenames.front();
+		terrainGenWindow = new wiWindow(GUI, "Terrain Gen");
+		terrainGenWindow->SetSize(XMFLOAT2(260, 130));
+		GUI->AddWidget(terrainGenWindow);
 
-			Scene& scene = wiScene::GetScene();
-			Entity entity = scene.Entity_CreateObject("editorTerrain");
-			ObjectComponent& object = *scene.objects.GetComponent(entity);
-			object.meshID = scene.Entity_CreateMesh("terrainMesh");
-			MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
 
-			const int channelCount = 4;
-			int width, height, bpp;
-			unsigned char* rgb = stbi_load(fileName.c_str(), &width, &height, &bpp, channelCount);
+		float xx = 20;
+		float yy = 0;
+		float stepstep = 25;
+		float heihei = 20;
 
-			mesh.vertex_positions.resize(width * height);
-			mesh.vertex_normals.resize(width * height);
-			mesh.vertex_colors.resize(width * height);
+
+
+		Scene& scene = wiScene::GetScene();
+		Entity entity = scene.Entity_CreateObject("editorTerrain");
+		ObjectComponent& object = *scene.objects.GetComponent(entity);
+		object.meshID = scene.Entity_CreateMesh("terrainMesh");
+		MeshComponent* mesh = scene.meshes.GetComponent(object.meshID);
+		mesh->SetTerrain(true);
+		mesh->subsets.emplace_back();
+		mesh->subsets.back().materialID = scene.Entity_CreateMaterial("terrainMaterial");
+		mesh->subsets.back().indexOffset = 0;
+		MaterialComponent* material = scene.materials.GetComponent(mesh->subsets.back().materialID);
+		material->SetUseVertexColors(true);
+
+		auto generate_mesh = [=] (int width, int height, unsigned char* rgb = nullptr, 
+			int channelCount = 4, float heightmap_scale = 1) 
+		{
+			mesh->vertex_positions.resize(width * height);
+			mesh->vertex_normals.resize(width * height);
+			mesh->vertex_colors.resize(width * height);
 			for (int i = 0; i < width; ++i)
 			{
 				for (int j = 0; j < height; ++j)
 				{
 					size_t index = size_t(i + j * width);
-					mesh.vertex_positions[index] = XMFLOAT3((float)i - (float)width * 0.5f, (float)rgb[index * channelCount] - 127.0f, (float)j - (float)height * 0.5f);
-					mesh.vertex_colors[index] = wiColor::Red().rgba;
+					mesh->vertex_positions[index] = XMFLOAT3((float)i - (float)width * 0.5f, 0, (float)j - (float)height * 0.5f);
+					if (rgb != nullptr)
+						mesh->vertex_positions[index].y = ((float)rgb[index * channelCount] - 127.0f) * heightmap_scale;
+					mesh->vertex_colors[index] = wiColor::Red().rgba;
 				}
 			}
-			mesh.indices.resize((width - 1) * (height - 1) * 6);
+			mesh->indices.resize((width - 1) * (height - 1) * 6);
 			size_t counter = 0;
 			for (int x = 0; x < width - 1; x++)
 			{
@@ -370,31 +388,105 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 					int topLeft = x + (y + 1) * width;
 					int topRight = (x + 1) + (y + 1) * width;
 
-					mesh.indices[counter++] = topLeft;
-					mesh.indices[counter++] = lowerLeft;
-					mesh.indices[counter++] = lowerRight;
+					mesh->indices[counter++] = topLeft;
+					mesh->indices[counter++] = lowerLeft;
+					mesh->indices[counter++] = lowerRight;
 
-					mesh.indices[counter++] = topLeft;
-					mesh.indices[counter++] = lowerRight;
-					mesh.indices[counter++] = topRight;
+					mesh->indices[counter++] = topLeft;
+					mesh->indices[counter++] = lowerRight;
+					mesh->indices[counter++] = topRight;
 				}
 			}
-			mesh.subsets.emplace_back();
-			mesh.subsets.back().materialID = scene.Entity_CreateMaterial("terrainMaterial");
-			mesh.subsets.back().indexOffset = 0;
-			mesh.subsets.back().indexCount = (uint32_t)mesh.indices.size();
+			mesh->subsets.back().indexCount = (uint32_t)mesh->indices.size();
 
-			mesh.ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
+			mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
+		};
+		generate_mesh(128, 128);
+		
+		editor->ClearSelected();
+		wiScene::PickResult pick;
+		pick.entity = entity;
+		pick.subsetIndex = 0;
+		editor->AddSelected(pick);
+		SetEntity(object.meshID);
 
-			editor->ClearSelected();
-			wiScene::PickResult pick;
-			pick.entity = entity;
-			pick.subsetIndex = 0;
-			editor->AddSelected(pick);
-			SetEntity(entity);
-		}
+
+		wiSlider* dimXSlider;
+		wiSlider* dimYSlider;
+		wiSlider* dimZSlider;
+
+		dimXSlider = new wiSlider(16, 1024, 128, 1024 - 16, "X: ");
+		dimXSlider->SetTooltip("Terrain mesh grid resolution on X axis");
+		dimXSlider->SetSize(XMFLOAT2(200, heihei));
+		dimXSlider->SetPos(XMFLOAT2(xx, yy += stepstep));
+		terrainGenWindow->AddWidget(dimXSlider);
+
+		dimYSlider = new wiSlider(0, 1, 0.5f, 10000, "Y: ");
+		dimYSlider->SetTooltip("Terrain mesh grid heightmap scale on Y axis");
+		dimYSlider->SetSize(XMFLOAT2(200, heihei));
+		dimYSlider->SetPos(XMFLOAT2(xx, yy += stepstep));
+		terrainGenWindow->AddWidget(dimYSlider);
+
+		dimZSlider = new wiSlider(16, 1024, 128, 1024 - 16, "Z: ");
+		dimZSlider->SetTooltip("Terrain mesh grid resolution on Z axis");
+		dimZSlider->SetSize(XMFLOAT2(200, heihei));
+		dimZSlider->SetPos(XMFLOAT2(xx, yy += stepstep));
+		terrainGenWindow->AddWidget(dimZSlider);
+
+		dimXSlider->OnSlide([=](wiEventArgs args) {
+			this->width = (int)dimXSlider->GetValue();
+			this->height = (int)dimZSlider->GetValue();
+			generate_mesh(this->width, this->height);
+		});
+		dimZSlider->OnSlide([=](wiEventArgs args) {
+			this->width = (int)dimXSlider->GetValue();
+			this->height = (int)dimZSlider->GetValue();
+			generate_mesh(this->width, this->height);
+		});
+		dimYSlider->OnSlide([=](wiEventArgs args) {
+			generate_mesh(this->width, this->height, this->rgb, this->channelCount, args.fValue);
+		});
+
+		wiButton* heightmapButton = new wiButton("Load Heightmap...");
+		heightmapButton->SetTooltip("Load a heightmap texture, where the red channel corresponds to terrain height and the resolution to dimensions");
+		heightmapButton->SetSize(XMFLOAT2(200, heihei));
+		heightmapButton->SetPos(XMFLOAT2(xx, yy += stepstep));
+		heightmapButton->OnClick([=](wiEventArgs args) {
+
+			wiHelper::FileDialogParams params;
+			wiHelper::FileDialogResult result;
+			params.type = wiHelper::FileDialogParams::OPEN;
+			params.description = "Texture";
+			params.extensions.push_back("dds");
+			params.extensions.push_back("png");
+			params.extensions.push_back("jpg");
+			params.extensions.push_back("tga");
+			wiHelper::FileDialog(params, result);
+
+			if (result.ok) {
+				string fileName = result.filenames.front();
+
+				if (this->rgb != nullptr)
+				{
+					stbi_image_free(this->rgb);
+					this->rgb = nullptr;
+				}
+
+				int bpp;
+				this->rgb = stbi_load(fileName.c_str(), &this->width, &this->height, &bpp, channelCount);
+
+				generate_mesh(width, height, rgb, channelCount, dimYSlider->GetValue());
+			}
+		});
+		terrainGenWindow->AddWidget(heightmapButton);
+
+		terrainGenWindow->Translate(XMFLOAT3(
+			terrainGenButton->translation.x + terrainGenButton->scale.x + 10,
+			terrainGenButton->translation.y,
+			0)
+		);
 	});
-	meshWindow->AddWidget(terrainFromHeightMapButton);
+	meshWindow->AddWidget(terrainGenButton);
 
 
 
@@ -404,12 +496,23 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	SetEntity(INVALID_ENTITY);
 }
 
-
 MeshWindow::~MeshWindow()
 {
 	meshWindow->RemoveWidgets(true);
 	GUI->RemoveWidget(meshWindow);
 	delete meshWindow;
+
+	if (terrainGenWindow != nullptr)
+	{
+		GUI->RemoveWidget(terrainGenWindow);
+		delete terrainGenWindow;
+		terrainGenWindow = nullptr;
+	}
+	if (this->rgb != nullptr)
+	{
+		stbi_image_free(this->rgb);
+		this->rgb = nullptr;
+	}
 }
 
 void MeshWindow::SetEntity(Entity entity)
@@ -419,6 +522,21 @@ void MeshWindow::SetEntity(Entity entity)
 	Scene&scene = wiScene::GetScene();
 
 	const MeshComponent* mesh = scene.meshes.GetComponent(entity);
+
+	if (mesh == nullptr || !mesh->IsTerrain())
+	{
+		if (terrainGenWindow != nullptr)
+		{
+			GUI->RemoveWidget(terrainGenWindow);
+			delete terrainGenWindow;
+			terrainGenWindow = nullptr;
+		}
+		if (this->rgb != nullptr)
+		{
+			stbi_image_free(this->rgb);
+			this->rgb = nullptr;
+		}
+	}
 
 	if (mesh != nullptr)
 	{
@@ -497,5 +615,5 @@ void MeshWindow::SetEntity(Entity entity)
 		meshWindow->SetEnabled(false);
 	}
 
-	terrainFromHeightMapButton->SetEnabled(true);
+	terrainGenButton->SetEnabled(true);
 }

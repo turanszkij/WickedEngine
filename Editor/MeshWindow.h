@@ -41,6 +41,13 @@ public:
 	wiComboBox* terrainMat1Combo;
 	wiComboBox* terrainMat2Combo;
 	wiComboBox* terrainMat3Combo;
-	wiButton* terrainFromHeightMapButton;
+	wiButton* terrainGenButton;
+
+	wiWindow* terrainGenWindow = nullptr;
+
+	// heightmap texture:
+	unsigned char* rgb = nullptr;
+	const int channelCount = 4;
+	int width = 0, height = 0;
 };
 

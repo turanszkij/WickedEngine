@@ -815,7 +815,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	blend_weights /= blend_weights.x + blend_weights.y + blend_weights.z + blend_weights.w;
 	float3 triplanar = abs(surface.N);
 	triplanar /= triplanar.x + triplanar.y + triplanar.z;
-	float4 sam_x, sam_y, sam_z;
+	float4 sam, sam_x, sam_y, sam_z;
 	float2 uv_x, uv_y, uv_z;
 
 	[branch]
@@ -824,25 +824,53 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 		uv_x = surface.P.yz * g_xMaterial.texMulAdd.xy + g_xMaterial.texMulAdd.zw;
 		uv_y = surface.P.xz * g_xMaterial.texMulAdd.xy + g_xMaterial.texMulAdd.zw;
 		uv_z = surface.P.xy * g_xMaterial.texMulAdd.xy + g_xMaterial.texMulAdd.zw;
-		sam_x = texture_basecolormap.Sample(sampler_objectshader, uv_x);
-		sam_y = texture_basecolormap.Sample(sampler_objectshader, uv_y);
-		sam_z = texture_basecolormap.Sample(sampler_objectshader, uv_z);
-		sam_x.rgb = DEGAMMA(sam_x.rgb);
-		sam_y.rgb = DEGAMMA(sam_y.rgb);
-		sam_z.rgb = DEGAMMA(sam_z.rgb);
-		color += (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z) * g_xMaterial.baseColor * blend_weights.x;
-		sam_x = texture_surfacemap.Sample(sampler_objectshader, uv_x);
-		sam_y = texture_surfacemap.Sample(sampler_objectshader, uv_y);
-		sam_z = texture_surfacemap.Sample(sampler_objectshader, uv_z);
-		surface_occlusion_roughness_metallic_reflectance += (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z) * 
-			float4(1, g_xMaterial.roughness, g_xMaterial.metalness, g_xMaterial.reflectance) * blend_weights.x;
-		sam_x.xyz = texture_normalmap.Sample(sampler_objectshader, uv_x).rgb;
-		sam_y.xyz = texture_normalmap.Sample(sampler_objectshader, uv_y).rgb;
-		sam_z.xyz = texture_normalmap.Sample(sampler_objectshader, uv_z).rgb;
-		bumpColor = (sam_x.xyz * triplanar.x + sam_y.xyz * triplanar.y + sam_z.xyz * triplanar.z);
-		bumpColor = bumpColor.rgb * 2 - 1;
-		bumpColor.g *= g_xMaterial.normalMapFlip;
-		triplanar_normal += normalize(lerp(surface.N, mul(bumpColor, TBN), g_xMaterial.normalMapStrength)) * blend_weights.x;
+
+		[branch]
+		if (g_xMaterial.uvset_baseColorMap >= 0)
+		{
+			sam_x = texture_basecolormap.Sample(sampler_objectshader, uv_x);
+			sam_y = texture_basecolormap.Sample(sampler_objectshader, uv_y);
+			sam_z = texture_basecolormap.Sample(sampler_objectshader, uv_z);
+			sam_x.rgb = DEGAMMA(sam_x.rgb);
+			sam_y.rgb = DEGAMMA(sam_y.rgb);
+			sam_z.rgb = DEGAMMA(sam_z.rgb);
+			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+		}
+		else
+		{
+			sam = 1;
+		}
+		color += sam * g_xMaterial.baseColor * blend_weights.x;
+
+		[branch]
+		if (g_xMaterial.uvset_surfaceMap >= 0)
+		{
+			sam_x = texture_surfacemap.Sample(sampler_objectshader, uv_x);
+			sam_y = texture_surfacemap.Sample(sampler_objectshader, uv_y);
+			sam_z = texture_surfacemap.Sample(sampler_objectshader, uv_z);
+			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+		}
+		else
+		{
+			sam = 1;
+		}
+		surface_occlusion_roughness_metallic_reflectance += sam * float4(1, g_xMaterial.roughness, g_xMaterial.metalness, g_xMaterial.reflectance) * blend_weights.x;
+
+		[branch]
+		if (g_xMaterial.uvset_normalMap >= 0)
+		{
+			sam_x.xyz = texture_normalmap.Sample(sampler_objectshader, uv_x).rgb;
+			sam_y.xyz = texture_normalmap.Sample(sampler_objectshader, uv_y).rgb;
+			sam_z.xyz = texture_normalmap.Sample(sampler_objectshader, uv_z).rgb;
+			bumpColor = (sam_x.xyz * triplanar.x + sam_y.xyz * triplanar.y + sam_z.xyz * triplanar.z);
+			bumpColor = bumpColor.rgb * 2 - 1;
+			bumpColor.g *= g_xMaterial.normalMapFlip;
+			triplanar_normal += normalize(lerp(surface.N, mul(bumpColor, TBN), g_xMaterial.normalMapStrength)) * blend_weights.x;
+		}
+		else
+		{
+			triplanar_normal += surface.N * blend_weights.x;
+		}
 	}
 
 	[branch]
@@ -851,25 +879,53 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 		uv_x = surface.P.yz * g_xMaterial_blend1.texMulAdd.xy + g_xMaterial_blend1.texMulAdd.zw;
 		uv_y = surface.P.xz * g_xMaterial_blend1.texMulAdd.xy + g_xMaterial_blend1.texMulAdd.zw;
 		uv_z = surface.P.xy * g_xMaterial_blend1.texMulAdd.xy + g_xMaterial_blend1.texMulAdd.zw;
-		sam_x = texture_blend1_basecolormap.Sample(sampler_objectshader, uv_x);
-		sam_y = texture_blend1_basecolormap.Sample(sampler_objectshader, uv_y);
-		sam_z = texture_blend1_basecolormap.Sample(sampler_objectshader, uv_z);
-		sam_x.rgb = DEGAMMA(sam_x.rgb);
-		sam_y.rgb = DEGAMMA(sam_y.rgb);
-		sam_z.rgb = DEGAMMA(sam_z.rgb);
-		color += (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z) * g_xMaterial_blend1.baseColor * blend_weights.y;
-		sam_x = texture_blend1_surfacemap.Sample(sampler_objectshader, uv_x);
-		sam_y = texture_blend1_surfacemap.Sample(sampler_objectshader, uv_y);
-		sam_z = texture_blend1_surfacemap.Sample(sampler_objectshader, uv_z);
-		surface_occlusion_roughness_metallic_reflectance += (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z) *
-			float4(1, g_xMaterial_blend1.roughness, g_xMaterial_blend1.metalness, g_xMaterial_blend1.reflectance) * blend_weights.y;
-		sam_x.xyz = texture_blend1_normalmap.Sample(sampler_objectshader, uv_x).rgb;
-		sam_y.xyz = texture_blend1_normalmap.Sample(sampler_objectshader, uv_y).rgb;
-		sam_z.xyz = texture_blend1_normalmap.Sample(sampler_objectshader, uv_z).rgb;
-		bumpColor = (sam_x.xyz * triplanar.x + sam_y.xyz * triplanar.y + sam_z.xyz * triplanar.z);
-		bumpColor = bumpColor.rgb * 2 - 1;
-		bumpColor.g *= g_xMaterial_blend1.normalMapFlip;
-		triplanar_normal += normalize(lerp(surface.N, mul(bumpColor, TBN), g_xMaterial_blend1.normalMapStrength)) * blend_weights.y;
+
+		[branch]
+		if (g_xMaterial_blend1.uvset_baseColorMap >= 0)
+		{
+			sam_x = texture_blend1_basecolormap.Sample(sampler_objectshader, uv_x);
+			sam_y = texture_blend1_basecolormap.Sample(sampler_objectshader, uv_y);
+			sam_z = texture_blend1_basecolormap.Sample(sampler_objectshader, uv_z);
+			sam_x.rgb = DEGAMMA(sam_x.rgb);
+			sam_y.rgb = DEGAMMA(sam_y.rgb);
+			sam_z.rgb = DEGAMMA(sam_z.rgb);
+			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+		}
+		else
+		{
+			sam = 1;
+		}
+		color += sam * g_xMaterial_blend1.baseColor * blend_weights.y;
+
+		[branch]
+		if (g_xMaterial_blend1.uvset_surfaceMap >= 0)
+		{
+			sam_x = texture_blend1_surfacemap.Sample(sampler_objectshader, uv_x);
+			sam_y = texture_blend1_surfacemap.Sample(sampler_objectshader, uv_y);
+			sam_z = texture_blend1_surfacemap.Sample(sampler_objectshader, uv_z);
+			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+		}
+		else
+		{
+			sam = 1;
+		}
+		surface_occlusion_roughness_metallic_reflectance += sam * float4(1, g_xMaterial_blend1.roughness, g_xMaterial_blend1.metalness, g_xMaterial_blend1.reflectance) * blend_weights.y;
+
+		[branch]
+		if (g_xMaterial_blend1.uvset_normalMap >= 0)
+		{
+			sam_x.xyz = texture_blend1_normalmap.Sample(sampler_objectshader, uv_x).rgb;
+			sam_y.xyz = texture_blend1_normalmap.Sample(sampler_objectshader, uv_y).rgb;
+			sam_z.xyz = texture_blend1_normalmap.Sample(sampler_objectshader, uv_z).rgb;
+			bumpColor = (sam_x.xyz * triplanar.x + sam_y.xyz * triplanar.y + sam_z.xyz * triplanar.z);
+			bumpColor = bumpColor.rgb * 2 - 1;
+			bumpColor.g *= g_xMaterial_blend1.normalMapFlip;
+			triplanar_normal += normalize(lerp(surface.N, mul(bumpColor, TBN), g_xMaterial_blend1.normalMapStrength)) * blend_weights.y;
+		}
+		else
+		{
+			triplanar_normal += surface.N * blend_weights.y;
+		}
 	}
 
 	[branch]
@@ -878,25 +934,53 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 		uv_x = surface.P.yz * g_xMaterial_blend2.texMulAdd.xy + g_xMaterial_blend2.texMulAdd.zw;
 		uv_y = surface.P.xz * g_xMaterial_blend2.texMulAdd.xy + g_xMaterial_blend2.texMulAdd.zw;
 		uv_z = surface.P.xy * g_xMaterial_blend2.texMulAdd.xy + g_xMaterial_blend2.texMulAdd.zw;
-		sam_x = texture_blend2_basecolormap.Sample(sampler_objectshader, uv_x);
-		sam_y = texture_blend2_basecolormap.Sample(sampler_objectshader, uv_y);
-		sam_z = texture_blend2_basecolormap.Sample(sampler_objectshader, uv_z);
-		sam_x.rgb = DEGAMMA(sam_x.rgb);
-		sam_y.rgb = DEGAMMA(sam_y.rgb);
-		sam_z.rgb = DEGAMMA(sam_z.rgb);
-		color += (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z) * g_xMaterial_blend2.baseColor * blend_weights.z;
-		sam_x = texture_blend2_surfacemap.Sample(sampler_objectshader, uv_x);
-		sam_y = texture_blend2_surfacemap.Sample(sampler_objectshader, uv_y);
-		sam_z = texture_blend2_surfacemap.Sample(sampler_objectshader, uv_z);
-		surface_occlusion_roughness_metallic_reflectance += (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z) *
-			float4(1, g_xMaterial_blend2.roughness, g_xMaterial_blend2.metalness, g_xMaterial_blend2.reflectance) * blend_weights.z;
-		sam_x.xyz = texture_blend2_normalmap.Sample(sampler_objectshader, uv_x).rgb;
-		sam_y.xyz = texture_blend2_normalmap.Sample(sampler_objectshader, uv_y).rgb;
-		sam_z.xyz = texture_blend2_normalmap.Sample(sampler_objectshader, uv_z).rgb;
-		bumpColor = (sam_x.xyz * triplanar.x + sam_y.xyz * triplanar.y + sam_z.xyz * triplanar.z);
-		bumpColor = bumpColor.rgb * 2 - 1;
-		bumpColor.g *= g_xMaterial_blend2.normalMapFlip;
-		triplanar_normal += normalize(lerp(surface.N, mul(bumpColor, TBN), g_xMaterial_blend2.normalMapStrength)) * blend_weights.z;
+
+		[branch]
+		if (g_xMaterial_blend2.uvset_baseColorMap >= 0)
+		{
+			sam_x = texture_blend2_basecolormap.Sample(sampler_objectshader, uv_x);
+			sam_y = texture_blend2_basecolormap.Sample(sampler_objectshader, uv_y);
+			sam_z = texture_blend2_basecolormap.Sample(sampler_objectshader, uv_z);
+			sam_x.rgb = DEGAMMA(sam_x.rgb);
+			sam_y.rgb = DEGAMMA(sam_y.rgb);
+			sam_z.rgb = DEGAMMA(sam_z.rgb);
+			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+		}
+		else
+		{
+			sam = 1;
+		}
+		color += sam * g_xMaterial_blend2.baseColor * blend_weights.z;
+
+		[branch]
+		if (g_xMaterial_blend2.uvset_surfaceMap >= 0)
+		{
+			sam_x = texture_blend2_surfacemap.Sample(sampler_objectshader, uv_x);
+			sam_y = texture_blend2_surfacemap.Sample(sampler_objectshader, uv_y);
+			sam_z = texture_blend2_surfacemap.Sample(sampler_objectshader, uv_z);
+			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+		}
+		else
+		{
+			sam = 1;
+		}
+		surface_occlusion_roughness_metallic_reflectance += sam * float4(1, g_xMaterial_blend2.roughness, g_xMaterial_blend2.metalness, g_xMaterial_blend2.reflectance) * blend_weights.z;
+
+		[branch]
+		if (g_xMaterial_blend2.uvset_normalMap >= 0)
+		{
+			sam_x.xyz = texture_blend2_normalmap.Sample(sampler_objectshader, uv_x).rgb;
+			sam_y.xyz = texture_blend2_normalmap.Sample(sampler_objectshader, uv_y).rgb;
+			sam_z.xyz = texture_blend2_normalmap.Sample(sampler_objectshader, uv_z).rgb;
+			bumpColor = (sam_x.xyz * triplanar.x + sam_y.xyz * triplanar.y + sam_z.xyz * triplanar.z);
+			bumpColor = bumpColor.rgb * 2 - 1;
+			bumpColor.g *= g_xMaterial_blend2.normalMapFlip;
+			triplanar_normal += normalize(lerp(surface.N, mul(bumpColor, TBN), g_xMaterial_blend2.normalMapStrength)) * blend_weights.z;
+		}
+		else
+		{
+			triplanar_normal += surface.N * blend_weights.z;
+		}
 	}
 
 	[branch]
@@ -905,25 +989,53 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 		uv_x = surface.P.yz * g_xMaterial_blend3.texMulAdd.xy + g_xMaterial_blend3.texMulAdd.zw;
 		uv_y = surface.P.xz * g_xMaterial_blend3.texMulAdd.xy + g_xMaterial_blend3.texMulAdd.zw;
 		uv_z = surface.P.xy * g_xMaterial_blend3.texMulAdd.xy + g_xMaterial_blend3.texMulAdd.zw;
-		sam_x = texture_blend3_basecolormap.Sample(sampler_objectshader, uv_x);
-		sam_y = texture_blend3_basecolormap.Sample(sampler_objectshader, uv_y);
-		sam_z = texture_blend3_basecolormap.Sample(sampler_objectshader, uv_z);
-		sam_x.rgb = DEGAMMA(sam_x.rgb);
-		sam_y.rgb = DEGAMMA(sam_y.rgb);
-		sam_z.rgb = DEGAMMA(sam_z.rgb);
-		color += (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z) * g_xMaterial_blend3.baseColor * blend_weights.w;
-		sam_x = texture_blend3_surfacemap.Sample(sampler_objectshader, uv_x);
-		sam_y = texture_blend3_surfacemap.Sample(sampler_objectshader, uv_y);
-		sam_z = texture_blend3_surfacemap.Sample(sampler_objectshader, uv_z);
-		surface_occlusion_roughness_metallic_reflectance += (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z) *
-			float4(1, g_xMaterial_blend3.roughness, g_xMaterial_blend3.metalness, g_xMaterial_blend3.reflectance) * blend_weights.w;
-		sam_x.xyz = texture_blend3_normalmap.Sample(sampler_objectshader, uv_x).rgb;
-		sam_y.xyz = texture_blend3_normalmap.Sample(sampler_objectshader, uv_y).rgb;
-		sam_z.xyz = texture_blend3_normalmap.Sample(sampler_objectshader, uv_z).rgb;
-		bumpColor = (sam_x.xyz * triplanar.x + sam_y.xyz * triplanar.y + sam_z.xyz * triplanar.z);
-		bumpColor = bumpColor.rgb * 2 - 1;
-		bumpColor.g *= g_xMaterial_blend3.normalMapFlip;
-		triplanar_normal += normalize(lerp(surface.N, mul(bumpColor, TBN), g_xMaterial_blend3.normalMapStrength)) * blend_weights.w;
+
+		[branch]
+		if (g_xMaterial_blend3.uvset_baseColorMap >= 0)
+		{
+			sam_x = texture_blend3_basecolormap.Sample(sampler_objectshader, uv_x);
+			sam_y = texture_blend3_basecolormap.Sample(sampler_objectshader, uv_y);
+			sam_z = texture_blend3_basecolormap.Sample(sampler_objectshader, uv_z);
+			sam_x.rgb = DEGAMMA(sam_x.rgb);
+			sam_y.rgb = DEGAMMA(sam_y.rgb);
+			sam_z.rgb = DEGAMMA(sam_z.rgb);
+			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+		}
+		else
+		{
+			sam = 1;
+		}
+		color += sam * g_xMaterial_blend3.baseColor * blend_weights.w;
+
+		[branch]
+		if (g_xMaterial_blend3.uvset_surfaceMap >= 0)
+		{
+			sam_x = texture_blend3_surfacemap.Sample(sampler_objectshader, uv_x);
+			sam_y = texture_blend3_surfacemap.Sample(sampler_objectshader, uv_y);
+			sam_z = texture_blend3_surfacemap.Sample(sampler_objectshader, uv_z);
+			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+		}
+		else
+		{
+			sam = 1;
+		}
+		surface_occlusion_roughness_metallic_reflectance += sam * float4(1, g_xMaterial_blend3.roughness, g_xMaterial_blend3.metalness, g_xMaterial_blend3.reflectance) * blend_weights.w;
+
+		[branch]
+		if (g_xMaterial_blend3.uvset_normalMap >= 0)
+		{
+			sam_x.xyz = texture_blend3_normalmap.Sample(sampler_objectshader, uv_x).rgb;
+			sam_y.xyz = texture_blend3_normalmap.Sample(sampler_objectshader, uv_y).rgb;
+			sam_z.xyz = texture_blend3_normalmap.Sample(sampler_objectshader, uv_z).rgb;
+			bumpColor = (sam_x.xyz * triplanar.x + sam_y.xyz * triplanar.y + sam_z.xyz * triplanar.z);
+			bumpColor = bumpColor.rgb * 2 - 1;
+			bumpColor.g *= g_xMaterial_blend3.normalMapFlip;
+			triplanar_normal += normalize(lerp(surface.N, mul(bumpColor, TBN), g_xMaterial_blend3.normalMapStrength)) * blend_weights.w;
+		}
+		else
+		{
+			triplanar_normal += surface.N * blend_weights.w;
+		}
 	}
 
 	color.a = 1;
