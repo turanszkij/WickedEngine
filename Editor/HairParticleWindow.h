@@ -8,6 +8,7 @@ class wiSlider;
 class wiComboBox;
 class wiColorPicker;
 class wiButton;
+class wiTextInputField;
 
 class MaterialWindow;
 
@@ -37,6 +38,10 @@ public:
 	wiSlider* segmentcountSlider;
 	wiSlider* randomSeedSlider;
 	wiSlider* viewDistanceSlider;
+	wiTextInputField* frameWidthInput;
+	wiTextInputField* frameHeightInput;
+	wiTextInputField* frameCountInput;
+	wiTextInputField* horizontalFrameCountInput;
 
 };
 

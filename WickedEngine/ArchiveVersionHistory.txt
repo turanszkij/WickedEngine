@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+42: Serialized hair particle sprite sheet properties
 41: Serialized terrain blend materials in MeshComponent
 40: Serialized WeatherComponent::windSpeed
 39: Serialized indices and weights for Hair Particle

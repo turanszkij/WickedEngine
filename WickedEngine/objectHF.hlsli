@@ -34,21 +34,24 @@
 TEXTURE2D(texture_basecolormap, float4, TEXSLOT_RENDERER_BASECOLORMAP);			// rgb: baseColor, a: opacity
 TEXTURE2D(texture_normalmap, float3, TEXSLOT_RENDERER_NORMALMAP);				// rgb: normal
 TEXTURE2D(texture_surfacemap, float4, TEXSLOT_RENDERER_SURFACEMAP);				// r: occlusion, g: roughness, b: metallic, a: reflectance
-TEXTURE2D(texture_displacementmap, float, TEXSLOT_RENDERER_DISPLACEMENTMAP);	// r: heightmap
 TEXTURE2D(texture_emissivemap, float4, TEXSLOT_RENDERER_EMISSIVEMAP);			// rgba: emissive
+TEXTURE2D(texture_displacementmap, float, TEXSLOT_RENDERER_DISPLACEMENTMAP);	// r: heightmap
 TEXTURE2D(texture_occlusionmap, float, TEXSLOT_RENDERER_OCCLUSIONMAP);			// r: occlusion
 
 TEXTURE2D(texture_blend1_basecolormap, float4, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP);	// rgb: baseColor, a: opacity
 TEXTURE2D(texture_blend1_normalmap, float3, TEXSLOT_RENDERER_BLEND1_NORMALMAP);			// rgb: normal
 TEXTURE2D(texture_blend1_surfacemap, float4, TEXSLOT_RENDERER_BLEND1_SURFACEMAP);		// r: occlusion, g: roughness, b: metallic, a: reflectance
+TEXTURE2D(texture_blend1_emissivemap, float4, TEXSLOT_RENDERER_BLEND1_EMISSIVEMAP);		// rgba: emissive
 
 TEXTURE2D(texture_blend2_basecolormap, float4, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP);	// rgb: baseColor, a: opacity
 TEXTURE2D(texture_blend2_normalmap, float3, TEXSLOT_RENDERER_BLEND2_NORMALMAP);			// rgb: normal
 TEXTURE2D(texture_blend2_surfacemap, float4, TEXSLOT_RENDERER_BLEND2_SURFACEMAP);		// r: occlusion, g: roughness, b: metallic, a: reflectance
+TEXTURE2D(texture_blend2_emissivemap, float4, TEXSLOT_RENDERER_BLEND2_EMISSIVEMAP);		// rgba: emissive
 
 TEXTURE2D(texture_blend3_basecolormap, float4, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP);	// rgb: baseColor, a: opacity
 TEXTURE2D(texture_blend3_normalmap, float3, TEXSLOT_RENDERER_BLEND3_NORMALMAP);			// rgb: normal
 TEXTURE2D(texture_blend3_surfacemap, float4, TEXSLOT_RENDERER_BLEND3_SURFACEMAP);		// r: occlusion, g: roughness, b: metallic, a: reflectance
+TEXTURE2D(texture_blend3_emissivemap, float4, TEXSLOT_RENDERER_BLEND3_EMISSIVEMAP);		// rgba: emissive
 
 // These are bound by RenderPath (based on Render Path):
 TEXTURE2D(texture_reflection, float4, TEXSLOT_RENDERPATH_REFLECTION);		// rgba: scene color from reflected camera angle
@@ -807,9 +810,22 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	}
 	surface_occlusion_roughness_metallic_reflectance *= float4(1, g_xMaterial.roughness, g_xMaterial.metalness, g_xMaterial.reflectance);
 
+	// Emissive map:
+	float4 emissiveColor = g_xMaterial.emissiveColor;
+	[branch]
+	if (emissiveColor.a > 0 && g_xMaterial.uvset_emissiveMap >= 0)
+	{
+		const float2 UV_emissiveMap = g_xMaterial.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		float4 emissiveMap = texture_emissivemap.Sample(sampler_objectshader, UV_emissiveMap);
+		emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
+		emissiveColor *= emissiveMap;
+	}
+
+
 #ifdef TERRAIN
 	color = 0;
 	surface_occlusion_roughness_metallic_reflectance = 0;
+	emissiveColor = 0;
 	float3 triplanar_normal = 0;
 	float4 blend_weights = input.color;
 	blend_weights /= blend_weights.x + blend_weights.y + blend_weights.z + blend_weights.w;
@@ -871,6 +887,23 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 		{
 			triplanar_normal += surface.N * blend_weights.x;
 		}
+
+		[branch]
+		if (g_xMaterial.uvset_emissiveMap >= 0)
+		{
+			sam_x = texture_emissivemap.Sample(sampler_objectshader, uv_x);
+			sam_y = texture_emissivemap.Sample(sampler_objectshader, uv_y);
+			sam_z = texture_emissivemap.Sample(sampler_objectshader, uv_z);
+			sam_x.rgb = DEGAMMA(sam_x.rgb);
+			sam_y.rgb = DEGAMMA(sam_y.rgb);
+			sam_z.rgb = DEGAMMA(sam_z.rgb);
+			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+		}
+		else
+		{
+			sam = 1;
+		}
+		emissiveColor += sam * g_xMaterial.emissiveColor * blend_weights.x;
 	}
 
 	[branch]
@@ -926,6 +959,23 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 		{
 			triplanar_normal += surface.N * blend_weights.y;
 		}
+
+		[branch]
+		if (g_xMaterial_blend1.uvset_emissiveMap >= 0)
+		{
+			sam_x = texture_blend1_emissivemap.Sample(sampler_objectshader, uv_x);
+			sam_y = texture_blend1_emissivemap.Sample(sampler_objectshader, uv_y);
+			sam_z = texture_blend1_emissivemap.Sample(sampler_objectshader, uv_z);
+			sam_x.rgb = DEGAMMA(sam_x.rgb);
+			sam_y.rgb = DEGAMMA(sam_y.rgb);
+			sam_z.rgb = DEGAMMA(sam_z.rgb);
+			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+		}
+		else
+		{
+			sam = 1;
+		}
+		emissiveColor += sam * g_xMaterial_blend1.emissiveColor * blend_weights.y;
 	}
 
 	[branch]
@@ -981,6 +1031,23 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 		{
 			triplanar_normal += surface.N * blend_weights.z;
 		}
+
+		[branch]
+		if (g_xMaterial_blend2.uvset_emissiveMap >= 0)
+		{
+			sam_x = texture_blend2_emissivemap.Sample(sampler_objectshader, uv_x);
+			sam_y = texture_blend2_emissivemap.Sample(sampler_objectshader, uv_y);
+			sam_z = texture_blend2_emissivemap.Sample(sampler_objectshader, uv_z);
+			sam_x.rgb = DEGAMMA(sam_x.rgb);
+			sam_y.rgb = DEGAMMA(sam_y.rgb);
+			sam_z.rgb = DEGAMMA(sam_z.rgb);
+			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+		}
+		else
+		{
+			sam = 1;
+		}
+		emissiveColor += sam * g_xMaterial_blend2.emissiveColor * blend_weights.z;
 	}
 
 	[branch]
@@ -1036,24 +1103,29 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 		{
 			triplanar_normal += surface.N * blend_weights.w;
 		}
+
+		[branch]
+		if (g_xMaterial_blend3.uvset_emissiveMap >= 0)
+		{
+			sam_x = texture_blend3_emissivemap.Sample(sampler_objectshader, uv_x);
+			sam_y = texture_blend3_emissivemap.Sample(sampler_objectshader, uv_y);
+			sam_z = texture_blend3_emissivemap.Sample(sampler_objectshader, uv_z);
+			sam_x.rgb = DEGAMMA(sam_x.rgb);
+			sam_y.rgb = DEGAMMA(sam_y.rgb);
+			sam_z.rgb = DEGAMMA(sam_z.rgb);
+			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+		}
+		else
+		{
+			sam = 1;
+		}
+		emissiveColor += sam * g_xMaterial_blend3.emissiveColor * blend_weights.w;
 	}
 
 	color.a = 1;
 	surface.N = triplanar_normal;
 
 #endif // TERRAIN
-
-
-	// Emissive map:
-	float4 emissiveColor = g_xMaterial.emissiveColor;
-	[branch]
-	if (emissiveColor.a > 0 && g_xMaterial.uvset_emissiveMap >= 0)
-	{
-		const float2 UV_emissiveMap = g_xMaterial.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-		float4 emissiveMap = texture_emissivemap.Sample(sampler_objectshader, UV_emissiveMap);
-		emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
-		emissiveColor *= emissiveMap;
-	}
 
 	// Secondary occlusion map:
 	[branch]

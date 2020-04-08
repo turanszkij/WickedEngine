@@ -153,6 +153,8 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 
 	device->BindComputeShader(&cs_simulate, cmd);
 
+	const TextureDesc& desc = material.GetBaseColorMap()->GetDesc();
+
 	HairParticleCB hcb;
 	hcb.xWorld = world;
 	hcb.xColor = material.baseColor;
@@ -169,7 +171,13 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 	hcb.xHairBaseMeshVertexPositionStride = sizeof(MeshComponent::Vertex_POS);
 	// segmentCount will be loop in the shader, not a threadgroup so we don't need it here:
 	hcb.xHairNumDispatchGroups = (hcb.xHairParticleCount + THREADCOUNT_SIMULATEHAIR - 1) / THREADCOUNT_SIMULATEHAIR;
-	hcb.xHairAspect = (float)material.GetBaseColorMap()->GetDesc().Width / (float)material.GetBaseColorMap()->GetDesc().Height;
+	hcb.xHairFrameSize = uint2(frameWidth == 0 ? desc.Width : frameWidth, frameHeight == 0 ? desc.Height : frameHeight);
+	hcb.xHairFrameCount = std::max(1u, frameCount);
+	hcb.xHairHorizontalFrameCount = std::max(1u, horizontalFrameCount == 0 ? frameCount : horizontalFrameCount);
+	hcb.xHairTexMul = float2((float)hcb.xHairFrameSize.x / (float)desc.Width, (float)hcb.xHairFrameSize.y / (float)desc.Height);
+	hcb.xHairResolution_rcp.x = 1.0f / (float)desc.Width;
+	hcb.xHairResolution_rcp.y = 1.0f / (float)desc.Height;
+	hcb.xHairAspect = (float)hcb.xHairFrameSize.x / (float)hcb.xHairFrameSize.y;
 	device->UpdateBuffer(&cb, &hcb, cmd);
 
 	device->BindConstantBuffer(CS, &cb, CB_GETBINDSLOT(HairParticleCB), cmd);
@@ -254,6 +262,13 @@ void wiHairParticle::Serialize(wiArchive& archive, uint32_t seed)
 		{
 			archive >> vertex_lengths;
 		}
+		if (archive.GetVersion() >= 42)
+		{
+			archive >> frameWidth;
+			archive >> frameHeight;
+			archive >> frameCount;
+			archive >> horizontalFrameCount;
+		}
 	}
 	else
 	{
@@ -269,6 +284,13 @@ void wiHairParticle::Serialize(wiArchive& archive, uint32_t seed)
 		if (archive.GetVersion() >= 39)
 		{
 			archive << vertex_lengths;
+		}
+		if (archive.GetVersion() >= 42)
+		{
+			archive << frameWidth;
+			archive << frameHeight;
+			archive << frameCount;
+			archive << horizontalFrameCount;
 		}
 	}
 }

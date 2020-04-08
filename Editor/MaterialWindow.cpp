@@ -566,6 +566,68 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 
 
+	texture_emissive_Label = new wiLabel("EmissiveMap: ");
+	texture_emissive_Label->SetPos(XMFLOAT2(x, y += step));
+	texture_emissive_Label->SetSize(XMFLOAT2(120, 20));
+	materialWindow->AddWidget(texture_emissive_Label);
+
+	texture_emissive_Button = new wiButton("EmissiveMap");
+	texture_emissive_Button->SetText("");
+	texture_emissive_Button->SetTooltip("Load the emissive map texture.");
+	texture_emissive_Button->SetPos(XMFLOAT2(x + 122, y));
+	texture_emissive_Button->SetSize(XMFLOAT2(260, 20));
+	texture_emissive_Button->OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material == nullptr)
+			return;
+
+		if (material->emissiveMap != nullptr)
+		{
+			material->emissiveMap = nullptr;
+			material->emissiveMapName = "";
+			material->SetDirty();
+			texture_emissive_Button->SetText("");
+		}
+		else
+		{
+			wiHelper::FileDialogParams params;
+			wiHelper::FileDialogResult result;
+			params.type = wiHelper::FileDialogParams::OPEN;
+			params.description = "Texture";
+			params.extensions.push_back("dds");
+			params.extensions.push_back("png");
+			params.extensions.push_back("jpg");
+			params.extensions.push_back("tga");
+			wiHelper::FileDialog(params, result);
+
+			if (result.ok) {
+				string fileName = result.filenames.front();
+				material->emissiveMap = wiResourceManager::Load(fileName);
+				material->emissiveMapName = fileName;
+				material->SetDirty();
+				fileName = wiHelper::GetFileNameFromPath(fileName);
+				texture_emissive_Button->SetText(fileName);
+			}
+		}
+		});
+	materialWindow->AddWidget(texture_emissive_Button);
+
+	texture_emissive_uvset_Field = new wiTextInputField("uvset_emissive");
+	texture_emissive_uvset_Field->SetText("");
+	texture_emissive_uvset_Field->SetTooltip("uv set number");
+	texture_emissive_uvset_Field->SetPos(XMFLOAT2(x + 392, y));
+	texture_emissive_uvset_Field->SetSize(XMFLOAT2(20, 20));
+	texture_emissive_uvset_Field->OnInputAccepted([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
+			material->SetUVSet_EmissiveMap(args.iValue);
+		}
+		});
+	materialWindow->AddWidget(texture_emissive_uvset_Field);
+
+
+
 	texture_displacement_Label = new wiLabel("DisplacementMap: ");
 	texture_displacement_Label->SetPos(XMFLOAT2(x, y += step));
 	texture_displacement_Label->SetSize(XMFLOAT2(120, 20));
@@ -625,68 +687,6 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		}
 	});
 	materialWindow->AddWidget(texture_displacement_uvset_Field);
-
-
-
-	texture_emissive_Label = new wiLabel("EmissiveMap: ");
-	texture_emissive_Label->SetPos(XMFLOAT2(x, y += step));
-	texture_emissive_Label->SetSize(XMFLOAT2(120, 20));
-	materialWindow->AddWidget(texture_emissive_Label);
-
-	texture_emissive_Button = new wiButton("EmissiveMap");
-	texture_emissive_Button->SetText("");
-	texture_emissive_Button->SetTooltip("Load the emissive map texture.");
-	texture_emissive_Button->SetPos(XMFLOAT2(x + 122, y));
-	texture_emissive_Button->SetSize(XMFLOAT2(260, 20));
-	texture_emissive_Button->OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material == nullptr)
-			return;
-
-		if (material->emissiveMap != nullptr)
-		{
-			material->emissiveMap = nullptr;
-			material->emissiveMapName = "";
-			material->SetDirty();
-			texture_emissive_Button->SetText("");
-		}
-		else
-		{
-			wiHelper::FileDialogParams params;
-			wiHelper::FileDialogResult result;
-			params.type = wiHelper::FileDialogParams::OPEN;
-			params.description = "Texture";
-			params.extensions.push_back("dds");
-			params.extensions.push_back("png");
-			params.extensions.push_back("jpg");
-			params.extensions.push_back("tga");
-			wiHelper::FileDialog(params, result);
-
-			if (result.ok) {
-				string fileName = result.filenames.front();
-				material->emissiveMap = wiResourceManager::Load(fileName);
-				material->emissiveMapName = fileName;
-				material->SetDirty();
-				fileName = wiHelper::GetFileNameFromPath(fileName);
-				texture_emissive_Button->SetText(fileName);
-			}
-		}
-	});
-	materialWindow->AddWidget(texture_emissive_Button);
-
-	texture_emissive_uvset_Field = new wiTextInputField("uvset_emissive");
-	texture_emissive_uvset_Field->SetText("");
-	texture_emissive_uvset_Field->SetTooltip("uv set number");
-	texture_emissive_uvset_Field->SetPos(XMFLOAT2(x + 392, y));
-	texture_emissive_uvset_Field->SetSize(XMFLOAT2(20, 20));
-	texture_emissive_uvset_Field->OnInputAccepted([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			material->SetUVSet_EmissiveMap(args.iValue);
-		}
-	});
-	materialWindow->AddWidget(texture_emissive_uvset_Field);
 
 
 

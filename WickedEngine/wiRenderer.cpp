@@ -3424,8 +3424,8 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 						material.GetBaseColorMap(),
 						material.GetNormalMap(),
 						material.GetSurfaceMap(),
-						material.GetDisplacementMap(),
 						material.GetEmissiveMap(),
+						material.GetDisplacementMap(),
 						material.GetOcclusionMap(),
 					};
 					device->BindResources(PS, res, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(res), cmd);
@@ -3448,6 +3448,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 							material.GetBaseColorMap(),
 							material.GetNormalMap(),
 							material.GetSurfaceMap(),
+							material.GetEmissiveMap(),
 						};
 						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, arraysize(res), cmd);
 						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
@@ -3459,6 +3460,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 							blendmat.GetBaseColorMap(),
 							blendmat.GetNormalMap(),
 							blendmat.GetSurfaceMap(),
+							blendmat.GetEmissiveMap(),
 						};
 						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, arraysize(res), cmd);
 						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
@@ -3470,6 +3472,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 							material.GetBaseColorMap(),
 							material.GetNormalMap(),
 							material.GetSurfaceMap(),
+							material.GetEmissiveMap(),
 						};
 						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, arraysize(res), cmd);
 						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
@@ -3481,6 +3484,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 							blendmat.GetBaseColorMap(),
 							blendmat.GetNormalMap(),
 							blendmat.GetSurfaceMap(),
+							blendmat.GetEmissiveMap(),
 						};
 						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, arraysize(res), cmd);
 						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
@@ -3492,6 +3496,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 							material.GetBaseColorMap(),
 							material.GetNormalMap(),
 							material.GetSurfaceMap(),
+							material.GetEmissiveMap(),
 						};
 						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, arraysize(res), cmd);
 						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
@@ -3503,6 +3508,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 							blendmat.GetBaseColorMap(),
 							blendmat.GetNormalMap(),
 							blendmat.GetSurfaceMap(),
+							blendmat.GetEmissiveMap(),
 						};
 						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, arraysize(res), cmd);
 						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);

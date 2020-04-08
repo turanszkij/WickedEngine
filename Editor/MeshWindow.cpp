@@ -16,7 +16,7 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 
 	meshWindow = new wiWindow(GUI, "Mesh Window");
-	meshWindow->SetSize(XMFLOAT2(600, 620));
+	meshWindow->SetSize(XMFLOAT2(580, 640));
 	GUI->AddWidget(meshWindow);
 
 	float x = 150;
@@ -26,10 +26,10 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	meshInfoLabel = new wiLabel("Mesh Info");
 	meshInfoLabel->SetPos(XMFLOAT2(x - 50, y += step));
-	meshInfoLabel->SetSize(XMFLOAT2(450, 150));
+	meshInfoLabel->SetSize(XMFLOAT2(450, 180));
 	meshWindow->AddWidget(meshInfoLabel);
 
-	y += 160;
+	y += 190;
 
 	doubleSidedCheckBox = new wiCheckBox("Double Sided: ");
 	doubleSidedCheckBox->SetTooltip("If enabled, the inside of the mesh will be visible.");
@@ -222,7 +222,7 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	meshWindow->AddWidget(recenterToBottomButton);
 
 	x = 150;
-	y = 160;
+	y = 190;
 
 	terrainCheckBox = new wiCheckBox("Terrain: ");
 	terrainCheckBox->SetTooltip("If enabled, the mesh will use multiple materials and blend between them based on vertex colors.");
@@ -271,7 +271,7 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			}
 		}
 		});
-	terrainMat1Combo->SetTooltip("Choose a sub terrain blend material.");
+	terrainMat1Combo->SetTooltip("Choose a sub terrain blend material. (GREEN vertex color mask)");
 	meshWindow->AddWidget(terrainMat1Combo);
 
 	terrainMat2Combo = new wiComboBox("Terrain Material 2: ");
@@ -293,7 +293,7 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			}
 		}
 		});
-	terrainMat2Combo->SetTooltip("Choose a sub terrain blend material.");
+	terrainMat2Combo->SetTooltip("Choose a sub terrain blend material. (BLUE vertex color mask)");
 	meshWindow->AddWidget(terrainMat2Combo);
 
 	terrainMat3Combo = new wiComboBox("Terrain Material 3: ");
@@ -315,7 +315,7 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			}
 		}
 		});
-	terrainMat3Combo->SetTooltip("Choose a sub terrain blend material.");
+	terrainMat3Combo->SetTooltip("Choose a sub terrain blend material. (ALPHA vertex color mask)");
 	meshWindow->AddWidget(terrainMat3Combo);
 
 	terrainGenButton = new wiButton("Generate Terrain...");
@@ -366,6 +366,7 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			mesh->vertex_positions.resize(width * height);
 			mesh->vertex_normals.resize(width * height);
 			mesh->vertex_colors.resize(width * height);
+			mesh->vertex_atlas.resize(width* height);
 			for (int i = 0; i < width; ++i)
 			{
 				for (int j = 0; j < height; ++j)
@@ -375,6 +376,7 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 					if (rgb != nullptr)
 						mesh->vertex_positions[index].y = ((float)rgb[index * channelCount] - 127.0f) * heightmap_scale;
 					mesh->vertex_colors[index] = wiColor::Red().rgba;
+					mesh->vertex_atlas[index] = XMFLOAT2((float)i / (float)width, (float)j / (float)height);
 				}
 			}
 			mesh->indices.resize((width - 1) * (height - 1) * 6);
@@ -556,7 +558,7 @@ void MeshWindow::SetEntity(Entity entity)
 		if (mesh->vertexBuffer_PRE.IsValid()) ss << "prevPos; ";
 		if (mesh->vertexBuffer_BON.IsValid()) ss << "bone; ";
 		if (mesh->streamoutBuffer_POS.IsValid()) ss << "streamout; ";
-		if (mesh->IsTerrain()) ss << endl << endl << "Terrain will use 4 blend materials and blend by vertex colors, the default one is always the subset material, the other 3 are selectable below.";
+		if (mesh->IsTerrain()) ss << endl << endl << "Terrain will use 4 blend materials and blend by vertex colors, the default one is always the subset material and uses RED vertex color channel mask, the other 3 are selectable below.";
 		meshInfoLabel->SetText(ss.str());
 
 		terrainCheckBox->SetCheck(mesh->IsTerrain());

@@ -10,11 +10,11 @@ HairParticleWindow::HairParticleWindow(wiGUI* gui) : GUI(gui)
 	assert(GUI && "Invalid GUI!");
 
 	hairWindow = new wiWindow(GUI, "Hair Particle System Window");
-	hairWindow->SetSize(XMFLOAT2(800, 600));
+	hairWindow->SetSize(XMFLOAT2(600, 400));
 	GUI->AddWidget(hairWindow);
 
-	float x = 150;
-	float y = 20;
+	float x = 160;
+	float y = 0;
 	float step = 35;
 
 
@@ -52,7 +52,7 @@ HairParticleWindow::HairParticleWindow(wiGUI* gui) : GUI(gui)
 
 	countSlider = new wiSlider(0, 100000, 1000, 100000, "Strand Count: ");
 	countSlider->SetSize(XMFLOAT2(360, 30));
-	countSlider->SetPos(XMFLOAT2(x, y += step * 2));
+	countSlider->SetPos(XMFLOAT2(x, y += step));
 	countSlider->OnSlide([&](wiEventArgs args) {
 		auto hair = GetHair();
 		if (hair != nullptr)
@@ -80,7 +80,7 @@ HairParticleWindow::HairParticleWindow(wiGUI* gui) : GUI(gui)
 
 	stiffnessSlider = new wiSlider(0, 20, 5, 100000, "Particle Stiffness: ");
 	stiffnessSlider->SetSize(XMFLOAT2(360, 30));
-	stiffnessSlider->SetPos(XMFLOAT2(x, y += step * 2));
+	stiffnessSlider->SetPos(XMFLOAT2(x, y += step));
 	stiffnessSlider->OnSlide([&](wiEventArgs args) {
 		auto hair = GetHair();
 		if (hair != nullptr)
@@ -148,6 +148,68 @@ HairParticleWindow::HairParticleWindow(wiGUI* gui) : GUI(gui)
 	viewDistanceSlider->SetTooltip("Set view distance. After this, particles will be faded out.");
 	hairWindow->AddWidget(viewDistanceSlider);
 
+	frameWidthInput = new wiTextInputField("");
+	frameWidthInput->SetPos(XMFLOAT2(x, y += step));
+	frameWidthInput->SetSize(XMFLOAT2(40, 18));
+	frameWidthInput->SetText("");
+	frameWidthInput->SetTooltip("Enter a value to enable sprite sheet frame width in pixels.");
+	frameWidthInput->SetDescription("Frame Width: ");
+	frameWidthInput->OnInputAccepted([this](wiEventArgs args) {
+		auto hair = GetHair();
+		if (hair != nullptr)
+		{
+			hair->frameWidth = (uint32_t)args.iValue;
+		}
+	});
+	hairWindow->AddWidget(frameWidthInput);
+
+	frameHeightInput = new wiTextInputField("");
+	frameHeightInput->SetPos(XMFLOAT2(x + 250, y));
+	frameHeightInput->SetSize(XMFLOAT2(40, 18));
+	frameHeightInput->SetText("");
+	frameHeightInput->SetTooltip("Enter a value to enable sprite sheet frame height in pixels.");
+	frameHeightInput->SetDescription("Frame Height: ");
+	frameHeightInput->OnInputAccepted([this](wiEventArgs args) {
+		auto hair = GetHair();
+		if (hair != nullptr)
+		{
+			hair->frameHeight = (uint32_t)args.iValue;
+		}
+		});
+	hairWindow->AddWidget(frameHeightInput);
+
+	step = 20;
+
+	frameCountInput = new wiTextInputField("");
+	frameCountInput->SetPos(XMFLOAT2(x, y += step));
+	frameCountInput->SetSize(XMFLOAT2(40, 18));
+	frameCountInput->SetText("");
+	frameCountInput->SetTooltip("Enter a value to enable the random sprite sheet frame selection's max frame number.");
+	frameCountInput->SetDescription("Frame Count: ");
+	frameCountInput->OnInputAccepted([this](wiEventArgs args) {
+		auto hair = GetHair();
+		if (hair != nullptr)
+		{
+			hair->frameCount = (uint32_t)args.iValue;
+		}
+		});
+	hairWindow->AddWidget(frameCountInput);
+
+	horizontalFrameCountInput = new wiTextInputField("");
+	horizontalFrameCountInput->SetPos(XMFLOAT2(x + 250, y));
+	horizontalFrameCountInput->SetSize(XMFLOAT2(40, 18));
+	horizontalFrameCountInput->SetText("");
+	horizontalFrameCountInput->SetTooltip("Specifies how many sprite sheet frames are in the horizontal direction. 0 = all frames are placed horizontally.");
+	horizontalFrameCountInput->SetDescription("Horizontal Frame Count: ");
+	horizontalFrameCountInput->OnInputAccepted([this](wiEventArgs args) {
+		auto hair = GetHair();
+		if (hair != nullptr)
+		{
+			hair->horizontalFrameCount = (uint32_t)args.iValue;
+		}
+		});
+	hairWindow->AddWidget(horizontalFrameCountInput);
+
 
 	hairWindow->Translate(XMFLOAT3(200, 50, 0));
 	hairWindow->SetVisible(false);
@@ -177,11 +239,19 @@ void HairParticleWindow::SetEntity(Entity entity)
 		segmentcountSlider->SetValue((float)hair->segmentCount);
 		randomSeedSlider->SetValue((float)hair->randomSeed);
 		viewDistanceSlider->SetValue(hair->viewDistance);
+		frameWidthInput->SetValue((int)hair->frameWidth);
+		frameHeightInput->SetValue((int)hair->frameHeight);
+		frameCountInput->SetValue((int)hair->frameCount);
+		horizontalFrameCountInput->SetValue((int)hair->horizontalFrameCount);
+
+		hairWindow->SetEnabled(true);
 	}
 	else
 	{
+		hairWindow->SetEnabled(false);
 	}
 
+	addButton->SetEnabled(true);
 }
 
 wiHairParticle* HairParticleWindow::GetHair()
