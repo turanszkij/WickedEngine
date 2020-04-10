@@ -547,8 +547,6 @@ void wiTextInputField::Update(wiGUI* gui, float dt)
 
 		if (state == ACTIVE)
 		{
-			font_input.params = font.params;
-
 			if (wiInput::Press(wiInput::KEYBOARD_BUTTON_ENTER))
 			{
 				// accept input...
@@ -578,6 +576,11 @@ void wiTextInputField::Update(wiGUI* gui, float dt)
 	font.params.posX = (int)translation.x + 2;
 	font.params.posY = (int)(translation.y + scale.y * 0.5f);
 	font.params.v_align = WIFALIGN_CENTER;
+
+	if (state == ACTIVE)
+	{
+		font_input.params = font.params;
+	}
 }
 void wiTextInputField::Render(const wiGUI* gui, CommandList cmd) const
 {
