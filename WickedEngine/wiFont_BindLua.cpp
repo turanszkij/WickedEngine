@@ -149,7 +149,7 @@ int wiFont_BindLua::SetColor(lua_State* L)
 		}
 	}
 	else
-		wiLua::SError(L, "SetColor(Vector pos) not enough arguments!");
+		wiLua::SError(L, "SetColor(Vector value) not enough arguments!");
 	return 0;
 }
 int wiFont_BindLua::SetShadowColor(lua_State* L)
@@ -171,7 +171,7 @@ int wiFont_BindLua::SetShadowColor(lua_State* L)
 		}
 	}
 	else
-		wiLua::SError(L, "SetShadowColor(Vector pos) not enough arguments!");
+		wiLua::SError(L, "SetShadowColor(Vector value) not enough arguments!");
 	return 0;
 }
 

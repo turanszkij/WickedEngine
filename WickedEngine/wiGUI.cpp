@@ -108,6 +108,13 @@ void wiGUI::Update(float dt)
 		}
 	}
 
+	for (auto& widget : priorityChangeQueue)
+	{
+		widgets.remove(widget);
+		widgets.push_front(widget);
+	}
+	priorityChangeQueue.clear();
+
 	scissorRect.bottom = (int32_t)(wiRenderer::GetDevice()->GetScreenHeight());
 	scissorRect.left = (int32_t)(0);
 	scissorRect.right = (int32_t)(wiRenderer::GetDevice()->GetScreenWidth());
@@ -122,18 +129,19 @@ void wiGUI::Render(CommandList cmd) const
 	}
 
 	wiRenderer::GetDevice()->EventBegin("GUI", cmd);
-	for (auto&x : widgets)
+	for (auto it = widgets.rbegin(); it != widgets.rend(); ++it)
 	{
-		if (x->parent == this && x != activeWidget)
+		const wiWidget* widget = (*it);
+		if (widget->parent == this && widget != activeWidget)
 		{
 			// the contained child widgets will be rendered by the containers
 			ApplyScissor(scissorRect, cmd);
-			x->Render(this, cmd);
+			widget->Render(this, cmd);
 		}
 	}
 	if (activeWidget != nullptr)
 	{
-		// render the active widget on top of everything
+		// Active widget is always on top!
 		ApplyScissor(scissorRect, cmd);
 		activeWidget->Render(this, cmd);
 	}
@@ -174,8 +182,15 @@ wiWidget* wiGUI::GetWidget(const wiHashString& name)
 
 void wiGUI::ActivateWidget(wiWidget* widget)
 {
-	activeWidget = widget;
-	activeWidget->Activate();
+	if (std::find(widgets.begin(), widgets.end(), widget) != widgets.end())
+	{
+		priorityChangeQueue.push_back(widget);
+	}
+	if (activeWidget == nullptr)
+	{
+		activeWidget = widget;
+		activeWidget->Activate();
+	}
 }
 void wiGUI::DeactivateWidget(wiWidget* widget)
 {

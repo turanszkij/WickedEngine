@@ -19,6 +19,7 @@ Luna<wiImageParams_BindLua>::FunctionType wiImageParams_BindLua::methods[] = {
 	lunamethod(wiImageParams_BindLua, IsDrawRectEnabled),
 	lunamethod(wiImageParams_BindLua, IsDrawRect2Enabled),
 	lunamethod(wiImageParams_BindLua, IsMirrorEnabled),
+	lunamethod(wiImageParams_BindLua, IsBackgroundBlurEnabled),
 
 	lunamethod(wiImageParams_BindLua, SetPos),
 	lunamethod(wiImageParams_BindLua, SetSize),
@@ -41,6 +42,8 @@ Luna<wiImageParams_BindLua>::FunctionType wiImageParams_BindLua::methods[] = {
 	lunamethod(wiImageParams_BindLua, DisableDrawRect2),
 	lunamethod(wiImageParams_BindLua, EnableMirror),
 	lunamethod(wiImageParams_BindLua, DisableMirror),
+	lunamethod(wiImageParams_BindLua, EnableBackgroundBlur),
+	lunamethod(wiImageParams_BindLua, DisableBackgroundBlur),
 	{ NULL, NULL }
 };
 Luna<wiImageParams_BindLua>::PropertyType wiImageParams_BindLua::properties[] = {
@@ -69,7 +72,7 @@ int wiImageParams_BindLua::GetPivot(lua_State* L)
 }
 int wiImageParams_BindLua::GetColor(lua_State* L)
 {
-	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&params.col)));
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&params.color)));
 	return 1;
 }
 int wiImageParams_BindLua::GetOpacity(lua_State* L)
@@ -125,6 +128,11 @@ int wiImageParams_BindLua::IsDrawRect2Enabled(lua_State* L)
 int wiImageParams_BindLua::IsMirrorEnabled(lua_State* L)
 {
 	wiLua::SSetBool(L, params.isMirrorEnabled());
+	return 1;
+}
+int wiImageParams_BindLua::IsBackgroundBlurEnabled(lua_State* L)
+{
+	wiLua::SSetBool(L, params.isBackgroundBlurEnabled());
 	return 1;
 }
 
@@ -184,10 +192,10 @@ int wiImageParams_BindLua::SetColor(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
-		if (vector != nullptr)
+		Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (param != nullptr)
 		{
-			XMStoreFloat4(&params.col, vector->vector);
+			XMStoreFloat4(&params.color, param->vector);
 		}
 	}
 	else
@@ -404,6 +412,22 @@ int wiImageParams_BindLua::EnableMirror(lua_State* L)
 int wiImageParams_BindLua::DisableMirror(lua_State* L)
 {
 	params.disableMirror();
+	return 0;
+}
+int wiImageParams_BindLua::EnableBackgroundBlur(lua_State* L)
+{
+	float mip = 0;
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		mip = wiLua::SGetFloat(L, 1);
+	}
+	params.enableBackgroundBlur(mip);
+	return 0;
+}
+int wiImageParams_BindLua::DisableBackgroundBlur(lua_State* L)
+{
+	params.disableBackgroundBlur();
 	return 0;
 }
 

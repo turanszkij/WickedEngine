@@ -220,8 +220,8 @@ void EditorComponent::Load()
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	XMFLOAT2 option_size = XMFLOAT2(100, 28);
-	float step = (option_size.y + 5) * -1, x = screenW - option_size.x, y = screenH - option_size.y;
-	float hstep = (option_size.x + 5) * -1;
+	float step = (option_size.y + 2) * -1, x = screenW - option_size.x, y = screenH - option_size.y;
+	float hstep = (option_size.x + 2) * -1;
 
 
 	wiButton* paintToolWnd_Toggle = new wiButton("Paint Tool");
@@ -429,7 +429,7 @@ void EditorComponent::Load()
 	saveButton->SetTooltip("Save the current scene");
 	saveButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5, 0));
 	saveButton->SetSize(XMFLOAT2(100, 40));
-	saveButton->SetColor(wiColor(0, 198, 101, 200), wiWidget::WIDGETSTATE::IDLE);
+	saveButton->SetColor(wiColor(0, 198, 101, 180), wiWidget::WIDGETSTATE::IDLE);
 	saveButton->SetColor(wiColor(0, 255, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
 	saveButton->OnClick([=](wiEventArgs args) {
 
@@ -468,7 +468,7 @@ void EditorComponent::Load()
 	modelButton->SetTooltip("Load a scene / import model into the editor...");
 	modelButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 4, 0));
 	modelButton->SetSize(XMFLOAT2(100, 40));
-	modelButton->SetColor(wiColor(0, 89, 255, 200), wiWidget::WIDGETSTATE::IDLE);
+	modelButton->SetColor(wiColor(0, 89, 255, 180), wiWidget::WIDGETSTATE::IDLE);
 	modelButton->SetColor(wiColor(112, 155, 255, 255), wiWidget::WIDGETSTATE::FOCUS);
 	modelButton->OnClick([=](wiEventArgs args) {
 		thread([&] {
@@ -529,7 +529,7 @@ void EditorComponent::Load()
 	scriptButton->SetTooltip("Load a Lua script...");
 	scriptButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 3, 0));
 	scriptButton->SetSize(XMFLOAT2(100, 40));
-	scriptButton->SetColor(wiColor(255, 33, 140, 200), wiWidget::WIDGETSTATE::IDLE);
+	scriptButton->SetColor(wiColor(255, 33, 140, 180), wiWidget::WIDGETSTATE::IDLE);
 	scriptButton->SetColor(wiColor(255, 100, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
 	scriptButton->OnClick([=](wiEventArgs args) {
 		thread([&] {
@@ -555,7 +555,7 @@ void EditorComponent::Load()
 	shaderButton->SetTooltip("Reload shaders from the default directory...");
 	shaderButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 2, 0));
 	shaderButton->SetSize(XMFLOAT2(100, 40));
-	shaderButton->SetColor(wiColor(255, 33, 140, 200), wiWidget::WIDGETSTATE::IDLE);
+	shaderButton->SetColor(wiColor(255, 33, 140, 180), wiWidget::WIDGETSTATE::IDLE);
 	shaderButton->SetColor(wiColor(255, 100, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
 	shaderButton->OnClick([=](wiEventArgs args) {
 
@@ -571,7 +571,7 @@ void EditorComponent::Load()
 	clearButton->SetTooltip("Delete every model from the scene");
 	clearButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 1, 0));
 	clearButton->SetSize(XMFLOAT2(100, 40));
-	clearButton->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
+	clearButton->SetColor(wiColor(255, 205, 43, 180), wiWidget::WIDGETSTATE::IDLE);
 	clearButton->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
 	clearButton->OnClick([&](wiEventArgs args) {
 		translator.selected.clear();
@@ -596,7 +596,7 @@ void EditorComponent::Load()
 	helpButton->SetTooltip("Help");
 	helpButton->SetPos(XMFLOAT2(screenW - 50 - 55, 0));
 	helpButton->SetSize(XMFLOAT2(50, 40));
-	helpButton->SetColor(wiColor(34, 158, 214, 200), wiWidget::WIDGETSTATE::IDLE);
+	helpButton->SetColor(wiColor(34, 158, 214, 180), wiWidget::WIDGETSTATE::IDLE);
 	helpButton->SetColor(wiColor(113, 183, 214, 255), wiWidget::WIDGETSTATE::FOCUS);
 	helpButton->OnClick([=](wiEventArgs args) {
 		static wiLabel* helpLabel = nullptr;
@@ -646,7 +646,7 @@ void EditorComponent::Load()
 	exitButton->SetTooltip("Exit");
 	exitButton->SetPos(XMFLOAT2(screenW - 50, 0));
 	exitButton->SetSize(XMFLOAT2(50, 40));
-	exitButton->SetColor(wiColor(190, 0, 0, 200), wiWidget::WIDGETSTATE::IDLE);
+	exitButton->SetColor(wiColor(190, 0, 0, 180), wiWidget::WIDGETSTATE::IDLE);
 	exitButton->SetColor(wiColor(255, 0, 0, 255), wiWidget::WIDGETSTATE::FOCUS);
 	exitButton->OnClick([this](wiEventArgs args) {
 		exit(0);
@@ -1766,7 +1766,10 @@ void EditorComponent::Compose(CommandList cmd) const
 
 	Scene& scene = wiScene::GetScene();
 
-	const XMFLOAT4 selectedEntityColor = wiMath::Lerp(wiMath::Lerp(XMFLOAT4(1, 1, 1, 1), selectionColor, 0.4f), selectionColor, selectionColorIntensity);
+	const wiColor inactiveEntityColor = wiColor::fromFloat4(XMFLOAT4(1, 1, 1, 0.5f));
+	const wiColor hoveredEntityColor = wiColor::fromFloat4(XMFLOAT4(1, 1, 1, 1));
+	const XMFLOAT4 glow = wiMath::Lerp(wiMath::Lerp(XMFLOAT4(1, 1, 1, 1), selectionColor, 0.4f), selectionColor, selectionColorIntensity);
+	const wiColor selectedEntityColor = wiColor::fromFloat4(glow);
 
 	if (rendererWnd->GetPickType() & PICK_LIGHT)
 	{
@@ -1783,17 +1786,17 @@ void EditorComponent::Compose(CommandList cmd) const
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-			fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+			fx.color = inactiveEntityColor;
 
 			if (hovered.entity == entity)
 			{
-				fx.col = XMFLOAT4(1, 1, 1, 1);
+				fx.color = hoveredEntityColor;
 			}
 			for (auto& picked : translator.selected)
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = selectedEntityColor;
+					fx.color = selectedEntityColor;
 					break;
 				}
 			}
@@ -1831,17 +1834,17 @@ void EditorComponent::Compose(CommandList cmd) const
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-			fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+			fx.color = inactiveEntityColor;
 
 			if (hovered.entity == entity)
 			{
-				fx.col = XMFLOAT4(1, 1, 1, 1);
+				fx.color = hoveredEntityColor;
 			}
 			for (auto& picked : translator.selected)
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = selectedEntityColor;
+					fx.color = selectedEntityColor;
 					break;
 				}
 			}
@@ -1866,17 +1869,17 @@ void EditorComponent::Compose(CommandList cmd) const
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-			fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+			fx.color = inactiveEntityColor;
 
 			if (hovered.entity == entity)
 			{
-				fx.col = XMFLOAT4(1, 1, 1, 1);
+				fx.color = hoveredEntityColor;
 			}
 			for (auto& picked : translator.selected)
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = selectedEntityColor;
+					fx.color = selectedEntityColor;
 					break;
 				}
 			}
@@ -1901,17 +1904,17 @@ void EditorComponent::Compose(CommandList cmd) const
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-			fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+			fx.color = inactiveEntityColor;
 
 			if (hovered.entity == entity)
 			{
-				fx.col = XMFLOAT4(1, 1, 1, 1);
+				fx.color = hoveredEntityColor;
 			}
 			for (auto& picked : translator.selected)
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = selectedEntityColor;
+					fx.color = selectedEntityColor;
 					break;
 				}
 			}
@@ -1935,17 +1938,17 @@ void EditorComponent::Compose(CommandList cmd) const
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-			fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+			fx.color = inactiveEntityColor;
 
 			if (hovered.entity == entity)
 			{
-				fx.col = XMFLOAT4(1, 1, 1, 1);
+				fx.color = hoveredEntityColor;
 			}
 			for (auto& picked : translator.selected)
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = selectedEntityColor;
+					fx.color = selectedEntityColor;
 					break;
 				}
 			}
@@ -1969,17 +1972,17 @@ void EditorComponent::Compose(CommandList cmd) const
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-			fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+			fx.color = inactiveEntityColor;
 
 			if (hovered.entity == entity)
 			{
-				fx.col = XMFLOAT4(1, 1, 1, 1);
+				fx.color = hoveredEntityColor;
 			}
 			for (auto& picked : translator.selected)
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = selectedEntityColor;
+					fx.color = selectedEntityColor;
 					break;
 				}
 			}
@@ -2003,17 +2006,17 @@ void EditorComponent::Compose(CommandList cmd) const
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-			fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+			fx.color = inactiveEntityColor;
 
 			if (hovered.entity == entity)
 			{
-				fx.col = XMFLOAT4(1, 1, 1, 1);
+				fx.color = hoveredEntityColor;
 			}
 			for (auto& picked : translator.selected)
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = selectedEntityColor;
+					fx.color = selectedEntityColor;
 					break;
 				}
 			}
@@ -2037,17 +2040,17 @@ void EditorComponent::Compose(CommandList cmd) const
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-			fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+			fx.color = inactiveEntityColor;
 
 			if (hovered.entity == entity)
 			{
-				fx.col = XMFLOAT4(1, 1, 1, 1);
+				fx.color = hoveredEntityColor;
 			}
 			for (auto& picked : translator.selected)
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = selectedEntityColor;
+					fx.color = selectedEntityColor;
 					break;
 				}
 			}

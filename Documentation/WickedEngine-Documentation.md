@@ -771,7 +771,7 @@ This can render fonts to the screen in a simple manner. You can render a font as
 ```cpp
 wiFont("write this!", wiFontParams(10, 20)).Draw(cmd);
 ```
-Which will write the text <i>write this!</i> to 10, 20 pixel position onto the screen. There are many other parameters to describe the font's position, size, color, etc. See the wiFontParams structure for more details.
+Which will write the text <i>write this!</i> to 10, 20 pixel position onto the screen. There are many other parameters to describe the font's position, size, color, etc. See the wiFontParams structure for more details. Note that wiFont internally does string conversion, so it is recommended to avoid repeatedly creating wiFont resources during the frame!
 - wiFontParams <br/>
 Describe all parameters of how and where to draw the font on the screen.
 

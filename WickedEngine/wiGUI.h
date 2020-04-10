@@ -26,6 +26,7 @@ class wiGUI : public wiGUIElement
 	friend class wiWidget;
 private:
 	std::list<wiWidget*> widgets;
+	std::vector<wiWidget*> priorityChangeQueue;
 	wiWidget* activeWidget = nullptr;
 	bool focus = false;
 	bool visible = true;

@@ -73,6 +73,7 @@ protected:
 	wiGraphics::Texture rtAO; // full res AO
 	wiGraphics::Texture rtSun[2]; // 0: sun render target used for lightshafts (can be MSAA), 1: radial blurred lightshafts
 	wiGraphics::Texture rtSun_resolved; // sun render target, but the resolved version if MSAA is enabled
+	wiGraphics::Texture rtGUIBlurredBackground[3];	// downsampled, gaussian blurred scene for GUI
 
 	wiGraphics::Texture rtPostprocess_HDR; // ping-pong with main scene RT in HDR post-process chain
 	wiGraphics::Texture rtPostprocess_LDR[2]; // ping-pong with itself in LDR post-process chain
@@ -122,6 +123,7 @@ protected:
 	
 public:
 	const wiGraphics::Texture* GetDepthStencil() const override { return &depthBuffer; }
+	const wiGraphics::Texture* GetGUIBlurredBackground() const override { return &rtGUIBlurredBackground[2]; }
 
 	constexpr float getExposure() const { return exposure; }
 	constexpr float getBloomThreshold() const { return bloomThreshold; }

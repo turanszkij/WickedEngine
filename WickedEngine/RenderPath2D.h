@@ -53,6 +53,7 @@ public:
 
 	const wiGraphics::Texture& GetRenderResult() const { return rtFinal; }
 	virtual const wiGraphics::Texture* GetDepthStencil() const { return nullptr; }
+	virtual const wiGraphics::Texture* GetGUIBlurredBackground() const { return nullptr; }
 
 	void AddSprite(wiSprite* sprite, const std::string& layer = "");
 	void RemoveSprite(wiSprite* sprite);

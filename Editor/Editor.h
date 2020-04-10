@@ -72,6 +72,7 @@ public:
 		RENDERPATH_PATHTRACING,
 	};
 	void ChangeRenderPath(RENDERPATH path);
+	const wiGraphics::Texture* GetGUIBlurredBackground() const override { return renderPath->GetGUIBlurredBackground(); }
 
 	void ResizeBuffers() override;
 	void Load() override;

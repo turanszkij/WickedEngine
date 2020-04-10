@@ -2,6 +2,7 @@
 #include "wiImage.h"
 #include "wiRenderer.h"
 #include "wiRandom.h"
+#include "wiTextureHelper.h"
 
 using namespace wiGraphics;
 
@@ -22,7 +23,7 @@ wiSprite::wiSprite(const std::string& newTexture, const std::string& newMask)
 
 void wiSprite::Draw(CommandList cmd) const
 {
-	wiImage::Draw(textureResource->texture, params, cmd);
+	wiImage::Draw(textureResource != nullptr ? textureResource->texture : wiTextureHelper::getWhite(), params, cmd);
 }
 void wiSprite::DrawNormal(CommandList cmd) const
 {
@@ -31,7 +32,7 @@ void wiSprite::DrawNormal(CommandList cmd) const
 		wiImageParams effectsMod(params);
 		effectsMod.blendFlag = BLENDMODE_ADDITIVE;
 		effectsMod.enableExtractNormalMap();
-		wiImage::Draw(textureResource->texture, effectsMod, cmd);
+		wiImage::Draw(textureResource != nullptr ? textureResource->texture : wiTextureHelper::getWhite(), effectsMod, cmd);
 	}
 }
 

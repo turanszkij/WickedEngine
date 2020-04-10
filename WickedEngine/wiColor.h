@@ -36,6 +36,8 @@ struct wiColor
 			((rgba >> 24) & 0xFF) / 255.0f
 		);
 	}
+	constexpr operator XMFLOAT3() const { return toFloat3(); }
+	constexpr operator XMFLOAT4() const { return toFloat4(); }
 
 	static constexpr wiColor fromFloat4(const XMFLOAT4& value)
 	{

@@ -18,6 +18,7 @@ VertextoPixel main(uint vI : SV_VERTEXID)
 	Out.uv1 = Out.uv0;
 	Out.uv0 = Out.uv0 * xTexMulAdd.xy + xTexMulAdd.zw;
 	Out.uv1 = Out.uv1 * xTexMulAdd2.xy + xTexMulAdd2.zw;
+	Out.uv_screen = Out.pos;
 
 	return Out;
 }

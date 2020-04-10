@@ -2,6 +2,7 @@
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiEnums.h"
+#include "wiColor.h"
 
 struct wiImageParams;
 
@@ -64,13 +65,14 @@ struct wiImageParams
 		MIRROR = 1 << 2,
 		EXTRACT_NORMALMAP = 1 << 3,
 		FULLSCREEN = 1 << 4,
+		BACKGROUND_BLUR = 1 << 5,
 	};
 	uint32_t _flags = EMPTY;
 
 	XMFLOAT3 pos;
 	XMFLOAT2 siz;
 	XMFLOAT2 scale;
-	XMFLOAT4 col;
+	XMFLOAT4 color;
 	XMFLOAT4 drawRect;
 	XMFLOAT4 drawRect2;
 	XMFLOAT4 lookAt;			//(x,y,z) : direction, (w) :isenabled?
@@ -79,6 +81,7 @@ struct wiImageParams
 	XMFLOAT2 pivot;				// (0,0) : upperleft, (0.5,0.5) : center, (1,1) : bottomright
 	float rotation;
 	float mipLevel;
+	float mipLevel_Background;	// can blur background with this if > 0 and the background texture has mip levels
 	float fade;
 	float opacity;
 	XMFLOAT2 corners[4];		// you can deform the image by its corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
@@ -100,17 +103,19 @@ struct wiImageParams
 		_flags = EMPTY;
 		pos = XMFLOAT3(0, 0, 0);
 		siz = XMFLOAT2(1, 1);
-		col = XMFLOAT4(1, 1, 1, 1);
 		scale = XMFLOAT2(1, 1);
+		color = XMFLOAT4(1, 1, 1, 1);
 		drawRect = XMFLOAT4(0, 0, 0, 0);
 		drawRect2 = XMFLOAT4(0, 0, 0, 0);
 		texOffset = XMFLOAT2(0, 0);
 		texOffset2 = XMFLOAT2(0, 0);
 		lookAt = XMFLOAT4(0, 0, 0, 0);
 		pivot = XMFLOAT2(0, 0);
-		fade = rotation = 0.0f;
-		opacity = 1.0f;
-		mipLevel = 0.f;
+		fade = 0;
+		rotation = 0;
+		opacity = 1;
+		mipLevel = 0;
+		mipLevel_Background = 0;
 		stencilRef = 0;
 		stencilComp = STENCILMODE_DISABLED;
 		stencilRefMode = STENCILREFMODE_ALL;
@@ -130,6 +135,7 @@ struct wiImageParams
 	constexpr bool isMirrorEnabled() const { return _flags & MIRROR; }
 	constexpr bool isExtractNormalMapEnabled() const { return _flags & EXTRACT_NORMALMAP; }
 	constexpr bool isFullScreenEnabled() const { return _flags & FULLSCREEN; }
+	constexpr bool isBackgroundBlurEnabled() const { return _flags & BACKGROUND_BLUR; }
 
 	// enables draw rectangle for base texture (cutout texture outside draw rectangle)
 	void enableDrawRect(const XMFLOAT4& rect) { _flags |= DRAWRECT; drawRect = rect; }
@@ -141,6 +147,9 @@ struct wiImageParams
 	void enableExtractNormalMap() { _flags |= EXTRACT_NORMALMAP; }
 	// enable full screen override. It just draws texture onto the full screen, disabling any other setup except sampler and stencil)
 	void enableFullScreen() { _flags |= FULLSCREEN; }
+	// enable background blur, which samples a background screen texture on a specified mip level on transparent areas instead of alpha blending
+	//	the background tex should be bound to resource slot: TEXSLOT_IMAGE_BACKGROUND beforehand!
+	void enableBackgroundBlur(float mip) { _flags |= BACKGROUND_BLUR; mipLevel_Background = mip; }
 
 	// disable draw rectangle for base texture (whole texture will be drawn, no cutout)
 	void disableDrawRect() { _flags &= ~DRAWRECT; }
@@ -152,6 +161,8 @@ struct wiImageParams
 	void disableExtractNormalMap() { _flags &= ~EXTRACT_NORMALMAP; }
 	// disable full screen override
 	void disableFullScreen() { _flags &= ~FULLSCREEN; }
+	// disable background blur
+	void disableBackgroundBlur() { _flags &= ~BACKGROUND_BLUR; }
 
 
 	wiImageParams() 
@@ -163,12 +174,12 @@ struct wiImageParams
 		init();
 		siz = XMFLOAT2(width, height);
 	}
-	wiImageParams(float posX, float posY, float width, float height, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1))
+	wiImageParams(float posX, float posY, float width, float height, const XMFLOAT4& _color = XMFLOAT4(1, 1, 1, 1))
 	{
 		init();
 		pos.x = posX;
 		pos.y = posY;
 		siz = XMFLOAT2(width, height);
-		col = color;
+		color = _color;
 	}
 };

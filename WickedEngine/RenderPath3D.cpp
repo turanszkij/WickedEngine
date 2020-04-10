@@ -186,6 +186,19 @@ void RenderPath3D::ResizeBuffers()
 		device->SetName(&rtPostprocess_LDR[0], "rtPostprocess_LDR[0]");
 		device->CreateTexture(&desc, nullptr, &rtPostprocess_LDR[1]);
 		device->SetName(&rtPostprocess_LDR[1], "rtPostprocess_LDR[1]");
+
+		desc.Width /= 4;
+		desc.Height /= 4;
+		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[0]);
+		device->SetName(&rtGUIBlurredBackground[0], "rtGUIBlurredBackground[0]");
+
+		desc.Width /= 4;
+		desc.Height /= 4;
+		device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[1]);
+		device->SetName(&rtGUIBlurredBackground[1], "rtGUIBlurredBackground[1]");
+		device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[2]);
+		device->SetName(&rtGUIBlurredBackground[2], "rtGUIBlurredBackground[2]");
 	}
 
 	// Depth buffers:
@@ -758,6 +771,17 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 
 			std::swap(rt_read, rt_write);
 			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
+		}
+
+		// GUI Background blurring:
+		{
+			auto range = wiProfiler::BeginRangeGPU("GUI Background Blur", cmd);
+			device->EventBegin("GUI Background Blur", cmd);
+			wiRenderer::Postprocess_Downsample4x(*rt_read, rtGUIBlurredBackground[0], cmd);
+			wiRenderer::Postprocess_Downsample4x(rtGUIBlurredBackground[0], rtGUIBlurredBackground[2], cmd);
+			wiRenderer::Postprocess_Blur_Gaussian(rtGUIBlurredBackground[2], rtGUIBlurredBackground[1], rtGUIBlurredBackground[2], cmd);
+			device->EventEnd(cmd);
+			wiProfiler::EndRange(range);
 		}
 	}
 }

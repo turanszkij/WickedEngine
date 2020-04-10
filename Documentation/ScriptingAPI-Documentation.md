@@ -182,6 +182,7 @@ Specify Sprite properties, like position, size, etc.
 - IsDrawRectEnabled() : bool result
 - IsDrawRect2Enabled() : bool result
 - IsMirrorEnabled() : bool result
+- IsBackgroundBlurEnabled() : bool result
 - SetPos(Vector pos)
 - SetSize(Vector size)
 - SetPivot(Vector value)
@@ -203,6 +204,8 @@ Specify Sprite properties, like position, size, etc.
 - DisableDrawRect2()
 - EnableMirror()
 - DisableMirror()
+- EnableBackgroundBlur(opt float mip = 0)
+- DisableBackgroundBlur()
 
 - [outer]STENCILMODE_DISABLED : int
 - [outer]STENCILMODE_EQUAL : int

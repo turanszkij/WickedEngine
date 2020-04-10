@@ -132,6 +132,7 @@ void RenderPath2D::Render() const
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	CommandList cmd = device->BeginCommandList();
 
+	wiRenderer::GetDevice()->BindResource(PS, GetGUIBlurredBackground(), TEXSLOT_IMAGE_BACKGROUND, cmd);
 
 	// Special care for internal resolution, because stencil buffer is of internal resolution, 
 	//	so we might need to render stencil sprites to separate render target that matches internal resolution!

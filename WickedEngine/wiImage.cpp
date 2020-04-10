@@ -21,6 +21,7 @@ namespace wiImage
 		IMAGE_SHADER_STANDARD,
 		IMAGE_SHADER_SEPARATENORMALMAP,
 		IMAGE_SHADER_MASKED,
+		IMAGE_SHADER_BACKGROUNDBLUR,
 		IMAGE_SHADER_FULLSCREEN,
 		IMAGE_SHADER_COUNT
 	};
@@ -53,9 +54,7 @@ namespace wiImage
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		device->EventBegin("Image", cmd);
 
-		bool fullScreenEffect = false;
-
-		device->BindResource(PS, texture, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(PS, texture, TEXSLOT_IMAGE_BASE, cmd);
 
 		uint32_t stencilRef = params.stencilRef;
 		if (params.stencilRefMode == STENCILREFMODE_USER)
@@ -95,7 +94,7 @@ namespace wiImage
 		}
 
 		ImageCB cb;
-		cb.xColor = params.col;
+		cb.xColor = params.color;
 		const float darken = 1 - params.fade;
 		cb.xColor.x *= darken;
 		cb.xColor.y *= darken;
@@ -103,6 +102,7 @@ namespace wiImage
 		cb.xColor.w *= params.opacity;
 		cb.xMirror = params.isMirrorEnabled() ? 1 : 0;
 		cb.xMipLevel = params.mipLevel;
+		cb.xMipLevel_Background = params.mipLevel_Background;
 
 		if (params.isFullScreenEnabled())
 		{
@@ -201,8 +201,9 @@ namespace wiImage
 
 		// Determine relevant image rendering pixel shader:
 		IMAGE_SHADER targetShader;
-		bool NormalmapSeparate = params.isExtractNormalMapEnabled();
-		bool Mask = params.maskMap != nullptr;
+		const bool NormalmapSeparate = params.isExtractNormalMapEnabled();
+		const bool Mask = params.maskMap != nullptr;
+		const bool background_blur = params.isBackgroundBlurEnabled();
 		if (NormalmapSeparate)
 		{
 			targetShader = IMAGE_SHADER_SEPARATENORMALMAP;
@@ -215,7 +216,14 @@ namespace wiImage
 			}
 			else
 			{
-				targetShader = IMAGE_SHADER_STANDARD;
+				if (background_blur)
+				{
+					targetShader = IMAGE_SHADER_BACKGROUNDBLUR;
+				}
+				else
+				{
+					targetShader = IMAGE_SHADER_STANDARD;
+				}
 			}
 		}
 
@@ -224,7 +232,7 @@ namespace wiImage
 		device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
 		device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
 
-		device->BindResource(PS, params.maskMap, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(PS, params.maskMap, TEXSLOT_IMAGE_MASK, cmd);
 
 		device->Draw(4, 0, cmd);
 
@@ -241,11 +249,13 @@ namespace wiImage
 
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_STANDARD][IMAGE_SAMPLING_SIMPLE], "imagePS.cso");
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_SEPARATENORMALMAP][IMAGE_SAMPLING_SIMPLE], "imagePS_separatenormalmap.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_MASKED][IMAGE_SAMPLING_SIMPLE],"imagePS_masked.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_MASKED][IMAGE_SAMPLING_SIMPLE], "imagePS_masked.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_BACKGROUNDBLUR][IMAGE_SAMPLING_SIMPLE], "imagePS_backgroundblur.cso");
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_FULLSCREEN][IMAGE_SAMPLING_SIMPLE], "screenPS.cso");
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_STANDARD][IMAGE_SAMPLING_BICUBIC], "imagePS_bicubic.cso");
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_SEPARATENORMALMAP][IMAGE_SAMPLING_BICUBIC], "imagePS_separatenormalmap_bicubic.cso");
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_MASKED][IMAGE_SAMPLING_BICUBIC], "imagePS_masked_bicubic.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_BACKGROUNDBLUR][IMAGE_SAMPLING_BICUBIC], "imagePS_backgroundblur_bicubic.cso");
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_FULLSCREEN][IMAGE_SAMPLING_BICUBIC], "screenPS_bicubic.cso");
 
 

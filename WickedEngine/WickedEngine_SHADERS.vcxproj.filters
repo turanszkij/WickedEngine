@@ -726,9 +726,6 @@
     <FxCompile Include="motionblurCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="bloomseparateCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="fxaaCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -956,6 +953,18 @@
     </FxCompile>
     <FxCompile Include="envMapPS_terrain.hlsl">
       <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="imagePS_backgroundblur.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="imagePS_backgroundblur_bicubic.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="downsample4xCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="bloomseparateCS.hlsl">
+      <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

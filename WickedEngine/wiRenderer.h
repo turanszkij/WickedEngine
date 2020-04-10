@@ -157,6 +157,7 @@ namespace wiRenderer
 	// Compute the luminance for the source image and return the texture containing the luminance value in pixel [0,0]
 	const wiGraphics::Texture* ComputeLuminance(const wiGraphics::Texture& sourceImage, wiGraphics::CommandList cmd);
 
+
 	void DeferredComposition(
 		const wiGraphics::Texture& gbuffer0,
 		const wiGraphics::Texture& gbuffer1,
@@ -312,6 +313,11 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd,
 		bool is_pixelshader = false,
 		float threshold = 1.0f
+	);
+	void Postprocess_Downsample4x(
+		const wiGraphics::Texture& input,
+		const wiGraphics::Texture& output,
+		wiGraphics::CommandList cmd
 	);
 
 	// Build the scene BVH on GPU that can be used by ray traced rendering

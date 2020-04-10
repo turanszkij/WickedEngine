@@ -27,7 +27,7 @@ struct wiFontParams
 	wiColor shadowColor;
 	int h_wrap = -1; // wrap start in pixels (-1 default for no wrap)
 
-	wiFontParams(int posX = 0, int posY = 0, int size = 16, wiFontAlign h_align = WIFALIGN_LEFT, wiFontAlign v_align = WIFALIGN_TOP
+	wiFontParams(int posX = 0, int posY = 0, int size = WIFONTSIZE_DEFAULT, wiFontAlign h_align = WIFALIGN_LEFT, wiFontAlign v_align = WIFALIGN_TOP
 		, int spacingX = 0, int spacingY = 0, wiColor color = wiColor(255, 255, 255, 255), wiColor shadowColor = wiColor(0,0,0,0))
 		:posX(posX), posY(posY), size(size), h_align(h_align), v_align(v_align), spacingX(spacingX), spacingY(spacingY), color(color), shadowColor(shadowColor)
 	{}

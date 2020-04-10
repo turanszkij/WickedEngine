@@ -74,10 +74,12 @@ void TestsRenderer::Load()
 
 	wiSlider* volume = new wiSlider(0, 100, 50, 100, "Volume");
 	volume->SetText("Volume: ");
-	volume->SetSize(XMFLOAT2(95, 20));
+	volume->SetSize(XMFLOAT2(100, 20));
 	volume->SetPos(XMFLOAT2(65, 110));
-	volume->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
-	volume->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
+	volume->sprites_knob[wiWidget::WIDGETSTATE::IDLE].params.color = wiColor(255, 205, 43, 200);
+	volume->sprites_knob[wiWidget::WIDGETSTATE::FOCUS].params.color = wiColor(255, 235, 173, 255);
+	volume->sprites[wiWidget::WIDGETSTATE::IDLE].params.color = wiMath::Lerp(wiColor::Transparent(), volume->sprites_knob[wiWidget::WIDGETSTATE::IDLE].params.color, 0.5f);
+	volume->sprites[wiWidget::WIDGETSTATE::FOCUS].params.color = wiMath::Lerp(wiColor::Transparent(), volume->sprites_knob[wiWidget::WIDGETSTATE::FOCUS].params.color, 0.5f);
 	volume->OnSlide([](wiEventArgs args) {
 		wiAudio::SetVolume(args.fValue / 100.0f, &soundinstance);
 	});
@@ -549,7 +551,7 @@ void TestsRenderer::RunSpriteTest()
 		sprite.params.pos = params.pos;
 		sprite.params.siz = params.siz;
 		sprite.params.pivot = params.pivot;
-		sprite.params.col = XMFLOAT4(2, 2, 2, 1); // increase brightness a bit
+		sprite.params.color = XMFLOAT4(2, 2, 2, 1); // increase brightness a bit
 		sprite.params.sampleFlag = SAMPLEMODE_MIRROR; // texcoords will be scrolled out of bounds, so set up a wrap mode other than clamp
 		sprite.anim.movingTexAnim.speedX = 0;
 		sprite.anim.movingTexAnim.speedY = 2; // scroll the texture vertically. This value is pixels/second. So because our texture here is 1x2 pixels, just scroll it once fully per second with a value of 2

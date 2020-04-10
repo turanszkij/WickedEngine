@@ -7,6 +7,7 @@
 #include "wiIntersect.h"
 #include "wiScene.h"
 #include "wiFont.h"
+#include "wiSprite.h"
 
 #include <string>
 #include <list>
@@ -42,30 +43,22 @@ private:
 	int tooltipTimer = 0;
 protected:
 	wiHashString fastName;
-	std::string text;
 	std::string tooltip;
 	std::string scriptTip;
 	bool enabled = true;
 	bool visible = true;
+	uint32_t foregroundPriority = 0;
 
 	WIDGETSTATE state = IDLE;
 	void Activate();
 	void Deactivate();
 
-	wiColor colors[WIDGETSTATE_COUNT] = {
-		wiColor::Booger(),
-		wiColor::Gray(),
-		wiColor::White(),
-		wiColor::Gray(),
-	};
-	static_assert(arraysize(colors) == WIDGETSTATE_COUNT, "Every WIDGETSTATE needs a default color!");
-
-	wiFontParams fontParams = wiFontParams(0, 0, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor::White(), wiColor::Black());
-
 public:
+	wiWidget();
+
 	const wiHashString& GetName() const;
 	void SetName(const std::string& value);
-	const std::string& GetText() const;
+	const std::string GetText() const;
 	void SetText(const std::string& value);
 	void SetTooltip(const std::string& value);
 	void SetScriptTip(const std::string& value);
@@ -79,14 +72,13 @@ public:
 	// last param default: set color for all states
 	void SetColor(wiColor color, WIDGETSTATE state = WIDGETSTATE_COUNT);
 	wiColor GetColor() const;
-	void SetTextColor(wiColor value) { fontParams.color = value; }
-	void SetTextShadowColor(wiColor value) { fontParams.shadowColor = value; }
-	void SetFontParams(wiFontParams params) { fontParams = params; }
-	const wiFontParams& GetFontParams() const { return fontParams; }
 
 	virtual void Update(wiGUI* gui, float dt);
 	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const = 0;
 	virtual void RenderTooltip(const wiGUI* gui, wiGraphics::CommandList cmd) const;
+
+	wiSprite sprites[WIDGETSTATE_COUNT];
+	wiFont font;
 
 	XMFLOAT3 translation = XMFLOAT3(0, 0, 0);
 	XMFLOAT3 scale = XMFLOAT3(1, 1, 1);
@@ -136,21 +128,20 @@ class wiTextInputField : public wiWidget
 {
 protected:
 	std::function<void(wiEventArgs args)> onInputAccepted;
+	static wiFont font_input;
 
-	std::string value;
-	static std::string value_new;
-
-	std::string description;
 public:
 	wiTextInputField(const std::string& name = "");
 	virtual ~wiTextInputField();
 
+	wiFont font_description;
+
 	void SetValue(const std::string& newValue);
 	void SetValue(int newValue);
 	void SetValue(float newValue);
-	const std::string& GetValue();
-	void SetDescription(const std::string& desc) { description = desc; }
-	const std::string& GetDescription() const { return description; }
+	const std::string GetValue();
+	void SetDescription(const std::string& desc) { font_description.SetText(desc); }
+	const std::string GetDescription() const { return font_description.GetTextA(); }
 
 	// There can only be ONE active text input field, so these methods modify the active one
 	static void AddInput(const char inputChar);
@@ -171,17 +162,6 @@ protected:
 	float step = 1000;
 	float value = 0;
 
-	wiColor colors_base[WIDGETSTATE_COUNT] = {
-		wiColor(60, 60, 60, 200),
-		wiColor(50, 50, 50, 200),
-		wiColor(50, 50, 50, 200),
-		wiColor(60, 60, 60, 200),
-	};
-	static_assert(arraysize(colors_base) == WIDGETSTATE_COUNT, "Every WIDGETSTATE needs a default color!");
-
-	// width of the head of the slider that can be grabbed:
-	float headWidth = 16;
-
 	wiTextInputField* valueInputField = nullptr;
 public:
 	// start : slider minimum value
@@ -191,6 +171,8 @@ public:
 	wiSlider(float start = 0.0f, float end = 1.0f, float defaultValue = 0.5f, float step = 1000.0f, const std::string& name = "");
 	virtual ~wiSlider();
 
+	wiSprite sprites_knob[WIDGETSTATE_COUNT];
+
 	void SetValue(float value);
 	float GetValue();
 	void SetRange(float start, float end);
@@ -198,11 +180,6 @@ public:
 	void Update(wiGUI* gui, float dt ) override;
 	void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
 	void RenderTooltip(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
-
-	// Sets colors for the base (or "path") of the slider
-	// last param default: set color for all states
-	void SetBaseColor(wiColor color, WIDGETSTATE state = WIDGETSTATE_COUNT);
-	void SetHeadWidth(float value) { headWidth = value; }
 
 	void OnSlide(std::function<void(wiEventArgs args)> func);
 };
@@ -216,6 +193,8 @@ protected:
 public:
 	wiCheckBox(const std::string& name = "");
 	virtual ~wiCheckBox();
+
+	wiSprite sprites_check[WIDGETSTATE_COUNT];
 
 	void SetCheck(bool value);
 	bool GetCheck() const;
@@ -307,7 +286,12 @@ class wiColorPicker : public wiWindow
 {
 protected:
 	std::function<void(wiEventArgs args)> onColorChanged;
-	bool huefocus = false; // whether the hue picker is in focus or the saturation
+	enum COLORPICKERSTATE
+	{
+		CPS_IDLE,
+		CPS_HUE,
+		CPS_SATURATION,
+	} colorpickerstate = CPS_IDLE;
 	float hue = 0.0f;			// [0, 360] degrees
 	float saturation = 0.0f;	// [0, 1]
 	float luminance = 1.0f;		// [0, 1]
