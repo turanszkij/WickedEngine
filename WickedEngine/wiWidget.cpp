@@ -29,6 +29,7 @@ wiWidget::wiWidget()
 
 	for (int i = IDLE; i < WIDGETSTATE_COUNT; ++i)
 	{
+		sprites[i].params.blendFlag = BLENDMODE_OPAQUE;
 		sprites[i].params.enableBackgroundBlur(0); // enable gui background blur by default, use mip = 0
 	}
 }
@@ -73,6 +74,7 @@ void wiWidget::Update(wiGUI* gui, float dt)
 		sprites[i].params.pos.y = translation.y;
 		sprites[i].params.siz.x = scale.x;
 		sprites[i].params.siz.y = scale.y;
+		sprites[i].params.fade = IsEnabled() ? 0.0f : 0.5f;
 	}
 	font.params.posX = (int)translation.x;
 	font.params.posY = (int)translation.y;
@@ -458,10 +460,10 @@ wiTextInputField::wiTextInputField(const std::string& name)
 	OnInputAccepted([](wiEventArgs args) {});
 	SetSize(XMFLOAT2(100, 30));
 
-	font_description.params = font.params;
-	font_description.params.v_align = WIFALIGN_CENTER;
+	font.params.v_align = WIFALIGN_CENTER;
 
-	font_input = font_description;
+	font_description.params = font.params;
+	font_description.params.h_align = WIFALIGN_RIGHT;
 }
 wiTextInputField::~wiTextInputField()
 {
@@ -575,7 +577,8 @@ void wiTextInputField::Update(wiGUI* gui, float dt)
 
 	font.params.posX = (int)translation.x + 2;
 	font.params.posY = (int)(translation.y + scale.y * 0.5f);
-	font.params.v_align = WIFALIGN_CENTER;
+	font_description.params.posX = (int)translation.x - 2;
+	font_description.params.posY = (int)(translation.y + scale.y * 0.5f);
 
 	if (state == ACTIVE)
 	{
@@ -800,6 +803,7 @@ void wiSlider::Update(wiGUI* gui, float dt)
 	sprites_knob[state].params.pos.y = translation.y + 2;
 	sprites_knob[state].params.siz.y = scale.y - 4;
 	sprites_knob[state].params.pivot = XMFLOAT2(0.5f, 0);
+	sprites_knob[state].params.fade = IsEnabled() ? 0.0f : 0.5f;
 }
 void wiSlider::Render(const wiGUI* gui, CommandList cmd) const
 {
@@ -1565,7 +1569,6 @@ void wiWindow::Update(wiGUI* gui, float dt)
 
 	if (IsEnabled() && !gui->IsWidgetDisabled(this))
 	{
-
 		if (state == FOCUS)
 		{
 			state = IDLE;
