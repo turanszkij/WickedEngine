@@ -548,6 +548,7 @@ ILTYPES GetILTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool
 	case RENDERPASS_FORWARD:
 	case RENDERPASS_TILEDFORWARD:
 	case RENDERPASS_ENVMAPCAPTURE:
+	case RENDERPASS_VOXELIZE:
 		realVL = ILTYPE_OBJECT_ALL;
 		break;
 	case RENDERPASS_DEPTHONLY:
@@ -577,9 +578,6 @@ ILTYPES GetILTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool
 		{
 			realVL = ILTYPE_OBJECT_POS;
 		}
-		break;
-	case RENDERPASS_VOXELIZE:
-		realVL = ILTYPE_OBJECT_POS_TEX;
 		break;
 	}
 
@@ -1581,8 +1579,10 @@ void LoadShaders()
 			desc.ps = nullptr;
 			break;
 		case RENDERPASS_VOXELIZE:
-			desc.dss = nullptr;
+			desc.dss = &depthStencils[DSSTYPE_XRAY];
 			desc.rs = &rasterizers[RSTYPE_VOXELIZE];
+			desc.vs = &vertexShaders[VSTYPE_VOXELIZER];
+			desc.gs = &geometryShaders[GSTYPE_VOXELIZER];
 			desc.ps = &pixelShaders[PSTYPE_VOXELIZER_TERRAIN];
 			break;
 		case RENDERPASS_ENVMAPCAPTURE:
@@ -3055,7 +3055,8 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 				renderPass == RENDERPASS_FORWARD ||
 				renderPass == RENDERPASS_DEFERRED ||
 				renderPass == RENDERPASS_TILEDFORWARD ||
-				renderPass == RENDERPASS_ENVMAPCAPTURE
+				renderPass == RENDERPASS_ENVMAPCAPTURE ||
+				renderPass == RENDERPASS_VOXELIZE
 				);
 
 		// Do we need to bind all textures or just a reduced amount for this pass?

@@ -8,7 +8,7 @@ struct VSOut
 	float3 nor : NORMAL;
 };
 
-VSOut main(Input_Object_POS_TEX input)
+VSOut main(Input_Object_ALL input)
 {
 	VSOut Out;
 
