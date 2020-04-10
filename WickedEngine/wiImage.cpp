@@ -22,6 +22,7 @@ namespace wiImage
 		IMAGE_SHADER_SEPARATENORMALMAP,
 		IMAGE_SHADER_MASKED,
 		IMAGE_SHADER_BACKGROUNDBLUR,
+		IMAGE_SHADER_BACKGROUNDBLUR_MASKED,
 		IMAGE_SHADER_FULLSCREEN,
 		IMAGE_SHADER_COUNT
 	};
@@ -212,7 +213,14 @@ namespace wiImage
 		{
 			if (Mask)
 			{
-				targetShader = IMAGE_SHADER_MASKED;
+				if (background_blur)
+				{
+					targetShader = IMAGE_SHADER_BACKGROUNDBLUR_MASKED;
+				}
+				else
+				{
+					targetShader = IMAGE_SHADER_MASKED;
+				}
 			}
 			else
 			{
@@ -251,11 +259,13 @@ namespace wiImage
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_SEPARATENORMALMAP][IMAGE_SAMPLING_SIMPLE], "imagePS_separatenormalmap.cso");
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_MASKED][IMAGE_SAMPLING_SIMPLE], "imagePS_masked.cso");
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_BACKGROUNDBLUR][IMAGE_SAMPLING_SIMPLE], "imagePS_backgroundblur.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_BACKGROUNDBLUR_MASKED][IMAGE_SAMPLING_SIMPLE], "imagePS_backgroundblur_masked.cso");
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_FULLSCREEN][IMAGE_SAMPLING_SIMPLE], "screenPS.cso");
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_STANDARD][IMAGE_SAMPLING_BICUBIC], "imagePS_bicubic.cso");
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_SEPARATENORMALMAP][IMAGE_SAMPLING_BICUBIC], "imagePS_separatenormalmap_bicubic.cso");
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_MASKED][IMAGE_SAMPLING_BICUBIC], "imagePS_masked_bicubic.cso");
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_BACKGROUNDBLUR][IMAGE_SAMPLING_BICUBIC], "imagePS_backgroundblur_bicubic.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_BACKGROUNDBLUR_MASKED][IMAGE_SAMPLING_BICUBIC], "imagePS_backgroundblur_masked_bicubic.cso");
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_FULLSCREEN][IMAGE_SAMPLING_BICUBIC], "screenPS_bicubic.cso");
 
 

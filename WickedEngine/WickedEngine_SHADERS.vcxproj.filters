@@ -966,6 +966,12 @@
     <FxCompile Include="bloomseparateCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="imagePS_backgroundblur_masked.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="imagePS_backgroundblur_masked_bicubic.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">
