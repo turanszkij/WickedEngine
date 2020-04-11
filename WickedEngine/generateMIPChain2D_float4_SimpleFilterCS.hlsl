@@ -15,6 +15,16 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
 	if (DTid.x < outputResolution.x && DTid.y < outputResolution.y)
 	{
-		output[DTid.xy] = input.SampleLevel(customsampler, ((float2)DTid.xy + 0.5f) * (float2)outputResolution_rcp.xy, 0);
+		float2 uv = ((float2)DTid.xy + 0.5f) * (float2)outputResolution_rcp.xy;
+		float4 color = input.SampleLevel(customsampler, uv, 0);
+
+		[branch]
+		if (mipgen_options & MIPGEN_OPTION_BIT_PRESERVE_COVERAGE)
+		{
+			float4 alphas = input.GatherAlpha(customsampler, uv, 0);
+			color.a = max(alphas.x, max(alphas.y, max(alphas.z, alphas.w)));
+		}
+
+		output[DTid.xy] = color;
 	}
 }

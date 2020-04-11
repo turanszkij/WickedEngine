@@ -268,7 +268,7 @@ namespace wiResourceManager
 
 					if (image != nullptr && image->GetDesc().MipLevels > 1)
 					{
-						wiRenderer::AddDeferredMIPGen(image);
+						wiRenderer::AddDeferredMIPGen(image, true);
 					}
 
 					success = image;

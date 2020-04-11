@@ -138,7 +138,7 @@ std::shared_ptr<wiResource> RegisterTexture(tinygltf::Image *image, const string
 
 				if (tex != nullptr)
 				{
-					wiRenderer::AddDeferredMIPGen(tex);
+					wiRenderer::AddDeferredMIPGen(tex, true);
 
 					if (image->uri.empty())
 					{

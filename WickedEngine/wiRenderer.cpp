@@ -167,7 +167,7 @@ std::vector<PaintRadius> paintrads;
 XMFLOAT4 waterPlane = XMFLOAT4(0, 1, 0, 0);
 
 wiSpinLock deferredMIPGenLock;
-unordered_set<const Texture*> deferredMIPGens;
+std::vector<std::pair<const Texture*, bool>> deferredMIPGens;
 
 wiGPUBVH sceneBVH;
 
@@ -4019,7 +4019,9 @@ void UpdateRenderData(CommandList cmd)
 	deferredMIPGenLock.lock();
 	for (auto& it : deferredMIPGens)
 	{
-		GenerateMipChain(*it, MIPGENFILTER_LINEAR, cmd);
+		MIPGEN_OPTIONS mipopt;
+		mipopt.preserve_coverage = it.second;
+		GenerateMipChain(*it.first, MIPGENFILTER_LINEAR, cmd, mipopt);
 	}
 	deferredMIPGens.clear();
 	deferredMIPGenLock.unlock();
@@ -6764,7 +6766,9 @@ void RefreshEnvProbes(CommandList cmd)
 
 		device->RenderPassEnd(cmd);
 
-		GenerateMipChain(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], MIPGENFILTER_LINEAR, cmd, probe.textureIndex);
+		MIPGEN_OPTIONS mipopt;
+		mipopt.arrayIndex = probe.textureIndex;
+		GenerateMipChain(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], MIPGENFILTER_LINEAR, cmd, mipopt);
 
 		// Filter the enviroment map mip chain according to BRDF:
 		//	A bit similar to MIP chain generation, but its input is the MIP-mapped texture,
@@ -7422,7 +7426,7 @@ void DownsampleDepthBuffer(const wiGraphics::Texture& src, wiGraphics::CommandLi
 	device->EventEnd(cmd);
 }
 
-void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList cmd, int arrayIndex, const Texture* gaussian_temp)
+void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList cmd, const MIPGEN_OPTIONS& options)
 {
 	GraphicsDevice* device = GetDevice();
 	TextureDesc desc = texture.GetDesc();
@@ -7480,7 +7484,8 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 					cb.outputResolution.y = desc.Height;
 					cb.outputResolution_rcp.x = 1.0f / cb.outputResolution.x;
 					cb.outputResolution_rcp.y = 1.0f / cb.outputResolution.y;
-					cb.arrayIndex = arrayIndex;
+					cb.arrayIndex = options.arrayIndex;
+					cb.mipgen_options = 0;
 					device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
 					device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
 
@@ -7526,6 +7531,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 					cb.outputResolution_rcp.x = 1.0f / cb.outputResolution.x;
 					cb.outputResolution_rcp.y = 1.0f / cb.outputResolution.y;
 					cb.arrayIndex = 0;
+					cb.mipgen_options = 0;
 					device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
 					device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
 
@@ -7562,7 +7568,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				// Gaussian filter is a bit different as we do it in a separable way:
 				for (uint32_t i = 0; i < desc.MipLevels - 1; ++i)
 				{
-					Postprocess_Blur_Gaussian(texture, *gaussian_temp, texture, cmd, i, i + 1);
+					Postprocess_Blur_Gaussian(texture, *options.gaussian_temp, texture, cmd, i, i + 1);
 				}
 				device->EventEnd(cmd);
 				return;
@@ -7589,7 +7595,12 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				cb.outputResolution.y = desc.Height;
 				cb.outputResolution_rcp.x = 1.0f / cb.outputResolution.x;
 				cb.outputResolution_rcp.y = 1.0f / cb.outputResolution.y;
-				cb.arrayIndex = arrayIndex >= 0 ? (uint)arrayIndex : 0;
+				cb.arrayIndex = options.arrayIndex >= 0 ? (uint)options.arrayIndex : 0;
+				cb.mipgen_options = 0;
+				if (options.preserve_coverage)
+				{
+					cb.mipgen_options |= MIPGEN_OPTION_BIT_PRESERVE_COVERAGE;
+				}
 				device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
 				device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
 
@@ -7642,7 +7653,8 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 			cb.outputResolution_rcp.x = 1.0f / cb.outputResolution.x;
 			cb.outputResolution_rcp.y = 1.0f / cb.outputResolution.y;
 			cb.outputResolution_rcp.z = 1.0f / cb.outputResolution.z;
-			cb.arrayIndex = arrayIndex >= 0 ? (uint)arrayIndex : 0;
+			cb.arrayIndex = options.arrayIndex >= 0 ? (uint)options.arrayIndex : 0;
+			cb.mipgen_options = 0;
 			device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
 			device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
 
@@ -10627,7 +10639,9 @@ void Postprocess_Bloom(
 	}
 
 	device->EventBegin("Bloom Mipchain", cmd);
-	wiRenderer::GenerateMipChain(bloom, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd, -1, &bloom_tmp);
+	MIPGEN_OPTIONS mipopt;
+	mipopt.gaussian_temp = &bloom_tmp;
+	GenerateMipChain(bloom, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd, mipopt);
 	device->EventEnd(cmd);
 
 	// Combine image with bloom
@@ -11130,10 +11144,10 @@ void DrawPaintRadius(const PaintRadius& paintrad)
 	paintrads.push_back(paintrad);
 }
 
-void AddDeferredMIPGen(const Texture* tex)
+void AddDeferredMIPGen(const Texture* tex, bool preserve_coverage)
 {
 	deferredMIPGenLock.lock();
-	deferredMIPGens.insert(tex);
+	deferredMIPGens.push_back(std::make_pair(tex, preserve_coverage));
 	deferredMIPGenLock.unlock();
 }
 

@@ -583,7 +583,9 @@ void RenderPath3D::RenderSceneMIPChain(const Texture& srcSceneRT, CommandList cm
 
 	device->RenderPassEnd(cmd);
 
-	wiRenderer::GenerateMipChain(rtSceneCopy, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd, -1, &rtSceneCopy_tmp);
+	wiRenderer::MIPGEN_OPTIONS mipopt;
+	mipopt.gaussian_temp = &rtSceneCopy_tmp;
+	wiRenderer::GenerateMipChain(rtSceneCopy, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd, mipopt);
 
 	device->EventEnd(cmd);
 	wiProfiler::EndRange(range);

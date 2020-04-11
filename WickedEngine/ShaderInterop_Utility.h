@@ -12,8 +12,9 @@ CBUFFER(GenerateMIPChainCB, CBSLOT_RENDERER_UTILITY)
 	uint3 outputResolution;
 	uint arrayIndex;
 	float3 outputResolution_rcp;
-	uint padding_mipgenCB;
+	uint mipgen_options;
 };
+static const uint MIPGEN_OPTION_BIT_PRESERVE_COVERAGE = 1 << 0;
 
 CBUFFER(FilterEnvmapCB, CBSLOT_RENDERER_UTILITY)
 {

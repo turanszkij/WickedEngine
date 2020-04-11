@@ -359,7 +359,13 @@ namespace wiRenderer
 		MIPGENFILTER_GAUSSIAN,
 		MIPGENFILTER_BICUBIC,
 	};
-	void GenerateMipChain(const wiGraphics::Texture& texture, MIPGENFILTER filter, wiGraphics::CommandList cmd, int arrayIndex = -1, const wiGraphics::Texture* gaussian_temp = nullptr);
+	struct MIPGEN_OPTIONS
+	{
+		int arrayIndex = -1;
+		const wiGraphics::Texture* gaussian_temp = nullptr;
+		bool preserve_coverage = false;
+	};
+	void GenerateMipChain(const wiGraphics::Texture& texture, MIPGENFILTER filter, wiGraphics::CommandList cmd, const MIPGEN_OPTIONS& options = {});
 
 	enum BORDEREXPANDSTYLE
 	{
@@ -530,7 +536,7 @@ namespace wiRenderer
 	void DrawPaintRadius(const PaintRadius& paintrad);
 
 	// Add a texture that should be mipmapped whenever it is feasible to do so
-	void AddDeferredMIPGen(const wiGraphics::Texture* tex);
+	void AddDeferredMIPGen(const wiGraphics::Texture* tex, bool preserve_coverage = false);
 
 	struct CustomShader
 	{
