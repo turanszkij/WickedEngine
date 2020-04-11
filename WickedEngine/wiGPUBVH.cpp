@@ -411,6 +411,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 					&mesh.vertexBuffer_UV0,
 					&mesh.vertexBuffer_UV1,
 					&mesh.vertexBuffer_COL,
+					&mesh.vertexBuffer_SUB,
 				};
 				device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 

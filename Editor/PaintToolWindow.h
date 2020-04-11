@@ -60,6 +60,7 @@ public:
 		MODE_HAIRPARTICLE_ADD_TRIANGLE,
 		MODE_HAIRPARTICLE_REMOVE_TRIANGLE,
 		MODE_HAIRPARTICLE_LENGTH,
+		MODE_WIND,
 	};
 	MODE GetMode() const;
 	void SetEntity(wiECS::Entity value, int subsetindex = -1);

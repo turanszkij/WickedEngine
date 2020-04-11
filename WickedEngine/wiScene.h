@@ -116,6 +116,7 @@ namespace wiScene
 			SPECULAR_GLOSSINESS_WORKFLOW = 1 << 6,
 			OCCLUSION_PRIMARY = 1 << 7,
 			OCCLUSION_SECONDARY = 1 << 8,
+			USE_WIND = 1 << 9,
 		};
 		uint32_t _flags = DIRTY | CAST_SHADOW;
 
@@ -205,6 +206,7 @@ namespace wiScene
 		inline bool IsAlphaTestEnabled() const { return alphaRef <= 1.0f - 1.0f / 256.0f; }
 		inline bool IsFlipNormalMap() const { return _flags & FLIP_NORMALMAP; }
 		inline bool IsUsingVertexColors() const { return _flags & USE_VERTEXCOLORS; }
+		inline bool IsUsingWind() const { return _flags & USE_WIND; }
 		inline bool IsUsingSpecularGlossinessWorkflow() const { return _flags & SPECULAR_GLOSSINESS_WORKFLOW; }
 		inline bool IsOcclusionEnabled_Primary() const { return _flags & OCCLUSION_PRIMARY; }
 		inline bool IsOcclusionEnabled_Secondary() const { return _flags & OCCLUSION_SECONDARY; }
@@ -225,6 +227,7 @@ namespace wiScene
 		inline void SetAlphaRef(float value) { SetDirty();  alphaRef = value; }
 		inline void SetFlipNormalMap(bool value) { SetDirty(); if (value) { _flags |= FLIP_NORMALMAP; } else { _flags &= ~FLIP_NORMALMAP; } }
 		inline void SetUseVertexColors(bool value) { SetDirty(); if (value) { _flags |= USE_VERTEXCOLORS; } else { _flags &= ~USE_VERTEXCOLORS; } }
+		inline void SetUseWind(bool value) { SetDirty(); if (value) { _flags |= USE_WIND; } else { _flags &= ~USE_WIND; } }
 		inline void SetUseSpecularGlossinessWorkflow(bool value) { SetDirty(); if (value) { _flags |= SPECULAR_GLOSSINESS_WORKFLOW; } else { _flags &= ~SPECULAR_GLOSSINESS_WORKFLOW; }  }
 		inline void SetCustomShaderID(int id) { customShaderID = id; }
 		inline void DisableCustomShader() { customShaderID = -1; }
@@ -260,6 +263,7 @@ namespace wiScene
 		std::vector<XMFLOAT4> vertex_boneweights;
 		std::vector<XMFLOAT2> vertex_atlas;
 		std::vector<uint32_t> vertex_colors;
+		std::vector<uint8_t> vertex_windweights;
 		std::vector<uint32_t> indices;
 
 		struct MeshSubset
@@ -293,6 +297,7 @@ namespace wiScene
 		wiGraphics::GPUBuffer vertexBuffer_ATL;
 		wiGraphics::GPUBuffer vertexBuffer_PRE;
 		wiGraphics::GPUBuffer streamoutBuffer_POS;
+		wiGraphics::GPUBuffer vertexBuffer_SUB;
 		std::vector<uint8_t> vertex_subsets;
 
 
@@ -330,14 +335,14 @@ namespace wiScene
 		struct Vertex_POS
 		{
 			XMFLOAT3 pos = XMFLOAT3(0.0f, 0.0f, 0.0f);
-			uint32_t normal_subsetIndex = 0;
+			uint32_t normal_wind = 0;
 
-			void FromFULL(const XMFLOAT3& _pos, const XMFLOAT3& _nor, uint32_t subsetIndex)
+			void FromFULL(const XMFLOAT3& _pos, const XMFLOAT3& _nor, uint8_t wind)
 			{
 				pos.x = _pos.x;
 				pos.y = _pos.y;
 				pos.z = _pos.z;
-				MakeFromParams(_nor, subsetIndex);
+				MakeFromParams(_nor, wind);
 			}
 			inline XMVECTOR LoadPOS() const
 			{
@@ -349,36 +354,34 @@ namespace wiScene
 			}
 			inline void MakeFromParams(const XMFLOAT3& normal)
 			{
-				normal_subsetIndex = normal_subsetIndex & 0xFF000000; // reset only the normals
+				normal_wind = normal_wind & 0xFF000000; // reset only the normals
 
-				normal_subsetIndex |= (uint32_t)((normal.x * 0.5f + 0.5f) * 255.0f) << 0;
-				normal_subsetIndex |= (uint32_t)((normal.y * 0.5f + 0.5f) * 255.0f) << 8;
-				normal_subsetIndex |= (uint32_t)((normal.z * 0.5f + 0.5f) * 255.0f) << 16;
+				normal_wind |= (uint32_t)((normal.x * 0.5f + 0.5f) * 255.0f) << 0;
+				normal_wind |= (uint32_t)((normal.y * 0.5f + 0.5f) * 255.0f) << 8;
+				normal_wind |= (uint32_t)((normal.z * 0.5f + 0.5f) * 255.0f) << 16;
 			}
-			inline void MakeFromParams(const XMFLOAT3& normal, uint32_t subsetIndex)
+			inline void MakeFromParams(const XMFLOAT3& normal, uint8_t wind)
 			{
-				assert(subsetIndex < 256); // subsetIndex is packed onto 8 bits
+				normal_wind = 0;
 
-				normal_subsetIndex = 0;
-
-				normal_subsetIndex |= (uint32_t)((normal.x * 0.5f + 0.5f) * 255.0f) << 0;
-				normal_subsetIndex |= (uint32_t)((normal.y * 0.5f + 0.5f) * 255.0f) << 8;
-				normal_subsetIndex |= (uint32_t)((normal.z * 0.5f + 0.5f) * 255.0f) << 16;
-				normal_subsetIndex |= (subsetIndex & 0x000000FF) << 24;
+				normal_wind |= (uint32_t)((normal.x * 0.5f + 0.5f) * 255.0f) << 0;
+				normal_wind |= (uint32_t)((normal.y * 0.5f + 0.5f) * 255.0f) << 8;
+				normal_wind |= (uint32_t)((normal.z * 0.5f + 0.5f) * 255.0f) << 16;
+				normal_wind |= (uint32_t)wind << 24;
 			}
 			inline XMFLOAT3 GetNor_FULL() const
 			{
 				XMFLOAT3 nor_FULL(0, 0, 0);
 
-				nor_FULL.x = (float)((normal_subsetIndex >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-				nor_FULL.y = (float)((normal_subsetIndex >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-				nor_FULL.z = (float)((normal_subsetIndex >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+				nor_FULL.x = (float)((normal_wind >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+				nor_FULL.y = (float)((normal_wind >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+				nor_FULL.z = (float)((normal_wind >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 
 				return nor_FULL;
 			}
-			inline uint32_t GetMaterialIndex() const
+			inline uint8_t GetWind() const
 			{
-				return (normal_subsetIndex >> 24) & 0x000000FF;
+				return (normal_wind >> 24) & 0x000000FF;
 			}
 
 			static const wiGraphics::FORMAT FORMAT = wiGraphics::FORMAT::FORMAT_R32G32B32A32_FLOAT;

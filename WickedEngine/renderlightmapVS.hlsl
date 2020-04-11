@@ -4,7 +4,7 @@
 
 struct Input
 {
-	float4 pos : POSITION_NORMAL_SUBSETINDEX;
+	float4 pos : POSITION_NORMAL_WIND;
 	float2 atl : ATLAS;
 	Input_InstancePrev instance;
 };
@@ -32,10 +32,10 @@ Output main(Input input)
 
 	output.pos3D = mul(WORLD, float4(input.pos.xyz, 1)).xyz;
 
-	uint normal_wind_matID = asuint(input.pos.w);
-	output.normal.x = (float)((normal_wind_matID >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	output.normal.y = (float)((normal_wind_matID >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	output.normal.z = (float)((normal_wind_matID >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	uint normal_wind = asuint(input.pos.w);
+	output.normal.x = (float)((normal_wind >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	output.normal.y = (float)((normal_wind >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	output.normal.z = (float)((normal_wind >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 
 	return output;
 }

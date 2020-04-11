@@ -12,6 +12,7 @@ RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND2);
 TYPEDBUFFER(meshVertexBuffer_UV0, float2, TEXSLOT_ONDEMAND3);
 TYPEDBUFFER(meshVertexBuffer_UV1, float2, TEXSLOT_ONDEMAND4);
 TYPEDBUFFER(meshVertexBuffer_COL, float4, TEXSLOT_ONDEMAND5);
+TYPEDBUFFER(meshVertexBuffer_SUB, uint, TEXSLOT_ONDEMAND6);
 
 RWSTRUCTUREDBUFFER(primitiveIDBuffer, uint, 0);
 RWSTRUCTUREDBUFFER(primitiveBuffer, BVHPrimitive, 1);
@@ -40,7 +41,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 		uint nor_u = asuint(pos_nor0.w);
 		float3 nor0 = unpack_unitvector(nor_u);
-		uint subsetIndex = (nor_u >> 24) & 0x000000FF;
+		uint subsetIndex = meshVertexBuffer_SUB[i0];
 
 		nor_u = asuint(pos_nor1.w);
 		float3 nor1 = unpack_unitvector(nor_u);

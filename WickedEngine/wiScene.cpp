@@ -300,6 +300,10 @@ namespace wiScene
 		{
 			retVal.options |= SHADERMATERIAL_OPTION_BIT_OCCLUSION_SECONDARY;
 		}
+		if (IsUsingWind())
+		{
+			retVal.options |= SHADERMATERIAL_OPTION_BIT_USE_WIND;
+		}
 		return retVal;
 	}
 
@@ -356,29 +360,16 @@ namespace wiScene
 		XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
 		XMFLOAT3 _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 
-		// vertexBuffer - POSITION + NORMAL + SUBSETINDEX:
+		// vertexBuffer - POSITION + NORMAL + WIND:
 		{
-			vertex_subsets.resize(vertex_positions.size());
-
-			uint32_t subsetCounter = 0;
-			for (auto& subset : subsets)
-			{
-				for (uint32_t i = 0; i < subset.indexCount; ++i)
-				{
-					uint32_t index = indices[subset.indexOffset + i];
-					vertex_subsets[index] = subsetCounter;
-				}
-				subsetCounter++;
-			}
-
 			std::vector<Vertex_POS> vertices(vertex_positions.size());
 			for (size_t i = 0; i < vertices.size(); ++i)
 			{
 				const XMFLOAT3& pos = vertex_positions[i];
 				XMFLOAT3& nor = vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : vertex_normals[i];
 				XMStoreFloat3(&nor, XMVector3Normalize(XMLoadFloat3(&nor)));
-				uint32_t subsetIndex = vertex_subsets[i];
-				vertices[i].FromFULL(pos, nor, subsetIndex);
+				const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
+				vertices[i].FromFULL(pos, nor, wind);
 
 				_min = wiMath::Min(_min, pos);
 				_max = wiMath::Max(_max, pos);
@@ -521,6 +512,35 @@ namespace wiScene
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();
 			device->CreateBuffer(&bd, &InitData, &vertexBuffer_ATL);
+		}
+
+		// vertexBuffer - SUBSETS
+		{
+			vertex_subsets.resize(vertex_positions.size());
+
+			uint32_t subsetCounter = 0;
+			for (auto& subset : subsets)
+			{
+				for (uint32_t i = 0; i < subset.indexCount; ++i)
+				{
+					uint32_t index = indices[subset.indexOffset + i];
+					vertex_subsets[index] = subsetCounter;
+				}
+				subsetCounter++;
+			}
+
+			GPUBufferDesc bd;
+			bd.Usage = USAGE_IMMUTABLE;
+			bd.CPUAccessFlags = 0;
+			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
+			bd.MiscFlags = 0;
+			bd.StructureByteStride = sizeof(uint8_t);
+			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertex_subsets.size());
+			bd.Format = FORMAT_R8_UINT;
+
+			SubresourceData InitData;
+			InitData.pSysMem = vertex_subsets.data();
+			device->CreateBuffer(&bd, &InitData, &vertexBuffer_SUB);
 		}
 
 		// vertexBuffer_PRE will be created on demand later!
@@ -966,8 +986,8 @@ namespace wiScene
 			XMStoreFloat3(&pos, XMVector3Transform(XMLoadFloat3(&pos), W));
 			XMFLOAT3 nor = mesh.vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : mesh.vertex_normals[i];
 			XMStoreFloat3(&nor, XMVector3Normalize(XMVector3TransformNormal(XMLoadFloat3(&nor), W)));
-			uint32_t subsetIndex = mesh.vertex_subsets[i];
-			vertex_positions_simulation[i].FromFULL(pos, nor, subsetIndex);
+			const uint8_t wind = mesh.vertex_windweights.empty() ? 0xFF : mesh.vertex_windweights[i];
+			vertex_positions_simulation[i].FromFULL(pos, nor, wind);
 			_min = wiMath::Min(_min, pos);
 			_max = wiMath::Max(_max, pos);
 		}

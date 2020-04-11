@@ -14,11 +14,11 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	assert(GUI && "Invalid GUI!");
 
 	materialWindow = new wiWindow(GUI, "Material Window");
-	materialWindow->SetSize(XMFLOAT2(700, 760));
+	materialWindow->SetSize(XMFLOAT2(700, 770));
 	GUI->AddWidget(materialWindow);
 
 	float x = 540, y = 0;
-	float step = 25;
+	float step = 24;
 
 	waterCheckBox = new wiCheckBox("Water: ");
 	waterCheckBox->SetTooltip("Set material as special water material.");
@@ -99,6 +99,16 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			material->SetOcclusionEnabled_Secondary(args.bValue);
 	});
 	materialWindow->AddWidget(occlusionSecondaryCheckBox);
+
+	windCheckBox = new wiCheckBox("Wind: ");
+	windCheckBox->SetTooltip("If enabled, vertex wind weights will affect how much wind offset affects the subset.");
+	windCheckBox->SetPos(XMFLOAT2(670, y += step));
+	windCheckBox->OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+			material->SetUseWind(args.bValue);
+		});
+	materialWindow->AddWidget(windCheckBox);
 
 
 	step = 30;
@@ -789,6 +799,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		specularGlossinessCheckBox->SetCheck(material->IsUsingSpecularGlossinessWorkflow());
 		occlusionPrimaryCheckBox->SetCheck(material->IsOcclusionEnabled_Primary());
 		occlusionSecondaryCheckBox->SetCheck(material->IsOcclusionEnabled_Secondary());
+		windCheckBox->SetCheck(material->IsUsingWind());
 		normalMapSlider->SetValue(material->normalMapStrength);
 		roughnessSlider->SetValue(material->roughness);
 		reflectanceSlider->SetValue(material->reflectance);

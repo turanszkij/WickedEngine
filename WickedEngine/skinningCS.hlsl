@@ -85,7 +85,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 		nor.x = (float)((pos_nor_u.w >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 		nor.y = (float)((pos_nor_u.w >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 		nor.z = (float)((pos_nor_u.w >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-		nor.w = (float)((pos_nor_u.w >> 24) & 0x000000FF) / 255.0f; // subsetindex
+		nor.w = (float)((pos_nor_u.w >> 24) & 0x000000FF) / 255.0f; // wind
 	}
 
 
@@ -125,7 +125,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 		pos_nor_u.w |= (uint)((nor.x * 0.5f + 0.5f) * 255.0f) << 0;
 		pos_nor_u.w |= (uint)((nor.y * 0.5f + 0.5f) * 255.0f) << 8;
 		pos_nor_u.w |= (uint)((nor.z * 0.5f + 0.5f) * 255.0f) << 16;
-		pos_nor_u.w |= (uint)(nor.w * 255.0f) << 24; // subsetindex
+		pos_nor_u.w |= (uint)(nor.w * 255.0f) << 24; // wind
 	}
 
 	// Store data:

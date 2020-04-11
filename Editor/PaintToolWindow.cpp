@@ -33,6 +33,7 @@ PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 	modeComboBox->AddItem("Hairparticle - Add Triangle");
 	modeComboBox->AddItem("Hairparticle - Remove Triangle");
 	modeComboBox->AddItem("Hairparticle - Length (Alpha)");
+	modeComboBox->AddItem("Wind weight (Alpha)");
 	modeComboBox->SetSelected(0);
 	modeComboBox->OnSelect([&](wiEventArgs args) {
 		textureSlotComboBox->SetEnabled(false);
@@ -70,6 +71,9 @@ PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 			break;
 		case MODE_HAIRPARTICLE_LENGTH:
 			infoLabel->SetText("In hair particle length mode, you can adjust length of hair particles with the colorpicker Alpha channel (A). The Alpha channel is 0-255, but the length will be normalized to 0-1 range.\nThis will NOT modify random distribution of hair!");
+			break;
+		case MODE_WIND:
+			infoLabel->SetText("Paint the wind affection amount onto the vertices. Use the Alpha channel to control the amount.");
 			break;
 		}
 	});
@@ -354,6 +358,7 @@ void PaintToolWindow::Update(float dt)
 	break;
 
 	case MODE_VERTEXCOLOR:
+	case MODE_WIND:
 	{
 		ObjectComponent* object = scene.objects.GetComponent(entity);
 		if (object == nullptr || object->meshID == INVALID_ENTITY)
@@ -371,14 +376,30 @@ void PaintToolWindow::Update(float dt)
 				material = scene.materials.GetComponent(x.materialID);
 				if (material != nullptr)
 				{
-					material->SetUseVertexColors(true);
+					switch (mode)
+					{
+					case MODE_VERTEXCOLOR:
+						material->SetUseVertexColors(true);
+						break;
+					case MODE_WIND:
+						material->SetUseWind(true);
+						break;
+					}
 				}
 			}
 			material = nullptr;
 		}
 		else
 		{
-			material->SetUseVertexColors(true);
+			switch (mode)
+			{
+			case MODE_VERTEXCOLOR:
+				material->SetUseVertexColors(true);
+				break;
+			case MODE_WIND:
+				material->SetUseWind(true);
+				break;
+			}
 		}
 		
 		const ArmatureComponent* armature = mesh->IsSkinned() ? scene.armatures.GetComponent(mesh->armatureID) : nullptr;
@@ -390,11 +411,25 @@ void PaintToolWindow::Update(float dt)
 		const XMMATRIX W = XMLoadFloat4x4(&transform->world);
 
 		bool rebuild = false;
-		if (mesh->vertex_colors.empty())
+
+		switch (mode)
 		{
-			mesh->vertex_colors.resize(mesh->vertex_positions.size());
-			std::fill(mesh->vertex_colors.begin(), mesh->vertex_colors.end(), 0xFFFFFFFF); // fill white
-			rebuild = true;
+		case MODE_VERTEXCOLOR:
+			if (mesh->vertex_colors.empty())
+			{
+				mesh->vertex_colors.resize(mesh->vertex_positions.size());
+				std::fill(mesh->vertex_colors.begin(), mesh->vertex_colors.end(), wiColor::White().rgba); // fill white
+				rebuild = true;
+			}
+			break;
+		case MODE_WIND:
+			if (mesh->vertex_windweights.empty())
+			{
+				mesh->vertex_windweights.resize(mesh->vertex_positions.size());
+				std::fill(mesh->vertex_windweights.begin(), mesh->vertex_windweights.end(), 0xFF); // fill max affection
+				rebuild = true;
+			}
+			break;
 		}
 
 		if (painting)
@@ -429,11 +464,26 @@ void PaintToolWindow::Update(float dt)
 				if (z >= 0 && z <= 1 && dist <= radius)
 				{
 					RecordHistory(true);
-					wiColor vcol = mesh->vertex_colors[j];
-					const float affection = amount * std::powf(1 - (dist / radius), falloff);
-					vcol = wiColor::lerp(vcol, color, affection);
-					mesh->vertex_colors[j] = vcol.rgba;
 					rebuild = true;
+					const float affection = amount * std::powf(1 - (dist / radius), falloff);
+
+					switch (mode)
+					{
+					case MODE_VERTEXCOLOR:
+					{
+						wiColor vcol = mesh->vertex_colors[j];
+						vcol = wiColor::lerp(vcol, color, affection);
+						mesh->vertex_colors[j] = vcol.rgba;
+					}
+					break;
+					case MODE_WIND:
+					{
+						wiColor vcol = wiColor(0, 0, 0, mesh->vertex_windweights[j]);
+						vcol = wiColor::lerp(vcol, color, affection);
+						mesh->vertex_windweights[j] = vcol.getA();
+					}
+					break;
+					}
 				}
 			}
 		}
@@ -460,9 +510,18 @@ void PaintToolWindow::Update(float dt)
 				XMStoreFloat3(&tri.positionA, P[0]);
 				XMStoreFloat3(&tri.positionB, P[1]);
 				XMStoreFloat3(&tri.positionC, P[2]);
-				tri.colorA.w = 0.8f;
-				tri.colorB.w = 0.8f;
-				tri.colorC.w = 0.8f;
+				if (mode == MODE_WIND)
+				{
+					tri.colorA = wiColor(mesh->vertex_windweights[triangle[0]], 0, 0, 255);
+					tri.colorB = wiColor(mesh->vertex_windweights[triangle[1]], 0, 0, 255);
+					tri.colorC = wiColor(mesh->vertex_windweights[triangle[2]], 0, 0, 255);
+				}
+				else
+				{
+					tri.colorA.w = 0.8f;
+					tri.colorB.w = 0.8f;
+					tri.colorC.w = 0.8f;
+				}
 				wiRenderer::DrawTriangle(tri, true);
 			}
 		}
@@ -952,6 +1011,19 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 		archive << mesh->vertex_colors;
 	}
 	break;
+	case PaintToolWindow::MODE_WIND:
+	{
+		ObjectComponent* object = scene.objects.GetComponent(entity);
+		if (object == nullptr || object->meshID == INVALID_ENTITY)
+			break;
+
+		MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+		if (mesh == nullptr)
+			break;
+
+		archive << mesh->vertex_windweights;
+	}
+	break;
 	case PaintToolWindow::MODE_SCULPTING_ADD:
 	case PaintToolWindow::MODE_SCULPTING_SUBTRACT:
 	{
@@ -1068,6 +1140,33 @@ void PaintToolWindow::ConsumeHistoryOperation(wiArchive& archive, bool undo)
 		else
 		{
 			mesh->vertex_colors = redo_mesh.vertex_colors;
+		}
+
+		mesh->CreateRenderData();
+	}
+	break;
+	case PaintToolWindow::MODE_WIND:
+	{
+		ObjectComponent* object = scene.objects.GetComponent(entity);
+		if (object == nullptr || object->meshID == INVALID_ENTITY)
+			break;
+
+		MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+		if (mesh == nullptr)
+			break;
+
+		MeshComponent undo_mesh;
+		archive >> undo_mesh.vertex_windweights;
+		MeshComponent redo_mesh;
+		archive >> redo_mesh.vertex_windweights;
+
+		if (undo)
+		{
+			mesh->vertex_windweights = undo_mesh.vertex_windweights;
+		}
+		else
+		{
+			mesh->vertex_windweights = redo_mesh.vertex_windweights;
 		}
 
 		mesh->CreateRenderData();

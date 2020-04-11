@@ -37,6 +37,20 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture(&desc, nullptr, &rtPostprocess_LDR[0]);
 		device->SetName(&rtPostprocess_LDR[0], "rtPostprocess_LDR[0]");
+
+
+		desc.Width /= 4;
+		desc.Height /= 4;
+		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[0]);
+		device->SetName(&rtGUIBlurredBackground[0], "rtGUIBlurredBackground[0]");
+
+		desc.Width /= 4;
+		desc.Height /= 4;
+		device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[1]);
+		device->SetName(&rtGUIBlurredBackground[1], "rtGUIBlurredBackground[1]");
+		device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[2]);
+		device->SetName(&rtGUIBlurredBackground[2], "rtGUIBlurredBackground[2]");
 	}
 
 	{
@@ -153,6 +167,17 @@ void RenderPath3D_PathTracing::Render() const
 			false,
 			nullptr
 		);
+
+		// GUI Background blurring:
+		{
+			auto range = wiProfiler::BeginRangeGPU("GUI Background Blur", cmd);
+			device->EventBegin("GUI Background Blur", cmd);
+			wiRenderer::Postprocess_Downsample4x(rtPostprocess_LDR[0], rtGUIBlurredBackground[0], cmd);
+			wiRenderer::Postprocess_Downsample4x(rtGUIBlurredBackground[0], rtGUIBlurredBackground[2], cmd);
+			wiRenderer::Postprocess_Blur_Gaussian(rtGUIBlurredBackground[2], rtGUIBlurredBackground[1], rtGUIBlurredBackground[2], cmd);
+			device->EventEnd(cmd);
+			wiProfiler::EndRange(range);
+		}
 	});
 
 	RenderPath2D::Render();

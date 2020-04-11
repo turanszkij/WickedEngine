@@ -34,6 +34,7 @@ public:
 	wiCheckBox* specularGlossinessCheckBox;
 	wiCheckBox* occlusionPrimaryCheckBox;
 	wiCheckBox* occlusionSecondaryCheckBox;
+	wiCheckBox* windCheckBox;
 	wiSlider*	normalMapSlider;
 	wiSlider*	roughnessSlider;
 	wiSlider*	reflectanceSlider;
