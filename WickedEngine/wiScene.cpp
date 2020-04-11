@@ -1802,7 +1802,7 @@ namespace wiScene
 	{
 		static float time = 0;
 		time += dt;
-		const XMVECTOR wind = XMLoadFloat3(&weather.windDirection);
+		const XMVECTOR windDir = XMLoadFloat3(&weather.windDirection);
 		const XMVECTOR gravity = XMVectorSet(0, -9.8f, 0, 0);
 
 		for (size_t i = 0; i < springs.GetCount(); ++i)
@@ -1843,8 +1843,7 @@ namespace wiScene
 
 			if (spring.wind_affection > 0)
 			{
-				// todo: nicer wind calculation
-				force += spring.wind_affection * wind * XMVectorSin(position_current + XMVectorReplicate(time*XM_2PI)) * 0.5f + XMVectorReplicate(0.5f);
+				force += std::sin(time * weather.windSpeed + XMVectorGetX(XMVector3Dot(position_current, windDir))) * windDir * spring.wind_affection;
 			}
 			if (spring.IsGravityEnabled())
 			{
