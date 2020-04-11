@@ -7453,7 +7453,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 			if (desc.ArraySize > 6)
 			{
 				// Cubearray
-				assert(arrayIndex >= 0 && "You should only filter a specific cube in the array for now, so provide its index!");
+				assert(options.arrayIndex >= 0 && "You should only filter a specific cube in the array for now, so provide its index!");
 
 				switch (filter)
 				{
@@ -7563,7 +7563,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				break;
 			case MIPGENFILTER_GAUSSIAN:
 			{
-				assert(gaussian_temp != nullptr); // needed for separate filter!
+				assert(options.gaussian_temp != nullptr); // needed for separate filter!
 				device->EventBegin("GenerateMipChain 2D - GaussianFilter", cmd);
 				// Gaussian filter is a bit different as we do it in a separable way:
 				for (uint32_t i = 0; i < desc.MipLevels - 1; ++i)
