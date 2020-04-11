@@ -8705,7 +8705,7 @@ void SetAlphaRef(float alphaRef, CommandList cmd)
 {
 	if (alphaRef != apiCB[cmd].g_xAlphaRef)
 	{
-		apiCB[cmd].g_xAlphaRef = alphaRef;
+		apiCB[cmd].g_xAlphaRef = 1 - alphaRef + 1.0f / 256.0f; // 256 so that it is just about smaller than 1 unorm unit (1.0/255.0)
 		GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_API], &apiCB[cmd], cmd);
 	}
 }
