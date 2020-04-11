@@ -188,7 +188,11 @@ wiWidget::WIDGETSTATE wiWidget::GetState() const
 }
 void wiWidget::SetEnabled(bool val)
 {
-	enabled = val;
+	if (enabled != val)
+	{
+		priority_change |= val;
+		enabled = val;
+	}
 }
 bool wiWidget::IsEnabled() const
 {
@@ -196,7 +200,11 @@ bool wiWidget::IsEnabled() const
 }
 void wiWidget::SetVisible(bool val)
 {
-	visible = val;
+	if (visible != val)
+	{
+		priority_change |= val;
+		visible = val;
+	}
 }
 bool wiWidget::IsVisible() const
 {

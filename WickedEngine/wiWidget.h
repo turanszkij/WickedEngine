@@ -47,7 +47,7 @@ protected:
 	std::string scriptTip;
 	bool enabled = true;
 	bool visible = true;
-	uint32_t foregroundPriority = 0;
+	bool priority_change = true;
 
 	WIDGETSTATE state = IDLE;
 	void Activate();

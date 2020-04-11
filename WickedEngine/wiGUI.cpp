@@ -106,6 +106,12 @@ void wiGUI::Update(float dt)
 		{
 			focus = true;
 		}
+
+		if (widget->priority_change)
+		{
+			widget->priority_change = false;
+			priorityChangeQueue.push_back(widget);
+		}
 	}
 
 	for (auto& widget : priorityChangeQueue)
@@ -184,6 +190,7 @@ void wiGUI::ActivateWidget(wiWidget* widget)
 {
 	if (std::find(widgets.begin(), widgets.end(), widget) != widgets.end())
 	{
+		widget->priority_change = false;
 		priorityChangeQueue.push_back(widget);
 	}
 	if (activeWidget == nullptr)
