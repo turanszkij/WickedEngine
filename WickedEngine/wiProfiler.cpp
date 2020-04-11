@@ -23,6 +23,8 @@ namespace wiProfiler
 	struct Range
 	{
 		std::string name;
+		float times[20] = {};
+		int avg_counter = 0;
 		float time = 0;
 		CommandList cmd = COMMANDLIST_COUNT;
 
@@ -96,6 +98,17 @@ namespace wiProfiler
 					while (!wiRenderer::GetDevice()->QueryRead(end_query, &end_result));
 				}
 				range.time = abs((float)(end_result.result_timestamp - begin_result.result_timestamp) / disjoint_result.result_timestamp_frequency * 1000.0f);
+			}
+			range.times[range.avg_counter++ % arraysize(range.times)] = range.time;
+
+			if (range.avg_counter > arraysize(range.times))
+			{
+				float avg_time = 0;
+				for (int i = 0; i < arraysize(range.times); ++i)
+				{
+					avg_time += range.times[i];
+				}
+				range.time = avg_time / arraysize(range.times);
 			}
 		}
 	}

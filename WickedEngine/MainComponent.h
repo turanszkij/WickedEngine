@@ -21,6 +21,10 @@ protected:
 	float deltaTime = 0;
 	float deltaTimeAccumulator = 0;
 	wiTimer timer;
+
+	float deltatimes[20] = {};
+	int fps_avg_counter = 0;
+
 public:
 	bool fullscreen = false;
 

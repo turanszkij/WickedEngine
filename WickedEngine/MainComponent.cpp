@@ -287,16 +287,30 @@ void MainComponent::Compose(CommandList cmd)
 		}
 		if (infoDisplay.fpsinfo)
 		{
-			ss.precision(2);
-			ss << fixed << 1.0f / deltaTime << " FPS" << endl;
-#ifdef _DEBUG
-			ss << "Warning: This is a [DEBUG] build, performance will be slow!" << endl;
-#endif
-			if (wiRenderer::GetDevice()->IsDebugDevice())
+			deltatimes[fps_avg_counter++ % arraysize(deltatimes)] = deltaTime;
+			float displaydeltatime = deltaTime;
+			if (fps_avg_counter > arraysize(deltatimes))
 			{
-				ss << "Warning: Graphics is in [debugdevice] mode, performance will be slow!" << endl;
+				float avg_time = 0;
+				for (int i = 0; i < arraysize(deltatimes); ++i)
+				{
+					avg_time += deltatimes[i];
+				}
+				displaydeltatime = avg_time / arraysize(deltatimes);
 			}
+
+			ss.precision(2);
+			ss << fixed << 1.0f / displaydeltatime << " FPS" << endl;
 		}
+
+#ifdef _DEBUG
+		ss << "Warning: This is a [DEBUG] build, performance will be slow!" << endl;
+#endif
+		if (wiRenderer::GetDevice()->IsDebugDevice())
+		{
+			ss << "Warning: Graphics is in [debugdevice] mode, performance will be slow!" << endl;
+		}
+
 		ss.precision(2);
 		wiFont(ss.str(), wiFontParams(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor(255,255,255,255), wiColor(0,0,0,255))).Draw(cmd);
 	}
