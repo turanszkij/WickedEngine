@@ -289,6 +289,11 @@ namespace wiScene
 				SerializeEntity(archive, terrain_material3, seed);
 			}
 
+			if (archive.GetVersion() >= 43)
+			{
+				archive >> vertex_windweights;
+			}
+
 			CreateRenderData();
 		}
 		else
@@ -324,6 +329,11 @@ namespace wiScene
 				SerializeEntity(archive, terrain_material1, seed);
 				SerializeEntity(archive, terrain_material2, seed);
 				SerializeEntity(archive, terrain_material3, seed);
+			}
+
+			if (archive.GetVersion() >= 43)
+			{
+				archive << vertex_windweights;
 			}
 
 		}
