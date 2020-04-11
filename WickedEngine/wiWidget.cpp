@@ -1567,7 +1567,7 @@ void wiWindow::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	if (IsEnabled() && !gui->IsWidgetDisabled(this))
+	if (IsEnabled() && !gui->IsWidgetDisabled(this) && !IsMinimized())
 	{
 		if (state == FOCUS)
 		{
@@ -1616,6 +1616,10 @@ void wiWindow::Update(wiGUI* gui, float dt)
 		{
 			gui->ActivateWidget(this);
 		}
+	}
+	else
+	{
+		state = IDLE;
 	}
 }
 void wiWindow::Render(const wiGUI* gui, CommandList cmd) const
