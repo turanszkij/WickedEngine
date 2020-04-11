@@ -366,6 +366,8 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			mesh->vertex_positions.resize(width * height);
 			mesh->vertex_normals.resize(width * height);
 			mesh->vertex_colors.resize(width * height);
+			mesh->vertex_uvset_0.resize(width* height);
+			mesh->vertex_uvset_1.resize(width* height);
 			mesh->vertex_atlas.resize(width* height);
 			for (int i = 0; i < width; ++i)
 			{
@@ -376,7 +378,10 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 					if (rgb != nullptr)
 						mesh->vertex_positions[index].y = ((float)rgb[index * channelCount] - 127.0f) * heightmap_scale;
 					mesh->vertex_colors[index] = wiColor::Red().rgba;
-					mesh->vertex_atlas[index] = XMFLOAT2((float)i / (float)width, (float)j / (float)height);
+					XMFLOAT2 uv = XMFLOAT2((float)i / (float)width, (float)j / (float)height);
+					mesh->vertex_uvset_0[index] = uv;
+					mesh->vertex_uvset_1[index] = uv;
+					mesh->vertex_atlas[index] = uv;
 				}
 			}
 			mesh->indices.resize((width - 1) * (height - 1) * 6);
