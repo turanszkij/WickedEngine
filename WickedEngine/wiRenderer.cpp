@@ -8671,6 +8671,10 @@ void UpdateFrameCB(CommandList cmd)
 	{
 		cb.g_xFrame_Options |= OPTION_BIT_VOXELGI_RETARGETTED;
 	}
+	if (scene.weather.IsSimpleSky())
+	{
+		cb.g_xFrame_Options |= OPTION_BIT_SIMPLE_SKY;
+	}
 
 	GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &cb, cmd);
 }

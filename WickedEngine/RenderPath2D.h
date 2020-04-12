@@ -30,6 +30,7 @@ class RenderPath2D :
 {
 private:
 	wiGraphics::Texture rtStenciled;
+	wiGraphics::Texture rtStenciled_resolved;
 	wiGraphics::Texture rtFinal;
 
 	wiGraphics::RenderPass renderpass_stenciled;

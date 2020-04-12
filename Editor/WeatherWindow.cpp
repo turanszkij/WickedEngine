@@ -108,6 +108,14 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	});
 	weatherWindow->AddWidget(windRandomnessSlider);
 
+	simpleskyCheckBox = new wiCheckBox("Simple sky: ");
+	simpleskyCheckBox->SetTooltip("Simple sky will simply blend horizon and zenith color from bottom to top.");
+	simpleskyCheckBox->SetPos(XMFLOAT2(x, y += step));
+	simpleskyCheckBox->OnClick([&](wiEventArgs args) {
+		auto& weather = GetWeather();
+		weather.SetSimpleSky(args.bValue);
+		});
+	weatherWindow->AddWidget(simpleskyCheckBox);
 
 	skyButton = new wiButton("Load Sky");
 	skyButton->SetTooltip("Load a skybox cubemap texture...");

@@ -736,7 +736,7 @@ inline float3 GetAmbient(in float3 N)
 	else
 #endif // ENVMAPRENDERING
 	{
-		ambient = lerp(GetHorizonColor(), GetZenithColor(), saturate(N.y * 0.5f + 0.5f)) + GetAmbientColor();
+		ambient = lerp(GetDynamicSkyColor(float3(0, -1, 0), false, false, false), GetDynamicSkyColor(float3(0, 1, 0), false, false, false), saturate(N.y * 0.5f + 0.5f)) + GetAmbientColor();
 	}
 
 	return ambient;
@@ -761,7 +761,7 @@ inline float3 EnvironmentReflection_Global(in Surface surface, in float MIP)
 	{
 		// There are no envmaps, approximate sky color:
 		float3 realSkyColor = GetDynamicSkyColor(surface.R, false, false, false); // false: disable sun disk and clouds
-		float3 roughSkyColor = lerp(GetHorizonColor(), GetZenithColor(), saturate(surface.R.y * 0.5f + 0.5f));
+		float3 roughSkyColor = lerp(GetDynamicSkyColor(float3(0, -1, 0), false, false, false), GetDynamicSkyColor(float3(0, 1, 0), false, false, false), saturate(surface.R.y * 0.5f + 0.5f));
 		envColor = lerp(realSkyColor, roughSkyColor, saturate(surface.roughness));
 	}
 

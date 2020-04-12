@@ -34,6 +34,7 @@ public:
 	wiSlider*		windDirectionSlider;
 	wiSlider*		windWaveSizeSlider;
 	wiSlider*		windRandomnessSlider;
+	wiCheckBox*		simpleskyCheckBox;
 	wiButton*		skyButton;
 	wiColorPicker*	ambientColorPicker;
 	wiColorPicker*	horizonColorPicker;

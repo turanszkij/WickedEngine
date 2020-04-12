@@ -39,6 +39,7 @@ Luna<RenderPath3D_TiledForward_BindLua>::FunctionType RenderPath3D_TiledForward_
 	lunamethod(RenderPath3D_BindLua, SetDepthOfFieldEnabled),
 	lunamethod(RenderPath3D_BindLua, SetEyeAdaptionEnabled),
 	lunamethod(RenderPath3D_BindLua, SetTessellationEnabled),
+	lunamethod(RenderPath3D_BindLua, SetMSAASampleCount),
 	lunamethod(RenderPath3D_BindLua, SetSharpenFilterEnabled),
 	lunamethod(RenderPath3D_BindLua, SetSharpenFilterAmount),
 	lunamethod(RenderPath3D_BindLua, SetMotionBlurStrength),

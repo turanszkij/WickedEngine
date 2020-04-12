@@ -14,15 +14,21 @@ void RenderPath2D::ResizeBuffers()
 
 	FORMAT defaultTextureFormat = device->GetBackBufferFormat();
 
-	if(GetDepthStencil() != nullptr && wiRenderer::GetResolutionScale() != 1.0f)
+	const Texture* dsv = GetDepthStencil();
+	if(dsv != nullptr && (wiRenderer::GetResolutionScale() != 1.0f ||  dsv->GetDesc().SampleCount > 1))
 	{
-		TextureDesc desc;
+		TextureDesc desc = GetDepthStencil()->GetDesc();
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = defaultTextureFormat;
-		desc.Width = wiRenderer::GetInternalResolution().x;
-		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture(&desc, nullptr, &rtStenciled);
 		device->SetName(&rtStenciled, "rtStenciled");
+
+		if (desc.SampleCount > 1)
+		{
+			desc.SampleCount = 1;
+			device->CreateTexture(&desc, nullptr, &rtStenciled_resolved);
+			device->SetName(&rtStenciled_resolved, "rtStenciled_resolved");
+		}
 	}
 	{
 		TextureDesc desc;
@@ -34,8 +40,7 @@ void RenderPath2D::ResizeBuffers()
 		device->SetName(&rtFinal, "rtFinal");
 	}
 
-	const Texture* dsv = GetDepthStencil();
-	if (dsv != nullptr && wiRenderer::GetResolutionScale() != 1.0f)
+	if (rtStenciled.IsValid())
 	{
 		RenderPassDesc desc;
 		desc.numAttachments = 2;
@@ -51,7 +56,7 @@ void RenderPath2D::ResizeBuffers()
 		desc.numAttachments = 1;
 		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,&rtFinal,-1 };
 		
-		if(dsv != nullptr)
+		if(dsv != nullptr && !rtStenciled.IsValid())
 		{
 			desc.numAttachments = 2;
 			desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,dsv,-1 };
@@ -136,7 +141,7 @@ void RenderPath2D::Render() const
 
 	// Special care for internal resolution, because stencil buffer is of internal resolution, 
 	//	so we might need to render stencil sprites to separate render target that matches internal resolution!
-	if (GetDepthStencil() != nullptr && wiRenderer::GetResolutionScale() != 1.0f)
+	if (rtStenciled.IsValid())
 	{
 		device->RenderPassBegin(&renderpass_stenciled, cmd);
 
@@ -159,6 +164,11 @@ void RenderPath2D::Render() const
 		wiRenderer::GetDevice()->EventEnd(cmd);
 
 		device->RenderPassEnd(cmd);
+
+		if (rtStenciled.GetDesc().SampleCount > 1)
+		{
+			device->MSAAResolve(&rtStenciled_resolved, &rtStenciled, cmd);
+		}
 	}
 
 	device->RenderPassBegin(&renderpass_final, cmd);
@@ -170,12 +180,19 @@ void RenderPath2D::Render() const
 
 	if (GetDepthStencil() != nullptr)
 	{
-		if (wiRenderer::GetResolutionScale() != 1.0f)
+		if (rtStenciled.IsValid())
 		{
 			wiRenderer::GetDevice()->EventBegin("Copy STENCIL Sprite Layers", cmd);
 			wiImageParams fx;
 			fx.enableFullScreen();
-			wiImage::Draw(&rtStenciled, fx, cmd);
+			if (rtStenciled.GetDesc().SampleCount > 1)
+			{
+				wiImage::Draw(&rtStenciled_resolved, fx, cmd);
+			}
+			else
+			{
+				wiImage::Draw(&rtStenciled, fx, cmd);
+			}
 			wiRenderer::GetDevice()->EventEnd(cmd);
 		}
 		else
