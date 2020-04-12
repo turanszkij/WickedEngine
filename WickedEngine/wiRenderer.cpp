@@ -1193,7 +1193,6 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER], "cubeShadowVS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST], "cubeShadowVS_alphatest.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_SKY], "skyVS.cso"); });
-	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_WATER], "waterVS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_VOXELIZER], "objectVS_voxelizer.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_VOXEL], "voxelVS.cso"); });
 	wiJobSystem::Execute(ctx, [] { LoadShader(VS, vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_POINT], "forceFieldPointVisualizerVS.cso"); });
@@ -1631,11 +1630,11 @@ void LoadShaders()
 
 	wiJobSystem::Execute(ctx, [device] {
 		PipelineStateDesc desc;
-		desc.vs = &vertexShaders[VSTYPE_WATER];
+		desc.vs = &vertexShaders[VSTYPE_OBJECT_COMMON];
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
-		desc.il = &inputLayouts[ILTYPE_OBJECT_POS_TEX];
+		desc.il = &inputLayouts[ILTYPE_OBJECT_ALL];
 
 		desc.ps = &pixelShaders[PSTYPE_OBJECT_FORWARD_WATER];
 		device->CreatePipelineState(&desc, &PSO_object_water[RENDERPASS_FORWARD]);
@@ -1650,6 +1649,14 @@ void LoadShaders()
 		desc.ps = &pixelShaders[PSTYPE_SHADOW_WATER];
 
 		device->CreatePipelineState(&desc, &PSO_object_water[RENDERPASS_SHADOW]);
+
+		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+		desc.bs = &blendStates[BSTYPE_OPAQUE];
+		desc.il = &inputLayouts[GetILTYPE(RENDERPASS_ENVMAPCAPTURE, false, false, true)];
+		desc.vs = &vertexShaders[GetVSTYPE(RENDERPASS_ENVMAPCAPTURE, false, false, true)];
+		desc.ps = &pixelShaders[GetPSTYPE(RENDERPASS_ENVMAPCAPTURE, false, true, false, false, false)];
+		device->CreatePipelineState(&desc, &PSO_object_water[RENDERPASS_ENVMAPCAPTURE]);
 		});
 	wiJobSystem::Execute(ctx, [device] {
 		PipelineStateDesc desc;
@@ -3251,7 +3258,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 					}
 				}
 
-				if (pso == nullptr)
+				if (pso == nullptr || !pso->IsValid())
 				{
 					continue;
 				}
@@ -3304,11 +3311,6 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 					{
 						boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
 					}
-				}
-
-				if (material.IsWater())
-				{
-					boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
 				}
 
 				if (IsWireRender())
@@ -6743,8 +6745,9 @@ void RefreshEnvProbes(CommandList cmd)
 		if (!renderQueue.empty())
 		{
 			BindShadowmaps(PS, cmd);
+			device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
 
-			RenderMeshes(renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_OPAQUE | RENDERTYPE_TRANSPARENT, cmd, false, cameras);
+			RenderMeshes(renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_ALL, cmd, false, cameras);
 
 			GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 		}

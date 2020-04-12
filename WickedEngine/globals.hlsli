@@ -70,7 +70,6 @@ inline float3 GetSunDirection() { return g_xFrame_SunDirection; }
 inline float3 GetHorizonColor() { return g_xFrame_Horizon.rgb; }
 inline float3 GetZenithColor() { return g_xFrame_Zenith.rgb; }
 inline float3 GetAmbientColor() { return g_xFrame_Ambient.rgb; }
-inline float3 GetAmbient(in float3 N) { return lerp(GetHorizonColor(), GetZenithColor(), saturate(N.y * 0.5f + 0.5f)) + GetAmbientColor(); }
 inline float2 GetScreenResolution() { return g_xFrame_ScreenWidthHeight; }
 inline float GetScreenWidth() { return g_xFrame_ScreenWidthHeight.x; }
 inline float GetScreenHeight() { return g_xFrame_ScreenWidthHeight.y; }
@@ -559,6 +558,68 @@ inline float ditherMask8(in float2 pixel)
 inline float dither(in float2 pixel)
 {
 	return ditherMask8(pixel);
+}
+
+// o		: ray origin
+// d		: ray direction
+// center	: sphere center
+// radius	: sphere radius
+// returns distance on the ray to the object if hit, 0 otherwise
+float Trace_sphere(float3 o, float3 d, float3 center, float radius)
+{
+	float3 rc = o - center;
+	float c = dot(rc, rc) - (radius * radius);
+	float b = dot(d, rc);
+	float dd = b * b - c;
+	float t = -b - sqrt(abs(dd));
+	float st = step(0.0, min(t, dd));
+	return lerp(-1.0, t, st);
+}
+// o		: ray origin
+// d		: ray direction
+// returns distance on the ray to the object if hit, 0 otherwise
+float Trace_plane(float3 o, float3 d, float3 planeOrigin, float3 planeNormal)
+{
+	return dot(planeNormal, (planeOrigin - o) / dot(planeNormal, d));
+}
+// o		: ray origin
+// d		: ray direction
+// A,B,C	: traingle corners
+// returns distance on the ray to the object if hit, 0 otherwise
+float Trace_triangle(float3 o, float3 d, float3 A, float3 B, float3 C)
+{
+	float3 planeNormal = normalize(cross(B - A, C - B));
+	float t = Trace_plane(o, d, A, planeNormal);
+	float3 p = o + d * t;
+
+	float3 N1 = normalize(cross(B - A, p - B));
+	float3 N2 = normalize(cross(C - B, p - C));
+	float3 N3 = normalize(cross(A - C, p - A));
+
+	float d0 = dot(N1, N2);
+	float d1 = dot(N2, N3);
+
+	float threshold = 1.0f - 0.001f;
+	return (d0 > threshold && d1 > threshold) ? 1.0f : 0.0f;
+}
+// o		: ray origin
+// d		: ray direction
+// A,B,C,D	: rectangle corners
+// returns distance on the ray to the object if hit, 0 otherwise
+float Trace_rectangle(float3 o, float3 d, float3 A, float3 B, float3 C, float3 D)
+{
+	return max(Trace_triangle(o, d, A, B, C), Trace_triangle(o, d, C, D, A));
+}
+// o		: ray origin
+// d		: ray direction
+// diskNormal : disk facing direction
+// returns distance on the ray to the object if hit, 0 otherwise
+float Trace_disk(float3 o, float3 d, float3 diskCenter, float diskRadius, float3 diskNormal)
+{
+	float t = Trace_plane(o, d, diskCenter, diskNormal);
+	float3 p = o + d * t;
+	float3 diff = p - diskCenter;
+	return dot(diff, diff) < sqr(diskRadius);
 }
 
 #endif // WI_SHADER_GLOBALS_HF

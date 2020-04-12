@@ -3,9 +3,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Raytracing.h"
 #include "ShaderInterop_BVH.h"
-
-#define NOSUN
-#include "skyHF.hlsli"
+#include "lightingHF.hlsli"
 
 
 static const float INFINITE_RAYHIT = 1000000;

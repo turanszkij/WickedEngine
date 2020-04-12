@@ -153,9 +153,6 @@
     <FxCompile Include="trailPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="waterVS.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
     <FxCompile Include="decalVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>

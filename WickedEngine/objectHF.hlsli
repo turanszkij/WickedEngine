@@ -13,9 +13,13 @@
 #define DISABLE_TRANSPARENT_SHADOWMAP
 #endif
 
-
 #ifdef PLANARREFLECTION
 #define DISABLE_ENVMAPS
+#define DISABLE_VOXELGI
+#endif
+
+#ifdef WATER
+#define DISABLE_VOXELGI
 #endif
 
 
@@ -701,11 +705,6 @@ inline void ApplyFog(in float dist, inout float4 color)
 #else
 #define PIXELINPUT PixelInputType
 #endif // SIMPLE_INPUT
-
-#ifdef PLANARREFLECTION
-#define DISABLE_ENVMAPS
-#define DISABLE_VOXELGI
-#endif // PLANARREFLECTION
 
 
 // entry point:

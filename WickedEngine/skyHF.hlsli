@@ -1,7 +1,6 @@
 #ifndef WI_SKY_HF
 #define WI_SKY_HF
 #include "globals.hlsli"
-#include "lightingHF.hlsli"
 
 // Atmosphere based on: https://www.shadertoy.com/view/Ml2cWG
 // Cloud noise based on: https://www.shadertoy.com/view/4tdSWr
@@ -32,7 +31,8 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enab
 	const float3 skyColor = GetZenithColor();
 	const float3 sunDirection = GetSunDirection();
 	const float3 sunColor = GetSunColor();
-	sun_enabled = sun_enabled && any(sunColor);
+	const bool sun_present = any(sunColor);
+	sun_enabled = sun_enabled && sun_present;
 
 	const float zenith = V.y; // how much is above (0: horizon, 1: directly above)
 	const float sunScatter = saturate(sunDirection.y + 0.1f); // how much the sun is directly above. Even if sunis at horizon, we add a constant scattering amount so that light still scatters at horizon
@@ -43,10 +43,10 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enab
 
 	const float3 aberration = float3(0.39, 0.57, 1.0); // the chromatic aberration effect on the horizon-zenith fade line
 	const float3 skyAbsorption = saturate(exp2(aberration * -zenithDensity) * 2.0f); // gradient on horizon
-	const float3 sunAbsorption = sun_enabled ? saturate(sunColor * exp2(aberration * -sunScatterDensity) * 2.0f) : 1; // gradient of sun when it's getting below horizon
+	const float3 sunAbsorption = sun_present ? saturate(sunColor * exp2(aberration * -sunScatterDensity) * 2.0f) : 1; // gradient of sun when it's getting below horizon
 
 	const float sunAmount = distance(V, sunDirection); // sun falloff descreasing from mid point
-	const float rayleigh = sun_enabled ? 1.0 + pow(1.0 - saturate(sunAmount), 2.0) * PI * 0.5 : 1;
+	const float rayleigh = sun_present ? 1.0 + pow(1.0 - saturate(sunAmount), 2.0) * PI * 0.5 : 1;
 	const float mie_disk = saturate(1.0 - pow(sunAmount, 0.1));
 	const float3 mie = mie_disk * mie_disk*(3.0 - 2.0 * mie_disk) * 2.0 * PI * sunAbsorption;
 

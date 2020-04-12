@@ -3,6 +3,7 @@
 #include "globals.hlsli"
 #include "brdf.hlsli"
 #include "voxelConeTracingHF.hlsli"
+#include "skyHF.hlsli"
 
 struct LightingContribution
 {
@@ -318,68 +319,6 @@ float RectangleSolidAngle(float3 worldPos,
 	return g0 + g1 + g2 + g3 - 2 * PI;
 }
 
-
-// o		: ray origin
-// d		: ray direction
-// center	: sphere center
-// radius	: sphere radius
-// returns distance on the ray to the object if hit, 0 otherwise
-float Trace_sphere(float3 o, float3 d, float3 center, float radius)
-{
-	float3 rc = o - center;
-	float c = dot(rc, rc) - (radius*radius);
-	float b = dot(d, rc);
-	float dd = b*b - c;
-	float t = -b - sqrt(abs(dd));
-	float st = step(0.0, min(t, dd));
-	return lerp(-1.0, t, st);
-}
-// o		: ray origin
-// d		: ray direction
-// returns distance on the ray to the object if hit, 0 otherwise
-float Trace_plane(float3 o, float3 d, float3 planeOrigin, float3 planeNormal)
-{
-	return dot(planeNormal, (planeOrigin - o) / dot(planeNormal, d));
-}
-// o		: ray origin
-// d		: ray direction
-// A,B,C	: traingle corners
-// returns distance on the ray to the object if hit, 0 otherwise
-float Trace_triangle(float3 o, float3 d, float3 A, float3 B, float3 C)
-{
-	float3 planeNormal = normalize(cross(B - A, C - B));
-	float t = Trace_plane(o, d, A, planeNormal);
-	float3 p = o + d*t;
-
-	float3 N1 = normalize(cross(B - A, p - B));
-	float3 N2 = normalize(cross(C - B, p - C));
-	float3 N3 = normalize(cross(A - C, p - A));
-
-	float d0 = dot(N1, N2);
-	float d1 = dot(N2, N3);
-
-	float threshold = 1.0f - 0.001f;
-	return (d0 > threshold && d1 > threshold) ? 1.0f : 0.0f;
-}
-// o		: ray origin
-// d		: ray direction
-// A,B,C,D	: rectangle corners
-// returns distance on the ray to the object if hit, 0 otherwise
-float Trace_rectangle(float3 o, float3 d, float3 A, float3 B, float3 C, float3 D)
-{
-	return max(Trace_triangle(o, d, A, B, C), Trace_triangle(o, d, C, D, A));
-}
-// o		: ray origin
-// d		: ray direction
-// diskNormal : disk facing direction
-// returns distance on the ray to the object if hit, 0 otherwise
-float Trace_disk(float3 o, float3 d, float3 diskCenter, float diskRadius, float3 diskNormal)
-{
-	float t = Trace_plane(o, d, diskCenter, diskNormal);
-	float3 p = o + d*t;
-	float3 diff = p - diskCenter;
-	return dot(diff, diff)<sqr(diskRadius);
-}
 
 inline float3 getDiffuseDominantDir(float3 N, float3 V, float NdotV, float roughness)
 {
@@ -784,6 +723,25 @@ inline LightingContribution VoxelGI(in Surface surface, inout Lighting lighting)
 // ENVIRONMENT MAPS
 
 
+inline float3 GetAmbient(in float3 N)
+{
+	float3 ambient;
+
+#ifndef ENVMAPRENDERING
+	[branch]
+	if (g_xFrame_GlobalEnvProbeIndex >= 0)
+	{
+		ambient = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(N, g_xFrame_GlobalEnvProbeIndex), g_xFrame_EnvProbeMipCount).rgb;
+	}
+	else
+#endif // ENVMAPRENDERING
+	{
+		ambient = lerp(GetHorizonColor(), GetZenithColor(), saturate(N.y * 0.5f + 0.5f)) + GetAmbientColor();
+	}
+
+	return ambient;
+}
+
 // surface:				surface descriptor
 // MIP:					mip level to sample
 // return:				color of the environment color (rgb)
@@ -802,10 +760,9 @@ inline float3 EnvironmentReflection_Global(in Surface surface, in float MIP)
 #endif // ENVMAPRENDERING
 	{
 		// There are no envmaps, approximate sky color:
-		float3 realSkyColor = lerp(GetHorizonColor(), GetZenithColor(), pow(saturate(surface.R.y), 0.25f));
-		float3 roughSkyColor = (GetHorizonColor() + GetZenithColor()) * 0.5f;
-		float blendSkyByRoughness = saturate(MIP * g_xFrame_EnvProbeMipCount_rcp);
-		envColor = lerp(realSkyColor, roughSkyColor, blendSkyByRoughness);
+		float3 realSkyColor = GetDynamicSkyColor(surface.R, false, false, false); // false: disable sun disk and clouds
+		float3 roughSkyColor = lerp(GetHorizonColor(), GetZenithColor(), saturate(surface.R.y * 0.5f + 0.5f));
+		envColor = lerp(realSkyColor, roughSkyColor, saturate(surface.roughness));
 	}
 
 	return envColor;
