@@ -2,7 +2,9 @@
 #include "wiGraphicsDevice.h"
 #include "wiRenderer.h"
 #include "wiFont.h"
+#include "wiImage.h"
 #include "wiTimer.h"
+#include "wiTextureHelper.h"
 
 #include <sstream>
 #include <unordered_map>
@@ -223,12 +225,34 @@ namespace wiProfiler
 			}
 		}
 
-		wiFont(ss.str(), wiFontParams(x, y, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor(255, 255, 255, 255), wiColor(0, 0, 0, 255))).Draw(cmd);
+		wiFont font;
+		font.SetText(ss.str());
+		font.params = wiFontParams(x, y, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor(255, 255, 255, 255), wiColor(0, 0, 0, 255));
+
+		wiImageParams fx;
+		fx.pos.x = (float)font.params.posX;
+		fx.pos.y = (float)font.params.posY;
+		fx.siz.x = (float)font.textWidth();
+		fx.siz.y = (float)font.textHeight();
+		fx.color = wiColor(40, 40, 40, 140);
+		wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
+
+		font.Draw(cmd);
 	}
 
 	void SetEnabled(bool value)
 	{
-		ENABLED = value;
+		if (value != ENABLED)
+		{
+			initialized = false;
+			ranges.clear();
+			ENABLED = value;
+		}
+	}
+
+	bool IsEnabled()
+	{
+		return ENABLED;
 	}
 
 }

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "WeatherWindow.h"
+#include "Editor.h"
 
 #include <thread>
 
@@ -8,7 +9,7 @@ using namespace wiECS;
 using namespace wiScene;
 using namespace wiGraphics;
 
-WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
+WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 {
 	assert(GUI && "Invalid GUI!");
 
@@ -508,7 +509,7 @@ void WeatherWindow::Update()
 		ambientColorPicker->SetPickColor(wiColor::fromFloat3(weather.ambient));
 		horizonColorPicker->SetPickColor(wiColor::fromFloat3(weather.horizon));
 		zenithColorPicker->SetPickColor(wiColor::fromFloat3(weather.zenith));
-
+		simpleskyCheckBox->SetCheck(weather.IsSimpleSky());
 
 		ocean_enabledCheckBox->SetCheck(weather.IsOceanEnabled());
 		ocean_patchSizeSlider->SetValue(weather.oceanParameters.patch_length);

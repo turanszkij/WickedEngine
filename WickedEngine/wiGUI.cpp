@@ -116,8 +116,11 @@ void wiGUI::Update(float dt)
 
 	for (auto& widget : priorityChangeQueue)
 	{
-		widgets.remove(widget);
-		widgets.push_front(widget);
+		if (std::find(widgets.begin(), widgets.end(), widget) != widgets.end())
+		{
+			widgets.remove(widget);
+			widgets.push_front(widget);
+		}
 	}
 	priorityChangeQueue.clear();
 

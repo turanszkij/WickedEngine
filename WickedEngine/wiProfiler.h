@@ -28,5 +28,7 @@ namespace wiProfiler
 
 	// Enable/disable profiling
 	void SetEnabled(bool value);
+
+	bool IsEnabled();
 };
 

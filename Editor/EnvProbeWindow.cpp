@@ -1,10 +1,11 @@
 #include "stdafx.h"
 #include "EnvProbeWindow.h"
+#include "Editor.h"
 
 using namespace wiECS;
 using namespace wiScene;
 
-EnvProbeWindow::EnvProbeWindow(wiGUI* gui) : GUI(gui)
+EnvProbeWindow::EnvProbeWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 {
 	assert(GUI && "Invalid GUI!");
 
@@ -29,10 +30,13 @@ EnvProbeWindow::EnvProbeWindow(wiGUI* gui) : GUI(gui)
 
 	generateButton = new wiButton("Put");
 	generateButton->SetPos(XMFLOAT2(x, y += step));
-	generateButton->OnClick([](wiEventArgs args) {
+	generateButton->OnClick([=](wiEventArgs args) {
 		XMFLOAT3 pos;
 		XMStoreFloat3(&pos, XMVectorAdd(wiRenderer::GetCamera().GetEye(), wiRenderer::GetCamera().GetAt() * 4));
-		wiScene::GetScene().Entity_CreateEnvironmentProbe("editorProbe", pos);
+		Entity entity = wiScene::GetScene().Entity_CreateEnvironmentProbe("editorProbe", pos);
+		editor->ClearSelected();
+		editor->AddSelected(entity);
+		SetEntity(entity);
 	});
 	envProbeWindow->AddWidget(generateButton);
 

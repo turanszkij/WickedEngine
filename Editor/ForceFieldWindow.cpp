@@ -1,11 +1,12 @@
 #include "stdafx.h"
 #include "ForceFieldWindow.h"
+#include "Editor.h"
 
 using namespace wiECS;
 using namespace wiScene;
 
 
-ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
+ForceFieldWindow::ForceFieldWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 {
 	assert(GUI && "Invalid GUI!");
 
@@ -78,7 +79,7 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 	addButton = new wiButton("Add Force Field");
 	addButton->SetSize(XMFLOAT2(150, 30));
 	addButton->SetPos(XMFLOAT2(x, y += step * 2));
-	addButton->OnClick([&](wiEventArgs args) {
+	addButton->OnClick([=](wiEventArgs args) {
 		Entity entity = wiScene::GetScene().Entity_CreateForce("editorForce");
 		ForceFieldComponent* force = wiScene::GetScene().forces.GetComponent(entity);
 		if (force != nullptr)
@@ -95,6 +96,9 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 				assert(0);
 				break;
 			}
+			editor->ClearSelected();
+			editor->AddSelected(entity);
+			SetEntity(entity);
 		}
 		else
 		{

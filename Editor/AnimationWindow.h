@@ -8,10 +8,12 @@ class wiSlider;
 class wiComboBox;
 class wiButton;
 
+class EditorComponent;
+
 class AnimationWindow
 {
 public:
-	AnimationWindow(wiGUI* gui);
+	AnimationWindow(EditorComponent* editor);
 	~AnimationWindow();
 
 	wiGUI* GUI;

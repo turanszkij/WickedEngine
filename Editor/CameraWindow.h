@@ -7,10 +7,12 @@ class wiCheckBox;
 class wiSlider;
 class wiTextInputField;
 
+class EditorComponent;
+
 class CameraWindow
 {
 public:
-	CameraWindow(wiGUI* gui);
+	CameraWindow(EditorComponent* editor);
 	~CameraWindow();
 
 	void ResetCam();

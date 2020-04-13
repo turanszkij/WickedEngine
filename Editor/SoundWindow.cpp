@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "SoundWindow.h"
 #include "wiAudio.h"
+#include "Editor.h"
 
 #include <sstream>
 
@@ -9,7 +10,7 @@ using namespace wiGraphics;
 using namespace wiECS;
 using namespace wiScene;
 
-SoundWindow::SoundWindow(wiGUI* gui) : GUI(gui)
+SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 {
 	assert(GUI && "Invalid GUI!");
 
@@ -66,7 +67,7 @@ SoundWindow::SoundWindow(wiGUI* gui) : GUI(gui)
 	addButton->SetTooltip("Add a sound file to the scene.");
 	addButton->SetPos(XMFLOAT2(x, y += step));
 	addButton->SetSize(XMFLOAT2(80, 30));
-	addButton->OnClick([&](wiEventArgs args) {
+	addButton->OnClick([=](wiEventArgs args) {
 		wiHelper::FileDialogParams params;
 		wiHelper::FileDialogResult result;
 		params.type = wiHelper::FileDialogParams::OPEN;
@@ -77,6 +78,9 @@ SoundWindow::SoundWindow(wiGUI* gui) : GUI(gui)
 		if (result.ok) {
 			string fileName = result.filenames.front();
 			Entity entity = GetScene().Entity_CreateSound("editorSound", fileName);
+			editor->ClearSelected();
+			editor->AddSelected(entity);
+			SetEntity(entity);
 		}
 	});
 	soundWindow->AddWidget(addButton);

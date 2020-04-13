@@ -9,10 +9,12 @@ class wiButton;
 class wiColorPicker;
 class wiComboBox;
 
+class EditorComponent;
+
 class LightWindow
 {
 public:
-	LightWindow(wiGUI* gui);
+	LightWindow(EditorComponent* editor);
 	~LightWindow();
 
 	wiGUI* GUI;

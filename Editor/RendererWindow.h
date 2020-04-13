@@ -1,13 +1,13 @@
 #pragma once
 
-class EditorComponent;
-
 class wiGUI;
 class wiWindow;
 class wiLabel;
 class wiCheckBox;
 class wiSlider;
 class wiComboBox;
+
+class EditorComponent;
 
 enum PICKTYPE
 {
@@ -27,7 +27,7 @@ enum PICKTYPE
 class RendererWindow
 {
 public:
-	RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, RenderPath3D* path);
+	RendererWindow(EditorComponent* editorcomponent);
 	~RendererWindow();
 
 	wiGUI* GUI;

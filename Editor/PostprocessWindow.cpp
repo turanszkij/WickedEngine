@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "PostprocessWindow.h"
+#include "Editor.h"
 
 #include <thread>
 
@@ -7,9 +8,8 @@ using namespace std;
 using namespace wiGraphics;
 
 
-PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui), component(comp)
+PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 {
-	assert(component && "PostprocessWnd invalid component!");
 	assert(GUI && "Invalid GUI!");
 
 	ppWindow = new wiWindow(GUI, "PostProcess Window");
@@ -25,9 +25,9 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	exposureSlider->SetScriptTip("RenderPath3D::SetExposure(float value)");
 	exposureSlider->SetSize(XMFLOAT2(100, 20));
 	exposureSlider->SetPos(XMFLOAT2(x, y += step));
-	exposureSlider->SetValue(component->getExposure());
+	exposureSlider->SetValue(editor->renderPath->getExposure());
 	exposureSlider->OnSlide([&](wiEventArgs args) {
-		component->setExposure(args.fValue);
+		editor->renderPath->setExposure(args.fValue);
 	});
 	ppWindow->AddWidget(exposureSlider);
 
@@ -35,9 +35,9 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	lensFlareCheckBox->SetTooltip("Toggle visibility of light source flares. Additional setup needed per light for a lensflare to be visible.");
 	lensFlareCheckBox->SetScriptTip("RenderPath3D::SetLensFlareEnabled(bool value)");
 	lensFlareCheckBox->SetPos(XMFLOAT2(x, y += step));
-	lensFlareCheckBox->SetCheck(component->getLensFlareEnabled());
+	lensFlareCheckBox->SetCheck(editor->renderPath->getLensFlareEnabled());
 	lensFlareCheckBox->OnClick([&](wiEventArgs args) {
-		component->setLensFlareEnabled(args.bValue);
+		editor->renderPath->setLensFlareEnabled(args.bValue);
 	});
 	ppWindow->AddWidget(lensFlareCheckBox);
 
@@ -45,9 +45,9 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	lightShaftsCheckBox->SetTooltip("Enable light shaft for directional light sources.");
 	lightShaftsCheckBox->SetScriptTip("RenderPath3D::SetLightShaftsEnabled(bool value)");
 	lightShaftsCheckBox->SetPos(XMFLOAT2(x, y += step));
-	lightShaftsCheckBox->SetCheck(component->getLightShaftsEnabled());
+	lightShaftsCheckBox->SetCheck(editor->renderPath->getLightShaftsEnabled());
 	lightShaftsCheckBox->OnClick([&](wiEventArgs args) {
-		component->setLightShaftsEnabled(args.bValue);
+		editor->renderPath->setLightShaftsEnabled(args.bValue);
 	});
 	ppWindow->AddWidget(lightShaftsCheckBox);
 
@@ -59,9 +59,9 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	aoComboBox->AddItem("SSAO");
 	aoComboBox->AddItem("HBAO");
 	aoComboBox->AddItem("MSAO");
-	aoComboBox->SetSelected(component->getAO());
+	aoComboBox->SetSelected(editor->renderPath->getAO());
 	aoComboBox->OnSelect([&](wiEventArgs args) {
-		component->setAO((RenderPath3D::AO)args.iValue);
+		editor->renderPath->setAO((RenderPath3D::AO)args.iValue);
 	});
 	ppWindow->AddWidget(aoComboBox);
 
@@ -69,9 +69,9 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	aoPowerSlider->SetTooltip("Set SSAO Power. Higher values produce darker, more pronounced effect");
 	aoPowerSlider->SetSize(XMFLOAT2(100, 20));
 	aoPowerSlider->SetPos(XMFLOAT2(x + 100, y += step));
-	aoPowerSlider->SetValue((float)component->getAOPower());
+	aoPowerSlider->SetValue((float)editor->renderPath->getAOPower());
 	aoPowerSlider->OnSlide([&](wiEventArgs args) {
-		component->setAOPower(args.fValue);
+		editor->renderPath->setAOPower(args.fValue);
 		});
 	ppWindow->AddWidget(aoPowerSlider);
 
@@ -79,9 +79,9 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	ssrCheckBox->SetTooltip("Enable Screen Space Reflections.");
 	ssrCheckBox->SetScriptTip("RenderPath3D::SetSSREnabled(bool value)");
 	ssrCheckBox->SetPos(XMFLOAT2(x, y += step));
-	ssrCheckBox->SetCheck(component->getSSREnabled());
+	ssrCheckBox->SetCheck(editor->renderPath->getSSREnabled());
 	ssrCheckBox->OnClick([&](wiEventArgs args) {
-		component->setSSREnabled(args.bValue);
+		editor->renderPath->setSSREnabled(args.bValue);
 	});
 	ppWindow->AddWidget(ssrCheckBox);
 
@@ -89,18 +89,18 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	sssCheckBox->SetTooltip("Enable Subsurface Scattering. (Deferred only for now)");
 	sssCheckBox->SetScriptTip("RenderPath3D::SetSSSEnabled(bool value)");
 	sssCheckBox->SetPos(XMFLOAT2(x, y += step));
-	sssCheckBox->SetCheck(component->getSSSEnabled());
+	sssCheckBox->SetCheck(editor->renderPath->getSSSEnabled());
 	sssCheckBox->OnClick([&](wiEventArgs args) {
-		component->setSSSEnabled(args.bValue);
+		editor->renderPath->setSSSEnabled(args.bValue);
 	});
 	ppWindow->AddWidget(sssCheckBox);
 
 	eyeAdaptionCheckBox = new wiCheckBox("EyeAdaption: ");
 	eyeAdaptionCheckBox->SetTooltip("Enable eye adaption for the overall screen luminance");
 	eyeAdaptionCheckBox->SetPos(XMFLOAT2(x, y += step));
-	eyeAdaptionCheckBox->SetCheck(component->getEyeAdaptionEnabled());
+	eyeAdaptionCheckBox->SetCheck(editor->renderPath->getEyeAdaptionEnabled());
 	eyeAdaptionCheckBox->OnClick([&](wiEventArgs args) {
-		component->setEyeAdaptionEnabled(args.bValue);
+		editor->renderPath->setEyeAdaptionEnabled(args.bValue);
 	});
 	ppWindow->AddWidget(eyeAdaptionCheckBox);
 
@@ -108,9 +108,9 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	motionBlurCheckBox->SetTooltip("Enable motion blur for camera movement and animated meshes.");
 	motionBlurCheckBox->SetScriptTip("RenderPath3D::SetMotionBlurEnabled(bool value)");
 	motionBlurCheckBox->SetPos(XMFLOAT2(x, y += step));
-	motionBlurCheckBox->SetCheck(component->getMotionBlurEnabled());
+	motionBlurCheckBox->SetCheck(editor->renderPath->getMotionBlurEnabled());
 	motionBlurCheckBox->OnClick([&](wiEventArgs args) {
-		component->setMotionBlurEnabled(args.bValue);
+		editor->renderPath->setMotionBlurEnabled(args.bValue);
 	});
 	ppWindow->AddWidget(motionBlurCheckBox);
 
@@ -119,9 +119,9 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	motionBlurStrengthSlider->SetScriptTip("RenderPath3D::SetMotionBlurStrength(float value)");
 	motionBlurStrengthSlider->SetSize(XMFLOAT2(100, 20));
 	motionBlurStrengthSlider->SetPos(XMFLOAT2(x + 100, y));
-	motionBlurStrengthSlider->SetValue(component->getMotionBlurStrength());
+	motionBlurStrengthSlider->SetValue(editor->renderPath->getMotionBlurStrength());
 	motionBlurStrengthSlider->OnSlide([&](wiEventArgs args) {
-		component->setMotionBlurStrength(args.fValue);
+		editor->renderPath->setMotionBlurStrength(args.fValue);
 		});
 	ppWindow->AddWidget(motionBlurStrengthSlider);
 
@@ -129,9 +129,9 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	depthOfFieldCheckBox->SetTooltip("Enable Depth of field effect. Additional focus and strength setup required.");
 	depthOfFieldCheckBox->SetScriptTip("RenderPath3D::SetDepthOfFieldEnabled(bool value)");
 	depthOfFieldCheckBox->SetPos(XMFLOAT2(x, y += step));
-	depthOfFieldCheckBox->SetCheck(component->getDepthOfFieldEnabled());
+	depthOfFieldCheckBox->SetCheck(editor->renderPath->getDepthOfFieldEnabled());
 	depthOfFieldCheckBox->OnClick([&](wiEventArgs args) {
-		component->setDepthOfFieldEnabled(args.bValue);
+		editor->renderPath->setDepthOfFieldEnabled(args.bValue);
 	});
 	ppWindow->AddWidget(depthOfFieldCheckBox);
 
@@ -140,9 +140,9 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	depthOfFieldFocusSlider->SetScriptTip("RenderPath3D::SetDepthOfFieldFocus(float value)");
 	depthOfFieldFocusSlider->SetSize(XMFLOAT2(100, 20));
 	depthOfFieldFocusSlider->SetPos(XMFLOAT2(x + 100, y));
-	depthOfFieldFocusSlider->SetValue(component->getDepthOfFieldFocus());
+	depthOfFieldFocusSlider->SetValue(editor->renderPath->getDepthOfFieldFocus());
 	depthOfFieldFocusSlider->OnSlide([&](wiEventArgs args) {
-		component->setDepthOfFieldFocus(args.fValue);
+		editor->renderPath->setDepthOfFieldFocus(args.fValue);
 	});
 	ppWindow->AddWidget(depthOfFieldFocusSlider);
 
@@ -151,9 +151,9 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	depthOfFieldScaleSlider->SetScriptTip("RenderPath3D::SetDepthOfFieldStrength(float value)");
 	depthOfFieldScaleSlider->SetSize(XMFLOAT2(100, 20));
 	depthOfFieldScaleSlider->SetPos(XMFLOAT2(x + 100, y += step));
-	depthOfFieldScaleSlider->SetValue(component->getDepthOfFieldStrength());
+	depthOfFieldScaleSlider->SetValue(editor->renderPath->getDepthOfFieldStrength());
 	depthOfFieldScaleSlider->OnSlide([&](wiEventArgs args) {
-		component->setDepthOfFieldStrength(args.fValue);
+		editor->renderPath->setDepthOfFieldStrength(args.fValue);
 	});
 	ppWindow->AddWidget(depthOfFieldScaleSlider);
 
@@ -162,9 +162,9 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	depthOfFieldAspectSlider->SetScriptTip("RenderPath3D::SetDepthOfFieldAspect(float value)");
 	depthOfFieldAspectSlider->SetSize(XMFLOAT2(100, 20));
 	depthOfFieldAspectSlider->SetPos(XMFLOAT2(x + 100, y += step));
-	depthOfFieldAspectSlider->SetValue(component->getDepthOfFieldAspect());
+	depthOfFieldAspectSlider->SetValue(editor->renderPath->getDepthOfFieldAspect());
 	depthOfFieldAspectSlider->OnSlide([&](wiEventArgs args) {
-		component->setDepthOfFieldAspect(args.fValue);
+		editor->renderPath->setDepthOfFieldAspect(args.fValue);
 		});
 	ppWindow->AddWidget(depthOfFieldAspectSlider);
 
@@ -172,9 +172,9 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	bloomCheckBox->SetTooltip("Enable bloom. The effect adds color bleeding to the brightest parts of the scene.");
 	bloomCheckBox->SetScriptTip("RenderPath3D::SetBloomEnabled(bool value)");
 	bloomCheckBox->SetPos(XMFLOAT2(x, y += step));
-	bloomCheckBox->SetCheck(component->getBloomEnabled());
+	bloomCheckBox->SetCheck(editor->renderPath->getBloomEnabled());
 	bloomCheckBox->OnClick([&](wiEventArgs args) {
-		component->setBloomEnabled(args.bValue);
+		editor->renderPath->setBloomEnabled(args.bValue);
 	});
 	ppWindow->AddWidget(bloomCheckBox);
 
@@ -182,9 +182,9 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	bloomStrengthSlider->SetTooltip("Set bloom threshold. The values below this will not glow on the screen.");
 	bloomStrengthSlider->SetSize(XMFLOAT2(100, 20));
 	bloomStrengthSlider->SetPos(XMFLOAT2(x + 100, y));
-	bloomStrengthSlider->SetValue(component->getBloomThreshold());
+	bloomStrengthSlider->SetValue(editor->renderPath->getBloomThreshold());
 	bloomStrengthSlider->OnSlide([&](wiEventArgs args) {
-		component->setBloomThreshold(args.fValue);
+		editor->renderPath->setBloomThreshold(args.fValue);
 	});
 	ppWindow->AddWidget(bloomStrengthSlider);
 
@@ -192,9 +192,9 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	fxaaCheckBox->SetTooltip("Fast Approximate Anti Aliasing. A fast antialiasing method, but can be a bit too blurry.");
 	fxaaCheckBox->SetScriptTip("RenderPath3D::SetFXAAEnabled(bool value)");
 	fxaaCheckBox->SetPos(XMFLOAT2(x, y += step));
-	fxaaCheckBox->SetCheck(component->getFXAAEnabled());
+	fxaaCheckBox->SetCheck(editor->renderPath->getFXAAEnabled());
 	fxaaCheckBox->OnClick([&](wiEventArgs args) {
-		component->setFXAAEnabled(args.bValue);
+		editor->renderPath->setFXAAEnabled(args.bValue);
 	});
 	ppWindow->AddWidget(fxaaCheckBox);
 
@@ -202,9 +202,9 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	colorGradingCheckBox->SetTooltip("Enable color grading of the final render. An additional lookup texture must be set for it to take effect.");
 	colorGradingCheckBox->SetScriptTip("RenderPath3D::SetColorGradingEnabled(bool value)");
 	colorGradingCheckBox->SetPos(XMFLOAT2(x, y += step));
-	colorGradingCheckBox->SetCheck(component->getColorGradingEnabled());
+	colorGradingCheckBox->SetCheck(editor->renderPath->getColorGradingEnabled());
 	colorGradingCheckBox->OnClick([&](wiEventArgs args) {
-		component->setColorGradingEnabled(args.bValue);
+		editor->renderPath->setColorGradingEnabled(args.bValue);
 	});
 	ppWindow->AddWidget(colorGradingCheckBox);
 
@@ -213,7 +213,7 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	colorGradingButton->SetPos(XMFLOAT2(x + 35, y));
 	colorGradingButton->SetSize(XMFLOAT2(200, 18));
 	colorGradingButton->OnClick([=](wiEventArgs args) {
-		auto x = component->getColorGradingTexture();
+		auto x = editor->renderPath->getColorGradingTexture();
 
 		if (x == nullptr)
 		{
@@ -230,8 +230,8 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 
 				if (result.ok) {
 					string fileName = result.filenames.front();
-					component->setColorGradingTexture(wiResourceManager::Load(fileName));
-					if (component->getColorGradingTexture() != nullptr)
+					editor->renderPath->setColorGradingTexture(wiResourceManager::Load(fileName));
+					if (editor->renderPath->getColorGradingTexture() != nullptr)
 					{
 						colorGradingButton->SetText(fileName);
 					}
@@ -240,7 +240,7 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 		}
 		else
 		{
-			component->setColorGradingTexture(nullptr);
+			editor->renderPath->setColorGradingTexture(nullptr);
 			colorGradingButton->SetText("Load Color Grading LUT...");
 		}
 
@@ -250,9 +250,9 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	outlineCheckBox = new wiCheckBox("Dithering: ");
 	outlineCheckBox->SetTooltip("Toggle the full screen dithering effect. This helps to reduce color banding.");
 	outlineCheckBox->SetPos(XMFLOAT2(x, y += step));
-	outlineCheckBox->SetCheck(component->getDitherEnabled());
+	outlineCheckBox->SetCheck(editor->renderPath->getDitherEnabled());
 	outlineCheckBox->OnClick([&](wiEventArgs args) {
-		component->setDitherEnabled(args.bValue);
+		editor->renderPath->setDitherEnabled(args.bValue);
 		});
 	ppWindow->AddWidget(outlineCheckBox);
 
@@ -260,9 +260,9 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	sharpenFilterCheckBox->SetTooltip("Toggle sharpening post process of the final image.");
 	sharpenFilterCheckBox->SetScriptTip("RenderPath3D::SetSharpenFilterEnabled(bool value)");
 	sharpenFilterCheckBox->SetPos(XMFLOAT2(x, y += step));
-	sharpenFilterCheckBox->SetCheck(component->getSharpenFilterEnabled());
+	sharpenFilterCheckBox->SetCheck(editor->renderPath->getSharpenFilterEnabled());
 	sharpenFilterCheckBox->OnClick([&](wiEventArgs args) {
-		component->setSharpenFilterEnabled(args.bValue);
+		editor->renderPath->setSharpenFilterEnabled(args.bValue);
 	});
 	ppWindow->AddWidget(sharpenFilterCheckBox);
 
@@ -271,18 +271,18 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	sharpenFilterAmountSlider->SetScriptTip("RenderPath3D::SetSharpenFilterAmount(float value)");
 	sharpenFilterAmountSlider->SetSize(XMFLOAT2(100, 20));
 	sharpenFilterAmountSlider->SetPos(XMFLOAT2(x + 100, y));
-	sharpenFilterAmountSlider->SetValue(component->getSharpenFilterAmount());
+	sharpenFilterAmountSlider->SetValue(editor->renderPath->getSharpenFilterAmount());
 	sharpenFilterAmountSlider->OnSlide([&](wiEventArgs args) {
-		component->setSharpenFilterAmount(args.fValue);
+		editor->renderPath->setSharpenFilterAmount(args.fValue);
 	});
 	ppWindow->AddWidget(sharpenFilterAmountSlider);
 
 	outlineCheckBox = new wiCheckBox("Cartoon Outline: ");
 	outlineCheckBox->SetTooltip("Toggle the full screen cartoon outline effect.");
 	outlineCheckBox->SetPos(XMFLOAT2(x, y += step));
-	outlineCheckBox->SetCheck(component->getOutlineEnabled());
+	outlineCheckBox->SetCheck(editor->renderPath->getOutlineEnabled());
 	outlineCheckBox->OnClick([&](wiEventArgs args) {
-		component->setOutlineEnabled(args.bValue);
+		editor->renderPath->setOutlineEnabled(args.bValue);
 	});
 	ppWindow->AddWidget(outlineCheckBox);
 
@@ -290,9 +290,9 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	outlineThresholdSlider->SetTooltip("Outline edge detection threshold. Increase if not enough otlines are detected, decrease if too many outlines are detected.");
 	outlineThresholdSlider->SetSize(XMFLOAT2(100, 20));
 	outlineThresholdSlider->SetPos(XMFLOAT2(x + 100, y));
-	outlineThresholdSlider->SetValue(component->getOutlineThreshold());
+	outlineThresholdSlider->SetValue(editor->renderPath->getOutlineThreshold());
 	outlineThresholdSlider->OnSlide([&](wiEventArgs args) {
-		component->setOutlineThreshold(args.fValue);
+		editor->renderPath->setOutlineThreshold(args.fValue);
 	});
 	ppWindow->AddWidget(outlineThresholdSlider);
 
@@ -300,18 +300,18 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	outlineThicknessSlider->SetTooltip("Set outline thickness.");
 	outlineThicknessSlider->SetSize(XMFLOAT2(100, 20));
 	outlineThicknessSlider->SetPos(XMFLOAT2(x + 100, y += step));
-	outlineThicknessSlider->SetValue(component->getOutlineThickness());
+	outlineThicknessSlider->SetValue(editor->renderPath->getOutlineThickness());
 	outlineThicknessSlider->OnSlide([&](wiEventArgs args) {
-		component->setOutlineThickness(args.fValue);
+		editor->renderPath->setOutlineThickness(args.fValue);
 	});
 	ppWindow->AddWidget(outlineThicknessSlider);
 
 	chromaticaberrationCheckBox = new wiCheckBox("Chromatic Aberration: ");
 	chromaticaberrationCheckBox->SetTooltip("Toggle the full screen chromatic aberration effect. This simulates lens distortion at screen edges.");
 	chromaticaberrationCheckBox->SetPos(XMFLOAT2(x, y += step));
-	chromaticaberrationCheckBox->SetCheck(component->getOutlineEnabled());
+	chromaticaberrationCheckBox->SetCheck(editor->renderPath->getOutlineEnabled());
 	chromaticaberrationCheckBox->OnClick([&](wiEventArgs args) {
-		component->setChromaticAberrationEnabled(args.bValue);
+		editor->renderPath->setChromaticAberrationEnabled(args.bValue);
 		});
 	ppWindow->AddWidget(chromaticaberrationCheckBox);
 
@@ -319,9 +319,9 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	chromaticaberrationSlider->SetTooltip("The lens distortion amount.");
 	chromaticaberrationSlider->SetSize(XMFLOAT2(100, 20));
 	chromaticaberrationSlider->SetPos(XMFLOAT2(x + 100, y));
-	chromaticaberrationSlider->SetValue(component->getChromaticAberrationAmount());
+	chromaticaberrationSlider->SetValue(editor->renderPath->getChromaticAberrationAmount());
 	chromaticaberrationSlider->OnSlide([&](wiEventArgs args) {
-		component->setChromaticAberrationAmount(args.fValue);
+		editor->renderPath->setChromaticAberrationAmount(args.fValue);
 		});
 	ppWindow->AddWidget(chromaticaberrationSlider);
 

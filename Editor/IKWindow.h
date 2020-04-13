@@ -10,22 +10,23 @@ class wiColorPicker;
 
 class EditorComponent;
 
-class ForceFieldWindow
+class IKWindow
 {
 public:
-	ForceFieldWindow(EditorComponent* editor);
-	~ForceFieldWindow();
+	IKWindow(EditorComponent* editor);
+	~IKWindow();
 
 	wiECS::Entity entity;
 	void SetEntity(wiECS::Entity entity);
 
 	wiGUI* GUI;
 
-	wiWindow*	forceFieldWindow;
+	wiWindow* window;
 
-	wiComboBox* typeComboBox;
-	wiSlider* gravitySlider;
-	wiSlider* rangeSlider;
-	wiButton* addButton;
+	wiButton* createButton;
+	wiComboBox* targetCombo;
+	wiCheckBox* disabledCheckBox;
+	wiSlider* chainLengthSlider;
+	wiSlider* iterationCountSlider;
 };
 

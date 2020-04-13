@@ -1,1 +1,1 @@
-SetProfilerEnabled(true)
+SetProfilerEnabled(false)

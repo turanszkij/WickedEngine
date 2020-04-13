@@ -6,10 +6,12 @@ class wiLabel;
 class wiCheckBox;
 class wiSlider;
 
+class EditorComponent;
+
 class DecalWindow
 {
 public:
-	DecalWindow(wiGUI* gui);
+	DecalWindow(EditorComponent* editor);
 	~DecalWindow();
 
 	wiGUI* GUI;

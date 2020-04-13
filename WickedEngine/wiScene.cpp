@@ -1907,7 +1907,6 @@ namespace wiScene
 			const HierarchyComponent* hier = hierarchy.GetComponent(entity);
 			if (transform == nullptr || target == nullptr || hier == nullptr)
 			{
-				assert(0); // without any of the above, the IK simulation doesn't make sense
 				continue;
 			}
 

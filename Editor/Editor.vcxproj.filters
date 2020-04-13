@@ -94,6 +94,15 @@
     <ClInclude Include="PaintToolWindow.h">
       <Filter>Code</Filter>
     </ClInclude>
+    <ClInclude Include="SpringWindow.h">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="TransformWindow.h">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="IKWindow.h">
+      <Filter>Code</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CameraWindow.cpp">
@@ -163,6 +172,15 @@
       <Filter>Code</Filter>
     </ClCompile>
     <ClCompile Include="PaintToolWindow.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="TransformWindow.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="IKWindow.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="SpringWindow.cpp">
       <Filter>Code</Filter>
     </ClCompile>
   </ItemGroup>

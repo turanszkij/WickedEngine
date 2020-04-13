@@ -8,11 +8,13 @@ class wiSlider;
 class wiColorPicker;
 class wiButton;
 
+class EditorComponent;
+
 class WeatherWindow
 {
 	void UpdateWind();
 public:
-	WeatherWindow(wiGUI* gui);
+	WeatherWindow(EditorComponent* editor);
 	~WeatherWindow();
 
 	void Update();

@@ -1,12 +1,13 @@
 #include "stdafx.h"
 #include "AnimationWindow.h"
+#include "Editor.h"
 
 #include <sstream>
 
 using namespace wiECS;
 using namespace wiScene;
 
-AnimationWindow::AnimationWindow(wiGUI* gui) :GUI(gui)
+AnimationWindow::AnimationWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 {
 	assert(GUI && "Invalid GUI!");
 

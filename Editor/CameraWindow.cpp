@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "CameraWindow.h"
+#include "Editor.h"
 
 using namespace wiECS;
 using namespace wiScene;
@@ -17,7 +18,7 @@ void CameraWindow::ResetCam()
 	camera_target.UpdateTransform();
 }
 
-CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
+CameraWindow::CameraWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 {
 	assert(GUI && "Invalid GUI!");
 

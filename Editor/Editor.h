@@ -18,6 +18,9 @@ class HairParticleWindow;
 class ForceFieldWindow;
 class SoundWindow;
 class PaintToolWindow;
+class SpringWindow;
+class IKWindow;
+class TransformWindow;
 
 class EditorLoadingScreen : public LoadingScreen
 {
@@ -52,6 +55,9 @@ public:
 	std::unique_ptr<HairParticleWindow>		hairWnd;
 	std::unique_ptr<ForceFieldWindow>		forceFieldWnd;
 	std::unique_ptr<PaintToolWindow>		paintToolWnd;
+	std::unique_ptr<SpringWindow>			springWnd;
+	std::unique_ptr<IKWindow>				ikWnd;
+	std::unique_ptr<TransformWindow>		transformWnd;
 
 	Editor*					main = nullptr;
 

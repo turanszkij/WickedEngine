@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "LightWindow.h"
+#include "Editor.h"
 
 #include <string>
 
@@ -8,7 +9,7 @@ using namespace wiGraphics;
 using namespace wiScene;
 
 
-LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
+LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 {
 	assert(GUI && "Invalid GUI!");
 
@@ -173,12 +174,15 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	addLightButton = new wiButton("Add Light");
 	addLightButton->SetPos(XMFLOAT2(x, y += step));
 	addLightButton->SetSize(XMFLOAT2(150, 30));
-	addLightButton->OnClick([&](wiEventArgs args) {
+	addLightButton->OnClick([=](wiEventArgs args) {
 		Entity entity = wiScene::GetScene().Entity_CreateLight("editorLight", XMFLOAT3(0, 3, 0), XMFLOAT3(1, 1, 1), 2, 60);
 		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->type = (LightComponent::LightType)typeSelectorComboBox->GetSelected();
+			editor->ClearSelected();
+			editor->AddSelected(entity);
+			SetEntity(entity);
 		}
 		else
 		{

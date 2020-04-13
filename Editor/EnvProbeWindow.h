@@ -6,10 +6,12 @@ class wiLabel;
 class wiCheckBox;
 class wiSlider;
 
+class EditorComponent;
+
 class EnvProbeWindow
 {
 public:
-	EnvProbeWindow(wiGUI* gui);
+	EnvProbeWindow(EditorComponent* editor);
 	~EnvProbeWindow();
 
 	wiGUI* GUI;

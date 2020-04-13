@@ -10,10 +10,12 @@ class wiButton;
 class wiComboBox;
 class wiTextInputField;
 
+class EditorComponent;
+
 class SoundWindow
 {
 public:
-	SoundWindow(wiGUI* gui);
+	SoundWindow(EditorComponent* editor);
 	~SoundWindow();
 
 	wiECS::Entity entity = wiECS::INVALID_ENTITY;

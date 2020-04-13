@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "EmitterWindow.h"
+#include "Editor.h"
 
 #include <sstream>
 
@@ -7,7 +8,7 @@ using namespace std;
 using namespace wiECS;
 using namespace wiScene;
 
-EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
+EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 {
 	assert(GUI && "Invalid GUI!");
 
@@ -35,9 +36,12 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	addButton = new wiButton("Add Emitter");
 	addButton->SetPos(XMFLOAT2(x, y += step));
 	addButton->SetSize(XMFLOAT2(150, 30));
-	addButton->OnClick([&](wiEventArgs args) {
+	addButton->OnClick([=](wiEventArgs args) {
 		Scene& scene = wiScene::GetScene();
-		scene.Entity_CreateEmitter("editorEmitter");
+		Entity entity = scene.Entity_CreateEmitter("editorEmitter");
+		editor->ClearSelected();
+		editor->AddSelected(entity);
+		SetEntity(entity);
 	});
 	addButton->SetTooltip("Add new emitter particle system.");
 	emitterWindow->AddWidget(addButton);

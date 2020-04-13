@@ -1146,7 +1146,6 @@ void wiComboBox::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	font.params.posX = (int)translation.x + 2;
 	font.params.posY = (int)(translation.y + sprites[state].params.siz.y * 0.5f);
 }
 void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
@@ -1401,6 +1400,7 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 			scaleDiff.y = (scale.y - args.deltaPos.y) / scale.y;
 			this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
 			this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
+			this->scale_local = wiMath::Max(this->scale_local, XMFLOAT3(40, 40, 1)); // don't allow resize to negative or too small
 			this->wiWidget::Update(gui, 0);
 			for (auto& x : this->childrenWidgets)
 			{
@@ -1420,6 +1420,7 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 			scaleDiff.x = (scale.x + args.deltaPos.x) / scale.x;
 			scaleDiff.y = (scale.y + args.deltaPos.y) / scale.y;
 			this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
+			this->scale_local = wiMath::Max(this->scale_local, XMFLOAT3(40, 40, 1)); // don't allow resize to negative or too small
 			this->wiWidget::Update(gui, 0);
 			for (auto& x : this->childrenWidgets)
 			{
@@ -1681,6 +1682,8 @@ void wiWindow::SetEnabled(bool value)
 		if (x == closeButton)
 			continue;
 		if (x == resizeDragger_UpperLeft)
+			continue;
+		if (x == resizeDragger_BottomRight)
 			continue;
 		x->SetEnabled(value);
 	}

@@ -1,11 +1,12 @@
 #include "stdafx.h"
 #include "HairParticleWindow.h"
+#include "Editor.h"
 
 using namespace std;
 using namespace wiECS;
 using namespace wiScene;
 
-HairParticleWindow::HairParticleWindow(wiGUI* gui) : GUI(gui)
+HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 {
 	assert(GUI && "Invalid GUI!");
 
@@ -21,9 +22,12 @@ HairParticleWindow::HairParticleWindow(wiGUI* gui) : GUI(gui)
 	addButton = new wiButton("Add Hair Particle System");
 	addButton->SetPos(XMFLOAT2(x, y += step));
 	addButton->SetSize(XMFLOAT2(200, 30));
-	addButton->OnClick([&](wiEventArgs args) {
+	addButton->OnClick([=](wiEventArgs args) {
 		Scene& scene = wiScene::GetScene();
-		scene.Entity_CreateHair("editorHair");
+		Entity entity = scene.Entity_CreateHair("editorHair");
+		editor->ClearSelected();
+		editor->AddSelected(entity);
+		SetEntity(entity);
 	});
 	addButton->SetTooltip("Add new hair particle system.");
 	hairWindow->AddWidget(addButton);

@@ -1,7 +1,5 @@
 #pragma once
 
-class RenderPath3D;
-
 class wiGUI;
 class wiWindow;
 class wiLabel;
@@ -10,14 +8,15 @@ class wiSlider;
 class wiButton;
 class wiComboBox;
 
+class EditorComponent;
+
 class PostprocessWindow
 {
 public:
-	PostprocessWindow(wiGUI* gui, RenderPath3D* component);
+	PostprocessWindow(EditorComponent* editor);
 	~PostprocessWindow();
 
 	wiGUI* GUI;
-	RenderPath3D* component;
 
 	wiWindow*	ppWindow;
 	wiSlider*	exposureSlider;

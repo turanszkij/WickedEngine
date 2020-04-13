@@ -1,11 +1,12 @@
 #include "stdafx.h"
 #include "DecalWindow.h"
+#include "Editor.h"
 
 using namespace wiECS;
 using namespace wiScene;
 
 
-DecalWindow::DecalWindow(wiGUI* gui) : GUI(gui)
+DecalWindow::DecalWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 {
 	assert(GUI && "Invalid GUI!");
 

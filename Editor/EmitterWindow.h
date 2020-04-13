@@ -9,12 +9,14 @@ class wiComboBox;
 class wiColorPicker;
 class wiButton;
 
+class EditorComponent;
+
 class MaterialWindow;
 
 class EmitterWindow
 {
 public:
-	EmitterWindow(wiGUI* gui);
+	EmitterWindow(EditorComponent* editor);
 	~EmitterWindow();
 
 	wiECS::Entity entity;

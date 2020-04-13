@@ -4,7 +4,7 @@
 #include "Editor.h"
 
 
-RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, RenderPath3D* path) : GUI(gui)
+RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 {
 	assert(GUI && "Invalid GUI!");
 
@@ -13,10 +13,10 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 	wiRenderer::SetToDrawDebugCameras(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(640, 790));
+	rendererWindow->SetSize(XMFLOAT2(640, 700));
 	GUI->AddWidget(rendererWindow);
 
-	float x = 260, y = 20, step = 30, sliderheight = 26;
+	float x = 260, y = 0, step = 28, sliderheight = 26;
 
 	vsyncCheckBox = new wiCheckBox("VSync: ");
 	vsyncCheckBox->SetTooltip("Toggle vertical sync");
@@ -69,7 +69,7 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 
 	voxelRadianceDebugCheckBox = new wiCheckBox("DEBUG: ");
 	voxelRadianceDebugCheckBox->SetTooltip("Toggle Voxel GI visualization.");
-	voxelRadianceDebugCheckBox->SetPos(XMFLOAT2(x + 130, y));
+	voxelRadianceDebugCheckBox->SetPos(XMFLOAT2(x + 122, y));
 	voxelRadianceDebugCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetToDrawVoxelHelper(args.bValue);
 	});
@@ -87,7 +87,7 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 
 	voxelRadianceReflectionsCheckBox = new wiCheckBox("Reflections: ");
 	voxelRadianceReflectionsCheckBox->SetTooltip("Toggle specular reflections computation for Voxel GI.");
-	voxelRadianceReflectionsCheckBox->SetPos(XMFLOAT2(x + 130, y));
+	voxelRadianceReflectionsCheckBox->SetPos(XMFLOAT2(x + 122, y));
 	voxelRadianceReflectionsCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetVoxelRadianceReflectionsEnabled(args.bValue);
 	});
@@ -154,7 +154,7 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 
 	debugLightCullingCheckBox = new wiCheckBox("DEBUG: ");
 	debugLightCullingCheckBox->SetTooltip("Toggle visualization of the screen space light culling heatmap grid (Tiled renderer only)");
-	debugLightCullingCheckBox->SetPos(XMFLOAT2(x + 100, y));
+	debugLightCullingCheckBox->SetPos(XMFLOAT2(x + 122, y));
 	debugLightCullingCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetDebugLightCulling(args.bValue);
 	});
@@ -165,7 +165,7 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 	tessellationCheckBox->SetTooltip("Enable tessellation feature. You also need to specify a tessellation factor for individual objects.");
 	tessellationCheckBox->SetPos(XMFLOAT2(x, y += step));
 	tessellationCheckBox->OnClick([=](wiEventArgs args) {
-		path->setTessellationEnabled(args.bValue);
+		editor->renderPath->setTessellationEnabled(args.bValue);
 	});
 	tessellationCheckBox->SetCheck(false);
 	rendererWindow->AddWidget(tessellationCheckBox);
@@ -199,7 +199,7 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 	});
 	rendererWindow->AddWidget(transparentShadowsCheckBox);
 
-	shadowProps2DComboBox = new wiComboBox("2D Shadowmap resolution:");
+	shadowProps2DComboBox = new wiComboBox("2D Shadowmap resolution: ");
 	shadowProps2DComboBox->SetSize(XMFLOAT2(100, 20));
 	shadowProps2DComboBox->SetPos(XMFLOAT2(x, y += step));
 	shadowProps2DComboBox->AddItem("Off");
@@ -244,7 +244,7 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 	shadowProps2DComboBox->SetScriptTip("SetShadowProps2D(int resolution, int count, int softShadowQuality)");
 	rendererWindow->AddWidget(shadowProps2DComboBox);
 
-	shadowPropsCubeComboBox = new wiComboBox("Cube Shadowmap resolution:");
+	shadowPropsCubeComboBox = new wiComboBox("Cube Shadowmap resolution: ");
 	shadowPropsCubeComboBox->SetSize(XMFLOAT2(100, 20));
 	shadowPropsCubeComboBox->SetPos(XMFLOAT2(x, y += step));
 	shadowPropsCubeComboBox->AddItem("Off");
@@ -288,7 +288,7 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 	shadowPropsCubeComboBox->SetScriptTip("SetShadowPropsCube(int resolution, int count)");
 	rendererWindow->AddWidget(shadowPropsCubeComboBox);
 
-	MSAAComboBox = new wiComboBox("MSAA:");
+	MSAAComboBox = new wiComboBox("MSAA: ");
 	MSAAComboBox->SetSize(XMFLOAT2(100, 20));
 	MSAAComboBox->SetPos(XMFLOAT2(x, y += step));
 	MSAAComboBox->AddItem("Off");
@@ -299,21 +299,20 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 		switch (args.iValue)
 		{
 		case 0:
-			path->setMSAASampleCount(1);
+			editor->renderPath->setMSAASampleCount(1);
 			break;
 		case 1:
-			path->setMSAASampleCount(2);
+			editor->renderPath->setMSAASampleCount(2);
 			break;
 		case 2:
-			path->setMSAASampleCount(4);
+			editor->renderPath->setMSAASampleCount(4);
 			break;
 		case 3:
-			path->setMSAASampleCount(8);
+			editor->renderPath->setMSAASampleCount(8);
 			break;
 		default:
 			break;
 		}
-		editorcomponent->ResizeBuffers();
 	});
 	MSAAComboBox->SetSelected(0);
 	MSAAComboBox->SetEnabled(true);
@@ -332,14 +331,14 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 	temporalAADebugCheckBox = new wiCheckBox("DEBUGJitter: ");
 	temporalAADebugCheckBox->SetText("DEBUG: ");
 	temporalAADebugCheckBox->SetTooltip("Disable blending of frame history. Camera Subpixel jitter will be visible.");
-	temporalAADebugCheckBox->SetPos(XMFLOAT2(x + 100, y));
+	temporalAADebugCheckBox->SetPos(XMFLOAT2(x + 122, y));
 	temporalAADebugCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetTemporalAADebugEnabled(args.bValue);
 	});
 	temporalAADebugCheckBox->SetCheck(wiRenderer::GetTemporalAADebugEnabled());
 	rendererWindow->AddWidget(temporalAADebugCheckBox);
 
-	textureQualityComboBox = new wiComboBox("Texture Quality:");
+	textureQualityComboBox = new wiComboBox("Texture Quality: ");
 	textureQualityComboBox->SetSize(XMFLOAT2(100, 20));
 	textureQualityComboBox->SetPos(XMFLOAT2(x, y += step));
 	textureQualityComboBox->AddItem("Nearest");
@@ -399,7 +398,7 @@ RendererWindow::RendererWindow(wiGUI* gui, EditorComponent* editorcomponent, Ren
 
 
 	// Visualizer toggles:
-	x = 600, y = 20;
+	x = 600, y = 0;
 
 	partitionBoxesCheckBox = new wiCheckBox("SPTree visualizer: ");
 	partitionBoxesCheckBox->SetTooltip("Visualize the world space partitioning tree as boxes");

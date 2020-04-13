@@ -17,6 +17,9 @@
 #include "ForceFieldWindow.h"
 #include "SoundWindow.h"
 #include "PaintToolWindow.h"
+#include "SpringWindow.h"
+#include "IKWindow.h"
+#include "TransformWindow.h"
 
 #include "ModelImporter.h"
 #include "Translator.h"
@@ -128,21 +131,24 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	renderPath->Update(0);
 
 	materialWnd = std::make_unique<MaterialWindow>(this);
-	postprocessWnd = std::make_unique<PostprocessWindow>(&GetGUI(), renderPath.get());
-	weatherWnd = std::make_unique<WeatherWindow>(&GetGUI());
+	postprocessWnd = std::make_unique<PostprocessWindow>(this);
+	weatherWnd = std::make_unique<WeatherWindow>(this);
 	objectWnd = std::make_unique<ObjectWindow>(this);
 	meshWnd = std::make_unique<MeshWindow>(this);
-	cameraWnd = std::make_unique<CameraWindow>(&GetGUI());
-	rendererWnd = std::make_unique<RendererWindow>(&GetGUI(), this, renderPath.get());
-	envProbeWnd = std::make_unique<EnvProbeWindow>(&GetGUI());
-	soundWnd = std::make_unique<SoundWindow>(&GetGUI());
-	decalWnd = std::make_unique<DecalWindow>(&GetGUI());
-	lightWnd = std::make_unique<LightWindow>(&GetGUI());
-	animWnd = std::make_unique<AnimationWindow>(&GetGUI());
-	emitterWnd = std::make_unique<EmitterWindow>(&GetGUI());
-	hairWnd = std::make_unique<HairParticleWindow>(&GetGUI());
-	forceFieldWnd = std::make_unique<ForceFieldWindow>(&GetGUI());
+	cameraWnd = std::make_unique<CameraWindow>(this);
+	rendererWnd = std::make_unique<RendererWindow>(this);
+	envProbeWnd = std::make_unique<EnvProbeWindow>(this);
+	soundWnd = std::make_unique<SoundWindow>(this);
+	decalWnd = std::make_unique<DecalWindow>(this);
+	lightWnd = std::make_unique<LightWindow>(this);
+	animWnd = std::make_unique<AnimationWindow>(this);
+	emitterWnd = std::make_unique<EmitterWindow>(this);
+	hairWnd = std::make_unique<HairParticleWindow>(this);
+	forceFieldWnd = std::make_unique<ForceFieldWindow>(this);
 	paintToolWnd = std::make_unique<PaintToolWindow>(this);
+	springWnd = std::make_unique<SpringWindow>(this);
+	ikWnd = std::make_unique<IKWindow>(this);
+	transformWnd = std::make_unique<TransformWindow>(this);
 
 	ResizeBuffers();
 }
@@ -219,32 +225,56 @@ void EditorComponent::Load()
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
-	XMFLOAT2 option_size = XMFLOAT2(100, 28);
-	float step = (option_size.y + 2) * -1, x = screenW - option_size.x, y = screenH - option_size.y;
+	XMFLOAT2 option_size = XMFLOAT2(100, 34);
+	float x = screenW - option_size.x;
+	float y = screenH - option_size.y;
+	float step = (option_size.y + 2) * -1;
 	float hstep = (option_size.x + 2) * -1;
 
 
+
+	wiButton* rendererWnd_Toggle = new wiButton("Renderer");
+	rendererWnd_Toggle->SetTooltip("Renderer settings window");
+	rendererWnd_Toggle->SetPos(XMFLOAT2(x += hstep, y));
+	rendererWnd_Toggle->SetSize(option_size);
+	rendererWnd_Toggle->OnClick([=](wiEventArgs args) {
+		rendererWnd->rendererWindow->SetVisible(!rendererWnd->rendererWindow->IsVisible());
+		});
+	GetGUI().AddWidget(rendererWnd_Toggle);
+
+	wiButton* postprocessWnd_Toggle = new wiButton("PostProcess");
+	postprocessWnd_Toggle->SetTooltip("Postprocess settings window");
+	postprocessWnd_Toggle->SetPos(XMFLOAT2(x += hstep, y));
+	postprocessWnd_Toggle->SetSize(option_size);
+	postprocessWnd_Toggle->OnClick([=](wiEventArgs args) {
+		postprocessWnd->ppWindow->SetVisible(!postprocessWnd->ppWindow->IsVisible());
+		});
+	GetGUI().AddWidget(postprocessWnd_Toggle);
+
 	wiButton* paintToolWnd_Toggle = new wiButton("Paint Tool");
 	paintToolWnd_Toggle->SetTooltip("Paint tool window");
-	paintToolWnd_Toggle->SetPos(XMFLOAT2(x + hstep, y));
+	paintToolWnd_Toggle->SetPos(XMFLOAT2(x += hstep, y));
 	paintToolWnd_Toggle->SetSize(option_size);
 	paintToolWnd_Toggle->OnClick([=](wiEventArgs args) {
 		paintToolWnd->window->SetVisible(!paintToolWnd->window->IsVisible());
 		});
 	GetGUI().AddWidget(paintToolWnd_Toggle);
 
-	wiButton* rendererWnd_Toggle = new wiButton("Renderer");
-	rendererWnd_Toggle->SetTooltip("Renderer settings window");
-	rendererWnd_Toggle->SetPos(XMFLOAT2(x, y));
-	rendererWnd_Toggle->SetSize(option_size);
-	rendererWnd_Toggle->OnClick([=](wiEventArgs args) {
-		rendererWnd->rendererWindow->SetVisible(!rendererWnd->rendererWindow->IsVisible());
-	});
-	GetGUI().AddWidget(rendererWnd_Toggle);
+
+	///////////////////////
+	option_size.y = 16; 
+	step = (option_size.y + 2) * -1;
+	x = screenW - option_size.x;
+	y = screenH - option_size.y;
+	wiColor option_color_idle = wiColor(255, 145, 145, 100);
+	wiColor option_color_focus = wiColor(255, 197, 193, 200);
+
 
 	wiButton* weatherWnd_Toggle = new wiButton("Weather");
-	weatherWnd_Toggle->SetTooltip("World settings window");
-	weatherWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	weatherWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
+	weatherWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
+	weatherWnd_Toggle->SetTooltip("Weather settings window");
+	weatherWnd_Toggle->SetPos(XMFLOAT2(x, y));
 	weatherWnd_Toggle->SetSize(option_size);
 	weatherWnd_Toggle->OnClick([=](wiEventArgs args) {
 		weatherWnd->weatherWindow->SetVisible(!weatherWnd->weatherWindow->IsVisible());
@@ -252,6 +282,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(weatherWnd_Toggle);
 
 	wiButton* objectWnd_Toggle = new wiButton("Object");
+	objectWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
+	objectWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	objectWnd_Toggle->SetTooltip("Object settings window");
 	objectWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
 	objectWnd_Toggle->SetSize(option_size);
@@ -261,6 +293,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(objectWnd_Toggle);
 
 	wiButton* meshWnd_Toggle = new wiButton("Mesh");
+	meshWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
+	meshWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	meshWnd_Toggle->SetTooltip("Mesh settings window");
 	meshWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
 	meshWnd_Toggle->SetSize(option_size);
@@ -270,6 +304,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(meshWnd_Toggle);
 
 	wiButton* materialWnd_Toggle = new wiButton("Material");
+	materialWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
+	materialWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	materialWnd_Toggle->SetTooltip("Material settings window");
 	materialWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
 	materialWnd_Toggle->SetSize(option_size);
@@ -278,16 +314,9 @@ void EditorComponent::Load()
 	});
 	GetGUI().AddWidget(materialWnd_Toggle);
 
-	wiButton* postprocessWnd_Toggle = new wiButton("PostProcess");
-	postprocessWnd_Toggle->SetTooltip("Postprocess settings window");
-	postprocessWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
-	postprocessWnd_Toggle->SetSize(option_size);
-	postprocessWnd_Toggle->OnClick([=](wiEventArgs args) {
-		postprocessWnd->ppWindow->SetVisible(!postprocessWnd->ppWindow->IsVisible());
-	});
-	GetGUI().AddWidget(postprocessWnd_Toggle);
-
 	wiButton* cameraWnd_Toggle = new wiButton("Camera");
+	cameraWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
+	cameraWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	cameraWnd_Toggle->SetTooltip("Camera settings window");
 	cameraWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
 	cameraWnd_Toggle->SetSize(option_size);
@@ -297,6 +326,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(cameraWnd_Toggle);
 
 	wiButton* envProbeWnd_Toggle = new wiButton("EnvProbe");
+	envProbeWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
+	envProbeWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	envProbeWnd_Toggle->SetTooltip("Environment probe settings window");
 	envProbeWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
 	envProbeWnd_Toggle->SetSize(option_size);
@@ -306,6 +337,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(envProbeWnd_Toggle);
 
 	wiButton* decalWnd_Toggle = new wiButton("Decal");
+	decalWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
+	decalWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	decalWnd_Toggle->SetTooltip("Decal settings window");
 	decalWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
 	decalWnd_Toggle->SetSize(option_size);
@@ -315,6 +348,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(decalWnd_Toggle);
 
 	wiButton* soundWnd_Toggle = new wiButton("Sound");
+	soundWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
+	soundWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	soundWnd_Toggle->SetTooltip("Sound settings window");
 	soundWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
 	soundWnd_Toggle->SetSize(option_size);
@@ -324,6 +359,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(soundWnd_Toggle);
 
 	wiButton* lightWnd_Toggle = new wiButton("Light");
+	lightWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
+	lightWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	lightWnd_Toggle->SetTooltip("Light settings window");
 	lightWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
 	lightWnd_Toggle->SetSize(option_size);
@@ -333,6 +370,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(lightWnd_Toggle);
 
 	wiButton* animWnd_Toggle = new wiButton("Animation");
+	animWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
+	animWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	animWnd_Toggle->SetTooltip("Animation inspector window");
 	animWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
 	animWnd_Toggle->SetSize(option_size);
@@ -342,6 +381,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(animWnd_Toggle);
 
 	wiButton* emitterWnd_Toggle = new wiButton("Emitter");
+	emitterWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
+	emitterWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	emitterWnd_Toggle->SetTooltip("Emitter Particle System properties");
 	emitterWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
 	emitterWnd_Toggle->SetSize(option_size);
@@ -351,6 +392,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(emitterWnd_Toggle);
 
 	wiButton* hairWnd_Toggle = new wiButton("HairParticle");
+	hairWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
+	hairWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	hairWnd_Toggle->SetTooltip("Hair Particle System properties");
 	hairWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
 	hairWnd_Toggle->SetSize(option_size);
@@ -360,6 +403,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(hairWnd_Toggle);
 
 	wiButton* forceFieldWnd_Toggle = new wiButton("ForceField");
+	forceFieldWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
+	forceFieldWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	forceFieldWnd_Toggle->SetTooltip("Force Field properties");
 	forceFieldWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
 	forceFieldWnd_Toggle->SetSize(option_size);
@@ -368,8 +413,47 @@ void EditorComponent::Load()
 	});
 	GetGUI().AddWidget(forceFieldWnd_Toggle);
 
+	wiButton* springWnd_Toggle = new wiButton("Spring");
+	springWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
+	springWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
+	springWnd_Toggle->SetTooltip("Spring properties");
+	springWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	springWnd_Toggle->SetSize(option_size);
+	springWnd_Toggle->OnClick([=](wiEventArgs args) {
+		springWnd->window->SetVisible(!springWnd->window->IsVisible());
+		});
+	GetGUI().AddWidget(springWnd_Toggle);
+
+	wiButton* ikWnd_Toggle = new wiButton("IK");
+	ikWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
+	ikWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
+	ikWnd_Toggle->SetTooltip("Inverse Kinematics properties");
+	ikWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	ikWnd_Toggle->SetSize(option_size);
+	ikWnd_Toggle->OnClick([=](wiEventArgs args) {
+		ikWnd->window->SetVisible(!ikWnd->window->IsVisible());
+		});
+	GetGUI().AddWidget(ikWnd_Toggle);
+
+	wiButton* transformWnd_Toggle = new wiButton("Transform");
+	transformWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
+	transformWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
+	transformWnd_Toggle->SetTooltip("Transform properties");
+	transformWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	transformWnd_Toggle->SetSize(option_size);
+	transformWnd_Toggle->OnClick([=](wiEventArgs args) {
+		transformWnd->window->SetVisible(!transformWnd->window->IsVisible());
+		});
+	GetGUI().AddWidget(transformWnd_Toggle);
+
+
+
+
 
 	////////////////////////////////////////////////////////////////////////////////////
+
+
+
 
 	wiCheckBox* translatorCheckBox = new wiCheckBox("Translator: ");
 	translatorCheckBox->SetTooltip("Enable the translator tool");
@@ -380,9 +464,9 @@ void EditorComponent::Load()
 	});
 	GetGUI().AddWidget(translatorCheckBox);
 
-	wiCheckBox* isScalatorCheckBox = new wiCheckBox("S:");
-	wiCheckBox* isRotatorCheckBox = new wiCheckBox("R:");
-	wiCheckBox* isTranslatorCheckBox = new wiCheckBox("T:");
+	wiCheckBox* isScalatorCheckBox = new wiCheckBox("S: ");
+	wiCheckBox* isRotatorCheckBox = new wiCheckBox("R: ");
+	wiCheckBox* isTranslatorCheckBox = new wiCheckBox("T: ");
 	{
 		isScalatorCheckBox->SetTooltip("Scale");
 		isScalatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25 - 40 * 2, 22));
@@ -588,6 +672,9 @@ void EditorComponent::Load()
 		forceFieldWnd->SetEntity(INVALID_ENTITY);
 		cameraWnd->SetEntity(INVALID_ENTITY);
 		paintToolWnd->SetEntity(INVALID_ENTITY);
+		springWnd->SetEntity(INVALID_ENTITY);
+		ikWnd->SetEntity(INVALID_ENTITY);
+		transformWnd->SetEntity(INVALID_ENTITY);
 	});
 	GetGUI().AddWidget(clearButton);
 
@@ -617,7 +704,6 @@ void EditorComponent::Load()
 			ss << "Copy: Ctrl + C" << endl;
 			ss << "Paste: Ctrl + V" << endl;
 			ss << "Delete: DELETE button" << endl;
-			ss << "Add Spring to selected transform: R button" << endl;
 			ss << "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)" << endl;
 			ss << "Script Console / backlog: HOME button" << endl;
 			ss << endl;
@@ -654,10 +740,19 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(exitButton);
 
 
+	wiCheckBox* profilerEnabledCheckBox = new wiCheckBox("Profiler Enabled: ");
+	profilerEnabledCheckBox->SetSize(XMFLOAT2(20, 20));
+	profilerEnabledCheckBox->SetPos(XMFLOAT2(screenW - 520, 45));
+	profilerEnabledCheckBox->SetTooltip("Toggle Profiler Engine On/Off");
+	profilerEnabledCheckBox->OnClick([&](wiEventArgs args) {
+		wiProfiler::SetEnabled(args.bValue);
+		});
+	profilerEnabledCheckBox->SetCheck(wiProfiler::IsEnabled());
+	GetGUI().AddWidget(profilerEnabledCheckBox);
 
 	wiCheckBox* physicsEnabledCheckBox = new wiCheckBox("Physics Enabled: ");
-	physicsEnabledCheckBox->SetSize(XMFLOAT2(18, 18));
-	physicsEnabledCheckBox->SetPos(XMFLOAT2(screenW - 25, 50));
+	physicsEnabledCheckBox->SetSize(XMFLOAT2(20, 20));
+	physicsEnabledCheckBox->SetPos(XMFLOAT2(screenW - 370, 45));
 	physicsEnabledCheckBox->SetTooltip("Toggle Physics Engine On/Off");
 	physicsEnabledCheckBox->OnClick([&](wiEventArgs args) {
 		wiPhysicsEngine::SetEnabled(args.bValue);
@@ -666,8 +761,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(physicsEnabledCheckBox);
 
 	cinemaModeCheckBox = new wiCheckBox("Cinema Mode: ");
-	cinemaModeCheckBox->SetSize(XMFLOAT2(18, 18));
-	cinemaModeCheckBox->SetPos(XMFLOAT2(screenW - 25, 72));
+	cinemaModeCheckBox->SetSize(XMFLOAT2(20, 20));
+	cinemaModeCheckBox->SetPos(XMFLOAT2(screenW - 240, 45));
 	cinemaModeCheckBox->SetTooltip("Toggle Cinema Mode (All HUD disabled). Press ESC to exit.");
 	cinemaModeCheckBox->OnClick([&](wiEventArgs args) {
 		if (renderPath != nullptr)
@@ -683,7 +778,7 @@ void EditorComponent::Load()
 
 	wiComboBox* renderPathComboBox = new wiComboBox("Render Path: ");
 	renderPathComboBox->SetSize(XMFLOAT2(100, 20));
-	renderPathComboBox->SetPos(XMFLOAT2(screenW - 128, 94));
+	renderPathComboBox->SetPos(XMFLOAT2(screenW - 120, 45));
 	renderPathComboBox->AddItem("Forward");
 	renderPathComboBox->AddItem("Deferred");
 	renderPathComboBox->AddItem("Tiled Forward");
@@ -718,8 +813,8 @@ void EditorComponent::Load()
 
 
 	sceneGraphView = new wiTreeList("Scene graph view (WIP)");
-	sceneGraphView->SetPos(XMFLOAT2(0, screenH - 200));
-	sceneGraphView->SetSize(XMFLOAT2(260, 200));
+	sceneGraphView->SetSize(XMFLOAT2(260, 300));
+	sceneGraphView->SetPos(XMFLOAT2(0, screenH - sceneGraphView->scale_local.y));
 	sceneGraphView->OnSelect([this](wiEventArgs args) {
 
 		translator.selected.clear();
@@ -1384,23 +1479,6 @@ void EditorComponent::Update(float dt)
 
 	}
 
-	// Springs
-	if (wiInput::Press((wiInput::BUTTON)'R'))
-	{
-		for (auto& x : translator.selected)
-		{
-			bool has_spring = scene.springs.Contains(x.entity);
-			if (scene.transforms.Contains(x.entity) && !has_spring)
-			{
-				SpringComponent& spring = scene.springs.Create(x.entity);
-			}
-			else if (has_spring)
-			{
-				scene.springs.Remove_KeepSorted(x.entity);
-			}
-		}
-	}
-
 
 	// Delete
 	if (wiInput::Press(wiInput::KEYBOARD_BUTTON_DELETE))
@@ -1440,6 +1518,9 @@ void EditorComponent::Update(float dt)
 		forceFieldWnd->SetEntity(INVALID_ENTITY);
 		cameraWnd->SetEntity(INVALID_ENTITY);
 		paintToolWnd->SetEntity(INVALID_ENTITY);
+		springWnd->SetEntity(INVALID_ENTITY);
+		ikWnd->SetEntity(INVALID_ENTITY);
+		transformWnd->SetEntity(INVALID_ENTITY);
 	}
 	else
 	{
@@ -1466,6 +1547,9 @@ void EditorComponent::Update(float dt)
 		forceFieldWnd->SetEntity(picked.entity);
 		cameraWnd->SetEntity(picked.entity);
 		paintToolWnd->SetEntity(picked.entity, picked.subsetIndex);
+		springWnd->SetEntity(picked.entity);
+		ikWnd->SetEntity(picked.entity);
+		transformWnd->SetEntity(picked.entity);
 
 		if (picked.subsetIndex >= 0)
 		{
@@ -1606,14 +1690,17 @@ void EditorComponent::Render() const
 		}
 
 		// Spring visualizer:
-		for (size_t i = 0; i < scene.springs.GetCount(); ++i)
+		if (springWnd->debugCheckBox->GetCheck())
 		{
-			const SpringComponent& spring = scene.springs[i];
-			wiRenderer::RenderablePoint point;
-			point.position = spring.center_of_mass;
-			point.size = 0.05f;
-			point.color = XMFLOAT4(1, 1, 0, 1);
-			wiRenderer::DrawPoint(point);
+			for (size_t i = 0; i < scene.springs.GetCount(); ++i)
+			{
+				const SpringComponent& spring = scene.springs[i];
+				wiRenderer::RenderablePoint point;
+				point.position = spring.center_of_mass;
+				point.size = 0.05f;
+				point.color = XMFLOAT4(1, 1, 0, 1);
+				wiRenderer::DrawPoint(point);
+			}
 		}
 	}
 

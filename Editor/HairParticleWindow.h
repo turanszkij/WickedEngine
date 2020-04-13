@@ -10,12 +10,14 @@ class wiColorPicker;
 class wiButton;
 class wiTextInputField;
 
+class EditorComponent;
+
 class MaterialWindow;
 
 class HairParticleWindow
 {
 public:
-	HairParticleWindow(wiGUI* gui);
+	HairParticleWindow(EditorComponent* editor);
 	~HairParticleWindow();
 
 	wiECS::Entity entity;
