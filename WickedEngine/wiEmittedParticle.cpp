@@ -25,6 +25,7 @@ static Shader		pixelShader[wiEmittedParticle::PARTICLESHADERTYPE_COUNT];
 static Shader		kickoffUpdateCS;
 static Shader		finishUpdateCS;
 static Shader		emitCS;
+static Shader		emitCS_VOLUME;
 static Shader		emitCS_FROMMESH;
 static Shader		sphpartitionCS;
 static Shader		sphpartitionoffsetsCS;
@@ -314,7 +315,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 
 		// emit the required amount if there are free slots in dead list
 		device->EventBegin("Emit", cmd);
-		device->BindComputeShader(mesh == nullptr ? &emitCS : &emitCS_FROMMESH, cmd);
+		device->BindComputeShader(mesh == nullptr ? (IsVolumeEnabled() ? &emitCS_VOLUME : &emitCS) : &emitCS_FROMMESH, cmd);
 		device->DispatchIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHEMIT, cmd);
 		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 		device->EventEnd(cmd);
@@ -608,6 +609,7 @@ void wiEmittedParticle::LoadShaders()
 	wiRenderer::LoadShader(CS, kickoffUpdateCS, "emittedparticle_kickoffUpdateCS.cso");
 	wiRenderer::LoadShader(CS, finishUpdateCS, "emittedparticle_finishUpdateCS.cso");
 	wiRenderer::LoadShader(CS, emitCS, "emittedparticle_emitCS.cso");
+	wiRenderer::LoadShader(CS, emitCS_VOLUME, "emittedparticle_emitCS_volume.cso");
 	wiRenderer::LoadShader(CS, emitCS_FROMMESH, "emittedparticle_emitCS_FROMMESH.cso");
 	wiRenderer::LoadShader(CS, sphpartitionCS, "emittedparticle_sphpartitionCS.cso");
 	wiRenderer::LoadShader(CS, sphpartitionoffsetsCS, "emittedparticle_sphpartitionoffsetsCS.cso");

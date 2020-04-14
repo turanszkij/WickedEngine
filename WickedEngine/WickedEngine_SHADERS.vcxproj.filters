@@ -969,6 +969,9 @@
     <FxCompile Include="imagePS_backgroundblur_masked_bicubic.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="emittedparticle_emitCS_volume.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

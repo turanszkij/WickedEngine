@@ -164,6 +164,15 @@ float InterleavedGradientNoise(float2 uv, uint frameCount)
 	return frac(magic.z * frac(dot(uv, magic.xy)));
 }
 
+// https://www.shadertoy.com/view/llGSzw
+float hash1(uint n)
+{
+	// integer hash copied from Hugo Elias
+	n = (n << 13U) ^ n;
+	n = n * (n * n * 15731U + 789221U) + 1376312589U;
+	return float(n & 0x7fffffffU) / float(0x7fffffff);
+}
+
 // 2D array index to flattened 1D array index
 inline uint flatten2D(uint2 coord, uint2 dim)
 {

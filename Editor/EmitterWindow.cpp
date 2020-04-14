@@ -16,7 +16,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	emitterWindow->SetSize(XMFLOAT2(800, 1100));
 	GUI->AddWidget(emitterWindow);
 
-	float x = 150;
+	float x = 200;
 	float y = 20;
 	float step = 35;
 
@@ -167,6 +167,20 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	debugCheckBox->SetCheck(false);
 	debugCheckBox->SetTooltip("Enable debug info for the emitter. This involves reading back GPU data, so rendering can slow down.");
 	emitterWindow->AddWidget(debugCheckBox);
+
+
+	volumeCheckBox = new wiCheckBox("Volume: ");
+	volumeCheckBox->SetPos(XMFLOAT2(x + 250, y));
+	volumeCheckBox->OnClick([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->SetVolumeEnabled(args.bValue);
+		}
+		});
+	volumeCheckBox->SetCheck(false);
+	volumeCheckBox->SetTooltip("Enable volume for the emitter. Particles will be emitted inside volume.");
+	emitterWindow->AddWidget(volumeCheckBox);
 
 
 
@@ -451,6 +465,7 @@ void EmitterWindow::SetEntity(Entity entity)
 		shaderTypeComboBox->SetEnabled(true);
 		meshComboBox->SetEnabled(true);
 		debugCheckBox->SetEnabled(true);
+		volumeCheckBox->SetEnabled(true);
 		sortCheckBox->SetEnabled(true);
 		depthCollisionsCheckBox->SetEnabled(true);
 		sphCheckBox->SetEnabled(true);
@@ -478,6 +493,7 @@ void EmitterWindow::SetEntity(Entity entity)
 		depthCollisionsCheckBox->SetCheck(emitter->IsDepthCollisionEnabled());
 		sphCheckBox->SetCheck(emitter->IsSPHEnabled());
 		pauseCheckBox->SetCheck(emitter->IsPaused());
+		volumeCheckBox->SetCheck(emitter->IsVolumeEnabled());
 		maxParticlesSlider->SetValue((float)emitter->GetMaxParticleCount());
 
 		emitCountSlider->SetValue(emitter->count);
@@ -506,6 +522,7 @@ void EmitterWindow::SetEntity(Entity entity)
 		shaderTypeComboBox->SetEnabled(false);
 		meshComboBox->SetEnabled(false);
 		debugCheckBox->SetEnabled(false);
+		volumeCheckBox->SetEnabled(false);
 		sortCheckBox->SetEnabled(false);
 		depthCollisionsCheckBox->SetEnabled(false);
 		sphCheckBox->SetEnabled(false);

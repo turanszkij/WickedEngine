@@ -69,6 +69,7 @@ public:
 		SORTING = 1 << 2,
 		DEPTHCOLLISION = 1 << 3,
 		SPH_FLUIDSIMULATION = 1 << 4,
+		HAS_VOLUME = 1 << 5,
 	};
 	uint32_t _flags = EMPTY;
 
@@ -107,12 +108,14 @@ public:
 	inline bool IsSorted() const { return _flags & SORTING; }
 	inline bool IsDepthCollisionEnabled() const { return _flags & DEPTHCOLLISION; }
 	inline bool IsSPHEnabled() const { return _flags & SPH_FLUIDSIMULATION; }
+	inline bool IsVolumeEnabled() const { return _flags & HAS_VOLUME; }
 
 	inline void SetDebug(bool value) { if (value) { _flags |= DEBUG; } else { _flags &= ~DEBUG; } }
 	inline void SetPaused(bool value) { if (value) { _flags |= PAUSED; } else { _flags &= ~PAUSED; } }
 	inline void SetSorted(bool value) { if (value) { _flags |= SORTING; } else { _flags &= ~SORTING; } }
 	inline void SetDepthCollisionEnabled(bool value) { if (value) { _flags |= DEPTHCOLLISION; } else { _flags &= ~DEPTHCOLLISION; } }
 	inline void SetSPHEnabled(bool value) { if (value) { _flags |= SPH_FLUIDSIMULATION; } else { _flags &= ~SPH_FLUIDSIMULATION; } }
+	inline void SetVolumeEnabled(bool value) { if (value) { _flags |= HAS_VOLUME; } else { _flags &= ~HAS_VOLUME; } }
 
 	void Serialize(wiArchive& archive, uint32_t seed = 0);
 

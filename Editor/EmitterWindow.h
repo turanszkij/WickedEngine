@@ -42,6 +42,7 @@ public:
 	wiCheckBox* sphCheckBox;
 	wiCheckBox* pauseCheckBox;
 	wiCheckBox* debugCheckBox;
+	wiCheckBox* volumeCheckBox;
 	wiSlider* emitCountSlider;
 	wiSlider* emitSizeSlider;
 	wiSlider* emitRotationSlider;

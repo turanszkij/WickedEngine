@@ -17,16 +17,7 @@ struct LDS_ForceField
 	float range_rcp;
 	float3 normal;
 };
-groupshared LDS_ForceField forceFields[NUM_LDS_FORCEFIELDS]; 
-
-// https://www.shadertoy.com/view/llGSzw
-float hash1(uint n)
-{
-	// integer hash copied from Hugo Elias
-	n = (n << 13U) ^ n;
-	n = n * (n * n * 15731U + 789221U) + 1376312589U;
-	return float(n & 0x7fffffffU) / float(0x7fffffff);
-}
+groupshared LDS_ForceField forceFields[NUM_LDS_FORCEFIELDS];
 
 [numthreads(THREADCOUNT_SIMULATEHAIR, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)

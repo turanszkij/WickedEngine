@@ -27,7 +27,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		
 #ifdef EMIT_FROM_MESH
 		// random triangle on emitter surface:
-		uint tri = (uint)((xEmitterMeshIndexCount / 3) * rand(seed, uv));
+		//	(Note that the usual rand() function is not used because that introduces unnatural clustering with high triangle count)
+		uint tri = (uint)((xEmitterMeshIndexCount / 3) * hash1(DTid.x));
 
 		// load indices of triangle from index buffer
 		uint i0 = meshIndexBuffer[tri * 3 + 0];
@@ -79,8 +80,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 #else
 
+#ifdef EMITTER_VOLUME
+		// Emit inside volume:
+		float3 pos = mul(xEmitterWorld, float4(rand(seed, uv) * 2 - 1, rand(seed, uv) * 2 - 1, rand(seed, uv) * 2 - 1, 1)).xyz;
+#else
 		// Just emit from center point:
 		float3 pos = mul(xEmitterWorld, float4(0, 0, 0, 1)).xyz;
+#endif // EMITTER_VOLUME
+
 		float3 nor = 0;
 
 #endif // EMIT_FROM_MESH
