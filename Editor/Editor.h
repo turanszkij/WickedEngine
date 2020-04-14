@@ -21,6 +21,8 @@ class PaintToolWindow;
 class SpringWindow;
 class IKWindow;
 class TransformWindow;
+class LayerWindow;
+class NameWindow;
 
 class EditorLoadingScreen : public LoadingScreen
 {
@@ -58,6 +60,8 @@ public:
 	std::unique_ptr<SpringWindow>			springWnd;
 	std::unique_ptr<IKWindow>				ikWnd;
 	std::unique_ptr<TransformWindow>		transformWnd;
+	std::unique_ptr<LayerWindow>			layerWnd;
+	std::unique_ptr<NameWindow>				nameWnd;
 
 	Editor*					main = nullptr;
 

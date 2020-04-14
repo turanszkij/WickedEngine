@@ -26,6 +26,8 @@ public:
 
 	wiButton* createButton;
 
+	wiComboBox* parentCombo;
+
 	wiTextInputField* txInput;
 	wiTextInputField* tyInput;
 	wiTextInputField* tzInput;

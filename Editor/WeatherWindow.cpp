@@ -180,9 +180,9 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	preset1Button->OnClick([=](wiEventArgs args) {
 
 		auto& weather = GetWeather();
-		weather.ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
-		weather.horizon = XMFLOAT3(0.3f, 0.3f, 0.4f);
-		weather.zenith = XMFLOAT3(37.0f / 255.0f, 61.0f / 255.0f, 142.0f / 255.0f);
+		weather.ambient = XMFLOAT3(33.0f / 255.0f, 47.0f / 255.0f, 127.0f / 255.0f);
+		weather.horizon = XMFLOAT3(101.0f / 255.0f, 101.0f / 255.0f, 227.0f / 255.0f);
+		weather.zenith = XMFLOAT3(99.0f / 255.0f, 133.0f / 255.0f, 255.0f / 255.0f);
 		weather.cloudiness = 0.4f;
 		weather.fogStart = 100;
 		weather.fogEnd = 1000;
@@ -200,9 +200,9 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	preset2Button->OnClick([=](wiEventArgs args) {
 
 		auto& weather = GetWeather();
-		weather.ambient = XMFLOAT3(0.02f, 0.02f, 0.02f);
-		weather.horizon = XMFLOAT3(0.2f, 0.05f, 0.15f);
-		weather.zenith = XMFLOAT3(0.4f, 0.05f, 0.1f);
+		weather.ambient = XMFLOAT3(86.0f / 255.0f, 29.0f / 255.0f, 29.0f / 255.0f);
+		weather.horizon = XMFLOAT3(121.0f / 255.0f, 28.0f / 255.0f, 22.0f / 255.0f);
+		weather.zenith = XMFLOAT3(146.0f / 255.0f, 51.0f / 255.0f, 51.0f / 255.0f);
 		weather.cloudiness = 0.36f;
 		weather.fogStart = 50;
 		weather.fogEnd = 600;
@@ -240,9 +240,9 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	preset4Button->OnClick([=](wiEventArgs args) {
 
 		auto& weather = GetWeather();
-		weather.ambient = XMFLOAT3(0.01f, 0.01f, 0.02f);
-		weather.horizon = XMFLOAT3(0.04f, 0.1f, 0.2f);
-		weather.zenith = XMFLOAT3(0.02f, 0.04f, 0.08f);
+		weather.ambient = XMFLOAT3(12.0f / 255.0f, 21.0f / 255.0f, 77.0f / 255.0f);
+		weather.horizon = XMFLOAT3(10.0f / 255.0f, 33.0f / 255.0f, 70.0f / 255.0f);
+		weather.zenith = XMFLOAT3(4.0f / 255.0f,20.0f / 255.0f, 51.0f / 255.0f);
 		weather.cloudiness = 0.28f;
 		weather.fogStart = 10;
 		weather.fogEnd = 400;

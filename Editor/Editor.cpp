@@ -20,6 +20,8 @@
 #include "SpringWindow.h"
 #include "IKWindow.h"
 #include "TransformWindow.h"
+#include "LayerWindow.h"
+#include "NameWindow.h"
 
 #include "ModelImporter.h"
 #include "Translator.h"
@@ -149,6 +151,8 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	springWnd = std::make_unique<SpringWindow>(this);
 	ikWnd = std::make_unique<IKWindow>(this);
 	transformWnd = std::make_unique<TransformWindow>(this);
+	layerWnd = std::make_unique<LayerWindow>(this);
+	nameWnd = std::make_unique<NameWindow>(this);
 
 	ResizeBuffers();
 }
@@ -446,6 +450,28 @@ void EditorComponent::Load()
 		});
 	GetGUI().AddWidget(transformWnd_Toggle);
 
+	wiButton* layerWnd_Toggle = new wiButton("Layer");
+	layerWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
+	layerWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
+	layerWnd_Toggle->SetTooltip("Layer Component");
+	layerWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	layerWnd_Toggle->SetSize(option_size);
+	layerWnd_Toggle->OnClick([=](wiEventArgs args) {
+		layerWnd->window->SetVisible(!layerWnd->window->IsVisible());
+		});
+	GetGUI().AddWidget(layerWnd_Toggle);
+
+	wiButton* nameWnd_Toggle = new wiButton("Name");
+	nameWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
+	nameWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
+	nameWnd_Toggle->SetTooltip("Name Component");
+	nameWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	nameWnd_Toggle->SetSize(option_size);
+	nameWnd_Toggle->OnClick([=](wiEventArgs args) {
+		nameWnd->window->SetVisible(!nameWnd->window->IsVisible());
+		});
+	GetGUI().AddWidget(nameWnd_Toggle);
+
 
 
 
@@ -675,6 +701,8 @@ void EditorComponent::Load()
 		springWnd->SetEntity(INVALID_ENTITY);
 		ikWnd->SetEntity(INVALID_ENTITY);
 		transformWnd->SetEntity(INVALID_ENTITY);
+		layerWnd->SetEntity(INVALID_ENTITY);
+		nameWnd->SetEntity(INVALID_ENTITY);
 	});
 	GetGUI().AddWidget(clearButton);
 
@@ -1521,6 +1549,8 @@ void EditorComponent::Update(float dt)
 		springWnd->SetEntity(INVALID_ENTITY);
 		ikWnd->SetEntity(INVALID_ENTITY);
 		transformWnd->SetEntity(INVALID_ENTITY);
+		layerWnd->SetEntity(INVALID_ENTITY);
+		nameWnd->SetEntity(INVALID_ENTITY);
 	}
 	else
 	{
@@ -1550,6 +1580,8 @@ void EditorComponent::Update(float dt)
 		springWnd->SetEntity(picked.entity);
 		ikWnd->SetEntity(picked.entity);
 		transformWnd->SetEntity(picked.entity);
+		layerWnd->SetEntity(picked.entity);
+		nameWnd->SetEntity(picked.entity);
 
 		if (picked.subsetIndex >= 0)
 		{

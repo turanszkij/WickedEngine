@@ -116,7 +116,7 @@ void wiGUI::Update(float dt)
 
 	for (auto& widget : priorityChangeQueue)
 	{
-		if (std::find(widgets.begin(), widgets.end(), widget) != widgets.end())
+		if (std::find(widgets.begin(), widgets.end(), widget) != widgets.end()) // only add back to widgets if it's still there!
 		{
 			widgets.remove(widget);
 			widgets.push_front(widget);
@@ -191,11 +191,9 @@ wiWidget* wiGUI::GetWidget(const wiHashString& name)
 
 void wiGUI::ActivateWidget(wiWidget* widget)
 {
-	if (std::find(widgets.begin(), widgets.end(), widget) != widgets.end())
-	{
-		widget->priority_change = false;
-		priorityChangeQueue.push_back(widget);
-	}
+	widget->priority_change = false;
+	priorityChangeQueue.push_back(widget);
+
 	if (activeWidget == nullptr)
 	{
 		activeWidget = widget;

@@ -11,7 +11,7 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 	assert(GUI && "Invalid GUI!");
 
 	window = new wiWindow(GUI, "Transform Window");
-	window->SetSize(XMFLOAT2(460, 150));
+	window->SetSize(XMFLOAT2(460, 170));
 	GUI->AddWidget(window);
 
 	float x = 100;
@@ -32,6 +32,35 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 		SetEntity(entity);
 		});
 	window->AddWidget(createButton);
+
+	parentCombo = new wiComboBox("Parent: ");
+	parentCombo->SetSize(XMFLOAT2(330, hei));
+	parentCombo->SetPos(XMFLOAT2(x, y += step));
+	parentCombo->SetEnabled(false);
+	parentCombo->OnSelect([&](wiEventArgs args) {
+		Scene& scene = wiScene::GetScene();
+		HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
+
+		if (args.iValue == 0 && hier != nullptr)
+		{
+			scene.hierarchy.Remove_KeepSorted(entity);
+		}
+		else if(args.iValue != 0)
+		{
+			if (hier == nullptr)
+			{
+				hier = &scene.hierarchy.Create(entity);
+			}
+			hier->parentID = scene.transforms.GetEntity(args.iValue - 1);
+			if (hier->parentID == entity)
+			{
+				scene.hierarchy.Remove_KeepSorted(entity);
+			}
+		}
+
+		});
+	parentCombo->SetTooltip("Choose a parent entity for the transform");
+	window->AddWidget(parentCombo);
 
 	txInput = new wiTextInputField("");
 	txInput->SetValue(0);
@@ -81,7 +110,7 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 
 
 	x = 250;
-	y = step;
+	y = step * 2;
 
 
 	rxInput = new wiTextInputField("");
@@ -148,7 +177,7 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 
 
 	x = 400;
-	y = step;
+	y = step * 2;
 
 
 	sxInput = new wiTextInputField("");
@@ -214,10 +243,33 @@ void TransformWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
 
-	const TransformComponent* transform = wiScene::GetScene().transforms.GetComponent(entity);
+	Scene& scene = wiScene::GetScene();
+	const TransformComponent* transform = scene.transforms.GetComponent(entity);
 
 	if (transform != nullptr)
 	{
+		parentCombo->ClearItems();
+		parentCombo->AddItem("NO PARENT");
+
+		HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
+		for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
+		{
+			Entity entity = scene.transforms.GetEntity(i);
+			std::string str;
+			const NameComponent* name = scene.names.GetComponent(entity);
+			if (name != nullptr)
+			{
+				str = name->name;
+			}
+			str = str + " (" + std::to_string(entity) + ")";
+			parentCombo->AddItem(str);
+
+			if (hier != nullptr && hier->parentID == entity)
+			{
+				parentCombo->SetSelected((int)i + 1);
+			}
+		}
+
 		txInput->SetValue(transform->translation_local.x);
 		tyInput->SetValue(transform->translation_local.y);
 		tzInput->SetValue(transform->translation_local.z);

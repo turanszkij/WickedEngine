@@ -103,6 +103,12 @@
     <ClInclude Include="IKWindow.h">
       <Filter>Code</Filter>
     </ClInclude>
+    <ClInclude Include="NameWindow.h">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="LayerWindow.h">
+      <Filter>Code</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CameraWindow.cpp">
@@ -181,6 +187,12 @@
       <Filter>Code</Filter>
     </ClCompile>
     <ClCompile Include="SpringWindow.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="NameWindow.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="LayerWindow.cpp">
       <Filter>Code</Filter>
     </ClCompile>
   </ItemGroup>
