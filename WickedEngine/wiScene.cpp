@@ -304,6 +304,12 @@ namespace wiScene
 		{
 			retVal.options |= SHADERMATERIAL_OPTION_BIT_USE_WIND;
 		}
+
+		retVal.baseColorAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
+		retVal.surfaceMapAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
+		retVal.emissiveMapAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
+		retVal.normalMapAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
+
 		return retVal;
 	}
 

@@ -2803,6 +2803,9 @@ void ClearWorld()
 
 	GetScene().Clear();
 
+	sceneBVH.Clear();
+	scene_bvh_invalid = true;
+
 	deferredMIPGenLock.lock();
 	deferredMIPGens.clear();
 	deferredMIPGenLock.unlock();

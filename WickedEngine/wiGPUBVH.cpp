@@ -35,12 +35,6 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 
 	using namespace wiRectPacker;
 
-	if (sceneTextures.empty())
-	{
-		sceneTextures.insert(wiTextureHelper::getWhite());
-		sceneTextures.insert(wiTextureHelper::getNormalMapDefault());
-	}
-
 	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
 	{
 		const ObjectComponent& object = scene.objects[i];
@@ -53,10 +47,22 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 			{
 				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
-				sceneTextures.insert(material.GetBaseColorMap());
-				sceneTextures.insert(material.GetSurfaceMap());
-				sceneTextures.insert(material.GetEmissiveMap());
-				sceneTextures.insert(material.GetNormalMap());
+				if (material.baseColorMap != nullptr)
+				{
+					sceneTextures.insert(material.baseColorMap);
+				}
+				if (material.surfaceMap != nullptr)
+				{
+					sceneTextures.insert(material.surfaceMap);
+				}
+				if (material.emissiveMap != nullptr)
+				{
+					sceneTextures.insert(material.emissiveMap);
+				}
+				if (material.normalMap != nullptr)
+				{
+					sceneTextures.insert(material.normalMap);
+				}
 			}
 		}
 
@@ -64,18 +70,18 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 
 	bool repackAtlas = false;
 	const int atlasWrapBorder = 1;
-	for (const Texture* tex : sceneTextures)
+	for (auto res : sceneTextures)
 	{
-		if (tex == nullptr)
+		if (res == nullptr)
 		{
 			continue;
 		}
 
-		if (storedTextures.find(tex) == storedTextures.end())
+		if (storedTextures.find(res) == storedTextures.end())
 		{
 			// we need to pack this texture into the atlas
-			rect_xywh newRect = rect_xywh(0, 0, tex->GetDesc().Width + atlasWrapBorder * 2, tex->GetDesc().Height + atlasWrapBorder * 2);
-			storedTextures[tex] = newRect;
+			rect_xywh newRect = rect_xywh(0, 0, res->texture->GetDesc().Width + atlasWrapBorder * 2, res->texture->GetDesc().Height + atlasWrapBorder * 2);
+			storedTextures[res] = newRect;
 
 			repackAtlas = true;
 		}
@@ -114,7 +120,7 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 
 			for (auto& it : storedTextures)
 			{
-				wiRenderer::CopyTexture2D(globalMaterialAtlas, 0, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, *it.first, 0, cmd, wiRenderer::BORDEREXPAND_WRAP);
+				wiRenderer::CopyTexture2D(globalMaterialAtlas, 0, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, *it.first->texture, 0, cmd, wiRenderer::BORDEREXPAND_WRAP);
 			}
 		}
 		else
@@ -141,78 +147,54 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 
 				// Add extended properties:
 				const TextureDesc& desc = globalMaterialAtlas.GetDesc();
-				rect_xywh rect;
 
-
-				if (material.GetBaseColorMap() != nullptr)
+				if (material.baseColorMap != nullptr)
 				{
-					rect = storedTextures[material.GetBaseColorMap()];
+					rect_xywh rect = storedTextures[material.baseColorMap];
+					// eliminate border expansion:
+					rect.x += atlasWrapBorder;
+					rect.y += atlasWrapBorder;
+					rect.w -= atlasWrapBorder * 2;
+					rect.h -= atlasWrapBorder * 2;
+					global_material.baseColorAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
+						(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
 				}
-				else
+
+				if (material.surfaceMap != nullptr)
 				{
-					rect = storedTextures[wiTextureHelper::getWhite()];
+					rect_xywh rect = storedTextures[material.surfaceMap];
+					// eliminate border expansion:
+					rect.x += atlasWrapBorder;
+					rect.y += atlasWrapBorder;
+					rect.w -= atlasWrapBorder * 2;
+					rect.h -= atlasWrapBorder * 2;
+					global_material.surfaceMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
+						(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
 				}
-				// eliminate border expansion:
-				rect.x += atlasWrapBorder;
-				rect.y += atlasWrapBorder;
-				rect.w -= atlasWrapBorder * 2;
-				rect.h -= atlasWrapBorder * 2;
-				global_material.baseColorAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
-					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
 
-
-
-				if (material.GetSurfaceMap() != nullptr)
+				if (material.emissiveMap != nullptr)
 				{
-					rect = storedTextures[material.GetSurfaceMap()];
+					rect_xywh rect = storedTextures[material.emissiveMap];
+					// eliminate border expansion:
+					rect.x += atlasWrapBorder;
+					rect.y += atlasWrapBorder;
+					rect.w -= atlasWrapBorder * 2;
+					rect.h -= atlasWrapBorder * 2;
+					global_material.emissiveMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
+						(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
 				}
-				else
+
+				if (material.normalMap != nullptr)
 				{
-					rect = storedTextures[wiTextureHelper::getWhite()];
+					rect_xywh rect = storedTextures[material.normalMap];
+					// eliminate border expansion:
+					rect.x += atlasWrapBorder;
+					rect.y += atlasWrapBorder;
+					rect.w -= atlasWrapBorder * 2;
+					rect.h -= atlasWrapBorder * 2;
+					global_material.normalMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
+						(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
 				}
-				// eliminate border expansion:
-				rect.x += atlasWrapBorder;
-				rect.y += atlasWrapBorder;
-				rect.w -= atlasWrapBorder * 2;
-				rect.h -= atlasWrapBorder * 2;
-				global_material.surfaceMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
-					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
-
-
-
-				if (material.GetEmissiveMap() != nullptr)
-				{
-					rect = storedTextures[material.GetEmissiveMap()];
-				}
-				else
-				{
-					rect = storedTextures[wiTextureHelper::getWhite()];
-				}
-				// eliminate border expansion:
-				rect.x += atlasWrapBorder;
-				rect.y += atlasWrapBorder;
-				rect.w -= atlasWrapBorder * 2;
-				rect.h -= atlasWrapBorder * 2;
-				global_material.emissiveMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
-					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
-
-
-
-				if (material.GetNormalMap() != nullptr)
-				{
-					rect = storedTextures[material.GetNormalMap()];
-				}
-				else
-				{
-					rect = storedTextures[wiTextureHelper::getNormalMapDefault()];
-				}
-				// eliminate border expansion:
-				rect.x += atlasWrapBorder;
-				rect.y += atlasWrapBorder;
-				rect.w -= atlasWrapBorder * 2;
-				rect.h -= atlasWrapBorder * 2;
-				global_material.normalMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
-					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
 
 				materialArray.push_back(global_material);
 			}
@@ -585,6 +567,15 @@ void wiGPUBVH::Bind(SHADERSTAGE stage, CommandList cmd) const
 		&bvhNodeBuffer,
 	};
 	device->BindResources(stage, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+}
+
+void wiGPUBVH::Clear()
+{
+	primitiveCapacity = 0;
+	primitiveCount = 0;
+	materialArray.clear();
+	storedTextures.clear();
+	sceneTextures.clear();
 }
 
 void wiGPUBVH::LoadShaders()

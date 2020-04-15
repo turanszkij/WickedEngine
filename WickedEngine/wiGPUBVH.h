@@ -4,6 +4,7 @@
 #include "wiScene_Decl.h"
 #include "wiRectPacker.h"
 #include "ShaderInterop_Renderer.h"
+#include "wiResourceManager.h"
 
 #include <vector>
 #include <unordered_map>
@@ -28,13 +29,15 @@ private:
 	wiGraphics::GPUBuffer globalMaterialBuffer;
 	wiGraphics::Texture globalMaterialAtlas;
 	std::vector<ShaderMaterial> materialArray;
-	std::unordered_map<const wiGraphics::Texture*, wiRectPacker::rect_xywh> storedTextures;
-	std::unordered_set<const wiGraphics::Texture*> sceneTextures;
+	std::unordered_map<std::shared_ptr<wiResource>, wiRectPacker::rect_xywh> storedTextures;
+	std::unordered_set<std::shared_ptr<wiResource>> sceneTextures;
 	void UpdateGlobalMaterialResources(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 
 public:
 	void Build(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 	void Bind(wiGraphics::SHADERSTAGE stage, wiGraphics::CommandList cmd) const;
+
+	void Clear();
 
 	static void LoadShaders();
 
