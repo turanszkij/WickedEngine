@@ -87,6 +87,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	shaderTypeComboBox->AddItem("SOFT");
 	shaderTypeComboBox->AddItem("SOFT + DISTORTION");
 	shaderTypeComboBox->AddItem("SIMPLEST");
+	shaderTypeComboBox->AddItem("SOFT + LIGHTING");
 	shaderTypeComboBox->OnSelect([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)

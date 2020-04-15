@@ -4384,36 +4384,48 @@ void UpdateRenderData(CommandList cmd)
 	}
 
 	// GPU Particle systems simulation/sorting/culling:
-	for (uint32_t emitterIndex : mainCameraCulling.culledEmitters)
+	if (!mainCameraCulling.culledEmitters.empty())
 	{
-		const wiEmittedParticle& emitter = scene.emitters[emitterIndex];
-		Entity entity = scene.emitters.GetEntity(emitterIndex);
-		const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-		const MaterialComponent& material = *scene.materials.GetComponent(entity);
-		const MeshComponent* mesh = scene.meshes.GetComponent(emitter.meshID);
+		range = wiProfiler::BeginRangeGPU("EmittedParticles - Simulate", cmd);
+		for (uint32_t emitterIndex : mainCameraCulling.culledEmitters)
+		{
+			const wiEmittedParticle& emitter = scene.emitters[emitterIndex];
+			Entity entity = scene.emitters.GetEntity(emitterIndex);
+			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+			const MaterialComponent& material = *scene.materials.GetComponent(entity);
+			const MeshComponent* mesh = scene.meshes.GetComponent(emitter.meshID);
 
-		emitter.UpdateGPU(transform, material, mesh, cmd);
+			emitter.UpdateGPU(transform, material, mesh, cmd);
+		}
+		wiProfiler::EndRange(range);
 	}
 
 	// Hair particle systems GPU simulation:
-	for (uint32_t hairIndex : mainCameraCulling.culledHairs)
+	if (!mainCameraCulling.culledHairs.empty())
 	{
-		const wiHairParticle& hair = scene.hairs[hairIndex];
-		const MeshComponent* mesh = scene.meshes.GetComponent(hair.meshID);
-
-		if (mesh != nullptr)
+		range = wiProfiler::BeginRangeGPU("HairParticles - Simulate", cmd);
+		for (uint32_t hairIndex : mainCameraCulling.culledHairs)
 		{
-			Entity entity = scene.hairs.GetEntity(hairIndex);
-			const MaterialComponent& material = *scene.materials.GetComponent(entity);
+			const wiHairParticle& hair = scene.hairs[hairIndex];
+			const MeshComponent* mesh = scene.meshes.GetComponent(hair.meshID);
 
-			hair.UpdateGPU(*mesh, material, cmd);
+			if (mesh != nullptr)
+			{
+				Entity entity = scene.hairs.GetEntity(hairIndex);
+				const MaterialComponent& material = *scene.materials.GetComponent(entity);
+
+				hair.UpdateGPU(*mesh, material, cmd);
+			}
 		}
+		wiProfiler::EndRange(range);
 	}
 
 	// Compute water simulation:
 	if (scene.weather.IsOceanEnabled() && ocean != nullptr)
 	{
+		range = wiProfiler::BeginRangeGPU("Ocean - Simulate", cmd);
 		ocean->UpdateDisplacementMap(scene.weather, renderTime, cmd);
+		wiProfiler::EndRange(range);
 	}
 
 	RefreshDecalAtlas(cmd);
@@ -4645,7 +4657,7 @@ void DrawSoftParticles(
 		{
 			emitter.Draw(camera, material, cmd);
 		}
-		else if (!distortion && (emitter.shaderType == wiEmittedParticle::SOFT || emitter.shaderType == wiEmittedParticle::SIMPLEST || IsWireRender()))
+		else if (!distortion && (emitter.shaderType == wiEmittedParticle::SOFT || emitter.shaderType == wiEmittedParticle::SOFT_LIGHTING || emitter.shaderType == wiEmittedParticle::SIMPLEST || IsWireRender()))
 		{
 			emitter.Draw(camera, material, cmd);
 		}

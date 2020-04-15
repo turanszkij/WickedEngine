@@ -972,6 +972,9 @@
     <FxCompile Include="emittedparticle_emitCS_volume.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="emittedparticlePS_soft_lighting.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

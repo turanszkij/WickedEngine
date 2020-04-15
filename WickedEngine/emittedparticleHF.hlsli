@@ -8,6 +8,7 @@ struct VertextoPixel
 	float2 tex						: TEXCOORD1;
 	nointerpolation float size		: TEXCOORD2;
 	nointerpolation uint color		: TEXCOORD3;
+	float3 P : WORLDPOSITION;
 };
 
 #endif // WI_EMITTEDPARTICLE_HF

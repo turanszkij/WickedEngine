@@ -56,6 +56,7 @@ VertextoPixel main(uint fakeIndex : SV_VERTEXID)
 	Out.pos = float4(particle.position, 1);
 	Out.pos = mul(g_xCamera_View, Out.pos);
 	Out.pos.xyz += quadPos.xyz;
+	Out.P = mul(g_xCamera_InvV, float4(Out.pos.xyz, 1)).xyz;
 	Out.pos = mul(g_xCamera_Proj, Out.pos);
 
 	Out.tex = uv;

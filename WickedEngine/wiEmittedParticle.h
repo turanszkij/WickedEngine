@@ -17,11 +17,14 @@ namespace wiScene
 class wiEmittedParticle
 {
 public:
+
+	// This is serialized, order of enums shouldn't change!
 	enum PARTICLESHADERTYPE
 	{
 		SOFT,
 		SOFT_DISTORTION,
 		SIMPLEST,
+		SOFT_LIGHTING,
 		PARTICLESHADERTYPE_COUNT,
 		ENUM_FORCE_UINT32 = 0xFFFFFFFF,
 	};

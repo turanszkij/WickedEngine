@@ -605,6 +605,7 @@ void wiEmittedParticle::LoadShaders()
 	wiRenderer::LoadShader(PS, pixelShader[SOFT], "emittedparticlePS_soft.cso");
 	wiRenderer::LoadShader(PS, pixelShader[SOFT_DISTORTION], "emittedparticlePS_soft_distortion.cso");
 	wiRenderer::LoadShader(PS, pixelShader[SIMPLEST], "emittedparticlePS_simplest.cso");
+	wiRenderer::LoadShader(PS, pixelShader[SOFT_LIGHTING], "emittedparticlePS_soft_lighting.cso");
 	
 	wiRenderer::LoadShader(CS, kickoffUpdateCS, "emittedparticle_kickoffUpdateCS.cso");
 	wiRenderer::LoadShader(CS, finishUpdateCS, "emittedparticle_finishUpdateCS.cso");
@@ -632,12 +633,11 @@ void wiEmittedParticle::LoadShaders()
 		desc.rs = &rasterizerState;
 		desc.dss = &depthStencilState;
 
-		desc.ps = &pixelShader[SOFT];
-		device->CreatePipelineState(&desc, &PSO[i][SOFT]);
-		desc.ps = &pixelShader[SOFT_DISTORTION];
-		device->CreatePipelineState(&desc, &PSO[i][SOFT_DISTORTION]);
-		desc.ps = &pixelShader[SIMPLEST];
-		device->CreatePipelineState(&desc, &PSO[i][SIMPLEST]);
+		for (int j = 0; j < PARTICLESHADERTYPE_COUNT; ++j)
+		{
+			desc.ps = &pixelShader[j];
+			device->CreatePipelineState(&desc, &PSO[i][j]);
+		}
 	}
 
 	{

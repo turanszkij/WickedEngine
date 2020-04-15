@@ -633,7 +633,11 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 
 	wiRenderer::DrawLightVisualizers(wiRenderer::GetCamera(), cmd);
 
-	wiRenderer::DrawSoftParticles(wiRenderer::GetCamera(), rtLinearDepth, false, cmd);
+	{
+		auto range = wiProfiler::BeginRangeGPU("EmittedParticles - Render", cmd);
+		wiRenderer::DrawSoftParticles(wiRenderer::GetCamera(), rtLinearDepth, false, cmd);
+		wiProfiler::EndRange(range);
+	}
 
 	if (getVolumeLightsEnabled() && wiRenderer::IsRequestedVolumetricLightRendering())
 	{
@@ -664,6 +668,7 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 
 	// Distortion particles:
 	{
+		auto range = wiProfiler::BeginRangeGPU("EmittedParticles - Render (Distortion)", cmd);
 		device->RenderPassBegin(&renderpass_particledistortion, cmd);
 
 		Viewport vp;
@@ -679,6 +684,7 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 		{
 			device->MSAAResolve(&rtParticleDistortion_Resolved, &rtParticleDistortion, cmd);
 		}
+		wiProfiler::EndRange(range);
 	}
 }
 void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Texture& srcGbuffer1, CommandList cmd) const
