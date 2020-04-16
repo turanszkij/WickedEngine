@@ -27,7 +27,7 @@ for shader in root.iter(namespace + "FxCompile"):
         profile = shaderprofile.text
         name = shader.attrib["Include"]
         
-        print profile + ":   " + name
+        print(profile + ":   " + name)
 
         file.write("..\shadercompilers\dxc " + name + " -T ")
         

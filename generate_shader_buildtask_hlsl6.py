@@ -27,8 +27,8 @@ for shader in root.iter(namespace + "FxCompile"):
         profile = shaderprofile.text
         name = shader.attrib["Include"]
         
-        print profile + ":   " + name
-
+        print(profile + ":   " + name)
+        
         file.write("..\shadercompilers\dxc " + name + " -T ")
         
         if profile == "Vertex":
@@ -48,7 +48,7 @@ for shader in root.iter(namespace + "FxCompile"):
 
         file.write(" -D SHADER_MODEL_6 ");
 
-        file.write(" -flegacy-macro-expansion -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso ")
+        file.write(" -HV 2016 -flegacy-macro-expansion -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso ")
 
         ## Append to error log:
         file.write(" 2>>../build_HLSL6_errors.log \n")
