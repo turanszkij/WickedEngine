@@ -40,6 +40,7 @@ Character = {
 		JUMP = 2,
 	},
 	state = STAND,
+	state_prev = STAND,
 	
 	Create = function(self,entity)
 		self.model = entity
@@ -93,33 +94,30 @@ Character = {
 	
 	Input = function(self)
 		
-		if(self.state==self.states.STAND) then
-			local lookDir = Vector()
-			if(input.Down(KEYBOARD_BUTTON_LEFT) or input.Down(string.byte('A'))) then
-				lookDir = lookDir:Add( Vector(-1) )
-			end
-			if(input.Down(KEYBOARD_BUTTON_RIGHT) or input.Down(string.byte('D'))) then
-				lookDir = lookDir:Add( Vector(1) )
-			end
+		local lookDir = Vector()
+		if(input.Down(KEYBOARD_BUTTON_LEFT) or input.Down(string.byte('A'))) then
+			lookDir = lookDir:Add( Vector(-1) )
+		end
+		if(input.Down(KEYBOARD_BUTTON_RIGHT) or input.Down(string.byte('D'))) then
+			lookDir = lookDir:Add( Vector(1) )
+		end
 		
-			if(input.Down(KEYBOARD_BUTTON_UP) or input.Down(string.byte('W'))) then
-				lookDir = lookDir:Add( Vector(0,0,1) )
-			end
-			if(input.Down(KEYBOARD_BUTTON_DOWN) or input.Down(string.byte('S'))) then
-				lookDir = lookDir:Add( Vector(0,0,-1) )
-			end
+		if(input.Down(KEYBOARD_BUTTON_UP) or input.Down(string.byte('W'))) then
+			lookDir = lookDir:Add( Vector(0,0,1) )
+		end
+		if(input.Down(KEYBOARD_BUTTON_DOWN) or input.Down(string.byte('S'))) then
+			lookDir = lookDir:Add( Vector(0,0,-1) )
+		end
 
-			local analog = input.GetAnalog(GAMEPAD_ANALOG_THUMBSTICK_L)
-			lookDir = vector.Add(lookDir, Vector(analog.GetX(), 0, analog.GetY()))
+		local analog = input.GetAnalog(GAMEPAD_ANALOG_THUMBSTICK_L)
+		lookDir = vector.Add(lookDir, Vector(analog.GetX(), 0, analog.GetY()))
 			
-			if(lookDir:Length()>0) then
-				if(input.Down(KEYBOARD_BUTTON_LSHIFT) or input.Down(GAMEPAD_BUTTON_6)) then
-					self:MoveDirection(lookDir,self.moveSpeed*2)
-				else
-					self:MoveDirection(lookDir,self.moveSpeed)
-				end
+		if(lookDir:Length()>0) then
+			if(input.Down(KEYBOARD_BUTTON_LSHIFT) or input.Down(GAMEPAD_BUTTON_6)) then
+				self:MoveDirection(lookDir,self.moveSpeed*2)
+			else
+				self:MoveDirection(lookDir,self.moveSpeed)
 			end
-		
 		end
 		
 		if( input.Press(string.byte('J'))  or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_2) ) then
@@ -157,7 +155,7 @@ Character = {
 		local target_transform = scene.Component_GetTransform(self.target)
 		
 		-- gravity:
-		self.force = vector.Add(self.force, Vector(0,-9.8 * 10,0))
+		self.force = vector.Add(self.force, Vector(0,-9.8 * 20,0))
 		
 		-- apply force:
 		self.velocity = vector.Add(self.velocity, vector.Multiply(self.force, getDeltaTime()))
@@ -165,18 +163,31 @@ Character = {
 		
 		-- state and animation update
 		if(self.state == self.states.STAND) then
-			scene.Component_GetAnimation(self.idle_anim).Play()
 			scene.Component_GetAnimation(self.walk_anim).Stop()
-			self.state = self.states.STAND
+			local anim = scene.Component_GetAnimation(self.idle_anim)
+			anim.Play()
+			anim.SetAmount(math.lerp(anim.GetAmount(), 1, 0.1))
+			if(self.state ~= self.state_prev) then
+				anim.SetAmount(0)
+			end
 		elseif(self.state == self.states.WALK) then
 			scene.Component_GetAnimation(self.idle_anim).Stop()
-			scene.Component_GetAnimation(self.walk_anim).Play()
-			self.state = self.states.STAND
+			local anim = scene.Component_GetAnimation(self.walk_anim)
+			anim.Play()
+			anim.SetAmount(math.lerp(anim.GetAmount(), 1, 0.1))
+			if(self.state ~= self.state_prev) then
+				anim.SetAmount(0)
+			end
 		elseif(self.state == self.states.JUMP) then
-			scene.Component_GetAnimation(self.idle_anim).Play()
 			scene.Component_GetAnimation(self.walk_anim).Stop()
-			self.state = self.states.STAND
+			local anim = scene.Component_GetAnimation(self.idle_anim)
+			anim.Play()
+			anim.SetAmount(math.lerp(anim.GetAmount(), 1, 0.1))
+			if(self.state ~= self.state_prev) then
+				anim.SetAmount(0)
+			end
 		end
+		self.state_prev = self.state
 		
 		-- front block shoots multiple rays in front to try to find obstruction
 		local rotations = {0, 3.1415*0.3, -3.1415*0.3}
@@ -228,7 +239,7 @@ Character = {
 			self.velocity.SetY(0) -- don't fall below ground
 			self.velocity = vector.Multiply(self.velocity, 0.8) -- slow down on ground
 		else	
-			self.velocity = vector.Multiply(self.velocity, 0.96) -- slow down in air
+			self.velocity = vector.Multiply(self.velocity, 0.94) -- slow down in air
 		end
 		
 	end
@@ -368,9 +379,11 @@ runProcess(function()
 	
 	while true do
 
-		player:Input()
-		
 		player:Update()
+
+		fixedupdate()
+
+		player:Input()
 		
 		camera:Update()
 		

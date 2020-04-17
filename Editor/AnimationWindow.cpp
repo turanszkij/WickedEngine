@@ -56,6 +56,7 @@ AnimationWindow::AnimationWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			else
 			{
 				animation->Play();
+				animation->amount = 0;
 			}
 		}
 	});
@@ -86,6 +87,20 @@ AnimationWindow::AnimationWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 	timerSlider->SetEnabled(false);
 	timerSlider->SetTooltip("Set the animation timer by hand.");
 	animWindow->AddWidget(timerSlider);
+
+	amountSlider = new wiSlider(0, 1, 0, 100000, "Amount: ");
+	amountSlider->SetSize(XMFLOAT2(250, 30));
+	amountSlider->SetPos(XMFLOAT2(x, y += step));
+	amountSlider->OnSlide([&](wiEventArgs args) {
+		AnimationComponent* animation = wiScene::GetScene().animations.GetComponent(entity);
+		if (animation != nullptr)
+		{
+			animation->amount = args.fValue;
+		}
+		});
+	amountSlider->SetEnabled(false);
+	amountSlider->SetTooltip("Set the animation blending amount by hand.");
+	animWindow->AddWidget(amountSlider);
 
 
 
@@ -153,6 +168,7 @@ void AnimationWindow::Update()
 		if (animation.IsPlaying())
 		{
 			playButton->SetText("Pause");
+			animation.amount = wiMath::Lerp(animation.amount, 1, 0.1f);
 		}
 		else
 		{
@@ -163,5 +179,6 @@ void AnimationWindow::Update()
 
 		timerSlider->SetRange(0, animation.GetLength());
 		timerSlider->SetValue(animation.timer);
+		amountSlider->SetValue(animation.amount);
 	}
 }

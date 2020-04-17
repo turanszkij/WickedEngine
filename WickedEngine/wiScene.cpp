@@ -1672,7 +1672,8 @@ namespace wiScene
 
 				float left = sampler.keyframe_times[keyLeft];
 
-				TransformComponent& transform = *transforms.GetComponent(channel.target);
+				TransformComponent& target_transform = *transforms.GetComponent(channel.target);
+				TransformComponent transform = target_transform;
 
 				if (sampler.mode == AnimationComponent::AnimationSampler::Mode::STEP || keyLeft == keyRight)
 				{
@@ -1741,7 +1742,25 @@ namespace wiScene
 					}
 				}
 
-				transform.SetDirty();
+				target_transform.SetDirty();
+
+				const float t = animation.amount;
+
+				const XMVECTOR aS = XMLoadFloat3(&target_transform.scale_local);
+				const XMVECTOR aR = XMLoadFloat4(&target_transform.rotation_local);
+				const XMVECTOR aT = XMLoadFloat3(&target_transform.translation_local);
+
+				const XMVECTOR bS = XMLoadFloat3(&transform.scale_local);
+				const XMVECTOR bR = XMLoadFloat4(&transform.rotation_local);
+				const XMVECTOR bT = XMLoadFloat3(&transform.translation_local);
+
+				const XMVECTOR S = XMVectorLerp(aS, bS, t);
+				const XMVECTOR R = XMQuaternionSlerp(aR, bR, t);
+				const XMVECTOR T = XMVectorLerp(aT, bT, t);
+
+				XMStoreFloat3(&target_transform.scale_local, S);
+				XMStoreFloat4(&target_transform.rotation_local, R);
+				XMStoreFloat3(&target_transform.translation_local, T);
 
 			}
 

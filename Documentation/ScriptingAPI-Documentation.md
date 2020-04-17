@@ -523,6 +523,10 @@ Describes an orientation in 3D space.
 - SetLooped(bool value)
 - IsLooped() : bool result
 - IsPlaying() : bool result
+- SetTimer(float value)
+- GetTimer() : float result
+- SetAmount(float value)
+- GetAmount() : float result
 
 #### MaterialComponent
 - SetBaseColor(Vector value)

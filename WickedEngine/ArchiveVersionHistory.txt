@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+44: Serialized AnimationComponent::amount
 43: Serialized MeshComponent::vertex_windweights
 42: Serialized hair particle sprite sheet properties
 41: Serialized terrain blend materials in MeshComponent

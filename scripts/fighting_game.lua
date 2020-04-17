@@ -1181,7 +1181,9 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 		end,
 		-- Starts a new state:
 		StartState = function(self, dst_state)
-			scene.Component_GetAnimation(self.states[dst_state].anim).Play()
+			local anim = scene.Component_GetAnimation(self.states[dst_state].anim)
+			anim.Play()
+			anim.SetAmount(0)
 			self.frame = 0
 			self.state = dst_state
 			self.hitconfirms = {}
@@ -1209,6 +1211,11 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 					end
 				end
 			end
+
+			-- Animation blending:
+			local anim = scene.Component_GetAnimation(self.states[self.state].anim)
+			local anim_amount = anim.GetAmount()
+			anim.SetAmount(math.lerp(anim_amount, 1, 0.2))
 
 			-- Execute the currently active state:
 			local current_state = self.states[self.state]

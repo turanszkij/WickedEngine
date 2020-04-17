@@ -636,6 +636,11 @@ namespace wiScene
 			archive >> end;
 			archive >> timer;
 
+			if (archive.GetVersion() >= 44)
+			{
+				archive >> amount;
+			}
+
 			size_t channelCount;
 			archive >> channelCount;
 			channels.resize(channelCount);
@@ -665,6 +670,11 @@ namespace wiScene
 			archive << start;
 			archive << end;
 			archive << timer;
+
+			if (archive.GetVersion() >= 44)
+			{
+				archive << amount;
+			}
 
 			archive << channels.size();
 			for (size_t i = 0; i < channels.size(); ++i)

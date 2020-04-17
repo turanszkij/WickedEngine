@@ -873,7 +873,8 @@ namespace wiScene
 		uint32_t _flags = LOOPED;
 		float start = 0;
 		float end = 0;
-		float timer = 0.0f;
+		float timer = 0;
+		float amount = 1;
 
 		struct AnimationChannel
 		{

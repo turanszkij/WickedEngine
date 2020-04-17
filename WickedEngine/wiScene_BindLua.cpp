@@ -1535,6 +1535,10 @@ Luna<AnimationComponent_BindLua>::FunctionType AnimationComponent_BindLua::metho
 	lunamethod(AnimationComponent_BindLua, IsLooped),
 	lunamethod(AnimationComponent_BindLua, IsPlaying),
 	lunamethod(AnimationComponent_BindLua, IsEnded),
+	lunamethod(AnimationComponent_BindLua, SetTimer),
+	lunamethod(AnimationComponent_BindLua, GetTimer),
+	lunamethod(AnimationComponent_BindLua, SetAmount),
+	lunamethod(AnimationComponent_BindLua, GetAmount),
 	{ NULL, NULL }
 };
 Luna<AnimationComponent_BindLua>::PropertyType AnimationComponent_BindLua::properties[] = {
@@ -1596,6 +1600,44 @@ int AnimationComponent_BindLua::IsPlaying(lua_State* L)
 int AnimationComponent_BindLua::IsEnded(lua_State* L)
 {
 	wiLua::SSetBool(L, component->IsEnded());
+	return 1;
+}
+int AnimationComponent_BindLua::SetTimer(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		float value = wiLua::SGetFloat(L, 1);
+		component->timer = value;
+	}
+	else
+	{
+		wiLua::SError(L, "SetTimer(float value) not enough arguments!");
+	}
+	return 0;
+}
+int AnimationComponent_BindLua::GetTimer(lua_State* L)
+{
+	wiLua::SSetFloat(L, component->timer);
+	return 1;
+}
+int AnimationComponent_BindLua::SetAmount(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		float value = wiLua::SGetFloat(L, 1);
+		component->amount = value;
+	}
+	else
+	{
+		wiLua::SError(L, "SetAmount(float value) not enough arguments!");
+	}
+	return 0;
+}
+int AnimationComponent_BindLua::GetAmount(lua_State* L)
+{
+	wiLua::SSetFloat(L, component->amount);
 	return 1;
 }
 
