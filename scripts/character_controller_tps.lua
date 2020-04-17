@@ -128,13 +128,13 @@ Character = {
 
 		-- read from gamepad analog stick:
 		local diff = input.GetAnalog(GAMEPAD_ANALOG_THUMBSTICK_R)
-		diff = vector.Multiply(diff, getDeltaTime() * 4)
+		diff = vector.Multiply(diff, 0.016 * 4)
 		
 		-- read from mouse:
 		if(input.Down(MOUSE_BUTTON_RIGHT)) then
 			local mousePosNew = input.GetPointer()
 			local mouseDif = vector.Subtract(mousePosNew,self.savedPointerPos)
-			mouseDif = mouseDif:Multiply(getDeltaTime() * 0.3)
+			mouseDif = mouseDif:Multiply(0.016 * 0.3)
 			diff = vector.Add(diff, mouseDif)
 			input.SetPointer(self.savedPointerPos)
 			input.HidePointer(true)
@@ -158,7 +158,7 @@ Character = {
 		self.force = vector.Add(self.force, Vector(0,-9.8 * 20,0))
 		
 		-- apply force:
-		self.velocity = vector.Add(self.velocity, vector.Multiply(self.force, getDeltaTime()))
+		self.velocity = vector.Add(self.velocity, vector.Multiply(self.force, 0.016))
 		self.force = Vector(0,0,0,0)
 		
 		-- state and animation update
@@ -224,7 +224,7 @@ Character = {
 		end
 
 		-- apply velocity:
-		model_transform.Translate(vector.Multiply(self.velocity, getDeltaTime()))
+		model_transform.Translate(vector.Multiply(self.velocity, 0.016))
 		model_transform.UpdateTransform()
 		
 		-- check if we are below or on the ground:
@@ -379,16 +379,14 @@ runProcess(function()
 	
 	while true do
 
-		player:Update()
-
-		fixedupdate()
-
 		player:Input()
+
+		player:Update()
 		
 		camera:Update()
 		
 		-- Wait for Engine update tick
-		update()
+		fixedupdate()
 
 
 	
