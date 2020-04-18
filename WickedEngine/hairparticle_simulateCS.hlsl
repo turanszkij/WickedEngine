@@ -19,6 +19,29 @@ struct LDS_ForceField
 };
 groupshared LDS_ForceField forceFields[NUM_LDS_FORCEFIELDS];
 
+inline float line_point_distance(float3 LinePoint1, float3 LinePoint2, float3 Point)
+{
+	// Given a vector PointVector from LinePoint1 to Point and a vector
+	// LineVector from LinePoint1 to LinePoint2, the scaled distance 
+	// PointProjectionScale from LinePoint1 to the perpendicular projection
+	// of PointVector onto the line is defined as:
+	//
+	//     PointProjectionScale = dot(PointVector, LineVector) / LengthSq(LineVector)
+
+	float3 PointVector = Point - LinePoint1;
+	float3 LineVector = LinePoint2 - LinePoint1;
+
+	float LengthSq = dot(LineVector, LineVector);
+
+	float PointProjectionScale = dot(PointVector, LineVector);
+	PointProjectionScale = PointProjectionScale / LengthSq;
+
+	float3 DistanceVector = LineVector * PointProjectionScale;
+	DistanceVector = PointVector - DistanceVector;
+
+	return length(DistanceVector);
+}
+
 [numthreads(THREADCOUNT_SIMULATEHAIR, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
@@ -132,11 +155,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
         {
             LDS_ForceField forceField = forceFields[i];
 
-            float3 dir = forceField.position - tip;
+			//float3 dir = forceField.position - PointOnLineSegmentNearestPoint(base, tip, forceField.position);
+			float3 dir = forceField.position - tip;
             float dist;
             if (forceField.type == ENTITY_TYPE_FORCEFIELD_POINT) // point-based force field
             {
-                dist = length(dir);
+                //dist = length(dir);
+				dist = line_point_distance(base, tip, forceField.position);
             }
             else // planar force field
             {
