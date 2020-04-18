@@ -10,6 +10,13 @@
 --		ESCAPE key: quit
 --		ENTER: reload script
 
+-- Debug Draw Helper
+local DrawAxis = function(point,f)
+	DrawLine(point,point:Add(Vector(f,0,0)),Vector(1,0,0,1))
+	DrawLine(point,point:Add(Vector(0,f,0)),Vector(0,1,0,1))
+	DrawLine(point,point:Add(Vector(0,0,f)),Vector(0,0,1,1))
+end
+
 local scene = GetScene()
 
 Character = {
@@ -52,8 +59,8 @@ Character = {
 		self.head = scene.Entity_FindByName("testa")
 		self.left_hand = scene.Entity_FindByName("mano_L")
 		self.right_hand = scene.Entity_FindByName("mano_R")
-		self.left_foot = scene.Entity_FindByName("avampiede_L")
-		self.right_foot = scene.Entity_FindByName("avampiede_R")
+		self.left_foot = scene.Entity_FindByName("piede_L")
+		self.right_foot = scene.Entity_FindByName("piede_R")
 		
 		local model_transform = scene.Component_GetTransform(self.model)
 		model_transform.ClearTransform()
@@ -78,8 +85,10 @@ Character = {
 		local target_transform = scene.Component_GetTransform(self.target)
 		local savedPos = model_transform.GetPosition()
 		model_transform.ClearTransform()
-		self.face = vector.Transform(dir:Normalize(), target_transform.GetMatrix())
-		self.face.SetY(0)
+		dir = vector.Transform(dir:Normalize(), target_transform.GetMatrix())
+		dir.SetY(0)
+		dir = dir.Normalize()
+		self.face = vector.Lerp(self.face, dir, 0.2);
 		self.face = self.face.Normalize()
 		model_transform.MatrixTransform(matrix.LookTo(Vector(),self.face):Inverse())
 		model_transform.Scale(self.scale)
@@ -214,14 +223,6 @@ Character = {
 		if(self.o == INVALID_ENTITY) then
 			self.p=pPrev -- if nothing, go back to previous position
 		end
-		
-		-- try to put water ripple if character head is directly above water
-		local head_transform = scene.Component_GetTransform(self.head)
-		local waterRay = Ray(head_transform.GetPosition(),Vector(0,-1,0))
-		local w,wp,wn = Pick(waterRay,PICK_WATER)
-		if(w ~= INVALID_ENTITY and self.velocity.Length() > 2) then
-			PutWaterRipple("../Editor/images/ripple.png",wp)
-		end
 
 		-- apply velocity:
 		model_transform.Translate(vector.Multiply(self.velocity, 0.016))
@@ -242,7 +243,16 @@ Character = {
 			self.velocity = vector.Multiply(self.velocity, 0.94) -- slow down in air
 		end
 		
-	end
+		-- try to put water ripple if character head is directly above water
+		local head_transform = scene.Component_GetTransform(self.head)
+		local waterRay = Ray(head_transform.GetPosition(),Vector(0,-1,0))
+		local w,wp,wn = Pick(waterRay,PICK_WATER)
+		if(w ~= INVALID_ENTITY and self.velocity.Length() > 2) then
+			PutWaterRipple("../Editor/images/ripple.png",wp)
+		end
+		
+	end,
+
 }
 
 -- Third person camera controller class:
@@ -385,9 +395,8 @@ runProcess(function()
 		
 		camera:Update()
 		
-		-- Wait for Engine update tick
+		-- Wait for Engine fixed update tick
 		fixedupdate()
-
 
 	
 		if(input.Press(KEYBOARD_BUTTON_ESCAPE)) then
@@ -411,14 +420,6 @@ runProcess(function()
 end)
 
 
-
-
--- Debug Draw Helper
-local DrawAxis = function(point,f)
-	DrawLine(point,point:Add(Vector(f,0,0)),Vector(1,0,0,1))
-	DrawLine(point,point:Add(Vector(0,f,0)),Vector(0,1,0,1))
-	DrawLine(point,point:Add(Vector(0,0,f)),Vector(0,0,1,1))
-end
 
 -- Draw
 runProcess(function()
