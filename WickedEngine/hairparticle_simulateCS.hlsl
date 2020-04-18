@@ -63,7 +63,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	float length2 = meshVertexBuffer_length[i2];
 
 	// random barycentric coords:
-	float2 uv = hammersley2d(DTid.x, xHairStrandCount);
+	float2 uv = float2((Gid.x + 1.0f) / (float)xHairNumDispatchGroups, (DTid.x + 1.0f) / (float)THREADCOUNT_SIMULATEHAIR);
 	float seed = xHairRandomSeed;
 	float f = rand(seed, uv);
 	float g = rand(seed, uv);
