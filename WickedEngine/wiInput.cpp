@@ -242,12 +242,15 @@ namespace wiInput
 			switch (button)
 			{
 			case wiInput::MOUSE_BUTTON_LEFT:
+				if (mouse.left_button_press) return true;
 				keycode = VK_LBUTTON;
 				break;
 			case wiInput::MOUSE_BUTTON_RIGHT:
+				if (mouse.right_button_press) return true;
 				keycode = VK_RBUTTON;
 				break;
 			case wiInput::MOUSE_BUTTON_MIDDLE:
+				if (mouse.middle_button_press) return true;
 				keycode = VK_MBUTTON;
 				break;
 			case wiInput::KEYBOARD_BUTTON_UP:
@@ -383,14 +386,11 @@ namespace wiInput
 	}
 	XMFLOAT4 GetPointer()
 	{
-		MouseState state;
-		wiRawInput::GetMouseState(&state); 
-
 #ifndef WINSTORE_SUPPORT
 		POINT p;
 		GetCursorPos(&p);
 		ScreenToClient(wiPlatform::GetWindow(), &p);
-		return XMFLOAT4((float)p.x, (float)p.y, state.delta_wheel, 0);
+		return XMFLOAT4((float)p.x, (float)p.y, mouse.delta_wheel, 0);
 #else
 		auto& p = Windows::UI::Core::CoreWindow::GetForCurrentThread()->PointerPosition;
 		return XMFLOAT4(p.X, p.Y, 0, 0);

@@ -234,7 +234,7 @@ namespace wiProfiler
 		fx.pos.y = (float)font.params.posY;
 		fx.siz.x = (float)font.textWidth();
 		fx.siz.y = (float)font.textHeight();
-		fx.color = wiColor(40, 40, 40, 140);
+		fx.color = wiColor(20, 20, 20, 230);
 		wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
 
 		font.Draw(cmd);

@@ -111,6 +111,19 @@ namespace wiRawInput
 				mouse.position.x += rawmouse.lLastX;
 				mouse.position.y += rawmouse.lLastY;
 			}
+
+			if (rawmouse.usButtonFlags == RI_MOUSE_LEFT_BUTTON_DOWN)
+			{
+				mouse.left_button_press = true;
+			}
+			if (rawmouse.usButtonFlags == RI_MOUSE_MIDDLE_BUTTON_DOWN)
+			{
+				mouse.middle_button_press = true;
+			}
+			if (rawmouse.usButtonFlags == RI_MOUSE_RIGHT_BUTTON_DOWN)
+			{
+				mouse.right_button_press = true;
+			}
 		}
 		else if (raw.header.dwType == RIM_TYPEHID)
 		{
