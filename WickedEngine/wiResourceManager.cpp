@@ -266,11 +266,6 @@ namespace wiResourceManager
 						assert(subresource_index == i);
 					}
 
-					if (image != nullptr && image->GetDesc().MipLevels > 1)
-					{
-						wiRenderer::AddDeferredMIPGen(image, true);
-					}
-
 					success = image;
 				}
 
@@ -293,6 +288,12 @@ namespace wiResourceManager
 		{
 			resource->data = success;
 			resource->type = type;
+
+			if (type == wiResource::IMAGE && resource->texture->GetDesc().MipLevels > 1)
+			{
+				wiRenderer::AddDeferredMIPGen(resource, true);
+			}
+
 			return resource;
 		}
 

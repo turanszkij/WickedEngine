@@ -138,8 +138,6 @@ std::shared_ptr<wiResource> RegisterTexture(tinygltf::Image *image, const string
 
 				if (tex != nullptr)
 				{
-					wiRenderer::AddDeferredMIPGen(tex, true);
-
 					if (image->uri.empty())
 					{
 						// If the texture was embedded, export it as a file:
@@ -154,7 +152,9 @@ std::shared_ptr<wiResource> RegisterTexture(tinygltf::Image *image, const string
 					}
 
 					// We loaded the texture2d, so register to the resource manager to be retrieved later:
-					return wiResourceManager::Register(image->uri, tex, wiResource::IMAGE);
+					auto resource = wiResourceManager::Register(image->uri, tex, wiResource::IMAGE);
+					wiRenderer::AddDeferredMIPGen(resource, true);
+					return resource;
 				}
 			}
 			else
