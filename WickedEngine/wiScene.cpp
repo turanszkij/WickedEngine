@@ -2735,7 +2735,7 @@ namespace wiScene
 	{
 		SceneIntersectSphereResult result;
 		XMVECTOR vCenter = XMLoadFloat3(&sphere.center);
-		XMVECTOR vRadius = XMVectorReplicatePtr(&sphere.radius);
+		XMVECTOR vRadius = XMVectorReplicate(sphere.radius);
 		XMVECTOR RadiusSq = XMVectorMultiply(vRadius, vRadius);
 
 		if (scene.objects.GetCount() > 0)
@@ -2822,10 +2822,10 @@ namespace wiScene
 						// Find the nearest feature on the triangle to the sphere.
 						XMVECTOR Dist = XMVector3Dot(XMVectorSubtract(vCenter, p0), N);
 
-						if (XMVectorGetX(Dist) > 0)
-						{
-							continue;
-						}
+						//if (XMVectorGetX(Dist) > 0)
+						//{
+						//	continue;
+						//}
 
 						// If the center of the sphere is farther from the plane of the triangle than
 						// the radius of the sphere, then there cannot be an intersection.
@@ -2890,12 +2890,13 @@ namespace wiScene
 
 						bool intersects = XMVector4EqualInt(XMVectorAndCInt(Intersection, NoIntersection), XMVectorTrueInt());
 
-						if (intersects && bestDist < result.distance_to_polygon)
+						if (intersects)
 						{
 							result.entity = entity;
 							result.depth = sphere.radius - XMVectorGetX(XMVector3Length(vCenter - bestPoint));
 							XMStoreFloat3(&result.position, bestPoint);
 							XMStoreFloat3(&result.normal, XMVector3Normalize(vCenter - bestPoint));
+							return result;
 						}
 					}
 					subsetCounter++;

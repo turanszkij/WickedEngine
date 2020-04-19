@@ -194,14 +194,15 @@ Character = {
 		self.state_prev = self.state
 		
 		-- gravity:
-		self.force = vector.Add(self.force, Vector(0,-9.8 * 10,0))
+		self.force = vector.Add(self.force, Vector(0,-9.8 * 20,0))
 		
 		-- apply force:
 		self.velocity = vector.Add(self.velocity, vector.Multiply(self.force, 0.016))
 		self.force = Vector(0,0,0,0)
 		
 		-- Sphere collider for character:
-		local sphere = Sphere(vector.Add(model_transform.GetPosition(), Vector(0,1.1)), 1)
+		local radius = 0.7
+		local sphere = Sphere(vector.Add(model_transform.GetPosition(), Vector(0,radius)), radius)
 		local pp = sphere.GetCenter()
 		local intersection = false
 		local ccd = 0
@@ -225,13 +226,13 @@ Character = {
 				self.velocity = vector.Multiply(desiredMotion, velocityLen)
 
 				intersection = true
-				sphere.SetCenter(prevpos)
+				sphere.SetCenter(vector.Add(sphere.GetCenter(), vector.Multiply(n2, depth))) -- remove penetration
 			end
 		end
 		--DrawPoint(sphere.GetCenter(), 0.5, Vector(0,1,0,1))
 
 		if intersection then
-			self.velocity = vector.Multiply(self.velocity, 0.8) -- ground friction
+			self.velocity = vector.Multiply(self.velocity, 0.87) -- ground friction
 		else
 			self.velocity = vector.Multiply(self.velocity, 0.94) -- air friction
 		end
