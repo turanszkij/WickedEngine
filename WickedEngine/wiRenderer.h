@@ -166,7 +166,7 @@ namespace wiRenderer
 		const wiGraphics::Texture& lightmap_diffuse,
 		const wiGraphics::Texture& lightmap_specular,
 		const wiGraphics::Texture& ao,
-		const wiGraphics::Texture& lineardepth,
+		const wiGraphics::Texture& depth,
 		wiGraphics::CommandList cmd);
 
 

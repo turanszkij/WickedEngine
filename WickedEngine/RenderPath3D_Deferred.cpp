@@ -295,7 +295,7 @@ void RenderPath3D_Deferred::RenderDeferredComposition(CommandList cmd) const
 		lightbuffer_diffuse,
 		lightbuffer_specular,
 		getAOEnabled() ? rtAO : *wiTextureHelper::getWhite(),
-		rtLinearDepth,
+		depthBuffer_Copy,
 		cmd
 	);
 	wiRenderer::DrawSky(cmd);

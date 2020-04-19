@@ -45,7 +45,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 			attenuation *= shadowCube(light, Lunnormalized);
 		}
 
-		attenuation *= GetFog(cameraDistance - marchedDistance);
+		attenuation *= GetFogAmount(cameraDistance - marchedDistance);
 
 		accumulation += attenuation;
 

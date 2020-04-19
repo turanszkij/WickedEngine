@@ -10,14 +10,15 @@ float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_TARGET
 	float4 g2 = texture_gbuffer2[pos.xy];
 	float3 albedo = ComputeAlbedo(float4(g0.rgb, 1), g2.b, g2.a);
 
-	float  depth = texture_lineardepth[pos.xy].r * g_xCamera_ZFarP;
+	float  depth = texture_depth[pos.xy];
 
 	float3 diffuse = texture_0[pos.xy].rgb; // light diffuse
 	float3 specular = texture_1[pos.xy].rgb; // light specular
 
 	float4 color = float4(albedo * diffuse + specular, 1);
 
-	ApplyFog(depth, color);
+	const float3 P = reconstructPosition(uv, depth);
+	ApplyFog(distance(P, g_xCamera_CamPos), color);
 
 	return max(0, color);
 }

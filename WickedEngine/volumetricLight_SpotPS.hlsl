@@ -54,7 +54,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 				}
 			}
 
-			attenuation *= GetFog(distance(P, g_xCamera_CamPos));
+			attenuation *= GetFogAmount(cameraDistance - marchedDistance);
 
 			accumulation += attenuation;
 		}

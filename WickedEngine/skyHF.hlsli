@@ -54,12 +54,11 @@ inline float3 GetDynamicSkyColor(in float3 V, in bool sun_enabled = true, in boo
 	const float mie_disk = saturate(1.0 - pow(sunAmount, 0.1));
 	const float3 mie = mie_disk * mie_disk * (3.0 - 2.0 * mie_disk) * 2.0 * PI * sunAbsorption;
 
-	const float3 sun = smoothstep(0.03, 0.026, sunAmount) * sunColor * 50.0 * skyAbsorption; // sun disc
-
 	float3 sky = lerp(GetHorizonColor(), GetZenithColor() * zenithDensity * rayleigh, skyAbsorption);
 	sky = lerp(sky * skyAbsorption, sky, sunScatter); // when sun goes below horizon, absorb sky color
 	if (sun_disc)
 	{
+		const float3 sun = smoothstep(0.03, 0.026, sunAmount) * sunColor * 50.0 * skyAbsorption; // sun disc
 		sky += sun;
 		sky += mie;
 	}
@@ -154,7 +153,10 @@ inline float3 GetDynamicSkyColor(in float3 V, in bool sun_enabled = true, in boo
 		}
 		else
 		{
-			sky = lerp(sky, 1, clouds); // sky and clouds on top
+			float3 cloudTint = 1;
+			cloudTint += mie;
+			cloudTint *= (sunAbsorption + length(sunAbsorption)) * 0.5f; // when sun goes below horizon, fade out whole clouds
+			sky = lerp(sky, cloudTint, clouds); // sky and clouds on top
 		}
 	}
 

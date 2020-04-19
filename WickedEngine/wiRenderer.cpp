@@ -8847,7 +8847,7 @@ void DeferredComposition(
 	const Texture& lightmap_diffuse,
 	const Texture& lightmap_specular,
 	const Texture& ao,
-	const Texture& lineardepth,
+	const Texture& depth,
 	CommandList cmd
 )
 {
@@ -8863,7 +8863,7 @@ void DeferredComposition(
 	device->BindResource(PS, &lightmap_diffuse, TEXSLOT_ONDEMAND0, cmd);
 	device->BindResource(PS, &lightmap_specular, TEXSLOT_ONDEMAND1, cmd);
 	device->BindResource(PS, &ao, TEXSLOT_ONDEMAND2, cmd);
-	device->BindResource(PS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(PS, &depth, TEXSLOT_DEPTH, cmd);
 
 	device->Draw(3, 0, cmd);
 

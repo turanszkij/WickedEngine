@@ -85,7 +85,7 @@ inline void ConvertToSpecularGlossiness(inout float4 surface_occlusion_roughness
 	surface_occlusion_roughness_metallic_reflectance.a = 0.02f;
 }
 
-inline float GetFog(float dist)
+inline float GetFogAmount(float dist)
 {
 	return saturate((dist - g_xFrame_Fog.x) / (g_xFrame_Fog.y - g_xFrame_Fog.x));
 }
