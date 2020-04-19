@@ -289,7 +289,7 @@ namespace wiResourceManager
 			resource->data = success;
 			resource->type = type;
 
-			if (type == wiResource::IMAGE && resource->texture->GetDesc().MipLevels > 1)
+			if (type == wiResource::IMAGE && resource->texture->GetDesc().MipLevels > 1 && resource->texture->GetDesc().BindFlags & BIND_UNORDERED_ACCESS)
 			{
 				wiRenderer::AddDeferredMIPGen(resource, true);
 			}
