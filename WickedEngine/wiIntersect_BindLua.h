@@ -62,5 +62,7 @@ namespace wiIntersect_BindLua
 		int Intersects(lua_State* L);
 		int GetCenter(lua_State* L);
 		int GetRadius(lua_State* L);
+		int SetCenter(lua_State* L);
+		int SetRadius(lua_State* L);
 	};
 }

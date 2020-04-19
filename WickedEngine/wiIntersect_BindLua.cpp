@@ -249,6 +249,8 @@ namespace wiIntersect_BindLua
 		lunamethod(Sphere_BindLua, Intersects),
 		lunamethod(Sphere_BindLua, GetCenter),
 		lunamethod(Sphere_BindLua, GetRadius),
+		lunamethod(Sphere_BindLua, SetCenter),
+		lunamethod(Sphere_BindLua, SetRadius),
 		{ NULL, NULL }
 	};
 	Luna<Sphere_BindLua>::PropertyType Sphere_BindLua::properties[] = {
@@ -323,6 +325,40 @@ namespace wiIntersect_BindLua
 	{
 		wiLua::SSetFloat(L, sphere.radius);
 		return 1;
+	}
+	int Sphere_BindLua::SetCenter(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Vector_BindLua* cV = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (cV)
+			{
+				XMStoreFloat3(&sphere.center, cV->vector);
+			}
+			else
+			{
+				wiLua::SError(L, "SetCenter(Vector value) requires first argument to be of Vector type!");
+			}
+		}
+		else
+		{
+			wiLua::SError(L, "SetCenter(Vector value) not enough arguments!");
+		}
+		return 0;
+	}
+	int Sphere_BindLua::SetRadius(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			sphere.radius = wiLua::SGetFloat(L, 1);
+		}
+		else
+		{
+			wiLua::SError(L, "SetRadius(float value) not enough arguments!");
+		}
+		return 0;
 	}
 
 }

@@ -32,9 +32,6 @@ Character = {
 	face = Vector(0,0,1), -- forward direction
 	force = Vector(),
 	velocity = Vector(),
-	ray = Ray(Vector(),Vector()),
-	o = INVALID_ENTITY, -- collision prop with scene (entity)
-	p,n = Vector(), -- collision props with scene (position,normal)
 	savedPointerPos = Vector(),
 	moveSpeed = 90,
 	layerMask = 0x2, -- The character will be tagged to use this layer, so scene Picking can filter out the character
@@ -87,9 +84,12 @@ Character = {
 		model_transform.ClearTransform()
 		dir = vector.Transform(dir:Normalize(), target_transform.GetMatrix())
 		dir.SetY(0)
-		dir = dir.Normalize()
+		local dot = vector.Dot(self.face, dir)
+		if(dot < 0) then
+			self.face = vector.TransformNormal(self.face, matrix.RotationY(3.1415 * 0.01))
+		end
 		self.face = vector.Lerp(self.face, dir, 0.2);
-		self.face = self.face.Normalize()
+		self.face.Normalize()
 		model_transform.MatrixTransform(matrix.LookTo(Vector(),self.face):Inverse())
 		model_transform.Scale(self.scale)
 		model_transform.Rotate(self.rotation)
@@ -97,7 +97,9 @@ Character = {
 		model_transform.UpdateTransform()
 		scene.Component_Detach(self.target)
 		scene.Component_Attach(self.target, self.model)
-		self.force = vector.Add(self.force, self.face:Multiply(Vector(f,f,f)))
+		if(dot > 0) then 
+			self.force = vector.Add(self.force, self.face:Multiply(Vector(f,f,f)))
+		end
 		self.state = self.states.WALK
 	end,
 	
@@ -163,13 +165,6 @@ Character = {
 		local model_transform = scene.Component_GetTransform(self.model)
 		local target_transform = scene.Component_GetTransform(self.target)
 		
-		-- gravity:
-		self.force = vector.Add(self.force, Vector(0,-9.8 * 20,0))
-		
-		-- apply force:
-		self.velocity = vector.Add(self.velocity, vector.Multiply(self.force, 0.016))
-		self.force = Vector(0,0,0,0)
-		
 		-- state and animation update
 		if(self.state == self.states.STAND) then
 			scene.Component_GetAnimation(self.walk_anim).Stop()
@@ -198,50 +193,53 @@ Character = {
 		end
 		self.state_prev = self.state
 		
-		-- front block shoots multiple rays in front to try to find obstruction
-		local rotations = {0, 3.1415*0.3, -3.1415*0.3}
-		for i,rot in ipairs(rotations) do
-			local origin = vector.Add(model_transform.GetPosition(), Vector(0,1,0)) -- this ray starts a little above character ground position
-			local dir = vector.Transform(self.face, matrix.RotationY(rot))
-			local ray2 = Ray(origin,dir)
-			local o2,p2,n2 = Pick(ray2, PICK_OPAQUE, ~self.layerMask)
-			local dist = vector.Subtract(origin,p2):Length()
-			if(o2 ~= INVALID_ENTITY and dist < 1) then
-				-- run along wall instead of going through it
+		-- gravity:
+		self.force = vector.Add(self.force, Vector(0,-9.8 * 10,0))
+		
+		-- apply force:
+		self.velocity = vector.Add(self.velocity, vector.Multiply(self.force, 0.016))
+		self.force = Vector(0,0,0,0)
+		
+		-- Sphere collider for character:
+		local sphere = Sphere(vector.Add(model_transform.GetPosition(), Vector(0,1.1)), 1)
+		local pp = sphere.GetCenter()
+		local intersection = false
+		local ccd = 0
+		local ccd_max = 5
+		while(ccd < ccd_max) do
+			ccd = ccd + 1
+			local step = vector.Multiply(self.velocity, 1.0 / ccd_max * 0.016)
+
+			local prevpos = sphere.GetCenter()
+			sphere.SetCenter(vector.Add(prevpos, step))
+			local o2, p2, n2, depth = SceneIntersectSphere(sphere, PICK_OPAQUE, ~self.layerMask)
+			if(o2 ~= INVALID_ENTITY) then
+				DrawPoint(p2,0.5,Vector(1,1,0,1))
+				DrawLine(p2, vector.Add(p2, n2), Vector(1,1,0,1))
+
+				-- Slide on surface:
 				local velocityLen = self.velocity.Length()
 				local velocityNormalized = self.velocity.Normalize()
 				local undesiredMotion = n2:Multiply(vector.Dot(velocityNormalized, n2))
 				local desiredMotion = vector.Subtract(velocityNormalized, undesiredMotion)
 				self.velocity = vector.Multiply(desiredMotion, velocityLen)
-			end
-		end
-		
-		-- check what is below the character
-		self.ray = Ray(target_transform.GetPosition(),Vector(0,-1,0))
-		local pPrev = self.p
-		self.o,self.p,self.n = Pick(self.ray, PICK_OPAQUE, ~self.layerMask)
-		if(self.o == INVALID_ENTITY) then
-			self.p=pPrev -- if nothing, go back to previous position
-		end
 
-		-- apply velocity:
-		model_transform.Translate(vector.Multiply(self.velocity, 0.016))
-		model_transform.UpdateTransform()
-		
-		-- check if we are below or on the ground:
-		local posY = model_transform.GetPosition().GetY()
-		if(posY <= self.p.GetY() and self.velocity.GetY()<=0) then
-			self.state = self.states.STAND
-			if(self.o == INVALID_ENTITY) then
-				model_transform.Translate(vector.Subtract(self.p,model_transform.GetPosition())) -- snap back to last succesfully traced position
-			else
-				model_transform.Translate(Vector(0,self.p.GetY()-posY,0)) -- snap to ground
+				intersection = true
+				sphere.SetCenter(prevpos)
 			end
-			self.velocity.SetY(0) -- don't fall below ground
-			self.velocity = vector.Multiply(self.velocity, 0.8) -- slow down on ground
-		else	
-			self.velocity = vector.Multiply(self.velocity, 0.94) -- slow down in air
 		end
+		--DrawPoint(sphere.GetCenter(), 0.5, Vector(0,1,0,1))
+
+		if intersection then
+			self.velocity = vector.Multiply(self.velocity, 0.8) -- ground friction
+		else
+			self.velocity = vector.Multiply(self.velocity, 0.94) -- air friction
+		end
+		if(vector.Length(self.velocity) < 0.001) then
+			self.state = self.states.STAND
+		end
+		model_transform.Translate(vector.Subtract(sphere.GetCenter(), pp))
+		model_transform.UpdateTransform()
 		
 		-- try to put water ripple if character head is directly above water
 		local head_transform = scene.Component_GetTransform(self.head)
@@ -441,7 +439,7 @@ runProcess(function()
 		--face
 		DrawLine(target_transform.GetPosition(),target_transform.GetPosition():Add(player.face:Normalize()),Vector(0,1,0,1))
 		--intersection
-		DrawAxis(player.p,0.5)
+		--DrawAxis(player.p,0.5)
 		
 		-- camera target box and axis
 		DrawBox(target_transform.GetMatrix())

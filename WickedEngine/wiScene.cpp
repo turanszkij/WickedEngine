@@ -2729,4 +2729,182 @@ namespace wiScene
 
 		return result;
 	}
+
+#include <DirectXCollision.h>
+	SceneIntersectSphereResult SceneIntersectSphere(const SPHERE& sphere, uint32_t renderTypeMask, uint32_t layerMask, const Scene& scene)
+	{
+		SceneIntersectSphereResult result;
+		XMVECTOR vCenter = XMLoadFloat3(&sphere.center);
+		XMVECTOR vRadius = XMVectorReplicatePtr(&sphere.radius);
+		XMVECTOR RadiusSq = XMVectorMultiply(vRadius, vRadius);
+
+		if (scene.objects.GetCount() > 0)
+		{
+
+			for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
+			{
+				const AABB& aabb = scene.aabb_objects[i];
+				if (!sphere.intersects(aabb))
+				{
+					continue;
+				}
+
+				const ObjectComponent& object = scene.objects[i];
+				if (object.meshID == INVALID_ENTITY)
+				{
+					continue;
+				}
+				if (!(renderTypeMask & object.GetRenderTypes()))
+				{
+					continue;
+				}
+
+				Entity entity = scene.aabb_objects.GetEntity(i);
+				const LayerComponent* layer = scene.layers.GetComponent(entity);
+				if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+				{
+					continue;
+				}
+
+				const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+				const SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(object.meshID);
+				const bool softbody_active = softbody != nullptr && !softbody->vertex_positions_simulation.empty();
+
+				const XMMATRIX objectMat = object.transform_index >= 0 ? XMLoadFloat4x4(&scene.transforms[object.transform_index].world) : XMMatrixIdentity();
+
+				const ArmatureComponent* armature = mesh.IsSkinned() ? scene.armatures.GetComponent(mesh.armatureID) : nullptr;
+
+				int subsetCounter = 0;
+				for (auto& subset : mesh.subsets)
+				{
+					for (size_t i = 0; i < subset.indexCount; i += 3)
+					{
+						const uint32_t i0 = mesh.indices[subset.indexOffset + i + 0];
+						const uint32_t i1 = mesh.indices[subset.indexOffset + i + 1];
+						const uint32_t i2 = mesh.indices[subset.indexOffset + i + 2];
+
+						XMVECTOR p0;
+						XMVECTOR p1;
+						XMVECTOR p2;
+
+						if (softbody_active)
+						{
+							p0 = softbody->vertex_positions_simulation[i0].LoadPOS();
+							p1 = softbody->vertex_positions_simulation[i1].LoadPOS();
+							p2 = softbody->vertex_positions_simulation[i2].LoadPOS();
+						}
+						else
+						{
+							if (armature == nullptr)
+							{
+								p0 = XMLoadFloat3(&mesh.vertex_positions[i0]);
+								p1 = XMLoadFloat3(&mesh.vertex_positions[i1]);
+								p2 = XMLoadFloat3(&mesh.vertex_positions[i2]);
+							}
+							else
+							{
+								p0 = SkinVertex(mesh, *armature, i0);
+								p1 = SkinVertex(mesh, *armature, i1);
+								p2 = SkinVertex(mesh, *armature, i2);
+							}
+						}
+						
+						p0 = XMVector3Transform(p0, objectMat);
+						p1 = XMVector3Transform(p1, objectMat);
+						p2 = XMVector3Transform(p2, objectMat);
+
+						// Compute the plane of the triangle (has to be normalized).
+						XMVECTOR N = XMVector3Normalize(XMVector3Cross(XMVectorSubtract(p1, p0), XMVectorSubtract(p2, p0)));
+
+						// Assert that the triangle is not degenerate.
+						assert(!XMVector3Equal(N, XMVectorZero()));
+
+						// Find the nearest feature on the triangle to the sphere.
+						XMVECTOR Dist = XMVector3Dot(XMVectorSubtract(vCenter, p0), N);
+
+						if (XMVectorGetX(Dist) > 0)
+						{
+							continue;
+						}
+
+						// If the center of the sphere is farther from the plane of the triangle than
+						// the radius of the sphere, then there cannot be an intersection.
+						XMVECTOR NoIntersection = XMVectorLess(Dist, XMVectorNegate(vRadius));
+						NoIntersection = XMVectorOrInt(NoIntersection, XMVectorGreater(Dist, vRadius));
+
+						// Project the center of the sphere onto the plane of the triangle.
+						XMVECTOR Point = XMVectorNegativeMultiplySubtract(N, Dist, vCenter);
+						XMVECTOR planeIntersection = Point;
+
+						// Is it inside all the edges? If so we intersect because the distance 
+						// to the plane is less than the radius.
+						XMVECTOR Intersection = DirectX::Internal::PointOnPlaneInsideTriangle(Point, p0, p1, p2);
+
+						bool inside = XMVector4EqualInt(XMVectorAndCInt(Intersection, NoIntersection), XMVectorTrueInt());
+						XMVECTOR bestPoint = Point;
+						float bestDist = inside ? 0 : FLT_MAX;
+
+						// Find the nearest point on each edge.
+
+						// Edge 0,1
+						Point = DirectX::Internal::PointOnLineSegmentNearestPoint(p0, p1, vCenter);
+
+						// If the distance to the center of the sphere to the point is less than 
+						// the radius of the sphere then it must intersect.
+						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(vCenter, Point)), RadiusSq));
+
+						float d = abs(XMVectorGetX(XMVector3LinePointDistance(p0, p1, planeIntersection)));
+						if (d < bestDist)
+						{
+							bestDist = d;
+							bestPoint = Point;
+						}
+
+						// Edge 1,2
+						Point = DirectX::Internal::PointOnLineSegmentNearestPoint(p1, p2, vCenter);
+
+						// If the distance to the center of the sphere to the point is less than 
+						// the radius of the sphere then it must intersect.
+						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(vCenter, Point)), RadiusSq));
+
+						d = abs(XMVectorGetX(XMVector3LinePointDistance(p1, p2, planeIntersection)));
+						if (d < bestDist)
+						{
+							bestDist = d;
+							bestPoint = Point;
+						}
+
+						// Edge 2,0
+						Point = DirectX::Internal::PointOnLineSegmentNearestPoint(p2, p0, vCenter);
+
+						// If the distance to the center of the sphere to the point is less than 
+						// the radius of the sphere then it must intersect.
+						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(vCenter, Point)), RadiusSq));
+
+						d = abs(XMVectorGetX(XMVector3LinePointDistance(p2, p0, planeIntersection)));
+						if (d < bestDist)
+						{
+							bestDist = d;
+							bestPoint = Point;
+						}
+
+						bool intersects = XMVector4EqualInt(XMVectorAndCInt(Intersection, NoIntersection), XMVectorTrueInt());
+
+						if (intersects && bestDist < result.distance_to_polygon)
+						{
+							result.entity = entity;
+							result.depth = sphere.radius - XMVectorGetX(XMVector3Length(vCenter - bestPoint));
+							XMStoreFloat3(&result.position, bestPoint);
+							XMStoreFloat3(&result.normal, XMVector3Normalize(vCenter - bestPoint));
+						}
+					}
+					subsetCounter++;
+				}
+
+			}
+		}
+
+		return result;
+	}
+
 }

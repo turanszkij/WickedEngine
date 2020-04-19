@@ -139,6 +139,56 @@ int Pick(lua_State* L)
 
 	return 0;
 }
+int SceneIntersectSphere(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Sphere_BindLua* sphere = Luna<Sphere_BindLua>::lightcheck(L, 1);
+		if (sphere != nullptr)
+		{
+			uint32_t renderTypeMask = RENDERTYPE_OPAQUE;
+			uint32_t layerMask = 0xFFFFFFFF;
+			Scene* scene = &wiScene::GetScene();
+			if (argc > 1)
+			{
+				renderTypeMask = (uint32_t)wiLua::SGetInt(L, 2);
+				if (argc > 2)
+				{
+					int mask = wiLua::SGetInt(L, 3);
+					layerMask = *reinterpret_cast<uint32_t*>(&mask);
+
+					if (argc > 3)
+					{
+						Scene_BindLua* custom_scene = Luna<Scene_BindLua>::lightcheck(L, 4);
+						if (custom_scene)
+						{
+							scene = custom_scene->scene;
+						}
+						else
+						{
+							wiLua::SError(L, "SceneIntersectSphere(Sphere sphere, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) last argument is not of type Scene!");
+						}
+					}
+				}
+			}
+			auto& pick = wiScene::SceneIntersectSphere(sphere->sphere, renderTypeMask, layerMask, *scene);
+			wiLua::SSetInt(L, (int)pick.entity);
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
+			wiLua::SSetFloat(L, pick.depth);
+			return 4;
+		}
+
+		wiLua::SError(L, "SceneIntersectSphere(Sphere sphere, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) first argument must be of Ray type!");
+	}
+	else
+	{
+		wiLua::SError(L, "SceneIntersectSphere(Sphere sphere, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) not enough arguments!");
+	}
+
+	return 0;
+}
 
 void Bind()
 {
@@ -168,6 +218,7 @@ void Bind()
 		wiLua::GetGlobal()->RegisterFunc("GetScene", GetScene);
 		wiLua::GetGlobal()->RegisterFunc("LoadModel", LoadModel);
 		wiLua::GetGlobal()->RegisterFunc("Pick", Pick);
+		wiLua::GetGlobal()->RegisterFunc("SceneIntersectSphere", SceneIntersectSphere);
 
 		Luna<Scene_BindLua>::Register(L);
 		Luna<NameComponent_BindLua>::Register(L);

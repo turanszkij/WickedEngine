@@ -719,6 +719,8 @@ Sphere defined by center Vector and radius. Can be intersected with other primit
 - Intersects(Ray ray) : bool result
 - GetCenter() : Vector result
 - GetRadius() : float result
+- SetCenter(Vector value)
+- SetRadius(float value)
 
 ### Input
 Query input devices
