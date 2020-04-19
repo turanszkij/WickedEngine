@@ -167,7 +167,7 @@ std::vector<PaintRadius> paintrads;
 XMFLOAT4 waterPlane = XMFLOAT4(0, 1, 0, 0);
 
 wiSpinLock deferredMIPGenLock;
-std::vector<std::pair<const Texture*, bool>> deferredMIPGens;
+std::vector<std::pair<std::shared_ptr<wiResource>, bool>> deferredMIPGens;
 
 wiGPUBVH sceneBVH;
 
@@ -4026,7 +4026,7 @@ void UpdateRenderData(CommandList cmd)
 	{
 		MIPGEN_OPTIONS mipopt;
 		mipopt.preserve_coverage = it.second;
-		GenerateMipChain(*it.first, MIPGENFILTER_LINEAR, cmd, mipopt);
+		GenerateMipChain(*it.first->texture, MIPGENFILTER_LINEAR, cmd, mipopt);
 	}
 	deferredMIPGens.clear();
 	deferredMIPGenLock.unlock();
@@ -11166,10 +11166,10 @@ void DrawPaintRadius(const PaintRadius& paintrad)
 	paintrads.push_back(paintrad);
 }
 
-void AddDeferredMIPGen(const Texture* tex, bool preserve_coverage)
+void AddDeferredMIPGen(std::shared_ptr<wiResource> resource, bool preserve_coverage)
 {
 	deferredMIPGenLock.lock();
-	deferredMIPGens.push_back(std::make_pair(tex, preserve_coverage));
+	deferredMIPGens.push_back(std::make_pair(resource, preserve_coverage));
 	deferredMIPGenLock.unlock();
 }
 

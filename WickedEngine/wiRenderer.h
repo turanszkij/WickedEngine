@@ -8,6 +8,7 @@
 #include <memory>
 
 struct RAY;
+struct wiResource;
 
 namespace wiRenderer
 {
@@ -536,7 +537,7 @@ namespace wiRenderer
 	void DrawPaintRadius(const PaintRadius& paintrad);
 
 	// Add a texture that should be mipmapped whenever it is feasible to do so
-	void AddDeferredMIPGen(const wiGraphics::Texture* tex, bool preserve_coverage = false);
+	void AddDeferredMIPGen(std::shared_ptr<wiResource> res, bool preserve_coverage = false);
 
 	struct CustomShader
 	{
