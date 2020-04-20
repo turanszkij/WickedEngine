@@ -192,9 +192,9 @@ Character = {
 			end
 		end
 		self.state_prev = self.state
-		
+
 		-- gravity:
-		self.force = vector.Add(self.force, Vector(0,-9.8 * 20,0))
+		self.force = vector.Add(self.force, Vector(0,-9.8 * 15,0))
 		
 		-- apply force:
 		self.velocity = vector.Add(self.velocity, vector.Multiply(self.force, 0.016))
@@ -203,8 +203,8 @@ Character = {
 		-- Sphere collider for character:
 		local radius = 0.7
 		local sphere = Sphere(vector.Add(model_transform.GetPosition(), Vector(0,radius)), radius)
-		local pp = sphere.GetCenter()
-		local intersection = false
+		local original_spherecenter = sphere.GetCenter()
+		local ground_intersection = false
 		local ccd = 0
 		local ccd_max = 5
 		while(ccd < ccd_max) do
@@ -213,33 +213,39 @@ Character = {
 
 			local prevpos = sphere.GetCenter()
 			sphere.SetCenter(vector.Add(prevpos, step))
-			local o2, p2, n2, depth = SceneIntersectSphere(sphere, PICK_OPAQUE, ~self.layerMask)
+			local o2, p2, n2, depth = SceneIntersectCapsule(sphere, 3, PICK_OPAQUE, ~self.layerMask)
 			if(o2 ~= INVALID_ENTITY) then
 				DrawPoint(p2,0.5,Vector(1,1,0,1))
 				DrawLine(p2, vector.Add(p2, n2), Vector(1,1,0,1))
 
-				-- Slide on surface:
+				-- Slide on contact surface:
 				local velocityLen = self.velocity.Length()
 				local velocityNormalized = self.velocity.Normalize()
 				local undesiredMotion = n2:Multiply(vector.Dot(velocityNormalized, n2))
 				local desiredMotion = vector.Subtract(velocityNormalized, undesiredMotion)
 				self.velocity = vector.Multiply(desiredMotion, velocityLen)
 
-				intersection = true
-				sphere.SetCenter(vector.Add(sphere.GetCenter(), vector.Multiply(n2, depth))) -- remove penetration
+				-- Remove penetration (penetration upscaled to avoid precision error):
+				sphere.SetCenter(vector.Add(sphere.GetCenter(), vector.Multiply(n2, depth * 1.2)))
+
+				-- Check whether it is intersecting the ground (ground normal is upwards)
+				if(vector.Dot(n2, Vector(0,1,0)) > 0) then
+					ground_intersection = true
+				end
+
 			end
 		end
 		--DrawPoint(sphere.GetCenter(), 0.5, Vector(0,1,0,1))
 
-		if intersection then
-			self.velocity = vector.Multiply(self.velocity, 0.87) -- ground friction
+		if ground_intersection then
+			self.velocity = vector.Multiply(self.velocity, 0.85) -- ground friction
 		else
 			self.velocity = vector.Multiply(self.velocity, 0.94) -- air friction
 		end
 		if(vector.Length(self.velocity) < 0.001) then
 			self.state = self.states.STAND
 		end
-		model_transform.Translate(vector.Subtract(sphere.GetCenter(), pp))
+		model_transform.Translate(vector.Subtract(sphere.GetCenter(), original_spherecenter)) -- transform by the sphere offset
 		model_transform.UpdateTransform()
 		
 		-- try to put water ripple if character head is directly above water

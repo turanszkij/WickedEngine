@@ -1362,6 +1362,7 @@ namespace wiScene
 		float depth = 0;
 	};
 	SceneIntersectSphereResult SceneIntersectSphere(const SPHERE& sphere, uint32_t renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
+	SceneIntersectSphereResult SceneIntersectCapsule(const SPHERE& sphere, float height, uint32_t renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
 
 }
 
