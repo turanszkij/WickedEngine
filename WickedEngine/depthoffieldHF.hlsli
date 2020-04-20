@@ -2,7 +2,7 @@
 #define WI_DEPTHOFFIELD_HF
 
 
-#define DOF_DEPTH_SCALE_FOREGROUND (g_xCamera_ZFarP * 0.25f)
+#define DOF_DEPTH_SCALE_FOREGROUND (g_xCamera_ZFarP * 1.5)
 float2 DepthCmp2(float depth, float closestTileDepth)
 {
     float d = DOF_DEPTH_SCALE_FOREGROUND * (depth - closestTileDepth);

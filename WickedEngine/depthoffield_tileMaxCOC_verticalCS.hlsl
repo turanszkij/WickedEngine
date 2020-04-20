@@ -13,7 +13,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const uint2 tile_upperleft = uint2(DTid.x, DTid.y * DEPTHOFFIELD_TILESIZE);
 	float min_depth = 1;
 	float max_coc = 0;
-	float min_coc = dof_maxcoc;
+	float min_coc = 1000000;
 
 	int2 dim;
 	tile_mindepth_maxcoc_horizontal.GetDimensions(dim.x, dim.y);

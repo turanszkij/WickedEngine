@@ -135,7 +135,7 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 	});
 	ppWindow->AddWidget(depthOfFieldCheckBox);
 
-	depthOfFieldFocusSlider = new wiSlider(0.1f, 100, 10, 10000, "Focus: ");
+	depthOfFieldFocusSlider = new wiSlider(1.0f, 100, 10, 10000, "Focus: ");
 	depthOfFieldFocusSlider->SetTooltip("Set the focus distance from the camera. The picture will be sharper near the focus, and blurrier further from it.");
 	depthOfFieldFocusSlider->SetScriptTip("RenderPath3D::SetDepthOfFieldFocus(float value)");
 	depthOfFieldFocusSlider->SetSize(XMFLOAT2(100, 20));
@@ -146,7 +146,7 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 	});
 	ppWindow->AddWidget(depthOfFieldFocusSlider);
 
-	depthOfFieldScaleSlider = new wiSlider(0.01f, 4, 100, 1000, "Scale: ");
+	depthOfFieldScaleSlider = new wiSlider(1.0f, 20, 100, 1000, "Scale: ");
 	depthOfFieldScaleSlider->SetTooltip("Set depth of field scale/falloff.");
 	depthOfFieldScaleSlider->SetScriptTip("RenderPath3D::SetDepthOfFieldStrength(float value)");
 	depthOfFieldScaleSlider->SetSize(XMFLOAT2(100, 20));

@@ -60,27 +60,24 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 
 #ifdef DEPTHOFFIELD_CHEAP
     color = center_color;
-    [unroll]
+    [unroll(DOF_RING_COUNT)]
     for (uint j = 0; j < ringCount; ++j)
     {
-        [unroll]
         for (uint i = ringSampleCount[j]; i < ringSampleCount[j + 1]; ++i)
         {
-            const float offsetCoc = disc[i].z;
             const float2 uv2 = uv + ringScale * disc[i].xy;
             color += texture_prefilter.SampleLevel(sampler_linear_clamp, uv2, 0);
         }
     }
     color *= ringNormFactor[ringCount];
-    alpha = 1; 
+    alpha = 0; 
 
 #else
     float4 background = center_backgroundWeight * float4(center_color.rgb, 1);
     float4 foreground = center_foregroundWeight * float4(center_color.rgb, 1);
-    [unroll]
+    [unroll(DOF_RING_COUNT)]
     for (uint j = 0; j < ringCount; ++j)
     {
-        [unroll]
         for (uint i = ringSampleCount[j]; i < ringSampleCount[j + 1]; ++i)
         {
             const float offsetCoc = disc[i].z;
@@ -98,7 +95,9 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
     background.rgb *= rcp(max(0.00001, background.a));
     foreground.rgb *= rcp(max(0.00001, foreground.a));
 
-    alpha = saturate(2 * ringNormFactor[ringCount] * rcp(SampleAlpha(maxcoc)) * foreground.a);
+    //const float grow_foreground_solid = 2.0f;
+    const float grow_foreground_solid = 1.0f; // scaled alpha has tile artifact on expensive - cheap tile boundaries in some cases, otherwise looks nicer (softer) :(
+    alpha = saturate(grow_foreground_solid * ringNormFactor[ringCount] / SampleAlpha(maxcoc) * foreground.a);
     color = lerp(background.rgb, foreground.rgb, alpha);
 #endif // DEPTHOFFIELD_CHEAP
 
@@ -111,11 +110,11 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 
 #ifdef DEBUG_TILING
 #if defined(DEPTHOFFIELD_EARLYEXIT)
-    color *= float3(0, 0, 1);
+    color = lerp(color, float3(0, 0, 1), 0.15f);
 #elif defined(DEPTHOFFIELD_CHEAP)
-    color *= float3(0, 1, 0);
+    color = lerp(color, float3(0, 1, 0), 0.15f);
 #else
-    color *= float3(1, 0, 0);
+    color = lerp(color, float3(1, 0, 0), 0.15f);
 #endif // MOTIONBLUR_EARLYEXIT
 #endif // DEBUG_TILING
     

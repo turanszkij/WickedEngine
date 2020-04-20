@@ -22,8 +22,8 @@ private:
 	float exposure = 1.0f;
 	float bloomThreshold = 1.0f;
 	float motionBlurStrength = 100.0f;
-	float dofFocus = 10.0f;
-	float dofStrength = 1.0f;
+	float dofFocus = 2.0f;
+	float dofStrength = 10.0f;
 	float dofAspect = 1.0f;
 	float sharpenFilterAmount = 0.28f;
 	float outlineThreshold = 0.2f;
