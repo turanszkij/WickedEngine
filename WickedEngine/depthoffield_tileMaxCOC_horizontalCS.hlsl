@@ -1,5 +1,6 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
+#include "depthOfFieldHF.hlsli"
 
 RWTEXTURE2D(tile_mindepth_maxcoc, float2, 0);
 RWTEXTURE2D(tile_mincoc, float, 1);
@@ -22,7 +23,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		if (pixel.x >= 0 && pixel.y >= 0 && pixel.x < dim.x && pixel.y < dim.y)
 		{
 			const float depth = texture_lineardepth[pixel];
-			const float coc = dof_scale * abs(1 - dof_focus / (depth * g_xCamera_ZFarP));
+			const float coc = get_coc(depth);
 			min_depth = min(min_depth, depth);
 			max_coc = max(max_coc, coc);
 			min_coc = min(min_coc, coc);

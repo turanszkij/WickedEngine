@@ -32,7 +32,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 
 	const float mindepth = neighborhood_mindepth_maxcoc[2 * pixel / DEPTHOFFIELD_TILESIZE].x;
     const float center_depth = texture_lineardepth.Load(uint3(pixel, 1));
-	const float coc = min(dof_maxcoc, dof_scale * abs(1 - dof_focus / (center_depth * g_xCamera_ZFarP)));
+	const float coc = get_coc(center_depth);
 	const float alpha = SampleAlpha(coc);
 	const float2 depthcmp = DepthCmp2(center_depth, mindepth);
 
@@ -53,7 +53,6 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
         [unroll]
         for (uint i = ringSampleCount[0]; i < ringSampleCount[1]; ++i)
         {
-            const float offsetCoc = disc[i].z;
             const float2 uv2 = uv + ringScale * disc[i].xy;
             const float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, uv2, 1);
             const float3 color = max(0, input.SampleLevel(sampler_linear_clamp, uv2, 0).rgb);

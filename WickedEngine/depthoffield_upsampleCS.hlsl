@@ -22,19 +22,22 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float3 halfres = texture_postfilter.SampleLevel(sampler_linear_clamp, uv, 0);
 	const float alpha = texture_alpha.SampleLevel(sampler_linear_clamp, uv, 0);
 
-	const float coc = min(dof_maxcoc, dof_scale * abs(1 - dof_focus / (center_depth * g_xCamera_ZFarP)));
+	const float coc = get_coc(center_depth);
 
-	float depthDelta = saturate(1.0 - g_xCamera_ZFarP * 0.2 * (center_depth - mindepth));
+	float depthDelta = saturate(1.0 - g_xCamera_ZFarP * (center_depth - mindepth));
 
 	const float backgroundFactor = coc;
-	const float foregroundFactor = lerp(maxcoc, coc, pow(depthDelta, 1.0f / 2.2f));
+	const float foregroundFactor = lerp(maxcoc, coc, depthDelta);
 
 	const float combinedFactor = saturate(lerp(backgroundFactor, foregroundFactor, alpha));
 
 	float4 color = float4(lerp(fullres.rgb, halfres, combinedFactor), fullres.a);
 	//color = backgroundFactor;
 	//color = foregroundFactor;
+	//color = maxcoc;
 	//color = combinedFactor;
+	//color = alpha;
+	//color = depthDelta;
 	//color.rgb = halfres;
 
 	//if (coc < 0.01) color = float4(1, 0, 0, 1);

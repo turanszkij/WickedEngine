@@ -42,9 +42,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		tile_statistics.InterlockedAdd(TILE_STATISTICS_OFFSET_EARLYEXIT, 1, prevCount);
 		tiles_earlyexit[prevCount] = tile;
-		return;
 	}
-	else if (abs(max_coc - min_coc) < 0.1f)
+	else if (abs(max_coc - min_coc) < 1)
 	{
 		tile_statistics.InterlockedAdd(TILE_STATISTICS_OFFSET_CHEAP, 1, prevCount);
 		tiles_cheap[prevCount] = tile;
@@ -54,5 +53,5 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		tile_statistics.InterlockedAdd(TILE_STATISTICS_OFFSET_EXPENSIVE, 1, prevCount);
 		tiles_expensive[prevCount] = tile;
 	}
-	output[DTid.xy] = float2(min_depth, min(dof_maxcoc, max_coc)); 
+	output[DTid.xy] = float2(min_depth, max_coc); 
 }

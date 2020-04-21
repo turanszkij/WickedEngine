@@ -1,6 +1,10 @@
 #ifndef WI_DEPTHOFFIELD_HF
 #define WI_DEPTHOFFIELD_HF
 
+inline float get_coc(in float linear_depth)
+{
+    return min(dof_maxcoc, dof_scale * pow(abs(1 - dof_focus / (linear_depth * g_xCamera_ZFarP)), 2.0f));
+}
 
 #define DOF_DEPTH_SCALE_FOREGROUND (g_xCamera_ZFarP * 1.5)
 float2 DepthCmp2(float depth, float closestTileDepth)
