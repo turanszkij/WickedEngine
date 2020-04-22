@@ -2734,9 +2734,9 @@ namespace wiScene
 	SceneIntersectSphereResult SceneIntersectSphere(const SPHERE& sphere, uint32_t renderTypeMask, uint32_t layerMask, const Scene& scene)
 	{
 		SceneIntersectSphereResult result;
-		XMVECTOR vCenter = XMLoadFloat3(&sphere.center);
-		XMVECTOR vRadius = XMVectorReplicate(sphere.radius);
-		XMVECTOR RadiusSq = XMVectorMultiply(vRadius, vRadius);
+		XMVECTOR Center = XMLoadFloat3(&sphere.center);
+		XMVECTOR Radius = XMVectorReplicate(sphere.radius);
+		XMVECTOR RadiusSq = XMVectorMultiply(Radius, Radius);
 
 		if (scene.objects.GetCount() > 0)
 		{
@@ -2820,7 +2820,7 @@ namespace wiScene
 						assert(!XMVector3Equal(N, XMVectorZero()));
 
 						// Find the nearest feature on the triangle to the sphere.
-						XMVECTOR Dist = XMVector3Dot(XMVectorSubtract(vCenter, p0), N);
+						XMVECTOR Dist = XMVector3Dot(XMVectorSubtract(Center, p0), N);
 
 						if (!mesh.IsDoubleSided() && XMVectorGetX(Dist) > 0)
 						{
@@ -2829,11 +2829,11 @@ namespace wiScene
 
 						// If the center of the sphere is farther from the plane of the triangle than
 						// the radius of the sphere, then there cannot be an intersection.
-						XMVECTOR NoIntersection = XMVectorLess(Dist, XMVectorNegate(vRadius));
-						NoIntersection = XMVectorOrInt(NoIntersection, XMVectorGreater(Dist, vRadius));
+						XMVECTOR NoIntersection = XMVectorLess(Dist, XMVectorNegate(Radius));
+						NoIntersection = XMVectorOrInt(NoIntersection, XMVectorGreater(Dist, Radius));
 
 						// Project the center of the sphere onto the plane of the triangle.
-						XMVECTOR Point0 = XMVectorNegativeMultiplySubtract(N, Dist, vCenter);
+						XMVECTOR Point0 = XMVectorNegativeMultiplySubtract(N, Dist, Center);
 
 						// Is it inside all the edges? If so we intersect because the distance 
 						// to the plane is less than the radius.
@@ -2844,25 +2844,25 @@ namespace wiScene
 						// Find the nearest point on each edge.
 
 						// Edge 0,1
-						XMVECTOR Point1 = DirectX::Internal::PointOnLineSegmentNearestPoint(p0, p1, vCenter);
+						XMVECTOR Point1 = DirectX::Internal::PointOnLineSegmentNearestPoint(p0, p1, Center);
 
 						// If the distance to the center of the sphere to the point is less than 
 						// the radius of the sphere then it must intersect.
-						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(vCenter, Point1)), RadiusSq));
+						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point1)), RadiusSq));
 
 						// Edge 1,2
-						XMVECTOR Point2 = DirectX::Internal::PointOnLineSegmentNearestPoint(p1, p2, vCenter);
+						XMVECTOR Point2 = DirectX::Internal::PointOnLineSegmentNearestPoint(p1, p2, Center);
 
 						// If the distance to the center of the sphere to the point is less than 
 						// the radius of the sphere then it must intersect.
-						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(vCenter, Point2)), RadiusSq));
+						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point2)), RadiusSq));
 
 						// Edge 2,0
-						XMVECTOR Point3 = DirectX::Internal::PointOnLineSegmentNearestPoint(p2, p0, vCenter);
+						XMVECTOR Point3 = DirectX::Internal::PointOnLineSegmentNearestPoint(p2, p0, Center);
 
 						// If the distance to the center of the sphere to the point is less than 
 						// the radius of the sphere then it must intersect.
-						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(vCenter, Point3)), RadiusSq));
+						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point3)), RadiusSq));
 
 						bool intersects = XMVector4EqualInt(XMVectorAndCInt(Intersection, NoIntersection), XMVectorTrueInt());
 
@@ -2874,26 +2874,26 @@ namespace wiScene
 								// If the sphere center's projection on the triangle plane is not within the triangle,
 								//	determine the closest point on triangle to the sphere center
 								float bestDist = FLT_MAX;
-								float d = abs(XMVectorGetX(XMVector3LengthSq(Point1 - vCenter)));
+								float d = abs(XMVectorGetX(XMVector3LengthSq(Point1 - Center)));
 								if (d < bestDist)
 								{
 									bestDist = d;
 									bestPoint = Point1;
 								}
-								d = abs(XMVectorGetX(XMVector3LengthSq(Point2 - vCenter)));
+								d = abs(XMVectorGetX(XMVector3LengthSq(Point2 - Center)));
 								if (d < bestDist)
 								{
 									bestDist = d;
 									bestPoint = Point2;
 								}
-								d = abs(XMVectorGetX(XMVector3LengthSq(Point3 - vCenter)));
+								d = abs(XMVectorGetX(XMVector3LengthSq(Point3 - Center)));
 								if (d < bestDist)
 								{
 									bestDist = d;
 									bestPoint = Point3;
 								}
 							}
-							XMVECTOR intersectionVec = vCenter - bestPoint;
+							XMVECTOR intersectionVec = Center - bestPoint;
 							XMVECTOR intersectionVecLen = XMVector3Length(intersectionVec);
 
 							result.entity = entity;
@@ -2911,21 +2911,17 @@ namespace wiScene
 
 		return result;
 	}
-	SceneIntersectSphereResult SceneIntersectCapsule(const SPHERE& sphere, float height, uint32_t renderTypeMask, uint32_t layerMask, const Scene& scene)
+	SceneIntersectSphereResult SceneIntersectCapsule(const CAPSULE& capsule, uint32_t renderTypeMask, uint32_t layerMask, const Scene& scene)
 	{
 		SceneIntersectSphereResult result;
-		XMVECTOR vCenterBase = XMLoadFloat3(&sphere.center);
-		XMVECTOR vTip = vCenterBase + XMVectorSet(0, height, 0, 0);
-		XMVECTOR vRadius = XMVectorReplicate(sphere.radius);
-		XMVECTOR RadiusSq = XMVectorMultiply(vRadius, vRadius);
-
-		AABB base_aabb;
-		base_aabb.createFromHalfWidth(sphere.center, XMFLOAT3(sphere.radius, sphere.radius, sphere.radius));
-		XMFLOAT3 centertip;
-		XMStoreFloat3(&centertip, vTip);
-		AABB tip_aabb;
-		tip_aabb.createFromHalfWidth(centertip, XMFLOAT3(sphere.radius, sphere.radius, sphere.radius));
-		AABB capsule_aabb = AABB::Merge(base_aabb, tip_aabb);
+		XMVECTOR Base = XMLoadFloat3(&capsule.base);
+		XMVECTOR Tip = XMLoadFloat3(&capsule.tip);
+		XMVECTOR Radius = XMVectorReplicate(capsule.radius);
+		XMVECTOR LineEndOffset = XMVector3Normalize(Tip - Base) * Radius;
+		XMVECTOR A = Base + LineEndOffset;
+		XMVECTOR B = Tip - LineEndOffset;
+		XMVECTOR RadiusSq = XMVectorMultiply(Radius, Radius);
+		AABB capsule_aabb = capsule.getAABB();
 
 		if (scene.objects.GetCount() > 0)
 		{
@@ -3007,17 +3003,15 @@ namespace wiScene
 
 						// Intersect capsule line with triangle plane:
 						XMVECTOR Plane = XMPlaneFromPointNormal(p0, N);
-						XMVECTOR LinePlaneIntersection = XMPlaneIntersectLine(Plane, vCenterBase, vTip);
+						XMVECTOR LinePlaneIntersection = XMPlaneIntersectLine(Plane, A, B);
 						// Place a sphere on closest point on line segment to intersection:
-						XMVECTOR ab = vTip - vCenterBase;
-						XMVECTOR t = XMVector3Dot(LinePlaneIntersection - vCenterBase, ab) / XMVector3Dot(ab, ab);
-						XMVECTOR vCenter = vCenterBase + XMVectorSaturate(t) * ab;
+						XMVECTOR Center = wiMath::ClosestPointOnLineSegment(A, B, LinePlaneIntersection);
 
 						// Assert that the triangle is not degenerate.
 						assert(!XMVector3Equal(N, XMVectorZero()));
 
 						// Find the nearest feature on the triangle to the sphere.
-						XMVECTOR Dist = XMVector3Dot(XMVectorSubtract(vCenter, p0), N);
+						XMVECTOR Dist = XMVector3Dot(XMVectorSubtract(Center, p0), N);
 
 						if (!mesh.IsDoubleSided() && XMVectorGetX(Dist) > 0)
 						{
@@ -3026,11 +3020,11 @@ namespace wiScene
 
 						// If the center of the sphere is farther from the plane of the triangle than
 						// the radius of the sphere, then there cannot be an intersection.
-						XMVECTOR NoIntersection = XMVectorLess(Dist, XMVectorNegate(vRadius));
-						NoIntersection = XMVectorOrInt(NoIntersection, XMVectorGreater(Dist, vRadius));
+						XMVECTOR NoIntersection = XMVectorLess(Dist, XMVectorNegate(Radius));
+						NoIntersection = XMVectorOrInt(NoIntersection, XMVectorGreater(Dist, Radius));
 
 						// Project the center of the sphere onto the plane of the triangle.
-						XMVECTOR Point0 = XMVectorNegativeMultiplySubtract(N, Dist, vCenter);
+						XMVECTOR Point0 = XMVectorNegativeMultiplySubtract(N, Dist, Center);
 
 						// Is it inside all the edges? If so we intersect because the distance 
 						// to the plane is less than the radius.
@@ -3041,25 +3035,25 @@ namespace wiScene
 						// Find the nearest point on each edge.
 
 						// Edge 0,1
-						XMVECTOR Point1 = DirectX::Internal::PointOnLineSegmentNearestPoint(p0, p1, vCenter);
+						XMVECTOR Point1 = wiMath::ClosestPointOnLineSegment(p0, p1, Center);
 
 						// If the distance to the center of the sphere to the point is less than 
 						// the radius of the sphere then it must intersect.
-						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(vCenter, Point1)), RadiusSq));
+						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point1)), RadiusSq));
 
 						// Edge 1,2
-						XMVECTOR Point2 = DirectX::Internal::PointOnLineSegmentNearestPoint(p1, p2, vCenter);
+						XMVECTOR Point2 = wiMath::ClosestPointOnLineSegment(p1, p2, Center);
 
 						// If the distance to the center of the sphere to the point is less than 
 						// the radius of the sphere then it must intersect.
-						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(vCenter, Point2)), RadiusSq));
+						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point2)), RadiusSq));
 
 						// Edge 2,0
-						XMVECTOR Point3 = DirectX::Internal::PointOnLineSegmentNearestPoint(p2, p0, vCenter);
+						XMVECTOR Point3 = wiMath::ClosestPointOnLineSegment(p2, p0, Center);
 
 						// If the distance to the center of the sphere to the point is less than 
 						// the radius of the sphere then it must intersect.
-						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(vCenter, Point3)), RadiusSq));
+						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point3)), RadiusSq));
 
 						bool intersects = XMVector4EqualInt(XMVectorAndCInt(Intersection, NoIntersection), XMVectorTrueInt());
 
@@ -3071,30 +3065,30 @@ namespace wiScene
 								// If the sphere center's projection on the triangle plane is not within the triangle,
 								//	determine the closest point on triangle to the sphere center
 								float bestDist = FLT_MAX;
-								float d = abs(XMVectorGetX(XMVector3LengthSq(Point1 - vCenter)));
+								float d = abs(XMVectorGetX(XMVector3LengthSq(Point1 - Center)));
 								if (d < bestDist)
 								{
 									bestDist = d;
 									bestPoint = Point1;
 								}
-								d = abs(XMVectorGetX(XMVector3LengthSq(Point2 - vCenter)));
+								d = abs(XMVectorGetX(XMVector3LengthSq(Point2 - Center)));
 								if (d < bestDist)
 								{
 									bestDist = d;
 									bestPoint = Point2;
 								}
-								d = abs(XMVectorGetX(XMVector3LengthSq(Point3 - vCenter)));
+								d = abs(XMVectorGetX(XMVector3LengthSq(Point3 - Center)));
 								if (d < bestDist)
 								{
 									bestDist = d;
 									bestPoint = Point3;
 								}
 							}
-							XMVECTOR intersectionVec = vCenter - bestPoint;
+							XMVECTOR intersectionVec = Center - bestPoint;
 							XMVECTOR intersectionVecLen = XMVector3Length(intersectionVec);
 
 							result.entity = entity;
-							result.depth = sphere.radius - XMVectorGetX(intersectionVecLen);
+							result.depth = capsule.radius - XMVectorGetX(intersectionVecLen);
 							XMStoreFloat3(&result.position, bestPoint);
 							XMStoreFloat3(&result.normal, intersectionVec / intersectionVecLen);
 							return result;

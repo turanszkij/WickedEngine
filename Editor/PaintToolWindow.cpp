@@ -872,19 +872,6 @@ void PaintToolWindow::DrawBrush() const
 
 	for (int i = 0; i < segmentcount; i += 1)
 	{
-		const float angle0 = (float)i / (float)segmentcount * XM_2PI;
-		const float angle1 = (float)(i + 1) / (float)segmentcount * XM_2PI;
-		wiRenderer::RenderableLine2D line;
-		line.start.x = pos.x + sinf(angle0) * radius;
-		line.start.y = pos.y + cosf(angle0) * radius;
-		line.end.x = pos.x + sinf(angle1) * radius;
-		line.end.y = pos.y + cosf(angle1) * radius;
-		line.color_end = line.color_start = XMFLOAT4(0, 0, 0, 0.8f);
-		wiRenderer::DrawLine(line);
-	}
-
-	for (int i = 0; i < segmentcount; i += 2)
-	{
 		const float angle0 = rot + (float)i / (float)segmentcount * XM_2PI;
 		const float angle1 = rot + (float)(i + 1) / (float)segmentcount * XM_2PI;
 		wiRenderer::RenderableLine2D line;
@@ -892,6 +879,7 @@ void PaintToolWindow::DrawBrush() const
 		line.start.y = pos.y + cosf(angle0) * radius;
 		line.end.x = pos.x + sinf(angle1) * radius;
 		line.end.y = pos.y + cosf(angle1) * radius;
+		line.color_end = line.color_start = i%2 == 0 ? XMFLOAT4(0, 0, 0, 0.8f): XMFLOAT4(1,1,1,1);
 		wiRenderer::DrawLine(line);
 	}
 

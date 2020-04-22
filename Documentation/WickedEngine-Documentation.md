@@ -119,6 +119,7 @@ This is a reference for the C++ features of Wicked Engine
 	8. [wiIntersect](#wiintersect)
 		1. [AABB](#aabb)
 		2. [SPHERE](#sphere)
+		2. [CAPSULE](#capsule)
 		3. [RAY](#ray)
 		4. [Frustum](#frustum)
 		5. [Hitbox2D](#hitbox2d)
@@ -262,6 +263,10 @@ Returns a global scene instance. The wiRenderer will use this scene instance to 
 There are two flavours to this. One of them immediately loads into the global scene. The other loads into a custom scene, which is usefult to manage the contents separately. This function will return an Entity that represents the root transform of the scene - if the attached parameter was true, otherwise it will return INVALID_ENTITY and no root transform will be created.
 - Pick <br/>
 Allows to pick the closest object with a RAY (closest ray intersection hit to the ray origin). The user can provide a custom scene or layermask to filter the objects to be checked.
+- SceneIntersectSphere <br/>
+Performs sphere intersection with all objects and returns the first occured intersection immediately. The result contains the incident normal and penetration depth and the contact object entity ID.
+- SceneIntersectCapsule <br/>
+Performs capsule intersection with all objects and returns the first occured intersection immediately. The result contains the incident normal and penetration depth and the contact object entity ID.
 
 Below you will find the structures that make up the scene. These are intended to be simple strucutres that will be held in [ComponentManagers](#componentmanager). Keep these structures minimal in size to use cache efficiently when iterating a large amount of components.
 
@@ -721,6 +726,8 @@ The user provided debug geometry features at present are:
 - `DrawLine()`: provide line segment begin, end positions and a color value. The line will be only rendered for a single frame.
 - `DrawPoint()`: provide a position, size and color to render a point as a "X" line geometry that is always camera facing. The point will be only rendered for a single frame.
 - `DrawTriangle()`: provide 3 positions and colors that represent a colored triangle. There is an option to draw the triangle in wireframe mode instead of solid. The triangle will be only rendered for a single frame.
+- `DrawSphere()`: provide a sphere and a color, its bounds will be drawn as line geometry. The sphere will be only rendered for a single frame.
+- `DrawCapsule()`: provide a capsule and a color, its bounds will be drawn as line geometry. The capsule will be only rendered for a single frame.
 
 Configuring other debug rendering functionality:
 - `SetToDrawDebugBoneLines()`: Bones will be rendered as lines
@@ -905,6 +912,10 @@ Axis aligned bounding box. There are multiple ways to construct it, for example 
 #### SPHERE
 [[Header]](../WickedEngine/wiIntersect.h) [[Cpp]](../WickedEngine/wiIntersect.cpp)
 Sphere with a center and radius.
+
+#### CAPSULE
+[[Header]](../WickedEngine/wiIntersect.h) [[Cpp]](../WickedEngine/wiIntersect.cpp)
+It's like two spheres connected by a cylinder. Base and Tip are the two endpoints, radius is the cylinder's radius.
 
 #### RAY
 [[Header]](../WickedEngine/wiIntersect.h) [[Cpp]](../WickedEngine/wiIntersect.cpp)

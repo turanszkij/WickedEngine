@@ -66,6 +66,18 @@ namespace wiMath
 		XMVECTOR& vector2 = XMLoadFloat3(&v2);
 		return DistanceEstimated(vector1, vector2);
 	}
+	inline XMVECTOR ClosestPointOnLine(const XMVECTOR& A, const XMVECTOR& B, const XMVECTOR& Point)
+	{
+		XMVECTOR AB = B - A;
+		XMVECTOR T = XMVector3Dot(Point - A, AB) / XMVector3Dot(AB, AB);
+		return A + T * AB;
+	}
+	inline XMVECTOR ClosestPointOnLineSegment(const XMVECTOR& A, const XMVECTOR& B, const XMVECTOR& Point)
+	{
+		XMVECTOR AB = B - A;
+		XMVECTOR T = XMVector3Dot(Point - A, AB) / XMVector3Dot(AB, AB);
+		return A + XMVectorSaturate(T) * AB;
+	}
 	inline constexpr XMFLOAT3 getVectorHalfWayPoint(const XMFLOAT3& a, const XMFLOAT3& b)
 	{
 		return XMFLOAT3((a.x + b.x)*0.5f, (a.y + b.y)*0.5f, (a.z + b.z)*0.5f);

@@ -122,6 +122,8 @@ You can use the Renderer with the following functions, all of which are in the g
 - DrawLine(Vector origin,end, opt Vector color)
 - DrawPoint(Vector origin, opt float size, opt Vector color)
 - DrawBox(Matrix boxMatrix, opt Vector color)
+- DrawSphere(Sphere sphere, opt Vector color)
+- DrawCapsule(Capsule capsule, opt Vector color)
 - PutWaterRipple(String imagename, Vector position)
 - PutDecal(Decal decal)
 - PutEnvProbe(Vector pos)
@@ -419,6 +421,8 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - [outer]LoadModel(string fileName, opt Matrix transform) : int rootEntity	-- Load Model from file. returns a root entity that everything in this model is attached to
 - [outer]LoadModel(Scene scene, string fileName, opt Matrix transform) : int rootEntity	-- Load Model from file into specified scene. returns a root entity that everything in this model is attached to
 - [outer]Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified.
+- [outer]SceneIntersectSphere(Sphere sphere, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified.
+- [outer]SceneIntersectCapsule(Capsule capsule, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified.
 - Update()  -- updates the scene and every entity and component inside the scene
 - Clear()  -- deletes every entity and component inside the scene
 - Merge(Scene other)  -- moves contents from an other scene into this one. The other scene will be empty after this operation (contents are moved, not copied)
@@ -720,6 +724,17 @@ Sphere defined by center Vector and radius. Can be intersected with other primit
 - GetCenter() : Vector result
 - GetRadius() : float result
 - SetCenter(Vector value)
+- SetRadius(float value)
+
+#### Capsule
+It's like two spheres connected by a cylinder. Base and Tip are the two endpoints, radius is the cylinder's radius.
+- [constructor]Capsule(Vector base, tip, float radius)
+- Intersects(Capsule other) : bool result, Vector position, indicent_normal, float penetration_depth
+- GetBase() : Vector result
+- GetTip() : Vector result
+- GetRadius() : float result
+- SetBase(Vector value)
+- SetTip(Vector value)
 - SetRadius(float value)
 
 ### Input

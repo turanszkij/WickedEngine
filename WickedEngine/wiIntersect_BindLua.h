@@ -65,4 +65,26 @@ namespace wiIntersect_BindLua
 		int SetCenter(lua_State* L);
 		int SetRadius(lua_State* L);
 	};
+
+	class Capsule_BindLua
+	{
+	public:
+		CAPSULE capsule;
+
+		static const char className[];
+		static Luna<Capsule_BindLua>::FunctionType methods[];
+		static Luna<Capsule_BindLua>::PropertyType properties[];
+
+		Capsule_BindLua(const CAPSULE& capsule) : capsule(capsule) {}
+		Capsule_BindLua(lua_State* L);
+
+		int Intersects(lua_State* L);
+		int GetAABB(lua_State* L);
+		int GetBase(lua_State* L);
+		int GetTip(lua_State* L);
+		int GetRadius(lua_State* L);
+		int SetBase(lua_State* L);
+		int SetTip(lua_State* L);
+		int SetRadius(lua_State* L);
+	};
 }

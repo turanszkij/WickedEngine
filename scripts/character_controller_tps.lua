@@ -37,6 +37,7 @@ Character = {
 	layerMask = 0x2, -- The character will be tagged to use this layer, so scene Picking can filter out the character
 	scale = Vector(0.8,0.8,0.8),
 	rotation = Vector(0,3.1415,0),
+	capsule = Capsule(Vector(), Vector(), 0),
 	
 	states = {
 		STAND = 0,
@@ -200,10 +201,12 @@ Character = {
 		self.velocity = vector.Add(self.velocity, vector.Multiply(self.force, 0.016))
 		self.force = Vector(0,0,0,0)
 		
-		-- Sphere collider for character:
+		-- Capsule collision for character:
+		local testcapsule = Capsule(Vector(-4,3),Vector(-4,6,-20),0.8) -- just place a test capsule into the scene
+		local original_capsulepos = model_transform.GetPosition()
+		local capsulepos = original_capsulepos
+		local capsuleheight = 4
 		local radius = 0.7
-		local sphere = Sphere(vector.Add(model_transform.GetPosition(), Vector(0,radius)), radius)
-		local original_spherecenter = sphere.GetCenter()
 		local ground_intersection = false
 		local ccd = 0
 		local ccd_max = 5
@@ -211,9 +214,12 @@ Character = {
 			ccd = ccd + 1
 			local step = vector.Multiply(self.velocity, 1.0 / ccd_max * 0.016)
 
-			local prevpos = sphere.GetCenter()
-			sphere.SetCenter(vector.Add(prevpos, step))
-			local o2, p2, n2, depth = SceneIntersectCapsule(sphere, 3, PICK_OPAQUE, ~self.layerMask)
+			capsulepos = vector.Add(capsulepos, step)
+			self.capsule = Capsule(capsulepos, vector.Add(capsulepos, Vector(0, capsuleheight)), radius)
+			local o2, p2, n2, depth = self.capsule.Intersects(testcapsule) -- capsule/capsule collision
+			if(not o2) then
+				o2, p2, n2, depth = SceneIntersectCapsule(self.capsule, PICK_OPAQUE, ~self.layerMask) -- scene/capsule collision
+			end
 			if(o2 ~= INVALID_ENTITY) then
 				DrawPoint(p2,0.5,Vector(1,1,0,1))
 				DrawLine(p2, vector.Add(p2, n2), Vector(1,1,0,1))
@@ -225,17 +231,18 @@ Character = {
 				local desiredMotion = vector.Subtract(velocityNormalized, undesiredMotion)
 				self.velocity = vector.Multiply(desiredMotion, velocityLen)
 
-				-- Remove penetration (penetration upscaled to avoid precision error):
-				sphere.SetCenter(vector.Add(sphere.GetCenter(), vector.Multiply(n2, depth * 1.2)))
+				-- Remove penetration (penetration epsilon added to handle infinitely small penetration):
+				capsulepos = vector.Add(capsulepos, vector.Multiply(n2, depth + 0.0001))
 
 				-- Check whether it is intersecting the ground (ground normal is upwards)
-				if(vector.Dot(n2, Vector(0,1,0)) > 0) then
+				if(vector.Dot(n2, Vector(0,1,0)) > 0.5) then
 					ground_intersection = true
 				end
 
 			end
 		end
-		--DrawPoint(sphere.GetCenter(), 0.5, Vector(0,1,0,1))
+		DrawCapsule(self.capsule)
+		DrawCapsule(testcapsule, Vector(1,0,0,100))
 
 		if ground_intersection then
 			self.velocity = vector.Multiply(self.velocity, 0.85) -- ground friction
@@ -245,7 +252,7 @@ Character = {
 		if(vector.Length(self.velocity) < 0.001) then
 			self.state = self.states.STAND
 		end
-		model_transform.Translate(vector.Subtract(sphere.GetCenter(), original_spherecenter)) -- transform by the sphere offset
+		model_transform.Translate(vector.Subtract(capsulepos, original_capsulepos)) -- transform by the sphere offset
 		model_transform.UpdateTransform()
 		
 		-- try to put water ripple if character head is directly above water
@@ -449,7 +456,7 @@ runProcess(function()
 		--DrawAxis(player.p,0.5)
 		
 		-- camera target box and axis
-		DrawBox(target_transform.GetMatrix())
+		--DrawBox(target_transform.GetMatrix())
 		
 		-- Head bone
 		DrawPoint(scene.Component_GetTransform(player.head).GetPosition(),0.2, Vector(0,1,1,1))

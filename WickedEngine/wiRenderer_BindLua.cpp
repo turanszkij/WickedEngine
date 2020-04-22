@@ -8,12 +8,14 @@
 #include "Texture_BindLua.h"
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"
+#include "wiIntersect_BindLua.h"
 
 using namespace std;
 using namespace wiECS;
 using namespace wiGraphics;
 using namespace wiScene;
 using namespace wiScene_BindLua;
+using namespace wiIntersect_BindLua;
 
 namespace wiRenderer_BindLua
 {
@@ -310,6 +312,66 @@ namespace wiRenderer_BindLua
 
 		return 0;
 	}
+	int DrawSphere(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Sphere_BindLua* sphere = Luna<Sphere_BindLua>::lightcheck(L, 1);
+			if (sphere)
+			{
+				if (argc > 1)
+				{
+					Vector_BindLua* color = Luna<Vector_BindLua>::lightcheck(L, 2);
+					if (color)
+					{
+						XMFLOAT4 col;
+						XMStoreFloat4(&col, color->vector);
+						wiRenderer::DrawSphere(sphere->sphere, col);
+						return 0;
+					}
+				}
+
+				wiRenderer::DrawSphere(sphere->sphere);
+			}
+			else
+				wiLua::SError(L, "DrawSphere(Sphere sphere, opt Vector color) first argument must be a Matrix type!");
+		}
+		else
+			wiLua::SError(L, "DrawSphere(Sphere sphere, opt Vector color) not enough arguments!");
+
+		return 0;
+	}
+	int DrawCapsule(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Capsule_BindLua* capsule = Luna<Capsule_BindLua>::lightcheck(L, 1);
+			if (capsule)
+			{
+				if (argc > 1)
+				{
+					Vector_BindLua* color = Luna<Vector_BindLua>::lightcheck(L, 2);
+					if (color)
+					{
+						XMFLOAT4 col;
+						XMStoreFloat4(&col, color->vector);
+						wiRenderer::DrawCapsule(capsule->capsule, col);
+						return 0;
+					}
+				}
+
+				wiRenderer::DrawCapsule(capsule->capsule);
+			}
+			else
+				wiLua::SError(L, "DrawCapsule(Capsule capsule, opt Vector color) first argument must be a Matrix type!");
+		}
+		else
+			wiLua::SError(L, "DrawCapsule(Capsule capsule, opt Vector color) not enough arguments!");
+
+		return 0;
+	}
 	int PutWaterRipple(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
@@ -376,6 +438,8 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("DrawLine", DrawLine);
 			wiLua::GetGlobal()->RegisterFunc("DrawPoint", DrawPoint);
 			wiLua::GetGlobal()->RegisterFunc("DrawBox", DrawBox);
+			wiLua::GetGlobal()->RegisterFunc("DrawSphere", DrawSphere);
+			wiLua::GetGlobal()->RegisterFunc("DrawCapsule", DrawCapsule);
 			wiLua::GetGlobal()->RegisterFunc("PutWaterRipple", PutWaterRipple);
 
 

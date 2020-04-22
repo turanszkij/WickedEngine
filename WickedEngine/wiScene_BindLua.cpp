@@ -180,7 +180,7 @@ int SceneIntersectSphere(lua_State* L)
 			return 4;
 		}
 
-		wiLua::SError(L, "SceneIntersectSphere(Sphere sphere, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) first argument must be of Ray type!");
+		wiLua::SError(L, "SceneIntersectSphere(Sphere sphere, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) first argument must be of Sphere type!");
 	}
 	else
 	{
@@ -194,40 +194,35 @@ int SceneIntersectCapsule(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Sphere_BindLua* sphere = Luna<Sphere_BindLua>::lightcheck(L, 1);
-		if (sphere != nullptr)
+		Capsule_BindLua* capsule = Luna<Capsule_BindLua>::lightcheck(L, 1);
+		if (capsule != nullptr)
 		{
 			uint32_t renderTypeMask = RENDERTYPE_OPAQUE;
 			uint32_t layerMask = 0xFFFFFFFF;
 			Scene* scene = &wiScene::GetScene();
-			float height = 1;
 			if (argc > 1)
 			{
-				height = wiLua::SGetFloat(L, 2);
+				renderTypeMask = (uint32_t)wiLua::SGetInt(L, 2);
 				if (argc > 2)
 				{
-					renderTypeMask = (uint32_t)wiLua::SGetInt(L, 3);
+					int mask = wiLua::SGetInt(L, 3);
+					layerMask = *reinterpret_cast<uint32_t*>(&mask);
+
 					if (argc > 3)
 					{
-						int mask = wiLua::SGetInt(L, 4);
-						layerMask = *reinterpret_cast<uint32_t*>(&mask);
-
-						if (argc > 4)
+						Scene_BindLua* custom_scene = Luna<Scene_BindLua>::lightcheck(L, 4);
+						if (custom_scene)
 						{
-							Scene_BindLua* custom_scene = Luna<Scene_BindLua>::lightcheck(L, 5);
-							if (custom_scene)
-							{
-								scene = custom_scene->scene;
-							}
-							else
-							{
-								wiLua::SError(L, "SceneIntersectCapsule(Sphere sphere, float height, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) last argument is not of type Scene!");
-							}
+							scene = custom_scene->scene;
+						}
+						else
+						{
+							wiLua::SError(L, "SceneIntersectCapsule(Capsule capsule, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) last argument is not of type Scene!");
 						}
 					}
 				}
 			}
-			auto& pick = wiScene::SceneIntersectCapsule(sphere->sphere, height, renderTypeMask, layerMask, *scene);
+			auto& pick = wiScene::SceneIntersectCapsule(capsule->capsule, renderTypeMask, layerMask, *scene);
 			wiLua::SSetInt(L, (int)pick.entity);
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
@@ -235,11 +230,11 @@ int SceneIntersectCapsule(lua_State* L)
 			return 4;
 		}
 
-		wiLua::SError(L, "SceneIntersectCapsule(Sphere sphere, float height, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) first argument must be of Ray type!");
+		wiLua::SError(L, "SceneIntersectCapsule(Capsule capsule, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) first argument must be of Capsule type!");
 	}
 	else
 	{
-		wiLua::SError(L, "SceneIntersectCapsule(Sphere sphere, float height, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) not enough arguments!");
+		wiLua::SError(L, "SceneIntersectCapsule(Capsule capsule, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) not enough arguments!");
 	}
 
 	return 0;

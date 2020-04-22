@@ -60,13 +60,36 @@ struct AABB
 };
 struct SPHERE 
 {
-	float radius;
 	XMFLOAT3 center;
+	float radius;
 	SPHERE() :center(XMFLOAT3(0, 0, 0)), radius(0) {}
 	SPHERE(const XMFLOAT3& c, float r) :center(c), radius(r) {}
 	bool intersects(const AABB& b) const;
 	bool intersects(const SPHERE& b) const;
 	bool intersects(const RAY& b) const;
+};
+struct CAPSULE
+{
+	XMFLOAT3 base = XMFLOAT3(0, 0, 0);
+	XMFLOAT3 tip = XMFLOAT3(0, 0, 0);
+	float radius = 0;
+	CAPSULE() = default;
+	CAPSULE(const XMFLOAT3& base, const XMFLOAT3& tip, float radius) :base(base), tip(tip), radius(radius) {}
+	CAPSULE(const SPHERE& sphere, float height) :
+		base(XMFLOAT3(sphere.center.x, sphere.center.y - sphere.radius, sphere.center.z)),
+		radius(sphere.radius), 
+		tip(XMFLOAT3(base.x, base.y + height, base.z)) 
+	{}
+	inline AABB getAABB() const
+	{
+		XMFLOAT3 halfWidth = XMFLOAT3(radius, radius, radius);
+		AABB base_aabb;
+		base_aabb.createFromHalfWidth(base, halfWidth);
+		AABB tip_aabb;
+		tip_aabb.createFromHalfWidth(tip, halfWidth);
+		return AABB::Merge(base_aabb, tip_aabb);
+	}
+	bool intersects(const CAPSULE& b, XMFLOAT3& position, XMFLOAT3& incident_normal, float& penetration_depth) const;
 };
 struct RAY 
 {

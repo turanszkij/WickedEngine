@@ -4,7 +4,6 @@
 #include "wiResourceManager.h"
 #include "wiSprite.h"
 #include "wiScene.h"
-#include "wiIntersect.h"
 #include "wiHelper.h"
 #include "wiMath.h"
 #include "wiTextureHelper.h"
@@ -157,6 +156,8 @@ std::vector<RenderPass> renderpasses_shadowCube;
 deque<wiSprite*> waterRipples;
 
 std::vector<pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
+std::vector<pair<SPHERE, XMFLOAT4>> renderableSpheres;
+std::vector<pair<CAPSULE, XMFLOAT4>> renderableCapsules;
 std::vector<RenderableLine> renderableLines;
 std::vector<RenderableLine2D> renderableLines2D;
 std::vector<RenderablePoint> renderablePoints;
@@ -6098,6 +6099,213 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 		device->EventEnd(cmd);
 	}
 
+	if (!renderableSpheres.empty())
+	{
+		device->EventBegin("DebugSpheres", cmd);
+
+		static GPUBuffer wiresphereVB;
+		static GPUBuffer wiresphereIB;
+		if (!wiresphereVB.IsValid())
+		{
+			struct Vertex
+			{
+				XMFLOAT4 position;
+				XMFLOAT4 color;
+			};
+			std::vector<Vertex> vertices;
+
+			const int segmentcount = 36;
+			Vertex vert;
+			vert.color = XMFLOAT4(1, 1, 1, 1);
+
+			// XY
+			for (int i = 0; i <= segmentcount; ++i)
+			{
+				const float angle0 = (float)i / (float)segmentcount * XM_2PI;
+				vert.position = XMFLOAT4(sinf(angle0), cosf(angle0), 0, 1);
+				vertices.push_back(vert);
+			}
+			// XZ
+			for (int i = 0; i <= segmentcount; ++i)
+			{
+				const float angle0 = (float)i / (float)segmentcount * XM_2PI;
+				vert.position = XMFLOAT4(sinf(angle0), 0, cosf(angle0), 1);
+				vertices.push_back(vert);
+			}
+			// YZ
+			for (int i = 0; i <= segmentcount; ++i)
+			{
+				const float angle0 = (float)i / (float)segmentcount * XM_2PI;
+				vert.position = XMFLOAT4(0, sinf(angle0), cosf(angle0), 1);
+				vertices.push_back(vert);
+			}
+
+			GPUBufferDesc bd;
+			bd.Usage = USAGE_DEFAULT;
+			bd.ByteWidth = uint32_t(vertices.size() * sizeof(Vertex));
+			bd.BindFlags = BIND_VERTEX_BUFFER;
+			bd.CPUAccessFlags = 0;
+			SubresourceData InitData;
+			InitData.pSysMem = vertices.data();
+			device->CreateBuffer(&bd, &InitData, &wiresphereVB);
+
+			std::vector<uint16_t> indices;
+			for (int i = 0; i < segmentcount; ++i)
+			{
+				indices.push_back(uint16_t(i));
+				indices.push_back(uint16_t(i + 1));
+			}
+			for (int i = 0; i < segmentcount; ++i)
+			{
+				indices.push_back(uint16_t(i + segmentcount + 1));
+				indices.push_back(uint16_t(i + segmentcount + 1 + 1));
+			}
+			for (int i = 0; i < segmentcount; ++i)
+			{
+				indices.push_back(uint16_t(i + (segmentcount + 1) * 2));
+				indices.push_back(uint16_t(i + (segmentcount + 1) * 2 + 1));
+			}
+
+			bd.Usage = USAGE_DEFAULT;
+			bd.ByteWidth = uint32_t(indices.size() * sizeof(uint16_t));
+			bd.BindFlags = BIND_INDEX_BUFFER;
+			bd.CPUAccessFlags = 0;
+			InitData.pSysMem = indices.data();
+			device->CreateBuffer(&bd, &InitData, &wiresphereIB);
+		}
+
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
+
+		const GPUBuffer* vbs[] = {
+			&wiresphereVB,
+		};
+		const uint32_t strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
+		device->BindIndexBuffer(&wiresphereIB, INDEXFORMAT_16BIT, 0, cmd);
+
+		MiscCB sb;
+
+		for (auto& x : renderableSpheres)
+		{
+			const SPHERE& sphere = x.first;
+			XMStoreFloat4x4(&sb.g_xTransform,
+				XMMatrixScaling(sphere.radius, sphere.radius, sphere.radius) *
+				XMMatrixTranslation(sphere.center.x, sphere.center.y, sphere.center.z) *
+				camera.GetViewProjection()
+			);
+			sb.g_xColor = x.second;
+
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
+			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+
+			device->DrawIndexed(wiresphereIB.GetDesc().ByteWidth / sizeof(uint16_t), 0, 0, cmd);
+		}
+		renderableSpheres.clear();
+
+		device->EventEnd(cmd);
+	}
+
+	if (!renderableCapsules.empty())
+	{
+		device->EventBegin("DebugCapsules", cmd);
+
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
+
+		MiscCB sb;
+		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
+		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
+		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+
+		const int segmentcount = 18 + 1 + 18 + 1;
+		const int linecount = (int)renderableCapsules.size() * segmentcount;
+
+		struct LineSegment
+		{
+			XMFLOAT4 a, colorA, b, colorB;
+		};
+		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(LineSegment) * (size_t)linecount, cmd);
+
+		XMVECTOR Eye = camera.GetEye();
+		XMVECTOR Unit = XMVectorSet(0, 1, 0, 0);
+
+		LineSegment* linearray = (LineSegment*)mem.data;
+		int j = 0;
+		for (auto& it : renderableCapsules)
+		{
+			const CAPSULE& capsule = it.first;
+			const float radius = capsule.radius;
+
+			XMVECTOR Base = XMLoadFloat3(&capsule.base);
+			XMVECTOR Tip = XMLoadFloat3(&capsule.tip);
+			XMVECTOR Radius = XMVectorReplicate(capsule.radius);
+			XMVECTOR Normal = XMVector3Normalize(Tip - Base);
+			XMVECTOR Tangent = XMVector3Normalize(XMVector3Cross(Normal, Base - Eye));
+			XMVECTOR Binormal = XMVector3Normalize(XMVector3Cross(Tangent, Normal));
+			XMVECTOR LineEndOffset = Normal * Radius;
+			XMVECTOR A = Base + LineEndOffset;
+			XMVECTOR B = Tip - LineEndOffset;
+			XMVECTOR AB = Unit * XMVector3Length(B - A);
+			XMMATRIX M = { Tangent,Normal,Binormal,XMVectorSetW(A, 1) };
+
+			for (int i = 0; i < segmentcount; i += 1)
+			{
+				const float angle0 = XM_PIDIV2 + (float)i / (float)segmentcount * XM_2PI;
+				const float angle1 = XM_PIDIV2 + (float)(i + 1) / (float)segmentcount * XM_2PI;
+				XMVECTOR a, b;
+				if (i < 18)
+				{
+
+					a = XMVectorSet(sinf(angle0) * radius, cosf(angle0) * radius, 0, 1);
+					b = XMVectorSet(sinf(angle1) * radius, cosf(angle1) * radius, 0, 1);
+				}
+				else if (i == 18)
+				{
+					a = XMVectorSet(sinf(angle0) * radius, cosf(angle0) * radius, 0, 1);
+					b = AB + XMVectorSet(sinf(angle1) * radius, cosf(angle1) * radius, 0, 1);
+				}
+				else if (i > 18 && i < 18 + 1 + 18)
+				{
+					a = AB + XMVectorSet(sinf(angle0) * radius, cosf(angle0) * radius, 0, 1);
+					b = AB + XMVectorSet(sinf(angle1) * radius, cosf(angle1) * radius, 0, 1);
+				}
+				else
+				{
+					a = AB + XMVectorSet(sinf(angle0) * radius, cosf(angle0) * radius, 0, 1);
+					b = XMVectorSet(sinf(angle1) * radius, cosf(angle1) * radius, 0, 1);
+				}
+				a = XMVector3Transform(a, M);
+				b = XMVector3Transform(b, M);
+				LineSegment& line = linearray[j++];
+				XMStoreFloat4(&line.a, a);
+				XMStoreFloat4(&line.b, b);
+				line.colorA = line.colorB = it.second;
+			}
+
+		}
+
+		const GPUBuffer* vbs[] = {
+			mem.buffer,
+		};
+		const uint32_t strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		const uint32_t offsets[] = {
+			mem.offset,
+		};
+		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+		device->Draw(linecount * 2, 0, cmd);
+
+		renderableCapsules.clear();
+
+		device->EventEnd(cmd);
+	}
+
 
 	if (debugEnvProbes && textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY].IsValid())
 	{
@@ -11136,7 +11344,15 @@ RAY GetPickRay(long cursorX, long cursorY)
 
 void DrawBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color)
 {
-	renderableBoxes.push_back(pair<XMFLOAT4X4,XMFLOAT4>(boxMatrix,color));
+	renderableBoxes.push_back(std::make_pair(boxMatrix,color));
+}
+void DrawSphere(const SPHERE& sphere, const XMFLOAT4& color)
+{
+	renderableSpheres.push_back(std::make_pair(sphere, color));
+}
+void DrawCapsule(const CAPSULE& capsule, const XMFLOAT4& color)
+{
+	renderableCapsules.push_back(std::make_pair(capsule, color));
 }
 void DrawLine(const RenderableLine& line)
 {

@@ -200,6 +200,68 @@ bool SPHERE::intersects(const RAY& b) const {
 
 
 
+bool CAPSULE::intersects(const CAPSULE& other, XMFLOAT3& position, XMFLOAT3& incident_normal, float& penetration_depth) const
+{
+	if(getAABB().intersects(other.getAABB()) == AABB::INTERSECTION_TYPE::OUTSIDE)
+		return false;
+
+	XMVECTOR a_Base = XMLoadFloat3(&base);
+	XMVECTOR a_Tip = XMLoadFloat3(&tip);
+	XMVECTOR a_Radius = XMVectorReplicate(radius);
+	XMVECTOR a_Normal = XMVector3Normalize(a_Tip - a_Base);
+	XMVECTOR a_LineEndOffset = a_Normal * a_Radius;
+	XMVECTOR a_A = a_Base + a_LineEndOffset;
+	XMVECTOR a_B = a_Tip - a_LineEndOffset;
+
+	XMVECTOR b_Base = XMLoadFloat3(&other.base);
+	XMVECTOR b_Tip = XMLoadFloat3(&other.tip);
+	XMVECTOR b_Radius = XMVectorReplicate(other.radius);
+	XMVECTOR b_Normal = XMVector3Normalize(b_Tip - b_Base);
+	XMVECTOR b_LineEndOffset = b_Normal * b_Radius;
+	XMVECTOR b_A = b_Base + b_LineEndOffset;
+	XMVECTOR b_B = b_Tip - b_LineEndOffset;
+
+	// Vectors between line endpoints:
+	XMVECTOR v0 = b_A - a_A;
+	XMVECTOR v1 = b_B - a_A;
+	XMVECTOR v2 = b_A - a_B;
+	XMVECTOR v3 = b_B - a_B;
+
+	// Distances (squared) between line endpoints:
+	float d0 = XMVectorGetX(XMVector3LengthSq(v0));
+	float d1 = XMVectorGetX(XMVector3LengthSq(v1));
+	float d2 = XMVectorGetX(XMVector3LengthSq(v2));
+	float d3 = XMVectorGetX(XMVector3LengthSq(v3));
+
+	// Select best potential endpoint on capsule A:
+	XMVECTOR bestA;
+	if (d2 < d0 || d2 < d1 || d3 < d0 || d3 < d1)
+	{
+		bestA = a_B;
+	}
+	else
+	{
+		bestA = a_A;
+	}
+
+	// Select point on capsule B line segment nearest to best potential endpoint on A capsule:
+	XMVECTOR bestB = wiMath::ClosestPointOnLineSegment(b_A, b_B, bestA);
+
+	// Now do the same for capsule A segment:
+	bestA = wiMath::ClosestPointOnLineSegment(a_A, a_B, bestB);
+
+	// Finally, sphere collision:
+	XMVECTOR N = bestA - bestB;
+	XMVECTOR len = XMVector3Length(N);
+	N /= len;
+	float dist = XMVectorGetX(len);
+
+	XMStoreFloat3(&position, bestA - N * radius);
+	XMStoreFloat3(&incident_normal, N);
+	penetration_depth = radius + other.radius - dist;
+
+	return penetration_depth > 0;
+}
 
 
 

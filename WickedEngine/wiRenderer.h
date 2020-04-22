@@ -4,6 +4,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiScene_Decl.h"
 #include "wiECS.h"
+#include "wiIntersect.h"
 
 #include <memory>
 
@@ -486,6 +487,10 @@ namespace wiRenderer
 
 	// Add box to render in next frame. It will be rendered in DrawDebugWorld()
 	void DrawBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color = XMFLOAT4(1,1,1,1));
+	// Add sphere to render in next frame. It will be rendered in DrawDebugWorld()
+	void DrawSphere(const SPHERE& sphere, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1));
+	// Add capsule to render in next frame. It will be rendered in DrawDebugWorld()
+	void DrawCapsule(const CAPSULE& capsule, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1));
 
 	struct RenderableLine
 	{

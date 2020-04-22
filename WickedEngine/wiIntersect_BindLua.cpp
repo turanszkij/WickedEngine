@@ -16,6 +16,7 @@ namespace wiIntersect_BindLua
 			Luna<Ray_BindLua>::Register(L);
 			Luna<AABB_BindLua>::Register(L);
 			Luna<Sphere_BindLua>::Register(L);
+			Luna<Capsule_BindLua>::Register(L);
 		}
 	}
 
@@ -292,7 +293,7 @@ namespace wiIntersect_BindLua
 			if (_aabb)
 			{
 				bool intersects = sphere.intersects(_aabb->aabb);
-				wiLua::SSetInt(L, intersects);
+				wiLua::SSetBool(L, intersects);
 				return 1;
 			}
 
@@ -353,6 +354,152 @@ namespace wiIntersect_BindLua
 		if (argc > 0)
 		{
 			sphere.radius = wiLua::SGetFloat(L, 1);
+		}
+		else
+		{
+			wiLua::SError(L, "SetRadius(float value) not enough arguments!");
+		}
+		return 0;
+	}
+
+
+
+	const char Capsule_BindLua::className[] = "Capsule";
+
+	Luna<Capsule_BindLua>::FunctionType Capsule_BindLua::methods[] = {
+		lunamethod(Capsule_BindLua, Intersects),
+		lunamethod(Capsule_BindLua, GetAABB),
+		lunamethod(Capsule_BindLua, GetBase),
+		lunamethod(Capsule_BindLua, GetTip),
+		lunamethod(Capsule_BindLua, GetRadius),
+		lunamethod(Capsule_BindLua, SetBase),
+		lunamethod(Capsule_BindLua, SetTip),
+		lunamethod(Capsule_BindLua, SetRadius),
+		{ NULL, NULL }
+	};
+	Luna<Capsule_BindLua>::PropertyType Capsule_BindLua::properties[] = {
+		{ NULL, NULL }
+	};
+
+	Capsule_BindLua::Capsule_BindLua(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 2)
+		{
+			Vector_BindLua* bV = Luna<Vector_BindLua>::lightcheck(L, 1);
+			Vector_BindLua* tV = Luna<Vector_BindLua>::lightcheck(L, 2);
+			if (bV && tV)
+			{
+				XMFLOAT3 b;
+				XMStoreFloat3(&b, bV->vector);
+				XMFLOAT3 t;
+				XMStoreFloat3(&t, tV->vector);
+
+				float r = wiLua::SGetFloat(L, 3);
+
+				capsule = CAPSULE(b, t, r);
+			}
+			else
+			{
+				wiLua::SError(L, "Capsule(Vector base, tip, float radius) requires first two arguments to be of Vector type!");
+			}
+		}
+		else
+		{
+			wiLua::SError(L, "Capsule(Vector base, tip, float radius) not enough arguments!");
+		}
+	}
+
+	int Capsule_BindLua::Intersects(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Capsule_BindLua* _capsule = Luna<Capsule_BindLua>::lightcheck(L, 1);
+			if (_capsule)
+			{
+				XMFLOAT3 position = XMFLOAT3(0, 0, 0);
+				XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
+				float depth = 0;
+				bool intersects = capsule.intersects(_capsule->capsule, position, normal, depth);
+				wiLua::SSetBool(L, intersects);
+				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&position)));
+				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&normal)));
+				wiLua::SSetFloat(L, depth);
+				return 4;
+			}
+		}
+		wiLua::SError(L, "Intersects(Capsule other) no matching arguments! ");
+		return 0;
+	}
+	int Capsule_BindLua::GetAABB(lua_State* L)
+	{
+		Luna<AABB_BindLua>::push(L, new AABB_BindLua(capsule.getAABB()));
+		return 1;
+	}
+	int Capsule_BindLua::GetBase(lua_State* L)
+	{
+		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&capsule.base)));
+		return 1;
+	}
+	int Capsule_BindLua::GetTip(lua_State* L)
+	{
+		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&capsule.tip)));
+		return 1;
+	}
+	int Capsule_BindLua::GetRadius(lua_State* L)
+	{
+		wiLua::SSetFloat(L, capsule.radius);
+		return 1;
+	}
+	int Capsule_BindLua::SetBase(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Vector_BindLua* cV = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (cV)
+			{
+				XMStoreFloat3(&capsule.base, cV->vector);
+			}
+			else
+			{
+				wiLua::SError(L, "SetBase(Vector value) requires first argument to be of Vector type!");
+			}
+		}
+		else
+		{
+			wiLua::SError(L, "SetBase(Vector value) not enough arguments!");
+		}
+		return 0;
+	}
+	int Capsule_BindLua::SetTip(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Vector_BindLua* cV = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (cV)
+			{
+				XMStoreFloat3(&capsule.tip, cV->vector);
+			}
+			else
+			{
+				wiLua::SError(L, "SetTip(Vector value) requires first argument to be of Vector type!");
+			}
+		}
+		else
+		{
+			wiLua::SError(L, "SetTip(Vector value) not enough arguments!");
+		}
+		return 0;
+	}
+	int Capsule_BindLua::SetRadius(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			capsule.radius = wiLua::SGetFloat(L, 1);
 		}
 		else
 		{
