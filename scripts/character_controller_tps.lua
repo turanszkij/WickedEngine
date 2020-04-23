@@ -19,6 +19,8 @@ end
 
 local scene = GetScene()
 
+local testcapsule = Capsule(Vector(-4,3),Vector(-4,6,-20),0.8) -- just place a test capsule into the scene
+
 Character = {
 	model = INVALID_ENTITY,
 	target = INVALID_ENTITY, -- Camera will look at this location, rays will be started from this location, etc.
@@ -32,6 +34,7 @@ Character = {
 	face = Vector(0,0,1), -- forward direction
 	force = Vector(),
 	velocity = Vector(),
+	gravity = Vector(),
 	savedPointerPos = Vector(),
 	moveSpeed = 90,
 	layerMask = 0x2, -- The character will be tagged to use this layer, so scene Picking can filter out the character
@@ -193,23 +196,19 @@ Character = {
 			end
 		end
 		self.state_prev = self.state
-
-		-- gravity:
-		self.force = vector.Add(self.force, Vector(0,-9.8 * 15,0))
 		
 		-- apply force:
 		self.velocity = vector.Add(self.velocity, vector.Multiply(self.force, 0.016))
 		self.force = Vector(0,0,0,0)
 		
 		-- Capsule collision for character:
-		local testcapsule = Capsule(Vector(-4,3),Vector(-4,6,-20),0.8) -- just place a test capsule into the scene
 		local original_capsulepos = model_transform.GetPosition()
 		local capsulepos = original_capsulepos
 		local capsuleheight = 4
 		local radius = 0.7
 		local ground_intersection = false
-		local ccd = 0
 		local ccd_max = 5
+		local ccd = 0
 		while(ccd < ccd_max) do
 			ccd = ccd + 1
 			local step = vector.Multiply(self.velocity, 1.0 / ccd_max * 0.016)
@@ -221,7 +220,7 @@ Character = {
 				o2, p2, n2, depth = SceneIntersectCapsule(self.capsule, PICK_OPAQUE, ~self.layerMask) -- scene/capsule collision
 			end
 			if(o2 ~= INVALID_ENTITY) then
-				DrawPoint(p2,0.5,Vector(1,1,0,1))
+				DrawPoint(p2,0.1,Vector(1,1,0,1))
 				DrawLine(p2, vector.Add(p2, n2), Vector(1,1,0,1))
 
 				-- Slide on contact surface:
@@ -234,15 +233,41 @@ Character = {
 				-- Remove penetration (penetration epsilon added to handle infinitely small penetration):
 				capsulepos = vector.Add(capsulepos, vector.Multiply(n2, depth + 0.0001))
 
+			end
+		end
+		
+		-- Gravity collision is separate:
+		--	This is to avoid sliding down slopes and easier traversing of slopes/stairs
+		--	Unlike normal character motion collision, surface sliding is not computed
+		self.gravity = vector.Add(self.gravity, Vector(0,-9.8*0.1,0))
+		ccd = 0
+		ccd_max = 5
+		while(ccd < ccd_max) do
+			ccd = ccd + 1
+			local step = vector.Multiply(self.gravity, 1.0 / ccd_max * 0.016)
+
+			capsulepos = vector.Add(capsulepos, step)
+			self.capsule = Capsule(capsulepos, vector.Add(capsulepos, Vector(0, capsuleheight)), radius)
+			local o2, p2, n2, depth = self.capsule.Intersects(testcapsule) -- capsule/capsule collision
+			if(not o2) then
+				o2, p2, n2, depth = SceneIntersectCapsule(self.capsule, PICK_OPAQUE, ~self.layerMask) -- scene/capsule collision
+			end
+			if(o2 ~= INVALID_ENTITY) then
+				DrawPoint(p2,0.1,Vector(1,1,0,1))
+				DrawLine(p2, vector.Add(p2, n2), Vector(1,1,0,1))
+
+				-- Remove penetration (penetration epsilon added to handle infinitely small penetration):
+				capsulepos = vector.Add(capsulepos, vector.Multiply(n2, depth + 0.0001))
+
 				-- Check whether it is intersecting the ground (ground normal is upwards)
-				if(vector.Dot(n2, Vector(0,1,0)) > 0.5) then
+				if(vector.Dot(n2, Vector(0,1,0)) > 0.3) then
 					ground_intersection = true
+					self.gravity = vector.Multiply(self.gravity, 0)
+					break
 				end
 
 			end
 		end
-		DrawCapsule(self.capsule)
-		DrawCapsule(testcapsule, Vector(1,0,0,100))
 
 		if ground_intersection then
 			self.velocity = vector.Multiply(self.velocity, 0.85) -- ground friction
@@ -469,6 +494,8 @@ runProcess(function()
 		-- Right foot bone
 		DrawPoint(scene.Component_GetTransform(player.right_foot).GetPosition(),0.2, Vector(0,1,1,1))
 		
+		DrawCapsule(player.capsule)
+		DrawCapsule(testcapsule, Vector(1,0,0,100))
 		
 		-- Wait for the engine to render the scene
 		render()

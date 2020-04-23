@@ -2813,6 +2813,15 @@ namespace wiScene
 						p1 = XMVector3Transform(p1, objectMat);
 						p2 = XMVector3Transform(p2, objectMat);
 
+						XMFLOAT3 min, max;
+						XMStoreFloat3(&min, XMVectorMin(p0, XMVectorMin(p1, p2)));
+						XMStoreFloat3(&max, XMVectorMax(p0, XMVectorMax(p1, p2)));
+						AABB aabb_triangle(min, max);
+						if (sphere.intersects(aabb_triangle) == AABB::OUTSIDE)
+						{
+							continue;
+						}
+
 						// Compute the plane of the triangle (has to be normalized).
 						XMVECTOR N = XMVector3Normalize(XMVector3Cross(XMVectorSubtract(p1, p0), XMVectorSubtract(p2, p0)));
 
@@ -2997,6 +3006,15 @@ namespace wiScene
 						p0 = XMVector3Transform(p0, objectMat);
 						p1 = XMVector3Transform(p1, objectMat);
 						p2 = XMVector3Transform(p2, objectMat);
+
+						XMFLOAT3 min, max;
+						XMStoreFloat3(&min, XMVectorMin(p0, XMVectorMin(p1, p2)));
+						XMStoreFloat3(&max, XMVectorMax(p0, XMVectorMax(p1, p2)));
+						AABB aabb_triangle(min, max);
+						if (capsule_aabb.intersects(aabb_triangle) == AABB::OUTSIDE)
+						{
+							continue;
+						}
 
 						// Compute the plane of the triangle (has to be normalized).
 						XMVECTOR N = XMVector3Normalize(XMVector3Cross(XMVectorSubtract(p1, p0), XMVectorSubtract(p2, p0)));
