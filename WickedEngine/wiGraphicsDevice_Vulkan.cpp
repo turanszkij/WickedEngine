@@ -3632,11 +3632,11 @@ using namespace Vulkan_Internal;
 		return false;
 	}
 
-	void GraphicsDevice_Vulkan::SetName(GPUResource* pResource, const std::string& name)
+	void GraphicsDevice_Vulkan::SetName(GPUResource* pResource, const char* name)
 	{
 		VkDebugUtilsObjectNameInfoEXT info = {};
 		info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
-		info.pObjectName = name.c_str();
+		info.pObjectName = name;
 		if (pResource->IsTexture())
 		{
 			info.objectType = VK_OBJECT_TYPE_IMAGE;
@@ -4948,13 +4948,13 @@ using namespace Vulkan_Internal;
 		return result;
 	}
 
-	void GraphicsDevice_Vulkan::EventBegin(const std::string& name, CommandList cmd)
+	void GraphicsDevice_Vulkan::EventBegin(const char* name, CommandList cmd)
 	{
 		if (cmdBeginDebugUtilsLabelEXT != nullptr)
 		{
 			VkDebugUtilsLabelEXT label = {};
 			label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
-			label.pLabelName = name.c_str();
+			label.pLabelName = name;
 			label.color[0] = 0;
 			label.color[1] = 0;
 			label.color[2] = 0;
@@ -4969,13 +4969,13 @@ using namespace Vulkan_Internal;
 			cmdEndDebugUtilsLabelEXT(GetDirectCommandList(cmd));
 		}
 	}
-	void GraphicsDevice_Vulkan::SetMarker(const std::string& name, CommandList cmd)
+	void GraphicsDevice_Vulkan::SetMarker(const char* name, CommandList cmd)
 	{
 		if (cmdInsertDebugUtilsLabelEXT != nullptr)
 		{
 			VkDebugUtilsLabelEXT label = {};
 			label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
-			label.pLabelName = name.c_str();
+			label.pLabelName = name;
 			label.color[0] = 0;
 			label.color[1] = 0;
 			label.color[2] = 0;

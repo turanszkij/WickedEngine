@@ -252,7 +252,7 @@ namespace wiGraphics
 
 		bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) override;
 
-		void SetName(GPUResource* pResource, const std::string& name) override;
+		void SetName(GPUResource* pResource, const char* name) override;
 
 		void PresentBegin(CommandList cmd) override;
 		void PresentEnd(CommandList cmd) override;
@@ -305,9 +305,9 @@ namespace wiGraphics
 
 		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
 
-		void EventBegin(const std::string& name, CommandList cmd) override;
+		void EventBegin(const char* name, CommandList cmd) override;
 		void EventEnd(CommandList cmd) override;
-		void SetMarker(const std::string& name, CommandList cmd) override;
+		void SetMarker(const char* name, CommandList cmd) override;
 
 
 		struct AllocationHandler

@@ -3,6 +3,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiColor.h"
 
+#include <string>
 
 // Do not alter order because it is bound to lua manually
 enum wiFontAlign

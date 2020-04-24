@@ -74,6 +74,8 @@ public:
 		bool fpsinfo = false;
 		// display resolution info
 		bool resolution = false;
+		// display number of heap allocations per frame
+		bool heap_allocation_counter = false;
 		// text size
 		int size = 16;
 	};

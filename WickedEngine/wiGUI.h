@@ -5,8 +5,6 @@
 
 #include <list>
 
-class wiHashString;
-
 class wiWidget;
 
 class wiGUIElement : public wiScene::TransformComponent
@@ -40,7 +38,7 @@ public:
 
 	void AddWidget(wiWidget* widget);
 	void RemoveWidget(wiWidget* widget);
-	wiWidget* GetWidget(const wiHashString& name);
+	wiWidget* GetWidget(const std::string& name);
 
 	void ActivateWidget(wiWidget* widget);
 	void DeactivateWidget(wiWidget* widget);

@@ -42,6 +42,7 @@ void Editor::Initialize()
 	infoDisplay.watermark = true;
 	infoDisplay.fpsinfo = true;
 	infoDisplay.resolution = true;
+	infoDisplay.heap_allocation_counter = true;
 
 	wiRenderer::GetDevice()->SetVSyncEnabled(true);
 	wiRenderer::SetOcclusionCullingEnabled(true);

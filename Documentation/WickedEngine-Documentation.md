@@ -114,22 +114,21 @@ This is a reference for the C++ features of Wicked Engine
 	4. [wiContainers](#wicontainers)
 		1. [ThreadSafeRingBuffer](#threadsaferingbuffer)
 	5. [wiFadeManager](#wifademanager)
-	6. [wiHashString](#wihashstring)
-	7. [wiHelper](#wihelper)
-	8. [wiIntersect](#wiintersect)
+	6. [wiHelper](#wihelper)
+	7. [wiIntersect](#wiintersect)
 		1. [AABB](#aabb)
 		2. [SPHERE](#sphere)
 		2. [CAPSULE](#capsule)
 		3. [RAY](#ray)
 		4. [Frustum](#frustum)
 		5. [Hitbox2D](#hitbox2d)
-	9. [wiMath](#wimath)
-	10. [wiRandom](#wirandom)
-	11. [wiRectPacker](#wirectpacker)
-	12. [wiResourceManager](#wiresourcemanager)
-	13. [wiSpinLock](#wispinlock)
-	14. [wiStartupArguments](#wistartuparguments)
-	15. [wiTimer](#witimer)
+	8. [wiMath](#wimath)
+	9. [wiRandom](#wirandom)
+	10. [wiRectPacker](#wirectpacker)
+	11. [wiResourceManager](#wiresourcemanager)
+	12. [wiSpinLock](#wispinlock)
+	13. [wiStartupArguments](#wistartuparguments)
+	14. [wiTimer](#witimer)
 6. [Input](#input)
 7. [Audio](#audio)
 	1. [wiAudio](#wiaudio)
@@ -892,10 +891,6 @@ This is a thread safe container that can hold elements of one certain data type 
 ### wiFadeManager
 [[Header]](../WickedEngine/wiFadeManager.h) [[Cpp]](../WickedEngine/wiFadeManager.cpp)
 Simple helper to manage a fadeout screen. Fadeout starts at transparent, then fades smoothly to an opaque color (such as black, in most cases), then a callback occurs which the user can handle with their own event. After that, the color will fade back to transperent. This is used by the [MainComponent](#maincomponent) to fade from one RenderPath to an other.
-
-### wiHashString
-[[Header]](../WickedEngine/wiHashString.h)
-Stores a string and a number hash value. The string is supposed to be easily readable by a human, while the hash part is designed for easy comparison of values. If two wiHashString hash values are equal, the strings are equal as well.
 
 ### wiHelper
 [[Header]](../WickedEngine/wiHelper.h) [[Cpp]](../WickedEngine/wiHelper.cpp)

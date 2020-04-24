@@ -14,6 +14,22 @@ namespace wiHelper
 		seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 	}
 
+	constexpr size_t string_hash(const char* input) 
+	{
+		// https://stackoverflow.com/questions/2111667/compile-time-string-hashing
+		size_t hash = sizeof(size_t) == 8 ? 0xcbf29ce484222325 : 0x811c9dc5;
+		const size_t prime = sizeof(size_t) == 8 ? 0x00000100000001b3 : 0x01000193;
+
+		while (*input) 
+		{
+			hash ^= static_cast<size_t>(*input);
+			hash *= prime;
+			++input;
+		}
+
+		return hash;
+	}
+
 	std::string toUpper(const std::string& s);
 
 	bool readByteData(const std::string& fileName, std::vector<uint8_t>& data);
@@ -72,6 +88,14 @@ namespace wiHelper
 	void StringConvert(const std::string from, std::wstring& to);
 
 	void StringConvert(const std::wstring from, std::string& to);
+
+	// Parameter - to - must be pre-allocated!
+	// returns result string length
+	int StringConvert(const char* from, wchar_t* to);
+
+	// Parameter - to - must be pre-allocated!
+	// returns result string length
+	int StringConvert(const wchar_t* from, char* to);
 
 	// Puts the current thread to sleeping state for a given time (OS can overtake)
 	void Sleep(float milliseconds);

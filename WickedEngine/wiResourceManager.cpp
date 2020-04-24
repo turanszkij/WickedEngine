@@ -29,7 +29,7 @@ wiResource::~wiResource()
 namespace wiResourceManager
 {
 	std::mutex locker;
-	std::unordered_map<wiHashString, std::weak_ptr<wiResource>> resources;
+	std::unordered_map<std::string, std::weak_ptr<wiResource>> resources;
 
 	static const std::unordered_map<std::string, wiResource::DATA_TYPE> types = {
 		std::make_pair("JPG", wiResource::IMAGE),
@@ -39,7 +39,7 @@ namespace wiResourceManager
 		std::make_pair("WAV", wiResource::SOUND)
 	};
 
-	std::shared_ptr<wiResource> Load(const wiHashString& name)
+	std::shared_ptr<wiResource> Load(const std::string& name)
 	{
 		locker.lock();
 		std::weak_ptr<wiResource>& weak_resource = resources[name];
@@ -58,8 +58,7 @@ namespace wiResourceManager
 		}
 
 
-		std::string nameStr = name.GetString();
-		std::string ext = wiHelper::toUpper(nameStr.substr(nameStr.length() - 3, nameStr.length()));
+		std::string ext = wiHelper::toUpper(name.substr(name.length() - 3, name.length()));
 		wiResource::DATA_TYPE type;
 
 		// dynamic type selection:
@@ -86,7 +85,7 @@ namespace wiResourceManager
 				// Load dds
 
 				tinyddsloader::DDSFile dds;
-				auto result = dds.Load(nameStr.c_str());
+				auto result = dds.Load(name.c_str());
 
 				if (result == tinyddsloader::Result::Success)
 				{
@@ -215,7 +214,7 @@ namespace wiResourceManager
 
 					Texture* image = new Texture;
 					wiRenderer::GetDevice()->CreateTexture(&desc, InitData.data(), image);
-					wiRenderer::GetDevice()->SetName(image, nameStr);
+					wiRenderer::GetDevice()->SetName(image, name.c_str());
 					success = image;
 				}
 				else assert(0); // failed to load DDS
@@ -227,7 +226,7 @@ namespace wiResourceManager
 
 				const int channelCount = 4;
 				int width, height, bpp;
-				unsigned char* rgb = stbi_load(nameStr.c_str(), &width, &height, &bpp, channelCount);
+				unsigned char* rgb = stbi_load(name.c_str(), &width, &height, &bpp, channelCount);
 
 				if (rgb != nullptr)
 				{
@@ -255,7 +254,7 @@ namespace wiResourceManager
 
 					Texture* image = new Texture;
 					device->CreateTexture(&desc, InitData.data(), image);
-					device->SetName(image, nameStr);
+					device->SetName(image, name.c_str());
 
 					for (uint32_t i = 0; i < image->GetDesc().MipLevels; ++i)
 					{
@@ -276,7 +275,7 @@ namespace wiResourceManager
 		case wiResource::SOUND:
 		{
 			wiAudio::Sound* sound = new wiAudio::Sound;
-			if (wiAudio::CreateSound(name.GetString(), sound))
+			if (wiAudio::CreateSound(name, sound))
 			{
 				success = sound;
 			}
@@ -300,7 +299,7 @@ namespace wiResourceManager
 		return nullptr;
 	}
 
-	bool Contains(const wiHashString& name)
+	bool Contains(const std::string& name)
 	{
 		bool result = false;
 		locker.lock();
@@ -314,7 +313,7 @@ namespace wiResourceManager
 		return result;
 	}
 
-	std::shared_ptr<wiResource> Register(const wiHashString& name, void* data, wiResource::DATA_TYPE data_type)
+	std::shared_ptr<wiResource> Register(const std::string& name, void* data, wiResource::DATA_TYPE data_type)
 	{
 		std::shared_ptr<wiResource> resource;
 

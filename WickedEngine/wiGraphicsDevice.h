@@ -2,7 +2,6 @@
 #include "CommonInclude.h"
 #include "wiGraphics.h"
 
-#include <string>
 #include <memory>
 
 namespace wiGraphics
@@ -46,7 +45,7 @@ namespace wiGraphics
 
 		virtual bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) = 0;
 
-		virtual void SetName(GPUResource* pResource, const std::string& name) = 0;
+		virtual void SetName(GPUResource* pResource, const char* name) = 0;
 
 		virtual void PresentBegin(CommandList cmd) = 0;
 		virtual void PresentEnd(CommandList cmd) = 0;
@@ -148,9 +147,9 @@ namespace wiGraphics
 		//	This allocation can be used to provide temporary vertex buffer, index buffer or raw buffer data to shaders
 		virtual GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) = 0;
 		
-		virtual void EventBegin(const std::string& name, CommandList cmd) = 0;
+		virtual void EventBegin(const char* name, CommandList cmd) = 0;
 		virtual void EventEnd(CommandList cmd) = 0;
-		virtual void SetMarker(const std::string& name, CommandList cmd) = 0;
+		virtual void SetMarker(const char* name, CommandList cmd) = 0;
 	};
 
 }

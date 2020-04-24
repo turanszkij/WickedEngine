@@ -1,6 +1,5 @@
 #pragma once
 #include "wiGraphicsDevice.h"
-#include "wiHashString.h"
 
 #include <string>
 
@@ -15,10 +14,10 @@ namespace wiProfiler
 	void EndFrame(wiGraphics::CommandList cmd);
 
 	// Start a CPU profiling range
-	range_id BeginRangeCPU(const wiHashString& name);
+	range_id BeginRangeCPU(const char* name);
 
 	// Start a GPU profiling range
-	range_id BeginRangeGPU(const wiHashString& name, wiGraphics::CommandList cmd);
+	range_id BeginRangeGPU(const char* name, wiGraphics::CommandList cmd);
 
 	// End a profiling range
 	void EndRange(range_id id);

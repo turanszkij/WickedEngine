@@ -19,6 +19,8 @@
 #include "wiGraphicsDevice_DX12.h"
 #include "wiGraphicsDevice_Vulkan.h"
 
+#include "Utility/replace_new.h"
+
 #include <sstream>
 #include <algorithm>
 
@@ -301,6 +303,11 @@ void MainComponent::Compose(CommandList cmd)
 
 			ss.precision(2);
 			ss << fixed << 1.0f / displaydeltatime << " FPS" << endl;
+		}
+		if (infoDisplay.heap_allocation_counter)
+		{
+			ss << "Heap allocations per frame: " << number_of_allocs.load() << endl;
+			number_of_allocs.store(0);
 		}
 
 #ifdef _DEBUG

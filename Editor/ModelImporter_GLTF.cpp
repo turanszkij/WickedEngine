@@ -94,7 +94,7 @@ namespace tinygltf
 std::shared_ptr<wiResource> RegisterTexture(tinygltf::Image *image, const string& type_name)
 {
 	// We will load the texture2d by hand here and register to the resource manager (if it was not already registered)
-	if (!wiResourceManager::Contains(wiHashString(image->uri)))
+	if (!wiResourceManager::Contains(image->uri))
 	{
 		int width = image->width;
 		int height = image->height;

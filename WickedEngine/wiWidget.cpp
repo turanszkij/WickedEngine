@@ -129,9 +129,9 @@ void wiWidget::RenderTooltip(const wiGUI* gui, CommandList cmd) const
 		}
 	}
 }
-const wiHashString& wiWidget::GetName() const
+const std::string& wiWidget::GetName() const
 {
-	return fastName;
+	return name;
 }
 void wiWidget::SetName(const std::string& value)
 {
@@ -140,11 +140,11 @@ void wiWidget::SetName(const std::string& value)
 		static unsigned long widgetID = 0;
 		stringstream ss("");
 		ss << "widget_" << widgetID++;
-		fastName = wiHashString(ss.str());
+		name = ss.str();
 	}
 	else
 	{
-		fastName = wiHashString(value);
+		name = value;
 	}
 
 }
@@ -253,7 +253,7 @@ void wiWidget::LoadShaders()
 wiButton::wiButton(const std::string& name) :wiWidget()
 {
 	SetName(name);
-	SetText(fastName.GetString());
+	SetText(name);
 	OnClick([](wiEventArgs args) {});
 	OnDragStart([](wiEventArgs args) {});
 	OnDrag([](wiEventArgs args) {});
@@ -420,7 +420,7 @@ void wiButton::OnDragEnd(function<void(wiEventArgs args)> func)
 wiLabel::wiLabel(const std::string& name)
 {
 	SetName(name);
-	SetText(fastName.GetString());
+	SetText(name);
 	SetSize(XMFLOAT2(100, 20));
 }
 wiLabel::~wiLabel()
@@ -464,7 +464,7 @@ wiFont wiTextInputField::font_input;
 wiTextInputField::wiTextInputField(const std::string& name)
 {
 	SetName(name);
-	SetText(fastName.GetString());
+	SetText(name);
 	OnInputAccepted([](wiEventArgs args) {});
 	SetSize(XMFLOAT2(100, 30));
 
@@ -647,7 +647,7 @@ void wiTextInputField::DeleteFromInput()
 wiSlider::wiSlider(float start, float end, float defaultValue, float step, const std::string& name) : start(start), end(end), value(defaultValue), step(std::max(step, 1.0f))
 {
 	SetName(name);
-	SetText(fastName.GetString());
+	SetText(name);
 	OnSlide([](wiEventArgs args) {});
 	SetSize(XMFLOAT2(200, 40));
 
@@ -851,7 +851,7 @@ void wiSlider::OnSlide(function<void(wiEventArgs args)> func)
 wiCheckBox::wiCheckBox(const std::string& name)
 {
 	SetName(name);
-	SetText(fastName.GetString());
+	SetText(name);
 	OnClick([](wiEventArgs args) {});
 	SetSize(XMFLOAT2(20, 20));
 
@@ -983,7 +983,7 @@ bool wiCheckBox::GetCheck() const
 wiComboBox::wiComboBox(const std::string& name)
 {
 	SetName(name);
-	SetText(fastName.GetString());
+	SetText(name);
 	OnSelect([](wiEventArgs args) {});
 	SetSize(XMFLOAT2(100, 20));
 
@@ -1378,7 +1378,7 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 	SetColor(wiColor::Ghost());
 
 	SetName(name);
-	SetText(fastName.GetString());
+	SetText(name);
 	SetSize(XMFLOAT2(640, 480)); 
 	
 	for (int i = IDLE + 1; i < WIDGETSTATE_COUNT; ++i)
@@ -2490,7 +2490,7 @@ static const float tree_scrollbar_width = 12;
 wiTreeList::wiTreeList(const std::string& name)
 {
 	SetName(name);
-	SetText(fastName.GetString());
+	SetText(name);
 	OnSelect([](wiEventArgs args) {});
 	SetSize(XMFLOAT2(100, 20));
 

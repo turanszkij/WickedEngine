@@ -1,6 +1,5 @@
 #include "wiGUI.h"
 #include "wiWidget.h"
-#include "wiHashString.h"
 #include "wiRenderer.h"
 #include "wiInput.h"
 
@@ -177,7 +176,7 @@ void wiGUI::RemoveWidget(wiWidget* widget)
 	widgets.remove(widget);
 }
 
-wiWidget* wiGUI::GetWidget(const wiHashString& name)
+wiWidget* wiGUI::GetWidget(const std::string& name)
 {
 	for (auto& x : widgets)
 	{

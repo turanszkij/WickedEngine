@@ -2342,10 +2342,10 @@ bool GraphicsDevice_DX11::DownloadResource(const GPUResource* resourceToDownload
 	return false;
 }
 
-void GraphicsDevice_DX11::SetName(GPUResource* pResource, const std::string& name)
+void GraphicsDevice_DX11::SetName(GPUResource* pResource, const char* name)
 {
 	auto internal_state = to_internal(pResource);
-	internal_state->resource->SetPrivateData(WKPDID_D3DDebugObjectName, (uint32_t)name.length(), name.c_str());
+	internal_state->resource->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)strlen(name), name);
 }
 
 void GraphicsDevice_DX11::PresentBegin(CommandList cmd)
@@ -3115,17 +3115,25 @@ GraphicsDevice::GPUAllocation GraphicsDevice_DX11::AllocateGPU(size_t dataSize, 
 	return result;
 }
 
-void GraphicsDevice_DX11::EventBegin(const std::string& name, CommandList cmd)
+void GraphicsDevice_DX11::EventBegin(const char* name, CommandList cmd)
 {
-	userDefinedAnnotations[cmd]->BeginEvent(std::wstring(name.begin(), name.end()).c_str());
+	wchar_t text[128];
+	if (wiHelper::StringConvert(name, text) > 0)
+	{
+		userDefinedAnnotations[cmd]->BeginEvent(text);
+	}
 }
 void GraphicsDevice_DX11::EventEnd(CommandList cmd)
 {
 	userDefinedAnnotations[cmd]->EndEvent();
 }
-void GraphicsDevice_DX11::SetMarker(const std::string& name, CommandList cmd)
+void GraphicsDevice_DX11::SetMarker(const char* name, CommandList cmd)
 {
-	userDefinedAnnotations[cmd]->SetMarker(std::wstring(name.begin(),name.end()).c_str());
+	wchar_t text[128];
+	if (wiHelper::StringConvert(name, text) > 0)
+	{
+		userDefinedAnnotations[cmd]->SetMarker(text);
+	}
 }
 
 }

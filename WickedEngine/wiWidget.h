@@ -1,7 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiGUI.h"
-#include "wiHashString.h"
 #include "wiColor.h"
 #include "wiGraphicsDevice.h"
 #include "wiIntersect.h"
@@ -42,7 +41,7 @@ public:
 private:
 	int tooltipTimer = 0;
 protected:
-	wiHashString fastName;
+	std::string name;
 	std::string tooltip;
 	std::string scriptTip;
 	bool enabled = true;
@@ -56,7 +55,7 @@ protected:
 public:
 	wiWidget();
 
-	const wiHashString& GetName() const;
+	const std::string& GetName() const;
 	void SetName(const std::string& value);
 	const std::string GetText() const;
 	void SetText(const std::string& value);

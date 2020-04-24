@@ -433,6 +433,26 @@ namespace wiHelper
 			WideCharToMultiByte(CP_UTF8, 0, from.c_str(), -1, &to[0], num, NULL, NULL);
 		}
 	}
+
+	int StringConvert(const char* from, wchar_t* to)
+	{
+		int num = MultiByteToWideChar(CP_UTF8, 0, from, -1, NULL, 0);
+		if (num > 0)
+		{
+			MultiByteToWideChar(CP_UTF8, 0, from, -1, &to[0], num);
+		}
+		return num;
+	}
+
+	int StringConvert(const wchar_t* from, char* to)
+	{
+		int num = WideCharToMultiByte(CP_UTF8, 0, from, -1, NULL, 0, NULL, NULL);
+		if (num > 0)
+		{
+			WideCharToMultiByte(CP_UTF8, 0, from, -1, &to[0], num, NULL, NULL);
+		}
+		return num;
+	}
 	
 	void Sleep(float milliseconds)
 	{

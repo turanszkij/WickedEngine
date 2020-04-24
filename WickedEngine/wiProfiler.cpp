@@ -5,6 +5,7 @@
 #include "wiImage.h"
 #include "wiTimer.h"
 #include "wiTextureHelper.h"
+#include "wiHelper.h"
 
 #include <sstream>
 #include <unordered_map>
@@ -115,18 +116,18 @@ namespace wiProfiler
 		}
 	}
 
-	range_id BeginRangeCPU(const wiHashString& name)
+	range_id BeginRangeCPU(const char* name)
 	{
 		if (!ENABLED || !initialized)
 			return 0;
 
-		range_id id = name.GetHash();
+		range_id id = wiHelper::string_hash(name);
 
 		lock.lock();
 		if (ranges.find(id) == ranges.end())
 		{
 			Range range;
-			range.name = name.GetString();
+			range.name = name;
 			range.time = 0;
 
 			range.cpuBegin.Start();
@@ -141,18 +142,18 @@ namespace wiProfiler
 
 		return id;
 	}
-	range_id BeginRangeGPU(const wiHashString& name, CommandList cmd)
+	range_id BeginRangeGPU(const char* name, CommandList cmd)
 	{
 		if (!ENABLED || !initialized)
 			return 0;
 
-		range_id id = name.GetHash();
+		range_id id = wiHelper::string_hash(name);
 
 		lock.lock();
 		if (ranges.find(id) == ranges.end())
 		{
 			Range range;
-			range.name = name.GetString();
+			range.name = name;
 			range.time = 0;
 
 			GPUQueryDesc desc;

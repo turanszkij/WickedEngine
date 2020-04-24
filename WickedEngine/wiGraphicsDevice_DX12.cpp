@@ -2942,10 +2942,14 @@ using namespace DX12_Internal;
 		return false;
 	}
 
-	void GraphicsDevice_DX12::SetName(GPUResource* pResource, const std::string& name)
+	void GraphicsDevice_DX12::SetName(GPUResource* pResource, const char* name)
 	{
-		auto internal_state = to_internal(pResource);
-		internal_state->resource->SetName(std::wstring(name.begin(), name.end()).c_str());
+		wchar_t text[128];
+		if (wiHelper::StringConvert(name, text) > 0)
+		{
+			auto internal_state = to_internal(pResource);
+			internal_state->resource->SetName(text);
+		}
 	}
 
 
@@ -4098,17 +4102,25 @@ using namespace DX12_Internal;
 		return result;
 	}
 
-	void GraphicsDevice_DX12::EventBegin(const std::string& name, CommandList cmd)
+	void GraphicsDevice_DX12::EventBegin(const char* name, CommandList cmd)
 	{
-		PIXBeginEvent(GetDirectCommandList(cmd), 0xFF000000, std::wstring(name.begin(), name.end()).c_str());
+		wchar_t text[128];
+		if (wiHelper::StringConvert(name, text) > 0)
+		{
+			PIXBeginEvent(GetDirectCommandList(cmd), 0xFF000000, text);
+		}
 	}
 	void GraphicsDevice_DX12::EventEnd(CommandList cmd)
 	{
 		PIXEndEvent(GetDirectCommandList(cmd));
 	}
-	void GraphicsDevice_DX12::SetMarker(const std::string& name, CommandList cmd)
+	void GraphicsDevice_DX12::SetMarker(const char* name, CommandList cmd)
 	{
-		PIXSetMarker(GetDirectCommandList(cmd), 0xFFFF0000, std::wstring(name.begin(), name.end()).c_str());
+		wchar_t text[128];
+		if (wiHelper::StringConvert(name, text) > 0)
+		{
+			PIXSetMarker(GetDirectCommandList(cmd), 0xFFFF0000, text);
+		}
 	}
 
 

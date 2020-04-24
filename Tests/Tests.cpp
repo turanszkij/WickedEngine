@@ -16,6 +16,7 @@ void Tests::Initialize()
 	infoDisplay.watermark = true;
 	infoDisplay.fpsinfo = true;
 	infoDisplay.resolution = true;
+	infoDisplay.heap_allocation_counter = true;
 
 	renderer.Load();
 

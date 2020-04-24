@@ -864,9 +864,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiEnums.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiHashString.h">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiColor.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
@@ -1127,6 +1124,9 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Paint.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\replace_new.h">
+      <Filter>UTILITY</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
