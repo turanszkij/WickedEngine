@@ -313,6 +313,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		default:
 			break;
 		}
+		editor->ResizeBuffers();
 	});
 	MSAAComboBox->SetSelected(0);
 	MSAAComboBox->SetEnabled(true);
