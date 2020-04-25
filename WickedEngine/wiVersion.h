@@ -14,7 +14,7 @@ namespace wiVersion
 	int GetMinor();
 	// minor bug fixes, alterations
 	int GetRevision();
-	std::string GetVersionString();
+	const std::string& GetVersionString();
 }
 
 #endif // WICKEDENGINE_VERSION_DEFINED

@@ -9,8 +9,9 @@ namespace wiVersion
 	// minor features, major updates
 	const int minor = 39;
 	// minor bug fixes, alterations, refactors, updates
-	const int revision = 79;
+	const int revision = 80;
 
+	const std::string version_string = std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(revision);
 
 	long GetVersion()
 	{
@@ -28,11 +29,9 @@ namespace wiVersion
 	{
 		return revision;
 	}
-	std::string GetVersionString()
+	const std::string& GetVersionString()
 	{
-		std::stringstream ss("");
-		ss << GetMajor() << "." << GetMinor() << "." << GetRevision();
-		return ss.str();
+		return version_string;
 	}
 
 }

@@ -2944,7 +2944,7 @@ using namespace DX12_Internal;
 
 	void GraphicsDevice_DX12::SetName(GPUResource* pResource, const char* name)
 	{
-		wchar_t text[128];
+		wchar_t text[256];
 		if (wiHelper::StringConvert(name, text) > 0)
 		{
 			auto internal_state = to_internal(pResource);

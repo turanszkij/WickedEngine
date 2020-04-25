@@ -385,8 +385,8 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	rendererWindow->AddWidget(mipLodBiasSlider);
 
-	raytraceBounceCountSlider = new wiSlider(0, 10, 1, 10, "Raytrace Bounces: ");
-	raytraceBounceCountSlider->SetTooltip("How many indirect light bounces to compute when doing ray tracing.");
+	raytraceBounceCountSlider = new wiSlider(1, 10, 1, 9, "Raytrace Bounces: ");
+	raytraceBounceCountSlider->SetTooltip("How many light bounces to compute when doing ray tracing.");
 	raytraceBounceCountSlider->SetSize(XMFLOAT2(100, sliderheight));
 	raytraceBounceCountSlider->SetPos(XMFLOAT2(x, y += step));
 	raytraceBounceCountSlider->SetValue((float)wiRenderer::GetRaytraceBounceCount());
