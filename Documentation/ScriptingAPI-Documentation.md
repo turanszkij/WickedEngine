@@ -7,12 +7,12 @@ This is a reference and explanation of Lua scripting features in Wicked Engine.
 4. [Engine Bindings](#engine-bindings)
 	1. [BackLog (Console)](#backlog)
 	2. [Renderer](#renderer)
-	3. [Font](#font)
-	4. [Sprite](#sprite)
+	3. [Sprite](#sprite)
 		1. [ImageParams](#imageparams)
 		2. [SpriteAnim](#spriteanim)
 		3. [MovingTexAnim](#movingtexanim)
 		4. [DrawRecAnim](#drawrecanim)
+	4. [SpriteFont](#spritefont)
 	5. [Texture](#texture)
 	6. [Audio](#audio)
 		1. [Sound](#sound)
@@ -129,33 +129,6 @@ You can use the Renderer with the following functions, all of which are in the g
 - PutEnvProbe(Vector pos)
 - ClearWorld()
 - ReloadShaders(opt string path)
-
-### Font
-Gives you the ability to render text with a custom font.
-- [constructor]Font(opt string text)
-- SetStyle(string fontstyle, opt int size = 16)
-- SetText(opt string text)
-- SetSize(int size)
-- SetPos(Vector pos)
-- SetSpacing(Vector spacing)
-- SetAlign(WIFALIGN Halign, opt WIFALIGN Valign)
-	- [outer]WIFALIGN_LEFT : int
-	- [outer]WIFALIGN_CENTER : int
-	- [outer]WIFALIGN_MID : int
-	- [outer]WIFALIGN_RIGHT : int
-	- [outer]WIFALIGN_TOP : int
-	- [outer]WIFALIGN_BOTTOM : int
-- SetColor(Vector color)
-- SetColor(int colorHexCode)
-- SetShadowColor(Vector shadowcolor)
-- SetShadowColor(int colorHexCode)
-- GetText() : string result
-- GetSize() : int result
-- GetPos() : Vector result
-- GetSpacing() : Vector result
-- GetAlign() : WIFALIGN halign,valign
-- GetColor() : Vector result
-- GetShadowColor() : Vector result
 
 ### Sprite
 Render images on the screen.
@@ -277,6 +250,33 @@ Animate sprite frame by frame.
 - GetFrameRate() : float result
 - GetFrameCount() : int result
 - GetHorizontalFrameCount() : int result
+
+### SpriteFont
+Gives you the ability to render text with a custom font.
+- [constructor]SpriteFont(opt string text)
+- SetStyle(string fontstyle, opt int size = 16)
+- SetText(opt string text)
+- SetSize(int size)
+- SetPos(Vector pos)
+- SetSpacing(Vector spacing)
+- SetAlign(WIFALIGN Halign, opt WIFALIGN Valign)
+	- [outer]WIFALIGN_LEFT : int
+	- [outer]WIFALIGN_CENTER : int
+	- [outer]WIFALIGN_MID : int
+	- [outer]WIFALIGN_RIGHT : int
+	- [outer]WIFALIGN_TOP : int
+	- [outer]WIFALIGN_BOTTOM : int
+- SetColor(Vector color)
+- SetColor(int colorHexCode)
+- SetShadowColor(Vector shadowcolor)
+- SetShadowColor(int colorHexCode)
+- GetText() : string result
+- GetSize() : int result
+- GetPos() : Vector result
+- GetSpacing() : Vector result
+- GetAlign() : WIFALIGN halign,valign
+- GetColor() : Vector result
+- GetShadowColor() : Vector result
 
 ### Texture
 Just holds texture information in VRAM.
@@ -618,20 +618,20 @@ A RenderPath is a high level system that represents a part of the whole applicat
 - SetLayerMask(uint mask)
 
 #### RenderPath2D
-It can hold Sprites and Fonts and can sort them by layers, update and render them.
+It can hold Sprites and SpriteFonts and can sort them by layers, update and render them.
 - [constructor]RenderPath2D()
 - AddSprite(Sprite sprite, opt string layer)
-- AddFont(Font font, opt string layer)
-- RemoveFont(Font font)
+- AddFont(SpriteFont font, opt string layer)
+- RemoveFont(SpriteFont font)
 - ClearSprites()
 - ClearFonts()
 - GetSpriteOrder(Sprite sprite) : int? result
-- GetFontOrder(Font font) : int? result
+- GetFontOrder(SpriteFont font) : int? result
 - AddLayer(string name)
 - GetLayers() : string? result
 - SetLayerOrder(string name, int order)
 - SetSpriteOrder(Sprite sprite, int order)
-- SetFontOrder(Font font, int order)
+- SetFontOrder(SpriteFont font, int order)
 
 #### RenderPath3D
 A 3D scene can either be rendered by a Forward or Deferred render path, or path tracing. 

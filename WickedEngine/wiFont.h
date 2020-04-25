@@ -27,6 +27,7 @@ struct wiFontParams
 	wiColor color;
 	wiColor shadowColor;
 	int h_wrap = -1; // wrap start in pixels (-1 default for no wrap)
+	int style = 0;
 
 	wiFontParams(int posX = 0, int posY = 0, int size = WIFONTSIZE_DEFAULT, wiFontAlign h_align = WIFALIGN_LEFT, wiFontAlign v_align = WIFALIGN_TOP
 		, int spacingX = 0, int spacingY = 0, wiColor color = wiColor(255, 255, 255, 255), wiColor shadowColor = wiColor(0,0,0,0))
@@ -34,37 +35,34 @@ struct wiFontParams
 	{}
 };
 
-class wiFont
+namespace wiFont
 {
-public:
-	static void Initialize();
+	void Initialize();
 
-	static void LoadShaders();
-	static const wiGraphics::Texture* GetAtlas();
+	void LoadShaders();
+	const wiGraphics::Texture* GetAtlas();
 
 	// Returns the font directory
-	static const std::string& GetFontPath();
+	const std::string& GetFontPath();
 	// Sets the font directory
-	static void SetFontPath(const std::string& path);
+	void SetFontPath(const std::string& path);
 
 	// Create a font. Returns fontStyleID that is reusable. If font already exists, just return its ID
-	static int AddFontStyle(const std::string& fontName);
+	int AddFontStyle(const std::string& fontName);
 
-	std::wstring text;
-	wiFontParams params;
-	int style;
+	void Draw(const char* text, const wiFontParams& params, wiGraphics::CommandList cmd);
+	void Draw(const wchar_t* text, const wiFontParams& params, wiGraphics::CommandList cmd);
+	void Draw(const std::string& text, const wiFontParams& params, wiGraphics::CommandList cmd);
+	void Draw(const std::wstring& text, const wiFontParams& params, wiGraphics::CommandList cmd);
 
-	wiFont(const std::string& text = "", wiFontParams params = wiFontParams(), int style = 0);
-	wiFont(const std::wstring& text, wiFontParams params = wiFontParams(), int style = 0);
-	
-	void Draw(wiGraphics::CommandList cmd) const;
+	int textWidth(const char* text, const wiFontParams& params);
+	int textWidth(const wchar_t* text, const wiFontParams& params);
+	int textWidth(const std::string& text, const wiFontParams& params);
+	int textWidth(const std::wstring& text, const wiFontParams& params);
 
-	int textWidth() const;
-	int textHeight() const;
-
-	void SetText(const std::string& text);
-	void SetText(const std::wstring& text);
-	std::wstring GetText() const;
-	std::string GetTextA() const;
+	int textHeight(const char* text, const wiFontParams& params);
+	int textHeight(const wchar_t* text, const wiFontParams& params);
+	int textHeight(const std::string& text, const wiFontParams& params);
+	int textHeight(const std::wstring& text, const wiFontParams& params);
 
 };

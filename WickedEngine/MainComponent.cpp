@@ -108,7 +108,7 @@ void MainComponent::Run()
 		// Until engine is not loaded, present initialization screen...
 		CommandList cmd = wiRenderer::GetDevice()->BeginCommandList();
 		wiRenderer::GetDevice()->PresentBegin(cmd);
-		wiFont(wiBackLog::getText(), wiFontParams(4, 4, infoDisplay.size)).Draw(cmd);
+		wiFont::Draw(wiBackLog::getText(), wiFontParams(4, 4, infoDisplay.size), cmd);
 		wiRenderer::GetDevice()->PresentEnd(cmd);
 		return;
 	}
@@ -319,7 +319,7 @@ void MainComponent::Compose(CommandList cmd)
 		}
 
 		ss.precision(2);
-		wiFont(ss.str(), wiFontParams(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor(255,255,255,255), wiColor(0,0,0,255))).Draw(cmd);
+		wiFont::Draw(ss.str(), wiFontParams(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor(255,255,255,255), wiColor(0,0,0,255)), cmd);
 	}
 
 	wiProfiler::DrawData(4, 120, cmd);

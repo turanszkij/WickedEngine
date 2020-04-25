@@ -1,6 +1,6 @@
 #include "RenderPath2D_BindLua.h"
 #include "wiSprite_BindLua.h"
-#include "wiFont_BindLua.h"
+#include "wiSpriteFont_BindLua.h"
 
 #include <sstream>
 
@@ -78,7 +78,7 @@ int RenderPath2D_BindLua::AddFont(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		wiFont_BindLua* font = Luna<wiFont_BindLua>::lightcheck(L, 1);
+		wiSpriteFont_BindLua* font = Luna<wiSpriteFont_BindLua>::lightcheck(L, 1);
 		if (font != nullptr)
 		{
 			RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
@@ -145,7 +145,7 @@ int RenderPath2D_BindLua::RemoveFont(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		wiFont_BindLua* font = Luna<wiFont_BindLua>::lightcheck(L, 1);
+		wiSpriteFont_BindLua* font = Luna<wiSpriteFont_BindLua>::lightcheck(L, 1);
 		if (font != nullptr)
 		{
 			RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
@@ -246,7 +246,7 @@ int RenderPath2D_BindLua::GetFontOrder(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		wiFont_BindLua* font = Luna<wiFont_BindLua>::lightcheck(L, 1);
+		wiSpriteFont_BindLua* font = Luna<wiSpriteFont_BindLua>::lightcheck(L, 1);
 		if (font != nullptr)
 		{
 			RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
@@ -395,7 +395,7 @@ int RenderPath2D_BindLua::SetFontOrder(lua_State* L)
 		RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
 		if (ccomp != nullptr)
 		{
-			wiFont_BindLua* font = Luna<wiFont_BindLua>::lightcheck(L, 1);
+			wiSpriteFont_BindLua* font = Luna<wiSpriteFont_BindLua>::lightcheck(L, 1);
 			if (font != nullptr)
 			{
 				ccomp->SetFontOrder(&font->font, wiLua::SGetInt(L, 2));

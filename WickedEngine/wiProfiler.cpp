@@ -226,19 +226,17 @@ namespace wiProfiler
 			}
 		}
 
-		wiFont font;
-		font.SetText(ss.str());
-		font.params = wiFontParams(x, y, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor(255, 255, 255, 255), wiColor(0, 0, 0, 255));
+		wiFontParams params = wiFontParams(x, y, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor(255, 255, 255, 255), wiColor(0, 0, 0, 255));
 
 		wiImageParams fx;
-		fx.pos.x = (float)font.params.posX;
-		fx.pos.y = (float)font.params.posY;
-		fx.siz.x = (float)font.textWidth();
-		fx.siz.y = (float)font.textHeight();
+		fx.pos.x = (float)params.posX;
+		fx.pos.y = (float)params.posY;
+		fx.siz.x = (float)wiFont::textWidth(ss.str(), params);
+		fx.siz.y = (float)wiFont::textHeight(ss.str(), params);
 		fx.color = wiColor(20, 20, 20, 230);
 		wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
 
-		font.Draw(cmd);
+		wiFont::Draw(ss.str(), params, cmd);
 	}
 
 	void SetEnabled(bool value)

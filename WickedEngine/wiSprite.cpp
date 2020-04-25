@@ -36,7 +36,7 @@ void wiSprite::DrawNormal(CommandList cmd) const
 	}
 }
 
-void wiSprite::FixedUpdate(float speed)
+void wiSprite::FixedUpdate()
 {
 
 }

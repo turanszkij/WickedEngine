@@ -101,7 +101,7 @@ void wiWidget::RenderTooltip(const wiGUI* gui, CommandList cmd) const
 		}
 		wiFontParams fontProps = wiFontParams((int)tooltipPos.x, (int)tooltipPos.y, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP);
 		fontProps.color = wiColor(25, 25, 25, 255);
-		wiFont tooltipFont = wiFont(tooltip, fontProps);
+		wiSpriteFont tooltipFont = wiSpriteFont(tooltip, fontProps);
 		if (!scriptTip.empty())
 		{
 			tooltipFont.SetText(tooltip + "\n" + scriptTip);
@@ -460,7 +460,7 @@ void wiLabel::Render(const wiGUI* gui, CommandList cmd) const
 
 
 
-wiFont wiTextInputField::font_input;
+wiSpriteFont wiTextInputField::font_input;
 wiTextInputField::wiTextInputField(const std::string& name)
 {
 	SetName(name);
@@ -1226,8 +1226,8 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 
 	if (selected >= 0)
 	{
-		wiFont(items[selected], wiFontParams((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
-			font.params.color, font.params.shadowColor)).Draw(cmd);
+		wiFont::Draw(items[selected], wiFontParams((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
+			font.params.color, font.params.shadowColor), cmd);
 	}
 
 	// drop-down
@@ -1293,8 +1293,8 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 				}
 			}
 			wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
-			wiFont(items[i], wiFontParams((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f + GetItemOffset(i)), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
-				font.params.color, font.params.shadowColor)).Draw(cmd);
+			wiFont::Draw(items[i], wiFontParams((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f + GetItemOffset(i)), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
+				font.params.color, font.params.shadowColor), cmd);
 		}
 	}
 }
@@ -2829,8 +2829,8 @@ void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 		}
 		
 		// Item name text:
-		wiFont(item.name, wiFontParams((int)name_box.pos.x + 1, (int)(name_box.pos.y + name_box.siz.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_CENTER, 0, 0,
-			font.params.color, font.params.shadowColor)).Draw(cmd);
+		wiFont::Draw(item.name, wiFontParams((int)name_box.pos.x + 1, (int)(name_box.pos.y + name_box.siz.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_CENTER, 0, 0,
+			font.params.color, font.params.shadowColor), cmd);
 	}
 }
 void wiTreeList::OnSelect(function<void(wiEventArgs args)> func)

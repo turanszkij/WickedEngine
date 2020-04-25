@@ -93,8 +93,10 @@ This is a reference for the C++ features of Wicked Engine
 	6. [wiEmittedParticle](#wiemittedparticle)
 	7. [wiHairParticle](#wihairparticle)
 	8. [wiOcean](#wiocean)
-	9. [wiGPUSortLib](#wigpusortlib)
-	10. [wiGPUBVH](#wigpubvh)
+	9. [wiSprite](#wisprite)
+	10. [wiSpriteFont](#wispritefont)
+	11. [wiGPUSortLib](#wigpusortlib)
+	12. [wiGPUBVH](#wigpubvh)
 4. [GUI](#gui)
 	1. [wiGUI](#wigui)
 	2. [wiWidget](#wiwidget)
@@ -200,7 +202,7 @@ Before a RenderPath is destroyed, Unload will be called, so deleting resources c
 
 ### RenderPath2D
 [[Header]](../WickedEngine/RenderPath2D.h) [[Cpp]](../WickedEngine/RenderPath2D.cpp)
-Capable of handling 2D rendering to offscreen buffer in Render() function, or just the screen in Compose() function. It has some functionality to render wiSprite and wiFont onto rendering layers and stenciling with 3D rendered scene. It has a [GUI](#gui) that is automatically updated and rendered if any elements have been added to it.
+Capable of handling 2D rendering to offscreen buffer in Render() function, or just the screen in Compose() function. It has some functionality to render wiSprite and wiSpriteFont onto rendering layers and stenciling with 3D rendered scene. It has a [GUI](#gui) that is automatically updated and rendered if any elements have been added to it.
 
 ### RenderPath3D
 [[Header]](../WickedEngine/RenderPath3D.h) [[Cpp]](../WickedEngine/RenderPath3D.cpp)
@@ -775,9 +777,9 @@ Describe all parameters of how and where to draw the image on the screen.
 [[Header]](../WickedEngine/wiFont.h) [[Cpp]](../WickedEngine/wiFont.cpp)
 This can render fonts to the screen in a simple manner. You can render a font as simple as this:
 ```cpp
-wiFont("write this!", wiFontParams(10, 20)).Draw(cmd);
+wiFont::Draw("write this!", wiFontParams(10, 20), cmd);
 ```
-Which will write the text <i>write this!</i> to 10, 20 pixel position onto the screen. There are many other parameters to describe the font's position, size, color, etc. See the wiFontParams structure for more details. Note that wiFont internally does string conversion, so it is recommended to avoid repeatedly creating wiFont resources during the frame!
+Which will write the text <i>write this!</i> to 10, 20 pixel position onto the screen. There are many other parameters to describe the font's position, size, color, etc. See the wiFontParams structure for more details.
 - wiFontParams <br/>
 Describe all parameters of how and where to draw the font on the screen.
 
@@ -798,6 +800,10 @@ Ocean renderer using Fast Fourier Transforms simulation. The ocean surface is al
 A helper facility to render and animate images. It uses the [wiImage](#wiimage) renderer internally
 - Anim <br/>
 Several different simple animation utilities, like animated textures, wobbling, rotation, fade out, etc...
+
+### wiSpriteFont
+[[Header]](../WickedEngine/wiSprite.h) [[Cpp]](../WickedEngine/wiSprite.cpp)
+A helper facility to render fonts. It uses the [wiFont](#wifont) renderer internally. It performs string conversion
 
 ### wiTextureHelper
 [[Header]](../WickedEngine/wiTextureHelper.h) [[Cpp]](../WickedEngine/wiTextureHelper.cpp)

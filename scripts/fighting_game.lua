@@ -1945,7 +1945,7 @@ runProcess(function()
 	help_text = help_text .. "\n\nCombos:"
 	help_text = help_text .. "\n\t Revolver action: A, B, C, D (Hit action buttons in quick succession)"
 	help_text = help_text .. "\n\t Airborne heat: 2B, 8, 8C (Uppercut, then jump cancel into Air Kick)"
-	local font = Font(help_text);
+	local font = SpriteFont(help_text);
 	font.SetSize(20)
 	font.SetPos(Vector(10, GetScreenHeight() - 10))
 	font.SetAlign(WIFALIGN_LEFT, WIFALIGN_BOTTOM)
@@ -1953,7 +1953,7 @@ runProcess(function()
 	font.SetShadowColor(Vector(0,0,0,1))
 	path.AddFont(font)
 
-	local info = Font("");
+	local info = SpriteFont("");
 	info.SetSize(24)
 	info.SetPos(Vector(GetScreenWidth() / 2.5, GetScreenHeight() - 10))
 	info.SetAlign(WIFALIGN_LEFT, WIFALIGN_BOTTOM)

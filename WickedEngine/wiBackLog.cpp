@@ -5,6 +5,7 @@
 #include "wiTextureHelper.h"
 #include "wiSpinLock.h"
 #include "wiFont.h"
+#include "wiSpriteFont.h"
 #include "wiImage.h"
 #include "wiLua.h"
 
@@ -35,7 +36,7 @@ namespace wiBackLog
 	int scroll = 0;
 	stringstream inputArea;
 	int historyPos = 0;
-	wiFont font;
+	wiSpriteFont font;
 	wiSpinLock logLock;
 
 	std::unique_ptr<Texture> backgroundTex;
@@ -98,7 +99,7 @@ namespace wiBackLog
 			font.params.posX = 50;
 			font.params.posY = (int)pos + (int)scroll;
 			font.Draw(cmd);
-			wiFont(inputArea.str().c_str(), wiFontParams(10, wiRenderer::GetDevice()->GetScreenHeight() - 10, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_BOTTOM)).Draw(cmd);
+			wiFont::Draw(inputArea.str(), wiFontParams(10, wiRenderer::GetDevice()->GetScreenHeight() - 10, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_BOTTOM), cmd);
 		}
 	}
 

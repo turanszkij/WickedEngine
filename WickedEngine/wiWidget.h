@@ -5,8 +5,8 @@
 #include "wiGraphicsDevice.h"
 #include "wiIntersect.h"
 #include "wiScene.h"
-#include "wiFont.h"
 #include "wiSprite.h"
+#include "wiSpriteFont.h"
 
 #include <string>
 #include <list>
@@ -77,7 +77,7 @@ public:
 	virtual void RenderTooltip(const wiGUI* gui, wiGraphics::CommandList cmd) const;
 
 	wiSprite sprites[WIDGETSTATE_COUNT];
-	wiFont font;
+	wiSpriteFont font;
 
 	XMFLOAT3 translation = XMFLOAT3(0, 0, 0);
 	XMFLOAT3 scale = XMFLOAT3(1, 1, 1);
@@ -127,13 +127,13 @@ class wiTextInputField : public wiWidget
 {
 protected:
 	std::function<void(wiEventArgs args)> onInputAccepted;
-	static wiFont font_input;
+	static wiSpriteFont font_input;
 
 public:
 	wiTextInputField(const std::string& name = "");
 	virtual ~wiTextInputField();
 
-	wiFont font_description;
+	wiSpriteFont font_description;
 
 	void SetValue(const std::string& newValue);
 	void SetValue(int newValue);

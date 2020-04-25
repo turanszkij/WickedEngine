@@ -17,6 +17,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <string>
 
 using namespace std;
 using namespace wiGraphics;
@@ -29,7 +30,7 @@ using namespace wiRectPacker;
 
 namespace wiFont_Internal
 {
-	std::string			FONTPATH = wiHelper::GetOriginalWorkingDirectory() + "../WickedEngine/fonts/";
+	string				FONTPATH = wiHelper::GetOriginalWorkingDirectory() + "../WickedEngine/fonts/";
 	GPUBuffer			indexBuffer;
 	GPUBuffer			constantBuffer;
 	BlendState			blendState;
@@ -101,7 +102,8 @@ namespace wiFont_Internal
 		XMHALF2 Tex;
 	};
 
-	uint32_t WriteVertices(volatile FontVertex* vertexList, const std::wstring& text, wiFontParams params, int style)
+	template<typename T>
+	uint32_t WriteVertices(volatile FontVertex* vertexList, const T* text, wiFontParams params)
 	{
 		uint32_t quadCount = 0;
 		int16_t line = 0;
@@ -126,9 +128,11 @@ namespace wiFont_Internal
 			}
 		};
 
-		for (auto& code : text)
+		size_t i = 0;
+		while(text[i] != 0)
 		{
-			const int32_t hash = glyphhash(code, style, params.size);
+			int code = (int)text[i++];
+			const int32_t hash = glyphhash(code, params.style, params.size);
 
 			if (glyph_lookup.count(hash) == 0)
 			{
@@ -212,17 +216,10 @@ namespace wiFont_Internal
 }
 using namespace wiFont_Internal;
 
-
-wiFont::wiFont(const std::string& text, wiFontParams params, int style) : params(params), style(style)
+namespace wiFont
 {
-	SetText(text);
-}
-wiFont::wiFont(const std::wstring& text, wiFontParams params, int style) : params(params), style(style)
-{
-	SetText(text);
-}
 
-void wiFont::Initialize()
+void Initialize()
 {
 	if (initialized)
 	{
@@ -232,7 +229,7 @@ void wiFont::Initialize()
 	// add default font if there is none yet:
 	if (fontStyles.empty())
 	{
-		AddFontStyle(FONTPATH + "arial.ttf");
+		AddFontStyle((FONTPATH + "arial.ttf").c_str());
 	}
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -323,7 +320,7 @@ void wiFont::Initialize()
 	initialized.store(true);
 }
 
-void wiFont::LoadShaders()
+void LoadShaders()
 {
 	std::string path = wiRenderer::GetShaderPath();
 
@@ -454,19 +451,19 @@ void UpdatePendingGlyphs()
 		}
 	}
 }
-const Texture* wiFont::GetAtlas()
+const Texture* GetAtlas()
 {
 	return &texture;
 }
-const std::string& wiFont::GetFontPath()
+const std::string& GetFontPath()
 {
 	return FONTPATH;
 }
-void wiFont::SetFontPath(const std::string& path)
+void SetFontPath(const std::string& path)
 {
 	FONTPATH = path;
 }
-int wiFont::AddFontStyle(const string& fontName)
+int AddFontStyle(const std::string& fontName)
 {
 	for (size_t i = 0; i < fontStyles.size(); i++)
 	{
@@ -482,9 +479,77 @@ int wiFont::AddFontStyle(const string& fontName)
 }
 
 
-void wiFont::Draw(CommandList cmd) const
+template<typename T>
+int textWidth_internal(const T* text, const wiFontParams& params)
 {
-	if (!initialized.load() || text.length() <= 0)
+	if (params.style >= (int)fontStyles.size())
+	{
+		return 0;
+	}
+
+	int maxWidth = 0;
+	int currentLineWidth = 0;
+	size_t i = 0;
+	while (text[i] != 0)
+	{
+		int code = (int)text[i++];
+		const int32_t hash = glyphhash(code, params.style, params.size);
+
+		if (glyph_lookup.count(hash) == 0)
+		{
+			// glyph not packed yet, we just continue (it will be added if it is actually rendered)
+			continue;
+		}
+
+		if (code == '\n')
+		{
+			currentLineWidth = 0;
+		}
+		else if (code == ' ')
+		{
+			currentLineWidth += WHITESPACE_SIZE;
+		}
+		else if (code == '\t')
+		{
+			currentLineWidth += TAB_SIZE;
+		}
+		else
+		{
+			const Glyph& glyph = glyph_lookup.at(hash);
+			currentLineWidth += int((glyph.width + params.spacingX) * params.scaling);
+		}
+		maxWidth = std::max(maxWidth, currentLineWidth);
+	}
+
+	return maxWidth;
+}
+
+template<typename T>
+int textHeight_internal(const T* text, const wiFontParams& params)
+{
+	if (params.style >= (int)fontStyles.size())
+	{
+		return 0;
+	}
+
+	int height = LINEBREAK_SIZE;
+	size_t i = 0;
+	while (text[i] != 0)
+	{
+		int code = (int)text[i++];
+		if (code == '\n')
+		{
+			height += LINEBREAK_SIZE;
+		}
+	}
+
+	return height;
+}
+
+template<typename T>
+void Draw_internal(const T* text, size_t text_length, const wiFontParams& params, CommandList cmd)
+{
+	if (!initialized.load())
 	{
 		return;
 	}
@@ -492,25 +557,24 @@ void wiFont::Draw(CommandList cmd) const
 	wiFontParams newProps = params;
 
 	if (params.h_align == WIFALIGN_CENTER)
-		newProps.posX -= textWidth() / 2;
+		newProps.posX -= textWidth(text, params) / 2;
 	else if (params.h_align == WIFALIGN_RIGHT)
-		newProps.posX -= textWidth();
+		newProps.posX -= textWidth(text, params);
 	if (params.v_align == WIFALIGN_CENTER)
-		newProps.posY -= textHeight() / 2;
+		newProps.posY -= textHeight(text, params) / 2;
 	else if (params.v_align == WIFALIGN_BOTTOM)
-		newProps.posY -= textHeight();
-
+		newProps.posY -= textHeight(text, params);
 
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(FontVertex) * text.length() * 4, cmd);
+	GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(FontVertex) * text_length * 4, cmd);
 	if (!mem.IsValid())
 	{
 		return;
 	}
 	volatile FontVertex* textBuffer = (volatile FontVertex*)mem.data;
-	const int quadCount = WriteVertices(textBuffer, text, newProps, style);
+	const uint32_t quadCount = WriteVertices(textBuffer, text, newProps);
 
 	device->EventBegin("Font", cmd);
 
@@ -532,7 +596,7 @@ void wiFont::Draw(CommandList cmd) const
 	};
 	device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 
-	assert(text.length() * 4 < 65536 && "The index buffer currently only supports so many characters!");
+	assert(text_length * 4 < 65536 && "The index buffer currently only supports so many characters!");
 	device->BindIndexBuffer(&indexBuffer, INDEXFORMAT_16BIT, 0, cmd);
 
 	FontCB cb;
@@ -565,82 +629,65 @@ void wiFont::Draw(CommandList cmd) const
 	UpdatePendingGlyphs();
 }
 
-
-int wiFont::textWidth() const
+void Draw(const char* text, const wiFontParams& params, CommandList cmd)
 {
-	if (style >= (int)fontStyles.size())
+	size_t text_length = strlen(text);
+	if (text_length == 0)
 	{
-		return 0;
+		return;
 	}
-
-	int maxWidth = 0;
-	int currentLineWidth = 0;
-	for (auto& code : text)
+	Draw_internal(text, text_length, params, cmd);
+}
+void Draw(const wchar_t* text, const wiFontParams& params, CommandList cmd)
+{
+	size_t text_length = wcslen(text);
+	if (text_length == 0)
 	{
-		const int32_t hash = glyphhash(code, style, params.size);
-
-		if (glyph_lookup.count(hash) == 0)
-		{
-			// glyph not packed yet, we just continue (it will be added if it is actually rendered)
-			continue;
-		}
-
-		if (code == '\n')
-		{
-			currentLineWidth = 0;
-		}
-		else if (code == ' ')
-		{
-			currentLineWidth += WHITESPACE_SIZE;
-		}
-		else if (code == '\t')
-		{
-			currentLineWidth += TAB_SIZE;
-		}
-		else
-		{
-			const Glyph& glyph = glyph_lookup.at(hash);
-			currentLineWidth += int((glyph.width + params.spacingX) * params.scaling);
-		}
-		maxWidth = std::max(maxWidth, currentLineWidth);
+		return;
 	}
-
-	return maxWidth;
+	Draw_internal(text, text_length, params, cmd);
 }
-int wiFont::textHeight() const
+void Draw(const string& text, const wiFontParams& params, CommandList cmd)
 {
-	if (style >= (int)fontStyles.size())
-	{
-		return 0;
-	}
-
-	int height = LINEBREAK_SIZE;
-	for(auto& code : text)
-	{
-		if (code == '\n')
-		{
-			height += LINEBREAK_SIZE;
-		}
-	}
-
-	return height;
+	Draw_internal(text.c_str(), text.length(), params, cmd);
+}
+void Draw(const wstring& text, const wiFontParams& params, CommandList cmd)
+{
+	Draw_internal(text.c_str(), text.length(), params, cmd);
 }
 
-void wiFont::SetText(const string& text)
+int textWidth(const char* text, const wiFontParams& params)
 {
-	wiHelper::StringConvert(text, this->text);
+	return textWidth_internal(text, params);
 }
-void wiFont::SetText(const wstring& text)
+int textWidth(const wchar_t* text, const wiFontParams& params)
 {
-	this->text = text;
+	return textWidth_internal(text, params);
 }
-wstring wiFont::GetText() const
+int textWidth(const string& text, const wiFontParams& params)
 {
-	return text;
+	return textWidth_internal(text.c_str(), params);
 }
-string wiFont::GetTextA() const
+int textWidth(const wstring& text, const wiFontParams& params)
 {
-	string retval;
-	wiHelper::StringConvert(this->text, retval);
-	return retval;
+	return textWidth_internal(text.c_str(), params);
+}
+
+int textHeight(const char* text, const wiFontParams& params)
+{
+	return textHeight_internal(text, params);
+}
+int textHeight(const wchar_t* text, const wiFontParams& params)
+{
+	return textHeight_internal(text, params);
+}
+int textHeight(const string& text, const wiFontParams& params)
+{
+	return textHeight_internal(text.c_str(), params);
+}
+int textHeight(const wstring& text, const wiFontParams& params)
+{
+	return textHeight_internal(text.c_str(), params);
+}
+
 }

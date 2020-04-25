@@ -15,7 +15,7 @@ private:
 public:
 	wiSprite(const std::string& newTexture = "", const std::string& newMask = "");
 
-	virtual void FixedUpdate(float speed);
+	virtual void FixedUpdate();
 	virtual void Update(float dt);
 	void Draw(wiGraphics::CommandList cmd) const;
 	void DrawNormal(wiGraphics::CommandList cmd) const;

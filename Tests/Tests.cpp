@@ -206,7 +206,7 @@ void TestsRenderer::Load()
 			break;
 		case 16:
 		{
-			static wiFont font("This test plays a vibration on the first controller's left motor (if device supports it) \n and changes the LED to a random color (if device supports it)");
+			static wiSpriteFont font("This test plays a vibration on the first controller's left motor (if device supports it) \n and changes the LED to a random color (if device supports it)");
 			font.params.h_align = WIFALIGN_CENTER;
 			font.params.v_align = WIFALIGN_CENTER;
 			font.params.size = 20;
@@ -371,8 +371,8 @@ void TestsRenderer::RunJobSystemTest()
 		ss << "wiJobSystem::Dispatch() took " << time << " milliseconds" << std::endl;
 	}
 
-	static wiFont font;
-	font = wiFont(ss.str());
+	static wiSpriteFont font;
+	font = wiSpriteFont(ss.str());
 	font.params.posX = wiRenderer::GetDevice()->GetScreenWidth() / 2;
 	font.params.posY = wiRenderer::GetDevice()->GetScreenHeight() / 2;
 	font.params.h_align = WIFALIGN_CENTER;
@@ -382,8 +382,8 @@ void TestsRenderer::RunJobSystemTest()
 }
 void TestsRenderer::RunFontTest()
 {
-	static wiFont font;
-	static wiFont font_upscaled;
+	static wiSpriteFont font;
+	static wiSpriteFont font_upscaled;
 	int arial = wiFont::AddFontStyle(wiFont::GetFontPath() + "arial.ttf");
 
 	font.SetText("This is Arial, size 32 wiFont");
@@ -396,15 +396,15 @@ void TestsRenderer::RunFontTest()
 	font_upscaled.params = font.params;
 	font_upscaled.params.posY += font.textHeight();
 
-	font.style = arial;
-	font_upscaled.style = arial;
+	font.params.style = arial;
+	font_upscaled.params.style = arial;
 	font_upscaled.params.size = 14;
 	font_upscaled.params.scaling = 32.0f / 14.0f;
 
 	AddFont(&font);
 	AddFont(&font_upscaled);
 
-	static wiFont font_aligned;
+	static wiSpriteFont font_aligned;
 	font_aligned = font;
 	font_aligned.params.posY += font.textHeight() * 2;
 	font_aligned.params.size = 38;
@@ -413,7 +413,7 @@ void TestsRenderer::RunFontTest()
 	font_aligned.SetText("Center aligned, red shadow, bigger");
 	AddFont(&font_aligned);
 
-	static wiFont font_aligned2;
+	static wiSpriteFont font_aligned2;
 	font_aligned2 = font_aligned;
 	font_aligned2.params.posY += font_aligned.textHeight();
 	font_aligned2.params.shadowColor = wiColor::Purple();
@@ -432,17 +432,17 @@ void TestsRenderer::RunFontTest()
 			ss << s << "\t";
 		}
 	}
-	static wiFont font_japanese;
+	static wiSpriteFont font_japanese;
 	font_japanese = font_aligned2;
 	font_japanese.params.posY += font_aligned2.textHeight();
-	font_japanese.style = wiFont::AddFontStyle("yumin.ttf");
+	font_japanese.params.style = wiFont::AddFontStyle("yumin.ttf");
 	font_japanese.params.shadowColor = wiColor::Transparent();
 	font_japanese.params.h_align = WIFALIGN_CENTER;
 	font_japanese.params.size = 34;
 	font_japanese.SetText(ss.str());
 	AddFont(&font_japanese);
 
-	static wiFont font_colored;
+	static wiSpriteFont font_colored;
 	font_colored.params.color = wiColor::Cyan();
 	font_colored.params.h_align = WIFALIGN_CENTER;
 	font_colored.params.v_align = WIFALIGN_TOP;
@@ -466,7 +466,7 @@ void TestsRenderer::RunSpriteTest()
 
 	// Info:
 	{
-		static wiFont font("For more information, please see \nTests.cpp, RunSpriteTest() function.");
+		static wiSpriteFont font("For more information, please see \nTests.cpp, RunSpriteTest() function.");
 		font.params.posX = 10;
 		font.params.posY = 200;
 		AddFont(&font);
@@ -478,7 +478,7 @@ void TestsRenderer::RunSpriteTest()
 		sprite.params = params;
 		AddSprite(&sprite);
 
-		static wiFont font("No animation: ");
+		static wiSpriteFont font("No animation: ");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);
@@ -497,7 +497,7 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim.repeatable = true;
 		AddSprite(&sprite);
 
-		static wiFont font("Fade animation: ");
+		static wiSpriteFont font("Fade animation: ");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);
@@ -516,7 +516,7 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim.wobbleAnim.speed = 1.4f;
 		AddSprite(&sprite);
 
-		static wiFont font("Wobble animation: ");
+		static wiSpriteFont font("Wobble animation: ");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);
@@ -535,7 +535,7 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim.repeatable = true;
 		AddSprite(&sprite);
 
-		static wiFont font("Rotate animation: ");
+		static wiSpriteFont font("Rotate animation: ");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);
@@ -558,7 +558,7 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim.movingTexAnim.speedY = 2; // scroll the texture vertically. This value is pixels/second. So because our texture here is 1x2 pixels, just scroll it once fully per second with a value of 2
 		AddSprite(&sprite);
 
-		static wiFont font("MovingTex + mask: ");
+		static wiSpriteFont font("MovingTex + mask: ");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);
@@ -578,7 +578,7 @@ void TestsRenderer::RunSpriteTest()
 		sprite.params = params; // nothing extra, just display the full spritesheet
 		AddSprite(&sprite);
 
-		static wiFont font("Spritesheet: \n(without animation)");
+		static wiSpriteFont font("Spritesheet: \n(without animation)");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);
@@ -599,7 +599,7 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim.drawRectAnim.frameCount = 4; // animate only a single line horizontally
 		AddSprite(&sprite);
 
-		static wiFont font("single line anim: \n(4 frames)");
+		static wiSpriteFont font("single line anim: \n(4 frames)");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);
@@ -621,7 +621,7 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim.drawRectAnim.horizontalFrameCount = 1; // ...but this time, limit the horizontal frame count. This way, we can get it to only animate vertically
 		AddSprite(&sprite);
 
-		static wiFont font("single line: \n(4 vertical frames)");
+		static wiSpriteFont font("single line: \n(4 vertical frames)");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);
@@ -643,7 +643,7 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim.drawRectAnim.horizontalFrameCount = 4; // all horizontal frames
 		AddSprite(&sprite);
 
-		static wiFont font("multiline: \n(all 16 frames)");
+		static wiSpriteFont font("multiline: \n(all 16 frames)");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);
@@ -665,7 +665,7 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim.drawRectAnim.horizontalFrameCount = 4; // all horizontal frames
 		AddSprite(&sprite);
 
-		static wiFont font("irregular multiline: \n(14 frames)");
+		static wiSpriteFont font("irregular multiline: \n(14 frames)");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);
@@ -692,7 +692,7 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim.repeatable = true; // looping
 		AddSprite(&sprite);
 
-		static wiFont font("For the following spritesheets, credits belong to: https://mrbubblewand.wordpress.com/download/");
+		static wiSpriteFont font("For the following spritesheets, credits belong to: https://mrbubblewand.wordpress.com/download/");
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x - sprite.params.siz.x * 0.5f);
 		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
@@ -760,7 +760,7 @@ void TestsRenderer::RunSpriteTest()
 }
 void TestsRenderer::RunNetworkTest()
 {
-	static wiFont font;
+	static wiSpriteFont font;
 
 	wiNetwork::Connection connection;
 	connection.ipaddress = { 127,0,0,1 }; // localhost

@@ -1,40 +1,40 @@
-#include "wiFont_BindLua.h"
+#include "wiSpriteFont_BindLua.h"
 #include "wiFont.h"
 #include "CommonInclude.h"
 #include "Vector_BindLua.h"
 
 using namespace std;
 
-const char wiFont_BindLua::className[] = "Font";
+const char wiSpriteFont_BindLua::className[] = "SpriteFont";
 
-Luna<wiFont_BindLua>::FunctionType wiFont_BindLua::methods[] = {
-	lunamethod(wiFont_BindLua, GetText),
-	lunamethod(wiFont_BindLua, SetSize),
-	lunamethod(wiFont_BindLua, SetPos),
-	lunamethod(wiFont_BindLua, SetSpacing),
-	lunamethod(wiFont_BindLua, SetAlign),
-	lunamethod(wiFont_BindLua, SetColor),
-	lunamethod(wiFont_BindLua, SetShadowColor),
+Luna<wiSpriteFont_BindLua>::FunctionType wiSpriteFont_BindLua::methods[] = {
+	lunamethod(wiSpriteFont_BindLua, GetText),
+	lunamethod(wiSpriteFont_BindLua, SetSize),
+	lunamethod(wiSpriteFont_BindLua, SetPos),
+	lunamethod(wiSpriteFont_BindLua, SetSpacing),
+	lunamethod(wiSpriteFont_BindLua, SetAlign),
+	lunamethod(wiSpriteFont_BindLua, SetColor),
+	lunamethod(wiSpriteFont_BindLua, SetShadowColor),
 
-	lunamethod(wiFont_BindLua, SetStyle),
-	lunamethod(wiFont_BindLua, SetText),
-	lunamethod(wiFont_BindLua, GetSize),
-	lunamethod(wiFont_BindLua, GetPos),
-	lunamethod(wiFont_BindLua, GetSpacing),
-	lunamethod(wiFont_BindLua, GetAlign),
-	lunamethod(wiFont_BindLua, GetColor),
-	lunamethod(wiFont_BindLua, GetShadowColor),
+	lunamethod(wiSpriteFont_BindLua, SetStyle),
+	lunamethod(wiSpriteFont_BindLua, SetText),
+	lunamethod(wiSpriteFont_BindLua, GetSize),
+	lunamethod(wiSpriteFont_BindLua, GetPos),
+	lunamethod(wiSpriteFont_BindLua, GetSpacing),
+	lunamethod(wiSpriteFont_BindLua, GetAlign),
+	lunamethod(wiSpriteFont_BindLua, GetColor),
+	lunamethod(wiSpriteFont_BindLua, GetShadowColor),
 
 	{ NULL, NULL }
 };
-Luna<wiFont_BindLua>::PropertyType wiFont_BindLua::properties[] = {
+Luna<wiSpriteFont_BindLua>::PropertyType wiSpriteFont_BindLua::properties[] = {
 	{ NULL, NULL }
 };
 
-wiFont_BindLua::wiFont_BindLua(const wiFont& font) : font(font)
+wiSpriteFont_BindLua::wiSpriteFont_BindLua(const wiSpriteFont& font) : font(font)
 {
 }
-wiFont_BindLua::wiFont_BindLua(lua_State* L)
+wiSpriteFont_BindLua::wiSpriteFont_BindLua(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
@@ -45,13 +45,13 @@ wiFont_BindLua::wiFont_BindLua(lua_State* L)
 }
 
 
-int wiFont_BindLua::SetStyle(lua_State* L)
+int wiSpriteFont_BindLua::SetStyle(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		string name = wiLua::SGetString(L, 1);
-		font.style = wiFont::AddFontStyle(name);
+		font.params.style = wiFont::AddFontStyle(name.c_str());
 	}
 	else
 	{
@@ -59,7 +59,7 @@ int wiFont_BindLua::SetStyle(lua_State* L)
 	}
 	return 0;
 }
-int wiFont_BindLua::SetText(lua_State* L)
+int wiSpriteFont_BindLua::SetText(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
@@ -68,7 +68,7 @@ int wiFont_BindLua::SetText(lua_State* L)
 		font.SetText("");
 	return 0;
 }
-int wiFont_BindLua::SetSize(lua_State* L)
+int wiSpriteFont_BindLua::SetSize(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
@@ -79,7 +79,7 @@ int wiFont_BindLua::SetSize(lua_State* L)
 		wiLua::SError(L, "SetSize(int size) not enough arguments!");
 	return 0;
 }
-int wiFont_BindLua::SetPos(lua_State* L)
+int wiSpriteFont_BindLua::SetPos(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
@@ -97,7 +97,7 @@ int wiFont_BindLua::SetPos(lua_State* L)
 		wiLua::SError(L, "SetPos(Vector pos) not enough arguments!");
 	return 0;
 }
-int wiFont_BindLua::SetSpacing(lua_State* L)
+int wiSpriteFont_BindLua::SetSpacing(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
@@ -115,7 +115,7 @@ int wiFont_BindLua::SetSpacing(lua_State* L)
 		wiLua::SError(L, "SetSpacing(Vector spacing) not enough arguments!");
 	return 0;
 }
-int wiFont_BindLua::SetAlign(lua_State* L)
+int wiSpriteFont_BindLua::SetAlign(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
@@ -130,7 +130,7 @@ int wiFont_BindLua::SetAlign(lua_State* L)
 		wiLua::SError(L, "SetAlign(WIFALIGN Halign, opt WIFALIGN Valign) not enough arguments!");
 	return 0;
 }
-int wiFont_BindLua::SetColor(lua_State* L)
+int wiSpriteFont_BindLua::SetColor(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
@@ -152,7 +152,7 @@ int wiFont_BindLua::SetColor(lua_State* L)
 		wiLua::SError(L, "SetColor(Vector value) not enough arguments!");
 	return 0;
 }
-int wiFont_BindLua::SetShadowColor(lua_State* L)
+int wiSpriteFont_BindLua::SetShadowColor(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
@@ -175,50 +175,50 @@ int wiFont_BindLua::SetShadowColor(lua_State* L)
 	return 0;
 }
 
-int wiFont_BindLua::GetText(lua_State* L)
+int wiSpriteFont_BindLua::GetText(lua_State* L)
 {
 	wiLua::SSetString(L, font.GetTextA());
 	return 1;
 }
-int wiFont_BindLua::GetSize(lua_State* L)
+int wiSpriteFont_BindLua::GetSize(lua_State* L)
 {
 	wiLua::SSetInt(L, font.params.size);
 	return 1;
 }
-int wiFont_BindLua::GetPos(lua_State* L)
+int wiSpriteFont_BindLua::GetPos(lua_State* L)
 {
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorSet((float)font.params.posX, (float)font.params.posY, 0, 0)));
 	return 1;
 }
-int wiFont_BindLua::GetSpacing(lua_State* L)
+int wiSpriteFont_BindLua::GetSpacing(lua_State* L)
 {
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorSet((float)font.params.spacingX, (float)font.params.spacingY, 0, 0)));
 	return 1;
 }
-int wiFont_BindLua::GetAlign(lua_State* L)
+int wiSpriteFont_BindLua::GetAlign(lua_State* L)
 {
 	wiLua::SSetInt(L, font.params.h_align);
 	wiLua::SSetInt(L, font.params.v_align);
 	return 2;
 }
-int wiFont_BindLua::GetColor(lua_State* L)
+int wiSpriteFont_BindLua::GetColor(lua_State* L)
 {
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&font.params.color.toFloat4())));
 	return 1;
 }
-int wiFont_BindLua::GetShadowColor(lua_State* L)
+int wiSpriteFont_BindLua::GetShadowColor(lua_State* L)
 {
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&font.params.color.toFloat4())));
 	return 1;
 }
 
-void wiFont_BindLua::Bind()
+void wiSpriteFont_BindLua::Bind()
 {
 	static bool initialized = false;
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<wiFont_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<wiSpriteFont_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
 
 
 		wiLua::GetGlobal()->RunText("WIFALIGN_LEFT = 0");

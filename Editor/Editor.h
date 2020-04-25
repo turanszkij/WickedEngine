@@ -28,7 +28,7 @@ class EditorLoadingScreen : public LoadingScreen
 {
 private:
 	wiSprite sprite;
-	wiFont font;
+	wiSpriteFont font;
 public:
 	void Load() override;
 	void Update(float dt) override;

@@ -20,7 +20,7 @@
 #include "Vector_BindLua.h"
 #include "Matrix_BindLua.h"
 #include "wiInput_BindLua.h"
-#include "wiFont_BindLua.h"
+#include "wiSpriteFont_BindLua.h"
 #include "wiBackLog_BindLua.h"
 #include "wiNetwork_BindLua.h"
 #include "wiIntersect_BindLua.h"
@@ -72,7 +72,7 @@ wiLua* wiLua::GetGlobal()
 		Vector_BindLua::Bind();
 		Matrix_BindLua::Bind();
 		wiInput_BindLua::Bind();
-		wiFont_BindLua::Bind();
+		wiSpriteFont_BindLua::Bind();
 		wiBackLog_BindLua::Bind();
 		wiNetwork_BindLua::Bind();
 		wiIntersect_BindLua::Bind();

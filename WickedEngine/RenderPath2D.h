@@ -5,7 +5,7 @@
 #include <string>
 
 class wiSprite;
-class wiFont;
+class wiSpriteFont;
 
 struct RenderItem2D
 {
@@ -15,7 +15,7 @@ struct RenderItem2D
 		FONT,
 	} type;
 	wiSprite* sprite = nullptr;
-	wiFont* font = nullptr;
+	wiSpriteFont* font = nullptr;
 	int order = 0;
 };
 struct RenderLayer2D
@@ -37,7 +37,6 @@ private:
 	wiGraphics::RenderPass renderpass_final;
 
 	wiGUI GUI;
-	float spriteSpeed = 1.0f;
 
 protected:
 	void ResizeBuffers() override;
@@ -59,20 +58,18 @@ public:
 	void AddSprite(wiSprite* sprite, const std::string& layer = "");
 	void RemoveSprite(wiSprite* sprite);
 	void ClearSprites();
-	void SetSpriteSpeed(float value) { spriteSpeed = value; }
-	float GetSpriteSpeed() { return spriteSpeed; }
 	int GetSpriteOrder(wiSprite* sprite);
 
-	void AddFont(wiFont* font, const std::string& layer = "");
-	void RemoveFont(wiFont* font);
+	void AddFont(wiSpriteFont* font, const std::string& layer = "");
+	void RemoveFont(wiSpriteFont* font);
 	void ClearFonts();
-	int GetFontOrder(wiFont* font);
+	int GetFontOrder(wiSpriteFont* font);
 
 	std::vector<RenderLayer2D> layers{ 1 };
 	void AddLayer(const std::string& name);
 	void SetLayerOrder(const std::string& name, int order);
 	void SetSpriteOrder(wiSprite* sprite, int order);
-	void SetFontOrder(wiFont* font, int order);
+	void SetFontOrder(wiSpriteFont* font, int order);
 	void SortLayers();
 	void CleanLayers();
 
