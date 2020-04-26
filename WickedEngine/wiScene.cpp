@@ -2846,7 +2846,23 @@ namespace wiScene
 
 						// Is it inside all the edges? If so we intersect because the distance 
 						// to the plane is less than the radius.
-						XMVECTOR Intersection = DirectX::Internal::PointOnPlaneInsideTriangle(Point0, p0, p1, p2);
+						//XMVECTOR Intersection = DirectX::Internal::PointOnPlaneInsideTriangle(Point0, p0, p1, p2);
+
+						// Compute the cross products of the vector from the base of each edge to 
+						// the point with each edge vector.
+						XMVECTOR C0 = XMVector3Cross(XMVectorSubtract(Point0, p0), XMVectorSubtract(p1, p0));
+						XMVECTOR C1 = XMVector3Cross(XMVectorSubtract(Point0, p1), XMVectorSubtract(p2, p1));
+						XMVECTOR C2 = XMVector3Cross(XMVectorSubtract(Point0, p2), XMVectorSubtract(p0, p2));
+
+						// If the cross product points in the same direction as the normal the the
+						// point is inside the edge (it is zero if is on the edge).
+						XMVECTOR Zero = XMVectorZero();
+						XMVECTOR Inside0 = XMVectorLessOrEqual(XMVector3Dot(C0, N), Zero);
+						XMVECTOR Inside1 = XMVectorLessOrEqual(XMVector3Dot(C1, N), Zero);
+						XMVECTOR Inside2 = XMVectorLessOrEqual(XMVector3Dot(C2, N), Zero);
+
+						// If the point inside all of the edges it is inside.
+						XMVECTOR Intersection = XMVectorAndInt(XMVectorAndInt(Inside0, Inside1), Inside2);
 
 						bool inside = XMVector4EqualInt(XMVectorAndCInt(Intersection, NoIntersection), XMVectorTrueInt());
 
@@ -3018,10 +3034,22 @@ namespace wiScene
 
 						// Compute the plane of the triangle (has to be normalized).
 						XMVECTOR N = XMVector3Normalize(XMVector3Cross(XMVectorSubtract(p1, p0), XMVectorSubtract(p2, p0)));
+						
+						XMVECTOR LinePlaneIntersection;
+						XMVECTOR d = XMVector3Normalize(B - A);
+						if (abs(XMVectorGetX(XMVector3Dot(N, d))) < FLT_EPSILON)
+						{
+							// Capsule line cannot be intersected with triangle plane (they are parallel)
+							//	In this case, just take a point from triangle
+							LinePlaneIntersection = p0;
+						}
+						else
+						{
+							// Intersect capsule line with triangle plane:
+							XMVECTOR t = XMVector3Dot(N, (Base - p0) / XMVectorAbs(XMVector3Dot(N, d)));
+							LinePlaneIntersection = Base + d * t;
+						}
 
-						// Intersect capsule line with triangle plane:
-						XMVECTOR Plane = XMPlaneFromPointNormal(p0, N);
-						XMVECTOR LinePlaneIntersection = XMPlaneIntersectLine(Plane, A, B);
 						// Place a sphere on closest point on line segment to intersection:
 						XMVECTOR Center = wiMath::ClosestPointOnLineSegment(A, B, LinePlaneIntersection);
 
@@ -3046,7 +3074,23 @@ namespace wiScene
 
 						// Is it inside all the edges? If so we intersect because the distance 
 						// to the plane is less than the radius.
-						XMVECTOR Intersection = DirectX::Internal::PointOnPlaneInsideTriangle(Point0, p0, p1, p2);
+						//XMVECTOR Intersection = DirectX::Internal::PointOnPlaneInsideTriangle(Point0, p0, p1, p2);
+
+						// Compute the cross products of the vector from the base of each edge to 
+						// the point with each edge vector.
+						XMVECTOR C0 = XMVector3Cross(XMVectorSubtract(Point0, p0), XMVectorSubtract(p1, p0));
+						XMVECTOR C1 = XMVector3Cross(XMVectorSubtract(Point0, p1), XMVectorSubtract(p2, p1));
+						XMVECTOR C2 = XMVector3Cross(XMVectorSubtract(Point0, p2), XMVectorSubtract(p0, p2));
+
+						// If the cross product points in the same direction as the normal the the
+						// point is inside the edge (it is zero if is on the edge).
+						XMVECTOR Zero = XMVectorZero();
+						XMVECTOR Inside0 = XMVectorLessOrEqual(XMVector3Dot(C0, N), Zero);
+						XMVECTOR Inside1 = XMVectorLessOrEqual(XMVector3Dot(C1, N), Zero);
+						XMVECTOR Inside2 = XMVectorLessOrEqual(XMVector3Dot(C2, N), Zero);
+
+						// If the point inside all of the edges it is inside.
+						XMVECTOR Intersection = XMVectorAndInt(XMVectorAndInt(Inside0, Inside1), Inside2);
 
 						bool inside = XMVector4EqualInt(XMVectorAndCInt(Intersection, NoIntersection), XMVectorTrueInt());
 
