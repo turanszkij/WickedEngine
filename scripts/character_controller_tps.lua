@@ -277,7 +277,7 @@ Character = {
 		if(vector.Length(self.velocity) < 0.001) then
 			self.state = self.states.STAND
 		end
-		model_transform.Translate(vector.Subtract(capsulepos, original_capsulepos)) -- transform by the sphere offset
+		model_transform.Translate(vector.Subtract(capsulepos, original_capsulepos)) -- transform by the capsule offset
 		model_transform.UpdateTransform()
 		
 		-- try to put water ripple if character head is directly above water
@@ -427,6 +427,7 @@ runProcess(function()
 	while true do
 		player:Update()
 		camera:Update()
+		fixedupdate()
 		
 		if(input.Press(KEYBOARD_BUTTON_ESCAPE)) then
 			-- restore previous component
@@ -445,7 +446,6 @@ runProcess(function()
 			return
 		end
 		
-		fixedupdate()
 	end
 end)
 
