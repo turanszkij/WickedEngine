@@ -2898,20 +2898,16 @@ namespace wiScene
 							{
 								// If the sphere center's projection on the triangle plane is not within the triangle,
 								//	determine the closest point on triangle to the sphere center
-								float bestDist = FLT_MAX;
-								float d = abs(XMVectorGetX(XMVector3LengthSq(Point1 - Center)));
-								if (d < bestDist)
-								{
-									bestDist = d;
-									bestPoint = Point1;
-								}
-								d = abs(XMVectorGetX(XMVector3LengthSq(Point2 - Center)));
+								float bestDist = XMVectorGetX(XMVector3LengthSq(Point1 - Center));
+								bestPoint = Point1;
+
+								float d = XMVectorGetX(XMVector3LengthSq(Point2 - Center));
 								if (d < bestDist)
 								{
 									bestDist = d;
 									bestPoint = Point2;
 								}
-								d = abs(XMVectorGetX(XMVector3LengthSq(Point3 - Center)));
+								d = XMVectorGetX(XMVector3LengthSq(Point3 - Center));
 								if (d < bestDist)
 								{
 									bestDist = d;
@@ -3035,23 +3031,76 @@ namespace wiScene
 						// Compute the plane of the triangle (has to be normalized).
 						XMVECTOR N = XMVector3Normalize(XMVector3Cross(XMVectorSubtract(p1, p0), XMVectorSubtract(p2, p0)));
 						
-						XMVECTOR LinePlaneIntersection;
+						XMVECTOR ReferencePoint;
 						XMVECTOR d = XMVector3Normalize(B - A);
 						if (abs(XMVectorGetX(XMVector3Dot(N, d))) < FLT_EPSILON)
 						{
 							// Capsule line cannot be intersected with triangle plane (they are parallel)
 							//	In this case, just take a point from triangle
-							LinePlaneIntersection = p0;
+							ReferencePoint = p0;
 						}
 						else
 						{
 							// Intersect capsule line with triangle plane:
 							XMVECTOR t = XMVector3Dot(N, (Base - p0) / XMVectorAbs(XMVector3Dot(N, d)));
-							LinePlaneIntersection = Base + d * t;
+							XMVECTOR LinePlaneIntersection = Base + d * t;
+
+							// Compute the cross products of the vector from the base of each edge to 
+							// the point with each edge vector.
+							XMVECTOR C0 = XMVector3Cross(XMVectorSubtract(LinePlaneIntersection, p0), XMVectorSubtract(p1, p0));
+							XMVECTOR C1 = XMVector3Cross(XMVectorSubtract(LinePlaneIntersection, p1), XMVectorSubtract(p2, p1));
+							XMVECTOR C2 = XMVector3Cross(XMVectorSubtract(LinePlaneIntersection, p2), XMVectorSubtract(p0, p2));
+
+							// If the cross product points in the same direction as the normal the the
+							// point is inside the edge (it is zero if is on the edge).
+							XMVECTOR Zero = XMVectorZero();
+							XMVECTOR Inside0 = XMVectorLessOrEqual(XMVector3Dot(C0, N), Zero);
+							XMVECTOR Inside1 = XMVectorLessOrEqual(XMVector3Dot(C1, N), Zero);
+							XMVECTOR Inside2 = XMVectorLessOrEqual(XMVector3Dot(C2, N), Zero);
+
+							// If the point inside all of the edges it is inside.
+							XMVECTOR Intersection = XMVectorAndInt(XMVectorAndInt(Inside0, Inside1), Inside2);
+
+							bool inside = XMVectorGetIntX(Intersection) != 0;
+
+							if (inside)
+							{
+								ReferencePoint = LinePlaneIntersection;
+							}
+							else
+							{
+								// Find the nearest point on each edge.
+
+								// Edge 0,1
+								XMVECTOR Point1 = wiMath::ClosestPointOnLineSegment(p0, p1, LinePlaneIntersection);
+
+								// Edge 1,2
+								XMVECTOR Point2 = wiMath::ClosestPointOnLineSegment(p1, p2, LinePlaneIntersection);
+
+								// Edge 2,0
+								XMVECTOR Point3 = wiMath::ClosestPointOnLineSegment(p2, p0, LinePlaneIntersection);
+
+								ReferencePoint = Point1;
+								float bestDist = XMVectorGetX(XMVector3LengthSq(Point1 - LinePlaneIntersection));
+								float d = abs(XMVectorGetX(XMVector3LengthSq(Point2 - LinePlaneIntersection)));
+								if (d < bestDist)
+								{
+									bestDist = d;
+									ReferencePoint = Point2;
+								}
+								d = abs(XMVectorGetX(XMVector3LengthSq(Point3 - LinePlaneIntersection)));
+								if (d < bestDist)
+								{
+									bestDist = d;
+									ReferencePoint = Point3;
+								}
+							}
+
+
 						}
 
 						// Place a sphere on closest point on line segment to intersection:
-						XMVECTOR Center = wiMath::ClosestPointOnLineSegment(A, B, LinePlaneIntersection);
+						XMVECTOR Center = wiMath::ClosestPointOnLineSegment(A, B, ReferencePoint);
 
 						// Assert that the triangle is not degenerate.
 						assert(!XMVector3Equal(N, XMVectorZero()));
@@ -3126,20 +3175,16 @@ namespace wiScene
 							{
 								// If the sphere center's projection on the triangle plane is not within the triangle,
 								//	determine the closest point on triangle to the sphere center
-								float bestDist = FLT_MAX;
-								float d = abs(XMVectorGetX(XMVector3LengthSq(Point1 - Center)));
-								if (d < bestDist)
-								{
-									bestDist = d;
-									bestPoint = Point1;
-								}
-								d = abs(XMVectorGetX(XMVector3LengthSq(Point2 - Center)));
+								float bestDist = XMVectorGetX(XMVector3LengthSq(Point1 - Center));
+								bestPoint = Point1;
+
+								float d = XMVectorGetX(XMVector3LengthSq(Point2 - Center));
 								if (d < bestDist)
 								{
 									bestDist = d;
 									bestPoint = Point2;
 								}
-								d = abs(XMVectorGetX(XMVector3LengthSq(Point3 - Center)));
+								d = XMVectorGetX(XMVector3LengthSq(Point3 - Center));
 								if (d < bestDist)
 								{
 									bestDist = d;

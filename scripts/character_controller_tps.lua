@@ -143,13 +143,13 @@ Character = {
 
 		-- read from gamepad analog stick:
 		local diff = input.GetAnalog(GAMEPAD_ANALOG_THUMBSTICK_R)
-		diff = vector.Multiply(diff, 0.016 * 4)
+		diff = vector.Multiply(diff, getDeltaTime() * 4)
 		
 		-- read from mouse:
 		if(input.Down(MOUSE_BUTTON_RIGHT)) then
 			local mousePosNew = input.GetPointer()
 			local mouseDif = vector.Subtract(mousePosNew,self.savedPointerPos)
-			mouseDif = mouseDif:Multiply(0.016 * 0.3)
+			mouseDif = mouseDif:Multiply(getDeltaTime() * 0.3)
 			diff = vector.Add(diff, mouseDif)
 			input.SetPointer(self.savedPointerPos)
 			input.HidePointer(true)
@@ -425,17 +425,9 @@ runProcess(function()
 	camera:Create(player)
 	
 	while true do
-
-		player:Input()
-
 		player:Update()
-		
 		camera:Update()
 		
-		-- Wait for Engine fixed update tick
-		fixedupdate()
-
-	
 		if(input.Press(KEYBOARD_BUTTON_ESCAPE)) then
 			-- restore previous component
 			--	so if you loaded this script from the editor, you can go back to the editor with ESC
@@ -453,9 +445,18 @@ runProcess(function()
 			return
 		end
 		
+		fixedupdate()
 	end
 end)
 
+runProcess(function()
+	
+	while true do
+		player:Input()
+
+		update()
+	end
+end)
 
 
 -- Draw
