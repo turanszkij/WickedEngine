@@ -75,7 +75,7 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 
 	// Prepare mesh to be processed by xatlas:
 	{
-		xatlas::InputMesh mesh;
+		xatlas::MeshDecl mesh;
 		mesh.vertexCount = (int)meshcomponent.vertex_positions.size();
 		mesh.vertexPositionData = meshcomponent.vertex_positions.data();
 		mesh.vertexPositionStride = sizeof(float) * 3;
@@ -99,22 +99,24 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 
 	// Generate atlas:
 	{
-		xatlas::PackerOptions packerOptions;
-		packerOptions.resolution = resolution;
-		packerOptions.conservative = true;
-		packerOptions.padding = 1;
-		xatlas::GenerateCharts(atlas, xatlas::CharterOptions(), nullptr, nullptr);
-		xatlas::PackCharts(atlas, packerOptions, nullptr, nullptr);
-		const uint32_t charts = xatlas::GetNumCharts(atlas);
-		dim.width = xatlas::GetWidth(atlas);
-		dim.height = xatlas::GetHeight(atlas);
-		const xatlas::OutputMesh* mesh = xatlas::GetOutputMeshes(atlas)[0];
+		xatlas::ChartOptions chartoptions;
+		xatlas::ParameterizeOptions parametrizeoptions;
+		xatlas::PackOptions packoptions;
+
+		packoptions.resolution = resolution;
+		packoptions.blockAlign = true;
+
+		xatlas::Generate(atlas, chartoptions, parametrizeoptions, packoptions);
+		dim.width = atlas->width;
+		dim.height = atlas->height;
+
+		xatlas::Mesh& mesh = atlas->meshes[0];
 
 		// Note: we must recreate all vertex buffers, because the index buffer will be different (the atlas could have removed shared vertices)
 		meshcomponent.indices.clear();
-		meshcomponent.indices.resize(mesh->indexCount);
-		std::vector<XMFLOAT3> positions(mesh->vertexCount);
-		std::vector<XMFLOAT2> atlas(mesh->vertexCount);
+		meshcomponent.indices.resize(mesh.indexCount);
+		std::vector<XMFLOAT3> positions(mesh.vertexCount);
+		std::vector<XMFLOAT2> atlas(mesh.vertexCount);
 		std::vector<XMFLOAT3> normals;
 		std::vector<XMFLOAT2> uvset_0;
 		std::vector<XMFLOAT2> uvset_1;
@@ -123,33 +125,33 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 		std::vector<XMFLOAT4> boneweights;
 		if (!meshcomponent.vertex_normals.empty())
 		{
-			normals.resize(mesh->vertexCount);
+			normals.resize(mesh.vertexCount);
 		}
 		if (!meshcomponent.vertex_uvset_0.empty())
 		{
-			uvset_0.resize(mesh->vertexCount);
+			uvset_0.resize(mesh.vertexCount);
 		}
 		if (!meshcomponent.vertex_uvset_1.empty())
 		{
-			uvset_1.resize(mesh->vertexCount);
+			uvset_1.resize(mesh.vertexCount);
 		}
 		if (!meshcomponent.vertex_colors.empty())
 		{
-			colors.resize(mesh->vertexCount);
+			colors.resize(mesh.vertexCount);
 		}
 		if (!meshcomponent.vertex_boneindices.empty())
 		{
-			boneindices.resize(mesh->vertexCount);
+			boneindices.resize(mesh.vertexCount);
 		}
 		if (!meshcomponent.vertex_boneweights.empty())
 		{
-			boneweights.resize(mesh->vertexCount);
+			boneweights.resize(mesh.vertexCount);
 		}
 
-		for (uint32_t j = 0; j < mesh->indexCount; ++j)
+		for (uint32_t j = 0; j < mesh.indexCount; ++j)
 		{
-			const uint32_t ind = mesh->indexArray[j];
-			const xatlas::OutputVertex &v = mesh->vertexArray[ind];
+			const uint32_t ind = mesh.indexArray[j];
+			const xatlas::Vertex &v = mesh.vertexArray[ind];
 			meshcomponent.indices[j] = ind;
 			atlas[ind].x = v.uv[0] / float(dim.width);
 			atlas[ind].y = v.uv[1] / float(dim.height);
