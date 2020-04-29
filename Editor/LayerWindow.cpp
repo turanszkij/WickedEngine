@@ -19,7 +19,7 @@ LayerWindow::LayerWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	float step = 25;
 	float siz = 20;
 
-	for (uint32_t i = 0; i < 32; ++i)
+	for (uint32_t i = 0; i < arraysize(layers); ++i)
 	{
 		layers[i] = new wiCheckBox("");
 		layers[i]->SetText(std::to_string(i) + ": ");
@@ -45,12 +45,33 @@ LayerWindow::LayerWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		window->AddWidget(layers[i]);
 	}
 
+	y += step * 5;
+
+	enableAllButton = new wiButton("Enable ALL");
+	enableAllButton->SetPos(XMFLOAT2(x, y));
+	enableAllButton->OnClick([this](wiEventArgs args) {
+		LayerComponent* layer = wiScene::GetScene().layers.GetComponent(entity);
+		if (layer == nullptr)
+			return;
+		layer->layerMask = ~0;
+	});
+	window->AddWidget(enableAllButton);
+
+	enableNoneButton = new wiButton("Enable NONE");
+	enableNoneButton->SetPos(XMFLOAT2(x + 120, y));
+	enableNoneButton->OnClick([this](wiEventArgs args) {
+		LayerComponent* layer = wiScene::GetScene().layers.GetComponent(entity);
+		if (layer == nullptr)
+			return;
+		layer->layerMask = 0;
+	});
+	window->AddWidget(enableNoneButton);
+
 	window->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 450, 300, 0));
 	window->SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
 }
-
 
 LayerWindow::~LayerWindow()
 {

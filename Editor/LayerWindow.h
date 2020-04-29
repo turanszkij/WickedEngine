@@ -25,5 +25,7 @@ public:
 	wiWindow* window;
 
 	wiCheckBox* layers[32];
+	wiButton* enableAllButton;
+	wiButton* enableNoneButton;
 };
 
