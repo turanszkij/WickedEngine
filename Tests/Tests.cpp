@@ -111,6 +111,7 @@ void TestsRenderer::Load()
 	testSelector->AddItem("Network Test");
 	testSelector->AddItem("Controller Test");
 	testSelector->AddItem("Inverse Kinematics");
+	testSelector->AddItem("65k Instances");
 	testSelector->SetMaxVisibleItemCount(10);
 	testSelector->OnSelect([=](wiEventArgs args) {
 
@@ -253,6 +254,30 @@ void TestsRenderer::Load()
 			wiScene::GetScene().Merge(scene); // add lodaded scene to global scene
 		}
 		break;
+
+		case 18:
+		{
+			wiScene::LoadModel("../models/suzanne.wiscene");
+			//wiProfiler::SetEnabled(true);
+			Scene& scene = wiScene::GetScene();
+			scene.Entity_CreateLight("testlight", XMFLOAT3(0, 2, -4), XMFLOAT3(1, 1, 1), 4, 10);
+			Entity suzanne = scene.Entity_FindByName("Suzanne");
+			const float scale = 0.05f;
+			int count = 256;
+			for (int i = 0; i < count; ++i)
+			{
+				for (int j = 0; j < count; ++j)
+				{
+					Entity entity = scene.Entity_Duplicate(suzanne);
+					TransformComponent* transform = scene.transforms.GetComponent(entity);
+					transform->Scale(XMFLOAT3(scale, scale, scale));
+					transform->Translate(XMFLOAT3(-5.5f + 11 * float(i) / float(count), -0.5f + 5 * float(j) / float(count), 0));
+				}
+			}
+			scene.Entity_Remove(suzanne);
+		}
+		break;
+
 		default:
 			assert(0);
 			break;
