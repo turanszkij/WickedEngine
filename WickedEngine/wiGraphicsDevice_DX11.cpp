@@ -2417,14 +2417,14 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 
 		// Temporary allocations will use the following buffer type:
 		GPUBufferDesc frameAllocatorDesc;
-		frameAllocatorDesc.ByteWidth = 4 * 1024 * 1024;
+		frameAllocatorDesc.ByteWidth = 1024 * 1024; // 1 MB starting size
 		frameAllocatorDesc.BindFlags = BIND_SHADER_RESOURCE | BIND_INDEX_BUFFER | BIND_VERTEX_BUFFER;
 		frameAllocatorDesc.Usage = USAGE_DYNAMIC;
 		frameAllocatorDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
 		frameAllocatorDesc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 		bool success = CreateBuffer(&frameAllocatorDesc, nullptr, &frame_allocators[cmd].buffer);
 		assert(success);
-		SetName(&frame_allocators[cmd].buffer, "frame_allocator[deferred]");
+		SetName(&frame_allocators[cmd].buffer, "frame_allocator");
 	}
 
 
@@ -3080,21 +3080,26 @@ bool GraphicsDevice_DX11::QueryRead(const GPUQuery* query, GPUQueryResult* resul
 
 GraphicsDevice::GPUAllocation GraphicsDevice_DX11::AllocateGPU(size_t dataSize, CommandList cmd)
 {
-	GPUAllocator& allocator = frame_allocators[cmd];
-	assert(allocator.buffer.desc.ByteWidth > dataSize && "Data of the required size cannot fit!");
-
 	GPUAllocation result;
-
 	if (dataSize == 0)
 	{
 		return result;
 	}
+
+	GPUAllocator& allocator = frame_allocators[cmd];
+	if (allocator.buffer.desc.ByteWidth <= dataSize)
+	{
+		// If allocation too large, grow the allocator:
+		allocator.buffer.desc.ByteWidth = uint32_t((dataSize + 1) * 2);
+		bool success = CreateBuffer(&allocator.buffer.desc, nullptr, &frame_allocators[cmd].buffer);
+		assert(success);
+		SetName(&frame_allocators[cmd].buffer, "frame_allocator");
+		allocator.byteOffset = 0;
+	}
+
 	auto internal_state = std::static_pointer_cast<Resource_DX11>(allocator.buffer.internal_state);
 
 	allocator.dirty = true;
-
-
-	dataSize = std::min(size_t(allocator.buffer.desc.ByteWidth), dataSize);
 
 	size_t position = allocator.byteOffset;
 	bool wrap = position == 0 || position + dataSize > allocator.buffer.desc.ByteWidth || allocator.residentFrame != FRAMECOUNT;

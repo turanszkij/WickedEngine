@@ -1613,7 +1613,6 @@ using namespace Vulkan_Internal;
 	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wiPlatform::window_type window, bool fullscreen, bool debuglayer)
 	{
 		DEBUGDEVICE = debuglayer;
-		BACKBUFFER_FORMAT = FORMAT::FORMAT_B8G8R8A8_UNORM;
 
 		FULLSCREEN = fullscreen;
 
@@ -3891,7 +3890,7 @@ using namespace Vulkan_Internal;
 				res = vkAllocateCommandBuffers(device, &commandBufferInfo, &frame.commandBuffers[cmd]);
 				assert(res == VK_SUCCESS);
 
-				frame.resourceBuffer[cmd].init(this, 4 * 1024 * 1024);
+				frame.resourceBuffer[cmd].init(this, 1024 * 1024); // 1 MB starting size
 				frame.descriptors[cmd].init(this);
 			}
 		}
@@ -4927,20 +4926,21 @@ using namespace Vulkan_Internal;
 
 	GraphicsDevice::GPUAllocation GraphicsDevice_Vulkan::AllocateGPU(size_t dataSize, CommandList cmd)
 	{
-		// This case allocates a CPU write access and GPU read access memory from the temporary buffer
-		// The application can write into this, but better to not read from it
-
-		FrameResources::ResourceFrameAllocator& allocator = GetFrameResources().resourceBuffer[cmd];
 		GPUAllocation result;
-
 		if (dataSize == 0)
 		{
 			return result;
 		}
 
-		uint8_t* dest = allocator.allocate(dataSize, 256);
+		FrameResources::ResourceFrameAllocator& allocator = GetFrameResources().resourceBuffer[cmd];
+		if (allocator.buffer.desc.ByteWidth <= dataSize)
+		{
+			// If allocation too large, grow the allocator:
+			allocator.init(this, (dataSize + 1) * 2);
+		}
 
-		assert(dest != nullptr); // todo: this needs to be handled as well
+		uint8_t* dest = allocator.allocate(dataSize, 256);
+		assert(dest != nullptr);
 
 		result.buffer = &allocator.buffer;
 		result.offset = (uint32_t)allocator.calculateOffset(dest);

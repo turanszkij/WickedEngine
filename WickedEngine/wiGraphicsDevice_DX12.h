@@ -309,6 +309,7 @@ namespace wiGraphics
 			void Update(uint64_t FRAMECOUNT, uint32_t BACKBUFFER_COUNT)
 			{
 				destroylocker.lock();
+				framecount = FRAMECOUNT;
 				while (!destroyer_allocations.empty())
 				{
 					if (destroyer_allocations.front().second + BACKBUFFER_COUNT < FRAMECOUNT)

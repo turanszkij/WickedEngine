@@ -1444,6 +1444,7 @@ using namespace DX12_Internal;
 		dataEnd = dataBegin + size;
 
 		// Because the "buffer" is created by hand in this, fill the desc to indicate how it can be used:
+		buffer.type = GPUResource::GPU_RESOURCE_TYPE::BUFFER;
 		buffer.desc.ByteWidth = (uint32_t)((size_t)dataEnd - (size_t)dataBegin);
 		buffer.desc.Usage = USAGE_DYNAMIC;
 		buffer.desc.BindFlags = BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
@@ -1473,7 +1474,6 @@ using namespace DX12_Internal;
 		assert(address >= dataBegin && address < dataEnd);
 		return static_cast<uint64_t>(address - dataBegin);
 	}
-
 
 
 	void GraphicsDevice_DX12::UploadBuffer::init(GraphicsDevice_DX12* device, size_t size)
@@ -3119,7 +3119,7 @@ using namespace DX12_Internal;
 				hr = static_cast<ID3D12GraphicsCommandList4*>(frames[fr].commandLists[cmd].Get())->Close();
 
 				frames[fr].descriptors[cmd].init(this);
-				frames[fr].resourceBuffer[cmd].init(this, 1024 * 1024 * 4);
+				frames[fr].resourceBuffer[cmd].init(this, 1024 * 1024); // 1 MB starting size
 			}
 		}
 
@@ -4081,20 +4081,21 @@ using namespace DX12_Internal;
 
 	GraphicsDevice::GPUAllocation GraphicsDevice_DX12::AllocateGPU(size_t dataSize, CommandList cmd)
 	{
-		// This case allocates a CPU write access and GPU read access memory from the temporary buffer
-		// The application can write into this, but better to not read from it
-
-		FrameResources::ResourceFrameAllocator& allocator = GetFrameResources().resourceBuffer[cmd];
 		GPUAllocation result;
-
 		if (dataSize == 0)
 		{
 			return result;
 		}
 
-		uint8_t* dest = allocator.allocate(dataSize, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+		FrameResources::ResourceFrameAllocator& allocator = GetFrameResources().resourceBuffer[cmd];
+		if (allocator.buffer.desc.ByteWidth <= dataSize)
+		{
+			// If allocation too large, grow the allocator:
+			allocator.init(this, (dataSize + 1) * 2);
+		}
 
-		assert(dest != nullptr); // todo: this needs to be handled as well
+		uint8_t* dest = allocator.allocate(dataSize, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+		assert(dest != nullptr);
 
 		result.buffer = &allocator.buffer;
 		result.offset = (uint32_t)allocator.calculateOffset(dest);
