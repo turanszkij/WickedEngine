@@ -1418,6 +1418,7 @@ using namespace DX12_Internal;
 
 	void GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::init(GraphicsDevice_DX12* device, size_t size)
 	{
+		this->device = device;
 		auto internal_state = std::make_shared<Resource_DX12>();
 		internal_state->allocationhandler = device->allocationhandler;
 		buffer.internal_state = internal_state;
@@ -1456,7 +1457,7 @@ using namespace DX12_Internal;
 
 		if (dataCur + dataSize > dataEnd)
 		{
-			return nullptr; // failed allocation. TODO: create new heap chunk and allocate from that
+			init(device, ((size_t)dataEnd + dataSize - (size_t)dataBegin) * 2);
 		}
 
 		uint8_t* retVal = dataCur;
@@ -4088,12 +4089,6 @@ using namespace DX12_Internal;
 		}
 
 		FrameResources::ResourceFrameAllocator& allocator = GetFrameResources().resourceBuffer[cmd];
-		if (allocator.buffer.desc.ByteWidth <= dataSize)
-		{
-			// If allocation too large, grow the allocator:
-			allocator.init(this, (dataSize + 1) * 2);
-		}
-
 		uint8_t* dest = allocator.allocate(dataSize, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 		assert(dest != nullptr);
 

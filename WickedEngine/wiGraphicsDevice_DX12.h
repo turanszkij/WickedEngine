@@ -138,6 +138,7 @@ namespace wiGraphics
 
 			struct ResourceFrameAllocator
 			{
+				GraphicsDevice_DX12*	device = nullptr;
 				GPUBuffer				buffer;
 				uint8_t*				dataBegin = nullptr;
 				uint8_t*				dataCur = nullptr;

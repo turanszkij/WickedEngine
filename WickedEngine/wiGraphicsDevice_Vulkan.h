@@ -177,6 +177,7 @@ namespace wiGraphics
 
 			struct ResourceFrameAllocator
 			{
+				GraphicsDevice_Vulkan*	device = nullptr;
 				GPUBuffer				buffer;
 				uint8_t*				dataBegin = nullptr;
 				uint8_t*				dataCur = nullptr;
