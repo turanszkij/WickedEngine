@@ -32,9 +32,9 @@ float4 main(VertextoPixel input) : SV_TARGET
 #ifdef EMITTEDPARTICLE_LIGHTING
 
 	float3 N;
-	N.x = cos(PI * input.tex.x);
-	N.y = cos(PI * input.tex.y);
-	N.z = -sin(PI * length(input.tex));
+	N.x = -cos(PI * input.unrotated_uv.x);
+	N.y = cos(PI * input.unrotated_uv.y);
+	N.z = -sin(PI * length(input.unrotated_uv));
 	N = mul((float3x3)g_xCamera_InvV, N);
 	N = normalize(N);
 
@@ -92,6 +92,9 @@ float4 main(VertextoPixel input) : SV_TARGET
 	}
 
 	color.rgb *= lighting.direct.diffuse + lighting.indirect.diffuse;
+
+	//color.rgb = float3(unrotated_uv, 0);
+	//color.rgb = float3(input.tex, 0);
 
 #endif // EMITTEDPARTICLE_LIGHTING
 
