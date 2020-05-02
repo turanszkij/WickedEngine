@@ -358,7 +358,7 @@ namespace wiInput
 			inputs.insert(make_pair(input, 0));
 			return true;
 		}
-		if (iter->second <= 0)
+		if (iter->second == 1)
 		{
 			return true;
 		}

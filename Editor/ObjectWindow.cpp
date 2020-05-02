@@ -600,18 +600,7 @@ void ObjectWindow::SetEntity(Entity entity)
 		objectWindow->SetEnabled(true);
 
 		const NameComponent* name = scene.names.GetComponent(entity);
-		if (name != nullptr)
-		{
-			std::stringstream ss("");
-			ss << name->name << " (" << entity << ")";
-			nameLabel->SetText(ss.str());
-		}
-		else
-		{
-			std::stringstream ss("");
-			ss<< "(" << entity << ")";
-			nameLabel->SetText(ss.str());
-		}
+		nameLabel->SetText(name == nullptr ? std::to_string(entity) : name->name);
 
 		renderableCheckBox->SetCheck(object->IsRenderable());
 		cascadeMaskSlider->SetValue((float)object->cascadeMask);

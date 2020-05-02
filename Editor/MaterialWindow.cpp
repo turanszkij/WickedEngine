@@ -788,10 +788,8 @@ void MaterialWindow::SetEntity(Entity entity)
 	if (material != nullptr)
 	{
 		const NameComponent& name = *scene.names.GetComponent(entity);
-		stringstream ss("");
-		ss << name.name << " (" << entity << ")";
 
-		materialNameField->SetValue(ss.str());
+		materialNameField->SetValue(name.name);
 		waterCheckBox->SetCheck(material->IsWater());
 		planarReflCheckBox->SetCheck(material->HasPlanarReflection());
 		shadowCasterCheckBox->SetCheck(material->IsCastingShadow());
@@ -831,24 +829,12 @@ void MaterialWindow::SetEntity(Entity entity)
 		texture_emissive_Button->SetText(wiHelper::GetFileNameFromPath(material->emissiveMapName));
 		texture_occlusion_Button->SetText(wiHelper::GetFileNameFromPath(material->occlusionMapName));
 
-		ss.str("");
-		ss << material->uvset_baseColorMap;
-		texture_baseColor_uvset_Field->SetText(ss.str());
-		ss.str("");
-		ss << material->uvset_normalMap;
-		texture_normal_uvset_Field->SetText(ss.str());
-		ss.str("");
-		ss << material->uvset_surfaceMap;
-		texture_surface_uvset_Field->SetText(ss.str());
-		ss.str("");
-		ss << material->uvset_displacementMap;
-		texture_displacement_uvset_Field->SetText(ss.str());
-		ss.str("");
-		ss << material->uvset_emissiveMap;
-		texture_emissive_uvset_Field->SetText(ss.str());
-		ss.str("");
-		ss << material->uvset_occlusionMap;
-		texture_occlusion_uvset_Field->SetText(ss.str());
+		texture_baseColor_uvset_Field->SetText(std::to_string(material->uvset_baseColorMap));
+		texture_normal_uvset_Field->SetText(std::to_string(material->uvset_normalMap));
+		texture_surface_uvset_Field->SetText(std::to_string(material->uvset_surfaceMap));
+		texture_displacement_uvset_Field->SetText(std::to_string(material->uvset_displacementMap));
+		texture_emissive_uvset_Field->SetText(std::to_string(material->uvset_emissiveMap));
+		texture_occlusion_uvset_Field->SetText(std::to_string(material->uvset_occlusionMap));
 	}
 	else
 	{

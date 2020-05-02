@@ -609,7 +609,5 @@ void EmitterWindow::UpdateData()
 
 	infoLabel->SetText(ss.str());
 
-	ss.str("");
-	ss << name->name << " (" << entity << ")";
-	emitterNameField->SetText(ss.str());
+	emitterNameField->SetText(name->name);
 }

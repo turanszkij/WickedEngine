@@ -143,10 +143,7 @@ void AnimationWindow::Update()
 	{
 		Entity e = scene.animations.GetEntity(i);
 		NameComponent& name = *scene.names.GetComponent(e);
-
-		std::stringstream ss("");
-		ss << name.name << " (" << e << ")";
-		animationsComboBox->AddItem(ss.str());
+		animationsComboBox->AddItem(name.name.empty() ? std::to_string(e) : name.name);
 
 		if (e == entity)
 		{

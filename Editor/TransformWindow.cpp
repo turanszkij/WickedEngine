@@ -255,14 +255,8 @@ void TransformWindow::SetEntity(Entity entity)
 		for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
 		{
 			Entity entity = scene.transforms.GetEntity(i);
-			std::string str;
 			const NameComponent* name = scene.names.GetComponent(entity);
-			if (name != nullptr)
-			{
-				str = name->name;
-			}
-			str = str + " (" + std::to_string(entity) + ")";
-			parentCombo->AddItem(str);
+			parentCombo->AddItem(name == nullptr ? std::to_string(entity) : name->name);
 
 			if (hier != nullptr && hier->parentID == entity)
 			{

@@ -109,14 +109,8 @@ void IKWindow::SetEntity(Entity entity)
 		for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
 		{
 			Entity entity = scene.transforms.GetEntity(i);
-			std::string str;
 			const NameComponent* name = scene.names.GetComponent(entity);
-			if (name != nullptr)
-			{
-				str = name->name;
-			}
-			str = str + " (" + std::to_string(entity) + ")";
-			targetCombo->AddItem(str);
+			targetCombo->AddItem(name == nullptr ? std::to_string(entity) : name->name);
 
 			if (ik->target == entity)
 			{

@@ -891,12 +891,8 @@ void EditorComponent::PushToSceneGraphView(wiECS::Entity entity, int level)
 	item.userdata = entity;
 	item.selected = IsSelected(entity);
 	item.open = scenegraphview_closed_items.count(entity) == 0;
-	item.name = "(" + std::to_string(entity) + ")";
 	const NameComponent* name = scene.names.GetComponent(entity);
-	if (name != nullptr)
-	{
-		item.name = name->name + " " + item.name;
-	}
+	item.name = name == nullptr ? std::to_string(entity) : name->name;
 	sceneGraphView->AddItem(item);
 
 	scenegraphview_added_items.insert(entity);
@@ -961,12 +957,8 @@ void EditorComponent::Update(float dt)
 			item.userdata = entity;
 			item.selected = IsSelected(entity);
 			item.open = scenegraphview_closed_items.count(entity) == 0;
-			item.name = "(" + std::to_string(entity) + ")";
 			const NameComponent* name = scene.names.GetComponent(entity);
-			if (name != nullptr)
-			{
-				item.name = name->name + " " + item.name;
-			}
+			item.name = name == nullptr ? std::to_string(entity) : name->name;
 			sceneGraphView->AddItem(item);
 
 			scenegraphview_added_items.insert(entity);
@@ -985,12 +977,8 @@ void EditorComponent::Update(float dt)
 			item.userdata = entity;
 			item.selected = IsSelected(entity);
 			item.open = scenegraphview_closed_items.count(entity) == 0;
-			item.name = "(" + std::to_string(entity) + ")";
 			const NameComponent* name = scene.names.GetComponent(entity);
-			if (name != nullptr)
-			{
-				item.name = name->name + " " + item.name;
-			}
+			item.name = name == nullptr ? std::to_string(entity) : name->name;
 			sceneGraphView->AddItem(item);
 
 			scenegraphview_added_items.insert(entity);

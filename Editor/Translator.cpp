@@ -17,6 +17,7 @@ GPUBuffer vertexBuffer_Origin;
 UINT vertexCount_Axis = 0;
 UINT vertexCount_Plane = 0;
 UINT vertexCount_Origin = 0;
+float origin_size = 0.2f;
 
 void Translator::LoadShaders()
 {
@@ -106,7 +107,7 @@ Translator::Translator()
 	if (!vertexBuffer_Origin.IsValid())
 	{
 		{
-			float edge = 0.2f;
+			float edge = origin_size;
 			XMFLOAT4 verts[] = {
 				XMFLOAT4(-edge,edge,edge,1),   XMFLOAT4(1,1,1,1),
 				XMFLOAT4(-edge,-edge,edge,1),  XMFLOAT4(1,1,1,1),
@@ -183,67 +184,56 @@ void Translator::Update()
 			XMMATRIX P = cam.GetProjection();
 			XMMATRIX V = cam.GetView();
 			XMMATRIX W = XMMatrixIdentity();
+			XMFLOAT3 p = transform.GetPosition();
 
-			dist = wiMath::Distance(transform.GetPosition(), cam.Eye) * 0.05f;
+			dist = wiMath::Distance(p, cam.Eye) * 0.05f;
 
-			XMVECTOR o, x, y, z, p, xy, xz, yz;
+			RAY ray = wiRenderer::GetPickRay((long)pointer.x, (long)pointer.y);
 
-			o = pos;
-			x = o + XMVectorSet(3, 0, 0, 0) * dist;
-			y = o + XMVectorSet(0, 3, 0, 0) * dist;
-			z = o + XMVectorSet(0, 0, 3, 0) * dist;
-			p = XMLoadFloat4(&pointer);
-			xy = o + XMVectorSet(0.5f, 0.5f, 0, 0) * dist;
-			xz = o + XMVectorSet(0.5f, 0, 0.5f, 0) * dist;
-			yz = o + XMVectorSet(0, 0.5f, 0.5f, 0) * dist;
+			XMVECTOR x, y, z, xy, xz, yz;
 
+			x = pos + XMVectorSet(3, 0, 0, 0) * dist;
+			y = pos + XMVectorSet(0, 3, 0, 0) * dist;
+			z = pos + XMVectorSet(0, 0, 3, 0) * dist;
+			xy = pos + XMVectorSet(1, 1, 0, 0) * dist;
+			xz = pos + XMVectorSet(1, 0, 1, 0) * dist;
+			yz = pos + XMVectorSet(0, 1, 1, 0) * dist;
 
-			o = XMVector3Project(o, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
-			x = XMVector3Project(x, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
-			y = XMVector3Project(y, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
-			z = XMVector3Project(z, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
-			xy = XMVector3Project(xy, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
-			xz = XMVector3Project(xz, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
-			yz = XMVector3Project(yz, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
+			AABB aabb_origin;
+			aabb_origin.createFromHalfWidth(p, XMFLOAT3(origin_size * dist, origin_size * dist, origin_size * dist));
 
-			XMVECTOR oDisV = XMVector3Length(o - p);
-			XMVECTOR xyDisV = XMVector3Length(xy - p);
-			XMVECTOR xzDisV = XMVector3Length(xz - p);
-			XMVECTOR yzDisV = XMVector3Length(yz - p);
+			XMFLOAT3 maxp;
+			XMStoreFloat3(&maxp, x);
+			AABB aabb_x = AABB::Merge(AABB(p, maxp), aabb_origin);
 
-			float xDis = wiMath::GetPointSegmentDistance(p, o, x);
-			float yDis = wiMath::GetPointSegmentDistance(p, o, y);
-			float zDis = wiMath::GetPointSegmentDistance(p, o, z);
-			float oDis = XMVectorGetX(oDisV);
-			float xyDis = XMVectorGetX(xyDisV);
-			float xzDis = XMVectorGetX(xzDisV);
-			float yzDis = XMVectorGetX(yzDisV);
+			XMStoreFloat3(&maxp, y);
+			AABB aabb_y = AABB::Merge(AABB(p, maxp), aabb_origin);
 
-			if (oDis < 10)
+			XMStoreFloat3(&maxp, z);
+			AABB aabb_z = AABB::Merge(AABB(p, maxp), aabb_origin);
+
+			XMStoreFloat3(&maxp, xy);
+			AABB aabb_xy = AABB(p, maxp);
+
+			XMStoreFloat3(&maxp, xz);
+			AABB aabb_xz = AABB(p, maxp);
+
+			XMStoreFloat3(&maxp, yz);
+			AABB aabb_yz = AABB(p, maxp);
+
+			if (aabb_origin.intersects(ray))
 			{
 				state = TRANSLATOR_XYZ;
 			}
-			else if (xyDis < 20)
-			{
-				state = TRANSLATOR_XY;
-			}
-			else if (xzDis < 20)
-			{
-				state = TRANSLATOR_XZ;
-			}
-			else if (yzDis < 20)
-			{
-				state = TRANSLATOR_YZ;
-			}
-			else if (xDis < 10)
+			else if (aabb_x.intersects(ray))
 			{
 				state = TRANSLATOR_X;
 			}
-			else if (yDis < 10)
+			else if (aabb_y.intersects(ray))
 			{
 				state = TRANSLATOR_Y;
 			}
-			else if (zDis < 10)
+			else if (aabb_z.intersects(ray))
 			{
 				state = TRANSLATOR_Z;
 			}
@@ -251,9 +241,39 @@ void Translator::Update()
 			{
 				state = TRANSLATOR_IDLE;
 			}
+
+			if (state != TRANSLATOR_XYZ)
+			{
+				// these can overlap, so take closest one (by checking plane ray trace distance):
+				XMVECTOR origin = XMLoadFloat3(&ray.origin);
+				XMVECTOR direction = XMLoadFloat3(&ray.direction);
+				XMVECTOR N = XMVectorSet(0, 0, 1, 0);
+
+				float prio = FLT_MAX;
+				if (aabb_xy.intersects(ray))
+				{
+					state = TRANSLATOR_XY;
+					prio = XMVectorGetX(XMVector3Dot(N, (origin - pos) / XMVectorAbs(XMVector3Dot(N, direction))));
+				}
+
+				N = XMVectorSet(0, 1, 0, 0);
+				float d = XMVectorGetX(XMVector3Dot(N, (origin - pos) / XMVectorAbs(XMVector3Dot(N, direction))));
+				if (d < prio && aabb_xz.intersects(ray))
+				{
+					state = TRANSLATOR_XZ;
+					prio = d;
+				}
+
+				N = XMVectorSet(1, 0, 0, 0);
+				d = XMVectorGetX(XMVector3Dot(N, (origin - pos) / XMVectorAbs(XMVector3Dot(N, direction))));
+				if (d < prio && aabb_yz.intersects(ray))
+				{
+					state = TRANSLATOR_YZ;
+				}
+			}
 		}
 
-		if (dragging || (state != TRANSLATOR_IDLE && wiInput::Down(wiInput::MOUSE_BUTTON_LEFT)))
+		if (dragging || (state != TRANSLATOR_IDLE && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT)))
 		{
 			if (!dragging)
 			{
@@ -441,7 +461,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 
 	// xy
 	XMStoreFloat4x4(&sb.g_xTransform, matX);
-	sb.g_xColor = state == TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
+	sb.g_xColor = state == TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.4f, 0.4f, 0, 0.4f);
 	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, cmd);
 	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
 	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
@@ -449,7 +469,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 
 	// xz
 	XMStoreFloat4x4(&sb.g_xTransform, matZ);
-	sb.g_xColor = state == TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
+	sb.g_xColor = state == TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.4f, 0.4f, 0, 0.4f);
 	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, cmd);
 	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
 	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
@@ -457,7 +477,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 
 	// yz
 	XMStoreFloat4x4(&sb.g_xTransform, matY);
-	sb.g_xColor = state == TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
+	sb.g_xColor = state == TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.4f, 0.4f, 0, 0.4f);
 	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, cmd);
 	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
 	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
