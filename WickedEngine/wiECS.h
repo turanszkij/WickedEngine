@@ -3,7 +3,6 @@
 
 #include "wiArchive.h"
 #include "wiRandom.h"
-#include "wiHelper.h"
 
 #include <cstdint>
 #include <cassert>
@@ -28,7 +27,7 @@ namespace wiECS
 			archive >> entity;
 			if (entity != INVALID_ENTITY && seed > 0)
 			{
-				wiHelper::hash_combine(entity, seed);
+				entity = ((entity << 1) ^ seed) >> 1;
 			}
 		}
 		else
