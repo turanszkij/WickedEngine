@@ -204,10 +204,6 @@ namespace wiInput
 		{
 			return false;
 		}
-		if (!wiPlatform::IsWindowActive())
-		{
-			return false;
-		}
 
 		if(button > GAMEPAD_RANGE_START)
 		{
@@ -242,15 +238,18 @@ namespace wiInput
 			switch (button)
 			{
 			case wiInput::MOUSE_BUTTON_LEFT:
-				if (mouse.left_button_press) return true;
+				if (mouse.left_button_press) 
+					return true;
 				keycode = VK_LBUTTON;
 				break;
 			case wiInput::MOUSE_BUTTON_RIGHT:
-				if (mouse.right_button_press) return true;
+				if (mouse.right_button_press) 
+					return true;
 				keycode = VK_RBUTTON;
 				break;
 			case wiInput::MOUSE_BUTTON_MIDDLE:
-				if (mouse.middle_button_press) return true;
+				if (mouse.middle_button_press) 
+					return true;
 				keycode = VK_MBUTTON;
 				break;
 			case wiInput::KEYBOARD_BUTTON_UP:
@@ -339,7 +338,7 @@ namespace wiInput
 				break;
 			}
 
-			return KEY_DOWN(keycode) | KEY_TOGGLE(keycode);
+			return KEY_DOWN(keycode) || KEY_TOGGLE(keycode);
 		}
 
 		return false;
@@ -358,7 +357,7 @@ namespace wiInput
 			inputs.insert(make_pair(input, 0));
 			return true;
 		}
-		if (iter->second == 1)
+		if (iter->second == 0)
 		{
 			return true;
 		}

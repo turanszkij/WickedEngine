@@ -171,6 +171,7 @@ void MainComponent::Run()
 	{
 		// If the application is not active, disable Update loops:
 		deltaTimeAccumulator = 0;
+		wiInput::Update(); // still flush the input events so they don't just accumulate
 	}
 
 	CommandList cmd = wiRenderer::GetDevice()->BeginCommandList();
