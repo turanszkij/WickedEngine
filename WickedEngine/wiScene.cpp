@@ -1278,8 +1278,7 @@ namespace wiScene
 
 		// Then deserialize with a unique seed:
 		archive.SetReadModeAndResetPos(true);
-		uint32_t seed = wiRandom::getRandom(1, INT_MAX);
-		return Entity_Serialize(archive, entity, seed, false);
+		return Entity_Serialize(archive, entity, CreateEntity(), false);
 	}
 	Entity Scene::Entity_CreateMaterial(
 		const std::string& name

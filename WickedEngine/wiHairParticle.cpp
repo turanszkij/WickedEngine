@@ -245,7 +245,7 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 }
 
 
-void wiHairParticle::Serialize(wiArchive& archive, uint32_t seed)
+void wiHairParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 {
 	if (archive.IsReadMode())
 	{

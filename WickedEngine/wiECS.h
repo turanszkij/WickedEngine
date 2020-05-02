@@ -3,6 +3,7 @@
 
 #include "wiArchive.h"
 #include "wiRandom.h"
+#include "wiHelper.h"
 
 #include <cstdint>
 #include <cassert>
@@ -11,23 +12,23 @@
 
 namespace wiECS
 {
-	typedef uint32_t Entity;
+	using Entity = uint64_t;
 	static const Entity INVALID_ENTITY = 0;
 	// Runtime can create a new entity with this
 	inline Entity CreateEntity()
 	{
-		return wiRandom::getRandom(1, INT_MAX);
+		return wiRandom::getRandom(INVALID_ENTITY + 1, ~0ull);
 	}
 	// This is the safe way to serialize an entity
-	//	seed : ensures that entity will be unique after loading (specify seed = 0 to leave entity as-is)
-	inline void SerializeEntity(wiArchive& archive, Entity& entity, uint32_t seed)
+	//	seed : ensures that entity will be unique after loading (specify seed = INVALID_ENTITY to leave entity as-is)
+	inline void SerializeEntity(wiArchive& archive, Entity& entity, Entity seed)
 	{
 		if (archive.IsReadMode())
 		{
 			archive >> entity;
 			if (entity != INVALID_ENTITY && seed > 0)
 			{
-				entity = ((entity << 1) ^ seed) >> 1;
+				wiHelper::hash_combine(entity, seed);
 			}
 		}
 		else
@@ -90,7 +91,7 @@ namespace wiECS
 		// Read/Write everything to an archive depending on the archive state
 		//	seed: needed when serializing from disk which might cause discrepancy in entity uniqueness
 		//	propagateSeedDeep: Components can have Entity references inside them, should the seed be propageted to those too?
-		inline void Serialize(wiArchive& archive, uint32_t seed = 0, bool propagateSeedDeep = true)
+		inline void Serialize(wiArchive& archive, Entity seed = INVALID_ENTITY, bool propagateSeedDeep = true)
 		{
 			if (archive.IsReadMode())
 			{

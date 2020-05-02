@@ -171,7 +171,7 @@ namespace wiPhysicsEngine
 			//rbInfo.m_angularDamping = physicscomponent.damping;
 
 			btRigidBody* rigidbody = new btRigidBody(rbInfo);
-			rigidbody->setUserIndex(*(int*)&entity);
+			rigidbody->setUserIndex(entity);
 
 			if (physicscomponent.IsKinematic())
 			{
@@ -230,7 +230,7 @@ namespace wiPhysicsEngine
 
 		if (softbody)
 		{
-			softbody->setUserIndex(*(int*)&entity);
+			softbody->setUserIndex(entity);
 
 			//btSoftBody::Material* pm = softbody->appendMaterial();
 			btSoftBody::Material* pm = softbody->m_materials[0];
@@ -418,8 +418,7 @@ namespace wiPhysicsEngine
 		for (int i = 0; i < dynamicsWorld->getCollisionObjectArray().size(); ++i)
 		{
 			btCollisionObject* collisionobject = dynamicsWorld->getCollisionObjectArray()[i];
-			int userIndex = collisionobject->getUserIndex();
-			Entity entity = *(Entity*)&userIndex;
+			Entity entity = (Entity)collisionobject->getUserIndex();
 
 			btRigidBody* rigidbody = btRigidBody::upcast(collisionobject);
 			if (rigidbody != nullptr)

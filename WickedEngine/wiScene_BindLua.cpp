@@ -17,7 +17,7 @@ namespace wiScene_BindLua
 int CreateEntity_BindLua(lua_State* L)
 {
 	Entity entity = CreateEntity();
-	wiLua::SSetInt(L, (int)entity);
+	wiLua::SSetLongLong(L, entity);
 	return 1;
 }
 
@@ -52,7 +52,7 @@ int LoadModel(lua_State* L)
 					}
 				}
 				Entity root = wiScene::LoadModel(*custom_scene->scene, fileName, transform, true);
-				wiLua::SSetInt(L, int(root));
+				wiLua::SSetLongLong(L, root);
 				return 1;
 			}
 			else
@@ -79,7 +79,7 @@ int LoadModel(lua_State* L)
 				}
 			}
 			Entity root = wiScene::LoadModel(fileName, transform, true);
-			wiLua::SSetInt(L, int(root));
+			wiLua::SSetLongLong(L, root);
 			return 1;
 		}
 	}
@@ -123,7 +123,7 @@ int Pick(lua_State* L)
 				}
 			}
 			auto& pick = wiScene::Pick(ray->ray, renderTypeMask, layerMask, *scene);
-			wiLua::SSetInt(L, (int)pick.entity);
+			wiLua::SSetLongLong(L, pick.entity);
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
 			wiLua::SSetFloat(L, pick.distance);
@@ -173,7 +173,7 @@ int SceneIntersectSphere(lua_State* L)
 				}
 			}
 			auto& pick = wiScene::SceneIntersectSphere(sphere->sphere, renderTypeMask, layerMask, *scene);
-			wiLua::SSetInt(L, (int)pick.entity);
+			wiLua::SSetLongLong(L, pick.entity);
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
 			wiLua::SSetFloat(L, pick.depth);
@@ -223,7 +223,7 @@ int SceneIntersectCapsule(lua_State* L)
 				}
 			}
 			auto& pick = wiScene::SceneIntersectCapsule(capsule->capsule, renderTypeMask, layerMask, *scene);
-			wiLua::SSetInt(L, (int)pick.entity);
+			wiLua::SSetLongLong(L, pick.entity);
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
 			wiLua::SSetFloat(L, pick.depth);
@@ -414,7 +414,7 @@ int Scene_BindLua::Entity_FindByName(lua_State* L)
 
 		Entity entity = scene->Entity_FindByName(name);
 
-		wiLua::SSetInt(L, (int)entity);
+		wiLua::SSetLongLong(L, entity);
 		return 1;
 	}
 	else
@@ -428,7 +428,7 @@ int Scene_BindLua::Entity_Remove(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		scene->Entity_Remove(entity);
 	}
@@ -443,11 +443,11 @@ int Scene_BindLua::Entity_Duplicate(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		Entity clone = scene->Entity_Duplicate(entity);
 
-		wiLua::SSetInt(L, (int)clone);
+		wiLua::SSetLongLong(L, clone);
 		return 1;
 	}
 	else
@@ -462,7 +462,7 @@ int Scene_BindLua::Component_CreateName(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		NameComponent& component = scene->names.Create(entity);
 		Luna<NameComponent_BindLua>::push(L, new NameComponent_BindLua(&component));
@@ -479,7 +479,7 @@ int Scene_BindLua::Component_CreateLayer(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		LayerComponent& component = scene->layers.Create(entity);
 		Luna<LayerComponent_BindLua>::push(L, new LayerComponent_BindLua(&component));
@@ -496,7 +496,7 @@ int Scene_BindLua::Component_CreateTransform(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		TransformComponent& component = scene->transforms.Create(entity);
 		Luna<TransformComponent_BindLua>::push(L, new TransformComponent_BindLua(&component));
@@ -513,7 +513,7 @@ int Scene_BindLua::Component_CreateLight(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		scene->aabb_lights.Create(entity);
 
@@ -532,7 +532,7 @@ int Scene_BindLua::Component_CreateObject(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		scene->aabb_objects.Create(entity);
 
@@ -551,7 +551,7 @@ int Scene_BindLua::Component_CreateInverseKinematics(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		InverseKinematicsComponent& component = scene->inverse_kinematics.Create(entity);
 		Luna<InverseKinematicsComponent_BindLua>::push(L, new InverseKinematicsComponent_BindLua(&component));
@@ -568,7 +568,7 @@ int Scene_BindLua::Component_CreateSpring(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		SpringComponent& component = scene->springs.Create(entity);
 		Luna<SpringComponent_BindLua>::push(L, new SpringComponent_BindLua(&component));
@@ -586,7 +586,7 @@ int Scene_BindLua::Component_GetName(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		NameComponent* component = scene->names.GetComponent(entity);
 		if (component == nullptr)
@@ -608,7 +608,7 @@ int Scene_BindLua::Component_GetLayer(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		LayerComponent* component = scene->layers.GetComponent(entity);
 		if (component == nullptr)
@@ -630,7 +630,7 @@ int Scene_BindLua::Component_GetTransform(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		TransformComponent* component = scene->transforms.GetComponent(entity);
 		if (component == nullptr)
@@ -652,7 +652,7 @@ int Scene_BindLua::Component_GetCamera(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		CameraComponent* component = scene->cameras.GetComponent(entity);
 		if (component == nullptr)
@@ -674,7 +674,7 @@ int Scene_BindLua::Component_GetAnimation(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		AnimationComponent* component = scene->animations.GetComponent(entity);
 		if (component == nullptr)
@@ -696,7 +696,7 @@ int Scene_BindLua::Component_GetMaterial(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		MaterialComponent* component = scene->materials.GetComponent(entity);
 		if (component == nullptr)
@@ -718,7 +718,7 @@ int Scene_BindLua::Component_GetEmitter(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		wiEmittedParticle* component = scene->emitters.GetComponent(entity);
 		if (component == nullptr)
@@ -740,7 +740,7 @@ int Scene_BindLua::Component_GetLight(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		LightComponent* component = scene->lights.GetComponent(entity);
 		if (component == nullptr)
@@ -762,7 +762,7 @@ int Scene_BindLua::Component_GetObject(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		ObjectComponent* component = scene->objects.GetComponent(entity);
 		if (component == nullptr)
@@ -784,7 +784,7 @@ int Scene_BindLua::Component_GetInverseKinematics(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		InverseKinematicsComponent* component = scene->inverse_kinematics.GetComponent(entity);
 		if (component == nullptr)
@@ -806,7 +806,7 @@ int Scene_BindLua::Component_GetSpring(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		SpringComponent* component = scene->springs.GetComponent(entity);
 		if (component == nullptr)
@@ -952,7 +952,7 @@ int Scene_BindLua::Entity_GetNameArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->names.GetCount(); ++i)
 	{
-		wiLua::SSetInt(L, scene->names.GetEntity(i));
+		wiLua::SSetLongLong(L, scene->names.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -963,7 +963,7 @@ int Scene_BindLua::Entity_GetLayerArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->layers.GetCount(); ++i)
 	{
-		wiLua::SSetInt(L, scene->layers.GetEntity(i));
+		wiLua::SSetLongLong(L, scene->layers.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -974,7 +974,7 @@ int Scene_BindLua::Entity_GetTransformArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->transforms.GetCount(); ++i)
 	{
-		wiLua::SSetInt(L, scene->transforms.GetEntity(i));
+		wiLua::SSetLongLong(L, scene->transforms.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -985,7 +985,7 @@ int Scene_BindLua::Entity_GetCameraArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->cameras.GetCount(); ++i)
 	{
-		wiLua::SSetInt(L, scene->cameras.GetEntity(i));
+		wiLua::SSetLongLong(L, scene->cameras.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -996,7 +996,7 @@ int Scene_BindLua::Entity_GetAnimationArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->animations.GetCount(); ++i)
 	{
-		wiLua::SSetInt(L, scene->animations.GetEntity(i));
+		wiLua::SSetLongLong(L, scene->animations.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -1007,7 +1007,7 @@ int Scene_BindLua::Entity_GetMaterialArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->materials.GetCount(); ++i)
 	{
-		wiLua::SSetInt(L, scene->materials.GetEntity(i));
+		wiLua::SSetLongLong(L, scene->materials.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -1018,7 +1018,7 @@ int Scene_BindLua::Entity_GetEmitterArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->emitters.GetCount(); ++i)
 	{
-		wiLua::SSetInt(L, scene->emitters.GetEntity(i));
+		wiLua::SSetLongLong(L, scene->emitters.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -1029,7 +1029,7 @@ int Scene_BindLua::Entity_GetLightArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->lights.GetCount(); ++i)
 	{
-		wiLua::SSetInt(L, scene->lights.GetEntity(i));
+		wiLua::SSetLongLong(L, scene->lights.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -1040,7 +1040,7 @@ int Scene_BindLua::Entity_GetObjectArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->objects.GetCount(); ++i)
 	{
-		wiLua::SSetInt(L, scene->objects.GetEntity(i));
+		wiLua::SSetLongLong(L, scene->objects.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -1051,7 +1051,7 @@ int Scene_BindLua::Entity_GetInverseKinematicsArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->inverse_kinematics.GetCount(); ++i)
 	{
-		wiLua::SSetInt(L, scene->inverse_kinematics.GetEntity(i));
+		wiLua::SSetLongLong(L, scene->inverse_kinematics.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -1062,7 +1062,7 @@ int Scene_BindLua::Entity_GetSpringArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->springs.GetCount(); ++i)
 	{
-		wiLua::SSetInt(L, scene->springs.GetEntity(i));
+		wiLua::SSetLongLong(L, scene->springs.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -1073,8 +1073,8 @@ int Scene_BindLua::Component_Attach(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 1)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
-		Entity parent = (Entity)wiLua::SGetInt(L, 2);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity parent = (Entity)wiLua::SGetLongLong(L, 2);
 
 		scene->Component_Attach(entity, parent);
 	}
@@ -1089,7 +1089,7 @@ int Scene_BindLua::Component_Detach(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 
 		scene->Component_Detach(entity);
 	}
@@ -1104,7 +1104,7 @@ int Scene_BindLua::Component_DetachChildren(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity parent = (Entity)wiLua::SGetInt(L, 1);
+		Entity parent = (Entity)wiLua::SGetLongLong(L, 1);
 
 		scene->Component_DetachChildren(parent);
 	}
@@ -2218,7 +2218,7 @@ ObjectComponent_BindLua::~ObjectComponent_BindLua()
 
 int ObjectComponent_BindLua::GetMeshID(lua_State* L)
 {
-	wiLua::SSetInt(L, (int)component->meshID);
+	wiLua::SSetLongLong(L, component->meshID);
 	return 1;
 }
 int ObjectComponent_BindLua::GetColor(lua_State* L)
@@ -2237,7 +2237,7 @@ int ObjectComponent_BindLua::SetMeshID(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity meshID = (Entity)wiLua::SGetInt(L, 1);
+		Entity meshID = (Entity)wiLua::SGetLongLong(L, 1);
 		component->meshID = meshID;
 	}
 	else
@@ -2325,7 +2325,7 @@ int InverseKinematicsComponent_BindLua::SetTarget(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 		component->target = entity;
 	}
 	else
@@ -2378,7 +2378,7 @@ int InverseKinematicsComponent_BindLua::SetDisabled(lua_State* L)
 }
 int InverseKinematicsComponent_BindLua::GetTarget(lua_State* L)
 {
-	wiLua::SSetInt(L, (int)component->target);
+	wiLua::SSetLongLong(L, component->target);
 	return 1;
 }
 int InverseKinematicsComponent_BindLua::GetChainLength(lua_State* L)

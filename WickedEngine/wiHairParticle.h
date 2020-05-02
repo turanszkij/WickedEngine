@@ -59,7 +59,7 @@ public:
 	AABB aabb;
 	std::vector<uint32_t> indices; // it is dependent on vertex_lengths and contains triangles with non-zero lengths
 
-	void Serialize(wiArchive& archive, uint32_t seed = 0);
+	void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
 
 	static void LoadShaders();
 	static void Initialize();

@@ -85,7 +85,7 @@ namespace wiRenderer_BindLua
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			Entity entity = (Entity)wiLua::SGetInt(L, 1);
+			Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
 			wiRenderer::AttachCamera(entity);
 		}
 		else

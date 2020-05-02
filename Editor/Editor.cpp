@@ -1458,7 +1458,7 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < count; ++i)
 				{
 					wiScene::PickResult picked;
-					picked.entity = scene.Entity_Serialize(clipboard, INVALID_ENTITY, wiRandom::getRandom(1, INT_MAX), false);
+					picked.entity = scene.Entity_Serialize(clipboard, INVALID_ENTITY, CreateEntity(), false);
 					AddSelected(picked);
 				}
 			}
@@ -1486,7 +1486,7 @@ void EditorComponent::Update(float dt)
 				clipboard >> count;
 				for (size_t i = 0; i < count; ++i)
 				{
-					Entity entity = scene.Entity_Serialize(clipboard, INVALID_ENTITY, wiRandom::getRandom(1, INT_MAX), false);
+					Entity entity = scene.Entity_Serialize(clipboard, INVALID_ENTITY, CreateEntity(), false);
 					TransformComponent* transform = scene.transforms.GetComponent(entity);
 					if (transform != nullptr)
 					{

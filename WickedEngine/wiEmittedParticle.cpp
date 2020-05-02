@@ -731,7 +731,7 @@ void wiEmittedParticle::Initialize()
 }
 
 
-void wiEmittedParticle::Serialize(wiArchive& archive, uint32_t seed)
+void wiEmittedParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 {
 	if (archive.IsReadMode())
 	{

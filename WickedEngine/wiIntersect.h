@@ -56,7 +56,7 @@ struct AABB
 		return XMFLOAT3(0, 0, 0);
 	}
 
-	void Serialize(wiArchive& archive, uint32_t seed = 0);
+	void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
 };
 struct SPHERE 
 {

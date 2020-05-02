@@ -120,7 +120,7 @@ public:
 	inline void SetSPHEnabled(bool value) { if (value) { _flags |= SPH_FLUIDSIMULATION; } else { _flags &= ~SPH_FLUIDSIMULATION; } }
 	inline void SetVolumeEnabled(bool value) { if (value) { _flags |= HAS_VOLUME; } else { _flags &= ~HAS_VOLUME; } }
 
-	void Serialize(wiArchive& archive, uint32_t seed = 0);
+	void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
 
 	static void LoadShaders();
 	static void Initialize();

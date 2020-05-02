@@ -9,7 +9,7 @@ using namespace wiECS;
 namespace wiScene
 {
 
-	void NameComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void NameComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -20,7 +20,7 @@ namespace wiScene
 			archive << name;
 		}
 	}
-	void LayerComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void LayerComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -31,7 +31,7 @@ namespace wiScene
 			archive << layerMask;
 		}
 	}
-	void TransformComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void TransformComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -51,12 +51,12 @@ namespace wiScene
 			archive << translation_local;
 		}
 	}
-	void PreviousFrameTransformComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void PreviousFrameTransformComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		// NOTHING! We just need a serialize function for this to be able serialize with ComponentManager!
 		//	This structure has no persistent state!
 	}
-	void HierarchyComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void HierarchyComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		SerializeEntity(archive, parentID, seed);
 
@@ -74,7 +74,7 @@ namespace wiScene
 			archive << layerMask_bind;
 		}
 	}
-	void MaterialComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void MaterialComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		std::string dir = archive.GetSourceDirectory();
 
@@ -249,7 +249,7 @@ namespace wiScene
 			}
 		}
 	}
-	void MeshComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void MeshComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 
 		if (archive.IsReadMode())
@@ -338,7 +338,7 @@ namespace wiScene
 
 		}
 	}
-	void ImpostorComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void ImpostorComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -353,7 +353,7 @@ namespace wiScene
 			archive << swapInDistance;
 		}
 	}
-	void ObjectComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void ObjectComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -394,7 +394,7 @@ namespace wiScene
 			}
 		}
 	}
-	void RigidBodyPhysicsComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void RigidBodyPhysicsComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -415,7 +415,7 @@ namespace wiScene
 			archive << damping;
 		}
 	}
-	void SoftBodyPhysicsComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void SoftBodyPhysicsComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -444,7 +444,7 @@ namespace wiScene
 			archive << weights;
 		}
 	}
-	void ArmatureComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void ArmatureComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -492,7 +492,7 @@ namespace wiScene
 			}
 		}
 	}
-	void LightComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void LightComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		std::string dir = archive.GetSourceDirectory();
 
@@ -563,7 +563,7 @@ namespace wiScene
 			archive << lensFlareNames;
 		}
 	}
-	void CameraComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void CameraComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -586,7 +586,7 @@ namespace wiScene
 			archive << fov;
 		}
 	}
-	void EnvironmentProbeComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void EnvironmentProbeComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -599,7 +599,7 @@ namespace wiScene
 			archive << _flags;
 		}
 	}
-	void ForceFieldComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void ForceFieldComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -616,7 +616,7 @@ namespace wiScene
 			archive << range_local;
 		}
 	}
-	void DecalComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void DecalComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -627,7 +627,7 @@ namespace wiScene
 			archive << _flags;
 		}
 	}
-	void AnimationComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void AnimationComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -695,7 +695,7 @@ namespace wiScene
 			}
 		}
 	}
-	void WeatherComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void WeatherComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		std::string dir = archive.GetSourceDirectory();
 
@@ -792,7 +792,7 @@ namespace wiScene
 
 		}
 	}
-	void SoundComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void SoundComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		std::string dir = archive.GetSourceDirectory();
 
@@ -828,7 +828,7 @@ namespace wiScene
 			archive << soundinstance.type;
 		}
 	}
-	void InverseKinematicsComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void InverseKinematicsComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		SerializeEntity(archive, target, seed);
 
@@ -845,7 +845,7 @@ namespace wiScene
 			archive << iteration_count;
 		}
 	}
-	void SpringComponent::Serialize(wiArchive& archive, uint32_t seed)
+	void SpringComponent::Serialize(wiArchive& archive, Entity seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -879,7 +879,7 @@ namespace wiScene
 		}
 
 		// With this we will ensure that serialized entities are unique and persistent across the scene:
-		uint32_t seed = (uint32_t)wiRandom::getRandom(1, INT_MAX);
+		Entity seed = CreateEntity();
 
 		names.Serialize(archive, seed);
 		layers.Serialize(archive, seed);
@@ -921,7 +921,7 @@ namespace wiScene
 
 	}
 
-	Entity Scene::Entity_Serialize(wiArchive& archive, Entity entity, uint32_t seed, bool propagateSeedDeep)
+	Entity Scene::Entity_Serialize(wiArchive& archive, Entity entity, Entity seed, bool propagateSeedDeep)
 	{
 		SerializeEntity(archive, entity, seed);
 
