@@ -41,4 +41,20 @@ namespace wiPlatform
 		return true;
 #endif // _WIN32
 	}
+	inline uint32_t GetDPI()
+	{
+#ifdef _WIN32
+#ifndef WINSTORE_SUPPORT
+		return GetDpiForWindow(GetWindow());
+#else
+		return 96;
+#endif // WINSTORE_SUPPORT
+#else
+		return 96;
+#endif // _WIN32
+	}
+	inline float GetDPIScaling()
+	{
+		return (float)GetDPI() / 96.0f;
+	}
 }

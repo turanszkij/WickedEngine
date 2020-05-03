@@ -230,6 +230,11 @@ void EditorComponent::Load()
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
+	// Instead of screen resolution, design gui elements to a specific size (reference resolution):
+	GetGUI().SetDesignSize(1280, 720);
+	screenW = GetGUI().GetDesignSize().x;
+	screenH = GetGUI().GetDesignSize().y;
+
 	XMFLOAT2 option_size = XMFLOAT2(100, 34);
 	float x = screenW - option_size.x;
 	float y = screenH - option_size.y;
@@ -744,9 +749,12 @@ void EditorComponent::Load()
 			ss << endl << endl << "For questions, bug reports, feedback, requests, please open an issue at:" << endl;
 			ss << "https://github.com/turanszkij/WickedEngine" << endl;
 
+			float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
+			float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
+
 			helpLabel = new wiLabel("HelpLabel");
 			helpLabel->SetText(ss.str());
-			helpLabel->SetSize(XMFLOAT2(screenW / 3.0f, screenH / 2.2f));
+			helpLabel->SetSize(XMFLOAT2(screenW / 2.0f, screenH / 1.5f));
 			helpLabel->SetPos(XMFLOAT2(screenW / 2.0f - helpLabel->scale.x / 2.0f, screenH / 2.0f - helpLabel->scale.y / 2.0f));
 			helpLabel->SetVisible(false);
 			GetGUI().AddWidget(helpLabel);
@@ -996,7 +1004,6 @@ void EditorComponent::Update(float dt)
 			renderPath->GetGUI().SetVisible(true);
 		}
 		GetGUI().SetVisible(true);
-		wiProfiler::SetEnabled(true);
 		main->infoDisplay.active = true;
 
 		cinemaModeCheckBox->SetCheck(false);

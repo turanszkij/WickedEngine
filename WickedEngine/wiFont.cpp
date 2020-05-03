@@ -8,6 +8,7 @@
 #include "wiTextureHelper.h"
 #include "wiRectPacker.h"
 #include "wiSpinLock.h"
+#include "wiPlatform.h"
 
 #include "Utility/stb_truetype.h"
 
@@ -24,9 +25,9 @@ using namespace wiGraphics;
 using namespace wiRectPacker;
 
 #define MAX_TEXT 10000
-#define WHITESPACE_SIZE (int((params.size + params.spacingX) * params.scaling * 0.3f))
+#define WHITESPACE_SIZE (int((params.size + params.spacingX) * params.scaling * 0.3f * wiPlatform::GetDPIScaling()))
 #define TAB_SIZE (WHITESPACE_SIZE * 4)
-#define LINEBREAK_SIZE (int((params.size + params.spacingY) * params.scaling))
+#define LINEBREAK_SIZE (int((params.size + params.spacingY) * params.scaling * wiPlatform::GetDPIScaling()))
 
 namespace wiFont_Internal
 {
@@ -38,7 +39,7 @@ namespace wiFont_Internal
 	DepthStencilState	depthStencilState;
 	Sampler				sampler;
 
-	InputLayout		inputLayout;
+	InputLayout			inputLayout;
 	Shader				vertexShader;
 	Shader				pixelShader;
 	PipelineState		PSO;
@@ -348,6 +349,22 @@ void LoadShaders()
 
 void UpdatePendingGlyphs()
 {
+	glyphLock.lock();
+
+	static uint32_t saved_dpi = wiPlatform::GetDPI();
+	uint32_t dpi = wiPlatform::GetDPI();
+	if (saved_dpi != dpi)
+	{
+		saved_dpi = dpi;
+
+		for (auto& x : glyph_lookup)
+		{
+			pendingGlyphs.insert(x.first);
+		}
+		glyph_lookup.clear();
+		rect_lookup.clear();
+	}
+
 	// If there are pending glyphs, render them and repack the atlas:
 	if (!pendingGlyphs.empty())
 	{
@@ -358,10 +375,10 @@ void UpdatePendingGlyphs()
 		{
 			const int code = codefromhash(hash);
 			const int style = stylefromhash(hash);
-			const int height = heightfromhash(hash);
+			const float height = (float)heightfromhash(hash) * wiPlatform::GetDPIScaling();
 			wiFontStyle& fontStyle = fontStyles[style];
 
-			float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, float(height));
+			float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, height);
 
 			// get bounding box for character (may be offset to account for chars that dip above or below the line
 			int left, top, right, bottom;
@@ -411,7 +428,7 @@ void UpdatePendingGlyphs()
 				const int32_t hash = it.first;
 				const wchar_t code = codefromhash(hash);
 				const int style = stylefromhash(hash);
-				const int height = heightfromhash(hash);
+				const float height = (float)heightfromhash(hash) * wiPlatform::GetDPIScaling();
 				wiFontStyle& fontStyle = fontStyles[style];
 				rect_xywh& rect = it.second;
 				Glyph& glyph = glyph_lookup[hash];
@@ -422,7 +439,7 @@ void UpdatePendingGlyphs()
 				rect.w -= borderPadding * 2;
 				rect.h -= borderPadding * 2;
 
-				float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, float(height));
+				float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, height);
 
 				// Render the glyph inside the CPU-side atlas:
 				int byteOffset = rect.x + (rect.y * bitmapWidth);
@@ -450,6 +467,8 @@ void UpdatePendingGlyphs()
 			wiTextureHelper::CreateTexture(texture, bitmap.data(), bitmapWidth, bitmapHeight, FORMAT_R8_UNORM);
 		}
 	}
+
+	glyphLock.unlock();
 }
 const Texture* GetAtlas()
 {
