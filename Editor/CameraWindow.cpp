@@ -138,7 +138,7 @@ CameraWindow::CameraWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	SetEntity(INVALID_ENTITY);
 
 
-	cameraWindow->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 720, 500, 0));
+	cameraWindow->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 720, 100, 0));
 	cameraWindow->SetVisible(false);
 }
 

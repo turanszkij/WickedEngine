@@ -10,10 +10,10 @@ EnvProbeWindow::EnvProbeWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	assert(GUI && "Invalid GUI!");
 
 	envProbeWindow = new wiWindow(GUI, "Environment Probe Window");
-	envProbeWindow->SetSize(XMFLOAT2(600, 400));
+	envProbeWindow->SetSize(XMFLOAT2(300, 200));
 	GUI->AddWidget(envProbeWindow);
 
-	float x = 250, y = 0, step = 45;
+	float x = 100, y = 5, step = 35;
 
 	realTimeCheckBox = new wiCheckBox("RealTime: ");
 	realTimeCheckBox->SetPos(XMFLOAT2(x, y += step));
@@ -68,7 +68,7 @@ EnvProbeWindow::EnvProbeWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 
 
-	envProbeWindow->Translate(XMFLOAT3(30, 30, 0));
+	envProbeWindow->Translate(XMFLOAT3(100, 100, 0));
 	envProbeWindow->SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

@@ -226,7 +226,7 @@ namespace wiProfiler
 			}
 		}
 
-		wiFontParams params = wiFontParams(x, y, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, wiColor(255, 255, 255, 255), wiColor(0, 0, 0, 255));
+		wiFontParams params = wiFontParams(x, y, WIFONTSIZE_DEFAULT - 4, WIFALIGN_LEFT, WIFALIGN_TOP, wiColor(255, 255, 255, 255), wiColor(0, 0, 0, 255));
 
 		wiImageParams fx;
 		fx.pos.x = (float)params.posX;
