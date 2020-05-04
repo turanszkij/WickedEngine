@@ -66,10 +66,10 @@ namespace wiGraphics
 		// Has the resolution changed since the last frame?
 		inline bool ResolutionChanged() const { return RESOLUTIONCHANGED; }
 
-		// Returns the width of the screen with DPI scaling applied:
-		int GetScreenWidth() const;
-		// Returns the height of the screen with DPI scaling applied:
-		int GetScreenHeight() const;
+		// Returns the width of the screen with DPI scaling applied (subpixel size):
+		float GetScreenWidth() const;
+		// Returns the height of the screen with DPI scaling applied (subpixel size):
+		float GetScreenHeight() const;
 
 
 		virtual void SetResolution(int width, int height) = 0;

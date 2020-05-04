@@ -25,9 +25,9 @@ using namespace wiGraphics;
 using namespace wiRectPacker;
 
 #define MAX_TEXT 10000
-#define WHITESPACE_SIZE (float((params.size + params.spacingX) * params.scaling * 0.3f))
+#define WHITESPACE_SIZE ((float(params.size) + params.spacingX) * params.scaling * 0.25f)
 #define TAB_SIZE (WHITESPACE_SIZE * 4)
-#define LINEBREAK_SIZE (float((params.size + params.spacingY) * params.scaling))
+#define LINEBREAK_SIZE ((float(params.size) + params.spacingY) * params.scaling)
 
 namespace wiFont_Internal
 {
@@ -78,6 +78,7 @@ namespace wiFont_Internal
 		vector<uint8_t> fontBuffer;
 		stbtt_fontinfo fontInfo;
 		int ascent, descent, lineGap;
+		float fontScaling;
 		void Create(const string& newName)
 		{
 			name = newName;
@@ -111,11 +112,11 @@ namespace wiFont_Internal
 		float pos = 0;
 		float pos_last_letter = 0;
 		size_t last_word_begin = 0;
-		bool start_new_word = true;
+		bool start_new_word = false;
 
 		auto word_wrap = [&] {
 			start_new_word = true;
-			if (params.h_wrap >= 0 && pos >= params.h_wrap - 1)
+			if (last_word_begin > 0 && params.h_wrap >= 0 && pos >= params.h_wrap - 1)
 			{
 				// Word ended and wrap detected, push down last word by one line:
 				float word_offset = vertexList[last_word_begin].Pos.x;
@@ -129,6 +130,7 @@ namespace wiFont_Internal
 			}
 		};
 
+		int code_prev = 0;
 		size_t i = 0;
 		while(text[i] != 0)
 		{
@@ -149,18 +151,21 @@ namespace wiFont_Internal
 				word_wrap();
 				line += LINEBREAK_SIZE;
 				pos = 0;
+				code_prev = 0;
 			}
 			else if (code == ' ')
 			{
 				word_wrap();
 				pos += WHITESPACE_SIZE;
 				start_new_word = true;
+				code_prev = 0;
 			}
 			else if (code == '\t')
 			{
 				word_wrap();
 				pos += TAB_SIZE;
 				start_new_word = true;
+				code_prev = 0;
 			}
 			else
 			{
@@ -177,6 +182,14 @@ namespace wiFont_Internal
 					last_word_begin = vertexID;
 				}
 				start_new_word = false;
+
+				if (code_prev != 0)
+				{
+					const wiFontStyle& style = fontStyles[params.style];
+					int kern = stbtt_GetCodepointKernAdvance(&style.fontInfo, code_prev, code);
+					pos += kern * style.fontScaling;
+				}
+				code_prev = code;
 
 				const float left = pos + glyphOffsetX;
 				const float right = left + glyphWidth;
@@ -201,7 +214,7 @@ namespace wiFont_Internal
 				vertexList[vertexID + 3].Tex.x = glyph.tc_right;
 				vertexList[vertexID + 3].Tex.y = glyph.tc_bottom;
 
-				pos += (glyph.width + (float)params.spacingX) * params.scaling;
+				pos += glyph.width * params.scaling + params.spacingX;
 				pos_last_letter = pos;
 
 				quadCount++;
@@ -382,6 +395,7 @@ void UpdatePendingGlyphs()
 			wiFontStyle& fontStyle = fontStyles[style];
 
 			float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, height);
+			fontStyle.fontScaling = fontScaling / dpiscaling;
 
 			// get bounding box for character (may be offset to account for chars that dip above or below the line
 			int left, top, right, bottom;
@@ -507,7 +521,7 @@ int AddFontStyle(const std::string& fontName)
 
 
 template<typename T>
-int textWidth_internal(const T* text, const wiFontParams& params)
+float textWidth_internal(const T* text, const wiFontParams& params)
 {
 	if (params.style >= (int)fontStyles.size())
 	{
@@ -548,11 +562,11 @@ int textWidth_internal(const T* text, const wiFontParams& params)
 		maxWidth = std::max(maxWidth, currentLineWidth);
 	}
 
-	return (int)maxWidth;
+	return maxWidth;
 }
 
 template<typename T>
-int textHeight_internal(const T* text, const wiFontParams& params)
+float textHeight_internal(const T* text, const wiFontParams& params)
 {
 	if (params.style >= (int)fontStyles.size())
 	{
@@ -570,7 +584,7 @@ int textHeight_internal(const T* text, const wiFontParams& params)
 		}
 	}
 
-	return (int)height;
+	return height;
 }
 
 template<typename T>
@@ -684,36 +698,36 @@ void Draw(const wstring& text, const wiFontParams& params, CommandList cmd)
 	Draw_internal(text.c_str(), text.length(), params, cmd);
 }
 
-int textWidth(const char* text, const wiFontParams& params)
+float textWidth(const char* text, const wiFontParams& params)
 {
 	return textWidth_internal(text, params);
 }
-int textWidth(const wchar_t* text, const wiFontParams& params)
+float textWidth(const wchar_t* text, const wiFontParams& params)
 {
 	return textWidth_internal(text, params);
 }
-int textWidth(const string& text, const wiFontParams& params)
+float textWidth(const string& text, const wiFontParams& params)
 {
 	return textWidth_internal(text.c_str(), params);
 }
-int textWidth(const wstring& text, const wiFontParams& params)
+float textWidth(const wstring& text, const wiFontParams& params)
 {
 	return textWidth_internal(text.c_str(), params);
 }
 
-int textHeight(const char* text, const wiFontParams& params)
+float textHeight(const char* text, const wiFontParams& params)
 {
 	return textHeight_internal(text, params);
 }
-int textHeight(const wchar_t* text, const wiFontParams& params)
+float textHeight(const wchar_t* text, const wiFontParams& params)
 {
 	return textHeight_internal(text, params);
 }
-int textHeight(const string& text, const wiFontParams& params)
+float textHeight(const string& text, const wiFontParams& params)
 {
 	return textHeight_internal(text.c_str(), params);
 }
-int textHeight(const wstring& text, const wiFontParams& params)
+float textHeight(const wstring& text, const wiFontParams& params)
 {
 	return textHeight_internal(text.c_str(), params);
 }

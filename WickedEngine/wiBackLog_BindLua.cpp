@@ -52,7 +52,7 @@ namespace wiBackLog_BindLua
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiBackLog::setFontRowspacing(wiLua::SGetInt(L, 1));
+			wiBackLog::setFontRowspacing(wiLua::SGetFloat(L, 1));
 		}
 		else
 			wiLua::SError(L, "backlog_fontrowspacing(int val) not enough arguments!");

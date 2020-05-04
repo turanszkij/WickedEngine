@@ -46,7 +46,6 @@ enum QUALITY
 	QUALITY_NEAREST,
 	QUALITY_LINEAR,
 	QUALITY_ANISOTROPIC,
-	QUALITY_BICUBIC,
 	QUALITY_COUNT
 };
 enum ImageType
@@ -80,8 +79,6 @@ struct wiImageParams
 	XMFLOAT2 texOffset2;
 	XMFLOAT2 pivot;				// (0,0) : upperleft, (0.5,0.5) : center, (1,1) : bottomright
 	float rotation;
-	float mipLevel;
-	float mipLevel_Background;	// can blur background with this if > 0 and the background texture has mip levels
 	float fade;
 	float opacity;
 	XMFLOAT2 corners[4];		// you can deform the image by its corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
@@ -114,8 +111,6 @@ struct wiImageParams
 		fade = 0;
 		rotation = 0;
 		opacity = 1;
-		mipLevel = 0;
-		mipLevel_Background = 0;
 		stencilRef = 0;
 		stencilComp = STENCILMODE_DISABLED;
 		stencilRefMode = STENCILREFMODE_ALL;
@@ -149,7 +144,7 @@ struct wiImageParams
 	void enableFullScreen() { _flags |= FULLSCREEN; }
 	// enable background blur, which samples a background screen texture on a specified mip level on transparent areas instead of alpha blending
 	//	the background tex should be bound to resource slot: TEXSLOT_IMAGE_BACKGROUND beforehand!
-	void enableBackgroundBlur(float mip) { _flags |= BACKGROUND_BLUR; mipLevel_Background = mip; }
+	void enableBackgroundBlur() { _flags |= BACKGROUND_BLUR; }
 
 	// disable draw rectangle for base texture (whole texture will be drawn, no cutout)
 	void disableDrawRect() { _flags &= ~DRAWRECT; }

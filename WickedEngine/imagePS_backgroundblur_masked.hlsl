@@ -2,9 +2,9 @@
 
 float4 main(VertextoPixel input) : SV_TARGET
 {
-	float4 color = texture_base.SampleLevel(Sampler, input.uv0, xMipLevel) * xColor;
-	float3 background = texture_background.SampleLevel(Sampler, (input.uv_screen.xy * float2(0.5f, -0.5f) + 0.5f) / input.uv_screen.w, xMipLevel_Background).rgb;
-	float4 mask = texture_mask.SampleLevel(Sampler, input.uv1, xMipLevel);
+	float4 color = texture_base.Sample(Sampler, input.uv0) * xColor;
+	float3 background = texture_background.Sample(Sampler, (input.uv_screen.xy * float2(0.5f, -0.5f) + 0.5f) / input.uv_screen.w).rgb;
+	float4 mask = texture_mask.Sample(Sampler, input.uv1);
 	color *= mask;
 
 	return float4(lerp(background, color.rgb, color.a), mask.a);

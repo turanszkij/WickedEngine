@@ -135,7 +135,7 @@ inline void LightMapping(in float2 ATLAS, inout Lighting lighting)
 	if (any(ATLAS))
 	{
 #ifdef LIGHTMAP_QUALITY_BICUBIC
-		float4 lightmap = SampleTextureCatmullRom(texture_globallightmap, ATLAS);
+		float4 lightmap = SampleTextureCatmullRom(texture_globallightmap, sampler_linear_clamp, ATLAS);
 #else
 		float4 lightmap = texture_globallightmap.SampleLevel(sampler_linear_clamp, ATLAS, 0);
 #endif // LIGHTMAP_QUALITY_BICUBIC

@@ -30,8 +30,8 @@ void TestsRenderer::Load()
 	setReflectionsEnabled(true);
 	setFXAAEnabled(false);
 
-	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
+	float screenW = wiRenderer::GetDevice()->GetScreenWidth();
+	float screenH = wiRenderer::GetDevice()->GetScreenHeight();
 
 	wiLabel* label = new wiLabel("Label1");
 	label->SetText("Wicked Engine Test Framework");
@@ -212,8 +212,8 @@ void TestsRenderer::Load()
 			font.params.h_align = WIFALIGN_CENTER;
 			font.params.v_align = WIFALIGN_CENTER;
 			font.params.size = 20;
-			font.params.posX = (int)screenW / 2;
-			font.params.posY = (int)screenH / 2;
+			font.params.posX = screenW / 2;
+			font.params.posY = screenH / 2;
 			AddFont(&font);
 
 			wiInput::ControllerFeedback feedback;
@@ -415,8 +415,8 @@ void TestsRenderer::RunFontTest()
 	font.SetText("This is Arial, size 32 wiFont");
 	font_upscaled.SetText("This is Arial, size 14 wiFont, but upscaled to 32");
 
-	font.params.posX = wiRenderer::GetDevice()->GetScreenWidth() / 2;
-	font.params.posY = wiRenderer::GetDevice()->GetScreenHeight() / 6;
+	font.params.posX = wiRenderer::GetDevice()->GetScreenWidth() / 2.0f;
+	font.params.posY = wiRenderer::GetDevice()->GetScreenHeight() / 6.0f;
 	font.params.size = 32;
 
 	font_upscaled.params = font.params;
@@ -481,8 +481,8 @@ void TestsRenderer::RunFontTest()
 void TestsRenderer::RunSpriteTest()
 {
 	const float step = 30;
-	const int screenW = wiRenderer::GetDevice()->GetScreenWidth();
-	const int screenH = wiRenderer::GetDevice()->GetScreenHeight();
+	const float screenW = wiRenderer::GetDevice()->GetScreenWidth();
+	const float screenH = wiRenderer::GetDevice()->GetScreenHeight();
 	const XMFLOAT3 startPos = XMFLOAT3(screenW * 0.3f, screenH * 0.2f, 0);
 	wiImageParams params;
 	params.pos = startPos;
@@ -509,8 +509,8 @@ void TestsRenderer::RunSpriteTest()
 		static wiSpriteFont font("No animation: ");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
-		font.params.posX = int(sprite.params.pos.x);
-		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		font.params.posX = sprite.params.pos.x;
+		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
 
 		params.pos.x += sprite.params.siz.x + step;
@@ -528,8 +528,8 @@ void TestsRenderer::RunSpriteTest()
 		static wiSpriteFont font("Fade animation: ");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
-		font.params.posX = int(sprite.params.pos.x);
-		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		font.params.posX = sprite.params.pos.x;
+		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
 
 		params.pos.x += sprite.params.siz.x + step;
@@ -547,8 +547,8 @@ void TestsRenderer::RunSpriteTest()
 		static wiSpriteFont font("Wobble animation: ");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
-		font.params.posX = int(sprite.params.pos.x);
-		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		font.params.posX = sprite.params.pos.x;
+		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
 
 		params.pos.x += sprite.params.siz.x + step;
@@ -566,8 +566,8 @@ void TestsRenderer::RunSpriteTest()
 		static wiSpriteFont font("Rotate animation: ");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
-		font.params.posX = int(sprite.params.pos.x);
-		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		font.params.posX = sprite.params.pos.x;
+		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
 
 		params.pos.x += sprite.params.siz.x + step;
@@ -589,8 +589,8 @@ void TestsRenderer::RunSpriteTest()
 		static wiSpriteFont font("MovingTex + mask: ");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
-		font.params.posX = int(sprite.params.pos.x);
-		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		font.params.posX = sprite.params.pos.x;
+		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
 
 		params.pos.x = startPos.x;
@@ -609,8 +609,8 @@ void TestsRenderer::RunSpriteTest()
 		static wiSpriteFont font("Spritesheet: \n(without animation)");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
-		font.params.posX = int(sprite.params.pos.x);
-		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		font.params.posX = sprite.params.pos.x;
+		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
 
 		params.pos.x += sprite.params.siz.x + step;
@@ -630,8 +630,8 @@ void TestsRenderer::RunSpriteTest()
 		static wiSpriteFont font("single line anim: \n(4 frames)");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
-		font.params.posX = int(sprite.params.pos.x);
-		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		font.params.posX = sprite.params.pos.x;
+		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
 
 		params.pos.x += sprite.params.siz.x + step;
@@ -652,8 +652,8 @@ void TestsRenderer::RunSpriteTest()
 		static wiSpriteFont font("single line: \n(4 vertical frames)");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
-		font.params.posX = int(sprite.params.pos.x);
-		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		font.params.posX = sprite.params.pos.x;
+		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
 
 		params.pos.x += sprite.params.siz.x + step;
@@ -674,8 +674,8 @@ void TestsRenderer::RunSpriteTest()
 		static wiSpriteFont font("multiline: \n(all 16 frames)");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
-		font.params.posX = int(sprite.params.pos.x);
-		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		font.params.posX = sprite.params.pos.x;
+		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
 
 		params.pos.x += sprite.params.siz.x + step;
@@ -696,8 +696,8 @@ void TestsRenderer::RunSpriteTest()
 		static wiSpriteFont font("irregular multiline: \n(14 frames)");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
-		font.params.posX = int(sprite.params.pos.x);
-		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		font.params.posX = sprite.params.pos.x;
+		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
 
 		params.pos.x = startPos.x;
@@ -722,8 +722,8 @@ void TestsRenderer::RunSpriteTest()
 
 		static wiSpriteFont font("For the following spritesheets, credits belong to: https://mrbubblewand.wordpress.com/download/");
 		font.params.v_align = WIFALIGN_BOTTOM;
-		font.params.posX = int(sprite.params.pos.x - sprite.params.siz.x * 0.5f);
-		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		font.params.posX = sprite.params.pos.x - sprite.params.siz.x * 0.5f;
+		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
 
 		params.pos.x += sprite.params.siz.x + step;

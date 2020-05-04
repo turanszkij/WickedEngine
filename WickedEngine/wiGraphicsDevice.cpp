@@ -164,11 +164,11 @@ bool GraphicsDevice::IsFormatStencilSupport(FORMAT value) const
 	return false;
 }
 
-int GraphicsDevice::GetScreenWidth() const
+float GraphicsDevice::GetScreenWidth() const
 {
-	return int((float)GetResolutionWidth() / wiPlatform::GetDPIScaling());
+	return (float)GetResolutionWidth() / wiPlatform::GetDPIScaling();
 }
-int GraphicsDevice::GetScreenHeight() const
+float GraphicsDevice::GetScreenHeight() const
 {
-	return int((float)GetResolutionHeight() / wiPlatform::GetDPIScaling());
+	return (float)GetResolutionHeight() / wiPlatform::GetDPIScaling();
 }

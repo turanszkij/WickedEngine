@@ -33,7 +33,7 @@ namespace wiBackLog
 	const float speed = 50.0f;
 	unsigned int deletefromline = 100;
 	float pos = -FLT_MAX;
-	int scroll = 0;
+	float scroll = 0;
 	stringstream inputArea;
 	int historyPos = 0;
 	wiSpriteFont font;
@@ -97,7 +97,7 @@ namespace wiBackLog
 			wiImage::Draw(backgroundTex.get(), fx, cmd);
 			font.SetText(getText());
 			font.params.posX = 50;
-			font.params.posY = (int)pos + (int)scroll;
+			font.params.posY = pos + scroll;
 			font.Draw(cmd);
 			wiFont::Draw(inputArea.str(), wiFontParams(10, wiRenderer::GetDevice()->GetScreenHeight() - 10, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_BOTTOM), cmd);
 		}
@@ -189,7 +189,7 @@ namespace wiBackLog
 	{
 		font.params.size = value;
 	}
-	void setFontRowspacing(int value)
+	void setFontRowspacing(float value)
 	{
 		font.params.spacingY = value;
 	}

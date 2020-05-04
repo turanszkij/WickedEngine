@@ -11,7 +11,6 @@ Luna<wiImageParams_BindLua>::FunctionType wiImageParams_BindLua::methods[] = {
 	lunamethod(wiImageParams_BindLua, GetOpacity),
 	lunamethod(wiImageParams_BindLua, GetFade),
 	lunamethod(wiImageParams_BindLua, GetRotation),
-	lunamethod(wiImageParams_BindLua, GetMipLevel),
 	lunamethod(wiImageParams_BindLua, GetTexOffset),
 	lunamethod(wiImageParams_BindLua, GetTexOffset2),
 	lunamethod(wiImageParams_BindLua, GetDrawRect),
@@ -33,7 +32,6 @@ Luna<wiImageParams_BindLua>::FunctionType wiImageParams_BindLua::methods[] = {
 	lunamethod(wiImageParams_BindLua, SetQuality),
 	lunamethod(wiImageParams_BindLua, SetSampleMode),
 	lunamethod(wiImageParams_BindLua, SetRotation),
-	lunamethod(wiImageParams_BindLua, SetMipLevel),
 	lunamethod(wiImageParams_BindLua, SetTexOffset),
 	lunamethod(wiImageParams_BindLua, SetTexOffset2),
 	lunamethod(wiImageParams_BindLua, EnableDrawRect),
@@ -88,11 +86,6 @@ int wiImageParams_BindLua::GetFade(lua_State* L)
 int wiImageParams_BindLua::GetRotation(lua_State* L)
 {
 	wiLua::SSetFloat(L, params.rotation);
-	return 1;
-}
-int wiImageParams_BindLua::GetMipLevel(lua_State* L)
-{
-	wiLua::SSetFloat(L, params.mipLevel);
 	return 1;
 }
 int wiImageParams_BindLua::GetTexOffset(lua_State* L)
@@ -309,19 +302,6 @@ int wiImageParams_BindLua::SetRotation(lua_State* L)
 	}
 	return 0;
 }
-int wiImageParams_BindLua::SetMipLevel(lua_State* L)
-{
-	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		params.mipLevel = wiLua::SGetFloat(L, 1);
-	}
-	else
-	{
-		wiLua::SError(L, "SetMipLevel(float x) not enough arguments!");
-	}
-	return 0;
-}
 int wiImageParams_BindLua::SetTexOffset(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
@@ -416,13 +396,7 @@ int wiImageParams_BindLua::DisableMirror(lua_State* L)
 }
 int wiImageParams_BindLua::EnableBackgroundBlur(lua_State* L)
 {
-	float mip = 0;
-	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		mip = wiLua::SGetFloat(L, 1);
-	}
-	params.enableBackgroundBlur(mip);
+	params.enableBackgroundBlur();
 	return 0;
 }
 int wiImageParams_BindLua::DisableBackgroundBlur(lua_State* L)

@@ -66,12 +66,12 @@ namespace wiRenderer_BindLua
 
 	int GetScreenWidth(lua_State* L)
 	{
-		wiLua::SSetInt(L, wiRenderer::GetDevice()->GetScreenWidth());
+		wiLua::SSetFloat(L, wiRenderer::GetDevice()->GetScreenWidth());
 		return 1;
 	}
 	int GetScreenHeight(lua_State* L)
 	{
-		wiLua::SSetInt(L, wiRenderer::GetDevice()->GetScreenHeight());
+		wiLua::SSetFloat(L, wiRenderer::GetDevice()->GetScreenHeight());
 		return 1;
 	}
 

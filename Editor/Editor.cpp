@@ -63,7 +63,7 @@ void Editor::Initialize()
 
 void EditorLoadingScreen::Load()
 {
-	font = wiSpriteFont("Loading...", wiFontParams((int)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f), (int)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f), 36,
+	font = wiSpriteFont("Loading...", wiFontParams(wiRenderer::GetDevice()->GetScreenWidth()*0.5f, wiRenderer::GetDevice()->GetScreenHeight()*0.5f, 36,
 		WIFALIGN_CENTER, WIFALIGN_CENTER));
 	AddFont(&font);
 
@@ -81,8 +81,8 @@ void EditorLoadingScreen::Load()
 }
 void EditorLoadingScreen::Update(float dt)
 {
-	font.params.posX = (int)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f);
-	font.params.posY = (int)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f);
+	font.params.posX = wiRenderer::GetDevice()->GetScreenWidth()*0.5f;
+	font.params.posY = wiRenderer::GetDevice()->GetScreenHeight()*0.5f;
 	sprite.params.pos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth()*0.5f, wiRenderer::GetDevice()->GetScreenHeight()*0.5f - font.textHeight(), 0);
 
 	__super::Update(dt);
@@ -227,8 +227,8 @@ void EditorComponent::Load()
 
 	translator.enabled = false;
 
-	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
+	float screenW = wiRenderer::GetDevice()->GetScreenWidth();
+	float screenH = wiRenderer::GetDevice()->GetScreenHeight();
 
 	XMFLOAT2 option_size = XMFLOAT2(100, 34);
 	float x = screenW - option_size.x;

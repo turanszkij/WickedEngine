@@ -30,7 +30,7 @@ wiWidget::wiWidget()
 	for (int i = IDLE; i < WIDGETSTATE_COUNT; ++i)
 	{
 		sprites[i].params.blendFlag = BLENDMODE_OPAQUE;
-		sprites[i].params.enableBackgroundBlur(0); // enable gui background blur by default, use mip = 0
+		sprites[i].params.enableBackgroundBlur();
 	}
 }
 
@@ -76,8 +76,8 @@ void wiWidget::Update(wiGUI* gui, float dt)
 		sprites[i].params.siz.y = scale.y;
 		sprites[i].params.fade = IsEnabled() ? 0.0f : 0.5f;
 	}
-	font.params.posX = (int)translation.x;
-	font.params.posY = (int)translation.y;
+	font.params.posX = translation.x;
+	font.params.posY = translation.y;
 }
 void wiWidget::RenderTooltip(const wiGUI* gui, CommandList cmd) const
 {
@@ -99,7 +99,7 @@ void wiWidget::RenderTooltip(const wiGUI* gui, CommandList cmd) const
 		{
 			tooltipPos.y += 40;
 		}
-		wiFontParams fontProps = wiFontParams((int)tooltipPos.x, (int)tooltipPos.y, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP);
+		wiFontParams fontProps = wiFontParams(tooltipPos.x, tooltipPos.y, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP);
 		fontProps.color = wiColor(25, 25, 25, 255);
 		wiSpriteFont tooltipFont = wiSpriteFont(tooltip, fontProps);
 		if (!scriptTip.empty())
@@ -107,11 +107,11 @@ void wiWidget::RenderTooltip(const wiGUI* gui, CommandList cmd) const
 			tooltipFont.SetText(tooltip + "\n" + scriptTip);
 		}
 
-		int textWidth = tooltipFont.textWidth();
+		float textWidth = tooltipFont.textWidth();
 		if (tooltipPos.x > wiRenderer::GetDevice()->GetScreenWidth() - textWidth)
 		{
 			tooltipPos.x -= textWidth + 10;
-			tooltipFont.params.posX = (int)tooltipPos.x;
+			tooltipFont.params.posX = tooltipPos.x;
 		}
 
 		static const float _border = 2;
@@ -357,27 +357,27 @@ void wiButton::Update(wiGUI* gui, float dt)
 	switch (font.params.h_align)
 	{
 	case WIFALIGN_LEFT:
-		font.params.posX = (int)(translation.x + 2);
+		font.params.posX = translation.x + 2;
 		break;
 	case WIFALIGN_RIGHT:
-		font.params.posX = (int)(translation.x + scale.x - 2);
+		font.params.posX = translation.x + scale.x - 2;
 		break;
 	case WIFALIGN_CENTER:
 	default:
-		font.params.posX = (int)(translation.x + scale.x * 0.5f);
+		font.params.posX = translation.x + scale.x * 0.5f;
 		break;
 	}
 	switch (font.params.v_align)
 	{
 	case WIFALIGN_TOP:
-		font.params.posY = (int)(translation.y + 2);
+		font.params.posY = translation.y + 2;
 		break;
 	case WIFALIGN_BOTTOM:
-		font.params.posY = (int)(translation.y + scale.y - 2);
+		font.params.posY = translation.y + scale.y - 2;
 		break;
 	case WIFALIGN_CENTER:
 	default:
-		font.params.posY = (int)(translation.y + scale.y * 0.5f);
+		font.params.posY = translation.y + scale.y * 0.5f;
 		break;
 	}
 }
@@ -436,32 +436,32 @@ void wiLabel::Update(wiGUI* gui, float dt)
 		// ...
 	}
 
-	font.params.h_wrap = (int)scale.x;
+	font.params.h_wrap = scale.x;
 
 	switch (font.params.h_align)
 	{
 	case WIFALIGN_LEFT:
-		font.params.posX = (int)(translation.x + 2);
+		font.params.posX = translation.x + 2;
 		break;
 	case WIFALIGN_RIGHT:
-		font.params.posX = (int)(translation.x + scale.x - 2);
+		font.params.posX = translation.x + scale.x - 2;
 		break;
 	case WIFALIGN_CENTER:
 	default:
-		font.params.posX = (int)(translation.x + scale.x * 0.5f);
+		font.params.posX = translation.x + scale.x * 0.5f;
 		break;
 	}
 	switch (font.params.v_align)
 	{
 	case WIFALIGN_TOP:
-		font.params.posY = (int)(translation.y + 2);
+		font.params.posY = translation.y + 2;
 		break;
 	case WIFALIGN_BOTTOM:
-		font.params.posY = (int)(translation.y + scale.y - 2);
+		font.params.posY = translation.y + scale.y - 2;
 		break;
 	case WIFALIGN_CENTER:
 	default:
-		font.params.posY = (int)(translation.y + scale.y * 0.5f);
+		font.params.posY = translation.y + scale.y * 0.5f;
 		break;
 	}
 }
@@ -608,10 +608,10 @@ void wiTextInputField::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	font.params.posX = (int)translation.x + 2;
-	font.params.posY = (int)(translation.y + scale.y * 0.5f);
-	font_description.params.posX = (int)translation.x - 2;
-	font_description.params.posY = (int)(translation.y + scale.y * 0.5f);
+	font.params.posX = translation.x + 2;
+	font.params.posY = translation.y + scale.y * 0.5f;
+	font_description.params.posX = translation.x - 2;
+	font_description.params.posY = translation.y + scale.y * 0.5f;
 
 	if (state == ACTIVE)
 	{
@@ -828,7 +828,7 @@ void wiSlider::Update(wiGUI* gui, float dt)
 		valueInputField->SetValue(value);
 	}
 
-	font.params.posY = (int)(translation.y + scale.y * 0.5f);
+	font.params.posY = translation.y + scale.y * 0.5f;
 
 	const float knobWidth = sprites_knob[state].params.siz.x;
 	const float knobWidthHalf = knobWidth * 0.5f;
@@ -959,7 +959,7 @@ void wiCheckBox::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	font.params.posY = (int)(translation.y + scale.y * 0.5f);
+	font.params.posY = translation.y + scale.y * 0.5f;
 
 	sprites_check[state].params.pos.x = translation.x + scale.x * 0.25f;
 	sprites_check[state].params.pos.y = translation.y + scale.y * 0.25f;
@@ -1171,7 +1171,7 @@ void wiComboBox::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	font.params.posY = (int)(translation.y + sprites[state].params.siz.y * 0.5f);
+	font.params.posY = translation.y + sprites[state].params.siz.y * 0.5f;
 }
 void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 {
@@ -1251,7 +1251,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 
 	if (selected >= 0)
 	{
-		wiFont::Draw(items[selected], wiFontParams((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
+		wiFont::Draw(items[selected], wiFontParams(translation.x + scale.x*0.5f, translation.y + scale.y*0.5f, WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER,
 			font.params.color, font.params.shadowColor), cmd);
 	}
 
@@ -1318,7 +1318,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 				}
 			}
 			wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
-			wiFont::Draw(items[i], wiFontParams((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f + GetItemOffset(i)), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
+			wiFont::Draw(items[i], wiFontParams(translation.x + scale.x*0.5f, translation.y + scale.y*0.5f + GetItemOffset(i), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER,
 				font.params.color, font.params.shadowColor), cmd);
 		}
 	}
@@ -2721,8 +2721,8 @@ void wiTreeList::Update(wiGUI* gui, float dt)
 	}
 
 	sprites[state].params.siz.y = item_height();
-	font.params.posX = (int)translation.x + 2;
-	font.params.posY = (int)(translation.y + sprites[state].params.siz.y * 0.5f);
+	font.params.posX = translation.x + 2;
+	font.params.posY = translation.y + sprites[state].params.siz.y * 0.5f;
 }
 void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 {
@@ -2854,7 +2854,7 @@ void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 		}
 		
 		// Item name text:
-		wiFont::Draw(item.name, wiFontParams((int)name_box.pos.x + 1, (int)(name_box.pos.y + name_box.siz.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_CENTER, 0, 0,
+		wiFont::Draw(item.name, wiFontParams(name_box.pos.x + 1, name_box.pos.y + name_box.siz.y * 0.5f, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_CENTER,
 			font.params.color, font.params.shadowColor), cmd);
 	}
 }

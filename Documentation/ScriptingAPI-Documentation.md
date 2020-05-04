@@ -93,7 +93,7 @@ The scripting API provides some functions which manipulate the BackLog. These fu
 - backlog_post(string params,,,)  -- post a string to the backlog
 - backlog_fontsize(int size)  -- modify the fint size of the backlog
 - backlog_isactive() : boolean result  -- returns true if the backlog is active, false otherwise
-- backlog_fontrowspacing(int spacing)  -- set a row spacing to the backlog
+- backlog_fontrowspacing(float spacing)  -- set a row spacing to the backlog
 
 ### Renderer
 This is the graphics renderer, which is also responsible for managing the scene graph which consists of keeping track of
