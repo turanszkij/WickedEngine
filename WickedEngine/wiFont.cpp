@@ -8,6 +8,7 @@
 #include "wiTextureHelper.h"
 #include "wiRectPacker.h"
 #include "wiSpinLock.h"
+#include "wiPlatform.h"
 
 #include "Utility/stb_truetype.h"
 
@@ -24,9 +25,9 @@ using namespace wiGraphics;
 using namespace wiRectPacker;
 
 #define MAX_TEXT 10000
-#define WHITESPACE_SIZE (int((params.size + params.spacingX) * params.scaling * 0.3f))
+#define WHITESPACE_SIZE ((float(params.size) + params.spacingX) * params.scaling * 0.25f)
 #define TAB_SIZE (WHITESPACE_SIZE * 4)
-#define LINEBREAK_SIZE (int((params.size + params.spacingY) * params.scaling))
+#define LINEBREAK_SIZE ((float(params.size) + params.spacingY) * params.scaling)
 
 namespace wiFont_Internal
 {
@@ -38,7 +39,7 @@ namespace wiFont_Internal
 	DepthStencilState	depthStencilState;
 	Sampler				sampler;
 
-	InputLayout		inputLayout;
+	InputLayout			inputLayout;
 	Shader				vertexShader;
 	Shader				pixelShader;
 	PipelineState		PSO;
@@ -49,10 +50,10 @@ namespace wiFont_Internal
 
 	struct Glyph
 	{
-		int16_t x;
-		int16_t y;
-		int16_t width;
-		int16_t height;
+		float x;
+		float y;
+		float width;
+		float height;
 		uint16_t tc_left;
 		uint16_t tc_right;
 		uint16_t tc_top;
@@ -77,6 +78,7 @@ namespace wiFont_Internal
 		vector<uint8_t> fontBuffer;
 		stbtt_fontinfo fontInfo;
 		int ascent, descent, lineGap;
+		float fontScaling;
 		void Create(const string& newName)
 		{
 			name = newName;
@@ -98,7 +100,7 @@ namespace wiFont_Internal
 
 	struct FontVertex
 	{
-		XMSHORT2 Pos;
+		XMFLOAT2 Pos;
 		XMHALF2 Tex;
 	};
 
@@ -106,18 +108,18 @@ namespace wiFont_Internal
 	uint32_t WriteVertices(volatile FontVertex* vertexList, const T* text, wiFontParams params)
 	{
 		uint32_t quadCount = 0;
-		int16_t line = 0;
-		int16_t pos = 0;
-		int16_t pos_last_letter = 0;
+		float line = 0;
+		float pos = 0;
+		float pos_last_letter = 0;
 		size_t last_word_begin = 0;
-		bool start_new_word = true;
+		bool start_new_word = false;
 
 		auto word_wrap = [&] {
 			start_new_word = true;
-			if (params.h_wrap >= 0 && pos >= params.h_wrap - 1)
+			if (last_word_begin > 0 && params.h_wrap >= 0 && pos >= params.h_wrap - 1)
 			{
 				// Word ended and wrap detected, push down last word by one line:
-				int16_t word_offset = vertexList[last_word_begin].Pos.x;
+				float word_offset = vertexList[last_word_begin].Pos.x;
 				for (size_t i = last_word_begin; i < quadCount * 4; ++i)
 				{
 					vertexList[i].Pos.x -= word_offset;
@@ -128,6 +130,7 @@ namespace wiFont_Internal
 			}
 		};
 
+		int code_prev = 0;
 		size_t i = 0;
 		while(text[i] != 0)
 		{
@@ -148,26 +151,29 @@ namespace wiFont_Internal
 				word_wrap();
 				line += LINEBREAK_SIZE;
 				pos = 0;
+				code_prev = 0;
 			}
 			else if (code == ' ')
 			{
 				word_wrap();
 				pos += WHITESPACE_SIZE;
 				start_new_word = true;
+				code_prev = 0;
 			}
 			else if (code == '\t')
 			{
 				word_wrap();
 				pos += TAB_SIZE;
 				start_new_word = true;
+				code_prev = 0;
 			}
 			else
 			{
 				const Glyph& glyph = glyph_lookup.at(hash);
-				const int16_t glyphWidth = int16_t(glyph.width * params.scaling);
-				const int16_t glyphHeight = int16_t(glyph.height * params.scaling);
-				const int16_t glyphOffsetX = int16_t(glyph.x * params.scaling);
-				const int16_t glyphOffsetY = int16_t(glyph.y * params.scaling);
+				const float glyphWidth = glyph.width * params.scaling;
+				const float glyphHeight = glyph.height * params.scaling;
+				const float glyphOffsetX = glyph.x * params.scaling;
+				const float glyphOffsetY = glyph.y * params.scaling;
 
 				const size_t vertexID = size_t(quadCount) * 4;
 
@@ -177,10 +183,18 @@ namespace wiFont_Internal
 				}
 				start_new_word = false;
 
-				const int16_t left = pos + glyphOffsetX;
-				const int16_t right = left + glyphWidth;
-				const int16_t top = line + glyphOffsetY;
-				const int16_t bottom = top + glyphHeight;
+				if (code_prev != 0)
+				{
+					const wiFontStyle& style = fontStyles[params.style];
+					int kern = stbtt_GetCodepointKernAdvance(&style.fontInfo, code_prev, code);
+					pos += kern * style.fontScaling;
+				}
+				code_prev = code;
+
+				const float left = pos + glyphOffsetX;
+				const float right = left + glyphWidth;
+				const float top = line + glyphOffsetY;
+				const float bottom = top + glyphHeight;
 
 				vertexList[vertexID + 0].Pos.x = left;
 				vertexList[vertexID + 0].Pos.y = top;
@@ -200,7 +214,7 @@ namespace wiFont_Internal
 				vertexList[vertexID + 3].Tex.x = glyph.tc_right;
 				vertexList[vertexID + 3].Tex.y = glyph.tc_bottom;
 
-				pos += int16_t((glyph.width + params.spacingX) * params.scaling);
+				pos += glyph.width * params.scaling + params.spacingX;
 				pos_last_letter = pos;
 
 				quadCount++;
@@ -326,7 +340,7 @@ void LoadShaders()
 
 	InputLayoutDesc layout[] =
 	{
-		{ "POSITION", 0, FORMAT_R16G16_SINT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "POSITION", 0, FORMAT_R32G32_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, FORMAT_R16G16_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 	};
 	wiRenderer::LoadShader(VS, vertexShader, "fontVS.cso");
@@ -348,20 +362,40 @@ void LoadShaders()
 
 void UpdatePendingGlyphs()
 {
+	glyphLock.lock();
+
+	static uint32_t saved_dpi = wiPlatform::GetDPI();
+	uint32_t dpi = wiPlatform::GetDPI();
+	if (saved_dpi != dpi)
+	{
+		saved_dpi = dpi;
+
+		for (auto& x : glyph_lookup)
+		{
+			pendingGlyphs.insert(x.first);
+		}
+		glyph_lookup.clear();
+		rect_lookup.clear();
+	}
+
 	// If there are pending glyphs, render them and repack the atlas:
 	if (!pendingGlyphs.empty())
 	{
 		// Pad the glyph rects in the atlas to avoid bleeding from nearby texels:
 		const int borderPadding = 1;
 
+		// Font resolution is DPI upscaled:
+		const float dpiscaling = wiPlatform::GetDPIScaling();
+
 		for (int32_t hash : pendingGlyphs)
 		{
 			const int code = codefromhash(hash);
 			const int style = stylefromhash(hash);
-			const int height = heightfromhash(hash);
+			const float height = (float)heightfromhash(hash) * dpiscaling;
 			wiFontStyle& fontStyle = fontStyles[style];
 
-			float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, float(height));
+			float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, height);
+			fontStyle.fontScaling = fontScaling / dpiscaling;
 
 			// get bounding box for character (may be offset to account for chars that dip above or below the line
 			int left, top, right, bottom;
@@ -369,10 +403,16 @@ void UpdatePendingGlyphs()
 
 			// Glyph dimensions are calculated without padding:
 			Glyph& glyph = glyph_lookup[hash];
-			glyph.x = left;
-			glyph.y = top + int(fontStyle.ascent * fontScaling);
-			glyph.width = right - left;
-			glyph.height = bottom - top;
+			glyph.x = float(left);
+			glyph.y = float(top) + float(fontStyle.ascent) * fontScaling;
+			glyph.width = float(right - left);
+			glyph.height = float(bottom - top);
+
+			// Remove dpi upscaling:
+			glyph.x = glyph.x / dpiscaling;
+			glyph.y = glyph.y / dpiscaling;
+			glyph.width = glyph.width / dpiscaling;
+			glyph.height = glyph.height / dpiscaling;
 
 			// Add padding to the rectangle that will be packed in the atlas:
 			right += borderPadding * 2;
@@ -411,7 +451,7 @@ void UpdatePendingGlyphs()
 				const int32_t hash = it.first;
 				const wchar_t code = codefromhash(hash);
 				const int style = stylefromhash(hash);
-				const int height = heightfromhash(hash);
+				const float height = (float)heightfromhash(hash) * dpiscaling;
 				wiFontStyle& fontStyle = fontStyles[style];
 				rect_xywh& rect = it.second;
 				Glyph& glyph = glyph_lookup[hash];
@@ -422,7 +462,7 @@ void UpdatePendingGlyphs()
 				rect.w -= borderPadding * 2;
 				rect.h -= borderPadding * 2;
 
-				float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, float(height));
+				float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, height);
 
 				// Render the glyph inside the CPU-side atlas:
 				int byteOffset = rect.x + (rect.y * bitmapWidth);
@@ -443,13 +483,14 @@ void UpdatePendingGlyphs()
 				glyph.tc_right = XMConvertFloatToHalf(tc_right);
 				glyph.tc_top = XMConvertFloatToHalf(tc_top);
 				glyph.tc_bottom = XMConvertFloatToHalf(tc_bottom);
-
 			}
 
 			// Upload the CPU-side texture atlas bitmap to the GPU:
 			wiTextureHelper::CreateTexture(texture, bitmap.data(), bitmapWidth, bitmapHeight, FORMAT_R8_UNORM);
 		}
 	}
+
+	glyphLock.unlock();
 }
 const Texture* GetAtlas()
 {
@@ -480,15 +521,15 @@ int AddFontStyle(const std::string& fontName)
 
 
 template<typename T>
-int textWidth_internal(const T* text, const wiFontParams& params)
+float textWidth_internal(const T* text, const wiFontParams& params)
 {
 	if (params.style >= (int)fontStyles.size())
 	{
 		return 0;
 	}
 
-	int maxWidth = 0;
-	int currentLineWidth = 0;
+	float maxWidth = 0;
+	float currentLineWidth = 0;
 	size_t i = 0;
 	while (text[i] != 0)
 	{
@@ -516,7 +557,7 @@ int textWidth_internal(const T* text, const wiFontParams& params)
 		else
 		{
 			const Glyph& glyph = glyph_lookup.at(hash);
-			currentLineWidth += int((glyph.width + params.spacingX) * params.scaling);
+			currentLineWidth += glyph.width + float(params.spacingX) * params.scaling;
 		}
 		maxWidth = std::max(maxWidth, currentLineWidth);
 	}
@@ -525,14 +566,14 @@ int textWidth_internal(const T* text, const wiFontParams& params)
 }
 
 template<typename T>
-int textHeight_internal(const T* text, const wiFontParams& params)
+float textHeight_internal(const T* text, const wiFontParams& params)
 {
 	if (params.style >= (int)fontStyles.size())
 	{
 		return 0;
 	}
 
-	int height = LINEBREAK_SIZE;
+	float height = LINEBREAK_SIZE;
 	size_t i = 0;
 	while (text[i] != 0)
 	{
@@ -557,14 +598,13 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 	wiFontParams newProps = params;
 
 	if (params.h_align == WIFALIGN_CENTER)
-		newProps.posX -= textWidth(text, params) / 2;
+		newProps.posX -= textWidth_internal(text, newProps) / 2;
 	else if (params.h_align == WIFALIGN_RIGHT)
-		newProps.posX -= textWidth(text, params);
+		newProps.posX -= textWidth_internal(text, newProps);
 	if (params.v_align == WIFALIGN_CENTER)
-		newProps.posY -= textHeight(text, params) / 2;
+		newProps.posY -= textHeight_internal(text, newProps) / 2;
 	else if (params.v_align == WIFALIGN_BOTTOM)
-		newProps.posY -= textHeight(text, params);
-
+		newProps.posY -= textHeight_internal(text, newProps);
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -601,12 +641,14 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 
 	FontCB cb;
 
+	XMMATRIX Projection = device->GetScreenProjection();
+
 	if (newProps.shadowColor.getA() > 0)
 	{
 		// font shadow render:
 		XMStoreFloat4x4(&cb.g_xFont_Transform,
 			XMMatrixTranslation((float)newProps.posX + 1, (float)newProps.posY + 1, 0)
-			* device->GetScreenProjection()
+			* Projection
 		);
 		cb.g_xFont_Color = newProps.shadowColor.toFloat4();
 		device->UpdateBuffer(&constantBuffer, &cb, cmd);
@@ -617,7 +659,7 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 	// font base render:
 	XMStoreFloat4x4(&cb.g_xFont_Transform, 
 		XMMatrixTranslation((float)newProps.posX, (float)newProps.posY, 0)
-		* device->GetScreenProjection()
+		* Projection
 	);
 	cb.g_xFont_Color = newProps.color.toFloat4();
 	device->UpdateBuffer(&constantBuffer, &cb, cmd);
@@ -656,36 +698,36 @@ void Draw(const wstring& text, const wiFontParams& params, CommandList cmd)
 	Draw_internal(text.c_str(), text.length(), params, cmd);
 }
 
-int textWidth(const char* text, const wiFontParams& params)
+float textWidth(const char* text, const wiFontParams& params)
 {
 	return textWidth_internal(text, params);
 }
-int textWidth(const wchar_t* text, const wiFontParams& params)
+float textWidth(const wchar_t* text, const wiFontParams& params)
 {
 	return textWidth_internal(text, params);
 }
-int textWidth(const string& text, const wiFontParams& params)
+float textWidth(const string& text, const wiFontParams& params)
 {
 	return textWidth_internal(text.c_str(), params);
 }
-int textWidth(const wstring& text, const wiFontParams& params)
+float textWidth(const wstring& text, const wiFontParams& params)
 {
 	return textWidth_internal(text.c_str(), params);
 }
 
-int textHeight(const char* text, const wiFontParams& params)
+float textHeight(const char* text, const wiFontParams& params)
 {
 	return textHeight_internal(text, params);
 }
-int textHeight(const wchar_t* text, const wiFontParams& params)
+float textHeight(const wchar_t* text, const wiFontParams& params)
 {
 	return textHeight_internal(text, params);
 }
-int textHeight(const string& text, const wiFontParams& params)
+float textHeight(const string& text, const wiFontParams& params)
 {
 	return textHeight_internal(text.c_str(), params);
 }
-int textHeight(const wstring& text, const wiFontParams& params)
+float textHeight(const wstring& text, const wiFontParams& params)
 {
 	return textHeight_internal(text.c_str(), params);
 }

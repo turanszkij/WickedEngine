@@ -12,7 +12,7 @@ AnimationWindow::AnimationWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 	assert(GUI && "Invalid GUI!");
 
 	animWindow = new wiWindow(GUI, "Animation Window");
-	animWindow->SetSize(XMFLOAT2(600, 450));
+	animWindow->SetSize(XMFLOAT2(600, 300));
 	GUI->AddWidget(animWindow);
 
 	float x = 200;

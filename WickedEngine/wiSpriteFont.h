@@ -20,8 +20,8 @@ public:
 	virtual void Update(float dt);
 	void Draw(wiGraphics::CommandList cmd) const;
 
-	int textWidth() const;
-	int textHeight() const;
+	float textWidth() const;
+	float textHeight() const;
 
 	void SetText(const std::string& value);
 	void SetText(const std::wstring& value);

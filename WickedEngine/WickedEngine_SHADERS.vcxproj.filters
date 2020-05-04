@@ -600,30 +600,6 @@
     <FxCompile Include="copytexture2D_unorm4_borderexpandCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="generateMIPChain2D_float4_SimpleFilterCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="generateMIPChain3D_float4_SimpleFilterCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="generateMIPChain2D_unorm4_SimpleFilterCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="generateMIPChain3D_unorm4_SimpleFilterCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="generateMIPChainCube_float4_SimpleFilterCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="generateMIPChainCube_unorm4_SimpleFilterCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="generateMIPChainCubeArray_float4_SimpleFilterCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="generateMIPChainCubeArray_unorm4_SimpleFilterCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="filterEnvMapCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -669,28 +645,13 @@
     <FxCompile Include="copytexture2D_float4_borderexpandCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="generateMIPChain2D_float4_BicubicCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="generateMIPChain2D_unorm4_BicubicCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="objectPS_deferred_planarreflection.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="objectPS_deferred_normalmap_planarreflection.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="imagePS_bicubic.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="imagePS_masked_bicubic.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="imagePS_separatenormalmap_bicubic.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="screenPS_bicubic.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="raytrace_debugbvhPS.hlsl">
@@ -954,9 +915,6 @@
     <FxCompile Include="imagePS_backgroundblur.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="imagePS_backgroundblur_bicubic.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="downsample4xCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -966,14 +924,35 @@
     <FxCompile Include="imagePS_backgroundblur_masked.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="imagePS_backgroundblur_masked_bicubic.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="emittedparticle_emitCS_volume.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="emittedparticlePS_soft_lighting.hlsl">
       <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChain2DCS_unorm4.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChain2DCS_float4.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChain3DCS_float4.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChain3DCS_unorm4.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChainCubeCS_float4.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChainCubeCS_unorm4.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChainCubeArrayCS_float4.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChainCubeArrayCS_unorm4.hlsl">
+      <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

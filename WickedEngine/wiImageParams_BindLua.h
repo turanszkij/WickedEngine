@@ -22,7 +22,6 @@ public:
 	int GetOpacity(lua_State* L);
 	int GetFade(lua_State* L);
 	int GetRotation(lua_State* L);
-	int GetMipLevel(lua_State* L);
 	int GetTexOffset(lua_State* L);
 	int GetTexOffset2(lua_State* L);
 	int GetDrawRect(lua_State* L);
@@ -44,7 +43,6 @@ public:
 	int SetQuality(lua_State* L);
 	int SetSampleMode(lua_State* L);
 	int SetRotation(lua_State* L);
-	int SetMipLevel(lua_State* L);
 	int SetTexOffset(lua_State* L);
 	int SetTexOffset2(lua_State* L);
 	int EnableDrawRect(lua_State* L);

@@ -23,7 +23,7 @@ namespace wiProfiler
 	void EndRange(range_id id);
 
 	// Renders a basic text of the Profiling results to the (x,y) screen coordinate
-	void DrawData(int x, int y, wiGraphics::CommandList cmd);
+	void DrawData(float x, float y, wiGraphics::CommandList cmd);
 
 	// Enable/disable profiling
 	void SetEnabled(bool value);

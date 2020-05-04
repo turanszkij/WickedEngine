@@ -362,7 +362,7 @@ inline float3 UV_to_CubeMap(in float2 uv, in uint faceIndex)
 
 // Samples a texture with Catmull-Rom filtering, using 9 texture fetches instead of 16. ( https://gist.github.com/TheRealMJP/c83b8c0f46b63f3a88a5986f4fa982b1#file-tex2dcatmullrom-hlsl )
 // See http://vec3.ca/bicubic-filtering-in-fewer-taps/ for more details
-float4 SampleTextureCatmullRom(in Texture2D<float4> tex, in float2 uv, in float mipLevel = 0)
+float4 SampleTextureCatmullRom(in Texture2D<float4> tex, in SamplerState linearSampler, in float2 uv)
 {
 	float2 texSize;
 	tex.GetDimensions(texSize.x, texSize.y);
@@ -400,17 +400,17 @@ float4 SampleTextureCatmullRom(in Texture2D<float4> tex, in float2 uv, in float 
 	texPos12 /= texSize;
 
 	float4 result = 0.0f;
-	result += tex.SampleLevel(sampler_linear_clamp, float2(texPos0.x, texPos0.y), mipLevel) * w0.x * w0.y;
-	result += tex.SampleLevel(sampler_linear_clamp, float2(texPos12.x, texPos0.y), mipLevel) * w12.x * w0.y;
-	result += tex.SampleLevel(sampler_linear_clamp, float2(texPos3.x, texPos0.y), mipLevel) * w3.x * w0.y;
+	result += tex.SampleLevel(linearSampler, float2(texPos0.x, texPos0.y), 0.0f) * w0.x * w0.y;
+	result += tex.SampleLevel(linearSampler, float2(texPos12.x, texPos0.y), 0.0f) * w12.x * w0.y;
+	result += tex.SampleLevel(linearSampler, float2(texPos3.x, texPos0.y), 0.0f) * w3.x * w0.y;
 
-	result += tex.SampleLevel(sampler_linear_clamp, float2(texPos0.x, texPos12.y), mipLevel) * w0.x * w12.y;
-	result += tex.SampleLevel(sampler_linear_clamp, float2(texPos12.x, texPos12.y), mipLevel) * w12.x * w12.y;
-	result += tex.SampleLevel(sampler_linear_clamp, float2(texPos3.x, texPos12.y), mipLevel) * w3.x * w12.y;
+	result += tex.SampleLevel(linearSampler, float2(texPos0.x, texPos12.y), 0.0f) * w0.x * w12.y;
+	result += tex.SampleLevel(linearSampler, float2(texPos12.x, texPos12.y), 0.0f) * w12.x * w12.y;
+	result += tex.SampleLevel(linearSampler, float2(texPos3.x, texPos12.y), 0.0f) * w3.x * w12.y;
 
-	result += tex.SampleLevel(sampler_linear_clamp, float2(texPos0.x, texPos3.y), mipLevel) * w0.x * w3.y;
-	result += tex.SampleLevel(sampler_linear_clamp, float2(texPos12.x, texPos3.y), mipLevel) * w12.x * w3.y;
-	result += tex.SampleLevel(sampler_linear_clamp, float2(texPos3.x, texPos3.y), mipLevel) * w3.x * w3.y;
+	result += tex.SampleLevel(linearSampler, float2(texPos0.x, texPos3.y), 0.0f) * w0.x * w3.y;
+	result += tex.SampleLevel(linearSampler, float2(texPos12.x, texPos3.y), 0.0f) * w12.x * w3.y;
+	result += tex.SampleLevel(linearSampler, float2(texPos3.x, texPos3.y), 0.0f) * w3.x * w3.y;
 
 	return result;
 }

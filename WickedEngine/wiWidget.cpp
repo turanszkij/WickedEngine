@@ -30,7 +30,7 @@ wiWidget::wiWidget()
 	for (int i = IDLE; i < WIDGETSTATE_COUNT; ++i)
 	{
 		sprites[i].params.blendFlag = BLENDMODE_OPAQUE;
-		sprites[i].params.enableBackgroundBlur(0); // enable gui background blur by default, use mip = 0
+		sprites[i].params.enableBackgroundBlur();
 	}
 }
 
@@ -76,8 +76,8 @@ void wiWidget::Update(wiGUI* gui, float dt)
 		sprites[i].params.siz.y = scale.y;
 		sprites[i].params.fade = IsEnabled() ? 0.0f : 0.5f;
 	}
-	font.params.posX = (int)translation.x;
-	font.params.posY = (int)translation.y;
+	font.params.posX = translation.x;
+	font.params.posY = translation.y;
 }
 void wiWidget::RenderTooltip(const wiGUI* gui, CommandList cmd) const
 {
@@ -99,7 +99,7 @@ void wiWidget::RenderTooltip(const wiGUI* gui, CommandList cmd) const
 		{
 			tooltipPos.y += 40;
 		}
-		wiFontParams fontProps = wiFontParams((int)tooltipPos.x, (int)tooltipPos.y, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP);
+		wiFontParams fontProps = wiFontParams(tooltipPos.x, tooltipPos.y, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP);
 		fontProps.color = wiColor(25, 25, 25, 255);
 		wiSpriteFont tooltipFont = wiSpriteFont(tooltip, fontProps);
 		if (!scriptTip.empty())
@@ -107,11 +107,11 @@ void wiWidget::RenderTooltip(const wiGUI* gui, CommandList cmd) const
 			tooltipFont.SetText(tooltip + "\n" + scriptTip);
 		}
 
-		int textWidth = tooltipFont.textWidth();
+		float textWidth = tooltipFont.textWidth();
 		if (tooltipPos.x > wiRenderer::GetDevice()->GetScreenWidth() - textWidth)
 		{
 			tooltipPos.x -= textWidth + 10;
-			tooltipFont.params.posX = (int)tooltipPos.x;
+			tooltipFont.params.posX = tooltipPos.x;
 		}
 
 		static const float _border = 2;
@@ -357,27 +357,27 @@ void wiButton::Update(wiGUI* gui, float dt)
 	switch (font.params.h_align)
 	{
 	case WIFALIGN_LEFT:
-		font.params.posX = (int)(translation.x + 2);
+		font.params.posX = translation.x + 2;
 		break;
 	case WIFALIGN_RIGHT:
-		font.params.posX = (int)(translation.x + scale.x - 2);
+		font.params.posX = translation.x + scale.x - 2;
 		break;
 	case WIFALIGN_CENTER:
 	default:
-		font.params.posX = (int)(translation.x + scale.x * 0.5f);
+		font.params.posX = translation.x + scale.x * 0.5f;
 		break;
 	}
 	switch (font.params.v_align)
 	{
 	case WIFALIGN_TOP:
-		font.params.posY = (int)(translation.y + 2);
+		font.params.posY = translation.y + 2;
 		break;
 	case WIFALIGN_BOTTOM:
-		font.params.posY = (int)(translation.y + scale.y - 2);
+		font.params.posY = translation.y + scale.y - 2;
 		break;
 	case WIFALIGN_CENTER:
 	default:
-		font.params.posY = (int)(translation.y + scale.y * 0.5f);
+		font.params.posY = translation.y + scale.y * 0.5f;
 		break;
 	}
 }
@@ -436,9 +436,34 @@ void wiLabel::Update(wiGUI* gui, float dt)
 		// ...
 	}
 
-	font.params.posX = (int)translation.x + 2;
-	font.params.posY = (int)translation.y + 2;
-	font.params.h_wrap = (int)scale.x;
+	font.params.h_wrap = scale.x;
+
+	switch (font.params.h_align)
+	{
+	case WIFALIGN_LEFT:
+		font.params.posX = translation.x + 2;
+		break;
+	case WIFALIGN_RIGHT:
+		font.params.posX = translation.x + scale.x - 2;
+		break;
+	case WIFALIGN_CENTER:
+	default:
+		font.params.posX = translation.x + scale.x * 0.5f;
+		break;
+	}
+	switch (font.params.v_align)
+	{
+	case WIFALIGN_TOP:
+		font.params.posY = translation.y + 2;
+		break;
+	case WIFALIGN_BOTTOM:
+		font.params.posY = translation.y + scale.y - 2;
+		break;
+	case WIFALIGN_CENTER:
+	default:
+		font.params.posY = translation.y + scale.y * 0.5f;
+		break;
+	}
 }
 void wiLabel::Render(const wiGUI* gui, CommandList cmd) const
 {
@@ -583,10 +608,10 @@ void wiTextInputField::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	font.params.posX = (int)translation.x + 2;
-	font.params.posY = (int)(translation.y + scale.y * 0.5f);
-	font_description.params.posX = (int)translation.x - 2;
-	font_description.params.posY = (int)(translation.y + scale.y * 0.5f);
+	font.params.posX = translation.x + 2;
+	font.params.posY = translation.y + scale.y * 0.5f;
+	font_description.params.posX = translation.x - 2;
+	font_description.params.posY = translation.y + scale.y * 0.5f;
 
 	if (state == ACTIVE)
 	{
@@ -675,7 +700,6 @@ wiSlider::wiSlider(float start, float end, float defaultValue, float step, const
 	for (int i = IDLE; i < WIDGETSTATE_COUNT; ++i)
 	{
 		sprites_knob[i].params = sprites[i].params;
-		sprites_knob[i].params.siz.x = 16;
 	}
 
 	sprites[IDLE].params.color = wiColor(60, 60, 60, 200);
@@ -709,7 +733,7 @@ void wiSlider::Update(wiGUI* gui, float dt)
 	wiWidget::Update(gui, dt);
 
 	valueInputField->Detach();
-	valueInputField->SetSize(XMFLOAT2(40, scale.y));
+	valueInputField->SetSize(XMFLOAT2(40.0f, scale.y));
 	valueInputField->SetPos(XMFLOAT2(translation.x + scale.x + 2, translation.y));
 	valueInputField->AttachTo(this);
 
@@ -720,6 +744,7 @@ void wiSlider::Update(wiGUI* gui, float dt)
 
 	for (int i = 0; i < WIDGETSTATE_COUNT; ++i)
 	{
+		sprites_knob[i].params.siz.x = 16.0f;
 		valueInputField->SetColor(wiColor::fromFloat4(this->sprites_knob[i].params.color), (WIDGETSTATE)i);
 	}
 	valueInputField->font.params.color = this->font.params.color;
@@ -803,7 +828,7 @@ void wiSlider::Update(wiGUI* gui, float dt)
 		valueInputField->SetValue(value);
 	}
 
-	font.params.posY = (int)(translation.y + scale.y * 0.5f);
+	font.params.posY = translation.y + scale.y * 0.5f;
 
 	const float knobWidth = sprites_knob[state].params.siz.x;
 	const float knobWidthHalf = knobWidth * 0.5f;
@@ -934,7 +959,7 @@ void wiCheckBox::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	font.params.posY = (int)(translation.y + scale.y * 0.5f);
+	font.params.posY = translation.y + scale.y * 0.5f;
 
 	sprites_check[state].params.pos.x = translation.x + scale.x * 0.25f;
 	sprites_check[state].params.pos.y = translation.y + scale.y * 0.25f;
@@ -1146,7 +1171,7 @@ void wiComboBox::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	font.params.posY = (int)(translation.y + sprites[state].params.siz.y * 0.5f);
+	font.params.posY = translation.y + sprites[state].params.siz.y * 0.5f;
 }
 void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 {
@@ -1226,7 +1251,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 
 	if (selected >= 0)
 	{
-		wiFont::Draw(items[selected], wiFontParams((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
+		wiFont::Draw(items[selected], wiFontParams(translation.x + scale.x*0.5f, translation.y + scale.y*0.5f, WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER,
 			font.params.color, font.params.shadowColor), cmd);
 	}
 
@@ -1293,7 +1318,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 				}
 			}
 			wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
-			wiFont::Draw(items[i], wiFontParams((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f + GetItemOffset(i)), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
+			wiFont::Draw(items[i], wiFontParams(translation.x + scale.x*0.5f, translation.y + scale.y*0.5f + GetItemOffset(i), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER,
 				font.params.color, font.params.shadowColor), cmd);
 		}
 	}
@@ -1370,7 +1395,7 @@ int wiComboBox::GetSelected() const
 
 
 
-static const float windowcontrolSize = 20.0f;
+inline float windowcontrolSize() { return 20.0f; }
 wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : gui(gui)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
@@ -1526,42 +1551,42 @@ void wiWindow::Update(wiGUI* gui, float dt)
 	if (moveDragger != nullptr)
 	{
 		moveDragger->Detach();
-		moveDragger->SetSize(XMFLOAT2(scale.x - windowcontrolSize * 3, windowcontrolSize));
-		moveDragger->SetPos(XMFLOAT2(translation.x + windowcontrolSize, translation.y));
+		moveDragger->SetSize(XMFLOAT2(scale.x - windowcontrolSize() * 3, windowcontrolSize()));
+		moveDragger->SetPos(XMFLOAT2(translation.x + windowcontrolSize(), translation.y));
 		moveDragger->AttachTo(this);
 	}
 	if (closeButton != nullptr)
 	{
 		closeButton->Detach();
-		closeButton->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
-		closeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y));
+		closeButton->SetSize(XMFLOAT2(windowcontrolSize(), windowcontrolSize()));
+		closeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize(), translation.y));
 		closeButton->AttachTo(this);
 	}
 	if (minimizeButton != nullptr)
 	{
 		minimizeButton->Detach();
-		minimizeButton->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
-		minimizeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize * 2, translation.y));
+		minimizeButton->SetSize(XMFLOAT2(windowcontrolSize(), windowcontrolSize()));
+		minimizeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize() * 2, translation.y));
 		minimizeButton->AttachTo(this);
 	}
 	if (resizeDragger_UpperLeft != nullptr)
 	{
 		resizeDragger_UpperLeft->Detach();
-		resizeDragger_UpperLeft->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+		resizeDragger_UpperLeft->SetSize(XMFLOAT2(windowcontrolSize(), windowcontrolSize()));
 		resizeDragger_UpperLeft->SetPos(XMFLOAT2(translation.x, translation.y));
 		resizeDragger_UpperLeft->AttachTo(this);
 	}
 	if (resizeDragger_BottomRight != nullptr)
 	{
 		resizeDragger_BottomRight->Detach();
-		resizeDragger_BottomRight->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
-		resizeDragger_BottomRight->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y + scale.y - windowcontrolSize));
+		resizeDragger_BottomRight->SetSize(XMFLOAT2(windowcontrolSize(), windowcontrolSize()));
+		resizeDragger_BottomRight->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize(), translation.y + scale.y - windowcontrolSize()));
 		resizeDragger_BottomRight->AttachTo(this);
 	}
 	if (label != nullptr)
 	{
 		label->Detach();
-		label->SetSize(XMFLOAT2(scale.x, windowcontrolSize));
+		label->SetSize(XMFLOAT2(scale.x, windowcontrolSize()));
 		label->SetPos(XMFLOAT2(translation.x, translation.y));
 		label->AttachTo(this);
 	}
@@ -2485,8 +2510,8 @@ void wiColorPicker::OnColorChanged(function<void(wiEventArgs args)> func)
 
 
 
-static const float item_height = 20;
-static const float tree_scrollbar_width = 12;
+inline float item_height() { return 20.0f; }
+inline float tree_scrollbar_width() { return 12.0f; }
 wiTreeList::wiTreeList(const std::string& name)
 {
 	SetName(name);
@@ -2506,28 +2531,28 @@ wiTreeList::~wiTreeList()
 }
 float wiTreeList::GetItemOffset(int index) const
 {
-	return 2 + list_offset + index * item_height;
+	return 2 + list_offset + index * item_height();
 }
 Hitbox2D wiTreeList::GetHitbox_ListArea() const
 {
-	return Hitbox2D(XMFLOAT2(translation.x, translation.y + item_height + 1), XMFLOAT2(scale.x - tree_scrollbar_width - 1, scale.y - item_height - 1));
+	return Hitbox2D(XMFLOAT2(translation.x, translation.y + item_height() + 1), XMFLOAT2(scale.x - tree_scrollbar_width() - 1, scale.y - item_height() - 1));
 }
 Hitbox2D wiTreeList::GetHitbox_Item(int visible_count, int level) const
 {
-	XMFLOAT2 pos = XMFLOAT2(translation.x + 2 + level * item_height, translation.y + GetItemOffset(visible_count) + item_height * 0.5f);
+	XMFLOAT2 pos = XMFLOAT2(translation.x + 2 + level * item_height(), translation.y + GetItemOffset(visible_count) + item_height() * 0.5f);
 	Hitbox2D hitbox;
-	hitbox.pos = XMFLOAT2(pos.x + item_height * 0.5f + 2, pos.y - item_height * 0.5f);
-	hitbox.siz = XMFLOAT2(scale.x - 2 - item_height * 0.5f - 2 - level * item_height - tree_scrollbar_width - 2, item_height);
+	hitbox.pos = XMFLOAT2(pos.x + item_height() * 0.5f + 2, pos.y - item_height() * 0.5f);
+	hitbox.siz = XMFLOAT2(scale.x - 2 - item_height() * 0.5f - 2 - level * item_height() - tree_scrollbar_width() - 2, item_height());
 	return hitbox;
 }
 Hitbox2D wiTreeList::GetHitbox_ItemOpener(int visible_count, int level) const
 {
-	XMFLOAT2 pos = XMFLOAT2(translation.x + 2 + level * item_height, translation.y + GetItemOffset(visible_count) + item_height * 0.5f);
-	return Hitbox2D(XMFLOAT2(pos.x, pos.y - item_height * 0.25f), XMFLOAT2(item_height * 0.5f, item_height * 0.5f));
+	XMFLOAT2 pos = XMFLOAT2(translation.x + 2 + level * item_height(), translation.y + GetItemOffset(visible_count) + item_height() * 0.5f);
+	return Hitbox2D(XMFLOAT2(pos.x, pos.y - item_height() * 0.25f), XMFLOAT2(item_height() * 0.5f, item_height() * 0.5f));
 }
 bool wiTreeList::HasScrollbar() const
 {
-	return scale.y < (int)items.size() * item_height;
+	return scale.y < (int)items.size() * item_height();
 }
 void wiTreeList::Update(wiGUI* gui, float dt)
 {
@@ -2588,15 +2613,15 @@ void wiTreeList::Update(wiGUI* gui, float dt)
 				visible_count++;
 				parent_open = item.open;
 				parent_level = item.level;
-				list_height += item_height;
+				list_height += item_height();
 			}
 		}
 
-		const float scrollbar_begin = translation.y + item_height;
-		const float scrollbar_end = scrollbar_begin + scale.y - item_height;
+		const float scrollbar_begin = translation.y + item_height();
+		const float scrollbar_end = scrollbar_begin + scale.y - item_height();
 		const float scrollbar_size = scrollbar_end - scrollbar_begin;
 		const float scrollbar_granularity = std::min(1.0f, scrollbar_size / list_height);
-		scrollbar_height = std::max(tree_scrollbar_width, scrollbar_size * scrollbar_granularity);
+		scrollbar_height = std::max(tree_scrollbar_width(), scrollbar_size * scrollbar_granularity);
 
 		if (!click_down)
 		{
@@ -2604,8 +2629,8 @@ void wiTreeList::Update(wiGUI* gui, float dt)
 		}
 
 		Hitbox2D scroll_box;
-		scroll_box.pos = XMFLOAT2(translation.x + scale.x - tree_scrollbar_width, translation.y + item_height + 1);
-		scroll_box.siz = XMFLOAT2(tree_scrollbar_width, scale.y - item_height - 1);
+		scroll_box.pos = XMFLOAT2(translation.x + scale.x - tree_scrollbar_width(), translation.y + item_height() + 1);
+		scroll_box.siz = XMFLOAT2(tree_scrollbar_width(), scale.y - item_height() - 1);
 		if (scroll_box.intersects(pointerHitbox))
 		{
 			if (clicked)
@@ -2627,7 +2652,7 @@ void wiTreeList::Update(wiGUI* gui, float dt)
 
 		if (state == FOCUS)
 		{
-			scrollbar_delta -= wiInput::GetPointer().z;
+			scrollbar_delta -= wiInput::GetPointer().z * 10;
 		}
 		scrollbar_delta = wiMath::Clamp(scrollbar_delta, 0, scrollbar_size - scrollbar_height);
 		scrollbar_value = wiMath::InverseLerp(scrollbar_begin, scrollbar_end, scrollbar_begin + scrollbar_delta);
@@ -2695,9 +2720,9 @@ void wiTreeList::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	sprites[state].params.siz.y = item_height;
-	font.params.posX = (int)translation.x + 2;
-	font.params.posY = (int)(translation.y + sprites[state].params.siz.y * 0.5f);
+	sprites[state].params.siz.y = item_height();
+	font.params.posX = translation.x + 2;
+	font.params.posY = translation.y + sprites[state].params.siz.y * 0.5f;
 }
 void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 {
@@ -2718,8 +2743,8 @@ void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 
 	// scrollbar background
 	wiImageParams fx = sprites[state].params;
-	fx.pos = XMFLOAT3(translation.x + scale.x - tree_scrollbar_width, translation.y + item_height + 1, 0);
-	fx.siz = XMFLOAT2(tree_scrollbar_width, scale.y - item_height - 1);
+	fx.pos = XMFLOAT3(translation.x + scale.x - tree_scrollbar_width(), translation.y + item_height() + 1, 0);
+	fx.siz = XMFLOAT2(tree_scrollbar_width(), scale.y - item_height() - 1);
 	fx.color = sprites[IDLE].params.color;
 	wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
 
@@ -2734,7 +2759,7 @@ void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 		scrollbar_color = wiColor::White();
 	}
 	wiImage::Draw(wiTextureHelper::getWhite()
-		, wiImageParams(translation.x + scale.x - tree_scrollbar_width, translation.y + item_height + 1 + scrollbar_delta, tree_scrollbar_width, scrollbar_height, scrollbar_color), cmd);
+		, wiImageParams(translation.x + scale.x - tree_scrollbar_width(), translation.y + item_height() + 1 + scrollbar_delta, tree_scrollbar_width(), scrollbar_height, scrollbar_color), cmd);
 
 	// list background
 	Hitbox2D itemlist_box = GetHitbox_ListArea();
@@ -2810,7 +2835,7 @@ void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 
 			MiscCB cb;
 			cb.g_xColor = opener_highlight == i ? wiColor::White().toFloat4() : sprites[FOCUS].params.color;
-			XMStoreFloat4x4(&cb.g_xTransform, XMMatrixScaling(item_height * 0.3f, item_height * 0.3f, 1) * 
+			XMStoreFloat4x4(&cb.g_xTransform, XMMatrixScaling(item_height() * 0.3f, item_height() * 0.3f, 1) * 
 				XMMatrixRotationZ(item.open ? XM_PIDIV2 : 0) * 
 				XMMatrixTranslation(open_box.pos.x + open_box.siz.x * 0.5f, open_box.pos.y + open_box.siz.y * 0.25f, 0) *
 				Projection
@@ -2829,7 +2854,7 @@ void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 		}
 		
 		// Item name text:
-		wiFont::Draw(item.name, wiFontParams((int)name_box.pos.x + 1, (int)(name_box.pos.y + name_box.siz.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_CENTER, 0, 0,
+		wiFont::Draw(item.name, wiFontParams(name_box.pos.x + 1, name_box.pos.y + name_box.siz.y * 0.5f, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_CENTER,
 			font.params.color, font.params.shadowColor), cmd);
 	}
 }

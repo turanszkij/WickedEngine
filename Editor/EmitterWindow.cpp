@@ -13,17 +13,18 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	assert(GUI && "Invalid GUI!");
 
 	emitterWindow = new wiWindow(GUI, "Emitter Window");
-	emitterWindow->SetSize(XMFLOAT2(800, 1100));
+	emitterWindow->SetSize(XMFLOAT2(700, 820));
 	GUI->AddWidget(emitterWindow);
 
 	float x = 200;
-	float y = 20;
-	float step = 35;
+	float y = 5;
+	float step = 25;
+	float itemheight = 20;
 
 
 	emitterNameField = new wiTextInputField("EmitterName");
 	emitterNameField->SetPos(XMFLOAT2(x, y += step));
-	emitterNameField->SetSize(XMFLOAT2(300, 20));
+	emitterNameField->SetSize(XMFLOAT2(300, itemheight));
 	emitterNameField->OnInputAccepted([&](wiEventArgs args) {
 		NameComponent* name = wiScene::GetScene().names.GetComponent(entity);
 		if (name != nullptr)
@@ -35,7 +36,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	addButton = new wiButton("Add Emitter");
 	addButton->SetPos(XMFLOAT2(x, y += step));
-	addButton->SetSize(XMFLOAT2(150, 30));
+	addButton->SetSize(XMFLOAT2(150, itemheight));
 	addButton->OnClick([=](wiEventArgs args) {
 		Scene& scene = wiScene::GetScene();
 		Entity entity = scene.Entity_CreateEmitter("editorEmitter");
@@ -48,7 +49,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	restartButton = new wiButton("Restart Emitter");
 	restartButton->SetPos(XMFLOAT2(x + 160, y));
-	restartButton->SetSize(XMFLOAT2(150, 30));
+	restartButton->SetSize(XMFLOAT2(150, itemheight));
 	restartButton->OnClick([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
@@ -60,7 +61,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	emitterWindow->AddWidget(restartButton);
 
 	meshComboBox = new wiComboBox("Mesh: ");
-	meshComboBox->SetSize(XMFLOAT2(300, 25));
+	meshComboBox->SetSize(XMFLOAT2(300, itemheight));
 	meshComboBox->SetPos(XMFLOAT2(x, y += step));
 	meshComboBox->SetEnabled(false);
 	meshComboBox->OnSelect([&](wiEventArgs args) {
@@ -83,7 +84,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	shaderTypeComboBox = new wiComboBox("ShaderType: ");
 	shaderTypeComboBox->SetPos(XMFLOAT2(x, y += step));
-	shaderTypeComboBox->SetSize(XMFLOAT2(300, 25));
+	shaderTypeComboBox->SetSize(XMFLOAT2(300, itemheight));
 	shaderTypeComboBox->AddItem("SOFT");
 	shaderTypeComboBox->AddItem("SOFT + DISTORTION");
 	shaderTypeComboBox->AddItem("SIMPLEST");
@@ -102,6 +103,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	sortCheckBox = new wiCheckBox("Sorting Enabled: ");
 	sortCheckBox->SetPos(XMFLOAT2(x, y += step));
+	sortCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	sortCheckBox->OnClick([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
@@ -116,6 +118,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	depthCollisionsCheckBox = new wiCheckBox("Depth Buffer Collisions Enabled: ");
 	depthCollisionsCheckBox->SetPos(XMFLOAT2(x + 250, y));
+	depthCollisionsCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	depthCollisionsCheckBox->OnClick([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
@@ -130,6 +133,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	sphCheckBox = new wiCheckBox("SPH - FluidSim: ");
 	sphCheckBox->SetPos(XMFLOAT2(x + 400, y));
+	sphCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	sphCheckBox->OnClick([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
@@ -144,6 +148,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	pauseCheckBox = new wiCheckBox("PAUSE: ");
 	pauseCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pauseCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pauseCheckBox->OnClick([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
@@ -158,6 +163,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	debugCheckBox = new wiCheckBox("DEBUG: ");
 	debugCheckBox->SetPos(XMFLOAT2(x + 120, y));
+	debugCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	debugCheckBox->OnClick([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
@@ -172,6 +178,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	volumeCheckBox = new wiCheckBox("Volume: ");
 	volumeCheckBox->SetPos(XMFLOAT2(x + 250, y));
+	volumeCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	volumeCheckBox->OnClick([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
@@ -192,7 +199,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 
 	maxParticlesSlider = new wiSlider(100.0f, 1000000.0f, 10000, 100000, "Max particle count: ");
-	maxParticlesSlider->SetSize(XMFLOAT2(360, 30));
+	maxParticlesSlider->SetSize(XMFLOAT2(360, itemheight));
 	maxParticlesSlider->SetPos(XMFLOAT2(x, y += step + 120));
 	maxParticlesSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -210,7 +217,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 
 	emitCountSlider = new wiSlider(0.0f, 10000.0f, 1.0f, 100000, "Emit count per sec: ");
-	emitCountSlider->SetSize(XMFLOAT2(360, 30));
+	emitCountSlider->SetSize(XMFLOAT2(360, itemheight));
 	emitCountSlider->SetPos(XMFLOAT2(x, y += step));
 	emitCountSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -224,7 +231,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	emitterWindow->AddWidget(emitCountSlider);
 
 	emitSizeSlider = new wiSlider(0.01f, 10.0f, 1.0f, 100000, "Size: ");
-	emitSizeSlider->SetSize(XMFLOAT2(360, 30));
+	emitSizeSlider->SetSize(XMFLOAT2(360, itemheight));
 	emitSizeSlider->SetPos(XMFLOAT2(x, y += step));
 	emitSizeSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -238,7 +245,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	emitterWindow->AddWidget(emitSizeSlider);
 
 	emitRotationSlider = new wiSlider(0.0f, 1.0f, 0.0f, 100000, "Rotation: ");
-	emitRotationSlider->SetSize(XMFLOAT2(360, 30));
+	emitRotationSlider->SetSize(XMFLOAT2(360, itemheight));
 	emitRotationSlider->SetPos(XMFLOAT2(x, y += step));
 	emitRotationSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -252,7 +259,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	emitterWindow->AddWidget(emitRotationSlider);
 
 	emitNormalSlider = new wiSlider(0.0f, 100.0f, 1.0f, 100000, "Normal factor: ");
-	emitNormalSlider->SetSize(XMFLOAT2(360, 30));
+	emitNormalSlider->SetSize(XMFLOAT2(360, itemheight));
 	emitNormalSlider->SetPos(XMFLOAT2(x, y += step));
 	emitNormalSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -266,7 +273,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	emitterWindow->AddWidget(emitNormalSlider);
 
 	emitScalingSlider = new wiSlider(0.0f, 100.0f, 1.0f, 100000, "Scaling: ");
-	emitScalingSlider->SetSize(XMFLOAT2(360, 30));
+	emitScalingSlider->SetSize(XMFLOAT2(360, itemheight));
 	emitScalingSlider->SetPos(XMFLOAT2(x, y += step));
 	emitScalingSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -280,7 +287,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	emitterWindow->AddWidget(emitScalingSlider);
 
 	emitLifeSlider = new wiSlider(0.0f, 100.0f, 1.0f, 10000, "Life span: ");
-	emitLifeSlider->SetSize(XMFLOAT2(360, 30));
+	emitLifeSlider->SetSize(XMFLOAT2(360, itemheight));
 	emitLifeSlider->SetPos(XMFLOAT2(x, y += step));
 	emitLifeSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -294,7 +301,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	emitterWindow->AddWidget(emitLifeSlider);
 
 	emitRandomnessSlider = new wiSlider(0.0f, 1.0f, 1.0f, 100000, "Randomness: ");
-	emitRandomnessSlider->SetSize(XMFLOAT2(360, 30));
+	emitRandomnessSlider->SetSize(XMFLOAT2(360, itemheight));
 	emitRandomnessSlider->SetPos(XMFLOAT2(x, y += step));
 	emitRandomnessSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -308,7 +315,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	emitterWindow->AddWidget(emitRandomnessSlider);
 
 	emitLifeRandomnessSlider = new wiSlider(0.0f, 2.0f, 0.0f, 100000, "Life randomness: ");
-	emitLifeRandomnessSlider->SetSize(XMFLOAT2(360, 30));
+	emitLifeRandomnessSlider->SetSize(XMFLOAT2(360, itemheight));
 	emitLifeRandomnessSlider->SetPos(XMFLOAT2(x, y += step));
 	emitLifeRandomnessSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -322,7 +329,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	emitterWindow->AddWidget(emitLifeRandomnessSlider);
 
 	emitMotionBlurSlider = new wiSlider(0.0f, 1.0f, 1.0f, 100000, "Motion blur: ");
-	emitMotionBlurSlider->SetSize(XMFLOAT2(360, 30));
+	emitMotionBlurSlider->SetSize(XMFLOAT2(360, itemheight));
 	emitMotionBlurSlider->SetPos(XMFLOAT2(x, y += step));
 	emitMotionBlurSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -336,7 +343,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	emitterWindow->AddWidget(emitMotionBlurSlider);
 
 	emitMassSlider = new wiSlider(0.1f, 100.0f, 1.0f, 100000, "Mass: ");
-	emitMassSlider->SetSize(XMFLOAT2(360, 30));
+	emitMassSlider->SetSize(XMFLOAT2(360, itemheight));
 	emitMassSlider->SetPos(XMFLOAT2(x, y += step));
 	emitMassSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -352,7 +359,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 
 	timestepSlider = new wiSlider(-1, 0.016f, -1, 100000, "Timestep: ");
-	timestepSlider->SetSize(XMFLOAT2(360, 30));
+	timestepSlider->SetSize(XMFLOAT2(360, itemheight));
 	timestepSlider->SetPos(XMFLOAT2(x, y += step*2));
 	timestepSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -374,7 +381,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	y += step;
 
 	sph_h_Slider = new wiSlider(0.1f, 100.0f, 1.0f, 100000, "SPH Smoothing Radius (h): ");
-	sph_h_Slider->SetSize(XMFLOAT2(360, 30));
+	sph_h_Slider->SetSize(XMFLOAT2(360, itemheight));
 	sph_h_Slider->SetPos(XMFLOAT2(x, y += step));
 	sph_h_Slider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -388,7 +395,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	emitterWindow->AddWidget(sph_h_Slider);
 
 	sph_K_Slider = new wiSlider(0.1f, 100.0f, 1.0f, 100000, "SPH Pressure Constant (K): ");
-	sph_K_Slider->SetSize(XMFLOAT2(360, 30));
+	sph_K_Slider->SetSize(XMFLOAT2(360, itemheight));
 	sph_K_Slider->SetPos(XMFLOAT2(x, y += step));
 	sph_K_Slider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -402,7 +409,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	emitterWindow->AddWidget(sph_K_Slider);
 
 	sph_p0_Slider = new wiSlider(0.1f, 100.0f, 1.0f, 100000, "SPH Reference Density (p0): ");
-	sph_p0_Slider->SetSize(XMFLOAT2(360, 30));
+	sph_p0_Slider->SetSize(XMFLOAT2(360, itemheight));
 	sph_p0_Slider->SetPos(XMFLOAT2(x, y += step));
 	sph_p0_Slider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -416,7 +423,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	emitterWindow->AddWidget(sph_p0_Slider);
 
 	sph_e_Slider = new wiSlider(0.1f, 100.0f, 1.0f, 100000, "SPH Viscosity (e): ");
-	sph_e_Slider->SetSize(XMFLOAT2(360, 30));
+	sph_e_Slider->SetSize(XMFLOAT2(360, itemheight));
 	sph_e_Slider->SetPos(XMFLOAT2(x, y += step));
 	sph_e_Slider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();

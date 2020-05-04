@@ -16,12 +16,13 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	rendererWindow->SetSize(XMFLOAT2(640, 700));
 	GUI->AddWidget(rendererWindow);
 
-	float x = 260, y = 0, step = 28, sliderheight = 26;
+	float x = 220, y = 5, step = 28, itemheight = 26;
 
 	vsyncCheckBox = new wiCheckBox("VSync: ");
 	vsyncCheckBox->SetTooltip("Toggle vertical sync");
 	vsyncCheckBox->SetScriptTip("SetVSyncEnabled(opt bool enabled)");
 	vsyncCheckBox->SetPos(XMFLOAT2(x, y += step));
+	vsyncCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	vsyncCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::GetDevice()->SetVSyncEnabled(args.bValue);
 	});
@@ -32,6 +33,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	occlusionCullingCheckBox->SetTooltip("Toggle occlusion culling. This can boost framerate if many objects are occluded in the scene.");
 	occlusionCullingCheckBox->SetScriptTip("SetOcclusionCullingEnabled(bool enabled)");
 	occlusionCullingCheckBox->SetPos(XMFLOAT2(x, y += step));
+	occlusionCullingCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	occlusionCullingCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetOcclusionCullingEnabled(args.bValue);
 	});
@@ -40,7 +42,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	resolutionScaleSlider = new wiSlider(0.25f, 2.0f, 1.0f, 7.0f, "Resolution Scale: ");
 	resolutionScaleSlider->SetTooltip("Adjust the internal rendering resolution.");
-	resolutionScaleSlider->SetSize(XMFLOAT2(100, sliderheight));
+	resolutionScaleSlider->SetSize(XMFLOAT2(100, itemheight));
 	resolutionScaleSlider->SetPos(XMFLOAT2(x, y += step));
 	resolutionScaleSlider->SetValue(wiRenderer::GetResolutionScale());
 	resolutionScaleSlider->OnSlide([&](wiEventArgs args) {
@@ -50,7 +52,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	gammaSlider = new wiSlider(1.0f, 3.0f, 2.2f, 1000.0f, "Gamma: ");
 	gammaSlider->SetTooltip("Adjust the gamma correction for the display device.");
-	gammaSlider->SetSize(XMFLOAT2(100, sliderheight));
+	gammaSlider->SetSize(XMFLOAT2(100, itemheight));
 	gammaSlider->SetPos(XMFLOAT2(x, y += step));
 	gammaSlider->SetValue(wiRenderer::GetGamma());
 	gammaSlider->OnSlide([&](wiEventArgs args) {
@@ -61,6 +63,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	voxelRadianceCheckBox = new wiCheckBox("Voxel GI: ");
 	voxelRadianceCheckBox->SetTooltip("Toggle voxel Global Illumination computation.");
 	voxelRadianceCheckBox->SetPos(XMFLOAT2(x, y += step));
+	voxelRadianceCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	voxelRadianceCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetVoxelRadianceEnabled(args.bValue);
 	});
@@ -70,6 +73,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	voxelRadianceDebugCheckBox = new wiCheckBox("DEBUG: ");
 	voxelRadianceDebugCheckBox->SetTooltip("Toggle Voxel GI visualization.");
 	voxelRadianceDebugCheckBox->SetPos(XMFLOAT2(x + 122, y));
+	voxelRadianceDebugCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	voxelRadianceDebugCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetToDrawVoxelHelper(args.bValue);
 	});
@@ -79,6 +83,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	voxelRadianceSecondaryBounceCheckBox = new wiCheckBox("Secondary Light Bounce: ");
 	voxelRadianceSecondaryBounceCheckBox->SetTooltip("Toggle secondary light bounce computation for Voxel GI.");
 	voxelRadianceSecondaryBounceCheckBox->SetPos(XMFLOAT2(x, y += step));
+	voxelRadianceSecondaryBounceCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	voxelRadianceSecondaryBounceCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetVoxelRadianceSecondaryBounceEnabled(args.bValue);
 	});
@@ -88,6 +93,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	voxelRadianceReflectionsCheckBox = new wiCheckBox("Reflections: ");
 	voxelRadianceReflectionsCheckBox->SetTooltip("Toggle specular reflections computation for Voxel GI.");
 	voxelRadianceReflectionsCheckBox->SetPos(XMFLOAT2(x + 122, y));
+	voxelRadianceReflectionsCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	voxelRadianceReflectionsCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetVoxelRadianceReflectionsEnabled(args.bValue);
 	});
@@ -96,7 +102,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	voxelRadianceVoxelSizeSlider = new wiSlider(0.25, 2, 1, 7, "Voxel GI Voxel Size: ");
 	voxelRadianceVoxelSizeSlider->SetTooltip("Adjust the voxel size for Voxel GI calculations.");
-	voxelRadianceVoxelSizeSlider->SetSize(XMFLOAT2(100, sliderheight));
+	voxelRadianceVoxelSizeSlider->SetSize(XMFLOAT2(100, itemheight));
 	voxelRadianceVoxelSizeSlider->SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceVoxelSizeSlider->SetValue(wiRenderer::GetVoxelRadianceVoxelSize());
 	voxelRadianceVoxelSizeSlider->OnSlide([&](wiEventArgs args) {
@@ -106,7 +112,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	voxelRadianceConeTracingSlider = new wiSlider(1, 16, 8, 15, "Voxel GI NumCones: ");
 	voxelRadianceConeTracingSlider->SetTooltip("Adjust the number of cones sampled in the radiance gathering phase.");
-	voxelRadianceConeTracingSlider->SetSize(XMFLOAT2(100, sliderheight));
+	voxelRadianceConeTracingSlider->SetSize(XMFLOAT2(100, itemheight));
 	voxelRadianceConeTracingSlider->SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceConeTracingSlider->SetValue((float)wiRenderer::GetVoxelRadianceNumCones());
 	voxelRadianceConeTracingSlider->OnSlide([&](wiEventArgs args) {
@@ -116,7 +122,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	voxelRadianceRayStepSizeSlider = new wiSlider(0.5f, 2.0f, 0.5f, 10000, "Voxel GI Ray Step Size: ");
 	voxelRadianceRayStepSizeSlider->SetTooltip("Adjust the precision of ray marching for cone tracing step. Lower values = more precision but slower performance.");
-	voxelRadianceRayStepSizeSlider->SetSize(XMFLOAT2(100, sliderheight));
+	voxelRadianceRayStepSizeSlider->SetSize(XMFLOAT2(100, itemheight));
 	voxelRadianceRayStepSizeSlider->SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceRayStepSizeSlider->SetValue(wiRenderer::GetVoxelRadianceRayStepSize());
 	voxelRadianceRayStepSizeSlider->OnSlide([&](wiEventArgs args) {
@@ -126,7 +132,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	voxelRadianceMaxDistanceSlider = new wiSlider(0, 100, 10, 10000, "Voxel GI Max Distance: ");
 	voxelRadianceMaxDistanceSlider->SetTooltip("Adjust max raymarching distance for voxel GI.");
-	voxelRadianceMaxDistanceSlider->SetSize(XMFLOAT2(100, sliderheight));
+	voxelRadianceMaxDistanceSlider->SetSize(XMFLOAT2(100, itemheight));
 	voxelRadianceMaxDistanceSlider->SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceMaxDistanceSlider->SetValue(wiRenderer::GetVoxelRadianceMaxDistance());
 	voxelRadianceMaxDistanceSlider->OnSlide([&](wiEventArgs args) {
@@ -137,6 +143,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	wireFrameCheckBox = new wiCheckBox("Render Wireframe: ");
 	wireFrameCheckBox->SetTooltip("Visualize the scene as a wireframe");
 	wireFrameCheckBox->SetPos(XMFLOAT2(x, y += step));
+	wireFrameCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	wireFrameCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetWireRender(args.bValue);
 	});
@@ -146,6 +153,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	advancedLightCullingCheckBox = new wiCheckBox("2.5D Light Culling: ");
 	advancedLightCullingCheckBox->SetTooltip("Enable a more aggressive light culling approach which can result in slower culling but faster rendering (Tiled renderer only)");
 	advancedLightCullingCheckBox->SetPos(XMFLOAT2(x, y += step));
+	advancedLightCullingCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	advancedLightCullingCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetAdvancedLightCulling(args.bValue);
 	});
@@ -155,6 +163,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	debugLightCullingCheckBox = new wiCheckBox("DEBUG: ");
 	debugLightCullingCheckBox->SetTooltip("Toggle visualization of the screen space light culling heatmap grid (Tiled renderer only)");
 	debugLightCullingCheckBox->SetPos(XMFLOAT2(x + 122, y));
+	debugLightCullingCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	debugLightCullingCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetDebugLightCulling(args.bValue);
 	});
@@ -164,6 +173,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	tessellationCheckBox = new wiCheckBox("Tessellation Enabled: ");
 	tessellationCheckBox->SetTooltip("Enable tessellation feature. You also need to specify a tessellation factor for individual objects.");
 	tessellationCheckBox->SetPos(XMFLOAT2(x, y += step));
+	tessellationCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	tessellationCheckBox->OnClick([=](wiEventArgs args) {
 		editor->renderPath->setTessellationEnabled(args.bValue);
 	});
@@ -174,6 +184,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	alphaCompositionCheckBox = new wiCheckBox("Alpha Composition: ");
 	alphaCompositionCheckBox->SetTooltip("Enable Alpha Composition. Enables softer alpha blending on partly solid geometry (eg. vegetation) but rendering performance will be slower.");
 	alphaCompositionCheckBox->SetPos(XMFLOAT2(x, y += step));
+	alphaCompositionCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	alphaCompositionCheckBox->OnClick([=](wiEventArgs args) {
 		wiRenderer::SetAlphaCompositionEnabled(args.bValue);
 	});
@@ -182,7 +193,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	speedMultiplierSlider = new wiSlider(0, 4, 1, 100000, "Speed: ");
 	speedMultiplierSlider->SetTooltip("Adjust the global speed (time multiplier)");
-	speedMultiplierSlider->SetSize(XMFLOAT2(100, sliderheight));
+	speedMultiplierSlider->SetSize(XMFLOAT2(100, itemheight));
 	speedMultiplierSlider->SetPos(XMFLOAT2(x, y += step));
 	speedMultiplierSlider->SetValue(wiRenderer::GetGameSpeed());
 	speedMultiplierSlider->OnSlide([&](wiEventArgs args) {
@@ -193,6 +204,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	transparentShadowsCheckBox = new wiCheckBox("Transparent Shadows: ");
 	transparentShadowsCheckBox->SetTooltip("Enables color tinted shadows and refraction caustics effects for transparent objects and water.");
 	transparentShadowsCheckBox->SetPos(XMFLOAT2(x, y += step));
+	transparentShadowsCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	transparentShadowsCheckBox->SetCheck(wiRenderer::GetTransparentShadowsEnabled());
 	transparentShadowsCheckBox->OnClick([=](wiEventArgs args) {
 		wiRenderer::SetTransparentShadowsEnabled(args.bValue);
@@ -200,7 +212,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	rendererWindow->AddWidget(transparentShadowsCheckBox);
 
 	shadowProps2DComboBox = new wiComboBox("2D Shadowmap resolution: ");
-	shadowProps2DComboBox->SetSize(XMFLOAT2(100, 20));
+	shadowProps2DComboBox->SetSize(XMFLOAT2(100, itemheight));
 	shadowProps2DComboBox->SetPos(XMFLOAT2(x, y += step));
 	shadowProps2DComboBox->AddItem("Off");
 	shadowProps2DComboBox->AddItem("128");
@@ -245,7 +257,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	rendererWindow->AddWidget(shadowProps2DComboBox);
 
 	shadowPropsCubeComboBox = new wiComboBox("Cube Shadowmap resolution: ");
-	shadowPropsCubeComboBox->SetSize(XMFLOAT2(100, 20));
+	shadowPropsCubeComboBox->SetSize(XMFLOAT2(100, itemheight));
 	shadowPropsCubeComboBox->SetPos(XMFLOAT2(x, y += step));
 	shadowPropsCubeComboBox->AddItem("Off");
 	shadowPropsCubeComboBox->AddItem("128");
@@ -289,7 +301,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	rendererWindow->AddWidget(shadowPropsCubeComboBox);
 
 	MSAAComboBox = new wiComboBox("MSAA: ");
-	MSAAComboBox->SetSize(XMFLOAT2(100, 20));
+	MSAAComboBox->SetSize(XMFLOAT2(100, itemheight));
 	MSAAComboBox->SetPos(XMFLOAT2(x, y += step));
 	MSAAComboBox->AddItem("Off");
 	MSAAComboBox->AddItem("2");
@@ -323,6 +335,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	temporalAACheckBox = new wiCheckBox("Temporal AA: ");
 	temporalAACheckBox->SetTooltip("Toggle Temporal Anti Aliasing. It is a supersampling techique which is performed across multiple frames.");
 	temporalAACheckBox->SetPos(XMFLOAT2(x, y += step));
+	temporalAACheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	temporalAACheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetTemporalAAEnabled(args.bValue);
 	});
@@ -333,6 +346,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	temporalAADebugCheckBox->SetText("DEBUG: ");
 	temporalAADebugCheckBox->SetTooltip("Disable blending of frame history. Camera Subpixel jitter will be visible.");
 	temporalAADebugCheckBox->SetPos(XMFLOAT2(x + 122, y));
+	temporalAADebugCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	temporalAADebugCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetTemporalAADebugEnabled(args.bValue);
 	});
@@ -340,7 +354,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	rendererWindow->AddWidget(temporalAADebugCheckBox);
 
 	textureQualityComboBox = new wiComboBox("Texture Quality: ");
-	textureQualityComboBox->SetSize(XMFLOAT2(100, 20));
+	textureQualityComboBox->SetSize(XMFLOAT2(100, itemheight));
 	textureQualityComboBox->SetPos(XMFLOAT2(x, y += step));
 	textureQualityComboBox->AddItem("Nearest");
 	textureQualityComboBox->AddItem("Bilinear");
@@ -377,7 +391,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	mipLodBiasSlider = new wiSlider(-2, 2, 0, 100000, "MipLOD Bias: ");
 	mipLodBiasSlider->SetTooltip("Bias the rendered mip map level of the material textures.");
-	mipLodBiasSlider->SetSize(XMFLOAT2(100, sliderheight));
+	mipLodBiasSlider->SetSize(XMFLOAT2(100, itemheight));
 	mipLodBiasSlider->SetPos(XMFLOAT2(x, y += step));
 	mipLodBiasSlider->OnSlide([&](wiEventArgs args) {
 		wiGraphics::SamplerDesc desc = wiRenderer::GetSampler(SSLOT_OBJECTSHADER)->GetDesc();
@@ -388,7 +402,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	raytraceBounceCountSlider = new wiSlider(1, 10, 1, 9, "Raytrace Bounces: ");
 	raytraceBounceCountSlider->SetTooltip("How many light bounces to compute when doing ray tracing.");
-	raytraceBounceCountSlider->SetSize(XMFLOAT2(100, sliderheight));
+	raytraceBounceCountSlider->SetSize(XMFLOAT2(100, itemheight));
 	raytraceBounceCountSlider->SetPos(XMFLOAT2(x, y += step));
 	raytraceBounceCountSlider->SetValue((float)wiRenderer::GetRaytraceBounceCount());
 	raytraceBounceCountSlider->OnSlide([&](wiEventArgs args) {
@@ -399,12 +413,13 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 
 	// Visualizer toggles:
-	x = 600, y = 0;
+	x = 540, y = 5;
 
 	partitionBoxesCheckBox = new wiCheckBox("SPTree visualizer: ");
 	partitionBoxesCheckBox->SetTooltip("Visualize the world space partitioning tree as boxes");
 	partitionBoxesCheckBox->SetScriptTip("SetDebugPartitionTreeEnabled(bool enabled)");
 	partitionBoxesCheckBox->SetPos(XMFLOAT2(x, y += step));
+	partitionBoxesCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	partitionBoxesCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetToDrawDebugPartitionTree(args.bValue);
 	});
@@ -416,6 +431,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	boneLinesCheckBox->SetTooltip("Visualize bones of armatures");
 	boneLinesCheckBox->SetScriptTip("SetDebugBonesEnabled(bool enabled)");
 	boneLinesCheckBox->SetPos(XMFLOAT2(x, y += step));
+	boneLinesCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	boneLinesCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetToDrawDebugBoneLines(args.bValue);
 	});
@@ -426,6 +442,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	debugEmittersCheckBox->SetTooltip("Visualize emitters");
 	debugEmittersCheckBox->SetScriptTip("SetDebugEmittersEnabled(bool enabled)");
 	debugEmittersCheckBox->SetPos(XMFLOAT2(x, y += step));
+	debugEmittersCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	debugEmittersCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetToDrawDebugEmitters(args.bValue);
 	});
@@ -436,6 +453,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	debugForceFieldsCheckBox->SetTooltip("Visualize force fields");
 	debugForceFieldsCheckBox->SetScriptTip("SetDebugForceFieldsEnabled(bool enabled)");
 	debugForceFieldsCheckBox->SetPos(XMFLOAT2(x, y += step));
+	debugForceFieldsCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	debugForceFieldsCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetToDrawDebugForceFields(args.bValue);
 	});
@@ -445,6 +463,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	debugRaytraceBVHCheckBox = new wiCheckBox("Raytrace BVH visualizer: ");
 	debugRaytraceBVHCheckBox->SetTooltip("Visualize scene BVH if raytracing is enabled");
 	debugRaytraceBVHCheckBox->SetPos(XMFLOAT2(x, y += step));
+	debugRaytraceBVHCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	debugRaytraceBVHCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetRaytraceDebugBVHVisualizerEnabled(args.bValue);
 	});
@@ -454,6 +473,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	envProbesCheckBox = new wiCheckBox("Env probe visualizer: ");
 	envProbesCheckBox->SetTooltip("Toggle visualization of environment probes as reflective spheres");
 	envProbesCheckBox->SetPos(XMFLOAT2(x, y += step));
+	envProbesCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	envProbesCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetToDrawDebugEnvProbes(args.bValue);
 	});
@@ -463,6 +483,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	cameraVisCheckBox = new wiCheckBox("Camera Proxy visualizer: ");
 	cameraVisCheckBox->SetTooltip("Toggle visualization of camera proxies in the scene");
 	cameraVisCheckBox->SetPos(XMFLOAT2(x, y += step));
+	cameraVisCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	cameraVisCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetToDrawDebugCameras(args.bValue);
 	});
@@ -472,6 +493,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	gridHelperCheckBox = new wiCheckBox("Grid helper: ");
 	gridHelperCheckBox->SetTooltip("Toggle showing of unit visualizer grid in the world origin");
 	gridHelperCheckBox->SetPos(XMFLOAT2(x, y += step));
+	gridHelperCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	gridHelperCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetToDrawGridHelper(args.bValue);
 	});
@@ -482,60 +504,70 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	pickTypeObjectCheckBox = new wiCheckBox("Pick Objects: ");
 	pickTypeObjectCheckBox->SetTooltip("Enable if you want to pick objects with the pointer");
 	pickTypeObjectCheckBox->SetPos(XMFLOAT2(x, y += step * 2));
+	pickTypeObjectCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeObjectCheckBox->SetCheck(true);
 	rendererWindow->AddWidget(pickTypeObjectCheckBox);
 
 	pickTypeEnvProbeCheckBox = new wiCheckBox("Pick EnvProbes: ");
 	pickTypeEnvProbeCheckBox->SetTooltip("Enable if you want to pick environment probes with the pointer");
 	pickTypeEnvProbeCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeEnvProbeCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeEnvProbeCheckBox->SetCheck(true);
 	rendererWindow->AddWidget(pickTypeEnvProbeCheckBox);
 
 	pickTypeLightCheckBox = new wiCheckBox("Pick Lights: ");
 	pickTypeLightCheckBox->SetTooltip("Enable if you want to pick lights with the pointer");
 	pickTypeLightCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeLightCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeLightCheckBox->SetCheck(true);
 	rendererWindow->AddWidget(pickTypeLightCheckBox);
 
 	pickTypeDecalCheckBox = new wiCheckBox("Pick Decals: ");
 	pickTypeDecalCheckBox->SetTooltip("Enable if you want to pick decals with the pointer");
 	pickTypeDecalCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeDecalCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeDecalCheckBox->SetCheck(true);
 	rendererWindow->AddWidget(pickTypeDecalCheckBox);
 
 	pickTypeForceFieldCheckBox = new wiCheckBox("Pick Force Fields: ");
 	pickTypeForceFieldCheckBox->SetTooltip("Enable if you want to pick force fields with the pointer");
 	pickTypeForceFieldCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeForceFieldCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeForceFieldCheckBox->SetCheck(true);
 	rendererWindow->AddWidget(pickTypeForceFieldCheckBox);
 
 	pickTypeEmitterCheckBox = new wiCheckBox("Pick Emitters: ");
 	pickTypeEmitterCheckBox->SetTooltip("Enable if you want to pick emitters with the pointer");
 	pickTypeEmitterCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeEmitterCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeEmitterCheckBox->SetCheck(true);
 	rendererWindow->AddWidget(pickTypeEmitterCheckBox);
 
 	pickTypeHairCheckBox = new wiCheckBox("Pick Hairs: ");
 	pickTypeHairCheckBox->SetTooltip("Enable if you want to pick hairs with the pointer");
 	pickTypeHairCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeHairCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeHairCheckBox->SetCheck(true);
 	rendererWindow->AddWidget(pickTypeHairCheckBox);
 
 	pickTypeCameraCheckBox = new wiCheckBox("Pick Cameras: ");
 	pickTypeCameraCheckBox->SetTooltip("Enable if you want to pick cameras with the pointer");
 	pickTypeCameraCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeCameraCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeCameraCheckBox->SetCheck(true);
 	rendererWindow->AddWidget(pickTypeCameraCheckBox);
 
 	pickTypeArmatureCheckBox = new wiCheckBox("Pick Armatures: ");
 	pickTypeArmatureCheckBox->SetTooltip("Enable if you want to pick armatures with the pointer");
 	pickTypeArmatureCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeArmatureCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeArmatureCheckBox->SetCheck(true);
 	rendererWindow->AddWidget(pickTypeArmatureCheckBox);
 
 	pickTypeSoundCheckBox = new wiCheckBox("Pick Sounds: ");
 	pickTypeSoundCheckBox->SetTooltip("Enable if you want to pick sounds with the pointer");
 	pickTypeSoundCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeSoundCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeSoundCheckBox->SetCheck(true);
 	rendererWindow->AddWidget(pickTypeSoundCheckBox);
 
@@ -544,6 +576,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	freezeCullingCameraCheckBox = new wiCheckBox("Freeze culling camera: ");
 	freezeCullingCameraCheckBox->SetTooltip("Freeze culling camera update. Scene culling will not be updated with the view");
 	freezeCullingCameraCheckBox->SetPos(XMFLOAT2(x, y += step * 2));
+	freezeCullingCameraCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	freezeCullingCameraCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetFreezeCullingCameraEnabled(args.bValue);
 	});
@@ -552,7 +585,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 
 
-	rendererWindow->Translate(XMFLOAT3(130, 20, 0));
+	rendererWindow->Translate(XMFLOAT3(100, 50, 0));
 	rendererWindow->SetVisible(false);
 }
 

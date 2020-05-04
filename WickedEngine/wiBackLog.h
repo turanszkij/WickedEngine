@@ -27,5 +27,5 @@ namespace wiBackLog
 
 	void setBackground(wiGraphics::Texture* texture);
 	void setFontSize(int value);
-	void setFontRowspacing(int value);
+	void setFontRowspacing(float value);
 };

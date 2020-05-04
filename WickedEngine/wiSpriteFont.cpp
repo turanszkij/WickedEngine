@@ -18,11 +18,11 @@ void wiSpriteFont::Draw(CommandList cmd) const
 	wiFont::Draw(text, params, cmd);
 }
 
-int wiSpriteFont::textWidth() const
+float wiSpriteFont::textWidth() const
 {
 	return wiFont::textWidth(text, params);
 }
-int wiSpriteFont::textHeight() const
+float wiSpriteFont::textHeight() const
 {
 	return wiFont::textHeight(text, params);
 }

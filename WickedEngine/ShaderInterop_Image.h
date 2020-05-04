@@ -8,11 +8,6 @@ CBUFFER(ImageCB, CBSLOT_IMAGE)
 	float4	xTexMulAdd;
 	float4	xTexMulAdd2;
 	float4	xColor;
-
-	uint	xMirror;
-	float	xMipLevel;
-	float	xMipLevel_Background;
-	float	padding_ImageCB;
 };
 
 

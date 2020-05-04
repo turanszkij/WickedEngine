@@ -14,8 +14,8 @@ namespace wiGraphics
 	protected:
 		uint64_t FRAMECOUNT = 0;
 		bool VSYNC = true;
-		int SCREENWIDTH = 0;
-		int SCREENHEIGHT = 0;
+		int RESOLUTIONWIDTH = 0;
+		int RESOLUTIONHEIGHT = 0;
 		bool DEBUGDEVICE = false;
 		bool FULLSCREEN = false;
 		bool RESOLUTIONCHANGED = false;
@@ -59,9 +59,17 @@ namespace wiGraphics
 		inline void SetVSyncEnabled(bool value) { VSYNC = value; }
 		inline uint64_t GetFrameCount() const { return FRAMECOUNT; }
 
-		inline int GetScreenWidth() const { return SCREENWIDTH; }
-		inline int GetScreenHeight() const { return SCREENHEIGHT; }
+		// Returns native resolution width of back buffer in pixels:
+		inline int GetResolutionWidth() const { return RESOLUTIONWIDTH; }
+		// Returns native resolution height of back buffer in pixels:
+		inline int GetResolutionHeight() const { return RESOLUTIONHEIGHT; }
+		// Has the resolution changed since the last frame?
 		inline bool ResolutionChanged() const { return RESOLUTIONCHANGED; }
+
+		// Returns the width of the screen with DPI scaling applied (subpixel size):
+		float GetScreenWidth() const;
+		// Returns the height of the screen with DPI scaling applied (subpixel size):
+		float GetScreenHeight() const;
 
 
 		virtual void SetResolution(int width, int height) = 0;

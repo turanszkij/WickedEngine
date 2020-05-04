@@ -286,7 +286,7 @@ void MainComponent::Compose(CommandList cmd)
 		}
 		if (infoDisplay.resolution)
 		{
-			ss << "Resolution: " << wiRenderer::GetDevice()->GetScreenWidth() << " x " << wiRenderer::GetDevice()->GetScreenHeight() << endl;
+			ss << "Resolution: " << wiRenderer::GetDevice()->GetResolutionWidth() << " x " << wiRenderer::GetDevice()->GetResolutionHeight() << " (" << wiPlatform::GetDPI() << " dpi)" << endl;
 		}
 		if (infoDisplay.fpsinfo)
 		{
@@ -320,7 +320,7 @@ void MainComponent::Compose(CommandList cmd)
 		}
 
 		ss.precision(2);
-		wiFont::Draw(ss.str(), wiFontParams(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor(255,255,255,255), wiColor(0,0,0,255)), cmd);
+		wiFont::Draw(ss.str(), wiFontParams(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, wiColor(255,255,255,255), wiColor(0,0,0,255)), cmd);
 	}
 
 	wiProfiler::DrawData(4, 120, cmd);

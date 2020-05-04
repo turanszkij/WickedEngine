@@ -1619,8 +1619,8 @@ using namespace Vulkan_Internal;
 
 		RECT rect = RECT();
 		GetClientRect(window, &rect);
-		SCREENWIDTH = rect.right - rect.left;
-		SCREENHEIGHT = rect.bottom - rect.top;
+		RESOLUTIONWIDTH = rect.right - rect.left;
+		RESOLUTIONHEIGHT = rect.bottom - rect.top;
 
 		VkResult res;
 
@@ -2055,7 +2055,7 @@ using namespace Vulkan_Internal;
 			VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
 			VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
 
-			swapChainExtent = { static_cast<uint32_t>(SCREENWIDTH), static_cast<uint32_t>(SCREENHEIGHT) };
+			swapChainExtent = { static_cast<uint32_t>(RESOLUTIONWIDTH), static_cast<uint32_t>(RESOLUTIONHEIGHT) };
 			swapChainExtent.width = std::max(swapChainSupport.capabilities.minImageExtent.width, std::min(swapChainSupport.capabilities.maxImageExtent.width, swapChainExtent.width));
 			swapChainExtent.height = std::max(swapChainSupport.capabilities.minImageExtent.height, std::min(swapChainSupport.capabilities.maxImageExtent.height, swapChainExtent.height));
 
@@ -2454,10 +2454,10 @@ using namespace Vulkan_Internal;
 
 	void GraphicsDevice_Vulkan::SetResolution(int width, int height)
 	{
-		if (width != SCREENWIDTH || height != SCREENHEIGHT)
+		if (width != RESOLUTIONWIDTH || height != RESOLUTIONHEIGHT)
 		{
-			SCREENWIDTH = width;
-			SCREENHEIGHT = height;
+			RESOLUTIONWIDTH = width;
+			RESOLUTIONHEIGHT = height;
 			//swapChain->ResizeBuffers(2, width, height, _ConvertFormat(GetBackBufferFormat()), 0);
 			RESOLUTIONCHANGED = true;
 		}
@@ -3911,8 +3911,8 @@ using namespace Vulkan_Internal;
 		{
 			viewports[i].x = 0;
 			viewports[i].y = 0;
-			viewports[i].width = (float)SCREENWIDTH;
-			viewports[i].height = (float)SCREENHEIGHT;
+			viewports[i].width = (float)RESOLUTIONWIDTH;
+			viewports[i].height = (float)RESOLUTIONHEIGHT;
 			viewports[i].minDepth = 0;
 			viewports[i].maxDepth = 1;
 		}

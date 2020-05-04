@@ -16,7 +16,7 @@ PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 	editor->GetGUI().AddWidget(window);
 
 	float x = 100;
-	float y = 10;
+	float y = 5;
 	float step = 30;
 
 	modeComboBox = new wiComboBox("Mode: ");

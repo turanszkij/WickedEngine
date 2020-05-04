@@ -26,21 +26,15 @@ namespace wiImage
 		IMAGE_SHADER_FULLSCREEN,
 		IMAGE_SHADER_COUNT
 	};
-	enum IMAGE_SAMPLING
-	{
-		IMAGE_SAMPLING_SIMPLE,
-		IMAGE_SAMPLING_BICUBIC,
-		IMAGE_SAMPLING_COUNT,
-	};
 
 	GPUBuffer				constantBuffer;
 	Shader					vertexShader;
 	Shader					screenVS;
-	Shader					imagePS[IMAGE_SHADER_COUNT][IMAGE_SAMPLING_COUNT];
+	Shader					imagePS[IMAGE_SHADER_COUNT];
 	BlendState				blendStates[BLENDMODE_COUNT];
 	RasterizerState			rasterizerState;
 	DepthStencilState		depthStencilStates[STENCILMODE_COUNT][STENCILREFMODE_COUNT];
-	PipelineState			imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT][IMAGE_SAMPLING_COUNT];
+	PipelineState			imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT];
 
 	std::atomic_bool initialized{ false };
 
@@ -63,8 +57,6 @@ namespace wiImage
 			stencilRef = wiRenderer::CombineStencilrefs(STENCILREF_EMPTY, (uint8_t)stencilRef);
 		}
 		device->BindStencilRef(stencilRef, cmd);
-
-		IMAGE_SAMPLING sampling_type = params.quality == QUALITY_BICUBIC ? IMAGE_SAMPLING_BICUBIC : IMAGE_SAMPLING_SIMPLE;
 
 		if (params.quality == QUALITY_NEAREST)
 		{
@@ -101,13 +93,10 @@ namespace wiImage
 		cb.xColor.y *= darken;
 		cb.xColor.z *= darken;
 		cb.xColor.w *= params.opacity;
-		cb.xMirror = params.isMirrorEnabled() ? 1 : 0;
-		cb.xMipLevel = params.mipLevel;
-		cb.xMipLevel_Background = params.mipLevel_Background;
 
 		if (params.isFullScreenEnabled())
 		{
-			device->BindPipelineState(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.stencilRefMode][sampling_type], cmd);
+			device->BindPipelineState(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
 			device->UpdateBuffer(&constantBuffer, &cb, cmd);
 			device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
 			device->Draw(3, 0, cmd);
@@ -164,6 +153,12 @@ namespace wiImage
 			XMVECTOR V = XMVectorSet(params.corners[i].x - params.pivot.x, params.corners[i].y - params.pivot.y, 0, 1);
 			V = XMVector2Transform(V, M);
 			XMStoreFloat4(&cb.xCorners[i], V);
+		}
+
+		if (params.isMirrorEnabled())
+		{
+			std::swap(cb.xCorners[0], cb.xCorners[1]);
+			std::swap(cb.xCorners[2], cb.xCorners[3]);
 		}
 
 		const TextureDesc& desc = texture->GetDesc();
@@ -235,7 +230,7 @@ namespace wiImage
 			}
 		}
 
-		device->BindPipelineState(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.stencilRefMode][sampling_type], cmd);
+		device->BindPipelineState(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
 
 		device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
 		device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
@@ -255,18 +250,12 @@ namespace wiImage
 		wiRenderer::LoadShader(VS, vertexShader, "imageVS.cso");
 		wiRenderer::LoadShader(VS, screenVS, "screenVS.cso");
 
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_STANDARD][IMAGE_SAMPLING_SIMPLE], "imagePS.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_SEPARATENORMALMAP][IMAGE_SAMPLING_SIMPLE], "imagePS_separatenormalmap.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_MASKED][IMAGE_SAMPLING_SIMPLE], "imagePS_masked.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_BACKGROUNDBLUR][IMAGE_SAMPLING_SIMPLE], "imagePS_backgroundblur.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_BACKGROUNDBLUR_MASKED][IMAGE_SAMPLING_SIMPLE], "imagePS_backgroundblur_masked.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_FULLSCREEN][IMAGE_SAMPLING_SIMPLE], "screenPS.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_STANDARD][IMAGE_SAMPLING_BICUBIC], "imagePS_bicubic.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_SEPARATENORMALMAP][IMAGE_SAMPLING_BICUBIC], "imagePS_separatenormalmap_bicubic.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_MASKED][IMAGE_SAMPLING_BICUBIC], "imagePS_masked_bicubic.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_BACKGROUNDBLUR][IMAGE_SAMPLING_BICUBIC], "imagePS_backgroundblur_bicubic.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_BACKGROUNDBLUR_MASKED][IMAGE_SAMPLING_BICUBIC], "imagePS_backgroundblur_masked_bicubic.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_FULLSCREEN][IMAGE_SAMPLING_BICUBIC], "screenPS_bicubic.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_STANDARD], "imagePS.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_SEPARATENORMALMAP], "imagePS_separatenormalmap.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_MASKED], "imagePS_masked.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_BACKGROUNDBLUR], "imagePS_backgroundblur.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_BACKGROUNDBLUR_MASKED], "imagePS_backgroundblur_masked.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_FULLSCREEN], "screenPS.cso");
 
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
@@ -282,22 +271,19 @@ namespace wiImage
 			desc.rs = &rasterizerState;
 			desc.pt = TRIANGLESTRIP;
 
-			for (int l = 0; l < IMAGE_SAMPLING_COUNT; ++l)
+			desc.ps = &imagePS[i];
+
+			for (int j = 0; j < BLENDMODE_COUNT; ++j)
 			{
-				desc.ps = &imagePS[i][l];
-
-				for (int j = 0; j < BLENDMODE_COUNT; ++j)
+				desc.bs = &blendStates[j];
+				for (int k = 0; k < STENCILMODE_COUNT; ++k)
 				{
-					desc.bs = &blendStates[j];
-					for (int k = 0; k < STENCILMODE_COUNT; ++k)
+					for (int m = 0; m < STENCILREFMODE_COUNT; ++m)
 					{
-						for (int m = 0; m < STENCILREFMODE_COUNT; ++m)
-						{
-							desc.dss = &depthStencilStates[k][m];
+						desc.dss = &depthStencilStates[k][m];
 
-							device->CreatePipelineState(&desc, &imagePSO[i][j][k][m][l]);
+						device->CreatePipelineState(&desc, &imagePSO[i][j][k][m]);
 
-						}
 					}
 				}
 			}

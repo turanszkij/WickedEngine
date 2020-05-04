@@ -63,7 +63,7 @@ void Editor::Initialize()
 
 void EditorLoadingScreen::Load()
 {
-	font = wiSpriteFont("Loading...", wiFontParams((int)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f), (int)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f), 36,
+	font = wiSpriteFont("Loading...", wiFontParams(wiRenderer::GetDevice()->GetScreenWidth()*0.5f, wiRenderer::GetDevice()->GetScreenHeight()*0.5f, 36,
 		WIFALIGN_CENTER, WIFALIGN_CENTER));
 	AddFont(&font);
 
@@ -81,8 +81,8 @@ void EditorLoadingScreen::Load()
 }
 void EditorLoadingScreen::Update(float dt)
 {
-	font.params.posX = (int)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f);
-	font.params.posY = (int)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f);
+	font.params.posX = wiRenderer::GetDevice()->GetScreenWidth()*0.5f;
+	font.params.posY = wiRenderer::GetDevice()->GetScreenHeight()*0.5f;
 	sprite.params.pos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth()*0.5f, wiRenderer::GetDevice()->GetScreenHeight()*0.5f - font.textHeight(), 0);
 
 	__super::Update(dt);
@@ -227,8 +227,8 @@ void EditorComponent::Load()
 
 	translator.enabled = false;
 
-	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
+	float screenW = wiRenderer::GetDevice()->GetScreenWidth();
+	float screenH = wiRenderer::GetDevice()->GetScreenHeight();
 
 	XMFLOAT2 option_size = XMFLOAT2(100, 34);
 	float x = screenW - option_size.x;
@@ -744,9 +744,12 @@ void EditorComponent::Load()
 			ss << endl << endl << "For questions, bug reports, feedback, requests, please open an issue at:" << endl;
 			ss << "https://github.com/turanszkij/WickedEngine" << endl;
 
+			float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
+			float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
+
 			helpLabel = new wiLabel("HelpLabel");
 			helpLabel->SetText(ss.str());
-			helpLabel->SetSize(XMFLOAT2(screenW / 3.0f, screenH / 2.2f));
+			helpLabel->SetSize(XMFLOAT2(screenW / 2.0f, screenH / 1.5f));
 			helpLabel->SetPos(XMFLOAT2(screenW / 2.0f - helpLabel->scale.x / 2.0f, screenH / 2.0f - helpLabel->scale.y / 2.0f));
 			helpLabel->SetVisible(false);
 			GetGUI().AddWidget(helpLabel);
@@ -772,7 +775,7 @@ void EditorComponent::Load()
 	wiCheckBox* profilerEnabledCheckBox = new wiCheckBox("Profiler Enabled: ");
 	profilerEnabledCheckBox->SetSize(XMFLOAT2(20, 20));
 	profilerEnabledCheckBox->SetPos(XMFLOAT2(screenW - 520, 45));
-	profilerEnabledCheckBox->SetTooltip("Toggle Profiler Engine On/Off");
+	profilerEnabledCheckBox->SetTooltip("Toggle Profiler On/Off");
 	profilerEnabledCheckBox->OnClick([&](wiEventArgs args) {
 		wiProfiler::SetEnabled(args.bValue);
 		});
@@ -996,7 +999,6 @@ void EditorComponent::Update(float dt)
 			renderPath->GetGUI().SetVisible(true);
 		}
 		GetGUI().SetVisible(true);
-		wiProfiler::SetEnabled(true);
 		main->infoDisplay.active = true;
 
 		cinemaModeCheckBox->SetCheck(false);

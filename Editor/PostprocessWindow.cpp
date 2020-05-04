@@ -13,12 +13,12 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 	assert(GUI && "Invalid GUI!");
 
 	ppWindow = new wiWindow(GUI, "PostProcess Window");
-	ppWindow->SetSize(XMFLOAT2(400, 700));
+	ppWindow->SetSize(XMFLOAT2(400, 550));
 	GUI->AddWidget(ppWindow);
 
 	float x = 150;
-	float y = 10;
-	float step = 30;
+	float y = 5;
+	float step = 25;
 
 	exposureSlider = new wiSlider(0.0f, 3.0f, 1, 10000, "Exposure: ");
 	exposureSlider->SetTooltip("Set the tonemap exposure value");
@@ -326,7 +326,7 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 	ppWindow->AddWidget(chromaticaberrationSlider);
 
 
-	ppWindow->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 550, 50, 0));
+	ppWindow->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 500, 80, 0));
 	ppWindow->SetVisible(false);
 
 }

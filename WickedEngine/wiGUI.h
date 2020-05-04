@@ -52,9 +52,6 @@ public:
 	void SetVisible(bool value) { visible = value; }
 	bool IsVisible() { return visible; }
 
-	void SetDesignSize(float width, float height) { size_design = XMFLOAT2(width, height); }
-	const XMFLOAT2& GetDesignSize() const { return size_design; }
-
 	const XMFLOAT2& GetPointerPos() const
 	{
 		return pointerpos;

@@ -85,6 +85,11 @@ namespace wiInput
 		wiRawInput::GetMouseState(&mouse); // currently only the relative data can be used from this
 		wiRawInput::GetKeyboardState(&keyboard); // it contains pressed buttons as "keyboard/typewriter" like, so no continuous presses
 
+		// aparently checking the mouse here instead of Down() avoids missing the button presses (review!)
+		mouse.left_button_press |= KEY_DOWN(VK_LBUTTON);
+		mouse.middle_button_press |= KEY_DOWN(VK_MBUTTON);
+		mouse.right_button_press |= KEY_DOWN(VK_RBUTTON);
+
 		// Check if low-level XINPUT controller is not registered for playerindex slot and register:
 		for (int i = 0; i < wiXInput::GetMaxControllerCount(); ++i)
 		{
@@ -240,17 +245,17 @@ namespace wiInput
 			case wiInput::MOUSE_BUTTON_LEFT:
 				if (mouse.left_button_press) 
 					return true;
-				keycode = VK_LBUTTON;
+				return false;
 				break;
 			case wiInput::MOUSE_BUTTON_RIGHT:
 				if (mouse.right_button_press) 
 					return true;
-				keycode = VK_RBUTTON;
+				return false;
 				break;
 			case wiInput::MOUSE_BUTTON_MIDDLE:
 				if (mouse.middle_button_press) 
 					return true;
-				keycode = VK_MBUTTON;
+				return false;
 				break;
 			case wiInput::KEYBOARD_BUTTON_UP:
 				keycode = VK_UP;
@@ -389,7 +394,8 @@ namespace wiInput
 		POINT p;
 		GetCursorPos(&p);
 		ScreenToClient(wiPlatform::GetWindow(), &p);
-		return XMFLOAT4((float)p.x, (float)p.y, mouse.delta_wheel, 0);
+		const float dpiscaling = wiPlatform::GetDPIScaling();
+		return XMFLOAT4((float)p.x / dpiscaling, (float)p.y / dpiscaling, mouse.delta_wheel, 0);
 #else
 		auto& p = Windows::UI::Core::CoreWindow::GetForCurrentThread()->PointerPosition;
 		return XMFLOAT4(p.X, p.Y, 0, 0);
@@ -398,9 +404,10 @@ namespace wiInput
 	void SetPointer(const XMFLOAT4& props)
 	{
 #ifndef WINSTORE_SUPPORT
+		const float dpiscaling = wiPlatform::GetDPIScaling();
 		POINT p;
-		p.x = (LONG)props.x;
-		p.y = (LONG)props.y;
+		p.x = (LONG)(props.x * dpiscaling);
+		p.y = (LONG)(props.y * dpiscaling);
 		ClientToScreen(wiPlatform::GetWindow(), &p);
 		SetCursorPos(p.x, p.y);
 #endif
