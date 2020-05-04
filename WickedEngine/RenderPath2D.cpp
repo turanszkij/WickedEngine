@@ -34,8 +34,8 @@ void RenderPath2D::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = defaultTextureFormat;
-		desc.Width = device->GetScreenWidth();
-		desc.Height = device->GetScreenHeight();
+		desc.Width = device->GetResolutionWidth();
+		desc.Height = device->GetResolutionHeight();
 		device->CreateTexture(&desc, nullptr, &rtFinal);
 		device->SetName(&rtFinal, "rtFinal");
 	}

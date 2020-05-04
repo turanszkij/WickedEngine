@@ -33,14 +33,11 @@ void TestsRenderer::Load()
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
-	// Instead of screen resolution, design gui elements to a specific size (reference resolution):
-	GetGUI().SetDesignSize(1280, 720);
-
 	wiLabel* label = new wiLabel("Label1");
 	label->SetText("Wicked Engine Test Framework");
 	label->font.params.h_align = WIFALIGN_CENTER;
-	label->SetSize(XMFLOAT2(240,24));
-	label->SetPos(XMFLOAT2(GetGUI().GetDesignSize().x / 2.f - label->scale.x / 2.f, GetGUI().GetDesignSize().y*0.95f));
+	label->SetSize(XMFLOAT2(240,20));
+	label->SetPos(XMFLOAT2(screenW / 2.f - label->scale.x / 2.f, screenH*0.95f));
 	GetGUI().AddWidget(label);
 
 	static wiAudio::Sound sound;
@@ -147,7 +144,7 @@ void TestsRenderer::Load()
 			static wiSprite sprite;
 			sprite = wiSprite("images/movingtex.png", "images/HelloWorld.png");
 			sprite.params.pos = XMFLOAT3(screenW / 2, screenH / 2, 0);
-			sprite.params.siz = XMFLOAT2(200*wiPlatform::GetDPIScaling(), 100 * wiPlatform::GetDPIScaling());
+			sprite.params.siz = XMFLOAT2(200, 100);
 			sprite.params.pivot = XMFLOAT2(0.5f, 0.5f);
 			sprite.anim.rot = XM_PI / 4.0f;
 			sprite.anim.wobbleAnim.amount = XMFLOAT2(0.16f, 0.16f);
@@ -483,14 +480,13 @@ void TestsRenderer::RunFontTest()
 }
 void TestsRenderer::RunSpriteTest()
 {
-	const float dpiscaling = wiPlatform::GetDPIScaling();
-	const float step = 30 * dpiscaling;
+	const float step = 30;
 	const int screenW = wiRenderer::GetDevice()->GetScreenWidth();
 	const int screenH = wiRenderer::GetDevice()->GetScreenHeight();
 	const XMFLOAT3 startPos = XMFLOAT3(screenW * 0.3f, screenH * 0.2f, 0);
 	wiImageParams params;
 	params.pos = startPos;
-	params.siz = XMFLOAT2(128 * dpiscaling, 128 * dpiscaling);
+	params.siz = XMFLOAT2(128, 128);
 	params.pivot = XMFLOAT2(0.5f, 0.5f);
 	params.quality = QUALITY_LINEAR;
 	params.sampleFlag = SAMPLEMODE_CLAMP;

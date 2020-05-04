@@ -230,11 +230,6 @@ void EditorComponent::Load()
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
-	// Instead of screen resolution, design gui elements to a specific size (reference resolution):
-	GetGUI().SetDesignSize(1280, 720);
-	screenW = GetGUI().GetDesignSize().x;
-	screenH = GetGUI().GetDesignSize().y;
-
 	XMFLOAT2 option_size = XMFLOAT2(100, 34);
 	float x = screenW - option_size.x;
 	float y = screenH - option_size.y;
@@ -780,7 +775,7 @@ void EditorComponent::Load()
 	wiCheckBox* profilerEnabledCheckBox = new wiCheckBox("Profiler Enabled: ");
 	profilerEnabledCheckBox->SetSize(XMFLOAT2(20, 20));
 	profilerEnabledCheckBox->SetPos(XMFLOAT2(screenW - 520, 45));
-	profilerEnabledCheckBox->SetTooltip("Toggle Profiler Engine On/Off");
+	profilerEnabledCheckBox->SetTooltip("Toggle Profiler On/Off");
 	profilerEnabledCheckBox->OnClick([&](wiEventArgs args) {
 		wiProfiler::SetEnabled(args.bValue);
 		});

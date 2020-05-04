@@ -49,7 +49,14 @@ void wiGUIElement::ApplyScissor(const Rect rect, CommandList cmd, bool constrain
 		scissor.top = scissor.bottom;
 	}
 
-	wiRenderer::GetDevice()->BindScissorRects(1, &scissor, cmd);
+	GraphicsDevice* device = wiRenderer::GetDevice();
+	float scale_x = (float)device->GetResolutionWidth() / (float)device->GetScreenWidth();
+	float scale_y = (float)device->GetResolutionHeight() / (float)device->GetScreenHeight();
+	scissor.bottom = int32_t((float)scissor.bottom * scale_y);
+	scissor.top = int32_t((float)scissor.top * scale_y);
+	scissor.left = int32_t((float)scissor.left * scale_x);
+	scissor.right = int32_t((float)scissor.right * scale_x);
+	device->BindScissorRects(1, &scissor, cmd);
 }
 
 

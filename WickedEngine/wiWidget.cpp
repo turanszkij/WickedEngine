@@ -7,7 +7,6 @@
 #include "wiInput.h"
 #include "wiRenderer.h"
 #include "ShaderInterop_Renderer.h"
-#include "wiPlatform.h"
 
 #include <DirectXCollision.h>
 
@@ -734,7 +733,7 @@ void wiSlider::Update(wiGUI* gui, float dt)
 	wiWidget::Update(gui, dt);
 
 	valueInputField->Detach();
-	valueInputField->SetSize(XMFLOAT2(40.0f * wiPlatform::GetDPIScaling(), scale.y));
+	valueInputField->SetSize(XMFLOAT2(40.0f, scale.y));
 	valueInputField->SetPos(XMFLOAT2(translation.x + scale.x + 2, translation.y));
 	valueInputField->AttachTo(this);
 
@@ -745,7 +744,7 @@ void wiSlider::Update(wiGUI* gui, float dt)
 
 	for (int i = 0; i < WIDGETSTATE_COUNT; ++i)
 	{
-		sprites_knob[i].params.siz.x = 16.0f * wiPlatform::GetDPIScaling();
+		sprites_knob[i].params.siz.x = 16.0f;
 		valueInputField->SetColor(wiColor::fromFloat4(this->sprites_knob[i].params.color), (WIDGETSTATE)i);
 	}
 	valueInputField->font.params.color = this->font.params.color;
@@ -1396,7 +1395,7 @@ int wiComboBox::GetSelected() const
 
 
 
-inline float windowcontrolSize() { return 20.0f * wiPlatform::GetDPIScaling(); }
+inline float windowcontrolSize() { return 20.0f; }
 wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : gui(gui)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
@@ -2511,8 +2510,8 @@ void wiColorPicker::OnColorChanged(function<void(wiEventArgs args)> func)
 
 
 
-inline float item_height() { return 20.0f * wiPlatform::GetDPIScaling(); }
-inline float tree_scrollbar_width() { return 12.0f * wiPlatform::GetDPIScaling(); }
+inline float item_height() { return 20.0f; }
+inline float tree_scrollbar_width() { return 12.0f; }
 wiTreeList::wiTreeList(const std::string& name)
 {
 	SetName(name);

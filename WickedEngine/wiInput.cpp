@@ -389,7 +389,8 @@ namespace wiInput
 		POINT p;
 		GetCursorPos(&p);
 		ScreenToClient(wiPlatform::GetWindow(), &p);
-		return XMFLOAT4((float)p.x, (float)p.y, mouse.delta_wheel, 0);
+		const float dpiscaling = wiPlatform::GetDPIScaling();
+		return XMFLOAT4((float)p.x / dpiscaling, (float)p.y / dpiscaling, mouse.delta_wheel, 0);
 #else
 		auto& p = Windows::UI::Core::CoreWindow::GetForCurrentThread()->PointerPosition;
 		return XMFLOAT4(p.X, p.Y, 0, 0);
@@ -398,9 +399,10 @@ namespace wiInput
 	void SetPointer(const XMFLOAT4& props)
 	{
 #ifndef WINSTORE_SUPPORT
+		const float dpiscaling = wiPlatform::GetDPIScaling();
 		POINT p;
-		p.x = (LONG)props.x;
-		p.y = (LONG)props.y;
+		p.x = (LONG)(props.x * dpiscaling);
+		p.y = (LONG)(props.y * dpiscaling);
 		ClientToScreen(wiPlatform::GetWindow(), &p);
 		SetCursorPos(p.x, p.y);
 #endif

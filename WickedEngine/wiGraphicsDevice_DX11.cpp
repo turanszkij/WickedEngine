@@ -1189,11 +1189,11 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 #ifndef WINSTORE_SUPPORT
 	RECT rect = RECT();
 	GetClientRect(window, &rect);
-	SCREENWIDTH = rect.right - rect.left;
-	SCREENHEIGHT = rect.bottom - rect.top;
+	RESOLUTIONWIDTH = rect.right - rect.left;
+	RESOLUTIONHEIGHT = rect.bottom - rect.top;
 #else WINSTORE_SUPPORT
-	SCREENWIDTH = (int)window->Bounds.Width;
-	SCREENHEIGHT = (int)window->Bounds.Height;
+	RESOLUTIONWIDTH = (int)window->Bounds.Width;
+	RESOLUTIONHEIGHT = (int)window->Bounds.Height;
 #endif
 
 	HRESULT hr = E_FAIL;
@@ -1254,8 +1254,8 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 
 
 	DXGI_SWAP_CHAIN_DESC1 sd = { 0 };
-	sd.Width = SCREENWIDTH;
-	sd.Height = SCREENHEIGHT;
+	sd.Width = RESOLUTIONWIDTH;
+	sd.Height = RESOLUTIONHEIGHT;
 	sd.Format = _ConvertFormat(GetBackBufferFormat());
 	sd.Stereo = false;
 	sd.SampleDesc.Count = 1; // Don't use multi-sampling.
@@ -1352,10 +1352,10 @@ void GraphicsDevice_DX11::CreateBackBufferResources()
 
 void GraphicsDevice_DX11::SetResolution(int width, int height)
 {
-	if ((width != SCREENWIDTH || height != SCREENHEIGHT) && width > 0 && height > 0)
+	if ((width != RESOLUTIONWIDTH || height != RESOLUTIONHEIGHT) && width > 0 && height > 0)
 	{
-		SCREENWIDTH = width;
-		SCREENHEIGHT = height;
+		RESOLUTIONWIDTH = width;
+		RESOLUTIONHEIGHT = height;
 
 		backBuffer.Reset();
 		renderTargetView.Reset();
@@ -2432,8 +2432,8 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 	BindComputeShader(nullptr, cmd);
 
 	D3D11_VIEWPORT vp = {};
-	vp.Width = (float)SCREENWIDTH;
-	vp.Height = (float)SCREENHEIGHT;
+	vp.Width = (float)RESOLUTIONWIDTH;
+	vp.Height = (float)RESOLUTIONHEIGHT;
 	vp.MinDepth = 0.0f;
 	vp.MaxDepth = 1.0f;
 	vp.TopLeftX = 0;

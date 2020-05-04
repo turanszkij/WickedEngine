@@ -20,7 +20,7 @@ static const int WIFONTSIZE_DEFAULT = 16;
 struct wiFontParams
 {
 	int posX, posY;
-	int size = WIFONTSIZE_DEFAULT; // line height in pixels
+	int size = WIFONTSIZE_DEFAULT; // line height in DPI scaled units
 	float scaling = 1;
 	int spacingX, spacingY;
 	wiFontAlign h_align, v_align;
