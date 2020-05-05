@@ -25,7 +25,7 @@ public:
 	wiScene::TransformComponent transform;
 	std::list<wiScene::PickResult> selected;
 
-	bool enabled = true;
+	bool enabled = false;
 
 	enum TRANSLATOR_STATE
 	{

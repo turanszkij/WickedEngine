@@ -29,7 +29,6 @@ private:
 	bool focus = false;
 	bool visible = true;
 	XMFLOAT2 pointerpos = XMFLOAT2(0, 0);
-	XMFLOAT2 size_design = XMFLOAT2(0, 0);
 public:
 	~wiGUI();
 

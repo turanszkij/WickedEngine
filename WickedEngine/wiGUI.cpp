@@ -76,16 +76,6 @@ void wiGUI::Update(float dt)
 		return;
 	}
 
-	XMFLOAT2 size_screen = XMFLOAT2((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
-	if (size_design.x == 0 || size_design.y == 0)
-	{
-		size_design = size_screen;
-	}
-	scale_local.x = size_screen.x / size_design.x;
-	scale_local.y = size_screen.y / size_design.y;
-	SetDirty();
-	UpdateTransform();
-
 	XMFLOAT4 _p = wiInput::GetPointer();
 	pointerpos.x = _p.x;
 	pointerpos.y = _p.y;

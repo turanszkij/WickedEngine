@@ -23,21 +23,24 @@ void Tests::Initialize()
 	ActivatePath(&renderer);
 }
 
+void TestsRenderer::ResizeBuffers()
+{
+	__super::ResizeBuffers();
 
+	float screenW = wiRenderer::GetDevice()->GetScreenWidth();
+	float screenH = wiRenderer::GetDevice()->GetScreenHeight();
+	label->SetPos(XMFLOAT2(screenW / 2.f - label->scale.x / 2.f, screenH * 0.95f));
+}
 void TestsRenderer::Load()
 {
 	setSSREnabled(false);
 	setReflectionsEnabled(true);
 	setFXAAEnabled(false);
 
-	float screenW = wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = wiRenderer::GetDevice()->GetScreenHeight();
-
-	wiLabel* label = new wiLabel("Label1");
+	label = new wiLabel("Label1");
 	label->SetText("Wicked Engine Test Framework");
 	label->font.params.h_align = WIFALIGN_CENTER;
 	label->SetSize(XMFLOAT2(240,20));
-	label->SetPos(XMFLOAT2(screenW / 2.f - label->scale.x / 2.f, screenH*0.95f));
 	GetGUI().AddWidget(label);
 
 	static wiAudio::Sound sound;
@@ -131,6 +134,9 @@ void TestsRenderer::Load()
 		transform.Translate(XMFLOAT3(0, 2.f, -4.5f));
 		transform.UpdateTransform();
 		wiRenderer::GetCamera().TransformCamera(transform);
+
+		float screenW = wiRenderer::GetDevice()->GetScreenWidth();
+		float screenH = wiRenderer::GetDevice()->GetScreenHeight();
 
 		// Based on combobox selection, start the appropriate test:
 		switch (args.iValue)

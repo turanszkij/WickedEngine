@@ -63,9 +63,44 @@ public:
 	std::unique_ptr<LayerWindow>			layerWnd;
 	std::unique_ptr<NameWindow>				nameWnd;
 
-	Editor*					main = nullptr;
+	Editor* main = nullptr;
 
-	wiCheckBox*				cinemaModeCheckBox = nullptr;
+	wiButton* rendererWnd_Toggle = nullptr;
+	wiButton* postprocessWnd_Toggle = nullptr;
+	wiButton* paintToolWnd_Toggle = nullptr;
+	wiButton* weatherWnd_Toggle = nullptr;
+	wiButton* objectWnd_Toggle = nullptr;
+	wiButton* meshWnd_Toggle = nullptr;
+	wiButton* materialWnd_Toggle = nullptr;
+	wiButton* cameraWnd_Toggle = nullptr;
+	wiButton* envProbeWnd_Toggle = nullptr;
+	wiButton* decalWnd_Toggle = nullptr;
+	wiButton* soundWnd_Toggle = nullptr;
+	wiButton* lightWnd_Toggle = nullptr;
+	wiButton* animWnd_Toggle = nullptr;
+	wiButton* emitterWnd_Toggle = nullptr;
+	wiButton* hairWnd_Toggle = nullptr;
+	wiButton* forceFieldWnd_Toggle = nullptr;
+	wiButton* springWnd_Toggle = nullptr;
+	wiButton* ikWnd_Toggle = nullptr;
+	wiButton* transformWnd_Toggle = nullptr;
+	wiButton* layerWnd_Toggle = nullptr;
+	wiButton* nameWnd_Toggle = nullptr;
+	wiCheckBox* translatorCheckBox = nullptr;
+	wiCheckBox* isScalatorCheckBox = nullptr;
+	wiCheckBox* isRotatorCheckBox = nullptr;
+	wiCheckBox* isTranslatorCheckBox = nullptr;
+	wiButton* saveButton = nullptr;
+	wiButton* modelButton = nullptr;
+	wiButton* scriptButton = nullptr;
+	wiButton* shaderButton = nullptr;
+	wiButton* clearButton = nullptr;
+	wiButton* helpButton = nullptr;
+	wiButton* exitButton = nullptr;
+	wiCheckBox* profilerEnabledCheckBox = nullptr;
+	wiCheckBox* physicsEnabledCheckBox = nullptr;
+	wiCheckBox* cinemaModeCheckBox = nullptr;
+	wiComboBox* renderPathComboBox = nullptr;
 
 	wiTreeList*				sceneGraphView = nullptr;
 	std::unordered_set<wiECS::Entity> scenegraphview_added_items;

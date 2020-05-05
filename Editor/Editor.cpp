@@ -206,6 +206,138 @@ void EditorComponent::ResizeBuffers()
 		hr = device->CreateRenderPass(&desc, &renderpass_selectionOutline[1]);
 		assert(SUCCEEDED(hr));
 	}
+
+
+	// GUI elements scaling:
+
+	float screenW = wiRenderer::GetDevice()->GetScreenWidth();
+	float screenH = wiRenderer::GetDevice()->GetScreenHeight();
+
+	XMFLOAT2 option_size = XMFLOAT2(100, 34);
+	float x = screenW - option_size.x;
+	float y = screenH - option_size.y;
+	float step = (option_size.y + 2) * -1;
+	float hstep = (option_size.x + 2) * -1;
+
+	rendererWnd_Toggle->SetPos(XMFLOAT2(x += hstep, y));
+	rendererWnd_Toggle->SetSize(option_size);
+
+	postprocessWnd_Toggle->SetPos(XMFLOAT2(x += hstep, y));
+	postprocessWnd_Toggle->SetSize(option_size);
+
+	paintToolWnd_Toggle->SetPos(XMFLOAT2(x += hstep, y));
+	paintToolWnd_Toggle->SetSize(option_size);
+
+	/////////////////////////
+
+	option_size.y = 16;
+	step = (option_size.y + 2) * -1;
+	x = screenW - option_size.x;
+	y = screenH - option_size.y;
+
+	weatherWnd_Toggle->SetPos(XMFLOAT2(x, y));
+	weatherWnd_Toggle->SetSize(option_size);
+
+	objectWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	objectWnd_Toggle->SetSize(option_size);
+
+	meshWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	meshWnd_Toggle->SetSize(option_size);
+
+	materialWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	materialWnd_Toggle->SetSize(option_size);
+
+	cameraWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	cameraWnd_Toggle->SetSize(option_size);
+
+	envProbeWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	envProbeWnd_Toggle->SetSize(option_size);
+
+	decalWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	decalWnd_Toggle->SetSize(option_size);
+
+	soundWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	soundWnd_Toggle->SetSize(option_size);
+
+	lightWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	lightWnd_Toggle->SetSize(option_size);
+
+	animWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	animWnd_Toggle->SetSize(option_size);
+
+	emitterWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	emitterWnd_Toggle->SetSize(option_size);
+
+	hairWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	hairWnd_Toggle->SetSize(option_size);
+
+	forceFieldWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	forceFieldWnd_Toggle->SetSize(option_size);
+
+	springWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	springWnd_Toggle->SetSize(option_size);
+
+	ikWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	ikWnd_Toggle->SetSize(option_size);
+
+	transformWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	transformWnd_Toggle->SetSize(option_size);
+
+	layerWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	layerWnd_Toggle->SetSize(option_size);
+
+	nameWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	nameWnd_Toggle->SetSize(option_size);
+
+	////////////////////////////////////////////////////////////////////////////////////
+
+	translatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25, 0));
+	translatorCheckBox->SetSize(XMFLOAT2(18, 18));
+
+	isScalatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25 - 40 * 2, 22));
+	isScalatorCheckBox->SetSize(XMFLOAT2(18, 18));
+
+	isRotatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25 - 40 * 1, 22));
+	isRotatorCheckBox->SetSize(XMFLOAT2(18, 18));
+
+	isTranslatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25, 22));
+	isTranslatorCheckBox->SetSize(XMFLOAT2(18, 18));
+
+	saveButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5, 0));
+	saveButton->SetSize(XMFLOAT2(100, 40));
+
+	modelButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 4, 0));
+	modelButton->SetSize(XMFLOAT2(100, 40));
+
+	scriptButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 3, 0));
+	scriptButton->SetSize(XMFLOAT2(100, 40));
+
+	shaderButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 2, 0));
+	shaderButton->SetSize(XMFLOAT2(100, 40));
+
+	clearButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 1, 0));
+	clearButton->SetSize(XMFLOAT2(100, 40));
+
+	helpButton->SetPos(XMFLOAT2(screenW - 50 - 55, 0));
+	helpButton->SetSize(XMFLOAT2(50, 40));
+
+	exitButton->SetPos(XMFLOAT2(screenW - 50, 0));
+	exitButton->SetSize(XMFLOAT2(50, 40));
+
+	profilerEnabledCheckBox->SetSize(XMFLOAT2(20, 20));
+	profilerEnabledCheckBox->SetPos(XMFLOAT2(screenW - 520, 45));
+
+	physicsEnabledCheckBox->SetSize(XMFLOAT2(20, 20));
+	physicsEnabledCheckBox->SetPos(XMFLOAT2(screenW - 370, 45));
+
+	cinemaModeCheckBox->SetSize(XMFLOAT2(20, 20));
+	cinemaModeCheckBox->SetPos(XMFLOAT2(screenW - 240, 45));
+
+	renderPathComboBox->SetSize(XMFLOAT2(100, 20));
+	renderPathComboBox->SetPos(XMFLOAT2(screenW - 120, 45));
+
+	sceneGraphView->SetSize(XMFLOAT2(260, 300));
+	sceneGraphView->SetPos(XMFLOAT2(0, screenH - sceneGraphView->scale_local.y));
 }
 void EditorComponent::Load()
 {
@@ -227,39 +359,24 @@ void EditorComponent::Load()
 
 	translator.enabled = false;
 
-	float screenW = wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = wiRenderer::GetDevice()->GetScreenHeight();
-
-	XMFLOAT2 option_size = XMFLOAT2(100, 34);
-	float x = screenW - option_size.x;
-	float y = screenH - option_size.y;
-	float step = (option_size.y + 2) * -1;
-	float hstep = (option_size.x + 2) * -1;
 
 
-
-	wiButton* rendererWnd_Toggle = new wiButton("Renderer");
+	rendererWnd_Toggle = new wiButton("Renderer");
 	rendererWnd_Toggle->SetTooltip("Renderer settings window");
-	rendererWnd_Toggle->SetPos(XMFLOAT2(x += hstep, y));
-	rendererWnd_Toggle->SetSize(option_size);
 	rendererWnd_Toggle->OnClick([=](wiEventArgs args) {
 		rendererWnd->rendererWindow->SetVisible(!rendererWnd->rendererWindow->IsVisible());
 		});
 	GetGUI().AddWidget(rendererWnd_Toggle);
 
-	wiButton* postprocessWnd_Toggle = new wiButton("PostProcess");
+	postprocessWnd_Toggle = new wiButton("PostProcess");
 	postprocessWnd_Toggle->SetTooltip("Postprocess settings window");
-	postprocessWnd_Toggle->SetPos(XMFLOAT2(x += hstep, y));
-	postprocessWnd_Toggle->SetSize(option_size);
 	postprocessWnd_Toggle->OnClick([=](wiEventArgs args) {
 		postprocessWnd->ppWindow->SetVisible(!postprocessWnd->ppWindow->IsVisible());
 		});
 	GetGUI().AddWidget(postprocessWnd_Toggle);
 
-	wiButton* paintToolWnd_Toggle = new wiButton("Paint Tool");
+	paintToolWnd_Toggle = new wiButton("Paint Tool");
 	paintToolWnd_Toggle->SetTooltip("Paint tool window");
-	paintToolWnd_Toggle->SetPos(XMFLOAT2(x += hstep, y));
-	paintToolWnd_Toggle->SetSize(option_size);
 	paintToolWnd_Toggle->OnClick([=](wiEventArgs args) {
 		paintToolWnd->window->SetVisible(!paintToolWnd->window->IsVisible());
 		});
@@ -267,238 +384,189 @@ void EditorComponent::Load()
 
 
 	///////////////////////
-	option_size.y = 16; 
-	step = (option_size.y + 2) * -1;
-	x = screenW - option_size.x;
-	y = screenH - option_size.y;
 	wiColor option_color_idle = wiColor(255, 145, 145, 100);
 	wiColor option_color_focus = wiColor(255, 197, 193, 200);
 
 
-	wiButton* weatherWnd_Toggle = new wiButton("Weather");
+	weatherWnd_Toggle = new wiButton("Weather");
 	weatherWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
 	weatherWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	weatherWnd_Toggle->SetTooltip("Weather settings window");
-	weatherWnd_Toggle->SetPos(XMFLOAT2(x, y));
-	weatherWnd_Toggle->SetSize(option_size);
 	weatherWnd_Toggle->OnClick([=](wiEventArgs args) {
 		weatherWnd->weatherWindow->SetVisible(!weatherWnd->weatherWindow->IsVisible());
 	});
 	GetGUI().AddWidget(weatherWnd_Toggle);
 
-	wiButton* objectWnd_Toggle = new wiButton("Object");
+	objectWnd_Toggle = new wiButton("Object");
 	objectWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
 	objectWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	objectWnd_Toggle->SetTooltip("Object settings window");
-	objectWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
-	objectWnd_Toggle->SetSize(option_size);
 	objectWnd_Toggle->OnClick([=](wiEventArgs args) {
 		objectWnd->objectWindow->SetVisible(!objectWnd->objectWindow->IsVisible());
 	});
 	GetGUI().AddWidget(objectWnd_Toggle);
 
-	wiButton* meshWnd_Toggle = new wiButton("Mesh");
+	meshWnd_Toggle = new wiButton("Mesh");
 	meshWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
 	meshWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	meshWnd_Toggle->SetTooltip("Mesh settings window");
-	meshWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
-	meshWnd_Toggle->SetSize(option_size);
 	meshWnd_Toggle->OnClick([=](wiEventArgs args) {
 		meshWnd->meshWindow->SetVisible(!meshWnd->meshWindow->IsVisible());
 	});
 	GetGUI().AddWidget(meshWnd_Toggle);
 
-	wiButton* materialWnd_Toggle = new wiButton("Material");
+	materialWnd_Toggle = new wiButton("Material");
 	materialWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
 	materialWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	materialWnd_Toggle->SetTooltip("Material settings window");
-	materialWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
-	materialWnd_Toggle->SetSize(option_size);
 	materialWnd_Toggle->OnClick([=](wiEventArgs args) {
 		materialWnd->materialWindow->SetVisible(!materialWnd->materialWindow->IsVisible());
 	});
 	GetGUI().AddWidget(materialWnd_Toggle);
 
-	wiButton* cameraWnd_Toggle = new wiButton("Camera");
+	cameraWnd_Toggle = new wiButton("Camera");
 	cameraWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
 	cameraWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	cameraWnd_Toggle->SetTooltip("Camera settings window");
-	cameraWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
-	cameraWnd_Toggle->SetSize(option_size);
 	cameraWnd_Toggle->OnClick([=](wiEventArgs args) {
 		cameraWnd->cameraWindow->SetVisible(!cameraWnd->cameraWindow->IsVisible());
 	});
 	GetGUI().AddWidget(cameraWnd_Toggle);
 
-	wiButton* envProbeWnd_Toggle = new wiButton("EnvProbe");
+	envProbeWnd_Toggle = new wiButton("EnvProbe");
 	envProbeWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
 	envProbeWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	envProbeWnd_Toggle->SetTooltip("Environment probe settings window");
-	envProbeWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
-	envProbeWnd_Toggle->SetSize(option_size);
 	envProbeWnd_Toggle->OnClick([=](wiEventArgs args) {
 		envProbeWnd->envProbeWindow->SetVisible(!envProbeWnd->envProbeWindow->IsVisible());
 	});
 	GetGUI().AddWidget(envProbeWnd_Toggle);
 
-	wiButton* decalWnd_Toggle = new wiButton("Decal");
+	decalWnd_Toggle = new wiButton("Decal");
 	decalWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
 	decalWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	decalWnd_Toggle->SetTooltip("Decal settings window");
-	decalWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
-	decalWnd_Toggle->SetSize(option_size);
 	decalWnd_Toggle->OnClick([=](wiEventArgs args) {
 		decalWnd->decalWindow->SetVisible(!decalWnd->decalWindow->IsVisible());
 	});
 	GetGUI().AddWidget(decalWnd_Toggle);
 
-	wiButton* soundWnd_Toggle = new wiButton("Sound");
+	soundWnd_Toggle = new wiButton("Sound");
 	soundWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
 	soundWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	soundWnd_Toggle->SetTooltip("Sound settings window");
-	soundWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
-	soundWnd_Toggle->SetSize(option_size);
 	soundWnd_Toggle->OnClick([=](wiEventArgs args) {
 		soundWnd->soundWindow->SetVisible(!soundWnd->soundWindow->IsVisible());
 		});
 	GetGUI().AddWidget(soundWnd_Toggle);
 
-	wiButton* lightWnd_Toggle = new wiButton("Light");
+	lightWnd_Toggle = new wiButton("Light");
 	lightWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
 	lightWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	lightWnd_Toggle->SetTooltip("Light settings window");
-	lightWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
-	lightWnd_Toggle->SetSize(option_size);
 	lightWnd_Toggle->OnClick([=](wiEventArgs args) {
 		lightWnd->lightWindow->SetVisible(!lightWnd->lightWindow->IsVisible());
 	});
 	GetGUI().AddWidget(lightWnd_Toggle);
 
-	wiButton* animWnd_Toggle = new wiButton("Animation");
+	animWnd_Toggle = new wiButton("Animation");
 	animWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
 	animWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	animWnd_Toggle->SetTooltip("Animation inspector window");
-	animWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
-	animWnd_Toggle->SetSize(option_size);
 	animWnd_Toggle->OnClick([=](wiEventArgs args) {
 		animWnd->animWindow->SetVisible(!animWnd->animWindow->IsVisible());
 	});
 	GetGUI().AddWidget(animWnd_Toggle);
 
-	wiButton* emitterWnd_Toggle = new wiButton("Emitter");
+	emitterWnd_Toggle = new wiButton("Emitter");
 	emitterWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
 	emitterWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	emitterWnd_Toggle->SetTooltip("Emitter Particle System properties");
-	emitterWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
-	emitterWnd_Toggle->SetSize(option_size);
 	emitterWnd_Toggle->OnClick([=](wiEventArgs args) {
 		emitterWnd->emitterWindow->SetVisible(!emitterWnd->emitterWindow->IsVisible());
 	});
 	GetGUI().AddWidget(emitterWnd_Toggle);
 
-	wiButton* hairWnd_Toggle = new wiButton("HairParticle");
+	hairWnd_Toggle = new wiButton("HairParticle");
 	hairWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
 	hairWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	hairWnd_Toggle->SetTooltip("Hair Particle System properties");
-	hairWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
-	hairWnd_Toggle->SetSize(option_size);
 	hairWnd_Toggle->OnClick([=](wiEventArgs args) {
 		hairWnd->hairWindow->SetVisible(!hairWnd->hairWindow->IsVisible());
 	});
 	GetGUI().AddWidget(hairWnd_Toggle);
 
-	wiButton* forceFieldWnd_Toggle = new wiButton("ForceField");
+	forceFieldWnd_Toggle = new wiButton("ForceField");
 	forceFieldWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
 	forceFieldWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	forceFieldWnd_Toggle->SetTooltip("Force Field properties");
-	forceFieldWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
-	forceFieldWnd_Toggle->SetSize(option_size);
 	forceFieldWnd_Toggle->OnClick([=](wiEventArgs args) {
 		forceFieldWnd->forceFieldWindow->SetVisible(!forceFieldWnd->forceFieldWindow->IsVisible());
 	});
 	GetGUI().AddWidget(forceFieldWnd_Toggle);
 
-	wiButton* springWnd_Toggle = new wiButton("Spring");
+	springWnd_Toggle = new wiButton("Spring");
 	springWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
 	springWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	springWnd_Toggle->SetTooltip("Spring properties");
-	springWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
-	springWnd_Toggle->SetSize(option_size);
 	springWnd_Toggle->OnClick([=](wiEventArgs args) {
 		springWnd->window->SetVisible(!springWnd->window->IsVisible());
 		});
 	GetGUI().AddWidget(springWnd_Toggle);
 
-	wiButton* ikWnd_Toggle = new wiButton("IK");
+	ikWnd_Toggle = new wiButton("IK");
 	ikWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
 	ikWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	ikWnd_Toggle->SetTooltip("Inverse Kinematics properties");
-	ikWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
-	ikWnd_Toggle->SetSize(option_size);
 	ikWnd_Toggle->OnClick([=](wiEventArgs args) {
 		ikWnd->window->SetVisible(!ikWnd->window->IsVisible());
 		});
 	GetGUI().AddWidget(ikWnd_Toggle);
 
-	wiButton* transformWnd_Toggle = new wiButton("Transform");
+	transformWnd_Toggle = new wiButton("Transform");
 	transformWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
 	transformWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	transformWnd_Toggle->SetTooltip("Transform properties");
-	transformWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
-	transformWnd_Toggle->SetSize(option_size);
 	transformWnd_Toggle->OnClick([=](wiEventArgs args) {
 		transformWnd->window->SetVisible(!transformWnd->window->IsVisible());
 		});
 	GetGUI().AddWidget(transformWnd_Toggle);
 
-	wiButton* layerWnd_Toggle = new wiButton("Layer");
+	layerWnd_Toggle = new wiButton("Layer");
 	layerWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
 	layerWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	layerWnd_Toggle->SetTooltip("Layer Component");
-	layerWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
-	layerWnd_Toggle->SetSize(option_size);
 	layerWnd_Toggle->OnClick([=](wiEventArgs args) {
 		layerWnd->window->SetVisible(!layerWnd->window->IsVisible());
 		});
 	GetGUI().AddWidget(layerWnd_Toggle);
 
-	wiButton* nameWnd_Toggle = new wiButton("Name");
+	nameWnd_Toggle = new wiButton("Name");
 	nameWnd_Toggle->SetColor(option_color_idle, wiWidget::IDLE);
 	nameWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	nameWnd_Toggle->SetTooltip("Name Component");
-	nameWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
-	nameWnd_Toggle->SetSize(option_size);
 	nameWnd_Toggle->OnClick([=](wiEventArgs args) {
 		nameWnd->window->SetVisible(!nameWnd->window->IsVisible());
 		});
 	GetGUI().AddWidget(nameWnd_Toggle);
 
 
-
-
-
 	////////////////////////////////////////////////////////////////////////////////////
 
 
-
-
-	wiCheckBox* translatorCheckBox = new wiCheckBox("Translator: ");
+	translatorCheckBox = new wiCheckBox("Translator: ");
 	translatorCheckBox->SetTooltip("Enable the translator tool");
-	translatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25, 0));
-	translatorCheckBox->SetSize(XMFLOAT2(18, 18));
 	translatorCheckBox->OnClick([&](wiEventArgs args) {
 		translator.enabled = args.bValue;
 	});
 	GetGUI().AddWidget(translatorCheckBox);
 
-	wiCheckBox* isScalatorCheckBox = new wiCheckBox("S: ");
-	wiCheckBox* isRotatorCheckBox = new wiCheckBox("R: ");
-	wiCheckBox* isTranslatorCheckBox = new wiCheckBox("T: ");
+	isScalatorCheckBox = new wiCheckBox("S: ");
+	isRotatorCheckBox = new wiCheckBox("R: ");
+	isTranslatorCheckBox = new wiCheckBox("T: ");
 	{
 		isScalatorCheckBox->SetTooltip("Scale");
-		isScalatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25 - 40 * 2, 22));
-		isScalatorCheckBox->SetSize(XMFLOAT2(18, 18));
-		isScalatorCheckBox->OnClick([&, isTranslatorCheckBox, isRotatorCheckBox](wiEventArgs args) {
+		isScalatorCheckBox->OnClick([&](wiEventArgs args) {
 			translator.isScalator = args.bValue;
 			translator.isTranslator = false;
 			translator.isRotator = false;
@@ -509,9 +577,7 @@ void EditorComponent::Load()
 		GetGUI().AddWidget(isScalatorCheckBox);
 
 		isRotatorCheckBox->SetTooltip("Rotate");
-		isRotatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25 - 40 * 1, 22));
-		isRotatorCheckBox->SetSize(XMFLOAT2(18, 18));
-		isRotatorCheckBox->OnClick([&, isTranslatorCheckBox, isScalatorCheckBox](wiEventArgs args) {
+		isRotatorCheckBox->OnClick([&](wiEventArgs args) {
 			translator.isRotator = args.bValue;
 			translator.isScalator = false;
 			translator.isTranslator = false;
@@ -522,9 +588,7 @@ void EditorComponent::Load()
 		GetGUI().AddWidget(isRotatorCheckBox);
 
 		isTranslatorCheckBox->SetTooltip("Translate");
-		isTranslatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25, 22));
-		isTranslatorCheckBox->SetSize(XMFLOAT2(18, 18));
-		isTranslatorCheckBox->OnClick([&, isScalatorCheckBox, isRotatorCheckBox](wiEventArgs args) {
+		isTranslatorCheckBox->OnClick([&](wiEventArgs args) {
 			translator.isTranslator = args.bValue;
 			translator.isScalator = false;
 			translator.isRotator = false;
@@ -536,10 +600,8 @@ void EditorComponent::Load()
 	}
 
 
-	wiButton* saveButton = new wiButton("Save");
+	saveButton = new wiButton("Save");
 	saveButton->SetTooltip("Save the current scene");
-	saveButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5, 0));
-	saveButton->SetSize(XMFLOAT2(100, 40));
 	saveButton->SetColor(wiColor(0, 198, 101, 180), wiWidget::WIDGETSTATE::IDLE);
 	saveButton->SetColor(wiColor(0, 255, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
 	saveButton->OnClick([=](wiEventArgs args) {
@@ -575,10 +637,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(saveButton);
 
 
-	wiButton* modelButton = new wiButton("Load Model");
+	modelButton = new wiButton("Load Model");
 	modelButton->SetTooltip("Load a scene / import model into the editor...");
-	modelButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 4, 0));
-	modelButton->SetSize(XMFLOAT2(100, 40));
 	modelButton->SetColor(wiColor(0, 89, 255, 180), wiWidget::WIDGETSTATE::IDLE);
 	modelButton->SetColor(wiColor(112, 155, 255, 255), wiWidget::WIDGETSTATE::FOCUS);
 	modelButton->OnClick([=](wiEventArgs args) {
@@ -636,10 +696,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(modelButton);
 
 
-	wiButton* scriptButton = new wiButton("Load Script");
+	scriptButton = new wiButton("Load Script");
 	scriptButton->SetTooltip("Load a Lua script...");
-	scriptButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 3, 0));
-	scriptButton->SetSize(XMFLOAT2(100, 40));
 	scriptButton->SetColor(wiColor(255, 33, 140, 180), wiWidget::WIDGETSTATE::IDLE);
 	scriptButton->SetColor(wiColor(255, 100, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
 	scriptButton->OnClick([=](wiEventArgs args) {
@@ -662,10 +720,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(scriptButton);
 
 
-	wiButton* shaderButton = new wiButton("Reload Shaders");
+	shaderButton = new wiButton("Reload Shaders");
 	shaderButton->SetTooltip("Reload shaders from the default directory...");
-	shaderButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 2, 0));
-	shaderButton->SetSize(XMFLOAT2(100, 40));
 	shaderButton->SetColor(wiColor(255, 33, 140, 180), wiWidget::WIDGETSTATE::IDLE);
 	shaderButton->SetColor(wiColor(255, 100, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
 	shaderButton->OnClick([=](wiEventArgs args) {
@@ -678,10 +734,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(shaderButton);
 
 
-	wiButton* clearButton = new wiButton("Clear World");
+	clearButton = new wiButton("Clear World");
 	clearButton->SetTooltip("Delete every model from the scene");
-	clearButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 1, 0));
-	clearButton->SetSize(XMFLOAT2(100, 40));
 	clearButton->SetColor(wiColor(255, 205, 43, 180), wiWidget::WIDGETSTATE::IDLE);
 	clearButton->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
 	clearButton->OnClick([&](wiEventArgs args) {
@@ -708,10 +762,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(clearButton);
 
 
-	wiButton* helpButton = new wiButton("?");
+	helpButton = new wiButton("?");
 	helpButton->SetTooltip("Help");
-	helpButton->SetPos(XMFLOAT2(screenW - 50 - 55, 0));
-	helpButton->SetSize(XMFLOAT2(50, 40));
 	helpButton->SetColor(wiColor(34, 158, 214, 180), wiWidget::WIDGETSTATE::IDLE);
 	helpButton->SetColor(wiColor(113, 183, 214, 255), wiWidget::WIDGETSTATE::FOCUS);
 	helpButton->OnClick([=](wiEventArgs args) {
@@ -760,10 +812,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(helpButton);
 
 
-	wiButton* exitButton = new wiButton("X");
+	exitButton = new wiButton("X");
 	exitButton->SetTooltip("Exit");
-	exitButton->SetPos(XMFLOAT2(screenW - 50, 0));
-	exitButton->SetSize(XMFLOAT2(50, 40));
 	exitButton->SetColor(wiColor(190, 0, 0, 180), wiWidget::WIDGETSTATE::IDLE);
 	exitButton->SetColor(wiColor(255, 0, 0, 255), wiWidget::WIDGETSTATE::FOCUS);
 	exitButton->OnClick([this](wiEventArgs args) {
@@ -772,9 +822,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(exitButton);
 
 
-	wiCheckBox* profilerEnabledCheckBox = new wiCheckBox("Profiler Enabled: ");
-	profilerEnabledCheckBox->SetSize(XMFLOAT2(20, 20));
-	profilerEnabledCheckBox->SetPos(XMFLOAT2(screenW - 520, 45));
+	profilerEnabledCheckBox = new wiCheckBox("Profiler Enabled: ");
 	profilerEnabledCheckBox->SetTooltip("Toggle Profiler On/Off");
 	profilerEnabledCheckBox->OnClick([&](wiEventArgs args) {
 		wiProfiler::SetEnabled(args.bValue);
@@ -782,9 +830,7 @@ void EditorComponent::Load()
 	profilerEnabledCheckBox->SetCheck(wiProfiler::IsEnabled());
 	GetGUI().AddWidget(profilerEnabledCheckBox);
 
-	wiCheckBox* physicsEnabledCheckBox = new wiCheckBox("Physics Enabled: ");
-	physicsEnabledCheckBox->SetSize(XMFLOAT2(20, 20));
-	physicsEnabledCheckBox->SetPos(XMFLOAT2(screenW - 370, 45));
+	physicsEnabledCheckBox = new wiCheckBox("Physics Enabled: ");
 	physicsEnabledCheckBox->SetTooltip("Toggle Physics Engine On/Off");
 	physicsEnabledCheckBox->OnClick([&](wiEventArgs args) {
 		wiPhysicsEngine::SetEnabled(args.bValue);
@@ -793,8 +839,6 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(physicsEnabledCheckBox);
 
 	cinemaModeCheckBox = new wiCheckBox("Cinema Mode: ");
-	cinemaModeCheckBox->SetSize(XMFLOAT2(20, 20));
-	cinemaModeCheckBox->SetPos(XMFLOAT2(screenW - 240, 45));
 	cinemaModeCheckBox->SetTooltip("Toggle Cinema Mode (All HUD disabled). Press ESC to exit.");
 	cinemaModeCheckBox->OnClick([&](wiEventArgs args) {
 		if (renderPath != nullptr)
@@ -808,9 +852,27 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(cinemaModeCheckBox);
 
 
-	wiComboBox* renderPathComboBox = new wiComboBox("Render Path: ");
-	renderPathComboBox->SetSize(XMFLOAT2(100, 20));
-	renderPathComboBox->SetPos(XMFLOAT2(screenW - 120, 45));
+	sceneGraphView = new wiTreeList("Scene graph view (WIP)");
+	sceneGraphView->OnSelect([this](wiEventArgs args) {
+
+		translator.selected.clear();
+
+		for (int i = 0; i < sceneGraphView->GetItemCount(); ++i)
+		{
+			const wiTreeList::Item& item = sceneGraphView->GetItem(i);
+			if (item.selected)
+			{
+				wiScene::PickResult pick;
+				pick.entity = (Entity)item.userdata;
+				AddSelected(pick);
+			}
+		}
+
+		});
+	GetGUI().AddWidget(sceneGraphView);
+
+
+	renderPathComboBox = new wiComboBox("Render Path: ");
 	renderPathComboBox->AddItem("Forward");
 	renderPathComboBox->AddItem("Deferred");
 	renderPathComboBox->AddItem("Tiled Forward");
@@ -842,28 +904,6 @@ void EditorComponent::Load()
 	renderPathComboBox->SetEnabled(true);
 	renderPathComboBox->SetTooltip("Choose a render path...");
 	GetGUI().AddWidget(renderPathComboBox);
-
-
-	sceneGraphView = new wiTreeList("Scene graph view (WIP)");
-	sceneGraphView->SetSize(XMFLOAT2(260, 300));
-	sceneGraphView->SetPos(XMFLOAT2(0, screenH - sceneGraphView->scale_local.y));
-	sceneGraphView->OnSelect([this](wiEventArgs args) {
-
-		translator.selected.clear();
-
-		for (int i = 0; i < sceneGraphView->GetItemCount(); ++i)
-		{
-			const wiTreeList::Item& item = sceneGraphView->GetItem(i);
-			if (item.selected)
-			{
-				wiScene::PickResult pick;
-				pick.entity = (Entity)item.userdata;
-				AddSelected(pick);
-			}
-		}
-
-	});
-	GetGUI().AddWidget(sceneGraphView);
 
 
 	cameraWnd->ResetCam();
