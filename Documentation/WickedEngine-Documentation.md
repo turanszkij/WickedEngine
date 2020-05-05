@@ -825,8 +825,7 @@ The custom GUI, implemented with engine features
 [[Header]](../WickedEngine/wiGUI.h) [[Cpp]](../WickedEngine/wiGUI.cpp)
 The wiGUI is responsible to run a GUI interface and manage widgets. 
 
-<b>GUI Scaling:</b> The wiGUI is created with a default size of the application window size, so by default, placing elements (widgets) onto the GUI will be relative to this resolution. This can be modified by calling the `wiGUI::SetDesignSize()` function.
-When the GUI is updated (usually done by [RenderPath2D](#renderpath2d) automatically), the GUI size will take the current screen size, and scale the contents accordingly. When the application window is resized, the GUI scaling will take effect automatically. When adding widgets to the GUI, they are always placed relative to the current GUI size, which could be different from the design GUI size, if the GUI was updated and the application resolution is different from the design GUI size.
+<b>GUI Scaling:</b> To ensure correct GUI scaling, GUI elements should be designed for the current window size. If they are placed inside `RenderPath2D::ResizeBuffers()` function according to current screen size, it will ensure that GUI will be scaled on a Resilution change event, which is recommended.
 
 ### wiEventArgs
 [[Header]](../WickedEngine/wiWidget.h) [[Cpp]](../WickedEngine/wiWidget.cpp)
