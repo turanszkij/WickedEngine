@@ -126,7 +126,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 			// reset force for next frame:
 			particle.force = 0;
 
-			if (xSPH_ENABLED)
+			[branch]
+			if (xEmitterOptions & EMITTER_OPTION_BIT_SPH_ENABLED)
 			{
 				// drag: 
 				particle.velocity *= 0.98f;

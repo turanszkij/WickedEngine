@@ -28,6 +28,9 @@ static const uint PARTICLECOUNTER_OFFSET_DEADCOUNT = PARTICLECOUNTER_OFFSET_ALIV
 static const uint PARTICLECOUNTER_OFFSET_REALEMITCOUNT = PARTICLECOUNTER_OFFSET_DEADCOUNT + 4;
 static const uint PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION = PARTICLECOUNTER_OFFSET_REALEMITCOUNT + 4;
 
+static const uint EMITTER_OPTION_BIT_FRAME_BLENDING_ENABLED = 1 << 0;
+static const uint EMITTER_OPTION_BIT_SPH_ENABLED = 1 << 1;
+
 CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 {
 	float4x4	xEmitterWorld;
@@ -52,6 +55,16 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 	float		xEmitterOpacity;
 	uint		xEmitterMaxParticleCount;
 
+	uint2		xEmitterFrameSize;
+	uint		xEmitterFrameCount;
+	uint		xEmitterHorizontalFrameCount;
+
+	float2		xEmitterTexMul;
+	float2		xEmitterResolution_rcp;
+
+	float3		padding_xEmitter;
+	float		xEmitterFrameRate;
+
 	float		xSPH_h;					// smoothing radius
 	float		xSPH_h_rcp;				// 1.0f / smoothing radius
 	float		xSPH_h2;				// smoothing radius ^ 2
@@ -63,7 +76,7 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 	float		xSPH_p0;				// reference density
 
 	float		xSPH_e;					// viscosity constant
-	uint		xSPH_ENABLED;			// is SPH enabled?
+	uint		xEmitterOptions;
 	float		xEmitterFixedTimestep;	// we can force a fixed timestep (>0) onto the simulation to avoid blowing up
 	float		xParticleEmissive;
 

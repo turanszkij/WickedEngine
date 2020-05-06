@@ -43,6 +43,7 @@ public:
 	wiCheckBox* pauseCheckBox;
 	wiCheckBox* debugCheckBox;
 	wiCheckBox* volumeCheckBox;
+	wiCheckBox* frameBlendingCheckBox;
 	wiSlider* emitCountSlider;
 	wiSlider* emitSizeSlider;
 	wiSlider* emitRotationSlider;
@@ -58,6 +59,12 @@ public:
 	wiSlider* sph_K_Slider;
 	wiSlider* sph_p0_Slider;
 	wiSlider* sph_e_Slider;
+
+	wiTextInputField* frameRateInput;
+	wiTextInputField* frameWidthInput;
+	wiTextInputField* frameHeightInput;
+	wiTextInputField* frameCountInput;
+	wiTextInputField* horizontalFrameCountInput;
 
 };
 

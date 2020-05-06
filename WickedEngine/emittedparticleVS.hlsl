@@ -33,10 +33,23 @@ VertextoPixel main(uint fakeIndex : SV_VERTEXID)
 
 	// expand the point into a billboard in view space:
 	float3 quadPos = BILLBOARD[vertexID];
+	quadPos.x = particle.color_mirror & 0x10000000 ? -quadPos.x : quadPos.x;
+	quadPos.y = particle.color_mirror & 0x20000000 ? -quadPos.y : quadPos.y;
 	float2 uv = quadPos.xy * float2(0.5f, -0.5f) + 0.5f;
-	uv.x = particle.color_mirror & 0x10000000 ? 1.0f - uv.x : uv.x;
-	uv.y = particle.color_mirror & 0x20000000 ? 1.0f - uv.y : uv.y;
-	
+	float2 uv2 = uv;
+
+	// Sprite sheet UV transform:
+	const float spriteframe = xEmitterFrameRate == 0 ? (lifeLerp * xEmitterFrameCount) : ((particle.life * xEmitterFrameRate) % xEmitterFrameCount);
+	const uint currentFrame = floor(spriteframe);
+	const uint nextFrame = ceil(spriteframe);
+	const float frameBlend = frac(spriteframe);
+	uint2 offset = uint2(currentFrame % xEmitterHorizontalFrameCount, currentFrame / xEmitterHorizontalFrameCount) * xEmitterFrameSize;
+	uv.xy *= xEmitterTexMul;
+	uv.xy += offset * xEmitterResolution_rcp;
+	uint2 offset2 = uint2(nextFrame % xEmitterHorizontalFrameCount, nextFrame / xEmitterHorizontalFrameCount) * xEmitterFrameSize;
+	uv2.xy *= xEmitterTexMul;
+	uv2.xy += offset2 * xEmitterResolution_rcp;
+
 	// rotate the billboard:
 	float2x2 rot = float2x2(
 		cos(rotation), -sin(rotation),
@@ -59,11 +72,12 @@ VertextoPixel main(uint fakeIndex : SV_VERTEXID)
 	Out.P = mul(g_xCamera_InvV, float4(Out.pos.xyz, 1)).xyz;
 	Out.pos = mul(g_xCamera_Proj, Out.pos);
 
-	Out.tex = uv;
+	Out.tex = float4(uv, uv2);
 	Out.size = size;
 	Out.color = (particle.color_mirror & 0x00FFFFFF) | (uint(opacity * 255.0f) << 24);
 	Out.pos2D = Out.pos;
 	Out.unrotated_uv = quadPos.xy * float2(1, -1) / size * 0.5f + 0.5f;
+	Out.frameBlend = frameBlend;
 
 	return Out;
 }

@@ -247,6 +247,8 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 	{
 		device->EventBegin("UpdateEmittedParticles", cmd);
 
+		const TextureDesc& desc = material.GetBaseColorMap()->GetDesc();
+
 		EmittedParticleCB cb;
 		cb.xEmitterWorld = transform.world;
 		cb.xEmitCount = (uint32_t)emit;
@@ -267,6 +269,23 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		cb.xParticleMass = mass;
 		cb.xEmitterMaxParticleCount = MAX_PARTICLES;
 		cb.xEmitterFixedTimestep = FIXED_TIMESTEP;
+		cb.xEmitterFrameSize = uint2(frameWidth == 0 ? desc.Width : frameWidth, frameHeight == 0 ? desc.Height : frameHeight);
+		cb.xEmitterFrameCount = std::max(1u, frameCount);
+		cb.xEmitterHorizontalFrameCount = std::max(1u, horizontalFrameCount == 0 ? frameCount : horizontalFrameCount);
+		cb.xEmitterTexMul = float2((float)cb.xEmitterFrameSize.x / (float)desc.Width, (float)cb.xEmitterFrameSize.y / (float)desc.Height);
+		cb.xEmitterResolution_rcp.x = 1.0f / (float)desc.Width;
+		cb.xEmitterResolution_rcp.y = 1.0f / (float)desc.Height;
+		cb.xEmitterFrameRate = framerate;
+
+		cb.xEmitterOptions = 0;
+		if (IsSPHEnabled())
+		{
+			cb.xEmitterOptions |= EMITTER_OPTION_BIT_SPH_ENABLED;
+		}
+		if (IsFrameBlendingEnabled())
+		{
+			cb.xEmitterOptions |= EMITTER_OPTION_BIT_FRAME_BLENDING_ENABLED;
+		}
 
 		// SPH:
 		cb.xSPH_h = SPH_h;
@@ -280,7 +299,6 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		cb.xSPH_K = SPH_K;
 		cb.xSPH_p0 = SPH_p0;
 		cb.xSPH_e = SPH_e;
-		cb.xSPH_ENABLED = IsSPHEnabled() ? 1 : 0;
 
 		device->UpdateBuffer(&constantBuffer, &cb, cmd);
 		device->BindConstantBuffer(CS, &constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), cmd);
@@ -755,6 +773,15 @@ void wiEmittedParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 		archive >> SPH_K;
 		archive >> SPH_p0;
 		archive >> SPH_e;
+
+		if (archive.GetVersion() >= 45)
+		{
+			archive >> frameWidth;
+			archive >> frameHeight;
+			archive >> frameCount;
+			archive >> horizontalFrameCount;
+			archive >> framerate;
+		}
 	}
 	else
 	{
@@ -778,6 +805,15 @@ void wiEmittedParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 		archive << SPH_K;
 		archive << SPH_p0;
 		archive << SPH_e;
+
+		if (archive.GetVersion() >= 45)
+		{
+			archive << frameWidth;
+			archive << frameHeight;
+			archive << frameCount;
+			archive << horizontalFrameCount;
+			archive << framerate;
+		}
 	}
 }
 

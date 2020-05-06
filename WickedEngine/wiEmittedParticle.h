@@ -73,6 +73,7 @@ public:
 		DEPTHCOLLISION = 1 << 3,
 		SPH_FLUIDSIMULATION = 1 << 4,
 		HAS_VOLUME = 1 << 5,
+		FRAME_BLENDING = 1 << 6,
 	};
 	uint32_t _flags = EMPTY;
 
@@ -99,6 +100,13 @@ public:
 	float SPH_p0 = 1.0f;	// reference density
 	float SPH_e = 0.018f;	// viscosity constant
 
+	// Sprite sheet properties:
+	uint32_t frameWidth = 0;
+	uint32_t frameHeight = 0;
+	uint32_t frameCount = 0;
+	uint32_t horizontalFrameCount = 0;
+	float framerate = 0; // frames per second
+
 	void SetMaxParticleCount(uint32_t value);
 	uint32_t GetMaxParticleCount() const { return MAX_PARTICLES; }
 	uint32_t GetMemorySizeInBytes() const;
@@ -112,6 +120,7 @@ public:
 	inline bool IsDepthCollisionEnabled() const { return _flags & DEPTHCOLLISION; }
 	inline bool IsSPHEnabled() const { return _flags & SPH_FLUIDSIMULATION; }
 	inline bool IsVolumeEnabled() const { return _flags & HAS_VOLUME; }
+	inline bool IsFrameBlendingEnabled() const { return _flags & FRAME_BLENDING; }
 
 	inline void SetDebug(bool value) { if (value) { _flags |= DEBUG; } else { _flags &= ~DEBUG; } }
 	inline void SetPaused(bool value) { if (value) { _flags |= PAUSED; } else { _flags &= ~PAUSED; } }
@@ -119,6 +128,7 @@ public:
 	inline void SetDepthCollisionEnabled(bool value) { if (value) { _flags |= DEPTHCOLLISION; } else { _flags &= ~DEPTHCOLLISION; } }
 	inline void SetSPHEnabled(bool value) { if (value) { _flags |= SPH_FLUIDSIMULATION; } else { _flags &= ~SPH_FLUIDSIMULATION; } }
 	inline void SetVolumeEnabled(bool value) { if (value) { _flags |= HAS_VOLUME; } else { _flags &= ~HAS_VOLUME; } }
+	inline void SetFrameBlendingEnabled(bool value) { if (value) { _flags |= FRAME_BLENDING; } else { _flags &= ~FRAME_BLENDING; } }
 
 	void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
 

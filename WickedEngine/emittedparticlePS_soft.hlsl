@@ -5,7 +5,15 @@
 
 float4 main(VertextoPixel input) : SV_TARGET
 {
-	float4 color = texture_0.Sample(sampler_linear_clamp,input.tex);
+	float4 color = texture_0.Sample(sampler_linear_clamp, input.tex.xy);
+
+	[branch]
+	if (xEmitterOptions & EMITTER_OPTION_BIT_FRAME_BLENDING_ENABLED)
+	{
+		float4 color2 = texture_0.Sample(sampler_linear_clamp, input.tex.zw);
+		color = lerp(color, color2, input.frameBlend);
+	}
+
 	clip(color.a - 1.0f / 255.0f);
 
 	float2 pTex = input.pos2D.xy / input.pos2D.w * float2(0.5f, -0.5f) + 0.5f;

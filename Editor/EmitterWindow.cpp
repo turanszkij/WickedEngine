@@ -13,12 +13,12 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	assert(GUI && "Invalid GUI!");
 
 	emitterWindow = new wiWindow(GUI, "Emitter Window");
-	emitterWindow->SetSize(XMFLOAT2(700, 820));
+	emitterWindow->SetSize(XMFLOAT2(680, 700));
 	GUI->AddWidget(emitterWindow);
 
 	float x = 200;
 	float y = 5;
-	float step = 25;
+	float step = 22;
 	float itemheight = 20;
 
 
@@ -191,6 +191,21 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	emitterWindow->AddWidget(volumeCheckBox);
 
 
+	frameBlendingCheckBox = new wiCheckBox("Frame Blending: ");
+	frameBlendingCheckBox->SetPos(XMFLOAT2(x + 400, y));
+	frameBlendingCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
+	frameBlendingCheckBox->OnClick([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->SetFrameBlendingEnabled(args.bValue);
+		}
+		});
+	frameBlendingCheckBox->SetCheck(false);
+	frameBlendingCheckBox->SetTooltip("If sprite sheet animation is in effect, frames will be smoothly blended.");
+	emitterWindow->AddWidget(frameBlendingCheckBox);
+
+
 
 	infoLabel = new wiLabel("EmitterInfo");
 	infoLabel->SetSize(XMFLOAT2(380, 120));
@@ -198,23 +213,96 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	emitterWindow->AddWidget(infoLabel);
 
 
+	y += 125;
+
+	frameRateInput = new wiTextInputField("");
+	frameRateInput->SetPos(XMFLOAT2(x, y));
+	frameRateInput->SetSize(XMFLOAT2(40, 18));
+	frameRateInput->SetText("");
+	frameRateInput->SetTooltip("Enter a value to enable looping sprite sheet animation (frames per second). Set 0 for animation along paritcle lifetime.");
+	frameRateInput->SetDescription("Frame Rate: ");
+	frameRateInput->OnInputAccepted([this](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->framerate = args.fValue;
+		}
+		});
+	emitterWindow->AddWidget(frameRateInput);
+
+	frameWidthInput = new wiTextInputField("");
+	frameWidthInput->SetPos(XMFLOAT2(x + 150, y));
+	frameWidthInput->SetSize(XMFLOAT2(40, 18));
+	frameWidthInput->SetText("");
+	frameWidthInput->SetTooltip("Enter a value to enable sprite sheet frame width in pixels.");
+	frameWidthInput->SetDescription("Frame Width: ");
+	frameWidthInput->OnInputAccepted([this](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->frameWidth = (uint32_t)args.iValue;
+		}
+		});
+	emitterWindow->AddWidget(frameWidthInput);
+
+	frameHeightInput = new wiTextInputField("");
+	frameHeightInput->SetPos(XMFLOAT2(x + 300, y));
+	frameHeightInput->SetSize(XMFLOAT2(40, 18));
+	frameHeightInput->SetText("");
+	frameHeightInput->SetTooltip("Enter a value to enable sprite sheet frame height in pixels.");
+	frameHeightInput->SetDescription("Frame Height: ");
+	frameHeightInput->OnInputAccepted([this](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->frameHeight = (uint32_t)args.iValue;
+		}
+		});
+	emitterWindow->AddWidget(frameHeightInput);
+
+	frameCountInput = new wiTextInputField("");
+	frameCountInput->SetPos(XMFLOAT2(x, y += step));
+	frameCountInput->SetSize(XMFLOAT2(40, 18));
+	frameCountInput->SetText("");
+	frameCountInput->SetTooltip("Enter a value to enable the random sprite sheet frame selection's max frame number.");
+	frameCountInput->SetDescription("Frame Count: ");
+	frameCountInput->OnInputAccepted([this](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->frameCount = (uint32_t)args.iValue;
+		}
+		});
+	emitterWindow->AddWidget(frameCountInput);
+
+	horizontalFrameCountInput = new wiTextInputField("");
+	horizontalFrameCountInput->SetPos(XMFLOAT2(x + 300, y));
+	horizontalFrameCountInput->SetSize(XMFLOAT2(40, 18));
+	horizontalFrameCountInput->SetText("");
+	horizontalFrameCountInput->SetTooltip("Specifies how many sprite sheet frames are in the horizontal direction. 0 = all frames are placed horizontally.");
+	horizontalFrameCountInput->SetDescription("Horizontal Frame Count: ");
+	horizontalFrameCountInput->OnInputAccepted([this](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->horizontalFrameCount = (uint32_t)args.iValue;
+		}
+		});
+	emitterWindow->AddWidget(horizontalFrameCountInput);
+
 	maxParticlesSlider = new wiSlider(100.0f, 1000000.0f, 10000, 100000, "Max particle count: ");
 	maxParticlesSlider->SetSize(XMFLOAT2(360, itemheight));
-	maxParticlesSlider->SetPos(XMFLOAT2(x, y += step + 120));
+	maxParticlesSlider->SetPos(XMFLOAT2(x, y += step));
 	maxParticlesSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
 		{
 			emitter->SetMaxParticleCount((uint32_t)args.iValue);
 		}
-	});
+		});
 	maxParticlesSlider->SetEnabled(false);
 	maxParticlesSlider->SetTooltip("Set the maximum amount of particles this system can handle. This has an effect on the memory budget.");
 	emitterWindow->AddWidget(maxParticlesSlider);
-
-	y += 30;
-
-	//////////////////////////////////////////////////////////////////////////////////////////////////
 
 	emitCountSlider = new wiSlider(0.0f, 10000.0f, 1.0f, 100000, "Emit count per sec: ");
 	emitCountSlider->SetSize(XMFLOAT2(360, itemheight));
@@ -360,7 +448,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	timestepSlider = new wiSlider(-1, 0.016f, -1, 100000, "Timestep: ");
 	timestepSlider->SetSize(XMFLOAT2(360, itemheight));
-	timestepSlider->SetPos(XMFLOAT2(x, y += step*2));
+	timestepSlider->SetPos(XMFLOAT2(x, y += step));
 	timestepSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
@@ -377,8 +465,6 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 
 	//////////////// SPH ////////////////////////////
-
-	y += step;
 
 	sph_h_Slider = new wiSlider(0.1f, 100.0f, 1.0f, 100000, "SPH Smoothing Radius (h): ");
 	sph_h_Slider->SetSize(XMFLOAT2(360, itemheight));
@@ -474,6 +560,7 @@ void EmitterWindow::SetEntity(Entity entity)
 		meshComboBox->SetEnabled(true);
 		debugCheckBox->SetEnabled(true);
 		volumeCheckBox->SetEnabled(true);
+		frameBlendingCheckBox->SetEnabled(true);
 		sortCheckBox->SetEnabled(true);
 		depthCollisionsCheckBox->SetEnabled(true);
 		sphCheckBox->SetEnabled(true);
@@ -502,7 +589,14 @@ void EmitterWindow::SetEntity(Entity entity)
 		sphCheckBox->SetCheck(emitter->IsSPHEnabled());
 		pauseCheckBox->SetCheck(emitter->IsPaused());
 		volumeCheckBox->SetCheck(emitter->IsVolumeEnabled());
+		frameBlendingCheckBox->SetCheck(emitter->IsFrameBlendingEnabled());
 		maxParticlesSlider->SetValue((float)emitter->GetMaxParticleCount());
+
+		frameRateInput->SetValue(emitter->framerate);
+		frameWidthInput->SetValue((int)emitter->frameWidth);
+		frameHeightInput->SetValue((int)emitter->frameHeight);
+		frameCountInput->SetValue((int)emitter->frameCount);
+		horizontalFrameCountInput->SetValue((int)emitter->horizontalFrameCount);
 
 		emitCountSlider->SetValue(emitter->count);
 		emitSizeSlider->SetValue(emitter->size);
@@ -531,6 +625,7 @@ void EmitterWindow::SetEntity(Entity entity)
 		meshComboBox->SetEnabled(false);
 		debugCheckBox->SetEnabled(false);
 		volumeCheckBox->SetEnabled(false);
+		frameBlendingCheckBox->SetEnabled(false);
 		sortCheckBox->SetEnabled(false);
 		depthCollisionsCheckBox->SetEnabled(false);
 		sphCheckBox->SetEnabled(false);
