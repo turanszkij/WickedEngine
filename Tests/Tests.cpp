@@ -23,9 +23,9 @@ void Tests::Initialize()
 	ActivatePath(&renderer);
 }
 
-void TestsRenderer::ResizeBuffers()
+void TestsRenderer::ResizeLayout()
 {
-	__super::ResizeBuffers();
+	__super::ResizeLayout();
 
 	float screenW = wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = wiRenderer::GetDevice()->GetScreenHeight();

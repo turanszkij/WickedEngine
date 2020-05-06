@@ -206,7 +206,10 @@ void EditorComponent::ResizeBuffers()
 		hr = device->CreateRenderPass(&desc, &renderpass_selectionOutline[1]);
 		assert(SUCCEEDED(hr));
 	}
-
+}
+void EditorComponent::ResizeLayout()
+{
+	__super::ResizeLayout();
 
 	// GUI elements scaling:
 
@@ -724,6 +727,7 @@ void EditorComponent::Load()
 	shaderButton->SetTooltip("Reload shaders from the default directory...");
 	shaderButton->SetColor(wiColor(255, 33, 140, 180), wiWidget::WIDGETSTATE::IDLE);
 	shaderButton->SetColor(wiColor(255, 100, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
+	shaderButton->font.params.size -= 2;
 	shaderButton->OnClick([=](wiEventArgs args) {
 
 		wiRenderer::ReloadShaders();

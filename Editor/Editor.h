@@ -120,6 +120,7 @@ public:
 	const wiGraphics::Texture* GetGUIBlurredBackground() const override { return renderPath->GetGUIBlurredBackground(); }
 
 	void ResizeBuffers() override;
+	void ResizeLayout() override;
 	void Load() override;
 	void Start() override;
 	void FixedUpdate() override;

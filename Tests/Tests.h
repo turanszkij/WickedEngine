@@ -10,7 +10,7 @@ class TestsRenderer : public RenderPath3D_Deferred
 public:
 	void Load() override;
 	void Update(float dt) override;
-	void ResizeBuffers() override;
+	void ResizeLayout() override;
 
 	void RunJobSystemTest();
 	void RunFontTest();

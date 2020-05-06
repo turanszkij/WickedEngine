@@ -825,7 +825,7 @@ The custom GUI, implemented with engine features
 [[Header]](../WickedEngine/wiGUI.h) [[Cpp]](../WickedEngine/wiGUI.cpp)
 The wiGUI is responsible to run a GUI interface and manage widgets. 
 
-<b>GUI Scaling:</b> To ensure correct GUI scaling, GUI elements should be designed for the current window size. If they are placed inside `RenderPath2D::ResizeBuffers()` function according to current screen size, it will ensure that GUI will be scaled on a Resilution change event, which is recommended.
+<b>GUI Scaling:</b> To ensure correct GUI scaling, GUI elements should be designed for the current window size. If they are placed inside `RenderPath2D::ResizeLayout()` function according to current screen size, it will ensure that GUI will be scaled on a Resolution or DPI change event, which is recommended.
 
 ### wiEventArgs
 [[Header]](../WickedEngine/wiWidget.h) [[Cpp]](../WickedEngine/wiWidget.cpp)

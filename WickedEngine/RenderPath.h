@@ -9,10 +9,13 @@ class RenderPath
 private:
 	uint32_t layerMask = 0xFFFFFFFF;
 	bool initial_resizebuffer = false;
+	uint32_t dpi = 0;
 
 protected:
-	// create resolution dependant resources
+	// create resolution dependant resources, such as render targets
 	virtual void ResizeBuffers() {}
+	// update resolution dependent elements, such as elements dependent on current monitor DPI
+	virtual void ResizeLayout();
 public:
 	std::function<void()> onStart;
 	std::function<void()> onStop;
