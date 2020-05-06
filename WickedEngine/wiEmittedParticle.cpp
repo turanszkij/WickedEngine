@@ -675,7 +675,7 @@ void wiEmittedParticle::Initialize()
 
 	RasterizerStateDesc rs;
 	rs.FillMode = FILL_SOLID;
-	rs.CullMode = CULL_BACK;
+	rs.CullMode = CULL_NONE;
 	rs.FrontCounterClockwise = true;
 	rs.DepthBias = 0;
 	rs.DepthBiasClamp = 0;
