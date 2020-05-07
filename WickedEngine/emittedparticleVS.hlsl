@@ -39,16 +39,18 @@ VertextoPixel main(uint fakeIndex : SV_VERTEXID)
 	float2 uv2 = uv;
 
 	// Sprite sheet UV transform:
-	const float spriteframe = xEmitterFrameRate == 0 ? (lifeLerp * xEmitterFrameCount) : ((particle.life * xEmitterFrameRate) % xEmitterFrameCount);
+	const float spriteframe = xEmitterFrameRate == 0 ? 
+		lerp(xEmitterFrameStart, xEmitterFrameCount, lifeLerp) : 
+		((xEmitterFrameStart + particle.life * xEmitterFrameRate) % xEmitterFrameCount);
 	const uint currentFrame = floor(spriteframe);
 	const uint nextFrame = ceil(spriteframe);
 	const float frameBlend = frac(spriteframe);
-	uint2 offset = uint2(currentFrame % xEmitterHorizontalFrameCount, currentFrame / xEmitterHorizontalFrameCount) * xEmitterFrameSize;
+	uint2 offset = uint2(currentFrame % xEmitterFramesXY.x, currentFrame / xEmitterFramesXY.x);
+	uv.xy += offset;
 	uv.xy *= xEmitterTexMul;
-	uv.xy += offset * xEmitterResolution_rcp;
-	uint2 offset2 = uint2(nextFrame % xEmitterHorizontalFrameCount, nextFrame / xEmitterHorizontalFrameCount) * xEmitterFrameSize;
+	uint2 offset2 = uint2(nextFrame % xEmitterFramesXY.x, nextFrame / xEmitterFramesXY.x);
+	uv2.xy += offset2;
 	uv2.xy *= xEmitterTexMul;
-	uv2.xy += offset2 * xEmitterResolution_rcp;
 
 	// rotate the billboard:
 	float2x2 rot = float2x2(

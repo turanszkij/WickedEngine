@@ -171,13 +171,13 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 	hcb.xHairBaseMeshVertexPositionStride = sizeof(MeshComponent::Vertex_POS);
 	// segmentCount will be loop in the shader, not a threadgroup so we don't need it here:
 	hcb.xHairNumDispatchGroups = (hcb.xHairParticleCount + THREADCOUNT_SIMULATEHAIR - 1) / THREADCOUNT_SIMULATEHAIR;
-	hcb.xHairFrameSize = uint2(frameWidth == 0 ? desc.Width : frameWidth, frameHeight == 0 ? desc.Height : frameHeight);
+	hcb.xHairFramesXY = uint2(framesX, framesY);
 	hcb.xHairFrameCount = std::max(1u, frameCount);
-	hcb.xHairHorizontalFrameCount = std::max(1u, horizontalFrameCount == 0 ? frameCount : horizontalFrameCount);
-	hcb.xHairTexMul = float2((float)hcb.xHairFrameSize.x / (float)desc.Width, (float)hcb.xHairFrameSize.y / (float)desc.Height);
-	hcb.xHairResolution_rcp.x = 1.0f / (float)desc.Width;
-	hcb.xHairResolution_rcp.y = 1.0f / (float)desc.Height;
-	hcb.xHairAspect = (float)hcb.xHairFrameSize.x / (float)hcb.xHairFrameSize.y;
+	hcb.xHairFramesXY = uint2(framesX, framesY);
+	hcb.xHairFrameCount = std::max(1u, frameCount);
+	hcb.xHairFrameStart = frameStart;
+	hcb.xHairTexMul = float2(1.0f / (float)hcb.xHairFramesXY.x, 1.0f / (float)hcb.xHairFramesXY.y);
+	hcb.xHairAspect = (float)desc.Width / (float)desc.Height;
 	device->UpdateBuffer(&cb, &hcb, cmd);
 
 	device->BindConstantBuffer(CS, &cb, CB_GETBINDSLOT(HairParticleCB), cmd);
@@ -264,10 +264,10 @@ void wiHairParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 		}
 		if (archive.GetVersion() >= 42)
 		{
-			archive >> frameWidth;
-			archive >> frameHeight;
+			archive >> framesX;
+			archive >> framesY;
 			archive >> frameCount;
-			archive >> horizontalFrameCount;
+			archive >> frameStart;
 		}
 	}
 	else
@@ -287,10 +287,10 @@ void wiHairParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 		}
 		if (archive.GetVersion() >= 42)
 		{
-			archive << frameWidth;
-			archive << frameHeight;
+			archive << framesX;
+			archive << framesY;
 			archive << frameCount;
-			archive << horizontalFrameCount;
+			archive << frameStart;
 		}
 	}
 }

@@ -68,10 +68,10 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 		patchPos.y += 1;
 
 		// Sprite sheet UV transform:
-		const uint currentFrame = rand % xHairFrameCount;
-		uint2 offset = uint2(currentFrame % xHairHorizontalFrameCount, currentFrame / xHairHorizontalFrameCount) * xHairFrameSize;
+		const uint currentFrame = (xHairFrameStart + rand) % xHairFrameCount;
+		uint2 offset = uint2(currentFrame % xHairFramesXY.x, currentFrame / xHairFramesXY.x);
+		uv.xy += offset;
 		uv.xy *= xHairTexMul;
-		uv.xy += offset * xHairResolution_rcp;
 
 		// scale the billboard by the texture aspect:
 		float2 frame = float2(xHairAspect, 1);

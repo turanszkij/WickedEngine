@@ -61,10 +61,10 @@ public:
 	wiSlider* sph_e_Slider;
 
 	wiTextInputField* frameRateInput;
-	wiTextInputField* frameWidthInput;
-	wiTextInputField* frameHeightInput;
+	wiTextInputField* framesXInput;
+	wiTextInputField* framesYInput;
 	wiTextInputField* frameCountInput;
-	wiTextInputField* horizontalFrameCountInput;
+	wiTextInputField* frameStartInput;
 
 };
 

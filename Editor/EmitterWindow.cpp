@@ -225,40 +225,40 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
 		{
-			emitter->framerate = args.fValue;
+			emitter->frameRate = args.fValue;
 		}
 		});
 	emitterWindow->AddWidget(frameRateInput);
 
-	frameWidthInput = new wiTextInputField("");
-	frameWidthInput->SetPos(XMFLOAT2(x + 150, y));
-	frameWidthInput->SetSize(XMFLOAT2(40, 18));
-	frameWidthInput->SetText("");
-	frameWidthInput->SetTooltip("Enter a value to enable sprite sheet frame width in pixels.");
-	frameWidthInput->SetDescription("Frame Width: ");
-	frameWidthInput->OnInputAccepted([this](wiEventArgs args) {
+	framesXInput = new wiTextInputField("");
+	framesXInput->SetPos(XMFLOAT2(x + 150, y));
+	framesXInput->SetSize(XMFLOAT2(40, 18));
+	framesXInput->SetText("");
+	framesXInput->SetTooltip("How many horizontal frames there are in the spritesheet.");
+	framesXInput->SetDescription("Frames X: ");
+	framesXInput->OnInputAccepted([this](wiEventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
 		{
-			emitter->frameWidth = (uint32_t)args.iValue;
+			emitter->framesX = (uint32_t)args.iValue;
 		}
 		});
-	emitterWindow->AddWidget(frameWidthInput);
+	emitterWindow->AddWidget(framesXInput);
 
-	frameHeightInput = new wiTextInputField("");
-	frameHeightInput->SetPos(XMFLOAT2(x + 300, y));
-	frameHeightInput->SetSize(XMFLOAT2(40, 18));
-	frameHeightInput->SetText("");
-	frameHeightInput->SetTooltip("Enter a value to enable sprite sheet frame height in pixels.");
-	frameHeightInput->SetDescription("Frame Height: ");
-	frameHeightInput->OnInputAccepted([this](wiEventArgs args) {
+	framesYInput = new wiTextInputField("");
+	framesYInput->SetPos(XMFLOAT2(x + 300, y));
+	framesYInput->SetSize(XMFLOAT2(40, 18));
+	framesYInput->SetText("");
+	framesYInput->SetTooltip("How many vertical frames there are in the spritesheet.");
+	framesYInput->SetDescription("Frames Y: ");
+	framesYInput->OnInputAccepted([this](wiEventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
 		{
-			emitter->frameHeight = (uint32_t)args.iValue;
+			emitter->framesY = (uint32_t)args.iValue;
 		}
 		});
-	emitterWindow->AddWidget(frameHeightInput);
+	emitterWindow->AddWidget(framesYInput);
 
 	frameCountInput = new wiTextInputField("");
 	frameCountInput->SetPos(XMFLOAT2(x, y += step));
@@ -275,20 +275,20 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		});
 	emitterWindow->AddWidget(frameCountInput);
 
-	horizontalFrameCountInput = new wiTextInputField("");
-	horizontalFrameCountInput->SetPos(XMFLOAT2(x + 300, y));
-	horizontalFrameCountInput->SetSize(XMFLOAT2(40, 18));
-	horizontalFrameCountInput->SetText("");
-	horizontalFrameCountInput->SetTooltip("Specifies how many sprite sheet frames are in the horizontal direction. 0 = all frames are placed horizontally.");
-	horizontalFrameCountInput->SetDescription("Horizontal Frame Count: ");
-	horizontalFrameCountInput->OnInputAccepted([this](wiEventArgs args) {
+	frameStartInput = new wiTextInputField("");
+	frameStartInput->SetPos(XMFLOAT2(x + 300, y));
+	frameStartInput->SetSize(XMFLOAT2(40, 18));
+	frameStartInput->SetText("");
+	frameStartInput->SetTooltip("Specifies the starting frame of the animation.");
+	frameStartInput->SetDescription("Start Frame: ");
+	frameStartInput->OnInputAccepted([this](wiEventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
 		{
-			emitter->horizontalFrameCount = (uint32_t)args.iValue;
+			emitter->frameStart = (uint32_t)args.iValue;
 		}
 		});
-	emitterWindow->AddWidget(horizontalFrameCountInput);
+	emitterWindow->AddWidget(frameStartInput);
 
 	maxParticlesSlider = new wiSlider(100.0f, 1000000.0f, 10000, 100000, "Max particle count: ");
 	maxParticlesSlider->SetSize(XMFLOAT2(360, itemheight));
@@ -592,11 +592,11 @@ void EmitterWindow::SetEntity(Entity entity)
 		frameBlendingCheckBox->SetCheck(emitter->IsFrameBlendingEnabled());
 		maxParticlesSlider->SetValue((float)emitter->GetMaxParticleCount());
 
-		frameRateInput->SetValue(emitter->framerate);
-		frameWidthInput->SetValue((int)emitter->frameWidth);
-		frameHeightInput->SetValue((int)emitter->frameHeight);
+		frameRateInput->SetValue(emitter->frameRate);
+		framesXInput->SetValue((int)emitter->framesX);
+		framesYInput->SetValue((int)emitter->framesY);
 		frameCountInput->SetValue((int)emitter->frameCount);
-		horizontalFrameCountInput->SetValue((int)emitter->horizontalFrameCount);
+		frameStartInput->SetValue((int)emitter->frameStart);
 
 		emitCountSlider->SetValue(emitter->count);
 		emitSizeSlider->SetValue(emitter->size);

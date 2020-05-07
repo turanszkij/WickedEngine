@@ -48,10 +48,10 @@ public:
 	std::vector<float> vertex_lengths;
 
 	// Sprite sheet properties:
-	uint32_t frameWidth = 0;
-	uint32_t frameHeight = 0;
-	uint32_t frameCount = 0;
-	uint32_t horizontalFrameCount = 0;
+	uint32_t framesX = 1;
+	uint32_t framesY = 1;
+	uint32_t frameCount = 1;
+	uint32_t frameStart = 0;
 
 	// Non-serialized attributes:
 	XMFLOAT4X4 world;

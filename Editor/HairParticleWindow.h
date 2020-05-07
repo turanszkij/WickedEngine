@@ -40,10 +40,10 @@ public:
 	wiSlider* segmentcountSlider;
 	wiSlider* randomSeedSlider;
 	wiSlider* viewDistanceSlider;
-	wiTextInputField* frameWidthInput;
-	wiTextInputField* frameHeightInput;
+	wiTextInputField* framesXInput;
+	wiTextInputField* framesYInput;
 	wiTextInputField* frameCountInput;
-	wiTextInputField* horizontalFrameCountInput;
+	wiTextInputField* frameStartInput;
 
 };
 

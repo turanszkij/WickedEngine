@@ -39,12 +39,11 @@ CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
 	uint xHairBaseMeshVertexPositionStride;
 	uint xHairNumDispatchGroups;
 
-	uint2 xHairFrameSize;
+	uint2 xHairFramesXY;
 	uint xHairFrameCount;
-	uint xHairHorizontalFrameCount;
+	uint xHairFrameStart;
 
 	float2 xHairTexMul;
-	float2 xHairResolution_rcp;
 
 	float xHairAspect;
 	float3 padding_xHair;

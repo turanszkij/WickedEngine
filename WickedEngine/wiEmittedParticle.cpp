@@ -247,8 +247,6 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 	{
 		device->EventBegin("UpdateEmittedParticles", cmd);
 
-		const TextureDesc& desc = material.GetBaseColorMap()->GetDesc();
-
 		EmittedParticleCB cb;
 		cb.xEmitterWorld = transform.world;
 		cb.xEmitCount = (uint32_t)emit;
@@ -269,13 +267,11 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		cb.xParticleMass = mass;
 		cb.xEmitterMaxParticleCount = MAX_PARTICLES;
 		cb.xEmitterFixedTimestep = FIXED_TIMESTEP;
-		cb.xEmitterFrameSize = uint2(frameWidth == 0 ? desc.Width : frameWidth, frameHeight == 0 ? desc.Height : frameHeight);
+		cb.xEmitterFramesXY = uint2(framesX, framesY);
 		cb.xEmitterFrameCount = std::max(1u, frameCount);
-		cb.xEmitterHorizontalFrameCount = std::max(1u, horizontalFrameCount == 0 ? frameCount : horizontalFrameCount);
-		cb.xEmitterTexMul = float2((float)cb.xEmitterFrameSize.x / (float)desc.Width, (float)cb.xEmitterFrameSize.y / (float)desc.Height);
-		cb.xEmitterResolution_rcp.x = 1.0f / (float)desc.Width;
-		cb.xEmitterResolution_rcp.y = 1.0f / (float)desc.Height;
-		cb.xEmitterFrameRate = framerate;
+		cb.xEmitterFrameStart = frameStart;
+		cb.xEmitterTexMul = float2(1.0f / (float)cb.xEmitterFramesXY.x, 1.0f / (float)cb.xEmitterFramesXY.y);
+		cb.xEmitterFrameRate = frameRate;
 
 		cb.xEmitterOptions = 0;
 		if (IsSPHEnabled())
@@ -776,11 +772,11 @@ void wiEmittedParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 
 		if (archive.GetVersion() >= 45)
 		{
-			archive >> frameWidth;
-			archive >> frameHeight;
+			archive >> framesX;
+			archive >> framesY;
 			archive >> frameCount;
-			archive >> horizontalFrameCount;
-			archive >> framerate;
+			archive >> frameStart;
+			archive >> frameRate;
 		}
 	}
 	else
@@ -808,11 +804,11 @@ void wiEmittedParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 
 		if (archive.GetVersion() >= 45)
 		{
-			archive << frameWidth;
-			archive << frameHeight;
+			archive << framesX;
+			archive << framesY;
 			archive << frameCount;
-			archive << horizontalFrameCount;
-			archive << framerate;
+			archive << frameStart;
+			archive << frameRate;
 		}
 	}
 }

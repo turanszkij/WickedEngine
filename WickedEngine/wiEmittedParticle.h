@@ -101,11 +101,11 @@ public:
 	float SPH_e = 0.018f;	// viscosity constant
 
 	// Sprite sheet properties:
-	uint32_t frameWidth = 0;
-	uint32_t frameHeight = 0;
-	uint32_t frameCount = 0;
-	uint32_t horizontalFrameCount = 0;
-	float framerate = 0; // frames per second
+	uint32_t framesX = 1;
+	uint32_t framesY = 1;
+	uint32_t frameCount = 1;
+	uint32_t frameStart = 0;
+	float frameRate = 0; // frames per second
 
 	void SetMaxParticleCount(uint32_t value);
 	uint32_t GetMaxParticleCount() const { return MAX_PARTICLES; }
