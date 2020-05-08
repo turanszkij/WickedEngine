@@ -26,7 +26,6 @@ namespace wiInput
 #endif //PLATFORM_UWP
 #define KEY_UP(vk_code) (!KEY_DOWN(vk_code))
 
-
 	KeyboardState keyboard;
 	MouseState mouse;
 
@@ -62,6 +61,67 @@ namespace wiInput
 	std::vector<Controller> controllers;
 	std::atomic_bool initialized{ false };
 
+#ifdef PLATFORM_UWP
+	using namespace Windows::ApplicationModel;
+	using namespace Windows::ApplicationModel::Core;
+	using namespace Windows::ApplicationModel::Activation;
+	using namespace Windows::UI::Core;
+	using namespace Windows::UI::Input;
+	using namespace Windows::System;
+	using namespace Windows::Foundation;
+
+	void OnPointerPressed(CoreWindow^ window, PointerEventArgs^ pointer)
+	{
+		auto p = pointer->CurrentPoint;
+
+		mouse.position = XMFLOAT2(p->Position.X, p->Position.Y);
+
+		mouse.left_button_press = p->Properties->IsLeftButtonPressed;
+		mouse.middle_button_press = p->Properties->IsMiddleButtonPressed;
+		mouse.right_button_press = p->Properties->IsRightButtonPressed;
+
+		Touch touch;
+		touch.state = Touch::TOUCHSTATE_PRESSED;
+		touch.pos = mouse.position;
+		touches.push_back(touch);
+	}
+	void OnPointerReleased(CoreWindow^ window, PointerEventArgs^ pointer)
+	{
+		auto p = pointer->CurrentPoint;
+
+		mouse.left_button_press = p->Properties->IsLeftButtonPressed;
+		mouse.middle_button_press = p->Properties->IsMiddleButtonPressed;
+		mouse.right_button_press = p->Properties->IsRightButtonPressed;
+
+		Touch touch;
+		touch.state = Touch::TOUCHSTATE_RELEASED;
+		touch.pos = XMFLOAT2(p->Position.X, p->Position.Y);
+		touches.push_back(touch);
+	}
+	void OnPointerMoved(CoreWindow^ window, PointerEventArgs^ pointer)
+	{
+		auto p = pointer->CurrentPoint;
+
+		mouse.position = XMFLOAT2(p->Position.X, p->Position.Y);
+
+		Touch touch;
+		touch.state = Touch::TOUCHSTATE_MOVED;
+		touch.pos = mouse.position;
+		touches.push_back(touch);
+	}
+	void OnPointerWheelChanged(CoreWindow^ window, PointerEventArgs^ pointer)
+	{
+		auto p = pointer->CurrentPoint;
+
+		mouse.delta_wheel += (float)p->Properties->MouseWheelDelta / WHEEL_DELTA;
+
+		Touch touch;
+		touch.state = Touch::TOUCHSTATE_RELEASED;
+		touch.pos = XMFLOAT2(p->Position.X, p->Position.Y);
+		touches.push_back(touch);
+	}
+#endif // PLATFORM_UWP
+
 	void Initialize()
 	{
 		wiRawInput::Initialize();
@@ -82,13 +142,27 @@ namespace wiInput
 		wiXInput::Update();
 		wiRawInput::Update();
 
+		mouse.delta_wheel = 0;
 		wiRawInput::GetMouseState(&mouse); // currently only the relative data can be used from this
 		wiRawInput::GetKeyboardState(&keyboard); // it contains pressed buttons as "keyboard/typewriter" like, so no continuous presses
 
-		// aparently checking the mouse here instead of Down() avoids missing the button presses (review!)
+		// apparently checking the mouse here instead of Down() avoids missing the button presses (review!)
 		mouse.left_button_press |= KEY_DOWN(VK_LBUTTON);
 		mouse.middle_button_press |= KEY_DOWN(VK_MBUTTON);
 		mouse.right_button_press |= KEY_DOWN(VK_RBUTTON);
+
+#ifdef PLATFORM_UWP
+		static bool isRegisteredTouch = false;
+		if (!isRegisteredTouch)
+		{
+			auto window = CoreWindow::GetForCurrentThread();
+			window->PointerPressed += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(OnPointerPressed);
+			window->PointerReleased += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(OnPointerReleased);
+			window->PointerMoved += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(OnPointerMoved);
+			window->PointerWheelChanged += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(OnPointerWheelChanged);
+			isRegisteredTouch = true;
+		}
+#endif
 
 		// Check if low-level XINPUT controller is not registered for playerindex slot and register:
 		for (int i = 0; i < wiXInput::GetMaxControllerCount(); ++i)
@@ -397,8 +471,7 @@ namespace wiInput
 		const float dpiscaling = wiPlatform::GetDPIScaling();
 		return XMFLOAT4((float)p.x / dpiscaling, (float)p.y / dpiscaling, mouse.delta_wheel, 0);
 #else
-		auto& p = Windows::UI::Core::CoreWindow::GetForCurrentThread()->PointerPosition;
-		return XMFLOAT4(p.X, p.Y, 0, 0);
+		return XMFLOAT4(mouse.position.x, mouse.position.y, mouse.delta_wheel, 0);
 #endif
 	}
 	void SetPointer(const XMFLOAT4& props)
@@ -461,61 +534,8 @@ namespace wiInput
 		}
 	}
 
-	
-#ifdef PLATFORM_UWP
-	using namespace Windows::ApplicationModel;
-	using namespace Windows::ApplicationModel::Core;
-	using namespace Windows::ApplicationModel::Activation;
-	using namespace Windows::UI::Core;
-	using namespace Windows::UI::Input;
-	using namespace Windows::System;
-	using namespace Windows::Foundation;
-
-	void _OnPointerPressed(CoreWindow^ window, PointerEventArgs^ pointer)
-	{
-		auto p = pointer->CurrentPoint;
-
-		Touch touch;
-		touch.state = Touch::TOUCHSTATE_PRESSED;
-		touch.pos = XMFLOAT2(p->Position.X, p->Position.Y);
-		touches.push_back(touch);
-	}
-	void _OnPointerReleased(CoreWindow^ window, PointerEventArgs^ pointer)
-	{
-		auto p = pointer->CurrentPoint;
-
-		Touch touch;
-		touch.state = Touch::TOUCHSTATE_RELEASED;
-		touch.pos = XMFLOAT2(p->Position.X, p->Position.Y);
-		touches.push_back(touch);
-	}
-	void _OnPointerMoved(CoreWindow^ window, PointerEventArgs^ pointer)
-	{
-		auto p = pointer->CurrentPoint;
-
-		Touch touch;
-		touch.state = Touch::TOUCHSTATE_MOVED;
-		touch.pos = XMFLOAT2(p->Position.X, p->Position.Y);
-		touches.push_back(touch);
-	}
-#endif // PLATFORM_UWP
-
 	const std::vector<Touch>& GetTouches()
 	{
-		static bool isRegisteredTouch = false;
-		if (!isRegisteredTouch)
-		{
-#ifdef PLATFORM_UWP
-			auto window = CoreWindow::GetForCurrentThread();
-
-			window->PointerPressed += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(_OnPointerPressed);
-			window->PointerReleased += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(_OnPointerReleased);
-			window->PointerMoved += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(_OnPointerMoved);
-#endif // PLATFORM_UWP
-
-			isRegisteredTouch = true;
-		}
-
 		return touches;
 	}
 

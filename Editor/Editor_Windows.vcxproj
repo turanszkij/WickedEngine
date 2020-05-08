@@ -23,7 +23,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>Editor</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>Editor</ProjectName>
+    <ProjectName>Editor_Windows</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -56,6 +56,7 @@
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="Shared">
+    <Import Project="Editor_SOURCE.vcxitems" Label="Shared" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -72,7 +73,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)BUILD\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
@@ -80,10 +81,11 @@
     <LinkIncremental>true</LinkIncremental>
     <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)</TargetName>
+    <OutDir>$(SolutionDir)BUILD\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)BUILD\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
@@ -91,6 +93,7 @@
     <LinkIncremental>false</LinkIncremental>
     <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)</TargetName>
+    <OutDir>$(SolutionDir)BUILD\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -99,11 +102,12 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../WickedEngine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>../$(Platform)/$(Configuration);$(VULKAN_SDK)/Lib32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);$(VULKAN_SDK)/Lib32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -113,11 +117,12 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../WickedEngine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>../$(Platform)/$(Configuration);$(VULKAN_SDK)/Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);$(VULKAN_SDK)/Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -135,13 +140,14 @@
       <StructMemberAlignment>16Bytes</StructMemberAlignment>
       <ExceptionHandling>Sync</ExceptionHandling>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>../$(Platform)/$(Configuration);$(VULKAN_SDK)/Lib32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);$(VULKAN_SDK)/Lib32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -155,111 +161,25 @@
       <AdditionalIncludeDirectories>../WickedEngine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>../$(Platform)/$(Configuration);$(VULKAN_SDK)/Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);$(VULKAN_SDK)/Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="AnimationWindow.h" />
-    <ClInclude Include="CameraWindow.h" />
-    <ClInclude Include="DecalWindow.h" />
-    <ClInclude Include="Editor.h" />
-    <ClInclude Include="EmitterWindow.h" />
-    <ClInclude Include="EnvProbeWindow.h" />
-    <ClInclude Include="ForceFieldWindow.h" />
-    <ClInclude Include="HairParticleWindow.h" />
-    <ClInclude Include="IKWindow.h" />
-    <ClInclude Include="json.hpp" />
-    <ClInclude Include="LayerWindow.h" />
-    <ClInclude Include="LightWindow.h" />
     <ClInclude Include="main.h" />
-    <ClInclude Include="MaterialWindow.h" />
-    <ClInclude Include="MeshWindow.h" />
-    <ClInclude Include="ModelImporter.h" />
-    <ClInclude Include="NameWindow.h" />
-    <ClInclude Include="ObjectWindow.h" />
-    <ClInclude Include="PaintToolWindow.h" />
-    <ClInclude Include="PostprocessWindow.h" />
-    <ClInclude Include="RendererWindow.h" />
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="SoundWindow.h" />
-    <ClInclude Include="SpringWindow.h" />
-    <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="tiny_gltf.h" />
-    <ClInclude Include="tiny_obj_loader.h" />
-    <ClInclude Include="TransformWindow.h" />
-    <ClInclude Include="Translator.h" />
-    <ClInclude Include="WeatherWindow.h" />
-    <ClInclude Include="xatlas.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AnimationWindow.cpp" />
-    <ClCompile Include="CameraWindow.cpp" />
-    <ClCompile Include="DecalWindow.cpp" />
-    <ClCompile Include="Editor.cpp" />
-    <ClCompile Include="EmitterWindow.cpp" />
-    <ClCompile Include="EnvProbeWindow.cpp" />
-    <ClCompile Include="ForceFieldWindow.cpp" />
-    <ClCompile Include="HairParticleWindow.cpp" />
-    <ClCompile Include="IKWindow.cpp" />
-    <ClCompile Include="LayerWindow.cpp" />
-    <ClCompile Include="LightWindow.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="MaterialWindow.cpp" />
-    <ClCompile Include="MeshWindow.cpp" />
-    <ClCompile Include="ModelImporter_GLTF.cpp" />
-    <ClCompile Include="ModelImporter_OBJ.cpp" />
-    <ClCompile Include="NameWindow.cpp" />
-    <ClCompile Include="ObjectWindow.cpp" />
-    <ClCompile Include="PaintToolWindow.cpp" />
-    <ClCompile Include="PostprocessWindow.cpp" />
-    <ClCompile Include="RendererWindow.cpp" />
-    <ClCompile Include="SoundWindow.cpp" />
-    <ClCompile Include="SpringWindow.cpp" />
-    <ClCompile Include="stdafx.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="TransformWindow.cpp" />
-    <ClCompile Include="Translator.cpp" />
-    <ClCompile Include="WeatherWindow.cpp" />
-    <ClCompile Include="xatlas.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="images\arealight.dds">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="images\blood1.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="images\directional_light.dds">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="images\leaf.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="images\pointlight.dds">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="images\ripple.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="images\spotlight.dds">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
     <Image Include="small.ico" />
     <Image Include="Editor.ico" />
   </ItemGroup>
@@ -269,9 +189,6 @@
   <ItemGroup>
     <None Include="config.ini">
       <FileType>Discomap</FileType>
-      <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="startup.lua">
       <DeploymentContent>true</DeploymentContent>
     </None>
   </ItemGroup>

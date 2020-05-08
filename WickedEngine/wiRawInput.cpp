@@ -97,8 +97,8 @@ namespace wiRawInput
 			const RAWMOUSE& rawmouse = raw.data.mouse;
 			if (raw.data.mouse.usFlags == MOUSE_MOVE_RELATIVE)
 			{
-				mouse.delta_position.x += rawmouse.lLastX;
-				mouse.delta_position.y += rawmouse.lLastY;
+				mouse.delta_position.x += (float)rawmouse.lLastX;
+				mouse.delta_position.y += (float)rawmouse.lLastY;
 				if (rawmouse.usButtonFlags == RI_MOUSE_WHEEL)
 				{
 					mouse.delta_wheel += float((SHORT)rawmouse.usButtonData) / float(WHEEL_DELTA);
@@ -106,9 +106,7 @@ namespace wiRawInput
 			}
 			else if (raw.data.mouse.usFlags == MOUSE_MOVE_ABSOLUTE)
 			{
-				// for some reason we never get absolute coordinates...
-				mouse.position.x += rawmouse.lLastX;
-				mouse.position.y += rawmouse.lLastY;
+				// for some reason we never get absolute coordinates with raw input...
 			}
 
 			if (rawmouse.usButtonFlags == RI_MOUSE_LEFT_BUTTON_DOWN)

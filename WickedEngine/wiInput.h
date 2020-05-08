@@ -83,8 +83,8 @@ namespace wiInput
 	};
 	struct MouseState
 	{
-		XMINT2 position = XMINT2(0, 0);
-		XMINT2 delta_position = XMINT2(0, 0);
+		XMFLOAT2 position = XMFLOAT2(0, 0);
+		XMFLOAT2 delta_position = XMFLOAT2(0, 0);
 		float delta_wheel = 0;
 		bool left_button_press = false;
 		bool middle_button_press = false;

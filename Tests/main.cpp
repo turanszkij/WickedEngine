@@ -6,10 +6,6 @@
 
 #define MAX_LOADSTRING 100
 
-extern "C" {
-	_declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
-}
-
 // Global Variables:
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text

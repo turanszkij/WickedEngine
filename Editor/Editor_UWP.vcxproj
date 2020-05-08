@@ -35,9 +35,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{c222218b-b6d1-406b-b2c0-8c1ced4a8d19}</ProjectGuid>
+    <ProjectGuid>{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}</ProjectGuid>
     <Keyword>DirectXApp</Keyword>
-    <RootNamespace>Template_UWP</RootNamespace>
+    <RootNamespace>Editor_UWP</RootNamespace>
     <DefaultLanguage>en-US</DefaultLanguage>
     <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
     <AppContainerApplication>true</AppContainerApplication>
@@ -103,6 +103,9 @@
     <Import Project="$(VSINSTALLDIR)\Common7\IDE\Extensions\Microsoft\VsGraphics\MeshContentTask.props" />
     <Import Project="$(VSINSTALLDIR)\Common7\IDE\Extensions\Microsoft\VsGraphics\ShaderGraphContentTask.props" />
   </ImportGroup>
+  <ImportGroup Label="Shared">
+    <Import Project="Editor_SOURCE.vcxitems" Label="Shared" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
@@ -166,24 +169,18 @@
       <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\arm; $(VCInstallDir)\lib\arm;../$(Platform)/$(Configuration)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)stdafx.pch</PrecompiledHeaderOutputFile>
       <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);../WickedEngine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>4453;28204</DisableSpecificWarnings>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <Manifest>
-      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
-    </Manifest>
     <PostBuildEvent>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
-xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
+xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
+xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
     </PostBuildEvent>
-    <PreBuildEvent>
-      <Command>
-      </Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <Link>
@@ -191,24 +188,18 @@ xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
       <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\arm; $(VCInstallDir)\lib\arm;../$(Platform)/$(Configuration)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)stdafx.pch</PrecompiledHeaderOutputFile>
       <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);../WickedEngine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>4453;28204</DisableSpecificWarnings>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <Manifest>
-      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
-    </Manifest>
     <PostBuildEvent>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
-xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
+xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
+xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
     </PostBuildEvent>
-    <PreBuildEvent>
-      <Command>
-      </Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <Link>
@@ -216,24 +207,18 @@ xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
       <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\arm64; $(VCInstallDir)\lib\arm64;../$(Platform)/$(Configuration)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)stdafx.pch</PrecompiledHeaderOutputFile>
       <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);../WickedEngine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>4453;28204</DisableSpecificWarnings>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <Manifest>
-      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
-    </Manifest>
     <PostBuildEvent>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
-xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
+xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
+xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
     </PostBuildEvent>
-    <PreBuildEvent>
-      <Command>
-      </Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <Link>
@@ -241,24 +226,18 @@ xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
       <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\arm64; $(VCInstallDir)\lib\arm64;../$(Platform)/$(Configuration)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)stdafx.pch</PrecompiledHeaderOutputFile>
       <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);../WickedEngine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>4453;28204</DisableSpecificWarnings>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <Manifest>
-      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
-    </Manifest>
     <PostBuildEvent>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
-xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
+xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
+xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
     </PostBuildEvent>
-    <PreBuildEvent>
-      <Command>
-      </Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Link>
@@ -266,24 +245,18 @@ xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
       <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store; $(VCInstallDir)\lib;../$(Platform)/$(Configuration)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)stdafx.pch</PrecompiledHeaderOutputFile>
       <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);../WickedEngine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>4453;28204</DisableSpecificWarnings>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <Manifest>
-      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
-    </Manifest>
     <PostBuildEvent>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
-xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
+xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
+xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
     </PostBuildEvent>
-    <PreBuildEvent>
-      <Command>
-      </Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Link>
@@ -291,24 +264,18 @@ xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
       <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store; $(VCInstallDir)\lib;../$(Platform)/$(Configuration)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)stdafx.pch</PrecompiledHeaderOutputFile>
       <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);../WickedEngine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>4453;28204</DisableSpecificWarnings>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <Manifest>
-      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
-    </Manifest>
     <PostBuildEvent>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
-xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
+xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
+xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
     </PostBuildEvent>
-    <PreBuildEvent>
-      <Command>
-      </Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Link>
@@ -316,24 +283,18 @@ xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
       <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\amd64; $(VCInstallDir)\lib\amd64;../$(Platform)/$(Configuration)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)stdafx.pch</PrecompiledHeaderOutputFile>
       <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);../WickedEngine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>4453;28204</DisableSpecificWarnings>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <Manifest>
-      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
-    </Manifest>
     <PostBuildEvent>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
-xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
+xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
+xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
     </PostBuildEvent>
-    <PreBuildEvent>
-      <Command>
-      </Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Link>
@@ -341,24 +302,18 @@ xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
       <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\amd64; $(VCInstallDir)\lib\amd64;../$(Platform)/$(Configuration)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)stdafx.pch</PrecompiledHeaderOutputFile>
       <AdditionalIncludeDirectories>$(ProjectDir);$(IntermediateOutputPath);../WickedEngine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>4453;28204</DisableSpecificWarnings>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <Manifest>
-      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
-    </Manifest>
     <PostBuildEvent>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
-xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
+xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
+xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
     </PostBuildEvent>
-    <PreBuildEvent>
-      <Command>
-      </Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <Image Include="Assets\LockScreenLogo.scale-200.png" />
@@ -371,20 +326,9 @@ xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
-    <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />
-    <ClCompile Include="pch.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">

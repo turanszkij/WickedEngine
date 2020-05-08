@@ -267,7 +267,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		cb.xParticleMass = mass;
 		cb.xEmitterMaxParticleCount = MAX_PARTICLES;
 		cb.xEmitterFixedTimestep = FIXED_TIMESTEP;
-		cb.xEmitterFramesXY = uint2(framesX, framesY);
+		cb.xEmitterFramesXY = uint2(std::max(1u, framesX), std::max(1u, framesY));
 		cb.xEmitterFrameCount = std::max(1u, frameCount);
 		cb.xEmitterFrameStart = frameStart;
 		cb.xEmitterTexMul = float2(1.0f / (float)cb.xEmitterFramesXY.x, 1.0f / (float)cb.xEmitterFramesXY.y);

@@ -1,0 +1,97 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{867febca-09c4-4fe7-8a4c-4d9b1c27e7d0}</ItemsProjectGuid>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)AnimationWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)CameraWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)DecalWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Editor.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)EmitterWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)EnvProbeWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ForceFieldWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)HairParticleWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)IKWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)LayerWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)LightWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)MaterialWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)MeshWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ModelImporter_GLTF.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ModelImporter_OBJ.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)NameWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ObjectWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)PaintToolWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)PostprocessWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)RendererWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)SoundWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)SpringWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)stdafx.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)TransformWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Translator.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)WeatherWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)xatlas.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)CameraWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)DecalWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Editor.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)EmitterWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)EnvProbeWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ForceFieldWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)HairParticleWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)IKWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)json.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)LayerWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)LightWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)MaterialWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)MeshWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ModelImporter.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)NameWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ObjectWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)PaintToolWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)PostprocessWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)RendererWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)SoundWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)SpringWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)stdafx.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)tiny_gltf.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)tiny_obj_loader.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)TransformWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Translator.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)WeatherWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)xatlas.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)startup.lua" />
+  </ItemGroup>
+</Project>
