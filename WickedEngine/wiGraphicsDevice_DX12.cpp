@@ -1536,19 +1536,20 @@ using namespace DX12_Internal;
 		DEBUGDEVICE = debuglayer;
 		FULLSCREEN = fullscreen;
 
-#ifndef WINSTORE_SUPPORT
+#ifndef PLATFORM_UWP
 		RECT rect = RECT();
 		GetClientRect(window, &rect);
 		RESOLUTIONWIDTH = rect.right - rect.left;
 		RESOLUTIONHEIGHT = rect.bottom - rect.top;
-#else WINSTORE_SUPPORT
-		RESOLUTIONWIDTH = (int)window->Bounds.Width;
-		RESOLUTIONHEIGHT = (int)window->Bounds.Height;
+#else PLATFORM_UWP
+		float dpiscale = wiPlatform::GetDPIScaling();
+		RESOLUTIONWIDTH = int(window->Bounds.Width * dpiscale);
+		RESOLUTIONHEIGHT = int(window->Bounds.Height * dpiscale);
 #endif
 
 		HRESULT hr = E_FAIL;
 
-#if !defined(WINSTORE_SUPPORT)
+#if !defined(PLATFORM_UWP)
 		if (debuglayer)
 		{
 			// Enable the debug layer.
@@ -1624,7 +1625,7 @@ using namespace DX12_Internal;
 		sd.Flags = 0;
 		sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 
-#ifndef WINSTORE_SUPPORT
+#ifndef PLATFORM_UWP
 		sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 		sd.Scaling = DXGI_SCALING_STRETCH;
 
@@ -1639,7 +1640,7 @@ using namespace DX12_Internal;
 		sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // All Windows Store apps must use this SwapEffect.
 		sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
-		hr = pIDXGIFactory->CreateSwapChainForCoreWindow(directQueue.Get(), reinterpret_cast<IUnknown*>(window), &sd, nullptr, &_swapChain);
+		hr = pIDXGIFactory->CreateSwapChainForCoreWindow(directQueue.Get(), reinterpret_cast<IUnknown*>(window.Get()), &sd, nullptr, &_swapChain);
 #endif
 
 		if (FAILED(hr))

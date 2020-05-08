@@ -67,11 +67,11 @@ If you wish to integrate Wicked Engine into your own project, you can use it as 
 	- Directory of your built .lib file (For example ./x64/Release)
 4. Also be sure to compile with a non-DLL runtime library for Release builds:
 	- Project settings -> C/C++ -> Code Generation -> Runtime Library -> Multi threaded
-5. If you want to create an UWP application, #define WINSTORE_SUPPORT preprocessor for the whole implementing project and link against the WickedEngine_UWP library.
+5. If you want to create a UWP application, link against the WickedEngine_UWP library.
 	
 When your project settings are set up, put `#include "WickedEngine.h"` in your source. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project.
 
-If you have trouble, you can always look at or copy the project settings for Editor, Tests and Template projects to get an idea how to link with Wicked Engine.
+If you have trouble, you can always look at or copy the project settings for Editor, Tests and Template application projects to get an idea how to link with Wicked Engine.
 
 Initialization example (C++):
 

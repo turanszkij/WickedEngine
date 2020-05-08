@@ -9,7 +9,7 @@ class RenderPath
 private:
 	uint32_t layerMask = 0xFFFFFFFF;
 	bool initial_resizebuffer = false;
-	uint32_t dpi = 0;
+	int dpi = 0;
 
 protected:
 	// create resolution dependant resources, such as render targets

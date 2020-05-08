@@ -17,13 +17,13 @@ using namespace std;
 namespace wiInput
 {
 
-#ifndef WINSTORE_SUPPORT
+#ifndef PLATFORM_UWP
 #define KEY_DOWN(vk_code) (GetAsyncKeyState(vk_code) < 0)
 #define KEY_TOGGLE(vk_code) ((GetAsyncKeyState(vk_code) & 1) != 0)
 #else
 #define KEY_DOWN(vk_code) ((int)Windows::UI::Core::CoreWindow::GetForCurrentThread()->GetAsyncKeyState((Windows::System::VirtualKey)vk_code) < 0)
 #define KEY_TOGGLE(vk_code) (((int)Windows::UI::Core::CoreWindow::GetForCurrentThread()->GetAsyncKeyState((Windows::System::VirtualKey)vk_code) & 1) != 0)
-#endif //WINSTORE_SUPPORT
+#endif //PLATFORM_UWP
 #define KEY_UP(vk_code) (!KEY_DOWN(vk_code))
 
 
@@ -390,7 +390,7 @@ namespace wiInput
 	}
 	XMFLOAT4 GetPointer()
 	{
-#ifndef WINSTORE_SUPPORT
+#ifndef PLATFORM_UWP
 		POINT p;
 		GetCursorPos(&p);
 		ScreenToClient(wiPlatform::GetWindow(), &p);
@@ -403,7 +403,7 @@ namespace wiInput
 	}
 	void SetPointer(const XMFLOAT4& props)
 	{
-#ifndef WINSTORE_SUPPORT
+#ifndef PLATFORM_UWP
 		const float dpiscaling = wiPlatform::GetDPIScaling();
 		POINT p;
 		p.x = (LONG)(props.x * dpiscaling);
@@ -414,7 +414,7 @@ namespace wiInput
 	}
 	void HidePointer(bool value)
 	{
-#ifndef WINSTORE_SUPPORT
+#ifndef PLATFORM_UWP
 		if (value)
 		{
 			while (ShowCursor(false) >= 0) {};
@@ -462,7 +462,7 @@ namespace wiInput
 	}
 
 	
-#ifdef WINSTORE_SUPPORT
+#ifdef PLATFORM_UWP
 	using namespace Windows::ApplicationModel;
 	using namespace Windows::ApplicationModel::Core;
 	using namespace Windows::ApplicationModel::Activation;
@@ -498,20 +498,20 @@ namespace wiInput
 		touch.pos = XMFLOAT2(p->Position.X, p->Position.Y);
 		touches.push_back(touch);
 	}
-#endif // WINSTORE_SUPPORT
+#endif // PLATFORM_UWP
 
 	const std::vector<Touch>& GetTouches()
 	{
 		static bool isRegisteredTouch = false;
 		if (!isRegisteredTouch)
 		{
-#ifdef WINSTORE_SUPPORT
+#ifdef PLATFORM_UWP
 			auto window = CoreWindow::GetForCurrentThread();
 
 			window->PointerPressed += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(_OnPointerPressed);
 			window->PointerReleased += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(_OnPointerReleased);
 			window->PointerMoved += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(_OnPointerMoved);
-#endif // WINSTORE_SUPPORT
+#endif // PLATFORM_UWP
 
 			isRegisteredTouch = true;
 		}

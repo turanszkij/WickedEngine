@@ -51,7 +51,7 @@ namespace wiHelper
 
 	void messageBox(const std::string& msg, const std::string& caption)
 	{
-#ifndef WINSTORE_SUPPORT
+#ifndef PLATFORM_UWP
 		MessageBoxA(wiPlatform::GetWindow(), msg.c_str(), caption.c_str(), 0);
 #else
 		wstring wmsg;
@@ -224,7 +224,7 @@ namespace wiHelper
 
 	void GetFilesInDirectory(std::vector<string>& out, const std::string& directory)
 	{
-#ifndef WINSTORE_SUPPORT
+#ifndef PLATFORM_UWP
 		// WINDOWS
 		wstring wdirectory;
 		StringConvert(directory, wdirectory);
@@ -346,7 +346,7 @@ namespace wiHelper
 	void FileDialog(const FileDialogParams& params, FileDialogResult& result)
 	{
 #ifdef _WIN32
-#ifndef WINSTORE_SUPPORT
+#ifndef PLATFORM_UWP
 
 		char szFile[256];
 
@@ -410,7 +410,7 @@ namespace wiHelper
 			result.filenames.push_back(ofn.lpstrFile);
 		}
 
-#endif // WINSTORE_SUPPORT
+#endif // PLATFORM_UWP
 #endif // _WIN32
 	}
 

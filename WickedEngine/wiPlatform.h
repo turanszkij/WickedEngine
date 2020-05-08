@@ -7,9 +7,11 @@
 #include <SDKDDKVer.h>
 #include <windows.h>
 
-#ifdef WINSTORE_SUPPORT
+#if WINAPI_FAMILY == WINAPI_FAMILY_APP
+#define PLATFORM_UWP
 #include <Windows.UI.Core.h>
-#endif // WINSTORE_SUPPORT
+#include <agile.h>
+#endif // UWP
 
 #endif // _WIN32
 
@@ -17,11 +19,11 @@
 namespace wiPlatform
 {
 #ifdef _WIN32
-#ifndef WINSTORE_SUPPORT
-	typedef HWND window_type;
+#ifndef PLATFORM_UWP
+	using window_type = HWND;
 #else
-	typedef Windows::UI::Core::CoreWindow^ window_type;
-#endif // WINSTORE_SUPPORT
+	using window_type = Platform::Agile<Windows::UI::Core::CoreWindow>;
+#endif // PLATFORM_UWP
 #endif // _WIN32
 
 	inline window_type& GetWindow()
@@ -32,23 +34,23 @@ namespace wiPlatform
 	inline bool IsWindowActive()
 	{
 #ifdef _WIN32
-#ifndef WINSTORE_SUPPORT
+#ifndef PLATFORM_UWP
 		return GetForegroundWindow() == GetWindow();
 #else
 		return true;
-#endif // WINSTORE_SUPPORT
+#endif // PLATFORM_UWP
 #else
 		return true;
 #endif // _WIN32
 	}
-	inline uint32_t GetDPI()
+	inline int GetDPI()
 	{
 #ifdef _WIN32
-#ifndef WINSTORE_SUPPORT
-		return GetDpiForWindow(GetWindow());
+#ifndef PLATFORM_UWP
+		return (int)GetDpiForWindow(GetWindow());
 #else
-		return 96;
-#endif // WINSTORE_SUPPORT
+		return (int)Windows::Graphics::Display::DisplayInformation::GetForCurrentView()->LogicalDpi;
+#endif // PLATFORM_UWP
 #else
 		return 96;
 #endif // _WIN32

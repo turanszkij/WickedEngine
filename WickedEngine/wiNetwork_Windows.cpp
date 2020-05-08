@@ -1,4 +1,6 @@
-#ifndef WINSTORE_SUPPORT
+#include "wiPlatform.h"
+
+#ifndef PLATFORM_UWP
 #include "wiNetwork.h"
 #include "wiBackLog.h"
 
@@ -191,4 +193,4 @@ namespace wiNetwork
 
 }
 
-#endif // WINSTORE_SUPPORT
+#endif // PLATFORM_UWP

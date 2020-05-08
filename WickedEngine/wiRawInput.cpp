@@ -1,14 +1,13 @@
 #include "wiRawInput.h"
+#include "wiPlatform.h"
 
-#if defined(_WIN32) && !defined(WINSTORE_SUPPORT)
+#if defined(_WIN32) && !defined(PLATFORM_UWP)
 
 #include "wiAllocators.h"
 
 #include <vector>
 #include <string>
 
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 #include <hidsdi.h>
 
 #pragma comment(lib,"Hid.lib")

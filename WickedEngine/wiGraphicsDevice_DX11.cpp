@@ -1186,14 +1186,15 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 	DEBUGDEVICE = debuglayer;
 	FULLSCREEN = fullscreen;
 
-#ifndef WINSTORE_SUPPORT
+#ifndef PLATFORM_UWP
 	RECT rect = RECT();
 	GetClientRect(window, &rect);
 	RESOLUTIONWIDTH = rect.right - rect.left;
 	RESOLUTIONHEIGHT = rect.bottom - rect.top;
-#else WINSTORE_SUPPORT
-	RESOLUTIONWIDTH = (int)window->Bounds.Width;
-	RESOLUTIONHEIGHT = (int)window->Bounds.Height;
+#else PLATFORM_UWP
+	float dpiscale = wiPlatform::GetDPIScaling();
+	RESOLUTIONWIDTH = int(window->Bounds.Width * dpiscale);
+	RESOLUTIONHEIGHT = int(window->Bounds.Height * dpiscale);
 #endif
 
 	HRESULT hr = E_FAIL;
@@ -1265,7 +1266,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 	sd.Flags = 0;
 	sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 
-#ifndef WINSTORE_SUPPORT
+#ifndef PLATFORM_UWP
 	sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 	sd.Scaling = DXGI_SCALING_STRETCH;
 
@@ -1280,7 +1281,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 	sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // All Windows Store apps must use this SwapEffect.
 	sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
-	hr = pIDXGIFactory->CreateSwapChainForCoreWindow(device.Get(), reinterpret_cast<IUnknown*>(window), &sd, nullptr, &swapChain);
+	hr = pIDXGIFactory->CreateSwapChainForCoreWindow(device.Get(), reinterpret_cast<IUnknown*>(window.Get()), &sd, nullptr, &swapChain);
 #endif
 
 	if (FAILED(hr))

@@ -364,8 +364,8 @@ void UpdatePendingGlyphs()
 {
 	glyphLock.lock();
 
-	static uint32_t saved_dpi = wiPlatform::GetDPI();
-	uint32_t dpi = wiPlatform::GetDPI();
+	static int saved_dpi = wiPlatform::GetDPI();
+	int dpi = wiPlatform::GetDPI();
 	if (saved_dpi != dpi)
 	{
 		saved_dpi = dpi;
