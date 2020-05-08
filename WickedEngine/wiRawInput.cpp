@@ -80,6 +80,7 @@ namespace wiRawInput
 
 	void ParseRawInputBlock(const RAWINPUT& raw)
 	{
+#if defined(_WIN64) // 32-bit has some weird problems with raw input
 		if (raw.header.dwType == RIM_TYPEKEYBOARD)
 		{
 			const RAWKEYBOARD& rawkeyboard = raw.data.keyboard;
@@ -320,6 +321,7 @@ namespace wiRawInput
 
 			}
 		}
+#endif // _WIN64
 	}
 
 	void Update()
