@@ -77,6 +77,9 @@ void App::SetWindow(CoreWindow^ window)
 	DisplayInformation::DisplayContentsInvalidated +=
 		ref new TypedEventHandler<DisplayInformation^, Object^>(this, &App::OnDisplayContentsInvalidated);
 
+	window->KeyDown += ref new TypedEventHandler<CoreWindow^, KeyEventArgs^>(this, &App::OnKeyDown);
+	window->CharacterReceived += ref new TypedEventHandler<CoreWindow^, CharacterReceivedEventArgs^>(this, &App::OnCharacterReceived);
+
 	editor.SetWindow(wiPlatform::window_type(window));
 }
 
@@ -169,10 +172,7 @@ void App::OnWindowClosed(CoreWindow^ sender, CoreWindowEventArgs^ args)
 
 void App::OnDpiChanged(DisplayInformation^ sender, Object^ args)
 {
-	// Note: The value for LogicalDpi retrieved here may not match the effective DPI of the app
-	// if it is being scaled for high resolution devices. Once the DPI is set on DeviceResources,
-	// you should always retrieve it using the GetDpi method.
-	// See DeviceResources.cpp for more details.
+	wiPlatform::GetWindowState().dpi = (int)sender->LogicalDpi;
 }
 
 void App::OnOrientationChanged(DisplayInformation^ sender, Object^ args)
@@ -181,4 +181,36 @@ void App::OnOrientationChanged(DisplayInformation^ sender, Object^ args)
 
 void App::OnDisplayContentsInvalidated(DisplayInformation^ sender, Object^ args)
 {
+}
+
+// Input event handlers
+void App::OnKeyDown(CoreWindow^ sender, KeyEventArgs^ key)
+{
+}
+void App::OnCharacterReceived(CoreWindow^ sender, CharacterReceivedEventArgs^ key)
+{
+
+	switch (key->KeyCode)
+	{
+	case (unsigned int)VirtualKey::Back:
+		if (wiBackLog::isActive())
+			wiBackLog::deletefromInput();
+		wiTextInputField::DeleteFromInput();
+		break;
+
+	case (unsigned int)VirtualKey::Enter:
+		break;
+
+	default:
+	{
+		const char c = (const char)key->KeyCode;
+		if (wiBackLog::isActive())
+		{
+			wiBackLog::input(c);
+		}
+		wiTextInputField::AddInput(c);
+	}
+	break;
+	}
+
 }

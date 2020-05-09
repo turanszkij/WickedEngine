@@ -416,23 +416,19 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		else
 		{
 			wiHelper::FileDialogParams params;
-			wiHelper::FileDialogResult result;
 			params.type = wiHelper::FileDialogParams::OPEN;
 			params.description = "Texture";
 			params.extensions.push_back("dds");
 			params.extensions.push_back("png");
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
-			wiHelper::FileDialog(params, result);
-
-			if (result.ok) {
-				string fileName = result.filenames.front();
+			wiHelper::FileDialog(params, [this, material](std::string fileName) {
 				material->baseColorMap = wiResourceManager::Load(fileName);
 				material->baseColorMapName = fileName;
 				material->SetDirty();
 				fileName = wiHelper::GetFileNameFromPath(fileName);
 				texture_baseColor_Button->SetText(fileName);
-			}
+			});
 		}
 	});
 	materialWindow->AddWidget(texture_baseColor_Button);
@@ -478,23 +474,19 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		else
 		{
 			wiHelper::FileDialogParams params;
-			wiHelper::FileDialogResult result;
 			params.type = wiHelper::FileDialogParams::OPEN;
 			params.description = "Texture";
 			params.extensions.push_back("dds");
 			params.extensions.push_back("png");
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
-			wiHelper::FileDialog(params, result);
-
-			if (result.ok) {
-				string fileName = result.filenames.front();
+			wiHelper::FileDialog(params, [this, material](std::string fileName) {
 				material->normalMap = wiResourceManager::Load(fileName);
 				material->normalMapName = fileName;
 				material->SetDirty();
 				fileName = wiHelper::GetFileNameFromPath(fileName);
 				texture_normal_Button->SetText(fileName);
-			}
+			});
 		}
 	});
 	materialWindow->AddWidget(texture_normal_Button);
@@ -540,23 +532,19 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		else
 		{
 			wiHelper::FileDialogParams params;
-			wiHelper::FileDialogResult result;
 			params.type = wiHelper::FileDialogParams::OPEN;
 			params.description = "Texture";
 			params.extensions.push_back("dds");
 			params.extensions.push_back("png");
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
-			wiHelper::FileDialog(params, result);
-
-			if (result.ok) {
-				string fileName = result.filenames.front();
+			wiHelper::FileDialog(params, [this, material](std::string fileName) {
 				material->surfaceMap = wiResourceManager::Load(fileName);
 				material->surfaceMapName = fileName;
 				material->SetDirty();
 				fileName = wiHelper::GetFileNameFromPath(fileName);
 				texture_surface_Button->SetText(fileName);
-			}
+			});
 		}
 	});
 	materialWindow->AddWidget(texture_surface_Button);
@@ -602,25 +590,21 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		else
 		{
 			wiHelper::FileDialogParams params;
-			wiHelper::FileDialogResult result;
 			params.type = wiHelper::FileDialogParams::OPEN;
 			params.description = "Texture";
 			params.extensions.push_back("dds");
 			params.extensions.push_back("png");
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
-			wiHelper::FileDialog(params, result);
-
-			if (result.ok) {
-				string fileName = result.filenames.front();
+			wiHelper::FileDialog(params, [this, material](std::string fileName) {
 				material->emissiveMap = wiResourceManager::Load(fileName);
 				material->emissiveMapName = fileName;
 				material->SetDirty();
 				fileName = wiHelper::GetFileNameFromPath(fileName);
 				texture_emissive_Button->SetText(fileName);
-			}
+			});
 		}
-		});
+	});
 	materialWindow->AddWidget(texture_emissive_Button);
 
 	texture_emissive_uvset_Field = new wiTextInputField("uvset_emissive");
@@ -664,23 +648,19 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		else
 		{
 			wiHelper::FileDialogParams params;
-			wiHelper::FileDialogResult result;
 			params.type = wiHelper::FileDialogParams::OPEN;
 			params.description = "Texture";
 			params.extensions.push_back("dds");
 			params.extensions.push_back("png");
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
-			wiHelper::FileDialog(params, result);
-
-			if (result.ok) {
-				string fileName = result.filenames.front();
+			wiHelper::FileDialog(params, [this, material](std::string fileName) {
 				material->displacementMap = wiResourceManager::Load(fileName);
 				material->displacementMapName = fileName;
 				material->SetDirty();
 				fileName = wiHelper::GetFileNameFromPath(fileName);
 				texture_displacement_Button->SetText(fileName);
-			}
+			});
 		}
 	});
 	materialWindow->AddWidget(texture_displacement_Button);
@@ -727,23 +707,19 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		else
 		{
 			wiHelper::FileDialogParams params;
-			wiHelper::FileDialogResult result;
 			params.type = wiHelper::FileDialogParams::OPEN;
 			params.description = "Texture";
 			params.extensions.push_back("dds");
 			params.extensions.push_back("png");
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
-			wiHelper::FileDialog(params, result);
-
-			if (result.ok) {
-				string fileName = result.filenames.front();
+			wiHelper::FileDialog(params, [this, material](std::string fileName) {
 				material->occlusionMap = wiResourceManager::Load(fileName);
 				material->occlusionMapName = fileName;
 				material->SetDirty();
 				fileName = wiHelper::GetFileNameFromPath(fileName);
 				texture_occlusion_Button->SetText(fileName);
-			}
+			});
 		}
 	});
 	materialWindow->AddWidget(texture_occlusion_Button);

@@ -266,24 +266,20 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			else
 			{
 				wiHelper::FileDialogParams params;
-				wiHelper::FileDialogResult result;
 				params.type = wiHelper::FileDialogParams::OPEN;
 				params.description = "Texture";
 				params.extensions.push_back("dds");
 				params.extensions.push_back("png");
 				params.extensions.push_back("jpg");
 				params.extensions.push_back("tga");
-				wiHelper::FileDialog(params, result);
-
-				if (result.ok) {
-					std::string fileName = result.filenames.front();
+				wiHelper::FileDialog(params, [this, light, i](std::string fileName) {
 					light->lensFlareRimTextures[i] = wiResourceManager::Load(fileName);
 					light->lensFlareNames[i] = fileName;
 					fileName = wiHelper::GetFileNameFromPath(fileName);
 					lensflare_Button[i]->SetText(fileName);
-				}
+				});
 			}
-			});
+		});
 		lightWindow->AddWidget(lensflare_Button[i]);
 	}
 

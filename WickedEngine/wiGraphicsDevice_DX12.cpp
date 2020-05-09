@@ -1577,7 +1577,7 @@ using namespace DX12_Internal;
 			ss << "Failed to create the graphics device! ERROR: " << std::hex << hr;
 			wiHelper::messageBox(ss.str(), "Error!");
 			assert(0);
-			exit(1);
+			wiPlatform::Exit();
 		}
 
 		D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
@@ -1647,7 +1647,7 @@ using namespace DX12_Internal;
 		{
 			wiHelper::messageBox("Failed to create a swapchain for the graphics device!", "Error!");
 			assert(0);
-			exit(1);
+			wiPlatform::Exit();
 		}
 
 		hr = _swapChain.As(&swapChain);

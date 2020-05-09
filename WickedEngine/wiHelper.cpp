@@ -5,6 +5,7 @@
 
 #include "Utility/stb_image_write.h"
 
+#include <thread>
 #include <locale>
 #include <direct.h>
 #include <chrono>
@@ -13,8 +14,13 @@
 #include <sstream>
 #include <codecvt> // string conversion
 
+#ifdef PLATFORM_UWP
+#include <collection.h>
+#include <ppltasks.h>
+#else
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
+#endif // PLATFORM_UWP
 
 using namespace std;
 
@@ -343,71 +349,145 @@ namespace wiHelper
 		return exists;
 	}
 
-	void FileDialog(const FileDialogParams& params, FileDialogResult& result)
+	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess)
 	{
 #ifdef _WIN32
 #ifndef PLATFORM_UWP
 
-		char szFile[256];
+		std::thread([=] {
 
-		OPENFILENAMEA ofn;
-		ZeroMemory(&ofn, sizeof(ofn));
-		ofn.lStructSize = sizeof(ofn);
-		ofn.hwndOwner = nullptr;
-		ofn.lpstrFile = szFile;
-		// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
-		// use the contents of szFile to initialize itself.
-		ofn.lpstrFile[0] = '\0';
-		ofn.nMaxFile = sizeof(szFile);
-		ofn.lpstrFileTitle = NULL;
-		ofn.nMaxFileTitle = 0;
-		ofn.lpstrInitialDir = NULL;
-		ofn.nFilterIndex = 1;
+			char szFile[256];
 
-		// Slightly convoluted way to create the filter.
-		//	First string is description, ended by '\0'
-		//	Second string is extensions, each separated by ';' and at the end of all, a '\0'
-		//	Then the whole container string is closed with an other '\0'
-		//		For example: "model files\0*.model;*.obj;\0"  <-- this string literal has "model files" as description and two accepted extensions "model" and "obj"
-		std::vector<char> filter;
-		filter.reserve(256);
-		{
-			for (auto& x : params.description)
+			OPENFILENAMEA ofn;
+			ZeroMemory(&ofn, sizeof(ofn));
+			ofn.lStructSize = sizeof(ofn);
+			ofn.hwndOwner = nullptr;
+			ofn.lpstrFile = szFile;
+			// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
+			// use the contents of szFile to initialize itself.
+			ofn.lpstrFile[0] = '\0';
+			ofn.nMaxFile = sizeof(szFile);
+			ofn.lpstrFileTitle = NULL;
+			ofn.nMaxFileTitle = 0;
+			ofn.lpstrInitialDir = NULL;
+			ofn.nFilterIndex = 1;
+
+			// Slightly convoluted way to create the filter.
+			//	First string is description, ended by '\0'
+			//	Second string is extensions, each separated by ';' and at the end of all, a '\0'
+			//	Then the whole container string is closed with an other '\0'
+			//		For example: "model files\0*.model;*.obj;\0"  <-- this string literal has "model files" as description and two accepted extensions "model" and "obj"
+			std::vector<char> filter;
+			filter.reserve(256);
 			{
-				filter.push_back(x);
-			}
-			filter.push_back(0);
-
-			for (auto& x : params.extensions)
-			{
-				filter.push_back('*');
-				filter.push_back('.');
-				for (auto& y : x)
+				for (auto& x : params.description)
 				{
-					filter.push_back(y);
+					filter.push_back(x);
 				}
-				filter.push_back(';');
+				filter.push_back(0);
+
+				for (auto& x : params.extensions)
+				{
+					filter.push_back('*');
+					filter.push_back('.');
+					for (auto& y : x)
+					{
+						filter.push_back(y);
+					}
+					filter.push_back(';');
+				}
+				filter.push_back(0);
+				filter.push_back(0);
 			}
-			filter.push_back(0);
-			filter.push_back(0);
-		}
-		ofn.lpstrFilter = filter.data();
+			ofn.lpstrFilter = filter.data();
+
+
+			BOOL ok = FALSE;
+			switch (params.type)
+			{
+			case FileDialogParams::OPEN:
+				ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+				ok = GetOpenFileNameA(&ofn) == TRUE;
+				break;
+			case FileDialogParams::SAVE:
+				ofn.Flags = OFN_OVERWRITEPROMPT;
+				ok = GetSaveFileNameA(&ofn) == TRUE;
+				break;
+			}
+
+			if (ok)
+			{
+				onSuccess(ofn.lpstrFile);
+			}
+
+			}).detach();
+
+#else
+
+		using namespace concurrency;
+		using namespace Platform;
+		using namespace Windows::Storage;
+		using namespace Windows::Storage::Pickers;
+		using namespace Windows::UI::Xaml;
+		using namespace Windows::UI::Xaml::Controls;
+		using namespace Windows::UI::Xaml::Navigation;
 
 		switch (params.type)
 		{
 		case FileDialogParams::OPEN:
-			ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-			result.ok = GetOpenFileNameA(&ofn) == TRUE;
-			break;
-		case FileDialogParams::SAVE:
-			ofn.Flags = OFN_OVERWRITEPROMPT;
-			result.ok = GetSaveFileNameA(&ofn) == TRUE;
-			break;
-		}
-
-		if (result.ok) 
 		{
-			result.filenames.push_back(ofn.lpstrFile);
+			FileOpenPicker^ picker = ref new FileOpenPicker();
+			picker->ViewMode = PickerViewMode::List;
+			picker->SuggestedStartLocation = PickerLocationId::ComputerFolder;
+
+			for (auto& x : params.extensions)
+			{
+				wstring wstr;
+				StringConvert(x, wstr);
+				wstr = L"." + wstr;
+				picker->FileTypeFilter->Append(ref new String(wstr.c_str()));
+			}
+
+			create_task(picker->PickSingleFileAsync()).then([=](StorageFile^ file) {
+
+				if (file)
+				{
+					wstring wstr = file->Path->Data();
+					string str;
+					StringConvert(wstr, str);
+					onSuccess(str);
+				}
+			});
+		}
+		break;
+		case FileDialogParams::SAVE:
+		{
+			FileSavePicker^ picker = ref new FileSavePicker();
+			picker->SuggestedStartLocation = PickerLocationId::ComputerFolder;
+
+			for (auto& x : params.extensions)
+			{
+				wstring wstr;
+				StringConvert(x, wstr);
+				wstr = L"." + wstr;
+				auto plainTextExtensions = ref new Platform::Collections::Vector<String^>();
+				plainTextExtensions->Append(ref new String(wstr.c_str()));
+				StringConvert(params.description, wstr);
+				picker->FileTypeChoices->Insert(ref new String(wstr.c_str()), plainTextExtensions);
+			}
+
+			create_task(picker->PickSaveFileAsync()).then([=](StorageFile^ file) {
+
+				if (file)
+				{
+					wstring wstr = file->Path->Data();
+					string str;
+					StringConvert(wstr, str);
+					onSuccess(str);
+				}
+			});
+		}
+		break;
 		}
 
 #endif // PLATFORM_UWP

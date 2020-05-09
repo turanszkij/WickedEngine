@@ -461,17 +461,13 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		heightmapButton->OnClick([=](wiEventArgs args) {
 
 			wiHelper::FileDialogParams params;
-			wiHelper::FileDialogResult result;
 			params.type = wiHelper::FileDialogParams::OPEN;
 			params.description = "Texture";
 			params.extensions.push_back("dds");
 			params.extensions.push_back("png");
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
-			wiHelper::FileDialog(params, result);
-
-			if (result.ok) {
-				string fileName = result.filenames.front();
+			wiHelper::FileDialog(params, [=](std::string fileName) {
 
 				if (this->rgb != nullptr)
 				{
@@ -483,7 +479,7 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 				this->rgb = stbi_load(fileName.c_str(), &this->width, &this->height, &bpp, channelCount);
 
 				generate_mesh(width, height, rgb, channelCount, dimYSlider->GetValue());
-			}
+			});
 		});
 		terrainGenWindow->AddWidget(heightmapButton);
 

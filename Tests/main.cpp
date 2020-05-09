@@ -165,32 +165,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 	}
 	break;
-	case WM_KEYDOWN:
-		switch (wParam)
-		{
-		case VK_HOME:
-			wiBackLog::Toggle();
-			break;
-		case VK_UP:
-			if (wiBackLog::isActive())
-				wiBackLog::historyPrev();
-			break;
-		case VK_DOWN:
-			if (wiBackLog::isActive())
-				wiBackLog::historyNext();
-			break;
-		case VK_NEXT:
-			if (wiBackLog::isActive())
-				wiBackLog::Scroll(10);
-			break;
-		case VK_PRIOR:
-			if (wiBackLog::isActive())
-				wiBackLog::Scroll(-10);
-			break;
-		default:
-			break;
-		}
-		break;
+    case WM_DPICHANGED:
+    {
+        int dpi_x = LOWORD(wParam);
+        int dpi_y = HIWORD(wParam);
+        assert(dpi_x == dpi_y);
+        RECT* size = (RECT*)lParam;
+        wiPlatform::GetWindowState().dpi = dpi_x;
+    }
+    break;
 	case WM_CHAR:
 		switch (wParam)
 		{
@@ -200,8 +183,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			wiTextInputField::DeleteFromInput();
 			break;
 		case VK_RETURN:
-			if (wiBackLog::isActive())
-				wiBackLog::acceptInput();
 			break;
 		default:
 		{

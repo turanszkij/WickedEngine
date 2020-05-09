@@ -1241,7 +1241,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 		std::stringstream ss("");
 		ss << "Failed to create the graphics device! ERROR: " << std::hex << hr;
 		wiHelper::messageBox(ss.str(), "Error!");
-		exit(1);
+		wiPlatform::Exit();
 	}
 
 	ComPtr<IDXGIDevice2> pDXGIDevice;
@@ -1287,7 +1287,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 	if (FAILED(hr))
 	{
 		wiHelper::messageBox("Failed to create a swapchain for the graphics device!", "Error!");
-		exit(1);
+		wiPlatform::Exit();
 	}
 
 	// Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
@@ -1341,13 +1341,13 @@ void GraphicsDevice_DX11::CreateBackBufferResources()
 	hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &backBuffer);
 	if (FAILED(hr)) {
 		wiHelper::messageBox("BackBuffer creation Failed!", "Error!");
-		exit(1);
+		wiPlatform::Exit();
 	}
 
 	hr = device->CreateRenderTargetView(backBuffer.Get(), nullptr, &renderTargetView);
 	if (FAILED(hr)) {
 		wiHelper::messageBox("Main Rendertarget creation Failed!", "Error!");
-		exit(1);
+		wiPlatform::Exit();
 	}
 }
 

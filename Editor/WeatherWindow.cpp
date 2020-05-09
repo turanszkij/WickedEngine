@@ -128,18 +128,15 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		if (weather.skyMap == nullptr)
 		{
 			wiHelper::FileDialogParams params;
-			wiHelper::FileDialogResult result;
 			params.type = wiHelper::FileDialogParams::OPEN;
 			params.description = "Cubemap texture";
 			params.extensions.push_back("dds");
-			wiHelper::FileDialog(params, result);
-
-			if (result.ok) {
-				string fileName = result.filenames.front();
+			wiHelper::FileDialog(params, [=](std::string fileName) {
+				auto& weather = GetWeather();
 				weather.skyMapName = fileName;
 				weather.skyMap = wiResourceManager::Load(fileName);
 				skyButton->SetText(fileName);
-			}
+			});
 		}
 		else
 		{

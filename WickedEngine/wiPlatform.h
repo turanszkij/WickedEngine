@@ -26,10 +26,20 @@ namespace wiPlatform
 #endif // PLATFORM_UWP
 #endif // _WIN32
 
+	struct WindowState
+	{
+		window_type window;
+		int dpi = 96;
+	};
+	inline WindowState& GetWindowState()
+	{
+		static WindowState state;
+		return state;
+	}
+
 	inline window_type& GetWindow()
 	{
-		static window_type window;
-		return window;
+		return GetWindowState().window;
 	}
 	inline bool IsWindowActive()
 	{
@@ -43,20 +53,32 @@ namespace wiPlatform
 		return true;
 #endif // _WIN32
 	}
-	inline int GetDPI()
+	inline void InitDPI()
 	{
 #ifdef _WIN32
 #ifndef PLATFORM_UWP
-		return (int)GetDpiForWindow(GetWindow());
+		GetWindowState().dpi = (int)GetDpiForWindow(GetWindow());
 #else
-		return (int)Windows::Graphics::Display::DisplayInformation::GetForCurrentView()->LogicalDpi;
+		GetWindowState().dpi = (int)Windows::Graphics::Display::DisplayInformation::GetForCurrentView()->LogicalDpi;
 #endif // PLATFORM_UWP
-#else
-		return 96;
 #endif // _WIN32
+	}
+	inline int GetDPI()
+	{
+		return GetWindowState().dpi;
 	}
 	inline float GetDPIScaling()
 	{
 		return (float)GetDPI() / 96.0f;
+	}
+	inline void Exit()
+	{
+#ifdef _WIN32
+#ifndef PLATFORM_UWP
+		PostQuitMessage(0);
+#else
+		Windows::ApplicationModel::Core::CoreApplication::Exit();
+#endif // PLATFORM_UWP
+#endif // _WIN32
 	}
 }

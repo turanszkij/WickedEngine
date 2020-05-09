@@ -733,7 +733,10 @@ namespace wiScene
 			if (archive.GetVersion() >= 32)
 			{
 				archive >> skyMapName;
-				skyMap = wiResourceManager::Load(dir + skyMapName);
+				if (!skyMapName.empty())
+				{
+					skyMap = wiResourceManager::Load(dir + skyMapName);
+				}
 			}
 			if (archive.GetVersion() >= 40)
 			{

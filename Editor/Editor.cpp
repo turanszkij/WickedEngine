@@ -67,7 +67,7 @@ void EditorLoadingScreen::Load()
 		WIFALIGN_CENTER, WIFALIGN_CENTER));
 	AddFont(&font);
 
-	sprite = wiSprite("../images/logo_small.png");
+	sprite = wiSprite("images/logo_small.png");
 	sprite.anim.opa = 1;
 	sprite.anim.repeatable = true;
 	sprite.params.pos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth()*0.5f, wiRenderer::GetDevice()->GetScreenHeight()*0.5f - font.textHeight(), 0);
@@ -610,14 +610,11 @@ void EditorComponent::Load()
 	saveButton->OnClick([=](wiEventArgs args) {
 
 		wiHelper::FileDialogParams params;
-		wiHelper::FileDialogResult result;
 		params.type = wiHelper::FileDialogParams::SAVE;
 		params.description = "Wicked Scene";
 		params.extensions.push_back("wiscene");
-		wiHelper::FileDialog(params, result);
+		wiHelper::FileDialog(params, [this](std::string fileName) {
 
-		if (result.ok) {
-			string fileName = result.filenames.front();
 			if (fileName.substr(fileName.length() - 8).compare(".wiscene") != 0)
 			{
 				fileName += ".wiscene";
@@ -635,7 +632,7 @@ void EditorComponent::Load()
 			{
 				wiHelper::messageBox("Could not create " + fileName + "!");
 			}
-		}
+		});
 	});
 	GetGUI().AddWidget(saveButton);
 
@@ -645,56 +642,48 @@ void EditorComponent::Load()
 	modelButton->SetColor(wiColor(0, 89, 255, 180), wiWidget::WIDGETSTATE::IDLE);
 	modelButton->SetColor(wiColor(112, 155, 255, 255), wiWidget::WIDGETSTATE::FOCUS);
 	modelButton->OnClick([=](wiEventArgs args) {
-		thread([&] {
+		wiHelper::FileDialogParams params;
+		params.type = wiHelper::FileDialogParams::OPEN;
+		params.description = "Model formats (.wiscene, .obj, .gltf, .glb)";
+		params.extensions.push_back("wiscene");
+		params.extensions.push_back("obj");
+		params.extensions.push_back("gltf");
+		params.extensions.push_back("glb");
+		wiHelper::FileDialog(params, [&](std::string fileName) {
 
-			wiHelper::FileDialogParams params;
-			wiHelper::FileDialogResult result;
-			params.type = wiHelper::FileDialogParams::OPEN;
-			params.description = "Model formats (.wiscene, .obj, .gltf, .glb)";
-			params.extensions.push_back("wiscene");
-			params.extensions.push_back("obj");
-			params.extensions.push_back("gltf");
-			params.extensions.push_back("glb");
-			wiHelper::FileDialog(params, result);
+			main->loader->addLoadingFunction([=] {
+				string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(fileName));
 
-			if (result.ok) 
-			{
-				string fileName = result.filenames.front();
-
-				main->loader->addLoadingFunction([=] {
-					string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(fileName));
-
-					if (!extension.compare("WISCENE")) // engine-serialized
-					{
-						wiScene::LoadModel(fileName);
-					}
-					else if (!extension.compare("OBJ")) // wavefront-obj
-					{
-						Scene scene;
-						ImportModel_OBJ(fileName, scene);
-						wiScene::GetScene().Merge(scene);
-					}
-					else if (!extension.compare("GLTF")) // text-based gltf
-					{
-						Scene scene;
-						ImportModel_GLTF(fileName, scene);
-						wiScene::GetScene().Merge(scene);
-					}
-					else if (!extension.compare("GLB")) // binary gltf
-					{
-						Scene scene;
-						ImportModel_GLTF(fileName, scene);
-						wiScene::GetScene().Merge(scene);
-					}
-				});
-				main->loader->onFinished([=] {
-					main->ActivatePath(this, 0.2f, wiColor::Black());
-					weatherWnd->Update();
-				});
-				main->ActivatePath(main->loader.get(), 0.2f, wiColor::Black());
-				ResetHistory();
-			}
-		}).detach();
+				if (!extension.compare("WISCENE")) // engine-serialized
+				{
+					wiScene::LoadModel(fileName);
+				}
+				else if (!extension.compare("OBJ")) // wavefront-obj
+				{
+					Scene scene;
+					ImportModel_OBJ(fileName, scene);
+					wiScene::GetScene().Merge(scene);
+				}
+				else if (!extension.compare("GLTF")) // text-based gltf
+				{
+					Scene scene;
+					ImportModel_GLTF(fileName, scene);
+					wiScene::GetScene().Merge(scene);
+				}
+				else if (!extension.compare("GLB")) // binary gltf
+				{
+					Scene scene;
+					ImportModel_GLTF(fileName, scene);
+					wiScene::GetScene().Merge(scene);
+				}
+			});
+			main->loader->onFinished([=] {
+				main->ActivatePath(this, 0.2f, wiColor::Black());
+				weatherWnd->Update();
+			});
+			main->ActivatePath(main->loader.get(), 0.2f, wiColor::Black());
+			ResetHistory();
+		});
 	});
 	GetGUI().AddWidget(modelButton);
 
@@ -704,21 +693,13 @@ void EditorComponent::Load()
 	scriptButton->SetColor(wiColor(255, 33, 140, 180), wiWidget::WIDGETSTATE::IDLE);
 	scriptButton->SetColor(wiColor(255, 100, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
 	scriptButton->OnClick([=](wiEventArgs args) {
-		thread([&] {
-
-			wiHelper::FileDialogParams params;
-			wiHelper::FileDialogResult result;
-			params.type = wiHelper::FileDialogParams::OPEN;
-			params.description = "Lua script";
-			params.extensions.push_back("lua");
-			wiHelper::FileDialog(params, result);
-
-			if (result.ok) {
-				string fileName = result.filenames.front();
-				wiLua::GetGlobal()->RunFile(fileName);
-			}
-		}).detach();
-
+		wiHelper::FileDialogParams params;
+		params.type = wiHelper::FileDialogParams::OPEN;
+		params.description = "Lua script";
+		params.extensions.push_back("lua");
+		wiHelper::FileDialog(params, [](std::string fileName) {
+			wiLua::GetGlobal()->RunFile(fileName);
+		});
 	});
 	GetGUI().AddWidget(scriptButton);
 
@@ -821,7 +802,7 @@ void EditorComponent::Load()
 	exitButton->SetColor(wiColor(190, 0, 0, 180), wiWidget::WIDGETSTATE::IDLE);
 	exitButton->SetColor(wiColor(255, 0, 0, 255), wiWidget::WIDGETSTATE::FOCUS);
 	exitButton->OnClick([this](wiEventArgs args) {
-		exit(0);
+		wiPlatform::Exit();
 	});
 	GetGUI().AddWidget(exitButton);
 
@@ -856,7 +837,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(cinemaModeCheckBox);
 
 
-	sceneGraphView = new wiTreeList("Scene graph view (WIP)");
+	sceneGraphView = new wiTreeList("Scene graph view");
 	sceneGraphView->OnSelect([this](wiEventArgs args) {
 
 		translator.selected.clear();

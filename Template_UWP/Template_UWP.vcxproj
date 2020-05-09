@@ -399,6 +399,11 @@ xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
       <SubType>Designer</SubType>
     </AppxManifest>
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\WickedEngine\WickedEngine_UWP.vcxproj">
+      <Project>{60da258f-e95f-4cf4-a46b-17d80644464b}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VSINSTALLDIR)\Common7\IDE\Extensions\Microsoft\VsGraphics\ImageContentTask.targets" />

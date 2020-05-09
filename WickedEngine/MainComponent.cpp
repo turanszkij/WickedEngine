@@ -332,6 +332,7 @@ void MainComponent::Compose(CommandList cmd)
 
 void MainComponent::SetWindow(wiPlatform::window_type window)
 {
-	wiPlatform::GetWindow() = window;
+	wiPlatform::GetWindowState().window = window;
+	wiPlatform::InitDPI();
 }
 

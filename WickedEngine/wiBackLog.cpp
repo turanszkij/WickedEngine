@@ -8,6 +8,7 @@
 #include "wiSpriteFont.h"
 #include "wiImage.h"
 #include "wiLua.h"
+#include "wiInput.h"
 
 #include <mutex>
 #include <sstream>
@@ -60,6 +61,35 @@ namespace wiBackLog
 	}
 	void Update() 
 	{
+		if (wiInput::Press(wiInput::KEYBOARD_BUTTON_HOME))
+		{
+			Toggle();
+		}
+
+		if (isActive)
+		{
+			if (wiInput::Press(wiInput::KEYBOARD_BUTTON_UP))
+			{
+				historyPrev();
+			}
+			if (wiInput::Press(wiInput::KEYBOARD_BUTTON_DOWN))
+			{
+				historyNext();
+			}
+			if (wiInput::Press(wiInput::KEYBOARD_BUTTON_ENTER))
+			{
+				acceptInput();
+			}
+			if (wiInput::Down(wiInput::KEYBOARD_BUTTON_PAGEUP))
+			{
+				Scroll(10);
+			}
+			if (wiInput::Down(wiInput::KEYBOARD_BUTTON_PAGEDOWN))
+			{
+				Scroll(-10);
+			}
+		}
+
 		if (state == DEACTIVATING)
 			pos -= speed;
 		else if (state == ACTIVATING)

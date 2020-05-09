@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include <functional>
 
 namespace wiHelper
 {
@@ -78,12 +79,7 @@ namespace wiHelper
 		std::string description;
 		std::vector<std::string> extensions;
 	};
-	struct FileDialogResult
-	{
-		bool ok = false;
-		std::vector<std::string> filenames;
-	};
-	void FileDialog(const FileDialogParams& params, FileDialogResult& result);
+	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess);
 
 	void StringConvert(const std::string from, std::wstring& to);
 

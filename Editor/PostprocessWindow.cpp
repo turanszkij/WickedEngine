@@ -217,26 +217,20 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 
 		if (x == nullptr)
 		{
-			thread([&] {
-				wiHelper::FileDialogParams params;
-				wiHelper::FileDialogResult result;
-				params.type = wiHelper::FileDialogParams::OPEN;
-				params.description = "Texture";
-				params.extensions.push_back("dds");
-				params.extensions.push_back("png");
-				params.extensions.push_back("jpg");
-				params.extensions.push_back("tga");
-				wiHelper::FileDialog(params, result);
-
-				if (result.ok) {
-					string fileName = result.filenames.front();
-					editor->renderPath->setColorGradingTexture(wiResourceManager::Load(fileName));
-					if (editor->renderPath->getColorGradingTexture() != nullptr)
-					{
-						colorGradingButton->SetText(fileName);
-					}
+			wiHelper::FileDialogParams params;
+			params.type = wiHelper::FileDialogParams::OPEN;
+			params.description = "Texture";
+			params.extensions.push_back("dds");
+			params.extensions.push_back("png");
+			params.extensions.push_back("jpg");
+			params.extensions.push_back("tga");
+			wiHelper::FileDialog(params, [=](std::string fileName) {
+				editor->renderPath->setColorGradingTexture(wiResourceManager::Load(fileName));
+				if (editor->renderPath->getColorGradingTexture() != nullptr)
+				{
+					colorGradingButton->SetText(fileName);
 				}
-			}).detach();
+			});
 		}
 		else
 		{
