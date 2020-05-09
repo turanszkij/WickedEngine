@@ -21,8 +21,8 @@ namespace wiInput
 #define KEY_DOWN(vk_code) (GetAsyncKeyState(vk_code) < 0)
 #define KEY_TOGGLE(vk_code) ((GetAsyncKeyState(vk_code) & 1) != 0)
 #else
-#define KEY_DOWN(vk_code) ((int)Windows::UI::Core::CoreWindow::GetForCurrentThread()->GetAsyncKeyState((Windows::System::VirtualKey)vk_code) < 0)
-#define KEY_TOGGLE(vk_code) (((int)Windows::UI::Core::CoreWindow::GetForCurrentThread()->GetAsyncKeyState((Windows::System::VirtualKey)vk_code) & 1) != 0)
+#define KEY_DOWN(vk_code) ((int)wiPlatform::GetWindow()->GetAsyncKeyState((Windows::System::VirtualKey)vk_code) < 0)
+#define KEY_TOGGLE(vk_code) (((int)wiPlatform::GetWindow()->GetAsyncKeyState((Windows::System::VirtualKey)vk_code) & 1) != 0)
 #endif //PLATFORM_UWP
 #define KEY_UP(vk_code) (!KEY_DOWN(vk_code))
 
@@ -74,24 +74,30 @@ namespace wiInput
 	{
 		auto p = pointer->CurrentPoint;
 
-		mouse.position = XMFLOAT2(p->Position.X, p->Position.Y);
+		if (p->Properties->IsPrimary)
+		{
+			mouse.position = XMFLOAT2(p->Position.X, p->Position.Y);
 
-		mouse.left_button_press = p->Properties->IsLeftButtonPressed;
-		mouse.middle_button_press = p->Properties->IsMiddleButtonPressed;
-		mouse.right_button_press = p->Properties->IsRightButtonPressed;
+			mouse.left_button_press = p->Properties->IsLeftButtonPressed;
+			mouse.middle_button_press = p->Properties->IsMiddleButtonPressed;
+			mouse.right_button_press = p->Properties->IsRightButtonPressed;
+		}
 
 		Touch touch;
 		touch.state = Touch::TOUCHSTATE_PRESSED;
-		touch.pos = mouse.position;
+		touch.pos = XMFLOAT2(p->Position.X, p->Position.Y);
 		touches.push_back(touch);
 	}
 	void OnPointerReleased(CoreWindow^ window, PointerEventArgs^ pointer)
 	{
 		auto p = pointer->CurrentPoint;
 
-		mouse.left_button_press = p->Properties->IsLeftButtonPressed;
-		mouse.middle_button_press = p->Properties->IsMiddleButtonPressed;
-		mouse.right_button_press = p->Properties->IsRightButtonPressed;
+		if (p->Properties->IsPrimary)
+		{
+			mouse.left_button_press = p->Properties->IsLeftButtonPressed;
+			mouse.middle_button_press = p->Properties->IsMiddleButtonPressed;
+			mouse.right_button_press = p->Properties->IsRightButtonPressed;
+		}
 
 		Touch touch;
 		touch.state = Touch::TOUCHSTATE_RELEASED;
@@ -102,18 +108,24 @@ namespace wiInput
 	{
 		auto p = pointer->CurrentPoint;
 
-		mouse.position = XMFLOAT2(p->Position.X, p->Position.Y);
+		if (p->Properties->IsPrimary)
+		{
+			mouse.position = XMFLOAT2(p->Position.X, p->Position.Y);
+		}
 
 		Touch touch;
 		touch.state = Touch::TOUCHSTATE_MOVED;
-		touch.pos = mouse.position;
+		touch.pos = XMFLOAT2(p->Position.X, p->Position.Y);
 		touches.push_back(touch);
 	}
 	void OnPointerWheelChanged(CoreWindow^ window, PointerEventArgs^ pointer)
 	{
 		auto p = pointer->CurrentPoint;
 
-		mouse.delta_wheel += (float)p->Properties->MouseWheelDelta / WHEEL_DELTA;
+		if (p->Properties->IsPrimary)
+		{
+			mouse.delta_wheel += (float)p->Properties->MouseWheelDelta / WHEEL_DELTA;
+		}
 
 		Touch touch;
 		touch.state = Touch::TOUCHSTATE_RELEASED;
@@ -155,7 +167,7 @@ namespace wiInput
 		static bool isRegisteredTouch = false;
 		if (!isRegisteredTouch)
 		{
-			auto window = CoreWindow::GetForCurrentThread();
+			auto& window = wiPlatform::GetWindow();
 			window->PointerPressed += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(OnPointerPressed);
 			window->PointerReleased += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(OnPointerReleased);
 			window->PointerMoved += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(OnPointerMoved);
@@ -483,6 +495,10 @@ namespace wiInput
 		p.y = (LONG)(props.y * dpiscaling);
 		ClientToScreen(wiPlatform::GetWindow(), &p);
 		SetCursorPos(p.x, p.y);
+#else
+		auto& window = wiPlatform::GetWindow();
+		auto& bounds = window->Bounds;
+		window->PointerPosition = Point(props.x + bounds.X, props.y + bounds.Y);
 #endif
 	}
 	void HidePointer(bool value)

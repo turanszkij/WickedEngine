@@ -5,7 +5,7 @@
   xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
-  IgnorableNamespaces="uap mp">
+  IgnorableNamespaces="uap mp rescap">
 
   <Identity
     Name="b626bf72-86dc-4688-8b44-6347c7b57a82"
