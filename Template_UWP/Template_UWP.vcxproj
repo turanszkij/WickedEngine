@@ -179,6 +179,7 @@
     <PostBuildEvent>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
 xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
+      <Message>Copying assets</Message>
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>
@@ -204,6 +205,7 @@ xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
     <PostBuildEvent>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
 xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
+      <Message>Copying assets</Message>
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>
@@ -229,6 +231,7 @@ xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
     <PostBuildEvent>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
 xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
+      <Message>Copying assets</Message>
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>
@@ -254,6 +257,7 @@ xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
     <PostBuildEvent>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
 xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
+      <Message>Copying assets</Message>
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>
@@ -279,6 +283,7 @@ xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
     <PostBuildEvent>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
 xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
+      <Message>Copying assets</Message>
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>
@@ -304,6 +309,7 @@ xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
     <PostBuildEvent>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
 xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
+      <Message>Copying assets</Message>
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>
@@ -329,6 +335,7 @@ xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
     <PostBuildEvent>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
 xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
+      <Message>Copying assets</Message>
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>
@@ -354,6 +361,7 @@ xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
     <PostBuildEvent>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
 xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts</Command>
+      <Message>Copying assets</Message>
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>

@@ -180,7 +180,11 @@
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
 xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
 xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
+      <Message>Copying assets</Message>
     </PostBuildEvent>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <Link>
@@ -199,7 +203,11 @@ xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
 xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
 xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
+      <Message>Copying assets</Message>
     </PostBuildEvent>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <Link>
@@ -218,7 +226,11 @@ xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
 xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
 xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
+      <Message>Copying assets</Message>
     </PostBuildEvent>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <Link>
@@ -237,7 +249,11 @@ xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
 xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
 xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
+      <Message>Copying assets</Message>
     </PostBuildEvent>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Link>
@@ -256,7 +272,11 @@ xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
 xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
 xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
+      <Message>Copying assets</Message>
     </PostBuildEvent>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Link>
@@ -275,7 +295,11 @@ xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
 xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
 xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
+      <Message>Copying assets</Message>
     </PostBuildEvent>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Link>
@@ -294,7 +318,11 @@ xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
 xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
 xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
+      <Message>Copying assets</Message>
     </PostBuildEvent>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Link>
@@ -313,7 +341,11 @@ xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
       <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
 xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
 xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
+      <Message>Copying assets</Message>
     </PostBuildEvent>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
     <Image Include="Assets\LockScreenLogo.scale-200.png" />
