@@ -46,5 +46,8 @@
 
   <Capabilities>
 	<rescap:Capability Name="broadFileSystemAccess" />
+	<uap:Capability Name="objects3D"/>
+	<uap:Capability Name="musicLibrary"/>
+	<uap:Capability Name="picturesLibrary"/>
   </Capabilities>
 </Package>

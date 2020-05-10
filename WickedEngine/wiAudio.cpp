@@ -224,8 +224,6 @@ namespace wiAudio
 				break;
 
 			default:
-				LARGE_INTEGER li = LARGE_INTEGER();
-				li.QuadPart = dwChunkDataSize;
 				pos += dwChunkDataSize;
 			}
 

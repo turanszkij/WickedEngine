@@ -1032,6 +1032,7 @@ bool LoadShader(SHADERSTAGE stage, wiGraphics::Shader& shader, const std::string
 	{
 		return GetDevice()->CreateShader(stage, buffer.data(), buffer.size(), &shader);
 	}
+	wiHelper::messageBox("Shader not found: " + SHADERPATH + filename);
 	return false;
 }
 

@@ -362,10 +362,6 @@ namespace wiHelper
 			return true;
 	}
 #else
-		if (!FileExists(fileName))
-		{
-			return false;
-		}
 		using namespace concurrency;
 		using namespace Platform;
 		using namespace Windows::Storage;
@@ -390,7 +386,7 @@ namespace wiHelper
 				}
 				catch (Platform::AccessDeniedException^ e)
 				{
-					messageBox("Opening file failed: " + fileName + " , please allow file system access permission!", "Error!");
+					messageBox("Opening file failed: " + fileName + "\nPlease allow file system access permission!", "Error!");
 					end0 = true;
 					return;
 				}
@@ -428,8 +424,8 @@ namespace wiHelper
 		}
 #endif // PLATFORM_UWP
 
-			messageBox("File not found: " + fileName);
-			return false;
+		wiBackLog::post(("File not found: " + fileName).c_str());
+		return false;
 	}
 
 	bool FileWrite(const std::string& fileName, const uint8_t* data, size_t size)
@@ -523,7 +519,7 @@ namespace wiHelper
 				}
 				catch (Platform::AccessDeniedException^ e)
 				{
-					messageBox("Opening file failed: " + fileName + " , please allow file system access permission!", "Error!");
+					messageBox("Opening file failed: " + fileName + "\nPlease allow file system access permission!", "Error!");
 					end0 = true;
 					return;
 				}
