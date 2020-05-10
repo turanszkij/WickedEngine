@@ -57,6 +57,12 @@ namespace wiResourceManager
 			return resource;
 		}
 
+		std::vector<uint8_t> filedata;
+		if (!wiHelper::FileRead(name, filedata))
+		{
+			resource.reset();
+			return nullptr;
+		}
 
 		std::string ext = wiHelper::toUpper(name.substr(name.length() - 3, name.length()));
 		wiResource::DATA_TYPE type;
@@ -85,7 +91,7 @@ namespace wiResourceManager
 				// Load dds
 
 				tinyddsloader::DDSFile dds;
-				auto result = dds.Load(name.c_str());
+				auto result = dds.Load(std::move(filedata));
 
 				if (result == tinyddsloader::Result::Success)
 				{
@@ -226,7 +232,7 @@ namespace wiResourceManager
 
 				const int channelCount = 4;
 				int width, height, bpp;
-				unsigned char* rgb = stbi_load(name.c_str(), &width, &height, &bpp, channelCount);
+				unsigned char* rgb = stbi_load_from_memory(filedata.data(), (int)filedata.size(), &width, &height, &bpp, channelCount);
 
 				if (rgb != nullptr)
 				{
@@ -275,7 +281,7 @@ namespace wiResourceManager
 		case wiResource::SOUND:
 		{
 			wiAudio::Sound* sound = new wiAudio::Sound;
-			if (wiAudio::CreateSound(name, sound))
+			if (wiAudio::CreateSound(filedata, sound))
 			{
 				success = sound;
 			}

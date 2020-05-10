@@ -23,14 +23,8 @@ wiArchive::wiArchive(const std::string& fileName, bool readMode) : fileName(file
 	{
 		if (readMode)
 		{
-			ifstream file(fileName, ios::binary | ios::ate);
-			if (file.is_open())
+			if (wiHelper::FileRead(fileName, DATA))
 			{
-				size_t dataSize = (size_t)file.tellg();
-				file.seekg(0, file.beg);
-				DATA.resize((size_t)dataSize);
-				file.read((char*)DATA.data(), dataSize);
-				file.close();
 				(*this) >> version;
 				if (version < __archiveVersionBarrier)
 				{
@@ -98,20 +92,7 @@ void wiArchive::Close()
 
 bool wiArchive::SaveFile(const std::string& fileName)
 {
-	if (pos <= 0)
-	{
-		return false;
-	}
-
-	ofstream file(fileName, ios::binary | ios::trunc);
-	if (file.is_open())
-	{
-		file.write((const char*)DATA.data(), (streamsize)pos);
-		file.close();
-		return true;
-	}
-
-	return false;
+	return wiHelper::FileWrite(fileName, DATA.data(), pos);
 }
 
 string wiArchive::GetSourceDirectory() const

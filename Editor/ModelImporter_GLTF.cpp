@@ -6,6 +6,7 @@
 #include "Utility/stb_image.h"
 
 #define TINYGLTF_IMPLEMENTATION
+#define TINYGLTF_NO_FS
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #include "tiny_gltf.h"
@@ -26,6 +27,69 @@ static const bool transform_to_LH = true;
 
 namespace tinygltf
 {
+
+	bool FileExists(const std::string& abs_filename, void*) {
+		return wiHelper::FileExists(abs_filename);
+	}
+
+	std::string ExpandFilePath(const std::string& filepath, void*) {
+#ifdef _WIN32
+		DWORD len = ExpandEnvironmentStringsA(filepath.c_str(), NULL, 0);
+		char* str = new char[len];
+		ExpandEnvironmentStringsA(filepath.c_str(), str, len);
+
+		std::string s(str);
+
+		delete[] str;
+
+		return s;
+#else
+
+#if defined(TARGET_OS_IPHONE) || defined(TARGET_IPHONE_SIMULATOR) || \
+    defined(__ANDROID__) || defined(__EMSCRIPTEN__)
+		// no expansion
+		std::string s = filepath;
+#else
+		std::string s;
+		wordexp_t p;
+
+		if (filepath.empty()) {
+			return "";
+		}
+
+		// char** w;
+		int ret = wordexp(filepath.c_str(), &p, 0);
+		if (ret) {
+			// err
+			s = filepath;
+			return s;
+		}
+
+		// Use first element only.
+		if (p.we_wordv) {
+			s = std::string(p.we_wordv[0]);
+			wordfree(&p);
+		}
+		else {
+			s = filepath;
+		}
+
+#endif
+
+		return s;
+#endif
+	}
+
+	bool ReadWholeFile(std::vector<unsigned char>* out, std::string* err,
+		const std::string& filepath, void*) {
+		return wiHelper::FileRead(filepath, *out);
+	}
+
+	bool WriteWholeFile(std::string* err, const std::string& filepath,
+		const std::vector<unsigned char>& contents, void*) {
+		return wiHelper::FileWrite(filepath, contents.data(), contents.size());
+	}
+
 	bool LoadImageData(Image *image, const int image_idx, std::string *err,
 		std::string *warn, int req_width, int req_height,
 		const unsigned char *bytes, int size, void *)
@@ -297,6 +361,14 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	tinygltf::TinyGLTF loader;
 	std::string err;
 	std::string warn;
+	bool ret;
+
+	tinygltf::FsCallbacks callbacks;
+	callbacks.ReadWholeFile = tinygltf::ReadWholeFile;
+	callbacks.WriteWholeFile = tinygltf::WriteWholeFile;
+	callbacks.FileExists = tinygltf::FileExists;
+	callbacks.ExpandFilePath = tinygltf::ExpandFilePath;
+	loader.SetFsCallbacks(callbacks);
 
 	loader.SetImageLoader(tinygltf::LoadImageData, nullptr);
 	loader.SetImageWriter(tinygltf::WriteImageData, nullptr);
@@ -304,15 +376,31 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	LoaderState state;
 	state.scene = &scene;
 
-	bool ret;
-	if (!extension.compare("GLTF"))
+	std::vector<uint8_t> filedata;
+	ret = wiHelper::FileRead(fileName, filedata);
+
+	if (ret)
 	{
-		ret = loader.LoadASCIIFromFile(&state.gltfModel, &err, &warn, fileName);
+		std::string basedir = tinygltf::GetBaseDir(fileName);
+
+		if (!extension.compare("GLTF"))
+		{
+			ret = loader.LoadASCIIFromString(&state.gltfModel, &err, &warn, 
+				reinterpret_cast<const char*>(&filedata.at(0)),
+				static_cast<unsigned int>(filedata.size()), basedir);
+		}
+		else
+		{
+			ret = loader.LoadBinaryFromMemory(&state.gltfModel, &err, &warn,
+				filedata.data(),
+				static_cast<unsigned int>(filedata.size()), basedir);
+		}
 	}
 	else
 	{
-		ret = loader.LoadBinaryFromFile(&state.gltfModel, &err, &warn, fileName); // for binary glTF(.glb) 
+		err = "Failed to read file: " + fileName;
 	}
+
 	if (!ret) {
 		wiHelper::messageBox(err, "GLTF error!");
 	}

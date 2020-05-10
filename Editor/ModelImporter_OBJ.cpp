@@ -5,12 +5,69 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
-#include <fstream>
+#include <istream>
+#include <streambuf>
 
 using namespace std;
 using namespace wiGraphics;
 using namespace wiScene;
 using namespace wiECS;
+
+struct membuf : std::streambuf
+{
+	membuf(char* begin, char* end) {
+		this->setg(begin, begin, end);
+	}
+};
+
+// Custom material file reader:
+class MaterialFileReader : public tinyobj::MaterialReader {
+public:
+	explicit MaterialFileReader(const std::string& mtl_basedir)
+		: m_mtlBaseDir(mtl_basedir) {}
+	virtual ~MaterialFileReader() {}
+	virtual bool operator()(const std::string& matId,
+		std::vector<tinyobj::material_t>* materials,
+		std::map<std::string, int>* matMap, std::string* err)
+	{
+		std::string filepath;
+
+		if (!m_mtlBaseDir.empty()) {
+			filepath = std::string(m_mtlBaseDir) + matId;
+		}
+		else {
+			filepath = matId;
+		}
+
+		std::vector<uint8_t> filedata;
+		if (!wiHelper::FileRead(filepath, filedata))
+		{
+			std::stringstream ss;
+			ss << "WARN: Material file [ " << filepath << " ] not found." << std::endl;
+			if (err) {
+				(*err) += ss.str();
+			}
+			return false;
+		}
+
+		membuf sbuf((char*)filedata.data(), (char*)filedata.data() + filedata.size());
+		std::istream matIStream(&sbuf);
+
+		std::string warning;
+		LoadMtl(matMap, materials, &matIStream, &warning);
+
+		if (!warning.empty()) {
+			if (err) {
+				(*err) += warning;
+			}
+		}
+
+		return true;
+	}
+
+private:
+	std::string m_mtlBaseDir;
+};
 
 // Transform the data from OBJ space to engine-space:
 static const bool transform_to_LH = true;
@@ -26,7 +83,20 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 	vector<tinyobj::material_t> obj_materials;
 	string obj_errors;
 
-	bool success = tinyobj::LoadObj(&obj_attrib, &obj_shapes, &obj_materials, &obj_errors, fileName.c_str(), directory.c_str(), true);
+	std::vector<uint8_t> filedata;
+	bool success = wiHelper::FileRead(fileName, filedata);
+
+	if (success)
+	{
+		membuf sbuf((char*)filedata.data(), (char*)filedata.data() + filedata.size());
+		std::istream in(&sbuf);
+		MaterialFileReader matFileReader(directory);
+		success = tinyobj::LoadObj(&obj_attrib, &obj_shapes, &obj_materials, &obj_errors, &in, &matFileReader, true);
+	}
+	else
+	{
+		obj_errors = "Failed to read file: " + fileName;
+	}
 
 	if (!obj_errors.empty())
 	{

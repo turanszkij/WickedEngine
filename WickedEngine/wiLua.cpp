@@ -1,6 +1,7 @@
 #include "wiLua.h"
 #include "wiLua_Globals.h"
 #include "wiBackLog.h"
+#include "wiHelper.h"
 #include "MainComponent_BindLua.h"
 #include "RenderPath_BindLua.h"
 #include "RenderPath2D_BindLua.h"
@@ -27,10 +28,28 @@
 
 #include <sstream>
 #include <memory>
+#include <vector>
 
 using namespace std;
 
 #define WILUA_ERROR_PREFIX "[Lua Error] "
+
+int Internal_DoFile(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+
+	if (argc > 0)
+	{
+		std::string filename = wiLua::SGetString(L, 1);
+		wiLua::GetGlobal()->RunFile(filename);
+	}
+	else
+	{
+		wiLua::SError(L, "dofile(string filename) not enough arguments!");
+	}
+
+	return 0;
+}
 
 wiLua::wiLua()
 {
@@ -38,6 +57,7 @@ wiLua::wiLua()
 	m_luaState = luaL_newstate();
 	luaL_openlibs(m_luaState);
 	RegisterFunc("debugout", DebugOut);
+	RegisterFunc("dofile", Internal_DoFile);
 	RunText(wiLua_Globals);
 }
 
@@ -134,16 +154,23 @@ void wiLua::PostErrorMsg(bool todebug, bool tobacklog)
 }
 bool wiLua::RunFile(const std::string& filename)
 {
-	lock.lock();
-	m_status = luaL_loadfile(m_luaState, filename.c_str());
-	lock.unlock();
-	
-	if (Success()) {
-		return RunScript();
+	std::vector<uint8_t> filedata;
+	if (wiHelper::FileRead(filename, filedata))
+	{
+		return RunText(string(filedata.begin(), filedata.end()));
 	}
-
-	PostErrorMsg();
 	return false;
+
+	//lock.lock();
+	//m_status = luaL_loadfile(m_luaState, filename.c_str());
+	//lock.unlock();
+	//
+	//if (Success()) {
+	//	return RunScript();
+	//}
+
+	//PostErrorMsg();
+	//return false;
 }
 bool wiLua::RunText(const std::string& script)
 {

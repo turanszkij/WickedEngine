@@ -82,7 +82,7 @@ namespace wiFont_Internal
 		void Create(const string& newName)
 		{
 			name = newName;
-			wiHelper::readByteData(newName, fontBuffer);
+			wiHelper::FileRead(newName, fontBuffer);
 
 			int offset = stbtt_GetFontOffsetForIndex(fontBuffer.data(), 0);
 

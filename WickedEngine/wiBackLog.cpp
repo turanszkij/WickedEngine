@@ -66,7 +66,7 @@ namespace wiBackLog
 			Toggle();
 		}
 
-		if (isActive)
+		if (isActive())
 		{
 			if (wiInput::Press(wiInput::KEYBOARD_BUTTON_UP))
 			{

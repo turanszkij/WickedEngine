@@ -33,8 +33,6 @@ namespace wiHelper
 
 	std::string toUpper(const std::string& s);
 
-	bool readByteData(const std::string& fileName, std::vector<uint8_t>& data);
-
 	void messageBox(const std::string& msg, const std::string& caption = "Warning!");
 
 	void screenshot(const std::string& name = "");
@@ -55,8 +53,6 @@ namespace wiHelper
 
 	bool SetWorkingDirectory(const std::string& path);
 
-	void GetFilesInDirectory(std::vector<std::string> &out, const std::string &directory);
-
 	void SplitPath(const std::string& fullPath, std::string& dir, std::string& fileName);
 
 	std::string GetFileNameFromPath(const std::string& fullPath);
@@ -66,6 +62,10 @@ namespace wiHelper
 	std::string GetExtensionFromFileName(const std::string& filename);
 
 	void RemoveExtensionFromFileName(std::string& filename);
+
+	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data);
+
+	bool FileWrite(const std::string& fileName, const uint8_t* data, size_t size);
 
 	bool FileExists(const std::string& fileName);
 
@@ -81,9 +81,9 @@ namespace wiHelper
 	};
 	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess);
 
-	void StringConvert(const std::string from, std::wstring& to);
+	void StringConvert(const std::string& from, std::wstring& to);
 
-	void StringConvert(const std::wstring from, std::string& to);
+	void StringConvert(const std::wstring& from, std::string& to);
 
 	// Parameter - to - must be pre-allocated!
 	// returns result string length

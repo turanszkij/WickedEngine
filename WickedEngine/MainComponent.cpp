@@ -121,6 +121,8 @@ void MainComponent::Run()
 		wiLua::GetGlobal()->RunFile("startup.lua");
 	}
 
+	wiPlatform::PopMessages();
+
 	wiProfiler::BeginFrame();
 
 	deltaTime = float(std::max(0.0, timer.elapsed() / 1000.0));

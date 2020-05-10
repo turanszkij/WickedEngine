@@ -1028,7 +1028,7 @@ Shader tiledLightingCS[TILEDLIGHTING_TYPE_COUNT][TILEDLIGHTING_CULLING_COUNT][TI
 bool LoadShader(SHADERSTAGE stage, wiGraphics::Shader& shader, const std::string& filename)
 {
 	vector<uint8_t> buffer;
-	if (wiHelper::readByteData(SHADERPATH + filename, buffer)) 
+	if (wiHelper::FileRead(SHADERPATH + filename, buffer)) 
 	{
 		return GetDevice()->CreateShader(stage, buffer.data(), buffer.size(), &shader);
 	}

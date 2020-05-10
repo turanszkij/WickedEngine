@@ -196,11 +196,9 @@ namespace wiAudio
 		}
 	}
 
-	HRESULT FindChunk(HANDLE hFile, DWORD fourcc, DWORD& dwChunkSize, DWORD& dwChunkDataPosition)
+	bool FindChunk(const uint8_t* data, DWORD fourcc, DWORD& dwChunkSize, DWORD& dwChunkDataPosition)
 	{
-		HRESULT hr = S_OK;
-		if (INVALID_SET_FILE_POINTER == SetFilePointerEx(hFile, LARGE_INTEGER(), NULL, FILE_BEGIN))
-			return HRESULT_FROM_WIN32(GetLastError());
+		size_t pos = 0;
 
 		DWORD dwChunkType;
 		DWORD dwChunkDataSize;
@@ -209,29 +207,26 @@ namespace wiAudio
 		DWORD bytesRead = 0;
 		DWORD dwOffset = 0;
 
-		while (hr == S_OK)
+		while(true)
 		{
-			DWORD dwRead;
-			if (0 == ReadFile(hFile, &dwChunkType, sizeof(DWORD), &dwRead, NULL))
-				hr = HRESULT_FROM_WIN32(GetLastError());
-
-			if (0 == ReadFile(hFile, &dwChunkDataSize, sizeof(DWORD), &dwRead, NULL))
-				hr = HRESULT_FROM_WIN32(GetLastError());
+			memcpy(&dwChunkType, data + pos, sizeof(DWORD));
+			pos += sizeof(DWORD);
+			memcpy(&dwChunkDataSize, data + pos, sizeof(DWORD));
+			pos += sizeof(DWORD);
 
 			switch (dwChunkType)
 			{
 			case fourccRIFF:
 				dwRIFFDataSize = dwChunkDataSize;
 				dwChunkDataSize = 4;
-				if (0 == ReadFile(hFile, &dwFileType, sizeof(DWORD), &dwRead, NULL))
-					hr = HRESULT_FROM_WIN32(GetLastError());
+				memcpy(&dwFileType, data + pos, sizeof(DWORD));
+				pos += sizeof(DWORD);
 				break;
 
 			default:
 				LARGE_INTEGER li = LARGE_INTEGER();
 				li.QuadPart = dwChunkDataSize;
-				if (INVALID_SET_FILE_POINTER == SetFilePointerEx(hFile, li, NULL, FILE_CURRENT))
-					return HRESULT_FROM_WIN32(GetLastError());
+				pos += dwChunkDataSize;
 			}
 
 			dwOffset += sizeof(DWORD) * 2;
@@ -240,84 +235,57 @@ namespace wiAudio
 			{
 				dwChunkSize = dwChunkDataSize;
 				dwChunkDataPosition = dwOffset;
-				return S_OK;
+				return true;
 			}
 
 			dwOffset += dwChunkDataSize;
 
-			if (bytesRead >= dwRIFFDataSize) return S_FALSE;
+			if (bytesRead >= dwRIFFDataSize) return false;
 
 		}
 
-		return S_OK;
+		return true;
 
-	}
-	HRESULT ReadChunkData(HANDLE hFile, void* buffer, DWORD buffersize, DWORD bufferoffset)
-	{
-		HRESULT hr = S_OK;
-
-		LARGE_INTEGER li = LARGE_INTEGER();
-		li.QuadPart = bufferoffset;
-		if (INVALID_SET_FILE_POINTER == SetFilePointerEx(hFile, li, NULL, FILE_BEGIN))
-			return HRESULT_FROM_WIN32(GetLastError());
-		DWORD dwRead;
-		if (0 == ReadFile(hFile, buffer, buffersize, &dwRead, NULL))
-			hr = HRESULT_FROM_WIN32(GetLastError());
-		return hr;
 	}
 
 	bool CreateSound(const std::string& filename, Sound* sound)
 	{
+		std::vector<uint8_t> filedata;
+		bool success = wiHelper::FileRead(filename, filedata);
+		if (!success)
+		{
+			return false;
+		}
+		return CreateSound(filedata, sound);
+	}
+	bool CreateSound(const std::vector<uint8_t>& data, Sound* sound)
+	{
 		std::shared_ptr<SoundInternal> soundinternal = std::make_shared<SoundInternal>();
 		sound->internal_state = soundinternal;
-
-		std::wstring wfilename;
-		wiHelper::StringConvert(filename, wfilename);
-
-		HANDLE hFile = CreateFile2(
-			wfilename.c_str(),
-			GENERIC_READ,
-			FILE_SHARE_READ,
-			OPEN_EXISTING,
-			nullptr
-		);
-
-		HRESULT hr;
-		if (INVALID_HANDLE_VALUE == hFile)
-		{
-			hr = HRESULT_FROM_WIN32(GetLastError());
-			return false;
-		}
-
-		if (INVALID_SET_FILE_POINTER == SetFilePointerEx(hFile, LARGE_INTEGER(), NULL, FILE_BEGIN))
-		{
-			hr = HRESULT_FROM_WIN32(GetLastError());
-			return false;
-		}
 
 		DWORD dwChunkSize;
 		DWORD dwChunkPosition;
 
-		FindChunk(hFile, fourccRIFF, dwChunkSize, dwChunkPosition);
+		bool success;
+
+		success = FindChunk(data.data(), fourccRIFF, dwChunkSize, dwChunkPosition);
+		assert(success);
 		DWORD filetype;
-		hr = ReadChunkData(hFile, &filetype, sizeof(DWORD), dwChunkPosition);
-		assert(SUCCEEDED(hr));
+		memcpy(&filetype, data.data() + dwChunkPosition, sizeof(DWORD));
 		assert(filetype == fourccWAVE);
 
 		soundinternal->audio = audio;
 
-		hr = FindChunk(hFile, fourccFMT, dwChunkSize, dwChunkPosition);
-		assert(SUCCEEDED(hr));
-		hr = ReadChunkData(hFile, &soundinternal->wfx, dwChunkSize, dwChunkPosition);
-		assert(SUCCEEDED(hr));
+		success = FindChunk(data.data(), fourccFMT, dwChunkSize, dwChunkPosition);
+		assert(success);
+		memcpy(&soundinternal->wfx, data.data() + dwChunkPosition, dwChunkSize);
 		soundinternal->wfx.wFormatTag = WAVE_FORMAT_PCM;
 
-		hr = FindChunk(hFile, fourccDATA, dwChunkSize, dwChunkPosition);
-		assert(SUCCEEDED(hr));
+		success = FindChunk(data.data(), fourccDATA, dwChunkSize, dwChunkPosition);
+		assert(success);
 
 		soundinternal->audioData.resize(dwChunkSize);
-		hr = ReadChunkData(hFile, soundinternal->audioData.data(), dwChunkSize, dwChunkPosition);
-		assert(SUCCEEDED(hr));
+		memcpy(soundinternal->audioData.data(), data.data() + dwChunkPosition, dwChunkSize);
 
 		return true;
 	}

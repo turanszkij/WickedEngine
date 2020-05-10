@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace wiAudio
 {
@@ -35,6 +36,7 @@ namespace wiAudio
 	};
 
 	bool CreateSound(const std::string& filename, Sound* sound);
+	bool CreateSound(const std::vector<uint8_t>& data, Sound* sound);
 	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance);
 
 	void Play(SoundInstance* instance);
