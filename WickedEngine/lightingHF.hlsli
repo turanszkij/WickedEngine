@@ -274,20 +274,6 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 float cot(float x) { return cos(x) / sin(x); }
 float acot(float x) { return atan(1 / x); }
 
-// Return the closest point on the line (without limit) 
-float3 ClosestPointOnLine(float3 a, float3 b, float3 c)
-{
-	float3 ab = b - a;
-	float t = dot(c - a, ab) / dot(ab, ab);
-	return a + t * ab;
-}
-// Return the closest point on the segment (with limit) 
-float3 ClosestPointOnSegment(float3 a, float3 b, float3 c)
-{
-	float3 ab = b - a;
-	float t = dot(c - a, ab) / dot(ab, ab);
-	return a + saturate(t) * ab;
-}
 float RightPyramidSolidAngle(float dist, float halfWidth, float halfHeight)
 {
 	float a = halfWidth;

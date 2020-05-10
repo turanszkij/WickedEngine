@@ -631,4 +631,19 @@ float Trace_disk(float3 o, float3 d, float3 diskCenter, float diskRadius, float3
 	return dot(diff, diff) < sqr(diskRadius);
 }
 
+// Return the closest point on the line (without limit) 
+float3 ClosestPointOnLine(float3 a, float3 b, float3 c)
+{
+	float3 ab = b - a;
+	float t = dot(c - a, ab) / dot(ab, ab);
+	return a + t * ab;
+}
+// Return the closest point on the segment (with limit) 
+float3 ClosestPointOnSegment(float3 a, float3 b, float3 c)
+{
+	float3 ab = b - a;
+	float t = dot(c - a, ab) / dot(ab, ab);
+	return a + saturate(t) * ab;
+}
+
 #endif // WI_SHADER_GLOBALS_HF
