@@ -18,17 +18,6 @@
 #ifdef PLATFORM_UWP
 #include <collection.h>
 #include <ppltasks.h>
-
-// This can be used to access any file on the system, but also needs the following manifests defined:
-//		xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
-//		IgnorableNamespaces = "uap mp rescap" >
-//
-//	And also the capability:
-//		<Capabilities>
-//			<rescap:Capability Name = "broadFileSystemAccess" / >
-//		< / Capabilities>
-#define UWP_BROAD_FILESYSTEM_ACCESS
-
 #else
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
@@ -386,7 +375,7 @@ namespace wiHelper
 				}
 				catch (Platform::AccessDeniedException^ e)
 				{
-					messageBox("Opening file failed: " + fileName + "\nPlease allow file system access permission!", "Error!");
+					wiBackLog::post(("Opening file failed: " + fileName + "\nReason: Permission Denied!").c_str());
 					end0 = true;
 					return;
 				}
@@ -519,7 +508,7 @@ namespace wiHelper
 				}
 				catch (Platform::AccessDeniedException^ e)
 				{
-					messageBox("Opening file failed: " + fileName + "\nPlease allow file system access permission!", "Error!");
+					wiBackLog::post(("Opening file failed: " + fileName + "\nReason: Permission Denied!").c_str());
 					end0 = true;
 					return;
 				}
@@ -630,54 +619,9 @@ namespace wiHelper
 		{
 		case FileDialogParams::OPEN:
 		{
-#ifndef UWP_BROAD_FILESYSTEM_ACCESS
-			FolderPicker^ picker = ref new FolderPicker();
-			picker->ViewMode = PickerViewMode::List;
-			picker->SuggestedStartLocation = PickerLocationId::ComputerFolder;
-
-			for (auto& x : params.extensions)
-			{
-				wstring wstr;
-				StringConvert(x, wstr);
-				wstr = L"." + wstr;
-				picker->FileTypeFilter->Append(ref new String(wstr.c_str()));
-			}
-
-			create_task(picker->PickSingleFolderAsync()).then([=](StorageFolder^ folder) {
-				if (folder)
-				{
-					auto futureaccess = StorageApplicationPermissions::FutureAccessList;
-					futureaccess->Clear();
-					futureaccess->Add(folder);
-
-					FileOpenPicker^ filepicker = ref new FileOpenPicker();
-					filepicker->ViewMode = PickerViewMode::List;
-					filepicker->SuggestedStartLocation = PickerLocationId::ComputerFolder;
-
-					for (auto& x : params.extensions)
-					{
-						wstring wstr;
-						StringConvert(x, wstr);
-						wstr = L"." + wstr;
-						filepicker->FileTypeFilter->Append(ref new String(wstr.c_str()));
-					}
-					create_task(filepicker->PickSingleFileAsync()).then([=](StorageFile^ file) {
-						if (file)
-						{
-							wstring wstr = file->Path->Data();
-							string str;
-							StringConvert(wstr, str);
-							onSuccess(str);
-						}
-						});
-
-				}
-				});
-
-#else
 			FileOpenPicker^ picker = ref new FileOpenPicker();
 			picker->ViewMode = PickerViewMode::List;
-			picker->SuggestedStartLocation = PickerLocationId::ComputerFolder;
+			picker->SuggestedStartLocation = PickerLocationId::Objects3D;
 
 			for (auto& x : params.extensions)
 			{
@@ -688,7 +632,6 @@ namespace wiHelper
 			}
 
 			create_task(picker->PickSingleFileAsync()).then([=](StorageFile^ file) {
-
 				if (file)
 				{
 					auto futureaccess = StorageApplicationPermissions::FutureAccessList;
@@ -697,13 +640,50 @@ namespace wiHelper
 					wstring wstr = file->Path->Data();
 					string str;
 					StringConvert(wstr, str);
-					onSuccess(str);
+
+					// Need to verify that parent folder is accessible:
+					create_task(file->GetParentAsync()).then([=](StorageFolder^ folder) {
+						if (folder)
+						{
+							onSuccess(str);
+						}
+						else
+						{
+							// Folder not accessible:
+							using namespace Windows::UI::Popups;
+							auto msg = ref new MessageDialog(
+								ref new Platform::String(L"No permission to folder!\nPlease pick the current folder to receive permission!\nOtherwise, some files might fail to load."),
+								ref new Platform::String(L"Warning!")
+							);
+							create_task(msg->ShowAsync()).then([=](IUICommand^ cmd) {
+
+								FolderPicker^ folderpicker = ref new FolderPicker();
+								folderpicker->ViewMode = PickerViewMode::List;
+								folderpicker->SuggestedStartLocation = PickerLocationId::ComputerFolder;
+
+								for (auto& x : params.extensions)
+								{
+									wstring wstr;
+									StringConvert(x, wstr);
+									wstr = L"." + wstr;
+									folderpicker->FileTypeFilter->Append(ref new String(wstr.c_str()));
+								}
+
+								create_task(folderpicker->PickSingleFolderAsync()).then([=](StorageFolder^ folder) {
+									if (folder)
+									{
+										futureaccess->Add(folder);
+										onSuccess(str);
+									}
+								});
+							});
+						}
+					});
 				}
 			});
-#endif
-
 		}
 		break;
+
 		case FileDialogParams::SAVE:
 		{
 			FileSavePicker^ picker = ref new FileSavePicker();
