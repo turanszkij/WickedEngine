@@ -140,8 +140,6 @@ CameraWindow::CameraWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	cameraWindow->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 720, 100, 0));
 	cameraWindow->SetVisible(false);
-
-	ResetCam();
 }
 
 
