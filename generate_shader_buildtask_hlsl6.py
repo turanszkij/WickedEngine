@@ -1,7 +1,7 @@
 import os
 import xml.etree.ElementTree as ET
 
-tree = ET.parse('WickedEngine/WickedEngine_SHADERS.vcxproj')
+tree = ET.parse('WickedEngine/WickedEngine_SHADERS.vcxitems')
 root = tree.getroot()
 
 ## Hardcode visual studio namespace for now...
@@ -26,6 +26,7 @@ for shader in root.iter(namespace + "FxCompile"):
 
         profile = shaderprofile.text
         name = shader.attrib["Include"]
+        name = name.replace("$(MSBuildThisFileDirectory)", "")
         
         print(profile + ":   " + name)
         
@@ -52,6 +53,7 @@ for shader in root.iter(namespace + "FxCompile"):
 
         ## Append to error log:
         file.write(" 2>>../build_HLSL6_errors.log \n")
+        break
 
         
 file.write("cd .. \n")

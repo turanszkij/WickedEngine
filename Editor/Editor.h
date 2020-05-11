@@ -101,6 +101,7 @@ public:
 	wiCheckBox* physicsEnabledCheckBox = nullptr;
 	wiCheckBox* cinemaModeCheckBox = nullptr;
 	wiComboBox* renderPathComboBox = nullptr;
+	wiLabel* helpLabel = nullptr;
 
 	wiTreeList*				sceneGraphView = nullptr;
 	std::unordered_set<wiECS::Entity> scenegraphview_added_items;

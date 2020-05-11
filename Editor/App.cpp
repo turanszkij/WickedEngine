@@ -49,8 +49,7 @@ void App::Initialize(CoreApplicationView^ applicationView)
 	CoreApplication::Resuming +=
 		ref new EventHandler<Platform::Object^>(this, &App::OnResuming);
 	
-	// These folders are also copied to the executable folder in post-build script:
-	wiFont::SetFontPath("fonts/");
+	wiFont::SetFontPath("");
 	wiRenderer::SetShaderPath("shaders/");
 }
 

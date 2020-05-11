@@ -86,6 +86,7 @@ namespace wiInput
 		XMFLOAT2 position = XMFLOAT2(0, 0);
 		XMFLOAT2 delta_position = XMFLOAT2(0, 0);
 		float delta_wheel = 0;
+		float pressure = 1.0f;
 		bool left_button_press = false;
 		bool middle_button_press = false;
 		bool right_button_press = false;
@@ -117,7 +118,7 @@ namespace wiInput
 	bool Press(BUTTON button, int playerindex = 0);
 	// check if a button is held down
 	bool Hold(BUTTON button, uint32_t frames = 30, bool continuous = false, int playerIndex = 0);
-	// get pointer position (eg. mouse pointer) (.xy) + scroll delta (.z) + 1 unused (.w)
+	// get pointer position (eg. mouse pointer) (.xy) + scroll delta (.z) + pressure (.w)
 	XMFLOAT4 GetPointer();
 	// set pointer position (eg. mouse pointer)
 	void SetPointer(const XMFLOAT4& props);

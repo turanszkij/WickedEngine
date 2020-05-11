@@ -63,4 +63,56 @@
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />
   </ItemGroup>
+  <ItemGroup>
+    <Filter Include="images">
+      <UniqueIdentifier>{caf55722-5ff7-41fe-b606-f376e784aa2f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="$(MSBuildThisFileDirectory)images\arealight.dds">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)images\armature.dds">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)images\blood1.png">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)images\camera.dds">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)images\decal.dds">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)images\directional_light.dds">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)images\emitter.dds">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)images\forcefield.dds">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)images\hair.dds">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)images\leaf.dds">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)images\logo_small.png">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)images\pointlight.dds">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)images\ripple.png">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)images\sound.dds">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)images\spotlight.dds">
+      <Filter>images</Filter>
+    </Image>
+  </ItemGroup>
 </Project>

@@ -349,7 +349,7 @@ namespace wiHelper
 			file.read((char*)data.data(), dataSize);
 			file.close();
 			return true;
-	}
+		}
 #else
 		using namespace concurrency;
 		using namespace Platform;

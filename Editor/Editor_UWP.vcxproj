@@ -105,6 +105,7 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
     <Import Project="Editor_SOURCE.vcxitems" Label="Shared" />
+    <Import Project="..\WickedEngine\WickedEngine_SHADERS.vcxitems" Label="Shared" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -134,38 +135,46 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <OutDir>$(SolutionDir)BUILD\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <MultiProcFXC>true</MultiProcFXC>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <OutDir>$(SolutionDir)BUILD\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <MultiProcFXC>true</MultiProcFXC>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <OutDir>$(SolutionDir)BUILD\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <MultiProcFXC>true</MultiProcFXC>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <OutDir>$(SolutionDir)BUILD\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <MultiProcFXC>true</MultiProcFXC>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)BUILD\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <MultiProcFXC>true</MultiProcFXC>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)BUILD\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <MultiProcFXC>true</MultiProcFXC>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)BUILD\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <MultiProcFXC>true</MultiProcFXC>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)BUILD\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <MultiProcFXC>true</MultiProcFXC>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <Link>
-      <AdditionalDependencies>d2d1.lib; d3d11.lib; dxgi.lib; windowscodecs.lib; dwrite.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\arm; $(VCInstallDir)\lib\arm;../$(Platform)/$(Configuration)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
@@ -177,18 +186,24 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <PostBuildEvent>
-      <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
-xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
-xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
-      <Message>Copying assets</Message>
+      <Command>
+      </Command>
+      <Message>
+      </Message>
     </PostBuildEvent>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
     </Manifest>
+    <FxCompile>
+      <ObjectFileOutput>$(OutDir)shaders/%(Filename).cso</ObjectFileOutput>
+      <ShaderModel>5.0</ShaderModel>
+      <DisableOptimizations>false</DisableOptimizations>
+      <EnableDebuggingInformation>false</EnableDebuggingInformation>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <Link>
-      <AdditionalDependencies>d2d1.lib; d3d11.lib; dxgi.lib; windowscodecs.lib; dwrite.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\arm; $(VCInstallDir)\lib\arm;../$(Platform)/$(Configuration)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
@@ -200,18 +215,22 @@ xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <PostBuildEvent>
-      <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
-xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
-xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
-      <Message>Copying assets</Message>
+      <Command>
+      </Command>
+      <Message>
+      </Message>
     </PostBuildEvent>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
     </Manifest>
+    <FxCompile>
+      <ObjectFileOutput>$(OutDir)shaders/%(Filename).cso</ObjectFileOutput>
+      <ShaderModel>5.0</ShaderModel>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <Link>
-      <AdditionalDependencies>d2d1.lib; d3d11.lib; dxgi.lib; windowscodecs.lib; dwrite.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\arm64; $(VCInstallDir)\lib\arm64;../$(Platform)/$(Configuration)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
@@ -223,18 +242,24 @@ xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <PostBuildEvent>
-      <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
-xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
-xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
-      <Message>Copying assets</Message>
+      <Command>
+      </Command>
+      <Message>
+      </Message>
     </PostBuildEvent>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
     </Manifest>
+    <FxCompile>
+      <ObjectFileOutput>$(OutDir)shaders/%(Filename).cso</ObjectFileOutput>
+      <ShaderModel>5.0</ShaderModel>
+      <DisableOptimizations>false</DisableOptimizations>
+      <EnableDebuggingInformation>false</EnableDebuggingInformation>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <Link>
-      <AdditionalDependencies>d2d1.lib; d3d11.lib; dxgi.lib; windowscodecs.lib; dwrite.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\arm64; $(VCInstallDir)\lib\arm64;../$(Platform)/$(Configuration)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
@@ -246,18 +271,22 @@ xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <PostBuildEvent>
-      <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
-xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
-xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
-      <Message>Copying assets</Message>
+      <Command>
+      </Command>
+      <Message>
+      </Message>
     </PostBuildEvent>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
     </Manifest>
+    <FxCompile>
+      <ObjectFileOutput>$(OutDir)shaders/%(Filename).cso</ObjectFileOutput>
+      <ShaderModel>5.0</ShaderModel>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Link>
-      <AdditionalDependencies>d2d1.lib; d3d11.lib; dxgi.lib; windowscodecs.lib; dwrite.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store; $(VCInstallDir)\lib;../$(Platform)/$(Configuration)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
@@ -269,18 +298,24 @@ xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <PostBuildEvent>
-      <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
-xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
-xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
-      <Message>Copying assets</Message>
+      <Command>
+      </Command>
+      <Message>
+      </Message>
     </PostBuildEvent>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
     </Manifest>
+    <FxCompile>
+      <ObjectFileOutput>$(OutDir)shaders/%(Filename).cso</ObjectFileOutput>
+      <ShaderModel>5.0</ShaderModel>
+      <DisableOptimizations>false</DisableOptimizations>
+      <EnableDebuggingInformation>false</EnableDebuggingInformation>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Link>
-      <AdditionalDependencies>d2d1.lib; d3d11.lib; dxgi.lib; windowscodecs.lib; dwrite.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store; $(VCInstallDir)\lib;../$(Platform)/$(Configuration)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
@@ -292,18 +327,22 @@ xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <PostBuildEvent>
-      <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
-xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
-xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
-      <Message>Copying assets</Message>
+      <Command>
+      </Command>
+      <Message>
+      </Message>
     </PostBuildEvent>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
     </Manifest>
+    <FxCompile>
+      <ObjectFileOutput>$(OutDir)shaders/%(Filename).cso</ObjectFileOutput>
+      <ShaderModel>5.0</ShaderModel>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Link>
-      <AdditionalDependencies>d2d1.lib; d3d11.lib; dxgi.lib; windowscodecs.lib; dwrite.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\amd64; $(VCInstallDir)\lib\amd64;../$(Platform)/$(Configuration)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
@@ -315,18 +354,24 @@ xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <PostBuildEvent>
-      <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
-xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
-xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
-      <Message>Copying assets</Message>
+      <Command>
+      </Command>
+      <Message>
+      </Message>
     </PostBuildEvent>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
     </Manifest>
+    <FxCompile>
+      <ObjectFileOutput>$(OutDir)shaders/%(Filename).cso</ObjectFileOutput>
+      <ShaderModel>5.0</ShaderModel>
+      <DisableOptimizations>false</DisableOptimizations>
+      <EnableDebuggingInformation>false</EnableDebuggingInformation>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Link>
-      <AdditionalDependencies>d2d1.lib; d3d11.lib; dxgi.lib; windowscodecs.lib; dwrite.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories); $(VCInstallDir)\lib\store\amd64; $(VCInstallDir)\lib\amd64;../$(Platform)/$(Configuration)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
@@ -338,14 +383,18 @@ xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <PostBuildEvent>
-      <Command>xcopy /Y /E /I $(SolutionDir)WickedEngine\shaders $(OutDir)AppX\shaders
-xcopy /Y /E /I $(SolutionDir)WickedEngine\fonts $(OutDir)AppX\fonts
-xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
-      <Message>Copying assets</Message>
+      <Command>
+      </Command>
+      <Message>
+      </Message>
     </PostBuildEvent>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
     </Manifest>
+    <FxCompile>
+      <ObjectFileOutput>$(OutDir)shaders/%(Filename).cso</ObjectFileOutput>
+      <ShaderModel>5.0</ShaderModel>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <Image Include="Assets\LockScreenLogo.scale-200.png" />
@@ -368,9 +417,7 @@ xcopy /Y /E /I $(SolutionDir)Editor\images $(OutDir)AppX\images</Command>
     </AppxManifest>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\WickedEngine\WickedEngine_UWP.vcxproj">
-      <Project>{60da258f-e95f-4cf4-a46b-17d80644464b}</Project>
-    </ProjectReference>
+    <Font Include="..\WickedEngine\fonts\arial.ttf" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
