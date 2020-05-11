@@ -77,10 +77,10 @@ namespace wiInput
 		if (p->Properties->IsPrimary)
 		{
 			mouse.position = XMFLOAT2(p->Position.X, p->Position.Y);
-
 			mouse.left_button_press = p->Properties->IsLeftButtonPressed;
 			mouse.middle_button_press = p->Properties->IsMiddleButtonPressed;
 			mouse.right_button_press = p->Properties->IsRightButtonPressed;
+			mouse.pressure = p->Properties->Pressure;
 		}
 
 		Touch touch;
@@ -97,6 +97,7 @@ namespace wiInput
 			mouse.left_button_press = p->Properties->IsLeftButtonPressed;
 			mouse.middle_button_press = p->Properties->IsMiddleButtonPressed;
 			mouse.right_button_press = p->Properties->IsRightButtonPressed;
+			mouse.pressure = p->Properties->Pressure;
 		}
 
 		Touch touch;
@@ -111,6 +112,7 @@ namespace wiInput
 		if (p->Properties->IsPrimary)
 		{
 			mouse.position = XMFLOAT2(p->Position.X, p->Position.Y);
+			mouse.pressure = p->Properties->Pressure;
 		}
 
 		Touch touch;
@@ -481,9 +483,9 @@ namespace wiInput
 		GetCursorPos(&p);
 		ScreenToClient(wiPlatform::GetWindow(), &p);
 		const float dpiscaling = wiPlatform::GetDPIScaling();
-		return XMFLOAT4((float)p.x / dpiscaling, (float)p.y / dpiscaling, mouse.delta_wheel, 0);
+		return XMFLOAT4((float)p.x / dpiscaling, (float)p.y / dpiscaling, mouse.delta_wheel, mouse.pressure);
 #else
-		return XMFLOAT4(mouse.position.x, mouse.position.y, mouse.delta_wheel, 0);
+		return XMFLOAT4(mouse.position.x, mouse.position.y, mouse.delta_wheel, mouse.pressure);
 #endif
 	}
 	void SetPointer(const XMFLOAT4& props)

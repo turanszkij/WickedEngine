@@ -53,9 +53,8 @@ void App::Initialize(CoreApplicationView^ applicationView)
 	main.infoDisplay.watermark = true;
 	main.infoDisplay.resolution = true;
 	main.infoDisplay.fpsinfo = true;
-	
-	// These folders are also copied to the executable folder in post-build script:
-	wiFont::SetFontPath("fonts/");
+
+	wiFont::SetFontPath("");
 	wiRenderer::SetShaderPath("shaders/");
 }
 
