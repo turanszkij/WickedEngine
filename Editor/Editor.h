@@ -105,7 +105,7 @@ public:
 
 	wiTreeList*				sceneGraphView = nullptr;
 	std::unordered_set<wiECS::Entity> scenegraphview_added_items;
-	std::unordered_set<wiECS::Entity> scenegraphview_closed_items;
+	std::unordered_set<wiECS::Entity> scenegraphview_opened_items;
 	void PushToSceneGraphView(wiECS::Entity entity, int level);
 
 	std::unique_ptr<RenderPath3D> renderPath;

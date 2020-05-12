@@ -17,6 +17,7 @@ public:
 	int Hold(lua_State* L);
 	int GetPointer(lua_State* L);
 	int SetPointer(lua_State* L);
+	int GetPointerDelta(lua_State* L);
 	int HidePointer(lua_State* L);
 	int GetAnalog(lua_State* L);
 	int GetTouches(lua_State* L);

@@ -51,7 +51,7 @@ namespace wiHelper
 
 	std::string GetWorkingDirectory();
 
-	bool SetWorkingDirectory(const std::string& path);
+	void SetWorkingDirectory(const std::string& path);
 
 	void SplitPath(const std::string& fullPath, std::string& dir, std::string& fileName);
 
@@ -62,6 +62,8 @@ namespace wiHelper
 	std::string GetExtensionFromFileName(const std::string& filename);
 
 	void RemoveExtensionFromFileName(std::string& filename);
+
+	std::string ExpandPath(const std::string& path);
 
 	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data);
 

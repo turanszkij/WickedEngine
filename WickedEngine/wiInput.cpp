@@ -29,6 +29,8 @@ namespace wiInput
 	KeyboardState keyboard;
 	MouseState mouse;
 
+	const MouseState& GetMouseState() { return mouse; }
+
 	struct Input 
 	{
 		BUTTON button = BUTTON_NONE;
@@ -134,6 +136,13 @@ namespace wiInput
 		touch.pos = XMFLOAT2(p->Position.X, p->Position.Y);
 		touches.push_back(touch);
 	}
+
+	using namespace Windows::Devices::Input;
+	void OnMouseMoved(MouseDevice^ mouseDevice, MouseEventArgs^ args)
+	{
+		mouse.delta_position.x += static_cast<float>(args->MouseDelta.X);
+		mouse.delta_position.y += static_cast<float>(args->MouseDelta.Y);
+	}
 #endif // PLATFORM_UWP
 
 	void Initialize()
@@ -157,6 +166,7 @@ namespace wiInput
 		wiRawInput::Update();
 
 		mouse.delta_wheel = 0;
+		mouse.delta_position = XMFLOAT2(0, 0);
 		wiRawInput::GetMouseState(&mouse); // currently only the relative data can be used from this
 		wiRawInput::GetKeyboardState(&keyboard); // it contains pressed buttons as "keyboard/typewriter" like, so no continuous presses
 
@@ -174,6 +184,9 @@ namespace wiInput
 			window->PointerReleased += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(OnPointerReleased);
 			window->PointerMoved += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(OnPointerMoved);
 			window->PointerWheelChanged += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(OnPointerWheelChanged);
+
+			MouseDevice::GetForCurrentView()->MouseMoved += ref new TypedEventHandler<MouseDevice^, MouseEventArgs^>(OnMouseMoved);
+			
 			isRegisteredTouch = true;
 		}
 #endif
@@ -513,6 +526,16 @@ namespace wiInput
 		else
 		{
 			while (ShowCursor(true) < 0) {};
+		}
+#else
+		static auto cursor = wiPlatform::GetWindow()->PointerCursor;
+		if (value)
+		{
+			wiPlatform::GetWindow()->PointerCursor = nullptr;
+		}
+		else
+		{
+			wiPlatform::GetWindow()->PointerCursor = cursor;
 		}
 #endif
 	}

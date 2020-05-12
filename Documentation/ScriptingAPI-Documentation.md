@@ -744,8 +744,9 @@ Query input devices
 - Down(int code, opt int playerindex = 0) : bool result  -- Check whether a button is currently being held down
 - Press(int code, opt int playerindex = 0) : bool result  -- Check whether a button has just been pushed that wasn't before
 - Hold(int code, opt int duration = 30, opt boolean continuous = false, opt int playerindex = 0) : bool result  -- Check whether a button was being held down for a specific duration (nunmber of frames). If continuous == true, than it will also return true after the duration was reached
-- GetPointer() : Vector result
-- SetPointer(Vector pos)
+- GetPointer() : Vector result  -- get mouse pointer or primary touch position (x, y). Also returns mouse wheel delta movement (z), and pen pressure (w)
+- SetPointer(Vector pos)  -- set mouse poisition
+- GetPointerDelta() : Vector result  -- native delta mouse movement
 - HidePointer(bool visible)
 - GetAnalog(int type, opt int playerindex = 0) : Vector result  -- read analog data from gamepad. type parameter must be from GAMEPAD_ANALOG values
 - GetTouches() : Touch result[]

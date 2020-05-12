@@ -111,6 +111,8 @@ namespace wiInput
 
 	// call once per frame
 	void Update();
+
+	const MouseState& GetMouseState();
 	
 	// check if a button is down
 	bool Down(BUTTON button, int playerindex = 0);

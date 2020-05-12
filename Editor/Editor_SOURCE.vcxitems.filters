@@ -105,9 +105,6 @@
     <Image Include="$(MSBuildThisFileDirectory)images\pointlight.dds">
       <Filter>images</Filter>
     </Image>
-    <Image Include="$(MSBuildThisFileDirectory)images\ripple.png">
-      <Filter>images</Filter>
-    </Image>
     <Image Include="$(MSBuildThisFileDirectory)images\sound.dds">
       <Filter>images</Filter>
     </Image>

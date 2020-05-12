@@ -121,6 +121,12 @@ void App::Uninitialize()
 
 void App::OnActivated(CoreApplicationView^ applicationView, IActivatedEventArgs^ args)
 {
+	if (args->Kind == ActivationKind::Launch)
+	{
+		LaunchActivatedEventArgs^ launchargs = (LaunchActivatedEventArgs^)args;
+		wiStartupArguments::Parse(launchargs->Arguments->Data());
+	}
+
 	// Run() won't start until the CoreWindow is activated.
 	CoreWindow::GetForCurrentThread()->Activate();
 }
