@@ -9,6 +9,7 @@ Luna<wiInput_BindLua>::FunctionType wiInput_BindLua::methods[] = {
 	lunamethod(wiInput_BindLua, Hold),
 	lunamethod(wiInput_BindLua, GetPointer),
 	lunamethod(wiInput_BindLua, SetPointer),
+	lunamethod(wiInput_BindLua, GetPointerDelta),
 	lunamethod(wiInput_BindLua, HidePointer),
 	lunamethod(wiInput_BindLua, GetAnalog),
 	lunamethod(wiInput_BindLua, GetTouches),
@@ -106,6 +107,11 @@ int wiInput_BindLua::SetPointer(lua_State* L)
 	else
 		wiLua::SError(L, "SetPointer(Vector props) not enough arguments!");
 	return 0;
+}
+int wiInput_BindLua::GetPointerDelta(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat2(&wiInput::GetMouseState().delta_position)));
+	return 1;
 }
 int wiInput_BindLua::HidePointer(lua_State* L)
 {

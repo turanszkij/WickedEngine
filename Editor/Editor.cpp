@@ -915,7 +915,7 @@ void EditorComponent::PushToSceneGraphView(wiECS::Entity entity, int level)
 	item.level = level;
 	item.userdata = entity;
 	item.selected = IsSelected(entity);
-	item.open = scenegraphview_closed_items.count(entity) == 0;
+	item.open = scenegraphview_opened_items.count(entity) != 0;
 	const NameComponent* name = scene.names.GetComponent(entity);
 	item.name = name == nullptr ? std::to_string(entity) : name->name;
 	sceneGraphView->AddItem(item);
@@ -949,9 +949,9 @@ void EditorComponent::Update(float dt)
 		for (int i = 0; i < sceneGraphView->GetItemCount(); ++i)
 		{
 			const wiTreeList::Item& item = sceneGraphView->GetItem(i);
-			if (!item.open)
+			if (item.open)
 			{
-				scenegraphview_closed_items.insert((Entity)item.userdata);
+				scenegraphview_opened_items.insert((Entity)item.userdata);
 			}
 		}
 
@@ -981,7 +981,7 @@ void EditorComponent::Update(float dt)
 			wiTreeList::Item item;
 			item.userdata = entity;
 			item.selected = IsSelected(entity);
-			item.open = scenegraphview_closed_items.count(entity) == 0;
+			item.open = scenegraphview_opened_items.count(entity) != 0;
 			const NameComponent* name = scene.names.GetComponent(entity);
 			item.name = name == nullptr ? std::to_string(entity) : name->name;
 			sceneGraphView->AddItem(item);
@@ -1001,7 +1001,7 @@ void EditorComponent::Update(float dt)
 			wiTreeList::Item item;
 			item.userdata = entity;
 			item.selected = IsSelected(entity);
-			item.open = scenegraphview_closed_items.count(entity) == 0;
+			item.open = scenegraphview_opened_items.count(entity) != 0;
 			const NameComponent* name = scene.names.GetComponent(entity);
 			item.name = name == nullptr ? std::to_string(entity) : name->name;
 			sceneGraphView->AddItem(item);
@@ -1010,7 +1010,7 @@ void EditorComponent::Update(float dt)
 		}
 
 		scenegraphview_added_items.clear();
-		scenegraphview_closed_items.clear();
+		scenegraphview_opened_items.clear();
 	}
 
 	// Exit cinema mode:
@@ -1040,15 +1040,18 @@ void EditorComponent::Update(float dt)
 	if (wiInput::Down(wiInput::MOUSE_BUTTON_MIDDLE))
 	{
 		camControlStart = false;
+#if 0
+		// Mouse delta from previous frame:
 		xDif = currentMouse.x - originalMouse.x;
 		yDif = currentMouse.y - originalMouse.y;
+#else
+		// Mouse delta from hardware read:
+		xDif = wiInput::GetMouseState().delta_position.x;
+		yDif = wiInput::GetMouseState().delta_position.y;
+#endif
 		xDif = 0.1f * xDif * (1.0f / 60.0f);
 		yDif = 0.1f * yDif * (1.0f / 60.0f);
-#ifdef PLATFORM_UWP
-		originalMouse = currentMouse;
-#else
 		wiInput::SetPointer(originalMouse);
-#endif // PLATFORM_UWP
 		wiInput::HidePointer(true);
 	}
 	else
@@ -1344,7 +1347,7 @@ void EditorComponent::Update(float dt)
 						if (wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
 						{
 							// if water, then put a water ripple onto it:
-							wiRenderer::PutWaterRipple(wiHelper::GetOriginalWorkingDirectory() + "images/ripple.png", hovered.position);
+							wiRenderer::PutWaterRipple(wiHelper::GetOriginalWorkingDirectory() + "../images/waterripple.png", hovered.position);
 						}
 					}
 					else if (translator.selected.empty() && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))

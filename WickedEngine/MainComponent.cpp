@@ -262,6 +262,10 @@ void MainComponent::Compose(CommandList cmd)
 			ss << "[32-bit]";
 #endif
 
+#ifdef PLATFORM_UWP
+			ss << "[UWP]";
+#endif
+
 			if (dynamic_cast<GraphicsDevice_DX11*>(wiRenderer::GetDevice()))
 			{
 				ss << "[DX11]";

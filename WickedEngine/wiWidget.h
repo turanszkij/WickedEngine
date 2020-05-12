@@ -325,7 +325,7 @@ public:
 		std::string name;
 		int level = 0;
 		uint64_t userdata = 0;
-		bool open = true;
+		bool open = false;
 		bool selected = false;
 	};
 protected:

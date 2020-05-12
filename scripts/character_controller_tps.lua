@@ -147,8 +147,7 @@ Character = {
 		
 		-- read from mouse:
 		if(input.Down(MOUSE_BUTTON_RIGHT)) then
-			local mousePosNew = input.GetPointer()
-			local mouseDif = vector.Subtract(mousePosNew,self.savedPointerPos)
+			local mouseDif = input.GetPointerDelta()
 			mouseDif = mouseDif:Multiply(getDeltaTime() * 0.3)
 			diff = vector.Add(diff, mouseDif)
 			input.SetPointer(self.savedPointerPos)
@@ -285,7 +284,7 @@ Character = {
 		local waterRay = Ray(head_transform.GetPosition(),Vector(0,-1,0))
 		local w,wp,wn = Pick(waterRay,PICK_WATER)
 		if(w ~= INVALID_ENTITY and self.velocity.Length() > 2) then
-			PutWaterRipple("../Editor/images/ripple.png",wp)
+			PutWaterRipple("../images/waterripple.png",wp)
 		end
 		
 	end,

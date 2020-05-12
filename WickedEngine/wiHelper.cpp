@@ -209,19 +209,15 @@ namespace wiHelper
 		return __originalWorkingDir;
 	}
 
+	std::string workingdir = std::string(_getcwd(NULL, 0)) + "/";
 	string GetWorkingDirectory()
 	{
-		char* cwd = _getcwd(NULL, 0);
-		if (cwd != nullptr)
-		{
-			return string(cwd) + "/";
-		}
-		return "/";
+		return workingdir;
 	}
 
-	bool SetWorkingDirectory(const std::string& path)
+	void SetWorkingDirectory(const std::string& path)
 	{
-		return _chdir(path.c_str()) == 0;
+		workingdir = path;
 	}
 
 	void GetFilesInDirectory(std::vector<string>& out, const std::string& directory)
@@ -337,6 +333,34 @@ namespace wiHelper
 		}
 	}
 
+	std::string ExpandPath(const std::string& path)
+	{
+		std::string expanded = path;
+
+		// First make the path absolute if it's not (if it doesn't start with a drive letter):
+		if (expanded.find(":\\") == string::npos)
+		{
+			expanded = GetWorkingDirectory() + expanded;
+		}
+
+		// Replace all slashes with backslashes:
+#ifdef PLATFORM_UWP
+		std::replace(expanded.begin(), expanded.end(), '/', '\\');
+#endif // _WIN32
+
+		size_t pos;
+		while ((pos = expanded.find("..")) != string::npos)
+		{
+			std::string parent = expanded.substr(0, pos - 1);
+			size_t pos2 = parent.find_last_of("\\");
+			parent = parent.substr(0, pos2);
+			std::string child = expanded.substr(pos + 2);
+			expanded = parent + child;
+		}
+
+		return expanded;
+	}
+
 	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data)
 	{
 #ifndef PLATFORM_UWP
@@ -356,13 +380,8 @@ namespace wiHelper
 		using namespace Windows::Storage;
 		using namespace Windows::Storage::Streams;
 		wstring wstr;
-		string filepath = fileName;
-		if (filepath.find(":\\") == string::npos)
-		{
-			filepath = GetWorkingDirectory() + filepath;
-		}
+		string filepath = ExpandPath(fileName);
 		StringConvert(filepath, wstr);
-		std::replace(wstr.begin(), wstr.end(), '/', '\\');
 		bool success = false;
 		std::thread([&] {
 			bool end0 = false;
@@ -439,13 +458,8 @@ namespace wiHelper
 		using namespace Windows::Storage::Streams;
 		using namespace Windows::Security::Cryptography;
 		wstring wstr;
-		string filepath = fileName;
-		if (filepath.find(":\\") == string::npos)
-		{
-			filepath = GetWorkingDirectory() + filepath;
-		}
+		string filepath = ExpandPath(fileName);
 		StringConvert(filepath, wstr);
-		std::replace(wstr.begin(), wstr.end(), '/', '\\');
 		bool success = false;
 		std::thread([&] {
 			bool end0 = false;
@@ -485,17 +499,12 @@ namespace wiHelper
 		using namespace Platform;
 		using namespace Windows::Storage;
 		using namespace Windows::Storage::Streams;
-		string filepath = fileName;
-		if (filepath.find(":\\") == string::npos)
-		{
-			filepath = GetWorkingDirectory() + filepath;
-		}
+		string filepath = ExpandPath(fileName);
 		string directory, name;
 		SplitPath(filepath, directory, name);
 		wstring wdir, wname;
 		StringConvert(directory, wdir);
 		StringConvert(name, wname);
-		std::replace(wdir.begin(), wdir.end(), '/', '\\');
 		bool success = false;
 		std::thread([&] {
 			bool end0 = false;
@@ -640,6 +649,9 @@ namespace wiHelper
 					wstring wstr = file->Path->Data();
 					string str;
 					StringConvert(wstr, str);
+
+					// The desktop file picker also modifies the working directory:
+					SetWorkingDirectory(GetDirectoryFromPath(str));
 
 					// Need to verify that parent folder is accessible:
 					create_task(file->GetParentAsync()).then([=](StorageFolder^ folder) {
