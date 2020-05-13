@@ -203,13 +203,13 @@ namespace wiHelper
 		return appDir;
 	}
 
+	std::string workingdir = std::string(_getcwd(NULL, 0)) + "/";
+	const std::string __originalWorkingDir = workingdir;
 	string GetOriginalWorkingDirectory()
 	{
-		static const string __originalWorkingDir = GetWorkingDirectory();
 		return __originalWorkingDir;
 	}
 
-	std::string workingdir = std::string(_getcwd(NULL, 0)) + "/";
 	string GetWorkingDirectory()
 	{
 		return workingdir;
@@ -699,7 +699,7 @@ namespace wiHelper
 		case FileDialogParams::SAVE:
 		{
 			FileSavePicker^ picker = ref new FileSavePicker();
-			picker->SuggestedStartLocation = PickerLocationId::ComputerFolder;
+			picker->SuggestedStartLocation = PickerLocationId::Objects3D;
 
 			for (auto& x : params.extensions)
 			{
