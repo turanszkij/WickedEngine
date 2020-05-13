@@ -28,6 +28,44 @@
 
 #include <sstream>
 
+#ifdef PLATFORM_UWP
+#include <collection.h>
+#include <ppltasks.h>
+using namespace concurrency;
+using namespace Platform;
+using namespace Windows::Storage;
+using namespace Windows::Storage::Pickers;
+using namespace Windows::Storage::AccessCache;
+using namespace Windows::Foundation::Collections;
+void copy_folder(StorageFolder^ src, StorageFolder^ dst) {
+	create_task(src->GetItemsAsync()).then([=](IVectorView<IStorageItem^>^ items) {
+		for (IStorageItem^ item : items)
+		{
+			if (item->IsOfType(StorageItemTypes::File))
+			{
+				StorageFile^ file = (StorageFile^)item;
+				try {
+					file->CopyAsync(dst);
+				}
+				catch (...) {
+					// file already exists, we don't want to overwrite
+				}
+			}
+			else if (item->IsOfType(StorageItemTypes::Folder))
+			{
+				StorageFolder^ src_child = (StorageFolder^)item;
+				create_task(dst->CreateFolderAsync(item->Name, CreationCollisionOption::OpenIfExists)).then([=](StorageFolder^ dst_child) {
+					if (dst_child)
+					{
+						copy_folder(src_child, dst_child);
+					}
+				});
+			}
+		}
+	});
+};
+#endif // PLATFORM_UWP
+
 using namespace std;
 using namespace wiGraphics;
 using namespace wiRectPacker;
@@ -348,6 +386,62 @@ void EditorComponent::ResizeLayout()
 void EditorComponent::Load()
 {
 	__super::Load();
+
+#ifdef PLATFORM_UWP
+	// On UWP we will copy the base content from application folder to 3D Objects directory
+	//	for easy access to the user:
+	StorageFolder^ location = KnownFolders::Objects3D;
+
+	// Objects3D/WickedEngine
+	create_task(location->CreateFolderAsync("WickedEngine", CreationCollisionOption::OpenIfExists)).then([=](StorageFolder^ destfolder) {
+
+		string rootdir = wiHelper::ExpandPath(wiHelper::GetOriginalWorkingDirectory());
+		wstring wstr;
+
+		// images:
+		wiHelper::StringConvert(rootdir + "images\\", wstr);
+		create_task(StorageFolder::GetFolderFromPathAsync(ref new String(wstr.c_str()))).then([=](StorageFolder^ src) {
+			if (src)
+			{
+				create_task(destfolder->CreateFolderAsync("images", CreationCollisionOption::OpenIfExists)).then([=](StorageFolder^ dst) {
+					if (dst)
+					{
+						copy_folder(src, dst);
+					}
+				});
+			}
+		});
+
+		// scripts:
+		wiHelper::StringConvert(rootdir + "scripts\\", wstr);
+		create_task(StorageFolder::GetFolderFromPathAsync(ref new String(wstr.c_str()))).then([=](StorageFolder^ src) {
+			if (src)
+			{
+				create_task(destfolder->CreateFolderAsync("scripts", CreationCollisionOption::OpenIfExists)).then([=](StorageFolder^ dst) {
+					if (dst)
+					{
+						copy_folder(src, dst);
+					}
+				});
+			}
+		});
+
+		// models:
+		wiHelper::StringConvert(rootdir + "models\\", wstr);
+		create_task(StorageFolder::GetFolderFromPathAsync(ref new String(wstr.c_str()))).then([=](StorageFolder^ src) {
+			if (src)
+			{
+				create_task(destfolder->CreateFolderAsync("models", CreationCollisionOption::OpenIfExists)).then([=](StorageFolder^ dst) {
+					if (dst)
+					{
+						copy_folder(src, dst);
+					}
+				});
+			}
+		});
+
+	});
+#endif // PLATFORM_UWP
 
 	wiJobSystem::context ctx;
 	wiJobSystem::Execute(ctx, [this] { pointLightTex = wiResourceManager::Load("images/pointlight.dds"); });
