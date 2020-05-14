@@ -398,20 +398,6 @@ void EditorComponent::Load()
 		string rootdir = wiHelper::ExpandPath(wiHelper::GetOriginalWorkingDirectory());
 		wstring wstr;
 
-		// images:
-		wiHelper::StringConvert(rootdir + "images\\", wstr);
-		create_task(StorageFolder::GetFolderFromPathAsync(ref new String(wstr.c_str()))).then([=](StorageFolder^ src) {
-			if (src)
-			{
-				create_task(destfolder->CreateFolderAsync("images", CreationCollisionOption::OpenIfExists)).then([=](StorageFolder^ dst) {
-					if (dst)
-					{
-						copy_folder(src, dst);
-					}
-				});
-			}
-		});
-
 		// scripts:
 		wiHelper::StringConvert(rootdir + "scripts\\", wstr);
 		create_task(StorageFolder::GetFolderFromPathAsync(ref new String(wstr.c_str()))).then([=](StorageFolder^ src) {
@@ -432,6 +418,20 @@ void EditorComponent::Load()
 			if (src)
 			{
 				create_task(destfolder->CreateFolderAsync("models", CreationCollisionOption::OpenIfExists)).then([=](StorageFolder^ dst) {
+					if (dst)
+					{
+						copy_folder(src, dst);
+					}
+				});
+			}
+		});
+
+		// Documentation:
+		wiHelper::StringConvert(rootdir + "Documentation\\", wstr);
+		create_task(StorageFolder::GetFolderFromPathAsync(ref new String(wstr.c_str()))).then([=](StorageFolder^ src) {
+			if (src)
+			{
+				create_task(destfolder->CreateFolderAsync("Documentation", CreationCollisionOption::OpenIfExists)).then([=](StorageFolder^ dst) {
 					if (dst)
 					{
 						copy_folder(src, dst);
@@ -1441,7 +1441,7 @@ void EditorComponent::Update(float dt)
 						if (wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
 						{
 							// if water, then put a water ripple onto it:
-							wiRenderer::PutWaterRipple(wiHelper::GetOriginalWorkingDirectory() + "../images/waterripple.png", hovered.position);
+							wiRenderer::PutWaterRipple(wiHelper::GetOriginalWorkingDirectory() + "images/ripple.png", hovered.position);
 						}
 					}
 					else if (translator.selected.empty() && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))

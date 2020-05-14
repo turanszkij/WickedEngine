@@ -111,5 +111,8 @@
     <Image Include="$(MSBuildThisFileDirectory)images\spotlight.dds">
       <Filter>images</Filter>
     </Image>
+    <Image Include="$(MSBuildThisFileDirectory)images\ripple.png">
+      <Filter>images</Filter>
+    </Image>
   </ItemGroup>
 </Project>
