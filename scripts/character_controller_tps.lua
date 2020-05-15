@@ -284,7 +284,7 @@ Character = {
 		local waterRay = Ray(head_transform.GetPosition(),Vector(0,-1,0))
 		local w,wp,wn = Pick(waterRay,PICK_WATER)
 		if(w ~= INVALID_ENTITY and self.velocity.Length() > 2) then
-			PutWaterRipple("../images/waterripple.png",wp)
+			PutWaterRipple("../models/ripple.png",wp)
 		end
 		
 	end,

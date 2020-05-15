@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="images">
-      <UniqueIdentifier>{341af3e7-9353-4ed5-9a03-c6dc8d522336}</UniqueIdentifier>
-    </Filter>
     <Filter Include="models">
       <UniqueIdentifier>{1e52ef96-0bb7-4391-a08b-70de0073ef4b}</UniqueIdentifier>
     </Filter>
@@ -21,6 +18,9 @@
     </Filter>
     <Filter Include="models\dungeon">
       <UniqueIdentifier>{2ba616fc-e2c9-4af4-9099-948f45e2dd80}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Documentation">
+      <UniqueIdentifier>{c66293fd-fe0c-444e-9502-f0864bfbf736}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -183,17 +183,14 @@
     <None Include="$(MSBuildThisFileDirectory)models\water_test.wiscene">
       <Filter>models</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)Documentation\ScriptingAPI-Documentation.md">
+      <Filter>Documentation</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Documentation\WickedEngine-Documentation.md">
+      <Filter>Documentation</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="$(MSBuildThisFileDirectory)images\hp_bar.png">
-      <Filter>images</Filter>
-    </Image>
-    <Image Include="$(MSBuildThisFileDirectory)images\logo_small.png">
-      <Filter>images</Filter>
-    </Image>
-    <Image Include="$(MSBuildThisFileDirectory)images\waterripple.png">
-      <Filter>images</Filter>
-    </Image>
     <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\background.png">
       <Filter>models\Sponza\textures</Filter>
     </Image>
@@ -481,6 +478,9 @@
     </Image>
     <Image Include="$(MSBuildThisFileDirectory)models\ripple.png">
       <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\hp_bar.png">
+      <Filter>scripts</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>

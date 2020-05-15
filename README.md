@@ -2,12 +2,12 @@
 
 # Wicked Engine
 
-[![Build status][s1]][av] [![License: MIT][s3]][li] [![Discord chat][s2]][di] 
+[![Build status][s1]][av] [![License: MIT][s3]][li] [![Discord chat][s2]][di] [![Store][s8]][msstorelink]
 <a href="https://twitter.com/intent/follow?screen_name=turanszkij">
         <img src="https://img.shields.io/twitter/follow/turanszkij.svg?style=social"
             alt="follow on Twitter"></a><br/>
 Latest builds: 
-[![Editor][s4]][do64] [![Editor32][s5]][do32]
+[![Editor][s4]][do64] [![Editor32][s5]][do32] 
 [![Tests][s6]][dt64] [![Tests32][s7]][dt32] <br/>
 
 [s1]: https://ci.appveyor.com/api/projects/status/3dbcee5gd6i7qh7v?svg=true
@@ -17,6 +17,7 @@ Latest builds:
 [s5]: https://img.shields.io/badge/editor-32bit-blue.svg
 [s6]: https://img.shields.io/badge/tests-64bit-blue.svg
 [s7]: https://img.shields.io/badge/tests-32bit-blue.svg
+[s8]: https://img.shields.io/badge/-Microsoft_Store-9cf.svg
 
 [av]: https://ci.appveyor.com/project/turanszkij/wickedengine
 [di]: https://discord.gg/CFjRYmE
@@ -26,6 +27,7 @@ Latest builds:
 [dt64]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineTests.zip?branch=master&job=Platform%3A%20x64
 [dt32]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineTests.zip?branch=master&job=Platform%3A%20Win32
 [ba]: https://github.com/turanszkij/WickedEngine/tree/old-system-backup
+[msstorelink]: https://www.microsoft.com/store/productId/9PPMV065W9QJ
 
 <br/>
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/gltfanim.gif"/>

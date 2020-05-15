@@ -1307,7 +1307,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			-- HP bar, etc. sprites:
 			local renderPath = main.GetActivePath()
 
-			self.sprite_hpbar_background = Sprite("../images/hp_bar.png")
+			self.sprite_hpbar_background = Sprite("hp_bar.png")
 			local fx = self.sprite_hpbar_background.GetParams()
 			fx.SetStencilRefMode(STENCILREFMODE_USER) -- we set the stencil ref in user space
 			fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
@@ -1323,7 +1323,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			self.sprite_hpbar_background.SetParams(fx)
 			renderPath.AddSprite(self.sprite_hpbar_background)
 
-			self.sprite_hpbar_hp = Sprite("../images/hp_bar.png")
+			self.sprite_hpbar_hp = Sprite("hp_bar.png")
 			fx = self.sprite_hpbar_hp.GetParams()
 			fx.SetStencilRefMode(STENCILREFMODE_USER) -- we set the stencil ref in user space
 			fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
@@ -1339,7 +1339,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			self.sprite_hpbar_hp.SetParams(fx)
 			renderPath.AddSprite(self.sprite_hpbar_hp)
 
-			self.sprite_hpbar_pattern = Sprite("../images/hp_bar.png", "../images/hp_bar.png")
+			self.sprite_hpbar_pattern = Sprite("hp_bar.png", "hp_bar.png")
 			fx = self.sprite_hpbar_pattern.GetParams()
 			fx.SetStencilRefMode(STENCILREFMODE_USER) -- we set the stencil ref in user space
 			fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
@@ -1361,7 +1361,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			self.sprite_hpbar_pattern.SetAnim(pattern_anim)
 			renderPath.AddSprite(self.sprite_hpbar_pattern)
 
-			self.sprite_hpbar_pattern2 = Sprite("../images/hp_bar.png", "../images/hp_bar.png")
+			self.sprite_hpbar_pattern2 = Sprite("hp_bar.png", "hp_bar.png")
 			fx = self.sprite_hpbar_pattern2.GetParams()
 			fx.SetStencilRefMode(STENCILREFMODE_USER) -- we set the stencil ref in user space
 			fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
@@ -1383,7 +1383,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			self.sprite_hpbar_pattern2.SetAnim(pattern_anim)
 			renderPath.AddSprite(self.sprite_hpbar_pattern2)
 
-			self.sprite_hpbar_border = Sprite("../images/hp_bar.png")
+			self.sprite_hpbar_border = Sprite("hp_bar.png")
 			fx = self.sprite_hpbar_border.GetParams()
 			fx.SetStencilRefMode(STENCILREFMODE_USER) -- we set the stencil ref in user space
 			fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
@@ -1399,7 +1399,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			renderPath.AddSprite(self.sprite_hpbar_border)
 			
 			if(self.face > 0) then
-				self.sprite_timer = Sprite("../images/hp_bar.png")
+				self.sprite_timer = Sprite("hp_bar.png")
 				fx = self.sprite_timer.GetParams()
 				fx.SetStencilRefMode(STENCILREFMODE_USER) -- we set the stencil ref in user space
 				fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
