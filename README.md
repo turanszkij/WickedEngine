@@ -2,15 +2,13 @@
 
 # Wicked Engine
 
-[![Build status][s1]][av] [![License: MIT][s3]][li] [![Discord chat][s2]][di] 
+[![Build status][s1]][av] [![License: MIT][s3]][li] [![Discord chat][s2]][di] [![Store][s8]][msstorelink]
 <a href="https://twitter.com/intent/follow?screen_name=turanszkij">
         <img src="https://img.shields.io/twitter/follow/turanszkij.svg?style=social"
             alt="follow on Twitter"></a><br/>
 Latest builds: 
-[![Editor][s4]][do64] [![Editor32][s5]][do32]
+[![Editor][s4]][do64] [![Editor32][s5]][do32] 
 [![Tests][s6]][dt64] [![Tests32][s7]][dt32] <br/>
-Microsoft Store:
-[![Store][s8]][msstorelink]
 
 [s1]: https://ci.appveyor.com/api/projects/status/3dbcee5gd6i7qh7v?svg=true
 [s2]: https://img.shields.io/discord/602811659224088577?logo=discord
@@ -19,7 +17,7 @@ Microsoft Store:
 [s5]: https://img.shields.io/badge/editor-32bit-blue.svg
 [s6]: https://img.shields.io/badge/tests-64bit-blue.svg
 [s7]: https://img.shields.io/badge/tests-32bit-blue.svg
-[s8]: https://img.shields.io/badge/editor-UWP-blue.svg
+[s8]: https://img.shields.io/badge/-Microsoft_Store-9cf.svg
 
 [av]: https://ci.appveyor.com/project/turanszkij/wickedengine
 [di]: https://discord.gg/CFjRYmE
