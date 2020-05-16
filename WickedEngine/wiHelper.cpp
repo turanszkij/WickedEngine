@@ -7,7 +7,6 @@
 
 #include <thread>
 #include <locale>
-#include <direct.h>
 #include <chrono>
 #include <iomanip>
 #include <fstream>
@@ -15,6 +14,7 @@
 #include <codecvt> // string conversion
 
 #ifdef _WIN32
+#include <direct.h>
 #ifdef PLATFORM_UWP
 #include <collection.h>
 #include <ppltasks.h>
@@ -22,7 +22,6 @@
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
 #endif // PLATFORM_UWP
-#endif // _WIN32
 
 using namespace std;
 
@@ -791,3 +790,116 @@ namespace wiHelper
 		}
 	}
 }
+
+#else
+namespace wiHelper
+{
+	std::string toUpper(const std::string& s) {
+		assert(false);
+	}
+
+	void messageBox(const std::string& msg, const std::string& caption = "Warning!") {
+		assert(false);
+	}
+	
+	void screenshot(const std::string& name = "") {
+		assert(false);
+	}
+
+	bool saveTextureToMemory(const wiGraphics::Texture& texture, std::vector<uint8_t>& data) {
+		assert(false);
+	}
+
+	bool saveTextureToFile(const wiGraphics::Texture& texture, const std::string& fileName) {
+		assert(false);
+	}
+
+	bool saveTextureToFile(const std::vector<uint8_t>& textureData, const wiGraphics::TextureDesc& desc, const std::string& fileName) {
+		assert(false);
+	}
+
+	std::string getCurrentDateTimeAsString() {
+		assert(false);
+	}
+
+	std::string GetApplicationDirectory() {
+		assert(false);
+	}
+
+	std::string GetOriginalWorkingDirectory() {
+		assert(false);
+	}
+
+	std::string GetWorkingDirectory() {
+		assert(false);
+	}
+
+	void SetWorkingDirectory(const std::string& path) {
+		assert(false);
+	}
+
+	void SplitPath(const std::string& fullPath, std::string& dir, std::string& fileName) {
+		assert(false);
+	}
+
+	std::string GetFileNameFromPath(const std::string& fullPath) {
+		assert(false);
+	}
+
+	std::string GetDirectoryFromPath(const std::string& fullPath) {
+		assert(false);
+	}
+
+	std::string GetExtensionFromFileName(const std::string& filename) {
+		assert(false);
+	}
+
+	void RemoveExtensionFromFileName(std::string& filename) {
+		assert(false);
+	}
+
+	std::string ExpandPath(const std::string& path) {
+		assert(false);
+	}
+
+	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data) {
+		assert(false);
+	}
+
+	bool FileWrite(const std::string& fileName, const uint8_t* data, size_t size) {
+		assert(false);
+	}
+
+	bool FileExists(const std::string& fileName) {
+		assert(false);
+	}
+
+	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess) {
+		assert(false);
+	}
+
+	void StringConvert(const std::string& from, std::wstring& to) {
+		assert(false);
+	}
+
+	void StringConvert(const std::wstring& from, std::string& to) {
+		assert(false);
+	}
+
+	int StringConvert(const char* from, wchar_t* to) {
+		assert(false);
+	}
+
+	int StringConvert(const wchar_t* from, char* to) {
+		assert(false);
+	}
+
+	void Sleep(float milliseconds) {
+		assert(false);
+	}
+
+	void Spin(float milliseconds) {
+		assert(false);
+	}
+}
+#endif // _WIN32

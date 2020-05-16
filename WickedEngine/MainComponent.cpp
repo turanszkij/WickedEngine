@@ -55,17 +55,25 @@ void MainComponent::Initialize()
 		}
 		else if (wiStartupArguments::HasArgument("dx12"))
 		{
+#if _WIN32
 			if (wiStartupArguments::HasArgument("hlsl6"))
 			{
 				wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl6/");
 			}
 			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX12>(window, fullscreen, debugdevice));
+#else
+			assert(false);
+#endif
 		}
 
 		// default graphics device:
 		if (wiRenderer::GetDevice() == nullptr)
 		{
+#if _WIN32
 			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX11>(window, fullscreen, debugdevice));
+#else
+			assert(false);
+#endif
 		}
 
 	}
@@ -266,6 +274,7 @@ void MainComponent::Compose(CommandList cmd)
 			ss << "[UWP]";
 #endif
 
+#ifdef _WIN32
 			if (dynamic_cast<GraphicsDevice_DX11*>(wiRenderer::GetDevice()))
 			{
 				ss << "[DX11]";
@@ -280,8 +289,15 @@ void MainComponent::Compose(CommandList cmd)
 				ss << "[Vulkan]";
 			}
 #endif
+#else // _WIN32
+			if (!dynamic_cast<GraphicsDevice_Vulkan*>(wiRenderer::GetDevice())) {
+				ss << "Error: Vulkan is not selected as the graphics device";
+				assert(false);
+			}
+#endif // _WIN32
 
 #ifdef _DEBUG
+      |                                        ^
 			ss << "[DEBUG]";
 #endif
 			if (wiRenderer::GetDevice()->IsDebugDevice())

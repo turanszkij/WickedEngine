@@ -1,4 +1,7 @@
 #pragma once
+
+#ifdef _WIN32
+
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiPlatform.h"
@@ -434,3 +437,5 @@ namespace wiGraphics
 	};
 
 }
+
+#endif

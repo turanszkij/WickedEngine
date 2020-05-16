@@ -4,6 +4,8 @@
 
 #include <vector>
 
+#ifdef _WIN32
+
 #include <wrl/client.h> // ComPtr
 #include <xaudio2.h>
 #include <xaudio2fx.h>
@@ -493,3 +495,68 @@ namespace wiAudio
 		assert(SUCCEEDED(hr));
 	}
 }
+
+#else
+
+namespace wiAudio
+{
+
+	void Initialize() {
+		assert(false);
+	}
+
+	bool CreateSound(const std::string& filename, Sound* sound) {
+		assert(false);
+	}
+
+	bool CreateSound(const std::vector<uint8_t>& data, Sound* sound) {
+		assert(false);
+	}
+
+	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance) {
+		assert(false);
+	}
+
+	void Play(SoundInstance* instance) {
+		assert(false);
+	}
+
+	void Pause(SoundInstance* instance) {
+		assert(false);
+	}
+
+	void Stop(SoundInstance* instance) {
+		assert(false);
+	}
+
+	void SetVolume(float volume, SoundInstance* instance = nullptr) {
+		assert(false);
+	}
+
+	float GetVolume(const Sound *instance = nullptr) {
+		assert(false);
+	}
+	
+	void ExitLoop(SoundInstance* instance) {
+		assert(false);
+	}
+
+	void SetSubmixVolume(SUBMIX_TYPE type, float volume) {
+		assert(false);
+	}
+
+	float GetSubmixVolume(SUBMIX_TYPE type) {
+		assert(false);
+	}
+
+	void Update3D(SoundInstance* instance, const SoundInstance3D& instance3D) {
+		assert(false);
+	}
+
+	void SetReverb(REVERB_PRESET preset) {
+		assert(false);
+	}
+
+};
+
+#endif

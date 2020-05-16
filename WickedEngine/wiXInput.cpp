@@ -1,6 +1,6 @@
 #include "wiXInput.h"
 
-#if __has_include("xinput.h")
+#ifdef _WIN32
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -112,9 +112,20 @@ namespace wiXInput
 #else
 namespace wiXInput
 {
-	void Update() {}
-	int GetMaxControllerCount() { return 0; }
-	bool GetControllerState(wiInput::ControllerState* state, int index) { return false; }
-	void SetControllerFeedback(const wiInput::ControllerFeedback& data, int index) {}
+	void Update() {
+		assert(false);
+	}
+
+	int GetMaxControllerCount() {
+		assert(false);
+	}
+
+	bool GetControllerState(wiInput::ControllerState* state, int index) {
+		assert(false);
+	}
+
+	void SetControllerFeedback(const wiInput::ControllerFeedback& data, int index) {
+		assert(false);
+	}
 }
-#endif // __has_include("xinput.h")
+#endif // _WIN32

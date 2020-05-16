@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #include "wiPlatform.h"
 
 #ifndef PLATFORM_UWP
@@ -194,3 +195,4 @@ namespace wiNetwork
 }
 
 #endif // PLATFORM_UWP
+#endif

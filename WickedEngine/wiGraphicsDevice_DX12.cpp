@@ -1,3 +1,5 @@
+#ifdef _WIN32
+
 #include "wiGraphicsDevice_DX12.h"
 #include "wiGraphicsDevice_SharedInternals.h"
 #include "wiHelper.h"
@@ -4122,3 +4124,5 @@ using namespace DX12_Internal;
 
 
 }
+
+#endif

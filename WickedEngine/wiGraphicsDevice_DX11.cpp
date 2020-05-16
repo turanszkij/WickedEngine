@@ -1,3 +1,5 @@
+#ifdef _WIN32
+
 #include "wiGraphicsDevice_DX11.h"
 #include "wiHelper.h"
 #include "ResourceMapping.h"
@@ -3143,3 +3145,5 @@ void GraphicsDevice_DX11::SetMarker(const char* name, CommandList cmd)
 }
 
 }
+
+#endif

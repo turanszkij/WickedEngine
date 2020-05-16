@@ -3,9 +3,15 @@
 
 extern "C"
 {
+#ifdef _WIN32
 #include "LUA\lua.h"
 #include "LUA\lualib.h"
 #include "LUA\lauxlib.h"
+#else
+#include "LUA/lua.h"
+#include "LUA/lualib.h"
+#include "LUA/lauxlib.h"
+#endif
 }
 
 #include <mutex>

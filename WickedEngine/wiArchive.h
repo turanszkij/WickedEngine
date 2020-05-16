@@ -5,6 +5,10 @@
 #include <string>
 #include <vector>
 
+#ifndef _WIN32
+#include <cstring>
+#endif
+
 class wiArchive
 {
 private:

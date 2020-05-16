@@ -1,23 +1,22 @@
 - WickedEngine/CommonInclude.h
-WickedEngine/MainComponent.cpp
-WickedEngine/Matrix_BindLua.cpp
-WickedEngine/Matrix_BindLua.h
-WickedEngine/Vector_BindLua.cpp
-WickedEngine/Vector_BindLua.h
-WickedEngine/wiAudio.cpp
-WickedEngine/wiGraphicsDevice_DX11.cpp
-WickedEngine/wiGraphicsDevice_DX11.h
-WickedEngine/wiGraphicsDevice_DX12.cpp
-WickedEngine/wiGraphicsDevice_DX12.h
-WickedEngine/wiHelper.cpp
-WickedEngine/wiNetwork_UWP.cpp
-WickedEngine/wiNetwork_Windows.cpp
-WickedEngine/wiPlatform.h
-WickedEngine/wiRawInput.cpp
-WickedEngine/wiVersion.cpp
-WickedEngine/wiWidget.cpp
-WickedEngine/wiXInput.cpp
-WickedEngine/<DirectXMath library>
+- WickedEngine/MainComponent.cpp
+- WickedEngine/Matrix_BindLua.cpp
+- WickedEngine/Matrix_BindLua.h
+- WickedEngine/Vector_BindLua.cpp
+- WickedEngine/Vector_BindLua.h
+- WickedEngine/wiAudio.cpp (Empty functions added)
+- WickedEngine/wiGraphicsDevice_DX11.cpp
+- WickedEngine/wiGraphicsDevice_DX11.h
+- WickedEngine/wiGraphicsDevice_DX12.cpp
+- WickedEngine/wiGraphicsDevice_DX12.h
+- WickedEngine/wiHelper.cpp (Empty functions added)
+- WickedEngine/wiNetwork_UWP.cpp
+- WickedEngine/wiNetwork_Windows.cpp
+- WickedEngine/wiPlatform.h ?
+- WickedEngine/wiRawInput.cpp (Empty functions added)
+- WickedEngine/wiVersion.cpp (Changed version)
+- WickedEngine/wiXInput.cpp
+- WickedEngine/<DirectXMath library> (From https://github.com/stievie/DirectXMathLinux)
 
 Editor/App.cpp
 Editor/Editor.cpp
@@ -31,4 +30,4 @@ Tests/*
 
 Build system ??? (CMake / Scons)
 
-Add DirectXMath licence to other_licenses.txt
+- Add DirectXMath licence to other_licenses.txt

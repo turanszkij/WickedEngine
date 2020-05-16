@@ -28,6 +28,8 @@ namespace wiPlatform
 #else
 	using window_type = Platform::Agile<Windows::UI::Core::CoreWindow>;
 #endif // PLATFORM_UWP
+#else
+	typedef void* window_type;
 #endif // _WIN32
 
 	struct DeferredMessageBox

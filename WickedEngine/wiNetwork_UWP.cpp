@@ -1,5 +1,6 @@
 #include "wiPlatform.h"
 
+#ifdef _WIN32
 #ifdef PLATFORM_UWP
 #include "wiNetwork.h"
 #include "wiBackLog.h"
@@ -43,3 +44,4 @@ namespace wiNetwork
 }
 
 #endif // PLATFORM_UWP
+#endif

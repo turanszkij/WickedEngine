@@ -493,12 +493,32 @@ namespace wiRawInput
 #else
 namespace wiRawInput
 {
-	void Initialize() {}
-	void Update() {}
-	void GetKeyboardState(wiInput::KeyboardState* state) {}
-	void GetMouseState(wiInput::MouseState* state) {}
-	int GetMaxControllerCount() { return 0; }
-	bool GetControllerState(wiInput::ControllerState* state, int index) { return false; }
-	void SetControllerFeedback(const wiInput::ControllerFeedback& data, int index) {}
+	void Initialize() {
+		assert(false);
+	}
+
+	void Update() {
+		assert(false);
+	}
+
+	void GetKeyboardState(wiInput::KeyboardState* state) {
+		assert(false);
+	}
+
+	void GetMouseState(wiInput::MouseState* state) {
+		assert(false);
+	}
+
+	int GetMaxControllerCount() {
+		assert(false);
+	}
+
+	bool GetControllerState(wiInput::ControllerState* state, int index) {
+		assert(false);
+	}
+
+	void SetControllerFeedback(const wiInput::ControllerFeedback& data, int index) {
+		assert(false);
+	}
 }
 #endif // _WIN32
