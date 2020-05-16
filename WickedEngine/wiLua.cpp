@@ -41,7 +41,31 @@ int Internal_DoFile(lua_State* L)
 	if (argc > 0)
 	{
 		std::string filename = wiLua::SGetString(L, 1);
-		wiLua::GetGlobal()->RunFile(filename);
+		std::vector<uint8_t> filedata;
+		if (wiHelper::FileRead(filename, filedata))
+		{
+			std::string command = string(filedata.begin(), filedata.end());
+			int status = luaL_loadstring(L, command.c_str());
+			if (status == 0)
+			{
+				status = lua_pcall(L, 0, LUA_MULTRET, 0);
+			}
+
+			if (status != 0)
+			{
+				const char* str = lua_tostring(L, -1);
+
+				if (str == nullptr)
+					return 0;
+
+				stringstream ss("");
+				ss << WILUA_ERROR_PREFIX << str;
+				wiBackLog::post(ss.str().c_str());
+				ss << endl;
+				OutputDebugStringA(ss.str().c_str());
+				lua_pop(L, 1); // remove error message
+			}
+		}
 	}
 	else
 	{
