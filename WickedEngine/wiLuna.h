@@ -5,7 +5,7 @@
 
 #ifndef _WIN32
 #include <cstring>
-#end
+#endif
 
 #define lunamethod(class, name) {#name, &class::name}
 
