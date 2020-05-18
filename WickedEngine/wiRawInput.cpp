@@ -4,6 +4,17 @@
 #ifdef _WIN32
 #ifdef PLATFORM_UWP
 
+namespace wiRawInput
+{
+	void Initialize() {}
+	void Update() {}
+	void GetKeyboardState(wiInput::KeyboardState* state) {}
+	void GetMouseState(wiInput::MouseState* state) {}
+	int GetMaxControllerCount() { return 0; }
+	bool GetControllerState(wiInput::ControllerState* state, int index) { return false; }
+	void SetControllerFeedback(const wiInput::ControllerFeedback& data, int index) {}
+}
+
 #else
 
 #include "wiAllocators.h"
