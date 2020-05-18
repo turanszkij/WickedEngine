@@ -1,7 +1,10 @@
 #include "wiRawInput.h"
 #include "wiPlatform.h"
 
-#if defined(_WIN32) && !defined(PLATFORM_UWP)
+#ifdef _WIN32
+#ifdef PLATFORM_UWP
+
+#else
 
 #include "wiAllocators.h"
 
@@ -489,8 +492,9 @@ namespace wiRawInput
 		}
 	}
 }
+#endif // PLATFORM_UWP
 
-#else
+#else // _WIN32
 namespace wiRawInput
 {
 	void Initialize() {
