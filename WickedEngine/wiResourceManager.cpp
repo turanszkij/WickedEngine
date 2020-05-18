@@ -69,7 +69,11 @@ namespace wiResourceManager
 
 		// dynamic type selection:
 		{
+#ifdef _WIN32
 			auto& it = types.find(ext);
+#else
+			auto it = types.find(ext);
+#endif
 			if (it != types.end())
 			{
 				type = it->second;

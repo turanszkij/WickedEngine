@@ -20,6 +20,8 @@
 // THE SOFTWARE.
 //
 
+#ifdef _WIN32
+
 #pragma once
 
 /** \mainpage D3D12 Memory Allocator
@@ -734,3 +736,5 @@ HRESULT CreateAllocator(const ALLOCATOR_DESC* pDesc, Allocator** ppAllocator);
 DEFINE_ENUM_FLAG_OPERATORS(D3D12MA::ALLOCATION_FLAGS);
 DEFINE_ENUM_FLAG_OPERATORS(D3D12MA::ALLOCATOR_FLAGS);
 /// \endcond
+
+#endif // _WIN32

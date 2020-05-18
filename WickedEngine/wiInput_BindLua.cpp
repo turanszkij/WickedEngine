@@ -86,7 +86,8 @@ int wiInput_BindLua::Hold(lua_State* L)
 }
 int wiInput_BindLua::GetPointer(lua_State* L)
 {
-	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&wiInput::GetPointer())));
+	XMFLOAT4 pointer = wiInput::GetPointer();
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&pointer)));
 	return 1;
 }
 int wiInput_BindLua::SetPointer(lua_State* L)
@@ -110,7 +111,8 @@ int wiInput_BindLua::SetPointer(lua_State* L)
 }
 int wiInput_BindLua::GetPointerDelta(lua_State* L)
 {
-	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat2(&wiInput::GetMouseState().delta_position)));
+	XMFLOAT2 mouse = wiInput::GetMouseState().delta_position;
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat2(&mouse)));
 	return 1;
 }
 int wiInput_BindLua::HidePointer(lua_State* L)

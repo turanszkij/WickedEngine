@@ -3,6 +3,10 @@
 #include <vector>
 #include <algorithm>
 
+#ifndef _WIN32
+#include <cstring>
+#endif
+
 using namespace std;
 
 namespace wiRectPacker

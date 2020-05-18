@@ -178,7 +178,11 @@ namespace wiProfiler
 
 		lock.lock();
 
+#ifdef _WIN32
 		auto& it = ranges.find(id);
+#else
+		auto it = ranges.find(id);
+#endif
 		if (it != ranges.end())
 		{
 			if (it->second.IsCPURange())

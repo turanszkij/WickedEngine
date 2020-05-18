@@ -1,11 +1,12 @@
 #pragma once
 #include "CommonInclude.h"
+#include <stddef.h>
 
 class wiTimer
 {
 private:
 	static double PCFreq;
-	static __int64 CounterStart;
+	static int64_t CounterStart;
 
 	double lastTime;
 public:

@@ -147,8 +147,12 @@ void RenderPath3D_Deferred::Render() const
 	wiJobSystem::Execute(ctx, [this, device, cmd] {
 
 		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
-
+#ifdef _WIN32
 		device->Barrier(&GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_DEPTHSTENCIL), 1, cmd);
+#else
+		GPUBarrier image = GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_DEPTHSTENCIL);
+		device->Barrier(&image, 1, cmd);
+#endif
 
 		{
 			auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);

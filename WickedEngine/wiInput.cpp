@@ -14,6 +14,7 @@
 
 using namespace std;
 
+#ifdef _WIN32
 namespace wiInput
 {
 
@@ -581,3 +582,56 @@ namespace wiInput
 	}
 
 }
+
+#else
+namespace wiInput
+{
+	void Initialize() {
+		assert(false);
+	}
+
+	void Update() {
+		assert(false);
+	}
+
+	const MouseState& GetMouseState() {
+		assert(false);
+	}
+
+	bool Down(BUTTON button, int playerindex) {
+		assert(false);
+	}
+
+	bool Press(BUTTON button, int playerindex) {
+		assert(false);
+	}
+
+	bool Hold(BUTTON button, uint32_t frames, bool continuous, int playerindex) {
+		assert(false);
+	}
+
+	XMFLOAT4 GetPointer() {
+		assert(false);
+	}
+
+	void SetPointer(const XMFLOAT4& props) {
+		assert(false);
+	}
+
+	void HidePointer(bool value) {
+		assert(false);
+	}
+
+	XMFLOAT4 GetAnalog(GAMEPAD_ANALOG analog, int playerindex) {
+		assert(false);
+	}
+
+	void SetControllerFeedback(const ControllerFeedback& data, int playerindex) {
+		assert(false);
+	}
+
+	const std::vector<Touch>& GetTouches() {
+		assert(false);
+	}
+};
+#endif // _WIN32

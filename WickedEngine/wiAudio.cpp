@@ -529,11 +529,15 @@ namespace wiAudio
 		assert(false);
 	}
 
-	void SetVolume(float volume, SoundInstance* instance = nullptr) {
+	void SetVolume(float volume, SoundInstance* instance) {
 		assert(false);
 	}
 
-	float GetVolume(const Sound *instance = nullptr) {
+	float GetVolume(const SoundInstance* instance) {
+		assert(false);
+	}
+
+	float GetVolume(const Sound *instance) {
 		assert(false);
 	}
 	

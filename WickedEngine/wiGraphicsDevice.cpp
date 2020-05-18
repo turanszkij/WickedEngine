@@ -3,8 +3,13 @@
 
 // These will let the driver select the dedicated GPU in favour of the integrated one:
 extern "C" {
+#ifdef _WIN32
 	_declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
 	_declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+#else
+	int NvOptimusEnablement = 0x1;
+	int AmdPowerXpressRequestHighPreformance = 1;
+#endif
 }
 
 using namespace wiGraphics;

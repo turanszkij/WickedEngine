@@ -350,7 +350,12 @@ namespace wiScene
 			}
 			inline XMVECTOR LoadNOR() const
 			{
+#ifdef _WIN32
 				return XMLoadFloat3(&GetNor_FULL());
+#else
+				DirectX::XMFLOAT3 nor = GetNor_FULL();
+				return XMLoadFloat3(&nor);
+#endif
 			}
 			inline void MakeFromParams(const XMFLOAT3& normal)
 			{

@@ -9,6 +9,8 @@
 //
 //*********************************************************
 
+#ifdef _WIN32
+
 #ifndef __D3DX12_H__
 #define __D3DX12_H__
 
@@ -2722,4 +2724,4 @@ inline HRESULT D3DX12ParsePipelineStream(const D3D12_PIPELINE_STATE_STREAM_DESC&
 
 #endif //__D3DX12_H__
 
-
+#endif // _WIN32

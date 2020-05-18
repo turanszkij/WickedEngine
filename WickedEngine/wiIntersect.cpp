@@ -12,7 +12,8 @@ AABB AABB::transform(const XMMATRIX& mat) const
 	XMFLOAT3 corners[8];
 	for (int i = 0; i < 8; ++i)
 	{
-		XMVECTOR point = XMVector3Transform(XMLoadFloat3(&corner(i)), mat);
+		XMFLOAT3 AABBCorner = corner(i);
+		XMVECTOR point = XMVector3Transform(XMLoadFloat3(&AABBCorner), mat);
 		XMStoreFloat3(&corners[i], point);
 	}
 	XMFLOAT3 min = corners[0];
@@ -62,7 +63,11 @@ float AABB::getArea() const
 	return (_max.x - _min.x)*(_max.y - _min.y)*(_max.z - _min.z);
 }
 float AABB::getRadius() const {
+#ifdef _WIN32
 	XMFLOAT3& abc = getHalfWidth();
+#else
+	XMFLOAT3 abc = getHalfWidth();
+#endif
 	return std::max(std::max(abc.x, abc.y), abc.z);
 }
 AABB::INTERSECTION_TYPE AABB::intersects(const AABB& b) const {
@@ -337,7 +342,8 @@ Frustum::BoxFrustumIntersect Frustum::CheckBox(const AABB& box) const
 
 		for (int i = 0; i < 8; ++i)
 		{
-			if (XMVectorGetX(XMPlaneDotCoord(XMLoadFloat4(&planes[p]), XMLoadFloat3(&box.corner(i)))) < 0.0f)
+			XMFLOAT3 corner = box.corner(i);
+			if (XMVectorGetX(XMPlaneDotCoord(XMLoadFloat4(&planes[p]), XMLoadFloat3(&corner))) < 0.0f)
 			{
 				iPtIn = 0;
 				--iInCount;

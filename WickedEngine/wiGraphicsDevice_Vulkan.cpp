@@ -577,7 +577,9 @@ namespace Vulkan_Internal
 		ss << "[VULKAN validation layer]: " << msg << std::endl;
 
 		std::cerr << ss.str();
+#ifdef _WIN32
 		OutputDebugStringA(ss.str().c_str());
+#endif
 
 		return VK_FALSE;
 	}
@@ -1026,7 +1028,7 @@ using namespace Vulkan_Internal;
 		assert(res == VK_SUCCESS);
 
 		void* pData = allocation->GetMappedData();
-		dataCur = dataBegin = reinterpret_cast< UINT8* >(pData);
+		dataCur = dataBegin = reinterpret_cast< uint8_t* >(pData);
 		dataEnd = dataBegin + size;
 	}
 	GraphicsDevice_Vulkan::UploadBuffer::~UploadBuffer()
@@ -1617,10 +1619,14 @@ using namespace Vulkan_Internal;
 
 		FULLSCREEN = fullscreen;
 
+#ifdef _WIN32
 		RECT rect = RECT();
 		GetClientRect(window, &rect);
 		RESOLUTIONWIDTH = rect.right - rect.left;
 		RESOLUTIONHEIGHT = rect.bottom - rect.top;
+#else
+		assert(false);
+#endif
 
 		VkResult res;
 
@@ -1646,7 +1652,9 @@ using namespace Vulkan_Internal;
 		//	extensionNames.push_back(x.extensionName);
 		//}
 		extensionNames.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+#ifdef _WIN32
 		extensionNames.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#endif
 		extensionNames.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
 
@@ -1704,7 +1712,7 @@ using namespace Vulkan_Internal;
 				assert(0);
 			}
 #else
-#error WICKEDENGINE VULKAN DEVICE ERROR: PLATFORM NOT SUPPORTED
+			assert(false);
 #endif // _WIN32
 		}
 

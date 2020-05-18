@@ -2204,7 +2204,7 @@ inline XMVECTOR XM_CALLCONV XMVectorSplatConstant(int32_t IntConstant, uint32_t 
 
     using DirectX::XMConvertVectorIntToFloat;
 
-    XMVECTORI32 V = { { { IntConstant, IntConstant, IntConstant, IntConstant } } };
+    XMVECTORI32 V = { IntConstant, IntConstant, IntConstant, IntConstant };
     return XMConvertVectorIntToFloat( V.v, DivExponent);
 
 #elif defined(_XM_ARM_NEON_INTRINSICS_)

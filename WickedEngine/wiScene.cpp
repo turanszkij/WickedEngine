@@ -6,7 +6,7 @@
 #include "wiArchive.h"
 #include "wiRenderer.h"
 #include "wiJobSystem.h"
-#include "wiSpinlock.h"
+//#include "wiSpinlock.h"
 
 #include <functional>
 #include <unordered_map>
@@ -372,7 +372,11 @@ namespace wiScene
 			for (size_t i = 0; i < vertices.size(); ++i)
 			{
 				const XMFLOAT3& pos = vertex_positions[i];
+#ifdef _WIN32
 				XMFLOAT3& nor = vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : vertex_normals[i];
+#else
+				XMFLOAT3 nor = vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : vertex_normals[i];
+#endif
 				XMStoreFloat3(&nor, XMVector3Normalize(XMLoadFloat3(&nor)));
 				const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
 				vertices[i].FromFULL(pos, nor, wind);

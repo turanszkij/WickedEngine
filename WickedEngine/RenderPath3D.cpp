@@ -402,8 +402,12 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 		}
 
 		wiRenderer::SetClipPlane(water, cmd);
-
+#ifdef _WIN32
 		device->Barrier(&GPUBarrier::Image(&rtReflection, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_RENDERTARGET), 1, cmd);
+#else
+		GPUBarrier image = GPUBarrier::Image(&rtReflection, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_RENDERTARGET);
+		device->Barrier(&image, 1, cmd);
+#endif
 
 		device->RenderPassBegin(&renderpass_reflection, cmd);
 

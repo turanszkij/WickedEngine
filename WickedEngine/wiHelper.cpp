@@ -798,11 +798,11 @@ namespace wiHelper
 		assert(false);
 	}
 
-	void messageBox(const std::string& msg, const std::string& caption = "Warning!") {
+	void messageBox(const std::string& msg, const std::string& caption) {
 		assert(false);
 	}
 	
-	void screenshot(const std::string& name = "") {
+	void screenshot(const std::string& name) {
 		assert(false);
 	}
 

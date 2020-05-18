@@ -16,6 +16,10 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #endif // _WIN32
 
+#ifndef _WIN32
+#include <cstring>
+#endif
+
 #include <vulkan/vulkan.h>
 
 #include "Utility/vk_mem_alloc.h"

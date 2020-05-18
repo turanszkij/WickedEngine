@@ -119,7 +119,7 @@ namespace wiInput
 	// check if a button is pressed once
 	bool Press(BUTTON button, int playerindex = 0);
 	// check if a button is held down
-	bool Hold(BUTTON button, uint32_t frames = 30, bool continuous = false, int playerIndex = 0);
+	bool Hold(BUTTON button, uint32_t frames = 30, bool continuous = false, int playerindex = 0);
 	// get pointer position (eg. mouse pointer) (.xy) + scroll delta (.z) + pressure (.w)
 	XMFLOAT4 GetPointer();
 	// set pointer position (eg. mouse pointer)
@@ -127,7 +127,7 @@ namespace wiInput
 	// hide pointer
 	void HidePointer(bool value);
 	// read analog input from controllers, like thumbsticks or triggers
-	XMFLOAT4 GetAnalog(GAMEPAD_ANALOG analog, int playerIndex = 0);
+	XMFLOAT4 GetAnalog(GAMEPAD_ANALOG analog, int playerindex = 0);
 	// send various feedback to the controller
 	void SetControllerFeedback(const ControllerFeedback& data, int playerindex = 0);
 

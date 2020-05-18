@@ -469,6 +469,22 @@ namespace wiGraphics
 		PRIMITIVETOPOLOGY			pt = TRIANGLELIST;
 		uint32_t					sampleMask = 0xFFFFFFFF;
 	};
+	struct Memory
+	{
+		const GPUResource* resource;
+	};
+	struct Image
+	{
+		const Texture * texture;
+		IMAGE_LAYOUT layout_before;
+		IMAGE_LAYOUT layout_after;
+	};
+	struct Buffer
+	{
+		const GPUBuffer *buffer;
+		BUFFER_STATE state_before;
+		BUFFER_STATE state_after;
+	};
 	struct GPUBarrier
 	{
 		enum TYPE
@@ -479,22 +495,9 @@ namespace wiGraphics
 		} type = MEMORY_BARRIER;
 		union
 		{
-			struct Memory
-			{
-				const GPUResource* resource;
-			} memory;
-			struct Image
-			{
-				const Texture* texture;
-				IMAGE_LAYOUT layout_before;
-				IMAGE_LAYOUT layout_after;
-			} image;
-			struct Buffer
-			{
-				const GPUBuffer* buffer;
-				BUFFER_STATE state_before;
-				BUFFER_STATE state_after;
-			} buffer;
+			struct Memory memory;
+			struct Image image;
+			struct Buffer buffer;
 		};
 
 		static GPUBarrier Memory(const GPUResource* resource = nullptr)

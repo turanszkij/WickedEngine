@@ -17,8 +17,13 @@ namespace wiMath
 	}
 	inline float Distance(const XMVECTOR& v1, const XMVECTOR& v2)
 	{
+#ifdef _WIN32
 		XMVECTOR& vectorSub = XMVectorSubtract(v1, v2);
 		XMVECTOR& length = XMVector3Length(vectorSub);
+#else
+		XMVECTOR vectorSub = DirectX::XMVectorSubtract(v1, v2);
+		XMVECTOR length = DirectX::XMVector3Length(vectorSub);
+#endif
 
 		float Distance = 0.0f;
 		XMStoreFloat(&Distance, length);
@@ -26,8 +31,13 @@ namespace wiMath
 	}
 	inline float DistanceSquared(const XMVECTOR& v1, const XMVECTOR& v2)
 	{
+#ifdef _WIN32
 		XMVECTOR& vectorSub = XMVectorSubtract(v1, v2);
 		XMVECTOR& length = XMVector3LengthSq(vectorSub);
+#else
+		XMVECTOR vectorSub = DirectX::XMVectorSubtract(v1, v2);
+		XMVECTOR length = DirectX::XMVector3LengthSq(vectorSub);
+#endif
 
 		float Distance = 0.0f;
 		XMStoreFloat(&Distance, length);
@@ -35,8 +45,13 @@ namespace wiMath
 	}
 	inline float DistanceEstimated(const XMVECTOR& v1, const XMVECTOR& v2)
 	{
+#ifdef _WIN32
 		XMVECTOR& vectorSub = XMVectorSubtract(v1, v2);
 		XMVECTOR& length = XMVector3LengthEst(vectorSub);
+#else
+		XMVECTOR vectorSub = DirectX::XMVectorSubtract(v1, v2);
+		XMVECTOR length = DirectX::XMVector3LengthEst(vectorSub);
+#endif
 
 		float Distance = 0.0f;
 		XMStoreFloat(&Distance, length);
@@ -44,39 +59,69 @@ namespace wiMath
 	}
 	inline float Distance(const XMFLOAT2& v1, const XMFLOAT2& v2)
 	{
+#ifdef _WIN32
 		XMVECTOR& vector1 = XMLoadFloat2(&v1);
 		XMVECTOR& vector2 = XMLoadFloat2(&v2);
 		return XMVectorGetX(XMVector2Length(vector2 - vector1));
+#else
+		XMVECTOR vector1 = DirectX::XMLoadFloat2(&v1);
+		XMVECTOR vector2 = DirectX::XMLoadFloat2(&v2);
+		return DirectX::XMVectorGetX(DirectX::XMVector2Length(vector2 - vector1));
+#endif
 	}
 	inline float Distance(const XMFLOAT3& v1, const XMFLOAT3& v2)
 	{
+#ifdef _WIN32
 		XMVECTOR& vector1 = XMLoadFloat3(&v1);
 		XMVECTOR& vector2 = XMLoadFloat3(&v2);
+#else
+		XMVECTOR vector1 = DirectX::XMLoadFloat3(&v1);
+		XMVECTOR vector2 = DirectX::XMLoadFloat3(&v2);
+#endif
 		return Distance(vector1, vector2);
 	}
 	inline float DistanceSquared(const XMFLOAT3& v1, const XMFLOAT3& v2)
 	{
+#ifdef _WIN32
 		XMVECTOR& vector1 = XMLoadFloat3(&v1);
 		XMVECTOR& vector2 = XMLoadFloat3(&v2);
+#else
+		XMVECTOR vector1 = DirectX::XMLoadFloat3(&v1);
+		XMVECTOR vector2 = DirectX::XMLoadFloat3(&v2);
+#endif
 		return DistanceSquared(vector1, vector2);
 	}
 	inline float DistanceEstimated(const XMFLOAT3& v1, const XMFLOAT3& v2)
 	{
+#ifdef _WIN32
 		XMVECTOR& vector1 = XMLoadFloat3(&v1);
 		XMVECTOR& vector2 = XMLoadFloat3(&v2);
+#else
+		XMVECTOR vector1 = DirectX::XMLoadFloat3(&v1);
+		XMVECTOR vector2 = DirectX::XMLoadFloat3(&v2);
+#endif
 		return DistanceEstimated(vector1, vector2);
 	}
 	inline XMVECTOR ClosestPointOnLine(const XMVECTOR& A, const XMVECTOR& B, const XMVECTOR& Point)
 	{
 		XMVECTOR AB = B - A;
+#ifdef _WIN32
 		XMVECTOR T = XMVector3Dot(Point - A, AB) / XMVector3Dot(AB, AB);
+#else
+		XMVECTOR T = DirectX::XMVector3Dot(Point - A, AB) / DirectX::XMVector3Dot(AB, AB);
+#endif
 		return A + T * AB;
 	}
 	inline XMVECTOR ClosestPointOnLineSegment(const XMVECTOR& A, const XMVECTOR& B, const XMVECTOR& Point)
 	{
 		XMVECTOR AB = B - A;
+#ifdef _WIN32
 		XMVECTOR T = XMVector3Dot(Point - A, AB) / XMVector3Dot(AB, AB);
 		return A + XMVectorSaturate(T) * AB;
+#else
+		XMVECTOR T = DirectX::XMVector3Dot(Point - A, AB) / DirectX::XMVector3Dot(AB, AB);
+		return A + DirectX::XMVectorSaturate(T) * AB;
+#endif
 	}
 	inline constexpr XMFLOAT3 getVectorHalfWayPoint(const XMFLOAT3& a, const XMFLOAT3& b)
 	{
@@ -196,6 +241,7 @@ namespace wiMath
 	_Use_decl_annotations_
 	inline bool XM_CALLCONV RayTriangleIntersects(FXMVECTOR Origin, FXMVECTOR Direction, FXMVECTOR V0, GXMVECTOR V1, HXMVECTOR V2, float& Dist, XMFLOAT2& bary)
 	{
+#ifdef _WIN32
 		const XMVECTOR g_RayEpsilon = XMVectorSet(1e-20f, 1e-20f, 1e-20f, 1e-20f);
 		const XMVECTOR g_RayNegEpsilon = XMVectorSet(-1e-20f, -1e-20f, -1e-20f, -1e-20f);
 
@@ -209,9 +255,24 @@ namespace wiMath
 
 		// det = e1 * p;
 		XMVECTOR det = XMVector3Dot(e1, p);
+#else
+		const XMVECTOR g_RayEpsilon = DirectX::XMVectorSet(1e-20f, 1e-20f, 1e-20f, 1e-20f);
+		const XMVECTOR g_RayNegEpsilon = DirectX::XMVectorSet(-1e-20f, -1e-20f, -1e-20f, -1e-20f);
+
+		XMVECTOR Zero = DirectX::XMVectorZero();
+
+		XMVECTOR e1 = DirectX::XMVectorSubtract(V1, V0);
+		XMVECTOR e2 = DirectX::XMVectorSubtract(V2, V0);
+
+		// p = Direction ^ e2;
+		XMVECTOR p = DirectX::XMVector3Cross(Direction, e2);
+
+		// det = e1 * p;
+		XMVECTOR det = DirectX::XMVector3Dot(e1, p);
+#endif
 
 		XMVECTOR u, v, t;
-
+#ifdef _WIN32
 		if (XMVector3GreaterOrEqual(det, g_RayEpsilon))
 		{
 			// Determinate is positive (front side of the triangle).
@@ -243,6 +304,39 @@ namespace wiMath
 				return false;
 			}
 		}
+#else
+		if (DirectX::XMVector3GreaterOrEqual(det, g_RayEpsilon))
+		{
+			// Determinate is positive (front side of the triangle).
+			XMVECTOR s = DirectX::XMVectorSubtract(Origin, V0);
+
+			// u = s * p;
+			u = DirectX::XMVector3Dot(s, p);
+
+			XMVECTOR NoIntersection = DirectX::XMVectorLess(u, Zero);
+			NoIntersection = DirectX::XMVectorOrInt(NoIntersection, DirectX::XMVectorGreater(u, det));
+
+			// q = s ^ e1;
+			XMVECTOR q = DirectX::XMVector3Cross(s, e1);
+
+			// v = Direction * q;
+			v = DirectX::XMVector3Dot(Direction, q);
+
+			NoIntersection = XMVectorOrInt(NoIntersection, XMVectorLess(v, Zero));
+			NoIntersection = XMVectorOrInt(NoIntersection, XMVectorGreater(XMVectorAdd(u, v), det));
+
+			// t = e2 * q;
+			t = XMVector3Dot(e2, q);
+
+			NoIntersection = XMVectorOrInt(NoIntersection, XMVectorLess(t, Zero));
+
+			if (XMVector4EqualInt(NoIntersection, XMVectorTrueInt()))
+			{
+				Dist = 0.f;
+				return false;
+			}
+		}
+#endif
 		else if (XMVector3LessOrEqual(det, g_RayNegEpsilon))
 		{
 			// Determinate is negative (back side of the triangle).

@@ -30,6 +30,10 @@
 #include <memory>
 #include <vector>
 
+#ifndef _WIN32
+#include <iostream>
+#endif
+
 using namespace std;
 
 #define WILUA_ERROR_PREFIX "[Lua Error] "
@@ -145,7 +149,11 @@ void wiLua::PostErrorMsg(bool todebug, bool tobacklog)
 		if (todebug)
 		{
 			ss << endl;
+#ifdef _WIN32
 			OutputDebugStringA(ss.str().c_str());
+#else
+			std::cerr << ss.str();
+#endif
 		}
 		lock.lock();
 		lua_pop(m_luaState, 1); // remove error message
@@ -330,7 +338,11 @@ int wiLua::DebugOut(lua_State* L)
 	}
 	ss << endl;
 
+#ifdef _WIN32
 	OutputDebugStringA(ss.str().c_str());
+#else
+	std::cerr << ss.str();
+#endif
 
 	//number of results
 	return 0;
@@ -472,7 +484,11 @@ void wiLua::SError(lua_State* L, const std::string& error, bool todebug, bool to
 	if (todebug)
 	{
 		ss << endl;
+#ifdef _WIN32
 		OutputDebugStringA(ss.str().c_str());
+#else
+		std::cerr << ss.str();
+#endif
 	}
 }
 
