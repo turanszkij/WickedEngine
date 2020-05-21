@@ -2916,23 +2916,29 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 		}
 
 		// Fit AABB onto bounding sphere:
-		XMVECTOR vMin = XMVectorAdd(center, XMVectorReplicate(-radius));
-		XMVECTOR vMax = XMVectorAdd(center, XMVectorReplicate(radius));
+		XMVECTOR vRadius = XMVectorReplicate(radius);
+		XMVECTOR vMin = XMVectorSubtract(center, vRadius);
+		XMVECTOR vMax = XMVectorAdd(center, vRadius);
 
 		// Snap cascade to texel grid:
 		const XMVECTOR extent = XMVectorSubtract(vMax, vMin);
 		const XMVECTOR texelSize = extent / float(wiRenderer::GetShadowRes2D());
 		vMin = XMVectorFloor(vMin / texelSize) * texelSize;
 		vMax = XMVectorFloor(vMax / texelSize) * texelSize;
+		center = (vMin + vMax) * 0.5f;
 
+		XMFLOAT3 _center;
 		XMFLOAT3 _min;
 		XMFLOAT3 _max;
+		XMStoreFloat3(&_center, center);
 		XMStoreFloat3(&_min, vMin);
 		XMStoreFloat3(&_max, vMax);
 
 		// Extrude bounds to avoid early shadow clipping:
-		_min.z = std::min(_min.z, -farPlane * 0.5f);
-		_max.z = std::max(_max.z, farPlane * 0.5f);
+		float ext = abs(_center.z - _min.z);
+		ext = std::max(ext, farPlane * 0.5f);
+		_min.z = _center.z - ext;
+		_max.z = _center.z + ext;
 
 		const XMMATRIX lightProjection = XMMatrixOrthographicOffCenterLH(_min.x, _max.x, _min.y, _max.y, _max.z, _min.z); // notice reversed Z!
 
