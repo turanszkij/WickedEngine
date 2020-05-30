@@ -193,9 +193,6 @@
     <Image Include="Tests.ico" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\WickedEngine\WickedEngine_SHADERS.vcxproj">
-      <Project>{8c15dc72-70c8-4212-b046-0b166a688a7c}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\WickedEngine\WickedEngine_Windows.vcxproj">
       <Project>{06163dcb-b183-4ed9-9c62-13ef1658e049}</Project>
     </ProjectReference>

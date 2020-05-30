@@ -265,7 +265,7 @@ void TestsRenderer::Load()
 		case 18:
 		{
 			wiScene::LoadModel("../models/suzanne.wiscene");
-			//wiProfiler::SetEnabled(true);
+			wiProfiler::SetEnabled(true);
 			Scene& scene = wiScene::GetScene();
 			scene.Entity_CreateLight("testlight", XMFLOAT3(0, 2, -4), XMFLOAT3(1, 1, 1), 4, 10);
 			Entity suzanne = scene.Entity_FindByName("Suzanne");
@@ -367,10 +367,10 @@ void TestsRenderer::RunJobSystemTest()
 	// Execute test
 	{
 		timer.record();
-		wiJobSystem::Execute(ctx, []{ wiHelper::Spin(100); });
-		wiJobSystem::Execute(ctx, []{ wiHelper::Spin(100); });
-		wiJobSystem::Execute(ctx, []{ wiHelper::Spin(100); });
-		wiJobSystem::Execute(ctx, []{ wiHelper::Spin(100); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args){ wiHelper::Spin(100); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args){ wiHelper::Spin(100); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args){ wiHelper::Spin(100); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args){ wiHelper::Spin(100); });
 		wiJobSystem::Wait(ctx);
 		double time = timer.elapsed();
 		ss << "wiJobSystem::Execute() took " << time << " milliseconds" << std::endl;
@@ -395,7 +395,7 @@ void TestsRenderer::RunJobSystemTest()
 	{
 		std::vector<wiScene::CameraComponent> dataSet(itemCount);
 		timer.record();
-		wiJobSystem::Dispatch(ctx, itemCount, 1000, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, itemCount, 1000, [&](wiJobArgs args) {
 			dataSet[args.jobIndex].UpdateCamera();
 		});
 		wiJobSystem::Wait(ctx);

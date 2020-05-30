@@ -13,8 +13,12 @@ namespace wiJobSystem
 {
 	struct Job
 	{
-		std::function<void()> task;
 		context* ctx;
+		std::function<void(wiJobArgs)> task;
+		uint32_t groupID;
+		uint32_t groupJobOffset;
+		uint32_t groupJobEnd;
+		uint32_t sharedmemory_size;
 	};
 
 	uint32_t numThreads = 0;
@@ -28,7 +32,26 @@ namespace wiJobSystem
 		Job job;
 		if (jobQueue.pop_front(job))
 		{
-			job.task(); // execute job
+			wiJobArgs args;
+			args.groupID = job.groupID;
+			if (job.sharedmemory_size > 0)
+			{
+				args.sharedmemory = alloca(job.sharedmemory_size);
+			}
+			else
+			{
+				args.sharedmemory = nullptr;
+			}
+
+			for (uint32_t i = job.groupJobOffset; i < job.groupJobEnd; ++i)
+			{
+				args.jobIndex = i;
+				args.groupIndex = i - job.groupJobOffset;
+				args.isFirstJobInGroup = (i == job.groupJobOffset);
+				args.isLastJobInGroup = (i == job.groupJobEnd - 1);
+				job.task(args);
+			}
+
 			job.ctx->counter.fetch_sub(1);
 			return true;
 		}
@@ -47,8 +70,6 @@ namespace wiJobSystem
 		{
 			std::thread worker([] {
 
-				std::function<void()> job;
-
 				while (true)
 				{
 					if (!work())
@@ -66,7 +87,7 @@ namespace wiJobSystem
 			HANDLE handle = (HANDLE)worker.native_handle();
 
 			// Put each thread on to dedicated core:
-			DWORD_PTR affinityMask = 1ull << threadID; 
+			DWORD_PTR affinityMask = 1ull << threadID;
 			DWORD_PTR affinity_result = SetThreadAffinityMask(handle, affinityMask);
 			assert(affinity_result > 0);
 
@@ -80,7 +101,7 @@ namespace wiJobSystem
 			HRESULT hr = SetThreadDescription(handle, wss.str().c_str());
 			assert(SUCCEEDED(hr));
 #endif // _WIN32
-			
+
 			worker.detach();
 		}
 
@@ -94,57 +115,62 @@ namespace wiJobSystem
 		return numThreads;
 	}
 
-	void Execute(context& ctx, const std::function<void()>& job)
+	void Execute(context& ctx, const std::function<void(wiJobArgs)>& task)
 	{
 		// Context state is updated:
 		ctx.counter.fetch_add(1);
 
+		Job job;
+		job.ctx = &ctx;
+		job.task = task;
+		job.groupID = 0;
+		job.groupJobOffset = 0;
+		job.groupJobEnd = 1;
+		job.sharedmemory_size = 0;
+
 		// Try to push a new job until it is pushed successfully:
-		while (!jobQueue.push_back({ job, &ctx })) { wakeCondition.notify_all(); }
+		while (!jobQueue.push_back(job)) { wakeCondition.notify_all(); }
 
 		// Wake any one thread that might be sleeping:
 		wakeCondition.notify_one();
 	}
 
-	void Dispatch(context& ctx, uint32_t jobCount, uint32_t groupSize, const std::function<void(wiJobDispatchArgs)>& job)
+	void Dispatch(context& ctx, uint32_t jobCount, uint32_t groupSize, const std::function<void(wiJobArgs)>& task, size_t sharedmemory_size)
 	{
 		if (jobCount == 0 || groupSize == 0)
 		{
 			return;
 		}
 
-		// Calculate the amount of job groups to dispatch (overestimate, or "ceil"):
-		const uint32_t groupCount = (jobCount + groupSize - 1) / groupSize;
+		const uint32_t groupCount = DispatchGroupCount(jobCount, groupSize);
 
 		// Context state is updated:
 		ctx.counter.fetch_add(groupCount);
 
-		for (uint32_t groupIndex = 0; groupIndex < groupCount; ++groupIndex)
+		Job job;
+		job.ctx = &ctx;
+		job.task = task;
+		job.sharedmemory_size = (uint32_t)sharedmemory_size;
+
+		for (uint32_t groupID = 0; groupID < groupCount; ++groupID)
 		{
 			// For each group, generate one real job:
-			const auto& jobGroup = [jobCount, groupSize, job, groupIndex]() {
-
-				// Calculate the current group's offset into the jobs:
-				const uint32_t groupJobOffset = groupIndex * groupSize;
-				const uint32_t groupJobEnd = std::min(groupJobOffset + groupSize, jobCount);
-
-				wiJobDispatchArgs args;
-				args.groupIndex = groupIndex;
-
-				// Inside the group, loop through all job indices and execute job for each index:
-				for (uint32_t i = groupJobOffset; i < groupJobEnd; ++i)
-				{
-					args.jobIndex = i;
-					job(args);
-				}
-			};
+			job.groupID = groupID;
+			job.groupJobOffset = groupID * groupSize;
+			job.groupJobEnd = std::min(job.groupJobOffset + groupSize, jobCount);
 
 			// Try to push a new job until it is pushed successfully:
-			while (!jobQueue.push_back({ jobGroup, &ctx })) { wakeCondition.notify_all(); }
+			while (!jobQueue.push_back(job)) { wakeCondition.notify_all(); }
 		}
 
 		// Wake any threads that might be sleeping:
 		wakeCondition.notify_all();
+	}
+
+	uint32_t DispatchGroupCount(uint32_t jobCount, uint32_t groupSize)
+	{
+		// Calculate the amount of job groups to dispatch (overestimate, or "ceil"):
+		return (jobCount + groupSize - 1) / groupSize;
 	}
 
 	bool IsBusy(const context& ctx)

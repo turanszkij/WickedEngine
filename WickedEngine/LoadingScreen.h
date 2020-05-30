@@ -13,13 +13,13 @@ class LoadingScreen :
 private:
 	wiJobSystem::context ctx_main;
 	wiJobSystem::context ctx_finish;
-	std::vector<std::function<void()>> tasks;
+	std::vector<std::function<void(wiJobArgs)>> tasks;
 	std::function<void()> finish;
 public:
 
 	//Add a loading task which should be executed
 	//use std::bind( YourFunctionPointer )
-	void addLoadingFunction(std::function<void()> loadingFunction);
+	void addLoadingFunction(std::function<void(wiJobArgs)> loadingFunction);
 	//Helper for loading a whole renderable component
 	void addLoadingComponent(RenderPath* component, MainComponent* main, float fadeSeconds = 0, wiColor fadeColor = wiColor(0, 0, 0, 255));
 	//Set a function that should be called when the loading finishes

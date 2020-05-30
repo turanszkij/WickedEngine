@@ -444,17 +444,17 @@ void EditorComponent::Load()
 #endif // PLATFORM_UWP
 
 	wiJobSystem::context ctx;
-	wiJobSystem::Execute(ctx, [this] { pointLightTex = wiResourceManager::Load("images/pointlight.dds"); });
-	wiJobSystem::Execute(ctx, [this] { spotLightTex = wiResourceManager::Load("images/spotlight.dds"); });
-	wiJobSystem::Execute(ctx, [this] { dirLightTex = wiResourceManager::Load("images/directional_light.dds"); });
-	wiJobSystem::Execute(ctx, [this] { areaLightTex = wiResourceManager::Load("images/arealight.dds"); });
-	wiJobSystem::Execute(ctx, [this] { decalTex = wiResourceManager::Load("images/decal.dds"); });
-	wiJobSystem::Execute(ctx, [this] { forceFieldTex = wiResourceManager::Load("images/forcefield.dds"); });
-	wiJobSystem::Execute(ctx, [this] { emitterTex = wiResourceManager::Load("images/emitter.dds"); });
-	wiJobSystem::Execute(ctx, [this] { hairTex = wiResourceManager::Load("images/hair.dds"); });
-	wiJobSystem::Execute(ctx, [this] { cameraTex = wiResourceManager::Load("images/camera.dds"); });
-	wiJobSystem::Execute(ctx, [this] { armatureTex = wiResourceManager::Load("images/armature.dds"); });
-	wiJobSystem::Execute(ctx, [this] { soundTex = wiResourceManager::Load("images/sound.dds"); });
+	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { pointLightTex = wiResourceManager::Load("images/pointlight.dds"); });
+	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { spotLightTex = wiResourceManager::Load("images/spotlight.dds"); });
+	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { dirLightTex = wiResourceManager::Load("images/directional_light.dds"); });
+	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { areaLightTex = wiResourceManager::Load("images/arealight.dds"); });
+	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { decalTex = wiResourceManager::Load("images/decal.dds"); });
+	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { forceFieldTex = wiResourceManager::Load("images/forcefield.dds"); });
+	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { emitterTex = wiResourceManager::Load("images/emitter.dds"); });
+	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { hairTex = wiResourceManager::Load("images/hair.dds"); });
+	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { cameraTex = wiResourceManager::Load("images/camera.dds"); });
+	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { armatureTex = wiResourceManager::Load("images/armature.dds"); });
+	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { soundTex = wiResourceManager::Load("images/sound.dds"); });
 	// wait for ctx is at the end of this function!
 
 	translator.enabled = false;
@@ -748,7 +748,7 @@ void EditorComponent::Load()
 		params.extensions.push_back("glb");
 		wiHelper::FileDialog(params, [&](std::string fileName) {
 
-			main->loader->addLoadingFunction([=] {
+			main->loader->addLoadingFunction([=](wiJobArgs args) {
 				string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(fileName));
 
 				if (!extension.compare("WISCENE")) // engine-serialized

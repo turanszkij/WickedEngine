@@ -12,13 +12,7 @@ namespace wiPhysicsEngine
 
 	void RunPhysicsUpdateSystem(
 		wiJobSystem::context& ctx,
-		const wiScene::WeatherComponent& weather,
-		const wiECS::ComponentManager<wiScene::ArmatureComponent>& armatures,
-		wiECS::ComponentManager<wiScene::TransformComponent>& transforms,
-		wiECS::ComponentManager<wiScene::MeshComponent>& meshes,
-		wiECS::ComponentManager<wiScene::ObjectComponent>& objects,
-		wiECS::ComponentManager<wiScene::RigidBodyPhysicsComponent>& rigidbodies,
-		wiECS::ComponentManager<wiScene::SoftBodyPhysicsComponent>& softbodies,
+		wiScene::Scene& scene,
 		float dt
 	);
 }

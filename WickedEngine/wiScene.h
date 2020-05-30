@@ -9,6 +9,7 @@
 #include "wiAudio.h"
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
+#include "wiSpinLock.h"
 
 #include "wiECS.h"
 #include "wiScene_Decl.h"
@@ -995,6 +996,9 @@ namespace wiScene
 		std::string skyMapName;
 		std::shared_ptr<wiResource> skyMap;
 
+		// Non-serialized attributes:
+		uint32_t most_important_light_index = ~0;
+
 		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
 	};
 
@@ -1107,8 +1111,9 @@ namespace wiScene
 		wiECS::ComponentManager<SpringComponent> springs;
 
 		// Non-serialized attributes:
+		wiSpinLock locker;
 		AABB bounds;
-		XMFLOAT4 waterPlane = XMFLOAT4(0, 1, 0, 0);
+		std::vector<AABB> parallel_bounds;
 		WeatherComponent weather;
 
 		// Update all components by a given timestep (in seconds):
@@ -1187,118 +1192,26 @@ namespace wiScene
 		void Component_DetachChildren(wiECS::Entity parent);
 
 		void Serialize(wiArchive& archive);
-	};
 
-	void RunPreviousFrameTransformUpdateSystem(
-		wiJobSystem::context& ctx,
-		const wiECS::ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<PreviousFrameTransformComponent>& prev_transforms
-	);
-	void RunAnimationUpdateSystem(
-		wiJobSystem::context& ctx,
-		wiECS::ComponentManager<AnimationComponent>& animations,
-		wiECS::ComponentManager<TransformComponent>& transforms,
-		float dt
-	);
-	void RunTransformUpdateSystem(
-		wiJobSystem::context& ctx, 
-		wiECS::ComponentManager<TransformComponent>& transforms
-	);
-	void RunHierarchyUpdateSystem(
-		wiJobSystem::context& ctx,
-		const wiECS::ComponentManager<HierarchyComponent>& hierarchy,
-		wiECS::ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<LayerComponent>& layers
-	);
-	void RunSpringUpdateSystem(
-		wiJobSystem::context& ctx,
-		const WeatherComponent& weather,
-		const wiECS::ComponentManager<HierarchyComponent>& hierarchy,
-		wiECS::ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<SpringComponent>& springs,
-		float dt
-	);
-	void RunInverseKinematicsUpdateSystem(
-		wiJobSystem::context& ctx,
-		const wiECS::ComponentManager<InverseKinematicsComponent>& inverse_kinematics,
-		const wiECS::ComponentManager<HierarchyComponent>& hierarchy,
-		wiECS::ComponentManager<TransformComponent>& transforms
-	);
-	void RunArmatureUpdateSystem(
-		wiJobSystem::context& ctx,
-		const wiECS::ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<ArmatureComponent>& armatures
-	);
-	void RunMaterialUpdateSystem(
-		wiJobSystem::context& ctx, 
-		wiECS::ComponentManager<MaterialComponent>& materials, float dt
-	);
-	void RunImpostorUpdateSystem(
-		wiJobSystem::context& ctx, 
-		wiECS::ComponentManager<ImpostorComponent>& impostors
-	);
-	void RunObjectUpdateSystem(
-		wiJobSystem::context& ctx,
-		const wiECS::ComponentManager<PreviousFrameTransformComponent>& prev_transforms,
-		const wiECS::ComponentManager<TransformComponent>& transforms,
-		const wiECS::ComponentManager<MeshComponent>& meshes,
-		const wiECS::ComponentManager<MaterialComponent>& materials,
-		const wiECS::ComponentManager<ArmatureComponent>& armatures,
-		wiECS::ComponentManager<ObjectComponent>& objects,
-		wiECS::ComponentManager<AABB>& aabb_objects,
-		wiECS::ComponentManager<ImpostorComponent>& impostors,
-		wiECS::ComponentManager<SoftBodyPhysicsComponent>& softbodies,
-		AABB& sceneBounds,
-		XMFLOAT4& waterPlane
-	);
-	void RunCameraUpdateSystem(
-		wiJobSystem::context& ctx,
-		const wiECS::ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<CameraComponent>& cameras
-	);
-	void RunDecalUpdateSystem(
-		wiJobSystem::context& ctx,
-		const wiECS::ComponentManager<TransformComponent>& transforms,
-		const wiECS::ComponentManager<MaterialComponent>& materials,
-		wiECS::ComponentManager<AABB>& aabb_decals,
-		wiECS::ComponentManager<DecalComponent>& decals
-	);
-	void RunProbeUpdateSystem(
-		wiJobSystem::context& ctx,
-		const wiECS::ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<AABB>& aabb_probes,
-		wiECS::ComponentManager<EnvironmentProbeComponent>& probes
-	);
-	void RunForceUpdateSystem(
-		wiJobSystem::context& ctx,
-		const wiECS::ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<ForceFieldComponent>& forces
-	);
-	void RunLightUpdateSystem(
-		wiJobSystem::context& ctx,
-		const wiECS::ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<AABB>& aabb_lights,
-		wiECS::ComponentManager<LightComponent>& lights
-	);
-	void RunParticleUpdateSystem(
-		wiJobSystem::context& ctx,
-		const wiECS::ComponentManager<TransformComponent>& transforms,
-		const wiECS::ComponentManager<MeshComponent>& meshes,
-		wiECS::ComponentManager<wiEmittedParticle>& emitters,
-		wiECS::ComponentManager<wiHairParticle>& hairs,
-		float dt
-	);
-	void RunWeatherUpdateSystem(
-		wiJobSystem::context& ctx,
-		const wiECS::ComponentManager<WeatherComponent>& weathers,
-		const wiECS::ComponentManager<LightComponent>& lights,
-		WeatherComponent& weather
-	);
-	void RunSoundUpdateSystem(
-		wiJobSystem::context& ctx,
-		const wiECS::ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<SoundComponent>& sounds
-	);
+		void RunPreviousFrameTransformUpdateSystem(wiJobSystem::context& ctx);
+		void RunAnimationUpdateSystem(wiJobSystem::context& ctx, float dt);
+		void RunTransformUpdateSystem(wiJobSystem::context& ctx);
+		void RunHierarchyUpdateSystem(wiJobSystem::context& ctx);
+		void RunSpringUpdateSystem(wiJobSystem::context& ctx, float dt);
+		void RunInverseKinematicsUpdateSystem(wiJobSystem::context& ctx);
+		void RunArmatureUpdateSystem(wiJobSystem::context& ctx);
+		void RunMaterialUpdateSystem(wiJobSystem::context& ctx, float dt);
+		void RunImpostorUpdateSystem(wiJobSystem::context& ctx);
+		void RunObjectUpdateSystem(wiJobSystem::context& ctx);
+		void RunCameraUpdateSystem(wiJobSystem::context& ctx);
+		void RunDecalUpdateSystem(wiJobSystem::context& ctx);
+		void RunProbeUpdateSystem(wiJobSystem::context& ctx);
+		void RunForceUpdateSystem(wiJobSystem::context& ctx);
+		void RunLightUpdateSystem(wiJobSystem::context& ctx);
+		void RunParticleUpdateSystem(wiJobSystem::context& ctx, float dt);
+		void RunWeatherUpdateSystem(wiJobSystem::context& ctx);
+		void RunSoundUpdateSystem(wiJobSystem::context& ctx);
+	};
 
 	// Returns skinned vertex position in armature local space
 	//	N : normal (out, optional)

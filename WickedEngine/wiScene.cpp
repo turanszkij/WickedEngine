@@ -1116,49 +1116,54 @@ namespace wiScene
 	{
 		wiJobSystem::context ctx;
 
-		RunPreviousFrameTransformUpdateSystem(ctx, transforms, prev_transforms);
+		RunPreviousFrameTransformUpdateSystem(ctx);
 
-		RunAnimationUpdateSystem(ctx, animations, transforms, dt);
+		RunAnimationUpdateSystem(ctx, dt);
 
-		RunTransformUpdateSystem(ctx, transforms);
-
-		wiJobSystem::Wait(ctx); // dependecies
-
-		RunHierarchyUpdateSystem(ctx, hierarchy, transforms, layers);
-
-		RunSpringUpdateSystem(ctx, weather, hierarchy, transforms, springs, dt);
-
-		RunInverseKinematicsUpdateSystem(ctx, inverse_kinematics, hierarchy, transforms);
-
-		RunArmatureUpdateSystem(ctx, transforms, armatures);
-
-		RunMaterialUpdateSystem(ctx, materials, dt);
-
-		RunImpostorUpdateSystem(ctx, impostors);
+		RunTransformUpdateSystem(ctx);
 
 		wiJobSystem::Wait(ctx); // dependecies
 
-		RunObjectUpdateSystem(ctx, prev_transforms, transforms, meshes, materials, armatures, objects, aabb_objects, impostors, softbodies, bounds, waterPlane);
+		RunHierarchyUpdateSystem(ctx);
 
-		wiPhysicsEngine::RunPhysicsUpdateSystem(ctx, weather, armatures, transforms, meshes, objects, rigidbodies, softbodies, dt);
+		RunSpringUpdateSystem(ctx, dt);
 
-		RunCameraUpdateSystem(ctx, transforms, cameras);
+		RunInverseKinematicsUpdateSystem(ctx);
 
-		RunDecalUpdateSystem(ctx, transforms, materials, aabb_decals, decals);
+		RunArmatureUpdateSystem(ctx);
 
-		RunProbeUpdateSystem(ctx, transforms, aabb_probes, probes);
+		RunMaterialUpdateSystem(ctx, dt);
 
-		RunForceUpdateSystem(ctx, transforms, forces);
+		RunImpostorUpdateSystem(ctx);
 
-		RunLightUpdateSystem(ctx, transforms, aabb_lights, lights);
+		RunWeatherUpdateSystem(ctx);
 
-		RunParticleUpdateSystem(ctx, transforms, meshes, emitters, hairs, dt);
+		wiPhysicsEngine::RunPhysicsUpdateSystem(ctx, *this, dt); // this syncs dependencies internally
+
+		RunObjectUpdateSystem(ctx);
+
+		RunCameraUpdateSystem(ctx);
+
+		RunDecalUpdateSystem(ctx);
+
+		RunProbeUpdateSystem(ctx);
+
+		RunForceUpdateSystem(ctx);
+
+		RunLightUpdateSystem(ctx);
+
+		RunParticleUpdateSystem(ctx, dt);
+
+		RunSoundUpdateSystem(ctx);
 
 		wiJobSystem::Wait(ctx); // dependecies
 
-		RunWeatherUpdateSystem(ctx, weathers, lights, weather);
-
-		RunSoundUpdateSystem(ctx, transforms, sounds);
+		// Merge parallel bounds computation (depends on object update system):
+		bounds = AABB();
+		for (auto& group_bound : parallel_bounds)
+		{
+			bounds = AABB::Merge(bounds, group_bound);
+		}
 	}
 	void Scene::Clear()
 	{
@@ -1614,15 +1619,11 @@ namespace wiScene
 	}
 
 
-	const uint32_t small_subtask_groupsize = 1024;
+	const uint32_t small_subtask_groupsize = 64;
 
-	void RunPreviousFrameTransformUpdateSystem(
-		wiJobSystem::context& ctx,
-		const ComponentManager<TransformComponent>& transforms,
-		ComponentManager<PreviousFrameTransformComponent>& prev_transforms
-	)
+	void Scene::RunPreviousFrameTransformUpdateSystem(wiJobSystem::context& ctx)
 	{
-		wiJobSystem::Dispatch(ctx, (uint32_t)prev_transforms.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)prev_transforms.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
 			PreviousFrameTransformComponent& prev_transform = prev_transforms[args.jobIndex];
 			Entity entity = prev_transforms.GetEntity(args.jobIndex);
@@ -1631,12 +1632,7 @@ namespace wiScene
 			prev_transform.world_prev = transform.world;
 		});
 	}
-	void RunAnimationUpdateSystem(
-		wiJobSystem::context& ctx,
-		ComponentManager<AnimationComponent>& animations,
-		ComponentManager<TransformComponent>& transforms,
-		float dt
-	)
+	void Scene::RunAnimationUpdateSystem(wiJobSystem::context& ctx, float dt)
 	{
 		for (size_t i = 0; i < animations.GetCount(); ++i)
 		{
@@ -1774,22 +1770,15 @@ namespace wiScene
 			}
 		}
 	}
-	void RunTransformUpdateSystem(
-		wiJobSystem::context& ctx, 
-		ComponentManager<TransformComponent>& transforms)
+	void Scene::RunTransformUpdateSystem(wiJobSystem::context& ctx)
 	{
-		wiJobSystem::Dispatch(ctx, (uint32_t)transforms.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)transforms.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
 			TransformComponent& transform = transforms[args.jobIndex];
 			transform.UpdateTransform();
 		});
 	}
-	void RunHierarchyUpdateSystem(
-		wiJobSystem::context& ctx,
-		const ComponentManager<HierarchyComponent>& hierarchy,
-		ComponentManager<TransformComponent>& transforms,
-		ComponentManager<LayerComponent>& layers
-		)
+	void Scene::RunHierarchyUpdateSystem(wiJobSystem::context& ctx)
 	{
 		// This needs serialized execution because there are dependencies enforced by component order!
 
@@ -1815,14 +1804,7 @@ namespace wiScene
 
 		}
 	}
-	void RunSpringUpdateSystem(
-		wiJobSystem::context& ctx,
-		const WeatherComponent& weather,
-		const ComponentManager<HierarchyComponent>& hierarchy,
-		ComponentManager<TransformComponent>& transforms,
-		ComponentManager<SpringComponent>& springs,
-		float dt
-	)
+	void Scene::RunSpringUpdateSystem(wiJobSystem::context& ctx, float dt)
 	{
 		static float time = 0;
 		time += dt;
@@ -1910,12 +1892,7 @@ namespace wiScene
 			*((XMFLOAT3*)&transform->world._41) = spring.center_of_mass;
 		}
 	}
-	void RunInverseKinematicsUpdateSystem(
-		wiJobSystem::context& ctx,
-		const ComponentManager<InverseKinematicsComponent>& inverse_kinematics,
-		const ComponentManager<HierarchyComponent>& hierarchy,
-		ComponentManager<TransformComponent>& transforms
-	)
+	void Scene::RunInverseKinematicsUpdateSystem(wiJobSystem::context& ctx)
 	{
 		bool recompute_hierarchy = false;
 		for (size_t i = 0; i < inverse_kinematics.GetCount(); ++i)
@@ -2014,13 +1991,9 @@ namespace wiScene
 			}
 		}
 	}
-	void RunArmatureUpdateSystem(
-		wiJobSystem::context& ctx,
-		const ComponentManager<TransformComponent>& transforms,
-		ComponentManager<ArmatureComponent>& armatures
-	)
+	void Scene::RunArmatureUpdateSystem(wiJobSystem::context& ctx)
 	{
-		wiJobSystem::Dispatch(ctx, (uint32_t)armatures.GetCount(), 1, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)armatures.GetCount(), 1, [&](wiJobArgs args) {
 
 			ArmatureComponent& armature = armatures[args.jobIndex];
 			Entity entity = armatures.GetEntity(args.jobIndex);
@@ -2066,11 +2039,9 @@ namespace wiScene
 
 		});
 	}
-	void RunMaterialUpdateSystem(
-		wiJobSystem::context& ctx, 
-		ComponentManager<MaterialComponent>& materials, float dt)
+	void Scene::RunMaterialUpdateSystem(wiJobSystem::context& ctx, float dt)
 	{
-		wiJobSystem::Dispatch(ctx, (uint32_t)materials.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)materials.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
 			MaterialComponent& material = materials[args.jobIndex];
 
@@ -2091,182 +2062,170 @@ namespace wiScene
 			}
 		});
 	}
-	void RunImpostorUpdateSystem(
-		wiJobSystem::context& ctx, 
-		ComponentManager<ImpostorComponent>& impostors)
+	void Scene::RunImpostorUpdateSystem(wiJobSystem::context& ctx)
 	{
-		wiJobSystem::Dispatch(ctx, (uint32_t)impostors.GetCount(), 1, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)impostors.GetCount(), 1, [&](wiJobArgs args) {
 
 			ImpostorComponent& impostor = impostors[args.jobIndex];
 			impostor.aabb = AABB();
 			impostor.instanceMatrices.clear();
 		});
 	}
-	void RunObjectUpdateSystem(
-		wiJobSystem::context& ctx,
-		const ComponentManager<PreviousFrameTransformComponent>& prev_transforms,
-		const ComponentManager<TransformComponent>& transforms,
-		const ComponentManager<MeshComponent>& meshes,
-		const ComponentManager<MaterialComponent>& materials,
-		const ComponentManager<ArmatureComponent>& armatures,
-		ComponentManager<ObjectComponent>& objects,
-		ComponentManager<AABB>& aabb_objects,
-		ComponentManager<ImpostorComponent>& impostors,
-		ComponentManager<SoftBodyPhysicsComponent>& softbodies,
-		AABB& sceneBounds,
-		XMFLOAT4& waterPlane
-	)
+	void Scene::RunObjectUpdateSystem(wiJobSystem::context& ctx)
 	{
 		assert(objects.GetCount() == aabb_objects.GetCount());
 
-		sceneBounds = AABB();
+		parallel_bounds.clear();
+		parallel_bounds.resize((size_t)wiJobSystem::DispatchGroupCount((uint32_t)objects.GetCount(), small_subtask_groupsize));
+		
+		wiJobSystem::Dispatch(ctx, (uint32_t)objects.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
-		// Instead of Dispatching, this will be one big job, because there is contention for several resources (sceneBounds, waterPlane, impostors)
-		wiJobSystem::Execute(ctx, [&] {
+			ObjectComponent& object = objects[args.jobIndex];
+			AABB& aabb = aabb_objects[args.jobIndex];
 
-			for (size_t i = 0; i < objects.GetCount(); ++i)
+			aabb = AABB();
+			object.rendertypeMask = 0;
+			object.SetDynamic(false);
+			object.SetCastShadow(false);
+			object.SetImpostorPlacement(false);
+			object.SetRequestPlanarReflection(false);
+
+			if (object.meshID != INVALID_ENTITY)
 			{
-				ObjectComponent& object = objects[i];
-				AABB& aabb = aabb_objects[i];
+				Entity entity = objects.GetEntity(args.jobIndex);
+				const MeshComponent* mesh = meshes.GetComponent(object.meshID);
 
-				aabb = AABB();
-				object.rendertypeMask = 0;
-				object.SetDynamic(false);
-				object.SetCastShadow(false);
-				object.SetImpostorPlacement(false);
-				object.SetRequestPlanarReflection(false);
+				// These will only be valid for a single frame:
+				object.transform_index = (int)transforms.GetIndex(entity);
+				object.prev_transform_index = (int)prev_transforms.GetIndex(entity);
 
-				if (object.meshID != INVALID_ENTITY)
+				const TransformComponent& transform = transforms[object.transform_index];
+
+				if (mesh != nullptr)
 				{
-					Entity entity = objects.GetEntity(i);
-					const MeshComponent* mesh = meshes.GetComponent(object.meshID);
+					XMMATRIX W = XMLoadFloat4x4(&transform.world);
+					aabb = mesh->aabb.transform(W);
 
-					// These will only be valid for a single frame:
-					object.transform_index = (int)transforms.GetIndex(entity);
-					object.prev_transform_index = (int)prev_transforms.GetIndex(entity);
+					// This is instance bounding box matrix:
+					XMFLOAT4X4 meshMatrix;
+					XMStoreFloat4x4(&meshMatrix, mesh->aabb.getAsBoxMatrix() * W);
 
-					const TransformComponent& transform = transforms[object.transform_index];
+					// We need sometimes the center of the instance bounding box, not the transform position (which can be outside the bounding box)
+					object.center = *((XMFLOAT3*)&meshMatrix._41);
 
-					if (mesh != nullptr)
+					if (mesh->IsSkinned() || mesh->IsDynamic())
 					{
-						XMMATRIX W = XMLoadFloat4x4(&transform.world);
-						aabb = mesh->aabb.transform(W);
-
-						// This is instance bounding box matrix:
-						XMFLOAT4X4 meshMatrix;
-						XMStoreFloat4x4(&meshMatrix, mesh->aabb.getAsBoxMatrix() * W);
-
-						// We need sometimes the center of the instance bounding box, not the transform position (which can be outside the bounding box)
-						object.center = *((XMFLOAT3*)&meshMatrix._41);
-
-						if (mesh->IsSkinned() || mesh->IsDynamic())
+						object.SetDynamic(true);
+						const ArmatureComponent* armature = armatures.GetComponent(mesh->armatureID);
+						if (armature != nullptr)
 						{
-							object.SetDynamic(true);
-							const ArmatureComponent* armature = armatures.GetComponent(mesh->armatureID);
-							if (armature != nullptr)
-							{
-								aabb = AABB::Merge(aabb, armature->aabb);
-							}
+							aabb = AABB::Merge(aabb, armature->aabb);
 						}
+					}
 
-						for (auto& subset : mesh->subsets)
+					for (auto& subset : mesh->subsets)
+					{
+						const MaterialComponent* material = materials.GetComponent(subset.materialID);
+
+						if (material != nullptr)
 						{
-							const MaterialComponent* material = materials.GetComponent(subset.materialID);
-
-							if (material != nullptr)
+							if (material->IsCustomShader())
 							{
-								if (material->IsCustomShader())
+								object.rendertypeMask |= RENDERTYPE_ALL;
+							}
+							else
+							{
+								if (material->IsTransparent())
 								{
-									object.rendertypeMask |= RENDERTYPE_ALL;
+									object.rendertypeMask |= RENDERTYPE_TRANSPARENT;
 								}
 								else
 								{
-									if (material->IsTransparent())
-									{
-										object.rendertypeMask |= RENDERTYPE_TRANSPARENT;
-									}
-									else
-									{
-										object.rendertypeMask |= RENDERTYPE_OPAQUE;
-									}
-
-									if (material->IsWater())
-									{
-										object.rendertypeMask |= RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
-									}
+									object.rendertypeMask |= RENDERTYPE_OPAQUE;
 								}
 
-								if (material->HasPlanarReflection())
+								if (material->IsWater())
 								{
-									object.SetRequestPlanarReflection(true);
-									XMVECTOR P = transform.GetPositionV();
-									XMVECTOR N = XMVectorSet(0, 1, 0, 0);
-									N = XMVector3TransformNormal(N, XMLoadFloat4x4(&transform.world));
-									XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
-									XMStoreFloat4(&waterPlane, _refPlane);
+									object.rendertypeMask |= RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
 								}
-
-								object.SetCastShadow(material->IsCastingShadow());
 							}
-						}
 
-						ImpostorComponent* impostor = impostors.GetComponent(object.meshID);
-						if (impostor != nullptr)
-						{
-							object.SetImpostorPlacement(true);
-							object.impostorSwapDistance = impostor->swapInDistance;
-							object.impostorFadeThresholdRadius = aabb.getRadius();
-
-							impostor->aabb = AABB::Merge(impostor->aabb, aabb);
-							impostor->color = object.color;
-							impostor->fadeThresholdRadius = object.impostorFadeThresholdRadius;
-							
-							const SPHERE boundingsphere = mesh->GetBoundingSphere();
-
-							impostor->instanceMatrices.emplace_back();
-							XMStoreFloat4x4(&impostor->instanceMatrices.back(), 
-								XMMatrixScaling(boundingsphere.radius, boundingsphere.radius, boundingsphere.radius) *
-								XMMatrixTranslation(boundingsphere.center.x, boundingsphere.center.y, boundingsphere.center.z) *
-								W
-								);
-						}
-
-						SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(object.meshID);
-						if (softbody != nullptr)
-						{
-							// this will be registered as soft body in the next physics update
-							softbody->_flags |= SoftBodyPhysicsComponent::SAFE_TO_REGISTER;
-							
-							// soft body manipulated with the object matrix
-							softbody->worldMatrix = transform.world;
-
-							if (softbody->graphicsToPhysicsVertexMapping.empty())
+							if (material->HasPlanarReflection())
 							{
-								softbody->CreateFromMesh(*mesh);
+								object.SetRequestPlanarReflection(true);
 							}
 
-							// simulation aabb will be used for soft bodies
-							aabb = softbody->aabb;
+							object.SetCastShadow(material->IsCastingShadow());
+						}
+					}
 
-							// soft bodies have no transform, their vertices are simulated in world space
-							object.transform_index = -1;
-							object.prev_transform_index = -1;
+					ImpostorComponent* impostor = impostors.GetComponent(object.meshID);
+					if (impostor != nullptr)
+					{
+						object.SetImpostorPlacement(true);
+						object.impostorSwapDistance = impostor->swapInDistance;
+						object.impostorFadeThresholdRadius = aabb.getRadius();
+
+						impostor->aabb = AABB::Merge(impostor->aabb, aabb);
+						impostor->color = object.color;
+						impostor->fadeThresholdRadius = object.impostorFadeThresholdRadius;
+
+						const SPHERE boundingsphere = mesh->GetBoundingSphere();
+
+						locker.lock();
+						impostor->instanceMatrices.emplace_back();
+						XMStoreFloat4x4(&impostor->instanceMatrices.back(),
+							XMMatrixScaling(boundingsphere.radius, boundingsphere.radius, boundingsphere.radius) *
+							XMMatrixTranslation(boundingsphere.center.x, boundingsphere.center.y, boundingsphere.center.z) *
+							W
+						);
+						locker.unlock();
+					}
+
+					SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(object.meshID);
+					if (softbody != nullptr)
+					{
+						// this will be registered as soft body in the next physics update
+						softbody->_flags |= SoftBodyPhysicsComponent::SAFE_TO_REGISTER;
+
+						// soft body manipulated with the object matrix
+						softbody->worldMatrix = transform.world;
+
+						if (softbody->graphicsToPhysicsVertexMapping.empty())
+						{
+							softbody->CreateFromMesh(*mesh);
 						}
 
-						sceneBounds = AABB::Merge(sceneBounds, aabb);
+						// simulation aabb will be used for soft bodies
+						aabb = softbody->aabb;
+
+						// soft bodies have no transform, their vertices are simulated in world space
+						object.transform_index = -1;
+						object.prev_transform_index = -1;
 					}
+				}
+
+				// parallel bounds computation using shared memory:
+				AABB* shared_bounds = (AABB*)args.sharedmemory;
+				if (args.isFirstJobInGroup)
+				{
+					*shared_bounds = aabb_objects[args.jobIndex];
+				}
+				else
+				{
+					*shared_bounds = AABB::Merge(*shared_bounds, aabb_objects[args.jobIndex]);
+				}
+				if (args.isLastJobInGroup)
+				{
+					parallel_bounds[args.groupID] = *shared_bounds;
 				}
 			}
 
-		});
+		}, sizeof(AABB));
 	}
-	void RunCameraUpdateSystem(
-		wiJobSystem::context& ctx,
-		const ComponentManager<TransformComponent>& transforms,
-		ComponentManager<CameraComponent>& cameras
-	)
+	void Scene::RunCameraUpdateSystem(wiJobSystem::context& ctx)
 	{
-		wiJobSystem::Dispatch(ctx, (uint32_t)cameras.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)cameras.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
 			CameraComponent& camera = cameras[args.jobIndex];
 			Entity entity = cameras.GetEntity(args.jobIndex);
@@ -2278,17 +2237,11 @@ namespace wiScene
 			camera.UpdateCamera();
 		});
 	}
-	void RunDecalUpdateSystem(
-		wiJobSystem::context& ctx,
-		const ComponentManager<TransformComponent>& transforms,
-		const ComponentManager<MaterialComponent>& materials,
-		ComponentManager<AABB>& aabb_decals,
-		ComponentManager<DecalComponent>& decals
-	)
+	void Scene::RunDecalUpdateSystem(wiJobSystem::context& ctx)
 	{
 		assert(decals.GetCount() == aabb_decals.GetCount());
 
-		wiJobSystem::Dispatch(ctx, (uint32_t)decals.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)decals.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
 			DecalComponent& decal = decals[args.jobIndex];
 			Entity entity = decals.GetEntity(args.jobIndex);
@@ -2318,16 +2271,11 @@ namespace wiScene
 			decal.normal = material.normalMap;
 		});
 	}
-	void RunProbeUpdateSystem(
-		wiJobSystem::context& ctx,
-		const ComponentManager<TransformComponent>& transforms,
-		ComponentManager<AABB>& aabb_probes,
-		ComponentManager<EnvironmentProbeComponent>& probes
-	)
+	void Scene::RunProbeUpdateSystem(wiJobSystem::context& ctx)
 	{
 		assert(probes.GetCount() == aabb_probes.GetCount());
 
-		wiJobSystem::Dispatch(ctx, (uint32_t)probes.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)probes.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
 			EnvironmentProbeComponent& probe = probes[args.jobIndex];
 			Entity entity = probes.GetEntity(args.jobIndex);
@@ -2349,13 +2297,9 @@ namespace wiScene
 			aabb = aabb.transform(transform.world);
 		});
 	}
-	void RunForceUpdateSystem(
-		wiJobSystem::context& ctx,
-		const ComponentManager<TransformComponent>& transforms,
-		ComponentManager<ForceFieldComponent>& forces
-	)
+	void Scene::RunForceUpdateSystem(wiJobSystem::context& ctx)
 	{
-		wiJobSystem::Dispatch(ctx, (uint32_t)forces.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)forces.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
 			ForceFieldComponent& force = forces[args.jobIndex];
 			Entity entity = forces.GetEntity(args.jobIndex);
@@ -2371,16 +2315,11 @@ namespace wiScene
 			force.range_global = force.range_local * std::max(XMVectorGetX(S), std::max(XMVectorGetY(S), XMVectorGetZ(S)));
 		});
 	}
-	void RunLightUpdateSystem(
-		wiJobSystem::context& ctx,
-		const ComponentManager<TransformComponent>& transforms,
-		ComponentManager<AABB>& aabb_lights,
-		ComponentManager<LightComponent>& lights
-	)
+	void Scene::RunLightUpdateSystem(wiJobSystem::context& ctx)
 	{
 		assert(lights.GetCount() == aabb_lights.GetCount());
 
-		wiJobSystem::Dispatch(ctx, (uint32_t)lights.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)lights.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
 			LightComponent& light = lights[args.jobIndex];
 			Entity entity = lights.GetEntity(args.jobIndex);
@@ -2402,6 +2341,14 @@ namespace wiScene
 			{
 			case LightComponent::DIRECTIONAL:
 				aabb.createFromHalfWidth(wiRenderer::GetCamera().Eye, XMFLOAT3(10000, 10000, 10000));
+				locker.lock();
+				if (args.jobIndex < weather.most_important_light_index)
+				{
+					weather.most_important_light_index = args.jobIndex;
+					weather.sunColor = light.color;
+					weather.sunDirection = light.direction;
+				}
+				locker.unlock();
 				break;
 			case LightComponent::SPOT:
 				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.GetRange(), light.GetRange(), light.GetRange()));
@@ -2422,16 +2369,9 @@ namespace wiScene
 
 		});
 	}
-	void RunParticleUpdateSystem(
-		wiJobSystem::context& ctx,
-		const ComponentManager<TransformComponent>& transforms,
-		const ComponentManager<MeshComponent>& meshes,
-		ComponentManager<wiEmittedParticle>& emitters,
-		ComponentManager<wiHairParticle>& hairs,
-		float dt
-	)
+	void Scene::RunParticleUpdateSystem(wiJobSystem::context& ctx, float dt)
 	{
-		wiJobSystem::Dispatch(ctx, (uint32_t)emitters.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)emitters.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
 			wiEmittedParticle& emitter = emitters[args.jobIndex];
 			Entity entity = emitters.GetEntity(args.jobIndex);
@@ -2439,7 +2379,7 @@ namespace wiScene
 			emitter.UpdateCPU(transform, dt);
 		});
 
-		wiJobSystem::Dispatch(ctx, (uint32_t)hairs.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)hairs.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
 			wiHairParticle& hair = hairs[args.jobIndex];
 
@@ -2458,32 +2398,15 @@ namespace wiScene
 
 		});
 	}
-	void RunWeatherUpdateSystem(
-		wiJobSystem::context& ctx,
-		const ComponentManager<WeatherComponent>& weathers,
-		const ComponentManager<LightComponent>& lights,
-		WeatherComponent& weather)
+	void Scene::RunWeatherUpdateSystem(wiJobSystem::context& ctx)
 	{
 		if (weathers.GetCount() > 0)
 		{
 			weather = weathers[0];
-		}
-
-		for (size_t i = 0; i < lights.GetCount(); ++i)
-		{
-			const LightComponent& light = lights[i];
-			if (light.GetType() == LightComponent::DIRECTIONAL)
-			{
-				weather.sunColor = light.color;
-				weather.sunDirection = light.direction;
-			}
+			weather.most_important_light_index = ~0;
 		}
 	}
-	void RunSoundUpdateSystem(
-		wiJobSystem::context& ctx,
-		const wiECS::ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<SoundComponent>& sounds
-	)
+	void Scene::RunSoundUpdateSystem(wiJobSystem::context& ctx)
 	{
 		const CameraComponent& camera = wiRenderer::GetCamera();
 		wiAudio::SoundInstance3D instance3D;

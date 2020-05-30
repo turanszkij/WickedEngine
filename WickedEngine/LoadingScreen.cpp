@@ -8,7 +8,7 @@ bool LoadingScreen::isActive()
 	return wiJobSystem::IsBusy(ctx_main) || wiJobSystem::IsBusy(ctx_finish);
 }
 
-void LoadingScreen::addLoadingFunction(function<void()> loadingFunction)
+void LoadingScreen::addLoadingFunction(function<void(wiJobArgs)> loadingFunction)
 {
 	if (loadingFunction != nullptr)
 	{
@@ -18,7 +18,7 @@ void LoadingScreen::addLoadingFunction(function<void()> loadingFunction)
 
 void LoadingScreen::addLoadingComponent(RenderPath* component, MainComponent* main, float fadeSeconds, wiColor fadeColor)
 {
-	addLoadingFunction([=] {
+	addLoadingFunction([=](wiJobArgs args) {
 		component->Load();
 	});
 	onFinished([=] {
@@ -43,7 +43,7 @@ void LoadingScreen::Start()
 	{
 		wiJobSystem::Execute(ctx_main, x);
 	}
-	wiJobSystem::Execute(ctx_finish, [this] {
+	wiJobSystem::Execute(ctx_finish, [this](wiJobArgs args) {
 		wiJobSystem::Wait(ctx_main);
 		finish();
 	});

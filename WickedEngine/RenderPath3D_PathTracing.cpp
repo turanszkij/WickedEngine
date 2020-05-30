@@ -114,7 +114,7 @@ void RenderPath3D_PathTracing::Render() const
 
 	// Setup:
 	cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, cmd] {
+	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
 		wiRenderer::UpdateRenderData(cmd);
 
@@ -126,8 +126,9 @@ void RenderPath3D_PathTracing::Render() const
 
 	// Main scene:
 	cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, device, cmd] {
+	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
+		GraphicsDevice* device = wiRenderer::GetDevice();
 		wiRenderer::BindCommonResources(cmd);
 
 		if (wiRenderer::GetRaytraceDebugBVHVisualizerEnabled())

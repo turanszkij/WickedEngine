@@ -501,7 +501,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 			}
 			else if (gen_type == UV_GEN_GENERATE_ATLAS)
 			{
-				wiJobSystem::Execute(ctx, [&] {
+				wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
 					it.second = GenerateMeshAtlas(mesh, (uint32_t)lightmapResolutionSlider->GetValue());
 				});
 			}

@@ -14,16 +14,17 @@ void RenderPath3D_TiledForward::Render() const
 	CommandList cmd;
 
 	cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, cmd] { RenderFrameSetUp(cmd); });
+	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) { RenderFrameSetUp(cmd); });
 	cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, cmd] { RenderShadows(cmd); });
+	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) { RenderShadows(cmd); });
 	cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, cmd] { RenderReflections(cmd); });
+	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) { RenderReflections(cmd); });
 
 	// Main scene:
 	cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, device, cmd] {
+	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
+		GraphicsDevice* device = wiRenderer::GetDevice();
 		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 
 		device->Barrier(&GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_DEPTHSTENCIL), 1, cmd);
@@ -79,8 +80,9 @@ void RenderPath3D_TiledForward::Render() const
 	});
 
 	cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, device, cmd] {
+	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
+		GraphicsDevice* device = wiRenderer::GetDevice();
 		wiRenderer::ComputeTiledLightCulling(
 			depthBuffer_Copy, 
 			cmd
@@ -114,8 +116,9 @@ void RenderPath3D_TiledForward::Render() const
 	});
 
 	cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, device, cmd] {
+	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
+		GraphicsDevice* device = wiRenderer::GetDevice();
 		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 		wiRenderer::BindCommonResources(cmd);
 

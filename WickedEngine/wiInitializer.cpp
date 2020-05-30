@@ -24,19 +24,19 @@ namespace wiInitializer
 
 		wiJobSystem::Initialize();
 
-		wiJobSystem::Execute(ctx, [] { wiFont::Initialize(); });
-		wiJobSystem::Execute(ctx, [] { wiImage::Initialize(); });
-		wiJobSystem::Execute(ctx, [] { wiInput::Initialize(); });
-		wiJobSystem::Execute(ctx, [] { wiRenderer::Initialize(); wiWidget::LoadShaders(); });
-		wiJobSystem::Execute(ctx, [] { wiAudio::Initialize(); });
-		wiJobSystem::Execute(ctx, [] { wiNetwork::Initialize(); });
-		wiJobSystem::Execute(ctx, [] { wiTextureHelper::Initialize(); });
-		wiJobSystem::Execute(ctx, [] { wiScene::wiHairParticle::Initialize(); });
-		wiJobSystem::Execute(ctx, [] { wiScene::wiEmittedParticle::Initialize(); });
-		wiJobSystem::Execute(ctx, [] { wiOcean::Initialize(); });
-		wiJobSystem::Execute(ctx, [] { wiGPUSortLib::LoadShaders(); });
-		wiJobSystem::Execute(ctx, [] { wiGPUBVH::LoadShaders(); });
-		wiJobSystem::Execute(ctx, [] { wiPhysicsEngine::Initialize(); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiFont::Initialize(); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiImage::Initialize(); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiInput::Initialize(); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiRenderer::Initialize(); wiWidget::LoadShaders(); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiAudio::Initialize(); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiNetwork::Initialize(); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiTextureHelper::Initialize(); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiScene::wiHairParticle::Initialize(); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiScene::wiEmittedParticle::Initialize(); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiOcean::Initialize(); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiGPUSortLib::LoadShaders(); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiGPUBVH::LoadShaders(); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiPhysicsEngine::Initialize(); });
 
 	}
 

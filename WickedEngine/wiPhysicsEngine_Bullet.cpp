@@ -285,13 +285,7 @@ namespace wiPhysicsEngine
 
 	void RunPhysicsUpdateSystem(
 		wiJobSystem::context& ctx,
-		const WeatherComponent& weather,
-		const ComponentManager<ArmatureComponent>& armatures,
-		ComponentManager<TransformComponent>& transforms,
-		ComponentManager<MeshComponent>& meshes,
-		ComponentManager<ObjectComponent>& objects,
-		ComponentManager<RigidBodyPhysicsComponent>& rigidbodies,
-		ComponentManager<SoftBodyPhysicsComponent>& softbodies,
+		Scene& scene,
 		float dt
 	)
 	{
@@ -300,23 +294,21 @@ namespace wiPhysicsEngine
 			return;
 		}
 
-		wiJobSystem::Wait(ctx);
-
 		auto range = wiProfiler::BeginRangeCPU("Physics");
 
-		btVector3 wind = btVector3(weather.windDirection.x, weather.windDirection.y, weather.windDirection.z);
+		btVector3 wind = btVector3(scene.weather.windDirection.x, scene.weather.windDirection.y, scene.weather.windDirection.z);
 
 		// System will register rigidbodies to objects, and update physics engine state for kinematics:
-		wiJobSystem::Dispatch(ctx, (uint32_t)rigidbodies.GetCount(), 256, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 256, [&](wiJobArgs args) {
 
-			RigidBodyPhysicsComponent& physicscomponent = rigidbodies[args.jobIndex];
-			Entity entity = rigidbodies.GetEntity(args.jobIndex);
+			RigidBodyPhysicsComponent& physicscomponent = scene.rigidbodies[args.jobIndex];
+			Entity entity = scene.rigidbodies.GetEntity(args.jobIndex);
 
 			if (physicscomponent.physicsobject == nullptr)
 			{
-				TransformComponent& transform = *transforms.GetComponent(entity);
-				const ObjectComponent& object = *objects.GetComponent(entity);
-				const MeshComponent& mesh = *meshes.GetComponent(object.meshID);
+				TransformComponent& transform = *scene.transforms.GetComponent(entity);
+				const ObjectComponent& object = *scene.objects.GetComponent(entity);
+				const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
 				physicsLock.lock();
 				AddRigidBody(entity, physicscomponent, mesh, transform);
 				physicsLock.unlock();
@@ -340,7 +332,7 @@ namespace wiPhysicsEngine
 				// For kinematic object, system updates physics state, else the physics updates system state:
 				if (physicscomponent.IsKinematic())
 				{
-					TransformComponent& transform = *transforms.GetComponent(entity);
+					TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 					btMotionState* motionState = rigidbody->getMotionState();
 					btTransform physicsTransform;
@@ -357,12 +349,12 @@ namespace wiPhysicsEngine
 		});
 
 		// System will register softbodies to meshes and update physics engine state:
-		wiJobSystem::Dispatch(ctx, (uint32_t)softbodies.GetCount(), 1, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)scene.softbodies.GetCount(), 1, [&](wiJobArgs args) {
 
-			SoftBodyPhysicsComponent& physicscomponent = softbodies[args.jobIndex];
-			Entity entity = softbodies.GetEntity(args.jobIndex);
-			MeshComponent& mesh = *meshes.GetComponent(entity); 
-			const ArmatureComponent* armature = mesh.IsSkinned() ? armatures.GetComponent(mesh.armatureID) : nullptr;
+			SoftBodyPhysicsComponent& physicscomponent = scene.softbodies[args.jobIndex];
+			Entity entity = scene.softbodies.GetEntity(args.jobIndex);
+			MeshComponent& mesh = *scene.meshes.GetComponent(entity);
+			const ArmatureComponent* armature = mesh.IsSkinned() ? scene.armatures.GetComponent(mesh.armatureID) : nullptr;
 			mesh.SetDynamic(true);
 
 			if (physicscomponent._flags & SoftBodyPhysicsComponent::FORCE_RESET)
@@ -423,7 +415,7 @@ namespace wiPhysicsEngine
 			btRigidBody* rigidbody = btRigidBody::upcast(collisionobject);
 			if (rigidbody != nullptr)
 			{
-				RigidBodyPhysicsComponent* physicscomponent = rigidbodies.GetComponent(entity);
+				RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(entity);
 				if (physicscomponent == nullptr)
 				{
 					dynamicsWorld->removeRigidBody(rigidbody);
@@ -434,7 +426,7 @@ namespace wiPhysicsEngine
 				// Feedback non-kinematic objects to system:
 				if(!physicscomponent->IsKinematic())
 				{
-					TransformComponent& transform = *transforms.GetComponent(entity);
+					TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 					btMotionState* motionState = rigidbody->getMotionState();
 					btTransform physicsTransform;
@@ -454,7 +446,7 @@ namespace wiPhysicsEngine
 
 				if (softbody != nullptr)
 				{
-					SoftBodyPhysicsComponent* physicscomponent = softbodies.GetComponent(entity);
+					SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(entity);
 					if (physicscomponent == nullptr)
 					{
 						((btSoftRigidDynamicsWorld*)dynamicsWorld.get())->removeSoftBody(softbody);
@@ -462,7 +454,7 @@ namespace wiPhysicsEngine
 						continue;
 					}
 
-					MeshComponent& mesh = *meshes.GetComponent(entity);
+					MeshComponent& mesh = *scene.meshes.GetComponent(entity);
 
 					// System mesh aabb will be queried from physics engine soft body:
 					btVector3 aabb_min;
