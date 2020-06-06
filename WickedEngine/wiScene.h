@@ -863,6 +863,20 @@ namespace wiScene
 		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
 	};
 
+	struct AnimationDataComponent
+	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+		};
+		uint32_t _flags = EMPTY;
+
+		std::vector<float> keyframe_times;
+		std::vector<float> keyframe_data;
+
+		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+	};
+
 	struct AnimationComponent
 	{
 		enum FLAGS
@@ -883,7 +897,10 @@ namespace wiScene
 			{
 				EMPTY = 0,
 			};
-			uint32_t _flags = EMPTY;
+			uint32_t _flags = LOOPED;
+
+			wiECS::Entity target = wiECS::INVALID_ENTITY;
+			int samplerIndex = -1;
 
 			enum Path
 			{
@@ -893,9 +910,6 @@ namespace wiScene
 				UNKNOWN,
 				TYPE_FORCE_UINT32 = 0xFFFFFFFF
 			} path = TRANSLATION;
-
-			wiECS::Entity target = wiECS::INVALID_ENTITY;
-			uint32_t samplerIndex = 0;
 		};
 		struct AnimationSampler
 		{
@@ -903,7 +917,9 @@ namespace wiScene
 			{
 				EMPTY = 0,
 			};
-			uint32_t _flags = EMPTY;
+			uint32_t _flags = LOOPED;
+
+			wiECS::Entity data = wiECS::INVALID_ENTITY;
 
 			enum Mode
 			{
@@ -912,10 +928,9 @@ namespace wiScene
 				MODE_FORCE_UINT32 = 0xFFFFFFFF
 			} mode = LINEAR;
 
-			std::vector<float> keyframe_times;
-			std::vector<float> keyframe_data;
+			// The data is now not part of the sampler, so it can be shared. This is kept only for backwards compatibility with previous versions.
+			AnimationDataComponent backwards_compatibility_data;
 		};
-
 		std::vector<AnimationChannel> channels;
 		std::vector<AnimationSampler> samplers;
 
@@ -1103,6 +1118,7 @@ namespace wiScene
 		wiECS::ComponentManager<DecalComponent> decals;
 		wiECS::ComponentManager<AABB> aabb_decals;
 		wiECS::ComponentManager<AnimationComponent> animations;
+		wiECS::ComponentManager<AnimationDataComponent> animation_datas;
 		wiECS::ComponentManager<wiEmittedParticle> emitters;
 		wiECS::ComponentManager<wiHairParticle> hairs;
 		wiECS::ComponentManager<WeatherComponent> weathers;

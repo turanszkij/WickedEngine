@@ -21,6 +21,7 @@ namespace wiScene
 	struct ForceFieldComponent;
 	struct DecalComponent;
 	struct AnimationComponent;
+	struct AnimationDataComponent;
 	struct WeatherComponent;
 	struct SoundComponent;
 	struct InverseKinematicsComponent;

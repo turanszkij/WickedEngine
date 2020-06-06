@@ -659,8 +659,15 @@ namespace wiScene
 			{
 				archive >> samplers[i]._flags;
 				archive >> (uint32_t&)samplers[i].mode;
-				archive >> samplers[i].keyframe_times;
-				archive >> samplers[i].keyframe_data;
+				if (archive.GetVersion() < 46)
+				{
+					archive >> samplers[i].backwards_compatibility_data.keyframe_times;
+					archive >> samplers[i].backwards_compatibility_data.keyframe_data;
+				}
+				if (archive.GetVersion() >= 46)
+				{
+					SerializeEntity(archive, samplers[i].data, seed);
+				}
 			}
 
 		}
@@ -690,9 +697,23 @@ namespace wiScene
 			{
 				archive << samplers[i]._flags;
 				archive << samplers[i].mode;
-				archive << samplers[i].keyframe_times;
-				archive << samplers[i].keyframe_data;
+				SerializeEntity(archive, samplers[i].data, seed);
 			}
+		}
+	}
+	void AnimationDataComponent::Serialize(wiArchive& archive, Entity seed)
+	{
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+			archive >> keyframe_times;
+			archive >> keyframe_data;
+		}
+		else
+		{
+			archive << _flags;
+			archive << keyframe_times;
+			archive << keyframe_data;
 		}
 	}
 	void WeatherComponent::Serialize(wiArchive& archive, Entity seed)
@@ -920,6 +941,10 @@ namespace wiScene
 		if (archive.GetVersion() >= 38)
 		{
 			springs.Serialize(archive, seed);
+		}
+		if (archive.GetVersion() >= 46)
+		{
+			animation_datas.Serialize(archive, seed);
 		}
 
 	}
@@ -1183,6 +1208,16 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = springs.Create(entity);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+				}
+			}
+			if (archive.GetVersion() >= 46)
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = animation_datas.Create(entity);
 					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
@@ -1519,6 +1554,19 @@ namespace wiScene
 			if (archive.GetVersion() >= 38)
 			{
 				auto component = springs.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			if (archive.GetVersion() >= 46)
+			{
+				auto component = animation_datas.GetComponent(entity);
 				if (component != nullptr)
 				{
 					archive << true;

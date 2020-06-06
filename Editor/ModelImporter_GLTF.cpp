@@ -846,6 +846,9 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				animationcomponent.samplers[i].mode = AnimationComponent::AnimationSampler::Mode::STEP;
 			}
 
+			animationcomponent.samplers[i].data = CreateEntity();
+			AnimationDataComponent& animationdata = scene.animation_datas.Create(animationcomponent.samplers[i].data);
+
 			// AnimationSampler input = keyframe times
 			{
 				const tinygltf::Accessor& accessor = state.gltfModel.accessors[sam.input];
@@ -857,7 +860,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				int stride = accessor.ByteStride(bufferView);
 				size_t count = accessor.count;
 
-				animationcomponent.samplers[i].keyframe_times.resize(count);
+				animationdata.keyframe_times.resize(count);
 
 				const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
 
@@ -866,7 +869,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				for (size_t j = 0; j < count; ++j)
 				{
 					float time = ((float*)data)[j];
-					animationcomponent.samplers[i].keyframe_times[j] = time;
+					animationdata.keyframe_times[j] = time;
 					animationcomponent.start = min(animationcomponent.start, time);
 					animationcomponent.end = max(animationcomponent.end, time);
 				}
@@ -889,20 +892,20 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				case TINYGLTF_TYPE_VEC3:
 				{
 					assert(stride == sizeof(XMFLOAT3));
-					animationcomponent.samplers[i].keyframe_data.resize(count * 3);
+					animationdata.keyframe_data.resize(count * 3);
 					for (size_t j = 0; j < count; ++j)
 					{
-						((XMFLOAT3*)animationcomponent.samplers[i].keyframe_data.data())[j] = ((XMFLOAT3*)data)[j];
+						((XMFLOAT3*)animationdata.keyframe_data.data())[j] = ((XMFLOAT3*)data)[j];
 					}
 				}
 				break;
 				case TINYGLTF_TYPE_VEC4:
 				{
 					assert(stride == sizeof(XMFLOAT4));
-					animationcomponent.samplers[i].keyframe_data.resize(count * 4);
+					animationdata.keyframe_data.resize(count * 4);
 					for (size_t j = 0; j < count; ++j)
 					{
-						((XMFLOAT4*)animationcomponent.samplers[i].keyframe_data.data())[j] = ((XMFLOAT4*)data)[j];
+						((XMFLOAT4*)animationdata.keyframe_data.data())[j] = ((XMFLOAT4*)data)[j];
 					}
 				}
 				break;

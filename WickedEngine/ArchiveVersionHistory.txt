@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+46: Decoupled animation data from targets
 45: Serialized emitter spritesheet properties
 44: Serialized AnimationComponent::amount
 43: Serialized MeshComponent::vertex_windweights

@@ -1189,6 +1189,7 @@ namespace wiScene
 		decals.Clear();
 		aabb_decals.Clear();
 		animations.Clear();
+		animation_datas.Clear();
 		emitters.Clear();
 		hairs.Clear();
 		weathers.Clear();
@@ -1220,6 +1221,7 @@ namespace wiScene
 		decals.Merge(other.decals);
 		aabb_decals.Merge(other.aabb_decals);
 		animations.Merge(other.animations);
+		animation_datas.Merge(other.animation_datas);
 		emitters.Merge(other.emitters);
 		hairs.Merge(other.hairs);
 		weathers.Merge(other.weathers);
@@ -1255,6 +1257,7 @@ namespace wiScene
 		decals.Remove(entity);
 		aabb_decals.Remove(entity);
 		animations.Remove(entity);
+		animation_datas.Remove(entity);
 		emitters.Remove(entity);
 		hairs.Remove(entity);
 		weathers.Remove(entity);
@@ -1645,27 +1648,40 @@ namespace wiScene
 			for (const AnimationComponent::AnimationChannel& channel : animation.channels)
 			{
 				assert(channel.samplerIndex < animation.samplers.size());
-				const AnimationComponent::AnimationSampler& sampler = animation.samplers[channel.samplerIndex];
+				AnimationComponent::AnimationSampler& sampler = animation.samplers[channel.samplerIndex];
+				if (sampler.data == INVALID_ENTITY)
+				{
+					// backwards-compatibility mode
+					sampler.data = CreateEntity();
+					animation_datas.Create(sampler.data) = sampler.backwards_compatibility_data;
+					sampler.backwards_compatibility_data.keyframe_times.clear();
+					sampler.backwards_compatibility_data.keyframe_data.clear();
+				}
+				const AnimationDataComponent* animationdata = animation_datas.GetComponent(sampler.data);
+				if (animationdata == nullptr)
+				{
+					continue;
+				}
 
 				int keyLeft = 0;
 				int keyRight = 0;
 
-				if (sampler.keyframe_times.back() < animation.timer)
+				if (animationdata->keyframe_times.back() < animation.timer)
 				{
 					// Rightmost keyframe is already outside animation, so just snap to last keyframe:
-					keyLeft = keyRight = (int)sampler.keyframe_times.size() - 1;
+					keyLeft = keyRight = (int)animationdata->keyframe_times.size() - 1;
 				}
 				else
 				{
 					// Search for the right keyframe (greater/equal to anim time):
-					while (sampler.keyframe_times[keyRight++] < animation.timer) {}
+					while (animationdata->keyframe_times[keyRight++] < animation.timer) {}
 					keyRight--;
 
 					// Left keyframe is just near right:
 					keyLeft = std::max(0, keyRight - 1);
 				}
 
-				float left = sampler.keyframe_times[keyLeft];
+				float left = animationdata->keyframe_times[keyLeft];
 
 				TransformComponent& target_transform = *transforms.GetComponent(channel.target);
 				TransformComponent transform = target_transform;
@@ -1677,20 +1693,20 @@ namespace wiScene
 					{
 					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
 					{
-						assert(sampler.keyframe_data.size() == sampler.keyframe_times.size() * 3);
-						transform.translation_local = ((const XMFLOAT3*)sampler.keyframe_data.data())[keyLeft];
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
+						transform.translation_local = ((const XMFLOAT3*)animationdata->keyframe_data.data())[keyLeft];
 					}
 					break;
 					case AnimationComponent::AnimationChannel::Path::ROTATION:
 					{
-						assert(sampler.keyframe_data.size() == sampler.keyframe_times.size() * 4);
-						transform.rotation_local = ((const XMFLOAT4*)sampler.keyframe_data.data())[keyLeft];
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4);
+						transform.rotation_local = ((const XMFLOAT4*)animationdata->keyframe_data.data())[keyLeft];
 					}
 					break;
 					case AnimationComponent::AnimationChannel::Path::SCALE:
 					{
-						assert(sampler.keyframe_data.size() == sampler.keyframe_times.size() * 3);
-						transform.scale_local = ((const XMFLOAT3*)sampler.keyframe_data.data())[keyLeft];
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
+						transform.scale_local = ((const XMFLOAT3*)animationdata->keyframe_data.data())[keyLeft];
 					}
 					break;
 					}
@@ -1698,15 +1714,15 @@ namespace wiScene
 				else
 				{
 					// Linear interpolation method:
-					float right = sampler.keyframe_times[keyRight];
+					float right = animationdata->keyframe_times[keyRight];
 					float t = (animation.timer - left) / (right - left);
 
 					switch (channel.path)
 					{
 					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
 					{
-						assert(sampler.keyframe_data.size() == sampler.keyframe_times.size() * 3);
-						const XMFLOAT3* data = (const XMFLOAT3*)sampler.keyframe_data.data();
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
+						const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
 						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
 						XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
 						XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
@@ -1715,8 +1731,8 @@ namespace wiScene
 					break;
 					case AnimationComponent::AnimationChannel::Path::ROTATION:
 					{
-						assert(sampler.keyframe_data.size() == sampler.keyframe_times.size() * 4);
-						const XMFLOAT4* data = (const XMFLOAT4*)sampler.keyframe_data.data();
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4);
+						const XMFLOAT4* data = (const XMFLOAT4*)animationdata->keyframe_data.data();
 						XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft]);
 						XMVECTOR vRight = XMLoadFloat4(&data[keyRight]);
 						XMVECTOR vAnim = XMQuaternionSlerp(vLeft, vRight, t);
@@ -1726,8 +1742,8 @@ namespace wiScene
 					break;
 					case AnimationComponent::AnimationChannel::Path::SCALE:
 					{
-						assert(sampler.keyframe_data.size() == sampler.keyframe_times.size() * 3);
-						const XMFLOAT3* data = (const XMFLOAT3*)sampler.keyframe_data.data();
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
+						const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
 						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
 						XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
 						XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
