@@ -555,7 +555,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		const GPUResource* res[] = {
 			&counterBuffer,
 		};
-		device->BindResources(CS, res, 0, arraysize(res), cmd);
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
 		const GPUResource* uavs[] = {
 			&indirectBuffers,
@@ -566,7 +566,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
 
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
-		device->UnbindResources(0, arraysize(res), cmd);
+		device->UnbindResources(TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 		device->EventEnd(cmd);
 	}
 }

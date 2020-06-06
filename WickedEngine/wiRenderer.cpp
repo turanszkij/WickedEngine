@@ -4447,12 +4447,12 @@ void UpdateRenderData(CommandList cmd)
 
 				// Upload bones for skinning to shader
 				device->UpdateBuffer(&armature.boneBuffer, armature.boneData.data(), cmd, (int)(sizeof(ArmatureComponent::ShaderBoneType) * armature.boneData.size()));
-				device->BindResource(CS, &armature.boneBuffer, SKINNINGSLOT_IN_BONEBUFFER, cmd);
 
 				// Do the skinning
 				const GPUResource* vbs[] = {
 					&mesh.vertexBuffer_POS,
 					&mesh.vertexBuffer_BON,
+					&armature.boneBuffer,
 				};
 				const GPUResource* so[] = {
 					&mesh.streamoutBuffer_POS,

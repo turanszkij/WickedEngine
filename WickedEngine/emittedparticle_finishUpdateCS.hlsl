@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_EmittedParticle.h"
 
-RAWBUFFER(counterBuffer, 0);
+RAWBUFFER(counterBuffer, TEXSLOT_ONDEMAND0);
 
 RWRAWBUFFER(indirectBuffers, 0);
 
