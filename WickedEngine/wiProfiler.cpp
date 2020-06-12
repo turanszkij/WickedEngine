@@ -178,7 +178,7 @@ namespace wiProfiler
 
 		lock.lock();
 
-		auto& it = ranges.find(id);
+		auto it = ranges.find(id);
 		if (it != ranges.end())
 		{
 			if (it->second.IsCPURange())

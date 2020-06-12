@@ -122,7 +122,7 @@ int Pick(lua_State* L)
 					}
 				}
 			}
-			auto& pick = wiScene::Pick(ray->ray, renderTypeMask, layerMask, *scene);
+			auto pick = wiScene::Pick(ray->ray, renderTypeMask, layerMask, *scene);
 			wiLua::SSetLongLong(L, pick.entity);
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
@@ -172,7 +172,7 @@ int SceneIntersectSphere(lua_State* L)
 					}
 				}
 			}
-			auto& pick = wiScene::SceneIntersectSphere(sphere->sphere, renderTypeMask, layerMask, *scene);
+			auto pick = wiScene::SceneIntersectSphere(sphere->sphere, renderTypeMask, layerMask, *scene);
 			wiLua::SSetLongLong(L, pick.entity);
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
@@ -222,7 +222,7 @@ int SceneIntersectCapsule(lua_State* L)
 					}
 				}
 			}
-			auto& pick = wiScene::SceneIntersectCapsule(capsule->capsule, renderTypeMask, layerMask, *scene);
+			auto pick = wiScene::SceneIntersectCapsule(capsule->capsule, renderTypeMask, layerMask, *scene);
 			wiLua::SSetLongLong(L, pick.entity);
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));

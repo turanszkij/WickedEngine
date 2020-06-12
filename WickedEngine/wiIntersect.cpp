@@ -62,7 +62,7 @@ float AABB::getArea() const
 	return (_max.x - _min.x)*(_max.y - _min.y)*(_max.z - _min.z);
 }
 float AABB::getRadius() const {
-	XMFLOAT3& abc = getHalfWidth();
+	XMFLOAT3 abc = getHalfWidth();
 	return std::max(std::max(abc.x, abc.y), abc.z);
 }
 AABB::INTERSECTION_TYPE AABB::intersects(const AABB& b) const {

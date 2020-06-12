@@ -1572,7 +1572,7 @@ bool GraphicsDevice_DX11::CreateInputLayout(const InputLayoutDesc *pInputElement
 	std::vector<D3D11_INPUT_ELEMENT_DESC> desc(NumElements);
 	for (uint32_t i = 0; i < NumElements; ++i)
 	{
-		desc[i].SemanticName = pInputElementDescs[i].SemanticName;
+		desc[i].SemanticName = pInputElementDescs[i].SemanticName.c_str();
 		desc[i].SemanticIndex = pInputElementDescs[i].SemanticIndex;
 		desc[i].Format = _ConvertFormat(pInputElementDescs[i].Format);
 		desc[i].InputSlot = pInputElementDescs[i].InputSlot;

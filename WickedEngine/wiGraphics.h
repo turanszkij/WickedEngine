@@ -1,7 +1,9 @@
 #pragma once
 #include "CommonInclude.h"
+
 #include <memory>
 #include <vector>
+#include <string>
 
 namespace wiGraphics
 {
@@ -334,7 +336,7 @@ namespace wiGraphics
 	{
 		static const uint32_t APPEND_ALIGNED_ELEMENT = 0xffffffff; // automatically figure out AlignedByteOffset depending on Format
 
-		char* SemanticName = nullptr;
+		std::string SemanticName;
 		uint32_t SemanticIndex = 0;
 		FORMAT Format = FORMAT_UNKNOWN;
 		uint32_t InputSlot = 0;

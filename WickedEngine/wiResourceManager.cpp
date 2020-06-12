@@ -69,7 +69,7 @@ namespace wiResourceManager
 
 		// dynamic type selection:
 		{
-			auto& it = types.find(ext);
+			auto it = types.find(ext);
 			if (it != types.end())
 			{
 				type = it->second;

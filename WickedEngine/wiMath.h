@@ -17,8 +17,8 @@ namespace wiMath
 	}
 	inline float Distance(const XMVECTOR& v1, const XMVECTOR& v2)
 	{
-		XMVECTOR& vectorSub = XMVectorSubtract(v1, v2);
-		XMVECTOR& length = XMVector3Length(vectorSub);
+		XMVECTOR vectorSub = XMVectorSubtract(v1, v2);
+		XMVECTOR length = XMVector3Length(vectorSub);
 
 		float Distance = 0.0f;
 		XMStoreFloat(&Distance, length);
@@ -26,8 +26,8 @@ namespace wiMath
 	}
 	inline float DistanceSquared(const XMVECTOR& v1, const XMVECTOR& v2)
 	{
-		XMVECTOR& vectorSub = XMVectorSubtract(v1, v2);
-		XMVECTOR& length = XMVector3LengthSq(vectorSub);
+		XMVECTOR vectorSub = XMVectorSubtract(v1, v2);
+		XMVECTOR length = XMVector3LengthSq(vectorSub);
 
 		float Distance = 0.0f;
 		XMStoreFloat(&Distance, length);
@@ -35,8 +35,8 @@ namespace wiMath
 	}
 	inline float DistanceEstimated(const XMVECTOR& v1, const XMVECTOR& v2)
 	{
-		XMVECTOR& vectorSub = XMVectorSubtract(v1, v2);
-		XMVECTOR& length = XMVector3LengthEst(vectorSub);
+		XMVECTOR vectorSub = XMVectorSubtract(v1, v2);
+		XMVECTOR length = XMVector3LengthEst(vectorSub);
 
 		float Distance = 0.0f;
 		XMStoreFloat(&Distance, length);
@@ -44,26 +44,26 @@ namespace wiMath
 	}
 	inline float Distance(const XMFLOAT2& v1, const XMFLOAT2& v2)
 	{
-		XMVECTOR& vector1 = XMLoadFloat2(&v1);
-		XMVECTOR& vector2 = XMLoadFloat2(&v2);
+		XMVECTOR vector1 = XMLoadFloat2(&v1);
+		XMVECTOR vector2 = XMLoadFloat2(&v2);
 		return XMVectorGetX(XMVector2Length(vector2 - vector1));
 	}
 	inline float Distance(const XMFLOAT3& v1, const XMFLOAT3& v2)
 	{
-		XMVECTOR& vector1 = XMLoadFloat3(&v1);
-		XMVECTOR& vector2 = XMLoadFloat3(&v2);
+		XMVECTOR vector1 = XMLoadFloat3(&v1);
+		XMVECTOR vector2 = XMLoadFloat3(&v2);
 		return Distance(vector1, vector2);
 	}
 	inline float DistanceSquared(const XMFLOAT3& v1, const XMFLOAT3& v2)
 	{
-		XMVECTOR& vector1 = XMLoadFloat3(&v1);
-		XMVECTOR& vector2 = XMLoadFloat3(&v2);
+		XMVECTOR vector1 = XMLoadFloat3(&v1);
+		XMVECTOR vector2 = XMLoadFloat3(&v2);
 		return DistanceSquared(vector1, vector2);
 	}
 	inline float DistanceEstimated(const XMFLOAT3& v1, const XMFLOAT3& v2)
 	{
-		XMVECTOR& vector1 = XMLoadFloat3(&v1);
-		XMVECTOR& vector2 = XMLoadFloat3(&v2);
+		XMVECTOR vector1 = XMLoadFloat3(&v1);
+		XMVECTOR vector2 = XMLoadFloat3(&v2);
 		return DistanceEstimated(vector1, vector2);
 	}
 	inline XMVECTOR ClosestPointOnLine(const XMVECTOR& A, const XMVECTOR& B, const XMVECTOR& Point)

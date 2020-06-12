@@ -421,19 +421,19 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		material.reflectance = 0.02f;
 
 		// metallic-roughness workflow:
-		auto& baseColorTexture = x.values.find("baseColorTexture");
-		auto& metallicRoughnessTexture = x.values.find("metallicRoughnessTexture");
-		auto& baseColorFactor = x.values.find("baseColorFactor");
-		auto& roughnessFactor = x.values.find("roughnessFactor");
-		auto& metallicFactor = x.values.find("metallicFactor");
+		auto baseColorTexture = x.values.find("baseColorTexture");
+		auto metallicRoughnessTexture = x.values.find("metallicRoughnessTexture");
+		auto baseColorFactor = x.values.find("baseColorFactor");
+		auto roughnessFactor = x.values.find("roughnessFactor");
+		auto metallicFactor = x.values.find("metallicFactor");
 
 		// common workflow:
-		auto& normalTexture = x.additionalValues.find("normalTexture");
-		auto& emissiveTexture = x.additionalValues.find("emissiveTexture");
-		auto& occlusionTexture = x.additionalValues.find("occlusionTexture");
-		auto& emissiveFactor = x.additionalValues.find("emissiveFactor");
-		auto& alphaCutoff = x.additionalValues.find("alphaCutoff");
-		auto& alphaMode = x.additionalValues.find("alphaMode");
+		auto normalTexture = x.additionalValues.find("normalTexture");
+		auto emissiveTexture = x.additionalValues.find("emissiveTexture");
+		auto occlusionTexture = x.additionalValues.find("occlusionTexture");
+		auto emissiveFactor = x.additionalValues.find("emissiveFactor");
+		auto alphaCutoff = x.additionalValues.find("alphaCutoff");
+		auto alphaMode = x.additionalValues.find("alphaMode");
 
 
 		if (baseColorTexture != x.values.end())
@@ -514,7 +514,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		}
 
 		// specular-glossiness workflow (todo):
-		auto& specularGlossinessWorkflow = x.extensions.find("KHR_materials_pbrSpecularGlossiness");
+		auto specularGlossinessWorkflow = x.extensions.find("KHR_materials_pbrSpecularGlossiness");
 		if (specularGlossinessWorkflow != x.extensions.end())
 		{
 			material.SetUseSpecularGlossinessWorkflow(true);

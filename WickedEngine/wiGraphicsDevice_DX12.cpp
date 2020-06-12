@@ -3652,7 +3652,7 @@ using namespace DX12_Internal;
 					elements.resize(desc.InputLayout.NumElements);
 					for (uint32_t i = 0; i < desc.InputLayout.NumElements; ++i)
 					{
-						elements[i].SemanticName = pso->desc.il->desc[i].SemanticName;
+						elements[i].SemanticName = pso->desc.il->desc[i].SemanticName.c_str();
 						elements[i].SemanticIndex = pso->desc.il->desc[i].SemanticIndex;
 						elements[i].Format = _ConvertFormat(pso->desc.il->desc[i].Format);
 						elements[i].InputSlot = pso->desc.il->desc[i].InputSlot;
