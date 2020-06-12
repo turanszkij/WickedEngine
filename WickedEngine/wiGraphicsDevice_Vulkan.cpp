@@ -1726,8 +1726,17 @@ using namespace Vulkan_Internal;
 			{
 				if (isDeviceSuitable(device, surface)) 
 				{
-					physicalDevice = device;
-					break;
+					auto props = VkPhysicalDeviceProperties{};
+					vkGetPhysicalDeviceProperties(device, &props);
+					bool discrete = props.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+					if (discrete || physicalDevice == VK_NULL_HANDLE)
+					{
+						physicalDevice = device;
+						if (discrete)
+						{
+							break; // if this is discrete GPU, look no further (prioritize discrete GPU)
+						}
+					}
 				}
 			}
 
