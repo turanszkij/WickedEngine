@@ -2,27 +2,27 @@
 #include "WickedEngine.h"
 #include "Translator.h"
 
-class MaterialWindow;
-class PostprocessWindow;
-class WeatherWindow;
-class ObjectWindow;
-class MeshWindow;
-class CameraWindow;
-class RendererWindow;
-class EnvProbeWindow;
-class DecalWindow;
-class LightWindow;
-class AnimationWindow;
-class EmitterWindow;
-class HairParticleWindow;
-class ForceFieldWindow;
-class SoundWindow;
-class PaintToolWindow;
-class SpringWindow;
-class IKWindow;
-class TransformWindow;
-class LayerWindow;
-class NameWindow;
+#include "MaterialWindow.h"
+#include "PostprocessWindow.h"
+#include "WeatherWindow.h"
+#include "ObjectWindow.h"
+#include "MeshWindow.h"
+#include "CameraWindow.h"
+#include "RendererWindow.h"
+#include "EnvProbeWindow.h"
+#include "DecalWindow.h"
+#include "LightWindow.h"
+#include "AnimationWindow.h"
+#include "EmitterWindow.h"
+#include "HairParticleWindow.h"
+#include "ForceFieldWindow.h"
+#include "SoundWindow.h"
+#include "PaintToolWindow.h"
+#include "SpringWindow.h"
+#include "IKWindow.h"
+#include "TransformWindow.h"
+#include "LayerWindow.h"
+#include "NameWindow.h"
 
 class EditorLoadingScreen : public LoadingScreen
 {

@@ -403,7 +403,10 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 
 		wiRenderer::SetClipPlane(water, cmd);
 
-		device->Barrier(&GPUBarrier::Image(&rtReflection, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_RENDERTARGET), 1, cmd);
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&rtReflection, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_RENDERTARGET),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
 
 		device->RenderPassBegin(&renderpass_reflection, cmd);
 

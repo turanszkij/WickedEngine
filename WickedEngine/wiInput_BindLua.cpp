@@ -86,7 +86,8 @@ int wiInput_BindLua::Hold(lua_State* L)
 }
 int wiInput_BindLua::GetPointer(lua_State* L)
 {
-	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&wiInput::GetPointer())));
+	XMFLOAT4 P = wiInput::GetPointer();
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&P)));
 	return 1;
 }
 int wiInput_BindLua::SetPointer(lua_State* L)

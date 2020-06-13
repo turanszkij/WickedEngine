@@ -341,7 +341,11 @@ void PaintToolWindow::Update(float dt)
 			const uint dispatch_dim = (diameter + PAINT_TEXTURE_BLOCKSIZE - 1) / PAINT_TEXTURE_BLOCKSIZE;
 			device->Dispatch(dispatch_dim, dispatch_dim, 1, cmd);
 
-			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+
 			device->UnbindUAVs(0, 1, cmd);
 
 			wiRenderer::GenerateMipChain(*resource->texture, wiRenderer::MIPGENFILTER::MIPGENFILTER_LINEAR, cmd);

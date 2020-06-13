@@ -90,7 +90,7 @@ inline int	btGetVersion()
 		#endif //__MINGW32__
 
 #ifdef BT_DEBUG
-	#ifdef _MSC_VER
+	#if defined(_MSC_VER) && !defined(__clang__)
 		#include <stdio.h>
 		#define btAssert(x) { if(!(x)){printf("Assert "__FILE__ ":%u ("#x")\n", __LINE__);__debugbreak();	}}
 	#else//_MSC_VER
@@ -285,6 +285,10 @@ static int btNanMask = 0x7F800001;
 static  int btInfinityMask = 0x7F800000;
 #define BT_INFINITY (*(float*)&btInfinityMask)
 #endif
+
+#if defined(__clang__)
+#define BT_NO_SIMD_OPERATOR_OVERLOADS
+#endif // clang
 
 //use this, in case there are clashes (such as xnamath.h)
 #ifndef BT_NO_SIMD_OPERATOR_OVERLOADS

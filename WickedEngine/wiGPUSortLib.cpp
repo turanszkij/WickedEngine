@@ -90,7 +90,11 @@ namespace wiGPUSortLib
 			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 			device->Dispatch(1, 1, 1, cmd);
-			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
 
 			device->UnbindUAVs(0, arraysize(uavs), cmd);
 
@@ -136,7 +140,11 @@ namespace wiGPUSortLib
 			// sort all buffers of size 512 (and presort bigger ones)
 			device->BindComputeShader(&sortCS, cmd);
 			device->DispatchIndirect(&indirectBuffer, 0, cmd);
-			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
 		int presorted = 512;
@@ -182,12 +190,20 @@ namespace wiGPUSortLib
 				device->BindConstantBuffer(CS, &sortCB, CB_GETBINDSLOT(SortConstants), cmd);
 
 				device->Dispatch(numThreadGroups, 1, 1, cmd);
-				device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+
+				GPUBarrier barriers[] = {
+					GPUBarrier::Memory(),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 
 			device->BindComputeShader(&sortInnerCS, cmd);
 			device->Dispatch(numThreadGroups, 1, 1, cmd);
-			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
 
 			presorted *= 2;
 		}

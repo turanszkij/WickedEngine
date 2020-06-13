@@ -199,22 +199,26 @@ namespace wiIntersect_BindLua
 	}
 	int AABB_BindLua::GetMin(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&aabb.getMin())));
+		XMFLOAT3 M = aabb.getMin();
+		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&M)));
 		return 1;
 	}
 	int AABB_BindLua::GetMax(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&aabb.getMax())));
+		XMFLOAT3 M = aabb.getMax();
+		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&M)));
 		return 1;
 	}
 	int AABB_BindLua::GetCenter(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&aabb.getCenter())));
+		XMFLOAT3 C = aabb.getCenter();
+		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&C)));
 		return 1;
 	}
 	int AABB_BindLua::GetHalfExtents(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&aabb.getHalfWidth())));
+		XMFLOAT3 H = aabb.getHalfWidth();
+		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&H)));
 		return 1;
 	}
 	int AABB_BindLua::Transform(lua_State* L)

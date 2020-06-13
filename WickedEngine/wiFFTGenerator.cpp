@@ -54,7 +54,11 @@ namespace wiFFTGenerator
 
 		// Execute
 		device->Dispatch(grid, 1, 1, cmd);
-		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
 
 		// Unbind resource
 		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);

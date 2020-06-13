@@ -2396,7 +2396,7 @@ struct CD3DX12_PIPELINE_STATE_STREAM1
 		D.DS = this->DS;
 		D.PS = this->PS;
 		D.BlendState = this->BlendState;
-		D.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC1(D3D12_DEPTH_STENCIL_DESC1(this->DepthStencilState));
+		D.DepthStencilState = (CD3DX12_DEPTH_STENCIL_DESC)CD3DX12_DEPTH_STENCIL_DESC1(D3D12_DEPTH_STENCIL_DESC1(this->DepthStencilState));
 		D.DSVFormat = this->DSVFormat;
 		D.RasterizerState = this->RasterizerState;
 		D.NumRenderTargets = D3D12_RT_FORMAT_ARRAY(this->RTVFormats).NumRenderTargets;
@@ -2489,7 +2489,7 @@ struct CD3DX12_PIPELINE_STATE_STREAM
 		D.DS = this->DS;
 		D.PS = this->PS;
 		D.BlendState = this->BlendState;
-		D.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC1(D3D12_DEPTH_STENCIL_DESC1(this->DepthStencilState));
+		D.DepthStencilState = (CD3DX12_DEPTH_STENCIL_DESC)CD3DX12_DEPTH_STENCIL_DESC1(D3D12_DEPTH_STENCIL_DESC1(this->DepthStencilState));
 		D.DSVFormat = this->DSVFormat;
 		D.RasterizerState = this->RasterizerState;
 		D.NumRenderTargets = D3D12_RT_FORMAT_ARRAY(this->RTVFormats).NumRenderTargets;

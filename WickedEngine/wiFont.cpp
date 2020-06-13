@@ -44,7 +44,7 @@ namespace wiFont_Internal
 	Shader				pixelShader;
 	PipelineState		PSO;
 
-	atomic_bool initialized = false;
+	atomic_bool initialized { false };
 
 	Texture texture;
 

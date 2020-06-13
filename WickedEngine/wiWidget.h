@@ -54,6 +54,7 @@ protected:
 
 public:
 	wiWidget();
+	virtual ~wiWidget() {}
 
 	const std::string& GetName() const;
 	void SetName(const std::string& value);

@@ -102,11 +102,14 @@ void RenderPath3D_Forward::Render() const
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 
-		device->Barrier(&GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_DEPTHSTENCIL), 1, cmd);
-
 		// depth prepass
 		{
 			auto range = wiProfiler::BeginRangeGPU("Z-Prepass", cmd);
+
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_DEPTHSTENCIL),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
 
 			device->RenderPassBegin(&renderpass_depthprepass, cmd);
 
@@ -124,9 +127,21 @@ void RenderPath3D_Forward::Render() const
 
 		if (getMSAASampleCount() > 1)
 		{
-			device->Barrier(&GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL, IMAGE_LAYOUT_SHADER_RESOURCE), 1, cmd);
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL, IMAGE_LAYOUT_SHADER_RESOURCE),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
 			wiRenderer::ResolveMSAADepthBuffer(depthBuffer_Copy, depthBuffer, cmd);
-			device->Barrier(&GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY), 1, cmd);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
 		}
 		else
 		{

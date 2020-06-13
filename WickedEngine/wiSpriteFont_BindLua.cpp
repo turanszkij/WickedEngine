@@ -203,12 +203,14 @@ int wiSpriteFont_BindLua::GetAlign(lua_State* L)
 }
 int wiSpriteFont_BindLua::GetColor(lua_State* L)
 {
-	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&font.params.color.toFloat4())));
+	XMFLOAT4 C = font.params.color.toFloat4();
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&C)));
 	return 1;
 }
 int wiSpriteFont_BindLua::GetShadowColor(lua_State* L)
 {
-	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&font.params.color.toFloat4())));
+	XMFLOAT4 C = font.params.color.toFloat4();
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&C)));
 	return 1;
 }
 

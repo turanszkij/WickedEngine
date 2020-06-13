@@ -399,14 +399,14 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 
 				device->Dispatch((cb.xBVHMeshTriangleCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE, 1, 1, cmd);
 
-				for (auto& subset : mesh.subsets)
-				{
-					materialCount++;
-				}
+				materialCount += (uint32_t)mesh.subsets.size();
 			}
 		}
 
-		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory()
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 	}
 	device->UpdateBuffer(&primitiveCounterBuffer, &primitiveCount, cmd);
@@ -435,14 +435,20 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 
 		device->Dispatch((primitiveCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE, 1, 1, cmd);
 
-		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory()
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 	}
 	device->EventEnd(cmd);
 
 	device->EventBegin("BVH - Propagate AABB", cmd);
 	{
-		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory()
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
 
 		device->BindComputeShader(&computeShaders[CSTYPE_BVH_PROPAGATEAABB], cmd);
 		GPUResource* uavs[] = {
@@ -461,7 +467,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 
 		device->Dispatch((primitiveCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE, 1, 1, cmd);
 
-		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->Barrier(barriers, arraysize(barriers), cmd);
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 	}
 	device->EventEnd(cmd);

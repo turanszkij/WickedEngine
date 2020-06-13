@@ -77,8 +77,8 @@ struct CAPSULE
 	CAPSULE(const XMFLOAT3& base, const XMFLOAT3& tip, float radius) :base(base), tip(tip), radius(radius) {}
 	CAPSULE(const SPHERE& sphere, float height) :
 		base(XMFLOAT3(sphere.center.x, sphere.center.y - sphere.radius, sphere.center.z)),
-		radius(sphere.radius), 
-		tip(XMFLOAT3(base.x, base.y + height, base.z)) 
+		tip(XMFLOAT3(base.x, base.y + height, base.z)),
+		radius(sphere.radius)
 	{}
 	inline AABB getAABB() const
 	{

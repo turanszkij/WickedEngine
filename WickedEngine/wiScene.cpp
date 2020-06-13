@@ -6,7 +6,7 @@
 #include "wiArchive.h"
 #include "wiRenderer.h"
 #include "wiJobSystem.h"
-#include "wiSpinlock.h"
+#include "wiSpinLock.h"
 
 #include <functional>
 #include <unordered_map>
@@ -732,7 +732,6 @@ namespace wiScene
 				{
 					uint32_t ind0 = indices[subset.indexOffset + (uint32_t)i];
 					const XMFLOAT3& p0 = vertex_positions[ind0];
-					const XMFLOAT3& n0 = vertex_normals[ind0];
 					const XMFLOAT2& u00 = vertex_uvset_0.empty() ? XMFLOAT2(0, 0) : vertex_uvset_0[ind0];
 					const XMFLOAT2& u10 = vertex_uvset_1.empty() ? XMFLOAT2(0, 0) : vertex_uvset_1[ind0];
 					const XMFLOAT2& at0 = vertex_atlas.empty() ? XMFLOAT2(0, 0) : vertex_atlas[ind0];
@@ -747,7 +746,6 @@ namespace wiScene
 						}
 
 						const XMFLOAT3& p1 = vertex_positions[ind1];
-						const XMFLOAT3& n1 = vertex_normals[ind1];
 						const XMFLOAT2& u01 = vertex_uvset_0.empty() ? XMFLOAT2(0, 0) : vertex_uvset_0[ind1];
 						const XMFLOAT2& u11 = vertex_uvset_1.empty() ? XMFLOAT2(0, 0) : vertex_uvset_1[ind1];
 						const XMFLOAT2& at1 = vertex_atlas.empty() ? XMFLOAT2(0, 0) : vertex_atlas[ind1];
@@ -1533,7 +1531,6 @@ namespace wiScene
 			for (size_t i = hierarchy.GetCount() - 1; i > 0; --i)
 			{
 				Entity parent_candidate_entity = hierarchy.GetEntity(i);
-				const HierarchyComponent& parent_candidate = hierarchy[i];
 				for (size_t j = 0; j < i; ++j)
 				{
 					const HierarchyComponent& child_candidate = hierarchy[j];
@@ -1691,6 +1688,7 @@ namespace wiScene
 					// Nearest neighbor method (snap to left):
 					switch (channel.path)
 					{
+					default:
 					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
 					{
 						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
@@ -1719,6 +1717,7 @@ namespace wiScene
 
 					switch (channel.path)
 					{
+					default:
 					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
 					{
 						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
@@ -2355,6 +2354,7 @@ namespace wiScene
 
 			switch (light.type)
 			{
+			default:
 			case LightComponent::DIRECTIONAL:
 				aabb.createFromHalfWidth(wiRenderer::GetCamera().Eye, XMFLOAT3(10000, 10000, 10000));
 				locker.lock();

@@ -12,7 +12,8 @@ AABB AABB::transform(const XMMATRIX& mat) const
 	XMFLOAT3 corners[8];
 	for (int i = 0; i < 8; ++i)
 	{
-		XMVECTOR point = XMVector3Transform(XMLoadFloat3(&corner(i)), mat);
+		XMFLOAT3 C = corner(i);
+		XMVECTOR point = XMVector3Transform(XMLoadFloat3(&C), mat);
 		XMStoreFloat3(&corners[i], point);
 	}
 	XMFLOAT3 min = corners[0];
@@ -337,7 +338,8 @@ Frustum::BoxFrustumIntersect Frustum::CheckBox(const AABB& box) const
 
 		for (int i = 0; i < 8; ++i)
 		{
-			if (XMVectorGetX(XMPlaneDotCoord(XMLoadFloat4(&planes[p]), XMLoadFloat3(&box.corner(i)))) < 0.0f)
+			XMFLOAT3 C = box.corner(i);
+			if (XMVectorGetX(XMPlaneDotCoord(XMLoadFloat4(&planes[p]), XMLoadFloat3(&C))) < 0.0f)
 			{
 				iPtIn = 0;
 				--iInCount;

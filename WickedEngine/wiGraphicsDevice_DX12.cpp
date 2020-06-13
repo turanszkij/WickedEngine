@@ -1428,9 +1428,11 @@ using namespace DX12_Internal;
 		D3D12MA::ALLOCATION_DESC allocationDesc = {};
 		allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
 
+		CD3DX12_RESOURCE_DESC resdesc = CD3DX12_RESOURCE_DESC::Buffer(size);
+
 		hr = device->allocationhandler->allocator->CreateResource(
 			&allocationDesc,
-			&CD3DX12_RESOURCE_DESC::Buffer(size),
+			&resdesc,
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
 			&internal_state->allocation,
@@ -1486,9 +1488,11 @@ using namespace DX12_Internal;
 		D3D12MA::ALLOCATION_DESC allocationDesc = {};
 		allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
 
+		CD3DX12_RESOURCE_DESC resdesc = CD3DX12_RESOURCE_DESC::Buffer(size);
+
 		hr = device->allocationhandler->allocator->CreateResource(
 			&allocationDesc,
-			&CD3DX12_RESOURCE_DESC::Buffer(size),
+			&resdesc,
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
 			&allocation,
@@ -2002,9 +2006,11 @@ using namespace DX12_Internal;
 			D3D12MA::ALLOCATION_DESC allocationDesc = {};
 			allocationDesc.HeapType = D3D12_HEAP_TYPE_READBACK;
 
+			CD3DX12_RESOURCE_DESC resdesc = CD3DX12_RESOURCE_DESC::Buffer(timestamp_query_count * sizeof(uint64_t));
+
 			hr = allocationhandler->allocator->CreateResource(
 				&allocationDesc,
-				&CD3DX12_RESOURCE_DESC::Buffer(timestamp_query_count * sizeof(uint64_t)),
+				&resdesc,
 				D3D12_RESOURCE_STATE_COPY_DEST,
 				nullptr,
 				&allocation_querypool_timestamp_readback,
@@ -2012,9 +2018,11 @@ using namespace DX12_Internal;
 			);
 			assert(SUCCEEDED(hr));
 
+			resdesc = CD3DX12_RESOURCE_DESC::Buffer(occlusion_query_count * sizeof(uint64_t));
+
 			hr = allocationhandler->allocator->CreateResource(
 				&allocationDesc,
-				&CD3DX12_RESOURCE_DESC::Buffer(occlusion_query_count * sizeof(uint64_t)),
+				&resdesc,
 				D3D12_RESOURCE_STATE_COPY_DEST,
 				nullptr,
 				&allocation_querypool_occlusion_readback,

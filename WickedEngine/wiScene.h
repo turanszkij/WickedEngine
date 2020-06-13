@@ -351,7 +351,8 @@ namespace wiScene
 			}
 			inline XMVECTOR LoadNOR() const
 			{
-				return XMLoadFloat3(&GetNor_FULL());
+				XMFLOAT3 N = GetNor_FULL();
+				return XMLoadFloat3(&N);
 			}
 			inline void MakeFromParams(const XMFLOAT3& normal)
 			{

@@ -149,10 +149,13 @@ void RenderPath3D_Deferred::Render() const
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 
-		device->Barrier(&GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_DEPTHSTENCIL), 1, cmd);
-
 		{
 			auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
+
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_DEPTHSTENCIL),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
 
 			device->RenderPassBegin(&renderpass_gbuffer, cmd);
 
