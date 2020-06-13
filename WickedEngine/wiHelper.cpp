@@ -7,7 +7,6 @@
 
 #include <thread>
 #include <locale>
-#include <direct.h>
 #include <chrono>
 #include <iomanip>
 #include <fstream>
@@ -51,7 +50,9 @@ namespace wiHelper
 
 	void screenshot(const std::string& name)
 	{
+#ifdef _WIN32
 		CreateDirectoryA("screenshots", 0);
+#endif // _WIN32
 		stringstream ss("");
 		if (name.length() <= 0)
 			ss << GetOriginalWorkingDirectory() << "screenshots/sc_" << getCurrentDateTimeAsString() << ".jpg";
@@ -83,13 +84,13 @@ namespace wiHelper
 		staging_desc.CPUAccessFlags = CPU_ACCESS_READ;
 		staging_desc.BindFlags = 0;
 		staging_desc.MiscFlags = 0;
-		HRESULT hr = device->CreateTexture(&staging_desc, nullptr, &stagingTex);
-		assert(SUCCEEDED(hr));
+		bool success = device->CreateTexture(&staging_desc, nullptr, &stagingTex);
+		assert(success);
 
-		bool download_success = device->DownloadResource(&texture, &stagingTex, data.data());
-		assert(download_success);
+		success = device->DownloadResource(&texture, &stagingTex, data.data());
+		assert(success);
 
-		return download_success;
+		return success;
 	}
 
 	bool saveTextureToFile(const wiGraphics::Texture& texture, const string& fileName)
@@ -183,7 +184,11 @@ namespace wiHelper
 	{
 		time_t t = std::time(nullptr);
 		struct tm time_info;
+#ifdef _WIN32
 		localtime_s(&time_info, &t);
+#else
+		localtime(&t);
+#endif
 		stringstream ss("");
 		ss << std::put_time(&time_info, "%d-%m-%Y %H-%M-%S");
 		return ss.str();
@@ -195,15 +200,24 @@ namespace wiHelper
 		static bool initComplete = false;
 		if (!initComplete)
 		{
+#ifdef _WIN32
 			CHAR fileName[1024] = {};
 			GetModuleFileNameA(NULL, fileName, arraysize(fileName));
 			appDir = GetDirectoryFromPath(fileName);
+#else
+			// TODO
+#endif // _WIN32
 			initComplete = true;
 		}
 		return appDir;
 	}
 
+#ifdef _WIN32
+#include <direct.h>
 	std::string workingdir = std::string(_getcwd(NULL, 0)) + "/";
+#else
+	std::string workingdir = ""; // TODO
+#endif
 	const std::string __originalWorkingDir = workingdir;
 	string GetOriginalWorkingDirectory()
 	{
@@ -218,63 +232,6 @@ namespace wiHelper
 	void SetWorkingDirectory(const std::string& path)
 	{
 		workingdir = path;
-	}
-
-	void GetFilesInDirectory(std::vector<string>& out, const std::string& directory)
-	{
-#ifndef PLATFORM_UWP
-		// WINDOWS
-		wstring wdirectory;
-		StringConvert(directory, wdirectory);
-		HANDLE dir;
-		WIN32_FIND_DATA file_data;
-
-		if ((dir = FindFirstFile((wdirectory + L"/*").c_str(), &file_data)) == INVALID_HANDLE_VALUE)
-			return; /* No files found */
-
-		do {
-			const wstring file_name = file_data.cFileName;
-			const wstring full_file_name = wdirectory + L"/" + file_name;
-			const bool is_directory = (file_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-
-			//if (file_name[0] == '.')
-			//	continue;
-
-			//if (is_directory)
-			//	continue;
-
-			string fname;
-			StringConvert(full_file_name, fname);
-			out.push_back(fname);
-		} while (FindNextFile(dir, &file_data));
-
-		FindClose(dir);
-#endif
-
-		// UNIX
-		//DIR *dir;
-		//class dirent *ent;
-		//class stat st;
-
-		//dir = opendir(directory);
-		//while ((ent = readdir(dir)) != NULL) {
-		//	const string file_name = ent->d_name;
-		//	const string full_file_name = directory + "/" + file_name;
-
-		//	if (file_name[0] == '.')
-		//		continue;
-
-		//	if (stat(full_file_name.c_str(), &st) == -1)
-		//		continue;
-
-		//	const bool is_directory = (st.st_mode & S_IFDIR) != 0;
-
-		//	if (is_directory)
-		//		continue;
-
-		//	out.push_back(full_file_name);
-		//}
-		//closedir(dir);
 	}
 
 	void SplitPath(const std::string& fullPath, string& dir, string& fileName)
@@ -730,52 +687,73 @@ namespace wiHelper
 		}
 
 #endif // PLATFORM_UWP
+
+#else
+
+	// TODO
+
 #endif // _WIN32
 	}
 
 	void StringConvert(const std::string& from, std::wstring& to)
 	{
+#ifdef _WIN32
 		int num = MultiByteToWideChar(CP_UTF8, 0, from.c_str(), -1, NULL, 0);
 		if (num > 0)
 		{
 			to.resize(size_t(num) - 1);
 			MultiByteToWideChar(CP_UTF8, 0, from.c_str(), -1, &to[0], num);
 		}
+#else
+		to = std::wstring(from.begin(), from.end()); // TODO
+#endif // _WIN32
 	}
 
 	void StringConvert(const std::wstring& from, std::string& to)
 	{
+#ifdef _WIN32
 		int num = WideCharToMultiByte(CP_UTF8, 0, from.c_str(), -1, NULL, 0, NULL, NULL);
 		if (num > 0)
 		{
 			to.resize(size_t(num) - 1);
 			WideCharToMultiByte(CP_UTF8, 0, from.c_str(), -1, &to[0], num, NULL, NULL);
 		}
+#else
+		to = std::string(from.begin(), from.end()); // TODO
+#endif // _WIN32
 	}
 
 	int StringConvert(const char* from, wchar_t* to)
 	{
+#ifdef _WIN32
 		int num = MultiByteToWideChar(CP_UTF8, 0, from, -1, NULL, 0);
 		if (num > 0)
 		{
 			MultiByteToWideChar(CP_UTF8, 0, from, -1, &to[0], num);
 		}
+#else
+		int num = 0; // TODO
+#endif // _WIN32
 		return num;
 	}
 
 	int StringConvert(const wchar_t* from, char* to)
 	{
+#ifdef _WIN32
 		int num = WideCharToMultiByte(CP_UTF8, 0, from, -1, NULL, 0, NULL, NULL);
 		if (num > 0)
 		{
 			WideCharToMultiByte(CP_UTF8, 0, from, -1, &to[0], num, NULL, NULL);
 		}
+#else
+		int num = 0; // TODO
+#endif // _WIN32
 		return num;
 	}
 	
 	void Sleep(float milliseconds)
 	{
-		::Sleep((DWORD)milliseconds);
+		std::this_thread::sleep_for(std::chrono::milliseconds((int)milliseconds));
 	}
 
 	void Spin(float milliseconds)

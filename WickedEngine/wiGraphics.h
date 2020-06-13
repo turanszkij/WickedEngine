@@ -479,24 +479,28 @@ namespace wiGraphics
 			IMAGE_BARRIER,		// image layout transition
 			BUFFER_BARRIER,		// buffer state transition
 		} type = MEMORY_BARRIER;
+
+		struct Memory
+		{
+			const GPUResource* resource;
+		};
+		struct Image
+		{
+			const Texture* texture;
+			IMAGE_LAYOUT layout_before;
+			IMAGE_LAYOUT layout_after;
+		};
+		struct Buffer
+		{
+			const GPUBuffer* buffer;
+			BUFFER_STATE state_before;
+			BUFFER_STATE state_after;
+		};
 		union
 		{
-			struct Memory
-			{
-				const GPUResource* resource;
-			} memory;
-			struct Image
-			{
-				const Texture* texture;
-				IMAGE_LAYOUT layout_before;
-				IMAGE_LAYOUT layout_after;
-			} image;
-			struct Buffer
-			{
-				const GPUBuffer* buffer;
-				BUFFER_STATE state_before;
-				BUFFER_STATE state_after;
-			} buffer;
+			Memory memory;
+			Image image;
+			Buffer buffer;
 		};
 
 		static GPUBarrier Memory(const GPUResource* resource = nullptr)

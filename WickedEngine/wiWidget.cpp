@@ -8,8 +8,6 @@
 #include "wiRenderer.h"
 #include "ShaderInterop_Renderer.h"
 
-#include <DirectXCollision.h>
-
 #include <sstream>
 
 using namespace std;

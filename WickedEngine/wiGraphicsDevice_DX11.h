@@ -1,4 +1,10 @@
 #pragma once
+
+#if __has_include("d3d11_3.h")
+#define WICKEDENGINE_BUILD_DX11
+#endif // HAS VULKAN
+
+#ifdef WICKEDENGINE_BUILD_DX11
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiPlatform.h"
@@ -145,3 +151,5 @@ namespace wiGraphics
 	};
 
 }
+
+#endif // WICKEDENGINE_BUILD_DX11

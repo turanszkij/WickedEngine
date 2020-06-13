@@ -1131,6 +1131,24 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSpriteFont_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXCollision.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXColors.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXMath.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXPackedVector.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\sal.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXMathCommon.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1221,9 +1239,6 @@
       <Filter>LUA</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lua.c">
-      <Filter>LUA</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\luac.c">
       <Filter>LUA</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lundump.c">
@@ -1892,6 +1907,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSpriteFont_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_Linux.cpp">
+      <Filter>ENGINE\Network</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)..\features.txt" />
@@ -1943,6 +1961,24 @@
     </None>
     <None Include="$(MSBuildThisFileDirectory)..\scripts\fighting_game.lua">
       <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Utility\DirectXCollision.inl">
+      <Filter>UTILITY</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Utility\DirectXMathConvert.inl">
+      <Filter>UTILITY</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Utility\DirectXMathMatrix.inl">
+      <Filter>UTILITY</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Utility\DirectXMathMisc.inl">
+      <Filter>UTILITY</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Utility\DirectXMathVector.inl">
+      <Filter>UTILITY</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Utility\DirectXPackedVector.inl">
+      <Filter>UTILITY</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

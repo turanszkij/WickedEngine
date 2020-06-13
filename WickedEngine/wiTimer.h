@@ -4,9 +4,6 @@
 class wiTimer
 {
 private:
-	static double PCFreq;
-	static __int64 CounterStart;
-
 	double lastTime;
 public:
 	wiTimer();

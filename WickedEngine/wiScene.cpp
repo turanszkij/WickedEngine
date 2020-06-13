@@ -2668,7 +2668,6 @@ namespace wiScene
 		return result;
 	}
 
-#include <DirectXCollision.h>
 	SceneIntersectSphereResult SceneIntersectSphere(const SPHERE& sphere, uint32_t renderTypeMask, uint32_t layerMask, const Scene& scene)
 	{
 		SceneIntersectSphereResult result;

@@ -17,6 +17,7 @@ using namespace std;
 namespace wiInput
 {
 
+#ifdef _WIN32
 #ifndef PLATFORM_UWP
 #define KEY_DOWN(vk_code) (GetAsyncKeyState(vk_code) < 0)
 #define KEY_TOGGLE(vk_code) ((GetAsyncKeyState(vk_code) & 1) != 0)
@@ -24,6 +25,10 @@ namespace wiInput
 #define KEY_DOWN(vk_code) ((int)wiPlatform::GetWindow()->GetAsyncKeyState((Windows::System::VirtualKey)vk_code) < 0)
 #define KEY_TOGGLE(vk_code) (((int)wiPlatform::GetWindow()->GetAsyncKeyState((Windows::System::VirtualKey)vk_code) & 1) != 0)
 #endif //PLATFORM_UWP
+#else
+#define KEY_DOWN(vk_code) 0
+#define KEY_TOGGLE(vk_code) 0
+#endif // WIN32
 #define KEY_UP(vk_code) (!KEY_DOWN(vk_code))
 
 	KeyboardState keyboard;
@@ -358,6 +363,7 @@ namespace wiInput
 					return true;
 				return false;
 				break;
+#ifdef _WIN32
 			case wiInput::KEYBOARD_BUTTON_UP:
 				keycode = VK_UP;
 				break;
@@ -442,6 +448,7 @@ namespace wiInput
 			case wiInput::KEYBOARD_BUTTON_PAGEUP:
 				keycode = VK_PRIOR;
 				break;
+#endif // _WIN32
 			}
 
 			return KEY_DOWN(keycode) || KEY_TOGGLE(keycode);
@@ -491,7 +498,7 @@ namespace wiInput
 	}
 	XMFLOAT4 GetPointer()
 	{
-#ifndef PLATFORM_UWP
+#if defined(_WIN32) && !defined(PLATFORM_UWP)
 		POINT p;
 		GetCursorPos(&p);
 		ScreenToClient(wiPlatform::GetWindow(), &p);
@@ -503,6 +510,7 @@ namespace wiInput
 	}
 	void SetPointer(const XMFLOAT4& props)
 	{
+#ifdef _WIN32
 #ifndef PLATFORM_UWP
 		const float dpiscaling = wiPlatform::GetDPIScaling();
 		POINT p;
@@ -515,9 +523,11 @@ namespace wiInput
 		auto& bounds = window->Bounds;
 		window->PointerPosition = Point(props.x + bounds.X, props.y + bounds.Y);
 #endif
+#endif // _WIN32
 	}
 	void HidePointer(bool value)
 	{
+#ifdef _WIN32
 #ifndef PLATFORM_UWP
 		if (value)
 		{
@@ -538,6 +548,7 @@ namespace wiInput
 			wiPlatform::GetWindow()->PointerCursor = cursor;
 		}
 #endif
+#endif // _WIN32
 	}
 
 	XMFLOAT4 GetAnalog(GAMEPAD_ANALOG analog, int playerindex)

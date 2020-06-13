@@ -93,7 +93,7 @@ namespace wiScene
 			archive >> roughness;
 			if (archive.GetVersion() < 35)
 			{
-				roughness = roughness == 0 ? 0 : std::sqrtf(roughness);
+				roughness = roughness == 0 ? 0 : std::sqrt(roughness);
 			}
 			archive >> reflectance;
 			archive >> metalness;

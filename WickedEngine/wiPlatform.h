@@ -17,6 +17,10 @@
 #include <agile.h>
 #endif // UWP
 
+#else
+
+#define PLATFORM_LINUX
+
 #endif // _WIN32
 
 
@@ -28,6 +32,8 @@ namespace wiPlatform
 #else
 	using window_type = Platform::Agile<Windows::UI::Core::CoreWindow>;
 #endif // PLATFORM_UWP
+#else
+	using window_type = int;
 #endif // _WIN32
 
 	struct DeferredMessageBox

@@ -1,4 +1,6 @@
 #pragma once
+#include "CommonInclude.h"
+
 #include <vector>
 
 // NOTE: 

@@ -61,8 +61,6 @@ int Internal_DoFile(lua_State* L)
 				stringstream ss("");
 				ss << WILUA_ERROR_PREFIX << str;
 				wiBackLog::post(ss.str().c_str());
-				ss << endl;
-				OutputDebugStringA(ss.str().c_str());
 				lua_pop(L, 1); // remove error message
 			}
 		}
@@ -80,7 +78,6 @@ wiLua::wiLua()
 	m_luaState = NULL;
 	m_luaState = luaL_newstate();
 	luaL_openlibs(m_luaState);
-	RegisterFunc("debugout", DebugOut);
 	RegisterFunc("dofile", Internal_DoFile);
 	RunText(wiLua_Globals);
 }
@@ -151,7 +148,7 @@ string wiLua::PopErrorMsg()
 	lock.unlock();
 	return retVal;
 }
-void wiLua::PostErrorMsg(bool todebug, bool tobacklog)
+void wiLua::PostErrorMsg()
 {
 	if (Failed())
 	{
@@ -162,15 +159,7 @@ void wiLua::PostErrorMsg(bool todebug, bool tobacklog)
 			return;
 		stringstream ss("");
 		ss << WILUA_ERROR_PREFIX << str;
-		if (tobacklog)
-		{
-			wiBackLog::post(ss.str().c_str());
-		}
-		if (todebug)
-		{
-			ss << endl;
-			OutputDebugStringA(ss.str().c_str());
-		}
+		wiBackLog::post(ss.str().c_str());
 		lock.lock();
 		lua_pop(m_luaState, 1); // remove error message
 		lock.unlock();
@@ -335,31 +324,6 @@ void wiLua::KillProcesses()
 	RunText("killProcesses();");
 }
 
-int wiLua::DebugOut(lua_State* L)
-{
-	int argc = lua_gettop(L); 
-
-	stringstream ss("");
-
-	for (int i = 1; i <= argc; i++)
-	{
-		static mutex sm;
-		sm.lock();
-		const char* str = lua_tostring(L, i);
-		sm.unlock();
-		if (str != nullptr)
-		{
-			ss << str;
-		}
-	}
-	ss << endl;
-
-	OutputDebugStringA(ss.str().c_str());
-
-	//number of results
-	return 0;
-}
-
 string wiLua::SGetString(lua_State* L, int stackpos)
 {
 	const char* str = lua_tostring(L, stackpos);
@@ -475,7 +439,7 @@ void wiLua::SSetNull(lua_State* L)
 	lua_pushnil(L);
 }
 
-void wiLua::SError(lua_State* L, const std::string& error, bool todebug, bool tobacklog)
+void wiLua::SError(lua_State* L, const std::string& error)
 {
 	//retrieve line number for error info
 	lua_Debug ar;
@@ -489,15 +453,7 @@ void wiLua::SError(lua_State* L, const std::string& error, bool todebug, bool to
 	{
 		ss << error;
 	}
-	if (tobacklog)
-	{
-		wiBackLog::post(ss.str().c_str());
-	}
-	if (todebug)
-	{
-		ss << endl;
-		OutputDebugStringA(ss.str().c_str());
-	}
+	wiBackLog::post(ss.str().c_str());
 }
 
 void wiLua::SAddMetatable(lua_State* L, const std::string& name)
