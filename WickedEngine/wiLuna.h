@@ -3,6 +3,7 @@
 //Luna : Official C++ to Lua binder project, 5th version
 //modified to fit with Wicked Engine, removed warnings
 
+
 #define lunamethod(class, name) {#name, &class::name}
 
 template < class T > class Luna {
@@ -221,7 +222,7 @@ public:
 			if (_index >> 8) // Try to set a func
 			{
 				char c[128];
-				sprintf_s(c, sizeof(c), "Trying to set the method [%s] of class [%s]", (*obj)->T::methods[_index ^ (1 << 8)].name, T::className);
+				snprintf(c, sizeof(c), "Trying to set the method [%s] of class [%s]", (*obj)->T::methods[_index ^ (1 << 8)].name, T::className);
 				luaL_error(L, c);
 				return 0;
 			}

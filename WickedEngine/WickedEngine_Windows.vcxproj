@@ -184,6 +184,7 @@
     </FxCompile>
     <Lib>
       <AdditionalLibraryDirectories>$(VULKAN_SDK)/Lib32;%(AdditionalLibraryDirectories);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <LinkTimeCodeGeneration>true</LinkTimeCodeGeneration>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -213,6 +214,7 @@
     </FxCompile>
     <Lib>
       <AdditionalLibraryDirectories>$(VULKAN_SDK)/Lib;%(AdditionalLibraryDirectories);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <LinkTimeCodeGeneration>true</LinkTimeCodeGeneration>
     </Lib>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

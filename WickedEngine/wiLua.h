@@ -3,9 +3,9 @@
 
 extern "C"
 {
-#include "LUA\lua.h"
-#include "LUA\lualib.h"
-#include "LUA\lauxlib.h"
+#include "LUA/lua.h"
+#include "LUA/lualib.h"
+#include "LUA/lauxlib.h"
 }
 
 #include <mutex>
@@ -19,8 +19,6 @@ private:
 	int m_status; //last call status
 
 	std::mutex lock;
-
-	static int DebugOut(lua_State *L);
 
 	//run the previously loaded script
 	bool RunScript();
@@ -42,7 +40,7 @@ public:
 	//remove and get error message from stack
 	std::string PopErrorMsg();
 	//post error to backlog and/or debug output
-	void PostErrorMsg(bool todebug = true, bool tobacklog = true);
+	void PostErrorMsg();
 	//run a script from file
 	bool RunFile(const std::string& filename);
 	//run a script from param
@@ -134,7 +132,7 @@ public:
 	static void SSetNull(lua_State* L);
 
 	//throw error
-	static void SError(lua_State* L, const std::string& error = "", bool todebug = true, bool tobacklog = true);
+	static void SError(lua_State* L, const std::string& error = "");
 	
 	//add new metatable
 	static void SAddMetatable(lua_State* L, const std::string& name);

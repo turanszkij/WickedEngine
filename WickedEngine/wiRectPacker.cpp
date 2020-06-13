@@ -1,6 +1,5 @@
-#pragma once
 #include "wiRectPacker.h"
-#include <vector>
+
 #include <algorithm>
 
 using namespace std;

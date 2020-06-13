@@ -4,11 +4,14 @@
 
 #include <vector>
 
+#ifdef _WIN32
+
 #include <wrl/client.h> // ComPtr
 #include <xaudio2.h>
 #include <xaudio2fx.h>
 #include <x3daudio.h>
 #pragma comment(lib,"xaudio2.lib")
+
 
 #ifdef _XBOX //Big-Endian
 #define fourccRIFF 'RIFF'
@@ -493,3 +496,30 @@ namespace wiAudio
 		assert(SUCCEEDED(hr));
 	}
 }
+
+#else
+
+namespace wiAudio
+{
+	void Initialize() {}
+
+	bool CreateSound(const std::string& filename, Sound* sound) {}
+	bool CreateSound(const std::vector<uint8_t>& data, Sound* sound) {}
+	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance) {}
+
+	void Play(SoundInstance* instance) {}
+	void Pause(SoundInstance* instance) {}
+	void Stop(SoundInstance* instance) {}
+	void SetVolume(float volume, SoundInstance* instance) {}
+	float GetVolume(const SoundInstance* instance) { return 0; }
+	void ExitLoop(SoundInstance* instance) {}
+
+	void SetSubmixVolume(SUBMIX_TYPE type, float volume) {}
+	float GetSubmixVolume(SUBMIX_TYPE type) { return 0; }
+
+	void Update3D(SoundInstance* instance, const SoundInstance3D& instance3D) {}
+
+	void SetReverb(REVERB_PRESET preset) {}
+}
+
+#endif // _WIN32

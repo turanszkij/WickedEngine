@@ -257,7 +257,13 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\D3D12MemAlloc.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\d3dx12.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXCollision.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXColors.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXMath.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXMathCommon.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXPackedVector.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\replace_new.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\sal.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image_write.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_truetype.h" />
@@ -623,9 +629,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lua.c">
       <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\luac.c">
-      <CompileAsWinRT>false</CompileAsWinRT>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lundump.c">
       <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
@@ -655,6 +658,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiEmittedParticle.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFadeManager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFont.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_Linux.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSpriteFont_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGUI.cpp" />
@@ -753,6 +757,12 @@
     <None Include="$(MSBuildThisFileDirectory)..\scripts\rotate_model.lua" />
     <None Include="$(MSBuildThisFileDirectory)..\scripts\set_material_color.lua" />
     <None Include="$(MSBuildThisFileDirectory)..\scripts\set_material_emissive.lua" />
+    <None Include="$(MSBuildThisFileDirectory)Utility\DirectXCollision.inl" />
+    <None Include="$(MSBuildThisFileDirectory)Utility\DirectXMathConvert.inl" />
+    <None Include="$(MSBuildThisFileDirectory)Utility\DirectXMathMatrix.inl" />
+    <None Include="$(MSBuildThisFileDirectory)Utility\DirectXMathMisc.inl" />
+    <None Include="$(MSBuildThisFileDirectory)Utility\DirectXMathVector.inl" />
+    <None Include="$(MSBuildThisFileDirectory)Utility\DirectXPackedVector.inl" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="$(MSBuildThisFileDirectory)fonts\arial.ttf">

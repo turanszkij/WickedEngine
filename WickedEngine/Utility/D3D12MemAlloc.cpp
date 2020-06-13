@@ -20,6 +20,8 @@
 // THE SOFTWARE.
 //
 
+#ifdef _WIN32
+
 #include "D3D12MemAlloc.h"
 
 #include <mutex>
@@ -4191,3 +4193,5 @@ HRESULT CreateAllocator(const ALLOCATOR_DESC* pDesc, Allocator** ppAllocator)
 }
 
 } // namespace D3D12MA
+
+#endif // _WIN32

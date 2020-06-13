@@ -1,4 +1,7 @@
 #include "wiGraphicsDevice_DX12.h"
+
+#ifdef WICKEDENGINE_BUILD_DX12
+
 #include "wiGraphicsDevice_SharedInternals.h"
 #include "wiHelper.h"
 #include "ResourceMapping.h"
@@ -4130,3 +4133,5 @@ using namespace DX12_Internal;
 
 
 }
+
+#endif // WICKEDENGINE_BUILD_DX12

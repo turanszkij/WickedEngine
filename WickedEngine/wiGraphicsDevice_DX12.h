@@ -1,4 +1,10 @@
 #pragma once
+
+#if __has_include("d3d12.h")
+#define WICKEDENGINE_BUILD_DX12
+#endif // HAS VULKAN
+
+#ifdef WICKEDENGINE_BUILD_DX12
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiPlatform.h"
@@ -434,3 +440,5 @@ namespace wiGraphics
 	};
 
 }
+
+#endif // WICKEDENGINE_BUILD_DX12

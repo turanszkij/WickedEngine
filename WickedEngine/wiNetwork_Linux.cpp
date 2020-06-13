@@ -1,6 +1,6 @@
 #include "wiPlatform.h"
 
-#if defined(_WIN32) && defined(PLATFORM_UWP)
+#ifdef PLATFORM_LINUX
 #include "wiNetwork.h"
 #include "wiBackLog.h"
 
@@ -8,7 +8,7 @@ namespace wiNetwork
 {
 	void Initialize()
 	{
-		wiBackLog::post("TODO wiNetwork_UWP");
+		wiBackLog::post("TODO wiNetwork_Linux");
 	}
 
 	bool CreateSocket(Socket* sock)
@@ -42,4 +42,4 @@ namespace wiNetwork
 
 }
 
-#endif // _WIN32 && PLATFORM_UWP
+#endif // LINUX

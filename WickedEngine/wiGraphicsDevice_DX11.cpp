@@ -1,4 +1,7 @@
 #include "wiGraphicsDevice_DX11.h"
+
+#ifdef WICKEDENGINE_BUILD_DX11
+
 #include "wiHelper.h"
 #include "ResourceMapping.h"
 #include "wiBackLog.h"
@@ -3143,3 +3146,5 @@ void GraphicsDevice_DX11::SetMarker(const char* name, CommandList cmd)
 }
 
 }
+
+#endif // WICKEDENGINE_BUILD_DX11

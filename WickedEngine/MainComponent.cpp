@@ -50,22 +50,30 @@ void MainComponent::Initialize()
 			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "spirv/");
 			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_Vulkan>(window, fullscreen, debugdevice));
 #else
-			wiHelper::messageBox("Vulkan SDK not found during building the application! Vulkan API disabled!", "Error");
+			wiHelper::messageBox("Vulkan SDK not found during build! Vulkan API disabled!", "Error");
 #endif
 		}
 		else if (wiStartupArguments::HasArgument("dx12"))
 		{
+#ifdef WICKEDENGINE_BUILD_DX12
 			if (wiStartupArguments::HasArgument("hlsl6"))
 			{
 				wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl6/");
 			}
 			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX12>(window, fullscreen, debugdevice));
+#else
+			wiHelper::messageBox("DirectX 12 not found during build! DirectX 12 API disabled!", "Error");
+#endif
 		}
 
 		// default graphics device:
 		if (wiRenderer::GetDevice() == nullptr)
 		{
+#ifdef WICKEDENGINE_BUILD_DX11
 			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX11>(window, fullscreen, debugdevice));
+#else
+			wiHelper::messageBox("DirectX 11 not found during build! DirectX 11 API disabled!", "Error");
+#endif
 		}
 
 	}
@@ -266,16 +274,20 @@ void MainComponent::Compose(CommandList cmd)
 			ss << "[UWP]";
 #endif
 
+#ifdef WICKEDENGINE_BUILD_DX11
 			if (dynamic_cast<GraphicsDevice_DX11*>(wiRenderer::GetDevice()))
 			{
 				ss << "[DX11]";
 			}
-			else if (dynamic_cast<GraphicsDevice_DX12*>(wiRenderer::GetDevice()))
+#endif
+#ifdef WICKEDENGINE_BUILD_DX12
+			if (dynamic_cast<GraphicsDevice_DX12*>(wiRenderer::GetDevice()))
 			{
 				ss << "[DX12]";
 			}
+#endif
 #ifdef WICKEDENGINE_BUILD_VULKAN
-			else if (dynamic_cast<GraphicsDevice_Vulkan*>(wiRenderer::GetDevice()))
+			if (dynamic_cast<GraphicsDevice_Vulkan*>(wiRenderer::GetDevice()))
 			{
 				ss << "[Vulkan]";
 			}
