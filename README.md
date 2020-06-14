@@ -66,7 +66,7 @@ If you wish to integrate Wicked Engine into your own project, you can use it as 
 2. C/C++ -> General -> Additional Include Directories: 
 	- ./WickedEngine
 3. Linker -> General -> Additional Library Directories:
-	- Directory of your built .lib file (For example ./x64/Release)
+	- Directory of your built .lib file (For example ./BUILD/x64/Release)
 4. Also be sure to compile with a non-DLL runtime library for Release builds:
 	- Project settings -> C/C++ -> Code Generation -> Runtime Library -> Multi threaded
 5. If you want to create a UWP application, link against the WickedEngine_UWP library.
