@@ -770,7 +770,7 @@ namespace wiGraphics
 	{
 		std::vector<ShaderLibrary> shaderlibraries;
 		std::vector<ShaderHitGroup> hitgroups;
-		uint32_t max_trace_recursion_depth = 0;
+		uint32_t max_trace_recursion_depth = 1;
 		uint32_t max_attribute_size_in_bytes = 0;
 		uint32_t max_payload_size_in_bytes = 0;
 	};

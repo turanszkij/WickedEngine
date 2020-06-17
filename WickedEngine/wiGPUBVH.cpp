@@ -269,7 +269,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 		rtdesc.hitgroups.back().name = "MyHitGroup";
 		rtdesc.hitgroups.back().closesthit_shader_name = "MyClosestHitShader";
 
-		rtdesc.max_trace_recursion_depth = 0;
+		rtdesc.max_trace_recursion_depth = 1;
 		rtdesc.max_payload_size_in_bytes = sizeof(XMFLOAT4); // color
 		rtdesc.max_attribute_size_in_bytes = sizeof(XMFLOAT2); // bary
 		suc = device->CreateRaytracingPipelineState(&rtdesc, &rtpso);
