@@ -292,6 +292,7 @@ namespace wiGraphics
 		BUFFER_STATE_UNORDERED_ACCESS,			// shader resource, write enabled
 		BUFFER_STATE_COPY_SRC,					// copy from
 		BUFFER_STATE_COPY_DST,					// copy to
+		BUFFER_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
 	};
 
 	// Flags ////////////////////////////////////////////
@@ -620,6 +621,7 @@ namespace wiGraphics
 		{
 			BUFFER,
 			TEXTURE,
+			RAYTRACING_ACCELERATION_STRUCTURE,
 			UNKNOWN_TYPE,
 		} type = GPU_RESOURCE_TYPE::UNKNOWN_TYPE;
 		inline bool IsTexture() const { return type == GPU_RESOURCE_TYPE::TEXTURE; }
@@ -688,4 +690,113 @@ namespace wiGraphics
 
 		const RenderPassDesc& GetDesc() const { return desc; }
 	};
+
+
+	struct RaytracingAccelerationStructureDesc
+	{
+		enum TYPE
+		{
+			BOTTOMLEVEL,
+			TOPLEVEL,
+		} type = BOTTOMLEVEL;
+
+		struct BottomLevel
+		{
+			struct Geometry
+			{
+				enum FLAGS
+				{
+					EMPTY = 0,
+					USE_TRANSFORM = 1 << 0
+				};
+				FLAGS _flags = EMPTY;
+
+				GPUBuffer vertexBuffer;
+				GPUBuffer indexBuffer;
+				uint32_t indexCount = 0;
+				uint32_t indexOffset = 0;
+				uint32_t vertexCount = 0;
+				uint32_t vertexByteOffset = 0;
+				uint32_t vertexStride = 0;
+				INDEXBUFFER_FORMAT indexFormat = INDEXFORMAT_32BIT;
+				FORMAT vertexFormat = FORMAT_R32G32B32_FLOAT;
+				GPUBuffer transform3x4Buffer;
+				uint32_t transform3x4BufferOffset = 0;
+			};
+			std::vector<Geometry> geometries;
+		} bottomlevel;
+
+		struct TopLevel
+		{
+			struct Instance
+			{
+				XMFLOAT3X4 transform;
+				uint32_t InstanceID : 24;
+				uint32_t InstanceMask : 8;
+				uint32_t InstanceContributionToHitGroupIndex : 24;
+				uint32_t Flags : 8;
+				GPUResource bottomlevel;
+			};
+			std::vector<Instance> instances;
+		} toplevel;
+	};
+	struct RaytracingAccelerationStructure : public GPUResource
+	{
+		RaytracingAccelerationStructureDesc desc;
+		GPUBuffer scratch;
+		GPUBuffer toplevel_instances;
+
+		const RaytracingAccelerationStructureDesc& GetDesc() const { return desc; }
+	};
+
+	struct ShaderLibrary
+	{
+		const Shader* shader = nullptr;
+		std::vector<std::string> export_functions;
+	};
+	struct ShaderHitGroup
+	{
+		enum TYPE
+		{
+			TRIANGLES,
+			PROCEDURAL,
+		} type = TRIANGLES;
+		std::string name;
+		std::string closesthit_shader_name;
+		std::string anyhit_shader_name;
+		std::string intersection_shader_name;
+	};
+	struct RaytracingPipelineStateDesc
+	{
+		std::vector<ShaderLibrary> shaderlibraries;
+		std::vector<ShaderHitGroup> hitgroups;
+		uint32_t max_trace_recursion_depth = 0;
+		uint32_t max_attribute_size_in_bytes = 0;
+		uint32_t max_payload_size_in_bytes = 0;
+	};
+	struct RaytracingPipelineState : public GraphicsDeviceChild
+	{
+		RaytracingPipelineStateDesc desc;
+
+		const RaytracingPipelineStateDesc& GetDesc() const { return desc; }
+	};
+
+	struct ShaderTable
+	{
+		const GPUBuffer* buffer = nullptr;
+		uint64_t offset = 0;
+		uint64_t size = 0;
+		uint64_t stride = 0;
+	};
+	struct DispatchRaysDesc
+	{
+		ShaderTable raygeneration;
+		ShaderTable miss;
+		ShaderTable hitgroup;
+		ShaderTable callable;
+		uint32_t Width = 1;
+		uint32_t Height = 1;
+		uint32_t Depth = 1;
+	};
+
 }

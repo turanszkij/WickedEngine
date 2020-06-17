@@ -29,7 +29,7 @@ namespace wiGraphics
 	class GraphicsDevice_DX12 : public GraphicsDevice
 	{
 	private:
-		Microsoft::WRL::ComPtr<ID3D12Device> device;
+		Microsoft::WRL::ComPtr<ID3D12Device5> device;
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> directQueue;
 		Microsoft::WRL::ComPtr<ID3D12Fence> frameFence;
 		HANDLE frameFenceEvent;
@@ -160,7 +160,7 @@ namespace wiGraphics
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
-		inline ID3D12GraphicsCommandList4* GetDirectCommandList(CommandList cmd) { return static_cast<ID3D12GraphicsCommandList4*>(GetFrameResources().commandLists[cmd].Get()); }
+		inline ID3D12GraphicsCommandList5* GetDirectCommandList(CommandList cmd) { return static_cast<ID3D12GraphicsCommandList5*>(GetFrameResources().commandLists[cmd].Get()); }
 
 		struct DynamicResourceState
 		{
@@ -220,12 +220,15 @@ namespace wiGraphics
 		bool CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) override;
 		bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
 		bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
+		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) override;
+		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) override;
 
 		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
 
 		bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) override;
 
 		void SetName(GPUResource* pResource, const char* name) override;
+		void* GetShaderIdentifier(const RaytracingPipelineState* rtpso, const char* name) override;
 
 		void PresentBegin(CommandList cmd) override;
 		void PresentEnd(CommandList cmd) override;
@@ -275,6 +278,9 @@ namespace wiGraphics
 		void QueryEnd(const GPUQuery *query, CommandList cmd) override;
 		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
 		void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) override;
+		void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) override;
+		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
+		void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
 
 		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
 
@@ -298,6 +304,7 @@ namespace wiGraphics
 			std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_timestamp;
 			std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_occlusion;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12PipelineState>, uint64_t>> destroyer_pipelines;
+			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12StateObject>, uint64_t>> destroyer_stateobjects;
 
 			DescriptorAllocator RTAllocator;
 			DescriptorAllocator DSAllocator;
@@ -425,6 +432,18 @@ namespace wiGraphics
 					if (destroyer_pipelines.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
 					{
 						destroyer_pipelines.pop_front();
+						// comptr auto delete
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_stateobjects.empty())
+				{
+					if (destroyer_stateobjects.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						destroyer_stateobjects.pop_front();
 						// comptr auto delete
 					}
 					else

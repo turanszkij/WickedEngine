@@ -27,6 +27,8 @@ namespace wiGraphics
 		bool UAV_LOAD_FORMAT_COMMON = false;
 		bool UAV_LOAD_FORMAT_R11G11B10_FLOAT = false;
 		bool RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS = false;
+		bool RAYTRACING = false;
+		size_t SHADER_IDENTIFIER_SIZE = 0;
 
 	public:
 		virtual bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) = 0;
@@ -40,12 +42,15 @@ namespace wiGraphics
 		virtual bool CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) = 0;
 		virtual bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) = 0;
 		virtual bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) = 0;
+		virtual bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) { return false; }
+		virtual bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) { return false; }
 
 		virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) = 0;
 
 		virtual bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) = 0;
 
 		virtual void SetName(GPUResource* pResource, const char* name) = 0;
+		virtual void* GetShaderIdentifier(const RaytracingPipelineState* rtpso, const char* name) { return nullptr; }
 
 		virtual void PresentBegin(CommandList cmd) = 0;
 		virtual void PresentEnd(CommandList cmd) = 0;
@@ -84,6 +89,7 @@ namespace wiGraphics
 			GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_COMMON, // eg: R16G16B16A16_FLOAT, R8G8B8A8_UNORM and more common ones
 			GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT,
 			GRAPHICSDEVICE_CAPABILITY_RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS,
+			GRAPHICSDEVICE_CAPABILITY_RAYTRACING,
 			GRAPHICSDEVICE_CAPABILITY_COUNT,
 		};
 		bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const;
@@ -101,6 +107,8 @@ namespace wiGraphics
 		inline static uint32_t GetBackBufferCount() { return BACKBUFFER_COUNT; }
 
 		inline bool IsDebugDevice() const { return DEBUGDEVICE; }
+
+		inline size_t GetShaderIdentifierSize() const { return SHADER_IDENTIFIER_SIZE; }
 
 
 		///////////////Thread-sensitive////////////////////////
@@ -139,6 +147,9 @@ namespace wiGraphics
 		virtual void QueryEnd(const GPUQuery *query, CommandList cmd) = 0;
 		virtual bool QueryRead(const GPUQuery *query, GPUQueryResult* result) = 0;
 		virtual void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) = 0;
+		virtual void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) {}
+		virtual void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) {}
+		virtual void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) {}
 
 		struct GPUAllocation
 		{

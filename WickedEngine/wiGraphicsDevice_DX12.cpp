@@ -671,6 +671,8 @@ namespace DX12_Internal
 			return D3D12_RESOURCE_STATE_COPY_SOURCE;
 		case wiGraphics::BUFFER_STATE_COPY_DST:
 			return D3D12_RESOURCE_STATE_COPY_DEST;
+		case wiGraphics::BUFFER_STATE_RAYTRACING_ACCELERATION_STRUCTURE:
+			return D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
 		}
 
 		return D3D12_RESOURCE_STATE_COMMON;
@@ -1017,6 +1019,29 @@ namespace DX12_Internal
 			allocationhandler->destroylocker.unlock();
 		}
 	};
+	struct BVH_DX12 : public Resource_DX12
+	{
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS desc = {};
+		std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometries;
+		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info = {};
+
+		~BVH_DX12() override
+		{
+		}
+	};
+	struct RTPipelineState_DX12
+	{
+		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
+		ComPtr<ID3D12StateObject> resource;
+
+		~RTPipelineState_DX12()
+		{
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+			if (resource) allocationhandler->destroyer_stateobjects.push_back(std::make_pair(resource, framecount));
+			allocationhandler->destroylocker.unlock();
+		}
+	};
 
 	Resource_DX12* to_internal(const GPUResource* param)
 	{
@@ -1046,6 +1071,14 @@ namespace DX12_Internal
 	PipelineState_DX12* to_internal(const PipelineState* param)
 	{
 		return static_cast<PipelineState_DX12*>(param->internal_state.get());
+	}
+	BVH_DX12* to_internal(const RaytracingAccelerationStructure* param)
+	{
+		return static_cast<BVH_DX12*>(param->internal_state.get());
+	}
+	RTPipelineState_DX12* to_internal(const RaytracingPipelineState* param)
+	{
+		return static_cast<RTPipelineState_DX12*>(param->internal_state.get());
 	}
 }
 using namespace DX12_Internal;
@@ -1540,6 +1573,7 @@ using namespace DX12_Internal;
 	// Engine functions
 	GraphicsDevice_DX12::GraphicsDevice_DX12(wiPlatform::window_type window, bool fullscreen, bool debuglayer)
 	{
+		SHADER_IDENTIFIER_SIZE = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 		DEBUGDEVICE = debuglayer;
 		FULLSCREEN = fullscreen;
 
@@ -1577,7 +1611,7 @@ using namespace DX12_Internal;
 		}
 #endif
 
-		hr = D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device));
+		hr = D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device));
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
@@ -1788,6 +1822,9 @@ using namespace DX12_Internal;
 			}
 		}
 
+		D3D12_FEATURE_DATA_D3D12_OPTIONS5 features_5;
+		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &features_5, sizeof(features_5));
+		RAYTRACING = features_5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0;
 
 		// Generate default root signature:
 
@@ -2576,6 +2613,253 @@ using namespace DX12_Internal;
 
 		return S_OK;
 	}
+	bool GraphicsDevice_DX12::CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh)
+	{
+		auto internal_state = std::make_shared<BVH_DX12>();
+		internal_state->allocationhandler = allocationhandler;
+		bvh->internal_state = internal_state;
+		bvh->type = GPUResource::GPU_RESOURCE_TYPE::RAYTRACING_ACCELERATION_STRUCTURE;
+
+		bvh->desc = *pDesc;
+
+		switch (pDesc->type)
+		{
+		case RaytracingAccelerationStructureDesc::BOTTOMLEVEL:
+		{
+			internal_state->desc.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+			internal_state->desc.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+			internal_state->desc.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
+			internal_state->desc.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+
+			for (auto& x : pDesc->bottomlevel.geometries)
+			{
+				internal_state->geometries.emplace_back();
+				auto& geometry = internal_state->geometries.back();
+				geometry = {};
+				geometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+				geometry.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+				geometry.Triangles.VertexBuffer.StartAddress = to_internal(&x.vertexBuffer)->resource->GetGPUVirtualAddress() + (D3D12_GPU_VIRTUAL_ADDRESS)x.vertexByteOffset;
+				geometry.Triangles.VertexBuffer.StrideInBytes = (UINT64)x.vertexStride;
+				geometry.Triangles.VertexCount = x.vertexCount;
+				geometry.Triangles.VertexFormat = _ConvertFormat(x.vertexFormat);
+				geometry.Triangles.IndexFormat = (x.indexFormat == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT);
+				geometry.Triangles.IndexBuffer = to_internal(&x.indexBuffer)->resource->GetGPUVirtualAddress() + 
+					(D3D12_GPU_VIRTUAL_ADDRESS)x.indexOffset * (x.indexFormat == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? sizeof(uint16_t) : sizeof(uint32_t));
+				geometry.Triangles.IndexCount = x.indexCount;
+
+				if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::USE_TRANSFORM)
+				{
+					geometry.Triangles.Transform3x4 = to_internal(&x.transform3x4Buffer)->resource->GetGPUVirtualAddress() +
+						(D3D12_GPU_VIRTUAL_ADDRESS)x.transform3x4BufferOffset;
+				}
+			}
+
+			internal_state->desc.pGeometryDescs = internal_state->geometries.data();
+			internal_state->desc.NumDescs = (UINT)internal_state->geometries.size();
+		}
+		break;
+		case RaytracingAccelerationStructureDesc::TOPLEVEL:
+		{
+			internal_state->desc.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+			internal_state->desc.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+			internal_state->desc.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
+			internal_state->desc.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+
+			std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instances;
+			instances.reserve(pDesc->toplevel.instances.size());
+			for (auto& x : pDesc->toplevel.instances)
+			{
+				instances.emplace_back();
+				auto& instance = instances.back();
+				instance = {};
+				memcpy(instance.Transform, &x.transform, sizeof(instance.Transform));
+				instance.InstanceID = x.InstanceID;
+				instance.InstanceMask = x.InstanceMask;
+				instance.InstanceContributionToHitGroupIndex = x.InstanceContributionToHitGroupIndex;
+				instance.Flags = x.Flags;
+				instance.AccelerationStructure = to_internal(&x.bottomlevel)->resource->GetGPUVirtualAddress();
+			}
+
+			GPUBufferDesc instances_desc;
+			instances_desc.ByteWidth = uint32_t(sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * pDesc->toplevel.instances.size());
+			SubresourceData initdata;
+			initdata.pSysMem = instances.data();
+			bool success = CreateBuffer(&instances_desc, &initdata, &bvh->toplevel_instances);
+			assert(success);
+
+			internal_state->desc.InstanceDescs = to_internal(&bvh->toplevel_instances)->resource->GetGPUVirtualAddress();
+			internal_state->desc.NumDescs = (UINT)pDesc->toplevel.instances.size();
+		}
+		break;
+		}
+
+		device->GetRaytracingAccelerationStructurePrebuildInfo(&internal_state->desc, &internal_state->info);
+
+
+		uint32_t alignment = 16;
+		size_t alignedSize = Align(internal_state->info.ResultDataMaxSizeInBytes, alignment);
+
+		D3D12_RESOURCE_DESC desc;
+		desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		desc.Format = DXGI_FORMAT_UNKNOWN;
+		desc.Width = (UINT64)alignedSize;
+		desc.Height = 1;
+		desc.MipLevels = 1;
+		desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+		desc.DepthOrArraySize = 1;
+		desc.Alignment = 0;
+		desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		desc.SampleDesc.Count = 1;
+		desc.SampleDesc.Quality = 0;
+
+		D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
+
+		D3D12MA::ALLOCATION_DESC allocationDesc = {};
+		allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+		allocationDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
+
+		HRESULT hr = allocationhandler->allocator->CreateResource(
+			&allocationDesc,
+			&desc,
+			resourceState,
+			nullptr,
+			&internal_state->allocation,
+			IID_PPV_ARGS(&internal_state->resource)
+		);
+		assert(SUCCEEDED(hr));
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+		srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srv_desc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
+		srv_desc.RaytracingAccelerationStructure.Location = internal_state->resource->GetGPUVirtualAddress();
+
+		internal_state->srv = allocationhandler->ResourceAllocator.allocate();
+		device->CreateShaderResourceView(nullptr, &srv_desc, internal_state->srv);
+
+		GPUBufferDesc scratch_desc;
+		scratch_desc.ByteWidth = (uint32_t)std::max(internal_state->info.ScratchDataSizeInBytes, internal_state->info.UpdateScratchDataSizeInBytes);
+
+		return CreateBuffer(&scratch_desc, nullptr, &bvh->scratch);
+	}
+	bool GraphicsDevice_DX12::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso)
+	{
+		auto internal_state = std::make_shared<RTPipelineState_DX12>();
+		internal_state->allocationhandler = allocationhandler;
+		rtpso->internal_state = internal_state;
+
+		rtpso->desc = *pDesc;
+
+		D3D12_STATE_OBJECT_DESC desc = {};
+		desc.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
+
+		std::vector<D3D12_STATE_SUBOBJECT> subobjects;
+
+		D3D12_RAYTRACING_PIPELINE_CONFIG pipeline_config = {};
+		{
+			subobjects.emplace_back();
+			auto& subobject = subobjects.back();
+			subobject = {};
+			subobject.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG;
+			pipeline_config.MaxTraceRecursionDepth = pDesc->max_trace_recursion_depth;
+			subobject.pDesc = &pipeline_config;
+		}
+
+		D3D12_RAYTRACING_SHADER_CONFIG shader_config = {};
+		{
+			subobjects.emplace_back();
+			auto& subobject = subobjects.back();
+			subobject = {};
+			subobject.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG;
+			shader_config.MaxAttributeSizeInBytes = pDesc->max_attribute_size_in_bytes;
+			shader_config.MaxPayloadSizeInBytes = pDesc->max_payload_size_in_bytes;
+			subobject.pDesc = &shader_config;
+		}
+
+		D3D12_GLOBAL_ROOT_SIGNATURE global_rootsig = {};
+		{
+			subobjects.emplace_back();
+			auto& subobject = subobjects.back();
+			subobject = {};
+			subobject.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE;
+			global_rootsig.pGlobalRootSignature = computeRootSig.Get();
+			subobject.pDesc = &global_rootsig;
+		}
+
+		std::vector<D3D12_DXIL_LIBRARY_DESC> library_descs;
+		library_descs.reserve(pDesc->shaderlibraries.size());
+		for(auto& x : pDesc->shaderlibraries)
+		{
+			subobjects.emplace_back();
+			auto& subobject = subobjects.back();
+			subobject = {};
+			subobject.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY;
+			library_descs.emplace_back();
+			auto& library_desc = library_descs.back();
+			library_desc = {};
+			library_desc.DXILLibrary.pShaderBytecode = x.shader->code.data();
+			library_desc.DXILLibrary.BytecodeLength = x.shader->code.size();
+			// todo export functions
+			subobject.pDesc = &library_desc;
+		}
+
+		std::vector<std::wstring> hitgroup_strings;
+		std::vector<D3D12_HIT_GROUP_DESC> hitgroup_descs;
+		hitgroup_descs.reserve(pDesc->hitgroups.size());
+		for (auto& x : pDesc->hitgroups)
+		{
+			subobjects.emplace_back();
+			auto& subobject = subobjects.back();
+			subobject = {};
+			subobject.Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
+			hitgroup_descs.emplace_back();
+			auto& hitgroup_desc = hitgroup_descs.back();
+			hitgroup_desc = {};
+			switch (x.type)
+			{
+			default:
+			case ShaderHitGroup::TRIANGLES:
+				hitgroup_desc.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+				break;
+			case ShaderHitGroup::PROCEDURAL:
+				hitgroup_desc.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
+				break;
+			}
+			if (!x.name.empty())
+			{
+				hitgroup_strings.emplace_back();
+				wiHelper::StringConvert(x.name, hitgroup_strings.back());
+				hitgroup_desc.HitGroupExport = hitgroup_strings.back().c_str();
+			}
+			if (!x.closesthit_shader_name.empty())
+			{
+				hitgroup_strings.emplace_back();
+				wiHelper::StringConvert(x.closesthit_shader_name, hitgroup_strings.back());
+				hitgroup_desc.ClosestHitShaderImport = hitgroup_strings.back().c_str();
+			}
+			if (!x.anyhit_shader_name.empty())
+			{
+				hitgroup_strings.emplace_back();
+				wiHelper::StringConvert(x.anyhit_shader_name, hitgroup_strings.back());
+				hitgroup_desc.AnyHitShaderImport = hitgroup_strings.back().c_str();
+			}
+			if (!x.intersection_shader_name.empty())
+			{
+				hitgroup_strings.emplace_back();
+				wiHelper::StringConvert(x.intersection_shader_name, hitgroup_strings.back());
+				hitgroup_desc.IntersectionShaderImport = hitgroup_strings.back().c_str();
+			}
+			subobject.pDesc = &hitgroup_desc;
+		}
+
+		desc.NumSubobjects = (UINT)subobjects.size();
+		desc.pSubobjects = subobjects.data();
+
+		HRESULT hr = device->CreateStateObject(&desc, IID_PPV_ARGS(&internal_state->resource));
+		assert(SUCCEEDED(hr));
+
+		return SUCCEEDED(hr);
+	}
+
 
 	int GraphicsDevice_DX12::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount)
 	{
@@ -2964,7 +3248,18 @@ using namespace DX12_Internal;
 			internal_state->resource->SetName(text);
 		}
 	}
+	void* GraphicsDevice_DX12::GetShaderIdentifier(const RaytracingPipelineState* rtpso, const char* name)
+	{
+		auto internal_state = to_internal(rtpso);
 
+		ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
+		HRESULT hr = internal_state->resource.As(&stateObjectProperties);
+		assert(SUCCEEDED(hr));
+
+		wchar_t wname[1024];
+		wiHelper::StringConvert(name, wname);
+		return stateObjectProperties->GetShaderIdentifier(wname);
+	}
 
 	void GraphicsDevice_DX12::PresentBegin(CommandList cmd)
 	{
@@ -3129,7 +3424,7 @@ using namespace DX12_Internal;
 			{
 				hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&frames[fr].commandAllocators[cmd]));
 				hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[fr].commandAllocators[cmd].Get(), nullptr, IID_PPV_ARGS(&frames[fr].commandLists[cmd]));
-				hr = static_cast<ID3D12GraphicsCommandList4*>(frames[fr].commandLists[cmd].Get())->Close();
+				hr = static_cast<ID3D12GraphicsCommandList5*>(frames[fr].commandLists[cmd].Get())->Close();
 
 				frames[fr].descriptors[cmd].init(this);
 				frames[fr].resourceBuffer[cmd].init(this, 1024 * 1024); // 1 MB starting size
@@ -4090,6 +4385,84 @@ using namespace DX12_Internal;
 		}
 
 		GetDirectCommandList(cmd)->ResourceBarrier(numBarriers, barrierdescs);
+	}
+	void GraphicsDevice_DX12::BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src)
+	{
+		auto dst_internal = to_internal(dst);
+
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC desc = {};
+		desc.Inputs = dst_internal->desc;
+		if (src != nullptr)
+		{
+			desc.Inputs.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
+
+			auto src_internal = to_internal(src);
+			desc.SourceAccelerationStructureData = src_internal->resource->GetGPUVirtualAddress();
+		}
+		desc.DestAccelerationStructureData = dst_internal->resource->GetGPUVirtualAddress();
+		desc.ScratchAccelerationStructureData = to_internal(&dst->scratch)->resource->GetGPUVirtualAddress();
+		GetDirectCommandList(cmd)->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
+	}
+	void GraphicsDevice_DX12::BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd)
+	{
+		prev_pipeline_hash[cmd] = 0;
+
+		auto internal_state = to_internal(rtpso);
+		GetDirectCommandList(cmd)->SetPipelineState1(internal_state->resource.Get());
+	}
+	void GraphicsDevice_DX12::DispatchRays(const DispatchRaysDesc* desc, CommandList cmd)
+	{
+		GetFrameResources().descriptors[cmd].validate(cmd);
+
+		D3D12_DISPATCH_RAYS_DESC dispatchrays_desc = {};
+
+		dispatchrays_desc.Width = desc->Width;
+		dispatchrays_desc.Height = desc->Height;
+		dispatchrays_desc.Depth = desc->Depth;
+
+		if (desc->raygeneration.buffer != nullptr)
+		{
+			dispatchrays_desc.RayGenerationShaderRecord.StartAddress =
+				to_internal(desc->raygeneration.buffer)->resource->GetGPUVirtualAddress() +
+				(D3D12_GPU_VIRTUAL_ADDRESS)desc->raygeneration.offset;
+			dispatchrays_desc.RayGenerationShaderRecord.SizeInBytes =
+				desc->raygeneration.size;
+		}
+
+		if (desc->miss.buffer != nullptr)
+		{
+			dispatchrays_desc.MissShaderTable.StartAddress =
+				to_internal(desc->miss.buffer)->resource->GetGPUVirtualAddress() +
+				(D3D12_GPU_VIRTUAL_ADDRESS)desc->miss.offset;
+			dispatchrays_desc.MissShaderTable.SizeInBytes =
+				desc->miss.size;
+			dispatchrays_desc.MissShaderTable.StrideInBytes =
+				desc->miss.stride;
+		}
+
+		if (desc->hitgroup.buffer != nullptr)
+		{
+			dispatchrays_desc.HitGroupTable.StartAddress =
+				to_internal(desc->hitgroup.buffer)->resource->GetGPUVirtualAddress() +
+				(D3D12_GPU_VIRTUAL_ADDRESS)desc->hitgroup.offset;
+			dispatchrays_desc.HitGroupTable.SizeInBytes =
+				desc->hitgroup.size;
+			dispatchrays_desc.HitGroupTable.StrideInBytes =
+				desc->hitgroup.stride;
+		}
+
+		if (desc->callable.buffer != nullptr)
+		{
+			dispatchrays_desc.CallableShaderTable.StartAddress =
+				to_internal(desc->callable.buffer)->resource->GetGPUVirtualAddress() +
+				(D3D12_GPU_VIRTUAL_ADDRESS)desc->callable.offset;
+			dispatchrays_desc.CallableShaderTable.SizeInBytes =
+				desc->callable.size;
+			dispatchrays_desc.CallableShaderTable.StrideInBytes =
+				desc->callable.stride;
+		}
+
+		GetDirectCommandList(cmd)->DispatchRays(&dispatchrays_desc);
 	}
 
 	GraphicsDevice::GPUAllocation GraphicsDevice_DX12::AllocateGPU(size_t dataSize, CommandList cmd)
