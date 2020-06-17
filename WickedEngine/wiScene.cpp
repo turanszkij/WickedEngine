@@ -2045,9 +2045,12 @@ namespace wiScene
 
 				armature.boneData[boneIndex++].Store(M);
 
+				const float bone_radius = 1;
 				XMFLOAT3 bonepos = bone.GetPosition();
-				_min = wiMath::Min(_min, bonepos);
-				_max = wiMath::Max(_max, bonepos);
+				AABB boneAABB;
+				boneAABB.createFromHalfWidth(bonepos, XMFLOAT3(bone_radius, bone_radius, bone_radius));
+				_min = wiMath::Min(_min, boneAABB._min);
+				_max = wiMath::Max(_max, boneAABB._max);
 			}
 
 			armature.aabb = AABB(_min, _max);
