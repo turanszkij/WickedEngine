@@ -552,6 +552,31 @@ namespace wiScene
 		// vertexBuffer_PRE will be created on demand later!
 		vertexBuffer_PRE = GPUBuffer();
 
+
+		if (wiRenderer::GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		{
+			RaytracingAccelerationStructureDesc desc;
+			desc.type = RaytracingAccelerationStructureDesc::BOTTOMLEVEL;
+
+			for (auto& subset : subsets)
+			{
+				desc.bottomlevel.geometries.emplace_back();
+				auto& geometry = desc.bottomlevel.geometries.back();
+				geometry._flags = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
+				geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES;
+				geometry.triangles.vertexBuffer = streamoutBuffer_POS.IsValid() ? streamoutBuffer_POS : vertexBuffer_POS;
+				geometry.triangles.indexBuffer = indexBuffer;
+				geometry.triangles.indexFormat = GetIndexFormat();
+				geometry.triangles.indexCount = subset.indexCount;
+				geometry.triangles.indexOffset = subset.indexOffset;
+				geometry.triangles.vertexCount = (uint32_t)vertex_positions.size();
+				geometry.triangles.vertexFormat = FORMAT_R32G32B32_FLOAT;
+				geometry.triangles.vertexStride = sizeof(MeshComponent::Vertex_POS);
+			}
+
+			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
+			assert(success);
+		}
 	}
 	void MeshComponent::ComputeNormals(COMPUTE_NORMALS compute)
 	{
@@ -1162,6 +1187,41 @@ namespace wiScene
 		{
 			bounds = AABB::Merge(bounds, group_bound);
 		}
+
+		if (wiRenderer::GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		{
+			// Recreate top level acceleration structure if the object count changed:
+			if (dt > 0 && objects.GetCount() > 0 && objects.GetCount() != TLAS.desc.toplevel.instances.size())
+			{
+				RaytracingAccelerationStructureDesc desc;
+				desc.type = RaytracingAccelerationStructureDesc::TOPLEVEL;
+				for (size_t i = 0; i < objects.GetCount(); ++i)
+				{
+					const ObjectComponent& object = objects[i];
+
+					if (object.meshID != INVALID_ENTITY)
+					{
+						const MeshComponent& mesh = *meshes.GetComponent(object.meshID);
+
+						desc.toplevel.instances.emplace_back();
+						auto& instance = desc.toplevel.instances.back();
+						const XMFLOAT4X4& transform = object.transform_index >= 0 ? transforms[object.transform_index].world : IDENTITYMATRIX;
+						instance = {};
+						instance.transform = XMFLOAT3X4(
+							transform._11, transform._21, transform._31, transform._41,
+							transform._12, transform._22, transform._32, transform._42,
+							transform._13, transform._23, transform._33, transform._43
+						);
+						instance.InstanceID = i;
+						instance.InstanceMask = 1;
+						instance.bottomlevel = mesh.BLAS;
+					}
+				}
+				bool success = wiRenderer::GetDevice()->CreateRaytracingAccelerationStructure(&desc, &TLAS);
+				assert(success);
+			}
+		}
+
 	}
 	void Scene::Clear()
 	{

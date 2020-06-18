@@ -214,13 +214,20 @@ namespace wiHelper
 
 #ifdef _WIN32
 #include <direct.h>
-	std::string workingdir = std::string(_getcwd(NULL, 0)) + "/";
-#else
-	std::string workingdir = ""; // TODO
-#endif
-	const std::string __originalWorkingDir = workingdir;
+#endif // _WIN32
+	static std::string workingdir;
+	static std::string __originalWorkingDir;
 	string GetOriginalWorkingDirectory()
 	{
+		static bool init = false;
+		if (!init)
+		{
+			init = true;
+#ifdef _WIN32
+			workingdir = std::string(_getcwd(NULL, 0)) + "/";
+#endif // _WIN32
+			__originalWorkingDir = workingdir;
+		}
 		return __originalWorkingDir;
 	}
 

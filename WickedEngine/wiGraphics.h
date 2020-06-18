@@ -706,22 +706,41 @@ namespace wiGraphics
 			{
 				enum FLAGS
 				{
-					EMPTY = 0,
-					USE_TRANSFORM = 1 << 0
+					FLAG_EMPTY = 0,
+					FLAG_OPAQUE = 1 << 0,
+					FLAG_NO_DUPLICATE_ANYHIT_INVOCATION = 1 << 1,
+					FLAG_USE_TRANSFORM = 1 << 2,
 				};
-				FLAGS _flags = EMPTY;
+				FLAGS _flags = FLAG_EMPTY;
 
-				GPUBuffer vertexBuffer;
-				GPUBuffer indexBuffer;
-				uint32_t indexCount = 0;
-				uint32_t indexOffset = 0;
-				uint32_t vertexCount = 0;
-				uint32_t vertexByteOffset = 0;
-				uint32_t vertexStride = 0;
-				INDEXBUFFER_FORMAT indexFormat = INDEXFORMAT_32BIT;
-				FORMAT vertexFormat = FORMAT_R32G32B32_FLOAT;
-				GPUBuffer transform3x4Buffer;
-				uint32_t transform3x4BufferOffset = 0;
+				enum TYPE
+				{
+					TRIANGLES,
+					PROCEDURAL_AABBS,
+				} type = TRIANGLES;
+
+				struct Triangles
+				{
+					GPUBuffer vertexBuffer;
+					GPUBuffer indexBuffer;
+					uint32_t indexCount = 0;
+					uint32_t indexOffset = 0;
+					uint32_t vertexCount = 0;
+					uint32_t vertexByteOffset = 0;
+					uint32_t vertexStride = 0;
+					INDEXBUFFER_FORMAT indexFormat = INDEXFORMAT_32BIT;
+					FORMAT vertexFormat = FORMAT_R32G32B32_FLOAT;
+					GPUBuffer transform3x4Buffer;
+					uint32_t transform3x4BufferOffset = 0;
+				} triangles;
+				struct Procedural_AABBs
+				{
+					GPUBuffer aabbBuffer;
+					uint32_t offset = 0;
+					uint32_t count = 0;
+					uint32_t stride = 0;
+				} aabbs;
+
 			};
 			std::vector<Geometry> geometries;
 		} bottomlevel;

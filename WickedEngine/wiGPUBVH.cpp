@@ -254,32 +254,6 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 		device->SetName(&primitiveCounterBuffer, "primitiveCounterBuffer"); 
 	}
 
-	Shader rtlib;
-	bool suc = wiRenderer::LoadShader(SHADERSTAGE_COUNT, rtlib, "dxr.cso");
-	assert(suc);
-
-	RaytracingPipelineStateDesc rtdesc;
-	RaytracingPipelineState rtpso;
-	{
-		rtdesc.shaderlibraries.emplace_back();
-		rtdesc.shaderlibraries.back().shader = &rtlib;
-
-		rtdesc.hitgroups.emplace_back();
-		rtdesc.hitgroups.back().type = ShaderHitGroup::TRIANGLES;
-		rtdesc.hitgroups.back().name = "MyHitGroup";
-		rtdesc.hitgroups.back().closesthit_shader_name = "MyClosestHitShader";
-
-		rtdesc.max_trace_recursion_depth = 1;
-		rtdesc.max_payload_size_in_bytes = sizeof(XMFLOAT4); // color
-		rtdesc.max_attribute_size_in_bytes = sizeof(XMFLOAT2); // bary
-		suc = device->CreateRaytracingPipelineState(&rtdesc, &rtpso);
-		assert(suc);
-	}
-
-	std::vector<RaytracingAccelerationStructure> bottomlevel_bvhs;
-	RaytracingAccelerationStructureDesc toplevel_desc;
-	toplevel_desc.type = RaytracingAccelerationStructureDesc::TOPLEVEL;
-
 	// Pre-gather scene properties:
 	uint totalTriangles = 0;
 	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
@@ -291,96 +265,8 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 			const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
 
 			totalTriangles += (uint)mesh.indices.size() / 3;
-
-			if (device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
-			{
-				RaytracingAccelerationStructureDesc desc;
-				desc.type = RaytracingAccelerationStructureDesc::BOTTOMLEVEL;
-
-				for (auto& subset : mesh.subsets)
-				{
-					desc.bottomlevel.geometries.emplace_back();
-					auto& geometry = desc.bottomlevel.geometries.back();
-					geometry.vertexBuffer = mesh.vertexBuffer_POS;
-					geometry.indexBuffer = mesh.indexBuffer;
-					geometry.indexFormat = mesh.GetIndexFormat();
-					geometry.indexCount = subset.indexCount;
-					geometry.indexOffset = subset.indexOffset;
-					geometry.vertexCount = (uint32_t)mesh.vertex_positions.size();
-					geometry.vertexFormat = FORMAT_R32G32B32_FLOAT;
-					geometry.vertexStride = sizeof(MeshComponent::Vertex_POS);
-				}
-
-				bottomlevel_bvhs.emplace_back();
-				auto& bottomlevel_bvh = bottomlevel_bvhs.back();
-				bool success = device->CreateRaytracingAccelerationStructure(&desc, &bottomlevel_bvh);
-				assert(success);
-
-				device->BuildRaytracingAccelerationStructure(&bottomlevel_bvh, cmd, nullptr);
-
-				toplevel_desc.toplevel.instances.emplace_back();
-				auto& instance = toplevel_desc.toplevel.instances.back();
-				const XMFLOAT4X4& transform = scene.transforms[object.transform_index].world;
-				instance.transform = XMFLOAT3X4(
-					transform._11, transform._21, transform._31, transform._41, 
-					transform._12, transform._22, transform._32, transform._42,
-					transform._13, transform._23, transform._33, transform._43
-				);
-				instance.InstanceID = i;
-				instance.bottomlevel = bottomlevel_bvh;
-			}
-
 		}
 	}
-
-	RaytracingAccelerationStructure toplevel_bvh;
-	suc = device->CreateRaytracingAccelerationStructure(&toplevel_desc, &toplevel_bvh);
-	assert(suc);
-	device->BuildRaytracingAccelerationStructure(&toplevel_bvh, cmd, nullptr);
-
-	device->BindRaytracingPipelineState(&rtpso, cmd);
-
-
-	size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
-	GraphicsDevice::GPUAllocation shadertable_raygen = device->AllocateGPU(shaderIdentifierSize, cmd);
-	GraphicsDevice::GPUAllocation shadertable_miss = device->AllocateGPU(shaderIdentifierSize, cmd);
-	GraphicsDevice::GPUAllocation shadertable_hitgroup = device->AllocateGPU(shaderIdentifierSize, cmd);
-
-	void* rayGenShaderIdentifier = device->GetShaderIdentifier(&rtpso, "MyRaygenShader");
-	void* missShaderIdentifier = device->GetShaderIdentifier(&rtpso, "MyMissShader");
-	void* hitGroupShaderIdentifier = device->GetShaderIdentifier(&rtpso, "MyHitGroup");
-
-	memcpy(shadertable_raygen.data, rayGenShaderIdentifier, shaderIdentifierSize);
-	memcpy(shadertable_miss.data, missShaderIdentifier, shaderIdentifierSize);
-	memcpy(shadertable_hitgroup.data, hitGroupShaderIdentifier, shaderIdentifierSize);
-
-	DispatchRaysDesc dispatchraysdesc;
-	dispatchraysdesc.raygeneration.buffer = shadertable_raygen.buffer;
-	dispatchraysdesc.raygeneration.offset = shadertable_raygen.offset;
-	dispatchraysdesc.raygeneration.size = shaderIdentifierSize;
-
-	dispatchraysdesc.miss.buffer = shadertable_miss.buffer;
-	dispatchraysdesc.miss.offset = shadertable_miss.offset;
-	dispatchraysdesc.miss.size = shaderIdentifierSize;
-	dispatchraysdesc.miss.stride = shaderIdentifierSize;
-
-	dispatchraysdesc.hitgroup.buffer = shadertable_hitgroup.buffer;
-	dispatchraysdesc.hitgroup.offset = shadertable_hitgroup.offset;
-	dispatchraysdesc.hitgroup.size = shaderIdentifierSize;
-	dispatchraysdesc.hitgroup.stride = shaderIdentifierSize;
-
-	dispatchraysdesc.Width = 1;
-	dispatchraysdesc.Height = 1;
-
-	GPUBarrier barriers[] = {
-		GPUBarrier::Memory(),
-	};
-	device->Barrier(barriers, arraysize(barriers), cmd);
-
-	device->BindResource(CS, &toplevel_bvh, 0, cmd);
-
-	device->DispatchRays(&dispatchraysdesc, cmd);
-
 
 	if (totalTriangles > primitiveCapacity)
 	{

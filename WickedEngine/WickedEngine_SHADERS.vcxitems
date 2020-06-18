@@ -615,7 +615,7 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)dxr.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)rtaoLIB.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
       </EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Library</ShaderType>
@@ -648,6 +648,15 @@
       </EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">Library</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">6.4</ShaderModel>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">-flegacy-macro-expansion %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">-flegacy-macro-expansion %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-flegacy-macro-expansion %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">-flegacy-macro-expansion %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">-flegacy-macro-expansion %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">-flegacy-macro-expansion %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">-flegacy-macro-expansion %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">-flegacy-macro-expansion %(AdditionalOptions)</AdditionalOptions>
+      <FileType>Document</FileType>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)emittedparticlePS_simplest.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>

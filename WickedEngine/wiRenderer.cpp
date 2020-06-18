@@ -51,6 +51,7 @@ Shader					geometryShaders[GSTYPE_COUNT];
 Shader					hullShaders[HSTYPE_COUNT];
 Shader					domainShaders[DSTYPE_COUNT];
 Shader					computeShaders[CSTYPE_COUNT];
+Shader					raytracingShaders[RTTYPE_COUNT];
 Texture					textures[TEXTYPE_COUNT];
 InputLayout				inputLayouts[ILTYPE_COUNT];
 RasterizerState			rasterizers[RSTYPE_COUNT];
@@ -984,6 +985,8 @@ PipelineState PSO_sss;
 PipelineState PSO_upsample_bilateral;
 PipelineState PSO_outline;
 
+RaytracingPipelineState RTPSO_rtao;
+
 enum SKYRENDERING
 {
 	SKYRENDERING_STATIC,
@@ -1414,6 +1417,11 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(HS, hullShaders[HSTYPE_OBJECT], "objectHS.cso"); });
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(DS, domainShaders[DSTYPE_OBJECT], "objectDS.cso"); });
+
+	if (wiRenderer::GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	{
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(SHADERSTAGE_COUNT, raytracingShaders[RTTYPE_RTAO], "rtaoLIB.cso"); });
+	}
 
 	wiJobSystem::Wait(ctx);
 
@@ -2154,6 +2162,28 @@ void LoadShaders()
 		}
 	}
 
+
+	if (wiRenderer::GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	{
+		wiJobSystem::Execute(ctx, [device](wiJobArgs args) {
+
+			RaytracingPipelineStateDesc rtdesc;
+			rtdesc.shaderlibraries.emplace_back();
+			rtdesc.shaderlibraries.back().shader = &raytracingShaders[RTTYPE_RTAO];
+
+			rtdesc.hitgroups.emplace_back();
+			rtdesc.hitgroups.back().type = ShaderHitGroup::TRIANGLES;
+			rtdesc.hitgroups.back().name = "RTAO_Hitgroup";
+			rtdesc.hitgroups.back().closesthit_shader_name = "RTAO_ClosestHit";
+
+			rtdesc.max_trace_recursion_depth = 1;
+			rtdesc.max_payload_size_in_bytes = sizeof(float);
+			rtdesc.max_attribute_size_in_bytes = sizeof(XMFLOAT2); // bary
+			bool success = device->CreateRaytracingPipelineState(&rtdesc, &RTPSO_rtao);
+			assert(success);
+
+		});
+	}
 
 	wiJobSystem::Wait(ctx);
 
@@ -3672,7 +3702,6 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 
 	// See which materials will need to update their GPU render data:
 	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-		pendingMaterialUpdates.clear();
 		for (size_t i = 0; i < scene.materials.GetCount(); ++i)
 		{
 			MaterialComponent& material = scene.materials[i];
@@ -4152,6 +4181,7 @@ void UpdateRenderData(CommandList cmd)
 			device->UpdateBuffer(&material.constantBuffer, &materialGPUData, cmd);
 		}
 	}
+	pendingMaterialUpdates.clear();
 
 
 	const FrameCulling& mainCameraCulling = frameCullings.at(&GetCamera());
@@ -10093,6 +10123,137 @@ void Postprocess_MSAO(
 
 	blur_and_upsample(output, lineardepth, texture_lineardepth_downsize1, &texture_ao_smooth1,
 		&texture_ao_hq1, nullptr);
+
+	wiProfiler::EndRange(prof_range);
+	device->EventEnd(cmd);
+}
+void Postprocess_RTAO(
+	const Texture& depthbuffer,
+	const Texture& lineardepth,
+	const Texture& output,
+	CommandList cmd,
+	float range,
+	uint32_t samplecount,
+	float power
+)
+{
+	const Scene& scene = wiScene::GetScene();
+	if (scene.objects.GetCount() <= 0)
+	{
+		return;
+	}
+
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("Postprocess_RTAO", cmd);
+	auto prof_range = wiProfiler::BeginRangeGPU("RTAO", cmd);
+
+	static TextureDesc saved_desc;
+	static Texture temp0;
+	static Texture temp1;
+
+	const TextureDesc& lineardepth_desc = lineardepth.GetDesc();
+	if (saved_desc.Width != lineardepth_desc.Width || saved_desc.Height != lineardepth_desc.Height)
+	{
+		saved_desc = lineardepth_desc; // <- this must already have SRV and UAV request flags set up!
+		saved_desc.MipLevels = 1;
+
+		TextureDesc desc = saved_desc;
+		desc.Format = FORMAT_R8_UNORM;
+		desc.Width = (desc.Width + 1) / 2;
+		desc.Height = (desc.Height + 1) / 2;
+		device->CreateTexture(&desc, nullptr, &temp0);
+		device->CreateTexture(&desc, nullptr, &temp1);
+	}
+
+	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+
+	const TextureDesc& desc = temp0.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	cb.ssao_range = range;
+	cb.ssao_samplecount = (float)samplecount;
+	cb.ssao_power = power;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	const GPUResource* uavs[] = {
+		&temp0,
+	};
+	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+	if (device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	{
+		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
+		{
+			const MeshComponent& mesh = scene.meshes[i];
+			device->BuildRaytracingAccelerationStructure(&mesh.BLAS, cmd, nullptr);
+		}
+
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+
+		device->BuildRaytracingAccelerationStructure(&scene.TLAS, cmd, nullptr);
+
+		size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
+		GraphicsDevice::GPUAllocation shadertable_raygen = device->AllocateGPU(shaderIdentifierSize, cmd);
+		GraphicsDevice::GPUAllocation shadertable_miss = device->AllocateGPU(shaderIdentifierSize, cmd);
+		GraphicsDevice::GPUAllocation shadertable_hitgroup = device->AllocateGPU(shaderIdentifierSize, cmd);
+
+		void* rayGenShaderIdentifier = device->GetShaderIdentifier(&RTPSO_rtao, "RTAO_Raygen");
+		void* missShaderIdentifier = device->GetShaderIdentifier(&RTPSO_rtao, "RTAO_Miss");
+		void* hitGroupShaderIdentifier = device->GetShaderIdentifier(&RTPSO_rtao, "RTAO_Hitgroup");
+
+		memcpy(shadertable_raygen.data, rayGenShaderIdentifier, shaderIdentifierSize);
+		memcpy(shadertable_miss.data, missShaderIdentifier, shaderIdentifierSize);
+		memcpy(shadertable_hitgroup.data, hitGroupShaderIdentifier, shaderIdentifierSize);
+
+		DispatchRaysDesc dispatchraysdesc;
+		dispatchraysdesc.raygeneration.buffer = shadertable_raygen.buffer;
+		dispatchraysdesc.raygeneration.offset = shadertable_raygen.offset;
+		dispatchraysdesc.raygeneration.size = shaderIdentifierSize;
+
+		dispatchraysdesc.miss.buffer = shadertable_miss.buffer;
+		dispatchraysdesc.miss.offset = shadertable_miss.offset;
+		dispatchraysdesc.miss.size = shaderIdentifierSize;
+		dispatchraysdesc.miss.stride = shaderIdentifierSize;
+
+		dispatchraysdesc.hitgroup.buffer = shadertable_hitgroup.buffer;
+		dispatchraysdesc.hitgroup.offset = shadertable_hitgroup.offset;
+		dispatchraysdesc.hitgroup.size = shaderIdentifierSize;
+		dispatchraysdesc.hitgroup.stride = shaderIdentifierSize;
+
+		dispatchraysdesc.Width = desc.Width;
+		dispatchraysdesc.Height = desc.Height;
+
+		device->Barrier(barriers, arraysize(barriers), cmd);
+
+		device->BindResource(CS, &scene.TLAS, 4, cmd);
+
+		device->BindRaytracingPipelineState(&RTPSO_rtao, cmd);
+		device->DispatchRays(&dispatchraysdesc, cmd);
+	}
+	else
+	{
+		assert(0); // TODO: non raytracing API implementation?
+	}
+
+	GPUBarrier barriers[] = {
+		GPUBarrier::Memory(),
+	};
+	device->Barrier(barriers, arraysize(barriers), cmd);
+
+	device->UnbindUAVs(0, arraysize(uavs), cmd);
+
+	Postprocess_Blur_Bilateral(temp0, lineardepth, temp1, temp0, cmd, 1.2f, -1, -1, true);
+	Postprocess_Upsample_Bilateral(temp0, lineardepth, output, cmd);
 
 	wiProfiler::EndRange(prof_range);
 	device->EventEnd(cmd);

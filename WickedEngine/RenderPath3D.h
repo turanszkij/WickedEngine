@@ -16,6 +16,7 @@ public:
 		AO_SSAO,		// simple brute force screen space ambient occlusion
 		AO_HBAO,		// horizon based screen space ambient occlusion
 		AO_MSAO,		// multi scale screen space ambient occlusion
+		AO_RTAO,		// ray traced ambient occlusion
 		// Don't alter order! (bound to lua manually)
 	};
 private:

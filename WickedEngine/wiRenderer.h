@@ -212,6 +212,15 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd,
 		float power = 2.0f
 		);
+	void Postprocess_RTAO(
+		const wiGraphics::Texture& depthbuffer,
+		const wiGraphics::Texture& lineardepth,
+		const wiGraphics::Texture& output,
+		wiGraphics::CommandList cmd,
+		float range = 1.0f,
+		uint32_t samplecount = 16,
+		float power = 2.0f
+	);
 	void Postprocess_SSR(
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& depthbuffer,

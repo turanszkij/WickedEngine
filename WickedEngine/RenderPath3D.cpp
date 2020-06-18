@@ -469,6 +469,17 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 				getAOPower()
 				);
 			break;
+		case AO_RTAO:
+			wiRenderer::Postprocess_RTAO(
+				depthBuffer_Copy,
+				rtLinearDepth,
+				rtAO,
+				cmd,
+				getAORange(),
+				getAOSampleCount(),
+				getAOPower()
+			);
+			break;
 		}
 	}
 }

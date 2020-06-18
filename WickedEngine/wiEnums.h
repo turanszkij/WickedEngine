@@ -364,6 +364,12 @@ enum CSTYPES
 	CSTYPE_POSTPROCESS_DOWNSAMPLE4X,
 	CSTYPE_COUNT
 };
+// raytracing shaders
+enum RTTYPES
+{
+	RTTYPE_RTAO,
+	RTTYPE_COUNT
+};
 
 // input layouts
 enum ILTYPES

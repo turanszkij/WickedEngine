@@ -2636,21 +2636,40 @@ using namespace DX12_Internal;
 				internal_state->geometries.emplace_back();
 				auto& geometry = internal_state->geometries.back();
 				geometry = {};
-				geometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-				geometry.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
-				geometry.Triangles.VertexBuffer.StartAddress = to_internal(&x.vertexBuffer)->resource->GetGPUVirtualAddress() + (D3D12_GPU_VIRTUAL_ADDRESS)x.vertexByteOffset;
-				geometry.Triangles.VertexBuffer.StrideInBytes = (UINT64)x.vertexStride;
-				geometry.Triangles.VertexCount = x.vertexCount;
-				geometry.Triangles.VertexFormat = _ConvertFormat(x.vertexFormat);
-				geometry.Triangles.IndexFormat = (x.indexFormat == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT);
-				geometry.Triangles.IndexBuffer = to_internal(&x.indexBuffer)->resource->GetGPUVirtualAddress() + 
-					(D3D12_GPU_VIRTUAL_ADDRESS)x.indexOffset * (x.indexFormat == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? sizeof(uint16_t) : sizeof(uint32_t));
-				geometry.Triangles.IndexCount = x.indexCount;
-
-				if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::USE_TRANSFORM)
+				if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE)
 				{
-					geometry.Triangles.Transform3x4 = to_internal(&x.transform3x4Buffer)->resource->GetGPUVirtualAddress() +
-						(D3D12_GPU_VIRTUAL_ADDRESS)x.transform3x4BufferOffset;
+					geometry.Flags |= D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+				}
+				if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_NO_DUPLICATE_ANYHIT_INVOCATION)
+				{
+					geometry.Flags |= D3D12_RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANYHIT_INVOCATION;
+				}
+
+				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES)
+				{
+					geometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+					geometry.Triangles.VertexBuffer.StartAddress = to_internal(&x.triangles.vertexBuffer)->resource->GetGPUVirtualAddress() + (D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.vertexByteOffset;
+					geometry.Triangles.VertexBuffer.StrideInBytes = (UINT64)x.triangles.vertexStride;
+					geometry.Triangles.VertexCount = x.triangles.vertexCount;
+					geometry.Triangles.VertexFormat = _ConvertFormat(x.triangles.vertexFormat);
+					geometry.Triangles.IndexFormat = (x.triangles.indexFormat == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT);
+					geometry.Triangles.IndexBuffer = to_internal(&x.triangles.indexBuffer)->resource->GetGPUVirtualAddress() +
+						(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.indexOffset * (x.triangles.indexFormat == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? sizeof(uint16_t) : sizeof(uint32_t));
+					geometry.Triangles.IndexCount = x.triangles.indexCount;
+
+					if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_USE_TRANSFORM)
+					{
+						geometry.Triangles.Transform3x4 = to_internal(&x.triangles.transform3x4Buffer)->resource->GetGPUVirtualAddress() +
+							(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.transform3x4BufferOffset;
+					}
+				}
+				else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::PROCEDURAL_AABBS)
+				{
+					geometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS; 
+					geometry.AABBs.AABBs.StartAddress = to_internal(&x.aabbs.aabbBuffer)->resource->GetGPUVirtualAddress() +
+						(D3D12_GPU_VIRTUAL_ADDRESS)x.aabbs.offset;
+					geometry.AABBs.AABBs.StrideInBytes = (UINT64)x.aabbs.stride;
+					geometry.AABBs.AABBCount = x.aabbs.count;
 				}
 			}
 

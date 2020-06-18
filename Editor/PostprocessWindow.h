@@ -24,6 +24,8 @@ public:
 	wiCheckBox* lightShaftsCheckBox;
 	wiComboBox* aoComboBox;
 	wiSlider*	aoPowerSlider;
+	wiSlider*	aoRangeSlider;
+	wiSlider*	aoSampleCountSlider;
 	wiCheckBox* ssrCheckBox;
 	wiCheckBox* sssCheckBox;
 	wiCheckBox* eyeAdaptionCheckBox;

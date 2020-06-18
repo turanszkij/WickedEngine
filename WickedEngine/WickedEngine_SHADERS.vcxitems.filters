@@ -980,7 +980,7 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)voxelSceneCopyClearCS_TemporalSmoothing.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)dxr.hlsl">
+    <FxCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\rtaoLIB.hlsl">
       <Filter>RT</Filter>
     </FxCompile>
   </ItemGroup>
