@@ -67,6 +67,8 @@ namespace wiRenderer
 	void UpdatePerFrameData(float dt, uint32_t layerMask = ~0);
 	// Updates the GPU state according to the previously called UpatePerFrameData()
 	void UpdateRenderData(wiGraphics::CommandList cmd);
+	// Updates all acceleration structures for raytracing API
+	void UpdateRaytracingAccelerationStructures(wiGraphics::CommandList cmd);
 
 	// Binds all common constant buffers and samplers that may be used in all shaders
 	void BindCommonResources(wiGraphics::CommandList cmd);

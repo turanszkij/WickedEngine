@@ -756,7 +756,9 @@ namespace wiGraphics
 				uint32_t Flags : 8;
 				GPUResource bottomlevel;
 			};
-			std::vector<Instance> instances;
+			GPUBuffer instanceBuffer;
+			uint32_t offset = 0;
+			uint32_t count = 0;
 		} toplevel;
 	};
 	struct RaytracingAccelerationStructure : public GPUResource

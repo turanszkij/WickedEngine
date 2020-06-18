@@ -1191,33 +1191,16 @@ namespace wiScene
 		if (wiRenderer::GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			// Recreate top level acceleration structure if the object count changed:
-			if (dt > 0 && objects.GetCount() > 0 && objects.GetCount() != TLAS.desc.toplevel.instances.size())
+			if (dt > 0 && objects.GetCount() > 0 && objects.GetCount() != TLAS.desc.toplevel.count)
 			{
 				RaytracingAccelerationStructureDesc desc;
 				desc.type = RaytracingAccelerationStructureDesc::TOPLEVEL;
-				for (size_t i = 0; i < objects.GetCount(); ++i)
-				{
-					const ObjectComponent& object = objects[i];
-
-					if (object.meshID != INVALID_ENTITY)
-					{
-						const MeshComponent& mesh = *meshes.GetComponent(object.meshID);
-
-						desc.toplevel.instances.emplace_back();
-						auto& instance = desc.toplevel.instances.back();
-						const XMFLOAT4X4& transform = object.transform_index >= 0 ? transforms[object.transform_index].world : IDENTITYMATRIX;
-						instance = {};
-						instance.transform = XMFLOAT3X4(
-							transform._11, transform._21, transform._31, transform._41,
-							transform._12, transform._22, transform._32, transform._42,
-							transform._13, transform._23, transform._33, transform._43
-						);
-						instance.InstanceID = i;
-						instance.InstanceMask = 1;
-						instance.bottomlevel = mesh.BLAS;
-					}
-				}
-				bool success = wiRenderer::GetDevice()->CreateRaytracingAccelerationStructure(&desc, &TLAS);
+				desc.toplevel.count = (uint32_t)objects.GetCount();
+				GPUBufferDesc bufdesc;
+				bufdesc.ByteWidth = desc.toplevel.count * (uint32_t)wiRenderer::GetDevice()->GetTopLevelAccelerationStructureInstanceSize();
+				bool success = wiRenderer::GetDevice()->CreateBuffer(&bufdesc, nullptr, &desc.toplevel.instanceBuffer);
+				assert(success);
+				success = wiRenderer::GetDevice()->CreateRaytracingAccelerationStructure(&desc, &TLAS);
 				assert(success);
 			}
 		}

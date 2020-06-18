@@ -1574,6 +1574,8 @@ using namespace DX12_Internal;
 	GraphicsDevice_DX12::GraphicsDevice_DX12(wiPlatform::window_type window, bool fullscreen, bool debuglayer)
 	{
 		SHADER_IDENTIFIER_SIZE = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
+
 		DEBUGDEVICE = debuglayer;
 		FULLSCREEN = fullscreen;
 
@@ -2684,30 +2686,9 @@ using namespace DX12_Internal;
 			internal_state->desc.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
 			internal_state->desc.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
 
-			std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instances;
-			instances.reserve(pDesc->toplevel.instances.size());
-			for (auto& x : pDesc->toplevel.instances)
-			{
-				instances.emplace_back();
-				auto& instance = instances.back();
-				instance = {};
-				memcpy(instance.Transform, &x.transform, sizeof(instance.Transform));
-				instance.InstanceID = x.InstanceID;
-				instance.InstanceMask = x.InstanceMask;
-				instance.InstanceContributionToHitGroupIndex = x.InstanceContributionToHitGroupIndex;
-				instance.Flags = x.Flags;
-				instance.AccelerationStructure = to_internal(&x.bottomlevel)->resource->GetGPUVirtualAddress();
-			}
-
-			GPUBufferDesc instances_desc;
-			instances_desc.ByteWidth = uint32_t(sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * pDesc->toplevel.instances.size());
-			SubresourceData initdata;
-			initdata.pSysMem = instances.data();
-			bool success = CreateBuffer(&instances_desc, &initdata, &bvh->toplevel_instances);
-			assert(success);
-
-			internal_state->desc.InstanceDescs = to_internal(&bvh->toplevel_instances)->resource->GetGPUVirtualAddress();
-			internal_state->desc.NumDescs = (UINT)pDesc->toplevel.instances.size();
+			internal_state->desc.InstanceDescs = to_internal(&pDesc->toplevel.instanceBuffer)->resource->GetGPUVirtualAddress() +
+				(D3D12_GPU_VIRTUAL_ADDRESS)pDesc->toplevel.offset;
+			internal_state->desc.NumDescs = (UINT)pDesc->toplevel.count;
 		}
 		break;
 		}
@@ -3251,6 +3232,17 @@ using namespace DX12_Internal;
 			break;
 		}
 		return -1;
+	}
+
+	void GraphicsDevice_DX12::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest)
+	{
+		D3D12_RAYTRACING_INSTANCE_DESC* desc = (D3D12_RAYTRACING_INSTANCE_DESC*)dest;
+		desc->AccelerationStructure = to_internal(&instance->bottomlevel)->resource->GetGPUVirtualAddress();
+		memcpy(desc->Transform, &instance->transform, sizeof(desc->Transform));
+		desc->InstanceID = instance->InstanceID;
+		desc->InstanceMask = instance->InstanceMask;
+		desc->InstanceContributionToHitGroupIndex = instance->InstanceContributionToHitGroupIndex;
+		desc->Flags = instance->Flags;
 	}
 
 	bool GraphicsDevice_DX12::DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest)

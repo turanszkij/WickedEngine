@@ -310,7 +310,8 @@ struct FrameCulling
 };
 unordered_map<const CameraComponent*, FrameCulling> frameCullings;
 
-vector<uint32_t> pendingMaterialUpdates;
+vector<size_t> pendingMaterialUpdates;
+vector<size_t> pendingBottomLevelBuilds;
 
 struct Instance
 {
@@ -2858,6 +2859,9 @@ void ClearWorld()
 
 	packedDecals.clear();
 	packedLightmaps.clear();
+
+	pendingMaterialUpdates.clear();
+	pendingBottomLevelBuilds.clear();
 }
 
 static const uint32_t CASCADE_COUNT = 3;
@@ -3709,7 +3713,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 			if (material.IsDirty())
 			{
 				material.SetDirty(false);
-				pendingMaterialUpdates.push_back(uint32_t(i));
+				pendingMaterialUpdates.push_back(i);
 
 				if (!material.constantBuffer.IsValid())
 				{
@@ -3727,6 +3731,26 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 	// Need to swap prev and current vertex buffers for any dynamic meshes BEFORE render threads are kicked 
 	//	and also create skinning bone buffers:
 	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
+		for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
+		{
+			const SoftBodyPhysicsComponent& softbody = scene.softbodies[i];
+			if (softbody.vertex_positions_simulation.empty())
+			{
+				continue;
+			}
+
+			Entity entity = scene.softbodies.GetEntity(i);
+			MeshComponent& mesh = *scene.meshes.GetComponent(entity);
+
+			mesh.BLAS_build_pending = true;
+
+			if (!mesh.vertexBuffer_PRE.IsValid())
+			{
+				device->CreateBuffer(&mesh.vertexBuffer_POS.GetDesc(), nullptr, &mesh.streamoutBuffer_POS);
+				device->CreateBuffer(&mesh.vertexBuffer_POS.GetDesc(), nullptr, &mesh.vertexBuffer_PRE);
+			}
+			std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
+		}
 		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
 		{
 			Entity entity = scene.meshes.GetEntity(i);
@@ -3741,6 +3765,8 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 					//	(Soft body animated vertices are skinned in simulation phase by physics system)
 					continue;
 				}
+
+				mesh.BLAS_build_pending = true;
 
 				ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
 
@@ -3763,24 +3789,12 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 				}
 				std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
 			}
-		}
-		for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
-		{
-			const SoftBodyPhysicsComponent& softbody = scene.softbodies[i];
-			if (softbody.vertex_positions_simulation.empty())
-			{
-				continue;
-			}
 
-			Entity entity = scene.softbodies.GetEntity(i);
-			MeshComponent& mesh = *scene.meshes.GetComponent(entity);
-
-			if (!mesh.vertexBuffer_PRE.IsValid())
+			if (mesh.BLAS_build_pending)
 			{
-				device->CreateBuffer(&mesh.vertexBuffer_POS.GetDesc(), nullptr, &mesh.streamoutBuffer_POS);
-				device->CreateBuffer(&mesh.vertexBuffer_POS.GetDesc(), nullptr, &mesh.vertexBuffer_PRE);
+				mesh.BLAS_build_pending = false;
+				pendingBottomLevelBuilds.push_back(i);
 			}
-			std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
 		}
 	});
 
@@ -4576,6 +4590,70 @@ void UpdateRenderData(CommandList cmd)
 	RefreshLightmapAtlas(cmd);
 	RefreshEnvProbes(cmd);
 	RefreshImpostors(cmd);
+}
+void UpdateRaytracingAccelerationStructures(CommandList cmd)
+{
+	GraphicsDevice* device = GetDevice();
+	if (!device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	{
+		return;
+	}
+
+	const Scene& scene = GetScene();
+
+	// Build bottom level:
+	for(auto& meshIndex : pendingBottomLevelBuilds)
+	{
+		if (meshIndex < scene.meshes.GetCount())
+		{
+			const MeshComponent& mesh = scene.meshes[meshIndex];
+			device->BuildRaytracingAccelerationStructure(&mesh.BLAS, cmd, nullptr);
+		}
+	}
+	pendingBottomLevelBuilds.clear();
+
+	// Gather all instances for top level:
+	size_t instanceSize = device->GetTopLevelAccelerationStructureInstanceSize();
+	size_t instanceArraySize = (size_t)scene.TLAS.desc.toplevel.count * instanceSize;
+	void* instanceArray = GetRenderFrameAllocator(cmd).allocate(instanceArraySize);
+	size_t instanceOffset = 0;
+	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+	{
+		const ObjectComponent& object = scene.objects[i];
+
+		if (object.meshID != INVALID_ENTITY)
+		{
+			const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+
+			RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
+			const XMFLOAT4X4& transform = object.transform_index >= 0 ? scene.transforms[object.transform_index].world : IDENTITYMATRIX;
+			instance = {};
+			instance.transform = XMFLOAT3X4(
+				transform._11, transform._21, transform._31, transform._41,
+				transform._12, transform._22, transform._32, transform._42,
+				transform._13, transform._23, transform._33, transform._43
+			);
+			instance.InstanceID = i;
+			instance.InstanceMask = 1;
+			instance.bottomlevel = mesh.BLAS;
+
+			device->WriteTopLevelAccelerationStructureInstance(&instance, (void*)((size_t)instanceArray + instanceOffset));
+			instanceOffset += instanceSize;
+		}
+	}
+	device->UpdateBuffer(&scene.TLAS.desc.toplevel.instanceBuffer, instanceArray, cmd, (int)instanceArraySize);
+	GetRenderFrameAllocator(cmd).free(instanceArraySize);
+
+	// Sync with bottom level before building top level:
+	GPUBarrier barriers[] = {
+		GPUBarrier::Memory(),
+	};
+	device->Barrier(barriers, arraysize(barriers), cmd);
+
+	// Build top level:
+	device->BuildRaytracingAccelerationStructure(&scene.TLAS, cmd, nullptr);
+	device->Barrier(barriers, arraysize(barriers), cmd);
+
 }
 void OcclusionCulling_Render(CommandList cmd)
 {
@@ -10189,19 +10267,6 @@ void Postprocess_RTAO(
 
 	if (device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 	{
-		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
-		{
-			const MeshComponent& mesh = scene.meshes[i];
-			device->BuildRaytracingAccelerationStructure(&mesh.BLAS, cmd, nullptr);
-		}
-
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-
-		device->BuildRaytracingAccelerationStructure(&scene.TLAS, cmd, nullptr);
-
 		size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
 		GraphicsDevice::GPUAllocation shadertable_raygen = device->AllocateGPU(shaderIdentifierSize, cmd);
 		GraphicsDevice::GPUAllocation shadertable_miss = device->AllocateGPU(shaderIdentifierSize, cmd);
@@ -10233,6 +10298,9 @@ void Postprocess_RTAO(
 		dispatchraysdesc.Width = desc.Width;
 		dispatchraysdesc.Height = desc.Height;
 
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 
 		device->BindResource(CS, &scene.TLAS, 4, cmd);

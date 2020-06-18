@@ -29,6 +29,7 @@ namespace wiGraphics
 		bool RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS = false;
 		bool RAYTRACING = false;
 		size_t SHADER_IDENTIFIER_SIZE = 0;
+		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
 
 	public:
 		virtual bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) = 0;
@@ -46,6 +47,8 @@ namespace wiGraphics
 		virtual bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) { return false; }
 
 		virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) = 0;
+
+		virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) {}
 
 		virtual bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) = 0;
 
@@ -109,6 +112,7 @@ namespace wiGraphics
 		inline bool IsDebugDevice() const { return DEBUGDEVICE; }
 
 		inline size_t GetShaderIdentifierSize() const { return SHADER_IDENTIFIER_SIZE; }
+		inline size_t GetTopLevelAccelerationStructureInstanceSize() const { return TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE; }
 
 
 		///////////////Thread-sensitive////////////////////////
