@@ -10303,7 +10303,7 @@ void Postprocess_RTAO(
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 
-		device->BindResource(CS, &scene.TLAS, 4, cmd);
+		device->BindResource(CS, &scene.TLAS, TEXSLOT_ONDEMAND0, cmd);
 
 		device->BindRaytracingPipelineState(&RTPSO_rtao, cmd);
 		device->DispatchRays(&dispatchraysdesc, cmd);

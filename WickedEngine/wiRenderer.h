@@ -65,7 +65,7 @@ namespace wiRenderer
 
 	// Updates the main scene, performs frustum culling for main camera and other tasks that are only done once per frame. Specify layerMask to only include specific entities in the render frame.
 	void UpdatePerFrameData(float dt, uint32_t layerMask = ~0);
-	// Updates the GPU state according to the previously called UpatePerFrameData()
+	// Updates the GPU state according to the previously called UpdatePerFrameData()
 	void UpdateRenderData(wiGraphics::CommandList cmd);
 	// Updates all acceleration structures for raytracing API
 	void UpdateRaytracingAccelerationStructures(wiGraphics::CommandList cmd);

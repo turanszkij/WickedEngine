@@ -2,8 +2,8 @@
 #include "ShaderInterop_Postprocess.h"
 #include "raytracingHF.hlsli"
 
-RaytracingAccelerationStructure Scene : register(t4);
-RWTexture2D<unorm float> RenderTarget : register(u0);
+RAYTRACINGACCELERATIONSTRUCTURE(Scene, TEXSLOT_ONDEMAND0);
+RWTEXTURE2D(output, unorm float, 0);
 
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
 struct RayPayload
@@ -51,7 +51,7 @@ void RTAO_Raygen()
     }
     payload.color /= rtao_samplecount;
 
-    RenderTarget[DispatchRaysIndex().xy] = pow(saturate(payload.color), rtao_power);
+    output[DispatchRaysIndex().xy] = pow(saturate(payload.color), rtao_power);
 }
 
 [shader("closesthit")]

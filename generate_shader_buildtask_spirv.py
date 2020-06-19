@@ -44,8 +44,10 @@ for shader in root.iter(namespace + "FxCompile"):
             file.write("ds")
         if profile == "Compute":
             file.write("cs")
+        if profile == "Library":
+            file.write("lib")
 
-        file.write("_6_0 ")
+        file.write("_6_4 ")
 
         file.write("-D SHADERCOMPILER_SPIRV -D ");
         
@@ -59,7 +61,7 @@ for shader in root.iter(namespace + "FxCompile"):
             file.write("SPIRV_SHADERTYPE_HS")
         if profile == "Domain":
             file.write("SPIRV_SHADERTYPE_DS -fvk-invert-y")
-        if profile == "Compute":
+        if profile == "Compute" or profile == "Library":
             file.write("SPIRV_SHADERTYPE_CS")
 
         file.write(" -spirv -fvk-use-dx-layout -flegacy-macro-expansion -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso ")
