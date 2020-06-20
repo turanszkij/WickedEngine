@@ -10236,7 +10236,11 @@ void Postprocess_MSAO(
 		}
 
 		device->Dispatch((HiWidth + 2 + 15) / 16, (HiHeight + 2 + 15) / 16, 1, cmd);
-		
+
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
 	};
 
 	blur_and_upsample(texture_ao_smooth3, texture_lineardepth_downsize3, texture_lineardepth_downsize4, &texture_ao_merged4,
@@ -10303,9 +10307,9 @@ void Postprocess_RTAO(
 	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.ssao_range = range;
-	cb.ssao_samplecount = (float)samplecount;
-	cb.ssao_power = power;
+	cb.rtao_range = range;
+	cb.rtao_samplecount = (float)samplecount;
+	cb.rtao_power = power;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 

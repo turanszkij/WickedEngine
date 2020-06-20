@@ -776,7 +776,6 @@ namespace wiGraphics
 	{
 		RaytracingAccelerationStructureDesc desc;
 		GPUBuffer scratch;
-		GPUBuffer toplevel_instances;
 
 		const RaytracingAccelerationStructureDesc& GetDesc() const { return desc; }
 	};
