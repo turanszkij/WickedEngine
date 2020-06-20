@@ -1912,20 +1912,15 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="$(MSBuildThisFileDirectory)..\features.txt" />
     <Text Include="$(MSBuildThisFileDirectory)ArchiveVersionHistory.txt" />
-    <Text Include="$(MSBuildThisFileDirectory)..\other_licenses.txt" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)..\README.md" />
     <None Include="$(MSBuildThisFileDirectory)..\Documentation\ScriptingAPI-Documentation.md">
       <Filter>Documentation</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)..\Documentation\WickedEngine-Documentation.md">
       <Filter>Documentation</Filter>
     </None>
-    <None Include="$(MSBuildThisFileDirectory)..\appveyor.yml" />
-    <None Include="$(MSBuildThisFileDirectory)..\LICENSE.md" />
     <None Include="$(MSBuildThisFileDirectory)..\scripts\camera_animation_clamped.lua">
       <Filter>scripts</Filter>
     </None>

@@ -230,8 +230,7 @@ You can specify command line arguments to switch between render devices or other
 Python script which will generate the SPIR-V shader building program "build_SPIRV.bat". Run "build_SPIRV.bat" to build all HLSL shaders as SPIR-V bytecode format for Vulkan. Shader loading after this 
 is automatic if you start the application with Vulkan support.
 
-* **To load HLSL 6 shaders, first, run the "generate_shader_buildtask_hlsl6.py"
-Python script which will generate the HLSL6 shader building program "build_HLSL6.bat". Run "build_HLSL6.bat" to build all HLSL shaders as HLSL6 bytecode format for DirectX12.
+* **To load HLSL 6 shaders, first compile the Shaders_HLSL6 project in Visual Studio
 
 <br/>
 
