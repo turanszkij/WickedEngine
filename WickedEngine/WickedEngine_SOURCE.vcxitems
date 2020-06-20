@@ -710,20 +710,6 @@
     </Text>
   </ItemGroup>
   <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)..\Documentation\ScriptingAPI-Documentation.md" />
-    <None Include="$(MSBuildThisFileDirectory)..\Documentation\WickedEngine-Documentation.md" />
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\camera_animation_clamped.lua" />
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\camera_animation_repeat.lua" />
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\character_controller_tps.lua" />
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\debug_draw.lua" />
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\dungeon_generator.lua" />
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\emitter_burst.lua" />
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\fighting_game.lua" />
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\move_object.lua" />
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\pick.lua" />
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\rotate_model.lua" />
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\set_material_color.lua" />
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\set_material_emissive.lua" />
     <None Include="$(MSBuildThisFileDirectory)Utility\DirectXCollision.inl" />
     <None Include="$(MSBuildThisFileDirectory)Utility\DirectXMathConvert.inl" />
     <None Include="$(MSBuildThisFileDirectory)Utility\DirectXMathMatrix.inl" />

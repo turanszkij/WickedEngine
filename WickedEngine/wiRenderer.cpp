@@ -4609,6 +4609,8 @@ void UpdateRaytracingAccelerationStructures(CommandList cmd)
 
 	const Scene& scene = GetScene();
 
+	bool bottomlevel_sync = false;
+
 	// Build bottom level:
 	for(auto& meshIndex : pendingBottomLevelBuilds)
 	{
@@ -4616,6 +4618,7 @@ void UpdateRaytracingAccelerationStructures(CommandList cmd)
 		{
 			const MeshComponent& mesh = scene.meshes[meshIndex];
 			device->BuildRaytracingAccelerationStructure(&mesh.BLAS, cmd, nullptr);
+			bottomlevel_sync = true;
 		}
 	}
 	pendingBottomLevelBuilds.clear();
@@ -4628,6 +4631,7 @@ void UpdateRaytracingAccelerationStructures(CommandList cmd)
 			const MeshComponent& mesh = scene.meshes[meshIndex];
 			// src in non nullptr -> update instead of build!
 			device->BuildRaytracingAccelerationStructure(&mesh.BLAS, cmd, &mesh.BLAS);
+			bottomlevel_sync = true;
 		}
 	}
 	pendingBottomLevelUpdates.clear();
@@ -4665,13 +4669,19 @@ void UpdateRaytracingAccelerationStructures(CommandList cmd)
 	GetRenderFrameAllocator(cmd).free(instanceArraySize);
 
 	// Sync with bottom level before building top level:
-	GPUBarrier barriers[] = {
-		GPUBarrier::Memory(),
-	};
-	device->Barrier(barriers, arraysize(barriers), cmd);
+	if (bottomlevel_sync)
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 
 	// Build top level:
 	device->BuildRaytracingAccelerationStructure(&scene.TLAS, cmd, nullptr);
+	GPUBarrier barriers[] = {
+		GPUBarrier::Memory(&scene.TLAS),
+	};
 	device->Barrier(barriers, arraysize(barriers), cmd);
 
 }
@@ -10317,11 +10327,6 @@ void Postprocess_RTAO(
 
 		dispatchraysdesc.Width = desc.Width;
 		dispatchraysdesc.Height = desc.Height;
-
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
 
 		device->BindResource(CS, &scene.TLAS, TEXSLOT_ONDEMAND0, cmd);
 

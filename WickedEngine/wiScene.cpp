@@ -559,7 +559,16 @@ namespace wiScene
 
 			RaytracingAccelerationStructureDesc desc;
 			desc.type = RaytracingAccelerationStructureDesc::BOTTOMLEVEL;
-			desc._flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
+
+			if (streamoutBuffer_POS.IsValid())
+			{
+				desc._flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
+				desc._flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
+			}
+			else
+			{
+				desc._flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE;
+			}
 
 			for (auto& subset : subsets)
 			{
@@ -1197,6 +1206,7 @@ namespace wiScene
 			if (dt > 0 && objects.GetCount() > 0 && objects.GetCount() != TLAS.desc.toplevel.count)
 			{
 				RaytracingAccelerationStructureDesc desc;
+				desc._flags = RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
 				desc.type = RaytracingAccelerationStructureDesc::TOPLEVEL;
 				desc.toplevel.count = (uint32_t)objects.GetCount();
 				GPUBufferDesc bufdesc;
