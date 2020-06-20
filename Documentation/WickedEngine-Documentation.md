@@ -59,6 +59,8 @@ This is a reference for the C++ features of Wicked Engine
 			12. [GPU Buffers](#gpu-buffers)
 			13. [Updating GPU buffers](#updating-gpu-buffers)
 			14. [GPU Queries](#gpu-queries)
+			15. [RayTracingAccelerationStructure](#raytracingaccelerationstructure)
+			16. [RayTracingPipelineState](#raytracingpipelinestate)
 		2. [GraphicsDevice_DX11](#wigraphicsdevice_dx11)
 		3. [GraphicsDevice_DX12](#wigraphicsdevice_dx12)
 		4. [GraphicsDevice_Vulkan](#wigraphicsdevice_vulkan)
@@ -582,6 +584,12 @@ float time_range_milliseconds = float(b.result_timestamp - a.result_timestamp) /
 
 Use the `GraphicsDevice::QueryRead()` function to retrieve results. However, note that the GPU Queries are designed to be running on the GPU timeline, so they shouldn't be read by the CPU immediately, but only after some frames of latency. The `wiRenderer::GPUQueryRing` helper can be used for this purpose.
 
+##### RayTracingAccelerationStructure
+The acceleration strucuture can be bottom level or top level, and decided by the description strucutre's `type` field. Depending on the `type`, either the `toplevel` or `bottomlevel` member must be filled out before creating the acceleration structure. When creating the acceleration structure with the grpahics device (`GraphicsDevice::CreateRaytracingAccelerationStructure()`), sufficient backing memory is allocated, but the acceleration structure is not built. Building the acceleration structure is performed on the GPU timeline, via the `GraphicsDevice::BuildRaytracingAccelerationStructure()`. To build it from scratch, leave the `src` argument of this function to `nullptr`. To update the acceleration structure without doing a full rebuild, specify a `src` argument. The `src` can be the same acceleration structure, in this case the update will be performed in place. To be able to update an acceleration structure, it must have been created with the `RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE` flag.
+
+##### RayTracingPipelineState
+Binding a ray tracing pipeline state is required to dispatch ray tracing shaders. A ray tracing pipeline state holds a collection of shader libraries and hitgroup definitions. It also declares information about max resource usage of the pipeline.
+
 
 #### GraphicsDevice_DX11
 [[Header]](../WickedEngine/wiGraphicsDevice_DX11.h) [[Cpp]](../WickedEngine/wiGraphicsDevice_DX11.cpp)
@@ -673,8 +681,14 @@ This function prepares the scene for rendering. It must be called once every fra
 #### UpdateRenderData
 Begin rendering the frame on GPU. This means that GPU compute jobs are kicked, such as particle simulations, texture packing, mipmap generation tasks that were queued up, updating per frame GPU buffer data, animation vertex skinning and other things.
 
-#### Ray tracing
-Ray tracing can be used in multiple ways torender the scene. The `RayTraceScene()` function will render the scene with the rays that are provided as the `RayBuffers` type argument. For example, to render the scene from the camera perspective, first create rays that originate from the camera and shoot towards the caera far plane for every pixel. The `GenerateScreenRayBuffers()` helper function implements this functionality, by expecting a [CameraComponent](#cameracomponent) argument and returns a `RayBuffers` structure. The result will be written to a texture that is provided as parameter. The texture must have been created with `BIND_UNORDERED_ACCESS` bind flags, because it will be written in compute shaders. The scene BVH structure must have been already built to use this, it can be accomplished by calling [wiRenderer::BuildSceneBVH()](#build-scene-bvh). The [RenderPath3D_Pathracing](#renderpath3d_pathtracing) uses this ray tracing functionality to render a path traced scene.
+#### Ray tracing (hardware accelerated)
+
+Hardware accelerated ray tracing API is now available, so a variety of renderer features are available using that. If the hardware support is available, the `Scene` will allocate a top level acceleration structure, and the meshes will allocate bottom level acceleration structures for themselves. Updating these is done by simply calling `wiRenderer::UpdateRaytracingAccelerationStructures(cmd)`. The updates will happen on the GPU timeline, so provide a [CommandList](#work-submission) as argument. The top level acceleration structure will be rebuilt from scratch. The bottom level acceleration structures will be rebuilt from scratch once, and then they will be updated (refitted).
+
+After the acceleration structures are updated, ray tracing shaders can use it after binding to a shader resource slot.
+
+#### Ray tracing (legacy)
+Ray tracing can be used in multiple ways to render the scene. The `RayTraceScene()` function will render the scene with the rays that are provided as the `RayBuffers` type argument. For example, to render the scene from the camera perspective, first create rays that originate from the camera and shoot towards the caera far plane for every pixel. The `GenerateScreenRayBuffers()` helper function implements this functionality, by expecting a [CameraComponent](#cameracomponent) argument and returns a `RayBuffers` structure. The result will be written to a texture that is provided as parameter. The texture must have been created with `BIND_UNORDERED_ACCESS` bind flags, because it will be written in compute shaders. The scene BVH structure must have been already built to use this, it can be accomplished by calling [wiRenderer::BuildSceneBVH()](#build-scene-bvh). The [RenderPath3D_Pathracing](#renderpath3d_pathtracing) uses this ray tracing functionality to render a path traced scene.
 
 Other than path tracing, the scene BVH can be rendered by using the `RayTraceSceneBVH` function. This will render the bounding box hierarchy to the screen as a heatmap. Blue colors mean that few boxes were hit per pixel, and with more bounding box hits the colors go to green, yellow, red, and finaly white. This is useful to determine how expensive a the scene is with regards to ray tracing performance.
 
@@ -815,7 +829,7 @@ This is a GPU sorting facility using the Bitonic Sort algorithm. It can be used 
 
 ### wiGPUBVH
 [[Header]](../WickedEngine/wiGPUBVH.h) [[Cpp]](../WickedEngine/wiGPUBVH.cpp)
-This facility can generate a BVH (Bounding Volume Hierarcy) on the GPU for a [Scene](#scene). The BVH structure can be used to perform efficient RAY-triangle intersections on the GPU, for example in ray tracing.
+This facility can generate a BVH (Bounding Volume Hierarcy) on the GPU for a [Scene](#scene). The BVH structure can be used to perform efficient RAY-triangle intersections on the GPU, for example in ray tracing. This is not using the ray tracing API hardware acceleration, but implemented in compute, so it has wide hardware support.
 
 
 ## GUI
@@ -1256,6 +1270,15 @@ myStructuredbuffer[42] = element;
 
 uint previous_value;
 InterlockedAdd(myStructuredbuffer[42].value2, 1, previous_value);
+```
+
+- RAYTRACINGACCELERATIONSTRUCTURE(name, slot)<br/>
+Declares a ray tracing acceleration structure. Only usabe in HLSL 6.1+ shader model. Requires hardware support for ray tracing.
+The binding slot is read only resource type (t slot).
+```cpp
+RAYTRACINGACCELERATIONSTRUCTURE(Scene, 0);
+
+TraceRay(Scene, ...);
 ```
 
 - SAMPLERSTATE(name, slot)<br/>

@@ -362,6 +362,11 @@ void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
+	if (getAO() == AO_RTAO)
+	{
+		wiRenderer::UpdateRaytracingAccelerationStructures(cmd);
+	}
+
 	device->BindResource(CS, &depthBuffer_Copy, TEXSLOT_DEPTH, cmd);
 	wiRenderer::UpdateRenderData(cmd);
 	
@@ -468,6 +473,17 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 				cmd,
 				getAOPower()
 				);
+			break;
+		case AO_RTAO:
+			wiRenderer::Postprocess_RTAO(
+				depthBuffer_Copy,
+				rtLinearDepth,
+				rtAO,
+				cmd,
+				getAORange(),
+				getAOSampleCount(),
+				getAOPower()
+			);
 			break;
 		}
 	}

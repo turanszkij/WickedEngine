@@ -395,5 +395,6 @@ void RenderPath3D_BindLua::Bind()
 		wiLua::GetGlobal()->RunText("AO_SSAO = 1");
 		wiLua::GetGlobal()->RunText("AO_HBAO = 2");
 		wiLua::GetGlobal()->RunText("AO_MSAO = 3");
+		wiLua::GetGlobal()->RunText("AO_RTAO = 4");
 	}
 }

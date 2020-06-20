@@ -51,6 +51,7 @@ Shader					geometryShaders[GSTYPE_COUNT];
 Shader					hullShaders[HSTYPE_COUNT];
 Shader					domainShaders[DSTYPE_COUNT];
 Shader					computeShaders[CSTYPE_COUNT];
+Shader					raytracingShaders[RTTYPE_COUNT];
 Texture					textures[TEXTYPE_COUNT];
 InputLayout				inputLayouts[ILTYPE_COUNT];
 RasterizerState			rasterizers[RSTYPE_COUNT];
@@ -309,7 +310,15 @@ struct FrameCulling
 };
 unordered_map<const CameraComponent*, FrameCulling> frameCullings;
 
-vector<uint32_t> pendingMaterialUpdates;
+vector<size_t> pendingMaterialUpdates;
+
+enum AS_UPDATE_TYPE
+{
+	AS_COMPLETE,
+	AS_REBUILD,
+	AS_UPDATE,
+};
+unordered_map<Entity, AS_UPDATE_TYPE> pendingBottomLevelBuilds;
 
 struct Instance
 {
@@ -984,6 +993,8 @@ PipelineState PSO_sss;
 PipelineState PSO_upsample_bilateral;
 PipelineState PSO_outline;
 
+RaytracingPipelineState RTPSO_rtao;
+
 enum SKYRENDERING
 {
 	SKYRENDERING_STATIC,
@@ -1414,6 +1425,11 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(HS, hullShaders[HSTYPE_OBJECT], "objectHS.cso"); });
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(DS, domainShaders[DSTYPE_OBJECT], "objectDS.cso"); });
+
+	if (wiRenderer::GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	{
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(SHADERSTAGE_COUNT, raytracingShaders[RTTYPE_RTAO], "rtaoLIB.cso"); });
+	}
 
 	wiJobSystem::Wait(ctx);
 
@@ -2155,6 +2171,28 @@ void LoadShaders()
 	}
 
 
+	if (wiRenderer::GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	{
+		wiJobSystem::Execute(ctx, [device](wiJobArgs args) {
+
+			RaytracingPipelineStateDesc rtdesc;
+			rtdesc.shaderlibraries.emplace_back();
+			rtdesc.shaderlibraries.back().shader = &raytracingShaders[RTTYPE_RTAO];
+
+			rtdesc.hitgroups.emplace_back();
+			rtdesc.hitgroups.back().type = ShaderHitGroup::TRIANGLES;
+			rtdesc.hitgroups.back().name = "RTAO_Hitgroup";
+			rtdesc.hitgroups.back().closesthit_shader_name = "RTAO_ClosestHit";
+
+			rtdesc.max_trace_recursion_depth = 1;
+			rtdesc.max_payload_size_in_bytes = sizeof(float);
+			rtdesc.max_attribute_size_in_bytes = sizeof(XMFLOAT2); // bary
+			bool success = device->CreateRaytracingPipelineState(&rtdesc, &RTPSO_rtao);
+			assert(success);
+
+		});
+	}
+
 	wiJobSystem::Wait(ctx);
 
 }
@@ -2828,6 +2866,9 @@ void ClearWorld()
 
 	packedDecals.clear();
 	packedLightmaps.clear();
+
+	pendingMaterialUpdates.clear();
+	pendingBottomLevelBuilds.clear();
 }
 
 static const uint32_t CASCADE_COUNT = 3;
@@ -3672,7 +3713,6 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 
 	// See which materials will need to update their GPU render data:
 	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-		pendingMaterialUpdates.clear();
 		for (size_t i = 0; i < scene.materials.GetCount(); ++i)
 		{
 			MaterialComponent& material = scene.materials[i];
@@ -3680,7 +3720,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 			if (material.IsDirty())
 			{
 				material.SetDirty(false);
-				pendingMaterialUpdates.push_back(uint32_t(i));
+				pendingMaterialUpdates.push_back(i);
 
 				if (!material.constantBuffer.IsValid())
 				{
@@ -3698,43 +3738,8 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 	// Need to swap prev and current vertex buffers for any dynamic meshes BEFORE render threads are kicked 
 	//	and also create skinning bone buffers:
 	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
-		{
-			Entity entity = scene.meshes.GetEntity(i);
-			MeshComponent& mesh = scene.meshes[i];
+		const bool raytracing_api = device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING);
 
-			if (mesh.IsSkinned() && scene.armatures.Contains(mesh.armatureID))
-			{
-				const SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(entity);
-				if (softbody != nullptr && !softbody->vertex_positions_simulation.empty())
-				{
-					// If soft body simulation is active, don't perform skinning.
-					//	(Soft body animated vertices are skinned in simulation phase by physics system)
-					continue;
-				}
-
-				ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
-
-				if (!armature.boneBuffer.IsValid())
-				{
-					GPUBufferDesc bd;
-					bd.Usage = USAGE_DYNAMIC;
-					bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-
-					bd.ByteWidth = sizeof(ArmatureComponent::ShaderBoneType) * (uint32_t)armature.boneCollection.size();
-					bd.BindFlags = BIND_SHADER_RESOURCE;
-					bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-					bd.StructureByteStride = sizeof(ArmatureComponent::ShaderBoneType);
-
-					device->CreateBuffer(&bd, nullptr, &armature.boneBuffer);
-				}
-				if (!mesh.vertexBuffer_PRE.IsValid())
-				{
-					device->CreateBuffer(&mesh.streamoutBuffer_POS.GetDesc(), nullptr, &mesh.vertexBuffer_PRE);
-				}
-				std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
-			}
-		}
 		for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
 		{
 			const SoftBodyPhysicsComponent& softbody = scene.softbodies[i];
@@ -3746,12 +3751,80 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 			Entity entity = scene.softbodies.GetEntity(i);
 			MeshComponent& mesh = *scene.meshes.GetComponent(entity);
 
+			if (raytracing_api && !mesh.BLAS_build_pending)
+			{
+				pendingBottomLevelBuilds[entity] = AS_UPDATE;
+			}
+
 			if (!mesh.vertexBuffer_PRE.IsValid())
 			{
 				device->CreateBuffer(&mesh.vertexBuffer_POS.GetDesc(), nullptr, &mesh.streamoutBuffer_POS);
 				device->CreateBuffer(&mesh.vertexBuffer_POS.GetDesc(), nullptr, &mesh.vertexBuffer_PRE);
+
+				if (raytracing_api)
+				{
+					mesh.BLAS.desc._flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
+					device->CreateRaytracingAccelerationStructure(&mesh.BLAS.desc, &mesh.BLAS);
+				}
 			}
 			std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
+		}
+		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
+		{
+			Entity entity = scene.meshes.GetEntity(i);
+			MeshComponent& mesh = scene.meshes[i];
+
+			if (mesh.IsSkinned() && scene.armatures.Contains(mesh.armatureID))
+			{
+				const SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(entity);
+				if (softbody == nullptr || softbody->vertex_positions_simulation.empty())
+				{
+					if (raytracing_api && !mesh.BLAS_build_pending)
+					{
+						pendingBottomLevelBuilds[entity] = AS_UPDATE;
+					}
+
+					ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
+
+					if (!armature.boneBuffer.IsValid())
+					{
+						GPUBufferDesc bd;
+						bd.Usage = USAGE_DYNAMIC;
+						bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+
+						bd.ByteWidth = sizeof(ArmatureComponent::ShaderBoneType) * (uint32_t)armature.boneCollection.size();
+						bd.BindFlags = BIND_SHADER_RESOURCE;
+						bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+						bd.StructureByteStride = sizeof(ArmatureComponent::ShaderBoneType);
+
+						device->CreateBuffer(&bd, nullptr, &armature.boneBuffer);
+					}
+					if (!mesh.vertexBuffer_PRE.IsValid())
+					{
+						device->CreateBuffer(&mesh.streamoutBuffer_POS.GetDesc(), nullptr, &mesh.vertexBuffer_PRE);
+					}
+					std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
+				}
+			}
+
+			if (raytracing_api)
+			{
+				if (mesh.streamoutBuffer_POS.IsValid())
+				{
+					for (auto& geometry : mesh.BLAS.desc.bottomlevel.geometries)
+					{
+						// swapped dynamic vertex buffers in BLAS:
+						geometry.triangles.vertexBuffer = mesh.streamoutBuffer_POS;
+					}
+				}
+
+				if (mesh.BLAS_build_pending)
+				{
+					mesh.BLAS_build_pending = false;
+					pendingBottomLevelBuilds[entity] = AS_REBUILD;
+				}
+			}
+
 		}
 	});
 
@@ -4152,6 +4225,7 @@ void UpdateRenderData(CommandList cmd)
 			device->UpdateBuffer(&material.constantBuffer, &materialGPUData, cmd);
 		}
 	}
+	pendingMaterialUpdates.clear();
 
 
 	const FrameCulling& mainCameraCulling = frameCullings.at(&GetCamera());
@@ -4546,6 +4620,89 @@ void UpdateRenderData(CommandList cmd)
 	RefreshLightmapAtlas(cmd);
 	RefreshEnvProbes(cmd);
 	RefreshImpostors(cmd);
+}
+void UpdateRaytracingAccelerationStructures(CommandList cmd)
+{
+	GraphicsDevice* device = GetDevice();
+	const Scene& scene = GetScene();
+	if (!device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING) || !scene.TLAS.IsValid())
+	{
+		return;
+	}
+	auto range = wiProfiler::BeginRangeGPU("Update Raytracing Acceleration Structures", cmd);
+	device->EventBegin("Update Raytracing Acceleration Structures", cmd);
+
+	bool bottomlevel_sync = false;
+
+	// Build bottom level:
+	for(auto& it : pendingBottomLevelBuilds)
+	{
+		AS_UPDATE_TYPE type = it.second;
+		if (type == AS_COMPLETE)
+			continue;
+
+		Entity entity = it.first;
+		const MeshComponent* mesh = scene.meshes.GetComponent(entity);
+
+		if (mesh != nullptr)
+		{
+			// If src param is nullptr, rebuild happens, else update (if src == dst, then update happens in place)
+			device->BuildRaytracingAccelerationStructure(&mesh->BLAS, cmd, type == AS_REBUILD ? nullptr : &mesh->BLAS);
+			bottomlevel_sync = true;
+			it.second = AS_COMPLETE;
+		}
+	}
+
+	// Gather all instances for top level:
+	size_t instanceSize = device->GetTopLevelAccelerationStructureInstanceSize();
+	size_t instanceArraySize = (size_t)scene.TLAS.desc.toplevel.count * instanceSize;
+	void* instanceArray = GetRenderFrameAllocator(cmd).allocate(instanceArraySize);
+	size_t instanceOffset = 0;
+	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+	{
+		const ObjectComponent& object = scene.objects[i];
+
+		if (object.meshID != INVALID_ENTITY)
+		{
+			const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+
+			RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
+			const XMFLOAT4X4& transform = object.transform_index >= 0 ? scene.transforms[object.transform_index].world : IDENTITYMATRIX;
+			instance = {};
+			instance.transform = XMFLOAT3X4(
+				transform._11, transform._21, transform._31, transform._41,
+				transform._12, transform._22, transform._32, transform._42,
+				transform._13, transform._23, transform._33, transform._43
+			);
+			instance.InstanceID = i;
+			instance.InstanceMask = 1;
+			instance.bottomlevel = mesh.BLAS;
+
+			device->WriteTopLevelAccelerationStructureInstance(&instance, (void*)((size_t)instanceArray + instanceOffset));
+			instanceOffset += instanceSize;
+		}
+	}
+	device->UpdateBuffer(&scene.TLAS.desc.toplevel.instanceBuffer, instanceArray, cmd, (int)instanceArraySize);
+	GetRenderFrameAllocator(cmd).free(instanceArraySize);
+
+	// Sync with bottom level before building top level:
+	if (bottomlevel_sync)
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	// Build top level:
+	device->BuildRaytracingAccelerationStructure(&scene.TLAS, cmd, nullptr);
+	GPUBarrier barriers[] = {
+		GPUBarrier::Memory(&scene.TLAS),
+	};
+	device->Barrier(barriers, arraysize(barriers), cmd);
+
+	device->EventEnd(cmd);
+	wiProfiler::EndRange(range);
 }
 void OcclusionCulling_Render(CommandList cmd)
 {
@@ -10079,7 +10236,11 @@ void Postprocess_MSAO(
 		}
 
 		device->Dispatch((HiWidth + 2 + 15) / 16, (HiHeight + 2 + 15) / 16, 1, cmd);
-		
+
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
 	};
 
 	blur_and_upsample(texture_ao_smooth3, texture_lineardepth_downsize3, texture_lineardepth_downsize4, &texture_ao_merged4,
@@ -10093,6 +10254,122 @@ void Postprocess_MSAO(
 
 	blur_and_upsample(output, lineardepth, texture_lineardepth_downsize1, &texture_ao_smooth1,
 		&texture_ao_hq1, nullptr);
+
+	wiProfiler::EndRange(prof_range);
+	device->EventEnd(cmd);
+}
+void Postprocess_RTAO(
+	const Texture& depthbuffer,
+	const Texture& lineardepth,
+	const Texture& output,
+	CommandList cmd,
+	float range,
+	uint32_t samplecount,
+	float power
+)
+{
+	const Scene& scene = wiScene::GetScene();
+	if (scene.objects.GetCount() <= 0)
+	{
+		return;
+	}
+
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("Postprocess_RTAO", cmd);
+	auto prof_range = wiProfiler::BeginRangeGPU("RTAO", cmd);
+
+	static TextureDesc saved_desc;
+	static Texture temp0;
+	static Texture temp1;
+
+	const TextureDesc& lineardepth_desc = lineardepth.GetDesc();
+	if (saved_desc.Width != lineardepth_desc.Width || saved_desc.Height != lineardepth_desc.Height)
+	{
+		saved_desc = lineardepth_desc; // <- this must already have SRV and UAV request flags set up!
+		saved_desc.MipLevels = 1;
+
+		TextureDesc desc = saved_desc;
+		desc.Format = FORMAT_R8_UNORM;
+		desc.Width = (desc.Width + 1) / 2;
+		desc.Height = (desc.Height + 1) / 2;
+		device->CreateTexture(&desc, nullptr, &temp0);
+		device->CreateTexture(&desc, nullptr, &temp1);
+	}
+
+	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+
+	const TextureDesc& desc = temp0.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	cb.rtao_range = range;
+	cb.rtao_samplecount = (float)samplecount;
+	cb.rtao_power = power;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	const GPUResource* uavs[] = {
+		&temp0,
+	};
+	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+	if (device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	{
+		size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
+		GraphicsDevice::GPUAllocation shadertable_raygen = device->AllocateGPU(shaderIdentifierSize, cmd);
+		GraphicsDevice::GPUAllocation shadertable_miss = device->AllocateGPU(shaderIdentifierSize, cmd);
+		GraphicsDevice::GPUAllocation shadertable_hitgroup = device->AllocateGPU(shaderIdentifierSize, cmd);
+
+		void* rayGenShaderIdentifier = device->GetShaderIdentifier(&RTPSO_rtao, "RTAO_Raygen");
+		void* missShaderIdentifier = device->GetShaderIdentifier(&RTPSO_rtao, "RTAO_Miss");
+		void* hitGroupShaderIdentifier = device->GetShaderIdentifier(&RTPSO_rtao, "RTAO_Hitgroup");
+
+		memcpy(shadertable_raygen.data, rayGenShaderIdentifier, shaderIdentifierSize);
+		memcpy(shadertable_miss.data, missShaderIdentifier, shaderIdentifierSize);
+		memcpy(shadertable_hitgroup.data, hitGroupShaderIdentifier, shaderIdentifierSize);
+
+		DispatchRaysDesc dispatchraysdesc;
+		dispatchraysdesc.raygeneration.buffer = shadertable_raygen.buffer;
+		dispatchraysdesc.raygeneration.offset = shadertable_raygen.offset;
+		dispatchraysdesc.raygeneration.size = shaderIdentifierSize;
+
+		dispatchraysdesc.miss.buffer = shadertable_miss.buffer;
+		dispatchraysdesc.miss.offset = shadertable_miss.offset;
+		dispatchraysdesc.miss.size = shaderIdentifierSize;
+		dispatchraysdesc.miss.stride = shaderIdentifierSize;
+
+		dispatchraysdesc.hitgroup.buffer = shadertable_hitgroup.buffer;
+		dispatchraysdesc.hitgroup.offset = shadertable_hitgroup.offset;
+		dispatchraysdesc.hitgroup.size = shaderIdentifierSize;
+		dispatchraysdesc.hitgroup.stride = shaderIdentifierSize;
+
+		dispatchraysdesc.Width = desc.Width;
+		dispatchraysdesc.Height = desc.Height;
+
+		device->BindResource(CS, &scene.TLAS, TEXSLOT_ONDEMAND0, cmd);
+
+		device->BindRaytracingPipelineState(&RTPSO_rtao, cmd);
+		device->DispatchRays(&dispatchraysdesc, cmd);
+	}
+	else
+	{
+		assert(0); // TODO: non raytracing API implementation?
+	}
+
+	GPUBarrier barriers[] = {
+		GPUBarrier::Memory(),
+	};
+	device->Barrier(barriers, arraysize(barriers), cmd);
+
+	device->UnbindUAVs(0, arraysize(uavs), cmd);
+
+	Postprocess_Blur_Bilateral(temp0, lineardepth, temp1, temp0, cmd, 1.2f, -1, -1, true);
+	Postprocess_Upsample_Bilateral(temp0, lineardepth, output, cmd);
 
 	wiProfiler::EndRange(prof_range);
 	device->EventEnd(cmd);

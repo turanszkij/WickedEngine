@@ -42,7 +42,7 @@
     <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
     <AppContainerApplication>true</AppContainerApplication>
     <ApplicationType>Windows Store</ApplicationType>
-    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <WindowsTargetPlatformMinVersion>10.0.17763.0</WindowsTargetPlatformMinVersion>
     <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
     <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
@@ -104,7 +104,7 @@
     <Import Project="$(VSINSTALLDIR)\Common7\IDE\Extensions\Microsoft\VsGraphics\ShaderGraphContentTask.props" />
   </ImportGroup>
   <ImportGroup Label="Shared">
-    <Import Project="..\WickedEngine\WickedEngine_SHADERS.vcxitems" Label="Shared" />
+    <Import Project="..\WickedEngine\Shaders_SOURCE.vcxitems" Label="Shared" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -134,42 +134,42 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <OutDir>$(SolutionDir)BUILD\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <MultiProcFXC>true</MultiProcFXC>
+    <MultiProcFXC>false</MultiProcFXC>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <OutDir>$(SolutionDir)BUILD\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <MultiProcFXC>true</MultiProcFXC>
+    <MultiProcFXC>false</MultiProcFXC>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <OutDir>$(SolutionDir)BUILD\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <MultiProcFXC>true</MultiProcFXC>
+    <MultiProcFXC>false</MultiProcFXC>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <OutDir>$(SolutionDir)BUILD\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <MultiProcFXC>true</MultiProcFXC>
+    <MultiProcFXC>false</MultiProcFXC>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)BUILD\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <MultiProcFXC>true</MultiProcFXC>
+    <MultiProcFXC>false</MultiProcFXC>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)BUILD\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <MultiProcFXC>true</MultiProcFXC>
+    <MultiProcFXC>false</MultiProcFXC>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)BUILD\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <MultiProcFXC>true</MultiProcFXC>
+    <MultiProcFXC>false</MultiProcFXC>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)BUILD\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <MultiProcFXC>true</MultiProcFXC>
+    <MultiProcFXC>false</MultiProcFXC>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <Link>
@@ -481,6 +481,11 @@
   </ItemGroup>
   <ItemGroup>
     <Font Include="..\WickedEngine\fonts\arial.ttf" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\rtaoLIB.hlsl">
+      <FileType>Document</FileType>
+    </FxCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

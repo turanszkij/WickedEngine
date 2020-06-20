@@ -301,6 +301,8 @@ namespace wiScene
 		wiGraphics::GPUBuffer vertexBuffer_SUB;
 		std::vector<uint8_t> vertex_subsets;
 
+		wiGraphics::RaytracingAccelerationStructure BLAS;
+		bool BLAS_build_pending = true;
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
@@ -1132,6 +1134,7 @@ namespace wiScene
 		AABB bounds;
 		std::vector<AABB> parallel_bounds;
 		WeatherComponent weather;
+		wiGraphics::RaytracingAccelerationStructure TLAS;
 
 		// Update all components by a given timestep (in seconds):
 		void Update(float dt);

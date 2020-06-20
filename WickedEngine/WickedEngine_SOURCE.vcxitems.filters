@@ -55,17 +55,11 @@
     <Filter Include="ENGINE\Graphics\API">
       <UniqueIdentifier>{4cb4ddc4-c5a9-483b-b6cf-2c4382340e7a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Documentation">
-      <UniqueIdentifier>{052d6b54-4254-4260-ba34-79b6fb943b4a}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ENGINE\System">
       <UniqueIdentifier>{f9156b5b-9cc8-436c-9faa-536f7dce4f27}</UniqueIdentifier>
     </Filter>
     <Filter Include="ENGINE\High level interface">
       <UniqueIdentifier>{a25b4076-72bb-4c78-8bc1-84c59a8984fd}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="scripts">
-      <UniqueIdentifier>{0b9a1138-b94c-416f-838b-89f81f53fbc3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -1912,56 +1906,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="$(MSBuildThisFileDirectory)..\features.txt" />
     <Text Include="$(MSBuildThisFileDirectory)ArchiveVersionHistory.txt" />
-    <Text Include="$(MSBuildThisFileDirectory)..\other_licenses.txt" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)..\README.md" />
-    <None Include="$(MSBuildThisFileDirectory)..\Documentation\ScriptingAPI-Documentation.md">
-      <Filter>Documentation</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)..\Documentation\WickedEngine-Documentation.md">
-      <Filter>Documentation</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)..\appveyor.yml" />
-    <None Include="$(MSBuildThisFileDirectory)..\LICENSE.md" />
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\camera_animation_clamped.lua">
-      <Filter>scripts</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\camera_animation_repeat.lua">
-      <Filter>scripts</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\character_controller_tps.lua">
-      <Filter>scripts</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\debug_draw.lua">
-      <Filter>scripts</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\dungeon_generator.lua">
-      <Filter>scripts</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\emitter_burst.lua">
-      <Filter>scripts</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\move_object.lua">
-      <Filter>scripts</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\pick.lua">
-      <Filter>scripts</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\rotate_model.lua">
-      <Filter>scripts</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\set_material_color.lua">
-      <Filter>scripts</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\set_material_emissive.lua">
-      <Filter>scripts</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)..\scripts\fighting_game.lua">
-      <Filter>scripts</Filter>
-    </None>
     <None Include="$(MSBuildThisFileDirectory)Utility\DirectXCollision.inl">
       <Filter>UTILITY</Filter>
     </None>

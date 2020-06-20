@@ -13,7 +13,7 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 	assert(GUI && "Invalid GUI!");
 
 	ppWindow = new wiWindow(GUI, "PostProcess Window");
-	ppWindow->SetSize(XMFLOAT2(400, 550));
+	ppWindow->SetSize(XMFLOAT2(400, 600));
 	GUI->AddWidget(ppWindow);
 
 	float x = 150;
@@ -59,9 +59,33 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 	aoComboBox->AddItem("SSAO");
 	aoComboBox->AddItem("HBAO");
 	aoComboBox->AddItem("MSAO");
+	aoComboBox->AddItem("RTAO");
 	aoComboBox->SetSelected(editor->renderPath->getAO());
 	aoComboBox->OnSelect([=](wiEventArgs args) {
 		editor->renderPath->setAO((RenderPath3D::AO)args.iValue);
+
+		switch (editor->renderPath->getAO())
+		{
+		case RenderPath3D::AO_SSAO:
+			aoRangeSlider->SetEnabled(true); 
+			aoRangeSlider->SetValue(2.0f);
+			aoSampleCountSlider->SetEnabled(true); 
+			aoSampleCountSlider->SetValue(9.0f);
+			break;
+		case RenderPath3D::AO_RTAO:
+			aoRangeSlider->SetEnabled(true); 
+			aoRangeSlider->SetValue(10.0f);
+			aoSampleCountSlider->SetEnabled(true); 
+			aoSampleCountSlider->SetValue(2.0f);
+			break;
+		default:
+			aoRangeSlider->SetEnabled(false);
+			aoSampleCountSlider->SetEnabled(false);
+			break;
+		}
+
+		editor->renderPath->setAORange(aoRangeSlider->GetValue());
+		editor->renderPath->setAOSampleCount((uint32_t)aoSampleCountSlider->GetValue());
 	});
 	ppWindow->AddWidget(aoComboBox);
 
@@ -74,6 +98,26 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 		editor->renderPath->setAOPower(args.fValue);
 		});
 	ppWindow->AddWidget(aoPowerSlider);
+
+	aoRangeSlider = new wiSlider(1.0f, 100.0f, 1, 1000, "Range: ");
+	aoRangeSlider->SetTooltip("Set AO ray length. Only for SSAO and RTAO");
+	aoRangeSlider->SetSize(XMFLOAT2(100, 20));
+	aoRangeSlider->SetPos(XMFLOAT2(x + 100, y += step));
+	aoRangeSlider->SetValue((float)editor->renderPath->getAOPower());
+	aoRangeSlider->OnSlide([=](wiEventArgs args) {
+		editor->renderPath->setAORange(args.fValue);
+		});
+	ppWindow->AddWidget(aoRangeSlider);
+
+	aoSampleCountSlider = new wiSlider(1, 16, 9, 15, "Sample Count: ");
+	aoSampleCountSlider->SetTooltip("Set AO ray count. Only for SSAO and RTAO");
+	aoSampleCountSlider->SetSize(XMFLOAT2(100, 20));
+	aoSampleCountSlider->SetPos(XMFLOAT2(x + 100, y += step));
+	aoSampleCountSlider->SetValue((float)editor->renderPath->getAOPower());
+	aoSampleCountSlider->OnSlide([=](wiEventArgs args) {
+		editor->renderPath->setAOSampleCount(args.iValue);
+		});
+	ppWindow->AddWidget(aoSampleCountSlider);
 
 	ssrCheckBox = new wiCheckBox("SSR: ");
 	ssrCheckBox->SetTooltip("Enable Screen Space Reflections.");

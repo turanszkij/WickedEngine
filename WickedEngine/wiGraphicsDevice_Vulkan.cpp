@@ -1004,62 +1004,62 @@ using namespace Vulkan_Internal;
 
 
 
-	void GraphicsDevice_Vulkan::UploadBuffer::init(GraphicsDevice_Vulkan* device, const QueueFamilyIndices& queueIndices, size_t size)
-	{
-		this->device = device;
+	//void GraphicsDevice_Vulkan::UploadBuffer::init(GraphicsDevice_Vulkan* device, const QueueFamilyIndices& queueIndices, size_t size)
+	//{
+	//	this->device = device;
 
-		VkBufferCreateInfo bufferInfo = {};
-		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = size;
-		bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-		bufferInfo.flags = 0;
+	//	VkBufferCreateInfo bufferInfo = {};
+	//	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	//	bufferInfo.size = size;
+	//	bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	//	bufferInfo.flags = 0;
 
-		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	//	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		VkResult res;
+	//	VkResult res;
 
-		VmaAllocationCreateInfo allocInfo = {};
-		allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-		allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+	//	VmaAllocationCreateInfo allocInfo = {};
+	//	allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+	//	allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-		res = vmaCreateBuffer(device->allocationhandler->allocator, &bufferInfo, &allocInfo, &resource, &allocation, nullptr);
-		assert(res == VK_SUCCESS);
+	//	res = vmaCreateBuffer(device->allocationhandler->allocator, &bufferInfo, &allocInfo, &resource, &allocation, nullptr);
+	//	assert(res == VK_SUCCESS);
 
-		void* pData = allocation->GetMappedData();
-		dataCur = dataBegin = reinterpret_cast< UINT8* >(pData);
-		dataEnd = dataBegin + size;
-	}
-	GraphicsDevice_Vulkan::UploadBuffer::~UploadBuffer()
-	{
-		vmaDestroyBuffer(device->allocationhandler->allocator, resource, allocation);
-	}
-	uint8_t* GraphicsDevice_Vulkan::UploadBuffer::allocate(size_t dataSize, size_t alignment)
-	{
-		lock.lock();
+	//	void* pData = allocation->GetMappedData();
+	//	dataCur = dataBegin = reinterpret_cast< UINT8* >(pData);
+	//	dataEnd = dataBegin + size;
+	//}
+	//GraphicsDevice_Vulkan::UploadBuffer::~UploadBuffer()
+	//{
+	//	vmaDestroyBuffer(device->allocationhandler->allocator, resource, allocation);
+	//}
+	//uint8_t* GraphicsDevice_Vulkan::UploadBuffer::allocate(size_t dataSize, size_t alignment)
+	//{
+	//	lock.lock();
 
-		dataCur = reinterpret_cast<uint8_t*>(Align(reinterpret_cast<size_t>(dataCur), alignment));
+	//	dataCur = reinterpret_cast<uint8_t*>(Align(reinterpret_cast<size_t>(dataCur), alignment));
 
-		assert(dataCur + dataSize <= dataEnd);
+	//	assert(dataCur + dataSize <= dataEnd);
 
-		uint8_t* retVal = dataCur;
+	//	uint8_t* retVal = dataCur;
 
-		dataCur += dataSize;
+	//	dataCur += dataSize;
 
-		lock.unlock();
+	//	lock.unlock();
 
-		return retVal;
-	}
-	void GraphicsDevice_Vulkan::UploadBuffer::clear()
-	{
-		lock.lock();
-		dataCur = dataBegin;
-		lock.unlock();
-	}
-	uint64_t GraphicsDevice_Vulkan::UploadBuffer::calculateOffset(uint8_t* address)
-	{
-		assert(address >= dataBegin && address < dataEnd);
-		return static_cast<uint64_t>(address - dataBegin);
-	}
+	//	return retVal;
+	//}
+	//void GraphicsDevice_Vulkan::UploadBuffer::clear()
+	//{
+	//	lock.lock();
+	//	dataCur = dataBegin;
+	//	lock.unlock();
+	//}
+	//uint64_t GraphicsDevice_Vulkan::UploadBuffer::calculateOffset(uint8_t* address)
+	//{
+	//	assert(address >= dataBegin && address < dataEnd);
+	//	return static_cast<uint64_t>(address - dataBegin);
+	//}
 
 
 
@@ -2302,11 +2302,6 @@ using namespace Vulkan_Internal;
 		}
 
 
-		// Create resource upload buffers
-		bufferUploader.init(this, queueIndices, 256 * 1024 * 1024);
-		textureUploader.init(this, queueIndices, 256 * 1024 * 1024);
-
-
 		// Create default null descriptors:
 		{
 			VkBufferCreateInfo bufferInfo = {};
@@ -2541,6 +2536,12 @@ using namespace Vulkan_Internal;
 
 		VmaAllocationCreateInfo allocInfo = {};
 		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+		if (pDesc->Usage == USAGE_STAGING)
+		{
+			allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY; 
+			allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+			bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		}
 
 		res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
 		assert(res == VK_SUCCESS);
@@ -2548,14 +2549,25 @@ using namespace Vulkan_Internal;
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
+			GPUBufferDesc uploaddesc;
+			uploaddesc.ByteWidth = pDesc->ByteWidth;
+			uploaddesc.Usage = USAGE_STAGING;
+			GPUBuffer uploadbuffer;
+			bool upload_success = CreateBuffer(&uploaddesc, nullptr, &uploadbuffer);
+			assert(upload_success);
+			VkBuffer upload_resource = to_internal(&uploadbuffer)->resource;
+			VmaAllocation upload_allocation = to_internal(&uploadbuffer)->allocation;
+
+			void* pData = upload_allocation->GetMappedData();
+			assert(pData != nullptr);
+
 			copyQueueLock.lock();
 			{
-				uint8_t* dest = bufferUploader.allocate((size_t)internal_state->allocation->GetSize(), (size_t)internal_state->allocation->GetAlignment());
-				memcpy(dest, pInitialData->pSysMem, pBuffer->desc.ByteWidth);
+				memcpy(pData, pInitialData->pSysMem, pBuffer->desc.ByteWidth);
 
 				VkBufferCopy copyRegion = {};
 				copyRegion.size = pBuffer->desc.ByteWidth;
-				copyRegion.srcOffset = bufferUploader.calculateOffset(dest);
+				copyRegion.srcOffset = 0;
 				copyRegion.dstOffset = 0;
 
 				VkBufferMemoryBarrier barrier = {};
@@ -2578,7 +2590,7 @@ using namespace Vulkan_Internal;
 				);
 
 
-				vkCmdCopyBuffer(copyCommandBuffer, bufferUploader.resource, internal_state->resource, 1, &copyRegion);
+				vkCmdCopyBuffer(copyCommandBuffer, upload_resource, internal_state->resource, 1, &copyRegion);
 
 
 				VkAccessFlags tmp = barrier.srcAccessMask;
@@ -2740,10 +2752,20 @@ using namespace Vulkan_Internal;
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
+			GPUBufferDesc uploaddesc;
+			uploaddesc.ByteWidth = (uint32_t)internal_state->allocation->GetSize();
+			uploaddesc.Usage = USAGE_STAGING;
+			GPUBuffer uploadbuffer;
+			bool upload_success = CreateBuffer(&uploaddesc, nullptr, &uploadbuffer);
+			assert(upload_success);
+			VkBuffer upload_resource = to_internal(&uploadbuffer)->resource;
+			VmaAllocation upload_allocation = to_internal(&uploadbuffer)->allocation;
+
+			void* pData = upload_allocation->GetMappedData();
+			assert(pData != nullptr);
+
 			copyQueueLock.lock();
 			{
-				uint8_t* dest = textureUploader.allocate((size_t)internal_state->allocation->GetSize(), (size_t)internal_state->allocation->GetAlignment());
-
 				std::vector<VkBufferImageCopy> copyRegions;
 
 				size_t cpyoffset = 0;
@@ -2760,12 +2782,12 @@ using namespace Vulkan_Internal;
 						{
 							cpysize /= 4;
 						}
-						uint8_t* cpyaddr = dest + cpyoffset;
+						uint8_t* cpyaddr = (uint8_t*)pData + cpyoffset;
 						memcpy(cpyaddr, subresourceData.pSysMem, cpysize);
 						cpyoffset += cpysize;
 
 						VkBufferImageCopy copyRegion = {};
-						copyRegion.bufferOffset = textureUploader.calculateOffset(cpyaddr);
+						copyRegion.bufferOffset = 0;
 						copyRegion.bufferRowLength = 0;
 						copyRegion.bufferImageHeight = 0;
 
@@ -2813,7 +2835,7 @@ using namespace Vulkan_Internal;
 					1, &barrier
 				);
 
-				vkCmdCopyBufferToImage(copyCommandBuffer, textureUploader.resource, internal_state->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)copyRegions.size(), copyRegions.data());
+				vkCmdCopyBufferToImage(copyCommandBuffer, upload_resource, internal_state->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)copyRegions.size(), copyRegions.data());
 
 				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 				barrier.newLayout = _ConvertImageLayout(pTexture->desc.layout);;
@@ -3724,8 +3746,6 @@ using namespace Vulkan_Internal;
 				res = vkBeginCommandBuffer(copyCommandBuffer, &beginInfo);
 				assert(res == VK_SUCCESS);
 
-				bufferUploader.clear();
-				textureUploader.clear();
 			}
 
 			// Transitions:

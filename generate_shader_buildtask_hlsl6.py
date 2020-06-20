@@ -44,8 +44,10 @@ for shader in root.iter(namespace + "FxCompile"):
             file.write("ds")
         if profile == "Compute":
             file.write("cs")
+        if profile == "Library":
+            file.write("lib")
 
-        file.write("_6_1 ")
+        file.write("_6_4 ")
 
         file.write(" -D SHADER_MODEL_6 ");
 

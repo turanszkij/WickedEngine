@@ -65,8 +65,10 @@ namespace wiRenderer
 
 	// Updates the main scene, performs frustum culling for main camera and other tasks that are only done once per frame. Specify layerMask to only include specific entities in the render frame.
 	void UpdatePerFrameData(float dt, uint32_t layerMask = ~0);
-	// Updates the GPU state according to the previously called UpatePerFrameData()
+	// Updates the GPU state according to the previously called UpdatePerFrameData()
 	void UpdateRenderData(wiGraphics::CommandList cmd);
+	// Updates all acceleration structures for raytracing API
+	void UpdateRaytracingAccelerationStructures(wiGraphics::CommandList cmd);
 
 	// Binds all common constant buffers and samplers that may be used in all shaders
 	void BindCommonResources(wiGraphics::CommandList cmd);
@@ -212,6 +214,15 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd,
 		float power = 2.0f
 		);
+	void Postprocess_RTAO(
+		const wiGraphics::Texture& depthbuffer,
+		const wiGraphics::Texture& lineardepth,
+		const wiGraphics::Texture& output,
+		wiGraphics::CommandList cmd,
+		float range = 1.0f,
+		uint32_t samplecount = 16,
+		float power = 2.0f
+	);
 	void Postprocess_SSR(
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& depthbuffer,

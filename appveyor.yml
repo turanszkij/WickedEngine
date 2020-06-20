@@ -17,6 +17,7 @@ build_script:
   - msbuild "C:\projects\wickedengine\WickedEngine.sln" /t:Tests /m /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - msbuild "C:\projects\wickedengine\WickedEngine.sln" /t:Template_Windows /m /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - msbuild "C:\projects\wickedengine\WickedEngine.sln" /t:Template_UWP /m /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+  - msbuild "C:\projects\wickedengine\WickedEngine.sln" /t:Shaders_HLSL6 /m /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
 platform:
   - x64
