@@ -1515,60 +1515,6 @@ using namespace DX12_Internal;
 	}
 
 
-	void GraphicsDevice_DX12::UploadBuffer::init(GraphicsDevice_DX12* device, size_t size)
-	{
-		this->device = device;
-
-		HRESULT hr;
-
-		D3D12MA::ALLOCATION_DESC allocationDesc = {};
-		allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
-
-		CD3DX12_RESOURCE_DESC resdesc = CD3DX12_RESOURCE_DESC::Buffer(size);
-
-		hr = device->allocationhandler->allocator->CreateResource(
-			&allocationDesc,
-			&resdesc,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			&allocation,
-			IID_PPV_ARGS(&resource)
-		);
-		assert(SUCCEEDED(hr));
-
-		void* pData;
-		CD3DX12_RANGE readRange(0, 0);
-		resource->Map(0, &readRange, &pData);
-		dataCur = dataBegin = reinterpret_cast<UINT8*>(pData);
-		dataEnd = dataBegin + size;
-	}
-	uint8_t* GraphicsDevice_DX12::UploadBuffer::allocate(size_t dataSize, size_t alignment)
-	{
-		lock.lock();
-
-		dataCur = reinterpret_cast<uint8_t*>(Align(reinterpret_cast<size_t>(dataCur), alignment));
-
-		assert(dataCur + dataSize <= dataEnd);
-
-		uint8_t* retVal = dataCur;
-
-		dataCur += dataSize;
-
-		lock.unlock();
-
-		return retVal;
-	}
-	void GraphicsDevice_DX12::UploadBuffer::clear()
-	{
-		lock.lock();
-		dataCur = dataBegin;
-		lock.unlock();
-	}
-	uint64_t GraphicsDevice_DX12::UploadBuffer::calculateOffset(uint8_t* address)
-	{
-		assert(address >= dataBegin && address < dataEnd);
-		return static_cast<uint64_t>(address - dataBegin);
-	}
 
 	// Engine functions
 	GraphicsDevice_DX12::GraphicsDevice_DX12(wiPlatform::window_type window, bool fullscreen, bool debuglayer)
@@ -1765,10 +1711,6 @@ using namespace DX12_Internal;
 			device->CreateSampler(&sampler_desc, null_sampler_heap_dest);
 			null_sampler_heap_dest.ptr += sampler_descriptor_size;
 		}
-
-		// Create resource upload buffer
-		bufferUploader.init(this, 256 * 1024 * 1024);
-		textureUploader.init(this, 256 * 1024 * 1024);
 
 
 		// Create frame-resident resources:
@@ -2166,6 +2108,11 @@ using namespace DX12_Internal;
 
 		D3D12MA::ALLOCATION_DESC allocationDesc = {};
 		allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+		if (pDesc->Usage == USAGE_STAGING)
+		{
+			allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+			resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
+		}
 
 		hr = allocationhandler->allocator->CreateResource(
 			&allocationDesc,
@@ -2181,12 +2128,24 @@ using namespace DX12_Internal;
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
+			GPUBufferDesc uploaddesc;
+			uploaddesc.ByteWidth = pDesc->ByteWidth;
+			uploaddesc.Usage = USAGE_STAGING;
+			GPUBuffer uploadbuffer;
+			bool upload_success = CreateBuffer(&uploaddesc, nullptr, &uploadbuffer);
+			assert(upload_success);
+			ID3D12Resource* upload_resource = to_internal(&uploadbuffer)->resource.Get();
+
+			void* pData;
+			CD3DX12_RANGE readRange(0, 0);
+			hr = upload_resource->Map(0, &readRange, &pData);
+			assert(SUCCEEDED(hr));
+
 			copyQueueLock.lock();
 			{
-				uint8_t* dest = bufferUploader.allocate(pDesc->ByteWidth, 1);
-				memcpy(dest, pInitialData->pSysMem, pDesc->ByteWidth);
+				memcpy(pData, pInitialData->pSysMem, pDesc->ByteWidth);
 				static_cast<ID3D12GraphicsCommandList*>(copyCommandList.Get())->CopyBufferRegion(
-					internal_state->resource.Get(), 0, bufferUploader.resource.Get(), bufferUploader.calculateOffset(dest), pDesc->ByteWidth);
+					internal_state->resource.Get(), 0, upload_resource, 0, pDesc->ByteWidth);
 			}
 			copyQueueLock.unlock();
 		}
@@ -2415,10 +2374,21 @@ using namespace DX12_Internal;
 
 			copyQueueLock.lock();
 			{
-				uint8_t* dest = textureUploader.allocate(static_cast<size_t>(RequiredSize), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+				GPUBufferDesc uploaddesc;
+				uploaddesc.ByteWidth = (uint32_t)RequiredSize;
+				uploaddesc.Usage = USAGE_STAGING;
+				GPUBuffer uploadbuffer;
+				bool upload_success = CreateBuffer(&uploaddesc, nullptr, &uploadbuffer);
+				assert(upload_success);
+				ID3D12Resource* upload_resource = to_internal(&uploadbuffer)->resource.Get();
 
+				void* pData;
+				CD3DX12_RANGE readRange(0, 0);
+				hr = upload_resource->Map(0, &readRange, &pData);
+				assert(SUCCEEDED(hr));
+				
 				UINT64 dataSize = UpdateSubresources(static_cast<ID3D12GraphicsCommandList*>(copyCommandList.Get()), internal_state->resource.Get(),
-					textureUploader.resource.Get(), textureUploader.calculateOffset(dest), 0, dataCount, data.data());
+					upload_resource, 0, 0, dataCount, data.data());
 			}
 			copyQueueLock.unlock();
 		}
@@ -3367,8 +3337,6 @@ using namespace DX12_Internal;
 			result = copyAllocator->Reset();
 			result = static_cast<ID3D12GraphicsCommandList*>(copyCommandList.Get())->Reset(copyAllocator.Get(), nullptr);
 
-			bufferUploader.clear();
-			textureUploader.clear();
 		}
 		copyQueueLock.unlock();
 

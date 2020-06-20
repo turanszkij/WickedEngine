@@ -4602,39 +4602,13 @@ void UpdateRenderData(CommandList cmd)
 void UpdateRaytracingAccelerationStructures(CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
-	if (!device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	const Scene& scene = GetScene();
+	if (!device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING) || !scene.TLAS.IsValid())
 	{
 		return;
 	}
-
-	const Scene& scene = GetScene();
-
-	bool bottomlevel_sync = false;
-
-	// Build bottom level:
-	for(auto& meshIndex : pendingBottomLevelBuilds)
-	{
-		if (meshIndex < scene.meshes.GetCount())
-		{
-			const MeshComponent& mesh = scene.meshes[meshIndex];
-			device->BuildRaytracingAccelerationStructure(&mesh.BLAS, cmd, nullptr);
-			bottomlevel_sync = true;
-		}
-	}
-	pendingBottomLevelBuilds.clear();
-
-	// Update bottom level:
-	for (auto& meshIndex : pendingBottomLevelUpdates)
-	{
-		if (meshIndex < scene.meshes.GetCount())
-		{
-			const MeshComponent& mesh = scene.meshes[meshIndex];
-			// src in non nullptr -> update instead of build!
-			device->BuildRaytracingAccelerationStructure(&mesh.BLAS, cmd, &mesh.BLAS);
-			bottomlevel_sync = true;
-		}
-	}
-	pendingBottomLevelUpdates.clear();
+	auto range = wiProfiler::BeginRangeGPU("Update Raytracing Acceleration Structures", cmd);
+	device->EventBegin("Update Raytracing Acceleration Structures", cmd);
 
 	// Gather all instances for top level:
 	size_t instanceSize = device->GetTopLevelAccelerationStructureInstanceSize();
@@ -4668,6 +4642,33 @@ void UpdateRaytracingAccelerationStructures(CommandList cmd)
 	device->UpdateBuffer(&scene.TLAS.desc.toplevel.instanceBuffer, instanceArray, cmd, (int)instanceArraySize);
 	GetRenderFrameAllocator(cmd).free(instanceArraySize);
 
+	bool bottomlevel_sync = false;
+
+	// Build bottom level:
+	for(auto& meshIndex : pendingBottomLevelBuilds)
+	{
+		if (meshIndex < scene.meshes.GetCount())
+		{
+			const MeshComponent& mesh = scene.meshes[meshIndex];
+			device->BuildRaytracingAccelerationStructure(&mesh.BLAS, cmd, nullptr);
+			bottomlevel_sync = true;
+		}
+	}
+	pendingBottomLevelBuilds.clear();
+
+	// Update bottom level:
+	for (auto& meshIndex : pendingBottomLevelUpdates)
+	{
+		if (meshIndex < scene.meshes.GetCount())
+		{
+			const MeshComponent& mesh = scene.meshes[meshIndex];
+			// src in non nullptr -> update instead of build!
+			device->BuildRaytracingAccelerationStructure(&mesh.BLAS, cmd, &mesh.BLAS);
+			bottomlevel_sync = true;
+		}
+	}
+	pendingBottomLevelUpdates.clear();
+
 	// Sync with bottom level before building top level:
 	if (bottomlevel_sync)
 	{
@@ -4684,6 +4685,8 @@ void UpdateRaytracingAccelerationStructures(CommandList cmd)
 	};
 	device->Barrier(barriers, arraysize(barriers), cmd);
 
+	device->EventEnd(cmd);
+	wiProfiler::EndRange(range);
 }
 void OcclusionCulling_Render(CommandList cmd)
 {

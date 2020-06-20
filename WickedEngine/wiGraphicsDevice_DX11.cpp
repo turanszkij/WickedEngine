@@ -2469,7 +2469,7 @@ void GraphicsDevice_DX11::commit_allocations(CommandList cmd)
 
 	if (frame_allocators[cmd].dirty)
 	{
-		auto internal_state = std::static_pointer_cast<Resource_DX11>(frame_allocators[cmd].buffer.internal_state);
+		auto internal_state = to_internal(&frame_allocators[cmd].buffer);
 		deviceContexts[cmd]->Unmap(internal_state->resource.Get(), 0);
 		frame_allocators[cmd].dirty = false;
 	}
@@ -3095,13 +3095,13 @@ GraphicsDevice::GPUAllocation GraphicsDevice_DX11::AllocateGPU(size_t dataSize, 
 	{
 		// If allocation too large, grow the allocator:
 		allocator.buffer.desc.ByteWidth = uint32_t((dataSize + 1) * 2);
-		bool success = CreateBuffer(&allocator.buffer.desc, nullptr, &frame_allocators[cmd].buffer);
+		bool success = CreateBuffer(&allocator.buffer.desc, nullptr, &allocator.buffer);
 		assert(success);
-		SetName(&frame_allocators[cmd].buffer, "frame_allocator");
+		SetName(&allocator.buffer, "frame_allocator");
 		allocator.byteOffset = 0;
 	}
 
-	auto internal_state = std::static_pointer_cast<Resource_DX11>(allocator.buffer.internal_state);
+	auto internal_state = to_internal(&allocator.buffer);
 
 	allocator.dirty = true;
 

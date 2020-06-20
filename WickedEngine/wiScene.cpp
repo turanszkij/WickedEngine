@@ -570,6 +570,22 @@ namespace wiScene
 				desc._flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE;
 			}
 
+#if 1
+			// Flattened subsets:
+			desc.bottomlevel.geometries.emplace_back();
+			auto& geometry = desc.bottomlevel.geometries.back();
+			geometry._flags = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
+			geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES;
+			geometry.triangles.vertexBuffer = streamoutBuffer_POS.IsValid() ? streamoutBuffer_POS : vertexBuffer_POS;
+			geometry.triangles.indexBuffer = indexBuffer;
+			geometry.triangles.indexFormat = GetIndexFormat();
+			geometry.triangles.indexCount = (uint32_t)indices.size();
+			geometry.triangles.indexOffset = 0;
+			geometry.triangles.vertexCount = (uint32_t)vertex_positions.size();
+			geometry.triangles.vertexFormat = FORMAT_R32G32B32_FLOAT;
+			geometry.triangles.vertexStride = sizeof(MeshComponent::Vertex_POS);
+#else
+			// One geometry per subset:
 			for (auto& subset : subsets)
 			{
 				desc.bottomlevel.geometries.emplace_back();
@@ -585,6 +601,7 @@ namespace wiScene
 				geometry.triangles.vertexFormat = FORMAT_R32G32B32_FLOAT;
 				geometry.triangles.vertexStride = sizeof(MeshComponent::Vertex_POS);
 			}
+#endif
 
 			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
 			assert(success);
@@ -1250,6 +1267,8 @@ namespace wiScene
 		sounds.Clear();
 		inverse_kinematics.Clear();
 		springs.Clear();
+
+		TLAS = RaytracingAccelerationStructure();
 	}
 	void Scene::Merge(Scene& other)
 	{

@@ -169,29 +169,6 @@ namespace wiGraphics
 		};
 		std::unordered_map<const GPUBuffer*, DynamicResourceState> dynamic_constantbuffers[COMMANDLIST_COUNT];
 
-		struct UploadBuffer
-		{
-			GraphicsDevice_DX12* device = nullptr;
-			Microsoft::WRL::ComPtr<ID3D12Resource> resource;
-			D3D12MA::Allocation*	allocation = nullptr;
-			uint8_t*				dataBegin = nullptr;
-			uint8_t*				dataCur = nullptr;
-			uint8_t*				dataEnd = nullptr;
-			wiSpinLock				lock;
-
-			void init(GraphicsDevice_DX12* device, size_t size);
-			~UploadBuffer()
-			{
-				if (allocation) allocation->Release();
-			}
-
-			uint8_t* allocate(size_t dataSize, size_t alignment);
-			void clear();
-			uint64_t calculateOffset(uint8_t* address);
-		};
-		UploadBuffer bufferUploader;
-		UploadBuffer textureUploader;
-
 		Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain;
 
 		PRIMITIVETOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};

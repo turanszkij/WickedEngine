@@ -203,26 +203,6 @@ namespace wiGraphics
 		};
 		std::unordered_map<const GPUBuffer*, DynamicResourceState> dynamic_constantbuffers[COMMANDLIST_COUNT];
 
-		struct UploadBuffer
-		{
-			GraphicsDevice_Vulkan*	device = nullptr;
-			VkBuffer				resource = VK_NULL_HANDLE;
-			VmaAllocation			allocation;
-			uint8_t*				dataBegin = nullptr;
-			uint8_t*				dataCur = nullptr;
-			uint8_t*				dataEnd = nullptr;
-			wiSpinLock				lock;
-
-			void init(GraphicsDevice_Vulkan* device, const QueueFamilyIndices& queueIndices, size_t size);
-			~UploadBuffer();
-
-			uint8_t* allocate(size_t dataSize, size_t alignment);
-			void clear();
-			uint64_t calculateOffset(uint8_t* address);
-		};
-		UploadBuffer bufferUploader;
-		UploadBuffer textureUploader;
-
 		std::unordered_map<size_t, VkPipeline> pipelines_global;
 		std::vector<std::pair<size_t, VkPipeline>> pipelines_worker[COMMANDLIST_COUNT];
 		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
