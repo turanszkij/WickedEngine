@@ -311,8 +311,14 @@ struct FrameCulling
 unordered_map<const CameraComponent*, FrameCulling> frameCullings;
 
 vector<size_t> pendingMaterialUpdates;
-vector<size_t> pendingBottomLevelBuilds;
-vector<size_t> pendingBottomLevelUpdates;
+
+enum AS_UPDATE_TYPE
+{
+	AS_COMPLETE,
+	AS_REBUILD,
+	AS_UPDATE,
+};
+unordered_map<Entity, AS_UPDATE_TYPE> pendingBottomLevelBuilds;
 
 struct Instance
 {
@@ -2863,7 +2869,6 @@ void ClearWorld()
 
 	pendingMaterialUpdates.clear();
 	pendingBottomLevelBuilds.clear();
-	pendingBottomLevelUpdates.clear();
 }
 
 static const uint32_t CASCADE_COUNT = 3;
@@ -3733,6 +3738,8 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 	// Need to swap prev and current vertex buffers for any dynamic meshes BEFORE render threads are kicked 
 	//	and also create skinning bone buffers:
 	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
+		const bool raytracing_api = device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING);
+
 		for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
 		{
 			const SoftBodyPhysicsComponent& softbody = scene.softbodies[i];
@@ -3744,15 +3751,21 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 			Entity entity = scene.softbodies.GetEntity(i);
 			MeshComponent& mesh = *scene.meshes.GetComponent(entity);
 
-			if (!mesh.BLAS_build_pending)
+			if (raytracing_api && !mesh.BLAS_build_pending)
 			{
-				pendingBottomLevelUpdates.push_back(i);
+				pendingBottomLevelBuilds[entity] = AS_UPDATE;
 			}
 
 			if (!mesh.vertexBuffer_PRE.IsValid())
 			{
 				device->CreateBuffer(&mesh.vertexBuffer_POS.GetDesc(), nullptr, &mesh.streamoutBuffer_POS);
 				device->CreateBuffer(&mesh.vertexBuffer_POS.GetDesc(), nullptr, &mesh.vertexBuffer_PRE);
+
+				if (raytracing_api)
+				{
+					mesh.BLAS.desc._flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
+					device->CreateRaytracingAccelerationStructure(&mesh.BLAS.desc, &mesh.BLAS);
+				}
 			}
 			std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
 		}
@@ -3764,45 +3777,54 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 			if (mesh.IsSkinned() && scene.armatures.Contains(mesh.armatureID))
 			{
 				const SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(entity);
-				if (softbody != nullptr && !softbody->vertex_positions_simulation.empty())
+				if (softbody == nullptr || softbody->vertex_positions_simulation.empty())
 				{
-					// If soft body simulation is active, don't perform skinning.
-					//	(Soft body animated vertices are skinned in simulation phase by physics system)
-					continue;
+					if (raytracing_api && !mesh.BLAS_build_pending)
+					{
+						pendingBottomLevelBuilds[entity] = AS_UPDATE;
+					}
+
+					ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
+
+					if (!armature.boneBuffer.IsValid())
+					{
+						GPUBufferDesc bd;
+						bd.Usage = USAGE_DYNAMIC;
+						bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+
+						bd.ByteWidth = sizeof(ArmatureComponent::ShaderBoneType) * (uint32_t)armature.boneCollection.size();
+						bd.BindFlags = BIND_SHADER_RESOURCE;
+						bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+						bd.StructureByteStride = sizeof(ArmatureComponent::ShaderBoneType);
+
+						device->CreateBuffer(&bd, nullptr, &armature.boneBuffer);
+					}
+					if (!mesh.vertexBuffer_PRE.IsValid())
+					{
+						device->CreateBuffer(&mesh.streamoutBuffer_POS.GetDesc(), nullptr, &mesh.vertexBuffer_PRE);
+					}
+					std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
 				}
-
-				if (!mesh.BLAS_build_pending)
-				{
-					pendingBottomLevelUpdates.push_back(i);
-				}
-
-				ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
-
-				if (!armature.boneBuffer.IsValid())
-				{
-					GPUBufferDesc bd;
-					bd.Usage = USAGE_DYNAMIC;
-					bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-
-					bd.ByteWidth = sizeof(ArmatureComponent::ShaderBoneType) * (uint32_t)armature.boneCollection.size();
-					bd.BindFlags = BIND_SHADER_RESOURCE;
-					bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-					bd.StructureByteStride = sizeof(ArmatureComponent::ShaderBoneType);
-
-					device->CreateBuffer(&bd, nullptr, &armature.boneBuffer);
-				}
-				if (!mesh.vertexBuffer_PRE.IsValid())
-				{
-					device->CreateBuffer(&mesh.streamoutBuffer_POS.GetDesc(), nullptr, &mesh.vertexBuffer_PRE);
-				}
-				std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
 			}
 
-			if (mesh.BLAS_build_pending)
+			if (raytracing_api)
 			{
-				mesh.BLAS_build_pending = false;
-				pendingBottomLevelBuilds.push_back(i);
+				if (mesh.streamoutBuffer_POS.IsValid())
+				{
+					for (auto& geometry : mesh.BLAS.desc.bottomlevel.geometries)
+					{
+						// swapped dynamic vertex buffers in BLAS:
+						geometry.triangles.vertexBuffer = mesh.streamoutBuffer_POS;
+					}
+				}
+
+				if (mesh.BLAS_build_pending)
+				{
+					mesh.BLAS_build_pending = false;
+					pendingBottomLevelBuilds[entity] = AS_REBUILD;
+				}
 			}
+
 		}
 	});
 
@@ -4610,6 +4632,27 @@ void UpdateRaytracingAccelerationStructures(CommandList cmd)
 	auto range = wiProfiler::BeginRangeGPU("Update Raytracing Acceleration Structures", cmd);
 	device->EventBegin("Update Raytracing Acceleration Structures", cmd);
 
+	bool bottomlevel_sync = false;
+
+	// Build bottom level:
+	for(auto& it : pendingBottomLevelBuilds)
+	{
+		AS_UPDATE_TYPE type = it.second;
+		if (type == AS_COMPLETE)
+			continue;
+
+		Entity entity = it.first;
+		const MeshComponent* mesh = scene.meshes.GetComponent(entity);
+
+		if (mesh != nullptr)
+		{
+			// If src param is nullptr, rebuild happens, else update (if src == dst, then update happens in place)
+			device->BuildRaytracingAccelerationStructure(&mesh->BLAS, cmd, type == AS_REBUILD ? nullptr : &mesh->BLAS);
+			bottomlevel_sync = true;
+			it.second = AS_COMPLETE;
+		}
+	}
+
 	// Gather all instances for top level:
 	size_t instanceSize = device->GetTopLevelAccelerationStructureInstanceSize();
 	size_t instanceArraySize = (size_t)scene.TLAS.desc.toplevel.count * instanceSize;
@@ -4641,33 +4684,6 @@ void UpdateRaytracingAccelerationStructures(CommandList cmd)
 	}
 	device->UpdateBuffer(&scene.TLAS.desc.toplevel.instanceBuffer, instanceArray, cmd, (int)instanceArraySize);
 	GetRenderFrameAllocator(cmd).free(instanceArraySize);
-
-	bool bottomlevel_sync = false;
-
-	// Build bottom level:
-	for(auto& meshIndex : pendingBottomLevelBuilds)
-	{
-		if (meshIndex < scene.meshes.GetCount())
-		{
-			const MeshComponent& mesh = scene.meshes[meshIndex];
-			device->BuildRaytracingAccelerationStructure(&mesh.BLAS, cmd, nullptr);
-			bottomlevel_sync = true;
-		}
-	}
-	pendingBottomLevelBuilds.clear();
-
-	// Update bottom level:
-	for (auto& meshIndex : pendingBottomLevelUpdates)
-	{
-		if (meshIndex < scene.meshes.GetCount())
-		{
-			const MeshComponent& mesh = scene.meshes[meshIndex];
-			// src in non nullptr -> update instead of build!
-			device->BuildRaytracingAccelerationStructure(&mesh.BLAS, cmd, &mesh.BLAS);
-			bottomlevel_sync = true;
-		}
-	}
-	pendingBottomLevelUpdates.clear();
 
 	// Sync with bottom level before building top level:
 	if (bottomlevel_sync)

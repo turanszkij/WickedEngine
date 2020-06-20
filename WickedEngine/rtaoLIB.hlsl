@@ -47,7 +47,10 @@ void RTAO_Raygen()
     for (uint i = 0; i < (uint)rtao_samplecount; ++i)
     {
         ray.Direction = SampleHemisphere_cos(N, seed, uv);
-        TraceRay(Scene, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, ~0, 0, 1, 0, ray, payload);
+        TraceRay(Scene, 
+            RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH |
+            RAY_FLAG_SKIP_CLOSEST_HIT_SHADER
+            , ~0, 0, 1, 0, ray, payload);
     }
     payload.color /= rtao_samplecount;
 

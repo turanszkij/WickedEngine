@@ -570,7 +570,7 @@ namespace wiScene
 				desc._flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE;
 			}
 
-#if 1
+#if 0
 			// Flattened subsets:
 			desc.bottomlevel.geometries.emplace_back();
 			auto& geometry = desc.bottomlevel.geometries.back();

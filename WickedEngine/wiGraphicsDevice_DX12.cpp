@@ -4389,6 +4389,46 @@ using namespace DX12_Internal;
 
 		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC desc = {};
 		desc.Inputs = dst_internal->desc;
+
+		// The real GPU addresses get filled here:
+		switch (dst->desc.type)
+		{
+		case RaytracingAccelerationStructureDesc::BOTTOMLEVEL:
+		{
+			size_t i = 0;
+			for (auto& x : dst->desc.bottomlevel.geometries)
+			{
+				auto& geometry = dst_internal->geometries[i++];
+
+				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES)
+				{
+					geometry.Triangles.VertexBuffer.StartAddress = to_internal(&x.triangles.vertexBuffer)->resource->GetGPUVirtualAddress() + 
+						(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.vertexByteOffset;
+					geometry.Triangles.IndexBuffer = to_internal(&x.triangles.indexBuffer)->resource->GetGPUVirtualAddress() +
+						(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.indexOffset * (x.triangles.indexFormat == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? sizeof(uint16_t) : sizeof(uint32_t));
+
+					if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_USE_TRANSFORM)
+					{
+						geometry.Triangles.Transform3x4 = to_internal(&x.triangles.transform3x4Buffer)->resource->GetGPUVirtualAddress() +
+							(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.transform3x4BufferOffset;
+					}
+				}
+				else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::PROCEDURAL_AABBS)
+				{
+					geometry.AABBs.AABBs.StartAddress = to_internal(&x.aabbs.aabbBuffer)->resource->GetGPUVirtualAddress() +
+						(D3D12_GPU_VIRTUAL_ADDRESS)x.aabbs.offset;
+				}
+			}
+		}
+		break;
+		case RaytracingAccelerationStructureDesc::TOPLEVEL:
+		{
+			dst_internal->desc.InstanceDescs = to_internal(&dst->desc.toplevel.instanceBuffer)->resource->GetGPUVirtualAddress() +
+				(D3D12_GPU_VIRTUAL_ADDRESS)dst->desc.toplevel.offset;
+		}
+		break;
+		}
+
 		if (src != nullptr)
 		{
 			desc.Inputs.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;

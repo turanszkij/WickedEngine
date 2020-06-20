@@ -74,7 +74,7 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 			break;
 		case RenderPath3D::AO_RTAO:
 			aoRangeSlider->SetEnabled(true); 
-			aoRangeSlider->SetValue(100.0f);
+			aoRangeSlider->SetValue(10.0f);
 			aoSampleCountSlider->SetEnabled(true); 
 			aoSampleCountSlider->SetValue(2.0f);
 			break;
