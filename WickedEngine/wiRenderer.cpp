@@ -312,6 +312,7 @@ unordered_map<const CameraComponent*, FrameCulling> frameCullings;
 
 vector<size_t> pendingMaterialUpdates;
 vector<size_t> pendingBottomLevelBuilds;
+vector<size_t> pendingBottomLevelUpdates;
 
 struct Instance
 {
@@ -2862,6 +2863,7 @@ void ClearWorld()
 
 	pendingMaterialUpdates.clear();
 	pendingBottomLevelBuilds.clear();
+	pendingBottomLevelUpdates.clear();
 }
 
 static const uint32_t CASCADE_COUNT = 3;
@@ -3742,7 +3744,10 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 			Entity entity = scene.softbodies.GetEntity(i);
 			MeshComponent& mesh = *scene.meshes.GetComponent(entity);
 
-			mesh.BLAS_build_pending = true;
+			if (!mesh.BLAS_build_pending)
+			{
+				pendingBottomLevelUpdates.push_back(i);
+			}
 
 			if (!mesh.vertexBuffer_PRE.IsValid())
 			{
@@ -3766,7 +3771,10 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 					continue;
 				}
 
-				mesh.BLAS_build_pending = true;
+				if (!mesh.BLAS_build_pending)
+				{
+					pendingBottomLevelUpdates.push_back(i);
+				}
 
 				ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
 
@@ -4611,6 +4619,18 @@ void UpdateRaytracingAccelerationStructures(CommandList cmd)
 		}
 	}
 	pendingBottomLevelBuilds.clear();
+
+	// Update bottom level:
+	for (auto& meshIndex : pendingBottomLevelUpdates)
+	{
+		if (meshIndex < scene.meshes.GetCount())
+		{
+			const MeshComponent& mesh = scene.meshes[meshIndex];
+			// src in non nullptr -> update instead of build!
+			device->BuildRaytracingAccelerationStructure(&mesh.BLAS, cmd, &mesh.BLAS);
+		}
+	}
+	pendingBottomLevelUpdates.clear();
 
 	// Gather all instances for top level:
 	size_t instanceSize = device->GetTopLevelAccelerationStructureInstanceSize();

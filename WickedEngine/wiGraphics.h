@@ -694,6 +694,17 @@ namespace wiGraphics
 
 	struct RaytracingAccelerationStructureDesc
 	{
+		enum FLAGS
+		{
+			FLAG_EMPTY = 0,
+			FLAG_ALLOW_UPDATE = 1 << 0,
+			FLAG_ALLOW_COMPACTION = 1 << 1,
+			FLAG_PREFER_FAST_TRACE = 1 << 2,
+			FLAG_PREFER_FAST_BUILD = 1 << 3,
+			FLAG_MINIMIZE_MEMORY = 1 << 4,
+		};
+		uint32_t _flags = FLAG_EMPTY;
+
 		enum TYPE
 		{
 			BOTTOMLEVEL,
@@ -711,7 +722,7 @@ namespace wiGraphics
 					FLAG_NO_DUPLICATE_ANYHIT_INVOCATION = 1 << 1,
 					FLAG_USE_TRANSFORM = 1 << 2,
 				};
-				FLAGS _flags = FLAG_EMPTY;
+				uint32_t _flags = FLAG_EMPTY;
 
 				enum TYPE
 				{

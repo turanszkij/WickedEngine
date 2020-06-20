@@ -555,8 +555,11 @@ namespace wiScene
 
 		if (wiRenderer::GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
+			BLAS_build_pending = true;
+
 			RaytracingAccelerationStructureDesc desc;
 			desc.type = RaytracingAccelerationStructureDesc::BOTTOMLEVEL;
+			desc._flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
 
 			for (auto& subset : subsets)
 			{
