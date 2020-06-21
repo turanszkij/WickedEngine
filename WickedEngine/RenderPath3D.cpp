@@ -362,13 +362,13 @@ void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
+	device->BindResource(CS, &depthBuffer_Copy, TEXSLOT_DEPTH, cmd);
+	wiRenderer::UpdateRenderData(cmd);
+
 	if (getAO() == AO_RTAO)
 	{
 		wiRenderer::UpdateRaytracingAccelerationStructures(cmd);
 	}
-
-	device->BindResource(CS, &depthBuffer_Copy, TEXSLOT_DEPTH, cmd);
-	wiRenderer::UpdateRenderData(cmd);
 	
 	Viewport viewport;
 	viewport.Width = (float)smallDepth.GetDesc().Width;

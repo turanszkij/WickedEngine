@@ -1024,6 +1024,7 @@ namespace DX12_Internal
 		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS desc = {};
 		std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometries;
 		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info = {};
+		GPUBuffer scratch;
 
 		~BVH_DX12() override
 		{
@@ -2684,7 +2685,7 @@ using namespace DX12_Internal;
 		device->GetRaytracingAccelerationStructurePrebuildInfo(&internal_state->desc, &internal_state->info);
 
 
-		uint32_t alignment = 16;
+		uint32_t alignment = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT;
 		size_t alignedSize = Align(internal_state->info.ResultDataMaxSizeInBytes, alignment);
 
 		D3D12_RESOURCE_DESC desc;
@@ -2727,7 +2728,7 @@ using namespace DX12_Internal;
 		GPUBufferDesc scratch_desc;
 		scratch_desc.ByteWidth = (uint32_t)std::max(internal_state->info.ScratchDataSizeInBytes, internal_state->info.UpdateScratchDataSizeInBytes);
 
-		return CreateBuffer(&scratch_desc, nullptr, &bvh->scratch);
+		return CreateBuffer(&scratch_desc, nullptr, &internal_state->scratch);
 	}
 	bool GraphicsDevice_DX12::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso)
 	{
@@ -4437,7 +4438,7 @@ using namespace DX12_Internal;
 			desc.SourceAccelerationStructureData = src_internal->resource->GetGPUVirtualAddress();
 		}
 		desc.DestAccelerationStructureData = dst_internal->resource->GetGPUVirtualAddress();
-		desc.ScratchAccelerationStructureData = to_internal(&dst->scratch)->resource->GetGPUVirtualAddress();
+		desc.ScratchAccelerationStructureData = to_internal(&dst_internal->scratch)->resource->GetGPUVirtualAddress();
 		GetDirectCommandList(cmd)->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
 	}
 	void GraphicsDevice_DX12::BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd)

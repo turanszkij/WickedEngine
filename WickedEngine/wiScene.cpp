@@ -1227,6 +1227,7 @@ namespace wiScene
 				desc.type = RaytracingAccelerationStructureDesc::TOPLEVEL;
 				desc.toplevel.count = (uint32_t)objects.GetCount();
 				GPUBufferDesc bufdesc;
+				bufdesc.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
 				bufdesc.ByteWidth = desc.toplevel.count * (uint32_t)wiRenderer::GetDevice()->GetTopLevelAccelerationStructureInstanceSize();
 				bool success = wiRenderer::GetDevice()->CreateBuffer(&bufdesc, nullptr, &desc.toplevel.instanceBuffer);
 				assert(success);

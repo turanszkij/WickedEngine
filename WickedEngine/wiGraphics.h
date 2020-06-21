@@ -298,28 +298,29 @@ namespace wiGraphics
 	// Flags ////////////////////////////////////////////
 	enum BIND_FLAG
 	{
-		BIND_VERTEX_BUFFER = 0x1L,
-		BIND_INDEX_BUFFER = 0x2L,
-		BIND_CONSTANT_BUFFER = 0x4L,
-		BIND_SHADER_RESOURCE = 0x8L,
-		BIND_STREAM_OUTPUT = 0x10L,
-		BIND_RENDER_TARGET = 0x20L,
-		BIND_DEPTH_STENCIL = 0x40L,
-		BIND_UNORDERED_ACCESS = 0x80L,
+		BIND_VERTEX_BUFFER = 1 << 0,
+		BIND_INDEX_BUFFER = 1 << 1,
+		BIND_CONSTANT_BUFFER = 1 << 2,
+		BIND_SHADER_RESOURCE = 1 << 3,
+		BIND_STREAM_OUTPUT = 1 << 4,
+		BIND_RENDER_TARGET = 1 << 5,
+		BIND_DEPTH_STENCIL = 1 << 6,
+		BIND_UNORDERED_ACCESS = 1 << 7,
 	};
 	enum CPU_ACCESS
 	{
-		CPU_ACCESS_WRITE = 0x10000L,
-		CPU_ACCESS_READ = 0x20000L,
+		CPU_ACCESS_WRITE = 1 << 0,
+		CPU_ACCESS_READ = 1 << 1,
 	};
 	enum RESOURCE_MISC_FLAG
 	{
-		RESOURCE_MISC_SHARED = 0x2L,
-		RESOURCE_MISC_TEXTURECUBE = 0x4L,
-		RESOURCE_MISC_INDIRECT_ARGS = 0x10L,
-		RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS = 0x20L,
-		RESOURCE_MISC_BUFFER_STRUCTURED = 0x40L,
-		RESOURCE_MISC_TILED = 0x40000L,
+		RESOURCE_MISC_SHARED = 1 << 0,
+		RESOURCE_MISC_TEXTURECUBE = 1 << 1,
+		RESOURCE_MISC_INDIRECT_ARGS = 1 << 2,
+		RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS = 1 << 3,
+		RESOURCE_MISC_BUFFER_STRUCTURED = 1 << 4,
+		RESOURCE_MISC_TILED = 1 << 5,
+		RESOURCE_MISC_RAY_TRACING = 1 << 0,
 	};
 
 	// Descriptor structs:
@@ -626,6 +627,7 @@ namespace wiGraphics
 		} type = GPU_RESOURCE_TYPE::UNKNOWN_TYPE;
 		inline bool IsTexture() const { return type == GPU_RESOURCE_TYPE::TEXTURE; }
 		inline bool IsBuffer() const { return type == GPU_RESOURCE_TYPE::BUFFER; }
+		inline bool IsAccelerationStructure() const { return type == GPU_RESOURCE_TYPE::RAYTRACING_ACCELERATION_STRUCTURE; }
 	};
 
 	struct GPUBuffer : public GPUResource
@@ -775,7 +777,6 @@ namespace wiGraphics
 	struct RaytracingAccelerationStructure : public GPUResource
 	{
 		RaytracingAccelerationStructureDesc desc;
-		GPUBuffer scratch;
 
 		const RaytracingAccelerationStructureDesc& GetDesc() const { return desc; }
 	};

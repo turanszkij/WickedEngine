@@ -16,6 +16,7 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #endif // _WIN32
 
+#define VK_ENABLE_BETA_EXTENSIONS
 #include <vulkan/vulkan.h>
 
 #include "Utility/vk_mem_alloc.h"
@@ -125,6 +126,7 @@ namespace wiGraphics
 				VkDescriptorBufferInfo bufferInfos[writeCapacity];
 				VkDescriptorImageInfo imageInfos[writeCapacity];
 				VkBufferView texelBufferViews[writeCapacity];
+				VkWriteDescriptorSetAccelerationStructureNV accelerationStructureViews[writeCapacity];
 
 				static const int max_null_resource_capacity = std::max(GPU_RESOURCE_HEAP_CBV_COUNT, std::max(GPU_RESOURCE_HEAP_SRV_COUNT, GPU_RESOURCE_HEAP_UAV_COUNT));
 				VkDescriptorBufferInfo null_bufferInfos[max_null_resource_capacity];
@@ -213,6 +215,12 @@ namespace wiGraphics
 		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> active_commandlists;
 
 
+		static PFN_vkCreateAccelerationStructureNV createAccelerationStructureNV;
+		static PFN_vkBindAccelerationStructureMemoryNV bindAccelerationStructureMemoryNV;
+		static PFN_vkDestroyAccelerationStructureNV destroyAccelerationStructureNV;
+		static PFN_vkGetAccelerationStructureMemoryRequirementsNV getAccelerationStructureMemoryRequirementsNV;
+		static PFN_vkCmdBuildAccelerationStructureNV cmdBuildAccelerationStructureNV;
+
 	public:
 		GraphicsDevice_Vulkan(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false);
 		virtual ~GraphicsDevice_Vulkan();
@@ -228,12 +236,17 @@ namespace wiGraphics
 		bool CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) override;
 		bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
 		bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
+		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) override;
+		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) override;
 
 		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
+
+		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
 
 		bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) override;
 
 		void SetName(GPUResource* pResource, const char* name) override;
+		void* GetShaderIdentifier(const RaytracingPipelineState* rtpso, const char* name) override;
 
 		void PresentBegin(CommandList cmd) override;
 		void PresentEnd(CommandList cmd) override;
@@ -283,6 +296,9 @@ namespace wiGraphics
 		void QueryEnd(const GPUQuery *query, CommandList cmd) override;
 		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
 		void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) override;
+		void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) override;
+		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
+		void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
 
 		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
 
@@ -302,6 +318,7 @@ namespace wiGraphics
 			std::deque<std::pair<VkImageView, uint64_t>> destroyer_imageviews;
 			std::deque<std::pair<std::pair<VkBuffer, VmaAllocation>, uint64_t>> destroyer_buffers;
 			std::deque<std::pair<VkBufferView, uint64_t>> destroyer_bufferviews;
+			std::deque<std::pair<VkAccelerationStructureNV, uint64_t>> destroyer_bvhs;
 			std::deque<std::pair<VkSampler, uint64_t>> destroyer_samplers;
 			std::deque<std::pair<VkShaderModule, uint64_t>> destroyer_shadermodules;
 			std::deque<std::pair<VkPipeline, uint64_t>> destroyer_pipelines;
@@ -372,6 +389,19 @@ namespace wiGraphics
 						auto item = destroyer_bufferviews.front();
 						destroyer_bufferviews.pop_front();
 						vkDestroyBufferView(device, item.first, nullptr);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_bvhs.empty())
+				{
+					if (destroyer_bvhs.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_bvhs.front();
+						destroyer_bvhs.pop_front();
+						destroyAccelerationStructureNV(device, item.first, nullptr);
 					}
 					else
 					{

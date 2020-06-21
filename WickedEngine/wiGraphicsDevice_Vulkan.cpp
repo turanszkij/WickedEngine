@@ -22,6 +22,12 @@
 namespace wiGraphics
 {
 
+	PFN_vkCreateAccelerationStructureNV GraphicsDevice_Vulkan::createAccelerationStructureNV = nullptr;
+	PFN_vkBindAccelerationStructureMemoryNV GraphicsDevice_Vulkan::bindAccelerationStructureMemoryNV = nullptr;
+	PFN_vkDestroyAccelerationStructureNV GraphicsDevice_Vulkan::destroyAccelerationStructureNV = nullptr;
+	PFN_vkGetAccelerationStructureMemoryRequirementsNV GraphicsDevice_Vulkan::getAccelerationStructureMemoryRequirementsNV = nullptr;
+	PFN_vkCmdBuildAccelerationStructureNV GraphicsDevice_Vulkan::cmdBuildAccelerationStructureNV = nullptr;
+
 namespace Vulkan_Internal
 {
 	// Converters:
@@ -535,9 +541,23 @@ namespace Vulkan_Internal
 	PFN_vkCmdEndDebugUtilsLabelEXT cmdEndDebugUtilsLabelEXT;
 	PFN_vkCmdInsertDebugUtilsLabelEXT cmdInsertDebugUtilsLabelEXT;
 
+	bool checkDeviceExtensionSupport(const char* checkExtension, 
+		const std::vector<VkExtensionProperties>& available_deviceExtensions) {
+
+		for (const auto& x : available_deviceExtensions)
+		{
+			if (strcmp(x.extensionName, checkExtension) == 0)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	// Validation layer helpers:
 	const std::vector<const char*> validationLayers = {
-		"VK_LAYER_LUNARG_standard_validation"
+		"VK_LAYER_KHRONOS_validation"
 	};
 	bool checkValidationLayerSupport() {
 		uint32_t layerCount;
@@ -630,26 +650,6 @@ namespace Vulkan_Internal
 	}
 
 	// Swapchain helpers:
-	const std::vector<const char*> deviceExtensions = {
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-		VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME,
-	};
-	bool checkDeviceExtensionSupport(VkPhysicalDevice device) {
-		uint32_t extensionCount;
-		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-
-		std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
-
-		std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
-
-		for (const auto& extension : availableExtensions) {
-			requiredExtensions.erase(extension.extensionName);
-		}
-
-		return requiredExtensions.empty();
-	}
-
 	struct SwapChainSupportDetails {
 		VkSurfaceCapabilitiesKHR capabilities;
 		std::vector<VkSurfaceFormatKHR> formats;
@@ -721,18 +721,34 @@ namespace Vulkan_Internal
 	}
 
 	// Device selection helpers:
-	bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
+	const std::vector<const char*> required_deviceExtensions = {
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+		VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME,
+	};
+	bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) 
+	{
 		QueueFamilyIndices indices = findQueueFamilies(device, surface);
-
-		bool extensionsSupported = checkDeviceExtensionSupport(device);
-
-		bool swapChainAdequate = false;
-		if (extensionsSupported) {
-			SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device, surface);
-			swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+		if (!indices.isComplete())
+		{
+			return false;
 		}
 
-		return indices.isComplete() && extensionsSupported && swapChainAdequate;
+		uint32_t extensionCount;
+		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+		std::vector<VkExtensionProperties> available(extensionCount);
+		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, available.data());
+
+		for (auto& x : required_deviceExtensions)
+		{
+			if (!checkDeviceExtensionSupport(x, available))
+			{
+				return false; // device doesn't have a required extension
+			}
+		}
+
+		SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device, surface);
+
+		return !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
 	}
 
 
@@ -908,6 +924,26 @@ namespace Vulkan_Internal
 			allocationhandler->destroylocker.unlock();
 		}
 	};
+	struct BVH_Vulkan
+	{
+		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
+		VmaAllocation allocation = nullptr;
+		VkBuffer buffer = VK_NULL_HANDLE;
+		VkAccelerationStructureNV resource = VK_NULL_HANDLE;
+
+		VkAccelerationStructureInfoNV info = {};
+		std::vector<VkGeometryNV> geometries;
+		VkDeviceSize scratch_offset = 0;
+
+		~BVH_Vulkan()
+		{
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+			if (buffer) allocationhandler->destroyer_buffers.push_back(std::make_pair(std::make_pair(buffer, allocation), framecount));
+			if (resource) allocationhandler->destroyer_bvhs.push_back(std::make_pair(resource, framecount));
+			allocationhandler->destroylocker.unlock();
+		}
+	};
 
 	Buffer_Vulkan* to_internal(const GPUBuffer* param)
 	{
@@ -936,6 +972,10 @@ namespace Vulkan_Internal
 	RenderPass_Vulkan* to_internal(const RenderPass* param)
 	{
 		return static_cast<RenderPass_Vulkan*>(param->internal_state.get());
+	}
+	BVH_Vulkan* to_internal(const RaytracingAccelerationStructure* param)
+	{
+		return static_cast<BVH_Vulkan*>(param->internal_state.get());
 	}
 }
 using namespace Vulkan_Internal;
@@ -1001,65 +1041,6 @@ using namespace Vulkan_Internal;
 		assert(address >= dataBegin && address < dataEnd);
 		return static_cast<uint64_t>(address - dataBegin);
 	}
-
-
-
-	//void GraphicsDevice_Vulkan::UploadBuffer::init(GraphicsDevice_Vulkan* device, const QueueFamilyIndices& queueIndices, size_t size)
-	//{
-	//	this->device = device;
-
-	//	VkBufferCreateInfo bufferInfo = {};
-	//	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	//	bufferInfo.size = size;
-	//	bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-	//	bufferInfo.flags = 0;
-
-	//	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-	//	VkResult res;
-
-	//	VmaAllocationCreateInfo allocInfo = {};
-	//	allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-	//	allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-
-	//	res = vmaCreateBuffer(device->allocationhandler->allocator, &bufferInfo, &allocInfo, &resource, &allocation, nullptr);
-	//	assert(res == VK_SUCCESS);
-
-	//	void* pData = allocation->GetMappedData();
-	//	dataCur = dataBegin = reinterpret_cast< UINT8* >(pData);
-	//	dataEnd = dataBegin + size;
-	//}
-	//GraphicsDevice_Vulkan::UploadBuffer::~UploadBuffer()
-	//{
-	//	vmaDestroyBuffer(device->allocationhandler->allocator, resource, allocation);
-	//}
-	//uint8_t* GraphicsDevice_Vulkan::UploadBuffer::allocate(size_t dataSize, size_t alignment)
-	//{
-	//	lock.lock();
-
-	//	dataCur = reinterpret_cast<uint8_t*>(Align(reinterpret_cast<size_t>(dataCur), alignment));
-
-	//	assert(dataCur + dataSize <= dataEnd);
-
-	//	uint8_t* retVal = dataCur;
-
-	//	dataCur += dataSize;
-
-	//	lock.unlock();
-
-	//	return retVal;
-	//}
-	//void GraphicsDevice_Vulkan::UploadBuffer::clear()
-	//{
-	//	lock.lock();
-	//	dataCur = dataBegin;
-	//	lock.unlock();
-	//}
-	//uint64_t GraphicsDevice_Vulkan::UploadBuffer::calculateOffset(uint8_t* address)
-	//{
-	//	assert(address >= dataBegin && address < dataEnd);
-	//	return static_cast<uint64_t>(address - dataBegin);
-	//}
 
 
 
@@ -1466,6 +1447,34 @@ using namespace Vulkan_Internal;
 							}
 
 						}
+						//else if (resource->IsAccelerationStructure())
+						//{
+						//	// Acceleration Structure:
+						//	const RaytracingAccelerationStructure* accelerationStructure = (const RaytracingAccelerationStructure*)resource;
+						//	auto internal_state = to_internal(accelerationStructure);
+
+						//	const uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot;
+
+						//	descriptorWrites[writeCount] = {};
+						//	descriptorWrites[writeCount].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+						//	descriptorWrites[writeCount].dstSet = heap.descriptorSet_GPU[heap.ringOffset];
+						//	descriptorWrites[writeCount].dstBinding = binding;
+						//	descriptorWrites[writeCount].dstArrayElement = 0;
+						//	descriptorWrites[writeCount].descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
+						//	descriptorWrites[writeCount].descriptorCount = 1;
+						//	descriptorWrites[writeCount].pBufferInfo = nullptr;
+						//	descriptorWrites[writeCount].pImageInfo = nullptr;
+						//	descriptorWrites[writeCount].pTexelBufferView = nullptr;
+
+						//	accelerationStructureViews[writeCount] = {};
+						//	accelerationStructureViews[writeCount].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_NV;
+						//	accelerationStructureViews[writeCount].accelerationStructureCount = 1;
+						//	accelerationStructureViews[writeCount].pAccelerationStructures = &internal_state->resource;
+						//	descriptorWrites[writeCount].pNext = &accelerationStructureViews[writeCount];
+
+						//	writeCount++;
+						//}
+
 					}
 
 					for (int slot = 0; slot < GPU_RESOURCE_HEAP_UAV_COUNT; ++slot)
@@ -1613,14 +1622,18 @@ using namespace Vulkan_Internal;
 	// Engine functions
 	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wiPlatform::window_type window, bool fullscreen, bool debuglayer)
 	{
+		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(VkAccelerationStructureInstanceNV);
+
 		DEBUGDEVICE = debuglayer;
 
 		FULLSCREEN = fullscreen;
 
+#ifdef _WIN32
 		RECT rect = RECT();
 		GetClientRect(window, &rect);
 		RESOLUTIONWIDTH = rect.right - rect.left;
 		RESOLUTIONHEIGHT = rect.bottom - rect.top;
+#endif // _WIN32
 
 		VkResult res;
 
@@ -1632,7 +1645,7 @@ using namespace Vulkan_Internal;
 		appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 		appInfo.pEngineName = "Wicked Engine";
 		appInfo.engineVersion = VK_MAKE_VERSION(wiVersion::GetMajor(), wiVersion::GetMinor(), wiVersion::GetRevision());
-		appInfo.apiVersion = VK_API_VERSION_1_1;
+		appInfo.apiVersion = VK_API_VERSION_1_2;
 
 		// Enumerate available extensions:
 		uint32_t extensionCount = 0;
@@ -1641,14 +1654,11 @@ using namespace Vulkan_Internal;
 		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
 
 		std::vector<const char*> extensionNames;
-		//for (auto& x : extensions)
-		//{
-		//	extensionNames.push_back(x.extensionName);
-		//}
 		extensionNames.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-		extensionNames.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 		extensionNames.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-
+#ifdef _WIN32
+		extensionNames.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#endif // _WIN32
 
 		bool enableValidationLayers = debuglayer;
 		
@@ -1760,6 +1770,7 @@ using namespace Vulkan_Internal;
 				queueCreateInfos.push_back(queueCreateInfo);
 			}
 
+
 			vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
 
 			assert(physicalDeviceProperties.limits.timestampComputeAndGraphics == VK_TRUE);
@@ -1790,8 +1801,20 @@ using namespace Vulkan_Internal;
 
 			createInfo.pEnabledFeatures = &deviceFeatures;
 
-			createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-			createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+			std::vector<const char*> enabled_deviceExtensions = required_deviceExtensions;
+
+			vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
+			std::vector<VkExtensionProperties> available_deviceExtensions(extensionCount);
+			vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, available_deviceExtensions.data());
+			
+			if (checkDeviceExtensionSupport(VK_NV_RAY_TRACING_EXTENSION_NAME, available_deviceExtensions))
+			{
+				RAYTRACING = true;
+				enabled_deviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
+			}
+
+			createInfo.enabledExtensionCount = static_cast<uint32_t>(enabled_deviceExtensions.size());
+			createInfo.ppEnabledExtensionNames = enabled_deviceExtensions.data();
 
 			if (enableValidationLayers) {
 				createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
@@ -1825,6 +1848,15 @@ using namespace Vulkan_Internal;
 		cmdBeginDebugUtilsLabelEXT = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdBeginDebugUtilsLabelEXT");
 		cmdEndDebugUtilsLabelEXT = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdEndDebugUtilsLabelEXT");
 		cmdInsertDebugUtilsLabelEXT = (PFN_vkCmdInsertDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdInsertDebugUtilsLabelEXT");
+
+		if (RAYTRACING)
+		{
+			createAccelerationStructureNV = (PFN_vkCreateAccelerationStructureNV)vkGetDeviceProcAddr(device, "vkCreateAccelerationStructureNV");
+			bindAccelerationStructureMemoryNV = (PFN_vkBindAccelerationStructureMemoryNV)vkGetDeviceProcAddr(device, "vkBindAccelerationStructureMemoryNV");
+			destroyAccelerationStructureNV = (PFN_vkDestroyAccelerationStructureNV)vkGetDeviceProcAddr(device, "vkDestroyAccelerationStructureNV");
+			getAccelerationStructureMemoryRequirementsNV = (PFN_vkGetAccelerationStructureMemoryRequirementsNV)vkGetDeviceProcAddr(device, "vkGetAccelerationStructureMemoryRequirementsNV");
+			cmdBuildAccelerationStructureNV = (PFN_vkCmdBuildAccelerationStructureNV)vkGetDeviceProcAddr(device, "vkCmdBuildAccelerationStructureNV");
+		}
 
 		// Create default pipeline:
 		{
@@ -2523,6 +2555,10 @@ using namespace Vulkan_Internal;
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
 		}
+		if (pBuffer->desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
+		{
+			bufferInfo.usage |= VK_BUFFER_USAGE_RAY_TRACING_BIT_NV;
+		}
 		bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -2575,6 +2611,7 @@ using namespace Vulkan_Internal;
 				barrier.buffer = internal_state->resource;
 				barrier.srcAccessMask = 0;
 				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrier.size = VK_WHOLE_SIZE;
 
 				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -2956,7 +2993,8 @@ using namespace Vulkan_Internal;
 			internal_state->stageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
 			break;
 		default:
-			assert(0);
+			internal_state->stageInfo.stage = VK_SHADER_STAGE_ALL;
+			// library shader (ray tracing)
 			break;
 		}
 
@@ -3468,6 +3506,149 @@ using namespace Vulkan_Internal;
 
 		return res == VK_SUCCESS ? true : false;
 	}
+	bool GraphicsDevice_Vulkan::CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh)
+	{
+		auto internal_state = std::make_shared<BVH_Vulkan>();
+		internal_state->allocationhandler = allocationhandler;
+		bvh->internal_state = internal_state;
+		bvh->type = GPUResource::GPU_RESOURCE_TYPE::RAYTRACING_ACCELERATION_STRUCTURE;
+
+		bvh->desc = *pDesc;
+
+		VkAccelerationStructureCreateInfoNV info = {};
+		info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_NV;
+		info.info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_INFO_NV;
+
+		switch (pDesc->type)
+		{
+		case RaytracingAccelerationStructureDesc::BOTTOMLEVEL:
+		{
+			info.info.type = VkAccelerationStructureTypeNV::VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_NV;
+
+			for (auto& x : pDesc->bottomlevel.geometries)
+			{
+				internal_state->geometries.emplace_back();
+				auto& geometry = internal_state->geometries.back();
+				geometry = {};
+				geometry.sType = VK_STRUCTURE_TYPE_GEOMETRY_NV;
+				geometry.geometry.triangles.sType = VK_STRUCTURE_TYPE_GEOMETRY_TRIANGLES_NV;
+				geometry.geometry.aabbs.sType = VK_STRUCTURE_TYPE_GEOMETRY_AABB_NV;
+
+				if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE)
+				{
+					geometry.flags |= VK_GEOMETRY_OPAQUE_BIT_KHR;
+				}
+				if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_NO_DUPLICATE_ANYHIT_INVOCATION)
+				{
+					geometry.flags |= VK_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION_BIT_KHR;
+				}
+
+				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES)
+				{
+					geometry.geometryType = VkGeometryTypeNV::VK_GEOMETRY_TYPE_TRIANGLES_NV;
+					geometry.geometry.triangles.indexType = x.triangles.indexFormat == INDEXFORMAT_16BIT ? VkIndexType::VK_INDEX_TYPE_UINT16 : VkIndexType::VK_INDEX_TYPE_UINT32;
+					geometry.geometry.triangles.indexData = to_internal(&x.triangles.indexBuffer)->resource;
+					geometry.geometry.triangles.indexOffset = x.triangles.indexOffset * (x.triangles.indexFormat == INDEXFORMAT_16BIT ? sizeof(uint16_t) : sizeof(uint32_t));
+					geometry.geometry.triangles.indexCount = x.triangles.indexCount;
+					geometry.geometry.triangles.vertexData = to_internal(&x.triangles.vertexBuffer)->resource;
+					geometry.geometry.triangles.vertexOffset = x.triangles.vertexByteOffset;
+					geometry.geometry.triangles.vertexStride = x.triangles.vertexStride;
+					geometry.geometry.triangles.vertexFormat = _ConvertFormat(x.triangles.vertexFormat);
+					geometry.geometry.triangles.vertexCount = x.triangles.vertexCount;
+
+					if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_USE_TRANSFORM)
+					{
+						geometry.geometry.triangles.transformData = to_internal(&x.triangles.transform3x4Buffer)->resource;
+						geometry.geometry.triangles.transformOffset = x.triangles.transform3x4BufferOffset;
+					}
+				}
+				else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::PROCEDURAL_AABBS)
+				{
+					geometry.geometryType = VkGeometryTypeNV::VK_GEOMETRY_TYPE_AABBS_NV;
+					geometry.geometry.aabbs.aabbData = to_internal(&x.aabbs.aabbBuffer)->resource;
+					geometry.geometry.aabbs.offset = x.aabbs.offset;
+					geometry.geometry.aabbs.stride = x.aabbs.stride;
+					geometry.geometry.aabbs.numAABBs = x.aabbs.count;
+				}
+			}
+
+			info.info.pGeometries = internal_state->geometries.data();
+			info.info.geometryCount = (uint32_t)internal_state->geometries.size();
+
+		}
+		break;
+		case RaytracingAccelerationStructureDesc::TOPLEVEL:
+		{
+			info.info.type = VkAccelerationStructureTypeNV::VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_NV;
+			info.info.instanceCount = pDesc->toplevel.count;
+		}
+		break;
+		}
+
+		internal_state->info = info.info;
+
+		VkResult res = createAccelerationStructureNV(device, &info, nullptr, &internal_state->resource);
+		assert(res == VK_SUCCESS);
+
+		VkAccelerationStructureMemoryRequirementsInfoNV meminfo = {};
+		meminfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_NV;
+		meminfo.accelerationStructure = internal_state->resource;
+
+		meminfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_NV;
+		VkMemoryRequirements2 memrequirements = {};
+		memrequirements.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
+		getAccelerationStructureMemoryRequirementsNV(device, &meminfo, &memrequirements);
+
+
+		meminfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_NV;
+		VkMemoryRequirements2 memrequirements_scratch_build = {};
+		memrequirements.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
+		getAccelerationStructureMemoryRequirementsNV(device, &meminfo, &memrequirements_scratch_build);
+
+		meminfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_UPDATE_SCRATCH_NV;
+		VkMemoryRequirements2 memrequirements_scratch_update = {};
+		memrequirements.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
+		getAccelerationStructureMemoryRequirementsNV(device, &meminfo, &memrequirements_scratch_update);
+
+
+		// Main backing memory:
+		VkBufferCreateInfo bufferInfo = {};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = memrequirements.memoryRequirements.size + 
+			std::max(memrequirements_scratch_build.memoryRequirements.size, memrequirements_scratch_update.memoryRequirements.size);
+		bufferInfo.usage = VK_BUFFER_USAGE_RAY_TRACING_BIT_NV | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+		bufferInfo.flags = 0;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		VmaAllocationCreateInfo allocInfo = {};
+		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+		res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->buffer, &internal_state->allocation, nullptr);
+		assert(res == VK_SUCCESS);
+
+		VkBindAccelerationStructureMemoryInfoNV bind_info = {};
+		bind_info.sType = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_NV;
+		bind_info.accelerationStructure = internal_state->resource;
+		bind_info.memory = internal_state->allocation->GetMemory();
+		res = bindAccelerationStructureMemoryNV(device, 1, &bind_info);
+		assert(res == VK_SUCCESS);
+
+
+
+		internal_state->scratch_offset = memrequirements.memoryRequirements.size;
+
+		return res == VK_SUCCESS;
+
+
+		//GPUBufferDesc scratch_desc;
+		//scratch_desc.ByteWidth = (uint32_t)std::max(memrequirements_scratch_build.memoryRequirements.size, memrequirements_scratch_update.memoryRequirements.size);
+
+		//return CreateBuffer(&scratch_desc, nullptr, &bvh->scratch);
+	}
+	bool GraphicsDevice_Vulkan::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso)
+	{
+		return true;
+	}
 
 	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount)
 	{
@@ -3657,6 +3838,18 @@ using namespace Vulkan_Internal;
 		return -1;
 	}
 
+	void GraphicsDevice_Vulkan::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest)
+	{
+		assert(instance->bottomlevel.IsAccelerationStructure());
+		VkAccelerationStructureInstanceNV* desc = (VkAccelerationStructureInstanceNV*)dest;
+		desc->accelerationStructureReference = (uint64_t)to_internal((RaytracingAccelerationStructure*)&instance->bottomlevel)->resource;
+		memcpy(&desc->transform, &instance->transform, sizeof(desc->transform));
+		desc->instanceCustomIndex = instance->InstanceID;
+		desc->mask = instance->InstanceMask;
+		desc->instanceShaderBindingTableRecordOffset = instance->InstanceContributionToHitGroupIndex;
+		desc->flags = instance->Flags;
+	}
+
 
 	bool GraphicsDevice_Vulkan::DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest)
 	{
@@ -3682,7 +3875,10 @@ using namespace Vulkan_Internal;
 		VkResult res = setDebugUtilsObjectNameEXT(device, &info);
 		assert(res == VK_SUCCESS);
 	}
-
+	void* GraphicsDevice_Vulkan::GetShaderIdentifier(const RaytracingPipelineState* rtpso, const char* name)
+	{
+		return nullptr;
+	}
 
 	void GraphicsDevice_Vulkan::PresentBegin(CommandList cmd)
 	{
@@ -4764,12 +4960,13 @@ using namespace Vulkan_Internal;
 			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.size = VK_WHOLE_SIZE;
 
 			vkCmdPipelineBarrier(
 				GetDirectCommandList(cmd),
 				stages,
 				VK_PIPELINE_STAGE_TRANSFER_BIT,
-				VK_DEPENDENCY_BY_REGION_BIT,
+				0,
 				0, nullptr,
 				1, &barrier,
 				0, nullptr
@@ -4798,7 +4995,7 @@ using namespace Vulkan_Internal;
 				GetDirectCommandList(cmd),
 				VK_PIPELINE_STAGE_TRANSFER_BIT,
 				stages,
-				VK_DEPENDENCY_BY_REGION_BIT,
+				0,
 				0, nullptr,
 				1, &barrier,
 				0, nullptr
@@ -4890,6 +5087,11 @@ using namespace Vulkan_Internal;
 				barrierdesc.pNext = nullptr;
 				barrierdesc.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 				barrierdesc.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
+				if (RAYTRACING)
+				{
+					barrierdesc.srcAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+					barrierdesc.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+				}
 			}
 			break;
 			case GPUBarrier::IMAGE_BARRIER:
@@ -4952,6 +5154,85 @@ using namespace Vulkan_Internal;
 			bufferbarrier_count, bufferbarriers,
 			imagebarrier_count, imagebarriers
 		);
+	}
+	void GraphicsDevice_Vulkan::BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src)
+	{
+		auto dst_internal = to_internal(dst);
+
+		VkAccelerationStructureNV dst_acc = dst_internal->resource;
+		VkAccelerationStructureNV src_acc = VK_NULL_HANDLE;
+		VkBool32 update = VK_FALSE;
+		VkBuffer instanceData = VK_NULL_HANDLE;
+		VkDeviceSize instanceOffset = 0;
+
+		// The real GPU addresses get filled here:
+		switch (dst->desc.type)
+		{
+		case RaytracingAccelerationStructureDesc::BOTTOMLEVEL:
+		{
+			size_t i = 0;
+			for (auto& x : dst->desc.bottomlevel.geometries)
+			{
+				auto& geometry = dst_internal->geometries[i++];
+
+				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES)
+				{
+					geometry.geometry.triangles.indexData = to_internal(&x.triangles.indexBuffer)->resource;
+					geometry.geometry.triangles.indexOffset = x.triangles.indexOffset * (x.triangles.indexFormat == INDEXFORMAT_16BIT ? sizeof(uint16_t) : sizeof(uint32_t));
+					geometry.geometry.triangles.vertexData = to_internal(&x.triangles.vertexBuffer)->resource;
+					geometry.geometry.triangles.vertexOffset = x.triangles.vertexByteOffset;
+
+					if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_USE_TRANSFORM)
+					{
+						geometry.geometry.triangles.transformData = to_internal(&x.triangles.transform3x4Buffer)->resource;
+						geometry.geometry.triangles.transformOffset = x.triangles.transform3x4BufferOffset;
+					}
+				}
+				else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::PROCEDURAL_AABBS)
+				{
+					geometry.geometryType = VkGeometryTypeNV::VK_GEOMETRY_TYPE_AABBS_NV;
+					geometry.geometry.aabbs.sType = VK_STRUCTURE_TYPE_GEOMETRY_AABB_NV;
+					geometry.geometry.aabbs.aabbData = to_internal(&x.aabbs.aabbBuffer)->resource;
+					geometry.geometry.aabbs.offset = x.aabbs.offset;
+				}
+			}
+
+		}
+		break;
+		case RaytracingAccelerationStructureDesc::TOPLEVEL:
+		{
+			instanceData = to_internal(&dst->desc.toplevel.instanceBuffer)->resource;
+			instanceOffset = (VkDeviceSize)dst->desc.toplevel.offset;
+		}
+		break;
+		}
+
+		if (src != nullptr)
+		{
+			update = VK_TRUE;
+
+			auto src_internal = to_internal(src);
+			src_acc = src_internal->resource;
+		}
+
+		cmdBuildAccelerationStructureNV(GetDirectCommandList(cmd),
+			&dst_internal->info,
+			instanceData,
+			instanceOffset,
+			update,
+			dst_acc,
+			src_acc,
+			dst_internal->buffer,
+			dst_internal->scratch_offset
+		);
+	}
+	void GraphicsDevice_Vulkan::BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd)
+	{
+
+	}
+	void GraphicsDevice_Vulkan::DispatchRays(const DispatchRaysDesc* desc, CommandList cmd)
+	{
+
 	}
 
 	GraphicsDevice::GPUAllocation GraphicsDevice_Vulkan::AllocateGPU(size_t dataSize, CommandList cmd)
