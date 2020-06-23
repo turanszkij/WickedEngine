@@ -48,48 +48,45 @@ namespace wiGraphics
 		friend struct DescriptorTableFrameAllocator;
 	private:
 
-		VkInstance instance;
-		VkDebugReportCallbackEXT callback;
-		VkSurfaceKHR surface;
+		VkInstance instance = VK_NULL_HANDLE;
+		VkDebugReportCallbackEXT callback = VK_NULL_HANDLE;
+		VkSurfaceKHR surface = VK_NULL_HANDLE;
 		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-		VkDevice device;
+		VkDevice device = VK_NULL_HANDLE;
 		QueueFamilyIndices queueIndices;
-		VkQueue graphicsQueue;
-		VkQueue presentQueue;
+		VkQueue graphicsQueue = VK_NULL_HANDLE;
+		VkQueue presentQueue = VK_NULL_HANDLE;
 
 		VkPhysicalDeviceProperties physicalDeviceProperties;
 
-		VkQueue copyQueue;
-		VkCommandPool copyCommandPool;
-		VkCommandBuffer copyCommandBuffer;
-		VkFence copyFence;
+		VkQueue copyQueue = VK_NULL_HANDLE;
+		VkCommandPool copyCommandPool = VK_NULL_HANDLE;
+		VkCommandBuffer copyCommandBuffer = VK_NULL_HANDLE;
+		VkFence copyFence = VK_NULL_HANDLE;
 		std::mutex copyQueueLock;
 
-		VkSemaphore imageAvailableSemaphore;
-		VkSemaphore renderFinishedSemaphore;
+		VkSemaphore imageAvailableSemaphore = VK_NULL_HANDLE;
+		VkSemaphore renderFinishedSemaphore = VK_NULL_HANDLE;
 
-		VkSwapchainKHR swapChain;
+		VkSwapchainKHR swapChain = VK_NULL_HANDLE;
 		VkFormat swapChainImageFormat;
 		VkExtent2D swapChainExtent;
 		std::vector<VkImage> swapChainImages;
 
-		VkRenderPass defaultRenderPass;
-		VkPipelineLayout defaultPipelineLayout_Graphics;
-		VkPipelineLayout defaultPipelineLayout_Compute;
-		VkDescriptorSetLayout defaultDescriptorSetlayouts[SHADERSTAGE_COUNT];
-		uint32_t descriptorCount;
+		VkRenderPass defaultRenderPass = VK_NULL_HANDLE;
 
-		VkBuffer		nullBuffer;
-		VmaAllocation	nullBufferAllocation;
-		VkBufferView	nullBufferView;
-		VkImage			nullImage;
-		VmaAllocation	nullImageAllocation;
-		VkImageView		nullImageView;
-		VkSampler		nullSampler;
+		VkBuffer		nullBuffer = VK_NULL_HANDLE;
+		VmaAllocation	nullBufferAllocation = VK_NULL_HANDLE;
+		VkBufferView	nullBufferView = VK_NULL_HANDLE;
+		VkImage			nullImage = VK_NULL_HANDLE;
+		VmaAllocation	nullImageAllocation = VK_NULL_HANDLE;
+		VkImageView		nullImageView = VK_NULL_HANDLE;
+		VkSampler		nullSampler = VK_NULL_HANDLE;
+		VkAccelerationStructureNV nullAccelerationStructure = VK_NULL_HANDLE;
 
 		uint64_t timestamp_frequency = 0;
-		VkQueryPool querypool_timestamp;
-		VkQueryPool querypool_occlusion;
+		VkQueryPool querypool_timestamp = VK_NULL_HANDLE;
+		VkQueryPool querypool_occlusion = VK_NULL_HANDLE;
 		static const size_t timestamp_query_count = 1024;
 		static const size_t occlusion_query_count = 1024;
 		bool initial_querypool_reset = false;
@@ -102,46 +99,26 @@ namespace wiGraphics
 			VkFence frameFence;
 			VkCommandPool commandPools[COMMANDLIST_COUNT] = {};
 			VkCommandBuffer commandBuffers[COMMANDLIST_COUNT] = {};
-			VkImageView swapChainImageView;
-			VkFramebuffer swapChainFramebuffer;
+			VkImageView swapChainImageView = VK_NULL_HANDLE;
+			VkFramebuffer swapChainFramebuffer = VK_NULL_HANDLE;
 
-			VkCommandPool transitionCommandPool;
-			VkCommandBuffer transitionCommandBuffer;
+			VkCommandPool transitionCommandPool = VK_NULL_HANDLE;
+			VkCommandBuffer transitionCommandBuffer = VK_NULL_HANDLE;
 			std::vector<VkImageMemoryBarrier> loadedimagetransitions;
 
 			struct DescriptorTableFrameAllocator
 			{
 				GraphicsDevice_Vulkan* device;
+				VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
+				uint32_t poolSize = 256;
 
-				static const int writeCapacity =
-					1 +									// null		CBV
-					3 +									// null		SRV (texture + typedbuffer + untypedbuffer)
-					3 +									// null		UAV (texture + typedbuffer + untypedbuffer)
-					1 +									// null		SAMPLER
-					GPU_RESOURCE_HEAP_CBV_COUNT +		// valid	CBV
-					GPU_RESOURCE_HEAP_SRV_COUNT * 3 +	// valid	SRV (texture + typedbuffer + untypedbuffer)
-					GPU_RESOURCE_HEAP_UAV_COUNT * 3 +	// valid	UAV (texture + typedbuffer + untypedbuffer)
-					GPU_SAMPLER_HEAP_COUNT;				// valid	SAMPLER
-				VkWriteDescriptorSet descriptorWrites[writeCapacity];
-				VkDescriptorBufferInfo bufferInfos[writeCapacity];
-				VkDescriptorImageInfo imageInfos[writeCapacity];
-				VkBufferView texelBufferViews[writeCapacity];
-				VkWriteDescriptorSetAccelerationStructureNV accelerationStructureViews[writeCapacity];
+				std::vector<VkWriteDescriptorSet> descriptorWrites;
+				std::vector<VkDescriptorBufferInfo> bufferInfos;
+				std::vector<VkDescriptorImageInfo> imageInfos;
+				std::vector<VkBufferView> texelBufferViews;
+				std::vector<VkWriteDescriptorSetAccelerationStructureNV> accelerationStructureViews;
 
-				static const int max_null_resource_capacity = std::max(GPU_RESOURCE_HEAP_CBV_COUNT, std::max(GPU_RESOURCE_HEAP_SRV_COUNT, GPU_RESOURCE_HEAP_UAV_COUNT));
-				VkDescriptorBufferInfo null_bufferInfos[max_null_resource_capacity];
-				VkDescriptorImageInfo null_imageInfos[max_null_resource_capacity];
-				VkBufferView null_texelBufferViews[max_null_resource_capacity];
-				VkDescriptorImageInfo null_samplerInfos[GPU_SAMPLER_HEAP_COUNT];
-
-				struct DescriptorHeap
-				{
-					VkDescriptorPool descriptorPool;
-					std::vector<VkDescriptorSet> descriptorSet_GPU;
-					uint32_t ringOffset;
-				};
-				std::vector<DescriptorHeap> heaps[SHADERSTAGE_COUNT];
-				size_t currentheap[SHADERSTAGE_COUNT] = {};
+				bool dirty_graphics_compute[2] = {};
 
 				struct Table
 				{
@@ -152,8 +129,6 @@ namespace wiGraphics
 					int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
 					const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
 
-					bool dirty;
-
 					void reset()
 					{
 						memset(CBV, 0, sizeof(CBV));
@@ -162,17 +137,15 @@ namespace wiGraphics
 						memset(UAV, 0, sizeof(UAV));
 						memset(UAV_index, -1, sizeof(UAV_index));
 						memset(SAM, 0, sizeof(SAM));
-						dirty = true;
 					}
 
 				} tables[SHADERSTAGE_COUNT];
 
 				void init(GraphicsDevice_Vulkan* device);
-				~DescriptorTableFrameAllocator();
+				void destroy();
 
 				void reset();
-				void validate(CommandList cmd);
-				void create_heaps_on_demand(SHADERSTAGE stage);
+				void validate(bool graphics, CommandList cmd);
 			};
 			DescriptorTableFrameAllocator descriptors[COMMANDLIST_COUNT];
 
@@ -208,6 +181,8 @@ namespace wiGraphics
 		std::unordered_map<size_t, VkPipeline> pipelines_global;
 		std::vector<std::pair<size_t, VkPipeline>> pipelines_worker[COMMANDLIST_COUNT];
 		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
+		const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
+		const Shader* active_cs[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 
 		std::atomic<uint8_t> commandlist_count{ 0 };
@@ -320,7 +295,10 @@ namespace wiGraphics
 			std::deque<std::pair<VkBufferView, uint64_t>> destroyer_bufferviews;
 			std::deque<std::pair<VkAccelerationStructureNV, uint64_t>> destroyer_bvhs;
 			std::deque<std::pair<VkSampler, uint64_t>> destroyer_samplers;
+			std::deque<std::pair<VkDescriptorPool, uint64_t>> destroyer_descriptorPools;
+			std::deque<std::pair<VkDescriptorSetLayout, uint64_t>> destroyer_descriptorSetLayouts;
 			std::deque<std::pair<VkShaderModule, uint64_t>> destroyer_shadermodules;
+			std::deque<std::pair<VkPipelineLayout, uint64_t>> destroyer_pipelineLayouts;
 			std::deque<std::pair<VkPipeline, uint64_t>> destroyer_pipelines;
 			std::deque<std::pair<VkRenderPass, uint64_t>> destroyer_renderpasses;
 			std::deque<std::pair<VkFramebuffer, uint64_t>> destroyer_framebuffers;
@@ -421,6 +399,32 @@ namespace wiGraphics
 						break;
 					}
 				}
+				while (!destroyer_descriptorPools.empty())
+				{
+					if (destroyer_descriptorPools.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_descriptorPools.front();
+						destroyer_descriptorPools.pop_front();
+						vkDestroyDescriptorPool(device, item.first, nullptr);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_descriptorSetLayouts.empty())
+				{
+					if (destroyer_descriptorSetLayouts.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_descriptorSetLayouts.front();
+						destroyer_descriptorSetLayouts.pop_front();
+						vkDestroyDescriptorSetLayout(device, item.first, nullptr);
+					}
+					else
+					{
+						break;
+					}
+				}
 				while (!destroyer_shadermodules.empty())
 				{
 					if (destroyer_shadermodules.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
@@ -428,6 +432,19 @@ namespace wiGraphics
 						auto item = destroyer_shadermodules.front();
 						destroyer_shadermodules.pop_front();
 						vkDestroyShaderModule(device, item.first, nullptr);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_pipelineLayouts.empty())
+				{
+					if (destroyer_pipelineLayouts.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_pipelineLayouts.front();
+						destroyer_pipelineLayouts.pop_front();
+						vkDestroyPipelineLayout(device, item.first, nullptr);
 					}
 					else
 					{

@@ -1,7 +1,7 @@
 import os
 import xml.etree.ElementTree as ET
 
-tree = ET.parse('WickedEngine/WickedEngine_SHADERS.vcxitems')
+tree = ET.parse('WickedEngine/Shaders_SOURCE.vcxitems')
 root = tree.getroot()
 
 ## Hardcode visual studio namespace for now...
@@ -52,20 +52,22 @@ for shader in root.iter(namespace + "FxCompile"):
         file.write("-D SHADERCOMPILER_SPIRV -D ");
         
         if profile == "Vertex":
-            file.write("SPIRV_SHADERTYPE_VS -fvk-invert-y")
-        if profile == "Pixel":
-            file.write("SPIRV_SHADERTYPE_PS")
-        if profile == "Geometry":
-            file.write("SPIRV_SHADERTYPE_GS -fvk-invert-y")
+            file.write("SPIRV_SHADERSTAGE=0 -fvk-invert-y")
         if profile == "Hull":
-            file.write("SPIRV_SHADERTYPE_HS")
+            file.write("SPIRV_SHADERSTAGE=1")
         if profile == "Domain":
-            file.write("SPIRV_SHADERTYPE_DS -fvk-invert-y")
+            file.write("SPIRV_SHADERSTAGE=2 -fvk-invert-y")
+        if profile == "Geometry":
+            file.write("SPIRV_SHADERSTAGE=3 -fvk-invert-y")
+        if profile == "Pixel":
+            file.write("SPIRV_SHADERSTAGE=4")
         if profile == "Compute" or profile == "Library":
-            file.write("SPIRV_SHADERTYPE_CS")
+            file.write("SPIRV_SHADERSTAGE=5")
 
         file.write(" -spirv -fvk-use-dx-layout -flegacy-macro-expansion -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso ")
 
+        file.write("-fspv-target-env=vulkan1.2 ")
+        
         ## Append to error log:
         file.write(" 2>>../build_SPIRV_errors.log \n")
         break

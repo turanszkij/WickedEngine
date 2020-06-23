@@ -1,7 +1,7 @@
 import os
 import xml.etree.ElementTree as ET
 
-tree = ET.parse('WickedEngine/WickedEngine_SHADERS.vcxitems')
+tree = ET.parse('WickedEngine/Shaders_SOURCE.vcxitems')
 root = tree.getroot()
 
 ## Hardcode visual studio namespace for now...
