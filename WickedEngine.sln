@@ -39,8 +39,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Supplementary", "Supplement
 	ProjectSection(SolutionItems) = preProject
 		appveyor.yml = appveyor.yml
 		features.txt = features.txt
-		generate_shader_buildtask_hlsl6.py = generate_shader_buildtask_hlsl6.py
-		generate_shader_buildtask_spirv.py = generate_shader_buildtask_spirv.py
 		LICENSE.md = LICENSE.md
 		other_licenses.txt = other_licenses.txt
 		README.md = README.md
@@ -83,7 +81,6 @@ Global
 		WickedEngine\Shaders_SOURCE.vcxitems*{c222218b-b6d1-406b-b2c0-8c1ced4a8d19}*SharedItemsImports = 4
 		Content.vcxitems*{c48f6bff-f91b-4db5-98b5-15287dfb7c95}*SharedItemsImports = 9
 		WickedEngine\WickedEngine_SOURCE.vcxitems*{d294c41d-d886-4b95-9fd6-ee13eee8d976}*SharedItemsImports = 4
-		WickedEngine\Shaders_SOURCE.vcxitems*{df832de3-02fa-4d00-b853-1229a9505e14}*SharedItemsImports = 4
 		Content.vcxitems*{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}*SharedItemsImports = 4
 		Editor\Editor_SOURCE.vcxitems*{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}*SharedItemsImports = 4
 		WickedEngine\Shaders_SOURCE.vcxitems*{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}*SharedItemsImports = 4

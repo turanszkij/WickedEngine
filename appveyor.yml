@@ -6,11 +6,6 @@ branches:
 image: Visual Studio 2019
 configuration: Release
 
-# There is a problem with Appveyor when it tries to build this project with Visual Studio 2019, so a workaround build script will be used instead
-#build:
-#  project: WickedEngine.sln
-#  parallel: true
-#  verbosity: minimal
 build_script:
   - msbuild "C:\projects\wickedengine\WickedEngine.sln" /t:Editor_Windows /m /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - msbuild "C:\projects\wickedengine\WickedEngine.sln" /t:Editor_UWP /m /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
@@ -18,6 +13,7 @@ build_script:
   - msbuild "C:\projects\wickedengine\WickedEngine.sln" /t:Template_Windows /m /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - msbuild "C:\projects\wickedengine\WickedEngine.sln" /t:Template_UWP /m /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - msbuild "C:\projects\wickedengine\WickedEngine.sln" /t:Shaders_HLSL6 /m /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+  - msbuild "C:\projects\wickedengine\WickedEngine.sln" /t:Shaders_SPIRV /m /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
 platform:
   - x64
@@ -25,9 +21,9 @@ platform:
   
 after_build:
   - cmd: move %APPVEYOR_BUILD_FOLDER%\BUILD\%PLATFORM%\Release\Editor_Windows\Editor_Windows.exe %APPVEYOR_BUILD_FOLDER%\Editor
-  - cmd: 7z a WickedEngineEditor.zip WickedEngine\shaders\ WickedEngine\fonts\ images\ models\ scripts\ shadercompilers\ Documentation\ *.txt *.md Editor\*.exe Editor\images\ Editor\sound\ Editor\*.ini Editor\*.ico Editor\*.lua
+  - cmd: 7z a WickedEngineEditor.zip WickedEngine\shaders\ WickedEngine\fonts\ images\ models\ scripts\ Documentation\ *.txt *.md Editor\*.exe Editor\images\ Editor\sound\ Editor\*.ini Editor\*.ico Editor\*.lua
   - cmd: move %APPVEYOR_BUILD_FOLDER%\BUILD\%PLATFORM%\Release\Tests\Tests.exe %APPVEYOR_BUILD_FOLDER%\Tests
-  - cmd: 7z a WickedEngineTests.zip WickedEngine\shaders\ WickedEngine\fonts\ images\ models\ scripts\ shadercompilers\ Documentation\ *.txt *.md Tests\*.exe Tests\images\ Tests\sound\ Tests\*.ini Tests\*.ico Tests\*.lua Tests\*.ttf
+  - cmd: 7z a WickedEngineTests.zip WickedEngine\shaders\ WickedEngine\fonts\ images\ models\ scripts\ Documentation\ *.txt *.md Tests\*.exe Tests\images\ Tests\sound\ Tests\*.ini Tests\*.ico Tests\*.lua Tests\*.ttf
   
 artifacts:
 - path: WickedEngineEditor.zip

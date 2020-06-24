@@ -2298,8 +2298,8 @@ using namespace DX12_Internal;
 		{
 			LPVOID address;
 			SIZE_T size;
-			LPVOID GetBufferPointer() override { return address; }
-			SIZE_T GetBufferSize() override { return size; }
+			LPVOID STDMETHODCALLTYPE GetBufferPointer() override { return address; }
+			SIZE_T STDMETHODCALLTYPE GetBufferSize() override { return size; }
 			HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, _COM_Outptr_ void __RPC_FAR* __RPC_FAR* ppvObject) { return E_FAIL; }
 			ULONG STDMETHODCALLTYPE AddRef(void) { return 0; }
 			ULONG STDMETHODCALLTYPE Release(void) { return 0; }
