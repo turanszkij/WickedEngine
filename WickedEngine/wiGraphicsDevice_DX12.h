@@ -42,9 +42,6 @@ namespace wiGraphics
 		UINT64 copyFenceValue;
 		wiSpinLock copyQueueLock;
 
-		Microsoft::WRL::ComPtr<ID3D12RootSignature> graphicsRootSig;
-		Microsoft::WRL::ComPtr<ID3D12RootSignature> computeRootSig;
-
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawInstancedIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawIndexedInstancedIndirectCommandSignature;
@@ -77,10 +74,6 @@ namespace wiGraphics
 			void free(D3D12_CPU_DESCRIPTOR_HANDLE descriptorHandle);
 		};
 
-		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> null_resource_heap_CPU;
-		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> null_sampler_heap_CPU;
-		D3D12_CPU_DESCRIPTOR_HANDLE null_resource_heap_cpu_start = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE null_sampler_heap_cpu_start = {};
 		uint32_t resource_descriptor_size = 0;
 		uint32_t sampler_descriptor_size = 0;
 
@@ -108,6 +101,8 @@ namespace wiGraphics
 				size_t currentheap_sampler = 0;
 				bool heaps_bound = false;
 
+				bool dirty_graphics_compute[2] = {};
+
 				struct Table
 				{
 					const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
@@ -117,9 +112,6 @@ namespace wiGraphics
 					int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
 					const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
 
-					bool dirty_resources;
-					bool dirty_samplers;
-
 					void reset()
 					{
 						memset(CBV, 0, sizeof(CBV));
@@ -128,8 +120,6 @@ namespace wiGraphics
 						memset(UAV, 0, sizeof(UAV));
 						memset(UAV_index, -1, sizeof(UAV_index));
 						memset(SAM, 0, sizeof(SAM));
-						dirty_resources = true;
-						dirty_samplers = true;
 					}
 
 				} tables[SHADERSTAGE_COUNT];
@@ -137,7 +127,7 @@ namespace wiGraphics
 				void init(GraphicsDevice_DX12* device);
 
 				void reset();
-				void validate(CommandList cmd);
+				void validate(bool graphics, CommandList cmd);
 				void create_or_bind_heaps_on_demand(CommandList cmd);
 			};
 			DescriptorTableFrameAllocator descriptors[COMMANDLIST_COUNT];
@@ -176,6 +166,8 @@ namespace wiGraphics
 		std::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_global;
 		std::vector<std::pair<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker[COMMANDLIST_COUNT];
 		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
+		const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
+		const Shader* active_cs[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 
 		std::atomic<uint8_t> commandlist_count{ 0 };
@@ -283,6 +275,7 @@ namespace wiGraphics
 			std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_timestamp;
 			std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_occlusion;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12PipelineState>, uint64_t>> destroyer_pipelines;
+			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12RootSignature>, uint64_t>> destroyer_rootSignatures;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12StateObject>, uint64_t>> destroyer_stateobjects;
 
 			DescriptorAllocator RTAllocator;
@@ -411,6 +404,18 @@ namespace wiGraphics
 					if (destroyer_pipelines.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
 					{
 						destroyer_pipelines.pop_front();
+						// comptr auto delete
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_rootSignatures.empty())
+				{
+					if (destroyer_rootSignatures.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						destroyer_rootSignatures.pop_front();
 						// comptr auto delete
 					}
 					else
