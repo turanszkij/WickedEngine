@@ -1309,9 +1309,10 @@ using namespace DX12_Internal;
 			}
 			auto shader_internal = to_internal(shader);
 
-			// Resources:
+			for (auto& PSO_table : shader_internal->tables)
 			{
-				const auto& PSO_table = shader_internal->tables.front();
+
+				// Resources:
 				if (!PSO_table.resources.empty())
 				{
 					DescriptorHeap& heap = heaps_resource[currentheap_resource];
@@ -1458,11 +1459,8 @@ using namespace DX12_Internal;
 					heap.ringOffset += (uint32_t)PSO_table.resources.size();
 					root_parameter_index++;
 				}
-			}
 
-			// Samplers:
-			{
-				const auto& PSO_table = shader_internal->tables.front();
+				// Samplers:
 				if (!PSO_table.samplers.empty())
 				{
 					DescriptorHeap& heap = heaps_sampler[currentheap_sampler];
@@ -1517,6 +1515,7 @@ using namespace DX12_Internal;
 					heap.ringOffset += (uint32_t)PSO_table.samplers.size();
 					root_parameter_index++;
 				}
+
 			}
 
 		}
@@ -1783,7 +1782,7 @@ using namespace DX12_Internal;
 
 		D3D12_FEATURE_DATA_D3D12_OPTIONS5 features_5;
 		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &features_5, sizeof(features_5));
-		//RAYTRACING = features_5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0;
+		RAYTRACING = features_5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0;
 
 
 		// Create common indirect command signatures:
@@ -2419,28 +2418,31 @@ using namespace DX12_Internal;
 		}
 
 
-		if (stage == CS)
+		if (stage == CS || stage == SHADERSTAGE_COUNT)
 		{
 			std::vector<D3D12_ROOT_PARAMETER> params;
 
-			if (!internal_state->tables.back().resources.empty())
+			for (auto& table : internal_state->tables)
 			{
-				params.emplace_back();
-				D3D12_ROOT_PARAMETER& param = params.back();
-				param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-				param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-				param.DescriptorTable.NumDescriptorRanges = (UINT)internal_state->tables.back().resources.size();
-				param.DescriptorTable.pDescriptorRanges = internal_state->tables.back().resources.data();
-			}
+				if (!table.resources.empty())
+				{
+					params.emplace_back();
+					D3D12_ROOT_PARAMETER& param = params.back();
+					param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+					param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+					param.DescriptorTable.NumDescriptorRanges = (UINT)table.resources.size();
+					param.DescriptorTable.pDescriptorRanges = table.resources.data();
+				}
 
-			if (!internal_state->tables.back().samplers.empty())
-			{
-				params.emplace_back();
-				D3D12_ROOT_PARAMETER& param = params.back();
-				param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-				param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-				param.DescriptorTable.NumDescriptorRanges = (UINT)internal_state->tables.back().samplers.size();
-				param.DescriptorTable.pDescriptorRanges = internal_state->tables.back().samplers.data();
+				if (!table.samplers.empty())
+				{
+					params.emplace_back();
+					D3D12_ROOT_PARAMETER& param = params.back();
+					param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+					param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+					param.DescriptorTable.NumDescriptorRanges = (UINT)table.samplers.size();
+					param.DescriptorTable.pDescriptorRanges = table.samplers.data();
+				}
 			}
 
 			D3D12_ROOT_SIGNATURE_DESC rootSigDesc = {};
@@ -2460,13 +2462,16 @@ using namespace DX12_Internal;
 			hr = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&internal_state->rootSignature));
 			assert(SUCCEEDED(hr));
 
-			D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {};
-			desc.CS.pShaderBytecode = pShader->code.data();
-			desc.CS.BytecodeLength = pShader->code.size();
-			desc.pRootSignature = internal_state->rootSignature.Get();
+			if (stage == CS)
+			{
+				D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {};
+				desc.CS.pShaderBytecode = pShader->code.data();
+				desc.CS.BytecodeLength = pShader->code.size();
+				desc.pRootSignature = internal_state->rootSignature.Get();
 
-			hr = device->CreateComputePipelineState(&desc, IID_PPV_ARGS(&internal_state->resource));
-			assert(SUCCEEDED(hr));
+				hr = device->CreateComputePipelineState(&desc, IID_PPV_ARGS(&internal_state->resource));
+				assert(SUCCEEDED(hr));
+			}
 		}
 
 		return SUCCEEDED(hr);
@@ -2840,6 +2845,7 @@ using namespace DX12_Internal;
 
 		D3D12_GLOBAL_ROOT_SIGNATURE global_rootsig = {};
 		{
+
 			auto shader_internal = to_internal(pDesc->shaderlibraries.front().shader); // think better way
 			subobjects.emplace_back();
 			auto& subobject = subobjects.back();
@@ -4536,9 +4542,12 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd)
 	{
 		prev_pipeline_hash[cmd] = 0;
+		GetFrameResources().descriptors[cmd].dirty_graphics_compute[1] = true;
+		active_cs[cmd] = rtpso->desc.shaderlibraries.front().shader; // we just take the first shader (todo: better)
 
 		auto internal_state = to_internal(rtpso);
 		GetDirectCommandList(cmd)->SetPipelineState1(internal_state->resource.Get());
+		GetDirectCommandList(cmd)->SetComputeRootSignature(to_internal(active_cs[cmd])->rootSignature.Get());
 	}
 	void GraphicsDevice_DX12::DispatchRays(const DispatchRaysDesc* desc, CommandList cmd)
 	{
