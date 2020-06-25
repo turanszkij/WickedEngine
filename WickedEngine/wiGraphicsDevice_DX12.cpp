@@ -1025,6 +1025,12 @@ namespace DX12_Internal
 		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		ComPtr<ID3D12StateObject> resource;
 
+		std::vector<std::wstring> export_strings;
+		std::vector<D3D12_EXPORT_DESC> exports;
+		std::vector<D3D12_DXIL_LIBRARY_DESC> library_descs;
+		std::vector<std::wstring> group_strings;
+		std::vector<D3D12_HIT_GROUP_DESC> hitgroup_descs;
+
 		~RTPipelineState_DX12()
 		{
 			allocationhandler->destroylocker.lock();
@@ -1313,13 +1319,20 @@ using namespace DX12_Internal;
 							{
 								auto internal_state = to_internal(resource);
 
-								if (subresource < 0)
+								if (resource->IsAccelerationStructure())
 								{
-									device->device->CreateShaderResourceView(internal_state->resource.Get(), &internal_state->srv, dst);
+									device->device->CreateShaderResourceView(nullptr, &internal_state->srv, dst);
 								}
 								else
 								{
-									device->device->CreateShaderResourceView(internal_state->resource.Get(), &internal_state->subresources_srv[subresource], dst);
+									if (subresource < 0)
+									{
+										device->device->CreateShaderResourceView(internal_state->resource.Get(), &internal_state->srv, dst);
+									}
+									else
+									{
+										device->device->CreateShaderResourceView(internal_state->resource.Get(), &internal_state->subresources_srv[subresource], dst);
+									}
 								}
 							}
 						}
@@ -2759,34 +2772,45 @@ using namespace DX12_Internal;
 			subobject.pDesc = &global_rootsig;
 		}
 
-		std::vector<D3D12_DXIL_LIBRARY_DESC> library_descs;
-		library_descs.reserve(pDesc->shaderlibraries.size());
+		internal_state->exports.reserve(pDesc->shaderlibraries.size());
+		internal_state->library_descs.reserve(pDesc->shaderlibraries.size());
 		for(auto& x : pDesc->shaderlibraries)
 		{
 			subobjects.emplace_back();
 			auto& subobject = subobjects.back();
 			subobject = {};
 			subobject.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY;
-			library_descs.emplace_back();
-			auto& library_desc = library_descs.back();
+			internal_state->library_descs.emplace_back();
+			auto& library_desc = internal_state->library_descs.back();
 			library_desc = {};
 			library_desc.DXILLibrary.pShaderBytecode = x.shader->code.data();
 			library_desc.DXILLibrary.BytecodeLength = x.shader->code.size();
-			// todo export functions
+			library_desc.NumExports = 1;
+
+			internal_state->exports.emplace_back();
+			D3D12_EXPORT_DESC& export_desc = internal_state->exports.back();
+			internal_state->export_strings.emplace_back();
+			wiHelper::StringConvert(x.function_name, internal_state->export_strings.back());
+			export_desc.Name = internal_state->export_strings.back().c_str();
+			library_desc.pExports = &export_desc;
+
 			subobject.pDesc = &library_desc;
 		}
 
-		std::vector<std::wstring> hitgroup_strings;
-		std::vector<D3D12_HIT_GROUP_DESC> hitgroup_descs;
-		hitgroup_descs.reserve(pDesc->hitgroups.size());
+		internal_state->hitgroup_descs.reserve(pDesc->hitgroups.size());
 		for (auto& x : pDesc->hitgroups)
 		{
+			internal_state->group_strings.emplace_back();
+			wiHelper::StringConvert(x.name, internal_state->group_strings.back());
+
+			if (x.type == ShaderHitGroup::GENERAL)
+				continue;
 			subobjects.emplace_back();
 			auto& subobject = subobjects.back();
 			subobject = {};
 			subobject.Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
-			hitgroup_descs.emplace_back();
-			auto& hitgroup_desc = hitgroup_descs.back();
+			internal_state->hitgroup_descs.emplace_back();
+			auto& hitgroup_desc = internal_state->hitgroup_descs.back();
 			hitgroup_desc = {};
 			switch (x.type)
 			{
@@ -2800,27 +2824,19 @@ using namespace DX12_Internal;
 			}
 			if (!x.name.empty())
 			{
-				hitgroup_strings.emplace_back();
-				wiHelper::StringConvert(x.name, hitgroup_strings.back());
-				hitgroup_desc.HitGroupExport = hitgroup_strings.back().c_str();
+				hitgroup_desc.HitGroupExport = internal_state->group_strings.back().c_str();
 			}
-			if (!x.closesthit_shader_name.empty())
+			if (x.closesthit_shader != ~0)
 			{
-				hitgroup_strings.emplace_back();
-				wiHelper::StringConvert(x.closesthit_shader_name, hitgroup_strings.back());
-				hitgroup_desc.ClosestHitShaderImport = hitgroup_strings.back().c_str();
+				hitgroup_desc.ClosestHitShaderImport = internal_state->exports[x.closesthit_shader].Name;
 			}
-			if (!x.anyhit_shader_name.empty())
+			if (x.anyhit_shader != ~0)
 			{
-				hitgroup_strings.emplace_back();
-				wiHelper::StringConvert(x.anyhit_shader_name, hitgroup_strings.back());
-				hitgroup_desc.AnyHitShaderImport = hitgroup_strings.back().c_str();
+				hitgroup_desc.ClosestHitShaderImport = internal_state->exports[x.anyhit_shader].Name;
 			}
-			if (!x.intersection_shader_name.empty())
+			if (x.intersection_shader != ~0)
 			{
-				hitgroup_strings.emplace_back();
-				wiHelper::StringConvert(x.intersection_shader_name, hitgroup_strings.back());
-				hitgroup_desc.IntersectionShaderImport = hitgroup_strings.back().c_str();
+				hitgroup_desc.ClosestHitShaderImport = internal_state->exports[x.intersection_shader].Name;
 			}
 			subobject.pDesc = &hitgroup_desc;
 		}
@@ -3206,6 +3222,17 @@ using namespace DX12_Internal;
 		desc->InstanceContributionToHitGroupIndex = instance->InstanceContributionToHitGroupIndex;
 		desc->Flags = instance->Flags;
 	}
+	void GraphicsDevice_DX12::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest)
+	{
+		auto internal_state = to_internal(rtpso);
+
+		ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
+		HRESULT hr = internal_state->resource.As(&stateObjectProperties);
+		assert(SUCCEEDED(hr));
+
+		void* identifier = stateObjectProperties->GetShaderIdentifier(internal_state->group_strings[group_index].c_str());
+		memcpy(dest, identifier, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+	}
 
 	bool GraphicsDevice_DX12::DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest)
 	{
@@ -3223,18 +3250,6 @@ using namespace DX12_Internal;
 				internal_state->resource->SetName(text);
 			}
 		}
-	}
-	void* GraphicsDevice_DX12::GetShaderIdentifier(const RaytracingPipelineState* rtpso, const char* name)
-	{
-		auto internal_state = to_internal(rtpso);
-
-		ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
-		HRESULT hr = internal_state->resource.As(&stateObjectProperties);
-		assert(SUCCEEDED(hr));
-
-		wchar_t wname[1024];
-		wiHelper::StringConvert(name, wname);
-		return stateObjectProperties->GetShaderIdentifier(wname);
 	}
 
 	void GraphicsDevice_DX12::PresentBegin(CommandList cmd)

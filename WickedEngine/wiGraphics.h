@@ -783,20 +783,30 @@ namespace wiGraphics
 
 	struct ShaderLibrary
 	{
+		enum TYPE
+		{
+			RAYGENERATION,
+			MISS,
+			CLOSESTHIT,
+			ANYHIT,
+			INTERSECTION,
+		} type = RAYGENERATION;
 		const Shader* shader = nullptr;
-		std::vector<std::string> export_functions;
+		std::string function_name;
 	};
 	struct ShaderHitGroup
 	{
 		enum TYPE
 		{
+			GENERAL, // raygen or miss
 			TRIANGLES,
 			PROCEDURAL,
 		} type = TRIANGLES;
 		std::string name;
-		std::string closesthit_shader_name;
-		std::string anyhit_shader_name;
-		std::string intersection_shader_name;
+		uint32_t general_shader = ~0;
+		uint32_t closesthit_shader = ~0;
+		uint32_t anyhit_shader = ~0;
+		uint32_t intersection_shader = ~0;
 	};
 	struct RaytracingPipelineStateDesc
 	{

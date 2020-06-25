@@ -190,11 +190,11 @@ namespace wiGraphics
 		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
 
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
+		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) override;
 
 		bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) override;
 
 		void SetName(GPUResource* pResource, const char* name) override;
-		void* GetShaderIdentifier(const RaytracingPipelineState* rtpso, const char* name) override;
 
 		void PresentBegin(CommandList cmd) override;
 		void PresentEnd(CommandList cmd) override;

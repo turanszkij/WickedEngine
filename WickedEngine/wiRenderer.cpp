@@ -2178,11 +2178,33 @@ void LoadShaders()
 			RaytracingPipelineStateDesc rtdesc;
 			rtdesc.shaderlibraries.emplace_back();
 			rtdesc.shaderlibraries.back().shader = &raytracingShaders[RTTYPE_RTAO];
+			rtdesc.shaderlibraries.back().function_name = "RTAO_Raygen";
+			rtdesc.shaderlibraries.back().type = ShaderLibrary::RAYGENERATION;
+
+			rtdesc.shaderlibraries.emplace_back();
+			rtdesc.shaderlibraries.back().shader = &raytracingShaders[RTTYPE_RTAO];
+			rtdesc.shaderlibraries.back().function_name = "RTAO_ClosestHit";
+			rtdesc.shaderlibraries.back().type = ShaderLibrary::CLOSESTHIT;
+
+			rtdesc.shaderlibraries.emplace_back();
+			rtdesc.shaderlibraries.back().shader = &raytracingShaders[RTTYPE_RTAO];
+			rtdesc.shaderlibraries.back().function_name = "RTAO_Miss";
+			rtdesc.shaderlibraries.back().type = ShaderLibrary::MISS;
+
+			rtdesc.hitgroups.emplace_back();
+			rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
+			rtdesc.hitgroups.back().name = "RTAO_Raygen";
+			rtdesc.hitgroups.back().general_shader = 0;
+
+			rtdesc.hitgroups.emplace_back();
+			rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
+			rtdesc.hitgroups.back().name = "RTAO_Miss";
+			rtdesc.hitgroups.back().general_shader = 2;
 
 			rtdesc.hitgroups.emplace_back();
 			rtdesc.hitgroups.back().type = ShaderHitGroup::TRIANGLES;
 			rtdesc.hitgroups.back().name = "RTAO_Hitgroup";
-			rtdesc.hitgroups.back().closesthit_shader_name = "RTAO_ClosestHit";
+			rtdesc.hitgroups.back().closesthit_shader = 1;
 
 			rtdesc.max_trace_recursion_depth = 1;
 			rtdesc.max_payload_size_in_bytes = sizeof(float);
@@ -3599,8 +3621,6 @@ void RenderImpostors(const CameraComponent& camera, RENDERPASS renderPass, Comma
 	{
 		GraphicsDevice* device = GetDevice();
 
-		device->EventBegin("RenderImpostors", cmd);
-
 		uint32_t instanceCount = 0;
 		for (size_t impostorID = 0; impostorID < scene.impostors.GetCount(); ++impostorID)
 		{
@@ -3615,6 +3635,8 @@ void RenderImpostors(const CameraComponent& camera, RENDERPASS renderPass, Comma
 		{
 			return;
 		}
+
+		device->EventBegin("RenderImpostors", cmd);
 
 		// Pre-allocate space for all the instances in GPU-buffer:
 		const uint32_t instanceDataSize = sizeof(Instance);
@@ -10325,13 +10347,17 @@ void Postprocess_RTAO(
 		GraphicsDevice::GPUAllocation shadertable_miss = device->AllocateGPU(shaderIdentifierSize, cmd);
 		GraphicsDevice::GPUAllocation shadertable_hitgroup = device->AllocateGPU(shaderIdentifierSize, cmd);
 
-		void* rayGenShaderIdentifier = device->GetShaderIdentifier(&RTPSO_rtao, "RTAO_Raygen");
-		void* missShaderIdentifier = device->GetShaderIdentifier(&RTPSO_rtao, "RTAO_Miss");
-		void* hitGroupShaderIdentifier = device->GetShaderIdentifier(&RTPSO_rtao, "RTAO_Hitgroup");
+		//void* rayGenShaderIdentifier = device->GetShaderIdentifier(&RTPSO_rtao, "RTAO_Raygen");
+		//void* missShaderIdentifier = device->GetShaderIdentifier(&RTPSO_rtao, "RTAO_Miss");
+		//void* hitGroupShaderIdentifier = device->GetShaderIdentifier(&RTPSO_rtao, "RTAO_Hitgroup");
 
-		memcpy(shadertable_raygen.data, rayGenShaderIdentifier, shaderIdentifierSize);
-		memcpy(shadertable_miss.data, missShaderIdentifier, shaderIdentifierSize);
-		memcpy(shadertable_hitgroup.data, hitGroupShaderIdentifier, shaderIdentifierSize);
+		//memcpy(shadertable_raygen.data, rayGenShaderIdentifier, shaderIdentifierSize);
+		//memcpy(shadertable_miss.data, missShaderIdentifier, shaderIdentifierSize);
+		//memcpy(shadertable_hitgroup.data, hitGroupShaderIdentifier, shaderIdentifierSize);
+
+		device->WriteShaderIdentifier(&RTPSO_rtao, 0, shadertable_raygen.data);
+		device->WriteShaderIdentifier(&RTPSO_rtao, 1, shadertable_miss.data);
+		device->WriteShaderIdentifier(&RTPSO_rtao, 2, shadertable_hitgroup.data);
 
 		DispatchRaysDesc dispatchraysdesc;
 		dispatchraysdesc.raygeneration.buffer = shadertable_raygen.buffer;

@@ -49,11 +49,11 @@ namespace wiGraphics
 		virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) = 0;
 
 		virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) {}
+		virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) {}
 
 		virtual bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) = 0;
 
 		virtual void SetName(GPUResource* pResource, const char* name) = 0;
-		virtual void* GetShaderIdentifier(const RaytracingPipelineState* rtpso, const char* name) { return nullptr; }
 
 		virtual void PresentBegin(CommandList cmd) = 0;
 		virtual void PresentEnd(CommandList cmd) = 0;

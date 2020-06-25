@@ -27,11 +27,14 @@
 namespace wiGraphics
 {
 
+	PFN_vkCreateRayTracingPipelinesNV GraphicsDevice_Vulkan::createRayTracingPipelinesNV = nullptr;
 	PFN_vkCreateAccelerationStructureNV GraphicsDevice_Vulkan::createAccelerationStructureNV = nullptr;
 	PFN_vkBindAccelerationStructureMemoryNV GraphicsDevice_Vulkan::bindAccelerationStructureMemoryNV = nullptr;
 	PFN_vkDestroyAccelerationStructureNV GraphicsDevice_Vulkan::destroyAccelerationStructureNV = nullptr;
 	PFN_vkGetAccelerationStructureMemoryRequirementsNV GraphicsDevice_Vulkan::getAccelerationStructureMemoryRequirementsNV = nullptr;
+	PFN_vkGetRayTracingShaderGroupHandlesNV GraphicsDevice_Vulkan::getRayTracingShaderGroupHandlesNV = nullptr;
 	PFN_vkCmdBuildAccelerationStructureNV GraphicsDevice_Vulkan::cmdBuildAccelerationStructureNV = nullptr;
+	PFN_vkCmdTraceRaysNV GraphicsDevice_Vulkan::cmdTraceRaysNV = nullptr;
 
 namespace Vulkan_Internal
 {
@@ -957,6 +960,19 @@ namespace Vulkan_Internal
 			allocationhandler->destroylocker.unlock();
 		}
 	};
+	struct RTPipelineState_Vulkan
+	{
+		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
+		VkPipeline pipeline;
+
+		~RTPipelineState_Vulkan()
+		{
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+			if (pipeline) allocationhandler->destroyer_pipelines.push_back(std::make_pair(pipeline, framecount));
+			allocationhandler->destroylocker.unlock();
+		}
+	};
 
 	Buffer_Vulkan* to_internal(const GPUBuffer* param)
 	{
@@ -989,6 +1005,10 @@ namespace Vulkan_Internal
 	BVH_Vulkan* to_internal(const RaytracingAccelerationStructure* param)
 	{
 		return static_cast<BVH_Vulkan*>(param->internal_state.get());
+	}
+	RTPipelineState_Vulkan* to_internal(const RaytracingPipelineState* param)
+	{
+		return static_cast<RTPipelineState_Vulkan*>(param->internal_state.get());
 	}
 }
 using namespace Vulkan_Internal;
@@ -1598,13 +1618,19 @@ using namespace Vulkan_Internal;
 			std::vector<VkPhysicalDevice> devices(deviceCount);
 			vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
+			VkPhysicalDeviceRayTracingPropertiesNV raytracing_properties = {};
+			raytracing_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_NV;
+
 			for (const auto& device : devices) 
 			{
 				if (isDeviceSuitable(device, surface)) 
 				{
-					auto props = VkPhysicalDeviceProperties{};
-					vkGetPhysicalDeviceProperties(device, &props);
-					bool discrete = props.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+					VkPhysicalDeviceProperties2 props = {};
+					props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+					props.pNext = &raytracing_properties;
+
+					vkGetPhysicalDeviceProperties2(device, &props);
+					bool discrete = props.properties.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
 					if (discrete || physicalDevice == VK_NULL_HANDLE)
 					{
 						physicalDevice = device;
@@ -1641,18 +1667,19 @@ using namespace Vulkan_Internal;
 
 			assert(physicalDeviceProperties.limits.timestampComputeAndGraphics == VK_TRUE);
 
-			VkPhysicalDeviceFeatures deviceFeatures = {};
-			vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
+			VkPhysicalDeviceFeatures2 deviceFeatures2 = {};
+			deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+			vkGetPhysicalDeviceFeatures2(physicalDevice, &deviceFeatures2);
 
-			assert(deviceFeatures.imageCubeArray == VK_TRUE);
-			assert(deviceFeatures.independentBlend == VK_TRUE);
-			assert(deviceFeatures.geometryShader == VK_TRUE);
-			assert(deviceFeatures.samplerAnisotropy == VK_TRUE);
-			assert(deviceFeatures.shaderClipDistance == VK_TRUE);
-			assert(deviceFeatures.textureCompressionBC == VK_TRUE);
-			assert(deviceFeatures.occlusionQueryPrecise == VK_TRUE);
-			TESSELLATION = deviceFeatures.tessellationShader == VK_TRUE;
-			UAV_LOAD_FORMAT_COMMON = deviceFeatures.shaderStorageImageExtendedFormats == VK_TRUE;
+			assert(deviceFeatures2.features.imageCubeArray == VK_TRUE);
+			assert(deviceFeatures2.features.independentBlend == VK_TRUE);
+			assert(deviceFeatures2.features.geometryShader == VK_TRUE);
+			assert(deviceFeatures2.features.samplerAnisotropy == VK_TRUE);
+			assert(deviceFeatures2.features.shaderClipDistance == VK_TRUE);
+			assert(deviceFeatures2.features.textureCompressionBC == VK_TRUE);
+			assert(deviceFeatures2.features.occlusionQueryPrecise == VK_TRUE);
+			TESSELLATION = deviceFeatures2.features.tessellationShader == VK_TRUE;
+			UAV_LOAD_FORMAT_COMMON = deviceFeatures2.features.shaderStorageImageExtendedFormats == VK_TRUE;
 			RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS = true; // let's hope for the best...
 			
 			VkFormatProperties formatProperties = { 0 };
@@ -1665,7 +1692,8 @@ using namespace Vulkan_Internal;
 			createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 			createInfo.pQueueCreateInfos = queueCreateInfos.data();
 
-			createInfo.pEnabledFeatures = &deviceFeatures;
+			createInfo.pEnabledFeatures = nullptr;
+			createInfo.pNext = &deviceFeatures2;
 
 			std::vector<const char*> enabled_deviceExtensions = required_deviceExtensions;
 
@@ -1674,10 +1702,15 @@ using namespace Vulkan_Internal;
 			vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, available_deviceExtensions.data());
 			
 #ifdef ENABLE_RAYTRACING_EXTENSION
+			VkPhysicalDeviceRayTracingFeaturesKHR raytracing_features = {};
+			raytracing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_FEATURES_KHR;
+			raytracing_features.rayTracing = VK_TRUE;
 			if (checkDeviceExtensionSupport(VK_NV_RAY_TRACING_EXTENSION_NAME, available_deviceExtensions))
 			{
+				SHADER_IDENTIFIER_SIZE = raytracing_properties.shaderGroupHandleSize;
 				RAYTRACING = true;
 				enabled_deviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
+				//deviceFeatures2.pNext = &raytracing_features;
 			}
 #endif // ENABLE_RAYTRACING_EXTENSION
 
@@ -1719,11 +1752,14 @@ using namespace Vulkan_Internal;
 
 		if (RAYTRACING)
 		{
+			createRayTracingPipelinesNV = (PFN_vkCreateRayTracingPipelinesNV)vkGetDeviceProcAddr(device, "vkCreateRayTracingPipelinesNV");
 			createAccelerationStructureNV = (PFN_vkCreateAccelerationStructureNV)vkGetDeviceProcAddr(device, "vkCreateAccelerationStructureNV");
 			bindAccelerationStructureMemoryNV = (PFN_vkBindAccelerationStructureMemoryNV)vkGetDeviceProcAddr(device, "vkBindAccelerationStructureMemoryNV");
 			destroyAccelerationStructureNV = (PFN_vkDestroyAccelerationStructureNV)vkGetDeviceProcAddr(device, "vkDestroyAccelerationStructureNV");
 			getAccelerationStructureMemoryRequirementsNV = (PFN_vkGetAccelerationStructureMemoryRequirementsNV)vkGetDeviceProcAddr(device, "vkGetAccelerationStructureMemoryRequirementsNV");
+			getRayTracingShaderGroupHandlesNV = (PFN_vkGetRayTracingShaderGroupHandlesNV)vkGetDeviceProcAddr(device, "vkGetRayTracingShaderGroupHandlesNV");
 			cmdBuildAccelerationStructureNV = (PFN_vkCmdBuildAccelerationStructureNV)vkGetDeviceProcAddr(device, "vkCmdBuildAccelerationStructureNV");
+			cmdTraceRaysNV = (PFN_vkCmdTraceRaysNV)vkGetDeviceProcAddr(device, "vkCmdTraceRaysNV");
 		}
 
 
@@ -2726,7 +2762,7 @@ using namespace Vulkan_Internal;
 			layoutBindings.push_back(layoutBinding);
 		}
 
-		if (stage == CS)
+		if (stage == CS || stage == SHADERSTAGE_COUNT)
 		{
 			VkDescriptorSetLayoutCreateInfo descriptorSetlayoutInfo = {};
 			descriptorSetlayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -2744,17 +2780,20 @@ using namespace Vulkan_Internal;
 			res = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &internal_state->pipelineLayout_cs);
 			assert(res == VK_SUCCESS);
 
-			VkComputePipelineCreateInfo pipelineInfo = {};
-			pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-			pipelineInfo.layout = internal_state->pipelineLayout_cs;
-			pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+			if (stage == CS)
+			{
+				VkComputePipelineCreateInfo pipelineInfo = {};
+				pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+				pipelineInfo.layout = internal_state->pipelineLayout_cs;
+				pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-			// Create compute pipeline state in place:
-			pipelineInfo.stage = internal_state->stageInfo;
+				// Create compute pipeline state in place:
+				pipelineInfo.stage = internal_state->stageInfo;
 
 
-			res = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &internal_state->pipeline_cs);
-			assert(res == VK_SUCCESS);
+				res = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &internal_state->pipeline_cs);
+				assert(res == VK_SUCCESS);
+			}
 		}
 
 		return res == VK_SUCCESS;
@@ -3337,11 +3376,11 @@ using namespace Vulkan_Internal;
 
 				if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE)
 				{
-					geometry.flags |= VK_GEOMETRY_OPAQUE_BIT_KHR;
+					geometry.flags |= VK_GEOMETRY_OPAQUE_BIT_NV;
 				}
 				if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_NO_DUPLICATE_ANYHIT_INVOCATION)
 				{
-					geometry.flags |= VK_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION_BIT_KHR;
+					geometry.flags |= VK_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION_BIT_NV;
 				}
 
 				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES)
@@ -3448,7 +3487,87 @@ using namespace Vulkan_Internal;
 	}
 	bool GraphicsDevice_Vulkan::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso)
 	{
-		return true;
+		auto internal_state = std::make_shared<RTPipelineState_Vulkan>();
+		internal_state->allocationhandler = allocationhandler;
+		rtpso->internal_state = internal_state;
+
+		rtpso->desc = *pDesc;
+
+		VkRayTracingPipelineCreateInfoNV info = {};
+		info.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_NV;
+		info.flags = 0;
+
+		std::vector<VkPipelineShaderStageCreateInfo> stages;
+		for (auto& x : pDesc->shaderlibraries)
+		{
+			stages.emplace_back();
+			auto& stage = stages.back();
+			stage = {};
+			stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			stage.module = to_internal(x.shader)->shaderModule;
+			switch (x.type)
+			{
+			default:
+			case ShaderLibrary::RAYGENERATION:
+				stage.stage = VK_SHADER_STAGE_RAYGEN_BIT_NV;
+				break;
+			case ShaderLibrary::MISS:
+				stage.stage = VK_SHADER_STAGE_MISS_BIT_NV;
+				break;
+			case ShaderLibrary::CLOSESTHIT:
+				stage.stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
+				break;
+			case ShaderLibrary::ANYHIT:
+				stage.stage = VK_SHADER_STAGE_ANY_HIT_BIT_NV;
+				break;
+			case ShaderLibrary::INTERSECTION:
+				stage.stage = VK_SHADER_STAGE_INTERSECTION_BIT_NV;
+				break;
+			}
+			stage.pName = x.function_name.c_str();
+		}
+		info.stageCount = (uint32_t)stages.size();
+		info.pStages = stages.data();
+
+		std::vector<VkRayTracingShaderGroupCreateInfoNV> groups;
+		groups.reserve(pDesc->hitgroups.size());
+		for (auto& x : pDesc->hitgroups)
+		{
+			groups.emplace_back();
+			auto& group = groups.back();
+			group = {};
+			group.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV;
+			switch (x.type)
+			{
+			default:
+			case ShaderHitGroup::GENERAL:
+				group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_NV;
+				break;
+			case ShaderHitGroup::TRIANGLES:
+				group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV;
+				break;
+			case ShaderHitGroup::PROCEDURAL:
+				group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_NV;
+				break;
+			}
+			group.generalShader = x.general_shader;
+			group.closestHitShader = x.closesthit_shader;
+			group.anyHitShader = x.anyhit_shader;
+			group.intersectionShader = x.intersection_shader;
+		}
+		info.groupCount = (uint32_t)groups.size();
+		info.pGroups = groups.data();
+
+		info.maxRecursionDepth = pDesc->max_trace_recursion_depth;
+		info.layout = to_internal(pDesc->shaderlibraries.front().shader)->pipelineLayout_cs; // think better way
+
+		info.basePipelineHandle = VK_NULL_HANDLE;
+		info.basePipelineIndex = 0;
+
+		VkResult res = createRayTracingPipelinesNV(device, VK_NULL_HANDLE, 1, &info, nullptr, &internal_state->pipeline);
+		assert(res == VK_SUCCESS);
+
+		return res == VK_SUCCESS;
 	}
 
 	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount)
@@ -3650,7 +3769,11 @@ using namespace Vulkan_Internal;
 		desc->instanceShaderBindingTableRecordOffset = instance->InstanceContributionToHitGroupIndex;
 		desc->flags = instance->Flags;
 	}
-
+	void GraphicsDevice_Vulkan::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest)
+	{
+		VkResult res = getRayTracingShaderGroupHandlesNV(device, to_internal(rtpso)->pipeline, group_index, 1, SHADER_IDENTIFIER_SIZE, dest);
+		assert(res == VK_SUCCESS);
+	}
 
 	bool GraphicsDevice_Vulkan::DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest)
 	{
@@ -3675,10 +3798,6 @@ using namespace Vulkan_Internal;
 
 		VkResult res = setDebugUtilsObjectNameEXT(device, &info);
 		assert(res == VK_SUCCESS);
-	}
-	void* GraphicsDevice_Vulkan::GetShaderIdentifier(const RaytracingPipelineState* rtpso, const char* name)
-	{
-		return nullptr;
 	}
 
 	void GraphicsDevice_Vulkan::PresentBegin(CommandList cmd)
@@ -4904,8 +5023,8 @@ using namespace Vulkan_Internal;
 				barrierdesc.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
 				if (RAYTRACING)
 				{
-					barrierdesc.srcAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-					barrierdesc.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+					barrierdesc.srcAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_NV;
+					barrierdesc.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NV;
 				}
 			}
 			break;
@@ -5043,11 +5162,22 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd)
 	{
-
+		vkCmdBindPipeline(GetDirectCommandList(cmd), VK_PIPELINE_BIND_POINT_RAY_TRACING_NV, to_internal(rtpso)->pipeline);
 	}
 	void GraphicsDevice_Vulkan::DispatchRays(const DispatchRaysDesc* desc, CommandList cmd)
 	{
+		VkBuffer raygen = desc->raygeneration.buffer ? to_internal(desc->raygeneration.buffer)->resource : VK_NULL_HANDLE;
+		VkBuffer miss = desc->miss.buffer ? to_internal(desc->miss.buffer)->resource : VK_NULL_HANDLE;
+		VkBuffer hitgroup = desc->hitgroup.buffer ? to_internal(desc->hitgroup.buffer)->resource : VK_NULL_HANDLE;
+		VkBuffer callable = desc->callable.buffer ? to_internal(desc->callable.buffer)->resource : VK_NULL_HANDLE;
 
+		cmdTraceRaysNV(GetDirectCommandList(cmd),
+			raygen, desc->raygeneration.offset,
+			miss, desc->miss.offset, desc->miss.stride,
+			hitgroup, desc->hitgroup.offset, desc->hitgroup.stride,
+			callable, desc->callable.offset, desc->callable.stride,
+			desc->Width, desc->Height, desc->Depth
+		);
 	}
 
 	GraphicsDevice::GPUAllocation GraphicsDevice_Vulkan::AllocateGPU(size_t dataSize, CommandList cmd)
