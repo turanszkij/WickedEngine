@@ -55,32 +55,20 @@ namespace wiGraphics
 		D3D12MA::Allocation* allocation_querypool_timestamp_readback = nullptr;
 		D3D12MA::Allocation* allocation_querypool_occlusion_readback = nullptr;
 
-		struct DescriptorAllocator
-		{
-			Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> heap;
-			size_t					heap_begin;
-			uint32_t				itemCount;
-			uint32_t				maxCount;
-			uint32_t				itemSize;
-			bool*					itemsAlive = nullptr;
-			uint32_t				lastAlloc;
-			wiSpinLock				lock;
-
-			void init(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t maxCount);
-			~DescriptorAllocator();
-
-			D3D12_CPU_DESCRIPTOR_HANDLE allocate();
-			void clear();
-			void free(D3D12_CPU_DESCRIPTOR_HANDLE descriptorHandle);
-		};
-
+		uint32_t rtv_descriptor_size = 0;
+		uint32_t dsv_descriptor_size = 0;
 		uint32_t resource_descriptor_size = 0;
 		uint32_t sampler_descriptor_size = 0;
+
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorheap_RTV;
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorheap_DSV;
+
+		D3D12_CPU_DESCRIPTOR_HANDLE rtv_descriptor_heap_start = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE dsv_descriptor_heap_start = {};
 
 		struct FrameResources
 		{
 			Microsoft::WRL::ComPtr<ID3D12Resource> backBuffer;
-			D3D12_CPU_DESCRIPTOR_HANDLE		backBufferRTV = {};
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[COMMANDLIST_COUNT];
 			Microsoft::WRL::ComPtr<ID3D12CommandList> commandLists[COMMANDLIST_COUNT];
 
@@ -169,6 +157,13 @@ namespace wiGraphics
 		const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
 		const Shader* active_cs[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
+
+		struct Query_Resolve
+		{
+			GPU_QUERY_TYPE type;
+			UINT index;
+		};
+		std::vector<Query_Resolve> query_resolves[COMMANDLIST_COUNT] = {};
 
 		std::atomic<uint8_t> commandlist_count{ 0 };
 		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> free_commandlists;
@@ -268,20 +263,12 @@ namespace wiGraphics
 			std::mutex destroylocker;
 			std::deque<std::pair<D3D12MA::Allocation*, uint64_t>> destroyer_allocations;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, uint64_t>> destroyer_resources;
-			std::deque<std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, uint64_t>> destroyer_resourceviews;
-			std::deque<std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, uint64_t>> destroyer_rtvs;
-			std::deque<std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, uint64_t>> destroyer_dsvs;
-			std::deque<std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, uint64_t>> destroyer_samplers;
 			std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_timestamp;
 			std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_occlusion;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12PipelineState>, uint64_t>> destroyer_pipelines;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12RootSignature>, uint64_t>> destroyer_rootSignatures;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12StateObject>, uint64_t>> destroyer_stateobjects;
 
-			DescriptorAllocator RTAllocator;
-			DescriptorAllocator DSAllocator;
-			DescriptorAllocator ResourceAllocator;
-			DescriptorAllocator SamplerAllocator;
 			wiContainers::ThreadSafeRingBuffer<uint32_t, timestamp_query_count> free_timestampqueries;
 			wiContainers::ThreadSafeRingBuffer<uint32_t, occlusion_query_count> free_occlusionqueries;
 
@@ -315,58 +302,6 @@ namespace wiGraphics
 					{
 						destroyer_resources.pop_front();
 						// comptr auto delete
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_resourceviews.empty())
-				{
-					if (destroyer_resourceviews.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_resourceviews.front();
-						destroyer_resourceviews.pop_front();
-						ResourceAllocator.free(item.first);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_rtvs.empty())
-				{
-					if (destroyer_rtvs.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_rtvs.front();
-						destroyer_rtvs.pop_front();
-						RTAllocator.free(item.first);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_dsvs.empty())
-				{
-					if (destroyer_dsvs.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_dsvs.front();
-						destroyer_dsvs.pop_front();
-						DSAllocator.free(item.first);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_samplers.empty())
-				{
-					if (destroyer_samplers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_samplers.front();
-						destroyer_samplers.pop_front();
-						SamplerAllocator.free(item.first);
 					}
 					else
 					{

@@ -993,6 +993,7 @@ namespace Vulkan_Internal
 }
 using namespace Vulkan_Internal;
 
+	// Allocators:
 
 	void GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::init(GraphicsDevice_Vulkan* device, size_t size)
 	{
@@ -1054,9 +1055,6 @@ using namespace Vulkan_Internal;
 		assert(address >= dataBegin && address < dataEnd);
 		return static_cast<uint64_t>(address - dataBegin);
 	}
-
-
-
 
 	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::init(GraphicsDevice_Vulkan* device)
 	{
