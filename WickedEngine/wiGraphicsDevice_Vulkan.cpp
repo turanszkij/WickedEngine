@@ -951,6 +951,7 @@ namespace Vulkan_Internal
 		VkAccelerationStructureCreateInfoKHR info = {};
 		std::vector<VkAccelerationStructureCreateGeometryTypeInfoKHR> geometries;
 		VkDeviceSize scratch_offset = 0;
+		VkDeviceAddress as_address = 0;
 
 		~BVH_Vulkan()
 		{
@@ -1695,7 +1696,6 @@ using namespace Vulkan_Internal;
 				enabled_deviceExtensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);
 				enabled_deviceExtensions.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
 				enabled_deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
-				enabled_deviceExtensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
 				features_1_2.pNext = &raytracing_features;
 			}
 #endif // ENABLE_RAYTRACING_EXTENSION
@@ -3474,6 +3474,7 @@ using namespace Vulkan_Internal;
 
 		VmaAllocationCreateInfo allocInfo = {};
 		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+		allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 
 		res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->buffer, &internal_state->allocation, nullptr);
 		assert(res == VK_SUCCESS);
@@ -3485,16 +3486,14 @@ using namespace Vulkan_Internal;
 		res = bindAccelerationStructureMemoryKHR(device, 1, &bind_info);
 		assert(res == VK_SUCCESS);
 
-
+		VkAccelerationStructureDeviceAddressInfoKHR addrinfo = {};
+		addrinfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
+		addrinfo.accelerationStructure = internal_state->resource;
+		internal_state->as_address = getAccelerationStructureDeviceAddressKHR(device, &addrinfo);
 
 		internal_state->scratch_offset = memrequirements.memoryRequirements.size;
 
 		return res == VK_SUCCESS;
-
-		//GPUBufferDesc scratch_desc;
-		//scratch_desc.ByteWidth = (uint32_t)std::max(memrequirements_scratch_build.memoryRequirements.size, memrequirements_scratch_update.memoryRequirements.size);
-
-		//return CreateBuffer(&scratch_desc, nullptr, &internal_state->scratch);
 	}
 	bool GraphicsDevice_Vulkan::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso)
 	{
@@ -3782,10 +3781,7 @@ using namespace Vulkan_Internal;
 
 		assert(instance->bottomlevel.IsAccelerationStructure());
 		auto internal_state = to_internal((RaytracingAccelerationStructure*)&instance->bottomlevel);
-		VkAccelerationStructureDeviceAddressInfoKHR addrinfo = {};
-		addrinfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
-		addrinfo.accelerationStructure = internal_state->resource;
-		desc->accelerationStructureReference = getAccelerationStructureDeviceAddressKHR(device, &addrinfo);
+		desc->accelerationStructureReference = internal_state->as_address;
 	}
 	void GraphicsDevice_Vulkan::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest)
 	{
@@ -5263,7 +5259,7 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::DispatchRays(const DispatchRaysDesc* desc, CommandList cmd)
 	{
-		//GetFrameResources().descriptors[cmd].validate(false, cmd, true);
+		GetFrameResources().descriptors[cmd].validate(false, cmd, true);
 
 		VkStridedBufferRegionKHR raygen = {};
 		raygen.buffer = desc->raygeneration.buffer ? to_internal(desc->raygeneration.buffer)->resource : VK_NULL_HANDLE;
