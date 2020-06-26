@@ -1231,6 +1231,7 @@ namespace wiScene
 				bufdesc.ByteWidth = desc.toplevel.count * (uint32_t)wiRenderer::GetDevice()->GetTopLevelAccelerationStructureInstanceSize();
 				bool success = wiRenderer::GetDevice()->CreateBuffer(&bufdesc, nullptr, &desc.toplevel.instanceBuffer);
 				assert(success);
+				wiRenderer::GetDevice()->SetName(&desc.toplevel.instanceBuffer, "TLAS.instanceBuffer");
 				success = wiRenderer::GetDevice()->CreateRaytracingAccelerationStructure(&desc, &TLAS);
 				assert(success);
 			}

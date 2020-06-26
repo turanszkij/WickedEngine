@@ -57,7 +57,15 @@ namespace wiGraphics
 		VkQueue graphicsQueue = VK_NULL_HANDLE;
 		VkQueue presentQueue = VK_NULL_HANDLE;
 
-		VkPhysicalDeviceProperties physicalDeviceProperties;
+		VkPhysicalDeviceProperties2 device_properties = {};
+		VkPhysicalDeviceVulkan11Properties device_properties_1_1 = {};
+		VkPhysicalDeviceVulkan12Properties device_properties_1_2 = {};
+		VkPhysicalDeviceRayTracingPropertiesKHR raytracing_properties = {};
+
+		VkPhysicalDeviceFeatures2 device_features2 = {};
+		VkPhysicalDeviceVulkan11Features features_1_1 = {};
+		VkPhysicalDeviceVulkan12Features features_1_2 = {};
+		VkPhysicalDeviceRayTracingFeaturesKHR raytracing_features = {};
 
 		VkQueue copyQueue = VK_NULL_HANDLE;
 		VkCommandPool copyCommandPool = VK_NULL_HANDLE;
@@ -82,7 +90,6 @@ namespace wiGraphics
 		VmaAllocation	nullImageAllocation = VK_NULL_HANDLE;
 		VkImageView		nullImageView = VK_NULL_HANDLE;
 		VkSampler		nullSampler = VK_NULL_HANDLE;
-		VkAccelerationStructureNV nullAccelerationStructure = VK_NULL_HANDLE;
 
 		uint64_t timestamp_frequency = 0;
 		VkQueryPool querypool_timestamp = VK_NULL_HANDLE;
@@ -145,7 +152,7 @@ namespace wiGraphics
 				void destroy();
 
 				void reset();
-				void validate(bool graphics, CommandList cmd);
+				void validate(bool graphics, CommandList cmd, bool raytracing = false);
 			};
 			DescriptorTableFrameAllocator descriptors[COMMANDLIST_COUNT];
 
@@ -189,15 +196,15 @@ namespace wiGraphics
 		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> free_commandlists;
 		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> active_commandlists;
 
-
-		static PFN_vkCreateRayTracingPipelinesNV createRayTracingPipelinesNV;
-		static PFN_vkCreateAccelerationStructureNV createAccelerationStructureNV;
-		static PFN_vkBindAccelerationStructureMemoryNV bindAccelerationStructureMemoryNV;
-		static PFN_vkDestroyAccelerationStructureNV destroyAccelerationStructureNV;
-		static PFN_vkGetAccelerationStructureMemoryRequirementsNV getAccelerationStructureMemoryRequirementsNV;
-		static PFN_vkGetRayTracingShaderGroupHandlesNV getRayTracingShaderGroupHandlesNV;
-		static PFN_vkCmdBuildAccelerationStructureNV cmdBuildAccelerationStructureNV;
-		static PFN_vkCmdTraceRaysNV cmdTraceRaysNV;
+		static PFN_vkCreateRayTracingPipelinesKHR createRayTracingPipelinesKHR;
+		static PFN_vkCreateAccelerationStructureKHR createAccelerationStructureKHR;
+		static PFN_vkBindAccelerationStructureMemoryKHR bindAccelerationStructureMemoryKHR;
+		static PFN_vkDestroyAccelerationStructureKHR destroyAccelerationStructureKHR;
+		static PFN_vkGetAccelerationStructureMemoryRequirementsKHR getAccelerationStructureMemoryRequirementsKHR;
+		static PFN_vkGetAccelerationStructureDeviceAddressKHR getAccelerationStructureDeviceAddressKHR;
+		static PFN_vkGetRayTracingShaderGroupHandlesKHR getRayTracingShaderGroupHandlesKHR;
+		static PFN_vkCmdBuildAccelerationStructureKHR cmdBuildAccelerationStructureKHR;
+		static PFN_vkCmdTraceRaysKHR cmdTraceRaysKHR;
 
 	public:
 		GraphicsDevice_Vulkan(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false);
@@ -296,7 +303,7 @@ namespace wiGraphics
 			std::deque<std::pair<VkImageView, uint64_t>> destroyer_imageviews;
 			std::deque<std::pair<std::pair<VkBuffer, VmaAllocation>, uint64_t>> destroyer_buffers;
 			std::deque<std::pair<VkBufferView, uint64_t>> destroyer_bufferviews;
-			std::deque<std::pair<VkAccelerationStructureNV, uint64_t>> destroyer_bvhs;
+			std::deque<std::pair<VkAccelerationStructureKHR, uint64_t>> destroyer_bvhs;
 			std::deque<std::pair<VkSampler, uint64_t>> destroyer_samplers;
 			std::deque<std::pair<VkDescriptorPool, uint64_t>> destroyer_descriptorPools;
 			std::deque<std::pair<VkDescriptorSetLayout, uint64_t>> destroyer_descriptorSetLayouts;
@@ -382,7 +389,7 @@ namespace wiGraphics
 					{
 						auto item = destroyer_bvhs.front();
 						destroyer_bvhs.pop_front();
-						destroyAccelerationStructureNV(device, item.first, nullptr);
+						destroyAccelerationStructureKHR(device, item.first, nullptr);
 					}
 					else
 					{
