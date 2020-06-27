@@ -897,6 +897,8 @@ namespace Vulkan_Internal
 		VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
 		std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
 
+		std::vector<spirv_cross::EntryPoint> entrypoints;
+
 		~Shader_Vulkan()
 		{
 			allocationhandler->destroylocker.lock();
@@ -2689,9 +2691,16 @@ using namespace Vulkan_Internal;
 		}
 
 		spirv_cross::Compiler comp((uint32_t*)pShader->code.data(), pShader->code.size() / sizeof(uint32_t));
+		auto entrypoints = comp.get_entry_points_and_stages();
 		auto active = comp.get_active_interface_variables();
 		spirv_cross::ShaderResources resources = comp.get_shader_resources(active);
 		comp.set_enabled_interface_variables(move(active));
+
+		internal_state->entrypoints.reserve(entrypoints.size());
+		for (auto& x : entrypoints)
+		{
+			internal_state->entrypoints.push_back(x);
+		}
 
 		std::vector<VkDescriptorSetLayoutBinding>& layoutBindings = internal_state->layoutBindings;
 
@@ -3420,7 +3429,6 @@ using namespace Vulkan_Internal;
 		case RaytracingAccelerationStructureDesc::TOPLEVEL:
 		{
 			info.type = VkAccelerationStructureTypeKHR::VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-			info.maxGeometryCount = 1;
 
 			internal_state->geometries.emplace_back();
 			auto& geometry = internal_state->geometries.back();
@@ -3572,6 +3580,12 @@ using namespace Vulkan_Internal;
 
 		info.maxRecursionDepth = pDesc->max_trace_recursion_depth;
 		info.layout = to_internal(pDesc->shaderlibraries.front().shader)->pipelineLayout_cs; // think better way
+
+		VkRayTracingPipelineInterfaceCreateInfoKHR library_interface = {};
+		library_interface.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_INTERFACE_CREATE_INFO_KHR;
+		library_interface.maxPayloadSize = pDesc->max_payload_size_in_bytes;
+		library_interface.maxAttributeSize = pDesc->max_attribute_size_in_bytes;
+		library_interface.maxCallableSize = 0;
 
 		info.basePipelineHandle = VK_NULL_HANDLE;
 		info.basePipelineIndex = 0;
@@ -3808,6 +3822,11 @@ using namespace Vulkan_Internal;
 		{
 			info.objectType = VK_OBJECT_TYPE_BUFFER;
 			info.objectHandle = (uint64_t)to_internal((const GPUBuffer*)pResource)->resource;
+		}
+		else if (pResource->IsAccelerationStructure())
+		{
+			info.objectType = VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR;
+			info.objectHandle = (uint64_t)to_internal((const RaytracingAccelerationStructure*)pResource)->resource;
 		}
 
 		VkResult res = setDebugUtilsObjectNameEXT(device, &info);
@@ -5042,8 +5061,8 @@ using namespace Vulkan_Internal;
 				barrierdesc.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
 				if (RAYTRACING)
 				{
-					barrierdesc.srcAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-					barrierdesc.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+					barrierdesc.srcAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+					barrierdesc.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
 				}
 			}
 			break;
@@ -5261,7 +5280,7 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::DispatchRays(const DispatchRaysDesc* desc, CommandList cmd)
 	{
-		//GetFrameResources().descriptors[cmd].validate(false, cmd, true);
+		GetFrameResources().descriptors[cmd].validate(false, cmd, true);
 
 		VkStridedBufferRegionKHR raygen = {};
 		raygen.buffer = desc->raygeneration.buffer ? to_internal(desc->raygeneration.buffer)->resource : VK_NULL_HANDLE;
@@ -5271,21 +5290,21 @@ using namespace Vulkan_Internal;
 
 		VkStridedBufferRegionKHR miss = {};
 		miss.buffer = desc->miss.buffer ? to_internal(desc->miss.buffer)->resource : VK_NULL_HANDLE;
-		miss.offset = desc->raygeneration.offset;
-		miss.size = desc->raygeneration.size;
-		miss.stride = desc->raygeneration.stride;
+		miss.offset = desc->miss.offset;
+		miss.size = desc->miss.size;
+		miss.stride = desc->miss.stride;
 
 		VkStridedBufferRegionKHR hitgroup = {};
 		hitgroup.buffer = desc->hitgroup.buffer ? to_internal(desc->hitgroup.buffer)->resource : VK_NULL_HANDLE;
-		hitgroup.offset = desc->raygeneration.offset;
-		hitgroup.size = desc->raygeneration.size;
-		hitgroup.stride = desc->raygeneration.stride;
+		hitgroup.offset = desc->hitgroup.offset;
+		hitgroup.size = desc->hitgroup.size;
+		hitgroup.stride = desc->hitgroup.stride;
 
 		VkStridedBufferRegionKHR callable = {};
 		callable.buffer = desc->callable.buffer ? to_internal(desc->callable.buffer)->resource : VK_NULL_HANDLE;
-		callable.offset = desc->raygeneration.offset;
-		callable.size = desc->raygeneration.size;
-		callable.stride = desc->raygeneration.stride;
+		callable.offset = desc->callable.offset;
+		callable.size = desc->callable.size;
+		callable.stride = desc->callable.stride;
 
 		cmdTraceRaysKHR(
 			GetDirectCommandList(cmd),

@@ -358,6 +358,14 @@ namespace wiScene
 			InitData.pSysMem = gpuIndexData;
 			bd.ByteWidth = (uint32_t)(stride * indices.size());
 			device->CreateBuffer(&bd, &InitData, &indexBuffer);
+			if (GetIndexFormat() == INDEXFORMAT_32BIT)
+			{
+				device->SetName(&indexBuffer, "indexBuffer_32bit");
+			}
+			else
+			{
+				device->SetName(&indexBuffer, "indexBuffer_16bit");
+			}
 
 			delete[] gpuIndexData;
 		}
@@ -391,6 +399,7 @@ namespace wiScene
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();
 			device->CreateBuffer(&bd, &InitData, &vertexBuffer_POS);
+			device->SetName(&vertexBuffer_POS, "vertexBuffer_POS");
 		}
 
 		aabb = AABB(_min, _max);
@@ -432,6 +441,7 @@ namespace wiScene
 
 			bd.ByteWidth = (uint32_t)(sizeof(Vertex_POS) * vertex_positions.size());
 			device->CreateBuffer(&bd, nullptr, &streamoutBuffer_POS);
+			device->SetName(&streamoutBuffer_POS, "streamoutBuffer_POS");
 		}
 
 		// vertexBuffer - UV SET 0
@@ -455,6 +465,7 @@ namespace wiScene
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();
 			device->CreateBuffer(&bd, &InitData, &vertexBuffer_UV0);
+			device->SetName(&vertexBuffer_UV0, "vertexBuffer_UV0");
 		}
 
 		// vertexBuffer - UV SET 1
@@ -478,6 +489,7 @@ namespace wiScene
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();
 			device->CreateBuffer(&bd, &InitData, &vertexBuffer_UV1);
+			device->SetName(&vertexBuffer_UV1, "vertexBuffer_UV1");
 		}
 
 		// vertexBuffer - COLORS
@@ -495,6 +507,7 @@ namespace wiScene
 			SubresourceData InitData;
 			InitData.pSysMem = vertex_colors.data();
 			device->CreateBuffer(&bd, &InitData, &vertexBuffer_COL);
+			device->SetName(&vertexBuffer_COL, "vertexBuffer_COL");
 		}
 
 		// vertexBuffer - ATLAS
@@ -518,6 +531,7 @@ namespace wiScene
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();
 			device->CreateBuffer(&bd, &InitData, &vertexBuffer_ATL);
+			device->SetName(&vertexBuffer_ATL, "vertexBuffer_ATL");
 		}
 
 		// vertexBuffer - SUBSETS
@@ -547,6 +561,7 @@ namespace wiScene
 			SubresourceData InitData;
 			InitData.pSysMem = vertex_subsets.data();
 			device->CreateBuffer(&bd, &InitData, &vertexBuffer_SUB);
+			device->SetName(&vertexBuffer_SUB, "vertexBuffer_SUB");
 		}
 
 		// vertexBuffer_PRE will be created on demand later!
@@ -605,6 +620,7 @@ namespace wiScene
 
 			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
 			assert(success);
+			device->SetName(&BLAS, "BLAS");
 		}
 	}
 	void MeshComponent::ComputeNormals(COMPUTE_NORMALS compute)
@@ -1234,6 +1250,7 @@ namespace wiScene
 				wiRenderer::GetDevice()->SetName(&desc.toplevel.instanceBuffer, "TLAS.instanceBuffer");
 				success = wiRenderer::GetDevice()->CreateRaytracingAccelerationStructure(&desc, &TLAS);
 				assert(success);
+				wiRenderer::GetDevice()->SetName(&TLAS, "TLAS");
 			}
 		}
 
