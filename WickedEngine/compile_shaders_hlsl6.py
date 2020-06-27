@@ -2,11 +2,12 @@ import os
 import xml.etree.ElementTree as ET
 from subprocess import check_output
 
-tree = ET.parse('Shaders_SOURCE.vcxitems')
-root = tree.getroot()
+# The shader compiler scripts parses the Shaders_SOURCE project filters to determine which shaders to compile and how
+#   Right now it depends on dxc.exe and dxcompiler.dll being available in the same directory as the script
+#   dxil.dll will be used to sign the shader binaries if it is available in the same directory as the script
 
-## Hardcode visual studio namespace for now...
-namespace = "{http://schemas.microsoft.com/developer/msbuild/2003}"
+tree = ET.parse('Shaders_SOURCE.vcxitems.filters')
+root = tree.getroot()
 
 outputdir = "hlsl6"
 
@@ -14,31 +15,29 @@ from pathlib import Path
 Path("shaders/" + outputdir).mkdir(parents=True, exist_ok=True)
 
 
-## Then we parse the default shader project and generate build task for DXC compiler:
+namespace = "{http://schemas.microsoft.com/developer/msbuild/2003}"
 for shader in root.iter(namespace + "FxCompile"):
-    for shaderprofile in shader.iter(namespace + "ShaderType"):
+    for shaderprofile in shader.iter(namespace + "Filter"):
 
         profile = shaderprofile.text
         name = shader.attrib["Include"]
         name = name.replace("$(MSBuildThisFileDirectory)", "")
-        
-        print(profile + ":   " + name)
 
         cmd = "dxc " + name + " -T "
         
-        if profile == "Vertex":
+        if profile == "VS":
             cmd += "vs"
-        if profile == "Pixel":
+        if profile == "PS":
             cmd += "ps"
-        if profile == "Geometry":
+        if profile == "GS":
             cmd += "gs"
-        if profile == "Hull":
+        if profile == "HS":
             cmd += "hs"
-        if profile == "Domain":
+        if profile == "DS":
             cmd += "ds"
-        if profile == "Compute":
+        if profile == "CS":
             cmd += "cs"
-        if profile == "Library":
+        if profile == "LIB":
             cmd += "lib"
 
         cmd += "_6_4 "

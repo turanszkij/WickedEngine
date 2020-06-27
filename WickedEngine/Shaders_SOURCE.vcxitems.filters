@@ -22,7 +22,7 @@
     <Filter Include="GS">
       <UniqueIdentifier>{9f327310-fe88-414c-a23a-22839ea58475}</UniqueIdentifier>
     </Filter>
-    <Filter Include="RT">
+    <Filter Include="LIB">
       <UniqueIdentifier>{1c9fec3c-c842-4bb0-9e03-69baf6cc090e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -113,6 +113,9 @@
     </None>
     <None Include="$(MSBuildThisFileDirectory)bitonicSortHF.hlsli">
       <Filter>HF</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)rtaoLIB.hlsl">
+      <Filter>LIB</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -979,9 +982,6 @@
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)voxelSceneCopyClearCS_TemporalSmoothing.hlsl">
       <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)rtaoLIB.hlsl">
-      <Filter>RT</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>
