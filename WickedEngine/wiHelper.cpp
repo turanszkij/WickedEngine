@@ -214,20 +214,13 @@ namespace wiHelper
 
 #ifdef _WIN32
 #include <direct.h>
-#endif // _WIN32
+	static std::string workingdir = std::string(_getcwd(NULL, 0)) + "/";
+#else
 	static std::string workingdir;
-	static std::string __originalWorkingDir;
+#endif // _WIN32
+	static std::string __originalWorkingDir = workingdir;
 	string GetOriginalWorkingDirectory()
 	{
-		static bool init = false;
-		if (!init)
-		{
-			init = true;
-#ifdef _WIN32
-			workingdir = std::string(_getcwd(NULL, 0)) + "/";
-#endif // _WIN32
-			__originalWorkingDir = workingdir;
-		}
 		return __originalWorkingDir;
 	}
 
@@ -424,6 +417,14 @@ namespace wiHelper
 		wstring wstr;
 		string filepath = ExpandPath(fileName);
 		StringConvert(filepath, wstr);
+
+		CREATEFILE2_EXTENDED_PARAMETERS params = {};
+		params.dwSize = (DWORD)size;
+		params.dwFileAttributes = FILE_ATTRIBUTE_NORMAL;
+		HANDLE filehandle = CreateFile2FromAppW(wstr.c_str(), GENERIC_READ | GENERIC_WRITE, 0, CREATE_ALWAYS, &params);
+		assert(filehandle);
+		CloseHandle(filehandle);
+
 		bool success = false;
 		std::thread([&] {
 			bool end0 = false;
@@ -440,15 +441,15 @@ namespace wiHelper
 				end0 = true;
 				});
 			while (!end0) { Sleep(1); }
-			}).join();
+		}).join();
 
-			if (success)
-			{
-				return true;
-			}
+		if (success)
+		{
+			return true;
+		}
 #endif // PLATFORM_UWP
 
-			return false;
+		return false;
 	}
 
 	bool FileExists(const std::string& fileName)
