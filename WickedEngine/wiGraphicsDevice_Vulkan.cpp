@@ -5149,6 +5149,7 @@ using namespace Vulkan_Internal;
 		{
 		case RaytracingAccelerationStructureDesc::BOTTOMLEVEL:
 		{
+			info.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
 			info.geometryCount = (uint32_t)dst->desc.bottomlevel.geometries.size();
 			geometries.reserve(info.geometryCount);
 			offsetinfos.reserve(info.geometryCount);
@@ -5217,6 +5218,7 @@ using namespace Vulkan_Internal;
 		break;
 		case RaytracingAccelerationStructureDesc::TOPLEVEL:
 		{
+			info.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
 			info.geometryCount = 1;
 			geometries.reserve(info.geometryCount);
 			offsetinfos.reserve(info.geometryCount);
@@ -5259,7 +5261,7 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::DispatchRays(const DispatchRaysDesc* desc, CommandList cmd)
 	{
-		GetFrameResources().descriptors[cmd].validate(false, cmd, true);
+		//GetFrameResources().descriptors[cmd].validate(false, cmd, true);
 
 		VkStridedBufferRegionKHR raygen = {};
 		raygen.buffer = desc->raygeneration.buffer ? to_internal(desc->raygeneration.buffer)->resource : VK_NULL_HANDLE;
