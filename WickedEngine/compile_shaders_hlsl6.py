@@ -16,45 +16,51 @@ Path("shaders/" + outputdir).mkdir(parents=True, exist_ok=True)
 
 
 namespace = "{http://schemas.microsoft.com/developer/msbuild/2003}"
-for shader in root.iter(namespace + "FxCompile"):
-    for shaderprofile in shader.iter(namespace + "Filter"):
-
-        profile = shaderprofile.text
-        name = shader.attrib["Include"]
+for item in root.iter():
+    try:
+        name = item.attrib["Include"]
+        filename, file_extension = os.path.splitext(name)
+        if file_extension != ".hlsl":
+            continue
         name = name.replace("$(MSBuildThisFileDirectory)", "")
+        for shaderprofile in item.iter(namespace + "Filter"):
+            profile = shaderprofile.text
 
-        cmd = "dxc " + name + " -T "
-        
-        if profile == "VS":
-            cmd += "vs"
-        if profile == "PS":
-            cmd += "ps"
-        if profile == "GS":
-            cmd += "gs"
-        if profile == "HS":
-            cmd += "hs"
-        if profile == "DS":
-            cmd += "ds"
-        if profile == "CS":
-            cmd += "cs"
-        if profile == "LIB":
-            cmd += "lib"
-
-        cmd += "_6_4 "
-
-        cmd += "-D HLSL6 "
-
-        #cmd += "-D INLINE_RAYTRACING "
-
-        cmd += "-flegacy-macro-expansion -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso "
-
-        print(cmd)
-
-        try:
-            print(check_output(cmd, shell=True).decode())
-        except:
-            print("DXC error")
-        
-        break
+            cmd = "dxc " + name + " -T "
+            
+            if profile == "VS":
+                cmd += "vs"
+            if profile == "PS":
+                cmd += "ps"
+            if profile == "GS":
+                cmd += "gs"
+            if profile == "HS":
+                cmd += "hs"
+            if profile == "DS":
+                cmd += "ds"
+            if profile == "CS":
+                cmd += "cs"
+            if profile == "LIB":
+                cmd += "lib"
+            
+            cmd += "_6_4 "
+            
+            cmd += "-D HLSL6 "
+            
+            #cmd += "-D INLINE_RAYTRACING "
+            
+            cmd += "-flegacy-macro-expansion -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso "
+            
+            print(cmd)
+            
+            try:
+                print(check_output(cmd, shell=True).decode())
+            except:
+                print("DXC error")
+            
+            break
+            
+    except:
+        continue
 
 
