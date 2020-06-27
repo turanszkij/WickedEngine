@@ -17,7 +17,10 @@
 #pragma comment(lib,"d3d12.lib")
 #pragma comment(lib,"Dxgi.lib")
 #pragma comment(lib,"dxguid.lib")
+
+#ifndef PLATFORM_UWP
 #pragma comment(lib,"dxcompiler.lib")
+#endif // PLATFORM_UWP
 
 #ifdef _DEBUG
 #include <d3d12sdklayers.h>
@@ -2211,7 +2214,7 @@ using namespace DX12_Internal;
 		assert(SUCCEEDED(hr));
 
 
-
+#ifndef PLATFORM_UWP // TODO: Can't use dxcompiler.dll in UWP, so can't use shader reflection
 		struct ShaderBlob : public IDxcBlob
 		{
 			LPVOID address;
@@ -2335,6 +2338,7 @@ using namespace DX12_Internal;
 				instert_descriptor(table, desc);
 			}
 		}
+#endif // PLATFORM_UWP
 
 
 		if (stage == CS || stage == SHADERSTAGE_COUNT)
