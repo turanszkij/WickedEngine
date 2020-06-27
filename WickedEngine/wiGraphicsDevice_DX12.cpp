@@ -4438,6 +4438,11 @@ using namespace DX12_Internal;
 		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC desc = {};
 		desc.Inputs = dst_internal->desc;
 
+		// Make a copy of geometries, don't overwrite internal_state (thread safety)
+		std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometries;
+		geometries = dst_internal->geometries;
+		desc.Inputs.pGeometryDescs = geometries.data();
+
 		// The real GPU addresses get filled here:
 		switch (dst->desc.type)
 		{
@@ -4446,7 +4451,7 @@ using namespace DX12_Internal;
 			size_t i = 0;
 			for (auto& x : dst->desc.bottomlevel.geometries)
 			{
-				auto& geometry = dst_internal->geometries[i++];
+				auto& geometry = geometries[i++];
 
 				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES)
 				{
@@ -4471,7 +4476,7 @@ using namespace DX12_Internal;
 		break;
 		case RaytracingAccelerationStructureDesc::TOPLEVEL:
 		{
-			dst_internal->desc.InstanceDescs = to_internal(&dst->desc.toplevel.instanceBuffer)->resource->GetGPUVirtualAddress() +
+			desc.Inputs.InstanceDescs = to_internal(&dst->desc.toplevel.instanceBuffer)->resource->GetGPUVirtualAddress() +
 				(D3D12_GPU_VIRTUAL_ADDRESS)dst->desc.toplevel.offset;
 		}
 		break;
