@@ -44,8 +44,6 @@ inline LightingPart CombineLighting(in Surface surface, in Lighting lighting)
 	return result;
 }
 
-
-
 inline float3 shadowCascade(in ShaderEntity light, in float3 shadowPos, in float2 shadowUV, in uint cascade) 
 {
 	const float realDistance = shadowPos.z + light.shadowBias;
@@ -94,6 +92,34 @@ inline float shadowCube(in ShaderEntity light, float3 Lunnormalized)
 	return texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-Lunnormalized, light.GetShadowMapIndex()), remappedDistance + light.shadowBias).r;
 }
 
+inline float shadowTrace(float3 P, float3 N, float3 L, float dist)
+{
+#ifdef INLINE_RAYTRACING_ENABLED
+	RayQuery<
+		RAY_FLAG_CULL_NON_OPAQUE | 
+		RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
+		RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH
+	> q;
+
+	RayDesc ray;
+	ray.TMin = 0.001;
+	ray.TMax = dist;
+	ray.Origin = P + N * 0.01;
+	ray.Direction = L;
+
+	q.TraceRayInline(scene_acceleration_structure, 0, 0xFF, ray);
+	q.Proceed();
+
+	if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
+	{
+		return 0;
+	}
+#endif // INLINE_RAYTRACING_ENABLED
+
+	return 1;
+}
+
+
 inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
 	float3 L = light.directionWS.xyz;
@@ -107,31 +133,12 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 		[branch]
 		if (light.IsCastingShadow())
 		{
-#ifdef INLINE_RAYTRACING
+			[branch]
 			if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
 			{
-				RayQuery<RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> q;
-
-				RayDesc ray;
-				ray.TMin = 0.001;
-				ray.TMax = 1000000;
-				ray.Origin = surface.P + surface.N * 0.01;
-
-				q.TraceRayInline(
-					scene_acceleration_structure,
-				    0, // OR'd with flags above
-				    ~0,
-				    ray);
-
-				q.Proceed();
-
-				if (q.CommittedStatus())
-				{
-					sh = 0;
-				}
+				sh *= shadowTrace(surface.P, surface.N, normalize(L), 100000);
 			}
 			else
-#endif // INLINE_RAYTRACING
 			{
 #ifndef DISABLE_SHADOWMAPS
 				// Loop through cascades from closest (smallest) to farest (biggest)
@@ -203,12 +210,21 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 		{
 			float sh = surfaceToLight.NdotL;
 
-#ifndef DISABLE_SHADOWMAPS
 			[branch]
-			if (light.IsCastingShadow()) {
-				sh *= shadowCube(light, Lunnormalized);
-			}
+			if (light.IsCastingShadow()) 
+			{
+				[branch]
+				if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
+				{
+					sh *= shadowTrace(surface.P, surface.N, L, dist);
+				}
+				else
+				{
+#ifndef DISABLE_SHADOWMAPS
+					sh *= shadowCube(light, Lunnormalized);
 #endif // DISABLE_SHADOWMAPS
+				}
+			}
 
 			[branch]
 			if (sh > 0)
@@ -250,20 +266,28 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 			{
 				float3 sh = surfaceToLight.NdotL.xxx;
 
-#ifndef DISABLE_SHADOWMAPS
 				[branch]
 				if (light.IsCastingShadow())
 				{
-					float4 ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + 0], float4(surface.P, 1));
-					ShPos.xyz /= ShPos.w;
-					float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 					[branch]
-					if (is_saturated(ShTex))
+					if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
 					{
-						sh *= shadowCascade(light, ShPos.xyz, ShTex.xy, 0);
+						sh *= shadowTrace(surface.P, surface.N, L, dist);
+					}
+					else
+					{
+#ifndef DISABLE_SHADOWMAPS
+						float4 ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + 0], float4(surface.P, 1));
+						ShPos.xyz /= ShPos.w;
+						float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
+						[branch]
+						if (is_saturated(ShTex))
+						{
+							sh *= shadowCascade(light, ShPos.xyz, ShTex.xy, 0);
+						}
+#endif // DISABLE_SHADOWMAPS
 					}
 				}
-#endif // DISABLE_SHADOWMAPS
 
 				[branch]
 				if (any(sh))

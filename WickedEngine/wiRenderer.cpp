@@ -9093,6 +9093,13 @@ void BindCommonResources(CommandList cmd)
 	device->BindResources(VS, resources, SBSLOT_ENTITYARRAY, arraysize(resources), cmd);
 	device->BindResources(PS, resources, SBSLOT_ENTITYARRAY, arraysize(resources), cmd);
 	device->BindResources(CS, resources, SBSLOT_ENTITYARRAY, arraysize(resources), cmd);
+
+	if (device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	{
+		const Scene& scene = GetScene();
+		device->BindResource(PS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+		device->BindResource(CS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+	}
 }
 
 void UpdateFrameCB(CommandList cmd)
@@ -9231,7 +9238,7 @@ void UpdateFrameCB(CommandList cmd)
 	{
 		cb.g_xFrame_Options |= OPTION_BIT_SIMPLE_SKY;
 	}
-	if (GetRaytracedShadowsEnabled())
+	if (GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && GetRaytracedShadowsEnabled())
 	{
 		cb.g_xFrame_Options |= OPTION_BIT_RAYTRACED_SHADOWS;
 	}

@@ -13,7 +13,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	wiRenderer::SetToDrawDebugCameras(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(640, 700));
+	rendererWindow->SetSize(XMFLOAT2(640, 710));
 	GUI->AddWidget(rendererWindow);
 
 	float x = 220, y = 5, step = 28, itemheight = 26;
@@ -210,6 +210,32 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetTransparentShadowsEnabled(args.bValue);
 	});
 	rendererWindow->AddWidget(transparentShadowsCheckBox);
+
+	shadowTypeComboBox = new wiComboBox("Shadow type: ");
+	shadowTypeComboBox->SetSize(XMFLOAT2(100, itemheight));
+	shadowTypeComboBox->SetPos(XMFLOAT2(x, y += step));
+	shadowTypeComboBox->AddItem("Shadowmap");
+	if (wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
+	{
+		shadowTypeComboBox->AddItem("Ray traced");
+	}
+	shadowTypeComboBox->OnSelect([&](wiEventArgs args) {
+
+		switch (args.iValue)
+		{
+		default:
+		case 0:
+			wiRenderer::SetRaytracedShadowsEnabled(false);
+			break;
+		case 1:
+			wiRenderer::SetRaytracedShadowsEnabled(true);
+			break;
+		}
+		});
+	shadowTypeComboBox->SetSelected(0);
+	shadowTypeComboBox->SetEnabled(true);
+	shadowTypeComboBox->SetTooltip("Choose between shadowmaps and ray traced shadows (only when hardware supports inline raytracing)");
+	rendererWindow->AddWidget(shadowTypeComboBox);
 
 	shadowProps2DComboBox = new wiComboBox("2D Shadowmap resolution: ");
 	shadowProps2DComboBox->SetSize(XMFLOAT2(100, itemheight));

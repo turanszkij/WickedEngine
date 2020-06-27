@@ -1702,6 +1702,7 @@ using namespace DX12_Internal;
 		D3D12_FEATURE_DATA_D3D12_OPTIONS5 features_5;
 		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &features_5, sizeof(features_5));
 		RAYTRACING = features_5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0;
+		RAYTRACING_INLINE = features_5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1;
 
 
 		// Create common indirect command signatures:

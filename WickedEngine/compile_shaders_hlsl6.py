@@ -43,11 +43,11 @@ for item in root.iter():
             if profile == "LIB":
                 cmd += "lib"
             
-            cmd += "_6_4 "
+            cmd += "_6_5 "
             
             cmd += "-D HLSL6 "
             
-            #cmd += "-D INLINE_RAYTRACING "
+            #cmd += "-D INLINE_RAYTRACING_ENABLED "
             
             cmd += "-flegacy-macro-expansion -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso "
             

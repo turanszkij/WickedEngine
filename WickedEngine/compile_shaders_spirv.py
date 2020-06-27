@@ -46,7 +46,7 @@ for item in root.iter():
             
             cmd += "-D SPIRV -D "
             
-            #cmd += "-D INLINE_RAYTRACING "
+            #cmd += "-D INLINE_RAYTRACING_ENABLED "
             
             if profile == "VS":
                 cmd += "SPIRV_SHADERSTAGE=0 -fvk-invert-y"
