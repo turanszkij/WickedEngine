@@ -43,7 +43,7 @@ for item in root.iter():
             if profile == "LIB":
                 cmd += "lib"
             
-            cmd += "_6_5 "
+            cmd += "_6_4 "
             
             cmd += "-D HLSL6 "
             
