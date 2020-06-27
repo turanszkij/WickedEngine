@@ -127,6 +127,7 @@ bool temporalAA = false;
 bool temporalAADEBUG = false;
 uint32_t raytraceBounceCount = 2;
 bool raytraceDebugVisualizer = false;
+bool raytracedShadows = false;
 Entity cameraTransform = INVALID_ENTITY;
 
 
@@ -9230,6 +9231,10 @@ void UpdateFrameCB(CommandList cmd)
 	{
 		cb.g_xFrame_Options |= OPTION_BIT_SIMPLE_SKY;
 	}
+	if (GetRaytracedShadowsEnabled())
+	{
+		cb.g_xFrame_Options |= OPTION_BIT_RAYTRACED_SHADOWS;
+	}
 
 	GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &cb, cmd);
 }
@@ -10369,7 +10374,7 @@ void Postprocess_RTAO(
 		dispatchraysdesc.Width = desc.Width;
 		dispatchraysdesc.Height = desc.Height;
 
-		device->BindResource(CS, &scene.TLAS, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 
 		device->BindRaytracingPipelineState(&RTPSO_rtao, cmd);
 		device->DispatchRays(&dispatchraysdesc, cmd);
@@ -12118,6 +12123,14 @@ void SetRaytraceDebugBVHVisualizerEnabled(bool value)
 bool GetRaytraceDebugBVHVisualizerEnabled()
 {
 	return raytraceDebugVisualizer;
+}
+void SetRaytracedShadowsEnabled(bool value)
+{
+	raytracedShadows = value;
+}
+bool GetRaytracedShadowsEnabled()
+{
+	return raytracedShadows;
 }
 
 }

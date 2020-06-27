@@ -31,7 +31,7 @@ typedef XMINT4 int4;
 
 // Shader - side types:
 
-#ifdef SHADERCOMPILER_SPIRV // invoking Vulkan shader compiler (HLSL -> SPIRV)
+#ifdef SPIRV // invoking Vulkan shader compiler (HLSL -> SPIRV)
 
 #define globallycoherent /*nothing*/
 
@@ -88,8 +88,6 @@ typedef XMINT4 int4;
 #define RWSTRUCTUREDBUFFER(name, type, slot) RWStructuredBuffer< type > name : register(u ## slot)
 #define ROVSTRUCTUREDBUFFER(name, type, slot) RasterizerOrderedStructuredBuffer< type > name : register(u ## slot)
 
-#define RAYTRACINGACCELERATIONSTRUCTURE(name, slot) RaytracingAccelerationStructure name : register(t ## slot)
-
 
 #define TEXTURE1D(name, type, slot) Texture1D< type > name : register(t ## slot)
 #define TEXTURE1DARRAY(name, type, slot) Texture1DArray< type > name : register(t ## slot)
@@ -113,11 +111,14 @@ typedef XMINT4 int4;
 #define SAMPLERSTATE(name, slot) SamplerState name : register(s ## slot)
 #define SAMPLERCOMPARISONSTATE(name, slot) SamplerComparisonState name : register(s ## slot)
 
-#ifndef SHADER_MODEL_6
-// Don't have access to wave-intrinsics in pre-SM6:
+#ifdef HLSL6
+#define RAYTRACINGACCELERATIONSTRUCTURE(name, slot) RaytracingAccelerationStructure name : register(t ## slot)
+
+#else
+#define RAYTRACINGACCELERATIONSTRUCTURE(name, slot) 
 #define WaveReadLaneFirst(a) (a)
 #define WaveActiveBitOr(a) (a)
-#endif // SHADER_MODEL_6
+#endif // HLSL6
 
 #endif // invoking vulkan/directx
 

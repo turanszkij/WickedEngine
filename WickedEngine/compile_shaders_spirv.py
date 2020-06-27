@@ -43,7 +43,9 @@ for shader in root.iter(namespace + "FxCompile"):
 
         cmd += "_6_4 "
 
-        cmd += "-D SHADERCOMPILER_SPIRV -D "
+        cmd += "-D SPIRV -D "
+
+        #cmd += "-D INLINE_RAYTRACING "
         
         if profile == "Vertex":
             cmd += "SPIRV_SHADERSTAGE=0 -fvk-invert-y"

@@ -63,7 +63,6 @@
     <None Include="compile_shaders_spirv.py" />
     <None Include="dxc.exe" />
     <None Include="dxcompiler.dll" />
-    <None Include="dxil.dll" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

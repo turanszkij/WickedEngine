@@ -94,7 +94,6 @@ inline float shadowCube(in ShaderEntity light, float3 Lunnormalized)
 	return texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-Lunnormalized, light.GetShadowMapIndex()), remappedDistance + light.shadowBias).r;
 }
 
-
 inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
 	float3 L = light.directionWS.xyz;
@@ -105,48 +104,75 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 	{
 		float3 sh = surfaceToLight.NdotL.xxx;
 
-#ifndef DISABLE_SHADOWMAPS
 		[branch]
 		if (light.IsCastingShadow())
 		{
-			// Loop through cascades from closest (smallest) to farest (biggest)
-			[loop]
-			for (uint cascade = 0; cascade < g_xFrame_ShadowCascadeCount; ++cascade)
+#ifdef INLINE_RAYTRACING
+			if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
 			{
-				// Project into shadow map space (no need to divide by .w because ortho projection!):
-				float3 ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + cascade], float4(surface.P, 1)).xyz;
-				float3 ShTex = ShPos * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+				RayQuery<RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> q;
 
-				// Determine if pixel is inside current cascade bounds and compute shadow if it is:
-				[branch]
-				if (is_saturated(ShTex))
+				RayDesc ray;
+				ray.TMin = 0.001;
+				ray.TMax = 1000000;
+				ray.Origin = surface.P + surface.N * 0.01;
+
+				q.TraceRayInline(
+					scene_acceleration_structure,
+				    0, // OR'd with flags above
+				    ~0,
+				    ray);
+
+				q.Proceed();
+
+				if (q.CommittedStatus())
 				{
-					const float3 shadow_main = shadowCascade(light, ShPos, ShTex.xy, cascade);
-					const float3 cascade_edgefactor = saturate(saturate(abs(ShPos)) - 0.8f) * 5.0f; // fade will be on edge and inwards 20%
-					const float cascade_fade = max(cascade_edgefactor.x, max(cascade_edgefactor.y, cascade_edgefactor.z));
-
-					// If we are on cascade edge threshold and not the last cascade, then fallback to a larger cascade:
-					[branch]
-					if (cascade_fade > 0 && cascade < g_xFrame_ShadowCascadeCount - 1)
-					{
-						// Project into next shadow cascade (no need to divide by .w because ortho projection!):
-						cascade += 1;
-						ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + cascade], float4(surface.P, 1)).xyz;
-						ShTex = ShPos * float3(0.5f, -0.5f, 0.5f) + 0.5f;
-						const float3 shadow_fallback = shadowCascade(light, ShPos, ShTex.xy, cascade);
-
-						sh *= lerp(shadow_main, shadow_fallback, cascade_fade);
-					}
-					else
-					{
-						sh *= shadow_main;
-					}
-					break;
+					sh = 0;
 				}
 			}
+			else
+#endif // INLINE_RAYTRACING
+			{
+#ifndef DISABLE_SHADOWMAPS
+				// Loop through cascades from closest (smallest) to farest (biggest)
+				[loop]
+				for (uint cascade = 0; cascade < g_xFrame_ShadowCascadeCount; ++cascade)
+				{
+					// Project into shadow map space (no need to divide by .w because ortho projection!):
+					float3 ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + cascade], float4(surface.P, 1)).xyz;
+					float3 ShTex = ShPos * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
-		}
+					// Determine if pixel is inside current cascade bounds and compute shadow if it is:
+					[branch]
+					if (is_saturated(ShTex))
+					{
+						const float3 shadow_main = shadowCascade(light, ShPos, ShTex.xy, cascade);
+						const float3 cascade_edgefactor = saturate(saturate(abs(ShPos)) - 0.8f) * 5.0f; // fade will be on edge and inwards 20%
+						const float cascade_fade = max(cascade_edgefactor.x, max(cascade_edgefactor.y, cascade_edgefactor.z));
+
+						// If we are on cascade edge threshold and not the last cascade, then fallback to a larger cascade:
+						[branch]
+						if (cascade_fade > 0 && cascade < g_xFrame_ShadowCascadeCount - 1)
+						{
+							// Project into next shadow cascade (no need to divide by .w because ortho projection!):
+							cascade += 1;
+							ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + cascade], float4(surface.P, 1)).xyz;
+							ShTex = ShPos * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+							const float3 shadow_fallback = shadowCascade(light, ShPos, ShTex.xy, cascade);
+
+							sh *= lerp(shadow_main, shadow_fallback, cascade_fade);
+						}
+						else
+						{
+							sh *= shadow_main;
+						}
+						break;
+					}
+				}
+
 #endif // DISABLE_SHADOWMAPS
+			}
+		}
 
 		[branch]
 		if (any(sh))

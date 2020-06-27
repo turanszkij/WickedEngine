@@ -2,7 +2,6 @@
 #include "ShaderInterop_Postprocess.h"
 #include "raytracingHF.hlsli"
 
-RAYTRACINGACCELERATIONSTRUCTURE(Scene, TEXSLOT_ONDEMAND0);
 RWTEXTURE2D(output, unorm float, 0);
 
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
@@ -47,7 +46,7 @@ void RTAO_Raygen()
     for (uint i = 0; i < (uint)rtao_samplecount; ++i)
     {
         ray.Direction = SampleHemisphere_cos(N, seed, uv);
-        TraceRay(Scene, 
+        TraceRay(scene_acceleration_structure,
             RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH |
             RAY_FLAG_SKIP_CLOSEST_HIT_SHADER
             , ~0, 0, 1, 0, ray, payload);

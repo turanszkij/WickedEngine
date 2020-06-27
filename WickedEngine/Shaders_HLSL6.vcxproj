@@ -6,6 +6,12 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="compile_shaders_hlsl6.py" />
+    <None Include="dxc.exe" />
+    <None Include="dxcompiler.dll" />
+    <None Include="dxil.dll" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
@@ -55,10 +61,12 @@
       <ShaderModel>6.4</ShaderModel>
       <ObjectFileOutput>shaders/hlsl6/%(Filename).cso</ObjectFileOutput>
       <AdditionalOptions>-flegacy-macro-expansion %(AdditionalOptions)</AdditionalOptions>
+      <PreprocessorDefinitions>HLSL6</PreprocessorDefinitions>
     </FxCompile>
+    <PreBuildEvent>
+      <Command>compile_shaders_hlsl6.py</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
-  <ItemGroup>
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
