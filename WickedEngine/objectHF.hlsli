@@ -438,7 +438,7 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout Lighting
 			uint bucket_bits = EntityTiles[flatTileIndex + bucket];
 
 			// This is the wave scalarizer from Improved Culling - Siggraph 2017 [Drobot]:
-			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+			//bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
 
 			[loop]
 			while (bucket_bits != 0)
@@ -517,7 +517,7 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout Lighting
 			uint bucket_bits = EntityTiles[flatTileIndex + bucket];
 
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
-			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+			//bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
 
 			[loop]
 			while (bucket_bits != 0)
@@ -591,7 +591,7 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout Lighting
 			uint bucket_bits = EntityTiles[flatTileIndex + bucket];
 
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
-			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+			//bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
 
 			[loop]
 			while (bucket_bits != 0)
