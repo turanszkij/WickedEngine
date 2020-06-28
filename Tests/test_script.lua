@@ -1,6 +1,6 @@
 -- Wicked Engine Test Framework lua script
 
-debugout("Begin script: test_script.lua");
+backlog_post("Begin script: test_script.lua");
 
 
 -- Load a model:
@@ -77,4 +77,4 @@ runProcess(function()
 end);
 
 
-debugout("Script complete.");
+backlog_post("Script complete.");
