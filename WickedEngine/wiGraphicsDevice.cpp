@@ -29,6 +29,8 @@ bool GraphicsDevice::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const
 		return RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS;
 	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING:
 		return RAYTRACING;
+	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE:
+		return RAYTRACING_INLINE;
 	}
 	return false;
 }

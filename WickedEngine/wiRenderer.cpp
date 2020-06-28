@@ -127,6 +127,7 @@ bool temporalAA = false;
 bool temporalAADEBUG = false;
 uint32_t raytraceBounceCount = 2;
 bool raytraceDebugVisualizer = false;
+bool raytracedShadows = false;
 Entity cameraTransform = INVALID_ENTITY;
 
 
@@ -2178,11 +2179,33 @@ void LoadShaders()
 			RaytracingPipelineStateDesc rtdesc;
 			rtdesc.shaderlibraries.emplace_back();
 			rtdesc.shaderlibraries.back().shader = &raytracingShaders[RTTYPE_RTAO];
+			rtdesc.shaderlibraries.back().function_name = "RTAO_Raygen";
+			rtdesc.shaderlibraries.back().type = ShaderLibrary::RAYGENERATION;
+
+			rtdesc.shaderlibraries.emplace_back();
+			rtdesc.shaderlibraries.back().shader = &raytracingShaders[RTTYPE_RTAO];
+			rtdesc.shaderlibraries.back().function_name = "RTAO_ClosestHit";
+			rtdesc.shaderlibraries.back().type = ShaderLibrary::CLOSESTHIT;
+
+			rtdesc.shaderlibraries.emplace_back();
+			rtdesc.shaderlibraries.back().shader = &raytracingShaders[RTTYPE_RTAO];
+			rtdesc.shaderlibraries.back().function_name = "RTAO_Miss";
+			rtdesc.shaderlibraries.back().type = ShaderLibrary::MISS;
+
+			rtdesc.hitgroups.emplace_back();
+			rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
+			rtdesc.hitgroups.back().name = "RTAO_Raygen";
+			rtdesc.hitgroups.back().general_shader = 0;
+
+			rtdesc.hitgroups.emplace_back();
+			rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
+			rtdesc.hitgroups.back().name = "RTAO_Miss";
+			rtdesc.hitgroups.back().general_shader = 2;
 
 			rtdesc.hitgroups.emplace_back();
 			rtdesc.hitgroups.back().type = ShaderHitGroup::TRIANGLES;
 			rtdesc.hitgroups.back().name = "RTAO_Hitgroup";
-			rtdesc.hitgroups.back().closesthit_shader_name = "RTAO_ClosestHit";
+			rtdesc.hitgroups.back().closesthit_shader = 1;
 
 			rtdesc.max_trace_recursion_depth = 1;
 			rtdesc.max_payload_size_in_bytes = sizeof(float);
@@ -3599,8 +3622,6 @@ void RenderImpostors(const CameraComponent& camera, RENDERPASS renderPass, Comma
 	{
 		GraphicsDevice* device = GetDevice();
 
-		device->EventBegin("RenderImpostors", cmd);
-
 		uint32_t instanceCount = 0;
 		for (size_t impostorID = 0; impostorID < scene.impostors.GetCount(); ++impostorID)
 		{
@@ -3615,6 +3636,8 @@ void RenderImpostors(const CameraComponent& camera, RENDERPASS renderPass, Comma
 		{
 			return;
 		}
+
+		device->EventBegin("RenderImpostors", cmd);
 
 		// Pre-allocate space for all the instances in GPU-buffer:
 		const uint32_t instanceDataSize = sizeof(Instance);
@@ -4647,7 +4670,8 @@ void UpdateRaytracingAccelerationStructures(CommandList cmd)
 		if (mesh != nullptr)
 		{
 			// If src param is nullptr, rebuild happens, else update (if src == dst, then update happens in place)
-			device->BuildRaytracingAccelerationStructure(&mesh->BLAS, cmd, type == AS_REBUILD ? nullptr : &mesh->BLAS);
+			//device->BuildRaytracingAccelerationStructure(&mesh->BLAS, cmd, type == AS_REBUILD ? nullptr : &mesh->BLAS);
+			device->BuildRaytracingAccelerationStructure(&mesh->BLAS, cmd, nullptr); // DX12 has some problem updating with new driver?
 			bottomlevel_sync = true;
 			it.second = AS_COMPLETE;
 		}
@@ -9070,6 +9094,13 @@ void BindCommonResources(CommandList cmd)
 	device->BindResources(VS, resources, SBSLOT_ENTITYARRAY, arraysize(resources), cmd);
 	device->BindResources(PS, resources, SBSLOT_ENTITYARRAY, arraysize(resources), cmd);
 	device->BindResources(CS, resources, SBSLOT_ENTITYARRAY, arraysize(resources), cmd);
+
+	if (device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	{
+		const Scene& scene = GetScene();
+		device->BindResource(PS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+		device->BindResource(CS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+	}
 }
 
 void UpdateFrameCB(CommandList cmd)
@@ -9207,6 +9238,10 @@ void UpdateFrameCB(CommandList cmd)
 	if (scene.weather.IsSimpleSky())
 	{
 		cb.g_xFrame_Options |= OPTION_BIT_SIMPLE_SKY;
+	}
+	if (GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && GetRaytracedShadowsEnabled())
+	{
+		cb.g_xFrame_Options |= OPTION_BIT_RAYTRACED_SHADOWS;
 	}
 
 	GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &cb, cmd);
@@ -10325,13 +10360,9 @@ void Postprocess_RTAO(
 		GraphicsDevice::GPUAllocation shadertable_miss = device->AllocateGPU(shaderIdentifierSize, cmd);
 		GraphicsDevice::GPUAllocation shadertable_hitgroup = device->AllocateGPU(shaderIdentifierSize, cmd);
 
-		void* rayGenShaderIdentifier = device->GetShaderIdentifier(&RTPSO_rtao, "RTAO_Raygen");
-		void* missShaderIdentifier = device->GetShaderIdentifier(&RTPSO_rtao, "RTAO_Miss");
-		void* hitGroupShaderIdentifier = device->GetShaderIdentifier(&RTPSO_rtao, "RTAO_Hitgroup");
-
-		memcpy(shadertable_raygen.data, rayGenShaderIdentifier, shaderIdentifierSize);
-		memcpy(shadertable_miss.data, missShaderIdentifier, shaderIdentifierSize);
-		memcpy(shadertable_hitgroup.data, hitGroupShaderIdentifier, shaderIdentifierSize);
+		device->WriteShaderIdentifier(&RTPSO_rtao, 0, shadertable_raygen.data);
+		device->WriteShaderIdentifier(&RTPSO_rtao, 1, shadertable_miss.data);
+		device->WriteShaderIdentifier(&RTPSO_rtao, 2, shadertable_hitgroup.data);
 
 		DispatchRaysDesc dispatchraysdesc;
 		dispatchraysdesc.raygeneration.buffer = shadertable_raygen.buffer;
@@ -10351,7 +10382,7 @@ void Postprocess_RTAO(
 		dispatchraysdesc.Width = desc.Width;
 		dispatchraysdesc.Height = desc.Height;
 
-		device->BindResource(CS, &scene.TLAS, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 
 		device->BindRaytracingPipelineState(&RTPSO_rtao, cmd);
 		device->DispatchRays(&dispatchraysdesc, cmd);
@@ -12100,6 +12131,14 @@ void SetRaytraceDebugBVHVisualizerEnabled(bool value)
 bool GetRaytraceDebugBVHVisualizerEnabled()
 {
 	return raytraceDebugVisualizer;
+}
+void SetRaytracedShadowsEnabled(bool value)
+{
+	raytracedShadows = value;
+}
+bool GetRaytracedShadowsEnabled()
+{
+	return raytracedShadows;
 }
 
 }

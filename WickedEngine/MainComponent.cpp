@@ -56,10 +56,7 @@ void MainComponent::Initialize()
 		else if (wiStartupArguments::HasArgument("dx12"))
 		{
 #ifdef WICKEDENGINE_BUILD_DX12
-			if (wiStartupArguments::HasArgument("hlsl6"))
-			{
-				wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl6/");
-			}
+			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl6/");
 			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX12>(window, fullscreen, debugdevice));
 #else
 			wiHelper::messageBox("DirectX 12 not found during build! DirectX 12 API disabled!", "Error");

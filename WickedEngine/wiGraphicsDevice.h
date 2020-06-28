@@ -28,6 +28,7 @@ namespace wiGraphics
 		bool UAV_LOAD_FORMAT_R11G11B10_FLOAT = false;
 		bool RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS = false;
 		bool RAYTRACING = false;
+		bool RAYTRACING_INLINE = false;
 		size_t SHADER_IDENTIFIER_SIZE = 0;
 		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
 
@@ -49,11 +50,11 @@ namespace wiGraphics
 		virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) = 0;
 
 		virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) {}
+		virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) {}
 
 		virtual bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) = 0;
 
 		virtual void SetName(GPUResource* pResource, const char* name) = 0;
-		virtual void* GetShaderIdentifier(const RaytracingPipelineState* rtpso, const char* name) { return nullptr; }
 
 		virtual void PresentBegin(CommandList cmd) = 0;
 		virtual void PresentEnd(CommandList cmd) = 0;
@@ -93,6 +94,7 @@ namespace wiGraphics
 			GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT,
 			GRAPHICSDEVICE_CAPABILITY_RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS,
 			GRAPHICSDEVICE_CAPABILITY_RAYTRACING,
+			GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE,
 			GRAPHICSDEVICE_CAPABILITY_COUNT,
 		};
 		bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const;

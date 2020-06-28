@@ -52,14 +52,17 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 	ppWindow->AddWidget(lightShaftsCheckBox);
 
 	aoComboBox = new wiComboBox("AO: ");
-	aoComboBox->SetTooltip("Choose Ambient Occlusion type");
+	aoComboBox->SetTooltip("Choose Ambient Occlusion type. RTAO is only available if hardware supports ray tracing");
 	aoComboBox->SetScriptTip("RenderPath3D::SetAO(int value)");
 	aoComboBox->SetPos(XMFLOAT2(x, y += step));
 	aoComboBox->AddItem("Disabled");
 	aoComboBox->AddItem("SSAO");
 	aoComboBox->AddItem("HBAO");
 	aoComboBox->AddItem("MSAO");
-	aoComboBox->AddItem("RTAO");
+	if (wiRenderer::GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	{
+		aoComboBox->AddItem("RTAO");
+	}
 	aoComboBox->SetSelected(editor->renderPath->getAO());
 	aoComboBox->OnSelect([=](wiEventArgs args) {
 		editor->renderPath->setAO((RenderPath3D::AO)args.iValue);

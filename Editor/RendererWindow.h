@@ -70,6 +70,7 @@ public:
 	wiCheckBox* pickTypeSoundCheckBox;
 	wiSlider*	speedMultiplierSlider;
 	wiCheckBox* transparentShadowsCheckBox;
+	wiComboBox* shadowTypeComboBox;
 	wiComboBox* shadowProps2DComboBox;
 	wiComboBox* shadowPropsCubeComboBox;
 	wiComboBox* MSAAComboBox;

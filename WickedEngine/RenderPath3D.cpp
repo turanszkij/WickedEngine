@@ -362,13 +362,13 @@ void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	if (getAO() == AO_RTAO)
+	device->BindResource(CS, &depthBuffer_Copy, TEXSLOT_DEPTH, cmd);
+	wiRenderer::UpdateRenderData(cmd);
+
+	if (getAO() == AO_RTAO || wiRenderer::GetRaytracedShadowsEnabled())
 	{
 		wiRenderer::UpdateRaytracingAccelerationStructures(cmd);
 	}
-
-	device->BindResource(CS, &depthBuffer_Copy, TEXSLOT_DEPTH, cmd);
-	wiRenderer::UpdateRenderData(cmd);
 	
 	Viewport viewport;
 	viewport.Width = (float)smallDepth.GetDesc().Width;
@@ -427,7 +427,7 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 }
 void RenderPath3D::RenderShadows(CommandList cmd) const
 {
-	if (getShadowsEnabled())
+	if (getShadowsEnabled() && !wiRenderer::GetRaytracedShadowsEnabled())
 	{
 		wiRenderer::DrawShadowmaps(wiRenderer::GetCamera(), cmd, getLayerMask());
 	}

@@ -1,4 +1,4 @@
-#define DISABLE_SOFT_SHADOWS
+#define DISABLE_SOFT_SHADOWMAP
 #include "objectHF.hlsli"
 #include "voxelHF.hlsli"
 

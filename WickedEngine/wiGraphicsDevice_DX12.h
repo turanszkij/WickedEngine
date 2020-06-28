@@ -42,9 +42,6 @@ namespace wiGraphics
 		UINT64 copyFenceValue;
 		wiSpinLock copyQueueLock;
 
-		Microsoft::WRL::ComPtr<ID3D12RootSignature> graphicsRootSig;
-		Microsoft::WRL::ComPtr<ID3D12RootSignature> computeRootSig;
-
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawInstancedIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawIndexedInstancedIndirectCommandSignature;
@@ -58,36 +55,20 @@ namespace wiGraphics
 		D3D12MA::Allocation* allocation_querypool_timestamp_readback = nullptr;
 		D3D12MA::Allocation* allocation_querypool_occlusion_readback = nullptr;
 
-		struct DescriptorAllocator
-		{
-			Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> heap;
-			size_t					heap_begin;
-			uint32_t				itemCount;
-			uint32_t				maxCount;
-			uint32_t				itemSize;
-			bool*					itemsAlive = nullptr;
-			uint32_t				lastAlloc;
-			wiSpinLock				lock;
-
-			void init(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t maxCount);
-			~DescriptorAllocator();
-
-			D3D12_CPU_DESCRIPTOR_HANDLE allocate();
-			void clear();
-			void free(D3D12_CPU_DESCRIPTOR_HANDLE descriptorHandle);
-		};
-
-		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> null_resource_heap_CPU;
-		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> null_sampler_heap_CPU;
-		D3D12_CPU_DESCRIPTOR_HANDLE null_resource_heap_cpu_start = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE null_sampler_heap_cpu_start = {};
+		uint32_t rtv_descriptor_size = 0;
+		uint32_t dsv_descriptor_size = 0;
 		uint32_t resource_descriptor_size = 0;
 		uint32_t sampler_descriptor_size = 0;
+
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorheap_RTV;
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorheap_DSV;
+
+		D3D12_CPU_DESCRIPTOR_HANDLE rtv_descriptor_heap_start = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE dsv_descriptor_heap_start = {};
 
 		struct FrameResources
 		{
 			Microsoft::WRL::ComPtr<ID3D12Resource> backBuffer;
-			D3D12_CPU_DESCRIPTOR_HANDLE		backBufferRTV = {};
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[COMMANDLIST_COUNT];
 			Microsoft::WRL::ComPtr<ID3D12CommandList> commandLists[COMMANDLIST_COUNT];
 
@@ -108,6 +89,8 @@ namespace wiGraphics
 				size_t currentheap_sampler = 0;
 				bool heaps_bound = false;
 
+				bool dirty_graphics_compute[2] = {};
+
 				struct Table
 				{
 					const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
@@ -117,9 +100,6 @@ namespace wiGraphics
 					int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
 					const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
 
-					bool dirty_resources;
-					bool dirty_samplers;
-
 					void reset()
 					{
 						memset(CBV, 0, sizeof(CBV));
@@ -128,8 +108,6 @@ namespace wiGraphics
 						memset(UAV, 0, sizeof(UAV));
 						memset(UAV_index, -1, sizeof(UAV_index));
 						memset(SAM, 0, sizeof(SAM));
-						dirty_resources = true;
-						dirty_samplers = true;
 					}
 
 				} tables[SHADERSTAGE_COUNT];
@@ -137,7 +115,7 @@ namespace wiGraphics
 				void init(GraphicsDevice_DX12* device);
 
 				void reset();
-				void validate(CommandList cmd);
+				void validate(bool graphics, CommandList cmd);
 				void create_or_bind_heaps_on_demand(CommandList cmd);
 			};
 			DescriptorTableFrameAllocator descriptors[COMMANDLIST_COUNT];
@@ -176,7 +154,16 @@ namespace wiGraphics
 		std::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_global;
 		std::vector<std::pair<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker[COMMANDLIST_COUNT];
 		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
+		const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
+		const Shader* active_cs[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
+
+		struct Query_Resolve
+		{
+			GPU_QUERY_TYPE type;
+			UINT index;
+		};
+		std::vector<Query_Resolve> query_resolves[COMMANDLIST_COUNT] = {};
 
 		std::atomic<uint8_t> commandlist_count{ 0 };
 		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> free_commandlists;
@@ -203,11 +190,11 @@ namespace wiGraphics
 		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
 
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
+		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) override;
 
 		bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) override;
 
 		void SetName(GPUResource* pResource, const char* name) override;
-		void* GetShaderIdentifier(const RaytracingPipelineState* rtpso, const char* name) override;
 
 		void PresentBegin(CommandList cmd) override;
 		void PresentEnd(CommandList cmd) override;
@@ -276,19 +263,12 @@ namespace wiGraphics
 			std::mutex destroylocker;
 			std::deque<std::pair<D3D12MA::Allocation*, uint64_t>> destroyer_allocations;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, uint64_t>> destroyer_resources;
-			std::deque<std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, uint64_t>> destroyer_resourceviews;
-			std::deque<std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, uint64_t>> destroyer_rtvs;
-			std::deque<std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, uint64_t>> destroyer_dsvs;
-			std::deque<std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, uint64_t>> destroyer_samplers;
 			std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_timestamp;
 			std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_occlusion;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12PipelineState>, uint64_t>> destroyer_pipelines;
+			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12RootSignature>, uint64_t>> destroyer_rootSignatures;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12StateObject>, uint64_t>> destroyer_stateobjects;
 
-			DescriptorAllocator RTAllocator;
-			DescriptorAllocator DSAllocator;
-			DescriptorAllocator ResourceAllocator;
-			DescriptorAllocator SamplerAllocator;
 			wiContainers::ThreadSafeRingBuffer<uint32_t, timestamp_query_count> free_timestampqueries;
 			wiContainers::ThreadSafeRingBuffer<uint32_t, occlusion_query_count> free_occlusionqueries;
 
@@ -328,58 +308,6 @@ namespace wiGraphics
 						break;
 					}
 				}
-				while (!destroyer_resourceviews.empty())
-				{
-					if (destroyer_resourceviews.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_resourceviews.front();
-						destroyer_resourceviews.pop_front();
-						ResourceAllocator.free(item.first);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_rtvs.empty())
-				{
-					if (destroyer_rtvs.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_rtvs.front();
-						destroyer_rtvs.pop_front();
-						RTAllocator.free(item.first);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_dsvs.empty())
-				{
-					if (destroyer_dsvs.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_dsvs.front();
-						destroyer_dsvs.pop_front();
-						DSAllocator.free(item.first);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_samplers.empty())
-				{
-					if (destroyer_samplers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_samplers.front();
-						destroyer_samplers.pop_front();
-						SamplerAllocator.free(item.first);
-					}
-					else
-					{
-						break;
-					}
-				}
 				while (!destroyer_queries_occlusion.empty())
 				{
 					if (destroyer_queries_occlusion.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
@@ -411,6 +339,18 @@ namespace wiGraphics
 					if (destroyer_pipelines.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
 					{
 						destroyer_pipelines.pop_front();
+						// comptr auto delete
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_rootSignatures.empty())
+				{
+					if (destroyer_rootSignatures.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						destroyer_rootSignatures.pop_front();
 						// comptr auto delete
 					}
 					else

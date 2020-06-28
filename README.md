@@ -208,29 +208,26 @@ You can specify command line arguments to switch between render devices or other
   </tr>
   <tr>
     <td>dx12</td>
-    <td>Use DirectX 12 rendering device</td>
+    <td>Use DirectX 12 rendering device*</td>
   </tr>
   <tr>
     <td>vulkan</td>
-    <td>Use Vulkan rendering device*. (Only if engine was built with Vulkan SDK installed)</td>
+    <td>Use Vulkan rendering device**</td>
   </tr>
   <tr>
     <td>debugdevice</td>
     <td>Use debug layer for graphics API validation. Performance will be degraded, but graphics warnings and errors will be written to "Output" window</td>
   </tr>
-  <tr>
-    <td>hlsl6</td>
-    <td>Reroute shader loading path to use shader model 6 shaders** (DirectX 12 only)</td>
-  </tr>
 </table>
 
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/soft.gif"/>
 
-* *Before enabling the Vulkan API, you must first also compile SPIR-V shaders. This step is not yet included in the standard build process. First, run the "generate_shader_buildtask_spirv.py"
-Python script which will generate the SPIR-V shader building program "build_SPIRV.bat". Run "build_SPIRV.bat" to build all HLSL shaders as SPIR-V bytecode format for Vulkan. Shader loading after this 
-is automatic if you start the application with Vulkan support.
+* *DX12 will try to load shaders from WickedEngine/shaders/hlsl6 directory. 
+HLSL6 shaders can be compiled by Rebuilding the Shaders_HLSL6 project from within Visual Studio.
 
-* **To load HLSL 6 shaders, first compile the Shaders_HLSL6 project in Visual Studio
+* **Vulkan support will be built into the application if the Vulkan SDK is installed on the build machine. 
+Vulkan will try to load shaders from WickedEngine/shaders/spirv directory. 
+SPIRV shaders can be compiled by Rebuilding the Shaders_SPIRV project from within Visual Studio (Python 3 required for building).
 
 <br/>
 

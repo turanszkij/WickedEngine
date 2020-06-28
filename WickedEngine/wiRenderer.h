@@ -488,6 +488,8 @@ namespace wiRenderer
 	uint32_t GetRaytraceBounceCount();
 	void SetRaytraceDebugBVHVisualizerEnabled(bool value);
 	bool GetRaytraceDebugBVHVisualizerEnabled();
+	void SetRaytracedShadowsEnabled(bool value);
+	bool GetRaytracedShadowsEnabled();
 
 	const wiGraphics::Texture* GetGlobalLightmap();
 
