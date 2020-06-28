@@ -214,7 +214,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	shadowTypeComboBox = new wiComboBox("Shadow type: ");
 	shadowTypeComboBox->SetSize(XMFLOAT2(100, itemheight));
 	shadowTypeComboBox->SetPos(XMFLOAT2(x, y += step));
-	shadowTypeComboBox->AddItem("Shadowmap");
+	shadowTypeComboBox->AddItem("Shadowmaps");
 	if (wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 	{
 		shadowTypeComboBox->AddItem("Ray traced");
@@ -234,7 +234,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		});
 	shadowTypeComboBox->SetSelected(0);
 	shadowTypeComboBox->SetEnabled(true);
-	shadowTypeComboBox->SetTooltip("Choose between shadowmaps and ray traced shadows (only when hardware supports inline raytracing)");
+	shadowTypeComboBox->SetTooltip("Choose between shadowmaps and ray traced shadows (if available).\n(ray traced shadows experimental, needs hardware support and shaders compiled with HLSL6.5)");
 	rendererWindow->AddWidget(shadowTypeComboBox);
 
 	shadowProps2DComboBox = new wiComboBox("2D Shadowmap resolution: ");

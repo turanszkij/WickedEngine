@@ -48,8 +48,7 @@ inline float3 shadowCascade(in ShaderEntity light, in float3 shadowPos, in float
 {
 	const float realDistance = shadowPos.z + light.shadowBias;
 	float3 shadow = 0;
-#ifndef DISABLE_SHADOWMAPS
-#ifndef DISABLE_SOFT_SHADOWS
+#ifndef DISABLE_SOFT_SHADOWMAP
 	const float range = 1.5f;
 	[loop]
 	for (float y = -range; y <= range; y += 1.0f)
@@ -64,7 +63,7 @@ inline float3 shadowCascade(in ShaderEntity light, in float3 shadowPos, in float
 	shadow = shadow.x / shadow.y;
 #else
 	shadow = texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(shadowUV, light.GetShadowMapIndex() + cascade), realDistance).r;
-#endif
+#endif // DISABLE_SOFT_SHADOWMAP
 
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
 	if (g_xFrame_Options & OPTION_BIT_TRANSPARENTSHADOWS_ENABLED)
@@ -81,8 +80,6 @@ inline float3 shadowCascade(in ShaderEntity light, in float3 shadowPos, in float
 	}
 #endif //DISABLE_TRANSPARENT_SHADOWMAP
 
-#endif // DISABLE_SHADOWMAPS
-
 	return shadow;
 }
 
@@ -94,7 +91,7 @@ inline float shadowCube(in ShaderEntity light, float3 Lunnormalized)
 
 inline float shadowTrace(float3 P, float3 N, float3 L, float dist)
 {
-#ifdef INLINE_RAYTRACING_ENABLED
+#ifdef RAYTRACING_INLINE
 	RayQuery<
 		RAY_FLAG_CULL_NON_OPAQUE | 
 		RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
@@ -114,7 +111,7 @@ inline float shadowTrace(float3 P, float3 N, float3 L, float dist)
 	{
 		return 0;
 	}
-#endif // INLINE_RAYTRACING_ENABLED
+#endif // RAYTRACING_INLINE
 
 	return 1;
 }
@@ -140,7 +137,6 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 			}
 			else
 			{
-#ifndef DISABLE_SHADOWMAPS
 				// Loop through cascades from closest (smallest) to farest (biggest)
 				[loop]
 				for (uint cascade = 0; cascade < g_xFrame_ShadowCascadeCount; ++cascade)
@@ -176,8 +172,6 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 						break;
 					}
 				}
-
-#endif // DISABLE_SHADOWMAPS
 			}
 		}
 
@@ -211,7 +205,7 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 			float sh = surfaceToLight.NdotL;
 
 			[branch]
-			if (light.IsCastingShadow()) 
+			if (light.IsCastingShadow())
 			{
 				[branch]
 				if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
@@ -220,9 +214,7 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 				}
 				else
 				{
-#ifndef DISABLE_SHADOWMAPS
 					sh *= shadowCube(light, Lunnormalized);
-#endif // DISABLE_SHADOWMAPS
 				}
 			}
 
@@ -276,7 +268,6 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 					}
 					else
 					{
-#ifndef DISABLE_SHADOWMAPS
 						float4 ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + 0], float4(surface.P, 1));
 						ShPos.xyz /= ShPos.w;
 						float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
@@ -285,7 +276,6 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 						{
 							sh *= shadowCascade(light, ShPos.xyz, ShTex.xy, 0);
 						}
-#endif // DISABLE_SHADOWMAPS
 					}
 				}
 
@@ -404,12 +394,19 @@ inline void SphereLight(in ShaderEntity light, in Surface surface, inout Lightin
 	float3 L = Lunnormalized / dist;
 	float fLight = 1;
 
-#ifndef DISABLE_SHADOWMAPS
 	[branch]
-	if (light.IsCastingShadow()) {
-		fLight = shadowCube(light, Lunnormalized);
+	if (light.IsCastingShadow()) 
+	{
+		[branch]
+		if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
+		{
+			fLight = shadowTrace(surface.P, surface.N, L, dist);
+		}
+		else
+		{
+			fLight = shadowCube(light, Lunnormalized);
+		}
 	}
-#endif
 
 	[branch]
 	if (fLight > 0)
@@ -453,12 +450,19 @@ inline void DiscLight(in ShaderEntity light, in Surface surface, inout Lighting 
 	float3 L = Lunnormalized / dist;
 	float fLight = 1;
 
-#ifndef DISABLE_SHADOWMAPS
 	[branch]
-	if (light.IsCastingShadow()) {
-		fLight = shadowCube(light, Lunnormalized);
+	if (light.IsCastingShadow())
+	{
+		[branch]
+		if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
+		{
+			fLight = shadowTrace(surface.P, surface.N, L, dist);
+		}
+		else
+		{
+			fLight = shadowCube(light, Lunnormalized);
+		}
 	}
-#endif
 
 	[branch]
 	if (fLight > 0)
@@ -509,12 +513,20 @@ inline void RectangleLight(in ShaderEntity light, in Surface surface, inout Ligh
 	L /= dist;
 	float fLight = 1;
 
-#ifndef DISABLE_SHADOWMAPS
 	[branch]
-	if (light.IsCastingShadow()) {
+	if (light.IsCastingShadow())
+	{
+		[branch]
+		if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
+		{
+			fLight = shadowTrace(surface.P, surface.N, L, dist);
+		}
+		else
+		{
+			fLight = shadowCube(light, Lunnormalized);
+		}
 		fLight = shadowCube(light, Lunnormalized);
 	}
-#endif
 
 	[branch]
 	if (fLight > 0)
@@ -624,12 +636,19 @@ inline void TubeLight(in ShaderEntity light, in Surface surface, inout Lighting 
 	float3 L = Lunnormalized / dist;
 	float fLight = 1;
 
-#ifndef DISABLE_SHADOWMAPS
 	[branch]
-	if (light.IsCastingShadow()) {
-		fLight = shadowCube(light, Lunnormalized);
+	if (light.IsCastingShadow())
+	{
+		[branch]
+		if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
+		{
+			fLight = shadowTrace(surface.P, surface.N, L, dist);
+		}
+		else
+		{
+			fLight = shadowCube(light, Lunnormalized);
+		}
 	}
-#endif
 
 	[branch]
 	if (fLight > 0)

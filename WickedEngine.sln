@@ -77,7 +77,6 @@ Global
 		WickedEngine\WickedEngine_SOURCE.vcxitems*{60da258f-e95f-4cf4-a46b-17d80644464b}*SharedItemsImports = 4
 		Editor\Editor_SOURCE.vcxitems*{867febca-09c4-4fe7-8a4c-4d9b1c27e7d0}*SharedItemsImports = 9
 		WickedEngine\Shaders_SOURCE.vcxitems*{92e86448-0724-4387-abac-96e63edf4190}*SharedItemsImports = 9
-		WickedEngine\Shaders_SOURCE.vcxitems*{9c8f8910-cca3-41cb-a2fa-3545cdd5d8bf}*SharedItemsImports = 4
 		WickedEngine\Shaders_SOURCE.vcxitems*{c222218b-b6d1-406b-b2c0-8c1ced4a8d19}*SharedItemsImports = 4
 		Content.vcxitems*{c48f6bff-f91b-4db5-98b5-15287dfb7c95}*SharedItemsImports = 9
 		WickedEngine\WickedEngine_SOURCE.vcxitems*{d294c41d-d886-4b95-9fd6-ee13eee8d976}*SharedItemsImports = 4

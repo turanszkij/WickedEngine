@@ -45,9 +45,9 @@ for item in root.iter():
             
             cmd += "_6_4 "
             
-            cmd += "-D HLSL6 "
+            #cmd += "-D RAYTRACING_INLINE "
             
-            #cmd += "-D INLINE_RAYTRACING_ENABLED "
+            cmd += "-D HLSL6 "
             
             cmd += "-flegacy-macro-expansion -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso "
             

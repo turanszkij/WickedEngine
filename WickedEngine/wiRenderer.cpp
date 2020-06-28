@@ -4670,7 +4670,8 @@ void UpdateRaytracingAccelerationStructures(CommandList cmd)
 		if (mesh != nullptr)
 		{
 			// If src param is nullptr, rebuild happens, else update (if src == dst, then update happens in place)
-			device->BuildRaytracingAccelerationStructure(&mesh->BLAS, cmd, type == AS_REBUILD ? nullptr : &mesh->BLAS);
+			//device->BuildRaytracingAccelerationStructure(&mesh->BLAS, cmd, type == AS_REBUILD ? nullptr : &mesh->BLAS);
+			device->BuildRaytracingAccelerationStructure(&mesh->BLAS, cmd, nullptr); // DX12 has some problem updating with new driver?
 			bottomlevel_sync = true;
 			it.second = AS_COMPLETE;
 		}
