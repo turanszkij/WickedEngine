@@ -12,33 +12,6 @@
 struct RAY;
 struct wiResource;
 
-struct RenderPassInput
-{
-	enum FLAGS
-	{
-		FLAG_EMPTY = 0,
-		FLAG_FORCE_ALPHATEST = 1 << 0,
-		FLAG_ENABLE_TESSELLATION = 1 << 1,
-	};
-	uint32_t flags = FLAG_EMPTY;
-	RENDERPASS renderPass;
-	uint32_t renderTypeFlags;
-	const wiScene::MeshComponent* mesh;
-	const wiScene::MaterialComponent* material;
-};
-struct RenderPassOutput
-{
-	enum FLAGS
-	{
-		FLAG_EMPTY = 0,
-		FLAG_DONT_RENDER = 1 << 0, // don't make this draw call
-		FLAG_REQUEST_LIGHTMASK = 1 << 1, // renderer will bind a CPU computed light bit mask constant buffer
-		FLAG_REQUEST_TESSELLATION = 1 << 2, // renderer will bind tessellation parameters constant buffer
-	};
-	uint32_t flags = 0;
-	const wiGraphics::PipelineState* pso = nullptr;
-};
-
 namespace wiRenderer
 {
 	inline uint32_t CombineStencilrefs(STENCILREF engineStencilRef, uint8_t userStencilRef)
@@ -111,18 +84,27 @@ namespace wiRenderer
 	// Resets the global shader alpha reference value to float g_xAlphaRef = 0.75f
 	inline void ResetAlphaRef(wiGraphics::CommandList cmd) { SetAlphaRef(0.75f, cmd); }
 
+	enum DRAWSCENE_FLAGS
+	{
+		DRAWSCENE_OPAQUE = 1 << 0,
+		DRAWSCENE_TRANSPARENT = 1 << 1,
+		DRAWSCENE_OCCLUSIONCULLING = 1 << 2,
+		DRAWSCENE_TESSELLATION = 1 << 3,
+		DRAWSCENE_HAIRPARTICLE = 1 << 4,
+	};
+
+	// Draw the world from a camera. You must call UpdateCameraCB() at least once in this frame prior to this
+	void DrawScene(
+		const wiScene::CameraComponent& camera,
+		RENDERPASS renderPass,
+		wiGraphics::CommandList cmd,
+		uint32_t flags = DRAWSCENE_OPAQUE
+	);
+
 	// Draw skydome centered to camera.
 	void DrawSky(wiGraphics::CommandList cmd);
 	// A black skydome will be draw with only the sun being visible on it
 	void DrawSun(wiGraphics::CommandList cmd);
-	// Draw the world from a camera. You must call UpdateCameraCB() at least once in this frame prior to this
-	void DrawScene(const wiScene::CameraComponent& camera, RENDERPASS renderPass, wiGraphics::CommandList cmd,
-		bool grass,
-		std::function<void(const RenderPassInput&, RenderPassOutput&)> renderpass_callback);
-	// Draw the transparent world from a camera. You must call UpdateCameraCB() at least once in this frame prior to this
-	void DrawScene_Transparent(const wiScene::CameraComponent& camera, const wiGraphics::Texture& lineardepth, RENDERPASS renderPass, wiGraphics::CommandList cmd,
-		bool grass,
-		std::function<void(const RenderPassInput&, RenderPassOutput&)> renderpass_callback);
 	// Draw shadow maps for each visible light that has associated shadow maps
 	void DrawShadowmaps(const wiScene::CameraComponent& camera, wiGraphics::CommandList cmd, uint32_t layerMask = ~0);
 	// Draw debug world. You must also enable what parts to draw, eg. SetToDrawGridHelper, etc, see implementation for details what can be enabled.
@@ -522,6 +504,8 @@ namespace wiRenderer
 	bool GetRaytraceDebugBVHVisualizerEnabled();
 	void SetRaytracedShadowsEnabled(bool value);
 	bool GetRaytracedShadowsEnabled();
+	void SetTessellationEnabled(bool value);
+	bool GetTessellationEnabled();
 
 	const wiGraphics::Texture* GetGlobalLightmap();
 

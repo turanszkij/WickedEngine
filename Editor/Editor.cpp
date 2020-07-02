@@ -65,9 +65,7 @@ void Editor::Initialize()
 	wiRenderer::SetOcclusionCullingEnabled(true);
 
 	renderComponent = std::make_unique<EditorComponent>();
-	renderComponent->Initialize();
 	loader = std::make_unique<EditorLoadingScreen>();
-	loader->Initialize();
 	loader->Load();
 
 	renderComponent->main = this;
@@ -103,10 +101,6 @@ void EditorLoadingScreen::Update(float dt)
 	sprite.params.pos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth()*0.5f, wiRenderer::GetDevice()->GetScreenHeight()*0.5f - font.textHeight(), 0);
 
 	__super::Update(dt);
-}
-void EditorLoadingScreen::Unload()
-{
-
 }
 
 
@@ -145,8 +139,6 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	renderPath->setDepthOfFieldEnabled(false);
 	renderPath->setLightShaftsEnabled(false);
 
-
-	renderPath->Initialize();
 	renderPath->Load();
 
 	materialWnd = std::make_unique<MaterialWindow>(this);
@@ -2277,12 +2269,6 @@ void EditorComponent::Compose(CommandList cmd) const
 	}
 
 	__super::Compose(cmd);
-}
-void EditorComponent::Unload()
-{
-	renderPath->Unload();
-
-	__super::Unload();
 }
 
 void EditorComponent::ClearSelected()

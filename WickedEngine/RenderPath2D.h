@@ -37,14 +37,16 @@ private:
 	wiGraphics::RenderPass renderpass_final;
 
 	wiGUI GUI;
+	bool initial_resizebuffers = false;
 
 protected:
-	void ResizeBuffers() override;
+	// create resolution dependant resources, such as render targets
+	virtual void ResizeBuffers();
+	// update resolution dependent elements, such as elements dependent on current monitor DPI
+	virtual void ResizeLayout() {}
 public:
 
-	void Initialize() override;
 	void Load() override;
-	void Unload() override;
 	void Start() override;
 	void Update(float dt) override;
 	void FixedUpdate() override;

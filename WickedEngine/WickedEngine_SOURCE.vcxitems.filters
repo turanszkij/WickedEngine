@@ -1874,9 +1874,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreen_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath.cpp">
-      <Filter>ENGINE\High level interface</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath2D.cpp">
       <Filter>ENGINE\High level interface</Filter>
     </ClCompile>

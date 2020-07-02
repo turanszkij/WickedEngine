@@ -18,9 +18,6 @@ Luna<RenderPath3D_TiledForward_BindLua>::FunctionType RenderPath3D_TiledForward_
 	lunamethod(RenderPath2D_BindLua, SetSpriteOrder),
 	lunamethod(RenderPath2D_BindLua, SetFontOrder),
 
-	lunamethod(RenderPath_BindLua, Initialize),
-	lunamethod(RenderPath_BindLua, OnStart),
-	lunamethod(RenderPath_BindLua, OnStop),
 	lunamethod(RenderPath_BindLua, GetLayerMask),
 	lunamethod(RenderPath_BindLua, SetLayerMask),
 
@@ -38,7 +35,6 @@ Luna<RenderPath3D_TiledForward_BindLua>::FunctionType RenderPath3D_TiledForward_
 	lunamethod(RenderPath3D_BindLua, SetSSSEnabled),
 	lunamethod(RenderPath3D_BindLua, SetDepthOfFieldEnabled),
 	lunamethod(RenderPath3D_BindLua, SetEyeAdaptionEnabled),
-	lunamethod(RenderPath3D_BindLua, SetTessellationEnabled),
 	lunamethod(RenderPath3D_BindLua, SetMSAASampleCount),
 	lunamethod(RenderPath3D_BindLua, SetSharpenFilterEnabled),
 	lunamethod(RenderPath3D_BindLua, SetSharpenFilterAmount),

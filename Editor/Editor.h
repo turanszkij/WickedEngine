@@ -32,7 +32,6 @@ private:
 public:
 	void Load() override;
 	void Update(float dt) override;
-	void Unload() override;
 };
 
 class Editor;
@@ -128,7 +127,6 @@ public:
 	void Update(float dt) override;
 	void Render() const override;
 	void Compose(wiGraphics::CommandList cmd) const override;
-	void Unload() override;
 
 
 	enum EDITORSTENCILREF

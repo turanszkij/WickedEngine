@@ -127,6 +127,7 @@ bool temporalAADEBUG = false;
 uint32_t raytraceBounceCount = 2;
 bool raytraceDebugVisualizer = false;
 bool raytracedShadows = false;
+bool tessellationEnabled = false;
 Entity cameraTransform = INVALID_ENTITY;
 
 
@@ -3122,10 +3123,14 @@ void BindEnvironmentTextures(SHADERSTAGE stage, CommandList cmd)
 	}
 }
 
-
-void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_t renderTypeFlags, CommandList cmd,
-	std::function<void(const RenderPassInput&, RenderPassOutput&)> renderpass_callback,
-	const SHCAM* shcams = nullptr)
+void RenderMeshes(
+	const RenderQueue& renderQueue, 
+	RENDERPASS renderPass, 
+	uint32_t renderTypeFlags, 
+	CommandList cmd,
+	bool tessellation = false,
+	const SHCAM* shcams = nullptr
+)
 {
 	if (!renderQueue.empty())
 	{
@@ -3134,7 +3139,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 
 		device->EventBegin("RenderMeshes", cmd);
 
-		const bool tessellation = device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
+		tessellation = tessellation && device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
 		if (tessellation)
 		{
 			BindConstantBuffers(DS, cmd);
@@ -3162,6 +3167,12 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 			renderPass == RENDERPASS_SHADOW ||
 			renderPass == RENDERPASS_SHADOWCUBE ||
 			renderPass == RENDERPASS_DEPTHONLY;
+
+		// Do we need to compute a light mask for this pass on the CPU?
+		const bool forwardLightmaskRequest =
+			renderPass == RENDERPASS_FORWARD ||
+			renderPass == RENDERPASS_ENVMAPCAPTURE ||
+			renderPass == RENDERPASS_VOXELIZE;
 
 		// Do we render to cubemaps in this pass?
 		const bool cubemapRenderRequest =
@@ -3224,8 +3235,8 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 
 			InstancedBatch& current_batch = instancedBatchArray[instancedBatchCount - 1];
 
-			float dither = instance.GetTransparency(); 
-			
+			float dither = instance.GetTransparency();
+
 			if (instance.IsImpostorPlacement())
 			{
 				float distance = batch.GetDistance();
@@ -3240,7 +3251,11 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 			}
 
 			const AABB& instanceAABB = scene.aabb_objects[instanceIndex];
-			current_batch.aabb = AABB::Merge(current_batch.aabb, instanceAABB);
+
+			if (forwardLightmaskRequest)
+			{
+				current_batch.aabb = AABB::Merge(current_batch.aabb, instanceAABB);
+			}
 
 			const XMFLOAT4X4& worldMatrix = instance.transform_index >= 0 ? scene.transforms[instance.transform_index].world : IDENTITYMATRIX;
 
@@ -3282,7 +3297,26 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 			const bool forceAlphaTestForDithering = instancedBatch.forceAlphatestForDithering != 0;
 			const uint8_t userStencilRefOverride = instancedBatch.userStencilRefOverride;
 
+			const float tessF = mesh.GetTessellationFactor();
+			const bool tessellatorRequested = tessF > 0 && tessellation;
 			const bool terrain = mesh.IsTerrain();
+
+			if (tessellatorRequested)
+			{
+				TessellationCB tessCB;
+				tessCB.g_f4TessFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_TESSELLATION], &tessCB, cmd);
+				device->BindConstantBuffer(HS, &constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, cmd);
+			}
+
+			if (forwardLightmaskRequest)
+			{
+				const CameraComponent* camera = renderQueue.camera == nullptr ? &GetCamera() : renderQueue.camera;
+				const FrameCulling& culling = frameCullings.at(camera);
+				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, instancedBatch.aabb, renderPass);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
+				device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
+			}
 
 			device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
 
@@ -3295,9 +3329,6 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 			};
 			BOUNDVERTEXBUFFERTYPE boundVBType_Prev = BOUNDVERTEXBUFFERTYPE::NOTHING;
 
-			bool request_lightmask_complete = false;
-			bool request_tessellation_complete = false;
-
 			for (const MeshComponent::MeshSubset& subset : mesh.subsets)
 			{
 				if (subset.indexCount == 0)
@@ -3306,19 +3337,24 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 				}
 				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
-				RenderPassInput callback_in;
-				if (forceAlphaTestForDithering)
-					callback_in.flags |= RenderPassInput::FLAG_FORCE_ALPHATEST;
-				if(tessellation)
-					callback_in.flags |= RenderPassInput::FLAG_ENABLE_TESSELLATION;
-				callback_in.renderPass = renderPass;
-				callback_in.renderTypeFlags = renderTypeFlags;
-				callback_in.mesh = &mesh;
-				callback_in.material = &material;
-				RenderPassOutput callback_out;
-				renderpass_callback(callback_in, callback_out); // Render pass specific setup happens here
+				const PipelineState* pso = nullptr;
+				if (terrain)
+				{
+					pso = &PSO_terrain[renderPass];
+				}
+				else
+				{
+					if (material.IsCustomShader())
+					{
+						pso = GetCustomShaderPSO(renderPass, renderTypeFlags, material.GetCustomShaderID());
+					}
+					else
+					{
+						pso = GetObjectPSO(renderPass, mesh.IsDoubleSided(), tessellatorRequested, material, forceAlphaTestForDithering);
+					}
+				}
 
-				if (callback_out.pso == nullptr || !callback_out.pso->IsValid())
+				if (pso == nullptr || !pso->IsValid())
 				{
 					continue;
 				}
@@ -3347,31 +3383,8 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 					continue;
 				}
 
-				const bool request_lightmask = callback_out.flags & RenderPassOutput::FLAG_REQUEST_LIGHTMASK;
-				const bool request_tessellation = callback_out.flags & RenderPassOutput::FLAG_REQUEST_TESSELLATION;
-
-				if (request_lightmask && !request_lightmask_complete)
-				{
-					request_lightmask_complete = true;
-					const CameraComponent* camera = renderQueue.camera == nullptr ? &GetCamera() : renderQueue.camera;
-					const FrameCulling& culling = frameCullings.at(camera);
-					ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, instancedBatch.aabb, renderPass);
-					device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
-					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
-				}
-
-				if (request_tessellation && !request_tessellation_complete)
-				{
-					request_tessellation_complete = true;
-					const float tessF = mesh.GetTessellationFactor();
-					TessellationCB tessCB;
-					tessCB.g_f4TessFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
-					device->UpdateBuffer(&constantBuffers[CBTYPE_TESSELLATION], &tessCB, cmd);
-					device->BindConstantBuffer(HS, &constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, cmd);
-				}
-
 				BOUNDVERTEXBUFFERTYPE boundVBType;
-				if (advancedVBRequest || request_tessellation)
+				if (advancedVBRequest || tessellatorRequested)
 				{
 					boundVBType = BOUNDVERTEXBUFFERTYPE::EVERYTHING;
 				}
@@ -3493,7 +3506,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 				uint32_t stencilRef = CombineStencilrefs(engineStencilRef, userStencilRef);
 				device->BindStencilRef(stencilRef, cmd);
 
-				device->BindPipelineState(callback_out.pso, cmd);
+				device->BindPipelineState(pso, cmd);
 
 				device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
 				device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
@@ -3518,7 +3531,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 					device->BindResources(PS, res, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(res), cmd);
 				}
 
-				if (request_tessellation)
+				if (tessellatorRequested)
 				{
 					const GPUResource* res[] = {
 						material.GetDisplacementMap(),
@@ -3614,7 +3627,11 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 	}
 }
 
-void RenderImpostors(const CameraComponent& camera, RENDERPASS renderPass, CommandList cmd)
+void RenderImpostors(
+	const CameraComponent& camera, 
+	RENDERPASS renderPass, 
+	CommandList cmd
+)
 {
 	const Scene& scene = GetScene();
 	const PipelineState* impostorRequest = GetImpostorPSO(renderPass);
@@ -5475,43 +5492,6 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 	if (IsWireRender())
 		return;
 
-	std::function<void(const RenderPassInput&, RenderPassOutput&)> renderpass_callback = [](const RenderPassInput& input, RenderPassOutput& output) {
-
-		switch (input.renderPass)
-		{
-		case RENDERPASS_FORWARD:
-		case RENDERPASS_VOXELIZE:
-		case RENDERPASS_ENVMAPCAPTURE:
-			output.flags |= RenderPassOutput::FLAG_REQUEST_LIGHTMASK;
-			break;
-		}
-
-		bool forceAlphaTestForDithering = input.flags & RenderPassInput::FLAG_FORCE_ALPHATEST;
-		const bool tessellatorRequested = input.mesh->GetTessellationFactor() > 0 && input.flags & RenderPassInput::FLAG_ENABLE_TESSELLATION;
-
-		if (input.mesh->IsTerrain())
-		{
-			output.pso = &PSO_terrain[input.renderPass];
-		}
-		else
-		{
-			if (input.material->IsCustomShader())
-			{
-				output.pso = GetCustomShaderPSO(input.renderPass, input.renderTypeFlags, input.material->GetCustomShaderID());
-			}
-			else
-			{
-				output.pso = GetObjectPSO(input.renderPass, input.mesh->IsDoubleSided(), tessellatorRequested, *input.material, forceAlphaTestForDithering);
-			}
-		}
-
-		if (output.pso == nullptr)
-		{
-			output.flags |= RenderPassOutput::FLAG_DONT_RENDER;
-		}
-
-	};
-
 	GraphicsDevice* device = GetDevice();
 	const FrameCulling& culling = frameCullings.at(&GetCamera());
 
@@ -5590,14 +5570,14 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 						device->BindViewports(1, &vp, cmd);
 
 						device->RenderPassBegin(&renderpasses_shadow2D[light.shadowMap_index + cascade], cmd);
-						RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd, renderpass_callback);
+						RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
 						device->RenderPassEnd(cmd);
 
 						// Transparent renderpass will always be started so that it is clear:
 						device->RenderPassBegin(&renderpasses_shadow2DTransparent[light.shadowMap_index + cascade], cmd);
 						if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 						{
-							RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd, renderpass_callback);
+							RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
 						}
 						device->RenderPassEnd(cmd);
 
@@ -5657,14 +5637,14 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 					device->BindViewports(1, &vp, cmd);
 
 					device->RenderPassBegin(&renderpasses_shadow2D[light.shadowMap_index], cmd);
-					RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd, renderpass_callback);
+					RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
 					device->RenderPassEnd(cmd);
 
 					// Transparent renderpass will always be started so that it is clear:
 					device->RenderPassBegin(&renderpasses_shadow2DTransparent[light.shadowMap_index], cmd);
 					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 					{
-						RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd, renderpass_callback);
+						RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
 					}
 					device->RenderPassEnd(cmd);
 
@@ -5744,7 +5724,7 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 					device->BindViewports(1, &vp, cmd);
 
 					device->RenderPassBegin(&renderpasses_shadowCube[light.shadowMap_index], cmd);
-					RenderMeshes(renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, cmd, renderpass_callback, cameras);
+					RenderMeshes(renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, cmd, false, cameras);
 					device->RenderPassEnd(cmd);
 
 					GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
@@ -5760,50 +5740,21 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 	}
 }
 
-void DrawScene(const CameraComponent& camera, RENDERPASS renderPass, CommandList cmd,
-	bool grass,
-	std::function<void(const RenderPassInput&, RenderPassOutput&)> renderpass_callback)
+void DrawScene(
+	const CameraComponent& camera,
+	RENDERPASS renderPass,
+	CommandList cmd,
+	uint32_t flags
+)
 {
 	GraphicsDevice* device = GetDevice();
 	const Scene& scene = GetScene();
 	const FrameCulling& culling = frameCullings.at(&camera);
 
-	renderpass_callback = [](const RenderPassInput& input, RenderPassOutput& output) {
-
-		switch (input.renderPass)
-		{
-		case RENDERPASS_FORWARD:
-		case RENDERPASS_VOXELIZE:
-		case RENDERPASS_ENVMAPCAPTURE:
-			output.flags |= RenderPassOutput::FLAG_REQUEST_LIGHTMASK;
-			break;
-		}
-
-		bool forceAlphaTestForDithering = input.flags & RenderPassInput::FLAG_FORCE_ALPHATEST;
-		const bool tessellatorRequested = input.mesh->GetTessellationFactor() > 0 && input.flags & RenderPassInput::FLAG_ENABLE_TESSELLATION;
-
-		if (input.mesh->IsTerrain())
-		{
-			output.pso = &PSO_terrain[input.renderPass];
-		}
-		else
-		{
-			if (input.material->IsCustomShader())
-			{
-				output.pso = GetCustomShaderPSO(input.renderPass, input.renderTypeFlags, input.material->GetCustomShaderID());
-			}
-			else
-			{
-				output.pso = GetObjectPSO(input.renderPass, input.mesh->IsDoubleSided(), tessellatorRequested, *input.material, forceAlphaTestForDithering);
-			}
-		}
-
-		if (output.pso == nullptr)
-		{
-			output.flags |= RenderPassOutput::FLAG_DONT_RENDER;
-		}
-
-	};
+	const bool opaque = flags & RENDERTYPE_OPAQUE;
+	const bool transparent = flags & DRAWSCENE_TRANSPARENT;
+	const bool tessellation = flags & DRAWSCENE_TESSELLATION;
+	const bool hairparticle = flags & DRAWSCENE_HAIRPARTICLE;
 
 	device->EventBegin("DrawScene", cmd);
 
@@ -5819,37 +5770,68 @@ void DrawScene(const CameraComponent& camera, RENDERPASS renderPass, CommandList
 		device->BindResource(PS, &decalAtlas, TEXSLOT_DECALATLAS, cmd);
 	}
 
-	if (renderPass == RENDERPASS_TILEDFORWARD)
+	if (transparent)
 	{
-		device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE], SBSLOT_ENTITYTILES, cmd);
+		if (renderPass == RENDERPASS_TILEDFORWARD)
+		{
+			device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], SBSLOT_ENTITYTILES, cmd);
+		}
+		if (ocean != nullptr)
+		{
+			ocean->Render(camera, scene.weather, renderTime, cmd);
+		}
+	}
+	else
+	{
+		if (renderPass == RENDERPASS_TILEDFORWARD)
+		{
+			device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE], SBSLOT_ENTITYTILES, cmd);
+		}
 	}
 
-	if (grass)
+	if (hairparticle)
 	{
-		if (GetAlphaCompositionEnabled())
+		const bool alphacomposition = GetAlphaCompositionEnabled();
+
+		if (!transparent && alphacomposition)
 		{
-			// cut off most transparent areas
+			// cut off most transparent areas in opaque pass (if alpha composition enabled)
 			SetAlphaRef(0.25f, cmd);
 		}
 
-		for (uint32_t hairIndex : culling.culledHairs)
+		if (!transparent || alphacomposition)
 		{
-			const wiHairParticle& hair = scene.hairs[hairIndex];
-			Entity entity = scene.hairs.GetEntity(hairIndex);
-			const MaterialComponent& material = *scene.materials.GetComponent(entity);
-
-			if (renderPass == RENDERPASS_FORWARD)
+			// transparent pass only renders hair when alpha composition enabled
+			for (uint32_t hairIndex : culling.culledHairs)
 			{
-				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, hair.aabb, renderPass);
-				device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
-				device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
-			}
+				const wiHairParticle& hair = scene.hairs[hairIndex];
+				Entity entity = scene.hairs.GetEntity(hairIndex);
+				const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
-			hair.Draw(camera, material, renderPass, false, cmd);
+				if (renderPass == RENDERPASS_FORWARD)
+				{
+					ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, hair.aabb, renderPass);
+					device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
+					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
+				}
+
+				hair.Draw(camera, material, renderPass, transparent, cmd);
+			}
 		}
 	}
 
 	RenderImpostors(camera, renderPass, cmd);
+
+	uint32_t renderTypeFlags = 0;
+	if (opaque)
+	{
+		renderTypeFlags |= RENDERTYPE_OPAQUE;
+	}
+	if (transparent)
+	{
+		renderTypeFlags |= RENDERTYPE_TRANSPARENT;
+		renderTypeFlags |= RENDERTYPE_WATER;
+	}
 
 	RenderQueue renderQueue;
 	renderQueue.camera = &camera;
@@ -5860,7 +5842,7 @@ void DrawScene(const CameraComponent& camera, RENDERPASS renderPass, CommandList
 		if (GetOcclusionCullingEnabled() && occlusionCulling && object.IsOccluded())
 			continue;
 
-		if (object.IsRenderable() && object.GetRenderTypes() & RENDERTYPE_OPAQUE)
+		if (object.IsRenderable() && (object.GetRenderTypes() & renderTypeFlags))
 		{
 			const float distance = wiMath::Distance(camera.Eye, object.center);
 			if (object.IsImpostorPlacement() && distance > object.impostorSwapDistance + object.impostorFadeThresholdRadius)
@@ -5875,8 +5857,8 @@ void DrawScene(const CameraComponent& camera, RENDERPASS renderPass, CommandList
 	}
 	if (!renderQueue.empty())
 	{
-		renderQueue.sort(RenderQueue::SORT_FRONT_TO_BACK);
-		RenderMeshes(renderQueue, renderPass, RENDERTYPE_OPAQUE, cmd, renderpass_callback);
+		renderQueue.sort(transparent ? RenderQueue::SORT_BACK_TO_FRONT : RenderQueue::SORT_FRONT_TO_BACK);
+		RenderMeshes(renderQueue, renderPass, renderTypeFlags, cmd, tessellation);
 
 		GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 	}
@@ -5885,124 +5867,85 @@ void DrawScene(const CameraComponent& camera, RENDERPASS renderPass, CommandList
 
 }
 
-void DrawScene_Transparent(const CameraComponent& camera, const Texture& lineardepth, RENDERPASS renderPass, CommandList cmd,
-	bool grass,
-	std::function<void(const RenderPassInput&, RenderPassOutput&)> renderpass_callback)
-{
-	GraphicsDevice* device = GetDevice();
-	const Scene& scene = GetScene();
-	const FrameCulling& culling = frameCullings.at(&camera);
-
-	renderpass_callback = [](const RenderPassInput& input, RenderPassOutput& output) {
-
-		switch (input.renderPass)
-		{
-		case RENDERPASS_FORWARD:
-		case RENDERPASS_VOXELIZE:
-		case RENDERPASS_ENVMAPCAPTURE:
-			output.flags |= RenderPassOutput::FLAG_REQUEST_LIGHTMASK;
-			break;
-		}
-
-		bool forceAlphaTestForDithering = input.flags & RenderPassInput::FLAG_FORCE_ALPHATEST;
-		const bool tessellatorRequested = input.mesh->GetTessellationFactor() > 0 && input.flags & RenderPassInput::FLAG_ENABLE_TESSELLATION;
-
-		if (input.mesh->IsTerrain())
-		{
-			output.pso = &PSO_terrain[input.renderPass];
-		}
-		else
-		{
-			if (input.material->IsCustomShader())
-			{
-				output.pso = GetCustomShaderPSO(input.renderPass, input.renderTypeFlags, input.material->GetCustomShaderID());
-			}
-			else
-			{
-				output.pso = GetObjectPSO(input.renderPass, input.mesh->IsDoubleSided(), tessellatorRequested, *input.material, forceAlphaTestForDithering);
-			}
-		}
-
-		if (output.pso == nullptr)
-		{
-			output.flags |= RenderPassOutput::FLAG_DONT_RENDER;
-		}
-
-	};
-
-	device->EventBegin("DrawScene_Transparent", cmd);
-
-	BindCommonResources(cmd);
-	BindShadowmaps(PS, cmd);
-	BindEnvironmentTextures(PS, cmd);
-	BindConstantBuffers(VS, cmd);
-	BindConstantBuffers(PS, cmd);
-
-	device->BindResource(PS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
-	if (decalAtlas.IsValid())
-	{
-		device->BindResource(PS, &decalAtlas, TEXSLOT_DECALATLAS, cmd);
-	}
-
-	if (renderPass == RENDERPASS_TILEDFORWARD)
-	{
-		device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], SBSLOT_ENTITYTILES, cmd);
-	}
-
-	if (ocean != nullptr)
-	{
-		ocean->Render(camera, scene.weather, renderTime, cmd);
-	}
-
-	if (grass && GetAlphaCompositionEnabled())
-	{
-		// transparent passes can only render hair when alpha composition is enabled
-
-		for (uint32_t hairIndex : culling.culledHairs)
-		{
-			const wiHairParticle& hair = scene.hairs[hairIndex];
-			Entity entity = scene.hairs.GetEntity(hairIndex);
-			const MaterialComponent& material = *scene.materials.GetComponent(entity);
-
-			if (renderPass == RENDERPASS_FORWARD)
-			{
-				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, hair.aabb, renderPass);
-				device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
-				device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
-			}
-
-			hair.Draw(camera, material, renderPass, true, cmd);
-		}
-	}
-
-	RenderQueue renderQueue;
-	renderQueue.camera = &camera;
-	for (uint32_t instanceIndex : culling.culledObjects)
-	{
-		const ObjectComponent& object = scene.objects[instanceIndex];
-
-		if (GetOcclusionCullingEnabled() && occlusionCulling && object.IsOccluded())
-			continue;
-
-		if (object.IsRenderable() && object.GetRenderTypes() & RENDERTYPE_TRANSPARENT)
-		{
-			RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
-			size_t meshIndex = scene.meshes.GetIndex(object.meshID);
-			batch->Create(meshIndex, instanceIndex, wiMath::DistanceEstimated(camera.Eye, object.center));
-			renderQueue.add(batch);
-		}
-	}
-	if (!renderQueue.empty())
-	{
-		renderQueue.sort(RenderQueue::SORT_BACK_TO_FRONT);
-		RenderMeshes(renderQueue, renderPass, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd, renderpass_callback);
-
-		GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
-	}
-
-	device->EventEnd(cmd);
-}
+//void DrawScene_Transparent(const CameraComponent& camera, const Texture& lineardepth, RENDERPASS renderPass, CommandList cmd, bool grass, bool occlusionCulling)
+//{
+//	GraphicsDevice* device = GetDevice();
+//	const Scene& scene = GetScene();
+//	const FrameCulling& culling = frameCullings.at(&camera);
+//
+//	device->EventBegin("DrawScene_Transparent", cmd);
+//
+//	BindCommonResources(cmd);
+//	BindShadowmaps(PS, cmd);
+//	BindEnvironmentTextures(PS, cmd);
+//	BindConstantBuffers(VS, cmd);
+//	BindConstantBuffers(PS, cmd);
+//
+//	device->BindResource(PS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+//	device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
+//	if (decalAtlas.IsValid())
+//	{
+//		device->BindResource(PS, &decalAtlas, TEXSLOT_DECALATLAS, cmd);
+//	}
+//
+//	if (renderPass == RENDERPASS_TILEDFORWARD)
+//	{
+//		device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], SBSLOT_ENTITYTILES, cmd);
+//	}
+//
+//	if (ocean != nullptr)
+//	{
+//		ocean->Render(camera, scene.weather, renderTime, cmd);
+//	}
+//
+//	if (grass && GetAlphaCompositionEnabled())
+//	{
+//		// transparent passes can only render hair when alpha composition is enabled
+//
+//		for (uint32_t hairIndex : culling.culledHairs)
+//		{
+//			const wiHairParticle& hair = scene.hairs[hairIndex];
+//			Entity entity = scene.hairs.GetEntity(hairIndex);
+//			const MaterialComponent& material = *scene.materials.GetComponent(entity);
+//
+//			if (renderPass == RENDERPASS_FORWARD)
+//			{
+//				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, hair.aabb, renderPass);
+//				device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
+//				device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
+//			}
+//
+//			hair.Draw(camera, material, renderPass, true, cmd);
+//		}
+//	}
+//
+//	RenderQueue renderQueue;
+//	renderQueue.camera = &camera;
+//	for (uint32_t instanceIndex : culling.culledObjects)
+//	{
+//		const ObjectComponent& object = scene.objects[instanceIndex];
+//
+//		if (GetOcclusionCullingEnabled() && occlusionCulling && object.IsOccluded())
+//			continue;
+//
+//		if (object.IsRenderable() && object.GetRenderTypes() & RENDERTYPE_TRANSPARENT)
+//		{
+//			RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
+//			size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+//			batch->Create(meshIndex, instanceIndex, wiMath::DistanceEstimated(camera.Eye, object.center));
+//			renderQueue.add(batch);
+//		}
+//	}
+//	if (!renderQueue.empty())
+//	{
+//		renderQueue.sort(RenderQueue::SORT_BACK_TO_FRONT);
+//		RenderMeshes(renderQueue, renderPass, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd, false);
+//
+//		GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
+//	}
+//
+//	device->EventEnd(cmd);
+//}
 
 void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 {
@@ -7297,43 +7240,6 @@ void RefreshEnvProbes(CommandList cmd)
 		return;
 	}
 
-	std::function<void(const RenderPassInput&, RenderPassOutput&)> renderpass_callback = [](const RenderPassInput& input, RenderPassOutput& output) {
-
-		switch (input.renderPass)
-		{
-		case RENDERPASS_FORWARD:
-		case RENDERPASS_VOXELIZE:
-		case RENDERPASS_ENVMAPCAPTURE:
-			output.flags |= RenderPassOutput::FLAG_REQUEST_LIGHTMASK;
-			break;
-		}
-
-		bool forceAlphaTestForDithering = input.flags & RenderPassInput::FLAG_FORCE_ALPHATEST;
-		const bool tessellatorRequested = input.mesh->GetTessellationFactor() > 0 && input.flags & RenderPassInput::FLAG_ENABLE_TESSELLATION;
-
-		if (input.mesh->IsTerrain())
-		{
-			output.pso = &PSO_terrain[input.renderPass];
-		}
-		else
-		{
-			if (input.material->IsCustomShader())
-			{
-				output.pso = GetCustomShaderPSO(input.renderPass, input.renderTypeFlags, input.material->GetCustomShaderID());
-			}
-			else
-			{
-				output.pso = GetObjectPSO(input.renderPass, input.mesh->IsDoubleSided(), tessellatorRequested, *input.material, forceAlphaTestForDithering);
-			}
-		}
-
-		if (output.pso == nullptr)
-		{
-			output.flags |= RenderPassOutput::FLAG_DONT_RENDER;
-		}
-
-	};
-
 	const Scene& scene = GetScene();
 
 	GraphicsDevice* device = GetDevice();
@@ -7417,7 +7323,7 @@ void RefreshEnvProbes(CommandList cmd)
 			BindShadowmaps(PS, cmd);
 			device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
 
-			RenderMeshes(renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_ALL, cmd, renderpass_callback, cameras);
+			RenderMeshes(renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_ALL, cmd, false, cameras);
 
 			GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 		}
@@ -7706,43 +7612,6 @@ void VoxelRadiance(CommandList cmd)
 		return;
 	}
 
-	std::function<void(const RenderPassInput&, RenderPassOutput&)> renderpass_callback = [](const RenderPassInput& input, RenderPassOutput& output) {
-
-		switch (input.renderPass)
-		{
-		case RENDERPASS_FORWARD:
-		case RENDERPASS_VOXELIZE:
-		case RENDERPASS_ENVMAPCAPTURE:
-			output.flags |= RenderPassOutput::FLAG_REQUEST_LIGHTMASK;
-			break;
-		}
-
-		bool forceAlphaTestForDithering = input.flags & RenderPassInput::FLAG_FORCE_ALPHATEST;
-		const bool tessellatorRequested = input.mesh->GetTessellationFactor() > 0 && input.flags & RenderPassInput::FLAG_ENABLE_TESSELLATION;
-
-		if (input.mesh->IsTerrain())
-		{
-			output.pso = &PSO_terrain[input.renderPass];
-		}
-		else
-		{
-			if (input.material->IsCustomShader())
-			{
-				output.pso = GetCustomShaderPSO(input.renderPass, input.renderTypeFlags, input.material->GetCustomShaderID());
-			}
-			else
-			{
-				output.pso = GetObjectPSO(input.renderPass, input.mesh->IsDoubleSided(), tessellatorRequested, *input.material, forceAlphaTestForDithering);
-			}
-		}
-
-		if (output.pso == nullptr)
-		{
-			output.flags |= RenderPassOutput::FLAG_DONT_RENDER;
-		}
-
-	};
-
 	GraphicsDevice* device = GetDevice();
 
 	device->EventBegin("Voxel Radiance", cmd);
@@ -7849,7 +7718,7 @@ void VoxelRadiance(CommandList cmd)
 		BindConstantBuffers(PS, cmd);
 
 		device->RenderPassBegin(&renderpass_voxelize, cmd);
-		RenderMeshes(renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, cmd, renderpass_callback);
+		RenderMeshes(renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, cmd);
 		device->RenderPassEnd(cmd);
 
 		GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
@@ -12329,6 +12198,14 @@ void SetRaytracedShadowsEnabled(bool value)
 bool GetRaytracedShadowsEnabled()
 {
 	return raytracedShadows;
+}
+void SetTessellationEnabled(bool value)
+{
+	tessellationEnabled = value;
+}
+bool GetTessellationEnabled()
+{
+	return tessellationEnabled;
 }
 
 }

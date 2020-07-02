@@ -32,11 +32,6 @@ void LoadingScreen::onFinished(function<void()> finishFunction)
 		finish = finishFunction;
 }
 
-void LoadingScreen::Unload()
-{
-	RenderPath2D::Unload();
-}
-
 void LoadingScreen::Start()
 {
 	for (auto& x : tasks)

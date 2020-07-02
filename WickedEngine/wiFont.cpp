@@ -358,6 +358,19 @@ void Initialize()
 	wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 	LoadShaders();
 
+
+	wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [](uint64_t userdata) {
+		glyphLock.lock();
+		for (auto& x : glyph_lookup)
+		{
+			pendingGlyphs.insert(x.first);
+		}
+		glyph_lookup.clear();
+		rect_lookup.clear();
+		glyphLock.unlock();
+	});
+
+
 	wiBackLog::post("wiFont Initialized");
 	initialized.store(true);
 }
@@ -365,20 +378,6 @@ void Initialize()
 void UpdatePendingGlyphs()
 {
 	glyphLock.lock();
-
-	static int saved_dpi = wiPlatform::GetDPI();
-	int dpi = wiPlatform::GetDPI();
-	if (saved_dpi != dpi)
-	{
-		saved_dpi = dpi;
-
-		for (auto& x : glyph_lookup)
-		{
-			pendingGlyphs.insert(x.first);
-		}
-		glyph_lookup.clear();
-		rect_lookup.clear();
-	}
 
 	// If there are pending glyphs, render them and repack the atlas:
 	if (!pendingGlyphs.empty())

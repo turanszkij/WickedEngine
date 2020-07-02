@@ -8,6 +8,7 @@
 
 using namespace wiGraphics;
 
+
 void RenderPath3D_TiledForward::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -20,6 +21,14 @@ void RenderPath3D_TiledForward::Render() const
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) { RenderShadows(cmd); });
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) { RenderReflections(cmd); });
+
+
+	static const uint32_t drawscene_flags =
+		wiRenderer::DRAWSCENE_OPAQUE |
+		wiRenderer::DRAWSCENE_HAIRPARTICLE |
+		wiRenderer::DRAWSCENE_TESSELLATION |
+		wiRenderer::DRAWSCENE_OCCLUSIONCULLING
+		;
 
 	// Main scene:
 	cmd = device->BeginCommandList();
@@ -44,7 +53,7 @@ void RenderPath3D_TiledForward::Render() const
 			vp.Height = (float)depthBuffer.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
-			wiRenderer::DrawScene(wiRenderer::GetCamera(), RENDERPASS_DEPTHONLY, cmd, true, nullptr);
+			wiRenderer::DrawScene(wiRenderer::GetCamera(), RENDERPASS_DEPTHONLY, cmd, drawscene_flags);
 
 			device->RenderPassEnd(cmd);
 
@@ -120,7 +129,7 @@ void RenderPath3D_TiledForward::Render() const
 			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
 			device->BindResource(PS, getAOEnabled() ? &rtAO : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_AO, cmd);
 			device->BindResource(PS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
-			wiRenderer::DrawScene(wiRenderer::GetCamera(), RENDERPASS_TILEDFORWARD, cmd, true, nullptr);
+			wiRenderer::DrawScene(wiRenderer::GetCamera(), RENDERPASS_TILEDFORWARD, cmd, drawscene_flags);
 			wiRenderer::DrawSky(cmd);
 
 			RenderOutline(cmd);

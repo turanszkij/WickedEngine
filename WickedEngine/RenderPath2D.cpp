@@ -3,13 +3,12 @@
 #include "wiSprite.h"
 #include "wiSpriteFont.h"
 #include "wiRenderer.h"
+#include "wiEvent.h"
 
 using namespace wiGraphics;
 
 void RenderPath2D::ResizeBuffers()
 {
-	RenderPath::ResizeBuffers();
-
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	FORMAT defaultTextureFormat = device->GetBackBufferFormat();
@@ -67,34 +66,23 @@ void RenderPath2D::ResizeBuffers()
 
 }
 
-void RenderPath2D::Initialize()
-{
-	RenderPath::Initialize();
-}
-
 void RenderPath2D::Load()
 {
-	RenderPath::Load();
-}
-void RenderPath2D::Unload()
-{
-	for (auto& x : layers)
+	if (!initial_resizebuffers)
 	{
-		for (auto& y : x.items)
-		{
-			if (y.sprite != nullptr)
-			{
-				delete y.sprite;
-			}
-			if (y.font != nullptr)
-			{
-				delete y.font;
-			}
-		}
+		initial_resizebuffers = true;
+		ResizeBuffers();
+		ResizeLayout();
+		wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [this](uint64_t userdata) {
+			ResizeBuffers();
+			ResizeLayout();
+			});
+		wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [this](uint64_t userdata) {
+			ResizeLayout();
+			});
 	}
-	layers.clear();
 
-	RenderPath::Unload();
+	RenderPath::Load();
 }
 void RenderPath2D::Start()
 {

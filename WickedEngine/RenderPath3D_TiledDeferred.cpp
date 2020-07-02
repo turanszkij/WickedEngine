@@ -47,6 +47,13 @@ void RenderPath3D_TiledDeferred::Render() const
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) { RenderReflections(cmd); });
 
+	static const uint32_t drawscene_flags =
+		wiRenderer::DRAWSCENE_OPAQUE |
+		wiRenderer::DRAWSCENE_HAIRPARTICLE |
+		wiRenderer::DRAWSCENE_TESSELLATION |
+		wiRenderer::DRAWSCENE_OCCLUSIONCULLING
+		;
+
 	// Main scene:
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
@@ -70,7 +77,7 @@ void RenderPath3D_TiledDeferred::Render() const
 			device->BindViewports(1, &vp, cmd);
 
 			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
-			wiRenderer::DrawScene(wiRenderer::GetCamera(), RENDERPASS_DEFERRED, cmd, true, nullptr);
+			wiRenderer::DrawScene(wiRenderer::GetCamera(), RENDERPASS_DEFERRED, cmd, drawscene_flags);
 
 			device->RenderPassEnd(cmd);
 

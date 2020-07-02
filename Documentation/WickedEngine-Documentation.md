@@ -42,6 +42,7 @@ This is a reference for the C++ features of Wicked Engine
 	3. [wiJobSystem](#wijobsystem)
 	4. [wiInitializer](#wiinitializer)
 	5. [wiPlatform](#wiplatform)
+	6. [wiEvent](#wievent)
 3. [Graphics](#graphics)
 	1. [wiGraphics](#wigraphics)
 		1. [GraphicsDevice](#wigraphicsdevice)
@@ -79,7 +80,8 @@ This is a reference for the C++ features of Wicked Engine
 		5. [Shadow Maps](#shadow-maps)
 		6. [UpdatePerFrameData](#updateperframedata)
 		7. [UpdateRenderData](#updaterenderdata)
-		8. [Ray tracing](#ray-tracing)
+		8. [Ray tracing (hardware accelerated)](#ray-tracing-hardware-accelerated)
+		8. [Ray tracing (Legacy)](#ray-tracing-legacy)
 		9. [Scene BVH](#scene-bvh)
 		10. [Decals](#decals)
 		11. [Environment probes](#environment-probes)
@@ -191,16 +193,12 @@ This will be called once per frame. It is const, so it shouldn't modify state. W
 It is called once per frame. It is running on a single command list that it receives as a parameter. These rendering commands will directly record onto the last submitted command list in the frame. The render target is the back buffer at this point, so rendering will happen to the screen.
 
 Apart from the functions that will be run every frame, the RenderPath has the following functions:
-1. Initialize() <br/>
-This is an optional function, that the user can call when something needs to be initialized before Load() function will be triggered.
-2. Load() <br/> 
-Intended for loading resources before the first time the RenderPath will be used.
-3. Start() <br/>
+1. Load() <br/> 
+Intended for loading resources before the first time the RenderPath will be used. It will be callsed by [LoadingScreen](#loadingscreen) to load resources in the background.
+2. Start() <br/>
 Start will always be called when a RenderPath is activated by the MainComponent
-4. Stop() <br/>
+3. Stop() <br/>
 Stop will be always called when the current RenderPath was the active one in MainComponent, but an other one was activated.
-5. Unload() <br/>
-Before a RenderPath is destroyed, Unload will be called, so deleting resources can take place if required.
 
 ### RenderPath2D
 [[Header]](../WickedEngine/RenderPath2D.h) [[Cpp]](../WickedEngine/RenderPath2D.cpp)
@@ -410,6 +408,18 @@ You can get native platform specific handles here, such as window handle.
 Returns the platform specific window handle
 - IsWindowActive <br/>
 Returns true if the current window is the topmost one, false if it is not in focus
+
+### wiEvent
+[[Header]](../WickedEngine/wiEvent.h)
+The event system can be used to execute system-wide tasks. Any system can "subscribe" to events and any system can "fire" events.
+- Subscribe <br/>
+The first parameter is the event ID. Core system events are negative numbers. The user can choose any positive number to create custom events. 
+The second parameter is a function to be executed, with a userdata argument. The userdata argument can hold any custom data that the user desires.
+Multiple functions can be subscribed to a single event ID.
+- FireEvent <br/>
+The first argument is the event id, that says which events to invoke. 
+The second argument will be passed to the subscribed event's userdata parameter.
+All events that are subsribed to the specified event id will run immediately at the time of the call of FireEvent. The order of execution among events is the order of which they were subscribed.
 
 
 ## Graphics

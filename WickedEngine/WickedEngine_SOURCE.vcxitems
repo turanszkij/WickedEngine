@@ -678,7 +678,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath2D_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_BindLua.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SpriteAnim_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Texture_BindLua.cpp" />

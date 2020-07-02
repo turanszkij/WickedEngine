@@ -49,7 +49,6 @@ private:
 	bool sssEnabled = true;
 	bool depthOfFieldEnabled = false;
 	bool eyeAdaptionEnabled = false;
-	bool tessellationEnabled = false;
 	bool sharpenFilterEnabled = false;
 	bool outlineEnabled = false;
 	bool chromaticAberrationEnabled = false;
@@ -156,7 +155,6 @@ public:
 	constexpr bool getSSSEnabled() const { return sssEnabled; }
 	constexpr bool getDepthOfFieldEnabled() const { return depthOfFieldEnabled; }
 	constexpr bool getEyeAdaptionEnabled() const { return eyeAdaptionEnabled; }
-	constexpr bool getTessellationEnabled() const { return tessellationEnabled && wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION); }
 	constexpr bool getSharpenFilterEnabled() const { return sharpenFilterEnabled && getSharpenFilterAmount() > 0; }
 	constexpr bool getOutlineEnabled() const { return outlineEnabled; }
 	constexpr bool getChromaticAberrationEnabled() const { return chromaticAberrationEnabled; }
@@ -195,7 +193,6 @@ public:
 	constexpr void setSSSEnabled(bool value){ sssEnabled = value; }
 	constexpr void setDepthOfFieldEnabled(bool value){ depthOfFieldEnabled = value; }
 	constexpr void setEyeAdaptionEnabled(bool value) { eyeAdaptionEnabled = value; }
-	constexpr void setTessellationEnabled(bool value) { tessellationEnabled = value; }
 	constexpr void setSharpenFilterEnabled(bool value) { sharpenFilterEnabled = value; }
 	constexpr void setOutlineEnabled(bool value) { outlineEnabled = value; }
 	constexpr void setChromaticAberrationEnabled(bool value) { chromaticAberrationEnabled = value; }

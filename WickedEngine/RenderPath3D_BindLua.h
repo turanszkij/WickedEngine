@@ -32,7 +32,6 @@ public:
 	int SetSSSEnabled(lua_State* L);
 	int SetDepthOfFieldEnabled(lua_State* L);
 	int SetEyeAdaptionEnabled(lua_State* L);
-	int SetTessellationEnabled(lua_State* L);
 	int SetMSAASampleCount(lua_State* L);
 	int SetSharpenFilterEnabled(lua_State* L);
 	int SetSharpenFilterAmount(lua_State* L);

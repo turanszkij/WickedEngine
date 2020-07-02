@@ -294,6 +294,7 @@ void TestsRenderer::Load()
 	testSelector->SetSelected(0);
 	GetGUI().AddWidget(testSelector);
 
+	__super::Load();
 }
 void TestsRenderer::Update(float dt)
 {
