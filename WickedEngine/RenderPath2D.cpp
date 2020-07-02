@@ -68,7 +68,7 @@ void RenderPath2D::ResizeBuffers()
 
 void RenderPath2D::Load()
 {
-	if (!initial_resizebuffers)
+	if (!initial_resizebuffers) // ideally, this would happen here, under loading screen
 	{
 		initial_resizebuffers = true;
 		ResizeBuffers();
@@ -90,6 +90,20 @@ void RenderPath2D::Start()
 }
 void RenderPath2D::Update(float dt)
 {
+	if (!initial_resizebuffers) // this is last resort, if Load() wasn't called
+	{
+		initial_resizebuffers = true;
+		ResizeBuffers();
+		ResizeLayout();
+		wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [this](uint64_t userdata) {
+			ResizeBuffers();
+			ResizeLayout();
+			});
+		wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [this](uint64_t userdata) {
+			ResizeLayout();
+			});
+	}
+
 	GetGUI().Update(dt);
 
 	for (auto& x : layers)
