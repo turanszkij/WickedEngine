@@ -118,7 +118,7 @@ void RenderPath3D_Forward::Render() const
 			vp.Height = (float)depthBuffer.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
-			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_DEPTHONLY, true, true);
+			wiRenderer::DrawScene(wiRenderer::GetCamera(), RENDERPASS_DEPTHONLY, cmd, true, nullptr);
 
 			device->RenderPassEnd(cmd);
 
@@ -189,7 +189,7 @@ void RenderPath3D_Forward::Render() const
 			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
 			device->BindResource(PS, getAOEnabled() ? &rtAO : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_AO, cmd);
 			device->BindResource(PS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
-			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_FORWARD, true, true);
+			wiRenderer::DrawScene(wiRenderer::GetCamera(), RENDERPASS_FORWARD, cmd, true, nullptr);
 			wiRenderer::DrawSky(cmd);
 
 			RenderOutline(cmd);

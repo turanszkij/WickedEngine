@@ -85,7 +85,7 @@ public:
 
 	Hitbox2D hitBox;
 
-	static void LoadShaders();
+	static void Initialize();
 };
 
 // Clickable, draggable box

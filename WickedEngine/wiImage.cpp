@@ -7,6 +7,7 @@
 #include "wiScene.h"
 #include "ShaderInterop_Image.h"
 #include "wiBackLog.h"
+#include "wiEvent.h"
 
 #include <atomic>
 
@@ -417,6 +418,7 @@ namespace wiImage
 		bd.IndependentBlendEnable = false;
 		device->CreateBlendState(&bd, &blendStates[BLENDMODE_ADDITIVE]);
 
+		wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();
 
 		wiBackLog::post("wiImage Initialized");

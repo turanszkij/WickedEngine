@@ -8,14 +8,13 @@ class RenderPath
 {
 private:
 	uint32_t layerMask = 0xFFFFFFFF;
-	bool initial_resizebuffer = false;
-	int dpi = 0;
+	bool initial_resizebuffers = false;
 
 protected:
 	// create resolution dependant resources, such as render targets
 	virtual void ResizeBuffers() {}
 	// update resolution dependent elements, such as elements dependent on current monitor DPI
-	virtual void ResizeLayout();
+	virtual void ResizeLayout() {}
 public:
 	std::function<void()> onStart;
 	std::function<void()> onStop;
@@ -25,7 +24,7 @@ public:
 	// initialize component
 	virtual void Initialize() {}
 	// load resources
-	virtual void Load() {}
+	virtual void Load();
 	// delete resources
 	virtual void Unload() {}
 	// start component, load temporary resources
@@ -36,7 +35,7 @@ public:
 	virtual void FixedUpdate() {}
 	// update once per frame
 	//	dt : elapsed time since last call in seconds
-	virtual void Update(float dt);
+	virtual void Update(float dt) {}
 	// Render to layers, rendertargets, etc
 	// This will be rendered offscreen
 	virtual void Render() const {}

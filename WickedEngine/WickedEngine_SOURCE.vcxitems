@@ -292,6 +292,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAudio_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiContainers.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiECS.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiEvent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFFTGenerator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGPUBVH.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGPUSortLib.h" />
@@ -559,6 +560,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArchive.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiAudio.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiAudio_BindLua.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiEvent.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFFTGenerator.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUBVH.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUSortLib.cpp" />

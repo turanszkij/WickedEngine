@@ -7,6 +7,7 @@
 #include "wiInput.h"
 #include "wiRenderer.h"
 #include "ShaderInterop_Renderer.h"
+#include "wiEvent.h"
 
 #include <sstream>
 
@@ -234,17 +235,27 @@ wiColor wiWidget::GetColor() const
 {
 	return wiColor::fromFloat4(sprites[GetState()].params.color);
 }
-void wiWidget::LoadShaders()
+
+namespace wiWidget_Internal
 {
-	PipelineStateDesc desc;
-	desc.vs = wiRenderer::GetVertexShader(VSTYPE_VERTEXCOLOR);
-	desc.ps = wiRenderer::GetPixelShader(PSTYPE_VERTEXCOLOR);
-	desc.il = wiRenderer::GetInputLayout(ILTYPE_VERTEXCOLOR);
-	desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
-	desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
-	desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
-	desc.pt = TRIANGLESTRIP;
-	wiRenderer::GetDevice()->CreatePipelineState(&desc, &PSO_colored);
+	void LoadShaders()
+	{
+		PipelineStateDesc desc;
+		desc.vs = wiRenderer::GetVertexShader(VSTYPE_VERTEXCOLOR);
+		desc.ps = wiRenderer::GetPixelShader(PSTYPE_VERTEXCOLOR);
+		desc.il = wiRenderer::GetInputLayout(ILTYPE_VERTEXCOLOR);
+		desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
+		desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
+		desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
+		desc.pt = TRIANGLESTRIP;
+		wiRenderer::GetDevice()->CreatePipelineState(&desc, &PSO_colored);
+	}
+}
+
+void wiWidget::Initialize()
+{
+	wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { wiWidget_Internal::LoadShaders(); });
+	wiWidget_Internal::LoadShaders();
 }
 
 

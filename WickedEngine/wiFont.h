@@ -39,7 +39,6 @@ namespace wiFont
 {
 	void Initialize();
 
-	void LoadShaders();
 	const wiGraphics::Texture* GetAtlas();
 
 	// Returns the font directory

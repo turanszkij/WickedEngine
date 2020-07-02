@@ -132,7 +132,6 @@ public:
 
 	void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
 
-	static void LoadShaders();
 	static void Initialize();
 };
 

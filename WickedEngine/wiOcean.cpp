@@ -4,6 +4,7 @@
 #include "ShaderInterop_Ocean.h"
 #include "wiScene.h"
 #include "wiBackLog.h"
+#include "wiEvent.h"
 
 #include <algorithm>
 #include <vector>
@@ -30,6 +31,39 @@ namespace wiOcean_Internal
 	PipelineState PSO, PSO_wire;
 
 	wiFFTGenerator::CSFFT512x512_Plan m_fft_plan;
+
+
+	void LoadShaders()
+	{
+
+		std::string path = wiRenderer::GetShaderPath();
+
+		wiRenderer::LoadShader(CS, updateSpectrumCS, "oceanSimulatorCS.cso");
+		wiRenderer::LoadShader(CS, updateDisplacementMapCS, "oceanUpdateDisplacementMapCS.cso");
+		wiRenderer::LoadShader(CS, updateGradientFoldingCS, "oceanUpdateGradientFoldingCS.cso");
+
+		wiRenderer::LoadShader(VS, oceanSurfVS, "oceanSurfaceVS.cso");
+
+		wiRenderer::LoadShader(PS, oceanSurfPS, "oceanSurfacePS.cso");
+		wiRenderer::LoadShader(PS, wireframePS, "oceanSurfaceSimplePS.cso");
+
+
+		GraphicsDevice* device = wiRenderer::GetDevice();
+
+		{
+			PipelineStateDesc desc;
+			desc.vs = &oceanSurfVS;
+			desc.ps = &oceanSurfPS;
+			desc.bs = &blendState;
+			desc.rs = &rasterizerState;
+			desc.dss = &depthStencilState;
+			device->CreatePipelineState(&desc, &PSO);
+
+			desc.ps = &wireframePS;
+			desc.rs = &wireRS;
+			device->CreatePipelineState(&desc, &PSO_wire);
+		}
+	}
 }
 using namespace wiOcean_Internal;
 
@@ -360,38 +394,6 @@ void wiOcean::Render(const CameraComponent& camera, const WeatherComponent& weat
 }
 
 
-void wiOcean::LoadShaders()
-{
-
-	std::string path = wiRenderer::GetShaderPath();
-
-	wiRenderer::LoadShader(CS, updateSpectrumCS, "oceanSimulatorCS.cso");
-	wiRenderer::LoadShader(CS, updateDisplacementMapCS, "oceanUpdateDisplacementMapCS.cso");
-	wiRenderer::LoadShader(CS, updateGradientFoldingCS, "oceanUpdateGradientFoldingCS.cso");
-
-	wiRenderer::LoadShader(VS, oceanSurfVS, "oceanSurfaceVS.cso");
-
-	wiRenderer::LoadShader(PS, oceanSurfPS, "oceanSurfacePS.cso");
-	wiRenderer::LoadShader(PS, wireframePS, "oceanSurfaceSimplePS.cso");
-
-
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
-	{
-		PipelineStateDesc desc;
-		desc.vs = &oceanSurfVS;
-		desc.ps = &oceanSurfPS;
-		desc.bs = &blendState;
-		desc.rs = &rasterizerState;
-		desc.dss = &depthStencilState;
-		device->CreatePipelineState(&desc, &PSO);
-
-		desc.ps = &wireframePS;
-		desc.rs = &wireRS;
-		device->CreatePipelineState(&desc, &PSO_wire);
-	}
-}
-
 void wiOcean::Initialize()
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -445,6 +447,8 @@ void wiOcean::Initialize()
 	blend_desc.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	device->CreateBlendState(&blend_desc, &blendState);
 
+
+	wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); wiFFTGenerator::LoadShaders(); });
 
 	LoadShaders();
 	wiFFTGenerator::LoadShaders();

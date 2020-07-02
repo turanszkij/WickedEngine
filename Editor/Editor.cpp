@@ -148,7 +148,6 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 
 	renderPath->Initialize();
 	renderPath->Load();
-	renderPath->Update(0);
 
 	materialWnd = std::make_unique<MaterialWindow>(this);
 	postprocessWnd = std::make_unique<PostprocessWindow>(this);
@@ -182,7 +181,7 @@ void EditorComponent::ResizeBuffers()
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	HRESULT hr;
 
-	if(renderPath->GetDepthStencil() != nullptr)
+	if(renderPath != nullptr && renderPath->GetDepthStencil() != nullptr)
 	{
 		TextureDesc desc;
 		desc.Width = wiRenderer::GetInternalResolution().x;
@@ -365,8 +364,6 @@ void EditorComponent::ResizeLayout()
 }
 void EditorComponent::Load()
 {
-	__super::Load();
-
 #ifdef PLATFORM_UWP
 	// On UWP we will copy the base content from application folder to 3D Objects directory
 	//	for easy access to the user:
@@ -790,8 +787,6 @@ void EditorComponent::Load()
 
 		wiRenderer::ReloadShaders();
 
-		Translator::LoadShaders();
-
 	});
 	GetGUI().AddWidget(shaderButton);
 
@@ -965,6 +960,8 @@ void EditorComponent::Load()
 	cameraWnd->ResetCam();
 
 	wiJobSystem::Wait(ctx);
+
+	__super::Load();
 }
 void EditorComponent::Start()
 {

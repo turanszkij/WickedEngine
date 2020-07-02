@@ -10,7 +10,6 @@ namespace wiImage
 {
 	void Draw(const wiGraphics::Texture* texture, const wiImageParams& params, wiGraphics::CommandList cmd);
 
-	void LoadShaders();
 	void Initialize();
 };
 

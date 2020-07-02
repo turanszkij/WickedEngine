@@ -1,23 +1,22 @@
 #include "RenderPath2D.h"
 #include "wiRenderer.h"
 #include "wiPlatform.h"
+#include "wiEvent.h"
 
-void RenderPath::ResizeLayout()
+void RenderPath::Load()
 {
-	dpi = wiPlatform::GetDPI();
-}
-
-void RenderPath::Update(float dt)
-{
-	if (wiRenderer::ResolutionChanged() || !initial_resizebuffer)
+	if (!initial_resizebuffers)
 	{
+		initial_resizebuffers = true;
 		ResizeBuffers();
 		ResizeLayout();
-		initial_resizebuffer = true;
-	}
-	if (dpi != wiPlatform::GetDPI())
-	{
-		ResizeLayout();
+		wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [this](uint64_t userdata) {
+			ResizeBuffers();
+			ResizeLayout();
+			});
+		wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [this](uint64_t userdata) {
+			ResizeLayout();
+			});
 	}
 }
 

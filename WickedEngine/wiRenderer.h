@@ -7,9 +7,37 @@
 #include "wiIntersect.h"
 
 #include <memory>
+#include <functional>
 
 struct RAY;
 struct wiResource;
+
+struct RenderPassInput
+{
+	enum FLAGS
+	{
+		FLAG_EMPTY = 0,
+		FLAG_FORCE_ALPHATEST = 1 << 0,
+		FLAG_ENABLE_TESSELLATION = 1 << 1,
+	};
+	uint32_t flags = FLAG_EMPTY;
+	RENDERPASS renderPass;
+	uint32_t renderTypeFlags;
+	const wiScene::MeshComponent* mesh;
+	const wiScene::MaterialComponent* material;
+};
+struct RenderPassOutput
+{
+	enum FLAGS
+	{
+		FLAG_EMPTY = 0,
+		FLAG_DONT_RENDER = 1 << 0, // don't make this draw call
+		FLAG_REQUEST_LIGHTMASK = 1 << 1, // renderer will bind a CPU computed light bit mask constant buffer
+		FLAG_REQUEST_TESSELLATION = 1 << 2, // renderer will bind tessellation parameters constant buffer
+	};
+	uint32_t flags = 0;
+	const wiGraphics::PipelineState* pso = nullptr;
+};
 
 namespace wiRenderer
 {
@@ -88,9 +116,13 @@ namespace wiRenderer
 	// A black skydome will be draw with only the sun being visible on it
 	void DrawSun(wiGraphics::CommandList cmd);
 	// Draw the world from a camera. You must call UpdateCameraCB() at least once in this frame prior to this
-	void DrawScene(const wiScene::CameraComponent& camera, bool tessellation, wiGraphics::CommandList cmd, RENDERPASS renderPass, bool grass, bool occlusionCulling);
+	void DrawScene(const wiScene::CameraComponent& camera, RENDERPASS renderPass, wiGraphics::CommandList cmd,
+		bool grass,
+		std::function<void(const RenderPassInput&, RenderPassOutput&)> renderpass_callback);
 	// Draw the transparent world from a camera. You must call UpdateCameraCB() at least once in this frame prior to this
-	void DrawScene_Transparent(const wiScene::CameraComponent& camera, const wiGraphics::Texture& lineardepth, RENDERPASS renderPass, wiGraphics::CommandList cmd, bool grass, bool occlusionCulling);
+	void DrawScene_Transparent(const wiScene::CameraComponent& camera, const wiGraphics::Texture& lineardepth, RENDERPASS renderPass, wiGraphics::CommandList cmd,
+		bool grass,
+		std::function<void(const RenderPassInput&, RenderPassOutput&)> renderpass_callback);
 	// Draw shadow maps for each visible light that has associated shadow maps
 	void DrawShadowmaps(const wiScene::CameraComponent& camera, wiGraphics::CommandList cmd, uint32_t layerMask = ~0);
 	// Draw debug world. You must also enable what parts to draw, eg. SetToDrawGridHelper, etc, see implementation for details what can be enabled.

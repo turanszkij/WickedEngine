@@ -18,7 +18,6 @@ public:
 	const wiGraphics::Texture* getGradientMap() const;
 
 	static void Initialize();
-	static void LoadShaders();
 
 protected:
 	wiGraphics::Texture displacementMap;		// (RGBA32F)

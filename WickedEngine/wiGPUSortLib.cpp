@@ -2,6 +2,7 @@
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
 #include "ShaderInterop_GPUSortLib.h"
+#include "wiEvent.h"
 
 using namespace wiGraphics;
 
@@ -13,6 +14,18 @@ namespace wiGPUSortLib
 	static Shader sortCS;
 	static Shader sortInnerCS;
 	static Shader sortStepCS;
+
+
+	void LoadShaders()
+	{
+		std::string path = wiRenderer::GetShaderPath();
+
+		wiRenderer::LoadShader(CS, kickoffSortCS, "gpusortlib_kickoffSortCS.cso");
+		wiRenderer::LoadShader(CS, sortCS, "gpusortlib_sortCS.cso");
+		wiRenderer::LoadShader(CS, sortInnerCS, "gpusortlib_sortInnerCS.cso");
+		wiRenderer::LoadShader(CS, sortStepCS, "gpusortlib_sortStepCS.cso");
+
+	}
 
 	void Initialize()
 	{
@@ -33,17 +46,8 @@ namespace wiGPUSortLib
 		bd.ByteWidth = sizeof(IndirectDispatchArgs);
 		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &indirectBuffer);
 
-	}
-
-	void LoadShaders()
-	{
-		std::string path = wiRenderer::GetShaderPath();
-
-		wiRenderer::LoadShader(CS, kickoffSortCS, "gpusortlib_kickoffSortCS.cso");
-		wiRenderer::LoadShader(CS, sortCS,  "gpusortlib_sortCS.cso");
-		wiRenderer::LoadShader(CS, sortInnerCS, "gpusortlib_sortInnerCS.cso");
-		wiRenderer::LoadShader(CS, sortStepCS, "gpusortlib_sortStepCS.cso");
-
+		wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
+		LoadShaders();
 	}
 
 
@@ -55,14 +59,6 @@ namespace wiGPUSortLib
 		const GPUBuffer& indexBuffer_write,
 		CommandList cmd)
 	{
-		static bool init = false;
-		if (!init)
-		{
-			Initialize();
-			init = true;
-		}
-
-
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		device->EventBegin("GPUSortLib", cmd);

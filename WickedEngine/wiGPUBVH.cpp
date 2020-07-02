@@ -7,6 +7,7 @@
 #include "wiGPUSortLib.h"
 #include "wiTextureHelper.h"
 #include "wiBackLog.h"
+#include "wiEvent.h"
 
 //#define BVH_VALIDATE // slow but great for debug!
 #ifdef BVH_VALIDATE
@@ -584,11 +585,20 @@ void wiGPUBVH::Clear()
 	sceneTextures.clear();
 }
 
-void wiGPUBVH::LoadShaders()
+namespace wiGPUBVH_Internal
 {
-	string SHADERPATH = wiRenderer::GetShaderPath();
+	void LoadShaders()
+	{
+		string SHADERPATH = wiRenderer::GetShaderPath();
 
-	wiRenderer::LoadShader(CS, computeShaders[CSTYPE_BVH_PRIMITIVES], "bvh_primitivesCS.cso");
-	wiRenderer::LoadShader(CS, computeShaders[CSTYPE_BVH_HIERARCHY], "bvh_hierarchyCS.cso");
-	wiRenderer::LoadShader(CS, computeShaders[CSTYPE_BVH_PROPAGATEAABB], "bvh_propagateaabbCS.cso");
+		wiRenderer::LoadShader(CS, computeShaders[CSTYPE_BVH_PRIMITIVES], "bvh_primitivesCS.cso");
+		wiRenderer::LoadShader(CS, computeShaders[CSTYPE_BVH_HIERARCHY], "bvh_hierarchyCS.cso");
+		wiRenderer::LoadShader(CS, computeShaders[CSTYPE_BVH_PROPAGATEAABB], "bvh_propagateaabbCS.cso");
+	}
+}
+
+void wiGPUBVH::Initialize()
+{
+	wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { wiGPUBVH_Internal::LoadShaders(); });
+	wiGPUBVH_Internal::LoadShaders();
 }
