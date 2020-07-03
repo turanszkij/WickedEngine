@@ -448,7 +448,7 @@ void wiOcean::Initialize()
 	device->CreateBlendState(&blend_desc, &blendState);
 
 
-	wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); wiFFTGenerator::LoadShaders(); });
+	static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); wiFFTGenerator::LoadShaders(); });
 
 	LoadShaders();
 	wiFFTGenerator::LoadShaders();

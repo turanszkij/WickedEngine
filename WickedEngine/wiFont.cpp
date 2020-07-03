@@ -355,11 +355,11 @@ void Initialize()
 	samplerDesc.MaxLOD = FLT_MAX;
 	device->CreateSampler(&samplerDesc, &sampler);
 
-	wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
+	static wiEvent::Handle handle1 = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 	LoadShaders();
 
 
-	wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [](uint64_t userdata) {
+	static wiEvent::Handle handle2 = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [](uint64_t userdata) {
 		glyphLock.lock();
 		for (auto& x : glyph_lookup)
 		{

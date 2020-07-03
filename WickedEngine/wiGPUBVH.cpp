@@ -599,6 +599,6 @@ namespace wiGPUBVH_Internal
 
 void wiGPUBVH::Initialize()
 {
-	wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { wiGPUBVH_Internal::LoadShaders(); });
+	static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { wiGPUBVH_Internal::LoadShaders(); });
 	wiGPUBVH_Internal::LoadShaders();
 }

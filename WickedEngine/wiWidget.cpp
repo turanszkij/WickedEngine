@@ -254,7 +254,7 @@ namespace wiWidget_Internal
 
 void wiWidget::Initialize()
 {
-	wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { wiWidget_Internal::LoadShaders(); });
+	static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { wiWidget_Internal::LoadShaders(); });
 	wiWidget_Internal::LoadShaders();
 }
 

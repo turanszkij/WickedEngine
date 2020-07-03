@@ -433,7 +433,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 	if (!shaders_loaded)
 	{
 		shaders_loaded = true;
-		wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { Translator_Internal::LoadShaders(); });
+		static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { Translator_Internal::LoadShaders(); });
 		Translator_Internal::LoadShaders();
 	}
 

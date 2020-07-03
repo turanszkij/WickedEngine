@@ -749,7 +749,7 @@ void wiEmittedParticle::Initialize()
 	bd.RenderTarget[0].BlendEnable = false;
 	wiRenderer::GetDevice()->CreateBlendState(&bd, &blendStates[BLENDMODE_OPAQUE]);
 
-	wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { wiEmittedParticle_Internal::LoadShaders(); });
+	static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { wiEmittedParticle_Internal::LoadShaders(); });
 	wiEmittedParticle_Internal::LoadShaders();
 
 	wiBackLog::post("wiEmittedParticle Initialized");

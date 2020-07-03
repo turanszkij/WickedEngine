@@ -1,6 +1,7 @@
 #pragma once
 #include "RenderPath.h"
 #include "wiGUI.h"
+#include "wiEvent.h"
 
 #include <string>
 
@@ -37,7 +38,8 @@ private:
 	wiGraphics::RenderPass renderpass_final;
 
 	wiGUI GUI;
-	bool initial_resizebuffers = false;
+	wiEvent::Handle resizebuffers_handle;
+	wiEvent::Handle resizelayout_handle;
 
 protected:
 	// create resolution dependant resources, such as render targets

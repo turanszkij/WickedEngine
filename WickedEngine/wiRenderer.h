@@ -7,7 +7,6 @@
 #include "wiIntersect.h"
 
 #include <memory>
-#include <functional>
 
 struct RAY;
 struct wiResource;

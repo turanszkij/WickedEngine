@@ -3,9 +3,9 @@
 #include "wiSprite.h"
 #include "wiSpriteFont.h"
 #include "wiRenderer.h"
-#include "wiEvent.h"
 
 using namespace wiGraphics;
+
 
 void RenderPath2D::ResizeBuffers()
 {
@@ -68,16 +68,19 @@ void RenderPath2D::ResizeBuffers()
 
 void RenderPath2D::Load()
 {
-	if (!initial_resizebuffers) // ideally, this would happen here, under loading screen
+	// ideally, this would happen here, under loading screen
+	if (!resizebuffers_handle.IsValid()) 
 	{
-		initial_resizebuffers = true;
 		ResizeBuffers();
-		ResizeLayout();
-		wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [this](uint64_t userdata) {
+		resizebuffers_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [this](uint64_t userdata) {
 			ResizeBuffers();
 			ResizeLayout();
 			});
-		wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [this](uint64_t userdata) {
+	}
+	if (!resizelayout_handle.IsValid())
+	{
+		ResizeLayout();
+		resizelayout_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [this](uint64_t userdata) {
 			ResizeLayout();
 			});
 	}
@@ -90,16 +93,19 @@ void RenderPath2D::Start()
 }
 void RenderPath2D::Update(float dt)
 {
-	if (!initial_resizebuffers) // this is last resort, if Load() wasn't called
+	// this is last resort, if Load() wasn't called
+	if (!resizebuffers_handle.IsValid())
 	{
-		initial_resizebuffers = true;
 		ResizeBuffers();
-		ResizeLayout();
-		wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [this](uint64_t userdata) {
+		resizebuffers_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [this](uint64_t userdata) {
 			ResizeBuffers();
 			ResizeLayout();
 			});
-		wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [this](uint64_t userdata) {
+	}
+	if (!resizelayout_handle.IsValid())
+	{
+		ResizeLayout();
+		resizelayout_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [this](uint64_t userdata) {
 			ResizeLayout();
 			});
 	}

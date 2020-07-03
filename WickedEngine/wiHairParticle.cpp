@@ -467,7 +467,7 @@ void wiHairParticle::Initialize()
 	bld.IndependentBlendEnable = false;
 	wiRenderer::GetDevice()->CreateBlendState(&bld, &bs[1]);
 
-	wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { wiHairParticle_Internal::LoadShaders(); });
+	static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { wiHairParticle_Internal::LoadShaders(); });
 	wiHairParticle_Internal::LoadShaders();
 
 	wiBackLog::post("wiHairParticle Initialized");

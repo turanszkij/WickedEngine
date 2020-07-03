@@ -418,7 +418,7 @@ namespace wiImage
 		bd.IndependentBlendEnable = false;
 		device->CreateBlendState(&bd, &blendStates[BLENDMODE_ADDITIVE]);
 
-		wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
+		static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();
 
 		wiBackLog::post("wiImage Initialized");

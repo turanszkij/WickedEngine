@@ -46,7 +46,7 @@ namespace wiGPUSortLib
 		bd.ByteWidth = sizeof(IndirectDispatchArgs);
 		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &indirectBuffer);
 
-		wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
+		static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();
 	}
 

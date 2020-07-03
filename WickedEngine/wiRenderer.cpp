@@ -450,6 +450,7 @@ const Texture* GetTexture(TEXTYPES id)
 	return &textures[id];
 }
 
+
 enum OBJECTRENDERING_DOUBLESIDED
 {
 	OBJECTRENDERING_DOUBLESIDED_DISABLED,
@@ -488,8 +489,15 @@ enum OBJECTRENDERING_POM
 };
 PipelineState PSO_object[RENDERPASS_COUNT][BLENDMODE_COUNT][OBJECTRENDERING_DOUBLESIDED_COUNT][OBJECTRENDERING_TESSELLATION_COUNT][OBJECTRENDERING_ALPHATEST_COUNT][OBJECTRENDERING_NORMALMAP_COUNT][OBJECTRENDERING_PLANARREFLECTION_COUNT][OBJECTRENDERING_POM_COUNT];
 PipelineState PSO_object_water[RENDERPASS_COUNT];
+PipelineState PSO_object_terrain[RENDERPASS_COUNT];
 PipelineState PSO_object_wire;
-inline const PipelineState* GetObjectPSO(RENDERPASS renderPass, bool doublesided, bool tessellation, const MaterialComponent& material, bool forceAlphaTestForDithering)
+inline const PipelineState* GetObjectPSO(
+	RENDERPASS renderPass,
+	const MeshComponent& mesh,
+	const MaterialComponent& material,
+	bool tessellation, 
+	bool forceAlphaTestForDithering
+)
 {
 	if (IsWireRender())
 	{
@@ -508,7 +516,12 @@ inline const PipelineState* GetObjectPSO(RENDERPASS renderPass, bool doublesided
 	{
 		return &PSO_object_water[renderPass];
 	}
+	else if (mesh.IsTerrain())
+	{
+		return &PSO_object_terrain[renderPass];
+	}
 
+	const bool doublesided = mesh.IsDoubleSided();
 	const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
 	const bool normalmap = material.GetNormalMap() != nullptr;
 	const bool planarreflection = material.HasPlanarReflection();
@@ -519,8 +532,6 @@ inline const PipelineState* GetObjectPSO(RENDERPASS renderPass, bool doublesided
 	assert(pso.IsValid());
 	return &pso;
 }
-
-PipelineState PSO_terrain[RENDERPASS_COUNT];
 
 PipelineState PSO_object_hologram;
 std::vector<CustomShader> customShaders;
@@ -1623,7 +1634,7 @@ void LoadShaders()
 			return;
 		}
 
-		device->CreatePipelineState(&desc, &PSO_terrain[args.jobIndex]);
+		device->CreatePipelineState(&desc, &PSO_object_terrain[args.jobIndex]);
 	});
 
 	// Clear custom shaders (Custom shaders coming from user will need to be handled by the user in case of shader reload):
@@ -2844,7 +2855,7 @@ void Initialize()
 		GetCamera().CreatePerspective((float)GetInternalResolution().x, (float)GetInternalResolution().y, 0.1f, 800);
 	};
 	camera_setup(0);
-	wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [=](uint64_t userdata) { camera_setup(userdata); });
+	static wiEvent::Handle handle1 = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [=](uint64_t userdata) { camera_setup(userdata); });
 
 	frameCullings[&GetCamera()].Clear();
 	frameCullings[&GetRefCamera()].Clear();
@@ -2852,20 +2863,20 @@ void Initialize()
 	SetUpStates();
 	LoadBuffers();
 
-	wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
+	static wiEvent::Handle handle2 = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 	LoadShaders();
 
 	SetShadowProps2D(SHADOWRES_2D, SHADOWCOUNT_2D, SOFTSHADOWQUALITY_2D);
 	SetShadowPropsCube(SHADOWRES_CUBE, SHADOWCOUNT_CUBE);
 
 
-	wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [](uint64_t userdata) {
+	static wiEvent::Handle handle3 = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [](uint64_t userdata) {
 		int width = userdata & 0xFFFF;
 		int height = (userdata >> 16) & 0xFFFF;
 		GetDevice()->SetResolution(width, height);
 	});
 
-	wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [](uint64_t userdata) {
+	static wiEvent::Handle handle4 = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [](uint64_t userdata) {
 		int dpi = userdata & 0xFFFF;
 		wiPlatform::GetWindowState().dpi = dpi;
 	});
@@ -3338,20 +3349,13 @@ void RenderMeshes(
 				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
 				const PipelineState* pso = nullptr;
-				if (terrain)
+				if (material.IsCustomShader())
 				{
-					pso = &PSO_terrain[renderPass];
+					pso = GetCustomShaderPSO(renderPass, renderTypeFlags, material.GetCustomShaderID());
 				}
 				else
 				{
-					if (material.IsCustomShader())
-					{
-						pso = GetCustomShaderPSO(renderPass, renderTypeFlags, material.GetCustomShaderID());
-					}
-					else
-					{
-						pso = GetObjectPSO(renderPass, mesh.IsDoubleSided(), tessellatorRequested, material, forceAlphaTestForDithering);
-					}
+					pso = GetObjectPSO(renderPass, mesh, material, tessellatorRequested, forceAlphaTestForDithering);
 				}
 
 				if (pso == nullptr || !pso->IsValid())
