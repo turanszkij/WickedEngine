@@ -69,18 +69,24 @@ void RenderPath2D::ResizeBuffers()
 void RenderPath2D::Load()
 {
 	// ideally, this would happen here, under loading screen
-	if (!resizebuffers_handle.IsValid()) 
+	if (!resolutionChange_handle.IsValid())
 	{
 		ResizeBuffers();
-		resizebuffers_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [this](uint64_t userdata) {
+		resolutionChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [this](uint64_t userdata) {
 			ResizeBuffers();
 			ResizeLayout();
 			});
 	}
-	if (!resizelayout_handle.IsValid())
+	if (!resolutionScaleChange_handle.IsValid())
+	{
+		resolutionScaleChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION_SCALE, [this](uint64_t userdata) {
+			ResizeBuffers();
+			});
+	}
+	if (!dpiChange_handle.IsValid())
 	{
 		ResizeLayout();
-		resizelayout_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [this](uint64_t userdata) {
+		dpiChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [this](uint64_t userdata) {
 			ResizeLayout();
 			});
 	}
@@ -94,18 +100,24 @@ void RenderPath2D::Start()
 void RenderPath2D::Update(float dt)
 {
 	// this is last resort, if Load() wasn't called
-	if (!resizebuffers_handle.IsValid())
+	if (!resolutionChange_handle.IsValid())
 	{
 		ResizeBuffers();
-		resizebuffers_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [this](uint64_t userdata) {
+		resolutionChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [this](uint64_t userdata) {
 			ResizeBuffers();
 			ResizeLayout();
 			});
 	}
-	if (!resizelayout_handle.IsValid())
+	if (!resolutionScaleChange_handle.IsValid())
+	{
+		resolutionScaleChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION_SCALE, [this](uint64_t userdata) {
+			ResizeBuffers();
+			});
+	}
+	if (!dpiChange_handle.IsValid())
 	{
 		ResizeLayout();
-		resizelayout_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [this](uint64_t userdata) {
+		dpiChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [this](uint64_t userdata) {
 			ResizeLayout();
 			});
 	}

@@ -6,7 +6,8 @@
 
 static const int SYSTEM_EVENT_RELOAD_SHADERS = -1;
 static const int SYSTEM_EVENT_CHANGE_RESOLUTION = -2;
-static const int SYSTEM_EVENT_CHANGE_DPI = -3;
+static const int SYSTEM_EVENT_CHANGE_RESOLUTION_SCALE = -3;
+static const int SYSTEM_EVENT_CHANGE_DPI = -4;
 
 namespace wiEvent
 {

@@ -5757,7 +5757,7 @@ void DrawScene(
 
 	const bool opaque = flags & RENDERTYPE_OPAQUE;
 	const bool transparent = flags & DRAWSCENE_TRANSPARENT;
-	const bool tessellation = flags & DRAWSCENE_TESSELLATION;
+	const bool tessellation = (flags & DRAWSCENE_TESSELLATION) && GetTessellationEnabled();
 	const bool hairparticle = flags & DRAWSCENE_HAIRPARTICLE;
 
 	device->EventBegin("DrawScene", cmd);
@@ -12002,7 +12002,20 @@ void AddDeferredMIPGen(std::shared_ptr<wiResource> resource, bool preserve_cover
 
 
 
-void SetResolutionScale(float value) { RESOLUTIONSCALE = value; }
+void SetResolutionScale(float value) 
+{ 
+	if (RESOLUTIONSCALE != value)
+	{
+		RESOLUTIONSCALE = value;
+		union UserData
+		{
+			float fValue;
+			uint64_t ullValue;
+		} data;
+		data.fValue = value;
+		wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_RESOLUTION_SCALE, data.ullValue);
+	}
+}
 float GetResolutionScale() { return RESOLUTIONSCALE; }
 int GetShadowRes2D() { return SHADOWRES_2D; }
 int GetShadowResCube() { return SHADOWRES_CUBE; }

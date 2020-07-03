@@ -38,8 +38,9 @@ private:
 	wiGraphics::RenderPass renderpass_final;
 
 	wiGUI GUI;
-	wiEvent::Handle resizebuffers_handle;
-	wiEvent::Handle resizelayout_handle;
+	wiEvent::Handle resolutionChange_handle;
+	wiEvent::Handle resolutionScaleChange_handle;
+	wiEvent::Handle dpiChange_handle;
 
 protected:
 	// create resolution dependant resources, such as render targets
