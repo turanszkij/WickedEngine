@@ -23,11 +23,6 @@ public:
 		}
 	}
 
-	virtual int Initialize(lua_State* L);
-
-	virtual int OnStart(lua_State* L);
-	virtual int OnStop(lua_State* L);
-
 	virtual int GetLayerMask(lua_State* L);
 	virtual int SetLayerMask(lua_State* L);
 

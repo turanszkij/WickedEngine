@@ -11,6 +11,7 @@
 #include "wiGPUSortLib.h"
 #include "wiProfiler.h"
 #include "wiBackLog.h"
+#include "wiEvent.h"
 
 #include <algorithm>
 
@@ -615,63 +616,66 @@ void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialCompon
 }
 
 
-
-void wiEmittedParticle::LoadShaders()
+namespace wiEmittedParticle_Internal
 {
-	std::string path = wiRenderer::GetShaderPath();
-
-	wiRenderer::LoadShader(VS, vertexShader, "emittedparticleVS.cso");
-	
-	wiRenderer::LoadShader(PS, pixelShader[SOFT], "emittedparticlePS_soft.cso");
-	wiRenderer::LoadShader(PS, pixelShader[SOFT_DISTORTION], "emittedparticlePS_soft_distortion.cso");
-	wiRenderer::LoadShader(PS, pixelShader[SIMPLEST], "emittedparticlePS_simplest.cso");
-	wiRenderer::LoadShader(PS, pixelShader[SOFT_LIGHTING], "emittedparticlePS_soft_lighting.cso");
-	
-	wiRenderer::LoadShader(CS, kickoffUpdateCS, "emittedparticle_kickoffUpdateCS.cso");
-	wiRenderer::LoadShader(CS, finishUpdateCS, "emittedparticle_finishUpdateCS.cso");
-	wiRenderer::LoadShader(CS, emitCS, "emittedparticle_emitCS.cso");
-	wiRenderer::LoadShader(CS, emitCS_VOLUME, "emittedparticle_emitCS_volume.cso");
-	wiRenderer::LoadShader(CS, emitCS_FROMMESH, "emittedparticle_emitCS_FROMMESH.cso");
-	wiRenderer::LoadShader(CS, sphpartitionCS, "emittedparticle_sphpartitionCS.cso");
-	wiRenderer::LoadShader(CS, sphpartitionoffsetsCS, "emittedparticle_sphpartitionoffsetsCS.cso");
-	wiRenderer::LoadShader(CS, sphpartitionoffsetsresetCS, "emittedparticle_sphpartitionoffsetsresetCS.cso");
-	wiRenderer::LoadShader(CS, sphdensityCS, "emittedparticle_sphdensityCS.cso");
-	wiRenderer::LoadShader(CS, sphforceCS, "emittedparticle_sphforceCS.cso");
-	wiRenderer::LoadShader(CS, simulateCS, "emittedparticle_simulateCS.cso");
-	wiRenderer::LoadShader(CS, simulateCS_SORTING, "emittedparticle_simulateCS_SORTING.cso");
-	wiRenderer::LoadShader(CS, simulateCS_DEPTHCOLLISIONS, "emittedparticle_simulateCS_DEPTHCOLLISIONS.cso");
-	wiRenderer::LoadShader(CS, simulateCS_SORTING_DEPTHCOLLISIONS, "emittedparticle_simulateCS_SORTING_DEPTHCOLLISIONS.cso");
-
-
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
-	for (int i = 0; i < BLENDMODE_COUNT; ++i)
+	void LoadShaders()
 	{
-		PipelineStateDesc desc;
-		desc.vs = &vertexShader;
-		desc.bs = &blendStates[i];
-		desc.rs = &rasterizerState;
-		desc.dss = &depthStencilState;
+		std::string path = wiRenderer::GetShaderPath();
 
-		for (int j = 0; j < PARTICLESHADERTYPE_COUNT; ++j)
+		wiRenderer::LoadShader(VS, vertexShader, "emittedparticleVS.cso");
+
+		wiRenderer::LoadShader(PS, pixelShader[wiEmittedParticle::SOFT], "emittedparticlePS_soft.cso");
+		wiRenderer::LoadShader(PS, pixelShader[wiEmittedParticle::SOFT_DISTORTION], "emittedparticlePS_soft_distortion.cso");
+		wiRenderer::LoadShader(PS, pixelShader[wiEmittedParticle::SIMPLEST], "emittedparticlePS_simplest.cso");
+		wiRenderer::LoadShader(PS, pixelShader[wiEmittedParticle::SOFT_LIGHTING], "emittedparticlePS_soft_lighting.cso");
+
+		wiRenderer::LoadShader(CS, kickoffUpdateCS, "emittedparticle_kickoffUpdateCS.cso");
+		wiRenderer::LoadShader(CS, finishUpdateCS, "emittedparticle_finishUpdateCS.cso");
+		wiRenderer::LoadShader(CS, emitCS, "emittedparticle_emitCS.cso");
+		wiRenderer::LoadShader(CS, emitCS_VOLUME, "emittedparticle_emitCS_volume.cso");
+		wiRenderer::LoadShader(CS, emitCS_FROMMESH, "emittedparticle_emitCS_FROMMESH.cso");
+		wiRenderer::LoadShader(CS, sphpartitionCS, "emittedparticle_sphpartitionCS.cso");
+		wiRenderer::LoadShader(CS, sphpartitionoffsetsCS, "emittedparticle_sphpartitionoffsetsCS.cso");
+		wiRenderer::LoadShader(CS, sphpartitionoffsetsresetCS, "emittedparticle_sphpartitionoffsetsresetCS.cso");
+		wiRenderer::LoadShader(CS, sphdensityCS, "emittedparticle_sphdensityCS.cso");
+		wiRenderer::LoadShader(CS, sphforceCS, "emittedparticle_sphforceCS.cso");
+		wiRenderer::LoadShader(CS, simulateCS, "emittedparticle_simulateCS.cso");
+		wiRenderer::LoadShader(CS, simulateCS_SORTING, "emittedparticle_simulateCS_SORTING.cso");
+		wiRenderer::LoadShader(CS, simulateCS_DEPTHCOLLISIONS, "emittedparticle_simulateCS_DEPTHCOLLISIONS.cso");
+		wiRenderer::LoadShader(CS, simulateCS_SORTING_DEPTHCOLLISIONS, "emittedparticle_simulateCS_SORTING_DEPTHCOLLISIONS.cso");
+
+
+		GraphicsDevice* device = wiRenderer::GetDevice();
+
+		for (int i = 0; i < BLENDMODE_COUNT; ++i)
 		{
-			desc.ps = &pixelShader[j];
-			device->CreatePipelineState(&desc, &PSO[i][j]);
+			PipelineStateDesc desc;
+			desc.vs = &vertexShader;
+			desc.bs = &blendStates[i];
+			desc.rs = &rasterizerState;
+			desc.dss = &depthStencilState;
+
+			for (int j = 0; j < wiEmittedParticle::PARTICLESHADERTYPE_COUNT; ++j)
+			{
+				desc.ps = &pixelShader[j];
+				device->CreatePipelineState(&desc, &PSO[i][j]);
+			}
 		}
+
+		{
+			PipelineStateDesc desc;
+			desc.vs = &vertexShader;
+			desc.ps = &pixelShader[wiEmittedParticle::SIMPLEST];
+			desc.bs = &blendStates[BLENDMODE_ALPHA];
+			desc.rs = &wireFrameRS;
+			desc.dss = &depthStencilState;
+
+			device->CreatePipelineState(&desc, &PSO_wire);
+		}
+
 	}
-
-	{
-		PipelineStateDesc desc;
-		desc.vs = &vertexShader;
-		desc.ps = &pixelShader[SIMPLEST];
-		desc.bs = &blendStates[BLENDMODE_ALPHA];
-		desc.rs = &wireFrameRS;
-		desc.dss = &depthStencilState;
-
-		device->CreatePipelineState(&desc, &PSO_wire);
-	}
-
 }
+
 void wiEmittedParticle::Initialize()
 {
 
@@ -745,7 +749,8 @@ void wiEmittedParticle::Initialize()
 	bd.RenderTarget[0].BlendEnable = false;
 	wiRenderer::GetDevice()->CreateBlendState(&bd, &blendStates[BLENDMODE_OPAQUE]);
 
-	LoadShaders();
+	static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { wiEmittedParticle_Internal::LoadShaders(); });
+	wiEmittedParticle_Internal::LoadShaders();
 
 	wiBackLog::post("wiEmittedParticle Initialized");
 }

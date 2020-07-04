@@ -1,7 +1,6 @@
 #include "wiRenderer.h"
 #include "wiHairParticle.h"
 #include "wiEmittedParticle.h"
-#include "wiResourceManager.h"
 #include "wiSprite.h"
 #include "wiScene.h"
 #include "wiHelper.h"
@@ -9,7 +8,6 @@
 #include "wiTextureHelper.h"
 #include "wiEnums.h"
 #include "wiRandom.h"
-#include "wiFont.h"
 #include "wiRectPacker.h"
 #include "wiBackLog.h"
 #include "wiProfiler.h"
@@ -21,12 +19,13 @@
 #include "ShaderInterop_BVH.h"
 #include "ShaderInterop_Utility.h"
 #include "ShaderInterop_Paint.h"
-#include "wiWidget.h"
 #include "wiGPUSortLib.h"
 #include "wiAllocators.h"
 #include "wiGPUBVH.h"
 #include "wiJobSystem.h"
 #include "wiSpinLock.h"
+#include "wiEvent.h"
+#include "wiPlatform.h"
 
 #include <algorithm>
 #include <unordered_set>
@@ -128,6 +127,7 @@ bool temporalAADEBUG = false;
 uint32_t raytraceBounceCount = 2;
 bool raytraceDebugVisualizer = false;
 bool raytracedShadows = false;
+bool tessellationEnabled = false;
 Entity cameraTransform = INVALID_ENTITY;
 
 
@@ -450,6 +450,7 @@ const Texture* GetTexture(TEXTYPES id)
 	return &textures[id];
 }
 
+
 enum OBJECTRENDERING_DOUBLESIDED
 {
 	OBJECTRENDERING_DOUBLESIDED_DISABLED,
@@ -488,8 +489,15 @@ enum OBJECTRENDERING_POM
 };
 PipelineState PSO_object[RENDERPASS_COUNT][BLENDMODE_COUNT][OBJECTRENDERING_DOUBLESIDED_COUNT][OBJECTRENDERING_TESSELLATION_COUNT][OBJECTRENDERING_ALPHATEST_COUNT][OBJECTRENDERING_NORMALMAP_COUNT][OBJECTRENDERING_PLANARREFLECTION_COUNT][OBJECTRENDERING_POM_COUNT];
 PipelineState PSO_object_water[RENDERPASS_COUNT];
+PipelineState PSO_object_terrain[RENDERPASS_COUNT];
 PipelineState PSO_object_wire;
-inline const PipelineState* GetObjectPSO(RENDERPASS renderPass, bool doublesided, bool tessellation, const MaterialComponent& material, bool forceAlphaTestForDithering)
+inline const PipelineState* GetObjectPSO(
+	RENDERPASS renderPass,
+	const MeshComponent& mesh,
+	const MaterialComponent& material,
+	bool tessellation, 
+	bool forceAlphaTestForDithering
+)
 {
 	if (IsWireRender())
 	{
@@ -508,7 +516,12 @@ inline const PipelineState* GetObjectPSO(RENDERPASS renderPass, bool doublesided
 	{
 		return &PSO_object_water[renderPass];
 	}
+	else if (mesh.IsTerrain())
+	{
+		return &PSO_object_terrain[renderPass];
+	}
 
+	const bool doublesided = mesh.IsDoubleSided();
 	const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
 	const bool normalmap = material.GetNormalMap() != nullptr;
 	const bool planarreflection = material.HasPlanarReflection();
@@ -519,8 +532,6 @@ inline const PipelineState* GetObjectPSO(RENDERPASS renderPass, bool doublesided
 	assert(pso.IsValid());
 	return &pso;
 }
-
-PipelineState PSO_terrain[RENDERPASS_COUNT];
 
 PipelineState PSO_object_hologram;
 std::vector<CustomShader> customShaders;
@@ -1623,7 +1634,7 @@ void LoadShaders()
 			return;
 		}
 
-		device->CreatePipelineState(&desc, &PSO_terrain[args.jobIndex]);
+		device->CreatePipelineState(&desc, &PSO_object_terrain[args.jobIndex]);
 	});
 
 	// Clear custom shaders (Custom shaders coming from user will need to be handled by the user in case of shader reload):
@@ -2815,16 +2826,7 @@ void ReloadShaders()
 {
 	GetDevice()->ClearPipelineStateCache();
 
-	LoadShaders();
-	wiHairParticle::LoadShaders();
-	wiEmittedParticle::LoadShaders();
-	wiFont::LoadShaders();
-	wiImage::LoadShaders();
-	wiOcean::LoadShaders();
-	wiFFTGenerator::LoadShaders();
-	wiWidget::LoadShaders();
-	wiGPUSortLib::LoadShaders();
-	wiGPUBVH::LoadShaders();
+	wiEvent::FireEvent(SYSTEM_EVENT_RELOAD_SHADERS, 0);
 }
 
 CameraComponent& GetCamera()
@@ -2849,17 +2851,35 @@ void AttachCamera(wiECS::Entity entity)
 
 void Initialize()
 {
-	GetCamera().CreatePerspective((float)GetInternalResolution().x, (float)GetInternalResolution().y, 0.1f, 800);
+	auto camera_setup = [](uint64_t userdata) {
+		GetCamera().CreatePerspective((float)GetInternalResolution().x, (float)GetInternalResolution().y, 0.1f, 800);
+	};
+	camera_setup(0);
+	static wiEvent::Handle handle1 = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [=](uint64_t userdata) { camera_setup(userdata); });
 
 	frameCullings[&GetCamera()].Clear();
 	frameCullings[&GetRefCamera()].Clear();
 
 	SetUpStates();
 	LoadBuffers();
+
+	static wiEvent::Handle handle2 = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 	LoadShaders();
 
 	SetShadowProps2D(SHADOWRES_2D, SHADOWCOUNT_2D, SOFTSHADOWQUALITY_2D);
 	SetShadowPropsCube(SHADOWRES_CUBE, SHADOWCOUNT_CUBE);
+
+
+	static wiEvent::Handle handle3 = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [](uint64_t userdata) {
+		int width = userdata & 0xFFFF;
+		int height = (userdata >> 16) & 0xFFFF;
+		GetDevice()->SetResolution(width, height);
+	});
+
+	static wiEvent::Handle handle4 = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [](uint64_t userdata) {
+		int dpi = userdata & 0xFFFF;
+		wiPlatform::GetWindowState().dpi = dpi;
+	});
 
 	wiBackLog::post("wiRenderer Initialized");
 }
@@ -3114,9 +3134,14 @@ void BindEnvironmentTextures(SHADERSTAGE stage, CommandList cmd)
 	}
 }
 
-void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_t renderTypeFlags, CommandList cmd, 
+void RenderMeshes(
+	const RenderQueue& renderQueue, 
+	RENDERPASS renderPass, 
+	uint32_t renderTypeFlags, 
+	CommandList cmd,
 	bool tessellation = false,
-	const SHCAM* shcams = nullptr)
+	const SHCAM* shcams = nullptr
+)
 {
 	if (!renderQueue.empty())
 	{
@@ -3155,7 +3180,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 			renderPass == RENDERPASS_DEPTHONLY;
 
 		// Do we need to compute a light mask for this pass on the CPU?
-		const bool forwardLightmaskRequest = 
+		const bool forwardLightmaskRequest =
 			renderPass == RENDERPASS_FORWARD ||
 			renderPass == RENDERPASS_ENVMAPCAPTURE ||
 			renderPass == RENDERPASS_VOXELIZE;
@@ -3221,8 +3246,8 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 
 			InstancedBatch& current_batch = instancedBatchArray[instancedBatchCount - 1];
 
-			float dither = instance.GetTransparency(); 
-			
+			float dither = instance.GetTransparency();
+
 			if (instance.IsImpostorPlacement())
 			{
 				float distance = batch.GetDistance();
@@ -3324,20 +3349,13 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
 				const PipelineState* pso = nullptr;
-				if (terrain)
+				if (material.IsCustomShader())
 				{
-					pso = &PSO_terrain[renderPass];
+					pso = GetCustomShaderPSO(renderPass, renderTypeFlags, material.GetCustomShaderID());
 				}
 				else
 				{
-					if (material.IsCustomShader())
-					{
-						pso = GetCustomShaderPSO(renderPass, renderTypeFlags, material.GetCustomShaderID());
-					}
-					else
-					{
-						pso = GetObjectPSO(renderPass, mesh.IsDoubleSided(), tessellatorRequested, material, forceAlphaTestForDithering);
-					}
+					pso = GetObjectPSO(renderPass, mesh, material, tessellatorRequested, forceAlphaTestForDithering);
 				}
 
 				if (pso == nullptr || !pso->IsValid())
@@ -3613,7 +3631,11 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, uint32_
 	}
 }
 
-void RenderImpostors(const CameraComponent& camera, RENDERPASS renderPass, CommandList cmd)
+void RenderImpostors(
+	const CameraComponent& camera, 
+	RENDERPASS renderPass, 
+	CommandList cmd
+)
 {
 	const Scene& scene = GetScene();
 	const PipelineState* impostorRequest = GetImpostorPSO(renderPass);
@@ -5722,11 +5744,21 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 	}
 }
 
-void DrawScene(const CameraComponent& camera, bool tessellation, CommandList cmd, RENDERPASS renderPass, bool grass, bool occlusionCulling)
+void DrawScene(
+	const CameraComponent& camera,
+	RENDERPASS renderPass,
+	CommandList cmd,
+	uint32_t flags
+)
 {
 	GraphicsDevice* device = GetDevice();
 	const Scene& scene = GetScene();
 	const FrameCulling& culling = frameCullings.at(&camera);
+
+	const bool opaque = flags & RENDERTYPE_OPAQUE;
+	const bool transparent = flags & DRAWSCENE_TRANSPARENT;
+	const bool tessellation = (flags & DRAWSCENE_TESSELLATION) && GetTessellationEnabled();
+	const bool hairparticle = flags & DRAWSCENE_HAIRPARTICLE;
 
 	device->EventBegin("DrawScene", cmd);
 
@@ -5742,37 +5774,68 @@ void DrawScene(const CameraComponent& camera, bool tessellation, CommandList cmd
 		device->BindResource(PS, &decalAtlas, TEXSLOT_DECALATLAS, cmd);
 	}
 
-	if (renderPass == RENDERPASS_TILEDFORWARD)
+	if (transparent)
 	{
-		device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE], SBSLOT_ENTITYTILES, cmd);
+		if (renderPass == RENDERPASS_TILEDFORWARD)
+		{
+			device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], SBSLOT_ENTITYTILES, cmd);
+		}
+		if (ocean != nullptr)
+		{
+			ocean->Render(camera, scene.weather, renderTime, cmd);
+		}
+	}
+	else
+	{
+		if (renderPass == RENDERPASS_TILEDFORWARD)
+		{
+			device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE], SBSLOT_ENTITYTILES, cmd);
+		}
 	}
 
-	if (grass)
+	if (hairparticle)
 	{
-		if (GetAlphaCompositionEnabled())
+		const bool alphacomposition = GetAlphaCompositionEnabled();
+
+		if (!transparent && alphacomposition)
 		{
-			// cut off most transparent areas
+			// cut off most transparent areas in opaque pass (if alpha composition enabled)
 			SetAlphaRef(0.25f, cmd);
 		}
 
-		for (uint32_t hairIndex : culling.culledHairs)
+		if (!transparent || alphacomposition)
 		{
-			const wiHairParticle& hair = scene.hairs[hairIndex];
-			Entity entity = scene.hairs.GetEntity(hairIndex);
-			const MaterialComponent& material = *scene.materials.GetComponent(entity);
-
-			if (renderPass == RENDERPASS_FORWARD)
+			// transparent pass only renders hair when alpha composition enabled
+			for (uint32_t hairIndex : culling.culledHairs)
 			{
-				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, hair.aabb, renderPass);
-				device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
-				device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
-			}
+				const wiHairParticle& hair = scene.hairs[hairIndex];
+				Entity entity = scene.hairs.GetEntity(hairIndex);
+				const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
-			hair.Draw(camera, material, renderPass, false, cmd);
+				if (renderPass == RENDERPASS_FORWARD)
+				{
+					ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, hair.aabb, renderPass);
+					device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
+					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
+				}
+
+				hair.Draw(camera, material, renderPass, transparent, cmd);
+			}
 		}
 	}
 
 	RenderImpostors(camera, renderPass, cmd);
+
+	uint32_t renderTypeFlags = 0;
+	if (opaque)
+	{
+		renderTypeFlags |= RENDERTYPE_OPAQUE;
+	}
+	if (transparent)
+	{
+		renderTypeFlags |= RENDERTYPE_TRANSPARENT;
+		renderTypeFlags |= RENDERTYPE_WATER;
+	}
 
 	RenderQueue renderQueue;
 	renderQueue.camera = &camera;
@@ -5783,7 +5846,7 @@ void DrawScene(const CameraComponent& camera, bool tessellation, CommandList cmd
 		if (GetOcclusionCullingEnabled() && occlusionCulling && object.IsOccluded())
 			continue;
 
-		if (object.IsRenderable() && object.GetRenderTypes() & RENDERTYPE_OPAQUE)
+		if (object.IsRenderable() && (object.GetRenderTypes() & renderTypeFlags))
 		{
 			const float distance = wiMath::Distance(camera.Eye, object.center);
 			if (object.IsImpostorPlacement() && distance > object.impostorSwapDistance + object.impostorFadeThresholdRadius)
@@ -5798,94 +5861,14 @@ void DrawScene(const CameraComponent& camera, bool tessellation, CommandList cmd
 	}
 	if (!renderQueue.empty())
 	{
-		renderQueue.sort(RenderQueue::SORT_FRONT_TO_BACK);
-		RenderMeshes(renderQueue, renderPass, RENDERTYPE_OPAQUE, cmd, tessellation);
+		renderQueue.sort(transparent ? RenderQueue::SORT_BACK_TO_FRONT : RenderQueue::SORT_FRONT_TO_BACK);
+		RenderMeshes(renderQueue, renderPass, renderTypeFlags, cmd, tessellation);
 
 		GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 	}
 
 	device->EventEnd(cmd);
 
-}
-
-void DrawScene_Transparent(const CameraComponent& camera, const Texture& lineardepth, RENDERPASS renderPass, CommandList cmd, bool grass, bool occlusionCulling)
-{
-	GraphicsDevice* device = GetDevice();
-	const Scene& scene = GetScene();
-	const FrameCulling& culling = frameCullings.at(&camera);
-
-	device->EventBegin("DrawScene_Transparent", cmd);
-
-	BindCommonResources(cmd);
-	BindShadowmaps(PS, cmd);
-	BindEnvironmentTextures(PS, cmd);
-	BindConstantBuffers(VS, cmd);
-	BindConstantBuffers(PS, cmd);
-
-	device->BindResource(PS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
-	if (decalAtlas.IsValid())
-	{
-		device->BindResource(PS, &decalAtlas, TEXSLOT_DECALATLAS, cmd);
-	}
-
-	if (renderPass == RENDERPASS_TILEDFORWARD)
-	{
-		device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], SBSLOT_ENTITYTILES, cmd);
-	}
-
-	if (ocean != nullptr)
-	{
-		ocean->Render(camera, scene.weather, renderTime, cmd);
-	}
-
-	if (grass && GetAlphaCompositionEnabled())
-	{
-		// transparent passes can only render hair when alpha composition is enabled
-
-		for (uint32_t hairIndex : culling.culledHairs)
-		{
-			const wiHairParticle& hair = scene.hairs[hairIndex];
-			Entity entity = scene.hairs.GetEntity(hairIndex);
-			const MaterialComponent& material = *scene.materials.GetComponent(entity);
-
-			if (renderPass == RENDERPASS_FORWARD)
-			{
-				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, hair.aabb, renderPass);
-				device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
-				device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
-			}
-
-			hair.Draw(camera, material, renderPass, true, cmd);
-		}
-	}
-
-	RenderQueue renderQueue;
-	renderQueue.camera = &camera;
-	for (uint32_t instanceIndex : culling.culledObjects)
-	{
-		const ObjectComponent& object = scene.objects[instanceIndex];
-
-		if (GetOcclusionCullingEnabled() && occlusionCulling && object.IsOccluded())
-			continue;
-
-		if (object.IsRenderable() && object.GetRenderTypes() & RENDERTYPE_TRANSPARENT)
-		{
-			RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
-			size_t meshIndex = scene.meshes.GetIndex(object.meshID);
-			batch->Create(meshIndex, instanceIndex, wiMath::DistanceEstimated(camera.Eye, object.center));
-			renderQueue.add(batch);
-		}
-	}
-	if (!renderQueue.empty())
-	{
-		renderQueue.sort(RenderQueue::SORT_BACK_TO_FRONT);
-		RenderMeshes(renderQueue, renderPass, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd, false);
-
-		GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
-	}
-
-	device->EventEnd(cmd);
 }
 
 void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
@@ -12019,7 +12002,20 @@ void AddDeferredMIPGen(std::shared_ptr<wiResource> resource, bool preserve_cover
 
 
 
-void SetResolutionScale(float value) { RESOLUTIONSCALE = value; }
+void SetResolutionScale(float value) 
+{ 
+	if (RESOLUTIONSCALE != value)
+	{
+		RESOLUTIONSCALE = value;
+		union UserData
+		{
+			float fValue;
+			uint64_t ullValue;
+		} data;
+		data.fValue = value;
+		wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_RESOLUTION_SCALE, data.ullValue);
+	}
+}
 float GetResolutionScale() { return RESOLUTIONSCALE; }
 int GetShadowRes2D() { return SHADOWRES_2D; }
 int GetShadowResCube() { return SHADOWRES_CUBE; }
@@ -12139,6 +12135,14 @@ void SetRaytracedShadowsEnabled(bool value)
 bool GetRaytracedShadowsEnabled()
 {
 	return raytracedShadows;
+}
+void SetTessellationEnabled(bool value)
+{
+	tessellationEnabled = value;
+}
+bool GetTessellationEnabled()
+{
+	return tessellationEnabled;
 }
 
 }

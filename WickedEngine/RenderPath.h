@@ -1,42 +1,24 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiResourceManager.h"
-
-#include <functional>
+#include "wiGraphicsDevice.h"
 
 class RenderPath
 {
 private:
 	uint32_t layerMask = 0xFFFFFFFF;
-	bool initial_resizebuffer = false;
-	int dpi = 0;
 
-protected:
-	// create resolution dependant resources, such as render targets
-	virtual void ResizeBuffers() {}
-	// update resolution dependent elements, such as elements dependent on current monitor DPI
-	virtual void ResizeLayout();
 public:
-	std::function<void()> onStart;
-	std::function<void()> onStop;
-
-	virtual ~RenderPath() { Unload(); }
-
-	// initialize component
-	virtual void Initialize() {}
-	// load resources
+	// load resources in background (for example behind loading screen)
 	virtual void Load() {}
-	// delete resources
-	virtual void Unload() {}
-	// start component, load temporary resources
-	virtual void Start();
-	// unload temporary resources
-	virtual void Stop();
+	// called when RenderPath gets activated
+	virtual void Start() {}
+	// called when RenderPath gets deactivated (for example when switching to an other RenderPath)
+	virtual void Stop() {}
 	// update with fixed frequency
 	virtual void FixedUpdate() {}
 	// update once per frame
 	//	dt : elapsed time since last call in seconds
-	virtual void Update(float dt);
+	virtual void Update(float dt) {}
 	// Render to layers, rendertargets, etc
 	// This will be rendered offscreen
 	virtual void Render() const {}

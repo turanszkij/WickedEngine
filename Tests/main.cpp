@@ -153,27 +153,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
-	case WM_SIZE:
-	{
-		if (wiRenderer::GetDevice() != nullptr)
-		{
-			int width = LOWORD(lParam);
-			int height = HIWORD(lParam);
-
-			wiRenderer::GetDevice()->SetResolution(width, height);
-			wiRenderer::GetCamera().CreatePerspective((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
-		}
-	}
-	break;
+    case WM_SIZE:
+        wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_RESOLUTION, lParam);
+        break;
     case WM_DPICHANGED:
-    {
-        int dpi_x = LOWORD(wParam);
-        int dpi_y = HIWORD(wParam);
-        assert(dpi_x == dpi_y);
-        RECT* size = (RECT*)lParam;
-        wiPlatform::GetWindowState().dpi = dpi_x;
-    }
-    break;
+        wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_DPI, wParam);
+        break;
 	case WM_CHAR:
 		switch (wParam)
 		{

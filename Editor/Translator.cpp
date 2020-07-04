@@ -4,6 +4,7 @@
 #include "wiInput.h"
 #include "wiMath.h"
 #include "ShaderInterop_Renderer.h"
+#include "wiEvent.h"
 
 using namespace wiGraphics;
 using namespace wiECS;
@@ -19,36 +20,39 @@ UINT vertexCount_Plane = 0;
 UINT vertexCount_Origin = 0;
 float origin_size = 0.2f;
 
-void Translator::LoadShaders()
+namespace Translator_Internal
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
+	void LoadShaders()
 	{
-		PipelineStateDesc desc;
+		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		desc.vs = wiRenderer::GetVertexShader(VSTYPE_VERTEXCOLOR);
-		desc.ps = wiRenderer::GetPixelShader(PSTYPE_VERTEXCOLOR);
-		desc.il = wiRenderer::GetInputLayout(ILTYPE_VERTEXCOLOR);
-		desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
-		desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
-		desc.bs = wiRenderer::GetBlendState(BSTYPE_ADDITIVE);
-		desc.pt = TRIANGLELIST;
+		{
+			PipelineStateDesc desc;
 
-		device->CreatePipelineState(&desc, &pso_solidpart);
-	}
+			desc.vs = wiRenderer::GetVertexShader(VSTYPE_VERTEXCOLOR);
+			desc.ps = wiRenderer::GetPixelShader(PSTYPE_VERTEXCOLOR);
+			desc.il = wiRenderer::GetInputLayout(ILTYPE_VERTEXCOLOR);
+			desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
+			desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
+			desc.bs = wiRenderer::GetBlendState(BSTYPE_ADDITIVE);
+			desc.pt = TRIANGLELIST;
 
-	{
-		PipelineStateDesc desc;
+			device->CreatePipelineState(&desc, &pso_solidpart);
+		}
 
-		desc.vs = wiRenderer::GetVertexShader(VSTYPE_VERTEXCOLOR);
-		desc.ps = wiRenderer::GetPixelShader(PSTYPE_VERTEXCOLOR);
-		desc.il = wiRenderer::GetInputLayout(ILTYPE_VERTEXCOLOR);
-		desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
-		desc.rs = wiRenderer::GetRasterizerState(RSTYPE_WIRE_DOUBLESIDED_SMOOTH);
-		desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
-		desc.pt = LINELIST;
+		{
+			PipelineStateDesc desc;
 
-		device->CreatePipelineState(&desc, &pso_wirepart);
+			desc.vs = wiRenderer::GetVertexShader(VSTYPE_VERTEXCOLOR);
+			desc.ps = wiRenderer::GetPixelShader(PSTYPE_VERTEXCOLOR);
+			desc.il = wiRenderer::GetInputLayout(ILTYPE_VERTEXCOLOR);
+			desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
+			desc.rs = wiRenderer::GetRasterizerState(RSTYPE_WIRE_DOUBLESIDED_SMOOTH);
+			desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
+			desc.pt = LINELIST;
+
+			device->CreatePipelineState(&desc, &pso_wirepart);
+		}
 	}
 }
 
@@ -429,7 +433,8 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 	if (!shaders_loaded)
 	{
 		shaders_loaded = true;
-		LoadShaders();
+		static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { Translator_Internal::LoadShaders(); });
+		Translator_Internal::LoadShaders();
 	}
 
 	Scene& scene = wiScene::GetScene();

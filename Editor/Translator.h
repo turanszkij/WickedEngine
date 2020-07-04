@@ -50,7 +50,5 @@ public:
 	bool IsDragEnded() const { return dragEnded; };
 	// Delta matrix from beginning to end of drag operation
 	XMFLOAT4X4 GetDragDeltaMatrix() const { return dragDeltaMatrix; }
-
-	static void LoadShaders();
 };
 

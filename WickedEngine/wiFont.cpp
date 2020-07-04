@@ -9,6 +9,7 @@
 #include "wiRectPacker.h"
 #include "wiSpinLock.h"
 #include "wiPlatform.h"
+#include "wiEvent.h"
 
 #include "Utility/stb_truetype.h"
 
@@ -233,6 +234,32 @@ using namespace wiFont_Internal;
 namespace wiFont
 {
 
+
+void LoadShaders()
+{
+	std::string path = wiRenderer::GetShaderPath();
+
+	InputLayoutDesc layout[] =
+	{
+		{ "POSITION", 0, FORMAT_R32G32_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, FORMAT_R16G16_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+	};
+	wiRenderer::LoadShader(VS, vertexShader, "fontVS.cso");
+	wiRenderer::GetDevice()->CreateInputLayout(layout, arraysize(layout), &vertexShader, &inputLayout);
+
+
+	wiRenderer::LoadShader(PS, pixelShader, "fontPS.cso");
+
+
+	PipelineStateDesc desc;
+	desc.vs = &vertexShader;
+	desc.ps = &pixelShader;
+	desc.il = &inputLayout;
+	desc.bs = &blendState;
+	desc.dss = &depthStencilState;
+	desc.rs = &rasterizerState;
+	wiRenderer::GetDevice()->CreatePipelineState(&desc, &PSO);
+}
 void Initialize()
 {
 	if (initialized)
@@ -328,55 +355,29 @@ void Initialize()
 	samplerDesc.MaxLOD = FLT_MAX;
 	device->CreateSampler(&samplerDesc, &sampler);
 
+	static wiEvent::Handle handle1 = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 	LoadShaders();
 
-	wiBackLog::post("wiFont Initialized");
-	initialized.store(true);
-}
 
-void LoadShaders()
-{
-	std::string path = wiRenderer::GetShaderPath();
-
-	InputLayoutDesc layout[] =
-	{
-		{ "POSITION", 0, FORMAT_R32G32_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, FORMAT_R16G16_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-	};
-	wiRenderer::LoadShader(VS, vertexShader, "fontVS.cso");
-	wiRenderer::GetDevice()->CreateInputLayout(layout, arraysize(layout), &vertexShader, &inputLayout);
-
-
-	wiRenderer::LoadShader(PS, pixelShader, "fontPS.cso");
-
-
-	PipelineStateDesc desc;
-	desc.vs = &vertexShader;
-	desc.ps = &pixelShader;
-	desc.il = &inputLayout;
-	desc.bs = &blendState;
-	desc.dss = &depthStencilState;
-	desc.rs = &rasterizerState;
-	wiRenderer::GetDevice()->CreatePipelineState(&desc, &PSO);
-}
-
-void UpdatePendingGlyphs()
-{
-	glyphLock.lock();
-
-	static int saved_dpi = wiPlatform::GetDPI();
-	int dpi = wiPlatform::GetDPI();
-	if (saved_dpi != dpi)
-	{
-		saved_dpi = dpi;
-
+	static wiEvent::Handle handle2 = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [](uint64_t userdata) {
+		glyphLock.lock();
 		for (auto& x : glyph_lookup)
 		{
 			pendingGlyphs.insert(x.first);
 		}
 		glyph_lookup.clear();
 		rect_lookup.clear();
-	}
+		glyphLock.unlock();
+	});
+
+
+	wiBackLog::post("wiFont Initialized");
+	initialized.store(true);
+}
+
+void UpdatePendingGlyphs()
+{
+	glyphLock.lock();
 
 	// If there are pending glyphs, render them and repack the atlas:
 	if (!pendingGlyphs.empty())

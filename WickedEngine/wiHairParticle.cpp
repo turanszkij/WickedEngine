@@ -11,6 +11,7 @@
 #include "wiScene.h"
 #include "ShaderInterop_HairParticle.h"
 #include "wiBackLog.h"
+#include "wiEvent.h"
 
 using namespace std;
 using namespace wiGraphics;
@@ -293,96 +294,99 @@ void wiHairParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 	}
 }
 
-
-void wiHairParticle::LoadShaders()
+namespace wiHairParticle_Internal
 {
-	std::string path = wiRenderer::GetShaderPath();
-
-	wiRenderer::LoadShader(VS, vs, "hairparticleVS.cso");
-
-	wiRenderer::LoadShader(PS, ps_simplest, "hairparticlePS_simplest.cso");
-	wiRenderer::LoadShader(PS, ps_alphatestonly, "hairparticlePS_alphatestonly.cso");
-	wiRenderer::LoadShader(PS, ps_deferred, "hairparticlePS_deferred.cso");
-	wiRenderer::LoadShader(PS, ps_forward, "hairparticlePS_forward.cso");
-	wiRenderer::LoadShader(PS, ps_forward_transparent, "hairparticlePS_forward_transparent.cso");
-	wiRenderer::LoadShader(PS, ps_tiledforward, "hairparticlePS_tiledforward.cso");
-	wiRenderer::LoadShader(PS, ps_tiledforward_transparent, "hairparticlePS_tiledforward_transparent.cso");
-
-	wiRenderer::LoadShader(CS, cs_simulate, "hairparticle_simulateCS.cso");
-
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
-	for (int i = 0; i < RENDERPASS_COUNT; ++i)
+	void LoadShaders()
 	{
-		if (i == RENDERPASS_DEPTHONLY || i == RENDERPASS_DEFERRED || i == RENDERPASS_FORWARD || i == RENDERPASS_TILEDFORWARD)
+		std::string path = wiRenderer::GetShaderPath();
+
+		wiRenderer::LoadShader(VS, vs, "hairparticleVS.cso");
+
+		wiRenderer::LoadShader(PS, ps_simplest, "hairparticlePS_simplest.cso");
+		wiRenderer::LoadShader(PS, ps_alphatestonly, "hairparticlePS_alphatestonly.cso");
+		wiRenderer::LoadShader(PS, ps_deferred, "hairparticlePS_deferred.cso");
+		wiRenderer::LoadShader(PS, ps_forward, "hairparticlePS_forward.cso");
+		wiRenderer::LoadShader(PS, ps_forward_transparent, "hairparticlePS_forward_transparent.cso");
+		wiRenderer::LoadShader(PS, ps_tiledforward, "hairparticlePS_tiledforward.cso");
+		wiRenderer::LoadShader(PS, ps_tiledforward_transparent, "hairparticlePS_tiledforward_transparent.cso");
+
+		wiRenderer::LoadShader(CS, cs_simulate, "hairparticle_simulateCS.cso");
+
+		GraphicsDevice* device = wiRenderer::GetDevice();
+
+		for (int i = 0; i < RENDERPASS_COUNT; ++i)
 		{
-			for (int j = 0; j < 2; ++j)
+			if (i == RENDERPASS_DEPTHONLY || i == RENDERPASS_DEFERRED || i == RENDERPASS_FORWARD || i == RENDERPASS_TILEDFORWARD)
 			{
-				if ((i == RENDERPASS_DEPTHONLY || i == RENDERPASS_DEFERRED) && j == 1)
+				for (int j = 0; j < 2; ++j)
 				{
-					continue;
+					if ((i == RENDERPASS_DEPTHONLY || i == RENDERPASS_DEFERRED) && j == 1)
+					{
+						continue;
+					}
+
+					PipelineStateDesc desc;
+					desc.vs = &vs;
+					desc.bs = &bs[j];
+					desc.rs = &ncrs;
+					desc.dss = &dss_default;
+
+					switch (i)
+					{
+					case RENDERPASS_DEPTHONLY:
+						desc.ps = &ps_alphatestonly;
+						break;
+					case RENDERPASS_DEFERRED:
+						desc.ps = &ps_deferred;
+						break;
+					case RENDERPASS_FORWARD:
+						if (j == 0)
+						{
+							desc.ps = &ps_forward;
+							desc.dss = &dss_equal;
+						}
+						else
+						{
+							desc.ps = &ps_forward_transparent;
+						}
+						break;
+					case RENDERPASS_TILEDFORWARD:
+						if (j == 0)
+						{
+							desc.ps = &ps_tiledforward;
+							desc.dss = &dss_equal;
+						}
+						else
+						{
+							desc.ps = &ps_tiledforward_transparent;
+						}
+						break;
+					}
+
+					if (j == 1)
+					{
+						desc.dss = &dss_rejectopaque_keeptransparent; // transparent
+					}
+
+					device->CreatePipelineState(&desc, &PSO[i][j]);
 				}
-
-				PipelineStateDesc desc;
-				desc.vs = &vs;
-				desc.bs = &bs[j];
-				desc.rs = &ncrs;
-				desc.dss = &dss_default;
-
-				switch (i)
-				{
-				case RENDERPASS_DEPTHONLY:
-					desc.ps = &ps_alphatestonly;
-					break;
-				case RENDERPASS_DEFERRED:
-					desc.ps = &ps_deferred;
-					break;
-				case RENDERPASS_FORWARD:
-					if (j == 0)
-					{
-						desc.ps = &ps_forward;
-						desc.dss = &dss_equal;
-					}
-					else
-					{
-						desc.ps = &ps_forward_transparent;
-					}
-					break;
-				case RENDERPASS_TILEDFORWARD:
-					if (j == 0)
-					{
-						desc.ps = &ps_tiledforward;
-						desc.dss = &dss_equal;
-					}
-					else
-					{
-						desc.ps = &ps_tiledforward_transparent;
-					}
-					break;
-				}
-
-				if (j == 1)
-				{
-					desc.dss = &dss_rejectopaque_keeptransparent; // transparent
-				}
-
-				device->CreatePipelineState(&desc, &PSO[i][j]);
 			}
 		}
+
+		{
+			PipelineStateDesc desc;
+			desc.vs = &vs;
+			desc.ps = &ps_simplest;
+			desc.bs = &bs[0];
+			desc.rs = &wirers;
+			desc.dss = &dss_default;
+			device->CreatePipelineState(&desc, &PSO_wire);
+		}
+
+
 	}
-
-	{
-		PipelineStateDesc desc;
-		desc.vs = &vs;
-		desc.ps = &ps_simplest;
-		desc.bs = &bs[0];
-		desc.rs = &wirers;
-		desc.dss = &dss_default;
-		device->CreatePipelineState(&desc, &PSO_wire);
-	}
-
-
 }
+
 void wiHairParticle::Initialize()
 {
 
@@ -463,7 +467,8 @@ void wiHairParticle::Initialize()
 	bld.IndependentBlendEnable = false;
 	wiRenderer::GetDevice()->CreateBlendState(&bld, &bs[1]);
 
-	LoadShaders();
+	static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { wiHairParticle_Internal::LoadShaders(); });
+	wiHairParticle_Internal::LoadShaders();
 
 	wiBackLog::post("wiHairParticle Initialized");
 }

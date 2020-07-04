@@ -1,6 +1,7 @@
 #pragma once
 #include "RenderPath.h"
 #include "wiGUI.h"
+#include "wiEvent.h"
 
 #include <string>
 
@@ -37,14 +38,18 @@ private:
 	wiGraphics::RenderPass renderpass_final;
 
 	wiGUI GUI;
+	wiEvent::Handle resolutionChange_handle;
+	wiEvent::Handle resolutionScaleChange_handle;
+	wiEvent::Handle dpiChange_handle;
 
 protected:
-	void ResizeBuffers() override;
+	// create resolution dependant resources, such as render targets
+	virtual void ResizeBuffers();
+	// update resolution dependent elements, such as elements dependent on current monitor DPI
+	virtual void ResizeLayout() {}
 public:
 
-	void Initialize() override;
 	void Load() override;
-	void Unload() override;
 	void Start() override;
 	void Update(float dt) override;
 	void FixedUpdate() override;

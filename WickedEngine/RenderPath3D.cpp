@@ -415,7 +415,7 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 
 		device->RenderPassBegin(&renderpass_reflection, cmd);
 
-		wiRenderer::DrawScene(wiRenderer::GetRefCamera(), false, cmd, RENDERPASS_TEXTURE, false, false);
+		wiRenderer::DrawScene(wiRenderer::GetRefCamera(), RENDERPASS_TEXTURE, cmd);
 		wiRenderer::DrawSky(cmd);
 
 		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), cmd);
@@ -642,10 +642,16 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 	{
 		auto range = wiProfiler::BeginRangeGPU("Transparent Scene", cmd);
 
+		device->BindResource(PS, &rtLinearDepth, TEXSLOT_LINEARDEPTH, cmd);
 		device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
 		device->BindResource(PS, &rtSceneCopy, TEXSLOT_RENDERPATH_REFRACTION, cmd);
 		device->BindResource(PS, &rtWaterRipple, TEXSLOT_RENDERPATH_WATERRIPPLES, cmd);
-		wiRenderer::DrawScene_Transparent(wiRenderer::GetCamera(), rtLinearDepth, renderPass, cmd, true, true);
+
+		uint32_t drawscene_flags = 0;
+		drawscene_flags |= wiRenderer::DRAWSCENE_TRANSPARENT;
+		drawscene_flags |= wiRenderer::DRAWSCENE_OCCLUSIONCULLING;
+		drawscene_flags |= wiRenderer::DRAWSCENE_HAIRPARTICLE;
+		wiRenderer::DrawScene(wiRenderer::GetCamera(), renderPass, cmd, drawscene_flags);
 
 		wiProfiler::EndRange(range); // Transparent Scene
 	}

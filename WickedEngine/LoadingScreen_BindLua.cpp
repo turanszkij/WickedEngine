@@ -19,9 +19,6 @@ Luna<LoadingScreen_BindLua>::FunctionType LoadingScreen_BindLua::methods[] = {
 	lunamethod(RenderPath2D_BindLua, SetSpriteOrder),
 	lunamethod(RenderPath2D_BindLua, SetFontOrder),
 
-	lunamethod(LoadingScreen_BindLua, Initialize),
-	lunamethod(RenderPath_BindLua, OnStart),
-	lunamethod(RenderPath_BindLua, OnStop),
 	lunamethod(RenderPath_BindLua, GetLayerMask),
 	lunamethod(RenderPath_BindLua, SetLayerMask),
 

@@ -155,12 +155,11 @@ void App::OnResuming(Platform::Object^ sender, Platform::Object^ args)
 
 void App::OnWindowSizeChanged(CoreWindow^ sender, WindowSizeChangedEventArgs^ args)
 {
-	if (wiRenderer::GetDevice() != nullptr)
-	{
-		float dpiscale = wiPlatform::GetDPIScaling();
-		wiRenderer::GetDevice()->SetResolution(int(sender->Bounds.Width * dpiscale), int(sender->Bounds.Height * dpiscale));
-		wiRenderer::GetCamera().CreatePerspective((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
-	}
+	float dpiscale = wiPlatform::GetDPIScaling();
+	uint64 data = 0;
+	data |= int(sender->Bounds.Width * dpiscale);
+	data |= int(sender->Bounds.Height * dpiscale) << 16;
+	wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_RESOLUTION, data);
 }
 
 void App::OnVisibilityChanged(CoreWindow^ sender, VisibilityChangedEventArgs^ args)
@@ -177,7 +176,7 @@ void App::OnWindowClosed(CoreWindow^ sender, CoreWindowEventArgs^ args)
 
 void App::OnDpiChanged(DisplayInformation^ sender, Object^ args)
 {
-	wiPlatform::GetWindowState().dpi = (int)sender->LogicalDpi;
+	wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_DPI, (int)sender->LogicalDpi);
 }
 
 void App::OnOrientationChanged(DisplayInformation^ sender, Object^ args)

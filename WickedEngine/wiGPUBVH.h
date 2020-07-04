@@ -39,6 +39,6 @@ public:
 
 	void Clear();
 
-	static void LoadShaders();
+	static void Initialize();
 
 };

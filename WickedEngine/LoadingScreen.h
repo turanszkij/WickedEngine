@@ -34,7 +34,5 @@ public:
 	virtual void Start() override;
 	//Clear all tasks
 	virtual void Stop() override;
-
-	virtual void Unload() override;
 };
 

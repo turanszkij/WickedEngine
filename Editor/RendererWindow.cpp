@@ -175,9 +175,9 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	tessellationCheckBox->SetPos(XMFLOAT2(x, y += step));
 	tessellationCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	tessellationCheckBox->OnClick([=](wiEventArgs args) {
-		editor->renderPath->setTessellationEnabled(args.bValue);
+		wiRenderer::SetTessellationEnabled(args.bValue);
 	});
-	tessellationCheckBox->SetCheck(false);
+	tessellationCheckBox->SetCheck(wiRenderer::GetTessellationEnabled());
 	rendererWindow->AddWidget(tessellationCheckBox);
 	tessellationCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION));
 

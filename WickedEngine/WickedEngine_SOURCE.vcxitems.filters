@@ -1194,6 +1194,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\GLSL.std.450.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiEvent.h">
+      <Filter>ENGINE\System</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1871,9 +1874,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreen_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath.cpp">
-      <Filter>ENGINE\High level interface</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath2D.cpp">
       <Filter>ENGINE\High level interface</Filter>
     </ClCompile>
@@ -1987,6 +1987,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_parser.cpp">
       <Filter>UTILITY</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiEvent.cpp">
+      <Filter>ENGINE\System</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -20,5 +20,4 @@ namespace wiGPUSortLib
 	);
 
 	void Initialize();
-	void LoadShaders();
 };

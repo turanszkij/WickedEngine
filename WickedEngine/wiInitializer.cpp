@@ -27,15 +27,15 @@ namespace wiInitializer
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiFont::Initialize(); });
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiImage::Initialize(); });
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiInput::Initialize(); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiRenderer::Initialize(); wiWidget::LoadShaders(); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiRenderer::Initialize(); wiWidget::Initialize(); });
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiAudio::Initialize(); });
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiNetwork::Initialize(); });
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiTextureHelper::Initialize(); });
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiScene::wiHairParticle::Initialize(); });
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiScene::wiEmittedParticle::Initialize(); });
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiOcean::Initialize(); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiGPUSortLib::LoadShaders(); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiGPUBVH::LoadShaders(); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiGPUSortLib::Initialize(); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiGPUBVH::Initialize(); });
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiPhysicsEngine::Initialize(); });
 
 	}

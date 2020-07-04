@@ -42,6 +42,7 @@ This is a reference for the C++ features of Wicked Engine
 	3. [wiJobSystem](#wijobsystem)
 	4. [wiInitializer](#wiinitializer)
 	5. [wiPlatform](#wiplatform)
+	6. [wiEvent](#wievent)
 3. [Graphics](#graphics)
 	1. [wiGraphics](#wigraphics)
 		1. [GraphicsDevice](#wigraphicsdevice)
@@ -79,7 +80,8 @@ This is a reference for the C++ features of Wicked Engine
 		5. [Shadow Maps](#shadow-maps)
 		6. [UpdatePerFrameData](#updateperframedata)
 		7. [UpdateRenderData](#updaterenderdata)
-		8. [Ray tracing](#ray-tracing)
+		8. [Ray tracing (hardware accelerated)](#ray-tracing-hardware-accelerated)
+		8. [Ray tracing (Legacy)](#ray-tracing-legacy)
 		9. [Scene BVH](#scene-bvh)
 		10. [Decals](#decals)
 		11. [Environment probes](#environment-probes)
@@ -191,16 +193,12 @@ This will be called once per frame. It is const, so it shouldn't modify state. W
 It is called once per frame. It is running on a single command list that it receives as a parameter. These rendering commands will directly record onto the last submitted command list in the frame. The render target is the back buffer at this point, so rendering will happen to the screen.
 
 Apart from the functions that will be run every frame, the RenderPath has the following functions:
-1. Initialize() <br/>
-This is an optional function, that the user can call when something needs to be initialized before Load() function will be triggered.
-2. Load() <br/> 
-Intended for loading resources before the first time the RenderPath will be used.
-3. Start() <br/>
+1. Load() <br/> 
+Intended for loading resources before the first time the RenderPath will be used. It will be callsed by [LoadingScreen](#loadingscreen) to load resources in the background.
+2. Start() <br/>
 Start will always be called when a RenderPath is activated by the MainComponent
-4. Stop() <br/>
+3. Stop() <br/>
 Stop will be always called when the current RenderPath was the active one in MainComponent, but an other one was activated.
-5. Unload() <br/>
-Before a RenderPath is destroyed, Unload will be called, so deleting resources can take place if required.
 
 ### RenderPath2D
 [[Header]](../WickedEngine/RenderPath2D.h) [[Cpp]](../WickedEngine/RenderPath2D.cpp)
@@ -410,6 +408,19 @@ You can get native platform specific handles here, such as window handle.
 Returns the platform specific window handle
 - IsWindowActive <br/>
 Returns true if the current window is the topmost one, false if it is not in focus
+
+### wiEvent
+[[Header]](../WickedEngine/wiEvent.h)
+The event system can be used to execute system-wide tasks. Any system can "subscribe" to events and any system can "fire" events.
+- Subscribe <br/>
+The first parameter is the event ID. Core system events are negative numbers. The user can choose any positive number to create custom events. 
+The second parameter is a function to be executed, with a userdata argument. The userdata argument can hold any custom data that the user desires.
+The return value is a wiEvent::Handle type. When this is object is destroyed, the event is subscription for the function will be removed.
+Multiple functions can be subscribed to a single event ID.
+- FireEvent <br/>
+The first argument is the event id, that says which events to invoke. 
+The second argument will be passed to the subscribed event's userdata parameter.
+All events that are subsribed to the specified event id will run immediately at the time of the call of FireEvent. The order of execution among events is the order of which they were subscribed.
 
 
 ## Graphics
@@ -646,7 +657,7 @@ The ShaderInterop also contains the resource macros to help share code between C
 [[Header]](../WickedEngine/wiRenderer.h) [[Cpp]](../WickedEngine/wiRenderer.cpp)
 This is a collection of graphics technique implentations and functions to draw a scene, shadows, post processes and other things. It is also the manager of the GraphicsDevice instance, and provides other helper functions to load shaders from files on disk.
 
-Apart from graphics helper functions that are mostly independent of each other, the renderer also provides facilities to render a Scene. This can be done via the high level DrawScene, DrawSceneTransparent, etc. functions. These don't set up render passes or viewports by themselves, but they expect that they are set up from outside. Most other render state will be handled internally, such as constant buffers, stencil, blendstate, etc.. Please see how the scene rendering functions are used in the High level interface RenderPath3D implementations (for example [RenderPath3D_TiledForward.cpp](../WickedEngine/RenderPath3D_TiledForward.cpp))
+Apart from graphics helper functions that are mostly independent of each other, the renderer also provides facilities to render a Scene. This can be done via the high level DrawScene, DrawSky, etc. functions. These don't set up render passes or viewports by themselves, but they expect that they are set up from outside. Most other render state will be handled internally, such as constant buffers, stencil, blendstate, etc.. Please see how the scene rendering functions are used in the High level interface RenderPath3D implementations (for example [RenderPath3D_TiledForward.cpp](../WickedEngine/RenderPath3D_TiledForward.cpp))
 
 Other points of interest here are utility graphics functions, such as CopyTexture2D, GenerateMipChain, and the like, which provide customizable operations, such as border expand mode, Gaussian mipchain generation, and things that wouldn't be supported by a graphics API.
 
@@ -658,13 +669,14 @@ Read about the different features of the renderer in more detail below:
 Renders the scene from the camera's point of view that was specified as parameter. Only the objects withing the camera [Frustum](#frustum) will be rendered. The objects will be sorted from front-to back. This is an optimization to reduce overdraw, because for opaque objects, only the closest pixel to the camera will contribute to the rendered image. Pixels behind the frontmost pixel will be culled by the GPU using the depth buffer and not be rendered. The sorting is implemented with RenderQueue internally. The RenderQueue is responsible to sort objects by distance and mesh index, so instaced rendering (batching multiple drawable objects into one draw call) and front-to back sorting can both work together. 
 
 The `renderPass` argument will specify what kind of render pass we are using and specifies shader complexity and rendering technique.
+The `cmd` argument refers to a valid [CommandList](#work-submission)
+The `flags` argument can contain various modifiers that determine what kind of objects to render, or what kind of other properties to take into account:
 
-In addition to rendering objects, [hair particle systems](#wihairparticle) will also be rendered, if there are any within the camera's view and the `grass` parameter is `true`.
-
-There are other parameters that can enable [tessellation](#tessellation) or [occlusion culling](#occlusionculling).
-
-#### DrawScene_Transparent
-Similar to [DrawScene](#drawscene), but the object sorting order is reversed, that is object will be rendered from back to front. This is because transparent objects will be using blending, to allow transparency. However, hardware blending requires that the blend destination (background pixel) is already present in the result when the source (foreground pixel) is rendered.
+- `DRAWSCENE_OPAQUE`: Opaque object will be rendered
+- `DRAWSCENE_TRANSPARENT`: Transparent objects will be rendered. Objects will be sorted back-to front, for blending purposes
+- `DRAWSCENE_OCCLUSIONCULLING`: Occluded objects won't be rendered. [Occlusion culling](#occlusion-culling) can be globally switched on/off using `wiRenderer::SetOcclusionCullingEnabled()`
+- `DRAWSCENE_TESSELLATION`: Enable [tessellation](#tessellation) (if hardware supports it). [Tessellation](#tessellation) can be globally switched on/off using `wiRenderer::SetTessellationEnabled()`
+- `DRAWSCENE_HAIRPARTICLE`: Draw hair particles
 
 #### Tessellation
 Tessellation can be used when rendering objects. Tessellation requires a GPU hardware feature and can enable displacement mapping on vertices or smoothing mesh silhouettes dynamically while rendering objects. Tessellation will be used when `tessellation` parameter to the [DrawScene](#drawscene) was set to `true` and the GPU supports the tessellation feature. Tessellation level can be specified per [MeshComponent](#meshcomponent)'s `tessellationFactor` parameter. Tessellation level will be modulated by distance from camera, so that tessellation factor will fade out on more distant objects. Greater tessellation factor means more detailed geometry will be generated.

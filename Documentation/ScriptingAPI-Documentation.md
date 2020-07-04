@@ -610,10 +610,6 @@ This is the main entry point and manages the lifetime of the application. Even t
 ### RenderPath
 A RenderPath is a high level system that represents a part of the whole application. It is responsible to handle high level rendering and logic flow. A render path can be for example a loading screen, a menu screen, or primary game screen, etc.
 - [constructor]RenderPath()
-- GetContent() : Resource result
-- Initialize()
-- OnStart(string task)
-- OnStop(string task)
 - GetLayerMask() : uint result
 - SetLayerMask(uint mask)
 
@@ -660,7 +656,6 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetDepthOfFieldFocus(float value)
 - SetDepthOfFieldStrength(float value)
 - SetDepthOfFieldAspect(float value)
-- SetTessellationEnabled(bool value)
 - SetMSAASampleCount(int count)
 - SetSharpenFilterEnabled(bool value)
 - SetSharpenFilterAmount(float value)

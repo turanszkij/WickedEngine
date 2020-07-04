@@ -6,10 +6,9 @@
 
 using namespace wiGraphics;
 
+
 void RenderPath2D::ResizeBuffers()
 {
-	RenderPath::ResizeBuffers();
-
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	FORMAT defaultTextureFormat = device->GetBackBufferFormat();
@@ -67,34 +66,32 @@ void RenderPath2D::ResizeBuffers()
 
 }
 
-void RenderPath2D::Initialize()
-{
-	RenderPath::Initialize();
-}
-
 void RenderPath2D::Load()
 {
-	RenderPath::Load();
-}
-void RenderPath2D::Unload()
-{
-	for (auto& x : layers)
+	// ideally, this would happen here, under loading screen
+	if (!resolutionChange_handle.IsValid())
 	{
-		for (auto& y : x.items)
-		{
-			if (y.sprite != nullptr)
-			{
-				delete y.sprite;
-			}
-			if (y.font != nullptr)
-			{
-				delete y.font;
-			}
-		}
+		ResizeBuffers();
+		resolutionChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [this](uint64_t userdata) {
+			ResizeBuffers();
+			ResizeLayout();
+			});
 	}
-	layers.clear();
+	if (!resolutionScaleChange_handle.IsValid())
+	{
+		resolutionScaleChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION_SCALE, [this](uint64_t userdata) {
+			ResizeBuffers();
+			});
+	}
+	if (!dpiChange_handle.IsValid())
+	{
+		ResizeLayout();
+		dpiChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [this](uint64_t userdata) {
+			ResizeLayout();
+			});
+	}
 
-	RenderPath::Unload();
+	RenderPath::Load();
 }
 void RenderPath2D::Start()
 {
@@ -102,6 +99,29 @@ void RenderPath2D::Start()
 }
 void RenderPath2D::Update(float dt)
 {
+	// this is last resort, if Load() wasn't called
+	if (!resolutionChange_handle.IsValid())
+	{
+		ResizeBuffers();
+		resolutionChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [this](uint64_t userdata) {
+			ResizeBuffers();
+			ResizeLayout();
+			});
+	}
+	if (!resolutionScaleChange_handle.IsValid())
+	{
+		resolutionScaleChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION_SCALE, [this](uint64_t userdata) {
+			ResizeBuffers();
+			});
+	}
+	if (!dpiChange_handle.IsValid())
+	{
+		ResizeLayout();
+		dpiChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [this](uint64_t userdata) {
+			ResizeLayout();
+			});
+	}
+
 	GetGUI().Update(dt);
 
 	for (auto& x : layers)
