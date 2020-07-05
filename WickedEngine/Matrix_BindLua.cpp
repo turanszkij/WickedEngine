@@ -305,7 +305,7 @@ void Matrix_BindLua::Bind()
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<Matrix_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
-		wiLua::GetGlobal()->RunText("matrix = Matrix()");
+		Luna<Matrix_BindLua>::Register(wiLua::GetLuaState());
+		wiLua::RunText("matrix = Matrix()");
 	}
 }

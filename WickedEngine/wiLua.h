@@ -1,6 +1,8 @@
 #pragma once
 #include "CommonInclude.h"
 
+#include <string>
+
 extern "C"
 {
 #include "LUA/lua.h"
@@ -8,28 +10,13 @@ extern "C"
 #include "LUA/lauxlib.h"
 }
 
-#include <mutex>
+typedef int(*lua_CFunction) (lua_State* L);
 
-typedef int(*lua_CFunction) (lua_State *L);
-
-class wiLua
+namespace wiLua
 {
-private:
-	lua_State *m_luaState;
-	int m_status; //last call status
+	void Initialize();
 
-	std::mutex lock;
-
-	//run the previously loaded script
-	bool RunScript();
-public:
-	wiLua();
-	~wiLua();
-
-	inline lua_State* GetLuaState(){ return m_luaState; }
-
-	//get global lua script manager
-	static wiLua* GetGlobal();
+	lua_State* GetLuaState();
 
 	//check if the last call succeeded
 	bool Success();
@@ -75,66 +62,66 @@ public:
 	//kill every running background task (coroutine)
 	void KillProcesses();
 
-	//Static function wrappers from here on
+	//Following functions are "static", operating on specified lua state:
 
 	//get string from lua on stack position
-	static std::string SGetString(lua_State* L, int stackpos);
+	std::string SGetString(lua_State* L, int stackpos);
 	//check if a value is string on the stack position
-	static bool SIsString(lua_State* L, int stackpos);
+	bool SIsString(lua_State* L, int stackpos);
 	//check if a value is number on the stack position
-	static bool SIsNumber(lua_State* L, int stackpos);
+	bool SIsNumber(lua_State* L, int stackpos);
 	//get int from lua on stack position
-	static int SGetInt(lua_State* L, int stackpos);
+	int SGetInt(lua_State* L, int stackpos);
 	//get long from lua on stack position
-	static long SGetLong(lua_State* L, int stackpos);
+	long SGetLong(lua_State* L, int stackpos);
 	//get long long from lua on stack position
-	static long long SGetLongLong(lua_State* L, int stackpos);
+	long long SGetLongLong(lua_State* L, int stackpos);
 	//get float from lua on stack position
-	static float SGetFloat(lua_State* L, int stackpos);
+	float SGetFloat(lua_State* L, int stackpos);
 	//get float2 from lua on stack position
-	static XMFLOAT2 SGetFloat2(lua_State* L, int stackpos);
+	XMFLOAT2 SGetFloat2(lua_State* L, int stackpos);
 	//get float3 from lua on stack position
-	static XMFLOAT3 SGetFloat3(lua_State* L, int stackpos);
+	XMFLOAT3 SGetFloat3(lua_State* L, int stackpos);
 	//get float4 from lua on stack position
-	static XMFLOAT4 SGetFloat4(lua_State* L, int stackpos);
+	XMFLOAT4 SGetFloat4(lua_State* L, int stackpos);
 	//get double from lua on stack position
-	static double SGetDouble(lua_State* L, int stackpos);
+	double SGetDouble(lua_State* L, int stackpos);
 	//get bool from lua on stack position
-	static bool SGetBool(lua_State* L, int stackpos);
+	bool SGetBool(lua_State* L, int stackpos);
 	//get number of elements in the stack, or index of the top element
-	static int SGetArgCount(lua_State* L);
+	int SGetArgCount(lua_State* L);
 	//get class context information
-	static void* SGetUserData(lua_State* L);
+	void* SGetUserData(lua_State* L);
 	
 	//push int to lua stack
-	static void SSetInt(lua_State* L, int data);
+	void SSetInt(lua_State* L, int data);
 	//push long to lua stack
-	static void SSetLong(lua_State* L, long data);
+	void SSetLong(lua_State* L, long data);
 	//push long long to lua stack
-	static void SSetLongLong(lua_State* L, long long data);
+	void SSetLongLong(lua_State* L, long long data);
 	//push float to lua stack
-	static void SSetFloat(lua_State* L, float data);
+	void SSetFloat(lua_State* L, float data);
 	//push float2 to lua stack
-	static void SSetFloat2(lua_State* L, const XMFLOAT2& data);
+	void SSetFloat2(lua_State* L, const XMFLOAT2& data);
 	//push float3 to lua stack
-	static void SSetFloat3(lua_State* L, const XMFLOAT3& data);
+	void SSetFloat3(lua_State* L, const XMFLOAT3& data);
 	//push float4 to lua stack
-	static void SSetFloat4(lua_State* L, const XMFLOAT4& data);
+	void SSetFloat4(lua_State* L, const XMFLOAT4& data);
 	//push double to lua stack
-	static void SSetDouble(lua_State* L, double data);
+	void SSetDouble(lua_State* L, double data);
 	//push string to lua stack
-	static void SSetString(lua_State* L, const std::string& data);
+	void SSetString(lua_State* L, const std::string& data);
 	//push bool to lua stack
-	static void SSetBool(lua_State* L, bool data);
+	void SSetBool(lua_State* L, bool data);
 	//push pointer (light userdata) to lua stack
-	static void SSetPointer(lua_State* L, void* data);
+	void SSetPointer(lua_State* L, void* data);
 	//push null to lua stack
-	static void SSetNull(lua_State* L);
+	void SSetNull(lua_State* L);
 
 	//throw error
-	static void SError(lua_State* L, const std::string& error = "");
+	void SError(lua_State* L, const std::string& error = "");
 	
 	//add new metatable
-	static void SAddMetatable(lua_State* L, const std::string& name);
+	void SAddMetatable(lua_State* L, const std::string& name);
 };
 

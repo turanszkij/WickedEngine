@@ -370,12 +370,12 @@ void RenderPath3D_BindLua::Bind()
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<RenderPath3D_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<RenderPath3D_BindLua>::Register(wiLua::GetLuaState());
 
-		wiLua::GetGlobal()->RunText("AO_DISABLED = 0");
-		wiLua::GetGlobal()->RunText("AO_SSAO = 1");
-		wiLua::GetGlobal()->RunText("AO_HBAO = 2");
-		wiLua::GetGlobal()->RunText("AO_MSAO = 3");
-		wiLua::GetGlobal()->RunText("AO_RTAO = 4");
+		wiLua::RunText("AO_DISABLED = 0");
+		wiLua::RunText("AO_SSAO = 1");
+		wiLua::RunText("AO_HBAO = 2");
+		wiLua::RunText("AO_MSAO = 3");
+		wiLua::RunText("AO_RTAO = 4");
 	}
 }

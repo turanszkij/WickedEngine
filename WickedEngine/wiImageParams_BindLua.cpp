@@ -439,34 +439,34 @@ void wiImageParams_BindLua::Bind()
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<wiImageParams_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<wiImageParams_BindLua>::Register(wiLua::GetLuaState());
 
-		wiLua::GetGlobal()->RunText("STENCILMODE_DISABLED		= 0");
-		wiLua::GetGlobal()->RunText("STENCILMODE_EQUAL			= 1");
-		wiLua::GetGlobal()->RunText("STENCILMODE_LESS			= 2");
-		wiLua::GetGlobal()->RunText("STENCILMODE_LESSEQUAL		= 3");
-		wiLua::GetGlobal()->RunText("STENCILMODE_GREATER		= 4");
-		wiLua::GetGlobal()->RunText("STENCILMODE_GREATEREQUAL	= 5");
-		wiLua::GetGlobal()->RunText("STENCILMODE_NOT			= 6");
-		wiLua::GetGlobal()->RunText("STENCILMODE_ALWAYS			= 7");
+		wiLua::RunText("STENCILMODE_DISABLED		= 0");
+		wiLua::RunText("STENCILMODE_EQUAL			= 1");
+		wiLua::RunText("STENCILMODE_LESS			= 2");
+		wiLua::RunText("STENCILMODE_LESSEQUAL		= 3");
+		wiLua::RunText("STENCILMODE_GREATER		= 4");
+		wiLua::RunText("STENCILMODE_GREATEREQUAL	= 5");
+		wiLua::RunText("STENCILMODE_NOT			= 6");
+		wiLua::RunText("STENCILMODE_ALWAYS			= 7");
 
-		wiLua::GetGlobal()->RunText("STENCILREFMODE_ENGINE		= 0");
-		wiLua::GetGlobal()->RunText("STENCILREFMODE_USER		= 1");
-		wiLua::GetGlobal()->RunText("STENCILREFMODE_ALL			= 2");
+		wiLua::RunText("STENCILREFMODE_ENGINE		= 0");
+		wiLua::RunText("STENCILREFMODE_USER		= 1");
+		wiLua::RunText("STENCILREFMODE_ALL			= 2");
 
-		wiLua::GetGlobal()->RunText("SAMPLEMODE_CLAMP			= 0");
-		wiLua::GetGlobal()->RunText("SAMPLEMODE_WRAP			= 1");
-		wiLua::GetGlobal()->RunText("SAMPLEMODE_MIRROR			= 2");
+		wiLua::RunText("SAMPLEMODE_CLAMP			= 0");
+		wiLua::RunText("SAMPLEMODE_WRAP			= 1");
+		wiLua::RunText("SAMPLEMODE_MIRROR			= 2");
 
-		wiLua::GetGlobal()->RunText("QUALITY_NEAREST			= 0");
-		wiLua::GetGlobal()->RunText("QUALITY_LINEAR				= 1");
-		wiLua::GetGlobal()->RunText("QUALITY_ANISOTROPIC		= 2");
-		wiLua::GetGlobal()->RunText("QUALITY_BICUBIC			= 3");
+		wiLua::RunText("QUALITY_NEAREST			= 0");
+		wiLua::RunText("QUALITY_LINEAR				= 1");
+		wiLua::RunText("QUALITY_ANISOTROPIC		= 2");
+		wiLua::RunText("QUALITY_BICUBIC			= 3");
 
-		wiLua::GetGlobal()->RunText("BLENDMODE_OPAQUE			= 0");
-		wiLua::GetGlobal()->RunText("BLENDMODE_ALPHA			= 1");
-		wiLua::GetGlobal()->RunText("BLENDMODE_PREMULTIPLIED	= 2");
-		wiLua::GetGlobal()->RunText("BLENDMODE_ADDITIVE			= 3");
+		wiLua::RunText("BLENDMODE_OPAQUE			= 0");
+		wiLua::RunText("BLENDMODE_ALPHA			= 1");
+		wiLua::RunText("BLENDMODE_PREMULTIPLIED	= 2");
+		wiLua::RunText("BLENDMODE_ADDITIVE			= 3");
 	}
 }
 

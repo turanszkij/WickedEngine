@@ -127,7 +127,7 @@ void TestsRenderer::Load()
 		wiScene::GetScene().weather = WeatherComponent();
 		this->ClearSprites();
 		this->ClearFonts();
-		wiLua::GetGlobal()->KillProcesses();
+		wiLua::KillProcesses();
 
 		// Reset camera position:
 		TransformComponent transform;
@@ -174,7 +174,7 @@ void TestsRenderer::Load()
 			break;
 		case 5:
 			wiRenderer::SetToDrawGridHelper(true);
-			wiLua::GetGlobal()->RunFile("test_script.lua");
+			wiLua::RunFile("test_script.lua");
 			break;
 		case 6:
 			wiRenderer::SetTemporalAAEnabled(true);

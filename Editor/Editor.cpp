@@ -764,7 +764,7 @@ void EditorComponent::Load()
 		params.description = "Lua script";
 		params.extensions.push_back("lua");
 		wiHelper::FileDialog(params, [](std::string fileName) {
-			wiLua::GetGlobal()->RunFile(fileName);
+			wiLua::RunFile(fileName);
 		});
 	});
 	GetGUI().AddWidget(scriptButton);

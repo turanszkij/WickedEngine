@@ -393,8 +393,8 @@ void Vector_BindLua::Bind()
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<Vector_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
-		wiLua::GetGlobal()->RunText("vector = Vector()");
+		Luna<Vector_BindLua>::Register(wiLua::GetLuaState());
+		wiLua::RunText("vector = Vector()");
 	}
 }
 

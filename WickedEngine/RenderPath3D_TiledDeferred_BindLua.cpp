@@ -54,6 +54,6 @@ void RenderPath3D_TiledDeferred_BindLua::Bind()
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<RenderPath3D_TiledDeferred_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<RenderPath3D_TiledDeferred_BindLua>::Register(wiLua::GetLuaState());
 	}
 }

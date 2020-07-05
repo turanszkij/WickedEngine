@@ -186,71 +186,71 @@ void wiInput_BindLua::Bind()
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<wiInput_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
-		wiLua::GetGlobal()->RunText("input = Input()");
+		Luna<wiInput_BindLua>::Register(wiLua::GetLuaState());
+		wiLua::RunText("input = Input()");
 
-		wiLua::GetGlobal()->RunText("MOUSE_BUTTON_LEFT			= 1");
-		wiLua::GetGlobal()->RunText("MOUSE_BUTTON_RIGHT			= 2");
-		wiLua::GetGlobal()->RunText("MOUSE_BUTTON_MIDDLE		= 3");
+		wiLua::RunText("MOUSE_BUTTON_LEFT			= 1");
+		wiLua::RunText("MOUSE_BUTTON_RIGHT			= 2");
+		wiLua::RunText("MOUSE_BUTTON_MIDDLE		= 3");
 
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_UP			= 4");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_DOWN		= 5");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_LEFT		= 6");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_RIGHT		= 7");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_SPACE		= 8");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_RSHIFT		= 9");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_LSHIFT		= 10");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_F1			= 11");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_F2			= 12");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_F3			= 13");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_F4			= 14");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_F5			= 15");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_F6			= 16");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_F7			= 17");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_F8			= 18");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_F9			= 19");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_F10		= 20");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_F11		= 21");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_F12		= 22");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_ENTER		= 23");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_ESCAPE		= 24");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_HOME		= 25");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_RCONTROL	= 26");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_LCONTROL	= 27");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_DELETE		= 28");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_BACK		= 29");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_PAGEDOWN	= 30");
-		wiLua::GetGlobal()->RunText("KEYBOARD_BUTTON_PAGEUP		= 31");
+		wiLua::RunText("KEYBOARD_BUTTON_UP			= 4");
+		wiLua::RunText("KEYBOARD_BUTTON_DOWN		= 5");
+		wiLua::RunText("KEYBOARD_BUTTON_LEFT		= 6");
+		wiLua::RunText("KEYBOARD_BUTTON_RIGHT		= 7");
+		wiLua::RunText("KEYBOARD_BUTTON_SPACE		= 8");
+		wiLua::RunText("KEYBOARD_BUTTON_RSHIFT		= 9");
+		wiLua::RunText("KEYBOARD_BUTTON_LSHIFT		= 10");
+		wiLua::RunText("KEYBOARD_BUTTON_F1			= 11");
+		wiLua::RunText("KEYBOARD_BUTTON_F2			= 12");
+		wiLua::RunText("KEYBOARD_BUTTON_F3			= 13");
+		wiLua::RunText("KEYBOARD_BUTTON_F4			= 14");
+		wiLua::RunText("KEYBOARD_BUTTON_F5			= 15");
+		wiLua::RunText("KEYBOARD_BUTTON_F6			= 16");
+		wiLua::RunText("KEYBOARD_BUTTON_F7			= 17");
+		wiLua::RunText("KEYBOARD_BUTTON_F8			= 18");
+		wiLua::RunText("KEYBOARD_BUTTON_F9			= 19");
+		wiLua::RunText("KEYBOARD_BUTTON_F10		= 20");
+		wiLua::RunText("KEYBOARD_BUTTON_F11		= 21");
+		wiLua::RunText("KEYBOARD_BUTTON_F12		= 22");
+		wiLua::RunText("KEYBOARD_BUTTON_ENTER		= 23");
+		wiLua::RunText("KEYBOARD_BUTTON_ESCAPE		= 24");
+		wiLua::RunText("KEYBOARD_BUTTON_HOME		= 25");
+		wiLua::RunText("KEYBOARD_BUTTON_RCONTROL	= 26");
+		wiLua::RunText("KEYBOARD_BUTTON_LCONTROL	= 27");
+		wiLua::RunText("KEYBOARD_BUTTON_DELETE		= 28");
+		wiLua::RunText("KEYBOARD_BUTTON_BACK		= 29");
+		wiLua::RunText("KEYBOARD_BUTTON_PAGEDOWN	= 30");
+		wiLua::RunText("KEYBOARD_BUTTON_PAGEUP		= 31");
 
-		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_UP			= 257");
-		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_LEFT		= 258");
-		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_DOWN		= 259");
-		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_RIGHT		= 260");
-		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_1			= 261");
-		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_2			= 262");
-		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_3			= 263");
-		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_4			= 264");
-		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_5			= 265");
-		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_6			= 266");
-		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_7			= 267");
-		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_8			= 268");
-		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_9			= 269");
-		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_10			= 270");
-		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_11			= 271");
-		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_12			= 272");
-		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_13			= 273");
-		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_14			= 274");
+		wiLua::RunText("GAMEPAD_BUTTON_UP			= 257");
+		wiLua::RunText("GAMEPAD_BUTTON_LEFT		= 258");
+		wiLua::RunText("GAMEPAD_BUTTON_DOWN		= 259");
+		wiLua::RunText("GAMEPAD_BUTTON_RIGHT		= 260");
+		wiLua::RunText("GAMEPAD_BUTTON_1			= 261");
+		wiLua::RunText("GAMEPAD_BUTTON_2			= 262");
+		wiLua::RunText("GAMEPAD_BUTTON_3			= 263");
+		wiLua::RunText("GAMEPAD_BUTTON_4			= 264");
+		wiLua::RunText("GAMEPAD_BUTTON_5			= 265");
+		wiLua::RunText("GAMEPAD_BUTTON_6			= 266");
+		wiLua::RunText("GAMEPAD_BUTTON_7			= 267");
+		wiLua::RunText("GAMEPAD_BUTTON_8			= 268");
+		wiLua::RunText("GAMEPAD_BUTTON_9			= 269");
+		wiLua::RunText("GAMEPAD_BUTTON_10			= 270");
+		wiLua::RunText("GAMEPAD_BUTTON_11			= 271");
+		wiLua::RunText("GAMEPAD_BUTTON_12			= 272");
+		wiLua::RunText("GAMEPAD_BUTTON_13			= 273");
+		wiLua::RunText("GAMEPAD_BUTTON_14			= 274");
 
 		//Analog
-		wiLua::GetGlobal()->RunText("GAMEPAD_ANALOG_THUMBSTICK_L	= 0");
-		wiLua::GetGlobal()->RunText("GAMEPAD_ANALOG_THUMBSTICK_R	= 1");
-		wiLua::GetGlobal()->RunText("GAMEPAD_ANALOG_TRIGGER_L		= 2");
-		wiLua::GetGlobal()->RunText("GAMEPAD_ANALOG_TRIGGER_R		= 3");
+		wiLua::RunText("GAMEPAD_ANALOG_THUMBSTICK_L	= 0");
+		wiLua::RunText("GAMEPAD_ANALOG_THUMBSTICK_R	= 1");
+		wiLua::RunText("GAMEPAD_ANALOG_TRIGGER_L		= 2");
+		wiLua::RunText("GAMEPAD_ANALOG_TRIGGER_R		= 3");
 
 		//Touch
-		wiLua::GetGlobal()->RunText("TOUCHSTATE_PRESSED		= 0");
-		wiLua::GetGlobal()->RunText("TOUCHSTATE_RELEASED	= 1");
-		wiLua::GetGlobal()->RunText("TOUCHSTATE_MOVED		= 2");
+		wiLua::RunText("TOUCHSTATE_PRESSED		= 0");
+		wiLua::RunText("TOUCHSTATE_RELEASED	= 1");
+		wiLua::RunText("TOUCHSTATE_MOVED		= 2");
 	}
 
 	Touch_BindLua::Bind();
@@ -291,7 +291,7 @@ void Touch_BindLua::Bind()
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<Touch_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<Touch_BindLua>::Register(wiLua::GetLuaState());
 	}
 }
 
@@ -369,6 +369,6 @@ void ControllerFeedback_BindLua::Bind()
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<ControllerFeedback_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<ControllerFeedback_BindLua>::Register(wiLua::GetLuaState());
 	}
 }

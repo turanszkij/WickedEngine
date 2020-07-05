@@ -220,13 +220,13 @@ void wiSpriteFont_BindLua::Bind()
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<wiSpriteFont_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<wiSpriteFont_BindLua>::Register(wiLua::GetLuaState());
 
 
-		wiLua::GetGlobal()->RunText("WIFALIGN_LEFT = 0");
-		wiLua::GetGlobal()->RunText("WIFALIGN_CENTER = 1");
-		wiLua::GetGlobal()->RunText("WIFALIGN_RIGHT = 2");
-		wiLua::GetGlobal()->RunText("WIFALIGN_TOP = 3");
-		wiLua::GetGlobal()->RunText("WIFALIGN_BOTTOM = 4");
+		wiLua::RunText("WIFALIGN_LEFT = 0");
+		wiLua::RunText("WIFALIGN_CENTER = 1");
+		wiLua::RunText("WIFALIGN_RIGHT = 2");
+		wiLua::RunText("WIFALIGN_TOP = 3");
+		wiLua::RunText("WIFALIGN_BOTTOM = 4");
 	}
 }

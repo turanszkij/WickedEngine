@@ -19,9 +19,9 @@ void wiNetwork_BindLua::Bind()
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<wiNetwork_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<wiNetwork_BindLua>::Register(wiLua::GetLuaState());
 
-		wiLua::GetGlobal()->RunText("network = Network()");
+		wiLua::RunText("network = Network()");
 	}
 }
 

@@ -244,9 +244,9 @@ void SpriteAnim_BindLua::Bind()
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<SpriteAnim_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
-		Luna<MovingTexAnim_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
-		Luna<DrawRectAnim_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<SpriteAnim_BindLua>::Register(wiLua::GetLuaState());
+		Luna<MovingTexAnim_BindLua>::Register(wiLua::GetLuaState());
+		Luna<DrawRectAnim_BindLua>::Register(wiLua::GetLuaState());
 	}
 }
 

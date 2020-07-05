@@ -411,46 +411,46 @@ namespace wiRenderer_BindLua
 		{
 			initialized = true;
 
-			wiLua::GetGlobal()->RegisterFunc("SetResolutionScale", SetResolutionScale);
-			wiLua::GetGlobal()->RegisterFunc("SetGamma", SetGamma);
-			wiLua::GetGlobal()->RegisterFunc("SetGameSpeed", SetGameSpeed);
-			wiLua::GetGlobal()->RegisterFunc("GetGameSpeed", GetGameSpeed);
+			wiLua::RegisterFunc("SetResolutionScale", SetResolutionScale);
+			wiLua::RegisterFunc("SetGamma", SetGamma);
+			wiLua::RegisterFunc("SetGameSpeed", SetGameSpeed);
+			wiLua::RegisterFunc("GetGameSpeed", GetGameSpeed);
 
-			wiLua::GetGlobal()->RegisterFunc("GetScreenWidth", GetScreenWidth);
-			wiLua::GetGlobal()->RegisterFunc("GetScreenHeight", GetScreenHeight);
+			wiLua::RegisterFunc("GetScreenWidth", GetScreenWidth);
+			wiLua::RegisterFunc("GetScreenHeight", GetScreenHeight);
 
-			wiLua::GetGlobal()->RegisterFunc("GetCamera", GetCamera);
-			wiLua::GetGlobal()->RegisterFunc("AttachCamera", AttachCamera);
+			wiLua::RegisterFunc("GetCamera", GetCamera);
+			wiLua::RegisterFunc("AttachCamera", AttachCamera);
 
-			wiLua::GetGlobal()->RegisterFunc("SetAlphaCompositionEnabled", SetAlphaCompositionEnabled);
-			wiLua::GetGlobal()->RegisterFunc("SetShadowProps2D", SetShadowProps2D);
-			wiLua::GetGlobal()->RegisterFunc("SetShadowPropsCube", SetShadowPropsCube);
-			wiLua::GetGlobal()->RegisterFunc("SetDebugBoxesEnabled", SetDebugBoxesEnabled);
-			wiLua::GetGlobal()->RegisterFunc("SetDebugPartitionTreeEnabled", SetDebugPartitionTreeEnabled);
-			wiLua::GetGlobal()->RegisterFunc("SetDebugBonesEnabled", SetDebugBonesEnabled);
-			wiLua::GetGlobal()->RegisterFunc("SetDebugEmittersEnabled", SetDebugEmittersEnabled);
-			wiLua::GetGlobal()->RegisterFunc("SetDebugForceFieldsEnabled", SetDebugForceFieldsEnabled);
-			wiLua::GetGlobal()->RegisterFunc("SetVSyncEnabled", SetVSyncEnabled);
-			wiLua::GetGlobal()->RegisterFunc("SetResolution", SetResolution);
-			wiLua::GetGlobal()->RegisterFunc("SetDebugLightCulling", SetDebugLightCulling);
-			wiLua::GetGlobal()->RegisterFunc("SetOcclusionCullingEnabled", SetOcclusionCullingEnabled);
+			wiLua::RegisterFunc("SetAlphaCompositionEnabled", SetAlphaCompositionEnabled);
+			wiLua::RegisterFunc("SetShadowProps2D", SetShadowProps2D);
+			wiLua::RegisterFunc("SetShadowPropsCube", SetShadowPropsCube);
+			wiLua::RegisterFunc("SetDebugBoxesEnabled", SetDebugBoxesEnabled);
+			wiLua::RegisterFunc("SetDebugPartitionTreeEnabled", SetDebugPartitionTreeEnabled);
+			wiLua::RegisterFunc("SetDebugBonesEnabled", SetDebugBonesEnabled);
+			wiLua::RegisterFunc("SetDebugEmittersEnabled", SetDebugEmittersEnabled);
+			wiLua::RegisterFunc("SetDebugForceFieldsEnabled", SetDebugForceFieldsEnabled);
+			wiLua::RegisterFunc("SetVSyncEnabled", SetVSyncEnabled);
+			wiLua::RegisterFunc("SetResolution", SetResolution);
+			wiLua::RegisterFunc("SetDebugLightCulling", SetDebugLightCulling);
+			wiLua::RegisterFunc("SetOcclusionCullingEnabled", SetOcclusionCullingEnabled);
 
-			wiLua::GetGlobal()->RegisterFunc("DrawLine", DrawLine);
-			wiLua::GetGlobal()->RegisterFunc("DrawPoint", DrawPoint);
-			wiLua::GetGlobal()->RegisterFunc("DrawBox", DrawBox);
-			wiLua::GetGlobal()->RegisterFunc("DrawSphere", DrawSphere);
-			wiLua::GetGlobal()->RegisterFunc("DrawCapsule", DrawCapsule);
-			wiLua::GetGlobal()->RegisterFunc("PutWaterRipple", PutWaterRipple);
-
-
-			wiLua::GetGlobal()->RunText("PICK_VOID = 0");
-			wiLua::GetGlobal()->RunText("PICK_OPAQUE = 1");
-			wiLua::GetGlobal()->RunText("PICK_TRANSPARENT = 2");
-			wiLua::GetGlobal()->RunText("PICK_WATER = 4");
+			wiLua::RegisterFunc("DrawLine", DrawLine);
+			wiLua::RegisterFunc("DrawPoint", DrawPoint);
+			wiLua::RegisterFunc("DrawBox", DrawBox);
+			wiLua::RegisterFunc("DrawSphere", DrawSphere);
+			wiLua::RegisterFunc("DrawCapsule", DrawCapsule);
+			wiLua::RegisterFunc("PutWaterRipple", PutWaterRipple);
 
 
-			wiLua::GetGlobal()->RegisterFunc("ClearWorld", ClearWorld);
-			wiLua::GetGlobal()->RegisterFunc("ReloadShaders", ReloadShaders);
+			wiLua::RunText("PICK_VOID = 0");
+			wiLua::RunText("PICK_OPAQUE = 1");
+			wiLua::RunText("PICK_TRANSPARENT = 2");
+			wiLua::RunText("PICK_WATER = 4");
+
+
+			wiLua::RegisterFunc("ClearWorld", ClearWorld);
+			wiLua::RegisterFunc("ReloadShaders", ReloadShaders);
 		}
 	}
 };

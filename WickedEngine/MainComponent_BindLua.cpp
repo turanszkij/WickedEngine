@@ -340,8 +340,8 @@ void MainComponent_BindLua::Bind()
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<MainComponent_BindLua>::Register(wiLua::GetGlobal()->GetLuaState()); 
+		Luna<MainComponent_BindLua>::Register(wiLua::GetLuaState()); 
 		
-		wiLua::GetGlobal()->RegisterFunc("SetProfilerEnabled", SetProfilerEnabled);
+		wiLua::RegisterFunc("SetProfilerEnabled", SetProfilerEnabled);
 	}
 }

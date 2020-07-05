@@ -40,7 +40,7 @@ void RenderPath_BindLua::Bind()
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<RenderPath_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<RenderPath_BindLua>::Register(wiLua::GetLuaState());
 	}
 }
 

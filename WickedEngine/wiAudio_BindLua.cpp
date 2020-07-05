@@ -235,45 +235,45 @@ void wiAudio_BindLua::Bind()
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<wiAudio_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<wiAudio_BindLua>::Register(wiLua::GetLuaState());
 
-		wiLua::GetGlobal()->RunText("audio = Audio()");
+		wiLua::RunText("audio = Audio()");
 
-		wiLua::GetGlobal()->RunText("SUBMIX_TYPE_SOUNDEFFECT = 0");
-		wiLua::GetGlobal()->RunText("SUBMIX_TYPE_MUSIC = 1");
-		wiLua::GetGlobal()->RunText("SUBMIX_TYPE_USER0 = 2");
-		wiLua::GetGlobal()->RunText("SUBMIX_TYPE_USER1 = 3");
+		wiLua::RunText("SUBMIX_TYPE_SOUNDEFFECT = 0");
+		wiLua::RunText("SUBMIX_TYPE_MUSIC = 1");
+		wiLua::RunText("SUBMIX_TYPE_USER0 = 2");
+		wiLua::RunText("SUBMIX_TYPE_USER1 = 3");
 
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_DEFAULT = 0");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_GENERIC = 1");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_FOREST = 2");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_PADDEDCELL = 3");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_ROOM = 4");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_BATHROOM = 5");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_LIVINGROOM = 6");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_STONEROOM = 7");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_AUDITORIUM = 8");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_CONCERTHALL = 9");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_CAVE = 10");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_ARENA = 11");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_HANGAR = 12");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_CARPETEDHALLWAY = 13");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_HALLWAY = 14");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_STONECORRIDOR = 15");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_ALLEY = 16");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_CITY = 17");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_MOUNTAINS = 18");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_QUARRY = 19");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_PLAIN = 20");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_PARKINGLOT = 21");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_SEWERPIPE = 22");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_UNDERWATER = 23");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_SMALLROOM = 24");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_MEDIUMROOM = 25");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_LARGEROOM = 26");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_MEDIUMHALL = 27");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_LARGEHALL = 28");
-		wiLua::GetGlobal()->RunText("REVERB_PRESET_PLATE = 29");
+		wiLua::RunText("REVERB_PRESET_DEFAULT = 0");
+		wiLua::RunText("REVERB_PRESET_GENERIC = 1");
+		wiLua::RunText("REVERB_PRESET_FOREST = 2");
+		wiLua::RunText("REVERB_PRESET_PADDEDCELL = 3");
+		wiLua::RunText("REVERB_PRESET_ROOM = 4");
+		wiLua::RunText("REVERB_PRESET_BATHROOM = 5");
+		wiLua::RunText("REVERB_PRESET_LIVINGROOM = 6");
+		wiLua::RunText("REVERB_PRESET_STONEROOM = 7");
+		wiLua::RunText("REVERB_PRESET_AUDITORIUM = 8");
+		wiLua::RunText("REVERB_PRESET_CONCERTHALL = 9");
+		wiLua::RunText("REVERB_PRESET_CAVE = 10");
+		wiLua::RunText("REVERB_PRESET_ARENA = 11");
+		wiLua::RunText("REVERB_PRESET_HANGAR = 12");
+		wiLua::RunText("REVERB_PRESET_CARPETEDHALLWAY = 13");
+		wiLua::RunText("REVERB_PRESET_HALLWAY = 14");
+		wiLua::RunText("REVERB_PRESET_STONECORRIDOR = 15");
+		wiLua::RunText("REVERB_PRESET_ALLEY = 16");
+		wiLua::RunText("REVERB_PRESET_CITY = 17");
+		wiLua::RunText("REVERB_PRESET_MOUNTAINS = 18");
+		wiLua::RunText("REVERB_PRESET_QUARRY = 19");
+		wiLua::RunText("REVERB_PRESET_PLAIN = 20");
+		wiLua::RunText("REVERB_PRESET_PARKINGLOT = 21");
+		wiLua::RunText("REVERB_PRESET_SEWERPIPE = 22");
+		wiLua::RunText("REVERB_PRESET_UNDERWATER = 23");
+		wiLua::RunText("REVERB_PRESET_SMALLROOM = 24");
+		wiLua::RunText("REVERB_PRESET_MEDIUMROOM = 25");
+		wiLua::RunText("REVERB_PRESET_LARGEROOM = 26");
+		wiLua::RunText("REVERB_PRESET_MEDIUMHALL = 27");
+		wiLua::RunText("REVERB_PRESET_LARGEHALL = 28");
+		wiLua::RunText("REVERB_PRESET_PLATE = 29");
 
 		wiSound_BindLua::Bind();
 		wiSoundInstance_BindLua::Bind();
@@ -299,7 +299,7 @@ void wiSound_BindLua::Bind()
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<wiSound_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<wiSound_BindLua>::Register(wiLua::GetLuaState());
 	}
 }
 
@@ -335,7 +335,7 @@ void wiSoundInstance_BindLua::Bind()
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<wiSoundInstance_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<wiSoundInstance_BindLua>::Register(wiLua::GetLuaState());
 	}
 }
 
@@ -499,6 +499,6 @@ void wiSoundInstance3D_BindLua::Bind()
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<wiSoundInstance3D_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<wiSoundInstance3D_BindLua>::Register(wiLua::GetLuaState());
 	}
 }

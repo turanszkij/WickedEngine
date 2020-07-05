@@ -247,29 +247,29 @@ void Bind()
 	{
 		initialized = true;
 
-		lua_State* L = wiLua::GetGlobal()->GetLuaState();
+		lua_State* L = wiLua::GetLuaState();
 
-		wiLua::GetGlobal()->RegisterFunc("CreateEntity", CreateEntity_BindLua);
-		wiLua::GetGlobal()->RunText("INVALID_ENTITY = 0");
+		wiLua::RegisterFunc("CreateEntity", CreateEntity_BindLua);
+		wiLua::RunText("INVALID_ENTITY = 0");
 
-		wiLua::GetGlobal()->RunText("DIRECTIONAL = 0");
-		wiLua::GetGlobal()->RunText("POINT = 1");
-		wiLua::GetGlobal()->RunText("SPOT = 2");
-		wiLua::GetGlobal()->RunText("SPHERE = 3");
-		wiLua::GetGlobal()->RunText("DISC = 4");
-		wiLua::GetGlobal()->RunText("RECTANGLE = 5");
-		wiLua::GetGlobal()->RunText("TUBE = 6");
+		wiLua::RunText("DIRECTIONAL = 0");
+		wiLua::RunText("POINT = 1");
+		wiLua::RunText("SPOT = 2");
+		wiLua::RunText("SPHERE = 3");
+		wiLua::RunText("DISC = 4");
+		wiLua::RunText("RECTANGLE = 5");
+		wiLua::RunText("TUBE = 6");
 
-		wiLua::GetGlobal()->RunText("STENCILREF_EMPTY = 0");
-		wiLua::GetGlobal()->RunText("STENCILREF_SKY = 1");
-		wiLua::GetGlobal()->RunText("STENCILREF_DEFAULT = 2");
-		wiLua::GetGlobal()->RunText("STENCILREF_SKIN = 3");
+		wiLua::RunText("STENCILREF_EMPTY = 0");
+		wiLua::RunText("STENCILREF_SKY = 1");
+		wiLua::RunText("STENCILREF_DEFAULT = 2");
+		wiLua::RunText("STENCILREF_SKIN = 3");
 
-		wiLua::GetGlobal()->RegisterFunc("GetScene", GetScene);
-		wiLua::GetGlobal()->RegisterFunc("LoadModel", LoadModel);
-		wiLua::GetGlobal()->RegisterFunc("Pick", Pick);
-		wiLua::GetGlobal()->RegisterFunc("SceneIntersectSphere", SceneIntersectSphere);
-		wiLua::GetGlobal()->RegisterFunc("SceneIntersectCapsule", SceneIntersectCapsule);
+		wiLua::RegisterFunc("GetScene", GetScene);
+		wiLua::RegisterFunc("LoadModel", LoadModel);
+		wiLua::RegisterFunc("Pick", Pick);
+		wiLua::RegisterFunc("SceneIntersectSphere", SceneIntersectSphere);
+		wiLua::RegisterFunc("SceneIntersectCapsule", SceneIntersectCapsule);
 
 		Luna<Scene_BindLua>::Register(L);
 		Luna<NameComponent_BindLua>::Register(L);

@@ -65,11 +65,11 @@ namespace wiBackLog_BindLua
 		if (!initialized)
 		{
 			initialized = true;
-			wiLua::GetGlobal()->RegisterFunc("backlog_clear", backlog_clear);
-			wiLua::GetGlobal()->RegisterFunc("backlog_post", backlog_post);
-			wiLua::GetGlobal()->RegisterFunc("backlog_fontsize", backlog_fontsize);
-			wiLua::GetGlobal()->RegisterFunc("backlog_isactive", backlog_isactive);
-			wiLua::GetGlobal()->RegisterFunc("backlog_fontrowspacing", backlog_fontrowspacing);
+			wiLua::RegisterFunc("backlog_clear", backlog_clear);
+			wiLua::RegisterFunc("backlog_post", backlog_post);
+			wiLua::RegisterFunc("backlog_fontsize", backlog_fontsize);
+			wiLua::RegisterFunc("backlog_isactive", backlog_isactive);
+			wiLua::RegisterFunc("backlog_fontrowspacing", backlog_fontrowspacing);
 		}
 	}
 }

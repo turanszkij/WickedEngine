@@ -23,7 +23,7 @@ void Texture_BindLua::Bind()
 	static bool initialized = false;
 	if (!initialized)
 	{
-		Luna<Texture_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<Texture_BindLua>::Register(wiLua::GetLuaState());
 		initialized = true;
 	}
 }

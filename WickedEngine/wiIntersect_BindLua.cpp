@@ -11,7 +11,7 @@ namespace wiIntersect_BindLua
 		{
 			initialized = true;
 
-			lua_State* L = wiLua::GetGlobal()->GetLuaState();
+			lua_State* L = wiLua::GetLuaState();
 
 			Luna<Ray_BindLua>::Register(L);
 			Luna<AABB_BindLua>::Register(L);

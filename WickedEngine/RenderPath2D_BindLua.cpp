@@ -420,6 +420,6 @@ void RenderPath2D_BindLua::Bind()
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<RenderPath2D_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<RenderPath2D_BindLua>::Register(wiLua::GetLuaState());
 	}
 }

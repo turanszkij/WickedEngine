@@ -122,8 +122,8 @@ void MainComponent::Run()
 	if (!startup_script)
 	{
 		startup_script = true;
-		wiLua::GetGlobal()->RegisterObject(MainComponent_BindLua::className, "main", new MainComponent_BindLua(this));
-		wiLua::GetGlobal()->RunFile("startup.lua");
+		wiLua::RegisterObject(MainComponent_BindLua::className, "main", new MainComponent_BindLua(this));
+		wiLua::RunFile("startup.lua");
 	}
 
 	wiPlatform::PopMessages();
@@ -196,8 +196,8 @@ void MainComponent::Update(float dt)
 {
 	auto range = wiProfiler::BeginRangeCPU("Update");
 
-	wiLua::GetGlobal()->SetDeltaTime(double(dt));
-	wiLua::GetGlobal()->Update();
+	wiLua::SetDeltaTime(double(dt));
+	wiLua::Update();
 
 	if (GetActivePath() != nullptr)
 	{
@@ -210,7 +210,7 @@ void MainComponent::Update(float dt)
 void MainComponent::FixedUpdate()
 {
 	wiBackLog::Update();
-	wiLua::GetGlobal()->FixedUpdate();
+	wiLua::FixedUpdate();
 
 	if (GetActivePath() != nullptr)
 	{
@@ -222,7 +222,7 @@ void MainComponent::Render()
 {
 	auto range = wiProfiler::BeginRangeCPU("Render");
 
-	wiLua::GetGlobal()->Render();
+	wiLua::Render();
 
 	if (GetActivePath() != nullptr)
 	{

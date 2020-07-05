@@ -88,7 +88,7 @@ void wiSprite_BindLua::Bind()
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<wiSprite_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<wiSprite_BindLua>::Register(wiLua::GetLuaState());
 	}
 }
 

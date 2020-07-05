@@ -180,7 +180,7 @@ namespace wiBackLog
 		if (history.size() > deletefromline) {
 			history.pop_front();
 		}
-		wiLua::GetGlobal()->RunText(inputArea.str());
+		wiLua::RunText(inputArea.str());
 		inputArea.str("");
 	}
 	void deletefromInput() 
