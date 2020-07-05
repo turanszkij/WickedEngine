@@ -18,9 +18,11 @@
 #pragma comment(lib,"Dxgi.lib")
 #pragma comment(lib,"dxguid.lib")
 
+#ifdef _X64
 #ifndef PLATFORM_UWP
 #pragma comment(lib,"dxcompiler.lib")
 #endif // PLATFORM_UWP
+#endif // _X64
 
 #ifdef _DEBUG
 #include <d3d12sdklayers.h>
@@ -1653,28 +1655,28 @@ using namespace DX12_Internal;
 		{
 			hr = swapChain->GetBuffer(fr, IID_PPV_ARGS(&frames[fr].backBuffer));
 			assert(SUCCEEDED(hr));
+
+			// Create copy queue:
+			{
+				D3D12_COMMAND_QUEUE_DESC copyQueueDesc = {};
+				copyQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+				copyQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+				copyQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+				copyQueueDesc.NodeMask = 0;
+				hr = device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&frames[fr].copyQueue));
+				assert(SUCCEEDED(hr));
+				hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&frames[fr].copyAllocator));
+				assert(SUCCEEDED(hr));
+				hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, frames[fr].copyAllocator.Get(), nullptr, IID_PPV_ARGS(&frames[fr].copyCommandList));
+				assert(SUCCEEDED(hr));
+
+				hr = static_cast<ID3D12GraphicsCommandList*>(frames[fr].copyCommandList.Get())->Close();
+				assert(SUCCEEDED(hr));
+			}
 		}
 
-
-		// Create copy queue:
-		{
-			D3D12_COMMAND_QUEUE_DESC copyQueueDesc = {};
-			copyQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
-			copyQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-			copyQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-			copyQueueDesc.NodeMask = 0;
-			hr = device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&copyQueue));
-			hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&copyAllocator));
-			hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, copyAllocator.Get(), nullptr, IID_PPV_ARGS(&copyCommandList));
-
-			hr = static_cast<ID3D12GraphicsCommandList*>(copyCommandList.Get())->Close();
-			hr = copyAllocator->Reset();
-			hr = static_cast<ID3D12GraphicsCommandList*>(copyCommandList.Get())->Reset(copyAllocator.Get(), nullptr);
-
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&copyFence));
-			copyFenceEvent = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
-			copyFenceValue = 1;
-		}
+		hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&copyFence));
+		assert(SUCCEEDED(hr));
 
 		// Query features:
 
@@ -1795,7 +1797,6 @@ using namespace DX12_Internal;
 		WaitForGPU();
 
 		CloseHandle(frameFenceEvent);
-		CloseHandle(copyFenceEvent);
 
 		allocation_querypool_timestamp_readback->Release();
 		allocation_querypool_occlusion_readback->Release();
@@ -1818,13 +1819,12 @@ using namespace DX12_Internal;
 			HRESULT hr = swapChain->ResizeBuffers(GetBackBufferCount(), width, height, _ConvertFormat(GetBackBufferFormat()), 0);
 			assert(SUCCEEDED(hr));
 
-			for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+			for (uint32_t i = 0; i < BACKBUFFER_COUNT; ++i)
 			{
-				hr = swapChain->GetBuffer(fr, IID_PPV_ARGS(&frames[fr].backBuffer));
+				uint32_t fr = (GetFrameCount() + i) % BACKBUFFER_COUNT;
+				hr = swapChain->GetBuffer(i, IID_PPV_ARGS(&frames[fr].backBuffer));
 				assert(SUCCEEDED(hr));
 			}
-
-			RESOLUTIONCHANGED = true;
 		}
 	}
 
@@ -1922,8 +1922,18 @@ using namespace DX12_Internal;
 
 			copyQueueLock.lock();
 			{
+				auto& frame = GetFrameResources();
+				if (!copyQueueUse)
+				{
+					copyQueueUse = true;
+
+					HRESULT hr = frame.copyAllocator->Reset();
+					assert(SUCCEEDED(hr));
+					hr = static_cast<ID3D12GraphicsCommandList*>(frame.copyCommandList.Get())->Reset(frame.copyAllocator.Get(), nullptr);
+					assert(SUCCEEDED(hr));
+				}
 				memcpy(pData, pInitialData->pSysMem, pDesc->ByteWidth);
-				static_cast<ID3D12GraphicsCommandList*>(copyCommandList.Get())->CopyBufferRegion(
+				static_cast<ID3D12GraphicsCommandList*>(frame.copyCommandList.Get())->CopyBufferRegion(
 					internal_state->resource.Get(), 0, upload_resource, 0, pDesc->ByteWidth);
 			}
 			copyQueueLock.unlock();
@@ -2150,6 +2160,17 @@ using namespace DX12_Internal;
 
 			copyQueueLock.lock();
 			{
+				auto& frame = GetFrameResources();
+				if (!copyQueueUse)
+				{
+					copyQueueUse = true;
+
+					HRESULT hr = frame.copyAllocator->Reset();
+					assert(SUCCEEDED(hr));
+					hr = static_cast<ID3D12GraphicsCommandList*>(frame.copyCommandList.Get())->Reset(frame.copyAllocator.Get(), nullptr);
+					assert(SUCCEEDED(hr));
+				}
+
 				GPUBufferDesc uploaddesc;
 				uploaddesc.ByteWidth = (uint32_t)RequiredSize;
 				uploaddesc.Usage = USAGE_STAGING;
@@ -2163,7 +2184,7 @@ using namespace DX12_Internal;
 				hr = upload_resource->Map(0, &readRange, &pData);
 				assert(SUCCEEDED(hr));
 				
-				UINT64 dataSize = UpdateSubresources(static_cast<ID3D12GraphicsCommandList*>(copyCommandList.Get()), internal_state->resource.Get(),
+				UINT64 dataSize = UpdateSubresources(static_cast<ID3D12GraphicsCommandList*>(frame.copyCommandList.Get()), internal_state->resource.Get(),
 					upload_resource, 0, 0, dataCount, data.data());
 			}
 			copyQueueLock.unlock();
@@ -2215,6 +2236,7 @@ using namespace DX12_Internal;
 		assert(SUCCEEDED(hr));
 
 
+#ifdef _X64 // TODO: Can't use dxcompiler.dll in 32-bit, so can't use shader reflection
 #ifndef PLATFORM_UWP // TODO: Can't use dxcompiler.dll in UWP, so can't use shader reflection
 		struct ShaderBlob : public IDxcBlob
 		{
@@ -2340,6 +2362,7 @@ using namespace DX12_Internal;
 			}
 		}
 #endif // PLATFORM_UWP
+#endif // _X64
 
 
 		if (stage == CS || stage == SHADERSTAGE_COUNT)
@@ -2687,8 +2710,8 @@ using namespace DX12_Internal;
 		device->GetRaytracingAccelerationStructurePrebuildInfo(&internal_state->desc, &internal_state->info);
 
 
-		uint32_t alignment = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT;
-		size_t alignedSize = Align(internal_state->info.ResultDataMaxSizeInBytes, alignment);
+		size_t alignment = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT;
+		size_t alignedSize = Align((size_t)internal_state->info.ResultDataMaxSizeInBytes, alignment);
 
 		D3D12_RESOURCE_DESC desc;
 		desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -3293,6 +3316,8 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::PresentEnd(CommandList cmd)
 	{
+		copyQueueLock.lock();
+
 #ifdef DX12_REAL_RENDERPASS
 		GetDirectCommandList(cmd)->EndRenderPass();
 #endif // DX12_REAL_RENDERPASS
@@ -3312,31 +3337,22 @@ using namespace DX12_Internal;
 
 
 		// Sync up copy queue:
-		copyQueueLock.lock();
+		if(copyQueueUse)
 		{
-			static_cast<ID3D12GraphicsCommandList*>(copyCommandList.Get())->Close();
+			copyQueueUse = false;
+			auto& frame = GetFrameResources();
+			static_cast<ID3D12GraphicsCommandList*>(frame.copyCommandList.Get())->Close();
 			ID3D12CommandList* commandlists[] = {
-				copyCommandList.Get()
+				frame.copyCommandList.Get()
 			};
-			copyQueue->ExecuteCommandLists(1, commandlists);
+			frame.copyQueue->ExecuteCommandLists(1, commandlists);
 
 			// Signal and increment the fence value.
-			UINT64 fenceToWaitFor = copyFenceValue;
-			HRESULT result = copyQueue->Signal(copyFence.Get(), fenceToWaitFor);
-			copyFenceValue++;
-
-			// Wait until the GPU is done copying.
-			if (copyFence->GetCompletedValue() < fenceToWaitFor)
-			{
-				result = copyFence->SetEventOnCompletion(fenceToWaitFor, copyFenceEvent);
-				WaitForSingleObject(copyFenceEvent, INFINITE);
-			}
-
-			result = copyAllocator->Reset();
-			result = static_cast<ID3D12GraphicsCommandList*>(copyCommandList.Get())->Reset(copyAllocator.Get(), nullptr);
-
+			HRESULT hr = frame.copyQueue->Signal(copyFence.Get(), FRAMECOUNT);
+			assert(SUCCEEDED(hr));
+			hr = frame.copyQueue->Wait(copyFence.Get(), FRAMECOUNT);
+			assert(SUCCEEDED(hr));
 		}
-		copyQueueLock.unlock();
 
 		// Execute deferred command lists:
 		{
@@ -3344,8 +3360,9 @@ using namespace DX12_Internal;
 			CommandList cmds[COMMANDLIST_COUNT];
 			uint32_t counter = 0;
 
-			CommandList cmd;
-			while (active_commandlists.pop_front(cmd))
+			CommandList cmd_last = cmd_count.load();
+			cmd_count.store(0);
+			for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
 			{
 				// Perform query resolves (must be outside of render pass):
 				for (auto& x : query_resolves[cmd])
@@ -3371,8 +3388,6 @@ using namespace DX12_Internal;
 				cmdLists[counter] = GetDirectCommandList(cmd);
 				cmds[counter] = cmd;
 				counter++;
-
-				free_commandlists.push_back(cmd);
 
 				for (auto& x : pipelines_worker[cmd])
 				{
@@ -3420,16 +3435,15 @@ using namespace DX12_Internal;
 
 		allocationhandler->Update(FRAMECOUNT, BACKBUFFER_COUNT);
 
-		RESOLUTIONCHANGED = false;
+		copyQueueLock.unlock();
 	}
 
 	CommandList GraphicsDevice_DX12::BeginCommandList()
 	{
-		CommandList cmd;
-		if (!free_commandlists.pop_front(cmd))
+		CommandList cmd = cmd_count.fetch_add(1);
+		if (GetDirectCommandList(cmd) == nullptr)
 		{
 			// need to create one more command list:
-			cmd = commandlist_count.fetch_add(1);
 			assert(cmd < COMMANDLIST_COUNT);
 
 			HRESULT hr;
@@ -3479,7 +3493,6 @@ using namespace DX12_Internal;
 		active_cs[cmd] = nullptr;
 		active_renderpass[cmd] = nullptr;
 
-		active_commandlists.push_back(cmd);
 		return cmd;
 	}
 

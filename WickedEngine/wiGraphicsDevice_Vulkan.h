@@ -67,12 +67,6 @@ namespace wiGraphics
 		VkPhysicalDeviceVulkan12Features features_1_2 = {};
 		VkPhysicalDeviceRayTracingFeaturesKHR raytracing_features = {};
 
-		VkQueue copyQueue = VK_NULL_HANDLE;
-		VkCommandPool copyCommandPool = VK_NULL_HANDLE;
-		VkCommandBuffer copyCommandBuffer = VK_NULL_HANDLE;
-		VkFence copyFence = VK_NULL_HANDLE;
-		std::mutex copyQueueLock;
-
 		VkSemaphore imageAvailableSemaphore = VK_NULL_HANDLE;
 		VkSemaphore renderFinishedSemaphore = VK_NULL_HANDLE;
 
@@ -100,14 +94,23 @@ namespace wiGraphics
 		std::vector<uint32_t> timestamps_to_reset;
 		std::vector<uint32_t> occlusions_to_reset;
 
+		void CreateBackBufferResources();
+
+		std::mutex copyQueueLock;
+		bool copyQueueUse = false;
+		VkSemaphore copySema = VK_NULL_HANDLE;
 
 		struct FrameResources
 		{
-			VkFence frameFence;
+			VkFence frameFence = VK_NULL_HANDLE;
 			VkCommandPool commandPools[COMMANDLIST_COUNT] = {};
 			VkCommandBuffer commandBuffers[COMMANDLIST_COUNT] = {};
 			VkImageView swapChainImageView = VK_NULL_HANDLE;
 			VkFramebuffer swapChainFramebuffer = VK_NULL_HANDLE;
+
+			VkQueue copyQueue = VK_NULL_HANDLE;
+			VkCommandPool copyCommandPool = VK_NULL_HANDLE;
+			VkCommandBuffer copyCommandBuffer = VK_NULL_HANDLE;
 
 			VkCommandPool transitionCommandPool = VK_NULL_HANDLE;
 			VkCommandBuffer transitionCommandBuffer = VK_NULL_HANDLE;
@@ -192,9 +195,7 @@ namespace wiGraphics
 		const Shader* active_cs[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 
-		std::atomic<uint8_t> commandlist_count{ 0 };
-		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> free_commandlists;
-		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> active_commandlists;
+		std::atomic<CommandList> cmd_count{ 0 };
 
 		static PFN_vkCreateRayTracingPipelinesKHR createRayTracingPipelinesKHR;
 		static PFN_vkCreateAccelerationStructureKHR createAccelerationStructureKHR;

@@ -18,7 +18,6 @@ namespace wiGraphics
 		int RESOLUTIONHEIGHT = 0;
 		bool DEBUGDEVICE = false;
 		bool FULLSCREEN = false;
-		bool RESOLUTIONCHANGED = false;
 		FORMAT BACKBUFFER_FORMAT = FORMAT_R10G10B10A2_UNORM;
 		static const uint32_t BACKBUFFER_COUNT = 2;
 		bool TESSELLATION = false;
@@ -72,8 +71,6 @@ namespace wiGraphics
 		inline int GetResolutionWidth() const { return RESOLUTIONWIDTH; }
 		// Returns native resolution height of back buffer in pixels:
 		inline int GetResolutionHeight() const { return RESOLUTIONHEIGHT; }
-		// Has the resolution changed since the last frame?
-		inline bool ResolutionChanged() const { return RESOLUTIONCHANGED; }
 
 		// Returns the width of the screen with DPI scaling applied (subpixel size):
 		float GetScreenWidth() const;

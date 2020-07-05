@@ -7730,7 +7730,7 @@ void ComputeTiledLightCulling(
 
 	static int _savedWidth = 0;
 	static int _savedHeight = 0;
-	bool _resolutionChanged = device->ResolutionChanged();
+	bool _resolutionChanged = false;
 	if (_savedWidth != _width || _savedHeight != _height)
 	{
 		_resolutionChanged = true;
@@ -12022,21 +12022,6 @@ int GetShadowResCube() { return SHADOWRES_CUBE; }
 void SetTransparentShadowsEnabled(float value) { TRANSPARENTSHADOWSENABLED = value; }
 float GetTransparentShadowsEnabled() { return TRANSPARENTSHADOWSENABLED; }
 XMUINT2 GetInternalResolution() { return XMUINT2((uint32_t)ceilf(GetDevice()->GetResolutionWidth()*GetResolutionScale()), (uint32_t)ceilf(GetDevice()->GetResolutionHeight()*GetResolutionScale())); }
-bool ResolutionChanged()
-{
-	//detect internal resolution change:
-	static float _savedresscale = GetResolutionScale();
-	static uint64_t lastFrameInternalResChange = 0;
-	if (_savedresscale != GetResolutionScale() || lastFrameInternalResChange == GetDevice()->GetFrameCount())
-	{
-		_savedresscale = GetResolutionScale();
-		lastFrameInternalResChange = GetDevice()->GetFrameCount();
-		return true;
-	}
-
-	// detect device resolution change:
-	return GetDevice()->ResolutionChanged();
-}
 void SetGamma(float value) { GAMMA = value; }
 float GetGamma() { return GAMMA; }
 void SetWireRender(bool value) { wireRender = value; }

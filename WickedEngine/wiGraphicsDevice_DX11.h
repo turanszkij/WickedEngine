@@ -8,7 +8,6 @@
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiPlatform.h"
-#include "wiContainers.h"
 
 #include <d3d11_3.h>
 #include <DXGI1_3.h>
@@ -67,9 +66,7 @@ namespace wiGraphics
 
 		void CreateBackBufferResources();
 
-		std::atomic<uint8_t> commandlist_count{ 0 };
-		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> free_commandlists;
-		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> active_commandlists;
+		std::atomic<CommandList> cmd_count{ 0 };
 
 		struct EmptyResourceHandle {}; // only care about control-block
 		std::shared_ptr<EmptyResourceHandle> emptyresource;

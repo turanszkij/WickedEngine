@@ -1368,8 +1368,6 @@ void GraphicsDevice_DX11::SetResolution(int width, int height)
 		assert(SUCCEEDED(hr));
 
 		CreateBackBufferResources();
-
-		RESOLUTIONCHANGED = true;
 	}
 }
 
@@ -2363,14 +2361,13 @@ void GraphicsDevice_DX11::PresentEnd(CommandList cmd)
 {
 	// Execute deferred command lists:
 	{
-		CommandList cmd;
-		while (active_commandlists.pop_front(cmd))
+		CommandList cmd_last = cmd_count.load();
+		cmd_count.store(0);
+		for(CommandList cmd = 0; cmd < cmd_last; ++cmd)
 		{
 			deviceContexts[cmd]->FinishCommandList(false, &commandLists[cmd]);
 			immediateContext->ExecuteCommandList(commandLists[cmd].Get(), false);
 			commandLists[cmd].Reset();
-
-			free_commandlists.push_back(cmd);
 		}
 	}
 
@@ -2399,18 +2396,15 @@ void GraphicsDevice_DX11::PresentEnd(CommandList cmd)
 	std::memset(raster_uavs_count, 0, sizeof(raster_uavs_count));
 
 	FRAMECOUNT++;
-
-	RESOLUTIONCHANGED = false;
 }
 
 
 CommandList GraphicsDevice_DX11::BeginCommandList()
 {
-	CommandList cmd;
-	if (!free_commandlists.pop_front(cmd))
+	CommandList cmd = cmd_count.fetch_add(1);
+	if (deviceContexts[cmd] == nullptr)
 	{
 		// need to create one more command list:
-		cmd = (CommandList)commandlist_count.fetch_add(1);
 		assert(cmd < COMMANDLIST_COUNT);
 
 		HRESULT hr = device->CreateDeferredContext(0, &deviceContexts[cmd]);
@@ -2430,7 +2424,6 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 		assert(success);
 		SetName(&frame_allocators[cmd].buffer, "frame_allocator");
 	}
-
 
 	BindPipelineState(nullptr, cmd);
 	BindComputeShader(nullptr, cmd);
@@ -2454,7 +2447,6 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 	}
 	deviceContexts[cmd]->RSSetScissorRects(8, pRects);
 
-	active_commandlists.push_back(cmd);
 	return cmd;
 }
 

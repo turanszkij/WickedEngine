@@ -34,14 +34,6 @@ namespace wiGraphics
 		Microsoft::WRL::ComPtr<ID3D12Fence> frameFence;
 		HANDLE frameFenceEvent;
 
-		Microsoft::WRL::ComPtr<ID3D12CommandQueue> copyQueue;
-		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> copyAllocator;
-		Microsoft::WRL::ComPtr<ID3D12CommandList> copyCommandList;
-		Microsoft::WRL::ComPtr<ID3D12Fence> copyFence;
-		HANDLE copyFenceEvent;
-		UINT64 copyFenceValue;
-		wiSpinLock copyQueueLock;
-
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawInstancedIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawIndexedInstancedIndirectCommandSignature;
@@ -66,11 +58,19 @@ namespace wiGraphics
 		D3D12_CPU_DESCRIPTOR_HANDLE rtv_descriptor_heap_start = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE dsv_descriptor_heap_start = {};
 
+		std::mutex copyQueueLock;
+		bool copyQueueUse = false;
+		Microsoft::WRL::ComPtr<ID3D12Fence> copyFence; // GPU only
+
 		struct FrameResources
 		{
 			Microsoft::WRL::ComPtr<ID3D12Resource> backBuffer;
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[COMMANDLIST_COUNT];
 			Microsoft::WRL::ComPtr<ID3D12CommandList> commandLists[COMMANDLIST_COUNT];
+
+			Microsoft::WRL::ComPtr<ID3D12CommandQueue> copyQueue;
+			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> copyAllocator;
+			Microsoft::WRL::ComPtr<ID3D12CommandList> copyCommandList;
 
 			struct DescriptorTableFrameAllocator
 			{
@@ -165,9 +165,7 @@ namespace wiGraphics
 		};
 		std::vector<Query_Resolve> query_resolves[COMMANDLIST_COUNT] = {};
 
-		std::atomic<uint8_t> commandlist_count{ 0 };
-		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> free_commandlists;
-		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> active_commandlists;
+		std::atomic<CommandList> cmd_count{ 0 };
 
 	public:
 		GraphicsDevice_DX12(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false);

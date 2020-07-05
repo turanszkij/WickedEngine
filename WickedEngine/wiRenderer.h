@@ -438,7 +438,6 @@ namespace wiRenderer
 	void SetTransparentShadowsEnabled(float value);
 	float GetTransparentShadowsEnabled();
 	XMUINT2 GetInternalResolution();
-	bool ResolutionChanged();
 	void SetGamma(float value);
 	float GetGamma();
 	void SetWireRender(bool value);

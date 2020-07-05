@@ -1735,7 +1735,6 @@ using namespace Vulkan_Internal;
 
 			vkGetDeviceQueue(device, queueIndices.graphicsFamily, 0, &graphicsQueue);
 			vkGetDeviceQueue(device, queueIndices.presentFamily, 0, &presentQueue);
-			vkGetDeviceQueue(device, queueIndices.copyFamily, 0, &copyQueue);
 		}
 
 		allocationhandler = std::make_shared<AllocationHandler>();
@@ -1770,115 +1769,7 @@ using namespace Vulkan_Internal;
 			cmdTraceRaysKHR = (PFN_vkCmdTraceRaysKHR)vkGetDeviceProcAddr(device, "vkCmdTraceRaysKHR");
 		}
 
-
-		// Set up swap chain:
-		{
-			SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice, surface);
-
-			VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
-
-			swapChainExtent = { static_cast<uint32_t>(RESOLUTIONWIDTH), static_cast<uint32_t>(RESOLUTIONHEIGHT) };
-			swapChainExtent.width = std::max(swapChainSupport.capabilities.minImageExtent.width, std::min(swapChainSupport.capabilities.maxImageExtent.width, swapChainExtent.width));
-			swapChainExtent.height = std::max(swapChainSupport.capabilities.minImageExtent.height, std::min(swapChainSupport.capabilities.maxImageExtent.height, swapChainExtent.height));
-
-
-			uint32_t imageCount = BACKBUFFER_COUNT;
-
-			VkSwapchainCreateInfoKHR createInfo = {};
-			createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-			createInfo.surface = surface;
-			createInfo.minImageCount = imageCount;
-			createInfo.imageFormat = surfaceFormat.format;
-			createInfo.imageColorSpace = surfaceFormat.colorSpace;
-			createInfo.imageExtent = swapChainExtent;
-			createInfo.imageArrayLayers = 1;
-			createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-			uint32_t queueFamilyIndices[] = { (uint32_t)queueIndices.graphicsFamily, (uint32_t)queueIndices.presentFamily };
-
-			if (queueIndices.graphicsFamily != queueIndices.presentFamily) {
-				createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-				createInfo.queueFamilyIndexCount = 2;
-				createInfo.pQueueFamilyIndices = queueFamilyIndices;
-			}
-			else {
-				createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-				createInfo.queueFamilyIndexCount = 0; // Optional
-				createInfo.pQueueFamilyIndices = nullptr; // Optional
-			}
-
-			createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
-			createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-			createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
-			createInfo.clipped = VK_TRUE;
-			createInfo.oldSwapchain = VK_NULL_HANDLE;
-
-			res = vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain);
-			assert(res == VK_SUCCESS);
-
-			vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
-			assert(imageCount == BACKBUFFER_COUNT);
-			swapChainImages.resize(imageCount);
-			vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
-			swapChainImageFormat = surfaceFormat.format;
-
-			VkDebugUtilsObjectNameInfoEXT info = {};
-			info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
-			info.pObjectName = "SWAPCHAIN";
-			info.objectType = VK_OBJECT_TYPE_IMAGE;
-			for (auto& x : swapChainImages)
-			{
-				info.objectHandle = (uint64_t)x;
-
-				res = setDebugUtilsObjectNameEXT(device, &info);
-				assert(res == VK_SUCCESS);
-			}
-
-		}
-
-		// Create default render pass:
-		{
-			VkAttachmentDescription colorAttachment = {};
-			colorAttachment.format = swapChainImageFormat;
-			colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-			colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-			VkAttachmentReference colorAttachmentRef = {};
-			colorAttachmentRef.attachment = 0;
-			colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-			VkSubpassDescription subpass = {};
-			subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-			subpass.colorAttachmentCount = 1;
-			subpass.pColorAttachments = &colorAttachmentRef;
-
-			VkRenderPassCreateInfo renderPassInfo = {};
-			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-			renderPassInfo.attachmentCount = 1;
-			renderPassInfo.pAttachments = &colorAttachment;
-			renderPassInfo.subpassCount = 1;
-			renderPassInfo.pSubpasses = &subpass;
-
-			VkSubpassDependency dependency = {};
-			dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-			dependency.dstSubpass = 0;
-			dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			dependency.srcAccessMask = 0;
-			dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-			renderPassInfo.dependencyCount = 1;
-			renderPassInfo.pDependencies = &dependency;
-
-			res = vkCreateRenderPass(device, &renderPassInfo, nullptr, &defaultRenderPass);
-			assert(res == VK_SUCCESS);
-
-		}
+		CreateBackBufferResources();
 
 		QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
 
@@ -1892,43 +1783,6 @@ using namespace Vulkan_Internal;
 					fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 					//fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 					vkCreateFence(device, &fenceInfo, nullptr, &frames[fr].frameFence);
-				}
-
-				// Create swap chain render targets:
-				{
-					VkImageViewCreateInfo createInfo = {};
-					createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-					createInfo.image = swapChainImages[fr];
-					createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-					createInfo.format = swapChainImageFormat;
-					createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-					createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-					createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-					createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-					createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-					createInfo.subresourceRange.baseMipLevel = 0;
-					createInfo.subresourceRange.levelCount = 1;
-					createInfo.subresourceRange.baseArrayLayer = 0;
-					createInfo.subresourceRange.layerCount = 1;
-
-					res = vkCreateImageView(device, &createInfo, nullptr, &frames[fr].swapChainImageView);
-					assert(res == VK_SUCCESS);
-
-					VkImageView attachments[] = {
-						frames[fr].swapChainImageView
-					};
-
-					VkFramebufferCreateInfo framebufferInfo = {};
-					framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-					framebufferInfo.renderPass = defaultRenderPass;
-					framebufferInfo.attachmentCount = 1;
-					framebufferInfo.pAttachments = attachments;
-					framebufferInfo.width = swapChainExtent.width;
-					framebufferInfo.height = swapChainExtent.height;
-					framebufferInfo.layers = 1;
-
-					res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &frames[fr].swapChainFramebuffer);
-					assert(res == VK_SUCCESS);
 				}
 
 				// Create resources for transition command buffer:
@@ -1958,6 +1812,37 @@ using namespace Vulkan_Internal;
 					res = vkBeginCommandBuffer(frames[fr].transitionCommandBuffer, &beginInfo);
 					assert(res == VK_SUCCESS);
 				}
+
+
+				// Create resources for copy (transfer) queue:
+				{
+					vkGetDeviceQueue(device, queueIndices.copyFamily, 0, &frames[fr].copyQueue);
+
+					VkCommandPoolCreateInfo poolInfo = {};
+					poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+					poolInfo.queueFamilyIndex = queueFamilyIndices.copyFamily;
+					poolInfo.flags = 0; // Optional
+
+					res = vkCreateCommandPool(device, &poolInfo, nullptr, &frames[fr].copyCommandPool);
+					assert(res == VK_SUCCESS);
+
+					VkCommandBufferAllocateInfo commandBufferInfo = {};
+					commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+					commandBufferInfo.commandBufferCount = 1;
+					commandBufferInfo.commandPool = frames[fr].copyCommandPool;
+					commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+					res = vkAllocateCommandBuffers(device, &commandBufferInfo, &frames[fr].copyCommandBuffer);
+					assert(res == VK_SUCCESS);
+
+					VkCommandBufferBeginInfo beginInfo = {};
+					beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+					beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+					beginInfo.pInheritanceInfo = nullptr; // Optional
+
+					res = vkBeginCommandBuffer(frames[fr].copyCommandBuffer, &beginInfo);
+					assert(res == VK_SUCCESS);
+				}
 			}
 		}
 
@@ -1970,41 +1855,8 @@ using namespace Vulkan_Internal;
 			assert(res == VK_SUCCESS);
 			res = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore);
 			assert(res == VK_SUCCESS);
-		}
-
-		// Create resources for copy (transfer) queue:
-		{
-			VkCommandPoolCreateInfo poolInfo = {};
-			poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-			poolInfo.queueFamilyIndex = queueFamilyIndices.copyFamily;
-			poolInfo.flags = 0; // Optional
-
-			res = vkCreateCommandPool(device, &poolInfo, nullptr, &copyCommandPool);
+			res = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &copySema);
 			assert(res == VK_SUCCESS);
-
-			VkCommandBufferAllocateInfo commandBufferInfo = {};
-			commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-			commandBufferInfo.commandBufferCount = 1;
-			commandBufferInfo.commandPool = copyCommandPool;
-			commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-
-			res = vkAllocateCommandBuffers(device, &commandBufferInfo, &copyCommandBuffer);
-			assert(res == VK_SUCCESS);
-
-			VkCommandBufferBeginInfo beginInfo = {};
-			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-			beginInfo.pInheritanceInfo = nullptr; // Optional
-
-			res = vkBeginCommandBuffer(copyCommandBuffer, &beginInfo);
-			assert(res == VK_SUCCESS);
-
-
-			// Fence for copy queue:
-			VkFenceCreateInfo fenceInfo = {};
-			fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-			//fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-			vkCreateFence(device, &fenceInfo, nullptr, &copyFence);
 		}
 
 
@@ -2109,9 +1961,6 @@ using namespace Vulkan_Internal;
 	{
 		WaitForGPU();
 
-		vkDestroyFence(device, copyFence, nullptr);
-		vkDestroyCommandPool(device, copyCommandPool, nullptr);
-
 		for (auto& frame : frames)
 		{
 			vkDestroyFence(device, frame.frameFence, nullptr);
@@ -2122,6 +1971,7 @@ using namespace Vulkan_Internal;
 				vkDestroyCommandPool(device, commandPool, nullptr);
 			}
 			vkDestroyCommandPool(device, frame.transitionCommandPool, nullptr);
+			vkDestroyCommandPool(device, frame.copyCommandPool, nullptr);
 
 			for (auto& descriptormanager : frame.descriptors)
 			{
@@ -2131,6 +1981,7 @@ using namespace Vulkan_Internal;
 
 		vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
 		vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
+		vkDestroySemaphore(device, copySema, nullptr);
 
 		for (auto& x : pipelines_worker)
 		{
@@ -2161,14 +2012,183 @@ using namespace Vulkan_Internal;
 		vkDestroySurfaceKHR(instance, surface, nullptr);
 	}
 
+	void GraphicsDevice_Vulkan::CreateBackBufferResources()
+	{
+		SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice, surface);
+
+		VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
+
+		swapChainExtent = { static_cast<uint32_t>(RESOLUTIONWIDTH), static_cast<uint32_t>(RESOLUTIONHEIGHT) };
+		swapChainExtent.width = std::max(swapChainSupport.capabilities.minImageExtent.width, std::min(swapChainSupport.capabilities.maxImageExtent.width, swapChainExtent.width));
+		swapChainExtent.height = std::max(swapChainSupport.capabilities.minImageExtent.height, std::min(swapChainSupport.capabilities.maxImageExtent.height, swapChainExtent.height));
+
+
+		uint32_t imageCount = BACKBUFFER_COUNT;
+
+		VkSwapchainCreateInfoKHR createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+		createInfo.surface = surface;
+		createInfo.minImageCount = imageCount;
+		createInfo.imageFormat = surfaceFormat.format;
+		createInfo.imageColorSpace = surfaceFormat.colorSpace;
+		createInfo.imageExtent = swapChainExtent;
+		createInfo.imageArrayLayers = 1;
+		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+		uint32_t queueFamilyIndices[] = { (uint32_t)queueIndices.graphicsFamily, (uint32_t)queueIndices.presentFamily };
+
+		if (queueIndices.graphicsFamily != queueIndices.presentFamily) {
+			createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+			createInfo.queueFamilyIndexCount = 2;
+			createInfo.pQueueFamilyIndices = queueFamilyIndices;
+		}
+		else {
+			createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			createInfo.queueFamilyIndexCount = 0; // Optional
+			createInfo.pQueueFamilyIndices = nullptr; // Optional
+		}
+
+		createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
+		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+		createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+		createInfo.clipped = VK_TRUE;
+		createInfo.oldSwapchain = VK_NULL_HANDLE;
+
+		if (swapChain != VK_NULL_HANDLE)
+		{
+			vkDestroySwapchainKHR(device, swapChain, nullptr);
+		}
+		VkResult res = vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain);
+		assert(res == VK_SUCCESS);
+
+		vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
+		assert(imageCount == BACKBUFFER_COUNT);
+		swapChainImages.resize(imageCount);
+		vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
+		swapChainImageFormat = surfaceFormat.format;
+
+		VkDebugUtilsObjectNameInfoEXT info = {};
+		info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+		info.pObjectName = "SWAPCHAIN";
+		info.objectType = VK_OBJECT_TYPE_IMAGE;
+		for (auto& x : swapChainImages)
+		{
+			info.objectHandle = (uint64_t)x;
+
+			res = setDebugUtilsObjectNameEXT(device, &info);
+			assert(res == VK_SUCCESS);
+		}
+
+
+		// Create default render pass:
+		{
+			VkAttachmentDescription colorAttachment = {};
+			colorAttachment.format = swapChainImageFormat;
+			colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+			colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+			colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+			VkAttachmentReference colorAttachmentRef = {};
+			colorAttachmentRef.attachment = 0;
+			colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+			VkSubpassDescription subpass = {};
+			subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+			subpass.colorAttachmentCount = 1;
+			subpass.pColorAttachments = &colorAttachmentRef;
+
+			VkRenderPassCreateInfo renderPassInfo = {};
+			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+			renderPassInfo.attachmentCount = 1;
+			renderPassInfo.pAttachments = &colorAttachment;
+			renderPassInfo.subpassCount = 1;
+			renderPassInfo.pSubpasses = &subpass;
+
+			VkSubpassDependency dependency = {};
+			dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+			dependency.dstSubpass = 0;
+			dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dependency.srcAccessMask = 0;
+			dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+			renderPassInfo.dependencyCount = 1;
+			renderPassInfo.pDependencies = &dependency;
+
+			if (defaultRenderPass != VK_NULL_HANDLE)
+			{
+				vkDestroyRenderPass(device, defaultRenderPass, nullptr);
+			}
+			res = vkCreateRenderPass(device, &renderPassInfo, nullptr, &defaultRenderPass);
+			assert(res == VK_SUCCESS);
+
+		}
+
+		for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+		{
+
+			// Create swap chain render targets:
+			{
+				VkImageViewCreateInfo createInfo = {};
+				createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+				createInfo.image = swapChainImages[fr];
+				createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+				createInfo.format = swapChainImageFormat;
+				createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+				createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+				createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+				createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+				createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				createInfo.subresourceRange.baseMipLevel = 0;
+				createInfo.subresourceRange.levelCount = 1;
+				createInfo.subresourceRange.baseArrayLayer = 0;
+				createInfo.subresourceRange.layerCount = 1;
+
+				if (frames[fr].swapChainImageView != VK_NULL_HANDLE)
+				{
+					vkDestroyImageView(device, frames[fr].swapChainImageView, nullptr);
+				}
+				res = vkCreateImageView(device, &createInfo, nullptr, &frames[fr].swapChainImageView);
+				assert(res == VK_SUCCESS);
+
+				VkImageView attachments[] = {
+					frames[fr].swapChainImageView
+				};
+
+				VkFramebufferCreateInfo framebufferInfo = {};
+				framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+				framebufferInfo.renderPass = defaultRenderPass;
+				framebufferInfo.attachmentCount = 1;
+				framebufferInfo.pAttachments = attachments;
+				framebufferInfo.width = swapChainExtent.width;
+				framebufferInfo.height = swapChainExtent.height;
+				framebufferInfo.layers = 1;
+
+				if (frames[fr].swapChainFramebuffer != VK_NULL_HANDLE)
+				{
+					vkDestroyFramebuffer(device, frames[fr].swapChainFramebuffer, nullptr);
+				}
+				res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &frames[fr].swapChainFramebuffer);
+				assert(res == VK_SUCCESS);
+			}
+
+		}
+	}
+
 	void GraphicsDevice_Vulkan::SetResolution(int width, int height)
 	{
 		if (width != RESOLUTIONWIDTH || height != RESOLUTIONHEIGHT)
 		{
 			RESOLUTIONWIDTH = width;
 			RESOLUTIONHEIGHT = height;
-			//swapChain->ResizeBuffers(2, width, height, _ConvertFormat(GetBackBufferFormat()), 0);
-			RESOLUTIONCHANGED = true;
+
+			WaitForGPU();
+
+			CreateBackBufferResources();
 		}
 	}
 
@@ -2276,6 +2296,23 @@ using namespace Vulkan_Internal;
 
 			copyQueueLock.lock();
 			{
+				auto& frame = GetFrameResources();
+				if (!copyQueueUse)
+				{
+					copyQueueUse = true;
+
+					res = vkResetCommandPool(device, frame.copyCommandPool, 0);
+					assert(res == VK_SUCCESS);
+
+					VkCommandBufferBeginInfo beginInfo = {};
+					beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+					beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+					beginInfo.pInheritanceInfo = nullptr; // Optional
+
+					res = vkBeginCommandBuffer(frame.copyCommandBuffer, &beginInfo);
+					assert(res == VK_SUCCESS);
+				}
+
 				memcpy(pData, pInitialData->pSysMem, pBuffer->desc.ByteWidth);
 
 				VkBufferCopy copyRegion = {};
@@ -2294,7 +2331,7 @@ using namespace Vulkan_Internal;
 				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 				vkCmdPipelineBarrier(
-					copyCommandBuffer,
+					frame.copyCommandBuffer,
 					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 					VK_PIPELINE_STAGE_TRANSFER_BIT,
 					0,
@@ -2304,7 +2341,7 @@ using namespace Vulkan_Internal;
 				);
 
 
-				vkCmdCopyBuffer(copyCommandBuffer, upload_resource, internal_state->resource, 1, &copyRegion);
+				vkCmdCopyBuffer(frame.copyCommandBuffer, upload_resource, internal_state->resource, 1, &copyRegion);
 
 
 				VkAccessFlags tmp = barrier.srcAccessMask;
@@ -2337,7 +2374,7 @@ using namespace Vulkan_Internal;
 				barrier.dstQueueFamilyIndex = queueIndices.graphicsFamily;
 
 				vkCmdPipelineBarrier(
-					copyCommandBuffer,
+					frame.copyCommandBuffer,
 					VK_PIPELINE_STAGE_TRANSFER_BIT,
 					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 					0,
@@ -2480,6 +2517,23 @@ using namespace Vulkan_Internal;
 
 			copyQueueLock.lock();
 			{
+				auto& frame = GetFrameResources();
+				if (!copyQueueUse)
+				{
+					copyQueueUse = true;
+
+					res = vkResetCommandPool(device, frame.copyCommandPool, 0);
+					assert(res == VK_SUCCESS);
+
+					VkCommandBufferBeginInfo beginInfo = {};
+					beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+					beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+					beginInfo.pInheritanceInfo = nullptr; // Optional
+
+					res = vkBeginCommandBuffer(frame.copyCommandBuffer, &beginInfo);
+					assert(res == VK_SUCCESS);
+				}
+
 				std::vector<VkBufferImageCopy> copyRegions;
 
 				size_t cpyoffset = 0;
@@ -2540,7 +2594,7 @@ using namespace Vulkan_Internal;
 				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 				vkCmdPipelineBarrier(
-					copyCommandBuffer,
+					frame.copyCommandBuffer,
 					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 					VK_PIPELINE_STAGE_TRANSFER_BIT,
 					0,
@@ -2549,14 +2603,14 @@ using namespace Vulkan_Internal;
 					1, &barrier
 				);
 
-				vkCmdCopyBufferToImage(copyCommandBuffer, upload_resource, internal_state->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)copyRegions.size(), copyRegions.data());
+				vkCmdCopyBufferToImage(frame.copyCommandBuffer, upload_resource, internal_state->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)copyRegions.size(), copyRegions.data());
 
 				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 				barrier.newLayout = _ConvertImageLayout(pTexture->desc.layout);;
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 
-				GetFrameResources().loadedimagetransitions.push_back(barrier);
+				frame.loadedimagetransitions.push_back(barrier);
 
 			}
 			copyQueueLock.unlock();
@@ -2564,6 +2618,23 @@ using namespace Vulkan_Internal;
 		else
 		{
 			copyQueueLock.lock();
+
+			auto& frame = GetFrameResources();
+			if (!copyQueueUse)
+			{
+				copyQueueUse = true;
+
+				res = vkResetCommandPool(device, frame.copyCommandPool, 0);
+				assert(res == VK_SUCCESS);
+
+				VkCommandBufferBeginInfo beginInfo = {};
+				beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+				beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+				beginInfo.pInheritanceInfo = nullptr; // Optional
+
+				res = vkBeginCommandBuffer(frame.copyCommandBuffer, &beginInfo);
+				assert(res == VK_SUCCESS);
+			}
 
 			VkImageMemoryBarrier barrier = {};
 			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -2590,7 +2661,7 @@ using namespace Vulkan_Internal;
 			barrier.subresourceRange.levelCount = pDesc->MipLevels;
 			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			GetFrameResources().loadedimagetransitions.push_back(barrier);
+			frame.loadedimagetransitions.push_back(barrier);
 
 			copyQueueLock.unlock();
 		}
@@ -3835,57 +3906,42 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::PresentEnd(CommandList cmd)
 	{
+		copyQueueLock.lock();
+
 		VkResult res;
 
-		uint64_t currentframe = GetFrameCount() % BACKBUFFER_COUNT;
 		uint32_t imageIndex;
 		vkAcquireNextImageKHR(device, swapChain, 0xFFFFFFFFFFFFFFFF, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
-		assert(imageIndex == currentframe);
 
 		vkCmdEndRenderPass(GetDirectCommandList(cmd));
 
 
 		// Sync up copy queue and transitions:
-		copyQueueLock.lock();
+		if(copyQueueUse)
 		{
+			auto& frame = GetFrameResources();
+
 			// Copies:
 			{
-				res = vkEndCommandBuffer(copyCommandBuffer);
+				res = vkEndCommandBuffer(frame.copyCommandBuffer);
 				assert(res == VK_SUCCESS);
+
+				VkSemaphore semaphores[] = { copySema };
 
 				VkSubmitInfo submitInfo = {};
 				submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 				submitInfo.commandBufferCount = 1;
-				submitInfo.pCommandBuffers = &copyCommandBuffer;
+				submitInfo.pCommandBuffers = &frame.copyCommandBuffer;
+				submitInfo.pSignalSemaphores = semaphores;
+				submitInfo.signalSemaphoreCount = arraysize(semaphores);
 
-				res = vkQueueSubmit(copyQueue, 1, &submitInfo, copyFence);
-				assert(res == VK_SUCCESS);
-
-				//vkQueueWaitIdle(copyQueue);
-
-				res = vkWaitForFences(device, 1, &copyFence, true, 0xFFFFFFFFFFFFFFFF);
-				assert(res == VK_SUCCESS);
-
-				res = vkResetFences(device, 1, &copyFence);
-				assert(res == VK_SUCCESS);
-
-				res = vkResetCommandPool(device, copyCommandPool, 0);
-				assert(res == VK_SUCCESS);
-
-				VkCommandBufferBeginInfo beginInfo = {};
-				beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-				beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-				beginInfo.pInheritanceInfo = nullptr; // Optional
-
-				res = vkBeginCommandBuffer(copyCommandBuffer, &beginInfo);
+				res = vkQueueSubmit(frame.copyQueue, 1, &submitInfo, VK_NULL_HANDLE);
 				assert(res == VK_SUCCESS);
 
 			}
 
 			// Transitions:
 			{
-				auto& frame = GetFrameResources();
-
 				for (auto& barrier : frame.loadedimagetransitions)
 				{
 					vkCmdPipelineBarrier(
@@ -3912,19 +3968,20 @@ using namespace Vulkan_Internal;
 				assert(res == VK_SUCCESS);
 			}
 		}
-		copyQueueLock.unlock();
-
 
 		VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
 
 		// Execute deferred command lists:
 		{
+			auto& frame = GetFrameResources();
+
 			VkCommandBuffer cmdLists[COMMANDLIST_COUNT];
 			CommandList cmds[COMMANDLIST_COUNT];
 			uint32_t counter = 0;
 
-			CommandList cmd;
-			while (active_commandlists.pop_front(cmd))
+			CommandList cmd_last = cmd_count.load();
+			cmd_count.store(0);
+			for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
 			{
 				res = vkEndCommandBuffer(GetDirectCommandList(cmd));
 				assert(res == VK_SUCCESS);
@@ -3932,8 +3989,6 @@ using namespace Vulkan_Internal;
 				cmdLists[counter] = GetDirectCommandList(cmd);
 				cmds[counter] = cmd;
 				counter++;
-
-				free_commandlists.push_back(cmd);
 
 				for (auto& x : pipelines_worker[cmd])
 				{
@@ -3954,9 +4009,16 @@ using namespace Vulkan_Internal;
 			VkSubmitInfo submitInfo = {};
 			submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-			VkSemaphore waitSemaphores[] = { imageAvailableSemaphore };
-			VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-			submitInfo.waitSemaphoreCount = 1;
+			VkSemaphore waitSemaphores[] = { imageAvailableSemaphore, copySema };
+			VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT };
+			if (copyQueueUse)
+			{
+				submitInfo.waitSemaphoreCount = 2;
+			}
+			else
+			{
+				submitInfo.waitSemaphoreCount = 1;
+			}
 			submitInfo.pWaitSemaphores = waitSemaphores;
 			submitInfo.pWaitDstStageMask = waitStages;
 			submitInfo.commandBufferCount = counter;
@@ -3964,7 +4026,8 @@ using namespace Vulkan_Internal;
 			submitInfo.signalSemaphoreCount = 1;
 			submitInfo.pSignalSemaphores = signalSemaphores;
 
-			res = vkQueueSubmit(graphicsQueue, 1, &submitInfo, GetFrameResources().frameFence);
+
+			res = vkQueueSubmit(graphicsQueue, 1, &submitInfo, frame.frameFence);
 			assert(res == VK_SUCCESS);
 		}
 
@@ -4019,18 +4082,18 @@ using namespace Vulkan_Internal;
 		}
 
 
-		RESOLUTIONCHANGED = false;
+		copyQueueUse = false;
+		copyQueueLock.unlock();
 	}
 
 	CommandList GraphicsDevice_Vulkan::BeginCommandList()
 	{
 		VkResult res;
 
-		CommandList cmd;
-		if (!free_commandlists.pop_front(cmd))
+		CommandList cmd = cmd_count.fetch_add(1);
+		if (GetDirectCommandList(cmd) == VK_NULL_HANDLE)
 		{
 			// need to create one more command list:
-			cmd = (CommandList)commandlist_count.fetch_add(1);
 			assert(cmd < COMMANDLIST_COUNT);
 
 			QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
@@ -4122,7 +4185,6 @@ using namespace Vulkan_Internal;
 		active_cs[cmd] = nullptr;
 		active_renderpass[cmd] = VK_NULL_HANDLE;
 
-		active_commandlists.push_back(cmd);
 		return cmd;
 	}
 
