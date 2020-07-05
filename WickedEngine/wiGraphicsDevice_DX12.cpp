@@ -18,7 +18,7 @@
 #pragma comment(lib,"Dxgi.lib")
 #pragma comment(lib,"dxguid.lib")
 
-#ifdef _X64
+#ifdef _WIN64
 #ifndef PLATFORM_UWP
 #pragma comment(lib,"dxcompiler.lib")
 #endif // PLATFORM_UWP
@@ -2236,7 +2236,7 @@ using namespace DX12_Internal;
 		assert(SUCCEEDED(hr));
 
 
-#ifdef _X64 // TODO: Can't use dxcompiler.dll in 32-bit, so can't use shader reflection
+#ifdef _WIN64 // TODO: Can't use dxcompiler.dll in 32-bit, so can't use shader reflection
 #ifndef PLATFORM_UWP // TODO: Can't use dxcompiler.dll in UWP, so can't use shader reflection
 		struct ShaderBlob : public IDxcBlob
 		{
@@ -2546,6 +2546,9 @@ using namespace DX12_Internal;
 				return;
 
 			auto internal_state = to_internal(shader);
+
+			if (internal_state->tables.empty())
+				return;
 
 			if (!internal_state->tables.back().resources.empty())
 			{
