@@ -203,9 +203,17 @@ namespace wiScene
 
 		XMVECTOR T = XMVectorCatmullRom(aT, bT, cT, dT, t);
 
-		// Catmull-rom has issues with full rotation for quaternions (todo):
-		XMVECTOR R = XMVectorCatmullRom(aR, bR, cR, dR, t);
-		R = XMQuaternionNormalize(R);
+		XMVECTOR setupA;
+		XMVECTOR setupB;
+		XMVECTOR setupC;
+
+		aR = XMQuaternionNormalize(aR);
+		bR = XMQuaternionNormalize(bR);
+		cR = XMQuaternionNormalize(cR);
+		dR = XMQuaternionNormalize(dR);
+
+		XMQuaternionSquadSetup(&setupA, &setupB, &setupC, aR, bR, cR, dR);
+		XMVECTOR R = XMQuaternionSquad(bR, setupA, setupB, setupC, t);
 
 		XMVECTOR S = XMVectorCatmullRom(aS, bS, cS, dS, t);
 
