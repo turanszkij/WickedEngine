@@ -33,7 +33,7 @@
 #include <wincodec.h>
 
 // Uncomment this to enable DX12 renderpass feature:
-//#define DX12_REAL_RENDERPASS
+#define DX12_REAL_RENDERPASS
 
 using namespace Microsoft::WRL;
 
@@ -1491,6 +1491,267 @@ using namespace DX12_Internal;
 		dirty_graphics_compute[1] = false;
 	}
 
+	void GraphicsDevice_DX12::pso_validate(CommandList cmd)
+	{
+		if (!dirty_pso[cmd])
+			return;
+
+		const PipelineState* pso = active_pso[cmd];
+		size_t pipeline_hash = prev_pipeline_hash[cmd];
+
+		auto internal_state = to_internal(pso);
+
+		ID3D12PipelineState* pipeline = nullptr;
+		auto it = pipelines_global.find(pipeline_hash);
+		if (it == pipelines_global.end())
+		{
+			for (auto& x : pipelines_worker[cmd])
+			{
+				if (pipeline_hash == x.first)
+				{
+					pipeline = x.second.Get();
+					break;
+				}
+			}
+
+			if (pipeline == nullptr)
+			{
+				D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = {};
+
+				if (pso->desc.vs != nullptr)
+				{
+					desc.VS.pShaderBytecode = pso->desc.vs->code.data();
+					desc.VS.BytecodeLength = pso->desc.vs->code.size();
+				}
+				if (pso->desc.hs != nullptr)
+				{
+					desc.HS.pShaderBytecode = pso->desc.hs->code.data();
+					desc.HS.BytecodeLength = pso->desc.hs->code.size();
+				}
+				if (pso->desc.ds != nullptr)
+				{
+					desc.DS.pShaderBytecode = pso->desc.ds->code.data();
+					desc.DS.BytecodeLength = pso->desc.ds->code.size();
+				}
+				if (pso->desc.gs != nullptr)
+				{
+					desc.GS.pShaderBytecode = pso->desc.gs->code.data();
+					desc.GS.BytecodeLength = pso->desc.gs->code.size();
+				}
+				if (pso->desc.ps != nullptr)
+				{
+					desc.PS.BytecodeLength = pso->desc.ps->code.size();
+					desc.PS.pShaderBytecode = pso->desc.ps->code.data();
+				}
+
+				RasterizerStateDesc pRasterizerStateDesc = pso->desc.rs != nullptr ? pso->desc.rs->GetDesc() : RasterizerStateDesc();
+				desc.RasterizerState.FillMode = _ConvertFillMode(pRasterizerStateDesc.FillMode);
+				desc.RasterizerState.CullMode = _ConvertCullMode(pRasterizerStateDesc.CullMode);
+				desc.RasterizerState.FrontCounterClockwise = pRasterizerStateDesc.FrontCounterClockwise;
+				desc.RasterizerState.DepthBias = pRasterizerStateDesc.DepthBias;
+				desc.RasterizerState.DepthBiasClamp = pRasterizerStateDesc.DepthBiasClamp;
+				desc.RasterizerState.SlopeScaledDepthBias = pRasterizerStateDesc.SlopeScaledDepthBias;
+				desc.RasterizerState.DepthClipEnable = pRasterizerStateDesc.DepthClipEnable;
+				desc.RasterizerState.MultisampleEnable = pRasterizerStateDesc.MultisampleEnable;
+				desc.RasterizerState.AntialiasedLineEnable = pRasterizerStateDesc.AntialiasedLineEnable;
+				desc.RasterizerState.ConservativeRaster = ((CONSERVATIVE_RASTERIZATION && pRasterizerStateDesc.ConservativeRasterizationEnable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+				desc.RasterizerState.ForcedSampleCount = pRasterizerStateDesc.ForcedSampleCount;
+
+
+				DepthStencilStateDesc pDepthStencilStateDesc = pso->desc.dss != nullptr ? pso->desc.dss->GetDesc() : DepthStencilStateDesc();
+				desc.DepthStencilState.DepthEnable = pDepthStencilStateDesc.DepthEnable;
+				desc.DepthStencilState.DepthWriteMask = _ConvertDepthWriteMask(pDepthStencilStateDesc.DepthWriteMask);
+				desc.DepthStencilState.DepthFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.DepthFunc);
+				desc.DepthStencilState.StencilEnable = pDepthStencilStateDesc.StencilEnable;
+				desc.DepthStencilState.StencilReadMask = pDepthStencilStateDesc.StencilReadMask;
+				desc.DepthStencilState.StencilWriteMask = pDepthStencilStateDesc.StencilWriteMask;
+				desc.DepthStencilState.FrontFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilDepthFailOp);
+				desc.DepthStencilState.FrontFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilFailOp);
+				desc.DepthStencilState.FrontFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.FrontFace.StencilFunc);
+				desc.DepthStencilState.FrontFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilPassOp);
+				desc.DepthStencilState.BackFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilDepthFailOp);
+				desc.DepthStencilState.BackFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilFailOp);
+				desc.DepthStencilState.BackFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.BackFace.StencilFunc);
+				desc.DepthStencilState.BackFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilPassOp);
+
+
+				BlendStateDesc pBlendStateDesc = pso->desc.bs != nullptr ? pso->desc.bs->GetDesc() : BlendStateDesc();
+				desc.BlendState.AlphaToCoverageEnable = pBlendStateDesc.AlphaToCoverageEnable;
+				desc.BlendState.IndependentBlendEnable = pBlendStateDesc.IndependentBlendEnable;
+				for (int i = 0; i < 8; ++i)
+				{
+					desc.BlendState.RenderTarget[i].BlendEnable = pBlendStateDesc.RenderTarget[i].BlendEnable;
+					desc.BlendState.RenderTarget[i].SrcBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlend);
+					desc.BlendState.RenderTarget[i].DestBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlend);
+					desc.BlendState.RenderTarget[i].BlendOp = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOp);
+					desc.BlendState.RenderTarget[i].SrcBlendAlpha = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlendAlpha);
+					desc.BlendState.RenderTarget[i].DestBlendAlpha = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlendAlpha);
+					desc.BlendState.RenderTarget[i].BlendOpAlpha = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOpAlpha);
+					desc.BlendState.RenderTarget[i].RenderTargetWriteMask = _ParseColorWriteMask(pBlendStateDesc.RenderTarget[i].RenderTargetWriteMask);
+				}
+
+				std::vector<D3D12_INPUT_ELEMENT_DESC> elements;
+				if (pso->desc.il != nullptr)
+				{
+					desc.InputLayout.NumElements = (uint32_t)pso->desc.il->desc.size();
+					elements.resize(desc.InputLayout.NumElements);
+					for (uint32_t i = 0; i < desc.InputLayout.NumElements; ++i)
+					{
+						elements[i].SemanticName = pso->desc.il->desc[i].SemanticName.c_str();
+						elements[i].SemanticIndex = pso->desc.il->desc[i].SemanticIndex;
+						elements[i].Format = _ConvertFormat(pso->desc.il->desc[i].Format);
+						elements[i].InputSlot = pso->desc.il->desc[i].InputSlot;
+						elements[i].AlignedByteOffset = pso->desc.il->desc[i].AlignedByteOffset;
+						if (elements[i].AlignedByteOffset == InputLayoutDesc::APPEND_ALIGNED_ELEMENT)
+							elements[i].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+						elements[i].InputSlotClass = _ConvertInputClassification(pso->desc.il->desc[i].InputSlotClass);
+						elements[i].InstanceDataStepRate = pso->desc.il->desc[i].InstanceDataStepRate;
+					}
+				}
+				desc.InputLayout.pInputElementDescs = elements.data();
+
+				desc.NumRenderTargets = 0;
+				desc.DSVFormat = DXGI_FORMAT_UNKNOWN;
+				desc.SampleDesc.Count = 1;
+				desc.SampleDesc.Quality = 0;
+				if (active_renderpass[cmd] == nullptr)
+				{
+					desc.NumRenderTargets = 1;
+					desc.RTVFormats[0] = _ConvertFormat(BACKBUFFER_FORMAT);
+				}
+				else
+				{
+					for (auto& attachment : active_renderpass[cmd]->desc.attachments)
+					{
+
+						switch (attachment.type)
+						{
+						case RenderPassAttachment::RENDERTARGET:
+							switch (attachment.texture->desc.Format)
+							{
+							case FORMAT_R16_TYPELESS:
+								desc.RTVFormats[desc.NumRenderTargets] = DXGI_FORMAT_R16_UNORM;
+								break;
+							case FORMAT_R32_TYPELESS:
+								desc.RTVFormats[desc.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT;
+								break;
+							case FORMAT_R24G8_TYPELESS:
+								desc.RTVFormats[desc.NumRenderTargets] = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+								break;
+							case FORMAT_R32G8X24_TYPELESS:
+								desc.RTVFormats[desc.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+								break;
+							default:
+								desc.RTVFormats[desc.NumRenderTargets] = _ConvertFormat(attachment.texture->desc.Format);
+								break;
+							}
+							desc.NumRenderTargets++;
+							break;
+						case RenderPassAttachment::DEPTH_STENCIL:
+							switch (attachment.texture->desc.Format)
+							{
+							case FORMAT_R16_TYPELESS:
+								desc.DSVFormat = DXGI_FORMAT_D16_UNORM;
+								break;
+							case FORMAT_R32_TYPELESS:
+								desc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+								break;
+							case FORMAT_R24G8_TYPELESS:
+								desc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+								break;
+							case FORMAT_R32G8X24_TYPELESS:
+								desc.DSVFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+								break;
+							default:
+								desc.DSVFormat = _ConvertFormat(attachment.texture->desc.Format);
+								break;
+							}
+							break;
+						default:
+							assert(0);
+							break;
+						}
+
+						desc.SampleDesc.Count = attachment.texture->desc.SampleCount;
+						desc.SampleDesc.Quality = 0;
+					}
+				}
+				desc.SampleMask = pso->desc.sampleMask;
+
+				switch (pso->desc.pt)
+				{
+				case POINTLIST:
+					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+					break;
+				case LINELIST:
+				case LINESTRIP:
+					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+					break;
+				case TRIANGLELIST:
+				case TRIANGLESTRIP:
+					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+					break;
+				case PATCHLIST:
+					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
+					break;
+				default:
+					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
+					break;
+				}
+
+				desc.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
+
+				desc.pRootSignature = internal_state->rootSignature.Get();
+
+				ComPtr<ID3D12PipelineState> newpso;
+				HRESULT hr = device->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&newpso));
+				assert(SUCCEEDED(hr));
+
+				pipelines_worker[cmd].push_back(std::make_pair(pipeline_hash, newpso));
+				pipeline = newpso.Get();
+			}
+		}
+		else
+		{
+			pipeline = it->second.Get();
+		}
+		assert(pipeline != nullptr);
+
+		GetDirectCommandList(cmd)->SetPipelineState(pipeline);
+
+		GetDirectCommandList(cmd)->SetGraphicsRootSignature(internal_state->rootSignature.Get());
+
+		if (prev_pt[cmd] != pso->desc.pt)
+		{
+			prev_pt[cmd] = pso->desc.pt;
+
+			D3D12_PRIMITIVE_TOPOLOGY d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+			switch (pso->desc.pt)
+			{
+			case TRIANGLELIST:
+				d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+				break;
+			case TRIANGLESTRIP:
+				d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+				break;
+			case POINTLIST:
+				d3dType = D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+				break;
+			case LINELIST:
+				d3dType = D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+				break;
+			case LINESTRIP:
+				d3dType = D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
+				break;
+			case PATCHLIST:
+				d3dType = D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
+				break;
+			default:
+				break;
+			};
+			GetDirectCommandList(cmd)->IASetPrimitiveTopology(d3dType);
+		}
+	}
 
 
 	// Engine functions
@@ -2605,11 +2866,11 @@ using namespace DX12_Internal;
 		renderpass->desc = *pDesc;
 
 		renderpass->hash = 0;
-		wiHelper::hash_combine(renderpass->hash, pDesc->numAttachments);
-		for (uint32_t i = 0; i < pDesc->numAttachments; ++i)
+		wiHelper::hash_combine(renderpass->hash, pDesc->attachments.size());
+		for (auto& attachment : pDesc->attachments)
 		{
-			wiHelper::hash_combine(renderpass->hash, pDesc->attachments[i].texture->desc.Format);
-			wiHelper::hash_combine(renderpass->hash, pDesc->attachments[i].texture->desc.SampleCount);
+			wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.Format);
+			wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.SampleCount);
 		}
 
 		return true;
@@ -3458,6 +3719,10 @@ using namespace DX12_Internal;
 
 				frames[fr].descriptors[cmd].init(this);
 				frames[fr].resourceBuffer[cmd].init(this, 1024 * 1024); // 1 MB starting size
+
+				std::wstringstream wss;
+				wss << "cmd" << cmd;
+				frames[fr].commandLists[cmd].Get()->SetName(wss.str().c_str());
 			}
 		}
 
@@ -3495,6 +3760,7 @@ using namespace DX12_Internal;
 		active_pso[cmd] = nullptr;
 		active_cs[cmd] = nullptr;
 		active_renderpass[cmd] = nullptr;
+		dirty_pso[cmd] = false;
 
 		return cmd;
 	}
@@ -3530,6 +3796,34 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 	{
 		active_renderpass[cmd] = renderpass;
+		const RenderPassDesc& desc = renderpass->GetDesc();
+
+		// Perform render pass transitions:
+		D3D12_RESOURCE_BARRIER barrierdescs[9];
+		uint32_t numBarriers = 0;
+		for (auto& attachment : desc.attachments)
+		{
+			auto internal_state = to_internal(attachment.texture);
+
+			D3D12_RESOURCE_BARRIER& barrierdesc = barrierdescs[numBarriers++];
+
+			barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			barrierdesc.Transition.pResource = internal_state->resource.Get();
+			barrierdesc.Transition.StateBefore = _ConvertImageLayout(attachment.initial_layout);
+			barrierdesc.Transition.StateAfter = _ConvertImageLayout(attachment.subpass_layout);
+			barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+			if (barrierdesc.Transition.StateBefore == barrierdesc.Transition.StateAfter)
+			{
+				numBarriers--;
+				continue;
+			}
+		}
+		if (numBarriers > 0)
+		{
+			GetDirectCommandList(cmd)->ResourceBarrier(numBarriers, barrierdescs);
+		}
 
 		D3D12_CPU_DESCRIPTOR_HANDLE descriptors_RTV = rtv_descriptor_heap_start;
 		descriptors_RTV.ptr += rtv_descriptor_size * D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT * cmd;
@@ -3537,17 +3831,14 @@ using namespace DX12_Internal;
 		D3D12_CPU_DESCRIPTOR_HANDLE descriptors_DSV = dsv_descriptor_heap_start;
 		descriptors_DSV.ptr += dsv_descriptor_size * cmd;
 
-		const RenderPassDesc& desc = renderpass->GetDesc();
-
 #ifdef DX12_REAL_RENDERPASS
 
 		uint32_t rt_count = 0;
-		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTVs[8] = {};
+		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTVs[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 		bool dsv = false;
 		D3D12_RENDER_PASS_DEPTH_STENCIL_DESC DSV = {};
-		for (uint32_t i = 0; i < desc.numAttachments; ++i)
+		for (auto& attachment : desc.attachments)
 		{
-			const RenderPassAttachment& attachment = desc.attachments[i];
 			const Texture* texture = attachment.texture;
 			int subresource = attachment.subresource;
 			auto internal_state = to_internal(texture);
@@ -3661,9 +3952,8 @@ using namespace DX12_Internal;
 		uint32_t rt_count = 0;
 		D3D12_RENDER_TARGET_VIEW_DESC RTVs[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 		D3D12_DEPTH_STENCIL_VIEW_DESC* DSV = nullptr;
-		for (uint32_t i = 0; i < desc.numAttachments; ++i)
+		for (auto& attachment : desc.attachments)
 		{
-			const RenderPassAttachment& attachment = desc.attachments[i];
 			const Texture* texture = attachment.texture;
 			int subresource = attachment.subresource;
 			auto internal_state = to_internal(texture);
@@ -3732,13 +4022,8 @@ using namespace DX12_Internal;
 		// Perform render pass transitions:
 		D3D12_RESOURCE_BARRIER barrierdescs[9];
 		uint32_t numBarriers = 0;
-		for (uint32_t i = 0; i < active_renderpass[cmd]->desc.numAttachments; ++i)
+		for (auto& attachment : active_renderpass[cmd]->desc.attachments)
 		{
-			const RenderPassAttachment& attachment = active_renderpass[cmd]->desc.attachments[i];
-			if (attachment.initial_layout == attachment.final_layout)
-			{
-				continue;
-			}
 			auto internal_state = to_internal(attachment.texture);
 
 			D3D12_RESOURCE_BARRIER& barrierdesc = barrierdescs[numBarriers++];
@@ -3746,9 +4031,15 @@ using namespace DX12_Internal;
 			barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 			barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 			barrierdesc.Transition.pResource = internal_state->resource.Get();
-			barrierdesc.Transition.StateBefore = _ConvertImageLayout(attachment.initial_layout);
+			barrierdesc.Transition.StateBefore = _ConvertImageLayout(attachment.subpass_layout);
 			barrierdesc.Transition.StateAfter = _ConvertImageLayout(attachment.final_layout);
 			barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+			if (barrierdesc.Transition.StateBefore == barrierdesc.Transition.StateAfter)
+			{
+				numBarriers--;
+				continue;
+			}
 		}
 		if (numBarriers > 0)
 		{
@@ -3914,260 +4205,7 @@ using namespace DX12_Internal;
 
 		GetFrameResources().descriptors[cmd].dirty_graphics_compute[0] = true;
 		active_pso[cmd] = pso;
-
-		auto internal_state = to_internal(pso);
-
-		ID3D12PipelineState* pipeline = nullptr;
-		auto it = pipelines_global.find(pipeline_hash);
-		if (it == pipelines_global.end())
-		{
-			for (auto& x : pipelines_worker[cmd])
-			{
-				if (pipeline_hash == x.first)
-				{
-					pipeline = x.second.Get();
-					break;
-				}
-			}
-
-			if (pipeline == nullptr)
-			{
-				D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = {};
-
-				if (pso->desc.vs != nullptr)
-				{
-					desc.VS.pShaderBytecode = pso->desc.vs->code.data();
-					desc.VS.BytecodeLength = pso->desc.vs->code.size();
-				}
-				if (pso->desc.hs != nullptr)
-				{
-					desc.HS.pShaderBytecode = pso->desc.hs->code.data();
-					desc.HS.BytecodeLength = pso->desc.hs->code.size();
-				}
-				if (pso->desc.ds != nullptr)
-				{
-					desc.DS.pShaderBytecode = pso->desc.ds->code.data();
-					desc.DS.BytecodeLength = pso->desc.ds->code.size();
-				}
-				if (pso->desc.gs != nullptr)
-				{
-					desc.GS.pShaderBytecode = pso->desc.gs->code.data();
-					desc.GS.BytecodeLength = pso->desc.gs->code.size();
-				}
-				if (pso->desc.ps != nullptr)
-				{
-					desc.PS.BytecodeLength = pso->desc.ps->code.size();
-					desc.PS.pShaderBytecode = pso->desc.ps->code.data();
-				}
-
-				RasterizerStateDesc pRasterizerStateDesc = pso->desc.rs != nullptr ? pso->desc.rs->GetDesc() : RasterizerStateDesc();
-				desc.RasterizerState.FillMode = _ConvertFillMode(pRasterizerStateDesc.FillMode);
-				desc.RasterizerState.CullMode = _ConvertCullMode(pRasterizerStateDesc.CullMode);
-				desc.RasterizerState.FrontCounterClockwise = pRasterizerStateDesc.FrontCounterClockwise;
-				desc.RasterizerState.DepthBias = pRasterizerStateDesc.DepthBias;
-				desc.RasterizerState.DepthBiasClamp = pRasterizerStateDesc.DepthBiasClamp;
-				desc.RasterizerState.SlopeScaledDepthBias = pRasterizerStateDesc.SlopeScaledDepthBias;
-				desc.RasterizerState.DepthClipEnable = pRasterizerStateDesc.DepthClipEnable;
-				desc.RasterizerState.MultisampleEnable = pRasterizerStateDesc.MultisampleEnable;
-				desc.RasterizerState.AntialiasedLineEnable = pRasterizerStateDesc.AntialiasedLineEnable;
-				desc.RasterizerState.ConservativeRaster = ((CONSERVATIVE_RASTERIZATION && pRasterizerStateDesc.ConservativeRasterizationEnable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
-				desc.RasterizerState.ForcedSampleCount = pRasterizerStateDesc.ForcedSampleCount;
-
-
-				DepthStencilStateDesc pDepthStencilStateDesc = pso->desc.dss != nullptr ? pso->desc.dss->GetDesc() : DepthStencilStateDesc();
-				desc.DepthStencilState.DepthEnable = pDepthStencilStateDesc.DepthEnable;
-				desc.DepthStencilState.DepthWriteMask = _ConvertDepthWriteMask(pDepthStencilStateDesc.DepthWriteMask);
-				desc.DepthStencilState.DepthFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.DepthFunc);
-				desc.DepthStencilState.StencilEnable = pDepthStencilStateDesc.StencilEnable;
-				desc.DepthStencilState.StencilReadMask = pDepthStencilStateDesc.StencilReadMask;
-				desc.DepthStencilState.StencilWriteMask = pDepthStencilStateDesc.StencilWriteMask;
-				desc.DepthStencilState.FrontFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilDepthFailOp);
-				desc.DepthStencilState.FrontFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilFailOp);
-				desc.DepthStencilState.FrontFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.FrontFace.StencilFunc);
-				desc.DepthStencilState.FrontFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilPassOp);
-				desc.DepthStencilState.BackFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilDepthFailOp);
-				desc.DepthStencilState.BackFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilFailOp);
-				desc.DepthStencilState.BackFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.BackFace.StencilFunc);
-				desc.DepthStencilState.BackFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilPassOp);
-
-
-				BlendStateDesc pBlendStateDesc = pso->desc.bs != nullptr ? pso->desc.bs->GetDesc() : BlendStateDesc();
-				desc.BlendState.AlphaToCoverageEnable = pBlendStateDesc.AlphaToCoverageEnable;
-				desc.BlendState.IndependentBlendEnable = pBlendStateDesc.IndependentBlendEnable;
-				for (int i = 0; i < 8; ++i)
-				{
-					desc.BlendState.RenderTarget[i].BlendEnable = pBlendStateDesc.RenderTarget[i].BlendEnable;
-					desc.BlendState.RenderTarget[i].SrcBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlend);
-					desc.BlendState.RenderTarget[i].DestBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlend);
-					desc.BlendState.RenderTarget[i].BlendOp = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOp);
-					desc.BlendState.RenderTarget[i].SrcBlendAlpha = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlendAlpha);
-					desc.BlendState.RenderTarget[i].DestBlendAlpha = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlendAlpha);
-					desc.BlendState.RenderTarget[i].BlendOpAlpha = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOpAlpha);
-					desc.BlendState.RenderTarget[i].RenderTargetWriteMask = _ParseColorWriteMask(pBlendStateDesc.RenderTarget[i].RenderTargetWriteMask);
-				}
-
-				std::vector<D3D12_INPUT_ELEMENT_DESC> elements;
-				if (pso->desc.il != nullptr)
-				{
-					desc.InputLayout.NumElements = (uint32_t)pso->desc.il->desc.size();
-					elements.resize(desc.InputLayout.NumElements);
-					for (uint32_t i = 0; i < desc.InputLayout.NumElements; ++i)
-					{
-						elements[i].SemanticName = pso->desc.il->desc[i].SemanticName.c_str();
-						elements[i].SemanticIndex = pso->desc.il->desc[i].SemanticIndex;
-						elements[i].Format = _ConvertFormat(pso->desc.il->desc[i].Format);
-						elements[i].InputSlot = pso->desc.il->desc[i].InputSlot;
-						elements[i].AlignedByteOffset = pso->desc.il->desc[i].AlignedByteOffset;
-						if (elements[i].AlignedByteOffset == InputLayoutDesc::APPEND_ALIGNED_ELEMENT)
-							elements[i].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-						elements[i].InputSlotClass = _ConvertInputClassification(pso->desc.il->desc[i].InputSlotClass);
-						elements[i].InstanceDataStepRate = pso->desc.il->desc[i].InstanceDataStepRate;
-					}
-				}
-				desc.InputLayout.pInputElementDescs = elements.data();
-
-				desc.NumRenderTargets = 0;
-				desc.DSVFormat = DXGI_FORMAT_UNKNOWN;
-				desc.SampleDesc.Count = 1;
-				desc.SampleDesc.Quality = 0;
-				if (active_renderpass[cmd] == nullptr)
-				{
-					desc.NumRenderTargets = 1;
-					desc.RTVFormats[0] = _ConvertFormat(BACKBUFFER_FORMAT);
-				}
-				else
-				{
-					for (uint32_t i = 0; i < active_renderpass[cmd]->desc.numAttachments; ++i)
-					{
-						const RenderPassAttachment& attachment = active_renderpass[cmd]->desc.attachments[i];
-
-						switch (attachment.type)
-						{
-						case RenderPassAttachment::RENDERTARGET:
-							switch (attachment.texture->desc.Format)
-							{
-							case FORMAT_R16_TYPELESS:
-								desc.RTVFormats[desc.NumRenderTargets] = DXGI_FORMAT_R16_UNORM;
-								break;
-							case FORMAT_R32_TYPELESS:
-								desc.RTVFormats[desc.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT;
-								break;
-							case FORMAT_R24G8_TYPELESS:
-								desc.RTVFormats[desc.NumRenderTargets] = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-								break;
-							case FORMAT_R32G8X24_TYPELESS:
-								desc.RTVFormats[desc.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
-								break;
-							default:
-								desc.RTVFormats[desc.NumRenderTargets] = _ConvertFormat(attachment.texture->desc.Format);
-								break;
-							}
-							desc.NumRenderTargets++;
-							break;
-						case RenderPassAttachment::DEPTH_STENCIL:
-							switch (attachment.texture->desc.Format)
-							{
-							case FORMAT_R16_TYPELESS:
-								desc.DSVFormat = DXGI_FORMAT_D16_UNORM;
-								break;
-							case FORMAT_R32_TYPELESS:
-								desc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-								break;
-							case FORMAT_R24G8_TYPELESS:
-								desc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-								break;
-							case FORMAT_R32G8X24_TYPELESS:
-								desc.DSVFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-								break;
-							default:
-								desc.DSVFormat = _ConvertFormat(attachment.texture->desc.Format);
-								break;
-							}
-							break;
-						default:
-							assert(0);
-							break;
-						}
-
-						desc.SampleDesc.Count = attachment.texture->desc.SampleCount;
-						desc.SampleDesc.Quality = 0;
-					}
-				}
-				desc.SampleMask = pso->desc.sampleMask;
-
-				switch (pso->desc.pt)
-				{
-				case POINTLIST:
-					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-					break;
-				case LINELIST:
-				case LINESTRIP:
-					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-					break;
-				case TRIANGLELIST:
-				case TRIANGLESTRIP:
-					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-					break;
-				case PATCHLIST:
-					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
-					break;
-				default:
-					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
-					break;
-				}
-
-				desc.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
-
-				desc.pRootSignature = internal_state->rootSignature.Get();
-
-				ComPtr<ID3D12PipelineState> newpso;
-				HRESULT hr = device->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&newpso));
-				assert(SUCCEEDED(hr));
-
-				pipelines_worker[cmd].push_back(std::make_pair(pipeline_hash, newpso));
-				pipeline = newpso.Get();
-			}
-		}
-		else
-		{
-			pipeline = it->second.Get();
-		}
-		assert(pipeline != nullptr);
-
-		GetDirectCommandList(cmd)->SetPipelineState(pipeline);
-
-		GetDirectCommandList(cmd)->SetGraphicsRootSignature(internal_state->rootSignature.Get());
-
-		if (prev_pt[cmd] != pso->desc.pt)
-		{
-			prev_pt[cmd] = pso->desc.pt;
-
-			D3D12_PRIMITIVE_TOPOLOGY d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-			switch (pso->desc.pt)
-			{
-			case TRIANGLELIST:
-				d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-				break;
-			case TRIANGLESTRIP:
-				d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-				break;
-			case POINTLIST:
-				d3dType = D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
-				break;
-			case LINELIST:
-				d3dType = D3D_PRIMITIVE_TOPOLOGY_LINELIST;
-				break;
-			case LINESTRIP:
-				d3dType = D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
-				break;
-			case PATCHLIST:
-				d3dType = D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
-				break;
-			default:
-				break;
-			};
-			GetDirectCommandList(cmd)->IASetPrimitiveTopology(d3dType);
-		}
+		dirty_pso[cmd] = true;
 	}
 	void GraphicsDevice_DX12::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
@@ -4185,33 +4223,39 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd)
 	{
+		pso_validate(cmd);
 		GetFrameResources().descriptors[cmd].validate(true, cmd);
 		GetDirectCommandList(cmd)->DrawInstanced(vertexCount, 1, startVertexLocation, 0);
 	}
 	void GraphicsDevice_DX12::DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, CommandList cmd)
 	{
+		pso_validate(cmd);
 		GetFrameResources().descriptors[cmd].validate(true, cmd);
 		GetDirectCommandList(cmd)->DrawIndexedInstanced(indexCount, 1, startIndexLocation, baseVertexLocation, 0);
 	}
 	void GraphicsDevice_DX12::DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
+		pso_validate(cmd);
 		GetFrameResources().descriptors[cmd].validate(true, cmd);
 		GetDirectCommandList(cmd)->DrawInstanced(vertexCount, instanceCount, startVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_DX12::DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
+		pso_validate(cmd);
 		GetFrameResources().descriptors[cmd].validate(true, cmd);
 		GetDirectCommandList(cmd)->DrawIndexedInstanced(indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_DX12::DrawInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 	{
 		auto internal_state = to_internal(args);
+		pso_validate(cmd);
 		GetFrameResources().descriptors[cmd].validate(true, cmd);
 		GetDirectCommandList(cmd)->ExecuteIndirect(drawInstancedIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
 	}
 	void GraphicsDevice_DX12::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 	{
 		auto internal_state = to_internal(args);
+		pso_validate(cmd);
 		GetFrameResources().descriptors[cmd].validate(true, cmd);
 		GetDirectCommandList(cmd)->ExecuteIndirect(drawIndexedInstancedIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
 	}

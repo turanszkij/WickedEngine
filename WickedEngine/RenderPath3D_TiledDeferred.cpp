@@ -64,11 +64,6 @@ void RenderPath3D_TiledDeferred::Render() const
 		{
 			auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
 
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_DEPTHSTENCIL),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-
 			device->RenderPassBegin(&renderpass_gbuffer, cmd);
 
 			Viewport vp;
@@ -86,7 +81,7 @@ void RenderPath3D_TiledDeferred::Render() const
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL, IMAGE_LAYOUT_COPY_SRC),
+				GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_COPY_SRC),
 				GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_COPY_DST)
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);

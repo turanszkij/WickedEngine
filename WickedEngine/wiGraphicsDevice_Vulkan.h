@@ -195,6 +195,9 @@ namespace wiGraphics
 		const Shader* active_cs[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 
+		bool dirty_pso[COMMANDLIST_COUNT] = {};
+		void pso_validate(CommandList cmd);
+
 		std::atomic<CommandList> cmd_count{ 0 };
 
 		static PFN_vkCreateRayTracingPipelinesKHR createRayTracingPipelinesKHR;

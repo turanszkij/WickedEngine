@@ -158,6 +158,9 @@ namespace wiGraphics
 		const Shader* active_cs[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 
+		bool dirty_pso[COMMANDLIST_COUNT] = {};
+		void pso_validate(CommandList cmd);
+
 		struct Query_Resolve
 		{
 			GPU_QUERY_TYPE type;

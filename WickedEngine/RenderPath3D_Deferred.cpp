@@ -70,60 +70,108 @@ void RenderPath3D_Deferred::ResizeBuffers()
 
 	{
 		RenderPassDesc desc;
-		desc.numAttachments = 6;
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_DONTCARE,&rtGBuffer[0],-1 };
-		desc.attachments[1] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,&rtGBuffer[1],-1 };
-		desc.attachments[2] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_DONTCARE,&rtGBuffer[2],-1 };
-		desc.attachments[3] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_DONTCARE,&lightbuffer_diffuse,-1 };
-		desc.attachments[4] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_DONTCARE,&lightbuffer_specular,-1 };
-		desc.attachments[5] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_CLEAR,&depthBuffer,-1 };
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtGBuffer[0], RenderPassAttachment::LOADOP_DONTCARE));
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtGBuffer[1], RenderPassAttachment::LOADOP_CLEAR));
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtGBuffer[2], RenderPassAttachment::LOADOP_DONTCARE));
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&lightbuffer_diffuse, RenderPassAttachment::LOADOP_DONTCARE));
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&lightbuffer_specular, RenderPassAttachment::LOADOP_DONTCARE));
+		desc.attachments.push_back(
+			RenderPassAttachment::DepthStencil(
+				&depthBuffer,
+				RenderPassAttachment::LOADOP_CLEAR,
+				RenderPassAttachment::STOREOP_STORE,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+			)
+		);
 
 		device->CreateRenderPass(&desc, &renderpass_gbuffer);
 	}
 	{
 		RenderPassDesc desc;
-		desc.numAttachments = 3;
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&lightbuffer_diffuse,-1 };
-		desc.attachments[1] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&lightbuffer_specular,-1 };
-		desc.attachments[2] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&depthBuffer,-1 };
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&lightbuffer_diffuse, RenderPassAttachment::LOADOP_LOAD));
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&lightbuffer_specular, RenderPassAttachment::LOADOP_LOAD));
+		desc.attachments.push_back(
+			RenderPassAttachment::DepthStencil(
+				&depthBuffer,
+				RenderPassAttachment::LOADOP_LOAD,
+				RenderPassAttachment::STOREOP_STORE,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+			)
+		);
 
 		device->CreateRenderPass(&desc, &renderpass_lights);
 	}
 	{
 		RenderPassDesc desc;
-		desc.numAttachments = 2;
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&rtGBuffer[0],-1 };
-		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&depthBuffer,-1 };
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtGBuffer[0], RenderPassAttachment::LOADOP_LOAD));
+		desc.attachments.push_back(
+			RenderPassAttachment::DepthStencil(
+				&depthBuffer,
+				RenderPassAttachment::LOADOP_LOAD,
+				RenderPassAttachment::STOREOP_STORE,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+			)
+		);
 
 		device->CreateRenderPass(&desc, &renderpass_decals);
 	}
 	{
 		RenderPassDesc desc;
-		desc.numAttachments = 2;
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&rtDeferred,-1 };
-		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&depthBuffer,-1 };
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtDeferred, RenderPassAttachment::LOADOP_LOAD));
+		desc.attachments.push_back(
+			RenderPassAttachment::DepthStencil(
+				&depthBuffer,
+				RenderPassAttachment::LOADOP_LOAD,
+				RenderPassAttachment::STOREOP_STORE,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+			)
+		);
 
 		device->CreateRenderPass(&desc, &renderpass_deferredcomposition);
 	}
 	{
 		RenderPassDesc desc;
-		desc.numAttachments = 2;
-		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&depthBuffer,-1 };
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&lightbuffer_diffuse, RenderPassAttachment::LOADOP_LOAD));
+		desc.attachments.push_back(
+			RenderPassAttachment::DepthStencil(
+				&depthBuffer,
+				RenderPassAttachment::LOADOP_LOAD,
+				RenderPassAttachment::STOREOP_STORE,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+			)
+		);
 
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&lightbuffer_diffuse,-1 };
 		device->CreateRenderPass(&desc, &renderpass_SSS[0]);
 
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&rtSSS[0],-1 };
+		desc.attachments[0].texture = &rtSSS[0];
 		device->CreateRenderPass(&desc, &renderpass_SSS[1]);
 
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&rtSSS[1],-1 };
+		desc.attachments[0].texture = &rtSSS[1];
 		device->CreateRenderPass(&desc, &renderpass_SSS[2]);
 	}
 	{
 		RenderPassDesc desc;
-		desc.numAttachments = 2;
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&rtDeferred,-1 };
-		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&depthBuffer,-1,RenderPassAttachment::STOREOP_DONTCARE };
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtDeferred, RenderPassAttachment::LOADOP_LOAD));
+		desc.attachments.push_back(
+			RenderPassAttachment::DepthStencil(
+				&depthBuffer,
+				RenderPassAttachment::LOADOP_LOAD,
+				RenderPassAttachment::STOREOP_STORE,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+			)
+		);
 
 		device->CreateRenderPass(&desc, &renderpass_transparent);
 	}
@@ -160,11 +208,6 @@ void RenderPath3D_Deferred::Render() const
 		{
 			auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
 
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_DEPTHSTENCIL),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-
 			device->RenderPassBegin(&renderpass_gbuffer, cmd);
 
 			Viewport vp;
@@ -182,7 +225,7 @@ void RenderPath3D_Deferred::Render() const
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL, IMAGE_LAYOUT_COPY_SRC),
+				GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_COPY_SRC),
 				GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_COPY_DST)
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);

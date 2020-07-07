@@ -2,7 +2,7 @@
 #include "WickedEngine.h"
 
 
-class TestsRenderer : public RenderPath3D_Deferred
+class TestsRenderer : public RenderPath3D_TiledForward
 {
 	wiLabel* label = nullptr;
 	wiComboBox* testSelector = nullptr;

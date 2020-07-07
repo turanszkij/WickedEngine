@@ -5411,10 +5411,12 @@ void SetShadowProps2D(int resolution, int count, int softShadowQuality)
 
 		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 		desc.Format = FORMAT_R16_TYPELESS;
+		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
 		device->CreateTexture(&desc, nullptr, &shadowMapArray_2D);
 
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = FORMAT_R8G8B8A8_UNORM;
+		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
 		// RGB: Shadow tint (multiplicative), A: Refraction caustics(additive)
 		desc.clear.color[0] = 1;
 		desc.clear.color[1] = 1;
@@ -5435,13 +5437,34 @@ void SetShadowProps2D(int resolution, int count, int softShadowQuality)
 
 			RenderPassDesc renderpassdesc;
 
-			renderpassdesc.numAttachments = 1;
-			renderpassdesc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::LOADOP_CLEAR,&shadowMapArray_2D, subresource_index };
+			renderpassdesc.attachments.push_back(
+				RenderPassAttachment::DepthStencil(
+					&shadowMapArray_2D,
+					RenderPassAttachment::LOADOP_CLEAR,
+					RenderPassAttachment::STOREOP_STORE,
+					IMAGE_LAYOUT_SHADER_RESOURCE,
+					IMAGE_LAYOUT_DEPTHSTENCIL,
+					IMAGE_LAYOUT_SHADER_RESOURCE
+				)
+			);
+			renderpassdesc.attachments.back().subresource = subresource_index;
+			
 			device->CreateRenderPass(&renderpassdesc, &renderpasses_shadow2D[subresource_index]);
 
-			renderpassdesc.numAttachments = 2;
-			renderpassdesc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::LOADOP_LOAD,&shadowMapArray_2D, subresource_index };
-			renderpassdesc.attachments[1] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::LOADOP_CLEAR,&shadowMapArray_Transparent, subresource_index };
+			renderpassdesc.attachments.back().loadop = RenderPassAttachment::LOADOP_LOAD;
+
+			renderpassdesc.attachments.push_back(
+				RenderPassAttachment::RenderTarget(
+					&shadowMapArray_Transparent,
+					RenderPassAttachment::LOADOP_CLEAR,
+					RenderPassAttachment::STOREOP_STORE,
+					IMAGE_LAYOUT_SHADER_RESOURCE,
+					IMAGE_LAYOUT_RENDERTARGET,
+					IMAGE_LAYOUT_SHADER_RESOURCE
+				)
+			);
+			renderpassdesc.attachments.back().subresource = subresource_index;
+			
 			device->CreateRenderPass(&renderpassdesc, &renderpasses_shadow2DTransparent[subresource_index]);
 		}
 	}
@@ -5473,6 +5496,7 @@ void SetShadowPropsCube(int resolution, int count)
 		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 		desc.CPUAccessFlags = 0;
 		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
+		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
 		device->CreateTexture(&desc, nullptr, &shadowMapArray_Cube);
 
 		renderpasses_shadowCube.resize(SHADOWCOUNT_CUBE);
@@ -5484,8 +5508,17 @@ void SetShadowPropsCube(int resolution, int count)
 			assert(subresource_index == i);
 
 			RenderPassDesc renderpassdesc;
-			renderpassdesc.numAttachments = 1;
-			renderpassdesc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::LOADOP_CLEAR,&shadowMapArray_Cube, subresource_index };
+			renderpassdesc.attachments.push_back(
+				RenderPassAttachment::DepthStencil(
+					&shadowMapArray_Cube,
+					RenderPassAttachment::LOADOP_CLEAR,
+					RenderPassAttachment::STOREOP_STORE,
+					IMAGE_LAYOUT_SHADER_RESOURCE,
+					IMAGE_LAYOUT_DEPTHSTENCIL,
+					IMAGE_LAYOUT_SHADER_RESOURCE
+				)
+			);
+			renderpassdesc.attachments.back().subresource = subresource_index;
 			device->CreateRenderPass(&renderpassdesc, &renderpasses_shadowCube[subresource_index]);
 		}
 	}
@@ -7134,9 +7167,16 @@ void ManageEnvProbes()
 			assert(subresource_index == i);
 
 			RenderPassDesc renderpassdesc;
-			renderpassdesc.numAttachments = 2;
-			renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::LOADOP_DONTCARE,&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], subresource_index };
-			renderpassdesc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::LOADOP_CLEAR,&envrenderingDepthBuffer, -1 };
+			renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], RenderPassAttachment::LOADOP_DONTCARE));
+			renderpassdesc.attachments.back().subresource = subresource_index; 
+			
+			renderpassdesc.attachments.push_back(
+				RenderPassAttachment::DepthStencil(
+					&envrenderingDepthBuffer,
+					RenderPassAttachment::LOADOP_CLEAR
+				)
+			);
+			
 			device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap[subresource_index]);
 		}
 		for (uint32_t i = 0; i < textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY].GetDesc().MipLevels; ++i)
@@ -7378,9 +7418,16 @@ void ManageImpostors()
 			assert(subresource_index == i);
 
 			RenderPassDesc renderpassdesc;
-			renderpassdesc.numAttachments = 2;
-			renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,&textures[TEXTYPE_2D_IMPOSTORARRAY], subresource_index };
-			renderpassdesc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_CLEAR,&impostorDepthStencil, subresource_index };
+			renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&textures[TEXTYPE_2D_IMPOSTORARRAY], RenderPassAttachment::LOADOP_CLEAR));
+			renderpassdesc.attachments.back().subresource = subresource_index;
+
+			renderpassdesc.attachments.push_back(
+				RenderPassAttachment::DepthStencil(
+					&impostorDepthStencil,
+					RenderPassAttachment::LOADOP_CLEAR
+				)
+			);
+			
 			device->CreateRenderPass(&renderpassdesc, &renderpasses_impostor[subresource_index]);
 		}
 	}
@@ -7571,7 +7618,6 @@ void VoxelRadiance(CommandList cmd)
 		}
 
 		RenderPassDesc renderpassdesc;
-		renderpassdesc.numAttachments = 0;
 		device->CreateRenderPass(&renderpassdesc, &renderpass_voxelize);
 	}
 	if (voxelSceneData.secondaryBounceEnabled && !textures[TEXTYPE_3D_VOXELRADIANCE_HELPER].IsValid())
@@ -8792,13 +8838,12 @@ void ManageLightmapAtlas()
 
 				RenderPassDesc renderpassdesc;
 
-				renderpassdesc.numAttachments = 1;
-				renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,&object.lightmap,-1 };
+				renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&object.lightmap, RenderPassAttachment::LOADOP_CLEAR));
+				
 				object.renderpass_lightmap_clear = RenderPass();
 				device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_clear);
 
-				renderpassdesc.numAttachments = 1;
-				renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&object.lightmap,-1 };
+				renderpassdesc.attachments.back().loadop = RenderPassAttachment::LOADOP_LOAD;
 				object.renderpass_lightmap_accumulate = RenderPass();
 				device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_accumulate);
 			}

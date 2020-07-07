@@ -42,9 +42,17 @@ void RenderPath2D::ResizeBuffers()
 	if (rtStenciled.IsValid())
 	{
 		RenderPassDesc desc;
-		desc.numAttachments = 2;
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,&rtStenciled,-1 };
-		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,dsv,-1 };
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtStenciled, RenderPassAttachment::LOADOP_CLEAR));
+		desc.attachments.push_back(
+			RenderPassAttachment::DepthStencil(
+				dsv,
+				RenderPassAttachment::LOADOP_LOAD,
+				RenderPassAttachment::STOREOP_STORE,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+			)
+		);
 
 		device->CreateRenderPass(&desc, &renderpass_stenciled);
 
@@ -52,13 +60,20 @@ void RenderPath2D::ResizeBuffers()
 	}
 	{
 		RenderPassDesc desc;
-		desc.numAttachments = 1;
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,&rtFinal,-1 };
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtFinal, RenderPassAttachment::LOADOP_CLEAR));
 		
 		if(dsv != nullptr && !rtStenciled.IsValid())
 		{
-			desc.numAttachments = 2;
-			desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,dsv,-1 };
+			desc.attachments.push_back(
+				RenderPassAttachment::DepthStencil(
+					dsv,
+					RenderPassAttachment::LOADOP_LOAD,
+					RenderPassAttachment::STOREOP_STORE,
+					IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+					IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+					IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+				)
+			);
 		}
 
 		device->CreateRenderPass(&desc, &renderpass_final);

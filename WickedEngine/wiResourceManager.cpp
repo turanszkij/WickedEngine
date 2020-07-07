@@ -107,6 +107,7 @@ namespace wiResourceManager
 					desc.MiscFlags = 0;
 					desc.Usage = USAGE_IMMUTABLE;
 					desc.Format = FORMAT_R8G8B8A8_UNORM;
+					desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
 
 					if (dds.IsCubemap())
 					{
@@ -248,6 +249,7 @@ namespace wiResourceManager
 					desc.MipLevels = (uint32_t)log2(std::max(width, height));
 					desc.MiscFlags = 0;
 					desc.Usage = USAGE_DEFAULT;
+					desc.layout = IMAGE_LAYOUT_GENERAL;
 
 					uint32_t mipwidth = width;
 					std::vector<SubresourceData> InitData(desc.MipLevels);
