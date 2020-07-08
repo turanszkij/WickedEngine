@@ -882,6 +882,7 @@ namespace Vulkan_Internal
 		VkPipelineShaderStageCreateInfo stageInfo = {};
 		VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
 		std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
+		std::vector<VkImageViewType> imageViewTypes;
 
 		std::vector<spirv_cross::EntryPoint> entrypoints;
 
@@ -1231,6 +1232,7 @@ using namespace Vulkan_Internal;
 			}
 			auto shader_internal = to_internal(shader);
 
+			int i = 0;
 			for (auto& x : shader_internal->layoutBindings)
 			{
 				descriptorWrites.emplace_back();
@@ -1242,6 +1244,8 @@ using namespace Vulkan_Internal;
 				write.descriptorType = x.descriptorType;
 				write.dstBinding = x.binding;
 				write.descriptorCount = 1;
+
+				VkImageViewType viewtype = shader_internal->imageViewTypes[i++];
 
 				switch (x.descriptorType)
 				{
@@ -1275,7 +1279,34 @@ using namespace Vulkan_Internal;
 					const GPUResource* SRV = table.SRV[original_binding];
 					if (SRV == nullptr || !SRV->IsValid() || !SRV->IsTexture())
 					{
-						imageInfos.back().imageView = device->nullImageView;
+						switch (viewtype)
+						{
+						case VK_IMAGE_VIEW_TYPE_1D:
+							imageInfos.back().imageView = device->nullImageView1D;
+							break;
+						case VK_IMAGE_VIEW_TYPE_2D:
+							imageInfos.back().imageView = device->nullImageView2D;
+							break;
+						case VK_IMAGE_VIEW_TYPE_3D:
+							imageInfos.back().imageView = device->nullImageView3D;
+							break;
+						case VK_IMAGE_VIEW_TYPE_CUBE:
+							imageInfos.back().imageView = device->nullImageViewCube;
+							break;
+						case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
+							imageInfos.back().imageView = device->nullImageView1DArray;
+							break;
+						case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
+							imageInfos.back().imageView = device->nullImageView2DArray;
+							break;
+						case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
+							imageInfos.back().imageView = device->nullImageViewCubeArray;
+							break;
+						case VK_IMAGE_VIEW_TYPE_MAX_ENUM:
+							break;
+						default:
+							break;
+						}
 					}
 					else
 					{
@@ -1299,12 +1330,40 @@ using namespace Vulkan_Internal;
 					imageInfos.emplace_back();
 					write.pImageInfo = &imageInfos.back();
 					imageInfos.back() = {};
+					imageInfos.back().imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 					const uint32_t original_binding = x.binding - VULKAN_BINDING_SHIFT_U - VULKAN_BINDING_SHIFT_STAGE(stage);
 					const GPUResource* UAV = table.UAV[original_binding];
 					if (UAV == nullptr || !UAV->IsValid() || !UAV->IsTexture())
 					{
-						imageInfos.back().imageView = device->nullImageView;
+						switch (viewtype)
+						{
+						case VK_IMAGE_VIEW_TYPE_1D:
+							imageInfos.back().imageView = device->nullImageView1D;
+							break;
+						case VK_IMAGE_VIEW_TYPE_2D:
+							imageInfos.back().imageView = device->nullImageView2D;
+							break;
+						case VK_IMAGE_VIEW_TYPE_3D:
+							imageInfos.back().imageView = device->nullImageView3D;
+							break;
+						case VK_IMAGE_VIEW_TYPE_CUBE:
+							imageInfos.back().imageView = device->nullImageViewCube;
+							break;
+						case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
+							imageInfos.back().imageView = device->nullImageView1DArray;
+							break;
+						case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
+							imageInfos.back().imageView = device->nullImageView2DArray;
+							break;
+						case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
+							imageInfos.back().imageView = device->nullImageViewCubeArray;
+							break;
+						case VK_IMAGE_VIEW_TYPE_MAX_ENUM:
+							break;
+						default:
+							break;
+						}
 					}
 					else
 					{
@@ -1318,7 +1377,7 @@ using namespace Vulkan_Internal;
 						{
 							imageInfos.back().imageView = to_internal(texture)->uav;
 						}
-						imageInfos.back().imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+						imageInfos.back().imageLayout = _ConvertImageLayout(texture->desc.layout);
 					}
 				}
 				break;
@@ -1334,6 +1393,7 @@ using namespace Vulkan_Internal;
 					if (CBV == nullptr || !CBV->IsValid())
 					{
 						bufferInfos.back().buffer = device->nullBuffer;
+						bufferInfos.back().range = VK_WHOLE_SIZE;
 					}
 					else
 					{
@@ -1429,6 +1489,7 @@ using namespace Vulkan_Internal;
 						if (UAV == nullptr || !UAV->IsValid() || !UAV->IsBuffer())
 						{
 							bufferInfos.back().buffer = device->nullBuffer;
+							bufferInfos.back().range = VK_WHOLE_SIZE;
 						}
 						else
 						{
@@ -1445,6 +1506,7 @@ using namespace Vulkan_Internal;
 						if (SRV == nullptr || !SRV->IsValid() || !SRV->IsBuffer())
 						{
 							bufferInfos.back().buffer = device->nullBuffer;
+							bufferInfos.back().range = VK_WHOLE_SIZE;
 						}
 						else
 						{
@@ -2275,7 +2337,6 @@ using namespace Vulkan_Internal;
 		{
 			VkImageCreateInfo imageInfo = {};
 			imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-			imageInfo.imageType = VK_IMAGE_TYPE_2D;
 			imageInfo.extent.width = 1;
 			imageInfo.extent.height = 1;
 			imageInfo.extent.depth = 1;
@@ -2291,21 +2352,111 @@ using namespace Vulkan_Internal;
 			VmaAllocationCreateInfo allocInfo = {};
 			allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
-			res = vmaCreateImage(allocationhandler->allocator, &imageInfo, &allocInfo, &nullImage, &nullImageAllocation, nullptr);
+			imageInfo.imageType = VK_IMAGE_TYPE_1D;
+			res = vmaCreateImage(allocationhandler->allocator, &imageInfo, &allocInfo, &nullImage1D, &nullImageAllocation1D, nullptr);
 			assert(res == VK_SUCCESS);
+
+			imageInfo.imageType = VK_IMAGE_TYPE_2D;
+			imageInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+			imageInfo.arrayLayers = 6;
+			res = vmaCreateImage(allocationhandler->allocator, &imageInfo, &allocInfo, &nullImage2D, &nullImageAllocation2D, nullptr);
+			assert(res == VK_SUCCESS);
+
+			imageInfo.imageType = VK_IMAGE_TYPE_3D;
+			imageInfo.flags = 0;
+			imageInfo.arrayLayers = 1;
+			res = vmaCreateImage(allocationhandler->allocator, &imageInfo, &allocInfo, &nullImage3D, &nullImageAllocation3D, nullptr);
+			assert(res == VK_SUCCESS);
+
+			// Transitions:
+			copyQueueLock.lock();
+			{
+				auto& frame = GetFrameResources();
+				if (!copyQueueUse)
+				{
+					copyQueueUse = true;
+
+					res = vkResetCommandPool(device, frame.copyCommandPool, 0);
+					assert(res == VK_SUCCESS);
+
+					VkCommandBufferBeginInfo beginInfo = {};
+					beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+					beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+					beginInfo.pInheritanceInfo = nullptr; // Optional
+
+					res = vkBeginCommandBuffer(frame.copyCommandBuffer, &beginInfo);
+					assert(res == VK_SUCCESS);
+				}
+
+				VkImageMemoryBarrier barrier = {};
+				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				barrier.oldLayout = imageInfo.initialLayout;
+				barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+				barrier.srcAccessMask = 0;
+				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				barrier.subresourceRange.baseArrayLayer = 0;
+				barrier.subresourceRange.baseMipLevel = 0;
+				barrier.subresourceRange.levelCount = 1;
+				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.image = nullImage1D;
+				barrier.subresourceRange.layerCount = 1;
+				frame.loadedimagetransitions.push_back(barrier);
+				barrier.image = nullImage2D;
+				barrier.subresourceRange.layerCount = 6;
+				frame.loadedimagetransitions.push_back(barrier);
+				barrier.image = nullImage3D;
+				barrier.subresourceRange.layerCount = 1;
+				frame.loadedimagetransitions.push_back(barrier);
+			}
+			copyQueueLock.unlock();
 
 			VkImageViewCreateInfo viewInfo = {};
 			viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			viewInfo.image = nullImage;
-			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
 			viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			viewInfo.subresourceRange.baseArrayLayer = 0;
 			viewInfo.subresourceRange.layerCount = 1;
 			viewInfo.subresourceRange.baseMipLevel = 0;
 			viewInfo.subresourceRange.levelCount = 1;
 			viewInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
-			
-			res = vkCreateImageView(device, &viewInfo, nullptr, &nullImageView);
+
+			viewInfo.image = nullImage1D;
+			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_1D;
+			res = vkCreateImageView(device, &viewInfo, nullptr, &nullImageView1D);
+			assert(res == VK_SUCCESS);
+
+			viewInfo.image = nullImage1D;
+			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
+			res = vkCreateImageView(device, &viewInfo, nullptr, &nullImageView1DArray);
+			assert(res == VK_SUCCESS);
+
+			viewInfo.image = nullImage2D;
+			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			res = vkCreateImageView(device, &viewInfo, nullptr, &nullImageView2D);
+			assert(res == VK_SUCCESS);
+
+			viewInfo.image = nullImage2D;
+			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+			res = vkCreateImageView(device, &viewInfo, nullptr, &nullImageView2DArray);
+			assert(res == VK_SUCCESS);
+
+			viewInfo.image = nullImage2D;
+			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+			viewInfo.subresourceRange.layerCount = 6;
+			res = vkCreateImageView(device, &viewInfo, nullptr, &nullImageViewCube);
+			assert(res == VK_SUCCESS);
+
+			viewInfo.image = nullImage2D;
+			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+			viewInfo.subresourceRange.layerCount = 6;
+			res = vkCreateImageView(device, &viewInfo, nullptr, &nullImageViewCubeArray);
+			assert(res == VK_SUCCESS);
+
+			viewInfo.image = nullImage3D;
+			viewInfo.subresourceRange.layerCount = 1;
+			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_3D;
+			res = vkCreateImageView(device, &viewInfo, nullptr, &nullImageView3D);
 			assert(res == VK_SUCCESS);
 		}
 		{
@@ -2393,8 +2544,16 @@ using namespace Vulkan_Internal;
 
 		vmaDestroyBuffer(allocationhandler->allocator, nullBuffer, nullBufferAllocation);
 		vkDestroyBufferView(device, nullBufferView, nullptr);
-		vmaDestroyImage(allocationhandler->allocator, nullImage, nullImageAllocation);
-		vkDestroyImageView(device, nullImageView, nullptr);
+		vmaDestroyImage(allocationhandler->allocator, nullImage1D, nullImageAllocation1D);
+		vmaDestroyImage(allocationhandler->allocator, nullImage2D, nullImageAllocation2D);
+		vmaDestroyImage(allocationhandler->allocator, nullImage3D, nullImageAllocation3D);
+		vkDestroyImageView(device, nullImageView1D, nullptr);
+		vkDestroyImageView(device, nullImageView1DArray, nullptr);
+		vkDestroyImageView(device, nullImageView2D, nullptr);
+		vkDestroyImageView(device, nullImageView2DArray, nullptr);
+		vkDestroyImageView(device, nullImageViewCube, nullptr);
+		vkDestroyImageView(device, nullImageViewCubeArray, nullptr);
+		vkDestroyImageView(device, nullImageView3D, nullptr);
 		vkDestroySampler(device, nullSampler, nullptr);
 
 		DestroyDebugReportCallbackEXT(instance, callback, nullptr);
@@ -2976,9 +3135,9 @@ using namespace Vulkan_Internal;
 				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				barrier.subresourceRange.baseArrayLayer = 0;
-				barrier.subresourceRange.layerCount = pDesc->ArraySize;
+				barrier.subresourceRange.layerCount = imageInfo.arrayLayers;
 				barrier.subresourceRange.baseMipLevel = 0;
-				barrier.subresourceRange.levelCount = pDesc->MipLevels;
+				barrier.subresourceRange.levelCount = imageInfo.mipLevels;
 				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
@@ -3045,9 +3204,9 @@ using namespace Vulkan_Internal;
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			}
 			barrier.subresourceRange.baseArrayLayer = 0;
-			barrier.subresourceRange.layerCount = pDesc->ArraySize;
+			barrier.subresourceRange.layerCount = imageInfo.arrayLayers;
 			barrier.subresourceRange.baseMipLevel = 0;
-			barrier.subresourceRange.levelCount = pDesc->MipLevels;
+			barrier.subresourceRange.levelCount = imageInfo.mipLevels;
 			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			frame.loadedimagetransitions.push_back(barrier);
@@ -3148,6 +3307,7 @@ using namespace Vulkan_Internal;
 		}
 
 		std::vector<VkDescriptorSetLayoutBinding>& layoutBindings = internal_state->layoutBindings;
+		std::vector<VkImageViewType>& imageViewTypes = internal_state->imageViewTypes;
 
 		for (auto& x : resources.separate_samplers)
 		{
@@ -3157,18 +3317,59 @@ using namespace Vulkan_Internal;
 			layoutBinding.binding = comp.get_decoration(x.id, spv::Decoration::DecorationBinding);
 			layoutBinding.descriptorCount = 1;
 			layoutBindings.push_back(layoutBinding);
+			imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_MAX_ENUM);
 		}
 		for (auto& x : resources.separate_images)
 		{
 			VkDescriptorSetLayoutBinding layoutBinding = {};
 			layoutBinding.stageFlags = internal_state->stageInfo.stage;
-			if (comp.get_type_from_variable(x.id).image.dim == spv::Dim::DimBuffer)
+			auto image = comp.get_type_from_variable(x.id).image;
+			switch (image.dim)
 			{
-				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-			}
-			else
-			{
+			case spv::Dim1D:
 				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+				if (image.arrayed)
+				{
+					imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_1D_ARRAY);
+				}
+				else
+				{
+					imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_1D);
+				}
+				break;
+			case spv::Dim2D:
+				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+				if (image.arrayed)
+				{
+					imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_2D_ARRAY);
+				}
+				else
+				{
+					imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_2D);
+				}
+				break;
+			case spv::Dim3D:
+				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+				imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_3D);
+				break;
+			case spv::DimCube:
+				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+				if (image.arrayed)
+				{
+					imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_CUBE_ARRAY);
+				}
+				else
+				{
+					imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_CUBE);
+				}
+				break;
+			case spv::DimBuffer:
+				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+				imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_MAX_ENUM);
+				break;
+			default:
+				imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_MAX_ENUM);
+				break;
 			}
 			layoutBinding.binding = comp.get_decoration(x.id, spv::Decoration::DecorationBinding);
 			layoutBinding.descriptorCount = 1;
@@ -3178,13 +3379,53 @@ using namespace Vulkan_Internal;
 		{
 			VkDescriptorSetLayoutBinding layoutBinding = {};
 			layoutBinding.stageFlags = internal_state->stageInfo.stage;
-			if (comp.get_type_from_variable(x.id).image.dim == spv::Dim::DimBuffer)
+			auto image = comp.get_type_from_variable(x.id).image;
+			switch (image.dim)
 			{
-				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-			}
-			else
-			{
+			case spv::Dim1D:
 				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+				if (image.arrayed)
+				{
+					imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_1D_ARRAY);
+				}
+				else
+				{
+					imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_1D);
+				}
+				break;
+			case spv::Dim2D:
+				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+				if (image.arrayed)
+				{
+					imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_2D_ARRAY);
+				}
+				else
+				{
+					imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_2D);
+				}
+				break;
+			case spv::Dim3D:
+				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+				imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_3D);
+				break;
+			case spv::DimCube:
+				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+				if (image.arrayed)
+				{
+					imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_CUBE_ARRAY);
+				}
+				else
+				{
+					imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_CUBE);
+				}
+				break;
+			case spv::DimBuffer:
+				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+				imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_MAX_ENUM);
+				break;
+			default:
+				imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_MAX_ENUM);
+				break;
 			}
 			layoutBinding.binding = comp.get_decoration(x.id, spv::Decoration::DecorationBinding);
 			layoutBinding.descriptorCount = 1;
@@ -3198,6 +3439,7 @@ using namespace Vulkan_Internal;
 			layoutBinding.binding = comp.get_decoration(x.id, spv::Decoration::DecorationBinding);
 			layoutBinding.descriptorCount = 1;
 			layoutBindings.push_back(layoutBinding);
+			imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_MAX_ENUM);
 		}
 		for (auto& x : resources.storage_buffers)
 		{
@@ -3207,6 +3449,7 @@ using namespace Vulkan_Internal;
 			layoutBinding.binding = comp.get_decoration(x.id, spv::Decoration::DecorationBinding);
 			layoutBinding.descriptorCount = 1;
 			layoutBindings.push_back(layoutBinding);
+			imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_MAX_ENUM);
 		}
 		for (auto& x : resources.acceleration_structures)
 		{
@@ -3216,6 +3459,7 @@ using namespace Vulkan_Internal;
 			layoutBinding.binding = comp.get_decoration(x.id, spv::Decoration::DecorationBinding);
 			layoutBinding.descriptorCount = 1;
 			layoutBindings.push_back(layoutBinding);
+			imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_MAX_ENUM);
 		}
 
 		if (stage == CS || stage == SHADERSTAGE_COUNT)
@@ -3755,6 +3999,12 @@ using namespace Vulkan_Internal;
 			framebufferInfo.height = texdesc.Height;
 			framebufferInfo.layers = texdesc.MiscFlags & RESOURCE_MISC_TEXTURECUBE ? 6 : 1; // todo figure out better! can't use ArraySize here, it will crash!
 		}
+		else
+		{
+			framebufferInfo.width = 1;
+			framebufferInfo.height = 1;
+			framebufferInfo.layers = 1;
+		}
 
 		res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &internal_state->framebuffer);
 		assert(res == VK_SUCCESS);
@@ -4160,6 +4410,7 @@ using namespace Vulkan_Internal;
 		case wiGraphics::RTV:
 		{
 			VkImageView rtv;
+			view_desc.subresourceRange.levelCount = 1;
 			VkResult res = vkCreateImageView(device, &view_desc, nullptr, &rtv);
 
 			if (res == VK_SUCCESS)
@@ -4180,6 +4431,7 @@ using namespace Vulkan_Internal;
 		break;
 		case wiGraphics::DSV:
 		{
+			view_desc.subresourceRange.levelCount = 1;
 			view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
 			switch (texture->desc.Format)
@@ -4952,6 +5204,8 @@ using namespace Vulkan_Internal;
 			// Contents will be transferred to device memory:
 
 			// barrier to transfer:
+
+			assert(active_renderpass[cmd] == nullptr); // must not be inside render pass
 
 			VkPipelineStageFlags stages = 0;
 

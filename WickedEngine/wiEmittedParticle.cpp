@@ -575,6 +575,13 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->UnbindResources(TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 		device->EventEnd(cmd);
+
+
+		const GPUBarrier barriers[] = {
+			GPUBarrier::Buffer(&particleBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
+			GPUBarrier::Buffer(&aliveList[1], BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 }
 
@@ -597,12 +604,6 @@ void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialCompon
 
 	device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), cmd);
 	device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), cmd);
-
-	const GPUBarrier barriers[] = {
-		GPUBarrier::Buffer(&particleBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
-		GPUBarrier::Buffer(&aliveList[1], BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
-	};
-	device->Barrier(barriers, arraysize(barriers), cmd);
 
 	const GPUResource* res[] = {
 		&particleBuffer,

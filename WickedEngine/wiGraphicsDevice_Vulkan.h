@@ -80,10 +80,20 @@ namespace wiGraphics
 		VkBuffer		nullBuffer = VK_NULL_HANDLE;
 		VmaAllocation	nullBufferAllocation = VK_NULL_HANDLE;
 		VkBufferView	nullBufferView = VK_NULL_HANDLE;
-		VkImage			nullImage = VK_NULL_HANDLE;
-		VmaAllocation	nullImageAllocation = VK_NULL_HANDLE;
-		VkImageView		nullImageView = VK_NULL_HANDLE;
 		VkSampler		nullSampler = VK_NULL_HANDLE;
+		VmaAllocation	nullImageAllocation1D = VK_NULL_HANDLE;
+		VmaAllocation	nullImageAllocation2D = VK_NULL_HANDLE;
+		VmaAllocation	nullImageAllocation3D = VK_NULL_HANDLE;
+		VkImage			nullImage1D = VK_NULL_HANDLE;
+		VkImage			nullImage2D = VK_NULL_HANDLE;
+		VkImage			nullImage3D = VK_NULL_HANDLE;
+		VkImageView		nullImageView1D = VK_NULL_HANDLE;
+		VkImageView		nullImageView1DArray = VK_NULL_HANDLE;
+		VkImageView		nullImageView2D = VK_NULL_HANDLE;
+		VkImageView		nullImageView2DArray = VK_NULL_HANDLE;
+		VkImageView		nullImageViewCube = VK_NULL_HANDLE;
+		VkImageView		nullImageViewCubeArray = VK_NULL_HANDLE;
+		VkImageView		nullImageView3D = VK_NULL_HANDLE;
 
 		uint64_t timestamp_frequency = 0;
 		VkQueryPool querypool_timestamp = VK_NULL_HANDLE;

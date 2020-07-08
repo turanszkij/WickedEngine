@@ -1284,14 +1284,14 @@ using namespace DX12_Internal;
 				// Resources:
 				if (!PSO_table.resources.empty())
 				{
-					DescriptorHeap& heap = heaps_resource[currentheap_resource];
-					if ((heap.ringOffset + (uint32_t)PSO_table.resources.size()) >= heap.heapDesc.NumDescriptors)
+					if ((heaps_resource[currentheap_resource].ringOffset + (uint32_t)PSO_table.resources.size()) >= heaps_resource[currentheap_resource].heapDesc.NumDescriptors)
 					{
 						// start new heap if the current one is full
 						currentheap_resource++;
 						heaps_bound = false;
 						create_or_bind_heaps_on_demand(cmd);
 					}
+					DescriptorHeap& heap = heaps_resource[currentheap_resource];
 
 					D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
 					D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
@@ -1431,14 +1431,14 @@ using namespace DX12_Internal;
 				// Samplers:
 				if (!PSO_table.samplers.empty())
 				{
-					DescriptorHeap& heap = heaps_sampler[currentheap_sampler];
-					if ((heap.ringOffset + (uint32_t)PSO_table.samplers.size()) >= heap.heapDesc.NumDescriptors)
+					if ((heaps_sampler[currentheap_sampler].ringOffset + (uint32_t)PSO_table.samplers.size()) >= heaps_sampler[currentheap_sampler].heapDesc.NumDescriptors)
 					{
 						// start new heap if the current one is full
 						currentheap_sampler++;
 						heaps_bound = false;
 						create_or_bind_heaps_on_demand(cmd);
 					}
+					DescriptorHeap& heap = heaps_sampler[currentheap_sampler];
 
 					D3D12_SAMPLER_DESC sampler_desc = {};
 					sampler_desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
