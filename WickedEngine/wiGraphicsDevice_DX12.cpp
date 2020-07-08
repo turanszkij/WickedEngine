@@ -4336,6 +4336,8 @@ using namespace DX12_Internal;
 		}
 		else
 		{
+			assert(active_renderpass[cmd] == nullptr);
+
 			// Contents will be transferred to device memory:
 			auto internal_state_src = std::static_pointer_cast<Resource_DX12>(GetFrameResources().resourceBuffer[cmd].buffer.internal_state);
 			auto internal_state_dst = to_internal(buffer);

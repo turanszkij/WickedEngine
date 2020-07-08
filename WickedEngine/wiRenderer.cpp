@@ -7224,8 +7224,6 @@ void RefreshEnvProbes(CommandList cmd)
 		const EnvironmentProbeComponent& probe = scene.probes[probeIndex];
 		Entity entity = scene.probes.GetEntity(probeIndex);
 
-		device->RenderPassBegin(&renderpasses_envmap[probe.textureIndex], cmd);
-
 		const XMVECTOR probePos = XMLoadFloat3(&probe.position);
 		const SHCAM cameras[] = {
 			SHCAM(probePos, XMVectorSet(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
@@ -7281,6 +7279,8 @@ void RefreshEnvProbes(CommandList cmd)
 
 		BindConstantBuffers(VS, cmd);
 		BindConstantBuffers(PS, cmd);
+
+		device->RenderPassBegin(&renderpasses_envmap[probe.textureIndex], cmd);
 
 		if (!renderQueue.empty())
 		{
