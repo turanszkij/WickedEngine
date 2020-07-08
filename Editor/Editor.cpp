@@ -199,6 +199,7 @@ void EditorComponent::ResizeBuffers()
 			if (renderPath->getMSAASampleCount() > 1)
 			{
 				desc.attachments[0].texture = &rt_selectionOutline_MSAA;
+				desc.attachments.push_back(RenderPassAttachment::Resolve(&rt_selectionOutline[0]));
 			}
 			desc.attachments.push_back(
 				RenderPassAttachment::DepthStencil(
@@ -215,7 +216,11 @@ void EditorComponent::ResizeBuffers()
 
 			if (renderPath->getMSAASampleCount() == 1)
 			{
-				desc.attachments[0].texture = &rt_selectionOutline[1];
+				desc.attachments[0].texture = &rt_selectionOutline[1]; // rendertarget
+			}
+			else
+			{
+				desc.attachments[1].texture = &rt_selectionOutline[1]; // resolve
 			}
 			hr = device->CreateRenderPass(&desc, &renderpass_selectionOutline[1]);
 			assert(SUCCEEDED(hr));
@@ -1915,11 +1920,6 @@ void EditorComponent::Render() const
 			wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
 
 			device->RenderPassEnd(cmd);
-
-			if (renderPath->getMSAASampleCount() > 1)
-			{
-				device->MSAAResolve(&rt_selectionOutline[0], &rt_selectionOutline_MSAA, cmd);
-			}
 		}
 
 		// Objects outline:
@@ -1932,11 +1932,6 @@ void EditorComponent::Render() const
 			wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
 
 			device->RenderPassEnd(cmd);
-
-			if (renderPath->getMSAASampleCount() > 1)
-			{
-				device->MSAAResolve(&rt_selectionOutline[1], &rt_selectionOutline_MSAA, cmd);
-			}
 		}
 
 		device->EventEnd(cmd);

@@ -19,6 +19,7 @@ void RenderPath2D::ResizeBuffers()
 		TextureDesc desc = GetDepthStencil()->GetDesc();
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = defaultTextureFormat;
+		desc.layout = IMAGE_LAYOUT_GENERAL;
 		device->CreateTexture(&desc, nullptr, &rtStenciled);
 		device->SetName(&rtStenciled, "rtStenciled");
 
@@ -53,6 +54,11 @@ void RenderPath2D::ResizeBuffers()
 				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
 			)
 		);
+
+		if (rtStenciled.GetDesc().SampleCount > 1)
+		{
+			desc.attachments.push_back(RenderPassAttachment::Resolve(&rtStenciled_resolved));
+		}
 
 		device->CreateRenderPass(&desc, &renderpass_stenciled);
 
@@ -199,11 +205,6 @@ void RenderPath2D::Render() const
 		wiRenderer::GetDevice()->EventEnd(cmd);
 
 		device->RenderPassEnd(cmd);
-
-		if (rtStenciled.GetDesc().SampleCount > 1)
-		{
-			device->MSAAResolve(&rtStenciled_resolved, &rtStenciled, cmd);
-		}
 	}
 
 	device->RenderPassBegin(&renderpass_final, cmd);

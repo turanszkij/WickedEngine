@@ -1623,6 +1623,8 @@ using namespace DX12_Internal;
 				{
 					for (auto& attachment : active_renderpass[cmd]->desc.attachments)
 					{
+						if (attachment.type == RenderPassAttachment::RESOLVE || attachment.texture == nullptr)
+							continue;
 
 						switch (attachment.type)
 						{
@@ -3803,6 +3805,9 @@ using namespace DX12_Internal;
 		uint32_t numBarriers = 0;
 		for (auto& attachment : desc.attachments)
 		{
+			if (attachment.type == RenderPassAttachment::RESOLVE || attachment.texture == nullptr)
+				continue;
+
 			auto internal_state = to_internal(attachment.texture);
 
 			D3D12_RESOURCE_BARRIER& barrierdesc = barrierdescs[numBarriers++];
@@ -3893,7 +3898,7 @@ using namespace DX12_Internal;
 
 				rt_count++;
 			}
-			else
+			else if (attachment.type == RenderPassAttachment::DEPTH_STENCIL)
 			{
 				dsv = true;
 
@@ -3981,7 +3986,7 @@ using namespace DX12_Internal;
 
 				rt_count++;
 			}
-			else
+			else if (attachment.type == RenderPassAttachment::DEPTH_STENCIL)
 			{
 				if (subresource < 0 || internal_state->subresources_dsv.empty())
 				{
@@ -4044,6 +4049,56 @@ using namespace DX12_Internal;
 		if (numBarriers > 0)
 		{
 			GetDirectCommandList(cmd)->ResourceBarrier(numBarriers, barrierdescs);
+		}
+
+		// Perform resolves:
+		int dst_counter = 0;
+		for (auto& attachment : active_renderpass[cmd]->desc.attachments)
+		{
+			if (attachment.type != RenderPassAttachment::RESOLVE || attachment.texture == nullptr)
+				continue;
+			auto dst_internal = to_internal(attachment.texture);
+
+			int src_counter = 0;
+			for (auto& src : active_renderpass[cmd]->desc.attachments)
+			{
+				if (src.type == RenderPassAttachment::RENDERTARGET && src.texture != nullptr)
+				{
+					if (src_counter == dst_counter)
+					{
+						auto src_internal = to_internal(src.texture);
+
+						D3D12_RESOURCE_BARRIER barrierdescs[2];
+
+						barrierdescs[0].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+						barrierdescs[0].Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+						barrierdescs[0].Transition.pResource = src_internal->resource.Get();
+						barrierdescs[0].Transition.StateBefore = _ConvertImageLayout(src.final_layout);
+						barrierdescs[0].Transition.StateAfter = D3D12_RESOURCE_STATE_RESOLVE_SOURCE;
+						barrierdescs[0].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+						barrierdescs[1].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+						barrierdescs[1].Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+						barrierdescs[1].Transition.pResource = dst_internal->resource.Get();
+						barrierdescs[1].Transition.StateBefore = _ConvertImageLayout(attachment.final_layout);
+						barrierdescs[1].Transition.StateAfter = D3D12_RESOURCE_STATE_RESOLVE_DEST;
+						barrierdescs[1].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+						GetDirectCommandList(cmd)->ResourceBarrier(arraysize(barrierdescs), barrierdescs);
+
+						GetDirectCommandList(cmd)->ResolveSubresource(dst_internal->resource.Get(), 0, src_internal->resource.Get(), 0, _ConvertFormat(attachment.texture->desc.Format));
+
+						std::swap(barrierdescs[0].Transition.StateBefore, barrierdescs[0].Transition.StateAfter);
+						std::swap(barrierdescs[1].Transition.StateBefore, barrierdescs[1].Transition.StateAfter);
+						GetDirectCommandList(cmd)->ResourceBarrier(arraysize(barrierdescs), barrierdescs);
+
+						break;
+					}
+					src_counter++;
+				}
+			}
+
+			dst_counter++;
 		}
 
 		active_renderpass[cmd] = nullptr;
@@ -4296,9 +4351,6 @@ using namespace DX12_Internal;
 
 
 		GetDirectCommandList(cmd)->CopyTextureRegion(&dst, dstX, dstY, 0, &src, nullptr);
-	}
-	void GraphicsDevice_DX12::MSAAResolve(const Texture* pDst, const Texture* pSrc, CommandList cmd)
-	{
 	}
 	void GraphicsDevice_DX12::UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize)
 	{

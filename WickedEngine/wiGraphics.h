@@ -537,6 +537,7 @@ namespace wiGraphics
 		{
 			RENDERTARGET,
 			DEPTH_STENCIL,
+			RESOLVE,
 		} type = RENDERTARGET;
 		enum LOAD_OPERATION
 		{
@@ -591,6 +592,20 @@ namespace wiGraphics
 			attachment.storeop = store_op;
 			attachment.initial_layout = initial_layout;
 			attachment.subpass_layout = subpass_layout;
+			attachment.final_layout = final_layout;
+			return attachment;
+		}
+
+		static RenderPassAttachment Resolve(
+			const Texture* resource = nullptr,
+			IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_GENERAL,
+			IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_GENERAL
+		)
+		{
+			RenderPassAttachment attachment;
+			attachment.type = RESOLVE;
+			attachment.texture = resource;
+			attachment.initial_layout = initial_layout;
 			attachment.final_layout = final_layout;
 			return attachment;
 		}

@@ -2558,6 +2558,7 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 
 	active_pso[cmd] = nullptr;
 	dirty_pso[cmd] = false;
+	active_renderpass[cmd] = nullptr;
 
 	return cmd;
 }
@@ -2582,6 +2583,7 @@ void GraphicsDevice_DX11::commit_allocations(CommandList cmd)
 
 void GraphicsDevice_DX11::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 {
+	active_renderpass[cmd] = renderpass;
 	const RenderPassDesc& desc = renderpass->GetDesc();
 
 	uint32_t rt_count = 0;
@@ -2613,7 +2615,7 @@ void GraphicsDevice_DX11::RenderPassBegin(const RenderPass* renderpass, CommandL
 
 			rt_count++;
 		}
-		else
+		else if (attachment.type == RenderPassAttachment::DEPTH_STENCIL)
 		{
 			if (subresource < 0 || internal_state->subresources_dsv.empty())
 			{
@@ -2654,6 +2656,33 @@ void GraphicsDevice_DX11::RenderPassBegin(const RenderPass* renderpass, CommandL
 void GraphicsDevice_DX11::RenderPassEnd(CommandList cmd)
 {
 	deviceContexts[cmd]->OMSetRenderTargets(0, nullptr, nullptr);
+
+	// Perform resolves:
+	int dst_counter = 0;
+	for (auto& attachment : active_renderpass[cmd]->desc.attachments)
+	{
+		if (attachment.type != RenderPassAttachment::RESOLVE || attachment.texture == nullptr)
+			continue;
+		auto dst_internal = to_internal(attachment.texture);
+
+		int src_counter = 0;
+		for (auto& src : active_renderpass[cmd]->desc.attachments)
+		{
+			if (src.type == RenderPassAttachment::RENDERTARGET && src.texture != nullptr)
+			{
+				if (src_counter == dst_counter)
+				{
+					auto src_internal = to_internal(src.texture);
+					deviceContexts[cmd]->ResolveSubresource(dst_internal->resource.Get(), 0, src_internal->resource.Get(), 0, _ConvertFormat(attachment.texture->desc.Format));
+					break;
+				}
+				src_counter++;
+			}
+		}
+
+		dst_counter++;
+	}
+	active_renderpass[cmd] = nullptr;
 }
 void GraphicsDevice_DX11::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) {
 	assert(rects != nullptr);
@@ -3002,13 +3031,6 @@ void GraphicsDevice_DX11::CopyTexture2D_Region(const Texture* pDst, uint32_t dst
 	auto internal_state_dst = to_internal(pDst);
 	deviceContexts[cmd]->CopySubresourceRegion(internal_state_dst->resource.Get(), D3D11CalcSubresource(dstMip, 0, pDst->GetDesc().MipLevels), dstX, dstY, 0,
 		internal_state_src->resource.Get(), D3D11CalcSubresource(srcMip, 0, pSrc->GetDesc().MipLevels), nullptr);
-}
-void GraphicsDevice_DX11::MSAAResolve(const Texture* pDst, const Texture* pSrc, CommandList cmd)
-{
-	assert(pDst != nullptr && pSrc != nullptr);
-	auto internal_state_src = to_internal(pSrc);
-	auto internal_state_dst = to_internal(pDst);
-	deviceContexts[cmd]->ResolveSubresource(internal_state_dst->resource.Get(), 0, internal_state_src->resource.Get(), 0, _ConvertFormat(pDst->desc.Format));
 }
 void GraphicsDevice_DX11::UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize)
 {

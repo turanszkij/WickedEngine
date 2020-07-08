@@ -343,6 +343,10 @@ void RenderPath3D::ResizeBuffers()
 				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
 			)
 		);
+		if (getMSAASampleCount() > 1)
+		{
+			desc.attachments.push_back(RenderPassAttachment::Resolve(&rtSun_resolved));
+		}
 
 		device->CreateRenderPass(&desc, &renderpass_lightshafts);
 	}
@@ -365,6 +369,11 @@ void RenderPath3D::ResizeBuffers()
 				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
 			)
 		);
+
+		if (getMSAASampleCount() > 1)
+		{
+			desc.attachments.push_back(RenderPassAttachment::Resolve(&rtParticleDistortion_Resolved));
+		}
 
 		device->CreateRenderPass(&desc, &renderpass_particledistortion);
 	}
@@ -584,13 +593,6 @@ void RenderPath3D::RenderLightShafts(CommandList cmd) const
 			device->RenderPassEnd(cmd);
 		}
 
-		const Texture* sunSource = &rtSun[0];
-		if (getMSAASampleCount() > 1)
-		{
-			device->MSAAResolve(&rtSun_resolved, sunSource, cmd);
-			sunSource = &rtSun_resolved;
-		}
-
 		// Radial blur on the sun:
 		{
 			XMVECTOR sunPos = XMVector3Project(sunDirection * 100000, 0, 0,
@@ -599,7 +601,7 @@ void RenderPath3D::RenderLightShafts(CommandList cmd) const
 			{
 				XMFLOAT2 sun;
 				XMStoreFloat2(&sun, sunPos);
-				wiRenderer::Postprocess_LightShafts(*sunSource, rtSun[1], cmd, sun);
+				wiRenderer::Postprocess_LightShafts(*renderpass_lightshafts.desc.attachments.back().texture, rtSun[1], cmd, sun);
 			}
 		}
 		device->EventEnd(cmd);
@@ -747,11 +749,6 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 		wiRenderer::DrawSoftParticles(wiRenderer::GetCamera(), rtLinearDepth, true, cmd);
 
 		device->RenderPassEnd(cmd);
-
-		if (getMSAASampleCount() > 1)
-		{
-			device->MSAAResolve(&rtParticleDistortion_Resolved, &rtParticleDistortion, cmd);
-		}
 		wiProfiler::EndRange(range);
 	}
 }

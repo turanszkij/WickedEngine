@@ -54,6 +54,8 @@ namespace wiGraphics
 		bool dirty_pso[COMMANDLIST_COUNT] = {};
 		void pso_validate(CommandList cmd);
 
+		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
+
 		ID3D11UnorderedAccessView* raster_uavs[COMMANDLIST_COUNT][8] = {};
 		uint8_t raster_uavs_slot[COMMANDLIST_COUNT] = {};
 		uint8_t raster_uavs_count[COMMANDLIST_COUNT] = {};
@@ -137,7 +139,6 @@ namespace wiGraphics
 		void DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
 		void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) override;
 		void CopyTexture2D_Region(const Texture* pDst, uint32_t dstMip, uint32_t dstX, uint32_t dstY, const Texture* pSrc, uint32_t srcMip, CommandList cmd) override;
-		void MSAAResolve(const Texture* pDst, const Texture* pSrc, CommandList cmd) override;
 		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) override;
 		void QueryBegin(const GPUQuery *query, CommandList cmd) override;
 		void QueryEnd(const GPUQuery *query, CommandList cmd) override;

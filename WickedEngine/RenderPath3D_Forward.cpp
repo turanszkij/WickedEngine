@@ -86,6 +86,12 @@ void RenderPath3D_Forward::ResizeBuffers()
 				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
 			)
 		);
+		if (getMSAASampleCount() > 1)
+		{
+			desc.attachments.push_back(RenderPassAttachment::Resolve(GetSceneRT_Read(0)));
+			desc.attachments.push_back(RenderPassAttachment::Resolve(GetSceneRT_Read(1)));
+			desc.attachments.push_back(RenderPassAttachment::Resolve(GetSceneRT_Read(2)));
+		}
 		device->CreateRenderPass(&desc, &renderpass_main);
 	}
 	{
@@ -101,6 +107,10 @@ void RenderPath3D_Forward::ResizeBuffers()
 				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
 			)
 		);
+		if (getMSAASampleCount() > 1)
+		{
+			desc.attachments.push_back(RenderPassAttachment::Resolve(GetSceneRT_Read(0)));
+		}
 		device->CreateRenderPass(&desc, &renderpass_transparent);
 	}
 }
@@ -234,13 +244,6 @@ void RenderPath3D_Forward::Render() const
 		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 		wiRenderer::BindCommonResources(cmd);
 
-		if (getMSAASampleCount() > 1)
-		{
-			device->MSAAResolve(GetSceneRT_Read(0), &rtMain[0], cmd);
-			device->MSAAResolve(GetSceneRT_Read(1), &rtMain[1], cmd);
-			device->MSAAResolve(GetSceneRT_Read(2), &rtMain[2], cmd);
-		}
-
 		DownsampleDepthBuffer(cmd);
 
 		RenderLightShafts(cmd);
@@ -252,11 +255,6 @@ void RenderPath3D_Forward::Render() const
 		RenderSSR(*GetSceneRT_Read(1), *GetSceneRT_Read(2), cmd);
 
 		RenderTransparents(renderpass_transparent, RENDERPASS_FORWARD, cmd);
-
-		if (getMSAASampleCount() > 1)
-		{
-			device->MSAAResolve(GetSceneRT_Read(0), &rtMain[0], cmd);
-		}
 
 		RenderPostprocessChain(*GetSceneRT_Read(0), *GetSceneRT_Read(1), cmd);
 

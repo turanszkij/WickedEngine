@@ -3846,10 +3846,13 @@ using namespace Vulkan_Internal;
 
 		VkResult res;
 
-		VkImageView attachments[9] = {};
-		VkAttachmentDescription attachmentDescriptions[9] = {};
+		VkImageView attachments[17] = {};
+		VkAttachmentDescription attachmentDescriptions[17] = {};
 		VkAttachmentReference colorAttachmentRefs[8] = {};
+		VkAttachmentReference resolveAttachmentRefs[8] = {};
 		VkAttachmentReference depthAttachmentRef = {};
+
+		int resolvecount = 0;
 
 		VkSubpassDescription subpass = {};
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -3967,9 +3970,26 @@ using namespace Vulkan_Internal;
 				depthAttachmentRef.layout = _ConvertImageLayout(attachment.subpass_layout);
 				subpass.pDepthStencilAttachment = &depthAttachmentRef;
 			}
-			else
+			else if (attachment.type == RenderPassAttachment::RESOLVE)
 			{
-				assert(0);
+				if (subresource < 0 || texture_internal_state->subresources_srv.empty())
+				{
+					attachments[validAttachmentCount] = texture_internal_state->srv;
+				}
+				else
+				{
+					assert(texture_internal_state->subresources_srv.size() > size_t(subresource) && "Invalid SRV subresource!");
+					attachments[validAttachmentCount] = texture_internal_state->subresources_srv[subresource];
+				}
+				if (attachments[validAttachmentCount] == VK_NULL_HANDLE)
+				{
+					continue;
+				}
+
+				resolveAttachmentRefs[resolvecount].attachment = validAttachmentCount;
+				resolveAttachmentRefs[resolvecount].layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				resolvecount++;
+				subpass.pResolveAttachments = resolveAttachmentRefs;
 			}
 
 			validAttachmentCount++;
@@ -4024,8 +4044,12 @@ using namespace Vulkan_Internal;
 			internal_state->beginInfo.clearValueCount = validAttachmentCount;
 			internal_state->beginInfo.pClearValues = internal_state->clearColors;
 
-			for (uint32_t i = 0; i < validAttachmentCount; ++i)
+			int i = 0;
+			for (auto& attachment : desc.attachments)
 			{
+				if (desc.attachments[i].type == RenderPassAttachment::RESOLVE || attachment.texture == nullptr)
+					continue;
+
 				const ClearValue& clear = desc.attachments[i].texture->desc.clear;
 				if (desc.attachments[i].type == RenderPassAttachment::RENDERTARGET)
 				{
@@ -4043,6 +4067,7 @@ using namespace Vulkan_Internal;
 				{
 					assert(0);
 				}
+				i++;
 			}
 		}
 
@@ -5164,9 +5189,6 @@ using namespace Vulkan_Internal;
 		}
 	}
 	void GraphicsDevice_Vulkan::CopyTexture2D_Region(const Texture* pDst, uint32_t dstMip, uint32_t dstX, uint32_t dstY, const Texture* pSrc, uint32_t srcMip, CommandList cmd)
-	{
-	}
-	void GraphicsDevice_Vulkan::MSAAResolve(const Texture* pDst, const Texture* pSrc, CommandList cmd)
 	{
 	}
 	void GraphicsDevice_Vulkan::UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize)
