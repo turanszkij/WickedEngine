@@ -1182,6 +1182,114 @@ namespace DX11_Internal
 }
 using namespace DX11_Internal;
 
+void GraphicsDevice_DX11::pso_validate(CommandList cmd)
+{
+	if (!dirty_pso[cmd])
+		return;
+
+	const PipelineState* pso = active_pso[cmd];
+	const PipelineStateDesc& desc = pso != nullptr ? pso->GetDesc() : PipelineStateDesc();
+
+	ID3D11VertexShader* vs = desc.vs == nullptr ? nullptr : static_cast<VertexShader_DX11*>(desc.vs->internal_state.get())->resource.Get();
+	if (vs != prev_vs[cmd])
+	{
+		deviceContexts[cmd]->VSSetShader(vs, nullptr, 0);
+		prev_vs[cmd] = vs;
+	}
+	ID3D11PixelShader* ps = desc.ps == nullptr ? nullptr : static_cast<PixelShader_DX11*>(desc.ps->internal_state.get())->resource.Get();
+	if (ps != prev_ps[cmd])
+	{
+		deviceContexts[cmd]->PSSetShader(ps, nullptr, 0);
+		prev_ps[cmd] = ps;
+	}
+	ID3D11HullShader* hs = desc.hs == nullptr ? nullptr : static_cast<HullShader_DX11*>(desc.hs->internal_state.get())->resource.Get();
+	if (hs != prev_hs[cmd])
+	{
+		deviceContexts[cmd]->HSSetShader(hs, nullptr, 0);
+		prev_hs[cmd] = hs;
+	}
+	ID3D11DomainShader* ds = desc.ds == nullptr ? nullptr : static_cast<DomainShader_DX11*>(desc.ds->internal_state.get())->resource.Get();
+	if (ds != prev_ds[cmd])
+	{
+		deviceContexts[cmd]->DSSetShader(ds, nullptr, 0);
+		prev_ds[cmd] = ds;
+	}
+	ID3D11GeometryShader* gs = desc.gs == nullptr ? nullptr : static_cast<GeometryShader_DX11*>(desc.gs->internal_state.get())->resource.Get();
+	if (gs != prev_gs[cmd])
+	{
+		deviceContexts[cmd]->GSSetShader(gs, nullptr, 0);
+		prev_gs[cmd] = gs;
+	}
+
+	ID3D11BlendState* bs = desc.bs == nullptr ? nullptr : to_internal(desc.bs)->resource.Get();
+	if (bs != prev_bs[cmd] || desc.sampleMask != prev_samplemask[cmd] ||
+		blendFactor[cmd].x != prev_blendfactor[cmd].x ||
+		blendFactor[cmd].y != prev_blendfactor[cmd].y ||
+		blendFactor[cmd].z != prev_blendfactor[cmd].z ||
+		blendFactor[cmd].w != prev_blendfactor[cmd].w
+		)
+	{
+		const float fact[4] = { blendFactor[cmd].x, blendFactor[cmd].y, blendFactor[cmd].z, blendFactor[cmd].w };
+		deviceContexts[cmd]->OMSetBlendState(bs, fact, desc.sampleMask);
+		prev_bs[cmd] = bs;
+		prev_blendfactor[cmd] = blendFactor[cmd];
+		prev_samplemask[cmd] = desc.sampleMask;
+	}
+
+	ID3D11RasterizerState* rs = desc.rs == nullptr ? nullptr : to_internal(desc.rs)->resource.Get();
+	if (rs != prev_rs[cmd])
+	{
+		deviceContexts[cmd]->RSSetState(rs);
+		prev_rs[cmd] = rs;
+	}
+
+	ID3D11DepthStencilState* dss = desc.dss == nullptr ? nullptr : to_internal(desc.dss)->resource.Get();
+	if (dss != prev_dss[cmd] || stencilRef[cmd] != prev_stencilRef[cmd])
+	{
+		deviceContexts[cmd]->OMSetDepthStencilState(dss, stencilRef[cmd]);
+		prev_dss[cmd] = dss;
+		prev_stencilRef[cmd] = stencilRef[cmd];
+	}
+
+	ID3D11InputLayout* il = desc.il == nullptr ? nullptr : to_internal(desc.il)->resource.Get();
+	if (il != prev_il[cmd])
+	{
+		deviceContexts[cmd]->IASetInputLayout(il);
+		prev_il[cmd] = il;
+	}
+
+	if (prev_pt[cmd] != desc.pt)
+	{
+		D3D11_PRIMITIVE_TOPOLOGY d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		switch (desc.pt)
+		{
+		case TRIANGLELIST:
+			d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+			break;
+		case TRIANGLESTRIP:
+			d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+			break;
+		case POINTLIST:
+			d3dType = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
+			break;
+		case LINELIST:
+			d3dType = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
+			break;
+		case LINESTRIP:
+			d3dType = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP;
+			break;
+		case PATCHLIST:
+			d3dType = D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
+			break;
+		default:
+			d3dType = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
+			break;
+		};
+		deviceContexts[cmd]->IASetPrimitiveTopology(d3dType);
+
+		prev_pt[cmd] = desc.pt;
+	}
+}
 
 // Engine functions
 GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fullscreen, bool debuglayer)
@@ -2423,6 +2531,7 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 		bool success = CreateBuffer(&frameAllocatorDesc, nullptr, &frame_allocators[cmd].buffer);
 		assert(success);
 		SetName(&frame_allocators[cmd].buffer, "frame_allocator");
+
 	}
 
 	BindPipelineState(nullptr, cmd);
@@ -2446,6 +2555,9 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 		pRects[i].top = INT32_MIN;
 	}
 	deviceContexts[cmd]->RSSetScissorRects(8, pRects);
+
+	active_pso[cmd] = nullptr;
+	dirty_pso[cmd] = false;
 
 	return cmd;
 }
@@ -2473,12 +2585,11 @@ void GraphicsDevice_DX11::RenderPassBegin(const RenderPass* renderpass, CommandL
 	const RenderPassDesc& desc = renderpass->GetDesc();
 
 	uint32_t rt_count = 0;
-	ID3D11RenderTargetView* RTVs[8] = {};
+	ID3D11RenderTargetView* RTVs[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 	ID3D11DepthStencilView* DSV = nullptr;
-	assert(desc.numAttachments < arraysize(RTVs) + 1);
-	for (uint32_t i = 0; i < desc.numAttachments; ++i)
+	assert(desc.attachments.size() < arraysize(RTVs) + 1);
+	for (auto& attachment : desc.attachments)
 	{
-		const RenderPassAttachment& attachment = desc.attachments[i];
 		const Texture* texture = attachment.texture;
 		int subresource = attachment.subresource;
 		auto internal_state = to_internal(texture);
@@ -2808,107 +2919,11 @@ void GraphicsDevice_DX11::BindBlendFactor(float r, float g, float b, float a, Co
 }
 void GraphicsDevice_DX11::BindPipelineState(const PipelineState* pso, CommandList cmd)
 {
-	const PipelineStateDesc& desc = pso != nullptr ? pso->GetDesc() : PipelineStateDesc();
+	if (active_pso[cmd] == pso)
+		return;
 
-	ID3D11VertexShader* vs = desc.vs == nullptr ? nullptr : static_cast<VertexShader_DX11*>(desc.vs->internal_state.get())->resource.Get();
-	if (vs != prev_vs[cmd])
-	{
-		deviceContexts[cmd]->VSSetShader(vs, nullptr, 0);
-		prev_vs[cmd] = vs;
-	}
-	ID3D11PixelShader* ps = desc.ps == nullptr ? nullptr : static_cast<PixelShader_DX11*>(desc.ps->internal_state.get())->resource.Get();
-	if (ps != prev_ps[cmd])
-	{
-		deviceContexts[cmd]->PSSetShader(ps, nullptr, 0);
-		prev_ps[cmd] = ps;
-	}
-	ID3D11HullShader* hs = desc.hs == nullptr ? nullptr : static_cast<HullShader_DX11*>(desc.hs->internal_state.get())->resource.Get();
-	if (hs != prev_hs[cmd])
-	{
-		deviceContexts[cmd]->HSSetShader(hs, nullptr, 0);
-		prev_hs[cmd] = hs;
-	}
-	ID3D11DomainShader* ds = desc.ds == nullptr ? nullptr : static_cast<DomainShader_DX11*>(desc.ds->internal_state.get())->resource.Get();
-	if (ds != prev_ds[cmd])
-	{
-		deviceContexts[cmd]->DSSetShader(ds, nullptr, 0);
-		prev_ds[cmd] = ds;
-	}
-	ID3D11GeometryShader* gs = desc.gs == nullptr ? nullptr : static_cast<GeometryShader_DX11*>(desc.gs->internal_state.get())->resource.Get();
-	if (gs != prev_gs[cmd])
-	{
-		deviceContexts[cmd]->GSSetShader(gs, nullptr, 0);
-		prev_gs[cmd] = gs;
-	}
-
-	ID3D11BlendState* bs = desc.bs == nullptr ? nullptr : to_internal(desc.bs)->resource.Get();
-	if (bs != prev_bs[cmd] || desc.sampleMask != prev_samplemask[cmd] ||
-		blendFactor[cmd].x != prev_blendfactor[cmd].x ||
-		blendFactor[cmd].y != prev_blendfactor[cmd].y ||
-		blendFactor[cmd].z != prev_blendfactor[cmd].z ||
-		blendFactor[cmd].w != prev_blendfactor[cmd].w
-		)
-	{
-		const float fact[4] = { blendFactor[cmd].x, blendFactor[cmd].y, blendFactor[cmd].z, blendFactor[cmd].w };
-		deviceContexts[cmd]->OMSetBlendState(bs, fact, desc.sampleMask);
-		prev_bs[cmd] = bs;
-		prev_blendfactor[cmd] = blendFactor[cmd];
-		prev_samplemask[cmd] = desc.sampleMask;
-	}
-
-	ID3D11RasterizerState* rs = desc.rs == nullptr ? nullptr : to_internal(desc.rs)->resource.Get();
-	if (rs != prev_rs[cmd])
-	{
-		deviceContexts[cmd]->RSSetState(rs);
-		prev_rs[cmd] = rs;
-	}
-
-	ID3D11DepthStencilState* dss = desc.dss == nullptr ? nullptr : to_internal(desc.dss)->resource.Get();
-	if (dss != prev_dss[cmd] || stencilRef[cmd] != prev_stencilRef[cmd])
-	{
-		deviceContexts[cmd]->OMSetDepthStencilState(dss, stencilRef[cmd]);
-		prev_dss[cmd] = dss;
-		prev_stencilRef[cmd] = stencilRef[cmd];
-	}
-
-	ID3D11InputLayout* il = desc.il == nullptr ? nullptr : to_internal(desc.il)->resource.Get();
-	if (il != prev_il[cmd])
-	{
-		deviceContexts[cmd]->IASetInputLayout(il);
-		prev_il[cmd] = il;
-	}
-
-	if (prev_pt[cmd] != desc.pt)
-	{
-		D3D11_PRIMITIVE_TOPOLOGY d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		switch (desc.pt)
-		{
-		case TRIANGLELIST:
-			d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-			break;
-		case TRIANGLESTRIP:
-			d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-			break;
-		case POINTLIST:
-			d3dType = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
-			break;
-		case LINELIST:
-			d3dType = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
-			break;
-		case LINESTRIP:
-			d3dType = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP;
-			break;
-		case PATCHLIST:
-			d3dType = D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
-			break;
-		default:
-			d3dType = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
-			break;
-		};
-		deviceContexts[cmd]->IASetPrimitiveTopology(d3dType);
-
-		prev_pt[cmd] = desc.pt;
-	}
+	active_pso[cmd] = pso;
+	dirty_pso[cmd] = true;
 }
 void GraphicsDevice_DX11::BindComputeShader(const Shader* cs, CommandList cmd)
 {
@@ -2921,36 +2936,42 @@ void GraphicsDevice_DX11::BindComputeShader(const Shader* cs, CommandList cmd)
 }
 void GraphicsDevice_DX11::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) 
 {
+	pso_validate(cmd);
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->Draw(vertexCount, startVertexLocation);
 }
 void GraphicsDevice_DX11::DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, CommandList cmd)
 {
+	pso_validate(cmd);
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->DrawIndexed(indexCount, startIndexLocation, baseVertexLocation);
 }
 void GraphicsDevice_DX11::DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd) 
 {
+	pso_validate(cmd);
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->DrawInstanced(vertexCount, instanceCount, startVertexLocation, startInstanceLocation);
 }
 void GraphicsDevice_DX11::DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 {
+	pso_validate(cmd);
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->DrawIndexedInstanced(indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
 }
 void GraphicsDevice_DX11::DrawInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 {
+	pso_validate(cmd);
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->DrawInstancedIndirect((ID3D11Buffer*)to_internal(args)->resource.Get(), args_offset);
 }
 void GraphicsDevice_DX11::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 {
+	pso_validate(cmd);
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->DrawIndexedInstancedIndirect((ID3D11Buffer*)to_internal(args)->resource.Get(), args_offset);

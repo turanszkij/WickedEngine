@@ -41,11 +41,6 @@ void RenderPath3D_TiledForward::Render() const
 		{
 			auto range = wiProfiler::BeginRangeGPU("Z-Prepass", cmd);
 
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_DEPTHSTENCIL),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-
 			device->RenderPassBegin(&renderpass_depthprepass, cmd);
 
 			Viewport vp;
@@ -64,7 +59,8 @@ void RenderPath3D_TiledForward::Render() const
 		{
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL, IMAGE_LAYOUT_SHADER_RESOURCE),
+					GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_SHADER_RESOURCE),
+					GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_GENERAL)
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -74,6 +70,7 @@ void RenderPath3D_TiledForward::Render() const
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY),
+					GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_GENERAL, IMAGE_LAYOUT_SHADER_RESOURCE)
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -82,7 +79,7 @@ void RenderPath3D_TiledForward::Render() const
 		{
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL, IMAGE_LAYOUT_COPY_SRC),
+					GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_COPY_SRC),
 					GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_COPY_DST)
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);

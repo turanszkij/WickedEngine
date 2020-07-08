@@ -60,24 +60,47 @@ void RenderPath3D_Forward::ResizeBuffers()
 
 	{
 		RenderPassDesc desc;
-
-		desc.numAttachments = 1;
-		desc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::LOADOP_CLEAR, &depthBuffer, -1 };
+		desc.attachments.push_back(
+			RenderPassAttachment::DepthStencil(
+				&depthBuffer,
+				RenderPassAttachment::LOADOP_CLEAR,
+				RenderPassAttachment::STOREOP_STORE,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+			)
+		);
 		device->CreateRenderPass(&desc, &renderpass_depthprepass);
 
-		desc.numAttachments = 4;
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::LOADOP_DONTCARE, &rtMain[0], -1 };
-		desc.attachments[1] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::LOADOP_CLEAR, &rtMain[1], -1 };
-		desc.attachments[2] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::LOADOP_CLEAR, &rtMain[2], -1 };
-		desc.attachments[3] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::LOADOP_LOAD, &depthBuffer, -1 };
+		desc.attachments.clear();
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtMain[0], RenderPassAttachment::LOADOP_DONTCARE));
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtMain[1], RenderPassAttachment::LOADOP_CLEAR));
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtMain[2], RenderPassAttachment::LOADOP_CLEAR));
+		desc.attachments.push_back(
+			RenderPassAttachment::DepthStencil(
+				&depthBuffer,
+				RenderPassAttachment::LOADOP_LOAD,
+				RenderPassAttachment::STOREOP_STORE,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+			)
+		);
 		device->CreateRenderPass(&desc, &renderpass_main);
 	}
 	{
 		RenderPassDesc desc;
-		desc.numAttachments = 2;
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&rtMain[0],-1 };
-		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&depthBuffer,-1,RenderPassAttachment::STOREOP_DONTCARE };
-
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtMain[0], RenderPassAttachment::LOADOP_LOAD));
+		desc.attachments.push_back(
+			RenderPassAttachment::DepthStencil(
+				&depthBuffer,
+				RenderPassAttachment::LOADOP_LOAD,
+				RenderPassAttachment::STOREOP_STORE,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+			)
+		);
 		device->CreateRenderPass(&desc, &renderpass_transparent);
 	}
 }
@@ -113,11 +136,6 @@ void RenderPath3D_Forward::Render() const
 		{
 			auto range = wiProfiler::BeginRangeGPU("Z-Prepass", cmd);
 
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_DEPTHSTENCIL),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-
 			device->RenderPassBegin(&renderpass_depthprepass, cmd);
 
 			Viewport vp;
@@ -136,7 +154,8 @@ void RenderPath3D_Forward::Render() const
 		{
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL, IMAGE_LAYOUT_SHADER_RESOURCE),
+					GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_SHADER_RESOURCE),
+					GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_GENERAL)
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -146,6 +165,7 @@ void RenderPath3D_Forward::Render() const
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY),
+					GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_GENERAL, IMAGE_LAYOUT_SHADER_RESOURCE)
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -154,7 +174,7 @@ void RenderPath3D_Forward::Render() const
 		{
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL, IMAGE_LAYOUT_COPY_SRC),
+					GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_COPY_SRC),
 					GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_COPY_DST)
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);

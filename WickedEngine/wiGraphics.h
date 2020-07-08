@@ -551,13 +551,53 @@ namespace wiGraphics
 			STOREOP_STORE,
 			STOREOP_DONTCARE,
 		} storeop = STOREOP_STORE;
-		IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_GENERAL;
-		IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_GENERAL;
+		IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_GENERAL;		// layout before the render pass
+		IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_GENERAL;		// layout after the render pass
+		IMAGE_LAYOUT subpass_layout = IMAGE_LAYOUT_RENDERTARGET;// layout within the render pass
+
+		static RenderPassAttachment RenderTarget(
+			const Texture* resource = nullptr,
+			LOAD_OPERATION load_op = LOADOP_LOAD,
+			STORE_OPERATION store_op = STOREOP_STORE,
+			IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_GENERAL,
+			IMAGE_LAYOUT subpass_layout = IMAGE_LAYOUT_RENDERTARGET,
+			IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_GENERAL
+		)
+		{
+			RenderPassAttachment attachment;
+			attachment.type = RENDERTARGET;
+			attachment.texture = resource;
+			attachment.loadop = load_op;
+			attachment.storeop = store_op;
+			attachment.initial_layout = initial_layout;
+			attachment.subpass_layout = subpass_layout;
+			attachment.final_layout = final_layout;
+			return attachment;
+		}
+
+		static RenderPassAttachment DepthStencil(
+			const Texture* resource = nullptr,
+			LOAD_OPERATION load_op = LOADOP_LOAD,
+			STORE_OPERATION store_op = STOREOP_STORE,
+			IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_DEPTHSTENCIL,
+			IMAGE_LAYOUT subpass_layout = IMAGE_LAYOUT_DEPTHSTENCIL,
+			IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_DEPTHSTENCIL
+		)
+		{
+			RenderPassAttachment attachment;
+			attachment.type = DEPTH_STENCIL;
+			attachment.texture = resource;
+			attachment.loadop = load_op;
+			attachment.storeop = store_op;
+			attachment.initial_layout = initial_layout;
+			attachment.subpass_layout = subpass_layout;
+			attachment.final_layout = final_layout;
+			return attachment;
+		}
 	};
 	struct RenderPassDesc
 	{
-		uint32_t numAttachments = 0;
-		RenderPassAttachment attachments[9] = {};
+		std::vector<RenderPassAttachment> attachments;
 	};
 	struct IndirectDrawArgsInstanced
 	{

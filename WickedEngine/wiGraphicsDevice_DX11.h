@@ -50,6 +50,10 @@ namespace wiGraphics
 		ID3D11InputLayout* prev_il[COMMANDLIST_COUNT] = {};
 		PRIMITIVETOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
 
+		const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
+		bool dirty_pso[COMMANDLIST_COUNT] = {};
+		void pso_validate(CommandList cmd);
+
 		ID3D11UnorderedAccessView* raster_uavs[COMMANDLIST_COUNT][8] = {};
 		uint8_t raster_uavs_slot[COMMANDLIST_COUNT] = {};
 		uint8_t raster_uavs_count[COMMANDLIST_COUNT] = {};
