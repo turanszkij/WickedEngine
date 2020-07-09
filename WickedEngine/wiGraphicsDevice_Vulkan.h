@@ -259,6 +259,8 @@ namespace wiGraphics
 
 		Texture GetBackBuffer() override;
 
+		void SetVSyncEnabled(bool value) override { VSYNC = value; CreateBackBufferResources(); };
+
 		///////////////Thread-sensitive////////////////////////
 
 		void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) override;

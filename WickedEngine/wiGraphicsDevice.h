@@ -64,7 +64,7 @@ namespace wiGraphics
 		virtual void ClearPipelineStateCache() {};
 
 		inline bool GetVSyncEnabled() const { return VSYNC; }
-		inline void SetVSyncEnabled(bool value) { VSYNC = value; }
+		virtual void SetVSyncEnabled(bool value) { VSYNC = value; }
 		inline uint64_t GetFrameCount() const { return FRAMECOUNT; }
 
 		// Returns native resolution width of back buffer in pixels:

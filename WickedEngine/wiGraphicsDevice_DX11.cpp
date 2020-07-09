@@ -2661,26 +2661,30 @@ void GraphicsDevice_DX11::RenderPassEnd(CommandList cmd)
 	int dst_counter = 0;
 	for (auto& attachment : active_renderpass[cmd]->desc.attachments)
 	{
-		if (attachment.type != RenderPassAttachment::RESOLVE || attachment.texture == nullptr)
-			continue;
-		auto dst_internal = to_internal(attachment.texture);
-
-		int src_counter = 0;
-		for (auto& src : active_renderpass[cmd]->desc.attachments)
+		if (attachment.type == RenderPassAttachment::RESOLVE)
 		{
-			if (src.type == RenderPassAttachment::RENDERTARGET && src.texture != nullptr)
+			if (attachment.texture != nullptr)
 			{
-				if (src_counter == dst_counter)
-				{
-					auto src_internal = to_internal(src.texture);
-					deviceContexts[cmd]->ResolveSubresource(dst_internal->resource.Get(), 0, src_internal->resource.Get(), 0, _ConvertFormat(attachment.texture->desc.Format));
-					break;
-				}
-				src_counter++;
-			}
-		}
+				auto dst_internal = to_internal(attachment.texture);
 
-		dst_counter++;
+				int src_counter = 0;
+				for (auto& src : active_renderpass[cmd]->desc.attachments)
+				{
+					if (src.type == RenderPassAttachment::RENDERTARGET && src.texture != nullptr)
+					{
+						if (src_counter == dst_counter)
+						{
+							auto src_internal = to_internal(src.texture);
+							deviceContexts[cmd]->ResolveSubresource(dst_internal->resource.Get(), 0, src_internal->resource.Get(), 0, _ConvertFormat(attachment.texture->desc.Format));
+							break;
+						}
+						src_counter++;
+					}
+				}
+			}
+
+			dst_counter++;
+		}
 	}
 	active_renderpass[cmd] = nullptr;
 }

@@ -67,13 +67,13 @@ If you wish to integrate Wicked Engine into your own project, you can use it as 
 	- ./WickedEngine
 3. Linker -> General -> Additional Library Directories:
 	- Directory of your built .lib file (For example ./x64/Release)
-4. Also be sure to compile with a non-DLL runtime library for Release builds:
+4. Compile with a non-DLL runtime library for Release builds:
 	- Project settings -> C/C++ -> Code Generation -> Runtime Library -> Multi threaded
 5. If you want to create a UWP application, link against the WickedEngine_UWP library.
 	
 When your project settings are set up, put `#include "WickedEngine.h"` in your source. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project.
 
-If you have trouble, you can always look at or copy the project settings for Editor, Tests and Template application projects to get an idea how to link with Wicked Engine.
+If you have trouble, you can look at or copy the project settings for Editor, Tests and Template application projects to get an idea how to link with Wicked Engine.
 
 Initialization example (C++):
 
@@ -223,7 +223,7 @@ You can specify command line arguments to switch between render devices or other
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/soft.gif"/>
 
 * *DX12 will try to load shaders from WickedEngine/shaders/hlsl6 directory. 
-HLSL6 shaders can be compiled by Rebuilding the Shaders_HLSL6 project from within Visual Studio.
+HLSL6 shaders can be compiled by Rebuilding the Shaders_HLSL6 project from within Visual Studio (Python 3 required for building).
 
 * **Vulkan support will be built into the application if the Vulkan SDK is installed on the build machine. 
 Vulkan will try to load shaders from WickedEngine/shaders/spirv directory. 

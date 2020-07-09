@@ -1320,7 +1320,14 @@ using namespace Vulkan_Internal;
 						{
 							imageInfos.back().imageView = to_internal(texture)->srv;
 						}
-						imageInfos.back().imageLayout = _ConvertImageLayout(texture->desc.layout);
+
+						VkImageLayout layout = _ConvertImageLayout(texture->desc.layout);
+						if (layout != VK_IMAGE_LAYOUT_GENERAL && layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+						{
+							// Means texture initial layout is not compatible, so it must have been transitioned
+							layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+						}
+						imageInfos.back().imageLayout = layout;
 					}
 				}
 				break;
@@ -1377,7 +1384,6 @@ using namespace Vulkan_Internal;
 						{
 							imageInfos.back().imageView = to_internal(texture)->uav;
 						}
-						imageInfos.back().imageLayout = _ConvertImageLayout(texture->desc.layout);
 					}
 				}
 				break;
@@ -2598,7 +2604,19 @@ using namespace Vulkan_Internal;
 
 		createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
 		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-		createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+		createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR; // The only one that is always supported
+		if (!VSYNC)
+		{
+			// The immediate present mode is not necessarily supported:
+			for (auto& presentmode : swapChainSupport.presentModes)
+			{
+				if (presentmode == VK_PRESENT_MODE_IMMEDIATE_KHR)
+				{
+					createInfo.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+					break;
+				}
+			}
+		}
 		createInfo.clipped = VK_TRUE;
 		createInfo.oldSwapchain = VK_NULL_HANDLE;
 
@@ -3972,22 +3990,29 @@ using namespace Vulkan_Internal;
 			}
 			else if (attachment.type == RenderPassAttachment::RESOLVE)
 			{
-				if (subresource < 0 || texture_internal_state->subresources_srv.empty())
+				if (attachment.texture == nullptr)
 				{
-					attachments[validAttachmentCount] = texture_internal_state->srv;
+					resolveAttachmentRefs[resolvecount].attachment = VK_ATTACHMENT_UNUSED;
 				}
 				else
 				{
-					assert(texture_internal_state->subresources_srv.size() > size_t(subresource) && "Invalid SRV subresource!");
-					attachments[validAttachmentCount] = texture_internal_state->subresources_srv[subresource];
-				}
-				if (attachments[validAttachmentCount] == VK_NULL_HANDLE)
-				{
-					continue;
+					if (subresource < 0 || texture_internal_state->subresources_srv.empty())
+					{
+						attachments[validAttachmentCount] = texture_internal_state->srv;
+					}
+					else
+					{
+						assert(texture_internal_state->subresources_srv.size() > size_t(subresource) && "Invalid SRV subresource!");
+						attachments[validAttachmentCount] = texture_internal_state->subresources_srv[subresource];
+					}
+					if (attachments[validAttachmentCount] == VK_NULL_HANDLE)
+					{
+						continue;
+					}
+					resolveAttachmentRefs[resolvecount].attachment = validAttachmentCount;
+					resolveAttachmentRefs[resolvecount].layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 				}
 
-				resolveAttachmentRefs[resolvecount].attachment = validAttachmentCount;
-				resolveAttachmentRefs[resolvecount].layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 				resolvecount++;
 				subpass.pResolveAttachments = resolveAttachmentRefs;
 			}

@@ -532,14 +532,24 @@ Shaders still need to be created with `GraphicsDevice::CreateShader()` in a simi
 Depending on the graphics device implementation, the shader code must be different format. For example, DirectX expects HLSL shaders, Vulkan expects SPIR-V shaders. The engine can only use precompiled shader bytecodes, shader compilation from high level source code is not supported. Usually shaders are compiled into bytecode and saved to files (with .cso extension) by Visual Studio if they are included in the project. These files can be loaded to memory and provided as input buffers to the CreateShader() function.
 
 ##### Render Passes
-Render passes are defining regions in GPU execution where a number of render targets or depth buffers will be used to render into them. Render targets and depth buffers are defined as `RenderPassAttachment`s. The `RenderPassAttachment`s have a pointer to the texture, state the resource type (`RENDER_TARGET` or `DEPTH_STENCIL`), state the [subresource](#subresources) index, the load and store operations, and the layout transitions for the textures.
+Render passes are defining regions in GPU execution where a number of render targets or depth buffers will be used to render into them. Render targets and depth buffers are defined as `RenderPassAttachment`s. The `RenderPassAttachment`s have a pointer to the texture, state the resource type (`RENDERTARGET`, `DEPTH_STENCIL` or `RESOLVE`), state the [subresource](#subresources) index, the load and store operations, and the layout transitions for the textures.
+
+- `RENDERTARGET`: The attachment will be used as a (color) render target. The order of these attachments define the shader color output order.
+- `DEPTH_STENCIL`: The attachment will be used as a depth (and/or stencil) buffer.
+- `RESOLVE`: The attachment will be used as MSAA resolve destination. The resolve source is chosen among the `RENDERTARGET` attachments in the same render pass, in the order they were declared in. The declaration order of the `RENDERTARGET` and `RESOLVE` attachment must match to correctly deduce source and destination targets for resolve operations.
 
 - Load Operation: <br/>
 Defines how the texture contents are initialized at the start of the render pass. `LOADOP_LOAD` says that the previous texture content will be retained. `LOADOP_CLEAR` says that the previous contents of the texture will be lost and instead the texture clear color will be used to fill the texture. `LOADOP_DONTCARE` says that the texture contents are undefined, so this should only be used when the developer can ensure that the whole texture will be rendered to and not leaving any region empty (in which case, undefined results will be present in the texture).
 - Store operation: <br/>
 Defines how the texture contents are handled after the render pass ends. `STOREOP_STORE` means that the contents will be preserved. `STOREOP_DONTCARE` means that the contents won't be necessarily preserved, they are only temporarily valid within the duration of the render pass, which can save some memory bandwidth on some platforms (specifically tile based rendering architectures, like mobile GPUs).
 - Layout transition: <br/>
-Define the `intial_layout` and `final_layout` members to have an implicit transition performed as part of the render pass, that works like an [IMAGE_BARRIER](#gpu-barriers), but can be more optimal.
+Define the `intial_layout`, `subpass_layout` (only for `RENDERTARGET` or `DEPTH_STENCIL`) and `final_layout` members to have an implicit transition performed as part of the render pass, that works like an [IMAGE_BARRIER](#gpu-barriers), but can be more optimal. The `initial_layout` states the starting state of the resource. The resource will be transitioned from `initial_layout` to `subpass_layout` within the render pass. The `subpass_layout` states how the resource is accessed within the render pass. For `RENDERTARGET`, this must be `IMAGE_LAYOUT_RENDERTARGET`, for `DEPTH_STENCIL` type, it must be either `IMAGE_LAYOUT_DEPTHSTENCIL` or `IMAGE_LAYOUT_DEPTHSTENCIL_READONLY`. For `RESOLVE` type, the subpass_layout have no meaning, it is implicitly defined. At the end of the render pass, the resources will be transitioned from `subpass_layout` to `final_layout`.
+
+Notes:
+- When `RenderPassBegin()` is called, `RenderPassEnd()` must be called after on the same command list before the command list gets [submitted](#work-submission).
+- It is not allowed to call `CopyResource()`, `CopyTexture2D()`, etc. inside a render pass.
+- It is not allowed to call `Dispatch()` and `DispatchIndirect()` inside a render pass.
+- It is not allowed to call `UpdateBuffer()` inside the render pass unless the buffer is `USAGE_DYNAMIC` and is a `BIND_CONSTANT_BUFFER`.
 
 ##### GPU Barriers
 `GPUBarrier`s can be used to state dependencies between GPU workloads. There are different kinds of barriers:
@@ -547,7 +557,7 @@ Define the `intial_layout` and `final_layout` members to have an implicit transi
 - MEMORY_BARRIER <br/>
 Memory barriers are used to wait for UAV writes to finish, or in other words to wait for shaders to finish that are writing to a BIND_UNORDERED_ACCESS resource. The `GPUBarrier::memory.resource` member is a pointer to the GPUResource to wait on. If it is nullptr, than the barrier means "wait for every UAV write that is in flight to finish".
 - IMAGE_BARRIER <br/>
-Image barriers are stating resource state transition for [textures](#textures). The most common use case for example is to transition from `IMAGE_LAYOUT_RENDERTARGET` to `IMAGE_LAYOUT_SHADER_RESOURCE`, which means that the [RenderPass](#renderpass) that writes to the texture as render target must finish before the barrier, and the texture can be used as a read only shader resource after the barrier. There are other cases that can be indicated using the `GPUBarrier::image.layout_before` and `GPUBarrier::image.layout_after` states. The `GPUBarrier::image.resource` is a pointer to the resource which will have its state changed.
+Image barriers are stating resource state transition for [textures](#textures). The most common use case for example is to transition from `IMAGE_LAYOUT_RENDERTARGET` to `IMAGE_LAYOUT_SHADER_RESOURCE`, which means that the [RenderPass](#render-passes) that writes to the texture as render target must finish before the barrier, and the texture can be used as a read only shader resource after the barrier. There are other cases that can be indicated using the `GPUBarrier::image.layout_before` and `GPUBarrier::image.layout_after` states. The `GPUBarrier::image.resource` is a pointer to the resource which will have its state changed. If the texture's `layout` (as part of the TextureDesc) is not `IMAGE_LAYOUT_GENERAL` or `IMAGE_LAYOUT_SHADER_RESOURCE`, the layout must be transitioned to `IMAGE_LAYOUT_SHADER_RESOURCE` before binding as shader resource. The image layout can also be transitioned using a [RenderPass](#render-passes), which should be preferred to `GPUBarrier`s.
 - BUFFER_BARRIER <br/>
 Similar to `IMAGE_BARRIER`, but for [GPU Buffer](#gpu-buffers) state transitions.
 
