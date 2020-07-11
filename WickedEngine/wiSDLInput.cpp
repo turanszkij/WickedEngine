@@ -175,7 +175,7 @@ namespace wiSDLInput
 }
 
 #else
-namespace wiRawInput
+namespace wiSDLInput
 {
     void Initialize() {}
     void Update() {}
