@@ -219,8 +219,6 @@ namespace wiHelper
 		return appDir;
 	}
 
-	static std::string workingdir = GetOriginalWorkingDirectory();
-
 	string GetOriginalWorkingDirectory()
 	{
 #ifdef _WIN32
@@ -231,6 +229,7 @@ namespace wiHelper
 		return originalWorkingDir;
 	}
 
+	static std::string workingdir = GetOriginalWorkingDirectory();
 	string GetWorkingDirectory()
 	{
 		return workingdir;
