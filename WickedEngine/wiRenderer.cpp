@@ -2919,23 +2919,32 @@ static const uint32_t CASCADE_COUNT = 3;
 struct SHCAM
 {
 	XMMATRIX VP;
-	Frustum frustum;
+	Frustum frustum;					// This frustum can be used for intersection test with wiIntersect primitives
+	BoundingFrustum boundingfrustum;	// This boundingfrustum can be used for frustum vs frustum intersection test
 
 	SHCAM() {}
-	SHCAM(const XMVECTOR& eyePos, const XMVECTOR& rotation, float nearPlane, float farPlane, float fov) 
+	SHCAM(const XMFLOAT3& eyePos, const XMFLOAT4& rotation, float nearPlane, float farPlane, float fov) 
 	{
-		const XMMATRIX rot = XMMatrixRotationQuaternion(rotation);
+		const XMVECTOR E = XMLoadFloat3(&eyePos);
+		const XMVECTOR Q = XMQuaternionNormalize(XMLoadFloat4(&rotation));
+		const XMMATRIX rot = XMMatrixRotationQuaternion(Q);
 		const XMVECTOR to = XMVector3TransformNormal(XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), rot);
 		const XMVECTOR up = XMVector3TransformNormal(XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rot);
-		const XMMATRIX V = XMMatrixLookToLH(eyePos, to, up);
+		const XMMATRIX V = XMMatrixLookToLH(E, to, up);
 		const XMMATRIX P = XMMatrixPerspectiveFovLH(fov, 1, farPlane, nearPlane);
 		VP = XMMatrixMultiply(V, P);
 		frustum.Create(VP);
+
+		
+		BoundingFrustum::CreateFromMatrix(boundingfrustum, P);
+		std::swap(boundingfrustum.Near, boundingfrustum.Far);
+		boundingfrustum.Transform(boundingfrustum, XMMatrixInverse(nullptr, V));
+		XMStoreFloat4(&boundingfrustum.Orientation, XMQuaternionNormalize(XMLoadFloat4(&boundingfrustum.Orientation)));
 	};
 };
 inline void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
 {
-	shcam = SHCAM(XMLoadFloat3(&light.position), XMLoadFloat4(&light.rotation), 0.1f, light.GetRange(), light.fov);
+	shcam = SHCAM(light.position, light.rotation, 0.1f, light.GetRange(), light.fov);
 }
 inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponent camera, std::array<SHCAM, CASCADE_COUNT>& shcams)
 {
@@ -3135,12 +3144,13 @@ void BindEnvironmentTextures(SHADERSTAGE stage, CommandList cmd)
 }
 
 void RenderMeshes(
-	const RenderQueue& renderQueue, 
-	RENDERPASS renderPass, 
-	uint32_t renderTypeFlags, 
+	const RenderQueue& renderQueue,
+	RENDERPASS renderPass,
+	uint32_t renderTypeFlags,
 	CommandList cmd,
 	bool tessellation = false,
-	const SHCAM* shcams = nullptr
+	const Frustum* frusta = nullptr,
+	uint32_t frustum_count = 1
 )
 {
 	if (!renderQueue.empty())
@@ -3185,17 +3195,9 @@ void RenderMeshes(
 			renderPass == RENDERPASS_ENVMAPCAPTURE ||
 			renderPass == RENDERPASS_VOXELIZE;
 
-		// Do we render to cubemaps in this pass?
-		const bool cubemapRenderRequest =
-			renderPass == RENDERPASS_SHADOWCUBE ||
-			renderPass == RENDERPASS_ENVMAPCAPTURE;
-
-		// If we will be rendering to cubemaps, we will further replicate instances to each visible cubemap face:
-		const uint32_t instanceReplicator = cubemapRenderRequest ? 6 : 1;
-
 		// Pre-allocate space for all the instances in GPU-buffer:
 		const uint32_t instanceDataSize = advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
-		size_t alloc_size = renderQueue.batchCount * instanceReplicator * instanceDataSize;
+		size_t alloc_size = renderQueue.batchCount * frustum_count * instanceDataSize;
 		GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
 
 		// Purpose of InstancedBatch:
@@ -3213,6 +3215,7 @@ void RenderMeshes(
 		InstancedBatch* instancedBatchArray = nullptr;
 		int instancedBatchCount = 0;
 
+		// The following loop is writing the instancing batches to a GPUBuffer:
 		size_t prevMeshIndex = ~0;
 		uint8_t prevUserStencilRefOverride = 0;
 		uint32_t instanceCount = 0;
@@ -3270,9 +3273,9 @@ void RenderMeshes(
 
 			const XMFLOAT4X4& worldMatrix = instance.transform_index >= 0 ? scene.transforms[instance.transform_index].world : IDENTITYMATRIX;
 
-			for (uint32_t subInstance = 0; subInstance < instanceReplicator; ++subInstance)
+			for (uint32_t frustum_index = 0; frustum_index < frustum_count; ++frustum_index)
 			{
-				if (shcams != nullptr && !shcams[subInstance].frustum.CheckBox(instanceAABB))
+				if (frusta != nullptr && !frusta[frustum_index].CheckBox(instanceAABB))
 				{
 					// In case shadow cameras were provided and no intersection detected with frustum, we don't add the instance for the face:
 					continue;
@@ -3281,7 +3284,7 @@ void RenderMeshes(
 				// Write into actual GPU-buffer:
 				if (advancedVBRequest)
 				{
-					((volatile InstBuf*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, subInstance);
+					((volatile InstBuf*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index);
 
 					const XMFLOAT4X4& prev_worldMatrix = instance.prev_transform_index >= 0 ? scene.prev_transforms[instance.prev_transform_index].world_prev : IDENTITYMATRIX;
 					((volatile InstBuf*)instances.data)[instanceCount].instancePrev.Create(prev_worldMatrix);
@@ -3289,7 +3292,7 @@ void RenderMeshes(
 				}
 				else
 				{
-					((volatile Instance*)instances.data)[instanceCount].Create(worldMatrix, instance.color, dither, subInstance);
+					((volatile Instance*)instances.data)[instanceCount].Create(worldMatrix, instance.color, dither, frustum_index);
 				}
 
 				current_batch.instanceCount++; // next instance in current InstancedBatch
@@ -5541,6 +5544,12 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 		BindConstantBuffers(VS, cmd);
 		BindConstantBuffers(PS, cmd);
 
+		BoundingFrustum cam_frustum;
+		BoundingFrustum::CreateFromMatrix(cam_frustum, camera.GetProjection());
+		std::swap(cam_frustum.Near, cam_frustum.Far);
+		cam_frustum.Transform(cam_frustum, camera.GetInvView());
+		XMStoreFloat4(&cam_frustum.Orientation, XMQuaternionNormalize(XMLoadFloat4(&cam_frustum.Orientation)));
+
 		const Scene& scene = GetScene();
 
 		device->UnbindResources(TEXSLOT_SHADOWARRAY_2D, 2, cmd);
@@ -5628,6 +5637,8 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 			{
 				SHCAM shcam;
 				CreateSpotLightShadowCam(light, shcam);
+				if (!cam_frustum.Intersects(shcam.boundingfrustum))
+					break;
 
 				RenderQueue renderQueue;
 				bool transparentShadowsRequested = false;
@@ -5733,20 +5744,27 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 
 					const float zNearP = 0.1f;
 					const float zFarP = std::max(1.0f, light.GetRange());
-					const XMVECTOR lightPos = XMLoadFloat3(&light.position);
-					const SHCAM cameras[] = {
-						SHCAM(lightPos, XMVectorSet(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
-						SHCAM(lightPos, XMVectorSet(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //-x
-						SHCAM(lightPos, XMVectorSet(1, 0, 0, -0), zNearP, zFarP, XM_PIDIV2), //+y
-						SHCAM(lightPos, XMVectorSet(0, 0, 0, -1), zNearP, zFarP, XM_PIDIV2), //-y
-						SHCAM(lightPos, XMVectorSet(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2), //+z
-						SHCAM(lightPos, XMVectorSet(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2), //-z
+					SHCAM cameras[] = {
+						SHCAM(light.position, XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
+						SHCAM(light.position, XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //-x
+						SHCAM(light.position, XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PIDIV2), //+y
+						SHCAM(light.position, XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PIDIV2), //-y
+						SHCAM(light.position, XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2), //+z
+						SHCAM(light.position, XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2), //-z
 					};
+					Frustum frusta[arraysize(cameras)];
+					uint32_t frustum_count = 0;
 
 					CubemapRenderCB cb;
-					for (int shcam = 0; shcam < arraysize(cameras); ++shcam)
+					for (uint32_t shcam = 0; shcam < arraysize(cameras); ++shcam)
 					{
-						XMStoreFloat4x4(&cb.xCubeShadowVP[shcam], cameras[shcam].VP);
+						if (cam_frustum.Intersects(cameras[shcam].boundingfrustum))
+						{
+							XMStoreFloat4x4(&cb.xCubemapRenderCams[frustum_count].VP, cameras[shcam].VP);
+							cb.xCubemapRenderCams[frustum_count].properties = uint4(shcam, 0, 0, 0);
+							frusta[frustum_count] = cameras[shcam].frustum;
+							frustum_count++;
+						}
 					}
 					device->UpdateBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, cmd);
 					device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), cmd);
@@ -5761,7 +5779,7 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 					device->BindViewports(1, &vp, cmd);
 
 					device->RenderPassBegin(&renderpasses_shadowCube[light.shadowMap_index], cmd);
-					RenderMeshes(renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, cmd, false, cameras);
+					RenderMeshes(renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, cmd, false, frusta, frustum_count);
 					device->RenderPassEnd(cmd);
 
 					GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
@@ -7224,20 +7242,22 @@ void RefreshEnvProbes(CommandList cmd)
 		const EnvironmentProbeComponent& probe = scene.probes[probeIndex];
 		Entity entity = scene.probes.GetEntity(probeIndex);
 
-		const XMVECTOR probePos = XMLoadFloat3(&probe.position);
 		const SHCAM cameras[] = {
-			SHCAM(probePos, XMVectorSet(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
-			SHCAM(probePos, XMVectorSet(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //-x
-			SHCAM(probePos, XMVectorSet(1, 0, 0, -0), zNearP, zFarP, XM_PIDIV2), //+y
-			SHCAM(probePos, XMVectorSet(0, 0, 0, -1), zNearP, zFarP, XM_PIDIV2), //-y
-			SHCAM(probePos, XMVectorSet(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2), //+z
-			SHCAM(probePos, XMVectorSet(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2), //-z
+			SHCAM(probe.position, XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
+			SHCAM(probe.position, XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //-x
+			SHCAM(probe.position, XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PIDIV2), //+y
+			SHCAM(probe.position, XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PIDIV2), //-y
+			SHCAM(probe.position, XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2), //+z
+			SHCAM(probe.position, XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2), //-z
 		};
+		Frustum frusta[arraysize(cameras)];
 
 		CubemapRenderCB cb;
-		for (int i = 0; i < arraysize(cameras); ++i)
+		for (uint32_t i = 0; i < arraysize(cameras); ++i)
 		{
-			XMStoreFloat4x4(&cb.xCubeShadowVP[i], cameras[i].VP);
+			frusta[i] = cameras[i].frustum;
+			XMStoreFloat4x4(&cb.xCubemapRenderCams[i].VP, cameras[i].VP);
+			cb.xCubemapRenderCams[i].properties = uint4(i, 0, 0, 0);
 		}
 
 		device->UpdateBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, cmd);
@@ -7287,7 +7307,7 @@ void RefreshEnvProbes(CommandList cmd)
 			BindShadowmaps(PS, cmd);
 			device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
 
-			RenderMeshes(renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_ALL, cmd, false, cameras);
+			RenderMeshes(renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_ALL, cmd, false, frusta, arraysize(frusta));
 
 			GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 		}
@@ -7618,6 +7638,7 @@ void VoxelRadiance(CommandList cmd)
 		}
 
 		RenderPassDesc renderpassdesc;
+		renderpassdesc._flags = RenderPassDesc::FLAG_ALLOW_UAV_WRITES;
 		device->CreateRenderPass(&renderpassdesc, &renderpass_voxelize);
 	}
 	if (voxelSceneData.secondaryBounceEnabled && !textures[TEXTYPE_3D_VOXELRADIANCE_HELPER].IsValid())

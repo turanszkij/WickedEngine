@@ -4021,7 +4021,12 @@ using namespace DX12_Internal;
 
 		}
 
-		GetDirectCommandList(cmd)->BeginRenderPass(rt_count, RTVs, dsv ? &DSV : nullptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
+		D3D12_RENDER_PASS_FLAGS flags = D3D12_RENDER_PASS_FLAG_NONE;
+		if (desc._flags & RenderPassDesc::FLAG_ALLOW_UAV_WRITES)
+		{
+			flags &= D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES;
+		}
+		GetDirectCommandList(cmd)->BeginRenderPass(rt_count, RTVs, dsv ? &DSV : nullptr, flags);
 
 	}
 	void GraphicsDevice_DX12::RenderPassEnd(CommandList cmd)
