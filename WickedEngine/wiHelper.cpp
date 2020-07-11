@@ -14,6 +14,7 @@
 #include <codecvt> // string conversion
 
 #ifdef _WIN32
+#include <direct.h>
 #ifdef PLATFORM_UWP
 #include <collection.h>
 #include <ppltasks.h>
@@ -29,6 +30,7 @@ using namespace std;
 
 namespace wiHelper
 {
+
 	string toUpper(const std::string& s)
 	{
 		std::string result;
@@ -201,34 +203,32 @@ namespace wiHelper
 
 	string GetApplicationDirectory()
 	{
-		static string appDir;
-		static bool initComplete = false;
-		if (!initComplete)
-		{
 #ifdef _WIN32
+		static std::string appDir;
+		if (appDir.empty())
+		{
 			CHAR fileName[1024] = {};
 			GetModuleFileNameA(NULL, fileName, arraysize(fileName));
 			appDir = GetDirectoryFromPath(fileName);
-#elif SDL2
-        appDir = std::string(SDL_GetBasePath());
-#else
-#error TODO
-#endif // _WIN32
-			initComplete = true;
 		}
+#elif SDL2
+		static std::string appDir = std::string(SDL_GetBasePath());
+#else
+		static std::string appDir;
+#endif // _WIN32
 		return appDir;
 	}
 
-#ifdef _WIN32
-#include <direct.h>
-	static std::string workingdir = std::string(_getcwd(NULL, 0)) + "/";
-#else
-	static std::string workingdir;
-#endif // _WIN32
-	static std::string __originalWorkingDir = workingdir;
+	static std::string workingdir = GetOriginalWorkingDirectory();
+
 	string GetOriginalWorkingDirectory()
 	{
-		return __originalWorkingDir;
+#ifdef _WIN32
+		static std::string originalWorkingDir = std::string(_getcwd(NULL, 0)) + "/";
+#else
+		static std::string originalWorkingDir;
+#endif
+		return originalWorkingDir;
 	}
 
 	string GetWorkingDirectory()
