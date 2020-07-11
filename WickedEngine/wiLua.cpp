@@ -102,8 +102,8 @@ namespace wiLua
 		LoadingScreen_BindLua::Bind();
 		RenderPath3D_BindLua::Bind();
 		// Note: when all render paths are registered, heap corruptions start happening!!!
-		//RenderPath3D_Deferred_BindLua::Bind();
 		//RenderPath3D_Forward_BindLua::Bind();
+		RenderPath3D_Deferred_BindLua::Bind();
 		RenderPath3D_TiledForward_BindLua::Bind();
 		RenderPath3D_TiledDeferred_BindLua::Bind();
 		Texture_BindLua::Bind();
@@ -120,6 +120,8 @@ namespace wiLua
 		wiBackLog_BindLua::Bind();
 		wiNetwork_BindLua::Bind();
 		wiIntersect_BindLua::Bind();
+
+		wiBackLog::post("wiLua Initialized");
 	}
 
 	lua_State* GetLuaState()
