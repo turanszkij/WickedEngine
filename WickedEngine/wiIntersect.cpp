@@ -39,13 +39,12 @@ AABB AABB::transform(const XMFLOAT4X4& mat) const
 }
 XMFLOAT3 AABB::getCenter() const 
 {
-	XMFLOAT3 min = getMin(), max = getMax();
-	return XMFLOAT3((min.x + max.x)*0.5f, (min.y + max.y)*0.5f, (min.z + max.z)*0.5f);
+	return XMFLOAT3((_min.x + _max.x)*0.5f, (_min.y + _max.y)*0.5f, (_min.z + _max.z)*0.5f);
 }
 XMFLOAT3 AABB::getHalfWidth() const 
 {
-	XMFLOAT3 max = getMax(), center = getCenter();
-	return XMFLOAT3(abs(max.x - center.x), abs(max.y - center.y), abs(max.z - center.z));
+	XMFLOAT3 center = getCenter();
+	return XMFLOAT3(abs(_max.x - center.x), abs(_max.y - center.y), abs(_max.z - center.z));
 }
 XMMATRIX AABB::AABB::getAsBoxMatrix() const
 {
@@ -146,6 +145,12 @@ bool AABB::intersects(const RAY& ray) const {
 bool AABB::intersects(const SPHERE& sphere) const 
 {
 	return sphere.intersects(*this);
+}
+bool AABB::intersects(const BoundingFrustum& frustum) const
+{
+	BoundingBox bb = BoundingBox(getCenter(), getHalfWidth());
+	bool intersection = frustum.Intersects(bb);
+	return intersection;
 }
 AABB AABB::operator* (float a)
 {

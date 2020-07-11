@@ -15,8 +15,9 @@ VertexOut main(Input_Object_POS_TEX input)
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.inst);
 	VertexSurface surface = MakeVertexSurfaceFromInput(input);
 
-	output.RTIndex = input.inst.userdata.y;
-	output.pos = mul(xCubeShadowVP[output.RTIndex], mul(WORLD, surface.position));
+	uint frustum_index = input.inst.userdata.y;
+	output.RTIndex = xCubemapRenderCams[frustum_index].properties.x;
+	output.pos = mul(xCubemapRenderCams[frustum_index].VP, mul(WORLD, surface.position));
 	output.uv = g_xMaterial.uvset_baseColorMap == 0 ? surface.uvsets.xy : surface.uvsets.zw;
 
 	return output;
