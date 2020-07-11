@@ -2,6 +2,7 @@
 #include "wiPlatform.h"
 #include "wiXInput.h"
 #include "wiRawInput.h"
+#include "wiSDLInput.h"
 #include "wiHelper.h"
 #include "wiBackLog.h"
 #include "wiProfiler.h"
@@ -11,6 +12,10 @@
 #include <map>
 #include <atomic>
 #include <thread>
+
+#ifdef SDL2
+#include <SDL2/SDL.h>
+#endif
 
 using namespace std;
 
@@ -153,6 +158,7 @@ namespace wiInput
 	void Initialize()
 	{
 		wiRawInput::Initialize();
+		wiSDLInput::Initialize();
 
 		wiBackLog::post("wiInput Initialized");
 		initialized.store(true);
@@ -169,16 +175,25 @@ namespace wiInput
 
 		wiXInput::Update();
 		wiRawInput::Update();
+		wiSDLInput::Update();
 
 		mouse.delta_wheel = 0;
 		mouse.delta_position = XMFLOAT2(0, 0);
+
+#ifdef _WIN32
 		wiRawInput::GetMouseState(&mouse); // currently only the relative data can be used from this
 		wiRawInput::GetKeyboardState(&keyboard); // it contains pressed buttons as "keyboard/typewriter" like, so no continuous presses
 
 		// apparently checking the mouse here instead of Down() avoids missing the button presses (review!)
-		mouse.left_button_press |= KEY_DOWN(VK_LBUTTON);
-		mouse.middle_button_press |= KEY_DOWN(VK_MBUTTON);
-		mouse.right_button_press |= KEY_DOWN(VK_RBUTTON);
+        mouse.left_button_press |= KEY_DOWN(VK_LBUTTON);
+        mouse.middle_button_press |= KEY_DOWN(VK_MBUTTON);
+        mouse.right_button_press |= KEY_DOWN(VK_RBUTTON);
+#elif SDL2
+		wiSDLInput::GetMouseState(&mouse);
+		wiSDLInput::GetKeyboardState(&keyboard);
+		//TODO controllers
+		//TODO touch
+#endif
 
 #ifdef PLATFORM_UWP
 		static bool isRegisteredTouch = false;
@@ -448,10 +463,103 @@ namespace wiInput
 			case wiInput::KEYBOARD_BUTTON_PAGEUP:
 				keycode = VK_PRIOR;
 				break;
+#elif SDL2
+                case wiInput::KEYBOARD_BUTTON_UP:
+                    keycode = SDL_SCANCODE_UP;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_DOWN:
+                    keycode = SDL_SCANCODE_DOWN;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_LEFT:
+                    keycode = SDL_SCANCODE_LEFT;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_RIGHT:
+                    keycode = SDL_SCANCODE_RIGHT;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_SPACE:
+                    keycode = SDL_SCANCODE_SPACE;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_RSHIFT:
+                    keycode = SDL_SCANCODE_RSHIFT;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_LSHIFT:
+                    keycode = SDL_SCANCODE_LSHIFT;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_F1:
+                    keycode = SDL_SCANCODE_F1;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_F2:
+                    keycode = SDL_SCANCODE_F2;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_F3:
+                    keycode = SDL_SCANCODE_F3;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_F4:
+                    keycode = SDL_SCANCODE_F4;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_F5:
+                    keycode = SDL_SCANCODE_F5;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_F6:
+                    keycode = SDL_SCANCODE_F6;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_F7:
+                    keycode = SDL_SCANCODE_F7;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_F8:
+                    keycode = SDL_SCANCODE_F8;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_F9:
+                    keycode = SDL_SCANCODE_F9;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_F10:
+                    keycode = SDL_SCANCODE_F10;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_F11:
+                    keycode = SDL_SCANCODE_F11;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_F12:
+                    keycode = SDL_SCANCODE_F12;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_ENTER:
+                    keycode = SDL_SCANCODE_RETURN;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_ESCAPE:
+                    keycode = SDL_SCANCODE_ESCAPE;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_HOME:
+                    keycode = SDL_SCANCODE_HOME;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_LCONTROL:
+                    keycode = SDL_SCANCODE_LCTRL;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_RCONTROL:
+                    keycode = SDL_SCANCODE_RCTRL;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_DELETE:
+                    keycode = SDL_SCANCODE_DELETE;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_BACKSPACE:
+                    keycode = SDL_SCANCODE_BACKSPACE;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_PAGEDOWN:
+                    keycode = SDL_SCANCODE_PAGEDOWN;
+                    break;
+                case wiInput::KEYBOARD_BUTTON_PAGEUP:
+                    keycode = SDL_SCANCODE_PAGEUP;
+                    break;
 #endif // _WIN32
 			}
 
+#ifdef _WIN32
 			return KEY_DOWN(keycode) || KEY_TOGGLE(keycode);
+#elif SDL2
+			int numkeys;
+			const uint8_t *state = SDL_GetKeyboardState(&numkeys);
+			return state[keycode] == 1;
+#else
+#error KEYBOARD INPUT NOT SUPPORTED
+#endif
 		}
 
 		return false;
@@ -548,6 +656,8 @@ namespace wiInput
 			wiPlatform::GetWindow()->PointerCursor = cursor;
 		}
 #endif
+#elif SDL2
+		SDL_ShowCursor(value ? SDL_ENABLE : SDL_DISABLE);
 #endif // _WIN32
 	}
 

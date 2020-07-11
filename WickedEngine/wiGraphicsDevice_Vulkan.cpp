@@ -21,6 +21,11 @@
 #include <set>
 #include <algorithm>
 
+#ifdef SDL2
+#include <SDL2/SDL_vulkan.h>
+#include "sdl2.h"
+#endif
+
 // Enabling ray tracing might crash RenderDoc:
 #define ENABLE_RAYTRACING_EXTENSION
 
@@ -606,7 +611,9 @@ namespace Vulkan_Internal
 		ss << "[VULKAN validation layer]: " << msg << std::endl;
 
 		std::cerr << ss.str();
+#ifdef _WIN32
 		OutputDebugStringA(ss.str().c_str());
+#endif
 
 		return VK_FALSE;
 	}
@@ -1966,6 +1973,11 @@ using namespace Vulkan_Internal;
 		GetClientRect(window, &rect);
 		RESOLUTIONWIDTH = rect.right - rect.left;
 		RESOLUTIONHEIGHT = rect.bottom - rect.top;
+#elif SDL2
+		int width, height;
+		SDL_GetWindowSize(window, &width, &height);
+		RESOLUTIONWIDTH = width;
+		RESOLUTIONHEIGHT = height;
 #endif // _WIN32
 
 		VkResult res;
@@ -1991,6 +2003,16 @@ using namespace Vulkan_Internal;
 		extensionNames.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #ifdef _WIN32
 		extensionNames.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#elif SDL2
+        {
+            uint32_t extensionCount;
+            SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, nullptr);
+            std::vector<const char *> extensionNames_sdl(extensionCount);
+            SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, extensionNames_sdl.data());
+            extensionNames.reserve(extensionNames.size() + extensionNames_sdl.size());
+            extensionNames.insert(extensionNames.begin(),
+                    extensionNames_sdl.cbegin(), extensionNames_sdl.cend());
+        }
 #endif // _WIN32
 
 		bool enableValidationLayers = debuglayer;
@@ -2045,6 +2067,11 @@ using namespace Vulkan_Internal;
 
 			if (!CreateWin32SurfaceKHR || CreateWin32SurfaceKHR(instance, &createInfo, nullptr, &surface) != VK_SUCCESS) {
 				assert(0);
+			}
+#elif SDL2
+			if (!SDL_Vulkan_CreateSurface(window, instance, &surface))
+			{
+				throw sdl2::SDLError("Error creating a vulkan surface");
 			}
 #else
 #error WICKEDENGINE VULKAN DEVICE ERROR: PLATFORM NOT SUPPORTED
@@ -2203,6 +2230,7 @@ using namespace Vulkan_Internal;
 		allocatorInfo.physicalDevice = physicalDevice;
 		allocatorInfo.device = device;
 		allocatorInfo.instance = instance;
+		//TODO enable CREATE_BUFFER_DEVICE_ADDRESS only if supported (not guaranteed on vk 1.1)
 		allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
 		res = vmaCreateAllocator(&allocatorInfo, &allocationhandler->allocator);
 		assert(res == VK_SUCCESS);

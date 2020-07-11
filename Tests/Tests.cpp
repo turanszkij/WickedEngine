@@ -4,13 +4,14 @@
 #include <string>
 #include <sstream>
 #include <fstream>
+#include <thread>
 
 using namespace wiECS;
 using namespace wiScene;
 
 void Tests::Initialize()
 {
-	__super::Initialize();
+    MainComponent::Initialize();
 
 	infoDisplay.active = true;
 	infoDisplay.watermark = true;
@@ -25,7 +26,7 @@ void Tests::Initialize()
 
 void TestsRenderer::ResizeLayout()
 {
-	__super::ResizeLayout();
+    RenderPath3D_TiledForward::ResizeLayout();
 
 	float screenW = wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = wiRenderer::GetDevice()->GetScreenHeight();
@@ -294,12 +295,37 @@ void TestsRenderer::Load()
 	testSelector->SetSelected(0);
 	GetGUI().AddWidget(testSelector);
 
-	__super::Load();
+    RenderPath3D_TiledForward::Load();
 }
 void TestsRenderer::Update(float dt)
 {
 	switch (testSelector->GetSelected())
 	{
+    case 1:
+    {
+        Scene& scene = wiScene::GetScene();
+        // teapot_material Base Base_mesh Top Top_mesh editorLight
+        wiECS::Entity e_teapot_base = scene.Entity_FindByName("Base");
+        wiECS::Entity e_teapot_top = scene.Entity_FindByName("Top");
+        assert(e_teapot_base != wiECS::INVALID_ENTITY);
+        assert(e_teapot_top != wiECS::INVALID_ENTITY);
+        TransformComponent* transform_base = scene.transforms.GetComponent(e_teapot_base);
+        TransformComponent* transform_top = scene.transforms.GetComponent(e_teapot_top);
+        assert(transform_base != nullptr);
+        assert(transform_top != nullptr);
+        float rotation = dt;
+        if (wiInput::Down(wiInput::KEYBOARD_BUTTON_LEFT))
+        {
+            transform_base->Rotate(XMVectorSet(0,rotation,0,1));
+            transform_top->Rotate(XMVectorSet(0,rotation,0,1));
+        }
+        else if (wiInput::Down(wiInput::KEYBOARD_BUTTON_RIGHT))
+        {
+            transform_base->Rotate(XMVectorSet(0,-rotation,0,1));
+            transform_top->Rotate(XMVectorSet(0,-rotation,0,1));
+        }
+    }
+    break;
 	case 17:
 	{
 		if (ik_entity != INVALID_ENTITY)
@@ -335,7 +361,7 @@ void TestsRenderer::Update(float dt)
 	break;
 	}
 
-	__super::Update(dt);
+    RenderPath3D_TiledForward::Update(dt);
 }
 
 void TestsRenderer::RunJobSystemTest()

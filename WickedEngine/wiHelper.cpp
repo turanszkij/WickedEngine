@@ -21,6 +21,8 @@
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
 #endif // PLATFORM_UWP
+#else
+#include <filesystem>
 #endif // _WIN32
 
 using namespace std;
@@ -50,8 +52,11 @@ namespace wiHelper
 
 	void screenshot(const std::string& name)
 	{
+    const char * screenshotsFolderName = "screenshots";
 #ifdef _WIN32
-		CreateDirectoryA("screenshots", 0);
+		CreateDirectoryA(screenshotsFolderName, 0);
+#elif SDL2
+        std::filesystem::create_directory(screenshotsFolderName);
 #endif // _WIN32
 		stringstream ss("");
 		if (name.length() <= 0)
@@ -204,8 +209,10 @@ namespace wiHelper
 			CHAR fileName[1024] = {};
 			GetModuleFileNameA(NULL, fileName, arraysize(fileName));
 			appDir = GetDirectoryFromPath(fileName);
+#elif SDL2
+        appDir = std::string(SDL_GetBasePath());
 #else
-			// TODO
+#error TODO
 #endif // _WIN32
 			initComplete = true;
 		}
@@ -303,7 +310,7 @@ namespace wiHelper
 		// Replace all slashes with backslashes:
 #ifdef PLATFORM_UWP
 		std::replace(expanded.begin(), expanded.end(), '/', '\\');
-#endif // _WIN32
+#endif // PLATFORM_UWP
 
 		size_t pos;
 		while ((pos = expanded.find("..")) != string::npos)
@@ -696,10 +703,13 @@ namespace wiHelper
 
 #endif // PLATFORM_UWP
 
+#elif SDL2
+    //TODO look at this implementation: https://discourse.libsdl.org/t/new-library-native-file-dialogs/21099
+    const char * message = "SDL2 does not seem to support a native file chooser, what a pain..";
+    std::cerr << message << std::endl;
+    throw std::runtime_error(message);
 #else
-
-	// TODO
-
+#error TODO
 #endif // _WIN32
 	}
 
@@ -741,6 +751,9 @@ namespace wiHelper
 		}
 #else
 		int num = 0; // TODO
+        const char * message = "int StringConvert(const char* from, wchar_t* to) not implemented";
+        std::cerr << message << std::endl;
+        throw std::runtime_error(message);
 #endif // _WIN32
 		return num;
 	}
@@ -755,6 +768,9 @@ namespace wiHelper
 		}
 #else
 		int num = 0; // TODO
+        const char * message = "int StringConvert(const wchar_t* from, char* to) not implemented";
+        std::cerr << message << std::endl;
+        throw std::runtime_error(message);
 #endif // _WIN32
 		return num;
 	}

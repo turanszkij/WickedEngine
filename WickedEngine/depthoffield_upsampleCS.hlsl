@@ -1,6 +1,6 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
-#include "depthoffieldHF.hlsli"
+#include "depthOfFieldHF.hlsli"
 
 TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
 TEXTURE2D(texture_postfilter, float3, TEXSLOT_ONDEMAND1);
