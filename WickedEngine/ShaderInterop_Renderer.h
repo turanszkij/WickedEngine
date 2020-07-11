@@ -341,9 +341,14 @@ CBUFFER(LensFlareCB, CBSLOT_RENDERER_LENSFLARE)
 	float4		xScreen; // screen dimensions
 };
 
+struct CubemapRenderCam
+{
+	float4x4 VP;
+	uint4 properties;
+};
 CBUFFER(CubemapRenderCB, CBSLOT_RENDERER_CUBEMAPRENDER)
 {
-	float4x4 xCubeShadowVP[6];
+	CubemapRenderCam xCubemapRenderCams[6];
 };
 
 CBUFFER(TessellationCB, CBSLOT_RENDERER_TESSELLATION)

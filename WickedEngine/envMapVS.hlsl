@@ -9,10 +9,11 @@ PSIn_EnvmapRendering main(Input_Object_ALL input)
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.inst);
 	VertexSurface surface = MakeVertexSurfaceFromInput(input);
 
-	output.RTIndex = input.inst.userdata.y;
+	uint frustum_index = input.inst.userdata.y;
+	output.RTIndex = xCubemapRenderCams[frustum_index].properties.x;
 	output.pos = mul(WORLD, surface.position);
 	output.pos3D = output.pos.xyz;
-	output.pos = mul(xCubeShadowVP[output.RTIndex], output.pos);
+	output.pos = mul(xCubemapRenderCams[frustum_index].VP, output.pos);
 	output.color = surface.color;
 	output.uvsets = surface.uvsets;
 	output.atl = surface.atlas;

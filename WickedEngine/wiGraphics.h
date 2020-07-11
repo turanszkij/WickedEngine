@@ -612,6 +612,12 @@ namespace wiGraphics
 	};
 	struct RenderPassDesc
 	{
+		enum FLAGS
+		{
+			FLAG_EMPTY = 0,
+			FLAG_ALLOW_UAV_WRITES = 1 << 0,
+		};
+		uint32_t _flags = FLAG_EMPTY;
 		std::vector<RenderPassAttachment> attachments;
 	};
 	struct IndirectDrawArgsInstanced
