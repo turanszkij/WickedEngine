@@ -26,10 +26,10 @@ Plane ComputePlane(float3 p0, float3 p1, float3 p2)
 }
 // Four planes of a view frustum (in view space).
 // The planes are:
-//  * Left,
-//  * Right,
-//  * Top,
-//  * Bottom.
+// * Left,
+// * Right,
+// * Top,
+// * Bottom.
 // The back and/or front planes can be computed from depth values in the 
 // light culling compute shader.
 struct Frustum
