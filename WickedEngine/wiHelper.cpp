@@ -14,6 +14,7 @@
 #include <codecvt> // string conversion
 
 #ifdef _WIN32
+#include <direct.h>
 #ifdef PLATFORM_UWP
 #include <collection.h>
 #include <ppltasks.h>
@@ -212,18 +213,17 @@ namespace wiHelper
 		return appDir;
 	}
 
-#ifdef _WIN32
-#include <direct.h>
-	static std::string workingdir = std::string(_getcwd(NULL, 0)) + "/";
-#else
-	static std::string workingdir;
-#endif // _WIN32
-	static std::string __originalWorkingDir = workingdir;
 	string GetOriginalWorkingDirectory()
 	{
-		return __originalWorkingDir;
+#ifdef _WIN32
+		static std::string originalWorkingDir = std::string(_getcwd(NULL, 0)) + "/";
+#else
+		static std::string originalWorkingDir;
+#endif
+		return originalWorkingDir;
 	}
 
+	static std::string workingdir = GetOriginalWorkingDirectory();
 	string GetWorkingDirectory()
 	{
 		return workingdir;
