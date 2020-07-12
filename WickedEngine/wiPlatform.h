@@ -4,6 +4,7 @@
 #include <vector>
 #include <mutex>
 #include <string>
+#include <iostream>
 
 #ifdef _WIN32
 
@@ -23,6 +24,11 @@
 
 #endif // _WIN32
 
+#ifdef SDL2
+#include <SDL2/SDL.h>
+#include "sdl2.h"
+#endif
+
 
 namespace wiPlatform
 {
@@ -32,6 +38,8 @@ namespace wiPlatform
 #else
 	using window_type = Platform::Agile<Windows::UI::Core::CoreWindow>;
 #endif // PLATFORM_UWP
+#elif SDL2
+	using window_type = SDL_Window*;
 #else
 	using window_type = int;
 #endif // _WIN32
@@ -79,6 +87,20 @@ namespace wiPlatform
 #else
 		GetWindowState().dpi = (int)Windows::Graphics::Display::DisplayInformation::GetForCurrentView()->LogicalDpi;
 #endif // PLATFORM_UWP
+#elif SDL2
+		int displayIndex = 0;
+		float ddpi;
+		float hdpi;
+		float vdpi;
+		int ret = SDL_GetDisplayDPI(displayIndex, &ddpi, &hdpi, &vdpi);
+		if (ret == 0) {
+		    //TODO setting the correct DPI resolution messes up with the correct mouse position.
+		    // I believe it's because SDL2 is reporting the correct pixel position while windows is reporting
+		    // a corrected version of the mouse position that needs to be interpreted depending on the DPI.
+		    //GetWindowState().dpi = ddpi;
+		} else {
+		    std::clog << "Could not infer Display DPI from SDL: " << SDL_GetError() << std::endl;
+		}
 #endif // _WIN32
 	}
 	inline int GetDPI()
@@ -111,6 +133,10 @@ namespace wiPlatform
 #else
 			Windows::UI::Popups::MessageDialog(ref new Platform::String(x.message.c_str()), ref new Platform::String(x.caption.c_str())).ShowAsync();
 #endif // PLATFORM_UWP
+#elif SDL2
+			std::string title(x.caption.begin(), x.caption.end());
+			std::string message(x.message.begin(), x.message.end());
+            SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title.c_str(), message.c_str(), NULL);
 #endif // _WIN32
 		}
 		state.messages.clear();

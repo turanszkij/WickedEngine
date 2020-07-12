@@ -2,7 +2,7 @@
 //
 
 #include "stdafx.h"
-#include "main.h"
+#include "main_Windows.h"
 
 #define MAX_LOADSTRING 100
 

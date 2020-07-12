@@ -1197,6 +1197,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiEvent.h">
       <Filter>ENGINE\System</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSDLInput.h">
+      <Filter>ENGINE\Input</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1990,6 +1993,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiEvent.cpp">
       <Filter>ENGINE\System</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSDLInput.cpp">
+      <Filter>ENGINE\Input</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
