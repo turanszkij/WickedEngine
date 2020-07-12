@@ -541,13 +541,6 @@ EmitterWindow::~EmitterWindow()
 
 void EmitterWindow::SetEntity(Entity entity)
 {
-	// first try to turn off any debug readbacks for emitters:
-	if (GetEmitter() != nullptr)
-	{
-		GetEmitter()->SetDebug(false);
-	}
-	debugCheckBox->SetCheck(false);
-
 	this->entity = entity;
 
 	auto emitter = GetEmitter();
@@ -614,6 +607,8 @@ void EmitterWindow::SetEntity(Entity entity)
 		sph_K_Slider->SetValue(emitter->SPH_K);
 		sph_p0_Slider->SetValue(emitter->SPH_p0);
 		sph_e_Slider->SetValue(emitter->SPH_e);
+
+		debugCheckBox->SetCheck(emitter->IsDebug());
 	}
 	else
 	{
