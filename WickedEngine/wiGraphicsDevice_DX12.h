@@ -34,6 +34,9 @@ namespace wiGraphics
 		Microsoft::WRL::ComPtr<ID3D12Fence> frameFence;
 		HANDLE frameFenceEvent;
 
+		uint32_t backbuffer_index = 0;
+		Microsoft::WRL::ComPtr<ID3D12Resource> backBuffers[BACKBUFFER_COUNT];
+
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawInstancedIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawIndexedInstancedIndirectCommandSignature;
@@ -64,7 +67,6 @@ namespace wiGraphics
 
 		struct FrameResources
 		{
-			Microsoft::WRL::ComPtr<ID3D12Resource> backBuffer;
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[COMMANDLIST_COUNT];
 			Microsoft::WRL::ComPtr<ID3D12CommandList> commandLists[COMMANDLIST_COUNT];
 
@@ -194,14 +196,16 @@ namespace wiGraphics
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
 		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) override;
 
-		bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) override;
+		void Map(const GPUResource* resource, Mapping* mapping = nullptr) override;
+		void Unmap(const GPUResource* resource) override;
 
 		void SetName(GPUResource* pResource, const char* name) override;
 
 		void PresentBegin(CommandList cmd) override;
 		void PresentEnd(CommandList cmd) override;
 
-		virtual CommandList BeginCommandList() override;
+		CommandList BeginCommandList() override;
+		void SubmitCommandLists() override;
 
 		void WaitForGPU() override;
 		void ClearPipelineStateCache() override;
@@ -239,7 +243,6 @@ namespace wiGraphics
 		void Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) override;
 		void DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
 		void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) override;
-		void CopyTexture2D_Region(const Texture* pDst, uint32_t dstMip, uint32_t dstX, uint32_t dstY, const Texture* pSrc, uint32_t srcMip, CommandList cmd) override;
 		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) override;
 		void QueryBegin(const GPUQuery *query, CommandList cmd) override;
 		void QueryEnd(const GPUQuery *query, CommandList cmd) override;

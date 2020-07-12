@@ -215,10 +215,16 @@ void wiEmittedParticle::UpdateCPU(const TransformComponent& transform, float dt)
 	// Swap CURRENT alivelist with NEW alivelist
 	std::swap(aliveList[0], aliveList[1]);
 
-
 	if (IsDebug())
 	{
-		wiRenderer::GetDevice()->DownloadResource(&counterBuffer, &debugDataReadbackBuffer, &debugData);
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		device->WaitForGPU();
+		Mapping mapping;
+		mapping._flags = Mapping::FLAG_READ;
+		mapping.size = sizeof(debugData);
+		device->Map(&debugDataReadbackBuffer, &mapping);
+		memcpy(&debugData, mapping.data, sizeof(debugData));
+		device->Unmap(&debugDataReadbackBuffer);
 	}
 }
 void wiEmittedParticle::Burst(int num)
@@ -582,6 +588,11 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 			GPUBarrier::Buffer(&aliveList[1], BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	if (IsDebug())
+	{
+		device->CopyResource(&debugDataReadbackBuffer, &counterBuffer, cmd);
 	}
 }
 

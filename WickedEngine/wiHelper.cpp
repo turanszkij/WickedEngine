@@ -51,17 +51,33 @@ namespace wiHelper
 
 	void screenshot(const std::string& name)
 	{
-#ifdef _WIN32
-		CreateDirectoryA("screenshots", 0);
-#endif // _WIN32
-		stringstream ss("");
-		if (name.length() <= 0)
-			ss << GetOriginalWorkingDirectory() << "screenshots/sc_" << getCurrentDateTimeAsString() << ".jpg";
+		std::string directory;
+		if (name.empty())
+		{
+			directory = GetOriginalWorkingDirectory() + "screenshots";
+		}
 		else
-			ss << name;
+		{
+			directory = GetDirectoryFromPath(name);
+		}
+#ifdef _WIN32
+		CreateDirectoryA(directory.c_str(), 0);
+#endif // _WIN32
 
-		bool result = saveTextureToFile(wiRenderer::GetDevice()->GetBackBuffer(), ss.str());
+		std::string filename = name;
+		if (filename.empty())
+		{
+			filename = directory + "/sc_" + getCurrentDateTimeAsString() + ".jpg";
+		}
+
+		bool result = saveTextureToFile(wiRenderer::GetDevice()->GetBackBuffer(), filename);
 		assert(result);
+
+		if (result)
+		{
+			std::string msg = "Screenshot saved: " + filename;
+			wiBackLog::post(msg.c_str());
+		}
 	}
 
 	bool saveTextureToMemory(const wiGraphics::Texture& texture, std::vector<uint8_t>& data)
@@ -69,8 +85,6 @@ namespace wiHelper
 		using namespace wiGraphics;
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
-
-		device->WaitForGPU();
 
 		TextureDesc desc = texture.GetDesc();
 		uint32_t data_count = desc.Width * desc.Height;
@@ -88,10 +102,41 @@ namespace wiHelper
 		bool success = device->CreateTexture(&staging_desc, nullptr, &stagingTex);
 		assert(success);
 
-		success = device->DownloadResource(&texture, &stagingTex, data.data());
-		assert(success);
+		CommandList cmd = device->BeginCommandList();
+		device->CopyResource(&stagingTex, &texture, cmd);
+		device->SubmitCommandLists();
+		device->WaitForGPU();
 
-		return success;
+		Mapping mapping;
+		mapping._flags = Mapping::FLAG_READ;
+		mapping.size = data_size;
+		device->Map(&stagingTex, &mapping);
+		if (mapping.data != nullptr)
+		{
+			if (mapping.rowpitch / data_stride != desc.Width)
+			{
+				// Copy padded texture row by row:
+				const uint32_t cpysize = desc.Width * data_stride;
+				for (uint32_t i = 0; i < desc.Height; ++i)
+				{
+					void* src = (void*)((size_t)mapping.data + size_t(i * mapping.rowpitch));
+					void* dst = (void*)((size_t)data.data() + size_t(i * cpysize));
+					memcpy(dst, src, cpysize);
+				}
+			}
+			else
+			{
+				// Copy whole
+				std::memcpy(data.data(), mapping.data, data.size());
+			}
+			device->Unmap(&stagingTex);
+		}
+		else
+		{
+			assert(0);
+		}
+
+		return mapping.data != nullptr;
 	}
 
 	bool saveTextureToFile(const wiGraphics::Texture& texture, const string& fileName)
