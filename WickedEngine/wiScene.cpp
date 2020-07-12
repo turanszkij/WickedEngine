@@ -7,6 +7,7 @@
 #include "wiRenderer.h"
 #include "wiJobSystem.h"
 #include "wiSpinLock.h"
+#include "wiHelper.h"
 
 #include <functional>
 #include <unordered_map>
@@ -1012,34 +1013,11 @@ namespace wiScene
 	}
 	void ObjectComponent::SaveLightmap()
 	{
-		if (!lightmap.IsValid())
+		if (lightmap.IsValid())
 		{
-			return;
+			bool success = wiHelper::saveTextureToMemory(lightmap, lightmapTextureData);
+			assert(success);
 		}
-
-		GraphicsDevice* device = wiRenderer::GetDevice();
-
-		TextureDesc desc = lightmap.GetDesc();
-		uint32_t data_count = desc.Width * desc.Height;
-		uint32_t data_stride = device->GetFormatStride(desc.Format);
-		uint32_t data_size = data_count * data_stride;
-
-		lightmapWidth = desc.Width;
-		lightmapHeight = desc.Height;
-		lightmapTextureData.clear();
-		lightmapTextureData.resize(data_size);
-
-		TextureDesc staging_desc = desc;
-		staging_desc.Usage = USAGE_STAGING;
-		staging_desc.CPUAccessFlags = CPU_ACCESS_READ;
-		staging_desc.BindFlags = 0;
-		staging_desc.MiscFlags = 0;
-
-		Texture stagingTex;
-		device->CreateTexture(&staging_desc, nullptr, &stagingTex);
-
-		bool download_success = device->DownloadResource(&lightmap, &stagingTex, lightmapTextureData.data());
-		assert(download_success);
 	}
 	FORMAT ObjectComponent::GetLightmapFormat()
 	{
