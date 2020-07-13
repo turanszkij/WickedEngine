@@ -110,7 +110,7 @@ float deltaTime = 0;
 XMFLOAT2 temporalAAJitter = XMFLOAT2(0, 0);
 XMFLOAT2 temporalAAJitterPrev = XMFLOAT2(0, 0);
 float RESOLUTIONSCALE = 1.0f;
-GPUQueryRing<2> occlusionQueries[256];
+GPUQueryRing<GraphicsDevice::GetBackBufferCount()> occlusionQueries[256];
 uint32_t entityArrayOffset_Lights = 0;
 uint32_t entityArrayCount_Lights = 0;
 uint32_t entityArrayOffset_Decals = 0;

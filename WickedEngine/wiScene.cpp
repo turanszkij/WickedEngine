@@ -340,7 +340,7 @@ namespace wiScene
 			{
 				bd.StructureByteStride = sizeof(uint32_t);
 				bd.Format = FORMAT_R32_UINT;
-				bd.ByteWidth = sizeof(uint32_t) * indices.size();
+				bd.ByteWidth = uint32_t(sizeof(uint32_t) * indices.size());
 
 				// Use indices directly since vector is in correct format
 				static_assert(std::is_same<decltype(indices)::value_type, uint32_t>::value, "indices not in INDEXFORMAT_32BIT");
@@ -353,7 +353,7 @@ namespace wiScene
 			{
 				bd.StructureByteStride = sizeof(uint16_t);
 				bd.Format = FORMAT_R16_UINT;
-				bd.ByteWidth = sizeof(uint16_t) * indices.size();
+				bd.ByteWidth = uint32_t(sizeof(uint16_t) * indices.size());
 
 				std::vector<uint16_t> gpuIndexData(indices.size());
 				std::copy(indices.begin(), indices.end(), gpuIndexData.begin());

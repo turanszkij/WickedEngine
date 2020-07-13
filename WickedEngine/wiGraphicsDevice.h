@@ -108,7 +108,7 @@ namespace wiGraphics
 			return XMMatrixOrthographicOffCenterLH(0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0, -1, 1);
 		}
 		inline FORMAT GetBackBufferFormat() const { return BACKBUFFER_FORMAT; }
-		inline static uint32_t GetBackBufferCount() { return BACKBUFFER_COUNT; }
+		static constexpr uint32_t GetBackBufferCount() { return BACKBUFFER_COUNT; }
 
 		inline bool IsDebugDevice() const { return DEBUGDEVICE; }
 

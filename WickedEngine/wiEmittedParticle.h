@@ -30,10 +30,8 @@ public:
 	};
 
 private:
-	ParticleCounters debugData = {};
-	wiGraphics::GPUBuffer debugDataReadbackBuffer;
-	wiGraphics::GPUBuffer debugDataReadbackIndexBuffer;
-	wiGraphics::GPUBuffer debugDataReadbackDistanceBuffer;
+	ParticleCounters statistics = {};
+	wiGraphics::GPUBuffer statisticsReadbackBuffer[wiGraphics::GraphicsDevice::GetBackBufferCount() + 1];
 
 	wiGraphics::GPUBuffer particleBuffer;
 	wiGraphics::GPUBuffer aliveList[2];
@@ -62,7 +60,7 @@ public:
 	void UpdateGPU(const TransformComponent& transform, const MaterialComponent& material, const MeshComponent* mesh, wiGraphics::CommandList cmd) const;
 	void Draw(const CameraComponent& camera, const MaterialComponent& material, wiGraphics::CommandList cmd) const;
 
-	ParticleCounters GetDebugData() { return debugData; }
+	ParticleCounters GetStatistics() { return statistics; }
 
 	enum FLAGS
 	{
@@ -113,6 +111,7 @@ public:
 
 	// Non-serialized attributes:
 	XMFLOAT3 center;
+	uint32_t statisticsReadBackIndex = 0;
 
 	inline bool IsDebug() const { return _flags & DEBUG; }
 	inline bool IsPaused() const { return _flags & PAUSED; }

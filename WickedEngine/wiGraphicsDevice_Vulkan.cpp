@@ -2597,6 +2597,9 @@ using namespace Vulkan_Internal;
 
 	void GraphicsDevice_Vulkan::CreateBackBufferResources()
 	{
+		vkQueueWaitIdle(graphicsQueue);
+		vkQueueWaitIdle(presentQueue);
+
 		SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice, surface);
 
 		VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
@@ -5537,7 +5540,10 @@ using namespace Vulkan_Internal;
 		case GPU_QUERY_TYPE_TIMESTAMP:
 			res = vkGetQueryPoolResults(device, querypool_timestamp, (uint32_t)internal_state->query_index, 1, sizeof(uint64_t),
 				&result->result_timestamp, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
-			timestamps_to_reset.push_back((uint32_t)internal_state->query_index);
+			if (res == VK_SUCCESS)
+			{
+				timestamps_to_reset.push_back((uint32_t)internal_state->query_index);
+			}
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
 			result->result_timestamp_frequency = timestamp_frequency;
@@ -5546,7 +5552,10 @@ using namespace Vulkan_Internal;
 		case GPU_QUERY_TYPE_OCCLUSION:
 			res = vkGetQueryPoolResults(device, querypool_occlusion, (uint32_t)internal_state->query_index, 1, sizeof(uint64_t),
 				&result->result_passed_sample_count, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
-			occlusions_to_reset.push_back((uint32_t)internal_state->query_index);
+			if (res == VK_SUCCESS)
+			{
+				occlusions_to_reset.push_back((uint32_t)internal_state->query_index);
+			}
 			break;
 		}
 
