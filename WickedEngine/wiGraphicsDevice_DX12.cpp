@@ -3644,13 +3644,13 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::Map(const GPUResource* resource, Mapping* mapping)
 	{
 		auto internal_state = to_internal(resource);
-		D3D12_RANGE read_range;
-		if (mapping != nullptr && mapping->_flags & Mapping::FLAG_READ)
+		D3D12_RANGE read_range = {};
+		if (mapping->_flags & Mapping::FLAG_READ)
 		{
 			read_range.Begin = mapping->offset;
 			read_range.End = mapping->size;
 		}
-		HRESULT hr = internal_state->resource->Map(0, mapping == nullptr ? nullptr : &read_range, &mapping->data);
+		HRESULT hr = internal_state->resource->Map(0, &read_range, &mapping->data);
 
 		mapping->rowpitch = internal_state->footprint.Footprint.RowPitch;
 
