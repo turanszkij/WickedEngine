@@ -328,55 +328,40 @@ namespace wiScene
 
 		// Create index buffer GPU data:
 		{
-			uint32_t counter = 0;
-			uint8_t stride;
-			void* gpuIndexData;
-			if (GetIndexFormat() == INDEXFORMAT_32BIT)
-			{
-				gpuIndexData = new uint32_t[indices.size()];
-				stride = sizeof(uint32_t);
-
-				for (auto& x : indices)
-				{
-					static_cast<uint32_t*>(gpuIndexData)[counter++] = static_cast<uint32_t>(x);
-				}
-
-			}
-			else
-			{
-				gpuIndexData = new uint16_t[indices.size()];
-				stride = sizeof(uint16_t);
-
-				for (auto& x : indices)
-				{
-					static_cast<uint16_t*>(gpuIndexData)[counter++] = static_cast<uint16_t>(x);
-				}
-
-			}
-
-
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_IMMUTABLE;
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = 0;
-			bd.StructureByteStride = stride;
-			bd.Format = GetIndexFormat() == INDEXFORMAT_16BIT ? FORMAT_R16_UINT : FORMAT_R32_UINT;
 
-			SubresourceData InitData;
-			InitData.pSysMem = gpuIndexData;
-			bd.ByteWidth = (uint32_t)(stride * indices.size());
-			device->CreateBuffer(&bd, &InitData, &indexBuffer);
+			SubresourceData initData;
+
 			if (GetIndexFormat() == INDEXFORMAT_32BIT)
 			{
+				bd.StructureByteStride = sizeof(uint32_t);
+				bd.Format = FORMAT_R32_UINT;
+				bd.ByteWidth = sizeof(uint32_t) * indices.size();
+
+				// Use indices directly since vector is in correct format
+				static_assert(std::is_same<decltype(indices)::value_type, uint32_t>::value, "indices not in INDEXFORMAT_32BIT");
+				initData.pSysMem = indices.data();
+
+				device->CreateBuffer(&bd, &initData, &indexBuffer);
 				device->SetName(&indexBuffer, "indexBuffer_32bit");
 			}
 			else
 			{
+				bd.StructureByteStride = sizeof(uint16_t);
+				bd.Format = FORMAT_R16_UINT;
+				bd.ByteWidth = sizeof(uint16_t) * indices.size();
+
+				std::vector<uint16_t> gpuIndexData(indices.size());
+				std::copy(indices.begin(), indices.end(), gpuIndexData.begin());
+				initData.pSysMem = gpuIndexData.data();
+
+				device->CreateBuffer(&bd, &initData, &indexBuffer);
 				device->SetName(&indexBuffer, "indexBuffer_16bit");
 			}
-
-			delete[] gpuIndexData;
 		}
 
 

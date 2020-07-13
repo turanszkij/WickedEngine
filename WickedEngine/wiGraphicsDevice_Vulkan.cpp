@@ -2557,13 +2557,12 @@ using namespace Vulkan_Internal;
 	}
 	GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
 	{
-		WaitForGPU();
+		vkQueueWaitIdle(graphicsQueue);
+		vkQueueWaitIdle(presentQueue);
 
 		for (auto& frame : frames)
 		{
 			vkDestroyFence(device, frame.frameFence, nullptr);
-			vkDestroyFramebuffer(device, frame.swapChainFramebuffer, nullptr);
-			vkDestroyImageView(device, frame.swapChainImageView, nullptr);
 			for (auto& commandPool : frame.commandPools)
 			{
 				vkDestroyCommandPool(device, commandPool, nullptr);
@@ -2593,10 +2592,6 @@ using namespace Vulkan_Internal;
 			vkDestroyPipeline(device, x.second, nullptr);
 		}
 
-		vkDestroyRenderPass(device, defaultRenderPass, nullptr);
-
-		vkDestroySwapchainKHR(device, swapChain, nullptr);
-
 		vkDestroyQueryPool(device, querypool_timestamp, nullptr);
 		vkDestroyQueryPool(device, querypool_occlusion, nullptr);
 
@@ -2613,6 +2608,15 @@ using namespace Vulkan_Internal;
 		vkDestroyImageView(device, nullImageViewCubeArray, nullptr);
 		vkDestroyImageView(device, nullImageView3D, nullptr);
 		vkDestroySampler(device, nullSampler, nullptr);
+
+		vkDestroyRenderPass(device, defaultRenderPass, nullptr);
+		for (size_t i = 0; i < swapChainImages.size(); ++i)
+		{
+			vkDestroyFramebuffer(device, swapChainFramebuffers[i], nullptr);
+			vkDestroyImageView(device, swapChainImageViews[i], nullptr);
+			//vkDestroyImage(device, swapChainImages[i], nullptr);
+		}
+		vkDestroySwapchainKHR(device, swapChain, nullptr);
 
 		DestroyDebugReportCallbackEXT(instance, callback, nullptr);
 		vkDestroySurfaceKHR(instance, surface, nullptr);
@@ -2680,7 +2684,7 @@ using namespace Vulkan_Internal;
 		assert(res == VK_SUCCESS);
 
 		vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
-		assert(imageCount == BACKBUFFER_COUNT);
+		assert(BACKBUFFER_COUNT <= imageCount);
 		swapChainImages.resize(imageCount);
 		vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
 		swapChainImageFormat = surfaceFormat.format;
@@ -2696,7 +2700,6 @@ using namespace Vulkan_Internal;
 			res = setDebugUtilsObjectNameEXT(device, &info);
 			assert(res == VK_SUCCESS);
 		}
-
 
 		// Create default render pass:
 		{
@@ -2746,54 +2749,52 @@ using namespace Vulkan_Internal;
 
 		}
 
-		for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+		// Create swap chain render targets:
+		swapChainImageViews.resize(swapChainImages.size());
+		swapChainFramebuffers.resize(swapChainImages.size());
+		for (size_t i = 0; i < swapChainImages.size(); ++i)
 		{
+			VkImageViewCreateInfo createInfo = {};
+			createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			createInfo.image = swapChainImages[i];
+			createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			createInfo.format = swapChainImageFormat;
+			createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			createInfo.subresourceRange.baseMipLevel = 0;
+			createInfo.subresourceRange.levelCount = 1;
+			createInfo.subresourceRange.baseArrayLayer = 0;
+			createInfo.subresourceRange.layerCount = 1;
 
-			// Create swap chain render targets:
+			if (swapChainImageViews[i] != VK_NULL_HANDLE)
 			{
-				VkImageViewCreateInfo createInfo = {};
-				createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-				createInfo.image = swapChainImages[fr];
-				createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-				createInfo.format = swapChainImageFormat;
-				createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-				createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-				createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-				createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-				createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				createInfo.subresourceRange.baseMipLevel = 0;
-				createInfo.subresourceRange.levelCount = 1;
-				createInfo.subresourceRange.baseArrayLayer = 0;
-				createInfo.subresourceRange.layerCount = 1;
-
-				if (frames[fr].swapChainImageView != VK_NULL_HANDLE)
-				{
-					vkDestroyImageView(device, frames[fr].swapChainImageView, nullptr);
-				}
-				res = vkCreateImageView(device, &createInfo, nullptr, &frames[fr].swapChainImageView);
-				assert(res == VK_SUCCESS);
-
-				VkImageView attachments[] = {
-					frames[fr].swapChainImageView
-				};
-
-				VkFramebufferCreateInfo framebufferInfo = {};
-				framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-				framebufferInfo.renderPass = defaultRenderPass;
-				framebufferInfo.attachmentCount = 1;
-				framebufferInfo.pAttachments = attachments;
-				framebufferInfo.width = swapChainExtent.width;
-				framebufferInfo.height = swapChainExtent.height;
-				framebufferInfo.layers = 1;
-
-				if (frames[fr].swapChainFramebuffer != VK_NULL_HANDLE)
-				{
-					vkDestroyFramebuffer(device, frames[fr].swapChainFramebuffer, nullptr);
-				}
-				res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &frames[fr].swapChainFramebuffer);
-				assert(res == VK_SUCCESS);
+				vkDestroyImageView(device, swapChainImageViews[i], nullptr);
 			}
+			res = vkCreateImageView(device, &createInfo, nullptr, &swapChainImageViews[i]);
+			assert(res == VK_SUCCESS);
 
+			VkImageView attachments[] = {
+				swapChainImageViews[i]
+			};
+
+			VkFramebufferCreateInfo framebufferInfo = {};
+			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			framebufferInfo.renderPass = defaultRenderPass;
+			framebufferInfo.attachmentCount = 1;
+			framebufferInfo.pAttachments = attachments;
+			framebufferInfo.width = swapChainExtent.width;
+			framebufferInfo.height = swapChainExtent.height;
+			framebufferInfo.layers = 1;
+
+			if (swapChainFramebuffers[i] != VK_NULL_HANDLE)
+			{
+				vkDestroyFramebuffer(device, swapChainFramebuffers[i], nullptr);
+			}
+			res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]);
+			assert(res == VK_SUCCESS);
 		}
 	}
 
@@ -4732,10 +4733,12 @@ using namespace Vulkan_Internal;
 	{
 		VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 
+		vkAcquireNextImageKHR(device, swapChain, 0xFFFFFFFFFFFFFFFF, imageAvailableSemaphore, VK_NULL_HANDLE, &swapChainImageIndex);
+
 		VkRenderPassBeginInfo renderPassInfo = {};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		renderPassInfo.renderPass = defaultRenderPass;
-		renderPassInfo.framebuffer = GetFrameResources().swapChainFramebuffer;
+		renderPassInfo.framebuffer = swapChainFramebuffers[swapChainImageIndex];
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent = swapChainExtent;
 		renderPassInfo.clearValueCount = 1;
@@ -4746,8 +4749,6 @@ using namespace Vulkan_Internal;
 	void GraphicsDevice_Vulkan::PresentEnd(CommandList cmd)
 	{
 		vkCmdEndRenderPass(GetDirectCommandList(cmd));
-
-		vkAcquireNextImageKHR(device, swapChain, 0xFFFFFFFFFFFFFFFF, imageAvailableSemaphore, VK_NULL_HANDLE, &swapChainImageIndex);
 
 		SubmitCommandLists();
 

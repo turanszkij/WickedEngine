@@ -94,7 +94,7 @@ namespace wiGraphics
 
 		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
 
-		void Map(const GPUResource* resource, Mapping* mapping = nullptr) override;
+		void Map(const GPUResource* resource, Mapping* mapping) override;
 		void Unmap(const GPUResource* resource) override;
 
 		void SetName(GPUResource* pResource, const char* name) override;
