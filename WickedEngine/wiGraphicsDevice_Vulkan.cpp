@@ -4706,6 +4706,8 @@ using namespace Vulkan_Internal;
 	{
 		VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 
+		vkAcquireNextImageKHR(device, swapChain, 0xFFFFFFFFFFFFFFFF, imageAvailableSemaphore, VK_NULL_HANDLE, &swapChainImageIndex);
+
 		VkRenderPassBeginInfo renderPassInfo = {};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		renderPassInfo.renderPass = defaultRenderPass;
@@ -4720,8 +4722,6 @@ using namespace Vulkan_Internal;
 	void GraphicsDevice_Vulkan::PresentEnd(CommandList cmd)
 	{
 		vkCmdEndRenderPass(GetDirectCommandList(cmd));
-
-		vkAcquireNextImageKHR(device, swapChain, 0xFFFFFFFFFFFFFFFF, imageAvailableSemaphore, VK_NULL_HANDLE, &swapChainImageIndex);
 
 		SubmitCommandLists();
 
