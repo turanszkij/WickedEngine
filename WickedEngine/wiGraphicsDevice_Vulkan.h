@@ -75,6 +75,8 @@ namespace wiGraphics
 		VkExtent2D swapChainExtent;
 		uint32_t swapChainImageIndex = 0;
 		std::vector<VkImage> swapChainImages;
+		std::vector<VkImageView> swapChainImageViews;
+		std::vector<VkFramebuffer> swapChainFramebuffers;
 
 		VkRenderPass defaultRenderPass = VK_NULL_HANDLE;
 
@@ -116,8 +118,6 @@ namespace wiGraphics
 			VkFence frameFence = VK_NULL_HANDLE;
 			VkCommandPool commandPools[COMMANDLIST_COUNT] = {};
 			VkCommandBuffer commandBuffers[COMMANDLIST_COUNT] = {};
-			VkImageView swapChainImageView = VK_NULL_HANDLE;
-			VkFramebuffer swapChainFramebuffer = VK_NULL_HANDLE;
 
 			VkQueue copyQueue = VK_NULL_HANDLE;
 			VkCommandPool copyCommandPool = VK_NULL_HANDLE;
@@ -244,7 +244,7 @@ namespace wiGraphics
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
 		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) override;
 
-		void Map(const GPUResource* resource, Mapping* mapping = nullptr) override;
+		void Map(const GPUResource* resource, Mapping* mapping) override;
 		void Unmap(const GPUResource* resource) override;
 
 		void SetName(GPUResource* pResource, const char* name) override;

@@ -51,7 +51,7 @@ namespace wiGraphics
 		virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) {}
 		virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) {}
 
-		virtual void Map(const GPUResource* resource, Mapping* mapping = nullptr) = 0;
+		virtual void Map(const GPUResource* resource, Mapping* mapping) = 0;
 		virtual void Unmap(const GPUResource* resource) = 0;
 
 		virtual void SetName(GPUResource* pResource, const char* name) = 0;

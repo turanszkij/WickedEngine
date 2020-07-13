@@ -196,7 +196,7 @@ namespace wiGraphics
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
 		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) override;
 
-		void Map(const GPUResource* resource, Mapping* mapping = nullptr) override;
+		void Map(const GPUResource* resource, Mapping* mapping) override;
 		void Unmap(const GPUResource* resource) override;
 
 		void SetName(GPUResource* pResource, const char* name) override;
