@@ -96,6 +96,7 @@ namespace wiGraphics
 
 		void Map(const GPUResource* resource, Mapping* mapping) override;
 		void Unmap(const GPUResource* resource) override;
+		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
 
 		void SetName(GPUResource* pResource, const char* name) override;
 
@@ -143,7 +144,6 @@ namespace wiGraphics
 		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) override;
 		void QueryBegin(const GPUQuery *query, CommandList cmd) override;
 		void QueryEnd(const GPUQuery *query, CommandList cmd) override;
-		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
 		void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) override {}
 
 		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;

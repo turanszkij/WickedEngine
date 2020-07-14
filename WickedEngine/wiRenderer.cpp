@@ -110,7 +110,7 @@ float deltaTime = 0;
 XMFLOAT2 temporalAAJitter = XMFLOAT2(0, 0);
 XMFLOAT2 temporalAAJitterPrev = XMFLOAT2(0, 0);
 float RESOLUTIONSCALE = 1.0f;
-GPUQueryRing<GraphicsDevice::GetBackBufferCount()> occlusionQueries[256];
+GPUQueryRing<GraphicsDevice::GetBackBufferCount() + 1> occlusionQueries[256];
 uint32_t entityArrayOffset_Lights = 0;
 uint32_t entityArrayCount_Lights = 0;
 uint32_t entityArrayOffset_Decals = 0;
@@ -4872,9 +4872,9 @@ void OcclusionCulling_Read()
 			}
 
 			GPUQueryResult query_result;
-			while (!device->QueryRead(query, &query_result)) {}
+			bool query_ready = device->QueryRead(query, &query_result);
 
-			if (query_result.result_passed_sample_count > 0)
+			if (query_result.result_passed_sample_count > 0 || !query_ready)
 			{
 				object.occlusionHistory |= 1; // mark this frame as visible
 			}

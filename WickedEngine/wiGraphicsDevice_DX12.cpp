@@ -946,6 +946,12 @@ namespace DX12_Internal
 
 		D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint;
 
+		struct DynamicResourceState
+		{
+			GraphicsDevice::GPUAllocation allocation;
+			bool binding[SHADERSTAGE_COUNT] = {};
+		} dynamic[COMMANDLIST_COUNT];
+
 		virtual ~Resource_DX12()
 		{
 			allocationhandler->destroylocker.lock();
@@ -1409,18 +1415,14 @@ using namespace DX12_Internal;
 
 								if (buffer->desc.Usage == USAGE_DYNAMIC)
 								{
-									auto it = device->dynamic_constantbuffers[cmd].find(buffer);
-									if (it != device->dynamic_constantbuffers[cmd].end())
-									{
-										DynamicResourceState& state = it->second;
-										state.binding[stage] = true;
-										D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
-										cbv.BufferLocation = to_internal(state.allocation.buffer)->resource->GetGPUVirtualAddress();
-										cbv.BufferLocation += (D3D12_GPU_VIRTUAL_ADDRESS)state.allocation.offset;
-										cbv.SizeInBytes = (uint32_t)Align((size_t)buffer->desc.ByteWidth, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+									Resource_DX12::DynamicResourceState& state = internal_state->dynamic[cmd];
+									state.binding[stage] = true;
+									D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
+									cbv.BufferLocation = to_internal(state.allocation.buffer)->resource->GetGPUVirtualAddress();
+									cbv.BufferLocation += (D3D12_GPU_VIRTUAL_ADDRESS)state.allocation.offset;
+									cbv.SizeInBytes = (uint32_t)Align((size_t)buffer->desc.ByteWidth, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
-										device->device->CreateConstantBufferView(&cbv, dst);
-									}
+									device->device->CreateConstantBufferView(&cbv, dst);
 								}
 								else
 								{
@@ -2092,8 +2094,6 @@ using namespace DX12_Internal;
 		{
 			RESOLUTIONWIDTH = width;
 			RESOLUTIONHEIGHT = height;
-
-			WaitForGPU();
 
 			for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 			{
@@ -3661,6 +3661,47 @@ using namespace DX12_Internal;
 		auto internal_state = to_internal(resource);
 		internal_state->resource->Unmap(0, nullptr);
 	}
+	bool GraphicsDevice_DX12::QueryRead(const GPUQuery* query, GPUQueryResult* result)
+	{
+		auto internal_state = to_internal(query);
+
+		D3D12_RANGE range;
+		range.Begin = (size_t)internal_state->query_index * sizeof(size_t);
+		range.End = range.Begin + sizeof(uint64_t);
+		D3D12_RANGE nullrange = {};
+		void* data = nullptr;
+
+		switch (query->desc.Type)
+		{
+		case GPU_QUERY_TYPE_EVENT:
+			assert(0); // not implemented yet
+			break;
+		case GPU_QUERY_TYPE_TIMESTAMP:
+			querypool_timestamp_readback->Map(0, &range, &data);
+			result->result_timestamp = *(uint64_t*)((size_t)data + range.Begin);
+			querypool_timestamp_readback->Unmap(0, &nullrange);
+			break;
+		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
+			directQueue->GetTimestampFrequency(&result->result_timestamp_frequency);
+			break;
+		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+		{
+			BOOL passed = FALSE;
+			querypool_occlusion_readback->Map(0, &range, &data);
+			passed = *(BOOL*)((size_t)data + range.Begin);
+			querypool_occlusion_readback->Unmap(0, &nullrange);
+			result->result_passed_sample_count = (uint64_t)passed;
+			break;
+		}
+		case GPU_QUERY_TYPE_OCCLUSION:
+			querypool_occlusion_readback->Map(0, &range, &data);
+			result->result_passed_sample_count = *(uint64_t*)((size_t)data + range.Begin);
+			querypool_occlusion_readback->Unmap(0, &nullrange);
+			break;
+		}
+
+		return true;
+	}
 
 	void GraphicsDevice_DX12::SetName(GPUResource* pResource, const char* name)
 	{
@@ -4342,12 +4383,6 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize)
 	{
-		// This will fully update the buffer on the GPU timeline
-		//	But on the CPU side we need to keep the in flight data versioned, and we use the temporary buffer for that
-		//	This is like a USAGE_DEFAULT buffer updater on DX11
-		// TODO: USAGE_DYNAMIC would not use GPU copies, but then it would need to handle assigning descriptor pointer dynamically. 
-		//	However, now descriptors are created ahead of time in CreateBuffer
-
 		assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
 		assert((int)buffer->desc.ByteWidth >= dataSize || dataSize < 0 && "Data size is too big!");
 
@@ -4362,7 +4397,8 @@ using namespace DX12_Internal;
 		if (buffer->desc.Usage == USAGE_DYNAMIC && buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
 		{
 			// Dynamic buffer will be used from host memory directly:
-			DynamicResourceState& state = dynamic_constantbuffers[cmd][buffer];
+			auto internal_state = to_internal(buffer);
+			Resource_DX12::DynamicResourceState& state = internal_state->dynamic[cmd];
 			state.allocation = AllocateGPU(dataSize, cmd);
 			memcpy(state.allocation.data, data, dataSize);
 
@@ -4452,47 +4488,6 @@ using namespace DX12_Internal;
 		Query_Resolve& resolver = query_resolves[cmd].back();
 		resolver.type = query->desc.Type;
 		resolver.index = internal_state->query_index;
-	}
-	bool GraphicsDevice_DX12::QueryRead(const GPUQuery* query, GPUQueryResult* result)
-	{
-		auto internal_state = to_internal(query);
-
-		D3D12_RANGE range;
-		range.Begin = (size_t)internal_state->query_index * sizeof(size_t);
-		range.End = range.Begin + sizeof(uint64_t);
-		D3D12_RANGE nullrange = {};
-		void* data = nullptr;
-
-		switch (query->desc.Type)
-		{
-		case GPU_QUERY_TYPE_EVENT:
-			assert(0); // not implemented yet
-			break;
-		case GPU_QUERY_TYPE_TIMESTAMP:
-			querypool_timestamp_readback->Map(0, &range, &data);
-			result->result_timestamp = *(uint64_t*)((size_t)data + range.Begin);
-			querypool_timestamp_readback->Unmap(0, &nullrange);
-			break;
-		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
-			directQueue->GetTimestampFrequency(&result->result_timestamp_frequency);
-			break;
-		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-		{
-			BOOL passed = FALSE;
-			querypool_occlusion_readback->Map(0, &range, &data);
-			passed = *(BOOL*)((size_t)data + range.Begin);
-			querypool_occlusion_readback->Unmap(0, &nullrange);
-			result->result_passed_sample_count = (uint64_t)passed;
-			break;
-		}
-		case GPU_QUERY_TYPE_OCCLUSION:
-			querypool_occlusion_readback->Map(0, &range, &data);
-			result->result_passed_sample_count = *(uint64_t*)((size_t)data + range.Begin);
-			querypool_occlusion_readback->Unmap(0, &nullrange);
-			break;
-		}
-
-		return true;
 	}
 	void GraphicsDevice_DX12::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{

@@ -202,7 +202,7 @@ void wiEmittedParticle::UpdateCPU(const TransformComponent& transform, float dt)
 	std::swap(aliveList[0], aliveList[1]);
 
 	// Read back statistics (with GPU delay):
-	if (statisticsReadBackIndex >= arraysize(statisticsReadbackBuffer))
+	if (statisticsReadBackIndex > arraysize(statisticsReadbackBuffer))
 	{
 		const uint32_t oldest_stat_index = (statisticsReadBackIndex + 1) % arraysize(statisticsReadbackBuffer);
 		GraphicsDevice* device = wiRenderer::GetDevice();
