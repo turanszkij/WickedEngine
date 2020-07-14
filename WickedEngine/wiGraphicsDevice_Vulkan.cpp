@@ -3214,10 +3214,9 @@ using namespace Vulkan_Internal;
 						}
 						uint8_t* cpyaddr = (uint8_t*)pData + cpyoffset;
 						memcpy(cpyaddr, subresourceData.pSysMem, cpysize);
-						cpyoffset += cpysize;
 
 						VkBufferImageCopy copyRegion = {};
-						copyRegion.bufferOffset = 0;
+						copyRegion.bufferOffset = cpyoffset;
 						copyRegion.bufferRowLength = 0;
 						copyRegion.bufferImageHeight = 0;
 
@@ -3237,6 +3236,8 @@ using namespace Vulkan_Internal;
 						height = std::max(1u, height / 2);
 
 						copyRegions.push_back(copyRegion);
+
+						cpyoffset += cpysize;
 					}
 				}
 
