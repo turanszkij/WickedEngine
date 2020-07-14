@@ -654,6 +654,20 @@ namespace wiGraphics
 		int32_t right = 0;
 		int32_t bottom = 0;
 	};
+	struct Mapping
+	{
+		enum FLAGS
+		{
+			FLAG_EMPTY = 0,
+			FLAG_READ = 1 << 0,
+			FLAG_WRITE = 1 << 1,
+		};
+		uint32_t _flags = FLAG_EMPTY;
+		size_t offset = 0;
+		size_t size = 0;
+		uint32_t rowpitch = 0;	// output
+		void* data = nullptr;	// output
+	};
 
 
 	// Resources:

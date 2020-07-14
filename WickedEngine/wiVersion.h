@@ -1,9 +1,6 @@
 #ifndef WICKEDENGINE_VERSION_DEFINED
 #define WICKEDENGINE_VERSION_DEFINED
-
 #include "CommonInclude.h"
-
-#include <string>
 
 namespace wiVersion
 {
@@ -14,7 +11,7 @@ namespace wiVersion
 	int GetMinor();
 	// minor bug fixes, alterations
 	int GetRevision();
-	const std::string& GetVersionString();
+	const char* GetVersionString();
 }
 
 #endif // WICKEDENGINE_VERSION_DEFINED

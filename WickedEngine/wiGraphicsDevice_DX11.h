@@ -94,7 +94,8 @@ namespace wiGraphics
 
 		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
 
-		bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) override;
+		void Map(const GPUResource* resource, Mapping* mapping) override;
+		void Unmap(const GPUResource* resource) override;
 
 		void SetName(GPUResource* pResource, const char* name) override;
 
@@ -103,7 +104,8 @@ namespace wiGraphics
 
 		void WaitForGPU() override;
 
-		virtual CommandList BeginCommandList() override;
+		CommandList BeginCommandList() override;
+		void SubmitCommandLists() override;
 
 		void SetResolution(int width, int height) override;
 
@@ -138,7 +140,6 @@ namespace wiGraphics
 		void Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) override;
 		void DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
 		void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) override;
-		void CopyTexture2D_Region(const Texture* pDst, uint32_t dstMip, uint32_t dstX, uint32_t dstY, const Texture* pSrc, uint32_t srcMip, CommandList cmd) override;
 		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) override;
 		void QueryBegin(const GPUQuery *query, CommandList cmd) override;
 		void QueryEnd(const GPUQuery *query, CommandList cmd) override;

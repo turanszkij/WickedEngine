@@ -51,7 +51,8 @@ namespace wiGraphics
 		virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) {}
 		virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) {}
 
-		virtual bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) = 0;
+		virtual void Map(const GPUResource* resource, Mapping* mapping) = 0;
+		virtual void Unmap(const GPUResource* resource) = 0;
 
 		virtual void SetName(GPUResource* pResource, const char* name) = 0;
 
@@ -59,6 +60,7 @@ namespace wiGraphics
 		virtual void PresentEnd(CommandList cmd) = 0;
 
 		virtual CommandList BeginCommandList() = 0;
+		virtual void SubmitCommandLists() = 0;
 
 		virtual void WaitForGPU() = 0;
 		virtual void ClearPipelineStateCache() {};
@@ -143,7 +145,6 @@ namespace wiGraphics
 		virtual void Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) = 0;
 		virtual void DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) = 0;
 		virtual void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) = 0;
-		virtual void CopyTexture2D_Region(const Texture* pDst, uint32_t dstMip, uint32_t dstX, uint32_t dstY, const Texture* pSrc, uint32_t srcMip, CommandList cmd) = 0;
 		virtual void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) = 0;
 		virtual void QueryBegin(const GPUQuery *query, CommandList cmd) = 0;
 		virtual void QueryEnd(const GPUQuery *query, CommandList cmd) = 0;

@@ -1,15 +1,15 @@
 #include "wiVersion.h"
 
-#include <sstream>
+#include <string>
 
 namespace wiVersion
 {
 	// main engine core
 	const int major = 0;
 	// minor features, major updates, breaking API changes
-	const int minor = 46;
+	const int minor = 47;
 	// minor bug fixes, alterations, refactors, updates
-	const int revision = 5;
+	const int revision = 1;
 
 	const std::string version_string = std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(revision);
 
@@ -29,9 +29,9 @@ namespace wiVersion
 	{
 		return revision;
 	}
-	const std::string& GetVersionString()
+	const char* GetVersionString()
 	{
-		return version_string;
+		return version_string.c_str();
 	}
 
 }

@@ -2369,87 +2369,36 @@ int GraphicsDevice_DX11::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE ty
 	return -1;
 }
 
-bool GraphicsDevice_DX11::DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest)
+void GraphicsDevice_DX11::Map(const GPUResource* resource, Mapping* mapping)
 {
-	assert(resourceToDownload->type == resourceDest->type);
-	auto internal_state_src = to_internal(resourceToDownload);
-	auto internal_state_dst = to_internal(resourceDest);
+	auto internal_state = to_internal(resource);
 
-	if (resourceToDownload->IsBuffer())
+	D3D11_MAPPED_SUBRESOURCE map_result = {};
+	D3D11_MAP map_type = D3D11_MAP_READ_WRITE;
+	if (mapping->_flags & Mapping::FLAG_READ)
 	{
-		const GPUBuffer* bufferToDownload = static_cast<const GPUBuffer*>(resourceToDownload);
-		const GPUBuffer* bufferDest = static_cast<const GPUBuffer*>(resourceDest);
-
-		if (bufferToDownload != nullptr && bufferDest != nullptr)
+		if (mapping->_flags & Mapping::FLAG_WRITE)
 		{
-			assert(bufferToDownload->desc.ByteWidth <= bufferDest->desc.ByteWidth);
-			assert(bufferDest->desc.Usage & USAGE_STAGING);
-			assert(dataDest != nullptr);
-
-			immediateContext->CopyResource(internal_state_dst->resource.Get(), internal_state_src->resource.Get());
-
-			D3D11_MAPPED_SUBRESOURCE mappedResource = {};
-			HRESULT hr = immediateContext->Map(internal_state_dst->resource.Get(), 0, D3D11_MAP_READ, /*async ? D3D11_MAP_FLAG_DO_NOT_WAIT :*/ 0, &mappedResource);
-			bool result = SUCCEEDED(hr);
-			if (result)
-			{
-				memcpy(dataDest, mappedResource.pData, bufferToDownload->desc.ByteWidth);
-				immediateContext->Unmap(internal_state_dst->resource.Get(), 0);
-			}
-
-			return result;
+			map_type = D3D11_MAP_READ_WRITE;
+		}
+		else
+		{
+			map_type = D3D11_MAP_READ;
 		}
 	}
-	else if (resourceToDownload->IsTexture())
+	else if (mapping->_flags & Mapping::FLAG_WRITE)
 	{
-		const Texture* textureToDownload = static_cast<const Texture*>(resourceToDownload);
-		const Texture* textureDest = static_cast<const Texture*>(resourceDest);
-
-		if (textureToDownload != nullptr && textureDest != nullptr)
-		{
-			assert(textureToDownload->desc.Width <= textureDest->desc.Width);
-			assert(textureToDownload->desc.Height <= textureDest->desc.Height);
-			assert(textureToDownload->desc.Depth <= textureDest->desc.Depth);
-			assert(textureDest->desc.Usage & USAGE_STAGING);
-			assert(dataDest != nullptr);
-
-			immediateContext->CopyResource(internal_state_dst->resource.Get(), internal_state_src->resource.Get());
-
-			D3D11_MAPPED_SUBRESOURCE mappedResource = {};
-			HRESULT hr = immediateContext->Map(internal_state_dst->resource.Get(), 0, D3D11_MAP_READ, 0, &mappedResource);
-			bool result = SUCCEEDED(hr);
-			if (result)
-			{
-				uint32_t cpystride = GetFormatStride(textureToDownload->desc.Format);
-				if (mappedResource.RowPitch / cpystride != textureToDownload->desc.Width)
-				{
-					assert(textureToDownload->desc.type == TextureDesc::TEXTURE_2D); // padded copy only implemented for texture2D!
-					assert(textureToDownload->desc.MipLevels == 1); // padded copy only implemented for single mip!
-
-					// Copy row by row without padding:
-					const uint32_t cpysize = textureToDownload->desc.Width * cpystride;
-					for (uint32_t i = 0; i < textureToDownload->desc.Height; ++i)
-					{
-						void* src = (void*)((size_t)mappedResource.pData + size_t(i * mappedResource.RowPitch));
-						void* dst = (void*)((size_t)dataDest + size_t(i * cpysize));
-						memcpy(dst, src, cpysize);
-					}
-				}
-				else
-				{
-					// Texture is not padded, copy the whole thing in one go:
-					uint32_t cpycount = std::max(1u, textureToDownload->desc.Width) * std::max(1u, textureToDownload->desc.Height) * std::max(1u, textureToDownload->desc.Depth);
-					uint32_t cpysize = cpycount * cpystride;
-					memcpy(dataDest, mappedResource.pData, cpysize);
-				}
-				immediateContext->Unmap(internal_state_dst->resource.Get(), 0);
-			}
-
-			return result;
-		}
+		map_type = D3D11_MAP_WRITE_NO_OVERWRITE;
 	}
-
-	return false;
+	HRESULT hr = immediateContext->Map(internal_state->resource.Get(), 0, map_type, D3D11_MAP_FLAG_DO_NOT_WAIT, &map_result);
+	mapping->data = map_result.pData;
+	mapping->rowpitch = map_result.RowPitch;
+	assert(SUCCEEDED(hr));
+}
+void GraphicsDevice_DX11::Unmap(const GPUResource* resource)
+{
+	auto internal_state = to_internal(resource);
+	immediateContext->Unmap(internal_state->resource.Get(), 0);
 }
 
 void GraphicsDevice_DX11::SetName(GPUResource* pResource, const char* name)
@@ -2467,43 +2416,9 @@ void GraphicsDevice_DX11::PresentBegin(CommandList cmd)
 }
 void GraphicsDevice_DX11::PresentEnd(CommandList cmd)
 {
-	// Execute deferred command lists:
-	{
-		CommandList cmd_last = cmd_count.load();
-		cmd_count.store(0);
-		for(CommandList cmd = 0; cmd < cmd_last; ++cmd)
-		{
-			deviceContexts[cmd]->FinishCommandList(false, &commandLists[cmd]);
-			immediateContext->ExecuteCommandList(commandLists[cmd].Get(), false);
-			commandLists[cmd].Reset();
-		}
-	}
+	SubmitCommandLists();
 
 	swapChain->Present(VSYNC, 0);
-
-
-	immediateContext->ClearState();
-
-	std::memset(prev_vs, 0, sizeof(prev_vs));
-	std::memset(prev_ps, 0, sizeof(prev_ps));
-	std::memset(prev_hs, 0, sizeof(prev_hs));
-	std::memset(prev_ds, 0, sizeof(prev_ds));
-	std::memset(prev_gs, 0, sizeof(prev_gs));
-	std::memset(prev_cs, 0, sizeof(prev_cs));
-	std::memset(prev_blendfactor, 0, sizeof(prev_blendfactor));
-	std::memset(prev_samplemask, 0, sizeof(prev_samplemask));
-	std::memset(prev_bs, 0, sizeof(prev_bs));
-	std::memset(prev_rs, 0, sizeof(prev_rs));
-	std::memset(prev_stencilRef, 0, sizeof(prev_stencilRef));
-	std::memset(prev_dss, 0, sizeof(prev_dss));
-	std::memset(prev_il, 0, sizeof(prev_il));
-	std::memset(prev_pt, 0, sizeof(prev_pt));
-
-	std::memset(raster_uavs, 0, sizeof(raster_uavs));
-	std::memset(raster_uavs_slot, 8, sizeof(raster_uavs_slot));
-	std::memset(raster_uavs_count, 0, sizeof(raster_uavs_count));
-
-	FRAMECOUNT++;
 }
 
 
@@ -2556,15 +2471,63 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 	}
 	deviceContexts[cmd]->RSSetScissorRects(8, pRects);
 
+	prev_vs[cmd] = {};
+	prev_ps[cmd] = {};
+	prev_hs[cmd] = {};
+	prev_ds[cmd] = {};
+	prev_gs[cmd] = {};
+	prev_cs[cmd] = {};
+	prev_blendfactor[cmd] = {};
+	prev_samplemask[cmd] = {};
+	prev_bs[cmd] = {};
+	prev_rs[cmd] = {};
+	prev_stencilRef[cmd] = {};
+	prev_dss[cmd] = {};
+	prev_il[cmd] = {};
+	prev_pt[cmd] = {};
+
+	memset(raster_uavs[cmd], 0, sizeof(raster_uavs[cmd]));
+	raster_uavs_slot[cmd] = {};
+	raster_uavs_count[cmd] = {};
+
 	active_pso[cmd] = nullptr;
 	dirty_pso[cmd] = false;
 	active_renderpass[cmd] = nullptr;
 
 	return cmd;
 }
+void GraphicsDevice_DX11::SubmitCommandLists()
+{
+	// Execute deferred command lists:
+	{
+		CommandList cmd_last = cmd_count.load();
+		cmd_count.store(0);
+		for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
+		{
+			deviceContexts[cmd]->FinishCommandList(false, &commandLists[cmd]);
+			immediateContext->ExecuteCommandList(commandLists[cmd].Get(), false);
+			commandLists[cmd].Reset();
+		}
+	}
+	immediateContext->ClearState();
+
+	FRAMECOUNT++;
+}
 
 void GraphicsDevice_DX11::WaitForGPU()
 {
+	immediateContext->Flush();
+
+	GPUQuery query;
+	GPUQueryDesc desc;
+	desc.Type = GPU_QUERY_TYPE_EVENT;
+	bool success = CreateQuery(&desc, &query);
+	assert(success);
+	auto internal_state = to_internal(&query);
+	immediateContext->End(internal_state->resource.Get());
+	BOOL result;
+	while (immediateContext->GetData(internal_state->resource.Get(), &result, sizeof(result), 0) == S_FALSE);
+	assert(result == TRUE);
 }
 
 
@@ -3027,14 +2990,6 @@ void GraphicsDevice_DX11::CopyResource(const GPUResource* pDst, const GPUResourc
 	auto internal_state_src = to_internal(pSrc);
 	auto internal_state_dst = to_internal(pDst);
 	deviceContexts[cmd]->CopyResource(internal_state_dst->resource.Get(), internal_state_src->resource.Get());
-}
-void GraphicsDevice_DX11::CopyTexture2D_Region(const Texture* pDst, uint32_t dstMip, uint32_t dstX, uint32_t dstY, const Texture* pSrc, uint32_t srcMip, CommandList cmd)
-{
-	assert(pDst != nullptr && pSrc != nullptr);
-	auto internal_state_src = to_internal(pSrc);
-	auto internal_state_dst = to_internal(pDst);
-	deviceContexts[cmd]->CopySubresourceRegion(internal_state_dst->resource.Get(), D3D11CalcSubresource(dstMip, 0, pDst->GetDesc().MipLevels), dstX, dstY, 0,
-		internal_state_src->resource.Get(), D3D11CalcSubresource(srcMip, 0, pSrc->GetDesc().MipLevels), nullptr);
 }
 void GraphicsDevice_DX11::UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize)
 {
