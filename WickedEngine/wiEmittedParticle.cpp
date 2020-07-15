@@ -210,8 +210,11 @@ void wiEmittedParticle::UpdateCPU(const TransformComponent& transform, float dt)
 		mapping._flags = Mapping::FLAG_READ;
 		mapping.size = sizeof(statistics);
 		device->Map(&statisticsReadbackBuffer[oldest_stat_index], &mapping);
-		memcpy(&statistics, mapping.data, sizeof(statistics));
-		device->Unmap(&statisticsReadbackBuffer[oldest_stat_index]);
+		if (mapping.data != nullptr)
+		{
+			memcpy(&statistics, mapping.data, sizeof(statistics));
+			device->Unmap(&statisticsReadbackBuffer[oldest_stat_index]);
+		}
 	}
 	statisticsReadBackIndex++;
 }

@@ -4671,7 +4671,12 @@ using namespace Vulkan_Internal;
 		VkDeviceSize size = mapping->size;
 
 		VkResult res = vkMapMemory(device, memory, offset, size, 0, &mapping->data);
-		assert(res == VK_SUCCESS);
+		if (res != VK_SUCCESS)
+		{
+			assert(0);
+			mapping->data = nullptr;
+			mapping->rowpitch = 0;
+		}
 	}
 	void GraphicsDevice_Vulkan::Unmap(const GPUResource* resource)
 	{
@@ -4702,7 +4707,10 @@ using namespace Vulkan_Internal;
 		case GPU_QUERY_TYPE_TIMESTAMP:
 			res = vkGetQueryPoolResults(device, querypool_timestamp, (uint32_t)internal_state->query_index, 1, sizeof(uint64_t),
 				&result->result_timestamp, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_PARTIAL_BIT);
-			timestamps_to_reset.push_back((uint32_t)internal_state->query_index);
+			if (timestamps_to_reset.empty() || timestamps_to_reset.back() != (uint32_t)internal_state->query_index)
+			{
+				timestamps_to_reset.push_back((uint32_t)internal_state->query_index);
+			}
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
 			result->result_timestamp_frequency = timestamp_frequency;
@@ -4711,7 +4719,10 @@ using namespace Vulkan_Internal;
 		case GPU_QUERY_TYPE_OCCLUSION:
 			res = vkGetQueryPoolResults(device, querypool_occlusion, (uint32_t)internal_state->query_index, 1, sizeof(uint64_t),
 				&result->result_passed_sample_count, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_PARTIAL_BIT);
-			occlusions_to_reset.push_back((uint32_t)internal_state->query_index);
+			if (occlusions_to_reset.empty() || occlusions_to_reset.back() != (uint32_t)internal_state->query_index)
+			{
+				occlusions_to_reset.push_back((uint32_t)internal_state->query_index);
+			}
 			break;
 		}
 

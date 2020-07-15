@@ -33,13 +33,13 @@ namespace wiProfiler
 
 		wiTimer cpuBegin, cpuEnd;
 
-		wiRenderer::GPUQueryRing<4> gpuBegin;
-		wiRenderer::GPUQueryRing<4> gpuEnd;
+		wiRenderer::GPUQueryRing<wiGraphics::GraphicsDevice::GetBackBufferCount() + 3> gpuBegin;
+		wiRenderer::GPUQueryRing<wiGraphics::GraphicsDevice::GetBackBufferCount() + 3> gpuEnd;
 
 		bool IsCPURange() const { return cmd == COMMANDLIST_COUNT; }
 	};
 	std::unordered_map<size_t, Range> ranges;
-	wiRenderer::GPUQueryRing<4> disjoint;
+	wiRenderer::GPUQueryRing<wiGraphics::GraphicsDevice::GetBackBufferCount() + 3> disjoint;
 
 	void BeginFrame()
 	{

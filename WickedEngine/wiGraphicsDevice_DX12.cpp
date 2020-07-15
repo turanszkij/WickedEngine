@@ -3651,10 +3651,16 @@ using namespace DX12_Internal;
 			read_range.End = mapping->size;
 		}
 		HRESULT hr = internal_state->resource->Map(0, &read_range, &mapping->data);
-
-		mapping->rowpitch = internal_state->footprint.Footprint.RowPitch;
-
-		assert(SUCCEEDED(hr));
+		if (SUCCEEDED(hr))
+		{
+			mapping->rowpitch = internal_state->footprint.Footprint.RowPitch;
+		}
+		else
+		{
+			assert(0);
+			mapping->data = nullptr;
+			mapping->rowpitch = 0;
+		}
 	}
 	void GraphicsDevice_DX12::Unmap(const GPUResource* resource)
 	{

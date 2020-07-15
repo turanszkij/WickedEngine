@@ -2391,9 +2391,17 @@ void GraphicsDevice_DX11::Map(const GPUResource* resource, Mapping* mapping)
 		map_type = D3D11_MAP_WRITE_NO_OVERWRITE;
 	}
 	HRESULT hr = immediateContext->Map(internal_state->resource.Get(), 0, map_type, D3D11_MAP_FLAG_DO_NOT_WAIT, &map_result);
-	mapping->data = map_result.pData;
-	mapping->rowpitch = map_result.RowPitch;
-	assert(SUCCEEDED(hr));
+	if (SUCCEEDED(hr))
+	{
+		mapping->data = map_result.pData;
+		mapping->rowpitch = map_result.RowPitch;
+	}
+	else
+	{
+		assert(0);
+		mapping->data = nullptr;
+		mapping->rowpitch = 0;
+	}
 }
 void GraphicsDevice_DX11::Unmap(const GPUResource* resource)
 {
