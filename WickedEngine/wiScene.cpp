@@ -1841,7 +1841,7 @@ namespace wiScene
 
 			if (animation.IsPlaying())
 			{
-				animation.timer += dt;
+				animation.timer += dt * animation.speed;
 			}
 
 			if (animation.IsLooped() && animation.timer > animation.end)

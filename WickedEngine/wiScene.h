@@ -892,7 +892,8 @@ namespace wiScene
 		float start = 0;
 		float end = 0;
 		float timer = 0;
-		float amount = 1;
+		float amount = 1;	// blend amount
+		float speed = 1;
 
 		struct AnimationChannel
 		{
