@@ -3237,7 +3237,7 @@ using namespace Vulkan_Internal;
 
 						copyRegions.push_back(copyRegion);
 
-						cpyoffset += cpysize;
+						cpyoffset += Align(cpysize, GetFormatStride(pDesc->Format));
 					}
 				}
 
