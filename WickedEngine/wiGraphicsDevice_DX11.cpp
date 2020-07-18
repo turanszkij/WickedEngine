@@ -1310,12 +1310,6 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 
 	HRESULT hr = E_FAIL;
 
-	for (int i = 0; i < COMMANDLIST_COUNT; i++)
-	{
-		stencilRef[i] = 0;
-		blendFactor[i] = XMFLOAT4(1, 1, 1, 1);
-	}
-
 	uint32_t createDeviceFlags = 0;
 
 	if (debuglayer)
@@ -2513,6 +2507,9 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 		pRects[i].top = INT32_MIN;
 	}
 	deviceContexts[cmd]->RSSetScissorRects(8, pRects);
+
+	stencilRef[cmd] = 0;
+	blendFactor[cmd] = XMFLOAT4(1, 1, 1, 1);
 
 	prev_vs[cmd] = {};
 	prev_ps[cmd] = {};
