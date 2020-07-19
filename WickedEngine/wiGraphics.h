@@ -15,6 +15,7 @@ namespace wiGraphics
 	struct GPUResource;
 	struct GPUBuffer;
 	struct Texture;
+	struct RootSignature;
 
 	enum SHADERSTAGE
 	{
@@ -682,6 +683,7 @@ namespace wiGraphics
 	{
 		SHADERSTAGE stage = SHADERSTAGE_COUNT;
 		std::vector<uint8_t> code;
+		const RootSignature* rootsignature_template = nullptr;
 	};
 
 	struct Sampler : public GraphicsDeviceChild
@@ -962,8 +964,7 @@ namespace wiGraphics
 	{
 		SHADERSTAGE stage = SHADERSTAGE_COUNT;
 		DescriptorRange range;
-		const DescriptorTable* table = nullptr;
-		const SamplerDesc* staticsampler = nullptr;
+		const DescriptorTable* table_template = nullptr;
 	};
 	struct StaticSampler
 	{

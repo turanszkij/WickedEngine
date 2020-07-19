@@ -34,18 +34,16 @@ namespace wiFont_Internal
 {
 	string				FONTPATH = wiHelper::GetOriginalWorkingDirectory() + "../WickedEngine/fonts/";
 	GPUBuffer			indexBuffer;
-	GPUBuffer			constantBuffer;
 	BlendState			blendState;
 	RasterizerState		rasterizerState;
 	DepthStencilState	depthStencilState;
-	Sampler				sampler;
 
 	InputLayout			inputLayout;
 	Shader				vertexShader;
 	Shader				pixelShader;
 	PipelineState		PSO;
 
-	DescriptorTable descriptortable;
+	DescriptorTable descriptortables[COMMANDLIST_COUNT];
 	RootSignature rootsig;
 
 	atomic_bool initialized { false };
@@ -301,16 +299,6 @@ void Initialize()
 		device->CreateBuffer(&bd, &InitData, &indexBuffer);
 	}
 
-	{
-		GPUBufferDesc bd;
-		bd.Usage = USAGE_DYNAMIC;
-		bd.ByteWidth = sizeof(FontCB);
-		bd.BindFlags = BIND_CONSTANT_BUFFER;
-		bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-
-		device->CreateBuffer(&bd, nullptr, &constantBuffer);
-	}
-
 
 
 	RasterizerStateDesc rs;
@@ -356,7 +344,36 @@ void Initialize()
 	samplerDesc.BorderColor[3] = 0;
 	samplerDesc.MinLOD = 0;
 	samplerDesc.MaxLOD = FLT_MAX;
-	device->CreateSampler(&samplerDesc, &sampler);
+
+
+	for (CommandList cmd = 0; cmd < COMMANDLIST_COUNT; ++cmd)
+	{
+		descriptortables[cmd].ranges.emplace_back();
+		descriptortables[cmd].ranges.back().binding = TEXTURE2D;
+		descriptortables[cmd].ranges.back().slot = TEXSLOT_FONTATLAS;
+		descriptortables[cmd].ranges.back().count = 1;
+		descriptortables[cmd].ranges.back().offset_from_table_start = 0;
+		device->CreateDescriptorTable(&descriptortables[cmd]);
+	}
+
+	rootsig._flags |= RootSignature::FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+	rootsig.staticsamplers.emplace_back();
+	rootsig.staticsamplers.back().stage = PS;
+	rootsig.staticsamplers.back().slot = SSLOT_ONDEMAND1;
+	rootsig.staticsamplers.back().desc = samplerDesc;
+
+	rootsig.parameters.emplace_back();
+	rootsig.parameters.back().stage = PS;
+	rootsig.parameters.back().range.binding = DESCRIPTORTABLE;
+	rootsig.parameters.back().range.offset_from_table_start = 0;
+	rootsig.parameters.back().table_template = &descriptortables[0];
+
+	rootsig.parameters.emplace_back();
+	rootsig.parameters.back().stage = SHADERSTAGE_COUNT;
+	rootsig.parameters.back().range.binding = CONSTANTBUFFER;
+	rootsig.parameters.back().range.slot = CBSLOT_FONT;
+	device->CreateRootSignature(&rootsig);
+
 
 	static wiEvent::Handle handle1 = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 	LoadShaders();
@@ -372,33 +389,6 @@ void Initialize()
 		rect_lookup.clear();
 		glyphLock.unlock();
 	});
-
-
-
-	descriptortable.ranges.emplace_back();
-	descriptortable.ranges.back().binding = TEXTURE2D;
-	descriptortable.ranges.back().slot = TEXSLOT_FONTATLAS;
-	descriptortable.ranges.back().count = 1;
-	descriptortable.ranges.back().offset_from_table_start = 0;
-	device->CreateDescriptorTable(&descriptortable);
-
-	rootsig._flags |= RootSignature::FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-	rootsig.staticsamplers.emplace_back();
-	rootsig.staticsamplers.back().stage = PS;
-	rootsig.staticsamplers.back().slot = SSLOT_ONDEMAND1;
-	rootsig.staticsamplers.back().desc = samplerDesc;
-
-	rootsig.parameters.emplace_back();
-	rootsig.parameters.back().stage = PS;
-	rootsig.parameters.back().range.binding = DESCRIPTORTABLE;
-	rootsig.parameters.back().range.offset_from_table_start = 0;
-	rootsig.parameters.back().table = &descriptortable;
-
-	rootsig.parameters.emplace_back();
-	rootsig.parameters.back().stage = SHADERSTAGE_COUNT;
-	rootsig.parameters.back().range.binding = CONSTANTBUFFER;
-	rootsig.parameters.back().range.slot = CBSLOT_FONT;
-	device->CreateRootSignature(&rootsig);
 
 
 	wiBackLog::post("wiFont Initialized");
@@ -652,13 +642,8 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 	device->BindPipelineState(&PSO, cmd);
 
 	device->BindRootSignatureGraphics(&rootsig, cmd);
-	device->WriteDescriptorSRV(&descriptortable, 0, &texture);
-	device->BindRootDescriptorTableGraphics(&descriptortable, 0, cmd);
-
-	//device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
-	//device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
-	//device->BindResource(PS, &texture, TEXSLOT_FONTATLAS, cmd);
-	//device->BindSampler(PS, &sampler, SSLOT_ONDEMAND1, cmd);
+	device->WriteDescriptorSRV(&descriptortables[cmd], 0, &texture);
+	device->BindRootDescriptorTableGraphics(0, &descriptortables[cmd], cmd);
 
 	const GPUBuffer* vbs[] = {
 		mem.buffer,
@@ -686,11 +671,10 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 			* Projection
 		);
 		cb.g_xFont_Color = newProps.shadowColor.toFloat4();
-		//device->UpdateBuffer(&constantBuffer, &cb, cmd);
 
 		GraphicsDevice::GPUAllocation cbmem = device->AllocateGPU(sizeof(FontCB), cmd);
 		memcpy(cbmem.data, &cb, sizeof(cb));
-		device->BindRootCBVGraphics(cbmem.buffer, 1, cmd, cbmem.offset);
+		device->BindRootCBVGraphics(1, cbmem.buffer, cbmem.offset, cmd);
 
 		device->DrawIndexed(quadCount * 6, 0, 0, cmd);
 	}
@@ -701,11 +685,10 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 		* Projection
 	);
 	cb.g_xFont_Color = newProps.color.toFloat4();
-	//device->UpdateBuffer(&constantBuffer, &cb, cmd);
 
 	GraphicsDevice::GPUAllocation cbmem = device->AllocateGPU(sizeof(FontCB), cmd);
 	memcpy(cbmem.data, &cb, sizeof(cb));
-	device->BindRootCBVGraphics(cbmem.buffer, 1, cmd, cbmem.offset);
+	device->BindRootCBVGraphics(1, cbmem.buffer, cbmem.offset, cmd);
 
 	device->DrawIndexed(quadCount * 6, 0, 0, cmd);
 

@@ -3454,8 +3454,8 @@ using namespace DX12_Internal;
 			{
 			case DESCRIPTORTABLE:
 				param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-				param.DescriptorTable.pDescriptorRanges = to_internal(x.table)->ranges.data();
-				param.DescriptorTable.NumDescriptorRanges = (UINT)to_internal(x.table)->ranges.size();
+				param.DescriptorTable.pDescriptorRanges = to_internal(x.table_template)->ranges.data();
+				param.DescriptorTable.NumDescriptorRanges = (UINT)to_internal(x.table_template)->ranges.size();
 				break;
 			case ROOTCONSTANT_32BIT:
 				param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
@@ -5047,54 +5047,54 @@ using namespace DX12_Internal;
 			GetDirectCommandList(cmd)->SetComputeRootSignature(to_internal(rootsig)->resource.Get());
 		}
 	}
-	void GraphicsDevice_DX12::BindRootDescriptorTableGraphics(const DescriptorTable* table, uint32_t slot, CommandList cmd)
+	void GraphicsDevice_DX12::BindRootDescriptorTableGraphics(uint32_t slot, const DescriptorTable* table, CommandList cmd)
 	{
 		auto& descriptors = GetFrameResources().descriptors[cmd];
 		GetDirectCommandList(cmd)->SetGraphicsRootDescriptorTable(slot, descriptors.commit(table, cmd));
 	}
-	void GraphicsDevice_DX12::BindRootDescriptorTableCompute(const DescriptorTable* table, uint32_t slot, CommandList cmd)
+	void GraphicsDevice_DX12::BindRootDescriptorTableCompute(uint32_t slot, const DescriptorTable* table, CommandList cmd)
 	{
 		auto& descriptors = GetFrameResources().descriptors[cmd];
 		GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(slot, descriptors.commit(table, cmd));
 	}
-	void GraphicsDevice_DX12::BindRootDescriptorTableRaytracing(const DescriptorTable* table, uint32_t slot, CommandList cmd)
+	void GraphicsDevice_DX12::BindRootDescriptorTableRaytracing(uint32_t slot, const DescriptorTable* table, CommandList cmd)
 	{
 		auto& descriptors = GetFrameResources().descriptors[cmd];
 		GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(slot, descriptors.commit(table, cmd));
 	}
-	void GraphicsDevice_DX12::BindRootSRVGraphics(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset)
+	void GraphicsDevice_DX12::BindRootSRVGraphics(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd)
 	{
 		GetDirectCommandList(cmd)->SetGraphicsRootShaderResourceView(slot, to_internal(resource)->resource->GetGPUVirtualAddress() + offset);
 	}
-	void GraphicsDevice_DX12::BindRootSRVCompute(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset)
+	void GraphicsDevice_DX12::BindRootSRVCompute(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd)
 	{
 		GetDirectCommandList(cmd)->SetComputeRootShaderResourceView(slot, to_internal(resource)->resource->GetGPUVirtualAddress() + offset);
 	}
-	void GraphicsDevice_DX12::BindRootSRVRaytracing(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset)
+	void GraphicsDevice_DX12::BindRootSRVRaytracing(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd)
 	{
 		GetDirectCommandList(cmd)->SetComputeRootShaderResourceView(slot, to_internal(resource)->resource->GetGPUVirtualAddress() + offset);
 	}
-	void GraphicsDevice_DX12::BindRootUAVGraphics(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset)
+	void GraphicsDevice_DX12::BindRootUAVGraphics(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd)
 	{
 		GetDirectCommandList(cmd)->SetGraphicsRootUnorderedAccessView(slot, to_internal(resource)->resource->GetGPUVirtualAddress() + offset);
 	}
-	void GraphicsDevice_DX12::BindRootUAVCompute(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset)
+	void GraphicsDevice_DX12::BindRootUAVCompute(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd)
 	{
 		GetDirectCommandList(cmd)->SetComputeRootUnorderedAccessView(slot, to_internal(resource)->resource->GetGPUVirtualAddress() + offset);
 	}
-	void GraphicsDevice_DX12::BindRootUAVRaytracing(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset)
+	void GraphicsDevice_DX12::BindRootUAVRaytracing(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd)
 	{
 		GetDirectCommandList(cmd)->SetComputeRootUnorderedAccessView(slot, to_internal(resource)->resource->GetGPUVirtualAddress());
 	}
-	void GraphicsDevice_DX12::BindRootCBVGraphics(const GPUBuffer* resource, uint32_t slot, CommandList cmd, size_t offset)
+	void GraphicsDevice_DX12::BindRootCBVGraphics(uint32_t slot, const GPUBuffer* resource, size_t offset, CommandList cmd)
 	{
 		GetDirectCommandList(cmd)->SetGraphicsRootConstantBufferView(slot, to_internal(resource)->resource->GetGPUVirtualAddress() + offset);
 	}
-	void GraphicsDevice_DX12::BindRootCBVCompute(const GPUBuffer* resource, uint32_t slot, CommandList cmd, size_t offset)
+	void GraphicsDevice_DX12::BindRootCBVCompute(uint32_t slot, const GPUBuffer* resource, size_t offset, CommandList cmd)
 	{
 		GetDirectCommandList(cmd)->SetComputeRootConstantBufferView(slot, to_internal(resource)->resource->GetGPUVirtualAddress() + offset);
 	}
-	void GraphicsDevice_DX12::BindRootCBVRaytracing(const GPUBuffer* resource, uint32_t slot, CommandList cmd, size_t offset)
+	void GraphicsDevice_DX12::BindRootCBVRaytracing(uint32_t slot, const GPUBuffer* resource, size_t offset, CommandList cmd)
 	{
 		GetDirectCommandList(cmd)->SetComputeRootConstantBufferView(slot, to_internal(resource)->resource->GetGPUVirtualAddress() + offset);
 	}

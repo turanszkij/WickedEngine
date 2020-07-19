@@ -162,18 +162,18 @@ namespace wiGraphics
 
 		virtual void BindRootSignatureGraphics(const RootSignature* rootsig, CommandList cmd) {};
 		virtual void BindRootSignatureCompute(const RootSignature* rootsig, CommandList cmd) {};
-		virtual void BindRootDescriptorTableGraphics(const DescriptorTable* table, uint32_t slot, CommandList cmd) {}
-		virtual void BindRootDescriptorTableCompute(const DescriptorTable* table, uint32_t slot, CommandList cmd) {}
-		virtual void BindRootDescriptorTableRaytracing(const DescriptorTable* table, uint32_t slot, CommandList cmd) {}
-		virtual void BindRootSRVGraphics(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset = 0) {}
-		virtual void BindRootSRVCompute(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset = 0) {}
-		virtual void BindRootSRVRaytracing(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset = 0) {}
-		virtual void BindRootUAVGraphics(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset = 0) {}
-		virtual void BindRootUAVCompute(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset = 0) {}
-		virtual void BindRootUAVRaytracing(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset = 0) {}
-		virtual void BindRootCBVGraphics(const GPUBuffer* resource, uint32_t slot, CommandList cmd, size_t offset = 0) {}
-		virtual void BindRootCBVCompute(const GPUBuffer* resource, uint32_t slot, CommandList cmd, size_t offset = 0) {}
-		virtual void BindRootCBVRaytracing(const GPUBuffer* resource, uint32_t slot, CommandList cmd, size_t offset = 0) {}
+		virtual void BindRootDescriptorTableGraphics(uint32_t slot, const DescriptorTable* table, CommandList cmd) {}
+		virtual void BindRootDescriptorTableCompute(uint32_t slot, const DescriptorTable* table, CommandList cmd) {}
+		virtual void BindRootDescriptorTableRaytracing(uint32_t slot, const DescriptorTable* table, CommandList cmd) {}
+		virtual void BindRootSRVGraphics(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd) {}
+		virtual void BindRootSRVCompute(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd) {}
+		virtual void BindRootSRVRaytracing(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd) {}
+		virtual void BindRootUAVGraphics(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd) {}
+		virtual void BindRootUAVCompute(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd) {}
+		virtual void BindRootUAVRaytracing(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd) {}
+		virtual void BindRootCBVGraphics(uint32_t slot, const GPUBuffer* resource, size_t offset, CommandList cmd) {}
+		virtual void BindRootCBVCompute(uint32_t slot, const GPUBuffer* resource, size_t offset, CommandList cmd) {}
+		virtual void BindRootCBVRaytracing(uint32_t slot, const GPUBuffer* resource, size_t offset, CommandList cmd) {}
 		virtual void BindRootConstants32BitGraphics(uint32_t slot, const void* srcdata, uint32_t count, uint32_t offset, CommandList cmd) {}
 		virtual void BindRootConstants32BitCompute(uint32_t slot, const void* srcdata, uint32_t count, uint32_t offset, CommandList cmd) {}
 		virtual void BindRootConstants32BitRaytracing(uint32_t slot, const void* srcdata, uint32_t count, uint32_t offset, CommandList cmd) {}
