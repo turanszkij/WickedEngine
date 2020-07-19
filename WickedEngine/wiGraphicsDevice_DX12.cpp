@@ -1594,6 +1594,7 @@ using namespace DX12_Internal;
 			gpu_handle = heap.start_gpu;
 			cpu_handle.ptr += heap.ringOffset;
 			gpu_handle.ptr += heap.ringOffset;
+			heap.ringOffset += internal_state->heapDesc.NumDescriptors * device->sampler_descriptor_size;
 		}
 		else
 		{
@@ -1609,6 +1610,7 @@ using namespace DX12_Internal;
 			gpu_handle = heap.start_gpu;
 			cpu_handle.ptr += heap.ringOffset;
 			gpu_handle.ptr += heap.ringOffset;
+			heap.ringOffset += internal_state->heapDesc.NumDescriptors * device->resource_descriptor_size;
 		}
 		device->device->CopyDescriptorsSimple(
 			internal_state->heapDesc.NumDescriptors,
@@ -3459,7 +3461,7 @@ using namespace DX12_Internal;
 				break;
 			case ROOTCONSTANT_32BIT:
 				param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-				param.Constants.ShaderRegister = x.range.binding;
+				param.Constants.ShaderRegister = x.range.slot;
 				param.Constants.RegisterSpace = x.range.space;
 				param.Constants.Num32BitValues = x.range.count;
 				break;
@@ -3922,7 +3924,15 @@ using namespace DX12_Internal;
 		D3D12_CPU_DESCRIPTOR_HANDLE dst = table_internal->heap_address;
 		dst.ptr += (size_t)index * (size_t)resource_descriptor_size;
 
-		if (resource->IsTexture())
+		if (resource == nullptr || !resource->IsValid())
+		{
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srv_desc.Format = DXGI_FORMAT_R32_UINT;
+			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+			device->CreateShaderResourceView(nullptr, &srv_desc, dst);
+		}
+		else if (resource->IsTexture())
 		{
 			auto internal_state = to_internal((const Texture*)resource);
 			if (subresource < 0)
@@ -3952,7 +3962,14 @@ using namespace DX12_Internal;
 		D3D12_CPU_DESCRIPTOR_HANDLE dst = table_internal->heap_address;
 		dst.ptr += (size_t)index * (size_t)resource_descriptor_size;
 
-		if (resource->IsTexture())
+		if (resource == nullptr || !resource->IsValid())
+		{
+			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
+			uav_desc.Format = DXGI_FORMAT_R32_UINT;
+			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, dst);
+		}
+		else if (resource->IsTexture())
 		{
 			auto internal_state = to_internal((const Texture*)resource);
 			if (subresource < 0)
@@ -3978,13 +3995,18 @@ using namespace DX12_Internal;
 			}
 		}
 	}
-	void GraphicsDevice_DX12::WriteDescriptorCBV(const DescriptorTable* table, uint32_t index, const GPUBuffer* resource, CommandList dynamicwrite_cmd)
+	void GraphicsDevice_DX12::WriteDescriptorCBV(const DescriptorTable* table, uint32_t index, const GPUBuffer* resource)
 	{
 		auto table_internal = to_internal(table);
 		D3D12_CPU_DESCRIPTOR_HANDLE dst = table_internal->heap_address;
 		dst.ptr += (size_t)index * (size_t)resource_descriptor_size;
 
-		if (resource->IsBuffer())
+		if (resource == nullptr || !resource->IsValid())
+		{
+			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
+			device->CreateConstantBufferView(&cbv_desc, dst);
+		}
+		else if (resource->IsBuffer())
 		{
 			const GPUBuffer* buffer = (const GPUBuffer*)resource;
 			auto internal_state = to_internal(buffer);

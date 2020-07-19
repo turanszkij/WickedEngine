@@ -54,8 +54,6 @@ namespace wiImage
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		device->EventBegin("Image", cmd);
 
-		//device->BindResource(PS, texture, TEXSLOT_IMAGE_BASE, cmd);
-
 		uint32_t stencilRef = params.stencilRef;
 		if (params.stencilRefMode == STENCILREFMODE_USER)
 		{
@@ -64,7 +62,7 @@ namespace wiImage
 		device->BindStencilRef(stencilRef, cmd);
 
 		device->BindRootSignatureGraphics(&rootsig, cmd);
-		device->WriteDescriptorSRV(&descriptortables_texture[cmd], 0, texture, cmd);
+		device->WriteDescriptorSRV(&descriptortables_texture[cmd], 0, texture);
 
 		if (params.quality == QUALITY_NEAREST)
 		{
@@ -107,9 +105,7 @@ namespace wiImage
 			device->BindPipelineState(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
 			device->BindRootDescriptorTableGraphics(0, &descriptortables_sampler[cmd], cmd);
 			device->BindRootDescriptorTableGraphics(1, &descriptortables_texture[cmd], cmd);
-			GraphicsDevice::GPUAllocation cbmem = device->AllocateGPU(sizeof(ImageCB), cmd);
-			memcpy(cbmem.data, &cb, sizeof(cb));
-			device->BindRootCBVGraphics(2, cbmem.buffer, cbmem.offset, cmd);
+			device->BindRootConstants32BitGraphics(2, &cb, sizeof(cb) / sizeof(uint32_t), 0, cmd);
 			device->Draw(3, 0, cmd);
 			device->EventEnd(cmd);
 			return;
@@ -247,9 +243,7 @@ namespace wiImage
 
 		device->BindRootDescriptorTableGraphics(0, &descriptortables_sampler[cmd], cmd);
 		device->BindRootDescriptorTableGraphics(1, &descriptortables_texture[cmd], cmd);
-		GraphicsDevice::GPUAllocation cbmem = device->AllocateGPU(sizeof(ImageCB), cmd);
-		memcpy(cbmem.data, &cb, sizeof(cb));
-		device->BindRootCBVGraphics(2, cbmem.buffer, cbmem.offset, cmd);
+		device->BindRootConstants32BitGraphics(2, &cb, sizeof(cb) / sizeof(uint32_t), 0, cmd);
 
 		device->Draw(4, 0, cmd);
 
@@ -486,8 +480,9 @@ namespace wiImage
 
 			rootsig.parameters.emplace_back();
 			rootsig.parameters.back().stage = SHADERSTAGE_COUNT;
-			rootsig.parameters.back().range.binding = CONSTANTBUFFER;
-			rootsig.parameters.back().range.slot = CBSLOT_FONT;
+			rootsig.parameters.back().range.binding = ROOTCONSTANT_32BIT;
+			rootsig.parameters.back().range.count = sizeof(ImageCB) / sizeof(uint32_t);
+			rootsig.parameters.back().range.slot = CBSLOT_IMAGE;
 			device->CreateRootSignature(&rootsig);
 		}
 

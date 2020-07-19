@@ -54,7 +54,7 @@ namespace wiGraphics
 		virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) {}
 		virtual void WriteDescriptorSRV(const DescriptorTable* table, uint32_t index, const GPUResource* resource, int subresource = -1) {}
 		virtual void WriteDescriptorUAV(const DescriptorTable* table, uint32_t index, const GPUResource* resource, int subresource = -1) {}
-		virtual void WriteDescriptorCBV(const DescriptorTable* table, uint32_t index, const GPUBuffer* resource, CommandList dynamicwrite_cmd) {}
+		virtual void WriteDescriptorCBV(const DescriptorTable* table, uint32_t index, const GPUBuffer* resource) {}
 		virtual void WriteDescriptorSampler(const DescriptorTable* table, uint32_t index, const Sampler* sampler) {}
 
 		virtual void Map(const GPUResource* resource, Mapping* mapping) = 0;

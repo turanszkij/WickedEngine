@@ -370,7 +370,8 @@ void Initialize()
 
 	rootsig.parameters.emplace_back();
 	rootsig.parameters.back().stage = SHADERSTAGE_COUNT;
-	rootsig.parameters.back().range.binding = CONSTANTBUFFER;
+	rootsig.parameters.back().range.binding = ROOTCONSTANT_32BIT;
+	rootsig.parameters.back().range.count = sizeof(FontCB) / sizeof(uint32_t);
 	rootsig.parameters.back().range.slot = CBSLOT_FONT;
 	device->CreateRootSignature(&rootsig);
 
@@ -672,9 +673,10 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 		);
 		cb.g_xFont_Color = newProps.shadowColor.toFloat4();
 
-		GraphicsDevice::GPUAllocation cbmem = device->AllocateGPU(sizeof(FontCB), cmd);
-		memcpy(cbmem.data, &cb, sizeof(cb));
-		device->BindRootCBVGraphics(1, cbmem.buffer, cbmem.offset, cmd);
+		//GraphicsDevice::GPUAllocation cbmem = device->AllocateGPU(sizeof(FontCB), cmd);
+		//memcpy(cbmem.data, &cb, sizeof(cb));
+		//device->BindRootCBVGraphics(1, cbmem.buffer, cbmem.offset, cmd);
+		device->BindRootConstants32BitGraphics(1, &cb, sizeof(cb) / sizeof(uint32_t), 0, cmd);
 
 		device->DrawIndexed(quadCount * 6, 0, 0, cmd);
 	}
@@ -686,9 +688,10 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 	);
 	cb.g_xFont_Color = newProps.color.toFloat4();
 
-	GraphicsDevice::GPUAllocation cbmem = device->AllocateGPU(sizeof(FontCB), cmd);
-	memcpy(cbmem.data, &cb, sizeof(cb));
-	device->BindRootCBVGraphics(1, cbmem.buffer, cbmem.offset, cmd);
+	//GraphicsDevice::GPUAllocation cbmem = device->AllocateGPU(sizeof(FontCB), cmd);
+	//memcpy(cbmem.data, &cb, sizeof(cb));
+	//device->BindRootCBVGraphics(1, cbmem.buffer, cbmem.offset, cmd);
+	device->BindRootConstants32BitGraphics(1, &cb, sizeof(cb) / sizeof(uint32_t), 0, cmd);
 
 	device->DrawIndexed(quadCount * 6, 0, 0, cmd);
 
