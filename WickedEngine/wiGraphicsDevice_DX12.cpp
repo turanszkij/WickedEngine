@@ -3985,14 +3985,7 @@ using namespace DX12_Internal;
 		{
 			const GPUBuffer* buffer = (const GPUBuffer*)resource;
 			auto internal_state = to_internal(buffer);
-			if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
-			{
-				device->CreateConstantBufferView(&internal_state->cbv, dst);
-			}
-			else
-			{
-				device->CreateUnorderedAccessView(internal_state->resource.Get(), nullptr, &internal_state->uav, dst);
-			}
+			device->CreateUnorderedAccessView(internal_state->resource.Get(), nullptr, &internal_state->uav, dst);
 		}
 	}
 	void GraphicsDevice_DX12::WriteDescriptorCBV(const DescriptorTable* table, uint32_t index, const GPUBuffer* resource)
