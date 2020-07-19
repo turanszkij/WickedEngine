@@ -45,11 +45,17 @@ namespace wiGraphics
 		virtual bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) = 0;
 		virtual bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) { return false; }
 		virtual bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) { return false; }
+		virtual bool CreateDescriptorTable(DescriptorTable* table) { return false; }
+		virtual bool CreateRootSignature(RootSignature* rootsig) { return false; }
 
 		virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) = 0;
 
 		virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) {}
 		virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) {}
+		virtual void WriteDescriptorSRV(const DescriptorTable* table, uint32_t index, const GPUResource* resource, int subresource = -1) {}
+		virtual void WriteDescriptorUAV(const DescriptorTable* table, uint32_t index, const GPUResource* resource, int subresource = -1) {}
+		virtual void WriteDescriptorCBV(const DescriptorTable* table, uint32_t index, const GPUBuffer* resource, CommandList dynamicwrite_cmd) {}
+		virtual void WriteDescriptorSampler(const DescriptorTable* table, uint32_t index, const Sampler* sampler) {}
 
 		virtual void Map(const GPUResource* resource, Mapping* mapping) = 0;
 		virtual void Unmap(const GPUResource* resource) = 0;
@@ -153,6 +159,24 @@ namespace wiGraphics
 		virtual void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) {}
 		virtual void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) {}
 		virtual void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) {}
+
+		virtual void BindRootSignatureGraphics(const RootSignature* rootsig, CommandList cmd) {};
+		virtual void BindRootSignatureCompute(const RootSignature* rootsig, CommandList cmd) {};
+		virtual void BindRootDescriptorTableGraphics(const DescriptorTable* table, uint32_t slot, CommandList cmd) {}
+		virtual void BindRootDescriptorTableCompute(const DescriptorTable* table, uint32_t slot, CommandList cmd) {}
+		virtual void BindRootDescriptorTableRaytracing(const DescriptorTable* table, uint32_t slot, CommandList cmd) {}
+		virtual void BindRootSRVGraphics(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset = 0) {}
+		virtual void BindRootSRVCompute(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset = 0) {}
+		virtual void BindRootSRVRaytracing(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset = 0) {}
+		virtual void BindRootUAVGraphics(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset = 0) {}
+		virtual void BindRootUAVCompute(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset = 0) {}
+		virtual void BindRootUAVRaytracing(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset = 0) {}
+		virtual void BindRootCBVGraphics(const GPUBuffer* resource, uint32_t slot, CommandList cmd, size_t offset = 0) {}
+		virtual void BindRootCBVCompute(const GPUBuffer* resource, uint32_t slot, CommandList cmd, size_t offset = 0) {}
+		virtual void BindRootCBVRaytracing(const GPUBuffer* resource, uint32_t slot, CommandList cmd, size_t offset = 0) {}
+		virtual void BindRootConstants32BitGraphics(uint32_t slot, const void* srcdata, uint32_t count, uint32_t offset, CommandList cmd) {}
+		virtual void BindRootConstants32BitCompute(uint32_t slot, const void* srcdata, uint32_t count, uint32_t offset, CommandList cmd) {}
+		virtual void BindRootConstants32BitRaytracing(uint32_t slot, const void* srcdata, uint32_t count, uint32_t offset, CommandList cmd) {}
 
 		struct GPUAllocation
 		{

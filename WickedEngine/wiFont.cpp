@@ -45,6 +45,9 @@ namespace wiFont_Internal
 	Shader				pixelShader;
 	PipelineState		PSO;
 
+	DescriptorTable descriptortable;
+	RootSignature rootsig;
+
 	atomic_bool initialized { false };
 
 	Texture texture;
@@ -371,6 +374,33 @@ void Initialize()
 	});
 
 
+
+	descriptortable.ranges.emplace_back();
+	descriptortable.ranges.back().binding = TEXTURE2D;
+	descriptortable.ranges.back().slot = TEXSLOT_FONTATLAS;
+	descriptortable.ranges.back().count = 1;
+	descriptortable.ranges.back().offset_from_table_start = 0;
+	device->CreateDescriptorTable(&descriptortable);
+
+	rootsig._flags |= RootSignature::FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+	rootsig.staticsamplers.emplace_back();
+	rootsig.staticsamplers.back().stage = PS;
+	rootsig.staticsamplers.back().slot = SSLOT_ONDEMAND1;
+	rootsig.staticsamplers.back().desc = samplerDesc;
+
+	rootsig.parameters.emplace_back();
+	rootsig.parameters.back().stage = PS;
+	rootsig.parameters.back().range.binding = DESCRIPTORTABLE;
+	rootsig.parameters.back().range.offset_from_table_start = 0;
+	rootsig.parameters.back().table = &descriptortable;
+
+	rootsig.parameters.emplace_back();
+	rootsig.parameters.back().stage = SHADERSTAGE_COUNT;
+	rootsig.parameters.back().range.binding = CONSTANTBUFFER;
+	rootsig.parameters.back().range.slot = CBSLOT_FONT;
+	device->CreateRootSignature(&rootsig);
+
+
 	wiBackLog::post("wiFont Initialized");
 	initialized.store(true);
 }
@@ -621,10 +651,14 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 
 	device->BindPipelineState(&PSO, cmd);
 
-	device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
-	device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
-	device->BindResource(PS, &texture, TEXSLOT_FONTATLAS, cmd);
-	device->BindSampler(PS, &sampler, SSLOT_ONDEMAND1, cmd);
+	device->BindRootSignatureGraphics(&rootsig, cmd);
+	device->WriteDescriptorSRV(&descriptortable, 0, &texture);
+	device->BindRootDescriptorTableGraphics(&descriptortable, 0, cmd);
+
+	//device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
+	//device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
+	//device->BindResource(PS, &texture, TEXSLOT_FONTATLAS, cmd);
+	//device->BindSampler(PS, &sampler, SSLOT_ONDEMAND1, cmd);
 
 	const GPUBuffer* vbs[] = {
 		mem.buffer,
@@ -652,7 +686,11 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 			* Projection
 		);
 		cb.g_xFont_Color = newProps.shadowColor.toFloat4();
-		device->UpdateBuffer(&constantBuffer, &cb, cmd);
+		//device->UpdateBuffer(&constantBuffer, &cb, cmd);
+
+		GraphicsDevice::GPUAllocation cbmem = device->AllocateGPU(sizeof(FontCB), cmd);
+		memcpy(cbmem.data, &cb, sizeof(cb));
+		device->BindRootCBVGraphics(cbmem.buffer, 1, cmd, cbmem.offset);
 
 		device->DrawIndexed(quadCount * 6, 0, 0, cmd);
 	}
@@ -663,7 +701,11 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 		* Projection
 	);
 	cb.g_xFont_Color = newProps.color.toFloat4();
-	device->UpdateBuffer(&constantBuffer, &cb, cmd);
+	//device->UpdateBuffer(&constantBuffer, &cb, cmd);
+
+	GraphicsDevice::GPUAllocation cbmem = device->AllocateGPU(sizeof(FontCB), cmd);
+	memcpy(cbmem.data, &cb, sizeof(cb));
+	device->BindRootCBVGraphics(cbmem.buffer, 1, cmd, cbmem.offset);
 
 	device->DrawIndexed(quadCount * 6, 0, 0, cmd);
 

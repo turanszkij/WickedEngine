@@ -916,4 +916,71 @@ namespace wiGraphics
 		uint32_t Depth = 1;
 	};
 
+	enum SHADERBINDING
+	{
+		DESCRIPTORTABLE,
+		ROOTCONSTANT_32BIT,
+		SAMPLER,
+		CONSTANTBUFFER,
+		RAWBUFFER,
+		STRUCTUREDBUFFER,
+		TYPEDBUFFER,
+		TEXTURE1D,
+		TEXTURE1DARRAY,
+		TEXTURE2D,
+		TEXTURE2DARRAY,
+		TEXTURECUBE,
+		TEXTURECUBEARRAY,
+		TEXTURE3D,
+		ACCELERATIONSTRUCTURE,
+		RWRAWBUFFER,
+		RWSTRUCTUREDBUFFER,
+		RWTYPEDBUFFER,
+		RWTEXTURE1D,
+		RWTEXTURE1DARRAY,
+		RWTEXTURE2D,
+		RWTEXTURE2DARRAY,
+		RWTEXTURECUBE,
+		RWTEXTURECUBEARRAY,
+		RWTEXTURE3D,
+
+		SHADERBINDING_COUNT
+	};
+	struct DescriptorRange
+	{
+		SHADERBINDING binding = DESCRIPTORTABLE;
+		uint32_t slot = 0;
+		uint32_t space = 0;
+		uint32_t count = 1;
+		uint32_t offset_from_table_start = ~0;
+	};
+	struct DescriptorTable : public GraphicsDeviceChild
+	{
+		std::vector<DescriptorRange> ranges;
+	};
+	struct RootParameter
+	{
+		SHADERSTAGE stage = SHADERSTAGE_COUNT;
+		DescriptorRange range;
+		const DescriptorTable* table = nullptr;
+		const SamplerDesc* staticsampler = nullptr;
+	};
+	struct StaticSampler
+	{
+		SHADERSTAGE stage = SHADERSTAGE_COUNT;
+		uint32_t slot = 0;
+		uint32_t space = 0;
+		SamplerDesc desc;
+	};
+	struct RootSignature : public GraphicsDeviceChild
+	{
+		enum FLAGS
+		{
+			FLAG_EMPTY = 0,
+			FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT = 1 << 0,
+		};
+		uint32_t _flags = FLAG_EMPTY;
+		std::vector<RootParameter> parameters;
+		std::vector<StaticSampler> staticsamplers;
+	};
 }

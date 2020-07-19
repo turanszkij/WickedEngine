@@ -57,7 +57,6 @@ namespace wiGraphics
 
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorheap_RTV;
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorheap_DSV;
-
 		D3D12_CPU_DESCRIPTOR_HANDLE rtv_descriptor_heap_start = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE dsv_descriptor_heap_start = {};
 
@@ -119,6 +118,7 @@ namespace wiGraphics
 				void reset();
 				void validate(bool graphics, CommandList cmd);
 				void create_or_bind_heaps_on_demand(CommandList cmd);
+				D3D12_GPU_DESCRIPTOR_HANDLE commit(const DescriptorTable* table, CommandList cmd);
 			};
 			DescriptorTableFrameAllocator descriptors[COMMANDLIST_COUNT];
 
@@ -151,6 +151,8 @@ namespace wiGraphics
 		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
 		const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
 		const Shader* active_cs[COMMANDLIST_COUNT] = {};
+		const RootSignature* active_rootsig_graphics[COMMANDLIST_COUNT] = {};
+		const RootSignature* active_rootsig_compute[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 		D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS resolve_subresources[COMMANDLIST_COUNT][D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 
@@ -183,11 +185,17 @@ namespace wiGraphics
 		bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
 		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) override;
 		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) override;
+		bool CreateDescriptorTable(DescriptorTable* table) override;
+		bool CreateRootSignature(RootSignature* rootsig) override;
 
 		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
 
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
 		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) override;
+		void WriteDescriptorSRV(const DescriptorTable* table, uint32_t index, const GPUResource* resource, int subresource = -1) override;
+		void WriteDescriptorUAV(const DescriptorTable* table, uint32_t index, const GPUResource* resource, int subresource = -1) override;
+		void WriteDescriptorCBV(const DescriptorTable* table, uint32_t index, const GPUBuffer* resource, CommandList dynamicwrite_cmd) override;
+		void WriteDescriptorSampler(const DescriptorTable* table, uint32_t index, const Sampler* sampler) override;
 
 		void Map(const GPUResource* resource, Mapping* mapping) override;
 		void Unmap(const GPUResource* resource) override;
@@ -245,6 +253,24 @@ namespace wiGraphics
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
 		void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
 
+		void BindRootSignatureGraphics(const RootSignature* rootsig, CommandList cmd) override;
+		void BindRootSignatureCompute(const RootSignature* rootsig, CommandList cmd) override;
+		void BindRootDescriptorTableGraphics(const DescriptorTable* table, uint32_t slot, CommandList cmd) override;
+		void BindRootDescriptorTableCompute(const DescriptorTable* table, uint32_t slot, CommandList cmd) override;
+		void BindRootDescriptorTableRaytracing(const DescriptorTable* table, uint32_t slot, CommandList cmd) override;
+		void BindRootSRVGraphics(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset = 0) override;
+		void BindRootSRVCompute(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset = 0) override;
+		void BindRootSRVRaytracing(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset = 0) override;
+		void BindRootUAVGraphics(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset = 0) override;
+		void BindRootUAVCompute(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset = 0) override;
+		void BindRootUAVRaytracing(const GPUResource* resource, uint32_t slot, CommandList cmd, size_t offset = 0) override;
+		void BindRootCBVGraphics(const GPUBuffer* resource, uint32_t slot, CommandList cmd, size_t offset = 0) override;
+		void BindRootCBVCompute(const GPUBuffer* resource, uint32_t slot, CommandList cmd, size_t offset = 0) override;
+		void BindRootCBVRaytracing(const GPUBuffer* resource, uint32_t slot, CommandList cmd, size_t offset = 0) override;
+		void BindRootConstants32BitGraphics(uint32_t slot, const void* srcdata, uint32_t count, uint32_t offset, CommandList cmd) override;
+		void BindRootConstants32BitCompute(uint32_t slot, const void* srcdata, uint32_t count, uint32_t offset, CommandList cmd) override;
+		void BindRootConstants32BitRaytracing(uint32_t slot, const void* srcdata, uint32_t count, uint32_t offset, CommandList cmd) override;
+
 		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
 
 		void EventBegin(const char* name, CommandList cmd) override;
@@ -265,6 +291,7 @@ namespace wiGraphics
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12PipelineState>, uint64_t>> destroyer_pipelines;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12RootSignature>, uint64_t>> destroyer_rootSignatures;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12StateObject>, uint64_t>> destroyer_stateobjects;
+			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>, uint64_t>> destroyer_descriptorHeaps;
 
 			wiContainers::ThreadSafeRingBuffer<uint32_t, timestamp_query_count> free_timestampqueries;
 			wiContainers::ThreadSafeRingBuffer<uint32_t, occlusion_query_count> free_occlusionqueries;
@@ -360,6 +387,18 @@ namespace wiGraphics
 					if (destroyer_stateobjects.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
 					{
 						destroyer_stateobjects.pop_front();
+						// comptr auto delete
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_descriptorHeaps.empty())
+				{
+					if (destroyer_descriptorHeaps.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						destroyer_descriptorHeaps.pop_front();
 						// comptr auto delete
 					}
 					else
