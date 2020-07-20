@@ -90,33 +90,9 @@ namespace wiGraphics
 				size_t currentheap_sampler = 0;
 				bool heaps_bound = false;
 
-				bool dirty_graphics_compute[2] = {};
-
-				struct Table
-				{
-					const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
-					const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
-					int SRV_index[GPU_RESOURCE_HEAP_SRV_COUNT];
-					const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
-					int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
-					const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
-
-					void reset()
-					{
-						memset(CBV, 0, sizeof(CBV));
-						memset(SRV, 0, sizeof(SRV));
-						memset(SRV_index, -1, sizeof(SRV_index));
-						memset(UAV, 0, sizeof(UAV));
-						memset(UAV_index, -1, sizeof(UAV_index));
-						memset(SAM, 0, sizeof(SAM));
-					}
-
-				} tables[SHADERSTAGE_COUNT];
-
 				void init(GraphicsDevice_DX12* device);
 
 				void reset();
-				void validate(bool graphics, CommandList cmd);
 				void create_or_bind_heaps_on_demand(CommandList cmd);
 				D3D12_GPU_DESCRIPTOR_HANDLE commit(const DescriptorTable* table, CommandList cmd);
 			};
@@ -156,9 +132,6 @@ namespace wiGraphics
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 		D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS resolve_subresources[COMMANDLIST_COUNT][D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 
-		bool dirty_pso[COMMANDLIST_COUNT] = {};
-		void pso_validate(CommandList cmd);
-
 		struct Query_Resolve
 		{
 			GPU_QUERY_TYPE type;
@@ -192,10 +165,8 @@ namespace wiGraphics
 
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
 		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) override;
-		void WriteDescriptorSRV(const DescriptorTable* table, uint32_t index, const GPUResource* resource, int subresource = -1) override;
-		void WriteDescriptorUAV(const DescriptorTable* table, uint32_t index, const GPUResource* resource, int subresource = -1) override;
-		void WriteDescriptorCBV(const DescriptorTable* table, uint32_t index, const GPUBuffer* resource) override;
-		void WriteDescriptorSampler(const DescriptorTable* table, uint32_t index, const Sampler* sampler) override;
+		void WriteDescriptor(const DescriptorTable* table, uint32_t index, const GPUResource* resource, int subresource = -1) override;
+		void WriteDescriptor(const DescriptorTable* table, uint32_t index, const Sampler* sampler) override;
 
 		void Map(const GPUResource* resource, Mapping* mapping) override;
 		void Unmap(const GPUResource* resource) override;
@@ -253,8 +224,6 @@ namespace wiGraphics
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
 		void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
 
-		void BindRootSignatureGraphics(const RootSignature* rootsig, CommandList cmd) override;
-		void BindRootSignatureCompute(const RootSignature* rootsig, CommandList cmd) override;
 		void BindRootDescriptorTableGraphics(uint32_t slot, const DescriptorTable* table, CommandList cmd) override;
 		void BindRootDescriptorTableCompute(uint32_t slot, const DescriptorTable* table, CommandList cmd) override;
 		void BindRootDescriptorTableRaytracing(uint32_t slot, const DescriptorTable* table, CommandList cmd) override;

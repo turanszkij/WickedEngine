@@ -52,10 +52,8 @@ namespace wiGraphics
 
 		virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) {}
 		virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) {}
-		virtual void WriteDescriptorSRV(const DescriptorTable* table, uint32_t index, const GPUResource* resource, int subresource = -1) {}
-		virtual void WriteDescriptorUAV(const DescriptorTable* table, uint32_t index, const GPUResource* resource, int subresource = -1) {}
-		virtual void WriteDescriptorCBV(const DescriptorTable* table, uint32_t index, const GPUBuffer* resource) {}
-		virtual void WriteDescriptorSampler(const DescriptorTable* table, uint32_t index, const Sampler* sampler) {}
+		virtual void WriteDescriptor(const DescriptorTable* table, uint32_t index, const GPUResource* resource, int subresource = -1) {}
+		virtual void WriteDescriptor(const DescriptorTable* table, uint32_t index, const Sampler* sampler) {}
 
 		virtual void Map(const GPUResource* resource, Mapping* mapping) = 0;
 		virtual void Unmap(const GPUResource* resource) = 0;
@@ -160,8 +158,6 @@ namespace wiGraphics
 		virtual void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) {}
 		virtual void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) {}
 
-		virtual void BindRootSignatureGraphics(const RootSignature* rootsig, CommandList cmd) {};
-		virtual void BindRootSignatureCompute(const RootSignature* rootsig, CommandList cmd) {};
 		virtual void BindRootDescriptorTableGraphics(uint32_t slot, const DescriptorTable* table, CommandList cmd) {}
 		virtual void BindRootDescriptorTableCompute(uint32_t slot, const DescriptorTable* table, CommandList cmd) {}
 		virtual void BindRootDescriptorTableRaytracing(uint32_t slot, const DescriptorTable* table, CommandList cmd) {}

@@ -6,7 +6,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 	color = 2 * color - 1;
 
-	color *= xColor;
+	color *= imageCB.xColor;
 
 	return color;
 }

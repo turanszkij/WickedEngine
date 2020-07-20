@@ -70,19 +70,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{3257
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		WickedEngine\Shaders_SOURCE.vcxitems*{06163dcb-b183-4ed9-9c62-13ef1658e049}*SharedItemsImports = 4
 		WickedEngine\WickedEngine_SOURCE.vcxitems*{06163dcb-b183-4ed9-9c62-13ef1658e049}*SharedItemsImports = 4
 		WickedEngine\WickedEngine_SOURCE.vcxitems*{45d41acc-2c3c-43d2-bc10-02aa73ffc7c7}*SharedItemsImports = 9
 		Editor\Editor_SOURCE.vcxitems*{5fe97b9b-a445-4eea-a42d-9de60b891d48}*SharedItemsImports = 4
 		WickedEngine\WickedEngine_SOURCE.vcxitems*{60da258f-e95f-4cf4-a46b-17d80644464b}*SharedItemsImports = 4
 		Editor\Editor_SOURCE.vcxitems*{867febca-09c4-4fe7-8a4c-4d9b1c27e7d0}*SharedItemsImports = 9
 		WickedEngine\Shaders_SOURCE.vcxitems*{92e86448-0724-4387-abac-96e63edf4190}*SharedItemsImports = 9
-		WickedEngine\Shaders_SOURCE.vcxitems*{c222218b-b6d1-406b-b2c0-8c1ced4a8d19}*SharedItemsImports = 4
 		Content.vcxitems*{c48f6bff-f91b-4db5-98b5-15287dfb7c95}*SharedItemsImports = 9
 		WickedEngine\WickedEngine_SOURCE.vcxitems*{d294c41d-d886-4b95-9fd6-ee13eee8d976}*SharedItemsImports = 4
 		Content.vcxitems*{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}*SharedItemsImports = 4
 		Editor\Editor_SOURCE.vcxitems*{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}*SharedItemsImports = 4
-		WickedEngine\Shaders_SOURCE.vcxitems*{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}*SharedItemsImports = 4
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM = Debug|ARM

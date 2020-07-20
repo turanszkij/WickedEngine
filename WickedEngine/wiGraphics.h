@@ -462,6 +462,7 @@ namespace wiGraphics
 	};
 	struct PipelineStateDesc
 	{
+		const RootSignature* rootSignature = nullptr;
 		const Shader*				vs = nullptr;
 		const Shader*				ps = nullptr;
 		const Shader*				hs = nullptr;
@@ -683,7 +684,7 @@ namespace wiGraphics
 	{
 		SHADERSTAGE stage = SHADERSTAGE_COUNT;
 		std::vector<uint8_t> code;
-		const RootSignature* rootsignature_template = nullptr;
+		const RootSignature* rootSignature = nullptr;
 	};
 
 	struct Sampler : public GraphicsDeviceChild
@@ -887,6 +888,7 @@ namespace wiGraphics
 	};
 	struct RaytracingPipelineStateDesc
 	{
+		const RootSignature* rootSignature_global = nullptr;
 		std::vector<ShaderLibrary> shaderlibraries;
 		std::vector<ShaderHitGroup> hitgroups;
 		uint32_t max_trace_recursion_depth = 1;

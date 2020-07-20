@@ -133,40 +133,11 @@ namespace wiGraphics
 				VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
 				uint32_t poolSize = 256;
 
-				std::vector<VkWriteDescriptorSet> descriptorWrites;
-				std::vector<VkDescriptorBufferInfo> bufferInfos;
-				std::vector<VkDescriptorImageInfo> imageInfos;
-				std::vector<VkBufferView> texelBufferViews;
-				std::vector<VkWriteDescriptorSetAccelerationStructureNV> accelerationStructureViews;
-
-				bool dirty_graphics_compute[2] = {};
-
-				struct Table
-				{
-					const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
-					const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
-					int SRV_index[GPU_RESOURCE_HEAP_SRV_COUNT];
-					const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
-					int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
-					const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
-
-					void reset()
-					{
-						memset(CBV, 0, sizeof(CBV));
-						memset(SRV, 0, sizeof(SRV));
-						memset(SRV_index, -1, sizeof(SRV_index));
-						memset(UAV, 0, sizeof(UAV));
-						memset(UAV_index, -1, sizeof(UAV_index));
-						memset(SAM, 0, sizeof(SAM));
-					}
-
-				} tables[SHADERSTAGE_COUNT];
-
 				void init(GraphicsDevice_Vulkan* device);
 				void destroy();
 
 				void reset();
-				void validate(bool graphics, CommandList cmd, bool raytracing = false);
+				VkDescriptorSet commit(VkDescriptorSetLayout layout);
 			};
 			DescriptorTableFrameAllocator descriptors[COMMANDLIST_COUNT];
 
@@ -199,9 +170,6 @@ namespace wiGraphics
 		const Shader* active_cs[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 
-		bool dirty_pso[COMMANDLIST_COUNT] = {};
-		void pso_validate(CommandList cmd);
-
 		std::atomic<CommandList> cmd_count{ 0 };
 
 		static PFN_vkCreateRayTracingPipelinesKHR createRayTracingPipelinesKHR;
@@ -231,11 +199,15 @@ namespace wiGraphics
 		bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
 		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) override;
 		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) override;
+		bool CreateDescriptorTable(DescriptorTable* table) override;
+		bool CreateRootSignature(RootSignature* rootsig) override;
 
 		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
 
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
 		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) override;
+		void WriteDescriptor(const DescriptorTable* table, uint32_t index, const GPUResource* resource, int subresource = -1) override;
+		void WriteDescriptor(const DescriptorTable* table, uint32_t index, const Sampler* sampler) override;
 
 		void Map(const GPUResource* resource, Mapping* mapping) override;
 		void Unmap(const GPUResource* resource) override;
@@ -295,6 +267,22 @@ namespace wiGraphics
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
 		void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
 
+		void BindRootDescriptorTableGraphics(uint32_t slot, const DescriptorTable* table, CommandList cmd) override;
+		void BindRootDescriptorTableCompute(uint32_t slot, const DescriptorTable* table, CommandList cmd) override;
+		void BindRootDescriptorTableRaytracing(uint32_t slot, const DescriptorTable* table, CommandList cmd) override;
+		void BindRootSRVGraphics(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd) override;
+		void BindRootSRVCompute(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd) override;
+		void BindRootSRVRaytracing(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd) override;
+		void BindRootUAVGraphics(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd) override;
+		void BindRootUAVCompute(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd) override;
+		void BindRootUAVRaytracing(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd) override;
+		void BindRootCBVGraphics(uint32_t slot, const GPUBuffer* resource, size_t offset, CommandList cmd) override;
+		void BindRootCBVCompute(uint32_t slot, const GPUBuffer* resource, size_t offset, CommandList cmd) override;
+		void BindRootCBVRaytracing(uint32_t slot, const GPUBuffer* resource, size_t offset, CommandList cmd) override;
+		void BindRootConstants32BitGraphics(uint32_t slot, const void* srcdata, uint32_t count, uint32_t offset, CommandList cmd) override;
+		void BindRootConstants32BitCompute(uint32_t slot, const void* srcdata, uint32_t count, uint32_t offset, CommandList cmd) override;
+		void BindRootConstants32BitRaytracing(uint32_t slot, const void* srcdata, uint32_t count, uint32_t offset, CommandList cmd) override;
+
 		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
 
 		void EventBegin(const char* name, CommandList cmd) override;
@@ -317,6 +305,7 @@ namespace wiGraphics
 			std::deque<std::pair<VkSampler, uint64_t>> destroyer_samplers;
 			std::deque<std::pair<VkDescriptorPool, uint64_t>> destroyer_descriptorPools;
 			std::deque<std::pair<VkDescriptorSetLayout, uint64_t>> destroyer_descriptorSetLayouts;
+			std::deque<std::pair<VkDescriptorUpdateTemplate, uint64_t>> destroyer_descriptorUpdateTemplates;
 			std::deque<std::pair<VkShaderModule, uint64_t>> destroyer_shadermodules;
 			std::deque<std::pair<VkPipelineLayout, uint64_t>> destroyer_pipelineLayouts;
 			std::deque<std::pair<VkPipeline, uint64_t>> destroyer_pipelines;
@@ -439,6 +428,19 @@ namespace wiGraphics
 						auto item = destroyer_descriptorSetLayouts.front();
 						destroyer_descriptorSetLayouts.pop_front();
 						vkDestroyDescriptorSetLayout(device, item.first, nullptr);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_descriptorUpdateTemplates.empty())
+				{
+					if (destroyer_descriptorUpdateTemplates.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_descriptorUpdateTemplates.front();
+						destroyer_descriptorUpdateTemplates.pop_front();
+						vkDestroyDescriptorUpdateTemplate(device, item.first, nullptr);
 					}
 					else
 					{

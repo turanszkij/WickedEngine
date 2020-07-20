@@ -945,9 +945,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_SharedInternals.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Vulkan.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
@@ -1141,57 +1138,6 @@
       <Filter>UTILITY</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXMathCommon.h">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_cross.hpp">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_reflect.hpp">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_glsl.hpp">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_hlsl.hpp">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv.h">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv.hpp">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_cfg.hpp">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_common.hpp">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_cpp.hpp">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_cross_c.h">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_cross_containers.hpp">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_cross_error_handling.hpp">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_cross_parsed_ir.hpp">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_cross_util.hpp">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_msl.hpp">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_parser.hpp">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\GLSL.std.450.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiEvent.h">
@@ -1954,39 +1900,6 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_Linux.cpp">
       <Filter>ENGINE\Network</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_cross.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_reflect.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_glsl.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_hlsl.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_cfg.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_cpp.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_cross_c.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_cross_parsed_ir.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_cross_util.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_msl.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_parser.cpp">
-      <Filter>UTILITY</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiEvent.cpp">
       <Filter>ENGINE\System</Filter>

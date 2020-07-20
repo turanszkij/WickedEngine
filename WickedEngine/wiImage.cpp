@@ -28,7 +28,6 @@ namespace wiImage
 		IMAGE_SHADER_COUNT
 	};
 
-	GPUBuffer				constantBuffer;
 	Shader					vertexShader;
 	Shader					screenVS;
 	Shader					imagePS[IMAGE_SHADER_COUNT];
@@ -61,35 +60,34 @@ namespace wiImage
 		}
 		device->BindStencilRef(stencilRef, cmd);
 
-		device->BindRootSignatureGraphics(&rootsig, cmd);
-		device->WriteDescriptorSRV(&descriptortables_texture[cmd], 0, texture);
+		device->WriteDescriptor(&descriptortables_texture[cmd], 0, texture);
 
 		if (params.quality == QUALITY_NEAREST)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				device->WriteDescriptorSampler(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_POINT_MIRROR));
+				device->WriteDescriptor(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_POINT_MIRROR));
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				device->WriteDescriptorSampler(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_POINT_WRAP));
+				device->WriteDescriptor(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_POINT_WRAP));
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				device->WriteDescriptorSampler(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_POINT_CLAMP));
+				device->WriteDescriptor(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_POINT_CLAMP));
 		}
 		else if (params.quality == QUALITY_LINEAR)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				device->WriteDescriptorSampler(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_LINEAR_MIRROR));
+				device->WriteDescriptor(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_LINEAR_MIRROR));
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				device->WriteDescriptorSampler(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_LINEAR_WRAP));
+				device->WriteDescriptor(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_LINEAR_WRAP));
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				device->WriteDescriptorSampler(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_LINEAR_CLAMP));
+				device->WriteDescriptor(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_LINEAR_CLAMP));
 		}
 		else if (params.quality == QUALITY_ANISOTROPIC)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				device->WriteDescriptorSampler(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_ANISO_MIRROR));
+				device->WriteDescriptor(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_ANISO_MIRROR));
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				device->WriteDescriptorSampler(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_ANISO_WRAP));
+				device->WriteDescriptor(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_ANISO_WRAP));
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				device->WriteDescriptorSampler(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_ANISO_CLAMP));
+				device->WriteDescriptor(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_ANISO_CLAMP));
 		}
 
 		ImageCB cb;
@@ -200,8 +198,6 @@ namespace wiImage
 		cb.xTexMulAdd2.z += params.texOffset2.x * inv_width;	// texOffset.x: add
 		cb.xTexMulAdd2.w += params.texOffset2.y * inv_height;	// texOffset.y: add
 
-		device->UpdateBuffer(&constantBuffer, &cb, cmd);
-
 		// Determine relevant image rendering pixel shader:
 		IMAGE_SHADER targetShader;
 		const bool NormalmapSeparate = params.isExtractNormalMapEnabled();
@@ -239,7 +235,7 @@ namespace wiImage
 
 		device->BindPipelineState(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
 
-		device->WriteDescriptorSRV(&descriptortables_texture[cmd], 1, params.maskMap, cmd);
+		device->WriteDescriptor(&descriptortables_texture[cmd], 1, params.maskMap, cmd);
 
 		device->BindRootDescriptorTableGraphics(0, &descriptortables_sampler[cmd], cmd);
 		device->BindRootDescriptorTableGraphics(1, &descriptortables_texture[cmd], cmd);
@@ -252,7 +248,7 @@ namespace wiImage
 	void SetBackground(const Texture* texture, CommandList cmd)
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		device->WriteDescriptorSRV(&descriptortables_texture[cmd], 2, texture, cmd);
+		device->WriteDescriptor(&descriptortables_texture[cmd], 2, texture, cmd);
 	}
 
 
@@ -295,6 +291,7 @@ namespace wiImage
 					{
 						desc.dss = &depthStencilStates[k][m];
 
+						desc.rootSignature = &rootsig;
 						device->CreatePipelineState(&desc, &imagePSO[i][j][k][m]);
 
 					}
@@ -308,15 +305,6 @@ namespace wiImage
 	void Initialize()
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
-
-		{
-			GPUBufferDesc bd;
-			bd.Usage = USAGE_DYNAMIC;
-			bd.ByteWidth = sizeof(ImageCB);
-			bd.BindFlags = BIND_CONSTANT_BUFFER;
-			bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-			device->CreateBuffer(&bd, nullptr, &constantBuffer);
-		}
 
 		RasterizerStateDesc rs;
 		rs.FillMode = FILL_SOLID;
@@ -430,8 +418,6 @@ namespace wiImage
 		bd.IndependentBlendEnable = false;
 		device->CreateBlendState(&bd, &blendStates[BLENDMODE_ADDITIVE]);
 
-		static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
-		LoadShaders();
 
 		for (CommandList cmd = 0; cmd < COMMANDLIST_COUNT; ++cmd)
 		{
@@ -485,6 +471,9 @@ namespace wiImage
 			rootsig.parameters.back().range.slot = CBSLOT_IMAGE;
 			device->CreateRootSignature(&rootsig);
 		}
+
+		static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
+		LoadShaders();
 
 		wiBackLog::post("wiImage Initialized");
 		initialized.store(true);

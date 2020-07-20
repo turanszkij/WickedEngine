@@ -1,7 +1,6 @@
 #ifndef WI_SHADERINTEROP_H
 #define WI_SHADERINTEROP_H
 
-#include "ShaderInterop_Vulkan.h"
 #include "ConstantBufferMapping.h"
 #include "SamplerMapping.h"
 #include "ResourceMapping.h"
@@ -26,57 +25,14 @@ typedef XMINT4 int4;
 
 #define CB_GETBINDSLOT(name) __CBUFFERBINDSLOT__##name##__
 #define CBUFFER(name, slot) static const int CB_GETBINDSLOT(name) = slot; struct alignas(16) name
+#define ROOTCONSTANTS(name, type, slot) CBUFFER(name, slot)
 
 #else
 
 // Shader - side types:
 
-#ifdef SPIRV // invoking Vulkan shader compiler (HLSL -> SPIRV)
-
-#define globallycoherent /*nothing*/
-
-#define CBUFFER(name, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_B + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] cbuffer name
-
-#define RAWBUFFER(name,slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_T + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] ByteAddressBuffer name
-#define RWRAWBUFFER(name,slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_U + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] RWByteAddressBuffer name
-
-#define TYPEDBUFFER(name, type, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_T + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] Buffer< type > name
-#define RWTYPEDBUFFER(name, type, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_U + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] RWBuffer< type > name
-
-#define STRUCTUREDBUFFER(name, type, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_T + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] StructuredBuffer< type > name
-#define RWSTRUCTUREDBUFFER(name, type, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_U + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] RWStructuredBuffer< type > name
-#define ROVSTRUCTUREDBUFFER(name, type, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_U + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] RasterizerOrderedStructuredBuffer< type > name
-
-#define RAYTRACINGACCELERATIONSTRUCTURE(name, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_T + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] RaytracingAccelerationStructure name
-
-
-#define TEXTURE1D(name, type, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_T + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] Texture1D< type > name
-#define TEXTURE1DARRAY(name, type, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_T + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] Texture1DArray< type > name
-#define RWTEXTURE1D(name, type, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_U + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] RWTexture1D< type > name
-
-#define TEXTURE2D(name, type, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_T + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] Texture2D< type > name
-#define TEXTURE2DMS(name, type, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_T + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] Texture2DMS< type > name
-#define TEXTURE2DARRAY(name, type, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_T + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] Texture2DArray< type > name
-#define RWTEXTURE2D(name, type, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_U + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] RWTexture2D< type > name
-#define RWTEXTURE2DARRAY(name, type, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_U + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] RWTexture2DArray< type > name
-#define ROVTEXTURE2D(name, type, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_U + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] RasterizerOrderedTexture2D< type > name
-
-#define TEXTURECUBE(name, type, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_T + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] TextureCube< type > name
-#define TEXTURECUBEARRAY(name, type, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_T + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] TextureCubeArray< type > name
-
-#define TEXTURE3D(name, type, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_T + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] Texture3D< type > name
-#define RWTEXTURE3D(name, type, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_U + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] RWTexture3D< type > name
-#define ROVTEXTURE3D(name, type, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_U + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] RasterizerOrderedTexture3D< type > name
-
-
-#define SAMPLERSTATE(name, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_S + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] SamplerState name
-#define SAMPLERCOMPARISONSTATE(name, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_S + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] SamplerComparisonState name
-
-
-
-#else // invoking DirectX shader compiler
-
 #define CBUFFER(name, slot) cbuffer name : register(b ## slot)
+#define CONSTANTBUFFER(name, type, slot) ConstantBuffer< type > name : register(b ## slot)
 
 #define RAWBUFFER(name,slot) ByteAddressBuffer name : register(t ## slot)
 #define RWRAWBUFFER(name,slot) RWByteAddressBuffer name : register(u ## slot)
@@ -111,16 +67,20 @@ typedef XMINT4 int4;
 #define SAMPLERSTATE(name, slot) SamplerState name : register(s ## slot)
 #define SAMPLERCOMPARISONSTATE(name, slot) SamplerComparisonState name : register(s ## slot)
 
-#ifdef HLSL6
+#if defined(HLSL6) || defined(SPIRV)
 #define RAYTRACINGACCELERATIONSTRUCTURE(name, slot) RaytracingAccelerationStructure name : register(t ## slot)
-
 #else
 #define RAYTRACINGACCELERATIONSTRUCTURE(name, slot) 
 #define WaveReadLaneFirst(a) (a)
 #define WaveActiveBitOr(a) (a)
-#endif // HLSL6
+#endif // HLSL6 || SPIRV
 
-#endif // invoking vulkan/directx
+#ifdef SPIRV
+#define globallycoherent /*nothing*/
+#define ROOTCONSTANTS(name, type, slot) [[vk::push_constant]]type name;
+#else
+#define ROOTCONSTANTS(name, type, slot) CONSTANTBUFFER(name, type, slot)
+#endif // SPIRV
 
 #endif // __cplusplus
 

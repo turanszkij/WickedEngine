@@ -259,6 +259,7 @@ void LoadShaders()
 	desc.bs = &blendState;
 	desc.dss = &depthStencilState;
 	desc.rs = &rasterizerState;
+	desc.rootSignature = &rootsig;
 	wiRenderer::GetDevice()->CreatePipelineState(&desc, &PSO);
 }
 void Initialize()
@@ -642,8 +643,7 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 
 	device->BindPipelineState(&PSO, cmd);
 
-	device->BindRootSignatureGraphics(&rootsig, cmd);
-	device->WriteDescriptorSRV(&descriptortables[cmd], 0, &texture);
+	device->WriteDescriptor(&descriptortables[cmd], 0, &texture);
 	device->BindRootDescriptorTableGraphics(0, &descriptortables[cmd], cmd);
 
 	const GPUBuffer* vbs[] = {
@@ -673,9 +673,6 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 		);
 		cb.g_xFont_Color = newProps.shadowColor.toFloat4();
 
-		//GraphicsDevice::GPUAllocation cbmem = device->AllocateGPU(sizeof(FontCB), cmd);
-		//memcpy(cbmem.data, &cb, sizeof(cb));
-		//device->BindRootCBVGraphics(1, cbmem.buffer, cbmem.offset, cmd);
 		device->BindRootConstants32BitGraphics(1, &cb, sizeof(cb) / sizeof(uint32_t), 0, cmd);
 
 		device->DrawIndexed(quadCount * 6, 0, 0, cmd);
@@ -688,9 +685,6 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 	);
 	cb.g_xFont_Color = newProps.color.toFloat4();
 
-	//GraphicsDevice::GPUAllocation cbmem = device->AllocateGPU(sizeof(FontCB), cmd);
-	//memcpy(cbmem.data, &cb, sizeof(cb));
-	//device->BindRootCBVGraphics(1, cbmem.buffer, cbmem.offset, cmd);
 	device->BindRootConstants32BitGraphics(1, &cb, sizeof(cb) / sizeof(uint32_t), 0, cmd);
 
 	device->DrawIndexed(quadCount * 6, 0, 0, cmd);
