@@ -110,7 +110,7 @@ float deltaTime = 0;
 XMFLOAT2 temporalAAJitter = XMFLOAT2(0, 0);
 XMFLOAT2 temporalAAJitterPrev = XMFLOAT2(0, 0);
 float RESOLUTIONSCALE = 1.0f;
-GPUQueryRing<2> occlusionQueries[256];
+GPUQueryRing<GraphicsDevice::GetBackBufferCount() + 1> occlusionQueries[256];
 uint32_t entityArrayOffset_Lights = 0;
 uint32_t entityArrayCount_Lights = 0;
 uint32_t entityArrayOffset_Decals = 0;
@@ -4872,9 +4872,9 @@ void OcclusionCulling_Read()
 			}
 
 			GPUQueryResult query_result;
-			while (!device->QueryRead(query, &query_result)) {}
+			bool query_ready = device->QueryRead(query, &query_result);
 
-			if (query_result.result_passed_sample_count > 0)
+			if (query_result.result_passed_sample_count > 0 || !query_ready)
 			{
 				object.occlusionHistory |= 1; // mark this frame as visible
 			}
@@ -9502,6 +9502,7 @@ void Postprocess_Blur_Gaussian(
 		break;
 	case FORMAT_R16G16B16A16_UNORM:
 	case FORMAT_R8G8B8A8_UNORM:
+	case FORMAT_B8G8R8A8_UNORM:
 	case FORMAT_R10G10B10A2_UNORM:
 		cs = wide ? CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_WIDE_UNORM4 : CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM4;
 		break;
@@ -9622,6 +9623,7 @@ void Postprocess_Blur_Bilateral(
 		break;
 	case FORMAT_R16G16B16A16_UNORM:
 	case FORMAT_R8G8B8A8_UNORM:
+	case FORMAT_B8G8R8A8_UNORM:
 	case FORMAT_R10G10B10A2_UNORM:
 		cs = wide ? CSTYPE_POSTPROCESS_BLUR_BILATERAL_WIDE_UNORM4 : CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM4;
 		break;
@@ -11911,6 +11913,8 @@ void Postprocess_Upsample_Bilateral(
 			break;
 		case FORMAT_R16G16B16A16_UNORM:
 		case FORMAT_R8G8B8A8_UNORM:
+		case FORMAT_B8G8R8A8_UNORM:
+		case FORMAT_R10G10B10A2_UNORM:
 			cs = CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_UNORM4;
 			break;
 		case FORMAT_R11G11B10_FLOAT:

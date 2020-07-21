@@ -27,6 +27,7 @@ public:
 	wiButton*	stopButton;
 	wiSlider*	timerSlider;
 	wiSlider*	amountSlider;
+	wiSlider*	speedSlider;
 
 	void Update();
 };

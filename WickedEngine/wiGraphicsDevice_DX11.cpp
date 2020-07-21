@@ -1310,12 +1310,6 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 
 	HRESULT hr = E_FAIL;
 
-	for (int i = 0; i < COMMANDLIST_COUNT; i++)
-	{
-		stencilRef[i] = 0;
-		blendFactor[i] = XMFLOAT4(1, 1, 1, 1);
-	}
-
 	uint32_t createDeviceFlags = 0;
 
 	if (debuglayer)
@@ -2391,14 +2385,57 @@ void GraphicsDevice_DX11::Map(const GPUResource* resource, Mapping* mapping)
 		map_type = D3D11_MAP_WRITE_NO_OVERWRITE;
 	}
 	HRESULT hr = immediateContext->Map(internal_state->resource.Get(), 0, map_type, D3D11_MAP_FLAG_DO_NOT_WAIT, &map_result);
-	mapping->data = map_result.pData;
-	mapping->rowpitch = map_result.RowPitch;
-	assert(SUCCEEDED(hr));
+	if (SUCCEEDED(hr))
+	{
+		mapping->data = map_result.pData;
+		mapping->rowpitch = map_result.RowPitch;
+	}
+	else
+	{
+		assert(0);
+		mapping->data = nullptr;
+		mapping->rowpitch = 0;
+	}
 }
 void GraphicsDevice_DX11::Unmap(const GPUResource* resource)
 {
 	auto internal_state = to_internal(resource);
 	immediateContext->Unmap(internal_state->resource.Get(), 0);
+}
+bool GraphicsDevice_DX11::QueryRead(const GPUQuery* query, GPUQueryResult* result)
+{
+	const uint32_t _flags = D3D11_ASYNC_GETDATA_DONOTFLUSH;
+
+	auto internal_state = to_internal(query);
+	ID3D11Query* QUERY = internal_state->resource.Get();
+
+	HRESULT hr = S_OK;
+	switch (query->desc.Type)
+	{
+	case GPU_QUERY_TYPE_TIMESTAMP:
+		hr = immediateContext->GetData(QUERY, &result->result_timestamp, sizeof(uint64_t), _flags);
+		break;
+	case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
+	{
+		D3D11_QUERY_DATA_TIMESTAMP_DISJOINT _temp;
+		hr = immediateContext->GetData(QUERY, &_temp, sizeof(_temp), _flags);
+		result->result_timestamp_frequency = _temp.Frequency;
+	}
+	break;
+	case GPU_QUERY_TYPE_EVENT:
+	case GPU_QUERY_TYPE_OCCLUSION:
+		hr = immediateContext->GetData(QUERY, &result->result_passed_sample_count, sizeof(uint64_t), _flags);
+		break;
+	case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+	{
+		BOOL passed = FALSE;
+		hr = immediateContext->GetData(QUERY, &passed, sizeof(BOOL), _flags);
+		result->result_passed_sample_count = (uint64_t)passed;
+		break;
+	}
+	}
+
+	return hr != S_FALSE;
 }
 
 void GraphicsDevice_DX11::SetName(GPUResource* pResource, const char* name)
@@ -2470,6 +2507,9 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 		pRects[i].top = INT32_MIN;
 	}
 	deviceContexts[cmd]->RSSetScissorRects(8, pRects);
+
+	stencilRef[cmd] = 0;
+	blendFactor[cmd] = XMFLOAT4(1, 1, 1, 1);
 
 	prev_vs[cmd] = {};
 	prev_ps[cmd] = {};
@@ -3029,7 +3069,6 @@ void GraphicsDevice_DX11::UpdateBuffer(const GPUBuffer* buffer, const void* data
 		deviceContexts[cmd]->UpdateSubresource(internal_state->resource.Get(), 0, &box, data, 0, 0);
 	}
 }
-
 void GraphicsDevice_DX11::QueryBegin(const GPUQuery* query, CommandList cmd)
 {
 	auto internal_state = to_internal(query);
@@ -3039,41 +3078,6 @@ void GraphicsDevice_DX11::QueryEnd(const GPUQuery* query, CommandList cmd)
 {
 	auto internal_state = to_internal(query);
 	deviceContexts[cmd]->End(internal_state->resource.Get());
-}
-bool GraphicsDevice_DX11::QueryRead(const GPUQuery* query, GPUQueryResult* result)
-{
-	const uint32_t _flags = D3D11_ASYNC_GETDATA_DONOTFLUSH;
-
-	auto internal_state = to_internal(query);
-	ID3D11Query* QUERY = internal_state->resource.Get();
-
-	HRESULT hr = S_OK;
-	switch (query->desc.Type)
-	{
-	case GPU_QUERY_TYPE_TIMESTAMP:
-		hr = immediateContext->GetData(QUERY, &result->result_timestamp, sizeof(uint64_t), _flags);
-		break;
-	case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
-	{
-		D3D11_QUERY_DATA_TIMESTAMP_DISJOINT _temp;
-		hr = immediateContext->GetData(QUERY, &_temp, sizeof(_temp), _flags);
-		result->result_timestamp_frequency = _temp.Frequency;
-	}
-	break;
-	case GPU_QUERY_TYPE_EVENT:
-	case GPU_QUERY_TYPE_OCCLUSION:
-		hr = immediateContext->GetData(QUERY, &result->result_passed_sample_count, sizeof(uint64_t), _flags);
-		break;
-	case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-	{
-		BOOL passed = FALSE;
-		hr = immediateContext->GetData(QUERY, &passed, sizeof(BOOL), _flags);
-		result->result_passed_sample_count = (uint64_t)passed;
-		break;
-	}
-	}
-
-	return hr != S_FALSE;
 }
 
 GraphicsDevice::GPUAllocation GraphicsDevice_DX11::AllocateGPU(size_t dataSize, CommandList cmd)

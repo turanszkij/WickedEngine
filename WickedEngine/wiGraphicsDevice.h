@@ -53,6 +53,7 @@ namespace wiGraphics
 
 		virtual void Map(const GPUResource* resource, Mapping* mapping) = 0;
 		virtual void Unmap(const GPUResource* resource) = 0;
+		virtual bool QueryRead(const GPUQuery* query, GPUQueryResult* result) = 0;
 
 		virtual void SetName(GPUResource* pResource, const char* name) = 0;
 
@@ -108,7 +109,7 @@ namespace wiGraphics
 			return XMMatrixOrthographicOffCenterLH(0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0, -1, 1);
 		}
 		inline FORMAT GetBackBufferFormat() const { return BACKBUFFER_FORMAT; }
-		inline static uint32_t GetBackBufferCount() { return BACKBUFFER_COUNT; }
+		static constexpr uint32_t GetBackBufferCount() { return BACKBUFFER_COUNT; }
 
 		inline bool IsDebugDevice() const { return DEBUGDEVICE; }
 
@@ -148,7 +149,6 @@ namespace wiGraphics
 		virtual void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) = 0;
 		virtual void QueryBegin(const GPUQuery *query, CommandList cmd) = 0;
 		virtual void QueryEnd(const GPUQuery *query, CommandList cmd) = 0;
-		virtual bool QueryRead(const GPUQuery *query, GPUQueryResult* result) = 0;
 		virtual void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) = 0;
 		virtual void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) {}
 		virtual void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) {}
