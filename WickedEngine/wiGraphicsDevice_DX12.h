@@ -84,17 +84,20 @@ namespace wiGraphics
 					D3D12_GPU_DESCRIPTOR_HANDLE start_gpu = {};
 					uint32_t ringOffset = 0;
 				};
-				std::vector<DescriptorHeap> heaps_resource;
-				std::vector<DescriptorHeap> heaps_sampler;
-				size_t currentheap_resource = 0;
-				size_t currentheap_sampler = 0;
+				DescriptorHeap heap_resource;
+				DescriptorHeap heap_sampler;
 				bool heaps_bound = false;
+
+				struct DescriptorHandles
+				{
+					D3D12_GPU_DESCRIPTOR_HANDLE sampler_handle = {};
+					D3D12_GPU_DESCRIPTOR_HANDLE resource_handle = {};
+				};
 
 				void init(GraphicsDevice_DX12* device);
 
 				void reset();
-				void create_or_bind_heaps_on_demand(CommandList cmd);
-				D3D12_GPU_DESCRIPTOR_HANDLE commit(const DescriptorTable* table, CommandList cmd);
+				DescriptorHandles commit(const DescriptorTable* table, CommandList cmd);
 			};
 			DescriptorTableFrameAllocator descriptors[COMMANDLIST_COUNT];
 
@@ -127,6 +130,7 @@ namespace wiGraphics
 		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
 		const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
 		const Shader* active_cs[COMMANDLIST_COUNT] = {};
+		const RaytracingPipelineState* active_rt[COMMANDLIST_COUNT] = {};
 		const RootSignature* active_rootsig_graphics[COMMANDLIST_COUNT] = {};
 		const RootSignature* active_rootsig_compute[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
@@ -165,8 +169,8 @@ namespace wiGraphics
 
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
 		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) override;
-		void WriteDescriptor(const DescriptorTable* table, uint32_t index, const GPUResource* resource, int subresource = -1) override;
-		void WriteDescriptor(const DescriptorTable* table, uint32_t index, const Sampler* sampler) override;
+		void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const GPUResource* resource, int subresource = -1, uint64_t offset = 0) override;
+		void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const Sampler* sampler) override;
 
 		void Map(const GPUResource* resource, Mapping* mapping) override;
 		void Unmap(const GPUResource* resource) override;
@@ -224,21 +228,12 @@ namespace wiGraphics
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
 		void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
 
-		void BindRootDescriptorTableGraphics(uint32_t slot, const DescriptorTable* table, CommandList cmd) override;
-		void BindRootDescriptorTableCompute(uint32_t slot, const DescriptorTable* table, CommandList cmd) override;
-		void BindRootDescriptorTableRaytracing(uint32_t slot, const DescriptorTable* table, CommandList cmd) override;
-		void BindRootSRVGraphics(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd) override;
-		void BindRootSRVCompute(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd) override;
-		void BindRootSRVRaytracing(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd) override;
-		void BindRootUAVGraphics(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd) override;
-		void BindRootUAVCompute(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd) override;
-		void BindRootUAVRaytracing(uint32_t slot, const GPUResource* resource, size_t offset, CommandList cmd) override;
-		void BindRootCBVGraphics(uint32_t slot, const GPUBuffer* resource, size_t offset, CommandList cmd) override;
-		void BindRootCBVCompute(uint32_t slot, const GPUBuffer* resource, size_t offset, CommandList cmd) override;
-		void BindRootCBVRaytracing(uint32_t slot, const GPUBuffer* resource, size_t offset, CommandList cmd) override;
-		void BindRootConstants32BitGraphics(uint32_t slot, const void* srcdata, uint32_t count, uint32_t offset, CommandList cmd) override;
-		void BindRootConstants32BitCompute(uint32_t slot, const void* srcdata, uint32_t count, uint32_t offset, CommandList cmd) override;
-		void BindRootConstants32BitRaytracing(uint32_t slot, const void* srcdata, uint32_t count, uint32_t offset, CommandList cmd) override;
+		void BindRootDescriptorTableGraphics(uint32_t space, const DescriptorTable* table, CommandList cmd) override;
+		void BindRootDescriptorTableCompute(uint32_t space, const DescriptorTable* table, CommandList cmd) override;
+		void BindRootDescriptorTableRaytracing(uint32_t space, const DescriptorTable* table, CommandList cmd) override;
+		void BindRootConstants32BitGraphics(uint32_t index, const void* srcdata, CommandList cmd) override;
+		void BindRootConstants32BitCompute(uint32_t index, const void* srcdata, CommandList cmd) override;
+		void BindRootConstants32BitRaytracing(uint32_t index, const void* srcdata, CommandList cmd) override;
 
 		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
 

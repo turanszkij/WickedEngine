@@ -44,6 +44,13 @@ for item in root.iter():
             
             cmd += "_6_4 "
             
+            if profile == "VS":
+                cmd += " -fvk-invert-y "
+            if profile == "GS":
+                cmd += " -fvk-invert-y "
+            if profile == "DS":
+                cmd += " -fvk-invert-y "
+            
             #cmd += "-D RAYTRACING_INLINE "
             
             cmd += "-D SPIRV "

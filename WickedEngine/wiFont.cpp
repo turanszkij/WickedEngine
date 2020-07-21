@@ -349,31 +349,25 @@ void Initialize()
 
 	for (CommandList cmd = 0; cmd < COMMANDLIST_COUNT; ++cmd)
 	{
-		descriptortables[cmd].ranges.emplace_back();
-		descriptortables[cmd].ranges.back().binding = TEXTURE2D;
-		descriptortables[cmd].ranges.back().slot = TEXSLOT_FONTATLAS;
-		descriptortables[cmd].ranges.back().count = 1;
-		descriptortables[cmd].ranges.back().offset_from_table_start = 0;
+		descriptortables[cmd].stage = PS;
+		descriptortables[cmd].resources.emplace_back();
+		descriptortables[cmd].resources.back().binding = TEXTURE2D;
+		descriptortables[cmd].resources.back().slot = 1;
+		descriptortables[cmd].resources.back().count = 1;
+		descriptortables[cmd].staticsamplers.emplace_back();
+		descriptortables[cmd].staticsamplers.back().slot = 2;
+		descriptortables[cmd].staticsamplers.back().desc = samplerDesc;
 		device->CreateDescriptorTable(&descriptortables[cmd]);
 	}
 
 	rootsig._flags |= RootSignature::FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-	rootsig.staticsamplers.emplace_back();
-	rootsig.staticsamplers.back().stage = PS;
-	rootsig.staticsamplers.back().slot = SSLOT_ONDEMAND1;
-	rootsig.staticsamplers.back().desc = samplerDesc;
 
-	rootsig.parameters.emplace_back();
-	rootsig.parameters.back().stage = PS;
-	rootsig.parameters.back().range.binding = DESCRIPTORTABLE;
-	rootsig.parameters.back().range.offset_from_table_start = 0;
-	rootsig.parameters.back().table_template = &descriptortables[0];
+	rootsig.tables.push_back(descriptortables[0]);
 
-	rootsig.parameters.emplace_back();
-	rootsig.parameters.back().stage = SHADERSTAGE_COUNT;
-	rootsig.parameters.back().range.binding = ROOTCONSTANT_32BIT;
-	rootsig.parameters.back().range.count = sizeof(FontCB) / sizeof(uint32_t);
-	rootsig.parameters.back().range.slot = CBSLOT_FONT;
+	rootsig.rootconstants.emplace_back();
+	rootsig.rootconstants.back().stage = SHADERSTAGE_COUNT;
+	rootsig.rootconstants.back().size = sizeof(FontCB);
+	rootsig.rootconstants.back().slot = 0;
 	device->CreateRootSignature(&rootsig);
 
 
@@ -643,7 +637,7 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 
 	device->BindPipelineState(&PSO, cmd);
 
-	device->WriteDescriptor(&descriptortables[cmd], 0, &texture);
+	device->WriteDescriptor(&descriptortables[cmd], 0, 0, &texture);
 	device->BindRootDescriptorTableGraphics(0, &descriptortables[cmd], cmd);
 
 	const GPUBuffer* vbs[] = {
@@ -673,7 +667,7 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 		);
 		cb.g_xFont_Color = newProps.shadowColor.toFloat4();
 
-		device->BindRootConstants32BitGraphics(1, &cb, sizeof(cb) / sizeof(uint32_t), 0, cmd);
+		device->BindRootConstants32BitGraphics(0, &cb, cmd);
 
 		device->DrawIndexed(quadCount * 6, 0, 0, cmd);
 	}
@@ -685,7 +679,7 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 	);
 	cb.g_xFont_Color = newProps.color.toFloat4();
 
-	device->BindRootConstants32BitGraphics(1, &cb, sizeof(cb) / sizeof(uint32_t), 0, cmd);
+	device->BindRootConstants32BitGraphics(0, &cb, cmd);
 
 	device->DrawIndexed(quadCount * 6, 0, 0, cmd);
 

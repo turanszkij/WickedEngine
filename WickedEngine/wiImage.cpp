@@ -36,8 +36,7 @@ namespace wiImage
 	DepthStencilState		depthStencilStates[STENCILMODE_COUNT][STENCILREFMODE_COUNT];
 	PipelineState			imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT];
 
-	DescriptorTable descriptortables_sampler[COMMANDLIST_COUNT];
-	DescriptorTable descriptortables_texture[COMMANDLIST_COUNT];
+	DescriptorTable descriptortables[COMMANDLIST_COUNT];
 	RootSignature rootsig;
 
 	std::atomic_bool initialized{ false };
@@ -60,34 +59,34 @@ namespace wiImage
 		}
 		device->BindStencilRef(stencilRef, cmd);
 
-		device->WriteDescriptor(&descriptortables_texture[cmd], 0, texture);
+		device->WriteDescriptor(&descriptortables[cmd], 0, 0, texture);
 
 		if (params.quality == QUALITY_NEAREST)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				device->WriteDescriptor(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_POINT_MIRROR));
+				device->WriteDescriptor(&descriptortables[cmd], 0, 0, wiRenderer::GetSampler(SSLOT_POINT_MIRROR));
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				device->WriteDescriptor(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_POINT_WRAP));
+				device->WriteDescriptor(&descriptortables[cmd], 0, 0, wiRenderer::GetSampler(SSLOT_POINT_WRAP));
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				device->WriteDescriptor(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_POINT_CLAMP));
+				device->WriteDescriptor(&descriptortables[cmd], 0, 0, wiRenderer::GetSampler(SSLOT_POINT_CLAMP));
 		}
 		else if (params.quality == QUALITY_LINEAR)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				device->WriteDescriptor(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_LINEAR_MIRROR));
+				device->WriteDescriptor(&descriptortables[cmd], 0, 0, wiRenderer::GetSampler(SSLOT_LINEAR_MIRROR));
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				device->WriteDescriptor(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_LINEAR_WRAP));
+				device->WriteDescriptor(&descriptortables[cmd], 0, 0, wiRenderer::GetSampler(SSLOT_LINEAR_WRAP));
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				device->WriteDescriptor(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_LINEAR_CLAMP));
+				device->WriteDescriptor(&descriptortables[cmd], 0, 0, wiRenderer::GetSampler(SSLOT_LINEAR_CLAMP));
 		}
 		else if (params.quality == QUALITY_ANISOTROPIC)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				device->WriteDescriptor(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_ANISO_MIRROR));
+				device->WriteDescriptor(&descriptortables[cmd], 0, 0, wiRenderer::GetSampler(SSLOT_ANISO_MIRROR));
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				device->WriteDescriptor(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_ANISO_WRAP));
+				device->WriteDescriptor(&descriptortables[cmd], 0, 0, wiRenderer::GetSampler(SSLOT_ANISO_WRAP));
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				device->WriteDescriptor(&descriptortables_sampler[cmd], 0, wiRenderer::GetSampler(SSLOT_ANISO_CLAMP));
+				device->WriteDescriptor(&descriptortables[cmd], 0, 0, wiRenderer::GetSampler(SSLOT_ANISO_CLAMP));
 		}
 
 		ImageCB cb;
@@ -101,9 +100,8 @@ namespace wiImage
 		if (params.isFullScreenEnabled())
 		{
 			device->BindPipelineState(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
-			device->BindRootDescriptorTableGraphics(0, &descriptortables_sampler[cmd], cmd);
-			device->BindRootDescriptorTableGraphics(1, &descriptortables_texture[cmd], cmd);
-			device->BindRootConstants32BitGraphics(2, &cb, sizeof(cb) / sizeof(uint32_t), 0, cmd);
+			device->BindRootDescriptorTableGraphics(0, &descriptortables[cmd], cmd);
+			device->BindRootConstants32BitGraphics(0, &cb, cmd);
 			device->Draw(3, 0, cmd);
 			device->EventEnd(cmd);
 			return;
@@ -235,11 +233,10 @@ namespace wiImage
 
 		device->BindPipelineState(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
 
-		device->WriteDescriptor(&descriptortables_texture[cmd], 1, params.maskMap, cmd);
+		device->WriteDescriptor(&descriptortables[cmd], 1, 0, params.maskMap);
 
-		device->BindRootDescriptorTableGraphics(0, &descriptortables_sampler[cmd], cmd);
-		device->BindRootDescriptorTableGraphics(1, &descriptortables_texture[cmd], cmd);
-		device->BindRootConstants32BitGraphics(2, &cb, sizeof(cb) / sizeof(uint32_t), 0, cmd);
+		device->BindRootDescriptorTableGraphics(0, &descriptortables[cmd], cmd);
+		device->BindRootConstants32BitGraphics(0, &cb, cmd);
 
 		device->Draw(4, 0, cmd);
 
@@ -248,7 +245,7 @@ namespace wiImage
 	void SetBackground(const Texture* texture, CommandList cmd)
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		device->WriteDescriptor(&descriptortables_texture[cmd], 2, texture, cmd);
+		device->WriteDescriptor(&descriptortables[cmd], 2, 0, texture, cmd);
 	}
 
 
@@ -421,54 +418,36 @@ namespace wiImage
 
 		for (CommandList cmd = 0; cmd < COMMANDLIST_COUNT; ++cmd)
 		{
-			descriptortables_sampler[cmd].ranges.emplace_back();
-			descriptortables_sampler[cmd].ranges.back().binding = SAMPLER;
-			descriptortables_sampler[cmd].ranges.back().slot = SSLOT_ONDEMAND0;
-			descriptortables_sampler[cmd].ranges.back().count = 1;
-			descriptortables_sampler[cmd].ranges.back().offset_from_table_start = 0;
-			device->CreateDescriptorTable(&descriptortables_sampler[cmd]);
+			descriptortables[cmd].samplers.emplace_back();
+			descriptortables[cmd].samplers.back().slot = SSLOT_ONDEMAND0;
+			descriptortables[cmd].samplers.back().count = 1;
 
-			descriptortables_texture[cmd].ranges.emplace_back();
-			descriptortables_texture[cmd].ranges.back().binding = TEXTURE2D;
-			descriptortables_texture[cmd].ranges.back().slot = TEXSLOT_IMAGE_BASE;
-			descriptortables_texture[cmd].ranges.back().count = 1;
-			descriptortables_texture[cmd].ranges.back().offset_from_table_start = 0;
+			descriptortables[cmd].resources.emplace_back();
+			descriptortables[cmd].resources.back().binding = TEXTURE2D;
+			descriptortables[cmd].resources.back().slot = TEXSLOT_IMAGE_BASE;
+			descriptortables[cmd].resources.back().count = 1;
 
-			descriptortables_texture[cmd].ranges.emplace_back();
-			descriptortables_texture[cmd].ranges.back().binding = TEXTURE2D;
-			descriptortables_texture[cmd].ranges.back().slot = TEXSLOT_IMAGE_MASK;
-			descriptortables_texture[cmd].ranges.back().count = 1;
-			descriptortables_texture[cmd].ranges.back().offset_from_table_start = 1;
+			descriptortables[cmd].resources.emplace_back();
+			descriptortables[cmd].resources.back().binding = TEXTURE2D;
+			descriptortables[cmd].resources.back().slot = TEXSLOT_IMAGE_MASK;
+			descriptortables[cmd].resources.back().count = 1;
 
-			descriptortables_texture[cmd].ranges.emplace_back();
-			descriptortables_texture[cmd].ranges.back().binding = TEXTURE2D;
-			descriptortables_texture[cmd].ranges.back().slot = TEXSLOT_IMAGE_BACKGROUND;
-			descriptortables_texture[cmd].ranges.back().count = 1;
-			descriptortables_texture[cmd].ranges.back().offset_from_table_start = 2;
+			descriptortables[cmd].resources.emplace_back();
+			descriptortables[cmd].resources.back().binding = TEXTURE2D;
+			descriptortables[cmd].resources.back().slot = TEXSLOT_IMAGE_BACKGROUND;
+			descriptortables[cmd].resources.back().count = 1;
 
-			device->CreateDescriptorTable(&descriptortables_texture[cmd]);
+			device->CreateDescriptorTable(&descriptortables[cmd]);
 		}
 
 		{
 			rootsig._flags |= RootSignature::FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
-			rootsig.parameters.emplace_back();
-			rootsig.parameters.back().stage = PS;
-			rootsig.parameters.back().range.binding = DESCRIPTORTABLE;
-			rootsig.parameters.back().range.offset_from_table_start = 0;
-			rootsig.parameters.back().table_template = &descriptortables_sampler[0];
+			rootsig.tables.push_back(descriptortables[0]);
 
-			rootsig.parameters.emplace_back();
-			rootsig.parameters.back().stage = PS;
-			rootsig.parameters.back().range.binding = DESCRIPTORTABLE;
-			rootsig.parameters.back().range.offset_from_table_start = 0;
-			rootsig.parameters.back().table_template = &descriptortables_texture[0];
-
-			rootsig.parameters.emplace_back();
-			rootsig.parameters.back().stage = SHADERSTAGE_COUNT;
-			rootsig.parameters.back().range.binding = ROOTCONSTANT_32BIT;
-			rootsig.parameters.back().range.count = sizeof(ImageCB) / sizeof(uint32_t);
-			rootsig.parameters.back().range.slot = CBSLOT_IMAGE;
+			rootsig.rootconstants.emplace_back();
+			rootsig.rootconstants.back().size = sizeof(ImageCB);
+			rootsig.rootconstants.back().slot = CBSLOT_IMAGE;
 			device->CreateRootSignature(&rootsig);
 		}
 

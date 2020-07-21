@@ -1,8 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Font.h"
 
-TEXTURE2D(texture_font, float, TEXSLOT_FONTATLAS);
-SAMPLERSTATE(sampler_font, SSLOT_ONDEMAND1);
+Texture2D<float> texture_font:register(t1, space0);
+SamplerState sampler_font:register(s2, space0);
 
 struct VertextoPixel
 {

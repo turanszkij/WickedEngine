@@ -920,11 +920,8 @@ namespace wiGraphics
 		uint32_t Depth = 1;
 	};
 
-	enum SHADERBINDING
+	enum RESOURCEBINDING
 	{
-		DESCRIPTORTABLE,
-		ROOTCONSTANT_32BIT,
-		SAMPLER,
 		CONSTANTBUFFER,
 		RAWBUFFER,
 		STRUCTUREDBUFFER,
@@ -948,32 +945,37 @@ namespace wiGraphics
 		RWTEXTURECUBEARRAY,
 		RWTEXTURE3D,
 
-		SHADERBINDING_COUNT
+		RESOURCEBINDING_COUNT
 	};
-	struct DescriptorRange
+	struct ResourceRange
 	{
-		SHADERBINDING binding = DESCRIPTORTABLE;
+		RESOURCEBINDING binding = CONSTANTBUFFER;
 		uint32_t slot = 0;
-		uint32_t space = 0;
 		uint32_t count = 1;
-		uint32_t offset_from_table_start = ~0;
 	};
-	struct DescriptorTable : public GraphicsDeviceChild
+	struct SamplerRange
 	{
-		std::vector<DescriptorRange> ranges;
-	};
-	struct RootParameter
-	{
-		SHADERSTAGE stage = SHADERSTAGE_COUNT;
-		DescriptorRange range;
-		const DescriptorTable* table_template = nullptr;
+		uint32_t slot = 0;
+		uint32_t count = 1;
 	};
 	struct StaticSampler
 	{
+		uint32_t slot = 0;
+		SamplerDesc desc;
+	};
+	struct DescriptorTable : public GraphicsDeviceChild
+	{
+		SHADERSTAGE stage = SHADERSTAGE_COUNT;
+		std::vector<ResourceRange> resources;
+		std::vector<SamplerRange> samplers;
+		std::vector<StaticSampler> staticsamplers;
+	};
+	struct RootConstantRange
+	{
 		SHADERSTAGE stage = SHADERSTAGE_COUNT;
 		uint32_t slot = 0;
-		uint32_t space = 0;
-		SamplerDesc desc;
+		uint32_t size = 0;
+		uint32_t offset = 0;
 	};
 	struct RootSignature : public GraphicsDeviceChild
 	{
@@ -983,7 +985,7 @@ namespace wiGraphics
 			FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT = 1 << 0,
 		};
 		uint32_t _flags = FLAG_EMPTY;
-		std::vector<RootParameter> parameters;
-		std::vector<StaticSampler> staticsamplers;
+		std::vector<DescriptorTable> tables;
+		std::vector<RootConstantRange> rootconstants;
 	};
 }
