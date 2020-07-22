@@ -623,9 +623,9 @@ RendererWindow::~RendererWindow()
 	delete rendererWindow;
 }
 
-UINT RendererWindow::GetPickType()
+uint32_t RendererWindow::GetPickType()
 {
-	UINT pickType = PICK_VOID;
+    uint32_t pickType = PICK_VOID;
 	if (pickTypeObjectCheckBox->GetCheck())
 	{
 		pickType |= PICK_OBJECT;

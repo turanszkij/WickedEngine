@@ -6,6 +6,8 @@
 #include "Translator.h"
 
 #include <sstream>
+#include <cassert>
+#include <cmath>
 
 #ifdef PLATFORM_UWP
 #include <collection.h>
@@ -53,7 +55,7 @@ using namespace wiECS;
 
 void Editor::Initialize()
 {
-	__super::Initialize();
+	MainComponent::Initialize();
 
 	infoDisplay.active = true;
 	infoDisplay.watermark = true;
@@ -92,7 +94,7 @@ void EditorLoadingScreen::Load()
 	sprite.params.blendFlag = BLENDMODE_ALPHA;
 	AddSprite(&sprite);
 
-	__super::Load();
+	LoadingScreen::Load();
 }
 void EditorLoadingScreen::Update(float dt)
 {
@@ -100,7 +102,7 @@ void EditorLoadingScreen::Update(float dt)
 	font.params.posY = wiRenderer::GetDevice()->GetScreenHeight()*0.5f;
 	sprite.params.pos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth()*0.5f, wiRenderer::GetDevice()->GetScreenHeight()*0.5f - font.textHeight(), 0);
 
-	__super::Update(dt);
+	LoadingScreen::Update(dt);
 }
 
 
@@ -168,10 +170,10 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 
 void EditorComponent::ResizeBuffers()
 {
-	__super::ResizeBuffers();
+	RenderPath2D::ResizeBuffers();
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
-	HRESULT hr;
+	bool hr;
 
 	if(renderPath != nullptr && renderPath->GetDepthStencil() != nullptr)
 	{
@@ -185,13 +187,13 @@ void EditorComponent::ResizeBuffers()
 		{
 			desc.SampleCount = renderPath->getMSAASampleCount();
 			hr = device->CreateTexture(&desc, nullptr, &rt_selectionOutline_MSAA);
-			assert(SUCCEEDED(hr));
+			assert(hr);
 			desc.SampleCount = 1;
 		}
 		hr = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[0]);
-		assert(SUCCEEDED(hr));
+		assert(hr);
 		hr = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[1]);
-		assert(SUCCEEDED(hr));
+		assert(hr);
 
 		{
 			RenderPassDesc desc;
@@ -212,7 +214,7 @@ void EditorComponent::ResizeBuffers()
 				)
 			);
 			hr = device->CreateRenderPass(&desc, &renderpass_selectionOutline[0]);
-			assert(SUCCEEDED(hr));
+			assert(hr);
 
 			if (renderPath->getMSAASampleCount() == 1)
 			{
@@ -223,14 +225,14 @@ void EditorComponent::ResizeBuffers()
 				desc.attachments[1].texture = &rt_selectionOutline[1]; // resolve
 			}
 			hr = device->CreateRenderPass(&desc, &renderpass_selectionOutline[1]);
-			assert(SUCCEEDED(hr));
+			assert(hr);
 		}
 	}
 
 }
 void EditorComponent::ResizeLayout()
 {
-	__super::ResizeLayout();
+	RenderPath2D::ResizeLayout();
 
 	// GUI elements scaling:
 
@@ -965,15 +967,15 @@ void EditorComponent::Load()
 
 	wiJobSystem::Wait(ctx);
 
-	__super::Load();
+    RenderPath2D::Load();
 }
 void EditorComponent::Start()
 {
-	__super::Start();
+	RenderPath2D::Start();
 }
 void EditorComponent::FixedUpdate()
 {
-	__super::FixedUpdate();
+	RenderPath2D::FixedUpdate();
 
 	renderPath->FixedUpdate();
 }
@@ -1238,7 +1240,7 @@ void EditorComponent::Update(float dt)
 	if (!wiBackLog::isActive() && !GetGUI().HasFocus())
 	{
 		// Begin picking:
-		UINT pickMask = rendererWnd->GetPickType();
+		unsigned int pickMask = rendererWnd->GetPickType();
 		RAY pickRay = wiRenderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y);
 		{
 			hovered = wiScene::PickResult();
@@ -1758,7 +1760,7 @@ void EditorComponent::Update(float dt)
 
 	wiProfiler::EndRange(profrange);
 
-	__super::Update(dt);
+	RenderPath2D::Update(dt);
 
 	renderPath->Update(dt);
 }
@@ -1937,7 +1939,7 @@ void EditorComponent::Render() const
 		device->EventEnd(cmd);
 	}
 
-	__super::Render();
+	RenderPath2D::Render();
 
 }
 void EditorComponent::Compose(CommandList cmd) const
@@ -1950,7 +1952,7 @@ void EditorComponent::Compose(CommandList cmd) const
 	}
 
 	// Draw selection outline to the screen:
-	const float selectionColorIntensity = std::sinf(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f;
+	const float selectionColorIntensity = std::sin(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f;
 	if (renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
@@ -2270,7 +2272,7 @@ void EditorComponent::Compose(CommandList cmd) const
 		translator.Draw(camera, cmd);
 	}
 
-	__super::Compose(cmd);
+	RenderPath2D::Compose(cmd);
 }
 
 void EditorComponent::ClearSelected()
