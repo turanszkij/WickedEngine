@@ -273,10 +273,11 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 				params.extensions.push_back("jpg");
 				params.extensions.push_back("tga");
 				wiHelper::FileDialog(params, [this, light, i](std::string fileName) {
-					light->lensFlareRimTextures[i] = wiResourceManager::Load(fileName);
-					light->lensFlareNames[i] = fileName;
-					fileName = wiHelper::GetFileNameFromPath(fileName);
-					lensflare_Button[i]->SetText(fileName);
+					wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+						light->lensFlareRimTextures[i] = wiResourceManager::Load(fileName);
+						light->lensFlareNames[i] = fileName;
+						lensflare_Button[i]->SetText(wiHelper::GetFileNameFromPath(fileName));
+					});
 				});
 			}
 		});

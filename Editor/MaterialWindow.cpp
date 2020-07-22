@@ -423,11 +423,12 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
 			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				material->baseColorMap = wiResourceManager::Load(fileName);
-				material->baseColorMapName = fileName;
-				material->SetDirty();
-				fileName = wiHelper::GetFileNameFromPath(fileName);
-				texture_baseColor_Button->SetText(fileName);
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					material->baseColorMap = wiResourceManager::Load(fileName);
+					material->baseColorMapName = fileName;
+					material->SetDirty();
+					texture_baseColor_Button->SetText(wiHelper::GetFileNameFromPath(fileName));
+				});
 			});
 		}
 	});
@@ -481,11 +482,12 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
 			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				material->normalMap = wiResourceManager::Load(fileName);
-				material->normalMapName = fileName;
-				material->SetDirty();
-				fileName = wiHelper::GetFileNameFromPath(fileName);
-				texture_normal_Button->SetText(fileName);
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					material->normalMap = wiResourceManager::Load(fileName);
+					material->normalMapName = fileName;
+					material->SetDirty();
+					texture_normal_Button->SetText(wiHelper::GetFileNameFromPath(fileName));
+				});
 			});
 		}
 	});
@@ -539,11 +541,12 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
 			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				material->surfaceMap = wiResourceManager::Load(fileName);
-				material->surfaceMapName = fileName;
-				material->SetDirty();
-				fileName = wiHelper::GetFileNameFromPath(fileName);
-				texture_surface_Button->SetText(fileName);
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					material->surfaceMap = wiResourceManager::Load(fileName);
+					material->surfaceMapName = fileName;
+					material->SetDirty();
+					texture_surface_Button->SetText(wiHelper::GetFileNameFromPath(fileName));
+				});
 			});
 		}
 	});
@@ -597,11 +600,12 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
 			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				material->emissiveMap = wiResourceManager::Load(fileName);
-				material->emissiveMapName = fileName;
-				material->SetDirty();
-				fileName = wiHelper::GetFileNameFromPath(fileName);
-				texture_emissive_Button->SetText(fileName);
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					material->emissiveMap = wiResourceManager::Load(fileName);
+					material->emissiveMapName = fileName;
+					material->SetDirty();
+					texture_emissive_Button->SetText(wiHelper::GetFileNameFromPath(fileName));
+				});
 			});
 		}
 	});
@@ -655,11 +659,12 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
 			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				material->displacementMap = wiResourceManager::Load(fileName);
-				material->displacementMapName = fileName;
-				material->SetDirty();
-				fileName = wiHelper::GetFileNameFromPath(fileName);
-				texture_displacement_Button->SetText(fileName);
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					material->displacementMap = wiResourceManager::Load(fileName);
+					material->displacementMapName = fileName;
+					material->SetDirty();
+					texture_displacement_Button->SetText(wiHelper::GetFileNameFromPath(fileName));
+				});
 			});
 		}
 	});
@@ -714,11 +719,12 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
 			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				material->occlusionMap = wiResourceManager::Load(fileName);
-				material->occlusionMapName = fileName;
-				material->SetDirty();
-				fileName = wiHelper::GetFileNameFromPath(fileName);
-				texture_occlusion_Button->SetText(fileName);
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					material->occlusionMap = wiResourceManager::Load(fileName);
+					material->occlusionMapName = fileName;
+					material->SetDirty();
+					texture_occlusion_Button->SetText(wiHelper::GetFileNameFromPath(fileName));
+				});
 			});
 		}
 	});

@@ -272,11 +272,13 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
 			wiHelper::FileDialog(params, [=](std::string fileName) {
-				editor->renderPath->setColorGradingTexture(wiResourceManager::Load(fileName));
-				if (editor->renderPath->getColorGradingTexture() != nullptr)
-				{
-					colorGradingButton->SetText(fileName);
-				}
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					editor->renderPath->setColorGradingTexture(wiResourceManager::Load(fileName));
+					if (editor->renderPath->getColorGradingTexture() != nullptr)
+					{
+						colorGradingButton->SetText(fileName);
+					}
+				});
 			});
 		}
 		else

@@ -468,17 +468,18 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
 			wiHelper::FileDialog(params, [=](std::string fileName) {
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					if (this->rgb != nullptr)
+					{
+						stbi_image_free(this->rgb);
+						this->rgb = nullptr;
+					}
 
-				if (this->rgb != nullptr)
-				{
-					stbi_image_free(this->rgb);
-					this->rgb = nullptr;
-				}
+					int bpp;
+					this->rgb = stbi_load(fileName.c_str(), &this->width, &this->height, &bpp, channelCount);
 
-				int bpp;
-				this->rgb = stbi_load(fileName.c_str(), &this->width, &this->height, &bpp, channelCount);
-
-				generate_mesh(width, height, rgb, channelCount, dimYSlider->GetValue());
+					generate_mesh(width, height, rgb, channelCount, dimYSlider->GetValue());
+				});
 			});
 		});
 		terrainGenWindow->AddWidget(heightmapButton);
