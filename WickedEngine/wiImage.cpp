@@ -59,7 +59,7 @@ namespace wiImage
 		}
 		device->BindStencilRef(stencilRef, cmd);
 
-		device->WriteDescriptor(&descriptortables[cmd], 0, 0, texture);
+		device->WriteDescriptor(&descriptortables[cmd], 1, 0, texture);
 
 		if (params.quality == QUALITY_NEAREST)
 		{
@@ -100,8 +100,10 @@ namespace wiImage
 		if (params.isFullScreenEnabled())
 		{
 			device->BindPipelineState(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
-			device->BindRootDescriptorTableGraphics(0, &descriptortables[cmd], cmd);
-			device->BindRootConstants32BitGraphics(0, &cb, cmd);
+			device->BindDescriptorTableGraphics(0, &descriptortables[cmd], cmd);
+			GraphicsDevice::GPUAllocation cb_alloc = device->AllocateGPU(sizeof(cb), cmd);
+			memcpy(cb_alloc.data, &cb, sizeof(cb));
+			device->BindRootDescriptorGraphics(0, cb_alloc.buffer, cb_alloc.offset, cmd);
 			device->Draw(3, 0, cmd);
 			device->EventEnd(cmd);
 			return;
@@ -233,10 +235,13 @@ namespace wiImage
 
 		device->BindPipelineState(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
 
-		device->WriteDescriptor(&descriptortables[cmd], 1, 0, params.maskMap);
+		device->WriteDescriptor(&descriptortables[cmd], 2, 0, params.maskMap);
 
-		device->BindRootDescriptorTableGraphics(0, &descriptortables[cmd], cmd);
-		device->BindRootConstants32BitGraphics(0, &cb, cmd);
+		device->BindDescriptorTableGraphics(0, &descriptortables[cmd], cmd);
+
+		GraphicsDevice::GPUAllocation cb_alloc = device->AllocateGPU(sizeof(cb), cmd);
+		memcpy(cb_alloc.data, &cb, sizeof(cb));
+		device->BindRootDescriptorGraphics(0, cb_alloc.buffer, cb_alloc.offset, cmd);
 
 		device->Draw(4, 0, cmd);
 
@@ -245,7 +250,7 @@ namespace wiImage
 	void SetBackground(const Texture* texture, CommandList cmd)
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		device->WriteDescriptor(&descriptortables[cmd], 2, 0, texture, cmd);
+		device->WriteDescriptor(&descriptortables[cmd], 3, 0, texture, cmd);
 	}
 
 
@@ -423,6 +428,11 @@ namespace wiImage
 			descriptortables[cmd].samplers.back().count = 1;
 
 			descriptortables[cmd].resources.emplace_back();
+			descriptortables[cmd].resources.back().binding = ROOT_CONSTANTBUFFER;
+			descriptortables[cmd].resources.back().slot = CBSLOT_IMAGE;
+			descriptortables[cmd].resources.back().count = 1;
+
+			descriptortables[cmd].resources.emplace_back();
 			descriptortables[cmd].resources.back().binding = TEXTURE2D;
 			descriptortables[cmd].resources.back().slot = TEXSLOT_IMAGE_BASE;
 			descriptortables[cmd].resources.back().count = 1;
@@ -445,9 +455,9 @@ namespace wiImage
 
 			rootsig.tables.push_back(descriptortables[0]);
 
-			rootsig.rootconstants.emplace_back();
-			rootsig.rootconstants.back().size = sizeof(ImageCB);
-			rootsig.rootconstants.back().slot = CBSLOT_IMAGE;
+			//rootsig.rootconstants.emplace_back();
+			//rootsig.rootconstants.back().size = sizeof(ImageCB);
+			//rootsig.rootconstants.back().slot = CBSLOT_IMAGE;
 			device->CreateRootSignature(&rootsig);
 		}
 

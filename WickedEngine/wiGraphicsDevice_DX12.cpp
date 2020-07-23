@@ -1108,9 +1108,17 @@ namespace DX12_Internal
 	{
 		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		ComPtr<ID3D12RootSignature> resource;
+		std::vector<D3D12_ROOT_PARAMETER> params;
 
-		std::vector<int> table_bind_point_remap;
-		uint32_t root_constant_bind_remap = -1;
+		std::vector<uint32_t> table_bind_point_remap;
+		uint32_t root_constant_bind_remap = 0;
+
+		struct RootRemap
+		{
+			uint32_t space = 0;
+			uint32_t rangeIndex = 0;
+		};
+		std::vector<RootRemap> root_remap;
 
 		~RootSignature_DX12()
 		{
@@ -2607,6 +2615,12 @@ using namespace DX12_Internal;
 		size_t prefix_sum = 0;
 		for (auto& x : table->resources)
 		{
+			if (x.binding < CONSTANTBUFFER)
+			{
+				internal_state->resource_heap.write_remap.push_back(prefix_sum);
+				continue;
+			}
+
 			internal_state->resource_heap.ranges.emplace_back();
 			auto& range = internal_state->resource_heap.ranges.back();
 			range = {};
@@ -2700,6 +2714,25 @@ using namespace DX12_Internal;
 
 		internal_state->resource_heap.address = internal_state->resource_heap.heap->GetCPUDescriptorHandleForHeapStart();
 		internal_state->sampler_heap.address = internal_state->sampler_heap.heap->GetCPUDescriptorHandleForHeapStart();
+
+		uint32_t slot = 0;
+		for (auto& x : table->resources)
+		{
+			for (uint32_t i = 0; i < x.count; ++i)
+			{
+				WriteDescriptor(table, slot, i, (const GPUResource*)nullptr);
+			}
+			slot++;
+		}
+		slot = 0;
+		for (auto& x : table->samplers)
+		{
+			for (uint32_t i = 0; i < x.count; ++i)
+			{
+				WriteDescriptor(table, slot, i, (const Sampler*)nullptr);
+			}
+			slot++;
+		}
 		
 		return SUCCEEDED(hr);
 	}
@@ -2709,11 +2742,50 @@ using namespace DX12_Internal;
 		internal_state->allocationhandler = allocationhandler;
 		rootsig->internal_state = internal_state;
 
-		std::vector<D3D12_ROOT_PARAMETER> params;
-		params.reserve(rootsig->tables.size());
+		internal_state->params.reserve(rootsig->tables.size());
 		std::vector<D3D12_STATIC_SAMPLER_DESC> staticsamplers;
 
-		uint32_t bind_point = 0;
+		uint32_t space = 0;
+		for (auto& x : rootsig->tables)
+		{
+			uint32_t rangeIndex = 0;
+			for (auto& binding : x.resources)
+			{
+				if (binding.binding < CONSTANTBUFFER)
+				{
+					assert(binding.count == 1); // descriptor array not allowed in the root
+					internal_state->root_remap.emplace_back();
+					internal_state->root_remap.back().space = space;
+					internal_state->root_remap.back().rangeIndex = rangeIndex;
+
+					internal_state->params.emplace_back();
+					auto& param = internal_state->params.back();
+					switch (binding.binding)
+					{
+					case ROOT_CONSTANTBUFFER:
+						param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+						break;
+					case ROOT_RAWBUFFER:
+					case ROOT_STRUCTUREDBUFFER:
+						param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
+						break;
+					case ROOT_RWRAWBUFFER:
+					case ROOT_RWSTRUCTUREDBUFFER:
+						param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV;
+						break;
+					default:
+						break;
+					}
+					param.ShaderVisibility = _ConvertShaderVisibility(x.stage);
+					param.Descriptor.RegisterSpace = space;
+					param.Descriptor.ShaderRegister = binding.slot;
+				}
+				rangeIndex++;
+			}
+			space++;
+		}
+
+		uint32_t bind_point = (uint32_t)internal_state->params.size();
 		for (auto& x : rootsig->tables)
 		{
 			auto table_internal = to_internal(&x);
@@ -2731,8 +2803,8 @@ using namespace DX12_Internal;
 
 			if (table_internal->resource_heap.desc.NumDescriptors > 0)
 			{
-				params.emplace_back();
-				auto& param = params.back();
+				internal_state->params.emplace_back();
+				auto& param = internal_state->params.back();
 				param = {};
 				param.ShaderVisibility = _ConvertShaderVisibility(x.stage);
 				param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
@@ -2742,8 +2814,8 @@ using namespace DX12_Internal;
 			}
 			if (table_internal->sampler_heap.desc.NumDescriptors > 0)
 			{
-				params.emplace_back();
-				auto& param = params.back();
+				internal_state->params.emplace_back();
+				auto& param = internal_state->params.back();
 				param = {};
 				param.ShaderVisibility = _ConvertShaderVisibility(x.stage);
 				param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
@@ -2762,8 +2834,8 @@ using namespace DX12_Internal;
 		internal_state->root_constant_bind_remap = bind_point;
 		for (auto& x : rootsig->rootconstants)
 		{
-			params.emplace_back();
-			auto& param = params.back();
+			internal_state->params.emplace_back();
+			auto& param = internal_state->params.back();
 			param = {};
 			param.ShaderVisibility = _ConvertShaderVisibility(x.stage);
 			param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
@@ -2777,8 +2849,8 @@ using namespace DX12_Internal;
 		{
 			desc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 		}
-		desc.NumParameters = (UINT)params.size();
-		desc.pParameters = params.data();
+		desc.NumParameters = (UINT)internal_state->params.size();
+		desc.pParameters = internal_state->params.data();
 		desc.NumStaticSamplers = (UINT)staticsamplers.size();
 		desc.pStaticSamplers = staticsamplers.data();
 
@@ -3315,8 +3387,21 @@ using namespace DX12_Internal;
 		size_t remap = table_internal->sampler_heap.write_remap[rangeIndex];
 		dst.ptr += (remap + arrayIndex) * (size_t)sampler_descriptor_size;
 
-		auto internal_state = to_internal(sampler);
-		device->CreateSampler(&internal_state->descriptor, dst);
+		if (sampler == nullptr || !sampler->IsValid())
+		{
+			D3D12_SAMPLER_DESC sam = {};
+			sam.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+			sam.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+			sam.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+			sam.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+			sam.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+			device->CreateSampler(&sam, dst);
+		}
+		else
+		{
+			auto internal_state = to_internal(sampler);
+			device->CreateSampler(&internal_state->descriptor, dst);
+		}
 	}
 
 	void GraphicsDevice_DX12::Map(const GPUResource* resource, Mapping* mapping)
@@ -4529,7 +4614,7 @@ using namespace DX12_Internal;
 		GetDirectCommandList(cmd)->DispatchRays(&dispatchrays_desc);
 	}
 
-	void GraphicsDevice_DX12::BindRootDescriptorTableGraphics(uint32_t space, const DescriptorTable* table, CommandList cmd)
+	void GraphicsDevice_DX12::BindDescriptorTableGraphics(uint32_t space, const DescriptorTable* table, CommandList cmd)
 	{
 		auto rootsig_internal = to_internal(active_pso[cmd]->desc.rootSignature);
 		uint32_t bind_point_remap = rootsig_internal->table_bind_point_remap[space];
@@ -4545,7 +4630,7 @@ using namespace DX12_Internal;
 			GetDirectCommandList(cmd)->SetGraphicsRootDescriptorTable(bind_point_remap, handles.sampler_handle);
 		}
 	}
-	void GraphicsDevice_DX12::BindRootDescriptorTableCompute(uint32_t space, const DescriptorTable* table, CommandList cmd)
+	void GraphicsDevice_DX12::BindDescriptorTableCompute(uint32_t space, const DescriptorTable* table, CommandList cmd)
 	{
 		auto rootsig_internal = to_internal(active_cs[cmd]->rootSignature);
 		uint32_t bind_point_remap = rootsig_internal->table_bind_point_remap[space];
@@ -4561,7 +4646,7 @@ using namespace DX12_Internal;
 			GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(bind_point_remap, handles.sampler_handle);
 		}
 	}
-	void GraphicsDevice_DX12::BindRootDescriptorTableRaytracing(uint32_t space, const DescriptorTable* table, CommandList cmd)
+	void GraphicsDevice_DX12::BindDescriptorTableRaytracing(uint32_t space, const DescriptorTable* table, CommandList cmd)
 	{
 		auto rootsig_internal = to_internal(active_rt[cmd]->desc.rootSignature_global);
 		uint32_t bind_point_remap = rootsig_internal->table_bind_point_remap[space];
@@ -4577,7 +4662,82 @@ using namespace DX12_Internal;
 			GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(bind_point_remap, handles.sampler_handle);
 		}
 	}
-	void GraphicsDevice_DX12::BindRootConstants32BitGraphics(uint32_t index, const void* srcdata, CommandList cmd)
+	void GraphicsDevice_DX12::BindRootDescriptorGraphics(uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd)
+	{
+		auto internal_state = to_internal(buffer);
+		D3D12_GPU_VIRTUAL_ADDRESS address = internal_state->resource.Get()->GetGPUVirtualAddress() + (UINT64)offset;
+
+		auto rootsig_internal = to_internal(active_pso[cmd]->desc.rootSignature);
+		auto remap = rootsig_internal->root_remap[index];
+		auto binding = active_rootsig_graphics[cmd]->tables[remap.space].resources[remap.rangeIndex].binding;
+		switch (binding)
+		{
+		case ROOT_CONSTANTBUFFER:
+			GetDirectCommandList(cmd)->SetGraphicsRootConstantBufferView(index, address);
+			break;
+		case ROOT_RAWBUFFER:
+		case ROOT_STRUCTUREDBUFFER:
+			GetDirectCommandList(cmd)->SetGraphicsRootShaderResourceView(index, address);
+			break;
+		case ROOT_RWRAWBUFFER:
+		case ROOT_RWSTRUCTUREDBUFFER:
+			GetDirectCommandList(cmd)->SetGraphicsRootUnorderedAccessView(index, address);
+			break;
+		default:
+			break;
+		}
+	}
+	void GraphicsDevice_DX12::BindRootDescriptorCompute(uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd)
+	{
+		auto internal_state = to_internal(buffer);
+		D3D12_GPU_VIRTUAL_ADDRESS address = internal_state->resource.Get()->GetGPUVirtualAddress() + (UINT64)offset;
+
+		auto rootsig_internal = to_internal(active_cs[cmd]->rootSignature);
+		auto remap = rootsig_internal->root_remap[index];
+		auto binding = active_rootsig_compute[cmd]->tables[remap.space].resources[remap.rangeIndex].binding;
+		switch (binding)
+		{
+		case ROOT_CONSTANTBUFFER:
+			GetDirectCommandList(cmd)->SetComputeRootConstantBufferView(index, address);
+			break;
+		case ROOT_RAWBUFFER:
+		case ROOT_STRUCTUREDBUFFER:
+			GetDirectCommandList(cmd)->SetComputeRootShaderResourceView(index, address);
+			break;
+		case ROOT_RWRAWBUFFER:
+		case ROOT_RWSTRUCTUREDBUFFER:
+			GetDirectCommandList(cmd)->SetComputeRootUnorderedAccessView(index, address);
+			break;
+		default:
+			break;
+		}
+	}
+	void GraphicsDevice_DX12::BindRootDescriptorRaytracing(uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd)
+	{
+		auto internal_state = to_internal(buffer);
+		D3D12_GPU_VIRTUAL_ADDRESS address = internal_state->resource.Get()->GetGPUVirtualAddress() + (UINT64)offset;
+
+		auto rootsig_internal = to_internal(active_rt[cmd]->desc.rootSignature_global);
+		auto remap = rootsig_internal->root_remap[index];
+		auto binding = active_rootsig_compute[cmd]->tables[remap.space].resources[remap.rangeIndex].binding;
+		switch (binding)
+		{
+		case ROOT_CONSTANTBUFFER:
+			GetDirectCommandList(cmd)->SetComputeRootConstantBufferView(index, address);
+			break;
+		case ROOT_RAWBUFFER:
+		case ROOT_STRUCTUREDBUFFER:
+			GetDirectCommandList(cmd)->SetComputeRootShaderResourceView(index, address);
+			break;
+		case ROOT_RWRAWBUFFER:
+		case ROOT_RWSTRUCTUREDBUFFER:
+			GetDirectCommandList(cmd)->SetComputeRootUnorderedAccessView(index, address);
+			break;
+		default:
+			break;
+		}
+	}
+	void GraphicsDevice_DX12::BindRootConstantsGraphics(uint32_t index, const void* srcdata, CommandList cmd)
 	{
 		const RootSignature* rootsig = active_pso[cmd]->desc.rootSignature;
 		auto rootsig_internal = to_internal(rootsig);
@@ -4589,7 +4749,7 @@ using namespace DX12_Internal;
 			range.offset / sizeof(uint32_t)
 		);
 	}
-	void GraphicsDevice_DX12::BindRootConstants32BitCompute(uint32_t index, const void* srcdata, CommandList cmd)
+	void GraphicsDevice_DX12::BindRootConstantsCompute(uint32_t index, const void* srcdata, CommandList cmd)
 	{
 		const RootSignature* rootsig = active_cs[cmd]->rootSignature;
 		auto rootsig_internal = to_internal(rootsig);
@@ -4601,7 +4761,7 @@ using namespace DX12_Internal;
 			range.offset / sizeof(uint32_t)
 		);
 	}
-	void GraphicsDevice_DX12::BindRootConstants32BitRaytracing(uint32_t index, const void* srcdata, CommandList cmd)
+	void GraphicsDevice_DX12::BindRootConstantsRaytracing(uint32_t index, const void* srcdata, CommandList cmd)
 	{
 		const RootSignature* rootsig = active_rt[cmd]->desc.rootSignature_global;
 		auto rootsig_internal = to_internal(rootsig);

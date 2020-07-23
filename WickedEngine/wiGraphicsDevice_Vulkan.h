@@ -171,6 +171,10 @@ namespace wiGraphics
 		const RaytracingPipelineState* active_rt[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 
+		void predraw(CommandList cmd);
+		void predispatch(CommandList cmd);
+		void preraytrace(CommandList cmd);
+
 		std::atomic<CommandList> cmd_count{ 0 };
 
 		static PFN_vkCreateRayTracingPipelinesKHR createRayTracingPipelinesKHR;
@@ -268,12 +272,15 @@ namespace wiGraphics
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
 		void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
 
-		void BindRootDescriptorTableGraphics(uint32_t space, const DescriptorTable* table, CommandList cmd) override;
-		void BindRootDescriptorTableCompute(uint32_t space, const DescriptorTable* table, CommandList cmd) override;
-		void BindRootDescriptorTableRaytracing(uint32_t space, const DescriptorTable* table, CommandList cmd) override;
-		void BindRootConstants32BitGraphics(uint32_t index, const void* srcdata, CommandList cmd) override;
-		void BindRootConstants32BitCompute(uint32_t index, const void* srcdata, CommandList cmd) override;
-		void BindRootConstants32BitRaytracing(uint32_t index, const void* srcdata, CommandList cmd) override;
+		void BindDescriptorTableGraphics(uint32_t space, const DescriptorTable* table, CommandList cmd) override;
+		void BindDescriptorTableCompute(uint32_t space, const DescriptorTable* table, CommandList cmd) override;
+		void BindDescriptorTableRaytracing(uint32_t space, const DescriptorTable* table, CommandList cmd) override;
+		void BindRootDescriptorGraphics(uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd) override;
+		void BindRootDescriptorCompute(uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd) override;
+		void BindRootDescriptorRaytracing(uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd) override;
+		void BindRootConstantsGraphics(uint32_t index, const void* srcdata, CommandList cmd) override;
+		void BindRootConstantsCompute(uint32_t index, const void* srcdata, CommandList cmd) override;
+		void BindRootConstantsRaytracing(uint32_t index, const void* srcdata, CommandList cmd) override;
 
 		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
 

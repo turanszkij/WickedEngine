@@ -638,7 +638,7 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 	device->BindPipelineState(&PSO, cmd);
 
 	device->WriteDescriptor(&descriptortables[cmd], 0, 0, &texture);
-	device->BindRootDescriptorTableGraphics(0, &descriptortables[cmd], cmd);
+	device->BindDescriptorTableGraphics(0, &descriptortables[cmd], cmd);
 
 	const GPUBuffer* vbs[] = {
 		mem.buffer,
@@ -667,7 +667,7 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 		);
 		cb.g_xFont_Color = newProps.shadowColor.toFloat4();
 
-		device->BindRootConstants32BitGraphics(0, &cb, cmd);
+		device->BindRootConstantsGraphics(0, &cb, cmd);
 
 		device->DrawIndexed(quadCount * 6, 0, 0, cmd);
 	}
@@ -679,7 +679,7 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 	);
 	cb.g_xFont_Color = newProps.color.toFloat4();
 
-	device->BindRootConstants32BitGraphics(0, &cb, cmd);
+	device->BindRootConstantsGraphics(0, &cb, cmd);
 
 	device->DrawIndexed(quadCount * 6, 0, 0, cmd);
 
