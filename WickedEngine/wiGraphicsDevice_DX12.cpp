@@ -4614,164 +4614,165 @@ using namespace DX12_Internal;
 		GetDirectCommandList(cmd)->DispatchRays(&dispatchrays_desc);
 	}
 
-	void GraphicsDevice_DX12::BindDescriptorTableGraphics(uint32_t space, const DescriptorTable* table, CommandList cmd)
+	void GraphicsDevice_DX12::BindDescriptorTable(BINDPOINT bindpoint, uint32_t space, const DescriptorTable* table, CommandList cmd)
 	{
-		auto rootsig_internal = to_internal(active_pso[cmd]->desc.rootSignature);
+		const RootSignature* rootsig = nullptr;
+		switch (bindpoint)
+		{
+		default:
+		case wiGraphics::GRAPHICS:
+			rootsig = active_pso[cmd]->desc.rootSignature;
+			break;
+		case wiGraphics::COMPUTE:
+			rootsig = active_cs[cmd]->rootSignature;
+			break;
+		case wiGraphics::RAYTRACING:
+			rootsig = active_rt[cmd]->desc.rootSignature_global;
+			break;
+		}
+		auto rootsig_internal = to_internal(rootsig);
 		uint32_t bind_point_remap = rootsig_internal->table_bind_point_remap[space];
 		auto& descriptors = GetFrameResources().descriptors[cmd];
 		auto handles = descriptors.commit(table, cmd);
 		if (handles.resource_handle.ptr != 0)
 		{
-			GetDirectCommandList(cmd)->SetGraphicsRootDescriptorTable(bind_point_remap, handles.resource_handle);
+			switch (bindpoint)
+			{
+			default:
+			case wiGraphics::GRAPHICS:
+				GetDirectCommandList(cmd)->SetGraphicsRootDescriptorTable(bind_point_remap, handles.resource_handle);
+				break;
+			case wiGraphics::COMPUTE:
+			case wiGraphics::RAYTRACING:
+				GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(bind_point_remap, handles.resource_handle);
+				break;
+			}
 			bind_point_remap++;
 		}
 		if (handles.sampler_handle.ptr != 0)
 		{
-			GetDirectCommandList(cmd)->SetGraphicsRootDescriptorTable(bind_point_remap, handles.sampler_handle);
+			switch (bindpoint)
+			{
+			default:
+			case wiGraphics::GRAPHICS:
+				GetDirectCommandList(cmd)->SetGraphicsRootDescriptorTable(bind_point_remap, handles.sampler_handle);
+				break;
+			case wiGraphics::COMPUTE:
+			case wiGraphics::RAYTRACING:
+				GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(bind_point_remap, handles.sampler_handle);
+				break;
+			}
 		}
 	}
-	void GraphicsDevice_DX12::BindDescriptorTableCompute(uint32_t space, const DescriptorTable* table, CommandList cmd)
+	void GraphicsDevice_DX12::BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd)
 	{
-		auto rootsig_internal = to_internal(active_cs[cmd]->rootSignature);
-		uint32_t bind_point_remap = rootsig_internal->table_bind_point_remap[space];
-		auto& descriptors = GetFrameResources().descriptors[cmd];
-		auto handles = descriptors.commit(table, cmd);
-		if (handles.resource_handle.ptr != 0)
+		const RootSignature* rootsig = nullptr;
+		switch (bindpoint)
 		{
-			GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(bind_point_remap, handles.resource_handle);
-			bind_point_remap++;
+		default:
+		case wiGraphics::GRAPHICS:
+			rootsig = active_pso[cmd]->desc.rootSignature;
+			break;
+		case wiGraphics::COMPUTE:
+			rootsig = active_cs[cmd]->rootSignature;
+			break;
+		case wiGraphics::RAYTRACING:
+			rootsig = active_rt[cmd]->desc.rootSignature_global;
+			break;
 		}
-		if (handles.sampler_handle.ptr != 0)
-		{
-			GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(bind_point_remap, handles.sampler_handle);
-		}
-	}
-	void GraphicsDevice_DX12::BindDescriptorTableRaytracing(uint32_t space, const DescriptorTable* table, CommandList cmd)
-	{
-		auto rootsig_internal = to_internal(active_rt[cmd]->desc.rootSignature_global);
-		uint32_t bind_point_remap = rootsig_internal->table_bind_point_remap[space];
-		auto& descriptors = GetFrameResources().descriptors[cmd];
-		auto handles = descriptors.commit(table, cmd);
-		if (handles.resource_handle.ptr != 0)
-		{
-			GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(bind_point_remap, handles.resource_handle);
-			bind_point_remap++;
-		}
-		if (handles.sampler_handle.ptr != 0)
-		{
-			GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(bind_point_remap, handles.sampler_handle);
-		}
-	}
-	void GraphicsDevice_DX12::BindRootDescriptorGraphics(uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd)
-	{
+		auto rootsig_internal = to_internal(rootsig);
 		auto internal_state = to_internal(buffer);
 		D3D12_GPU_VIRTUAL_ADDRESS address = internal_state->resource.Get()->GetGPUVirtualAddress() + (UINT64)offset;
 
-		auto rootsig_internal = to_internal(active_pso[cmd]->desc.rootSignature);
 		auto remap = rootsig_internal->root_remap[index];
 		auto binding = active_rootsig_graphics[cmd]->tables[remap.space].resources[remap.rangeIndex].binding;
 		switch (binding)
 		{
 		case ROOT_CONSTANTBUFFER:
-			GetDirectCommandList(cmd)->SetGraphicsRootConstantBufferView(index, address);
+			switch (bindpoint)
+			{
+			default:
+			case wiGraphics::GRAPHICS:
+				GetDirectCommandList(cmd)->SetGraphicsRootConstantBufferView(index, address);
+				break;
+			case wiGraphics::COMPUTE:
+			case wiGraphics::RAYTRACING:
+				GetDirectCommandList(cmd)->SetComputeRootConstantBufferView(index, address);
+				break;
+			}
 			break;
 		case ROOT_RAWBUFFER:
 		case ROOT_STRUCTUREDBUFFER:
-			GetDirectCommandList(cmd)->SetGraphicsRootShaderResourceView(index, address);
+			switch (bindpoint)
+			{
+			default:
+			case wiGraphics::GRAPHICS:
+				GetDirectCommandList(cmd)->SetGraphicsRootShaderResourceView(index, address);
+				break;
+			case wiGraphics::COMPUTE:
+			case wiGraphics::RAYTRACING:
+				GetDirectCommandList(cmd)->SetComputeRootShaderResourceView(index, address);
+				break;
+			}
 			break;
 		case ROOT_RWRAWBUFFER:
 		case ROOT_RWSTRUCTUREDBUFFER:
-			GetDirectCommandList(cmd)->SetGraphicsRootUnorderedAccessView(index, address);
+			switch (bindpoint)
+			{
+			default:
+			case wiGraphics::GRAPHICS:
+				GetDirectCommandList(cmd)->SetGraphicsRootUnorderedAccessView(index, address);
+				break;
+			case wiGraphics::COMPUTE:
+			case wiGraphics::RAYTRACING:
+				GetDirectCommandList(cmd)->SetComputeRootUnorderedAccessView(index, address);
+				break;
+			}
 			break;
 		default:
 			break;
 		}
 	}
-	void GraphicsDevice_DX12::BindRootDescriptorCompute(uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd)
+	void GraphicsDevice_DX12::BindRootConstants(BINDPOINT bindpoint, uint32_t index, const void* srcdata, CommandList cmd)
 	{
-		auto internal_state = to_internal(buffer);
-		D3D12_GPU_VIRTUAL_ADDRESS address = internal_state->resource.Get()->GetGPUVirtualAddress() + (UINT64)offset;
-
-		auto rootsig_internal = to_internal(active_cs[cmd]->rootSignature);
-		auto remap = rootsig_internal->root_remap[index];
-		auto binding = active_rootsig_compute[cmd]->tables[remap.space].resources[remap.rangeIndex].binding;
-		switch (binding)
+		const RootSignature* rootsig = nullptr;
+		switch (bindpoint)
 		{
-		case ROOT_CONSTANTBUFFER:
-			GetDirectCommandList(cmd)->SetComputeRootConstantBufferView(index, address);
-			break;
-		case ROOT_RAWBUFFER:
-		case ROOT_STRUCTUREDBUFFER:
-			GetDirectCommandList(cmd)->SetComputeRootShaderResourceView(index, address);
-			break;
-		case ROOT_RWRAWBUFFER:
-		case ROOT_RWSTRUCTUREDBUFFER:
-			GetDirectCommandList(cmd)->SetComputeRootUnorderedAccessView(index, address);
-			break;
 		default:
+		case wiGraphics::GRAPHICS:
+			rootsig = active_pso[cmd]->desc.rootSignature;
+			break;
+		case wiGraphics::COMPUTE:
+			rootsig = active_cs[cmd]->rootSignature;
+			break;
+		case wiGraphics::RAYTRACING:
+			rootsig = active_rt[cmd]->desc.rootSignature_global;
 			break;
 		}
-	}
-	void GraphicsDevice_DX12::BindRootDescriptorRaytracing(uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd)
-	{
-		auto internal_state = to_internal(buffer);
-		D3D12_GPU_VIRTUAL_ADDRESS address = internal_state->resource.Get()->GetGPUVirtualAddress() + (UINT64)offset;
+		auto rootsig_internal = to_internal(rootsig);
+		const RootConstantRange& range = rootsig->rootconstants[index];
 
-		auto rootsig_internal = to_internal(active_rt[cmd]->desc.rootSignature_global);
-		auto remap = rootsig_internal->root_remap[index];
-		auto binding = active_rootsig_compute[cmd]->tables[remap.space].resources[remap.rangeIndex].binding;
-		switch (binding)
+		switch (bindpoint)
 		{
-		case ROOT_CONSTANTBUFFER:
-			GetDirectCommandList(cmd)->SetComputeRootConstantBufferView(index, address);
-			break;
-		case ROOT_RAWBUFFER:
-		case ROOT_STRUCTUREDBUFFER:
-			GetDirectCommandList(cmd)->SetComputeRootShaderResourceView(index, address);
-			break;
-		case ROOT_RWRAWBUFFER:
-		case ROOT_RWSTRUCTUREDBUFFER:
-			GetDirectCommandList(cmd)->SetComputeRootUnorderedAccessView(index, address);
-			break;
 		default:
+		case wiGraphics::GRAPHICS:
+			GetDirectCommandList(cmd)->SetGraphicsRoot32BitConstants(
+				rootsig_internal->root_constant_bind_remap + index,
+				range.size / sizeof(uint32_t),
+				srcdata,
+				range.offset / sizeof(uint32_t)
+			);
+			break;
+		case wiGraphics::COMPUTE:
+		case wiGraphics::RAYTRACING:
+			GetDirectCommandList(cmd)->SetComputeRoot32BitConstants(
+				rootsig_internal->root_constant_bind_remap + index,
+				range.size / sizeof(uint32_t),
+				srcdata,
+				range.offset / sizeof(uint32_t)
+			);
 			break;
 		}
-	}
-	void GraphicsDevice_DX12::BindRootConstantsGraphics(uint32_t index, const void* srcdata, CommandList cmd)
-	{
-		const RootSignature* rootsig = active_pso[cmd]->desc.rootSignature;
-		auto rootsig_internal = to_internal(rootsig);
-		const RootConstantRange& range = rootsig->rootconstants[index];
-		GetDirectCommandList(cmd)->SetGraphicsRoot32BitConstants(
-			rootsig_internal->root_constant_bind_remap + index,
-			range.size / sizeof(uint32_t), 
-			srcdata, 
-			range.offset / sizeof(uint32_t)
-		);
-	}
-	void GraphicsDevice_DX12::BindRootConstantsCompute(uint32_t index, const void* srcdata, CommandList cmd)
-	{
-		const RootSignature* rootsig = active_cs[cmd]->rootSignature;
-		auto rootsig_internal = to_internal(rootsig);
-		const RootConstantRange& range = rootsig->rootconstants[index];
-		GetDirectCommandList(cmd)->SetComputeRoot32BitConstants(
-			rootsig_internal->root_constant_bind_remap + index,
-			range.size / sizeof(uint32_t),
-			srcdata, 
-			range.offset / sizeof(uint32_t)
-		);
-	}
-	void GraphicsDevice_DX12::BindRootConstantsRaytracing(uint32_t index, const void* srcdata, CommandList cmd)
-	{
-		const RootSignature* rootsig = active_rt[cmd]->desc.rootSignature_global;
-		auto rootsig_internal = to_internal(rootsig);
-		const RootConstantRange& range = rootsig->rootconstants[index];
-		GetDirectCommandList(cmd)->SetComputeRoot32BitConstants(
-			rootsig_internal->root_constant_bind_remap + index,
-			range.size / sizeof(uint32_t),
-			srcdata, 
-			range.offset / sizeof(uint32_t)
-		);
 	}
 
 	GraphicsDevice::GPUAllocation GraphicsDevice_DX12::AllocateGPU(size_t dataSize, CommandList cmd)

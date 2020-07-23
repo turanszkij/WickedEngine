@@ -1022,13 +1022,16 @@ namespace Vulkan_Internal
 		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 
 		bool dirty[COMMANDLIST_COUNT] = {};
+		std::vector<const DescriptorTable*> last_tables[COMMANDLIST_COUNT];
 		std::vector<VkDescriptorSet> last_descriptorsets[COMMANDLIST_COUNT];
+		std::vector<const GPUBuffer*> root_descriptors[COMMANDLIST_COUNT];
 		std::vector<uint32_t> root_offsets[COMMANDLIST_COUNT];
 
 		struct RootRemap
 		{
 			uint32_t space = 0;
 			uint32_t binding = 0;
+			uint32_t rangeIndex = 0;
 		};
 		std::vector<RootRemap> root_remap;
 
@@ -3734,21 +3737,25 @@ using namespace Vulkan_Internal;
 		{
 			layouts.push_back(to_internal(&x)->layout);
 
+			uint32_t rangeIndex = 0;
 			for (auto& binding : x.resources)
 			{
-				if(binding.binding < CONSTANTBUFFER)
+				if (binding.binding < CONSTANTBUFFER)
 				{
 					assert(binding.count == 1); // descriptor array not allowed in the root
 					internal_state->root_remap.emplace_back();
 					internal_state->root_remap.back().space = space;
 					internal_state->root_remap.back().binding = binding.slot;
+					internal_state->root_remap.back().rangeIndex = rangeIndex;
 				}
+				rangeIndex++;
 			}
 			space++;
 		}
 
 		for (CommandList cmd = 0; cmd < COMMANDLIST_COUNT; ++cmd)
 		{
+			internal_state->last_tables[cmd].resize(layouts.size());
 			internal_state->last_descriptorsets[cmd].resize(layouts.size());
 
 			for (auto& x : rootsig->tables)
@@ -3757,6 +3764,7 @@ using namespace Vulkan_Internal;
 				{
 					if (binding.binding < CONSTANTBUFFER)
 					{
+						internal_state->root_descriptors[cmd].emplace_back();
 						internal_state->root_offsets[cmd].emplace_back();
 					}
 				}
@@ -5758,126 +5766,123 @@ using namespace Vulkan_Internal;
 		);
 	}
 
-	void GraphicsDevice_Vulkan::BindDescriptorTableGraphics(uint32_t space, const DescriptorTable* table, CommandList cmd)
+	void GraphicsDevice_Vulkan::BindDescriptorTable(BINDPOINT bindpoint, uint32_t space, const DescriptorTable* table, CommandList cmd)
 	{
-		auto rootsig_internal = to_internal(active_pso[cmd]->desc.rootSignature);
+		const RootSignature* rootsig = nullptr;
+		switch (bindpoint)
+		{
+		default:
+		case wiGraphics::GRAPHICS:
+			rootsig = active_pso[cmd]->desc.rootSignature;
+			break;
+		case wiGraphics::COMPUTE:
+			rootsig = active_cs[cmd]->rootSignature;
+			break;
+		case wiGraphics::RAYTRACING:
+			rootsig = active_rt[cmd]->desc.rootSignature_global;
+			break;
+		}
+		auto rootsig_internal = to_internal(rootsig);
 		auto& descriptors = GetFrameResources().descriptors[cmd];
+		rootsig_internal->last_tables[cmd][space] = table;
 		rootsig_internal->last_descriptorsets[cmd][space] = descriptors.commit(table);
 		rootsig_internal->dirty[cmd] = true;
+		for (auto& x : rootsig_internal->root_descriptors[cmd])
+		{
+			x = nullptr;
+		}
 	}
-	void GraphicsDevice_Vulkan::BindDescriptorTableCompute(uint32_t space, const DescriptorTable* table, CommandList cmd)
+	void GraphicsDevice_Vulkan::BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd)
 	{
-		auto rootsig_internal = to_internal(active_cs[cmd]->rootSignature);
-		auto& descriptors = GetFrameResources().descriptors[cmd];
-		rootsig_internal->last_descriptorsets[cmd][space] = descriptors.commit(table);
-		rootsig_internal->dirty[cmd] = true;
-	}
-	void GraphicsDevice_Vulkan::BindDescriptorTableRaytracing(uint32_t space, const DescriptorTable* table, CommandList cmd)
-	{
-		auto rootsig_internal = to_internal(active_rt[cmd]->desc.rootSignature_global);
-		auto& descriptors = GetFrameResources().descriptors[cmd];
-		rootsig_internal->last_descriptorsets[cmd][space] = descriptors.commit(table);
-		rootsig_internal->dirty[cmd] = true;
-	}
-	void GraphicsDevice_Vulkan::BindRootDescriptorGraphics(uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd)
-	{
-		auto rootsig_internal = to_internal(active_pso[cmd]->desc.rootSignature);
+		const RootSignature* rootsig = nullptr;
+		switch (bindpoint)
+		{
+		default:
+		case wiGraphics::GRAPHICS:
+			rootsig = active_pso[cmd]->desc.rootSignature;
+			break;
+		case wiGraphics::COMPUTE:
+			rootsig = active_cs[cmd]->rootSignature;
+			break;
+		case wiGraphics::RAYTRACING:
+			rootsig = active_rt[cmd]->desc.rootSignature_global;
+			break;
+		}
+		auto rootsig_internal = to_internal(rootsig);
 		rootsig_internal->root_offsets[cmd][index] = offset;
+
+		if (buffer != rootsig_internal->root_descriptors[cmd][index])
+		{
+			rootsig_internal->root_descriptors[cmd][index] = buffer;
+
+			auto remap = rootsig_internal->root_remap[index];
+
+			if (!rootsig_internal->dirty[cmd])
+			{
+				// Need to recommit descriptor set if root descriptor changes and the set is already bound:
+				auto& descriptors = GetFrameResources().descriptors[cmd];
+				VkDescriptorSet set = descriptors.commit(rootsig_internal->last_tables[cmd][remap.space]);
+				rootsig_internal->last_descriptorsets[cmd][remap.space] = set;
+			}
+
+			// Then write root descriptor on top:
+			VkDescriptorBufferInfo bufferInfo = {};
+			bufferInfo.buffer = to_internal(buffer)->resource;
+			bufferInfo.offset = 0;
+
+			VkWriteDescriptorSet write = {};
+			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			write.dstSet = rootsig_internal->last_descriptorsets[cmd][remap.space];
+			write.dstBinding = remap.binding;
+			write.dstArrayElement = 0;
+			write.descriptorCount = 1;
+			write.pBufferInfo = &bufferInfo;
+
+			switch (rootsig_internal->last_tables[cmd][remap.space]->resources[remap.rangeIndex].binding)
+			{
+			case ROOT_CONSTANTBUFFER:
+				bufferInfo.range = std::min(buffer->desc.ByteWidth, device_properties.properties.limits.maxUniformBufferRange);
+				write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+				break;
+			case ROOT_RAWBUFFER:
+			case ROOT_STRUCTUREDBUFFER:
+			case ROOT_RWRAWBUFFER:
+			case ROOT_RWSTRUCTUREDBUFFER:
+				bufferInfo.range = VK_WHOLE_SIZE;
+				write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+				break;
+			default:
+				assert(0); // this function is only usable for root buffers!
+				break;
+			}
+
+			vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+		}
+
 		rootsig_internal->dirty[cmd] = true;
-
-		auto remap = rootsig_internal->root_remap[index];
-
-		VkDescriptorBufferInfo bufferInfo = {};
-		bufferInfo.buffer = to_internal(buffer)->resource;
-		bufferInfo.offset = 0;
-		bufferInfo.range = std::min(buffer->desc.ByteWidth, device_properties.properties.limits.maxUniformBufferRange);
-
-		VkWriteDescriptorSet write = {};
-		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write.dstSet = rootsig_internal->last_descriptorsets[cmd][remap.space];
-		write.dstBinding = remap.binding;
-		write.dstArrayElement = 0;
-		write.descriptorCount = 1;
-		write.pBufferInfo = &bufferInfo;
-		write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-		vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
 	}
-	void GraphicsDevice_Vulkan::BindRootDescriptorCompute(uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd)
+	void GraphicsDevice_Vulkan::BindRootConstants(BINDPOINT bindpoint, uint32_t index, const void* srcdata, CommandList cmd)
 	{
-		auto rootsig_internal = to_internal(active_cs[cmd]->rootSignature);
-		rootsig_internal->root_offsets[cmd][index] = offset;
-		rootsig_internal->dirty[cmd] = true;
+		const RootSignature* rootsig = nullptr;
+		switch (bindpoint)
+		{
+		default:
+		case wiGraphics::GRAPHICS:
+			rootsig = active_pso[cmd]->desc.rootSignature;
+			break;
+		case wiGraphics::COMPUTE:
+			rootsig = active_cs[cmd]->rootSignature;
+			break;
+		case wiGraphics::RAYTRACING:
+			rootsig = active_rt[cmd]->desc.rootSignature_global;
+			break;
+		}
+		auto rootsig_internal = to_internal(rootsig);
 
-		auto remap = rootsig_internal->root_remap[index];
-
-		VkDescriptorBufferInfo bufferInfo = {};
-		bufferInfo.buffer = to_internal(buffer)->resource;
-		bufferInfo.offset = 0;
-		bufferInfo.range = std::min(buffer->desc.ByteWidth, device_properties.properties.limits.maxUniformBufferRange);
-
-		VkWriteDescriptorSet write = {};
-		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write.dstSet = rootsig_internal->last_descriptorsets[cmd][remap.space];
-		write.dstBinding = remap.binding;
-		write.dstArrayElement = 0;
-		write.descriptorCount = 1;
-		write.pBufferInfo = &bufferInfo;
-		write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-		vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
-	}
-	void GraphicsDevice_Vulkan::BindRootDescriptorRaytracing(uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd)
-	{
-		auto rootsig_internal = to_internal(active_rt[cmd]->desc.rootSignature_global);
-		rootsig_internal->root_offsets[cmd][index] = offset;
-		rootsig_internal->dirty[cmd] = true;
-
-		auto remap = rootsig_internal->root_remap[index];
-
-		VkDescriptorBufferInfo bufferInfo = {};
-		bufferInfo.buffer = to_internal(buffer)->resource;
-		bufferInfo.offset = 0;
-		bufferInfo.range = std::min(buffer->desc.ByteWidth, device_properties.properties.limits.maxUniformBufferRange);
-
-		VkWriteDescriptorSet write = {};
-		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write.dstSet = rootsig_internal->last_descriptorsets[cmd][remap.space];
-		write.dstBinding = remap.binding;
-		write.dstArrayElement = 0;
-		write.descriptorCount = 1;
-		write.pBufferInfo = &bufferInfo;
-		write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-		vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
-	}
-	void GraphicsDevice_Vulkan::BindRootConstantsGraphics(uint32_t index, const void* srcdata, CommandList cmd)
-	{
-		const RootConstantRange& range = active_pso[cmd]->desc.rootSignature->rootconstants[index];
+		const RootConstantRange& range = rootsig->rootconstants[index];
 		vkCmdPushConstants(
 			GetDirectCommandList(cmd),
-			to_internal(active_pso[cmd]->desc.rootSignature)->pipelineLayout,
-			_ConvertStageFlags(range.stage),
-			range.offset,
-			range.size,
-			srcdata
-		);
-	}
-	void GraphicsDevice_Vulkan::BindRootConstantsCompute(uint32_t index, const void* srcdata, CommandList cmd)
-	{
-		const RootConstantRange& range = active_cs[cmd]->rootSignature->rootconstants[index];
-		vkCmdPushConstants(
-			GetDirectCommandList(cmd),
-			to_internal(active_cs[cmd]->rootSignature)->pipelineLayout,
-			_ConvertStageFlags(range.stage),
-			range.offset,
-			range.size,
-			srcdata
-		);
-	}
-	void GraphicsDevice_Vulkan::BindRootConstantsRaytracing(uint32_t index, const void* srcdata, CommandList cmd)
-	{
-		const RootConstantRange& range = active_rt[cmd]->desc.rootSignature_global->rootconstants[index];
-		vkCmdPushConstants(
-			GetDirectCommandList(cmd),
-			to_internal(active_rt[cmd]->desc.rootSignature_global)->pipelineLayout,
+			rootsig_internal->pipelineLayout,
 			_ConvertStageFlags(range.stage),
 			range.offset,
 			range.size,

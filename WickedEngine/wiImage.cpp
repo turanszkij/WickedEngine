@@ -100,10 +100,10 @@ namespace wiImage
 		if (params.isFullScreenEnabled())
 		{
 			device->BindPipelineState(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
-			device->BindDescriptorTableGraphics(0, &descriptortables[cmd], cmd);
+			device->BindDescriptorTable(GRAPHICS, 0, &descriptortables[cmd], cmd);
 			GraphicsDevice::GPUAllocation cb_alloc = device->AllocateGPU(sizeof(cb), cmd);
 			memcpy(cb_alloc.data, &cb, sizeof(cb));
-			device->BindRootDescriptorGraphics(0, cb_alloc.buffer, cb_alloc.offset, cmd);
+			device->BindRootDescriptor(GRAPHICS, 0, cb_alloc.buffer, cb_alloc.offset, cmd);
 			device->Draw(3, 0, cmd);
 			device->EventEnd(cmd);
 			return;
@@ -237,11 +237,11 @@ namespace wiImage
 
 		device->WriteDescriptor(&descriptortables[cmd], 2, 0, params.maskMap);
 
-		device->BindDescriptorTableGraphics(0, &descriptortables[cmd], cmd);
+		device->BindDescriptorTable(GRAPHICS, 0, &descriptortables[cmd], cmd);
 
 		GraphicsDevice::GPUAllocation cb_alloc = device->AllocateGPU(sizeof(cb), cmd);
 		memcpy(cb_alloc.data, &cb, sizeof(cb));
-		device->BindRootDescriptorGraphics(0, cb_alloc.buffer, cb_alloc.offset, cmd);
+		device->BindRootDescriptor(GRAPHICS, 0, cb_alloc.buffer, cb_alloc.offset, cmd);
 
 		device->Draw(4, 0, cmd);
 

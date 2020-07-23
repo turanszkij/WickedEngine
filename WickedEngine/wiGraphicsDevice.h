@@ -158,15 +158,9 @@ namespace wiGraphics
 		virtual void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) {}
 		virtual void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) {}
 
-		virtual void BindDescriptorTableGraphics(uint32_t space, const DescriptorTable* table, CommandList cmd) {}
-		virtual void BindDescriptorTableCompute(uint32_t space, const DescriptorTable* table, CommandList cmd) {}
-		virtual void BindDescriptorTableRaytracing(uint32_t space, const DescriptorTable* table, CommandList cmd) {}
-		virtual void BindRootDescriptorGraphics(uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd) {}
-		virtual void BindRootDescriptorCompute(uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd) {}
-		virtual void BindRootDescriptorRaytracing(uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd) {}
-		virtual void BindRootConstantsGraphics(uint32_t index, const void* srcdata, CommandList cmd) {}
-		virtual void BindRootConstantsCompute(uint32_t index, const void* srcdata, CommandList cmd) {}
-		virtual void BindRootConstantsRaytracing(uint32_t index, const void* srcdata, CommandList cmd) {}
+		virtual void BindDescriptorTable(BINDPOINT bindpoint, uint32_t space, const DescriptorTable* table, CommandList cmd) {}
+		virtual void BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd) {}
+		virtual void BindRootConstants(BINDPOINT bindpoint, uint32_t index, const void* srcdata, CommandList cmd) {}
 
 		struct GPUAllocation
 		{

@@ -920,6 +920,12 @@ namespace wiGraphics
 		uint32_t Depth = 1;
 	};
 
+	enum BINDPOINT
+	{
+		GRAPHICS,
+		COMPUTE,
+		RAYTRACING,
+	};
 	enum RESOURCEBINDING
 	{
 		ROOT_CONSTANTBUFFER,

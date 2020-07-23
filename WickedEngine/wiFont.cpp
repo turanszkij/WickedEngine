@@ -349,11 +349,13 @@ void Initialize()
 
 	for (CommandList cmd = 0; cmd < COMMANDLIST_COUNT; ++cmd)
 	{
-		descriptortables[cmd].stage = PS;
+		descriptortables[cmd].stage = SHADERSTAGE_COUNT;
+		descriptortables[cmd].resources.emplace_back();
+		descriptortables[cmd].resources.back().binding = ROOT_CONSTANTBUFFER;
+		descriptortables[cmd].resources.back().slot = 0;
 		descriptortables[cmd].resources.emplace_back();
 		descriptortables[cmd].resources.back().binding = TEXTURE2D;
 		descriptortables[cmd].resources.back().slot = 1;
-		descriptortables[cmd].resources.back().count = 1;
 		descriptortables[cmd].staticsamplers.emplace_back();
 		descriptortables[cmd].staticsamplers.back().slot = 2;
 		descriptortables[cmd].staticsamplers.back().desc = samplerDesc;
@@ -364,10 +366,10 @@ void Initialize()
 
 	rootsig.tables.push_back(descriptortables[0]);
 
-	rootsig.rootconstants.emplace_back();
-	rootsig.rootconstants.back().stage = SHADERSTAGE_COUNT;
-	rootsig.rootconstants.back().size = sizeof(FontCB);
-	rootsig.rootconstants.back().slot = 0;
+	//rootsig.rootconstants.emplace_back();
+	//rootsig.rootconstants.back().stage = SHADERSTAGE_COUNT;
+	//rootsig.rootconstants.back().size = sizeof(FontCB);
+	//rootsig.rootconstants.back().slot = 0;
 	device->CreateRootSignature(&rootsig);
 
 
@@ -637,8 +639,8 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 
 	device->BindPipelineState(&PSO, cmd);
 
-	device->WriteDescriptor(&descriptortables[cmd], 0, 0, &texture);
-	device->BindDescriptorTableGraphics(0, &descriptortables[cmd], cmd);
+	device->WriteDescriptor(&descriptortables[cmd], 1, 0, &texture);
+	device->BindDescriptorTable(GRAPHICS, 0, &descriptortables[cmd], cmd);
 
 	const GPUBuffer* vbs[] = {
 		mem.buffer,
@@ -667,7 +669,10 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 		);
 		cb.g_xFont_Color = newProps.shadowColor.toFloat4();
 
-		device->BindRootConstantsGraphics(0, &cb, cmd);
+		//device->BindRootConstantsGraphics(0, &cb, cmd);
+		GraphicsDevice::GPUAllocation cb_alloc = device->AllocateGPU(sizeof(cb), cmd);
+		memcpy(cb_alloc.data, &cb, sizeof(cb));
+		device->BindRootDescriptor(GRAPHICS, 0, cb_alloc.buffer, cb_alloc.offset, cmd);
 
 		device->DrawIndexed(quadCount * 6, 0, 0, cmd);
 	}
@@ -679,7 +684,10 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 	);
 	cb.g_xFont_Color = newProps.color.toFloat4();
 
-	device->BindRootConstantsGraphics(0, &cb, cmd);
+	//device->BindRootConstantsGraphics(0, &cb, cmd);
+	GraphicsDevice::GPUAllocation cb_alloc = device->AllocateGPU(sizeof(cb), cmd);
+	memcpy(cb_alloc.data, &cb, sizeof(cb));
+	device->BindRootDescriptor(GRAPHICS, 0, cb_alloc.buffer, cb_alloc.offset, cmd);
 
 	device->DrawIndexed(quadCount * 6, 0, 0, cmd);
 
