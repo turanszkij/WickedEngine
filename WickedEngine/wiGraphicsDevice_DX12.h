@@ -87,6 +87,14 @@ namespace wiGraphics
 				DescriptorHeap heap_resource;
 				DescriptorHeap heap_sampler;
 				bool heaps_bound = false;
+				bool dirty_graphics_compute[2] = {};
+
+				const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
+				const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
+				int SRV_index[GPU_RESOURCE_HEAP_SRV_COUNT];
+				const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
+				int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
+				const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
 
 				struct DescriptorHandles
 				{
@@ -97,6 +105,7 @@ namespace wiGraphics
 				void init(GraphicsDevice_DX12* device);
 
 				void reset();
+				void validate(bool graphics, CommandList cmd);
 				DescriptorHandles commit(const DescriptorTable* table, CommandList cmd);
 			};
 			DescriptorTableFrameAllocator descriptors[COMMANDLIST_COUNT];
@@ -145,6 +154,9 @@ namespace wiGraphics
 
 		std::atomic<CommandList> cmd_count{ 0 };
 
+		RootSignature defaultRootSignature_compute;
+		RootSignature defaultRootSignature_graphics;
+
 	public:
 		GraphicsDevice_DX12(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false);
 		virtual ~GraphicsDevice_DX12();
@@ -189,7 +201,9 @@ namespace wiGraphics
 
 		void SetResolution(int width, int height) override;
 
-		Texture GetBackBuffer() override;
+		Texture GetBackBuffer() override; 
+		
+		void SetDefaultRootSignature(const RootSignature* rootsig_desc) override;
 
 		///////////////Thread-sensitive////////////////////////
 

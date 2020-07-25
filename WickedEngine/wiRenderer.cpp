@@ -26,6 +26,7 @@
 #include "wiSpinLock.h"
 #include "wiEvent.h"
 #include "wiPlatform.h"
+#include "wiGraphicsDevice_SharedInternals.h"
 
 #include <algorithm>
 #include <unordered_set>
@@ -186,10 +187,46 @@ unordered_map<const void*, wiRectPacker::rect_xywh> packedLightmaps;
 
 
 
-
 void SetDevice(std::shared_ptr<GraphicsDevice> newDevice)
 {
 	graphicsDevice = newDevice;
+
+	RootSignature rootsig;
+	rootsig.tables.emplace_back();
+	DescriptorTable& table = rootsig.tables.back();
+	table.stage = SHADERSTAGE_COUNT;
+
+	for (uint32_t i = 0; i < GPU_SAMPLER_HEAP_COUNT; ++i)
+	{
+		table.samplers.emplace_back();
+		table.samplers.back().slot = i;
+		table.samplers.back().count = 1;
+	}
+
+	for (uint32_t i = 0; i < GPU_RESOURCE_HEAP_CBV_COUNT; ++i)
+	{
+		table.resources.emplace_back();
+		table.resources.back().binding = CONSTANTBUFFER;
+		table.resources.back().slot = i;
+		table.resources.back().count = 1;
+	}
+	for (uint32_t i = 0; i < GPU_RESOURCE_HEAP_SRV_COUNT; ++i)
+	{
+		table.resources.emplace_back();
+		table.resources.back().binding = RAWBUFFER;
+		table.resources.back().slot = i;
+		table.resources.back().count = 1;
+	}
+	for (uint32_t i = 0; i < GPU_RESOURCE_HEAP_UAV_COUNT; ++i)
+	{
+		table.resources.emplace_back();
+		table.resources.back().binding = RWRAWBUFFER;
+		table.resources.back().slot = i;
+		table.resources.back().count = 1;
+	}
+
+	graphicsDevice->CreateDescriptorTable(&table);
+	graphicsDevice->SetDefaultRootSignature(&rootsig);
 }
 GraphicsDevice* GetDevice()
 {

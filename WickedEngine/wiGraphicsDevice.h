@@ -120,6 +120,7 @@ namespace wiGraphics
 		inline size_t GetShaderIdentifierSize() const { return SHADER_IDENTIFIER_SIZE; }
 		inline size_t GetTopLevelAccelerationStructureInstanceSize() const { return TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE; }
 
+		virtual void SetDefaultRootSignature(const RootSignature* rootsig_desc) {}
 
 		///////////////Thread-sensitive////////////////////////
 

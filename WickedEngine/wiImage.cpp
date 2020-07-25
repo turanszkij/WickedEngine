@@ -250,7 +250,7 @@ namespace wiImage
 	void SetBackground(const Texture* texture, CommandList cmd)
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		device->WriteDescriptor(&descriptortables[cmd], 3, 0, texture, cmd);
+		device->WriteDescriptor(&descriptortables[cmd], 3, 0, texture);
 	}
 
 
