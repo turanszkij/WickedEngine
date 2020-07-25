@@ -16,6 +16,8 @@ using namespace wiGraphics;
 using namespace wiScene;
 
 
+static wiGraphics::DescriptorTable descriptortable_colored;
+static wiGraphics::RootSignature rootsig_colored;
 static wiGraphics::PipelineState PSO_colored;
 
 wiWidget::wiWidget()
@@ -240,6 +242,8 @@ namespace wiWidget_Internal
 {
 	void LoadShaders()
 	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
+
 		PipelineStateDesc desc;
 		desc.vs = wiRenderer::GetVertexShader(VSTYPE_VERTEXCOLOR);
 		desc.ps = wiRenderer::GetPixelShader(PSTYPE_VERTEXCOLOR);
@@ -248,12 +252,24 @@ namespace wiWidget_Internal
 		desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
 		desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
 		desc.pt = TRIANGLESTRIP;
-		wiRenderer::GetDevice()->CreatePipelineState(&desc, &PSO_colored);
+		desc.rootSignature = &rootsig_colored;
+		device->CreatePipelineState(&desc, &PSO_colored);
 	}
 }
 
 void wiWidget::Initialize()
 {
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	descriptortable_colored.resources.emplace_back();
+	descriptortable_colored.resources.back().binding = ROOT_CONSTANTBUFFER;
+	descriptortable_colored.resources.back().slot = CBSLOT_RENDERER_MISC;
+	device->CreateDescriptorTable(&descriptortable_colored);
+
+	rootsig_colored._flags = RootSignature::FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+	rootsig_colored.tables.push_back(descriptortable_colored);
+	device->CreateRootSignature(&rootsig_colored);
+
 	static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { wiWidget_Internal::LoadShaders(); });
 	wiWidget_Internal::LoadShaders();
 }
@@ -1232,6 +1248,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 	// control-arrow-triangle
 	{
 		device->BindPipelineState(&PSO_colored, cmd);
+		device->BindDescriptorTable(GRAPHICS, 0, &descriptortable_colored, cmd);
 
 		MiscCB cb;
 		cb.g_xColor = sprites[ACTIVE].params.color;
@@ -1240,8 +1257,9 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 			XMMatrixTranslation(translation.x + scale.x + 1 + scale.y * 0.5f, translation.y + scale.y * 0.5f, 0) *
 			Projection
 		);
-		device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
-		device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CBSLOT_RENDERER_MISC, cmd);
+		GraphicsDevice::GPUAllocation cb_alloc = device->AllocateGPU(sizeof(cb), cmd);
+		memcpy(cb_alloc.data, &cb, sizeof(cb));
+		device->BindRootDescriptor(GRAPHICS, 0, cb_alloc.buffer, cb_alloc.offset, cmd);
 		const GPUBuffer* vbs[] = {
 			&vb_triangle,
 		};
