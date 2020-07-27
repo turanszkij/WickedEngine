@@ -292,6 +292,14 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd,
 		float threshold = 1.0f
 	);
+	void Postprocess_VolumetricClouds(
+		const wiGraphics::Texture& input,
+		const wiGraphics::Texture& output,
+		const wiGraphics::Texture& lightshaftoutput,
+		const wiGraphics::Texture& lineardepth,
+		const wiGraphics::Texture& depthbuffer,
+		wiGraphics::CommandList cmd
+	);
 	void Postprocess_FXAA(
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& output,

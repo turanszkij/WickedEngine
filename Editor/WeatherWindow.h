@@ -25,6 +25,8 @@ public:
 	wiGUI* GUI;
 
 	wiWindow*		weatherWindow;
+	wiButton*		skyTypeAccurateButton;
+	wiButton*		skyTypeCustomButton;
 	wiSlider*		fogStartSlider;
 	wiSlider*		fogEndSlider;
 	wiSlider*		fogHeightSlider;
