@@ -4,7 +4,7 @@
 
 // Shared SSR settings:
 static const float SSRMaxRoughness = 1.0f; // Specify max roughness, this can improve performance in complex scenes.
-static const float BRDFBias = 0.7f; 
+static const float BRDFBias = 0.7f;
 
 float ComputeRoughnessMaskScale(in float maxRoughness)
 {
@@ -30,35 +30,62 @@ float Luminance(float3 color)
     return dot(color, float3(0.2126, 0.7152, 0.0722));
 }
 
-static const float2 offset[9] =
+// Fast RNG inspired by PCG (Permuted Congruential Generator) - Based on Epic Games (Unreal Engine)
+// Returns three elements with 16 random bits each (0-0xffff (65535)).
+uint3 Rand_PCG16(int3 i)
 {
-    float2(-2.0, -2.0),
-    float2(0.0, -2.0),
-    float2(2.0, -2.0),
-    float2(-2.0, 0.0),
-    float2(0.0, 0.0),
-    float2(2.0, 0.0),
-    float2(-2.0, 2.0),
-    float2(0.0, 2.0),
-    float2(2.0, 2.0)
-};
+    // Epic Games had good results by interpreting signed values as unsigned.
+    uint3 r = uint3(i);
 
+    // Linear congruential generator
+    // A simple but very fast pseudorandom number generator
+    // see: https://en.wikipedia.org/wiki/Linear_congruential_generator
+    r = r * 1664525u + 1013904223u; // LCG set from 'Numerical Recipes'
 
-uint3 Rand3DPCG16(int3 p)
+    // Final shuffle
+    // In the original PCG code, they used xorshift for their final shuffle.
+    // According to Epic Games, they would do simple Feistel steps instead since xorshift is expensive.
+    // They would then use r.x, r.y and r.z as parts to create something persistence with few instructions.
+    r.x += r.y * r.z;
+    r.y += r.z * r.x;
+    r.z += r.x * r.y;
+    
+    r.x += r.y * r.z;
+    r.y += r.z * r.x;
+    r.z += r.x * r.y;
+
+	// PCG would then shuffle the top 16 bits thoroughly.
+    return r >> 16u;
+}
+
+// Hammersley sequence manipulated by a random value and returns top 16 bits
+float2 HammersleyRandom16(uint idx, uint num, uint2 random)
 {
-    uint3 v = uint3(p);
+    // Reverse Bits 32
+    uint bits = idx;
+    bits = (bits << 16u) | (bits >> 16u);
+    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+    
+    float E1 = frac(float(idx / num) + float(random.x) * 1.52587890625e-5); // / 0xffff (rcp(65536) )
+    float E2 = float((bits >> 16) ^ random.y) * 1.52587890625e-5; // Shift reverse bits by 16 and compare bits with random
+    return float2(E1, E2);
+}
 
-    v = v * 1664525u + 1013904223u;
-
-    v.x += v.y * v.z;
-    v.y += v.z * v.x;
-    v.z += v.x * v.y;
-    v.x += v.y * v.z;
-    v.y += v.z * v.x;
-    v.z += v.x * v.y;
-
-	// only top 16 bits are well shuffled
-    return v >> 16u;
+float2 HammersleyRandom16(uint idx, uint2 random)
+{
+    uint bits = idx;
+    bits = (bits << 16u) | (bits >> 16u);
+    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+    
+    float E1 = frac(float(random.x) * 1.52587890625e-5); // / 0xffff (rcp(65536) )
+    float E2 = float((bits >> 16) ^ random.y) * 1.52587890625e-5; // Shift reverse bits by 16 and compare bits with random
+    return float2(E1, E2);
 }
 
 // Brian Karis, Epic Games "Real Shading in Unreal Engine 4"
