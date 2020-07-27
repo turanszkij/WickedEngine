@@ -21,9 +21,32 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	float y = 20;
 	float step = 32;
 
+
+	skyTypeCustomButton = new wiButton("Sky Custom");
+	skyTypeCustomButton->SetTooltip("Set sky to Custom Atmosphere...");
+	skyTypeCustomButton->SetSize(XMFLOAT2(120, 30));
+	skyTypeCustomButton->SetPos(XMFLOAT2(x - 100, y += y));
+	skyTypeCustomButton->OnClick([=](wiEventArgs args) {
+		GetWeather().skyType = 0;
+
+		InvalidateProbes();
+	});
+	weatherWindow->AddWidget(skyTypeCustomButton);
+
+	skyTypeAccurateButton = new wiButton("Sky Accurate");
+	skyTypeAccurateButton->SetTooltip("Set sky to PBR Atmosphere...");
+	skyTypeAccurateButton->SetSize(XMFLOAT2(120, 30));
+	skyTypeAccurateButton->SetPos(XMFLOAT2(x + 30, y));
+	skyTypeAccurateButton->OnClick([=](wiEventArgs args) {
+		GetWeather().skyType = 1;
+
+		InvalidateProbes();
+	});
+	weatherWindow->AddWidget(skyTypeAccurateButton);
+
 	fogStartSlider = new wiSlider(0, 5000, 0, 100000, "Fog Start: ");
 	fogStartSlider->SetSize(XMFLOAT2(100, 30));
-	fogStartSlider->SetPos(XMFLOAT2(x, y += step));
+	fogStartSlider->SetPos(XMFLOAT2(x, y += step * 2));
 	fogStartSlider->OnSlide([&](wiEventArgs args) {
 		GetWeather().fogStart = args.fValue;
 	});

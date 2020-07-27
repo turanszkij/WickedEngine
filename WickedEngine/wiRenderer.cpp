@@ -9182,6 +9182,7 @@ void UpdateFrameCB(CommandList cmd)
 	cb.g_xFrame_Fog = float3(scene.weather.fogStart, scene.weather.fogEnd, scene.weather.fogHeight);
 	cb.g_xFrame_Horizon = scene.weather.horizon;
 	cb.g_xFrame_Zenith = scene.weather.zenith;
+	cb.g_xFrame_SkyType = scene.weather.skyType;
 	cb.g_xFrame_VoxelRadianceMaxDistance = voxelSceneData.maxDistance;
 	cb.g_xFrame_VoxelRadianceDataSize = voxelSceneData.voxelsize;
 	cb.g_xFrame_VoxelRadianceDataSize_rcp = 1.0f / (float)cb.g_xFrame_VoxelRadianceDataSize;

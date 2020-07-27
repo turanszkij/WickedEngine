@@ -983,6 +983,7 @@ namespace wiScene
 		float windRandomness = 5;
 		float windWaveSize = 1;
 		float windSpeed = 1;
+		float skyType = 0;
 
 		struct OceanParameters
 		{

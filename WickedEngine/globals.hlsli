@@ -79,6 +79,7 @@ inline float2 GetInternalResolution() { return g_xFrame_InternalResolution; }
 inline float GetTime() { return g_xFrame_Time; }
 inline uint2 GetTemporalAASampleRotation() { return uint2((g_xFrame_TemporalAASampleRotation >> 0) & 0x000000FF, (g_xFrame_TemporalAASampleRotation >> 8) & 0x000000FF); }
 inline bool IsStaticSky() { return g_xFrame_StaticSkyGamma > 0.0f; }
+inline float GetSkyType() { return g_xFrame_SkyType; }
 inline void ConvertToSpecularGlossiness(inout float4 surface_occlusion_roughness_metallic_reflectance)
 {
 	surface_occlusion_roughness_metallic_reflectance.r = 1;
