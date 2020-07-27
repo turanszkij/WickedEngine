@@ -68,6 +68,7 @@ inline bool is_saturated(float4 a) { return is_saturated(a.x) && is_saturated(a.
 
 inline float3 GetSunColor() { return g_xFrame_SunColor; }
 inline float3 GetSunDirection() { return g_xFrame_SunDirection; }
+inline float GetSunEnergy() { return g_xFrame_SunEnergy; }
 inline float3 GetHorizonColor() { return g_xFrame_Horizon.rgb; }
 inline float3 GetZenithColor() { return g_xFrame_Zenith.rgb; }
 inline float3 GetAmbientColor() { return g_xFrame_Ambient.rgb; }

@@ -250,6 +250,8 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float4x4	g_xFrame_MainCamera_PrevInvVP;		// Inverse(PrevView*PrevProjection)
 	float4x4	g_xFrame_MainCamera_ReflVP;			// ReflectionView*ReflectionProjection
 
+	float3		_padding1_frameCB;
+	float		g_xFrame_SunEnergy;
 };
 
 CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)

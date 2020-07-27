@@ -2431,6 +2431,7 @@ namespace wiScene
 					weather.most_important_light_index = args.jobIndex;
 					weather.sunColor = light.color;
 					weather.sunDirection = light.direction;
+					weather.sunEnergy = light.energy;
 				}
 				locker.unlock();
 				break;
