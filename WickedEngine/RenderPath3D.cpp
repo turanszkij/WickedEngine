@@ -772,6 +772,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 			std::swap(rt_read, rt_write);
 			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
+
 		if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
 		{
 			GraphicsDevice* device = wiRenderer::GetDevice();

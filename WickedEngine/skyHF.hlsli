@@ -409,11 +409,27 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enab
     const float3 sunDirection = GetSunDirection();
     const float3 sunColor = GetSunColor();
     const float sunEnergy = GetSunEnergy();
-    const float atmosphereType = GetSkyType();
     
     float3 sky = float3(0, 0, 0);
-    
-    if (atmosphereType == 0)
+
+    if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
+    {
+        AtmosphericMedium medium = CreateAtmosphericScattering();
+
+        sky = AccurateAtmosphericScattering
+        (
+            g_xCamera_CamPos,           // Ray origin
+            V,                          // Ray direction
+            sunDirection,               // Position of the sun
+            float3(0.0, -6372e3, 0.0),  // Center of the planet
+            6371e3,                     // Radius of the planet in meters
+            6471e3,                     // Radius of the atmosphere in meters
+            medium,                     // Atmospheric medium constructor.
+            sun_enabled,                // Use sun and total
+            dark_enabled                // Enable dark mode for light shafts etc.
+        );
+    }
+    else
     {
         sky = CustomAtmosphericScattering
         (
@@ -424,25 +440,7 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enab
             dark_enabled    // enable dark mode for light shafts etc.
         );
     }
-    else
-    {
-        AtmosphericMedium medium = CreateAtmosphericScattering();
-        
-        sky = AccurateAtmosphericScattering
-	    (
-		    g_xCamera_CamPos,           // Ray origin
-		    V,                          // Ray direction
-		    sunDirection,               // Position of the sun
-            float3(0.0, -6372e3, 0.0),  // Center of the planet
-		    6371e3,                     // Radius of the planet in meters
-		    6471e3,                     // Radius of the atmosphere in meters
-            medium,                     // Atmospheric medium constructor.
-            sun_enabled,                // Use sun and total
-            dark_enabled                // Enable dark mode for light shafts etc.
-        );
-    }
 
-    
     if (clouds_enabled)
     {
         CalculateClouds(sky, V, dark_enabled);

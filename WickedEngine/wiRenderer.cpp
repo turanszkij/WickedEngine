@@ -9182,7 +9182,6 @@ void UpdateFrameCB(CommandList cmd)
 	cb.g_xFrame_Fog = float3(scene.weather.fogStart, scene.weather.fogEnd, scene.weather.fogHeight);
 	cb.g_xFrame_Horizon = scene.weather.horizon;
 	cb.g_xFrame_Zenith = scene.weather.zenith;
-	cb.g_xFrame_SkyType = scene.weather.skyType;
 	cb.g_xFrame_VoxelRadianceMaxDistance = voxelSceneData.maxDistance;
 	cb.g_xFrame_VoxelRadianceDataSize = voxelSceneData.voxelsize;
 	cb.g_xFrame_VoxelRadianceDataSize_rcp = 1.0f / (float)cb.g_xFrame_VoxelRadianceDataSize;
@@ -9296,6 +9295,10 @@ void UpdateFrameCB(CommandList cmd)
 	if (scene.weather.IsSimpleSky())
 	{
 		cb.g_xFrame_Options |= OPTION_BIT_SIMPLE_SKY;
+	}
+	if (scene.weather.IsRealisticSky())
+	{
+		cb.g_xFrame_Options |= OPTION_BIT_REALISTIC_SKY;
 	}
 	if (GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && GetRaytracedShadowsEnabled())
 	{
@@ -11577,6 +11580,8 @@ void Postprocess_VolumetricClouds(
 	device->EventBegin("Postprocess_VolumetricClouds", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Volumetric Clouds", cmd);
 
+	GPUBarrier memory_barrier = GPUBarrier::Memory();
+
 	const TextureDesc& desc = output.GetDesc();
 
 	static TextureDesc initialized_desc;
@@ -11678,7 +11683,7 @@ void Postprocess_VolumetricClouds(
 
 			device->Dispatch(noiseThreadXY, noiseThreadXY, noiseThreadZ, cmd);
 
-			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+			device->Barrier(&memory_barrier, 1, cmd);
 			device->UnbindUAVs(0, arraysize(uavs), cmd);
 			device->EventEnd(cmd);
 		}
@@ -11698,14 +11703,14 @@ void Postprocess_VolumetricClouds(
 
 			device->Dispatch(noiseThreadXYZ, noiseThreadXYZ, noiseThreadXYZ, cmd);
 
-			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+			device->Barrier(&memory_barrier, 1, cmd);
 			device->UnbindUAVs(0, arraysize(uavs), cmd);
 			device->EventEnd(cmd);
 		}
 
 		// Generate mip chains for 3D textures:
-		GenerateMipChain(texture_shapeNoise, MIPGENFILTER_GAUSSIAN, cmd);
-		GenerateMipChain(texture_detailNoise, MIPGENFILTER_GAUSSIAN, cmd);
+		GenerateMipChain(texture_shapeNoise, MIPGENFILTER_LINEAR, cmd);
+		GenerateMipChain(texture_detailNoise, MIPGENFILTER_LINEAR, cmd);
 
 		// Curl Noise pass:
 		{
@@ -11723,7 +11728,7 @@ void Postprocess_VolumetricClouds(
 
 			device->Dispatch(curlThread, curlThread, 1, cmd);
 
-			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+			device->Barrier(&memory_barrier, 1, cmd);
 			device->UnbindUAVs(0, arraysize(uavs), cmd);
 			device->EventEnd(cmd);
 		}
@@ -11744,7 +11749,7 @@ void Postprocess_VolumetricClouds(
 
 			device->Dispatch(weatherThread, weatherThread, 1, cmd);
 
-			device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+			device->Barrier(&memory_barrier, 1, cmd);
 			device->UnbindUAVs(0, arraysize(uavs), cmd);
 			device->EventEnd(cmd);
 		}
@@ -11789,7 +11794,7 @@ void Postprocess_VolumetricClouds(
 			cmd
 		);
 
-		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->Barrier(&memory_barrier, 1, cmd);
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
@@ -11832,7 +11837,7 @@ void Postprocess_VolumetricClouds(
 			cmd
 		);
 
-		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->Barrier(&memory_barrier, 1, cmd);
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
@@ -11860,7 +11865,7 @@ void Postprocess_VolumetricClouds(
 			cmd
 		);
 
-		device->Barrier(&GPUBarrier::Memory(), 1, cmd);
+		device->Barrier(&memory_barrier, 1, cmd);
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
