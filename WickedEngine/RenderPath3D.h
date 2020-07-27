@@ -41,7 +41,7 @@ private:
 	bool reflectionsEnabled = true;
 	bool shadowsEnabled = true;
 	bool bloomEnabled = true;
-	bool volumetricCloudsEnabled = true;
+	bool volumetricCloudsEnabled = false;
 	bool colorGradingEnabled = false;
 	bool volumeLightsEnabled = true;
 	bool lightShaftsEnabled = false;

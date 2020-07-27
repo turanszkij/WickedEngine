@@ -160,7 +160,8 @@ static const uint OPTION_BIT_VOXELGI_ENABLED = 1 << 2;
 static const uint OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED = 1 << 3;
 static const uint OPTION_BIT_VOXELGI_RETARGETTED = 1 << 4;
 static const uint OPTION_BIT_SIMPLE_SKY = 1 << 5;
-static const uint OPTION_BIT_RAYTRACED_SHADOWS = 1 << 6;
+static const uint OPTION_BIT_REALISTIC_SKY = 1 << 6;
+static const uint OPTION_BIT_RAYTRACED_SHADOWS = 1 << 7;
 
 // ---------- Common Constant buffers: -----------------
 
@@ -211,7 +212,7 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_Time;
 	float		g_xFrame_TimePrev;
 
-	float		_padding0_frameCB;
+	float		g_xFrame_SunEnergy;
 	float		g_xFrame_WindSpeed;
 	float		g_xFrame_DeltaTime;
 	uint		g_xFrame_FrameCount;
@@ -249,10 +250,6 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float4x4	g_xFrame_MainCamera_PrevVP;			// PrevView*PrevProjection
 	float4x4	g_xFrame_MainCamera_PrevInvVP;		// Inverse(PrevView*PrevProjection)
 	float4x4	g_xFrame_MainCamera_ReflVP;			// ReflectionView*ReflectionProjection
-
-	float2		_padding1_frameCB;
-	float		g_xFrame_SunEnergy;
-	float		g_xFrame_SkyType;
 };
 
 CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)

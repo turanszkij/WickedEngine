@@ -13,7 +13,7 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 	assert(GUI && "Invalid GUI!");
 
 	ppWindow = new wiWindow(GUI, "PostProcess Window");
-	ppWindow->SetSize(XMFLOAT2(400, 600));
+	ppWindow->SetSize(XMFLOAT2(400, 620));
 	GUI->AddWidget(ppWindow);
 
 	float x = 150;
@@ -50,6 +50,15 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 		editor->renderPath->setLightShaftsEnabled(args.bValue);
 	});
 	ppWindow->AddWidget(lightShaftsCheckBox);
+
+	volumetricCloudsCheckBox = new wiCheckBox("Volumetric clouds: ");
+	volumetricCloudsCheckBox->SetTooltip("Enable volumetric cloud rendering.");
+	volumetricCloudsCheckBox->SetPos(XMFLOAT2(x, y += step));
+	volumetricCloudsCheckBox->SetCheck(editor->renderPath->getVolumetricCloudsEnabled());
+	volumetricCloudsCheckBox->OnClick([=](wiEventArgs args) {
+		editor->renderPath->setVolumetricCloudsEnabled(args.bValue);
+		});
+	ppWindow->AddWidget(volumetricCloudsCheckBox);
 
 	aoComboBox = new wiComboBox("AO: ");
 	aoComboBox->SetTooltip("Choose Ambient Occlusion type. RTAO is only available if hardware supports ray tracing");

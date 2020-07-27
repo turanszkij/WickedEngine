@@ -22,31 +22,9 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	float step = 32;
 
 
-	skyTypeCustomButton = new wiButton("Sky Custom");
-	skyTypeCustomButton->SetTooltip("Set sky to Custom Atmosphere...");
-	skyTypeCustomButton->SetSize(XMFLOAT2(120, 30));
-	skyTypeCustomButton->SetPos(XMFLOAT2(x - 100, y += y));
-	skyTypeCustomButton->OnClick([=](wiEventArgs args) {
-		GetWeather().skyType = 0;
-
-		InvalidateProbes();
-	});
-	weatherWindow->AddWidget(skyTypeCustomButton);
-
-	skyTypeAccurateButton = new wiButton("Sky Accurate");
-	skyTypeAccurateButton->SetTooltip("Set sky to PBR Atmosphere...");
-	skyTypeAccurateButton->SetSize(XMFLOAT2(120, 30));
-	skyTypeAccurateButton->SetPos(XMFLOAT2(x + 30, y));
-	skyTypeAccurateButton->OnClick([=](wiEventArgs args) {
-		GetWeather().skyType = 1;
-
-		InvalidateProbes();
-	});
-	weatherWindow->AddWidget(skyTypeAccurateButton);
-
 	fogStartSlider = new wiSlider(0, 5000, 0, 100000, "Fog Start: ");
 	fogStartSlider->SetSize(XMFLOAT2(100, 30));
-	fogStartSlider->SetPos(XMFLOAT2(x, y += step * 2));
+	fogStartSlider->SetPos(XMFLOAT2(x, y += step));
 	fogStartSlider->OnSlide([&](wiEventArgs args) {
 		GetWeather().fogStart = args.fValue;
 	});
@@ -138,8 +116,25 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	simpleskyCheckBox->OnClick([&](wiEventArgs args) {
 		auto& weather = GetWeather();
 		weather.SetSimpleSky(args.bValue);
-		});
+		if (args.bValue)
+		{
+			weather.SetRealisticSky(false);
+		}
+	});
 	weatherWindow->AddWidget(simpleskyCheckBox);
+
+	realisticskyCheckBox = new wiCheckBox("Realistic sky: ");
+	realisticskyCheckBox->SetTooltip("Physically based sky rendering model.");
+	realisticskyCheckBox->SetPos(XMFLOAT2(x + 120, y));
+	realisticskyCheckBox->OnClick([&](wiEventArgs args) {
+		auto& weather = GetWeather();
+		weather.SetRealisticSky(args.bValue);
+		if (args.bValue)
+		{
+			weather.SetSimpleSky(false);
+		}
+	});
+	weatherWindow->AddWidget(realisticskyCheckBox);
 
 	skyButton = new wiButton("Load Sky");
 	skyButton->SetTooltip("Load a skybox cubemap texture...");
@@ -532,6 +527,7 @@ void WeatherWindow::Update()
 		horizonColorPicker->SetPickColor(wiColor::fromFloat3(weather.horizon));
 		zenithColorPicker->SetPickColor(wiColor::fromFloat3(weather.zenith));
 		simpleskyCheckBox->SetCheck(weather.IsSimpleSky());
+		realisticskyCheckBox->SetCheck(weather.IsRealisticSky());
 
 		ocean_enabledCheckBox->SetCheck(weather.IsOceanEnabled());
 		ocean_patchSizeSlider->SetValue(weather.oceanParameters.patch_length);

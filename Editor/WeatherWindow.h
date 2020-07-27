@@ -25,8 +25,6 @@ public:
 	wiGUI* GUI;
 
 	wiWindow*		weatherWindow;
-	wiButton*		skyTypeAccurateButton;
-	wiButton*		skyTypeCustomButton;
 	wiSlider*		fogStartSlider;
 	wiSlider*		fogEndSlider;
 	wiSlider*		fogHeightSlider;
@@ -39,6 +37,7 @@ public:
 	wiSlider*		windWaveSizeSlider;
 	wiSlider*		windRandomnessSlider;
 	wiCheckBox*		simpleskyCheckBox;
+	wiCheckBox*		realisticskyCheckBox;
 	wiButton*		skyButton;
 	wiColorPicker*	ambientColorPicker;
 	wiColorPicker*	horizonColorPicker;
