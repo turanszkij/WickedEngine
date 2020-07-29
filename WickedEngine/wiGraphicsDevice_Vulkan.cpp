@@ -2009,34 +2009,36 @@ using namespace Vulkan_Internal;
 						continue;
 					}
 
-					RenderTargetBlendStateDesc desc = pso->desc.bs->desc.RenderTarget[numBlendAttachments++];
+					RenderTargetBlendStateDesc desc = pso->desc.bs->desc.RenderTarget[numBlendAttachments];
+					VkPipelineColorBlendAttachmentState& attachment = colorBlendAttachments[numBlendAttachments];
+					numBlendAttachments++;
 
-					colorBlendAttachments[i].blendEnable = desc.BlendEnable ? VK_TRUE : VK_FALSE;
+					attachment.blendEnable = desc.BlendEnable ? VK_TRUE : VK_FALSE;
 
-					colorBlendAttachments[i].colorWriteMask = 0;
+					attachment.colorWriteMask = 0;
 					if (desc.RenderTargetWriteMask & COLOR_WRITE_ENABLE_RED)
 					{
-						colorBlendAttachments[i].colorWriteMask |= VK_COLOR_COMPONENT_R_BIT;
+						attachment.colorWriteMask |= VK_COLOR_COMPONENT_R_BIT;
 					}
 					if (desc.RenderTargetWriteMask & COLOR_WRITE_ENABLE_GREEN)
 					{
-						colorBlendAttachments[i].colorWriteMask |= VK_COLOR_COMPONENT_G_BIT;
+						attachment.colorWriteMask |= VK_COLOR_COMPONENT_G_BIT;
 					}
 					if (desc.RenderTargetWriteMask & COLOR_WRITE_ENABLE_BLUE)
 					{
-						colorBlendAttachments[i].colorWriteMask |= VK_COLOR_COMPONENT_B_BIT;
+						attachment.colorWriteMask |= VK_COLOR_COMPONENT_B_BIT;
 					}
 					if (desc.RenderTargetWriteMask & COLOR_WRITE_ENABLE_ALPHA)
 					{
-						colorBlendAttachments[i].colorWriteMask |= VK_COLOR_COMPONENT_A_BIT;
+						attachment.colorWriteMask |= VK_COLOR_COMPONENT_A_BIT;
 					}
 
-					colorBlendAttachments[i].srcColorBlendFactor = _ConvertBlend(desc.SrcBlend);
-					colorBlendAttachments[i].dstColorBlendFactor = _ConvertBlend(desc.DestBlend);
-					colorBlendAttachments[i].colorBlendOp = _ConvertBlendOp(desc.BlendOp);
-					colorBlendAttachments[i].srcAlphaBlendFactor = _ConvertBlend(desc.SrcBlendAlpha);
-					colorBlendAttachments[i].dstAlphaBlendFactor = _ConvertBlend(desc.DestBlendAlpha);
-					colorBlendAttachments[i].alphaBlendOp = _ConvertBlendOp(desc.BlendOpAlpha);
+					attachment.srcColorBlendFactor = _ConvertBlend(desc.SrcBlend);
+					attachment.dstColorBlendFactor = _ConvertBlend(desc.DestBlend);
+					attachment.colorBlendOp = _ConvertBlendOp(desc.BlendOp);
+					attachment.srcAlphaBlendFactor = _ConvertBlend(desc.SrcBlendAlpha);
+					attachment.dstAlphaBlendFactor = _ConvertBlend(desc.DestBlendAlpha);
+					attachment.alphaBlendOp = _ConvertBlendOp(desc.BlendOpAlpha);
 				}
 
 				VkPipelineColorBlendStateCreateInfo colorBlending = {};

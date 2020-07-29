@@ -332,7 +332,6 @@ void RenderPath3D::ResizeBuffers()
 	}
 	{
 		RenderPassDesc desc;
-		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtSun[0], RenderPassAttachment::LOADOP_CLEAR));
 		desc.attachments.push_back(
 			RenderPassAttachment::DepthStencil(
 				&depthBuffer,
@@ -343,8 +342,10 @@ void RenderPath3D::ResizeBuffers()
 				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
 			)
 		);
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtSun[0], RenderPassAttachment::LOADOP_CLEAR));
 		if (getMSAASampleCount() > 1)
 		{
+			desc.attachments.back().storeop = RenderPassAttachment::STOREOP_DONTCARE;
 			desc.attachments.push_back(RenderPassAttachment::Resolve(&rtSun_resolved));
 		}
 
