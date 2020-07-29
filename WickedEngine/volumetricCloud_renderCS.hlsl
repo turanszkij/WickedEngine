@@ -204,7 +204,7 @@ float SampleCloudDensity(float3 p, float heightFraction, float3 weatherData, flo
     float densityHeightGradient = GetDensityHeightGradient(heightFraction, weatherData);
     
     float cloudSample = (lowFrequencyNoises.r + lowFrequencyNoises.g + lowFrequencyNoises.b + lowFrequencyNoises.a) * g_ShapeNoiseMultiplier * densityHeightGradient;
-    cloudSample = pow(cloudSample, min(1.0, g_ShapeNoisePower * heightFraction));
+    cloudSample = pow(abs(cloudSample), min(1.0, g_ShapeNoisePower * heightFraction));
     
     cloudSample = smoothstep(g_ShapeNoiseMinMax.x, g_ShapeNoiseMinMax.y, cloudSample);
     
@@ -251,7 +251,7 @@ float HenyeyGreensteinPhase(float g, float cosTheta)
 {
     float numer = 1.0 - g * g;
     float denom = 1.0 + g * g - 2.0 * g * cosTheta;
-    return (numer / pow(denom, 1.5)) / 4.0 * PI;
+    return (numer / pow(abs(denom), 1.5)) / 4.0 * PI;
 }
 
 // Clamp the base, so it's never <= 0.0f (INF/NaN).
