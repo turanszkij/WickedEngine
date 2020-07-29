@@ -15,6 +15,7 @@ namespace wiGraphics
 	struct GPUResource;
 	struct GPUBuffer;
 	struct Texture;
+	struct RootSignature;
 
 	enum SHADERSTAGE
 	{
@@ -461,6 +462,7 @@ namespace wiGraphics
 	};
 	struct PipelineStateDesc
 	{
+		const RootSignature* rootSignature = nullptr;
 		const Shader*				vs = nullptr;
 		const Shader*				ps = nullptr;
 		const Shader*				hs = nullptr;
@@ -682,6 +684,7 @@ namespace wiGraphics
 	{
 		SHADERSTAGE stage = SHADERSTAGE_COUNT;
 		std::vector<uint8_t> code;
+		const RootSignature* rootSignature = nullptr;
 	};
 
 	struct Sampler : public GraphicsDeviceChild
@@ -885,6 +888,7 @@ namespace wiGraphics
 	};
 	struct RaytracingPipelineStateDesc
 	{
+		const RootSignature* rootSignature = nullptr;
 		std::vector<ShaderLibrary> shaderlibraries;
 		std::vector<ShaderHitGroup> hitgroups;
 		uint32_t max_trace_recursion_depth = 1;
@@ -914,6 +918,87 @@ namespace wiGraphics
 		uint32_t Width = 1;
 		uint32_t Height = 1;
 		uint32_t Depth = 1;
+	};
+
+	enum BINDPOINT
+	{
+		GRAPHICS,
+		COMPUTE,
+		RAYTRACING,
+	};
+	enum RESOURCEBINDING
+	{
+		ROOT_CONSTANTBUFFER,
+		ROOT_RAWBUFFER,
+		ROOT_STRUCTUREDBUFFER,
+		ROOT_RWRAWBUFFER,
+		ROOT_RWSTRUCTUREDBUFFER,
+
+		CONSTANTBUFFER,
+		RAWBUFFER,
+		STRUCTUREDBUFFER,
+		TYPEDBUFFER,
+		TEXTURE1D,
+		TEXTURE1DARRAY,
+		TEXTURE2D,
+		TEXTURE2DARRAY,
+		TEXTURECUBE,
+		TEXTURECUBEARRAY,
+		TEXTURE3D,
+		ACCELERATIONSTRUCTURE,
+		RWRAWBUFFER,
+		RWSTRUCTUREDBUFFER,
+		RWTYPEDBUFFER,
+		RWTEXTURE1D,
+		RWTEXTURE1DARRAY,
+		RWTEXTURE2D,
+		RWTEXTURE2DARRAY,
+		RWTEXTURECUBE,
+		RWTEXTURECUBEARRAY,
+		RWTEXTURE3D,
+
+		RESOURCEBINDING_COUNT
+	};
+	struct ResourceRange
+	{
+		RESOURCEBINDING binding = CONSTANTBUFFER;
+		uint32_t slot = 0;
+		uint32_t count = 1;
+	};
+	struct SamplerRange
+	{
+		uint32_t slot = 0;
+		uint32_t count = 1;
+	};
+	struct StaticSampler
+	{
+		uint32_t slot = 0;
+		SamplerDesc desc;
+	};
+	struct DescriptorTable : public GraphicsDeviceChild
+	{
+		SHADERSTAGE stage = SHADERSTAGE_COUNT;
+		std::vector<ResourceRange> resources;
+		std::vector<SamplerRange> samplers;
+		std::vector<StaticSampler> staticsamplers;
+	};
+	struct RootConstantRange
+	{
+		SHADERSTAGE stage = SHADERSTAGE_COUNT;
+		uint32_t slot = 0;
+		uint32_t size = 0;
+		uint32_t offset = 0;
+	};
+	struct RootSignature : public GraphicsDeviceChild
+	{
+		enum FLAGS
+		{
+			FLAG_EMPTY = 0,
+			FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT = 1 << 0,
+		};
+		uint32_t _flags = FLAG_EMPTY;
+		std::vector<DescriptorTable> tables;
+		std::vector<RootConstantRange> rootconstants;
 	};
 
 }

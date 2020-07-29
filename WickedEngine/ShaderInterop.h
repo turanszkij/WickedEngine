@@ -26,6 +26,8 @@ typedef XMINT4 int4;
 
 #define CB_GETBINDSLOT(name) __CBUFFERBINDSLOT__##name##__
 #define CBUFFER(name, slot) static const int CB_GETBINDSLOT(name) = slot; struct alignas(16) name
+#define CONSTANTBUFFER(name, type, slot) CBUFFER(name, slot)
+#define ROOTCONSTANTS(name, type, slot) CBUFFER(name, slot)
 
 #else
 
@@ -36,6 +38,8 @@ typedef XMINT4 int4;
 #define globallycoherent /*nothing*/
 
 #define CBUFFER(name, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_B + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] cbuffer name
+#define CONSTANTBUFFER(name, type, slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_B + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] ConstantBuffer< type > name
+#define ROOTCONSTANTS(name, type, slot) [[vk::push_constant]] type name;
 
 #define RAWBUFFER(name,slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_T + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] ByteAddressBuffer name
 #define RWRAWBUFFER(name,slot) [[vk::binding(slot + VULKAN_BINDING_SHIFT_U + VULKAN_BINDING_SHIFT_STAGE(SPIRV_SHADERSTAGE))]] RWByteAddressBuffer name
@@ -77,6 +81,8 @@ typedef XMINT4 int4;
 #else // invoking DirectX shader compiler
 
 #define CBUFFER(name, slot) cbuffer name : register(b ## slot)
+#define CONSTANTBUFFER(name, type, slot) ConstantBuffer< type > name : register(b ## slot)
+#define ROOTCONSTANTS(name, type, slot) CONSTANTBUFFER(name, type, slot)
 
 #define RAWBUFFER(name,slot) ByteAddressBuffer name : register(t ## slot)
 #define RWRAWBUFFER(name,slot) RWByteAddressBuffer name : register(u ## slot)
