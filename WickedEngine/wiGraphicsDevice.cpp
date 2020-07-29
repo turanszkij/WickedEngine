@@ -31,6 +31,8 @@ bool GraphicsDevice::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const
 		return RAYTRACING;
 	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE:
 		return RAYTRACING_INLINE;
+	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT:
+		return DESCRIPTOR_MANAGEMENT;
 	}
 	return false;
 }
