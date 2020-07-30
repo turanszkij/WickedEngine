@@ -763,6 +763,17 @@ void RenderPath3D::RenderPostprocessChain(const Texture& srcSceneRT, const Textu
 
 	// 1.) HDR post process chain
 	{
+		if (getVolumetricCloudsEnabled())
+		{
+			const Texture* lightShaftTemp = nullptr;
+
+			wiRenderer::Postprocess_VolumetricClouds(rt_first == nullptr ? *rt_read : *rt_first, *rt_write, *lightShaftTemp, rtLinearDepth, depthBuffer_Copy, cmd);
+			rt_first = nullptr;
+
+			std::swap(rt_read, rt_write);
+			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
+		}
+
 		if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
 		{
 			GraphicsDevice* device = wiRenderer::GetDevice();

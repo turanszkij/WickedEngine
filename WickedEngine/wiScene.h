@@ -969,6 +969,7 @@ namespace wiScene
 
 		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);
+		float sunEnergy = 0;
 		XMFLOAT3 horizon = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		XMFLOAT3 zenith = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		XMFLOAT3 ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);

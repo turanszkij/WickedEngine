@@ -1,16 +1,20 @@
 #include "globals.hlsli"
-#include "stochasticSSRHF.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-TEXTURE2D(resolve_current, float4, TEXSLOT_ONDEMAND0);
-TEXTURE2D(resolve_history, float4, TEXSLOT_ONDEMAND1);
+TEXTURE2D(cloud_current, float4, TEXSLOT_ONDEMAND0);
+TEXTURE2D(cloud_positionShaft, float4, TEXSLOT_ONDEMAND1);
+TEXTURE2D(cloud_history, float4, TEXSLOT_ONDEMAND2);
 
 RWTEXTURE2D(output, float4, 0);
+RWTEXTURE2D(cloudLightShaft, float4, 1);
 
-static const float temporalResponseMin = 0.85;
-static const float temporalResponseMax = 1.0f;
-static const float temporalScale = 2.0;
-static const float temporalExposure = 10.0f;
+
+// The rendering uses a temporal upsampling pass similar to Frostbite. See https://odr.chalmers.se/handle/20.500.12380/241770
+
+// If the clouds are moving fast, the upsampling will most likely not be able to keep up. You can modify these values to relax the effect:
+static const float temporalResponse = 0.05;
+static const float temporalScale = 3.0;
+static const float temporalExposure = 10.0;
 
 inline float Luma4(float3 color)
 {
@@ -90,6 +94,19 @@ inline void ResolverAABB(Texture2D<float4> currentColor, SamplerState currentSam
     currentAverage = mean;
 }
 
+float2 CalculateCustomMotion(float4 worldPosition)
+{
+    float4 thisClip = mul(g_xCamera_VP, worldPosition);
+    float4 prevClip = mul(g_xFrame_MainCamera_PrevVP, worldPosition);
+    
+    float2 thisScreen = thisClip.xy * rcp(thisClip.w);
+    float2 prevScreen = prevClip.xy * rcp(prevClip.w);
+    thisScreen = (thisScreen.xy * float2(0.5, -0.5) + 0.5);
+    prevScreen = (prevScreen.xy * float2(0.5, -0.5) + 0.5);
+    
+    return thisScreen - prevScreen;
+}
+
 float2 CalculateCustomMotion(float depth, float2 uv)
 {
     float4 sampleWorldPosition = float4(reconstructPosition(uv, depth, g_xCamera_InvVP), 1.0f);
@@ -106,51 +123,77 @@ float2 CalculateCustomMotion(float depth, float2 uv)
 }
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
-void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
+void main(uint3 DTid : SV_DispatchThreadID)
 {
     const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
     const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
-
-    const float3 worldNormal = decodeNormal(texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy);
-
-    //float4 raytraceSource = texture_raytrace.SampleLevel(sampler_point_clamp, uv, 0);
-    //float hitDepth = raytraceSource.z;
-    //float2 hitPixel = raytraceSource.xy;
     
-    // Normal velocity seems to work best in most scenarios
-    float2 customVelocity = CalculateCustomMotion(depth, uv);
-    //float2 hitCustomVelocity = CalculateCustomMotion(hitDepth, uv); 
+#if 1
+        
+#if 0 
     
-    float2 velocity = customVelocity;
+        // Calculate screen dependant motion vector
+        float4 prevPos = float4(uv * 2.0 - 1.0, 1.0, 1.0);
+        prevPos = mul(g_xCamera_InvP, prevPos);
+        prevPos = prevPos / prevPos.w;
+        
+        prevPos.xyz = mul((float3x3)g_xCamera_InvV, prevPos.xyz);
+        prevPos.xyz = mul((float3x3)g_xFrame_MainCamera_PrevV, prevPos.xyz);
+        
+        float4 reproj = mul(g_xCamera_Proj, prevPos);
+        reproj /= reproj.w;
+    
+        float2 prevUV = reproj.xy * 0.5 + 0.5;
+            
+#else
+    
+        // Calculate custom motion vector based on cloud/atmosphere world position
+    float4 cloudPositionWS = float4(cloud_positionShaft.SampleLevel(sampler_linear_clamp, uv, 0).xyz, 1.0);
+    
+    float2 velocity = CalculateCustomMotion(cloudPositionWS); // CalculateCustomMotion(depth, uv);
     float2 prevUV = uv - velocity;
     
-    float4 previous = resolve_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
-
-    // Luma HDR and AABB minmax
+#endif
+    
+    float4 previous = cloud_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
     
     float4 current = 0;
     float4 currentMin, currentMax, currentAverage;
-    ResolverAABB(resolve_current, sampler_linear_clamp, 0, temporalExposure, temporalScale, uv, xPPResolution, currentMin, currentMax, currentAverage, current);
+    ResolverAABB(cloud_current, sampler_point_clamp, 0, temporalExposure, temporalScale, uv, xPPResolution, currentMin, currentMax, currentAverage, current);
 
-    previous.xyz = clip_aabb(currentMin.xyz, currentMax.xyz, clamp(currentAverage, currentMin, currentMax), previous).xyz;
-    previous.a = clamp(previous.a, currentMin.a, currentMax.a);
+    previous = clip_aabb(currentMin.xyz, currentMax.xyz, clamp(currentAverage, currentMin, currentMax), previous);
     
-    // Blend color & history
-    // Feedback weight from unbiased luminance difference (Timothy Lottes)
+    float4 result = lerp(previous, current, temporalResponse);
     
-    float lumFiltered = Luminance(current.rgb); // Luma4(current.rgb)
-    float lumHistory = Luminance(previous.rgb);
+    result = is_saturated(prevUV) ? result : current;
+    
+    // Light Shaft    
 
-    float lumDifference = abs(lumFiltered - lumHistory) / max(lumFiltered, max(lumHistory, 0.2f));
-    float lumWeight = sqr(1.0f - lumDifference);
-    float blendFinal = lerp(temporalResponseMin, temporalResponseMax, lumWeight);
+    const float lightShaftStrength = 5.0;
 
-    // Reduce ghosting by refreshing the blend by velocity (Unreal)
-    float2 velocityScreen = customVelocity * xPPResolution;
-    float velocityBlend = sqrt(dot(velocityScreen, velocityScreen));
-    blendFinal = lerp(blendFinal, 0.2, saturate(velocityBlend / 100.0));
+    float lightShaftComponent = cloud_positionShaft.SampleLevel(sampler_point_clamp, uv, 0).a;
+    float3 lightShaftColor = lightShaftComponent * result.a * lightShaftStrength * GetSunColor();
     
-    float4 result = lerp(current, previous, blendFinal);
+#elif 0
+    
+    float4 cloudPositionWS = float4(cloud_positionShaft.SampleLevel(sampler_linear_clamp, uv, 0).xyz, 1.0);
+
+    float2 velocity = CalculateCustomMotion(cloudPositionWS);
+    float2 prevUV = uv - velocity;
+    
+    float4 current = cloud_current.SampleLevel(sampler_linear_clamp, uv, 0);
+    float4 previous = cloud_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
+    
+    float4 result = lerp(previous, current, temporalResponse);
+    
+    result = is_saturated(prevUV) ? result : current;
+    
+#else
+
+    float4 result = cloud_current.SampleLevel(sampler_linear_clamp, uv, 0);
+
+#endif
     
     output[DTid.xy] = result;
+    cloudLightShaft[DTid.xy] = float4(lightShaftColor, 1.0);
 }

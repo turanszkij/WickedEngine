@@ -69,9 +69,8 @@ bool ScreenSpaceRayTrace(float3 csOrig, float3 csDir, float jitter, float roughn
     P0.xy *= xPPResolution.xy;
     P1.xy *= xPPResolution.xy;
     
-#if 1
+#if 0
     // Clip to the screen coordinates. Alternatively we could just modify rayTraceMaxStep instead
-    // This will also improve the framerate, without losing quality or features
     float2 yDelta = float2(xPPResolution.y + 2.0f, -2.0f); // - 0.5, 0.5
     float2 xDelta = float2(xPPResolution.x + 2.0f, -2.0f); // - 0.5, 0.5
     float alpha = 0.0;
@@ -239,7 +238,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
         const float surfaceMargin = 0.0f;
         const float maxRegenCount = 15.0f;
 
-        uint2 Random = Rand3DPCG16(int3((DTid.xy + 0.5f), g_xFrame_FrameCount)).xy;
+        uint2 Random = Rand_PCG16(int3((DTid.xy + 0.5f), g_xFrame_FrameCount)).xy;
         
         // Pick the best rays
         
@@ -250,7 +249,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
         {
             // Low-discrepancy sequence
             //float2 Xi = float2(Random) * rcp(65536.0); // equivalent to HammersleyRandom(0, 1, Random).
-            float2 Xi = HammersleyRandom(regenCount, Random); // SingleSPP
+            float2 Xi = HammersleyRandom16(regenCount, Random); // SingleSPP
             
             Xi.y = lerp(Xi.y, 0.0f, BRDFBias);
 
