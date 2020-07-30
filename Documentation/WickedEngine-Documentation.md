@@ -51,7 +51,8 @@ This is a reference for the C++ features of Wicked Engine
 			3. [Destroying resources](#destroying-resources)
 			4. [Work submission](#work-submission)
 			5. [Presenting to the screen](#presenting-to-the-screen)
-			6. [Resource binding](#resource-binding)
+			6. [Resource binding (Simple)](#resource-binding-simple)
+			6. [Resource binding (Advanced)](#resource-binding-advanced)
 			7. [Subresources](#subresources)
 			8. [Pipeline States and Shaders](#pipeline-states-and-shaders)
 			9. [Render Passes](#render-passes)
@@ -468,7 +469,7 @@ Furthermore, the `BeginCommandList()` is thread safe, so the user can call it fr
 ##### Presenting to the screen
 The `PresentBegin()` and `PresentEnd()` functions are used to prepare for rendering to the back buffer. When the `PresentBegin()` is called, the back buffer will be set as the current active render target or render pass. This means, that rendering commands will draw directly to the screen. This is generally used to draw textures that were previously rendered to, or 2D GUI elements. For example, the `RenderPath3D::Compose()` function is used in the [High Level Interface](#high-level-interface) to draw the results of the `RenderPath3D::Render()`, and the [GUI](#gui) elements. The rendering commands executed between `PresentBegin()` and `PresentEnd()` are still executed by the GPU in the command list beginning order described in the topic: [Work submission](#work-submission).
 
-##### Resource binding
+##### Resource binding (Simple)
 The resource binding model is based on DirectX 11. That means, resources are bound to slot numbers that are simple integers. This makes it easy to share binding information between shaders and C++ code, just define the bind slot number as global constants in [shared header files](#shaderinterop). For sharing, the bind slot numbers can be easily defined as compile time constants using:
 
 ```cpp
@@ -510,6 +511,31 @@ Only `GPUBuffer`s can be set as constant buffers if they were created with a `Bi
 Only `Sampler` can be bound as sampler. Use the `GraphicsDevice::BindSampler()` function to bind samplers.
 
 There are some limitations on the maximum value of slots that can be used, these are defined as compile time constants in [Graphics device SharedInternals](../WickedEngine/wiGraphicsDevice_SharedInternals.h). The user can modify these and recompile the engine if the predefined slots are not enough. This could slightly affect performance.
+
+Remarks:
+- Always use the resource declaration macros ([Shaders](#shaders) section) for the simple binding model, as these will properly remap Vulkan bind points.
+
+##### Resource Binding (Advanced)
+This resource binding model is based on a combination of DirectX 12 and Vulkan resource binding model and allows the developer to use a more fine grained resource management that can be fitted for specific use cases more optimally. For example, a bindless descriptor model could be implemented with descriptor arrays, or a system where descriptors are grouped by update frequency into tables. The developer can query whether the `GraphicsDevice` supports advanced binding model, by querying the `GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT` capability with `GraphicsDevice::CheckCapability()`.
+
+The following APIs are available:
+
+- `ResourceRange`: Represents an array of descriptors, by specifying the descriptor type (any GPUResource type that is declared within a shader), the binding slot and the number of descriptors in the array.
+- `SamplerRange`: Represents an array of samplers, by specifying the binding slot and the number of sampler desciptors in the array.
+- `StaticSampler`: Represents a static sampler by specifying the sampler description and bind point. Static sampler array is not permitted. The static samplers are samplers that never change and they can result in more efficient shader code being generated.
+- `RootConstantRange`: Root constants are a group of 32 bit values that will be used by a shader without going through a real descriptor, so the access indirfection count is zero, which can make them most efficient to use. However, they take a lot of space from the root signature, so it is advised to use them sparingly. Bounds checking is also not supported on these, so careless use could result in GPU hang.
+- `DescriptorTable`: Descriptors are always grouped within tables. The implementation can remove descriptors from tables and put them into the root of the `RootSignature` if the `ResourceRange` is either `ROOT_CONSTANTBUFFER`, `ROOT_RAWBUFFER`, `ROOT_RWRAWBUFFER`, `ROOT_STRUCTUREDBUFFER` or `ROOT_RWSTRUCTUREDBUFFER`. Root descriptors take additional space in the `RootSignature`, so use them sparingly. Bounds checking is also not supported on root descriptors, so careless use could result in GPU hang.
+- `RootSignature`: This can contain a number of `DescriptorTable`s, `RootConstantRange`s and `StaticSampler`s. `Shader`s, `PipelineState`s and `RaytracingPipelineState` objects can declare that they are using a root signature and by doing so, they will switch to the advanced resource binding model. Specify the `RootSignature::FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT` flag if this is going to be used by a graphics `PipelineState` object.
+- `CreateDescriptorTable()`: Create the underlying GPU resources for the `DescriptorTable`.
+- `CreteRootSignature()`: Create the underlying GPU resources for the `RootSignature`
+- `WriteDescriptor()`: Write actual descriptors into the table (either `GPUResource` or `Sampler`). To write individual `subresource`s, refer to the [Subresources](#subresources) topic. The indexing of the descriptors will match by what order they are declared withing the tables. Root descriptors don't have to be written by this function.
+- `BindDescriptorTable()`: The `DescriptorTable` will be bound to either `GRAPHICS`, `COMPUTE` or `RAYTRACING` pipelines to the specified `space`. The HLSL shader code can declare `space` registers manually, but the default `space` will be `0`. To declare `space` manually, use the `register` keyword like this: `register(t56, space4)` (which would mean slot=56 in descriptor space=4.
+- `BindRootDescriptor()`: Bind the root descriptor to the specified slot in the root signature. The slot is calculated by taking the index of the root descriptor relative to all root descriptors bound to the root signature (within all tables). This must be done after using `BindDescriptorTable()` to first bind the table itself (because Vulkan API will put the root descriptors within the table). After `BindDescriptorTable()` is called, all root descriptors will need to be rebound.
+- `BindRootConstants()`: Write into the specified `RootConstantRange` directly. The index is relative to the array of `RootConstantRange`s declared inside the `RootSignature`.
+
+Remarks:
+- Vulkan and DirectX 12 have different resource binding behaviour regarding the shader code. To write shader code that is compliant with both, and uses the advanced binding model, make sure to use that binding points don't overlap even between different bind types (s/b/t/u).
+- Never use the resource delaration macros ([Shaders](#shaders) section) with the advanced binding model, as those will remap Vulkan binding points.
 
 ##### Subresources
 Resources like textures can have different views. For example, if a texture contains multiple mip levels, each mip level can be viewed as a separate texture with one mip level, or the whole texture can be viewed as a texture with multiple mip levels. When creating resources, a subresource that views the entire resource will be created. Functions that expect a subresource parameter can be provided with the value `-1` that means the whole resource. Usually, this parameter is optional.

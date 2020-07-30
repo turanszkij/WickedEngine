@@ -85,10 +85,8 @@ namespace wiGraphics
 					D3D12_GPU_DESCRIPTOR_HANDLE start_gpu = {};
 					uint32_t ringOffset = 0;
 				};
-				std::vector<DescriptorHeap> heaps_resource;
-				std::vector<DescriptorHeap> heaps_sampler;
-				size_t currentheap_resource = 0;
-				size_t currentheap_sampler = 0;
+				DescriptorHeap heap_resource;
+				DescriptorHeap heap_sampler;
 				bool heaps_bound = false;
 
 				bool dirty_graphics_compute[2] = {};
@@ -114,11 +112,17 @@ namespace wiGraphics
 
 				} tables[SHADERSTAGE_COUNT];
 
+				struct DescriptorHandles
+				{
+					D3D12_GPU_DESCRIPTOR_HANDLE sampler_handle = {};
+					D3D12_GPU_DESCRIPTOR_HANDLE resource_handle = {};
+				};
+
 				void init(GraphicsDevice_DX12* device);
 
 				void reset();
 				void validate(bool graphics, CommandList cmd);
-				void create_or_bind_heaps_on_demand(CommandList cmd);
+				DescriptorHandles commit(const DescriptorTable* table, CommandList cmd);
 			};
 			DescriptorTableFrameAllocator descriptors[COMMANDLIST_COUNT];
 
@@ -151,11 +155,18 @@ namespace wiGraphics
 		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
 		const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
 		const Shader* active_cs[COMMANDLIST_COUNT] = {};
+		const RaytracingPipelineState* active_rt[COMMANDLIST_COUNT] = {};
+		const RootSignature* active_rootsig_graphics[COMMANDLIST_COUNT] = {};
+		const RootSignature* active_rootsig_compute[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 		D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS resolve_subresources[COMMANDLIST_COUNT][D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 
 		bool dirty_pso[COMMANDLIST_COUNT] = {};
 		void pso_validate(CommandList cmd);
+
+		void predraw(CommandList cmd);
+		void predispatch(CommandList cmd);
+		void preraytrace(CommandList cmd);
 
 		struct Query_Resolve
 		{
@@ -183,11 +194,15 @@ namespace wiGraphics
 		bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
 		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) override;
 		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) override;
+		bool CreateDescriptorTable(DescriptorTable* table) override;
+		bool CreateRootSignature(RootSignature* rootsig) override;
 
 		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
 
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
 		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) override;
+		void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const GPUResource* resource, int subresource = -1, uint64_t offset = 0) override;
+		void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const Sampler* sampler) override;
 
 		void Map(const GPUResource* resource, Mapping* mapping) override;
 		void Unmap(const GPUResource* resource) override;
@@ -245,6 +260,10 @@ namespace wiGraphics
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
 		void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
 
+		void BindDescriptorTable(BINDPOINT bindpoint, uint32_t space, const DescriptorTable* table, CommandList cmd) override;
+		void BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd) override;
+		void BindRootConstants(BINDPOINT bindpoint, uint32_t index, const void* srcdata, CommandList cmd) override;
+
 		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
 
 		void EventBegin(const char* name, CommandList cmd) override;
@@ -265,6 +284,7 @@ namespace wiGraphics
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12PipelineState>, uint64_t>> destroyer_pipelines;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12RootSignature>, uint64_t>> destroyer_rootSignatures;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12StateObject>, uint64_t>> destroyer_stateobjects;
+			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>, uint64_t>> destroyer_descriptorHeaps;
 
 			wiContainers::ThreadSafeRingBuffer<uint32_t, timestamp_query_count> free_timestampqueries;
 			wiContainers::ThreadSafeRingBuffer<uint32_t, occlusion_query_count> free_occlusionqueries;
@@ -272,7 +292,7 @@ namespace wiGraphics
 			~AllocationHandler()
 			{
 				Update(~0, 0); // destroy all remaining
-				if(allocator) allocator->Release();
+				if (allocator) allocator->Release();
 			}
 
 			// Deferred destroy of resources that the GPU is already finished with:
@@ -360,6 +380,18 @@ namespace wiGraphics
 					if (destroyer_stateobjects.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
 					{
 						destroyer_stateobjects.pop_front();
+						// comptr auto delete
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_descriptorHeaps.empty())
+				{
+					if (destroyer_descriptorHeaps.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						destroyer_descriptorHeaps.pop_front();
 						// comptr auto delete
 					}
 					else

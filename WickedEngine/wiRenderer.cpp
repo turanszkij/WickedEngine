@@ -9296,10 +9296,6 @@ void UpdateFrameCB(CommandList cmd)
 	{
 		cb.g_xFrame_Options |= OPTION_BIT_SIMPLE_SKY;
 	}
-	if (scene.weather.IsRealisticSky())
-	{
-		cb.g_xFrame_Options |= OPTION_BIT_REALISTIC_SKY;
-	}
 	if (GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && GetRaytracedShadowsEnabled())
 	{
 		cb.g_xFrame_Options |= OPTION_BIT_RAYTRACED_SHADOWS;

@@ -2,6 +2,9 @@
 #define WI_SKY_HF
 #include "globals.hlsli"
 
+// This can enable realistic sky simulation (performance heavy)
+//#define REALISTIC_SKY
+
 // Accurate Atmosphere based on: https://www.scratchapixel.com/lessons/procedural-generation-virtual-worlds/simulating-sky
 // Custom Atmosphere based on: https://www.shadertoy.com/view/Ml2cWG
 // Cloud noise based on: https://www.shadertoy.com/view/4tdSWr
@@ -412,34 +415,31 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enab
     
     float3 sky = float3(0, 0, 0);
 
-    if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
-    {
-        AtmosphericMedium medium = CreateAtmosphericScattering();
+#ifdef REALISTIC_SKY
+    AtmosphericMedium medium = CreateAtmosphericScattering();
 
-        sky = AccurateAtmosphericScattering
-        (
-            g_xCamera_CamPos,           // Ray origin
-            V,                          // Ray direction
-            sunDirection,               // Position of the sun
-            float3(0.0, -6372e3, 0.0),  // Center of the planet
-            6371e3,                     // Radius of the planet in meters
-            6471e3,                     // Radius of the atmosphere in meters
-            medium,                     // Atmospheric medium constructor.
-            sun_enabled,                // Use sun and total
-            dark_enabled                // Enable dark mode for light shafts etc.
-        );
-    }
-    else
-    {
-        sky = CustomAtmosphericScattering
-        (
-            V,              // normalized ray direction
-            sunDirection,   // position of the sun
-            sunColor,       // color of the sun, for disc
-            sun_enabled,    // use sun and total
-            dark_enabled    // enable dark mode for light shafts etc.
-        );
-    }
+    sky = AccurateAtmosphericScattering
+    (
+        g_xCamera_CamPos,           // Ray origin
+        V,                          // Ray direction
+        sunDirection,               // Position of the sun
+        float3(0.0, -6372e3, 0.0),  // Center of the planet
+        6371e3,                     // Radius of the planet in meters
+        6471e3,                     // Radius of the atmosphere in meters
+        medium,                     // Atmospheric medium constructor.
+        sun_enabled,                // Use sun and total
+        dark_enabled                // Enable dark mode for light shafts etc.
+    );
+#else
+    sky = CustomAtmosphericScattering
+    (
+        V,              // normalized ray direction
+        sunDirection,   // position of the sun
+        sunColor,       // color of the sun, for disc
+        sun_enabled,    // use sun and total
+        dark_enabled    // enable dark mode for light shafts etc.
+    );
+#endif // REALISTIC_SKY
 
     if (clouds_enabled)
     {
