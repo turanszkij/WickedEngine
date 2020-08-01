@@ -138,8 +138,7 @@ namespace wiGraphics
 				std::vector<VkDescriptorImageInfo> imageInfos;
 				std::vector<VkBufferView> texelBufferViews;
 				std::vector<VkWriteDescriptorSetAccelerationStructureNV> accelerationStructureViews;
-
-				bool dirty_graphics_compute[2] = {};
+				bool dirty = false;
 
 				struct Table
 				{

@@ -1264,8 +1264,7 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::reset()
 	{
-		dirty_graphics_compute[0] = true;
-		dirty_graphics_compute[1] = true;
+		dirty = true;
 		heaps_bound = false;
 		heap_resource.ringOffset = 0;
 		heap_sampler.ringOffset = 0;
@@ -1276,14 +1275,9 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::validate(bool graphics, CommandList cmd)
 	{
-		if (graphics && !dirty_graphics_compute[0])
+		if (!dirty)
 			return;
-		if (graphics && device->active_pso[cmd] == nullptr)
-			return;
-		if (!graphics && !dirty_graphics_compute[1])
-			return;
-		if (!graphics && device->active_cs[cmd] == nullptr)
-			return;
+		dirty = true;
 
 		auto pso_internal = graphics ? to_internal(device->active_pso[cmd]) : to_internal(device->active_cs[cmd]);
 
@@ -1347,13 +1341,12 @@ using namespace DX12_Internal;
 
 		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
 		{
-			Table& table = tables[stage];
-			if (!dirty_graphics_compute[stage == CS])
-				continue;
 			if (graphics && stage == CS)
 				continue;
 			if (!graphics && stage != CS)
 				continue;
+
+			Table& table = tables[stage];
 
 			const Shader* shader = nullptr;
 			switch (stage)
@@ -1573,9 +1566,6 @@ using namespace DX12_Internal;
 			}
 
 		}
-
-		dirty_graphics_compute[0] = false;
-		dirty_graphics_compute[1] = false;
 	}
 	GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::DescriptorHandles
 		GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::commit(const DescriptorTable* table, CommandList cmd)
@@ -4796,7 +4786,7 @@ using namespace DX12_Internal;
 		{
 			table.SRV[slot] = resource;
 			table.SRV_index[slot] = subresource;
-			descriptors.dirty_graphics_compute[stage == CS] = true;
+			descriptors.dirty = true;
 		}
 	}
 	void GraphicsDevice_DX12::BindResources(SHADERSTAGE stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
@@ -4818,7 +4808,7 @@ using namespace DX12_Internal;
 		{
 			table.UAV[slot] = resource;
 			table.UAV_index[slot] = subresource;
-			descriptors.dirty_graphics_compute[stage == CS] = true;
+			descriptors.dirty = true;
 		}
 	}
 	void GraphicsDevice_DX12::BindUAVs(SHADERSTAGE stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
@@ -4845,7 +4835,7 @@ using namespace DX12_Internal;
 		if (table.SAM[slot] != sampler)
 		{
 			table.SAM[slot] = sampler;
-			descriptors.dirty_graphics_compute[stage == CS] = true;
+			descriptors.dirty = true;
 		}
 	}
 	void GraphicsDevice_DX12::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd)
@@ -4856,7 +4846,7 @@ using namespace DX12_Internal;
 		if (buffer->desc.Usage == USAGE_DYNAMIC || table.CBV[slot] != buffer)
 		{
 			table.CBV[slot] = buffer;
-			descriptors.dirty_graphics_compute[stage == CS] = true;
+			descriptors.dirty = true;
 		}
 	}
 	void GraphicsDevice_DX12::BindVertexBuffers(const GPUBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd)
@@ -4926,7 +4916,7 @@ using namespace DX12_Internal;
 			GetDirectCommandList(cmd)->SetGraphicsRootSignature(to_internal(pso->desc.rootSignature)->resource.Get());
 		}
 
-		GetFrameResources().descriptors[cmd].dirty_graphics_compute[0] = true;
+		GetFrameResources().descriptors[cmd].dirty = true;
 		active_pso[cmd] = pso;
 		dirty_pso[cmd] = true;
 	}
@@ -4936,7 +4926,7 @@ using namespace DX12_Internal;
 		if (active_cs[cmd] != cs)
 		{
 			prev_pipeline_hash[cmd] = 0;
-			GetFrameResources().descriptors[cmd].dirty_graphics_compute[1] = true;
+			GetFrameResources().descriptors[cmd].dirty = true;
 			active_cs[cmd] = cs;
 
 			auto internal_state = to_internal(cs);
@@ -5045,7 +5035,7 @@ using namespace DX12_Internal;
 			{
 				if (state.binding[stage])
 				{
-					GetFrameResources().descriptors[cmd].dirty_graphics_compute[stage == CS] = true;
+					GetFrameResources().descriptors[cmd].dirty = true;
 				}
 			}
 		}
@@ -5240,7 +5230,7 @@ using namespace DX12_Internal;
 		{
 			prev_pipeline_hash[cmd] = 0;
 			active_rt[cmd] = rtpso;
-			GetFrameResources().descriptors[cmd].dirty_graphics_compute[1] = true;
+			GetFrameResources().descriptors[cmd].dirty = true;
 
 			auto internal_state = to_internal(rtpso);
 			GetDirectCommandList(cmd)->SetPipelineState1(internal_state->resource.Get());

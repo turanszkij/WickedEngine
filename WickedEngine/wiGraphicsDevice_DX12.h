@@ -88,8 +88,7 @@ namespace wiGraphics
 				DescriptorHeap heap_resource;
 				DescriptorHeap heap_sampler;
 				bool heaps_bound = false;
-
-				bool dirty_graphics_compute[2] = {};
+				bool dirty = false;
 
 				struct Table
 				{
