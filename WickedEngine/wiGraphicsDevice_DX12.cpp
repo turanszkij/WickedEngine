@@ -4,6 +4,7 @@
 
 #include "wiGraphicsDevice_SharedInternals.h"
 #include "wiHelper.h"
+#include "wiMath.h"
 #include "ResourceMapping.h"
 #include "wiBackLog.h"
 
@@ -1261,16 +1262,135 @@ using namespace DX12_Internal;
 
 		// Reset state to empty:
 		reset();
+
+		heaps_resource.resize(1);
+		heaps_sampler.resize(1);
 	}
 	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::reset()
 	{
 		dirty = true;
 		heaps_bound = false;
-		heap_resource.ringOffset = 0;
-		heap_sampler.ringOffset = 0;
+		for (auto& x : heaps_resource)
+		{
+			x.ringOffset = 0;
+		}
+		for (auto& x : heaps_sampler)
+		{
+			x.ringOffset = 0;
+		}
+		current_resource_heap = 0;
+		current_sampler_heap = 0;
 		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
 		{
 			tables[stage].reset();
+		}
+	}
+	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::request_heaps(uint32_t resources, uint32_t samplers, CommandList cmd)
+	{
+		// This function allocatesGPU visible descriptor heaps that can fit the requested table sizes.
+		//	First, they grow the heaps until the size fits the dx12 resource limits (tier 1 resource limit = 1 million, sampler limit is 2048)
+		//	When the limits are reached, and there is still a need to allocate, then completely new heap blocks are started
+		//	
+		//	The function will automatically bind descriptor heaps when there was a new (growing or block allocation)
+
+		DescriptorHeap& heap_resource = heaps_resource[current_resource_heap];
+		uint32_t allocation = heap_resource.ringOffset + resources;
+		if (heap_resource.heapDesc.NumDescriptors <= allocation)
+		{
+			if (allocation > 1000000) // tier 1 limit
+			{
+				// need new block
+				allocation -= heap_resource.ringOffset;
+				current_resource_heap++;
+				if (heaps_resource.size() <= current_resource_heap)
+				{
+					heaps_resource.resize(current_resource_heap + 1);
+				}
+			}
+			DescriptorHeap& heap = heaps_resource[current_resource_heap];
+
+			// Need to re-check if growing is necessary (maybe step into new block is enough):
+			if (heap.heapDesc.NumDescriptors <= allocation)
+			{
+				// grow rate is controlled here:
+				allocation = std::max(512u, allocation);
+				allocation = wiMath::GetNextPowerOfTwo(allocation);
+				allocation = std::min(1000000u, allocation);
+
+				// Issue destruction of the old heap:
+				device->allocationhandler->destroylocker.lock();
+				uint64_t framecount = device->allocationhandler->framecount;
+				device->allocationhandler->destroyer_descriptorHeaps.push_back(std::make_pair(heap.heap_GPU, framecount));
+				device->allocationhandler->destroylocker.unlock();
+
+				heap.heapDesc.NodeMask = 0;
+				heap.heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+				heap.heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+				heap.heapDesc.NumDescriptors = allocation;
+				HRESULT hr = device->device->CreateDescriptorHeap(&heap.heapDesc, IID_PPV_ARGS(&heap.heap_GPU));
+				assert(SUCCEEDED(hr));
+
+				// Save heap properties:
+				heap.start_cpu = heap.heap_GPU->GetCPUDescriptorHandleForHeapStart();
+				heap.start_gpu = heap.heap_GPU->GetGPUDescriptorHandleForHeapStart();
+			}
+
+			heaps_bound = false;
+		}
+
+		DescriptorHeap& heap_sampler = heaps_sampler[current_sampler_heap];
+		allocation = heap_sampler.ringOffset + samplers;
+		if (heap_sampler.heapDesc.NumDescriptors <= allocation)
+		{
+			if (allocation > 2048) // sampler limit
+			{
+				// need new block
+				allocation -= heap_sampler.ringOffset;
+				current_sampler_heap++;
+				if (heaps_sampler.size() <= current_sampler_heap)
+				{
+					heaps_sampler.resize(current_sampler_heap + 1);
+				}
+			}
+			DescriptorHeap& heap = heaps_sampler[current_sampler_heap];
+
+			// Need to re-check if growing is necessary (maybe step into new block is enough):
+			if (heap.heapDesc.NumDescriptors <= allocation)
+			{
+				// grow rate is controlled here:
+				allocation = std::max(512u, allocation);
+				allocation = wiMath::GetNextPowerOfTwo(allocation);
+				allocation = std::min(2048u, allocation);
+
+				// Issue destruction of the old heap:
+				device->allocationhandler->destroylocker.lock();
+				uint64_t framecount = device->allocationhandler->framecount;
+				device->allocationhandler->destroyer_descriptorHeaps.push_back(std::make_pair(heap.heap_GPU, framecount));
+				device->allocationhandler->destroylocker.unlock();
+
+				heap.heapDesc.NodeMask = 0;
+				heap.heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+				heap.heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+				heap.heapDesc.NumDescriptors = allocation;
+				HRESULT hr = device->device->CreateDescriptorHeap(&heap.heapDesc, IID_PPV_ARGS(&heap.heap_GPU));
+				assert(SUCCEEDED(hr));
+
+				// Save heap properties:
+				heap.start_cpu = heap.heap_GPU->GetCPUDescriptorHandleForHeapStart();
+				heap.start_gpu = heap.heap_GPU->GetGPUDescriptorHandleForHeapStart();
+			}
+
+			heaps_bound = false;
+		}
+
+		if (!heaps_bound)
+		{
+			// definitely re-index the heap blocks!
+			ID3D12DescriptorHeap* heaps[] = {
+				heaps_resource[current_resource_heap].heap_GPU.Get(),
+				heaps_sampler[current_sampler_heap].heap_GPU.Get()
+			};
+			device->GetDirectCommandList(cmd)->SetDescriptorHeaps(arraysize(heaps), heaps);
 		}
 	}
 	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::validate(bool graphics, CommandList cmd)
@@ -1281,61 +1401,7 @@ using namespace DX12_Internal;
 
 		auto pso_internal = graphics ? to_internal(device->active_pso[cmd]) : to_internal(device->active_cs[cmd]);
 
-		uint32_t request_resource = pso_internal->descriptor_resource_count;
-		if (heap_resource.heapDesc.NumDescriptors <= heap_resource.ringOffset + request_resource)
-		{
-			DescriptorHeap& heap = heap_resource;
-
-			device->allocationhandler->destroylocker.lock();
-			uint64_t framecount = device->allocationhandler->framecount;
-			device->allocationhandler->destroyer_descriptorHeaps.push_back(std::make_pair(heap_resource.heap_GPU, framecount));
-			device->allocationhandler->destroylocker.unlock();
-
-			heap.heapDesc.NodeMask = 0;
-			heap.heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-			heap.heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-			heap.heapDesc.NumDescriptors = std::max(512u, (heap_resource.ringOffset + request_resource + 1) * 2);
-			HRESULT hr = device->device->CreateDescriptorHeap(&heap.heapDesc, IID_PPV_ARGS(&heap.heap_GPU));
-			assert(SUCCEEDED(hr));
-
-			// Save heap properties:
-			heap.start_cpu = heap.heap_GPU->GetCPUDescriptorHandleForHeapStart();
-			heap.start_gpu = heap.heap_GPU->GetGPUDescriptorHandleForHeapStart();
-
-			heaps_bound = false;
-		}
-
-		uint32_t request_sampler = pso_internal->descriptor_sampler_count;
-		if (heap_sampler.heapDesc.NumDescriptors <= heap_sampler.ringOffset + request_sampler)
-		{
-			DescriptorHeap& heap = heap_sampler;
-
-			device->allocationhandler->destroylocker.lock();
-			uint64_t framecount = device->allocationhandler->framecount;
-			device->allocationhandler->destroyer_descriptorHeaps.push_back(std::make_pair(heap_sampler.heap_GPU, framecount));
-			device->allocationhandler->destroylocker.unlock();
-
-			heap.heapDesc.NodeMask = 0;
-			heap.heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-			heap.heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-			heap.heapDesc.NumDescriptors = std::max(256u, (heap_sampler.ringOffset + request_sampler + 1) * 2);
-			HRESULT hr = device->device->CreateDescriptorHeap(&heap.heapDesc, IID_PPV_ARGS(&heap.heap_GPU));
-			assert(SUCCEEDED(hr));
-
-			// Save heap properties:
-			heap.start_cpu = heap.heap_GPU->GetCPUDescriptorHandleForHeapStart();
-			heap.start_gpu = heap.heap_GPU->GetGPUDescriptorHandleForHeapStart();
-
-			heaps_bound = false;
-		}
-
-		if (!heaps_bound)
-		{
-			ID3D12DescriptorHeap* heaps[] = {
-				heap_resource.heap_GPU.Get(), heap_sampler.heap_GPU.Get()
-			};
-			device->GetDirectCommandList(cmd)->SetDescriptorHeaps(arraysize(heaps), heaps);
-		}
+		request_heaps(pso_internal->descriptor_resource_count, pso_internal->descriptor_sampler_count, cmd);
 
 		UINT root_parameter_index = 0;
 
@@ -1382,7 +1448,7 @@ using namespace DX12_Internal;
 				// Resources:
 				if (!PSO_table.resources.empty())
 				{
-					DescriptorHeap& heap = heap_resource;
+					DescriptorHeap& heap = heaps_resource[current_resource_heap];
 
 					D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
 					D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
@@ -1518,7 +1584,7 @@ using namespace DX12_Internal;
 				// Samplers:
 				if (!PSO_table.samplers.empty())
 				{
-					DescriptorHeap& heap = heap_sampler;
+					DescriptorHeap& heap = heaps_sampler[current_sampler_heap];
 
 					D3D12_SAMPLER_DESC sampler_desc = {};
 					sampler_desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
@@ -1572,67 +1638,13 @@ using namespace DX12_Internal;
 	{
 		auto internal_state = to_internal(table);
 
-		uint32_t request_resource = internal_state->resource_heap.desc.NumDescriptors;
-		if (heap_resource.heapDesc.NumDescriptors <= heap_resource.ringOffset + request_resource)
-		{
-			DescriptorHeap& heap = heap_resource;
-
-			device->allocationhandler->destroylocker.lock();
-			uint64_t framecount = device->allocationhandler->framecount;
-			device->allocationhandler->destroyer_descriptorHeaps.push_back(std::make_pair(heap_resource.heap_GPU, framecount));
-			device->allocationhandler->destroylocker.unlock();
-
-			heap.heapDesc.NodeMask = 0;
-			heap.heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-			heap.heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-			heap.heapDesc.NumDescriptors = std::max(512u, (heap_resource.ringOffset + request_resource + 1) * 2);
-			HRESULT hr = device->device->CreateDescriptorHeap(&heap.heapDesc, IID_PPV_ARGS(&heap.heap_GPU));
-			assert(SUCCEEDED(hr));
-
-			// Save heap properties:
-			heap.start_cpu = heap.heap_GPU->GetCPUDescriptorHandleForHeapStart();
-			heap.start_gpu = heap.heap_GPU->GetGPUDescriptorHandleForHeapStart();
-
-			heaps_bound = false;
-		}
-
-		uint32_t request_sampler = internal_state->sampler_heap.desc.NumDescriptors;
-		if (heap_sampler.heapDesc.NumDescriptors <= heap_sampler.ringOffset + request_sampler)
-		{
-			DescriptorHeap& heap = heap_sampler;
-
-			device->allocationhandler->destroylocker.lock();
-			uint64_t framecount = device->allocationhandler->framecount;
-			device->allocationhandler->destroyer_descriptorHeaps.push_back(std::make_pair(heap_sampler.heap_GPU, framecount));
-			device->allocationhandler->destroylocker.unlock();
-
-			heap.heapDesc.NodeMask = 0;
-			heap.heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-			heap.heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-			heap.heapDesc.NumDescriptors = std::max(256u, (heap_sampler.ringOffset + request_sampler + 1) * 2);
-			HRESULT hr = device->device->CreateDescriptorHeap(&heap.heapDesc, IID_PPV_ARGS(&heap.heap_GPU));
-			assert(SUCCEEDED(hr));
-
-			// Save heap properties:
-			heap.start_cpu = heap.heap_GPU->GetCPUDescriptorHandleForHeapStart();
-			heap.start_gpu = heap.heap_GPU->GetGPUDescriptorHandleForHeapStart();
-
-			heaps_bound = false;
-		}
-
-		if (!heaps_bound)
-		{
-			ID3D12DescriptorHeap* heaps[] = {
-				heap_resource.heap_GPU.Get(), heap_sampler.heap_GPU.Get()
-			};
-			device->GetDirectCommandList(cmd)->SetDescriptorHeaps(arraysize(heaps), heaps);
-		}
+		request_heaps(internal_state->resource_heap.desc.NumDescriptors, internal_state->sampler_heap.desc.NumDescriptors, cmd);
 
 		DescriptorHandles handles;
 
 		if (!internal_state->sampler_heap.ranges.empty())
 		{
-			DescriptorHeap& heap = heap_sampler;
+			DescriptorHeap& heap = heaps_sampler[current_sampler_heap];
 			D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle = heap.start_cpu;
 			D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle = heap.start_gpu;
 			cpu_handle.ptr += heap.ringOffset * device->sampler_descriptor_size;
@@ -1649,7 +1661,7 @@ using namespace DX12_Internal;
 
 		if (!internal_state->resource_heap.ranges.empty())
 		{
-			DescriptorHeap& heap = heap_resource;
+			DescriptorHeap& heap = heaps_resource[current_resource_heap];
 			D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle = heap.start_cpu;
 			D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle = heap.start_gpu;
 			cpu_handle.ptr += heap.ringOffset * device->resource_descriptor_size;

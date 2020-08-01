@@ -85,8 +85,10 @@ namespace wiGraphics
 					D3D12_GPU_DESCRIPTOR_HANDLE start_gpu = {};
 					uint32_t ringOffset = 0;
 				};
-				DescriptorHeap heap_resource;
-				DescriptorHeap heap_sampler;
+				std::vector<DescriptorHeap> heaps_resource;
+				std::vector<DescriptorHeap> heaps_sampler;
+				uint32_t current_resource_heap = 0;
+				uint32_t current_sampler_heap = 0;
 				bool heaps_bound = false;
 				bool dirty = false;
 
@@ -120,6 +122,7 @@ namespace wiGraphics
 				void init(GraphicsDevice_DX12* device);
 
 				void reset();
+				void request_heaps(uint32_t resources, uint32_t samplers, CommandList cmd);
 				void validate(bool graphics, CommandList cmd);
 				DescriptorHandles commit(const DescriptorTable* table, CommandList cmd);
 			};
