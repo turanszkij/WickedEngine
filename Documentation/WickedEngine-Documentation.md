@@ -513,7 +513,7 @@ Only `Sampler` can be bound as sampler. Use the `GraphicsDevice::BindSampler()` 
 There are some limitations on the maximum value of slots that can be used, these are defined as compile time constants in [Graphics device SharedInternals](../WickedEngine/wiGraphicsDevice_SharedInternals.h). The user can modify these and recompile the engine if the predefined slots are not enough. This could slightly affect performance.
 
 Remarks:
-- Always use the resource declaration macros ([Shaders](#shaders) section) for the simple binding model, as these will properly remap Vulkan bind points.
+- Vulkan and DX12 devices make an effort to combine descriptors across shader stages, so overlapping descriptors will not be supported with those APIs to some extent. For example it is OK, to have a constant buffer on slot 0 (b0) in a vertex shader while having a Texture2D on slot 0 (t0) in pixel shader. However, having a StructuredBuffer on vertex shader slot 0 (t0) and a Texture2D in pixel shader slot 0 (t0) will not work correctly, as only one of them will be bound to a pipeline state. This is made for performance reasons and to retain compatibility with the [advanced binding model](#resource-binding-advanced).
 
 ##### Resource Binding (Advanced)
 This resource binding model is based on a combination of DirectX 12 and Vulkan resource binding model and allows the developer to use a more fine grained resource management that can be fitted for specific use cases more optimally. For example, a bindless descriptor model could be implemented with descriptor arrays, or a system where descriptors are grouped by update frequency into tables. The developer can query whether the `GraphicsDevice` supports advanced binding model, by querying the `GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT` capability with `GraphicsDevice::CheckCapability()`.
@@ -532,10 +532,6 @@ The following APIs are available:
 - `BindDescriptorTable()`: The `DescriptorTable` will be bound to either `GRAPHICS`, `COMPUTE` or `RAYTRACING` pipelines to the specified `space`. The HLSL shader code can declare `space` registers manually, but the default `space` will be `0`. To declare `space` manually, use the `register` keyword like this: `register(t56, space4)` (which would mean slot=56 in descriptor space=4.
 - `BindRootDescriptor()`: Bind the root descriptor to the specified slot in the root signature. The slot is calculated by taking the index of the root descriptor relative to all root descriptors bound to the root signature (within all tables). This must be done after using `BindDescriptorTable()` to first bind the table itself (because Vulkan API will put the root descriptors within the table). After `BindDescriptorTable()` is called, all root descriptors will need to be rebound.
 - `BindRootConstants()`: Write into the specified `RootConstantRange` directly. The index is relative to the array of `RootConstantRange`s declared inside the `RootSignature`.
-
-Remarks:
-- Vulkan and DirectX 12 have different resource binding behaviour regarding the shader code. To write shader code that is compliant with both, and uses the advanced binding model, make sure to use that binding points don't overlap even between different bind types (s/b/t/u).
-- Never use the resource delaration macros ([Shaders](#shaders) section) with the advanced binding model, as those will remap Vulkan binding points.
 
 ##### Subresources
 Resources like textures can have different views. For example, if a texture contains multiple mip levels, each mip level can be viewed as a separate texture with one mip level, or the whole texture can be viewed as a texture with multiple mip levels. When creating resources, a subresource that views the entire resource will be created. Functions that expect a subresource parameter can be provided with the value `-1` that means the whole resource. Usually, this parameter is optional.
@@ -1229,7 +1225,7 @@ Used to time specific ranges in execution. Support CPU and GPU timing. Can write
 
 
 ## Shaders
-There is a separate project file for shaders in the solution. Shaders are written in pure HLSL, although there are some macros used to keep them more manageable and easier to build with different shader compilers. These macros are used to declare resources:
+There is a separate project file for shaders in the solution. Shaders are written in HLSL shading language. There are some macros used to declare resources with binding slots that can be read from the C++ application via code sharing. These macros are used to declare resources:
 
 - CBUFFER(name, slot)<br/>
 Declares a constant buffer

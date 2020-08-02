@@ -250,7 +250,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Ocean.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Skinning.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Utility.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Vulkan.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledDeferred.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledDeferred_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward.h" />

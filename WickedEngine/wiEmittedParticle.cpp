@@ -544,7 +544,7 @@ void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialCompon
 		&particleBuffer,
 		&aliveList[1] // NEW aliveList
 	};
-	device->BindResources(VS, res, 0, arraysize(res), cmd);
+	device->BindResources(VS, res, TEXSLOT_ONDEMAND21, arraysize(res), cmd);
 
 	device->DrawInstancedIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, cmd);
 

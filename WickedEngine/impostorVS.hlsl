@@ -11,7 +11,7 @@ static const float3 BILLBOARD[] = {
 	float3(1, 1, 0),
 };
 
-RAWBUFFER(instanceBuffer, TEXSLOT_ONDEMAND0);
+RAWBUFFER(instanceBuffer, TEXSLOT_ONDEMAND21);
 
 VSOut main(uint fakeIndex : SV_VERTEXID)
 {

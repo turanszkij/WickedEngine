@@ -972,8 +972,8 @@ namespace wiGraphics
 	};
 	struct StaticSampler
 	{
+		Sampler sampler;
 		uint32_t slot = 0;
-		SamplerDesc desc;
 	};
 	struct DescriptorTable : public GraphicsDeviceChild
 	{

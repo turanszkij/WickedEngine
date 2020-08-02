@@ -140,26 +140,12 @@ namespace wiGraphics
 				std::vector<VkWriteDescriptorSetAccelerationStructureNV> accelerationStructureViews;
 				bool dirty = false;
 
-				struct Table
-				{
-					const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
-					const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
-					int SRV_index[GPU_RESOURCE_HEAP_SRV_COUNT];
-					const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
-					int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
-					const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
-
-					void reset()
-					{
-						memset(CBV, 0, sizeof(CBV));
-						memset(SRV, 0, sizeof(SRV));
-						memset(SRV_index, -1, sizeof(SRV_index));
-						memset(UAV, 0, sizeof(UAV));
-						memset(UAV_index, -1, sizeof(UAV_index));
-						memset(SAM, 0, sizeof(SAM));
-					}
-
-				} tables[SHADERSTAGE_COUNT];
+				const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
+				const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
+				int SRV_index[GPU_RESOURCE_HEAP_SRV_COUNT];
+				const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
+				int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
+				const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
 
 				void init(GraphicsDevice_Vulkan* device);
 				void destroy();

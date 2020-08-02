@@ -46,24 +46,19 @@ for item in root.iter():
             
             #cmd += "-D RAYTRACING_INLINE "
             
-            cmd += "-D SPIRV -D "
-            
-            if profile == "VS":
-                cmd += "SPIRV_SHADERSTAGE=0 -fvk-invert-y"
-            if profile == "HS":
-                cmd += "SPIRV_SHADERSTAGE=1"
-            if profile == "DS":
-                cmd += "SPIRV_SHADERSTAGE=2 -fvk-invert-y"
-            if profile == "GS":
-                cmd += "SPIRV_SHADERSTAGE=3 -fvk-invert-y"
-            if profile == "PS":
-                cmd += "SPIRV_SHADERSTAGE=4"
-            if profile == "CS" or profile == "LIB":
-                cmd += "SPIRV_SHADERSTAGE=5"
+            cmd += "-D SPIRV "
             
             cmd += " -spirv -fvk-use-dx-layout -flegacy-macro-expansion -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso "
             
             cmd += "-fspv-target-env=vulkan1.2 "
+            
+            if profile == "VS" or profile == "DS" or profile == "GS":
+                cmd += " -fvk-invert-y "
+
+            #cmd += " -fvk-b-shift 0 all "
+            cmd += " -fvk-t-shift 1000 all "
+            cmd += " -fvk-u-shift 2000 all "
+            cmd += " -fvk-s-shift 3000 all "
             
             print(cmd)
             
