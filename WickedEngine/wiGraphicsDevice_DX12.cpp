@@ -2139,7 +2139,9 @@ using namespace DX12_Internal;
 		D3D12_FEATURE_DATA_D3D12_OPTIONS5 features_5;
 		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &features_5, sizeof(features_5));
 		RAYTRACING = features_5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0;
+#if (WDK_NTDDI_VERSION >= NTDDI_WIN10_VB)
 		RAYTRACING_INLINE = features_5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1;
+#endif // WDK_NTDDI_VERSION
 
 
 		// Create common indirect command signatures:
@@ -2760,7 +2762,9 @@ using namespace DX12_Internal;
 				case D3D_SIT_UAV_APPEND_STRUCTURED:
 				case D3D_SIT_UAV_CONSUME_STRUCTURED:
 				case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER:
+#if (WDK_NTDDI_VERSION >= NTDDI_WIN10_VB)
 				case D3D_SIT_UAV_FEEDBACKTEXTURE:
+#endif // WDK_NTDDI_VERSION
 					descriptor.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
 					break;
 				}
