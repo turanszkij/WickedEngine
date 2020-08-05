@@ -2699,181 +2699,184 @@ using namespace DX12_Internal;
 		assert(SUCCEEDED(hr));
 
 
+		if (pShader->rootSignature == nullptr)
+		{
 #ifdef _WIN64 // TODO: Can't use dxcompiler.dll in 32-bit, so can't use shader reflection
 #ifndef PLATFORM_UWP // TODO: Can't use dxcompiler.dll in UWP, so can't use shader reflection
-		struct ShaderBlob : public IDxcBlob
-		{
-			LPVOID address;
-			SIZE_T size;
-			LPVOID STDMETHODCALLTYPE GetBufferPointer() override { return address; }
-			SIZE_T STDMETHODCALLTYPE GetBufferSize() override { return size; }
-			HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, _COM_Outptr_ void __RPC_FAR* __RPC_FAR* ppvObject) { return E_FAIL; }
-			ULONG STDMETHODCALLTYPE AddRef(void) { return 0; }
-			ULONG STDMETHODCALLTYPE Release(void) { return 0; }
-		};
-		ShaderBlob blob;
-		blob.address = (LPVOID)pShaderBytecode;
-		blob.size = BytecodeLength;
-
-		ComPtr<IDxcContainerReflection> container_reflection;
-		hr = DxcCreateInstance(CLSID_DxcContainerReflection, __uuidof(IDxcContainerReflection), (void**)&container_reflection);
-		assert(SUCCEEDED(hr));
-		hr = container_reflection->Load(&blob);
-		assert(SUCCEEDED(hr));
-
-		UINT32 shaderIdx;
-		hr = container_reflection->FindFirstPartKind('LIXD', &shaderIdx); // Say 'DXIL' in Little-Endian
-		assert(SUCCEEDED(hr));
-
-		auto instert_descriptor = [&](const D3D12_SHADER_INPUT_BIND_DESC& desc)
-		{
-			if (desc.Type == D3D_SIT_SAMPLER)
+			struct ShaderBlob : public IDxcBlob
 			{
-				internal_state->samplers.emplace_back();
-				D3D12_DESCRIPTOR_RANGE& descriptor = internal_state->samplers.back();
+				LPVOID address;
+				SIZE_T size;
+				LPVOID STDMETHODCALLTYPE GetBufferPointer() override { return address; }
+				SIZE_T STDMETHODCALLTYPE GetBufferSize() override { return size; }
+				HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, _COM_Outptr_ void __RPC_FAR* __RPC_FAR* ppvObject) { return E_FAIL; }
+				ULONG STDMETHODCALLTYPE AddRef(void) { return 0; }
+				ULONG STDMETHODCALLTYPE Release(void) { return 0; }
+			};
+			ShaderBlob blob;
+			blob.address = (LPVOID)pShaderBytecode;
+			blob.size = BytecodeLength;
 
-				descriptor.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-				descriptor.BaseShaderRegister = desc.BindPoint;
-				descriptor.NumDescriptors = 1;
-				descriptor.RegisterSpace = 0;
-				descriptor.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-			}
-			else
+			ComPtr<IDxcContainerReflection> container_reflection;
+			hr = DxcCreateInstance(CLSID_DxcContainerReflection, __uuidof(IDxcContainerReflection), (void**)&container_reflection);
+			assert(SUCCEEDED(hr));
+			hr = container_reflection->Load(&blob);
+			assert(SUCCEEDED(hr));
+
+			UINT32 shaderIdx;
+			hr = container_reflection->FindFirstPartKind('LIXD', &shaderIdx); // Say 'DXIL' in Little-Endian
+			assert(SUCCEEDED(hr));
+
+			auto instert_descriptor = [&](const D3D12_SHADER_INPUT_BIND_DESC& desc)
 			{
-				internal_state->resources.emplace_back();
-				D3D12_DESCRIPTOR_RANGE& descriptor = internal_state->resources.back();
-
-				switch (desc.Type)
+				if (desc.Type == D3D_SIT_SAMPLER)
 				{
-				default:
-				case D3D_SIT_CBUFFER:
-					descriptor.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-					break;
-				case D3D_SIT_TBUFFER:
-				case D3D_SIT_TEXTURE:
-				case D3D_SIT_STRUCTURED:
-				case D3D_SIT_BYTEADDRESS:
-				case D3D_SIT_RTACCELERATIONSTRUCTURE:
-					descriptor.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-					break;
-				case D3D_SIT_UAV_RWTYPED:
-				case D3D_SIT_UAV_RWSTRUCTURED:
-				case D3D_SIT_UAV_RWBYTEADDRESS:
-				case D3D_SIT_UAV_APPEND_STRUCTURED:
-				case D3D_SIT_UAV_CONSUME_STRUCTURED:
-				case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER:
-#if (WDK_NTDDI_VERSION >= NTDDI_WIN10_VB)
-				case D3D_SIT_UAV_FEEDBACKTEXTURE:
-#endif // WDK_NTDDI_VERSION
-					descriptor.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
-					break;
+					internal_state->samplers.emplace_back();
+					D3D12_DESCRIPTOR_RANGE& descriptor = internal_state->samplers.back();
+
+					descriptor.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+					descriptor.BaseShaderRegister = desc.BindPoint;
+					descriptor.NumDescriptors = 1;
+					descriptor.RegisterSpace = 0;
+					descriptor.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 				}
-				descriptor.BaseShaderRegister = desc.BindPoint;
-				descriptor.NumDescriptors = 1;
-				descriptor.RegisterSpace = 0;
-				descriptor.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-			}
-		};
+				else
+				{
+					internal_state->resources.emplace_back();
+					D3D12_DESCRIPTOR_RANGE& descriptor = internal_state->resources.back();
 
-		if (stage == SHADERSTAGE_COUNT) // Library reflection
-		{
-			ComPtr<ID3D12LibraryReflection> reflection;
-			hr = container_reflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(&reflection));
-			assert(SUCCEEDED(hr));
+					switch (desc.Type)
+					{
+					default:
+					case D3D_SIT_CBUFFER:
+						descriptor.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+						break;
+					case D3D_SIT_TBUFFER:
+					case D3D_SIT_TEXTURE:
+					case D3D_SIT_STRUCTURED:
+					case D3D_SIT_BYTEADDRESS:
+					case D3D_SIT_RTACCELERATIONSTRUCTURE:
+						descriptor.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+						break;
+					case D3D_SIT_UAV_RWTYPED:
+					case D3D_SIT_UAV_RWSTRUCTURED:
+					case D3D_SIT_UAV_RWBYTEADDRESS:
+					case D3D_SIT_UAV_APPEND_STRUCTURED:
+					case D3D_SIT_UAV_CONSUME_STRUCTURED:
+					case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER:
+#if (WDK_NTDDI_VERSION >= NTDDI_WIN10_VB)
+					case D3D_SIT_UAV_FEEDBACKTEXTURE:
+#endif // WDK_NTDDI_VERSION
+						descriptor.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+						break;
+					}
+					descriptor.BaseShaderRegister = desc.BindPoint;
+					descriptor.NumDescriptors = 1;
+					descriptor.RegisterSpace = 0;
+					descriptor.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+				}
+			};
 
-			D3D12_LIBRARY_DESC library_desc;
-			hr = reflection->GetDesc(&library_desc);
-			assert(SUCCEEDED(hr));
-
-			for (UINT i = 0; i < library_desc.FunctionCount; ++i)
+			if (stage == SHADERSTAGE_COUNT) // Library reflection
 			{
-				ID3D12FunctionReflection* function_reflection = reflection->GetFunctionByIndex((INT)i);
-				assert(function_reflection != nullptr);
-				D3D12_FUNCTION_DESC function_desc;
-				hr = function_reflection->GetDesc(&function_desc);
+				ComPtr<ID3D12LibraryReflection> reflection;
+				hr = container_reflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(&reflection));
 				assert(SUCCEEDED(hr));
 
-				for (UINT i = 0; i < function_desc.BoundResources; ++i)
+				D3D12_LIBRARY_DESC library_desc;
+				hr = reflection->GetDesc(&library_desc);
+				assert(SUCCEEDED(hr));
+
+				for (UINT i = 0; i < library_desc.FunctionCount; ++i)
+				{
+					ID3D12FunctionReflection* function_reflection = reflection->GetFunctionByIndex((INT)i);
+					assert(function_reflection != nullptr);
+					D3D12_FUNCTION_DESC function_desc;
+					hr = function_reflection->GetDesc(&function_desc);
+					assert(SUCCEEDED(hr));
+
+					for (UINT i = 0; i < function_desc.BoundResources; ++i)
+					{
+						D3D12_SHADER_INPUT_BIND_DESC desc;
+						hr = function_reflection->GetResourceBindingDesc(i, &desc);
+						assert(SUCCEEDED(hr));
+						instert_descriptor(desc);
+					}
+				}
+			}
+			else // Shader reflection
+			{
+				ComPtr<ID3D12ShaderReflection> reflection;
+				hr = container_reflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(&reflection));
+				assert(SUCCEEDED(hr));
+
+				D3D12_SHADER_DESC shader_desc;
+				hr = reflection->GetDesc(&shader_desc);
+				assert(SUCCEEDED(hr));
+
+				for (UINT i = 0; i < shader_desc.BoundResources; ++i)
 				{
 					D3D12_SHADER_INPUT_BIND_DESC desc;
-					hr = function_reflection->GetResourceBindingDesc(i, &desc);
+					hr = reflection->GetResourceBindingDesc(i, &desc);
 					assert(SUCCEEDED(hr));
 					instert_descriptor(desc);
 				}
 			}
-		}
-		else // Shader reflection
-		{
-			ComPtr<ID3D12ShaderReflection> reflection;
-			hr = container_reflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(&reflection));
-			assert(SUCCEEDED(hr));
-
-			D3D12_SHADER_DESC shader_desc;
-			hr = reflection->GetDesc(&shader_desc);
-			assert(SUCCEEDED(hr));
-
-			for (UINT i = 0; i < shader_desc.BoundResources; ++i)
-			{
-				D3D12_SHADER_INPUT_BIND_DESC desc;
-				hr = reflection->GetResourceBindingDesc(i, &desc);
-				assert(SUCCEEDED(hr));
-				instert_descriptor(desc);
-			}
-		}
 #endif // PLATFORM_UWP
 #endif // _X64
 
 
-		if (stage == CS || stage == SHADERSTAGE_COUNT)
-		{
-			std::vector<D3D12_ROOT_PARAMETER> params;
-
-			if (!internal_state->resources.empty())
+			if (stage == CS || stage == SHADERSTAGE_COUNT)
 			{
-				params.emplace_back();
-				D3D12_ROOT_PARAMETER& param = params.back();
-				param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-				param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-				param.DescriptorTable.NumDescriptorRanges = (UINT)internal_state->resources.size();
-				param.DescriptorTable.pDescriptorRanges = internal_state->resources.data();
-			}
+				std::vector<D3D12_ROOT_PARAMETER> params;
 
-			if (!internal_state->samplers.empty())
-			{
-				params.emplace_back();
-				D3D12_ROOT_PARAMETER& param = params.back();
-				param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-				param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-				param.DescriptorTable.NumDescriptorRanges = (UINT)internal_state->samplers.size();
-				param.DescriptorTable.pDescriptorRanges = internal_state->samplers.data();
-			}
+				if (!internal_state->resources.empty())
+				{
+					params.emplace_back();
+					D3D12_ROOT_PARAMETER& param = params.back();
+					param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+					param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+					param.DescriptorTable.NumDescriptorRanges = (UINT)internal_state->resources.size();
+					param.DescriptorTable.pDescriptorRanges = internal_state->resources.data();
+				}
 
-			D3D12_ROOT_SIGNATURE_DESC rootSigDesc = {};
-			rootSigDesc.NumStaticSamplers = 0;
-			rootSigDesc.NumParameters = (UINT)params.size();
-			rootSigDesc.pParameters = params.data();
-			rootSigDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+				if (!internal_state->samplers.empty())
+				{
+					params.emplace_back();
+					D3D12_ROOT_PARAMETER& param = params.back();
+					param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+					param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+					param.DescriptorTable.NumDescriptorRanges = (UINT)internal_state->samplers.size();
+					param.DescriptorTable.pDescriptorRanges = internal_state->samplers.data();
+				}
 
-			ID3DBlob* rootSigBlob;
-			ID3DBlob* rootSigError;
-			hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &rootSigBlob, &rootSigError);
-			if (FAILED(hr))
-			{
-				assert(0);
-				OutputDebugStringA((char*)rootSigError->GetBufferPointer());
-			}
-			hr = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&internal_state->rootSignature));
-			assert(SUCCEEDED(hr));
+				D3D12_ROOT_SIGNATURE_DESC rootSigDesc = {};
+				rootSigDesc.NumStaticSamplers = 0;
+				rootSigDesc.NumParameters = (UINT)params.size();
+				rootSigDesc.pParameters = params.data();
+				rootSigDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
 
-			if (stage == CS)
-			{
-				D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {};
-				desc.CS.pShaderBytecode = pShader->code.data();
-				desc.CS.BytecodeLength = pShader->code.size();
-				desc.pRootSignature = internal_state->rootSignature.Get();
-
-				hr = device->CreateComputePipelineState(&desc, IID_PPV_ARGS(&internal_state->resource));
+				ID3DBlob* rootSigBlob;
+				ID3DBlob* rootSigError;
+				hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &rootSigBlob, &rootSigError);
+				if (FAILED(hr))
+				{
+					OutputDebugStringA((char*)rootSigError->GetBufferPointer());
+					assert(0);
+				}
+				hr = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&internal_state->rootSignature));
 				assert(SUCCEEDED(hr));
+
+				if (stage == CS)
+				{
+					D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {};
+					desc.CS.pShaderBytecode = pShader->code.data();
+					desc.CS.BytecodeLength = pShader->code.size();
+					desc.pRootSignature = internal_state->rootSignature.Get();
+
+					hr = device->CreateComputePipelineState(&desc, IID_PPV_ARGS(&internal_state->resource));
+					assert(SUCCEEDED(hr));
+				}
 			}
 		}
 
@@ -3439,11 +3442,11 @@ using namespace DX12_Internal;
 			}
 			if (x.anyhit_shader != ~0)
 			{
-				hitgroup_desc.ClosestHitShaderImport = internal_state->exports[x.anyhit_shader].Name;
+				hitgroup_desc.AnyHitShaderImport = internal_state->exports[x.anyhit_shader].Name;
 			}
 			if (x.intersection_shader != ~0)
 			{
-				hitgroup_desc.ClosestHitShaderImport = internal_state->exports[x.intersection_shader].Name;
+				hitgroup_desc.IntersectionShaderImport = internal_state->exports[x.intersection_shader].Name;
 			}
 			subobject.pDesc = &hitgroup_desc;
 		}
@@ -3481,6 +3484,7 @@ using namespace DX12_Internal;
 			range.BaseShaderRegister = x.slot;
 			range.NumDescriptors = x.count;
 			range.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+			range.RegisterSpace = 0;
 			internal_state->resource_heap.desc.NumDescriptors += range.NumDescriptors;
 
 			switch (x.binding)
@@ -3599,9 +3603,17 @@ using namespace DX12_Internal;
 		internal_state->params.reserve(rootsig->tables.size());
 		std::vector<D3D12_STATIC_SAMPLER_DESC> staticsamplers;
 
+		std::vector<std::vector<D3D12_DESCRIPTOR_RANGE>> table_ranges_resource;
+		std::vector<std::vector<D3D12_DESCRIPTOR_RANGE>> table_ranges_sampler;
+		table_ranges_resource.reserve(rootsig->tables.size());
+		table_ranges_sampler.reserve(rootsig->tables.size());
+
 		uint32_t space = 0;
 		for (auto& x : rootsig->tables)
 		{
+			table_ranges_resource.emplace_back();
+			table_ranges_sampler.emplace_back();
+
 			uint32_t rangeIndex = 0;
 			for (auto& binding : x.resources)
 			{
@@ -3609,7 +3621,7 @@ using namespace DX12_Internal;
 				{
 					assert(binding.count == 1); // descriptor array not allowed in the root
 					internal_state->root_remap.emplace_back();
-					internal_state->root_remap.back().space = space;
+					internal_state->root_remap.back().space = space; // Space assignment for Root Signature
 					internal_state->root_remap.back().rangeIndex = rangeIndex;
 
 					internal_state->params.emplace_back();
@@ -3634,11 +3646,30 @@ using namespace DX12_Internal;
 					param.Descriptor.RegisterSpace = space;
 					param.Descriptor.ShaderRegister = binding.slot;
 				}
+				else
+				{
+					// Space assignment for Root Signature:
+					table_ranges_resource.back().emplace_back();
+					D3D12_DESCRIPTOR_RANGE& range = table_ranges_resource.back().back();
+					auto table_internal = to_internal(&x);
+					range = table_internal->resource_heap.ranges[rangeIndex];
+					range.RegisterSpace = space;
+				}
 				rangeIndex++;
+			}
+			for (auto& binding : x.samplers)
+			{
+				// Space assignment for Root Signature:
+				table_ranges_sampler.back().emplace_back();
+				D3D12_DESCRIPTOR_RANGE& range = table_ranges_sampler.back().back();
+				auto table_internal = to_internal(&x);
+				range = table_internal->sampler_heap.ranges[rangeIndex];
+				range.RegisterSpace = space;
 			}
 			space++;
 		}
 
+		space = 0;
 		uint32_t bind_point = (uint32_t)internal_state->params.size();
 		for (auto& x : rootsig->tables)
 		{
@@ -3662,8 +3693,8 @@ using namespace DX12_Internal;
 				param = {};
 				param.ShaderVisibility = _ConvertShaderVisibility(x.stage);
 				param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-				param.DescriptorTable.pDescriptorRanges = table_internal->resource_heap.ranges.data();
-				param.DescriptorTable.NumDescriptorRanges = (UINT)table_internal->resource_heap.ranges.size();
+				param.DescriptorTable.pDescriptorRanges = table_ranges_resource[space].data();
+				param.DescriptorTable.NumDescriptorRanges = (UINT)table_ranges_resource[space].size();
 				bind_point++;
 			}
 			if (table_internal->sampler_heap.desc.NumDescriptors > 0)
@@ -3673,16 +3704,24 @@ using namespace DX12_Internal;
 				param = {};
 				param.ShaderVisibility = _ConvertShaderVisibility(x.stage);
 				param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-				param.DescriptorTable.pDescriptorRanges = table_internal->sampler_heap.ranges.data();
-				param.DescriptorTable.NumDescriptorRanges = (UINT)table_internal->sampler_heap.ranges.size();
+				param.DescriptorTable.pDescriptorRanges = table_ranges_sampler[space].data();
+				param.DescriptorTable.NumDescriptorRanges = (UINT)table_ranges_sampler[space].size();
 				bind_point++;
 			}
 
+			std::vector<D3D12_STATIC_SAMPLER_DESC> tmp_staticsamplers(table_internal->staticsamplers.begin(), table_internal->staticsamplers.end());
+			for (auto& sam : tmp_staticsamplers)
+			{
+				// Space assignment for Root Signature:
+				sam.RegisterSpace = space;
+			}
 			staticsamplers.insert(
 				staticsamplers.end(),
-				table_internal->staticsamplers.begin(),
-				table_internal->staticsamplers.end()
+				tmp_staticsamplers.begin(),
+				tmp_staticsamplers.end()
 			);
+
+			space++;
 		}
 
 		internal_state->root_constant_bind_remap = bind_point;
