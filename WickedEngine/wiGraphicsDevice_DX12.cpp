@@ -2736,8 +2736,8 @@ using namespace DX12_Internal;
 
 					descriptor.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
 					descriptor.BaseShaderRegister = desc.BindPoint;
-					descriptor.NumDescriptors = 1;
-					descriptor.RegisterSpace = 0;
+					descriptor.NumDescriptors = desc.BindCount;
+					descriptor.RegisterSpace = desc.Space;
 					descriptor.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 				}
 				else
@@ -2771,8 +2771,8 @@ using namespace DX12_Internal;
 						break;
 					}
 					descriptor.BaseShaderRegister = desc.BindPoint;
-					descriptor.NumDescriptors = 1;
-					descriptor.RegisterSpace = 0;
+					descriptor.NumDescriptors = desc.BindCount;
+					descriptor.RegisterSpace = desc.Space;
 					descriptor.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 				}
 			};
@@ -3484,7 +3484,7 @@ using namespace DX12_Internal;
 			range.BaseShaderRegister = x.slot;
 			range.NumDescriptors = x.count;
 			range.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-			range.RegisterSpace = 0;
+			range.RegisterSpace = 0; // this will be filled by root signature depending on the table position (to mirror Vulkan behaviour)
 			internal_state->resource_heap.desc.NumDescriptors += range.NumDescriptors;
 
 			switch (x.binding)
@@ -3512,8 +3512,6 @@ using namespace DX12_Internal;
 			case RWTEXTURE1DARRAY:
 			case RWTEXTURE2D:
 			case RWTEXTURE2DARRAY:
-			case RWTEXTURECUBE:
-			case RWTEXTURECUBEARRAY:
 			case RWTEXTURE3D:
 				range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
 				break;
@@ -3536,12 +3534,12 @@ using namespace DX12_Internal;
 			internal_state->sampler_heap.ranges.emplace_back();
 			auto& range = internal_state->sampler_heap.ranges.back();
 			range = {};
+			range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
 			range.BaseShaderRegister = x.slot;
 			range.NumDescriptors = x.count;
+			range.RegisterSpace = 0; // this will be filled by root signature depending on the table position (to mirror Vulkan behaviour)
 			range.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 			internal_state->sampler_heap.desc.NumDescriptors += range.NumDescriptors;
-			range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-			internal_state->sampler_heap.desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
 
 			internal_state->sampler_heap.write_remap.push_back(prefix_sum);
 			prefix_sum += (size_t)range.NumDescriptors;
@@ -3565,31 +3563,39 @@ using namespace DX12_Internal;
 			desc.MaxLOD = x.sampler.desc.MaxLOD;
 		}
 
-		HRESULT hr = device->CreateDescriptorHeap(&internal_state->resource_heap.desc, IID_PPV_ARGS(&internal_state->resource_heap.heap));
-		assert(SUCCEEDED(hr));
-		hr = device->CreateDescriptorHeap(&internal_state->sampler_heap.desc, IID_PPV_ARGS(&internal_state->sampler_heap.heap));
-		assert(SUCCEEDED(hr));
+		HRESULT hr = S_OK;
 
-		internal_state->resource_heap.address = internal_state->resource_heap.heap->GetCPUDescriptorHandleForHeapStart();
-		internal_state->sampler_heap.address = internal_state->sampler_heap.heap->GetCPUDescriptorHandleForHeapStart();
-
-		uint32_t slot = 0;
-		for (auto& x : table->resources)
+		if (internal_state->resource_heap.desc.NumDescriptors > 0)
 		{
-			for (uint32_t i = 0; i < x.count; ++i)
+			hr = device->CreateDescriptorHeap(&internal_state->resource_heap.desc, IID_PPV_ARGS(&internal_state->resource_heap.heap));
+			assert(SUCCEEDED(hr));
+			internal_state->resource_heap.address = internal_state->resource_heap.heap->GetCPUDescriptorHandleForHeapStart();
+
+			uint32_t slot = 0;
+			for (auto& x : table->resources)
 			{
-				WriteDescriptor(table, slot, i, (const GPUResource*)nullptr);
+				for (uint32_t i = 0; i < x.count; ++i)
+				{
+					WriteDescriptor(table, slot, i, (const GPUResource*)nullptr);
+				}
+				slot++;
 			}
-			slot++;
 		}
-		slot = 0;
-		for (auto& x : table->samplers)
+		if (internal_state->sampler_heap.desc.NumDescriptors > 0)
 		{
-			for (uint32_t i = 0; i < x.count; ++i)
+			hr = device->CreateDescriptorHeap(&internal_state->sampler_heap.desc, IID_PPV_ARGS(&internal_state->sampler_heap.heap));
+			assert(SUCCEEDED(hr));
+			internal_state->sampler_heap.address = internal_state->sampler_heap.heap->GetCPUDescriptorHandleForHeapStart();
+
+			uint32_t slot = 0;
+			for (auto& x : table->samplers)
 			{
-				WriteDescriptor(table, slot, i, (const Sampler*)nullptr);
+				for (uint32_t i = 0; i < x.count; ++i)
+				{
+					WriteDescriptor(table, slot, i, (const Sampler*)nullptr);
+				}
+				slot++;
 			}
-			slot++;
 		}
 
 		return SUCCEEDED(hr);
@@ -4150,7 +4156,8 @@ using namespace DX12_Internal;
 		size_t remap = table_internal->resource_heap.write_remap[rangeIndex];
 		dst.ptr += (remap + arrayIndex) * (size_t)resource_descriptor_size;
 
-		switch (table->resources[rangeIndex].binding)
+		RESOURCEBINDING binding = table->resources[rangeIndex].binding;
+		switch (binding)
 		{
 		case CONSTANTBUFFER:
 			if (resource == nullptr || !resource->IsValid())
@@ -4185,8 +4192,44 @@ using namespace DX12_Internal;
 			{
 				D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
 				srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-				srv_desc.Format = DXGI_FORMAT_R32_UINT;
-				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+				srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+				switch (binding)
+				{
+				case RAWBUFFER:
+				case STRUCTUREDBUFFER:
+				case TYPEDBUFFER:
+					srv_desc.Format = DXGI_FORMAT_R32_UINT;
+					srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+					break;
+				case TEXTURE1D:
+					srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
+					break;
+				case TEXTURE1DARRAY:
+					srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1DARRAY;
+					break;
+				case TEXTURE2D:
+					srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+					break;
+				case TEXTURE2DARRAY:
+					srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+					break;
+				case TEXTURECUBE:
+					srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+					break;
+				case TEXTURECUBEARRAY:
+					srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
+					break;
+				case TEXTURE3D:
+					srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+					break;
+				case ACCELERATIONSTRUCTURE:
+					srv_desc.Format = DXGI_FORMAT_UNKNOWN;
+					srv_desc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
+					break;
+				default:
+					assert(0);
+					break;
+				}
 				device->CreateShaderResourceView(nullptr, &srv_desc, dst);
 			}
 			else if (resource->IsTexture())
@@ -4230,14 +4273,37 @@ using namespace DX12_Internal;
 		case RWTEXTURE1DARRAY:
 		case RWTEXTURE2D:
 		case RWTEXTURE2DARRAY:
-		case RWTEXTURECUBE:
-		case RWTEXTURECUBEARRAY:
 		case RWTEXTURE3D:
 			if (resource == nullptr || !resource->IsValid())
 			{
 				D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
 				uav_desc.Format = DXGI_FORMAT_R32_UINT;
-				uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+				switch (binding)
+				{
+				case RWRAWBUFFER:
+				case RWSTRUCTUREDBUFFER:
+				case RWTYPEDBUFFER:
+					uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+					break;
+				case RWTEXTURE1D:
+					uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE1D;
+					break;
+				case RWTEXTURE1DARRAY:
+					uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE1DARRAY;
+					break;
+				case RWTEXTURE2D:
+					uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+					break;
+				case RWTEXTURE2DARRAY:
+					uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+					break;
+				case RWTEXTURE3D:
+					uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
+					break;
+				default:
+					assert(0);
+					break;
+				}
 				device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, dst);
 			}
 			else if (resource->IsTexture())

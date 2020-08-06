@@ -4714,8 +4714,6 @@ using namespace Vulkan_Internal;
 			case RWTEXTURE1DARRAY:
 			case RWTEXTURE2D:
 			case RWTEXTURE2DARRAY:
-			case RWTEXTURECUBE:
-			case RWTEXTURECUBEARRAY:
 			case RWTEXTURE3D:
 				binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 				binding.binding = x.slot + VULKAN_BINDING_SHIFT_U;
@@ -5276,8 +5274,6 @@ using namespace Vulkan_Internal;
 		case RWTEXTURE1DARRAY:
 		case RWTEXTURE2D:
 		case RWTEXTURE2DARRAY:
-		case RWTEXTURECUBE:
-		case RWTEXTURECUBEARRAY:
 		case RWTEXTURE3D:
 			descriptor.imageinfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 			descriptor.imageinfo.sampler = VK_NULL_HANDLE;
