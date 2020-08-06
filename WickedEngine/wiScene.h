@@ -273,7 +273,7 @@ namespace wiScene
 			uint32_t indexOffset = 0;
 			uint32_t indexCount = 0;
 		};
-		std::vector<MeshSubset>		subsets;
+		std::vector<MeshSubset> subsets;
 
 		float tessellationFactor = 0.0f;
 		wiECS::Entity armatureID = wiECS::INVALID_ENTITY;
@@ -303,6 +303,7 @@ namespace wiScene
 
 		wiGraphics::RaytracingAccelerationStructure BLAS;
 		bool BLAS_build_pending = true;
+		uint32_t TLAS_geometryOffset = 0;
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
@@ -316,6 +317,7 @@ namespace wiScene
 
 		inline float GetTessellationFactor() const { return tessellationFactor; }
 		inline wiGraphics::INDEXBUFFER_FORMAT GetIndexFormat() const { return vertex_positions.size() > 65535 ? wiGraphics::INDEXFORMAT_32BIT : wiGraphics::INDEXFORMAT_16BIT; }
+		inline size_t GetIndexStride() const { return GetIndexFormat() == wiGraphics::INDEXFORMAT_32BIT ? sizeof(uint32_t) : sizeof(uint16_t); }
 		inline bool IsSkinned() const { return armatureID != wiECS::INVALID_ENTITY; }
 
 		void CreateRenderData();
@@ -1137,6 +1139,18 @@ namespace wiScene
 		std::vector<AABB> parallel_bounds;
 		WeatherComponent weather;
 		wiGraphics::RaytracingAccelerationStructure TLAS;
+		wiGraphics::DescriptorTable descriptorTable;
+		enum DESCRIPTORTABLE_ENTRY
+		{
+			DESCRIPTORTABLE_ENTRY_SUBSETS_MATERIAL,
+			DESCRIPTORTABLE_ENTRY_SUBSETS_TEXTURE_BASECOLOR,
+			DESCRIPTORTABLE_ENTRY_SUBSETS_INDEXBUFFER,
+			DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_UV0,
+			DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_UV1,
+
+			DESCRIPTORTABLE_ENTRY_COUNT
+		};
+		std::atomic<uint32_t> geometryOffset;
 
 		// Update all components by a given timestep (in seconds):
 		void Update(float dt);
@@ -1222,6 +1236,7 @@ namespace wiScene
 		void RunSpringUpdateSystem(wiJobSystem::context& ctx, float dt);
 		void RunInverseKinematicsUpdateSystem(wiJobSystem::context& ctx);
 		void RunArmatureUpdateSystem(wiJobSystem::context& ctx);
+		void RunMeshUpdateSystem(wiJobSystem::context& ctx);
 		void RunMaterialUpdateSystem(wiJobSystem::context& ctx, float dt);
 		void RunImpostorUpdateSystem(wiJobSystem::context& ctx);
 		void RunObjectUpdateSystem(wiJobSystem::context& ctx);

@@ -4678,7 +4678,7 @@ void UpdateRaytracingAccelerationStructures(CommandList cmd)
 				transform._12, transform._22, transform._32, transform._42,
 				transform._13, transform._23, transform._33, transform._43
 			);
-			instance.InstanceID = i;
+			instance.InstanceID = mesh.TLAS_geometryOffset;
 			instance.InstanceMask = 1;
 			instance.bottomlevel = mesh.BLAS;
 
@@ -10330,7 +10330,7 @@ void Postprocess_RTAO(
 	static DescriptorTable descriptorTable;
 	static RootSignature rootSignature;
 
-	auto load_shaders = [](uint64_t userdata) {
+	auto load_shaders = [&scene](uint64_t userdata) {
 
 		GraphicsDevice* device = GetDevice();
 
@@ -10345,6 +10345,7 @@ void Postprocess_RTAO(
 
 		rootSignature = RootSignature();
 		rootSignature.tables.push_back(descriptorTable);
+		rootSignature.tables.push_back(scene.descriptorTable);
 		device->CreateRootSignature(&rootSignature);
 
 		raytracingShaders[RTTYPE_RTAO].rootSignature = &rootSignature;
@@ -10366,6 +10367,11 @@ void Postprocess_RTAO(
 
 		rtdesc.shaderlibraries.emplace_back();
 		rtdesc.shaderlibraries.back().shader = &raytracingShaders[RTTYPE_RTAO];
+		rtdesc.shaderlibraries.back().function_name = "RTAO_AnyHit";
+		rtdesc.shaderlibraries.back().type = ShaderLibrary::ANYHIT;
+
+		rtdesc.shaderlibraries.emplace_back();
+		rtdesc.shaderlibraries.back().shader = &raytracingShaders[RTTYPE_RTAO];
 		rtdesc.shaderlibraries.back().function_name = "RTAO_Miss";
 		rtdesc.shaderlibraries.back().type = ShaderLibrary::MISS;
 
@@ -10377,12 +10383,13 @@ void Postprocess_RTAO(
 		rtdesc.hitgroups.emplace_back();
 		rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
 		rtdesc.hitgroups.back().name = "RTAO_Miss";
-		rtdesc.hitgroups.back().general_shader = 2;
+		rtdesc.hitgroups.back().general_shader = 3;
 
 		rtdesc.hitgroups.emplace_back();
 		rtdesc.hitgroups.back().type = ShaderHitGroup::TRIANGLES;
 		rtdesc.hitgroups.back().name = "RTAO_Hitgroup";
 		rtdesc.hitgroups.back().closesthit_shader = 1;
+		rtdesc.hitgroups.back().anyhit_shader = 2;
 
 		rtdesc.max_trace_recursion_depth = 1;
 		rtdesc.max_payload_size_in_bytes = sizeof(float);
@@ -10435,6 +10442,7 @@ void Postprocess_RTAO(
 	device->WriteDescriptor(&descriptorTable, 1, 0, &scene.TLAS);
 	device->WriteDescriptor(&descriptorTable, 2, 0, &temp0);
 	device->BindDescriptorTable(RAYTRACING, 0, &descriptorTable, cmd);
+	device->BindDescriptorTable(RAYTRACING, 1, &scene.descriptorTable, cmd);
 	device->BindRootDescriptor(RAYTRACING, 0, &constantBuffers[CBTYPE_CAMERA], 0, cmd);
 	device->BindRootDescriptor(RAYTRACING, 1, cb_alloc.buffer, cb_alloc.offset, cmd);
 

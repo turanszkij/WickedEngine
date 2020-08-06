@@ -4,6 +4,14 @@
 
 RWTEXTURE2D(output, unorm float, 0);
 
+#ifdef RAYTRACING_TIER_1_1
+ConstantBuffer<ShaderMaterial> subsets_material[MAX_DESCRIPTOR_INDEXING] : register(b0, space1);
+Texture2D<float4> subsets_texture_baseColor[MAX_DESCRIPTOR_INDEXING] : register(t0, space1);
+Buffer<uint> subsets_indexBuffer[MAX_DESCRIPTOR_INDEXING] : register(t100000, space1);
+Buffer<float2> subsets_vertexBuffer_UV0[MAX_DESCRIPTOR_INDEXING] : register(t300000, space1);
+Buffer<float2> subsets_vertexBuffer_UV1[MAX_DESCRIPTOR_INDEXING] : register(t400000, space1);
+#endif // RAYTRACING_TIER_1_1
+
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
 struct RayPayload
 {
@@ -47,7 +55,10 @@ void RTAO_Raygen()
     {
         ray.Direction = SampleHemisphere_cos(N, seed, uv);
         TraceRay(scene_acceleration_structure,
+#ifndef RAYTRACING_TIER_1_1 // tier 1_0 method of alpha test without GeometryIndex() is not implemented yet
+            RAY_FLAG_FORCE_OPAQUE |
             RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH |
+#endif // RAYTRACING_TIER_1_1
             RAY_FLAG_SKIP_CLOSEST_HIT_SHADER
             , ~0, 0, 1, 0, ray, payload);
     }
@@ -60,6 +71,50 @@ void RTAO_Raygen()
 void RTAO_ClosestHit(inout RayPayload payload, in MyAttributes attr)
 {
     //payload.color = 0;
+}
+
+[shader("anyhit")]
+void RTAO_AnyHit(inout RayPayload payload, in MyAttributes attr)
+{
+#ifdef RAYTRACING_TIER_1_1
+    float u = attr.barycentrics.x;
+    float v = attr.barycentrics.y;
+    float w = 1 - u - v;
+    uint primitiveIndex = PrimitiveIndex();
+    uint geometryOffset = InstanceID();
+    uint geometryIndex = GeometryIndex(); // requires tier_1_1!!
+    uint descriptorIndex = geometryOffset + geometryIndex;
+    ShaderMaterial material = subsets_material[descriptorIndex];
+    uint i0 = subsets_indexBuffer[descriptorIndex][primitiveIndex / 3 + 0];
+    uint i1 = subsets_indexBuffer[descriptorIndex][primitiveIndex / 3 + 1];
+    uint i2 = subsets_indexBuffer[descriptorIndex][primitiveIndex / 3 + 2];
+    float2 uv0, uv1, uv2;
+    if (material.uvset_baseColorMap == 0)
+    {
+        uv0 = subsets_vertexBuffer_UV0[descriptorIndex][i0];
+        uv1 = subsets_vertexBuffer_UV0[descriptorIndex][i1];
+        uv2 = subsets_vertexBuffer_UV0[descriptorIndex][i2];
+    }
+    else
+    {
+        uv0 = subsets_vertexBuffer_UV1[descriptorIndex][i0];
+        uv1 = subsets_vertexBuffer_UV1[descriptorIndex][i1];
+        uv2 = subsets_vertexBuffer_UV1[descriptorIndex][i2];
+    }
+
+    float2 uv = uv0 * w + uv1 * u + uv2 * v;
+    float4 baseColor = material.baseColor;
+    baseColor *= subsets_texture_baseColor[descriptorIndex].SampleLevel(sampler_point_clamp, uv, 0);
+
+    if (baseColor.a > 0.9)
+    {
+        AcceptHitAndEndSearch();
+    }
+    else
+    {
+        payload.color += 1 - baseColor.a;
+    }
+#endif // RAYTRACING_TIER_1_1
 }
 
 [shader("miss")]
