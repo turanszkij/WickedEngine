@@ -15,10 +15,29 @@ DecalWindow::DecalWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	GUI->AddWidget(decalWindow);
 
 	float x = 200;
-	float y = 0;
+	float y = 5;
+	float step = 22;
+	float itemheight = 20;
 
-	decalNameField = new wiTextInputField("MaterialName");
-	decalNameField->SetPos(XMFLOAT2(10, 30));
+	placementCheckBox = new wiCheckBox("Decal Placement Enabled: ");
+	placementCheckBox->SetPos(XMFLOAT2(x, y += step));
+	placementCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
+	placementCheckBox->SetCheck(false);
+	placementCheckBox->SetTooltip("Enable decal placement. Use the left mouse button to place decals to the scene.");
+	decalWindow->AddWidget(placementCheckBox);
+
+	y += step;
+
+	infoLabel = new wiLabel("");
+	infoLabel->SetText("Selecting decals will select the according material. Set decal properties (texture, color, etc.) in the Material window.");
+	infoLabel->SetSize(XMFLOAT2(400 - 20, 100));
+	infoLabel->SetPos(XMFLOAT2(10, y));
+	infoLabel->SetColor(wiColor::Transparent());
+	decalWindow->AddWidget(infoLabel);
+	y += infoLabel->GetScale().y - step + 5;
+
+	decalNameField = new wiTextInputField("Decal Name");
+	decalNameField->SetPos(XMFLOAT2(10, y+=step));
 	decalNameField->SetSize(XMFLOAT2(300, 20));
 	decalNameField->OnInputAccepted([&](wiEventArgs args) {
 		NameComponent* name = wiScene::GetScene().names.GetComponent(entity);

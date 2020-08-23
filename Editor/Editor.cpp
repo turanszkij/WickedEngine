@@ -1430,7 +1430,7 @@ void EditorComponent::Update(float dt)
 							wiRenderer::PutWaterRipple(wiHelper::GetOriginalWorkingDirectory() + "images/ripple.png", hovered.position);
 						}
 					}
-					else if (translator.selected.empty() && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
+					else if (decalWnd->placementCheckBox->GetCheck() && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
 					{
 						// if not water or softbody, put a decal on it:
 						static int decalselector = 0;
