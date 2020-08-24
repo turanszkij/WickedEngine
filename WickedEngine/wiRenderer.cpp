@@ -8109,7 +8109,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				// Gaussian filter is a bit different as we do it in a separable way:
 				for (uint32_t i = 0; i < desc.MipLevels - 1; ++i)
 				{
-					Postprocess_Blur_Gaussian(texture, *options.gaussian_temp, texture, cmd, i, i + 1);
+					Postprocess_Blur_Gaussian(texture, *options.gaussian_temp, texture, cmd, i, i + 1 , options.wide_gauss);
 				}
 				device->EventEnd(cmd);
 				return;
@@ -11538,6 +11538,7 @@ void Postprocess_Bloom(
 	device->EventBegin("Bloom Mipchain", cmd);
 	MIPGEN_OPTIONS mipopt;
 	mipopt.gaussian_temp = &bloom_tmp;
+	mipopt.wide_gauss = true;
 	GenerateMipChain(bloom, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd, mipopt);
 	device->EventEnd(cmd);
 

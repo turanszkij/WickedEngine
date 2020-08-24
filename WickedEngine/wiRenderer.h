@@ -397,6 +397,7 @@ namespace wiRenderer
 		int arrayIndex = -1;
 		const wiGraphics::Texture* gaussian_temp = nullptr;
 		bool preserve_coverage = false;
+		bool wide_gauss = false;
 	};
 	void GenerateMipChain(const wiGraphics::Texture& texture, MIPGENFILTER filter, wiGraphics::CommandList cmd, const MIPGEN_OPTIONS& options = {});
 
