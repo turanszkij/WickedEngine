@@ -194,7 +194,8 @@
       </Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>mkdir $(OutDir)shaders</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <FxCompile>
       <DisableOptimizations>false</DisableOptimizations>
@@ -230,7 +231,8 @@
       </Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>mkdir $(OutDir)shaders</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
@@ -260,7 +262,8 @@
       </Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>mkdir $(OutDir)shaders</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <FxCompile>
       <DisableOptimizations>false</DisableOptimizations>
@@ -296,7 +299,8 @@
       </Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>mkdir $(OutDir)shaders</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
@@ -326,7 +330,8 @@
       </Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>mkdir $(OutDir)shaders</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <FxCompile>
       <DisableOptimizations>false</DisableOptimizations>
@@ -362,7 +367,8 @@
       </Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>mkdir $(OutDir)shaders</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
@@ -392,7 +398,8 @@
       </Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>mkdir $(OutDir)shaders</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <FxCompile>
       <DisableOptimizations>false</DisableOptimizations>
@@ -428,7 +435,8 @@
       </Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>mkdir $(OutDir)shaders</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
