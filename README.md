@@ -242,22 +242,38 @@ Contributions can be submitted on Github by following the steps below:
 
 <br/>
 
+### Other software using Wicked Engine
+
+- <a href="https://www.game-guru.com/max">Game Guru MAX</a>: Easy to use game creator software
+- <a href="https://www.youtube.com/watch?v=0SxXmnSQ6Q4">Flytrap</a>: Demoscene production by qop
+- Your project: add your project to this readme and open a pull request
+
+<br/>
+
 ### Finally, take a look at some screenshots:
 
 Sponza scene with voxel GI enabled:
-![Sponza](https://turanszkij.files.wordpress.com/2018/12/sponza.png)
+![Sponza](https://turanszkij.files.wordpress.com/2020/08/vxgi_sponza_small.png)
 
-Damaged Helmet GLTF sample model:
+Damaged Helmet sample model imported from GLTF:
 ![Sponza](https://turanszkij.files.wordpress.com/2019/03/damagedhelmet.png)
 
 Bokeh Depth of Field (Lain model by <a href="https://sketchfab.com/3d-models/lain-20-bf255be16da34df08d48abb5443a6706">woopoodle at Sketchfab</a>):
-![DepthOfField1](https://turanszkij.files.wordpress.com/2019/12/dof1_small.png)
-![DepthOfField2](https://turanszkij.files.wordpress.com/2019/12/dof2_small.png)
+![DepthOfField](https://turanszkij.files.wordpress.com/2020/08/dof_bokeh_small.png)
 
 Motion blur (fighting game sample):
 ![MotionBlur](https://turanszkij.files.wordpress.com/2019/12/motionblur.png)
 
-Path tracing in the living room:
+Stochastic Screen Space Reflections:
+![ScreenSpaceReflections](https://turanszkij.files.wordpress.com/2020/08/ssr.png)
+
+Real time ray traced shadows and ambient occlusion (DXR, VK_KHR_raytracing):
+![RaytracedShadows](https://turanszkij.files.wordpress.com/2020/08/dxr_rtao_rtshadow_small.png)
+
+Bloom and post processing:
+![Bloom](https://turanszkij.files.wordpress.com/2020/08/bloom_new.png)
+
+Path tracing in the living room (model from <a href="http://casual-effects.com/data/index.html">Morgan McGuire's graphics archive</a>):
 ![LivingRoom](https://turanszkij.files.wordpress.com/2019/09/livingroom.jpg)
 
 City scene with a light map (model by <a href="https://www.cgtrader.com/michaelmilesgallie">Michael Gallie at CgTrader</a>):
@@ -269,14 +285,8 @@ Path tracing in the city:
 Path traced caustics:
 ![Caustics](https://turanszkij.files.wordpress.com/2019/01/trace.png)
 
-Lots of instanced boxes with a light map:
-![Lightmap](https://turanszkij.files.wordpress.com/2019/01/lightmap.png)
-
-Lots of boxes path traced in the editor:
-![EditorBoxes](https://turanszkij.files.wordpress.com/2019/01/boxes.png)
-
-Bloom and post processing:
-![Bloom](https://turanszkij.files.wordpress.com/2019/01/bloom.png)
+Vegetation particle system and depth of field:
+![Vegetation](https://turanszkij.files.wordpress.com/2020/08/grass.png)
 
 Bistro scene from Amazon Lumberyard (model from <a href="http://casual-effects.com/data/index.html">Morgan McGuire's graphics archive</a>):
 ![Bistro_out](https://turanszkij.files.wordpress.com/2019/01/bistro_out_0.png)
@@ -288,13 +298,10 @@ Parallax occlusion mapping:
 ![ParallxOcclusionMapping](https://turanszkij.files.wordpress.com/2019/01/pom.png)
 
 Large scale particle simulation on the GPU:
-![ParticleSimulation](https://turanszkij.files.wordpress.com/2019/01/gpuparticles3.png)
+![ParticleSimulation](https://turanszkij.files.wordpress.com/2020/08/particles_2.png)
 
 Tiled light culling in the Bistro:
 ![TiledLightCulling](https://turanszkij.files.wordpress.com/2019/02/bistro_heatmap-1.png)
-
-Physically based rendering test:
-![PBRTest](https://turanszkij.files.wordpress.com/2019/03/roughness.png)
 
 GPU-based BVH builder:
 ![GPU_BVH](https://turanszkij.files.wordpress.com/2019/07/bvh_livingroom.png)
