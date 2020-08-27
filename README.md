@@ -60,7 +60,7 @@ There are a couple of projects that you can run up front: Editor, Tests and Temp
 
 If you wish to integrate Wicked Engine into your own project, you can use it as a static library and link it to your application. For this, you must first compile the engine library project for the desired platform. For Windows Desktop, this is the WickedEngine_Windows project. After that, set the following dependencies to this library in Visual Studio this way in the implementing project (paths are as if your project is inside the engine root folder):
 
-<img align="right" src="https://turanszkij.files.wordpress.com/2020/08/fighting_game_small.gif"/>
+<img align="right" src="https://turanszkij.files.wordpress.com/2020/08/fighting_game_small-1.gif"/>
 
 1. Open Project Properties -> Configuration Properties
 2. C/C++ -> General -> Additional Include Directories: 
