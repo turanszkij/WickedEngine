@@ -56,11 +56,11 @@ You can download the engine by using Git and cloning the repository, or download
 
 ### Getting started: 
 
-<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/trace.gif"/>
-
 There are a couple of projects that you can run up front: Editor, Tests and Template. You just have to set either as startup project and press F5 in Visual Studio to build and run.
 
 If you wish to integrate Wicked Engine into your own project, you can use it as a static library and link it to your application. For this, you must first compile the engine library project for the desired platform. For Windows Desktop, this is the WickedEngine_Windows project. After that, set the following dependencies to this library in Visual Studio this way in the implementing project (paths are as if your project is inside the engine root folder):
+
+<img align="right" src="https://turanszkij.files.wordpress.com/2020/08/fighting_game.gif"/>
 
 1. Open Project Properties -> Configuration Properties
 2. C/C++ -> General -> Additional Include Directories: 
@@ -270,7 +270,7 @@ Stochastic Screen Space Reflections:
 Real time ray traced shadows and ambient occlusion (DXR, VK_KHR_raytracing):
 ![RaytracedShadows](https://turanszkij.files.wordpress.com/2020/08/dxr_rtao_rtshadow_small.png)
 
-Bloom and post processing:
+Bloom:
 ![Bloom](https://turanszkij.files.wordpress.com/2020/08/bloom_new.png)
 
 Path tracing in the living room (model from <a href="http://casual-effects.com/data/index.html">Morgan McGuire's graphics archive</a>):
