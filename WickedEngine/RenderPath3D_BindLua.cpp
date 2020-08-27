@@ -28,12 +28,14 @@ Luna<RenderPath3D_BindLua>::FunctionType RenderPath3D_BindLua::methods[] = {
 	lunamethod(RenderPath3D_BindLua, SetReflectionsEnabled),
 	lunamethod(RenderPath3D_BindLua, SetFXAAEnabled),
 	lunamethod(RenderPath3D_BindLua, SetBloomEnabled),
+	lunamethod(RenderPath3D_BindLua, SetBloomThreshold),
 	lunamethod(RenderPath3D_BindLua, SetColorGradingEnabled),
 	lunamethod(RenderPath3D_BindLua, SetVolumeLightsEnabled),
 	lunamethod(RenderPath3D_BindLua, SetLightShaftsEnabled),
 	lunamethod(RenderPath3D_BindLua, SetLensFlareEnabled),
 	lunamethod(RenderPath3D_BindLua, SetMotionBlurEnabled),
 	lunamethod(RenderPath3D_BindLua, SetSSSEnabled),
+	lunamethod(RenderPath3D_BindLua, SetDitherEnabled),
 	lunamethod(RenderPath3D_BindLua, SetDepthOfFieldEnabled),
 	lunamethod(RenderPath3D_BindLua, SetEyeAdaptionEnabled),
 	lunamethod(RenderPath3D_BindLua, SetMSAASampleCount),
@@ -133,6 +135,21 @@ int RenderPath3D_BindLua::SetBloomEnabled(lua_State* L)
 		wiLua::SError(L, "SetBloomEnabled(bool value) not enough arguments!");
 	return 0;
 }
+int RenderPath3D_BindLua::SetBloomThreshold(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetBloomThreshold(float value) component is null!");
+		return 0;
+	}
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		((RenderPath3D*)component)->setBloomThreshold(wiLua::SGetFloat(L, 1));
+	}
+	else
+		wiLua::SError(L, "SetBloomThreshold(float value) not enough arguments!");
+	return 0;
+}
 int RenderPath3D_BindLua::SetColorGradingEnabled(lua_State* L)
 {
 	if (component == nullptr)
@@ -209,6 +226,19 @@ int RenderPath3D_BindLua::SetSSSEnabled(lua_State* L)
 		((RenderPath3D*)component)->setSSSEnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetSSSEnabled(bool value) not enough arguments!");
+	return 0;
+}
+int RenderPath3D_BindLua::SetDitherEnabled(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetDitherEnabled(bool value) component is null!");
+		return 0;
+	}
+	if (wiLua::SGetArgCount(L) > 0)
+		((RenderPath3D*)component)->setDitherEnabled(wiLua::SGetBool(L, 1));
+	else
+		wiLua::SError(L, "SetDitherEnabled(bool value) not enough arguments!");
 	return 0;
 }
 int RenderPath3D_BindLua::SetDepthOfFieldEnabled(lua_State* L)

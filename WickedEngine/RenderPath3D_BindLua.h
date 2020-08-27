@@ -24,12 +24,14 @@ public:
 	int SetReflectionsEnabled(lua_State* L);
 	int SetFXAAEnabled(lua_State* L);
 	int SetBloomEnabled(lua_State* L);
+	int SetBloomThreshold(lua_State* L);
 	int SetColorGradingEnabled(lua_State* L);
 	int SetVolumeLightsEnabled(lua_State* L);
 	int SetLightShaftsEnabled(lua_State* L);
 	int SetLensFlareEnabled(lua_State* L);
 	int SetMotionBlurEnabled(lua_State* L);
 	int SetSSSEnabled(lua_State* L);
+	int SetDitherEnabled(lua_State* L);
 	int SetDepthOfFieldEnabled(lua_State* L);
 	int SetEyeAdaptionEnabled(lua_State* L);
 	int SetMSAASampleCount(lua_State* L);
