@@ -54,6 +54,7 @@ public:
 	wiSlider*	alphaRefSlider;
 	wiComboBox* blendModeComboBox;
 	wiComboBox* shaderTypeComboBox;
+	wiComboBox* shadingRateComboBox;
 
 	wiLabel*	texture_baseColor_Label;
 	wiLabel*	texture_normal_Label;

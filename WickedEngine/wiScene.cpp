@@ -1723,7 +1723,7 @@ namespace wiScene
 
 			for (const AnimationComponent::AnimationChannel& channel : animation.channels)
 			{
-				assert(channel.samplerIndex < animation.samplers.size());
+				assert(channel.samplerIndex < (int)animation.samplers.size());
 				AnimationComponent::AnimationSampler& sampler = animation.samplers[channel.samplerIndex];
 				if (sampler.data == INVALID_ENTITY)
 				{

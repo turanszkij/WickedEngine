@@ -3256,7 +3256,6 @@ void RenderMeshes(
 
 		}
 
-
 		// Render instanced batches:
 		PRIMITIVETOPOLOGY prevTOPOLOGY = TRIANGLELIST;
 		for (int instancedBatchID = 0; instancedBatchID < instancedBatchCount; ++instancedBatchID)
@@ -3467,6 +3466,8 @@ void RenderMeshes(
 				uint8_t userStencilRef = userStencilRefOverride > 0 ? userStencilRefOverride : material.userStencilRef;
 				uint32_t stencilRef = CombineStencilrefs(engineStencilRef, userStencilRef);
 				device->BindStencilRef(stencilRef, cmd);
+
+				device->BindShadingRate(material.shadingRate, cmd);
 
 				device->BindPipelineState(pso, cmd);
 
@@ -5873,6 +5874,7 @@ void DrawScene(
 		GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 	}
 
+	device->BindShadingRate(SHADING_RATE_1X1, cmd);
 	device->EventEnd(cmd);
 
 }

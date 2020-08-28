@@ -526,6 +526,8 @@ void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialCompon
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	device->EventBegin("EmittedParticle", cmd);
 
+	device->BindShadingRate(shadingRate, cmd);
+
 	if (wiRenderer::IsWireRender())
 	{
 		device->BindPipelineState(&PSO_wire, cmd);
@@ -725,6 +727,11 @@ void wiEmittedParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 			archive >> frameStart;
 			archive >> frameRate;
 		}
+
+		if (archive.GetVersion() >= 48)
+		{
+			archive >> (uint8_t&)shadingRate;
+		}
 	}
 	else
 	{
@@ -756,6 +763,11 @@ void wiEmittedParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 			archive << frameCount;
 			archive << frameStart;
 			archive << frameRate;
+		}
+
+		if (archive.GetVersion() >= 48)
+		{
+			archive << (uint8_t)shadingRate;
 		}
 	}
 }

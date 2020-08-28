@@ -29,6 +29,7 @@ namespace wiGraphics
 		bool RAYTRACING = false;
 		bool RAYTRACING_INLINE = false;
 		bool DESCRIPTOR_MANAGEMENT = false;
+		bool VARIABLE_RATE_SHADING = false;
 		size_t SHADER_IDENTIFIER_SIZE = 0;
 		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
 
@@ -101,6 +102,7 @@ namespace wiGraphics
 			GRAPHICSDEVICE_CAPABILITY_RAYTRACING,
 			GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE,
 			GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT,
+			GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING,
 			GRAPHICSDEVICE_CAPABILITY_COUNT,
 		};
 		bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const;
@@ -141,6 +143,7 @@ namespace wiGraphics
 		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd) = 0;
 		virtual void BindStencilRef(uint32_t value, CommandList cmd) = 0;
 		virtual void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) = 0;
+		virtual void BindShadingRate(SHADING_RATE rate, CommandList cmd) {}
 		virtual void BindPipelineState(const PipelineState* pso, CommandList cmd) = 0;
 		virtual void BindComputeShader(const Shader* cs, CommandList cmd) = 0;
 		virtual void Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) = 0;

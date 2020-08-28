@@ -50,6 +50,10 @@ namespace wiGraphics
 		D3D12MA::Allocation* allocation_querypool_timestamp_readback = nullptr;
 		D3D12MA::Allocation* allocation_querypool_occlusion_readback = nullptr;
 
+		D3D12_FEATURE_DATA_D3D12_OPTIONS features_0;
+		D3D12_FEATURE_DATA_D3D12_OPTIONS5 features_5;
+		D3D12_FEATURE_DATA_D3D12_OPTIONS6 features_6;
+
 		uint32_t rtv_descriptor_size = 0;
 		uint32_t dsv_descriptor_size = 0;
 		uint32_t resource_descriptor_size = 0;
@@ -148,6 +152,7 @@ namespace wiGraphics
 		const RootSignature* active_rootsig_compute[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 		D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS resolve_subresources[COMMANDLIST_COUNT][D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+		SHADING_RATE prev_shadingrate[COMMANDLIST_COUNT] = {};
 
 		bool dirty_pso[COMMANDLIST_COUNT] = {};
 		void pso_validate(CommandList cmd);
@@ -229,6 +234,7 @@ namespace wiGraphics
 		void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd) override;
 		void BindStencilRef(uint32_t value, CommandList cmd) override;
 		void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) override;
+		void BindShadingRate(SHADING_RATE rate, CommandList cmd) override;
 		void BindPipelineState(const PipelineState* pso, CommandList cmd) override;
 		void BindComputeShader(const Shader* cs, CommandList cmd) override;
 		void Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) override;

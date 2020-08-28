@@ -138,6 +138,7 @@ namespace wiScene
 		float displacementMapping = 0.0f;
 
 		float alphaRef = 1.0f;
+		wiGraphics::SHADING_RATE shadingRate = wiGraphics::SHADING_RATE_1X1;
 		
 		XMFLOAT2 texAnimDirection = XMFLOAT2(0, 0);
 		float texAnimFrameRate = 0.0f;

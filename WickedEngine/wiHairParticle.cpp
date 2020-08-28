@@ -212,6 +212,8 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	device->EventBegin("HairParticle - Draw", cmd);
 
+	device->BindShadingRate(shadingRate, cmd);
+
 	device->BindStencilRef(STENCILREF_DEFAULT, cmd);
 
 	if (wiRenderer::IsWireRender())
@@ -268,6 +270,11 @@ void wiHairParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 			archive >> frameCount;
 			archive >> frameStart;
 		}
+
+		if (archive.GetVersion() >= 48)
+		{
+			archive >> (uint8_t&)shadingRate;
+		}
 	}
 	else
 	{
@@ -290,6 +297,11 @@ void wiHairParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 			archive << framesY;
 			archive << frameCount;
 			archive << frameStart;
+		}
+
+		if (archive.GetVersion() >= 48)
+		{
+			archive << (uint8_t)shadingRate;
 		}
 	}
 }

@@ -85,3 +85,4 @@ Job system
 Inverse Kinematics
 Springs
 Terrain Rendering (material blending)
+Variable Rate Shading

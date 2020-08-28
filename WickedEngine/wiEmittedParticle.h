@@ -76,6 +76,7 @@ public:
 	uint32_t _flags = EMPTY;
 
 	PARTICLESHADERTYPE shaderType = SOFT;
+	wiGraphics::SHADING_RATE shadingRate = wiGraphics::SHADING_RATE_1X1;
 
 	wiECS::Entity meshID = wiECS::INVALID_ENTITY;
 

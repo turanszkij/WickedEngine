@@ -84,7 +84,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	shaderTypeComboBox = new wiComboBox("ShaderType: ");
 	shaderTypeComboBox->SetPos(XMFLOAT2(x, y += step));
-	shaderTypeComboBox->SetSize(XMFLOAT2(300, itemheight));
+	shaderTypeComboBox->SetSize(XMFLOAT2(250, itemheight));
 	shaderTypeComboBox->AddItem("SOFT");
 	shaderTypeComboBox->AddItem("SOFT + DISTORTION");
 	shaderTypeComboBox->AddItem("SIMPLEST");
@@ -99,6 +99,28 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	shaderTypeComboBox->SetEnabled(false);
 	shaderTypeComboBox->SetTooltip("Choose a shader type for the particles. This is responsible of how they will be rendered.");
 	emitterWindow->AddWidget(shaderTypeComboBox);
+
+
+	shadingRateComboBox = new wiComboBox("Shading Rate: ");
+	shadingRateComboBox->SetTooltip("Select shading rate for this material. \nSelecting larger shading rate will decrease rendering quality of this material, \nbut increases performance.\nDX12 only and requires Tier1 hardware support for variable shading rate");
+	shadingRateComboBox->SetPos(XMFLOAT2(x + 400, y));
+	shadingRateComboBox->SetSize(XMFLOAT2(40, itemheight));
+	shadingRateComboBox->OnSelect([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->shadingRate = (wiGraphics::SHADING_RATE)args.iValue;
+		}
+		});
+	shadingRateComboBox->AddItem("1X1");
+	shadingRateComboBox->AddItem("1X2");
+	shadingRateComboBox->AddItem("2X1");
+	shadingRateComboBox->AddItem("2X2");
+	shadingRateComboBox->AddItem("2X4");
+	shadingRateComboBox->AddItem("4X2");
+	shadingRateComboBox->AddItem("4X4");
+	shadingRateComboBox->SetEnabled(false);
+	emitterWindow->AddWidget(shadingRateComboBox);
 
 
 	sortCheckBox = new wiCheckBox("Sorting Enabled: ");
@@ -526,6 +548,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 
 
+
 	emitterWindow->Translate(XMFLOAT3(200, 50, 0));
 	emitterWindow->SetVisible(false);
 
@@ -550,6 +573,7 @@ void EmitterWindow::SetEntity(Entity entity)
 		emitterNameField->SetEnabled(true);
 		restartButton->SetEnabled(true);
 		shaderTypeComboBox->SetEnabled(true);
+		shadingRateComboBox->SetEnabled(true);
 		meshComboBox->SetEnabled(true);
 		debugCheckBox->SetEnabled(true);
 		volumeCheckBox->SetEnabled(true);
@@ -576,6 +600,7 @@ void EmitterWindow::SetEntity(Entity entity)
 		sph_e_Slider->SetEnabled(true);
 
 		shaderTypeComboBox->SetSelected((int)emitter->shaderType);
+		shadingRateComboBox->SetSelected((int)emitter->shadingRate);
 
 		sortCheckBox->SetCheck(emitter->IsSorted());
 		depthCollisionsCheckBox->SetCheck(emitter->IsDepthCollisionEnabled());
@@ -617,6 +642,7 @@ void EmitterWindow::SetEntity(Entity entity)
 		emitterNameField->SetEnabled(false);
 		restartButton->SetEnabled(false);
 		shaderTypeComboBox->SetEnabled(false);
+		shadingRateComboBox->SetEnabled(false);
 		meshComboBox->SetEnabled(false);
 		debugCheckBox->SetEnabled(false);
 		volumeCheckBox->SetEnabled(false);

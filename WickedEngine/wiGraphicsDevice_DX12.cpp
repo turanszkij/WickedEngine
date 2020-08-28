@@ -702,6 +702,29 @@ namespace DX12_Internal
 		}
 		return D3D12_SHADER_VISIBILITY_ALL;
 	}
+	constexpr D3D12_SHADING_RATE _ConvertShadingRate(SHADING_RATE value, const D3D12_FEATURE_DATA_D3D12_OPTIONS6& features_6)
+	{
+		switch (value)
+		{
+		case wiGraphics::SHADING_RATE_1X1:
+			return D3D12_SHADING_RATE_1X1;
+		case wiGraphics::SHADING_RATE_1X2:
+			return D3D12_SHADING_RATE_1X2;
+		case wiGraphics::SHADING_RATE_2X1:
+			return D3D12_SHADING_RATE_2X1;
+		case wiGraphics::SHADING_RATE_2X2:
+			return D3D12_SHADING_RATE_2X2;
+		case wiGraphics::SHADING_RATE_2X4:
+			return features_6.AdditionalShadingRatesSupported ? D3D12_SHADING_RATE_2X4 : D3D12_SHADING_RATE_2X2;
+		case wiGraphics::SHADING_RATE_4X2:
+			return features_6.AdditionalShadingRatesSupported ? D3D12_SHADING_RATE_4X2 : D3D12_SHADING_RATE_2X2;
+		case wiGraphics::SHADING_RATE_4X4:
+			return features_6.AdditionalShadingRatesSupported ? D3D12_SHADING_RATE_4X4 : D3D12_SHADING_RATE_2X2;
+		default:
+			return D3D12_SHADING_RATE_1X1;
+		}
+		return D3D12_SHADING_RATE_1X1;
+	}
 
 	// Native -> Engine converters
 
@@ -2117,7 +2140,6 @@ using namespace DX12_Internal;
 
 		TESSELLATION = true;
 
-		D3D12_FEATURE_DATA_D3D12_OPTIONS features_0;
 		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &features_0, sizeof(features_0));
 		CONSERVATIVE_RASTERIZATION = features_0.ConservativeRasterizationTier >= D3D12_CONSERVATIVE_RASTERIZATION_TIER_1;
 		RASTERIZER_ORDERED_VIEWS = features_0.ROVsSupported == TRUE;
@@ -2136,12 +2158,13 @@ using namespace DX12_Internal;
 			}
 		}
 
-		D3D12_FEATURE_DATA_D3D12_OPTIONS5 features_5;
 		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &features_5, sizeof(features_5));
 		RAYTRACING = features_5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0;
-#if (WDK_NTDDI_VERSION >= NTDDI_WIN10_VB)
+		// needs Windows SDK 10.19041 or greater, this can be commented out safely:
 		RAYTRACING_INLINE = features_5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1;
-#endif // WDK_NTDDI_VERSION
+
+		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &features_6, sizeof(features_6));
+		VARIABLE_RATE_SHADING = features_6.VariableShadingRateTier >= D3D12_VARIABLE_SHADING_RATE_TIER_1;
 
 
 		// Create common indirect command signatures:
@@ -2764,9 +2787,7 @@ using namespace DX12_Internal;
 					case D3D_SIT_UAV_APPEND_STRUCTURED:
 					case D3D_SIT_UAV_CONSUME_STRUCTURED:
 					case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER:
-#if (WDK_NTDDI_VERSION >= NTDDI_WIN10_VB)
 					case D3D_SIT_UAV_FEEDBACKTEXTURE:
-#endif // WDK_NTDDI_VERSION
 						descriptor.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
 						break;
 					}
@@ -4544,6 +4565,7 @@ using namespace DX12_Internal;
 		active_rootsig_graphics[cmd] = nullptr;
 		active_rootsig_compute[cmd] = nullptr;
 		active_renderpass[cmd] = nullptr;
+		prev_shadingrate[cmd] = SHADING_RATE_1X1;
 		dirty_pso[cmd] = false;
 
 		return cmd;
@@ -4995,6 +5017,14 @@ using namespace DX12_Internal;
 	{
 		const float blendFactor[4] = { r, g, b, a };
 		GetDirectCommandList(cmd)->OMSetBlendFactor(blendFactor);
+	}
+	void GraphicsDevice_DX12::BindShadingRate(SHADING_RATE rate, CommandList cmd)
+	{
+		if (prev_shadingrate[cmd] != rate)
+		{
+			prev_shadingrate[cmd] = rate;
+			GetDirectCommandList(cmd)->RSSetShadingRate(_ConvertShadingRate(rate, features_6), nullptr);
+		}
 	}
 	void GraphicsDevice_DX12::BindPipelineState(const PipelineState* pso, CommandList cmd)
 	{

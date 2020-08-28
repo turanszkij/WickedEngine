@@ -295,6 +295,16 @@ namespace wiGraphics
 		BUFFER_STATE_COPY_DST,					// copy to
 		BUFFER_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
 	};
+	enum SHADING_RATE
+	{
+		SHADING_RATE_1X1,
+		SHADING_RATE_1X2,
+		SHADING_RATE_2X1,
+		SHADING_RATE_2X2,
+		SHADING_RATE_2X4,
+		SHADING_RATE_4X2,
+		SHADING_RATE_4X4
+	};
 
 	// Flags ////////////////////////////////////////////
 	enum BIND_FLAG

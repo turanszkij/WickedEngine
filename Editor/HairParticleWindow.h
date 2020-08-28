@@ -44,6 +44,7 @@ public:
 	wiTextInputField* framesYInput;
 	wiTextInputField* frameCountInput;
 	wiTextInputField* frameStartInput;
+	wiComboBox* shadingRateComboBox;
 
 };
 
