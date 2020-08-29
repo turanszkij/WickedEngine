@@ -2644,6 +2644,19 @@ using namespace DX12_Internal;
 
 			uint32_t FirstSubresource = 0;
 
+			GPUBufferDesc uploaddesc;
+			uploaddesc.ByteWidth = (uint32_t)RequiredSize;
+			uploaddesc.Usage = USAGE_STAGING;
+			GPUBuffer uploadbuffer;
+			bool upload_success = CreateBuffer(&uploaddesc, nullptr, &uploadbuffer);
+			assert(upload_success);
+			ID3D12Resource* upload_resource = to_internal(&uploadbuffer)->resource.Get();
+
+			void* pData;
+			CD3DX12_RANGE readRange(0, 0);
+			hr = upload_resource->Map(0, &readRange, &pData);
+			assert(SUCCEEDED(hr));
+
 			copyQueueLock.lock();
 			{
 				auto& frame = GetFrameResources();
@@ -2656,19 +2669,6 @@ using namespace DX12_Internal;
 					hr = static_cast<ID3D12GraphicsCommandList*>(frame.copyCommandList.Get())->Reset(frame.copyAllocator.Get(), nullptr);
 					assert(SUCCEEDED(hr));
 				}
-
-				GPUBufferDesc uploaddesc;
-				uploaddesc.ByteWidth = (uint32_t)RequiredSize;
-				uploaddesc.Usage = USAGE_STAGING;
-				GPUBuffer uploadbuffer;
-				bool upload_success = CreateBuffer(&uploaddesc, nullptr, &uploadbuffer);
-				assert(upload_success);
-				ID3D12Resource* upload_resource = to_internal(&uploadbuffer)->resource.Get();
-
-				void* pData;
-				CD3DX12_RANGE readRange(0, 0);
-				hr = upload_resource->Map(0, &readRange, &pData);
-				assert(SUCCEEDED(hr));
 				
 				UINT64 dataSize = UpdateSubresources(static_cast<ID3D12GraphicsCommandList*>(frame.copyCommandList.Get()), internal_state->resource.Get(),
 					upload_resource, 0, 0, dataCount, data.data());

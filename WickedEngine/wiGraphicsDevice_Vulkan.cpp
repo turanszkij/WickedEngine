@@ -3350,6 +3350,51 @@ using namespace Vulkan_Internal;
 			void* pData = upload_allocation->GetMappedData();
 			assert(pData != nullptr);
 
+			std::vector<VkBufferImageCopy> copyRegions;
+
+			size_t cpyoffset = 0;
+			uint32_t initDataIdx = 0;
+			for (uint32_t slice = 0; slice < pDesc->ArraySize; ++slice)
+			{
+				uint32_t width = pDesc->Width;
+				uint32_t height = pDesc->Height;
+				for (uint32_t mip = 0; mip < pDesc->MipLevels; ++mip)
+				{
+					const SubresourceData& subresourceData = pInitialData[initDataIdx++];
+					size_t cpysize = subresourceData.SysMemPitch * height;
+					if (IsFormatBlockCompressed(pDesc->Format))
+					{
+						cpysize /= 4;
+					}
+					uint8_t* cpyaddr = (uint8_t*)pData + cpyoffset;
+					memcpy(cpyaddr, subresourceData.pSysMem, cpysize);
+
+					VkBufferImageCopy copyRegion = {};
+					copyRegion.bufferOffset = cpyoffset;
+					copyRegion.bufferRowLength = 0;
+					copyRegion.bufferImageHeight = 0;
+
+					copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+					copyRegion.imageSubresource.mipLevel = mip;
+					copyRegion.imageSubresource.baseArrayLayer = slice;
+					copyRegion.imageSubresource.layerCount = 1;
+
+					copyRegion.imageOffset = { 0, 0, 0 };
+					copyRegion.imageExtent = {
+						width,
+						height,
+						1
+					};
+
+					width = std::max(1u, width / 2);
+					height = std::max(1u, height / 2);
+
+					copyRegions.push_back(copyRegion);
+
+					cpyoffset += Align(cpysize, GetFormatStride(pDesc->Format));
+				}
+			}
+
 			copyQueueLock.lock();
 			{
 				auto& frame = GetFrameResources();
@@ -3367,51 +3412,6 @@ using namespace Vulkan_Internal;
 
 					res = vkBeginCommandBuffer(frame.copyCommandBuffer, &beginInfo);
 					assert(res == VK_SUCCESS);
-				}
-
-				std::vector<VkBufferImageCopy> copyRegions;
-
-				size_t cpyoffset = 0;
-				uint32_t initDataIdx = 0;
-				for (uint32_t slice = 0; slice < pDesc->ArraySize; ++slice)
-				{
-					uint32_t width = pDesc->Width;
-					uint32_t height = pDesc->Height;
-					for (uint32_t mip = 0; mip < pDesc->MipLevels; ++mip)
-					{
-						const SubresourceData& subresourceData = pInitialData[initDataIdx++];
-						size_t cpysize = subresourceData.SysMemPitch * height;
-						if (IsFormatBlockCompressed(pDesc->Format))
-						{
-							cpysize /= 4;
-						}
-						uint8_t* cpyaddr = (uint8_t*)pData + cpyoffset;
-						memcpy(cpyaddr, subresourceData.pSysMem, cpysize);
-
-						VkBufferImageCopy copyRegion = {};
-						copyRegion.bufferOffset = cpyoffset;
-						copyRegion.bufferRowLength = 0;
-						copyRegion.bufferImageHeight = 0;
-
-						copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-						copyRegion.imageSubresource.mipLevel = mip;
-						copyRegion.imageSubresource.baseArrayLayer = slice;
-						copyRegion.imageSubresource.layerCount = 1;
-
-						copyRegion.imageOffset = { 0, 0, 0 };
-						copyRegion.imageExtent = {
-							width,
-							height,
-							1
-						};
-
-						width = std::max(1u, width / 2);
-						height = std::max(1u, height / 2);
-
-						copyRegions.push_back(copyRegion);
-
-						cpyoffset += Align(cpysize, GetFormatStride(pDesc->Format));
-					}
 				}
 
 				VkImageMemoryBarrier barrier = {};
