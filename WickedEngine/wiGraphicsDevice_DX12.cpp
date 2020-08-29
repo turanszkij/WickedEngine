@@ -2640,9 +2640,10 @@ using namespace DX12_Internal;
 			}
 
 			UINT64 RequiredSize = 0;
-			device->GetCopyableFootprints(&desc, 0, dataCount, 0, nullptr, nullptr, nullptr, &RequiredSize);
-
-			uint32_t FirstSubresource = 0;
+			std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> layouts(dataCount);
+			std::vector<UINT64> rowSizesInBytes(dataCount);
+			std::vector<UINT> numRows(dataCount);
+			device->GetCopyableFootprints(&desc, 0, dataCount, 0, layouts.data(), numRows.data(), rowSizesInBytes.data(), &RequiredSize);
 
 			GPUBufferDesc uploaddesc;
 			uploaddesc.ByteWidth = (uint32_t)RequiredSize;
@@ -2652,10 +2653,17 @@ using namespace DX12_Internal;
 			assert(upload_success);
 			ID3D12Resource* upload_resource = to_internal(&uploadbuffer)->resource.Get();
 
-			void* pData;
+			uint8_t* pData;
 			CD3DX12_RANGE readRange(0, 0);
-			hr = upload_resource->Map(0, &readRange, &pData);
+			hr = upload_resource->Map(0, &readRange, (void**)&pData);
 			assert(SUCCEEDED(hr));
+
+			for (uint32_t i = 0; i < dataCount; ++i)
+			{
+				if (rowSizesInBytes[i] > (SIZE_T)-1) return 0;
+				D3D12_MEMCPY_DEST DestData = { pData + layouts[i].Offset, layouts[i].Footprint.RowPitch, layouts[i].Footprint.RowPitch * numRows[i] };
+				MemcpySubresource(&DestData, &data[i], (SIZE_T)rowSizesInBytes[i], numRows[i], layouts[i].Footprint.Depth);
+			}
 
 			copyQueueLock.lock();
 			{
@@ -2669,9 +2677,14 @@ using namespace DX12_Internal;
 					hr = static_cast<ID3D12GraphicsCommandList*>(frame.copyCommandList.Get())->Reset(frame.copyAllocator.Get(), nullptr);
 					assert(SUCCEEDED(hr));
 				}
-				
-				UINT64 dataSize = UpdateSubresources(static_cast<ID3D12GraphicsCommandList*>(frame.copyCommandList.Get()), internal_state->resource.Get(),
-					upload_resource, 0, 0, dataCount, data.data());
+
+				for (UINT i = 0; i < dataCount; ++i)
+				{
+					CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state->resource.Get(), i);
+					CD3DX12_TEXTURE_COPY_LOCATION Src(upload_resource, layouts[i]);
+					static_cast<ID3D12GraphicsCommandList*>(frame.copyCommandList.Get())->
+						CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+				}
 			}
 			copyQueueLock.unlock();
 		}
