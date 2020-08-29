@@ -123,6 +123,7 @@ public:
 		BOX_FRUSTUM_INSIDE,
 	};
 	BoxFrustumIntersect CheckBox(const AABB& box) const;
+	bool CheckBoxFast(const AABB& box) const;
 
 	const XMFLOAT4& getNearPlane() const;
 	const XMFLOAT4& getFarPlane() const;

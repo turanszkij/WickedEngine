@@ -3230,7 +3230,7 @@ void RenderMeshes(
 
 			for (uint32_t frustum_index = 0; frustum_index < frustum_count; ++frustum_index)
 			{
-				if (frusta != nullptr && !frusta[frustum_index].CheckBox(instanceAABB))
+				if (frusta != nullptr && !frusta[frustum_index].CheckBoxFast(instanceAABB))
 				{
 					// In case shadow cameras were provided and no intersection detected with frustum, we don't add the instance for the face:
 					continue;
@@ -3607,7 +3607,7 @@ void RenderImpostors(
 		for (size_t impostorID = 0; impostorID < scene.impostors.GetCount(); ++impostorID)
 		{
 			const ImpostorComponent& impostor = scene.impostors[impostorID];
-			if (camera.frustum.CheckBox(impostor.aabb))
+			if (camera.frustum.CheckBoxFast(impostor.aabb))
 			{
 				instanceCount += (uint32_t)impostor.instanceMatrices.size();
 			}
@@ -3629,7 +3629,7 @@ void RenderImpostors(
 		for (size_t impostorID = 0; impostorID < scene.impostors.GetCount(); ++impostorID)
 		{
 			const ImpostorComponent& impostor = scene.impostors[impostorID];
-			if (!camera.frustum.CheckBox(impostor.aabb))
+			if (!camera.frustum.CheckBoxFast(impostor.aabb))
 			{
 				continue;
 			}
@@ -3898,7 +3898,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 					group_count = 0; // first thread initializes local counter
 				}
 
-				if (culling.frustum.CheckBox(aabb))
+				if (culling.frustum.CheckBoxFast(aabb))
 				{
 					// Local stream compaction:
 					group_list[group_count++] = args.jobIndex;
@@ -3963,7 +3963,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 						group_count = 0; // first thread initializes local counter
 					}
 
-					if (culling.frustum.CheckBox(aabb))
+					if (culling.frustum.CheckBoxFast(aabb))
 					{
 						// Local stream compaction:
 						group_list[group_count++] = args.jobIndex;
@@ -3994,7 +3994,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 
 						const AABB& aabb = scene.aabb_probes[i];
 
-						if (culling.frustum.CheckBox(aabb))
+						if (culling.frustum.CheckBoxFast(aabb))
 						{
 							culling.culledEnvProbes.push_back((uint32_t)i);
 						}
@@ -4022,7 +4022,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 						group_count = 0; // first thread initializes local counter
 					}
 
-					if (culling.frustum.CheckBox(aabb))
+					if (culling.frustum.CheckBoxFast(aabb))
 					{
 						// Local stream compaction:
 						group_list[group_count++] = args.jobIndex;
@@ -4066,7 +4066,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 						}
 
 						const wiHairParticle& hair = scene.hairs[i];
-						if (hair.meshID == INVALID_ENTITY || !culling.frustum.CheckBox(hair.aabb))
+						if (hair.meshID == INVALID_ENTITY || !culling.frustum.CheckBoxFast(hair.aabb))
 						{
 							continue;
 						}
@@ -5532,7 +5532,7 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 					for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 					{
 						const AABB& aabb = scene.aabb_objects[i];
-						if (shcams[cascade].frustum.CheckBox(aabb))
+						if (shcams[cascade].frustum.CheckBoxFast(aabb))
 						{
 							const ObjectComponent& object = scene.objects[i];
 							if (object.IsRenderable() && cascade >= object.cascadeMask && object.IsCastingShadow())
@@ -5601,7 +5601,7 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 				for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 				{
 					const AABB& aabb = scene.aabb_objects[i];
-					if (shcam.frustum.CheckBox(aabb))
+					if (shcam.frustum.CheckBoxFast(aabb))
 					{
 						const ObjectComponent& object = scene.objects[i];
 						if (object.IsRenderable() && object.IsCastingShadow())
@@ -7008,7 +7008,7 @@ void DrawDeferredDecals(
 			const DecalComponent& decal = scene.decals[decalIndex];
 			const AABB& aabb = scene.aabb_decals[decalIndex];
 
-			if ((decal.texture != nullptr || decal.normal != nullptr) && camera.frustum.CheckBox(aabb)) 
+			if ((decal.texture != nullptr || decal.normal != nullptr) && camera.frustum.CheckBoxFast(aabb)) 
 			{
 
 				device->BindResource(PS, decal.texture != nullptr ? decal.texture->texture : nullptr, TEXSLOT_ONDEMAND0, cmd);
