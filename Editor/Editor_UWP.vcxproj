@@ -202,8 +202,7 @@
       <EnableDebuggingInformation>false</EnableDebuggingInformation>
     </FxCompile>
     <PreBuildEvent>
-      <Command>
-      </Command>
+      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
@@ -233,8 +232,7 @@
       <ShaderModel>5.0</ShaderModel>
     </FxCompile>
     <PreBuildEvent>
-      <Command>
-      </Command>
+      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
@@ -266,8 +264,7 @@
       <EnableDebuggingInformation>false</EnableDebuggingInformation>
     </FxCompile>
     <PreBuildEvent>
-      <Command>
-      </Command>
+      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
@@ -297,8 +294,7 @@
       <ShaderModel>5.0</ShaderModel>
     </FxCompile>
     <PreBuildEvent>
-      <Command>
-      </Command>
+      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -330,8 +326,7 @@
       <EnableDebuggingInformation>false</EnableDebuggingInformation>
     </FxCompile>
     <PreBuildEvent>
-      <Command>
-      </Command>
+      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -361,8 +356,7 @@
       <ShaderModel>5.0</ShaderModel>
     </FxCompile>
     <PreBuildEvent>
-      <Command>
-      </Command>
+      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -394,8 +388,7 @@
       <EnableDebuggingInformation>false</EnableDebuggingInformation>
     </FxCompile>
     <PreBuildEvent>
-      <Command>
-      </Command>
+      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -425,8 +418,7 @@
       <ShaderModel>5.0</ShaderModel>
     </FxCompile>
     <PreBuildEvent>
-      <Command>
-      </Command>
+      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
