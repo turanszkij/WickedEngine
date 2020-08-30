@@ -1007,5 +1007,11 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_weathermapCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)shadingRateClassificationCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)shadingRateClassificationCS_DEBUG.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

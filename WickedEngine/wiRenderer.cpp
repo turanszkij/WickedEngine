@@ -102,6 +102,8 @@ bool voxelHelper = false;
 bool requestReflectionRendering = false;
 bool requestVolumetricLightRendering = false;
 bool advancedLightCulling = true;
+bool variableRateShadingClassification = false;
+bool variableRateShadingClassificationDebug = false;
 bool ldsSkinningEnabled = true;
 bool scene_bvh_invalid = true;
 float renderTime = 0;
@@ -1335,6 +1337,8 @@ void LoadShaders()
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_LUMINANCE_PASS1], "luminancePass1CS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_LUMINANCE_PASS2], "luminancePass2CS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_SHADINGRATECLASSIFICATION], "shadingRateClassificationCS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_SHADINGRATECLASSIFICATION_DEBUG], "shadingRateClassificationCS_DEBUG.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_TILEFRUSTUMS], "tileFrustumsCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL], "resolveMSAADepthStencilCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_VOXELSCENECOPYCLEAR], "voxelSceneCopyClearCS.cso"); });
@@ -2295,6 +2299,10 @@ void LoadBuffers()
 	bd.ByteWidth = sizeof(PaintRadiusCB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_PAINTRADIUS]);
 	device->SetName(&constantBuffers[CBTYPE_PAINTRADIUS], "PaintRadiusCB");
+
+	bd.ByteWidth = sizeof(ShadingRateClassificationCB);
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_SHADINGRATECLASSIFICATION]);
+	device->SetName(&constantBuffers[CBTYPE_SHADINGRATECLASSIFICATION], "ShadingRateClassificationCB");
 
 
 }
@@ -9403,6 +9411,68 @@ const Texture* ComputeLuminance(const Texture& sourceImage, CommandList cmd)
 	return nullptr;
 }
 
+void ComputeShadingRateClassification(
+	const Texture& gbuffer1,
+	const Texture& lineardepth,
+	const Texture& output,
+	CommandList cmd
+)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("ComputeShadingRateClassification", cmd);
+	auto range = wiProfiler::BeginRangeGPU("ComputeShadingRateClassification", cmd);
+
+	if (GetVariableRateShadingClassificationDebug())
+	{
+		device->BindUAV(CS, &textures[TEXTYPE_2D_DEBUGUAV], 1, cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_SHADINGRATECLASSIFICATION_DEBUG], cmd);
+	}
+	else
+	{
+		device->BindComputeShader(&computeShaders[CSTYPE_SHADINGRATECLASSIFICATION], cmd);
+	}
+
+	device->BindResource(CS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	ShadingRateClassificationCB cb = {}; // zero init the shading rates!
+	cb.xShadingRateTileSize = device->GetVariableRateShadingTileSize();
+	device->WriteShadingRateValue(SHADING_RATE_1X1, &cb.SHADING_RATE_1X1);
+	device->WriteShadingRateValue(SHADING_RATE_1X2, &cb.SHADING_RATE_1X2);
+	device->WriteShadingRateValue(SHADING_RATE_2X1, &cb.SHADING_RATE_2X1);
+	device->WriteShadingRateValue(SHADING_RATE_2X2, &cb.SHADING_RATE_2X2);
+	device->WriteShadingRateValue(SHADING_RATE_2X4, &cb.SHADING_RATE_2X4);
+	device->WriteShadingRateValue(SHADING_RATE_4X2, &cb.SHADING_RATE_4X2);
+	device->WriteShadingRateValue(SHADING_RATE_4X4, &cb.SHADING_RATE_4X4);
+	device->UpdateBuffer(&constantBuffers[CBTYPE_SHADINGRATECLASSIFICATION], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_SHADINGRATECLASSIFICATION], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+	device->Dispatch(
+		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		1,
+		cmd
+	);
+
+	GPUBarrier barriers[] = {
+		GPUBarrier::Memory(),
+		GPUBarrier::Image(&output,IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADING_RATE_SOURCE),
+	};
+	device->Barrier(barriers, arraysize(barriers), cmd);
+
+	device->UnbindUAVs(0, arraysize(uavs), cmd);
+
+	wiProfiler::EndRange(range);
+	device->EventEnd(cmd);
+}
 
 void DeferredComposition(
 	const Texture& gbuffer0,
@@ -11593,7 +11663,7 @@ void Postprocess_VolumetricClouds(
 	const Texture& lightshaftoutput,
 	const Texture& lineardepth,
 	const Texture& depthbuffer,
-	wiGraphics::CommandList cmd
+	CommandList cmd
 )
 {
 	GraphicsDevice* device = GetDevice();
@@ -12455,6 +12525,10 @@ void SetDebugLightCulling(bool enabled) { debugLightCulling = enabled; }
 bool GetDebugLightCulling() { return debugLightCulling; }
 void SetAdvancedLightCulling(bool enabled) { advancedLightCulling = enabled; }
 bool GetAdvancedLightCulling() { return advancedLightCulling; }
+void SetVariableRateShadingClassification(bool enabled) { variableRateShadingClassification = enabled; }
+bool GetVariableRateShadingClassification() { return variableRateShadingClassification; }
+void SetVariableRateShadingClassificationDebug(bool enabled) { variableRateShadingClassificationDebug = enabled; }
+bool GetVariableRateShadingClassificationDebug() { return variableRateShadingClassificationDebug; }
 void SetAlphaCompositionEnabled(bool enabled) { ALPHACOMPOSITIONENABLED = enabled; }
 bool GetAlphaCompositionEnabled() { return ALPHACOMPOSITIONENABLED; }
 void SetOcclusionCullingEnabled(bool value)

@@ -54,6 +54,19 @@ CBUFFER(MSAO_UPSAMPLECB, CBSLOT_RENDERER_POSTPROCESS)
 	float kUpsampleTolerance;
 };
 
+CBUFFER(ShadingRateClassificationCB, CBSLOT_RENDERER_POSTPROCESS)
+{
+	uint xShadingRateTileSize;
+	uint SHADING_RATE_1X1;
+	uint SHADING_RATE_1X2;
+	uint SHADING_RATE_2X1;
+
+	uint SHADING_RATE_2X2;
+	uint SHADING_RATE_2X4;
+	uint SHADING_RATE_4X2;
+	uint SHADING_RATE_4X4;
+};
+
 static const uint MOTIONBLUR_TILESIZE = 32;
 #define motionblur_strength xPPParams0.x
 

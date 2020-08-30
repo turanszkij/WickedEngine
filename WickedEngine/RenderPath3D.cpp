@@ -201,6 +201,19 @@ void RenderPath3D::ResizeBuffers()
 		device->SetName(&rtGUIBlurredBackground[2], "rtGUIBlurredBackground[2]");
 	}
 
+	if(device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
+	{
+		uint32_t tileSize = device->GetVariableRateShadingTileSize();
+
+		TextureDesc desc;
+		desc.BindFlags = BIND_UNORDERED_ACCESS;
+		desc.Format = FORMAT_R8_UINT;
+		desc.Width = (wiRenderer::GetInternalResolution().x + tileSize - 1) / tileSize;
+		desc.Height = (wiRenderer::GetInternalResolution().y + tileSize - 1) / tileSize;
+		device->CreateTexture(&desc, nullptr, &rtShadingRate);
+		device->SetName(&rtShadingRate, "rtShadingRate");
+	}
+
 	// Depth buffers:
 	{
 		TextureDesc desc;
@@ -408,7 +421,7 @@ void RenderPath3D::Compose(CommandList cmd) const
 	wiImage::Draw(GetLastPostprocessRT(), fx, cmd);
 	device->EventEnd(cmd);
 
-	if (wiRenderer::GetDebugLightCulling())
+	if (wiRenderer::GetDebugLightCulling() || wiRenderer::GetVariableRateShadingClassificationDebug())
 	{
 		wiImage::Draw((Texture*)wiRenderer::GetTexture(TEXTYPE_2D_DEBUGUAV), wiImageParams((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight()), cmd);
 	}

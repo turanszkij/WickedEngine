@@ -486,6 +486,9 @@
     <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\rtaoLIB.hlsl">
       <FileType>Document</FileType>
     </FxCompile>
+    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\shadingRateClassificationCS.hlsl">
+      <FileType>Document</FileType>
+    </FxCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

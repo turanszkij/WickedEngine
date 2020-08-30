@@ -110,6 +110,13 @@ void RenderPath3D_TiledForward::Render() const
 			cmd
 		);
 
+		if (wiRenderer::GetVariableRateShadingClassification() && device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
+		{
+			wiRenderer::ComputeShadingRateClassification(*GetSceneRT_Read(1), rtLinearDepth, rtShadingRate, cmd);
+			device->BindShadingRate(SHADING_RATE_1X1, cmd);
+			device->BindShadingRateImage(&rtShadingRate, cmd);
+		}
+
 		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 
 		// Opaque scene:
@@ -135,6 +142,8 @@ void RenderPath3D_TiledForward::Render() const
 
 			wiProfiler::EndRange(range); // Opaque Scene
 		}
+
+		device->BindShadingRateImage(nullptr, cmd);
 	});
 
 	cmd = device->BeginCommandList();

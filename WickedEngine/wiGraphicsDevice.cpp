@@ -35,6 +35,8 @@ bool GraphicsDevice::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const
 		return DESCRIPTOR_MANAGEMENT;
 	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING:
 		return VARIABLE_RATE_SHADING;
+	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2:
+		return VARIABLE_RATE_SHADING_TIER2;
 	}
 	return false;
 }

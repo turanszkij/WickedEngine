@@ -59,7 +59,6 @@ public:
 	wiSlider* sph_K_Slider;
 	wiSlider* sph_p0_Slider;
 	wiSlider* sph_e_Slider;
-	wiComboBox* shadingRateComboBox;
 
 	wiTextInputField* frameRateInput;
 	wiTextInputField* framesXInput;

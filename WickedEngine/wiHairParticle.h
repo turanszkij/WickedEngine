@@ -46,7 +46,6 @@ public:
 	float randomness = 0.2f;
 	float viewDistance = 200;
 	std::vector<float> vertex_lengths;
-	wiGraphics::SHADING_RATE shadingRate = wiGraphics::SHADING_RATE_1X1;
 
 	// Sprite sheet properties:
 	uint32_t framesX = 1;

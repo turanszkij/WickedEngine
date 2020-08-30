@@ -174,6 +174,12 @@ namespace wiRenderer
 	// Compute the luminance for the source image and return the texture containing the luminance value in pixel [0,0]
 	const wiGraphics::Texture* ComputeLuminance(const wiGraphics::Texture& sourceImage, wiGraphics::CommandList cmd);
 
+	void ComputeShadingRateClassification(
+		const wiGraphics::Texture& gbuffer1,
+		const wiGraphics::Texture& lineardepth,
+		const wiGraphics::Texture& output,
+		wiGraphics::CommandList cmd
+	);
 
 	void DeferredComposition(
 		const wiGraphics::Texture& gbuffer0,
@@ -183,7 +189,8 @@ namespace wiRenderer
 		const wiGraphics::Texture& lightmap_specular,
 		const wiGraphics::Texture& ao,
 		const wiGraphics::Texture& depth,
-		wiGraphics::CommandList cmd);
+		wiGraphics::CommandList cmd
+	);
 
 
 	void Postprocess_Blur_Gaussian(
@@ -471,6 +478,10 @@ namespace wiRenderer
 	bool GetDebugLightCulling();
 	void SetAdvancedLightCulling(bool enabled);
 	bool GetAdvancedLightCulling();
+	void SetVariableRateShadingClassification(bool enabled);
+	bool GetVariableRateShadingClassification();
+	void SetVariableRateShadingClassificationDebug(bool enabled);
+	bool GetVariableRateShadingClassificationDebug();
 	void SetAlphaCompositionEnabled(bool enabled);
 	bool GetAlphaCompositionEnabled();
 	void SetOcclusionCullingEnabled(bool enabled);

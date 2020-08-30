@@ -43,7 +43,7 @@ for item in root.iter():
             if profile == "LIB":
                 cmd += "lib"
             
-            raytracing_inline = 1
+            raytracing_inline = 0
             if raytracing_inline == 1:
                 cmd += "_6_5 "
                 cmd += "-D RAYTRACING_INLINE "

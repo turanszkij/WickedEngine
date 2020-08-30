@@ -216,27 +216,6 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 
 
 
-	shadingRateComboBox = new wiComboBox("Shading Rate: ");
-	shadingRateComboBox->SetTooltip("Select shading rate for this material. \nSelecting larger shading rate will decrease rendering quality of this material, \nbut increases performance.\nDX12 only and requires Tier1 hardware support for variable shading rate");
-	shadingRateComboBox->SetPos(XMFLOAT2(x, y += step));
-	shadingRateComboBox->SetSize(XMFLOAT2(100, 20));
-	shadingRateComboBox->OnSelect([&](wiEventArgs args) {
-		auto hair = GetHair();
-		if (hair != nullptr)
-		{
-			hair->shadingRate = (wiGraphics::SHADING_RATE)args.iValue;
-		}
-		});
-	shadingRateComboBox->AddItem("1X1");
-	shadingRateComboBox->AddItem("1X2");
-	shadingRateComboBox->AddItem("2X1");
-	shadingRateComboBox->AddItem("2X2");
-	shadingRateComboBox->AddItem("2X4");
-	shadingRateComboBox->AddItem("4X2");
-	shadingRateComboBox->AddItem("4X4");
-	shadingRateComboBox->SetEnabled(false);
-	hairWindow->AddWidget(shadingRateComboBox);
-
 
 	hairWindow->Translate(XMFLOAT3(200, 50, 0));
 	hairWindow->SetVisible(false);
@@ -270,7 +249,6 @@ void HairParticleWindow::SetEntity(Entity entity)
 		framesYInput->SetValue((int)hair->framesY);
 		frameCountInput->SetValue((int)hair->frameCount);
 		frameStartInput->SetValue((int)hair->frameStart);
-		shadingRateComboBox->SetSelected((int)hair->shadingRate);
 
 		hairWindow->SetEnabled(true);
 	}

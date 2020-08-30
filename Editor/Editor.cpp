@@ -698,7 +698,7 @@ void EditorComponent::Load()
 				{
 					filename += ".wiscene";
 				}
-				wiArchive archive(fileName, false);
+				wiArchive archive(filename, false);
 				if (archive.IsOpen())
 				{
 					Scene& scene = wiScene::GetScene();

@@ -212,6 +212,13 @@ void RenderPath3D_Forward::Render() const
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 
+		if (wiRenderer::GetVariableRateShadingClassification() && device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
+		{
+			wiRenderer::ComputeShadingRateClassification(*GetSceneRT_Read(1), rtLinearDepth, rtShadingRate, cmd);
+			device->BindShadingRate(SHADING_RATE_1X1, cmd);
+			device->BindShadingRateImage(&rtShadingRate, cmd);
+		}
+
 		// Opaque Scene:
 		{
 			auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
@@ -235,6 +242,8 @@ void RenderPath3D_Forward::Render() const
 
 			wiProfiler::EndRange(range); // Opaque Scene
 		}
+
+		device->BindShadingRateImage(nullptr, cmd);
 	});
 
 	cmd = device->BeginCommandList();

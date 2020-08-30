@@ -526,8 +526,6 @@ void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialCompon
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	device->EventBegin("EmittedParticle", cmd);
 
-	device->BindShadingRate(shadingRate, cmd);
-
 	if (wiRenderer::IsWireRender())
 	{
 		device->BindPipelineState(&PSO_wire, cmd);
@@ -537,6 +535,7 @@ void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialCompon
 		const BLENDMODE blendMode = material.GetBlendMode();
 		device->BindPipelineState(&PSO[blendMode][shaderType], cmd);
 		device->BindResource(PS, material.GetBaseColorMap(), TEXSLOT_ONDEMAND0, cmd);
+		device->BindShadingRate(material.shadingRate, cmd);
 	}
 
 	device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), cmd);
@@ -730,7 +729,8 @@ void wiEmittedParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 
 		if (archive.GetVersion() >= 48)
 		{
-			archive >> (uint8_t&)shadingRate;
+			uint8_t shadingRate;
+			archive >> shadingRate; // no longer needed
 		}
 	}
 	else
@@ -763,11 +763,6 @@ void wiEmittedParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 			archive << frameCount;
 			archive << frameStart;
 			archive << frameRate;
-		}
-
-		if (archive.GetVersion() >= 48)
-		{
-			archive << (uint8_t)shadingRate;
 		}
 	}
 }

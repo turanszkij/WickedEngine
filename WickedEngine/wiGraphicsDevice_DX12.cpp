@@ -651,6 +651,8 @@ namespace DX12_Internal
 			return D3D12_RESOURCE_STATE_COPY_SOURCE;
 		case wiGraphics::IMAGE_LAYOUT_COPY_DST:
 			return D3D12_RESOURCE_STATE_COPY_DEST;
+		case wiGraphics::IMAGE_LAYOUT_SHADING_RATE_SOURCE:
+			return D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE;
 		}
 
 		return D3D12_RESOURCE_STATE_COMMON;
@@ -702,7 +704,7 @@ namespace DX12_Internal
 		}
 		return D3D12_SHADER_VISIBILITY_ALL;
 	}
-	constexpr D3D12_SHADING_RATE _ConvertShadingRate(SHADING_RATE value, const D3D12_FEATURE_DATA_D3D12_OPTIONS6& features_6)
+	constexpr D3D12_SHADING_RATE _ConvertShadingRate(SHADING_RATE value)
 	{
 		switch (value)
 		{
@@ -715,11 +717,11 @@ namespace DX12_Internal
 		case wiGraphics::SHADING_RATE_2X2:
 			return D3D12_SHADING_RATE_2X2;
 		case wiGraphics::SHADING_RATE_2X4:
-			return features_6.AdditionalShadingRatesSupported ? D3D12_SHADING_RATE_2X4 : D3D12_SHADING_RATE_2X2;
+			return D3D12_SHADING_RATE_2X4;
 		case wiGraphics::SHADING_RATE_4X2:
-			return features_6.AdditionalShadingRatesSupported ? D3D12_SHADING_RATE_4X2 : D3D12_SHADING_RATE_2X2;
+			return D3D12_SHADING_RATE_4X2;
 		case wiGraphics::SHADING_RATE_4X4:
-			return features_6.AdditionalShadingRatesSupported ? D3D12_SHADING_RATE_4X4 : D3D12_SHADING_RATE_2X2;
+			return D3D12_SHADING_RATE_4X4;
 		default:
 			return D3D12_SHADING_RATE_1X1;
 		}
@@ -2165,7 +2167,8 @@ using namespace DX12_Internal;
 
 		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &features_6, sizeof(features_6));
 		VARIABLE_RATE_SHADING = features_6.VariableShadingRateTier >= D3D12_VARIABLE_SHADING_RATE_TIER_1;
-
+		VARIABLE_RATE_SHADING_TIER2 = features_6.VariableShadingRateTier >= D3D12_VARIABLE_SHADING_RATE_TIER_2;
+		VARIABLE_RATE_SHADING_TILE_SIZE = features_6.ShadingRateImageTileSize;
 
 		// Create common indirect command signatures:
 
@@ -4154,6 +4157,15 @@ using namespace DX12_Internal;
 		return -1;
 	}
 
+	void GraphicsDevice_DX12::WriteShadingRateValue(SHADING_RATE rate, void* dest)
+	{
+		D3D12_SHADING_RATE _rate = _ConvertShadingRate(rate);
+		if (!features_6.AdditionalShadingRatesSupported)
+		{
+			_rate = std::min(_rate, D3D12_SHADING_RATE_2X2);
+		}
+		*(uint8_t*)dest = _rate;
+	}
 	void GraphicsDevice_DX12::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest)
 	{
 		D3D12_RAYTRACING_INSTANCE_DESC* desc = (D3D12_RAYTRACING_INSTANCE_DESC*)dest;
@@ -4578,8 +4590,18 @@ using namespace DX12_Internal;
 		active_rootsig_graphics[cmd] = nullptr;
 		active_rootsig_compute[cmd] = nullptr;
 		active_renderpass[cmd] = nullptr;
-		prev_shadingrate[cmd] = SHADING_RATE_1X1;
+		prev_shadingrate[cmd] = D3D12_SHADING_RATE_1X1;
 		dirty_pso[cmd] = false;
+
+		if (VARIABLE_RATE_SHADING)
+		{
+			D3D12_SHADING_RATE_COMBINER combiners[] =
+			{
+				D3D12_SHADING_RATE_COMBINER_MAX,
+				D3D12_SHADING_RATE_COMBINER_MAX,
+			};
+			GetDirectCommandList(cmd)->RSSetShadingRate(D3D12_SHADING_RATE_1X1, combiners);
+		}
 
 		return cmd;
 	}
@@ -5033,10 +5055,29 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::BindShadingRate(SHADING_RATE rate, CommandList cmd)
 	{
-		if (prev_shadingrate[cmd] != rate)
+		D3D12_SHADING_RATE _rate = D3D12_SHADING_RATE_1X1;
+		WriteShadingRateValue(rate, &_rate);
+
+		if (VARIABLE_RATE_SHADING && prev_shadingrate[cmd] != _rate)
 		{
-			prev_shadingrate[cmd] = rate;
-			GetDirectCommandList(cmd)->RSSetShadingRate(_ConvertShadingRate(rate, features_6), nullptr);
+			prev_shadingrate[cmd] = _rate;
+			// Combiners are set to MAX by default in BeginCommandList
+			GetDirectCommandList(cmd)->RSSetShadingRate(_rate, nullptr);
+		}
+	}
+	void GraphicsDevice_DX12::BindShadingRateImage(const Texture* texture, CommandList cmd)
+	{
+		if (VARIABLE_RATE_SHADING_TIER2)
+		{
+			if (texture == nullptr)
+			{
+				GetDirectCommandList(cmd)->RSSetShadingRateImage(nullptr);
+			}
+			else
+			{
+				assert(texture->desc.Format == FORMAT_R8_UINT);
+				GetDirectCommandList(cmd)->RSSetShadingRateImage(to_internal(texture)->resource.Get());
+			}
 		}
 	}
 	void GraphicsDevice_DX12::BindPipelineState(const PipelineState* pso, CommandList cmd)

@@ -51,6 +51,8 @@ public:
 	wiCheckBox* debugForceFieldsCheckBox;
 	wiCheckBox* debugRaytraceBVHCheckBox;
 	wiCheckBox* wireFrameCheckBox;
+	wiCheckBox* variableRateShadingClassificationCheckBox;
+	wiCheckBox* variableRateShadingClassificationDebugCheckBox;
 	wiCheckBox* advancedLightCullingCheckBox;
 	wiCheckBox* debugLightCullingCheckBox;
 	wiCheckBox* tessellationCheckBox;

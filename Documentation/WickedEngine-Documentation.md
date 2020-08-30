@@ -63,6 +63,7 @@ This is a reference for the C++ features of Wicked Engine
 			14. [GPU Queries](#gpu-queries)
 			15. [RayTracingAccelerationStructure](#raytracingaccelerationstructure)
 			16. [RayTracingPipelineState](#raytracingpipelinestate)
+			17. [Variable Rate Shading](#variable-rate-shading)
 		2. [GraphicsDevice_DX11](#wigraphicsdevice_dx11)
 		3. [GraphicsDevice_DX12](#wigraphicsdevice_dx12)
 		4. [GraphicsDevice_Vulkan](#wigraphicsdevice_vulkan)
@@ -632,6 +633,17 @@ The acceleration strucuture can be bottom level or top level, and decided by the
 
 ##### RayTracingPipelineState
 Binding a ray tracing pipeline state is required to dispatch ray tracing shaders. A ray tracing pipeline state holds a collection of shader libraries and hitgroup definitions. It also declares information about max resource usage of the pipeline.
+
+##### Variable Rate Shading
+Variable Rate Shading can be used to decrease shading quality while retaining depth testing accuracy. The shading rate can be set up in different ways:
+
+- `BindShadingRate()`: Set the shading rate for the following draw calls. The first parameter is the shading rate, which is by default `SHADING_RATE_1X1` (the best quality). The increasing enum values are standing for decreasing shading rates.
+- `BindShadingRateImage()`: Set the shading rate for the screen via a tiled texture. The texture must be using the `FORMAT_R8_UINT` format. In each pixel, the texture contains the shading rate value for a tile of pixels (8x8, 16x16 or 32x32). The tile size can be queried via `GetVariableRateShadingTileSize()`. The shading rate values that the texture contains are not the raw values from `SHADING_RATE` enum, but they must be converted to values that are native to the graphics API used using the `WriteShadingRateValue()` function. The shading rate texture must be written with a compute shader and transitioned to `IMAGE_LAYOUT_SHADING_RATE_SOURCE` with a [GPUBarrier](#gpu-barriers) before setting it with `BindShadingRateImage()`. It is valid to set a `nullptr` instead of the texture, indicating that the shading rate is not specified by a texture.
+- Or setting the shading rate from a vertex or geometry shader with the `SV_ShadingRate` system value semantic.
+
+The final shading rate will be determined from the above methods using the maximum shading rate (least detailed) which is applicable to the screen tile. In the future it might be considered to expose the operator to define this.
+
+To read more about variable rate shading, refer to the [DirectX specifications.](https://microsoft.github.io/DirectX-Specs/d3d/VariableRateShading)
 
 
 #### GraphicsDevice_DX11

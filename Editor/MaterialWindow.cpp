@@ -360,6 +360,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	shadingRateComboBox->AddItem("4X2");
 	shadingRateComboBox->AddItem("4X4");
 	shadingRateComboBox->SetEnabled(false);
+	shadingRateComboBox->SetMaxVisibleItemCount(4);
 	materialWindow->AddWidget(shadingRateComboBox);
 
 

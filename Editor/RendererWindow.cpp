@@ -13,10 +13,10 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	wiRenderer::SetToDrawDebugCameras(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(640, 710));
+	rendererWindow->SetSize(XMFLOAT2(580, 600));
 	GUI->AddWidget(rendererWindow);
 
-	float x = 220, y = 5, step = 28, itemheight = 26;
+	float x = 220, y = 5, step = 22, itemheight = 20;
 
 	vsyncCheckBox = new wiCheckBox("VSync: ");
 	vsyncCheckBox->SetTooltip("Toggle vertical sync");
@@ -149,6 +149,28 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	wireFrameCheckBox->SetCheck(wiRenderer::IsWireRender());
 	rendererWindow->AddWidget(wireFrameCheckBox);
+
+	variableRateShadingClassificationCheckBox = new wiCheckBox("VRS Classification: ");
+	variableRateShadingClassificationCheckBox->SetTooltip("Enable classification of variable rate shading on the screen. Less important parts will be shaded with lesser resolution.\nDX12 only and requires Tier1 hardware support for variable shading rate");
+	variableRateShadingClassificationCheckBox->SetPos(XMFLOAT2(x, y += step));
+	variableRateShadingClassificationCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
+	variableRateShadingClassificationCheckBox->OnClick([](wiEventArgs args) {
+		wiRenderer::SetVariableRateShadingClassification(args.bValue);
+		});
+	variableRateShadingClassificationCheckBox->SetCheck(wiRenderer::GetVariableRateShadingClassification());
+	rendererWindow->AddWidget(variableRateShadingClassificationCheckBox);
+	variableRateShadingClassificationCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2));
+
+	variableRateShadingClassificationDebugCheckBox = new wiCheckBox("DEBUG: ");
+	variableRateShadingClassificationDebugCheckBox->SetTooltip("Toggle visualization of variable rate shading classification feature");
+	variableRateShadingClassificationDebugCheckBox->SetPos(XMFLOAT2(x + 122, y));
+	variableRateShadingClassificationDebugCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
+	variableRateShadingClassificationDebugCheckBox->OnClick([](wiEventArgs args) {
+		wiRenderer::SetVariableRateShadingClassificationDebug(args.bValue);
+		});
+	variableRateShadingClassificationDebugCheckBox->SetCheck(wiRenderer::GetVariableRateShadingClassificationDebug());
+	rendererWindow->AddWidget(variableRateShadingClassificationDebugCheckBox);
+	variableRateShadingClassificationDebugCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2));
 
 	advancedLightCullingCheckBox = new wiCheckBox("2.5D Light Culling: ");
 	advancedLightCullingCheckBox->SetTooltip("Enable a more aggressive light culling approach which can result in slower culling but faster rendering (Tiled renderer only)");

@@ -30,8 +30,10 @@ namespace wiGraphics
 		bool RAYTRACING_INLINE = false;
 		bool DESCRIPTOR_MANAGEMENT = false;
 		bool VARIABLE_RATE_SHADING = false;
+		bool VARIABLE_RATE_SHADING_TIER2 = false;
 		size_t SHADER_IDENTIFIER_SIZE = 0;
 		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
+		uint32_t VARIABLE_RATE_SHADING_TILE_SIZE = 0;
 
 	public:
 		virtual bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) = 0;
@@ -52,6 +54,7 @@ namespace wiGraphics
 
 		virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) = 0;
 
+		virtual void WriteShadingRateValue(SHADING_RATE rate, void* dest) {};
 		virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) {}
 		virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) {}
 		virtual void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const GPUResource* resource, int subresource = -1, uint64_t offset = 0) {}
@@ -103,6 +106,7 @@ namespace wiGraphics
 			GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE,
 			GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT,
 			GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING,
+			GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2,
 			GRAPHICSDEVICE_CAPABILITY_COUNT,
 		};
 		bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const;
@@ -123,7 +127,7 @@ namespace wiGraphics
 
 		inline size_t GetShaderIdentifierSize() const { return SHADER_IDENTIFIER_SIZE; }
 		inline size_t GetTopLevelAccelerationStructureInstanceSize() const { return TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE; }
-
+		inline uint32_t GetVariableRateShadingTileSize() const { return VARIABLE_RATE_SHADING_TILE_SIZE; }
 
 		///////////////Thread-sensitive////////////////////////
 
@@ -144,6 +148,7 @@ namespace wiGraphics
 		virtual void BindStencilRef(uint32_t value, CommandList cmd) = 0;
 		virtual void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) = 0;
 		virtual void BindShadingRate(SHADING_RATE rate, CommandList cmd) {}
+		virtual void BindShadingRateImage(const Texture* texture, CommandList cmd) {}
 		virtual void BindPipelineState(const PipelineState* pso, CommandList cmd) = 0;
 		virtual void BindComputeShader(const Shader* cs, CommandList cmd) = 0;
 		virtual void Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) = 0;

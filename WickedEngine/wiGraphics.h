@@ -281,6 +281,7 @@ namespace wiGraphics
 		IMAGE_LAYOUT_UNORDERED_ACCESS,			// shader resource, write enabled
 		IMAGE_LAYOUT_COPY_SRC,					// copy from
 		IMAGE_LAYOUT_COPY_DST,					// copy to
+		IMAGE_LAYOUT_SHADING_RATE_SOURCE,		// shading rate control per tile
 	};
 	enum BUFFER_STATE
 	{
