@@ -9455,12 +9455,8 @@ void ComputeShadingRateClassification(
 	};
 	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
-	device->Dispatch(
-		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-		1,
-		cmd
-	);
+	// Whole threadgroup for each tile:
+	device->Dispatch(desc.Width, desc.Height, 1, cmd);
 
 	GPUBarrier barriers[] = {
 		GPUBarrier::Memory(),
