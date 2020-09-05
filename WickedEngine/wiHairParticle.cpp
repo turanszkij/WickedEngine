@@ -270,7 +270,7 @@ void wiHairParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 			archive >> frameStart;
 		}
 
-		if (archive.GetVersion() >= 48)
+		if (archive.GetVersion() == 48)
 		{
 			uint8_t shadingRate;
 			archive >> shadingRate; // no longer needed
