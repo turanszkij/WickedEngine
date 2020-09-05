@@ -42,14 +42,15 @@ for item in root.iter():
                 cmd += "cs"
             if profile == "LIB":
                 cmd += "lib"
+            if profile == "MS":
+                cmd += "ms"
+            if profile == "AS":
+                cmd += "as"
+
+            cmd += "_6_5 "
             
-            raytracing_inline = 0
-            if raytracing_inline == 1:
-                cmd += "_6_5 "
-                cmd += "-D RAYTRACING_INLINE "
-                cmd += "-D RAYTRACING_TIER_1_1 "
-            else:
-                cmd += "_6_4 "
+            cmd += "-D RAYTRACING_INLINE "
+            cmd += "-D RAYTRACING_TIER_1_1 "
             
             cmd += "-D HLSL6 "
             

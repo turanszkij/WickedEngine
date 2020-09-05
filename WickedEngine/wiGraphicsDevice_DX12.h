@@ -40,6 +40,7 @@ namespace wiGraphics
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawInstancedIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawIndexedInstancedIndirectCommandSignature;
+		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchMeshIndirectCommandSignature;
 
 		Microsoft::WRL::ComPtr<ID3D12QueryHeap> querypool_timestamp;
 		Microsoft::WRL::ComPtr<ID3D12QueryHeap> querypool_occlusion;
@@ -53,6 +54,7 @@ namespace wiGraphics
 		D3D12_FEATURE_DATA_D3D12_OPTIONS features_0;
 		D3D12_FEATURE_DATA_D3D12_OPTIONS5 features_5;
 		D3D12_FEATURE_DATA_D3D12_OPTIONS6 features_6;
+		D3D12_FEATURE_DATA_D3D12_OPTIONS7 features_7;
 
 		uint32_t rtv_descriptor_size = 0;
 		uint32_t dsv_descriptor_size = 0;
@@ -136,7 +138,7 @@ namespace wiGraphics
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
-		inline ID3D12GraphicsCommandList5* GetDirectCommandList(CommandList cmd) { return static_cast<ID3D12GraphicsCommandList5*>(GetFrameResources().commandLists[cmd].Get()); }
+		inline ID3D12GraphicsCommandList6* GetDirectCommandList(CommandList cmd) { return static_cast<ID3D12GraphicsCommandList6*>(GetFrameResources().commandLists[cmd].Get()); }
 
 		Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain;
 
@@ -247,6 +249,8 @@ namespace wiGraphics
 		void DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
 		void Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) override;
 		void DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
+		void DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) override;
+		void DispatchMeshIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
 		void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) override;
 		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) override;
 		void QueryBegin(const GPUQuery *query, CommandList cmd) override;

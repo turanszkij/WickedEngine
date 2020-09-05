@@ -41,8 +41,12 @@ for item in root.iter():
                 cmd += "cs"
             if profile == "LIB":
                 cmd += "lib"
+            if profile == "MS":
+                cmd += "ms"
+            if profile == "AS":
+                cmd += "as"
             
-            cmd += "_6_4 "
+            cmd += "_6_5 "
             
             #cmd += "-D RAYTRACING_INLINE "
             

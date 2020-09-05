@@ -689,6 +689,10 @@ namespace DX12_Internal
 	{
 		switch (value)
 		{
+		case MS:
+			return D3D12_SHADER_VISIBILITY_MESH;
+		case AS:
+			return D3D12_SHADER_VISIBILITY_AMPLIFICATION;
 		case VS:
 			return D3D12_SHADER_VISIBILITY_VERTEX;
 		case HS:
@@ -1685,86 +1689,116 @@ using namespace DX12_Internal;
 
 			if (pipeline == nullptr)
 			{
-				D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = {};
+				struct PSO_STREAM
+				{
+					CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
+					CD3DX12_PIPELINE_STATE_STREAM_VS VS;
+					CD3DX12_PIPELINE_STATE_STREAM_HS HS;
+					CD3DX12_PIPELINE_STATE_STREAM_DS DS;
+					CD3DX12_PIPELINE_STATE_STREAM_GS GS;
+					CD3DX12_PIPELINE_STATE_STREAM_PS PS;
+					CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER RS;
+					CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL DSS;
+					CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC BD;
+					CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PT;
+					CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT IL;
+					CD3DX12_PIPELINE_STATE_STREAM_IB_STRIP_CUT_VALUE STRIP;
+					CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSFormat;
+					CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS Formats;
+					CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC SampleDesc;
+					CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_MASK SampleMask;
+
+					CD3DX12_PIPELINE_STATE_STREAM_MS MS;
+					CD3DX12_PIPELINE_STATE_STREAM_AS AS;
+				} stream = {};
 
 				if (pso->desc.vs != nullptr)
 				{
-					desc.VS.pShaderBytecode = pso->desc.vs->code.data();
-					desc.VS.BytecodeLength = pso->desc.vs->code.size();
+					stream.VS = { pso->desc.vs->code.data(), pso->desc.vs->code.size() };
 				}
 				if (pso->desc.hs != nullptr)
 				{
-					desc.HS.pShaderBytecode = pso->desc.hs->code.data();
-					desc.HS.BytecodeLength = pso->desc.hs->code.size();
+					stream.HS = { pso->desc.hs->code.data(), pso->desc.hs->code.size() };
 				}
 				if (pso->desc.ds != nullptr)
 				{
-					desc.DS.pShaderBytecode = pso->desc.ds->code.data();
-					desc.DS.BytecodeLength = pso->desc.ds->code.size();
+					stream.DS = { pso->desc.ds->code.data(), pso->desc.ds->code.size() };
 				}
 				if (pso->desc.gs != nullptr)
 				{
-					desc.GS.pShaderBytecode = pso->desc.gs->code.data();
-					desc.GS.BytecodeLength = pso->desc.gs->code.size();
+					stream.GS = { pso->desc.gs->code.data(), pso->desc.gs->code.size() };
 				}
 				if (pso->desc.ps != nullptr)
 				{
-					desc.PS.BytecodeLength = pso->desc.ps->code.size();
-					desc.PS.pShaderBytecode = pso->desc.ps->code.data();
+					stream.PS = { pso->desc.ps->code.data(), pso->desc.ps->code.size() };
+				}
+
+				if (pso->desc.ms != nullptr)
+				{
+					stream.MS = { pso->desc.ms->code.data(), pso->desc.ms->code.size() };
+				}
+				if (pso->desc.as != nullptr)
+				{
+					stream.AS = { pso->desc.as->code.data(), pso->desc.as->code.size() };
 				}
 
 				RasterizerStateDesc pRasterizerStateDesc = pso->desc.rs != nullptr ? pso->desc.rs->GetDesc() : RasterizerStateDesc();
-				desc.RasterizerState.FillMode = _ConvertFillMode(pRasterizerStateDesc.FillMode);
-				desc.RasterizerState.CullMode = _ConvertCullMode(pRasterizerStateDesc.CullMode);
-				desc.RasterizerState.FrontCounterClockwise = pRasterizerStateDesc.FrontCounterClockwise;
-				desc.RasterizerState.DepthBias = pRasterizerStateDesc.DepthBias;
-				desc.RasterizerState.DepthBiasClamp = pRasterizerStateDesc.DepthBiasClamp;
-				desc.RasterizerState.SlopeScaledDepthBias = pRasterizerStateDesc.SlopeScaledDepthBias;
-				desc.RasterizerState.DepthClipEnable = pRasterizerStateDesc.DepthClipEnable;
-				desc.RasterizerState.MultisampleEnable = pRasterizerStateDesc.MultisampleEnable;
-				desc.RasterizerState.AntialiasedLineEnable = pRasterizerStateDesc.AntialiasedLineEnable;
-				desc.RasterizerState.ConservativeRaster = ((CONSERVATIVE_RASTERIZATION && pRasterizerStateDesc.ConservativeRasterizationEnable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
-				desc.RasterizerState.ForcedSampleCount = pRasterizerStateDesc.ForcedSampleCount;
-
+				CD3DX12_RASTERIZER_DESC rs = {};
+				rs.FillMode = _ConvertFillMode(pRasterizerStateDesc.FillMode);
+				rs.CullMode = _ConvertCullMode(pRasterizerStateDesc.CullMode);
+				rs.FrontCounterClockwise = pRasterizerStateDesc.FrontCounterClockwise;
+				rs.DepthBias = pRasterizerStateDesc.DepthBias;
+				rs.DepthBiasClamp = pRasterizerStateDesc.DepthBiasClamp;
+				rs.SlopeScaledDepthBias = pRasterizerStateDesc.SlopeScaledDepthBias;
+				rs.DepthClipEnable = pRasterizerStateDesc.DepthClipEnable;
+				rs.MultisampleEnable = pRasterizerStateDesc.MultisampleEnable;
+				rs.AntialiasedLineEnable = pRasterizerStateDesc.AntialiasedLineEnable;
+				rs.ConservativeRaster = ((CONSERVATIVE_RASTERIZATION && pRasterizerStateDesc.ConservativeRasterizationEnable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+				rs.ForcedSampleCount = pRasterizerStateDesc.ForcedSampleCount;
+				stream.RS = rs;
 
 				DepthStencilStateDesc pDepthStencilStateDesc = pso->desc.dss != nullptr ? pso->desc.dss->GetDesc() : DepthStencilStateDesc();
-				desc.DepthStencilState.DepthEnable = pDepthStencilStateDesc.DepthEnable;
-				desc.DepthStencilState.DepthWriteMask = _ConvertDepthWriteMask(pDepthStencilStateDesc.DepthWriteMask);
-				desc.DepthStencilState.DepthFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.DepthFunc);
-				desc.DepthStencilState.StencilEnable = pDepthStencilStateDesc.StencilEnable;
-				desc.DepthStencilState.StencilReadMask = pDepthStencilStateDesc.StencilReadMask;
-				desc.DepthStencilState.StencilWriteMask = pDepthStencilStateDesc.StencilWriteMask;
-				desc.DepthStencilState.FrontFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilDepthFailOp);
-				desc.DepthStencilState.FrontFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilFailOp);
-				desc.DepthStencilState.FrontFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.FrontFace.StencilFunc);
-				desc.DepthStencilState.FrontFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilPassOp);
-				desc.DepthStencilState.BackFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilDepthFailOp);
-				desc.DepthStencilState.BackFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilFailOp);
-				desc.DepthStencilState.BackFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.BackFace.StencilFunc);
-				desc.DepthStencilState.BackFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilPassOp);
-
+				CD3DX12_DEPTH_STENCIL_DESC dss = {};
+				dss.DepthEnable = pDepthStencilStateDesc.DepthEnable;
+				dss.DepthWriteMask = _ConvertDepthWriteMask(pDepthStencilStateDesc.DepthWriteMask);
+				dss.DepthFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.DepthFunc);
+				dss.StencilEnable = pDepthStencilStateDesc.StencilEnable;
+				dss.StencilReadMask = pDepthStencilStateDesc.StencilReadMask;
+				dss.StencilWriteMask = pDepthStencilStateDesc.StencilWriteMask;
+				dss.FrontFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilDepthFailOp);
+				dss.FrontFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilFailOp);
+				dss.FrontFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.FrontFace.StencilFunc);
+				dss.FrontFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilPassOp);
+				dss.BackFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilDepthFailOp);
+				dss.BackFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilFailOp);
+				dss.BackFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.BackFace.StencilFunc);
+				dss.BackFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilPassOp);
+				stream.DSS = dss;
 
 				BlendStateDesc pBlendStateDesc = pso->desc.bs != nullptr ? pso->desc.bs->GetDesc() : BlendStateDesc();
-				desc.BlendState.AlphaToCoverageEnable = pBlendStateDesc.AlphaToCoverageEnable;
-				desc.BlendState.IndependentBlendEnable = pBlendStateDesc.IndependentBlendEnable;
+				CD3DX12_BLEND_DESC bd = {};
+				bd.AlphaToCoverageEnable = pBlendStateDesc.AlphaToCoverageEnable;
+				bd.IndependentBlendEnable = pBlendStateDesc.IndependentBlendEnable;
 				for (int i = 0; i < 8; ++i)
 				{
-					desc.BlendState.RenderTarget[i].BlendEnable = pBlendStateDesc.RenderTarget[i].BlendEnable;
-					desc.BlendState.RenderTarget[i].SrcBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlend);
-					desc.BlendState.RenderTarget[i].DestBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlend);
-					desc.BlendState.RenderTarget[i].BlendOp = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOp);
-					desc.BlendState.RenderTarget[i].SrcBlendAlpha = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlendAlpha);
-					desc.BlendState.RenderTarget[i].DestBlendAlpha = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlendAlpha);
-					desc.BlendState.RenderTarget[i].BlendOpAlpha = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOpAlpha);
-					desc.BlendState.RenderTarget[i].RenderTargetWriteMask = _ParseColorWriteMask(pBlendStateDesc.RenderTarget[i].RenderTargetWriteMask);
+					bd.RenderTarget[i].BlendEnable = pBlendStateDesc.RenderTarget[i].BlendEnable;
+					bd.RenderTarget[i].SrcBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlend);
+					bd.RenderTarget[i].DestBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlend);
+					bd.RenderTarget[i].BlendOp = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOp);
+					bd.RenderTarget[i].SrcBlendAlpha = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlendAlpha);
+					bd.RenderTarget[i].DestBlendAlpha = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlendAlpha);
+					bd.RenderTarget[i].BlendOpAlpha = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOpAlpha);
+					bd.RenderTarget[i].RenderTargetWriteMask = _ParseColorWriteMask(pBlendStateDesc.RenderTarget[i].RenderTargetWriteMask);
 				}
+				stream.BD = bd;
 
 				std::vector<D3D12_INPUT_ELEMENT_DESC> elements;
+				D3D12_INPUT_LAYOUT_DESC il = {};
 				if (pso->desc.il != nullptr)
 				{
-					desc.InputLayout.NumElements = (uint32_t)pso->desc.il->desc.size();
-					elements.resize(desc.InputLayout.NumElements);
-					for (uint32_t i = 0; i < desc.InputLayout.NumElements; ++i)
+					il.NumElements = (uint32_t)pso->desc.il->desc.size();
+					elements.resize(il.NumElements);
+					for (uint32_t i = 0; i < il.NumElements; ++i)
 					{
 						elements[i].SemanticName = pso->desc.il->desc[i].SemanticName.c_str();
 						elements[i].SemanticIndex = pso->desc.il->desc[i].SemanticIndex;
@@ -1777,16 +1811,19 @@ using namespace DX12_Internal;
 						elements[i].InstanceDataStepRate = pso->desc.il->desc[i].InstanceDataStepRate;
 					}
 				}
-				desc.InputLayout.pInputElementDescs = elements.data();
+				il.pInputElementDescs = elements.data();
+				stream.IL = il;
 
-				desc.NumRenderTargets = 0;
-				desc.DSVFormat = DXGI_FORMAT_UNKNOWN;
-				desc.SampleDesc.Count = 1;
-				desc.SampleDesc.Quality = 0;
+				DXGI_FORMAT DSFormat = DXGI_FORMAT_UNKNOWN;
+				D3D12_RT_FORMAT_ARRAY formats = {};
+				formats.NumRenderTargets = 0;
+				DXGI_SAMPLE_DESC sampleDesc = {};
+				sampleDesc.Count = 1;
+				sampleDesc.Quality = 0;
 				if (active_renderpass[cmd] == nullptr)
 				{
-					desc.NumRenderTargets = 1;
-					desc.RTVFormats[0] = _ConvertFormat(BACKBUFFER_FORMAT);
+					formats.NumRenderTargets = 1;
+					formats.RTFormats[0] = _ConvertFormat(BACKBUFFER_FORMAT);
 				}
 				else
 				{
@@ -1801,40 +1838,40 @@ using namespace DX12_Internal;
 							switch (attachment.texture->desc.Format)
 							{
 							case FORMAT_R16_TYPELESS:
-								desc.RTVFormats[desc.NumRenderTargets] = DXGI_FORMAT_R16_UNORM;
+								formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R16_UNORM;
 								break;
 							case FORMAT_R32_TYPELESS:
-								desc.RTVFormats[desc.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT;
+								formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT;
 								break;
 							case FORMAT_R24G8_TYPELESS:
-								desc.RTVFormats[desc.NumRenderTargets] = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+								formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 								break;
 							case FORMAT_R32G8X24_TYPELESS:
-								desc.RTVFormats[desc.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+								formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
 								break;
 							default:
-								desc.RTVFormats[desc.NumRenderTargets] = _ConvertFormat(attachment.texture->desc.Format);
+								formats.RTFormats[formats.NumRenderTargets] = _ConvertFormat(attachment.texture->desc.Format);
 								break;
 							}
-							desc.NumRenderTargets++;
+							formats.NumRenderTargets++;
 							break;
 						case RenderPassAttachment::DEPTH_STENCIL:
 							switch (attachment.texture->desc.Format)
 							{
 							case FORMAT_R16_TYPELESS:
-								desc.DSVFormat = DXGI_FORMAT_D16_UNORM;
+								DSFormat = DXGI_FORMAT_D16_UNORM;
 								break;
 							case FORMAT_R32_TYPELESS:
-								desc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+								DSFormat = DXGI_FORMAT_D32_FLOAT;
 								break;
 							case FORMAT_R24G8_TYPELESS:
-								desc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+								DSFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 								break;
 							case FORMAT_R32G8X24_TYPELESS:
-								desc.DSVFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+								DSFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 								break;
 							default:
-								desc.DSVFormat = _ConvertFormat(attachment.texture->desc.Format);
+								DSFormat = _ConvertFormat(attachment.texture->desc.Format);
 								break;
 							}
 							break;
@@ -1843,46 +1880,53 @@ using namespace DX12_Internal;
 							break;
 						}
 
-						desc.SampleDesc.Count = attachment.texture->desc.SampleCount;
-						desc.SampleDesc.Quality = 0;
+						sampleDesc.Count = attachment.texture->desc.SampleCount;
+						sampleDesc.Quality = 0;
 					}
 				}
-				desc.SampleMask = pso->desc.sampleMask;
+				stream.DSFormat = DSFormat;
+				stream.Formats = formats;
+				stream.SampleDesc = sampleDesc;
+				stream.SampleMask = pso->desc.sampleMask;
 
 				switch (pso->desc.pt)
 				{
 				case POINTLIST:
-					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+					stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
 					break;
 				case LINELIST:
 				case LINESTRIP:
-					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+					stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
 					break;
 				case TRIANGLELIST:
 				case TRIANGLESTRIP:
-					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+					stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 					break;
 				case PATCHLIST:
-					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
+					stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
 					break;
 				default:
-					desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
+					stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
 					break;
 				}
 
-				desc.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
+				stream.STRIP = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
 
 				if (pso->desc.rootSignature == nullptr)
 				{
-					desc.pRootSignature = internal_state->rootSignature.Get();
+					stream.pRootSignature = internal_state->rootSignature.Get();
 				}
 				else
 				{
-					desc.pRootSignature = to_internal(pso->desc.rootSignature)->resource.Get();
+					stream.pRootSignature = to_internal(pso->desc.rootSignature)->resource.Get();
 				}
 
+				D3D12_PIPELINE_STATE_STREAM_DESC streamDesc = {};
+				streamDesc.pPipelineStateSubobjectStream = &stream;
+				streamDesc.SizeInBytes = sizeof(stream);
+
 				ComPtr<ID3D12PipelineState> newpso;
-				HRESULT hr = device->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&newpso));
+				HRESULT hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&newpso));
 				assert(SUCCEEDED(hr));
 
 				pipelines_worker[cmd].push_back(std::make_pair(pipeline_hash, newpso));
@@ -2170,6 +2214,9 @@ using namespace DX12_Internal;
 		VARIABLE_RATE_SHADING_TIER2 = features_6.VariableShadingRateTier >= D3D12_VARIABLE_SHADING_RATE_TIER_2;
 		VARIABLE_RATE_SHADING_TILE_SIZE = features_6.ShadingRateImageTileSize;
 
+		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &features_7, sizeof(features_7));
+		MESH_SHADER = features_7.MeshShaderTier >= D3D12_MESH_SHADER_TIER_1;
+		
 		// Create common indirect command signatures:
 
 		D3D12_COMMAND_SIGNATURE_DESC cmd_desc = {};
@@ -2200,6 +2247,18 @@ using namespace DX12_Internal;
 		cmd_desc.pArgumentDescs = drawIndexedInstancedArgs;
 		hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&drawIndexedInstancedIndirectCommandSignature));
 		assert(SUCCEEDED(hr));
+
+		if (MESH_SHADER)
+		{
+			D3D12_INDIRECT_ARGUMENT_DESC dispatchMeshArgs[1];
+			dispatchMeshArgs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
+
+			cmd_desc.ByteStride = sizeof(IndirectDispatchArgs);
+			cmd_desc.NumArgumentDescs = 1;
+			cmd_desc.pArgumentDescs = dispatchMeshArgs;
+			hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&dispatchMeshIndirectCommandSignature));
+			assert(SUCCEEDED(hr));
+		}
 
 		// GPU Queries:
 		{
@@ -2766,7 +2825,7 @@ using namespace DX12_Internal;
 			hr = container_reflection->FindFirstPartKind('LIXD', &shaderIdx); // Say 'DXIL' in Little-Endian
 			assert(SUCCEEDED(hr));
 
-			auto instert_descriptor = [&](const D3D12_SHADER_INPUT_BIND_DESC& desc)
+			auto insert_descriptor = [&](const D3D12_SHADER_INPUT_BIND_DESC& desc)
 			{
 				if (desc.Type == D3D_SIT_SAMPLER)
 				{
@@ -2837,7 +2896,7 @@ using namespace DX12_Internal;
 						D3D12_SHADER_INPUT_BIND_DESC desc;
 						hr = function_reflection->GetResourceBindingDesc(i, &desc);
 						assert(SUCCEEDED(hr));
-						instert_descriptor(desc);
+						insert_descriptor(desc);
 					}
 				}
 			}
@@ -2856,7 +2915,7 @@ using namespace DX12_Internal;
 					D3D12_SHADER_INPUT_BIND_DESC desc;
 					hr = reflection->GetResourceBindingDesc(i, &desc);
 					assert(SUCCEEDED(hr));
-					instert_descriptor(desc);
+					insert_descriptor(desc);
 				}
 			}
 #endif // PLATFORM_UWP
@@ -2906,12 +2965,20 @@ using namespace DX12_Internal;
 
 				if (stage == CS)
 				{
-					D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {};
-					desc.CS.pShaderBytecode = pShader->code.data();
-					desc.CS.BytecodeLength = pShader->code.size();
-					desc.pRootSignature = internal_state->rootSignature.Get();
+					struct PSO_STREAM
+					{
+						CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
+						CD3DX12_PIPELINE_STATE_STREAM_CS CS;
+					} stream;
 
-					hr = device->CreateComputePipelineState(&desc, IID_PPV_ARGS(&internal_state->resource));
+					stream.pRootSignature = internal_state->rootSignature.Get();
+					stream.CS = { pShader->code.data(), pShader->code.size() };
+
+					D3D12_PIPELINE_STATE_STREAM_DESC streamDesc = {};
+					streamDesc.pPipelineStateSubobjectStream = &stream;
+					streamDesc.SizeInBytes = sizeof(stream);
+
+					hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&internal_state->resource));
 					assert(SUCCEEDED(hr));
 				}
 			}
@@ -3021,6 +3088,8 @@ using namespace DX12_Internal;
 		pso->desc = *pDesc;
 
 		pso->hash = 0;
+		wiHelper::hash_combine(pso->hash, pDesc->ms);
+		wiHelper::hash_combine(pso->hash, pDesc->as);
 		wiHelper::hash_combine(pso->hash, pDesc->vs);
 		wiHelper::hash_combine(pso->hash, pDesc->ps);
 		wiHelper::hash_combine(pso->hash, pDesc->hs);
@@ -3092,6 +3161,8 @@ using namespace DX12_Internal;
 				}
 			};
 
+			insert_shader(pDesc->ms);
+			insert_shader(pDesc->as);
 			insert_shader(pDesc->vs);
 			insert_shader(pDesc->hs);
 			insert_shader(pDesc->ds);
@@ -5175,6 +5246,17 @@ using namespace DX12_Internal;
 		predispatch(cmd);
 		auto internal_state = to_internal(args);
 		GetDirectCommandList(cmd)->ExecuteIndirect(dispatchIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
+	}
+	void GraphicsDevice_DX12::DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
+	{
+		predraw(cmd);
+		GetDirectCommandList(cmd)->DispatchMesh(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+	}
+	void GraphicsDevice_DX12::DispatchMeshIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
+	{
+		predraw(cmd);
+		auto internal_state = to_internal(args);
+		GetDirectCommandList(cmd)->ExecuteIndirect(dispatchMeshIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
 	}
 	void GraphicsDevice_DX12::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 	{

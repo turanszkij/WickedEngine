@@ -61,11 +61,13 @@ namespace wiGraphics
 		VkPhysicalDeviceVulkan11Properties device_properties_1_1 = {};
 		VkPhysicalDeviceVulkan12Properties device_properties_1_2 = {};
 		VkPhysicalDeviceRayTracingPropertiesKHR raytracing_properties = {};
+		VkPhysicalDeviceMeshShaderPropertiesNV mesh_shader_properties = {};
 
 		VkPhysicalDeviceFeatures2 device_features2 = {};
 		VkPhysicalDeviceVulkan11Features features_1_1 = {};
 		VkPhysicalDeviceVulkan12Features features_1_2 = {};
 		VkPhysicalDeviceRayTracingFeaturesKHR raytracing_features = {};
+		VkPhysicalDeviceMeshShaderFeaturesNV mesh_shader_features = {};
 
 		VkSemaphore imageAvailableSemaphore = VK_NULL_HANDLE;
 		VkSemaphore renderFinishedSemaphore = VK_NULL_HANDLE;
@@ -205,6 +207,9 @@ namespace wiGraphics
 		static PFN_vkCmdBuildAccelerationStructureKHR cmdBuildAccelerationStructureKHR;
 		static PFN_vkCmdTraceRaysKHR cmdTraceRaysKHR;
 
+		static PFN_vkCmdDrawMeshTasksNV cmdDrawMeshTasksNV;
+		static PFN_vkCmdDrawMeshTasksIndirectNV cmdDrawMeshTasksIndirectNV;
+
 	public:
 		GraphicsDevice_Vulkan(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false);
 		virtual ~GraphicsDevice_Vulkan();
@@ -281,6 +286,8 @@ namespace wiGraphics
 		void DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
 		void Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) override;
 		void DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
+		void DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) override;
+		void DispatchMeshIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
 		void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) override;
 		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) override;
 		void QueryBegin(const GPUQuery *query, CommandList cmd) override;

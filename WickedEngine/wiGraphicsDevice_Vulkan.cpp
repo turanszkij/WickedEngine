@@ -43,6 +43,9 @@ namespace wiGraphics
 	PFN_vkCmdBuildAccelerationStructureKHR GraphicsDevice_Vulkan::cmdBuildAccelerationStructureKHR = nullptr;
 	PFN_vkCmdTraceRaysKHR GraphicsDevice_Vulkan::cmdTraceRaysKHR = nullptr;
 
+	PFN_vkCmdDrawMeshTasksNV GraphicsDevice_Vulkan::cmdDrawMeshTasksNV = nullptr;
+	PFN_vkCmdDrawMeshTasksIndirectNV GraphicsDevice_Vulkan::cmdDrawMeshTasksIndirectNV = nullptr;
+
 namespace Vulkan_Internal
 {
 	// Converters:
@@ -455,6 +458,10 @@ namespace Vulkan_Internal
 	{
 		switch (value)
 		{
+		case wiGraphics::MS:
+			return VK_SHADER_STAGE_MESH_BIT_NV;
+		case wiGraphics::AS:
+			return VK_SHADER_STAGE_TASK_BIT_NV;
 		case wiGraphics::VS:
 			return VK_SHADER_STAGE_VERTEX_BIT;
 		case wiGraphics::HS:
@@ -1685,6 +1692,7 @@ using namespace Vulkan_Internal;
 				VkResult res;
 
 				VkGraphicsPipelineCreateInfo pipelineInfo = {};
+				//pipelineInfo.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
 				pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 				if (pso->desc.rootSignature == nullptr)
 				{
@@ -1702,6 +1710,14 @@ using namespace Vulkan_Internal;
 
 				uint32_t shaderStageCount = 0;
 				VkPipelineShaderStageCreateInfo shaderStages[SHADERSTAGE_COUNT - 1];
+				if (pso->desc.ms != nullptr && pso->desc.ms->IsValid())
+				{
+					shaderStages[shaderStageCount++] = to_internal(pso->desc.ms)->stageInfo;
+				}
+				if (pso->desc.as != nullptr && pso->desc.as->IsValid())
+				{
+					shaderStages[shaderStageCount++] = to_internal(pso->desc.as)->stageInfo;
+				}
 				if (pso->desc.vs != nullptr && pso->desc.vs->IsValid())
 				{
 					shaderStages[shaderStageCount++] = to_internal(pso->desc.vs)->stageInfo;
@@ -2254,10 +2270,12 @@ using namespace Vulkan_Internal;
 			device_properties_1_1.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
 			device_properties_1_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES;
 			raytracing_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_KHR;
+			mesh_shader_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
 
 			device_properties.pNext = &device_properties_1_1;
 			device_properties_1_1.pNext = &device_properties_1_2;
 			device_properties_1_2.pNext = &raytracing_properties;
+			raytracing_properties.pNext = &mesh_shader_properties;
 
 			for (const auto& device : devices) 
 			{
@@ -2330,6 +2348,20 @@ using namespace Vulkan_Internal;
 			}
 #endif // ENABLE_RAYTRACING_EXTENSION
 
+			mesh_shader_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
+			if (checkDeviceExtensionSupport(VK_NV_MESH_SHADER_EXTENSION_NAME, available_deviceExtensions))
+			{
+				enabled_deviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
+				if (RAYTRACING)
+				{
+					raytracing_features.pNext = &mesh_shader_features;
+				}
+				else
+				{
+					features_1_2.pNext = &mesh_shader_features;
+				}
+			}
+
 			vkGetPhysicalDeviceFeatures2(physicalDevice, &device_features2);
 
 			assert(device_features2.features.imageCubeArray == VK_TRUE);
@@ -2346,6 +2378,12 @@ using namespace Vulkan_Internal;
 			if (RAYTRACING)
 			{
 				assert(features_1_2.bufferDeviceAddress == VK_TRUE);
+			}
+
+			if (mesh_shader_features.meshShader == VK_TRUE && mesh_shader_features.taskShader == VK_TRUE)
+			{
+				// Currently, creating pipeline state with mesh shader crashes nvidia driver for me, so disable until solved
+				//MESH_SHADER = true;
 			}
 			
 			VkFormatProperties formatProperties = { 0 };
@@ -2412,6 +2450,12 @@ using namespace Vulkan_Internal;
 			getRayTracingShaderGroupHandlesKHR = (PFN_vkGetRayTracingShaderGroupHandlesKHR)vkGetDeviceProcAddr(device, "vkGetRayTracingShaderGroupHandlesKHR");
 			cmdBuildAccelerationStructureKHR = (PFN_vkCmdBuildAccelerationStructureKHR)vkGetDeviceProcAddr(device, "vkCmdBuildAccelerationStructureKHR");
 			cmdTraceRaysKHR = (PFN_vkCmdTraceRaysKHR)vkGetDeviceProcAddr(device, "vkCmdTraceRaysKHR");
+		}
+
+		if (MESH_SHADER)
+		{
+			cmdDrawMeshTasksNV = (PFN_vkCmdDrawMeshTasksNV)vkGetDeviceProcAddr(device, "vkCmdDrawMeshTasksNV");
+			cmdDrawMeshTasksIndirectNV = (PFN_vkCmdDrawMeshTasksIndirectNV)vkGetDeviceProcAddr(device, "vkCmdDrawMeshTasksIndirectNV");
 		}
 
 		CreateBackBufferResources();
@@ -3558,6 +3602,12 @@ using namespace Vulkan_Internal;
 		internal_state->stageInfo.pName = "main";
 		switch (stage)
 		{
+		case wiGraphics::MS:
+			internal_state->stageInfo.stage = VK_SHADER_STAGE_MESH_BIT_NV;
+			break;
+		case wiGraphics::AS:
+			internal_state->stageInfo.stage = VK_SHADER_STAGE_TASK_BIT_NV;
+			break;
 		case wiGraphics::VS:
 			internal_state->stageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
 			break;
@@ -4059,6 +4109,8 @@ using namespace Vulkan_Internal;
 		pso->desc = *pDesc;
 
 		pso->hash = 0;
+		wiHelper::hash_combine(pso->hash, pDesc->ms);
+		wiHelper::hash_combine(pso->hash, pDesc->as);
 		wiHelper::hash_combine(pso->hash, pDesc->vs);
 		wiHelper::hash_combine(pso->hash, pDesc->ps);
 		wiHelper::hash_combine(pso->hash, pDesc->hs);
@@ -4112,6 +4164,8 @@ using namespace Vulkan_Internal;
 				}
 			};
 
+			insert_shader(pDesc->ms);
+			insert_shader(pDesc->as);
 			insert_shader(pDesc->vs);
 			insert_shader(pDesc->hs);
 			insert_shader(pDesc->ds);
@@ -6001,6 +6055,17 @@ using namespace Vulkan_Internal;
 		predispatch(cmd);
 		auto internal_state = to_internal(args);
 		vkCmdDispatchIndirect(GetDirectCommandList(cmd), internal_state->resource, (VkDeviceSize)args_offset);
+	}
+	void GraphicsDevice_Vulkan::DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
+	{
+		predraw(cmd);
+		cmdDrawMeshTasksNV(GetDirectCommandList(cmd), threadGroupCountX * threadGroupCountY * threadGroupCountZ, 0);
+	}
+	void GraphicsDevice_Vulkan::DispatchMeshIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
+	{
+		predraw(cmd);
+		auto internal_state = to_internal(args);
+		cmdDrawMeshTasksIndirectNV(GetDirectCommandList(cmd), internal_state->resource, (VkDeviceSize)args_offset,1,sizeof(IndirectDispatchArgs));
 	}
 	void GraphicsDevice_Vulkan::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 	{

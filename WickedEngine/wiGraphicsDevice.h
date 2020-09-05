@@ -31,6 +31,7 @@ namespace wiGraphics
 		bool DESCRIPTOR_MANAGEMENT = false;
 		bool VARIABLE_RATE_SHADING = false;
 		bool VARIABLE_RATE_SHADING_TIER2 = false;
+		bool MESH_SHADER = false;
 		size_t SHADER_IDENTIFIER_SIZE = 0;
 		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
 		uint32_t VARIABLE_RATE_SHADING_TILE_SIZE = 0;
@@ -107,6 +108,7 @@ namespace wiGraphics
 			GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT,
 			GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING,
 			GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2,
+			GRAPHICSDEVICE_CAPABILITY_MESH_SHADER,
 			GRAPHICSDEVICE_CAPABILITY_COUNT,
 		};
 		bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const;
@@ -159,6 +161,8 @@ namespace wiGraphics
 		virtual void DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) = 0;
 		virtual void Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) = 0;
 		virtual void DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) = 0;
+		virtual void DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) {}
+		virtual void DispatchMeshIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) {}
 		virtual void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) = 0;
 		virtual void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) = 0;
 		virtual void QueryBegin(const GPUQuery *query, CommandList cmd) = 0;

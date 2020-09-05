@@ -19,13 +19,15 @@ namespace wiGraphics
 
 	enum SHADERSTAGE
 	{
+		MS,
+		AS,
 		VS,
 		HS,
 		DS,
 		GS,
 		PS,
 		CS,
-		SHADERSTAGE_COUNT
+		SHADERSTAGE_COUNT,
 	};
 	enum PRIMITIVETOPOLOGY
 	{
@@ -479,6 +481,8 @@ namespace wiGraphics
 		const Shader*				hs = nullptr;
 		const Shader*				ds = nullptr;
 		const Shader*				gs = nullptr;
+		const Shader*				ms = nullptr;
+		const Shader*				as = nullptr;
 		const BlendState*			bs = nullptr;
 		const RasterizerState*		rs = nullptr;
 		const DepthStencilState*	dss = nullptr;

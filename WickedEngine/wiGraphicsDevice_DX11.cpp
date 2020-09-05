@@ -2893,6 +2893,9 @@ void GraphicsDevice_DX11::BindSampler(SHADERSTAGE stage, const Sampler* sampler,
 		case wiGraphics::CS:
 			deviceContexts[cmd]->CSSetSamplers(slot, 1, &SAM);
 			break;
+		case MS:
+		case AS:
+			break;
 		default:
 			assert(0);
 			break;
@@ -2921,6 +2924,9 @@ void GraphicsDevice_DX11::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer*
 		break;
 	case wiGraphics::CS:
 		deviceContexts[cmd]->CSSetConstantBuffers(slot, 1, &res);
+		break;
+	case MS:
+	case AS:
 		break;
 	default:
 		assert(0);

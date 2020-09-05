@@ -37,6 +37,8 @@ bool GraphicsDevice::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const
 		return VARIABLE_RATE_SHADING;
 	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2:
 		return VARIABLE_RATE_SHADING_TIER2;
+	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_MESH_SHADER:
+		return MESH_SHADER;
 	}
 	return false;
 }
