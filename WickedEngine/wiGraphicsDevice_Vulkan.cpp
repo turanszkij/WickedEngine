@@ -2381,7 +2381,7 @@ using namespace Vulkan_Internal;
 			if (mesh_shader_features.meshShader == VK_TRUE && mesh_shader_features.taskShader == VK_TRUE)
 			{
 				// Currently, creating pipeline state with mesh shader crashes nvidia driver for me, so disable until solved
-				MESH_SHADER = true;
+				//MESH_SHADER = true;
 			}
 			
 			VkFormatProperties formatProperties = { 0 };
