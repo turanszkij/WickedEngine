@@ -1689,8 +1689,6 @@ using namespace Vulkan_Internal;
 
 			if (pipeline == VK_NULL_HANDLE)
 			{
-				VkResult res;
-
 				VkGraphicsPipelineCreateInfo pipelineInfo = {};
 				//pipelineInfo.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
 				pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -2058,7 +2056,7 @@ using namespace Vulkan_Internal;
 
 				pipelineInfo.pDynamicState = &dynamicState;
 
-				res = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
+				VkResult res = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
 				assert(res == VK_SUCCESS);
 
 				pipelines_worker[cmd].push_back(std::make_pair(pipeline_hash, pipeline));
@@ -2383,7 +2381,7 @@ using namespace Vulkan_Internal;
 			if (mesh_shader_features.meshShader == VK_TRUE && mesh_shader_features.taskShader == VK_TRUE)
 			{
 				// Currently, creating pipeline state with mesh shader crashes nvidia driver for me, so disable until solved
-				//MESH_SHADER = true;
+				MESH_SHADER = true;
 			}
 			
 			VkFormatProperties formatProperties = { 0 };

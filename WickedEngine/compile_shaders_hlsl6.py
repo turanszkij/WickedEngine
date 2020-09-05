@@ -49,8 +49,8 @@ for item in root.iter():
 
             cmd += "_6_5 "
             
-            cmd += "-D RAYTRACING_INLINE "
-            cmd += "-D RAYTRACING_TIER_1_1 "
+            #cmd += "-D RAYTRACING_INLINE "
+            #cmd += "-D RAYTRACING_TIER_1_1 "
             
             cmd += "-D HLSL6 "
             
