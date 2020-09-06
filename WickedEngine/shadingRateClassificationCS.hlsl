@@ -16,7 +16,7 @@ void main( uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupInde
 {
 	if (groupIndex == 0)
 	{
-		tile_rate = 0;
+		tile_rate = 0xFF;
 	}
 	GroupMemoryBarrierWithGroupSync();
 
@@ -36,56 +36,35 @@ void main( uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupInde
 		const float2 velocity = abs(texture_gbuffer1[pixel].zw);
 		const float magnitude = max(velocity.x, velocity.y);
 
-		uint bit_rate = 0;
+		uint rate = 0;
 		if (magnitude > 0.1f)
 		{
 			// least detailed
-			bit_rate = 1 << 0;
+			rate = SHADING_RATE_4X4;
 		}
 		else if (magnitude > 0.01f)
 		{
-			bit_rate = 1 << 1;
+			rate = SHADING_RATE_4X2;
 		}
 		else if (magnitude > 0.005f)
 		{
-			bit_rate = 1 << 2;
+			rate = SHADING_RATE_2X2;
 		}
 		else if (magnitude > 0.001f)
 		{
-			bit_rate = 1 << 3;
+			rate = SHADING_RATE_2X1;
 		}
 		else
 		{
 			// most detailed
-			bit_rate = 1 << 4;
+			rate = SHADING_RATE_1X1;
 		}
-		InterlockedOr(tile_rate, bit_rate);
+		InterlockedMin(tile_rate, rate);
 	}
 
 	GroupMemoryBarrierWithGroupSync();
 
-	uint firstbit = firstbithigh(tile_rate);
-	uint rate = 0;
-	switch (firstbit)
-	{
-	case 0:
-		rate = SHADING_RATE_4X4;
-		break;
-	case 1:
-		rate = SHADING_RATE_2X4;
-		break;
-	case 2:
-		rate = SHADING_RATE_2X2;
-		break;
-	case 3:
-		rate = SHADING_RATE_1X2;
-		break;
-	case 4:
-	default:
-		rate = SHADING_RATE_1X1;
-		break;
-	}
-
+	uint rate = tile_rate;
 	if (groupIndex == 0)
 	{
 		output[tile] = rate;
