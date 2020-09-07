@@ -3475,7 +3475,10 @@ void RenderMeshes(
 				uint32_t stencilRef = CombineStencilrefs(engineStencilRef, userStencilRef);
 				device->BindStencilRef(stencilRef, cmd);
 
-				device->BindShadingRate(material.shadingRate, cmd);
+				if (renderPass != RENDERPASS_DEPTHONLY) // depth only alpha test will be full res
+				{
+					device->BindShadingRate(material.shadingRate, cmd);
+				}
 
 				device->BindPipelineState(pso, cmd);
 
