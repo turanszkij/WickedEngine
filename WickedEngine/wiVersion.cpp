@@ -9,7 +9,7 @@ namespace wiVersion
 	// minor features, major updates, breaking API changes
 	const int minor = 47;
 	// minor bug fixes, alterations, refactors, updates
-	const int revision = 33;
+	const int revision = 34;
 
 	const std::string version_string = std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(revision);
 
