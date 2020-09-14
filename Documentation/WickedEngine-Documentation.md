@@ -182,7 +182,7 @@ Calls Render for the active RenderPath and wakes up scripts that are waiting for
 Calls Compose for the active RenderPath
 
 ### RenderPath
-[[Header]](../WickedEngine/RenderPath.h) [[Cpp]](../WickedEngine/RenderPath.cpp)
+[[Header]](../WickedEngine/RenderPath.h)
 This is an empty base class that can be activated with a MainComponent. It calls its Start(), Update(), FixedUpdate(), Render(), Compose(), Stop() functions as needed. Override this to perform custom gameplay or rendering logic. <br/>
 The order in which the functions are executed every frame: <br/>
 1. FixedUpdate() <br/>
@@ -497,7 +497,7 @@ Other than this, resources like `Texture` can have different subresources, so an
 ```cpp
 Texture myTexture;
 // after texture was created, etc:
-device->BindResource(PS, myTexture, my_texture_bind_slot, 42);
+device->BindResource(PS, myTexture, my_texture_bind_slot, cmd, 42);
 ```
 By default, the `subresource` parameter is `-1`, which means that the entire resource will be bound. For more information about subresources, see the [Subresources](#subresources) section.
 
@@ -545,12 +545,23 @@ Other subresources can be create with the `GraphicsDevice::CreateSubresource()` 
 The pipeline states are subject to shader compilations. Shader compilation will happen when a pipeline state is bound inside a render pass for the first time. This is required because the render target formats are necessary information for compilation, but they are not part of the pipeline state description. This choice was made for increased flexibility of defining pipeline states. However, unlike APIs where state subsets (like RasterizerDesc, or BlendStateDesc) can be bound individually, the grouping of states is more optimal regarding CPU time, because state hashes are computed only once for the whole pipeline state at creation time, as opposed to binding time for each individual state. This approach is also less prone to user error when the developer might forget setting any subset of state and the leftover state from previous render passes are incorrect. 
 
 Shaders still need to be created with `GraphicsDevice::CreateShader()` in a similar to CreateTexture(), etc. This could result in shader compilation/hashing in some graphics APIs like DirectX 11. The CreateShader() function expects a `wiGraphics::SHADERSTAGE` enum value which will define the type of shader:
+
+- `MS`: Mesh Shader
+- `AS`: Amplification Shader, or Task Shader
 - `VS`: Vertex Shader
 - `HS`: Hull Shader, or Tessellation Control Shader
 - `DS`: Domain Shader, or Tessellation Evaluation Shader
 - `GS`: Geometry Shader
 - `PS`: Pixel Shader
 - `CS`: Compute Shader
+- `SHADERSTAGE_COUNT`: Invalid Shader. This also denotes a library of shaders (usable for raytracing). As an other feature, this can be used to enumerate through all shader stages like:
+
+```cpp
+for(int i = 0; i < SHADERSTAGE_COUNT; ++i)
+{
+	device->BindResource((SHADERSTAGE)i, myTexture, 5, cmd); // Binds myTexture to slot 5 for all stages
+}
+```
 
 Depending on the graphics device implementation, the shader code must be different format. For example, DirectX expects HLSL shaders, Vulkan expects SPIR-V shaders. The engine can only use precompiled shader bytecodes, shader compilation from high level source code is not supported. Usually shaders are compiled into bytecode and saved to files (with .cso extension) by Visual Studio if they are included in the project. These files can be loaded to memory and provided as input buffers to the CreateShader() function.
 
