@@ -446,7 +446,7 @@ Functions like `CreateTexture()`, `CreateBuffer()`, etc. can be used to create c
 Resources will be destroyed automatically by the graphics device when they are no longer used.
 
 ##### Work submission
-Rendering commands that expect a `CommandList` as a parameter are not executed immediately. They will be recorded into command lists and submitted to the GPU for execution upon calling the `PresentEnd()` function. The `CommandList` is a simple handle that associates rendering commands to a CPU execution timeline. The `CommandList` is not thread safe, so every `CommandList` can be used by a single CPU thread at a time to record commands. In a multithreading scenario, each CPU thread should have its own `CommandList`. `CommandList`s can be retrieved from the [GraphicsDevice](#graphicsdevice) by calling `GraphicsDevice::BeginCommandList()` that will return a `CommandList` handle that is free to be used from that point by the calling thread. All such handles will be in use until `PresentEnd()` was called, where GPU submission takes place. The command lists will be submitted in the order they were retrieved with `GraphicsDevice::BeginCommandList()`. The order of submission correlates with the order of actual GPU execution. For example:
+Rendering commands that expect a `CommandList` as a parameter are not executed immediately. They will be recorded into command lists and submitted to the GPU for execution upon calling the `PresentEnd()` function. The `CommandList` is a simple handle that associates rendering commands to a CPU execution timeline. The `CommandList` is not thread safe, so every `CommandList` can be used by a single CPU thread at a time to record commands. In a multithreading scenario, each CPU thread should have its own `CommandList`. `CommandList`s can be retrieved from the [GraphicsDevice](#graphicsdevice) by calling `GraphicsDevice::BeginCommandList()` that will return a `CommandList` handle that is free to be used from that point by the calling thread. All such handles will be in use until `SubmitCommandLists()` or `PresentEnd()` was called, where GPU submission takes place. The command lists will be submitted in the order they were retrieved with `GraphicsDevice::BeginCommandList()`. The order of submission correlates with the order of actual GPU execution. For example:
 
 ```cpp
 CommandList cmd1 = device->BeginCommandList();
@@ -463,7 +463,22 @@ device->PresentBegin(cmd_present);
 device->PresentEnd(cmd_present); // CPU submits work for GPU
 // The GPU will execute the Render_Shadowmaps() commands first, then the Read_Shadowmaps() commands second
 // The GPU will execute the commands between PresentBegin() and PresentEnd() last.
+// PresentEnd displays the final image (render command executed between PresentBegin and PresentEnd) to the screen
 ```
+
+In specific circumstances, when outputting the final image to the screen is not immediately required, the `SubmitCommandLists()` option can also be used to submit and execute GPU work:
+
+```cpp
+CommandList cmd1 = device->BeginCommandList();
+CommandList cmd2 = device->BeginCommandList();
+
+// Record something with command lists...
+
+device->SubmitCommandLists(); // CPU submits work for GPU
+// The GPU will execute commands recorded with cmd1, then cmd2
+```
+
+When submitting command lists with `SubmitCommandLists()` or `PresentEnd()`, the CPU can be blocked in cases when there is too much GPU work submitted already that didn't finish.
 
 Furthermore, the `BeginCommandList()` is thread safe, so the user can call it from worker threads if ordering between command lists is not a requirement (such as when they are producing workloads that are independent of each other).
 
