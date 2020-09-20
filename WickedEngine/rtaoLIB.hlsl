@@ -112,7 +112,7 @@ void RTAO_AnyHit(inout RayPayload payload, in MyAttributes attr)
     }
     else
     {
-        payload.color += 1 - baseColor.a;
+        IgnoreHit();
     }
 #endif // RAYTRACING_GEOMETRYINDEX
 }
