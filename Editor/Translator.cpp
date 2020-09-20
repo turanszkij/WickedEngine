@@ -617,7 +617,11 @@ void Translator::PostTranslate()
 			}
 
 			// Restore worldPrev, so velocity buffer is correctly updated:
-			transform_selected->world = worldPrev;
+			//	(Only when dragging, otherwise if it's released, we want to record the matrix properly for undo)
+			if (dragging)
+			{
+				transform_selected->world = worldPrev;
+			}
 		}
 	}
 }
