@@ -85,9 +85,9 @@ void RTAO_AnyHit(inout RayPayload payload, in MyAttributes attr)
     uint geometryIndex = GeometryIndex(); // requires tier_1_1 GeometryIndex feature!!
     uint descriptorIndex = geometryOffset + geometryIndex;
     ShaderMaterial material = subsets_material[descriptorIndex];
-    uint i0 = subsets_indexBuffer[descriptorIndex][primitiveIndex / 3 + 0];
-    uint i1 = subsets_indexBuffer[descriptorIndex][primitiveIndex / 3 + 1];
-    uint i2 = subsets_indexBuffer[descriptorIndex][primitiveIndex / 3 + 2];
+    uint i0 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 0];
+    uint i1 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 1];
+    uint i2 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 2];
     float2 uv0, uv1, uv2;
     if (material.uvset_baseColorMap == 0)
     {
