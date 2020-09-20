@@ -10467,6 +10467,9 @@ void Postprocess_RTAO(
 		rtdesc.max_attribute_size_in_bytes = sizeof(XMFLOAT2); // bary
 		success = device->CreateRaytracingPipelineState(&rtdesc, &RTPSO);
 		assert(success);
+
+		success = LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_RTAO_TEMPORAL], "rtao_temporalCS.cso");
+		assert(success);
 	};
 
 	static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, load_shaders);
@@ -10476,8 +10479,8 @@ void Postprocess_RTAO(
 	}
 
 	static TextureDesc saved_desc;
-	static Texture temp0;
-	static Texture temp1;
+	static Texture temp;
+	static Texture temporal[2];
 
 	const TextureDesc& lineardepth_desc = lineardepth.GetDesc();
 	if (saved_desc.Width != lineardepth_desc.Width || saved_desc.Height != lineardepth_desc.Height)
@@ -10489,13 +10492,16 @@ void Postprocess_RTAO(
 		desc.Format = FORMAT_R8_UNORM;
 		desc.Width = (desc.Width + 1) / 2;
 		desc.Height = (desc.Height + 1) / 2;
-		device->CreateTexture(&desc, nullptr, &temp0);
-		device->SetName(&temp0, "rtao_temp0");
-		device->CreateTexture(&desc, nullptr, &temp1);
-		device->SetName(&temp1, "rtao_temp1");
+		device->CreateTexture(&desc, nullptr, &temp);
+		device->SetName(&temp, "rtao_temp");
+
+		device->CreateTexture(&desc, nullptr, &temporal[0]);
+		device->SetName(&temporal[0], "rtao_temporal[0]");
+		device->CreateTexture(&desc, nullptr, &temporal[1]);
+		device->SetName(&temporal[1], "rtao_temporal[1]");
 	}
 
-	const TextureDesc& desc = temp0.GetDesc();
+	const TextureDesc& desc = temp.GetDesc();
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width;
@@ -10505,13 +10511,14 @@ void Postprocess_RTAO(
 	cb.rtao_range = range;
 	cb.rtao_samplecount = (float)samplecount;
 	cb.rtao_power = power;
+	cb.rtao_seed = renderTime;
 	GraphicsDevice::GPUAllocation cb_alloc = device->AllocateGPU(sizeof(cb), cmd);
 	memcpy(cb_alloc.data, &cb, sizeof(cb));
 
 	device->BindRaytracingPipelineState(&RTPSO, cmd);
 	device->WriteDescriptor(&descriptorTable, 0, 0, &depthbuffer);
 	device->WriteDescriptor(&descriptorTable, 1, 0, &scene.TLAS);
-	device->WriteDescriptor(&descriptorTable, 2, 0, &temp0);
+	device->WriteDescriptor(&descriptorTable, 2, 0, &temp);
 	device->BindDescriptorTable(RAYTRACING, 0, &descriptorTable, cmd);
 	device->BindDescriptorTable(RAYTRACING, 1, &scene.descriptorTable, cmd);
 	device->BindRootDescriptor(RAYTRACING, 0, &constantBuffers[CBTYPE_CAMERA], 0, cmd);
@@ -10551,8 +10558,41 @@ void Postprocess_RTAO(
 	};
 	device->Barrier(barriers, arraysize(barriers), cmd);
 
-	Postprocess_Blur_Bilateral(temp0, lineardepth, temp1, temp0, cmd, 1.2f, -1, -1, true);
-	Postprocess_Upsample_Bilateral(temp0, lineardepth, output, cmd);
+	int temporal_output = device->GetFrameCount() % 2;
+	int temporal_history = 1 - temporal_output;
+
+	// Temporal pass:
+	{
+		device->EventBegin("Temporal pass", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_RTAO_TEMPORAL], cmd);
+
+		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(CS, &temp, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
+
+		const GPUResource* uavs[] = {
+			&temporal[temporal_output],
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(temporal[temporal_output].GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(temporal[temporal_output].GetDesc().Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
+
+	Postprocess_Blur_Bilateral(temporal[temporal_output], lineardepth, temp, temporal[temporal_output], cmd, 1.2f, -1, -1, true);
+	Postprocess_Upsample_Bilateral(temporal[temporal_output], lineardepth, output, cmd);
 
 	wiProfiler::EndRange(prof_range);
 	device->EventEnd(cmd);
@@ -10702,7 +10742,6 @@ void Postprocess_SSR(
 		device->EventBegin("Temporal pass", cmd);
 		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_SSR_TEMPORAL], cmd);
 
-		device->BindResource(CS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(CS, &texture_resolve, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, &texture_temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);

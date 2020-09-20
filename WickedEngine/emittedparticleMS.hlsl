@@ -98,6 +98,10 @@ void main(
 		Out.P = mul(g_xCamera_InvV, float4(Out.pos.xyz, 1)).xyz;
 		Out.pos = mul(g_xCamera_Proj, Out.pos);
 
+#ifdef SPIRV
+		Out.pos.y = -Out.pos.y;
+#endif // SPIRV
+
 		Out.tex = float4(uv, uv2);
 		Out.size = size;
 		Out.color = (particle.color_mirror & 0x00FFFFFF) | (uint(opacity * 255.0f) << 24);

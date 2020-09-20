@@ -48,13 +48,12 @@ for item in root.iter():
             
             cmd += "_6_5 "
             
-            #cmd += "-D RAYTRACING_INLINE "
+            cmd += " -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso "
             
-            cmd += "-D SPIRV "
-            
-            cmd += " -spirv -fvk-use-dx-layout -flegacy-macro-expansion -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso "
-            
-            cmd += "-fspv-target-env=vulkan1.2 "
+            cmd += " -spirv "
+            cmd += " -fspv-target-env=vulkan1.2 "
+            cmd += " -fvk-use-dx-layout "
+            cmd += " -flegacy-macro-expansion "
             
             if profile == "VS" or profile == "DS" or profile == "GS":
                 cmd += " -fvk-invert-y "
@@ -63,6 +62,10 @@ for item in root.iter():
             cmd += " -fvk-t-shift 1000 all "
             cmd += " -fvk-u-shift 2000 all "
             cmd += " -fvk-s-shift 3000 all "
+            
+            cmd += " -D SPIRV "
+            #cmd += " -D RAYTRACING_INLINE "
+            #cmd += " -D RAYTRACING_GEOMETRYINDEX "
             
             print(cmd)
             

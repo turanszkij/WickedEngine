@@ -92,6 +92,7 @@ inline void ResolverAABB(Texture2D<float4> currentColor, SamplerState currentSam
 
 float2 CalculateCustomMotion(float depth, float2 uv)
 {
+    // Velocity buffer not good, because that contains object motion, and reflection is camera relative
     float4 sampleWorldPosition = float4(reconstructPosition(uv, depth, g_xCamera_InvVP), 1.0f);
     
     float4 thisClip = mul(g_xCamera_VP, sampleWorldPosition);
@@ -110,12 +111,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 {
     const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
     const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
-
-    const float3 worldNormal = decodeNormal(texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy);
-
-    //float4 raytraceSource = texture_raytrace.SampleLevel(sampler_point_clamp, uv, 0);
-    //float hitDepth = raytraceSource.z;
-    //float2 hitPixel = raytraceSource.xy;
     
     // Normal velocity seems to work best in most scenarios
     float2 customVelocity = CalculateCustomMotion(depth, uv);

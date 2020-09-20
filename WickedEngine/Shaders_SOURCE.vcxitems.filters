@@ -1019,5 +1019,8 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)shadingRateClassificationCS_DEBUG.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)rtao_temporalCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

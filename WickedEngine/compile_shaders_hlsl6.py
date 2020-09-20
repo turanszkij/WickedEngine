@@ -48,13 +48,14 @@ for item in root.iter():
                 cmd += "as"
 
             cmd += "_6_5 "
+
+            cmd += " -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso "
             
-            #cmd += "-D RAYTRACING_INLINE "
-            #cmd += "-D RAYTRACING_TIER_1_1 "
+            cmd += " -flegacy-macro-expansion "
             
-            cmd += "-D HLSL6 "
-            
-            cmd += "-flegacy-macro-expansion -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso "
+            cmd += " -D HLSL6 "
+            #cmd += " -D RAYTRACING_INLINE "
+            #cmd += " -D RAYTRACING_GEOMETRYINDEX "
             
             print(cmd)
             
