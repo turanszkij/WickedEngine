@@ -126,6 +126,9 @@
     <None Include="$(MSBuildThisFileDirectory)emittedparticleMS.hlsl">
       <Filter>MS</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)rtreflectionLIB.hlsl">
+      <Filter>LIB</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="$(MSBuildThisFileDirectory)hairparticle_simulateCS.hlsl">

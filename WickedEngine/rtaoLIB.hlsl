@@ -4,13 +4,11 @@
 
 RWTEXTURE2D(output, unorm float, 0);
 
-#ifdef RAYTRACING_GEOMETRYINDEX
 ConstantBuffer<ShaderMaterial> subsets_material[MAX_DESCRIPTOR_INDEXING] : register(b0, space1);
 Texture2D<float4> subsets_texture_baseColor[MAX_DESCRIPTOR_INDEXING] : register(t0, space1);
 Buffer<uint> subsets_indexBuffer[MAX_DESCRIPTOR_INDEXING] : register(t100000, space1);
 Buffer<float2> subsets_vertexBuffer_UV0[MAX_DESCRIPTOR_INDEXING] : register(t300000, space1);
 Buffer<float2> subsets_vertexBuffer_UV1[MAX_DESCRIPTOR_INDEXING] : register(t400000, space1);
-#endif // RAYTRACING_GEOMETRYINDEX
 
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
 struct RayPayload
@@ -49,18 +47,23 @@ void RTAO_Raygen()
     ray.TMax = rtao_range;
     ray.Origin = P + N * 0.1;
 
-    RayPayload payload = { 0 };
+    RayPayload payload;
+    payload.color = 0;
 
     for (uint i = 0; i < (uint)rtao_samplecount; ++i)
     {
         ray.Direction = SampleHemisphere_cos(N, seed, uv);
-        TraceRay(scene_acceleration_structure,
-#ifndef RAYTRACING_GEOMETRYINDEX // tier 1_0 method of alpha test without GeometryIndex() is not implemented yet
-            RAY_FLAG_FORCE_OPAQUE |
-            RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH |
-#endif // RAYTRACING_GEOMETRYINDEX
-            RAY_FLAG_SKIP_CLOSEST_HIT_SHADER
-            , ~0, 0, 1, 0, ray, payload);
+
+        TraceRay(
+            scene_acceleration_structure,         // AccelerationStructure
+            RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,     // RayFlags
+            ~0,                                   // InstanceInclusionMask
+            0,                                    // RayContributionToHitGroupIndex
+            0,                                    // MultiplierForGeomtryContributionToShaderIndex
+            0,                                    // MissShaderIndex
+            ray,                                  // Ray
+            payload                               // Payload
+        );
     }
     payload.color /= rtao_samplecount;
 
@@ -76,15 +79,23 @@ void RTAO_ClosestHit(inout RayPayload payload, in MyAttributes attr)
 [shader("anyhit")]
 void RTAO_AnyHit(inout RayPayload payload, in MyAttributes attr)
 {
-#ifdef RAYTRACING_GEOMETRYINDEX
+#ifndef SPIRV
     float u = attr.barycentrics.x;
     float v = attr.barycentrics.y;
     float w = 1 - u - v;
     uint primitiveIndex = PrimitiveIndex();
     uint geometryOffset = InstanceID();
+#ifdef RAYTRACING_GEOMETRYINDEX
     uint geometryIndex = GeometryIndex(); // requires tier_1_1 GeometryIndex feature!!
+#else
+    uint geometryIndex = 0;
+#endif // RAYTRACING_GEOMETRYINDEX
     uint descriptorIndex = geometryOffset + geometryIndex;
     ShaderMaterial material = subsets_material[descriptorIndex];
+    if (material.uvset_baseColorMap < 0)
+    {
+        AcceptHitAndEndSearch();
+    }
     uint i0 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 0];
     uint i1 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 1];
     uint i2 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 2];
@@ -103,10 +114,9 @@ void RTAO_AnyHit(inout RayPayload payload, in MyAttributes attr)
     }
 
     float2 uv = uv0 * w + uv1 * u + uv2 * v;
-    float4 baseColor = material.baseColor;
-    baseColor *= subsets_texture_baseColor[descriptorIndex].SampleLevel(sampler_point_clamp, uv, 0);
+    float alpha = subsets_texture_baseColor[descriptorIndex].SampleLevel(sampler_point_wrap, uv, 2).a;
 
-    if (baseColor.a > 0.9)
+    if (alpha > 0.9)
     {
         AcceptHitAndEndSearch();
     }
@@ -114,7 +124,7 @@ void RTAO_AnyHit(inout RayPayload payload, in MyAttributes attr)
     {
         IgnoreHit();
     }
-#endif // RAYTRACING_GEOMETRYINDEX
+#endif // SPIRV
 }
 
 [shader("miss")]

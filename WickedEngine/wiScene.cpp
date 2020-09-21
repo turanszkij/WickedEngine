@@ -1158,6 +1158,7 @@ namespace wiScene
 			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_MATERIAL] = { CONSTANTBUFFER, 0, MAX_DESCRIPTOR_INDEXING };
 			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_TEXTURE_BASECOLOR] = { TEXTURE2D, 0, MAX_DESCRIPTOR_INDEXING };
 			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_INDEXBUFFER] = { TYPEDBUFFER, MAX_DESCRIPTOR_INDEXING, MAX_DESCRIPTOR_INDEXING };
+			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_POSITION_NORMAL_WIND] = { RAWBUFFER, MAX_DESCRIPTOR_INDEXING * 2, MAX_DESCRIPTOR_INDEXING };
 			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_UV0] = { TYPEDBUFFER, MAX_DESCRIPTOR_INDEXING * 3, MAX_DESCRIPTOR_INDEXING };
 			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_UV1] = { TYPEDBUFFER, MAX_DESCRIPTOR_INDEXING * 4, MAX_DESCRIPTOR_INDEXING };
 
@@ -2173,6 +2174,12 @@ namespace wiScene
 							global_geometryIndex,
 							&mesh.indexBuffer,
 							-1, subset.indexOffset * mesh.GetIndexStride()
+						);
+						device->WriteDescriptor(
+							&descriptorTable,
+							DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_POSITION_NORMAL_WIND,
+							global_geometryIndex,
+							&mesh.vertexBuffer_POS
 						);
 						device->WriteDescriptor(
 							&descriptorTable,
