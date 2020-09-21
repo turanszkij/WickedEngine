@@ -243,6 +243,14 @@ namespace wiRenderer
 		uint32_t samplecount = 16,
 		float power = 2.0f
 	);
+	void Postprocess_RTReflection(
+		const wiGraphics::Texture& depthbuffer,
+		const wiGraphics::Texture& gbuffer1,
+		const wiGraphics::Texture& gbuffer2,
+		const wiGraphics::Texture& output,
+		wiGraphics::CommandList cmd,
+		float range = 1000.0f
+	);
 	void Postprocess_SSR(
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& depthbuffer,

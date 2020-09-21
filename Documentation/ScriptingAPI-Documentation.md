@@ -640,6 +640,7 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - AO_MSAO : int  -- enable multi scale screen space ambient occlusion (use in SetAO() function)
 - SetHBAOEnabled(bool value)
 - SetSSREnabled(bool value)
+- SetRaytracedReflectionsEnabled(bool value)
 - SetShadowsEnabled(bool value)
 - SetReflectionsEnabled(bool value)
 - SetFXAAEnabled(bool value)

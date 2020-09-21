@@ -141,6 +141,17 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 	});
 	ppWindow->AddWidget(ssrCheckBox);
 
+	ssrCheckBox = new wiCheckBox("Ray Traced Reflections: ");
+	ssrCheckBox->SetTooltip("Enable Ray Traced Reflections. Only if GPU supports raytracing.");
+	ssrCheckBox->SetScriptTip("RenderPath3D::SetRaytracedReflectionsEnabled(bool value)");
+	ssrCheckBox->SetPos(XMFLOAT2(x + 200, y));
+	ssrCheckBox->SetCheck(editor->renderPath->getRaytracedReflectionEnabled());
+	ssrCheckBox->OnClick([=](wiEventArgs args) {
+		editor->renderPath->setRaytracedReflectionsEnabled(args.bValue);
+		});
+	ppWindow->AddWidget(ssrCheckBox);
+	ssrCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING));
+
 	sssCheckBox = new wiCheckBox("SSS: ");
 	sssCheckBox->SetTooltip("Enable Subsurface Scattering. (Deferred only for now)");
 	sssCheckBox->SetScriptTip("RenderPath3D::SetSSSEnabled(bool value)");

@@ -38,6 +38,7 @@ private:
 	AO ao = AO_DISABLED;
 	bool fxaaEnabled = false;
 	bool ssrEnabled = false;
+	bool raytracedReflectionsEnabled = false;
 	bool reflectionsEnabled = true;
 	bool shadowsEnabled = true;
 	bool bloomEnabled = true;
@@ -145,6 +146,7 @@ public:
 	constexpr bool getAOEnabled() const { return ao != AO_DISABLED; }
 	constexpr AO getAO() const { return ao; }
 	constexpr bool getSSREnabled() const { return ssrEnabled; }
+	constexpr bool getRaytracedReflectionEnabled() const { return raytracedReflectionsEnabled; }
 	constexpr bool getShadowsEnabled() const { return shadowsEnabled; }
 	constexpr bool getReflectionsEnabled() const { return reflectionsEnabled; }
 	constexpr bool getFXAAEnabled() const { return fxaaEnabled; }
@@ -184,6 +186,7 @@ public:
 
 	constexpr void setAO(AO value) { ao = value; }
 	constexpr void setSSREnabled(bool value){ ssrEnabled = value; }
+	constexpr void setRaytracedReflectionsEnabled(bool value){ raytracedReflectionsEnabled = value; }
 	constexpr void setShadowsEnabled(bool value){ shadowsEnabled = value; }
 	constexpr void setReflectionsEnabled(bool value){ reflectionsEnabled = value; }
 	constexpr void setFXAAEnabled(bool value){ fxaaEnabled = value; }

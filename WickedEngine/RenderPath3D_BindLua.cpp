@@ -24,6 +24,7 @@ Luna<RenderPath3D_BindLua>::FunctionType RenderPath3D_BindLua::methods[] = {
 
 	lunamethod(RenderPath3D_BindLua, SetAO),
 	lunamethod(RenderPath3D_BindLua, SetSSREnabled),
+	lunamethod(RenderPath3D_BindLua, SetRaytracedReflectionsEnabled),
 	lunamethod(RenderPath3D_BindLua, SetShadowsEnabled),
 	lunamethod(RenderPath3D_BindLua, SetReflectionsEnabled),
 	lunamethod(RenderPath3D_BindLua, SetFXAAEnabled),
@@ -81,6 +82,19 @@ int RenderPath3D_BindLua::SetSSREnabled(lua_State* L)
 		((RenderPath3D*)component)->setSSREnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetSSREnabled(bool value) not enough arguments!");
+	return 0;
+}
+int RenderPath3D_BindLua::SetRaytracedReflectionsEnabled(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetRaytracedReflectionsEnabled(bool value) component is null!");
+		return 0;
+	}
+	if (wiLua::SGetArgCount(L) > 0)
+		((RenderPath3D*)component)->setRaytracedReflectionsEnabled(wiLua::SGetBool(L, 1));
+	else
+		wiLua::SError(L, "SetRaytracedReflectionsEnabled(bool value) not enough arguments!");
 	return 0;
 }
 int RenderPath3D_BindLua::SetShadowsEnabled(lua_State* L)

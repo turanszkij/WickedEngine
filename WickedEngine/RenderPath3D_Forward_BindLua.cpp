@@ -23,6 +23,7 @@ Luna<RenderPath3D_Forward_BindLua>::FunctionType RenderPath3D_Forward_BindLua::m
 
 	lunamethod(RenderPath3D_BindLua, SetAO),
 	lunamethod(RenderPath3D_BindLua, SetSSREnabled),
+	lunamethod(RenderPath3D_BindLua, SetRaytracedReflectionsEnabled),
 	lunamethod(RenderPath3D_BindLua, SetShadowsEnabled),
 	lunamethod(RenderPath3D_BindLua, SetReflectionsEnabled),
 	lunamethod(RenderPath3D_BindLua, SetFXAAEnabled),
