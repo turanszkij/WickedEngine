@@ -130,7 +130,10 @@ void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
     n2 = unpack_unitvector(subsets_vertexBuffer_POS[descriptorIndex].Load4(i2 * 16).w);
 
     float4 uvsets = uv0 * w + uv1 * u + uv2 * v;
-    float3 N = normalize(n0 * w + n1 * u + n2 * v);
+    float3 N = n0 * w + n1 * u + n2 * v;
+
+    N = mul((float3x3)ObjectToWorld3x4(), N);
+    N = normalize(N);
 
     float4 baseColor;
     [branch]
@@ -152,8 +155,8 @@ void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
     // Light sampling:
     float3 P = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
     float3 V = normalize(g_xCamera_CamPos - P);
-    Surface surface = CreateSurface(P, N, V, baseColor, 0.5f, 1, 0, 0);
-    Lighting lighting = CreateLighting(0, 0, 0, 0);
+    Surface surface = CreateSurface(P, N, V, baseColor, material.roughness, 1, material.metalness, material.reflectance);
+    Lighting lighting = CreateLighting(0, 0, GetAmbient(surface.N), 0);
 
     [loop]
     for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
@@ -205,7 +208,8 @@ void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
         }
     }
 
-    payload.color = baseColor.rgb * (lighting.direct.diffuse + GetAmbient(surface.N)) + emissiveColor.rgb * emissiveColor.a;
+    LightingPart combined_lighting = CombineLighting(surface, lighting);
+    payload.color = baseColor.rgb * combined_lighting.diffuse + emissiveColor.rgb * emissiveColor.a;
 
 #else
     payload.color = float3(1, 0, 0);
