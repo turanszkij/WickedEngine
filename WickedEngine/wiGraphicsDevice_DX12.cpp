@@ -4357,15 +4357,19 @@ using namespace DX12_Internal;
 				const GPUBuffer* buffer = (const GPUBuffer*)resource;
 				auto internal_state = to_internal(buffer);
 				D3D12_SHADER_RESOURCE_VIEW_DESC srv = internal_state->srv;
-				if (buffer->desc.MiscFlags & RESOURCE_MISC_BUFFER_STRUCTURED)
+				switch (binding)
 				{
-					srv.Buffer.FirstElement += offset / srv.Buffer.StructureByteStride;
-				}
-				else if (buffer->desc.MiscFlags & RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS)
-				{
+				default:
+				case RAWBUFFER:
 					srv.Buffer.FirstElement += offset / sizeof(uint32_t);
+					break;
+				case STRUCTUREDBUFFER:
+					srv.Buffer.FirstElement += offset / srv.Buffer.StructureByteStride;
+					break;
+				case TYPEDBUFFER:
+					srv.Buffer.FirstElement += offset;
+					break;
 				}
-				srv.Buffer.NumElements -= (UINT)srv.Buffer.FirstElement;
 				device->CreateShaderResourceView(internal_state->resource.Get(), &srv, dst);
 			}
 			else if (resource->IsAccelerationStructure())
@@ -4431,15 +4435,19 @@ using namespace DX12_Internal;
 				const GPUBuffer* buffer = (const GPUBuffer*)resource;
 				auto internal_state = to_internal(buffer);
 				D3D12_UNORDERED_ACCESS_VIEW_DESC uav = internal_state->uav;
-				if (buffer->desc.MiscFlags & RESOURCE_MISC_BUFFER_STRUCTURED)
+				switch (binding)
 				{
-					uav.Buffer.FirstElement += offset / uav.Buffer.StructureByteStride;
-				}
-				else if (buffer->desc.MiscFlags & RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS)
-				{
+				default:
+				case RWRAWBUFFER:
 					uav.Buffer.FirstElement += offset / sizeof(uint32_t);
+					break;
+				case RWSTRUCTUREDBUFFER:
+					uav.Buffer.FirstElement += offset / uav.Buffer.StructureByteStride;
+					break;
+				case RWTYPEDBUFFER:
+					uav.Buffer.FirstElement += offset;
+					break;
 				}
-				uav.Buffer.NumElements -= (UINT)uav.Buffer.FirstElement;
 				device->CreateUnorderedAccessView(internal_state->resource.Get(), nullptr, &uav, dst);
 			}
 			break;

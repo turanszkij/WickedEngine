@@ -2173,7 +2173,7 @@ namespace wiScene
 							DESCRIPTORTABLE_ENTRY_SUBSETS_INDEXBUFFER,
 							global_geometryIndex,
 							&mesh.indexBuffer,
-							-1, subset.indexOffset * mesh.GetIndexStride()
+							-1, subset.indexOffset
 						);
 						device->WriteDescriptor(
 							&descriptorTable,
