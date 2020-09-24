@@ -2,6 +2,8 @@
 #include "ShaderInterop_Postprocess.h"
 #include "raytracingHF.hlsli"
 
+TEXTURE2D(texture_normals, float3, TEXSLOT_ONDEMAND0);
+
 RWTEXTURE2D(output, unorm float, 0);
 
 ConstantBuffer<ShaderMaterial> subsets_material[MAX_DESCRIPTOR_INDEXING] : register(b0, space1);
@@ -25,20 +27,7 @@ void RTAO_Raygen()
         return;
 
     const float3 P = reconstructPosition(uv, depth);
-    
-    float2 uv0 = uv; // center
-    float2 uv1 = uv + float2(1, 0) / (float2)DispatchRaysDimensions(); // right 
-    float2 uv2 = uv + float2(0, 1) / (float2)DispatchRaysDimensions(); // top
-
-    float depth0 = texture_depth.SampleLevel(sampler_point_clamp, uv0, 0).r;
-    float depth1 = texture_depth.SampleLevel(sampler_point_clamp, uv1, 0).r;
-    float depth2 = texture_depth.SampleLevel(sampler_point_clamp, uv2, 0).r;
-
-    float3 P0 = reconstructPosition(uv0, depth0);
-    float3 P1 = reconstructPosition(uv1, depth1);
-    float3 P2 = reconstructPosition(uv2, depth2);
-
-    float3 N = normalize(cross(P1 - P0, P2 - P0));
+    float3 N = normalize(texture_normals.SampleLevel(sampler_point_clamp, uv, 0) * 2 - 1);
 
     float seed = rtao_seed;
 

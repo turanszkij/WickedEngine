@@ -201,7 +201,7 @@ void RenderPath3D::ResizeBuffers()
 		device->SetName(&rtGUIBlurredBackground[2], "rtGUIBlurredBackground[2]");
 	}
 
-	if(device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
+	if(device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
 	{
 		uint32_t tileSize = device->GetVariableRateShadingTileSize();
 

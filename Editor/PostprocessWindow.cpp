@@ -68,7 +68,7 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 	aoComboBox->AddItem("SSAO");
 	aoComboBox->AddItem("HBAO");
 	aoComboBox->AddItem("MSAO");
-	if (wiRenderer::GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 	{
 		aoComboBox->AddItem("RTAO");
 	}
@@ -150,7 +150,7 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 		editor->renderPath->setRaytracedReflectionsEnabled(args.bValue);
 		});
 	ppWindow->AddWidget(ssrCheckBox);
-	ssrCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING));
+	ssrCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING));
 
 	sssCheckBox = new wiCheckBox("SSS: ");
 	sssCheckBox->SetTooltip("Enable Subsurface Scattering. (Deferred only for now)");

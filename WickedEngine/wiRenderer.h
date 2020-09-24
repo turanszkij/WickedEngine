@@ -368,6 +368,11 @@ namespace wiRenderer
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
+	void Postprocess_NormalsFromDepth(
+		const wiGraphics::Texture& depthbuffer,
+		const wiGraphics::Texture& output,
+		wiGraphics::CommandList cmd
+	);
 
 	// Build the scene BVH on GPU that can be used by ray traced rendering
 	void BuildSceneBVH(wiGraphics::CommandList cmd);

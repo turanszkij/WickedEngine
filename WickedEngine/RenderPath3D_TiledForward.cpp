@@ -110,7 +110,7 @@ void RenderPath3D_TiledForward::Render() const
 			cmd
 		);
 
-		if (wiRenderer::GetVariableRateShadingClassification() && device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
+		if (wiRenderer::GetVariableRateShadingClassification() && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
 		{
 			wiRenderer::ComputeShadingRateClassification(*GetSceneRT_Read(1), rtLinearDepth, rtShadingRate, cmd);
 			device->BindShadingRate(SHADING_RATE_1X1, cmd);

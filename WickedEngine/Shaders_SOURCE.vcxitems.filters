@@ -1022,7 +1022,13 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)shadingRateClassificationCS_DEBUG.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)rtao_temporalCS.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)normalsfromdepthCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)rtao_denoise_blurCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)rtao_denoise_temporalCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

@@ -159,7 +159,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		});
 	variableRateShadingClassificationCheckBox->SetCheck(wiRenderer::GetVariableRateShadingClassification());
 	rendererWindow->AddWidget(variableRateShadingClassificationCheckBox);
-	variableRateShadingClassificationCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2));
+	variableRateShadingClassificationCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2));
 
 	variableRateShadingClassificationDebugCheckBox = new wiCheckBox("DEBUG: ");
 	variableRateShadingClassificationDebugCheckBox->SetTooltip("Toggle visualization of variable rate shading classification feature");
@@ -170,7 +170,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		});
 	variableRateShadingClassificationDebugCheckBox->SetCheck(wiRenderer::GetVariableRateShadingClassificationDebug());
 	rendererWindow->AddWidget(variableRateShadingClassificationDebugCheckBox);
-	variableRateShadingClassificationDebugCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2));
+	variableRateShadingClassificationDebugCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2));
 
 	advancedLightCullingCheckBox = new wiCheckBox("2.5D Light Culling: ");
 	advancedLightCullingCheckBox->SetTooltip("Enable a more aggressive light culling approach which can result in slower culling but faster rendering (Tiled renderer only)");
@@ -201,7 +201,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	tessellationCheckBox->SetCheck(wiRenderer::GetTessellationEnabled());
 	rendererWindow->AddWidget(tessellationCheckBox);
-	tessellationCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION));
+	tessellationCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GRAPHICSDEVICE_CAPABILITY_TESSELLATION));
 
 	alphaCompositionCheckBox = new wiCheckBox("Alpha Composition: ");
 	alphaCompositionCheckBox->SetTooltip("Enable Alpha Composition. Enables softer alpha blending on partly solid geometry (eg. vegetation) but rendering performance will be slower.");
@@ -237,7 +237,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	shadowTypeComboBox->SetSize(XMFLOAT2(100, itemheight));
 	shadowTypeComboBox->SetPos(XMFLOAT2(x, y += step));
 	shadowTypeComboBox->AddItem("Shadowmaps");
-	if (wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
+	if (wiRenderer::GetDevice()->CheckCapability(wiGraphics::GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 	{
 		shadowTypeComboBox->AddItem("Ray traced");
 	}
