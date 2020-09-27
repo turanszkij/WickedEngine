@@ -46,17 +46,14 @@ You can download the engine by using Git and cloning the repository, or download
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/physics.gif"/>
 
 ### Platforms:
-- Windows PC Desktop (x86, x64)
-- Universal Windows (x86, x64, ARM, Phone, XBOX One)
+- Windows 10 Desktop (x86, x64)
+- UWP (x86, x64, ARM, Phone, XBOX One)
+- Linux (<a href="https://github.com/turanszkij/WickedEngine/tree/linux">experimental branch</a>)
 
-### Requirements:
+### How to build: 
 
-- Windows 10
-- Visual Studio 2019 with latest Windows 10 SDK
-
-### Getting started: 
-
-There are a couple of projects that you can run up front: Editor, Tests and Template. You just have to set either as startup project and press F5 in Visual Studio to build and run.
+#### Windows
+To build Wicked Engine for Windows 10, use Visual Studio and the provided solution file. <b>Make sure that you have the latest Windows SDK and updated operating system</b>. There are a couple of projects that you can run up front: Editor, Tests and Template. You just have to set either as startup project and press F5 in Visual Studio to build and run.
 
 If you wish to integrate Wicked Engine into your own project, you can use it as a static library and link it to your application. For this, you must first compile the engine library project for the desired platform. For Windows Desktop, this is the WickedEngine_Windows project. After that, set the following dependencies to this library in Visual Studio this way in the implementing project (paths are as if your project is inside the engine root folder):
 
@@ -75,7 +72,12 @@ When your project settings are set up, put `#include "WickedEngine.h"` in your s
 
 If you have trouble, you can look at or copy the project settings for Editor, Tests and Template application projects to get an idea how to link with Wicked Engine.
 
-Initialization example (C++):
+#### Linux
+The <a href="https://github.com/turanszkij/WickedEngine/tree/linux">Linux branch</a> is experimental. The steps to build can be found <a href="https://github.com/turanszkij/WickedEngine/blob/linux/README_Linux.md">here</a>. If you have questions or stuck, please use the `linux` communication channel on Discord: [![Discord chat][s2]][di]
+
+### Examples:
+
+#### Initialization (C++):
 
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/05/sphinit.gif"/>
 
@@ -95,7 +97,7 @@ while(true) {
 }
 ```
 
-Some basic usage examples (C++):
+#### Basics (C++):
 ```cpp
 RenderPath3D_Deferred myGame; // Declare a game screen component, aka "RenderPath" (you could also override its Update(), Render() etc. functions). This is a 3D, Deferred path for example, but there are others
 main.ActivatePath(&myGame); // Register your game to the application. It will call Start(), Update(), Render(), etc. from now on...
@@ -128,7 +130,7 @@ if (wiInput::Press(wiInput::KEYBOARD_BUTTON_SPACE)) { wiAudio::Stop(&mySoundInst
 if (wiInput::Down(wiInput::KEYBOARD_BUTTON_SPACE)) { wiAudio::Play(&mySoundInstance); } // You can check if a button is pushed down or not (this triggers repeatedly)
 ```
 
-Some scripting examples (LUA):
+#### Scripting (LUA):
 ```lua
 -- Set a rendering path for the application main component
 path = RenderPath3D_Deferred;
@@ -200,7 +202,7 @@ The preferred workflow is to import models into the Editor, and save them as <b>
 ### Graphics API:
 
 The default renderer is DirectX 11. There is also a DirectX12 renderer and Vulkan renderer.
-You can specify command line arguments to switch between render devices or other settings. Currently the list of options:
+You can specify command line arguments (without any prefix) to switch between render devices or other settings. Currently the list of options:
 <table>
   <tr>
     <th>Argument</th>

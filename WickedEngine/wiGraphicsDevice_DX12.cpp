@@ -2485,77 +2485,12 @@ using namespace DX12_Internal;
 
 		if (pDesc->BindFlags & BIND_SHADER_RESOURCE)
 		{
-
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-
-			if (pDesc->MiscFlags & RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS)
-			{
-				// This is a Raw Buffer
-
-				srv_desc.Format = DXGI_FORMAT_R32_TYPELESS;
-				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-				srv_desc.Buffer.FirstElement = 0;
-				srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
-				srv_desc.Buffer.NumElements = pDesc->ByteWidth / 4;
-			}
-			else if (pDesc->MiscFlags & RESOURCE_MISC_BUFFER_STRUCTURED)
-			{
-				// This is a Structured Buffer
-
-				srv_desc.Format = DXGI_FORMAT_UNKNOWN;
-				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-				srv_desc.Buffer.FirstElement = 0;
-				srv_desc.Buffer.NumElements = pDesc->ByteWidth / pDesc->StructureByteStride;
-				srv_desc.Buffer.StructureByteStride = pDesc->StructureByteStride;
-			}
-			else
-			{
-				// This is a Typed Buffer
-
-				srv_desc.Format = _ConvertFormat(pDesc->Format);
-				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-				srv_desc.Buffer.FirstElement = 0;
-				srv_desc.Buffer.NumElements = pDesc->ByteWidth / pDesc->StructureByteStride;
-			}
-
-			internal_state->srv = srv_desc;
+			CreateSubresource(pBuffer, SRV, 0);
 		}
 
 		if (pDesc->BindFlags & BIND_UNORDERED_ACCESS)
 		{
-			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
-			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-			uav_desc.Buffer.FirstElement = 0;
-
-			if (pDesc->MiscFlags & RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS)
-			{
-				// This is a Raw Buffer
-
-				uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
-				uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
-				uav_desc.Buffer.FirstElement = 0;
-				uav_desc.Buffer.NumElements = pDesc->ByteWidth / 4;
-			}
-			else if (pDesc->MiscFlags & RESOURCE_MISC_BUFFER_STRUCTURED)
-			{
-				// This is a Structured Buffer
-
-				uav_desc.Format = DXGI_FORMAT_UNKNOWN;
-				uav_desc.Buffer.FirstElement = 0;
-				uav_desc.Buffer.NumElements = pDesc->ByteWidth / pDesc->StructureByteStride;
-				uav_desc.Buffer.StructureByteStride = pDesc->StructureByteStride;
-			}
-			else
-			{
-				// This is a Typed Buffer
-
-				uav_desc.Format = _ConvertFormat(pDesc->Format);
-				uav_desc.Buffer.FirstElement = 0;
-				uav_desc.Buffer.NumElements = pDesc->ByteWidth / pDesc->StructureByteStride;
-			}
-
-			internal_state->uav = uav_desc;
+			CreateSubresource(pBuffer, UAV, 0);
 		}
 
 		return SUCCEEDED(hr);
@@ -2686,7 +2621,7 @@ using namespace DX12_Internal;
 
 		if (pTexture->desc.MipLevels == 0)
 		{
-			pTexture->desc.MipLevels = (uint32_t)log2(std::max(pTexture->desc.Width, pTexture->desc.Height));
+			pTexture->desc.MipLevels = (uint32_t)log2(std::max(pTexture->desc.Width, pTexture->desc.Height)) + 1;
 		}
 
 
@@ -4226,6 +4161,103 @@ using namespace DX12_Internal;
 		}
 		return -1;
 	}
+	int GraphicsDevice_DX12::CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size)
+	{
+		auto internal_state = to_internal(buffer);
+		const GPUBufferDesc& desc = buffer->GetDesc();
+
+		switch (type)
+		{
+		case wiGraphics::SRV:
+		{
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+			if (desc.MiscFlags & RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS)
+			{
+				// This is a Raw Buffer
+				srv_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+				srv_desc.Buffer.FirstElement = (UINT)offset / sizeof(uint32_t);
+				srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+				srv_desc.Buffer.NumElements = std::min((UINT)size, desc.ByteWidth - (UINT)offset) / sizeof(uint32_t);
+			}
+			else if (desc.MiscFlags & RESOURCE_MISC_BUFFER_STRUCTURED)
+			{
+				// This is a Structured Buffer
+				srv_desc.Format = DXGI_FORMAT_UNKNOWN;
+				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+				srv_desc.Buffer.FirstElement = (UINT)offset / desc.StructureByteStride;
+				srv_desc.Buffer.NumElements = std::min((UINT)size, desc.ByteWidth - (UINT)offset) / desc.StructureByteStride;
+				srv_desc.Buffer.StructureByteStride = desc.StructureByteStride;
+			}
+			else
+			{
+				// This is a Typed Buffer
+				uint32_t stride = GetFormatStride(desc.Format);
+				srv_desc.Format = _ConvertFormat(desc.Format);
+				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+				srv_desc.Buffer.FirstElement = offset / stride;
+				srv_desc.Buffer.NumElements = std::min((UINT)size, desc.ByteWidth - (UINT)offset) / stride;
+			}
+
+			if (internal_state->srv.ViewDimension == D3D12_SRV_DIMENSION_UNKNOWN)
+			{
+				internal_state->srv = srv_desc;
+				return -1;
+			}
+			internal_state->subresources_srv.push_back(srv_desc);
+			return int(internal_state->subresources_srv.size() - 1);
+		}
+		break;
+		case wiGraphics::UAV:
+		{
+
+			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
+			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+			uav_desc.Buffer.FirstElement = 0;
+
+			if (desc.MiscFlags & RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS)
+			{
+				// This is a Raw Buffer
+				uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+				uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+				uav_desc.Buffer.FirstElement = (UINT)offset / sizeof(uint32_t);
+				uav_desc.Buffer.NumElements = std::min((UINT)size, desc.ByteWidth - (UINT)offset) / sizeof(uint32_t);
+			}
+			else if (desc.MiscFlags & RESOURCE_MISC_BUFFER_STRUCTURED)
+			{
+				// This is a Structured Buffer
+				uav_desc.Format = DXGI_FORMAT_UNKNOWN;
+				uav_desc.Buffer.FirstElement = (UINT)offset / desc.StructureByteStride;
+				uav_desc.Buffer.NumElements = std::min((UINT)size, desc.ByteWidth - (UINT)offset) / desc.StructureByteStride;
+				uav_desc.Buffer.StructureByteStride = desc.StructureByteStride;
+			}
+			else
+			{
+				// This is a Typed Buffer
+				uint32_t stride = GetFormatStride(desc.Format);
+				uav_desc.Format = _ConvertFormat(desc.Format);
+				uav_desc.Buffer.FirstElement = (UINT)offset / stride;
+				uav_desc.Buffer.NumElements = std::min((UINT)size, desc.ByteWidth - (UINT)offset) / stride;
+			}
+
+			if (internal_state->uav.ViewDimension == D3D12_UAV_DIMENSION_UNKNOWN)
+			{
+				internal_state->uav = uav_desc;
+				return -1;
+			}
+			internal_state->subresources_uav.push_back(uav_desc);
+			return int(internal_state->subresources_uav.size() - 1);
+		}
+		break;
+		default:
+			assert(0);
+			break;
+		}
+
+		return -1;
+	}
 
 	void GraphicsDevice_DX12::WriteShadingRateValue(SHADING_RATE rate, void* dest)
 	{
@@ -4356,7 +4388,7 @@ using namespace DX12_Internal;
 			{
 				const GPUBuffer* buffer = (const GPUBuffer*)resource;
 				auto internal_state = to_internal(buffer);
-				D3D12_SHADER_RESOURCE_VIEW_DESC srv = internal_state->srv;
+				D3D12_SHADER_RESOURCE_VIEW_DESC srv = subresource < 0 ? internal_state->srv : internal_state->subresources_srv[subresource];
 				switch (binding)
 				{
 				default:
@@ -4367,7 +4399,7 @@ using namespace DX12_Internal;
 					srv.Buffer.FirstElement += offset / srv.Buffer.StructureByteStride;
 					break;
 				case TYPEDBUFFER:
-					srv.Buffer.FirstElement += offset;
+					srv.Buffer.FirstElement += offset / GetFormatStride(buffer->desc.Format);
 					break;
 				}
 				device->CreateShaderResourceView(internal_state->resource.Get(), &srv, dst);
@@ -4434,7 +4466,7 @@ using namespace DX12_Internal;
 			{
 				const GPUBuffer* buffer = (const GPUBuffer*)resource;
 				auto internal_state = to_internal(buffer);
-				D3D12_UNORDERED_ACCESS_VIEW_DESC uav = internal_state->uav;
+				D3D12_UNORDERED_ACCESS_VIEW_DESC uav = subresource < 0 ? internal_state->uav : internal_state->subresources_uav[subresource];
 				switch (binding)
 				{
 				default:
@@ -4445,7 +4477,7 @@ using namespace DX12_Internal;
 					uav.Buffer.FirstElement += offset / uav.Buffer.StructureByteStride;
 					break;
 				case RWTYPEDBUFFER:
-					uav.Buffer.FirstElement += offset;
+					uav.Buffer.FirstElement += offset / GetFormatStride(buffer->desc.Format);
 					break;
 				}
 				device->CreateUnorderedAccessView(internal_state->resource.Get(), nullptr, &uav, dst);

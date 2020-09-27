@@ -273,6 +273,7 @@ namespace wiScene
 			wiECS::Entity materialID = wiECS::INVALID_ENTITY;
 			uint32_t indexOffset = 0;
 			uint32_t indexCount = 0;
+			int indexBuffer_subresource = -1;
 		};
 		std::vector<MeshSubset> subsets;
 

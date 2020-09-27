@@ -362,6 +362,11 @@ namespace wiScene
 				device->CreateBuffer(&bd, &initData, &indexBuffer);
 				device->SetName(&indexBuffer, "indexBuffer_16bit");
 			}
+
+			for (MeshSubset& subset : subsets)
+			{
+				subset.indexBuffer_subresource = device->CreateSubresource(&indexBuffer, SRV, subset.indexOffset * GetIndexStride());
+			}
 		}
 
 
@@ -2173,7 +2178,7 @@ namespace wiScene
 							DESCRIPTORTABLE_ENTRY_SUBSETS_INDEXBUFFER,
 							global_geometryIndex,
 							&mesh.indexBuffer,
-							-1, subset.indexOffset
+							subset.indexBuffer_subresource
 						);
 						device->WriteDescriptor(
 							&descriptorTable,

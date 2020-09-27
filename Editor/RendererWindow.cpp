@@ -443,7 +443,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	mipLodBiasSlider->SetPos(XMFLOAT2(x, y += step));
 	mipLodBiasSlider->OnSlide([&](wiEventArgs args) {
 		wiGraphics::SamplerDesc desc = wiRenderer::GetSampler(SSLOT_OBJECTSHADER)->GetDesc();
-		desc.MipLODBias = args.fValue;
+		desc.MipLODBias = wiMath::Clamp(args.fValue, -15.9f, 15.9f);
 		wiRenderer::ModifySampler(desc, SSLOT_OBJECTSHADER);
 	});
 	rendererWindow->AddWidget(mipLodBiasSlider);

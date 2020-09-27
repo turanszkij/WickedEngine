@@ -3223,33 +3223,14 @@ using namespace Vulkan_Internal;
 		}
 
 
-
-		if (pDesc->BindFlags & BIND_SHADER_RESOURCE && pBuffer->desc.Format != FORMAT_UNKNOWN)
+		// Create resource views if needed
+		if (pDesc->BindFlags & BIND_SHADER_RESOURCE)
 		{
-			VkBufferViewCreateInfo srv_desc = {};
-			srv_desc.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-			srv_desc.buffer = internal_state->resource;
-			srv_desc.flags = 0;
-			srv_desc.format = _ConvertFormat(pBuffer->desc.Format);
-			srv_desc.offset = 0;
-			srv_desc.range = pBuffer->desc.ByteWidth;
-
-			res = vkCreateBufferView(device, &srv_desc, nullptr, &internal_state->srv);
-			assert(res == VK_SUCCESS);
+			CreateSubresource(pBuffer, SRV, 0);
 		}
-
-		if (pDesc->BindFlags & BIND_UNORDERED_ACCESS && pBuffer->desc.Format != FORMAT_UNKNOWN)
+		if (pDesc->BindFlags & BIND_UNORDERED_ACCESS)
 		{
-			VkBufferViewCreateInfo uav_desc = {};
-			uav_desc.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-			uav_desc.buffer = internal_state->resource;
-			uav_desc.flags = 0;
-			uav_desc.format = _ConvertFormat(pBuffer->desc.Format);
-			uav_desc.offset = 0;
-			uav_desc.range = pBuffer->desc.ByteWidth;
-
-			res = vkCreateBufferView(device, &uav_desc, nullptr, &internal_state->uav);
-			assert(res == VK_SUCCESS);
+			CreateSubresource(pBuffer, UAV, 0);
 		}
 
 
@@ -3267,7 +3248,7 @@ using namespace Vulkan_Internal;
 
 		if (pTexture->desc.MipLevels == 0)
 		{
-			pTexture->desc.MipLevels = static_cast<uint32_t>(log2(std::max(pTexture->desc.Width, pTexture->desc.Height)));
+			pTexture->desc.MipLevels = (uint32_t)log2(std::max(pTexture->desc.Width, pTexture->desc.Height)) + 1;
 		}
 
 		VmaAllocationCreateInfo allocInfo = {};
@@ -5139,6 +5120,68 @@ using namespace Vulkan_Internal;
 		}
 		return -1;
 	}
+	int GraphicsDevice_Vulkan::CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size)
+	{
+		auto internal_state = to_internal(buffer);
+		const GPUBufferDesc& desc = buffer->GetDesc();
+		VkResult res;
+
+		switch (type)
+		{
+		case wiGraphics::SRV:
+		case wiGraphics::UAV:
+		{
+			if (desc.Format == FORMAT_UNKNOWN)
+			{
+				return -1;
+			}
+
+			VkBufferViewCreateInfo srv_desc = {};
+			srv_desc.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+			srv_desc.buffer = internal_state->resource;
+			srv_desc.flags = 0;
+			srv_desc.format = _ConvertFormat(desc.Format);
+			srv_desc.offset = Align(offset, device_properties.properties.limits.minTexelBufferOffsetAlignment); // damn, if this needs alignment, that could break a lot of things! (index buffer, index offset?)
+			srv_desc.range = std::min(size, (uint64_t)desc.ByteWidth - srv_desc.offset);
+
+			VkBufferView view;
+			res = vkCreateBufferView(device, &srv_desc, nullptr, &view);
+
+			if (res == VK_SUCCESS)
+			{
+				if (type == SRV)
+				{
+					if (internal_state->srv == VK_NULL_HANDLE)
+					{
+						internal_state->srv = view;
+						return -1;
+					}
+					internal_state->subresources_srv.push_back(view);
+					return int(internal_state->subresources_srv.size() - 1);
+				}
+				else
+				{
+					if (internal_state->uav == VK_NULL_HANDLE)
+					{
+						internal_state->uav = view;
+						return -1;
+					}
+					internal_state->subresources_uav.push_back(view);
+					return int(internal_state->subresources_uav.size() - 1);
+				}
+			}
+			else
+			{
+				assert(0);
+			}
+		}
+		break;
+		default:
+			assert(0);
+			break;
+		}
+		return -1;
+	}
 
 	void GraphicsDevice_Vulkan::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest)
 	{
@@ -5200,7 +5243,7 @@ using namespace Vulkan_Internal;
 			{
 				const GPUBuffer* buffer = (const GPUBuffer*)resource;
 				auto internal_state = to_internal(buffer);
-				descriptor.bufferView = internal_state->srv;
+				descriptor.bufferView = subresource < 0 ? internal_state->srv : internal_state->subresources_srv[subresource];
 			}
 			else
 			{
@@ -5315,7 +5358,7 @@ using namespace Vulkan_Internal;
 			{
 				const GPUBuffer* buffer = (const GPUBuffer*)resource;
 				auto internal_state = to_internal(buffer);
-				descriptor.bufferView = internal_state->uav;
+				descriptor.bufferView = subresource < 0 ? internal_state->uav : internal_state->subresources_uav[subresource];
 			}
 			else
 			{
