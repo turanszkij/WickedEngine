@@ -15,9 +15,9 @@ PipelineState pso_wirepart;
 GPUBuffer vertexBuffer_Axis;
 GPUBuffer vertexBuffer_Plane;
 GPUBuffer vertexBuffer_Origin;
-UINT vertexCount_Axis = 0;
-UINT vertexCount_Plane = 0;
-UINT vertexCount_Origin = 0;
+uint32_t vertexCount_Axis = 0;
+uint32_t vertexCount_Plane = 0;
+uint32_t vertexCount_Origin = 0;
 float origin_size = 0.2f;
 
 namespace Translator_Internal
@@ -458,7 +458,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 		const GPUBuffer* vbs[] = {
 			&vertexBuffer_Plane,
 		};
-		const UINT strides[] = {
+		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
@@ -494,7 +494,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 		const GPUBuffer* vbs[] = {
 			&vertexBuffer_Axis,
 		};
-		const UINT strides[] = {
+		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
@@ -530,7 +530,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 		const GPUBuffer* vbs[] = {
 			&vertexBuffer_Origin,
 		};
-		const UINT strides[] = {
+		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);

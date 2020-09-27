@@ -172,7 +172,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		}
 	});
 	debugCheckBox->SetCheck(false);
-	debugCheckBox->SetTooltip("Enable debug info for the emitter. This involves reading back GPU data, so rendering can slow down.");
+	debugCheckBox->SetTooltip("Currently this has no functionality.");
 	emitterWindow->AddWidget(debugCheckBox);
 
 
@@ -691,18 +691,10 @@ void EmitterWindow::UpdateData()
 	ss << "Memort Budget: " << emitter->GetMemorySizeInBytes() / 1024.0f / 1024.0f << " MB" << endl;
 	ss << endl;
 
-	if (emitter->DEBUG)
-	{
-		auto data = emitter->GetDebugData();
-
-		ss << "Alive Particle Count = " << data.aliveCount << endl;
-		ss << "Dead Particle Count = " << data.deadCount << endl;
-		ss << "GPU Emit count = " << data.realEmitCount << endl;
-	}
-	else
-	{
-		ss << "For additional data, enable [DEBUG]" << endl;
-	}
+	auto data = emitter->GetStatistics();
+	ss << "Alive Particle Count = " << data.aliveCount << endl;
+	ss << "Dead Particle Count = " << data.deadCount << endl;
+	ss << "GPU Emit count = " << data.realEmitCount << endl;
 
 	infoLabel->SetText(ss.str());
 

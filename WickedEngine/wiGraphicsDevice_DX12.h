@@ -142,13 +142,6 @@ namespace wiGraphics
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
 		inline ID3D12GraphicsCommandList5* GetDirectCommandList(CommandList cmd) { return static_cast<ID3D12GraphicsCommandList5*>(GetFrameResources().commandLists[cmd].Get()); }
 
-		struct DynamicResourceState
-		{
-			GPUAllocation allocation;
-			bool binding[SHADERSTAGE_COUNT] = {};
-		};
-		std::unordered_map<const GPUBuffer*, DynamicResourceState> dynamic_constantbuffers[COMMANDLIST_COUNT];
-
 		Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain;
 
 		PRIMITIVETOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
@@ -198,6 +191,7 @@ namespace wiGraphics
 
 		void Map(const GPUResource* resource, Mapping* mapping) override;
 		void Unmap(const GPUResource* resource) override;
+		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
 
 		void SetName(GPUResource* pResource, const char* name) override;
 
@@ -246,7 +240,6 @@ namespace wiGraphics
 		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) override;
 		void QueryBegin(const GPUQuery *query, CommandList cmd) override;
 		void QueryEnd(const GPUQuery *query, CommandList cmd) override;
-		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
 		void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) override;
 		void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) override;
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;

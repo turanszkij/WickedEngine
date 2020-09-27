@@ -25,10 +25,10 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="App.cpp" />
+    <ClCompile Include="App_Windows.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="App.h" />
+    <ClInclude Include="App_Windows.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\StoreLogo.png">

@@ -192,13 +192,6 @@ namespace wiGraphics
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
 		inline VkCommandBuffer GetDirectCommandList(CommandList cmd) { return GetFrameResources().commandBuffers[cmd]; }
 
-		struct DynamicResourceState
-		{
-			GPUAllocation allocation;
-			bool binding[SHADERSTAGE_COUNT] = {};
-		};
-		std::unordered_map<const GPUBuffer*, DynamicResourceState> dynamic_constantbuffers[COMMANDLIST_COUNT];
-
 		std::unordered_map<size_t, VkPipeline> pipelines_global;
 		std::vector<std::pair<size_t, VkPipeline>> pipelines_worker[COMMANDLIST_COUNT];
 		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
@@ -246,6 +239,7 @@ namespace wiGraphics
 
 		void Map(const GPUResource* resource, Mapping* mapping) override;
 		void Unmap(const GPUResource* resource) override;
+		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
 
 		void SetName(GPUResource* pResource, const char* name) override;
 
@@ -296,7 +290,6 @@ namespace wiGraphics
 		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) override;
 		void QueryBegin(const GPUQuery *query, CommandList cmd) override;
 		void QueryEnd(const GPUQuery *query, CommandList cmd) override;
-		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
 		void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) override;
 		void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) override;
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;

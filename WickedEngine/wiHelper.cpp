@@ -24,6 +24,7 @@
 #endif // PLATFORM_UWP
 #else
 #include <filesystem>
+#include "Utility/portable-file-dialogs.h"
 #endif // _WIN32
 
 using namespace std;
@@ -746,13 +747,47 @@ namespace wiHelper
 
 #endif // PLATFORM_UWP
 
-#elif SDL2
-    //TODO look at this implementation: https://discourse.libsdl.org/t/new-library-native-file-dialogs/21099
-    const char * message = "SDL2 does not seem to support a native file chooser, what a pain..";
-    std::cerr << message << std::endl;
-    throw std::runtime_error(message);
 #else
-#error TODO
+        if (!pfd::settings::available()) {
+            const char *message = "No dialog backend available";
+#ifdef SDL2
+            SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+                                     "File dialog error!",
+                                     message,
+                                     nullptr);
+#endif
+            std::cerr << message << std::endl;
+        }
+
+        std::vector<std::string> extensions = {params.description};
+        extensions.reserve(params.extensions.size()+1);
+        extensions.insert(extensions.end(), params.extensions.cbegin(), params.extensions.cend());
+
+        switch (params.type) {
+            case FileDialogParams::OPEN: {
+                std::vector<std::string> selection = pfd::open_file(
+                        params.description,
+                        wiHelper::GetOriginalWorkingDirectory(),
+                        extensions
+                        // allow multi selection here
+                ).result();
+                // result() will wait for user action before returning.
+                // This operation will block and return the user choice
+
+                if (!selection.empty()) {
+                    onSuccess(selection[0]);
+                }
+                //TODO what happens if the user cancelled the action? Is there not a onFailure callback?
+            }
+            case FileDialogParams::SAVE: {
+                std::string destination = pfd::save_file(params.description,
+                        wiHelper::GetOriginalWorkingDirectory(),
+                        extensions
+                        // remove overwrite warning here
+                ).result();
+                onSuccess(destination);
+            }
+        }
 #endif // _WIN32
 	}
 

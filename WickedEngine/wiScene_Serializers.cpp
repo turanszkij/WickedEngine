@@ -640,6 +640,10 @@ namespace wiScene
 			{
 				archive >> amount;
 			}
+			if (archive.GetVersion() >= 47)
+			{
+				archive >> speed;
+			}
 
 			size_t channelCount;
 			archive >> channelCount;
@@ -681,6 +685,10 @@ namespace wiScene
 			if (archive.GetVersion() >= 44)
 			{
 				archive << amount;
+			}
+			if (archive.GetVersion() >= 47)
+			{
+				archive << speed;
 			}
 
 			archive << channels.size();
