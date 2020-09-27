@@ -48,7 +48,7 @@ You can download the engine by using Git and cloning the repository, or download
 ### Platforms:
 - Windows 10 Desktop (x86, x64)
 - UWP (x86, x64, ARM, Phone, XBOX One)
-- Linux (<a href="https://github.com/turanszkij/WickedEngine/tree/linux">experimental branch</a>)
+- Linux (<a href="https://github.com/portaloffreedom/WickedEngine/tree/linux-sdl2">experimental branch</a>)
 
 ### How to build: 
 
@@ -73,7 +73,7 @@ When your project settings are set up, put `#include "WickedEngine.h"` in your s
 If you have trouble, you can look at or copy the project settings for Editor, Tests and Template application projects to get an idea how to link with Wicked Engine.
 
 #### Linux
-The <a href="https://github.com/turanszkij/WickedEngine/tree/linux">Linux branch</a> is experimental. The steps to build can be found <a href="https://github.com/turanszkij/WickedEngine/blob/linux/README_Linux.md">here</a>. If you have questions or stuck, please use the `linux` communication channel on Discord: [![Discord chat][s2]][di]
+The <a href="https://github.com/portaloffreedom/WickedEngine/tree/linux-sdl2">Linux branch</a> is experimental. The steps to build can be found <a href="https://github.com/portaloffreedom/WickedEngine/blob/linux-sdl2/README_Linux.md">here</a>. If you have questions or stuck, please use the `linux` communication channel on Discord: [![Discord chat][s2]][di]
 
 ### Examples:
 
