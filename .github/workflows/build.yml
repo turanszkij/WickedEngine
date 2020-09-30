@@ -13,7 +13,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: build
       run: |
-        msbuild WickedEngine.sln /p:Configuration=Release /p:Platform=x64
+        "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /p:Configuration=Release /p:Platform=x64
     - name: package-editor
       run: |
         move BUILD\x64\Release\Editor_Windows\Editor_Windows.exe Editor
