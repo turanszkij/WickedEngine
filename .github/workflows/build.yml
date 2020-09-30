@@ -11,15 +11,36 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v2
-    - name: build
+    - name: Build
       shell: cmd
       run: |
         cd D:/a/WickedEngine/WickedEngine/
         "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /p:Configuration=Release /p:Platform=x64
-    - name: package-editor
+    
+    - name: Packaging
+      shell: cmd
       run: |
         cd D:/a/WickedEngine/WickedEngine/
+        
         move BUILD\x64\Release\Editor_Windows\Editor_Windows.exe Editor
         xcopy WickedEngine\dxcompiler.dll Editor
         7z a WickedEngineEditor.zip WickedEngine\shaders\ WickedEngine\fonts\ images\ models\ scripts\ Documentation\ *.txt *.md Editor\*.exe Editor\images\ Editor\sound\ Editor\*.ini Editor\*.ico Editor\*.lua Editor\*.dll
+        
+        move BUILD\x64\Release\Tests\Tests.exe Tests
+        xcopy WickedEngine\dxcompiler.dll Tests
+        7z a WickedEngineTests.zip WickedEngine\shaders\ WickedEngine\fonts\ images\ models\ scripts\ Documentation\ *.txt *.md Tests\*.exe Tests\images\ Tests\sound\ Tests\*.ini Tests\*.ico Tests\*.lua Tests\*.dll Tests\*.ttf
+        
+    - name: artifacts-editor
+      uses: actions/upload-artifact@v2
+      with:
+        name: editor
+        path: |
+          WickedEngineEditor.zip
+          
+    - name: artifacts-tests
+      uses: actions/upload-artifact@v2
+      with:
+        name: tests
+        path: |
+          WickedEngineTests.zip
 
