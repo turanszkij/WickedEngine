@@ -17,7 +17,7 @@ jobs:
         cd D:/a/WickedEngine/WickedEngine/
         "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /p:Configuration=Release /p:Platform=x64
     
-    - name: Packaging
+    - name: Directory structure
       shell: cmd
       run: |
         cd D:/a/WickedEngine/WickedEngine/
@@ -33,14 +33,45 @@ jobs:
     - name: artifacts-editor
       uses: actions/upload-artifact@v2
       with:
-        name: editor
+        name: Editor (Windows x64)
+        working-directory: D:/a/WickedEngine/WickedEngine/
         path: |
-          WickedEngineEditor.zip
+          WickedEngine\shaders\
+          WickedEngine\fonts\
+          images\
+          models\
+          scripts\
+          Documentation\
+          *.txt
+          *.md
+          Editor\*.exe
+          Editor\images\
+          Editor\sound\
+          Editor\*.ini
+          Editor\*.ico
+          Editor\*.lua
+          Editor\*.dll
           
     - name: artifacts-tests
       uses: actions/upload-artifact@v2
       with:
-        name: tests
+        name: Tests (Windows x64)
+        working-directory: D:/a/WickedEngine/WickedEngine/
         path: |
-          WickedEngineTests.zip
+          WickedEngine\shaders\
+          WickedEngine\fonts\
+          images\
+          models\
+          scripts\
+          Documentation\
+          *.txt
+          *.md
+          Tests\*.exe
+          Tests\images\
+          Tests\sound\
+          Tests\*.ini
+          Tests\*.ico
+          Tests\*.lua
+          Tests\*.dll
+          Tests\*.ttf
 
