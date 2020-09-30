@@ -1,0 +1,22 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: build
+      run: |
+        msbuild WickedEngine.sln /p:Configuration=Release /p:Platform=x64
+    - name: package-editor
+      run: |
+        move BUILD\x64\Release\Editor_Windows\Editor_Windows.exe Editor
+        xcopy WickedEngine\dxcompiler.dll Editor
+        7z a WickedEngineEditor.zip WickedEngine\shaders\ WickedEngine\fonts\ images\ models\ scripts\ Documentation\ *.txt *.md Editor\*.exe Editor\images\ Editor\sound\ Editor\*.ini Editor\*.ico Editor\*.lua Editor\*.dll
+
