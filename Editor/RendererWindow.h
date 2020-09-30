@@ -84,6 +84,6 @@ public:
 
 	wiCheckBox* freezeCullingCameraCheckBox;
 
-	UINT GetPickType();
+    uint32_t GetPickType();
 };
 

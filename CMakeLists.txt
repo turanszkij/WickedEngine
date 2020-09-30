@@ -5,7 +5,7 @@ project(WickedEngine)
 set(CMAKE_CXX_STANDARD 17)
 
 if (WIN32)
-    set(PLATFORM "Win32")
+    set(PLATFORM "Windows")
     add_compile_definitions(WIN32=1)
     # add_compile_definitions(_WIN32=1) this is a given from the compiler
 elseif(UNIX)
@@ -16,4 +16,4 @@ endif()
 
 add_subdirectory(WickedEngine)
 add_subdirectory(Tests)
-#add_subdirectory(Editor)
+add_subdirectory(Editor)

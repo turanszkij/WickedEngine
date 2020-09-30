@@ -128,7 +128,9 @@ void TestsRenderer::Load()
 		wiScene::GetScene().weather = WeatherComponent();
 		this->ClearSprites();
 		this->ClearFonts();
-		wiLua::KillProcesses();
+		if (wiLua::GetLuaState() != nullptr) {
+            wiLua::KillProcesses();
+        }
 
 		// Reset camera position:
 		TransformComponent transform;
