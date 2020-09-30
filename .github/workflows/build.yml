@@ -82,6 +82,7 @@ jobs:
         sudo apt install vulkan-sdk
         sudo apt install libsdl2-dev
         sudo apt install cmake
+        sudo apt install build-essential
 
     - name: Build
       run: |
