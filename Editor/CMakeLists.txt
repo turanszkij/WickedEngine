@@ -34,6 +34,4 @@ add_executable(WickedEngineEditor
 
 target_link_libraries(WickedEngineEditor PUBLIC WickedEngine Threads::Threads)
 
-if (SDL2)
-    target_link_libraries(WickedEngineEditor PRIVATE SDL2::SDL2 SDL2::SDL2main)
-endif()
+
