@@ -27,9 +27,9 @@ You can download the engine by using Git and cloning the repository, or download
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/physics.gif"/>
 
 ### Platforms:
-- Windows 10 Desktop (x86, x64)
-- UWP (x86, x64, ARM, Phone, XBOX One)
-- Linux (<a href="https://github.com/portaloffreedom/WickedEngine/tree/linux-sdl2">experimental branch</a>)
+- Windows 10 Desktop (x86, x64) [Visual Studio 2019]
+- UWP (x86, x64, ARM, Phone, XBOX One) [Visual Studio 2019]
+- Linux (<a href="https://github.com/portaloffreedom/WickedEngine/tree/linux-sdl2">experimental branch</a>) [CMake]
 
 ### How to build: 
 
@@ -54,7 +54,7 @@ When your project settings are set up, put `#include "WickedEngine.h"` in your s
 If you have trouble, you can look at or copy the project settings for Editor, Tests and Template application projects to get an idea how to link with Wicked Engine.
 
 #### Linux
-The <a href="https://github.com/portaloffreedom/WickedEngine/tree/linux-sdl2">Linux branch</a> is experimental. The steps to build can be found <a href="https://github.com/portaloffreedom/WickedEngine/blob/linux-sdl2/README_Linux.md">here</a>. If you have questions or stuck, please use the `linux` communication channel on Discord: [![Discord chat][s2]][di]
+The <a href="https://github.com/portaloffreedom/WickedEngine/tree/linux-sdl2">Linux branch</a> is experimental. The steps to build can be found <a href="https://github.com/portaloffreedom/WickedEngine/blob/linux-sdl2/README_Linux.md">here</a>. If you have questions or stuck, please use the `linux` communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
 
 ### Examples:
 
