@@ -2,32 +2,13 @@
 
 # Wicked Engine
 
-[![Build status][s1]][av] [![License: MIT][s3]][li] [![Discord chat][s2]][di] [![Store][s8]][msstorelink]
-<a href="https://twitter.com/intent/follow?screen_name=turanszkij">
-        <img src="https://img.shields.io/twitter/follow/turanszkij.svg?style=social"
-            alt="follow on Twitter"></a><br/>
-Latest builds: 
-[![Editor][s4]][do64] [![Editor32][s5]][do32] 
-[![Tests][s6]][dt64] [![Tests32][s7]][dt32] <br/>
+[![License: MIT](https://img.shields.io/badge/License-MIT-orange.svg)](https://opensource.org/licenses/MIT)
+[![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
+<a href="https://twitter.com/intent/follow?screen_name=turanszkij"><img src="https://img.shields.io/twitter/follow/turanszkij.svg?style=social" alt="follow on Twitter"></a><br/>
+[![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
+[![Appveyor Build status](https://ci.appveyor.com/api/projects/status/3dbcee5gd6i7qh7v?svg=true)](https://ci.appveyor.com/project/turanszkij/wickedengine)
+[![Store](https://img.shields.io/badge/-Microsoft_Store-9cf.svg)](https://www.microsoft.com/store/productId/9PPMV065W9QJ)
 
-[s1]: https://ci.appveyor.com/api/projects/status/3dbcee5gd6i7qh7v?svg=true
-[s2]: https://img.shields.io/discord/602811659224088577?logo=discord
-[s3]: https://img.shields.io/badge/License-MIT-orange.svg
-[s4]: https://img.shields.io/badge/editor-64bit-blue.svg
-[s5]: https://img.shields.io/badge/editor-32bit-blue.svg
-[s6]: https://img.shields.io/badge/tests-64bit-blue.svg
-[s7]: https://img.shields.io/badge/tests-32bit-blue.svg
-[s8]: https://img.shields.io/badge/-Microsoft_Store-9cf.svg
-
-[av]: https://ci.appveyor.com/project/turanszkij/wickedengine
-[di]: https://discord.gg/CFjRYmE
-[li]: https://opensource.org/licenses/MIT
-[do64]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineEditor.zip?branch=master&job=Platform%3A%20x64
-[do32]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineEditor.zip?branch=master&job=Platform%3A%20Win32
-[dt64]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineTests.zip?branch=master&job=Platform%3A%20x64
-[dt32]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineTests.zip?branch=master&job=Platform%3A%20Win32
-[ba]: https://github.com/turanszkij/WickedEngine/tree/old-system-backup
-[msstorelink]: https://www.microsoft.com/store/productId/9PPMV065W9QJ
 
 <br/>
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/gltfanim.gif"/>
@@ -197,7 +178,7 @@ In addition, the Editor supports the importing of some common model formats (the
 - <b>GLTF 2.0</b>
 
 The preferred workflow is to import models into the Editor, and save them as <b>WISCENE</b>, then any Wicked Engine application can open them.<br/>
-<i>(The old Blender exporter script is now not supported! (from version 0.21.0), because the engine was redesigned with Entity-Component System at its core. The old object oriented version can be found [here][ba].)</i>
+<i>(The old Blender exporter script is now not supported! (from version 0.21.0), because the engine was redesigned with Entity-Component System at its core. The old object oriented version can be found <a href ="https://github.com/turanszkij/WickedEngine/tree/old-system-backup">[here]</a>.)</i>
 
 ### Graphics API:
 

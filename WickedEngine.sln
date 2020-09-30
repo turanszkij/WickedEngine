@@ -66,6 +66,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{3257
 		scripts\set_material_emissive.lua = scripts\set_material_emissive.lua
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{9FB29521-17A9-4533-A68B-0D6BC681C530}"
+	ProjectSection(SolutionItems) = preProject
+		.github\build.yml = .github\build.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		WickedEngine\Shaders_SOURCE.vcxitems*{06163dcb-b183-4ed9-9c62-13ef1658e049}*SharedItemsImports = 4
@@ -243,6 +248,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{6C5B74BD-2300-47A1-8FE1-DB88D6F55959} = {BF8FCAB8-D7D3-4DAE-92DE-4B5037E9A0ED}
 		{3257CB8C-789A-4370-88CB-6DB5D77D300D} = {BF8FCAB8-D7D3-4DAE-92DE-4B5037E9A0ED}
+		{9FB29521-17A9-4533-A68B-0D6BC681C530} = {BF8FCAB8-D7D3-4DAE-92DE-4B5037E9A0ED}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E3FF044A-B72E-4ED5-BE05-AB641BA048CD}

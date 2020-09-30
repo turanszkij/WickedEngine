@@ -1,0 +1,69 @@
+name: Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build
+      shell: cmd
+      run: |
+        "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /p:Configuration=Release /p:Platform=x64
+    
+    - name: Move binaries
+      shell: cmd
+      run: |
+        move BUILD\x64\Release\Editor_Windows\Editor_Windows.exe Editor
+        xcopy WickedEngine\dxcompiler.dll Editor
+        
+        move BUILD\x64\Release\Tests\Tests.exe Tests
+        xcopy WickedEngine\dxcompiler.dll Tests
+        
+    - name: Package Editor
+      uses: actions/upload-artifact@v2
+      with:
+        name: Editor (Windows x64)
+        path: |
+          WickedEngine\shaders\
+          WickedEngine\fonts\
+          images\
+          models\
+          scripts\
+          Documentation\
+          *.txt
+          *.md
+          Editor\*.exe
+          Editor\images\
+          Editor\sound\
+          Editor\*.ini
+          Editor\*.ico
+          Editor\*.lua
+          Editor\*.dll
+          
+    - name: Package Tests
+      uses: actions/upload-artifact@v2
+      with:
+        name: Tests (Windows x64)
+        path: |
+          WickedEngine\shaders\
+          WickedEngine\fonts\
+          images\
+          models\
+          scripts\
+          Documentation\
+          *.txt
+          *.md
+          Tests\*.exe
+          Tests\images\
+          Tests\sound\
+          Tests\*.ini
+          Tests\*.ico
+          Tests\*.lua
+          Tests\*.dll
+          Tests\*.ttf
