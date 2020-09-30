@@ -133,6 +133,14 @@ set(SHADERS_CS
         "blur_bilateral_unorm1CS.hlsl"
         "bloomcombineCS.hlsl"
         "voxelSceneCopyClearCS_TemporalSmoothing.hlsl"
+		"normalsfromdepthCS.cso"
+		"volumetricCloud_shapenoiseCS.cso"
+		"volumetricCloud_detailnoiseCS.cso"
+		"volumetricCloud_curlnoiseCS.cso"
+		"volumetricCloud_weathermapCS.cso"
+		"volumetricCloud_renderCS.cso"
+		"volumetricCloud_reprojectCS.cso"
+		"volumetricCloud_finalCS.cso"
 )
 
 set(SHADERS_DS
@@ -258,7 +266,7 @@ set(SHADERS_VS
         "emittedparticleVS.hlsl"
         "imageVS.hlsl"
         "fontVS.hlsl"
-        "voxelVS.hlsl" #ray tracing required
+        "voxelVS.hlsl"
         "vertexcolorVS.hlsl"
         "vSpotLightVS.hlsl"
         "vTubeLightVS.hlsl"
@@ -331,17 +339,9 @@ function(Generate_Shaders SHADERS_SRC_LIST SHADER_TYPE)
                 COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/spirv/"
                 COMMAND "/opt/directx-shader-compiler/bin/dxc"
                 "${SPIRV_SOURCE}"
-                -T "${SHADER_TYPE}_6_4"
+                -T "${SHADER_TYPE}_6_5"
                 -I "${CMAKE_CURRENT_SOURCE_DIR}/../"
                 -D SPIRV
-                -D
-                $<$<STREQUAL:${SHADER_TYPE},vs>:SPIRV_SHADERSTAGE=0> # VS
-                $<$<STREQUAL:${SHADER_TYPE},hs>:SPIRV_SHADERSTAGE=1> # HS
-                $<$<STREQUAL:${SHADER_TYPE},ds>:SPIRV_SHADERSTAGE=2> # DS
-                $<$<STREQUAL:${SHADER_TYPE},gs>:SPIRV_SHADERSTAGE=3> # GS
-                $<$<STREQUAL:${SHADER_TYPE},ps>:SPIRV_SHADERSTAGE=4> # PS
-                $<$<STREQUAL:${SHADER_TYPE},cs>:SPIRV_SHADERSTAGE=5> # CS or LIB
-                $<$<STREQUAL:${SHADER_TYPE},lib>:SPIRV_SHADERSTAGE=5> # CS or LIB
                 $<$<BOOL:${INVERT_Y}>:-fvk-invert-y>
                 -spirv
 #                -O1
@@ -349,6 +349,9 @@ function(Generate_Shaders SHADERS_SRC_LIST SHADER_TYPE)
                 -flegacy-macro-expansion
                 -Fo ${SPIRV_OUTPUT}
                 -fspv-target-env=vulkan1.2
+                -fvk-t-shift 1000 all
+                -fvk-u-shift 2000 all
+                -fvk-s-shift 3000 all
 #                -fspv-extension=KHR
                 DEPENDS ${SPIRV_SOURCE}
         )

@@ -87,4 +87,17 @@ jobs:
       run: |
         mkdir build && cd build
         cmake ..
-    
+        
+    - name: Package Editor
+      uses: actions/upload-artifact@v2
+      with:
+        name: Editor (Linux - Ubuntu)
+        path: |
+          WickedEngine\build\
+          
+    - name: Package Tests
+      uses: actions/upload-artifact@v2
+      with:
+        name: Tests (Linux - Ubuntu)
+        path: |
+          WickedEngine\build\
