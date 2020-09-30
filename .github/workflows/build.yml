@@ -67,3 +67,21 @@ jobs:
           Tests\*.lua
           Tests\*.dll
           Tests\*.ttf
+
+    
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install Dependencies
+      run: |
+        sudo apt update
+        sudo apt install vulkan-sdk
+        sudo apt install libsdl2-dev
+
+    - name: Build
+      run: |
+        mkdir build && cd build
+        cmake ..
+    
