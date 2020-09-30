@@ -91,7 +91,7 @@ target_include_directories(WickedEngine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(WickedEngine PUBLIC
         Vulkan::Vulkan
-        ${SDL2_LIBRARIES}
+        ${SDL2_LIBRARY}
         SDL2::SDL2
         Bullet
         LUA
