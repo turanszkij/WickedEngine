@@ -134,6 +134,11 @@ namespace wiScene
 				archive >> displacementMapping;
 			}
 
+			if (archive.GetVersion() >= 48)
+			{
+				archive >> (uint8_t&)shadingRate;
+			}
+
 			SetDirty();
 
 			if (!baseColorMapName.empty())
@@ -246,6 +251,11 @@ namespace wiScene
 				archive << uvset_occlusionMap;
 
 				archive << displacementMapping;
+			}
+
+			if (archive.GetVersion() >= 48)
+			{
+				archive << (uint8_t)shadingRate;
 			}
 		}
 	}
@@ -640,6 +650,10 @@ namespace wiScene
 			{
 				archive >> amount;
 			}
+			if (archive.GetVersion() >= 47)
+			{
+				archive >> speed;
+			}
 
 			size_t channelCount;
 			archive >> channelCount;
@@ -681,6 +695,10 @@ namespace wiScene
 			if (archive.GetVersion() >= 44)
 			{
 				archive << amount;
+			}
+			if (archive.GetVersion() >= 47)
+			{
+				archive << speed;
 			}
 
 			archive << channels.size();

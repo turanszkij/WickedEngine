@@ -245,7 +245,7 @@ namespace wiResourceManager
 					desc.Format = FORMAT_R8G8B8A8_UNORM;
 					desc.Height = static_cast<uint32_t>(height);
 					desc.Width = static_cast<uint32_t>(width);
-					desc.MipLevels = (uint32_t)log2(std::max(width, height));
+					desc.MipLevels = (uint32_t)log2(std::max(width, height)) + 1;
 					desc.MiscFlags = 0;
 					desc.Usage = USAGE_DEFAULT;
 

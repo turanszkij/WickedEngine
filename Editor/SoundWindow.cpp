@@ -73,10 +73,12 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		params.description = "Sound";
 		params.extensions.push_back("wav");
 		wiHelper::FileDialog(params, [=](std::string fileName) {
-			Entity entity = GetScene().Entity_CreateSound("editorSound", fileName);
-			editor->ClearSelected();
-			editor->AddSelected(entity);
-			SetEntity(entity);
+			wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+				Entity entity = GetScene().Entity_CreateSound("editorSound", fileName);
+				editor->ClearSelected();
+				editor->AddSelected(entity);
+				SetEntity(entity);
+			});
 		});
 	});
 	soundWindow->AddWidget(addButton);

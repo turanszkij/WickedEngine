@@ -29,8 +29,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WickedEngine_UWP", "WickedE
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Content", "Content.vcxitems", "{C48F6BFF-F91B-4DB5-98B5-15287DFB7C95}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WickedEngine_Linux", "WickedEngine\WickedEngine_Linux.vcxproj", "{D294C41D-D886-4B95-9FD6-EE13EEE8D976}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Shaders_SOURCE", "WickedEngine\Shaders_SOURCE.vcxitems", "{92E86448-0724-4387-ABAC-96E63EDF4190}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Shaders_HLSL6", "WickedEngine\Shaders_HLSL6.vcxproj", "{9C8F8910-CCA3-41CB-A2FA-3545CDD5D8BF}"
@@ -38,6 +36,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Supplementary", "Supplementary", "{BF8FCAB8-D7D3-4DAE-92DE-4B5037E9A0ED}"
 	ProjectSection(SolutionItems) = preProject
 		appveyor.yml = appveyor.yml
+		.github\workflows\build.yml = .github\workflows\build.yml
 		features.txt = features.txt
 		LICENSE.md = LICENSE.md
 		other_licenses.txt = other_licenses.txt
@@ -79,7 +78,6 @@ Global
 		WickedEngine\Shaders_SOURCE.vcxitems*{92e86448-0724-4387-abac-96e63edf4190}*SharedItemsImports = 9
 		WickedEngine\Shaders_SOURCE.vcxitems*{c222218b-b6d1-406b-b2c0-8c1ced4a8d19}*SharedItemsImports = 4
 		Content.vcxitems*{c48f6bff-f91b-4db5-98b5-15287dfb7c95}*SharedItemsImports = 9
-		WickedEngine\WickedEngine_SOURCE.vcxitems*{d294c41d-d886-4b95-9fd6-ee13eee8d976}*SharedItemsImports = 4
 		Content.vcxitems*{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}*SharedItemsImports = 4
 		Editor\Editor_SOURCE.vcxitems*{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}*SharedItemsImports = 4
 		WickedEngine\Shaders_SOURCE.vcxitems*{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}*SharedItemsImports = 4
@@ -207,30 +205,6 @@ Global
 		{60DA258F-E95F-4CF4-A46B-17D80644464B}.Release|Win32.Build.0 = Release|Win32
 		{60DA258F-E95F-4CF4-A46B-17D80644464B}.Release|x64.ActiveCfg = Release|x64
 		{60DA258F-E95F-4CF4-A46B-17D80644464B}.Release|x64.Build.0 = Release|x64
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Debug|ARM.ActiveCfg = Debug|ARM
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Debug|ARM.Build.0 = Debug|ARM
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Debug|ARM.Deploy.0 = Debug|ARM
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Debug|ARM64.ActiveCfg = Debug|ARM64
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Debug|ARM64.Build.0 = Debug|ARM64
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Debug|ARM64.Deploy.0 = Debug|ARM64
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Debug|Win32.ActiveCfg = Debug|x86
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Debug|Win32.Build.0 = Debug|x86
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Debug|Win32.Deploy.0 = Debug|x86
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Debug|x64.ActiveCfg = Debug|x64
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Debug|x64.Build.0 = Debug|x64
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Debug|x64.Deploy.0 = Debug|x64
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Release|ARM.ActiveCfg = Release|ARM
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Release|ARM.Build.0 = Release|ARM
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Release|ARM.Deploy.0 = Release|ARM
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Release|ARM64.ActiveCfg = Release|ARM64
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Release|ARM64.Build.0 = Release|ARM64
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Release|ARM64.Deploy.0 = Release|ARM64
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Release|Win32.ActiveCfg = Release|x86
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Release|Win32.Build.0 = Release|x86
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Release|Win32.Deploy.0 = Release|x86
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Release|x64.ActiveCfg = Release|x64
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Release|x64.Build.0 = Release|x64
-		{D294C41D-D886-4B95-9FD6-EE13EEE8D976}.Release|x64.Deploy.0 = Release|x64
 		{9C8F8910-CCA3-41CB-A2FA-3545CDD5D8BF}.Debug|ARM.ActiveCfg = Release|x64
 		{9C8F8910-CCA3-41CB-A2FA-3545CDD5D8BF}.Debug|ARM.Build.0 = Release|x64
 		{9C8F8910-CCA3-41CB-A2FA-3545CDD5D8BF}.Debug|ARM64.ActiveCfg = Release|x64

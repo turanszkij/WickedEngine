@@ -93,7 +93,7 @@ inline float shadowTrace(float3 P, float3 N, float3 L, float dist)
 {
 #ifdef RAYTRACING_INLINE
 	RayQuery<
-		RAY_FLAG_CULL_NON_OPAQUE | 
+		RAY_FLAG_FORCE_OPAQUE | 
 		RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
 		RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH
 	> q;

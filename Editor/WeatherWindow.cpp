@@ -21,6 +21,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	float y = 20;
 	float step = 32;
 
+
 	fogStartSlider = new wiSlider(0, 5000, 0, 100000, "Fog Start: ");
 	fogStartSlider->SetSize(XMFLOAT2(100, 30));
 	fogStartSlider->SetPos(XMFLOAT2(x, y += step));
@@ -115,8 +116,25 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	simpleskyCheckBox->OnClick([&](wiEventArgs args) {
 		auto& weather = GetWeather();
 		weather.SetSimpleSky(args.bValue);
-		});
+		//if (args.bValue)
+		//{
+		//	weather.SetRealisticSky(false);
+		//}
+	});
 	weatherWindow->AddWidget(simpleskyCheckBox);
+
+	//realisticskyCheckBox = new wiCheckBox("Realistic sky: ");
+	//realisticskyCheckBox->SetTooltip("Physically based sky rendering model.");
+	//realisticskyCheckBox->SetPos(XMFLOAT2(x + 120, y));
+	//realisticskyCheckBox->OnClick([&](wiEventArgs args) {
+	//	auto& weather = GetWeather();
+	//	weather.SetRealisticSky(args.bValue);
+	//	if (args.bValue)
+	//	{
+	//		weather.SetSimpleSky(false);
+	//	}
+	//});
+	//weatherWindow->AddWidget(realisticskyCheckBox);
 
 	skyButton = new wiButton("Load Sky");
 	skyButton->SetTooltip("Load a skybox cubemap texture...");
@@ -132,10 +150,12 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			params.description = "Cubemap texture";
 			params.extensions.push_back("dds");
 			wiHelper::FileDialog(params, [=](std::string fileName) {
-				auto& weather = GetWeather();
-				weather.skyMapName = fileName;
-				weather.skyMap = wiResourceManager::Load(fileName);
-				skyButton->SetText(fileName);
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					auto& weather = GetWeather();
+					weather.skyMapName = fileName;
+					weather.skyMap = wiResourceManager::Load(fileName);
+					skyButton->SetText(fileName);
+				});
 			});
 		}
 		else
@@ -507,6 +527,7 @@ void WeatherWindow::Update()
 		horizonColorPicker->SetPickColor(wiColor::fromFloat3(weather.horizon));
 		zenithColorPicker->SetPickColor(wiColor::fromFloat3(weather.zenith));
 		simpleskyCheckBox->SetCheck(weather.IsSimpleSky());
+		//realisticskyCheckBox->SetCheck(weather.IsRealisticSky());
 
 		ocean_enabledCheckBox->SetCheck(weather.IsOceanEnabled());
 		ocean_patchSizeSlider->SetValue(weather.oceanParameters.patch_length);

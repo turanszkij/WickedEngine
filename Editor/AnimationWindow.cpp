@@ -97,10 +97,24 @@ AnimationWindow::AnimationWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 		{
 			animation->amount = args.fValue;
 		}
-		});
+	});
 	amountSlider->SetEnabled(false);
 	amountSlider->SetTooltip("Set the animation blending amount by hand.");
 	animWindow->AddWidget(amountSlider);
+
+	speedSlider = new wiSlider(0, 4, 1, 100000, "Speed: ");
+	speedSlider->SetSize(XMFLOAT2(250, 30));
+	speedSlider->SetPos(XMFLOAT2(x, y += step));
+	speedSlider->OnSlide([&](wiEventArgs args) {
+		AnimationComponent* animation = wiScene::GetScene().animations.GetComponent(entity);
+		if (animation != nullptr)
+		{
+			animation->speed = args.fValue;
+		}
+	});
+	speedSlider->SetEnabled(false);
+	speedSlider->SetTooltip("Set the animation speed.");
+	animWindow->AddWidget(speedSlider);
 
 
 
@@ -177,5 +191,6 @@ void AnimationWindow::Update()
 		timerSlider->SetRange(0, animation.GetLength());
 		timerSlider->SetValue(animation.timer);
 		amountSlider->SetValue(animation.amount);
+		speedSlider->SetValue(animation.speed);
 	}
 }

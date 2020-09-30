@@ -4,13 +4,12 @@
 
 TEXTURE2D(resolve_current, float4, TEXSLOT_ONDEMAND0);
 TEXTURE2D(resolve_history, float4, TEXSLOT_ONDEMAND1);
-TEXTURE2D(texture_raytrace, float4, TEXSLOT_ONDEMAND2);
 
 RWTEXTURE2D(output, float4, 0);
 
-static const float temporalResponseMin = 0.85f;
+static const float temporalResponseMin = 0.85;
 static const float temporalResponseMax = 1.0f;
-static const float temporalScale = 2.0f;
+static const float temporalScale = 2.0;
 static const float temporalExposure = 10.0f;
 
 inline float Luma4(float3 color)
@@ -47,7 +46,7 @@ inline void ResolverAABB(Texture2D<float4> currentColor, SamplerState currentSam
     
     float4 sampleColors[9];
     [unroll]
-    for (uint i = 0; i < 9; i++) 
+    for (uint i = 0; i < 9; i++)
     {
         sampleColors[i] = currentColor.SampleLevel(currentSampler, uv + (SampleOffset[i] / texelSize), 0.0f);
     }
@@ -93,6 +92,7 @@ inline void ResolverAABB(Texture2D<float4> currentColor, SamplerState currentSam
 
 float2 CalculateCustomMotion(float depth, float2 uv)
 {
+    // Velocity buffer not good, because that contains object motion, and reflection is camera relative
     float4 sampleWorldPosition = float4(reconstructPosition(uv, depth, g_xCamera_InvVP), 1.0f);
     
     float4 thisClip = mul(g_xCamera_VP, sampleWorldPosition);
@@ -100,8 +100,8 @@ float2 CalculateCustomMotion(float depth, float2 uv)
     
     float2 thisScreen = thisClip.xy * rcp(thisClip.w);
     float2 prevScreen = prevClip.xy * rcp(prevClip.w);
-    thisScreen = (thisScreen.xy + 1.0f) / 2.0f;
-    prevScreen = (prevScreen.xy + 1.0f) / 2.0f;
+    thisScreen = thisScreen.xy * float2(0.5, -0.5) + 0.5;
+    prevScreen = prevScreen.xy * float2(0.5, -0.5) + 0.5;
     
     return thisScreen - prevScreen;
 }
@@ -111,34 +111,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 {
     const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
     const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
-
-    const float3 worldNormal = decodeNormal(texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy);
-
-    float4 raytraceSource = texture_raytrace.SampleLevel(sampler_point_clamp, uv, 0);
-    float  hitDepth = raytraceSource.z;
-    float2 hitPixel = raytraceSource.xy;
     
-    // Calculate custom motion vectors to counter smearing, which we would get by using normal gbuffer velocity
-    
-    float2 reflectionCustomVelocity = CalculateCustomMotion(hitDepth, uv);
-    float2 hitCustomVelocity = CalculateCustomMotion(hitDepth, hitPixel);
+    // Normal velocity seems to work best in most scenarios
     float2 customVelocity = CalculateCustomMotion(depth, uv);
+    //float2 hitCustomVelocity = CalculateCustomMotion(hitDepth, uv); 
     
-    float2 standardHitVelocity = texture_gbuffer1.SampleLevel(sampler_point_clamp, hitPixel, 0).zw;
-    float2 standardVelocity = texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).zw;
+    float2 velocity = customVelocity;
+    float2 prevUV = uv - velocity;
     
-    float2 velocityDifference = customVelocity - standardVelocity;
-    float2 hitVelocityDifference = hitCustomVelocity - standardHitVelocity;
-    
-    float objectVelocityMask = saturate(dot(velocityDifference, velocityDifference) * xPPResolution_rcp.x * 100.0f);
-    float hitObjectVelocityMask = saturate(dot(hitVelocityDifference, hitVelocityDifference) * xPPResolution_rcp.x * 100.0f);
-    
-    float2 objectVelocity = standardVelocity * objectVelocityMask;
-    float2 hitObjectVelocity = standardHitVelocity * hitObjectVelocityMask;
-
-    float2 velocity = lerp(lerp(reflectionCustomVelocity, hitObjectVelocity, hitObjectVelocityMask), objectVelocity, objectVelocityMask);
-    float2 prevUV = float2(uv.x - velocity.x, uv.y + velocity.y);
-
     float4 previous = resolve_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
 
     // Luma HDR and AABB minmax
@@ -149,7 +129,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 
     previous.xyz = clip_aabb(currentMin.xyz, currentMax.xyz, clamp(currentAverage, currentMin, currentMax), previous).xyz;
     previous.a = clamp(previous.a, currentMin.a, currentMax.a);
-
+    
     // Blend color & history
     // Feedback weight from unbiased luminance difference (Timothy Lottes)
     
@@ -161,10 +141,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
     float blendFinal = lerp(temporalResponseMin, temporalResponseMax, lumWeight);
 
     // Reduce ghosting by refreshing the blend by velocity (Unreal)
-    float2 velocityScreen = standardVelocity * xPPResolution;
+    float2 velocityScreen = customVelocity * xPPResolution;
     float velocityBlend = sqrt(dot(velocityScreen, velocityScreen));
-    blendFinal = lerp(blendFinal, 0.2f, saturate(velocityBlend / 100.0f));
-
+    blendFinal = lerp(blendFinal, 0.2, saturate(velocityBlend / 100.0));
+    
     float4 result = lerp(current, previous, blendFinal);
     
     output[DTid.xy] = result;

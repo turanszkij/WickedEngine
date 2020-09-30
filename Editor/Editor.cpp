@@ -692,24 +692,26 @@ void EditorComponent::Load()
 		params.description = "Wicked Scene";
 		params.extensions.push_back("wiscene");
 		wiHelper::FileDialog(params, [this](std::string fileName) {
+			wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+				std::string filename = fileName;
+				if (filename.substr(filename.length() - 8).compare(".wiscene") != 0)
+				{
+					filename += ".wiscene";
+				}
+				wiArchive archive(filename, false);
+				if (archive.IsOpen())
+				{
+					Scene& scene = wiScene::GetScene();
 
-			if (fileName.substr(fileName.length() - 8).compare(".wiscene") != 0)
-			{
-				fileName += ".wiscene";
-			}
-			wiArchive archive(fileName, false);
-			if (archive.IsOpen())
-			{
-				Scene& scene = wiScene::GetScene();
+					scene.Serialize(archive);
 
-				scene.Serialize(archive);
-
-				ResetHistory();
-			}
-			else
-			{
-				wiHelper::messageBox("Could not create " + fileName + "!");
-			}
+					ResetHistory();
+				}
+				else
+				{
+					wiHelper::messageBox("Could not create " + fileName + "!");
+				}
+			});
 		});
 	});
 	GetGUI().AddWidget(saveButton);
@@ -728,39 +730,40 @@ void EditorComponent::Load()
 		params.extensions.push_back("gltf");
 		params.extensions.push_back("glb");
 		wiHelper::FileDialog(params, [&](std::string fileName) {
+			wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+				main->loader->addLoadingFunction([=](wiJobArgs args) {
+					string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(fileName));
 
-			main->loader->addLoadingFunction([=](wiJobArgs args) {
-				string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(fileName));
-
-				if (!extension.compare("WISCENE")) // engine-serialized
-				{
-					wiScene::LoadModel(fileName);
-				}
-				else if (!extension.compare("OBJ")) // wavefront-obj
-				{
-					Scene scene;
-					ImportModel_OBJ(fileName, scene);
-					wiScene::GetScene().Merge(scene);
-				}
-				else if (!extension.compare("GLTF")) // text-based gltf
-				{
-					Scene scene;
-					ImportModel_GLTF(fileName, scene);
-					wiScene::GetScene().Merge(scene);
-				}
-				else if (!extension.compare("GLB")) // binary gltf
-				{
-					Scene scene;
-					ImportModel_GLTF(fileName, scene);
-					wiScene::GetScene().Merge(scene);
-				}
+					if (!extension.compare("WISCENE")) // engine-serialized
+					{
+						wiScene::LoadModel(fileName);
+					}
+					else if (!extension.compare("OBJ")) // wavefront-obj
+					{
+						Scene scene;
+						ImportModel_OBJ(fileName, scene);
+						wiScene::GetScene().Merge(scene);
+					}
+					else if (!extension.compare("GLTF")) // text-based gltf
+					{
+						Scene scene;
+						ImportModel_GLTF(fileName, scene);
+						wiScene::GetScene().Merge(scene);
+					}
+					else if (!extension.compare("GLB")) // binary gltf
+					{
+						Scene scene;
+						ImportModel_GLTF(fileName, scene);
+						wiScene::GetScene().Merge(scene);
+					}
+					});
+				main->loader->onFinished([=] {
+					main->ActivatePath(this, 0.2f, wiColor::Black());
+					weatherWnd->Update();
+					});
+				main->ActivatePath(main->loader.get(), 0.2f, wiColor::Black());
+				ResetHistory();
 			});
-			main->loader->onFinished([=] {
-				main->ActivatePath(this, 0.2f, wiColor::Black());
-				weatherWnd->Update();
-			});
-			main->ActivatePath(main->loader.get(), 0.2f, wiColor::Black());
-			ResetHistory();
 		});
 	});
 	GetGUI().AddWidget(modelButton);
@@ -776,7 +779,9 @@ void EditorComponent::Load()
 		params.description = "Lua script";
 		params.extensions.push_back("lua");
 		wiHelper::FileDialog(params, [](std::string fileName) {
-			wiLua::RunFile(fileName);
+			wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+				wiLua::RunFile(fileName);
+			});
 		});
 	});
 	GetGUI().AddWidget(scriptButton);
@@ -1425,7 +1430,7 @@ void EditorComponent::Update(float dt)
 							wiRenderer::PutWaterRipple(wiHelper::GetOriginalWorkingDirectory() + "images/ripple.png", hovered.position);
 						}
 					}
-					else if (translator.selected.empty() && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
+					else if (decalWnd->placementCheckBox->GetCheck() && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
 					{
 						// if not water or softbody, put a decal on it:
 						static int decalselector = 0;

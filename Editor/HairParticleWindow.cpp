@@ -11,7 +11,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 	assert(GUI && "Invalid GUI!");
 
 	hairWindow = new wiWindow(GUI, "Hair Particle System Window");
-	hairWindow->SetSize(XMFLOAT2(600, 400));
+	hairWindow->SetSize(XMFLOAT2(600, 420));
 	GUI->AddWidget(hairWindow);
 
 	float x = 160;
@@ -213,6 +213,8 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 		}
 		});
 	hairWindow->AddWidget(frameStartInput);
+
+
 
 
 	hairWindow->Translate(XMFLOAT3(200, 50, 0));

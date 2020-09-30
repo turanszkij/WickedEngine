@@ -68,6 +68,7 @@ inline bool is_saturated(float4 a) { return is_saturated(a.x) && is_saturated(a.
 
 inline float3 GetSunColor() { return g_xFrame_SunColor; }
 inline float3 GetSunDirection() { return g_xFrame_SunDirection; }
+inline float GetSunEnergy() { return g_xFrame_SunEnergy; }
 inline float3 GetHorizonColor() { return g_xFrame_Horizon.rgb; }
 inline float3 GetZenithColor() { return g_xFrame_Zenith.rgb; }
 inline float3 GetAmbientColor() { return g_xFrame_Ambient.rgb; }
@@ -124,34 +125,6 @@ inline float2 hammersley2d(uint idx, uint num) {
 	const float radicalInverse_VdC = float(bits) * 2.3283064365386963e-10; // / 0x100000000
 
 	return float2(float(idx) / float(num), radicalInverse_VdC);
-}
-
-inline float2 HammersleyRandom(uint idx, uint num, uint2 random)
-{
-    uint bits = idx;
-    bits = (bits << 16) | (bits >> 16);
-    bits = ((bits & 0x00ff00ff) << 8) | ((bits & 0xff00ff00) >> 8);
-    bits = ((bits & 0x0f0f0f0f) << 4) | ((bits & 0xf0f0f0f0) >> 4);
-    bits = ((bits & 0x33333333) << 2) | ((bits & 0xcccccccc) >> 2);
-    bits = ((bits & 0x55555555) << 1) | ((bits & 0xaaaaaaaa) >> 1);
-    
-    float E1 = frac((float) idx / num + float(random.x) * (1.0 / 65536.0));
-    float E2 = float((bits >> 16) ^ random.y) * (1.0 / 65536.0);
-    return float2(E1, E2);
-}
-
-inline float2 HammersleyRandom(uint idx, uint2 random)
-{
-    uint bits = idx;
-    bits = (bits << 16) | (bits >> 16);
-    bits = ((bits & 0x00ff00ff) << 8) | ((bits & 0xff00ff00) >> 8);
-    bits = ((bits & 0x0f0f0f0f) << 4) | ((bits & 0xf0f0f0f0) >> 4);
-    bits = ((bits & 0x33333333) << 2) | ((bits & 0xcccccccc) >> 2);
-    bits = ((bits & 0x55555555) << 1) | ((bits & 0xaaaaaaaa) >> 1);
-    
-    float E1 = frac(float(random.x) * (1.0 / 65536.0));
-    float E2 = float((bits >> 16) ^ random.y) * (1.0 / 65536.0);
-    return float2(E1, E2);
 }
 
 // "Next Generation Post Processing in Call of Duty: Advanced Warfare"

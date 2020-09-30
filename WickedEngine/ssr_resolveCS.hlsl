@@ -35,7 +35,6 @@ float CalculateBlendIntersection(bool hit, float iterationStep, float2 hitPixel)
     return blend;
 }
 
-// I probably need to figure out a better way to deal with this.
 float2 CalculateTailDirection(float3 viewNormal)
 {
     float3 upVector = abs(viewNormal.z) < 0.999 ? float3(0.0, 0.0, 1.0) : float3(1.0, 0.0, 0.0);
@@ -45,6 +44,19 @@ float2 CalculateTailDirection(float3 viewNormal)
     
     return lerp(float2(1.0, 0.1), float2(0.1, 1.0), tailDirection);
 }
+
+static const float2 resolveOffsets3x3[9] =
+{
+    float2(-2.0, -2.0),
+    float2(0.0, -2.0),
+    float2(2.0, -2.0),
+    float2(-2.0, 0.0),
+    float2(0.0, 0.0),
+    float2(2.0, 0.0),
+    float2(-2.0, 2.0),
+    float2(0.0, 2.0),
+    float2(2.0, 2.0)
+};
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -71,10 +83,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
         return;
     }
 
+    const uint2 Random = Rand_PCG16(int3((DTid.xy + 0.5f), g_xFrame_FrameCount)).xy;
+
     float specularConeTangent = lerp(0.0, roughness * (1.0 - BRDFBias), NdotV * sqrt(roughness));
     specularConeTangent *= lerp(saturate(NdotV * 2), 1.0f, sqrt(roughness));
-
-    const uint2 Random = Rand3DPCG16(int3((DTid.xy + 0.5f), g_xFrame_FrameCount)).xy;
     
     float4 result = 0.0f;
     float weightSum = 0.0f;
@@ -83,10 +95,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
     [unroll]
     for (uint i = 0; i < NumResolve; i++)
     {
-        float2 offsetRotation = (HammersleyRandom(i, NumResolve, Random) * 2.0 - 1.0) * roughnessSequenceSize;
+        float2 offsetRotation = (HammersleyRandom16(i, NumResolve, Random) * 2.0 - 1.0) * roughnessSequenceSize;
         float2x2 offsetRotationMatrix = float2x2(offsetRotation.x, offsetRotation.y, -offsetRotation.y, offsetRotation.x);
         
-        float2 offsetUV = offset[i] * xPPResolution_rcp;
+        float2 offsetUV = resolveOffsets3x3[i] * xPPResolution_rcp;
         offsetUV = uv + mul(offsetRotationMatrix, offsetUV) * CalculateTailDirection(N);
         
         float4 raytraceSource = texture_raytrace.SampleLevel(sampler_point_clamp, offsetUV, 0);

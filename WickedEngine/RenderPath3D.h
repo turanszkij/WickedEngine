@@ -38,9 +38,11 @@ private:
 	AO ao = AO_DISABLED;
 	bool fxaaEnabled = false;
 	bool ssrEnabled = false;
+	bool raytracedReflectionsEnabled = false;
 	bool reflectionsEnabled = true;
 	bool shadowsEnabled = true;
 	bool bloomEnabled = true;
+	bool volumetricCloudsEnabled = false;
 	bool colorGradingEnabled = false;
 	bool volumeLightsEnabled = true;
 	bool lightShaftsEnabled = false;
@@ -74,6 +76,7 @@ protected:
 	wiGraphics::Texture rtSun[2]; // 0: sun render target used for lightshafts (can be MSAA), 1: radial blurred lightshafts
 	wiGraphics::Texture rtSun_resolved; // sun render target, but the resolved version if MSAA is enabled
 	wiGraphics::Texture rtGUIBlurredBackground[3];	// downsampled, gaussian blurred scene for GUI
+	wiGraphics::Texture rtShadingRate; // UINT8 shading rate per tile
 
 	wiGraphics::Texture rtPostprocess_HDR; // ping-pong with main scene RT in HDR post-process chain
 	wiGraphics::Texture rtPostprocess_LDR[2]; // ping-pong with itself in LDR post-process chain
@@ -143,10 +146,12 @@ public:
 	constexpr bool getAOEnabled() const { return ao != AO_DISABLED; }
 	constexpr AO getAO() const { return ao; }
 	constexpr bool getSSREnabled() const { return ssrEnabled; }
+	constexpr bool getRaytracedReflectionEnabled() const { return raytracedReflectionsEnabled; }
 	constexpr bool getShadowsEnabled() const { return shadowsEnabled; }
 	constexpr bool getReflectionsEnabled() const { return reflectionsEnabled; }
 	constexpr bool getFXAAEnabled() const { return fxaaEnabled; }
 	constexpr bool getBloomEnabled() const { return bloomEnabled; }
+	constexpr bool getVolumetricCloudsEnabled() const { return volumetricCloudsEnabled; }
 	constexpr bool getColorGradingEnabled() const { return colorGradingEnabled; }
 	constexpr bool getVolumeLightsEnabled() const { return volumeLightsEnabled; }
 	constexpr bool getLightShaftsEnabled() const { return lightShaftsEnabled; }
@@ -181,10 +186,12 @@ public:
 
 	constexpr void setAO(AO value) { ao = value; }
 	constexpr void setSSREnabled(bool value){ ssrEnabled = value; }
+	constexpr void setRaytracedReflectionsEnabled(bool value){ raytracedReflectionsEnabled = value; }
 	constexpr void setShadowsEnabled(bool value){ shadowsEnabled = value; }
 	constexpr void setReflectionsEnabled(bool value){ reflectionsEnabled = value; }
 	constexpr void setFXAAEnabled(bool value){ fxaaEnabled = value; }
 	constexpr void setBloomEnabled(bool value){ bloomEnabled = value; }
+	constexpr void setVolumetricCloudsEnabled(bool value) { volumetricCloudsEnabled = value; }
 	constexpr void setColorGradingEnabled(bool value){ colorGradingEnabled = value; }
 	constexpr void setVolumeLightsEnabled(bool value){ volumeLightsEnabled = value; }
 	constexpr void setLightShaftsEnabled(bool value){ lightShaftsEnabled = value; }

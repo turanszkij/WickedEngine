@@ -22,6 +22,7 @@ namespace wiScene
 {
 
 static Shader		vertexShader;
+static Shader		meshShader;
 static Shader		pixelShader[wiEmittedParticle::PARTICLESHADERTYPE_COUNT];
 static Shader		kickoffUpdateCS;
 static Shader		finishUpdateCS;
@@ -152,26 +153,12 @@ void wiEmittedParticle::CreateSelfBuffers()
 		debugBufDesc.CPUAccessFlags = CPU_ACCESS_READ;
 		debugBufDesc.BindFlags = 0;
 		debugBufDesc.MiscFlags = 0;
-		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, &debugDataReadbackBuffer);
+		for (int i = 0; i < arraysize(statisticsReadbackBuffer); ++i)
+		{
+			wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, &statisticsReadbackBuffer[i]);
+		}
 	}
 
-	// Sorting debug buffers:
-	{
-		GPUBufferDesc debugBufDesc = aliveList[0].GetDesc();
-		debugBufDesc.Usage = USAGE_STAGING;
-		debugBufDesc.CPUAccessFlags = CPU_ACCESS_READ;
-		debugBufDesc.BindFlags = 0;
-		debugBufDesc.MiscFlags = 0;
-		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, &debugDataReadbackIndexBuffer);
-	}
-	{
-		GPUBufferDesc debugBufDesc = distanceBuffer.GetDesc();
-		debugBufDesc.Usage = USAGE_STAGING;
-		debugBufDesc.CPUAccessFlags = CPU_ACCESS_READ;
-		debugBufDesc.BindFlags = 0;
-		debugBufDesc.MiscFlags = 0;
-		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, &debugDataReadbackDistanceBuffer);
-	}
 }
 
 uint32_t wiEmittedParticle::GetMemorySizeInBytes() const
@@ -215,17 +202,22 @@ void wiEmittedParticle::UpdateCPU(const TransformComponent& transform, float dt)
 	// Swap CURRENT alivelist with NEW alivelist
 	std::swap(aliveList[0], aliveList[1]);
 
-	if (IsDebug())
+	// Read back statistics (with GPU delay):
+	if (statisticsReadBackIndex > arraysize(statisticsReadbackBuffer))
 	{
+		const uint32_t oldest_stat_index = (statisticsReadBackIndex + 1) % arraysize(statisticsReadbackBuffer);
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		device->WaitForGPU();
 		Mapping mapping;
 		mapping._flags = Mapping::FLAG_READ;
-		mapping.size = sizeof(debugData);
-		device->Map(&debugDataReadbackBuffer, &mapping);
-		memcpy(&debugData, mapping.data, sizeof(debugData));
-		device->Unmap(&debugDataReadbackBuffer);
+		mapping.size = sizeof(statistics);
+		device->Map(&statisticsReadbackBuffer[oldest_stat_index], &mapping);
+		if (mapping.data != nullptr)
+		{
+			memcpy(&statistics, mapping.data, sizeof(statistics));
+			device->Unmap(&statisticsReadbackBuffer[oldest_stat_index]);
+		}
 	}
+	statisticsReadBackIndex++;
 }
 void wiEmittedParticle::Burst(int num)
 {
@@ -240,7 +232,6 @@ void wiEmittedParticle::Restart()
 	SetPaused(false);
 }
 
-//#define DEBUG_SORTING // slow but great for debug!!
 void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const MaterialComponent& material, const MeshComponent* mesh, CommandList cmd) const
 {
 	if (!particleBuffer.IsValid())
@@ -288,6 +279,10 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		if (IsFrameBlendingEnabled())
 		{
 			cb.xEmitterOptions |= EMITTER_OPTION_BIT_FRAME_BLENDING_ENABLED;
+		}
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
+		{
+			cb.xEmitterOptions |= EMITTER_OPTION_BIT_MESH_SHADER_ENABLED;
 		}
 
 		// SPH:
@@ -490,71 +485,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 
 	if (IsSorted())
 	{
-#ifdef DEBUG_SORTING
-		vector<uint32_t> before(MAX_PARTICLES);
-		device->DownloadResource(&aliveList[1], &debugDataReadbackIndexBuffer, before.data());
-
-		ParticleCounters data;
-		device->DownloadResource(&counterBuffer, &debugDataReadbackBuffer, &data);
-		uint32_t particleCount = data.aliveCount_afterSimulation;
-#endif // DEBUG_SORTING
-
-
 		wiGPUSortLib::Sort(MAX_PARTICLES, distanceBuffer, counterBuffer, PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION, aliveList[1], cmd);
-
-
-#ifdef DEBUG_SORTING
-		vector<uint32_t> after(MAX_PARTICLES);
-		device->DownloadResource(&aliveList[1], &debugDataReadbackIndexBuffer, after.data());
-
-		vector<float> distances(MAX_PARTICLES);
-		device->DownloadResource(&distanceBuffer, &debugDataReadbackDistanceBuffer, distances.data());
-
-		if (particleCount > 1)
-		{
-			// CPU sort:
-			for (uint32_t i = 0; i < particleCount - 1; ++i)
-			{
-				for (uint32_t j = i + 1; j < particleCount; ++j)
-				{
-					uint32_t particleIndexA = before[i];
-					uint32_t particleIndexB = before[j];
-
-					float distA = distances[particleIndexA];
-					float distB = distances[particleIndexB];
-
-					if (distA > distB)
-					{
-						before[i] = particleIndexB;
-						before[j] = particleIndexA;
-					}
-				}
-			}
-
-			// Validate:
-			bool valid = true;
-			uint32_t i = 0;
-			for (i = 0; i < particleCount; ++i)
-			{
-				if (before[i] != after[i])
-				{
-					if (distances[before[i]] != distances[after[i]]) // if distances are equal, we just don't care...
-					{
-						valid = false;
-						break;
-					}
-				}
-			}
-
-			assert(valid && "Invalid GPU sorting result!");
-
-			// Also we can reupload CPU sorted particles to verify:
-			if (!valid)
-			{
-				device->UpdateBuffer(&aliveList[1], before.data(), cmd);
-			}
-		}
-#endif // DEBUG_SORTING
 	}
 
 	if (!IsPaused())
@@ -590,10 +521,8 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	if (IsDebug())
-	{
-		device->CopyResource(&debugDataReadbackBuffer, &counterBuffer, cmd);
-	}
+	// Statistics is copied to readback:
+	device->CopyResource(&statisticsReadbackBuffer[(statisticsReadBackIndex - 1) % arraysize(statisticsReadbackBuffer)], &counterBuffer, cmd);
 }
 
 
@@ -611,18 +540,31 @@ void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialCompon
 		const BLENDMODE blendMode = material.GetBlendMode();
 		device->BindPipelineState(&PSO[blendMode][shaderType], cmd);
 		device->BindResource(PS, material.GetBaseColorMap(), TEXSLOT_ONDEMAND0, cmd);
+		device->BindShadingRate(material.shadingRate, cmd);
 	}
 
 	device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), cmd);
 	device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), cmd);
 
-	const GPUResource* res[] = {
-		&particleBuffer,
-		&aliveList[1] // NEW aliveList
-	};
-	device->BindResources(VS, res, 0, arraysize(res), cmd);
-
-	device->DrawInstancedIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, cmd);
+	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
+	{
+		const GPUResource* res[] = {
+			&counterBuffer,
+			&particleBuffer,
+			&aliveList[1], // NEW aliveList
+		};
+		device->BindResources(MS, res, TEXSLOT_ONDEMAND20, arraysize(res), cmd);
+		device->DispatchMeshIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, cmd);
+	}
+	else
+	{
+		const GPUResource* res[] = {
+			&particleBuffer,
+			&aliveList[1] // NEW aliveList
+		};
+		device->BindResources(VS, res, TEXSLOT_ONDEMAND21, arraysize(res), cmd);
+		device->DrawInstancedIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, cmd);
+	}
 
 	device->EventEnd(cmd);
 }
@@ -635,6 +577,11 @@ namespace wiEmittedParticle_Internal
 		std::string path = wiRenderer::GetShaderPath();
 
 		wiRenderer::LoadShader(VS, vertexShader, "emittedparticleVS.cso");
+
+		if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
+		{
+			wiRenderer::LoadShader(MS, meshShader, "emittedparticleMS.cso");
+		}
 
 		wiRenderer::LoadShader(PS, pixelShader[wiEmittedParticle::SOFT], "emittedparticlePS_soft.cso");
 		wiRenderer::LoadShader(PS, pixelShader[wiEmittedParticle::SOFT_DISTORTION], "emittedparticlePS_soft_distortion.cso");
@@ -662,7 +609,14 @@ namespace wiEmittedParticle_Internal
 		for (int i = 0; i < BLENDMODE_COUNT; ++i)
 		{
 			PipelineStateDesc desc;
-			desc.vs = &vertexShader;
+			if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
+			{
+				desc.ms = &meshShader;
+			}
+			else
+			{
+				desc.vs = &vertexShader;
+			}
 			desc.bs = &blendStates[i];
 			desc.rs = &rasterizerState;
 			desc.dss = &depthStencilState;
@@ -676,7 +630,14 @@ namespace wiEmittedParticle_Internal
 
 		{
 			PipelineStateDesc desc;
-			desc.vs = &vertexShader;
+			if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
+			{
+				desc.ms = &meshShader;
+			}
+			else
+			{
+				desc.vs = &vertexShader;
+			}
 			desc.ps = &pixelShader[wiEmittedParticle::SIMPLEST];
 			desc.bs = &blendStates[BLENDMODE_ALPHA];
 			desc.rs = &wireFrameRS;
@@ -800,6 +761,12 @@ void wiEmittedParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 			archive >> frameCount;
 			archive >> frameStart;
 			archive >> frameRate;
+		}
+
+		if (archive.GetVersion() == 48)
+		{
+			uint8_t shadingRate;
+			archive >> shadingRate; // no longer needed
 		}
 	}
 	else

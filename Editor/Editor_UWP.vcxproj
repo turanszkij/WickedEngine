@@ -201,6 +201,9 @@
       <DisableOptimizations>false</DisableOptimizations>
       <EnableDebuggingInformation>false</EnableDebuggingInformation>
     </FxCompile>
+    <PreBuildEvent>
+      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <Link>
@@ -228,6 +231,9 @@
       <ObjectFileOutput>$(OutDir)shaders/%(Filename).cso</ObjectFileOutput>
       <ShaderModel>5.0</ShaderModel>
     </FxCompile>
+    <PreBuildEvent>
+      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <Link>
@@ -257,6 +263,9 @@
       <DisableOptimizations>false</DisableOptimizations>
       <EnableDebuggingInformation>false</EnableDebuggingInformation>
     </FxCompile>
+    <PreBuildEvent>
+      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <Link>
@@ -284,6 +293,9 @@
       <ObjectFileOutput>$(OutDir)shaders/%(Filename).cso</ObjectFileOutput>
       <ShaderModel>5.0</ShaderModel>
     </FxCompile>
+    <PreBuildEvent>
+      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Link>
@@ -313,6 +325,9 @@
       <DisableOptimizations>false</DisableOptimizations>
       <EnableDebuggingInformation>false</EnableDebuggingInformation>
     </FxCompile>
+    <PreBuildEvent>
+      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Link>
@@ -340,6 +355,9 @@
       <ObjectFileOutput>$(OutDir)shaders/%(Filename).cso</ObjectFileOutput>
       <ShaderModel>5.0</ShaderModel>
     </FxCompile>
+    <PreBuildEvent>
+      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Link>
@@ -369,6 +387,9 @@
       <DisableOptimizations>false</DisableOptimizations>
       <EnableDebuggingInformation>false</EnableDebuggingInformation>
     </FxCompile>
+    <PreBuildEvent>
+      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Link>
@@ -396,6 +417,9 @@
       <ObjectFileOutput>$(OutDir)shaders/%(Filename).cso</ObjectFileOutput>
       <ShaderModel>5.0</ShaderModel>
     </FxCompile>
+    <PreBuildEvent>
+      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <Image Include="Assets\LockScreenLogo.scale-200.png" />
@@ -422,6 +446,15 @@
   </ItemGroup>
   <ItemGroup>
     <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\rtaoLIB.hlsl">
+      <FileType>Document</FileType>
+    </FxCompile>
+    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\rtao_denoise_blurCS.hlsl">
+      <FileType>Document</FileType>
+    </FxCompile>
+    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\rtao_denoise_temporalCS.hlsl">
+      <FileType>Document</FileType>
+    </FxCompile>
+    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\shadingRateClassificationCS.hlsl">
       <FileType>Document</FileType>
     </FxCompile>
   </ItemGroup>

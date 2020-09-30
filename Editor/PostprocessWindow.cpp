@@ -13,7 +13,7 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 	assert(GUI && "Invalid GUI!");
 
 	ppWindow = new wiWindow(GUI, "PostProcess Window");
-	ppWindow->SetSize(XMFLOAT2(400, 600));
+	ppWindow->SetSize(XMFLOAT2(400, 620));
 	GUI->AddWidget(ppWindow);
 
 	float x = 150;
@@ -51,6 +51,15 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 	});
 	ppWindow->AddWidget(lightShaftsCheckBox);
 
+	volumetricCloudsCheckBox = new wiCheckBox("Volumetric clouds: ");
+	volumetricCloudsCheckBox->SetTooltip("Enable volumetric cloud rendering.");
+	volumetricCloudsCheckBox->SetPos(XMFLOAT2(x, y += step));
+	volumetricCloudsCheckBox->SetCheck(editor->renderPath->getVolumetricCloudsEnabled());
+	volumetricCloudsCheckBox->OnClick([=](wiEventArgs args) {
+		editor->renderPath->setVolumetricCloudsEnabled(args.bValue);
+		});
+	ppWindow->AddWidget(volumetricCloudsCheckBox);
+
 	aoComboBox = new wiComboBox("AO: ");
 	aoComboBox->SetTooltip("Choose Ambient Occlusion type. RTAO is only available if hardware supports ray tracing");
 	aoComboBox->SetScriptTip("RenderPath3D::SetAO(int value)");
@@ -59,7 +68,7 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 	aoComboBox->AddItem("SSAO");
 	aoComboBox->AddItem("HBAO");
 	aoComboBox->AddItem("MSAO");
-	if (wiRenderer::GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 	{
 		aoComboBox->AddItem("RTAO");
 	}
@@ -131,6 +140,17 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 		editor->renderPath->setSSREnabled(args.bValue);
 	});
 	ppWindow->AddWidget(ssrCheckBox);
+
+	ssrCheckBox = new wiCheckBox("Ray Traced Reflections: ");
+	ssrCheckBox->SetTooltip("Enable Ray Traced Reflections. Only if GPU supports raytracing.");
+	ssrCheckBox->SetScriptTip("RenderPath3D::SetRaytracedReflectionsEnabled(bool value)");
+	ssrCheckBox->SetPos(XMFLOAT2(x + 200, y));
+	ssrCheckBox->SetCheck(editor->renderPath->getRaytracedReflectionEnabled());
+	ssrCheckBox->OnClick([=](wiEventArgs args) {
+		editor->renderPath->setRaytracedReflectionsEnabled(args.bValue);
+		});
+	ppWindow->AddWidget(ssrCheckBox);
+	ssrCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING));
 
 	sssCheckBox = new wiCheckBox("SSS: ");
 	sssCheckBox->SetTooltip("Enable Subsurface Scattering. (Deferred only for now)");
@@ -272,11 +292,13 @@ PostprocessWindow::PostprocessWindow(EditorComponent* editor) : GUI(&editor->Get
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
 			wiHelper::FileDialog(params, [=](std::string fileName) {
-				editor->renderPath->setColorGradingTexture(wiResourceManager::Load(fileName));
-				if (editor->renderPath->getColorGradingTexture() != nullptr)
-				{
-					colorGradingButton->SetText(fileName);
-				}
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					editor->renderPath->setColorGradingTexture(wiResourceManager::Load(fileName));
+					if (editor->renderPath->getColorGradingTexture() != nullptr)
+					{
+						colorGradingButton->SetText(fileName);
+					}
+				});
 			});
 		}
 		else

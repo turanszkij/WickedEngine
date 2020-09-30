@@ -232,6 +232,11 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 		};
 		device->BindResources(PS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 		device->BindResources(VS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+
+		if (renderPass != RENDERPASS_DEPTHONLY) // depth only alpha test will be full res
+		{
+			device->BindShadingRate(material.shadingRate, cmd);
+		}
 	}
 
 	device->BindConstantBuffer(VS, &cb, CB_GETBINDSLOT(HairParticleCB), cmd);
@@ -267,6 +272,12 @@ void wiHairParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 			archive >> framesY;
 			archive >> frameCount;
 			archive >> frameStart;
+		}
+
+		if (archive.GetVersion() == 48)
+		{
+			uint8_t shadingRate;
+			archive >> shadingRate; // no longer needed
 		}
 	}
 	else

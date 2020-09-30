@@ -33,13 +33,13 @@ namespace wiProfiler
 
 		wiTimer cpuBegin, cpuEnd;
 
-		wiRenderer::GPUQueryRing<4> gpuBegin;
-		wiRenderer::GPUQueryRing<4> gpuEnd;
+		wiRenderer::GPUQueryRing<wiGraphics::GraphicsDevice::GetBackBufferCount() + 3> gpuBegin;
+		wiRenderer::GPUQueryRing<wiGraphics::GraphicsDevice::GetBackBufferCount() + 3> gpuEnd;
 
 		bool IsCPURange() const { return cmd == COMMANDLIST_COUNT; }
 	};
 	std::unordered_map<size_t, Range> ranges;
-	wiRenderer::GPUQueryRing<4> disjoint;
+	wiRenderer::GPUQueryRing<wiGraphics::GraphicsDevice::GetBackBufferCount() + 3> disjoint;
 
 	void BeginFrame()
 	{
@@ -78,7 +78,7 @@ namespace wiProfiler
 		GPUQuery* disjoint_query = disjoint.Get_CPU();
 		if (disjoint_query != nullptr)
 		{
-			while (!wiRenderer::GetDevice()->QueryRead(disjoint_query, &disjoint_result));
+			wiRenderer::GetDevice()->QueryRead(disjoint_query, &disjoint_result);
 		}
 
 		for (auto& x : ranges)
@@ -97,8 +97,8 @@ namespace wiProfiler
 				GPUQueryResult begin_result, end_result;
 				if (begin_query != nullptr && end_query != nullptr)
 				{
-					while (!wiRenderer::GetDevice()->QueryRead(begin_query, &begin_result));
-					while (!wiRenderer::GetDevice()->QueryRead(end_query, &end_result));
+					wiRenderer::GetDevice()->QueryRead(begin_query, &begin_result);
+					wiRenderer::GetDevice()->QueryRead(end_query, &end_result);
 				}
 				range.time = abs((float)(end_result.result_timestamp - begin_result.result_timestamp) / disjoint_result.result_timestamp_frequency * 1000.0f);
 			}

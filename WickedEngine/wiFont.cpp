@@ -324,7 +324,7 @@ void Initialize()
 
 	BlendStateDesc bd;
 	bd.RenderTarget[0].BlendEnable = true;
-	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
+	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
 	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;

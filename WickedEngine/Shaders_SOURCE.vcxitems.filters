@@ -25,6 +25,9 @@
     <Filter Include="LIB">
       <UniqueIdentifier>{1c9fec3c-c842-4bb0-9e03-69baf6cc090e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="MS">
+      <UniqueIdentifier>{92e70786-aab6-48dd-9d04-277448eaa897}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)globals.hlsli">
@@ -115,6 +118,15 @@
       <Filter>HF</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)rtaoLIB.hlsl">
+      <Filter>LIB</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)volumetricCloudsHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)emittedparticleMS.hlsl">
+      <Filter>MS</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)rtreflectionLIB.hlsl">
       <Filter>LIB</Filter>
     </None>
   </ItemGroup>
@@ -981,6 +993,42 @@
       <Filter>HS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)voxelSceneCopyClearCS_TemporalSmoothing.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_curlnoiseCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_detailnoiseCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_finalCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_renderCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_reprojectCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_shapenoiseCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_weathermapCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)shadingRateClassificationCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)shadingRateClassificationCS_DEBUG.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)normalsfromdepthCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)rtao_denoise_blurCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)rtao_denoise_temporalCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

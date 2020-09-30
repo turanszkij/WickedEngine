@@ -27,6 +27,10 @@ CBUFFER(PostProcessCB, CBSLOT_RENDERER_POSTPROCESS)
 #define rtao_range ssao_range
 #define rtao_samplecount ssao_samplecount
 #define rtao_power ssao_power
+#define rtao_seed xPPParams0.w
+
+#define rtreflection_range ssao_range
+#define rtreflection_seed xPPParams0.w
 
 static const uint POSTPROCESS_HBAO_THREADCOUNT = 320;
 #define hbao_direction xPPParams0.xy
@@ -52,6 +56,19 @@ CBUFFER(MSAO_UPSAMPLECB, CBSLOT_RENDERER_POSTPROCESS)
 	float StepSize;
 	float kBlurTolerance;
 	float kUpsampleTolerance;
+};
+
+CBUFFER(ShadingRateClassificationCB, CBSLOT_RENDERER_POSTPROCESS)
+{
+	uint xShadingRateTileSize;
+	uint SHADING_RATE_1X1;
+	uint SHADING_RATE_1X2;
+	uint SHADING_RATE_2X1;
+
+	uint SHADING_RATE_2X2;
+	uint SHADING_RATE_2X4;
+	uint SHADING_RATE_4X2;
+	uint SHADING_RATE_4X4;
 };
 
 static const uint MOTIONBLUR_TILESIZE = 32;

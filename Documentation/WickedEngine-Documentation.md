@@ -51,7 +51,8 @@ This is a reference for the C++ features of Wicked Engine
 			3. [Destroying resources](#destroying-resources)
 			4. [Work submission](#work-submission)
 			5. [Presenting to the screen](#presenting-to-the-screen)
-			6. [Resource binding](#resource-binding)
+			6. [Resource binding (Simple)](#resource-binding-simple)
+			6. [Resource binding (Advanced)](#resource-binding-advanced)
 			7. [Subresources](#subresources)
 			8. [Pipeline States and Shaders](#pipeline-states-and-shaders)
 			9. [Render Passes](#render-passes)
@@ -62,6 +63,7 @@ This is a reference for the C++ features of Wicked Engine
 			14. [GPU Queries](#gpu-queries)
 			15. [RayTracingAccelerationStructure](#raytracingaccelerationstructure)
 			16. [RayTracingPipelineState](#raytracingpipelinestate)
+			17. [Variable Rate Shading](#variable-rate-shading)
 		2. [GraphicsDevice_DX11](#wigraphicsdevice_dx11)
 		3. [GraphicsDevice_DX12](#wigraphicsdevice_dx12)
 		4. [GraphicsDevice_Vulkan](#wigraphicsdevice_vulkan)
@@ -180,7 +182,7 @@ Calls Render for the active RenderPath and wakes up scripts that are waiting for
 Calls Compose for the active RenderPath
 
 ### RenderPath
-[[Header]](../WickedEngine/RenderPath.h) [[Cpp]](../WickedEngine/RenderPath.cpp)
+[[Header]](../WickedEngine/RenderPath.h)
 This is an empty base class that can be activated with a MainComponent. It calls its Start(), Update(), FixedUpdate(), Render(), Compose(), Stop() functions as needed. Override this to perform custom gameplay or rendering logic. <br/>
 The order in which the functions are executed every frame: <br/>
 1. FixedUpdate() <br/>
@@ -444,7 +446,7 @@ Functions like `CreateTexture()`, `CreateBuffer()`, etc. can be used to create c
 Resources will be destroyed automatically by the graphics device when they are no longer used.
 
 ##### Work submission
-Rendering commands that expect a `CommandList` as a parameter are not executed immediately. They will be recorded into command lists and submitted to the GPU for execution upon calling the `PresentEnd()` function. The `CommandList` is a simple handle that associates rendering commands to a CPU execution timeline. The `CommandList` is not thread safe, so every `CommandList` can be used by a single CPU thread at a time to record commands. In a multithreading scenario, each CPU thread should have its own `CommandList`. `CommandList`s can be retrieved from the [GraphicsDevice](#graphicsdevice) by calling `GraphicsDevice::BeginCommandList()` that will return a `CommandList` handle that is free to be used from that point by the calling thread. All such handles will be in use until `PresentEnd()` was called, where GPU submission takes place. The command lists will be submitted in the order they were retrieved with `GraphicsDevice::BeginCommandList()`. The order of submission correlates with the order of actual GPU execution. For example:
+Rendering commands that expect a `CommandList` as a parameter are not executed immediately. They will be recorded into command lists and submitted to the GPU for execution upon calling the `PresentEnd()` function. The `CommandList` is a simple handle that associates rendering commands to a CPU execution timeline. The `CommandList` is not thread safe, so every `CommandList` can be used by a single CPU thread at a time to record commands. In a multithreading scenario, each CPU thread should have its own `CommandList`. `CommandList`s can be retrieved from the [GraphicsDevice](#graphicsdevice) by calling `GraphicsDevice::BeginCommandList()` that will return a `CommandList` handle that is free to be used from that point by the calling thread. All such handles will be in use until `SubmitCommandLists()` or `PresentEnd()` was called, where GPU submission takes place. The command lists will be submitted in the order they were retrieved with `GraphicsDevice::BeginCommandList()`. The order of submission correlates with the order of actual GPU execution. For example:
 
 ```cpp
 CommandList cmd1 = device->BeginCommandList();
@@ -461,14 +463,29 @@ device->PresentBegin(cmd_present);
 device->PresentEnd(cmd_present); // CPU submits work for GPU
 // The GPU will execute the Render_Shadowmaps() commands first, then the Read_Shadowmaps() commands second
 // The GPU will execute the commands between PresentBegin() and PresentEnd() last.
+// PresentEnd displays the final image (render command executed between PresentBegin and PresentEnd) to the screen
 ```
+
+In specific circumstances, when outputting the final image to the screen is not immediately required, the `SubmitCommandLists()` option can also be used to submit and execute GPU work:
+
+```cpp
+CommandList cmd1 = device->BeginCommandList();
+CommandList cmd2 = device->BeginCommandList();
+
+// Record something with command lists...
+
+device->SubmitCommandLists(); // CPU submits work for GPU
+// The GPU will execute commands recorded with cmd1, then cmd2
+```
+
+When submitting command lists with `SubmitCommandLists()` or `PresentEnd()`, the CPU can be blocked in cases when there is too much GPU work submitted already that didn't finish.
 
 Furthermore, the `BeginCommandList()` is thread safe, so the user can call it from worker threads if ordering between command lists is not a requirement (such as when they are producing workloads that are independent of each other).
 
 ##### Presenting to the screen
 The `PresentBegin()` and `PresentEnd()` functions are used to prepare for rendering to the back buffer. When the `PresentBegin()` is called, the back buffer will be set as the current active render target or render pass. This means, that rendering commands will draw directly to the screen. This is generally used to draw textures that were previously rendered to, or 2D GUI elements. For example, the `RenderPath3D::Compose()` function is used in the [High Level Interface](#high-level-interface) to draw the results of the `RenderPath3D::Render()`, and the [GUI](#gui) elements. The rendering commands executed between `PresentBegin()` and `PresentEnd()` are still executed by the GPU in the command list beginning order described in the topic: [Work submission](#work-submission).
 
-##### Resource binding
+##### Resource binding (Simple)
 The resource binding model is based on DirectX 11. That means, resources are bound to slot numbers that are simple integers. This makes it easy to share binding information between shaders and C++ code, just define the bind slot number as global constants in [shared header files](#shaderinterop). For sharing, the bind slot numbers can be easily defined as compile time constants using:
 
 ```cpp
@@ -495,7 +512,7 @@ Other than this, resources like `Texture` can have different subresources, so an
 ```cpp
 Texture myTexture;
 // after texture was created, etc:
-device->BindResource(PS, myTexture, my_texture_bind_slot, 42);
+device->BindResource(PS, myTexture, my_texture_bind_slot, cmd, 42);
 ```
 By default, the `subresource` parameter is `-1`, which means that the entire resource will be bound. For more information about subresources, see the [Subresources](#subresources) section.
 
@@ -511,6 +528,27 @@ Only `Sampler` can be bound as sampler. Use the `GraphicsDevice::BindSampler()` 
 
 There are some limitations on the maximum value of slots that can be used, these are defined as compile time constants in [Graphics device SharedInternals](../WickedEngine/wiGraphicsDevice_SharedInternals.h). The user can modify these and recompile the engine if the predefined slots are not enough. This could slightly affect performance.
 
+Remarks:
+- Vulkan and DX12 devices make an effort to combine descriptors across shader stages, so overlapping descriptors will not be supported with those APIs to some extent. For example it is OK, to have a constant buffer on slot 0 (b0) in a vertex shader while having a Texture2D on slot 0 (t0) in pixel shader. However, having a StructuredBuffer on vertex shader slot 0 (t0) and a Texture2D in pixel shader slot 0 (t0) will not work correctly, as only one of them will be bound to a pipeline state. This is made for performance reasons and to retain compatibility with the [advanced binding model](#resource-binding-advanced).
+
+##### Resource Binding (Advanced)
+This resource binding model is based on a combination of DirectX 12 and Vulkan resource binding model and allows the developer to use a more fine grained resource management that can be fitted for specific use cases more optimally. For example, a bindless descriptor model could be implemented with descriptor arrays, or a system where descriptors are grouped by update frequency into tables. The developer can query whether the `GraphicsDevice` supports advanced binding model, by querying the `GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT` capability with `GraphicsDevice::CheckCapability()`.
+
+The following APIs are available:
+
+- `ResourceRange`: Represents an array of descriptors, by specifying the descriptor type (any GPUResource type that is declared within a shader), the binding slot and the number of descriptors in the array.
+- `SamplerRange`: Represents an array of samplers, by specifying the binding slot and the number of sampler desciptors in the array.
+- `StaticSampler`: Represents a static sampler by specifying the sampler description and bind point. Static sampler array is not permitted. The static samplers are samplers that never change and they can result in more efficient shader code being generated.
+- `RootConstantRange`: Root constants are a group of 32 bit values that will be used by a shader without going through a real descriptor, so the access indirfection count is zero, which can make them most efficient to use. However, they take a lot of space from the root signature, so it is advised to use them sparingly. Bounds checking is also not supported on these, so careless use could result in GPU hang.
+- `DescriptorTable`: Descriptors are always grouped within tables. The implementation can remove descriptors from tables and put them into the root of the `RootSignature` if the `ResourceRange` is either `ROOT_CONSTANTBUFFER`, `ROOT_RAWBUFFER`, `ROOT_RWRAWBUFFER`, `ROOT_STRUCTUREDBUFFER` or `ROOT_RWSTRUCTUREDBUFFER`. Root descriptors take additional space in the `RootSignature`, so use them sparingly. Bounds checking is also not supported on root descriptors, so careless use could result in GPU hang.
+- `RootSignature`: This can contain a number of `DescriptorTable`s, `RootConstantRange`s and `StaticSampler`s. `Shader`s, `PipelineState`s and `RaytracingPipelineState` objects can declare that they are using a root signature and by doing so, they will switch to the advanced resource binding model. Specify the `RootSignature::FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT` flag if this is going to be used by a graphics `PipelineState` object.
+- `CreateDescriptorTable()`: Create the underlying GPU resources for the `DescriptorTable`.
+- `CreteRootSignature()`: Create the underlying GPU resources for the `RootSignature`
+- `WriteDescriptor()`: Write actual descriptors into the table (either `GPUResource` or `Sampler`). To write individual `subresource`s, refer to the [Subresources](#subresources) topic. The indexing of the descriptors will match by what order they are declared withing the tables. Root descriptors don't have to be written by this function.
+- `BindDescriptorTable()`: The `DescriptorTable` will be bound to either `GRAPHICS`, `COMPUTE` or `RAYTRACING` pipelines to the specified `space`. The HLSL shader code can declare `space` registers manually, but the default `space` will be `0`. To declare `space` manually, use the `register` keyword like this: `register(t56, space4)` (which would mean slot=56 in descriptor space=4.
+- `BindRootDescriptor()`: Bind the root descriptor to the specified slot in the root signature. The slot is calculated by taking the index of the root descriptor relative to all root descriptors bound to the root signature (within all tables). This must be done after using `BindDescriptorTable()` to first bind the table itself (because Vulkan API will put the root descriptors within the table). After `BindDescriptorTable()` is called, all root descriptors will need to be rebound.
+- `BindRootConstants()`: Write into the specified `RootConstantRange` directly. The index is relative to the array of `RootConstantRange`s declared inside the `RootSignature`.
+
 ##### Subresources
 Resources like textures can have different views. For example, if a texture contains multiple mip levels, each mip level can be viewed as a separate texture with one mip level, or the whole texture can be viewed as a texture with multiple mip levels. When creating resources, a subresource that views the entire resource will be created. Functions that expect a subresource parameter can be provided with the value `-1` that means the whole resource. Usually, this parameter is optional.
 
@@ -522,12 +560,23 @@ Other subresources can be create with the `GraphicsDevice::CreateSubresource()` 
 The pipeline states are subject to shader compilations. Shader compilation will happen when a pipeline state is bound inside a render pass for the first time. This is required because the render target formats are necessary information for compilation, but they are not part of the pipeline state description. This choice was made for increased flexibility of defining pipeline states. However, unlike APIs where state subsets (like RasterizerDesc, or BlendStateDesc) can be bound individually, the grouping of states is more optimal regarding CPU time, because state hashes are computed only once for the whole pipeline state at creation time, as opposed to binding time for each individual state. This approach is also less prone to user error when the developer might forget setting any subset of state and the leftover state from previous render passes are incorrect. 
 
 Shaders still need to be created with `GraphicsDevice::CreateShader()` in a similar to CreateTexture(), etc. This could result in shader compilation/hashing in some graphics APIs like DirectX 11. The CreateShader() function expects a `wiGraphics::SHADERSTAGE` enum value which will define the type of shader:
+
+- `MS`: Mesh Shader
+- `AS`: Amplification Shader, or Task Shader
 - `VS`: Vertex Shader
 - `HS`: Hull Shader, or Tessellation Control Shader
 - `DS`: Domain Shader, or Tessellation Evaluation Shader
 - `GS`: Geometry Shader
 - `PS`: Pixel Shader
 - `CS`: Compute Shader
+- `SHADERSTAGE_COUNT`: Invalid Shader. This also denotes a library of shaders (usable for raytracing). As an other feature, this can be used to enumerate through all shader stages like:
+
+```cpp
+for(int i = 0; i < SHADERSTAGE_COUNT; ++i)
+{
+	device->BindResource((SHADERSTAGE)i, myTexture, 5, cmd); // Binds myTexture to slot 5 for all stages
+}
+```
 
 Depending on the graphics device implementation, the shader code must be different format. For example, DirectX expects HLSL shaders, Vulkan expects SPIR-V shaders. The engine can only use precompiled shader bytecodes, shader compilation from high level source code is not supported. Usually shaders are compiled into bytecode and saved to files (with .cso extension) by Visual Studio if they are included in the project. These files can be loaded to memory and provided as input buffers to the CreateShader() function.
 
@@ -610,6 +659,17 @@ The acceleration strucuture can be bottom level or top level, and decided by the
 
 ##### RayTracingPipelineState
 Binding a ray tracing pipeline state is required to dispatch ray tracing shaders. A ray tracing pipeline state holds a collection of shader libraries and hitgroup definitions. It also declares information about max resource usage of the pipeline.
+
+##### Variable Rate Shading
+Variable Rate Shading can be used to decrease shading quality while retaining depth testing accuracy. The shading rate can be set up in different ways:
+
+- `BindShadingRate()`: Set the shading rate for the following draw calls. The first parameter is the shading rate, which is by default `SHADING_RATE_1X1` (the best quality). The increasing enum values are standing for decreasing shading rates.
+- `BindShadingRateImage()`: Set the shading rate for the screen via a tiled texture. The texture must be using the `FORMAT_R8_UINT` format. In each pixel, the texture contains the shading rate value for a tile of pixels (8x8, 16x16 or 32x32). The tile size can be queried via `GetVariableRateShadingTileSize()`. The shading rate values that the texture contains are not the raw values from `SHADING_RATE` enum, but they must be converted to values that are native to the graphics API used using the `WriteShadingRateValue()` function. The shading rate texture must be written with a compute shader and transitioned to `IMAGE_LAYOUT_SHADING_RATE_SOURCE` with a [GPUBarrier](#gpu-barriers) before setting it with `BindShadingRateImage()`. It is valid to set a `nullptr` instead of the texture, indicating that the shading rate is not specified by a texture.
+- Or setting the shading rate from a vertex or geometry shader with the `SV_ShadingRate` system value semantic.
+
+The final shading rate will be determined from the above methods using the maximum shading rate (least detailed) which is applicable to the screen tile. In the future it might be considered to expose the operator to define this.
+
+To read more about variable rate shading, refer to the [DirectX specifications.](https://microsoft.github.io/DirectX-Specs/d3d/VariableRateShading)
 
 
 #### GraphicsDevice_DX11
@@ -1203,7 +1263,7 @@ Used to time specific ranges in execution. Support CPU and GPU timing. Can write
 
 
 ## Shaders
-There is a separate project file for shaders in the solution. Shaders are written in pure HLSL, although there are some macros used to keep them more manageable and easier to build with different shader compilers. These macros are used to declare resources:
+There is a separate project file for shaders in the solution. Shaders are written in HLSL shading language. There are some macros used to declare resources with binding slots that can be read from the C++ application via code sharing. These macros are used to declare resources:
 
 - CBUFFER(name, slot)<br/>
 Declares a constant buffer

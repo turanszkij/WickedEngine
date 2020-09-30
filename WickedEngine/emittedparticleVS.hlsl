@@ -11,8 +11,8 @@ static const float3 BILLBOARD[] = {
 	float3(1, 1, 0),	// 5
 };
 
-STRUCTUREDBUFFER(particleBuffer, Particle, 0);
-STRUCTUREDBUFFER(aliveList, uint, 1);
+STRUCTUREDBUFFER(particleBuffer, Particle, TEXSLOT_ONDEMAND21);
+STRUCTUREDBUFFER(aliveList, uint, TEXSLOT_ONDEMAND22);
 
 VertextoPixel main(uint fakeIndex : SV_VERTEXID)
 {

@@ -61,11 +61,13 @@ namespace wiGraphics
 		VkPhysicalDeviceVulkan11Properties device_properties_1_1 = {};
 		VkPhysicalDeviceVulkan12Properties device_properties_1_2 = {};
 		VkPhysicalDeviceRayTracingPropertiesKHR raytracing_properties = {};
+		VkPhysicalDeviceMeshShaderPropertiesNV mesh_shader_properties = {};
 
 		VkPhysicalDeviceFeatures2 device_features2 = {};
 		VkPhysicalDeviceVulkan11Features features_1_1 = {};
 		VkPhysicalDeviceVulkan12Features features_1_2 = {};
 		VkPhysicalDeviceRayTracingFeaturesKHR raytracing_features = {};
+		VkPhysicalDeviceMeshShaderFeaturesNV mesh_shader_features = {};
 
 		VkSemaphore imageAvailableSemaphore = VK_NULL_HANDLE;
 		VkSemaphore renderFinishedSemaphore = VK_NULL_HANDLE;
@@ -138,35 +140,21 @@ namespace wiGraphics
 				std::vector<VkDescriptorImageInfo> imageInfos;
 				std::vector<VkBufferView> texelBufferViews;
 				std::vector<VkWriteDescriptorSetAccelerationStructureNV> accelerationStructureViews;
+				bool dirty = false;
 
-				bool dirty_graphics_compute[2] = {};
-
-				struct Table
-				{
-					const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
-					const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
-					int SRV_index[GPU_RESOURCE_HEAP_SRV_COUNT];
-					const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
-					int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
-					const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
-
-					void reset()
-					{
-						memset(CBV, 0, sizeof(CBV));
-						memset(SRV, 0, sizeof(SRV));
-						memset(SRV_index, -1, sizeof(SRV_index));
-						memset(UAV, 0, sizeof(UAV));
-						memset(UAV_index, -1, sizeof(UAV_index));
-						memset(SAM, 0, sizeof(SAM));
-					}
-
-				} tables[SHADERSTAGE_COUNT];
+				const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
+				const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
+				int SRV_index[GPU_RESOURCE_HEAP_SRV_COUNT];
+				const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
+				int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
+				const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
 
 				void init(GraphicsDevice_Vulkan* device);
 				void destroy();
 
 				void reset();
 				void validate(bool graphics, CommandList cmd, bool raytracing = false);
+				VkDescriptorSet commit(const DescriptorTable* table);
 			};
 			DescriptorTableFrameAllocator descriptors[COMMANDLIST_COUNT];
 
@@ -192,22 +180,20 @@ namespace wiGraphics
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
 		inline VkCommandBuffer GetDirectCommandList(CommandList cmd) { return GetFrameResources().commandBuffers[cmd]; }
 
-		struct DynamicResourceState
-		{
-			GPUAllocation allocation;
-			bool binding[SHADERSTAGE_COUNT] = {};
-		};
-		std::unordered_map<const GPUBuffer*, DynamicResourceState> dynamic_constantbuffers[COMMANDLIST_COUNT];
-
 		std::unordered_map<size_t, VkPipeline> pipelines_global;
 		std::vector<std::pair<size_t, VkPipeline>> pipelines_worker[COMMANDLIST_COUNT];
 		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
 		const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
 		const Shader* active_cs[COMMANDLIST_COUNT] = {};
+		const RaytracingPipelineState* active_rt[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 
 		bool dirty_pso[COMMANDLIST_COUNT] = {};
 		void pso_validate(CommandList cmd);
+
+		void predraw(CommandList cmd);
+		void predispatch(CommandList cmd);
+		void preraytrace(CommandList cmd);
 
 		std::atomic<CommandList> cmd_count{ 0 };
 
@@ -220,6 +206,9 @@ namespace wiGraphics
 		static PFN_vkGetRayTracingShaderGroupHandlesKHR getRayTracingShaderGroupHandlesKHR;
 		static PFN_vkCmdBuildAccelerationStructureKHR cmdBuildAccelerationStructureKHR;
 		static PFN_vkCmdTraceRaysKHR cmdTraceRaysKHR;
+
+		static PFN_vkCmdDrawMeshTasksNV cmdDrawMeshTasksNV;
+		static PFN_vkCmdDrawMeshTasksIndirectNV cmdDrawMeshTasksIndirectNV;
 
 	public:
 		GraphicsDevice_Vulkan(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false);
@@ -238,14 +227,20 @@ namespace wiGraphics
 		bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
 		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) override;
 		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) override;
+		bool CreateDescriptorTable(DescriptorTable* table) override;
+		bool CreateRootSignature(RootSignature* rootsig) override;
 
 		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
+		int CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) override;
 
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
 		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) override;
+		void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const GPUResource* resource, int subresource = -1, uint64_t offset = 0) override;
+		void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const Sampler* sampler) override;
 
 		void Map(const GPUResource* resource, Mapping* mapping) override;
 		void Unmap(const GPUResource* resource) override;
+		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
 
 		void SetName(GPUResource* pResource, const char* name) override;
 
@@ -292,15 +287,20 @@ namespace wiGraphics
 		void DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
 		void Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) override;
 		void DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
+		void DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) override;
+		void DispatchMeshIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
 		void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) override;
 		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) override;
 		void QueryBegin(const GPUQuery *query, CommandList cmd) override;
 		void QueryEnd(const GPUQuery *query, CommandList cmd) override;
-		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
 		void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) override;
 		void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) override;
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
 		void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
+
+		void BindDescriptorTable(BINDPOINT bindpoint, uint32_t space, const DescriptorTable* table, CommandList cmd) override;
+		void BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd) override;
+		void BindRootConstants(BINDPOINT bindpoint, uint32_t index, const void* srcdata, CommandList cmd) override;
 
 		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
 
@@ -324,6 +324,7 @@ namespace wiGraphics
 			std::deque<std::pair<VkSampler, uint64_t>> destroyer_samplers;
 			std::deque<std::pair<VkDescriptorPool, uint64_t>> destroyer_descriptorPools;
 			std::deque<std::pair<VkDescriptorSetLayout, uint64_t>> destroyer_descriptorSetLayouts;
+			std::deque<std::pair<VkDescriptorUpdateTemplate, uint64_t>> destroyer_descriptorUpdateTemplates;
 			std::deque<std::pair<VkShaderModule, uint64_t>> destroyer_shadermodules;
 			std::deque<std::pair<VkPipelineLayout, uint64_t>> destroyer_pipelineLayouts;
 			std::deque<std::pair<VkPipeline, uint64_t>> destroyer_pipelines;
@@ -452,6 +453,19 @@ namespace wiGraphics
 						break;
 					}
 				}
+				while (!destroyer_descriptorUpdateTemplates.empty())
+				{
+					if (destroyer_descriptorUpdateTemplates.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_descriptorUpdateTemplates.front();
+						destroyer_descriptorUpdateTemplates.pop_front();
+						vkDestroyDescriptorUpdateTemplate(device, item.first, nullptr);
+					}
+					else
+					{
+						break;
+					}
+				}
 				while (!destroyer_shadermodules.empty())
 				{
 					if (destroyer_shadermodules.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
@@ -547,6 +561,7 @@ namespace wiGraphics
 			}
 		};
 		std::shared_ptr<AllocationHandler> allocationhandler;
+
 	};
 }
 

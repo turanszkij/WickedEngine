@@ -27,7 +27,7 @@ float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_TARGET
 {
     const float4 color_ref = texture_0[pos.xy];
 	const float depth_ref = texture_lineardepth[pos.xy] * g_xCamera_ZFarP;
-	const float sss = texture_gbuffer0[pos.xy].a;
+	const float sss_ref = texture_gbuffer0[pos.xy].a;
 
     // Accumulate center sample, multiplying it with its gaussian weight:
     float4 colorBlurred = color_ref;
@@ -38,7 +38,7 @@ float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_TARGET
     //     step = sssStrength * gaussianWidth * pixelSize * dir
     // The closer the pixel, the stronger the effect needs to be, hence
     // the factor 1.0 / depthM.
-	float2 step = xPPParams0.xy * sss;
+	float2 step = xPPParams0.xy * sss_ref;
     float2 finalStep = color_ref.a * step / depth_ref;
 
     // Accumulate the other samples:
@@ -46,6 +46,8 @@ float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_TARGET
 	{
         // Fetch color and depth for current sample:
         float2 offset = uv + kernel[i].a * finalStep;
+        float sss = texture_gbuffer0.SampleLevel(sampler_point_clamp, offset, 0).a;
+        offset = sss == sss_ref ? offset : uv; // don't blur into non-sss region
         float3 color = texture_0.SampleLevel(sampler_linear_clamp, offset, 0).rgb;
 		float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, offset, 0) * g_xCamera_ZFarP;
 

@@ -42,14 +42,20 @@ for item in root.iter():
                 cmd += "cs"
             if profile == "LIB":
                 cmd += "lib"
+            if profile == "MS":
+                cmd += "ms"
+            if profile == "AS":
+                cmd += "as"
+
+            cmd += "_6_5 "
+
+            cmd += " -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso "
             
-            cmd += "_6_4 "
+            cmd += " -flegacy-macro-expansion "
             
-            #cmd += "-D RAYTRACING_INLINE "
-            
-            cmd += "-D HLSL6 "
-            
-            cmd += "-flegacy-macro-expansion -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso "
+            cmd += " -D HLSL6 "
+            #cmd += " -D RAYTRACING_INLINE "
+            #cmd += " -D RAYTRACING_GEOMETRYINDEX "
             
             print(cmd)
             
