@@ -131,16 +131,16 @@ set(SHADERS_CS
         "blur_bilateral_float3CS.hlsl"
         "blur_bilateral_float4CS.hlsl"
         "blur_bilateral_unorm1CS.hlsl"
-        "bloomcombineCS.hlsl"
-        "voxelSceneCopyClearCS_TemporalSmoothing.hlsl"
-		"normalsfromdepthCS.cso"
-		"volumetricCloud_shapenoiseCS.cso"
-		"volumetricCloud_detailnoiseCS.cso"
-		"volumetricCloud_curlnoiseCS.cso"
-		"volumetricCloud_weathermapCS.cso"
-		"volumetricCloud_renderCS.cso"
-		"volumetricCloud_reprojectCS.cso"
-		"volumetricCloud_finalCS.cso"
+		"bloomcombineCS.hlsl"
+		"voxelSceneCopyClearCS_TemporalSmoothing.hlsl"
+		"normalsfromdepthCS.hlsl"
+		"volumetricCloud_shapenoiseCS.hlsl"
+		"volumetricCloud_detailnoiseCS.hlsl"
+		"volumetricCloud_curlnoiseCS.hlsl"
+		"volumetricCloud_weathermapCS.hlsl"
+		#"volumetricCloud_renderCS.hlsl"
+		"volumetricCloud_reprojectCS.hlsl"
+		"volumetricCloud_finalCS.hlsl"
 )
 
 set(SHADERS_DS
@@ -323,8 +323,7 @@ set(SHADERS_LIB
 SET(SPIRV_BINARY_FILES)
 
 
-#TODO find dxc
-
+#dxc (DirectX Shader Compiler) is installed as part of the Vulkan SDK
 function(Generate_Shaders SHADERS_SRC_LIST SHADER_TYPE)
     foreach (Shader IN LISTS ${SHADERS_SRC_LIST})
         get_filename_component(FILE_NAME ${Shader} NAME_WLE)
@@ -337,7 +336,7 @@ function(Generate_Shaders SHADERS_SRC_LIST SHADER_TYPE)
         add_custom_command(
                 OUTPUT ${SPIRV_OUTPUT}
                 COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/spirv/"
-                COMMAND "/opt/directx-shader-compiler/bin/dxc"
+                COMMAND "dxc"
                 "${SPIRV_SOURCE}"
                 -T "${SHADER_TYPE}_6_5"
                 -I "${CMAKE_CURRENT_SOURCE_DIR}/../"

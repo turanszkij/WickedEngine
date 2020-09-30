@@ -38,12 +38,12 @@ jobs:
           Documentation\
           *.txt
           *.md
-          Editor\*.exe
           Editor\images\
           Editor\sound\
           Editor\*.ini
           Editor\*.ico
           Editor\*.lua
+          Editor\*.exe
           Editor\*.dll
           
     - name: Package Tests
@@ -59,14 +59,14 @@ jobs:
           Documentation\
           *.txt
           *.md
-          Tests\*.exe
           Tests\images\
           Tests\sound\
           Tests\*.ini
           Tests\*.ico
           Tests\*.lua
-          Tests\*.dll
           Tests\*.ttf
+          Tests\*.exe
+          Tests\*.dll
 
     
   linux:
@@ -86,18 +86,5 @@ jobs:
     - name: Build
       run: |
         mkdir build && cd build
-        cmake ..
-        
-    - name: Package Editor
-      uses: actions/upload-artifact@v2
-      with:
-        name: Editor (Linux - Ubuntu)
-        path: |
-          WickedEngine\build\
-          
-    - name: Package Tests
-      uses: actions/upload-artifact@v2
-      with:
-        name: Tests (Linux - Ubuntu)
-        path: |
-          WickedEngine\build\
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+        make
