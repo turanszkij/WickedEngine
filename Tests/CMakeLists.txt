@@ -1,4 +1,5 @@
 find_package(Threads REQUIRED)
+find_package(SDL2 REQUIRED)
 
 add_executable( Tests
         main_SDL2.cpp
@@ -6,4 +7,4 @@ add_executable( Tests
         Tests.cpp
 )
 
-target_link_libraries(Tests WickedEngine Threads::Threads)
+target_link_libraries(Tests PUBLIC WickedEngine ${SDL2_LIBRARY} Threads::Threads)

@@ -1,4 +1,5 @@
 find_package(Threads REQUIRED)
+find_package(SDL2 REQUIRED)
 
 add_executable(WickedEngineEditor 
     main_${PLATFORM}.cpp
@@ -32,6 +33,6 @@ add_executable(WickedEngineEditor
     xatlas.cpp
 )
 
-target_link_libraries(WickedEngineEditor PUBLIC WickedEngine Threads::Threads)
+target_link_libraries(WickedEngineEditor PUBLIC ${SDL2_LIBRARY} WickedEngine Threads::Threads)
 
 
