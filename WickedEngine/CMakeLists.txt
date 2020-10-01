@@ -88,13 +88,13 @@ add_library(WickedEngine STATIC
 )
 
 target_include_directories(WickedEngine PUBLIC
-	${CMAKE_CURRENT_SOURCE_DIR}
 	${SDL2_INCLUDE_DIR}
+	${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_link_libraries(WickedEngine PUBLIC
 	Vulkan::Vulkan
-	${SDL2_LIBRARY}
+	${SDL2_LIBRARIES}
 	Bullet
 	LUA
 	Utility
