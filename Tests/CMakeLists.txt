@@ -7,4 +7,12 @@ add_executable( Tests
         Tests.cpp
 )
 
-target_link_libraries(Tests PUBLIC WickedEngine ${SDL2_LIBRARY} Threads::Threads)
+target_link_libraries(Tests PUBLIC 
+	WickedEngine 
+	${SDL2_LIBRARY} 
+	Threads::Threads
+)
+
+target_include_directories(WickedEngine PUBLIC
+	${SDL2_INCLUDE_DIR}
+)
