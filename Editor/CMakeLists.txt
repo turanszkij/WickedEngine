@@ -1,5 +1,4 @@
 find_package(Threads REQUIRED)
-find_package(SDL2 REQUIRED)
 
 add_executable(WickedEngineEditor 
     main_${PLATFORM}.cpp
@@ -34,11 +33,6 @@ add_executable(WickedEngineEditor
 )
 
 target_link_libraries(WickedEngineEditor PUBLIC
-	${SDL2_LIBRARY} 
 	WickedEngine 
 	Threads::Threads
-)
-
-target_include_directories(WickedEngine PUBLIC
-	${SDL2_INCLUDE_DIR}
 )
