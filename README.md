@@ -36,13 +36,13 @@ You can download the engine by using Git and cloning the repository, or download
 #### Windows
 To build Wicked Engine for Windows 10, use Visual Studio and the provided solution file. <b>Make sure that you have the latest Windows SDK and updated operating system</b>. There are a couple of projects that you can run up front: Editor, Tests and Template. You just have to set either as startup project and press F5 in Visual Studio to build and run.
 
+<img align="right" src="https://turanszkij.files.wordpress.com/2020/08/fighting_game_small-1.gif"/>
+
 If you want to develop an application that uses Wicked Engine, you will have to link to WickedEngine_Windows.lib or WickedEngine_UWP.lib.lib and `#include "WickedEngine.h"` into the source code. For examples, look at the Template, Editor and Tests projects in Visual Studio that do this.
 
 You can also dowload prebuilt and packaged versions of the Editor and Tests here: [![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
 
 If you have questions or stuck, please use the communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
-
-<img align="right" src="https://turanszkij.files.wordpress.com/2020/08/fighting_game_small-1.gif"/>
 
 
 #### Linux
