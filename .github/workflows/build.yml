@@ -74,14 +74,64 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Build
+    - name: Install dependencies
       run: |
         wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
         sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.148-focal.list https://packages.lunarg.com/vulkan/1.2.148/lunarg-vulkan-1.2.148-focal.list
         sudo apt update
         sudo apt install vulkan-sdk
         sudo apt install libsdl2-dev
+
+    - name: Build
+      run: |
         mkdir build
         cd build
         cmake ..
         make
+        
+    - name: Move binaries
+      shell: cmd
+      run: |
+        mv build/Editor/WickedEngineEditor Editor/
+        mv build/Tests/Tests Tests/
+        
+    - name: Package Editor
+      uses: actions/upload-artifact@v2
+      with:
+        name: Editor (Ubuntu 20.04)
+        path: |
+          WickedEngine\shaders\
+          WickedEngine\fonts\
+          images\
+          models\
+          scripts\
+          Documentation\
+          *.txt
+          *.md
+          Editor\images\
+          Editor\sound\
+          Editor\*.ini
+          Editor\*.ico
+          Editor\*.lua
+          Editor\WickedEngineEditor
+          
+    - name: Package Tests
+      uses: actions/upload-artifact@v2
+      with:
+        name: Tests (Ubuntu 20.04)
+        path: |
+          WickedEngine\shaders\
+          WickedEngine\fonts\
+          images\
+          models\
+          scripts\
+          Documentation\
+          *.txt
+          *.md
+          Tests\images\
+          Tests\sound\
+          Tests\*.ini
+          Tests\*.ico
+          Tests\*.lua
+          Tests\*.ttf
+          Tests\Tests
