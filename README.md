@@ -34,7 +34,7 @@ You can download the engine by using Git and cloning the repository, or download
 ### How to build: 
 
 #### Windows
-To build Wicked Engine for Windows 10, use Visual Studio and the provided solution file. <b>Make sure that you have the latest Windows SDK and updated operating system</b>. There are a couple of projects that you can run up front: Editor, Tests and Template. You just have to set either as startup project and press F5 in Visual Studio to build and run.
+To build Wicked Engine for Windows 10, use Visual Studio and the provided solution file. <b>Make sure that you have the latest Windows SDK and updated operating system</b>. There are a couple of projects that you can run up front: Editor, Tests and Template. You just have to set either as startup project and press F5 in Visual Studio to build and run. For optimal performance, choose `Release` mode, for the best debugging experience, choose `Debug` mode.
 
 <img align="right" src="https://turanszkij.files.wordpress.com/2020/08/fighting_game_small-1.gif"/>
 
@@ -42,7 +42,7 @@ If you want to develop an application that uses Wicked Engine, you will have to 
 
 You can also dowload prebuilt and packaged versions of the Editor and Tests here: [![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
 
-If you have questions or stuck, please use the communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
+If you have questions or stuck, please use the `windows` communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
 
 
 #### Linux
@@ -196,7 +196,7 @@ The preferred workflow is to import models into the Editor, and save them as <b>
 
 ### Graphics API:
 
-The default renderer is DirectX 11. There is also a DirectX12 renderer and Vulkan renderer.
+The default renderer is DirectX 11 on Windows and Vulkan on Linux. There is also an optional DirectX12 renderer for Windows.
 You can specify command line arguments (without any prefix) to switch between render devices or other settings. Currently the list of options:
 <table>
   <tr>
@@ -225,6 +225,7 @@ HLSL6 shaders can be compiled by Rebuilding the Shaders_HLSL6 project from withi
 * **Vulkan support will be built into the application if the Vulkan SDK is installed on the build machine. 
 Vulkan will try to load shaders from WickedEngine/shaders/spirv directory. 
 SPIRV shaders can be compiled by Rebuilding the Shaders_SPIRV project from within Visual Studio (Python 3 required for building).
+For Linux builds, spirv shaders will be built by using Cmake system.
 
 <br/>
 
