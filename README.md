@@ -29,7 +29,7 @@ You can download the engine by using Git and cloning the repository, or download
 ### Platforms:
 - Windows 10 Desktop (x86, x64) [Visual Studio 2019]
 - UWP (x86, x64, ARM, Phone, XBOX One) [Visual Studio 2019]
-- Linux (<a href="https://github.com/portaloffreedom/WickedEngine/tree/linux-sdl2">experimental branch</a>) [CMake]
+- Linux [CMake 3.7]
 
 ### How to build: 
 
@@ -54,7 +54,23 @@ When your project settings are set up, put `#include "WickedEngine.h"` in your s
 If you have trouble, you can look at or copy the project settings for Editor, Tests and Template application projects to get an idea how to link with Wicked Engine.
 
 #### Linux
-The <a href="https://github.com/portaloffreedom/WickedEngine/tree/linux-sdl2">Linux branch</a> is experimental. The steps to build can be found <a href="https://github.com/portaloffreedom/WickedEngine/blob/linux-sdl2/README_Linux.md">here</a>. If you have questions or stuck, please use the `linux` communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
+The Linux support is experimental. You can find a sample build script for Ubuntu 20.04 [here](.github/workflows/build.yml) (in the linux section). You might need to install some dependencies, such as Vulkan SDK 1.2 or greater, SDL2, cmake 3.7 and g++ compiler (C++ 17 compliant version). For Ubuntu 20.04, you can use the following commands to install dependencies:
+```bash
+wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
+sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.148-focal.list https://packages.lunarg.com/vulkan/1.2.148/lunarg-vulkan-1.2.148-focal.list
+sudo apt update
+sudo apt install vulkan-sdk
+sudo apt install libsdl2-dev
+sudo apt install build-essential
+```
+To build the engine, editor and tests, use Cmake and make:
+```bash
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make
+```
+If you have questions or stuck, please use the `linux` communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
 
 ### Examples:
 

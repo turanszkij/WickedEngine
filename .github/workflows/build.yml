@@ -86,11 +86,10 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake ..
+        cmake .. -DCMAKE_BUILD_TYPE=Release
         make
         
     - name: Move binaries
-      shell: cmd
       run: |
         mv build/Editor/WickedEngineEditor Editor/
         mv build/Tests/Tests Tests/
