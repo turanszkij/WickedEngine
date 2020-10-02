@@ -194,7 +194,7 @@
       </Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
+      <Command>IF NOT EXIST "$(OutDir)shaders\" mkdir "$(OutDir)shaders\"</Command>
     </PreBuildEvent>
     <FxCompile>
       <DisableOptimizations>false</DisableOptimizations>
@@ -230,7 +230,7 @@
       </Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
+      <Command>IF NOT EXIST "$(OutDir)shaders\" mkdir "$(OutDir)shaders\"</Command>
     </PreBuildEvent>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
@@ -260,7 +260,7 @@
       </Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
+      <Command>IF NOT EXIST "$(OutDir)shaders\" mkdir "$(OutDir)shaders\"</Command>
     </PreBuildEvent>
     <FxCompile>
       <DisableOptimizations>false</DisableOptimizations>
@@ -296,7 +296,7 @@
       </Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
+      <Command>IF NOT EXIST "$(OutDir)shaders\" mkdir "$(OutDir)shaders\"</Command>
     </PreBuildEvent>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
@@ -326,7 +326,7 @@
       </Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
+      <Command>IF NOT EXIST "$(OutDir)shaders\" mkdir "$(OutDir)shaders\"</Command>
     </PreBuildEvent>
     <FxCompile>
       <DisableOptimizations>false</DisableOptimizations>
@@ -362,7 +362,7 @@
       </Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
+      <Command>IF NOT EXIST "$(OutDir)shaders\" mkdir "$(OutDir)shaders\"</Command>
     </PreBuildEvent>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
@@ -392,7 +392,7 @@
       </Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
+      <Command>IF NOT EXIST "$(OutDir)shaders\" mkdir "$(OutDir)shaders\"</Command>
     </PreBuildEvent>
     <FxCompile>
       <DisableOptimizations>false</DisableOptimizations>
@@ -428,7 +428,7 @@
       </Message>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>IF NOT EXIST $(OutDir)shaders\ mkdir $(OutDir)shaders\</Command>
+      <Command>IF NOT EXIST "$(OutDir)shaders\" mkdir "$(OutDir)shaders\"</Command>
     </PreBuildEvent>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
