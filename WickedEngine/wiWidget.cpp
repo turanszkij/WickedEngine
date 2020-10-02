@@ -1435,6 +1435,9 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 			this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
 			this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
 			this->scale_local = wiMath::Max(this->scale_local, XMFLOAT3(40, 40, 1)); // don't allow resize to negative or too small
+			// Don't allow control outside of screen:
+			this->translation_local.x = wiMath::Clamp(this->translation_local.x, 0, wiRenderer::GetDevice()->GetScreenWidth() - this->scale_local.x);
+			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, wiRenderer::GetDevice()->GetScreenHeight() - windowcontrolSize());
 			this->wiWidget::Update(gui, 0);
 			for (auto& x : this->childrenWidgets)
 			{
@@ -1455,6 +1458,9 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 			scaleDiff.y = (scale.y + args.deltaPos.y) / scale.y;
 			this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
 			this->scale_local = wiMath::Max(this->scale_local, XMFLOAT3(40, 40, 1)); // don't allow resize to negative or too small
+			// Don't allow control outside of screen:
+			this->translation_local.x = wiMath::Clamp(this->translation_local.x, 0, wiRenderer::GetDevice()->GetScreenWidth() - this->scale_local.x);
+			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, wiRenderer::GetDevice()->GetScreenHeight() - windowcontrolSize());
 			this->wiWidget::Update(gui, 0);
 			for (auto& x : this->childrenWidgets)
 			{
@@ -1472,6 +1478,9 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 			auto saved_parent = this->parent;
 			this->Detach();
 			this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
+			// Don't allow control outside of screen:
+			this->translation_local.x = wiMath::Clamp(this->translation_local.x, 0, wiRenderer::GetDevice()->GetScreenWidth() - this->scale_local.x);
+			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, wiRenderer::GetDevice()->GetScreenHeight() - windowcontrolSize());
 			this->wiWidget::Update(gui, 0);
 			for (auto& x : this->childrenWidgets)
 			{
@@ -1863,9 +1872,11 @@ rgb hsv2rgb(hsv in)
 	return out;
 }
 
+static const float cp_width = 300;
+static const float cp_height = 260;
 wiColorPicker::wiColorPicker(wiGUI* gui, const std::string& name, bool window_controls) :wiWindow(gui, name, window_controls)
 {
-	SetSize(XMFLOAT2(300, 260));
+	SetSize(XMFLOAT2(cp_width, cp_height));
 	SetColor(wiColor(100, 100, 100, 100));
 
 	if (resizeDragger_BottomRight != nullptr)
@@ -1970,7 +1981,6 @@ wiColorPicker::wiColorPicker(wiGUI* gui, const std::string& name, bool window_co
 		});
 	AddWidget(alphaSlider);
 }
-static const float colorpicker_center = 120;
 static const float colorpicker_radius_triangle = 68;
 static const float colorpicker_radius = 75;
 static const float colorpicker_width = 22;
@@ -1986,10 +1996,17 @@ void wiColorPicker::Update(wiGUI* gui, float dt)
 			state = IDLE;
 		}
 
-		XMFLOAT2 center = XMFLOAT2(translation.x + colorpicker_center, translation.y + colorpicker_center);
+		float sca = std::min(scale.x / cp_width, scale.y / cp_height);
+
+		XMMATRIX W =
+			XMMatrixScaling(sca, sca, 1) *
+			XMMatrixTranslation(translation.x + scale.x * 0.4f, translation.y + scale.y * 0.5f, 0)
+			;
+
+		XMFLOAT2 center = XMFLOAT2(translation.x + scale.x * 0.4f, translation.y + scale.y * 0.5f);
 		XMFLOAT2 pointer = gui->GetPointerPos();
 		float distance = wiMath::Distance(center, pointer);
-		bool hover_hue = (distance > colorpicker_radius) && (distance < colorpicker_radius + colorpicker_width);
+		bool hover_hue = (distance > colorpicker_radius * sca) && (distance < (colorpicker_radius + colorpicker_width) * sca);
 
 		float distTri = 0;
 		XMFLOAT4 A, B, C;
@@ -1997,7 +2014,7 @@ void wiColorPicker::Update(wiGUI* gui, float dt)
 		XMVECTOR _A = XMLoadFloat4(&A);
 		XMVECTOR _B = XMLoadFloat4(&B);
 		XMVECTOR _C = XMLoadFloat4(&C);
-		XMMATRIX _triTransform = XMMatrixRotationZ(-hue / 360.0f * XM_2PI) * XMMatrixTranslation(center.x, center.y, 0);
+		XMMATRIX _triTransform = XMMatrixRotationZ(-hue / 360.0f * XM_2PI) * W;
 		_A = XMVector4Transform(_A, _triTransform);
 		_B = XMVector4Transform(_B, _triTransform);
 		_C = XMVector4Transform(_C, _triTransform);
@@ -2307,6 +2324,13 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 
 	ApplyScissor(scissorRect, cmd);
 
+	float sca = std::min(scale.x / cp_width, scale.y / cp_height);
+
+	XMMATRIX W =
+		XMMatrixScaling(sca, sca, 1) *
+		XMMatrixTranslation(translation.x + scale.x * 0.4f, translation.y + scale.y * 0.5f, 0)
+		;
+
 	MiscCB cb;
 
 	// render saturation triangle
@@ -2333,7 +2357,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 
 		XMStoreFloat4x4(&cb.g_xTransform, 
 			XMMatrixRotationZ(-angle) *
-			XMMatrixTranslation(translation.x + colorpicker_center, translation.y + colorpicker_center, 0) *
+			W *
 			Projection
 		);
 		cb.g_xColor = IsEnabled() ? float4(1, 1, 1, 1) : float4(0.5f, 0.5f, 0.5f, 1);
@@ -2353,8 +2377,8 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 
 	// render hue circle
 	{
-		XMStoreFloat4x4(&cb.g_xTransform, 
-			XMMatrixTranslation(translation.x + colorpicker_center, translation.y + colorpicker_center, 0) *
+		XMStoreFloat4x4(&cb.g_xTransform,
+			W *
 			Projection
 		);
 		cb.g_xColor = IsEnabled() ? float4(1, 1, 1, 1) : float4(0.5f, 0.5f, 0.5f, 1);
@@ -2374,7 +2398,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	{
 		XMStoreFloat4x4(&cb.g_xTransform,
 			XMMatrixRotationZ(-hue / 360.0f * XM_2PI)*
-			XMMatrixTranslation(translation.x + colorpicker_center, translation.y + colorpicker_center, 0) *
+			W *
 			Projection
 		);
 
@@ -2399,13 +2423,12 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	// render saturation picker
 	if (IsEnabled())
 	{
-		XMFLOAT2 center = XMFLOAT2(translation.x + colorpicker_center, translation.y + colorpicker_center);
 		XMFLOAT4 A, B, C;
 		wiMath::ConstructTriangleEquilateral(colorpicker_radius_triangle, A, B, C);
 		XMVECTOR _A = XMLoadFloat4(&A);
 		XMVECTOR _B = XMLoadFloat4(&B);
 		XMVECTOR _C = XMLoadFloat4(&C);
-		XMMATRIX _triTransform = XMMatrixRotationZ(-hue / 360.0f * XM_2PI) * XMMatrixTranslation(center.x, center.y, 0);
+		XMMATRIX _triTransform = XMMatrixRotationZ(-hue / 360.0f * XM_2PI);
 		_A = XMVector4Transform(_A, _triTransform);
 		_B = XMVector4Transform(_B, _triTransform);
 		_C = XMVector4Transform(_C, _triTransform);
@@ -2433,6 +2456,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 
 		XMStoreFloat4x4(&cb.g_xTransform, 
 			XMMatrixTranslationFromVector(picker_center) *
+			W *
 			Projection
 		);
 		cb.g_xColor = float4(1 - final_color.toFloat3().x, 1 - final_color.toFloat3().y, 1 - final_color.toFloat3().z, 1);
@@ -2450,7 +2474,8 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	// render preview
 	{
 		XMStoreFloat4x4(&cb.g_xTransform, 
-			XMMatrixTranslation(translation.x + 260, translation.y + 40, 0) *
+			XMMatrixScaling(sca, sca, 1) *
+			XMMatrixTranslation(translation.x + scale.x - 40 * sca, translation.y + 40, 0) *
 			Projection
 		);
 		cb.g_xColor = final_color.toFloat4();
