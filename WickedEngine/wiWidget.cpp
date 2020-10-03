@@ -37,10 +37,16 @@ void wiWidget::Update(wiGUI* gui, float dt)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
+	if (!IsVisible())
+	{
+		return;
+	}
+
+
 	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
 	hitBox = Hitbox2D(XMFLOAT2(translation.x, translation.y), XMFLOAT2(scale.x, scale.y));
 
-	if (IsEnabled() && GetState() != WIDGETSTATE::ACTIVE && !tooltip.empty() && pointerHitbox.intersects(hitBox))
+	if (GetState() != WIDGETSTATE::ACTIVE && !tooltip.empty() && pointerHitbox.intersects(hitBox))
 	{
 		tooltipTimer++;
 	}
@@ -278,6 +284,13 @@ wiButton::~wiButton()
 }
 void wiButton::Update(wiGUI* gui, float dt)
 {
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
 	wiWidget::Update(gui, dt);
 
 	if (IsEnabled() && !gui->IsWidgetDisabled(this))
@@ -533,6 +546,13 @@ const std::string wiTextInputField::GetValue()
 }
 void wiTextInputField::Update(wiGUI* gui, float dt)
 {
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
 	wiWidget::Update(gui, dt);
 
 	if (IsEnabled() && !gui->IsWidgetDisabled(this))
@@ -739,6 +759,13 @@ void wiSlider::SetRange(float start, float end)
 }
 void wiSlider::Update(wiGUI* gui, float dt)
 {
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
 	wiWidget::Update(gui, dt);
 
 	valueInputField->Detach();
@@ -904,6 +931,13 @@ wiCheckBox::~wiCheckBox()
 }
 void wiCheckBox::Update(wiGUI* gui, float dt)
 {
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
 	wiWidget::Update(gui, dt);
 
 	if (IsEnabled() && !gui->IsWidgetDisabled(this))
@@ -1039,6 +1073,13 @@ bool wiComboBox::HasScrollbar() const
 }
 void wiComboBox::Update(wiGUI* gui, float dt)
 {
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
 	wiWidget::Update(gui, dt);
 
 	if (IsEnabled() && !gui->IsWidgetDisabled(this))
@@ -1564,6 +1605,13 @@ void wiWindow::RemoveWidgets(bool alsoDelete)
 }
 void wiWindow::Update(wiGUI* gui, float dt)
 {
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
 	wiWidget::Update(gui, dt);
 
 	if (moveDragger != nullptr)
@@ -1986,6 +2034,13 @@ static const float colorpicker_radius = 75;
 static const float colorpicker_width = 22;
 void wiColorPicker::Update(wiGUI* gui, float dt)
 {
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
 	wiWindow::Update(gui, dt);
 
 	if (IsEnabled() && !gui->IsWidgetDisabled(this))
@@ -2501,17 +2556,20 @@ wiColor wiColorPicker::GetPickColor() const
 }
 void wiColorPicker::SetPickColor(wiColor value)
 {
+	if (colorpickerstate != CPS_IDLE)
+	{
+		// Only allow setting the pick color when picking is not active, the RGB and HSV precision combat each other
+		return;
+	}
+
 	rgb source;
 	source.r = value.toFloat3().x;
 	source.g = value.toFloat3().y;
 	source.b = value.toFloat3().z;
 	hsv result = rgb2hsv(source);
-	if (
-		(value.getR() < 255 || value.getG() < 255 || value.getB() < 255) &&
-		(value.getR() > 0 || value.getG() > 0 || value.getB() > 0)
-		)
+	if (value.getR() != value.getG() || value.getG() != value.getB() || value.getR() != value.getB())
 	{
-		hue = result.h; // only change the hue when not pure black or white because those don't retain the saturation value
+		hue = result.h; // only change the hue when not pure greyscale because those don't retain the saturation value
 	}
 	saturation = result.s;
 	luminance = result.v;
@@ -2581,6 +2639,13 @@ bool wiTreeList::HasScrollbar() const
 }
 void wiTreeList::Update(wiGUI* gui, float dt)
 {
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
 	wiWidget::Update(gui, dt);
 
 	if (IsEnabled() && !gui->IsWidgetDisabled(this))
