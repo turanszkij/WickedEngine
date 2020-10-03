@@ -14,12 +14,12 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	assert(GUI && "Invalid GUI!");
 
 	materialWindow = new wiWindow(GUI, "Material Window");
-	materialWindow->SetSize(XMFLOAT2(700, 700));
+	materialWindow->SetSize(XMFLOAT2(700, 580));
 	GUI->AddWidget(materialWindow);
 
 	float x = 670, y = 0;
-	float step = 22;
-	float hei = 20;
+	float hei = 18;
+	float step = hei + 2;
 
 	waterCheckBox = new wiCheckBox("Water: ");
 	waterCheckBox->SetTooltip("Set material as special water material.");
@@ -368,6 +368,8 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	x = 10;
 	y = 0;
+	hei = 20;
+	step = hei + 2;
 
 	materialNameField = new wiTextInputField("MaterialName");
 	materialNameField->SetTooltip("Set a name for the material...");
@@ -749,35 +751,41 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 
 	y = 180;
-	step = 260;
 
-	baseColorPicker = new wiColorPicker(GUI, "Base Color", false);
-	baseColorPicker->SetPos(XMFLOAT2(10, y));
-	baseColorPicker->SetVisible(true);
-	baseColorPicker->SetEnabled(true);
-	baseColorPicker->OnColorChanged([&](wiEventArgs args) {
+	colorComboBox = new wiComboBox("Color picker mode: ");
+	colorComboBox->SetSize(XMFLOAT2(120, hei));
+	colorComboBox->SetPos(XMFLOAT2(x + 150, y += step));
+	colorComboBox->AddItem("Base color");
+	colorComboBox->AddItem("Emissive color");
+	colorComboBox->SetTooltip("Choose the destination data of the color picker.");
+	materialWindow->AddWidget(colorComboBox);
+
+	y += 10;
+
+	colorPicker = new wiColorPicker(GUI, "Color", false);
+	colorPicker->SetPos(XMFLOAT2(10, y += step));
+	colorPicker->SetVisible(true);
+	colorPicker->SetEnabled(true);
+	colorPicker->OnColorChanged([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
-			material->SetBaseColor(args.color.toFloat4());
+			switch (colorComboBox->GetSelected())
+			{
+			default:
+			case 0:
+				material->SetBaseColor(args.color.toFloat4());
+				break;
+			case 1:
+			{
+				XMFLOAT3 col = args.color.toFloat3();
+				material->SetEmissiveColor(XMFLOAT4(col.x, col.y, col.z, material->GetEmissiveStrength()));
+			}
+			break;
+			}
 		}
-		});
-	materialWindow->AddWidget(baseColorPicker);
-
-
-	emissiveColorPicker = new wiColorPicker(GUI, "Emissive Color", false);
-	emissiveColorPicker->SetPos(XMFLOAT2(10, y += step));
-	emissiveColorPicker->SetVisible(true);
-	emissiveColorPicker->SetEnabled(true);
-	emissiveColorPicker->OnColorChanged([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			XMFLOAT3 col = args.color.toFloat3();
-			material->SetEmissiveColor(XMFLOAT4(col.x, col.y, col.z, material->GetEmissiveStrength()));
-		}
-		});
-	materialWindow->AddWidget(emissiveColorPicker);
+	});
+	materialWindow->AddWidget(colorPicker);
 
 
 	materialWindow->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 880, 120, 0));
@@ -832,10 +840,6 @@ void MaterialWindow::SetEntity(Entity entity)
 		texMulSliderY->SetValue(material->texMulAdd.y);
 		alphaRefSlider->SetValue(material->alphaRef);
 		materialWindow->SetEnabled(true);
-		baseColorPicker->SetEnabled(true);
-		baseColorPicker->SetPickColor(wiColor::fromFloat4(material->baseColor));
-		emissiveColorPicker->SetEnabled(true);
-		emissiveColorPicker->SetPickColor(wiColor::fromFloat3(XMFLOAT3(material->emissiveColor.x, material->emissiveColor.y, material->emissiveColor.z)));
 		blendModeComboBox->SetSelected((int)material->userBlendMode);
 		shaderTypeComboBox->SetSelected(max(0, material->GetCustomShaderID() + 1));
 		shadingRateComboBox->SetSelected((int)material->shadingRate);
@@ -853,13 +857,29 @@ void MaterialWindow::SetEntity(Entity entity)
 		texture_displacement_uvset_Field->SetText(std::to_string(material->uvset_displacementMap));
 		texture_emissive_uvset_Field->SetText(std::to_string(material->uvset_emissiveMap));
 		texture_occlusion_uvset_Field->SetText(std::to_string(material->uvset_occlusionMap));
+
+
+		colorComboBox->SetEnabled(true);
+		colorPicker->SetEnabled(true);
+		
+		switch (colorComboBox->GetSelected())
+		{
+		default:
+		case 0:
+			colorPicker->SetPickColor(wiColor::fromFloat4(material->baseColor));
+			break;
+		case 1:
+			colorPicker->SetPickColor(wiColor::fromFloat3(XMFLOAT3(material->emissiveColor.x, material->emissiveColor.y, material->emissiveColor.z)));
+			break;
+		}
+	
 	}
 	else
 	{
 		materialNameField->SetValue("No material selected");
 		materialWindow->SetEnabled(false);
-		baseColorPicker->SetEnabled(false);
-		emissiveColorPicker->SetEnabled(false);
+		colorComboBox->SetEnabled(false);
+		colorPicker->SetEnabled(false);
 
 		texture_baseColor_Button->SetText("");
 		texture_normal_Button->SetText("");

@@ -1445,7 +1445,7 @@ int wiComboBox::GetSelected() const
 
 
 
-inline float windowcontrolSize() { return 20.0f; }
+static const float windowcontrolSize = 20.0f;
 wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : gui(gui)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
@@ -1475,10 +1475,10 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 			scaleDiff.y = (scale.y - args.deltaPos.y) / scale.y;
 			this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
 			this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
-			this->scale_local = wiMath::Max(this->scale_local, XMFLOAT3(40, 40, 1)); // don't allow resize to negative or too small
+			this->scale_local = wiMath::Max(this->scale_local, XMFLOAT3(windowcontrolSize * 3, windowcontrolSize * 2, 1)); // don't allow resize to negative or too small
 			// Don't allow control outside of screen:
 			this->translation_local.x = wiMath::Clamp(this->translation_local.x, 0, wiRenderer::GetDevice()->GetScreenWidth() - this->scale_local.x);
-			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, wiRenderer::GetDevice()->GetScreenHeight() - windowcontrolSize());
+			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, wiRenderer::GetDevice()->GetScreenHeight() - windowcontrolSize);
 			this->wiWidget::Update(gui, 0);
 			for (auto& x : this->childrenWidgets)
 			{
@@ -1498,10 +1498,10 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 			scaleDiff.x = (scale.x + args.deltaPos.x) / scale.x;
 			scaleDiff.y = (scale.y + args.deltaPos.y) / scale.y;
 			this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
-			this->scale_local = wiMath::Max(this->scale_local, XMFLOAT3(40, 40, 1)); // don't allow resize to negative or too small
+			this->scale_local = wiMath::Max(this->scale_local, XMFLOAT3(windowcontrolSize * 3, windowcontrolSize * 2, 1)); // don't allow resize to negative or too small
 			// Don't allow control outside of screen:
 			this->translation_local.x = wiMath::Clamp(this->translation_local.x, 0, wiRenderer::GetDevice()->GetScreenWidth() - this->scale_local.x);
-			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, wiRenderer::GetDevice()->GetScreenHeight() - windowcontrolSize());
+			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, wiRenderer::GetDevice()->GetScreenHeight() - windowcontrolSize);
 			this->wiWidget::Update(gui, 0);
 			for (auto& x : this->childrenWidgets)
 			{
@@ -1521,7 +1521,7 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 			this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
 			// Don't allow control outside of screen:
 			this->translation_local.x = wiMath::Clamp(this->translation_local.x, 0, wiRenderer::GetDevice()->GetScreenWidth() - this->scale_local.x);
-			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, wiRenderer::GetDevice()->GetScreenHeight() - windowcontrolSize());
+			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, wiRenderer::GetDevice()->GetScreenHeight() - windowcontrolSize);
 			this->wiWidget::Update(gui, 0);
 			for (auto& x : this->childrenWidgets)
 			{
@@ -1617,42 +1617,42 @@ void wiWindow::Update(wiGUI* gui, float dt)
 	if (moveDragger != nullptr)
 	{
 		moveDragger->Detach();
-		moveDragger->SetSize(XMFLOAT2(scale.x - windowcontrolSize() * 3, windowcontrolSize()));
-		moveDragger->SetPos(XMFLOAT2(translation.x + windowcontrolSize(), translation.y));
+		moveDragger->SetSize(XMFLOAT2(scale.x - windowcontrolSize * 3, windowcontrolSize));
+		moveDragger->SetPos(XMFLOAT2(translation.x + windowcontrolSize, translation.y));
 		moveDragger->AttachTo(this);
 	}
 	if (closeButton != nullptr)
 	{
 		closeButton->Detach();
-		closeButton->SetSize(XMFLOAT2(windowcontrolSize(), windowcontrolSize()));
-		closeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize(), translation.y));
+		closeButton->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+		closeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y));
 		closeButton->AttachTo(this);
 	}
 	if (minimizeButton != nullptr)
 	{
 		minimizeButton->Detach();
-		minimizeButton->SetSize(XMFLOAT2(windowcontrolSize(), windowcontrolSize()));
-		minimizeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize() * 2, translation.y));
+		minimizeButton->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+		minimizeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize * 2, translation.y));
 		minimizeButton->AttachTo(this);
 	}
 	if (resizeDragger_UpperLeft != nullptr)
 	{
 		resizeDragger_UpperLeft->Detach();
-		resizeDragger_UpperLeft->SetSize(XMFLOAT2(windowcontrolSize(), windowcontrolSize()));
+		resizeDragger_UpperLeft->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
 		resizeDragger_UpperLeft->SetPos(XMFLOAT2(translation.x, translation.y));
 		resizeDragger_UpperLeft->AttachTo(this);
 	}
 	if (resizeDragger_BottomRight != nullptr)
 	{
 		resizeDragger_BottomRight->Detach();
-		resizeDragger_BottomRight->SetSize(XMFLOAT2(windowcontrolSize(), windowcontrolSize()));
-		resizeDragger_BottomRight->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize(), translation.y + scale.y - windowcontrolSize()));
+		resizeDragger_BottomRight->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+		resizeDragger_BottomRight->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y + scale.y - windowcontrolSize));
 		resizeDragger_BottomRight->AttachTo(this);
 	}
 	if (label != nullptr)
 	{
 		label->Detach();
-		label->SetSize(XMFLOAT2(scale.x, windowcontrolSize()));
+		label->SetSize(XMFLOAT2(scale.x, windowcontrolSize));
 		label->SetPos(XMFLOAT2(translation.x, translation.y));
 		label->AttachTo(this);
 	}
