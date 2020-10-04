@@ -55,6 +55,7 @@ sudo apt install vulkan-sdk
 sudo apt install libsdl2-dev
 sudo apt install build-essential
 ```
+ - Note: The Vulkan SDK for Ubuntu contains DXC (<a href="https://github.com/microsoft/DirectXShaderCompiler">DirectXShaderCompiler</a>) which is required to build the shaders. If you are using an other Linux distribution, make sure that you have DirectXShaderCompiler.
 To build the engine, editor and tests, use Cmake and make:
 ```bash
 mkdir build
