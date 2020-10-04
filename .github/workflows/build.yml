@@ -36,8 +36,10 @@ jobs:
           models/
           scripts/
           Documentation/
-          *.txt
-          *.md
+          README.md
+          LICENSE.md
+          other_licenses.txt
+          features.txt
           Editor/images/
           Editor/sound/
           Editor/*.ini
@@ -57,8 +59,10 @@ jobs:
           models/
           scripts/
           Documentation/
-          *.txt
-          *.md
+          README.md
+          LICENSE.md
+          other_licenses.txt
+          features.txt
           Tests/images/
           Tests/sound/
           Tests/*.ini
@@ -105,8 +109,10 @@ jobs:
           models/
           scripts/
           Documentation/
-          *.txt
-          *.md
+          README.md
+          LICENSE.md
+          other_licenses.txt
+          features.txt
           Editor/images/
           Editor/sound/
           Editor/*.ini
@@ -125,8 +131,10 @@ jobs:
           models/
           scripts/
           Documentation/
-          *.txt
-          *.md
+          README.md
+          LICENSE.md
+          other_licenses.txt
+          features.txt
           Tests/images/
           Tests/sound/
           Tests/*.ini
