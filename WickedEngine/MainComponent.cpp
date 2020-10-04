@@ -45,32 +45,62 @@ void MainComponent::Initialize()
 
 		bool debugdevice = wiStartupArguments::HasArgument("debugdevice");
 
-		if (wiStartupArguments::HasArgument("vulkan"))
+        bool use_dx11 = wiStartupArguments::HasArgument("dx11");
+        bool use_dx12 = wiStartupArguments::HasArgument("dx12");
+        bool use_vulkan = wiStartupArguments::HasArgument("vulkan");
+
+#ifndef WICKEDENGINE_BUILD_DX11
+        if (use_dx11) {
+            wiHelper::messageBox("DirectX 11 not found during build! DirectX 11 API disabled!", "Error");
+            use_dx11 = false;
+        }
+#endif
+#ifndef WICKEDENGINE_BUILD_DX12
+        if (use_dx12) {
+            wiHelper::messageBox("DirectX 12 not found during build! DirectX 12 API disabled!", "Error");
+            use_dx12 = false;
+        }
+#endif
+#ifndef WICKEDENGINE_BUILD_VULKAN
+        if (use_vulkan) {
+            wiHelper::messageBox("Vulkan SDK not found during build! Vulkan API disabled!", "Error");
+            use_vulkan = false;
+        }
+#endif
+
+        if (!use_dx11 && !use_dx12 && !use_vulkan)
+        {
+#if defined(WICKEDENGINE_BUILD_DX11)
+            use_dx11 = true;
+#elif defined(WICKEDENGINE_BUILD_DX12)
+            use_dx12 = true;
+#elif defined(WICKEDENGINE_BUILD_VULKAN)
+            use_vulkan = true;
+#else
+            wiBackLog::post("No rendering backend is enabled! Please enable at least one so we can use it as default");
+            assert(false);
+#endif
+        }
+        assert(use_dx11 || use_dx12 || use_vulkan);
+
+		if (use_vulkan)
 		{
 #ifdef WICKEDENGINE_BUILD_VULKAN
 			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "spirv/");
 			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_Vulkan>(window, fullscreen, debugdevice));
-#else
-			wiHelper::messageBox("Vulkan SDK not found during build! Vulkan API disabled!", "Error");
 #endif
 		}
-		else if (wiStartupArguments::HasArgument("dx12"))
+		else if (use_dx12)
 		{
 #ifdef WICKEDENGINE_BUILD_DX12
 			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl6/");
 			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX12>(window, fullscreen, debugdevice));
-#else
-			wiHelper::messageBox("DirectX 12 not found during build! DirectX 12 API disabled!", "Error");
 #endif
 		}
-
-		// default graphics device:
-		if (wiRenderer::GetDevice() == nullptr)
+		else if (use_dx11)
 		{
 #ifdef WICKEDENGINE_BUILD_DX11
 			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX11>(window, fullscreen, debugdevice));
-#else
-			wiHelper::messageBox("DirectX 11 not found during build! DirectX 11 API disabled!", "Error");
 #endif
 		}
 

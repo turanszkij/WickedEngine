@@ -29,32 +29,47 @@ You can download the engine by using Git and cloning the repository, or download
 ### Platforms:
 - Windows 10 Desktop (x86, x64) [Visual Studio 2019]
 - UWP (x86, x64, ARM, Phone, XBOX One) [Visual Studio 2019]
-- Linux (<a href="https://github.com/portaloffreedom/WickedEngine/tree/linux-sdl2">experimental branch</a>) [CMake]
+- Linux [CMake 3.7]
 
 ### How to build: 
 
 #### Windows
-To build Wicked Engine for Windows 10, use Visual Studio and the provided solution file. <b>Make sure that you have the latest Windows SDK and updated operating system</b>. There are a couple of projects that you can run up front: Editor, Tests and Template. You just have to set either as startup project and press F5 in Visual Studio to build and run.
-
-If you wish to integrate Wicked Engine into your own project, you can use it as a static library and link it to your application. For this, you must first compile the engine library project for the desired platform. For Windows Desktop, this is the WickedEngine_Windows project. After that, set the following dependencies to this library in Visual Studio this way in the implementing project (paths are as if your project is inside the engine root folder):
+To build Wicked Engine for Windows 10, use Visual Studio and the provided solution file. <b>Make sure that you have the latest Windows SDK and updated operating system</b>. There are a couple of projects that you can run up front: Editor, Tests and Template. You just have to set either as startup project and press F5 in Visual Studio to build and run. For optimal performance, choose `Release` mode, for the best debugging experience, choose `Debug` mode.
 
 <img align="right" src="https://turanszkij.files.wordpress.com/2020/08/fighting_game_small-1.gif"/>
 
-1. Open Project Properties -> Configuration Properties
-2. C/C++ -> General -> Additional Include Directories: 
-	- ./WickedEngine
-3. Linker -> General -> Additional Library Directories:
-	- Directory of your built .lib file (For example ./x64/Release)
-4. Compile with a non-DLL runtime library for Release builds:
-	- Project settings -> C/C++ -> Code Generation -> Runtime Library -> Multi threaded
-5. If you want to create a UWP application, link against the WickedEngine_UWP library.
-	
-When your project settings are set up, put `#include "WickedEngine.h"` in your source. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project.
+If you want to develop an application that uses Wicked Engine, you will have to link to WickedEngine_Windows.lib or WickedEngine_UWP.lib.lib and `#include "WickedEngine.h"` into the source code. For examples, look at the Template, Editor and Tests projects in Visual Studio that do this.
 
-If you have trouble, you can look at or copy the project settings for Editor, Tests and Template application projects to get an idea how to link with Wicked Engine.
+You can also dowload prebuilt and packaged versions of the Editor and Tests here: [![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
+
+If you have questions or stuck, please use the `windows` communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
+
 
 #### Linux
-The <a href="https://github.com/portaloffreedom/WickedEngine/tree/linux-sdl2">Linux branch</a> is experimental. The steps to build can be found <a href="https://github.com/portaloffreedom/WickedEngine/blob/linux-sdl2/README_Linux.md">here</a>. If you have questions or stuck, please use the `linux` communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
+The Linux support is experimental. You can find a sample build script for Ubuntu 20.04 [here](.github/workflows/build.yml) (in the linux section). You might need to install some dependencies, such as Vulkan SDK 1.2 or greater, SDL2, cmake 3.7 and g++ compiler (C++ 17 compliant version). For Ubuntu 20.04, you can use the following commands to install dependencies:
+```bash
+wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
+sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.148-focal.list https://packages.lunarg.com/vulkan/1.2.148/lunarg-vulkan-1.2.148-focal.list
+sudo apt update
+sudo apt install vulkan-sdk
+sudo apt install libsdl2-dev
+sudo apt install build-essential
+```
+ - Note: The Vulkan SDK for Ubuntu contains DXC (<a href="https://github.com/microsoft/DirectXShaderCompiler">DirectXShaderCompiler</a>) which is required to build the shaders. If you are using an other Linux distribution, make sure that you have DirectXShaderCompiler.
+To build the engine, editor and tests, use Cmake and make:
+```bash
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make
+```
+
+If you want to develop an application that uses Wicked Engine, you will have to link to libWickedEngine.a and `#include "WickedEngine.h"` into the source code. For examples, look at the Cmake files.
+
+You can also dowload prebuilt and packaged versions of the Editor and Tests here: [![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
+
+If you have questions or stuck, please use the `linux` communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
+
 
 ### Examples:
 
@@ -182,7 +197,7 @@ The preferred workflow is to import models into the Editor, and save them as <b>
 
 ### Graphics API:
 
-The default renderer is DirectX 11. There is also a DirectX12 renderer and Vulkan renderer.
+The default renderer is DirectX 11 on Windows and Vulkan on Linux. There is also an optional DirectX12 renderer for Windows.
 You can specify command line arguments (without any prefix) to switch between render devices or other settings. Currently the list of options:
 <table>
   <tr>
@@ -211,6 +226,7 @@ HLSL6 shaders can be compiled by Rebuilding the Shaders_HLSL6 project from withi
 * **Vulkan support will be built into the application if the Vulkan SDK is installed on the build machine. 
 Vulkan will try to load shaders from WickedEngine/shaders/spirv directory. 
 SPIRV shaders can be compiled by Rebuilding the Shaders_SPIRV project from within Visual Studio (Python 3 required for building).
+For Linux builds, spirv shaders will be built by using Cmake system.
 
 <br/>
 

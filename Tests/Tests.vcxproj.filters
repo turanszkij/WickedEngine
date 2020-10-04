@@ -28,7 +28,7 @@
     <ClInclude Include="Tests.h">
       <Filter>Code</Filter>
     </ClInclude>
-    <ClInclude Include="main.h">
+    <ClInclude Include="main_Windows.h">
       <Filter>Code</Filter>
     </ClInclude>
   </ItemGroup>
@@ -39,7 +39,7 @@
     <ClCompile Include="Tests.cpp">
       <Filter>Code</Filter>
     </ClCompile>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="main_Windows.cpp">
       <Filter>Code</Filter>
     </ClCompile>
   </ItemGroup>

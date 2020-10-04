@@ -597,6 +597,7 @@ namespace wiRenderer
 		uint32_t uvset = 0;
 		float radius = 0;
 		XMUINT2 center;
+		XMUINT2 dimensions;
 	};
 	void DrawPaintRadius(const PaintRadius& paintrad);
 

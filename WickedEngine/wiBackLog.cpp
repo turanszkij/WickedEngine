@@ -164,6 +164,8 @@ namespace wiBackLog
 
 #ifdef _WIN32
 		OutputDebugStringA(ss.str().c_str());
+#else
+        std::cout << ss.str();
 #endif // _WIN32
 	}
 	void input(const char& input) 

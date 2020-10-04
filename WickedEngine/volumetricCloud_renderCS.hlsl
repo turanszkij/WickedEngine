@@ -1,7 +1,7 @@
 // References:
 // GPU Pro 7: Real-Time Volumetric Cloudscapes - A. Schneider
 // Follow up presentation: http://advances.realtimerendering.com/s2017/Nubis%20-%20Authoring%20Realtime%20Volumetric%20Cloudscapes%20with%20the%20Decima%20Engine%20-%20Final%20.pdf
-// R. Högfeldt, "Convincing Cloud Rendering – An Implementation of Real-Time Dynamic Volumetric Clouds in Frostbite"
+// R. Hogfeldt, "Convincing Cloud Rendering An Implementation of Real-Time Dynamic Volumetric Clouds in Frostbite"
 // F. Bauer, "Creating the Atmospheric World of Red Dead Redemption 2: A Complete and Integrated Solution" in Advances in Real-Time Rendering in Games, Siggraph 2019.
 
 #include "globals.hlsli"
@@ -19,7 +19,7 @@
  * 
  * Right now the clouds use the lighting system, as described in GPU Pro 7 which isn't entirely physical. (+ phase functions)
  * However, it is possible to make it more physically accurate using the volumetric integration and participating media method from Frostbite. 
- * See paper from Sébastian Hillary describing their approach: https://media.contentapi.ea.com/content/dam/eacom/frostbite/files/s2016-pbs-frostbite-sky-clouds-new.pdf
+ * See paper from Sebastian Hillary describing their approach: https://media.contentapi.ea.com/content/dam/eacom/frostbite/files/s2016-pbs-frostbite-sky-clouds-new.pdf
  * Small example: https://www.shadertoy.com/view/XlBSRz
  * 
  */

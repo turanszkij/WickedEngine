@@ -2,7 +2,7 @@
 
 #if __has_include("d3d12.h")
 #define WICKEDENGINE_BUILD_DX12
-#endif // HAS VULKAN
+#endif // HAS DX12
 
 #ifdef WICKEDENGINE_BUILD_DX12
 #include "CommonInclude.h"

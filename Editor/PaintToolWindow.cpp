@@ -4,6 +4,7 @@
 #include "ShaderInterop_Paint.h"
 
 #include <sstream>
+#include <cmath>
 
 using namespace wiECS;
 using namespace wiScene;
@@ -289,6 +290,8 @@ void PaintToolWindow::Update(float dt)
 
 		int uvset = 0;
 		auto resource = GetEditTextureSlot(*material, &uvset);
+		if (resource == nullptr)
+			break;
 		const TextureDesc& desc = resource->texture->GetDesc();
 		auto& vertex_uvset = uvset == 0 ? mesh->vertex_uvset_0 : mesh->vertex_uvset_1;
 
@@ -360,6 +363,8 @@ void PaintToolWindow::Update(float dt)
 		paintrad.radius = radius;
 		paintrad.center = center;
 		paintrad.uvset = uvset;
+		paintrad.dimensions.x = desc.Width;
+		paintrad.dimensions.y = desc.Height;
 		wiRenderer::DrawPaintRadius(paintrad);
 	}
 	break;
@@ -472,7 +477,7 @@ void PaintToolWindow::Update(float dt)
 				{
 					RecordHistory(true);
 					rebuild = true;
-					const float affection = amount * std::powf(1 - (dist / radius), falloff);
+					const float affection = amount * std::pow(1.0f - (dist / radius), falloff);
 
 					switch (mode)
 					{
@@ -599,7 +604,7 @@ void PaintToolWindow::Update(float dt)
 				if (z >= 0 && z <= 1 && dist <= radius)
 				{
 					averageNormal += N;
-					const float affection = amount * std::powf(1 - (dist / radius), falloff);
+					const float affection = amount * std::pow(1.0f - (dist / radius), falloff);
 					paintindices.push_back({ j, affection });
 				}
 			}
@@ -807,7 +812,7 @@ void PaintToolWindow::Update(float dt)
 					case MODE_HAIRPARTICLE_LENGTH:
 						if (hair->vertex_lengths[j] > 0) // don't change distribution
 						{
-							const float affection = amount * std::powf(1 - (dist / radius), falloff);
+							const float affection = amount * std::pow(1.0f - (dist / radius), falloff);
 							hair->vertex_lengths[j] = wiMath::Lerp(hair->vertex_lengths[j], color_float.w, affection);
 							// don't let it "remove" the vertex by keeping its length above zero:
 							//	(because if removed, distribution also changes which might be distracting)

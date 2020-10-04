@@ -22,12 +22,16 @@
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
 #endif // PLATFORM_UWP
+#else
+#include <filesystem>
+#include "Utility/portable-file-dialogs.h"
 #endif // _WIN32
 
 using namespace std;
 
 namespace wiHelper
 {
+
 	string toUpper(const std::string& s)
 	{
 		std::string result;
@@ -62,6 +66,8 @@ namespace wiHelper
 		}
 #ifdef _WIN32
 		CreateDirectoryA(directory.c_str(), 0);
+#elif SDL2
+        std::filesystem::create_directory(directory.c_str());
 #endif // _WIN32
 
 		std::string filename = name;
@@ -242,19 +248,19 @@ namespace wiHelper
 
 	string GetApplicationDirectory()
 	{
-		static string appDir;
-		static bool initComplete = false;
-		if (!initComplete)
-		{
 #ifdef _WIN32
+		static std::string appDir;
+		if (appDir.empty())
+		{
 			CHAR fileName[1024] = {};
 			GetModuleFileNameA(NULL, fileName, arraysize(fileName));
 			appDir = GetDirectoryFromPath(fileName);
-#else
-			// TODO
-#endif // _WIN32
-			initComplete = true;
 		}
+#elif SDL2
+		static std::string appDir = std::string(SDL_GetBasePath());
+#else
+		static std::string appDir;
+#endif // _WIN32
 		return appDir;
 	}
 
@@ -348,7 +354,7 @@ namespace wiHelper
 		// Replace all slashes with backslashes:
 #ifdef PLATFORM_UWP
 		std::replace(expanded.begin(), expanded.end(), '/', '\\');
-#endif // _WIN32
+#endif // PLATFORM_UWP
 
 		size_t pos;
 		while ((pos = expanded.find("..")) != string::npos)
@@ -742,9 +748,46 @@ namespace wiHelper
 #endif // PLATFORM_UWP
 
 #else
+        if (!pfd::settings::available()) {
+            const char *message = "No dialog backend available";
+#ifdef SDL2
+            SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+                                     "File dialog error!",
+                                     message,
+                                     nullptr);
+#endif
+            std::cerr << message << std::endl;
+        }
 
-	// TODO
+        std::vector<std::string> extensions = {params.description};
+        extensions.reserve(params.extensions.size()+1);
+        extensions.insert(extensions.end(), params.extensions.cbegin(), params.extensions.cend());
 
+        switch (params.type) {
+            case FileDialogParams::OPEN: {
+                std::vector<std::string> selection = pfd::open_file(
+                        params.description,
+                        wiHelper::GetOriginalWorkingDirectory(),
+                        extensions
+                        // allow multi selection here
+                ).result();
+                // result() will wait for user action before returning.
+                // This operation will block and return the user choice
+
+                if (!selection.empty()) {
+                    onSuccess(selection[0]);
+                }
+                //TODO what happens if the user cancelled the action? Is there not a onFailure callback?
+            }
+            case FileDialogParams::SAVE: {
+                std::string destination = pfd::save_file(params.description,
+                        wiHelper::GetOriginalWorkingDirectory(),
+                        extensions
+                        // remove overwrite warning here
+                ).result();
+                onSuccess(destination);
+            }
+        }
 #endif // _WIN32
 	}
 
@@ -786,6 +829,9 @@ namespace wiHelper
 		}
 #else
 		int num = 0; // TODO
+        const char * message = "int StringConvert(const char* from, wchar_t* to) not implemented";
+        std::cerr << message << std::endl;
+        throw std::runtime_error(message);
 #endif // _WIN32
 		return num;
 	}
@@ -800,6 +846,9 @@ namespace wiHelper
 		}
 #else
 		int num = 0; // TODO
+        const char * message = "int StringConvert(const wchar_t* from, char* to) not implemented";
+        std::cerr << message << std::endl;
+        throw std::runtime_error(message);
 #endif // _WIN32
 		return num;
 	}
