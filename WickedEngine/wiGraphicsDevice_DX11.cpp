@@ -1516,76 +1516,13 @@ bool GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subreso
 	if (SUCCEEDED(hr))
 	{
 		// Create resource views if needed
-		if (desc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
+		if (pDesc->BindFlags & BIND_SHADER_RESOURCE)
 		{
-
-			D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-
-			if (desc.MiscFlags & D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS)
-			{
-				// This is a Raw Buffer
-
-				srv_desc.Format = DXGI_FORMAT_R32_TYPELESS;
-				srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
-				srv_desc.BufferEx.FirstElement = 0;
-				srv_desc.BufferEx.Flags = D3D11_BUFFEREX_SRV_FLAG_RAW;
-				srv_desc.BufferEx.NumElements = desc.ByteWidth / 4;
-			}
-			else if (desc.MiscFlags & D3D11_RESOURCE_MISC_BUFFER_STRUCTURED)
-			{
-				// This is a Structured Buffer
-
-				srv_desc.Format = DXGI_FORMAT_UNKNOWN;
-				srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
-				srv_desc.BufferEx.FirstElement = 0;
-				srv_desc.BufferEx.NumElements = desc.ByteWidth / desc.StructureByteStride;
-			}
-			else
-			{
-				// This is a Typed Buffer
-
-				srv_desc.Format = _ConvertFormat(pDesc->Format);
-				srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
-				srv_desc.Buffer.FirstElement = 0;
-				srv_desc.Buffer.NumElements = desc.ByteWidth / desc.StructureByteStride;
-			}
-
-			hr = device->CreateShaderResourceView(internal_state->resource.Get(), &srv_desc, &internal_state->srv);
-
-			assert(SUCCEEDED(hr) && "ShaderResourceView of the GPUBuffer could not be created!");
+			CreateSubresource(pBuffer, SRV, 0);
 		}
-		if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
+		if (pDesc->BindFlags & BIND_UNORDERED_ACCESS)
 		{
-			D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
-			uav_desc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
-			uav_desc.Buffer.FirstElement = 0;
-
-			if (desc.MiscFlags & D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS)
-			{
-				// This is a Raw Buffer
-
-				uav_desc.Format = DXGI_FORMAT_R32_TYPELESS; // Format must be DXGI_FORMAT_R32_TYPELESS, when creating Raw Unordered Access View
-				uav_desc.Buffer.Flags = D3D11_BUFFER_UAV_FLAG_RAW;
-				uav_desc.Buffer.NumElements = desc.ByteWidth / 4;
-			}
-			else if (desc.MiscFlags & D3D11_RESOURCE_MISC_BUFFER_STRUCTURED)
-			{
-				// This is a Structured Buffer
-
-				uav_desc.Format = DXGI_FORMAT_UNKNOWN;      // Format must be must be DXGI_FORMAT_UNKNOWN, when creating a View of a Structured Buffer
-				uav_desc.Buffer.NumElements = desc.ByteWidth / desc.StructureByteStride;
-			}
-			else
-			{
-				// This is a Typed Buffer
-
-				uav_desc.Format = _ConvertFormat(pDesc->Format);
-				uav_desc.Buffer.NumElements = desc.ByteWidth / desc.StructureByteStride;
-			}
-
-			hr = device->CreateUnorderedAccessView(internal_state->resource.Get(), &uav_desc, &internal_state->uav);
-
-			assert(SUCCEEDED(hr) && "UnorderedAccessView of the GPUBuffer could not be created!");
+			CreateSubresource(pBuffer, UAV, 0);
 		}
 	}
 
@@ -1643,7 +1580,7 @@ bool GraphicsDevice_DX11::CreateTexture(const TextureDesc* pDesc, const Subresou
 
 	if (pTexture->desc.MipLevels == 0)
 	{
-		pTexture->desc.MipLevels = (uint32_t)log2(std::max(pTexture->desc.Width, pTexture->desc.Height));
+		pTexture->desc.MipLevels = (uint32_t)log2(std::max(pTexture->desc.Width, pTexture->desc.Height)) + 1;
 	}
 
 	if (pTexture->desc.BindFlags & BIND_RENDER_TARGET)
@@ -2362,6 +2299,124 @@ int GraphicsDevice_DX11::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE ty
 	}
 	return -1;
 }
+int GraphicsDevice_DX11::CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size)
+{
+	auto internal_state = to_internal(buffer);
+	const GPUBufferDesc& desc = buffer->GetDesc();
+	HRESULT hr = E_FAIL;
+
+	switch (type)
+	{
+	case wiGraphics::SRV:
+	{
+		D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+
+		if (desc.MiscFlags & RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS)
+		{
+			// This is a Raw Buffer
+			srv_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+			srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
+			srv_desc.BufferEx.Flags = D3D11_BUFFEREX_SRV_FLAG_RAW;
+			srv_desc.BufferEx.FirstElement = (UINT)offset / sizeof(uint32_t);
+			srv_desc.BufferEx.NumElements = std::min((UINT)size, desc.ByteWidth - (UINT)offset) / sizeof(uint32_t);
+		}
+		else if (desc.MiscFlags & RESOURCE_MISC_BUFFER_STRUCTURED)
+		{
+			// This is a Structured Buffer
+			srv_desc.Format = DXGI_FORMAT_UNKNOWN;
+			srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
+			srv_desc.BufferEx.FirstElement = (UINT)offset / desc.StructureByteStride;
+			srv_desc.BufferEx.NumElements = std::min((UINT)size, desc.ByteWidth - (UINT)offset) / desc.StructureByteStride;
+		}
+		else
+		{
+			// This is a Typed Buffer
+			uint32_t stride = GetFormatStride(desc.Format);
+			srv_desc.Format = _ConvertFormat(desc.Format);
+			srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+			srv_desc.Buffer.FirstElement = (UINT)offset / stride;
+			srv_desc.Buffer.NumElements = std::min((UINT)size, desc.ByteWidth - (UINT)offset) / stride;
+		}
+
+		ComPtr<ID3D11ShaderResourceView> srv;
+		hr = device->CreateShaderResourceView(internal_state->resource.Get(), &srv_desc, &srv);
+
+		if (SUCCEEDED(hr))
+		{
+			if (internal_state->srv == nullptr)
+			{
+				internal_state->srv = srv;
+				return -1;
+			}
+			else
+			{
+				internal_state->subresources_srv.push_back(srv);
+				return int(internal_state->subresources_srv.size() - 1);
+			}
+		}
+		else
+		{
+			assert(0);
+		}
+	}
+	break;
+	case wiGraphics::UAV:
+	{
+		D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
+		uav_desc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+
+		if (desc.MiscFlags & RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS)
+		{
+			// This is a Raw Buffer
+			uav_desc.Format = DXGI_FORMAT_R32_TYPELESS; // Format must be DXGI_FORMAT_R32_TYPELESS, when creating Raw Unordered Access View
+			uav_desc.Buffer.Flags = D3D11_BUFFER_UAV_FLAG_RAW;
+			uav_desc.Buffer.FirstElement = (UINT)offset / sizeof(uint32_t);
+			uav_desc.Buffer.NumElements = std::min((UINT)size, desc.ByteWidth - (UINT)offset) / sizeof(uint32_t);
+		}
+		else if (desc.MiscFlags & RESOURCE_MISC_BUFFER_STRUCTURED)
+		{
+			// This is a Structured Buffer
+			uav_desc.Format = DXGI_FORMAT_UNKNOWN;      // Format must be must be DXGI_FORMAT_UNKNOWN, when creating a View of a Structured Buffer
+			uav_desc.Buffer.FirstElement = (UINT)offset / desc.StructureByteStride;
+			uav_desc.Buffer.NumElements = std::min((UINT)size, desc.ByteWidth - (UINT)offset) / desc.StructureByteStride;
+		}
+		else
+		{
+			// This is a Typed Buffer
+			uint32_t stride = GetFormatStride(desc.Format);
+			uav_desc.Format = _ConvertFormat(desc.Format);
+			uav_desc.Buffer.FirstElement = (UINT)offset / stride;
+			uav_desc.Buffer.NumElements = std::min((UINT)size, desc.ByteWidth - (UINT)offset) / stride;
+		}
+
+		ComPtr<ID3D11UnorderedAccessView> uav;
+		hr = device->CreateUnorderedAccessView(internal_state->resource.Get(), &uav_desc, &uav);
+
+		if (SUCCEEDED(hr))
+		{
+			if (internal_state->uav == nullptr)
+			{
+				internal_state->uav = uav;
+				return -1;
+			}
+			else
+			{
+				internal_state->subresources_uav.push_back(uav);
+				return int(internal_state->subresources_uav.size() - 1);
+			}
+		}
+		else
+		{
+			assert(0);
+		}
+	}
+	break;
+	default:
+		assert(0);
+		break;
+	}
+	return -1;
+}
 
 void GraphicsDevice_DX11::Map(const GPUResource* resource, Mapping* mapping)
 {
@@ -2893,6 +2948,9 @@ void GraphicsDevice_DX11::BindSampler(SHADERSTAGE stage, const Sampler* sampler,
 		case wiGraphics::CS:
 			deviceContexts[cmd]->CSSetSamplers(slot, 1, &SAM);
 			break;
+		case MS:
+		case AS:
+			break;
 		default:
 			assert(0);
 			break;
@@ -2921,6 +2979,9 @@ void GraphicsDevice_DX11::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer*
 		break;
 	case wiGraphics::CS:
 		deviceContexts[cmd]->CSSetConstantBuffers(slot, 1, &res);
+		break;
+	case MS:
+	case AS:
 		break;
 	default:
 		assert(0);

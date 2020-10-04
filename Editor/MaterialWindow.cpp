@@ -14,15 +14,17 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	assert(GUI && "Invalid GUI!");
 
 	materialWindow = new wiWindow(GUI, "Material Window");
-	materialWindow->SetSize(XMFLOAT2(700, 770));
+	materialWindow->SetSize(XMFLOAT2(700, 580));
 	GUI->AddWidget(materialWindow);
 
-	float x = 540, y = 0;
-	float step = 24;
+	float x = 670, y = 0;
+	float hei = 18;
+	float step = hei + 2;
 
 	waterCheckBox = new wiCheckBox("Water: ");
 	waterCheckBox->SetTooltip("Set material as special water material.");
 	waterCheckBox->SetPos(XMFLOAT2(670, y += step));
+	waterCheckBox->SetSize(XMFLOAT2(hei, hei));
 	waterCheckBox->OnClick([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
@@ -33,6 +35,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	planarReflCheckBox = new wiCheckBox("Planar Reflections: ");
 	planarReflCheckBox->SetTooltip("Enable planar reflections. The mesh should be a single plane for best results.");
 	planarReflCheckBox->SetPos(XMFLOAT2(670, y += step));
+	planarReflCheckBox->SetSize(XMFLOAT2(hei, hei));
 	planarReflCheckBox->OnClick([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
@@ -43,6 +46,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	shadowCasterCheckBox = new wiCheckBox("Cast Shadow: ");
 	shadowCasterCheckBox->SetTooltip("The subset will contribute to the scene shadows if enabled.");
 	shadowCasterCheckBox->SetPos(XMFLOAT2(670, y += step));
+	shadowCasterCheckBox->SetSize(XMFLOAT2(hei, hei));
 	shadowCasterCheckBox->OnClick([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
@@ -53,6 +57,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	flipNormalMapCheckBox = new wiCheckBox("Flip Normal Map: ");
 	flipNormalMapCheckBox->SetTooltip("The normal map green channel will be inverted. Useful for imported models coming from OpenGL space (such as GLTF).");
 	flipNormalMapCheckBox->SetPos(XMFLOAT2(670, y += step));
+	flipNormalMapCheckBox->SetSize(XMFLOAT2(hei, hei));
 	flipNormalMapCheckBox->OnClick([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
@@ -63,6 +68,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	useVertexColorsCheckBox = new wiCheckBox("Use vertex colors: ");
 	useVertexColorsCheckBox->SetTooltip("Enable if you want to render the mesh with vertex colors (must have appropriate vertex buffer)");
 	useVertexColorsCheckBox->SetPos(XMFLOAT2(670, y += step));
+	useVertexColorsCheckBox->SetSize(XMFLOAT2(hei, hei));
 	useVertexColorsCheckBox->OnClick([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
@@ -73,6 +79,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	specularGlossinessCheckBox = new wiCheckBox("Specular-glossiness workflow: ");
 	specularGlossinessCheckBox->SetTooltip("If enabled, surface map will be viewed like it contains specular color (RGB) and smoothness (A)");
 	specularGlossinessCheckBox->SetPos(XMFLOAT2(670, y += step));
+	specularGlossinessCheckBox->SetSize(XMFLOAT2(hei, hei));
 	specularGlossinessCheckBox->OnClick([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
@@ -83,6 +90,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	occlusionPrimaryCheckBox = new wiCheckBox("Occlusion - Primary: ");
 	occlusionPrimaryCheckBox->SetTooltip("If enabled, surface map's RED channel will be used as occlusion map");
 	occlusionPrimaryCheckBox->SetPos(XMFLOAT2(670, y += step));
+	occlusionPrimaryCheckBox->SetSize(XMFLOAT2(hei, hei));
 	occlusionPrimaryCheckBox->OnClick([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
@@ -93,6 +101,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	occlusionSecondaryCheckBox = new wiCheckBox("Occlusion - Secondary: ");
 	occlusionSecondaryCheckBox->SetTooltip("If enabled, occlusion map's RED channel will be used as occlusion map");
 	occlusionSecondaryCheckBox->SetPos(XMFLOAT2(670, y += step));
+	occlusionSecondaryCheckBox->SetSize(XMFLOAT2(hei, hei));
 	occlusionSecondaryCheckBox->OnClick([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
@@ -103,6 +112,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	windCheckBox = new wiCheckBox("Wind: ");
 	windCheckBox->SetTooltip("If enabled, vertex wind weights will affect how much wind offset affects the subset.");
 	windCheckBox->SetPos(XMFLOAT2(670, y += step));
+	windCheckBox->SetSize(XMFLOAT2(hei, hei));
 	windCheckBox->OnClick([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
@@ -110,9 +120,8 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		});
 	materialWindow->AddWidget(windCheckBox);
 
-
-	step = 30;
-	float hei = 25;
+	// Sliders:
+	x = 550;
 
 	normalMapSlider = new wiSlider(0, 4, 1, 4000, "Normalmap: ");
 	normalMapSlider->SetTooltip("How much the normal map should distort the face normals (bumpiness).");
@@ -292,35 +301,6 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	materialWindow->AddWidget(texMulSliderY);
 
 
-	baseColorPicker = new wiColorPicker(GUI, "Base Color", false);
-	baseColorPicker->SetPos(XMFLOAT2(10, 240));
-	baseColorPicker->SetVisible(true);
-	baseColorPicker->SetEnabled(true);
-	baseColorPicker->OnColorChanged([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			material->SetBaseColor(args.color.toFloat4());
-		}
-	});
-	materialWindow->AddWidget(baseColorPicker);
-
-
-	emissiveColorPicker = new wiColorPicker(GUI, "Emissive Color", false);
-	emissiveColorPicker->SetPos(XMFLOAT2(10, 500));
-	emissiveColorPicker->SetVisible(true);
-	emissiveColorPicker->SetEnabled(true);
-	emissiveColorPicker->OnColorChanged([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			XMFLOAT3 col = args.color.toFloat3();
-			material->SetEmissiveColor(XMFLOAT4(col.x, col.y, col.z, material->GetEmissiveStrength()));
-		}
-	});
-	materialWindow->AddWidget(emissiveColorPicker);
-
-
 	blendModeComboBox = new wiComboBox("Blend mode: ");
 	blendModeComboBox->SetPos(XMFLOAT2(x, y += step));
 	blendModeComboBox->SetSize(XMFLOAT2(100, hei));
@@ -357,19 +337,44 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		shaderTypeComboBox->AddItem(x.name);
 	}
 	shaderTypeComboBox->SetEnabled(false);
-	shaderTypeComboBox->SetTooltip("Set the custom shader of the material.");
 	materialWindow->AddWidget(shaderTypeComboBox);
+
+
+
+	shadingRateComboBox = new wiComboBox("Shading Rate: ");
+	shadingRateComboBox->SetTooltip("Select shading rate for this material. \nSelecting larger shading rate will decrease rendering quality of this material, \nbut increases performance.\nDX12 only and requires Tier1 hardware support for variable shading rate");
+	shadingRateComboBox->SetPos(XMFLOAT2(x, y += step));
+	shadingRateComboBox->SetSize(XMFLOAT2(100, hei));
+	shadingRateComboBox->OnSelect([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
+			material->shadingRate = (SHADING_RATE)args.iValue;
+		}
+	});
+	shadingRateComboBox->AddItem("1X1");
+	shadingRateComboBox->AddItem("1X2");
+	shadingRateComboBox->AddItem("2X1");
+	shadingRateComboBox->AddItem("2X2");
+	shadingRateComboBox->AddItem("2X4");
+	shadingRateComboBox->AddItem("4X2");
+	shadingRateComboBox->AddItem("4X4");
+	shadingRateComboBox->SetEnabled(false);
+	shadingRateComboBox->SetMaxVisibleItemCount(4);
+	materialWindow->AddWidget(shadingRateComboBox);
 
 
 	// Textures:
 
 	x = 10;
 	y = 0;
+	hei = 20;
+	step = hei + 2;
 
 	materialNameField = new wiTextInputField("MaterialName");
 	materialNameField->SetTooltip("Set a name for the material...");
 	materialNameField->SetPos(XMFLOAT2(10, y += step));
-	materialNameField->SetSize(XMFLOAT2(300, 25));
+	materialNameField->SetSize(XMFLOAT2(300, hei));
 	materialNameField->OnInputAccepted([&](wiEventArgs args) {
 		NameComponent* name = wiScene::GetScene().names.GetComponent(entity);
 		if (name != nullptr)
@@ -381,7 +386,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	newMaterialButton = new wiButton("New Material");
 	newMaterialButton->SetPos(XMFLOAT2(10 + 5 + 300, y));
-	newMaterialButton->SetSize(XMFLOAT2(100, 25));
+	newMaterialButton->SetSize(XMFLOAT2(100, hei));
 	newMaterialButton->OnClick([=](wiEventArgs args) {
 		Scene& scene = wiScene::GetScene();
 		Entity entity = scene.Entity_CreateMaterial("editorMaterial");
@@ -423,11 +428,12 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
 			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				material->baseColorMap = wiResourceManager::Load(fileName);
-				material->baseColorMapName = fileName;
-				material->SetDirty();
-				fileName = wiHelper::GetFileNameFromPath(fileName);
-				texture_baseColor_Button->SetText(fileName);
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					material->baseColorMap = wiResourceManager::Load(fileName);
+					material->baseColorMapName = fileName;
+					material->SetDirty();
+					texture_baseColor_Button->SetText(wiHelper::GetFileNameFromPath(fileName));
+				});
 			});
 		}
 	});
@@ -481,11 +487,12 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
 			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				material->normalMap = wiResourceManager::Load(fileName);
-				material->normalMapName = fileName;
-				material->SetDirty();
-				fileName = wiHelper::GetFileNameFromPath(fileName);
-				texture_normal_Button->SetText(fileName);
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					material->normalMap = wiResourceManager::Load(fileName);
+					material->normalMapName = fileName;
+					material->SetDirty();
+					texture_normal_Button->SetText(wiHelper::GetFileNameFromPath(fileName));
+				});
 			});
 		}
 	});
@@ -539,11 +546,12 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
 			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				material->surfaceMap = wiResourceManager::Load(fileName);
-				material->surfaceMapName = fileName;
-				material->SetDirty();
-				fileName = wiHelper::GetFileNameFromPath(fileName);
-				texture_surface_Button->SetText(fileName);
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					material->surfaceMap = wiResourceManager::Load(fileName);
+					material->surfaceMapName = fileName;
+					material->SetDirty();
+					texture_surface_Button->SetText(wiHelper::GetFileNameFromPath(fileName));
+				});
 			});
 		}
 	});
@@ -597,11 +605,12 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
 			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				material->emissiveMap = wiResourceManager::Load(fileName);
-				material->emissiveMapName = fileName;
-				material->SetDirty();
-				fileName = wiHelper::GetFileNameFromPath(fileName);
-				texture_emissive_Button->SetText(fileName);
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					material->emissiveMap = wiResourceManager::Load(fileName);
+					material->emissiveMapName = fileName;
+					material->SetDirty();
+					texture_emissive_Button->SetText(wiHelper::GetFileNameFromPath(fileName));
+				});
 			});
 		}
 	});
@@ -655,11 +664,12 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
 			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				material->displacementMap = wiResourceManager::Load(fileName);
-				material->displacementMapName = fileName;
-				material->SetDirty();
-				fileName = wiHelper::GetFileNameFromPath(fileName);
-				texture_displacement_Button->SetText(fileName);
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					material->displacementMap = wiResourceManager::Load(fileName);
+					material->displacementMapName = fileName;
+					material->SetDirty();
+					texture_displacement_Button->SetText(wiHelper::GetFileNameFromPath(fileName));
+				});
 			});
 		}
 	});
@@ -714,11 +724,12 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("tga");
 			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				material->occlusionMap = wiResourceManager::Load(fileName);
-				material->occlusionMapName = fileName;
-				material->SetDirty();
-				fileName = wiHelper::GetFileNameFromPath(fileName);
-				texture_occlusion_Button->SetText(fileName);
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					material->occlusionMap = wiResourceManager::Load(fileName);
+					material->occlusionMapName = fileName;
+					material->SetDirty();
+					texture_occlusion_Button->SetText(wiHelper::GetFileNameFromPath(fileName));
+				});
 			});
 		}
 	});
@@ -737,6 +748,44 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		}
 	});
 	materialWindow->AddWidget(texture_occlusion_uvset_Field);
+
+
+	y = 180;
+
+	colorComboBox = new wiComboBox("Color picker mode: ");
+	colorComboBox->SetSize(XMFLOAT2(120, hei));
+	colorComboBox->SetPos(XMFLOAT2(x + 150, y += step));
+	colorComboBox->AddItem("Base color");
+	colorComboBox->AddItem("Emissive color");
+	colorComboBox->SetTooltip("Choose the destination data of the color picker.");
+	materialWindow->AddWidget(colorComboBox);
+
+	y += 10;
+
+	colorPicker = new wiColorPicker(GUI, "Color", false);
+	colorPicker->SetPos(XMFLOAT2(10, y += step));
+	colorPicker->SetVisible(true);
+	colorPicker->SetEnabled(true);
+	colorPicker->OnColorChanged([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
+			switch (colorComboBox->GetSelected())
+			{
+			default:
+			case 0:
+				material->SetBaseColor(args.color.toFloat4());
+				break;
+			case 1:
+			{
+				XMFLOAT3 col = args.color.toFloat3();
+				material->SetEmissiveColor(XMFLOAT4(col.x, col.y, col.z, material->GetEmissiveStrength()));
+			}
+			break;
+			}
+		}
+	});
+	materialWindow->AddWidget(colorPicker);
 
 
 	materialWindow->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 880, 120, 0));
@@ -791,12 +840,9 @@ void MaterialWindow::SetEntity(Entity entity)
 		texMulSliderY->SetValue(material->texMulAdd.y);
 		alphaRefSlider->SetValue(material->alphaRef);
 		materialWindow->SetEnabled(true);
-		baseColorPicker->SetEnabled(true);
-		baseColorPicker->SetPickColor(wiColor::fromFloat4(material->baseColor));
-		emissiveColorPicker->SetEnabled(true);
-		emissiveColorPicker->SetPickColor(wiColor::fromFloat3(XMFLOAT3(material->emissiveColor.x, material->emissiveColor.y, material->emissiveColor.z)));
 		blendModeComboBox->SetSelected((int)material->userBlendMode);
 		shaderTypeComboBox->SetSelected(max(0, material->GetCustomShaderID() + 1));
+		shadingRateComboBox->SetSelected((int)material->shadingRate);
 
 		texture_baseColor_Button->SetText(wiHelper::GetFileNameFromPath(material->baseColorMapName));
 		texture_normal_Button->SetText(wiHelper::GetFileNameFromPath(material->normalMapName));
@@ -811,13 +857,29 @@ void MaterialWindow::SetEntity(Entity entity)
 		texture_displacement_uvset_Field->SetText(std::to_string(material->uvset_displacementMap));
 		texture_emissive_uvset_Field->SetText(std::to_string(material->uvset_emissiveMap));
 		texture_occlusion_uvset_Field->SetText(std::to_string(material->uvset_occlusionMap));
+
+
+		colorComboBox->SetEnabled(true);
+		colorPicker->SetEnabled(true);
+		
+		switch (colorComboBox->GetSelected())
+		{
+		default:
+		case 0:
+			colorPicker->SetPickColor(wiColor::fromFloat4(material->baseColor));
+			break;
+		case 1:
+			colorPicker->SetPickColor(wiColor::fromFloat3(XMFLOAT3(material->emissiveColor.x, material->emissiveColor.y, material->emissiveColor.z)));
+			break;
+		}
+	
 	}
 	else
 	{
 		materialNameField->SetValue("No material selected");
 		materialWindow->SetEnabled(false);
-		baseColorPicker->SetEnabled(false);
-		emissiveColorPicker->SetEnabled(false);
+		colorComboBox->SetEnabled(false);
+		colorPicker->SetEnabled(false);
 
 		texture_baseColor_Button->SetText("");
 		texture_normal_Button->SetText("");

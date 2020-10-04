@@ -2,32 +2,13 @@
 
 # Wicked Engine
 
-[![Build status][s1]][av] [![License: MIT][s3]][li] [![Discord chat][s2]][di] [![Store][s8]][msstorelink]
-<a href="https://twitter.com/intent/follow?screen_name=turanszkij">
-        <img src="https://img.shields.io/twitter/follow/turanszkij.svg?style=social"
-            alt="follow on Twitter"></a><br/>
-Latest builds: 
-[![Editor][s4]][do64] [![Editor32][s5]][do32] 
-[![Tests][s6]][dt64] [![Tests32][s7]][dt32] <br/>
+[![License: MIT](https://img.shields.io/badge/License-MIT-orange.svg)](https://opensource.org/licenses/MIT)
+[![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
+<a href="https://twitter.com/intent/follow?screen_name=turanszkij"><img src="https://img.shields.io/twitter/follow/turanszkij.svg?style=social" alt="follow on Twitter"></a><br/>
+[![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
+[![Appveyor Build status](https://ci.appveyor.com/api/projects/status/3dbcee5gd6i7qh7v?svg=true)](https://ci.appveyor.com/project/turanszkij/wickedengine)
+[![Store](https://img.shields.io/badge/-Microsoft_Store-9cf.svg)](https://www.microsoft.com/store/productId/9PPMV065W9QJ)
 
-[s1]: https://ci.appveyor.com/api/projects/status/3dbcee5gd6i7qh7v?svg=true
-[s2]: https://img.shields.io/discord/602811659224088577?logo=discord
-[s3]: https://img.shields.io/badge/License-MIT-orange.svg
-[s4]: https://img.shields.io/badge/editor-64bit-blue.svg
-[s5]: https://img.shields.io/badge/editor-32bit-blue.svg
-[s6]: https://img.shields.io/badge/tests-64bit-blue.svg
-[s7]: https://img.shields.io/badge/tests-32bit-blue.svg
-[s8]: https://img.shields.io/badge/-Microsoft_Store-9cf.svg
-
-[av]: https://ci.appveyor.com/project/turanszkij/wickedengine
-[di]: https://discord.gg/CFjRYmE
-[li]: https://opensource.org/licenses/MIT
-[do64]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineEditor.zip?branch=master&job=Platform%3A%20x64
-[do32]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineEditor.zip?branch=master&job=Platform%3A%20Win32
-[dt64]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineTests.zip?branch=master&job=Platform%3A%20x64
-[dt32]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineTests.zip?branch=master&job=Platform%3A%20Win32
-[ba]: https://github.com/turanszkij/WickedEngine/tree/old-system-backup
-[msstorelink]: https://www.microsoft.com/store/productId/9PPMV065W9QJ
 
 <br/>
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/gltfanim.gif"/>
@@ -46,36 +27,53 @@ You can download the engine by using Git and cloning the repository, or download
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/physics.gif"/>
 
 ### Platforms:
-- Windows PC Desktop (x86, x64)
-- Universal Windows (x86, x64, ARM, Phone, XBOX One)
+- Windows 10 Desktop (x86, x64) [Visual Studio 2019]
+- UWP (x86, x64, ARM, Phone, XBOX One) [Visual Studio 2019]
+- Linux [CMake 3.7]
 
-### Requirements:
+### How to build: 
 
-- Windows 10
-- Visual Studio 2019
+#### Windows
+To build Wicked Engine for Windows 10, use Visual Studio and the provided solution file. <b>Make sure that you have the latest Windows SDK and updated operating system</b>. There are a couple of projects that you can run up front: Editor, Tests and Template. You just have to set either as startup project and press F5 in Visual Studio to build and run. For optimal performance, choose `Release` mode, for the best debugging experience, choose `Debug` mode.
 
-### Getting started: 
+<img align="right" src="https://turanszkij.files.wordpress.com/2020/08/fighting_game_small-1.gif"/>
 
-<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/trace.gif"/>
+If you want to develop an application that uses Wicked Engine, you will have to link to WickedEngine_Windows.lib or WickedEngine_UWP.lib.lib and `#include "WickedEngine.h"` into the source code. For examples, look at the Template, Editor and Tests projects in Visual Studio that do this.
 
-There are a couple of projects that you can run up front: Editor, Tests and Template. You just have to set either as startup project and press F5 in Visual Studio to build and run.
+You can also dowload prebuilt and packaged versions of the Editor and Tests here: [![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
 
-If you wish to integrate Wicked Engine into your own project, you can use it as a static library and link it to your application. For this, you must first compile the engine library project for the desired platform. For Windows Desktop, this is the WickedEngine_Windows project. After that, set the following dependencies to this library in Visual Studio this way in the implementing project (paths are as if your project is inside the engine root folder):
+If you have questions or stuck, please use the `windows` communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
 
-1. Open Project Properties -> Configuration Properties
-2. C/C++ -> General -> Additional Include Directories: 
-	- ./WickedEngine
-3. Linker -> General -> Additional Library Directories:
-	- Directory of your built .lib file (For example ./x64/Release)
-4. Compile with a non-DLL runtime library for Release builds:
-	- Project settings -> C/C++ -> Code Generation -> Runtime Library -> Multi threaded
-5. If you want to create a UWP application, link against the WickedEngine_UWP library.
-	
-When your project settings are set up, put `#include "WickedEngine.h"` in your source. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project.
 
-If you have trouble, you can look at or copy the project settings for Editor, Tests and Template application projects to get an idea how to link with Wicked Engine.
+#### Linux
+The Linux support is experimental. You can find a sample build script for Ubuntu 20.04 [here](.github/workflows/build.yml) (in the linux section). You might need to install some dependencies, such as Vulkan SDK 1.2 or greater, SDL2, cmake 3.7 and g++ compiler (C++ 17 compliant version). For Ubuntu 20.04, you can use the following commands to install dependencies:
+```bash
+wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
+sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.148-focal.list https://packages.lunarg.com/vulkan/1.2.148/lunarg-vulkan-1.2.148-focal.list
+sudo apt update
+sudo apt install vulkan-sdk
+sudo apt install libsdl2-dev
+sudo apt install build-essential
+```
+ - Note: The Vulkan SDK for Ubuntu contains DXC (<a href="https://github.com/microsoft/DirectXShaderCompiler">DirectXShaderCompiler</a>) which is required to build the shaders. If you are using an other Linux distribution, make sure that you have DirectXShaderCompiler.
+To build the engine, editor and tests, use Cmake and make:
+```bash
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make
+```
 
-Initialization example (C++):
+If you want to develop an application that uses Wicked Engine, you will have to link to libWickedEngine.a and `#include "WickedEngine.h"` into the source code. For examples, look at the Cmake files.
+
+You can also dowload prebuilt and packaged versions of the Editor and Tests here: [![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
+
+If you have questions or stuck, please use the `linux` communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
+
+
+### Examples:
+
+#### Initialization (C++):
 
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/05/sphinit.gif"/>
 
@@ -95,7 +93,7 @@ while(true) {
 }
 ```
 
-Some basic usage examples (C++):
+#### Basics (C++):
 ```cpp
 RenderPath3D_Deferred myGame; // Declare a game screen component, aka "RenderPath" (you could also override its Update(), Render() etc. functions). This is a 3D, Deferred path for example, but there are others
 main.ActivatePath(&myGame); // Register your game to the application. It will call Start(), Update(), Render(), etc. from now on...
@@ -128,7 +126,7 @@ if (wiInput::Press(wiInput::KEYBOARD_BUTTON_SPACE)) { wiAudio::Stop(&mySoundInst
 if (wiInput::Down(wiInput::KEYBOARD_BUTTON_SPACE)) { wiAudio::Play(&mySoundInstance); } // You can check if a button is pushed down or not (this triggers repeatedly)
 ```
 
-Some scripting examples (LUA):
+#### Scripting (LUA):
 ```lua
 -- Set a rendering path for the application main component
 path = RenderPath3D_Deferred;
@@ -195,12 +193,12 @@ In addition, the Editor supports the importing of some common model formats (the
 - <b>GLTF 2.0</b>
 
 The preferred workflow is to import models into the Editor, and save them as <b>WISCENE</b>, then any Wicked Engine application can open them.<br/>
-<i>(The old Blender exporter script is now not supported! (from version 0.21.0), because the engine was redesigned with Entity-Component System at its core. The old object oriented version can be found [here][ba].)</i>
+<i>(The old Blender exporter script is now not supported! (from version 0.21.0), because the engine was redesigned with Entity-Component System at its core. The old object oriented version can be found <a href ="https://github.com/turanszkij/WickedEngine/tree/old-system-backup">[here]</a>.)</i>
 
 ### Graphics API:
 
-The default renderer is DirectX 11. There is also a DirectX12 renderer and Vulkan renderer.
-You can specify command line arguments to switch between render devices or other settings. Currently the list of options:
+The default renderer is DirectX 11 on Windows and Vulkan on Linux. There is also an optional DirectX12 renderer for Windows.
+You can specify command line arguments (without any prefix) to switch between render devices or other settings. Currently the list of options:
 <table>
   <tr>
     <th>Argument</th>
@@ -228,6 +226,7 @@ HLSL6 shaders can be compiled by Rebuilding the Shaders_HLSL6 project from withi
 * **Vulkan support will be built into the application if the Vulkan SDK is installed on the build machine. 
 Vulkan will try to load shaders from WickedEngine/shaders/spirv directory. 
 SPIRV shaders can be compiled by Rebuilding the Shaders_SPIRV project from within Visual Studio (Python 3 required for building).
+For Linux builds, spirv shaders will be built by using Cmake system.
 
 <br/>
 
@@ -242,22 +241,38 @@ Contributions can be submitted on Github by following the steps below:
 
 <br/>
 
+### Other software using Wicked Engine
+
+- <a href="https://www.game-guru.com/max">Game Guru MAX</a>: Easy to use game creator software
+- <a href="https://www.youtube.com/watch?v=0SxXmnSQ6Q4">Flytrap</a>: Demoscene production by qop
+- Your project: add your project to this readme and open a pull request
+
+<br/>
+
 ### Finally, take a look at some screenshots:
 
 Sponza scene with voxel GI enabled:
-![Sponza](https://turanszkij.files.wordpress.com/2018/12/sponza.png)
+![Sponza](https://turanszkij.files.wordpress.com/2020/08/vxgi_sponza_small.png)
 
-Damaged Helmet GLTF sample model:
+Damaged Helmet sample model imported from GLTF:
 ![Sponza](https://turanszkij.files.wordpress.com/2019/03/damagedhelmet.png)
 
 Bokeh Depth of Field (Lain model by <a href="https://sketchfab.com/3d-models/lain-20-bf255be16da34df08d48abb5443a6706">woopoodle at Sketchfab</a>):
-![DepthOfField1](https://turanszkij.files.wordpress.com/2019/12/dof1_small.png)
-![DepthOfField2](https://turanszkij.files.wordpress.com/2019/12/dof2_small.png)
+![DepthOfField](https://turanszkij.files.wordpress.com/2020/08/dof_bokeh_small.png)
 
 Motion blur (fighting game sample):
 ![MotionBlur](https://turanszkij.files.wordpress.com/2019/12/motionblur.png)
 
-Path tracing in the living room:
+Stochastic Screen Space Reflections:
+![ScreenSpaceReflections](https://turanszkij.files.wordpress.com/2020/08/ssr.png)
+
+Real time ray traced shadows and ambient occlusion (DXR, VK_KHR_raytracing):
+![RaytracedShadows](https://turanszkij.files.wordpress.com/2020/08/dxr_rtao_rtshadow_small.png)
+
+Bloom:
+![Bloom](https://turanszkij.files.wordpress.com/2020/08/bloom_new.png)
+
+Path tracing in the living room (model from <a href="http://casual-effects.com/data/index.html">Morgan McGuire's graphics archive</a>):
 ![LivingRoom](https://turanszkij.files.wordpress.com/2019/09/livingroom.jpg)
 
 City scene with a light map (model by <a href="https://www.cgtrader.com/michaelmilesgallie">Michael Gallie at CgTrader</a>):
@@ -269,14 +284,8 @@ Path tracing in the city:
 Path traced caustics:
 ![Caustics](https://turanszkij.files.wordpress.com/2019/01/trace.png)
 
-Lots of instanced boxes with a light map:
-![Lightmap](https://turanszkij.files.wordpress.com/2019/01/lightmap.png)
-
-Lots of boxes path traced in the editor:
-![EditorBoxes](https://turanszkij.files.wordpress.com/2019/01/boxes.png)
-
-Bloom and post processing:
-![Bloom](https://turanszkij.files.wordpress.com/2019/01/bloom.png)
+Vegetation particle system and depth of field:
+![Vegetation](https://turanszkij.files.wordpress.com/2020/08/grass.png)
 
 Bistro scene from Amazon Lumberyard (model from <a href="http://casual-effects.com/data/index.html">Morgan McGuire's graphics archive</a>):
 ![Bistro_out](https://turanszkij.files.wordpress.com/2019/01/bistro_out_0.png)
@@ -288,13 +297,10 @@ Parallax occlusion mapping:
 ![ParallxOcclusionMapping](https://turanszkij.files.wordpress.com/2019/01/pom.png)
 
 Large scale particle simulation on the GPU:
-![ParticleSimulation](https://turanszkij.files.wordpress.com/2019/01/gpuparticles3.png)
+![ParticleSimulation](https://turanszkij.files.wordpress.com/2020/08/particles_2.png)
 
 Tiled light culling in the Bistro:
 ![TiledLightCulling](https://turanszkij.files.wordpress.com/2019/02/bistro_heatmap-1.png)
-
-Physically based rendering test:
-![PBRTest](https://turanszkij.files.wordpress.com/2019/03/roughness.png)
 
 GPU-based BVH builder:
 ![GPU_BVH](https://turanszkij.files.wordpress.com/2019/07/bvh_livingroom.png)

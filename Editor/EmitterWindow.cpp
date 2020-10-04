@@ -13,13 +13,13 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	assert(GUI && "Invalid GUI!");
 
 	emitterWindow = new wiWindow(GUI, "Emitter Window");
-	emitterWindow->SetSize(XMFLOAT2(680, 700));
+	emitterWindow->SetSize(XMFLOAT2(680, 660));
 	GUI->AddWidget(emitterWindow);
 
 	float x = 200;
 	float y = 5;
-	float step = 22;
-	float itemheight = 20;
+	float itemheight = 18;
+	float step = itemheight + 2;
 
 
 	emitterNameField = new wiTextInputField("EmitterName");
@@ -521,6 +521,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	sph_e_Slider->SetEnabled(false);
 	sph_e_Slider->SetTooltip("Set the SPH parameter: viscosity constant");
 	emitterWindow->AddWidget(sph_e_Slider);
+
 
 
 

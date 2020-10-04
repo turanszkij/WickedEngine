@@ -14,6 +14,7 @@
 #include "wiStartupArguments.h"
 #include "wiFont.h"
 #include "wiImage.h"
+#include "wiEvent.h"
 
 #include "wiGraphicsDevice_DX11.h"
 #include "wiGraphicsDevice_DX12.h"
@@ -166,6 +167,9 @@ void MainComponent::Run()
 	if (wiPlatform::IsWindowActive())
 	{
 		// If the application is active, run Update loops:
+
+		// Wake up the events that need to be executed on the main thread, in thread safe manner:
+		wiEvent::FireEvent(SYSTEM_EVENT_THREAD_SAFE_POINT, 0);
 
 		const float dt = framerate_lock ? (1.0f / targetFrameRate) : deltaTime;
 

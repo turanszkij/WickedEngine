@@ -153,6 +153,8 @@ static const uint TILED_CULLING_GRANULARITY = TILED_CULLING_BLOCKSIZE / TILED_CU
 
 static const int impostorCaptureAngles = 36;
 
+static const uint MAX_DESCRIPTOR_INDEXING = 100000;
+
 // These option bits can be read from g_xFrame_Options constant buffer value:
 static const uint OPTION_BIT_TEMPORALAA_ENABLED = 1 << 0;
 static const uint OPTION_BIT_TRANSPARENTSHADOWS_ENABLED = 1 << 1;
@@ -211,7 +213,7 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_Time;
 	float		g_xFrame_TimePrev;
 
-	float		_padding0_frameCB;
+	float		g_xFrame_SunEnergy;
 	float		g_xFrame_WindSpeed;
 	float		g_xFrame_DeltaTime;
 	uint		g_xFrame_FrameCount;
@@ -249,7 +251,6 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float4x4	g_xFrame_MainCamera_PrevVP;			// PrevView*PrevProjection
 	float4x4	g_xFrame_MainCamera_PrevInvVP;		// Inverse(PrevView*PrevProjection)
 	float4x4	g_xFrame_MainCamera_ReflVP;			// ReflectionView*ReflectionProjection
-
 };
 
 CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)

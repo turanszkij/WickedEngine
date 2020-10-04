@@ -123,6 +123,7 @@ public:
 		BOX_FRUSTUM_INSIDE,
 	};
 	BoxFrustumIntersect CheckBox(const AABB& box) const;
+	bool CheckBoxFast(const AABB& box) const;
 
 	const XMFLOAT4& getNearPlane() const;
 	const XMFLOAT4& getFarPlane() const;
@@ -143,7 +144,7 @@ public:
 	Hitbox2D(const XMFLOAT2& newPos, const XMFLOAT2 newSiz) :pos(newPos), siz(newSiz) {}
 	~Hitbox2D() {};
 
-	bool intersects(const Hitbox2D& b);
+	bool intersects(const Hitbox2D& b) const;
 };
 
 

@@ -17,7 +17,7 @@ void RenderPath3D_TiledDeferred::ResizeBuffers()
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	// Workaround textures if R11G11B10 UAV loads are not supported by the GPU:
-	if(!device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT))
+	if(!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT))
 	{
 		wiBackLog::post("\nWARNING: GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT not supported, Tiled deferred will be using workaround slow path!\n");
 
@@ -112,10 +112,10 @@ void RenderPath3D_TiledDeferred::Render() const
 		RenderDecals(cmd);
 
 		device->BindResource(CS, getAOEnabled() ? &rtAO : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_AO, cmd);
-		device->BindResource(CS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
+		device->BindResource(CS, getSSREnabled() || getRaytracedReflectionEnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
 
 
-		if (device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT))
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT))
 		{
 			wiRenderer::ComputeTiledLightCulling(
 				depthBuffer_Copy,

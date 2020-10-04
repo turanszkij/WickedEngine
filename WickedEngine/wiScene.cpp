@@ -362,6 +362,11 @@ namespace wiScene
 				device->CreateBuffer(&bd, &initData, &indexBuffer);
 				device->SetName(&indexBuffer, "indexBuffer_16bit");
 			}
+
+			for (MeshSubset& subset : subsets)
+			{
+				subset.indexBuffer_subresource = device->CreateSubresource(&indexBuffer, SRV, subset.indexOffset * GetIndexStride());
+			}
 		}
 
 
@@ -562,7 +567,7 @@ namespace wiScene
 		vertexBuffer_PRE = GPUBuffer();
 
 
-		if (wiRenderer::GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			BLAS_build_pending = true;
 
@@ -583,7 +588,6 @@ namespace wiScene
 			// Flattened subsets:
 			desc.bottomlevel.geometries.emplace_back();
 			auto& geometry = desc.bottomlevel.geometries.back();
-			geometry._flags = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
 			geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES;
 			geometry.triangles.vertexBuffer = streamoutBuffer_POS.IsValid() ? streamoutBuffer_POS : vertexBuffer_POS;
 			geometry.triangles.indexBuffer = indexBuffer;
@@ -599,7 +603,6 @@ namespace wiScene
 			{
 				desc.bottomlevel.geometries.emplace_back();
 				auto& geometry = desc.bottomlevel.geometries.back();
-				geometry._flags = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
 				geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES;
 				geometry.triangles.vertexBuffer = streamoutBuffer_POS.IsValid() ? streamoutBuffer_POS : vertexBuffer_POS;
 				geometry.triangles.indexBuffer = indexBuffer;
@@ -1153,6 +1156,21 @@ namespace wiScene
 
 	void Scene::Update(float dt)
 	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT) && !descriptorTable.IsValid())
+		{
+			descriptorTable.resources.resize(DESCRIPTORTABLE_ENTRY_COUNT);
+			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_MATERIAL] = { CONSTANTBUFFER, 0, MAX_DESCRIPTOR_INDEXING };
+			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_TEXTURE_BASECOLOR] = { TEXTURE2D, 0, MAX_DESCRIPTOR_INDEXING };
+			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_INDEXBUFFER] = { TYPEDBUFFER, MAX_DESCRIPTOR_INDEXING, MAX_DESCRIPTOR_INDEXING };
+			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_POSITION_NORMAL_WIND] = { RAWBUFFER, MAX_DESCRIPTOR_INDEXING * 2, MAX_DESCRIPTOR_INDEXING };
+			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_UV0] = { TYPEDBUFFER, MAX_DESCRIPTOR_INDEXING * 3, MAX_DESCRIPTOR_INDEXING };
+			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_UV1] = { TYPEDBUFFER, MAX_DESCRIPTOR_INDEXING * 4, MAX_DESCRIPTOR_INDEXING };
+
+			bool success = device->CreateDescriptorTable(&descriptorTable);
+			assert(success);
+		}
+
 		wiJobSystem::context ctx;
 
 		RunPreviousFrameTransformUpdateSystem(ctx);
@@ -1161,7 +1179,7 @@ namespace wiScene
 
 		RunTransformUpdateSystem(ctx);
 
-		wiJobSystem::Wait(ctx); // dependecies
+		wiJobSystem::Wait(ctx); // dependencies
 
 		RunHierarchyUpdateSystem(ctx);
 
@@ -1170,6 +1188,8 @@ namespace wiScene
 		RunInverseKinematicsUpdateSystem(ctx);
 
 		RunArmatureUpdateSystem(ctx);
+
+		RunMeshUpdateSystem(ctx);
 
 		RunMaterialUpdateSystem(ctx, dt);
 
@@ -1195,7 +1215,7 @@ namespace wiScene
 
 		RunSoundUpdateSystem(ctx);
 
-		wiJobSystem::Wait(ctx); // dependecies
+		wiJobSystem::Wait(ctx); // dependencies
 
 		// Merge parallel bounds computation (depends on object update system):
 		bounds = AABB();
@@ -1204,7 +1224,7 @@ namespace wiScene
 			bounds = AABB::Merge(bounds, group_bound);
 		}
 
-		if (wiRenderer::GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			// Recreate top level acceleration structure if the object count changed:
 			if (dt > 0 && objects.GetCount() > 0 && objects.GetCount() != TLAS.desc.toplevel.count)
@@ -1215,13 +1235,13 @@ namespace wiScene
 				desc.toplevel.count = (uint32_t)objects.GetCount();
 				GPUBufferDesc bufdesc;
 				bufdesc.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
-				bufdesc.ByteWidth = desc.toplevel.count * (uint32_t)wiRenderer::GetDevice()->GetTopLevelAccelerationStructureInstanceSize();
-				bool success = wiRenderer::GetDevice()->CreateBuffer(&bufdesc, nullptr, &desc.toplevel.instanceBuffer);
+				bufdesc.ByteWidth = desc.toplevel.count * (uint32_t)device->GetTopLevelAccelerationStructureInstanceSize();
+				bool success = device->CreateBuffer(&bufdesc, nullptr, &desc.toplevel.instanceBuffer);
 				assert(success);
-				wiRenderer::GetDevice()->SetName(&desc.toplevel.instanceBuffer, "TLAS.instanceBuffer");
-				success = wiRenderer::GetDevice()->CreateRaytracingAccelerationStructure(&desc, &TLAS);
+				device->SetName(&desc.toplevel.instanceBuffer, "TLAS.instanceBuffer");
+				success = device->CreateRaytracingAccelerationStructure(&desc, &TLAS);
 				assert(success);
-				wiRenderer::GetDevice()->SetName(&TLAS, "TLAS");
+				device->SetName(&TLAS, "TLAS");
 			}
 		}
 
@@ -1709,7 +1729,7 @@ namespace wiScene
 
 			for (const AnimationComponent::AnimationChannel& channel : animation.channels)
 			{
-				assert(channel.samplerIndex < animation.samplers.size());
+				assert(channel.samplerIndex < (int)animation.samplers.size());
 				AnimationComponent::AnimationSampler& sampler = animation.samplers[channel.samplerIndex];
 				if (sampler.data == INVALID_ENTITY)
 				{
@@ -2122,6 +2142,89 @@ namespace wiScene
 
 		});
 	}
+	void Scene::RunMeshUpdateSystem(wiJobSystem::context& ctx)
+	{
+		geometryOffset.store(0);
+
+		wiJobSystem::Dispatch(ctx, (uint32_t)meshes.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
+
+			MeshComponent& mesh = meshes[args.jobIndex];
+			mesh.TLAS_geometryOffset = geometryOffset.fetch_add((uint32_t)mesh.subsets.size());
+
+			GraphicsDevice* device = wiRenderer::GetDevice();
+			uint32_t subsetIndex = 0;
+			for (auto& subset : mesh.subsets)
+			{
+				const MaterialComponent* material = materials.GetComponent(subset.materialID);
+				if (material != nullptr)
+				{
+					if (descriptorTable.IsValid())
+					{
+						uint32_t global_geometryIndex = mesh.TLAS_geometryOffset + subsetIndex;
+						device->WriteDescriptor(
+							&descriptorTable,
+							DESCRIPTORTABLE_ENTRY_SUBSETS_MATERIAL,
+							global_geometryIndex,
+							&material->constantBuffer
+						);
+						device->WriteDescriptor(
+							&descriptorTable,
+							DESCRIPTORTABLE_ENTRY_SUBSETS_TEXTURE_BASECOLOR,
+							global_geometryIndex,
+							material->baseColorMap ? material->baseColorMap->texture : nullptr
+						);
+						device->WriteDescriptor(
+							&descriptorTable,
+							DESCRIPTORTABLE_ENTRY_SUBSETS_INDEXBUFFER,
+							global_geometryIndex,
+							&mesh.indexBuffer,
+							subset.indexBuffer_subresource
+						);
+						device->WriteDescriptor(
+							&descriptorTable,
+							DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_POSITION_NORMAL_WIND,
+							global_geometryIndex,
+							&mesh.vertexBuffer_POS
+						);
+						device->WriteDescriptor(
+							&descriptorTable,
+							DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_UV0,
+							global_geometryIndex,
+							&mesh.vertexBuffer_UV0
+						);
+						device->WriteDescriptor(
+							&descriptorTable,
+							DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_UV1,
+							global_geometryIndex,
+							&mesh.vertexBuffer_UV1
+						);
+					}
+
+					if (mesh.BLAS.IsValid())
+					{
+						uint32_t flags = mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags;
+						if (material->IsAlphaTestEnabled() || material->IsTransparent())
+						{
+							mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags &=
+								~RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
+						}
+						else
+						{
+							mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags =
+								RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
+						}
+						if (flags != mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags)
+						{
+							// New flags invalidate BLAS
+							mesh.BLAS_build_pending = true;
+						}
+					}
+				}
+				subsetIndex++;
+			}
+
+		});
+	}
 	void Scene::RunMaterialUpdateSystem(wiJobSystem::context& ctx, float dt)
 	{
 		wiJobSystem::Dispatch(ctx, (uint32_t)materials.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
@@ -2143,6 +2246,7 @@ namespace wiScene
 			{
 				material.engineStencilRef = STENCILREF_SKIN;
 			}
+
 		});
 	}
 	void Scene::RunImpostorUpdateSystem(wiJobSystem::context& ctx)
@@ -2431,6 +2535,7 @@ namespace wiScene
 					weather.most_important_light_index = args.jobIndex;
 					weather.sunColor = light.color;
 					weather.sunDirection = light.direction;
+					weather.sunEnergy = light.energy;
 				}
 				locker.unlock();
 				break;

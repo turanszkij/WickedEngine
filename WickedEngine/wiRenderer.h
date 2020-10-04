@@ -174,6 +174,12 @@ namespace wiRenderer
 	// Compute the luminance for the source image and return the texture containing the luminance value in pixel [0,0]
 	const wiGraphics::Texture* ComputeLuminance(const wiGraphics::Texture& sourceImage, wiGraphics::CommandList cmd);
 
+	void ComputeShadingRateClassification(
+		const wiGraphics::Texture& gbuffer1,
+		const wiGraphics::Texture& lineardepth,
+		const wiGraphics::Texture& output,
+		wiGraphics::CommandList cmd
+	);
 
 	void DeferredComposition(
 		const wiGraphics::Texture& gbuffer0,
@@ -183,7 +189,8 @@ namespace wiRenderer
 		const wiGraphics::Texture& lightmap_specular,
 		const wiGraphics::Texture& ao,
 		const wiGraphics::Texture& depth,
-		wiGraphics::CommandList cmd);
+		wiGraphics::CommandList cmd
+	);
 
 
 	void Postprocess_Blur_Gaussian(
@@ -235,6 +242,14 @@ namespace wiRenderer
 		float range = 1.0f,
 		uint32_t samplecount = 16,
 		float power = 2.0f
+	);
+	void Postprocess_RTReflection(
+		const wiGraphics::Texture& depthbuffer,
+		const wiGraphics::Texture& gbuffer1,
+		const wiGraphics::Texture& gbuffer2,
+		const wiGraphics::Texture& output,
+		wiGraphics::CommandList cmd,
+		float range = 1000.0f
 	);
 	void Postprocess_SSR(
 		const wiGraphics::Texture& input,
@@ -292,6 +307,14 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd,
 		float threshold = 1.0f
 	);
+	void Postprocess_VolumetricClouds(
+		const wiGraphics::Texture& input,
+		const wiGraphics::Texture& output,
+		const wiGraphics::Texture& lightshaftoutput,
+		const wiGraphics::Texture& lineardepth,
+		const wiGraphics::Texture& depthbuffer,
+		wiGraphics::CommandList cmd
+	);
 	void Postprocess_FXAA(
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& output,
@@ -345,6 +368,11 @@ namespace wiRenderer
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
+	void Postprocess_NormalsFromDepth(
+		const wiGraphics::Texture& depthbuffer,
+		const wiGraphics::Texture& output,
+		wiGraphics::CommandList cmd
+	);
 
 	// Build the scene BVH on GPU that can be used by ray traced rendering
 	void BuildSceneBVH(wiGraphics::CommandList cmd);
@@ -389,6 +417,7 @@ namespace wiRenderer
 		int arrayIndex = -1;
 		const wiGraphics::Texture* gaussian_temp = nullptr;
 		bool preserve_coverage = false;
+		bool wide_gauss = false;
 	};
 	void GenerateMipChain(const wiGraphics::Texture& texture, MIPGENFILTER filter, wiGraphics::CommandList cmd, const MIPGEN_OPTIONS& options = {});
 
@@ -462,6 +491,10 @@ namespace wiRenderer
 	bool GetDebugLightCulling();
 	void SetAdvancedLightCulling(bool enabled);
 	bool GetAdvancedLightCulling();
+	void SetVariableRateShadingClassification(bool enabled);
+	bool GetVariableRateShadingClassification();
+	void SetVariableRateShadingClassificationDebug(bool enabled);
+	bool GetVariableRateShadingClassificationDebug();
 	void SetAlphaCompositionEnabled(bool enabled);
 	bool GetAlphaCompositionEnabled();
 	void SetOcclusionCullingEnabled(bool enabled);
@@ -564,6 +597,7 @@ namespace wiRenderer
 		uint32_t uvset = 0;
 		float radius = 0;
 		XMUINT2 center;
+		XMUINT2 dimensions;
 	};
 	void DrawPaintRadius(const PaintRadius& paintrad);
 

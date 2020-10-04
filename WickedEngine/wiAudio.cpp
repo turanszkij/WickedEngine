@@ -503,9 +503,9 @@ namespace wiAudio
 {
 	void Initialize() {}
 
-	bool CreateSound(const std::string& filename, Sound* sound) {}
-	bool CreateSound(const std::vector<uint8_t>& data, Sound* sound) {}
-	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance) {}
+	bool CreateSound(const std::string& filename, Sound* sound) { return false; }
+	bool CreateSound(const std::vector<uint8_t>& data, Sound* sound) { return false; }
+	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance) { return false; }
 
 	void Play(SoundInstance* instance) {}
 	void Pause(SoundInstance* instance) {}

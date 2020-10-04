@@ -29,6 +29,7 @@ private:
 	bool focus = false;
 	bool visible = true;
 	XMFLOAT2 pointerpos = XMFLOAT2(0, 0);
+	Hitbox2D pointerhitbox;
 public:
 	~wiGUI();
 
@@ -54,6 +55,10 @@ public:
 	const XMFLOAT2& GetPointerPos() const
 	{
 		return pointerpos;
+	}
+	const Hitbox2D& GetPointerHitbox() const
+	{
+		return pointerhitbox;
 	}
 };
 

@@ -87,24 +87,21 @@ add_library(WickedEngine STATIC
     wiXInput.cpp
 )
 
-target_include_directories(WickedEngine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
-target_link_libraries(WickedEngine PUBLIC
-        Vulkan::Vulkan
-        ${SDL2_LIBRARIES}
-        SDL2::SDL2
-        Bullet
-        LUA
-        Utility
+target_include_directories(WickedEngine PUBLIC
+	${SDL2_INCLUDE_DIR}
+	${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_include_directories(WickedEngine PUBLIC
-        ${SDL2_INCLUDE_DIR}
-        ${CMAKE_CURRENT_SOURCE_DIR}
+target_link_libraries(WickedEngine PUBLIC
+	Vulkan::Vulkan
+	${SDL2_LIBRARIES}
+	Bullet
+	LUA
+	Utility
 )
 
 add_dependencies(WickedEngine
-        Shaders_SPIRV)
+	Shaders_SPIRV)
 
 if (PLATFORM MATCHES "SDL2")
     target_compile_definitions(WickedEngine PUBLIC SDL2=1)

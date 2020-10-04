@@ -28,8 +28,13 @@ namespace wiGraphics
 		bool RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS = false;
 		bool RAYTRACING = false;
 		bool RAYTRACING_INLINE = false;
+		bool DESCRIPTOR_MANAGEMENT = false;
+		bool VARIABLE_RATE_SHADING = false;
+		bool VARIABLE_RATE_SHADING_TIER2 = false;
+		bool MESH_SHADER = false;
 		size_t SHADER_IDENTIFIER_SIZE = 0;
 		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
+		uint32_t VARIABLE_RATE_SHADING_TILE_SIZE = 0;
 
 	public:
 		virtual bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) = 0;
@@ -45,11 +50,17 @@ namespace wiGraphics
 		virtual bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) = 0;
 		virtual bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) { return false; }
 		virtual bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) { return false; }
+		virtual bool CreateDescriptorTable(DescriptorTable* table) { return false; }
+		virtual bool CreateRootSignature(RootSignature* rootsig) { return false; }
 
 		virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) = 0;
+		virtual int CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) = 0;
 
+		virtual void WriteShadingRateValue(SHADING_RATE rate, void* dest) {};
 		virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) {}
 		virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) {}
+		virtual void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const GPUResource* resource, int subresource = -1, uint64_t offset = 0) {}
+		virtual void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const Sampler* sampler) {}
 
 		virtual void Map(const GPUResource* resource, Mapping* mapping) = 0;
 		virtual void Unmap(const GPUResource* resource) = 0;
@@ -85,18 +96,6 @@ namespace wiGraphics
 
 		virtual Texture GetBackBuffer() = 0;
 
-		enum GRAPHICSDEVICE_CAPABILITY
-		{
-			GRAPHICSDEVICE_CAPABILITY_TESSELLATION,
-			GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION,
-			GRAPHICSDEVICE_CAPABILITY_RASTERIZER_ORDERED_VIEWS,
-			GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_COMMON, // eg: R16G16B16A16_FLOAT, R8G8B8A8_UNORM and more common ones
-			GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT,
-			GRAPHICSDEVICE_CAPABILITY_RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS,
-			GRAPHICSDEVICE_CAPABILITY_RAYTRACING,
-			GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE,
-			GRAPHICSDEVICE_CAPABILITY_COUNT,
-		};
 		bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const;
 
 		uint32_t GetFormatStride(FORMAT value) const;
@@ -115,7 +114,7 @@ namespace wiGraphics
 
 		inline size_t GetShaderIdentifierSize() const { return SHADER_IDENTIFIER_SIZE; }
 		inline size_t GetTopLevelAccelerationStructureInstanceSize() const { return TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE; }
-
+		inline uint32_t GetVariableRateShadingTileSize() const { return VARIABLE_RATE_SHADING_TILE_SIZE; }
 
 		///////////////Thread-sensitive////////////////////////
 
@@ -135,6 +134,8 @@ namespace wiGraphics
 		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd) = 0;
 		virtual void BindStencilRef(uint32_t value, CommandList cmd) = 0;
 		virtual void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) = 0;
+		virtual void BindShadingRate(SHADING_RATE rate, CommandList cmd) {}
+		virtual void BindShadingRateImage(const Texture* texture, CommandList cmd) {}
 		virtual void BindPipelineState(const PipelineState* pso, CommandList cmd) = 0;
 		virtual void BindComputeShader(const Shader* cs, CommandList cmd) = 0;
 		virtual void Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) = 0;
@@ -145,6 +146,8 @@ namespace wiGraphics
 		virtual void DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) = 0;
 		virtual void Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) = 0;
 		virtual void DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) = 0;
+		virtual void DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) {}
+		virtual void DispatchMeshIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) {}
 		virtual void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) = 0;
 		virtual void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) = 0;
 		virtual void QueryBegin(const GPUQuery *query, CommandList cmd) = 0;
@@ -153,6 +156,10 @@ namespace wiGraphics
 		virtual void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) {}
 		virtual void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) {}
 		virtual void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) {}
+
+		virtual void BindDescriptorTable(BINDPOINT bindpoint, uint32_t space, const DescriptorTable* table, CommandList cmd) {}
+		virtual void BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd) {}
+		virtual void BindRootConstants(BINDPOINT bindpoint, uint32_t index, const void* srcdata, CommandList cmd) {}
 
 		struct GPUAllocation
 		{

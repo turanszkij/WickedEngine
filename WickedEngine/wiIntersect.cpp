@@ -358,6 +358,22 @@ Frustum::BoxFrustumIntersect Frustum::CheckBox(const AABB& box) const
 		return(BOX_FRUSTUM_INSIDE);
 	return(BOX_FRUSTUM_INTERSECTS);
 }
+bool Frustum::CheckBoxFast(const AABB& box) const
+{
+	XMVECTOR max = XMLoadFloat3(&box._max);
+	XMVECTOR min = XMLoadFloat3(&box._min);
+	XMVECTOR zero = XMVectorZero();
+	for (size_t p = 0; p < 6; ++p)
+	{
+		auto lt = XMVectorLess(XMLoadFloat4(&planes[p]), zero);
+		auto furthestFromPlane = XMVectorSelect(max, min, lt);
+		if (XMVectorGetX(XMPlaneDotCoord(XMLoadFloat4(&planes[p]), furthestFromPlane)) < 0.0f)
+		{
+			return false;
+		}
+	}
+	return true;
+}
 
 const XMFLOAT4& Frustum::getNearPlane() const { return planes[0]; }
 const XMFLOAT4& Frustum::getFarPlane() const { return planes[1]; }
@@ -368,7 +384,7 @@ const XMFLOAT4& Frustum::getBottomPlane() const { return planes[5]; }
 
 
 
-bool Hitbox2D::intersects(const Hitbox2D& b)
+bool Hitbox2D::intersects(const Hitbox2D& b) const
 {
 	return wiMath::Collision2D(pos, siz, b.pos, b.siz);
 }

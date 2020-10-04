@@ -138,6 +138,7 @@ namespace wiScene
 		float displacementMapping = 0.0f;
 
 		float alphaRef = 1.0f;
+		wiGraphics::SHADING_RATE shadingRate = wiGraphics::SHADING_RATE_1X1;
 		
 		XMFLOAT2 texAnimDirection = XMFLOAT2(0, 0);
 		float texAnimFrameRate = 0.0f;
@@ -272,8 +273,9 @@ namespace wiScene
 			wiECS::Entity materialID = wiECS::INVALID_ENTITY;
 			uint32_t indexOffset = 0;
 			uint32_t indexCount = 0;
+			int indexBuffer_subresource = -1;
 		};
-		std::vector<MeshSubset>		subsets;
+		std::vector<MeshSubset> subsets;
 
 		float tessellationFactor = 0.0f;
 		wiECS::Entity armatureID = wiECS::INVALID_ENTITY;
@@ -303,6 +305,7 @@ namespace wiScene
 
 		wiGraphics::RaytracingAccelerationStructure BLAS;
 		bool BLAS_build_pending = true;
+		uint32_t TLAS_geometryOffset = 0;
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
@@ -316,6 +319,7 @@ namespace wiScene
 
 		inline float GetTessellationFactor() const { return tessellationFactor; }
 		inline wiGraphics::INDEXBUFFER_FORMAT GetIndexFormat() const { return vertex_positions.size() > 65535 ? wiGraphics::INDEXFORMAT_32BIT : wiGraphics::INDEXFORMAT_16BIT; }
+		inline size_t GetIndexStride() const { return GetIndexFormat() == wiGraphics::INDEXFORMAT_32BIT ? sizeof(uint32_t) : sizeof(uint16_t); }
 		inline bool IsSkinned() const { return armatureID != wiECS::INVALID_ENTITY; }
 
 		void CreateRenderData();
@@ -969,6 +973,7 @@ namespace wiScene
 
 		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);
+		float sunEnergy = 0;
 		XMFLOAT3 horizon = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		XMFLOAT3 zenith = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		XMFLOAT3 ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
@@ -1136,6 +1141,19 @@ namespace wiScene
 		std::vector<AABB> parallel_bounds;
 		WeatherComponent weather;
 		wiGraphics::RaytracingAccelerationStructure TLAS;
+		wiGraphics::DescriptorTable descriptorTable;
+		enum DESCRIPTORTABLE_ENTRY
+		{
+			DESCRIPTORTABLE_ENTRY_SUBSETS_MATERIAL,
+			DESCRIPTORTABLE_ENTRY_SUBSETS_TEXTURE_BASECOLOR,
+			DESCRIPTORTABLE_ENTRY_SUBSETS_INDEXBUFFER,
+			DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_POSITION_NORMAL_WIND,
+			DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_UV0,
+			DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_UV1,
+
+			DESCRIPTORTABLE_ENTRY_COUNT
+		};
+		std::atomic<uint32_t> geometryOffset;
 
 		// Update all components by a given timestep (in seconds):
 		void Update(float dt);
@@ -1221,6 +1239,7 @@ namespace wiScene
 		void RunSpringUpdateSystem(wiJobSystem::context& ctx, float dt);
 		void RunInverseKinematicsUpdateSystem(wiJobSystem::context& ctx);
 		void RunArmatureUpdateSystem(wiJobSystem::context& ctx);
+		void RunMeshUpdateSystem(wiJobSystem::context& ctx);
 		void RunMaterialUpdateSystem(wiJobSystem::context& ctx, float dt);
 		void RunImpostorUpdateSystem(wiJobSystem::context& ctx);
 		void RunObjectUpdateSystem(wiJobSystem::context& ctx);

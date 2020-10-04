@@ -1,5 +1,7 @@
 This file contains changelog of wiArchive versions
 
+49: Particles are just using material's shading rate, so removed shading rate from particles
+48: Serialized shading rate for material and particles
 47: Serialized animation speed
 46: Decoupled animation data from targets
 45: Serialized emitter spritesheet properties

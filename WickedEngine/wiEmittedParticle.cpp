@@ -22,6 +22,7 @@ namespace wiScene
 {
 
 static Shader		vertexShader;
+static Shader		meshShader;
 static Shader		pixelShader[wiEmittedParticle::PARTICLESHADERTYPE_COUNT];
 static Shader		kickoffUpdateCS;
 static Shader		finishUpdateCS;
@@ -279,6 +280,10 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		{
 			cb.xEmitterOptions |= EMITTER_OPTION_BIT_FRAME_BLENDING_ENABLED;
 		}
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
+		{
+			cb.xEmitterOptions |= EMITTER_OPTION_BIT_MESH_SHADER_ENABLED;
+		}
 
 		// SPH:
 		cb.xSPH_h = SPH_h;
@@ -535,18 +540,31 @@ void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialCompon
 		const BLENDMODE blendMode = material.GetBlendMode();
 		device->BindPipelineState(&PSO[blendMode][shaderType], cmd);
 		device->BindResource(PS, material.GetBaseColorMap(), TEXSLOT_ONDEMAND0, cmd);
+		device->BindShadingRate(material.shadingRate, cmd);
 	}
 
 	device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), cmd);
 	device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), cmd);
 
-	const GPUResource* res[] = {
-		&particleBuffer,
-		&aliveList[1] // NEW aliveList
-	};
-	device->BindResources(VS, res, 0, arraysize(res), cmd);
-
-	device->DrawInstancedIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, cmd);
+	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
+	{
+		const GPUResource* res[] = {
+			&counterBuffer,
+			&particleBuffer,
+			&aliveList[1], // NEW aliveList
+		};
+		device->BindResources(MS, res, TEXSLOT_ONDEMAND20, arraysize(res), cmd);
+		device->DispatchMeshIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, cmd);
+	}
+	else
+	{
+		const GPUResource* res[] = {
+			&particleBuffer,
+			&aliveList[1] // NEW aliveList
+		};
+		device->BindResources(VS, res, TEXSLOT_ONDEMAND21, arraysize(res), cmd);
+		device->DrawInstancedIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, cmd);
+	}
 
 	device->EventEnd(cmd);
 }
@@ -559,6 +577,11 @@ namespace wiEmittedParticle_Internal
 		std::string path = wiRenderer::GetShaderPath();
 
 		wiRenderer::LoadShader(VS, vertexShader, "emittedparticleVS.cso");
+
+		if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
+		{
+			wiRenderer::LoadShader(MS, meshShader, "emittedparticleMS.cso");
+		}
 
 		wiRenderer::LoadShader(PS, pixelShader[wiEmittedParticle::SOFT], "emittedparticlePS_soft.cso");
 		wiRenderer::LoadShader(PS, pixelShader[wiEmittedParticle::SOFT_DISTORTION], "emittedparticlePS_soft_distortion.cso");
@@ -586,7 +609,14 @@ namespace wiEmittedParticle_Internal
 		for (int i = 0; i < BLENDMODE_COUNT; ++i)
 		{
 			PipelineStateDesc desc;
-			desc.vs = &vertexShader;
+			if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
+			{
+				desc.ms = &meshShader;
+			}
+			else
+			{
+				desc.vs = &vertexShader;
+			}
 			desc.bs = &blendStates[i];
 			desc.rs = &rasterizerState;
 			desc.dss = &depthStencilState;
@@ -600,7 +630,14 @@ namespace wiEmittedParticle_Internal
 
 		{
 			PipelineStateDesc desc;
-			desc.vs = &vertexShader;
+			if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
+			{
+				desc.ms = &meshShader;
+			}
+			else
+			{
+				desc.vs = &vertexShader;
+			}
 			desc.ps = &pixelShader[wiEmittedParticle::SIMPLEST];
 			desc.bs = &blendStates[BLENDMODE_ALPHA];
 			desc.rs = &wireFrameRS;
@@ -724,6 +761,12 @@ void wiEmittedParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 			archive >> frameCount;
 			archive >> frameStart;
 			archive >> frameRate;
+		}
+
+		if (archive.GetVersion() == 48)
+		{
+			uint8_t shadingRate;
+			archive >> shadingRate; // no longer needed
 		}
 	}
 	else

@@ -11,17 +11,18 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 	assert(GUI && "Invalid GUI!");
 
 	hairWindow = new wiWindow(GUI, "Hair Particle System Window");
-	hairWindow->SetSize(XMFLOAT2(600, 400));
+	hairWindow->SetSize(XMFLOAT2(600, 260));
 	GUI->AddWidget(hairWindow);
 
 	float x = 160;
-	float y = 0;
-	float step = 35;
+	float y = 10;
+	float hei = 18;
+	float step = hei + 2;
 
 
 	addButton = new wiButton("Add Hair Particle System");
 	addButton->SetPos(XMFLOAT2(x, y += step));
-	addButton->SetSize(XMFLOAT2(200, 30));
+	addButton->SetSize(XMFLOAT2(200, hei));
 	addButton->OnClick([=](wiEventArgs args) {
 		Scene& scene = wiScene::GetScene();
 		Entity entity = scene.Entity_CreateHair("editorHair");
@@ -33,7 +34,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 	hairWindow->AddWidget(addButton);
 
 	meshComboBox = new wiComboBox("Mesh: ");
-	meshComboBox->SetSize(XMFLOAT2(300, 25));
+	meshComboBox->SetSize(XMFLOAT2(300, hei));
 	meshComboBox->SetPos(XMFLOAT2(x, y += step));
 	meshComboBox->SetEnabled(false);
 	meshComboBox->OnSelect([&](wiEventArgs args) {
@@ -55,7 +56,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 	hairWindow->AddWidget(meshComboBox);
 
 	countSlider = new wiSlider(0, 100000, 1000, 100000, "Strand Count: ");
-	countSlider->SetSize(XMFLOAT2(360, 30));
+	countSlider->SetSize(XMFLOAT2(360, hei));
 	countSlider->SetPos(XMFLOAT2(x, y += step));
 	countSlider->OnSlide([&](wiEventArgs args) {
 		auto hair = GetHair();
@@ -69,7 +70,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 	hairWindow->AddWidget(countSlider);
 
 	lengthSlider = new wiSlider(0, 4, 1, 100000, "Particle Length: ");
-	lengthSlider->SetSize(XMFLOAT2(360, 30));
+	lengthSlider->SetSize(XMFLOAT2(360, hei));
 	lengthSlider->SetPos(XMFLOAT2(x, y += step));
 	lengthSlider->OnSlide([&](wiEventArgs args) {
 		auto hair = GetHair();
@@ -83,7 +84,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 	hairWindow->AddWidget(lengthSlider);
 
 	stiffnessSlider = new wiSlider(0, 20, 5, 100000, "Particle Stiffness: ");
-	stiffnessSlider->SetSize(XMFLOAT2(360, 30));
+	stiffnessSlider->SetSize(XMFLOAT2(360, hei));
 	stiffnessSlider->SetPos(XMFLOAT2(x, y += step));
 	stiffnessSlider->OnSlide([&](wiEventArgs args) {
 		auto hair = GetHair();
@@ -97,7 +98,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 	hairWindow->AddWidget(stiffnessSlider);
 
 	randomnessSlider = new wiSlider(0, 1, 0.2f, 100000, "Particle Randomness: ");
-	randomnessSlider->SetSize(XMFLOAT2(360, 30));
+	randomnessSlider->SetSize(XMFLOAT2(360, hei));
 	randomnessSlider->SetPos(XMFLOAT2(x, y += step));
 	randomnessSlider->OnSlide([&](wiEventArgs args) {
 		auto hair = GetHair();
@@ -111,7 +112,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 	hairWindow->AddWidget(randomnessSlider);
 
 	segmentcountSlider = new wiSlider(1, 10, 1, 9, "Segment Count: ");
-	segmentcountSlider->SetSize(XMFLOAT2(360, 30));
+	segmentcountSlider->SetSize(XMFLOAT2(360, hei));
 	segmentcountSlider->SetPos(XMFLOAT2(x, y += step));
 	segmentcountSlider->OnSlide([&](wiEventArgs args) {
 		auto hair = GetHair();
@@ -125,7 +126,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 	hairWindow->AddWidget(segmentcountSlider);
 
 	randomSeedSlider = new wiSlider(1, 12345, 1, 12344, "Random seed: ");
-	randomSeedSlider->SetSize(XMFLOAT2(360, 30));
+	randomSeedSlider->SetSize(XMFLOAT2(360, hei));
 	randomSeedSlider->SetPos(XMFLOAT2(x, y += step));
 	randomSeedSlider->OnSlide([&](wiEventArgs args) {
 		auto hair = GetHair();
@@ -139,7 +140,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 	hairWindow->AddWidget(randomSeedSlider);
 
 	viewDistanceSlider = new wiSlider(0, 1000, 100, 10000, "View distance: ");
-	viewDistanceSlider->SetSize(XMFLOAT2(360, 30));
+	viewDistanceSlider->SetSize(XMFLOAT2(360, hei));
 	viewDistanceSlider->SetPos(XMFLOAT2(x, y += step));
 	viewDistanceSlider->OnSlide([&](wiEventArgs args) {
 		auto hair = GetHair();
@@ -154,7 +155,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 
 	framesXInput = new wiTextInputField("");
 	framesXInput->SetPos(XMFLOAT2(x, y += step));
-	framesXInput->SetSize(XMFLOAT2(40, 18));
+	framesXInput->SetSize(XMFLOAT2(40, hei));
 	framesXInput->SetText("");
 	framesXInput->SetTooltip("How many horizontal frames there are in the spritesheet.");
 	framesXInput->SetDescription("Frames X: ");
@@ -169,7 +170,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 
 	framesYInput = new wiTextInputField("");
 	framesYInput->SetPos(XMFLOAT2(x + 250, y));
-	framesYInput->SetSize(XMFLOAT2(40, 18));
+	framesYInput->SetSize(XMFLOAT2(40, hei));
 	framesYInput->SetText("");
 	framesYInput->SetTooltip("How many vertical frames there are in the spritesheet.");
 	framesYInput->SetDescription("Frames Y: ");
@@ -186,7 +187,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 
 	frameCountInput = new wiTextInputField("");
 	frameCountInput->SetPos(XMFLOAT2(x, y += step));
-	frameCountInput->SetSize(XMFLOAT2(40, 18));
+	frameCountInput->SetSize(XMFLOAT2(40, hei));
 	frameCountInput->SetText("");
 	frameCountInput->SetTooltip("Enter a value to enable the random sprite sheet frame selection's max frame number.");
 	frameCountInput->SetDescription("Frame Count: ");
@@ -201,7 +202,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 
 	frameStartInput = new wiTextInputField("");
 	frameStartInput->SetPos(XMFLOAT2(x + 250, y));
-	frameStartInput->SetSize(XMFLOAT2(40, 18));
+	frameStartInput->SetSize(XMFLOAT2(40, hei));
 	frameStartInput->SetText("");
 	frameStartInput->SetTooltip("Specifies the first frame of the sheet that can be used.");
 	frameStartInput->SetDescription("First Frame: ");
@@ -213,6 +214,8 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 		}
 		});
 	hairWindow->AddWidget(frameStartInput);
+
+
 
 
 	hairWindow->Translate(XMFLOAT3(200, 50, 0));

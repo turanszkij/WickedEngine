@@ -110,6 +110,13 @@ void RenderPath3D_TiledForward::Render() const
 			cmd
 		);
 
+		if (wiRenderer::GetVariableRateShadingClassification() && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
+		{
+			wiRenderer::ComputeShadingRateClassification(*GetSceneRT_Read(1), rtLinearDepth, rtShadingRate, cmd);
+			device->BindShadingRate(SHADING_RATE_1X1, cmd);
+			device->BindShadingRateImage(&rtShadingRate, cmd);
+		}
+
 		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 
 		// Opaque scene:
@@ -125,7 +132,7 @@ void RenderPath3D_TiledForward::Render() const
 
 			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
 			device->BindResource(PS, getAOEnabled() ? &rtAO : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_AO, cmd);
-			device->BindResource(PS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
+			device->BindResource(PS, getSSREnabled() || getRaytracedReflectionEnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
 			wiRenderer::DrawScene(wiRenderer::GetCamera(), RENDERPASS_TILEDFORWARD, cmd, drawscene_flags);
 			wiRenderer::DrawSky(cmd);
 
@@ -135,6 +142,8 @@ void RenderPath3D_TiledForward::Render() const
 
 			wiProfiler::EndRange(range); // Opaque Scene
 		}
+
+		device->BindShadingRateImage(nullptr, cmd);
 	});
 
 	cmd = device->BeginCommandList();

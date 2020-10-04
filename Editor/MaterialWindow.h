@@ -49,11 +49,10 @@ public:
 	wiSlider*	texAnimDirectionSliderV;
 	wiSlider*	texMulSliderX;
 	wiSlider*	texMulSliderY;
-	wiColorPicker* baseColorPicker;
-	wiColorPicker* emissiveColorPicker;
 	wiSlider*	alphaRefSlider;
 	wiComboBox* blendModeComboBox;
 	wiComboBox* shaderTypeComboBox;
+	wiComboBox* shadingRateComboBox;
 
 	wiLabel*	texture_baseColor_Label;
 	wiLabel*	texture_normal_Label;
@@ -75,5 +74,8 @@ public:
 	wiTextInputField*	texture_displacement_uvset_Field;
 	wiTextInputField*	texture_emissive_uvset_Field;
 	wiTextInputField*	texture_occlusion_uvset_Field;
+
+	wiComboBox* colorComboBox;
+	wiColorPicker* colorPicker;
 };
 

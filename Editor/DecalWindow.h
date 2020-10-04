@@ -19,6 +19,8 @@ public:
 	wiECS::Entity entity;
 	void SetEntity(wiECS::Entity entity);
 
+	wiCheckBox* placementCheckBox;
+	wiLabel* infoLabel;
 	wiTextInputField*	decalNameField;
 
 	wiWindow*	decalWindow;

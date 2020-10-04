@@ -79,6 +79,7 @@ void wiGUI::Update(float dt)
 	XMFLOAT4 _p = wiInput::GetPointer();
 	pointerpos.x = _p.x;
 	pointerpos.y = _p.y;
+	pointerhitbox = Hitbox2D(pointerpos, XMFLOAT2(1, 1));
 
 	if (activeWidget != nullptr)
 	{
@@ -96,6 +97,13 @@ void wiGUI::Update(float dt)
 		{
 			// the contained child widgets will be updated by the containers
 			widget->Update(this, dt);
+
+			if (widget->IsVisible() && widget->hitBox.intersects(pointerhitbox))
+			{
+				// hitbox can only intersect with one element (avoid detecting multiple overlapping elements)
+				pointerhitbox.pos = XMFLOAT2(-FLT_MAX, -FLT_MAX);
+				pointerhitbox.siz = XMFLOAT2(0, 0);
+			}
 		}
 
 		if (widget->IsEnabled() && widget->IsVisible() && widget->GetState() > wiWidget::WIDGETSTATE::IDLE)

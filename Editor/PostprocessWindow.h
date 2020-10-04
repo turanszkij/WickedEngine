@@ -22,11 +22,13 @@ public:
 	wiSlider*	exposureSlider;
 	wiCheckBox* lensFlareCheckBox;
 	wiCheckBox* lightShaftsCheckBox;
+	wiCheckBox* volumetricCloudsCheckBox;
 	wiComboBox* aoComboBox;
 	wiSlider*	aoPowerSlider;
 	wiSlider*	aoRangeSlider;
 	wiSlider*	aoSampleCountSlider;
 	wiCheckBox* ssrCheckBox;
+	wiCheckBox* raytracedReflectionsCheckBox;
 	wiCheckBox* sssCheckBox;
 	wiCheckBox* eyeAdaptionCheckBox;
 	wiCheckBox* motionBlurCheckBox;

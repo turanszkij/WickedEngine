@@ -15,16 +15,19 @@ namespace wiGraphics
 	struct GPUResource;
 	struct GPUBuffer;
 	struct Texture;
+	struct RootSignature;
 
 	enum SHADERSTAGE
 	{
+		MS,
+		AS,
 		VS,
 		HS,
 		DS,
 		GS,
 		PS,
 		CS,
-		SHADERSTAGE_COUNT
+		SHADERSTAGE_COUNT,
 	};
 	enum PRIMITIVETOPOLOGY
 	{
@@ -280,6 +283,7 @@ namespace wiGraphics
 		IMAGE_LAYOUT_UNORDERED_ACCESS,			// shader resource, write enabled
 		IMAGE_LAYOUT_COPY_SRC,					// copy from
 		IMAGE_LAYOUT_COPY_DST,					// copy to
+		IMAGE_LAYOUT_SHADING_RATE_SOURCE,		// shading rate control per tile
 	};
 	enum BUFFER_STATE
 	{
@@ -293,6 +297,32 @@ namespace wiGraphics
 		BUFFER_STATE_COPY_SRC,					// copy from
 		BUFFER_STATE_COPY_DST,					// copy to
 		BUFFER_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
+	};
+	enum SHADING_RATE
+	{
+		SHADING_RATE_1X1,
+		SHADING_RATE_1X2,
+		SHADING_RATE_2X1,
+		SHADING_RATE_2X2,
+		SHADING_RATE_2X4,
+		SHADING_RATE_4X2,
+		SHADING_RATE_4X4
+	};
+	enum GRAPHICSDEVICE_CAPABILITY
+	{
+		GRAPHICSDEVICE_CAPABILITY_TESSELLATION,
+		GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION,
+		GRAPHICSDEVICE_CAPABILITY_RASTERIZER_ORDERED_VIEWS,
+		GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_COMMON, // eg: R16G16B16A16_FLOAT, R8G8B8A8_UNORM and more common ones
+		GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT,
+		GRAPHICSDEVICE_CAPABILITY_RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS,
+		GRAPHICSDEVICE_CAPABILITY_RAYTRACING,
+		GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE,
+		GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT,
+		GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING,
+		GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2,
+		GRAPHICSDEVICE_CAPABILITY_MESH_SHADER,
+		GRAPHICSDEVICE_CAPABILITY_COUNT,
 	};
 
 	// Flags ////////////////////////////////////////////
@@ -461,11 +491,14 @@ namespace wiGraphics
 	};
 	struct PipelineStateDesc
 	{
+		const RootSignature* rootSignature = nullptr;
 		const Shader*				vs = nullptr;
 		const Shader*				ps = nullptr;
 		const Shader*				hs = nullptr;
 		const Shader*				ds = nullptr;
 		const Shader*				gs = nullptr;
+		const Shader*				ms = nullptr;
+		const Shader*				as = nullptr;
 		const BlendState*			bs = nullptr;
 		const RasterizerState*		rs = nullptr;
 		const DepthStencilState*	dss = nullptr;
@@ -682,6 +715,7 @@ namespace wiGraphics
 	{
 		SHADERSTAGE stage = SHADERSTAGE_COUNT;
 		std::vector<uint8_t> code;
+		const RootSignature* rootSignature = nullptr;
 	};
 
 	struct Sampler : public GraphicsDeviceChild
@@ -885,6 +919,7 @@ namespace wiGraphics
 	};
 	struct RaytracingPipelineStateDesc
 	{
+		const RootSignature* rootSignature = nullptr;
 		std::vector<ShaderLibrary> shaderlibraries;
 		std::vector<ShaderHitGroup> hitgroups;
 		uint32_t max_trace_recursion_depth = 1;
@@ -914,6 +949,85 @@ namespace wiGraphics
 		uint32_t Width = 1;
 		uint32_t Height = 1;
 		uint32_t Depth = 1;
+	};
+
+	enum BINDPOINT
+	{
+		GRAPHICS,
+		COMPUTE,
+		RAYTRACING,
+	};
+	enum RESOURCEBINDING
+	{
+		ROOT_CONSTANTBUFFER,
+		ROOT_RAWBUFFER,
+		ROOT_STRUCTUREDBUFFER,
+		ROOT_RWRAWBUFFER,
+		ROOT_RWSTRUCTUREDBUFFER,
+
+		CONSTANTBUFFER,
+		RAWBUFFER,
+		STRUCTUREDBUFFER,
+		TYPEDBUFFER,
+		TEXTURE1D,
+		TEXTURE1DARRAY,
+		TEXTURE2D,
+		TEXTURE2DARRAY,
+		TEXTURECUBE,
+		TEXTURECUBEARRAY,
+		TEXTURE3D,
+		ACCELERATIONSTRUCTURE,
+		RWRAWBUFFER,
+		RWSTRUCTUREDBUFFER,
+		RWTYPEDBUFFER,
+		RWTEXTURE1D,
+		RWTEXTURE1DARRAY,
+		RWTEXTURE2D,
+		RWTEXTURE2DARRAY,
+		RWTEXTURE3D,
+
+		RESOURCEBINDING_COUNT
+	};
+	struct ResourceRange
+	{
+		RESOURCEBINDING binding = CONSTANTBUFFER;
+		uint32_t slot = 0;
+		uint32_t count = 1;
+	};
+	struct SamplerRange
+	{
+		uint32_t slot = 0;
+		uint32_t count = 1;
+	};
+	struct StaticSampler
+	{
+		Sampler sampler;
+		uint32_t slot = 0;
+	};
+	struct DescriptorTable : public GraphicsDeviceChild
+	{
+		SHADERSTAGE stage = SHADERSTAGE_COUNT;
+		std::vector<ResourceRange> resources;
+		std::vector<SamplerRange> samplers;
+		std::vector<StaticSampler> staticsamplers;
+	};
+	struct RootConstantRange
+	{
+		SHADERSTAGE stage = SHADERSTAGE_COUNT;
+		uint32_t slot = 0;
+		uint32_t size = 0;
+		uint32_t offset = 0;
+	};
+	struct RootSignature : public GraphicsDeviceChild
+	{
+		enum FLAGS
+		{
+			FLAG_EMPTY = 0,
+			FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT = 1 << 0,
+		};
+		uint32_t _flags = FLAG_EMPTY;
+		std::vector<DescriptorTable> tables;
+		std::vector<RootConstantRange> rootconstants;
 	};
 
 }
