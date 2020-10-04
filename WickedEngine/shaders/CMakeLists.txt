@@ -141,6 +141,8 @@ set(SHADERS_CS
 		"volumetricCloud_renderCS.hlsl"
 		"volumetricCloud_reprojectCS.hlsl"
 		"volumetricCloud_finalCS.hlsl"
+		"shadingRateClassificationCS.hlsl"
+		"shadingRateClassificationCS_DEBUG.hlsl"
 )
 
 set(SHADERS_DS
