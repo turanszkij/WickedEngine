@@ -16,13 +16,13 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 
 	meshWindow = new wiWindow(GUI, "Mesh Window");
-	meshWindow->SetSize(XMFLOAT2(580, 640));
+	meshWindow->SetSize(XMFLOAT2(580, 500));
 	GUI->AddWidget(meshWindow);
 
 	float x = 150;
 	float y = 0;
-	float step = 30;
-	float hei = 25;
+	float hei = 18;
+	float step = hei + 2;
 
 	meshInfoLabel = new wiLabel("Mesh Info");
 	meshInfoLabel->SetPos(XMFLOAT2(x - 50, y += step));
@@ -33,6 +33,7 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	doubleSidedCheckBox = new wiCheckBox("Double Sided: ");
 	doubleSidedCheckBox->SetTooltip("If enabled, the inside of the mesh will be visible.");
+	doubleSidedCheckBox->SetSize(XMFLOAT2(hei, hei));
 	doubleSidedCheckBox->SetPos(XMFLOAT2(x, y += step));
 	doubleSidedCheckBox->OnClick([&](wiEventArgs args) {
 		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
@@ -45,6 +46,7 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	softbodyCheckBox = new wiCheckBox("Soft body: ");
 	softbodyCheckBox->SetTooltip("Enable soft body simulation. Tip: Use the Paint Tool to control vertex pinning.");
+	softbodyCheckBox->SetSize(XMFLOAT2(hei, hei));
 	softbodyCheckBox->SetPos(XMFLOAT2(x, y += step));
 	softbodyCheckBox->OnClick([&](wiEventArgs args) {
 
@@ -226,6 +228,7 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	terrainCheckBox = new wiCheckBox("Terrain: ");
 	terrainCheckBox->SetTooltip("If enabled, the mesh will use multiple materials and blend between them based on vertex colors.");
+	terrainCheckBox->SetSize(XMFLOAT2(hei, hei));
 	terrainCheckBox->SetPos(XMFLOAT2(x, y += step));
 	terrainCheckBox->OnClick([&](wiEventArgs args) {
 		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
@@ -253,7 +256,7 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	meshWindow->AddWidget(terrainCheckBox);
 
 	terrainMat1Combo = new wiComboBox("Terrain Material 1: ");
-	terrainMat1Combo->SetSize(XMFLOAT2(200, 20));
+	terrainMat1Combo->SetSize(XMFLOAT2(200, hei));
 	terrainMat1Combo->SetPos(XMFLOAT2(x + 180, y));
 	terrainMat1Combo->SetEnabled(false);
 	terrainMat1Combo->OnSelect([&](wiEventArgs args) {
@@ -275,7 +278,7 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	meshWindow->AddWidget(terrainMat1Combo);
 
 	terrainMat2Combo = new wiComboBox("Terrain Material 2: ");
-	terrainMat2Combo->SetSize(XMFLOAT2(200, 20));
+	terrainMat2Combo->SetSize(XMFLOAT2(200, hei));
 	terrainMat2Combo->SetPos(XMFLOAT2(x + 180, y += step));
 	terrainMat2Combo->SetEnabled(false);
 	terrainMat2Combo->OnSelect([&](wiEventArgs args) {
@@ -297,7 +300,7 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	meshWindow->AddWidget(terrainMat2Combo);
 
 	terrainMat3Combo = new wiComboBox("Terrain Material 3: ");
-	terrainMat3Combo->SetSize(XMFLOAT2(200, 20));
+	terrainMat3Combo->SetSize(XMFLOAT2(200, hei));
 	terrainMat3Combo->SetPos(XMFLOAT2(x + 180, y += step));
 	terrainMat3Combo->SetEnabled(false);
 	terrainMat3Combo->OnSelect([&](wiEventArgs args) {
@@ -320,7 +323,7 @@ MeshWindow::MeshWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	terrainGenButton = new wiButton("Generate Terrain...");
 	terrainGenButton->SetTooltip("Generate terrain meshes.");
-	terrainGenButton->SetSize(XMFLOAT2(200, 20));
+	terrainGenButton->SetSize(XMFLOAT2(200, hei));
 	terrainGenButton->SetPos(XMFLOAT2(x + 180, y += step));
 	terrainGenButton->OnClick([=](wiEventArgs args) {
 

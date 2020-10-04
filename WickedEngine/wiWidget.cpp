@@ -43,10 +43,9 @@ void wiWidget::Update(wiGUI* gui, float dt)
 	}
 
 
-	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
 	hitBox = Hitbox2D(XMFLOAT2(translation.x, translation.y), XMFLOAT2(scale.x, scale.y));
 
-	if (GetState() != WIDGETSTATE::ACTIVE && !tooltip.empty() && pointerHitbox.intersects(hitBox))
+	if (GetState() != WIDGETSTATE::ACTIVE && !tooltip.empty() && gui->GetPointerHitbox().intersects(hitBox))
 	{
 		tooltipTimer++;
 	}
@@ -95,16 +94,10 @@ void wiWidget::RenderTooltip(const wiGUI* gui, CommandList cmd) const
 
 	if (tooltipTimer > 25)
 	{
-		XMFLOAT2 tooltipPos = XMFLOAT2(gui->pointerpos.x, gui->pointerpos.y);
-		if (tooltipPos.y > wiRenderer::GetDevice()->GetScreenHeight()*0.8f)
-		{
-			tooltipPos.y -= 30;
-		}
-		else
-		{
-			tooltipPos.y += 40;
-		}
-		wiFontParams fontProps = wiFontParams(tooltipPos.x, tooltipPos.y, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP);
+		float screenwidth = wiRenderer::GetDevice()->GetScreenWidth();
+		float screenheight = wiRenderer::GetDevice()->GetScreenHeight();
+
+		wiFontParams fontProps = wiFontParams(0, 0, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP);
 		fontProps.color = wiColor(25, 25, 25, 255);
 		wiSpriteFont tooltipFont = wiSpriteFont(tooltip, fontProps);
 		if (!scriptTip.empty())
@@ -112,23 +105,40 @@ void wiWidget::RenderTooltip(const wiGUI* gui, CommandList cmd) const
 			tooltipFont.SetText(tooltip + "\n" + scriptTip);
 		}
 
-		float textWidth = tooltipFont.textWidth();
-		if (tooltipPos.x > wiRenderer::GetDevice()->GetScreenWidth() - textWidth)
+		static const float _border = 2;
+		float textWidth = tooltipFont.textWidth() + _border * 2;
+		float textHeight = tooltipFont.textHeight() + _border * 2;
+
+		tooltipFont.params.posX = gui->pointerpos.x;
+		tooltipFont.params.posY = gui->pointerpos.y;
+
+		if (tooltipFont.params.posX + textWidth > screenwidth)
 		{
-			tooltipPos.x -= textWidth + 10;
-			tooltipFont.params.posX = tooltipPos.x;
+			tooltipFont.params.posX -= tooltipFont.params.posX + textWidth - screenwidth;
+		}
+		if (tooltipFont.params.posX < 0)
+		{
+			tooltipFont.params.posX = 0;
 		}
 
-		static const float _border = 2;
-		float fontWidth = (float)tooltipFont.textWidth() + _border * 2;
-		float fontHeight = (float)tooltipFont.textHeight() + _border * 2;
-		wiImage::Draw(wiTextureHelper::getWhite(), wiImageParams(tooltipPos.x - _border, tooltipPos.y - _border, fontWidth, fontHeight, wiColor(255, 234, 165)), cmd);
+		if (tooltipFont.params.posY > screenheight * 0.8f)
+		{
+			tooltipFont.params.posY -= 30;
+		}
+		else
+		{
+			tooltipFont.params.posY += 40;
+		}
+
+		wiImage::Draw(wiTextureHelper::getWhite(), 
+			wiImageParams(tooltipFont.params.posX - _border, tooltipFont.params.posY - _border, 
+				textWidth, textHeight, wiColor(255, 234, 165)), cmd);
 		tooltipFont.SetText(tooltip);
 		tooltipFont.Draw(cmd);
 		if (!scriptTip.empty())
 		{
 			tooltipFont.SetText(scriptTip);
-			tooltipFont.params.posY += (int)(fontHeight / 2);
+			tooltipFont.params.posY += (int)(textHeight / 2);
 			tooltipFont.params.color = wiColor(25, 25, 25, 110);
 			tooltipFont.Draw(cmd);
 		}
@@ -300,7 +310,7 @@ void wiButton::Update(wiGUI* gui, float dt)
 		hitBox.siz.x = scale.x;
 		hitBox.siz.y = scale.y;
 
-		Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
+		const Hitbox2D& pointerHitbox = gui->GetPointerHitbox();
 
 		if (state == FOCUS)
 		{
@@ -562,7 +572,7 @@ void wiTextInputField::Update(wiGUI* gui, float dt)
 		hitBox.siz.x = scale.x;
 		hitBox.siz.y = scale.y;
 
-		Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
+		const Hitbox2D& pointerHitbox = gui->GetPointerHitbox();
 		bool intersectsPointer = pointerHitbox.intersects(hitBox);
 
 		if (state == FOCUS)
@@ -823,7 +833,7 @@ void wiSlider::Update(wiGUI* gui, float dt)
 		hitBox.siz.x = scale.x + knobWidth;
 		hitBox.siz.y = scale.y;
 
-		Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
+		const Hitbox2D& pointerHitbox = gui->GetPointerHitbox();
 
 
 		if (pointerHitbox.intersects(hitBox))
@@ -961,7 +971,7 @@ void wiCheckBox::Update(wiGUI* gui, float dt)
 		hitBox.siz.x = scale.x;
 		hitBox.siz.y = scale.y;
 
-		Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
+		const Hitbox2D& pointerHitbox = gui->GetPointerHitbox();
 
 		bool clicked = false;
 		// hover the button
@@ -1108,7 +1118,7 @@ void wiComboBox::Update(wiGUI* gui, float dt)
 		hitBox.siz.x = scale.x + scale.y + 1; // + drop-down indicator arrow + little offset
 		hitBox.siz.y = scale.y;
 
-		Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
+		const Hitbox2D& pointerHitbox = gui->GetPointerHitbox();
 
 		bool clicked = false;
 		// hover the button
@@ -1682,7 +1692,7 @@ void wiWindow::Update(wiGUI* gui, float dt)
 			gui->DeactivateWidget(this);
 		}
 
-		Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
+		const Hitbox2D& pointerHitbox = gui->GetPointerHitbox();
 
 		bool clicked = false;
 		// hover the button
@@ -2059,7 +2069,7 @@ void wiColorPicker::Update(wiGUI* gui, float dt)
 			;
 
 		XMFLOAT2 center = XMFLOAT2(translation.x + scale.x * 0.4f, translation.y + scale.y * 0.5f);
-		XMFLOAT2 pointer = gui->GetPointerPos();
+		XMFLOAT2 pointer = gui->GetPointerHitbox().pos;
 		float distance = wiMath::Distance(center, pointer);
 		bool hover_hue = (distance > colorpicker_radius * sca) && (distance < (colorpicker_radius + colorpicker_width) * sca);
 
@@ -2664,7 +2674,7 @@ void wiTreeList::Update(wiGUI* gui, float dt)
 		}
 
 		Hitbox2D hitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y), XMFLOAT2(scale.x, scale.y));
-		Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
+		const Hitbox2D& pointerHitbox = gui->GetPointerHitbox();
 
 		if (state == IDLE && hitbox.intersects(pointerHitbox))
 		{

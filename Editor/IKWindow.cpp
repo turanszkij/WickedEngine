@@ -11,14 +11,14 @@ IKWindow::IKWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	assert(GUI && "Invalid GUI!");
 
 	window = new wiWindow(GUI, "Inverse Kinematics (IK) Window");
-	window->SetSize(XMFLOAT2(460, 200));
+	window->SetSize(XMFLOAT2(400, 150));
 	GUI->AddWidget(window);
 
-	float x = 100;
-	float y = 0;
-	float step = 25;
+	float x = 120;
+	float y = 10;
 	float siz = 200;
-	float hei = 20;
+	float hei = 18;
+	float step = hei + 2;
 
 	createButton = new wiButton("Create");
 	createButton->SetTooltip("Create/Remove IK Component to selected entity");

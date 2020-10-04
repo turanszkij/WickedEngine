@@ -13,13 +13,13 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	assert(GUI && "Invalid GUI!");
 
 	emitterWindow = new wiWindow(GUI, "Emitter Window");
-	emitterWindow->SetSize(XMFLOAT2(680, 700));
+	emitterWindow->SetSize(XMFLOAT2(680, 660));
 	GUI->AddWidget(emitterWindow);
 
 	float x = 200;
 	float y = 5;
-	float step = 22;
-	float itemheight = 20;
+	float itemheight = 18;
+	float step = itemheight + 2;
 
 
 	emitterNameField = new wiTextInputField("EmitterName");

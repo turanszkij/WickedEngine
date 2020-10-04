@@ -11,14 +11,14 @@ SpringWindow::SpringWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	assert(GUI && "Invalid GUI!");
 
 	window = new wiWindow(GUI, "Spring Window");
-	window->SetSize(XMFLOAT2(460, 230));
+	window->SetSize(XMFLOAT2(460, 200));
 	GUI->AddWidget(window);
 
 	float x = 150;
-	float y = 0;
-	float step = 25;
+	float y = 10;
 	float siz = 200;
-	float hei = 20;
+	float hei = 18;
+	float step = hei + 2;
 
 	createButton = new wiButton("Create");
 	createButton->SetTooltip("Create/Remove Spring Component to selected entity");

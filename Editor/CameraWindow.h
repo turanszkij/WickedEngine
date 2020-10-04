@@ -36,7 +36,6 @@ public:
 	wiCheckBox* fpsCheckBox;
 
 	wiButton* proxyButton;
-	wiTextInputField* proxyNameField;
 	wiCheckBox* followCheckBox;
 	wiSlider* followSlider;
 };

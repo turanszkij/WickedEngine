@@ -14,15 +14,16 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	assert(GUI && "Invalid GUI!");
 
 	lightWindow = new wiWindow(GUI, "Light Window");
-	lightWindow->SetSize(XMFLOAT2(650, 520));
+	lightWindow->SetSize(XMFLOAT2(650, 500));
 	GUI->AddWidget(lightWindow);
 
 	float x = 450;
 	float y = 0;
-	float step = 35;
+	float hei = 18;
+	float step = hei + 2;
 
 	energySlider = new wiSlider(0.1f, 64, 0, 100000, "Energy: ");
-	energySlider->SetSize(XMFLOAT2(100, 30));
+	energySlider->SetSize(XMFLOAT2(100, hei));
 	energySlider->SetPos(XMFLOAT2(x, y += step));
 	energySlider->OnSlide([&](wiEventArgs args) {
 		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
@@ -36,7 +37,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	lightWindow->AddWidget(energySlider);
 
 	rangeSlider = new wiSlider(1, 1000, 0, 100000, "Range: ");
-	rangeSlider->SetSize(XMFLOAT2(100, 30));
+	rangeSlider->SetSize(XMFLOAT2(100, hei));
 	rangeSlider->SetPos(XMFLOAT2(x, y += step));
 	rangeSlider->OnSlide([&](wiEventArgs args) {
 		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
@@ -50,7 +51,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	lightWindow->AddWidget(rangeSlider);
 
 	radiusSlider = new wiSlider(0.01f, 10, 0, 100000, "Radius: ");
-	radiusSlider->SetSize(XMFLOAT2(100, 30));
+	radiusSlider->SetSize(XMFLOAT2(100, hei));
 	radiusSlider->SetPos(XMFLOAT2(x, y += step));
 	radiusSlider->OnSlide([&](wiEventArgs args) {
 		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
@@ -64,7 +65,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	lightWindow->AddWidget(radiusSlider);
 
 	widthSlider = new wiSlider(1, 10, 0, 100000, "Width: ");
-	widthSlider->SetSize(XMFLOAT2(100, 30));
+	widthSlider->SetSize(XMFLOAT2(100, hei));
 	widthSlider->SetPos(XMFLOAT2(x, y += step));
 	widthSlider->OnSlide([&](wiEventArgs args) {
 		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
@@ -78,7 +79,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	lightWindow->AddWidget(widthSlider);
 
 	heightSlider = new wiSlider(1, 10, 0, 100000, "Height: ");
-	heightSlider->SetSize(XMFLOAT2(100, 30));
+	heightSlider->SetSize(XMFLOAT2(100, hei));
 	heightSlider->SetPos(XMFLOAT2(x, y += step));
 	heightSlider->OnSlide([&](wiEventArgs args) {
 		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
@@ -92,7 +93,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	lightWindow->AddWidget(heightSlider);
 
 	fovSlider = new wiSlider(0.1f, XM_PI - 0.01f, 0, 100000, "FOV: ");
-	fovSlider->SetSize(XMFLOAT2(100, 30));
+	fovSlider->SetSize(XMFLOAT2(100, hei));
 	fovSlider->SetPos(XMFLOAT2(x, y += step));
 	fovSlider->OnSlide([&](wiEventArgs args) {
 		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
@@ -106,7 +107,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	lightWindow->AddWidget(fovSlider);
 
 	biasSlider = new wiSlider(0.0f, 0.2f, 0, 100000, "ShadowBias: ");
-	biasSlider->SetSize(XMFLOAT2(100, 30));
+	biasSlider->SetSize(XMFLOAT2(100, hei));
 	biasSlider->SetPos(XMFLOAT2(x, y += step));
 	biasSlider->OnSlide([&](wiEventArgs args) {
 		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
@@ -120,6 +121,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	lightWindow->AddWidget(biasSlider);
 
 	shadowCheckBox = new wiCheckBox("Shadow: ");
+	shadowCheckBox->SetSize(XMFLOAT2(hei, hei));
 	shadowCheckBox->SetPos(XMFLOAT2(x, y += step));
 	shadowCheckBox->OnClick([&](wiEventArgs args) {
 		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
@@ -132,7 +134,8 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	shadowCheckBox->SetTooltip("Set light as shadow caster. Many shadow casters can affect performance!");
 	lightWindow->AddWidget(shadowCheckBox);
 
-	volumetricsCheckBox = new wiCheckBox("Volumetric Scattering: ");
+	volumetricsCheckBox = new wiCheckBox("Volumetric: ");
+	volumetricsCheckBox->SetSize(XMFLOAT2(hei, hei));
 	volumetricsCheckBox->SetPos(XMFLOAT2(x, y += step));
 	volumetricsCheckBox->OnClick([&](wiEventArgs args) {
 		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
@@ -142,10 +145,11 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		}
 	});
 	volumetricsCheckBox->SetEnabled(false);
-	volumetricsCheckBox->SetTooltip("Compute volumetric light scattering effect. The scattering is modulated by fog settings!");
+	volumetricsCheckBox->SetTooltip("Compute volumetric light scattering effect. \nThe fog settings affect scattering (see Weather window). If there is no fog, there is no scattering.");
 	lightWindow->AddWidget(volumetricsCheckBox);
 
 	haloCheckBox = new wiCheckBox("Visualizer: ");
+	haloCheckBox->SetSize(XMFLOAT2(hei, hei));
 	haloCheckBox->SetPos(XMFLOAT2(x, y += step));
 	haloCheckBox->OnClick([&](wiEventArgs args) {
 		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
@@ -159,6 +163,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	lightWindow->AddWidget(haloCheckBox);
 
 	staticCheckBox = new wiCheckBox("Static: ");
+	staticCheckBox->SetSize(XMFLOAT2(hei, hei));
 	staticCheckBox->SetPos(XMFLOAT2(x, y += step));
 	staticCheckBox->OnClick([&](wiEventArgs args) {
 		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
@@ -173,7 +178,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	addLightButton = new wiButton("Add Light");
 	addLightButton->SetPos(XMFLOAT2(x, y += step));
-	addLightButton->SetSize(XMFLOAT2(150, 30));
+	addLightButton->SetSize(XMFLOAT2(150, hei));
 	addLightButton->OnClick([=](wiEventArgs args) {
 		Entity entity = wiScene::GetScene().Entity_CreateLight("editorLight", XMFLOAT3(0, 3, 0), XMFLOAT3(1, 1, 1), 2, 60);
 		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
@@ -207,6 +212,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	lightWindow->AddWidget(colorPicker);
 
 	typeSelectorComboBox = new wiComboBox("Type: ");
+	typeSelectorComboBox->SetSize(XMFLOAT2(150, hei));
 	typeSelectorComboBox->SetPos(XMFLOAT2(x, y += step));
 	typeSelectorComboBox->OnSelect([&](wiEventArgs args) {
 		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
@@ -232,11 +238,12 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	x = 10;
 	y = 280;
-	step = 25;
+	hei = 20;
+	step = hei + 2;
 
 	lensflare_Label = new wiLabel("Lens flare textures: ");
 	lensflare_Label->SetPos(XMFLOAT2(x, y += step));
-	lensflare_Label->SetSize(XMFLOAT2(140, 20));
+	lensflare_Label->SetSize(XMFLOAT2(140, hei));
 	lightWindow->AddWidget(lensflare_Label);
 
 	for (size_t i = 0; i < arraysize(lensflare_Button); ++i)
@@ -245,7 +252,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		lensflare_Button[i]->SetText("");
 		lensflare_Button[i]->SetTooltip("Load a lensflare texture to this slot");
 		lensflare_Button[i]->SetPos(XMFLOAT2(x, y += step));
-		lensflare_Button[i]->SetSize(XMFLOAT2(260, 20));
+		lensflare_Button[i]->SetSize(XMFLOAT2(260, hei));
 		lensflare_Button[i]->OnClick([=](wiEventArgs args) {
 			LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
 			if (light == nullptr)

@@ -251,21 +251,24 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	assert(GUI && "Invalid GUI!");
 
 	objectWindow = new wiWindow(GUI, "Object Window");
-	objectWindow->SetSize(XMFLOAT2(600, 520));
+	objectWindow->SetSize(XMFLOAT2(350, 610));
 	GUI->AddWidget(objectWindow);
 
-	float x = 450;
+	float x = 200;
 	float y = 0;
+	float hei = 18;
+	float step = hei + 2;
 
 	nameLabel = new wiLabel("NAMELABEL");
 	nameLabel->SetText("");
-	nameLabel->SetPos(XMFLOAT2(x - 30, y += 30));
-	nameLabel->SetSize(XMFLOAT2(150, 20));
+	nameLabel->SetPos(XMFLOAT2(x - 30, y += step));
+	nameLabel->SetSize(XMFLOAT2(150, hei));
 	objectWindow->AddWidget(nameLabel);
 
 	renderableCheckBox = new wiCheckBox("Renderable: ");
 	renderableCheckBox->SetTooltip("Set object to be participating in rendering.");
-	renderableCheckBox->SetPos(XMFLOAT2(x, y += 30));
+	renderableCheckBox->SetSize(XMFLOAT2(hei, hei));
+	renderableCheckBox->SetPos(XMFLOAT2(x, y += step));
 	renderableCheckBox->SetCheck(true);
 	renderableCheckBox->OnClick([&](wiEventArgs args) {
 		ObjectComponent* object = wiScene::GetScene().objects.GetComponent(entity);
@@ -278,8 +281,8 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 
 	ditherSlider = new wiSlider(0, 1, 0, 1000, "Dither: ");
 	ditherSlider->SetTooltip("Adjust dithered transparency of the object. This disables some optimizations so performance can be affected.");
-	ditherSlider->SetSize(XMFLOAT2(100, 30));
-	ditherSlider->SetPos(XMFLOAT2(x, y += 30));
+	ditherSlider->SetSize(XMFLOAT2(100, hei));
+	ditherSlider->SetPos(XMFLOAT2(x, y += step));
 	ditherSlider->OnSlide([&](wiEventArgs args) {
 		ObjectComponent* object = wiScene::GetScene().objects.GetComponent(entity);
 		if (object != nullptr)
@@ -291,8 +294,8 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 
 	cascadeMaskSlider = new wiSlider(0, 3, 0, 3, "Cascade Mask: ");
 	cascadeMaskSlider->SetTooltip("How many shadow cascades to skip when rendering this object into shadow maps? (0: skip none, it will be in all cascades, 1: skip first (biggest cascade), ...etc...");
-	cascadeMaskSlider->SetSize(XMFLOAT2(100, 30));
-	cascadeMaskSlider->SetPos(XMFLOAT2(x, y += 30));
+	cascadeMaskSlider->SetSize(XMFLOAT2(100, hei));
+	cascadeMaskSlider->SetPos(XMFLOAT2(x, y += step));
 	cascadeMaskSlider->OnSlide([&](wiEventArgs args) {
 		ObjectComponent* object = wiScene::GetScene().objects.GetComponent(entity);
 		if (object != nullptr)
@@ -302,34 +305,20 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	});
 	objectWindow->AddWidget(cascadeMaskSlider);
 
-
-	colorPicker = new wiColorPicker(GUI, "Object Color", false);
-	colorPicker->SetPos(XMFLOAT2(10, 30));
-	colorPicker->SetVisible(true);
-	colorPicker->SetEnabled(true);
-	colorPicker->OnColorChanged([&](wiEventArgs args) {
-		ObjectComponent* object = wiScene::GetScene().objects.GetComponent(entity);
-		if (object != nullptr)
-		{
-			XMFLOAT3 col = args.color.toFloat3();
-			object->color = XMFLOAT4(col.x, col.y, col.z, object->color.w);
-		}
-	});
-	objectWindow->AddWidget(colorPicker);
-
-	y += 60;
+	y += step;
 
 	physicsLabel = new wiLabel("PHYSICSLABEL");
 	physicsLabel->SetText("PHYSICS SETTINGS");
-	physicsLabel->SetPos(XMFLOAT2(x - 30, y += 30));
-	physicsLabel->SetSize(XMFLOAT2(150, 20));
+	physicsLabel->SetPos(XMFLOAT2(x - 30, y += step));
+	physicsLabel->SetSize(XMFLOAT2(150, hei));
 	objectWindow->AddWidget(physicsLabel);
 
 
 
 	rigidBodyCheckBox = new wiCheckBox("Rigid Body Physics: ");
 	rigidBodyCheckBox->SetTooltip("Enable rigid body physics simulation.");
-	rigidBodyCheckBox->SetPos(XMFLOAT2(x, y += 30));
+	rigidBodyCheckBox->SetSize(XMFLOAT2(hei, hei));
+	rigidBodyCheckBox->SetPos(XMFLOAT2(x, y += step));
 	rigidBodyCheckBox->SetCheck(false);
 	rigidBodyCheckBox->OnClick([&](wiEventArgs args) 
 	{
@@ -359,7 +348,8 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 
 	kinematicCheckBox = new wiCheckBox("Kinematic: ");
 	kinematicCheckBox->SetTooltip("Toggle kinematic behaviour.");
-	kinematicCheckBox->SetPos(XMFLOAT2(x, y += 30));
+	kinematicCheckBox->SetSize(XMFLOAT2(hei, hei));
+	kinematicCheckBox->SetPos(XMFLOAT2(x, y += step));
 	kinematicCheckBox->SetCheck(false);
 	kinematicCheckBox->OnClick([&](wiEventArgs args) {
 		RigidBodyPhysicsComponent* physicscomponent = wiScene::GetScene().rigidbodies.GetComponent(entity);
@@ -372,7 +362,8 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 
 	disabledeactivationCheckBox = new wiCheckBox("Disable Deactivation: ");
 	disabledeactivationCheckBox->SetTooltip("Toggle kinematic behaviour.");
-	disabledeactivationCheckBox->SetPos(XMFLOAT2(x, y += 30));
+	disabledeactivationCheckBox->SetSize(XMFLOAT2(hei, hei));
+	disabledeactivationCheckBox->SetPos(XMFLOAT2(x, y += step));
 	disabledeactivationCheckBox->SetCheck(false);
 	disabledeactivationCheckBox->OnClick([&](wiEventArgs args) {
 		RigidBodyPhysicsComponent* physicscomponent = wiScene::GetScene().rigidbodies.GetComponent(entity);
@@ -384,8 +375,8 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	objectWindow->AddWidget(disabledeactivationCheckBox);
 
 	collisionShapeComboBox = new wiComboBox("Collision Shape:");
-	collisionShapeComboBox->SetSize(XMFLOAT2(100, 20));
-	collisionShapeComboBox->SetPos(XMFLOAT2(x, y += 30));
+	collisionShapeComboBox->SetSize(XMFLOAT2(100, hei));
+	collisionShapeComboBox->SetPos(XMFLOAT2(x, y += step));
 	collisionShapeComboBox->AddItem("Box");
 	collisionShapeComboBox->AddItem("Sphere");
 	collisionShapeComboBox->AddItem("Capsule");
@@ -424,13 +415,13 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	objectWindow->AddWidget(collisionShapeComboBox);
 
 
-	y += 30;
+	y += step;
 
 
 	lightmapResolutionSlider = new wiSlider(32, 1024, 128, 1024 - 32, "Lightmap resolution: ");
 	lightmapResolutionSlider->SetTooltip("Set the approximate resolution for this object's lightmap. This will be packed into the larger global lightmap later.");
-	lightmapResolutionSlider->SetSize(XMFLOAT2(100, 30));
-	lightmapResolutionSlider->SetPos(XMFLOAT2(x, y += 30));
+	lightmapResolutionSlider->SetSize(XMFLOAT2(100, hei));
+	lightmapResolutionSlider->SetPos(XMFLOAT2(x, y += step));
 	lightmapResolutionSlider->OnSlide([&](wiEventArgs args) {
 		// unfortunately, we must be pow2 with full float lightmap format, otherwise it could be unlimited (but accumulation blending would suffer then)
 		//	or at least for me, downloading the lightmap was glitching out when non-pow 2 and RGBA32_FLOAT format
@@ -438,8 +429,8 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	});
 	objectWindow->AddWidget(lightmapResolutionSlider);
 
-	lightmapSourceUVSetComboBox = new wiComboBox("Source UV: ");
-	lightmapSourceUVSetComboBox->SetPos(XMFLOAT2(x - 130, y += 30));
+	lightmapSourceUVSetComboBox = new wiComboBox("UV Set: ");
+	lightmapSourceUVSetComboBox->SetPos(XMFLOAT2(x - 130, y += step));
 	lightmapSourceUVSetComboBox->AddItem("Copy UV 0");
 	lightmapSourceUVSetComboBox->AddItem("Copy UV 1");
 	lightmapSourceUVSetComboBox->AddItem("Keep Atlas");
@@ -451,7 +442,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	generateLightmapButton = new wiButton("Generate Lightmap");
 	generateLightmapButton->SetTooltip("Render the lightmap for only this object. It will automatically combined with the global lightmap.");
 	generateLightmapButton->SetPos(XMFLOAT2(x, y));
-	generateLightmapButton->SetSize(XMFLOAT2(140,30));
+	generateLightmapButton->SetSize(XMFLOAT2(140, hei));
 	generateLightmapButton->OnClick([&](wiEventArgs args) {
 
 		Scene& scene = wiScene::GetScene();
@@ -531,8 +522,8 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 
 	stopLightmapGenButton = new wiButton("Stop Lightmap Gen");
 	stopLightmapGenButton->SetTooltip("Stop the lightmap rendering and save the lightmap.");
-	stopLightmapGenButton->SetPos(XMFLOAT2(x, y += 30));
-	stopLightmapGenButton->SetSize(XMFLOAT2(140, 30));
+	stopLightmapGenButton->SetPos(XMFLOAT2(x, y += step));
+	stopLightmapGenButton->SetSize(XMFLOAT2(140, hei));
 	stopLightmapGenButton->OnClick([&](wiEventArgs args) {
 
 		Scene& scene = wiScene::GetScene();
@@ -552,8 +543,8 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 
 	clearLightmapButton = new wiButton("Clear Lightmap");
 	clearLightmapButton->SetTooltip("Clear the lightmap from this object.");
-	clearLightmapButton->SetPos(XMFLOAT2(x, y += 30));
-	clearLightmapButton->SetSize(XMFLOAT2(140, 30));
+	clearLightmapButton->SetPos(XMFLOAT2(x, y += step));
+	clearLightmapButton->SetSize(XMFLOAT2(140, hei));
 	clearLightmapButton->OnClick([&](wiEventArgs args) {
 
 		Scene& scene = wiScene::GetScene();
@@ -570,6 +561,21 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	});
 	objectWindow->AddWidget(clearLightmapButton);
 
+	y += step;
+
+	colorPicker = new wiColorPicker(GUI, "Object Color", false);
+	colorPicker->SetPos(XMFLOAT2(20, y += step));
+	colorPicker->SetVisible(true);
+	colorPicker->SetEnabled(true);
+	colorPicker->OnColorChanged([&](wiEventArgs args) {
+		ObjectComponent* object = wiScene::GetScene().objects.GetComponent(entity);
+		if (object != nullptr)
+		{
+			XMFLOAT3 col = args.color.toFloat3();
+			object->color = XMFLOAT4(col.x, col.y, col.z, object->color.w);
+		}
+		});
+	objectWindow->AddWidget(colorPicker);
 
 
 	objectWindow->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 720, 120, 0));
