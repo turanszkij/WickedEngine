@@ -384,7 +384,7 @@ const XMFLOAT4& Frustum::getBottomPlane() const { return planes[5]; }
 
 
 
-bool Hitbox2D::intersects(const Hitbox2D& b)
+bool Hitbox2D::intersects(const Hitbox2D& b) const
 {
 	return wiMath::Collision2D(pos, siz, b.pos, b.siz);
 }

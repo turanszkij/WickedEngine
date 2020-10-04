@@ -26,16 +26,17 @@ CameraWindow::CameraWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	camera_transform.UpdateTransform();
 
 	cameraWindow = new wiWindow(GUI, "Camera Window");
-	cameraWindow->SetSize(XMFLOAT2(600, 420));
+	cameraWindow->SetSize(XMFLOAT2(380, 260));
 	GUI->AddWidget(cameraWindow);
 
 	float x = 200;
-	float y = 0;
-	float inc = 35;
+	float y = 10;
+	float hei = 18;
+	float step = hei + 2;
 
 	farPlaneSlider = new wiSlider(1, 5000, 1000, 100000, "Far Plane: ");
-	farPlaneSlider->SetSize(XMFLOAT2(100, 30));
-	farPlaneSlider->SetPos(XMFLOAT2(x, y += inc));
+	farPlaneSlider->SetSize(XMFLOAT2(100, hei));
+	farPlaneSlider->SetPos(XMFLOAT2(x, y += step));
 	farPlaneSlider->SetValue(wiRenderer::GetCamera().zFarP);
 	farPlaneSlider->OnSlide([&](wiEventArgs args) {
 		Scene& scene = wiScene::GetScene();
@@ -46,8 +47,8 @@ CameraWindow::CameraWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	cameraWindow->AddWidget(farPlaneSlider);
 
 	nearPlaneSlider = new wiSlider(0.01f, 10, 0.1f, 10000, "Near Plane: ");
-	nearPlaneSlider->SetSize(XMFLOAT2(100, 30));
-	nearPlaneSlider->SetPos(XMFLOAT2(x, y += inc));
+	nearPlaneSlider->SetSize(XMFLOAT2(100, hei));
+	nearPlaneSlider->SetPos(XMFLOAT2(x, y += step));
 	nearPlaneSlider->SetValue(wiRenderer::GetCamera().zNearP);
 	nearPlaneSlider->OnSlide([&](wiEventArgs args) {
 		Scene& scene = wiScene::GetScene();
@@ -58,8 +59,8 @@ CameraWindow::CameraWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	cameraWindow->AddWidget(nearPlaneSlider);
 
 	fovSlider = new wiSlider(1, 179, 60, 10000, "FOV: ");
-	fovSlider->SetSize(XMFLOAT2(100, 30));
-	fovSlider->SetPos(XMFLOAT2(x, y += inc));
+	fovSlider->SetSize(XMFLOAT2(100, hei));
+	fovSlider->SetPos(XMFLOAT2(x, y += step));
 	fovSlider->OnSlide([&](wiEventArgs args) {
 		Scene& scene = wiScene::GetScene();
 		CameraComponent& camera = wiRenderer::GetCamera();
@@ -69,25 +70,26 @@ CameraWindow::CameraWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	cameraWindow->AddWidget(fovSlider);
 
 	movespeedSlider = new wiSlider(1, 100, 10, 10000, "Movement Speed: ");
-	movespeedSlider->SetSize(XMFLOAT2(100, 30));
-	movespeedSlider->SetPos(XMFLOAT2(x, y += inc));
+	movespeedSlider->SetSize(XMFLOAT2(100, hei));
+	movespeedSlider->SetPos(XMFLOAT2(x, y += step));
 	cameraWindow->AddWidget(movespeedSlider);
 
 	rotationspeedSlider = new wiSlider(0.1f, 2, 1, 10000, "Rotation Speed: ");
-	rotationspeedSlider->SetSize(XMFLOAT2(100, 30));
-	rotationspeedSlider->SetPos(XMFLOAT2(x, y += inc));
+	rotationspeedSlider->SetSize(XMFLOAT2(100, hei));
+	rotationspeedSlider->SetPos(XMFLOAT2(x, y += step));
 	cameraWindow->AddWidget(rotationspeedSlider);
 
 	resetButton = new wiButton("Reset Camera");
-	resetButton->SetSize(XMFLOAT2(140, 30));
-	resetButton->SetPos(XMFLOAT2(x, y += inc));
+	resetButton->SetSize(XMFLOAT2(140, hei));
+	resetButton->SetPos(XMFLOAT2(x, y += step));
 	resetButton->OnClick([&](wiEventArgs args) {
 		ResetCam();
 	});
 	cameraWindow->AddWidget(resetButton);
 
 	fpsCheckBox = new wiCheckBox("FPS Camera: ");
-	fpsCheckBox->SetPos(XMFLOAT2(x, y += inc));
+	fpsCheckBox->SetSize(XMFLOAT2(hei, hei));
+	fpsCheckBox->SetPos(XMFLOAT2(x, y += step));
 	fpsCheckBox->SetCheck(true);
 	cameraWindow->AddWidget(fpsCheckBox);
 
@@ -95,8 +97,8 @@ CameraWindow::CameraWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	proxyButton = new wiButton("Place Proxy");
 	proxyButton->SetTooltip("Copy the current camera and place a proxy of it in the world.");
-	proxyButton->SetSize(XMFLOAT2(140, 30));
-	proxyButton->SetPos(XMFLOAT2(x, y += inc * 2));
+	proxyButton->SetSize(XMFLOAT2(140, hei));
+	proxyButton->SetPos(XMFLOAT2(x, y += step * 2));
 	proxyButton->OnClick([&](wiEventArgs args) {
 
 		const CameraComponent& camera = wiRenderer::GetCamera();
@@ -110,28 +112,16 @@ CameraWindow::CameraWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	cameraWindow->AddWidget(proxyButton);
 
-	proxyNameField = new wiTextInputField("Proxy Name: ");
-	proxyNameField->SetSize(XMFLOAT2(140, 30));
-	proxyNameField->SetPos(XMFLOAT2(x + 200, y));
-	proxyNameField->OnInputAccepted([&](wiEventArgs args) {
-		Scene& scene = wiScene::GetScene();
-		NameComponent* camera = scene.names.GetComponent(proxy);
-		if (camera != nullptr)
-		{
-			*camera = args.sValue;
-		}
-	});
-	cameraWindow->AddWidget(proxyNameField);
-
 
 	followCheckBox = new wiCheckBox("Follow Proxy: ");
-	followCheckBox->SetPos(XMFLOAT2(x, y += inc));
+	followCheckBox->SetSize(XMFLOAT2(hei, hei));
+	followCheckBox->SetPos(XMFLOAT2(x, y += step));
 	followCheckBox->SetCheck(false);
 	cameraWindow->AddWidget(followCheckBox);
 
 	followSlider = new wiSlider(0.0f, 0.999f, 0.0f, 1000.0f, "Follow Proxy Delay: ");
-	followSlider->SetSize(XMFLOAT2(100, 30));
-	followSlider->SetPos(XMFLOAT2(x, y += inc));
+	followSlider->SetSize(XMFLOAT2(100, hei));
+	followSlider->SetPos(XMFLOAT2(x, y += step));
 	cameraWindow->AddWidget(followSlider);
 
 
@@ -160,17 +150,11 @@ void CameraWindow::SetEntity(Entity entity)
 	{
 		followCheckBox->SetEnabled(true);
 		followSlider->SetEnabled(true);
-		NameComponent* camera = scene.names.GetComponent(entity);
-		if (camera != nullptr)
-		{
-			proxyNameField->SetValue(camera->name);
-		}
 	}
 	else
 	{
 		followCheckBox->SetCheck(false);
 		followCheckBox->SetEnabled(false);
 		followSlider->SetEnabled(false);
-		proxyNameField->SetValue("Proxy Name: ");
 	}
 }

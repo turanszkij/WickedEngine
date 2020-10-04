@@ -13,17 +13,18 @@ using namespace wiGraphics;
 PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 {
 	window = new wiWindow(&editor->GetGUI(), "Paint Tool Window");
-	window->SetSize(XMFLOAT2(400, 660));
+	window->SetSize(XMFLOAT2(400, 600));
 	editor->GetGUI().AddWidget(window);
 
 	float x = 100;
 	float y = 5;
-	float step = 30;
+	float hei = 20;
+	float step = hei + 4;
 
 	modeComboBox = new wiComboBox("Mode: ");
 	modeComboBox->SetTooltip("Choose paint tool mode");
 	modeComboBox->SetPos(XMFLOAT2(x, y += step));
-	modeComboBox->SetSize(XMFLOAT2(200, 28));
+	modeComboBox->SetSize(XMFLOAT2(200, hei));
 	modeComboBox->AddItem("Disabled");
 	modeComboBox->AddItem("Texture");
 	modeComboBox->AddItem("Vertexcolor");
@@ -91,35 +92,37 @@ PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 
 	radiusSlider = new wiSlider(1.0f, 500.0f, 50, 10000, "Brush Radius: ");
 	radiusSlider->SetTooltip("Set the brush radius in pixel units");
-	radiusSlider->SetSize(XMFLOAT2(200, 20));
+	radiusSlider->SetSize(XMFLOAT2(200, hei));
 	radiusSlider->SetPos(XMFLOAT2(x, y += step));
 	window->AddWidget(radiusSlider);
 
 	amountSlider = new wiSlider(0, 1, 1, 10000, "Brush Amount: ");
 	amountSlider->SetTooltip("Set the brush amount. 0 = minimum affection, 1 = maximum affection");
-	amountSlider->SetSize(XMFLOAT2(200, 20));
+	amountSlider->SetSize(XMFLOAT2(200, hei));
 	amountSlider->SetPos(XMFLOAT2(x, y += step));
 	window->AddWidget(amountSlider);
 
 	falloffSlider = new wiSlider(0, 16, 0, 10000, "Brush Falloff: ");
 	falloffSlider->SetTooltip("Set the brush power. 0 = no falloff, 1 = linear falloff, more = falloff power");
-	falloffSlider->SetSize(XMFLOAT2(200, 20));
+	falloffSlider->SetSize(XMFLOAT2(200, hei));
 	falloffSlider->SetPos(XMFLOAT2(x, y += step));
 	window->AddWidget(falloffSlider);
 
 	spacingSlider = new wiSlider(0, 500, 1, 500, "Brush Spacing: ");
 	spacingSlider->SetTooltip("Brush spacing means how much brush movement (in pixels) starts a new stroke. 0 = new stroke every frame, 100 = every 100 pixel movement since last stroke will start a new stroke.");
-	spacingSlider->SetSize(XMFLOAT2(200, 20));
+	spacingSlider->SetSize(XMFLOAT2(200, hei));
 	spacingSlider->SetPos(XMFLOAT2(x, y += step));
 	window->AddWidget(spacingSlider);
 
 	backfaceCheckBox = new wiCheckBox("Backfaces: ");
 	backfaceCheckBox->SetTooltip("Set whether to paint on backfaces of geometry or not");
+	backfaceCheckBox->SetSize(XMFLOAT2(hei, hei));
 	backfaceCheckBox->SetPos(XMFLOAT2(x, y += step));
 	window->AddWidget(backfaceCheckBox);
 
 	wireCheckBox = new wiCheckBox("Wireframe: ");
 	wireCheckBox->SetTooltip("Set whether to draw wireframe on top of geometry or not");
+	wireCheckBox->SetSize(XMFLOAT2(hei, hei));
 	wireCheckBox->SetPos(XMFLOAT2(x + 100, y));
 	wireCheckBox->SetCheck(true);
 	window->AddWidget(wireCheckBox);
@@ -127,7 +130,7 @@ PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 	textureSlotComboBox = new wiComboBox("Texture Slot: ");
 	textureSlotComboBox->SetTooltip("Choose texture slot of the selected material to paint (texture paint mode only)");
 	textureSlotComboBox->SetPos(XMFLOAT2(x, y += step));
-	textureSlotComboBox->SetSize(XMFLOAT2(200, 28));
+	textureSlotComboBox->SetSize(XMFLOAT2(200, hei));
 	textureSlotComboBox->AddItem("BaseColor (RGBA)");
 	textureSlotComboBox->AddItem("Normal (RGB)");
 	textureSlotComboBox->AddItem("SurfaceMap (RGBA)");
@@ -140,7 +143,7 @@ PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 
 	saveTextureButton = new wiButton("Save Texture");
 	saveTextureButton->SetTooltip("Save edited texture. This will append _0 postfix to texture name and save as new PNG texture.");
-	saveTextureButton->SetSize(XMFLOAT2(200, 28));
+	saveTextureButton->SetSize(XMFLOAT2(200, hei));
 	saveTextureButton->SetPos(XMFLOAT2(x, y += step));
 	saveTextureButton->SetEnabled(false);
 	saveTextureButton->OnClick([this] (wiEventArgs args) {

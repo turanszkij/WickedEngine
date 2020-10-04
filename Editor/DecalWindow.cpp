@@ -11,17 +11,17 @@ DecalWindow::DecalWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	assert(GUI && "Invalid GUI!");
 
 	decalWindow = new wiWindow(GUI, "Decal Window");
-	decalWindow->SetSize(XMFLOAT2(400, 300));
+	decalWindow->SetSize(XMFLOAT2(400, 200));
 	GUI->AddWidget(decalWindow);
 
 	float x = 200;
 	float y = 5;
-	float step = 22;
-	float itemheight = 20;
+	float hei = 18;
+	float step = hei + 2;
 
 	placementCheckBox = new wiCheckBox("Decal Placement Enabled: ");
 	placementCheckBox->SetPos(XMFLOAT2(x, y += step));
-	placementCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
+	placementCheckBox->SetSize(XMFLOAT2(hei, hei));
 	placementCheckBox->SetCheck(false);
 	placementCheckBox->SetTooltip("Enable decal placement. Use the left mouse button to place decals to the scene.");
 	decalWindow->AddWidget(placementCheckBox);
@@ -38,7 +38,7 @@ DecalWindow::DecalWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	decalNameField = new wiTextInputField("Decal Name");
 	decalNameField->SetPos(XMFLOAT2(10, y+=step));
-	decalNameField->SetSize(XMFLOAT2(300, 20));
+	decalNameField->SetSize(XMFLOAT2(300, hei));
 	decalNameField->OnInputAccepted([&](wiEventArgs args) {
 		NameComponent* name = wiScene::GetScene().names.GetComponent(entity);
 		if (name != nullptr)

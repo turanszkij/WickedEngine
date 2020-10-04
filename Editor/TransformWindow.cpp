@@ -11,7 +11,7 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 	assert(GUI && "Invalid GUI!");
 
 	window = new wiWindow(GUI, "Transform Window");
-	window->SetSize(XMFLOAT2(460, 170));
+	window->SetSize(XMFLOAT2(460, 180));
 	GUI->AddWidget(window);
 
 	float x = 100;

@@ -15,16 +15,17 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	assert(GUI && "Invalid GUI!");
 
 	soundWindow = new wiWindow(GUI, "Sound Window");
-	soundWindow->SetSize(XMFLOAT2(440, 340));
+	soundWindow->SetSize(XMFLOAT2(440, 200));
 	GUI->AddWidget(soundWindow);
 
 	float x = 20;
-	float y = 0;
-	float step = 35;
+	float y = 10;
+	float hei = 18;
+	float step = hei + 2;
 
 	reverbComboBox = new wiComboBox("Reverb: ");
 	reverbComboBox->SetPos(XMFLOAT2(x + 80, y += step));
-	reverbComboBox->SetSize(XMFLOAT2(180, 25));
+	reverbComboBox->SetSize(XMFLOAT2(180, hei));
 	reverbComboBox->OnSelect([&](wiEventArgs args) {
 		wiAudio::SetReverb((wiAudio::REVERB_PRESET)args.iValue);
 	});
@@ -66,7 +67,7 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	addButton = new wiButton("Add Sound");
 	addButton->SetTooltip("Add a sound file to the scene.");
 	addButton->SetPos(XMFLOAT2(x, y += step));
-	addButton->SetSize(XMFLOAT2(80, 30));
+	addButton->SetSize(XMFLOAT2(80, hei));
 	addButton->OnClick([=](wiEventArgs args) {
 		wiHelper::FileDialogParams params;
 		params.type = wiHelper::FileDialogParams::OPEN;
@@ -85,13 +86,13 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	filenameLabel = new wiLabel("Filename");
 	filenameLabel->SetPos(XMFLOAT2(x, y += step));
-	filenameLabel->SetSize(XMFLOAT2(400, 20));
+	filenameLabel->SetSize(XMFLOAT2(400, hei));
 	soundWindow->AddWidget(filenameLabel);
 
 	nameField = new wiTextInputField("SoundName");
 	nameField->SetTooltip("Enter a sound name to identify this entity...");
 	nameField->SetPos(XMFLOAT2(x, y += step));
-	nameField->SetSize(XMFLOAT2(300, 20));
+	nameField->SetSize(XMFLOAT2(300, hei));
 	nameField->OnInputAccepted([&](wiEventArgs args) {
 		NameComponent* name = wiScene::GetScene().names.GetComponent(entity);
 		if (name == nullptr)
@@ -106,7 +107,7 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	playstopButton = new wiButton("Play");
 	playstopButton->SetTooltip("Play/Stop selected sound instance.");
 	playstopButton->SetPos(XMFLOAT2(x, y += step));
-	playstopButton->SetSize(XMFLOAT2(80, 30));
+	playstopButton->SetSize(XMFLOAT2(80, hei));
 	playstopButton->OnClick([&](wiEventArgs args) {
 		SoundComponent* sound = GetScene().sounds.GetComponent(entity);
 		if (sound != nullptr)
@@ -129,7 +130,7 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	loopedCheckbox = new wiCheckBox("Looped: ");
 	loopedCheckbox->SetTooltip("Enable looping for the selected sound instance.");
 	loopedCheckbox->SetPos(XMFLOAT2(x + 150, y));
-	loopedCheckbox->SetSize(XMFLOAT2(30, 30));
+	loopedCheckbox->SetSize(XMFLOAT2(30, hei));
 	loopedCheckbox->OnClick([&](wiEventArgs args) {
 		SoundComponent* sound = GetScene().sounds.GetComponent(entity);
 		if (sound != nullptr)
@@ -143,7 +144,7 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	volumeSlider = new wiSlider(0, 1, 1, 1000, "Volume: ");
 	volumeSlider->SetTooltip("Set volume level for the selected sound instance.");
 	volumeSlider->SetPos(XMFLOAT2(x + 60, y += step));
-	volumeSlider->SetSize(XMFLOAT2(240, 30));
+	volumeSlider->SetSize(XMFLOAT2(240, hei));
 	volumeSlider->OnSlide([&](wiEventArgs args) {
 		SoundComponent* sound = GetScene().sounds.GetComponent(entity);
 		if (sound != nullptr)

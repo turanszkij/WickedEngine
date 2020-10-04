@@ -37,10 +37,15 @@ void wiWidget::Update(wiGUI* gui, float dt)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
-	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
+	if (!IsVisible())
+	{
+		return;
+	}
+
+
 	hitBox = Hitbox2D(XMFLOAT2(translation.x, translation.y), XMFLOAT2(scale.x, scale.y));
 
-	if (IsEnabled() && GetState() != WIDGETSTATE::ACTIVE && !tooltip.empty() && pointerHitbox.intersects(hitBox))
+	if (GetState() != WIDGETSTATE::ACTIVE && !tooltip.empty() && gui->GetPointerHitbox().intersects(hitBox))
 	{
 		tooltipTimer++;
 	}
@@ -89,16 +94,10 @@ void wiWidget::RenderTooltip(const wiGUI* gui, CommandList cmd) const
 
 	if (tooltipTimer > 25)
 	{
-		XMFLOAT2 tooltipPos = XMFLOAT2(gui->pointerpos.x, gui->pointerpos.y);
-		if (tooltipPos.y > wiRenderer::GetDevice()->GetScreenHeight()*0.8f)
-		{
-			tooltipPos.y -= 30;
-		}
-		else
-		{
-			tooltipPos.y += 40;
-		}
-		wiFontParams fontProps = wiFontParams(tooltipPos.x, tooltipPos.y, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP);
+		float screenwidth = wiRenderer::GetDevice()->GetScreenWidth();
+		float screenheight = wiRenderer::GetDevice()->GetScreenHeight();
+
+		wiFontParams fontProps = wiFontParams(0, 0, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP);
 		fontProps.color = wiColor(25, 25, 25, 255);
 		wiSpriteFont tooltipFont = wiSpriteFont(tooltip, fontProps);
 		if (!scriptTip.empty())
@@ -106,23 +105,40 @@ void wiWidget::RenderTooltip(const wiGUI* gui, CommandList cmd) const
 			tooltipFont.SetText(tooltip + "\n" + scriptTip);
 		}
 
-		float textWidth = tooltipFont.textWidth();
-		if (tooltipPos.x > wiRenderer::GetDevice()->GetScreenWidth() - textWidth)
+		static const float _border = 2;
+		float textWidth = tooltipFont.textWidth() + _border * 2;
+		float textHeight = tooltipFont.textHeight() + _border * 2;
+
+		tooltipFont.params.posX = gui->pointerpos.x;
+		tooltipFont.params.posY = gui->pointerpos.y;
+
+		if (tooltipFont.params.posX + textWidth > screenwidth)
 		{
-			tooltipPos.x -= textWidth + 10;
-			tooltipFont.params.posX = tooltipPos.x;
+			tooltipFont.params.posX -= tooltipFont.params.posX + textWidth - screenwidth;
+		}
+		if (tooltipFont.params.posX < 0)
+		{
+			tooltipFont.params.posX = 0;
 		}
 
-		static const float _border = 2;
-		float fontWidth = (float)tooltipFont.textWidth() + _border * 2;
-		float fontHeight = (float)tooltipFont.textHeight() + _border * 2;
-		wiImage::Draw(wiTextureHelper::getWhite(), wiImageParams(tooltipPos.x - _border, tooltipPos.y - _border, fontWidth, fontHeight, wiColor(255, 234, 165)), cmd);
+		if (tooltipFont.params.posY > screenheight * 0.8f)
+		{
+			tooltipFont.params.posY -= 30;
+		}
+		else
+		{
+			tooltipFont.params.posY += 40;
+		}
+
+		wiImage::Draw(wiTextureHelper::getWhite(), 
+			wiImageParams(tooltipFont.params.posX - _border, tooltipFont.params.posY - _border, 
+				textWidth, textHeight, wiColor(255, 234, 165)), cmd);
 		tooltipFont.SetText(tooltip);
 		tooltipFont.Draw(cmd);
 		if (!scriptTip.empty())
 		{
 			tooltipFont.SetText(scriptTip);
-			tooltipFont.params.posY += (int)(fontHeight / 2);
+			tooltipFont.params.posY += (int)(textHeight / 2);
 			tooltipFont.params.color = wiColor(25, 25, 25, 110);
 			tooltipFont.Draw(cmd);
 		}
@@ -278,6 +294,13 @@ wiButton::~wiButton()
 }
 void wiButton::Update(wiGUI* gui, float dt)
 {
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
 	wiWidget::Update(gui, dt);
 
 	if (IsEnabled() && !gui->IsWidgetDisabled(this))
@@ -287,7 +310,7 @@ void wiButton::Update(wiGUI* gui, float dt)
 		hitBox.siz.x = scale.x;
 		hitBox.siz.y = scale.y;
 
-		Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
+		const Hitbox2D& pointerHitbox = gui->GetPointerHitbox();
 
 		if (state == FOCUS)
 		{
@@ -533,6 +556,13 @@ const std::string wiTextInputField::GetValue()
 }
 void wiTextInputField::Update(wiGUI* gui, float dt)
 {
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
 	wiWidget::Update(gui, dt);
 
 	if (IsEnabled() && !gui->IsWidgetDisabled(this))
@@ -542,7 +572,7 @@ void wiTextInputField::Update(wiGUI* gui, float dt)
 		hitBox.siz.x = scale.x;
 		hitBox.siz.y = scale.y;
 
-		Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
+		const Hitbox2D& pointerHitbox = gui->GetPointerHitbox();
 		bool intersectsPointer = pointerHitbox.intersects(hitBox);
 
 		if (state == FOCUS)
@@ -739,6 +769,13 @@ void wiSlider::SetRange(float start, float end)
 }
 void wiSlider::Update(wiGUI* gui, float dt)
 {
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
 	wiWidget::Update(gui, dt);
 
 	valueInputField->Detach();
@@ -796,7 +833,7 @@ void wiSlider::Update(wiGUI* gui, float dt)
 		hitBox.siz.x = scale.x + knobWidth;
 		hitBox.siz.y = scale.y;
 
-		Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
+		const Hitbox2D& pointerHitbox = gui->GetPointerHitbox();
 
 
 		if (pointerHitbox.intersects(hitBox))
@@ -904,6 +941,13 @@ wiCheckBox::~wiCheckBox()
 }
 void wiCheckBox::Update(wiGUI* gui, float dt)
 {
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
 	wiWidget::Update(gui, dt);
 
 	if (IsEnabled() && !gui->IsWidgetDisabled(this))
@@ -927,7 +971,7 @@ void wiCheckBox::Update(wiGUI* gui, float dt)
 		hitBox.siz.x = scale.x;
 		hitBox.siz.y = scale.y;
 
-		Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
+		const Hitbox2D& pointerHitbox = gui->GetPointerHitbox();
 
 		bool clicked = false;
 		// hover the button
@@ -1039,6 +1083,13 @@ bool wiComboBox::HasScrollbar() const
 }
 void wiComboBox::Update(wiGUI* gui, float dt)
 {
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
 	wiWidget::Update(gui, dt);
 
 	if (IsEnabled() && !gui->IsWidgetDisabled(this))
@@ -1067,7 +1118,7 @@ void wiComboBox::Update(wiGUI* gui, float dt)
 		hitBox.siz.x = scale.x + scale.y + 1; // + drop-down indicator arrow + little offset
 		hitBox.siz.y = scale.y;
 
-		Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
+		const Hitbox2D& pointerHitbox = gui->GetPointerHitbox();
 
 		bool clicked = false;
 		// hover the button
@@ -1404,7 +1455,7 @@ int wiComboBox::GetSelected() const
 
 
 
-inline float windowcontrolSize() { return 20.0f; }
+static const float windowcontrolSize = 20.0f;
 wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : gui(gui)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
@@ -1434,7 +1485,10 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 			scaleDiff.y = (scale.y - args.deltaPos.y) / scale.y;
 			this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
 			this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
-			this->scale_local = wiMath::Max(this->scale_local, XMFLOAT3(40, 40, 1)); // don't allow resize to negative or too small
+			this->scale_local = wiMath::Max(this->scale_local, XMFLOAT3(windowcontrolSize * 3, windowcontrolSize * 2, 1)); // don't allow resize to negative or too small
+			// Don't allow control outside of screen:
+			this->translation_local.x = wiMath::Clamp(this->translation_local.x, 0, wiRenderer::GetDevice()->GetScreenWidth() - this->scale_local.x);
+			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, wiRenderer::GetDevice()->GetScreenHeight() - windowcontrolSize);
 			this->wiWidget::Update(gui, 0);
 			for (auto& x : this->childrenWidgets)
 			{
@@ -1454,7 +1508,10 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 			scaleDiff.x = (scale.x + args.deltaPos.x) / scale.x;
 			scaleDiff.y = (scale.y + args.deltaPos.y) / scale.y;
 			this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
-			this->scale_local = wiMath::Max(this->scale_local, XMFLOAT3(40, 40, 1)); // don't allow resize to negative or too small
+			this->scale_local = wiMath::Max(this->scale_local, XMFLOAT3(windowcontrolSize * 3, windowcontrolSize * 2, 1)); // don't allow resize to negative or too small
+			// Don't allow control outside of screen:
+			this->translation_local.x = wiMath::Clamp(this->translation_local.x, 0, wiRenderer::GetDevice()->GetScreenWidth() - this->scale_local.x);
+			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, wiRenderer::GetDevice()->GetScreenHeight() - windowcontrolSize);
 			this->wiWidget::Update(gui, 0);
 			for (auto& x : this->childrenWidgets)
 			{
@@ -1472,6 +1529,9 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 			auto saved_parent = this->parent;
 			this->Detach();
 			this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
+			// Don't allow control outside of screen:
+			this->translation_local.x = wiMath::Clamp(this->translation_local.x, 0, wiRenderer::GetDevice()->GetScreenWidth() - this->scale_local.x);
+			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, wiRenderer::GetDevice()->GetScreenHeight() - windowcontrolSize);
 			this->wiWidget::Update(gui, 0);
 			for (auto& x : this->childrenWidgets)
 			{
@@ -1555,47 +1615,54 @@ void wiWindow::RemoveWidgets(bool alsoDelete)
 }
 void wiWindow::Update(wiGUI* gui, float dt)
 {
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
 	wiWidget::Update(gui, dt);
 
 	if (moveDragger != nullptr)
 	{
 		moveDragger->Detach();
-		moveDragger->SetSize(XMFLOAT2(scale.x - windowcontrolSize() * 3, windowcontrolSize()));
-		moveDragger->SetPos(XMFLOAT2(translation.x + windowcontrolSize(), translation.y));
+		moveDragger->SetSize(XMFLOAT2(scale.x - windowcontrolSize * 3, windowcontrolSize));
+		moveDragger->SetPos(XMFLOAT2(translation.x + windowcontrolSize, translation.y));
 		moveDragger->AttachTo(this);
 	}
 	if (closeButton != nullptr)
 	{
 		closeButton->Detach();
-		closeButton->SetSize(XMFLOAT2(windowcontrolSize(), windowcontrolSize()));
-		closeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize(), translation.y));
+		closeButton->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+		closeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y));
 		closeButton->AttachTo(this);
 	}
 	if (minimizeButton != nullptr)
 	{
 		minimizeButton->Detach();
-		minimizeButton->SetSize(XMFLOAT2(windowcontrolSize(), windowcontrolSize()));
-		minimizeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize() * 2, translation.y));
+		minimizeButton->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+		minimizeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize * 2, translation.y));
 		minimizeButton->AttachTo(this);
 	}
 	if (resizeDragger_UpperLeft != nullptr)
 	{
 		resizeDragger_UpperLeft->Detach();
-		resizeDragger_UpperLeft->SetSize(XMFLOAT2(windowcontrolSize(), windowcontrolSize()));
+		resizeDragger_UpperLeft->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
 		resizeDragger_UpperLeft->SetPos(XMFLOAT2(translation.x, translation.y));
 		resizeDragger_UpperLeft->AttachTo(this);
 	}
 	if (resizeDragger_BottomRight != nullptr)
 	{
 		resizeDragger_BottomRight->Detach();
-		resizeDragger_BottomRight->SetSize(XMFLOAT2(windowcontrolSize(), windowcontrolSize()));
-		resizeDragger_BottomRight->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize(), translation.y + scale.y - windowcontrolSize()));
+		resizeDragger_BottomRight->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+		resizeDragger_BottomRight->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y + scale.y - windowcontrolSize));
 		resizeDragger_BottomRight->AttachTo(this);
 	}
 	if (label != nullptr)
 	{
 		label->Detach();
-		label->SetSize(XMFLOAT2(scale.x, windowcontrolSize()));
+		label->SetSize(XMFLOAT2(scale.x, windowcontrolSize));
 		label->SetPos(XMFLOAT2(translation.x, translation.y));
 		label->AttachTo(this);
 	}
@@ -1625,7 +1692,7 @@ void wiWindow::Update(wiGUI* gui, float dt)
 			gui->DeactivateWidget(this);
 		}
 
-		Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
+		const Hitbox2D& pointerHitbox = gui->GetPointerHitbox();
 
 		bool clicked = false;
 		// hover the button
@@ -1863,9 +1930,11 @@ rgb hsv2rgb(hsv in)
 	return out;
 }
 
+static const float cp_width = 300;
+static const float cp_height = 260;
 wiColorPicker::wiColorPicker(wiGUI* gui, const std::string& name, bool window_controls) :wiWindow(gui, name, window_controls)
 {
-	SetSize(XMFLOAT2(300, 260));
+	SetSize(XMFLOAT2(cp_width, cp_height));
 	SetColor(wiColor(100, 100, 100, 100));
 
 	if (resizeDragger_BottomRight != nullptr)
@@ -1970,12 +2039,18 @@ wiColorPicker::wiColorPicker(wiGUI* gui, const std::string& name, bool window_co
 		});
 	AddWidget(alphaSlider);
 }
-static const float colorpicker_center = 120;
 static const float colorpicker_radius_triangle = 68;
 static const float colorpicker_radius = 75;
 static const float colorpicker_width = 22;
 void wiColorPicker::Update(wiGUI* gui, float dt)
 {
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
 	wiWindow::Update(gui, dt);
 
 	if (IsEnabled() && !gui->IsWidgetDisabled(this))
@@ -1986,10 +2061,17 @@ void wiColorPicker::Update(wiGUI* gui, float dt)
 			state = IDLE;
 		}
 
-		XMFLOAT2 center = XMFLOAT2(translation.x + colorpicker_center, translation.y + colorpicker_center);
-		XMFLOAT2 pointer = gui->GetPointerPos();
+		float sca = std::min(scale.x / cp_width, scale.y / cp_height);
+
+		XMMATRIX W =
+			XMMatrixScaling(sca, sca, 1) *
+			XMMatrixTranslation(translation.x + scale.x * 0.4f, translation.y + scale.y * 0.5f, 0)
+			;
+
+		XMFLOAT2 center = XMFLOAT2(translation.x + scale.x * 0.4f, translation.y + scale.y * 0.5f);
+		XMFLOAT2 pointer = gui->GetPointerHitbox().pos;
 		float distance = wiMath::Distance(center, pointer);
-		bool hover_hue = (distance > colorpicker_radius) && (distance < colorpicker_radius + colorpicker_width);
+		bool hover_hue = (distance > colorpicker_radius * sca) && (distance < (colorpicker_radius + colorpicker_width) * sca);
 
 		float distTri = 0;
 		XMFLOAT4 A, B, C;
@@ -1997,7 +2079,7 @@ void wiColorPicker::Update(wiGUI* gui, float dt)
 		XMVECTOR _A = XMLoadFloat4(&A);
 		XMVECTOR _B = XMLoadFloat4(&B);
 		XMVECTOR _C = XMLoadFloat4(&C);
-		XMMATRIX _triTransform = XMMatrixRotationZ(-hue / 360.0f * XM_2PI) * XMMatrixTranslation(center.x, center.y, 0);
+		XMMATRIX _triTransform = XMMatrixRotationZ(-hue / 360.0f * XM_2PI) * W;
 		_A = XMVector4Transform(_A, _triTransform);
 		_B = XMVector4Transform(_B, _triTransform);
 		_C = XMVector4Transform(_C, _triTransform);
@@ -2307,6 +2389,13 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 
 	ApplyScissor(scissorRect, cmd);
 
+	float sca = std::min(scale.x / cp_width, scale.y / cp_height);
+
+	XMMATRIX W =
+		XMMatrixScaling(sca, sca, 1) *
+		XMMatrixTranslation(translation.x + scale.x * 0.4f, translation.y + scale.y * 0.5f, 0)
+		;
+
 	MiscCB cb;
 
 	// render saturation triangle
@@ -2333,7 +2422,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 
 		XMStoreFloat4x4(&cb.g_xTransform, 
 			XMMatrixRotationZ(-angle) *
-			XMMatrixTranslation(translation.x + colorpicker_center, translation.y + colorpicker_center, 0) *
+			W *
 			Projection
 		);
 		cb.g_xColor = IsEnabled() ? float4(1, 1, 1, 1) : float4(0.5f, 0.5f, 0.5f, 1);
@@ -2353,8 +2442,8 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 
 	// render hue circle
 	{
-		XMStoreFloat4x4(&cb.g_xTransform, 
-			XMMatrixTranslation(translation.x + colorpicker_center, translation.y + colorpicker_center, 0) *
+		XMStoreFloat4x4(&cb.g_xTransform,
+			W *
 			Projection
 		);
 		cb.g_xColor = IsEnabled() ? float4(1, 1, 1, 1) : float4(0.5f, 0.5f, 0.5f, 1);
@@ -2374,7 +2463,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	{
 		XMStoreFloat4x4(&cb.g_xTransform,
 			XMMatrixRotationZ(-hue / 360.0f * XM_2PI)*
-			XMMatrixTranslation(translation.x + colorpicker_center, translation.y + colorpicker_center, 0) *
+			W *
 			Projection
 		);
 
@@ -2399,13 +2488,12 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	// render saturation picker
 	if (IsEnabled())
 	{
-		XMFLOAT2 center = XMFLOAT2(translation.x + colorpicker_center, translation.y + colorpicker_center);
 		XMFLOAT4 A, B, C;
 		wiMath::ConstructTriangleEquilateral(colorpicker_radius_triangle, A, B, C);
 		XMVECTOR _A = XMLoadFloat4(&A);
 		XMVECTOR _B = XMLoadFloat4(&B);
 		XMVECTOR _C = XMLoadFloat4(&C);
-		XMMATRIX _triTransform = XMMatrixRotationZ(-hue / 360.0f * XM_2PI) * XMMatrixTranslation(center.x, center.y, 0);
+		XMMATRIX _triTransform = XMMatrixRotationZ(-hue / 360.0f * XM_2PI);
 		_A = XMVector4Transform(_A, _triTransform);
 		_B = XMVector4Transform(_B, _triTransform);
 		_C = XMVector4Transform(_C, _triTransform);
@@ -2433,6 +2521,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 
 		XMStoreFloat4x4(&cb.g_xTransform, 
 			XMMatrixTranslationFromVector(picker_center) *
+			W *
 			Projection
 		);
 		cb.g_xColor = float4(1 - final_color.toFloat3().x, 1 - final_color.toFloat3().y, 1 - final_color.toFloat3().z, 1);
@@ -2450,7 +2539,8 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	// render preview
 	{
 		XMStoreFloat4x4(&cb.g_xTransform, 
-			XMMatrixTranslation(translation.x + 260, translation.y + 40, 0) *
+			XMMatrixScaling(sca, sca, 1) *
+			XMMatrixTranslation(translation.x + scale.x - 40 * sca, translation.y + 40, 0) *
 			Projection
 		);
 		cb.g_xColor = final_color.toFloat4();
@@ -2476,17 +2566,20 @@ wiColor wiColorPicker::GetPickColor() const
 }
 void wiColorPicker::SetPickColor(wiColor value)
 {
+	if (colorpickerstate != CPS_IDLE)
+	{
+		// Only allow setting the pick color when picking is not active, the RGB and HSV precision combat each other
+		return;
+	}
+
 	rgb source;
 	source.r = value.toFloat3().x;
 	source.g = value.toFloat3().y;
 	source.b = value.toFloat3().z;
 	hsv result = rgb2hsv(source);
-	if (
-		(value.getR() < 255 || value.getG() < 255 || value.getB() < 255) &&
-		(value.getR() > 0 || value.getG() > 0 || value.getB() > 0)
-		)
+	if (value.getR() != value.getG() || value.getG() != value.getB() || value.getR() != value.getB())
 	{
-		hue = result.h; // only change the hue when not pure black or white because those don't retain the saturation value
+		hue = result.h; // only change the hue when not pure greyscale because those don't retain the saturation value
 	}
 	saturation = result.s;
 	luminance = result.v;
@@ -2556,6 +2649,13 @@ bool wiTreeList::HasScrollbar() const
 }
 void wiTreeList::Update(wiGUI* gui, float dt)
 {
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
 	wiWidget::Update(gui, dt);
 
 	if (IsEnabled() && !gui->IsWidgetDisabled(this))
@@ -2574,7 +2674,7 @@ void wiTreeList::Update(wiGUI* gui, float dt)
 		}
 
 		Hitbox2D hitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y), XMFLOAT2(scale.x, scale.y));
-		Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
+		const Hitbox2D& pointerHitbox = gui->GetPointerHitbox();
 
 		if (state == IDLE && hitbox.intersects(pointerHitbox))
 		{

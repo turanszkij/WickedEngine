@@ -144,7 +144,7 @@ public:
 	Hitbox2D(const XMFLOAT2& newPos, const XMFLOAT2 newSiz) :pos(newPos), siz(newSiz) {}
 	~Hitbox2D() {};
 
-	bool intersects(const Hitbox2D& b);
+	bool intersects(const Hitbox2D& b) const;
 };
 
 

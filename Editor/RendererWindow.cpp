@@ -13,10 +13,10 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	wiRenderer::SetToDrawDebugCameras(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(580, 600));
+	rendererWindow->SetSize(XMFLOAT2(580, 540));
 	GUI->AddWidget(rendererWindow);
 
-	float x = 220, y = 5, step = 22, itemheight = 20;
+	float x = 220, y = 5, step = 20, itemheight = 18;
 
 	vsyncCheckBox = new wiCheckBox("VSync: ");
 	vsyncCheckBox->SetTooltip("Toggle vertical sync");
