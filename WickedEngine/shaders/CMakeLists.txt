@@ -138,7 +138,7 @@ set(SHADERS_CS
 		"volumetricCloud_detailnoiseCS.hlsl"
 		"volumetricCloud_curlnoiseCS.hlsl"
 		"volumetricCloud_weathermapCS.hlsl"
-		#"volumetricCloud_renderCS.hlsl"
+		"volumetricCloud_renderCS.hlsl"
 		"volumetricCloud_reprojectCS.hlsl"
 		"volumetricCloud_finalCS.hlsl"
 )
