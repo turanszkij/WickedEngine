@@ -290,6 +290,8 @@ void PaintToolWindow::Update(float dt)
 
 		int uvset = 0;
 		auto resource = GetEditTextureSlot(*material, &uvset);
+		if (resource == nullptr)
+			break;
 		const TextureDesc& desc = resource->texture->GetDesc();
 		auto& vertex_uvset = uvset == 0 ? mesh->vertex_uvset_0 : mesh->vertex_uvset_1;
 
@@ -361,6 +363,8 @@ void PaintToolWindow::Update(float dt)
 		paintrad.radius = radius;
 		paintrad.center = center;
 		paintrad.uvset = uvset;
+		paintrad.dimensions.x = desc.Width;
+		paintrad.dimensions.y = desc.Height;
 		wiRenderer::DrawPaintRadius(paintrad);
 	}
 	break;

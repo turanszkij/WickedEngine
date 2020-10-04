@@ -6857,8 +6857,7 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 			device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
 
 			PaintRadiusCB cb;
-			cb.xPaintRadResolution.x = material.GetBaseColorMap()->GetDesc().Width;
-			cb.xPaintRadResolution.y = material.GetBaseColorMap()->GetDesc().Height;
+			cb.xPaintRadResolution = x.dimensions;
 			cb.xPaintRadCenter = x.center;
 			cb.xPaintRadRadius = x.radius;
 			cb.xPaintRadUVSET = x.uvset;
