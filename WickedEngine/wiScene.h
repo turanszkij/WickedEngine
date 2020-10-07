@@ -1033,6 +1033,7 @@ namespace wiScene
 			EMPTY = 0,
 			PLAYING = 1 << 0,
 			LOOPED = 1 << 1,
+			DISABLE_3D = 1 << 2,
 		};
 		uint32_t _flags = LOOPED;
 
@@ -1043,10 +1044,12 @@ namespace wiScene
 
 		inline bool IsPlaying() const { return _flags & PLAYING; }
 		inline bool IsLooped() const { return _flags & LOOPED; }
+		inline bool IsDisable3D() const { return _flags & DISABLE_3D; }
 
 		inline void Play() { _flags |= PLAYING; }
 		inline void Stop() { _flags &= ~PLAYING; }
 		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
+		inline void SetDisable3D(bool value = true) { if (value) { _flags |= DISABLE_3D; } else { _flags &= ~DISABLE_3D; } }
 
 		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
 	};

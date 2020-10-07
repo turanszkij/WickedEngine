@@ -15,7 +15,7 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	assert(GUI && "Invalid GUI!");
 
 	soundWindow = new wiWindow(GUI, "Sound Window");
-	soundWindow->SetSize(XMFLOAT2(440, 200));
+	soundWindow->SetSize(XMFLOAT2(440, 220));
 	GUI->AddWidget(soundWindow);
 
 	float x = 20;
@@ -59,7 +59,7 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	reverbComboBox->AddItem("MEDIUMHALL");
 	reverbComboBox->AddItem("LARGEHALL");
 	reverbComboBox->AddItem("PLATE");
-	reverbComboBox->SetTooltip("Set the global reverb setting.");
+	reverbComboBox->SetTooltip("Set the global reverb setting. This will affect all the 3D sounds in the scene.");
 	soundWindow->AddWidget(reverbComboBox);
 
 	y += step;
@@ -130,7 +130,7 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	loopedCheckbox = new wiCheckBox("Looped: ");
 	loopedCheckbox->SetTooltip("Enable looping for the selected sound instance.");
 	loopedCheckbox->SetPos(XMFLOAT2(x + 150, y));
-	loopedCheckbox->SetSize(XMFLOAT2(30, hei));
+	loopedCheckbox->SetSize(XMFLOAT2(hei, hei));
 	loopedCheckbox->OnClick([&](wiEventArgs args) {
 		SoundComponent* sound = GetScene().sounds.GetComponent(entity);
 		if (sound != nullptr)
@@ -139,6 +139,21 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		}
 	});
 	soundWindow->AddWidget(loopedCheckbox);
+	loopedCheckbox->SetEnabled(false);
+
+	disable3dCheckbox = new wiCheckBox("2D: ");
+	disable3dCheckbox->SetTooltip("Sounds in the scene are 3D spatial by default. Select this to disable 3D effect.");
+	disable3dCheckbox->SetPos(XMFLOAT2(x + 300, y));
+	disable3dCheckbox->SetSize(XMFLOAT2(hei, hei));
+	disable3dCheckbox->OnClick([&](wiEventArgs args) {
+		SoundComponent* sound = GetScene().sounds.GetComponent(entity);
+		if (sound != nullptr)
+		{
+			sound->SetDisable3D(args.bValue);
+			wiAudio::CreateSoundInstance(sound->soundResource->sound, &sound->soundinstance);
+		}
+	});
+	soundWindow->AddWidget(disable3dCheckbox);
 	loopedCheckbox->SetEnabled(false);
 
 	volumeSlider = new wiSlider(0, 1, 1, 1000, "Volume: ");
@@ -154,6 +169,25 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	soundWindow->AddWidget(volumeSlider);
 	volumeSlider->SetEnabled(false);
+
+	submixComboBox = new wiComboBox("Submix: ");
+	submixComboBox->SetPos(XMFLOAT2(x + 80, y += step));
+	submixComboBox->SetSize(XMFLOAT2(180, hei));
+	submixComboBox->OnSelect([&](wiEventArgs args) {
+		SoundComponent* sound = GetScene().sounds.GetComponent(entity);
+		if (sound != nullptr)
+		{
+			sound->soundinstance.type = (wiAudio::SUBMIX_TYPE)args.iValue;
+			wiAudio::CreateSoundInstance(sound->soundResource->sound, &sound->soundinstance);
+		}
+	});
+	submixComboBox->AddItem("SOUNDEFFECT");
+	submixComboBox->AddItem("MUSIC");
+	submixComboBox->AddItem("USER0");
+	submixComboBox->AddItem("USER1");
+	submixComboBox->SetTooltip("Set the submix channel of the sound. \nSound properties like volume can be set per sound, or per submix channel.");
+	submixComboBox->SetScriptTip("SoundInstance::SetSubmixType(int submixType)");
+	soundWindow->AddWidget(submixComboBox);
 
 	soundWindow->Translate(XMFLOAT3(400, 120, 0));
 	soundWindow->SetVisible(false);
@@ -193,6 +227,8 @@ void SoundWindow::SetEntity(Entity entity)
 		playstopButton->SetEnabled(true);
 		loopedCheckbox->SetEnabled(true);
 		loopedCheckbox->SetCheck(sound->IsLooped());
+		disable3dCheckbox->SetEnabled(true);
+		disable3dCheckbox->SetCheck(sound->IsDisable3D());
 		volumeSlider->SetEnabled(true);
 		volumeSlider->SetValue(sound->volume);
 		if (sound->IsPlaying())
@@ -203,6 +239,8 @@ void SoundWindow::SetEntity(Entity entity)
 		{
 			playstopButton->SetText("Play");
 		}
+		submixComboBox->SetEnabled(true);
+		submixComboBox->SetSelected((int)sound->soundinstance.type);
 	}
 	else
 	{
@@ -211,7 +249,9 @@ void SoundWindow::SetEntity(Entity entity)
 		nameField->SetEnabled(false);
 		playstopButton->SetEnabled(false);
 		loopedCheckbox->SetEnabled(false);
+		disable3dCheckbox->SetEnabled(false);
 		volumeSlider->SetEnabled(false);
+		submixComboBox->SetEnabled(false);
 	}
 }
 

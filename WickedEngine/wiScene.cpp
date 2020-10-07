@@ -2606,12 +2606,16 @@ namespace wiScene
 		for (size_t i = 0; i < sounds.GetCount(); ++i)
 		{
 			SoundComponent& sound = sounds[i];
-			Entity entity = sounds.GetEntity(i);
-			const TransformComponent* transform = transforms.GetComponent(entity);
-			if (transform != nullptr)
+
+			if (!sound.IsDisable3D())
 			{
-				instance3D.emitterPos = transform->GetPosition();
-				wiAudio::Update3D(&sound.soundinstance, instance3D);
+				Entity entity = sounds.GetEntity(i);
+				const TransformComponent* transform = transforms.GetComponent(entity);
+				if (transform != nullptr)
+				{
+					instance3D.emitterPos = transform->GetPosition();
+					wiAudio::Update3D(&sound.soundinstance, instance3D);
+				}
 			}
 			if (sound.IsPlaying())
 			{
