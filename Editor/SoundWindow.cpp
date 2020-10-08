@@ -240,7 +240,10 @@ void SoundWindow::SetEntity(Entity entity)
 			playstopButton->SetText("Play");
 		}
 		submixComboBox->SetEnabled(true);
-		submixComboBox->SetSelected((int)sound->soundinstance.type);
+		if (submixComboBox->GetSelected() != (int)sound->soundinstance.type)
+		{
+			submixComboBox->SetSelected((int)sound->soundinstance.type);
+		}
 	}
 	else
 	{

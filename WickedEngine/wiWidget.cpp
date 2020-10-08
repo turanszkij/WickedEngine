@@ -1430,15 +1430,12 @@ void wiComboBox::SetMaxVisibleItemCount(int value)
 }
 void wiComboBox::SetSelected(int index)
 {
-	if (selected != index)
-	{
-		selected = index;
+	selected = index;
 
-		wiEventArgs args;
-		args.iValue = selected;
-		args.sValue = GetItemText(selected);
-		onSelect(args);
-	}
+	wiEventArgs args;
+	args.iValue = selected;
+	args.sValue = GetItemText(selected);
+	onSelect(args);
 }
 string wiComboBox::GetItemText(int index) const
 {
