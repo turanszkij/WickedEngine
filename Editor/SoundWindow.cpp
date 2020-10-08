@@ -59,7 +59,7 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	reverbComboBox->AddItem("MEDIUMHALL");
 	reverbComboBox->AddItem("LARGEHALL");
 	reverbComboBox->AddItem("PLATE");
-	reverbComboBox->SetTooltip("Set the global reverb setting. This will affect all the 3D sounds in the scene.");
+	reverbComboBox->SetTooltip("Set the global reverb setting. Sound instances need to enable reverb to take effect!");
 	soundWindow->AddWidget(reverbComboBox);
 
 	y += step;
@@ -73,6 +73,7 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		params.type = wiHelper::FileDialogParams::OPEN;
 		params.description = "Sound";
 		params.extensions.push_back("wav");
+		params.extensions.push_back("ogg");
 		wiHelper::FileDialog(params, [=](std::string fileName) {
 			wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 				Entity entity = GetScene().Entity_CreateSound("editorSound", fileName);
@@ -140,6 +141,21 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	soundWindow->AddWidget(loopedCheckbox);
 	loopedCheckbox->SetEnabled(false);
+
+	reverbCheckbox = new wiCheckBox("Reverb: ");
+	reverbCheckbox->SetTooltip("Enable/disable reverb.");
+	reverbCheckbox->SetPos(XMFLOAT2(x + 240, y));
+	reverbCheckbox->SetSize(XMFLOAT2(hei, hei));
+	reverbCheckbox->OnClick([&](wiEventArgs args) {
+		SoundComponent* sound = GetScene().sounds.GetComponent(entity);
+		if (sound != nullptr)
+		{
+			sound->soundinstance.SetEnableReverb(args.bValue);
+			wiAudio::CreateSoundInstance(sound->soundResource->sound, &sound->soundinstance);
+		}
+	});
+	soundWindow->AddWidget(reverbCheckbox);
+	reverbCheckbox->SetEnabled(false);
 
 	disable3dCheckbox = new wiCheckBox("2D: ");
 	disable3dCheckbox->SetTooltip("Sounds in the scene are 3D spatial by default. Select this to disable 3D effect.");
@@ -227,6 +243,8 @@ void SoundWindow::SetEntity(Entity entity)
 		playstopButton->SetEnabled(true);
 		loopedCheckbox->SetEnabled(true);
 		loopedCheckbox->SetCheck(sound->IsLooped());
+		reverbCheckbox->SetEnabled(true);
+		reverbCheckbox->SetCheck(sound->soundinstance.IsEnableReverb());
 		disable3dCheckbox->SetEnabled(true);
 		disable3dCheckbox->SetCheck(sound->IsDisable3D());
 		volumeSlider->SetEnabled(true);
@@ -252,6 +270,7 @@ void SoundWindow::SetEntity(Entity entity)
 		nameField->SetEnabled(false);
 		playstopButton->SetEnabled(false);
 		loopedCheckbox->SetEnabled(false);
+		reverbCheckbox->SetEnabled(false);
 		disable3dCheckbox->SetEnabled(false);
 		volumeSlider->SetEnabled(false);
 		submixComboBox->SetEnabled(false);

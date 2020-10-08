@@ -30,6 +30,7 @@ public:
 	wiTextInputField* nameField;
 	wiButton* playstopButton;
 	wiCheckBox* loopedCheckbox;
+	wiCheckBox* reverbCheckbox;
 	wiCheckBox* disable3dCheckbox;
 	wiSlider* volumeSlider;
 	wiComboBox* submixComboBox;

@@ -33,6 +33,16 @@ namespace wiAudio
 		SUBMIX_TYPE type = SUBMIX_TYPE_SOUNDEFFECT;
 		float loop_begin = 0;	// loop region begin in seconds (0 = from beginning)
 		float loop_length = 0;	// loop region legth in seconds (0 = until the end)
+
+		enum FLAGS
+		{
+			EMPTY = 0,
+			ENABLE_REVERB = 1 << 0,
+		};
+		uint32_t _flags = EMPTY;
+
+		inline void SetEnableReverb(bool value = true) { if (value) { _flags |= ENABLE_REVERB; } else { _flags &= ~ENABLE_REVERB; } }
+		inline bool IsEnableReverb() const { return _flags & ENABLE_REVERB; }
 	};
 
 	bool CreateSound(const std::string& filename, Sound* sound);

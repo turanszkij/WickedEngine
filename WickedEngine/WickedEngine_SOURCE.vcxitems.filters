@@ -1994,6 +1994,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSDLInput.cpp">
       <Filter>ENGINE\Input</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\stb_vorbis.c">
+      <Filter>UTILITY</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)ArchiveVersionHistory.txt" />

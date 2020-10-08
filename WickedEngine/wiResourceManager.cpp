@@ -36,7 +36,8 @@ namespace wiResourceManager
 		std::make_pair("PNG", wiResource::IMAGE),
 		std::make_pair("DDS", wiResource::IMAGE),
 		std::make_pair("TGA", wiResource::IMAGE),
-		std::make_pair("WAV", wiResource::SOUND)
+		std::make_pair("WAV", wiResource::SOUND),
+		std::make_pair("OGG", wiResource::SOUND),
 	};
 
 	std::shared_ptr<wiResource> Load(const std::string& name)
