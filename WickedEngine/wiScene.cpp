@@ -2203,7 +2203,7 @@ namespace wiScene
 					if (mesh.BLAS.IsValid())
 					{
 						uint32_t flags = mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags;
-						if (material->IsAlphaTestEnabled() || material->IsTransparent())
+						if (material->IsAlphaTestEnabled() || (material->GetRenderTypes() & RENDERTYPE_TRANSPARENT))
 						{
 							mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags &=
 								~RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
@@ -2316,26 +2316,7 @@ namespace wiScene
 
 						if (material != nullptr)
 						{
-							if (material->IsCustomShader())
-							{
-								object.rendertypeMask |= RENDERTYPE_ALL;
-							}
-							else
-							{
-								if (material->IsTransparent())
-								{
-									object.rendertypeMask |= RENDERTYPE_TRANSPARENT;
-								}
-								else
-								{
-									object.rendertypeMask |= RENDERTYPE_OPAQUE;
-								}
-
-								if (material->IsWater())
-								{
-									object.rendertypeMask |= RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
-								}
-							}
+							object.rendertypeMask |= material->GetRenderTypes();
 
 							if (material->HasPlanarReflection())
 							{

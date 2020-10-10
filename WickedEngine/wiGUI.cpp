@@ -161,9 +161,12 @@ void wiGUI::Render(CommandList cmd) const
 
 	ApplyScissor(scissorRect, cmd);
 
-	for (auto&x : widgets)
+	if (activeWidget == nullptr)
 	{
-		x->RenderTooltip(this, cmd);
+		for (auto& x : widgets)
+		{
+			x->RenderTooltip(this, cmd);
+		}
 	}
 
 	wiRenderer::GetDevice()->EventEnd(cmd);

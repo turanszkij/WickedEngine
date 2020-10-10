@@ -14,34 +14,12 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	assert(GUI && "Invalid GUI!");
 
 	materialWindow = new wiWindow(GUI, "Material Window");
-	materialWindow->SetSize(XMFLOAT2(700, 580));
+	materialWindow->SetSize(XMFLOAT2(720, 540));
 	GUI->AddWidget(materialWindow);
 
 	float x = 670, y = 0;
 	float hei = 18;
 	float step = hei + 2;
-
-	waterCheckBox = new wiCheckBox("Water: ");
-	waterCheckBox->SetTooltip("Set material as special water material.");
-	waterCheckBox->SetPos(XMFLOAT2(670, y += step));
-	waterCheckBox->SetSize(XMFLOAT2(hei, hei));
-	waterCheckBox->OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-			material->SetWater(args.bValue);
-	});
-	materialWindow->AddWidget(waterCheckBox);
-
-	planarReflCheckBox = new wiCheckBox("Planar Reflections: ");
-	planarReflCheckBox->SetTooltip("Enable planar reflections. The mesh should be a single plane for best results.");
-	planarReflCheckBox->SetPos(XMFLOAT2(670, y += step));
-	planarReflCheckBox->SetSize(XMFLOAT2(hei, hei));
-	planarReflCheckBox->OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-			material->SetPlanarReflections(args.bValue);
-	});
-	materialWindow->AddWidget(planarReflCheckBox);
 
 	shadowCasterCheckBox = new wiCheckBox("Cast Shadow: ");
 	shadowCasterCheckBox->SetTooltip("The subset will contribute to the scene shadows if enabled.");
@@ -121,11 +99,12 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	materialWindow->AddWidget(windCheckBox);
 
 	// Sliders:
-	x = 550;
+	x = 520;
+	float wid = 150;
 
 	normalMapSlider = new wiSlider(0, 4, 1, 4000, "Normalmap: ");
 	normalMapSlider->SetTooltip("How much the normal map should distort the face normals (bumpiness).");
-	normalMapSlider->SetSize(XMFLOAT2(100, hei));
+	normalMapSlider->SetSize(XMFLOAT2(wid, hei));
 	normalMapSlider->SetPos(XMFLOAT2(x, y += step));
 	normalMapSlider->OnSlide([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -136,7 +115,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	roughnessSlider = new wiSlider(0, 1, 0.5f, 1000, "Roughness: ");
 	roughnessSlider->SetTooltip("Adjust the surface roughness. Rough surfaces are less shiny, more matte.");
-	roughnessSlider->SetSize(XMFLOAT2(100, hei));
+	roughnessSlider->SetSize(XMFLOAT2(wid, hei));
 	roughnessSlider->SetPos(XMFLOAT2(x, y += step));
 	roughnessSlider->OnSlide([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -147,7 +126,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	reflectanceSlider = new wiSlider(0, 1, 0.5f, 1000, "Reflectance: ");
 	reflectanceSlider->SetTooltip("Adjust the overall surface reflectivity.");
-	reflectanceSlider->SetSize(XMFLOAT2(100, hei));
+	reflectanceSlider->SetSize(XMFLOAT2(wid, hei));
 	reflectanceSlider->SetPos(XMFLOAT2(x, y += step));
 	reflectanceSlider->OnSlide([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -158,7 +137,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	metalnessSlider = new wiSlider(0, 1, 0.0f, 1000, "Metalness: ");
 	metalnessSlider->SetTooltip("The more metal-like the surface is, the more the its color will contribute to the reflection color.");
-	metalnessSlider->SetSize(XMFLOAT2(100, hei));
+	metalnessSlider->SetSize(XMFLOAT2(wid, hei));
 	metalnessSlider->SetPos(XMFLOAT2(x, y += step));
 	metalnessSlider->OnSlide([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -169,7 +148,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	alphaRefSlider = new wiSlider(0, 1, 1.0f, 1000, "AlphaRef: ");
 	alphaRefSlider->SetTooltip("Adjust the alpha cutoff threshold. Some performance optimizations will be disabled.");
-	alphaRefSlider->SetSize(XMFLOAT2(100, hei));
+	alphaRefSlider->SetSize(XMFLOAT2(wid, hei));
 	alphaRefSlider->SetPos(XMFLOAT2(x, y += step));
 	alphaRefSlider->OnSlide([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -180,7 +159,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	refractionIndexSlider = new wiSlider(0, 1.0f, 0.02f, 1000, "Refraction Index: ");
 	refractionIndexSlider->SetTooltip("Adjust the IOR (index of refraction). It controls the amount of distortion of the scene visible through the transparent object. No effect when BlendMode is set to OPAQUE.");
-	refractionIndexSlider->SetSize(XMFLOAT2(100, hei));
+	refractionIndexSlider->SetSize(XMFLOAT2(wid, hei));
 	refractionIndexSlider->SetPos(XMFLOAT2(x, y += step));
 	refractionIndexSlider->OnSlide([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -191,7 +170,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	emissiveSlider = new wiSlider(0, 1, 0.0f, 1000, "Emissive: ");
 	emissiveSlider->SetTooltip("Adjust the light emission of the surface. The color of the light emitted is that of the color of the material.");
-	emissiveSlider->SetSize(XMFLOAT2(100, hei));
+	emissiveSlider->SetSize(XMFLOAT2(wid, hei));
 	emissiveSlider->SetPos(XMFLOAT2(x, y += step));
 	emissiveSlider->OnSlide([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -202,7 +181,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	sssSlider = new wiSlider(0, 1, 0.0f, 1000, "Subsurface Scattering: ");
 	sssSlider->SetTooltip("Adjust how much the light is scattered when entered inside the surface of the object. (SSS postprocess must be enabled)");
-	sssSlider->SetSize(XMFLOAT2(100, hei));
+	sssSlider->SetSize(XMFLOAT2(wid, hei));
 	sssSlider->SetPos(XMFLOAT2(x, y += step));
 	sssSlider->OnSlide([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -213,7 +192,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	pomSlider = new wiSlider(0, 0.1f, 0.0f, 1000, "Parallax Occlusion Mapping: ");
 	pomSlider->SetTooltip("Adjust how much the bump map should modulate the surface parallax effect.");
-	pomSlider->SetSize(XMFLOAT2(100, hei));
+	pomSlider->SetSize(XMFLOAT2(wid, hei));
 	pomSlider->SetPos(XMFLOAT2(x, y += step));
 	pomSlider->OnSlide([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -224,7 +203,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	displacementMappingSlider = new wiSlider(0, 0.1f, 0.0f, 1000, "Displacement Mapping: ");
 	displacementMappingSlider->SetTooltip("Adjust how much the bump map should modulate the geometry when using tessellation.");
-	displacementMappingSlider->SetSize(XMFLOAT2(100, hei));
+	displacementMappingSlider->SetSize(XMFLOAT2(wid, hei));
 	displacementMappingSlider->SetPos(XMFLOAT2(x, y += step));
 	displacementMappingSlider->OnSlide([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -235,7 +214,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	texAnimFrameRateSlider = new wiSlider(0, 60, 0, 60, "Texcoord anim FPS: ");
 	texAnimFrameRateSlider->SetTooltip("Adjust the texture animation frame rate (frames per second). Any value above 0 will make the material dynamic.");
-	texAnimFrameRateSlider->SetSize(XMFLOAT2(100, hei));
+	texAnimFrameRateSlider->SetSize(XMFLOAT2(wid, hei));
 	texAnimFrameRateSlider->SetPos(XMFLOAT2(x, y += step));
 	texAnimFrameRateSlider->OnSlide([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -248,7 +227,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	texAnimDirectionSliderU = new wiSlider(-0.05f, 0.05f, 0, 1000, "Texcoord anim U: ");
 	texAnimDirectionSliderU->SetTooltip("Adjust the texture animation speed along the U direction in texture space.");
-	texAnimDirectionSliderU->SetSize(XMFLOAT2(100, hei));
+	texAnimDirectionSliderU->SetSize(XMFLOAT2(wid, hei));
 	texAnimDirectionSliderU->SetPos(XMFLOAT2(x, y += step));
 	texAnimDirectionSliderU->OnSlide([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -261,7 +240,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	texAnimDirectionSliderV = new wiSlider(-0.05f, 0.05f, 0, 1000, "Texcoord anim V: ");
 	texAnimDirectionSliderV->SetTooltip("Adjust the texture animation speed along the V direction in texture space.");
-	texAnimDirectionSliderV->SetSize(XMFLOAT2(100, hei));
+	texAnimDirectionSliderV->SetSize(XMFLOAT2(wid, hei));
 	texAnimDirectionSliderV->SetPos(XMFLOAT2(x, y += step));
 	texAnimDirectionSliderV->OnSlide([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -274,7 +253,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	texMulSliderX = new wiSlider(0.01f, 10.0f, 0, 1000, "Texture TileSize X: ");
 	texMulSliderX->SetTooltip("Adjust the texture mapping size.");
-	texMulSliderX->SetSize(XMFLOAT2(100, hei));
+	texMulSliderX->SetSize(XMFLOAT2(wid, hei));
 	texMulSliderX->SetPos(XMFLOAT2(x, y += step));
 	texMulSliderX->OnSlide([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -288,7 +267,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	texMulSliderY = new wiSlider(0.01f, 10.0f, 0, 1000, "Texture TileSize Y: ");
 	texMulSliderY->SetTooltip("Adjust the texture mapping size.");
-	texMulSliderY->SetSize(XMFLOAT2(100, hei));
+	texMulSliderY->SetSize(XMFLOAT2(wid, hei));
 	texMulSliderY->SetPos(XMFLOAT2(x, y += step));
 	texMulSliderY->OnSlide([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -300,10 +279,43 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	materialWindow->AddWidget(texMulSliderY);
 
+	wid = 170;
+
+
+	shaderTypeComboBox = new wiComboBox("Shader: ");
+	shaderTypeComboBox->SetTooltip("Select a shader for this material. \nCustom shaders will also show up here (see wiRenderer:RegisterCustomShader() for more info.)");
+	shaderTypeComboBox->SetPos(XMFLOAT2(x, y += step));
+	shaderTypeComboBox->SetSize(XMFLOAT2(wid, hei));
+	shaderTypeComboBox->OnSelect([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
+			if (args.iValue >= MaterialComponent::SHADERTYPE_COUNT)
+			{
+				material->SetCustomShaderID(args.iValue - MaterialComponent::SHADERTYPE_COUNT);
+				material->userBlendMode = wiRenderer::GetCustomShaders()[material->customShaderID].preferredBlendMode;
+			}
+			else
+			{
+				material->shaderType = (MaterialComponent::SHADERTYPE)args.iValue;
+				material->SetCustomShaderID(-1);
+			}
+		}
+		});
+	shaderTypeComboBox->AddItem("PBR");
+	shaderTypeComboBox->AddItem("PBR + Planar reflections");
+	shaderTypeComboBox->AddItem("PBR + Par. occl. mapping");
+	shaderTypeComboBox->AddItem("Water");
+	for (auto& x : wiRenderer::GetCustomShaders())
+	{
+		shaderTypeComboBox->AddItem(x.name);
+	}
+	shaderTypeComboBox->SetEnabled(false);
+	materialWindow->AddWidget(shaderTypeComboBox);
 
 	blendModeComboBox = new wiComboBox("Blend mode: ");
 	blendModeComboBox->SetPos(XMFLOAT2(x, y += step));
-	blendModeComboBox->SetSize(XMFLOAT2(100, hei));
+	blendModeComboBox->SetSize(XMFLOAT2(wid, hei));
 	blendModeComboBox->OnSelect([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr && args.iValue >= 0)
@@ -320,31 +332,11 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	materialWindow->AddWidget(blendModeComboBox);
 
 
-	shaderTypeComboBox = new wiComboBox("Custom Shader: ");
-	shaderTypeComboBox->SetTooltip("Select a custom shader for his material. See wiRenderer:RegisterCustomShader() for more info.");
-	shaderTypeComboBox->SetPos(XMFLOAT2(x, y += step));
-	shaderTypeComboBox->SetSize(XMFLOAT2(100, hei));
-	shaderTypeComboBox->OnSelect([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			material->SetCustomShaderID(args.iValue - 1);
-		}
-	});
-	shaderTypeComboBox->AddItem("None");
-	for (auto& x : wiRenderer::GetCustomShaders())
-	{
-		shaderTypeComboBox->AddItem(x.name);
-	}
-	shaderTypeComboBox->SetEnabled(false);
-	materialWindow->AddWidget(shaderTypeComboBox);
-
-
 
 	shadingRateComboBox = new wiComboBox("Shading Rate: ");
 	shadingRateComboBox->SetTooltip("Select shading rate for this material. \nSelecting larger shading rate will decrease rendering quality of this material, \nbut increases performance.\nDX12 only and requires Tier1 hardware support for variable shading rate");
 	shadingRateComboBox->SetPos(XMFLOAT2(x, y += step));
-	shadingRateComboBox->SetSize(XMFLOAT2(100, hei));
+	shadingRateComboBox->SetSize(XMFLOAT2(wid, hei));
 	shadingRateComboBox->OnSelect([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
@@ -815,8 +807,6 @@ void MaterialWindow::SetEntity(Entity entity)
 		const NameComponent& name = *scene.names.GetComponent(entity);
 
 		materialNameField->SetValue(name.name);
-		waterCheckBox->SetCheck(material->IsWater());
-		planarReflCheckBox->SetCheck(material->HasPlanarReflection());
 		shadowCasterCheckBox->SetCheck(material->IsCastingShadow());
 		flipNormalMapCheckBox->SetCheck(material->IsFlipNormalMap());
 		useVertexColorsCheckBox->SetCheck(material->IsUsingVertexColors());
@@ -841,7 +831,14 @@ void MaterialWindow::SetEntity(Entity entity)
 		alphaRefSlider->SetValue(material->alphaRef);
 		materialWindow->SetEnabled(true);
 		blendModeComboBox->SetSelected((int)material->userBlendMode);
-		shaderTypeComboBox->SetSelected(max(0, material->GetCustomShaderID() + 1));
+		if (material->GetCustomShaderID() >= 0)
+		{
+			shaderTypeComboBox->SetSelected(MaterialComponent::SHADERTYPE_COUNT + material->GetCustomShaderID());
+		}
+		else
+		{
+			shaderTypeComboBox->SetSelected((int)material->shaderType);
+		}
 		shadingRateComboBox->SetSelected((int)material->shadingRate);
 
 		texture_baseColor_Button->SetText(wiHelper::GetFileNameFromPath(material->baseColorMapName));

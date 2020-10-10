@@ -132,6 +132,7 @@ inline void ApplyEmissive(in Surface surface, inout Lighting lighting)
 
 inline void LightMapping(in float2 ATLAS, inout Lighting lighting)
 {
+	[branch]
 	if (any(ATLAS))
 	{
 #ifdef LIGHTMAP_QUALITY_BICUBIC
@@ -143,13 +144,22 @@ inline void LightMapping(in float2 ATLAS, inout Lighting lighting)
 	}
 }
 
-inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, in float3x3 TBN, out float3 bumpColor)
+inline void NormalMapping(inout float4 uvsets, in float3 V, inout float3 N, in float3x3 TBN, out float3 bumpColor)
 {
-	float3 normalMap = texture_normalmap.Sample(sampler_objectshader, UV).rgb;
-	bumpColor = normalMap.rgb * 2 - 1;
-	bumpColor.g *= g_xMaterial.normalMapFlip;
-	N = normalize(lerp(N, mul(bumpColor, TBN), g_xMaterial.normalMapStrength));
-	bumpColor *= g_xMaterial.normalMapStrength;
+	[branch]
+	if (g_xMaterial.normalMapStrength > 0 && g_xMaterial.uvset_normalMap >= 0)
+	{
+		const float2 UV_normalMap = g_xMaterial.uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
+		float3 normalMap = texture_normalmap.Sample(sampler_objectshader, UV_normalMap).rgb;
+		bumpColor = normalMap.rgb * 2 - 1;
+		bumpColor.g *= g_xMaterial.normalMapFlip;
+		N = normalize(lerp(N, mul(bumpColor, TBN), g_xMaterial.normalMapStrength));
+		bumpColor *= g_xMaterial.normalMapStrength;
+	}
+	else
+	{
+		bumpColor = 0;
+	}
 }
 
 inline float3 PlanarReflection(in Surface surface, in float2 bumpColor)
@@ -163,35 +173,40 @@ inline float3 PlanarReflection(in Surface surface, in float2 bumpColor)
 #define NUM_PARALLAX_OCCLUSION_STEPS 32
 inline void ParallaxOcclusionMapping(inout float4 uvsets, in float3 V, in float3x3 TBN)
 {
-	V = mul(TBN, V);
-	float layerHeight = 1.0 / NUM_PARALLAX_OCCLUSION_STEPS;
-	float curLayerHeight = 0;
-	float2 dtex = g_xMaterial.parallaxOcclusionMapping * V.xy / NUM_PARALLAX_OCCLUSION_STEPS;
-	float2 originalTextureCoords = g_xMaterial.uvset_displacementMap == 0 ? uvsets.xy : uvsets.zw;
-	float2 currentTextureCoords = originalTextureCoords;
-	float2 derivX = ddx_coarse(currentTextureCoords);
-	float2 derivY = ddy_coarse(currentTextureCoords);
-	float heightFromTexture = 1 - texture_displacementmap.SampleGrad(sampler_linear_wrap, currentTextureCoords, derivX, derivY).r;
-	uint iter = 0;
-	[loop]
-	while (heightFromTexture > curLayerHeight && iter < NUM_PARALLAX_OCCLUSION_STEPS)
+	[branch]
+	if (g_xMaterial.parallaxOcclusionMapping > 0)
 	{
-		curLayerHeight += layerHeight;
-		currentTextureCoords -= dtex;
-		heightFromTexture = 1 - texture_displacementmap.SampleGrad(sampler_linear_wrap, currentTextureCoords, derivX, derivY).r;
-		iter++;
+		V = mul(TBN, V);
+		float layerHeight = 1.0 / NUM_PARALLAX_OCCLUSION_STEPS;
+		float curLayerHeight = 0;
+		float2 dtex = g_xMaterial.parallaxOcclusionMapping * V.xy / NUM_PARALLAX_OCCLUSION_STEPS;
+		float2 originalTextureCoords = g_xMaterial.uvset_displacementMap == 0 ? uvsets.xy : uvsets.zw;
+		float2 currentTextureCoords = originalTextureCoords;
+		float2 derivX = ddx_coarse(currentTextureCoords);
+		float2 derivY = ddy_coarse(currentTextureCoords);
+		float heightFromTexture = 1 - texture_displacementmap.SampleGrad(sampler_linear_wrap, currentTextureCoords, derivX, derivY).r;
+		uint iter = 0;
+		[loop]
+		while (heightFromTexture > curLayerHeight && iter < NUM_PARALLAX_OCCLUSION_STEPS)
+		{
+			curLayerHeight += layerHeight;
+			currentTextureCoords -= dtex;
+			heightFromTexture = 1 - texture_displacementmap.SampleGrad(sampler_linear_wrap, currentTextureCoords, derivX, derivY).r;
+			iter++;
+		}
+		float2 prevTCoords = currentTextureCoords + dtex;
+		float nextH = heightFromTexture - curLayerHeight;
+		float prevH = 1 - texture_displacementmap.SampleGrad(sampler_linear_wrap, prevTCoords, derivX, derivY).r - curLayerHeight + layerHeight;
+		float weight = nextH / (nextH - prevH);
+		float2 finalTextureCoords = prevTCoords * weight + currentTextureCoords * (1.0 - weight);
+		float2 difference = finalTextureCoords - originalTextureCoords;
+		uvsets += difference.xyxy;
 	}
-	float2 prevTCoords = currentTextureCoords + dtex;
-	float nextH = heightFromTexture - curLayerHeight;
-	float prevH = 1 - texture_displacementmap.SampleGrad(sampler_linear_wrap, prevTCoords, derivX, derivY).r - curLayerHeight + layerHeight;
-	float weight = nextH / (nextH - prevH);
-	float2 finalTextureCoords = prevTCoords * weight + currentTextureCoords * (1.0 - weight);
-	float2 difference = finalTextureCoords - originalTextureCoords;
-	uvsets += difference.xyxy;
 }
 
 inline void Refraction(in float2 ScreenCoord, inout Surface surface, inout float4 color, inout Lighting lighting)
 {
+	[branch]
 	if (g_xMaterial.refractionIndex > 0)
 	{
 		float2 size;
@@ -689,7 +704,6 @@ inline void ApplyFog(in float dist, inout float4 color)
 //	TILEDFORWARD		-	assemble object shader for tiled forward rendering
 //	TRANSPARENT			-	assemble object shader for forward or tile forward transparent rendering
 //	ENVMAPRENDERING		-	modify object shader for envmap rendering
-//	NORMALMAP			-	include normal mapping computation
 //	PLANARREFLECTION	-	include planar reflection sampling
 //	POM					-	include parallax occlusion mapping computation
 //	WATER				-	include specialized water shader code
@@ -779,13 +793,13 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	const float2 ScreenCoord = input.pos2D.xy * float2(0.5f, -0.5f) + 0.5f;
 	const float2 velocity = ((input.pos2DPrev.xy - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
 	const float2 ReprojectedScreenCoord = ScreenCoord + velocity;
+
+#ifndef WATER
+	NormalMapping(input.uvsets, surface.P, surface.N, TBN, bumpColor);
+#endif // WATER
+
 #endif // ENVMAPRENDERING
 #endif // SIMPLE_INPUT
-
-#ifdef NORMALMAP
-	const float2 UV_normalMap = g_xMaterial.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-	NormalMapping(UV_normalMap, surface.P, surface.N, TBN, bumpColor);
-#endif // NORMALMAP
 
 	// Surface map:
 	float4 surface_occlusion_roughness_metallic_reflectance;
@@ -872,7 +886,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 		surface_occlusion_roughness_metallic_reflectance += sam * float4(1, g_xMaterial.roughness, g_xMaterial.metalness, g_xMaterial.reflectance) * blend_weights.x;
 
 		[branch]
-		if (g_xMaterial.uvset_normalMap >= 0)
+		if (g_xMaterial.normalMapStrength > 0 && g_xMaterial.uvset_normalMap >= 0)
 		{
 			sam_x.xyz = texture_normalmap.Sample(sampler_objectshader, uv_x).rgb;
 			sam_y.xyz = texture_normalmap.Sample(sampler_objectshader, uv_y).rgb;
@@ -944,7 +958,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 		surface_occlusion_roughness_metallic_reflectance += sam * float4(1, g_xMaterial_blend1.roughness, g_xMaterial_blend1.metalness, g_xMaterial_blend1.reflectance) * blend_weights.y;
 
 		[branch]
-		if (g_xMaterial_blend1.uvset_normalMap >= 0)
+		if (g_xMaterial_blend1.normalMapStrength > 0 && g_xMaterial_blend1.uvset_normalMap >= 0)
 		{
 			sam_x.xyz = texture_blend1_normalmap.Sample(sampler_objectshader, uv_x).rgb;
 			sam_y.xyz = texture_blend1_normalmap.Sample(sampler_objectshader, uv_y).rgb;
@@ -1016,7 +1030,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 		surface_occlusion_roughness_metallic_reflectance += sam * float4(1, g_xMaterial_blend2.roughness, g_xMaterial_blend2.metalness, g_xMaterial_blend2.reflectance) * blend_weights.z;
 
 		[branch]
-		if (g_xMaterial_blend2.uvset_normalMap >= 0)
+		if (g_xMaterial_blend2.normalMapStrength > 0 && g_xMaterial_blend2.uvset_normalMap >= 0)
 		{
 			sam_x.xyz = texture_blend2_normalmap.Sample(sampler_objectshader, uv_x).rgb;
 			sam_y.xyz = texture_blend2_normalmap.Sample(sampler_objectshader, uv_y).rgb;
@@ -1088,7 +1102,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 		surface_occlusion_roughness_metallic_reflectance += sam * float4(1, g_xMaterial_blend3.roughness, g_xMaterial_blend3.metalness, g_xMaterial_blend3.reflectance) * blend_weights.w;
 
 		[branch]
-		if (g_xMaterial_blend3.uvset_normalMap >= 0)
+		if (g_xMaterial_blend3.normalMapStrength > 0 && g_xMaterial_blend3.uvset_normalMap >= 0)
 		{
 			sam_x.xyz = texture_blend3_normalmap.Sample(sampler_objectshader, uv_x).rgb;
 			sam_y.xyz = texture_blend3_normalmap.Sample(sampler_objectshader, uv_y).rgb;

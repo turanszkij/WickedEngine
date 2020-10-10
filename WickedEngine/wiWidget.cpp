@@ -779,7 +779,7 @@ void wiSlider::Update(wiGUI* gui, float dt)
 	wiWidget::Update(gui, dt);
 
 	valueInputField->Detach();
-	valueInputField->SetSize(XMFLOAT2(40.0f, scale.y));
+	valueInputField->SetSize(XMFLOAT2(scale.y * 2, scale.y));
 	valueInputField->SetPos(XMFLOAT2(translation.x + scale.x + 2, translation.y));
 	valueInputField->AttachTo(this);
 

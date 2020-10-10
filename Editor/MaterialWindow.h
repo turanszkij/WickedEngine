@@ -26,8 +26,6 @@ public:
 	wiWindow*	materialWindow;
 	wiTextInputField*	materialNameField;
 	wiButton* newMaterialButton;
-	wiCheckBox* waterCheckBox;
-	wiCheckBox* planarReflCheckBox;
 	wiCheckBox* shadowCasterCheckBox;
 	wiCheckBox* flipNormalMapCheckBox;
 	wiCheckBox* useVertexColorsCheckBox;

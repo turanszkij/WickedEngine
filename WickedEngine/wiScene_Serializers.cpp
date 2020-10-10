@@ -139,6 +139,27 @@ namespace wiScene
 				archive >> (uint8_t&)shadingRate;
 			}
 
+			if (archive.GetVersion() >= 50)
+			{
+				archive >> (uint32_t&)shaderType;
+				archive >> customShaderID;
+			}
+			else
+			{
+				if (_flags & _DEPRECATED_WATER)
+				{
+					shaderType = SHADERTYPE_WATER;
+				}
+				if (_flags & _DEPRECATED_PLANAR_REFLECTION)
+				{
+					shaderType = SHADERTYPE_PBR_PLANARREFLECTION;
+				}
+				if (parallaxOcclusionMapping > 0)
+				{
+					shaderType = SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING;
+				}
+			}
+
 			SetDirty();
 
 			if (!baseColorMapName.empty())
@@ -256,6 +277,12 @@ namespace wiScene
 			if (archive.GetVersion() >= 48)
 			{
 				archive << (uint8_t)shadingRate;
+			}
+
+			if (archive.GetVersion() >= 50)
+			{
+				archive << (uint32_t)shaderType;
+				archive << customShaderID;
 			}
 		}
 	}

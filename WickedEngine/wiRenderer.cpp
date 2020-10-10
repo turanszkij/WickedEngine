@@ -471,33 +471,35 @@ enum OBJECTRENDERING_ALPHATEST
 	OBJECTRENDERING_ALPHATEST_ENABLED,
 	OBJECTRENDERING_ALPHATEST_COUNT
 };
-enum OBJECTRENDERING_NORMALMAP
-{
-	OBJECTRENDERING_NORMALMAP_DISABLED,
-	OBJECTRENDERING_NORMALMAP_ENABLED,
-	OBJECTRENDERING_NORMALMAP_COUNT
-};
-enum OBJECTRENDERING_PLANARREFLECTION
-{
-	OBJECTRENDERING_PLANARREFLECTION_DISABLED,
-	OBJECTRENDERING_PLANARREFLECTION_ENABLED,
-	OBJECTRENDERING_PLANARREFLECTION_COUNT
-};
-enum OBJECTRENDERING_POM
-{
-	OBJECTRENDERING_POM_DISABLED,
-	OBJECTRENDERING_POM_ENABLED,
-	OBJECTRENDERING_POM_COUNT
-};
-PipelineState PSO_object[RENDERPASS_COUNT][BLENDMODE_COUNT][OBJECTRENDERING_DOUBLESIDED_COUNT][OBJECTRENDERING_TESSELLATION_COUNT][OBJECTRENDERING_ALPHATEST_COUNT][OBJECTRENDERING_NORMALMAP_COUNT][OBJECTRENDERING_PLANARREFLECTION_COUNT][OBJECTRENDERING_POM_COUNT];
-PipelineState PSO_object_water[RENDERPASS_COUNT];
+PipelineState PSO_object
+	[MaterialComponent::SHADERTYPE_COUNT]
+	[RENDERPASS_COUNT]
+	[BLENDMODE_COUNT]
+	[OBJECTRENDERING_DOUBLESIDED_COUNT]
+	[OBJECTRENDERING_TESSELLATION_COUNT]
+	[OBJECTRENDERING_ALPHATEST_COUNT];
 PipelineState PSO_object_terrain[RENDERPASS_COUNT];
 PipelineState PSO_object_wire;
+
+PipelineState PSO_object_hologram;
+std::vector<CustomShader> customShaders;
+int RegisterCustomShader(const CustomShader& customShader)
+{
+	int result = (int)customShaders.size();
+	customShaders.push_back(customShader);
+	return result;
+}
+const std::vector<CustomShader>& GetCustomShaders()
+{
+	return customShaders;
+}
+
 inline const PipelineState* GetObjectPSO(
 	RENDERPASS renderPass,
+	uint32_t renderTypeFlags,
 	const MeshComponent& mesh,
 	const MaterialComponent& material,
-	bool tessellation, 
+	bool tessellation,
 	bool forceAlphaTestForDithering
 )
 {
@@ -514,51 +516,28 @@ inline const PipelineState* GetObjectPSO(
 		return nullptr;
 	}
 
-	if (material.IsWater())
-	{
-		return &PSO_object_water[renderPass];
-	}
-	else if (mesh.IsTerrain())
+	if (mesh.IsTerrain())
 	{
 		return &PSO_object_terrain[renderPass];
 	}
 
-	const bool doublesided = mesh.IsDoubleSided();
-	const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
-	const bool normalmap = material.GetNormalMap() != nullptr;
-	const bool planarreflection = material.HasPlanarReflection();
-	const bool pom = material.parallaxOcclusionMapping > 0;
-	const BLENDMODE blendMode = material.GetBlendMode();
-
-	const PipelineState& pso = PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][normalmap][planarreflection][pom];
-	assert(pso.IsValid());
-	return &pso;
-}
-
-PipelineState PSO_object_hologram;
-std::vector<CustomShader> customShaders;
-int RegisterCustomShader(const CustomShader& customShader)
-{
-	int result = (int)customShaders.size();
-	customShaders.push_back(customShader);
-	return result;
-}
-const std::vector<CustomShader>& GetCustomShaders()
-{
-	return customShaders;
-}
-inline const PipelineState* GetCustomShaderPSO(RENDERPASS renderPass, uint32_t renderTypeFlags, int customShaderID)
-{
-	if (customShaderID >= 0 && customShaderID < (int)customShaders.size())
+	if (material.customShaderID >= 0 && material.customShaderID < (int)customShaders.size())
 	{
-		const CustomShader& customShader = customShaders[customShaderID];
+		const CustomShader& customShader = customShaders[material.customShaderID];
 		const CustomShader::Pass& customPass = customShader.passes[renderPass];
 		if (customPass.renderTypeFlags & renderTypeFlags)
 		{
 			return customPass.pso;
 		}
 	}
-	return nullptr;
+
+	const bool doublesided = mesh.IsDoubleSided();
+	const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
+	const BLENDMODE blendMode = material.GetBlendMode();
+
+	const PipelineState& pso = PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellation][alphatest];
+	assert(pso.IsValid());
+	return &pso;
 }
 
 ILTYPES GetILTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool transparent)
@@ -742,179 +721,84 @@ DSTYPES GetDSTYPE(RENDERPASS renderPass, bool tessellation)
 
 	return DSTYPE_COUNT;
 }
-PSTYPES GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, bool normalmap, bool planarreflection, bool pom)
+PSTYPES GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, MaterialComponent::SHADERTYPE shaderType)
 {
-	PSTYPES realPS = PSTYPE_OBJECT_SIMPLEST;
+	PSTYPES realPS = PSTYPE_COUNT;
 
 	switch (renderPass)
 	{
+	case RENDERPASS_TEXTURE:
+		realPS = PSTYPE_OBJECT_TEXTUREONLY;
+		break;
 	case RENDERPASS_DEFERRED:
-		if (normalmap)
+		if (!transparent)
 		{
-			if (pom)
+			switch (shaderType)
 			{
-				realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP_POM;
-			}
-			else
-			{
-				realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP;
-			}
-			if (planarreflection)
-			{
-				realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP_PLANARREFLECTION;
-			}
-		}
-		else
-		{
-			if (pom)
-			{
-				realPS = PSTYPE_OBJECT_DEFERRED_POM;
-			}
-			else
-			{
+			case wiScene::MaterialComponent::SHADERTYPE_PBR:
 				realPS = PSTYPE_OBJECT_DEFERRED;
-			}
-			if (planarreflection)
-			{
+				break;
+			case wiScene::MaterialComponent::SHADERTYPE_PBR_PLANARREFLECTION:
 				realPS = PSTYPE_OBJECT_DEFERRED_PLANARREFLECTION;
+				break;
+			case wiScene::MaterialComponent::SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING:
+				realPS = PSTYPE_OBJECT_DEFERRED_POM;
+				break;
+			default:
+				break;
 			}
 		}
 		break;
 	case RENDERPASS_FORWARD:
-		if (transparent)
+		switch (shaderType)
 		{
-			if (normalmap)
-			{
-				if (pom)
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP;
-				}
-				if (planarreflection)
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION;
-				}
-			}
-			else
-			{
-				if (pom)
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_TRANSPARENT_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_TRANSPARENT;
-				}
-				if (planarreflection)
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_TRANSPARENT_PLANARREFLECTION;
-				}
-			}
-		}
-		else
-		{
-			if (normalmap)
-			{
-				if (pom)
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_NORMALMAP_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_NORMALMAP;
-				}
-				if (planarreflection)
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_NORMALMAP_PLANARREFLECTION;
-				}
-			}
-			else
-			{
-				if (pom)
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_FORWARD;
-				}
-				if (planarreflection)
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_PLANARREFLECTION;
-				}
-			}
+		case wiScene::MaterialComponent::SHADERTYPE_PBR:
+			realPS = transparent ? PSTYPE_OBJECT_FORWARD_TRANSPARENT : PSTYPE_OBJECT_FORWARD;
+			break;
+		case wiScene::MaterialComponent::SHADERTYPE_PBR_PLANARREFLECTION:
+			realPS = transparent ? PSTYPE_OBJECT_FORWARD_TRANSPARENT_PLANARREFLECTION : PSTYPE_OBJECT_FORWARD_PLANARREFLECTION;
+			break;
+		case wiScene::MaterialComponent::SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING:
+			realPS = transparent ? PSTYPE_OBJECT_FORWARD_TRANSPARENT_POM : PSTYPE_OBJECT_FORWARD_POM;
+			break;
+		case wiScene::MaterialComponent::SHADERTYPE_WATER:
+			realPS = transparent ? PSTYPE_OBJECT_FORWARD_WATER : PSTYPE_COUNT;
+			break;
+		default:
+			break;
 		}
 		break;
 	case RENDERPASS_TILEDFORWARD:
-		if (transparent)
+		switch (shaderType)
 		{
-			if (normalmap)
-			{
-				if (pom)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP;
-				}
-				if (planarreflection)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION;
-				}
-			}
-			else
-			{
-				if (pom)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT;
-				}
-				if (planarreflection)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_PLANARREFLECTION;
-				}
-			}
+		case wiScene::MaterialComponent::SHADERTYPE_PBR:
+			realPS = transparent ? PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT : PSTYPE_OBJECT_TILEDFORWARD;
+			break;
+		case wiScene::MaterialComponent::SHADERTYPE_PBR_PLANARREFLECTION:
+			realPS = transparent ? PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_PLANARREFLECTION : PSTYPE_OBJECT_TILEDFORWARD_PLANARREFLECTION;
+			break;
+		case wiScene::MaterialComponent::SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING:
+			realPS = transparent ? PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_POM : PSTYPE_OBJECT_TILEDFORWARD_POM;
+			break;
+		case wiScene::MaterialComponent::SHADERTYPE_WATER:
+			realPS = transparent ? PSTYPE_OBJECT_TILEDFORWARD_WATER : PSTYPE_COUNT;
+			break;
+		default:
+			break;
+		}
+		break;
+	case RENDERPASS_DEPTHONLY:
+		if (alphatest)
+		{
+			realPS = PSTYPE_OBJECT_ALPHATESTONLY;
 		}
 		else
 		{
-			if (normalmap)
-			{
-				if (pom)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP;
-				}
-				if (planarreflection)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_PLANARREFLECTION;
-				}
-			}
-			else
-			{
-				if (pom)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD;
-				}
-				if (planarreflection)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_PLANARREFLECTION;
-				}
-			}
+			realPS = PSTYPE_COUNT;
 		}
+		break;
+	case RENDERPASS_ENVMAPCAPTURE:
+		realPS = PSTYPE_ENVMAP;
 		break;
 	case RENDERPASS_SHADOW:
 		if (transparent)
@@ -943,24 +827,10 @@ PSTYPES GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, bool 
 			realPS = PSTYPE_COUNT;
 		}
 		break;
-	case RENDERPASS_ENVMAPCAPTURE:
-		realPS = PSTYPE_ENVMAP;
-		break;
-	case RENDERPASS_DEPTHONLY:
-		if (alphatest)
-		{
-			realPS = PSTYPE_OBJECT_ALPHATESTONLY;
-		}
-		else
-		{
-			realPS = PSTYPE_COUNT;
-		}
-		break;
 	case RENDERPASS_VOXELIZE:
 		realPS = PSTYPE_VOXELIZER;
 		break;
-	case RENDERPASS_TEXTURE:
-		realPS = PSTYPE_OBJECT_TEXTUREONLY;
+	default:
 		break;
 	}
 
@@ -1237,42 +1107,27 @@ void LoadShaders()
 
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED], "objectPS_deferred.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP], "objectPS_deferred_normalmap.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_POM], "objectPS_deferred_pom.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_PLANARREFLECTION], "objectPS_deferred_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP_POM], "objectPS_deferred_normalmap_pom.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP_PLANARREFLECTION], "objectPS_deferred_normalmap_planarreflection.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_TERRAIN], "objectPS_deferred_terrain.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_DEFERRED], "impostorPS_deferred.cso"); });
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD], "objectPS_forward.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP], "objectPS_forward_normalmap.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT], "objectPS_forward_transparent.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP], "objectPS_forward_transparent_normalmap.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_PLANARREFLECTION], "objectPS_forward_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP_PLANARREFLECTION], "objectPS_forward_normalmap_planarreflection.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_PLANARREFLECTION], "objectPS_forward_transparent_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION], "objectPS_forward_transparent_normalmap_planarreflection.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_POM], "objectPS_forward_pom.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP_POM], "objectPS_forward_normalmap_pom.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_POM], "objectPS_forward_transparent_pom.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_POM], "objectPS_forward_transparent_normalmap_pom.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_WATER], "objectPS_forward_water.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TERRAIN], "objectPS_forward_terrain.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_FORWARD], "impostorPS_forward.cso"); });
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD], "objectPS_tiledforward.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP], "objectPS_tiledforward_normalmap.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT], "objectPS_tiledforward_transparent.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP], "objectPS_tiledforward_transparent_normalmap.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_PLANARREFLECTION], "objectPS_tiledforward_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_PLANARREFLECTION], "objectPS_tiledforward_normalmap_planarreflection.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_PLANARREFLECTION], "objectPS_tiledforward_transparent_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION], "objectPS_tiledforward_transparent_normalmap_planarreflection.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_POM], "objectPS_tiledforward_pom.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_POM], "objectPS_tiledforward_normalmap_pom.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_POM], "objectPS_tiledforward_transparent_pom.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_POM], "objectPS_tiledforward_transparent_normalmap_pom.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_WATER], "objectPS_tiledforward_water.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TERRAIN], "objectPS_tiledforward_terrain.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_TILEDFORWARD], "impostorPS_tiledforward.cso"); });
@@ -1451,142 +1306,135 @@ void LoadShaders()
 	wiJobSystem::Wait(ctx);
 
 	// default objectshaders:
-	for (int renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
-	{
-		for (int blendMode = 0; blendMode < BLENDMODE_COUNT; ++blendMode)
+	wiJobSystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [device](wiJobArgs args) {
+		MaterialComponent::SHADERTYPE shaderType = (MaterialComponent::SHADERTYPE)args.jobIndex;
+
+		for (int renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
 		{
-			for (int doublesided = 0; doublesided < OBJECTRENDERING_DOUBLESIDED_COUNT; ++doublesided)
+			for (int blendMode = 0; blendMode < BLENDMODE_COUNT; ++blendMode)
 			{
-				for (int tessellation = 0; tessellation < OBJECTRENDERING_TESSELLATION_COUNT; ++tessellation)
+				for (int doublesided = 0; doublesided < OBJECTRENDERING_DOUBLESIDED_COUNT; ++doublesided)
 				{
-					for (int alphatest = 0; alphatest < OBJECTRENDERING_ALPHATEST_COUNT; ++alphatest)
+					for (int tessellation = 0; tessellation < OBJECTRENDERING_TESSELLATION_COUNT; ++tessellation)
 					{
-						for (int normalmap = 0; normalmap < OBJECTRENDERING_NORMALMAP_COUNT; ++normalmap)
+						for (int alphatest = 0; alphatest < OBJECTRENDERING_ALPHATEST_COUNT; ++alphatest)
 						{
-							for (int planarreflection = 0; planarreflection < OBJECTRENDERING_PLANARREFLECTION_COUNT; ++planarreflection)
+							const bool transparency = blendMode != BLENDMODE_OPAQUE;
+							VSTYPES realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
+							ILTYPES realVL = GetILTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
+							HSTYPES realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation);
+							DSTYPES realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation);
+							GSTYPES realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest);
+							PSTYPES realPS = GetPSTYPE((RENDERPASS)renderPass, alphatest, transparency, shaderType);
+
+							if (tessellation && (realHS == HSTYPE_COUNT || realDS == DSTYPE_COUNT))
 							{
-								for (int pom = 0; pom < OBJECTRENDERING_POM_COUNT; ++pom)
-								{
-									wiJobSystem::Execute(ctx, [device, renderPass, blendMode, doublesided, tessellation, alphatest, normalmap, planarreflection, pom](wiJobArgs args) {
-										const bool transparency = blendMode != BLENDMODE_OPAQUE;
-										VSTYPES realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
-										ILTYPES realVL = GetILTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
-										HSTYPES realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation);
-										DSTYPES realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation);
-										GSTYPES realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest);
-										PSTYPES realPS = GetPSTYPE((RENDERPASS)renderPass, alphatest, transparency, normalmap, planarreflection, pom);
-
-										if (tessellation && (realHS == HSTYPE_COUNT || realDS == DSTYPE_COUNT))
-										{
-											return; // if no job, this must be continue!!
-										}
-
-										PipelineStateDesc desc;
-										desc.il = realVL < ILTYPE_COUNT ? &inputLayouts[realVL] : nullptr;
-										desc.vs = realVS < VSTYPE_COUNT ? &vertexShaders[realVS] : nullptr;
-										desc.hs = realHS < HSTYPE_COUNT ? &hullShaders[realHS] : nullptr;
-										desc.ds = realDS < DSTYPE_COUNT ? &domainShaders[realDS] : nullptr;
-										desc.gs = realGS < GSTYPE_COUNT ? &geometryShaders[realGS] : nullptr;
-										desc.ps = realPS < PSTYPE_COUNT ? &pixelShaders[realPS] : nullptr;
-
-										switch (blendMode)
-										{
-										case BLENDMODE_OPAQUE:
-											desc.bs = &blendStates[BSTYPE_OPAQUE];
-											break;
-										case BLENDMODE_ALPHA:
-											desc.bs = &blendStates[BSTYPE_TRANSPARENT];
-											break;
-										case BLENDMODE_ADDITIVE:
-											desc.bs = &blendStates[BSTYPE_ADDITIVE];
-											break;
-										case BLENDMODE_PREMULTIPLIED:
-											desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
-											break;
-										default:
-											assert(0);
-											break;
-										}
-
-										switch (renderPass)
-										{
-										case RENDERPASS_DEPTHONLY:
-										case RENDERPASS_SHADOW:
-										case RENDERPASS_SHADOWCUBE:
-											desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOWMAP : BSTYPE_COLORWRITEDISABLE];
-											break;
-										default:
-											break;
-										}
-
-										switch (renderPass)
-										{
-										case RENDERPASS_SHADOW:
-										case RENDERPASS_SHADOWCUBE:
-											desc.dss = &depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
-											break;
-										case RENDERPASS_FORWARD:
-										case RENDERPASS_TILEDFORWARD:
-											if (blendMode == BLENDMODE_ADDITIVE)
-											{
-												desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
-											}
-											else
-											{
-												desc.dss = &depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
-											}
-											break;
-										case RENDERPASS_ENVMAPCAPTURE:
-											desc.dss = &depthStencils[DSSTYPE_ENVMAP];
-											break;
-										case RENDERPASS_VOXELIZE:
-											desc.dss = &depthStencils[DSSTYPE_XRAY];
-											break;
-										default:
-											if (blendMode == BLENDMODE_ADDITIVE)
-											{
-												desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
-											}
-											else
-											{
-												desc.dss = &depthStencils[DSSTYPE_DEFAULT];
-											}
-											break;
-										}
-
-										switch (renderPass)
-										{
-										case RENDERPASS_SHADOW:
-										case RENDERPASS_SHADOWCUBE:
-											desc.rs = &rasterizers[doublesided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
-											break;
-										case RENDERPASS_VOXELIZE:
-											desc.rs = &rasterizers[RSTYPE_VOXELIZE];
-											break;
-										default:
-											desc.rs = &rasterizers[doublesided ? RSTYPE_DOUBLESIDED : RSTYPE_FRONT];
-											break;
-										}
-
-										if (tessellation)
-										{
-											desc.pt = PATCHLIST;
-										}
-										else
-										{
-											desc.pt = TRIANGLELIST;
-										}
-
-										device->CreatePipelineState(&desc, &PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][normalmap][planarreflection][pom]);
-										});
-								}
+								continue;
 							}
+
+							PipelineStateDesc desc;
+							desc.il = realVL < ILTYPE_COUNT ? &inputLayouts[realVL] : nullptr;
+							desc.vs = realVS < VSTYPE_COUNT ? &vertexShaders[realVS] : nullptr;
+							desc.hs = realHS < HSTYPE_COUNT ? &hullShaders[realHS] : nullptr;
+							desc.ds = realDS < DSTYPE_COUNT ? &domainShaders[realDS] : nullptr;
+							desc.gs = realGS < GSTYPE_COUNT ? &geometryShaders[realGS] : nullptr;
+							desc.ps = realPS < PSTYPE_COUNT ? &pixelShaders[realPS] : nullptr;
+
+							switch (blendMode)
+							{
+							case BLENDMODE_OPAQUE:
+								desc.bs = &blendStates[BSTYPE_OPAQUE];
+								break;
+							case BLENDMODE_ALPHA:
+								desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+								break;
+							case BLENDMODE_ADDITIVE:
+								desc.bs = &blendStates[BSTYPE_ADDITIVE];
+								break;
+							case BLENDMODE_PREMULTIPLIED:
+								desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
+								break;
+							default:
+								assert(0);
+								break;
+							}
+
+							switch (renderPass)
+							{
+							case RENDERPASS_DEPTHONLY:
+							case RENDERPASS_SHADOW:
+							case RENDERPASS_SHADOWCUBE:
+								desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOWMAP : BSTYPE_COLORWRITEDISABLE];
+								break;
+							default:
+								break;
+							}
+
+							switch (renderPass)
+							{
+							case RENDERPASS_SHADOW:
+							case RENDERPASS_SHADOWCUBE:
+								desc.dss = &depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
+								break;
+							case RENDERPASS_FORWARD:
+							case RENDERPASS_TILEDFORWARD:
+								if (blendMode == BLENDMODE_ADDITIVE)
+								{
+									desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+								}
+								else
+								{
+									desc.dss = &depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
+								}
+								break;
+							case RENDERPASS_ENVMAPCAPTURE:
+								desc.dss = &depthStencils[DSSTYPE_ENVMAP];
+								break;
+							case RENDERPASS_VOXELIZE:
+								desc.dss = &depthStencils[DSSTYPE_XRAY];
+								break;
+							default:
+								if (blendMode == BLENDMODE_ADDITIVE)
+								{
+									desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+								}
+								else
+								{
+									desc.dss = &depthStencils[DSSTYPE_DEFAULT];
+								}
+								break;
+							}
+
+							switch (renderPass)
+							{
+							case RENDERPASS_SHADOW:
+							case RENDERPASS_SHADOWCUBE:
+								desc.rs = &rasterizers[doublesided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
+								break;
+							case RENDERPASS_VOXELIZE:
+								desc.rs = &rasterizers[RSTYPE_VOXELIZE];
+								break;
+							default:
+								desc.rs = &rasterizers[doublesided ? RSTYPE_DOUBLESIDED : RSTYPE_FRONT];
+								break;
+							}
+
+							if (tessellation)
+							{
+								desc.pt = PATCHLIST;
+							}
+							else
+							{
+								desc.pt = TRIANGLELIST;
+							}
+
+							device->CreatePipelineState(&desc, &PSO_object[shaderType][renderPass][blendMode][doublesided][tessellation][alphatest]);
 						}
 					}
 				}
 			}
 		}
-	}
+	});
 
 	wiJobSystem::Dispatch(ctx, RENDERPASS_COUNT, 1, [device](wiJobArgs args) {
 
@@ -1664,42 +1512,15 @@ void LoadShaders()
 
 		CustomShader customShader;
 		customShader.name = "Hologram";
+		customShader.preferredBlendMode = BLENDMODE_ADDITIVE;
 		customShader.passes[RENDERPASS_FORWARD].pso = &PSO_object_hologram;
+		customShader.passes[RENDERPASS_FORWARD].renderTypeFlags = RENDERTYPE_TRANSPARENT;
 		customShader.passes[RENDERPASS_TILEDFORWARD].pso = &PSO_object_hologram;
+		customShader.passes[RENDERPASS_TILEDFORWARD].renderTypeFlags = RENDERTYPE_TRANSPARENT;
 		RegisterCustomShader(customShader);
 		});
 
 
-	wiJobSystem::Execute(ctx, [device](wiJobArgs args) {
-		PipelineStateDesc desc;
-		desc.vs = &vertexShaders[VSTYPE_OBJECT_COMMON];
-		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
-		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
-		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
-		desc.il = &inputLayouts[ILTYPE_OBJECT_ALL];
-
-		desc.ps = &pixelShaders[PSTYPE_OBJECT_FORWARD_WATER];
-		device->CreatePipelineState(&desc, &PSO_object_water[RENDERPASS_FORWARD]);
-
-		desc.ps = &pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_WATER];
-		device->CreatePipelineState(&desc, &PSO_object_water[RENDERPASS_TILEDFORWARD]);
-
-		desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
-		desc.rs = &rasterizers[RSTYPE_SHADOW];
-		desc.bs = &blendStates[BSTYPE_TRANSPARENTSHADOWMAP];
-		desc.vs = &vertexShaders[VSTYPE_SHADOW_TRANSPARENT];
-		desc.ps = &pixelShaders[PSTYPE_SHADOW_WATER];
-
-		device->CreatePipelineState(&desc, &PSO_object_water[RENDERPASS_SHADOW]);
-
-		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
-		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
-		desc.bs = &blendStates[BSTYPE_OPAQUE];
-		desc.il = &inputLayouts[GetILTYPE(RENDERPASS_ENVMAPCAPTURE, false, false, true)];
-		desc.vs = &vertexShaders[GetVSTYPE(RENDERPASS_ENVMAPCAPTURE, false, false, true)];
-		desc.ps = &pixelShaders[GetPSTYPE(RENDERPASS_ENVMAPCAPTURE, false, true, false, false, false)];
-		device->CreatePipelineState(&desc, &PSO_object_water[RENDERPASS_ENVMAPCAPTURE]);
-		});
 	wiJobSystem::Execute(ctx, [device](wiJobArgs args) {
 		PipelineStateDesc desc;
 		desc.vs = &vertexShaders[VSTYPE_OBJECT_SIMPLE];
@@ -3314,41 +3135,21 @@ void RenderMeshes(
 				}
 				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
-				const PipelineState* pso = nullptr;
-				if (material.IsCustomShader())
-				{
-					pso = GetCustomShaderPSO(renderPass, renderTypeFlags, material.GetCustomShaderID());
-				}
-				else
-				{
-					pso = GetObjectPSO(renderPass, mesh, material, tessellatorRequested, forceAlphaTestForDithering);
-				}
+				bool subsetRenderable = renderTypeFlags & material.GetRenderTypes();
 
-				if (pso == nullptr || !pso->IsValid())
-				{
-					continue;
-				}
-
-				bool subsetRenderable = false;
-
-				if (renderTypeFlags & RENDERTYPE_OPAQUE)
-				{
-					subsetRenderable = subsetRenderable || (!material.IsTransparent() && !material.IsWater());
-				}
-				if (renderTypeFlags & RENDERTYPE_TRANSPARENT)
-				{
-					subsetRenderable = subsetRenderable || material.IsTransparent();
-				}
-				if (renderTypeFlags & RENDERTYPE_WATER)
-				{
-					subsetRenderable = subsetRenderable || material.IsWater();
-				}
 				if (renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_SHADOWCUBE)
 				{
 					subsetRenderable = subsetRenderable && material.IsCastingShadow();
 				}
 
 				if (!subsetRenderable)
+				{
+					continue;
+				}
+
+				const PipelineState* pso = GetObjectPSO(renderPass, renderTypeFlags, mesh, material, tessellatorRequested, forceAlphaTestForDithering);
+
+				if (pso == nullptr || !pso->IsValid())
 				{
 					continue;
 				}
@@ -3363,7 +3164,7 @@ void RenderMeshes(
 					// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
 					if ((renderPass == RENDERPASS_DEPTHONLY || renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_SHADOWCUBE) && !material.IsAlphaTestEnabled() && !forceAlphaTestForDithering)
 					{
-						if (renderPass == RENDERPASS_SHADOW && material.IsTransparent())
+						if (renderPass == RENDERPASS_SHADOW && (renderTypeFlags & RENDERTYPE_TRANSPARENT))
 						{
 							boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
 						}

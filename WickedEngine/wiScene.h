@@ -110,8 +110,8 @@ namespace wiScene
 			EMPTY = 0,
 			DIRTY = 1 << 0,
 			CAST_SHADOW = 1 << 1,
-			PLANAR_REFLECTION = 1 << 2,
-			WATER = 1 << 3,
+			_DEPRECATED_PLANAR_REFLECTION = 1 << 2,
+			_DEPRECATED_WATER = 1 << 3,
 			FLIP_NORMALMAP = 1 << 4,
 			USE_VERTEXCOLORS = 1 << 5,
 			SPECULAR_GLOSSINESS_WORKFLOW = 1 << 6,
@@ -120,6 +120,15 @@ namespace wiScene
 			USE_WIND = 1 << 9,
 		};
 		uint32_t _flags = DIRTY | CAST_SHADOW;
+
+		enum SHADERTYPE
+		{
+			SHADERTYPE_PBR,
+			SHADERTYPE_PBR_PLANARREFLECTION,
+			SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING,
+			SHADERTYPE_WATER,
+			SHADERTYPE_COUNT
+		} shaderType = SHADERTYPE_PBR;
 
 		STENCILREF engineStencilRef = STENCILREF_DEFAULT;
 		uint8_t userStencilRef = 0;
@@ -191,19 +200,16 @@ namespace wiScene
 		inline float GetEmissiveStrength() const { return emissiveColor.w; }
 		inline int GetCustomShaderID() const { return customShaderID; }
 
+		inline bool HasPlanarReflection() const { return shaderType == SHADERTYPE_PBR_PLANARREFLECTION || shaderType == SHADERTYPE_WATER; }
+
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline bool IsDirty() const { return _flags & DIRTY; }
 
 		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
-		inline void SetPlanarReflections(bool value) { if (value) { _flags |= PLANAR_REFLECTION; } else { _flags &= ~PLANAR_REFLECTION; } }
-		inline void SetWater(bool value) { if (value) { _flags |= WATER; } else { _flags &= ~WATER; } }
 		inline void SetOcclusionEnabled_Primary(bool value) { SetDirty(); if (value) { _flags |= OCCLUSION_PRIMARY; } else { _flags &= ~OCCLUSION_PRIMARY; } }
 		inline void SetOcclusionEnabled_Secondary(bool value) { SetDirty(); if (value) { _flags |= OCCLUSION_SECONDARY; } else { _flags &= ~OCCLUSION_SECONDARY; } }
 
-		inline bool IsTransparent() const { return userBlendMode != BLENDMODE_OPAQUE || IsCustomShader() || IsWater(); }
-		inline BLENDMODE GetBlendMode() const { if (userBlendMode == BLENDMODE_OPAQUE && IsTransparent()) { return BLENDMODE_ALPHA; } else return userBlendMode; }
-		inline bool IsWater() const { return _flags & WATER; }
-		inline bool HasPlanarReflection() const { return (_flags & PLANAR_REFLECTION) || IsWater(); }
+		inline BLENDMODE GetBlendMode() const { if (userBlendMode == BLENDMODE_OPAQUE && (GetRenderTypes() & RENDERTYPE_TRANSPARENT)) return BLENDMODE_ALPHA; else return userBlendMode; }
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
 		inline bool IsAlphaTestEnabled() const { return alphaRef <= 1.0f - 1.0f / 256.0f; }
 		inline bool IsFlipNormalMap() const { return _flags & FLIP_NORMALMAP; }
@@ -239,6 +245,19 @@ namespace wiScene
 		inline void SetUVSet_DisplacementMap(uint32_t value) { uvset_displacementMap = value; SetDirty(); }
 		inline void SetUVSet_EmissiveMap(uint32_t value) { uvset_emissiveMap = value; SetDirty(); }
 		inline void SetUVSet_OcclusionMap(uint32_t value) { uvset_occlusionMap = value; SetDirty(); }
+
+		inline uint32_t GetRenderTypes() const
+		{
+			if (shaderType == SHADERTYPE_WATER)
+			{
+				return RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
+			}
+			if (userBlendMode == BLENDMODE_OPAQUE)
+			{
+				return RENDERTYPE_OPAQUE;
+			}
+			return RENDERTYPE_TRANSPARENT;
+		}
 
 		ShaderMaterial CreateShaderMaterial() const;
 

@@ -607,10 +607,11 @@ namespace wiRenderer
 	struct CustomShader
 	{
 		std::string name;
+		BLENDMODE preferredBlendMode = BLENDMODE_OPAQUE;
 
 		struct Pass
 		{
-			uint32_t renderTypeFlags = RENDERTYPE_TRANSPARENT;
+			uint32_t renderTypeFlags = RENDERTYPE_OPAQUE;
 			wiGraphics::PipelineState* pso = nullptr;
 		};
 		Pass passes[RENDERPASS_COUNT] = {};
