@@ -481,7 +481,6 @@ PipelineState PSO_object
 PipelineState PSO_object_terrain[RENDERPASS_COUNT];
 PipelineState PSO_object_wire;
 
-PipelineState PSO_object_hologram;
 std::vector<CustomShader> customShaders;
 int RegisterCustomShader(const CustomShader& customShader)
 {
@@ -521,19 +520,23 @@ inline const PipelineState* GetObjectPSO(
 		return &PSO_object_terrain[renderPass];
 	}
 
+
 	if (material.customShaderID >= 0 && material.customShaderID < (int)customShaders.size())
 	{
 		const CustomShader& customShader = customShaders[material.customShaderID];
-		const CustomShader::Pass& customPass = customShader.passes[renderPass];
-		if (customPass.renderTypeFlags & renderTypeFlags)
+		if (renderTypeFlags & customShader.renderTypeFlags)
 		{
-			return customPass.pso;
+			return &customShader.pso[renderPass];
+		}
+		else
+		{
+			return nullptr;
 		}
 	}
 
+	const BLENDMODE blendMode = material.GetBlendMode();
 	const bool doublesided = mesh.IsDoubleSided();
 	const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
-	const BLENDMODE blendMode = material.GetBlendMode();
 
 	const PipelineState& pso = PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellation][alphatest];
 	assert(pso.IsValid());
@@ -1508,15 +1511,14 @@ void LoadShaders()
 		desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 		desc.pt = TRIANGLELIST;
 
-		device->CreatePipelineState(&desc, &PSO_object_hologram);
+		PipelineState pso;
+		device->CreatePipelineState(&desc, &pso);
 
 		CustomShader customShader;
 		customShader.name = "Hologram";
-		customShader.preferredBlendMode = BLENDMODE_ADDITIVE;
-		customShader.passes[RENDERPASS_FORWARD].pso = &PSO_object_hologram;
-		customShader.passes[RENDERPASS_FORWARD].renderTypeFlags = RENDERTYPE_TRANSPARENT;
-		customShader.passes[RENDERPASS_TILEDFORWARD].pso = &PSO_object_hologram;
-		customShader.passes[RENDERPASS_TILEDFORWARD].renderTypeFlags = RENDERTYPE_TRANSPARENT;
+		customShader.renderTypeFlags = RENDERTYPE_TRANSPARENT;
+		customShader.pso[RENDERPASS_FORWARD] = pso;
+		customShader.pso[RENDERPASS_TILEDFORWARD] = pso;
 		RegisterCustomShader(customShader);
 		});
 
@@ -4038,7 +4040,8 @@ void UpdateRenderData(CommandList cmd)
 		if (materialIndex < scene.materials.GetCount())
 		{
 			const MaterialComponent& material = scene.materials[materialIndex];
-			ShaderMaterial materialGPUData = material.CreateShaderMaterial();
+			ShaderMaterial materialGPUData;
+			material.WriteShaderMaterial(&materialGPUData);
 			device->UpdateBuffer(&material.constantBuffer, &materialGPUData, cmd);
 		}
 	}

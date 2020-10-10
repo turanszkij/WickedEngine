@@ -144,7 +144,8 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 			for (auto& subset : mesh.subsets)
 			{
 				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
-				ShaderMaterial global_material = material.CreateShaderMaterial();
+				ShaderMaterial global_material;
+				material.WriteShaderMaterial(&global_material);
 
 				// Add extended properties:
 				const TextureDesc& desc = globalMaterialAtlas.GetDesc();

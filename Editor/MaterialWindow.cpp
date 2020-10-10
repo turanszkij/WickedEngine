@@ -281,38 +281,6 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	wid = 170;
 
-
-	shaderTypeComboBox = new wiComboBox("Shader: ");
-	shaderTypeComboBox->SetTooltip("Select a shader for this material. \nCustom shaders will also show up here (see wiRenderer:RegisterCustomShader() for more info.)");
-	shaderTypeComboBox->SetPos(XMFLOAT2(x, y += step));
-	shaderTypeComboBox->SetSize(XMFLOAT2(wid, hei));
-	shaderTypeComboBox->OnSelect([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			if (args.iValue >= MaterialComponent::SHADERTYPE_COUNT)
-			{
-				material->SetCustomShaderID(args.iValue - MaterialComponent::SHADERTYPE_COUNT);
-				material->userBlendMode = wiRenderer::GetCustomShaders()[material->customShaderID].preferredBlendMode;
-			}
-			else
-			{
-				material->shaderType = (MaterialComponent::SHADERTYPE)args.iValue;
-				material->SetCustomShaderID(-1);
-			}
-		}
-		});
-	shaderTypeComboBox->AddItem("PBR");
-	shaderTypeComboBox->AddItem("PBR + Planar reflections");
-	shaderTypeComboBox->AddItem("PBR + Par. occl. mapping");
-	shaderTypeComboBox->AddItem("Water");
-	for (auto& x : wiRenderer::GetCustomShaders())
-	{
-		shaderTypeComboBox->AddItem(x.name);
-	}
-	shaderTypeComboBox->SetEnabled(false);
-	materialWindow->AddWidget(shaderTypeComboBox);
-
 	blendModeComboBox = new wiComboBox("Blend mode: ");
 	blendModeComboBox->SetPos(XMFLOAT2(x, y += step));
 	blendModeComboBox->SetSize(XMFLOAT2(wid, hei));
@@ -330,6 +298,39 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	blendModeComboBox->SetEnabled(false);
 	blendModeComboBox->SetTooltip("Set the blend mode of the material.");
 	materialWindow->AddWidget(blendModeComboBox);
+
+
+	shaderTypeComboBox = new wiComboBox("Shader: ");
+	shaderTypeComboBox->SetTooltip("Select a shader for this material. \nCustom shaders (*) will also show up here (see wiRenderer:RegisterCustomShader() for more info.)\nNote that custom shaders (*) can't select between blend modes, as they are created with an explicit blend mode.");
+	shaderTypeComboBox->SetPos(XMFLOAT2(x, y += step));
+	shaderTypeComboBox->SetSize(XMFLOAT2(wid, hei));
+	shaderTypeComboBox->OnSelect([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
+			if (args.iValue >= MaterialComponent::SHADERTYPE_COUNT)
+			{
+				material->SetCustomShaderID(args.iValue - MaterialComponent::SHADERTYPE_COUNT);
+				blendModeComboBox->SetEnabled(false);
+			}
+			else
+			{
+				material->shaderType = (MaterialComponent::SHADERTYPE)args.iValue;
+				material->SetCustomShaderID(-1);
+				blendModeComboBox->SetEnabled(true);
+			}
+		}
+		});
+	shaderTypeComboBox->AddItem("PBR");
+	shaderTypeComboBox->AddItem("PBR + Planar reflections");
+	shaderTypeComboBox->AddItem("PBR + Par. occl. mapping");
+	shaderTypeComboBox->AddItem("Water");
+	for (auto& x : wiRenderer::GetCustomShaders())
+	{
+		shaderTypeComboBox->AddItem("*" + x.name);
+	}
+	shaderTypeComboBox->SetEnabled(false);
+	materialWindow->AddWidget(shaderTypeComboBox);
 
 
 

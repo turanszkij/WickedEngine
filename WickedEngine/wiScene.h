@@ -246,20 +246,8 @@ namespace wiScene
 		inline void SetUVSet_EmissiveMap(uint32_t value) { uvset_emissiveMap = value; SetDirty(); }
 		inline void SetUVSet_OcclusionMap(uint32_t value) { uvset_occlusionMap = value; SetDirty(); }
 
-		inline uint32_t GetRenderTypes() const
-		{
-			if (shaderType == SHADERTYPE_WATER)
-			{
-				return RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
-			}
-			if (userBlendMode == BLENDMODE_OPAQUE)
-			{
-				return RENDERTYPE_OPAQUE;
-			}
-			return RENDERTYPE_TRANSPARENT;
-		}
-
-		ShaderMaterial CreateShaderMaterial() const;
+		void WriteShaderMaterial(ShaderMaterial* dest) const;
+		uint32_t GetRenderTypes() const;
 
 		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
 	};

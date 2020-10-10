@@ -93,6 +93,7 @@ This is a reference for the C++ features of Wicked Engine
 		15. [Loading Shaders](#loading-shaders)
 		16. [Debug Draw](#debug-draw)
 		17. [Animation Skinning](#animation-skinning)
+		18. [Custom Shaders](#custom-shaders)
 	3. [wiEnums](#wienums)
 	4. [wiImage](#wiimage)
 	5. [wiFont](#wifont)
@@ -838,6 +839,11 @@ Configuring other debug rendering functionality:
 [MeshComponents](#meshcomponent) that have their `armatureID` associated with an [ArmatureComponent](#armaturecomponent) will be skinned inside the `wiRenderer::UpdateRenderData()` function. This means that their vertex buffer will be animated with compute shaders, and the animated vertex buffer will be used throughout the rest of the frame. 
 
 If the [ArmatureComponent](#armaturecomponent) has less than `SKINNING_COMPUTE_THREADCOUNT` amount of bones, an optimized version of the skinning will be performed that uses shared memory. The user can disable this with the `wiRenderer::SetLDSSkinningEnabled()` function if the optimization proves to be worse on the target platform.
+
+#### Custom Shaders
+Apart from the built in material shaders, the developer can create a library of custom shaders from the application side and assign them to materials. The `wiRenderer::RegisterCustomShader()` function is used to register a custom shader from the application. The function returns the ID of the custom shader that can be input to the `MaterialComponent::SetCustomShaderID()` function. 
+
+The custom shader is essentially the combination of a [Pipeline State Object](#pipeline-state) for each `RENDERPASS` and a `RENDERTYPE` flag that specifies whether it is to be drawn in a transparent or opaque, or other kind of pass within a `RENDERPASS`. The developer is responsible of creating a fully valid pipeline state to render a mesh. If a pipeline state is left as empty for a combination of `RENDERPASS` and `RENDERTYPE`, then the material will simply be skipped and not rendered.
 
 
 ### wiEnums

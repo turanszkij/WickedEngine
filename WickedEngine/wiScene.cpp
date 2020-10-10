@@ -271,55 +271,69 @@ namespace wiScene
 		}
 		return wiTextureHelper::getWhite();
 	}
-	ShaderMaterial MaterialComponent::CreateShaderMaterial() const
+	void MaterialComponent::WriteShaderMaterial(ShaderMaterial* dest) const
 	{
-		ShaderMaterial retVal;
-		retVal.baseColor = baseColor;
-		retVal.emissiveColor = emissiveColor;
-		retVal.texMulAdd = texMulAdd;
-		retVal.roughness = roughness;
-		retVal.reflectance = reflectance;
-		retVal.metalness = metalness;
-		retVal.refractionIndex = refractionIndex;
-		retVal.subsurfaceScattering = subsurfaceScattering;
-		retVal.normalMapStrength = (normalMap == nullptr ? 0 : normalMapStrength);
-		retVal.normalMapFlip = (_flags & MaterialComponent::FLIP_NORMALMAP ? -1.0f : 1.0f);
-		retVal.parallaxOcclusionMapping = parallaxOcclusionMapping;
-		retVal.displacementMapping = displacementMapping;
-		retVal.uvset_baseColorMap = baseColorMap == nullptr ? -1 : (int)uvset_baseColorMap;
-		retVal.uvset_surfaceMap = surfaceMap == nullptr ? -1 : (int)uvset_surfaceMap;
-		retVal.uvset_normalMap = normalMap == nullptr ? -1 : (int)uvset_normalMap;
-		retVal.uvset_displacementMap = displacementMap == nullptr ? -1 : (int)uvset_displacementMap;
-		retVal.uvset_emissiveMap = emissiveMap == nullptr ? -1 : (int)uvset_emissiveMap;
-		retVal.uvset_occlusionMap = occlusionMap == nullptr ? -1 : (int)uvset_occlusionMap;
-		retVal.options = 0;
+		dest->baseColor = baseColor;
+		dest->emissiveColor = emissiveColor;
+		dest->texMulAdd = texMulAdd;
+		dest->roughness = roughness;
+		dest->reflectance = reflectance;
+		dest->metalness = metalness;
+		dest->refractionIndex = refractionIndex;
+		dest->subsurfaceScattering = subsurfaceScattering;
+		dest->normalMapStrength = (normalMap == nullptr ? 0 : normalMapStrength);
+		dest->normalMapFlip = (_flags & MaterialComponent::FLIP_NORMALMAP ? -1.0f : 1.0f);
+		dest->parallaxOcclusionMapping = parallaxOcclusionMapping;
+		dest->displacementMapping = displacementMapping;
+		dest->uvset_baseColorMap = baseColorMap == nullptr ? -1 : (int)uvset_baseColorMap;
+		dest->uvset_surfaceMap = surfaceMap == nullptr ? -1 : (int)uvset_surfaceMap;
+		dest->uvset_normalMap = normalMap == nullptr ? -1 : (int)uvset_normalMap;
+		dest->uvset_displacementMap = displacementMap == nullptr ? -1 : (int)uvset_displacementMap;
+		dest->uvset_emissiveMap = emissiveMap == nullptr ? -1 : (int)uvset_emissiveMap;
+		dest->uvset_occlusionMap = occlusionMap == nullptr ? -1 : (int)uvset_occlusionMap;
+		dest->options = 0;
 		if (IsUsingVertexColors())
 		{
-			retVal.options |= SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS;
+			dest->options |= SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS;
 		}
 		if (IsUsingSpecularGlossinessWorkflow())
 		{
-			retVal.options |= SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW;
+			dest->options |= SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW;
 		}
 		if (IsOcclusionEnabled_Primary())
 		{
-			retVal.options |= SHADERMATERIAL_OPTION_BIT_OCCLUSION_PRIMARY;
+			dest->options |= SHADERMATERIAL_OPTION_BIT_OCCLUSION_PRIMARY;
 		}
 		if (IsOcclusionEnabled_Secondary())
 		{
-			retVal.options |= SHADERMATERIAL_OPTION_BIT_OCCLUSION_SECONDARY;
+			dest->options |= SHADERMATERIAL_OPTION_BIT_OCCLUSION_SECONDARY;
 		}
 		if (IsUsingWind())
 		{
-			retVal.options |= SHADERMATERIAL_OPTION_BIT_USE_WIND;
+			dest->options |= SHADERMATERIAL_OPTION_BIT_USE_WIND;
 		}
 
-		retVal.baseColorAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
-		retVal.surfaceMapAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
-		retVal.emissiveMapAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
-		retVal.normalMapAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
-
-		return retVal;
+		dest->baseColorAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
+		dest->surfaceMapAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
+		dest->emissiveMapAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
+		dest->normalMapAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
+	}
+	uint32_t MaterialComponent::GetRenderTypes() const
+	{
+		if (IsCustomShader() && customShaderID < (int)wiRenderer::GetCustomShaders().size())
+		{
+			auto& customShader = wiRenderer::GetCustomShaders()[customShaderID];
+			return customShader.renderTypeFlags;
+		}
+		if (shaderType == SHADERTYPE_WATER)
+		{
+			return RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
+		}
+		if (userBlendMode == BLENDMODE_OPAQUE)
+		{
+			return RENDERTYPE_OPAQUE;
+		}
+		return RENDERTYPE_TRANSPARENT;
 	}
 
 	void MeshComponent::CreateRenderData()

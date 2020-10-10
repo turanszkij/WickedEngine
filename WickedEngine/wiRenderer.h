@@ -607,14 +607,8 @@ namespace wiRenderer
 	struct CustomShader
 	{
 		std::string name;
-		BLENDMODE preferredBlendMode = BLENDMODE_OPAQUE;
-
-		struct Pass
-		{
-			uint32_t renderTypeFlags = RENDERTYPE_OPAQUE;
-			wiGraphics::PipelineState* pso = nullptr;
-		};
-		Pass passes[RENDERPASS_COUNT] = {};
+		uint32_t renderTypeFlags = RENDERTYPE_OPAQUE;
+		wiGraphics::PipelineState pso[RENDERPASS_COUNT] = {};
 	};
 	// Registers a custom shader that can be set to materials. 
 	//	Returns the ID of the custom shader that can be used with MaterialComponent::SetCustomShaderID()
