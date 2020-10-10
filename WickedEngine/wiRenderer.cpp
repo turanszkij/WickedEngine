@@ -1507,8 +1507,8 @@ void LoadShaders()
 		desc.ps = &pixelShaders[PSTYPE_OBJECT_HOLOGRAM];
 
 		desc.bs = &blendStates[BSTYPE_ADDITIVE];
-		desc.rs = &rasterizers[DSSTYPE_DEFAULT];
-		desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+		desc.rs = &rasterizers[RSTYPE_FRONT];
+		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
 		desc.pt = TRIANGLELIST;
 
 		PipelineState pso;
