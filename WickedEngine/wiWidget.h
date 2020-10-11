@@ -54,7 +54,6 @@ protected:
 
 public:
 	wiWidget();
-	virtual ~wiWidget() {}
 
 	const std::string& GetName() const;
 	void SetName(const std::string& value);
@@ -99,11 +98,10 @@ protected:
 	XMFLOAT2 dragStart = XMFLOAT2(0, 0);
 	XMFLOAT2 prevPos = XMFLOAT2(0, 0);
 public:
-	wiButton(const std::string& name = "");
-	virtual ~wiButton();
+	void Create(const std::string& name);
 
-	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+	void Update(wiGUI* gui, float dt ) override;
+	void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
 
 	void OnClick(std::function<void(wiEventArgs args)> func);
 	void OnDragStart(std::function<void(wiEventArgs args)> func);
@@ -116,11 +114,10 @@ class wiLabel : public wiWidget
 {
 protected:
 public:
-	wiLabel(const std::string& name = "");
-	virtual ~wiLabel();
+	void Create(const std::string& name);
 
-	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+	void Update(wiGUI* gui, float dt ) override;
+	void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
 };
 
 // Text input box
@@ -131,8 +128,7 @@ protected:
 	static wiSpriteFont font_input;
 
 public:
-	wiTextInputField(const std::string& name = "");
-	virtual ~wiTextInputField();
+	void Create(const std::string& name);
 
 	wiSpriteFont font_description;
 
@@ -147,8 +143,8 @@ public:
 	static void AddInput(const char inputChar);
 	static void DeleteFromInput();
 
-	virtual void Update(wiGUI* gui, float dt) override;
-	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+	void Update(wiGUI* gui, float dt) override;
+	void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
 
 	void OnInputAccepted(std::function<void(wiEventArgs args)> func);
 };
@@ -162,19 +158,18 @@ protected:
 	float step = 1000;
 	float value = 0;
 
-	wiTextInputField* valueInputField = nullptr;
+	wiTextInputField valueInputField;
 public:
 	// start : slider minimum value
 	// end : slider maximum value
 	// defaultValue : slider default Value
 	// step : slider step size
-	wiSlider(float start = 0.0f, float end = 1.0f, float defaultValue = 0.5f, float step = 1000.0f, const std::string& name = "");
-	virtual ~wiSlider();
-
+	void Create(float start, float end, float defaultValue, float step, const std::string& name);
+	
 	wiSprite sprites_knob[WIDGETSTATE_COUNT];
 
 	void SetValue(float value);
-	float GetValue();
+	float GetValue() const;
 	void SetRange(float start, float end);
 
 	void Update(wiGUI* gui, float dt ) override;
@@ -191,16 +186,15 @@ protected:
 	std::function<void(wiEventArgs args)> onClick;
 	bool checked = false;
 public:
-	wiCheckBox(const std::string& name = "");
-	virtual ~wiCheckBox();
+	void Create(const std::string& name);
 
 	wiSprite sprites_check[WIDGETSTATE_COUNT];
 
 	void SetCheck(bool value);
 	bool GetCheck() const;
 
-	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+	void Update(wiGUI* gui, float dt ) override;
+	void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
 
 	void OnClick(std::function<void(wiEventArgs args)> func);
 };
@@ -232,8 +226,7 @@ protected:
 
 	float GetItemOffset(int index) const;
 public:
-	wiComboBox(const std::string& name = "");
-	virtual ~wiComboBox();
+	void Create(const std::string& name);
 
 	void AddItem(const std::string& item);
 	void RemoveItem(int index);
@@ -245,8 +238,8 @@ public:
 	int GetSelected() const;
 	std::string GetItemText(int index) const;
 
-	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+	void Update(wiGUI* gui, float dt ) override;
+	void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
 
 	void OnSelect(std::function<void(wiEventArgs args)> func);
 };
@@ -255,28 +248,27 @@ public:
 class wiWindow :public wiWidget
 {
 protected:
-	wiGUI* gui = nullptr;
-	wiButton* closeButton = nullptr;
-	wiButton* minimizeButton = nullptr;
-	wiButton* resizeDragger_UpperLeft = nullptr;
-	wiButton* resizeDragger_BottomRight = nullptr;
-	wiButton* moveDragger = nullptr;
-	wiLabel* label = nullptr;
+	wiButton closeButton;
+	wiButton minimizeButton;
+	wiButton resizeDragger_UpperLeft;
+	wiButton resizeDragger_BottomRight;
+	wiButton moveDragger;
+	wiLabel label;
 	std::list<wiWidget*> childrenWidgets;
 	bool minimized = false;
 public:
-	wiWindow(wiGUI* gui, const std::string& name = "", bool window_controls = true);
-	virtual ~wiWindow();
+	void Create(const std::string& name, bool window_controls = true);
 
 	void AddWidget(wiWidget* widget);
 	void RemoveWidget(wiWidget* widget);
-	void RemoveWidgets(bool alsoDelete = false);
+	void RemoveWidgets();
 
-	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+	void Update(wiGUI* gui, float dt ) override;
+	void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+	void RenderTooltip(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
 
-	virtual void SetVisible(bool value) override;
-	virtual void SetEnabled(bool value) override;
+	void SetVisible(bool value) override;
+	void SetEnabled(bool value) override;
 	void SetMinimized(bool value);
 	bool IsMinimized() const;
 };
@@ -296,20 +288,20 @@ protected:
 	float saturation = 0.0f;	// [0, 1]
 	float luminance = 1.0f;		// [0, 1]
 
-	wiTextInputField* text_R = nullptr;
-	wiTextInputField* text_G = nullptr;
-	wiTextInputField* text_B = nullptr;
-	wiTextInputField* text_H = nullptr;
-	wiTextInputField* text_S = nullptr;
-	wiTextInputField* text_V = nullptr;
-	wiSlider* alphaSlider = nullptr;
+	wiTextInputField text_R;
+	wiTextInputField text_G;
+	wiTextInputField text_B;
+	wiTextInputField text_H;
+	wiTextInputField text_S;
+	wiTextInputField text_V;
+	wiSlider alphaSlider;
 
 	void FireEvents();
 public:
-	wiColorPicker(wiGUI* gui, const std::string& name = "", bool window_controls  = true);
+	void Create(const std::string& name, bool window_controls  = true);
 
-	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+	void Update(wiGUI* gui, float dt ) override;
+	void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
 
 	wiColor GetPickColor() const;
 	void SetPickColor(wiColor value);
@@ -356,8 +348,7 @@ protected:
 
 	float GetItemOffset(int index) const;
 public:
-	wiTreeList(const std::string& name = "");
-	virtual ~wiTreeList();
+	void Create(const std::string& name);
 
 	void AddItem(const Item& item);
 	void ClearItems();
@@ -369,8 +360,8 @@ public:
 	int GetItemCount() const { return (int)items.size(); }
 	const Item& GetItem(int index) const;
 
-	virtual void Update(wiGUI* gui, float dt) override;
-	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+	void Update(wiGUI* gui, float dt) override;
+	void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
 
 	void OnSelect(std::function<void(wiEventArgs args)> func);
 };

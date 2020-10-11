@@ -31,7 +31,6 @@ private:
 	XMFLOAT2 pointerpos = XMFLOAT2(0, 0);
 	Hitbox2D pointerhitbox;
 public:
-	~wiGUI();
 
 	void Update(float dt);
 	void Render(wiGraphics::CommandList cmd) const;

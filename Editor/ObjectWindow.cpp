@@ -245,8 +245,11 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 }
 
 
-ObjectWindow::ObjectWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI(), "Object Window"), editor(editor)
+void ObjectWindow::Create(EditorComponent* editor)
 {
+	this->editor = editor;
+
+	wiWindow::Create("Object Window");
 	SetSize(XMFLOAT2(350, 610));
 
 	float x = 200;
@@ -254,68 +257,68 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI()
 	float hei = 18;
 	float step = hei + 2;
 
-	nameLabel = new wiLabel("NAMELABEL");
-	nameLabel->SetText("");
-	nameLabel->SetPos(XMFLOAT2(x - 30, y += step));
-	nameLabel->SetSize(XMFLOAT2(150, hei));
-	AddWidget(nameLabel);
+	nameLabel.Create("NAMELABEL");
+	nameLabel.SetText("");
+	nameLabel.SetPos(XMFLOAT2(x - 30, y += step));
+	nameLabel.SetSize(XMFLOAT2(150, hei));
+	AddWidget(&nameLabel);
 
-	renderableCheckBox = new wiCheckBox("Renderable: ");
-	renderableCheckBox->SetTooltip("Set object to be participating in rendering.");
-	renderableCheckBox->SetSize(XMFLOAT2(hei, hei));
-	renderableCheckBox->SetPos(XMFLOAT2(x, y += step));
-	renderableCheckBox->SetCheck(true);
-	renderableCheckBox->OnClick([&](wiEventArgs args) {
+	renderableCheckBox.Create("Renderable: ");
+	renderableCheckBox.SetTooltip("Set object to be participating in rendering.");
+	renderableCheckBox.SetSize(XMFLOAT2(hei, hei));
+	renderableCheckBox.SetPos(XMFLOAT2(x, y += step));
+	renderableCheckBox.SetCheck(true);
+	renderableCheckBox.OnClick([&](wiEventArgs args) {
 		ObjectComponent* object = wiScene::GetScene().objects.GetComponent(entity);
 		if (object != nullptr)
 		{
 			object->SetRenderable(args.bValue);
 		}
 	});
-	AddWidget(renderableCheckBox);
+	AddWidget(&renderableCheckBox);
 
-	ditherSlider = new wiSlider(0, 1, 0, 1000, "Dither: ");
-	ditherSlider->SetTooltip("Adjust dithered transparency of the object. This disables some optimizations so performance can be affected.");
-	ditherSlider->SetSize(XMFLOAT2(100, hei));
-	ditherSlider->SetPos(XMFLOAT2(x, y += step));
-	ditherSlider->OnSlide([&](wiEventArgs args) {
+	ditherSlider.Create(0, 1, 0, 1000, "Dither: ");
+	ditherSlider.SetTooltip("Adjust dithered transparency of the object. This disables some optimizations so performance can be affected.");
+	ditherSlider.SetSize(XMFLOAT2(100, hei));
+	ditherSlider.SetPos(XMFLOAT2(x, y += step));
+	ditherSlider.OnSlide([&](wiEventArgs args) {
 		ObjectComponent* object = wiScene::GetScene().objects.GetComponent(entity);
 		if (object != nullptr)
 		{
 			object->color.w = 1 - args.fValue;
 		}
 	});
-	AddWidget(ditherSlider);
+	AddWidget(&ditherSlider);
 
-	cascadeMaskSlider = new wiSlider(0, 3, 0, 3, "Cascade Mask: ");
-	cascadeMaskSlider->SetTooltip("How many shadow cascades to skip when rendering this object into shadow maps? (0: skip none, it will be in all cascades, 1: skip first (biggest cascade), ...etc...");
-	cascadeMaskSlider->SetSize(XMFLOAT2(100, hei));
-	cascadeMaskSlider->SetPos(XMFLOAT2(x, y += step));
-	cascadeMaskSlider->OnSlide([&](wiEventArgs args) {
+	cascadeMaskSlider.Create(0, 3, 0, 3, "Cascade Mask: ");
+	cascadeMaskSlider.SetTooltip("How many shadow cascades to skip when rendering this object into shadow maps? (0: skip none, it will be in all cascades, 1: skip first (biggest cascade), ...etc...");
+	cascadeMaskSlider.SetSize(XMFLOAT2(100, hei));
+	cascadeMaskSlider.SetPos(XMFLOAT2(x, y += step));
+	cascadeMaskSlider.OnSlide([&](wiEventArgs args) {
 		ObjectComponent* object = wiScene::GetScene().objects.GetComponent(entity);
 		if (object != nullptr)
 		{
 			object->cascadeMask = (uint32_t)args.iValue;
 		}
 	});
-	AddWidget(cascadeMaskSlider);
+	AddWidget(&cascadeMaskSlider);
 
 	y += step;
 
-	physicsLabel = new wiLabel("PHYSICSLABEL");
-	physicsLabel->SetText("PHYSICS SETTINGS");
-	physicsLabel->SetPos(XMFLOAT2(x - 30, y += step));
-	physicsLabel->SetSize(XMFLOAT2(150, hei));
-	AddWidget(physicsLabel);
+	physicsLabel.Create("PHYSICSLABEL");
+	physicsLabel.SetText("PHYSICS SETTINGS");
+	physicsLabel.SetPos(XMFLOAT2(x - 30, y += step));
+	physicsLabel.SetSize(XMFLOAT2(150, hei));
+	AddWidget(&physicsLabel);
 
 
 
-	rigidBodyCheckBox = new wiCheckBox("Rigid Body Physics: ");
-	rigidBodyCheckBox->SetTooltip("Enable rigid body physics simulation.");
-	rigidBodyCheckBox->SetSize(XMFLOAT2(hei, hei));
-	rigidBodyCheckBox->SetPos(XMFLOAT2(x, y += step));
-	rigidBodyCheckBox->SetCheck(false);
-	rigidBodyCheckBox->OnClick([&](wiEventArgs args) 
+	rigidBodyCheckBox.Create("Rigid Body Physics: ");
+	rigidBodyCheckBox.SetTooltip("Enable rigid body physics simulation.");
+	rigidBodyCheckBox.SetSize(XMFLOAT2(hei, hei));
+	rigidBodyCheckBox.SetPos(XMFLOAT2(x, y += step));
+	rigidBodyCheckBox.SetCheck(false);
+	rigidBodyCheckBox.OnClick([&](wiEventArgs args) 
 	{
 		Scene& scene = wiScene::GetScene();
 		RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(entity);
@@ -325,9 +328,9 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI()
 			if (physicscomponent == nullptr)
 			{
 				RigidBodyPhysicsComponent& rigidbody = scene.rigidbodies.Create(entity);
-				rigidbody.SetKinematic(kinematicCheckBox->GetCheck());
-				rigidbody.SetDisableDeactivation(disabledeactivationCheckBox->GetCheck());
-				rigidbody.shape = (RigidBodyPhysicsComponent::CollisionShape)collisionShapeComboBox->GetSelected();
+				rigidbody.SetKinematic(kinematicCheckBox.GetCheck());
+				rigidbody.SetDisableDeactivation(disabledeactivationCheckBox.GetCheck());
+				rigidbody.shape = (RigidBodyPhysicsComponent::CollisionShape)collisionShapeComboBox.GetSelected();
 			}
 		}
 		else
@@ -339,45 +342,45 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI()
 		}
 
 	});
-	AddWidget(rigidBodyCheckBox);
+	AddWidget(&rigidBodyCheckBox);
 
-	kinematicCheckBox = new wiCheckBox("Kinematic: ");
-	kinematicCheckBox->SetTooltip("Toggle kinematic behaviour.");
-	kinematicCheckBox->SetSize(XMFLOAT2(hei, hei));
-	kinematicCheckBox->SetPos(XMFLOAT2(x, y += step));
-	kinematicCheckBox->SetCheck(false);
-	kinematicCheckBox->OnClick([&](wiEventArgs args) {
+	kinematicCheckBox.Create("Kinematic: ");
+	kinematicCheckBox.SetTooltip("Toggle kinematic behaviour.");
+	kinematicCheckBox.SetSize(XMFLOAT2(hei, hei));
+	kinematicCheckBox.SetPos(XMFLOAT2(x, y += step));
+	kinematicCheckBox.SetCheck(false);
+	kinematicCheckBox.OnClick([&](wiEventArgs args) {
 		RigidBodyPhysicsComponent* physicscomponent = wiScene::GetScene().rigidbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
 		{
 			physicscomponent->SetKinematic(args.bValue);
 		}
 	});
-	AddWidget(kinematicCheckBox);
+	AddWidget(&kinematicCheckBox);
 
-	disabledeactivationCheckBox = new wiCheckBox("Disable Deactivation: ");
-	disabledeactivationCheckBox->SetTooltip("Toggle kinematic behaviour.");
-	disabledeactivationCheckBox->SetSize(XMFLOAT2(hei, hei));
-	disabledeactivationCheckBox->SetPos(XMFLOAT2(x, y += step));
-	disabledeactivationCheckBox->SetCheck(false);
-	disabledeactivationCheckBox->OnClick([&](wiEventArgs args) {
+	disabledeactivationCheckBox.Create("Disable Deactivation: ");
+	disabledeactivationCheckBox.SetTooltip("Toggle kinematic behaviour.");
+	disabledeactivationCheckBox.SetSize(XMFLOAT2(hei, hei));
+	disabledeactivationCheckBox.SetPos(XMFLOAT2(x, y += step));
+	disabledeactivationCheckBox.SetCheck(false);
+	disabledeactivationCheckBox.OnClick([&](wiEventArgs args) {
 		RigidBodyPhysicsComponent* physicscomponent = wiScene::GetScene().rigidbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
 		{
 			physicscomponent->SetDisableDeactivation(args.bValue);
 		}
 	});
-	AddWidget(disabledeactivationCheckBox);
+	AddWidget(&disabledeactivationCheckBox);
 
-	collisionShapeComboBox = new wiComboBox("Collision Shape:");
-	collisionShapeComboBox->SetSize(XMFLOAT2(100, hei));
-	collisionShapeComboBox->SetPos(XMFLOAT2(x, y += step));
-	collisionShapeComboBox->AddItem("Box");
-	collisionShapeComboBox->AddItem("Sphere");
-	collisionShapeComboBox->AddItem("Capsule");
-	collisionShapeComboBox->AddItem("Convex Hull");
-	collisionShapeComboBox->AddItem("Triangle Mesh");
-	collisionShapeComboBox->OnSelect([&](wiEventArgs args) 
+	collisionShapeComboBox.Create("Collision Shape:");
+	collisionShapeComboBox.SetSize(XMFLOAT2(100, hei));
+	collisionShapeComboBox.SetPos(XMFLOAT2(x, y += step));
+	collisionShapeComboBox.AddItem("Box");
+	collisionShapeComboBox.AddItem("Sphere");
+	collisionShapeComboBox.AddItem("Capsule");
+	collisionShapeComboBox.AddItem("Convex Hull");
+	collisionShapeComboBox.AddItem("Triangle Mesh");
+	collisionShapeComboBox.OnSelect([&](wiEventArgs args) 
 	{
 		RigidBodyPhysicsComponent* physicscomponent = wiScene::GetScene().rigidbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
@@ -404,41 +407,41 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI()
 			}
 		}
 	});
-	collisionShapeComboBox->SetSelected(0);
-	collisionShapeComboBox->SetEnabled(true);
-	collisionShapeComboBox->SetTooltip("Set rigid body collision shape.");
-	AddWidget(collisionShapeComboBox);
+	collisionShapeComboBox.SetSelected(0);
+	collisionShapeComboBox.SetEnabled(true);
+	collisionShapeComboBox.SetTooltip("Set rigid body collision shape.");
+	AddWidget(&collisionShapeComboBox);
 
 
 	y += step;
 
 
-	lightmapResolutionSlider = new wiSlider(32, 1024, 128, 1024 - 32, "Lightmap resolution: ");
-	lightmapResolutionSlider->SetTooltip("Set the approximate resolution for this object's lightmap. This will be packed into the larger global lightmap later.");
-	lightmapResolutionSlider->SetSize(XMFLOAT2(100, hei));
-	lightmapResolutionSlider->SetPos(XMFLOAT2(x, y += step));
-	lightmapResolutionSlider->OnSlide([&](wiEventArgs args) {
+	lightmapResolutionSlider.Create(32, 1024, 128, 1024 - 32, "Lightmap resolution: ");
+	lightmapResolutionSlider.SetTooltip("Set the approximate resolution for this object's lightmap. This will be packed into the larger global lightmap later.");
+	lightmapResolutionSlider.SetSize(XMFLOAT2(100, hei));
+	lightmapResolutionSlider.SetPos(XMFLOAT2(x, y += step));
+	lightmapResolutionSlider.OnSlide([&](wiEventArgs args) {
 		// unfortunately, we must be pow2 with full float lightmap format, otherwise it could be unlimited (but accumulation blending would suffer then)
 		//	or at least for me, downloading the lightmap was glitching out when non-pow 2 and RGBA32_FLOAT format
-		lightmapResolutionSlider->SetValue(float(wiMath::GetNextPowerOfTwo(uint32_t(args.fValue)))); 
+		lightmapResolutionSlider.SetValue(float(wiMath::GetNextPowerOfTwo(uint32_t(args.fValue)))); 
 	});
-	AddWidget(lightmapResolutionSlider);
+	AddWidget(&lightmapResolutionSlider);
 
-	lightmapSourceUVSetComboBox = new wiComboBox("UV Set: ");
-	lightmapSourceUVSetComboBox->SetPos(XMFLOAT2(x - 130, y += step));
-	lightmapSourceUVSetComboBox->AddItem("Copy UV 0");
-	lightmapSourceUVSetComboBox->AddItem("Copy UV 1");
-	lightmapSourceUVSetComboBox->AddItem("Keep Atlas");
-	lightmapSourceUVSetComboBox->AddItem("Generate Atlas");
-	lightmapSourceUVSetComboBox->SetSelected(3);
-	lightmapSourceUVSetComboBox->SetTooltip("Set which UV set to use when generating the lightmap Atlas");
-	AddWidget(lightmapSourceUVSetComboBox);
+	lightmapSourceUVSetComboBox.Create("UV Set: ");
+	lightmapSourceUVSetComboBox.SetPos(XMFLOAT2(x - 130, y += step));
+	lightmapSourceUVSetComboBox.AddItem("Copy UV 0");
+	lightmapSourceUVSetComboBox.AddItem("Copy UV 1");
+	lightmapSourceUVSetComboBox.AddItem("Keep Atlas");
+	lightmapSourceUVSetComboBox.AddItem("Generate Atlas");
+	lightmapSourceUVSetComboBox.SetSelected(3);
+	lightmapSourceUVSetComboBox.SetTooltip("Set which UV set to use when generating the lightmap Atlas");
+	AddWidget(&lightmapSourceUVSetComboBox);
 
-	generateLightmapButton = new wiButton("Generate Lightmap");
-	generateLightmapButton->SetTooltip("Render the lightmap for only this object. It will automatically combined with the global lightmap.");
-	generateLightmapButton->SetPos(XMFLOAT2(x, y));
-	generateLightmapButton->SetSize(XMFLOAT2(140, hei));
-	generateLightmapButton->OnClick([&](wiEventArgs args) {
+	generateLightmapButton.Create("Generate Lightmap");
+	generateLightmapButton.SetTooltip("Render the lightmap for only this object. It will automatically combined with the global lightmap.");
+	generateLightmapButton.SetPos(XMFLOAT2(x, y));
+	generateLightmapButton.SetSize(XMFLOAT2(140, hei));
+	generateLightmapButton.OnClick([&](wiEventArgs args) {
 
 		Scene& scene = wiScene::GetScene();
 
@@ -449,7 +452,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI()
 			UV_GEN_KEEP_ATLAS,
 			UV_GEN_GENERATE_ATLAS,
 		};
-		UV_GEN_TYPE gen_type = (UV_GEN_TYPE)lightmapSourceUVSetComboBox->GetSelected();
+		UV_GEN_TYPE gen_type = (UV_GEN_TYPE)lightmapSourceUVSetComboBox.GetSelected();
 
 		std::unordered_set<ObjectComponent*> gen_objects;
 		std::unordered_map<MeshComponent*, Atlas_Dim> gen_meshes;
@@ -488,7 +491,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI()
 			else if (gen_type == UV_GEN_GENERATE_ATLAS)
 			{
 				wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-					it.second = GenerateMeshAtlas(mesh, (uint32_t)lightmapResolutionSlider->GetValue());
+					it.second = GenerateMeshAtlas(mesh, (uint32_t)lightmapResolutionSlider.GetValue());
 				});
 			}
 		}
@@ -505,7 +508,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI()
 			}
 			else
 			{
-				x->lightmapWidth = x->lightmapHeight = (uint32_t)lightmapResolutionSlider->GetValue();
+				x->lightmapWidth = x->lightmapHeight = (uint32_t)lightmapResolutionSlider.GetValue();
 			}
 			x->SetLightmapRenderRequest(true);
 		}
@@ -513,13 +516,13 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI()
 		wiRenderer::InvalidateBVH();
 
 	});
-	AddWidget(generateLightmapButton);
+	AddWidget(&generateLightmapButton);
 
-	stopLightmapGenButton = new wiButton("Stop Lightmap Gen");
-	stopLightmapGenButton->SetTooltip("Stop the lightmap rendering and save the lightmap.");
-	stopLightmapGenButton->SetPos(XMFLOAT2(x, y += step));
-	stopLightmapGenButton->SetSize(XMFLOAT2(140, hei));
-	stopLightmapGenButton->OnClick([&](wiEventArgs args) {
+	stopLightmapGenButton.Create("Stop Lightmap Gen");
+	stopLightmapGenButton.SetTooltip("Stop the lightmap rendering and save the lightmap.");
+	stopLightmapGenButton.SetPos(XMFLOAT2(x, y += step));
+	stopLightmapGenButton.SetSize(XMFLOAT2(140, hei));
+	stopLightmapGenButton.OnClick([&](wiEventArgs args) {
 
 		Scene& scene = wiScene::GetScene();
 
@@ -534,13 +537,13 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI()
 		}
 
 	});
-	AddWidget(stopLightmapGenButton);
+	AddWidget(&stopLightmapGenButton);
 
-	clearLightmapButton = new wiButton("Clear Lightmap");
-	clearLightmapButton->SetTooltip("Clear the lightmap from this object.");
-	clearLightmapButton->SetPos(XMFLOAT2(x, y += step));
-	clearLightmapButton->SetSize(XMFLOAT2(140, hei));
-	clearLightmapButton->OnClick([&](wiEventArgs args) {
+	clearLightmapButton.Create("Clear Lightmap");
+	clearLightmapButton.SetTooltip("Clear the lightmap from this object.");
+	clearLightmapButton.SetPos(XMFLOAT2(x, y += step));
+	clearLightmapButton.SetSize(XMFLOAT2(140, hei));
+	clearLightmapButton.OnClick([&](wiEventArgs args) {
 
 		Scene& scene = wiScene::GetScene();
 
@@ -554,15 +557,15 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI()
 		}
 
 	});
-	AddWidget(clearLightmapButton);
+	AddWidget(&clearLightmapButton);
 
 	y += step;
 
-	colorPicker = new wiColorPicker(gui, "Object Color", false);
-	colorPicker->SetPos(XMFLOAT2(20, y += step));
-	colorPicker->SetVisible(true);
-	colorPicker->SetEnabled(true);
-	colorPicker->OnColorChanged([&](wiEventArgs args) {
+	colorPicker.Create("Object Color", false);
+	colorPicker.SetPos(XMFLOAT2(20, y += step));
+	colorPicker.SetVisible(true);
+	colorPicker.SetEnabled(true);
+	colorPicker.OnColorChanged([&](wiEventArgs args) {
 		ObjectComponent* object = wiScene::GetScene().objects.GetComponent(entity);
 		if (object != nullptr)
 		{
@@ -570,7 +573,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI()
 			object->color = XMFLOAT4(col.x, col.y, col.z, object->color.w);
 		}
 		});
-	AddWidget(colorPicker);
+	AddWidget(&colorPicker);
 
 
 	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 720, 120, 0));
@@ -593,41 +596,41 @@ void ObjectWindow::SetEntity(Entity entity)
 		SetEnabled(true);
 
 		const NameComponent* name = scene.names.GetComponent(entity);
-		nameLabel->SetText(name == nullptr ? std::to_string(entity) : name->name);
+		nameLabel.SetText(name == nullptr ? std::to_string(entity) : name->name);
 
-		renderableCheckBox->SetCheck(object->IsRenderable());
-		cascadeMaskSlider->SetValue((float)object->cascadeMask);
-		ditherSlider->SetValue(object->GetTransparency());
-		colorPicker->SetPickColor(wiColor::fromFloat4(object->color));
+		renderableCheckBox.SetCheck(object->IsRenderable());
+		cascadeMaskSlider.SetValue((float)object->cascadeMask);
+		ditherSlider.SetValue(object->GetTransparency());
+		colorPicker.SetPickColor(wiColor::fromFloat4(object->color));
 
 		const RigidBodyPhysicsComponent* physicsComponent = scene.rigidbodies.GetComponent(entity);
 
-		rigidBodyCheckBox->SetCheck(physicsComponent != nullptr);
+		rigidBodyCheckBox.SetCheck(physicsComponent != nullptr);
 
 		if (physicsComponent != nullptr)
 		{
-			kinematicCheckBox->SetCheck(physicsComponent->IsKinematic());
-			disabledeactivationCheckBox->SetCheck(physicsComponent->IsDisableDeactivation());
+			kinematicCheckBox.SetCheck(physicsComponent->IsKinematic());
+			disabledeactivationCheckBox.SetCheck(physicsComponent->IsDisableDeactivation());
 
 			if (physicsComponent->shape == RigidBodyPhysicsComponent::CollisionShape::BOX)
 			{
-				collisionShapeComboBox->SetSelected(0);
+				collisionShapeComboBox.SetSelected(0);
 			}
 			else if (physicsComponent->shape == RigidBodyPhysicsComponent::CollisionShape::SPHERE)
 			{
-				collisionShapeComboBox->SetSelected(1);
+				collisionShapeComboBox.SetSelected(1);
 			}
 			else if (physicsComponent->shape == RigidBodyPhysicsComponent::CollisionShape::CAPSULE)
 			{
-				collisionShapeComboBox->SetSelected(2);
+				collisionShapeComboBox.SetSelected(2);
 			}
 			else if (physicsComponent->shape == RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL)
 			{
-				collisionShapeComboBox->SetSelected(3);
+				collisionShapeComboBox.SetSelected(3);
 			}
 			else if (physicsComponent->shape == RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH)
 			{
-				collisionShapeComboBox->SetSelected(4);
+				collisionShapeComboBox.SetSelected(4);
 			}
 		}
 

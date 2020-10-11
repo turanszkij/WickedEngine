@@ -30,7 +30,7 @@ void TestsRenderer::ResizeLayout()
 
 	float screenW = wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = wiRenderer::GetDevice()->GetScreenHeight();
-	label->SetPos(XMFLOAT2(screenW / 2.f - label->scale.x / 2.f, screenH * 0.95f));
+	label.SetPos(XMFLOAT2(screenW / 2.f - label.scale.x / 2.f, screenH * 0.95f));
 }
 void TestsRenderer::Load()
 {
@@ -38,22 +38,23 @@ void TestsRenderer::Load()
 	setReflectionsEnabled(true);
 	setFXAAEnabled(false);
 
-	label = new wiLabel("Label1");
-	label->SetText("Wicked Engine Test Framework");
-	label->font.params.h_align = WIFALIGN_CENTER;
-	label->SetSize(XMFLOAT2(240,20));
-	GetGUI().AddWidget(label);
+	label.Create("Label1");
+	label.SetText("Wicked Engine Test Framework");
+	label.font.params.h_align = WIFALIGN_CENTER;
+	label.SetSize(XMFLOAT2(240,20));
+	GetGUI().AddWidget(&label);
 
 	static wiAudio::Sound sound;
 	static wiAudio::SoundInstance soundinstance;
 
-	wiButton* audioTest = new wiButton("AudioTest");
-	audioTest->SetText("Play Test Audio");
-	audioTest->SetSize(XMFLOAT2(200, 20));
-	audioTest->SetPos(XMFLOAT2(10, 140));
-	audioTest->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
-	audioTest->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
-	audioTest->OnClick([=](wiEventArgs args) {
+	static wiButton audioTest;
+	audioTest.Create("AudioTest");
+	audioTest.SetText("Play Test Audio");
+	audioTest.SetSize(XMFLOAT2(200, 20));
+	audioTest.SetPos(XMFLOAT2(10, 140));
+	audioTest.SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
+	audioTest.SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
+	audioTest.OnClick([&](wiEventArgs args) {
 		static bool playing = false;
 
 		if (!sound.IsValid())
@@ -65,60 +66,61 @@ void TestsRenderer::Load()
 		if (playing)
 		{
 			wiAudio::Stop(&soundinstance);
-			audioTest->SetText("Play Test Audio");
+			audioTest.SetText("Play Test Audio");
 		}
 		else
 		{
 			wiAudio::Play(&soundinstance);
-			audioTest->SetText("Stop Test Audio");
+			audioTest.SetText("Stop Test Audio");
 		}
 
 		playing = !playing;
 	});
-	GetGUI().AddWidget(audioTest);
+	GetGUI().AddWidget(&audioTest);
 
 
-	wiSlider* volume = new wiSlider(0, 100, 50, 100, "Volume");
-	volume->SetText("Volume: ");
-	volume->SetSize(XMFLOAT2(100, 20));
-	volume->SetPos(XMFLOAT2(65, 170));
-	volume->sprites_knob[wiWidget::WIDGETSTATE::IDLE].params.color = wiColor(255, 205, 43, 200);
-	volume->sprites_knob[wiWidget::WIDGETSTATE::FOCUS].params.color = wiColor(255, 235, 173, 255);
-	volume->sprites[wiWidget::WIDGETSTATE::IDLE].params.color = wiMath::Lerp(wiColor::Transparent(), volume->sprites_knob[wiWidget::WIDGETSTATE::IDLE].params.color, 0.5f);
-	volume->sprites[wiWidget::WIDGETSTATE::FOCUS].params.color = wiMath::Lerp(wiColor::Transparent(), volume->sprites_knob[wiWidget::WIDGETSTATE::FOCUS].params.color, 0.5f);
-	volume->OnSlide([](wiEventArgs args) {
+	static wiSlider volume;
+	volume.Create(0, 100, 50, 100, "Volume");
+	volume.SetText("Volume: ");
+	volume.SetSize(XMFLOAT2(100, 20));
+	volume.SetPos(XMFLOAT2(65, 170));
+	volume.sprites_knob[wiWidget::WIDGETSTATE::IDLE].params.color = wiColor(255, 205, 43, 200);
+	volume.sprites_knob[wiWidget::WIDGETSTATE::FOCUS].params.color = wiColor(255, 235, 173, 255);
+	volume.sprites[wiWidget::WIDGETSTATE::IDLE].params.color = wiMath::Lerp(wiColor::Transparent(), volume.sprites_knob[wiWidget::WIDGETSTATE::IDLE].params.color, 0.5f);
+	volume.sprites[wiWidget::WIDGETSTATE::FOCUS].params.color = wiMath::Lerp(wiColor::Transparent(), volume.sprites_knob[wiWidget::WIDGETSTATE::FOCUS].params.color, 0.5f);
+	volume.OnSlide([](wiEventArgs args) {
 		wiAudio::SetVolume(args.fValue / 100.0f, &soundinstance);
 	});
-	GetGUI().AddWidget(volume);
+	GetGUI().AddWidget(&volume);
 
 
-	testSelector = new wiComboBox("TestSelector");
-	testSelector->SetText("Demo: ");
-	testSelector->SetSize(XMFLOAT2(140, 20));
-	testSelector->SetPos(XMFLOAT2(50, 200));
-	testSelector->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
-	testSelector->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
-	testSelector->AddItem("HelloWorld");
-	testSelector->AddItem("Model");
-	testSelector->AddItem("EmittedParticle 1");
-	testSelector->AddItem("EmittedParticle 2");
-	testSelector->AddItem("HairParticle");
-	testSelector->AddItem("Lua Script");
-	testSelector->AddItem("Water Test");
-	testSelector->AddItem("Shadows Test");
-	testSelector->AddItem("Physics Test");
-	testSelector->AddItem("Cloth Physics Test");
-	testSelector->AddItem("Job System Test");
-	testSelector->AddItem("Font Test");
-	testSelector->AddItem("Volumetric Test");
-	testSelector->AddItem("Sprite Test");
-	testSelector->AddItem("Lightmap Bake Test");
-	testSelector->AddItem("Network Test");
-	testSelector->AddItem("Controller Test");
-	testSelector->AddItem("Inverse Kinematics");
-	testSelector->AddItem("65k Instances");
-	testSelector->SetMaxVisibleItemCount(10);
-	testSelector->OnSelect([=](wiEventArgs args) {
+	testSelector.Create("TestSelector");
+	testSelector.SetText("Demo: ");
+	testSelector.SetSize(XMFLOAT2(140, 20));
+	testSelector.SetPos(XMFLOAT2(50, 200));
+	testSelector.SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
+	testSelector.SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
+	testSelector.AddItem("HelloWorld");
+	testSelector.AddItem("Model");
+	testSelector.AddItem("EmittedParticle 1");
+	testSelector.AddItem("EmittedParticle 2");
+	testSelector.AddItem("HairParticle");
+	testSelector.AddItem("Lua Script");
+	testSelector.AddItem("Water Test");
+	testSelector.AddItem("Shadows Test");
+	testSelector.AddItem("Physics Test");
+	testSelector.AddItem("Cloth Physics Test");
+	testSelector.AddItem("Job System Test");
+	testSelector.AddItem("Font Test");
+	testSelector.AddItem("Volumetric Test");
+	testSelector.AddItem("Sprite Test");
+	testSelector.AddItem("Lightmap Bake Test");
+	testSelector.AddItem("Network Test");
+	testSelector.AddItem("Controller Test");
+	testSelector.AddItem("Inverse Kinematics");
+	testSelector.AddItem("65k Instances");
+	testSelector.SetMaxVisibleItemCount(10);
+	testSelector.OnSelect([=](wiEventArgs args) {
 
 		// Reset all state that tests might have modified:
 		wiRenderer::GetDevice()->SetVSyncEnabled(true);
@@ -294,14 +296,14 @@ void TestsRenderer::Load()
 		}
 
 	});
-	testSelector->SetSelected(0);
-	GetGUI().AddWidget(testSelector);
+	testSelector.SetSelected(0);
+	GetGUI().AddWidget(&testSelector);
 
     RenderPath3D_TiledForward::Load();
 }
 void TestsRenderer::Update(float dt)
 {
-	switch (testSelector->GetSelected())
+	switch (testSelector.GetSelected())
 	{
     case 1:
     {

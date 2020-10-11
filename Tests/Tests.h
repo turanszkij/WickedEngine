@@ -4,8 +4,8 @@
 
 class TestsRenderer : public RenderPath3D_TiledForward
 {
-	wiLabel* label = nullptr;
-	wiComboBox* testSelector = nullptr;
+	wiLabel label;
+	wiComboBox testSelector;
 	wiECS::Entity ik_entity = wiECS::INVALID_ENTITY;
 public:
 	void Load() override;

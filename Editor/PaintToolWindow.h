@@ -14,23 +14,23 @@ class PaintToolWindow : public wiWindow
 	std::shared_ptr<wiResource> GetEditTextureSlot(const wiScene::MaterialComponent& material, int* uvset = nullptr);
 	void ReplaceEditTextureSlot(wiScene::MaterialComponent& material, std::shared_ptr<wiResource> resource);
 public:
-	PaintToolWindow(EditorComponent* editor);
+	void Create(EditorComponent* editor);
 
 	EditorComponent* editor = nullptr;
 	wiECS::Entity entity = wiECS::INVALID_ENTITY;
 	int subset = -1;
 
-	wiComboBox* modeComboBox;
-	wiLabel* infoLabel;
-	wiSlider* radiusSlider;
-	wiSlider* amountSlider;
-	wiSlider* falloffSlider;
-	wiSlider* spacingSlider;
-	wiCheckBox* backfaceCheckBox;
-	wiCheckBox* wireCheckBox;
-	wiColorPicker* colorPicker;
-	wiComboBox* textureSlotComboBox;
-	wiButton* saveTextureButton;
+	wiComboBox modeComboBox;
+	wiLabel infoLabel;
+	wiSlider radiusSlider;
+	wiSlider amountSlider;
+	wiSlider falloffSlider;
+	wiSlider spacingSlider;
+	wiCheckBox backfaceCheckBox;
+	wiCheckBox wireCheckBox;
+	wiColorPicker colorPicker;
+	wiComboBox textureSlotComboBox;
+	wiButton saveTextureButton;
 
 	void Update(float dt);
 	void DrawBrush() const;

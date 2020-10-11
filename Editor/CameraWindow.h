@@ -6,7 +6,7 @@ class EditorComponent;
 class CameraWindow : public wiWindow
 {
 public:
-	CameraWindow(EditorComponent* editor);
+	void Create(EditorComponent* editor);
 
 	void ResetCam();
 
@@ -17,16 +17,16 @@ public:
 	wiScene::TransformComponent camera_transform;
 	wiScene::TransformComponent camera_target;
 
-	wiSlider* farPlaneSlider;
-	wiSlider* nearPlaneSlider;
-	wiSlider* fovSlider;
-	wiSlider* movespeedSlider;
-	wiSlider* rotationspeedSlider;
-	wiButton* resetButton;
-	wiCheckBox* fpsCheckBox;
+	wiSlider farPlaneSlider;
+	wiSlider nearPlaneSlider;
+	wiSlider fovSlider;
+	wiSlider movespeedSlider;
+	wiSlider rotationspeedSlider;
+	wiButton resetButton;
+	wiCheckBox fpsCheckBox;
 
-	wiButton* proxyButton;
-	wiCheckBox* followCheckBox;
-	wiSlider* followSlider;
+	wiButton proxyButton;
+	wiCheckBox followCheckBox;
+	wiSlider followSlider;
 };
 

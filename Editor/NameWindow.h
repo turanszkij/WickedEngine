@@ -6,11 +6,11 @@ class EditorComponent;
 class NameWindow : public wiWindow
 {
 public:
-	NameWindow(EditorComponent* editor);
+	void Create(EditorComponent* editor);
 
 	wiECS::Entity entity;
 	void SetEntity(wiECS::Entity entity);
 
-	wiTextInputField* nameInput;
+	wiTextInputField nameInput;
 };
 

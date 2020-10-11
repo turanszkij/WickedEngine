@@ -843,7 +843,7 @@ If the [ArmatureComponent](#armaturecomponent) has less than `SKINNING_COMPUTE_T
 #### Custom Shaders
 Apart from the built in material shaders, the developer can create a library of custom shaders from the application side and assign them to materials. The `wiRenderer::RegisterCustomShader()` function is used to register a custom shader from the application. The function returns the ID of the custom shader that can be input to the `MaterialComponent::SetCustomShaderID()` function. 
 
-The custom shader is essentially the combination of a [Pipeline State Object](#pipeline-state) for each `RENDERPASS` and a `RENDERTYPE` flag that specifies whether it is to be drawn in a transparent or opaque, or other kind of pass within a `RENDERPASS`. The developer is responsible of creating a fully valid pipeline state to render a mesh. If a pipeline state is left as empty for a combination of `RENDERPASS` and `RENDERTYPE`, then the material will simply be skipped and not rendered.
+The custom shader is essentially the combination of a [Pipeline State Object](#pipeline-states-and-shaders) for each `RENDERPASS` and a `RENDERTYPE` flag that specifies whether it is to be drawn in a transparent or opaque, or other kind of pass within a `RENDERPASS`. The developer is responsible of creating a fully valid pipeline state to render a mesh. If a pipeline state is left as empty for a combination of `RENDERPASS` and `RENDERTYPE`, then the material will simply be skipped and not rendered.
 
 
 ### wiEnums
@@ -963,7 +963,7 @@ Supports item selection from a list of text. Can set the maximum number of visib
 
 #### wiWindow
 [[Header]](../WickedEngine/wiWidget.h) [[Cpp]](../WickedEngine/wiWidget.cpp)
-A window widget is able to hold any number of other widgets. It can be moved across the screen, minimized and resized by the user. If a window holds a widget, it will manage its lifetime, so if the window is destroyed, all its children will be destroyed as well.
+A window widget is able to hold any number of other widgets. It can be moved across the screen, minimized and resized by the user. The window does not manage lifetime of attached widgets since 0.49.0!
 
 #### wiColorPicker
 [[Header]](../WickedEngine/wiWidget.h) [[Cpp]](../WickedEngine/wiWidget.cpp)

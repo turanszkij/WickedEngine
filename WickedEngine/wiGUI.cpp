@@ -59,16 +59,6 @@ void wiGUIElement::ApplyScissor(const Rect rect, CommandList cmd, bool constrain
 	device->BindScissorRects(1, &scissor, cmd);
 }
 
-
-
-wiGUI::~wiGUI()
-{
-	for (auto& widget : widgets)
-	{
-		delete widget;
-	}
-}
-
 void wiGUI::Update(float dt)
 {
 	if (!visible)
@@ -145,9 +135,8 @@ void wiGUI::Render(CommandList cmd) const
 	for (auto it = widgets.rbegin(); it != widgets.rend(); ++it)
 	{
 		const wiWidget* widget = (*it);
-		if (widget->parent == this && widget != activeWidget)
+		if (widget != activeWidget)
 		{
-			// the contained child widgets will be rendered by the containers
 			ApplyScissor(scissorRect, cmd);
 			widget->Render(this, cmd);
 		}
@@ -174,8 +163,9 @@ void wiGUI::Render(CommandList cmd) const
 
 void wiGUI::AddWidget(wiWidget* widget)
 {
-	if (std::find(widgets.begin(), widgets.end(), widget) == widgets.end())
+	if (widget != nullptr)
 	{
+		assert(std::find(widgets.begin(), widgets.end(), widget) == widgets.end()); // don't attach one widget twice!
 		widget->AttachTo(this);
 		widgets.push_back(widget);
 	}
@@ -183,8 +173,11 @@ void wiGUI::AddWidget(wiWidget* widget)
 
 void wiGUI::RemoveWidget(wiWidget* widget)
 {
-	widget->Detach();
-	widgets.remove(widget);
+	if (widget != nullptr)
+	{
+		widget->Detach();
+		widgets.remove(widget);
+	}
 }
 
 wiWidget* wiGUI::GetWidget(const std::string& name)
