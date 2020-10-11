@@ -83,21 +83,14 @@ void wiGUI::Update(float dt)
 	focus = false;
 	for (auto& widget : widgets)
 	{
-		if (widget->parent == this)
-		{
-			// the contained child widgets will be updated by the containers
-			widget->Update(this, dt);
+		// the contained child widgets will be updated by the containers
+		widget->Update(this, dt);
 
-			if (widget->IsVisible() && widget->hitBox.intersects(pointerhitbox))
-			{
-				// hitbox can only intersect with one element (avoid detecting multiple overlapping elements)
-				pointerhitbox.pos = XMFLOAT2(-FLT_MAX, -FLT_MAX);
-				pointerhitbox.siz = XMFLOAT2(0, 0);
-			}
-		}
-
-		if (widget->IsEnabled() && widget->IsVisible() && widget->GetState() > wiWidget::WIDGETSTATE::IDLE)
+		if (widget->IsVisible() && widget->hitBox.intersects(pointerhitbox))
 		{
+			// hitbox can only intersect with one element (avoid detecting multiple overlapping elements)
+			pointerhitbox.pos = XMFLOAT2(-FLT_MAX, -FLT_MAX);
+			pointerhitbox.siz = XMFLOAT2(0, 0);
 			focus = true;
 		}
 
