@@ -6,13 +6,9 @@ using namespace wiECS;
 using namespace wiScene;
 
 
-DecalWindow::DecalWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
+DecalWindow::DecalWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI(), "Decal Window")
 {
-	assert(GUI && "Invalid GUI!");
-
-	decalWindow = new wiWindow(GUI, "Decal Window");
-	decalWindow->SetSize(XMFLOAT2(400, 200));
-	GUI->AddWidget(decalWindow);
+	SetSize(XMFLOAT2(400, 200));
 
 	float x = 200;
 	float y = 5;
@@ -24,7 +20,7 @@ DecalWindow::DecalWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	placementCheckBox->SetSize(XMFLOAT2(hei, hei));
 	placementCheckBox->SetCheck(false);
 	placementCheckBox->SetTooltip("Enable decal placement. Use the left mouse button to place decals to the scene.");
-	decalWindow->AddWidget(placementCheckBox);
+	AddWidget(placementCheckBox);
 
 	y += step;
 
@@ -33,7 +29,7 @@ DecalWindow::DecalWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	infoLabel->SetSize(XMFLOAT2(400 - 20, 100));
 	infoLabel->SetPos(XMFLOAT2(10, y));
 	infoLabel->SetColor(wiColor::Transparent());
-	decalWindow->AddWidget(infoLabel);
+	AddWidget(infoLabel);
 	y += infoLabel->GetScale().y - step + 5;
 
 	decalNameField = new wiTextInputField("Decal Name");
@@ -46,20 +42,12 @@ DecalWindow::DecalWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			*name = args.sValue;
 		}
 	});
-	decalWindow->AddWidget(decalNameField);
+	AddWidget(decalNameField);
 
-	decalWindow->Translate(XMFLOAT3(30, 30, 0));
-	decalWindow->SetVisible(false);
+	Translate(XMFLOAT3(30, 30, 0));
+	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
-}
-
-
-DecalWindow::~DecalWindow()
-{
-	decalWindow->RemoveWidgets(true);
-	GUI->RemoveWidget(decalWindow);
-	delete decalWindow;
 }
 
 void DecalWindow::SetEntity(Entity entity)

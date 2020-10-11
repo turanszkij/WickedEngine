@@ -447,21 +447,21 @@ void EditorComponent::Load()
 	rendererWnd_Toggle = new wiButton("Renderer");
 	rendererWnd_Toggle->SetTooltip("Renderer settings window");
 	rendererWnd_Toggle->OnClick([=](wiEventArgs args) {
-		rendererWnd->rendererWindow->SetVisible(!rendererWnd->rendererWindow->IsVisible());
+		rendererWnd->SetVisible(!rendererWnd->IsVisible());
 		});
 	GetGUI().AddWidget(rendererWnd_Toggle);
 
 	postprocessWnd_Toggle = new wiButton("PostProcess");
 	postprocessWnd_Toggle->SetTooltip("Postprocess settings window");
 	postprocessWnd_Toggle->OnClick([=](wiEventArgs args) {
-		postprocessWnd->ppWindow->SetVisible(!postprocessWnd->ppWindow->IsVisible());
+		postprocessWnd->SetVisible(!postprocessWnd->IsVisible());
 		});
 	GetGUI().AddWidget(postprocessWnd_Toggle);
 
 	paintToolWnd_Toggle = new wiButton("Paint Tool");
 	paintToolWnd_Toggle->SetTooltip("Paint tool window");
 	paintToolWnd_Toggle->OnClick([=](wiEventArgs args) {
-		paintToolWnd->window->SetVisible(!paintToolWnd->window->IsVisible());
+		paintToolWnd->SetVisible(!paintToolWnd->IsVisible());
 		});
 	GetGUI().AddWidget(paintToolWnd_Toggle);
 
@@ -476,7 +476,7 @@ void EditorComponent::Load()
 	weatherWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	weatherWnd_Toggle->SetTooltip("Weather settings window");
 	weatherWnd_Toggle->OnClick([=](wiEventArgs args) {
-		weatherWnd->weatherWindow->SetVisible(!weatherWnd->weatherWindow->IsVisible());
+		weatherWnd->SetVisible(!weatherWnd->IsVisible());
 	});
 	GetGUI().AddWidget(weatherWnd_Toggle);
 
@@ -485,7 +485,7 @@ void EditorComponent::Load()
 	objectWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	objectWnd_Toggle->SetTooltip("Object settings window");
 	objectWnd_Toggle->OnClick([=](wiEventArgs args) {
-		objectWnd->objectWindow->SetVisible(!objectWnd->objectWindow->IsVisible());
+		objectWnd->SetVisible(!objectWnd->IsVisible());
 	});
 	GetGUI().AddWidget(objectWnd_Toggle);
 
@@ -494,7 +494,7 @@ void EditorComponent::Load()
 	meshWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	meshWnd_Toggle->SetTooltip("Mesh settings window");
 	meshWnd_Toggle->OnClick([=](wiEventArgs args) {
-		meshWnd->meshWindow->SetVisible(!meshWnd->meshWindow->IsVisible());
+		meshWnd->SetVisible(!meshWnd->IsVisible());
 	});
 	GetGUI().AddWidget(meshWnd_Toggle);
 
@@ -503,7 +503,7 @@ void EditorComponent::Load()
 	materialWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	materialWnd_Toggle->SetTooltip("Material settings window");
 	materialWnd_Toggle->OnClick([=](wiEventArgs args) {
-		materialWnd->materialWindow->SetVisible(!materialWnd->materialWindow->IsVisible());
+		materialWnd->SetVisible(!materialWnd->IsVisible());
 	});
 	GetGUI().AddWidget(materialWnd_Toggle);
 
@@ -512,7 +512,7 @@ void EditorComponent::Load()
 	cameraWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	cameraWnd_Toggle->SetTooltip("Camera settings window");
 	cameraWnd_Toggle->OnClick([=](wiEventArgs args) {
-		cameraWnd->cameraWindow->SetVisible(!cameraWnd->cameraWindow->IsVisible());
+		cameraWnd->SetVisible(!cameraWnd->IsVisible());
 	});
 	GetGUI().AddWidget(cameraWnd_Toggle);
 
@@ -521,7 +521,7 @@ void EditorComponent::Load()
 	envProbeWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	envProbeWnd_Toggle->SetTooltip("Environment probe settings window");
 	envProbeWnd_Toggle->OnClick([=](wiEventArgs args) {
-		envProbeWnd->envProbeWindow->SetVisible(!envProbeWnd->envProbeWindow->IsVisible());
+		envProbeWnd->SetVisible(!envProbeWnd->IsVisible());
 	});
 	GetGUI().AddWidget(envProbeWnd_Toggle);
 
@@ -530,7 +530,7 @@ void EditorComponent::Load()
 	decalWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	decalWnd_Toggle->SetTooltip("Decal settings window");
 	decalWnd_Toggle->OnClick([=](wiEventArgs args) {
-		decalWnd->decalWindow->SetVisible(!decalWnd->decalWindow->IsVisible());
+		decalWnd->SetVisible(!decalWnd->IsVisible());
 	});
 	GetGUI().AddWidget(decalWnd_Toggle);
 
@@ -539,7 +539,7 @@ void EditorComponent::Load()
 	soundWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	soundWnd_Toggle->SetTooltip("Sound settings window");
 	soundWnd_Toggle->OnClick([=](wiEventArgs args) {
-		soundWnd->soundWindow->SetVisible(!soundWnd->soundWindow->IsVisible());
+		soundWnd->SetVisible(!soundWnd->IsVisible());
 		});
 	GetGUI().AddWidget(soundWnd_Toggle);
 
@@ -548,7 +548,7 @@ void EditorComponent::Load()
 	lightWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	lightWnd_Toggle->SetTooltip("Light settings window");
 	lightWnd_Toggle->OnClick([=](wiEventArgs args) {
-		lightWnd->lightWindow->SetVisible(!lightWnd->lightWindow->IsVisible());
+		lightWnd->SetVisible(!lightWnd->IsVisible());
 	});
 	GetGUI().AddWidget(lightWnd_Toggle);
 
@@ -557,7 +557,7 @@ void EditorComponent::Load()
 	animWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	animWnd_Toggle->SetTooltip("Animation inspector window");
 	animWnd_Toggle->OnClick([=](wiEventArgs args) {
-		animWnd->animWindow->SetVisible(!animWnd->animWindow->IsVisible());
+		animWnd->SetVisible(!animWnd->IsVisible());
 	});
 	GetGUI().AddWidget(animWnd_Toggle);
 
@@ -566,7 +566,7 @@ void EditorComponent::Load()
 	emitterWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	emitterWnd_Toggle->SetTooltip("Emitter Particle System properties");
 	emitterWnd_Toggle->OnClick([=](wiEventArgs args) {
-		emitterWnd->emitterWindow->SetVisible(!emitterWnd->emitterWindow->IsVisible());
+		emitterWnd->SetVisible(!emitterWnd->IsVisible());
 	});
 	GetGUI().AddWidget(emitterWnd_Toggle);
 
@@ -575,7 +575,7 @@ void EditorComponent::Load()
 	hairWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	hairWnd_Toggle->SetTooltip("Hair Particle System properties");
 	hairWnd_Toggle->OnClick([=](wiEventArgs args) {
-		hairWnd->hairWindow->SetVisible(!hairWnd->hairWindow->IsVisible());
+		hairWnd->SetVisible(!hairWnd->IsVisible());
 	});
 	GetGUI().AddWidget(hairWnd_Toggle);
 
@@ -584,7 +584,7 @@ void EditorComponent::Load()
 	forceFieldWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	forceFieldWnd_Toggle->SetTooltip("Force Field properties");
 	forceFieldWnd_Toggle->OnClick([=](wiEventArgs args) {
-		forceFieldWnd->forceFieldWindow->SetVisible(!forceFieldWnd->forceFieldWindow->IsVisible());
+		forceFieldWnd->SetVisible(!forceFieldWnd->IsVisible());
 	});
 	GetGUI().AddWidget(forceFieldWnd_Toggle);
 
@@ -593,7 +593,7 @@ void EditorComponent::Load()
 	springWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	springWnd_Toggle->SetTooltip("Spring properties");
 	springWnd_Toggle->OnClick([=](wiEventArgs args) {
-		springWnd->window->SetVisible(!springWnd->window->IsVisible());
+		springWnd->SetVisible(!springWnd->IsVisible());
 		});
 	GetGUI().AddWidget(springWnd_Toggle);
 
@@ -602,7 +602,7 @@ void EditorComponent::Load()
 	ikWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	ikWnd_Toggle->SetTooltip("Inverse Kinematics properties");
 	ikWnd_Toggle->OnClick([=](wiEventArgs args) {
-		ikWnd->window->SetVisible(!ikWnd->window->IsVisible());
+		ikWnd->SetVisible(!ikWnd->IsVisible());
 		});
 	GetGUI().AddWidget(ikWnd_Toggle);
 
@@ -611,7 +611,7 @@ void EditorComponent::Load()
 	transformWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	transformWnd_Toggle->SetTooltip("Transform properties");
 	transformWnd_Toggle->OnClick([=](wiEventArgs args) {
-		transformWnd->window->SetVisible(!transformWnd->window->IsVisible());
+		transformWnd->SetVisible(!transformWnd->IsVisible());
 		});
 	GetGUI().AddWidget(transformWnd_Toggle);
 
@@ -620,7 +620,7 @@ void EditorComponent::Load()
 	layerWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	layerWnd_Toggle->SetTooltip("Layer Component");
 	layerWnd_Toggle->OnClick([=](wiEventArgs args) {
-		layerWnd->window->SetVisible(!layerWnd->window->IsVisible());
+		layerWnd->SetVisible(!layerWnd->IsVisible());
 		});
 	GetGUI().AddWidget(layerWnd_Toggle);
 
@@ -629,7 +629,7 @@ void EditorComponent::Load()
 	nameWnd_Toggle->SetColor(option_color_focus, wiWidget::FOCUS);
 	nameWnd_Toggle->SetTooltip("Name Component");
 	nameWnd_Toggle->OnClick([=](wiEventArgs args) {
-		nameWnd->window->SetVisible(!nameWnd->window->IsVisible());
+		nameWnd->SetVisible(!nameWnd->IsVisible());
 		});
 	GetGUI().AddWidget(nameWnd_Toggle);
 

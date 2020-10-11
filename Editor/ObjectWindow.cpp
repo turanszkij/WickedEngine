@@ -245,14 +245,9 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 }
 
 
-ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
+ObjectWindow::ObjectWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI(), "Object Window"), editor(editor)
 {
-	GUI = &editor->GetGUI();
-	assert(GUI && "Invalid GUI!");
-
-	objectWindow = new wiWindow(GUI, "Object Window");
-	objectWindow->SetSize(XMFLOAT2(350, 610));
-	GUI->AddWidget(objectWindow);
+	SetSize(XMFLOAT2(350, 610));
 
 	float x = 200;
 	float y = 0;
@@ -263,7 +258,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	nameLabel->SetText("");
 	nameLabel->SetPos(XMFLOAT2(x - 30, y += step));
 	nameLabel->SetSize(XMFLOAT2(150, hei));
-	objectWindow->AddWidget(nameLabel);
+	AddWidget(nameLabel);
 
 	renderableCheckBox = new wiCheckBox("Renderable: ");
 	renderableCheckBox->SetTooltip("Set object to be participating in rendering.");
@@ -277,7 +272,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 			object->SetRenderable(args.bValue);
 		}
 	});
-	objectWindow->AddWidget(renderableCheckBox);
+	AddWidget(renderableCheckBox);
 
 	ditherSlider = new wiSlider(0, 1, 0, 1000, "Dither: ");
 	ditherSlider->SetTooltip("Adjust dithered transparency of the object. This disables some optimizations so performance can be affected.");
@@ -290,7 +285,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 			object->color.w = 1 - args.fValue;
 		}
 	});
-	objectWindow->AddWidget(ditherSlider);
+	AddWidget(ditherSlider);
 
 	cascadeMaskSlider = new wiSlider(0, 3, 0, 3, "Cascade Mask: ");
 	cascadeMaskSlider->SetTooltip("How many shadow cascades to skip when rendering this object into shadow maps? (0: skip none, it will be in all cascades, 1: skip first (biggest cascade), ...etc...");
@@ -303,7 +298,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 			object->cascadeMask = (uint32_t)args.iValue;
 		}
 	});
-	objectWindow->AddWidget(cascadeMaskSlider);
+	AddWidget(cascadeMaskSlider);
 
 	y += step;
 
@@ -311,7 +306,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	physicsLabel->SetText("PHYSICS SETTINGS");
 	physicsLabel->SetPos(XMFLOAT2(x - 30, y += step));
 	physicsLabel->SetSize(XMFLOAT2(150, hei));
-	objectWindow->AddWidget(physicsLabel);
+	AddWidget(physicsLabel);
 
 
 
@@ -344,7 +339,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 		}
 
 	});
-	objectWindow->AddWidget(rigidBodyCheckBox);
+	AddWidget(rigidBodyCheckBox);
 
 	kinematicCheckBox = new wiCheckBox("Kinematic: ");
 	kinematicCheckBox->SetTooltip("Toggle kinematic behaviour.");
@@ -358,7 +353,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 			physicscomponent->SetKinematic(args.bValue);
 		}
 	});
-	objectWindow->AddWidget(kinematicCheckBox);
+	AddWidget(kinematicCheckBox);
 
 	disabledeactivationCheckBox = new wiCheckBox("Disable Deactivation: ");
 	disabledeactivationCheckBox->SetTooltip("Toggle kinematic behaviour.");
@@ -372,7 +367,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 			physicscomponent->SetDisableDeactivation(args.bValue);
 		}
 	});
-	objectWindow->AddWidget(disabledeactivationCheckBox);
+	AddWidget(disabledeactivationCheckBox);
 
 	collisionShapeComboBox = new wiComboBox("Collision Shape:");
 	collisionShapeComboBox->SetSize(XMFLOAT2(100, hei));
@@ -412,7 +407,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	collisionShapeComboBox->SetSelected(0);
 	collisionShapeComboBox->SetEnabled(true);
 	collisionShapeComboBox->SetTooltip("Set rigid body collision shape.");
-	objectWindow->AddWidget(collisionShapeComboBox);
+	AddWidget(collisionShapeComboBox);
 
 
 	y += step;
@@ -427,7 +422,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 		//	or at least for me, downloading the lightmap was glitching out when non-pow 2 and RGBA32_FLOAT format
 		lightmapResolutionSlider->SetValue(float(wiMath::GetNextPowerOfTwo(uint32_t(args.fValue)))); 
 	});
-	objectWindow->AddWidget(lightmapResolutionSlider);
+	AddWidget(lightmapResolutionSlider);
 
 	lightmapSourceUVSetComboBox = new wiComboBox("UV Set: ");
 	lightmapSourceUVSetComboBox->SetPos(XMFLOAT2(x - 130, y += step));
@@ -437,7 +432,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	lightmapSourceUVSetComboBox->AddItem("Generate Atlas");
 	lightmapSourceUVSetComboBox->SetSelected(3);
 	lightmapSourceUVSetComboBox->SetTooltip("Set which UV set to use when generating the lightmap Atlas");
-	objectWindow->AddWidget(lightmapSourceUVSetComboBox);
+	AddWidget(lightmapSourceUVSetComboBox);
 
 	generateLightmapButton = new wiButton("Generate Lightmap");
 	generateLightmapButton->SetTooltip("Render the lightmap for only this object. It will automatically combined with the global lightmap.");
@@ -518,7 +513,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 		wiRenderer::InvalidateBVH();
 
 	});
-	objectWindow->AddWidget(generateLightmapButton);
+	AddWidget(generateLightmapButton);
 
 	stopLightmapGenButton = new wiButton("Stop Lightmap Gen");
 	stopLightmapGenButton->SetTooltip("Stop the lightmap rendering and save the lightmap.");
@@ -539,7 +534,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 		}
 
 	});
-	objectWindow->AddWidget(stopLightmapGenButton);
+	AddWidget(stopLightmapGenButton);
 
 	clearLightmapButton = new wiButton("Clear Lightmap");
 	clearLightmapButton->SetTooltip("Clear the lightmap from this object.");
@@ -559,11 +554,11 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 		}
 
 	});
-	objectWindow->AddWidget(clearLightmapButton);
+	AddWidget(clearLightmapButton);
 
 	y += step;
 
-	colorPicker = new wiColorPicker(GUI, "Object Color", false);
+	colorPicker = new wiColorPicker(gui, "Object Color", false);
 	colorPicker->SetPos(XMFLOAT2(20, y += step));
 	colorPicker->SetVisible(true);
 	colorPicker->SetEnabled(true);
@@ -575,21 +570,13 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 			object->color = XMFLOAT4(col.x, col.y, col.z, object->color.w);
 		}
 		});
-	objectWindow->AddWidget(colorPicker);
+	AddWidget(colorPicker);
 
 
-	objectWindow->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 720, 120, 0));
-	objectWindow->SetVisible(false);
+	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 720, 120, 0));
+	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
-}
-
-
-ObjectWindow::~ObjectWindow()
-{
-	objectWindow->RemoveWidgets(true);
-	GUI->RemoveWidget(objectWindow);
-	delete objectWindow;
 }
 
 
@@ -603,7 +590,7 @@ void ObjectWindow::SetEntity(Entity entity)
 
 	if (object != nullptr)
 	{
-		objectWindow->SetEnabled(true);
+		SetEnabled(true);
 
 		const NameComponent* name = scene.names.GetComponent(entity);
 		nameLabel->SetText(name == nullptr ? std::to_string(entity) : name->name);
@@ -647,7 +634,7 @@ void ObjectWindow::SetEntity(Entity entity)
 	}
 	else
 	{
-		objectWindow->SetEnabled(false);
+		SetEnabled(false);
 	}
 
 }

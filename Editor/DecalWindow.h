@@ -1,20 +1,12 @@
 #pragma once
-
-class wiGUI;
-class wiWindow;
-class wiLabel;
-class wiCheckBox;
-class wiSlider;
+#include "WickedEngine.h"
 
 class EditorComponent;
 
-class DecalWindow
+class DecalWindow : public wiWindow
 {
 public:
 	DecalWindow(EditorComponent* editor);
-	~DecalWindow();
-
-	wiGUI* GUI;
 
 	wiECS::Entity entity;
 	void SetEntity(wiECS::Entity entity);
@@ -22,7 +14,5 @@ public:
 	wiCheckBox* placementCheckBox;
 	wiLabel* infoLabel;
 	wiTextInputField*	decalNameField;
-
-	wiWindow*	decalWindow;
 };
 

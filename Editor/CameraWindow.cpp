@@ -18,16 +18,12 @@ void CameraWindow::ResetCam()
 	camera_target.UpdateTransform();
 }
 
-CameraWindow::CameraWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
+CameraWindow::CameraWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI(), "Camera Window")
 {
-	assert(GUI && "Invalid GUI!");
-
 	camera_transform.MatrixTransform(wiRenderer::GetCamera().GetInvView());
 	camera_transform.UpdateTransform();
 
-	cameraWindow = new wiWindow(GUI, "Camera Window");
-	cameraWindow->SetSize(XMFLOAT2(380, 260));
-	GUI->AddWidget(cameraWindow);
+	SetSize(XMFLOAT2(380, 260));
 
 	float x = 200;
 	float y = 10;
@@ -44,7 +40,7 @@ CameraWindow::CameraWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		camera.zFarP = args.fValue;
 		camera.UpdateCamera();
 	});
-	cameraWindow->AddWidget(farPlaneSlider);
+	AddWidget(farPlaneSlider);
 
 	nearPlaneSlider = new wiSlider(0.01f, 10, 0.1f, 10000, "Near Plane: ");
 	nearPlaneSlider->SetSize(XMFLOAT2(100, hei));
@@ -56,7 +52,7 @@ CameraWindow::CameraWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		camera.zNearP = args.fValue;
 		camera.UpdateCamera();
 	});
-	cameraWindow->AddWidget(nearPlaneSlider);
+	AddWidget(nearPlaneSlider);
 
 	fovSlider = new wiSlider(1, 179, 60, 10000, "FOV: ");
 	fovSlider->SetSize(XMFLOAT2(100, hei));
@@ -67,17 +63,17 @@ CameraWindow::CameraWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		camera.fov = args.fValue / 180.f * XM_PI;
 		camera.UpdateCamera();
 	});
-	cameraWindow->AddWidget(fovSlider);
+	AddWidget(fovSlider);
 
 	movespeedSlider = new wiSlider(1, 100, 10, 10000, "Movement Speed: ");
 	movespeedSlider->SetSize(XMFLOAT2(100, hei));
 	movespeedSlider->SetPos(XMFLOAT2(x, y += step));
-	cameraWindow->AddWidget(movespeedSlider);
+	AddWidget(movespeedSlider);
 
 	rotationspeedSlider = new wiSlider(0.1f, 2, 1, 10000, "Rotation Speed: ");
 	rotationspeedSlider->SetSize(XMFLOAT2(100, hei));
 	rotationspeedSlider->SetPos(XMFLOAT2(x, y += step));
-	cameraWindow->AddWidget(rotationspeedSlider);
+	AddWidget(rotationspeedSlider);
 
 	resetButton = new wiButton("Reset Camera");
 	resetButton->SetSize(XMFLOAT2(140, hei));
@@ -85,13 +81,13 @@ CameraWindow::CameraWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	resetButton->OnClick([&](wiEventArgs args) {
 		ResetCam();
 	});
-	cameraWindow->AddWidget(resetButton);
+	AddWidget(resetButton);
 
 	fpsCheckBox = new wiCheckBox("FPS Camera: ");
 	fpsCheckBox->SetSize(XMFLOAT2(hei, hei));
 	fpsCheckBox->SetPos(XMFLOAT2(x, y += step));
 	fpsCheckBox->SetCheck(true);
-	cameraWindow->AddWidget(fpsCheckBox);
+	AddWidget(fpsCheckBox);
 
 
 
@@ -110,34 +106,26 @@ CameraWindow::CameraWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		TransformComponent& transform = *scene.transforms.GetComponent(entity);
 		transform.MatrixTransform(camera.InvView);
 	});
-	cameraWindow->AddWidget(proxyButton);
+	AddWidget(proxyButton);
 
 
 	followCheckBox = new wiCheckBox("Follow Proxy: ");
 	followCheckBox->SetSize(XMFLOAT2(hei, hei));
 	followCheckBox->SetPos(XMFLOAT2(x, y += step));
 	followCheckBox->SetCheck(false);
-	cameraWindow->AddWidget(followCheckBox);
+	AddWidget(followCheckBox);
 
 	followSlider = new wiSlider(0.0f, 0.999f, 0.0f, 1000.0f, "Follow Proxy Delay: ");
 	followSlider->SetSize(XMFLOAT2(100, hei));
 	followSlider->SetPos(XMFLOAT2(x, y += step));
-	cameraWindow->AddWidget(followSlider);
+	AddWidget(followSlider);
 
 
 	SetEntity(INVALID_ENTITY);
 
 
-	cameraWindow->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 720, 100, 0));
-	cameraWindow->SetVisible(false);
-}
-
-
-CameraWindow::~CameraWindow()
-{
-	cameraWindow->RemoveWidgets(true);
-	GUI->RemoveWidget(cameraWindow);
-	delete cameraWindow;
+	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 720, 100, 0));
+	SetVisible(false);
 }
 
 void CameraWindow::SetEntity(Entity entity)

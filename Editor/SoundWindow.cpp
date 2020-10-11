@@ -10,13 +10,9 @@ using namespace wiGraphics;
 using namespace wiECS;
 using namespace wiScene;
 
-SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
+SoundWindow::SoundWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI(), "Sound Window")
 {
-	assert(GUI && "Invalid GUI!");
-
-	soundWindow = new wiWindow(GUI, "Sound Window");
-	soundWindow->SetSize(XMFLOAT2(440, 220));
-	GUI->AddWidget(soundWindow);
+	SetSize(XMFLOAT2(440, 220));
 
 	float x = 20;
 	float y = 10;
@@ -60,7 +56,7 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	reverbComboBox->AddItem("LARGEHALL");
 	reverbComboBox->AddItem("PLATE");
 	reverbComboBox->SetTooltip("Set the global reverb setting. Sound instances need to enable reverb to take effect!");
-	soundWindow->AddWidget(reverbComboBox);
+	AddWidget(reverbComboBox);
 
 	y += step;
 
@@ -83,12 +79,12 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			});
 		});
 	});
-	soundWindow->AddWidget(addButton);
+	AddWidget(addButton);
 
 	filenameLabel = new wiLabel("Filename");
 	filenameLabel->SetPos(XMFLOAT2(x, y += step));
 	filenameLabel->SetSize(XMFLOAT2(400, hei));
-	soundWindow->AddWidget(filenameLabel);
+	AddWidget(filenameLabel);
 
 	nameField = new wiTextInputField("SoundName");
 	nameField->SetTooltip("Enter a sound name to identify this entity...");
@@ -102,7 +98,7 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		}
 		*name = args.sValue;
 	});
-	soundWindow->AddWidget(nameField);
+	AddWidget(nameField);
 	nameField->SetEnabled(false);
 
 	playstopButton = new wiButton("Play");
@@ -125,7 +121,7 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			}
 		}
 	});
-	soundWindow->AddWidget(playstopButton);
+	AddWidget(playstopButton);
 	playstopButton->SetEnabled(false);
 
 	loopedCheckbox = new wiCheckBox("Looped: ");
@@ -139,7 +135,7 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			sound->SetLooped(args.bValue);
 		}
 	});
-	soundWindow->AddWidget(loopedCheckbox);
+	AddWidget(loopedCheckbox);
 	loopedCheckbox->SetEnabled(false);
 
 	reverbCheckbox = new wiCheckBox("Reverb: ");
@@ -154,7 +150,7 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			wiAudio::CreateSoundInstance(sound->soundResource->sound, &sound->soundinstance);
 		}
 	});
-	soundWindow->AddWidget(reverbCheckbox);
+	AddWidget(reverbCheckbox);
 	reverbCheckbox->SetEnabled(false);
 
 	disable3dCheckbox = new wiCheckBox("2D: ");
@@ -169,7 +165,7 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			wiAudio::CreateSoundInstance(sound->soundResource->sound, &sound->soundinstance);
 		}
 	});
-	soundWindow->AddWidget(disable3dCheckbox);
+	AddWidget(disable3dCheckbox);
 	loopedCheckbox->SetEnabled(false);
 
 	volumeSlider = new wiSlider(0, 1, 1, 1000, "Volume: ");
@@ -183,7 +179,7 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			sound->volume = args.fValue;
 		}
 	});
-	soundWindow->AddWidget(volumeSlider);
+	AddWidget(volumeSlider);
 	volumeSlider->SetEnabled(false);
 
 	submixComboBox = new wiComboBox("Submix: ");
@@ -203,19 +199,12 @@ SoundWindow::SoundWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	submixComboBox->AddItem("USER1");
 	submixComboBox->SetTooltip("Set the submix channel of the sound. \nSound properties like volume can be set per sound, or per submix channel.");
 	submixComboBox->SetScriptTip("SoundInstance::SetSubmixType(int submixType)");
-	soundWindow->AddWidget(submixComboBox);
+	AddWidget(submixComboBox);
 
-	soundWindow->Translate(XMFLOAT3(400, 120, 0));
-	soundWindow->SetVisible(false);
+	Translate(XMFLOAT3(400, 120, 0));
+	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
-}
-
-SoundWindow::~SoundWindow()
-{
-	soundWindow->RemoveWidgets(true);
-	GUI->RemoveWidget(soundWindow);
-	delete soundWindow;
 }
 
 

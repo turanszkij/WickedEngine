@@ -9,13 +9,9 @@ using namespace wiGraphics;
 using namespace wiECS;
 using namespace wiScene;
 
-MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
+MaterialWindow::MaterialWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI(), "Material Window")
 {
-	assert(GUI && "Invalid GUI!");
-
-	materialWindow = new wiWindow(GUI, "Material Window");
-	materialWindow->SetSize(XMFLOAT2(720, 540));
-	GUI->AddWidget(materialWindow);
+	SetSize(XMFLOAT2(720, 540));
 
 	float x = 670, y = 0;
 	float hei = 18;
@@ -30,7 +26,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		if (material != nullptr)
 			material->SetCastShadow(args.bValue);
 	});
-	materialWindow->AddWidget(shadowCasterCheckBox);
+	AddWidget(shadowCasterCheckBox);
 
 	flipNormalMapCheckBox = new wiCheckBox("Flip Normal Map: ");
 	flipNormalMapCheckBox->SetTooltip("The normal map green channel will be inverted. Useful for imported models coming from OpenGL space (such as GLTF).");
@@ -41,7 +37,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		if (material != nullptr)
 			material->SetFlipNormalMap(args.bValue);
 	});
-	materialWindow->AddWidget(flipNormalMapCheckBox);
+	AddWidget(flipNormalMapCheckBox);
 
 	useVertexColorsCheckBox = new wiCheckBox("Use vertex colors: ");
 	useVertexColorsCheckBox->SetTooltip("Enable if you want to render the mesh with vertex colors (must have appropriate vertex buffer)");
@@ -52,7 +48,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		if (material != nullptr)
 			material->SetUseVertexColors(args.bValue);
 	});
-	materialWindow->AddWidget(useVertexColorsCheckBox);
+	AddWidget(useVertexColorsCheckBox);
 
 	specularGlossinessCheckBox = new wiCheckBox("Specular-glossiness workflow: ");
 	specularGlossinessCheckBox->SetTooltip("If enabled, surface map will be viewed like it contains specular color (RGB) and smoothness (A)");
@@ -63,7 +59,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		if (material != nullptr)
 			material->SetUseSpecularGlossinessWorkflow(args.bValue);
 	});
-	materialWindow->AddWidget(specularGlossinessCheckBox);
+	AddWidget(specularGlossinessCheckBox);
 
 	occlusionPrimaryCheckBox = new wiCheckBox("Occlusion - Primary: ");
 	occlusionPrimaryCheckBox->SetTooltip("If enabled, surface map's RED channel will be used as occlusion map");
@@ -74,7 +70,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		if (material != nullptr)
 			material->SetOcclusionEnabled_Primary(args.bValue);
 	});
-	materialWindow->AddWidget(occlusionPrimaryCheckBox);
+	AddWidget(occlusionPrimaryCheckBox);
 
 	occlusionSecondaryCheckBox = new wiCheckBox("Occlusion - Secondary: ");
 	occlusionSecondaryCheckBox->SetTooltip("If enabled, occlusion map's RED channel will be used as occlusion map");
@@ -85,7 +81,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		if (material != nullptr)
 			material->SetOcclusionEnabled_Secondary(args.bValue);
 	});
-	materialWindow->AddWidget(occlusionSecondaryCheckBox);
+	AddWidget(occlusionSecondaryCheckBox);
 
 	windCheckBox = new wiCheckBox("Wind: ");
 	windCheckBox->SetTooltip("If enabled, vertex wind weights will affect how much wind offset affects the subset.");
@@ -96,7 +92,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		if (material != nullptr)
 			material->SetUseWind(args.bValue);
 		});
-	materialWindow->AddWidget(windCheckBox);
+	AddWidget(windCheckBox);
 
 	// Sliders:
 	x = 520;
@@ -111,7 +107,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		if (material != nullptr)
 			material->SetNormalMapStrength(args.fValue);
 	});
-	materialWindow->AddWidget(normalMapSlider);
+	AddWidget(normalMapSlider);
 
 	roughnessSlider = new wiSlider(0, 1, 0.5f, 1000, "Roughness: ");
 	roughnessSlider->SetTooltip("Adjust the surface roughness. Rough surfaces are less shiny, more matte.");
@@ -122,7 +118,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		if (material != nullptr)
 			material->SetRoughness(args.fValue);
 	});
-	materialWindow->AddWidget(roughnessSlider);
+	AddWidget(roughnessSlider);
 
 	reflectanceSlider = new wiSlider(0, 1, 0.5f, 1000, "Reflectance: ");
 	reflectanceSlider->SetTooltip("Adjust the overall surface reflectivity.");
@@ -133,7 +129,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		if (material != nullptr)
 			material->SetReflectance(args.fValue);
 	});
-	materialWindow->AddWidget(reflectanceSlider);
+	AddWidget(reflectanceSlider);
 
 	metalnessSlider = new wiSlider(0, 1, 0.0f, 1000, "Metalness: ");
 	metalnessSlider->SetTooltip("The more metal-like the surface is, the more the its color will contribute to the reflection color.");
@@ -144,7 +140,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		if (material != nullptr)
 			material->SetMetalness(args.fValue);
 	});
-	materialWindow->AddWidget(metalnessSlider);
+	AddWidget(metalnessSlider);
 
 	alphaRefSlider = new wiSlider(0, 1, 1.0f, 1000, "AlphaRef: ");
 	alphaRefSlider->SetTooltip("Adjust the alpha cutoff threshold. Some performance optimizations will be disabled.");
@@ -155,7 +151,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		if (material != nullptr)
 			material->SetAlphaRef(args.fValue);
 	});
-	materialWindow->AddWidget(alphaRefSlider);
+	AddWidget(alphaRefSlider);
 
 	refractionIndexSlider = new wiSlider(0, 1.0f, 0.02f, 1000, "Refraction Index: ");
 	refractionIndexSlider->SetTooltip("Adjust the IOR (index of refraction). It controls the amount of distortion of the scene visible through the transparent object. No effect when BlendMode is set to OPAQUE.");
@@ -166,7 +162,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		if (material != nullptr)
 			material->SetRefractionIndex(args.fValue);
 	});
-	materialWindow->AddWidget(refractionIndexSlider);
+	AddWidget(refractionIndexSlider);
 
 	emissiveSlider = new wiSlider(0, 1, 0.0f, 1000, "Emissive: ");
 	emissiveSlider->SetTooltip("Adjust the light emission of the surface. The color of the light emitted is that of the color of the material.");
@@ -177,7 +173,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		if (material != nullptr)
 			material->SetEmissiveStrength(args.fValue);
 	});
-	materialWindow->AddWidget(emissiveSlider);
+	AddWidget(emissiveSlider);
 
 	sssSlider = new wiSlider(0, 1, 0.0f, 1000, "Subsurface Scattering: ");
 	sssSlider->SetTooltip("Adjust how much the light is scattered when entered inside the surface of the object. (SSS postprocess must be enabled)");
@@ -188,7 +184,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		if (material != nullptr)
 			material->SetSubsurfaceScattering(args.fValue);
 	});
-	materialWindow->AddWidget(sssSlider);
+	AddWidget(sssSlider);
 
 	pomSlider = new wiSlider(0, 0.1f, 0.0f, 1000, "Parallax Occlusion Mapping: ");
 	pomSlider->SetTooltip("Adjust how much the bump map should modulate the surface parallax effect.");
@@ -199,7 +195,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		if (material != nullptr)
 			material->SetParallaxOcclusionMapping(args.fValue);
 	});
-	materialWindow->AddWidget(pomSlider);
+	AddWidget(pomSlider);
 
 	displacementMappingSlider = new wiSlider(0, 0.1f, 0.0f, 1000, "Displacement Mapping: ");
 	displacementMappingSlider->SetTooltip("Adjust how much the bump map should modulate the geometry when using tessellation.");
@@ -210,7 +206,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		if (material != nullptr)
 			material->SetDisplacementMapping(args.fValue);
 	});
-	materialWindow->AddWidget(displacementMappingSlider);
+	AddWidget(displacementMappingSlider);
 
 	texAnimFrameRateSlider = new wiSlider(0, 60, 0, 60, "Texcoord anim FPS: ");
 	texAnimFrameRateSlider->SetTooltip("Adjust the texture animation frame rate (frames per second). Any value above 0 will make the material dynamic.");
@@ -223,7 +219,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			material->texAnimFrameRate = args.fValue;
 		}
 	});
-	materialWindow->AddWidget(texAnimFrameRateSlider);
+	AddWidget(texAnimFrameRateSlider);
 
 	texAnimDirectionSliderU = new wiSlider(-0.05f, 0.05f, 0, 1000, "Texcoord anim U: ");
 	texAnimDirectionSliderU->SetTooltip("Adjust the texture animation speed along the U direction in texture space.");
@@ -236,7 +232,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			material->texAnimDirection.x = args.fValue;
 		}
 	});
-	materialWindow->AddWidget(texAnimDirectionSliderU);
+	AddWidget(texAnimDirectionSliderU);
 
 	texAnimDirectionSliderV = new wiSlider(-0.05f, 0.05f, 0, 1000, "Texcoord anim V: ");
 	texAnimDirectionSliderV->SetTooltip("Adjust the texture animation speed along the V direction in texture space.");
@@ -249,7 +245,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			material->texAnimDirection.y = args.fValue;
 		}
 	});
-	materialWindow->AddWidget(texAnimDirectionSliderV);
+	AddWidget(texAnimDirectionSliderV);
 
 	texMulSliderX = new wiSlider(0.01f, 10.0f, 0, 1000, "Texture TileSize X: ");
 	texMulSliderX->SetTooltip("Adjust the texture mapping size.");
@@ -263,7 +259,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			material->texMulAdd.x = args.fValue;
 		}
 	});
-	materialWindow->AddWidget(texMulSliderX);
+	AddWidget(texMulSliderX);
 
 	texMulSliderY = new wiSlider(0.01f, 10.0f, 0, 1000, "Texture TileSize Y: ");
 	texMulSliderY->SetTooltip("Adjust the texture mapping size.");
@@ -277,7 +273,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			material->texMulAdd.y = args.fValue;
 		}
 	});
-	materialWindow->AddWidget(texMulSliderY);
+	AddWidget(texMulSliderY);
 
 	wid = 170;
 
@@ -297,7 +293,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	blendModeComboBox->AddItem("Additive");
 	blendModeComboBox->SetEnabled(false);
 	blendModeComboBox->SetTooltip("Set the blend mode of the material.");
-	materialWindow->AddWidget(blendModeComboBox);
+	AddWidget(blendModeComboBox);
 
 
 	shaderTypeComboBox = new wiComboBox("Shader: ");
@@ -330,7 +326,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		shaderTypeComboBox->AddItem("*" + x.name);
 	}
 	shaderTypeComboBox->SetEnabled(false);
-	materialWindow->AddWidget(shaderTypeComboBox);
+	AddWidget(shaderTypeComboBox);
 
 
 
@@ -354,7 +350,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	shadingRateComboBox->AddItem("4X4");
 	shadingRateComboBox->SetEnabled(false);
 	shadingRateComboBox->SetMaxVisibleItemCount(4);
-	materialWindow->AddWidget(shadingRateComboBox);
+	AddWidget(shadingRateComboBox);
 
 
 	// Textures:
@@ -375,7 +371,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			*name = args.sValue;
 		}
 	});
-	materialWindow->AddWidget(materialNameField);
+	AddWidget(materialNameField);
 
 	newMaterialButton = new wiButton("New Material");
 	newMaterialButton->SetPos(XMFLOAT2(10 + 5 + 300, y));
@@ -387,12 +383,12 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		editor->AddSelected(entity);
 		SetEntity(entity);
 	});
-	materialWindow->AddWidget(newMaterialButton);
+	AddWidget(newMaterialButton);
 
 	texture_baseColor_Label = new wiLabel("BaseColorMap: ");
 	texture_baseColor_Label->SetPos(XMFLOAT2(x, y += step));
 	texture_baseColor_Label->SetSize(XMFLOAT2(120, 20));
-	materialWindow->AddWidget(texture_baseColor_Label);
+	AddWidget(texture_baseColor_Label);
 
 	texture_baseColor_Button = new wiButton("BaseColor");
 	texture_baseColor_Button->SetText("");
@@ -430,7 +426,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			});
 		}
 	});
-	materialWindow->AddWidget(texture_baseColor_Button);
+	AddWidget(texture_baseColor_Button);
 
 	texture_baseColor_uvset_Field = new wiTextInputField("uvset_baseColor");
 	texture_baseColor_uvset_Field->SetText("");
@@ -444,14 +440,14 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			material->SetUVSet_BaseColorMap(args.iValue);
 		}
 	});
-	materialWindow->AddWidget(texture_baseColor_uvset_Field);
+	AddWidget(texture_baseColor_uvset_Field);
 
 
 
 	texture_normal_Label = new wiLabel("NormalMap: ");
 	texture_normal_Label->SetPos(XMFLOAT2(x, y += step));
 	texture_normal_Label->SetSize(XMFLOAT2(120, 20));
-	materialWindow->AddWidget(texture_normal_Label);
+	AddWidget(texture_normal_Label);
 
 	texture_normal_Button = new wiButton("NormalMap");
 	texture_normal_Button->SetText("");
@@ -489,7 +485,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			});
 		}
 	});
-	materialWindow->AddWidget(texture_normal_Button);
+	AddWidget(texture_normal_Button);
 
 	texture_normal_uvset_Field = new wiTextInputField("uvset_normal");
 	texture_normal_uvset_Field->SetText("");
@@ -503,14 +499,14 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			material->SetUVSet_NormalMap(args.iValue);
 		}
 	});
-	materialWindow->AddWidget(texture_normal_uvset_Field);
+	AddWidget(texture_normal_uvset_Field);
 
 
 
 	texture_surface_Label = new wiLabel("SurfaceMap: ");
 	texture_surface_Label->SetPos(XMFLOAT2(x, y += step));
 	texture_surface_Label->SetSize(XMFLOAT2(120, 20));
-	materialWindow->AddWidget(texture_surface_Label);
+	AddWidget(texture_surface_Label);
 
 	texture_surface_Button = new wiButton("SurfaceMap");
 	texture_surface_Button->SetText("");
@@ -548,7 +544,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			});
 		}
 	});
-	materialWindow->AddWidget(texture_surface_Button);
+	AddWidget(texture_surface_Button);
 
 	texture_surface_uvset_Field = new wiTextInputField("uvset_surface");
 	texture_surface_uvset_Field->SetText("");
@@ -562,14 +558,14 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			material->SetUVSet_SurfaceMap(args.iValue);
 		}
 	});
-	materialWindow->AddWidget(texture_surface_uvset_Field);
+	AddWidget(texture_surface_uvset_Field);
 
 
 
 	texture_emissive_Label = new wiLabel("EmissiveMap: ");
 	texture_emissive_Label->SetPos(XMFLOAT2(x, y += step));
 	texture_emissive_Label->SetSize(XMFLOAT2(120, 20));
-	materialWindow->AddWidget(texture_emissive_Label);
+	AddWidget(texture_emissive_Label);
 
 	texture_emissive_Button = new wiButton("EmissiveMap");
 	texture_emissive_Button->SetText("");
@@ -607,7 +603,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			});
 		}
 	});
-	materialWindow->AddWidget(texture_emissive_Button);
+	AddWidget(texture_emissive_Button);
 
 	texture_emissive_uvset_Field = new wiTextInputField("uvset_emissive");
 	texture_emissive_uvset_Field->SetText("");
@@ -621,14 +617,14 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			material->SetUVSet_EmissiveMap(args.iValue);
 		}
 		});
-	materialWindow->AddWidget(texture_emissive_uvset_Field);
+	AddWidget(texture_emissive_uvset_Field);
 
 
 
 	texture_displacement_Label = new wiLabel("DisplacementMap: ");
 	texture_displacement_Label->SetPos(XMFLOAT2(x, y += step));
 	texture_displacement_Label->SetSize(XMFLOAT2(120, 20));
-	materialWindow->AddWidget(texture_displacement_Label);
+	AddWidget(texture_displacement_Label);
 
 	texture_displacement_Button = new wiButton("DisplacementMap");
 	texture_displacement_Button->SetText("");
@@ -666,7 +662,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			});
 		}
 	});
-	materialWindow->AddWidget(texture_displacement_Button);
+	AddWidget(texture_displacement_Button);
 
 	texture_displacement_uvset_Field = new wiTextInputField("uvset_displacement");
 	texture_displacement_uvset_Field->SetText("");
@@ -680,7 +676,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			material->SetUVSet_DisplacementMap(args.iValue);
 		}
 	});
-	materialWindow->AddWidget(texture_displacement_uvset_Field);
+	AddWidget(texture_displacement_uvset_Field);
 
 
 
@@ -688,7 +684,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	texture_occlusion_Label = new wiLabel("OcclusionMap: ");
 	texture_occlusion_Label->SetPos(XMFLOAT2(x, y += step));
 	texture_occlusion_Label->SetSize(XMFLOAT2(120, 20));
-	materialWindow->AddWidget(texture_occlusion_Label);
+	AddWidget(texture_occlusion_Label);
 
 	texture_occlusion_Button = new wiButton("OcclusionMap");
 	texture_occlusion_Button->SetText("");
@@ -726,7 +722,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			});
 		}
 	});
-	materialWindow->AddWidget(texture_occlusion_Button);
+	AddWidget(texture_occlusion_Button);
 
 	texture_occlusion_uvset_Field = new wiTextInputField("uvset_occlusion");
 	texture_occlusion_uvset_Field->SetText("");
@@ -740,7 +736,7 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			material->SetUVSet_OcclusionMap(args.iValue);
 		}
 	});
-	materialWindow->AddWidget(texture_occlusion_uvset_Field);
+	AddWidget(texture_occlusion_uvset_Field);
 
 
 	y = 180;
@@ -751,11 +747,11 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	colorComboBox->AddItem("Base color");
 	colorComboBox->AddItem("Emissive color");
 	colorComboBox->SetTooltip("Choose the destination data of the color picker.");
-	materialWindow->AddWidget(colorComboBox);
+	AddWidget(colorComboBox);
 
 	y += 10;
 
-	colorPicker = new wiColorPicker(GUI, "Color", false);
+	colorPicker = new wiColorPicker(gui, "Color", false);
 	colorPicker->SetPos(XMFLOAT2(10, y += step));
 	colorPicker->SetVisible(true);
 	colorPicker->SetEnabled(true);
@@ -778,20 +774,13 @@ MaterialWindow::MaterialWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			}
 		}
 	});
-	materialWindow->AddWidget(colorPicker);
+	AddWidget(colorPicker);
 
 
-	materialWindow->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 880, 120, 0));
-	materialWindow->SetVisible(false);
+	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 880, 120, 0));
+	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
-}
-
-MaterialWindow::~MaterialWindow()
-{
-	materialWindow->RemoveWidgets(true);
-	GUI->RemoveWidget(materialWindow);
-	delete materialWindow;
 }
 
 
@@ -830,7 +819,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		texMulSliderX->SetValue(material->texMulAdd.x);
 		texMulSliderY->SetValue(material->texMulAdd.y);
 		alphaRefSlider->SetValue(material->alphaRef);
-		materialWindow->SetEnabled(true);
+		SetEnabled(true);
 		blendModeComboBox->SetSelected((int)material->userBlendMode);
 		if (material->GetCustomShaderID() >= 0)
 		{
@@ -875,7 +864,7 @@ void MaterialWindow::SetEntity(Entity entity)
 	else
 	{
 		materialNameField->SetValue("No material selected");
-		materialWindow->SetEnabled(false);
+		SetEnabled(false);
 		colorComboBox->SetEnabled(false);
 		colorPicker->SetEnabled(false);
 

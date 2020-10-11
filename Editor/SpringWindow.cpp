@@ -6,13 +6,9 @@ using namespace wiECS;
 using namespace wiScene;
 
 
-SpringWindow::SpringWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
+SpringWindow::SpringWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI(), "Spring Window")
 {
-	assert(GUI && "Invalid GUI!");
-
-	window = new wiWindow(GUI, "Spring Window");
-	window->SetSize(XMFLOAT2(460, 200));
-	GUI->AddWidget(window);
+	SetSize(XMFLOAT2(460, 200));
 
 	float x = 150;
 	float y = 10;
@@ -24,13 +20,13 @@ SpringWindow::SpringWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	createButton->SetTooltip("Create/Remove Spring Component to selected entity");
 	createButton->SetPos(XMFLOAT2(x, y += step));
 	createButton->SetSize(XMFLOAT2(siz, hei));
-	window->AddWidget(createButton);
+	AddWidget(createButton);
 
 	debugCheckBox = new wiCheckBox("DEBUG: ");
 	debugCheckBox->SetTooltip("Enabling this will visualize springs as small yellow X-es in the scene");
 	debugCheckBox->SetPos(XMFLOAT2(x, y += step));
 	debugCheckBox->SetSize(XMFLOAT2(hei, hei));
-	window->AddWidget(debugCheckBox);
+	AddWidget(debugCheckBox);
 
 	disabledCheckBox = new wiCheckBox("Disabled: ");
 	disabledCheckBox->SetTooltip("Disable simulation.");
@@ -39,7 +35,7 @@ SpringWindow::SpringWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	disabledCheckBox->OnClick([=](wiEventArgs args) {
 		wiScene::GetScene().springs.GetComponent(entity)->SetDisabled(args.bValue);
 		});
-	window->AddWidget(disabledCheckBox);
+	AddWidget(disabledCheckBox);
 
 	stretchCheckBox = new wiCheckBox("Stretch enabled: ");
 	stretchCheckBox->SetTooltip("Stretch means that length from parent transform won't be preserved.");
@@ -48,7 +44,7 @@ SpringWindow::SpringWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	stretchCheckBox->OnClick([=](wiEventArgs args) {
 		wiScene::GetScene().springs.GetComponent(entity)->SetStretchEnabled(args.bValue);
 		});
-	window->AddWidget(stretchCheckBox);
+	AddWidget(stretchCheckBox);
 
 	gravityCheckBox = new wiCheckBox("Gravity enabled: ");
 	gravityCheckBox->SetTooltip("Whether global gravity should affect the spring");
@@ -57,7 +53,7 @@ SpringWindow::SpringWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	gravityCheckBox->OnClick([=](wiEventArgs args) {
 		wiScene::GetScene().springs.GetComponent(entity)->SetGravityEnabled(args.bValue);
 		});
-	window->AddWidget(gravityCheckBox);
+	AddWidget(gravityCheckBox);
 
 	stiffnessSlider = new wiSlider(0, 1000, 100, 100000, "Stiffness: ");
 	stiffnessSlider->SetTooltip("The stiffness affects how strongly the spring tries to orient itself to rest pose (higher values increase the jiggliness)");
@@ -66,7 +62,7 @@ SpringWindow::SpringWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	stiffnessSlider->OnSlide([&](wiEventArgs args) {
 		wiScene::GetScene().springs.GetComponent(entity)->stiffness = args.fValue;
 		});
-	window->AddWidget(stiffnessSlider);
+	AddWidget(stiffnessSlider);
 
 	dampingSlider = new wiSlider(0, 1, 0.8f, 100000, "Damping: ");
 	dampingSlider->SetTooltip("The damping affects how fast energy is lost (higher values make the spring come to rest faster)");
@@ -75,7 +71,7 @@ SpringWindow::SpringWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	dampingSlider->OnSlide([&](wiEventArgs args) {
 		wiScene::GetScene().springs.GetComponent(entity)->damping = args.fValue;
 		});
-	window->AddWidget(dampingSlider);
+	AddWidget(dampingSlider);
 
 	windSlider = new wiSlider(0, 1, 0, 100000, "Wind affection: ");
 	windSlider->SetTooltip("How much the global wind effect affects the spring");
@@ -84,20 +80,12 @@ SpringWindow::SpringWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	windSlider->OnSlide([&](wiEventArgs args) {
 		wiScene::GetScene().springs.GetComponent(entity)->wind_affection = args.fValue;
 		});
-	window->AddWidget(windSlider);
+	AddWidget(windSlider);
 
-	window->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 700, 80, 0));
-	window->SetVisible(false);
+	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 700, 80, 0));
+	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
-}
-
-
-SpringWindow::~SpringWindow()
-{
-	window->RemoveWidgets(true);
-	GUI->RemoveWidget(window);
-	delete window;
 }
 
 void SpringWindow::SetEntity(Entity entity)
@@ -108,7 +96,7 @@ void SpringWindow::SetEntity(Entity entity)
 
 	if (spring != nullptr)
 	{
-		window->SetEnabled(true);
+		SetEnabled(true);
 
 		disabledCheckBox->SetCheck(spring->IsDisabled());
 		stretchCheckBox->SetCheck(spring->IsStretchEnabled());
@@ -119,7 +107,7 @@ void SpringWindow::SetEntity(Entity entity)
 	}
 	else
 	{
-		window->SetEnabled(false);
+		SetEnabled(false);
 	}
 
 	const TransformComponent* transform = wiScene::GetScene().transforms.GetComponent(entity);

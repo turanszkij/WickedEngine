@@ -6,13 +6,9 @@ using namespace std;
 using namespace wiECS;
 using namespace wiScene;
 
-HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
+HairParticleWindow::HairParticleWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI(), "Hair Particle System Window")
 {
-	assert(GUI && "Invalid GUI!");
-
-	hairWindow = new wiWindow(GUI, "Hair Particle System Window");
-	hairWindow->SetSize(XMFLOAT2(600, 260));
-	GUI->AddWidget(hairWindow);
+	SetSize(XMFLOAT2(600, 260));
 
 	float x = 160;
 	float y = 10;
@@ -31,7 +27,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 		SetEntity(entity);
 	});
 	addButton->SetTooltip("Add new hair particle system.");
-	hairWindow->AddWidget(addButton);
+	AddWidget(addButton);
 
 	meshComboBox = new wiComboBox("Mesh: ");
 	meshComboBox->SetSize(XMFLOAT2(300, hei));
@@ -53,7 +49,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 		}
 	});
 	meshComboBox->SetTooltip("Choose a mesh where hair will grow from...");
-	hairWindow->AddWidget(meshComboBox);
+	AddWidget(meshComboBox);
 
 	countSlider = new wiSlider(0, 100000, 1000, 100000, "Strand Count: ");
 	countSlider->SetSize(XMFLOAT2(360, hei));
@@ -67,7 +63,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 	});
 	countSlider->SetEnabled(false);
 	countSlider->SetTooltip("Set hair strand count");
-	hairWindow->AddWidget(countSlider);
+	AddWidget(countSlider);
 
 	lengthSlider = new wiSlider(0, 4, 1, 100000, "Particle Length: ");
 	lengthSlider->SetSize(XMFLOAT2(360, hei));
@@ -81,7 +77,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 	});
 	lengthSlider->SetEnabled(false);
 	lengthSlider->SetTooltip("Set hair strand length");
-	hairWindow->AddWidget(lengthSlider);
+	AddWidget(lengthSlider);
 
 	stiffnessSlider = new wiSlider(0, 20, 5, 100000, "Particle Stiffness: ");
 	stiffnessSlider->SetSize(XMFLOAT2(360, hei));
@@ -95,7 +91,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 	});
 	stiffnessSlider->SetEnabled(false);
 	stiffnessSlider->SetTooltip("Set hair strand stiffness, how much it tries to get back to rest position.");
-	hairWindow->AddWidget(stiffnessSlider);
+	AddWidget(stiffnessSlider);
 
 	randomnessSlider = new wiSlider(0, 1, 0.2f, 100000, "Particle Randomness: ");
 	randomnessSlider->SetSize(XMFLOAT2(360, hei));
@@ -109,7 +105,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 	});
 	randomnessSlider->SetEnabled(false);
 	randomnessSlider->SetTooltip("Set hair length randomization factor. This will affect randomness of hair lengths.");
-	hairWindow->AddWidget(randomnessSlider);
+	AddWidget(randomnessSlider);
 
 	segmentcountSlider = new wiSlider(1, 10, 1, 9, "Segment Count: ");
 	segmentcountSlider->SetSize(XMFLOAT2(360, hei));
@@ -123,7 +119,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 	});
 	segmentcountSlider->SetEnabled(false);
 	segmentcountSlider->SetTooltip("Set hair strand segment count. This will affect simulation quality and performance.");
-	hairWindow->AddWidget(segmentcountSlider);
+	AddWidget(segmentcountSlider);
 
 	randomSeedSlider = new wiSlider(1, 12345, 1, 12344, "Random seed: ");
 	randomSeedSlider->SetSize(XMFLOAT2(360, hei));
@@ -137,7 +133,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 	});
 	randomSeedSlider->SetEnabled(false);
 	randomSeedSlider->SetTooltip("Set hair system-wide random seed value. This will affect hair patch placement randomization.");
-	hairWindow->AddWidget(randomSeedSlider);
+	AddWidget(randomSeedSlider);
 
 	viewDistanceSlider = new wiSlider(0, 1000, 100, 10000, "View distance: ");
 	viewDistanceSlider->SetSize(XMFLOAT2(360, hei));
@@ -151,7 +147,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 		});
 	viewDistanceSlider->SetEnabled(false);
 	viewDistanceSlider->SetTooltip("Set view distance. After this, particles will be faded out.");
-	hairWindow->AddWidget(viewDistanceSlider);
+	AddWidget(viewDistanceSlider);
 
 	framesXInput = new wiTextInputField("");
 	framesXInput->SetPos(XMFLOAT2(x, y += step));
@@ -166,7 +162,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 			hair->framesX = (uint32_t)args.iValue;
 		}
 	});
-	hairWindow->AddWidget(framesXInput);
+	AddWidget(framesXInput);
 
 	framesYInput = new wiTextInputField("");
 	framesYInput->SetPos(XMFLOAT2(x + 250, y));
@@ -181,7 +177,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 			hair->framesY = (uint32_t)args.iValue;
 		}
 		});
-	hairWindow->AddWidget(framesYInput);
+	AddWidget(framesYInput);
 
 	step = 20;
 
@@ -198,7 +194,7 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 			hair->frameCount = (uint32_t)args.iValue;
 		}
 		});
-	hairWindow->AddWidget(frameCountInput);
+	AddWidget(frameCountInput);
 
 	frameStartInput = new wiTextInputField("");
 	frameStartInput->SetPos(XMFLOAT2(x + 250, y));
@@ -213,22 +209,15 @@ HairParticleWindow::HairParticleWindow(EditorComponent* editor) : GUI(&editor->G
 			hair->frameStart = (uint32_t)args.iValue;
 		}
 		});
-	hairWindow->AddWidget(frameStartInput);
+	AddWidget(frameStartInput);
 
 
 
 
-	hairWindow->Translate(XMFLOAT3(200, 50, 0));
-	hairWindow->SetVisible(false);
+	Translate(XMFLOAT3(200, 50, 0));
+	SetVisible(false);
 
 	SetEntity(entity);
-}
-
-HairParticleWindow::~HairParticleWindow()
-{
-	hairWindow->RemoveWidgets(true);
-	GUI->RemoveWidget(hairWindow);
-	delete hairWindow;
 }
 
 void HairParticleWindow::SetEntity(Entity entity)
@@ -251,11 +240,11 @@ void HairParticleWindow::SetEntity(Entity entity)
 		frameCountInput->SetValue((int)hair->frameCount);
 		frameStartInput->SetValue((int)hair->frameStart);
 
-		hairWindow->SetEnabled(true);
+		SetEnabled(true);
 	}
 	else
 	{
-		hairWindow->SetEnabled(false);
+		SetEnabled(false);
 	}
 
 	addButton->SetEnabled(true);

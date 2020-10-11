@@ -9,13 +9,9 @@ using namespace wiECS;
 using namespace wiScene;
 using namespace wiGraphics;
 
-WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
+WeatherWindow::WeatherWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI(), "Weather Window")
 {
-	assert(GUI && "Invalid GUI!");
-
-	weatherWindow = new wiWindow(GUI, "Weather Window");
-	weatherWindow->SetSize(XMFLOAT2(660, 520));
-	GUI->AddWidget(weatherWindow);
+	SetSize(XMFLOAT2(660, 520));
 
 	float x = 180;
 	float y = 20;
@@ -29,7 +25,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	fogStartSlider->OnSlide([&](wiEventArgs args) {
 		GetWeather().fogStart = args.fValue;
 	});
-	weatherWindow->AddWidget(fogStartSlider);
+	AddWidget(fogStartSlider);
 
 	fogEndSlider = new wiSlider(1, 5000, 1000, 10000, "Fog End: ");
 	fogEndSlider->SetSize(XMFLOAT2(100, hei));
@@ -37,7 +33,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	fogEndSlider->OnSlide([&](wiEventArgs args) {
 		GetWeather().fogEnd = args.fValue;
 	});
-	weatherWindow->AddWidget(fogEndSlider);
+	AddWidget(fogEndSlider);
 
 	fogHeightSlider = new wiSlider(0, 1, 0, 10000, "Fog Height: ");
 	fogHeightSlider->SetSize(XMFLOAT2(100, hei));
@@ -45,7 +41,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	fogHeightSlider->OnSlide([&](wiEventArgs args) {
 		GetWeather().fogHeight = args.fValue;
 	});
-	weatherWindow->AddWidget(fogHeightSlider);
+	AddWidget(fogHeightSlider);
 
 	cloudinessSlider = new wiSlider(0, 1, 0.0f, 10000, "Cloudiness: ");
 	cloudinessSlider->SetSize(XMFLOAT2(100, hei));
@@ -53,7 +49,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	cloudinessSlider->OnSlide([&](wiEventArgs args) {
 		GetWeather().cloudiness = args.fValue;
 	});
-	weatherWindow->AddWidget(cloudinessSlider);
+	AddWidget(cloudinessSlider);
 
 	cloudScaleSlider = new wiSlider(0.00005f, 0.001f, 0.0005f, 10000, "Cloud Scale: ");
 	cloudScaleSlider->SetSize(XMFLOAT2(100, hei));
@@ -61,7 +57,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	cloudScaleSlider->OnSlide([&](wiEventArgs args) {
 		GetWeather().cloudScale = args.fValue;
 	});
-	weatherWindow->AddWidget(cloudScaleSlider);
+	AddWidget(cloudScaleSlider);
 
 	cloudSpeedSlider = new wiSlider(0.001f, 0.2f, 0.1f, 10000, "Cloud Speed: ");
 	cloudSpeedSlider->SetSize(XMFLOAT2(100, hei));
@@ -69,7 +65,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	cloudSpeedSlider->OnSlide([&](wiEventArgs args) {
 		GetWeather().cloudSpeed = args.fValue;
 	});
-	weatherWindow->AddWidget(cloudSpeedSlider);
+	AddWidget(cloudSpeedSlider);
 
 	windSpeedSlider = new wiSlider(0.0f, 4.0f, 1.0f, 10000, "Wind Speed: ");
 	windSpeedSlider->SetSize(XMFLOAT2(100, hei));
@@ -77,7 +73,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	windSpeedSlider->OnSlide([&](wiEventArgs args) {
 		GetWeather().windSpeed = args.fValue;
 	});
-	weatherWindow->AddWidget(windSpeedSlider);
+	AddWidget(windSpeedSlider);
 
 	windMagnitudeSlider = new wiSlider(0.0f, 0.2f, 0.0f, 10000, "Wind Magnitude: ");
 	windMagnitudeSlider->SetSize(XMFLOAT2(100, hei));
@@ -85,7 +81,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	windMagnitudeSlider->OnSlide([&](wiEventArgs args) {
 		UpdateWind();
 		});
-	weatherWindow->AddWidget(windMagnitudeSlider);
+	AddWidget(windMagnitudeSlider);
 
 	windDirectionSlider = new wiSlider(0, 1, 0, 10000, "Wind Direction: ");
 	windDirectionSlider->SetSize(XMFLOAT2(100, hei));
@@ -93,7 +89,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	windDirectionSlider->OnSlide([&](wiEventArgs args) {
 		UpdateWind();
 	});
-	weatherWindow->AddWidget(windDirectionSlider);
+	AddWidget(windDirectionSlider);
 
 	windWaveSizeSlider = new wiSlider(0, 1, 0, 10000, "Wind Wave Size: ");
 	windWaveSizeSlider->SetSize(XMFLOAT2(100, hei));
@@ -101,7 +97,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	windWaveSizeSlider->OnSlide([&](wiEventArgs args) {
 		GetWeather().windWaveSize = args.fValue;
 	});
-	weatherWindow->AddWidget(windWaveSizeSlider);
+	AddWidget(windWaveSizeSlider);
 
 	windRandomnessSlider = new wiSlider(0, 10, 5, 10000, "Wind Randomness: ");
 	windRandomnessSlider->SetSize(XMFLOAT2(100, hei));
@@ -109,7 +105,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	windRandomnessSlider->OnSlide([&](wiEventArgs args) {
 		GetWeather().windRandomness = args.fValue;
 	});
-	weatherWindow->AddWidget(windRandomnessSlider);
+	AddWidget(windRandomnessSlider);
 
 	simpleskyCheckBox = new wiCheckBox("Simple sky: ");
 	simpleskyCheckBox->SetTooltip("Simple sky will simply blend horizon and zenith color from bottom to top.");
@@ -119,7 +115,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		auto& weather = GetWeather();
 		weather.SetSimpleSky(args.bValue);
 	});
-	weatherWindow->AddWidget(simpleskyCheckBox);
+	AddWidget(simpleskyCheckBox);
 
 	skyButton = new wiButton("Load Sky");
 	skyButton->SetTooltip("Load a skybox cubemap texture...");
@@ -154,7 +150,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		InvalidateProbes();
 
 	});
-	weatherWindow->AddWidget(skyButton);
+	AddWidget(skyButton);
 
 
 
@@ -170,7 +166,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			wiRenderer::OceanRegenerate();
 		}
 		});
-	weatherWindow->AddWidget(ocean_enabledCheckBox);
+	AddWidget(ocean_enabledCheckBox);
 
 
 	ocean_patchSizeSlider = new wiSlider(1, 1000, 1000, 100000, "Patch size: ");
@@ -189,7 +185,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			}
 		}
 		});
-	weatherWindow->AddWidget(ocean_patchSizeSlider);
+	AddWidget(ocean_patchSizeSlider);
 
 	ocean_waveAmplitudeSlider = new wiSlider(0, 1000, 1000, 100000, "Wave amplitude: ");
 	ocean_waveAmplitudeSlider->SetSize(XMFLOAT2(100, hei));
@@ -207,7 +203,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			}
 		}
 		});
-	weatherWindow->AddWidget(ocean_waveAmplitudeSlider);
+	AddWidget(ocean_waveAmplitudeSlider);
 
 	ocean_choppyScaleSlider = new wiSlider(0, 10, 1000, 100000, "Choppiness: ");
 	ocean_choppyScaleSlider->SetSize(XMFLOAT2(100, hei));
@@ -221,7 +217,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			weather.oceanParameters.choppy_scale = args.fValue;
 		}
 		});
-	weatherWindow->AddWidget(ocean_choppyScaleSlider);
+	AddWidget(ocean_choppyScaleSlider);
 
 	ocean_windDependencySlider = new wiSlider(0, 1, 1000, 100000, "Wind dependency: ");
 	ocean_windDependencySlider->SetSize(XMFLOAT2(100, hei));
@@ -239,7 +235,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			}
 		}
 		});
-	weatherWindow->AddWidget(ocean_windDependencySlider);
+	AddWidget(ocean_windDependencySlider);
 
 	ocean_timeScaleSlider = new wiSlider(0, 4, 1000, 100000, "Time scale: ");
 	ocean_timeScaleSlider->SetSize(XMFLOAT2(100, hei));
@@ -253,7 +249,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			weather.oceanParameters.time_scale = args.fValue;
 		}
 		});
-	weatherWindow->AddWidget(ocean_timeScaleSlider);
+	AddWidget(ocean_timeScaleSlider);
 
 	ocean_heightSlider = new wiSlider(-100, 100, 0, 100000, "Water level: ");
 	ocean_heightSlider->SetSize(XMFLOAT2(100, hei));
@@ -267,7 +263,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			weather.oceanParameters.waterHeight = args.fValue;
 		}
 		});
-	weatherWindow->AddWidget(ocean_heightSlider);
+	AddWidget(ocean_heightSlider);
 
 	ocean_detailSlider = new wiSlider(1, 10, 0, 9, "Surface Detail: ");
 	ocean_detailSlider->SetSize(XMFLOAT2(100, hei));
@@ -281,7 +277,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			weather.oceanParameters.surfaceDetail = (uint32_t)args.iValue;
 		}
 		});
-	weatherWindow->AddWidget(ocean_detailSlider);
+	AddWidget(ocean_detailSlider);
 
 	ocean_toleranceSlider = new wiSlider(1, 10, 0, 1000, "Displacement Tolerance: ");
 	ocean_toleranceSlider->SetSize(XMFLOAT2(100, hei));
@@ -295,7 +291,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			weather.oceanParameters.surfaceDisplacementTolerance = args.fValue;
 		}
 		});
-	weatherWindow->AddWidget(ocean_toleranceSlider);
+	AddWidget(ocean_toleranceSlider);
 
 
 	ocean_resetButton = new wiButton("Reset Ocean to default");
@@ -306,7 +302,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		auto& weather = GetWeather();
 		weather.oceanParameters = WeatherComponent::OceanParameters();
 		});
-	weatherWindow->AddWidget(ocean_resetButton);
+	AddWidget(ocean_resetButton);
 
 
 
@@ -328,11 +324,11 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	colorComboBox->AddItem("Zenith color");
 	colorComboBox->AddItem("Ocean color");
 	colorComboBox->SetTooltip("Choose the destination data of the color picker.");
-	weatherWindow->AddWidget(colorComboBox);
+	AddWidget(colorComboBox);
 
 	y += 10;
 
-	colorPicker = new wiColorPicker(GUI, "Color", false);
+	colorPicker = new wiColorPicker(gui, "Color", false);
 	colorPicker->SetPos(XMFLOAT2(x, y += step));
 	colorPicker->SetVisible(false);
 	colorPicker->SetEnabled(true);
@@ -355,7 +351,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			break;
 		}
 	});
-	weatherWindow->AddWidget(colorPicker);
+	AddWidget(colorPicker);
 
 	y += colorPicker->GetScale().y;
 
@@ -372,7 +368,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		InvalidateProbes();
 
 		});
-	weatherWindow->AddWidget(preset0Button);
+	AddWidget(preset0Button);
 
 	wiButton* preset1Button = new wiButton("WeatherPreset - Daytime");
 	preset1Button->SetTooltip("Apply this weather preset to the world.");
@@ -392,7 +388,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		InvalidateProbes();
 
 		});
-	weatherWindow->AddWidget(preset1Button);
+	AddWidget(preset1Button);
 
 	wiButton* preset2Button = new wiButton("WeatherPreset - Sunset");
 	preset2Button->SetTooltip("Apply this weather preset to the world.");
@@ -412,7 +408,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		InvalidateProbes();
 
 		});
-	weatherWindow->AddWidget(preset2Button);
+	AddWidget(preset2Button);
 
 	wiButton* preset3Button = new wiButton("WeatherPreset - Cloudy");
 	preset3Button->SetTooltip("Apply this weather preset to the world.");
@@ -432,7 +428,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		InvalidateProbes();
 
 		});
-	weatherWindow->AddWidget(preset3Button);
+	AddWidget(preset3Button);
 
 	wiButton* preset4Button = new wiButton("WeatherPreset - Night");
 	preset4Button->SetTooltip("Apply this weather preset to the world.");
@@ -452,7 +448,7 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		InvalidateProbes();
 
 		});
-	weatherWindow->AddWidget(preset4Button);
+	AddWidget(preset4Button);
 
 
 	wiButton* eliminateCoarseCascadesButton = new wiButton("EliminateCoarseCascades");
@@ -468,21 +464,13 @@ WeatherWindow::WeatherWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		}
 
 		});
-	weatherWindow->AddWidget(eliminateCoarseCascadesButton);
+	AddWidget(eliminateCoarseCascadesButton);
 
 
 
 
-	weatherWindow->Translate(XMFLOAT3(130, 30, 0));
-	weatherWindow->SetVisible(false);
-}
-
-
-WeatherWindow::~WeatherWindow()
-{
-	weatherWindow->RemoveWidgets(true);
-	GUI->RemoveWidget(weatherWindow);
-	delete weatherWindow;
+	Translate(XMFLOAT3(130, 30, 0));
+	SetVisible(false);
 }
 
 void WeatherWindow::Update()

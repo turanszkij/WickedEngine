@@ -1,11 +1,5 @@
 #pragma once
-
-class wiGUI;
-class wiWindow;
-class wiLabel;
-class wiCheckBox;
-class wiSlider;
-class wiComboBox;
+#include "WickedEngine.h"
 
 class EditorComponent;
 
@@ -24,15 +18,11 @@ enum PICKTYPE
 	PICK_SOUND				= 2048,
 };
 
-class RendererWindow
+class RendererWindow : public wiWindow
 {
 public:
 	RendererWindow(EditorComponent* editorcomponent);
-	~RendererWindow();
 
-	wiGUI* GUI;
-
-	wiWindow*	rendererWindow;
 	wiCheckBox* vsyncCheckBox;
 	wiCheckBox* occlusionCullingCheckBox;
 	wiSlider*	resolutionScaleSlider;

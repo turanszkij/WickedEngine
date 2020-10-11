@@ -1572,10 +1572,17 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name, bool window_controls) : 
 	SetEnabled(true);
 	SetVisible(true);
 	SetMinimized(false);
+
+	gui->AddWidget(this);
 }
 wiWindow::~wiWindow()
 {
 	RemoveWidgets(true);
+
+	if (gui != nullptr)
+	{
+		gui->RemoveWidget(this);
+	}
 }
 void wiWindow::AddWidget(wiWidget* widget)
 {

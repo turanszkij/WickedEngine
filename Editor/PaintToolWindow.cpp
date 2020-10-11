@@ -10,11 +10,9 @@ using namespace wiECS;
 using namespace wiScene;
 using namespace wiGraphics;
 
-PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
+PaintToolWindow::PaintToolWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI(), "Paint Tool Window"), editor(editor)
 {
-	window = new wiWindow(&editor->GetGUI(), "Paint Tool Window");
-	window->SetSize(XMFLOAT2(400, 600));
-	editor->GetGUI().AddWidget(window);
+	SetSize(XMFLOAT2(400, 600));
 
 	float x = 100;
 	float y = 5;
@@ -79,7 +77,7 @@ PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 			break;
 		}
 	});
-	window->AddWidget(modeComboBox);
+	AddWidget(modeComboBox);
 
 	y += step + 5;
 
@@ -87,45 +85,45 @@ PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 	infoLabel->SetSize(XMFLOAT2(400 - 20, 100));
 	infoLabel->SetPos(XMFLOAT2(10, y));
 	infoLabel->SetColor(wiColor::Transparent());
-	window->AddWidget(infoLabel);
+	AddWidget(infoLabel);
 	y += infoLabel->GetScale().y - step + 5;
 
 	radiusSlider = new wiSlider(1.0f, 500.0f, 50, 10000, "Brush Radius: ");
 	radiusSlider->SetTooltip("Set the brush radius in pixel units");
 	radiusSlider->SetSize(XMFLOAT2(200, hei));
 	radiusSlider->SetPos(XMFLOAT2(x, y += step));
-	window->AddWidget(radiusSlider);
+	AddWidget(radiusSlider);
 
 	amountSlider = new wiSlider(0, 1, 1, 10000, "Brush Amount: ");
 	amountSlider->SetTooltip("Set the brush amount. 0 = minimum affection, 1 = maximum affection");
 	amountSlider->SetSize(XMFLOAT2(200, hei));
 	amountSlider->SetPos(XMFLOAT2(x, y += step));
-	window->AddWidget(amountSlider);
+	AddWidget(amountSlider);
 
 	falloffSlider = new wiSlider(0, 16, 0, 10000, "Brush Falloff: ");
 	falloffSlider->SetTooltip("Set the brush power. 0 = no falloff, 1 = linear falloff, more = falloff power");
 	falloffSlider->SetSize(XMFLOAT2(200, hei));
 	falloffSlider->SetPos(XMFLOAT2(x, y += step));
-	window->AddWidget(falloffSlider);
+	AddWidget(falloffSlider);
 
 	spacingSlider = new wiSlider(0, 500, 1, 500, "Brush Spacing: ");
 	spacingSlider->SetTooltip("Brush spacing means how much brush movement (in pixels) starts a new stroke. 0 = new stroke every frame, 100 = every 100 pixel movement since last stroke will start a new stroke.");
 	spacingSlider->SetSize(XMFLOAT2(200, hei));
 	spacingSlider->SetPos(XMFLOAT2(x, y += step));
-	window->AddWidget(spacingSlider);
+	AddWidget(spacingSlider);
 
 	backfaceCheckBox = new wiCheckBox("Backfaces: ");
 	backfaceCheckBox->SetTooltip("Set whether to paint on backfaces of geometry or not");
 	backfaceCheckBox->SetSize(XMFLOAT2(hei, hei));
 	backfaceCheckBox->SetPos(XMFLOAT2(x, y += step));
-	window->AddWidget(backfaceCheckBox);
+	AddWidget(backfaceCheckBox);
 
 	wireCheckBox = new wiCheckBox("Wireframe: ");
 	wireCheckBox->SetTooltip("Set whether to draw wireframe on top of geometry or not");
 	wireCheckBox->SetSize(XMFLOAT2(hei, hei));
 	wireCheckBox->SetPos(XMFLOAT2(x + 100, y));
 	wireCheckBox->SetCheck(true);
-	window->AddWidget(wireCheckBox);
+	AddWidget(wireCheckBox);
 
 	textureSlotComboBox = new wiComboBox("Texture Slot: ");
 	textureSlotComboBox->SetTooltip("Choose texture slot of the selected material to paint (texture paint mode only)");
@@ -139,7 +137,7 @@ PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 	textureSlotComboBox->AddItem("OcclusionMap (R)");
 	textureSlotComboBox->SetSelected(0);
 	textureSlotComboBox->SetEnabled(false);
-	window->AddWidget(textureSlotComboBox);
+	AddWidget(textureSlotComboBox);
 
 	saveTextureButton = new wiButton("Save Texture");
 	saveTextureButton->SetTooltip("Save edited texture. This will append _0 postfix to texture name and save as new PNG texture.");
@@ -198,20 +196,14 @@ PaintToolWindow::PaintToolWindow(EditorComponent* editor) : editor(editor)
 			wiHelper::messageBox("Saving texture failed! Check filename of texture slot in the material!");
 		}
 	});
-	window->AddWidget(saveTextureButton);
+	AddWidget(saveTextureButton);
 
 	colorPicker = new wiColorPicker(&editor->GetGUI(), "Color", false);
 	colorPicker->SetPos(XMFLOAT2(10, y += step));
-	window->AddWidget(colorPicker);
+	AddWidget(colorPicker);
 
-	window->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 550, 50, 0));
-	window->SetVisible(false);
-}
-PaintToolWindow::~PaintToolWindow()
-{
-	window->RemoveWidgets(true);
-	editor->GetGUI().RemoveWidget(window);
-	delete window;
+	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 550, 50, 0));
+	SetVisible(false);
 }
 
 void PaintToolWindow::Update(float dt)

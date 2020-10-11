@@ -1,24 +1,13 @@
 #pragma once
-
-class wiGUI;
-class wiWindow;
-class wiLabel;
-class wiCheckBox;
-class wiSlider;
-class wiButton;
-class wiComboBox;
+#include "WickedEngine.h"
 
 class EditorComponent;
 
-class PostprocessWindow
+class PostprocessWindow : public wiWindow
 {
 public:
 	PostprocessWindow(EditorComponent* editor);
-	~PostprocessWindow();
 
-	wiGUI* GUI;
-
-	wiWindow*	ppWindow;
 	wiSlider*	exposureSlider;
 	wiCheckBox* lensFlareCheckBox;
 	wiCheckBox* lightShaftsCheckBox;

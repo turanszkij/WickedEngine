@@ -7,13 +7,9 @@
 using namespace wiECS;
 using namespace wiScene;
 
-AnimationWindow::AnimationWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
+AnimationWindow::AnimationWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI(), "Animation Window")
 {
-	assert(GUI && "Invalid GUI!");
-
-	animWindow = new wiWindow(GUI, "Animation Window");
-	animWindow->SetSize(XMFLOAT2(520, 140));
-	GUI->AddWidget(animWindow);
+	SetSize(XMFLOAT2(520, 140));
 
 	float x = 140;
 	float y = 10;
@@ -29,7 +25,7 @@ AnimationWindow::AnimationWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 		entity = wiScene::GetScene().animations.GetEntity(args.iValue);
 	});
 	animationsComboBox->SetTooltip("Choose an animation clip...");
-	animWindow->AddWidget(animationsComboBox);
+	AddWidget(animationsComboBox);
 
 	loopedCheckBox = new wiCheckBox("Looped: ");
 	loopedCheckBox->SetTooltip("Toggle animation looping behaviour.");
@@ -42,7 +38,7 @@ AnimationWindow::AnimationWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			animation->SetLooped(args.bValue);
 		}
 	});
-	animWindow->AddWidget(loopedCheckBox);
+	AddWidget(loopedCheckBox);
 
 	playButton = new wiButton("Play");
 	playButton->SetTooltip("Play/Pause animation.");
@@ -63,7 +59,7 @@ AnimationWindow::AnimationWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			}
 		}
 	});
-	animWindow->AddWidget(playButton);
+	AddWidget(playButton);
 
 	stopButton = new wiButton("Stop");
 	stopButton->SetTooltip("Stop animation.");
@@ -76,7 +72,7 @@ AnimationWindow::AnimationWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			animation->Stop();
 		}
 	});
-	animWindow->AddWidget(stopButton);
+	AddWidget(stopButton);
 
 	timerSlider = new wiSlider(0, 1, 0, 100000, "Timer: ");
 	timerSlider->SetSize(XMFLOAT2(250, hei));
@@ -90,7 +86,7 @@ AnimationWindow::AnimationWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 	});
 	timerSlider->SetEnabled(false);
 	timerSlider->SetTooltip("Set the animation timer by hand.");
-	animWindow->AddWidget(timerSlider);
+	AddWidget(timerSlider);
 
 	amountSlider = new wiSlider(0, 1, 0, 100000, "Amount: ");
 	amountSlider->SetSize(XMFLOAT2(250, hei));
@@ -104,7 +100,7 @@ AnimationWindow::AnimationWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 	});
 	amountSlider->SetEnabled(false);
 	amountSlider->SetTooltip("Set the animation blending amount by hand.");
-	animWindow->AddWidget(amountSlider);
+	AddWidget(amountSlider);
 
 	speedSlider = new wiSlider(0, 4, 1, 100000, "Speed: ");
 	speedSlider->SetSize(XMFLOAT2(250, hei));
@@ -118,22 +114,13 @@ AnimationWindow::AnimationWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 	});
 	speedSlider->SetEnabled(false);
 	speedSlider->SetTooltip("Set the animation speed.");
-	animWindow->AddWidget(speedSlider);
+	AddWidget(speedSlider);
 
 
 
-	animWindow->Translate(XMFLOAT3(100, 50, 0));
-	animWindow->SetVisible(false);
+	Translate(XMFLOAT3(100, 50, 0));
+	SetVisible(false);
 
-}
-
-
-AnimationWindow::~AnimationWindow()
-{
-	animWindow->RemoveWidgets(true);
-
-	GUI->RemoveWidget(animWindow);
-	delete animWindow;
 }
 
 void AnimationWindow::Update()
@@ -149,12 +136,12 @@ void AnimationWindow::Update()
 
 	if (scene.animations.GetCount() == 0)
 	{
-		animWindow->SetEnabled(false);
+		SetEnabled(false);
 		return;
 	}
 	else
 	{
-		animWindow->SetEnabled(true);
+		SetEnabled(true);
 	}
 
 	for (size_t i = 0; i < scene.animations.GetCount(); ++i)

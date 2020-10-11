@@ -6,13 +6,9 @@ using namespace wiECS;
 using namespace wiScene;
 
 
-ForceFieldWindow::ForceFieldWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
+ForceFieldWindow::ForceFieldWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI(), "Force Field Window")
 {
-	assert(GUI && "Invalid GUI!");
-
-	forceFieldWindow = new wiWindow(GUI, "Force Field Window");
-	forceFieldWindow->SetSize(XMFLOAT2(420, 120));
-	GUI->AddWidget(forceFieldWindow);
+	SetSize(XMFLOAT2(420, 120));
 
 	float x = 150;
 	float y = 10;
@@ -50,7 +46,7 @@ ForceFieldWindow::ForceFieldWindow(EditorComponent* editor) : GUI(&editor->GetGU
 		});
 	addButton->SetEnabled(true);
 	addButton->SetTooltip("Add new Force Field to the simulation.");
-	forceFieldWindow->AddWidget(addButton);
+	AddWidget(addButton);
 
 	typeComboBox = new wiComboBox("Force Field type: ");
 	typeComboBox->SetPos(XMFLOAT2(x, y += step));
@@ -77,7 +73,7 @@ ForceFieldWindow::ForceFieldWindow(EditorComponent* editor) : GUI(&editor->GetGU
 	typeComboBox->AddItem("Plane");
 	typeComboBox->SetEnabled(false);
 	typeComboBox->SetTooltip("Choose the force field type.");
-	forceFieldWindow->AddWidget(typeComboBox);
+	AddWidget(typeComboBox);
 
 
 	gravitySlider = new wiSlider(-10, 10, 0, 100000, "Gravity: ");
@@ -92,7 +88,7 @@ ForceFieldWindow::ForceFieldWindow(EditorComponent* editor) : GUI(&editor->GetGU
 	});
 	gravitySlider->SetEnabled(false);
 	gravitySlider->SetTooltip("Set the amount of gravity. Positive values attract, negatives deflect.");
-	forceFieldWindow->AddWidget(gravitySlider);
+	AddWidget(gravitySlider);
 
 
 	rangeSlider = new wiSlider(0.0f, 100.0f, 10, 100000, "Range: ");
@@ -107,22 +103,14 @@ ForceFieldWindow::ForceFieldWindow(EditorComponent* editor) : GUI(&editor->GetGU
 	});
 	rangeSlider->SetEnabled(false);
 	rangeSlider->SetTooltip("Set the range of affection.");
-	forceFieldWindow->AddWidget(rangeSlider);
+	AddWidget(rangeSlider);
 
 
 
-	forceFieldWindow->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 720, 50, 0));
-	forceFieldWindow->SetVisible(false);
+	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 720, 50, 0));
+	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
-}
-
-
-ForceFieldWindow::~ForceFieldWindow()
-{
-	forceFieldWindow->RemoveWidgets(true);
-	GUI->RemoveWidget(forceFieldWindow);
-	delete forceFieldWindow;
 }
 
 void ForceFieldWindow::SetEntity(Entity entity)

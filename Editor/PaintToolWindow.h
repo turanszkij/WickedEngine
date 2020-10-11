@@ -1,18 +1,9 @@
 #pragma once
-#include "CommonInclude.h"
-
-class wiGUI;
-class wiWindow;
-class wiLabel;
-class wiCheckBox;
-class wiSlider;
-class wiComboBox;
-class wiColorPicker;
-class wiButton;
+#include "WickedEngine.h"
 
 class EditorComponent;
 
-class PaintToolWindow
+class PaintToolWindow : public wiWindow
 {
 	float rot = 0;
 	float stroke_dist = 0;
@@ -24,13 +15,11 @@ class PaintToolWindow
 	void ReplaceEditTextureSlot(wiScene::MaterialComponent& material, std::shared_ptr<wiResource> resource);
 public:
 	PaintToolWindow(EditorComponent* editor);
-	~PaintToolWindow();
 
 	EditorComponent* editor = nullptr;
 	wiECS::Entity entity = wiECS::INVALID_ENTITY;
 	int subset = -1;
 
-	wiWindow* window;
 	wiComboBox* modeComboBox;
 	wiLabel* infoLabel;
 	wiSlider* radiusSlider;

@@ -6,13 +6,9 @@ using namespace wiECS;
 using namespace wiScene;
 
 
-LayerWindow::LayerWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
+LayerWindow::LayerWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI(), "Layer Window")
 {
-	assert(GUI && "Invalid GUI!");
-
-	window = new wiWindow(GUI, "Layer Window");
-	window->SetSize(XMFLOAT2(410, 160));
-	GUI->AddWidget(window);
+	SetSize(XMFLOAT2(410, 160));
 
 	float x = 30;
 	float y = 0;
@@ -42,7 +38,7 @@ LayerWindow::LayerWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			}
 
 			});
-		window->AddWidget(layers[i]);
+		AddWidget(layers[i]);
 	}
 
 	y += step * 5;
@@ -55,7 +51,7 @@ LayerWindow::LayerWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			return;
 		layer->layerMask = ~0;
 	});
-	window->AddWidget(enableAllButton);
+	AddWidget(enableAllButton);
 
 	enableNoneButton = new wiButton("Enable NONE");
 	enableNoneButton->SetPos(XMFLOAT2(x + 120, y));
@@ -65,19 +61,12 @@ LayerWindow::LayerWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			return;
 		layer->layerMask = 0;
 	});
-	window->AddWidget(enableNoneButton);
+	AddWidget(enableNoneButton);
 
-	window->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 450, 300, 0));
-	window->SetVisible(false);
+	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 450, 300, 0));
+	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
-}
-
-LayerWindow::~LayerWindow()
-{
-	window->RemoveWidgets(true);
-	GUI->RemoveWidget(window);
-	delete window;
 }
 
 void LayerWindow::SetEntity(Entity entity)
@@ -86,7 +75,7 @@ void LayerWindow::SetEntity(Entity entity)
 
 	if (entity != INVALID_ENTITY)
 	{
-		window->SetEnabled(true);
+		SetEnabled(true);
 
 		LayerComponent* layer = wiScene::GetScene().layers.GetComponent(entity);
 		if (layer == nullptr)
@@ -106,6 +95,6 @@ void LayerWindow::SetEntity(Entity entity)
 	}
 	else
 	{
-		window->SetEnabled(false);
+		SetEnabled(false);
 	}
 }

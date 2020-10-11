@@ -5,13 +5,9 @@
 using namespace wiECS;
 using namespace wiScene;
 
-EnvProbeWindow::EnvProbeWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
+EnvProbeWindow::EnvProbeWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI(), "Environment Probe Window")
 {
-	assert(GUI && "Invalid GUI!");
-
-	envProbeWindow = new wiWindow(GUI, "Environment Probe Window");
-	envProbeWindow->SetSize(XMFLOAT2(300, 200));
-	GUI->AddWidget(envProbeWindow);
+	SetSize(XMFLOAT2(300, 200));
 
 	float x = 100, y = 5, step = 35;
 
@@ -26,7 +22,7 @@ EnvProbeWindow::EnvProbeWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			probe->SetDirty();
 		}
 	});
-	envProbeWindow->AddWidget(realTimeCheckBox);
+	AddWidget(realTimeCheckBox);
 
 	generateButton = new wiButton("Put");
 	generateButton->SetPos(XMFLOAT2(x, y += step));
@@ -38,7 +34,7 @@ EnvProbeWindow::EnvProbeWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		editor->AddSelected(entity);
 		SetEntity(entity);
 	});
-	envProbeWindow->AddWidget(generateButton);
+	AddWidget(generateButton);
 
 	refreshButton = new wiButton("Refresh");
 	refreshButton->SetPos(XMFLOAT2(x, y += step));
@@ -50,7 +46,7 @@ EnvProbeWindow::EnvProbeWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			probe->SetDirty();
 		}
 	});
-	envProbeWindow->AddWidget(refreshButton);
+	AddWidget(refreshButton);
 
 	refreshAllButton = new wiButton("Refresh All");
 	refreshAllButton->SetPos(XMFLOAT2(x, y += step));
@@ -63,23 +59,15 @@ EnvProbeWindow::EnvProbeWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			probe.SetDirty();
 		}
 	});
-	envProbeWindow->AddWidget(refreshAllButton);
+	AddWidget(refreshAllButton);
 
 
 
 
-	envProbeWindow->Translate(XMFLOAT3(100, 100, 0));
-	envProbeWindow->SetVisible(false);
+	Translate(XMFLOAT3(100, 100, 0));
+	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
-}
-
-
-EnvProbeWindow::~EnvProbeWindow()
-{
-	envProbeWindow->RemoveWidgets(true);
-	GUI->RemoveWidget(envProbeWindow);
-	delete envProbeWindow;
 }
 
 void EnvProbeWindow::SetEntity(Entity entity)

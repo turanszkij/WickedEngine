@@ -9,13 +9,9 @@ using namespace wiGraphics;
 using namespace wiScene;
 
 
-LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
+LightWindow::LightWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI(), "Light Window")
 {
-	assert(GUI && "Invalid GUI!");
-
-	lightWindow = new wiWindow(GUI, "Light Window");
-	lightWindow->SetSize(XMFLOAT2(650, 500));
-	GUI->AddWidget(lightWindow);
+	SetSize(XMFLOAT2(650, 500));
 
 	float x = 450;
 	float y = 0;
@@ -34,7 +30,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	energySlider->SetEnabled(false);
 	energySlider->SetTooltip("Adjust the light radiation amount inside the maximum range");
-	lightWindow->AddWidget(energySlider);
+	AddWidget(energySlider);
 
 	rangeSlider = new wiSlider(1, 1000, 0, 100000, "Range: ");
 	rangeSlider->SetSize(XMFLOAT2(100, hei));
@@ -48,7 +44,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	rangeSlider->SetEnabled(false);
 	rangeSlider->SetTooltip("Adjust the maximum range the light can affect.");
-	lightWindow->AddWidget(rangeSlider);
+	AddWidget(rangeSlider);
 
 	radiusSlider = new wiSlider(0.01f, 10, 0, 100000, "Radius: ");
 	radiusSlider->SetSize(XMFLOAT2(100, hei));
@@ -62,7 +58,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	radiusSlider->SetEnabled(false);
 	radiusSlider->SetTooltip("Adjust the radius of an area light.");
-	lightWindow->AddWidget(radiusSlider);
+	AddWidget(radiusSlider);
 
 	widthSlider = new wiSlider(1, 10, 0, 100000, "Width: ");
 	widthSlider->SetSize(XMFLOAT2(100, hei));
@@ -76,7 +72,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	widthSlider->SetEnabled(false);
 	widthSlider->SetTooltip("Adjust the width of an area light.");
-	lightWindow->AddWidget(widthSlider);
+	AddWidget(widthSlider);
 
 	heightSlider = new wiSlider(1, 10, 0, 100000, "Height: ");
 	heightSlider->SetSize(XMFLOAT2(100, hei));
@@ -90,7 +86,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	heightSlider->SetEnabled(false);
 	heightSlider->SetTooltip("Adjust the height of an area light.");
-	lightWindow->AddWidget(heightSlider);
+	AddWidget(heightSlider);
 
 	fovSlider = new wiSlider(0.1f, XM_PI - 0.01f, 0, 100000, "FOV: ");
 	fovSlider->SetSize(XMFLOAT2(100, hei));
@@ -104,7 +100,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	fovSlider->SetEnabled(false);
 	fovSlider->SetTooltip("Adjust the cone aperture for spotlight.");
-	lightWindow->AddWidget(fovSlider);
+	AddWidget(fovSlider);
 
 	biasSlider = new wiSlider(0.0f, 0.2f, 0, 100000, "ShadowBias: ");
 	biasSlider->SetSize(XMFLOAT2(100, hei));
@@ -118,7 +114,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	biasSlider->SetEnabled(false);
 	biasSlider->SetTooltip("Adjust the shadow bias if shadow artifacts occur.");
-	lightWindow->AddWidget(biasSlider);
+	AddWidget(biasSlider);
 
 	shadowCheckBox = new wiCheckBox("Shadow: ");
 	shadowCheckBox->SetSize(XMFLOAT2(hei, hei));
@@ -132,7 +128,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	shadowCheckBox->SetEnabled(false);
 	shadowCheckBox->SetTooltip("Set light as shadow caster. Many shadow casters can affect performance!");
-	lightWindow->AddWidget(shadowCheckBox);
+	AddWidget(shadowCheckBox);
 
 	volumetricsCheckBox = new wiCheckBox("Volumetric: ");
 	volumetricsCheckBox->SetSize(XMFLOAT2(hei, hei));
@@ -146,7 +142,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	volumetricsCheckBox->SetEnabled(false);
 	volumetricsCheckBox->SetTooltip("Compute volumetric light scattering effect. \nThe fog settings affect scattering (see Weather window). If there is no fog, there is no scattering.");
-	lightWindow->AddWidget(volumetricsCheckBox);
+	AddWidget(volumetricsCheckBox);
 
 	haloCheckBox = new wiCheckBox("Visualizer: ");
 	haloCheckBox->SetSize(XMFLOAT2(hei, hei));
@@ -160,7 +156,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	haloCheckBox->SetEnabled(false);
 	haloCheckBox->SetTooltip("Visualize light source emission");
-	lightWindow->AddWidget(haloCheckBox);
+	AddWidget(haloCheckBox);
 
 	staticCheckBox = new wiCheckBox("Static: ");
 	staticCheckBox->SetSize(XMFLOAT2(hei, hei));
@@ -174,7 +170,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	staticCheckBox->SetEnabled(false);
 	staticCheckBox->SetTooltip("Static lights will only be used for baking into lightmaps.");
-	lightWindow->AddWidget(staticCheckBox);
+	AddWidget(staticCheckBox);
 
 	addLightButton = new wiButton("Add Light");
 	addLightButton->SetPos(XMFLOAT2(x, y += step));
@@ -195,10 +191,10 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		}
 	});
 	addLightButton->SetTooltip("Add a light to the scene.");
-	lightWindow->AddWidget(addLightButton);
+	AddWidget(addLightButton);
 
 
-	colorPicker = new wiColorPicker(GUI, "Light Color", false);
+	colorPicker = new wiColorPicker(gui, "Light Color", false);
 	colorPicker->SetPos(XMFLOAT2(10, 30));
 	colorPicker->SetVisible(true);
 	colorPicker->SetEnabled(false);
@@ -209,7 +205,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			light->color = args.color.toFloat3();
 		}
 	});
-	lightWindow->AddWidget(colorPicker);
+	AddWidget(colorPicker);
 
 	typeSelectorComboBox = new wiComboBox("Type: ");
 	typeSelectorComboBox->SetSize(XMFLOAT2(150, hei));
@@ -232,7 +228,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	typeSelectorComboBox->AddItem("Tube");
 	typeSelectorComboBox->SetTooltip("Choose the light source type...");
 	typeSelectorComboBox->SetSelected((int)LightComponent::POINT);
-	lightWindow->AddWidget(typeSelectorComboBox);
+	AddWidget(typeSelectorComboBox);
 
 
 
@@ -244,7 +240,7 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	lensflare_Label = new wiLabel("Lens flare textures: ");
 	lensflare_Label->SetPos(XMFLOAT2(x, y += step));
 	lensflare_Label->SetSize(XMFLOAT2(140, hei));
-	lightWindow->AddWidget(lensflare_Label);
+	AddWidget(lensflare_Label);
 
 	for (size_t i = 0; i < arraysize(lensflare_Button); ++i)
 	{
@@ -288,22 +284,14 @@ LightWindow::LightWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 				});
 			}
 		});
-		lightWindow->AddWidget(lensflare_Button[i]);
+		AddWidget(lensflare_Button[i]);
 	}
 
 
-	lightWindow->Translate(XMFLOAT3(120, 30, 0));
-	lightWindow->SetVisible(false);
+	Translate(XMFLOAT3(120, 30, 0));
+	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
-}
-
-
-LightWindow::~LightWindow()
-{
-	lightWindow->RemoveWidgets(true);
-	GUI->RemoveWidget(lightWindow);
-	delete lightWindow;
 }
 
 void LightWindow::SetEntity(Entity entity)

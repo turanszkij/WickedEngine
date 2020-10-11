@@ -174,8 +174,11 @@ void wiGUI::Render(CommandList cmd) const
 
 void wiGUI::AddWidget(wiWidget* widget)
 {
-	widget->AttachTo(this);
-	widgets.push_back(widget);
+	if (std::find(widgets.begin(), widgets.end(), widget) == widgets.end())
+	{
+		widget->AttachTo(this);
+		widgets.push_back(widget);
+	}
 }
 
 void wiGUI::RemoveWidget(wiWidget* widget)

@@ -6,13 +6,9 @@ using namespace wiECS;
 using namespace wiScene;
 
 
-IKWindow::IKWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
+IKWindow::IKWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI(), "Inverse Kinematics (IK) Window")
 {
-	assert(GUI && "Invalid GUI!");
-
-	window = new wiWindow(GUI, "Inverse Kinematics (IK) Window");
-	window->SetSize(XMFLOAT2(400, 150));
-	GUI->AddWidget(window);
+	SetSize(XMFLOAT2(400, 150));
 
 	float x = 120;
 	float y = 10;
@@ -24,7 +20,7 @@ IKWindow::IKWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	createButton->SetTooltip("Create/Remove IK Component to selected entity");
 	createButton->SetPos(XMFLOAT2(x, y += step));
 	createButton->SetSize(XMFLOAT2(siz, hei));
-	window->AddWidget(createButton);
+	AddWidget(createButton);
 
 	targetCombo = new wiComboBox("Target: ");
 	targetCombo->SetSize(XMFLOAT2(siz, hei));
@@ -46,7 +42,7 @@ IKWindow::IKWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		}
 		});
 	targetCombo->SetTooltip("Choose a target entity (with transform) that the IK will follow");
-	window->AddWidget(targetCombo);
+	AddWidget(targetCombo);
 
 	disabledCheckBox = new wiCheckBox("Disabled: ");
 	disabledCheckBox->SetTooltip("Disable simulation.");
@@ -55,7 +51,7 @@ IKWindow::IKWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	disabledCheckBox->OnClick([=](wiEventArgs args) {
 		wiScene::GetScene().inverse_kinematics.GetComponent(entity)->SetDisabled(args.bValue);
 		});
-	window->AddWidget(disabledCheckBox);
+	AddWidget(disabledCheckBox);
 
 	chainLengthSlider = new wiSlider(0, 10, 0, 10, "Chain Length: ");
 	chainLengthSlider->SetTooltip("How far the hierarchy chain is simulated backwards from this entity");
@@ -64,7 +60,7 @@ IKWindow::IKWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	chainLengthSlider->OnSlide([&](wiEventArgs args) {
 		wiScene::GetScene().inverse_kinematics.GetComponent(entity)->chain_length = args.iValue;
 		});
-	window->AddWidget(chainLengthSlider);
+	AddWidget(chainLengthSlider);
 
 	iterationCountSlider = new wiSlider(0, 10, 1, 10, "Iteration Count: ");
 	iterationCountSlider->SetTooltip("How many iterations to compute the inverse kinematics for. Higher values are slower but more accurate.");
@@ -73,20 +69,12 @@ IKWindow::IKWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	iterationCountSlider->OnSlide([&](wiEventArgs args) {
 		wiScene::GetScene().inverse_kinematics.GetComponent(entity)->iteration_count = args.iValue;
 		});
-	window->AddWidget(iterationCountSlider);
+	AddWidget(iterationCountSlider);
 
-	window->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 740, 150, 0));
-	window->SetVisible(false);
+	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 740, 150, 0));
+	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
-}
-
-
-IKWindow::~IKWindow()
-{
-	window->RemoveWidgets(true);
-	GUI->RemoveWidget(window);
-	delete window;
 }
 
 void IKWindow::SetEntity(Entity entity)
@@ -98,7 +86,7 @@ void IKWindow::SetEntity(Entity entity)
 
 	if (ik != nullptr)
 	{
-		window->SetEnabled(true);
+		SetEnabled(true);
 
 		disabledCheckBox->SetCheck(ik->IsDisabled());
 		chainLengthSlider->SetValue((float)ik->chain_length);
@@ -120,7 +108,7 @@ void IKWindow::SetEntity(Entity entity)
 	}
 	else
 	{
-		window->SetEnabled(false);
+		SetEnabled(false);
 	}
 
 	const TransformComponent* transform = wiScene::GetScene().transforms.GetComponent(entity);

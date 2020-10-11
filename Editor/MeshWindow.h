@@ -1,27 +1,17 @@
 #pragma once
-
-class wiGUI;
-class wiWindow;
-class wiLabel;
-class wiCheckBox;
-class wiSlider;
-class wiButton;
-class wiComboBox;
+#include "WickedEngine.h"
 
 class EditorComponent;
 
-class MeshWindow
+class MeshWindow : public wiWindow
 {
 public:
 	MeshWindow(EditorComponent* editor);
-	~MeshWindow();
-
-	wiGUI* GUI;
+	virtual ~MeshWindow();
 
 	wiECS::Entity entity;
 	void SetEntity(wiECS::Entity entity);
 
-	wiWindow*	meshWindow;
 	wiLabel*	meshInfoLabel;
 	wiCheckBox* doubleSidedCheckBox;
 	wiCheckBox* softbodyCheckBox;

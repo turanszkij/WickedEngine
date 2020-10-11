@@ -1,31 +1,19 @@
 #pragma once
-
-class wiGUI;
-class wiWindow;
-class wiLabel;
-class wiCheckBox;
-class wiSlider;
-class wiColorPicker;
-class wiButton;
-class wiComboBox;
+#include "WickedEngine.h"
 
 class EditorComponent;
 
-class WeatherWindow
+class WeatherWindow : public wiWindow
 {
 	void UpdateWind();
 public:
 	WeatherWindow(EditorComponent* editor);
-	~WeatherWindow();
 
 	void Update();
 
 	wiScene::WeatherComponent& GetWeather() const;
 	void InvalidateProbes() const;
 
-	wiGUI* GUI;
-
-	wiWindow*		weatherWindow;
 	wiSlider*		fogStartSlider;
 	wiSlider*		fogEndSlider;
 	wiSlider*		fogHeightSlider;

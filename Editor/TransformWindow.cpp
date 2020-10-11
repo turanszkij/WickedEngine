@@ -6,13 +6,9 @@ using namespace wiECS;
 using namespace wiScene;
 
 
-TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
+TransformWindow::TransformWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI(), "Transform Window")
 {
-	assert(GUI && "Invalid GUI!");
-
-	window = new wiWindow(GUI, "Transform Window");
-	window->SetSize(XMFLOAT2(460, 180));
-	GUI->AddWidget(window);
+	SetSize(XMFLOAT2(460, 180));
 
 	float x = 100;
 	float y = 0;
@@ -31,7 +27,7 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 		editor->AddSelected(entity);
 		SetEntity(entity);
 		});
-	window->AddWidget(createButton);
+	AddWidget(createButton);
 
 	parentCombo = new wiComboBox("Parent: ");
 	parentCombo->SetSize(XMFLOAT2(330, hei));
@@ -60,7 +56,7 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 
 		});
 	parentCombo->SetTooltip("Choose a parent entity for the transform");
-	window->AddWidget(parentCombo);
+	AddWidget(parentCombo);
 
 	txInput = new wiTextInputField("");
 	txInput->SetValue(0);
@@ -75,7 +71,7 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			transform->SetDirty();
 		}
 	});
-	window->AddWidget(txInput);
+	AddWidget(txInput);
 
 	tyInput = new wiTextInputField("");
 	tyInput->SetValue(0);
@@ -90,7 +86,7 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			transform->SetDirty();
 		}
 		});
-	window->AddWidget(tyInput);
+	AddWidget(tyInput);
 
 	tzInput = new wiTextInputField("");
 	tzInput->SetValue(0);
@@ -105,7 +101,7 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			transform->SetDirty();
 		}
 		});
-	window->AddWidget(tzInput);
+	AddWidget(tzInput);
 
 
 
@@ -126,7 +122,7 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			transform->SetDirty();
 		}
 		});
-	window->AddWidget(rxInput);
+	AddWidget(rxInput);
 
 	ryInput = new wiTextInputField("");
 	ryInput->SetValue(0);
@@ -141,7 +137,7 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			transform->SetDirty();
 		}
 		});
-	window->AddWidget(ryInput);
+	AddWidget(ryInput);
 
 	rzInput = new wiTextInputField("");
 	rzInput->SetValue(0);
@@ -156,7 +152,7 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			transform->SetDirty();
 		}
 		});
-	window->AddWidget(rzInput);
+	AddWidget(rzInput);
 
 	rwInput = new wiTextInputField("");
 	rwInput->SetValue(1);
@@ -171,7 +167,7 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			transform->SetDirty();
 		}
 		});
-	window->AddWidget(rwInput);
+	AddWidget(rwInput);
 
 
 
@@ -193,7 +189,7 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			transform->SetDirty();
 		}
 		});
-	window->AddWidget(sxInput);
+	AddWidget(sxInput);
 
 	syInput = new wiTextInputField("");
 	syInput->SetValue(1);
@@ -208,7 +204,7 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			transform->SetDirty();
 		}
 		});
-	window->AddWidget(syInput);
+	AddWidget(syInput);
 
 	szInput = new wiTextInputField("");
 	szInput->SetValue(1);
@@ -223,20 +219,12 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			transform->SetDirty();
 		}
 		});
-	window->AddWidget(szInput);
+	AddWidget(szInput);
 
-	window->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 750, 100, 0));
-	window->SetVisible(false);
+	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 750, 100, 0));
+	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
-}
-
-
-TransformWindow::~TransformWindow()
-{
-	window->RemoveWidgets(true);
-	GUI->RemoveWidget(window);
-	delete window;
 }
 
 void TransformWindow::SetEntity(Entity entity)
@@ -277,11 +265,11 @@ void TransformWindow::SetEntity(Entity entity)
 		syInput->SetValue(transform->scale_local.y);
 		szInput->SetValue(transform->scale_local.z);
 
-		window->SetEnabled(true);
+		SetEnabled(true);
 	}
 	else
 	{
-		window->SetEnabled(false);
+		SetEnabled(false);
 	}
 
 	createButton->SetEnabled(true);

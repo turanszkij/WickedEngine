@@ -6,13 +6,9 @@ using namespace wiECS;
 using namespace wiScene;
 
 
-NameWindow::NameWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
+NameWindow::NameWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI(), "Name Window")
 {
-	assert(GUI && "Invalid GUI!");
-
-	window = new wiWindow(GUI, "Name Window");
-	window->SetSize(XMFLOAT2(360, 80));
-	GUI->AddWidget(window);
+	SetSize(XMFLOAT2(360, 80));
 
 	float x = 60;
 	float y = 0;
@@ -32,20 +28,12 @@ NameWindow::NameWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		}
 		name->name = args.sValue;
 	});
-	window->AddWidget(nameInput);
+	AddWidget(nameInput);
 
-	window->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 450, 200, 0));
-	window->SetVisible(false);
+	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 450, 200, 0));
+	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
-}
-
-
-NameWindow::~NameWindow()
-{
-	window->RemoveWidgets(true);
-	GUI->RemoveWidget(window);
-	delete window;
 }
 
 void NameWindow::SetEntity(Entity entity)
@@ -54,7 +42,7 @@ void NameWindow::SetEntity(Entity entity)
 
 	if (entity != INVALID_ENTITY)
 	{
-		window->SetEnabled(true);
+		SetEnabled(true);
 
 		NameComponent* name = wiScene::GetScene().names.GetComponent(entity);
 		if (name != nullptr)
@@ -64,7 +52,7 @@ void NameWindow::SetEntity(Entity entity)
 	}
 	else
 	{
-		window->SetEnabled(false);
+		SetEnabled(false);
 		nameInput->SetValue("Select entity to modify name...");
 	}
 }

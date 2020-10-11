@@ -1,23 +1,14 @@
 #pragma once
-
-class wiGUI;
-class wiWindow;
-class wiLabel;
-class wiCheckBox;
-class wiSlider;
-class wiComboBox;
-class wiColorPicker;
-class wiButton;
+#include "WickedEngine.h"
 
 class EditorComponent;
 
 class MaterialWindow;
 
-class EmitterWindow
+class EmitterWindow : public wiWindow
 {
 public:
 	EmitterWindow(EditorComponent* editor);
-	~EmitterWindow();
 
 	wiECS::Entity entity;
 	void SetEntity(wiECS::Entity entity);
@@ -25,10 +16,6 @@ public:
 	void UpdateData();
 
 	wiScene::wiEmittedParticle* GetEmitter();
-
-	wiGUI* GUI;
-
-	wiWindow*	emitterWindow;
 
 	wiTextInputField*	emitterNameField;
 	wiButton* addButton;

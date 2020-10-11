@@ -8,13 +8,9 @@ using namespace std;
 using namespace wiECS;
 using namespace wiScene;
 
-EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
+EmitterWindow::EmitterWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI(), "Emitter Window")
 {
-	assert(GUI && "Invalid GUI!");
-
-	emitterWindow = new wiWindow(GUI, "Emitter Window");
-	emitterWindow->SetSize(XMFLOAT2(680, 660));
-	GUI->AddWidget(emitterWindow);
+	SetSize(XMFLOAT2(680, 660));
 
 	float x = 200;
 	float y = 5;
@@ -32,7 +28,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			*name = args.sValue;
 		}
 	});
-	emitterWindow->AddWidget(emitterNameField);
+	AddWidget(emitterNameField);
 
 	addButton = new wiButton("Add Emitter");
 	addButton->SetPos(XMFLOAT2(x, y += step));
@@ -45,7 +41,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		SetEntity(entity);
 	});
 	addButton->SetTooltip("Add new emitter particle system.");
-	emitterWindow->AddWidget(addButton);
+	AddWidget(addButton);
 
 	restartButton = new wiButton("Restart Emitter");
 	restartButton->SetPos(XMFLOAT2(x + 160, y));
@@ -58,7 +54,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		}
 	});
 	restartButton->SetTooltip("Restart particle system emitter");
-	emitterWindow->AddWidget(restartButton);
+	AddWidget(restartButton);
 
 	meshComboBox = new wiComboBox("Mesh: ");
 	meshComboBox->SetSize(XMFLOAT2(300, itemheight));
@@ -80,7 +76,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		}
 	});
 	meshComboBox->SetTooltip("Choose an mesh that particles will be emitted from...");
-	emitterWindow->AddWidget(meshComboBox);
+	AddWidget(meshComboBox);
 
 	shaderTypeComboBox = new wiComboBox("ShaderType: ");
 	shaderTypeComboBox->SetPos(XMFLOAT2(x, y += step));
@@ -98,7 +94,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	shaderTypeComboBox->SetEnabled(false);
 	shaderTypeComboBox->SetTooltip("Choose a shader type for the particles. This is responsible of how they will be rendered.");
-	emitterWindow->AddWidget(shaderTypeComboBox);
+	AddWidget(shaderTypeComboBox);
 
 
 	sortCheckBox = new wiCheckBox("Sorting Enabled: ");
@@ -113,7 +109,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	sortCheckBox->SetCheck(false);
 	sortCheckBox->SetTooltip("Enable sorting of the particles. This might slow down performance.");
-	emitterWindow->AddWidget(sortCheckBox);
+	AddWidget(sortCheckBox);
 
 
 	depthCollisionsCheckBox = new wiCheckBox("Depth Buffer Collisions Enabled: ");
@@ -128,7 +124,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	depthCollisionsCheckBox->SetCheck(false);
 	depthCollisionsCheckBox->SetTooltip("Enable particle collisions with the depth buffer.");
-	emitterWindow->AddWidget(depthCollisionsCheckBox);
+	AddWidget(depthCollisionsCheckBox);
 
 
 	sphCheckBox = new wiCheckBox("SPH - FluidSim: ");
@@ -143,7 +139,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	sphCheckBox->SetCheck(false);
 	sphCheckBox->SetTooltip("Enable particle collisions with each other. Simulate with Smooth Particle Hydrodynamics (SPH) solver.");
-	emitterWindow->AddWidget(sphCheckBox);
+	AddWidget(sphCheckBox);
 
 
 	pauseCheckBox = new wiCheckBox("PAUSE: ");
@@ -158,7 +154,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	pauseCheckBox->SetCheck(false);
 	pauseCheckBox->SetTooltip("Stop simulation update.");
-	emitterWindow->AddWidget(pauseCheckBox);
+	AddWidget(pauseCheckBox);
 
 
 	debugCheckBox = new wiCheckBox("DEBUG: ");
@@ -173,7 +169,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	debugCheckBox->SetCheck(false);
 	debugCheckBox->SetTooltip("Currently this has no functionality.");
-	emitterWindow->AddWidget(debugCheckBox);
+	AddWidget(debugCheckBox);
 
 
 	volumeCheckBox = new wiCheckBox("Volume: ");
@@ -188,7 +184,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		});
 	volumeCheckBox->SetCheck(false);
 	volumeCheckBox->SetTooltip("Enable volume for the emitter. Particles will be emitted inside volume.");
-	emitterWindow->AddWidget(volumeCheckBox);
+	AddWidget(volumeCheckBox);
 
 
 	frameBlendingCheckBox = new wiCheckBox("Frame Blending: ");
@@ -203,14 +199,14 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		});
 	frameBlendingCheckBox->SetCheck(false);
 	frameBlendingCheckBox->SetTooltip("If sprite sheet animation is in effect, frames will be smoothly blended.");
-	emitterWindow->AddWidget(frameBlendingCheckBox);
+	AddWidget(frameBlendingCheckBox);
 
 
 
 	infoLabel = new wiLabel("EmitterInfo");
 	infoLabel->SetSize(XMFLOAT2(380, 120));
 	infoLabel->SetPos(XMFLOAT2(x, y += step));
-	emitterWindow->AddWidget(infoLabel);
+	AddWidget(infoLabel);
 
 
 	y += 125;
@@ -228,7 +224,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			emitter->frameRate = args.fValue;
 		}
 		});
-	emitterWindow->AddWidget(frameRateInput);
+	AddWidget(frameRateInput);
 
 	framesXInput = new wiTextInputField("");
 	framesXInput->SetPos(XMFLOAT2(x + 150, y));
@@ -243,7 +239,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			emitter->framesX = (uint32_t)args.iValue;
 		}
 		});
-	emitterWindow->AddWidget(framesXInput);
+	AddWidget(framesXInput);
 
 	framesYInput = new wiTextInputField("");
 	framesYInput->SetPos(XMFLOAT2(x + 300, y));
@@ -258,7 +254,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			emitter->framesY = (uint32_t)args.iValue;
 		}
 		});
-	emitterWindow->AddWidget(framesYInput);
+	AddWidget(framesYInput);
 
 	frameCountInput = new wiTextInputField("");
 	frameCountInput->SetPos(XMFLOAT2(x, y += step));
@@ -273,7 +269,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			emitter->frameCount = (uint32_t)args.iValue;
 		}
 		});
-	emitterWindow->AddWidget(frameCountInput);
+	AddWidget(frameCountInput);
 
 	frameStartInput = new wiTextInputField("");
 	frameStartInput->SetPos(XMFLOAT2(x + 300, y));
@@ -288,7 +284,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			emitter->frameStart = (uint32_t)args.iValue;
 		}
 		});
-	emitterWindow->AddWidget(frameStartInput);
+	AddWidget(frameStartInput);
 
 	maxParticlesSlider = new wiSlider(100.0f, 1000000.0f, 10000, 100000, "Max particle count: ");
 	maxParticlesSlider->SetSize(XMFLOAT2(360, itemheight));
@@ -302,7 +298,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		});
 	maxParticlesSlider->SetEnabled(false);
 	maxParticlesSlider->SetTooltip("Set the maximum amount of particles this system can handle. This has an effect on the memory budget.");
-	emitterWindow->AddWidget(maxParticlesSlider);
+	AddWidget(maxParticlesSlider);
 
 	emitCountSlider = new wiSlider(0.0f, 10000.0f, 1.0f, 100000, "Emit count per sec: ");
 	emitCountSlider->SetSize(XMFLOAT2(360, itemheight));
@@ -316,7 +312,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	emitCountSlider->SetEnabled(false);
 	emitCountSlider->SetTooltip("Set the number of particles to emit per second.");
-	emitterWindow->AddWidget(emitCountSlider);
+	AddWidget(emitCountSlider);
 
 	emitSizeSlider = new wiSlider(0.01f, 10.0f, 1.0f, 100000, "Size: ");
 	emitSizeSlider->SetSize(XMFLOAT2(360, itemheight));
@@ -330,7 +326,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	emitSizeSlider->SetEnabled(false);
 	emitSizeSlider->SetTooltip("Set the size of the emitted particles.");
-	emitterWindow->AddWidget(emitSizeSlider);
+	AddWidget(emitSizeSlider);
 
 	emitRotationSlider = new wiSlider(0.0f, 1.0f, 0.0f, 100000, "Rotation: ");
 	emitRotationSlider->SetSize(XMFLOAT2(360, itemheight));
@@ -344,7 +340,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	emitRotationSlider->SetEnabled(false);
 	emitRotationSlider->SetTooltip("Set the rotation velocity of the emitted particles.");
-	emitterWindow->AddWidget(emitRotationSlider);
+	AddWidget(emitRotationSlider);
 
 	emitNormalSlider = new wiSlider(0.0f, 100.0f, 1.0f, 100000, "Normal factor: ");
 	emitNormalSlider->SetSize(XMFLOAT2(360, itemheight));
@@ -358,7 +354,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	emitNormalSlider->SetEnabled(false);
 	emitNormalSlider->SetTooltip("Set the velocity of the emitted particles based on the normal vector of the emitter surface.");
-	emitterWindow->AddWidget(emitNormalSlider);
+	AddWidget(emitNormalSlider);
 
 	emitScalingSlider = new wiSlider(0.0f, 100.0f, 1.0f, 100000, "Scaling: ");
 	emitScalingSlider->SetSize(XMFLOAT2(360, itemheight));
@@ -372,7 +368,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	emitScalingSlider->SetEnabled(false);
 	emitScalingSlider->SetTooltip("Set the scaling of the particles based on their lifetime.");
-	emitterWindow->AddWidget(emitScalingSlider);
+	AddWidget(emitScalingSlider);
 
 	emitLifeSlider = new wiSlider(0.0f, 100.0f, 1.0f, 10000, "Life span: ");
 	emitLifeSlider->SetSize(XMFLOAT2(360, itemheight));
@@ -386,7 +382,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	emitLifeSlider->SetEnabled(false);
 	emitLifeSlider->SetTooltip("Set the lifespan of the emitted particles (in seconds).");
-	emitterWindow->AddWidget(emitLifeSlider);
+	AddWidget(emitLifeSlider);
 
 	emitRandomnessSlider = new wiSlider(0.0f, 1.0f, 1.0f, 100000, "Randomness: ");
 	emitRandomnessSlider->SetSize(XMFLOAT2(360, itemheight));
@@ -400,7 +396,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	emitRandomnessSlider->SetEnabled(false);
 	emitRandomnessSlider->SetTooltip("Set the general randomness of the emitter.");
-	emitterWindow->AddWidget(emitRandomnessSlider);
+	AddWidget(emitRandomnessSlider);
 
 	emitLifeRandomnessSlider = new wiSlider(0.0f, 2.0f, 0.0f, 100000, "Life randomness: ");
 	emitLifeRandomnessSlider->SetSize(XMFLOAT2(360, itemheight));
@@ -414,7 +410,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	emitLifeRandomnessSlider->SetEnabled(false);
 	emitLifeRandomnessSlider->SetTooltip("Set the randomness of lifespans for the emitted particles.");
-	emitterWindow->AddWidget(emitLifeRandomnessSlider);
+	AddWidget(emitLifeRandomnessSlider);
 
 	emitMotionBlurSlider = new wiSlider(0.0f, 1.0f, 1.0f, 100000, "Motion blur: ");
 	emitMotionBlurSlider->SetSize(XMFLOAT2(360, itemheight));
@@ -428,7 +424,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	emitMotionBlurSlider->SetEnabled(false);
 	emitMotionBlurSlider->SetTooltip("Set the motion blur amount for the particle system.");
-	emitterWindow->AddWidget(emitMotionBlurSlider);
+	AddWidget(emitMotionBlurSlider);
 
 	emitMassSlider = new wiSlider(0.1f, 100.0f, 1.0f, 100000, "Mass: ");
 	emitMassSlider->SetSize(XMFLOAT2(360, itemheight));
@@ -442,7 +438,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	emitMassSlider->SetEnabled(false);
 	emitMassSlider->SetTooltip("Set the mass per particle.");
-	emitterWindow->AddWidget(emitMassSlider);
+	AddWidget(emitMassSlider);
 
 
 
@@ -458,7 +454,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	timestepSlider->SetEnabled(false);
 	timestepSlider->SetTooltip("Adjust timestep for emitter simulation. -1 means variable timestep, positive means fixed timestep.");
-	emitterWindow->AddWidget(timestepSlider);
+	AddWidget(timestepSlider);
 
 
 
@@ -478,7 +474,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	sph_h_Slider->SetEnabled(false);
 	sph_h_Slider->SetTooltip("Set the SPH parameter: smoothing radius");
-	emitterWindow->AddWidget(sph_h_Slider);
+	AddWidget(sph_h_Slider);
 
 	sph_K_Slider = new wiSlider(0.1f, 100.0f, 1.0f, 100000, "SPH Pressure Constant (K): ");
 	sph_K_Slider->SetSize(XMFLOAT2(360, itemheight));
@@ -492,7 +488,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	sph_K_Slider->SetEnabled(false);
 	sph_K_Slider->SetTooltip("Set the SPH parameter: pressure constant");
-	emitterWindow->AddWidget(sph_K_Slider);
+	AddWidget(sph_K_Slider);
 
 	sph_p0_Slider = new wiSlider(0.1f, 100.0f, 1.0f, 100000, "SPH Reference Density (p0): ");
 	sph_p0_Slider->SetSize(XMFLOAT2(360, itemheight));
@@ -506,7 +502,7 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	sph_p0_Slider->SetEnabled(false);
 	sph_p0_Slider->SetTooltip("Set the SPH parameter: reference density");
-	emitterWindow->AddWidget(sph_p0_Slider);
+	AddWidget(sph_p0_Slider);
 
 	sph_e_Slider = new wiSlider(0.1f, 100.0f, 1.0f, 100000, "SPH Viscosity (e): ");
 	sph_e_Slider->SetSize(XMFLOAT2(360, itemheight));
@@ -520,24 +516,17 @@ EmitterWindow::EmitterWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	sph_e_Slider->SetEnabled(false);
 	sph_e_Slider->SetTooltip("Set the SPH parameter: viscosity constant");
-	emitterWindow->AddWidget(sph_e_Slider);
+	AddWidget(sph_e_Slider);
 
 
 
 
 
 
-	emitterWindow->Translate(XMFLOAT3(200, 50, 0));
-	emitterWindow->SetVisible(false);
+	Translate(XMFLOAT3(200, 50, 0));
+	SetVisible(false);
 
 	SetEntity(entity);
-}
-
-EmitterWindow::~EmitterWindow()
-{
-	emitterWindow->RemoveWidgets(true);
-	GUI->RemoveWidget(emitterWindow);
-	delete emitterWindow;
 }
 
 void EmitterWindow::SetEntity(Entity entity)

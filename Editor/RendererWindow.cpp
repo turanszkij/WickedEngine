@@ -4,17 +4,13 @@
 #include "Editor.h"
 
 
-RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
+RendererWindow::RendererWindow(EditorComponent* editor) : wiWindow(&editor->GetGUI(), "Renderer Window")
 {
-	assert(GUI && "Invalid GUI!");
-
 	wiRenderer::SetToDrawDebugEnvProbes(true);
 	wiRenderer::SetToDrawGridHelper(true);
 	wiRenderer::SetToDrawDebugCameras(true);
 
-	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(580, 540));
-	GUI->AddWidget(rendererWindow);
+	SetSize(XMFLOAT2(580, 540));
 
 	float x = 220, y = 5, step = 20, itemheight = 18;
 
@@ -27,7 +23,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::GetDevice()->SetVSyncEnabled(args.bValue);
 	});
 	vsyncCheckBox->SetCheck(wiRenderer::GetDevice()->GetVSyncEnabled());
-	rendererWindow->AddWidget(vsyncCheckBox);
+	AddWidget(vsyncCheckBox);
 
 	occlusionCullingCheckBox = new wiCheckBox("Occlusion Culling: ");
 	occlusionCullingCheckBox->SetTooltip("Toggle occlusion culling. This can boost framerate if many objects are occluded in the scene.");
@@ -38,7 +34,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetOcclusionCullingEnabled(args.bValue);
 	});
 	occlusionCullingCheckBox->SetCheck(wiRenderer::GetOcclusionCullingEnabled());
-	rendererWindow->AddWidget(occlusionCullingCheckBox);
+	AddWidget(occlusionCullingCheckBox);
 
 	resolutionScaleSlider = new wiSlider(0.25f, 2.0f, 1.0f, 7.0f, "Resolution Scale: ");
 	resolutionScaleSlider->SetTooltip("Adjust the internal rendering resolution.");
@@ -48,7 +44,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	resolutionScaleSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::SetResolutionScale(args.fValue);
 	});
-	rendererWindow->AddWidget(resolutionScaleSlider);
+	AddWidget(resolutionScaleSlider);
 
 	gammaSlider = new wiSlider(1.0f, 3.0f, 2.2f, 1000.0f, "Gamma: ");
 	gammaSlider->SetTooltip("Adjust the gamma correction for the display device.");
@@ -58,7 +54,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	gammaSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::SetGamma(args.fValue);
 	});
-	rendererWindow->AddWidget(gammaSlider);
+	AddWidget(gammaSlider);
 
 	voxelRadianceCheckBox = new wiCheckBox("Voxel GI: ");
 	voxelRadianceCheckBox->SetTooltip("Toggle voxel Global Illumination computation.");
@@ -68,7 +64,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetVoxelRadianceEnabled(args.bValue);
 	});
 	voxelRadianceCheckBox->SetCheck(wiRenderer::GetVoxelRadianceEnabled());
-	rendererWindow->AddWidget(voxelRadianceCheckBox);
+	AddWidget(voxelRadianceCheckBox);
 
 	voxelRadianceDebugCheckBox = new wiCheckBox("DEBUG: ");
 	voxelRadianceDebugCheckBox->SetTooltip("Toggle Voxel GI visualization.");
@@ -78,7 +74,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetToDrawVoxelHelper(args.bValue);
 	});
 	voxelRadianceDebugCheckBox->SetCheck(wiRenderer::GetToDrawVoxelHelper());
-	rendererWindow->AddWidget(voxelRadianceDebugCheckBox);
+	AddWidget(voxelRadianceDebugCheckBox);
 
 	voxelRadianceSecondaryBounceCheckBox = new wiCheckBox("Secondary Light Bounce: ");
 	voxelRadianceSecondaryBounceCheckBox->SetTooltip("Toggle secondary light bounce computation for Voxel GI.");
@@ -88,7 +84,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetVoxelRadianceSecondaryBounceEnabled(args.bValue);
 	});
 	voxelRadianceSecondaryBounceCheckBox->SetCheck(wiRenderer::GetVoxelRadianceSecondaryBounceEnabled());
-	rendererWindow->AddWidget(voxelRadianceSecondaryBounceCheckBox);
+	AddWidget(voxelRadianceSecondaryBounceCheckBox);
 
 	voxelRadianceReflectionsCheckBox = new wiCheckBox("Reflections: ");
 	voxelRadianceReflectionsCheckBox->SetTooltip("Toggle specular reflections computation for Voxel GI.");
@@ -98,7 +94,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetVoxelRadianceReflectionsEnabled(args.bValue);
 	});
 	voxelRadianceReflectionsCheckBox->SetCheck(wiRenderer::GetVoxelRadianceReflectionsEnabled());
-	rendererWindow->AddWidget(voxelRadianceReflectionsCheckBox);
+	AddWidget(voxelRadianceReflectionsCheckBox);
 
 	voxelRadianceVoxelSizeSlider = new wiSlider(0.25, 2, 1, 7, "Voxel GI Voxel Size: ");
 	voxelRadianceVoxelSizeSlider->SetTooltip("Adjust the voxel size for Voxel GI calculations.");
@@ -108,7 +104,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	voxelRadianceVoxelSizeSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::SetVoxelRadianceVoxelSize(args.fValue);
 	});
-	rendererWindow->AddWidget(voxelRadianceVoxelSizeSlider);
+	AddWidget(voxelRadianceVoxelSizeSlider);
 
 	voxelRadianceConeTracingSlider = new wiSlider(1, 16, 8, 15, "Voxel GI NumCones: ");
 	voxelRadianceConeTracingSlider->SetTooltip("Adjust the number of cones sampled in the radiance gathering phase.");
@@ -118,7 +114,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	voxelRadianceConeTracingSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::SetVoxelRadianceNumCones(args.iValue);
 	});
-	rendererWindow->AddWidget(voxelRadianceConeTracingSlider);
+	AddWidget(voxelRadianceConeTracingSlider);
 
 	voxelRadianceRayStepSizeSlider = new wiSlider(0.5f, 2.0f, 0.5f, 10000, "Voxel GI Ray Step Size: ");
 	voxelRadianceRayStepSizeSlider->SetTooltip("Adjust the precision of ray marching for cone tracing step. Lower values = more precision but slower performance.");
@@ -128,7 +124,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	voxelRadianceRayStepSizeSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::SetVoxelRadianceRayStepSize(args.fValue);
 	});
-	rendererWindow->AddWidget(voxelRadianceRayStepSizeSlider);
+	AddWidget(voxelRadianceRayStepSizeSlider);
 
 	voxelRadianceMaxDistanceSlider = new wiSlider(0, 100, 10, 10000, "Voxel GI Max Distance: ");
 	voxelRadianceMaxDistanceSlider->SetTooltip("Adjust max raymarching distance for voxel GI.");
@@ -138,7 +134,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	voxelRadianceMaxDistanceSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::SetVoxelRadianceMaxDistance(args.fValue);
 	});
-	rendererWindow->AddWidget(voxelRadianceMaxDistanceSlider);
+	AddWidget(voxelRadianceMaxDistanceSlider);
 
 	wireFrameCheckBox = new wiCheckBox("Render Wireframe: ");
 	wireFrameCheckBox->SetTooltip("Visualize the scene as a wireframe");
@@ -148,7 +144,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetWireRender(args.bValue);
 	});
 	wireFrameCheckBox->SetCheck(wiRenderer::IsWireRender());
-	rendererWindow->AddWidget(wireFrameCheckBox);
+	AddWidget(wireFrameCheckBox);
 
 	variableRateShadingClassificationCheckBox = new wiCheckBox("VRS Classification: ");
 	variableRateShadingClassificationCheckBox->SetTooltip("Enable classification of variable rate shading on the screen. Less important parts will be shaded with lesser resolution.\nDX12 only and requires Tier1 hardware support for variable shading rate");
@@ -158,7 +154,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetVariableRateShadingClassification(args.bValue);
 		});
 	variableRateShadingClassificationCheckBox->SetCheck(wiRenderer::GetVariableRateShadingClassification());
-	rendererWindow->AddWidget(variableRateShadingClassificationCheckBox);
+	AddWidget(variableRateShadingClassificationCheckBox);
 	variableRateShadingClassificationCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2));
 
 	variableRateShadingClassificationDebugCheckBox = new wiCheckBox("DEBUG: ");
@@ -169,7 +165,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetVariableRateShadingClassificationDebug(args.bValue);
 		});
 	variableRateShadingClassificationDebugCheckBox->SetCheck(wiRenderer::GetVariableRateShadingClassificationDebug());
-	rendererWindow->AddWidget(variableRateShadingClassificationDebugCheckBox);
+	AddWidget(variableRateShadingClassificationDebugCheckBox);
 	variableRateShadingClassificationDebugCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2));
 
 	advancedLightCullingCheckBox = new wiCheckBox("2.5D Light Culling: ");
@@ -180,7 +176,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetAdvancedLightCulling(args.bValue);
 	});
 	advancedLightCullingCheckBox->SetCheck(wiRenderer::GetAdvancedLightCulling());
-	rendererWindow->AddWidget(advancedLightCullingCheckBox);
+	AddWidget(advancedLightCullingCheckBox);
 
 	debugLightCullingCheckBox = new wiCheckBox("DEBUG: ");
 	debugLightCullingCheckBox->SetTooltip("Toggle visualization of the screen space light culling heatmap grid (Tiled renderer only)");
@@ -190,7 +186,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetDebugLightCulling(args.bValue);
 	});
 	debugLightCullingCheckBox->SetCheck(wiRenderer::GetDebugLightCulling());
-	rendererWindow->AddWidget(debugLightCullingCheckBox);
+	AddWidget(debugLightCullingCheckBox);
 
 	tessellationCheckBox = new wiCheckBox("Tessellation Enabled: ");
 	tessellationCheckBox->SetTooltip("Enable tessellation feature. You also need to specify a tessellation factor for individual objects.");
@@ -200,7 +196,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetTessellationEnabled(args.bValue);
 	});
 	tessellationCheckBox->SetCheck(wiRenderer::GetTessellationEnabled());
-	rendererWindow->AddWidget(tessellationCheckBox);
+	AddWidget(tessellationCheckBox);
 	tessellationCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GRAPHICSDEVICE_CAPABILITY_TESSELLATION));
 
 	alphaCompositionCheckBox = new wiCheckBox("Alpha Composition: ");
@@ -211,7 +207,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetAlphaCompositionEnabled(args.bValue);
 	});
 	alphaCompositionCheckBox->SetCheck(wiRenderer::GetAlphaCompositionEnabled());
-	rendererWindow->AddWidget(alphaCompositionCheckBox);
+	AddWidget(alphaCompositionCheckBox);
 
 	speedMultiplierSlider = new wiSlider(0, 4, 1, 100000, "Speed: ");
 	speedMultiplierSlider->SetTooltip("Adjust the global speed (time multiplier)");
@@ -221,7 +217,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	speedMultiplierSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::SetGameSpeed(args.fValue);
 	});
-	rendererWindow->AddWidget(speedMultiplierSlider);
+	AddWidget(speedMultiplierSlider);
 
 	transparentShadowsCheckBox = new wiCheckBox("Transparent Shadows: ");
 	transparentShadowsCheckBox->SetTooltip("Enables color tinted shadows and refraction caustics effects for transparent objects and water.");
@@ -231,7 +227,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	transparentShadowsCheckBox->OnClick([=](wiEventArgs args) {
 		wiRenderer::SetTransparentShadowsEnabled(args.bValue);
 	});
-	rendererWindow->AddWidget(transparentShadowsCheckBox);
+	AddWidget(transparentShadowsCheckBox);
 
 	shadowTypeComboBox = new wiComboBox("Shadow type: ");
 	shadowTypeComboBox->SetSize(XMFLOAT2(100, itemheight));
@@ -257,7 +253,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	shadowTypeComboBox->SetSelected(0);
 	shadowTypeComboBox->SetEnabled(true);
 	shadowTypeComboBox->SetTooltip("Choose between shadowmaps and ray traced shadows (if available).\n(ray traced shadows experimental, needs hardware support and shaders compiled with HLSL6.5)");
-	rendererWindow->AddWidget(shadowTypeComboBox);
+	AddWidget(shadowTypeComboBox);
 
 	shadowProps2DComboBox = new wiComboBox("2D Shadowmap resolution: ");
 	shadowProps2DComboBox->SetSize(XMFLOAT2(100, itemheight));
@@ -302,7 +298,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	shadowProps2DComboBox->SetEnabled(true);
 	shadowProps2DComboBox->SetTooltip("Choose a shadow quality preset for 2D shadow maps (spotlights, directional lights)...");
 	shadowProps2DComboBox->SetScriptTip("SetShadowProps2D(int resolution, int count, int softShadowQuality)");
-	rendererWindow->AddWidget(shadowProps2DComboBox);
+	AddWidget(shadowProps2DComboBox);
 
 	shadowPropsCubeComboBox = new wiComboBox("Cube Shadowmap resolution: ");
 	shadowPropsCubeComboBox->SetSize(XMFLOAT2(100, itemheight));
@@ -346,7 +342,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	shadowPropsCubeComboBox->SetEnabled(true);
 	shadowPropsCubeComboBox->SetTooltip("Choose a shadow quality preset for cube shadow maps (pointlights, area lights)...");
 	shadowPropsCubeComboBox->SetScriptTip("SetShadowPropsCube(int resolution, int count)");
-	rendererWindow->AddWidget(shadowPropsCubeComboBox);
+	AddWidget(shadowPropsCubeComboBox);
 
 	MSAAComboBox = new wiComboBox("MSAA: ");
 	MSAAComboBox->SetSize(XMFLOAT2(100, itemheight));
@@ -378,7 +374,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	MSAAComboBox->SetSelected(0);
 	MSAAComboBox->SetEnabled(true);
 	MSAAComboBox->SetTooltip("Multisampling Anti Aliasing quality. It is only available for Forward render paths.");
-	rendererWindow->AddWidget(MSAAComboBox);
+	AddWidget(MSAAComboBox);
 
 	temporalAACheckBox = new wiCheckBox("Temporal AA: ");
 	temporalAACheckBox->SetTooltip("Toggle Temporal Anti Aliasing. It is a supersampling techique which is performed across multiple frames.");
@@ -388,7 +384,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetTemporalAAEnabled(args.bValue);
 	});
 	temporalAACheckBox->SetCheck(wiRenderer::GetTemporalAAEnabled());
-	rendererWindow->AddWidget(temporalAACheckBox);
+	AddWidget(temporalAACheckBox);
 
 	temporalAADebugCheckBox = new wiCheckBox("DEBUGJitter: ");
 	temporalAADebugCheckBox->SetText("DEBUG: ");
@@ -399,7 +395,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetTemporalAADebugEnabled(args.bValue);
 	});
 	temporalAADebugCheckBox->SetCheck(wiRenderer::GetTemporalAADebugEnabled());
-	rendererWindow->AddWidget(temporalAADebugCheckBox);
+	AddWidget(temporalAADebugCheckBox);
 
 	textureQualityComboBox = new wiComboBox("Texture Quality: ");
 	textureQualityComboBox->SetSize(XMFLOAT2(100, itemheight));
@@ -435,7 +431,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	textureQualityComboBox->SetSelected(3);
 	textureQualityComboBox->SetEnabled(true);
 	textureQualityComboBox->SetTooltip("Choose a texture sampling method for material textures.");
-	rendererWindow->AddWidget(textureQualityComboBox);
+	AddWidget(textureQualityComboBox);
 
 	mipLodBiasSlider = new wiSlider(-2, 2, 0, 100000, "MipLOD Bias: ");
 	mipLodBiasSlider->SetTooltip("Bias the rendered mip map level of the material textures.");
@@ -446,7 +442,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		desc.MipLODBias = wiMath::Clamp(args.fValue, -15.9f, 15.9f);
 		wiRenderer::ModifySampler(desc, SSLOT_OBJECTSHADER);
 	});
-	rendererWindow->AddWidget(mipLodBiasSlider);
+	AddWidget(mipLodBiasSlider);
 
 	raytraceBounceCountSlider = new wiSlider(1, 10, 1, 9, "Raytrace Bounces: ");
 	raytraceBounceCountSlider->SetTooltip("How many light bounces to compute when doing ray tracing.");
@@ -456,7 +452,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	raytraceBounceCountSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::SetRaytraceBounceCount((uint32_t)args.iValue);
 	});
-	rendererWindow->AddWidget(raytraceBounceCountSlider);
+	AddWidget(raytraceBounceCountSlider);
 
 
 
@@ -473,7 +469,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	});
 	partitionBoxesCheckBox->SetCheck(wiRenderer::GetToDrawDebugPartitionTree());
 	partitionBoxesCheckBox->SetEnabled(false); // SP tree is not implemented at the moment anymore
-	rendererWindow->AddWidget(partitionBoxesCheckBox);
+	AddWidget(partitionBoxesCheckBox);
 
 	boneLinesCheckBox = new wiCheckBox("Bone line visualizer: ");
 	boneLinesCheckBox->SetTooltip("Visualize bones of armatures");
@@ -484,7 +480,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetToDrawDebugBoneLines(args.bValue);
 	});
 	boneLinesCheckBox->SetCheck(wiRenderer::GetToDrawDebugBoneLines());
-	rendererWindow->AddWidget(boneLinesCheckBox);
+	AddWidget(boneLinesCheckBox);
 
 	debugEmittersCheckBox = new wiCheckBox("Emitter visualizer: ");
 	debugEmittersCheckBox->SetTooltip("Visualize emitters");
@@ -495,7 +491,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetToDrawDebugEmitters(args.bValue);
 	});
 	debugEmittersCheckBox->SetCheck(wiRenderer::GetToDrawDebugEmitters());
-	rendererWindow->AddWidget(debugEmittersCheckBox);
+	AddWidget(debugEmittersCheckBox);
 
 	debugForceFieldsCheckBox = new wiCheckBox("Force Field visualizer: ");
 	debugForceFieldsCheckBox->SetTooltip("Visualize force fields");
@@ -506,7 +502,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetToDrawDebugForceFields(args.bValue);
 	});
 	debugForceFieldsCheckBox->SetCheck(wiRenderer::GetToDrawDebugForceFields());
-	rendererWindow->AddWidget(debugForceFieldsCheckBox);
+	AddWidget(debugForceFieldsCheckBox);
 
 	debugRaytraceBVHCheckBox = new wiCheckBox("Raytrace BVH visualizer: ");
 	debugRaytraceBVHCheckBox->SetTooltip("Visualize scene BVH if raytracing is enabled");
@@ -516,7 +512,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetRaytraceDebugBVHVisualizerEnabled(args.bValue);
 	});
 	debugRaytraceBVHCheckBox->SetCheck(wiRenderer::GetRaytraceDebugBVHVisualizerEnabled());
-	rendererWindow->AddWidget(debugRaytraceBVHCheckBox);
+	AddWidget(debugRaytraceBVHCheckBox);
 
 	envProbesCheckBox = new wiCheckBox("Env probe visualizer: ");
 	envProbesCheckBox->SetTooltip("Toggle visualization of environment probes as reflective spheres");
@@ -526,7 +522,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetToDrawDebugEnvProbes(args.bValue);
 	});
 	envProbesCheckBox->SetCheck(wiRenderer::GetToDrawDebugEnvProbes());
-	rendererWindow->AddWidget(envProbesCheckBox);
+	AddWidget(envProbesCheckBox);
 
 	cameraVisCheckBox = new wiCheckBox("Camera Proxy visualizer: ");
 	cameraVisCheckBox->SetTooltip("Toggle visualization of camera proxies in the scene");
@@ -536,7 +532,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetToDrawDebugCameras(args.bValue);
 	});
 	cameraVisCheckBox->SetCheck(wiRenderer::GetToDrawDebugCameras());
-	rendererWindow->AddWidget(cameraVisCheckBox);
+	AddWidget(cameraVisCheckBox);
 
 	gridHelperCheckBox = new wiCheckBox("Grid helper: ");
 	gridHelperCheckBox->SetTooltip("Toggle showing of unit visualizer grid in the world origin");
@@ -546,7 +542,7 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetToDrawGridHelper(args.bValue);
 	});
 	gridHelperCheckBox->SetCheck(wiRenderer::GetToDrawGridHelper());
-	rendererWindow->AddWidget(gridHelperCheckBox);
+	AddWidget(gridHelperCheckBox);
 
 
 	pickTypeObjectCheckBox = new wiCheckBox("Pick Objects: ");
@@ -554,70 +550,70 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 	pickTypeObjectCheckBox->SetPos(XMFLOAT2(x, y += step * 2));
 	pickTypeObjectCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeObjectCheckBox->SetCheck(true);
-	rendererWindow->AddWidget(pickTypeObjectCheckBox);
+	AddWidget(pickTypeObjectCheckBox);
 
 	pickTypeEnvProbeCheckBox = new wiCheckBox("Pick EnvProbes: ");
 	pickTypeEnvProbeCheckBox->SetTooltip("Enable if you want to pick environment probes with the pointer");
 	pickTypeEnvProbeCheckBox->SetPos(XMFLOAT2(x, y += step));
 	pickTypeEnvProbeCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeEnvProbeCheckBox->SetCheck(true);
-	rendererWindow->AddWidget(pickTypeEnvProbeCheckBox);
+	AddWidget(pickTypeEnvProbeCheckBox);
 
 	pickTypeLightCheckBox = new wiCheckBox("Pick Lights: ");
 	pickTypeLightCheckBox->SetTooltip("Enable if you want to pick lights with the pointer");
 	pickTypeLightCheckBox->SetPos(XMFLOAT2(x, y += step));
 	pickTypeLightCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeLightCheckBox->SetCheck(true);
-	rendererWindow->AddWidget(pickTypeLightCheckBox);
+	AddWidget(pickTypeLightCheckBox);
 
 	pickTypeDecalCheckBox = new wiCheckBox("Pick Decals: ");
 	pickTypeDecalCheckBox->SetTooltip("Enable if you want to pick decals with the pointer");
 	pickTypeDecalCheckBox->SetPos(XMFLOAT2(x, y += step));
 	pickTypeDecalCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeDecalCheckBox->SetCheck(true);
-	rendererWindow->AddWidget(pickTypeDecalCheckBox);
+	AddWidget(pickTypeDecalCheckBox);
 
 	pickTypeForceFieldCheckBox = new wiCheckBox("Pick Force Fields: ");
 	pickTypeForceFieldCheckBox->SetTooltip("Enable if you want to pick force fields with the pointer");
 	pickTypeForceFieldCheckBox->SetPos(XMFLOAT2(x, y += step));
 	pickTypeForceFieldCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeForceFieldCheckBox->SetCheck(true);
-	rendererWindow->AddWidget(pickTypeForceFieldCheckBox);
+	AddWidget(pickTypeForceFieldCheckBox);
 
 	pickTypeEmitterCheckBox = new wiCheckBox("Pick Emitters: ");
 	pickTypeEmitterCheckBox->SetTooltip("Enable if you want to pick emitters with the pointer");
 	pickTypeEmitterCheckBox->SetPos(XMFLOAT2(x, y += step));
 	pickTypeEmitterCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeEmitterCheckBox->SetCheck(true);
-	rendererWindow->AddWidget(pickTypeEmitterCheckBox);
+	AddWidget(pickTypeEmitterCheckBox);
 
 	pickTypeHairCheckBox = new wiCheckBox("Pick Hairs: ");
 	pickTypeHairCheckBox->SetTooltip("Enable if you want to pick hairs with the pointer");
 	pickTypeHairCheckBox->SetPos(XMFLOAT2(x, y += step));
 	pickTypeHairCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeHairCheckBox->SetCheck(true);
-	rendererWindow->AddWidget(pickTypeHairCheckBox);
+	AddWidget(pickTypeHairCheckBox);
 
 	pickTypeCameraCheckBox = new wiCheckBox("Pick Cameras: ");
 	pickTypeCameraCheckBox->SetTooltip("Enable if you want to pick cameras with the pointer");
 	pickTypeCameraCheckBox->SetPos(XMFLOAT2(x, y += step));
 	pickTypeCameraCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeCameraCheckBox->SetCheck(true);
-	rendererWindow->AddWidget(pickTypeCameraCheckBox);
+	AddWidget(pickTypeCameraCheckBox);
 
 	pickTypeArmatureCheckBox = new wiCheckBox("Pick Armatures: ");
 	pickTypeArmatureCheckBox->SetTooltip("Enable if you want to pick armatures with the pointer");
 	pickTypeArmatureCheckBox->SetPos(XMFLOAT2(x, y += step));
 	pickTypeArmatureCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeArmatureCheckBox->SetCheck(true);
-	rendererWindow->AddWidget(pickTypeArmatureCheckBox);
+	AddWidget(pickTypeArmatureCheckBox);
 
 	pickTypeSoundCheckBox = new wiCheckBox("Pick Sounds: ");
 	pickTypeSoundCheckBox->SetTooltip("Enable if you want to pick sounds with the pointer");
 	pickTypeSoundCheckBox->SetPos(XMFLOAT2(x, y += step));
 	pickTypeSoundCheckBox->SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeSoundCheckBox->SetCheck(true);
-	rendererWindow->AddWidget(pickTypeSoundCheckBox);
+	AddWidget(pickTypeSoundCheckBox);
 
 
 
@@ -629,20 +625,12 @@ RendererWindow::RendererWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 		wiRenderer::SetFreezeCullingCameraEnabled(args.bValue);
 	});
 	freezeCullingCameraCheckBox->SetCheck(wiRenderer::GetToDrawDebugForceFields());
-	rendererWindow->AddWidget(freezeCullingCameraCheckBox);
+	AddWidget(freezeCullingCameraCheckBox);
 
 
 
-	rendererWindow->Translate(XMFLOAT3(100, 50, 0));
-	rendererWindow->SetVisible(false);
-}
-
-
-RendererWindow::~RendererWindow()
-{
-	rendererWindow->RemoveWidgets(true);
-	GUI->RemoveWidget(rendererWindow);
-	delete rendererWindow;
+	Translate(XMFLOAT3(100, 50, 0));
+	SetVisible(false);
 }
 
 uint32_t RendererWindow::GetPickType()
