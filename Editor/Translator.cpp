@@ -56,7 +56,7 @@ namespace Translator_Internal
 	}
 }
 
-Translator::Translator()
+void Translator::Create()
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 

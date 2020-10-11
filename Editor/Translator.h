@@ -12,7 +12,7 @@ private:
 	bool dragStarted = false;
 	bool dragEnded = false;
 public:
-	Translator();
+	void Create();
 
 	void Update();
 	void Draw(const wiScene::CameraComponent& camera, wiGraphics::CommandList cmd) const;

@@ -2668,6 +2668,13 @@ void Initialize()
 		wiPlatform::GetWindowState().dpi = dpi;
 	});
 
+	TextureDesc desc;
+	desc.Width = 1;
+	desc.Height = 1;
+	desc.Format = FORMAT_R11G11B10_FLOAT;
+	desc.BindFlags = BIND_SHADER_RESOURCE;
+	GetDevice()->CreateTexture(&desc, nullptr, &globalLightmap);
+
 	wiBackLog::post("wiRenderer Initialized");
 }
 void ClearWorld()
@@ -8882,11 +8889,7 @@ void RefreshLightmapAtlas(CommandList cmd)
 
 const Texture* GetGlobalLightmap()
 {
-	if (globalLightmap.IsValid())
-	{
-		return &globalLightmap;
-	}
-	return wiTextureHelper::getTransparent();
+	return &globalLightmap;
 }
 
 void BindCommonResources(CommandList cmd)

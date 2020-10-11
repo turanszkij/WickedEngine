@@ -175,8 +175,8 @@ public:
 class Editor : public MainComponent
 {
 public:
-	std::unique_ptr<EditorComponent> renderComponent;
-	std::unique_ptr<EditorLoadingScreen> loader;
+	EditorComponent renderComponent;
+	EditorLoadingScreen loader;
 
 	void Initialize() override;
 };

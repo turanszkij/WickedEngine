@@ -66,15 +66,13 @@ void Editor::Initialize()
 	wiRenderer::GetDevice()->SetVSyncEnabled(true);
 	wiRenderer::SetOcclusionCullingEnabled(true);
 
-	renderComponent = std::make_unique<EditorComponent>();
-	loader = std::make_unique<EditorLoadingScreen>();
-	loader->Load();
+	loader.Load();
 
-	renderComponent->main = this;
+	renderComponent.main = this;
 
-	loader->addLoadingComponent(renderComponent.get(), this, 0.2f);
+	loader.addLoadingComponent(&renderComponent, this, 0.2f);
 
-	ActivatePath(loader.get(), 0.2f);
+	ActivatePath(&loader, 0.2f);
 
 }
 
@@ -428,6 +426,7 @@ void EditorComponent::Load()
 	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { soundTex = wiResourceManager::Load("images/sound.dds"); });
 	// wait for ctx is at the end of this function!
 
+	translator.Create();
 	translator.enabled = false;
 
 
@@ -721,7 +720,7 @@ void EditorComponent::Load()
 		params.extensions.push_back("glb");
 		wiHelper::FileDialog(params, [&](std::string fileName) {
 			wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-				main->loader->addLoadingFunction([=](wiJobArgs args) {
+				main->loader.addLoadingFunction([=](wiJobArgs args) {
 					string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(fileName));
 
 					if (!extension.compare("WISCENE")) // engine-serialized
@@ -747,11 +746,11 @@ void EditorComponent::Load()
 						wiScene::GetScene().Merge(scene);
 					}
 					});
-				main->loader->onFinished([=] {
+				main->loader.onFinished([=] {
 					main->ActivatePath(this, 0.2f, wiColor::Black());
 					weatherWnd.Update();
 					});
-				main->ActivatePath(main->loader.get(), 0.2f, wiColor::Black());
+				main->ActivatePath(&main->loader, 0.2f, wiColor::Black());
 				ResetHistory();
 			});
 		});
