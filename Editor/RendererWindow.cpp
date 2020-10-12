@@ -375,7 +375,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	});
 	MSAAComboBox.SetSelected(0);
 	MSAAComboBox.SetEnabled(true);
-	MSAAComboBox.SetTooltip("Multisampling Anti Aliasing quality. It is only available for Forward render paths.");
+	MSAAComboBox.SetTooltip("Multisampling Anti Aliasing quality. ");
 	AddWidget(&MSAAComboBox);
 
 	temporalAACheckBox.Create("Temporal AA: ");

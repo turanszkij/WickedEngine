@@ -157,7 +157,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	raytracedReflectionsCheckBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING));
 
 	sssCheckBox.Create("SSS: ");
-	sssCheckBox.SetTooltip("Enable Subsurface Scattering. (Deferred only for now)");
+	sssCheckBox.SetTooltip("Enable Subsurface Scattering. Only for PBR shaders.");
 	sssCheckBox.SetScriptTip("RenderPath3D::SetSSSEnabled(bool value)");
 	sssCheckBox.SetSize(XMFLOAT2(hei, hei));
 	sssCheckBox.SetPos(XMFLOAT2(x, y += step));
