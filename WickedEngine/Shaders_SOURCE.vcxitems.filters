@@ -884,5 +884,14 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)hairparticlePS_transparent.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)volumetriclight_directionalVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)volumetriclight_pointVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)volumetriclight_spotVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

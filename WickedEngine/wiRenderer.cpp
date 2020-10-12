@@ -1025,6 +1025,9 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_OBJECT_COMMON_TESSELLATION], "objectVS_common_tessellation.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_OBJECT_SIMPLE_TESSELLATION], "objectVS_simple_tessellation.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_IMPOSTOR], "impostorVS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_VOLUMETRICLIGHT_DIRECTIONAL], "volumetriclight_directionalVS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_VOLUMETRICLIGHT_POINT], "volumetriclight_pointVS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_VOLUMETRICLIGHT_SPOT], "volumetriclight_spotVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_SPOTLIGHT], "vSpotLightVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_POINTLIGHT], "vPointLightVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_SPHERELIGHT], "vSphereLightVS.cso"); });
@@ -1576,15 +1579,15 @@ void LoadShaders()
 			switch (args.jobIndex)
 			{
 			case LightComponent::DIRECTIONAL:
-				desc.vs = &vertexShaders[VSTYPE_DIRLIGHT];
+				desc.vs = &vertexShaders[VSTYPE_VOLUMETRICLIGHT_DIRECTIONAL];
 				desc.ps = &pixelShaders[PSTYPE_VOLUMETRICLIGHT_DIRECTIONAL];
 				break;
 			case LightComponent::POINT:
-				desc.vs = &vertexShaders[VSTYPE_POINTLIGHT];
+				desc.vs = &vertexShaders[VSTYPE_VOLUMETRICLIGHT_POINT];
 				desc.ps = &pixelShaders[PSTYPE_VOLUMETRICLIGHT_POINT];
 				break;
 			case LightComponent::SPOT:
-				desc.vs = &vertexShaders[VSTYPE_SPOTLIGHT];
+				desc.vs = &vertexShaders[VSTYPE_VOLUMETRICLIGHT_SPOT];
 				desc.ps = &pixelShaders[PSTYPE_VOLUMETRICLIGHT_SPOT];
 				break;
 			}
