@@ -2256,9 +2256,17 @@ namespace wiScene
 			}
 
 			material.engineStencilRef = STENCILREF_DEFAULT;
+			if (material.IsCustomShader())
+			{
+				material.engineStencilRef = STENCILREF_CUSTOMSHADER;
+			}
 			if (material.subsurfaceScattering > 0)
 			{
 				material.engineStencilRef = STENCILREF_SKIN;
+				if (material.IsCustomShader())
+				{
+					material.engineStencilRef = STENCILREF_SKIN_AND_CUSTOMSHADER;
+				}
 			}
 
 		});
