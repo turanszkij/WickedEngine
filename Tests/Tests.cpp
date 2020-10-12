@@ -26,7 +26,7 @@ void Tests::Initialize()
 
 void TestsRenderer::ResizeLayout()
 {
-    RenderPath3D_TiledForward::ResizeLayout();
+    RenderPath3D::ResizeLayout();
 
 	float screenW = wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = wiRenderer::GetDevice()->GetScreenHeight();
@@ -299,7 +299,7 @@ void TestsRenderer::Load()
 	testSelector.SetSelected(0);
 	GetGUI().AddWidget(&testSelector);
 
-    RenderPath3D_TiledForward::Load();
+    RenderPath3D::Load();
 }
 void TestsRenderer::Update(float dt)
 {
@@ -365,7 +365,7 @@ void TestsRenderer::Update(float dt)
 	break;
 	}
 
-    RenderPath3D_TiledForward::Update(dt);
+    RenderPath3D::Update(dt);
 }
 
 void TestsRenderer::RunJobSystemTest()

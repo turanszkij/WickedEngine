@@ -2,7 +2,7 @@
 #include "WickedEngine.h"
 
 
-class TestsRenderer : public RenderPath3D_TiledForward
+class TestsRenderer : public RenderPath3D
 {
 	wiLabel label;
 	wiComboBox testSelector;
