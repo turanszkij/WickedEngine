@@ -204,7 +204,6 @@ set(SHADERS_PS
         "hairparticlePS_alphatestonly.hlsl"
         "forceFieldVisualizerPS.hlsl"
         "fontPS.hlsl"
-        "environmentalLightPS.hlsl"
         "envMap_skyPS_static.hlsl"
         "envMap_skyPS_dynamic.hlsl"
         "envMapPS.hlsl"
