@@ -143,11 +143,15 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 
 	wiGUI& gui = GetGUI();
 
+	// Destroy and recreate renderer and postprocess windows:
+
 	gui.RemoveWidget(&rendererWnd);
+	rendererWnd = RendererWindow();
 	rendererWnd.Create(this);
 	gui.AddWidget(&rendererWnd);
 
 	gui.RemoveWidget(&postprocessWnd);
+	postprocessWnd = PostprocessWindow();
 	postprocessWnd.Create(this);
 	gui.AddWidget(&postprocessWnd);
 
