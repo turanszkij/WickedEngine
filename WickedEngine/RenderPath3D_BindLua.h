@@ -16,7 +16,11 @@ public:
 	{
 		this->component = component;
 	}
-	RenderPath3D_BindLua(lua_State* L) {}
+	RenderPath3D_BindLua(lua_State* L)
+	{
+		component = new RenderPath3D;
+		owning = true;
+	}
 
 	int SetAO(lua_State* L);
 	int SetSSREnabled(lua_State* L);

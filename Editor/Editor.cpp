@@ -108,17 +108,8 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 {
 	switch (path)
 	{
-	case EditorComponent::RENDERPATH_FORWARD:
-		renderPath = std::make_unique<RenderPath3D_Forward>();
-		break;
-	case EditorComponent::RENDERPATH_DEFERRED:
-		renderPath = std::make_unique<RenderPath3D_Deferred>();
-		break;
-	case EditorComponent::RENDERPATH_TILEDFORWARD:
-		renderPath = std::make_unique<RenderPath3D_TiledForward>();
-		break;
-	case EditorComponent::RENDERPATH_TILEDDEFERRED:
-		renderPath = std::make_unique<RenderPath3D_TiledDeferred>();
+	case EditorComponent::RENDERPATH_DEFAULT:
+		renderPath = std::make_unique<RenderPath3D>();
 		break;
 	case EditorComponent::RENDERPATH_PATHTRACING:
 		renderPath = std::make_unique<RenderPath3D_PathTracing>();
@@ -926,34 +917,12 @@ void EditorComponent::Load()
 
 
 	renderPathComboBox.Create("Render Path: ");
-	renderPathComboBox.AddItem("Forward");
-	renderPathComboBox.AddItem("Deferred");
-	renderPathComboBox.AddItem("Tiled Forward");
-	renderPathComboBox.AddItem("Tiled Deferred");
+	renderPathComboBox.AddItem("Default");
 	renderPathComboBox.AddItem("Path Tracing");
 	renderPathComboBox.OnSelect([&](wiEventArgs args) {
-		switch (args.iValue)
-		{
-		case 0:
-			ChangeRenderPath(RENDERPATH_FORWARD);
-			break;
-		case 1:
-			ChangeRenderPath(RENDERPATH_DEFERRED);
-			break;
-		case 2:
-			ChangeRenderPath(RENDERPATH_TILEDFORWARD);
-			break;
-		case 3:
-			ChangeRenderPath(RENDERPATH_TILEDDEFERRED);
-			break;
-		case 4:
-			ChangeRenderPath(RENDERPATH_PATHTRACING);
-			break;
-		default:
-			break;
-		}
+		ChangeRenderPath((RENDERPATH)args.iValue);
 	});
-	renderPathComboBox.SetSelected(2);
+	renderPathComboBox.SetSelected(RENDERPATH_DEFAULT);
 	renderPathComboBox.SetEnabled(true);
 	renderPathComboBox.SetTooltip("Choose a render path...");
 	GetGUI().AddWidget(&renderPathComboBox);

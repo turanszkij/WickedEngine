@@ -115,15 +115,6 @@ namespace wiRenderer
 		bool distortion, 
 		wiGraphics::CommandList cmd
 	);
-	// Draw deferred lights. Gbuffer and depth textures should already be readable (see BindGBufferTextures(), BindDepthTextures())
-	void DrawDeferredLights(
-		const wiScene::CameraComponent& camera,
-		const wiGraphics::Texture& depthbuffer,
-		const wiGraphics::Texture& gbuffer0,
-		const wiGraphics::Texture& gbuffer1,
-		const wiGraphics::Texture& gbuffer2,
-		wiGraphics::CommandList cmd
-	);
 	// Draw simple light visualizer geometries
 	void DrawLightVisualizers(
 		const wiScene::CameraComponent& camera, 
@@ -141,12 +132,6 @@ namespace wiRenderer
 		const wiGraphics::Texture& depthbuffer,
 		wiGraphics::CommandList cmd
 	);
-	// Draw deferred decals
-	void DrawDeferredDecals(
-		const wiScene::CameraComponent& camera,
-		const wiGraphics::Texture& depthbuffer,
-		wiGraphics::CommandList cmd
-	);
 	// Call once per frame to re-render out of date environment probes
 	void RefreshEnvProbes(wiGraphics::CommandList cmd);
 	// Call once per frame to re-render out of date impostors
@@ -157,16 +142,10 @@ namespace wiRenderer
 	void RefreshLightmapAtlas(wiGraphics::CommandList cmd);
 	// Voxelize the scene into a voxel grid 3D texture
 	void VoxelRadiance(wiGraphics::CommandList cmd);
-	// Compute light grid tiles for tiled rendering paths
-	//	If you specify lightbuffers (diffuse, specular), then a tiled deferred lighting will be computed as well. Otherwise, only the light grid gets computed
+	// Compute light grid tiles
 	void ComputeTiledLightCulling(
 		const wiGraphics::Texture& depthbuffer,
-		wiGraphics::CommandList cmd, 
-		const wiGraphics::Texture* gbuffer0 = nullptr,
-		const wiGraphics::Texture* gbuffer1 = nullptr,
-		const wiGraphics::Texture* gbuffer2 = nullptr,
-		const wiGraphics::Texture* lightbuffer_diffuse = nullptr,
-		const wiGraphics::Texture* lightbuffer_specular = nullptr
+		wiGraphics::CommandList cmd
 	);
 	// Run a compute shader that will resolve a MSAA depth buffer to a single-sample texture
 	void ResolveMSAADepthBuffer(const wiGraphics::Texture& dst, const wiGraphics::Texture& src, wiGraphics::CommandList cmd);
@@ -175,23 +154,17 @@ namespace wiRenderer
 	const wiGraphics::Texture* ComputeLuminance(const wiGraphics::Texture& sourceImage, wiGraphics::CommandList cmd);
 
 	void ComputeShadingRateClassification(
-		const wiGraphics::Texture& gbuffer1,
+		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
 
 	void DeferredComposition(
-		const wiGraphics::Texture& gbuffer0,
-		const wiGraphics::Texture& gbuffer1,
-		const wiGraphics::Texture& gbuffer2,
-		const wiGraphics::Texture& lightmap_diffuse,
-		const wiGraphics::Texture& lightmap_specular,
-		const wiGraphics::Texture& ao,
+		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& depth,
 		wiGraphics::CommandList cmd
 	);
-
 
 	void Postprocess_Blur_Gaussian(
 		const wiGraphics::Texture& input,
@@ -245,8 +218,7 @@ namespace wiRenderer
 	);
 	void Postprocess_RTReflection(
 		const wiGraphics::Texture& depthbuffer,
-		const wiGraphics::Texture& gbuffer1,
-		const wiGraphics::Texture& gbuffer2,
+		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float range = 1000.0f
@@ -255,14 +227,13 @@ namespace wiRenderer
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture& lineardepth,
-		const wiGraphics::Texture& gbuffer1,
-		const wiGraphics::Texture& gbuffer2,
+		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
 	void Postprocess_SSS(
 		const wiGraphics::Texture& lineardepth,
-		const wiGraphics::Texture& gbuffer0,
+		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::RenderPass& input_output_lightbuffer_diffuse,
 		const wiGraphics::RenderPass& input_output_temp1,
 		const wiGraphics::RenderPass& input_output_temp2,

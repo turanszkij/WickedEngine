@@ -21,11 +21,8 @@ namespace wiScene
 
 static Shader vs;
 static Shader ps_alphatestonly;
-static Shader ps_deferred;
-static Shader ps_forward;
-static Shader ps_forward_transparent;
-static Shader ps_tiledforward;
-static Shader ps_tiledforward_transparent;
+static Shader ps;
+static Shader ps_transparent;
 static Shader ps_simplest;
 static Shader cs_simulate;
 static DepthStencilState dss_default, dss_equal, dss_rejectopaque_keeptransparent;
@@ -315,11 +312,8 @@ namespace wiHairParticle_Internal
 
 		wiRenderer::LoadShader(PS, ps_simplest, "hairparticlePS_simplest.cso");
 		wiRenderer::LoadShader(PS, ps_alphatestonly, "hairparticlePS_alphatestonly.cso");
-		wiRenderer::LoadShader(PS, ps_deferred, "hairparticlePS_deferred.cso");
-		wiRenderer::LoadShader(PS, ps_forward, "hairparticlePS_forward.cso");
-		wiRenderer::LoadShader(PS, ps_forward_transparent, "hairparticlePS_forward_transparent.cso");
-		wiRenderer::LoadShader(PS, ps_tiledforward, "hairparticlePS_tiledforward.cso");
-		wiRenderer::LoadShader(PS, ps_tiledforward_transparent, "hairparticlePS_tiledforward_transparent.cso");
+		wiRenderer::LoadShader(PS, ps, "hairparticlePS.cso");
+		wiRenderer::LoadShader(PS, ps_transparent, "hairparticlePS_transparent.cso");
 
 		wiRenderer::LoadShader(CS, cs_simulate, "hairparticle_simulateCS.cso");
 
@@ -327,11 +321,11 @@ namespace wiHairParticle_Internal
 
 		for (int i = 0; i < RENDERPASS_COUNT; ++i)
 		{
-			if (i == RENDERPASS_DEPTHONLY || i == RENDERPASS_DEFERRED || i == RENDERPASS_FORWARD || i == RENDERPASS_TILEDFORWARD)
+			if (i == RENDERPASS_DEPTHONLY || i == RENDERPASS_MAIN)
 			{
 				for (int j = 0; j < 2; ++j)
 				{
-					if ((i == RENDERPASS_DEPTHONLY || i == RENDERPASS_DEFERRED) && j == 1)
+					if ((i == RENDERPASS_DEPTHONLY) && j == 1)
 					{
 						continue;
 					}
@@ -347,29 +341,15 @@ namespace wiHairParticle_Internal
 					case RENDERPASS_DEPTHONLY:
 						desc.ps = &ps_alphatestonly;
 						break;
-					case RENDERPASS_DEFERRED:
-						desc.ps = &ps_deferred;
-						break;
-					case RENDERPASS_FORWARD:
+					case RENDERPASS_MAIN:
 						if (j == 0)
 						{
-							desc.ps = &ps_forward;
+							desc.ps = &ps;
 							desc.dss = &dss_equal;
 						}
 						else
 						{
-							desc.ps = &ps_forward_transparent;
-						}
-						break;
-					case RENDERPASS_TILEDFORWARD:
-						if (j == 0)
-						{
-							desc.ps = &ps_tiledforward;
-							desc.dss = &dss_equal;
-						}
-						else
-						{
-							desc.ps = &ps_tiledforward_transparent;
+							desc.ps = &ps_transparent;
 						}
 						break;
 					}

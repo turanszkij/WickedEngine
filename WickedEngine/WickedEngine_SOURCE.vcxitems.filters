@@ -990,18 +990,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_truetype.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward_BindLua.h">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledDeferred_BindLua.h">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_Forward_BindLua.h">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_Deferred_BindLua.h">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
@@ -1014,9 +1002,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreen_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward.h">
-      <Filter>ENGINE\High level interface</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath.h">
       <Filter>ENGINE\High level interface</Filter>
     </ClInclude>
@@ -1026,16 +1011,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D.h">
       <Filter>ENGINE\High level interface</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_Deferred.h">
-      <Filter>ENGINE\High level interface</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_Forward.h">
-      <Filter>ENGINE\High level interface</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_PathTracing.h">
-      <Filter>ENGINE\High level interface</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledDeferred.h">
       <Filter>ENGINE\High level interface</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreen.h">
@@ -1850,18 +1826,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUBVH.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward_BindLua.cpp">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledDeferred_BindLua.cpp">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_Forward_BindLua.cpp">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_Deferred_BindLua.cpp">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
@@ -1880,19 +1844,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D.cpp">
       <Filter>ENGINE\High level interface</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_Deferred.cpp">
-      <Filter>ENGINE\High level interface</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_Forward.cpp">
-      <Filter>ENGINE\High level interface</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_PathTracing.cpp">
-      <Filter>ENGINE\High level interface</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledDeferred.cpp">
-      <Filter>ENGINE\High level interface</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward.cpp">
       <Filter>ENGINE\High level interface</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreen.cpp">

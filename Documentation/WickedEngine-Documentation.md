@@ -7,10 +7,6 @@ This is a reference for the C++ features of Wicked Engine
 	2. [RenderPath](#renderpath)
 	3. [RenderPath2D](#renderpath2d)
 	4. [RenderPath3D](#renderpath3d)
-	5. [RenderPath3D_Forward](#renderpath3d_forward)
-	6. [RenderPath3D_Deferred](#renderpath3d_deferred)
-	7. [RenderPath3D_TiledForward](#renderpath3d_tiledforward)
-	8. [RenderPath3D_TiledDeferred](#renderpath3d_tileddeferred)
 	9. [RenderPath3D_Pathtracing](#renderpath3d_pathtracing)
 	10. [LoadingScreen](#loadingscreen)
 2. [System](#system)
@@ -209,7 +205,7 @@ Capable of handling 2D rendering to offscreen buffer in Render() function, or ju
 
 ### RenderPath3D
 [[Header]](../WickedEngine/RenderPath3D.h) [[Cpp]](../WickedEngine/RenderPath3D.cpp)
-Base class for implementing 3D rendering paths. It supports everything that the Renderpath2D does. It is a base class that doesn't implement a particular 3D scene rendering algorithm, so it can't be used by itself. For specific algorithm, the user can choose between using [RenderPath3D_Forward](#renderpath3d_forward), [RenderPath3D_Deferred](#renderpath3d_deferred), [RenderPath3D_TiledForward](#renderpath3d_tiledforward), [RenderPath3D_TiledDeferred](#renderpath3d_tileddeferred) and [RenderPath3D_PathTracing](#renderpath3d_pathtracing), each with their own strengths and weaknesses.
+Base class for implementing 3D rendering paths. It also supports everything that the Renderpath2D does.
 
 The post process chain is also implemented here. This means that the order of the post processes and the resources that they use are defined here, but the individual post process rendering on a lower level is implemented in the `wiRenderer` as core engine features. Read more about post process implementation in the [wiRenderer section](#post-processing). 
 
@@ -222,22 +218,6 @@ These are running after tone mapping. For example: Color grading, FXAA, chromati
 These are running in more specific locations, depending on the render path. For example: SSR, SSAO, cartoon outline
 
 The HDR and LDR post process chain are using the "ping-ponging" technique, which means when the first post process consumes texture1 and produces texture2, then the following post process will consume texture2 and produce texture1, until all post processes are rendered.
-
-### RenderPath3D_Forward
-[[Header]](../WickedEngine/RenderPath3D_Forward.h) [[Cpp]](../WickedEngine/RenderPath3D_Forward.cpp)
-Implements simple Forward rendering. It uses few render targets, small memory footprint, but not very efficient with many lights.
-
-### RenderPath3D_Defered
-[[Header]](../WickedEngine/RenderPath3D_Deferred.h) [[Cpp]](../WickedEngine/RenderPath3D_Deferred.cpp)
-Implements "old school" Deferred rendering. It uses many render targets, capable of advanced post processing effects, and good to render many lights.
-
-### RenderPath3D_TiledForward
-[[Header]](../WickedEngine/RenderPath3D_TiledForward.h) [[Cpp]](../WickedEngine/RenderPath3D_TiledForward.cpp)
-Implements an advanced method of Forward rendering to be able to render many lights efficiently. It uses fewer render targets, and less memory than deferred. One downside is that it is not capable of Subsurface scattering, because light buffers are not separated from rendering result.
-
-### RenderPath3D_TiledDeferred
-[[Header]](../WickedEngine/RenderPath3D_TiledDeferred.h) [[Cpp]](../WickedEngine/RenderPath3D_TiledDeferred.cpp)
-Implements an advanced method of Deferred rendering to be able to render many lights with reduced memory bandwidth requirements. This has the largest memory footprint overall, but less bandwidth consummation than old school deferred approach, because lighting is computed in a single pass instead of additive blending.
 
 ### RenderPath3D_PathTracing
 [[Header]](../WickedEngine/RenderPath3D_PathTracing.h) [[Cpp]](../WickedEngine/RenderPath3D_PathTracing.cpp)

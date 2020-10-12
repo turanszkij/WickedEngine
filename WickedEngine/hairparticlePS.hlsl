@@ -7,7 +7,7 @@
 #ifndef TRANSPARENT
 [earlydepthstencil]
 #endif // TRANSPARENT
-GBUFFEROutputType_Thin main(VertexToPixel input)
+GBUFFEROutputType main(VertexToPixel input)
 {
 	float4 color = texture_0.Sample(sampler_linear_wrap, input.tex);
 	color.rgb = DEGAMMA(color.rgb);
@@ -30,9 +30,5 @@ GBUFFEROutputType_Thin main(VertexToPixel input)
 
 	TiledLighting(pixel, surface, lighting);
 
-	ApplyLighting(surface, lighting, color);
-
-	ApplyFog(dist, color);
-
-	return CreateGbuffer_Thin(color, surface, velocity);
+	return CreateGbuffer(surface, velocity, lighting);
 }

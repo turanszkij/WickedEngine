@@ -93,31 +93,16 @@ struct GBUFFEROutputType
 	float4 diffuse	: SV_Target3;
 	float4 specular	: SV_Target4;
 };
-inline GBUFFEROutputType CreateGbuffer(in float4 color, in Surface surface, in float2 velocity, in Lighting lighting)
+inline GBUFFEROutputType CreateGbuffer(in Surface surface, in float2 velocity, in Lighting lighting)
 {
 	LightingPart combined_lighting = CombineLighting(surface, lighting);
 
 	GBUFFEROutputType Out;
-	Out.g0 = float4(color.rgb, surface.sss);														/*FORMAT_R8G8B8A8_UNORM*/
-	Out.g1 = float4(encodeNormal(surface.N), velocity);												/*FORMAT_R16G16B16A16_FLOAT*/
-	Out.g2 = float4(surface.roughness, surface.occlusion, surface.metalness, surface.reflectance);	/*FORMAT_R8G8B8A8_UNORM*/
-	Out.diffuse = float4(combined_lighting.diffuse, 1);												/*FORMAT_R11G11B10_FLOAT*/
-	Out.specular = float4(combined_lighting.specular, 1);											/*FORMAT_R11G11B10_FLOAT*/
-	return Out;
-}
-
-struct GBUFFEROutputType_Thin
-{
-	float4 g0	: SV_Target0;		// texture_gbuffer0
-	float4 g1	: SV_Target1;		// texture_gbuffer1
-	float g2	: SV_Target2;		// texture_gbuffer2
-};
-inline GBUFFEROutputType_Thin CreateGbuffer_Thin(in float4 color, in Surface surface, in float2 velocity)
-{
-	GBUFFEROutputType_Thin Out;
-	Out.g0 = color;										/*FORMAT_R11G11B10_FLOAT*/
-	Out.g1 = float4(encodeNormal(surface.N), velocity);	/*FORMAT_R16G16B16A16_FLOAT*/
-	Out.g2 = surface.roughness;	/*FORMAT_R8_UNORM*/
+	Out.g0 = float4(surface.albedo, 1);						/*FORMAT_R11G11B10_FLOAT*/
+	Out.g1 = float4(encodeNormal(surface.N), velocity);		/*FORMAT_R16G16B16A16_FLOAT*/
+	Out.g2 = float4(surface.roughness, surface.sss, 0, 0);	/*FORMAT_R8G8_UNORM*/
+	Out.diffuse = float4(combined_lighting.diffuse, 1);		/*FORMAT_R11G11B10_FLOAT*/
+	Out.specular = float4(combined_lighting.specular, 1);	/*FORMAT_R11G11B10_FLOAT*/
 	return Out;
 }
 
@@ -699,9 +684,6 @@ inline void ApplyFog(in float dist, inout float4 color)
 // Possible switches:
 //	ALPHATESTONLY		-	assemble object shader for depth only rendering + alpha test
 //	TEXTUREONLY			-	assemble object shader for rendering only with base textures, no lighting
-//	DEFERRED			-	assemble object shader for deferred rendering
-//	FORWARD				-	assemble object shader for forward rendering
-//	TILEDFORWARD		-	assemble object shader for tiled forward rendering
 //	TRANSPARENT			-	assemble object shader for forward or tile forward transparent rendering
 //	ENVMAPRENDERING		-	modify object shader for envmap rendering
 //	PLANARREFLECTION	-	include planar reflection sampling
@@ -730,11 +712,9 @@ float4 main(PIXELINPUT input) : SV_TARGET
 float4 main(PIXELINPUT input) : SV_TARGET
 #elif defined(ENVMAPRENDERING)
 float4 main(PSIn_EnvmapRendering input) : SV_TARGET
-#elif defined(DEFERRED)
-GBUFFEROutputType main(PIXELINPUT input)
-#elif defined(FORWARD) || defined(TILEDFORWARD)
+#else
 [earlydepthstencil]
-GBUFFEROutputType_Thin main(PIXELINPUT input)
+GBUFFEROutputType main(PIXELINPUT input)
 #endif // ALPHATESTONLY
 
 
@@ -1148,7 +1128,6 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 		surface_occlusion_roughness_metallic_reflectance.r *= texture_occlusionmap.Sample(sampler_objectshader, UV_occlusionMap).r;
 	}
 
-#ifndef DEFERRED
 #ifndef SIMPLE_INPUT
 #ifndef ENVMAPRENDERING
 #ifndef TRANSPARENT
@@ -1156,7 +1135,6 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #endif // TRANSPARENT
 #endif // ENVMAPRENDERING
 #endif // SIMPLE_INPUT
-#endif
 
 
 	surface = CreateSurface(
@@ -1215,8 +1193,6 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 
 
-#ifndef DEFERRED
-
 
 #ifdef FORWARD
 	ForwardLighting(surface, lighting);
@@ -1259,8 +1235,6 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	ApplyFog(dist, color);
 
 
-#endif // DEFERRED
-
 #endif // SIMPLE_INPUT
 
 
@@ -1277,15 +1251,13 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 
 	// end point:
-#if defined(TRANSPARENT) || defined(TEXTUREONLY) || defined(ENVMAPRENDERING)
-	return color;
+#ifndef ALPHATESTONLY
+#ifdef OUTPUT_GBUFFER
+	return CreateGbuffer(surface, velocity, lighting);
 #else
-#if defined(DEFERRED)	
-	return CreateGbuffer(color, surface, velocity, lighting);
-#elif defined(FORWARD) || defined(TILEDFORWARD)
-	return CreateGbuffer_Thin(color, surface, velocity);
-#endif // DEFERRED
-#endif // TRANSPARENT
+	return color;
+#endif // OUTPUT_GBUFFER
+#endif // ALPHATESTONLY
 
 }
 

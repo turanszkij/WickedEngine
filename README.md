@@ -95,7 +95,7 @@ while(true) {
 
 #### Basics (C++):
 ```cpp
-RenderPath3D_Deferred myGame; // Declare a game screen component, aka "RenderPath" (you could also override its Update(), Render() etc. functions). This is a 3D, Deferred path for example, but there are others
+RenderPath3D myGame; // Declare a game screen component, aka "RenderPath" (you could also override its Update(), Render() etc. functions). 
 main.ActivatePath(&myGame); // Register your game to the application. It will call Start(), Update(), Render(), etc. from now on...
 
 wiScene::LoadModel("myModel.wiscene"); // Simply load a model into the current global scene
@@ -129,7 +129,7 @@ if (wiInput::Down(wiInput::KEYBOARD_BUTTON_SPACE)) { wiAudio::Play(&mySoundInsta
 #### Scripting (LUA):
 ```lua
 -- Set a rendering path for the application main component
-path = RenderPath3D_Deferred;
+path = RenderPath3D;
 main.SetActivePath(path);    -- "main" is created automatically
 
 -- Load a model entity into the global scene:
