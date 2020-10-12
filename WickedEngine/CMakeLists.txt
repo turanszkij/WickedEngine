@@ -17,15 +17,7 @@ add_library(WickedEngine STATIC
     RenderPath2D_BindLua.cpp
     RenderPath3D.cpp
     RenderPath3D_BindLua.cpp
-    RenderPath3D_Deferred.cpp
-    RenderPath3D_Deferred_BindLua.cpp
-    RenderPath3D_Forward.cpp
-    RenderPath3D_Forward_BindLua.cpp
     RenderPath3D_PathTracing.cpp
-    RenderPath3D_TiledDeferred.cpp
-    RenderPath3D_TiledDeferred_BindLua.cpp
-    RenderPath3D_TiledForward.cpp
-    RenderPath3D_TiledForward_BindLua.cpp
     SpriteAnim_BindLua.cpp
     Texture_BindLua.cpp
     Vector_BindLua.cpp
