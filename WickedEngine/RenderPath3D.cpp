@@ -74,6 +74,10 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		if (getMSAASampleCount() == 1)
+		{
+			desc.BindFlags |= BIND_UNORDERED_ACCESS;
+		}
 		desc.Format = FORMAT_R11G11B10_FLOAT;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
@@ -84,6 +88,7 @@ void RenderPath3D::ResizeBuffers()
 		if (getMSAASampleCount() > 1)
 		{
 			desc.SampleCount = 1;
+			desc.BindFlags |= BIND_UNORDERED_ACCESS;
 
 			device->CreateTexture(&desc, nullptr, &rtDeferred_resolved);
 			device->SetName(&rtDeferred_resolved, "rtDeferred_resolved");
@@ -887,6 +892,8 @@ void RenderPath3D::RenderDeferredComposition(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
+	auto range = wiProfiler::BeginRangeGPU("Sky and Composition", cmd);
+
 	device->RenderPassBegin(&renderpass_deferredcomposition, cmd);
 
 	Viewport vp;
@@ -904,6 +911,8 @@ void RenderPath3D::RenderDeferredComposition(CommandList cmd) const
 	RenderOutline(cmd);
 
 	device->RenderPassEnd(cmd);
+
+	wiProfiler::EndRange(range);
 }
 void RenderPath3D::RenderLinearDepth(CommandList cmd) const
 {
@@ -1200,9 +1209,8 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 		{
 			const Texture* lightShaftTemp = nullptr;
 
-			wiRenderer::Postprocess_VolumetricClouds(rt_first == nullptr ? *rt_read : *rt_first, *rt_write, *lightShaftTemp, rtLinearDepth, depthBuffer_Copy, cmd);
-			rt_first = nullptr;
-
+			wiRenderer::Postprocess_VolumetricClouds(*rt_read, *rt_write, *lightShaftTemp, rtLinearDepth, depthBuffer_Copy, cmd);
+			
 			std::swap(rt_read, rt_write);
 			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
