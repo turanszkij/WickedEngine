@@ -158,7 +158,7 @@ std::vector<RenderPass> renderpasses_shadow2D;
 std::vector<RenderPass> renderpasses_shadow2DTransparent;
 std::vector<RenderPass> renderpasses_shadowCube;
 
-deque<wiSprite*> waterRipples;
+deque<wiSprite> waterRipples;
 
 std::vector<pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
 std::vector<pair<SPHERE, XMFLOAT4>> renderableSpheres;
@@ -2507,10 +2507,6 @@ void Initialize()
 }
 void ClearWorld()
 {
-	for (wiSprite* x : waterRipples)
-	{
-		delete x;
-	}
 	waterRipples.clear();
 
 	GetScene().Clear();
@@ -3838,7 +3834,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
 		for (auto& x : waterRipples)
 		{
-			x->Update(dt * 60);
+			x.Update(dt * 60);
 		}
 		ManageWaterRipples();
 	});
@@ -4501,24 +4497,24 @@ void EndFrame()
 
 void PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
 {
-	wiSprite* img = new wiSprite(image);
-	img->anim.fad = 0.01f;
-	img->anim.scaleX = 0.2f;
-	img->anim.scaleY = 0.2f;
-	img->params.pos = pos;
-	img->params.rotation = (wiRandom::getRandom(0, 1000)*0.001f) * 2 * 3.1415f;
-	img->params.siz = XMFLOAT2(1, 1);
-	img->params.typeFlag = WORLD;
-	img->params.quality = QUALITY_ANISOTROPIC;
-	img->params.pivot = XMFLOAT2(0.5f, 0.5f);
-	img->params.lookAt = waterPlane;
-	img->params.lookAt.w = 1;
+	wiSprite img(image);
+	img.anim.fad = 0.01f;
+	img.anim.scaleX = 0.2f;
+	img.anim.scaleY = 0.2f;
+	img.params.pos = pos;
+	img.params.rotation = (wiRandom::getRandom(0, 1000)*0.001f) * 2 * 3.1415f;
+	img.params.siz = XMFLOAT2(1, 1);
+	img.params.typeFlag = WORLD;
+	img.params.quality = QUALITY_ANISOTROPIC;
+	img.params.pivot = XMFLOAT2(0.5f, 0.5f);
+	img.params.lookAt = waterPlane;
+	img.params.lookAt.w = 1;
 	waterRipples.push_back(img);
 }
 void ManageWaterRipples(){
 	while (
 		!waterRipples.empty() &&
-		(waterRipples.front()->params.opacity <= 0 + FLT_EPSILON || waterRipples.front()->params.fade == 1)
+		(waterRipples.front().params.opacity <= 0 + FLT_EPSILON || waterRipples.front().params.fade == 1)
 		)
 	{
 		waterRipples.pop_front();
@@ -4527,9 +4523,9 @@ void ManageWaterRipples(){
 void DrawWaterRipples(CommandList cmd)
 {
 	GetDevice()->EventBegin("Water Ripples", cmd);
-	for(wiSprite* i:waterRipples)
+	for(auto& x : waterRipples)
 	{
-		i->DrawNormal(cmd);
+		x.DrawNormal(cmd);
 	}
 	GetDevice()->EventEnd(cmd);
 }
