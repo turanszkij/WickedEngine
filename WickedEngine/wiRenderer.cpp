@@ -2252,11 +2252,11 @@ void SetUpStates()
 	dsd.DepthFunc = COMPARISON_GREATER;
 	dsd.StencilReadMask = STENCILREF_MASK_ENGINE;
 	dsd.StencilWriteMask = 0x00;
-	dsd.FrontFace.StencilFunc = COMPARISON_EQUAL;
+	dsd.FrontFace.StencilFunc = COMPARISON_GREATER_EQUAL;
 	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = COMPARISON_EQUAL;
+	dsd.BackFace.StencilFunc = COMPARISON_GREATER_EQUAL;
 	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
