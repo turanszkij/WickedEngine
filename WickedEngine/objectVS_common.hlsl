@@ -16,7 +16,7 @@ PixelInputType main(Input_Object_ALL input)
 
 	Out.clip = dot(surface.position, g_xClipPlane);
 
-	Out.pos = Out.pos2D = mul(g_xCamera_VP, surface.position);
+	Out.pos = mul(g_xCamera_VP, surface.position);
 	Out.pos2DPrev = mul(g_xFrame_MainCamera_PrevVP, surface.prevPos);
 	Out.pos3D = surface.position.xyz;
 	Out.color = surface.color;

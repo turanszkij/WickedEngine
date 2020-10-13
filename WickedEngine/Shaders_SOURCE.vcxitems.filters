@@ -893,5 +893,8 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)volumetriclight_spotVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)denoiseCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

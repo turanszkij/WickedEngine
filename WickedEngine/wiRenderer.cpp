@@ -1216,6 +1216,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_UNORM4], "upsample_bilateral_unorm4CS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DOWNSAMPLE4X], "downsample4xCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_NORMALSFROMDEPTH], "normalsfromdepthCS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DENOISE], "denoiseCS.cso"); });
 
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(HS, hullShaders[HSTYPE_OBJECT], "objectHS.cso"); });
@@ -12280,6 +12281,78 @@ void Postprocess_NormalsFromDepth(
 	device->Barrier(barriers, arraysize(barriers), cmd);
 
 	device->UnbindUAVs(0, arraysize(uavs), cmd);
+	device->EventEnd(cmd);
+}
+void Postprocess_Denoise(
+	const Texture& input_output_current,
+	const Texture& temporal_history,
+	const Texture& temporal_current,
+	const Texture& velocity,
+	CommandList cmd
+)
+{
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	device->EventBegin("Postprocess_Denoise", cmd);
+	device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DENOISE], cmd);
+
+	const TextureDesc& desc = input_output_current.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	device->BindResource(CS, &velocity, TEXSLOT_GBUFFER1, cmd);
+
+	{
+		device->BindResource(CS, &input_output_current, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &temporal_history, TEXSLOT_ONDEMAND1, cmd);
+
+		const GPUResource* uavs[] = {
+			&temporal_current,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+	}
+	{
+		device->BindResource(CS, &temporal_current, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &temporal_history, TEXSLOT_ONDEMAND1, cmd);
+
+		const GPUResource* uavs[] = {
+			&input_output_current,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+	}
+
 	device->EventEnd(cmd);
 }
 

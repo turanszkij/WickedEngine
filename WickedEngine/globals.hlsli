@@ -255,7 +255,7 @@ float3 hemispherepoint_cos(float u, float v) {
 // Get random hemisphere sample in world-space along the normal (uniform distribution)
 inline float3 SampleHemisphere_uniform(in float3 normal, inout float seed, in float2 pixel)
 {
-	return mul(hemispherepoint_cos(rand(seed, pixel), rand(seed, pixel)), GetTangentSpace(normal));
+	return mul(hemispherepoint_uniform(rand(seed, pixel), rand(seed, pixel)), GetTangentSpace(normal));
 }
 // Get random hemisphere sample in world-space along the normal (cosine-weighted distribution)
 inline float3 SampleHemisphere_cos(in float3 normal, inout float seed, in float2 pixel)

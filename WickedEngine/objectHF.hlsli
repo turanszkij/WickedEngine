@@ -81,7 +81,6 @@ struct PixelInputType
 	float2 atl								: ATLAS;
 	float3 nor								: NORMAL;
 	float3 pos3D							: WORLDPOSITION;
-	float4 pos2D							: SCREENPOSITION;
 	float4 pos2DPrev						: SCREENPOSITIONPREV;
 };
 
@@ -722,6 +721,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 // shader base:
 {
 	float2 pixel = input.pos.xy;
+	float2 ScreenCoord = pixel * g_xFrame_InternalResolution_rcp;
 
 #ifndef DISABLE_ALPHATEST
 #ifndef TRANSPARENT
@@ -767,11 +767,11 @@ GBUFFEROutputType main(PIXELINPUT input)
 	float3 bumpColor = 0;
 	float depth = input.pos.z;
 #ifndef ENVMAPRENDERING
-	input.pos2D.xy /= input.pos2D.w;
+	float2 pos2D = ScreenCoord * 2 - 1;
+	pos2D.y *= -1;
 	input.pos2DPrev.xy /= input.pos2DPrev.w;
 
-	const float2 ScreenCoord = input.pos2D.xy * float2(0.5f, -0.5f) + 0.5f;
-	const float2 velocity = ((input.pos2DPrev.xy - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
+	const float2 velocity = ((input.pos2DPrev.xy - g_xFrame_TemporalAAJitterPrev) - (pos2D.xy - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
 	const float2 ReprojectedScreenCoord = ScreenCoord + velocity;
 
 #ifndef WATER
@@ -1150,6 +1150,9 @@ GBUFFEROutputType main(PIXELINPUT input)
 		g_xMaterial.subsurfaceScattering
 	);
 
+	surface.pixel = pixel;
+	surface.screenUV = ScreenCoord;
+
 	Lighting lighting = CreateLighting(0, 0, GetAmbient(surface.N), 0);
 
 #ifndef SIMPLE_INPUT
@@ -1216,7 +1219,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 
 #ifdef WATER
 	// WATER REFRACTION
-	const float lineardepth = input.pos2D.w;
+	const float lineardepth = input.pos.w;
 	float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + bumpColor.rg, 0) * g_xCamera_ZFarP;
 	float depth_difference = sampled_lineardepth - lineardepth;
 	surface.refraction.rgb = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + bumpColor.rg * saturate(0.5 * depth_difference), 0).rgb;

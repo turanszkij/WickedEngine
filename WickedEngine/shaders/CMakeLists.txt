@@ -139,6 +139,7 @@ set(SHADERS_CS
 		"volumetricCloud_finalCS.hlsl"
 		"shadingRateClassificationCS.hlsl"
 		"shadingRateClassificationCS_DEBUG.hlsl"
+        "denoiseCS.hlsl"
 )
 
 set(SHADERS_DS

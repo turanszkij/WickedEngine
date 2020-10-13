@@ -16,7 +16,7 @@ float4 main(Input input) : SV_TARGET
 	float3 N = normalize(input.normal);
 	float2 uv = input.uv;
 	float seed = xTraceRandomSeed;
-	float3 direction = SampleHemisphere_uniform(N, seed, uv); // uniform because we care about only diffuse here
+	float3 direction = SampleHemisphere_cos(N, seed, uv);
 	Ray ray = CreateRay(trace_bias_position(P, N), direction);
 
 	const uint bounces = xTraceUserData.x;

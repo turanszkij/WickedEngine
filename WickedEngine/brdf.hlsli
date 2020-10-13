@@ -38,6 +38,8 @@ struct Surface
 	float4 emissiveColor;	// light emission [0 -> 1]
 	float sss;				// subsurface scattering [0 -> 1]
 	float4 refraction;		// refraction color (rgb), refraction amount (a)
+	float2 pixel;			// pixel coordinate (used for randomization effects)
+	float2 screenUV;		// pixel coordinate in UV space [0 -> 1] (used for randomization effects)
 
 	float alphaRoughness;	// roughness remapped from perceptual to a "more linear change in roughness"
 	float alphaRoughnessSq;	// roughness input to brdf functions
@@ -88,6 +90,8 @@ inline Surface CreateSurface(
 	surface.emissiveColor = emissiveColor;
 	surface.sss = sss;
 	surface.refraction = 0;
+	surface.pixel = 0;
+	surface.screenUV = 0;
 
 	surface.Update();
 

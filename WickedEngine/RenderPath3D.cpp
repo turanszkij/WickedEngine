@@ -70,6 +70,23 @@ void RenderPath3D::ResizeBuffers()
 			device->CreateTexture(&desc, nullptr, &rtGbuffer_resolved[GBUFFER_LIGHTBUFFER_SPECULAR]);
 			device->SetName(&rtGbuffer_resolved[GBUFFER_LIGHTBUFFER_SPECULAR], "rtGbuffer_resolved[GBUFFER_LIGHTBUFFER_SPECULAR]");
 		}
+
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
+		{
+			desc.BindFlags |= BIND_UNORDERED_ACCESS;
+			desc.Format = FORMAT_R11G11B10_FLOAT;
+			desc.SampleCount = 1;
+
+			device->CreateTexture(&desc, nullptr, &rtDiffuseTemporal[0]);
+			device->SetName(&rtDiffuseTemporal[0], "rtDiffuseTemporal[0]");
+			device->CreateTexture(&desc, nullptr, &rtDiffuseTemporal[1]);
+			device->SetName(&rtDiffuseTemporal[1], "rtDiffuseTemporal[1]");
+
+			device->CreateTexture(&desc, nullptr, &rtSpecularTemporal[0]);
+			device->SetName(&rtSpecularTemporal[0], "rtSpecularTemporal[0]");
+			device->CreateTexture(&desc, nullptr, &rtSpecularTemporal[1]);
+			device->SetName(&rtSpecularTemporal[1], "rtSpecularTemporal[1]");
+		}
 	}
 	{
 		TextureDesc desc;
@@ -894,6 +911,27 @@ void RenderPath3D::RenderDeferredComposition(CommandList cmd) const
 
 	auto range = wiProfiler::BeginRangeGPU("Sky and Composition", cmd);
 
+	if (wiRenderer::GetRaytracedShadowsEnabled() && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
+	{
+		int output = device->GetFrameCount() % 2;
+		int history = 1 - output;
+
+		wiRenderer::Postprocess_Denoise(
+			*GetGbuffer_Read(GBUFFER_LIGHTBUFFER_DIFFUSE),
+			rtDiffuseTemporal[history],
+			rtDiffuseTemporal[output],
+			*GetGbuffer_Read(GBUFFER_NORMAL_VELOCITY),
+			cmd
+		);
+		wiRenderer::Postprocess_Denoise(
+			*GetGbuffer_Read(GBUFFER_LIGHTBUFFER_SPECULAR),
+			rtSpecularTemporal[history],
+			rtSpecularTemporal[output],
+			*GetGbuffer_Read(GBUFFER_NORMAL_VELOCITY),
+			cmd
+		);
+	}
+
 	device->RenderPassBegin(&renderpass_deferredcomposition, cmd);
 
 	Viewport vp;
@@ -905,7 +943,8 @@ void RenderPath3D::RenderDeferredComposition(CommandList cmd) const
 		GetGbuffer_Read(),
 		depthBuffer_Copy,
 		cmd
-	); 
+	);
+
 	wiRenderer::DrawSky(cmd);
 
 	RenderOutline(cmd);

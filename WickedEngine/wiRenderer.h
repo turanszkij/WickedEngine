@@ -344,6 +344,13 @@ namespace wiRenderer
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
+	void Postprocess_Denoise(
+		const wiGraphics::Texture& input_output_current,
+		const wiGraphics::Texture& temporal_history,
+		const wiGraphics::Texture& temporal_current,
+		const wiGraphics::Texture& velocity,
+		wiGraphics::CommandList cmd
+	);
 
 	// Build the scene BVH on GPU that can be used by ray traced rendering
 	void BuildSceneBVH(wiGraphics::CommandList cmd);

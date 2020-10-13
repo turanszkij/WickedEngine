@@ -7,9 +7,9 @@ TEXTURE2D(resolve_history, float4, TEXSLOT_ONDEMAND1);
 
 RWTEXTURE2D(output, float4, 0);
 
-static const float temporalResponseMin = 0.85;
+static const float temporalResponseMin = 0.9;
 static const float temporalResponseMax = 1.0f;
-static const float temporalScale = 2.0;
+static const float temporalScale = 50.0;
 static const float temporalExposure = 10.0f;
 
 inline float Luma4(float3 color)
@@ -41,9 +41,9 @@ float4 clip_aabb(float3 aabb_min, float3 aabb_max, float4 p, float4 q)
 inline void ResolverAABB(Texture2D<float4> currentColor, SamplerState currentSampler, float sharpness, float exposureScale, float AABBScale, float2 uv, float2 texelSize, inout float4 currentMin, inout float4 currentMax, inout float4 currentAverage, inout float4 currentOutput)
 {
     const int2 SampleOffset[9] = { int2(-1.0, -1.0), int2(0.0, -1.0), int2(1.0, -1.0), int2(-1.0, 0.0), int2(0.0, 0.0), int2(1.0, 0.0), int2(-1.0, 1.0), int2(0.0, 1.0), int2(1.0, 1.0) };
-    
+
     // Modulate Luma HDR
-    
+
     float4 sampleColors[9];
     [unroll]
     for (uint i = 0; i < 9; i++)
@@ -65,10 +65,10 @@ inline void ResolverAABB(Texture2D<float4> currentColor, SamplerState currentSam
         totalWeight += sampleWeights[k];
     }
     sampleColors[4] = (sampleColors[0] * sampleWeights[0] + sampleColors[1] * sampleWeights[1] + sampleColors[2] * sampleWeights[2] + sampleColors[3] * sampleWeights[3] + sampleColors[4] * sampleWeights[4] +
-                       sampleColors[5] * sampleWeights[5] + sampleColors[6] * sampleWeights[6] + sampleColors[7] * sampleWeights[7] + sampleColors[8] * sampleWeights[8]) / totalWeight;
+        sampleColors[5] * sampleWeights[5] + sampleColors[6] * sampleWeights[6] + sampleColors[7] * sampleWeights[7] + sampleColors[8] * sampleWeights[8]) / totalWeight;
 
     // Variance Clipping (AABB)
-    
+
     float4 m1 = 0.0;
     float4 m2 = 0.0;
     [unroll]
@@ -80,7 +80,7 @@ inline void ResolverAABB(Texture2D<float4> currentColor, SamplerState currentSam
 
     float4 mean = m1 / 9.0;
     float4 stddev = sqrt((m2 / 9.0) - sqr(mean));
-        
+
     currentMin = mean - AABBScale * stddev;
     currentMax = mean + AABBScale * stddev;
 
@@ -90,49 +90,28 @@ inline void ResolverAABB(Texture2D<float4> currentColor, SamplerState currentSam
     currentAverage = mean;
 }
 
-float2 CalculateCustomMotion(float depth, float2 uv)
-{
-    // Velocity buffer not good, because that contains object motion, and reflection is camera relative
-    float4 sampleWorldPosition = float4(reconstructPosition(uv, depth, g_xCamera_InvVP), 1.0f);
-    
-    float4 thisClip = mul(g_xCamera_VP, sampleWorldPosition);
-    float4 prevClip = mul(g_xFrame_MainCamera_PrevVP, sampleWorldPosition);
-    
-    float2 thisScreen = thisClip.xy * rcp(thisClip.w);
-    float2 prevScreen = prevClip.xy * rcp(prevClip.w);
-    thisScreen = thisScreen.xy * float2(0.5, -0.5) + 0.5;
-    prevScreen = prevScreen.xy * float2(0.5, -0.5) + 0.5;
-    
-    return thisScreen - prevScreen;
-}
-
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
     const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
-    const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
-    
-    // Normal velocity seems to work best in most scenarios
-    float2 customVelocity = CalculateCustomMotion(depth, uv);
-    //float2 hitCustomVelocity = CalculateCustomMotion(hitDepth, uv); 
-    
-    float2 velocity = customVelocity;
-    float2 prevUV = uv - velocity;
-    
+
+    float2 velocity = texture_gbuffer1.SampleLevel(sampler_linear_clamp, uv, 0).zw;
+    float2 prevUV = uv + velocity;
+
     float4 previous = resolve_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
 
     // Luma HDR and AABB minmax
-    
+
     float4 current = 0;
     float4 currentMin, currentMax, currentAverage;
     ResolverAABB(resolve_current, sampler_linear_clamp, 0, temporalExposure, temporalScale, uv, xPPResolution, currentMin, currentMax, currentAverage, current);
 
     previous.xyz = clip_aabb(currentMin.xyz, currentMax.xyz, clamp(currentAverage, currentMin, currentMax), previous).xyz;
     previous.a = clamp(previous.a, currentMin.a, currentMax.a);
-    
+
     // Blend color & history
     // Feedback weight from unbiased luminance difference (Timothy Lottes)
-    
+
     float lumFiltered = Luminance(current.rgb); // Luma4(current.rgb)
     float lumHistory = Luminance(previous.rgb);
 
@@ -141,11 +120,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
     float blendFinal = lerp(temporalResponseMin, temporalResponseMax, lumWeight);
 
     // Reduce ghosting by refreshing the blend by velocity (Unreal)
-    float2 velocityScreen = customVelocity * xPPResolution;
+    float2 velocityScreen = velocity * xPPResolution;
     float velocityBlend = sqrt(dot(velocityScreen, velocityScreen));
     blendFinal = lerp(blendFinal, 0.2, saturate(velocityBlend / 100.0));
-    
+
     float4 result = lerp(current, previous, blendFinal);
-    
+
     output[DTid.xy] = max(0, result);
 }
