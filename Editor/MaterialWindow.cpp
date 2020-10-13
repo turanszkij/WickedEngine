@@ -188,7 +188,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	AddWidget(&sssSlider);
 
 	pomSlider.Create(0, 0.1f, 0.0f, 1000, "Parallax Occlusion Mapping: ");
-	pomSlider.SetTooltip("Adjust how much the bump map should modulate the surface parallax effect.");
+	pomSlider.SetTooltip("Adjust how much the bump map should modulate the surface parallax effect. \nOnly works with PBR + Parallax shader.");
 	pomSlider.SetSize(XMFLOAT2(wid, hei));
 	pomSlider.SetPos(XMFLOAT2(x, y += step));
 	pomSlider.OnSlide([&](wiEventArgs args) {
@@ -321,12 +321,14 @@ void MaterialWindow::Create(EditorComponent* editor)
 	shaderTypeComboBox.AddItem("PBR");
 	shaderTypeComboBox.AddItem("PBR + Planar reflections");
 	shaderTypeComboBox.AddItem("PBR + Par. occl. mapping");
+	shaderTypeComboBox.AddItem("PBR + Anisotropic");
 	shaderTypeComboBox.AddItem("Water");
 	for (auto& x : wiRenderer::GetCustomShaders())
 	{
 		shaderTypeComboBox.AddItem("*" + x.name);
 	}
 	shaderTypeComboBox.SetEnabled(false);
+	shaderTypeComboBox.SetMaxVisibleItemCount(5);
 	AddWidget(&shaderTypeComboBox);
 
 
@@ -858,6 +860,23 @@ void MaterialWindow::SetEntity(Entity entity)
 			break;
 		case 1:
 			colorPicker.SetPickColor(wiColor::fromFloat3(XMFLOAT3(material->emissiveColor.x, material->emissiveColor.y, material->emissiveColor.z)));
+			break;
+		}
+
+		switch (material->shaderType)
+		{
+		case MaterialComponent::SHADERTYPE_PBR_ANISOTROPIC:
+			pomSlider.SetText("Anisotropy: ");
+			pomSlider.SetTooltip("Adjust anisotropy specular effect. \nOnly works with PBR + Anisotropic shader.");
+			pomSlider.SetRange(0, 0.99f);
+			break;
+		case MaterialComponent::SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING:
+			pomSlider.SetText("Parallax Occlusion Mapping: ");
+			pomSlider.SetTooltip("Adjust how much the bump map should modulate the surface parallax effect. \nOnly works with PBR + Parallax shader.");
+			pomSlider.SetRange(0, 0.1f);
+			break;
+		default:
+			pomSlider.SetEnabled(false);
 			break;
 		}
 	

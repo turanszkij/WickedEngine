@@ -195,6 +195,8 @@ set(SHADERS_PS
         "objectPS_blackout.hlsl"
         "objectPS_debug.hlsl"
         "objectPS_alphatestonly.hlsl"
+        "objectPS_anisotropic.hlsl"
+        "objectPS_transparent_anisotropic.hlsl"
         "lightVisualizerPS.hlsl"
         "lensFlarePS.hlsl"
         "impostorPS_wire.hlsl"

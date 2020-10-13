@@ -1136,6 +1136,10 @@ GBUFFEROutputType main(PIXELINPUT input)
 #endif // ENVMAPRENDERING
 #endif // SIMPLE_INPUT
 
+#ifdef BRDF_ANISOTROPIC
+	float3 anisoT = normalize(mul(float3(1, 0, 0), TBN));
+	float3 anisoB = normalize(cross(surface.N, anisoT));
+#endif // BRDF_ANISOTROPIC
 
 	surface = CreateSurface(
 		surface.P, 
@@ -1148,6 +1152,11 @@ GBUFFEROutputType main(PIXELINPUT input)
 		surface_occlusion_roughness_metallic_reflectance.a,
 		emissiveColor,
 		g_xMaterial.subsurfaceScattering
+#ifdef BRDF_ANISOTROPIC
+		, g_xMaterial.parallaxOcclusionMapping,
+		anisoT,
+		anisoB
+#endif // BRDF_ANISOTROPIC
 	);
 
 	surface.pixel = pixel;
