@@ -355,7 +355,6 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	string directory, name;
 	wiHelper::SplitPath(fileName, directory, name);
 	string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(name));
-	wiHelper::RemoveExtensionFromFileName(name);
 
 
 	tinygltf::TinyGLTF loader;
@@ -407,6 +406,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 	Entity rootEntity = CreateEntity();
 	scene.transforms.Create(rootEntity);
+	scene.names.Create(rootEntity) = name;
 
 	// Create materials:
 	for (auto& x : state.gltfModel.materials)
