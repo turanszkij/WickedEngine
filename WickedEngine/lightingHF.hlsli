@@ -38,9 +38,17 @@ inline Lighting CreateLighting(
 // Combine the direct and indirect lighting into final contribution
 inline LightingPart CombineLighting(in Surface surface, in Lighting lighting)
 {
+#ifdef LIGHTING_CARTOON
+	lighting.direct.diffuse = smoothstep(0.005, 0.05, lighting.direct.diffuse);
+	lighting.direct.specular = max(lighting.direct.specular.r, max(lighting.direct.specular.g, lighting.direct.specular.b));
+	lighting.direct.specular = step(0.05, lighting.direct.specular);
+	lighting.indirect.specular = smoothstep(0.008, 0.098, lighting.indirect.specular);
+#endif // LIGHTING_CARTOON
+
 	LightingPart result;
 	result.diffuse = lighting.direct.diffuse + lighting.indirect.diffuse * surface.occlusion;
 	result.specular = lighting.direct.specular + lighting.indirect.specular * surface.F * surface.occlusion;
+
 	return result;
 }
 

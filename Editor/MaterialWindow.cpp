@@ -95,9 +95,94 @@ void MaterialWindow::Create(EditorComponent* editor)
 		});
 	AddWidget(&windCheckBox);
 
-	// Sliders:
+
+
 	x = 520;
-	float wid = 150;
+	float wid = 170;
+
+
+	shaderTypeComboBox.Create("Shader: ");
+	shaderTypeComboBox.SetTooltip("Select a shader for this material. \nCustom shaders (*) will also show up here (see wiRenderer:RegisterCustomShader() for more info.)\nNote that custom shaders (*) can't select between blend modes, as they are created with an explicit blend mode.");
+	shaderTypeComboBox.SetPos(XMFLOAT2(x, y += step));
+	shaderTypeComboBox.SetSize(XMFLOAT2(wid, hei));
+	shaderTypeComboBox.OnSelect([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
+			if (args.iValue >= MaterialComponent::SHADERTYPE_COUNT)
+			{
+				material->SetCustomShaderID(args.iValue - MaterialComponent::SHADERTYPE_COUNT);
+				blendModeComboBox.SetEnabled(false);
+			}
+			else
+			{
+				material->shaderType = (MaterialComponent::SHADERTYPE)args.iValue;
+				material->SetCustomShaderID(-1);
+				blendModeComboBox.SetEnabled(true);
+			}
+		}
+		});
+	shaderTypeComboBox.AddItem("PBR");
+	shaderTypeComboBox.AddItem("PBR + Planar reflections");
+	shaderTypeComboBox.AddItem("PBR + Par. occl. mapping");
+	shaderTypeComboBox.AddItem("PBR + Anisotropic");
+	shaderTypeComboBox.AddItem("Water");
+	shaderTypeComboBox.AddItem("Cartoon");
+	for (auto& x : wiRenderer::GetCustomShaders())
+	{
+		shaderTypeComboBox.AddItem("*" + x.name);
+	}
+	shaderTypeComboBox.SetEnabled(false);
+	shaderTypeComboBox.SetMaxVisibleItemCount(5);
+	AddWidget(&shaderTypeComboBox);
+
+	blendModeComboBox.Create("Blend mode: ");
+	blendModeComboBox.SetPos(XMFLOAT2(x, y += step));
+	blendModeComboBox.SetSize(XMFLOAT2(wid, hei));
+	blendModeComboBox.OnSelect([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr && args.iValue >= 0)
+		{
+			material->userBlendMode = static_cast<BLENDMODE>(args.iValue);
+		}
+		});
+	blendModeComboBox.AddItem("Opaque");
+	blendModeComboBox.AddItem("Alpha");
+	blendModeComboBox.AddItem("Premultiplied");
+	blendModeComboBox.AddItem("Additive");
+	blendModeComboBox.SetEnabled(false);
+	blendModeComboBox.SetTooltip("Set the blend mode of the material.");
+	AddWidget(&blendModeComboBox);
+
+
+
+	shadingRateComboBox.Create("Shading Rate: ");
+	shadingRateComboBox.SetTooltip("Select shading rate for this material. \nSelecting larger shading rate will decrease rendering quality of this material, \nbut increases performance.\nDX12 only and requires Tier1 hardware support for variable shading rate");
+	shadingRateComboBox.SetPos(XMFLOAT2(x, y += step));
+	shadingRateComboBox.SetSize(XMFLOAT2(wid, hei));
+	shadingRateComboBox.OnSelect([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
+			material->shadingRate = (SHADING_RATE)args.iValue;
+		}
+		});
+	shadingRateComboBox.AddItem("1X1");
+	shadingRateComboBox.AddItem("1X2");
+	shadingRateComboBox.AddItem("2X1");
+	shadingRateComboBox.AddItem("2X2");
+	shadingRateComboBox.AddItem("2X4");
+	shadingRateComboBox.AddItem("4X2");
+	shadingRateComboBox.AddItem("4X4");
+	shadingRateComboBox.SetEnabled(false);
+	shadingRateComboBox.SetMaxVisibleItemCount(4);
+	AddWidget(&shadingRateComboBox);
+
+
+
+
+	// Sliders:
+	wid = 150;
 
 	normalMapSlider.Create(0, 4, 1, 4000, "Normalmap: ");
 	normalMapSlider.SetTooltip("How much the normal map should distort the face normals (bumpiness).");
@@ -275,85 +360,6 @@ void MaterialWindow::Create(EditorComponent* editor)
 		}
 	});
 	AddWidget(&texMulSliderY);
-
-	wid = 170;
-
-	blendModeComboBox.Create("Blend mode: ");
-	blendModeComboBox.SetPos(XMFLOAT2(x, y += step));
-	blendModeComboBox.SetSize(XMFLOAT2(wid, hei));
-	blendModeComboBox.OnSelect([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr && args.iValue >= 0)
-		{
-			material->userBlendMode = static_cast<BLENDMODE>(args.iValue);
-		}
-	});
-	blendModeComboBox.AddItem("Opaque");
-	blendModeComboBox.AddItem("Alpha");
-	blendModeComboBox.AddItem("Premultiplied");
-	blendModeComboBox.AddItem("Additive");
-	blendModeComboBox.SetEnabled(false);
-	blendModeComboBox.SetTooltip("Set the blend mode of the material.");
-	AddWidget(&blendModeComboBox);
-
-
-	shaderTypeComboBox.Create("Shader: ");
-	shaderTypeComboBox.SetTooltip("Select a shader for this material. \nCustom shaders (*) will also show up here (see wiRenderer:RegisterCustomShader() for more info.)\nNote that custom shaders (*) can't select between blend modes, as they are created with an explicit blend mode.");
-	shaderTypeComboBox.SetPos(XMFLOAT2(x, y += step));
-	shaderTypeComboBox.SetSize(XMFLOAT2(wid, hei));
-	shaderTypeComboBox.OnSelect([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			if (args.iValue >= MaterialComponent::SHADERTYPE_COUNT)
-			{
-				material->SetCustomShaderID(args.iValue - MaterialComponent::SHADERTYPE_COUNT);
-				blendModeComboBox.SetEnabled(false);
-			}
-			else
-			{
-				material->shaderType = (MaterialComponent::SHADERTYPE)args.iValue;
-				material->SetCustomShaderID(-1);
-				blendModeComboBox.SetEnabled(true);
-			}
-		}
-		});
-	shaderTypeComboBox.AddItem("PBR");
-	shaderTypeComboBox.AddItem("PBR + Planar reflections");
-	shaderTypeComboBox.AddItem("PBR + Par. occl. mapping");
-	shaderTypeComboBox.AddItem("PBR + Anisotropic");
-	shaderTypeComboBox.AddItem("Water");
-	for (auto& x : wiRenderer::GetCustomShaders())
-	{
-		shaderTypeComboBox.AddItem("*" + x.name);
-	}
-	shaderTypeComboBox.SetEnabled(false);
-	shaderTypeComboBox.SetMaxVisibleItemCount(5);
-	AddWidget(&shaderTypeComboBox);
-
-
-
-	shadingRateComboBox.Create("Shading Rate: ");
-	shadingRateComboBox.SetTooltip("Select shading rate for this material. \nSelecting larger shading rate will decrease rendering quality of this material, \nbut increases performance.\nDX12 only and requires Tier1 hardware support for variable shading rate");
-	shadingRateComboBox.SetPos(XMFLOAT2(x, y += step));
-	shadingRateComboBox.SetSize(XMFLOAT2(wid, hei));
-	shadingRateComboBox.OnSelect([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			material->shadingRate = (SHADING_RATE)args.iValue;
-		}
-	});
-	shadingRateComboBox.AddItem("1X1");
-	shadingRateComboBox.AddItem("1X2");
-	shadingRateComboBox.AddItem("2X1");
-	shadingRateComboBox.AddItem("2X2");
-	shadingRateComboBox.AddItem("2X4");
-	shadingRateComboBox.AddItem("4X2");
-	shadingRateComboBox.AddItem("4X4");
-	shadingRateComboBox.SetEnabled(false);
-	shadingRateComboBox.SetMaxVisibleItemCount(4);
-	AddWidget(&shadingRateComboBox);
 
 
 	// Textures:
@@ -904,4 +910,5 @@ void MaterialWindow::SetEntity(Entity entity)
 	}
 
 	newMaterialButton.SetEnabled(true);
+	shadingRateComboBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING));
 }

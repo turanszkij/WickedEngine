@@ -1621,6 +1621,11 @@ void wiWindow::Update(wiGUI* gui, float dt)
 		}
 	}
 
+	if (IsMinimized())
+	{
+		hitBox.siz.y = windowcontrolSize;
+	}
+
 	if (IsEnabled() && !gui->IsWidgetDisabled(this) && !IsMinimized())
 	{
 		if (state == FOCUS)

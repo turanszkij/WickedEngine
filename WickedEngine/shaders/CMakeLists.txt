@@ -197,6 +197,8 @@ set(SHADERS_PS
         "objectPS_alphatestonly.hlsl"
         "objectPS_anisotropic.hlsl"
         "objectPS_transparent_anisotropic.hlsl"
+        "objectPS_cartoon.hlsl"
+        "objectPS_transparent_cartoon.hlsl"
         "lightVisualizerPS.hlsl"
         "lensFlarePS.hlsl"
         "impostorPS_wire.hlsl"

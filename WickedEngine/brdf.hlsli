@@ -244,12 +244,13 @@ float3 BRDF_GetSpecular(in Surface surface, in SurfaceToLight surfaceToLight)
 #else
 	float Vis = visibilityOcclusion(surface, surfaceToLight);
 	float D = microfacetDistribution(surface, surfaceToLight);
-#endif
-	return surfaceToLight.F * Vis * D * surfaceToLight.NdotL;
+#endif // BRDF_ANISOTROPIC
+
+	return surfaceToLight.F * Vis * D;
 }
 float3 BRDF_GetDiffuse(in Surface surface, in SurfaceToLight surfaceToLight)
 {
-	return (1.0 - surfaceToLight.F) / PI * surfaceToLight.NdotL;
+	return (1.0 - surfaceToLight.F) / PI;
 }
 
 #endif // WI_BRDF_HF

@@ -11,7 +11,7 @@ using namespace wiGraphics;
 void PostprocessWindow::Create(EditorComponent* editor)
 {
 	wiWindow::Create("PostProcess Window");
-	SetSize(XMFLOAT2(420, 500));
+	SetSize(XMFLOAT2(420, 520));
 
 	float x = 150;
 	float y = 10;
@@ -321,15 +321,15 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&colorGradingButton);
 
-	outlineCheckBox.Create("Dithering: ");
-	outlineCheckBox.SetTooltip("Toggle the full screen dithering effect. This helps to reduce color banding.");
-	outlineCheckBox.SetSize(XMFLOAT2(hei, hei));
-	outlineCheckBox.SetPos(XMFLOAT2(x, y += step));
-	outlineCheckBox.SetCheck(editor->renderPath->getDitherEnabled());
-	outlineCheckBox.OnClick([=](wiEventArgs args) {
+	ditherCheckBox.Create("Dithering: ");
+	ditherCheckBox.SetTooltip("Toggle the full screen dithering effect. This helps to reduce color banding.");
+	ditherCheckBox.SetSize(XMFLOAT2(hei, hei));
+	ditherCheckBox.SetPos(XMFLOAT2(x, y += step));
+	ditherCheckBox.SetCheck(editor->renderPath->getDitherEnabled());
+	ditherCheckBox.OnClick([=](wiEventArgs args) {
 		editor->renderPath->setDitherEnabled(args.bValue);
 		});
-	AddWidget(&outlineCheckBox);
+	AddWidget(&ditherCheckBox);
 
 	sharpenFilterCheckBox.Create("Sharpen Filter: ");
 	sharpenFilterCheckBox.SetTooltip("Toggle sharpening post process of the final image.");
