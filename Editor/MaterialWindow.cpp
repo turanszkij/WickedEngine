@@ -12,7 +12,7 @@ using namespace wiScene;
 void MaterialWindow::Create(EditorComponent* editor)
 {
 	wiWindow::Create("Material Window");
-	SetSize(XMFLOAT2(720, 540));
+	SetSize(XMFLOAT2(720, 520));
 
 	float x = 670, y = 0;
 	float hei = 18;
@@ -28,17 +28,6 @@ void MaterialWindow::Create(EditorComponent* editor)
 			material->SetCastShadow(args.bValue);
 	});
 	AddWidget(&shadowCasterCheckBox);
-
-	flipNormalMapCheckBox.Create("Flip Normal Map: ");
-	flipNormalMapCheckBox.SetTooltip("The normal map green channel will be inverted. Useful for imported models coming from OpenGL space (such as GLTF).");
-	flipNormalMapCheckBox.SetPos(XMFLOAT2(670, y += step));
-	flipNormalMapCheckBox.SetSize(XMFLOAT2(hei, hei));
-	flipNormalMapCheckBox.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-			material->SetFlipNormalMap(args.bValue);
-	});
-	AddWidget(&flipNormalMapCheckBox);
 
 	useVertexColorsCheckBox.Create("Use vertex colors: ");
 	useVertexColorsCheckBox.SetTooltip("Enable if you want to render the mesh with vertex colors (must have appropriate vertex buffer)");
@@ -803,11 +792,12 @@ void MaterialWindow::SetEntity(Entity entity)
 
 	if (material != nullptr)
 	{
+		SetEnabled(true);
+
 		const NameComponent& name = *scene.names.GetComponent(entity);
 
 		materialNameField.SetValue(name.name);
 		shadowCasterCheckBox.SetCheck(material->IsCastingShadow());
-		flipNormalMapCheckBox.SetCheck(material->IsFlipNormalMap());
 		useVertexColorsCheckBox.SetCheck(material->IsUsingVertexColors());
 		specularGlossinessCheckBox.SetCheck(material->IsUsingSpecularGlossinessWorkflow());
 		occlusionPrimaryCheckBox.SetCheck(material->IsOcclusionEnabled_Primary());
@@ -828,7 +818,6 @@ void MaterialWindow::SetEntity(Entity entity)
 		texMulSliderX.SetValue(material->texMulAdd.x);
 		texMulSliderY.SetValue(material->texMulAdd.y);
 		alphaRefSlider.SetValue(material->alphaRef);
-		SetEnabled(true);
 		blendModeComboBox.SetSelected((int)material->userBlendMode);
 		if (material->GetCustomShaderID() >= 0)
 		{
@@ -885,7 +874,8 @@ void MaterialWindow::SetEntity(Entity entity)
 			pomSlider.SetEnabled(false);
 			break;
 		}
-	
+
+		shadingRateComboBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING));
 	}
 	else
 	{
@@ -910,5 +900,4 @@ void MaterialWindow::SetEntity(Entity entity)
 	}
 
 	newMaterialButton.SetEnabled(true);
-	shadingRateComboBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING));
 }

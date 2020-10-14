@@ -112,7 +112,7 @@ namespace wiScene
 			CAST_SHADOW = 1 << 1,
 			_DEPRECATED_PLANAR_REFLECTION = 1 << 2,
 			_DEPRECATED_WATER = 1 << 3,
-			FLIP_NORMALMAP = 1 << 4,
+			_DEPRECATED_FLIP_NORMALMAP = 1 << 4,
 			USE_VERTEXCOLORS = 1 << 5,
 			SPECULAR_GLOSSINESS_WORKFLOW = 1 << 6,
 			OCCLUSION_PRIMARY = 1 << 7,
@@ -214,7 +214,6 @@ namespace wiScene
 		inline BLENDMODE GetBlendMode() const { if (userBlendMode == BLENDMODE_OPAQUE && (GetRenderTypes() & RENDERTYPE_TRANSPARENT)) return BLENDMODE_ALPHA; else return userBlendMode; }
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
 		inline bool IsAlphaTestEnabled() const { return alphaRef <= 1.0f - 1.0f / 256.0f; }
-		inline bool IsFlipNormalMap() const { return _flags & FLIP_NORMALMAP; }
 		inline bool IsUsingVertexColors() const { return _flags & USE_VERTEXCOLORS; }
 		inline bool IsUsingWind() const { return _flags & USE_WIND; }
 		inline bool IsUsingSpecularGlossinessWorkflow() const { return _flags & SPECULAR_GLOSSINESS_WORKFLOW; }
@@ -235,7 +234,6 @@ namespace wiScene
 		inline void SetDisplacementMapping(float value) { SetDirty(); displacementMapping = value; }
 		inline void SetOpacity(float value) { SetDirty(); baseColor.w = value; }
 		inline void SetAlphaRef(float value) { SetDirty();  alphaRef = value; }
-		inline void SetFlipNormalMap(bool value) { SetDirty(); if (value) { _flags |= FLIP_NORMALMAP; } else { _flags &= ~FLIP_NORMALMAP; } }
 		inline void SetUseVertexColors(bool value) { SetDirty(); if (value) { _flags |= USE_VERTEXCOLORS; } else { _flags &= ~USE_VERTEXCOLORS; } }
 		inline void SetUseWind(bool value) { SetDirty(); if (value) { _flags |= USE_WIND; } else { _flags &= ~USE_WIND; } }
 		inline void SetUseSpecularGlossinessWorkflow(bool value) { SetDirty(); if (value) { _flags |= SPECULAR_GLOSSINESS_WORKFLOW; } else { _flags &= ~SPECULAR_GLOSSINESS_WORKFLOW; }  }
@@ -268,6 +266,7 @@ namespace wiScene
 
 		std::vector<XMFLOAT3> vertex_positions;
 		std::vector<XMFLOAT3> vertex_normals;
+		std::vector<XMFLOAT4> vertex_tangents;
 		std::vector<XMFLOAT2> vertex_uvset_0;
 		std::vector<XMFLOAT2> vertex_uvset_1;
 		std::vector<XMUINT4> vertex_boneindices;
@@ -302,6 +301,7 @@ namespace wiScene
 		AABB aabb;
 		wiGraphics::GPUBuffer indexBuffer;
 		wiGraphics::GPUBuffer vertexBuffer_POS;
+		wiGraphics::GPUBuffer vertexBuffer_TAN;
 		wiGraphics::GPUBuffer vertexBuffer_UV0;
 		wiGraphics::GPUBuffer vertexBuffer_UV1;
 		wiGraphics::GPUBuffer vertexBuffer_BON;
@@ -309,6 +309,7 @@ namespace wiScene
 		wiGraphics::GPUBuffer vertexBuffer_ATL;
 		wiGraphics::GPUBuffer vertexBuffer_PRE;
 		wiGraphics::GPUBuffer streamoutBuffer_POS;
+		wiGraphics::GPUBuffer streamoutBuffer_TAN;
 		wiGraphics::GPUBuffer vertexBuffer_SUB;
 		std::vector<uint8_t> vertex_subsets;
 
@@ -460,6 +461,26 @@ namespace wiScene
 		struct Vertex_COL
 		{
 			uint32_t color = 0;
+			static const wiGraphics::FORMAT FORMAT = wiGraphics::FORMAT::FORMAT_R8G8B8A8_UNORM;
+		};
+		struct Vertex_TAN
+		{
+			uint32_t tangent = 0;
+
+			void FromFULL(const XMFLOAT4& tan)
+			{
+				XMVECTOR T = XMLoadFloat4(&tan);
+				T = XMVector3Normalize(T);
+				XMFLOAT4 t;
+				XMStoreFloat4(&t, T);
+				t.w = tan.w;
+				tangent = 0;
+				tangent |= (uint)((t.x * 0.5f + 0.5f) * 255.0f) << 0;
+				tangent |= (uint)((t.y * 0.5f + 0.5f) * 255.0f) << 8;
+				tangent |= (uint)((t.z * 0.5f + 0.5f) * 255.0f) << 16;
+				tangent |= (uint)((t.w * 0.5f + 0.5f) * 255.0f) << 24;
+			}
+
 			static const wiGraphics::FORMAT FORMAT = wiGraphics::FORMAT::FORMAT_R8G8B8A8_UNORM;
 		};
 
@@ -633,6 +654,8 @@ namespace wiScene
 		void* physicsobject = nullptr;
 		XMFLOAT4X4 worldMatrix = IDENTITYMATRIX;
 		std::vector<MeshComponent::Vertex_POS> vertex_positions_simulation; // graphics vertices after simulation (world space)
+		std::vector<XMFLOAT4>vertex_tangents_tmp;
+		std::vector<MeshComponent::Vertex_TAN> vertex_tangents_simulation;
 		AABB aabb;
 
 		inline void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }

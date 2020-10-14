@@ -108,7 +108,7 @@ namespace wiRenderer
 	void DrawShadowmaps(const wiScene::CameraComponent& camera, wiGraphics::CommandList cmd, uint32_t layerMask = ~0);
 	// Draw debug world. You must also enable what parts to draw, eg. SetToDrawGridHelper, etc, see implementation for details what can be enabled.
 	void DrawDebugWorld(const wiScene::CameraComponent& camera, wiGraphics::CommandList cmd);
-	// Draw Soft offscreen particles. Linear depth should be already readable (see BindDepthTextures())
+	// Draw Soft offscreen particles.
 	void DrawSoftParticles(
 		const wiScene::CameraComponent& camera, 
 		const wiGraphics::Texture& lineardepth,

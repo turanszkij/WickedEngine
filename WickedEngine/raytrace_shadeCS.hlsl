@@ -93,7 +93,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			const float2 UV_normalMap = material.uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
 			float3 normalMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_normalMap * material.normalMapAtlasMulAdd.xy + material.normalMapAtlasMulAdd.zw, 0).rgb;
 			normalMap = normalMap.rgb * 2 - 1;
-			normalMap.g *= material.normalMapFlip;
 			const float3x3 TBN = float3x3(tri.tangent, tri.binormal, N);
 			N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
 		}

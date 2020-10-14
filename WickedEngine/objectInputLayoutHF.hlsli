@@ -40,6 +40,7 @@ struct Input_Object_ALL
 	float2 uv1 : UVSET1;
 	float2 atl : ATLAS;
 	float4 col : COLOR;
+	float4 tan : TANGENT;
 	float4 pre : PREVPOS;
 	Input_Instance inst;
 	Input_InstancePrev instPrev;
@@ -72,6 +73,7 @@ struct VertexSurface
 	float2 atlas;
 	float4 color;
 	float3 normal;
+	float4 tangent;
 	float4 prevPos;
 };
 inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_POS input)
@@ -83,13 +85,13 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_POS input)
 	surface.color = g_xMaterial.baseColor * unpack_rgba(input.inst.userdata.x);
 
 	uint normal_wind = asuint(input.pos.w);
-	surface.normal.x = (float)((normal_wind >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	surface.normal.y = (float)((normal_wind >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	surface.normal.z = (float)((normal_wind >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.x = (float)((normal_wind >> 0) & 0xFF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.y = (float)((normal_wind >> 8) & 0xFF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.z = (float)((normal_wind >> 16) & 0xFF) / 255.0f * 2.0f - 1.0f;
 
 	if (g_xMaterial.IsUsingWind())
 	{
-		const float windweight = ((normal_wind >> 24) & 0x000000FF) / 255.0f;
+		const float windweight = ((normal_wind >> 24) & 0xFF) / 255.0f;
 		const float waveoffset = dot(surface.position.xyz, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + (surface.position.x + surface.position.y + surface.position.z) * g_xFrame_WindRandomness;
 		const float3 wavedir = g_xFrame_WindDirection * windweight;
 		const float3 wind = sin(g_xFrame_Time * g_xFrame_WindSpeed + waveoffset) * wavedir;
@@ -109,13 +111,13 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_POS_TEX input)
 	surface.color = g_xMaterial.baseColor * unpack_rgba(input.inst.userdata.x);
 
 	uint normal_wind = asuint(input.pos.w);
-	surface.normal.x = (float)((normal_wind >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	surface.normal.y = (float)((normal_wind >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	surface.normal.z = (float)((normal_wind >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.x = (float)((normal_wind >> 0) & 0xFF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.y = (float)((normal_wind >> 8) & 0xFF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.z = (float)((normal_wind >> 16) & 0xFF) / 255.0f * 2.0f - 1.0f;
 
 	if (g_xMaterial.IsUsingWind())
 	{
-		const float windweight = ((normal_wind >> 24) & 0x000000FF) / 255.0f;
+		const float windweight = ((normal_wind >> 24) & 0xFF) / 255.0f;
 		const float waveoffset = dot(surface.position.xyz, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + (surface.position.x + surface.position.y + surface.position.z) * g_xFrame_WindRandomness;
 		const float3 wavedir = g_xFrame_WindDirection * windweight;
 		const float3 wind = sin(g_xFrame_Time * g_xFrame_WindSpeed + waveoffset) * wavedir;
@@ -142,13 +144,15 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_ALL input)
 	}
 
 	uint normal_wind = asuint(input.pos.w);
-	surface.normal.x = (float)((normal_wind >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	surface.normal.y = (float)((normal_wind >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	surface.normal.z = (float)((normal_wind >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.x = (float)((normal_wind >> 0) & 0xFF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.y = (float)((normal_wind >> 8) & 0xFF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.z = (float)((normal_wind >> 16) & 0xFF) / 255.0f * 2.0f - 1.0f;
+
+	surface.tangent = input.tan * 2 - 1;
 
 	if (g_xMaterial.IsUsingWind())
 	{
-		const float windweight = ((normal_wind >> 24) & 0x000000FF) / 255.0f;
+		const float windweight = ((normal_wind >> 24) & 0xFF) / 255.0f;
 		const float waveoffset = dot(surface.position.xyz, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + (surface.position.x + surface.position.y + surface.position.z) * g_xFrame_WindRandomness;
 		const float3 wavedir = g_xFrame_WindDirection * windweight;
 		const float3 wind = sin(g_xFrame_Time * g_xFrame_WindSpeed + waveoffset) * wavedir;

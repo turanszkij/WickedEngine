@@ -22,7 +22,7 @@ struct ShaderMaterial
 
 	float		subsurfaceScattering;
 	float		normalMapStrength;
-	float		normalMapFlip;
+	float		padding;
 	float		parallaxOcclusionMapping;
 
 	float		displacementMapping;

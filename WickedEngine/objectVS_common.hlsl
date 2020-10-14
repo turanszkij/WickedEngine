@@ -13,6 +13,7 @@ PixelInputType main(Input_Object_ALL input)
 	surface.position = mul(WORLD, surface.position);
 	surface.prevPos = mul(WORLDPREV, surface.prevPos);
 	surface.normal = normalize(mul((float3x3)WORLD, surface.normal));
+	surface.tangent.xyz = normalize(mul((float3x3)WORLD, surface.tangent.xyz));
 
 	Out.clip = dot(surface.position, g_xClipPlane);
 
@@ -23,6 +24,7 @@ PixelInputType main(Input_Object_ALL input)
 	Out.uvsets = surface.uvsets;
 	Out.atl = surface.atlas;
 	Out.nor = surface.normal;
+	Out.tan = surface.tangent;
 
 	return Out;
 }

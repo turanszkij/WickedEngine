@@ -912,16 +912,17 @@ void LoadShaders()
 			{ "UVSET",					1, MeshComponent::Vertex_TEX::FORMAT, 2, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 			{ "ATLAS",					0, MeshComponent::Vertex_TEX::FORMAT, 3, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 			{ "COLOR",					0, MeshComponent::Vertex_COL::FORMAT, 4, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, 5, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TANGENT",				0, MeshComponent::Vertex_TAN::FORMAT, 5, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIXPREV",		0, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIXPREV",		1, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIXPREV",		2, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEATLAS",			0, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT,  7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",		0, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",		1, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",		2, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEATLAS",			0, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		LoadShader(VS, vertexShaders[VSTYPE_OBJECT_COMMON], "objectVS_common.cso");
 		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_OBJECT_COMMON], &inputLayouts[ILTYPE_OBJECT_ALL]);
@@ -2257,11 +2258,11 @@ void SetUpStates()
 	dsd.DepthFunc = COMPARISON_GREATER;
 	dsd.StencilReadMask = STENCILREF_MASK_ENGINE;
 	dsd.StencilWriteMask = 0x00;
-	dsd.FrontFace.StencilFunc = COMPARISON_GREATER_EQUAL;
+	dsd.FrontFace.StencilFunc = COMPARISON_LESS_EQUAL;
 	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = COMPARISON_GREATER_EQUAL;
+	dsd.BackFace.StencilFunc = COMPARISON_LESS_EQUAL;
 	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
@@ -3077,6 +3078,7 @@ void RenderMeshes(
 							&mesh.vertexBuffer_UV1,
 							&mesh.vertexBuffer_ATL,
 							&mesh.vertexBuffer_COL,
+							mesh.streamoutBuffer_TAN.IsValid() ? &mesh.streamoutBuffer_TAN : &mesh.vertexBuffer_TAN,
 							mesh.vertexBuffer_PRE.IsValid() ? &mesh.vertexBuffer_PRE : &mesh.vertexBuffer_POS,
 							instances.buffer
 						};
@@ -3086,10 +3088,12 @@ void RenderMeshes(
 							sizeof(MeshComponent::Vertex_TEX),
 							sizeof(MeshComponent::Vertex_TEX),
 							sizeof(MeshComponent::Vertex_COL),
+							sizeof(MeshComponent::Vertex_TAN),
 							sizeof(MeshComponent::Vertex_POS),
 							instanceDataSize
 						};
 						uint32_t offsets[] = {
+							0,
 							0,
 							0,
 							0,
@@ -3413,8 +3417,12 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 
 			if (!mesh.vertexBuffer_PRE.IsValid())
 			{
-				device->CreateBuffer(&mesh.vertexBuffer_POS.GetDesc(), nullptr, &mesh.streamoutBuffer_POS);
-				device->CreateBuffer(&mesh.vertexBuffer_POS.GetDesc(), nullptr, &mesh.vertexBuffer_PRE);
+				device->CreateBuffer(&mesh.vertexBuffer_POS.desc, nullptr, &mesh.streamoutBuffer_POS);
+				device->CreateBuffer(&mesh.vertexBuffer_POS.desc, nullptr, &mesh.vertexBuffer_PRE);
+
+				GPUBufferDesc tandesc = mesh.vertexBuffer_TAN.desc;
+				tandesc.Usage = USAGE_DEFAULT;
+				device->CreateBuffer(&tandesc, nullptr, &mesh.streamoutBuffer_TAN);
 
 				if (raytracing_api)
 				{
@@ -4181,11 +4189,13 @@ void UpdateRenderData(CommandList cmd)
 				// Do the skinning
 				const GPUResource* vbs[] = {
 					&mesh.vertexBuffer_POS,
+					&mesh.vertexBuffer_TAN,
 					&mesh.vertexBuffer_BON,
 					&armature.boneBuffer,
 				};
 				const GPUResource* so[] = {
 					&mesh.streamoutBuffer_POS,
+					&mesh.streamoutBuffer_TAN,
 				};
 
 				device->BindResources(CS, vbs, SKINNINGSLOT_IN_VERTEX_POS, arraysize(vbs), cmd);
@@ -4204,7 +4214,7 @@ void UpdateRenderData(CommandList cmd)
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 			device->UnbindUAVs(0, 2, cmd);
-			device->UnbindResources(SKINNINGSLOT_IN_VERTEX_POS, 2, cmd);
+			device->UnbindResources(SKINNINGSLOT_IN_VERTEX_POS, 4, cmd);
 		}
 
 	}
@@ -4225,6 +4235,9 @@ void UpdateRenderData(CommandList cmd)
 
 		device->UpdateBuffer(&mesh.streamoutBuffer_POS, softbody.vertex_positions_simulation.data(), cmd, 
 			(uint32_t)(sizeof(MeshComponent::Vertex_POS) * softbody.vertex_positions_simulation.size()));
+
+		device->UpdateBuffer(&mesh.streamoutBuffer_TAN, softbody.vertex_tangents_simulation.data(), cmd,
+			(uint32_t)(sizeof(MeshComponent::Vertex_TAN)* softbody.vertex_tangents_simulation.size()));
 	}
 
 	// GPU Particle systems simulation/sorting/culling:
@@ -6934,6 +6947,7 @@ void RefreshImpostors(CommandList cmd)
 			&mesh.vertexBuffer_UV1,
 			&mesh.vertexBuffer_ATL,
 			&mesh.vertexBuffer_COL,
+			&mesh.vertexBuffer_TAN,
 			mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
 			mem.buffer
 		};
@@ -6943,10 +6957,12 @@ void RefreshImpostors(CommandList cmd)
 			sizeof(MeshComponent::Vertex_TEX),
 			sizeof(MeshComponent::Vertex_TEX),
 			sizeof(MeshComponent::Vertex_COL),
+			sizeof(MeshComponent::Vertex_TAN),
 			sizeof(MeshComponent::Vertex_POS),
 			sizeof(InstBuf)
 		};
 		uint32_t offsets[] = {
+			0,
 			0,
 			0,
 			0,
@@ -8739,32 +8755,6 @@ void SetAlphaRef(float alphaRef, CommandList cmd)
 		GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_API], &apiCB[cmd], cmd);
 	}
 }
-void BindGBufferTextures(const Texture* slot0, const Texture* slot1, const Texture* slot2, CommandList cmd)
-{
-	GraphicsDevice* device = GetDevice();
-
-	device->BindResource(PS, slot0, TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(PS, slot1, TEXSLOT_GBUFFER1, cmd);
-	device->BindResource(PS, slot2, TEXSLOT_GBUFFER2, cmd);
-
-	device->BindResource(CS, slot0, TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(CS, slot1, TEXSLOT_GBUFFER1, cmd);
-	device->BindResource(CS, slot2, TEXSLOT_GBUFFER2, cmd);
-}
-void BindDepthTextures(const Texture* depth, const Texture* linearDepth, CommandList cmd)
-{
-	GraphicsDevice* device = GetDevice();
-
-	device->BindResource(PS, depth, TEXSLOT_DEPTH, cmd);
-	device->BindResource(VS, depth, TEXSLOT_DEPTH, cmd);
-	device->BindResource(GS, depth, TEXSLOT_DEPTH, cmd);
-	device->BindResource(CS, depth, TEXSLOT_DEPTH, cmd);
-
-	device->BindResource(PS, linearDepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(VS, linearDepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(GS, linearDepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(CS, linearDepth, TEXSLOT_LINEARDEPTH, cmd);
-}
 
 const Texture* ComputeLuminance(const Texture& sourceImage, CommandList cmd)
 {
@@ -8923,7 +8913,6 @@ void DeferredComposition(
 	device->BindPipelineState(&PSO_deferredcomposition, cmd);
 
 	device->BindResource(PS, &gbuffer[GBUFFER_ALBEDO], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(PS, &gbuffer[GBUFFER_NORMAL_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 	device->BindResource(PS, &gbuffer[GBUFFER_SURFACE], TEXSLOT_GBUFFER2, cmd);
 	device->BindResource(PS, &gbuffer[GBUFFER_LIGHTBUFFER_DIFFUSE], TEXSLOT_ONDEMAND0, cmd);
 	device->BindResource(PS, &gbuffer[GBUFFER_LIGHTBUFFER_SPECULAR], TEXSLOT_ONDEMAND1, cmd);

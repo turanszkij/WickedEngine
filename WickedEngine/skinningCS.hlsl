@@ -17,17 +17,20 @@ groupshared Bone LDS_BoneList[SKINNING_COMPUTE_THREADCOUNT];
 #endif // USE_LDS
 
 RAWBUFFER(vertexBuffer_POS, SKINNINGSLOT_IN_VERTEX_POS);
+RAWBUFFER(vertexBuffer_TAN, SKINNINGSLOT_IN_VERTEX_TAN);
 RAWBUFFER(vertexBuffer_BON, SKINNINGSLOT_IN_VERTEX_BON);
 
 RWRAWBUFFER(streamoutBuffer_POS, 0);
+RWRAWBUFFER(streamoutBuffer_TAN, 1);
 
 
-inline void Skinning(inout float3 pos, inout float3 nor, in float4 inBon, in float4 inWei)
+inline void Skinning(inout float3 pos, inout float3 nor, inout float3 tan, in float4 inBon, in float4 inWei)
 {
 	if (any(inWei))
 	{
 		float4 p = 0;
 		float3 n = 0;
+		float3 t = 0;
 		float weisum = 0;
 
 		// force loop to reduce register pressure
@@ -48,14 +51,16 @@ inline void Skinning(inout float3 pos, inout float3 nor, in float4 inBon, in flo
 				float4(0, 0, 0, 1)
 				);
 
-			p += mul(m, float4(pos.xyz, 1))*inWei[i];
-			n += mul((float3x3)m, nor.xyz)*inWei[i];
+			p += mul(m, float4(pos.xyz, 1)) * inWei[i];
+			n += mul((float3x3)m, nor.xyz) * inWei[i];
+			t += mul((float3x3)m, tan.xyz) * inWei[i];
 
 			weisum += inWei[i];
 		}
 
 		pos.xyz = p.xyz;
 		nor.xyz = normalize(n.xyz);
+		tan.xyz = normalize(t.xyz);
 	}
 }
 
@@ -68,16 +73,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 #endif // USE_LDS
 
 	const uint stride_POS_NOR = 16;
+	const uint stride_TAN = 4;
 	const uint stride_BON_IND = 8;
 	const uint stride_BON_WEI = 8;
 
 	const uint fetchAddress_POS_NOR = DTid.x * stride_POS_NOR;
+	const uint fetchAddress_TAN = DTid.x * stride_TAN;
 	const uint fetchAddress_BON = DTid.x * (stride_BON_IND + stride_BON_WEI);
 
 	// Manual type-conversion for pos:
 	uint4 pos_nor_u = vertexBuffer_POS.Load4(fetchAddress_POS_NOR);
 	float3 pos = asfloat(pos_nor_u.xyz);
-
+	uint vtan = vertexBuffer_TAN.Load(fetchAddress_TAN);
 
 	// Manual type-conversion for normal:
 	float4 nor = 0;
@@ -88,6 +95,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 		nor.w = (float)((pos_nor_u.w >> 24) & 0x000000FF) / 255.0f; // wind
 	}
 
+	// Manual type-conversion for tangent:
+	float4 tan = 0;
+	{
+		tan.x = (float)((vtan >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+		tan.y = (float)((vtan >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+		tan.z = (float)((vtan >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+		tan.w = (float)((vtan >> 24) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	}
 
 	// Manual type-conversion for bone props:
 	uint4 ind_wei_u = vertexBuffer_BON.Load4(fetchAddress_BON);
@@ -111,7 +126,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 
 
 	// Perform skinning:
-	Skinning(pos, nor.xyz, ind, wei);
+	Skinning(pos, nor.xyz, tan.xyz, ind, wei);
 
 
 
@@ -128,6 +143,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 		pos_nor_u.w |= (uint)(nor.w * 255.0f) << 24; // wind
 	}
 
+	// Manual type-conversion for tangent:
+	vtan = 0;
+	{
+		vtan |= (uint)((tan.x * 0.5f + 0.5f) * 255.0f) << 0;
+		vtan |= (uint)((tan.y * 0.5f + 0.5f) * 255.0f) << 8;
+		vtan |= (uint)((tan.z * 0.5f + 0.5f) * 255.0f) << 16;
+		vtan |= (uint)((tan.w * 0.5f + 0.5f) * 255.0f) << 24;
+	}
+
 	// Store data:
 	streamoutBuffer_POS.Store4(fetchAddress_POS_NOR, pos_nor_u);
+	streamoutBuffer_TAN.Store(fetchAddress_TAN, vtan);
 }

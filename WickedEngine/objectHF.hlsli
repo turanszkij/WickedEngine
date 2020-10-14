@@ -80,6 +80,7 @@ struct PixelInputType
 	float4 uvsets							: UVSETS;
 	float2 atl								: ATLAS;
 	float3 nor								: NORMAL;
+	float4 tan								: TANGENT;
 	float3 pos3D							: WORLDPOSITION;
 	float4 pos2DPrev						: SCREENPOSITIONPREV;
 };
@@ -136,7 +137,6 @@ inline void NormalMapping(inout float4 uvsets, in float3 V, inout float3 N, in f
 		const float2 UV_normalMap = g_xMaterial.uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
 		float3 normalMap = texture_normalmap.Sample(sampler_objectshader, UV_normalMap).rgb;
 		bumpColor = normalMap.rgb * 2 - 1;
-		bumpColor.g *= g_xMaterial.normalMapFlip;
 		N = normalize(lerp(N, mul(bumpColor, TBN), g_xMaterial.normalMapStrength));
 		bumpColor *= g_xMaterial.normalMapStrength;
 	}
@@ -741,7 +741,15 @@ GBUFFEROutputType main(PIXELINPUT input)
 	surface.V /= dist;
 	surface.N = normalize(input.nor);
 
+#if 0
 	float3x3 TBN = compute_tangent_frame(surface.N, surface.P, input.uvsets.xy);
+#else
+	float4 tangent = input.tan;
+	tangent.xyz = normalize(tangent.xyz);
+	float3 binormal = normalize(cross(tangent.xyz, surface.N) * tangent.w);
+	float3x3 TBN = float3x3(tangent.xyz, binormal, surface.N);
+#endif
+
 #endif // SIMPLE_INPUT
 
 #ifdef POM
@@ -873,7 +881,6 @@ GBUFFEROutputType main(PIXELINPUT input)
 			sam_z.xyz = texture_normalmap.Sample(sampler_objectshader, uv_z).rgb;
 			bumpColor = (sam_x.xyz * triplanar.x + sam_y.xyz * triplanar.y + sam_z.xyz * triplanar.z);
 			bumpColor = bumpColor.rgb * 2 - 1;
-			bumpColor.g *= g_xMaterial.normalMapFlip;
 			triplanar_normal += normalize(lerp(surface.N, mul(bumpColor, TBN), g_xMaterial.normalMapStrength)) * blend_weights.x;
 		}
 		else
@@ -945,7 +952,6 @@ GBUFFEROutputType main(PIXELINPUT input)
 			sam_z.xyz = texture_blend1_normalmap.Sample(sampler_objectshader, uv_z).rgb;
 			bumpColor = (sam_x.xyz * triplanar.x + sam_y.xyz * triplanar.y + sam_z.xyz * triplanar.z);
 			bumpColor = bumpColor.rgb * 2 - 1;
-			bumpColor.g *= g_xMaterial_blend1.normalMapFlip;
 			triplanar_normal += normalize(lerp(surface.N, mul(bumpColor, TBN), g_xMaterial_blend1.normalMapStrength)) * blend_weights.y;
 		}
 		else
@@ -1017,7 +1023,6 @@ GBUFFEROutputType main(PIXELINPUT input)
 			sam_z.xyz = texture_blend2_normalmap.Sample(sampler_objectshader, uv_z).rgb;
 			bumpColor = (sam_x.xyz * triplanar.x + sam_y.xyz * triplanar.y + sam_z.xyz * triplanar.z);
 			bumpColor = bumpColor.rgb * 2 - 1;
-			bumpColor.g *= g_xMaterial_blend2.normalMapFlip;
 			triplanar_normal += normalize(lerp(surface.N, mul(bumpColor, TBN), g_xMaterial_blend2.normalMapStrength)) * blend_weights.z;
 		}
 		else
@@ -1089,7 +1094,6 @@ GBUFFEROutputType main(PIXELINPUT input)
 			sam_z.xyz = texture_blend3_normalmap.Sample(sampler_objectshader, uv_z).rgb;
 			bumpColor = (sam_x.xyz * triplanar.x + sam_y.xyz * triplanar.y + sam_z.xyz * triplanar.z);
 			bumpColor = bumpColor.rgb * 2 - 1;
-			bumpColor.g *= g_xMaterial_blend3.normalMapFlip;
 			triplanar_normal += normalize(lerp(surface.N, mul(bumpColor, TBN), g_xMaterial_blend3.normalMapStrength)) * blend_weights.w;
 		}
 		else

@@ -10,6 +10,7 @@ struct PSIn_EnvmapRendering
 	float4 uvsets : UVSETS;
 	float2 atl : ATLAS;
 	float3 nor : NORMAL;
+	float4 tan : TANGENT;
 	float3 pos3D : WORLDPOSITION;
 	uint RTIndex	: SV_RenderTargetArrayIndex;
 };

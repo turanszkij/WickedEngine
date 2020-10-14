@@ -331,6 +331,11 @@ namespace wiScene
 				archive >> vertex_windweights;
 			}
 
+			if (archive.GetVersion() >= 51)
+			{
+				archive >> vertex_tangents;
+			}
+
 			CreateRenderData();
 		}
 		else
@@ -371,6 +376,11 @@ namespace wiScene
 			if (archive.GetVersion() >= 43)
 			{
 				archive << vertex_windweights;
+			}
+
+			if (archive.GetVersion() >= 51)
+			{
+				archive << vertex_tangents;
 			}
 
 		}

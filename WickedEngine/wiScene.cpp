@@ -282,7 +282,6 @@ namespace wiScene
 		dest->refractionIndex = refractionIndex;
 		dest->subsurfaceScattering = subsurfaceScattering;
 		dest->normalMapStrength = (normalMap == nullptr ? 0 : normalMapStrength);
-		dest->normalMapFlip = (_flags & MaterialComponent::FLIP_NORMALMAP ? -1.0f : 1.0f);
 		dest->parallaxOcclusionMapping = parallaxOcclusionMapping;
 		dest->displacementMapping = displacementMapping;
 		dest->uvset_baseColorMap = baseColorMap == nullptr ? -1 : (int)uvset_baseColorMap;
@@ -415,6 +414,101 @@ namespace wiScene
 			device->SetName(&vertexBuffer_POS, "vertexBuffer_POS");
 		}
 
+		// vertexBuffer - TANGENTS
+		if(!vertex_uvset_0.empty())
+		{
+			if (vertex_tangents.empty())
+			{
+				// Generate tangents if not found:
+				vertex_tangents.resize(vertex_positions.size());
+
+				for (size_t i = 0; i < indices.size(); i += 3)
+				{
+					const uint32_t i0 = indices[i + 0];
+					const uint32_t i1 = indices[i + 1];
+					const uint32_t i2 = indices[i + 2];
+
+					const XMFLOAT3 v0 = vertex_positions[i0];
+					const XMFLOAT3 v1 = vertex_positions[i1];
+					const XMFLOAT3 v2 = vertex_positions[i2];
+
+					const XMFLOAT2 u0 = vertex_uvset_0[i0];
+					const XMFLOAT2 u1 = vertex_uvset_0[i1];
+					const XMFLOAT2 u2 = vertex_uvset_0[i2];
+
+					const XMFLOAT3 n0 = vertex_normals[i0];
+					const XMFLOAT3 n1 = vertex_normals[i1];
+					const XMFLOAT3 n2 = vertex_normals[i2];
+
+					const XMVECTOR nor0 = XMLoadFloat3(&n0);
+					const XMVECTOR nor1 = XMLoadFloat3(&n1);
+					const XMVECTOR nor2 = XMLoadFloat3(&n2);
+
+					const XMVECTOR facenormal = XMVector3Normalize(nor0 + nor1 + nor2);
+
+					const float x1 = v1.x - v0.x;
+					const float x2 = v2.x - v0.x;
+					const float y1 = v1.y - v0.y;
+					const float y2 = v2.y - v0.y;
+					const float z1 = v1.z - v0.z;
+					const float z2 = v2.z - v0.z;
+
+					const float s1 = u1.x - u0.x;
+					const float s2 = u2.x - u0.x;
+					const float t1 = u1.y - u0.y;
+					const float t2 = u2.y - u0.y;
+
+					const float r = 1.0f / (s1 * t2 - s2 * t1);
+					const XMVECTOR sdir = XMVectorSet((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
+						(t2 * z1 - t1 * z2) * r, 0);
+					const XMVECTOR tdir = XMVectorSet((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
+						(s1 * z2 - s2 * z1) * r, 0);
+
+					XMVECTOR tangent;
+					tangent = XMVector3Normalize(sdir - facenormal * XMVector3Dot(facenormal, sdir));
+					float sign = XMVectorGetX(XMVector3Dot(XMVector3Cross(tangent, facenormal), tdir)) < 0.0f ? -1.0f : 1.0f;
+
+					XMFLOAT3 t;
+					XMStoreFloat3(&t, tangent);
+
+					vertex_tangents[i0].x += t.x;
+					vertex_tangents[i0].y += t.y;
+					vertex_tangents[i0].z += t.z;
+					vertex_tangents[i0].w = sign;
+
+					vertex_tangents[i1].x += t.x;
+					vertex_tangents[i1].y += t.y;
+					vertex_tangents[i1].z += t.z;
+					vertex_tangents[i1].w = sign;
+
+					vertex_tangents[i2].x += t.x;
+					vertex_tangents[i2].y += t.y;
+					vertex_tangents[i2].z += t.z;
+					vertex_tangents[i2].w = sign;
+				}
+
+			}
+
+			std::vector<Vertex_TAN> vertices(vertex_tangents.size());
+			for (size_t i = 0; i < vertex_tangents.size(); ++i)
+			{
+				vertices[i].FromFULL(vertex_tangents[i]);
+			}
+
+			GPUBufferDesc bd;
+			bd.Usage = USAGE_IMMUTABLE;
+			bd.CPUAccessFlags = 0;
+			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
+			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+			bd.StructureByteStride = sizeof(Vertex_TAN);
+			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
+
+			SubresourceData InitData;
+			InitData.pSysMem = vertices.data();
+			device->CreateBuffer(&bd, &InitData, &vertexBuffer_TAN);
+			device->SetName(&vertexBuffer_TAN, "vertexBuffer_TAN");
+		}
+
 		aabb = AABB(_min, _max);
 
 		// skinning buffers:
@@ -455,6 +549,10 @@ namespace wiScene
 			bd.ByteWidth = (uint32_t)(sizeof(Vertex_POS) * vertex_positions.size());
 			device->CreateBuffer(&bd, nullptr, &streamoutBuffer_POS);
 			device->SetName(&streamoutBuffer_POS, "streamoutBuffer_POS");
+
+			bd.ByteWidth = (uint32_t)(sizeof(Vertex_TAN) * vertex_tangents.size());
+			device->CreateBuffer(&bd, nullptr, &streamoutBuffer_TAN);
+			device->SetName(&streamoutBuffer_TAN, "streamoutBuffer_TAN");
 		}
 
 		// vertexBuffer - UV SET 0
@@ -938,6 +1036,8 @@ namespace wiScene
 
 		}
 
+		vertex_tangents.clear(); // <- will be recomputed
+
 		CreateRenderData(); // <- normals will be normalized here!
 	}
 	void MeshComponent::FlipCulling()
@@ -1038,6 +1138,8 @@ namespace wiScene
 	void SoftBodyPhysicsComponent::CreateFromMesh(const MeshComponent& mesh)
 	{
 		vertex_positions_simulation.resize(mesh.vertex_positions.size());
+		vertex_tangents_tmp.resize(mesh.vertex_tangents.size());
+		vertex_tangents_simulation.resize(mesh.vertex_tangents.size());
 
 		XMMATRIX W = XMLoadFloat4x4(&worldMatrix);
 		XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);

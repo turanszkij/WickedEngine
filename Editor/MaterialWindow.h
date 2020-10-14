@@ -14,7 +14,6 @@ public:
 	wiTextInputField materialNameField;
 	wiButton newMaterialButton;
 	wiCheckBox shadowCasterCheckBox;
-	wiCheckBox flipNormalMapCheckBox;
 	wiCheckBox useVertexColorsCheckBox;
 	wiCheckBox specularGlossinessCheckBox;
 	wiCheckBox occlusionPrimaryCheckBox;
