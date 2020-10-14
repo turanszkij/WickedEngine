@@ -512,6 +512,12 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			}
 		}
 
+		auto unlit = x.extensions.find("KHR_materials_unlit");
+		if (unlit != x.extensions.end())
+		{
+			material.shaderType = MaterialComponent::SHADERTYPE_UNLIT;
+		}
+
 		// specular-glossiness workflow (todo):
 		auto specularGlossinessWorkflow = x.extensions.find("KHR_materials_pbrSpecularGlossiness");
 		if (specularGlossinessWorkflow != x.extensions.end())

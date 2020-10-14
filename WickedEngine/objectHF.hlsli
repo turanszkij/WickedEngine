@@ -1246,6 +1246,13 @@ GBUFFEROutputType main(PIXELINPUT input)
 	surface.refraction.a = 1 - saturate(surface.baseColor.a * 0.1f * depth_difference);
 #endif // WATER
 
+#ifdef UNLIT
+	lighting.direct.diffuse = 1;
+	lighting.indirect.diffuse = 0;
+	lighting.direct.specular = 0;
+	lighting.indirect.specular = 0;
+#endif // UNLIT
+
 	ApplyLighting(surface, lighting, color);
 
 	ApplyFog(dist, color);

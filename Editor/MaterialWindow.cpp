@@ -117,6 +117,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	shaderTypeComboBox.AddItem("PBR + Anisotropic");
 	shaderTypeComboBox.AddItem("Water");
 	shaderTypeComboBox.AddItem("Cartoon");
+	shaderTypeComboBox.AddItem("Unlit");
 	for (auto& x : wiRenderer::GetCustomShaders())
 	{
 		shaderTypeComboBox.AddItem("*" + x.name);

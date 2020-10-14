@@ -744,6 +744,9 @@ PSTYPES GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, Mater
 		case wiScene::MaterialComponent::SHADERTYPE_CARTOON:
 			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_CARTOON : PSTYPE_OBJECT_CARTOON;
 			break;
+		case wiScene::MaterialComponent::SHADERTYPE_UNLIT:
+			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_UNLIT : PSTYPE_OBJECT_UNLIT;
+			break;
 		default:
 			break;
 		}
@@ -1067,6 +1070,8 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TRANSPARENT_ANISOTROPIC], "objectPS_transparent_anisotropic.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_CARTOON], "objectPS_cartoon.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TRANSPARENT_CARTOON], "objectPS_transparent_cartoon.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_UNLIT], "objectPS_unlit.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TRANSPARENT_UNLIT], "objectPS_transparent_unlit.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_WATER], "objectPS_water.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TERRAIN], "objectPS_terrain.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR], "impostorPS.cso"); });
