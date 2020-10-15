@@ -36,7 +36,6 @@ struct Surface
 	float metalness;		// metalness [0:dielectric -> 1:metal]
 	float reflectance;		// reflectivity [0:diffuse -> 1:specular]
 	float4 emissiveColor;	// light emission [0 -> 1]
-	float sss;				// subsurface scattering [0 -> 1]
 	float4 refraction;		// refraction color (rgb), refraction amount (a)
 	float2 pixel;			// pixel coordinate (used for randomization effects)
 	float2 screenUV;		// pixel coordinate in UV space [0 -> 1] (used for randomization effects)
@@ -88,8 +87,7 @@ inline Surface CreateSurface(
 	in float occlusion,
 	in float metalness,
 	in float reflectance, 
-	in float4 emissiveColor = 0, 
-	in float sss = 0,
+	in float4 emissiveColor = 0,
 	in float anisotropy = 0,
 	in float3 T = 0,
 	in float3 B = 0)
@@ -105,7 +103,6 @@ inline Surface CreateSurface(
 	surface.metalness = metalness;
 	surface.reflectance = reflectance;
 	surface.emissiveColor = emissiveColor;
-	surface.sss = sss;
 	surface.refraction = 0;
 	surface.pixel = 0;
 	surface.screenUV = 0;

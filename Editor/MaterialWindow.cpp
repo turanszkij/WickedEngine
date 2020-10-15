@@ -133,7 +133,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr && args.iValue >= 0)
 		{
-			material->userBlendMode = static_cast<BLENDMODE>(args.iValue);
+			material->userBlendMode = (BLENDMODE)args.iValue;
 		}
 		});
 	blendModeComboBox.AddItem("Opaque");
@@ -144,7 +144,22 @@ void MaterialWindow::Create(EditorComponent* editor)
 	blendModeComboBox.SetTooltip("Set the blend mode of the material.");
 	AddWidget(&blendModeComboBox);
 
-
+	sssComboBox.Create("Subsurface profile: ");
+	sssComboBox.SetPos(XMFLOAT2(x, y += step));
+	sssComboBox.SetSize(XMFLOAT2(wid, hei));
+	sssComboBox.OnSelect([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr && args.iValue >= 0)
+		{
+			material->subsurfaceProfile = (MaterialComponent::SUBSURFACE_PROFILE)args.iValue;
+		}
+		});
+	sssComboBox.AddItem("Solid");
+	sssComboBox.AddItem("Skin");
+	sssComboBox.AddItem("Snow");
+	sssComboBox.SetEnabled(false);
+	sssComboBox.SetTooltip("Set the subsurface profile of the material. Needs the SSS prost process enabled.");
+	AddWidget(&sssComboBox);
 
 	shadingRateComboBox.Create("Shading Rate: ");
 	shadingRateComboBox.SetTooltip("Select shading rate for this material. \nSelecting larger shading rate will decrease rendering quality of this material, \nbut increases performance.\nDX12 only and requires Tier1 hardware support for variable shading rate");
@@ -250,17 +265,6 @@ void MaterialWindow::Create(EditorComponent* editor)
 			material->SetEmissiveStrength(args.fValue);
 	});
 	AddWidget(&emissiveSlider);
-
-	sssSlider.Create(0, 1, 0.0f, 1000, "Subsurface Scattering: ");
-	sssSlider.SetTooltip("Adjust how much the light is scattered when entered inside the surface of the object. (SSS postprocess must be enabled)");
-	sssSlider.SetSize(XMFLOAT2(wid, hei));
-	sssSlider.SetPos(XMFLOAT2(x, y += step));
-	sssSlider.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-			material->SetSubsurfaceScattering(args.fValue);
-	});
-	AddWidget(&sssSlider);
 
 	pomSlider.Create(0, 0.1f, 0.0f, 1000, "Parallax Occlusion Mapping: ");
 	pomSlider.SetTooltip("Adjust how much the bump map should modulate the surface parallax effect. \nOnly works with PBR + Parallax shader.");
@@ -811,7 +815,6 @@ void MaterialWindow::SetEntity(Entity entity)
 		metalnessSlider.SetValue(material->metalness);
 		refractionIndexSlider.SetValue(material->refractionIndex);
 		emissiveSlider.SetValue(material->emissiveColor.w);
-		sssSlider.SetValue(material->subsurfaceScattering);
 		pomSlider.SetValue(material->parallaxOcclusionMapping);
 		displacementMappingSlider.SetValue(material->displacementMapping);
 		texAnimFrameRateSlider.SetValue(material->texAnimFrameRate);
@@ -821,6 +824,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		texMulSliderY.SetValue(material->texMulAdd.y);
 		alphaRefSlider.SetValue(material->alphaRef);
 		blendModeComboBox.SetSelected((int)material->userBlendMode);
+		sssComboBox.SetSelected((int)material->subsurfaceProfile);
 		if (material->GetCustomShaderID() >= 0)
 		{
 			shaderTypeComboBox.SetSelected(MaterialComponent::SHADERTYPE_COUNT + material->GetCustomShaderID());

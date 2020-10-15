@@ -264,7 +264,7 @@ void Bind()
 		wiLua::RunText("STENCILREF_DEFAULT = 1");
 		wiLua::RunText("STENCILREF_CUSTOMSHADER = 2");
 		wiLua::RunText("STENCILREF_SKIN = 3");
-		wiLua::RunText("STENCILREF_SKIN_AND_CUSTOMSHADER = 4");
+		wiLua::RunText("STENCILREF_SNOW = 4");
 
 		wiLua::RegisterFunc("GetScene", GetScene);
 		wiLua::RegisterFunc("LoadModel", LoadModel);

@@ -280,7 +280,6 @@ namespace wiScene
 		dest->reflectance = reflectance;
 		dest->metalness = metalness;
 		dest->refractionIndex = refractionIndex;
-		dest->subsurfaceScattering = subsurfaceScattering;
 		dest->normalMapStrength = (normalMap == nullptr ? 0 : normalMapStrength);
 		dest->parallaxOcclusionMapping = parallaxOcclusionMapping;
 		dest->displacementMapping = displacementMapping;
@@ -2362,13 +2361,14 @@ namespace wiScene
 			{
 				material.engineStencilRef = STENCILREF_CUSTOMSHADER;
 			}
-			if (material.subsurfaceScattering > 0)
+
+			if (material.subsurfaceProfile == MaterialComponent::SUBSURFACE_SKIN)
 			{
 				material.engineStencilRef = STENCILREF_SKIN;
-				if (material.IsCustomShader())
-				{
-					material.engineStencilRef = STENCILREF_SKIN_AND_CUSTOMSHADER;
-				}
+			}
+			else if (material.subsurfaceProfile == MaterialComponent::SUBSURFACE_SNOW)
+			{
+				material.engineStencilRef = STENCILREF_SNOW;
 			}
 
 		});

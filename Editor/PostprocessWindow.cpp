@@ -167,6 +167,16 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&sssCheckBox);
 
+	sssSlider.Create(0.0f, 2.0f, 1, 1000, "Amount: ");
+	sssSlider.SetTooltip("Set SSS amount for subsurface materials.");
+	sssSlider.SetSize(XMFLOAT2(100, hei));
+	sssSlider.SetPos(XMFLOAT2(x + 100, y));
+	sssSlider.SetValue((float)editor->renderPath->getSSSBlurAmount());
+	sssSlider.OnSlide([=](wiEventArgs args) {
+		editor->renderPath->setSSSBlurAmount(args.fValue);
+		});
+	AddWidget(&sssSlider);
+
 	eyeAdaptionCheckBox.Create("EyeAdaption: ");
 	eyeAdaptionCheckBox.SetTooltip("Enable eye adaption for the overall screen luminance");
 	eyeAdaptionCheckBox.SetSize(XMFLOAT2(hei, hei));

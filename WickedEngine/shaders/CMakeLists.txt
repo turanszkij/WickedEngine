@@ -169,6 +169,7 @@ set(SHADERS_PS
         "upsample_bilateralPS.hlsl"
         "sunPS.hlsl"
         "sssPS.hlsl"
+        "sssPS_snow.hlsl"
         "skyPS_dynamic.hlsl"
         "skyPS_static.hlsl"
         "shadowPS_transparent.hlsl"

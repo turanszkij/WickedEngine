@@ -29,17 +29,13 @@ void RenderPath3D::ResizeBuffers()
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		desc.SampleCount = getMSAASampleCount();
 
-		desc.Format = FORMAT_R11G11B10_FLOAT;
-		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_ALBEDO]);
-		device->SetName(&rtGbuffer[GBUFFER_ALBEDO], "rtGbuffer[GBUFFER_ALBEDO]");
+		desc.Format = FORMAT_R8G8B8A8_UNORM;
+		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_ALBEDO_ROUGHNESS]);
+		device->SetName(&rtGbuffer[GBUFFER_ALBEDO_ROUGHNESS], "rtGbuffer[GBUFFER_ALBEDO_ROUGHNESS]");
 
 		desc.Format = FORMAT_R16G16B16A16_FLOAT;
 		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_NORMAL_VELOCITY]);
 		device->SetName(&rtGbuffer[GBUFFER_NORMAL_VELOCITY], "rtGbuffer[GBUFFER_NORMAL_VELOCITY]");
-
-		desc.Format = FORMAT_R8G8_UNORM;
-		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_SURFACE]);
-		device->SetName(&rtGbuffer[GBUFFER_SURFACE], "rtGbuffer[GBUFFER_SURFACE]");
 
 		desc.Format = FORMAT_R11G11B10_FLOAT;
 		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_LIGHTBUFFER_DIFFUSE]);
@@ -52,17 +48,13 @@ void RenderPath3D::ResizeBuffers()
 			desc.SampleCount = 1;
 			desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 
-			desc.Format = FORMAT_R11G11B10_FLOAT;
-			device->CreateTexture(&desc, nullptr, &rtGbuffer_resolved[GBUFFER_ALBEDO]);
-			device->SetName(&rtGbuffer_resolved[GBUFFER_ALBEDO], "rtGbuffer_resolved[GBUFFER_ALBEDO]");
+			desc.Format = FORMAT_R8G8B8A8_UNORM;
+			device->CreateTexture(&desc, nullptr, &rtGbuffer_resolved[GBUFFER_ALBEDO_ROUGHNESS]);
+			device->SetName(&rtGbuffer_resolved[GBUFFER_ALBEDO_ROUGHNESS], "rtGbuffer_resolved[GBUFFER_ALBEDO_ROUGHNESS]");
 
 			desc.Format = FORMAT_R16G16B16A16_FLOAT;
 			device->CreateTexture(&desc, nullptr, &rtGbuffer_resolved[GBUFFER_NORMAL_VELOCITY]);
 			device->SetName(&rtGbuffer_resolved[GBUFFER_NORMAL_VELOCITY], "rtGbuffer_resolved[GBUFFER_NORMAL_VELOCITY]");
-
-			desc.Format = FORMAT_R8G8_UNORM;
-			device->CreateTexture(&desc, nullptr, &rtGbuffer_resolved[GBUFFER_SURFACE]);
-			device->SetName(&rtGbuffer_resolved[GBUFFER_SURFACE], "rtGbuffer_resolved[GBUFFER_SURFACE]");
 
 			desc.Format = FORMAT_R11G11B10_FLOAT;
 			device->CreateTexture(&desc, nullptr, &rtGbuffer_resolved[GBUFFER_LIGHTBUFFER_DIFFUSE]);
@@ -411,9 +403,8 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateRenderPass(&desc, &renderpass_depthprepass);
 
 		desc.attachments.clear();
-		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtGbuffer[GBUFFER_ALBEDO], RenderPassAttachment::LOADOP_DONTCARE));
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtGbuffer[GBUFFER_ALBEDO_ROUGHNESS], RenderPassAttachment::LOADOP_DONTCARE));
 		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtGbuffer[GBUFFER_NORMAL_VELOCITY], RenderPassAttachment::LOADOP_CLEAR));
-		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtGbuffer[GBUFFER_SURFACE], RenderPassAttachment::LOADOP_CLEAR));
 		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtGbuffer[GBUFFER_LIGHTBUFFER_DIFFUSE], RenderPassAttachment::LOADOP_CLEAR));
 		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtGbuffer[GBUFFER_LIGHTBUFFER_SPECULAR], RenderPassAttachment::LOADOP_CLEAR));
 		desc.attachments.push_back(
@@ -428,9 +419,8 @@ void RenderPath3D::ResizeBuffers()
 		);
 		if (getMSAASampleCount() > 1)
 		{
-			desc.attachments.push_back(RenderPassAttachment::Resolve(GetGbuffer_Read(GBUFFER_ALBEDO)));
+			desc.attachments.push_back(RenderPassAttachment::Resolve(GetGbuffer_Read(GBUFFER_ALBEDO_ROUGHNESS)));
 			desc.attachments.push_back(RenderPassAttachment::Resolve(GetGbuffer_Read(GBUFFER_NORMAL_VELOCITY)));
-			desc.attachments.push_back(RenderPassAttachment::Resolve(GetGbuffer_Read(GBUFFER_SURFACE)));
 			desc.attachments.push_back(RenderPassAttachment::Resolve(GetGbuffer_Read(GBUFFER_LIGHTBUFFER_DIFFUSE)));
 			desc.attachments.push_back(RenderPassAttachment::Resolve(GetGbuffer_Read(GBUFFER_LIGHTBUFFER_SPECULAR)));
 		}
@@ -893,7 +883,7 @@ void RenderPath3D::RenderShadows(CommandList cmd) const
 
 void RenderPath3D::RenderSSS(CommandList cmd) const
 {
-	if (getSSSEnabled())
+	if (getSSSEnabled() && getSSSBlurAmount() > 0)
 	{
 		wiRenderer::Postprocess_SSS(
 			rtLinearDepth,
@@ -901,7 +891,8 @@ void RenderPath3D::RenderSSS(CommandList cmd) const
 			renderpass_SSS[0],
 			renderpass_SSS[1],
 			renderpass_SSS[2],
-			cmd
+			cmd,
+			getSSSBlurAmount()
 		);
 	}
 }

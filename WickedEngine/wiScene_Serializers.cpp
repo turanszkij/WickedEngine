@@ -102,7 +102,15 @@ namespace wiScene
 				archive >> emissiveColor.w;
 			}
 			archive >> refractionIndex;
-			archive >> subsurfaceScattering;
+			if (archive.GetVersion() < 52)
+			{
+				float subsurfaceScattering;
+				archive >> subsurfaceScattering;
+				if (subsurfaceScattering > 0)
+				{
+					subsurfaceProfile = SUBSURFACE_SKIN;
+				}
+			}
 			archive >> normalMapStrength;
 			archive >> parallaxOcclusionMapping;
 			archive >> alphaRef;
@@ -160,6 +168,11 @@ namespace wiScene
 				}
 			}
 
+			if (archive.GetVersion() >= 52)
+			{
+				archive >> (uint32_t&)subsurfaceProfile;
+			}
+
 			SetDirty();
 
 			if (!baseColorMapName.empty())
@@ -208,7 +221,11 @@ namespace wiScene
 				archive << emissiveColor.w;
 			}
 			archive << refractionIndex;
-			archive << subsurfaceScattering;
+			if (archive.GetVersion() < 52)
+			{
+				float subsurfaceScattering = 0;
+				archive << subsurfaceScattering;
+			}
 			archive << normalMapStrength;
 			archive << parallaxOcclusionMapping;
 			archive << alphaRef;
@@ -283,6 +300,11 @@ namespace wiScene
 			{
 				archive << (uint32_t)shaderType;
 				archive << customShaderID;
+			}
+
+			if (archive.GetVersion() >= 52)
+			{
+				archive << (uint32_t&)subsurfaceProfile;
 			}
 		}
 	}

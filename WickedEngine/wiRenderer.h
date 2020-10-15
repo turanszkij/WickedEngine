@@ -237,7 +237,8 @@ namespace wiRenderer
 		const wiGraphics::RenderPass& input_output_lightbuffer_diffuse,
 		const wiGraphics::RenderPass& input_output_temp1,
 		const wiGraphics::RenderPass& input_output_temp2,
-		wiGraphics::CommandList cmd
+		wiGraphics::CommandList cmd,
+		float amount = 1.0f
 	);
 	void Postprocess_LightShafts(
 		const wiGraphics::Texture& input,

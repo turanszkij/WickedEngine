@@ -19,6 +19,7 @@ public:
 	wiCheckBox ssrCheckBox;
 	wiCheckBox raytracedReflectionsCheckBox;
 	wiCheckBox sssCheckBox;
+	wiSlider sssSlider;
 	wiCheckBox eyeAdaptionCheckBox;
 	wiCheckBox motionBlurCheckBox;
 	wiSlider motionBlurStrengthSlider;

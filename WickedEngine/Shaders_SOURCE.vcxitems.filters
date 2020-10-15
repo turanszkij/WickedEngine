@@ -914,5 +914,8 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_transparent_unlit.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)sssPS_snow.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

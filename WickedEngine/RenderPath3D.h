@@ -34,6 +34,7 @@ private:
 	uint32_t aoSampleCount = 16;
 	float aoPower = 2.0f;
 	float chromaticAberrationAmount = 2.0f;
+	float sssBlurAmount = 1.0f;
 
 	AO ao = AO_DISABLED;
 	bool fxaaEnabled = false;
@@ -202,6 +203,7 @@ public:
 	constexpr uint32_t getAOSampleCount() const { return aoSampleCount; }
 	constexpr float getAOPower() const { return aoPower; }
 	constexpr float getChromaticAberrationAmount() const { return chromaticAberrationAmount; }
+	constexpr float getSSSBlurAmount() const { return sssBlurAmount; }
 
 	constexpr bool getAOEnabled() const { return ao != AO_DISABLED; }
 	constexpr AO getAO() const { return ao; }
@@ -243,6 +245,7 @@ public:
 	constexpr void setAOSampleCount(uint32_t value) { aoSampleCount = value; }
 	constexpr void setAOPower(float value) { aoPower = value; }
 	constexpr void setChromaticAberrationAmount(float value) { chromaticAberrationAmount = value; }
+	constexpr void setSSSBlurAmount(float value) { sssBlurAmount = value; }
 
 	constexpr void setAO(AO value) { ao = value; }
 	constexpr void setSSREnabled(bool value){ ssrEnabled = value; }

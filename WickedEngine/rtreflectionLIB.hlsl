@@ -30,7 +30,7 @@ void RTReflection_Raygen()
     if (depth == 0.0f)
         return;
 
-    const float roughness = texture_gbuffer2.SampleLevel(sampler_linear_clamp, uv, 0).r;
+    const float roughness = texture_gbuffer0.SampleLevel(sampler_linear_clamp, uv, 0).a;
 
     const float3 P = reconstructPosition(uv, depth);
     const float3 N = decodeNormal(texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy);

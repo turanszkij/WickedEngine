@@ -89,18 +89,16 @@ struct GBUFFEROutputType
 {
 	float4 g0	: SV_Target0;		// texture_gbuffer0
 	float4 g1	: SV_Target1;		// texture_gbuffer1
-	float4 g2	: SV_Target2;		// texture_gbuffer2
-	float4 diffuse	: SV_Target3;
-	float4 specular	: SV_Target4;
+	float4 diffuse	: SV_Target2;
+	float4 specular	: SV_Target3;
 };
 inline GBUFFEROutputType CreateGbuffer(in Surface surface, in float2 velocity, in Lighting lighting)
 {
 	LightingPart combined_lighting = CombineLighting(surface, lighting);
 
 	GBUFFEROutputType Out;
-	Out.g0 = float4(surface.albedo, 1);						/*FORMAT_R11G11B10_FLOAT*/
+	Out.g0 = float4(surface.albedo, surface.roughness);		/*FORMAT_R8G8B8A8_UNORM*/
 	Out.g1 = float4(encodeNormal(surface.N), velocity);		/*FORMAT_R16G16B16A16_FLOAT*/
-	Out.g2 = float4(surface.roughness, surface.sss, 0, 0);	/*FORMAT_R8G8_UNORM*/
 	Out.diffuse = float4(combined_lighting.diffuse, 1);		/*FORMAT_R11G11B10_FLOAT*/
 	Out.specular = float4(combined_lighting.specular, 1);	/*FORMAT_R11G11B10_FLOAT*/
 	return Out;
@@ -1049,8 +1047,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 		surface_occlusion_roughness_metallic_reflectance.r,
 		surface_occlusion_roughness_metallic_reflectance.b,
 		surface_occlusion_roughness_metallic_reflectance.a,
-		emissiveColor,
-		g_xMaterial.subsurfaceScattering
+		emissiveColor
 #ifdef BRDF_ANISOTROPIC
 		, g_xMaterial.parallaxOcclusionMapping,
 		tangent.xyz,

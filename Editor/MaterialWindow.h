@@ -25,7 +25,6 @@ public:
 	wiSlider metalnessSlider;
 	wiSlider refractionIndexSlider;
 	wiSlider emissiveSlider;
-	wiSlider sssSlider;
 	wiSlider pomSlider;
 	wiSlider displacementMappingSlider;
 	wiSlider texAnimFrameRateSlider;
@@ -34,8 +33,9 @@ public:
 	wiSlider texMulSliderX;
 	wiSlider texMulSliderY;
 	wiSlider alphaRefSlider;
-	wiComboBox blendModeComboBox;
 	wiComboBox shaderTypeComboBox;
+	wiComboBox blendModeComboBox;
+	wiComboBox sssComboBox;
 	wiComboBox shadingRateComboBox;
 
 	wiLabel texture_baseColor_Label;

@@ -133,6 +133,13 @@ namespace wiScene
 			SHADERTYPE_COUNT
 		} shaderType = SHADERTYPE_PBR;
 
+		enum SUBSURFACE_PROFILE
+		{
+			SUBSURFACE_SOLID,
+			SUBSURFACE_SKIN,
+			SUBSURFACE_SNOW,
+		} subsurfaceProfile = SUBSURFACE_SOLID;
+
 		STENCILREF engineStencilRef = STENCILREF_DEFAULT;
 		uint8_t userStencilRef = 0;
 		BLENDMODE userBlendMode = BLENDMODE_OPAQUE;
@@ -144,7 +151,6 @@ namespace wiScene
 		float reflectance = 0.02f;
 		float metalness = 0.0f;
 		float refractionIndex = 0.0f;
-		float subsurfaceScattering = 0.0f;
 		float normalMapStrength = 1.0f;
 		float parallaxOcclusionMapping = 0.0f;
 		float displacementMapping = 0.0f;
@@ -229,7 +235,6 @@ namespace wiScene
 		inline void SetMetalness(float value) { SetDirty(); metalness = value; }
 		inline void SetEmissiveStrength(float value) { SetDirty(); emissiveColor.w = value; }
 		inline void SetRefractionIndex(float value) { SetDirty(); refractionIndex = value; }
-		inline void SetSubsurfaceScattering(float value) { SetDirty(); subsurfaceScattering = value; }
 		inline void SetNormalMapStrength(float value) { SetDirty(); normalMapStrength = value; }
 		inline void SetParallaxOcclusionMapping(float value) { SetDirty(); parallaxOcclusionMapping = value; }
 		inline void SetDisplacementMapping(float value) { SetDirty(); displacementMapping = value; }

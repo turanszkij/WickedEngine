@@ -20,10 +20,10 @@ struct ShaderMaterial
 	float		metalness;
 	float		refractionIndex;
 
-	float		subsurfaceScattering;
 	float		normalMapStrength;
-	float		padding;
 	float		parallaxOcclusionMapping;
+	float		padding0;
+	float		padding1;
 
 	float		displacementMapping;
 	int			uvset_baseColorMap;
