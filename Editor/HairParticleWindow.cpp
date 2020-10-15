@@ -25,6 +25,7 @@ void HairParticleWindow::Create(EditorComponent* editor)
 		Entity entity = scene.Entity_CreateHair("editorHair");
 		editor->ClearSelected();
 		editor->AddSelected(entity);
+		editor->RefreshSceneGraphView();
 		SetEntity(entity);
 	});
 	addButton.SetTooltip("Add new hair particle system.");

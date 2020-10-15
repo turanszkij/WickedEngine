@@ -33,6 +33,7 @@ void EnvProbeWindow::Create(EditorComponent* editor)
 		Entity entity = wiScene::GetScene().Entity_CreateEnvironmentProbe("editorProbe", pos);
 		editor->ClearSelected();
 		editor->AddSelected(entity);
+		editor->RefreshSceneGraphView();
 		SetEntity(entity);
 	});
 	AddWidget(&generateButton);

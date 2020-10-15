@@ -76,6 +76,7 @@ void SoundWindow::Create(EditorComponent* editor)
 				Entity entity = GetScene().Entity_CreateSound("editorSound", fileName);
 				editor->ClearSelected();
 				editor->AddSelected(entity);
+				editor->RefreshSceneGraphView();
 				SetEntity(entity);
 			});
 		});

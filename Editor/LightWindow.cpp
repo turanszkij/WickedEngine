@@ -184,6 +184,7 @@ void LightWindow::Create(EditorComponent* editor)
 			light->type = (LightComponent::LightType)typeSelectorComboBox.GetSelected();
 			editor->ClearSelected();
 			editor->AddSelected(entity);
+			editor->RefreshSceneGraphView();
 			SetEntity(entity);
 		}
 		else

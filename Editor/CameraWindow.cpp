@@ -106,6 +106,8 @@ void CameraWindow::Create(EditorComponent* editor)
 
 		TransformComponent& transform = *scene.transforms.GetComponent(entity);
 		transform.MatrixTransform(camera.InvView);
+
+		editor->RefreshSceneGraphView();
 	});
 	AddWidget(&proxyButton);
 

@@ -380,6 +380,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 		Entity entity = scene.Entity_CreateMaterial("editorMaterial");
 		editor->ClearSelected();
 		editor->AddSelected(entity);
+		editor->RefreshSceneGraphView();
 		SetEntity(entity);
 	});
 	AddWidget(&newMaterialButton);

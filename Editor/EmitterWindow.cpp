@@ -39,6 +39,7 @@ void EmitterWindow::Create(EditorComponent* editor)
 		Entity entity = scene.Entity_CreateEmitter("editorEmitter");
 		editor->ClearSelected();
 		editor->AddSelected(entity);
+		editor->RefreshSceneGraphView();
 		SetEntity(entity);
 	});
 	addButton.SetTooltip("Add new emitter particle system.");

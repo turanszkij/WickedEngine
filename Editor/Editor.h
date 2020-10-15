@@ -106,6 +106,7 @@ public:
 	std::unordered_set<wiECS::Entity> scenegraphview_added_items;
 	std::unordered_set<wiECS::Entity> scenegraphview_opened_items;
 	void PushToSceneGraphView(wiECS::Entity entity, int level);
+	void RefreshSceneGraphView();
 
 	std::unique_ptr<RenderPath3D> renderPath;
 	enum RENDERPATH
@@ -147,7 +148,6 @@ public:
 	void AddSelected(wiECS::Entity entity);
 	void AddSelected(const wiScene::PickResult& picked);
 	bool IsSelected(wiECS::Entity entity) const;
-
 
 
 

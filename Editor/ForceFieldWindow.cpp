@@ -38,6 +38,7 @@ void ForceFieldWindow::Create(EditorComponent* editor)
 			}
 			editor->ClearSelected();
 			editor->AddSelected(entity);
+			editor->RefreshSceneGraphView();
 			SetEntity(entity);
 		}
 		else

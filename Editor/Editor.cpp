@@ -744,6 +744,7 @@ void EditorComponent::Load()
 				main->loader.onFinished([=] {
 					main->ActivatePath(this, 0.2f, wiColor::Black());
 					weatherWnd.Update();
+					RefreshSceneGraphView();
 					});
 				main->ActivatePath(&main->loader, 0.2f, wiColor::Black());
 				ResetHistory();
@@ -786,7 +787,7 @@ void EditorComponent::Load()
 
 	clearButton.Create("Clear World");
 	clearButton.SetTooltip("Delete every model from the scene");
-	clearButton.SetColor(wiColor(255, 205, 43, 180), wiWidget::WIDGETSTATE::IDLE);
+	clearButton.SetColor(wiColor(255, 173, 43, 180), wiWidget::WIDGETSTATE::IDLE);
 	clearButton.SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
 	clearButton.OnClick([&](wiEventArgs args) {
 		translator.selected.clear();
@@ -808,6 +809,8 @@ void EditorComponent::Load()
 		transformWnd.SetEntity(INVALID_ENTITY);
 		layerWnd.SetEntity(INVALID_ENTITY);
 		nameWnd.SetEntity(INVALID_ENTITY);
+
+		RefreshSceneGraphView();
 	});
 	GetGUI().AddWidget(&clearButton);
 
@@ -913,6 +916,7 @@ void EditorComponent::Load()
 		}
 
 		});
+	sceneGraphView.SetColor(wiColor(100, 100, 100, 100), wiWidget::IDLE);
 	GetGUI().AddWidget(&sceneGraphView);
 
 
@@ -989,33 +993,6 @@ void EditorComponent::FixedUpdate()
 	renderPath->FixedUpdate();
 }
 
-void EditorComponent::PushToSceneGraphView(wiECS::Entity entity, int level)
-{
-	if (scenegraphview_added_items.count(entity) != 0)
-	{
-		return;
-	}
-	const Scene& scene = wiScene::GetScene();
-
-	wiTreeList::Item item;
-	item.level = level;
-	item.userdata = entity;
-	item.selected = IsSelected(entity);
-	item.open = scenegraphview_opened_items.count(entity) != 0;
-	const NameComponent* name = scene.names.GetComponent(entity);
-	item.name = name == nullptr ? std::to_string(entity) : name->name;
-	sceneGraphView.AddItem(item);
-
-	scenegraphview_added_items.insert(entity);
-
-	for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
-	{
-		if (scene.hierarchy[i].parentID == entity)
-		{
-			PushToSceneGraphView(scene.hierarchy.GetEntity(i), level + 1);
-		}
-	}
-}
 void EditorComponent::Update(float dt)
 {
 	wiProfiler::range_id profrange = wiProfiler::BeginRangeCPU("Editor Update");
@@ -1028,73 +1005,6 @@ void EditorComponent::Update(float dt)
 	paintToolWnd.Update(dt);
 
 	selectionOutlineTimer += dt;
-
-	// Update scene graph view:
-	for (int i = 0; i < sceneGraphView.GetItemCount(); ++i)
-	{
-		const wiTreeList::Item& item = sceneGraphView.GetItem(i);
-		if (item.open)
-		{
-			scenegraphview_opened_items.insert((Entity)item.userdata);
-		}
-	}
-
-	sceneGraphView.ClearItems();
-
-	// Add hierarchy:
-	for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
-	{
-		PushToSceneGraphView(scene.hierarchy[i].parentID, 0);
-	}
-
-	// Any transform left that is not part of a hierarchy:
-	for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
-	{
-		PushToSceneGraphView(scene.transforms.GetEntity(i), 0);
-	}
-
-	// Add materials:
-	for (size_t i = 0; i < scene.materials.GetCount(); ++i)
-	{
-		Entity entity = scene.materials.GetEntity(i);
-		if (scenegraphview_added_items.count(entity) != 0)
-		{
-			continue;
-		}
-
-		wiTreeList::Item item;
-		item.userdata = entity;
-		item.selected = IsSelected(entity);
-		item.open = scenegraphview_opened_items.count(entity) != 0;
-		const NameComponent* name = scene.names.GetComponent(entity);
-		item.name = name == nullptr ? std::to_string(entity) : name->name;
-		sceneGraphView.AddItem(item);
-
-		scenegraphview_added_items.insert(entity);
-	}
-
-	// Add meshes:
-	for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
-	{
-		Entity entity = scene.meshes.GetEntity(i);
-		if (scenegraphview_added_items.count(entity) != 0)
-		{
-			continue;
-		}
-
-		wiTreeList::Item item;
-		item.userdata = entity;
-		item.selected = IsSelected(entity);
-		item.open = scenegraphview_opened_items.count(entity) != 0;
-		const NameComponent* name = scene.names.GetComponent(entity);
-		item.name = name == nullptr ? std::to_string(entity) : name->name;
-		sceneGraphView.AddItem(item);
-
-		scenegraphview_added_items.insert(entity);
-	}
-
-	scenegraphview_added_items.clear();
-	scenegraphview_opened_items.clear();
 
 	// Exit cinema mode:
 	if (wiInput::Down(wiInput::KEYBOARD_BUTTON_ESCAPE))
@@ -1444,6 +1354,8 @@ void EditorComponent::Update(float dt)
 						transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
 						transform.Scale(XMFLOAT3(2, 2, 2));
 						scene.Component_Attach(entity, hovered.entity);
+
+						RefreshSceneGraphView();
 					}
 				}
 
@@ -1575,6 +1487,8 @@ void EditorComponent::Update(float dt)
 					picked.entity = scene.Entity_Duplicate(x.entity);
 					AddSelected(picked);
 				}
+
+				RefreshSceneGraphView();
 			}
 			// Put Instances
 			if (clipboard.IsOpen() && hovered.subsetIndex >= 0 && wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT) && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
@@ -1595,6 +1509,8 @@ void EditorComponent::Update(float dt)
 						transform->UpdateTransform_Parented(parent_transform);
 					}
 				}
+
+				RefreshSceneGraphView();
 			}
 			// Undo
 			if (wiInput::Press((wiInput::BUTTON)'Z'))
@@ -2281,6 +2197,104 @@ void EditorComponent::Compose(CommandList cmd) const
 	RenderPath2D::Compose(cmd);
 }
 
+void EditorComponent::PushToSceneGraphView(wiECS::Entity entity, int level)
+{
+	if (scenegraphview_added_items.count(entity) != 0)
+	{
+		return;
+	}
+	const Scene& scene = wiScene::GetScene();
+
+	wiTreeList::Item item;
+	item.level = level;
+	item.userdata = entity;
+	item.selected = IsSelected(entity);
+	item.open = scenegraphview_opened_items.count(entity) != 0;
+	const NameComponent* name = scene.names.GetComponent(entity);
+	item.name = name == nullptr ? std::to_string(entity) : name->name;
+	sceneGraphView.AddItem(item);
+
+	scenegraphview_added_items.insert(entity);
+
+	for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
+	{
+		if (scene.hierarchy[i].parentID == entity)
+		{
+			PushToSceneGraphView(scene.hierarchy.GetEntity(i), level + 1);
+		}
+	}
+}
+void EditorComponent::RefreshSceneGraphView()
+{
+	const Scene& scene = wiScene::GetScene();
+
+	for (int i = 0; i < sceneGraphView.GetItemCount(); ++i)
+	{
+		const wiTreeList::Item& item = sceneGraphView.GetItem(i);
+		if (item.open)
+		{
+			scenegraphview_opened_items.insert((Entity)item.userdata);
+		}
+	}
+
+	sceneGraphView.ClearItems();
+
+	// Add hierarchy:
+	for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
+	{
+		PushToSceneGraphView(scene.hierarchy[i].parentID, 0);
+	}
+
+	// Any transform left that is not part of a hierarchy:
+	for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
+	{
+		PushToSceneGraphView(scene.transforms.GetEntity(i), 0);
+	}
+
+	// Add materials:
+	for (size_t i = 0; i < scene.materials.GetCount(); ++i)
+	{
+		Entity entity = scene.materials.GetEntity(i);
+		if (scenegraphview_added_items.count(entity) != 0)
+		{
+			continue;
+		}
+
+		wiTreeList::Item item;
+		item.userdata = entity;
+		item.selected = IsSelected(entity);
+		item.open = scenegraphview_opened_items.count(entity) != 0;
+		const NameComponent* name = scene.names.GetComponent(entity);
+		item.name = name == nullptr ? std::to_string(entity) : name->name;
+		sceneGraphView.AddItem(item);
+
+		scenegraphview_added_items.insert(entity);
+	}
+
+	// Add meshes:
+	for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
+	{
+		Entity entity = scene.meshes.GetEntity(i);
+		if (scenegraphview_added_items.count(entity) != 0)
+		{
+			continue;
+		}
+
+		wiTreeList::Item item;
+		item.userdata = entity;
+		item.selected = IsSelected(entity);
+		item.open = scenegraphview_opened_items.count(entity) != 0;
+		const NameComponent* name = scene.names.GetComponent(entity);
+		item.name = name == nullptr ? std::to_string(entity) : name->name;
+		sceneGraphView.AddItem(item);
+
+		scenegraphview_added_items.insert(entity);
+	}
+
+	scenegraphview_added_items.clear();
+	scenegraphview_opened_items.clear();
+}
+
 void EditorComponent::ClearSelected()
 {
 	translator.selected.clear();
@@ -2461,4 +2475,6 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 			historyPos--;
 		}
 	}
+
+	RefreshSceneGraphView();
 }

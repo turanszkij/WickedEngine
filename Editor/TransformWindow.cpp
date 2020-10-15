@@ -26,6 +26,7 @@ void TransformWindow::Create(EditorComponent* editor)
 		wiScene::GetScene().transforms.Create(entity);
 		editor->ClearSelected();
 		editor->AddSelected(entity);
+		editor->RefreshSceneGraphView();
 		SetEntity(entity);
 		});
 	AddWidget(&createButton);
