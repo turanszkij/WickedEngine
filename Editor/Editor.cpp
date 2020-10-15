@@ -1579,7 +1579,6 @@ void EditorComponent::Update(float dt)
 
 		assert(picked.entity != INVALID_ENTITY);
 
-		objectWnd.SetEntity(INVALID_ENTITY);
 		for (auto& x : translator.selected)
 		{
 			if (scene.objects.GetComponent(x.entity) != nullptr)
