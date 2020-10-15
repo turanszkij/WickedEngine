@@ -5013,7 +5013,7 @@ using namespace Vulkan_Internal;
 			{
 				if (texture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 				{
-					if (texture->desc.ArraySize > 6)
+					if (texture->desc.ArraySize > 6 && sliceCount > 6)
 					{
 						view_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
 					}
@@ -5082,6 +5082,11 @@ using namespace Vulkan_Internal;
 		break;
 		case wiGraphics::UAV:
 		{
+			if (view_desc.viewType == VK_IMAGE_VIEW_TYPE_CUBE || view_desc.viewType == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY)
+			{
+				view_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+			}
+
 			VkImageView uav;
 			VkResult res = vkCreateImageView(device, &view_desc, nullptr, &uav);
 
