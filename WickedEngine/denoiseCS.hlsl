@@ -4,6 +4,7 @@
 
 TEXTURE2D(resolve_current, float4, TEXSLOT_ONDEMAND0);
 TEXTURE2D(resolve_history, float4, TEXSLOT_ONDEMAND1);
+TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND2);
 
 RWTEXTURE2D(output, float4, 0);
 
@@ -97,6 +98,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 
     float2 velocity = texture_gbuffer1.SampleLevel(sampler_linear_clamp, uv, 0).zw;
     float2 prevUV = uv + velocity;
+
+    // Disocclusion fallback:
+    float depth_current = texture_lineardepth[DTid.xy] * g_xCamera_ZFarP;
+    float depth_history = getLinearDepth(texture_depth_history.SampleLevel(sampler_point_clamp, prevUV, 0));
+    if (length(velocity) > 0.0025 && abs(depth_current - depth_history) > 1)
+    {
+        output[DTid.xy] = resolve_current.SampleLevel(sampler_point_clamp, uv, 0);
+        return;
+    }
 
     float4 previous = resolve_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
 

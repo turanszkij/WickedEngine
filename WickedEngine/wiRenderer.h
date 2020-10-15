@@ -210,6 +210,7 @@ namespace wiRenderer
 	void Postprocess_RTAO(
 		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture& lineardepth,
+		const wiGraphics::Texture& depth_history,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float range = 1.0f,
@@ -297,6 +298,7 @@ namespace wiRenderer
 		const wiGraphics::Texture& input_history,
 		const wiGraphics::Texture& velocity,
 		const wiGraphics::Texture& lineardepth,
+		const wiGraphics::Texture& depth_history,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
@@ -350,6 +352,8 @@ namespace wiRenderer
 		const wiGraphics::Texture& temporal_history,
 		const wiGraphics::Texture& temporal_current,
 		const wiGraphics::Texture& velocity,
+		const wiGraphics::Texture& lineardepth,
+		const wiGraphics::Texture& depth_history,
 		wiGraphics::CommandList cmd
 	);
 

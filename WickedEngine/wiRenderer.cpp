@@ -9812,6 +9812,7 @@ void Postprocess_MSAO(
 void Postprocess_RTAO(
 	const Texture& depthbuffer,
 	const Texture& lineardepth,
+	const Texture& depth_history,
 	const Texture& output,
 	CommandList cmd,
 	float range,
@@ -10027,6 +10028,7 @@ void Postprocess_RTAO(
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(CS, &temp, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, &temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
 
 		const GPUResource* uavs[] = {
 			&temporal[temporal_output],
@@ -11879,6 +11881,7 @@ void Postprocess_TemporalAA(
 	const Texture& input_history,
 	const Texture& velocity,
 	const Texture& lineardepth,
+	const Texture& depth_history,
 	const Texture& output,
 	CommandList cmd
 )
@@ -11892,6 +11895,7 @@ void Postprocess_TemporalAA(
 
 	device->BindResource(CS, &input_current, TEXSLOT_ONDEMAND0, cmd);
 	device->BindResource(CS, &input_history, TEXSLOT_ONDEMAND1, cmd);
+	device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
 	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 	device->BindResource(CS, &velocity, TEXSLOT_GBUFFER1, cmd);
 
@@ -12319,6 +12323,8 @@ void Postprocess_Denoise(
 	const Texture& temporal_history,
 	const Texture& temporal_current,
 	const Texture& velocity,
+	const Texture& lineardepth,
+	const Texture& depth_history,
 	CommandList cmd
 )
 {
@@ -12342,6 +12348,8 @@ void Postprocess_Denoise(
 	{
 		device->BindResource(CS, &input_output_current, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, &temporal_history, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 		const GPUResource* uavs[] = {
 			&temporal_current,

@@ -92,6 +92,7 @@ protected:
 
 	wiGraphics::Texture depthBuffer; // used for depth-testing, can be MSAA
 	wiGraphics::Texture depthBuffer_Copy; // used for shader resource, single sample
+	wiGraphics::Texture depthBuffer_Copy1; // used for disocclusion check
 	wiGraphics::Texture depthBuffer_Reflection; // used for reflection, single sample
 	wiGraphics::Texture rtLinearDepth; // linear depth result + mipchain (max filter)
 	wiGraphics::Texture smallDepth; // downsampled depth buffer

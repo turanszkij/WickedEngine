@@ -346,6 +346,8 @@ void RenderPath3D::ResizeBuffers()
 		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
 		device->CreateTexture(&desc, nullptr, &depthBuffer_Copy);
 		device->SetName(&depthBuffer_Copy, "depthBuffer_Copy");
+		device->CreateTexture(&desc, nullptr, &depthBuffer_Copy1);
+		device->SetName(&depthBuffer_Copy1, "depthBuffer_Copy1");
 	}
 	{
 		TextureDesc desc;
@@ -621,6 +623,8 @@ void RenderPath3D::Update(float dt)
 	RenderPath2D::Update(dt);
 
 	wiRenderer::UpdatePerFrameData(dt, getLayerMask());
+
+	std::swap(depthBuffer_Copy, depthBuffer_Copy1);
 }
 
 void RenderPath3D::Render() const
@@ -813,7 +817,7 @@ void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	device->BindResource(CS, &depthBuffer_Copy, TEXSLOT_DEPTH, cmd);
+	device->BindResource(CS, &depthBuffer_Copy1, TEXSLOT_DEPTH, cmd);
 	wiRenderer::UpdateRenderData(cmd);
 
 	if (getAO() == AO_RTAO || wiRenderer::GetRaytracedShadowsEnabled() || getRaytracedReflectionEnabled())
@@ -912,6 +916,8 @@ void RenderPath3D::RenderDeferredComposition(CommandList cmd) const
 			rtDiffuseTemporal[history],
 			rtDiffuseTemporal[output],
 			*GetGbuffer_Read(GBUFFER_NORMAL_VELOCITY),
+			rtLinearDepth,
+			depthBuffer_Copy1,
 			cmd
 		);
 		wiRenderer::Postprocess_Denoise(
@@ -919,6 +925,8 @@ void RenderPath3D::RenderDeferredComposition(CommandList cmd) const
 			rtSpecularTemporal[history],
 			rtSpecularTemporal[output],
 			*GetGbuffer_Read(GBUFFER_NORMAL_VELOCITY),
+			rtLinearDepth,
+			depthBuffer_Copy1,
 			cmd
 		);
 	}
@@ -987,6 +995,7 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 			wiRenderer::Postprocess_RTAO(
 				depthBuffer_Copy,
 				rtLinearDepth,
+				depthBuffer_Copy1,
 				rtAO,
 				cmd,
 				getAORange(),
@@ -1251,7 +1260,14 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 
 			int output = device->GetFrameCount() % 2;
 			int history = 1 - output;
-			wiRenderer::Postprocess_TemporalAA(*rt_read, rtTemporalAA[history], *GetGbuffer_Read(GBUFFER_NORMAL_VELOCITY), rtLinearDepth, rtTemporalAA[output], cmd);
+			wiRenderer::Postprocess_TemporalAA(
+				*rt_read, rtTemporalAA[history], 
+				*GetGbuffer_Read(GBUFFER_NORMAL_VELOCITY), 
+				rtLinearDepth,
+				depthBuffer_Copy1,
+				rtTemporalAA[output], 
+				cmd
+			);
 			rt_first = &rtTemporalAA[output];
 		}
 
