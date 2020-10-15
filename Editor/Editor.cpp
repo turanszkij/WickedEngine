@@ -1438,6 +1438,8 @@ void EditorComponent::Update(float dt)
 				archive << x.subsetIndex;
 				archive << x.distance;
 			}
+
+			RefreshSceneGraphView();
 		}
 
 		// Control operations...
