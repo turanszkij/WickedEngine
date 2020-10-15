@@ -827,31 +827,19 @@ GBUFFEROutputType main(PIXELINPUT input)
 	color = 0;
 	surface_occlusion_roughness_metallic_reflectance = 0;
 	emissiveColor = 0;
-	float3 triplanar_normal = 0;
 	float4 blend_weights = input.color;
 	blend_weights /= blend_weights.x + blend_weights.y + blend_weights.z + blend_weights.w;
-	float3 triplanar = abs(surface.N);
-	triplanar /= triplanar.x + triplanar.y + triplanar.z;
-	float4 sam, sam_x, sam_y, sam_z;
-	float2 uv_x, uv_y, uv_z;
+	float4 sam;
 
 	[branch]
 	if (blend_weights.x > 0)
 	{
-		uv_x = surface.P.yz * g_xMaterial.texMulAdd.xy + g_xMaterial.texMulAdd.zw;
-		uv_y = surface.P.xz * g_xMaterial.texMulAdd.xy + g_xMaterial.texMulAdd.zw;
-		uv_z = surface.P.xy * g_xMaterial.texMulAdd.xy + g_xMaterial.texMulAdd.zw;
-
 		[branch]
 		if (g_xMaterial.uvset_baseColorMap >= 0)
 		{
-			sam_x = texture_basecolormap.Sample(sampler_objectshader, uv_x);
-			sam_y = texture_basecolormap.Sample(sampler_objectshader, uv_y);
-			sam_z = texture_basecolormap.Sample(sampler_objectshader, uv_z);
-			sam_x.rgb = DEGAMMA(sam_x.rgb);
-			sam_y.rgb = DEGAMMA(sam_y.rgb);
-			sam_z.rgb = DEGAMMA(sam_z.rgb);
-			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+			float2 uv = g_xMaterial.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			sam = texture_basecolormap.Sample(sampler_objectshader, uv);
+			sam.rgb = DEGAMMA(sam.rgb);
 		}
 		else
 		{
@@ -862,10 +850,8 @@ GBUFFEROutputType main(PIXELINPUT input)
 		[branch]
 		if (g_xMaterial.uvset_surfaceMap >= 0)
 		{
-			sam_x = texture_surfacemap.Sample(sampler_objectshader, uv_x);
-			sam_y = texture_surfacemap.Sample(sampler_objectshader, uv_y);
-			sam_z = texture_surfacemap.Sample(sampler_objectshader, uv_z);
-			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+			float2 uv = g_xMaterial.uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			sam = texture_surfacemap.Sample(sampler_objectshader, uv);
 		}
 		else
 		{
@@ -876,53 +862,31 @@ GBUFFEROutputType main(PIXELINPUT input)
 		[branch]
 		if (g_xMaterial.normalMapStrength > 0 && g_xMaterial.uvset_normalMap >= 0)
 		{
-			sam_x.xyz = texture_normalmap.Sample(sampler_objectshader, uv_x).rgb;
-			sam_y.xyz = texture_normalmap.Sample(sampler_objectshader, uv_y).rgb;
-			sam_z.xyz = texture_normalmap.Sample(sampler_objectshader, uv_z).rgb;
-			bumpColor = (sam_x.xyz * triplanar.x + sam_y.xyz * triplanar.y + sam_z.xyz * triplanar.z);
-			bumpColor = bumpColor.rgb * 2 - 1;
-			triplanar_normal += normalize(lerp(surface.N, mul(bumpColor, TBN), g_xMaterial.normalMapStrength)) * blend_weights.x;
-		}
-		else
-		{
-			triplanar_normal += surface.N * blend_weights.x;
+			float2 uv = g_xMaterial.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			sam = texture_surfacemap.Sample(sampler_objectshader, uv);
+			sam.rgb = sam.rgb * 2 - 1;
+			surface.N += lerp(surface.N, mul(sam.rgb, TBN), g_xMaterial.normalMapStrength) * blend_weights.x;
 		}
 
 		[branch]
-		if (g_xMaterial.uvset_emissiveMap >= 0)
+		if (g_xMaterial.uvset_emissiveMap >= 0 && any(g_xMaterial.emissiveColor))
 		{
-			sam_x = texture_emissivemap.Sample(sampler_objectshader, uv_x);
-			sam_y = texture_emissivemap.Sample(sampler_objectshader, uv_y);
-			sam_z = texture_emissivemap.Sample(sampler_objectshader, uv_z);
-			sam_x.rgb = DEGAMMA(sam_x.rgb);
-			sam_y.rgb = DEGAMMA(sam_y.rgb);
-			sam_z.rgb = DEGAMMA(sam_z.rgb);
-			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+			float2 uv = g_xMaterial.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			sam = texture_emissivemap.Sample(sampler_objectshader, uv);
+			sam.rgb = DEGAMMA(sam.rgb);
+			emissiveColor += sam * g_xMaterial.emissiveColor * blend_weights.x;
 		}
-		else
-		{
-			sam = 1;
-		}
-		emissiveColor += sam * g_xMaterial.emissiveColor * blend_weights.x;
 	}
 
 	[branch]
 	if (blend_weights.y > 0)
 	{
-		uv_x = surface.P.yz * g_xMaterial_blend1.texMulAdd.xy + g_xMaterial_blend1.texMulAdd.zw;
-		uv_y = surface.P.xz * g_xMaterial_blend1.texMulAdd.xy + g_xMaterial_blend1.texMulAdd.zw;
-		uv_z = surface.P.xy * g_xMaterial_blend1.texMulAdd.xy + g_xMaterial_blend1.texMulAdd.zw;
-
 		[branch]
 		if (g_xMaterial_blend1.uvset_baseColorMap >= 0)
 		{
-			sam_x = texture_blend1_basecolormap.Sample(sampler_objectshader, uv_x);
-			sam_y = texture_blend1_basecolormap.Sample(sampler_objectshader, uv_y);
-			sam_z = texture_blend1_basecolormap.Sample(sampler_objectshader, uv_z);
-			sam_x.rgb = DEGAMMA(sam_x.rgb);
-			sam_y.rgb = DEGAMMA(sam_y.rgb);
-			sam_z.rgb = DEGAMMA(sam_z.rgb);
-			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+			float2 uv = g_xMaterial_blend1.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			sam = texture_blend1_basecolormap.Sample(sampler_objectshader, uv);
+			sam.rgb = DEGAMMA(sam.rgb);
 		}
 		else
 		{
@@ -933,10 +897,8 @@ GBUFFEROutputType main(PIXELINPUT input)
 		[branch]
 		if (g_xMaterial_blend1.uvset_surfaceMap >= 0)
 		{
-			sam_x = texture_blend1_surfacemap.Sample(sampler_objectshader, uv_x);
-			sam_y = texture_blend1_surfacemap.Sample(sampler_objectshader, uv_y);
-			sam_z = texture_blend1_surfacemap.Sample(sampler_objectshader, uv_z);
-			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+			float2 uv = g_xMaterial_blend1.uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			sam = texture_blend1_surfacemap.Sample(sampler_objectshader, uv);
 		}
 		else
 		{
@@ -947,53 +909,31 @@ GBUFFEROutputType main(PIXELINPUT input)
 		[branch]
 		if (g_xMaterial_blend1.normalMapStrength > 0 && g_xMaterial_blend1.uvset_normalMap >= 0)
 		{
-			sam_x.xyz = texture_blend1_normalmap.Sample(sampler_objectshader, uv_x).rgb;
-			sam_y.xyz = texture_blend1_normalmap.Sample(sampler_objectshader, uv_y).rgb;
-			sam_z.xyz = texture_blend1_normalmap.Sample(sampler_objectshader, uv_z).rgb;
-			bumpColor = (sam_x.xyz * triplanar.x + sam_y.xyz * triplanar.y + sam_z.xyz * triplanar.z);
-			bumpColor = bumpColor.rgb * 2 - 1;
-			triplanar_normal += normalize(lerp(surface.N, mul(bumpColor, TBN), g_xMaterial_blend1.normalMapStrength)) * blend_weights.y;
-		}
-		else
-		{
-			triplanar_normal += surface.N * blend_weights.y;
+			float2 uv = g_xMaterial_blend1.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			sam = texture_blend1_surfacemap.Sample(sampler_objectshader, uv);
+			sam.rgb = sam.rgb * 2 - 1;
+			surface.N += lerp(surface.N, mul(sam.rgb, TBN), g_xMaterial_blend1.normalMapStrength) * blend_weights.y;
 		}
 
 		[branch]
-		if (g_xMaterial_blend1.uvset_emissiveMap >= 0)
+		if (g_xMaterial_blend1.uvset_emissiveMap >= 0 && any(g_xMaterial_blend1.emissiveColor))
 		{
-			sam_x = texture_blend1_emissivemap.Sample(sampler_objectshader, uv_x);
-			sam_y = texture_blend1_emissivemap.Sample(sampler_objectshader, uv_y);
-			sam_z = texture_blend1_emissivemap.Sample(sampler_objectshader, uv_z);
-			sam_x.rgb = DEGAMMA(sam_x.rgb);
-			sam_y.rgb = DEGAMMA(sam_y.rgb);
-			sam_z.rgb = DEGAMMA(sam_z.rgb);
-			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+			float2 uv = g_xMaterial_blend1.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			sam = texture_blend1_emissivemap.Sample(sampler_objectshader, uv);
+			sam.rgb = DEGAMMA(sam.rgb);
+			emissiveColor += sam * g_xMaterial_blend1.emissiveColor * blend_weights.y;
 		}
-		else
-		{
-			sam = 1;
-		}
-		emissiveColor += sam * g_xMaterial_blend1.emissiveColor * blend_weights.y;
 	}
 
 	[branch]
 	if (blend_weights.z > 0)
 	{
-		uv_x = surface.P.yz * g_xMaterial_blend2.texMulAdd.xy + g_xMaterial_blend2.texMulAdd.zw;
-		uv_y = surface.P.xz * g_xMaterial_blend2.texMulAdd.xy + g_xMaterial_blend2.texMulAdd.zw;
-		uv_z = surface.P.xy * g_xMaterial_blend2.texMulAdd.xy + g_xMaterial_blend2.texMulAdd.zw;
-
 		[branch]
 		if (g_xMaterial_blend2.uvset_baseColorMap >= 0)
 		{
-			sam_x = texture_blend2_basecolormap.Sample(sampler_objectshader, uv_x);
-			sam_y = texture_blend2_basecolormap.Sample(sampler_objectshader, uv_y);
-			sam_z = texture_blend2_basecolormap.Sample(sampler_objectshader, uv_z);
-			sam_x.rgb = DEGAMMA(sam_x.rgb);
-			sam_y.rgb = DEGAMMA(sam_y.rgb);
-			sam_z.rgb = DEGAMMA(sam_z.rgb);
-			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+			float2 uv = g_xMaterial_blend2.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			sam = texture_blend2_basecolormap.Sample(sampler_objectshader, uv);
+			sam.rgb = DEGAMMA(sam.rgb);
 		}
 		else
 		{
@@ -1004,10 +944,8 @@ GBUFFEROutputType main(PIXELINPUT input)
 		[branch]
 		if (g_xMaterial_blend2.uvset_surfaceMap >= 0)
 		{
-			sam_x = texture_blend2_surfacemap.Sample(sampler_objectshader, uv_x);
-			sam_y = texture_blend2_surfacemap.Sample(sampler_objectshader, uv_y);
-			sam_z = texture_blend2_surfacemap.Sample(sampler_objectshader, uv_z);
-			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+			float2 uv = g_xMaterial_blend2.uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			sam = texture_blend2_surfacemap.Sample(sampler_objectshader, uv);
 		}
 		else
 		{
@@ -1018,53 +956,31 @@ GBUFFEROutputType main(PIXELINPUT input)
 		[branch]
 		if (g_xMaterial_blend2.normalMapStrength > 0 && g_xMaterial_blend2.uvset_normalMap >= 0)
 		{
-			sam_x.xyz = texture_blend2_normalmap.Sample(sampler_objectshader, uv_x).rgb;
-			sam_y.xyz = texture_blend2_normalmap.Sample(sampler_objectshader, uv_y).rgb;
-			sam_z.xyz = texture_blend2_normalmap.Sample(sampler_objectshader, uv_z).rgb;
-			bumpColor = (sam_x.xyz * triplanar.x + sam_y.xyz * triplanar.y + sam_z.xyz * triplanar.z);
-			bumpColor = bumpColor.rgb * 2 - 1;
-			triplanar_normal += normalize(lerp(surface.N, mul(bumpColor, TBN), g_xMaterial_blend2.normalMapStrength)) * blend_weights.z;
-		}
-		else
-		{
-			triplanar_normal += surface.N * blend_weights.z;
+			float2 uv = g_xMaterial_blend2.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			sam = texture_blend2_surfacemap.Sample(sampler_objectshader, uv);
+			sam.rgb = sam.rgb * 2 - 1;
+			surface.N += lerp(surface.N, mul(sam.rgb, TBN), g_xMaterial_blend2.normalMapStrength) * blend_weights.z;
 		}
 
 		[branch]
-		if (g_xMaterial_blend2.uvset_emissiveMap >= 0)
+		if (g_xMaterial_blend2.uvset_emissiveMap >= 0 && any(g_xMaterial_blend2.emissiveColor))
 		{
-			sam_x = texture_blend2_emissivemap.Sample(sampler_objectshader, uv_x);
-			sam_y = texture_blend2_emissivemap.Sample(sampler_objectshader, uv_y);
-			sam_z = texture_blend2_emissivemap.Sample(sampler_objectshader, uv_z);
-			sam_x.rgb = DEGAMMA(sam_x.rgb);
-			sam_y.rgb = DEGAMMA(sam_y.rgb);
-			sam_z.rgb = DEGAMMA(sam_z.rgb);
-			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+			float2 uv = g_xMaterial_blend2.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			sam = texture_blend2_emissivemap.Sample(sampler_objectshader, uv);
+			sam.rgb = DEGAMMA(sam.rgb);
+			emissiveColor += sam * g_xMaterial_blend2.emissiveColor * blend_weights.z;
 		}
-		else
-		{
-			sam = 1;
-		}
-		emissiveColor += sam * g_xMaterial_blend2.emissiveColor * blend_weights.z;
 	}
 
 	[branch]
 	if (blend_weights.w > 0)
 	{
-		uv_x = surface.P.yz * g_xMaterial_blend3.texMulAdd.xy + g_xMaterial_blend3.texMulAdd.zw;
-		uv_y = surface.P.xz * g_xMaterial_blend3.texMulAdd.xy + g_xMaterial_blend3.texMulAdd.zw;
-		uv_z = surface.P.xy * g_xMaterial_blend3.texMulAdd.xy + g_xMaterial_blend3.texMulAdd.zw;
-
 		[branch]
 		if (g_xMaterial_blend3.uvset_baseColorMap >= 0)
 		{
-			sam_x = texture_blend3_basecolormap.Sample(sampler_objectshader, uv_x);
-			sam_y = texture_blend3_basecolormap.Sample(sampler_objectshader, uv_y);
-			sam_z = texture_blend3_basecolormap.Sample(sampler_objectshader, uv_z);
-			sam_x.rgb = DEGAMMA(sam_x.rgb);
-			sam_y.rgb = DEGAMMA(sam_y.rgb);
-			sam_z.rgb = DEGAMMA(sam_z.rgb);
-			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+			float2 uv = g_xMaterial_blend3.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			sam = texture_blend3_basecolormap.Sample(sampler_objectshader, uv);
+			sam.rgb = DEGAMMA(sam.rgb);
 		}
 		else
 		{
@@ -1075,10 +991,8 @@ GBUFFEROutputType main(PIXELINPUT input)
 		[branch]
 		if (g_xMaterial_blend3.uvset_surfaceMap >= 0)
 		{
-			sam_x = texture_blend3_surfacemap.Sample(sampler_objectshader, uv_x);
-			sam_y = texture_blend3_surfacemap.Sample(sampler_objectshader, uv_y);
-			sam_z = texture_blend3_surfacemap.Sample(sampler_objectshader, uv_z);
-			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+			float2 uv = g_xMaterial_blend3.uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			sam = texture_blend3_surfacemap.Sample(sampler_objectshader, uv);
 		}
 		else
 		{
@@ -1089,38 +1003,24 @@ GBUFFEROutputType main(PIXELINPUT input)
 		[branch]
 		if (g_xMaterial_blend3.normalMapStrength > 0 && g_xMaterial_blend3.uvset_normalMap >= 0)
 		{
-			sam_x.xyz = texture_blend3_normalmap.Sample(sampler_objectshader, uv_x).rgb;
-			sam_y.xyz = texture_blend3_normalmap.Sample(sampler_objectshader, uv_y).rgb;
-			sam_z.xyz = texture_blend3_normalmap.Sample(sampler_objectshader, uv_z).rgb;
-			bumpColor = (sam_x.xyz * triplanar.x + sam_y.xyz * triplanar.y + sam_z.xyz * triplanar.z);
-			bumpColor = bumpColor.rgb * 2 - 1;
-			triplanar_normal += normalize(lerp(surface.N, mul(bumpColor, TBN), g_xMaterial_blend3.normalMapStrength)) * blend_weights.w;
-		}
-		else
-		{
-			triplanar_normal += surface.N * blend_weights.w;
+			float2 uv = g_xMaterial_blend3.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			sam = texture_blend3_surfacemap.Sample(sampler_objectshader, uv);
+			sam.rgb = sam.rgb * 2 - 1;
+			surface.N += lerp(surface.N, mul(sam.rgb, TBN), g_xMaterial_blend3.normalMapStrength) * blend_weights.w;
 		}
 
 		[branch]
-		if (g_xMaterial_blend3.uvset_emissiveMap >= 0)
+		if (g_xMaterial_blend3.uvset_emissiveMap >= 0 && any(g_xMaterial_blend3.emissiveColor))
 		{
-			sam_x = texture_blend3_emissivemap.Sample(sampler_objectshader, uv_x);
-			sam_y = texture_blend3_emissivemap.Sample(sampler_objectshader, uv_y);
-			sam_z = texture_blend3_emissivemap.Sample(sampler_objectshader, uv_z);
-			sam_x.rgb = DEGAMMA(sam_x.rgb);
-			sam_y.rgb = DEGAMMA(sam_y.rgb);
-			sam_z.rgb = DEGAMMA(sam_z.rgb);
-			sam = (sam_x * triplanar.x + sam_y * triplanar.y + sam_z * triplanar.z);
+			float2 uv = g_xMaterial_blend3.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			sam = texture_blend3_emissivemap.Sample(sampler_objectshader, uv);
+			sam.rgb = DEGAMMA(sam.rgb);
+			emissiveColor += sam * g_xMaterial_blend3.emissiveColor * blend_weights.w;
 		}
-		else
-		{
-			sam = 1;
-		}
-		emissiveColor += sam * g_xMaterial_blend3.emissiveColor * blend_weights.w;
 	}
 
 	color.a = 1;
-	surface.N = triplanar_normal;
+	surface.N = normalize(surface.N);
 
 #endif // TERRAIN
 
@@ -1140,11 +1040,6 @@ GBUFFEROutputType main(PIXELINPUT input)
 #endif // ENVMAPRENDERING
 #endif // SIMPLE_INPUT
 
-#ifdef BRDF_ANISOTROPIC
-	float3 anisoT = normalize(mul(float3(1, 0, 0), TBN));
-	float3 anisoB = normalize(cross(surface.N, anisoT));
-#endif // BRDF_ANISOTROPIC
-
 	surface = CreateSurface(
 		surface.P, 
 		surface.N, 
@@ -1158,8 +1053,8 @@ GBUFFEROutputType main(PIXELINPUT input)
 		g_xMaterial.subsurfaceScattering
 #ifdef BRDF_ANISOTROPIC
 		, g_xMaterial.parallaxOcclusionMapping,
-		anisoT,
-		anisoB
+		tangent.xyz,
+		normalize(cross(tangent.xyz, surface.N) * tangent.w) // Compute bitangent again after normal mapping
 #endif // BRDF_ANISOTROPIC
 	);
 
