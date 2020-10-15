@@ -210,8 +210,8 @@ struct RenderBatch
 		hash = 0;
 
 		assert(meshIndex < 0x00FFFFFF);
-		hash |= (uint32_t)(meshIndex & 0x00FFFFFF) << 8;
-		hash |= ((uint32_t)(_distance)) & 0xFF;
+		hash |= (uint32_t)(meshIndex & 0x00FFFFFF);
+		hash |= ((uint32_t)_distance & 0xFF) << 24;
 
 		instance = (uint32_t)instanceIndex;
 		distance = _distance;
@@ -219,7 +219,7 @@ struct RenderBatch
 
 	inline uint32_t GetMeshIndex() const
 	{
-		return (hash >> 8) & 0x00FFFFFF;
+		return hash & 0x00FFFFFF;
 	}
 	inline uint32_t GetInstanceIndex() const
 	{
