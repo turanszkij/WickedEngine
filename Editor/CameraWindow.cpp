@@ -102,7 +102,9 @@ void CameraWindow::Create(EditorComponent* editor)
 
 		Scene& scene = wiScene::GetScene();
 
-		Entity entity = scene.Entity_CreateCamera("cam", camera.width, camera.height, camera.zNearP, camera.zFarP, camera.fov);
+		static int camcounter = 0;
+		Entity entity = scene.Entity_CreateCamera("cam" + std::to_string(camcounter), camera.width, camera.height, camera.zNearP, camera.zFarP, camera.fov);
+		camcounter++;
 
 		TransformComponent& transform = *scene.transforms.GetComponent(entity);
 		transform.MatrixTransform(camera.InvView);
