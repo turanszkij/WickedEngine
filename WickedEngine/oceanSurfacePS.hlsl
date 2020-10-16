@@ -6,12 +6,16 @@
 #include "oceanSurfaceHF.hlsli"
 #include "objectHF.hlsli"
 
-#define xGradientMap		texture_0
+TEXTURE2D(texture_gradientmap, float4, TEXSLOT_ONDEMAND1);
 
 [earlydepthstencil]
 float4 main(PSIn input) : SV_TARGET
 {
-	float2 gradient = xGradientMap.Sample(sampler_aniso_wrap, input.uv).xy;
+#ifdef SPIRV
+	input.pos.w = rcp(input.pos.w);
+#endif // SPIRV
+
+	float2 gradient = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv).xy;
 
 	float4 color = float4(xOceanWaterColor, 1);
 	float opacity = 1; // keep edge diffuse shading
@@ -38,7 +42,7 @@ float4 main(PSIn input) : SV_TARGET
 	TiledLighting(surface, lighting);
 
 	// WATER REFRACTION 
-	const float lineardepth = input.pos.w;
+	float lineardepth = input.pos.w;
 	float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + surface.N.xz * 0.04f, 0) * g_xCamera_ZFarP;
 	float depth_difference = sampled_lineardepth - lineardepth;
 	surface.refraction.rgb = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + surface.N.xz * 0.04f * saturate(0.5 * depth_difference), 0).rgb;

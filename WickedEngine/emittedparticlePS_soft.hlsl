@@ -5,6 +5,10 @@
 
 float4 main(VertextoPixel input) : SV_TARGET
 {
+#ifdef SPIRV
+	input.pos.w = rcp(input.pos.w);
+#endif // SPIRV
+
 	float4 color = texture_0.Sample(sampler_linear_clamp, input.tex.xy);
 
 	[branch]

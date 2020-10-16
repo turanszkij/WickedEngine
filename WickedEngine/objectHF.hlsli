@@ -718,6 +718,10 @@ GBUFFEROutputType main(PIXELINPUT input)
 
 // shader base:
 {
+#ifdef SPIRV
+	input.pos.w = rcp(input.pos.w);
+#endif // SPIRV
+
 	float2 pixel = input.pos.xy;
 	float2 ScreenCoord = pixel * g_xFrame_InternalResolution_rcp;
 
@@ -1124,7 +1128,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 
 #ifdef WATER
 	// WATER REFRACTION
-	const float lineardepth = input.pos.w;
+	float lineardepth = input.pos.w;
 	float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + bumpColor.rg, 0) * g_xCamera_ZFarP;
 	float depth_difference = sampled_lineardepth - lineardepth;
 	surface.refraction.rgb = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + bumpColor.rg * saturate(0.5 * depth_difference), 0).rgb;
