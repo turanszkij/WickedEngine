@@ -17,12 +17,16 @@ GBUFFEROutputType main(VertexToPixel input)
 	float emissive = 0;
 	Surface surface = CreateSurface(input.pos3D, input.nor, V, color, 1, 1, 0, 0);
 	Lighting lighting = CreateLighting(0, 0, GetAmbient(surface.N), 0);
-	float2 pixel = input.pos.xy;
+	surface.pixel = input.pos.xy;
 	float depth = input.pos.z;
 	float3 reflection = 0;
-	float2 velocity = ((input.pos2DPrev.xy / input.pos2DPrev.w - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy / input.pos2D.w - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
 
-	TiledLighting(pixel, surface, lighting);
+	float2 ScreenCoord = surface.pixel * g_xFrame_InternalResolution_rcp;
+	float2 pos2D = ScreenCoord * 2 - 1;
+	pos2D.y *= -1;
+	float2 velocity = ((input.pos2DPrev.xy / input.pos2DPrev.w - g_xFrame_TemporalAAJitterPrev) - (pos2D.xy - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
+
+	TiledLighting(surface, lighting);
 
 	return CreateGbuffer(surface, velocity, lighting);
 }

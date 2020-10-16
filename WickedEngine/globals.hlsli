@@ -443,6 +443,19 @@ inline float4 unpack_rgba(in uint value)
 	return retVal;
 }
 
+inline uint2 pack_half2(in float2 value)
+{
+	uint retVal = 0;
+	retVal = f32tof16(value.x) | (f32tof16(value.y) << 16);
+	return retVal;
+}
+inline float2 unpack_half2(in uint value)
+{
+	float2 retVal;
+	retVal.x = f16tof32(value.x);
+	retVal.y = f16tof32(value.x >> 16);
+	return retVal;
+}
 inline uint2 pack_half3(in float3 value)
 {
 	uint2 retVal = 0;

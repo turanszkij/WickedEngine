@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "emittedparticleHF.hlsli"
 #include "ShaderInterop_EmittedParticle.h"
-#include "lightingHF.hlsli"
+#include "objectHF.hlsli"
 
 float4 main(VertextoPixel input) : SV_TARGET
 {
@@ -16,9 +16,10 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 	clip(color.a - 1.0f / 255.0f);
 
-	float2 pTex = input.pos2D.xy / input.pos2D.w * float2(0.5f, -0.5f) + 0.5f;
-	float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, pTex) * g_xCamera_ZFarP;
-	float depthFragment = input.pos2D.w;
+	float2 pixel = input.pos.xy;
+	float2 ScreenCoord = pixel * g_xFrame_InternalResolution_rcp;
+	float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, ScreenCoord) * g_xCamera_ZFarP;
+	float depthFragment = input.pos.w;
 	float fade = saturate(1.0 / input.size*(max(max(depthScene.x, depthScene.y), max(depthScene.z, depthScene.w)) - depthFragment));
 
 	float4 inputColor;
@@ -48,56 +49,9 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 	Lighting lighting = CreateLighting(0, 0, GetAmbient(N), 0);
 	Surface surface = CreateSurface(input.P, N, 0, color, 1, 1, 0, 0);
+	surface.pixel = pixel;
 
-	[loop]
-	for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
-	{
-		ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + iterator];
-
-		if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
-		{
-			continue; // static lights will be skipped (they are used in lightmap baking)
-		}
-
-		switch (light.GetType())
-		{
-		case ENTITY_TYPE_DIRECTIONALLIGHT:
-		{
-			DirectionalLight(light, surface, lighting);
-		}
-		break;
-		case ENTITY_TYPE_POINTLIGHT:
-		{
-			PointLight(light, surface, lighting);
-		}
-		break;
-		case ENTITY_TYPE_SPOTLIGHT:
-		{
-			SpotLight(light, surface, lighting);
-		}
-		break;
-		case ENTITY_TYPE_SPHERELIGHT:
-		{
-			SphereLight(light, surface, lighting);
-		}
-		break;
-		case ENTITY_TYPE_DISCLIGHT:
-		{
-			DiscLight(light, surface, lighting);
-		}
-		break;
-		case ENTITY_TYPE_RECTANGLELIGHT:
-		{
-			RectangleLight(light, surface, lighting);
-		}
-		break;
-		case ENTITY_TYPE_TUBELIGHT:
-		{
-			TubeLight(light, surface, lighting);
-		}
-		break;
-		}
-	}
+	TiledLighting(surface, lighting);
 
 	color.rgb *= lighting.direct.diffuse + lighting.indirect.diffuse;
 

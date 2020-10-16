@@ -1248,6 +1248,11 @@ using namespace DX12_Internal;
 		buffer.desc.Usage = USAGE_DYNAMIC;
 		buffer.desc.BindFlags = BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
 		buffer.desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		internal_state->srv.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+		internal_state->srv.Format = DXGI_FORMAT_R32_TYPELESS;
+		internal_state->srv.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+		internal_state->srv.Buffer.NumElements = buffer.desc.ByteWidth / sizeof(uint32_t);
+		internal_state->srv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	}
 	uint8_t* GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::allocate(size_t dataSize, size_t alignment)
 	{

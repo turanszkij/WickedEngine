@@ -409,9 +409,9 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 
 }
 
-inline void TiledLighting(in float2 pixel, inout Surface surface, inout Lighting lighting)
+inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 {
-	const uint2 tileIndex = uint2(floor(pixel / TILED_CULLING_BLOCKSIZE));
+	const uint2 tileIndex = uint2(floor(surface.pixel / TILED_CULLING_BLOCKSIZE));
 	const uint flatTileIndex = flatten2D(tileIndex, g_xFrame_EntityCullingTileCount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 
 
@@ -1107,7 +1107,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 #endif // FORWARD
 
 #ifdef TILEDFORWARD
-	TiledLighting(pixel, surface, lighting);
+	TiledLighting(surface, lighting);
 #endif // TILEDFORWARD
 
 

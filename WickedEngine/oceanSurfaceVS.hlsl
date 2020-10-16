@@ -57,7 +57,6 @@ PSIn main(uint fakeIndex : SV_VERTEXID)
 
 	// Reproject displaced surface and output:
 	Out.pos = mul(g_xCamera_VP, float4(worldPos, 1));
-	Out.pos2D = Out.pos;
 	Out.pos3D = worldPos;
 	Out.uv = uv;
 	Out.ReflectionMapSamplingPos = mul(g_xFrame_MainCamera_ReflVP, float4(worldPos, 1));

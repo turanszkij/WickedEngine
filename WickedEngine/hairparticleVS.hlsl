@@ -105,7 +105,6 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 		Out.nor = normalize(normal + wind);
 		Out.tex = uv;
 
-		Out.pos2D = Out.pos;
 		Out.pos2DPrev = mul(g_xFrame_MainCamera_PrevVP, float4(savedPos + windPrev, 1));
 
 		Out.color = xColor.rgb;
