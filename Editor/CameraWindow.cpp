@@ -96,7 +96,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	proxyButton.SetTooltip("Copy the current camera and place a proxy of it in the world.");
 	proxyButton.SetSize(XMFLOAT2(140, hei));
 	proxyButton.SetPos(XMFLOAT2(x, y += step * 2));
-	proxyButton.OnClick([&](wiEventArgs args) {
+	proxyButton.OnClick([=](wiEventArgs args) {
 
 		const CameraComponent& camera = wiRenderer::GetCamera();
 
@@ -107,7 +107,10 @@ void CameraWindow::Create(EditorComponent* editor)
 		TransformComponent& transform = *scene.transforms.GetComponent(entity);
 		transform.MatrixTransform(camera.InvView);
 
+		editor->ClearSelected();
+		editor->AddSelected(entity);
 		editor->RefreshSceneGraphView();
+		SetEntity(entity);
 	});
 	AddWidget(&proxyButton);
 
