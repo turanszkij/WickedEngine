@@ -276,6 +276,8 @@ CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 	float		g_xCamera_ZFarP_rcp;
 	float		g_xCamera_ZRange;
 	float		g_xCamera_ZRange_rcp;
+
+	float4		g_xCamera_FrustumPlanes[6];
 };
 
 CBUFFER(APICB, CBSLOT_API)

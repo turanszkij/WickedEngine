@@ -88,7 +88,6 @@ uint32_t SHADOWCOUNT_2D = 5 + 3 + 3;
 uint32_t SHADOWCOUNT_CUBE = 5;
 uint32_t SOFTSHADOWQUALITY_2D = 2;
 bool TRANSPARENTSHADOWSENABLED = false;
-bool ALPHACOMPOSITIONENABLED = false;
 bool wireRender = false;
 bool debugBoneLines = false;
 bool debugPartitionTree = false;
@@ -5385,15 +5384,7 @@ void DrawScene(
 
 	if (hairparticle)
 	{
-		const bool alphacomposition = GetAlphaCompositionEnabled();
-
-		if (!transparent && alphacomposition)
-		{
-			// cut off most transparent areas in opaque pass (if alpha composition enabled)
-			SetAlphaRef(0.25f, cmd);
-		}
-
-		if (!transparent || alphacomposition)
+		if (!transparent)
 		{
 			// transparent pass only renders hair when alpha composition enabled
 			for (uint32_t hairIndex : culling.culledHairs)
@@ -5402,7 +5393,7 @@ void DrawScene(
 				Entity entity = scene.hairs.GetEntity(hairIndex);
 				const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
-				hair.Draw(camera, material, renderPass, transparent, cmd);
+				hair.Draw(camera, material, renderPass, cmd);
 			}
 		}
 	}
@@ -8756,6 +8747,12 @@ void UpdateCameraCB(const CameraComponent& camera, CommandList cmd)
 	cb.g_xCamera_ZFarP_rcp = 1.0f / std::max(0.0001f, cb.g_xCamera_ZFarP);
 	cb.g_xCamera_ZRange = abs(cb.g_xCamera_ZFarP - cb.g_xCamera_ZNearP);
 	cb.g_xCamera_ZRange_rcp = 1.0f / std::max(0.0001f, cb.g_xCamera_ZRange);
+
+	static_assert(arraysize(camera.frustum.planes) == arraysize(cb.g_xCamera_FrustumPlanes), "Mismatch!");
+	for (int i = 0; i < arraysize(camera.frustum.planes); ++i)
+	{
+		cb.g_xCamera_FrustumPlanes[i] = camera.frustum.planes[i];
+	}
 
 	GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
 }
@@ -12515,8 +12512,6 @@ void SetVariableRateShadingClassification(bool enabled) { variableRateShadingCla
 bool GetVariableRateShadingClassification() { return variableRateShadingClassification; }
 void SetVariableRateShadingClassificationDebug(bool enabled) { variableRateShadingClassificationDebug = enabled; }
 bool GetVariableRateShadingClassificationDebug() { return variableRateShadingClassificationDebug; }
-void SetAlphaCompositionEnabled(bool enabled) { ALPHACOMPOSITIONENABLED = enabled; }
-bool GetAlphaCompositionEnabled() { return ALPHACOMPOSITIONENABLED; }
 void SetOcclusionCullingEnabled(bool value)
 {
 	static bool initialized = false;

@@ -881,9 +881,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)hairparticlePS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)hairparticlePS_transparent.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)volumetriclight_directionalVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
@@ -916,6 +913,9 @@
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)sssPS_snow.hlsl">
       <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)hairparticle_finishUpdateCS.hlsl">
+      <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

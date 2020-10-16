@@ -4,18 +4,12 @@
 #include "objectHF.hlsli"
 #include "hairparticleHF.hlsli"
 
-#ifndef TRANSPARENT
 [earlydepthstencil]
-#endif // TRANSPARENT
 GBUFFEROutputType main(VertexToPixel input)
 {
 	float4 color = texture_0.Sample(sampler_linear_wrap, input.tex);
 	color.rgb = DEGAMMA(color.rgb);
 	color.rgb *= input.color;
-#ifdef TRANSPARENT
-	color.a *= 1.0 - input.fade;
-	clip(color.a - 1.0f / 255.0f); // cancel heaviest overdraw for the alpha composition effect
-#endif // TRANSPARENT
 	float opacity = 1;
 	float3 V = g_xCamera_CamPos - input.pos3D;
 	float dist = length(V);

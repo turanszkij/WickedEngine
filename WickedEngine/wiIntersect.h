@@ -106,11 +106,10 @@ struct RAY
 	bool intersects(const SPHERE& b) const;
 };
 
-class Frustum
+struct Frustum
 {
-private:
 	XMFLOAT4 planes[6];
-public:
+
 	void Create(const XMMATRIX& viewProjection);
 
 	bool CheckPoint(const XMFLOAT3&) const;

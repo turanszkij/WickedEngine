@@ -4,6 +4,7 @@ set(OUTPUT_DIR spirv)
 
 set(SHADERS_CS
         "hairparticle_simulateCS.hlsl"
+        "hairparticle_finishUpdateCS.hlsl"
         "emittedparticle_simulateCS.hlsl"
         "generateMIPChainCubeCS_float4.hlsl"
         "generateMIPChainCubeCS_unorm4.hlsl"
@@ -207,7 +208,6 @@ set(SHADERS_PS
         "impostorPS_wire.hlsl"
         "impostorPS_simple.hlsl"
         "impostorPS_alphatestonly.hlsl"
-        "hairparticlePS_transparent.hlsl"
         "hairparticlePS_simplest.hlsl"
         "hairparticlePS_alphatestonly.hlsl"
         "forceFieldVisualizerPS.hlsl"

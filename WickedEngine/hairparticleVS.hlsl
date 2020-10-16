@@ -20,6 +20,7 @@ static const float3 HAIRPATCH[] = {
 };
 
 STRUCTUREDBUFFER(particleBuffer, Patch, 0);
+STRUCTUREDBUFFER(culledIndexBuffer, uint, 1);
 
 VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 {
@@ -27,8 +28,8 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 
 	// bypass the geometry shader and expand the particle here:
 	const uint vertexID = fakeIndex % 12;
-	const uint segmentID = (fakeIndex / 12) % xHairSegmentCount;
-	const uint particleID = fakeIndex / 12;
+	const uint particleID = culledIndexBuffer[fakeIndex / 12];
+	const uint segmentID = particleID % xHairSegmentCount;
 
 	float3 rootposition = particleBuffer[particleID - segmentID].position;
 	Out.fade = saturate(distance(rootposition.xyz, g_xCamera_CamPos.xyz) / xHairViewDistance);

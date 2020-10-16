@@ -46,7 +46,6 @@ public:
 	wiCheckBox advancedLightCullingCheckBox;
 	wiCheckBox debugLightCullingCheckBox;
 	wiCheckBox tessellationCheckBox;
-	wiCheckBox alphaCompositionCheckBox;
 	wiCheckBox envProbesCheckBox;
 	wiCheckBox gridHelperCheckBox;
 	wiCheckBox cameraVisCheckBox;

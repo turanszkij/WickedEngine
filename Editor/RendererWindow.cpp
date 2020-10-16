@@ -12,7 +12,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	wiRenderer::SetToDrawGridHelper(true);
 	wiRenderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 540));
+	SetSize(XMFLOAT2(580, 520));
 
 	float x = 220, y = 5, step = 20, itemheight = 18;
 
@@ -200,16 +200,6 @@ void RendererWindow::Create(EditorComponent* editor)
 	tessellationCheckBox.SetCheck(wiRenderer::GetTessellationEnabled());
 	AddWidget(&tessellationCheckBox);
 	tessellationCheckBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GRAPHICSDEVICE_CAPABILITY_TESSELLATION));
-
-	alphaCompositionCheckBox.Create("Alpha Composition: ");
-	alphaCompositionCheckBox.SetTooltip("Enable Alpha Composition. Enables softer alpha blending on partly solid geometry (eg. vegetation) but rendering performance will be slower.");
-	alphaCompositionCheckBox.SetPos(XMFLOAT2(x, y += step));
-	alphaCompositionCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	alphaCompositionCheckBox.OnClick([=](wiEventArgs args) {
-		wiRenderer::SetAlphaCompositionEnabled(args.bValue);
-	});
-	alphaCompositionCheckBox.SetCheck(wiRenderer::GetAlphaCompositionEnabled());
-	AddWidget(&alphaCompositionCheckBox);
 
 	speedMultiplierSlider.Create(0, 4, 1, 100000, "Speed: ");
 	speedMultiplierSlider.SetTooltip("Adjust the global speed (time multiplier)");

@@ -478,8 +478,6 @@ namespace wiRenderer
 	bool GetVariableRateShadingClassification();
 	void SetVariableRateShadingClassificationDebug(bool enabled);
 	bool GetVariableRateShadingClassificationDebug();
-	void SetAlphaCompositionEnabled(bool enabled);
-	bool GetAlphaCompositionEnabled();
 	void SetOcclusionCullingEnabled(bool enabled);
 	bool GetOcclusionCullingEnabled();
 	void SetLDSSkinningEnabled(bool enabled);
