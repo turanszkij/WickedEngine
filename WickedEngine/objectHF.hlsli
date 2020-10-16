@@ -865,7 +865,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 		if (g_xMaterial.normalMapStrength > 0 && g_xMaterial.uvset_normalMap >= 0)
 		{
 			float2 uv = g_xMaterial.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			sam = texture_surfacemap.Sample(sampler_objectshader, uv);
+			sam.rgb = texture_normalmap.Sample(sampler_objectshader, uv);
 			sam.rgb = sam.rgb * 2 - 1;
 			surface.N += lerp(surface.N, mul(sam.rgb, TBN), g_xMaterial.normalMapStrength) * blend_weights.x;
 		}
@@ -912,7 +912,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 		if (g_xMaterial_blend1.normalMapStrength > 0 && g_xMaterial_blend1.uvset_normalMap >= 0)
 		{
 			float2 uv = g_xMaterial_blend1.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			sam = texture_blend1_surfacemap.Sample(sampler_objectshader, uv);
+			sam.rgb = texture_blend1_normalmap.Sample(sampler_objectshader, uv);
 			sam.rgb = sam.rgb * 2 - 1;
 			surface.N += lerp(surface.N, mul(sam.rgb, TBN), g_xMaterial_blend1.normalMapStrength) * blend_weights.y;
 		}
@@ -959,7 +959,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 		if (g_xMaterial_blend2.normalMapStrength > 0 && g_xMaterial_blend2.uvset_normalMap >= 0)
 		{
 			float2 uv = g_xMaterial_blend2.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			sam = texture_blend2_surfacemap.Sample(sampler_objectshader, uv);
+			sam.rgb = texture_blend2_normalmap.Sample(sampler_objectshader, uv);
 			sam.rgb = sam.rgb * 2 - 1;
 			surface.N += lerp(surface.N, mul(sam.rgb, TBN), g_xMaterial_blend2.normalMapStrength) * blend_weights.z;
 		}
@@ -1006,7 +1006,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 		if (g_xMaterial_blend3.normalMapStrength > 0 && g_xMaterial_blend3.uvset_normalMap >= 0)
 		{
 			float2 uv = g_xMaterial_blend3.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			sam = texture_blend3_surfacemap.Sample(sampler_objectshader, uv);
+			sam.rgb = texture_blend3_normalmap.Sample(sampler_objectshader, uv);
 			sam.rgb = sam.rgb * 2 - 1;
 			surface.N += lerp(surface.N, mul(sam.rgb, TBN), g_xMaterial_blend3.normalMapStrength) * blend_weights.w;
 		}
