@@ -370,6 +370,7 @@ namespace wiHairParticle_Internal
 				desc.bs = &bs;
 				desc.rs = &ncrs;
 				desc.dss = &dss_default;
+				desc.pt = TRIANGLESTRIP;
 
 				switch (i)
 				{

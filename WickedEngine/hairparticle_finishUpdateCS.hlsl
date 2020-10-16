@@ -14,5 +14,5 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	counterBuffer.Store(0, 0);
 
 	// Create draw argument buffer (VertexCountPerInstance, InstanceCount, StartVertexLocation, StartInstanceLocation):
-	counterBuffer.Store4(4, uint4(particleCount * 12, 1, 0, 0));
+	counterBuffer.Store4(4, uint4(4, particleCount, 0, 0));
 }
