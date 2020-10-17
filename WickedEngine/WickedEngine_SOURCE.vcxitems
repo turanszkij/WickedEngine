@@ -230,10 +230,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)CommonInclude.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ConstantBufferMapping.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_Deferred.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_Deferred_BindLua.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_Forward.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_Forward_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_BVH.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Font.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_HairParticle.h" />
@@ -250,10 +246,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Ocean.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Skinning.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Utility.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledDeferred.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledDeferred_BindLua.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\D3D12MemAlloc.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\d3dx12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXCollision.h" />
@@ -535,15 +527,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btQuickprof.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btSerializer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_Deferred.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_Deferred_BindLua.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_Forward.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_Forward_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_PathTracing.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledDeferred.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledDeferred_BindLua.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\D3D12MemAlloc.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_cfg.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_cpp.cpp" />

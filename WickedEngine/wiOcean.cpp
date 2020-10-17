@@ -386,7 +386,7 @@ void wiOcean::Render(const CameraComponent& camera, const WeatherComponent& weat
 	device->BindConstantBuffer(PS, &shadingCB, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
 
 	device->BindResource(VS, &displacementMap, TEXSLOT_ONDEMAND0, cmd);
-	device->BindResource(PS, &gradientMap, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(PS, &gradientMap, TEXSLOT_ONDEMAND1, cmd);
 
 	device->Draw(dim.x*dim.y*6, 0, cmd);
 

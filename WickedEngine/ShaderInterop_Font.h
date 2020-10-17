@@ -7,6 +7,8 @@ CBUFFER(FontCB, CBSLOT_FONT)
 {
 	float4x4	g_xFont_Transform;
 	float4		g_xFont_Color;
+	uint		g_xFont_BufferOffset;
+	float3		g_xFont_padding;
 };
 
 

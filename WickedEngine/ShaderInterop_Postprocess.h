@@ -38,6 +38,8 @@ static const uint POSTPROCESS_HBAO_THREADCOUNT = 320;
 #define hbao_uv_to_view_A xPPParams1.xy
 #define hbao_uv_to_view_B xPPParams1.zw
 
+#define sss_step xPPParams0
+
 static const uint POSTPROCESS_MSAO_BLOCKSIZE = 16;
 CBUFFER(MSAOCB, CBSLOT_RENDERER_POSTPROCESS)
 {

@@ -95,15 +95,6 @@ namespace wiRenderer_BindLua
 		return 0;
 	}
 
-	int SetAlphaCompositionEnabled(lua_State* L)
-	{
-		int argc = wiLua::SGetArgCount(L);
-		if (argc > 0)
-		{
-			wiRenderer::SetAlphaCompositionEnabled(wiLua::SGetBool(L, 1));
-		}
-		return 0;
-	}
 	int SetShadowProps2D(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
@@ -422,7 +413,6 @@ namespace wiRenderer_BindLua
 			wiLua::RegisterFunc("GetCamera", GetCamera);
 			wiLua::RegisterFunc("AttachCamera", AttachCamera);
 
-			wiLua::RegisterFunc("SetAlphaCompositionEnabled", SetAlphaCompositionEnabled);
 			wiLua::RegisterFunc("SetShadowProps2D", SetShadowProps2D);
 			wiLua::RegisterFunc("SetShadowPropsCube", SetShadowPropsCube);
 			wiLua::RegisterFunc("SetDebugBoxesEnabled", SetDebugBoxesEnabled);

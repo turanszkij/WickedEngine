@@ -1,31 +1,19 @@
 #pragma once
-
-class wiGUI;
-class wiWindow;
-class wiLabel;
-class wiCheckBox;
-class wiSlider;
-class wiComboBox;
-class wiColorPicker;
+#include "WickedEngine.h"
 
 class EditorComponent;
 
-class ForceFieldWindow
+class ForceFieldWindow : public wiWindow
 {
 public:
-	ForceFieldWindow(EditorComponent* editor);
-	~ForceFieldWindow();
+	void Create(EditorComponent* editor);
 
 	wiECS::Entity entity;
 	void SetEntity(wiECS::Entity entity);
 
-	wiGUI* GUI;
-
-	wiWindow*	forceFieldWindow;
-
-	wiComboBox* typeComboBox;
-	wiSlider* gravitySlider;
-	wiSlider* rangeSlider;
-	wiButton* addButton;
+	wiComboBox typeComboBox;
+	wiSlider gravitySlider;
+	wiSlider rangeSlider;
+	wiButton addButton;
 };
 

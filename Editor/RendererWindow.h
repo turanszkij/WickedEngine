@@ -1,11 +1,5 @@
 #pragma once
-
-class wiGUI;
-class wiWindow;
-class wiLabel;
-class wiCheckBox;
-class wiSlider;
-class wiComboBox;
+#include "WickedEngine.h"
 
 class EditorComponent;
 
@@ -24,66 +18,61 @@ enum PICKTYPE
 	PICK_SOUND				= 2048,
 };
 
-class RendererWindow
+class RendererWindow : public wiWindow
 {
 public:
-	RendererWindow(EditorComponent* editorcomponent);
-	~RendererWindow();
+	void Create(EditorComponent* editorcomponent);
 
-	wiGUI* GUI;
+	wiCheckBox vsyncCheckBox;
+	wiCheckBox occlusionCullingCheckBox;
+	wiSlider resolutionScaleSlider;
+	wiSlider gammaSlider;
+	wiCheckBox voxelRadianceCheckBox;
+	wiCheckBox voxelRadianceDebugCheckBox;
+	wiCheckBox voxelRadianceSecondaryBounceCheckBox;
+	wiCheckBox voxelRadianceReflectionsCheckBox;
+	wiSlider voxelRadianceVoxelSizeSlider;
+	wiSlider voxelRadianceConeTracingSlider;
+	wiSlider voxelRadianceRayStepSizeSlider;
+	wiSlider voxelRadianceMaxDistanceSlider;
+	wiCheckBox partitionBoxesCheckBox;
+	wiCheckBox boneLinesCheckBox;
+	wiCheckBox debugEmittersCheckBox;
+	wiCheckBox debugForceFieldsCheckBox;
+	wiCheckBox debugRaytraceBVHCheckBox;
+	wiCheckBox wireFrameCheckBox;
+	wiCheckBox variableRateShadingClassificationCheckBox;
+	wiCheckBox variableRateShadingClassificationDebugCheckBox;
+	wiCheckBox advancedLightCullingCheckBox;
+	wiCheckBox debugLightCullingCheckBox;
+	wiCheckBox tessellationCheckBox;
+	wiCheckBox envProbesCheckBox;
+	wiCheckBox gridHelperCheckBox;
+	wiCheckBox cameraVisCheckBox;
+	wiCheckBox pickTypeObjectCheckBox;
+	wiCheckBox pickTypeEnvProbeCheckBox;
+	wiCheckBox pickTypeLightCheckBox;
+	wiCheckBox pickTypeDecalCheckBox;
+	wiCheckBox pickTypeForceFieldCheckBox;
+	wiCheckBox pickTypeEmitterCheckBox;
+	wiCheckBox pickTypeHairCheckBox;
+	wiCheckBox pickTypeCameraCheckBox;
+	wiCheckBox pickTypeArmatureCheckBox;
+	wiCheckBox pickTypeSoundCheckBox;
+	wiSlider speedMultiplierSlider;
+	wiCheckBox transparentShadowsCheckBox;
+	wiComboBox shadowTypeComboBox;
+	wiComboBox shadowProps2DComboBox;
+	wiComboBox shadowPropsCubeComboBox;
+	wiComboBox MSAAComboBox;
+	wiCheckBox temporalAACheckBox;
+	wiCheckBox temporalAADebugCheckBox;
+	wiComboBox textureQualityComboBox;
+	wiSlider mipLodBiasSlider;
+	wiSlider raytraceBounceCountSlider;
 
-	wiWindow*	rendererWindow;
-	wiCheckBox* vsyncCheckBox;
-	wiCheckBox* occlusionCullingCheckBox;
-	wiSlider*	resolutionScaleSlider;
-	wiSlider*	gammaSlider;
-	wiCheckBox* voxelRadianceCheckBox;
-	wiCheckBox* voxelRadianceDebugCheckBox;
-	wiCheckBox* voxelRadianceSecondaryBounceCheckBox;
-	wiCheckBox* voxelRadianceReflectionsCheckBox;
-	wiSlider*	voxelRadianceVoxelSizeSlider;
-	wiSlider*	voxelRadianceConeTracingSlider;
-	wiSlider*	voxelRadianceRayStepSizeSlider;
-	wiSlider*	voxelRadianceMaxDistanceSlider;
-	wiCheckBox* partitionBoxesCheckBox;
-	wiCheckBox* boneLinesCheckBox;
-	wiCheckBox* debugEmittersCheckBox;
-	wiCheckBox* debugForceFieldsCheckBox;
-	wiCheckBox* debugRaytraceBVHCheckBox;
-	wiCheckBox* wireFrameCheckBox;
-	wiCheckBox* variableRateShadingClassificationCheckBox;
-	wiCheckBox* variableRateShadingClassificationDebugCheckBox;
-	wiCheckBox* advancedLightCullingCheckBox;
-	wiCheckBox* debugLightCullingCheckBox;
-	wiCheckBox* tessellationCheckBox;
-	wiCheckBox* alphaCompositionCheckBox;
-	wiCheckBox* envProbesCheckBox;
-	wiCheckBox* gridHelperCheckBox;
-	wiCheckBox* cameraVisCheckBox;
-	wiCheckBox* pickTypeObjectCheckBox;
-	wiCheckBox* pickTypeEnvProbeCheckBox;
-	wiCheckBox* pickTypeLightCheckBox;
-	wiCheckBox* pickTypeDecalCheckBox;
-	wiCheckBox* pickTypeForceFieldCheckBox;
-	wiCheckBox* pickTypeEmitterCheckBox;
-	wiCheckBox* pickTypeHairCheckBox;
-	wiCheckBox* pickTypeCameraCheckBox;
-	wiCheckBox* pickTypeArmatureCheckBox;
-	wiCheckBox* pickTypeSoundCheckBox;
-	wiSlider*	speedMultiplierSlider;
-	wiCheckBox* transparentShadowsCheckBox;
-	wiComboBox* shadowTypeComboBox;
-	wiComboBox* shadowProps2DComboBox;
-	wiComboBox* shadowPropsCubeComboBox;
-	wiComboBox* MSAAComboBox;
-	wiCheckBox* temporalAACheckBox;
-	wiCheckBox* temporalAADebugCheckBox;
-	wiComboBox* textureQualityComboBox;
-	wiSlider*	mipLodBiasSlider;
-	wiSlider*	raytraceBounceCountSlider;
+	wiCheckBox freezeCullingCameraCheckBox;
 
-	wiCheckBox* freezeCullingCameraCheckBox;
-
-    uint32_t GetPickType();
+    uint32_t GetPickType() const;
 };
 

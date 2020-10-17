@@ -6,13 +6,10 @@ using namespace wiECS;
 using namespace wiScene;
 
 
-LayerWindow::LayerWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
+void LayerWindow::Create(EditorComponent* editor)
 {
-	assert(GUI && "Invalid GUI!");
-
-	window = new wiWindow(GUI, "Layer Window");
-	window->SetSize(XMFLOAT2(410, 160));
-	GUI->AddWidget(window);
+	wiWindow::Create("Layer Window");
+	SetSize(XMFLOAT2(410, 160));
 
 	float x = 30;
 	float y = 0;
@@ -21,10 +18,10 @@ LayerWindow::LayerWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 
 	for (uint32_t i = 0; i < arraysize(layers); ++i)
 	{
-		layers[i] = new wiCheckBox("");
-		layers[i]->SetText(std::to_string(i) + ": ");
-		layers[i]->SetPos(XMFLOAT2(x + (i % 8) * 50, y + (i / 8 + 1) * step));
-		layers[i]->OnClick([=](wiEventArgs args) {
+		layers[i].Create("");
+		layers[i].SetText(std::to_string(i) + ": ");
+		layers[i].SetPos(XMFLOAT2(x + (i % 8) * 50, y + (i / 8 + 1) * step));
+		layers[i].OnClick([=](wiEventArgs args) {
 
 			LayerComponent* layer = wiScene::GetScene().layers.GetComponent(entity);
 			if (layer == nullptr)
@@ -42,42 +39,35 @@ LayerWindow::LayerWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
 			}
 
 			});
-		window->AddWidget(layers[i]);
+		AddWidget(&layers[i]);
 	}
 
 	y += step * 5;
 
-	enableAllButton = new wiButton("Enable ALL");
-	enableAllButton->SetPos(XMFLOAT2(x, y));
-	enableAllButton->OnClick([this](wiEventArgs args) {
+	enableAllButton.Create("Enable ALL");
+	enableAllButton.SetPos(XMFLOAT2(x, y));
+	enableAllButton.OnClick([this](wiEventArgs args) {
 		LayerComponent* layer = wiScene::GetScene().layers.GetComponent(entity);
 		if (layer == nullptr)
 			return;
 		layer->layerMask = ~0;
 	});
-	window->AddWidget(enableAllButton);
+	AddWidget(&enableAllButton);
 
-	enableNoneButton = new wiButton("Enable NONE");
-	enableNoneButton->SetPos(XMFLOAT2(x + 120, y));
-	enableNoneButton->OnClick([this](wiEventArgs args) {
+	enableNoneButton.Create("Enable NONE");
+	enableNoneButton.SetPos(XMFLOAT2(x + 120, y));
+	enableNoneButton.OnClick([this](wiEventArgs args) {
 		LayerComponent* layer = wiScene::GetScene().layers.GetComponent(entity);
 		if (layer == nullptr)
 			return;
 		layer->layerMask = 0;
 	});
-	window->AddWidget(enableNoneButton);
+	AddWidget(&enableNoneButton);
 
-	window->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 450, 300, 0));
-	window->SetVisible(false);
+	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 450, 300, 0));
+	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
-}
-
-LayerWindow::~LayerWindow()
-{
-	window->RemoveWidgets(true);
-	GUI->RemoveWidget(window);
-	delete window;
 }
 
 void LayerWindow::SetEntity(Entity entity)
@@ -86,26 +76,26 @@ void LayerWindow::SetEntity(Entity entity)
 
 	if (entity != INVALID_ENTITY)
 	{
-		window->SetEnabled(true);
+		SetEnabled(true);
 
 		LayerComponent* layer = wiScene::GetScene().layers.GetComponent(entity);
 		if (layer == nullptr)
 		{
 			for (uint32_t i = 0; i < 32; ++i)
 			{
-				layers[i]->SetCheck(true);
+				layers[i].SetCheck(true);
 			}
 		}
 		else
 		{
 			for (uint32_t i = 0; i < 32; ++i)
 			{
-				layers[i]->SetCheck(layer->GetLayerMask() & 1 << i);
+				layers[i].SetCheck(layer->GetLayerMask() & 1 << i);
 			}
 		}
 	}
 	else
 	{
-		window->SetEnabled(false);
+		SetEnabled(false);
 	}
 }

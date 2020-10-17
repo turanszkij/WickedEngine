@@ -147,5 +147,5 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
     
     float4 result = lerp(current, previous, blendFinal);
     
-    output[DTid.xy] = result;
+    output[DTid.xy] = max(0, result);
 }

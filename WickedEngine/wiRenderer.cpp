@@ -88,7 +88,6 @@ uint32_t SHADOWCOUNT_2D = 5 + 3 + 3;
 uint32_t SHADOWCOUNT_CUBE = 5;
 uint32_t SOFTSHADOWQUALITY_2D = 2;
 bool TRANSPARENTSHADOWSENABLED = false;
-bool ALPHACOMPOSITIONENABLED = false;
 bool wireRender = false;
 bool debugBoneLines = false;
 bool debugPartitionTree = false;
@@ -158,7 +157,7 @@ std::vector<RenderPass> renderpasses_shadow2D;
 std::vector<RenderPass> renderpasses_shadow2DTransparent;
 std::vector<RenderPass> renderpasses_shadowCube;
 
-deque<wiSprite*> waterRipples;
+deque<wiSprite> waterRipples;
 
 std::vector<pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
 std::vector<pair<SPHERE, XMFLOAT4>> renderableSpheres;
@@ -210,8 +209,8 @@ struct RenderBatch
 		hash = 0;
 
 		assert(meshIndex < 0x00FFFFFF);
-		hash |= (uint32_t)(meshIndex & 0x00FFFFFF) << 8;
-		hash |= ((uint32_t)(_distance)) & 0xFF;
+		hash |= (uint32_t)(meshIndex & 0x00FFFFFF);
+		hash |= ((uint32_t)_distance & 0xFF) << 24;
 
 		instance = (uint32_t)instanceIndex;
 		distance = _distance;
@@ -219,7 +218,7 @@ struct RenderBatch
 
 	inline uint32_t GetMeshIndex() const
 	{
-		return (hash >> 8) & 0x00FFFFFF;
+		return hash & 0x00FFFFFF;
 	}
 	inline uint32_t GetInstanceIndex() const
 	{
@@ -471,71 +470,16 @@ enum OBJECTRENDERING_ALPHATEST
 	OBJECTRENDERING_ALPHATEST_ENABLED,
 	OBJECTRENDERING_ALPHATEST_COUNT
 };
-enum OBJECTRENDERING_NORMALMAP
-{
-	OBJECTRENDERING_NORMALMAP_DISABLED,
-	OBJECTRENDERING_NORMALMAP_ENABLED,
-	OBJECTRENDERING_NORMALMAP_COUNT
-};
-enum OBJECTRENDERING_PLANARREFLECTION
-{
-	OBJECTRENDERING_PLANARREFLECTION_DISABLED,
-	OBJECTRENDERING_PLANARREFLECTION_ENABLED,
-	OBJECTRENDERING_PLANARREFLECTION_COUNT
-};
-enum OBJECTRENDERING_POM
-{
-	OBJECTRENDERING_POM_DISABLED,
-	OBJECTRENDERING_POM_ENABLED,
-	OBJECTRENDERING_POM_COUNT
-};
-PipelineState PSO_object[RENDERPASS_COUNT][BLENDMODE_COUNT][OBJECTRENDERING_DOUBLESIDED_COUNT][OBJECTRENDERING_TESSELLATION_COUNT][OBJECTRENDERING_ALPHATEST_COUNT][OBJECTRENDERING_NORMALMAP_COUNT][OBJECTRENDERING_PLANARREFLECTION_COUNT][OBJECTRENDERING_POM_COUNT];
-PipelineState PSO_object_water[RENDERPASS_COUNT];
+PipelineState PSO_object
+	[MaterialComponent::SHADERTYPE_COUNT]
+	[RENDERPASS_COUNT]
+	[BLENDMODE_COUNT]
+	[OBJECTRENDERING_DOUBLESIDED_COUNT]
+	[OBJECTRENDERING_TESSELLATION_COUNT]
+	[OBJECTRENDERING_ALPHATEST_COUNT];
 PipelineState PSO_object_terrain[RENDERPASS_COUNT];
 PipelineState PSO_object_wire;
-inline const PipelineState* GetObjectPSO(
-	RENDERPASS renderPass,
-	const MeshComponent& mesh,
-	const MaterialComponent& material,
-	bool tessellation, 
-	bool forceAlphaTestForDithering
-)
-{
-	if (IsWireRender())
-	{
-		switch (renderPass)
-		{
-		case RENDERPASS_TEXTURE:
-		case RENDERPASS_DEFERRED:
-		case RENDERPASS_FORWARD:
-		case RENDERPASS_TILEDFORWARD:
-			return &PSO_object_wire;
-		}
-		return nullptr;
-	}
 
-	if (material.IsWater())
-	{
-		return &PSO_object_water[renderPass];
-	}
-	else if (mesh.IsTerrain())
-	{
-		return &PSO_object_terrain[renderPass];
-	}
-
-	const bool doublesided = mesh.IsDoubleSided();
-	const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
-	const bool normalmap = material.GetNormalMap() != nullptr;
-	const bool planarreflection = material.HasPlanarReflection();
-	const bool pom = material.parallaxOcclusionMapping > 0;
-	const BLENDMODE blendMode = material.GetBlendMode();
-
-	const PipelineState& pso = PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][normalmap][planarreflection][pom];
-	assert(pso.IsValid());
-	return &pso;
-}
-
-PipelineState PSO_object_hologram;
 std::vector<CustomShader> customShaders;
 int RegisterCustomShader(const CustomShader& customShader)
 {
@@ -547,18 +491,53 @@ const std::vector<CustomShader>& GetCustomShaders()
 {
 	return customShaders;
 }
-inline const PipelineState* GetCustomShaderPSO(RENDERPASS renderPass, uint32_t renderTypeFlags, int customShaderID)
+
+inline const PipelineState* GetObjectPSO(
+	RENDERPASS renderPass,
+	uint32_t renderTypeFlags,
+	const MeshComponent& mesh,
+	const MaterialComponent& material,
+	bool tessellation,
+	bool forceAlphaTestForDithering
+)
 {
-	if (customShaderID >= 0 && customShaderID < (int)customShaders.size())
+	if (IsWireRender())
 	{
-		const CustomShader& customShader = customShaders[customShaderID];
-		const CustomShader::Pass& customPass = customShader.passes[renderPass];
-		if (customPass.renderTypeFlags & renderTypeFlags)
+		switch (renderPass)
 		{
-			return customPass.pso;
+		case RENDERPASS_TEXTURE:
+		case RENDERPASS_MAIN:
+			return &PSO_object_wire;
+		}
+		return nullptr;
+	}
+
+	if (mesh.IsTerrain())
+	{
+		return &PSO_object_terrain[renderPass];
+	}
+
+
+	if (material.customShaderID >= 0 && material.customShaderID < (int)customShaders.size())
+	{
+		const CustomShader& customShader = customShaders[material.customShaderID];
+		if (renderTypeFlags & customShader.renderTypeFlags)
+		{
+			return &customShader.pso[renderPass];
+		}
+		else
+		{
+			return nullptr;
 		}
 	}
-	return nullptr;
+
+	const BLENDMODE blendMode = material.GetBlendMode();
+	const bool doublesided = mesh.IsDoubleSided();
+	const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
+
+	const PipelineState& pso = PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellation][alphatest];
+	assert(pso.IsValid());
+	return &pso;
 }
 
 ILTYPES GetILTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool transparent)
@@ -577,9 +556,7 @@ ILTYPES GetILTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool
 			realVL = ILTYPE_OBJECT_POS_TEX;
 		}
 		break;
-	case RENDERPASS_DEFERRED:
-	case RENDERPASS_FORWARD:
-	case RENDERPASS_TILEDFORWARD:
+	case RENDERPASS_MAIN:
 	case RENDERPASS_ENVMAPCAPTURE:
 	case RENDERPASS_VOXELIZE:
 		realVL = ILTYPE_OBJECT_ALL;
@@ -632,9 +609,7 @@ VSTYPES GetVSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool
 			realVS = VSTYPE_OBJECT_SIMPLE;
 		}
 		break;
-	case RENDERPASS_DEFERRED:
-	case RENDERPASS_FORWARD:
-	case RENDERPASS_TILEDFORWARD:
+	case RENDERPASS_MAIN:
 		if (tessellation)
 		{
 			realVS = VSTYPE_OBJECT_COMMON_TESSELLATION;
@@ -718,9 +693,7 @@ HSTYPES GetHSTYPE(RENDERPASS renderPass, bool tessellation)
 	{
 	case RENDERPASS_TEXTURE:
 	case RENDERPASS_DEPTHONLY:
-	case RENDERPASS_DEFERRED:
-	case RENDERPASS_FORWARD:
-	case RENDERPASS_TILEDFORWARD:
+	case RENDERPASS_MAIN:
 		return tessellation ? HSTYPE_OBJECT : HSTYPE_COUNT;
 		break;
 	}
@@ -733,188 +706,62 @@ DSTYPES GetDSTYPE(RENDERPASS renderPass, bool tessellation)
 	{
 	case RENDERPASS_TEXTURE:
 	case RENDERPASS_DEPTHONLY:
-	case RENDERPASS_DEFERRED:
-	case RENDERPASS_FORWARD:
-	case RENDERPASS_TILEDFORWARD:
+	case RENDERPASS_MAIN:
 		return tessellation ? DSTYPE_OBJECT : DSTYPE_COUNT;
 		break;
 	}
 
 	return DSTYPE_COUNT;
 }
-PSTYPES GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, bool normalmap, bool planarreflection, bool pom)
+PSTYPES GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, MaterialComponent::SHADERTYPE shaderType)
 {
-	PSTYPES realPS = PSTYPE_OBJECT_SIMPLEST;
+	PSTYPES realPS = PSTYPE_COUNT;
 
 	switch (renderPass)
 	{
-	case RENDERPASS_DEFERRED:
-		if (normalmap)
+	case RENDERPASS_TEXTURE:
+		realPS = PSTYPE_OBJECT_TEXTUREONLY;
+		break;
+	case RENDERPASS_MAIN:
+		switch (shaderType)
 		{
-			if (pom)
-			{
-				realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP_POM;
-			}
-			else
-			{
-				realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP;
-			}
-			if (planarreflection)
-			{
-				realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP_PLANARREFLECTION;
-			}
-		}
-		else
-		{
-			if (pom)
-			{
-				realPS = PSTYPE_OBJECT_DEFERRED_POM;
-			}
-			else
-			{
-				realPS = PSTYPE_OBJECT_DEFERRED;
-			}
-			if (planarreflection)
-			{
-				realPS = PSTYPE_OBJECT_DEFERRED_PLANARREFLECTION;
-			}
+		case wiScene::MaterialComponent::SHADERTYPE_PBR:
+			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT : PSTYPE_OBJECT;
+			break;
+		case wiScene::MaterialComponent::SHADERTYPE_PBR_PLANARREFLECTION:
+			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_PLANARREFLECTION : PSTYPE_OBJECT_PLANARREFLECTION;
+			break;
+		case wiScene::MaterialComponent::SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING:
+			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_POM : PSTYPE_OBJECT_POM;
+			break;
+		case wiScene::MaterialComponent::SHADERTYPE_PBR_ANISOTROPIC:
+			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_ANISOTROPIC : PSTYPE_OBJECT_ANISOTROPIC;
+			break;
+		case wiScene::MaterialComponent::SHADERTYPE_WATER:
+			realPS = transparent ? PSTYPE_OBJECT_WATER : PSTYPE_COUNT;
+			break;
+		case wiScene::MaterialComponent::SHADERTYPE_CARTOON:
+			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_CARTOON : PSTYPE_OBJECT_CARTOON;
+			break;
+		case wiScene::MaterialComponent::SHADERTYPE_UNLIT:
+			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_UNLIT : PSTYPE_OBJECT_UNLIT;
+			break;
+		default:
+			break;
 		}
 		break;
-	case RENDERPASS_FORWARD:
-		if (transparent)
+	case RENDERPASS_DEPTHONLY:
+		if (alphatest)
 		{
-			if (normalmap)
-			{
-				if (pom)
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP;
-				}
-				if (planarreflection)
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION;
-				}
-			}
-			else
-			{
-				if (pom)
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_TRANSPARENT_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_TRANSPARENT;
-				}
-				if (planarreflection)
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_TRANSPARENT_PLANARREFLECTION;
-				}
-			}
+			realPS = PSTYPE_OBJECT_ALPHATESTONLY;
 		}
 		else
 		{
-			if (normalmap)
-			{
-				if (pom)
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_NORMALMAP_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_NORMALMAP;
-				}
-				if (planarreflection)
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_NORMALMAP_PLANARREFLECTION;
-				}
-			}
-			else
-			{
-				if (pom)
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_FORWARD;
-				}
-				if (planarreflection)
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_PLANARREFLECTION;
-				}
-			}
+			realPS = PSTYPE_COUNT;
 		}
 		break;
-	case RENDERPASS_TILEDFORWARD:
-		if (transparent)
-		{
-			if (normalmap)
-			{
-				if (pom)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP;
-				}
-				if (planarreflection)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION;
-				}
-			}
-			else
-			{
-				if (pom)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT;
-				}
-				if (planarreflection)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_PLANARREFLECTION;
-				}
-			}
-		}
-		else
-		{
-			if (normalmap)
-			{
-				if (pom)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP;
-				}
-				if (planarreflection)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_PLANARREFLECTION;
-				}
-			}
-			else
-			{
-				if (pom)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD;
-				}
-				if (planarreflection)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_PLANARREFLECTION;
-				}
-			}
-		}
+	case RENDERPASS_ENVMAPCAPTURE:
+		realPS = PSTYPE_ENVMAP;
 		break;
 	case RENDERPASS_SHADOW:
 		if (transparent)
@@ -943,24 +790,10 @@ PSTYPES GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, bool 
 			realPS = PSTYPE_COUNT;
 		}
 		break;
-	case RENDERPASS_ENVMAPCAPTURE:
-		realPS = PSTYPE_ENVMAP;
-		break;
-	case RENDERPASS_DEPTHONLY:
-		if (alphatest)
-		{
-			realPS = PSTYPE_OBJECT_ALPHATESTONLY;
-		}
-		else
-		{
-			realPS = PSTYPE_COUNT;
-		}
-		break;
 	case RENDERPASS_VOXELIZE:
 		realPS = PSTYPE_VOXELIZER;
 		break;
-	case RENDERPASS_TEXTURE:
-		realPS = PSTYPE_OBJECT_TEXTUREONLY;
+	default:
 		break;
 	}
 
@@ -981,9 +814,7 @@ inline const PipelineState* GetImpostorPSO(RENDERPASS renderPass)
 		switch (renderPass)
 		{
 		case RENDERPASS_TEXTURE:
-		case RENDERPASS_DEFERRED:
-		case RENDERPASS_FORWARD:
-		case RENDERPASS_TILEDFORWARD:
+		case RENDERPASS_MAIN:
 			return &PSO_impostor_wire;
 		}
 		return nullptr;
@@ -992,10 +823,8 @@ inline const PipelineState* GetImpostorPSO(RENDERPASS renderPass)
 	return &PSO_impostor[renderPass];
 }
 
-PipelineState PSO_deferredlight[LightComponent::LIGHTTYPE_COUNT];
 PipelineState PSO_lightvisualizer[LightComponent::LIGHTTYPE_COUNT];
 PipelineState PSO_volumetriclight[LightComponent::LIGHTTYPE_COUNT];
-PipelineState PSO_enviromentallight;
 
 PipelineState PSO_renderlightmap;
 
@@ -1003,7 +832,8 @@ PipelineState PSO_lensflare;
 
 PipelineState PSO_downsampledepthbuffer;
 PipelineState PSO_deferredcomposition;
-PipelineState PSO_sss;
+PipelineState PSO_sss_skin;
+PipelineState PSO_sss_snow;
 PipelineState PSO_upsample_bilateral;
 PipelineState PSO_outline;
 
@@ -1036,12 +866,6 @@ enum DEBUGRENDERING
 };
 PipelineState PSO_debug[DEBUGRENDERING_COUNT];
 
-enum TILEDLIGHTING_TYPE
-{
-	TILEDLIGHTING_TYPE_FORWARD,
-	TILEDLIGHTING_TYPE_DEFERRED,
-	TILEDLIGHTING_TYPE_COUNT
-};
 enum TILEDLIGHTING_CULLING
 {
 	TILEDLIGHTING_CULLING_BASIC,
@@ -1054,7 +878,7 @@ enum TILEDLIGHTING_DEBUG
 	TILEDLIGHTING_DEBUG_ENABLED,
 	TILEDLIGHTING_DEBUG_COUNT
 };
-Shader tiledLightingCS[TILEDLIGHTING_TYPE_COUNT][TILEDLIGHTING_CULLING_COUNT][TILEDLIGHTING_DEBUG_COUNT];
+Shader tiledLightingCS[TILEDLIGHTING_CULLING_COUNT][TILEDLIGHTING_DEBUG_COUNT];
 
 
 bool LoadShader(SHADERSTAGE stage, wiGraphics::Shader& shader, const std::string& filename)
@@ -1091,16 +915,17 @@ void LoadShaders()
 			{ "UVSET",					1, MeshComponent::Vertex_TEX::FORMAT, 2, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 			{ "ATLAS",					0, MeshComponent::Vertex_TEX::FORMAT, 3, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 			{ "COLOR",					0, MeshComponent::Vertex_COL::FORMAT, 4, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, 5, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TANGENT",				0, MeshComponent::Vertex_TAN::FORMAT, 5, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIXPREV",		0, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIXPREV",		1, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIXPREV",		2, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEATLAS",			0, FORMAT_R32G32B32A32_FLOAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT,  7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",		0, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",		1, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",		2, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEATLAS",			0, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		LoadShader(VS, vertexShaders[VSTYPE_OBJECT_COMMON], "objectVS_common.cso");
 		device->CreateInputLayout(layout, arraysize(layout), &vertexShaders[VSTYPE_OBJECT_COMMON], &inputLayouts[ILTYPE_OBJECT_ALL]);
@@ -1210,16 +1035,15 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_OBJECT_COMMON_TESSELLATION], "objectVS_common_tessellation.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_OBJECT_SIMPLE_TESSELLATION], "objectVS_simple_tessellation.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_IMPOSTOR], "impostorVS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_DIRLIGHT], "dirLightVS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_POINTLIGHT], "pointLightVS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_SPOTLIGHT], "spotLightVS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_VOLUMETRICLIGHT_DIRECTIONAL], "volumetriclight_directionalVS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_VOLUMETRICLIGHT_POINT], "volumetriclight_pointVS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_VOLUMETRICLIGHT_SPOT], "volumetriclight_spotVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_SPOTLIGHT], "vSpotLightVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_POINTLIGHT], "vPointLightVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_SPHERELIGHT], "vSphereLightVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_DISCLIGHT], "vDiscLightVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_RECTANGLELIGHT], "vRectangleLightVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_LIGHTVISUALIZER_TUBELIGHT], "vTubeLightVS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_DECAL], "decalVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_ENVMAP], "envMapVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_ENVMAP_SKY], "envMap_skyVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_SPHERE], "sphereVS.cso"); });
@@ -1236,46 +1060,21 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, vertexShaders[VSTYPE_LENSFLARE], "lensFlareVS.cso"); });
 
 
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED], "objectPS_deferred.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP], "objectPS_deferred_normalmap.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_POM], "objectPS_deferred_pom.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_PLANARREFLECTION], "objectPS_deferred_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP_POM], "objectPS_deferred_normalmap_pom.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP_PLANARREFLECTION], "objectPS_deferred_normalmap_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_DEFERRED_TERRAIN], "objectPS_deferred_terrain.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_DEFERRED], "impostorPS_deferred.cso"); });
-
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD], "objectPS_forward.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP], "objectPS_forward_normalmap.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT], "objectPS_forward_transparent.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP], "objectPS_forward_transparent_normalmap.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_PLANARREFLECTION], "objectPS_forward_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP_PLANARREFLECTION], "objectPS_forward_normalmap_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_PLANARREFLECTION], "objectPS_forward_transparent_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION], "objectPS_forward_transparent_normalmap_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_POM], "objectPS_forward_pom.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP_POM], "objectPS_forward_normalmap_pom.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_POM], "objectPS_forward_transparent_pom.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_POM], "objectPS_forward_transparent_normalmap_pom.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_WATER], "objectPS_forward_water.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_FORWARD_TERRAIN], "objectPS_forward_terrain.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_FORWARD], "impostorPS_forward.cso"); });
-
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD], "objectPS_tiledforward.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP], "objectPS_tiledforward_normalmap.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT], "objectPS_tiledforward_transparent.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP], "objectPS_tiledforward_transparent_normalmap.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_PLANARREFLECTION], "objectPS_tiledforward_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_PLANARREFLECTION], "objectPS_tiledforward_normalmap_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_PLANARREFLECTION], "objectPS_tiledforward_transparent_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION], "objectPS_tiledforward_transparent_normalmap_planarreflection.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_POM], "objectPS_tiledforward_pom.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_POM], "objectPS_tiledforward_normalmap_pom.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_POM], "objectPS_tiledforward_transparent_pom.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_POM], "objectPS_tiledforward_transparent_normalmap_pom.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_WATER], "objectPS_tiledforward_water.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TERRAIN], "objectPS_tiledforward_terrain.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_TILEDFORWARD], "impostorPS_tiledforward.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT], "objectPS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TRANSPARENT], "objectPS_transparent.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_PLANARREFLECTION], "objectPS_planarreflection.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TRANSPARENT_PLANARREFLECTION], "objectPS_transparent_planarreflection.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_POM], "objectPS_pom.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TRANSPARENT_POM], "objectPS_transparent_pom.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_ANISOTROPIC], "objectPS_anisotropic.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TRANSPARENT_ANISOTROPIC], "objectPS_transparent_anisotropic.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_CARTOON], "objectPS_cartoon.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TRANSPARENT_CARTOON], "objectPS_transparent_cartoon.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_UNLIT], "objectPS_unlit.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TRANSPARENT_UNLIT], "objectPS_transparent_unlit.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_WATER], "objectPS_water.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_TERRAIN], "objectPS_terrain.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR], "impostorPS.cso"); });
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_OBJECT_HOLOGRAM], "objectPS_hologram.cso"); });
 
@@ -1288,19 +1087,10 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_ALPHATESTONLY], "impostorPS_alphatestonly.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_SIMPLE], "impostorPS_simple.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_IMPOSTOR_WIRE], "impostorPS_wire.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_ENVIRONMENTALLIGHT], "environmentalLightPS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_DIRLIGHT], "dirLightPS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_POINTLIGHT], "pointLightPS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_SPOTLIGHT], "spotLightPS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_SPHERELIGHT], "sphereLightPS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_DISCLIGHT], "discLightPS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_RECTANGLELIGHT], "rectangleLightPS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_TUBELIGHT], "tubeLightPS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_LIGHTVISUALIZER], "lightVisualizerPS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_VOLUMETRICLIGHT_DIRECTIONAL], "volumetricLight_DirectionalPS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_VOLUMETRICLIGHT_POINT], "volumetricLight_PointPS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_VOLUMETRICLIGHT_SPOT], "volumetricLight_SpotPS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_DECAL], "decalPS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_ENVMAP], "envMapPS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_ENVMAP_TERRAIN], "envMapPS_terrain.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_ENVMAP_SKY_STATIC], "envMap_skyPS_static.cso"); });
@@ -1325,7 +1115,8 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_RAYTRACE_DEBUGBVH], "raytrace_debugbvhPS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_DOWNSAMPLEDEPTHBUFFER], "downsampleDepthBuffer4xPS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_DEFERREDCOMPOSITION], "deferredPS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_POSTPROCESS_SSS], "sssPS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_POSTPROCESS_SSS_SKIN], "sssPS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_POSTPROCESS_SSS_SNOW], "sssPS_snow.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL], "upsample_bilateralPS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_POSTPROCESS_OUTLINE], "outlinePS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, pixelShaders[PSTYPE_LENSFLARE], "lensFlarePS.cso"); });
@@ -1442,6 +1233,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_UNORM4], "upsample_bilateral_unorm4CS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DOWNSAMPLE4X], "downsample4xCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_NORMALSFROMDEPTH], "normalsfromdepthCS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_POSTPROCESS_DENOISE], "denoiseCS.cso"); });
 
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(HS, hullShaders[HSTYPE_OBJECT], "objectHS.cso"); });
@@ -1451,142 +1243,134 @@ void LoadShaders()
 	wiJobSystem::Wait(ctx);
 
 	// default objectshaders:
-	for (int renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
-	{
-		for (int blendMode = 0; blendMode < BLENDMODE_COUNT; ++blendMode)
+	wiJobSystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [device](wiJobArgs args) {
+		MaterialComponent::SHADERTYPE shaderType = (MaterialComponent::SHADERTYPE)args.jobIndex;
+
+		for (int renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
 		{
-			for (int doublesided = 0; doublesided < OBJECTRENDERING_DOUBLESIDED_COUNT; ++doublesided)
+			for (int blendMode = 0; blendMode < BLENDMODE_COUNT; ++blendMode)
 			{
-				for (int tessellation = 0; tessellation < OBJECTRENDERING_TESSELLATION_COUNT; ++tessellation)
+				for (int doublesided = 0; doublesided < OBJECTRENDERING_DOUBLESIDED_COUNT; ++doublesided)
 				{
-					for (int alphatest = 0; alphatest < OBJECTRENDERING_ALPHATEST_COUNT; ++alphatest)
+					for (int tessellation = 0; tessellation < OBJECTRENDERING_TESSELLATION_COUNT; ++tessellation)
 					{
-						for (int normalmap = 0; normalmap < OBJECTRENDERING_NORMALMAP_COUNT; ++normalmap)
+						for (int alphatest = 0; alphatest < OBJECTRENDERING_ALPHATEST_COUNT; ++alphatest)
 						{
-							for (int planarreflection = 0; planarreflection < OBJECTRENDERING_PLANARREFLECTION_COUNT; ++planarreflection)
+							const bool transparency = blendMode != BLENDMODE_OPAQUE;
+							VSTYPES realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
+							ILTYPES realVL = GetILTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
+							HSTYPES realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation);
+							DSTYPES realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation);
+							GSTYPES realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest);
+							PSTYPES realPS = GetPSTYPE((RENDERPASS)renderPass, alphatest, transparency, shaderType);
+
+							if (tessellation && (realHS == HSTYPE_COUNT || realDS == DSTYPE_COUNT))
 							{
-								for (int pom = 0; pom < OBJECTRENDERING_POM_COUNT; ++pom)
-								{
-									wiJobSystem::Execute(ctx, [device, renderPass, blendMode, doublesided, tessellation, alphatest, normalmap, planarreflection, pom](wiJobArgs args) {
-										const bool transparency = blendMode != BLENDMODE_OPAQUE;
-										VSTYPES realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
-										ILTYPES realVL = GetILTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
-										HSTYPES realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation);
-										DSTYPES realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation);
-										GSTYPES realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest);
-										PSTYPES realPS = GetPSTYPE((RENDERPASS)renderPass, alphatest, transparency, normalmap, planarreflection, pom);
-
-										if (tessellation && (realHS == HSTYPE_COUNT || realDS == DSTYPE_COUNT))
-										{
-											return; // if no job, this must be continue!!
-										}
-
-										PipelineStateDesc desc;
-										desc.il = realVL < ILTYPE_COUNT ? &inputLayouts[realVL] : nullptr;
-										desc.vs = realVS < VSTYPE_COUNT ? &vertexShaders[realVS] : nullptr;
-										desc.hs = realHS < HSTYPE_COUNT ? &hullShaders[realHS] : nullptr;
-										desc.ds = realDS < DSTYPE_COUNT ? &domainShaders[realDS] : nullptr;
-										desc.gs = realGS < GSTYPE_COUNT ? &geometryShaders[realGS] : nullptr;
-										desc.ps = realPS < PSTYPE_COUNT ? &pixelShaders[realPS] : nullptr;
-
-										switch (blendMode)
-										{
-										case BLENDMODE_OPAQUE:
-											desc.bs = &blendStates[BSTYPE_OPAQUE];
-											break;
-										case BLENDMODE_ALPHA:
-											desc.bs = &blendStates[BSTYPE_TRANSPARENT];
-											break;
-										case BLENDMODE_ADDITIVE:
-											desc.bs = &blendStates[BSTYPE_ADDITIVE];
-											break;
-										case BLENDMODE_PREMULTIPLIED:
-											desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
-											break;
-										default:
-											assert(0);
-											break;
-										}
-
-										switch (renderPass)
-										{
-										case RENDERPASS_DEPTHONLY:
-										case RENDERPASS_SHADOW:
-										case RENDERPASS_SHADOWCUBE:
-											desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOWMAP : BSTYPE_COLORWRITEDISABLE];
-											break;
-										default:
-											break;
-										}
-
-										switch (renderPass)
-										{
-										case RENDERPASS_SHADOW:
-										case RENDERPASS_SHADOWCUBE:
-											desc.dss = &depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
-											break;
-										case RENDERPASS_FORWARD:
-										case RENDERPASS_TILEDFORWARD:
-											if (blendMode == BLENDMODE_ADDITIVE)
-											{
-												desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
-											}
-											else
-											{
-												desc.dss = &depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
-											}
-											break;
-										case RENDERPASS_ENVMAPCAPTURE:
-											desc.dss = &depthStencils[DSSTYPE_ENVMAP];
-											break;
-										case RENDERPASS_VOXELIZE:
-											desc.dss = &depthStencils[DSSTYPE_XRAY];
-											break;
-										default:
-											if (blendMode == BLENDMODE_ADDITIVE)
-											{
-												desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
-											}
-											else
-											{
-												desc.dss = &depthStencils[DSSTYPE_DEFAULT];
-											}
-											break;
-										}
-
-										switch (renderPass)
-										{
-										case RENDERPASS_SHADOW:
-										case RENDERPASS_SHADOWCUBE:
-											desc.rs = &rasterizers[doublesided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
-											break;
-										case RENDERPASS_VOXELIZE:
-											desc.rs = &rasterizers[RSTYPE_VOXELIZE];
-											break;
-										default:
-											desc.rs = &rasterizers[doublesided ? RSTYPE_DOUBLESIDED : RSTYPE_FRONT];
-											break;
-										}
-
-										if (tessellation)
-										{
-											desc.pt = PATCHLIST;
-										}
-										else
-										{
-											desc.pt = TRIANGLELIST;
-										}
-
-										device->CreatePipelineState(&desc, &PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][normalmap][planarreflection][pom]);
-										});
-								}
+								continue;
 							}
+
+							PipelineStateDesc desc;
+							desc.il = realVL < ILTYPE_COUNT ? &inputLayouts[realVL] : nullptr;
+							desc.vs = realVS < VSTYPE_COUNT ? &vertexShaders[realVS] : nullptr;
+							desc.hs = realHS < HSTYPE_COUNT ? &hullShaders[realHS] : nullptr;
+							desc.ds = realDS < DSTYPE_COUNT ? &domainShaders[realDS] : nullptr;
+							desc.gs = realGS < GSTYPE_COUNT ? &geometryShaders[realGS] : nullptr;
+							desc.ps = realPS < PSTYPE_COUNT ? &pixelShaders[realPS] : nullptr;
+
+							switch (blendMode)
+							{
+							case BLENDMODE_OPAQUE:
+								desc.bs = &blendStates[BSTYPE_OPAQUE];
+								break;
+							case BLENDMODE_ALPHA:
+								desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+								break;
+							case BLENDMODE_ADDITIVE:
+								desc.bs = &blendStates[BSTYPE_ADDITIVE];
+								break;
+							case BLENDMODE_PREMULTIPLIED:
+								desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
+								break;
+							default:
+								assert(0);
+								break;
+							}
+
+							switch (renderPass)
+							{
+							case RENDERPASS_DEPTHONLY:
+							case RENDERPASS_SHADOW:
+							case RENDERPASS_SHADOWCUBE:
+								desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOWMAP : BSTYPE_COLORWRITEDISABLE];
+								break;
+							default:
+								break;
+							}
+
+							switch (renderPass)
+							{
+							case RENDERPASS_SHADOW:
+							case RENDERPASS_SHADOWCUBE:
+								desc.dss = &depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
+								break;
+							case RENDERPASS_MAIN:
+								if (blendMode == BLENDMODE_ADDITIVE)
+								{
+									desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+								}
+								else
+								{
+									desc.dss = &depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
+								}
+								break;
+							case RENDERPASS_ENVMAPCAPTURE:
+								desc.dss = &depthStencils[DSSTYPE_ENVMAP];
+								break;
+							case RENDERPASS_VOXELIZE:
+								desc.dss = &depthStencils[DSSTYPE_XRAY];
+								break;
+							default:
+								if (blendMode == BLENDMODE_ADDITIVE)
+								{
+									desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+								}
+								else
+								{
+									desc.dss = &depthStencils[DSSTYPE_DEFAULT];
+								}
+								break;
+							}
+
+							switch (renderPass)
+							{
+							case RENDERPASS_SHADOW:
+							case RENDERPASS_SHADOWCUBE:
+								desc.rs = &rasterizers[doublesided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
+								break;
+							case RENDERPASS_VOXELIZE:
+								desc.rs = &rasterizers[RSTYPE_VOXELIZE];
+								break;
+							default:
+								desc.rs = &rasterizers[doublesided ? RSTYPE_DOUBLESIDED : RSTYPE_FRONT];
+								break;
+							}
+
+							if (tessellation)
+							{
+								desc.pt = PATCHLIST;
+							}
+							else
+							{
+								desc.pt = TRIANGLELIST;
+							}
+
+							device->CreatePipelineState(&desc, &PSO_object[shaderType][renderPass][blendMode][doublesided][tessellation][alphatest]);
 						}
 					}
 				}
 			}
 		}
-	}
+	});
 
 	wiJobSystem::Dispatch(ctx, RENDERPASS_COUNT, 1, [device](wiJobArgs args) {
 
@@ -1605,16 +1389,9 @@ void LoadShaders()
 		case RENDERPASS_TEXTURE:
 			desc.ps = &pixelShaders[PSTYPE_OBJECT_TEXTUREONLY]; // textureonly doesn't have worldpos or normal inputs, so it will not use terrain blending
 			break;
-		case RENDERPASS_DEFERRED:
-			desc.ps = &pixelShaders[PSTYPE_OBJECT_DEFERRED_TERRAIN];
-			break;
-		case RENDERPASS_FORWARD:
+		case RENDERPASS_MAIN:
 			desc.dss = &depthStencils[DSSTYPE_DEPTHREADEQUAL];
-			desc.ps = &pixelShaders[PSTYPE_OBJECT_FORWARD_TERRAIN];
-			break;
-		case RENDERPASS_TILEDFORWARD:
-			desc.dss = &depthStencils[DSSTYPE_DEPTHREADEQUAL];
-			desc.ps = &pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TERRAIN];
+			desc.ps = &pixelShaders[PSTYPE_OBJECT_TERRAIN];
 			break;
 		case RENDERPASS_DEPTHONLY:
 			desc.ps = nullptr;
@@ -1647,8 +1424,8 @@ void LoadShaders()
 
 	// Hologram sample shader will be registered as custom shader:
 	wiJobSystem::Execute(ctx, [device](wiJobArgs args) {
-		VSTYPES realVS = GetVSTYPE(RENDERPASS_FORWARD, false, false, true);
-		ILTYPES realVL = GetILTYPE(RENDERPASS_FORWARD, false, false, true);
+		VSTYPES realVS = GetVSTYPE(RENDERPASS_MAIN, false, false, true);
+		ILTYPES realVL = GetILTYPE(RENDERPASS_MAIN, false, false, true);
 
 		PipelineStateDesc desc;
 		desc.vs = &vertexShaders[realVS];
@@ -1656,50 +1433,21 @@ void LoadShaders()
 		desc.ps = &pixelShaders[PSTYPE_OBJECT_HOLOGRAM];
 
 		desc.bs = &blendStates[BSTYPE_ADDITIVE];
-		desc.rs = &rasterizers[DSSTYPE_DEFAULT];
-		desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+		desc.rs = &rasterizers[RSTYPE_FRONT];
+		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
 		desc.pt = TRIANGLELIST;
 
-		device->CreatePipelineState(&desc, &PSO_object_hologram);
+		PipelineState pso;
+		device->CreatePipelineState(&desc, &pso);
 
 		CustomShader customShader;
 		customShader.name = "Hologram";
-		customShader.passes[RENDERPASS_FORWARD].pso = &PSO_object_hologram;
-		customShader.passes[RENDERPASS_TILEDFORWARD].pso = &PSO_object_hologram;
+		customShader.renderTypeFlags = RENDERTYPE_TRANSPARENT;
+		customShader.pso[RENDERPASS_MAIN] = pso;
 		RegisterCustomShader(customShader);
 		});
 
 
-	wiJobSystem::Execute(ctx, [device](wiJobArgs args) {
-		PipelineStateDesc desc;
-		desc.vs = &vertexShaders[VSTYPE_OBJECT_COMMON];
-		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
-		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
-		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
-		desc.il = &inputLayouts[ILTYPE_OBJECT_ALL];
-
-		desc.ps = &pixelShaders[PSTYPE_OBJECT_FORWARD_WATER];
-		device->CreatePipelineState(&desc, &PSO_object_water[RENDERPASS_FORWARD]);
-
-		desc.ps = &pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_WATER];
-		device->CreatePipelineState(&desc, &PSO_object_water[RENDERPASS_TILEDFORWARD]);
-
-		desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
-		desc.rs = &rasterizers[RSTYPE_SHADOW];
-		desc.bs = &blendStates[BSTYPE_TRANSPARENTSHADOWMAP];
-		desc.vs = &vertexShaders[VSTYPE_SHADOW_TRANSPARENT];
-		desc.ps = &pixelShaders[PSTYPE_SHADOW_WATER];
-
-		device->CreatePipelineState(&desc, &PSO_object_water[RENDERPASS_SHADOW]);
-
-		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
-		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
-		desc.bs = &blendStates[BSTYPE_OPAQUE];
-		desc.il = &inputLayouts[GetILTYPE(RENDERPASS_ENVMAPCAPTURE, false, false, true)];
-		desc.vs = &vertexShaders[GetVSTYPE(RENDERPASS_ENVMAPCAPTURE, false, false, true)];
-		desc.ps = &pixelShaders[GetPSTYPE(RENDERPASS_ENVMAPCAPTURE, false, true, false, false, false)];
-		device->CreatePipelineState(&desc, &PSO_object_water[RENDERPASS_ENVMAPCAPTURE]);
-		});
 	wiJobSystem::Execute(ctx, [device](wiJobArgs args) {
 		PipelineStateDesc desc;
 		desc.vs = &vertexShaders[VSTYPE_OBJECT_SIMPLE];
@@ -1710,17 +1458,6 @@ void LoadShaders()
 		desc.il = &inputLayouts[ILTYPE_OBJECT_POS_TEX];
 
 		device->CreatePipelineState(&desc, &PSO_object_wire);
-		});
-	wiJobSystem::Execute(ctx, [device](wiJobArgs args) {
-		PipelineStateDesc desc;
-		desc.vs = &vertexShaders[VSTYPE_DECAL];
-		desc.ps = &pixelShaders[PSTYPE_DECAL];
-		desc.rs = &rasterizers[RSTYPE_FRONT];
-		desc.bs = &blendStates[BSTYPE_DECAL];
-		desc.dss = &depthStencils[DSSTYPE_DEFERREDLIGHT];
-		desc.pt = TRIANGLESTRIP;
-
-		device->CreatePipelineState(&desc, &PSO_decal);
 		});
 	wiJobSystem::Execute(ctx, [device](wiJobArgs args) {
 		PipelineStateDesc desc;
@@ -1751,19 +1488,10 @@ void LoadShaders()
 
 		switch (args.jobIndex)
 		{
-		case RENDERPASS_DEFERRED:
-			desc.vs = &vertexShaders[VSTYPE_IMPOSTOR];
-			desc.ps = &pixelShaders[PSTYPE_IMPOSTOR_DEFERRED];
-			break;
-		case RENDERPASS_FORWARD:
+		case RENDERPASS_MAIN:
 			desc.dss = &depthStencils[DSSTYPE_DEPTHREADEQUAL];
 			desc.vs = &vertexShaders[VSTYPE_IMPOSTOR];
-			desc.ps = &pixelShaders[PSTYPE_IMPOSTOR_FORWARD];
-			break;
-		case RENDERPASS_TILEDFORWARD:
-			desc.dss = &depthStencils[DSSTYPE_DEPTHREADEQUAL];
-			desc.vs = &vertexShaders[VSTYPE_IMPOSTOR];
-			desc.ps = &pixelShaders[PSTYPE_IMPOSTOR_TILEDFORWARD];
+			desc.ps = &pixelShaders[PSTYPE_IMPOSTOR];
 			break;
 		case RENDERPASS_DEPTHONLY:
 			desc.vs = &vertexShaders[VSTYPE_IMPOSTOR];
@@ -1812,44 +1540,6 @@ void LoadShaders()
 		// deferred lights:
 
 		desc.pt = TRIANGLELIST;
-		desc.rs = &rasterizers[RSTYPE_BACK];
-		desc.bs = &blendStates[BSTYPE_DEFERREDLIGHT];
-		desc.dss = &depthStencils[DSSTYPE_DEFERREDLIGHT];
-
-		switch (args.jobIndex)
-		{
-		case LightComponent::DIRECTIONAL:
-			desc.vs = &vertexShaders[VSTYPE_DIRLIGHT];
-			desc.ps = &pixelShaders[PSTYPE_DIRLIGHT];
-			break;
-		case LightComponent::POINT:
-			desc.vs = &vertexShaders[VSTYPE_POINTLIGHT];
-			desc.ps = &pixelShaders[PSTYPE_POINTLIGHT];
-			break;
-		case LightComponent::SPOT:
-			desc.vs = &vertexShaders[VSTYPE_SPOTLIGHT];
-			desc.ps = &pixelShaders[PSTYPE_SPOTLIGHT];
-			break;
-		case LightComponent::SPHERE:
-			desc.vs = &vertexShaders[VSTYPE_DIRLIGHT];
-			desc.ps = &pixelShaders[PSTYPE_SPHERELIGHT];
-			break;
-		case LightComponent::DISC:
-			desc.vs = &vertexShaders[VSTYPE_DIRLIGHT];
-			desc.ps = &pixelShaders[PSTYPE_DISCLIGHT];
-			break;
-		case LightComponent::RECTANGLE:
-			desc.vs = &vertexShaders[VSTYPE_DIRLIGHT];
-			desc.ps = &pixelShaders[PSTYPE_RECTANGLELIGHT];
-			break;
-		case LightComponent::TUBE:
-			desc.vs = &vertexShaders[VSTYPE_DIRLIGHT];
-			desc.ps = &pixelShaders[PSTYPE_TUBELIGHT];
-			break;
-		}
-
-		device->CreatePipelineState(&desc, &PSO_deferredlight[args.jobIndex]);
-
 
 
 		// light visualizers:
@@ -1907,15 +1597,15 @@ void LoadShaders()
 			switch (args.jobIndex)
 			{
 			case LightComponent::DIRECTIONAL:
-				desc.vs = &vertexShaders[VSTYPE_DIRLIGHT];
+				desc.vs = &vertexShaders[VSTYPE_VOLUMETRICLIGHT_DIRECTIONAL];
 				desc.ps = &pixelShaders[PSTYPE_VOLUMETRICLIGHT_DIRECTIONAL];
 				break;
 			case LightComponent::POINT:
-				desc.vs = &vertexShaders[VSTYPE_POINTLIGHT];
+				desc.vs = &vertexShaders[VSTYPE_VOLUMETRICLIGHT_POINT];
 				desc.ps = &pixelShaders[PSTYPE_VOLUMETRICLIGHT_POINT];
 				break;
 			case LightComponent::SPOT:
-				desc.vs = &vertexShaders[VSTYPE_SPOTLIGHT];
+				desc.vs = &vertexShaders[VSTYPE_VOLUMETRICLIGHT_SPOT];
 				desc.ps = &pixelShaders[PSTYPE_VOLUMETRICLIGHT_SPOT];
 				break;
 			}
@@ -1924,16 +1614,6 @@ void LoadShaders()
 		}
 
 
-		});
-	wiJobSystem::Execute(ctx, [device](wiJobArgs args) {
-		PipelineStateDesc desc;
-		desc.vs = &vertexShaders[VSTYPE_DIRLIGHT];
-		desc.ps = &pixelShaders[PSTYPE_ENVIRONMENTALLIGHT];
-		desc.rs = &rasterizers[RSTYPE_BACK];
-		desc.bs = &blendStates[BSTYPE_ENVIRONMENTALLIGHT];
-		desc.dss = &depthStencils[DSSTYPE_DEFERREDLIGHT];
-
-		device->CreatePipelineState(&desc, &PSO_enviromentallight);
 		});
 	wiJobSystem::Execute(ctx, [device](wiJobArgs args) {
 		PipelineStateDesc desc;
@@ -1969,12 +1649,22 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [device](wiJobArgs args) {
 		PipelineStateDesc desc;
 		desc.vs = &vertexShaders[VSTYPE_SCREEN];
-		desc.ps = &pixelShaders[PSTYPE_POSTPROCESS_SSS];
+		desc.ps = &pixelShaders[PSTYPE_POSTPROCESS_SSS_SKIN];
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
 		desc.dss = &depthStencils[DSSTYPE_SSS];
 
-		device->CreatePipelineState(&desc, &PSO_sss);
+		device->CreatePipelineState(&desc, &PSO_sss_skin);
+		});
+	wiJobSystem::Execute(ctx, [device](wiJobArgs args) {
+		PipelineStateDesc desc;
+		desc.vs = &vertexShaders[VSTYPE_SCREEN];
+		desc.ps = &pixelShaders[PSTYPE_POSTPROCESS_SSS_SNOW];
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+		desc.bs = &blendStates[BSTYPE_OPAQUE];
+		desc.dss = &depthStencils[DSSTYPE_SSS];
+
+		device->CreatePipelineState(&desc, &PSO_sss_snow);
 		});
 	wiJobSystem::Execute(ctx, [device](wiJobArgs args) {
 		PipelineStateDesc desc;
@@ -2159,31 +1849,24 @@ void LoadShaders()
 		});
 
 
-	for (int i = 0; i < TILEDLIGHTING_TYPE_COUNT; ++i)
+	for (int j = 0; j < TILEDLIGHTING_CULLING_COUNT; ++j)
 	{
-		for (int j = 0; j < TILEDLIGHTING_CULLING_COUNT; ++j)
+		for (int k = 0; k < TILEDLIGHTING_DEBUG_COUNT; ++k)
 		{
-			for (int k = 0; k < TILEDLIGHTING_DEBUG_COUNT; ++k)
-			{
-				wiJobSystem::Execute(ctx, [i, j, k](wiJobArgs args) {
-					string name = "lightCullingCS";
-					if (i == TILEDLIGHTING_TYPE_DEFERRED)
-					{
-						name += "_DEFERRED";
-					}
-					if (j == TILEDLIGHTING_CULLING_ADVANCED)
-					{
-						name += "_ADVANCED";
-					}
-					if (k == TILEDLIGHTING_DEBUG_ENABLED)
-					{
-						name += "_DEBUG";
-					}
-					name += ".cso";
+			wiJobSystem::Execute(ctx, [j, k](wiJobArgs args) {
+				string name = "lightCullingCS";
+				if (j == TILEDLIGHTING_CULLING_ADVANCED)
+				{
+					name += "_ADVANCED";
+				}
+				if (k == TILEDLIGHTING_DEBUG_ENABLED)
+				{
+					name += "_DEBUG";
+				}
+				name += ".cso";
 
-					LoadShader(CS, tiledLightingCS[i][j][k], name);
+				LoadShader(CS, tiledLightingCS[j][k], name);
 				});
-			}
 		}
 	}
 
@@ -2244,10 +1927,6 @@ void LoadBuffers()
 	bd.ByteWidth = sizeof(VolumeLightCB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_VOLUMELIGHT]);
 	device->SetName(&constantBuffers[CBTYPE_VOLUMELIGHT], "VolumelightCB");
-
-	bd.ByteWidth = sizeof(DecalCB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_DECAL]);
-	device->SetName(&constantBuffers[CBTYPE_DECAL], "DecalCB");
 
 	bd.ByteWidth = sizeof(CubemapRenderCB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_CUBEMAPRENDER]);
@@ -2570,7 +2249,7 @@ void SetUpStates()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DEFERREDLIGHT]);
+	//device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DEFERREDLIGHT]);
 
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
@@ -2705,7 +2384,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN | COLOR_WRITE_ENABLE_BLUE; // alpha is not written by deferred lights!
 	bd.IndependentBlendEnable = false,
 		bd.AlphaToCoverageEnable = false;
-	device->CreateBlendState(&bd, &blendStates[BSTYPE_DEFERREDLIGHT]);
+	//device->CreateBlendState(&bd, &blendStates[BSTYPE_DEFERREDLIGHT]);
 
 	bd.RenderTarget[0].BlendEnable = true;
 	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
@@ -2845,14 +2524,17 @@ void Initialize()
 		wiPlatform::GetWindowState().dpi = dpi;
 	});
 
+	TextureDesc desc;
+	desc.Width = 1;
+	desc.Height = 1;
+	desc.Format = FORMAT_R11G11B10_FLOAT;
+	desc.BindFlags = BIND_SHADER_RESOURCE;
+	GetDevice()->CreateTexture(&desc, nullptr, &globalLightmap);
+
 	wiBackLog::post("wiRenderer Initialized");
 }
 void ClearWorld()
 {
-	for (wiSprite* x : waterRipples)
-	{
-		delete x;
-	}
 	waterRipples.clear();
 
 	GetScene().Clear();
@@ -3043,21 +2725,18 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const FrameCulling& culling, const A
 	cb.xForwardLightMask.x = buckets[0];
 	cb.xForwardLightMask.y = buckets[1];
 
-	if (renderPass == RENDERPASS_FORWARD || renderPass == RENDERPASS_ENVMAPCAPTURE)
+	for (size_t i = 0; i < std::min(size_t(32), culling.culledDecals.size()); ++i)
 	{
-		for (size_t i = 0; i < std::min(size_t(32), culling.culledDecals.size()); ++i)
+		const uint32_t decalIndex = culling.culledDecals[culling.culledDecals.size() - 1 - i]; // note: reverse order, for correct blending!
+		const AABB& decal_aabb = scene.aabb_decals[decalIndex];
+		if (decal_aabb.intersects(batch_aabb))
 		{
-			const uint32_t decalIndex = culling.culledDecals[culling.culledDecals.size() - 1 - i]; // note: reverse order, for correct blending!
-			const AABB& decal_aabb = scene.aabb_decals[decalIndex];
-			if (decal_aabb.intersects(batch_aabb))
-			{
-				const uint8_t bucket_place = uint8_t(i % 32);
-				cb.xForwardDecalMask |= 1 << bucket_place;
-			}
+			const uint8_t bucket_place = uint8_t(i % 32);
+			cb.xForwardDecalMask |= 1 << bucket_place;
 		}
 	}
 
-	if (renderPass == RENDERPASS_FORWARD)
+	if (renderPass != RENDERPASS_ENVMAPCAPTURE)
 	{
 		for (size_t i = 0; i < std::min(size_t(32), culling.culledEnvProbes.size()); ++i)
 		{
@@ -3140,9 +2819,7 @@ void RenderMeshes(
 		// Do we need to bind every vertex buffer or just a reduced amount for this pass?
 		const bool advancedVBRequest =
 			!IsWireRender() && (
-				renderPass == RENDERPASS_FORWARD ||
-				renderPass == RENDERPASS_DEFERRED ||
-				renderPass == RENDERPASS_TILEDFORWARD ||
+				renderPass == RENDERPASS_MAIN ||
 				renderPass == RENDERPASS_ENVMAPCAPTURE ||
 				renderPass == RENDERPASS_VOXELIZE
 				);
@@ -3155,7 +2832,6 @@ void RenderMeshes(
 
 		// Do we need to compute a light mask for this pass on the CPU?
 		const bool forwardLightmaskRequest =
-			renderPass == RENDERPASS_FORWARD ||
 			renderPass == RENDERPASS_ENVMAPCAPTURE ||
 			renderPass == RENDERPASS_VOXELIZE;
 
@@ -3314,41 +2990,21 @@ void RenderMeshes(
 				}
 				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
-				const PipelineState* pso = nullptr;
-				if (material.IsCustomShader())
-				{
-					pso = GetCustomShaderPSO(renderPass, renderTypeFlags, material.GetCustomShaderID());
-				}
-				else
-				{
-					pso = GetObjectPSO(renderPass, mesh, material, tessellatorRequested, forceAlphaTestForDithering);
-				}
+				bool subsetRenderable = renderTypeFlags & material.GetRenderTypes();
 
-				if (pso == nullptr || !pso->IsValid())
-				{
-					continue;
-				}
-
-				bool subsetRenderable = false;
-
-				if (renderTypeFlags & RENDERTYPE_OPAQUE)
-				{
-					subsetRenderable = subsetRenderable || (!material.IsTransparent() && !material.IsWater());
-				}
-				if (renderTypeFlags & RENDERTYPE_TRANSPARENT)
-				{
-					subsetRenderable = subsetRenderable || material.IsTransparent();
-				}
-				if (renderTypeFlags & RENDERTYPE_WATER)
-				{
-					subsetRenderable = subsetRenderable || material.IsWater();
-				}
 				if (renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_SHADOWCUBE)
 				{
 					subsetRenderable = subsetRenderable && material.IsCastingShadow();
 				}
 
 				if (!subsetRenderable)
+				{
+					continue;
+				}
+
+				const PipelineState* pso = GetObjectPSO(renderPass, renderTypeFlags, mesh, material, tessellatorRequested, forceAlphaTestForDithering);
+
+				if (pso == nullptr || !pso->IsValid())
 				{
 					continue;
 				}
@@ -3363,7 +3019,7 @@ void RenderMeshes(
 					// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
 					if ((renderPass == RENDERPASS_DEPTHONLY || renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_SHADOWCUBE) && !material.IsAlphaTestEnabled() && !forceAlphaTestForDithering)
 					{
-						if (renderPass == RENDERPASS_SHADOW && material.IsTransparent())
+						if (renderPass == RENDERPASS_SHADOW && (renderTypeFlags & RENDERTYPE_TRANSPARENT))
 						{
 							boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
 						}
@@ -3438,6 +3094,7 @@ void RenderMeshes(
 							&mesh.vertexBuffer_UV1,
 							&mesh.vertexBuffer_ATL,
 							&mesh.vertexBuffer_COL,
+							mesh.streamoutBuffer_TAN.IsValid() ? &mesh.streamoutBuffer_TAN : &mesh.vertexBuffer_TAN,
 							mesh.vertexBuffer_PRE.IsValid() ? &mesh.vertexBuffer_PRE : &mesh.vertexBuffer_POS,
 							instances.buffer
 						};
@@ -3447,10 +3104,12 @@ void RenderMeshes(
 							sizeof(MeshComponent::Vertex_TEX),
 							sizeof(MeshComponent::Vertex_TEX),
 							sizeof(MeshComponent::Vertex_COL),
+							sizeof(MeshComponent::Vertex_TAN),
 							sizeof(MeshComponent::Vertex_POS),
 							instanceDataSize
 						};
 						uint32_t offsets[] = {
+							0,
 							0,
 							0,
 							0,
@@ -3774,8 +3433,12 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 
 			if (!mesh.vertexBuffer_PRE.IsValid())
 			{
-				device->CreateBuffer(&mesh.vertexBuffer_POS.GetDesc(), nullptr, &mesh.streamoutBuffer_POS);
-				device->CreateBuffer(&mesh.vertexBuffer_POS.GetDesc(), nullptr, &mesh.vertexBuffer_PRE);
+				device->CreateBuffer(&mesh.vertexBuffer_POS.desc, nullptr, &mesh.streamoutBuffer_POS);
+				device->CreateBuffer(&mesh.vertexBuffer_POS.desc, nullptr, &mesh.vertexBuffer_PRE);
+
+				GPUBufferDesc tandesc = mesh.vertexBuffer_TAN.desc;
+				tandesc.Usage = USAGE_DEFAULT;
+				device->CreateBuffer(&tandesc, nullptr, &mesh.streamoutBuffer_TAN);
 
 				if (raytracing_api)
 				{
@@ -4206,7 +3869,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
 		for (auto& x : waterRipples)
 		{
-			x->Update(dt * 60);
+			x.Update(dt * 60);
 		}
 		ManageWaterRipples();
 	});
@@ -4237,7 +3900,8 @@ void UpdateRenderData(CommandList cmd)
 		if (materialIndex < scene.materials.GetCount())
 		{
 			const MaterialComponent& material = scene.materials[materialIndex];
-			ShaderMaterial materialGPUData = material.CreateShaderMaterial();
+			ShaderMaterial materialGPUData;
+			material.WriteShaderMaterial(&materialGPUData);
 			device->UpdateBuffer(&material.constantBuffer, &materialGPUData, cmd);
 		}
 	}
@@ -4541,11 +4205,13 @@ void UpdateRenderData(CommandList cmd)
 				// Do the skinning
 				const GPUResource* vbs[] = {
 					&mesh.vertexBuffer_POS,
+					&mesh.vertexBuffer_TAN,
 					&mesh.vertexBuffer_BON,
 					&armature.boneBuffer,
 				};
 				const GPUResource* so[] = {
 					&mesh.streamoutBuffer_POS,
+					&mesh.streamoutBuffer_TAN,
 				};
 
 				device->BindResources(CS, vbs, SKINNINGSLOT_IN_VERTEX_POS, arraysize(vbs), cmd);
@@ -4564,7 +4230,7 @@ void UpdateRenderData(CommandList cmd)
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 			device->UnbindUAVs(0, 2, cmd);
-			device->UnbindResources(SKINNINGSLOT_IN_VERTEX_POS, 2, cmd);
+			device->UnbindResources(SKINNINGSLOT_IN_VERTEX_POS, 4, cmd);
 		}
 
 	}
@@ -4585,6 +4251,9 @@ void UpdateRenderData(CommandList cmd)
 
 		device->UpdateBuffer(&mesh.streamoutBuffer_POS, softbody.vertex_positions_simulation.data(), cmd, 
 			(uint32_t)(sizeof(MeshComponent::Vertex_POS) * softbody.vertex_positions_simulation.size()));
+
+		device->UpdateBuffer(&mesh.streamoutBuffer_TAN, softbody.vertex_tangents_simulation.data(), cmd,
+			(uint32_t)(sizeof(MeshComponent::Vertex_TAN)* softbody.vertex_tangents_simulation.size()));
 	}
 
 	// GPU Particle systems simulation/sorting/culling:
@@ -4868,24 +4537,24 @@ void EndFrame()
 
 void PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
 {
-	wiSprite* img = new wiSprite(image);
-	img->anim.fad = 0.01f;
-	img->anim.scaleX = 0.2f;
-	img->anim.scaleY = 0.2f;
-	img->params.pos = pos;
-	img->params.rotation = (wiRandom::getRandom(0, 1000)*0.001f) * 2 * 3.1415f;
-	img->params.siz = XMFLOAT2(1, 1);
-	img->params.typeFlag = WORLD;
-	img->params.quality = QUALITY_ANISOTROPIC;
-	img->params.pivot = XMFLOAT2(0.5f, 0.5f);
-	img->params.lookAt = waterPlane;
-	img->params.lookAt.w = 1;
+	wiSprite img(image);
+	img.anim.fad = 0.01f;
+	img.anim.scaleX = 0.2f;
+	img.anim.scaleY = 0.2f;
+	img.params.pos = pos;
+	img.params.rotation = (wiRandom::getRandom(0, 1000)*0.001f) * 2 * 3.1415f;
+	img.params.siz = XMFLOAT2(1, 1);
+	img.params.typeFlag = WORLD;
+	img.params.quality = QUALITY_ANISOTROPIC;
+	img.params.pivot = XMFLOAT2(0.5f, 0.5f);
+	img.params.lookAt = waterPlane;
+	img.params.lookAt.w = 1;
 	waterRipples.push_back(img);
 }
 void ManageWaterRipples(){
 	while (
 		!waterRipples.empty() &&
-		(waterRipples.front()->params.opacity <= 0 + FLT_EPSILON || waterRipples.front()->params.fade == 1)
+		(waterRipples.front().params.opacity <= 0 + FLT_EPSILON || waterRipples.front().params.fade == 1)
 		)
 	{
 		waterRipples.pop_front();
@@ -4894,9 +4563,9 @@ void ManageWaterRipples(){
 void DrawWaterRipples(CommandList cmd)
 {
 	GetDevice()->EventBegin("Water Ripples", cmd);
-	for(wiSprite* i:waterRipples)
+	for(auto& x : waterRipples)
 	{
-		i->DrawNormal(cmd);
+		x.DrawNormal(cmd);
 	}
 	GetDevice()->EventEnd(cmd);
 }
@@ -4953,105 +4622,6 @@ void DrawSoftParticles(
 
 	GetRenderFrameAllocator(cmd).free(sizeof(uint32_t) * emitterCount);
 
-}
-void DrawDeferredLights(
-	const CameraComponent& camera,
-	const Texture& depthbuffer,
-	const Texture& gbuffer0,
-	const Texture& gbuffer1,
-	const Texture& gbuffer2,
-	CommandList cmd
-)
-{
-	GraphicsDevice* device = GetDevice();
-	const FrameCulling& culling = frameCullings.at(&camera);
-
-	const Scene& scene = GetScene();
-
-	device->EventBegin("DrawDeferredLights", cmd);
-	auto range = wiProfiler::BeginRangeGPU("Deferred Light Render", cmd);
-
-	BindShadowmaps(PS, cmd);
-	BindEnvironmentTextures(PS, cmd);
-
-	device->BindResource(PS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-	device->BindResource(PS, &gbuffer0, TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(PS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
-	device->BindResource(PS, &gbuffer2, TEXSLOT_GBUFFER2, cmd);
-
-	// Environmental light (envmap + voxelGI) is always drawn
-	{
-		device->BindPipelineState(&PSO_enviromentallight, cmd);
-		device->Draw(3, 0, cmd); // full screen triangle
-	}
-
-	for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
-	{
-		device->BindPipelineState(&PSO_deferredlight[type], cmd);
-
-		for (size_t i = 0; i < culling.culledLights.size(); ++i)
-		{
-			const uint32_t lightIndex = culling.culledLights[i];
-			const LightComponent& light = scene.lights[lightIndex];
-			if (light.GetType() != type || light.IsStatic())
-				continue;
-
-			switch (type)
-			{
-			case LightComponent::DIRECTIONAL:
-			case LightComponent::SPHERE:
-			case LightComponent::DISC:
-			case LightComponent::RECTANGLE:
-			case LightComponent::TUBE:
-				{
-					MiscCB miscCb;
-					miscCb.g_xColor.x =  float(entityArrayOffset_Lights + i);
-					device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
-					device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-
-					device->Draw(3, 0, cmd); // full screen triangle
-				}
-				break;
-			case LightComponent::POINT:
-				{
-					MiscCB miscCb;
-					miscCb.g_xColor.x = float(entityArrayOffset_Lights + i);
-					float sca = light.GetRange() + 1;
-					XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * camera.GetViewProjection());
-					device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
-					device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-
-					device->Draw(240, 0, cmd); // icosphere
-				}
-				break;
-			case LightComponent::SPOT:
-				{
-					MiscCB miscCb;
-					miscCb.g_xColor.x = float(entityArrayOffset_Lights + i);
-					const float coneS = (const float)(light.fov / XM_PIDIV4);
-					XMStoreFloat4x4(&miscCb.g_xTransform, 
-						XMMatrixScaling(coneS*light.GetRange(), light.GetRange(), coneS*light.GetRange())*
-						XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
-						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) *
-						camera.GetViewProjection()
-					);
-					device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
-					device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-
-					device->Draw(192, 0, cmd); // cone
-				}
-				break;
-			}
-		}
-
-
-	}
-
-	wiProfiler::EndRange(range);
-	device->EventEnd(cmd);
 }
 void DrawLightVisualizers(
 	const CameraComponent& camera, 
@@ -5795,7 +5365,7 @@ void DrawScene(
 
 	if (transparent)
 	{
-		if (renderPass == RENDERPASS_TILEDFORWARD)
+		if (renderPass == RENDERPASS_MAIN)
 		{
 			device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], SBSLOT_ENTITYTILES, cmd);
 		}
@@ -5806,7 +5376,7 @@ void DrawScene(
 	}
 	else
 	{
-		if (renderPass == RENDERPASS_TILEDFORWARD)
+		if (renderPass == RENDERPASS_MAIN)
 		{
 			device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE], SBSLOT_ENTITYTILES, cmd);
 		}
@@ -5814,15 +5384,7 @@ void DrawScene(
 
 	if (hairparticle)
 	{
-		const bool alphacomposition = GetAlphaCompositionEnabled();
-
-		if (!transparent && alphacomposition)
-		{
-			// cut off most transparent areas in opaque pass (if alpha composition enabled)
-			SetAlphaRef(0.25f, cmd);
-		}
-
-		if (!transparent || alphacomposition)
+		if (!transparent)
 		{
 			// transparent pass only renders hair when alpha composition enabled
 			for (uint32_t hairIndex : culling.culledHairs)
@@ -5831,14 +5393,7 @@ void DrawScene(
 				Entity entity = scene.hairs.GetEntity(hairIndex);
 				const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
-				if (renderPass == RENDERPASS_FORWARD)
-				{
-					ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, hair.aabb, renderPass);
-					device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
-					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
-				}
-
-				hair.Draw(camera, material, renderPass, transparent, cmd);
+				hair.Draw(camera, material, renderPass, cmd);
 			}
 		}
 	}
@@ -6990,69 +6545,6 @@ void DrawSun(CommandList cmd)
 	device->EventEnd(cmd);
 }
 
-void DrawDeferredDecals(
-	const CameraComponent& camera,
-	const Texture& depthbuffer,
-	CommandList cmd
-)
-{
-	const FrameCulling& culling = frameCullings.at(&camera);
-
-	if(!culling.culledDecals.empty())
-	{
-		GraphicsDevice* device = GetDevice();
-
-		device->EventBegin("DrawDeferredDecals", cmd);
-
-		const Scene& scene = GetScene();
-
-		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),cmd);
-
-		device->BindStencilRef(STENCILREF_DEFAULT, cmd);
-
-		device->BindPipelineState(&PSO_decal, cmd);
-
-		device->BindResource(PS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-
-		for (size_t decalIndex : culling.culledDecals) 
-		{
-			const DecalComponent& decal = scene.decals[decalIndex];
-			const AABB& aabb = scene.aabb_decals[decalIndex];
-
-			if ((decal.texture != nullptr || decal.normal != nullptr) && camera.frustum.CheckBoxFast(aabb)) 
-			{
-
-				device->BindResource(PS, decal.texture != nullptr ? decal.texture->texture : nullptr, TEXSLOT_ONDEMAND0, cmd);
-				device->BindResource(PS, decal.normal != nullptr ? decal.normal->texture : nullptr, TEXSLOT_ONDEMAND1, cmd);
-
-				XMMATRIX decalWorld = XMLoadFloat4x4(&decal.world);
-
-				MiscCB dcbvs;
-				XMStoreFloat4x4(&dcbvs.g_xTransform, decalWorld*camera.GetViewProjection());
-				device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &dcbvs, cmd);
-				device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-
-				DecalCB dcbps;
-				XMStoreFloat4x4(&dcbps.xDecalVP, XMMatrixInverse(nullptr, decalWorld)); // todo: cache the inverse!
-				dcbps.hasTexNor = 0;
-				if (decal.texture != nullptr)
-					dcbps.hasTexNor |= 0x0000001;
-				if (decal.normal != nullptr)
-					dcbps.hasTexNor |= 0x0000010;
-				XMStoreFloat3(&dcbps.eye, camera.GetEye());
-				dcbps.opacity = decal.GetOpacity();
-				dcbps.front = decal.front;
-				device->UpdateBuffer(&constantBuffers[CBTYPE_DECAL], &dcbps, cmd);
-
-				device->Draw(14, 0, cmd);
-
-			}
-
-		}
-
-		device->EventEnd(cmd);
-	}
-}
 
 static const uint32_t envmapCount = 16;
 static const uint32_t envmapRes = 128;
@@ -7129,6 +6621,7 @@ void ManageEnvProbes()
 		desc.MipLevels = 1;
 		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 		desc.Usage = USAGE_DEFAULT;
+		desc.layout = IMAGE_LAYOUT_DEPTHSTENCIL;
 
 		device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
 
@@ -7141,6 +6634,7 @@ void ManageEnvProbes()
 		desc.MipLevels = envmapMIPs;
 		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 		desc.Usage = USAGE_DEFAULT;
+		desc.layout = IMAGE_LAYOUT_GENERAL;
 
 		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
 
@@ -7463,6 +6957,7 @@ void RefreshImpostors(CommandList cmd)
 			&mesh.vertexBuffer_UV1,
 			&mesh.vertexBuffer_ATL,
 			&mesh.vertexBuffer_COL,
+			&mesh.vertexBuffer_TAN,
 			mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
 			mem.buffer
 		};
@@ -7472,10 +6967,12 @@ void RefreshImpostors(CommandList cmd)
 			sizeof(MeshComponent::Vertex_TEX),
 			sizeof(MeshComponent::Vertex_TEX),
 			sizeof(MeshComponent::Vertex_COL),
+			sizeof(MeshComponent::Vertex_TAN),
 			sizeof(MeshComponent::Vertex_POS),
 			sizeof(InstBuf)
 		};
 		uint32_t offsets[] = {
+			0,
 			0,
 			0,
 			0,
@@ -7746,15 +7243,9 @@ inline XMUINT3 GetEntityCullingTileCount()
 }
 void ComputeTiledLightCulling(
 	const Texture& depthbuffer,
-	CommandList cmd, 
-	const Texture* gbuffer0,
-	const Texture* gbuffer1,
-	const Texture* gbuffer2,
-	const Texture* lightbuffer_diffuse,
-	const Texture* lightbuffer_specular
+	CommandList cmd
 )
 {
-	const bool deferred = lightbuffer_diffuse != nullptr && lightbuffer_specular != nullptr;
 	auto range = wiProfiler::BeginRangeGPU("Entity Culling", cmd);
 	GraphicsDevice* device = GetDevice();
 
@@ -7868,7 +7359,7 @@ void ComputeTiledLightCulling(
 
 		device->BindResource(CS, &frustumBuffer, SBSLOT_TILEFRUSTUMS, cmd);
 
-		device->BindComputeShader(&tiledLightingCS[deferred][GetAdvancedLightCulling()][GetDebugLightCulling()], cmd);
+		device->BindComputeShader(&tiledLightingCS[GetAdvancedLightCulling()][GetDebugLightCulling()], cmd);
 
 		if (GetDebugLightCulling())
 		{
@@ -7893,38 +7384,14 @@ void ComputeTiledLightCulling(
 
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 
-		if (deferred)
-		{
-			const GPUResource* uavs[] = {
-				&resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT],
-				lightbuffer_diffuse,
-				lightbuffer_specular,
-			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		GPUResource* uavs[] = {
+			&resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT],
+			&resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE],
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
-			const GPUResource* res[] = {
-				gbuffer0,
-				gbuffer1,
-				gbuffer2,
-			};
-			device->BindResources(CS, res, TEXSLOT_GBUFFER0, arraysize(res), cmd);
-
-			BindShadowmaps(CS, cmd);
-			BindEnvironmentTextures(CS, cmd);
-
-			device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, cmd);
-		}
-		else
-		{
-			GPUResource* uavs[] = {
-				&resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT],
-				&resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE],
-			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-			device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, cmd);
-		}
-
+		device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, cmd);
+		
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(),
 		};
@@ -9078,11 +8545,7 @@ void RefreshLightmapAtlas(CommandList cmd)
 
 const Texture* GetGlobalLightmap()
 {
-	if (globalLightmap.IsValid())
-	{
-		return &globalLightmap;
-	}
-	return wiTextureHelper::getTransparent();
+	return &globalLightmap;
 }
 
 void BindCommonResources(CommandList cmd)
@@ -9285,6 +8748,12 @@ void UpdateCameraCB(const CameraComponent& camera, CommandList cmd)
 	cb.g_xCamera_ZRange = abs(cb.g_xCamera_ZFarP - cb.g_xCamera_ZNearP);
 	cb.g_xCamera_ZRange_rcp = 1.0f / std::max(0.0001f, cb.g_xCamera_ZRange);
 
+	static_assert(arraysize(camera.frustum.planes) == arraysize(cb.g_xCamera_FrustumPlanes), "Mismatch!");
+	for (int i = 0; i < arraysize(camera.frustum.planes); ++i)
+	{
+		cb.g_xCamera_FrustumPlanes[i] = camera.frustum.planes[i];
+	}
+
 	GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
 }
 
@@ -9301,32 +8770,6 @@ void SetAlphaRef(float alphaRef, CommandList cmd)
 		apiCB[cmd].g_xAlphaRef = 1 - alphaRef + 1.0f / 256.0f; // 256 so that it is just about smaller than 1 unorm unit (1.0/255.0)
 		GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_API], &apiCB[cmd], cmd);
 	}
-}
-void BindGBufferTextures(const Texture* slot0, const Texture* slot1, const Texture* slot2, CommandList cmd)
-{
-	GraphicsDevice* device = GetDevice();
-
-	device->BindResource(PS, slot0, TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(PS, slot1, TEXSLOT_GBUFFER1, cmd);
-	device->BindResource(PS, slot2, TEXSLOT_GBUFFER2, cmd);
-
-	device->BindResource(CS, slot0, TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(CS, slot1, TEXSLOT_GBUFFER1, cmd);
-	device->BindResource(CS, slot2, TEXSLOT_GBUFFER2, cmd);
-}
-void BindDepthTextures(const Texture* depth, const Texture* linearDepth, CommandList cmd)
-{
-	GraphicsDevice* device = GetDevice();
-
-	device->BindResource(PS, depth, TEXSLOT_DEPTH, cmd);
-	device->BindResource(VS, depth, TEXSLOT_DEPTH, cmd);
-	device->BindResource(GS, depth, TEXSLOT_DEPTH, cmd);
-	device->BindResource(CS, depth, TEXSLOT_DEPTH, cmd);
-
-	device->BindResource(PS, linearDepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(VS, linearDepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(GS, linearDepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(CS, linearDepth, TEXSLOT_LINEARDEPTH, cmd);
 }
 
 const Texture* ComputeLuminance(const Texture& sourceImage, CommandList cmd)
@@ -9415,7 +8858,7 @@ const Texture* ComputeLuminance(const Texture& sourceImage, CommandList cmd)
 }
 
 void ComputeShadingRateClassification(
-	const Texture& gbuffer1,
+	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& lineardepth,
 	const Texture& output,
 	CommandList cmd
@@ -9436,7 +8879,7 @@ void ComputeShadingRateClassification(
 		device->BindComputeShader(&computeShaders[CSTYPE_SHADINGRATECLASSIFICATION], cmd);
 	}
 
-	device->BindResource(CS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
@@ -9474,12 +8917,7 @@ void ComputeShadingRateClassification(
 }
 
 void DeferredComposition(
-	const Texture& gbuffer0,
-	const Texture& gbuffer1,
-	const Texture& gbuffer2,
-	const Texture& lightmap_diffuse,
-	const Texture& lightmap_specular,
-	const Texture& ao,
+	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& depth,
 	CommandList cmd
 )
@@ -9490,12 +8928,9 @@ void DeferredComposition(
 
 	device->BindPipelineState(&PSO_deferredcomposition, cmd);
 
-	device->BindResource(PS, &gbuffer0, TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(PS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
-	device->BindResource(PS, &gbuffer2, TEXSLOT_GBUFFER2, cmd);
-	device->BindResource(PS, &lightmap_diffuse, TEXSLOT_ONDEMAND0, cmd);
-	device->BindResource(PS, &lightmap_specular, TEXSLOT_ONDEMAND1, cmd);
-	device->BindResource(PS, &ao, TEXSLOT_ONDEMAND2, cmd);
+	device->BindResource(PS, &gbuffer[GBUFFER_ALBEDO_ROUGHNESS], TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(PS, &gbuffer[GBUFFER_LIGHTBUFFER_DIFFUSE], TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(PS, &gbuffer[GBUFFER_LIGHTBUFFER_SPECULAR], TEXSLOT_ONDEMAND1, cmd);
 	device->BindResource(PS, &depth, TEXSLOT_DEPTH, cmd);
 
 	device->Draw(3, 0, cmd);
@@ -10374,6 +9809,7 @@ void Postprocess_MSAO(
 void Postprocess_RTAO(
 	const Texture& depthbuffer,
 	const Texture& lineardepth,
+	const Texture& depth_history,
 	const Texture& output,
 	CommandList cmd,
 	float range,
@@ -10589,6 +10025,7 @@ void Postprocess_RTAO(
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(CS, &temp, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, &temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
 
 		const GPUResource* uavs[] = {
 			&temporal[temporal_output],
@@ -10693,8 +10130,7 @@ void Postprocess_RTAO(
 }
 void Postprocess_RTReflection(
 	const Texture& depthbuffer,
-	const Texture& gbuffer1,
-	const Texture& gbuffer2,
+	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& output,
 	CommandList cmd,
 	float range
@@ -10746,8 +10182,8 @@ void Postprocess_RTReflection(
 		descriptorTable.resources.push_back({ RWTEXTURE2D, 0 });
 		descriptorTable.resources.push_back({ ACCELERATIONSTRUCTURE, TEXSLOT_ACCELERATION_STRUCTURE });
 		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_DEPTH });
+		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_GBUFFER0 });
 		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_GBUFFER1 });
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_GBUFFER2 });
 		descriptorTable.resources.push_back({ TEXTURECUBEARRAY, TEXSLOT_ENVMAPARRAY });
 		descriptorTable.resources.push_back({ TEXTURE2DARRAY, TEXSLOT_SHADOWARRAY_2D });
 		descriptorTable.resources.push_back({ TEXTURECUBEARRAY, TEXSLOT_SHADOWARRAY_CUBE });
@@ -10839,8 +10275,8 @@ void Postprocess_RTReflection(
 	device->WriteDescriptor(&descriptorTable, 0, 0, &temp);
 	device->WriteDescriptor(&descriptorTable, 1, 0, &scene.TLAS);
 	device->WriteDescriptor(&descriptorTable, 2, 0, &depthbuffer);
-	device->WriteDescriptor(&descriptorTable, 3, 0, &gbuffer1);
-	device->WriteDescriptor(&descriptorTable, 4, 0, &gbuffer2);
+	device->WriteDescriptor(&descriptorTable, 3, 0, &gbuffer[GBUFFER_ALBEDO_ROUGHNESS]);
+	device->WriteDescriptor(&descriptorTable, 4, 0, &gbuffer[GBUFFER_NORMAL_VELOCITY]);
 	device->WriteDescriptor(&descriptorTable, 5, 0, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
 	device->WriteDescriptor(&descriptorTable, 6, 0, &shadowMapArray_2D);
 	device->WriteDescriptor(&descriptorTable, 7, 0, &shadowMapArray_Cube);
@@ -10967,8 +10403,7 @@ void Postprocess_SSR(
 	const Texture& input,
 	const Texture& depthbuffer,
 	const Texture& lineardepth,
-	const Texture& gbuffer1,
-	const Texture& gbuffer2,
+	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& output,
 	CommandList cmd
 )
@@ -11033,8 +10468,8 @@ void Postprocess_SSR(
 
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-		device->BindResource(CS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
-		device->BindResource(CS, &gbuffer2, TEXSLOT_GBUFFER2, cmd);
+		device->BindResource(CS, &gbuffer[GBUFFER_ALBEDO_ROUGHNESS], TEXSLOT_GBUFFER0, cmd);
+		device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
 
 		const GPUResource* uavs[] = {
@@ -11073,8 +10508,7 @@ void Postprocess_SSR(
 		device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_SSR_RESOLVE], cmd);
 
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(CS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
-		device->BindResource(CS, &gbuffer2, TEXSLOT_GBUFFER2, cmd);
+		device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 		device->BindResource(CS, &texture_raytrace, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, &texture_mask, TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(CS, &input, TEXSLOT_ONDEMAND2, cmd);
@@ -11167,11 +10601,12 @@ void Postprocess_SSR(
 }
 void Postprocess_SSS(
 	const Texture& lineardepth,
-	const Texture& gbuffer0,
+	const Texture gbuffer[GBUFFER_COUNT],
 	const RenderPass& input_output_lightbuffer_diffuse,
 	const RenderPass& input_output_temp1,
 	const RenderPass& input_output_temp2,
-	CommandList cmd
+	CommandList cmd,
+	float amount
 )
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -11179,71 +10614,93 @@ void Postprocess_SSS(
 	device->EventBegin("Postprocess_SSS", cmd);
 	auto range = wiProfiler::BeginRangeGPU("SSS", cmd);
 
-	device->BindStencilRef(STENCILREF_SKIN, cmd);
-	device->BindPipelineState(&PSO_sss, cmd);
-
 	device->BindResource(PS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(PS, &gbuffer0, TEXSLOT_GBUFFER0, cmd);
 
-	const RenderPass* rt_read = &input_output_lightbuffer_diffuse;
-	const RenderPass* rt_write = &input_output_temp1;
-
-	static int sssPassCount = 6;
-	for (int i = 0; i < sssPassCount; ++i)
+	for (uint32_t stencilref = STENCILREF_SKIN; stencilref <= STENCILREF_SNOW; ++stencilref)
 	{
-		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
+		device->BindStencilRef(stencilref, cmd);
 
-		if (i == sssPassCount - 1)
+		switch (stencilref)
 		{
-			// last pass will write into light buffer, but still use the previous ping-pong result:
-			rt_write = &input_output_lightbuffer_diffuse;
+		case STENCILREF_SKIN:
+			device->BindPipelineState(&PSO_sss_skin, cmd);
+			break;
+		case STENCILREF_SNOW:
+			device->BindPipelineState(&PSO_sss_snow, cmd);
+			break;
+		default:
+			assert(0);
+			break;
 		}
 
-		const TextureDesc& desc = rt_write->GetDesc().attachments[0].texture->GetDesc();
+		const RenderPass* rt_read = &input_output_lightbuffer_diffuse;
+		const RenderPass* rt_write = &input_output_temp1;
 
-		device->RenderPassBegin(rt_write, cmd);
-
-		Viewport vp;
-		vp.Width = (float)desc.Width;
-		vp.Height = (float)desc.Height;
-		device->BindViewports(1, &vp, cmd);
-
-
-		PostProcessCB cb;
-		cb.xPPResolution.x = desc.Width;
-		cb.xPPResolution.y = desc.Height;
-		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-		const float blur_strength = 400.0f;
-		if (i % 2 == 0)
+		static int sssPassCount = 6;
+		for (int i = 0; i < sssPassCount; ++i)
 		{
-			cb.xPPParams0.x = blur_strength * cb.xPPResolution_rcp.x;
-			cb.xPPParams0.y = 0;
-		}
-		else
-		{
-			cb.xPPParams0.x = 0;
-			cb.xPPParams0.y = blur_strength * cb.xPPResolution_rcp.y;
-		}
-		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 
-		device->BindResource(PS, rt_read->GetDesc().attachments[0].texture, TEXSLOT_ONDEMAND0, cmd);
+			if (i == sssPassCount - 1)
+			{
+				// last pass will write into light buffer, but still use the previous ping-pong result:
+				rt_write = &input_output_lightbuffer_diffuse;
+			}
 
-		device->Draw(3, 0, cmd);
+			const TextureDesc& desc = rt_write->GetDesc().attachments[0].texture->GetDesc();
 
-		device->RenderPassEnd(cmd);
+			device->RenderPassBegin(rt_write, cmd);
 
-		if (i == 0)
-		{
-			// first pass was reading from lightbuffer, so correct here for next pass ping-pong:
-			rt_read = &input_output_temp1;
-			rt_write = &input_output_temp2;
-		}
-		else
-		{
-			// ping-pong between temp render targets:
-			std::swap(rt_read, rt_write);
+			Viewport vp;
+			vp.Width = (float)desc.Width;
+			vp.Height = (float)desc.Height;
+			device->BindViewports(1, &vp, cmd);
+
+
+			PostProcessCB cb;
+			cb.xPPResolution.x = desc.Width;
+			cb.xPPResolution.y = desc.Height;
+			cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+			cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+			const float blur_strength = 400.0f * amount;
+			if (i % 2 == 0)
+			{
+				cb.sss_step.x = blur_strength * cb.xPPResolution_rcp.x;
+				cb.sss_step.y = 0;
+			}
+			else
+			{
+				cb.sss_step.x = 0;
+				cb.sss_step.y = blur_strength * cb.xPPResolution_rcp.y;
+			}
+			device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+			if (rt_read->GetDesc().attachments.size() > 2)
+			{
+				// resolved input!
+				device->BindResource(PS, rt_read->GetDesc().attachments[2].texture, TEXSLOT_ONDEMAND0, cmd);
+			}
+			else
+			{
+				device->BindResource(PS, rt_read->GetDesc().attachments[0].texture, TEXSLOT_ONDEMAND0, cmd);
+			}
+
+			device->Draw(3, 0, cmd);
+
+			device->RenderPassEnd(cmd);
+
+			if (i == 0)
+			{
+				// first pass was reading from lightbuffer, so correct here for next pass ping-pong:
+				rt_read = &input_output_temp1;
+				rt_write = &input_output_temp2;
+			}
+			else
+			{
+				// ping-pong between temp render targets:
+				std::swap(rt_read, rt_write);
+			}
 		}
 	}
 
@@ -12421,6 +11878,7 @@ void Postprocess_TemporalAA(
 	const Texture& input_history,
 	const Texture& velocity,
 	const Texture& lineardepth,
+	const Texture& depth_history,
 	const Texture& output,
 	CommandList cmd
 )
@@ -12434,6 +11892,7 @@ void Postprocess_TemporalAA(
 
 	device->BindResource(CS, &input_current, TEXSLOT_ONDEMAND0, cmd);
 	device->BindResource(CS, &input_history, TEXSLOT_ONDEMAND1, cmd);
+	device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
 	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 	device->BindResource(CS, &velocity, TEXSLOT_GBUFFER1, cmd);
 
@@ -12856,6 +12315,82 @@ void Postprocess_NormalsFromDepth(
 	device->UnbindUAVs(0, arraysize(uavs), cmd);
 	device->EventEnd(cmd);
 }
+void Postprocess_Denoise(
+	const Texture& input_output_current,
+	const Texture& temporal_history,
+	const Texture& temporal_current,
+	const Texture& velocity,
+	const Texture& lineardepth,
+	const Texture& depth_history,
+	CommandList cmd
+)
+{
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	device->EventBegin("Postprocess_Denoise", cmd);
+	device->BindComputeShader(&computeShaders[CSTYPE_POSTPROCESS_DENOISE], cmd);
+
+	const TextureDesc& desc = input_output_current.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	device->BindResource(CS, &velocity, TEXSLOT_GBUFFER1, cmd);
+
+	{
+		device->BindResource(CS, &input_output_current, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &temporal_history, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+
+		const GPUResource* uavs[] = {
+			&temporal_current,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+	}
+	{
+		device->BindResource(CS, &temporal_current, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &temporal_history, TEXSLOT_ONDEMAND1, cmd);
+
+		const GPUResource* uavs[] = {
+			&input_output_current,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+	}
+
+	device->EventEnd(cmd);
+}
 
 const XMFLOAT4& GetWaterPlane()
 {
@@ -12977,8 +12512,6 @@ void SetVariableRateShadingClassification(bool enabled) { variableRateShadingCla
 bool GetVariableRateShadingClassification() { return variableRateShadingClassification; }
 void SetVariableRateShadingClassificationDebug(bool enabled) { variableRateShadingClassificationDebug = enabled; }
 bool GetVariableRateShadingClassificationDebug() { return variableRateShadingClassificationDebug; }
-void SetAlphaCompositionEnabled(bool enabled) { ALPHACOMPOSITIONENABLED = enabled; }
-bool GetAlphaCompositionEnabled() { return ALPHACOMPOSITIONENABLED; }
 void SetOcclusionCullingEnabled(bool value)
 {
 	static bool initialized = false;

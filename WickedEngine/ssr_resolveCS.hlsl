@@ -72,7 +72,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     const float3 V = normalize(-P);
     const float NdotV = saturate(dot(N, V));
     
-    const float roughness = GetRoughness(texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).r);
+    const float roughness = GetRoughness(texture_gbuffer0.SampleLevel(sampler_point_clamp, uv, 0).a);
     const float roughnessSequenceSize = resolveSequenceSize * roughness + 1.0f;
     
     // Early out, useless if the roughness is out of range

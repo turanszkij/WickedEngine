@@ -110,9 +110,9 @@ namespace wiScene
 			EMPTY = 0,
 			DIRTY = 1 << 0,
 			CAST_SHADOW = 1 << 1,
-			PLANAR_REFLECTION = 1 << 2,
-			WATER = 1 << 3,
-			FLIP_NORMALMAP = 1 << 4,
+			_DEPRECATED_PLANAR_REFLECTION = 1 << 2,
+			_DEPRECATED_WATER = 1 << 3,
+			_DEPRECATED_FLIP_NORMALMAP = 1 << 4,
 			USE_VERTEXCOLORS = 1 << 5,
 			SPECULAR_GLOSSINESS_WORKFLOW = 1 << 6,
 			OCCLUSION_PRIMARY = 1 << 7,
@@ -120,6 +120,25 @@ namespace wiScene
 			USE_WIND = 1 << 9,
 		};
 		uint32_t _flags = DIRTY | CAST_SHADOW;
+
+		enum SHADERTYPE
+		{
+			SHADERTYPE_PBR,
+			SHADERTYPE_PBR_PLANARREFLECTION,
+			SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING,
+			SHADERTYPE_PBR_ANISOTROPIC,
+			SHADERTYPE_WATER,
+			SHADERTYPE_CARTOON,
+			SHADERTYPE_UNLIT,
+			SHADERTYPE_COUNT
+		} shaderType = SHADERTYPE_PBR;
+
+		enum SUBSURFACE_PROFILE
+		{
+			SUBSURFACE_SOLID,
+			SUBSURFACE_SKIN,
+			SUBSURFACE_SNOW,
+		} subsurfaceProfile = SUBSURFACE_SOLID;
 
 		STENCILREF engineStencilRef = STENCILREF_DEFAULT;
 		uint8_t userStencilRef = 0;
@@ -132,7 +151,6 @@ namespace wiScene
 		float reflectance = 0.02f;
 		float metalness = 0.0f;
 		float refractionIndex = 0.0f;
-		float subsurfaceScattering = 0.0f;
 		float normalMapStrength = 1.0f;
 		float parallaxOcclusionMapping = 0.0f;
 		float displacementMapping = 0.0f;
@@ -191,22 +209,18 @@ namespace wiScene
 		inline float GetEmissiveStrength() const { return emissiveColor.w; }
 		inline int GetCustomShaderID() const { return customShaderID; }
 
+		inline bool HasPlanarReflection() const { return shaderType == SHADERTYPE_PBR_PLANARREFLECTION || shaderType == SHADERTYPE_WATER; }
+
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline bool IsDirty() const { return _flags & DIRTY; }
 
 		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
-		inline void SetPlanarReflections(bool value) { if (value) { _flags |= PLANAR_REFLECTION; } else { _flags &= ~PLANAR_REFLECTION; } }
-		inline void SetWater(bool value) { if (value) { _flags |= WATER; } else { _flags &= ~WATER; } }
 		inline void SetOcclusionEnabled_Primary(bool value) { SetDirty(); if (value) { _flags |= OCCLUSION_PRIMARY; } else { _flags &= ~OCCLUSION_PRIMARY; } }
 		inline void SetOcclusionEnabled_Secondary(bool value) { SetDirty(); if (value) { _flags |= OCCLUSION_SECONDARY; } else { _flags &= ~OCCLUSION_SECONDARY; } }
 
-		inline bool IsTransparent() const { return userBlendMode != BLENDMODE_OPAQUE || IsCustomShader() || IsWater(); }
-		inline BLENDMODE GetBlendMode() const { if (userBlendMode == BLENDMODE_OPAQUE && IsTransparent()) { return BLENDMODE_ALPHA; } else return userBlendMode; }
-		inline bool IsWater() const { return _flags & WATER; }
-		inline bool HasPlanarReflection() const { return (_flags & PLANAR_REFLECTION) || IsWater(); }
+		inline BLENDMODE GetBlendMode() const { if (userBlendMode == BLENDMODE_OPAQUE && (GetRenderTypes() & RENDERTYPE_TRANSPARENT)) return BLENDMODE_ALPHA; else return userBlendMode; }
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
 		inline bool IsAlphaTestEnabled() const { return alphaRef <= 1.0f - 1.0f / 256.0f; }
-		inline bool IsFlipNormalMap() const { return _flags & FLIP_NORMALMAP; }
 		inline bool IsUsingVertexColors() const { return _flags & USE_VERTEXCOLORS; }
 		inline bool IsUsingWind() const { return _flags & USE_WIND; }
 		inline bool IsUsingSpecularGlossinessWorkflow() const { return _flags & SPECULAR_GLOSSINESS_WORKFLOW; }
@@ -221,13 +235,11 @@ namespace wiScene
 		inline void SetMetalness(float value) { SetDirty(); metalness = value; }
 		inline void SetEmissiveStrength(float value) { SetDirty(); emissiveColor.w = value; }
 		inline void SetRefractionIndex(float value) { SetDirty(); refractionIndex = value; }
-		inline void SetSubsurfaceScattering(float value) { SetDirty(); subsurfaceScattering = value; }
 		inline void SetNormalMapStrength(float value) { SetDirty(); normalMapStrength = value; }
 		inline void SetParallaxOcclusionMapping(float value) { SetDirty(); parallaxOcclusionMapping = value; }
 		inline void SetDisplacementMapping(float value) { SetDirty(); displacementMapping = value; }
 		inline void SetOpacity(float value) { SetDirty(); baseColor.w = value; }
 		inline void SetAlphaRef(float value) { SetDirty();  alphaRef = value; }
-		inline void SetFlipNormalMap(bool value) { SetDirty(); if (value) { _flags |= FLIP_NORMALMAP; } else { _flags &= ~FLIP_NORMALMAP; } }
 		inline void SetUseVertexColors(bool value) { SetDirty(); if (value) { _flags |= USE_VERTEXCOLORS; } else { _flags &= ~USE_VERTEXCOLORS; } }
 		inline void SetUseWind(bool value) { SetDirty(); if (value) { _flags |= USE_WIND; } else { _flags &= ~USE_WIND; } }
 		inline void SetUseSpecularGlossinessWorkflow(bool value) { SetDirty(); if (value) { _flags |= SPECULAR_GLOSSINESS_WORKFLOW; } else { _flags &= ~SPECULAR_GLOSSINESS_WORKFLOW; }  }
@@ -240,7 +252,8 @@ namespace wiScene
 		inline void SetUVSet_EmissiveMap(uint32_t value) { uvset_emissiveMap = value; SetDirty(); }
 		inline void SetUVSet_OcclusionMap(uint32_t value) { uvset_occlusionMap = value; SetDirty(); }
 
-		ShaderMaterial CreateShaderMaterial() const;
+		void WriteShaderMaterial(ShaderMaterial* dest) const;
+		uint32_t GetRenderTypes() const;
 
 		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
 	};
@@ -259,6 +272,7 @@ namespace wiScene
 
 		std::vector<XMFLOAT3> vertex_positions;
 		std::vector<XMFLOAT3> vertex_normals;
+		std::vector<XMFLOAT4> vertex_tangents;
 		std::vector<XMFLOAT2> vertex_uvset_0;
 		std::vector<XMFLOAT2> vertex_uvset_1;
 		std::vector<XMUINT4> vertex_boneindices;
@@ -293,6 +307,7 @@ namespace wiScene
 		AABB aabb;
 		wiGraphics::GPUBuffer indexBuffer;
 		wiGraphics::GPUBuffer vertexBuffer_POS;
+		wiGraphics::GPUBuffer vertexBuffer_TAN;
 		wiGraphics::GPUBuffer vertexBuffer_UV0;
 		wiGraphics::GPUBuffer vertexBuffer_UV1;
 		wiGraphics::GPUBuffer vertexBuffer_BON;
@@ -300,6 +315,7 @@ namespace wiScene
 		wiGraphics::GPUBuffer vertexBuffer_ATL;
 		wiGraphics::GPUBuffer vertexBuffer_PRE;
 		wiGraphics::GPUBuffer streamoutBuffer_POS;
+		wiGraphics::GPUBuffer streamoutBuffer_TAN;
 		wiGraphics::GPUBuffer vertexBuffer_SUB;
 		std::vector<uint8_t> vertex_subsets;
 
@@ -451,6 +467,26 @@ namespace wiScene
 		struct Vertex_COL
 		{
 			uint32_t color = 0;
+			static const wiGraphics::FORMAT FORMAT = wiGraphics::FORMAT::FORMAT_R8G8B8A8_UNORM;
+		};
+		struct Vertex_TAN
+		{
+			uint32_t tangent = 0;
+
+			void FromFULL(const XMFLOAT4& tan)
+			{
+				XMVECTOR T = XMLoadFloat4(&tan);
+				T = XMVector3Normalize(T);
+				XMFLOAT4 t;
+				XMStoreFloat4(&t, T);
+				t.w = tan.w;
+				tangent = 0;
+				tangent |= (uint)((t.x * 0.5f + 0.5f) * 255.0f) << 0;
+				tangent |= (uint)((t.y * 0.5f + 0.5f) * 255.0f) << 8;
+				tangent |= (uint)((t.z * 0.5f + 0.5f) * 255.0f) << 16;
+				tangent |= (uint)((t.w * 0.5f + 0.5f) * 255.0f) << 24;
+			}
+
 			static const wiGraphics::FORMAT FORMAT = wiGraphics::FORMAT::FORMAT_R8G8B8A8_UNORM;
 		};
 
@@ -624,6 +660,8 @@ namespace wiScene
 		void* physicsobject = nullptr;
 		XMFLOAT4X4 worldMatrix = IDENTITYMATRIX;
 		std::vector<MeshComponent::Vertex_POS> vertex_positions_simulation; // graphics vertices after simulation (world space)
+		std::vector<XMFLOAT4>vertex_tangents_tmp;
+		std::vector<MeshComponent::Vertex_TAN> vertex_tangents_simulation;
 		AABB aabb;
 
 		inline void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }

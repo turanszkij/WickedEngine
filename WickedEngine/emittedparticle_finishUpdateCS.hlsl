@@ -18,6 +18,6 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	else
 	{
 		// Create draw argument buffer (VertexCountPerInstance, InstanceCount, StartVertexLocation, StartInstanceLocation):
-		indirectBuffers.Store4(ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, uint4(particleCount * 6, 1, 0, 0));
+		indirectBuffers.Store4(ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, uint4(4, particleCount, 0, 0));
 	}
 }

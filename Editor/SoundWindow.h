@@ -1,37 +1,24 @@
 #pragma once
-
-class wiGUI;
-class wiWindow;
-class wiLabel;
-class wiCheckBox;
-class wiSlider;
-class wiColorPicker;
-class wiButton;
-class wiComboBox;
-class wiTextInputField;
+#include "WickedEngine.h"
 
 class EditorComponent;
 
-class SoundWindow
+class SoundWindow : public wiWindow
 {
 public:
-	SoundWindow(EditorComponent* editor);
-	~SoundWindow();
+	void Create(EditorComponent* editor);
 
 	wiECS::Entity entity = wiECS::INVALID_ENTITY;
 	void SetEntity(wiECS::Entity entity);
 
-	wiGUI* GUI;
-
-	wiWindow* soundWindow;
-	wiComboBox* reverbComboBox;
-	wiButton* addButton;
-	wiLabel* filenameLabel;
-	wiTextInputField* nameField;
-	wiButton* playstopButton;
-	wiCheckBox* loopedCheckbox;
-	wiCheckBox* reverbCheckbox;
-	wiCheckBox* disable3dCheckbox;
-	wiSlider* volumeSlider;
-	wiComboBox* submixComboBox;
+	wiComboBox reverbComboBox;
+	wiButton addButton;
+	wiLabel filenameLabel;
+	wiTextInputField nameField;
+	wiButton playstopButton;
+	wiCheckBox loopedCheckbox;
+	wiCheckBox reverbCheckbox;
+	wiCheckBox disable3dCheckbox;
+	wiSlider volumeSlider;
+	wiComboBox submixComboBox;
 };

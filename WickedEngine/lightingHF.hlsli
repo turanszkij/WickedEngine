@@ -38,9 +38,17 @@ inline Lighting CreateLighting(
 // Combine the direct and indirect lighting into final contribution
 inline LightingPart CombineLighting(in Surface surface, in Lighting lighting)
 {
+#ifdef LIGHTING_CARTOON
+	lighting.direct.diffuse = smoothstep(0.005, 0.05, lighting.direct.diffuse);
+	lighting.direct.specular = max(lighting.direct.specular.r, max(lighting.direct.specular.g, lighting.direct.specular.b));
+	lighting.direct.specular = step(0.05, lighting.direct.specular);
+	lighting.indirect.specular = smoothstep(0.008, 0.098, lighting.indirect.specular);
+#endif // LIGHTING_CARTOON
+
 	LightingPart result;
 	result.diffuse = lighting.direct.diffuse + lighting.indirect.diffuse * surface.occlusion;
 	result.specular = lighting.direct.specular + lighting.indirect.specular * surface.F * surface.occlusion;
+
 	return result;
 }
 
@@ -89,7 +97,7 @@ inline float shadowCube(in ShaderEntity light, float3 Lunnormalized)
 	return texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-Lunnormalized, light.GetShadowMapIndex()), remappedDistance + light.shadowBias).r;
 }
 
-inline float shadowTrace(float3 P, float3 N, float3 L, float dist)
+inline float shadowTrace(in Surface surface, in float3 L, in float dist)
 {
 #ifdef RAYTRACING_INLINE
 	RayQuery<
@@ -101,8 +109,12 @@ inline float shadowTrace(float3 P, float3 N, float3 L, float dist)
 	RayDesc ray;
 	ray.TMin = 0.001;
 	ray.TMax = dist;
-	ray.Origin = P + N * 0.01;
-	ray.Direction = L;
+	ray.Origin = surface.P + surface.N * 0.01;
+
+	float seed = g_xFrame_FrameCount * 0.001f;
+	float2 uv = surface.screenUV;
+	float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1; // todo: should be specific to light surface
+	ray.Direction = normalize(L + sampling_offset * 0.025f);
 
 	q.TraceRayInline(scene_acceleration_structure, 0, 0xFF, ray);
 	q.Proceed();
@@ -133,7 +145,7 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 			[branch]
 			if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
 			{
-				sh *= shadowTrace(surface.P, surface.N, normalize(L), 100000);
+				sh *= shadowTrace(surface, normalize(L), 100000);
 			}
 			else
 			{
@@ -210,7 +222,7 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 				[branch]
 				if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
 				{
-					sh *= shadowTrace(surface.P, surface.N, L, dist);
+					sh *= shadowTrace(surface, L, dist);
 				}
 				else
 				{
@@ -264,7 +276,7 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 					[branch]
 					if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
 					{
-						sh *= shadowTrace(surface.P, surface.N, L, dist);
+						sh *= shadowTrace(surface, L, dist);
 					}
 					else
 					{
@@ -400,7 +412,7 @@ inline void SphereLight(in ShaderEntity light, in Surface surface, inout Lightin
 		[branch]
 		if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
 		{
-			fLight = shadowTrace(surface.P, surface.N, L, dist);
+			fLight = shadowTrace(surface, L, dist);
 		}
 		else
 		{
@@ -456,7 +468,7 @@ inline void DiscLight(in ShaderEntity light, in Surface surface, inout Lighting 
 		[branch]
 		if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
 		{
-			fLight = shadowTrace(surface.P, surface.N, L, dist);
+			fLight = shadowTrace(surface, L, dist);
 		}
 		else
 		{
@@ -519,7 +531,7 @@ inline void RectangleLight(in ShaderEntity light, in Surface surface, inout Ligh
 		[branch]
 		if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
 		{
-			fLight = shadowTrace(surface.P, surface.N, L, dist);
+			fLight = shadowTrace(surface, L, dist);
 		}
 		else
 		{
@@ -642,7 +654,7 @@ inline void TubeLight(in ShaderEntity light, in Surface surface, inout Lighting 
 		[branch]
 		if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
 		{
-			fLight = shadowTrace(surface.P, surface.N, L, dist);
+			fLight = shadowTrace(surface, L, dist);
 		}
 		else
 		{

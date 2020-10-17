@@ -2,10 +2,6 @@
 #include "RenderPath_BindLua.h"
 #include "RenderPath3D_BindLua.h"
 #include "RenderPath2D_BindLua.h"
-#include "RenderPath3D_Deferred_BindLua.h"
-#include "RenderPath3D_Forward_BindLua.h"
-#include "RenderPath3D_TiledForward_BindLua.h"
-#include "RenderPath3D_TiledDeferred_BindLua.h"
 #include "LoadingScreen_BindLua.h"
 #include "wiProfiler.h"
 
@@ -42,38 +38,6 @@ int MainComponent_BindLua::GetActivePath(lua_State *L)
 	{
 		wiLua::SError(L, "GetActivePath() component is empty!");
 		return 0;
-	}
-
-	//return deferred 3d component if the active one is of that type
-	RenderPath3D_Deferred* compDef3D = dynamic_cast<RenderPath3D_Deferred*>(component->GetActivePath());
-	if (compDef3D != nullptr)
-	{
-		Luna<RenderPath3D_Deferred_BindLua>::push(L, new RenderPath3D_Deferred_BindLua(compDef3D));
-		return 1;
-	}
-
-	//return tiled deferred 3d component if the active one is of that type
-	RenderPath3D_TiledDeferred* compTDef3D = dynamic_cast<RenderPath3D_TiledDeferred*>(component->GetActivePath());
-	if (compTDef3D != nullptr)
-	{
-		Luna<RenderPath3D_TiledDeferred_BindLua>::push(L, new RenderPath3D_TiledDeferred_BindLua(compTDef3D));
-		return 1;
-	}
-
-	//return tiled forward 3d component if the active one is of that type
-	RenderPath3D_TiledForward* compTFwd3D = dynamic_cast<RenderPath3D_TiledForward*>(component->GetActivePath());
-	if (compTFwd3D != nullptr)
-	{
-		Luna<RenderPath3D_TiledForward_BindLua>::push(L, new RenderPath3D_TiledForward_BindLua(compTFwd3D));
-		return 1;
-	}
-
-	//return forward 3d component if the active one is of that type
-	RenderPath3D_Forward* compFwd3D = dynamic_cast<RenderPath3D_Forward*>(component->GetActivePath());
-	if (compFwd3D != nullptr)
-	{
-		Luna<RenderPath3D_Forward_BindLua>::push(L, new RenderPath3D_Forward_BindLua(compFwd3D));
-		return 1;
 	}
 
 	//return 3d component if the active one is of that type
@@ -139,34 +103,6 @@ int MainComponent_BindLua::SetActivePath(lua_State *L)
 					}
 				}
 			}
-		}
-
-		RenderPath3D_Forward_BindLua* compFwd3D = Luna<RenderPath3D_Forward_BindLua>::lightcheck(L, 1);
-		if (compFwd3D != nullptr)
-		{
-			component->ActivatePath(compFwd3D->component, fadeSeconds, fadeColor);
-			return 0;
-		}
-
-		RenderPath3D_Deferred_BindLua* compDef3D = Luna<RenderPath3D_Deferred_BindLua>::lightcheck(L, 1);
-		if (compDef3D != nullptr)
-		{
-			component->ActivatePath(compDef3D->component, fadeSeconds, fadeColor);
-			return 0;
-		}
-
-		RenderPath3D_TiledDeferred_BindLua* compTDef3D = Luna<RenderPath3D_TiledDeferred_BindLua>::lightcheck(L, 1);
-		if (compTDef3D != nullptr)
-		{
-			component->ActivatePath(compTDef3D->component, fadeSeconds, fadeColor);
-			return 0;
-		}
-
-		RenderPath3D_TiledForward_BindLua* compTFwd3D = Luna<RenderPath3D_TiledForward_BindLua>::lightcheck(L, 1);
-		if (compTFwd3D != nullptr)
-		{
-			component->ActivatePath(compTFwd3D->component, fadeSeconds, fadeColor);
-			return 0;
 		}
 
 		RenderPath3D_BindLua* comp3D = Luna<RenderPath3D_BindLua>::lightcheck(L, 1);

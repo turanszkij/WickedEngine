@@ -105,7 +105,6 @@ void main(
 		Out.tex = float4(uv, uv2);
 		Out.size = size;
 		Out.color = (particle.color_mirror & 0x00FFFFFF) | (uint(opacity * 255.0f) << 24);
-		Out.pos2D = Out.pos;
 		Out.unrotated_uv = quadPos.xy * float2(1, -1) / size * 0.5f + 0.5f;
 		Out.frameBlend = frameBlend;
 

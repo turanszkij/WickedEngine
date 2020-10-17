@@ -609,6 +609,7 @@ namespace wiEmittedParticle_Internal
 		for (int i = 0; i < BLENDMODE_COUNT; ++i)
 		{
 			PipelineStateDesc desc;
+			desc.pt = TRIANGLESTRIP;
 			if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
 			{
 				desc.ms = &meshShader;

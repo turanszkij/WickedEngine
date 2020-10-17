@@ -2647,7 +2647,6 @@ void GraphicsDevice_DX11::RenderPassBegin(const RenderPass* renderpass, CommandL
 	uint32_t rt_count = 0;
 	ID3D11RenderTargetView* RTVs[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 	ID3D11DepthStencilView* DSV = nullptr;
-	assert(desc.attachments.size() < arraysize(RTVs) + 1);
 	for (auto& attachment : desc.attachments)
 	{
 		const Texture* texture = attachment.texture;

@@ -1,44 +1,31 @@
 #pragma once
-
-class wiGUI;
-class wiWindow;
-class wiLabel;
-class wiCheckBox;
-class wiSlider;
-class wiComboBox;
-class wiColorPicker;
-class wiTextInputField;
+#include "WickedEngine.h"
 
 class EditorComponent;
 
-class TransformWindow
+class TransformWindow : public wiWindow
 {
 public:
-	TransformWindow(EditorComponent* editor);
-	~TransformWindow();
+	void Create(EditorComponent* editor);
 
 	wiECS::Entity entity;
 	void SetEntity(wiECS::Entity entity);
 
-	wiGUI* GUI;
+	wiButton createButton;
 
-	wiWindow* window;
+	wiComboBox parentCombo;
 
-	wiButton* createButton;
-
-	wiComboBox* parentCombo;
-
-	wiTextInputField* txInput;
-	wiTextInputField* tyInput;
-	wiTextInputField* tzInput;
-
-	wiTextInputField* rxInput;
-	wiTextInputField* ryInput;
-	wiTextInputField* rzInput;
-	wiTextInputField* rwInput;
-
-	wiTextInputField* sxInput;
-	wiTextInputField* syInput;
-	wiTextInputField* szInput;
+	wiTextInputField txInput;
+	wiTextInputField tyInput;
+	wiTextInputField tzInput;
+					 
+	wiTextInputField rxInput;
+	wiTextInputField ryInput;
+	wiTextInputField rzInput;
+	wiTextInputField rwInput;
+					 
+	wiTextInputField sxInput;
+	wiTextInputField syInput;
+	wiTextInputField szInput;
 };
 

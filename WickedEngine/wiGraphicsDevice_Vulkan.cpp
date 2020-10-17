@@ -1170,6 +1170,7 @@ using namespace Vulkan_Internal;
 		dataEnd = dataBegin + size;
 
 		// Because the "buffer" is created by hand in this, fill the desc to indicate how it can be used:
+		this->buffer.type = GPUResource::GPU_RESOURCE_TYPE::BUFFER;
 		this->buffer.desc.ByteWidth = (uint32_t)((size_t)dataEnd - (size_t)dataBegin);
 		this->buffer.desc.Usage = USAGE_DYNAMIC;
 		this->buffer.desc.BindFlags = BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
@@ -5013,7 +5014,7 @@ using namespace Vulkan_Internal;
 			{
 				if (texture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 				{
-					if (texture->desc.ArraySize > 6)
+					if (texture->desc.ArraySize > 6 && sliceCount > 6)
 					{
 						view_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
 					}
@@ -5082,6 +5083,11 @@ using namespace Vulkan_Internal;
 		break;
 		case wiGraphics::UAV:
 		{
+			if (view_desc.viewType == VK_IMAGE_VIEW_TYPE_CUBE || view_desc.viewType == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY)
+			{
+				view_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+			}
+
 			VkImageView uav;
 			VkResult res = vkCreateImageView(device, &view_desc, nullptr, &uav);
 

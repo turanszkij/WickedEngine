@@ -1,5 +1,8 @@
 This file contains changelog of wiArchive versions
 
+52: Serialized MaterialComponent::subsurfaceProfile
+51: Serialized MeshComponent::vertex_tangents
+50: Serialized MaterialComponent::SHADERTYPE
 49: Particles are just using material's shading rate, so removed shading rate from particles
 48: Serialized shading rate for material and particles
 47: Serialized animation speed

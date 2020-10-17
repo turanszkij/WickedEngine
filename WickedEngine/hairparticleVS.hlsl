@@ -2,33 +2,22 @@
 #include "hairparticleHF.hlsli"
 #include "ShaderInterop_HairParticle.h"
 
-// billboard cross section:
 static const float3 HAIRPATCH[] = {
 	float3(-1, -1, 0),
 	float3(1, -1, 0),
 	float3(-1, 1, 0),
-	float3(-1, 1, 0),
-	float3(1, -1, 0),
 	float3(1, 1, 0),
-
-	float3(0, -1, -1),
-	float3(0, -1, 1),
-	float3(0, 1, -1),
-	float3(0, 1, -1),
-	float3(0, -1, 1),
-	float3(0, 1, 1),
 };
 
 STRUCTUREDBUFFER(particleBuffer, Patch, 0);
+STRUCTUREDBUFFER(culledIndexBuffer, uint, 1);
 
-VertexToPixel main(uint fakeIndex : SV_VERTEXID)
+VertexToPixel main(uint vertexID : SV_VERTEXID, uint instanceID : SV_INSTANCEID)
 {
 	VertexToPixel Out;
 
-	// bypass the geometry shader and expand the particle here:
-	const uint vertexID = fakeIndex % 12;
-	const uint segmentID = (fakeIndex / 12) % xHairSegmentCount;
-	const uint particleID = fakeIndex / 12;
+	const uint particleID = culledIndexBuffer[instanceID];
+	const uint segmentID = particleID % xHairSegmentCount;
 
 	float3 rootposition = particleBuffer[particleID - segmentID].position;
 	Out.fade = saturate(distance(rootposition.xyz, g_xCamera_CamPos.xyz) / xHairViewDistance);
@@ -104,7 +93,6 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 		Out.nor = normalize(normal + wind);
 		Out.tex = uv;
 
-		Out.pos2D = Out.pos;
 		Out.pos2DPrev = mul(g_xFrame_MainCamera_PrevVP, float4(savedPos + windPrev, 1));
 
 		Out.color = xColor.rgb;

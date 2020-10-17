@@ -34,6 +34,7 @@ private:
 	uint32_t aoSampleCount = 16;
 	float aoPower = 2.0f;
 	float chromaticAberrationAmount = 2.0f;
+	float sssBlurAmount = 1.0f;
 
 	AO ao = AO_DISABLED;
 	bool fxaaEnabled = false;
@@ -61,6 +62,12 @@ private:
 	uint32_t msaaSampleCount = 1;
 
 protected:
+	wiGraphics::Texture rtGbuffer[GBUFFER_COUNT];
+	wiGraphics::Texture rtGbuffer_resolved[GBUFFER_COUNT];
+	wiGraphics::Texture rtDeferred;
+	wiGraphics::Texture rtDeferred_resolved;
+	wiGraphics::Texture rtSSS[2];
+	wiGraphics::Texture rtSSS_resolved;
 	wiGraphics::Texture rtReflection; // contains the scene rendered for planar reflections
 	wiGraphics::Texture rtSSR; // standard screen-space reflection results
 	wiGraphics::Texture rtSceneCopy; // contains the rendered scene that can be fed into transparent pass for distortion effect
@@ -77,16 +84,22 @@ protected:
 	wiGraphics::Texture rtSun_resolved; // sun render target, but the resolved version if MSAA is enabled
 	wiGraphics::Texture rtGUIBlurredBackground[3];	// downsampled, gaussian blurred scene for GUI
 	wiGraphics::Texture rtShadingRate; // UINT8 shading rate per tile
+	wiGraphics::Texture rtDiffuseTemporal[2];	// raytraced shadows denoise
+	wiGraphics::Texture rtSpecularTemporal[2];	// raytraced shadows denoise
 
 	wiGraphics::Texture rtPostprocess_HDR; // ping-pong with main scene RT in HDR post-process chain
 	wiGraphics::Texture rtPostprocess_LDR[2]; // ping-pong with itself in LDR post-process chain
 
 	wiGraphics::Texture depthBuffer; // used for depth-testing, can be MSAA
 	wiGraphics::Texture depthBuffer_Copy; // used for shader resource, single sample
+	wiGraphics::Texture depthBuffer_Copy1; // used for disocclusion check
 	wiGraphics::Texture depthBuffer_Reflection; // used for reflection, single sample
 	wiGraphics::Texture rtLinearDepth; // linear depth result + mipchain (max filter)
 	wiGraphics::Texture smallDepth; // downsampled depth buffer
 
+	wiGraphics::RenderPass renderpass_depthprepass;
+	wiGraphics::RenderPass renderpass_main;
+	wiGraphics::RenderPass renderpass_transparent;
 	wiGraphics::RenderPass renderpass_occlusionculling;
 	wiGraphics::RenderPass renderpass_reflection;
 	wiGraphics::RenderPass renderpass_downsampledepthbuffer;
@@ -95,6 +108,53 @@ protected:
 	wiGraphics::RenderPass renderpass_volumetriclight;
 	wiGraphics::RenderPass renderpass_particledistortion;
 	wiGraphics::RenderPass renderpass_waterripples;
+	wiGraphics::RenderPass renderpass_deferredcomposition;
+	wiGraphics::RenderPass renderpass_SSS[3];
+
+	const constexpr wiGraphics::Texture* GetGbuffer_Read() const
+	{
+		if (getMSAASampleCount() > 1)
+		{
+			return rtGbuffer_resolved;
+		}
+		else
+		{
+			return rtGbuffer;
+		}
+	}
+	const constexpr wiGraphics::Texture* GetGbuffer_Read(GBUFFER i) const
+	{
+		if (getMSAASampleCount() > 1)
+		{
+			return &rtGbuffer_resolved[i];
+		}
+		else
+		{
+			return &rtGbuffer[i];
+		}
+	}
+	const constexpr wiGraphics::Texture* GetDeferred_Read() const
+	{
+		if (getMSAASampleCount() > 1)
+		{
+			return &rtDeferred_resolved;
+		}
+		else
+		{
+			return &rtDeferred;
+		}
+	}
+	const constexpr wiGraphics::Texture* GetSSS_Read(int i) const
+	{
+		if (getMSAASampleCount() > 1)
+		{
+			return &rtSSS_resolved;
+		}
+		else
+		{
+			return &rtSSS[i];
+		}
+	}
 
 	// Post-processes are ping-ponged, this function helps to obtain the last postprocess render target that was written
 	const wiGraphics::Texture* GetLastPostprocessRT() const
@@ -113,16 +173,18 @@ protected:
 	virtual void RenderReflections(wiGraphics::CommandList cmd) const;
 	virtual void RenderShadows(wiGraphics::CommandList cmd) const;
 
+	virtual void RenderSSS(wiGraphics::CommandList cmd) const;
+	virtual void RenderDeferredComposition(wiGraphics::CommandList cmd) const;
 	virtual void RenderLinearDepth(wiGraphics::CommandList cmd) const;
 	virtual void RenderAO(wiGraphics::CommandList cmd) const;
-	virtual void RenderSSR(const wiGraphics::Texture& gbuffer1, const wiGraphics::Texture& gbuffer2, wiGraphics::CommandList cmd) const;
+	virtual void RenderSSR(wiGraphics::CommandList cmd) const;
 	virtual void DownsampleDepthBuffer(wiGraphics::CommandList cmd) const;
 	virtual void RenderOutline(wiGraphics::CommandList cmd) const;
 	virtual void RenderLightShafts(wiGraphics::CommandList cmd) const;
 	virtual void RenderVolumetrics(wiGraphics::CommandList cmd) const;
-	virtual void RenderSceneMIPChain(const wiGraphics::Texture& srcSceneRT, wiGraphics::CommandList cmd) const;
-	virtual void RenderTransparents(const wiGraphics::RenderPass& renderpass_transparent, RENDERPASS renderPass, wiGraphics::CommandList cmd) const;
-	virtual void RenderPostprocessChain(const wiGraphics::Texture& srcSceneRT, const wiGraphics::Texture& srcGbuffer1, wiGraphics::CommandList cmd) const;
+	virtual void RenderSceneMIPChain(wiGraphics::CommandList cmd) const;
+	virtual void RenderTransparents(wiGraphics::CommandList cmd) const;
+	virtual void RenderPostprocessChain(wiGraphics::CommandList cmd) const;
 	
 public:
 	const wiGraphics::Texture* GetDepthStencil() const override { return &depthBuffer; }
@@ -142,6 +204,7 @@ public:
 	constexpr uint32_t getAOSampleCount() const { return aoSampleCount; }
 	constexpr float getAOPower() const { return aoPower; }
 	constexpr float getChromaticAberrationAmount() const { return chromaticAberrationAmount; }
+	constexpr float getSSSBlurAmount() const { return sssBlurAmount; }
 
 	constexpr bool getAOEnabled() const { return ao != AO_DISABLED; }
 	constexpr AO getAO() const { return ao; }
@@ -183,6 +246,7 @@ public:
 	constexpr void setAOSampleCount(uint32_t value) { aoSampleCount = value; }
 	constexpr void setAOPower(float value) { aoPower = value; }
 	constexpr void setChromaticAberrationAmount(float value) { chromaticAberrationAmount = value; }
+	constexpr void setSSSBlurAmount(float value) { sssBlurAmount = value; }
 
 	constexpr void setAO(AO value) { ao = value; }
 	constexpr void setSSREnabled(bool value){ ssrEnabled = value; }
@@ -210,7 +274,7 @@ public:
 	virtual void setMSAASampleCount(uint32_t value) { if (msaaSampleCount != value) { msaaSampleCount = value; ResizeBuffers(); } }
 
 	void Update(float dt) override;
-	void Render() const override = 0;
+	void Render() const override;
 	void Compose(wiGraphics::CommandList cmd) const override;
 };
 

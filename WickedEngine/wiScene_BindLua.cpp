@@ -261,9 +261,10 @@ void Bind()
 		wiLua::RunText("TUBE = 6");
 
 		wiLua::RunText("STENCILREF_EMPTY = 0");
-		wiLua::RunText("STENCILREF_SKY = 1");
-		wiLua::RunText("STENCILREF_DEFAULT = 2");
+		wiLua::RunText("STENCILREF_DEFAULT = 1");
+		wiLua::RunText("STENCILREF_CUSTOMSHADER = 2");
 		wiLua::RunText("STENCILREF_SKIN = 3");
+		wiLua::RunText("STENCILREF_SNOW = 4");
 
 		wiLua::RegisterFunc("GetScene", GetScene);
 		wiLua::RegisterFunc("LoadModel", LoadModel);

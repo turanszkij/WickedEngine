@@ -76,7 +76,6 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 {
 	string directory, name;
 	wiHelper::SplitPath(fileName, directory, name);
-	wiHelper::RemoveExtensionFromFileName(name);
 
 	tinyobj::attrib_t obj_attrib;
 	vector<tinyobj::shape_t> obj_shapes;

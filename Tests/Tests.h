@@ -2,10 +2,10 @@
 #include "WickedEngine.h"
 
 
-class TestsRenderer : public RenderPath3D_TiledForward
+class TestsRenderer : public RenderPath3D
 {
-	wiLabel* label = nullptr;
-	wiComboBox* testSelector = nullptr;
+	wiLabel label;
+	wiComboBox testSelector;
 	wiECS::Entity ik_entity = wiECS::INVALID_ENTITY;
 public:
 	void Load() override;

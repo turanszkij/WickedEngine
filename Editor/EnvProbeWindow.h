@@ -1,29 +1,19 @@
 #pragma once
-
-class wiGUI;
-class wiWindow;
-class wiLabel;
-class wiCheckBox;
-class wiSlider;
+#include "WickedEngine.h"
 
 class EditorComponent;
 
-class EnvProbeWindow
+class EnvProbeWindow : public wiWindow
 {
 public:
-	EnvProbeWindow(EditorComponent* editor);
-	~EnvProbeWindow();
-
-	wiGUI* GUI;
+	void Create(EditorComponent* editor);
 
 	wiECS::Entity entity;
 	void SetEntity(wiECS::Entity entity);
 
-	wiWindow*	envProbeWindow;
-
-	wiCheckBox*	realTimeCheckBox;
-	wiButton*	generateButton;
-	wiButton*	refreshButton;
-	wiButton*	refreshAllButton;
+	wiCheckBox realTimeCheckBox;
+	wiButton generateButton;
+	wiButton refreshButton;
+	wiButton refreshAllButton;
 };
 

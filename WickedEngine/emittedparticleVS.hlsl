@@ -6,21 +6,15 @@ static const float3 BILLBOARD[] = {
 	float3(-1, -1, 0),	// 0
 	float3(1, -1, 0),	// 1
 	float3(-1, 1, 0),	// 2
-	float3(-1, 1, 0),	// 3
-	float3(1, -1, 0),	// 4
-	float3(1, 1, 0),	// 5
+	float3(1, 1, 0),	// 4
 };
 
 STRUCTUREDBUFFER(particleBuffer, Particle, TEXSLOT_ONDEMAND21);
 STRUCTUREDBUFFER(aliveList, uint, TEXSLOT_ONDEMAND22);
 
-VertextoPixel main(uint fakeIndex : SV_VERTEXID)
+VertextoPixel main(uint vertexID : SV_VERTEXID, uint instanceID : SV_INSTANCEID)
 {
 	VertextoPixel Out;
-
-	// bypass the geometry shader, and instead expand the particle here in the VS:
-	uint vertexID = fakeIndex % 6;
-	uint instanceID = fakeIndex / 6;
 
 	// load particle data:
 	Particle particle = particleBuffer[aliveList[instanceID]];
@@ -77,7 +71,6 @@ VertextoPixel main(uint fakeIndex : SV_VERTEXID)
 	Out.tex = float4(uv, uv2);
 	Out.size = size;
 	Out.color = (particle.color_mirror & 0x00FFFFFF) | (uint(opacity * 255.0f) << 24);
-	Out.pos2D = Out.pos;
 	Out.unrotated_uv = quadPos.xy * float2(1, -1) / size * 0.5f + 0.5f;
 	Out.frameBlend = frameBlend;
 

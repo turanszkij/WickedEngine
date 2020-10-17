@@ -1,24 +1,14 @@
 #pragma once
-
-class wiGUI;
-class wiWindow;
-class wiLabel;
-class wiCheckBox;
-class wiSlider;
-class wiComboBox;
-class wiColorPicker;
-class wiButton;
-class wiTextInputField;
+#include "WickedEngine.h"
 
 class EditorComponent;
 
 class MaterialWindow;
 
-class HairParticleWindow
+class HairParticleWindow : public wiWindow
 {
 public:
-	HairParticleWindow(EditorComponent* editor);
-	~HairParticleWindow();
+	void Create(EditorComponent* editor);
 
 	wiECS::Entity entity;
 	void SetEntity(wiECS::Entity entity);
@@ -27,23 +17,19 @@ public:
 
 	wiScene::wiHairParticle* GetHair();
 
-	wiGUI* GUI;
-
-	wiWindow*	hairWindow;
-
-	wiButton* addButton;
-	wiComboBox*	meshComboBox;
-	wiSlider* lengthSlider;
-	wiSlider* stiffnessSlider;
-	wiSlider* randomnessSlider;
-	wiSlider* countSlider;
-	wiSlider* segmentcountSlider;
-	wiSlider* randomSeedSlider;
-	wiSlider* viewDistanceSlider;
-	wiTextInputField* framesXInput;
-	wiTextInputField* framesYInput;
-	wiTextInputField* frameCountInput;
-	wiTextInputField* frameStartInput;
+	wiButton addButton;
+	wiComboBox	meshComboBox;
+	wiSlider lengthSlider;
+	wiSlider stiffnessSlider;
+	wiSlider randomnessSlider;
+	wiSlider countSlider;
+	wiSlider segmentcountSlider;
+	wiSlider randomSeedSlider;
+	wiSlider viewDistanceSlider;
+	wiTextInputField framesXInput;
+	wiTextInputField framesYInput;
+	wiTextInputField frameCountInput;
+	wiTextInputField frameStartInput;
 
 };
 

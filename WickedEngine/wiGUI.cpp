@@ -59,16 +59,6 @@ void wiGUIElement::ApplyScissor(const Rect rect, CommandList cmd, bool constrain
 	device->BindScissorRects(1, &scissor, cmd);
 }
 
-
-
-wiGUI::~wiGUI()
-{
-	for (auto& widget : widgets)
-	{
-		delete widget;
-	}
-}
-
 void wiGUI::Update(float dt)
 {
 	if (!visible)
@@ -93,21 +83,14 @@ void wiGUI::Update(float dt)
 	focus = false;
 	for (auto& widget : widgets)
 	{
-		if (widget->parent == this)
-		{
-			// the contained child widgets will be updated by the containers
-			widget->Update(this, dt);
+		// the contained child widgets will be updated by the containers
+		widget->Update(this, dt);
 
-			if (widget->IsVisible() && widget->hitBox.intersects(pointerhitbox))
-			{
-				// hitbox can only intersect with one element (avoid detecting multiple overlapping elements)
-				pointerhitbox.pos = XMFLOAT2(-FLT_MAX, -FLT_MAX);
-				pointerhitbox.siz = XMFLOAT2(0, 0);
-			}
-		}
-
-		if (widget->IsEnabled() && widget->IsVisible() && widget->GetState() > wiWidget::WIDGETSTATE::IDLE)
+		if (widget->IsVisible() && widget->hitBox.intersects(pointerhitbox))
 		{
+			// hitbox can only intersect with one element (avoid detecting multiple overlapping elements)
+			pointerhitbox.pos = XMFLOAT2(-FLT_MAX, -FLT_MAX);
+			pointerhitbox.siz = XMFLOAT2(0, 0);
 			focus = true;
 		}
 
@@ -145,9 +128,8 @@ void wiGUI::Render(CommandList cmd) const
 	for (auto it = widgets.rbegin(); it != widgets.rend(); ++it)
 	{
 		const wiWidget* widget = (*it);
-		if (widget->parent == this && widget != activeWidget)
+		if (widget != activeWidget)
 		{
-			// the contained child widgets will be rendered by the containers
 			ApplyScissor(scissorRect, cmd);
 			widget->Render(this, cmd);
 		}
@@ -161,9 +143,12 @@ void wiGUI::Render(CommandList cmd) const
 
 	ApplyScissor(scissorRect, cmd);
 
-	for (auto&x : widgets)
+	if (activeWidget == nullptr)
 	{
-		x->RenderTooltip(this, cmd);
+		for (auto& x : widgets)
+		{
+			x->RenderTooltip(this, cmd);
+		}
 	}
 
 	wiRenderer::GetDevice()->EventEnd(cmd);
@@ -171,14 +156,21 @@ void wiGUI::Render(CommandList cmd) const
 
 void wiGUI::AddWidget(wiWidget* widget)
 {
-	widget->AttachTo(this);
-	widgets.push_back(widget);
+	if (widget != nullptr)
+	{
+		assert(std::find(widgets.begin(), widgets.end(), widget) == widgets.end()); // don't attach one widget twice!
+		widget->AttachTo(this);
+		widgets.push_back(widget);
+	}
 }
 
 void wiGUI::RemoveWidget(wiWidget* widget)
 {
-	widget->Detach();
-	widgets.remove(widget);
+	if (widget != nullptr)
+	{
+		widget->Detach();
+		widgets.remove(widget);
+	}
 }
 
 wiWidget* wiGUI::GetWidget(const std::string& name)

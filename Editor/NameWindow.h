@@ -1,29 +1,16 @@
 #pragma once
-
-class wiGUI;
-class wiWindow;
-class wiLabel;
-class wiCheckBox;
-class wiSlider;
-class wiComboBox;
-class wiColorPicker;
-class wiTextInputField;
+#include "WickedEngine.h"
 
 class EditorComponent;
 
-class NameWindow
+class NameWindow : public wiWindow
 {
 public:
-	NameWindow(EditorComponent* editor);
-	~NameWindow();
+	void Create(EditorComponent* editor);
 
 	wiECS::Entity entity;
 	void SetEntity(wiECS::Entity entity);
 
-	wiGUI* GUI;
-
-	wiWindow* window;
-
-	wiTextInputField* nameInput;
+	wiTextInputField nameInput;
 };
 

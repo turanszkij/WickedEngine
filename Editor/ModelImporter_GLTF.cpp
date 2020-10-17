@@ -355,7 +355,6 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	string directory, name;
 	wiHelper::SplitPath(fileName, directory, name);
 	string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(name));
-	wiHelper::RemoveExtensionFromFileName(name);
 
 
 	tinygltf::TinyGLTF loader;
@@ -407,6 +406,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 	Entity rootEntity = CreateEntity();
 	scene.transforms.Create(rootEntity);
+	scene.names.Create(rootEntity) = name;
 
 	// Create materials:
 	for (auto& x : state.gltfModel.materials)
@@ -450,7 +450,6 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			auto& img = state.gltfModel.images[tex.source];
 			material.normalMap = RegisterTexture(&img, "normal");
 			material.normalMapName = img.uri;
-			material.SetFlipNormalMap(true); // gltf import will always flip normal map by default
 			material.uvset_normalMap = normalTexture->second.TextureTexCoord();
 		}
 		if (metallicRoughnessTexture != x.values.end())
@@ -511,6 +510,12 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			{
 				material.userBlendMode = BLENDMODE_ALPHA;
 			}
+		}
+
+		auto unlit = x.extensions.find("KHR_materials_unlit");
+		if (unlit != x.extensions.end())
+		{
+			material.shaderType = MaterialComponent::SHADERTYPE_UNLIT;
 		}
 
 		// specular-glossiness workflow (todo):
@@ -677,6 +682,15 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					for (size_t i = 0; i < vertexCount; ++i)
 					{
 						mesh.vertex_normals[vertexOffset + i] = ((XMFLOAT3*)data)[i];
+					}
+				}
+				else if (!attr_name.compare("TANGENT"))
+				{
+					mesh.vertex_tangents.resize(vertexOffset + vertexCount);
+					assert(stride == 16);
+					for (size_t i = 0; i < vertexCount; ++i)
+					{
+						mesh.vertex_tangents[vertexOffset + i] = ((XMFLOAT4*)data)[i];
 					}
 				}
 				else if (!attr_name.compare("TEXCOORD_0"))

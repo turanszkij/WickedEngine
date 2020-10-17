@@ -7,7 +7,6 @@ TEXTURE2D(texture_depth, float, TEXSLOT_DEPTH);
 TEXTURE2D(texture_lineardepth, float, TEXSLOT_LINEARDEPTH);
 TEXTURE2D(texture_gbuffer0, float4, TEXSLOT_GBUFFER0);
 TEXTURE2D(texture_gbuffer1, float4, TEXSLOT_GBUFFER1);
-TEXTURE2D(texture_gbuffer2, float4, TEXSLOT_GBUFFER2);
 RAYTRACINGACCELERATIONSTRUCTURE(scene_acceleration_structure, TEXSLOT_ACCELERATION_STRUCTURE);
 TEXTURECUBE(texture_globalenvmap, float4, TEXSLOT_GLOBALENVMAP);
 TEXTURE2D(texture_globallightmap, float4, TEXSLOT_GLOBALLIGHTMAP);
@@ -199,7 +198,25 @@ inline void FullScreenTriangle(in uint vertexID, out float4 pos, out float2 uv)
 // Computes a tangent-basis matrix for a surface using screen-space derivatives
 inline float3x3 compute_tangent_frame(float3 N, float3 P, float2 UV)
 {
-	// ddx_coarse can be faster than ddx, but could result in artifacts. Haven't observed any artifacts yet.
+#if 1
+	// http://www.thetenthplanet.de/archives/1180
+	// get edge vectors of the pixel triangle
+	float3 dp1 = ddx_coarse(P);
+	float3 dp2 = ddy_coarse(P);
+	float2 duv1 = ddx_coarse(UV);
+	float2 duv2 = ddy_coarse(UV);
+
+	// solve the linear system
+	float3 dp2perp = cross(dp2, N);
+	float3 dp1perp = cross(N, dp1);
+	float3 T = dp2perp * duv1.x + dp1perp * duv2.x;
+	float3 B = dp2perp * duv1.y + dp1perp * duv2.y;
+
+	// construct a scale-invariant frame 
+	float invmax = rcp(sqrt(max(dot(T, T), dot(B, B))));
+	return float3x3(T * invmax, B * invmax, N);
+#else
+	// Old version
 	float3 dp1 = ddx_coarse(P);
 	float3 dp2 = ddy_coarse(P);
 	float2 duv1 = ddx_coarse(UV);
@@ -211,6 +228,7 @@ inline float3x3 compute_tangent_frame(float3 N, float3 P, float2 UV)
 	float3 B = normalize(mul(float2(duv1.y, duv2.y), inverseM));
 
 	return float3x3(T, B, N);
+#endif
 }
 
 // Computes linear depth from post-projection depth
@@ -255,7 +273,7 @@ float3 hemispherepoint_cos(float u, float v) {
 // Get random hemisphere sample in world-space along the normal (uniform distribution)
 inline float3 SampleHemisphere_uniform(in float3 normal, inout float seed, in float2 pixel)
 {
-	return mul(hemispherepoint_cos(rand(seed, pixel), rand(seed, pixel)), GetTangentSpace(normal));
+	return mul(hemispherepoint_uniform(rand(seed, pixel), rand(seed, pixel)), GetTangentSpace(normal));
 }
 // Get random hemisphere sample in world-space along the normal (cosine-weighted distribution)
 inline float3 SampleHemisphere_cos(in float3 normal, inout float seed, in float2 pixel)
@@ -425,6 +443,19 @@ inline float4 unpack_rgba(in uint value)
 	return retVal;
 }
 
+inline uint2 pack_half2(in float2 value)
+{
+	uint retVal = 0;
+	retVal = f32tof16(value.x) | (f32tof16(value.y) << 16);
+	return retVal;
+}
+inline float2 unpack_half2(in uint value)
+{
+	float2 retVal;
+	retVal.x = f16tof32(value.x);
+	retVal.y = f16tof32(value.x >> 16);
+	return retVal;
+}
 inline uint2 pack_half3(in float3 value)
 {
 	uint2 retVal = 0;

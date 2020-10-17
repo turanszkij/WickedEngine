@@ -20,10 +20,10 @@ struct ShaderMaterial
 	float		metalness;
 	float		refractionIndex;
 
-	float		subsurfaceScattering;
 	float		normalMapStrength;
-	float		normalMapFlip;
 	float		parallaxOcclusionMapping;
+	float		padding0;
+	float		padding1;
 
 	float		displacementMapping;
 	int			uvset_baseColorMap;
@@ -276,6 +276,8 @@ CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 	float		g_xCamera_ZFarP_rcp;
 	float		g_xCamera_ZRange;
 	float		g_xCamera_ZRange_rcp;
+
+	float4		g_xCamera_FrustumPlanes[6];
 };
 
 CBUFFER(APICB, CBSLOT_API)

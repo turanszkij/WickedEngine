@@ -21,17 +21,14 @@ namespace wiScene
 
 static Shader vs;
 static Shader ps_alphatestonly;
-static Shader ps_deferred;
-static Shader ps_forward;
-static Shader ps_forward_transparent;
-static Shader ps_tiledforward;
-static Shader ps_tiledforward_transparent;
+static Shader ps;
 static Shader ps_simplest;
 static Shader cs_simulate;
-static DepthStencilState dss_default, dss_equal, dss_rejectopaque_keeptransparent;
+static Shader cs_finishUpdate;
+static DepthStencilState dss_default, dss_equal;
 static RasterizerState rs, ncrs, wirers;
-static BlendState bs[2]; 
-static PipelineState PSO[RENDERPASS_COUNT][2];
+static BlendState bs; 
+static PipelineState PSO[RENDERPASS_COUNT];
 static PipelineState PSO_wire;
 
 void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshComponent& mesh, float dt)
@@ -54,13 +51,13 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 
 	if (dt > 0)
 	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
+
 		_flags &= ~REGENERATE_FRAME;
 		if (_flags & REBUILD_BUFFERS || !cb.IsValid() || (strandCount * segmentCount) != particleBuffer.GetDesc().ByteWidth / sizeof(Patch))
 		{
 			_flags &= ~REBUILD_BUFFERS;
 			_flags |= REGENERATE_FRAME;
-
-			GraphicsDevice* device = wiRenderer::GetDevice();
 
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_DEFAULT;
@@ -77,6 +74,10 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 				bd.StructureByteStride = sizeof(PatchSimulationData);
 				bd.ByteWidth = bd.StructureByteStride * strandCount * segmentCount;
 				device->CreateBuffer(&bd, nullptr, &simulationBuffer);
+
+				bd.StructureByteStride = sizeof(uint);
+				bd.ByteWidth = bd.StructureByteStride * strandCount * segmentCount;
+				device->CreateBuffer(&bd, nullptr, &culledIndexBuffer);
 			}
 
 			bd.Usage = USAGE_DEFAULT;
@@ -139,6 +140,15 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			}
 
 		}
+
+		if (!indirectBuffer.IsValid())
+		{
+			GPUBufferDesc desc;
+			desc.ByteWidth = sizeof(uint) + sizeof(IndirectDrawArgsInstanced); // counter + draw args
+			desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS | RESOURCE_MISC_INDIRECT_ARGS;
+			desc.BindFlags = BIND_UNORDERED_ACCESS;
+			device->CreateBuffer(&desc, nullptr, &indirectBuffer);
+		}
 	}
 
 }
@@ -151,8 +161,6 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	device->EventBegin("HairParticle - UpdateRenderData", cmd);
-
-	device->BindComputeShader(&cs_simulate, cmd);
 
 	const TextureDesc& desc = material.GetBaseColorMap()->GetDesc();
 
@@ -179,30 +187,60 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 	hcb.xHairAspect = (float)desc.Width / (float)desc.Height;
 	device->UpdateBuffer(&cb, &hcb, cmd);
 
-	device->BindConstantBuffer(CS, &cb, CB_GETBINDSLOT(HairParticleCB), cmd);
+	// Simulate:
+	{
+		device->BindComputeShader(&cs_simulate, cmd);
+		device->BindConstantBuffer(CS, &cb, CB_GETBINDSLOT(HairParticleCB), cmd);
 
-	const GPUResource* uavs[] = {
-		&particleBuffer,
-		&simulationBuffer
-	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		const GPUResource* uavs[] = {
+			&particleBuffer,
+			&simulationBuffer,
+			&culledIndexBuffer,
+			&indirectBuffer
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
-	const GPUResource* res[] = {
-		indexBuffer.IsValid() ? &indexBuffer : &mesh.indexBuffer,
-		mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
-		&vertexBuffer_length
-	};
-	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+		const GPUResource* res[] = {
+			indexBuffer.IsValid() ? &indexBuffer : &mesh.indexBuffer,
+			mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
+			&vertexBuffer_length
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
-	device->Dispatch(hcb.xHairNumDispatchGroups, 1, 1, cmd);
+		device->Dispatch(hcb.xHairNumDispatchGroups, 1, 1, cmd);
 
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
-	device->UnbindResources(TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory()
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->UnbindResources(TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+	}
+
+	// Finish update (reset counter, create indirect draw args):
+	{
+		device->BindComputeShader(&cs_finishUpdate, cmd);
+
+		const GPUResource* uavs[] = {
+			&indirectBuffer
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(1, 1, 1, cmd);
+
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory()
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+	}
 
 	device->EventEnd(cmd);
 }
 
-void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent& material, RENDERPASS renderPass, bool transparent, CommandList cmd) const
+void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent& material, RENDERPASS renderPass, CommandList cmd) const
 {
 	if (strandCount == 0 || !cb.IsValid())
 	{
@@ -216,7 +254,7 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 
 	if (wiRenderer::IsWireRender())
 	{
-		if (transparent || renderPass == RENDERPASS_DEPTHONLY)
+		if (renderPass == RENDERPASS_DEPTHONLY)
 		{
 			return;
 		}
@@ -225,7 +263,7 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 	}
 	else
 	{
-		device->BindPipelineState(&PSO[renderPass][transparent], cmd);
+		device->BindPipelineState(&PSO[renderPass], cmd);
 
 		const GPUResource* res[] = {
 			material.GetBaseColorMap()
@@ -242,8 +280,9 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 	device->BindConstantBuffer(VS, &cb, CB_GETBINDSLOT(HairParticleCB), cmd);
 
 	device->BindResource(VS, &particleBuffer, 0, cmd);
+	device->BindResource(VS, &culledIndexBuffer, 1, cmd);
 
-	device->Draw(strandCount * 12 * std::max(segmentCount, 1u), 0, cmd);
+	device->DrawInstancedIndirect(&indirectBuffer, 4, cmd);
 
 	device->EventEnd(cmd);
 }
@@ -315,72 +354,36 @@ namespace wiHairParticle_Internal
 
 		wiRenderer::LoadShader(PS, ps_simplest, "hairparticlePS_simplest.cso");
 		wiRenderer::LoadShader(PS, ps_alphatestonly, "hairparticlePS_alphatestonly.cso");
-		wiRenderer::LoadShader(PS, ps_deferred, "hairparticlePS_deferred.cso");
-		wiRenderer::LoadShader(PS, ps_forward, "hairparticlePS_forward.cso");
-		wiRenderer::LoadShader(PS, ps_forward_transparent, "hairparticlePS_forward_transparent.cso");
-		wiRenderer::LoadShader(PS, ps_tiledforward, "hairparticlePS_tiledforward.cso");
-		wiRenderer::LoadShader(PS, ps_tiledforward_transparent, "hairparticlePS_tiledforward_transparent.cso");
+		wiRenderer::LoadShader(PS, ps, "hairparticlePS.cso");
 
 		wiRenderer::LoadShader(CS, cs_simulate, "hairparticle_simulateCS.cso");
+		wiRenderer::LoadShader(CS, cs_finishUpdate, "hairparticle_finishUpdateCS.cso");
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		for (int i = 0; i < RENDERPASS_COUNT; ++i)
 		{
-			if (i == RENDERPASS_DEPTHONLY || i == RENDERPASS_DEFERRED || i == RENDERPASS_FORWARD || i == RENDERPASS_TILEDFORWARD)
+			if (i == RENDERPASS_DEPTHONLY || i == RENDERPASS_MAIN)
 			{
-				for (int j = 0; j < 2; ++j)
+				PipelineStateDesc desc;
+				desc.vs = &vs;
+				desc.bs = &bs;
+				desc.rs = &ncrs;
+				desc.dss = &dss_default;
+				desc.pt = TRIANGLESTRIP;
+
+				switch (i)
 				{
-					if ((i == RENDERPASS_DEPTHONLY || i == RENDERPASS_DEFERRED) && j == 1)
-					{
-						continue;
-					}
-
-					PipelineStateDesc desc;
-					desc.vs = &vs;
-					desc.bs = &bs[j];
-					desc.rs = &ncrs;
-					desc.dss = &dss_default;
-
-					switch (i)
-					{
-					case RENDERPASS_DEPTHONLY:
-						desc.ps = &ps_alphatestonly;
-						break;
-					case RENDERPASS_DEFERRED:
-						desc.ps = &ps_deferred;
-						break;
-					case RENDERPASS_FORWARD:
-						if (j == 0)
-						{
-							desc.ps = &ps_forward;
-							desc.dss = &dss_equal;
-						}
-						else
-						{
-							desc.ps = &ps_forward_transparent;
-						}
-						break;
-					case RENDERPASS_TILEDFORWARD:
-						if (j == 0)
-						{
-							desc.ps = &ps_tiledforward;
-							desc.dss = &dss_equal;
-						}
-						else
-						{
-							desc.ps = &ps_tiledforward_transparent;
-						}
-						break;
-					}
-
-					if (j == 1)
-					{
-						desc.dss = &dss_rejectopaque_keeptransparent; // transparent
-					}
-
-					device->CreatePipelineState(&desc, &PSO[i][j]);
+				case RENDERPASS_DEPTHONLY:
+					desc.ps = &ps_alphatestonly;
+					break;
+				case RENDERPASS_MAIN:
+					desc.ps = &ps;
+					desc.dss = &dss_equal;
+					break;
 				}
+
+				device->CreatePipelineState(&desc, &PSO[i]);
 			}
 		}
 
@@ -388,7 +391,7 @@ namespace wiHairParticle_Internal
 			PipelineStateDesc desc;
 			desc.vs = &vs;
 			desc.ps = &ps_simplest;
-			desc.bs = &bs[0];
+			desc.bs = &bs;
 			desc.rs = &wirers;
 			desc.dss = &dss_default;
 			device->CreatePipelineState(&desc, &PSO_wire);
@@ -457,26 +460,12 @@ void wiHairParticle::Initialize()
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthFunc = COMPARISON_EQUAL;
 	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &dss_equal);
-	dsd.DepthFunc = COMPARISON_GREATER;
-	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &dss_rejectopaque_keeptransparent);
 
 
 	BlendStateDesc bld;
 	bld.RenderTarget[0].BlendEnable = false;
 	bld.AlphaToCoverageEnable = false; // maybe for msaa
-	wiRenderer::GetDevice()->CreateBlendState(&bld, &bs[0]);
-
-	bld.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
-	bld.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
-	bld.RenderTarget[0].BlendOp = BLEND_OP_ADD;
-	bld.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-	bld.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
-	bld.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-	bld.RenderTarget[0].BlendEnable = true;
-	bld.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-	bld.AlphaToCoverageEnable = false;
-	bld.IndependentBlendEnable = false;
-	wiRenderer::GetDevice()->CreateBlendState(&bld, &bs[1]);
+	wiRenderer::GetDevice()->CreateBlendState(&bld, &bs);
 
 	static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { wiHairParticle_Internal::LoadShaders(); });
 	wiHairParticle_Internal::LoadShaders();

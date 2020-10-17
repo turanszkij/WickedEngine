@@ -7,10 +7,6 @@
 #include "RenderPath2D_BindLua.h"
 #include "LoadingScreen_BindLua.h"
 #include "RenderPath3D_BindLua.h"
-#include "RenderPath3D_Deferred_BindLua.h"
-#include "RenderPath3D_Forward_BindLua.h"
-#include "RenderPath3D_TiledForward_BindLua.h"
-#include "RenderPath3D_TiledDeferred_BindLua.h"
 #include "Texture_BindLua.h"
 #include "wiRenderer_BindLua.h"
 #include "wiAudio_BindLua.h"
@@ -101,11 +97,6 @@ namespace wiLua
 		RenderPath2D_BindLua::Bind();
 		LoadingScreen_BindLua::Bind();
 		RenderPath3D_BindLua::Bind();
-		// Note: when all render paths are registered, heap corruptions start happening!!!
-		//RenderPath3D_Forward_BindLua::Bind();
-		RenderPath3D_Deferred_BindLua::Bind();
-		RenderPath3D_TiledForward_BindLua::Bind();
-		RenderPath3D_TiledDeferred_BindLua::Bind();
 		Texture_BindLua::Bind();
 		wiRenderer_BindLua::Bind();
 		wiAudio_BindLua::Bind();

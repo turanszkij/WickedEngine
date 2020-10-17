@@ -102,7 +102,15 @@ namespace wiScene
 				archive >> emissiveColor.w;
 			}
 			archive >> refractionIndex;
-			archive >> subsurfaceScattering;
+			if (archive.GetVersion() < 52)
+			{
+				float subsurfaceScattering;
+				archive >> subsurfaceScattering;
+				if (subsurfaceScattering > 0)
+				{
+					subsurfaceProfile = SUBSURFACE_SKIN;
+				}
+			}
 			archive >> normalMapStrength;
 			archive >> parallaxOcclusionMapping;
 			archive >> alphaRef;
@@ -137,6 +145,32 @@ namespace wiScene
 			if (archive.GetVersion() >= 48)
 			{
 				archive >> (uint8_t&)shadingRate;
+			}
+
+			if (archive.GetVersion() >= 50)
+			{
+				archive >> (uint32_t&)shaderType;
+				archive >> customShaderID;
+			}
+			else
+			{
+				if (_flags & _DEPRECATED_WATER)
+				{
+					shaderType = SHADERTYPE_WATER;
+				}
+				if (_flags & _DEPRECATED_PLANAR_REFLECTION)
+				{
+					shaderType = SHADERTYPE_PBR_PLANARREFLECTION;
+				}
+				if (parallaxOcclusionMapping > 0)
+				{
+					shaderType = SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING;
+				}
+			}
+
+			if (archive.GetVersion() >= 52)
+			{
+				archive >> (uint32_t&)subsurfaceProfile;
 			}
 
 			SetDirty();
@@ -187,7 +221,11 @@ namespace wiScene
 				archive << emissiveColor.w;
 			}
 			archive << refractionIndex;
-			archive << subsurfaceScattering;
+			if (archive.GetVersion() < 52)
+			{
+				float subsurfaceScattering = 0;
+				archive << subsurfaceScattering;
+			}
 			archive << normalMapStrength;
 			archive << parallaxOcclusionMapping;
 			archive << alphaRef;
@@ -257,6 +295,17 @@ namespace wiScene
 			{
 				archive << (uint8_t)shadingRate;
 			}
+
+			if (archive.GetVersion() >= 50)
+			{
+				archive << (uint32_t)shaderType;
+				archive << customShaderID;
+			}
+
+			if (archive.GetVersion() >= 52)
+			{
+				archive << (uint32_t&)subsurfaceProfile;
+			}
 		}
 	}
 	void MeshComponent::Serialize(wiArchive& archive, Entity seed)
@@ -304,6 +353,11 @@ namespace wiScene
 				archive >> vertex_windweights;
 			}
 
+			if (archive.GetVersion() >= 51)
+			{
+				archive >> vertex_tangents;
+			}
+
 			CreateRenderData();
 		}
 		else
@@ -344,6 +398,11 @@ namespace wiScene
 			if (archive.GetVersion() >= 43)
 			{
 				archive << vertex_windweights;
+			}
+
+			if (archive.GetVersion() >= 51)
+			{
+				archive << vertex_tangents;
 			}
 
 		}

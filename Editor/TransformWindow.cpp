@@ -6,13 +6,10 @@ using namespace wiECS;
 using namespace wiScene;
 
 
-TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
+void TransformWindow::Create(EditorComponent* editor)
 {
-	assert(GUI && "Invalid GUI!");
-
-	window = new wiWindow(GUI, "Transform Window");
-	window->SetSize(XMFLOAT2(460, 180));
-	GUI->AddWidget(window);
+	wiWindow::Create("Transform Window");
+	SetSize(XMFLOAT2(460, 180));
 
 	float x = 100;
 	float y = 0;
@@ -20,24 +17,25 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 	float siz = 50;
 	float hei = 20;
 
-	createButton = new wiButton("Create New Transform");
-	createButton->SetTooltip("Create a new entity with only a trasform component");
-	createButton->SetPos(XMFLOAT2(x, y += step));
-	createButton->SetSize(XMFLOAT2(350, hei));
-	createButton->OnClick([=](wiEventArgs args) {
+	createButton.Create("Create New Transform");
+	createButton.SetTooltip("Create a new entity with only a trasform component");
+	createButton.SetPos(XMFLOAT2(x, y += step));
+	createButton.SetSize(XMFLOAT2(350, hei));
+	createButton.OnClick([=](wiEventArgs args) {
 		Entity entity = CreateEntity();
 		wiScene::GetScene().transforms.Create(entity);
 		editor->ClearSelected();
 		editor->AddSelected(entity);
+		editor->RefreshSceneGraphView();
 		SetEntity(entity);
 		});
-	window->AddWidget(createButton);
+	AddWidget(&createButton);
 
-	parentCombo = new wiComboBox("Parent: ");
-	parentCombo->SetSize(XMFLOAT2(330, hei));
-	parentCombo->SetPos(XMFLOAT2(x, y += step));
-	parentCombo->SetEnabled(false);
-	parentCombo->OnSelect([&](wiEventArgs args) {
+	parentCombo.Create("Parent: ");
+	parentCombo.SetSize(XMFLOAT2(330, hei));
+	parentCombo.SetPos(XMFLOAT2(x, y += step));
+	parentCombo.SetEnabled(false);
+	parentCombo.OnSelect([&](wiEventArgs args) {
 		Scene& scene = wiScene::GetScene();
 		HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
 
@@ -59,15 +57,15 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 		}
 
 		});
-	parentCombo->SetTooltip("Choose a parent entity for the transform");
-	window->AddWidget(parentCombo);
+	parentCombo.SetTooltip("Choose a parent entity for the transform");
+	AddWidget(&parentCombo);
 
-	txInput = new wiTextInputField("");
-	txInput->SetValue(0);
-	txInput->SetDescription("Translation X: ");
-	txInput->SetPos(XMFLOAT2(x, y += step));
-	txInput->SetSize(XMFLOAT2(siz, hei));
-	txInput->OnInputAccepted([&](wiEventArgs args) {
+	txInput.Create("");
+	txInput.SetValue(0);
+	txInput.SetDescription("Translation X: ");
+	txInput.SetPos(XMFLOAT2(x, y += step));
+	txInput.SetSize(XMFLOAT2(siz, hei));
+	txInput.OnInputAccepted([&](wiEventArgs args) {
 		TransformComponent* transform = wiScene::GetScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -75,14 +73,14 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			transform->SetDirty();
 		}
 	});
-	window->AddWidget(txInput);
+	AddWidget(&txInput);
 
-	tyInput = new wiTextInputField("");
-	tyInput->SetValue(0);
-	tyInput->SetDescription("Translation Y: ");
-	tyInput->SetPos(XMFLOAT2(x, y += step));
-	tyInput->SetSize(XMFLOAT2(siz, hei));
-	tyInput->OnInputAccepted([&](wiEventArgs args) {
+	tyInput.Create("");
+	tyInput.SetValue(0);
+	tyInput.SetDescription("Translation Y: ");
+	tyInput.SetPos(XMFLOAT2(x, y += step));
+	tyInput.SetSize(XMFLOAT2(siz, hei));
+	tyInput.OnInputAccepted([&](wiEventArgs args) {
 		TransformComponent* transform = wiScene::GetScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -90,14 +88,14 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			transform->SetDirty();
 		}
 		});
-	window->AddWidget(tyInput);
+	AddWidget(&tyInput);
 
-	tzInput = new wiTextInputField("");
-	tzInput->SetValue(0);
-	tzInput->SetDescription("Translation Z: ");
-	tzInput->SetPos(XMFLOAT2(x, y += step));
-	tzInput->SetSize(XMFLOAT2(siz, hei));
-	tzInput->OnInputAccepted([&](wiEventArgs args) {
+	tzInput.Create("");
+	tzInput.SetValue(0);
+	tzInput.SetDescription("Translation Z: ");
+	tzInput.SetPos(XMFLOAT2(x, y += step));
+	tzInput.SetSize(XMFLOAT2(siz, hei));
+	tzInput.OnInputAccepted([&](wiEventArgs args) {
 		TransformComponent* transform = wiScene::GetScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -105,7 +103,7 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			transform->SetDirty();
 		}
 		});
-	window->AddWidget(tzInput);
+	AddWidget(&tzInput);
 
 
 
@@ -113,12 +111,12 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 	y = step * 2;
 
 
-	rxInput = new wiTextInputField("");
-	rxInput->SetValue(0);
-	rxInput->SetDescription("Rotation X: ");
-	rxInput->SetPos(XMFLOAT2(x, y += step));
-	rxInput->SetSize(XMFLOAT2(siz, hei));
-	rxInput->OnInputAccepted([&](wiEventArgs args) {
+	rxInput.Create("");
+	rxInput.SetValue(0);
+	rxInput.SetDescription("Rotation X: ");
+	rxInput.SetPos(XMFLOAT2(x, y += step));
+	rxInput.SetSize(XMFLOAT2(siz, hei));
+	rxInput.OnInputAccepted([&](wiEventArgs args) {
 		TransformComponent* transform = wiScene::GetScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -126,14 +124,14 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			transform->SetDirty();
 		}
 		});
-	window->AddWidget(rxInput);
+	AddWidget(&rxInput);
 
-	ryInput = new wiTextInputField("");
-	ryInput->SetValue(0);
-	ryInput->SetDescription("Rotation Y: ");
-	ryInput->SetPos(XMFLOAT2(x, y += step));
-	ryInput->SetSize(XMFLOAT2(siz, hei));
-	ryInput->OnInputAccepted([&](wiEventArgs args) {
+	ryInput.Create("");
+	ryInput.SetValue(0);
+	ryInput.SetDescription("Rotation Y: ");
+	ryInput.SetPos(XMFLOAT2(x, y += step));
+	ryInput.SetSize(XMFLOAT2(siz, hei));
+	ryInput.OnInputAccepted([&](wiEventArgs args) {
 		TransformComponent* transform = wiScene::GetScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -141,14 +139,14 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			transform->SetDirty();
 		}
 		});
-	window->AddWidget(ryInput);
+	AddWidget(&ryInput);
 
-	rzInput = new wiTextInputField("");
-	rzInput->SetValue(0);
-	rzInput->SetDescription("Rotation Z: ");
-	rzInput->SetPos(XMFLOAT2(x, y += step));
-	rzInput->SetSize(XMFLOAT2(siz, hei));
-	rzInput->OnInputAccepted([&](wiEventArgs args) {
+	rzInput.Create("");
+	rzInput.SetValue(0);
+	rzInput.SetDescription("Rotation Z: ");
+	rzInput.SetPos(XMFLOAT2(x, y += step));
+	rzInput.SetSize(XMFLOAT2(siz, hei));
+	rzInput.OnInputAccepted([&](wiEventArgs args) {
 		TransformComponent* transform = wiScene::GetScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -156,14 +154,14 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			transform->SetDirty();
 		}
 		});
-	window->AddWidget(rzInput);
+	AddWidget(&rzInput);
 
-	rwInput = new wiTextInputField("");
-	rwInput->SetValue(1);
-	rwInput->SetDescription("Rotation W: ");
-	rwInput->SetPos(XMFLOAT2(x, y += step));
-	rwInput->SetSize(XMFLOAT2(siz, hei));
-	rwInput->OnInputAccepted([&](wiEventArgs args) {
+	rwInput.Create("");
+	rwInput.SetValue(1);
+	rwInput.SetDescription("Rotation W: ");
+	rwInput.SetPos(XMFLOAT2(x, y += step));
+	rwInput.SetSize(XMFLOAT2(siz, hei));
+	rwInput.OnInputAccepted([&](wiEventArgs args) {
 		TransformComponent* transform = wiScene::GetScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -171,7 +169,7 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			transform->SetDirty();
 		}
 		});
-	window->AddWidget(rwInput);
+	AddWidget(&rwInput);
 
 
 
@@ -180,12 +178,12 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 	y = step * 2;
 
 
-	sxInput = new wiTextInputField("");
-	sxInput->SetValue(1);
-	sxInput->SetDescription("Scale X: ");
-	sxInput->SetPos(XMFLOAT2(x, y += step));
-	sxInput->SetSize(XMFLOAT2(siz, hei));
-	sxInput->OnInputAccepted([&](wiEventArgs args) {
+	sxInput.Create("");
+	sxInput.SetValue(1);
+	sxInput.SetDescription("Scale X: ");
+	sxInput.SetPos(XMFLOAT2(x, y += step));
+	sxInput.SetSize(XMFLOAT2(siz, hei));
+	sxInput.OnInputAccepted([&](wiEventArgs args) {
 		TransformComponent* transform = wiScene::GetScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -193,14 +191,14 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			transform->SetDirty();
 		}
 		});
-	window->AddWidget(sxInput);
+	AddWidget(&sxInput);
 
-	syInput = new wiTextInputField("");
-	syInput->SetValue(1);
-	syInput->SetDescription("Scale Y: ");
-	syInput->SetPos(XMFLOAT2(x, y += step));
-	syInput->SetSize(XMFLOAT2(siz, hei));
-	syInput->OnInputAccepted([&](wiEventArgs args) {
+	syInput.Create("");
+	syInput.SetValue(1);
+	syInput.SetDescription("Scale Y: ");
+	syInput.SetPos(XMFLOAT2(x, y += step));
+	syInput.SetSize(XMFLOAT2(siz, hei));
+	syInput.OnInputAccepted([&](wiEventArgs args) {
 		TransformComponent* transform = wiScene::GetScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -208,14 +206,14 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			transform->SetDirty();
 		}
 		});
-	window->AddWidget(syInput);
+	AddWidget(&syInput);
 
-	szInput = new wiTextInputField("");
-	szInput->SetValue(1);
-	szInput->SetDescription("Scale Z: ");
-	szInput->SetPos(XMFLOAT2(x, y += step));
-	szInput->SetSize(XMFLOAT2(siz, hei));
-	szInput->OnInputAccepted([&](wiEventArgs args) {
+	szInput.Create("");
+	szInput.SetValue(1);
+	szInput.SetDescription("Scale Z: ");
+	szInput.SetPos(XMFLOAT2(x, y += step));
+	szInput.SetSize(XMFLOAT2(siz, hei));
+	szInput.OnInputAccepted([&](wiEventArgs args) {
 		TransformComponent* transform = wiScene::GetScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -223,20 +221,12 @@ TransformWindow::TransformWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			transform->SetDirty();
 		}
 		});
-	window->AddWidget(szInput);
+	AddWidget(&szInput);
 
-	window->Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 750, 100, 0));
-	window->SetVisible(false);
+	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 750, 100, 0));
+	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
-}
-
-
-TransformWindow::~TransformWindow()
-{
-	window->RemoveWidgets(true);
-	GUI->RemoveWidget(window);
-	delete window;
 }
 
 void TransformWindow::SetEntity(Entity entity)
@@ -248,41 +238,41 @@ void TransformWindow::SetEntity(Entity entity)
 
 	if (transform != nullptr)
 	{
-		parentCombo->ClearItems();
-		parentCombo->AddItem("NO PARENT");
+		parentCombo.ClearItems();
+		parentCombo.AddItem("NO PARENT");
 
 		HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
 		for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
 		{
 			Entity entity = scene.transforms.GetEntity(i);
 			const NameComponent* name = scene.names.GetComponent(entity);
-			parentCombo->AddItem(name == nullptr ? std::to_string(entity) : name->name);
+			parentCombo.AddItem(name == nullptr ? std::to_string(entity) : name->name);
 
 			if (hier != nullptr && hier->parentID == entity)
 			{
-				parentCombo->SetSelected((int)i + 1);
+				parentCombo.SetSelected((int)i + 1);
 			}
 		}
 
-		txInput->SetValue(transform->translation_local.x);
-		tyInput->SetValue(transform->translation_local.y);
-		tzInput->SetValue(transform->translation_local.z);
+		txInput.SetValue(transform->translation_local.x);
+		tyInput.SetValue(transform->translation_local.y);
+		tzInput.SetValue(transform->translation_local.z);
 
-		rxInput->SetValue(transform->rotation_local.x);
-		ryInput->SetValue(transform->rotation_local.y);
-		rzInput->SetValue(transform->rotation_local.z);
-		rwInput->SetValue(transform->rotation_local.w);
+		rxInput.SetValue(transform->rotation_local.x);
+		ryInput.SetValue(transform->rotation_local.y);
+		rzInput.SetValue(transform->rotation_local.z);
+		rwInput.SetValue(transform->rotation_local.w);
 
-		sxInput->SetValue(transform->scale_local.x);
-		syInput->SetValue(transform->scale_local.y);
-		szInput->SetValue(transform->scale_local.z);
+		sxInput.SetValue(transform->scale_local.x);
+		syInput.SetValue(transform->scale_local.y);
+		szInput.SetValue(transform->scale_local.z);
 
-		window->SetEnabled(true);
+		SetEnabled(true);
 	}
 	else
 	{
-		window->SetEnabled(false);
+		SetEnabled(false);
 	}
 
-	createButton->SetEnabled(true);
+	createButton.SetEnabled(true);
 }

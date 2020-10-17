@@ -11,8 +11,7 @@ float4 main(PixelInputType input) : SV_Target0
 	if (g_xMaterial.uvset_normalMap >= 0)
 	{
 		float3 bumpColor;
-		const float2 UV_normalMap = g_xMaterial.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-		NormalMapping(UV_normalMap, P, N, TBN, bumpColor);
+		NormalMapping(input.uvsets, P, N, TBN, bumpColor);
 	}
 
 	return float4(N * 0.5f + 0.5f, 1);

@@ -26,6 +26,10 @@ struct ConstantOutputType
 	float4 nor1 : NORMAL1;
 	float4 nor2 : NORMAL2;
 
+	float4 tan0 : TANGENT0;
+	float4 tan1 : TANGENT1;
+	float4 tan2 : TANGENT2;
+
 	float4 posPrev0 : POSITIONPREV0;
 	float4 posPrev1 : POSITIONPREV1;
 	float4 posPrev2 : POSITIONPREV2;
@@ -38,6 +42,7 @@ struct HullOutputType
 	float4 uvsets							: UVSETS;
 	float4 atlas							: ATLAS;
 	float4 nor								: NORMAL;
+	float4 tan								: TANGENT;
 	float4 posPrev							: POSITIONPREV;
 };
 
@@ -88,6 +93,11 @@ float3 PhongNormal(float u, float v, float w, ConstantOutputType hsc)
     // Interpolate
     return normalize(w * hsc.nor0.xyz + u * hsc.nor1.xyz + v * hsc.nor2.xyz);
 }
+float4 PhongTangent(float u, float v, float w, ConstantOutputType hsc)
+{
+	// Interpolate
+	return normalize(w * hsc.tan0 + u * hsc.tan1 + v * hsc.tan2);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Domain Shader
@@ -101,6 +111,7 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	float4 vertexPosition;
 	float4 vertexPositionPrev;
 	float3 vertexNormal;
+	float4 vertexTangent;
 	float4 vertexUvsets;
 	float2 vertexAtlas;
 	float4 vertexColor;
@@ -122,6 +133,7 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	vertexPositionPrev = float4(PhongGeometryPrev(fU, fV, fW, input), 1);
     // Compute normal
 	vertexNormal = PhongNormal(fU, fV, fW, input);
+	vertexTangent = PhongTangent(fU, fV, fW, input);
 
 	// Displacement
 	float3 displacement = -g_xMaterial.displacementMapping * vertexNormal.xyz;
@@ -136,13 +148,14 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	
 	Out.clip = dot(vertexPosition, g_xClipPlane);
 	
-	Out.pos = Out.pos2D = mul(g_xCamera_VP, vertexPosition);
+	Out.pos = mul(g_xCamera_VP, vertexPosition);
 	Out.pos2DPrev = mul(g_xFrame_MainCamera_PrevVP, vertexPositionPrev);
 	Out.pos3D = vertexPosition.xyz;
 	Out.uvsets = vertexUvsets;
 	Out.atl = vertexAtlas;
 	Out.color = vertexColor;
-	Out.nor = normalize(vertexNormal.xyz);
+	Out.nor = vertexNormal;
+	Out.tan = vertexTangent;
 
 	return Out;
 }

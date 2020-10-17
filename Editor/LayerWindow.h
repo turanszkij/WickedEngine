@@ -1,31 +1,18 @@
 #pragma once
-
-class wiGUI;
-class wiWindow;
-class wiLabel;
-class wiCheckBox;
-class wiSlider;
-class wiComboBox;
-class wiColorPicker;
-class wiTextInputField;
+#include "WickedEngine.h"
 
 class EditorComponent;
 
-class LayerWindow
+class LayerWindow : public wiWindow
 {
 public:
-	LayerWindow(EditorComponent* editor);
-	~LayerWindow();
+	void Create(EditorComponent* editor);
 
 	wiECS::Entity entity;
 	void SetEntity(wiECS::Entity entity);
 
-	wiGUI* GUI;
-
-	wiWindow* window;
-
-	wiCheckBox* layers[32];
-	wiButton* enableAllButton;
-	wiButton* enableNoneButton;
+	wiCheckBox layers[32];
+	wiButton enableAllButton;
+	wiButton enableNoneButton;
 };
 

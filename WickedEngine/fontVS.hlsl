@@ -7,13 +7,16 @@ struct VertextoPixel
 	float2 tex				: TEXCOORD0;
 };
 
-VertextoPixel main(float2 inPos : POSITION, float2 inTex : TEXCOORD0)
+RAWBUFFER(vertexBuffer, 0);
+
+VertextoPixel main(uint vertexID : SV_VERTEXID, uint instanceID : SV_InstanceID)
 {
 	VertextoPixel Out;
 
-	Out.pos = mul(g_xFont_Transform, float4(inPos, 0, 1));
-	
-	Out.tex = inTex;
+	uint vID = instanceID * 4 + vertexID;
+	uint3 raw = vertexBuffer.Load3(g_xFont_BufferOffset + vID * 12);
+	Out.pos = mul(g_xFont_Transform, float4(asfloat(raw.xy), 0, 1));
+	Out.tex = unpack_half2(raw.z);
 
 	return Out;
 }

@@ -25,7 +25,6 @@ using namespace std;
 using namespace wiGraphics;
 using namespace wiRectPacker;
 
-#define MAX_TEXT 10000
 #define WHITESPACE_SIZE ((float(params.size) + params.spacingX) * params.scaling * 0.25f)
 #define TAB_SIZE (WHITESPACE_SIZE * 4)
 #define LINEBREAK_SIZE ((float(params.size) + params.spacingY) * params.scaling)
@@ -33,7 +32,6 @@ using namespace wiRectPacker;
 namespace wiFont_Internal
 {
 	string				FONTPATH = wiHelper::GetOriginalWorkingDirectory() + "../WickedEngine/fonts/";
-	GPUBuffer			indexBuffer;
 	GPUBuffer			constantBuffer;
 	BlendState			blendState;
 	RasterizerState		rasterizerState;
@@ -239,14 +237,7 @@ void LoadShaders()
 {
 	std::string path = wiRenderer::GetShaderPath();
 
-	InputLayoutDesc layout[] =
-	{
-		{ "POSITION", 0, FORMAT_R32G32_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, FORMAT_R16G16_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-	};
 	wiRenderer::LoadShader(VS, vertexShader, "fontVS.cso");
-	wiRenderer::GetDevice()->CreateInputLayout(layout, arraysize(layout), &vertexShader, &inputLayout);
-
 
 	wiRenderer::LoadShader(PS, pixelShader, "fontPS.cso");
 
@@ -254,10 +245,10 @@ void LoadShaders()
 	PipelineStateDesc desc;
 	desc.vs = &vertexShader;
 	desc.ps = &pixelShader;
-	desc.il = &inputLayout;
 	desc.bs = &blendState;
 	desc.dss = &depthStencilState;
 	desc.rs = &rasterizerState;
+	desc.pt = TRIANGLESTRIP;
 	wiRenderer::GetDevice()->CreatePipelineState(&desc, &PSO);
 }
 void Initialize()
@@ -276,29 +267,6 @@ void Initialize()
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	{
-		std::vector<uint16_t> indices(MAX_TEXT * 6);
-		for (uint16_t i = 0; i < MAX_TEXT * 4; i += 4) 
-		{
-			indices[size_t(i) / 4 * 6 + 0] = i + 0;
-			indices[size_t(i) / 4 * 6 + 1] = i + 2;
-			indices[size_t(i) / 4 * 6 + 2] = i + 1;
-			indices[size_t(i) / 4 * 6 + 3] = i + 1;
-			indices[size_t(i) / 4 * 6 + 4] = i + 2;
-			indices[size_t(i) / 4 * 6 + 5] = i + 3;
-		}
-
-		GPUBufferDesc bd;
-		bd.Usage = USAGE_IMMUTABLE;
-		bd.ByteWidth = uint32_t(sizeof(uint16_t) * indices.size());
-		bd.BindFlags = BIND_INDEX_BUFFER;
-		bd.CPUAccessFlags = 0;
-		SubresourceData InitData;
-		InitData.pSysMem = indices.data();
-
-		device->CreateBuffer(&bd, &InitData, &indexBuffer);
-	}
-
-	{
 		GPUBufferDesc bd;
 		bd.Usage = USAGE_DYNAMIC;
 		bd.ByteWidth = sizeof(FontCB);
@@ -312,7 +280,7 @@ void Initialize()
 
 	RasterizerStateDesc rs;
 	rs.FillMode = FILL_SOLID;
-	rs.CullMode = CULL_BACK;
+	rs.CullMode = CULL_FRONT;
 	rs.FrontCounterClockwise = true;
 	rs.DepthBias = 0;
 	rs.DepthBiasClamp = 0;
@@ -626,21 +594,10 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 	device->BindResource(PS, &texture, TEXSLOT_FONTATLAS, cmd);
 	device->BindSampler(PS, &sampler, SSLOT_ONDEMAND1, cmd);
 
-	const GPUBuffer* vbs[] = {
-		mem.buffer,
-	};
-	const uint32_t strides[] = {
-		sizeof(FontVertex),
-	};
-	const uint32_t offsets[] = {
-		mem.offset,
-	};
-	device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
-
-	assert(text_length * 4 < 65536 && "The index buffer currently only supports so many characters!");
-	device->BindIndexBuffer(&indexBuffer, INDEXFORMAT_16BIT, 0, cmd);
+	device->BindResource(VS, mem.buffer, 0, cmd);
 
 	FontCB cb;
+	cb.g_xFont_BufferOffset = mem.offset;
 
 	XMMATRIX Projection = device->GetScreenProjection();
 
@@ -654,7 +611,7 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 		cb.g_xFont_Color = newProps.shadowColor.toFloat4();
 		device->UpdateBuffer(&constantBuffer, &cb, cmd);
 
-		device->DrawIndexed(quadCount * 6, 0, 0, cmd);
+		device->DrawInstanced(4, quadCount, 0, 0, cmd);
 	}
 
 	// font base render:
@@ -665,7 +622,7 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 	cb.g_xFont_Color = newProps.color.toFloat4();
 	device->UpdateBuffer(&constantBuffer, &cb, cmd);
 
-	device->DrawIndexed(quadCount * 6, 0, 0, cmd);
+	device->DrawInstanced(4, quadCount, 0, 0, cmd);
 
 	device->EventEnd(cmd);
 

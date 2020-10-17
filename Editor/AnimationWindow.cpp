@@ -7,13 +7,10 @@
 using namespace wiECS;
 using namespace wiScene;
 
-AnimationWindow::AnimationWindow(EditorComponent* editor) : GUI(&editor->GetGUI())
+void AnimationWindow::Create(EditorComponent* editor)
 {
-	assert(GUI && "Invalid GUI!");
-
-	animWindow = new wiWindow(GUI, "Animation Window");
-	animWindow->SetSize(XMFLOAT2(520, 140));
-	GUI->AddWidget(animWindow);
+	wiWindow::Create("Animation Window");
+	SetSize(XMFLOAT2(520, 140));
 
 	float x = 140;
 	float y = 10;
@@ -21,34 +18,34 @@ AnimationWindow::AnimationWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 	float step = hei + 2;
 
 
-	animationsComboBox = new wiComboBox("Animation: ");
-	animationsComboBox->SetSize(XMFLOAT2(300, hei));
-	animationsComboBox->SetPos(XMFLOAT2(x, y += step));
-	animationsComboBox->SetEnabled(false);
-	animationsComboBox->OnSelect([&](wiEventArgs args) {
+	animationsComboBox.Create("Animation: ");
+	animationsComboBox.SetSize(XMFLOAT2(300, hei));
+	animationsComboBox.SetPos(XMFLOAT2(x, y += step));
+	animationsComboBox.SetEnabled(false);
+	animationsComboBox.OnSelect([&](wiEventArgs args) {
 		entity = wiScene::GetScene().animations.GetEntity(args.iValue);
 	});
-	animationsComboBox->SetTooltip("Choose an animation clip...");
-	animWindow->AddWidget(animationsComboBox);
+	animationsComboBox.SetTooltip("Choose an animation clip...");
+	AddWidget(&animationsComboBox);
 
-	loopedCheckBox = new wiCheckBox("Looped: ");
-	loopedCheckBox->SetTooltip("Toggle animation looping behaviour.");
-	loopedCheckBox->SetSize(XMFLOAT2(hei, hei));
-	loopedCheckBox->SetPos(XMFLOAT2(150, y += step));
-	loopedCheckBox->OnClick([&](wiEventArgs args) {
+	loopedCheckBox.Create("Looped: ");
+	loopedCheckBox.SetTooltip("Toggle animation looping behaviour.");
+	loopedCheckBox.SetSize(XMFLOAT2(hei, hei));
+	loopedCheckBox.SetPos(XMFLOAT2(150, y += step));
+	loopedCheckBox.OnClick([&](wiEventArgs args) {
 		AnimationComponent* animation = wiScene::GetScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
 			animation->SetLooped(args.bValue);
 		}
 	});
-	animWindow->AddWidget(loopedCheckBox);
+	AddWidget(&loopedCheckBox);
 
-	playButton = new wiButton("Play");
-	playButton->SetTooltip("Play/Pause animation.");
-	playButton->SetSize(XMFLOAT2(100, hei));
-	playButton->SetPos(XMFLOAT2(200, y));
-	playButton->OnClick([&](wiEventArgs args) {
+	playButton.Create("Play");
+	playButton.SetTooltip("Play/Pause animation.");
+	playButton.SetSize(XMFLOAT2(100, hei));
+	playButton.SetPos(XMFLOAT2(200, y));
+	playButton.OnClick([&](wiEventArgs args) {
 		AnimationComponent* animation = wiScene::GetScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
@@ -63,82 +60,73 @@ AnimationWindow::AnimationWindow(EditorComponent* editor) : GUI(&editor->GetGUI(
 			}
 		}
 	});
-	animWindow->AddWidget(playButton);
+	AddWidget(&playButton);
 
-	stopButton = new wiButton("Stop");
-	stopButton->SetTooltip("Stop animation.");
-	stopButton->SetSize(XMFLOAT2(100, hei));
-	stopButton->SetPos(XMFLOAT2(310, y));
-	stopButton->OnClick([&](wiEventArgs args) {
+	stopButton.Create("Stop");
+	stopButton.SetTooltip("Stop animation.");
+	stopButton.SetSize(XMFLOAT2(100, hei));
+	stopButton.SetPos(XMFLOAT2(310, y));
+	stopButton.OnClick([&](wiEventArgs args) {
 		AnimationComponent* animation = wiScene::GetScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
 			animation->Stop();
 		}
 	});
-	animWindow->AddWidget(stopButton);
+	AddWidget(&stopButton);
 
-	timerSlider = new wiSlider(0, 1, 0, 100000, "Timer: ");
-	timerSlider->SetSize(XMFLOAT2(250, hei));
-	timerSlider->SetPos(XMFLOAT2(x, y += step));
-	timerSlider->OnSlide([&](wiEventArgs args) {
+	timerSlider.Create(0, 1, 0, 100000, "Timer: ");
+	timerSlider.SetSize(XMFLOAT2(250, hei));
+	timerSlider.SetPos(XMFLOAT2(x, y += step));
+	timerSlider.OnSlide([&](wiEventArgs args) {
 		AnimationComponent* animation = wiScene::GetScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
 			animation->timer = args.fValue;
 		}
 	});
-	timerSlider->SetEnabled(false);
-	timerSlider->SetTooltip("Set the animation timer by hand.");
-	animWindow->AddWidget(timerSlider);
+	timerSlider.SetEnabled(false);
+	timerSlider.SetTooltip("Set the animation timer by hand.");
+	AddWidget(&timerSlider);
 
-	amountSlider = new wiSlider(0, 1, 0, 100000, "Amount: ");
-	amountSlider->SetSize(XMFLOAT2(250, hei));
-	amountSlider->SetPos(XMFLOAT2(x, y += step));
-	amountSlider->OnSlide([&](wiEventArgs args) {
+	amountSlider.Create(0, 1, 0, 100000, "Amount: ");
+	amountSlider.SetSize(XMFLOAT2(250, hei));
+	amountSlider.SetPos(XMFLOAT2(x, y += step));
+	amountSlider.OnSlide([&](wiEventArgs args) {
 		AnimationComponent* animation = wiScene::GetScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
 			animation->amount = args.fValue;
 		}
 	});
-	amountSlider->SetEnabled(false);
-	amountSlider->SetTooltip("Set the animation blending amount by hand.");
-	animWindow->AddWidget(amountSlider);
+	amountSlider.SetEnabled(false);
+	amountSlider.SetTooltip("Set the animation blending amount by hand.");
+	AddWidget(&amountSlider);
 
-	speedSlider = new wiSlider(0, 4, 1, 100000, "Speed: ");
-	speedSlider->SetSize(XMFLOAT2(250, hei));
-	speedSlider->SetPos(XMFLOAT2(x, y += step));
-	speedSlider->OnSlide([&](wiEventArgs args) {
+	speedSlider.Create(0, 4, 1, 100000, "Speed: ");
+	speedSlider.SetSize(XMFLOAT2(250, hei));
+	speedSlider.SetPos(XMFLOAT2(x, y += step));
+	speedSlider.OnSlide([&](wiEventArgs args) {
 		AnimationComponent* animation = wiScene::GetScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
 			animation->speed = args.fValue;
 		}
 	});
-	speedSlider->SetEnabled(false);
-	speedSlider->SetTooltip("Set the animation speed.");
-	animWindow->AddWidget(speedSlider);
+	speedSlider.SetEnabled(false);
+	speedSlider.SetTooltip("Set the animation speed.");
+	AddWidget(&speedSlider);
 
 
 
-	animWindow->Translate(XMFLOAT3(100, 50, 0));
-	animWindow->SetVisible(false);
+	Translate(XMFLOAT3(100, 50, 0));
+	SetVisible(false);
 
-}
-
-
-AnimationWindow::~AnimationWindow()
-{
-	animWindow->RemoveWidgets(true);
-
-	GUI->RemoveWidget(animWindow);
-	delete animWindow;
 }
 
 void AnimationWindow::Update()
 {
-	animationsComboBox->ClearItems();
+	animationsComboBox.ClearItems();
 	
 	Scene& scene = wiScene::GetScene();
 
@@ -149,52 +137,52 @@ void AnimationWindow::Update()
 
 	if (scene.animations.GetCount() == 0)
 	{
-		animWindow->SetEnabled(false);
+		SetEnabled(false);
 		return;
 	}
 	else
 	{
-		animWindow->SetEnabled(true);
+		SetEnabled(true);
 	}
 
 	for (size_t i = 0; i < scene.animations.GetCount(); ++i)
 	{
 		Entity e = scene.animations.GetEntity(i);
 		NameComponent& name = *scene.names.GetComponent(e);
-		animationsComboBox->AddItem(name.name.empty() ? std::to_string(e) : name.name);
+		animationsComboBox.AddItem(name.name.empty() ? std::to_string(e) : name.name);
 
 		if (e == entity)
 		{
-			animationsComboBox->SetSelected((int)i);
+			animationsComboBox.SetSelected((int)i);
 		}
 	}
 
 	if (entity == INVALID_ENTITY && scene.animations.GetCount() > 0)
 	{
 		entity = scene.animations.GetEntity(0);
-		animationsComboBox->SetSelected(0);
+		animationsComboBox.SetSelected(0);
 	}
 
-	int selected = animationsComboBox->GetSelected();
+	int selected = animationsComboBox.GetSelected();
 	if (selected >= 0 && selected < (int)scene.animations.GetCount())
 	{
 		AnimationComponent& animation = scene.animations[selected];
 
 		if (animation.IsPlaying())
 		{
-			playButton->SetText("Pause");
+			playButton.SetText("Pause");
 			animation.amount = wiMath::Lerp(animation.amount, 1, 0.1f);
 		}
 		else
 		{
-			playButton->SetText("Play");
+			playButton.SetText("Play");
 		}
 
-		loopedCheckBox->SetCheck(animation.IsLooped());
+		loopedCheckBox.SetCheck(animation.IsLooped());
 
-		timerSlider->SetRange(0, animation.GetLength());
-		timerSlider->SetValue(animation.timer);
-		amountSlider->SetValue(animation.amount);
-		speedSlider->SetValue(animation.speed);
+		timerSlider.SetRange(0, animation.GetLength());
+		timerSlider.SetValue(animation.timer);
+		amountSlider.SetValue(animation.amount);
+		speedSlider.SetValue(animation.speed);
 	}
 }

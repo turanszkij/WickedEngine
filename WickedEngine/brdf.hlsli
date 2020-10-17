@@ -36,8 +36,12 @@ struct Surface
 	float metalness;		// metalness [0:dielectric -> 1:metal]
 	float reflectance;		// reflectivity [0:diffuse -> 1:specular]
 	float4 emissiveColor;	// light emission [0 -> 1]
-	float sss;				// subsurface scattering [0 -> 1]
 	float4 refraction;		// refraction color (rgb), refraction amount (a)
+	float2 pixel;			// pixel coordinate (used for randomization effects)
+	float2 screenUV;		// pixel coordinate in UV space [0 -> 1] (used for randomization effects)
+	float3 T;				// tangent
+	float3 B;				// bitangent
+	float anisotropy;		// anisotropy factor [0 -> 1]
 
 	float alphaRoughness;	// roughness remapped from perceptual to a "more linear change in roughness"
 	float alphaRoughnessSq;	// roughness input to brdf functions
@@ -47,6 +51,12 @@ struct Surface
 	float3 albedo;			// diffuse light absorbtion value (rgb)
 	float3 R;				// reflection vector
 	float3 F;				// fresnel term computed from NdotV
+
+	// Aniso params:
+	float TdotV;
+	float BdotV;
+	float at;
+	float ab;
 
 	inline void Update()
 	{
@@ -61,6 +71,11 @@ struct Surface
 		R = -reflect(V, N);
 		f90 = saturate(50.0 * dot(f0, 0.33));
 		F = F_Schlick(f0, f90, NdotV);
+
+		TdotV = dot(T, V);
+		BdotV = dot(B, V);
+		at = max(0, alphaRoughness * (1.0 + anisotropy));
+		ab = max(0, alphaRoughness * (1.0 - anisotropy));
 	}
 };
 inline Surface CreateSurface(
@@ -72,8 +87,10 @@ inline Surface CreateSurface(
 	in float occlusion,
 	in float metalness,
 	in float reflectance, 
-	in float4 emissiveColor = 0, 
-	in float sss = 0)
+	in float4 emissiveColor = 0,
+	in float anisotropy = 0,
+	in float3 T = 0,
+	in float3 B = 0)
 {
 	Surface surface;
 
@@ -86,8 +103,12 @@ inline Surface CreateSurface(
 	surface.metalness = metalness;
 	surface.reflectance = reflectance;
 	surface.emissiveColor = emissiveColor;
-	surface.sss = sss;
 	surface.refraction = 0;
+	surface.pixel = 0;
+	surface.screenUV = 0;
+	surface.anisotropy = anisotropy;
+	surface.T = T;
+	surface.B = B;
 
 	surface.Update();
 
@@ -104,6 +125,12 @@ struct SurfaceToLight
 	float LdotH;	// cos angle between light direction and half vector
 	float VdotH;	// cos angle between view direction and half vector
 	float3 F;		// fresnel term computed from VdotH
+
+	// Aniso params:
+	float TdotL;
+	float BdotL;
+	float TdotH;
+	float BdotH;
 };
 inline SurfaceToLight CreateSurfaceToLight(in Surface surface, in float3 L)
 {
@@ -119,6 +146,11 @@ inline SurfaceToLight CreateSurfaceToLight(in Surface surface, in float3 L)
 	surfaceToLight.VdotH = saturate(dot(surface.V, surfaceToLight.H));
 
 	surfaceToLight.F = F_Schlick(surface.f0, surface.f90, surfaceToLight.VdotH);
+
+	surfaceToLight.TdotL = dot(surface.T, L);
+	surfaceToLight.BdotL = dot(surface.B, L);
+	surfaceToLight.TdotH = dot(surface.T, surfaceToLight.H);
+	surfaceToLight.BdotH = dot(surface.B, surfaceToLight.H);
 
 	return surfaceToLight;
 }
@@ -150,15 +182,72 @@ float microfacetDistribution(in Surface surface, in SurfaceToLight surfaceToLigh
 	return surface.alphaRoughnessSq / (PI * f * f);
 }
 
+
+// Aniso functions source: https://github.com/google/filament/blob/main/shaders/src/brdf.fs
+
+float D_GGX_Anisotropic(float at, float ab, float ToH, float BoH, float NoH) {
+	// Burley 2012, "Physically-Based Shading at Disney"
+
+	// The values at and ab are perceptualRoughness^2, a2 is therefore perceptualRoughness^4
+	// The dot product below computes perceptualRoughness^8. We cannot fit in fp16 without clamping
+	// the roughness to too high values so we perform the dot product and the division in fp32
+	float a2 = at * ab;
+	float3 d = float3(ab * ToH, at * BoH, a2 * NoH);
+	float d2 = dot(d, d);
+	float b2 = a2 / d2;
+	return a2 * b2 * b2 * (1.0 / PI);
+}
+float V_SmithGGXCorrelated_Anisotropic(float at, float ab, float ToV, float BoV,
+	float ToL, float BoL, float NoV, float NoL) {
+	// Heitz 2014, "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
+	// TODO: lambdaV can be pre-computed for all the lights, it should be moved out of this function
+	float lambdaV = NoL * length(float3(at * ToV, ab * BoV, NoV));
+	float lambdaL = NoV * length(float3(at * ToL, ab * BoL, NoL));
+	float v = 0.5 / (lambdaV + lambdaL);
+	return saturate(v);
+}
+
+float distributionAnisotropic(float at, float ab, float ToH, float BoH, float NoH) {
+	return D_GGX_Anisotropic(at, ab, ToH, BoH, NoH);
+}
+
+float visibilityAnisotropic(float at, float ab,
+	float ToV, float BoV, float ToL, float BoL, float NoV, float NoL) {
+	return V_SmithGGXCorrelated_Anisotropic(at, ab, ToV, BoV, ToL, BoL, NoV, NoL);
+}
+
+
+// These are the functions that will be used by shaders:
 float3 BRDF_GetSpecular(in Surface surface, in SurfaceToLight surfaceToLight)
 {
+#ifdef BRDF_ANISOTROPIC
+	float Vis = visibilityAnisotropic(
+		surface.at, 
+		surface.ab, 
+		surface.TdotV,
+		surface.BdotV,
+		surfaceToLight.TdotL, 
+		surfaceToLight.BdotL, 
+		surface.NdotV,
+		surfaceToLight.NdotL
+	);
+	float D = distributionAnisotropic(
+		surface.at, 
+		surface.ab, 
+		surfaceToLight.TdotH, 
+		surfaceToLight.BdotH, 
+		surfaceToLight.NdotH
+	);
+#else
 	float Vis = visibilityOcclusion(surface, surfaceToLight);
 	float D = microfacetDistribution(surface, surfaceToLight);
-	return surfaceToLight.F * Vis * D * surfaceToLight.NdotL;
+#endif // BRDF_ANISOTROPIC
+
+	return surfaceToLight.F * Vis * D;
 }
 float3 BRDF_GetDiffuse(in Surface surface, in SurfaceToLight surfaceToLight)
 {
-	return (1.0 - surfaceToLight.F) / PI * surfaceToLight.NdotL;
+	return (1.0 - surfaceToLight.F) / PI;
 }
 
 #endif // WI_BRDF_HF

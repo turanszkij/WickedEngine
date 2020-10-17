@@ -7,10 +7,6 @@ This is a reference for the C++ features of Wicked Engine
 	2. [RenderPath](#renderpath)
 	3. [RenderPath2D](#renderpath2d)
 	4. [RenderPath3D](#renderpath3d)
-	5. [RenderPath3D_Forward](#renderpath3d_forward)
-	6. [RenderPath3D_Deferred](#renderpath3d_deferred)
-	7. [RenderPath3D_TiledForward](#renderpath3d_tiledforward)
-	8. [RenderPath3D_TiledDeferred](#renderpath3d_tileddeferred)
 	9. [RenderPath3D_Pathtracing](#renderpath3d_pathtracing)
 	10. [LoadingScreen](#loadingscreen)
 2. [System](#system)
@@ -93,6 +89,7 @@ This is a reference for the C++ features of Wicked Engine
 		15. [Loading Shaders](#loading-shaders)
 		16. [Debug Draw](#debug-draw)
 		17. [Animation Skinning](#animation-skinning)
+		18. [Custom Shaders](#custom-shaders)
 	3. [wiEnums](#wienums)
 	4. [wiImage](#wiimage)
 	5. [wiFont](#wifont)
@@ -208,7 +205,7 @@ Capable of handling 2D rendering to offscreen buffer in Render() function, or ju
 
 ### RenderPath3D
 [[Header]](../WickedEngine/RenderPath3D.h) [[Cpp]](../WickedEngine/RenderPath3D.cpp)
-Base class for implementing 3D rendering paths. It supports everything that the Renderpath2D does. It is a base class that doesn't implement a particular 3D scene rendering algorithm, so it can't be used by itself. For specific algorithm, the user can choose between using [RenderPath3D_Forward](#renderpath3d_forward), [RenderPath3D_Deferred](#renderpath3d_deferred), [RenderPath3D_TiledForward](#renderpath3d_tiledforward), [RenderPath3D_TiledDeferred](#renderpath3d_tileddeferred) and [RenderPath3D_PathTracing](#renderpath3d_pathtracing), each with their own strengths and weaknesses.
+Base class for implementing 3D rendering paths. It also supports everything that the Renderpath2D does.
 
 The post process chain is also implemented here. This means that the order of the post processes and the resources that they use are defined here, but the individual post process rendering on a lower level is implemented in the `wiRenderer` as core engine features. Read more about post process implementation in the [wiRenderer section](#post-processing). 
 
@@ -221,22 +218,6 @@ These are running after tone mapping. For example: Color grading, FXAA, chromati
 These are running in more specific locations, depending on the render path. For example: SSR, SSAO, cartoon outline
 
 The HDR and LDR post process chain are using the "ping-ponging" technique, which means when the first post process consumes texture1 and produces texture2, then the following post process will consume texture2 and produce texture1, until all post processes are rendered.
-
-### RenderPath3D_Forward
-[[Header]](../WickedEngine/RenderPath3D_Forward.h) [[Cpp]](../WickedEngine/RenderPath3D_Forward.cpp)
-Implements simple Forward rendering. It uses few render targets, small memory footprint, but not very efficient with many lights.
-
-### RenderPath3D_Defered
-[[Header]](../WickedEngine/RenderPath3D_Deferred.h) [[Cpp]](../WickedEngine/RenderPath3D_Deferred.cpp)
-Implements "old school" Deferred rendering. It uses many render targets, capable of advanced post processing effects, and good to render many lights.
-
-### RenderPath3D_TiledForward
-[[Header]](../WickedEngine/RenderPath3D_TiledForward.h) [[Cpp]](../WickedEngine/RenderPath3D_TiledForward.cpp)
-Implements an advanced method of Forward rendering to be able to render many lights efficiently. It uses fewer render targets, and less memory than deferred. One downside is that it is not capable of Subsurface scattering, because light buffers are not separated from rendering result.
-
-### RenderPath3D_TiledDeferred
-[[Header]](../WickedEngine/RenderPath3D_TiledDeferred.h) [[Cpp]](../WickedEngine/RenderPath3D_TiledDeferred.cpp)
-Implements an advanced method of Deferred rendering to be able to render many lights with reduced memory bandwidth requirements. This has the largest memory footprint overall, but less bandwidth consummation than old school deferred approach, because lighting is computed in a single pass instead of additive blending.
 
 ### RenderPath3D_PathTracing
 [[Header]](../WickedEngine/RenderPath3D_PathTracing.h) [[Cpp]](../WickedEngine/RenderPath3D_PathTracing.cpp)
@@ -839,6 +820,11 @@ Configuring other debug rendering functionality:
 
 If the [ArmatureComponent](#armaturecomponent) has less than `SKINNING_COMPUTE_THREADCOUNT` amount of bones, an optimized version of the skinning will be performed that uses shared memory. The user can disable this with the `wiRenderer::SetLDSSkinningEnabled()` function if the optimization proves to be worse on the target platform.
 
+#### Custom Shaders
+Apart from the built in material shaders, the developer can create a library of custom shaders from the application side and assign them to materials. The `wiRenderer::RegisterCustomShader()` function is used to register a custom shader from the application. The function returns the ID of the custom shader that can be input to the `MaterialComponent::SetCustomShaderID()` function. 
+
+The custom shader is essentially the combination of a [Pipeline State Object](#pipeline-states-and-shaders) for each `RENDERPASS` and a `RENDERTYPE` flag that specifies whether it is to be drawn in a transparent or opaque, or other kind of pass within a `RENDERPASS`. The developer is responsible of creating a fully valid pipeline state to render a mesh. If a pipeline state is left as empty for a combination of `RENDERPASS` and `RENDERTYPE`, then the material will simply be skipped and not rendered.
+
 
 ### wiEnums
 [[Header]](../WickedEngine/wiEnums.h)
@@ -957,7 +943,7 @@ Supports item selection from a list of text. Can set the maximum number of visib
 
 #### wiWindow
 [[Header]](../WickedEngine/wiWidget.h) [[Cpp]](../WickedEngine/wiWidget.cpp)
-A window widget is able to hold any number of other widgets. It can be moved across the screen, minimized and resized by the user. If a window holds a widget, it will manage its lifetime, so if the window is destroyed, all its children will be destroyed as well.
+A window widget is able to hold any number of other widgets. It can be moved across the screen, minimized and resized by the user. The window does not manage lifetime of attached widgets since 0.49.0!
 
 #### wiColorPicker
 [[Header]](../WickedEngine/wiWidget.h) [[Cpp]](../WickedEngine/wiWidget.cpp)

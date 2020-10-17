@@ -1,19 +1,12 @@
 #pragma once
-
-class wiGUI;
-class wiWindow;
-class wiLabel;
-class wiCheckBox;
-class wiSlider;
-class wiTextInputField;
+#include "WickedEngine.h"
 
 class EditorComponent;
 
-class CameraWindow
+class CameraWindow : public wiWindow
 {
 public:
-	CameraWindow(EditorComponent* editor);
-	~CameraWindow();
+	void Create(EditorComponent* editor);
 
 	void ResetCam();
 
@@ -24,19 +17,16 @@ public:
 	wiScene::TransformComponent camera_transform;
 	wiScene::TransformComponent camera_target;
 
-	wiGUI* GUI;
+	wiSlider farPlaneSlider;
+	wiSlider nearPlaneSlider;
+	wiSlider fovSlider;
+	wiSlider movespeedSlider;
+	wiSlider rotationspeedSlider;
+	wiButton resetButton;
+	wiCheckBox fpsCheckBox;
 
-	wiWindow* cameraWindow;
-	wiSlider* farPlaneSlider;
-	wiSlider* nearPlaneSlider;
-	wiSlider* fovSlider;
-	wiSlider* movespeedSlider;
-	wiSlider* rotationspeedSlider;
-	wiButton* resetButton;
-	wiCheckBox* fpsCheckBox;
-
-	wiButton* proxyButton;
-	wiCheckBox* followCheckBox;
-	wiSlider* followSlider;
+	wiButton proxyButton;
+	wiCheckBox followCheckBox;
+	wiSlider followSlider;
 };
 

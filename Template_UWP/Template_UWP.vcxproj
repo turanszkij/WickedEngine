@@ -475,6 +475,39 @@
     <Font Include="..\WickedEngine\fonts\arial.ttf" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\hairparticlePS.hlsl">
+      <FileType>Document</FileType>
+    </FxCompile>
+    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\hairparticlePS_transparent.hlsl">
+      <FileType>Document</FileType>
+    </FxCompile>
+    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\impostorPS.hlsl">
+      <FileType>Document</FileType>
+    </FxCompile>
+    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\objectPS.hlsl">
+      <FileType>Document</FileType>
+    </FxCompile>
+    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\objectPS_planarreflection.hlsl">
+      <FileType>Document</FileType>
+    </FxCompile>
+    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\objectPS_pom.hlsl">
+      <FileType>Document</FileType>
+    </FxCompile>
+    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\objectPS_terrain.hlsl">
+      <FileType>Document</FileType>
+    </FxCompile>
+    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\objectPS_transparent.hlsl">
+      <FileType>Document</FileType>
+    </FxCompile>
+    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\objectPS_transparent_planarreflection.hlsl">
+      <FileType>Document</FileType>
+    </FxCompile>
+    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\objectPS_transparent_pom.hlsl">
+      <FileType>Document</FileType>
+    </FxCompile>
+    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\objectPS_water.hlsl">
+      <FileType>Document</FileType>
+    </FxCompile>
     <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\rtaoLIB.hlsl">
       <FileType>Document</FileType>
     </FxCompile>

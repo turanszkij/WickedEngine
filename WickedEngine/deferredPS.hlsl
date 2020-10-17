@@ -6,9 +6,7 @@
 
 float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_TARGET
 {
-	float4 g0 = texture_gbuffer0[pos.xy];
-	float4 g2 = texture_gbuffer2[pos.xy];
-	float3 albedo = ComputeAlbedo(float4(g0.rgb, 1), g2.b, g2.a);
+	float3 albedo = texture_gbuffer0[pos.xy].rgb;
 
 	float  depth = texture_depth[pos.xy];
 

@@ -9,6 +9,7 @@ struct HullInputType
 	float4 uvsets							: UVSETS;
 	float4 atlas							: ATLAS;
 	float4 nor								: NORMAL;
+	float4 tan								: TANGENT;
 	float4 posPrev							: POSITIONPREV;
 };
 
@@ -38,6 +39,10 @@ struct ConstantOutputType
 	float4 nor1 : NORMAL1;
 	float4 nor2 : NORMAL2;
 
+	float4 tan0 : TANGENT0;
+	float4 tan1 : TANGENT1;
+	float4 tan2 : TANGENT2;
+
 	float4 posPrev0 : POSITIONPREV0;
 	float4 posPrev1 : POSITIONPREV1;
 	float4 posPrev2 : POSITIONPREV2;
@@ -51,6 +56,7 @@ struct HullOutputType
 	float4 uvsets							: UVSETS;
 	float4 atlas							: ATLAS;
 	float4 nor								: NORMAL;
+	float4 tan								: TANGENT;
 	float4 posPrev							: POSITIONPREV;
 };
 
@@ -131,6 +137,10 @@ ConstantOutputType PatchConstantFunction(InputPatch<HullInputType, 3> I)
 	Out.nor1 = I[1].nor;
 	Out.nor2 = I[2].nor;
 
+	Out.tan0 = I[0].tan;
+	Out.tan1 = I[1].tan;
+	Out.tan2 = I[2].tan;
+
 	Out.posPrev0 = I[0].posPrev;
 	Out.posPrev1 = I[1].posPrev;
 	Out.posPrev2 = I[2].posPrev;
@@ -155,6 +165,7 @@ HullOutputType main(InputPatch<HullInputType, 3> patch, uint pointId : SV_Output
 	Out.uvsets			= patch[pointId].uvsets;
 	Out.atlas			= patch[pointId].atlas;
     Out.nor				= patch[pointId].nor;
+    Out.tan				= patch[pointId].tan;
 	Out.posPrev			= patch[pointId].posPrev;
 
     return Out;
