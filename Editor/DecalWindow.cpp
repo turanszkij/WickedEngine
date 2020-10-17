@@ -36,11 +36,13 @@ void DecalWindow::Create(EditorComponent* editor)
 	decalNameField.Create("Decal Name");
 	decalNameField.SetPos(XMFLOAT2(10, y+=step));
 	decalNameField.SetSize(XMFLOAT2(300, hei));
-	decalNameField.OnInputAccepted([&](wiEventArgs args) {
+	decalNameField.OnInputAccepted([=](wiEventArgs args) {
 		NameComponent* name = wiScene::GetScene().names.GetComponent(entity);
 		if (name != nullptr)
 		{
 			*name = args.sValue;
+
+			editor->RefreshSceneGraphView();
 		}
 	});
 	AddWidget(&decalNameField);

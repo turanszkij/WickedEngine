@@ -22,11 +22,13 @@ void EmitterWindow::Create(EditorComponent* editor)
 	emitterNameField.Create("EmitterName");
 	emitterNameField.SetPos(XMFLOAT2(x, y += step));
 	emitterNameField.SetSize(XMFLOAT2(300, itemheight));
-	emitterNameField.OnInputAccepted([&](wiEventArgs args) {
+	emitterNameField.OnInputAccepted([=](wiEventArgs args) {
 		NameComponent* name = wiScene::GetScene().names.GetComponent(entity);
 		if (name != nullptr)
 		{
 			*name = args.sValue;
+
+			editor->RefreshSceneGraphView();
 		}
 	});
 	AddWidget(&emitterNameField);

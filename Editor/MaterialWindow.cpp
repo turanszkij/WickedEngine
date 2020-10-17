@@ -367,11 +367,13 @@ void MaterialWindow::Create(EditorComponent* editor)
 	materialNameField.SetTooltip("Set a name for the material...");
 	materialNameField.SetPos(XMFLOAT2(10, y += step));
 	materialNameField.SetSize(XMFLOAT2(300, hei));
-	materialNameField.OnInputAccepted([&](wiEventArgs args) {
+	materialNameField.OnInputAccepted([=](wiEventArgs args) {
 		NameComponent* name = wiScene::GetScene().names.GetComponent(entity);
 		if (name != nullptr)
 		{
 			*name = args.sValue;
+
+			editor->RefreshSceneGraphView();
 		}
 	});
 	AddWidget(&materialNameField);

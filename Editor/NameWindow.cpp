@@ -21,13 +21,15 @@ void NameWindow::Create(EditorComponent* editor)
 	nameInput.SetDescription("Name: ");
 	nameInput.SetPos(XMFLOAT2(x, y += step));
 	nameInput.SetSize(XMFLOAT2(siz, hei));
-	nameInput.OnInputAccepted([&](wiEventArgs args) {
+	nameInput.OnInputAccepted([=](wiEventArgs args) {
 		NameComponent* name = wiScene::GetScene().names.GetComponent(entity);
 		if (name == nullptr)
 		{
 			name = &wiScene::GetScene().names.Create(entity);
 		}
 		name->name = args.sValue;
+
+		editor->RefreshSceneGraphView();
 	});
 	AddWidget(&nameInput);
 

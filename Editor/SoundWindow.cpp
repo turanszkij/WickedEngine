@@ -92,13 +92,15 @@ void SoundWindow::Create(EditorComponent* editor)
 	nameField.SetTooltip("Enter a sound name to identify this entity...");
 	nameField.SetPos(XMFLOAT2(x, y += step));
 	nameField.SetSize(XMFLOAT2(300, hei));
-	nameField.OnInputAccepted([&](wiEventArgs args) {
+	nameField.OnInputAccepted([=](wiEventArgs args) {
 		NameComponent* name = wiScene::GetScene().names.GetComponent(entity);
 		if (name == nullptr)
 		{
 			name = &wiScene::GetScene().names.Create(entity);
 		}
 		*name = args.sValue;
+
+		editor->RefreshSceneGraphView();
 	});
 	AddWidget(&nameField);
 	nameField.SetEnabled(false);
