@@ -189,6 +189,9 @@
     <None Include="$(MSBuildThisFileDirectory)Documentation\WickedEngine-Documentation.md">
       <Filter>Documentation</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)models\blend_instancing_test.wiscene">
+      <Filter>models</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\background.png">

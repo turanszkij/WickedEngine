@@ -474,53 +474,6 @@
   <ItemGroup>
     <Font Include="..\WickedEngine\fonts\arial.ttf" />
   </ItemGroup>
-  <ItemGroup>
-    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\hairparticlePS.hlsl">
-      <FileType>Document</FileType>
-    </FxCompile>
-    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\hairparticlePS_transparent.hlsl">
-      <FileType>Document</FileType>
-    </FxCompile>
-    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\impostorPS.hlsl">
-      <FileType>Document</FileType>
-    </FxCompile>
-    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\objectPS.hlsl">
-      <FileType>Document</FileType>
-    </FxCompile>
-    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\objectPS_planarreflection.hlsl">
-      <FileType>Document</FileType>
-    </FxCompile>
-    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\objectPS_pom.hlsl">
-      <FileType>Document</FileType>
-    </FxCompile>
-    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\objectPS_terrain.hlsl">
-      <FileType>Document</FileType>
-    </FxCompile>
-    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\objectPS_transparent.hlsl">
-      <FileType>Document</FileType>
-    </FxCompile>
-    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\objectPS_transparent_planarreflection.hlsl">
-      <FileType>Document</FileType>
-    </FxCompile>
-    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\objectPS_transparent_pom.hlsl">
-      <FileType>Document</FileType>
-    </FxCompile>
-    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\objectPS_water.hlsl">
-      <FileType>Document</FileType>
-    </FxCompile>
-    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\rtaoLIB.hlsl">
-      <FileType>Document</FileType>
-    </FxCompile>
-    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\rtao_denoise_blurCS.hlsl">
-      <FileType>Document</FileType>
-    </FxCompile>
-    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\rtao_denoise_temporalCS.hlsl">
-      <FileType>Document</FileType>
-    </FxCompile>
-    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\shadingRateClassificationCS.hlsl">
-      <FileType>Document</FileType>
-    </FxCompile>
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VSINSTALLDIR)\Common7\IDE\Extensions\Microsoft\VsGraphics\ImageContentTask.targets" />

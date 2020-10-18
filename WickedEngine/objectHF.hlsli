@@ -832,6 +832,8 @@ GBUFFEROutputType main(PIXELINPUT input)
 	float4 blend_weights = input.color;
 	blend_weights /= blend_weights.x + blend_weights.y + blend_weights.z + blend_weights.w;
 	float4 sam;
+	float3 baseN = normalize(input.nor);
+	surface.N = 0;
 
 	[branch]
 	if (blend_weights.x > 0)
@@ -867,7 +869,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 			float2 uv = g_xMaterial.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam.rgb = texture_normalmap.Sample(sampler_objectshader, uv);
 			sam.rgb = sam.rgb * 2 - 1;
-			surface.N += lerp(surface.N, mul(sam.rgb, TBN), g_xMaterial.normalMapStrength) * blend_weights.x;
+			surface.N += lerp(baseN, mul(sam.rgb, TBN), g_xMaterial.normalMapStrength) * blend_weights.x;
 		}
 
 		[branch]
@@ -914,7 +916,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 			float2 uv = g_xMaterial_blend1.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam.rgb = texture_blend1_normalmap.Sample(sampler_objectshader, uv);
 			sam.rgb = sam.rgb * 2 - 1;
-			surface.N += lerp(surface.N, mul(sam.rgb, TBN), g_xMaterial_blend1.normalMapStrength) * blend_weights.y;
+			surface.N += lerp(baseN, mul(sam.rgb, TBN), g_xMaterial_blend1.normalMapStrength) * blend_weights.y;
 		}
 
 		[branch]
@@ -961,7 +963,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 			float2 uv = g_xMaterial_blend2.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam.rgb = texture_blend2_normalmap.Sample(sampler_objectshader, uv);
 			sam.rgb = sam.rgb * 2 - 1;
-			surface.N += lerp(surface.N, mul(sam.rgb, TBN), g_xMaterial_blend2.normalMapStrength) * blend_weights.z;
+			surface.N += lerp(baseN, mul(sam.rgb, TBN), g_xMaterial_blend2.normalMapStrength) * blend_weights.z;
 		}
 
 		[branch]
@@ -1008,7 +1010,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 			float2 uv = g_xMaterial_blend3.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam.rgb = texture_blend3_normalmap.Sample(sampler_objectshader, uv);
 			sam.rgb = sam.rgb * 2 - 1;
-			surface.N += lerp(surface.N, mul(sam.rgb, TBN), g_xMaterial_blend3.normalMapStrength) * blend_weights.w;
+			surface.N += lerp(baseN, mul(sam.rgb, TBN), g_xMaterial_blend3.normalMapStrength) * blend_weights.w;
 		}
 
 		[branch]
