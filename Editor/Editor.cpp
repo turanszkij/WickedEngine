@@ -1550,6 +1550,8 @@ void EditorComponent::Update(float dt)
 		}
 
 		translator.selected.clear();
+
+		RefreshSceneGraphView();
 	}
 
 	// Update window data bindings...
