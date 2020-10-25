@@ -637,6 +637,16 @@ void RenderPath3D::Render() const
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) { RenderFrameSetUp(cmd); });
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) { RenderShadows(cmd); });
+
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+		wiRenderer::BindCommonResources(cmd);
+		wiRenderer::RefreshDecalAtlas(cmd);
+		wiRenderer::RefreshLightmapAtlas(cmd);
+		wiRenderer::RefreshEnvProbes(cmd);
+		wiRenderer::RefreshImpostors(cmd);
+		});
+
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) { RenderReflections(cmd); });
 

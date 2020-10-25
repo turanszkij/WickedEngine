@@ -265,12 +265,20 @@ set(SHADERS_VS
         "forceFieldPlaneVisualizerVS.hlsl"
         "envMap_skyVS.hlsl"
         "envMapVS.hlsl"
+        "envMap_skyVS_emulation.hlsl"
+        "envMapVS_emulation.hlsl"
         "cubeShadowVS.hlsl"
         "cubeShadowVS_alphatest.hlsl"
+        "cubeShadowVS_emulation.hlsl"
+        "cubeShadowVS_alphatest_emulation.hlsl"
         "cubeVS.hlsl"
 )
 
 set(SHADERS_GS
+        "envMap_skyGS_emulation.hlsl"
+        "envMapGS_emulation.hlsl"
+        "cubeShadowGS_emulation.hlsl"
+        "cubeShadowGS_alphatest_emulation.hlsl"
         "voxelGS.hlsl"
         "objectGS_voxelizer.hlsl"
         "lensFlareGS.hlsl"

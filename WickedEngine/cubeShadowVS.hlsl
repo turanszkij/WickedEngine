@@ -4,7 +4,11 @@
 struct VertexOut
 {
 	float4 pos		: SV_POSITION;
+#ifdef VPRT_EMULATION
+	uint RTIndex	: RTINDEX;
+#else
 	uint RTIndex	: SV_RenderTargetArrayIndex;
+#endif // VPRT_EMULATION
 };
 
 VertexOut main(Input_Object_POS input)
