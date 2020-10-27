@@ -9,7 +9,7 @@ using namespace wiECS;
 namespace wiScene
 {
 
-	void NameComponent::Serialize(wiArchive& archive, Entity seed)
+	void NameComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -20,7 +20,7 @@ namespace wiScene
 			archive << name;
 		}
 	}
-	void LayerComponent::Serialize(wiArchive& archive, Entity seed)
+	void LayerComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -31,7 +31,7 @@ namespace wiScene
 			archive << layerMask;
 		}
 	}
-	void TransformComponent::Serialize(wiArchive& archive, Entity seed)
+	void TransformComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -51,14 +51,14 @@ namespace wiScene
 			archive << translation_local;
 		}
 	}
-	void PreviousFrameTransformComponent::Serialize(wiArchive& archive, Entity seed)
+	void PreviousFrameTransformComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 		// NOTHING! We just need a serialize function for this to be able serialize with ComponentManager!
 		//	This structure has no persistent state!
 	}
-	void HierarchyComponent::Serialize(wiArchive& archive, Entity seed)
+	void HierarchyComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
-		SerializeEntity(archive, parentID, seed);
+		SerializeEntity(archive, parentID, seri);
 
 		if (archive.IsReadMode())
 		{
@@ -74,7 +74,7 @@ namespace wiScene
 			archive << layerMask_bind;
 		}
 	}
-	void MaterialComponent::Serialize(wiArchive& archive, Entity seed)
+	void MaterialComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 		std::string dir = archive.GetSourceDirectory();
 
@@ -174,31 +174,6 @@ namespace wiScene
 			}
 
 			SetDirty();
-
-			if (!baseColorMapName.empty())
-			{
-				baseColorMap = wiResourceManager::Load(dir + baseColorMapName);
-			}
-			if (!surfaceMapName.empty())
-			{
-				surfaceMap = wiResourceManager::Load(dir + surfaceMapName);
-			}
-			if (!normalMapName.empty())
-			{
-				normalMap = wiResourceManager::Load(dir + normalMapName);
-			}
-			if (!displacementMapName.empty())
-			{
-				displacementMap = wiResourceManager::Load(dir + displacementMapName);
-			}
-			if (!emissiveMapName.empty())
-			{
-				emissiveMap = wiResourceManager::Load(dir + emissiveMapName);
-			}
-			if (!occlusionMapName.empty())
-			{
-				occlusionMap = wiResourceManager::Load(dir + occlusionMapName);
-			}
 
 		}
 		else
@@ -308,7 +283,7 @@ namespace wiScene
 			}
 		}
 	}
-	void MeshComponent::Serialize(wiArchive& archive, Entity seed)
+	void MeshComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 
 		if (archive.IsReadMode())
@@ -328,13 +303,13 @@ namespace wiScene
 			subsets.resize(subsetCount);
 			for (size_t i = 0; i < subsetCount; ++i)
 			{
-				SerializeEntity(archive, subsets[i].materialID, seed);
+				SerializeEntity(archive, subsets[i].materialID, seri);
 				archive >> subsets[i].indexOffset;
 				archive >> subsets[i].indexCount;
 			}
 
 			archive >> tessellationFactor;
-			SerializeEntity(archive, armatureID, seed);
+			SerializeEntity(archive, armatureID, seri);
 
 			if (archive.GetVersion() >= 28)
 			{
@@ -343,9 +318,9 @@ namespace wiScene
 
 			if (archive.GetVersion() >= 41)
 			{
-				SerializeEntity(archive, terrain_material1, seed);
-				SerializeEntity(archive, terrain_material2, seed);
-				SerializeEntity(archive, terrain_material3, seed);
+				SerializeEntity(archive, terrain_material1, seri);
+				SerializeEntity(archive, terrain_material2, seri);
+				SerializeEntity(archive, terrain_material3, seri);
 			}
 
 			if (archive.GetVersion() >= 43)
@@ -357,8 +332,6 @@ namespace wiScene
 			{
 				archive >> vertex_tangents;
 			}
-
-			CreateRenderData();
 		}
 		else
 		{
@@ -375,13 +348,13 @@ namespace wiScene
 			archive << subsets.size();
 			for (size_t i = 0; i < subsets.size(); ++i)
 			{
-				SerializeEntity(archive, subsets[i].materialID, seed);
+				SerializeEntity(archive, subsets[i].materialID, seri);
 				archive << subsets[i].indexOffset;
 				archive << subsets[i].indexCount;
 			}
 
 			archive << tessellationFactor;
-			SerializeEntity(archive, armatureID, seed);
+			SerializeEntity(archive, armatureID, seri);
 
 			if (archive.GetVersion() >= 28)
 			{
@@ -390,9 +363,9 @@ namespace wiScene
 
 			if (archive.GetVersion() >= 41)
 			{
-				SerializeEntity(archive, terrain_material1, seed);
-				SerializeEntity(archive, terrain_material2, seed);
-				SerializeEntity(archive, terrain_material3, seed);
+				SerializeEntity(archive, terrain_material1, seri);
+				SerializeEntity(archive, terrain_material2, seri);
+				SerializeEntity(archive, terrain_material3, seri);
 			}
 
 			if (archive.GetVersion() >= 43)
@@ -407,7 +380,7 @@ namespace wiScene
 
 		}
 	}
-	void ImpostorComponent::Serialize(wiArchive& archive, Entity seed)
+	void ImpostorComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -422,12 +395,12 @@ namespace wiScene
 			archive << swapInDistance;
 		}
 	}
-	void ObjectComponent::Serialize(wiArchive& archive, Entity seed)
+	void ObjectComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
-			SerializeEntity(archive, meshID, seed);
+			SerializeEntity(archive, meshID, seri);
 			archive >> cascadeMask;
 			archive >> rendertypeMask;
 			archive >> color;
@@ -446,7 +419,7 @@ namespace wiScene
 		else
 		{
 			archive << _flags;
-			SerializeEntity(archive, meshID, seed);
+			SerializeEntity(archive, meshID, seri);
 			archive << cascadeMask;
 			archive << rendertypeMask;
 			archive << color;
@@ -463,7 +436,7 @@ namespace wiScene
 			}
 		}
 	}
-	void RigidBodyPhysicsComponent::Serialize(wiArchive& archive, Entity seed)
+	void RigidBodyPhysicsComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -484,7 +457,7 @@ namespace wiScene
 			archive << damping;
 		}
 	}
-	void SoftBodyPhysicsComponent::Serialize(wiArchive& archive, Entity seed)
+	void SoftBodyPhysicsComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -513,7 +486,7 @@ namespace wiScene
 			archive << weights;
 		}
 	}
-	void ArmatureComponent::Serialize(wiArchive& archive, Entity seed)
+	void ArmatureComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -525,7 +498,7 @@ namespace wiScene
 			for (size_t i = 0; i < boneCount; ++i)
 			{
 				Entity boneID;
-				SerializeEntity(archive, boneID, seed);
+				SerializeEntity(archive, boneID, seri);
 				boneCollection[i] = boneID;
 			}
 
@@ -539,7 +512,7 @@ namespace wiScene
 			if (archive.GetVersion() == 26)
 			{
 				Entity rootBoneID;
-				SerializeEntity(archive, rootBoneID, seed);
+				SerializeEntity(archive, rootBoneID, seri);
 			}
 		}
 		else
@@ -550,18 +523,18 @@ namespace wiScene
 			for (size_t i = 0; i < boneCollection.size(); ++i)
 			{
 				Entity boneID = boneCollection[i];
-				SerializeEntity(archive, boneID, seed);
+				SerializeEntity(archive, boneID, seri);
 			}
 
 			archive << inverseBindMatrices;
 			if (archive.GetVersion() == 26)
 			{
 				Entity rootBoneID;
-				SerializeEntity(archive, rootBoneID, seed);
+				SerializeEntity(archive, rootBoneID, seri);
 			}
 		}
 	}
-	void LightComponent::Serialize(wiArchive& archive, Entity seed)
+	void LightComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 		std::string dir = archive.GetSourceDirectory();
 
@@ -632,7 +605,7 @@ namespace wiScene
 			archive << lensFlareNames;
 		}
 	}
-	void CameraComponent::Serialize(wiArchive& archive, Entity seed)
+	void CameraComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -655,7 +628,7 @@ namespace wiScene
 			archive << fov;
 		}
 	}
-	void EnvironmentProbeComponent::Serialize(wiArchive& archive, Entity seed)
+	void EnvironmentProbeComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -668,7 +641,7 @@ namespace wiScene
 			archive << _flags;
 		}
 	}
-	void ForceFieldComponent::Serialize(wiArchive& archive, Entity seed)
+	void ForceFieldComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -685,7 +658,7 @@ namespace wiScene
 			archive << range_local;
 		}
 	}
-	void DecalComponent::Serialize(wiArchive& archive, Entity seed)
+	void DecalComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -696,7 +669,7 @@ namespace wiScene
 			archive << _flags;
 		}
 	}
-	void AnimationComponent::Serialize(wiArchive& archive, Entity seed)
+	void AnimationComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -721,7 +694,7 @@ namespace wiScene
 			{
 				archive >> channels[i]._flags;
 				archive >> (uint32_t&)channels[i].path;
-				SerializeEntity(archive, channels[i].target, seed);
+				SerializeEntity(archive, channels[i].target, seri);
 				archive >> channels[i].samplerIndex;
 			}
 
@@ -739,7 +712,7 @@ namespace wiScene
 				}
 				if (archive.GetVersion() >= 46)
 				{
-					SerializeEntity(archive, samplers[i].data, seed);
+					SerializeEntity(archive, samplers[i].data, seri);
 				}
 			}
 
@@ -765,7 +738,7 @@ namespace wiScene
 			{
 				archive << channels[i]._flags;
 				archive << (uint32_t&)channels[i].path;
-				SerializeEntity(archive, channels[i].target, seed);
+				SerializeEntity(archive, channels[i].target, seri);
 				archive << channels[i].samplerIndex;
 			}
 
@@ -774,11 +747,11 @@ namespace wiScene
 			{
 				archive << samplers[i]._flags;
 				archive << samplers[i].mode;
-				SerializeEntity(archive, samplers[i].data, seed);
+				SerializeEntity(archive, samplers[i].data, seri);
 			}
 		}
 	}
-	void AnimationDataComponent::Serialize(wiArchive& archive, Entity seed)
+	void AnimationDataComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -793,7 +766,7 @@ namespace wiScene
 			archive << keyframe_data;
 		}
 	}
-	void WeatherComponent::Serialize(wiArchive& archive, Entity seed)
+	void WeatherComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 		std::string dir = archive.GetSourceDirectory();
 
@@ -893,7 +866,7 @@ namespace wiScene
 
 		}
 	}
-	void SoundComponent::Serialize(wiArchive& archive, Entity seed)
+	void SoundComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 		std::string dir = archive.GetSourceDirectory();
 
@@ -929,9 +902,9 @@ namespace wiScene
 			archive << soundinstance.type;
 		}
 	}
-	void InverseKinematicsComponent::Serialize(wiArchive& archive, Entity seed)
+	void InverseKinematicsComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
-		SerializeEntity(archive, target, seed);
+		SerializeEntity(archive, target, seri);
 
 		if (archive.IsReadMode())
 		{
@@ -946,7 +919,7 @@ namespace wiScene
 			archive << iteration_count;
 		}
 	}
-	void SpringComponent::Serialize(wiArchive& archive, Entity seed)
+	void SpringComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -980,55 +953,75 @@ namespace wiScene
 		}
 
 		// With this we will ensure that serialized entities are unique and persistent across the scene:
-		Entity seed = CreateEntity();
+		EntitySerializer seri;
 
-		names.Serialize(archive, seed);
-		layers.Serialize(archive, seed);
-		transforms.Serialize(archive, seed);
-		prev_transforms.Serialize(archive, seed);
-		hierarchy.Serialize(archive, seed);
-		materials.Serialize(archive, seed);
-		meshes.Serialize(archive, seed);
-		impostors.Serialize(archive, seed);
-		objects.Serialize(archive, seed);
-		aabb_objects.Serialize(archive, seed);
-		rigidbodies.Serialize(archive, seed);
-		softbodies.Serialize(archive, seed);
-		armatures.Serialize(archive, seed);
-		lights.Serialize(archive, seed);
-		aabb_lights.Serialize(archive, seed);
-		cameras.Serialize(archive, seed);
-		probes.Serialize(archive, seed);
-		aabb_probes.Serialize(archive, seed);
-		forces.Serialize(archive, seed);
-		decals.Serialize(archive, seed);
-		aabb_decals.Serialize(archive, seed);
-		animations.Serialize(archive, seed);
-		emitters.Serialize(archive, seed);
-		hairs.Serialize(archive, seed);
-		weathers.Serialize(archive, seed);
+		names.Serialize(archive, seri);
+		layers.Serialize(archive, seri);
+		transforms.Serialize(archive, seri);
+		prev_transforms.Serialize(archive, seri);
+		hierarchy.Serialize(archive, seri);
+		materials.Serialize(archive, seri);
+		meshes.Serialize(archive, seri);
+		impostors.Serialize(archive, seri);
+		objects.Serialize(archive, seri);
+		aabb_objects.Serialize(archive, seri);
+		rigidbodies.Serialize(archive, seri);
+		softbodies.Serialize(archive, seri);
+		armatures.Serialize(archive, seri);
+		lights.Serialize(archive, seri);
+		aabb_lights.Serialize(archive, seri);
+		cameras.Serialize(archive, seri);
+		probes.Serialize(archive, seri);
+		aabb_probes.Serialize(archive, seri);
+		forces.Serialize(archive, seri);
+		decals.Serialize(archive, seri);
+		aabb_decals.Serialize(archive, seri);
+		animations.Serialize(archive, seri);
+		emitters.Serialize(archive, seri);
+		hairs.Serialize(archive, seri);
+		weathers.Serialize(archive, seri);
 		if (archive.GetVersion() >= 30)
 		{
-			sounds.Serialize(archive, seed);
+			sounds.Serialize(archive, seri);
 		}
 		if (archive.GetVersion() >= 37)
 		{
-			inverse_kinematics.Serialize(archive, seed);
+			inverse_kinematics.Serialize(archive, seri);
 		}
 		if (archive.GetVersion() >= 38)
 		{
-			springs.Serialize(archive, seed);
+			springs.Serialize(archive, seri);
 		}
 		if (archive.GetVersion() >= 46)
 		{
-			animation_datas.Serialize(archive, seed);
+			animation_datas.Serialize(archive, seri);
+		}
+
+
+		if (archive.IsReadMode())
+		{
+			wiJobSystem::context ctx;
+
+			wiJobSystem::Dispatch(ctx, (uint32_t)meshes.GetCount(), 1, [&](wiJobArgs args) {
+				meshes[args.jobIndex].CreateRenderData();
+				});
+			wiJobSystem::Dispatch(ctx, (uint32_t)materials.GetCount(), 1, [&](wiJobArgs args) {
+				materials[args.jobIndex].CreateRenderData(archive.GetSourceDirectory());
+				});
+			wiJobSystem::Wait(ctx);
 		}
 
 	}
 
-	Entity Scene::Entity_Serialize(wiArchive& archive, Entity entity, Entity seed, bool propagateSeedDeep)
+	Entity Scene::Entity_Serialize(wiArchive& archive, Entity entity)
 	{
-		SerializeEntity(archive, entity, seed);
+		EntitySerializer seri;
+
+		SerializeEntity(archive, entity, seri);
+
+		// From this point, we will not remap the entities, 
+		//	to retain internal entity references inside components:
+		seri.allow_remap = false;
 
 		if (archive.IsReadMode())
 		{
@@ -1039,7 +1032,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = names.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1048,7 +1041,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = layers.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1057,7 +1050,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = transforms.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1066,7 +1059,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = prev_transforms.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1075,7 +1068,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = hierarchy.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1084,7 +1077,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = materials.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1093,7 +1086,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = meshes.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1102,7 +1095,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = impostors.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1111,7 +1104,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = objects.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1120,7 +1113,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = aabb_objects.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1129,7 +1122,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = rigidbodies.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1138,7 +1131,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = softbodies.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1147,7 +1140,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = armatures.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1156,7 +1149,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = lights.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1165,7 +1158,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = aabb_lights.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1174,7 +1167,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = cameras.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1183,7 +1176,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = probes.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1192,7 +1185,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = aabb_probes.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1201,7 +1194,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = forces.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1210,7 +1203,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = decals.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1219,7 +1212,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = aabb_decals.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1228,7 +1221,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = animations.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1237,7 +1230,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = emitters.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1246,7 +1239,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = hairs.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			{
@@ -1255,7 +1248,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = weathers.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			if (archive.GetVersion() >= 30)
@@ -1265,7 +1258,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = sounds.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			if (archive.GetVersion() >= 37)
@@ -1275,7 +1268,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = inverse_kinematics.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			if (archive.GetVersion() >= 38)
@@ -1285,7 +1278,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = springs.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 			if (archive.GetVersion() >= 46)
@@ -1295,7 +1288,7 @@ namespace wiScene
 				if (component_exists)
 				{
 					auto& component = animation_datas.Create(entity);
-					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+					component.Serialize(archive, seri);
 				}
 			}
 		}
@@ -1307,7 +1300,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1319,7 +1312,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1331,7 +1324,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1343,7 +1336,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1355,7 +1348,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1367,7 +1360,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1379,7 +1372,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1391,7 +1384,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1403,7 +1396,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1415,7 +1408,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1427,7 +1420,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1439,7 +1432,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1451,7 +1444,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1463,7 +1456,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1475,7 +1468,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1487,7 +1480,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1499,7 +1492,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1511,7 +1504,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1523,7 +1516,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1535,7 +1528,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1547,7 +1540,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1559,7 +1552,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1571,7 +1564,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1583,7 +1576,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1595,7 +1588,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1608,7 +1601,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1621,7 +1614,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1634,7 +1627,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{
@@ -1647,7 +1640,7 @@ namespace wiScene
 				if (component != nullptr)
 				{
 					archive << true;
-					component->Serialize(archive, seed);
+					component->Serialize(archive, seri);
 				}
 				else
 				{

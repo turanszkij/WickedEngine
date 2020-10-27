@@ -333,6 +333,33 @@ namespace wiScene
 		}
 		return RENDERTYPE_TRANSPARENT;
 	}
+	void MaterialComponent::CreateRenderData(const std::string& content_dir)
+	{
+		if (!baseColorMapName.empty())
+		{
+			baseColorMap = wiResourceManager::Load(content_dir + baseColorMapName);
+		}
+		if (!surfaceMapName.empty())
+		{
+			surfaceMap = wiResourceManager::Load(content_dir + surfaceMapName);
+		}
+		if (!normalMapName.empty())
+		{
+			normalMap = wiResourceManager::Load(content_dir + normalMapName);
+		}
+		if (!displacementMapName.empty())
+		{
+			displacementMap = wiResourceManager::Load(content_dir + displacementMapName);
+		}
+		if (!emissiveMapName.empty())
+		{
+			emissiveMap = wiResourceManager::Load(content_dir + emissiveMapName);
+		}
+		if (!occlusionMapName.empty())
+		{
+			occlusionMap = wiResourceManager::Load(content_dir + occlusionMapName);
+		}
+	}
 
 	void MeshComponent::CreateRenderData()
 	{
@@ -1480,11 +1507,11 @@ namespace wiScene
 
 		// First write the entity to staging area:
 		archive.SetReadModeAndResetPos(false);
-		Entity_Serialize(archive, entity, 0);
+		Entity_Serialize(archive, entity);
 
-		// Then deserialize with a unique seed:
+		// Then deserialize:
 		archive.SetReadModeAndResetPos(true);
-		return Entity_Serialize(archive, entity, CreateEntity(), false);
+		return Entity_Serialize(archive, entity);
 	}
 	Entity Scene::Entity_CreateMaterial(
 		const std::string& name

@@ -21,6 +21,7 @@ wiArchive::wiArchive(const std::string& fileName, bool readMode) : fileName(file
 {
 	if (!fileName.empty())
 	{
+		directory = wiHelper::GetDirectoryFromPath(fileName);
 		if (readMode)
 		{
 			if (wiHelper::FileRead(fileName, DATA))
@@ -95,12 +96,12 @@ bool wiArchive::SaveFile(const std::string& fileName)
 	return wiHelper::FileWrite(fileName, DATA.data(), pos);
 }
 
-string wiArchive::GetSourceDirectory() const
+const string& wiArchive::GetSourceDirectory() const
 {
-	return wiHelper::GetDirectoryFromPath(fileName);
+	return directory;
 }
 
-string wiArchive::GetSourceFileName() const
+const string& wiArchive::GetSourceFileName() const
 {
 	return fileName;
 }

@@ -14,6 +14,7 @@ private:
 	std::vector<uint8_t> DATA;
 
 	std::string fileName; // save to this file on closing if not empty
+	std::string directory;
 
 	void CreateEmpty();
 
@@ -37,8 +38,8 @@ public:
 	bool IsOpen();
 	void Close();
 	bool SaveFile(const std::string& fileName);
-	std::string GetSourceDirectory() const;
-	std::string GetSourceFileName() const;
+	const std::string& GetSourceDirectory() const;
+	const std::string& GetSourceFileName() const;
 
 	// It could be templated but we have to be extremely careful of different datasizes on different platforms
 	// because serialized data should be interchangeable!

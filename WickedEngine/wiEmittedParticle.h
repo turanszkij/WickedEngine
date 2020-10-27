@@ -129,7 +129,7 @@ public:
 	inline void SetVolumeEnabled(bool value) { if (value) { _flags |= HAS_VOLUME; } else { _flags &= ~HAS_VOLUME; } }
 	inline void SetFrameBlendingEnabled(bool value) { if (value) { _flags |= FRAME_BLENDING; } else { _flags &= ~FRAME_BLENDING; } }
 
-	void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+	void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 
 	static void Initialize();
 };

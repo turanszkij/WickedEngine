@@ -288,12 +288,12 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 }
 
 
-void wiHairParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
+void wiHairParticle::Serialize(wiArchive& archive, wiECS::EntitySerializer& seri)
 {
 	if (archive.IsReadMode())
 	{
 		archive >> _flags;
-		wiECS::SerializeEntity(archive, meshID, seed);
+		wiECS::SerializeEntity(archive, meshID, seri);
 		archive >> strandCount;
 		archive >> segmentCount;
 		archive >> randomSeed;
@@ -322,7 +322,7 @@ void wiHairParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 	else
 	{
 		archive << _flags;
-		wiECS::SerializeEntity(archive, meshID, seed);
+		wiECS::SerializeEntity(archive, meshID, seri);
 		archive << strandCount;
 		archive << segmentCount;
 		archive << randomSeed;

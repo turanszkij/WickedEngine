@@ -30,7 +30,7 @@ namespace wiScene
 		inline void operator=(std::string&& str) { name = std::move(str); }
 		inline bool operator==(const std::string& str) const { return name.compare(str) == 0; }
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct LayerComponent
@@ -39,7 +39,7 @@ namespace wiScene
 
 		inline uint32_t GetLayerMask() const { return layerMask; }
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 	
 	struct TransformComponent
@@ -84,7 +84,7 @@ namespace wiScene
 		void Lerp(const TransformComponent& a, const TransformComponent& b, float t);
 		void CatmullRom(const TransformComponent& a, const TransformComponent& b, const TransformComponent& c, const TransformComponent& d, float t);
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct PreviousFrameTransformComponent
@@ -92,7 +92,7 @@ namespace wiScene
 		// Non-serialized attributes:
 		XMFLOAT4X4 world_prev;
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct HierarchyComponent
@@ -100,7 +100,7 @@ namespace wiScene
 		wiECS::Entity parentID = wiECS::INVALID_ENTITY;
 		uint32_t layerMask_bind; // saved child layermask at the time of binding
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct MaterialComponent
@@ -255,7 +255,9 @@ namespace wiScene
 		void WriteShaderMaterial(ShaderMaterial* dest) const;
 		uint32_t GetRenderTypes() const;
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void CreateRenderData(const std::string& content_dir);
+
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct MeshComponent
@@ -352,7 +354,7 @@ namespace wiScene
 		void RecenterToBottom();
 		SPHERE GetBoundingSphere() const;
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 
 
 		struct Vertex_POS
@@ -512,7 +514,7 @@ namespace wiScene
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline bool IsDirty() const { return _flags & DIRTY; }
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct ObjectComponent
@@ -599,7 +601,7 @@ namespace wiScene
 		void SaveLightmap();
 		wiGraphics::FORMAT GetLightmapFormat();
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct RigidBodyPhysicsComponent
@@ -636,7 +638,7 @@ namespace wiScene
 		inline bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
 		inline bool IsKinematic() const { return _flags & KINEMATIC; }
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct SoftBodyPhysicsComponent
@@ -671,7 +673,7 @@ namespace wiScene
 		// Create physics represenation of graphics mesh
 		void CreateFromMesh(const MeshComponent& mesh);
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct ArmatureComponent
@@ -715,7 +717,7 @@ namespace wiScene
 		std::vector<ShaderBoneType> boneData;
 		wiGraphics::GPUBuffer boneBuffer;
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct LightComponent
@@ -783,7 +785,7 @@ namespace wiScene
 		}
 		inline LightType GetType() const { return type; }
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct CameraComponent
@@ -833,7 +835,7 @@ namespace wiScene
 		inline bool IsDirty() const { return _flags & DIRTY; }
 		inline bool IsCustomProjectionEnabled() const { return _flags & CUSTOM_PROJECTION; }
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct EnvironmentProbeComponent
@@ -858,7 +860,7 @@ namespace wiScene
 		inline bool IsDirty() const { return _flags & DIRTY; }
 		inline bool IsRealTime() const { return _flags & REALTIME; }
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct ForceFieldComponent
@@ -880,7 +882,7 @@ namespace wiScene
 
 		inline float GetRange() const { return range_global; }
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct DecalComponent
@@ -905,7 +907,7 @@ namespace wiScene
 
 		inline float GetOpacity() const { return color.w; }
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct AnimationDataComponent
@@ -919,7 +921,7 @@ namespace wiScene
 		std::vector<float> keyframe_times;
 		std::vector<float> keyframe_data;
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct AnimationComponent
@@ -990,7 +992,7 @@ namespace wiScene
 		inline void Stop() { Pause(); timer = 0.0f; }
 		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct WeatherComponent
@@ -1061,7 +1063,7 @@ namespace wiScene
 		// Non-serialized attributes:
 		uint32_t most_important_light_index = ~0;
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct SoundComponent
@@ -1089,7 +1091,7 @@ namespace wiScene
 		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
 		inline void SetDisable3D(bool value = true) { if (value) { _flags |= DISABLE_3D; } else { _flags &= ~DISABLE_3D; } }
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct InverseKinematicsComponent
@@ -1108,7 +1110,7 @@ namespace wiScene
 		inline void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }
 		inline bool IsDisabled() const { return _flags & DISABLED; }
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct SpringComponent
@@ -1141,7 +1143,7 @@ namespace wiScene
 		inline bool IsStretchEnabled() const { return _flags & STRETCH_ENABLED; }
 		inline bool IsGravityEnabled() const { return _flags & GRAVITY_ENABLED; }
 
-		void Serialize(wiArchive& archive, wiECS::Entity seed = wiECS::INVALID_ENTITY);
+		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
 	struct Scene
@@ -1210,11 +1212,8 @@ namespace wiScene
 		// Duplicates all of an entity's components and creates a new entity with them:
 		wiECS::Entity Entity_Duplicate(wiECS::Entity entity);
 		// Serializes entity and all of its components to archive:
-		//	You can specify entity = INVALID_ENTITY when the entity needs to be created from archive
-		//	You can specify seed = INVALID_ENTITY when the archive is guaranteed to be storing persistent and unique entities
-		//	propagateDeepSeed : request that entity references inside components should be seeded as well
 		//	Returns either the new entity that was read, or the original entity that was written
-		wiECS::Entity Entity_Serialize(wiArchive& archive, wiECS::Entity entity = wiECS::INVALID_ENTITY, wiECS::Entity seed = wiECS::INVALID_ENTITY, bool propagateSeedDeep = true);
+		wiECS::Entity Entity_Serialize(wiArchive& archive, wiECS::Entity entity = wiECS::INVALID_ENTITY);
 
 		wiECS::Entity Entity_CreateMaterial(
 			const std::string& name

@@ -730,13 +730,13 @@ void wiEmittedParticle::Initialize()
 }
 
 
-void wiEmittedParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
+void wiEmittedParticle::Serialize(wiArchive& archive, wiECS::EntitySerializer& seri)
 {
 	if (archive.IsReadMode())
 	{
 		archive >> _flags;
 		archive >> (uint32_t&)shaderType;
-		wiECS::SerializeEntity(archive, meshID, seed);
+		wiECS::SerializeEntity(archive, meshID, seri);
 		archive >> MAX_PARTICLES;
 		archive >> FIXED_TIMESTEP;
 		archive >> size;
@@ -774,7 +774,7 @@ void wiEmittedParticle::Serialize(wiArchive& archive, wiECS::Entity seed)
 	{
 		archive << _flags;
 		archive << (uint32_t)shaderType;
-		wiECS::SerializeEntity(archive, meshID, seed);
+		wiECS::SerializeEntity(archive, meshID, seri);
 		archive << MAX_PARTICLES;
 		archive << FIXED_TIMESTEP;
 		archive << size;

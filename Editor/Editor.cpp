@@ -1459,7 +1459,7 @@ void EditorComponent::Update(float dt)
 				clipboard << prevSel.size();
 				for (auto& x : prevSel)
 				{
-					scene.Entity_Serialize(clipboard, x.entity, 0);
+					scene.Entity_Serialize(clipboard, x.entity);
 				}
 			}
 			// Paste
@@ -1474,7 +1474,7 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < count; ++i)
 				{
 					wiScene::PickResult picked;
-					picked.entity = scene.Entity_Serialize(clipboard, INVALID_ENTITY, CreateEntity(), false);
+					picked.entity = scene.Entity_Serialize(clipboard);
 					AddSelected(picked);
 				}
 			}
@@ -1504,7 +1504,7 @@ void EditorComponent::Update(float dt)
 				clipboard >> count;
 				for (size_t i = 0; i < count; ++i)
 				{
-					Entity entity = scene.Entity_Serialize(clipboard, INVALID_ENTITY, CreateEntity(), false);
+					Entity entity = scene.Entity_Serialize(clipboard);
 					TransformComponent* transform = scene.transforms.GetComponent(entity);
 					if (transform != nullptr)
 					{

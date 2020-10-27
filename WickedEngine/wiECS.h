@@ -2,32 +2,57 @@
 #define WI_ENTITY_COMPONENT_SYSTEM_H
 
 #include "wiArchive.h"
-#include "wiRandom.h"
 
 #include <cstdint>
 #include <cassert>
 #include <vector>
 #include <unordered_map>
+#include <mutex>
 
 namespace wiECS
 {
-	using Entity = uint64_t;
+	using Entity = uint32_t;
 	static const Entity INVALID_ENTITY = 0;
 	// Runtime can create a new entity with this
 	inline Entity CreateEntity()
 	{
-		return wiRandom::getRandom(INVALID_ENTITY + 1, ~0ull);
+		static std::atomic<Entity> next{ INVALID_ENTITY + 1 };
+		return next.fetch_add(1);
 	}
+
+	struct EntitySerializer
+	{
+		std::mutex locker;
+		std::unordered_map<uint64_t, Entity> remap;
+		bool allow_remap = true;
+	};
 	// This is the safe way to serialize an entity
-	//	seed : ensures that entity will be unique after loading (specify seed = INVALID_ENTITY to leave entity as-is)
-	inline void SerializeEntity(wiArchive& archive, Entity& entity, Entity seed)
+	inline void SerializeEntity(wiArchive& archive, Entity& entity, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
-			archive >> entity;
-			if (entity != INVALID_ENTITY && seed > 0)
+			// Entities are always serialized as uint64_t for back-compat
+			uint64_t mem;
+			archive >> mem;
+
+			if (seri.allow_remap)
 			{
-				entity = ((entity << 1) ^ seed) >> 1;
+				seri.locker.lock();
+				auto it = seri.remap.find(mem);
+				if (it == seri.remap.end())
+				{
+					entity = CreateEntity();
+					seri.remap[mem] = entity;
+				}
+				else
+				{
+					entity = it->second;
+				}
+				seri.locker.unlock();
+			}
+			else
+			{
+				entity = (Entity)mem;
 			}
 		}
 		else
@@ -88,9 +113,7 @@ namespace wiECS
 		}
 
 		// Read/Write everything to an archive depending on the archive state
-		//	seed: needed when serializing from disk which might cause discrepancy in entity uniqueness
-		//	propagateSeedDeep: Components can have Entity references inside them, should the seed be propageted to those too?
-		inline void Serialize(wiArchive& archive, Entity seed = INVALID_ENTITY, bool propagateSeedDeep = true)
+		inline void Serialize(wiArchive& archive, EntitySerializer& seri)
 		{
 			if (archive.IsReadMode())
 			{
@@ -102,14 +125,14 @@ namespace wiECS
 				components.resize(count);
 				for (size_t i = 0; i < count; ++i)
 				{
-					components[i].Serialize(archive, propagateSeedDeep ? seed : 0);
+					components[i].Serialize(archive, seri);
 				}
 
 				entities.resize(count);
 				for (size_t i = 0; i < count; ++i)
 				{
 					Entity entity;
-					SerializeEntity(archive, entity, seed);
+					SerializeEntity(archive, entity, seri);
 					entities[i] = entity;
 					lookup[entity] = i;
 				}
@@ -119,11 +142,11 @@ namespace wiECS
 				archive << components.size();
 				for (Component& component : components)
 				{
-					component.Serialize(archive);
+					component.Serialize(archive, seri);
 				}
 				for (Entity entity : entities)
 				{
-					SerializeEntity(archive, entity, seed);
+					SerializeEntity(archive, entity, seri);
 				}
 			}
 		}
