@@ -335,6 +335,12 @@ namespace wiScene
 	}
 	void MaterialComponent::CreateRenderData(const std::string& content_dir)
 	{
+		GPUBufferDesc desc;
+		desc.Usage = USAGE_DEFAULT;
+		desc.BindFlags = BIND_CONSTANT_BUFFER;
+		desc.ByteWidth = sizeof(MaterialCB);
+		wiRenderer::GetDevice()->CreateBuffer(&desc, nullptr, &constantBuffer);
+
 		if (!baseColorMapName.empty())
 		{
 			baseColorMap = wiResourceManager::Load(content_dir + baseColorMapName);
@@ -1161,6 +1167,18 @@ namespace wiScene
 		return FORMAT_UNKNOWN;
 	}
 
+	void LightComponent::LoadAssets(const std::string& content_dir)
+	{
+		lensFlareRimTextures.resize(lensFlareNames.size());
+		for (size_t i = 0; i < lensFlareNames.size(); ++i)
+		{
+			if (!lensFlareNames[i].empty())
+			{
+				lensFlareRimTextures[i] = wiResourceManager::Load(content_dir + lensFlareNames[i]);
+			}
+		}
+	}
+
 	void SoftBodyPhysicsComponent::CreateFromMesh(const MeshComponent& mesh)
 	{
 		vertex_positions_simulation.resize(mesh.vertex_positions.size());
@@ -1295,6 +1313,16 @@ namespace wiScene
 
 		UpdateCamera();
 	}
+
+	void SoundComponent::LoadAssets(const std::string& content_dir)
+	{
+		if (!filename.empty())
+		{
+			soundResource = wiResourceManager::Load(content_dir + filename);
+			wiAudio::CreateSoundInstance(soundResource->sound, &soundinstance);
+		}
+	}
+
 
 	void Scene::Update(float dt)
 	{
@@ -1521,7 +1549,7 @@ namespace wiScene
 
 		names.Create(entity) = name;
 
-		materials.Create(entity);
+		materials.Create(entity).CreateRenderData();
 
 		return entity;
 	}

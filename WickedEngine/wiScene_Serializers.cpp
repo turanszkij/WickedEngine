@@ -76,8 +76,6 @@ namespace wiScene
 	}
 	void MaterialComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
-		std::string dir = archive.GetSourceDirectory();
-
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
@@ -209,6 +207,7 @@ namespace wiScene
 			archive << texAnimElapsedTime;
 
 			// If detecting an absolute path in textures, remove it and convert to relative:
+			const std::string& dir = archive.GetSourceDirectory();
 			if(!dir.empty())
 			{
 				size_t found = baseColorMapName.rfind(dir);
@@ -536,8 +535,6 @@ namespace wiScene
 	}
 	void LightComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
-		std::string dir = archive.GetSourceDirectory();
-
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
@@ -552,15 +549,6 @@ namespace wiScene
 			archive >> height;
 
 			archive >> lensFlareNames;
-
-			lensFlareRimTextures.resize(lensFlareNames.size());
-			for (size_t i = 0; i < lensFlareNames.size(); ++i)
-			{
-				if (!lensFlareNames[i].empty())
-				{
-					lensFlareRimTextures[i] = wiResourceManager::Load(dir + lensFlareNames[i]);
-				}
-			}
 
 			if (archive.GetVersion() < 33)
 			{
@@ -591,6 +579,7 @@ namespace wiScene
 			archive << height;
 
 			// If detecting an absolute path in textures, remove it and convert to relative:
+			const std::string& dir = archive.GetSourceDirectory();
 			if (!dir.empty())
 			{
 				for (size_t i = 0; i < lensFlareNames.size(); ++i)
@@ -868,8 +857,6 @@ namespace wiScene
 	}
 	void SoundComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
-		std::string dir = archive.GetSourceDirectory();
-
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
@@ -877,16 +864,11 @@ namespace wiScene
 			archive >> volume;
 			archive >> (uint32_t&)soundinstance.type;
 
-			if (!filename.empty())
-			{
-				soundResource = wiResourceManager::Load(dir + filename);
-				wiAudio::CreateSoundInstance(soundResource->sound, &soundinstance);
-			}
-
 		}
 		else
 		{
 			// If detecting an absolute path in textures, remove it and convert to relative:
+			const std::string& dir = archive.GetSourceDirectory();
 			if(!dir.empty())
 			{
 				size_t found = filename.rfind(dir);
@@ -1007,6 +989,12 @@ namespace wiScene
 				});
 			wiJobSystem::Dispatch(ctx, (uint32_t)materials.GetCount(), 1, [&](wiJobArgs args) {
 				materials[args.jobIndex].CreateRenderData(archive.GetSourceDirectory());
+				});
+			wiJobSystem::Dispatch(ctx, (uint32_t)lights.GetCount(), 1, [&](wiJobArgs args) {
+				lights[args.jobIndex].LoadAssets(archive.GetSourceDirectory());
+				});
+			wiJobSystem::Dispatch(ctx, (uint32_t)sounds.GetCount(), 1, [&](wiJobArgs args) {
+				sounds[args.jobIndex].LoadAssets(archive.GetSourceDirectory());
 				});
 			wiJobSystem::Wait(ctx);
 		}

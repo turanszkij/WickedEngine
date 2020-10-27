@@ -3435,16 +3435,6 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 			{
 				material.SetDirty(false);
 				pendingMaterialUpdates.push_back(i);
-
-				if (!material.constantBuffer.IsValid())
-				{
-					GPUBufferDesc desc;
-					desc.Usage = USAGE_DEFAULT;
-					desc.BindFlags = BIND_CONSTANT_BUFFER;
-					desc.ByteWidth = sizeof(MaterialCB);
-
-					device->CreateBuffer(&desc, nullptr, &material.constantBuffer);
-				}
 			}
 		}
 	});
