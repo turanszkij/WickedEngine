@@ -8,6 +8,7 @@
 #include <vector>
 #include <unordered_map>
 #include <mutex>
+#include <atomic>
 
 namespace wiECS
 {
