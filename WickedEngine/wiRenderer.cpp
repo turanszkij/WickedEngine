@@ -3943,8 +3943,11 @@ void UpdateRenderData(CommandList cmd)
 	pendingMaterialUpdates.clear();
 
 
-	// Render Atmospheric Scattering textures for lighting and sky
-	RenderAtmosphericScatteringTextures(cmd);
+	if (scene.weather.IsRealisticSky())
+	{
+		// Render Atmospheric Scattering textures for lighting and sky
+		RenderAtmosphericScatteringTextures(cmd);
+	}
 
 	const FrameCulling& mainCameraCulling = frameCullings.at(&GetCamera());
 
@@ -6933,8 +6936,11 @@ void RefreshEnvProbes(CommandList cmd)
 
 		device->RenderPassBegin(&renderpasses_envmap[probe.textureIndex], cmd);
 
-		// Refresh atmospheric textures, since each probe has different positions
-		RefreshAtmosphericScatteringTextures(cmd);
+		if (scene.weather.IsRealisticSky())
+		{
+			// Refresh atmospheric textures, since each probe has different positions
+			RefreshAtmosphericScatteringTextures(cmd);
+		}
 
 		// Bind the atmospheric textures, as lighting and sky needs them
 		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
