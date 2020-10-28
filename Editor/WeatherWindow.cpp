@@ -115,8 +115,25 @@ void WeatherWindow::Create(EditorComponent* editor)
 	simpleskyCheckBox.OnClick([&](wiEventArgs args) {
 		auto& weather = GetWeather();
 		weather.SetSimpleSky(args.bValue);
+		if (args.bValue)
+		{
+			weather.SetRealisticSky(false);
+		}
 	});
 	AddWidget(&simpleskyCheckBox);
+
+	realisticskyCheckBox.Create("Realistic sky: ");
+	realisticskyCheckBox.SetTooltip("Physically based sky rendering model.");
+	realisticskyCheckBox.SetPos(XMFLOAT2(x + 120, y));
+	realisticskyCheckBox.OnClick([&](wiEventArgs args) {
+		auto& weather = GetWeather();
+		weather.SetRealisticSky(args.bValue);
+		if (args.bValue)
+		{
+			weather.SetSimpleSky(false);
+		}
+		});
+	AddWidget(&realisticskyCheckBox);
 
 	skyButton.Create("Load Sky");
 	skyButton.SetTooltip("Load a skybox cubemap texture...");
@@ -510,6 +527,7 @@ void WeatherWindow::Update()
 		}
 
 		simpleskyCheckBox.SetCheck(weather.IsSimpleSky());
+		realisticskyCheckBox.SetCheck(weather.IsRealisticSky());
 
 		ocean_enabledCheckBox.SetCheck(weather.IsOceanEnabled());
 		ocean_patchSizeSlider.SetValue(weather.oceanParameters.patch_length);

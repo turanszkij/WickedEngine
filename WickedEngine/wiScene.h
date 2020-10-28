@@ -1004,14 +1004,17 @@ namespace wiScene
 			EMPTY = 0,
 			OCEAN_ENABLED = 1 << 0,
 			SIMPLE_SKY = 1 << 1,
+			REALISTIC_SKY = 1 << 2,
 		};
 		uint32_t _flags = EMPTY;
 
 		inline bool IsOceanEnabled() const { return _flags & OCEAN_ENABLED; }
 		inline bool IsSimpleSky() const { return _flags & SIMPLE_SKY; }
+		inline bool IsRealisticSky() const { return _flags & REALISTIC_SKY; }
 
 		inline void SetOceanEnabled(bool value = true) { if (value) { _flags |= OCEAN_ENABLED; } else { _flags &= ~OCEAN_ENABLED; } }
 		inline void SetSimpleSky(bool value = true) { if (value) { _flags |= SIMPLE_SKY; } else { _flags &= ~SIMPLE_SKY; } }
+		inline void SetRealisticSky(bool value = true) { if (value) { _flags |= REALISTIC_SKY; } else { _flags &= ~REALISTIC_SKY; } }
 
 		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);
