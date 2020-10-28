@@ -129,6 +129,9 @@
     <None Include="$(MSBuildThisFileDirectory)volumetricLightHF.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)skyAtmosphere.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="$(MSBuildThisFileDirectory)hairparticle_simulateCS.hlsl">
@@ -940,6 +943,15 @@
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)envMap_skyGS_emulation.hlsl">
       <Filter>GS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_transmittanceLutCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_skyViewLutCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_multiScatteredLuminanceLutCS.hlsl">
+      <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

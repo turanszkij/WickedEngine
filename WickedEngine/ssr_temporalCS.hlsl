@@ -8,7 +8,7 @@ TEXTURE2D(resolve_history, float4, TEXSLOT_ONDEMAND1);
 RWTEXTURE2D(output, float4, 0);
 
 static const float temporalResponseMin = 0.85;
-static const float temporalResponseMax = 1.0f;
+static const float temporalResponseMax = 0.98f;
 static const float temporalScale = 2.0;
 static const float temporalExposure = 10.0f;
 
@@ -131,19 +131,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
     previous.a = clamp(previous.a, currentMin.a, currentMax.a);
     
     // Blend color & history
-    // Feedback weight from unbiased luminance difference (Timothy Lottes)
     
-    float lumFiltered = Luminance(current.rgb); // Luma4(current.rgb)
-    float lumHistory = Luminance(previous.rgb);
-
-    float lumDifference = abs(lumFiltered - lumHistory) / max(lumFiltered, max(lumHistory, 0.2f));
-    float lumWeight = sqr(1.0f - lumDifference);
-    float blendFinal = lerp(temporalResponseMin, temporalResponseMax, lumWeight);
-
-    // Reduce ghosting by refreshing the blend by velocity (Unreal)
-    float2 velocityScreen = customVelocity * xPPResolution;
-    float velocityBlend = sqrt(dot(velocityScreen, velocityScreen));
-    blendFinal = lerp(blendFinal, 0.2, saturate(velocityBlend / 100.0));
+	float blendFinal = lerp(temporalResponseMin, temporalResponseMax, saturate(1.0 - length(velocity) * 100));
     
     float4 result = lerp(current, previous, blendFinal);
     
