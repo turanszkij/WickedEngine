@@ -76,6 +76,8 @@ namespace wiScene
 	}
 	void MaterialComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
+		const std::string& dir = archive.GetSourceDirectory();
+
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
@@ -173,6 +175,9 @@ namespace wiScene
 
 			SetDirty();
 
+			wiJobSystem::Execute(seri.ctx, [&](wiJobArgs args) {
+				CreateRenderData(dir);
+			});
 		}
 		else
 		{
@@ -207,7 +212,6 @@ namespace wiScene
 			archive << texAnimElapsedTime;
 
 			// If detecting an absolute path in textures, remove it and convert to relative:
-			const std::string& dir = archive.GetSourceDirectory();
 			if(!dir.empty())
 			{
 				size_t found = baseColorMapName.rfind(dir);
@@ -331,6 +335,10 @@ namespace wiScene
 			{
 				archive >> vertex_tangents;
 			}
+
+			wiJobSystem::Execute(seri.ctx, [&](wiJobArgs args) {
+				CreateRenderData();
+			});
 		}
 		else
 		{
@@ -535,6 +543,8 @@ namespace wiScene
 	}
 	void LightComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
+		const std::string& dir = archive.GetSourceDirectory();
+
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
@@ -564,6 +574,16 @@ namespace wiScene
 				}
 			}
 
+			wiJobSystem::Execute(seri.ctx, [&](wiJobArgs args) {
+				lensFlareRimTextures.resize(lensFlareNames.size());
+				for (size_t i = 0; i < lensFlareNames.size(); ++i)
+				{
+					if (!lensFlareNames[i].empty())
+					{
+						lensFlareRimTextures[i] = wiResourceManager::Load(dir + lensFlareNames[i]);
+					}
+				}
+			});
 		}
 		else
 		{
@@ -579,7 +599,6 @@ namespace wiScene
 			archive << height;
 
 			// If detecting an absolute path in textures, remove it and convert to relative:
-			const std::string& dir = archive.GetSourceDirectory();
 			if (!dir.empty())
 			{
 				for (size_t i = 0; i < lensFlareNames.size(); ++i)
@@ -857,6 +876,8 @@ namespace wiScene
 	}
 	void SoundComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
 	{
+		const std::string& dir = archive.GetSourceDirectory();
+
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
@@ -864,11 +885,17 @@ namespace wiScene
 			archive >> volume;
 			archive >> (uint32_t&)soundinstance.type;
 
+			wiJobSystem::Execute(seri.ctx, [&](wiJobArgs args) {
+				if (!filename.empty())
+				{
+					soundResource = wiResourceManager::Load(dir + filename);
+					wiAudio::CreateSoundInstance(soundResource->sound, &soundinstance);
+				}
+			});
 		}
 		else
 		{
 			// If detecting an absolute path in textures, remove it and convert to relative:
-			const std::string& dir = archive.GetSourceDirectory();
 			if(!dir.empty())
 			{
 				size_t found = filename.rfind(dir);
@@ -977,26 +1004,6 @@ namespace wiScene
 		if (archive.GetVersion() >= 46)
 		{
 			animation_datas.Serialize(archive, seri);
-		}
-
-
-		if (archive.IsReadMode())
-		{
-			wiJobSystem::context ctx;
-
-			wiJobSystem::Dispatch(ctx, (uint32_t)meshes.GetCount(), 1, [&](wiJobArgs args) {
-				meshes[args.jobIndex].CreateRenderData();
-				});
-			wiJobSystem::Dispatch(ctx, (uint32_t)materials.GetCount(), 1, [&](wiJobArgs args) {
-				materials[args.jobIndex].CreateRenderData(archive.GetSourceDirectory());
-				});
-			wiJobSystem::Dispatch(ctx, (uint32_t)lights.GetCount(), 1, [&](wiJobArgs args) {
-				lights[args.jobIndex].LoadAssets(archive.GetSourceDirectory());
-				});
-			wiJobSystem::Dispatch(ctx, (uint32_t)sounds.GetCount(), 1, [&](wiJobArgs args) {
-				sounds[args.jobIndex].LoadAssets(archive.GetSourceDirectory());
-				});
-			wiJobSystem::Wait(ctx);
 		}
 
 	}

@@ -2,12 +2,12 @@
 #define WI_ENTITY_COMPONENT_SYSTEM_H
 
 #include "wiArchive.h"
+#include "wiJobSystem.h"
 
 #include <cstdint>
 #include <cassert>
 #include <vector>
 #include <unordered_map>
-#include <mutex>
 #include <atomic>
 
 namespace wiECS
@@ -23,9 +23,14 @@ namespace wiECS
 
 	struct EntitySerializer
 	{
-		std::mutex locker;
+		wiJobSystem::context ctx; // allow components to spawn serialization subtasks
 		std::unordered_map<uint64_t, Entity> remap;
 		bool allow_remap = true;
+
+		~EntitySerializer()
+		{
+			wiJobSystem::Wait(ctx); // automatically wait for all subtasks after serialization
+		}
 	};
 	// This is the safe way to serialize an entity
 	inline void SerializeEntity(wiArchive& archive, Entity& entity, EntitySerializer& seri)
@@ -38,7 +43,6 @@ namespace wiECS
 
 			if (seri.allow_remap)
 			{
-				seri.locker.lock();
 				auto it = seri.remap.find(mem);
 				if (it == seri.remap.end())
 				{
@@ -49,7 +53,6 @@ namespace wiECS
 				{
 					entity = it->second;
 				}
-				seri.locker.unlock();
 			}
 			else
 			{

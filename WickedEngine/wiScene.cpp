@@ -1167,18 +1167,6 @@ namespace wiScene
 		return FORMAT_UNKNOWN;
 	}
 
-	void LightComponent::LoadAssets(const std::string& content_dir)
-	{
-		lensFlareRimTextures.resize(lensFlareNames.size());
-		for (size_t i = 0; i < lensFlareNames.size(); ++i)
-		{
-			if (!lensFlareNames[i].empty())
-			{
-				lensFlareRimTextures[i] = wiResourceManager::Load(content_dir + lensFlareNames[i]);
-			}
-		}
-	}
-
 	void SoftBodyPhysicsComponent::CreateFromMesh(const MeshComponent& mesh)
 	{
 		vertex_positions_simulation.resize(mesh.vertex_positions.size());
@@ -1314,14 +1302,6 @@ namespace wiScene
 		UpdateCamera();
 	}
 
-	void SoundComponent::LoadAssets(const std::string& content_dir)
-	{
-		if (!filename.empty())
-		{
-			soundResource = wiResourceManager::Load(content_dir + filename);
-			wiAudio::CreateSoundInstance(soundResource->sound, &soundinstance);
-		}
-	}
 
 
 	void Scene::Update(float dt)
@@ -1549,7 +1529,7 @@ namespace wiScene
 
 		names.Create(entity) = name;
 
-		materials.Create(entity).CreateRenderData();
+		materials.Create(entity);
 
 		return entity;
 	}
@@ -2400,6 +2380,11 @@ namespace wiScene
 		wiJobSystem::Dispatch(ctx, (uint32_t)materials.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
 			MaterialComponent& material = materials[args.jobIndex];
+
+			if (!material.constantBuffer.IsValid())
+			{
+				material.CreateRenderData();
+			}
 
 			material.texAnimElapsedTime += dt * material.texAnimFrameRate;
 			if (material.texAnimElapsedTime >= 1.0f)
