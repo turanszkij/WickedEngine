@@ -141,6 +141,9 @@ set(SHADERS_CS
 		"shadingRateClassificationCS.hlsl"
 		"shadingRateClassificationCS_DEBUG.hlsl"
         "denoiseCS.hlsl"
+        "skyAtmosphere_transmittanceLutCS.hlsl"
+        "skyAtmosphere_skyViewLutCS.hlsl"
+        "skyAtmosphere_multiScatteredLuminanceLutCS.hlsl"
 )
 
 set(SHADERS_DS
