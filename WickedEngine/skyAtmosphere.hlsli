@@ -475,7 +475,8 @@ float3 GetCameraPlanetPos(AtmosphereParameters atmosphere, float3 cameraPosition
 
 float3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDirection, float3 sunIlluminance, AtmosphereParameters atmosphere, Texture2D<float4> transmittanceLutTexture)
 {
-	float sunApexAngleDegree = 0.545; // Angular diameter of sun to earth from sea level, see https://en.wikipedia.org/wiki/Solid_angle
+	//float sunApexAngleDegree = 0.545; // Angular diameter of sun to earth from sea level, see https://en.wikipedia.org/wiki/Solid_angle
+	float sunApexAngleDegree = 2.4; // Modified sun size
 	float sunHalfApexAngleRadian = 0.5 * sunApexAngleDegree * PI / 180.0;
 	float sunCosHalfApexAngle = cos(sunHalfApexAngleRadian);
 
