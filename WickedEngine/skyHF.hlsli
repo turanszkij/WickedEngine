@@ -153,88 +153,86 @@ float3 CustomAtmosphericScattering(float3 V, float3 sunDirection, float3 sunColo
 
 void CalculateClouds(inout float3 sky, float3 V, bool dark_enabled)
 {
-    if (g_xFrame_Cloudiness <= 0)
+    [branch]
+    if (g_xFrame_Cloudiness >= 0)
     {
-        return;
-    }
+        // Trace a cloud layer plane:
+        const float3 o = g_xCamera_CamPos;
+        const float3 d = V;
+        const float3 planeOrigin = float3(0, 1000, 0);
+        const float3 planeNormal = float3(0, -1, 0);
+        const float t = Trace_plane(o, d, planeOrigin, planeNormal);
 
-	// Trace a cloud layer plane:
-    const float3 o = g_xCamera_CamPos;
-    const float3 d = V;
-    const float3 planeOrigin = float3(0, 1000, 0);
-    const float3 planeNormal = float3(0, -1, 0);
-    const float t = Trace_plane(o, d, planeOrigin, planeNormal);
-
-    if (t < 0)
-    {
-        return;
-    }
-
-    const float3 cloudPos = o + d * t;
-    const float2 cloudUV = cloudPos.xz * g_xFrame_CloudScale;
-    const float cloudTime = g_xFrame_Time * g_xFrame_CloudSpeed;
-    const float2x2 m = float2x2(1.6, 1.2, -1.2, 1.6);
-    const uint quality = 8;
-
-	// rotate uvs like a flow effect:
-    float flow = 0;
-	{
-        float2 uv = cloudUV * 0.5f;
-        float amount = 0.1;
-        for (uint i = 0; i < quality; i++)
+        [branch]
+        if (t >= 0)
         {
-            flow += noise(uv) * amount;
-            uv = mul(m, uv);
-            amount *= 0.4;
+            const float3 cloudPos = o + d * t;
+            const float2 cloudUV = cloudPos.xz * g_xFrame_CloudScale;
+            const float cloudTime = g_xFrame_Time * g_xFrame_CloudSpeed;
+            const float2x2 m = float2x2(1.6, 1.2, -1.2, 1.6);
+            const uint quality = 8;
+
+            // rotate uvs like a flow effect:
+            float flow = 0;
+            {
+                float2 uv = cloudUV * 0.5f;
+                float amount = 0.1;
+                for (uint i = 0; i < quality; i++)
+                {
+                    flow += noise(uv) * amount;
+                    uv = mul(m, uv);
+                    amount *= 0.4;
+                }
+            }
+
+
+            // Main shape:
+            float clouds = 0.0;
+            {
+                const float time = cloudTime * 0.2f;
+                float density = 1.1f;
+                float2 uv = cloudUV * 0.8f;
+                uv -= flow - time;
+                for (uint i = 0; i < quality; i++)
+                {
+                    clouds += density * noise(uv);
+                    uv = mul(m, uv) + time;
+                    density *= 0.6f;
+                }
+            }
+
+            // Detail shape:
+            {
+                float detail_shape = 0.0;
+                const float time = cloudTime * 0.1f;
+                float density = 0.8f;
+                float2 uv = cloudUV;
+                uv -= flow - time;
+                for (uint i = 0; i < quality; i++)
+                {
+                    detail_shape += abs(density * noise(uv));
+                    uv = mul(m, uv) + time;
+                    density *= 0.7f;
+                }
+                clouds *= detail_shape + clouds;
+                clouds *= detail_shape;
+            }
+
+
+            // lerp between "choppy clouds" and "uniform clouds". Lower cloudiness will produce choppy clouds, but very high cloudiness will switch to overcast unfiform clouds:
+            clouds = lerp(clouds * 9.0f * g_xFrame_Cloudiness + 0.3f, clouds * 0.5f + 0.5f, pow(saturate(g_xFrame_Cloudiness), 8));
+            clouds = saturate(clouds - (1 - g_xFrame_Cloudiness)); // modulate constant cloudiness
+            clouds *= pow(1 - saturate(length(abs(cloudPos.xz * 0.00001f))), 16); //fade close to horizon
+
+            if (dark_enabled)
+            {
+                sky *= pow(saturate(1 - clouds), 16.0f); // only sun and clouds. Boost clouds to have nicer sun shafts occlusion
+            }
+            else
+            {
+                sky = lerp(sky, 1, clouds); // sky and clouds on top
+            }
         }
-    }
-
-
-	// Main shape:
-    float clouds = 0.0;
-	{
-        const float time = cloudTime * 0.2f;
-        float density = 1.1f;
-        float2 uv = cloudUV * 0.8f;
-        uv -= flow - time;
-        for (uint i = 0; i < quality; i++)
-        {
-            clouds += density * noise(uv);
-            uv = mul(m, uv) + time;
-            density *= 0.6f;
-        }
-    }
-
-	// Detail shape:
-	{
-        float detail_shape = 0.0;
-        const float time = cloudTime * 0.1f;
-        float density = 0.8f;
-        float2 uv = cloudUV;
-        uv -= flow - time;
-        for (uint i = 0; i < quality; i++)
-        {
-            detail_shape += abs(density * noise(uv));
-            uv = mul(m, uv) + time;
-            density *= 0.7f;
-        }
-        clouds *= detail_shape + clouds;
-        clouds *= detail_shape;
-    }
-
-
-	// lerp between "choppy clouds" and "uniform clouds". Lower cloudiness will produce choppy clouds, but very high cloudiness will switch to overcast unfiform clouds:
-    clouds = lerp(clouds * 9.0f * g_xFrame_Cloudiness + 0.3f, clouds * 0.5f + 0.5f, pow(saturate(g_xFrame_Cloudiness), 8));
-    clouds = saturate(clouds - (1 - g_xFrame_Cloudiness)); // modulate constant cloudiness
-    clouds *= pow(1 - saturate(length(abs(cloudPos.xz * 0.00001f))), 16); //fade close to horizon
-
-    if (dark_enabled)
-    {
-        sky *= pow(saturate(1 - clouds), 16.0f); // only sun and clouds. Boost clouds to have nicer sun shafts occlusion
-    }
-    else
-    {
-        sky = lerp(sky, 1, clouds); // sky and clouds on top
     }
 }
 
@@ -242,46 +240,51 @@ void CalculateClouds(inout float3 sky, float3 V, bool dark_enabled)
 //	V	: view direction
 float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enabled = true, bool dark_enabled = false, bool realistic_sky_stationary = false)
 {
+    float3 sky = 0;
+
+    [branch]
 	if (g_xFrame_Options & OPTION_BIT_SIMPLE_SKY)
 	{
-		return lerp(GetHorizonColor(), GetZenithColor(), saturate(V.y * 0.5f + 0.5f));
+		sky = lerp(GetHorizonColor(), GetZenithColor(), saturate(V.y * 0.5f + 0.5f));
 	}
-    
-	const float3 sunDirection = GetSunDirection();
-	const float3 sunColor = GetSunColor();
-	const float sunEnergy = GetSunEnergy();
-    
-	float3 sky = float3(0, 0, 0);
+    else
+    {
+        const float3 sunDirection = GetSunDirection();
+        const float3 sunColor = GetSunColor();
+        const float sunEnergy = GetSunEnergy();
 
-	if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
-	{
-		sky = AccurateAtmosphericScattering
-        (
-            texture_skyviewlut,          // Sky View Lut (combination of precomputed atmospheric LUTs)
-            texture_transmittancelut,
-            texture_multiscatteringlut,
-            g_xCamera_CamPos,           // Ray origin
-            V,                          // Ray direction
-            sunDirection,               // Position of the sun
-            sunEnergy,                  // Sun energy
-            sunColor,                   // Sun Color
-            sun_enabled,                // Use sun and total
-            dark_enabled,               // Enable dark mode for light shafts etc.
-            realistic_sky_stationary    // Fixed position for ambient and environment capture.
-        );
-	}
-	else
-	{
-		sky = CustomAtmosphericScattering
-        (
-            V,              // normalized ray direction
-            sunDirection,   // position of the sun
-            sunColor,       // color of the sun, for disc
-            sun_enabled,    // use sun and total
-            dark_enabled    // enable dark mode for light shafts etc.
-        );
-	}
+        [branch]
+        if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
+        {
+            sky = AccurateAtmosphericScattering
+            (
+                texture_skyviewlut,          // Sky View Lut (combination of precomputed atmospheric LUTs)
+                texture_transmittancelut,
+                texture_multiscatteringlut,
+                g_xCamera_CamPos,           // Ray origin
+                V,                          // Ray direction
+                sunDirection,               // Position of the sun
+                sunEnergy,                  // Sun energy
+                sunColor,                   // Sun Color
+                sun_enabled,                // Use sun and total
+                dark_enabled,               // Enable dark mode for light shafts etc.
+                realistic_sky_stationary    // Fixed position for ambient and environment capture.
+            );
+        }
+        else
+        {
+            sky = CustomAtmosphericScattering
+            (
+                V,              // normalized ray direction
+                sunDirection,   // position of the sun
+                sunColor,       // color of the sun, for disc
+                sun_enabled,    // use sun and total
+                dark_enabled    // enable dark mode for light shafts etc.
+            );
+        }
+    }
 
+    [branch]
 	if (clouds_enabled)
 	{
 		CalculateClouds(sky, V, dark_enabled);
