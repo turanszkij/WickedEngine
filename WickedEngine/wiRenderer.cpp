@@ -1167,6 +1167,9 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING], "voxelSceneCopyClearCS_TemporalSmoothing.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], "voxelRadianceSecondaryBounceCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_VOXELCLEARONLYNORMAL], "voxelClearOnlyNormalCS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_SKYATMOSPHERE_TRANSMITTANCELUT], "skyAtmosphere_transmittanceLutCS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], "skyAtmosphere_multiScatteredLuminanceLutCS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_SKYATMOSPHERE_SKYVIEWLUT], "skyAtmosphere_skyViewLutCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN2D_UNORM4], "generateMIPChain2DCS_unorm4.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN2D_FLOAT4], "generateMIPChain2DCS_float4.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, computeShaders[CSTYPE_GENERATEMIPCHAIN3D_UNORM4], "generateMIPChain3DCS_unorm4.cso"); });
@@ -2817,6 +2820,9 @@ void BindEnvironmentTextures(SHADERSTAGE stage, CommandList cmd)
 
 	device->BindResource(stage, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, cmd);
 	device->BindResource(stage, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, cmd);
+	device->BindResource(stage, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
+	device->BindResource(stage, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+	device->BindResource(stage, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 	device->BindResource(stage, GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, cmd);
 
 	if (GetScene().weather.skyMap != nullptr)
@@ -3936,6 +3942,12 @@ void UpdateRenderData(CommandList cmd)
 	}
 	pendingMaterialUpdates.clear();
 
+
+	if (scene.weather.IsRealisticSky())
+	{
+		// Render Atmospheric Scattering textures for lighting and sky
+		RenderAtmosphericScatteringTextures(cmd);
+	}
 
 	const FrameCulling& mainCameraCulling = frameCullings.at(&GetCamera());
 
@@ -6527,6 +6539,139 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 	device->EventEnd(cmd);
 }
 
+
+void RenderAtmosphericScatteringTextures(CommandList cmd)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("ComputeAtmosphericScatteringTextures", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Atmospheric Scattering Textures", cmd);
+
+	GPUBarrier memory_barrier = GPUBarrier::Memory();
+
+	if (!textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT].IsValid())
+	{
+		TextureDesc desc;
+		desc.type = TextureDesc::TEXTURE_2D;
+		desc.Width = 256;
+		desc.Height = 64;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT]);
+	}
+	if (!textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT].IsValid())
+	{
+		TextureDesc desc;
+		desc.type = TextureDesc::TEXTURE_2D;
+		desc.Width = 32;
+		desc.Height = 32;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT]);
+	}
+	if (!textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT].IsValid())
+	{
+		TextureDesc desc;
+		desc.type = TextureDesc::TEXTURE_2D;
+		desc.Width = 192;
+		desc.Height = 104;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT]);
+	}
+
+	// Transmittance Lut pass:
+	{
+		device->EventBegin("TransmittanceLut", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_SKYATMOSPHERE_TRANSMITTANCELUT], cmd);
+
+		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_ONDEMAND0, cmd); // empty
+		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_ONDEMAND1, cmd); // empty
+
+		const GPUResource* uavs[] = {
+			&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT],
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		const int threadSize = 8;
+		const int transmittanceLutWidth = textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT].GetDesc().Width;
+		const int transmittanceLutHeight = textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT].GetDesc().Height;
+		const int transmittanceLutThreadX = static_cast<uint32_t>(std::ceil(transmittanceLutWidth / threadSize));
+		const int transmittanceLutThreadY = static_cast<uint32_t>(std::ceil(transmittanceLutHeight / threadSize));
+
+		device->Dispatch(transmittanceLutThreadX, transmittanceLutThreadY, 1, cmd);
+
+		device->Barrier(&memory_barrier, 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
+
+	// MultiScattered Luminance Lut pass:
+	{
+		device->EventBegin("MultiScatteredLuminanceLut", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], cmd);
+
+		// Use transmittance from previous pass
+		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_ONDEMAND1, cmd);
+
+		const GPUResource* uavs[] = {
+			&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT],
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		const int multiScatteredLutWidth = textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT].GetDesc().Width;
+		const int multiScatteredLutHeight = textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT].GetDesc().Height;
+
+		device->Dispatch(multiScatteredLutWidth, multiScatteredLutHeight, 1, cmd);
+
+		device->Barrier(&memory_barrier, 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
+
+	device->EventEnd(cmd);
+
+	RefreshAtmosphericScatteringTextures(cmd);
+
+	wiProfiler::EndRange(range);
+}
+void RefreshAtmosphericScatteringTextures(CommandList cmd)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("UpdateAtmosphericScatteringTextures", cmd);
+
+	GPUBarrier memory_barrier = GPUBarrier::Memory();
+
+	// Sky View Lut pass:
+	{
+		device->EventBegin("SkyViewLut", cmd);
+		device->BindComputeShader(&computeShaders[CSTYPE_SKYATMOSPHERE_SKYVIEWLUT], cmd);
+
+		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_ONDEMAND1, cmd);
+
+		const GPUResource* uavs[] = {
+			&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT],
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		const int threadSize = 8;
+		const int skyViewLutWidth = textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT].GetDesc().Width;
+		const int skyViewLutHeight = textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT].GetDesc().Height;
+		const int skyViewLutThreadX = static_cast<uint32_t>(std::ceil(skyViewLutWidth / threadSize));
+		const int skyViewLutThreadY = static_cast<uint32_t>(std::ceil(skyViewLutHeight / threadSize));
+
+		device->Dispatch(skyViewLutThreadX, skyViewLutThreadY, 1, cmd);
+
+		device->Barrier(&memory_barrier, 1, cmd);
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
+
+	device->EventEnd(cmd);
+}
 void DrawSky(CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
@@ -6542,6 +6687,9 @@ void DrawSky(CommandList cmd)
 	else
 	{
 		device->BindPipelineState(&PSO_sky[SKYRENDERING_DYNAMIC], cmd);
+		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
+		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 	}
 
 	BindConstantBuffers(VS, cmd);
@@ -6558,6 +6706,10 @@ void DrawSun(CommandList cmd)
 	device->EventBegin("DrawSun", cmd);
 
 	device->BindPipelineState(&PSO_sky[SKYRENDERING_SUN], cmd);
+
+	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
+	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 
 	BindConstantBuffers(VS, cmd);
 	BindConstantBuffers(PS, cmd);
@@ -6783,6 +6935,17 @@ void RefreshEnvProbes(CommandList cmd)
 		BindConstantBuffers(PS, cmd);
 
 		device->RenderPassBegin(&renderpasses_envmap[probe.textureIndex], cmd);
+
+		if (scene.weather.IsRealisticSky())
+		{
+			// Refresh atmospheric textures, since each probe has different positions
+			RefreshAtmosphericScatteringTextures(cmd);
+		}
+
+		// Bind the atmospheric textures, as lighting and sky needs them
+		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
+		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 
 		if (!renderQueue.empty())
 		{
@@ -7938,6 +8101,12 @@ void RayTraceScene(
 	{
 		device->BindResource(CS, scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
 	}
+	else
+	{
+		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
+		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
+	}
 
 	const XMFLOAT4& halton = wiMath::GetHaltonSequence((int)GetDevice()->GetFrameCount());
 	RaytracingCB cb;
@@ -8493,6 +8662,18 @@ void RenderObjectLightMap(const ObjectComponent& object, CommandList cmd)
 	device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
 
 	device->BindPipelineState(&PSO_renderlightmap, cmd);
+
+	if (scene.weather.skyMap != nullptr)
+	{
+		device->BindResource(PS, scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
+	}
+	else
+	{
+		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
+		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
+	}
+
 	device->DrawIndexedInstanced((uint32_t)mesh.indices.size(), 1, 0, 0, 0, cmd);
 
 	device->RenderPassEnd(cmd);
@@ -8739,6 +8920,10 @@ void UpdateFrameCB(CommandList cmd)
 	if (scene.weather.IsSimpleSky())
 	{
 		cb.g_xFrame_Options |= OPTION_BIT_SIMPLE_SKY;
+	}
+	if (scene.weather.IsRealisticSky())
+	{
+		cb.g_xFrame_Options |= OPTION_BIT_REALISTIC_SKY;
 	}
 	if (GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && GetRaytracedShadowsEnabled())
 	{
@@ -10210,6 +10395,9 @@ void Postprocess_RTReflection(
 		descriptorTable.resources.push_back({ TEXTURECUBEARRAY, TEXSLOT_SHADOWARRAY_TRANSPARENT });
 		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, SBSLOT_ENTITYARRAY });
 		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, SBSLOT_MATRIXARRAY });
+		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_SKYVIEWLUT });
+		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_TRANSMITTANCELUT });
+		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_MULTISCATTERINGLUT });
 		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(FrameCB) });
 		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(CameraCB) });
 		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(PostProcessCB) });
@@ -10303,6 +10491,9 @@ void Postprocess_RTReflection(
 	device->WriteDescriptor(&descriptorTable, 8, 0, &shadowMapArray_Transparent);
 	device->WriteDescriptor(&descriptorTable, 9, 0, &resourceBuffers[RBTYPE_ENTITYARRAY]);
 	device->WriteDescriptor(&descriptorTable, 10, 0, &resourceBuffers[RBTYPE_MATRIXARRAY]);
+	device->WriteDescriptor(&descriptorTable, 11, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT]);
+	device->WriteDescriptor(&descriptorTable, 12, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT]);
+	device->WriteDescriptor(&descriptorTable, 13, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT]);
 	device->BindDescriptorTable(RAYTRACING, 0, &descriptorTable, cmd);
 	device->BindDescriptorTable(RAYTRACING, 1, &scene.descriptorTable, cmd);
 	device->BindRootDescriptor(RAYTRACING, 0, &constantBuffers[CBTYPE_FRAME], 0, cmd);

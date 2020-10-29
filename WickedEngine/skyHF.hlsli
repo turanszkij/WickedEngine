@@ -1,256 +1,94 @@
 #ifndef WI_SKY_HF
 #define WI_SKY_HF
 #include "globals.hlsli"
+#include "skyAtmosphere.hlsli"
 
-// This can enable realistic sky simulation (performance heavy)
-//#define REALISTIC_SKY
-
-// Accurate Atmosphere based on: https://www.scratchapixel.com/lessons/procedural-generation-virtual-worlds/simulating-sky
 // Custom Atmosphere based on: https://www.shadertoy.com/view/Ml2cWG
 // Cloud noise based on: https://www.shadertoy.com/view/4tdSWr
 
-// warning X4122: sum of X and Y cannot be represented accurately in double precision
-#pragma warning( disable : 4122 )
-
-struct AtmosphericMedium
+float3 AccurateAtmosphericScattering(Texture2D<float4> skyViewLutTexture, Texture2D<float4> transmittanceLUT, Texture2D<float4> multiScatteringLUT, float3 rayOrigin, float3 rayDirection, float3 sunDirection, float sunEnergy, float3 sunColor, bool enableSun, bool darkMode, bool stationary)
 {
-    // Scattering
-    float3 rayleighScattering;      // Affects the color of the sky
-    float3 mieScattering;           // Affects the color of the blob around the sun
-    float3 absorptionScattering;    // What color gets absorbed by the atmosphere (due to things like ozone)
-    float3 ambientScattering;       // Affects the scattering color when there is no lighting from the sun
+	AtmosphereParameters atmosphere = GetAtmosphereParameters();
+    
+	float3 worldDirection = rayDirection;
+    
+	float3 skyRelativePosition = stationary ? float3(0.00001, 0.00001, 0.00001) : rayOrigin; // We get compiler warnings: "floating point division by zero" when stationary is true, but it gets handled by GetCameraPlanetPos anyway
+	float3 worldPosition = GetCameraPlanetPos(atmosphere, skyRelativePosition);
+    
+	float viewHeight = length(worldPosition);
 
-    // Scale heights
-    float rayleighScaleHeight;      // Rayleigh scale height
-    float mieScaleHeight;           // Mie scale height
-    float absorptionScaleHeight;    // Absorption scale height, at what height the absorption is at it's fullest
-    
-    // Etc.
-    float mieEccentricity;          // Mie preferred scattering direction
-    float absorptionFalloff;        // How much the absorption decreases the further away it gets from the maximum height
-};
+	float3 luminance = float3(0.0, 0.0, 0.0);
 
-inline AtmosphericMedium CreateAtmosphericScattering()
-{
-    AtmosphericMedium medium;
-    
-    medium.rayleighScattering = float3(5.5e-6, 13.0e-6, 22.4e-6); // Causes a blue atmosphere for earth.
-    medium.mieScattering = float3(21e-6, 21e-6, 21e-6);
-    medium.absorptionScattering = float3(2.04e-5, 4.97e-5, 1.95e-6);
-    medium.ambientScattering = float3(0.0, 0.0, 0.0); // Disabled by default
-    
-    medium.rayleighScaleHeight = 8e3;
-    medium.mieScaleHeight = 1.2e3;
-    medium.absorptionScaleHeight = 30e3; // Ozone layer starts around 30 km
-    
-    medium.mieEccentricity = 0.758;
-    medium.absorptionFalloff = 3e3;
-    
-    return medium;
-}
-
-inline AtmosphericMedium CreateAtmosphericScattering(float3 rayleighScattering, float3 mieScattering, float3 absorptionScattering, float3 ambientScattering,
-    float rayleighScaleHeight, float mieScaleHeight, float absorptionScaleHeight, float mieEccentricity, float absorptionFalloff)
-{
-    AtmosphericMedium medium;
-    
-    medium.rayleighScattering = rayleighScattering;
-    medium.mieScattering = mieScattering;
-    medium.absorptionScattering = absorptionScattering;
-    medium.ambientScattering = ambientScattering;
-    
-    medium.rayleighScaleHeight = rayleighScaleHeight;
-    medium.mieScaleHeight = mieScaleHeight;
-    medium.absorptionScaleHeight = absorptionScaleHeight;
-    
-    medium.mieEccentricity = mieEccentricity;
-    medium.absorptionFalloff = absorptionFalloff;
-    
-    return medium;
-}
-
-bool TraceSphereIntersections(float3 rayOrigin, float3 rayDirection, float3 sphereCenter, float sphereRadius, inout float2 solutions)
-{
-    float3 localPosition = rayOrigin - sphereCenter;
-    float localPositionSqr = dot(localPosition, localPosition);
-    
-    // Quadratic Coefficients
-    float a = dot(rayDirection, rayDirection);
-    float b = 2 * dot(rayDirection, localPosition);
-    float c = localPositionSqr - sphereRadius * sphereRadius;
-    
-    float discriminant = b * b - 4 * a * c;
-    
-    // Only continue if the ray intersects with the sphere
-    if (discriminant >= 0.0)
-    {
-        float sqrtDiscriminant = sqrt(discriminant);
-        solutions = (-b + float2(-1, 1) * sqrtDiscriminant) / (2 * a);
-        return true;
-    }
-    
-    return false;
-}
-
-// RayLeigh phase function
-float computeRayleighPhase(float cosTheta)
-{
-    return 3.0 / (16.0 * PI) * (1.0 + cosTheta * cosTheta);
-}
-
-// Henyey Greenstein Phase
-// See http://www.pbr-book.org/3ed-2018/Volume_Scattering/Phase_Functions.html
-float computeMiePhase(float g, float cosTheta)
-{
-    float gg = g * g;
-    float a = (1.0 - gg) * (1.0 + cosTheta * cosTheta);
-    float b = (2.0 + gg) * pow(abs(1.0 + gg - 2.0 * g * cosTheta), 1.5);
-    
-    return 3.0 / (8.0 * PI) * (a / b);
-}
-
-// AccurateAtmosphericScattering - WIP
-float3 AccurateAtmosphericScattering(float3 rayOrigin, float3 rayDirection, float3 sunDirection,
-    float3 planetCenter, float planetRadius, float AtmosphereRadius, AtmosphericMedium medium, bool enableSun, bool darkMode)
-{
-    const int numSteps = 16;
-    const int numStepsLight = 8;
-    
-    float tMaxDistance = 1e12;
-    float2 tBottomSolutions = 0.0; // Planet intersections
-    if (TraceSphereIntersections(rayOrigin, rayDirection, planetCenter, planetRadius, tBottomSolutions))
-    {
-        // If we hit the planet
-        if (0.0 < tBottomSolutions.y)
-        {
-            tMaxDistance = max(tBottomSolutions.x, 0.0);
-        }
-    }
-    
-    float2 tTopSolutions = 0.0; // Atmosphere intersections
-    if (TraceSphereIntersections(rayOrigin, rayDirection, planetCenter, AtmosphereRadius, tTopSolutions))
-    {
-        // Make sure the ray is no longer than allowed
-        tTopSolutions.y = min(tTopSolutions.y, tMaxDistance);
-        tTopSolutions.x = max(tTopSolutions.x, 0.0);
-    }
-    else
-    {
-        return float3(0.0, 0.0, 0.0);
-    }
-    
-    float stepSize = (tTopSolutions.y - tTopSolutions.x) / float(numSteps);
-    
-    float tCurrent = tTopSolutions.x;
-    float tCurrentLight = 0.0;
-    
-    // How much light coming from the sun direction is scattered in direction V
-    float cosTheta = dot(rayDirection, sunDirection);
-    
-    // Phase functions - Rayleigh and Mie
-    float phaseRayleigh = computeRayleighPhase(cosTheta);
-    float phaseMie = computeMiePhase(medium.mieEccentricity, cosTheta);
-    
-    float3 totalRayleigh = float3(0.0, 0.0, 0.0);
-    float3 totalMie = float3(0.0, 0.0, 0.0);
-    
-    // Initialize optical depth accumulators for each ray - How much air was in the ray    
-    float3 opticalDepth = float3(0.0, 0.0, 0.0);
-    float3 opticalDepthLight = float3(0.0, 0.0, 0.0);
-    
-    float2 scaleHeight = float2(medium.rayleighScaleHeight, medium.mieScaleHeight);
-    
-    // Planet location relative to the camera position
-    float3 planetLocalPosition = rayOrigin - planetCenter;
-
-	// Sample the primary ray.
-    
-    [loop]
-    for (int i = 0; i < numSteps; i++)
-    {
-        float3 samplePosition = planetLocalPosition + rayDirection * (tCurrent + stepSize * 0.5);
+	const bool fastSky = true;
+	if (viewHeight < atmosphere.topRadius && fastSky)
+	{
+		float2 uv;
+		float3 upVector = normalize(worldPosition);
+		float viewZenithCosAngle = dot(worldDirection, upVector);
         
-        float sampleHeight = length(samplePosition) - planetRadius;
-        
-        // Density of the particles for rayleigh and mie
-        float3 density = float3(exp(-sampleHeight / scaleHeight), 0.0);
-        
-        // And the absorption density. This is for ozone, which scales together with the rayleigh.
-        density.z = saturate((1.0 / cosh((medium.absorptionScaleHeight - sampleHeight) / medium.absorptionFalloff)) * density.x);
-        density *= stepSize;
-        
-        opticalDepth += density;
-        
-        // Step size of light ray.
-        float2 tLightSolutions;
-        TraceSphereIntersections(samplePosition + planetCenter, sunDirection, planetCenter, AtmosphereRadius, tLightSolutions); // Undo planetLocalPosition to rayOrigin
-        float stepSizeLight = tLightSolutions.y / float(numStepsLight);
+		float3 sideVector = normalize(cross(upVector, worldDirection)); // Assumes non parallel vectors
+		float3 forwardVector = normalize(cross(sideVector, upVector)); // Aligns toward the sun light but perpendicular to up vector
+		float2 lightOnPlane = float2(dot(sunDirection, forwardVector), dot(sunDirection, sideVector));
+		lightOnPlane = normalize(lightOnPlane);
+		float lightViewCosAngle = lightOnPlane.x;
 
-		// Sample the secondary ray. (Light)
+		bool intersectGround = RaySphereIntersectNearest(worldPosition, worldDirection, float3(0, 0, 0), atmosphere.bottomRadius) >= 0.0f;
         
-        [unroll]
-        for (int j = 0; j < numStepsLight; j++)
-        {
-            float3 samplePositionLight = samplePosition + sunDirection * (tCurrentLight + stepSizeLight * 0.5);
-
-            float sampleHeightLight = length(samplePositionLight) - planetRadius;
-
-            // Calculate the particle density.
-            float3 densityLight = float3(exp(-sampleHeightLight / scaleHeight), 0.0);
+		SkyViewLutParamsToUv(atmosphere, intersectGround, viewZenithCosAngle, lightViewCosAngle, viewHeight, uv);
+        
+		luminance = skyViewLutTexture.SampleLevel(sampler_linear_clamp, uv, 0).rgb;
+	}
+	else
+	{
+        // Move to top atmosphere as the starting point for ray marching.
+	    // This is critical to be after the above to not disrupt above atmosphere tests and voxel selection.
+		if (MoveToTopAtmosphere(worldPosition, worldDirection, atmosphere.topRadius))
+		{
+            // Apply the start offset after moving to the top of atmosphere to avoid black pixels
+			const float startOffsetKm = 0.1; // 100m seems enough for long distances
+			worldPosition += worldDirection * startOffsetKm;
             
-            // And the absorption density.
-            densityLight.z = saturate((1.0 / cosh((medium.absorptionScaleHeight - sampleHeightLight) / medium.absorptionFalloff)) * densityLight.x);
-            densityLight *= stepSizeLight;
-            
-            opticalDepthLight += densityLight;
-            
-            tCurrentLight += stepSizeLight;
-        }
-        
-        // Calculate attenuation. How much light reaches the current sample point due to scattering
-        float3 tauRayleigh = medium.rayleighScattering * (opticalDepth.x + opticalDepthLight.x);
-        float3 tauMie = medium.mieScattering * (opticalDepth.y + opticalDepthLight.y);
-        float3 tauAbsorption = medium.absorptionScattering * (opticalDepth.z + opticalDepthLight.z);
-            
-        float3 attenuation = exp(-(tauMie + tauRayleigh + tauAbsorption));
-            
-        totalRayleigh += density.x * attenuation;
-        totalMie += density.y * attenuation;
-        
-        tCurrent += stepSize;
-    }
+			float3 sunIlluminance = sunEnergy * sunColor;
+
+			SamplingParameters sampling;
+            {
+				sampling.variableSampleCount = true;
+				sampling.sampleCountIni = 0.0f;
+				sampling.rayMarchMinMaxSPP = float2(4, 14);
+				sampling.distanceSPPMaxInv = 0.01;
+			}
+			const bool ground = false;
+			const float depthBufferWorldPos = 0.0;
+			const bool opaque = false;
+			const bool mieRayPhase = true;
+			const bool multiScatteringApprox = true;
+			const float2 pixPos = float2(0, 0);
+			SingleScatteringResult ss = IntegrateScatteredLuminance(
+                atmosphere, pixPos, worldPosition, worldDirection, sunDirection, sunIlluminance,
+                sampling, ground, depthBufferWorldPos, opaque, mieRayPhase, multiScatteringApprox, transmittanceLUT, multiScatteringLUT);
+
+			luminance = ss.L;
+		}
+	}
+     
+	float3 totalColor = float3(0.0, 0.0, 0.0);
+
+	if (enableSun)
+	{
+		float3 sunIlluminance = sunEnergy * sunColor;
+		totalColor = luminance + GetSunLuminance(worldPosition, worldDirection, sunDirection, sunIlluminance, atmosphere, transmittanceLUT);
+	}
+	else
+	{
+		totalColor = luminance; // We cant really seperate mie from luminance due to precomputation, todo?
+	}
     
-    // Calculate how much light can pass through the atmosphere. Can be utilized when scene data is available.
-    //float3 transmittance = exp(-(medium.rayleighScattering * opticalDepth.x + medium.mieScattering * opticalDepth.y + medium.absorptionScattering * opticalDepth.z));
+	if (darkMode)
+	{
+		totalColor = max(pow(saturate(dot(sunDirection, rayDirection)), 64) * sunColor, 0) * luminance * 1.0;
+	}
 	
-    float3 rayleigh = phaseRayleigh * medium.rayleighScattering * totalRayleigh;
-    float3 mie = phaseMie * medium.mieScattering * totalMie;
-    float3 ambient = opticalDepth.x * medium.ambientScattering;
-        
-    float sunIntensity = GetSunEnergy();
-    float3 sunColor = GetSunColor();
-    
-    float3 totalColor = float3(0, 0, 0);
-
-    if (enableSun)
-    {
-        const float maxSunDiscIntensity = 20.0;
-        const float discAmount = distance(rayDirection, sunDirection); // sun falloff descreasing from mid point
-        const float3 sun = smoothstep(0.03, 0.026, discAmount) * sunColor * min(sunIntensity, maxSunDiscIntensity); // sun disc
-	
-        totalColor = sunIntensity * 2.0 * (rayleigh + mie + ambient) + sun; // Calculate and return the final color.
-    }
-    else
-    {
-        totalColor = sunIntensity * 2.0 * (rayleigh + ambient); // Exclude mie when sun disc is not enabled.
-    }
-    
-    if (darkMode)
-    {
-        totalColor = max(pow(saturate(dot(sunDirection, rayDirection)), 64) * sunColor, 0) * mie * 150.0f;
-    }
-	
-    return totalColor;
+	return totalColor;
 }
 
 float2 hash(float2 p)
@@ -402,51 +240,54 @@ void CalculateClouds(inout float3 sky, float3 V, bool dark_enabled)
 
 // Returns sky color modulated by the sun and clouds
 //	V	: view direction
-float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enabled = true, bool dark_enabled = false)
+float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enabled = true, bool dark_enabled = false, bool realistic_sky_stationary = false)
 {
-    if (g_xFrame_Options & OPTION_BIT_SIMPLE_SKY)
-    {
-        return lerp(GetHorizonColor(), GetZenithColor(), saturate(V.y * 0.5f + 0.5f));
-    }
+	if (g_xFrame_Options & OPTION_BIT_SIMPLE_SKY)
+	{
+		return lerp(GetHorizonColor(), GetZenithColor(), saturate(V.y * 0.5f + 0.5f));
+	}
     
-    const float3 sunDirection = GetSunDirection();
-    const float3 sunColor = GetSunColor();
-    const float sunEnergy = GetSunEnergy();
+	const float3 sunDirection = GetSunDirection();
+	const float3 sunColor = GetSunColor();
+	const float sunEnergy = GetSunEnergy();
     
-    float3 sky = float3(0, 0, 0);
+	float3 sky = float3(0, 0, 0);
 
-#ifdef REALISTIC_SKY
-    AtmosphericMedium medium = CreateAtmosphericScattering();
+	if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
+	{
+		sky = AccurateAtmosphericScattering
+        (
+            texture_skyviewlut,          // Sky View Lut (combination of precomputed atmospheric LUTs)
+            texture_transmittancelut,
+            texture_multiscatteringlut,
+            g_xCamera_CamPos,           // Ray origin
+            V,                          // Ray direction
+            sunDirection,               // Position of the sun
+            sunEnergy,                  // Sun energy
+            sunColor,                   // Sun Color
+            sun_enabled,                // Use sun and total
+            dark_enabled,               // Enable dark mode for light shafts etc.
+            realistic_sky_stationary    // Fixed position for ambient and environment capture.
+        );
+	}
+	else
+	{
+		sky = CustomAtmosphericScattering
+        (
+            V,              // normalized ray direction
+            sunDirection,   // position of the sun
+            sunColor,       // color of the sun, for disc
+            sun_enabled,    // use sun and total
+            dark_enabled    // enable dark mode for light shafts etc.
+        );
+	}
 
-    sky = AccurateAtmosphericScattering
-    (
-        g_xCamera_CamPos,           // Ray origin
-        V,                          // Ray direction
-        sunDirection,               // Position of the sun
-        float3(0.0, -6372e3, 0.0),  // Center of the planet
-        6371e3,                     // Radius of the planet in meters
-        6471e3,                     // Radius of the atmosphere in meters
-        medium,                     // Atmospheric medium constructor.
-        sun_enabled,                // Use sun and total
-        dark_enabled                // Enable dark mode for light shafts etc.
-    );
-#else
-    sky = CustomAtmosphericScattering
-    (
-        V,              // normalized ray direction
-        sunDirection,   // position of the sun
-        sunColor,       // color of the sun, for disc
-        sun_enabled,    // use sun and total
-        dark_enabled    // enable dark mode for light shafts etc.
-    );
-#endif // REALISTIC_SKY
+	if (clouds_enabled)
+	{
+		CalculateClouds(sky, V, dark_enabled);
+	}
 
-    if (clouds_enabled)
-    {
-        CalculateClouds(sky, V, dark_enabled);
-    }
-
-    return sky;
+	return sky;
 }
 
 

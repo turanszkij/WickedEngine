@@ -669,7 +669,8 @@ inline void ApplyLighting(in Surface surface, in Lighting lighting, inout float4
 
 inline void ApplyFog(in float dist, inout float4 color)
 {
-	color.rgb = lerp(color.rgb, GetDynamicSkyColor(float3(0, -1, 0), false, false, false), GetFogAmount(dist));
+	float3 V = g_xFrame_Options & OPTION_BIT_REALISTIC_SKY ? float3(0.0, 1.0, 0.0) : float3(0.0, -1.0, 0.0);	
+	color.rgb = lerp(color.rgb, GetDynamicSkyColor(V, false, false, false, true), GetFogAmount(dist));
 }
 
 

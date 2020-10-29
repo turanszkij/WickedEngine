@@ -52,7 +52,14 @@ float4 main(Input input) : SV_TARGET
 				[branch]
 				if (NdotL > 0)
 				{
-					float3 lightColor = light.GetColor().rgb * light.energy;
+					float3 atmosphereTransmittance = 1.0;
+					if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
+					{
+						AtmosphereParameters Atmosphere = GetAtmosphereParameters();
+						atmosphereTransmittance = GetAtmosphericLightTransmittance(Atmosphere, P, L, texture_transmittancelut);
+					}
+					
+					float3 lightColor = light.GetColor().rgb * light.energy * atmosphereTransmittance;
 
 					lighting.direct.diffuse = lightColor;
 				}
@@ -173,7 +180,7 @@ float4 main(Input input) : SV_TARGET
 			}
 			else
 			{
-				envColor = GetDynamicSkyColor(ray.direction);
+				envColor = GetDynamicSkyColor(ray.direction, true, true, false, true);
 			}
 			ray.color += max(0, ray.energy * envColor);
 

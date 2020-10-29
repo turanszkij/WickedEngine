@@ -171,7 +171,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				[branch]
 				if (NdotL > 0)
 				{
-					float3 lightColor = light.GetColor().rgb * light.energy;
+					float3 atmosphereTransmittance = 1.0;
+					if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
+					{
+						AtmosphereParameters Atmosphere = GetAtmosphereParameters();
+						atmosphereTransmittance = GetAtmosphericLightTransmittance(Atmosphere, surface.P, L, texture_transmittancelut);
+					}
+					
+					float3 lightColor = light.GetColor().rgb * light.energy * atmosphereTransmittance;
 
 					lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
 					lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
