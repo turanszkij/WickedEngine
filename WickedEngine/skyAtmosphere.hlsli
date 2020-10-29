@@ -4,7 +4,7 @@
 
 /*
  *
- * Implementation is based on Sébastien Hillaires papers on "A Scalable and Production Ready Sky and Atmosphere Rendering Technique"
+ * Implementation is based on Sebastien Hillaires papers on "A Scalable and Production Ready Sky and Atmosphere Rendering Technique"
  * See: https://sebh.github.io/publications/egsr2020.pdf
  *
  * And source that follows (MIT): https://github.com/sebh/UnrealEngineSkyAtmosphere

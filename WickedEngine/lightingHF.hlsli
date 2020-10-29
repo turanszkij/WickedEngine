@@ -812,8 +812,8 @@ inline float3 GetAmbient(in float3 N)
 	{
 		// Also set realistic_sky_stationary to true so we capture ambient at float3(0.0, 0.0, 0.0), similar to the standard sky to avoid flickering and weird behavior
 		ambient = lerp(
-			GetDynamicSkyColor(float3(0, -1, 0), texture_skyviewlut, texture_transmittancelut, texture_multiscatteringlut, false, false, false, true),
-			GetDynamicSkyColor(float3(0, 1, 0), texture_skyviewlut, texture_transmittancelut, texture_multiscatteringlut, false, false, false, true),
+			GetDynamicSkyColor(float3(0, -1, 0), false, false, false, true),
+			GetDynamicSkyColor(float3(0, 1, 0), false, false, false, true),
 			saturate(N.y * 0.5f + 0.5f)) + GetAmbientColor();
 	}
 
@@ -839,10 +839,10 @@ inline float3 EnvironmentReflection_Global(in Surface surface, in float MIP)
 	{
 		// There are no envmaps, approximate sky color:
 		// Also set realistic_sky_stationary to true so we capture environment at float3(0.0, 0.0, 0.0), similar to the standard sky to avoid flickering and weird behavior
-		float3 realSkyColor = GetDynamicSkyColor(surface.R, texture_skyviewlut, texture_transmittancelut, texture_multiscatteringlut, false, false, false, true); // false: disable sun disk and clouds
+		float3 realSkyColor = GetDynamicSkyColor(surface.R, false, false, false, true); // false: disable sun disk and clouds
 		float3 roughSkyColor = lerp(
-			GetDynamicSkyColor(float3(0, -1, 0), texture_skyviewlut, texture_transmittancelut, texture_multiscatteringlut, false, false, false, true),
-			GetDynamicSkyColor(float3(0, 1, 0), texture_skyviewlut, texture_transmittancelut, texture_multiscatteringlut, false, false, false, true),
+			GetDynamicSkyColor(float3(0, -1, 0), false, false, false, true),
+			GetDynamicSkyColor(float3(0, 1, 0), false, false, false, true),
 			saturate(surface.R.y * 0.5f + 0.5f));
 		
 		envColor = lerp(realSkyColor, roughSkyColor, saturate(surface.roughness));

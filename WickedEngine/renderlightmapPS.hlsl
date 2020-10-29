@@ -180,7 +180,7 @@ float4 main(Input input) : SV_TARGET
 			}
 			else
 			{
-				envColor = GetDynamicSkyColor(ray.direction, texture_skyviewlut, texture_transmittancelut, texture_multiscatteringlut, true, true, false, true);
+				envColor = GetDynamicSkyColor(ray.direction, true, true, false, true);
 			}
 			ray.color += max(0, ray.energy * envColor);
 

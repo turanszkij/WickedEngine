@@ -124,6 +124,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 
 	realisticskyCheckBox.Create("Realistic sky: ");
 	realisticskyCheckBox.SetTooltip("Physically based sky rendering model.");
+	realisticskyCheckBox.SetSize(XMFLOAT2(hei, hei));
 	realisticskyCheckBox.SetPos(XMFLOAT2(x + 120, y));
 	realisticskyCheckBox.OnClick([&](wiEventArgs args) {
 		auto& weather = GetWeather();

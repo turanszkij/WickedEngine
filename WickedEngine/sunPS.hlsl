@@ -10,5 +10,5 @@ float4 main(float4 pos : SV_POSITION, float2 clipspace : TEXCOORD) : SV_TARGET
 	const float3 origin = g_xCamera_CamPos;
 	const float3 direction = normalize(unprojected.xyz - origin);
 
-	return float4(GetDynamicSkyColor(direction, texture_skyviewlut, texture_transmittancelut, texture_multiscatteringlut, true, true, true), 1);
+	return float4(GetDynamicSkyColor(direction, true, true, true), 1);
 }
