@@ -70,7 +70,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 				}
 				else
 				{
-					envColor = GetDynamicSkyColor(ray.direction, texture_skyviewlut, texture_transmittancelut, texture_multiscatteringlut);
+					envColor = GetDynamicSkyColor(ray.direction);
 				}
 				ray.color += max(0, ray.energy * envColor);
 

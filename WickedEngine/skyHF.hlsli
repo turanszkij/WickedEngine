@@ -240,7 +240,7 @@ void CalculateClouds(inout float3 sky, float3 V, bool dark_enabled)
 
 // Returns sky color modulated by the sun and clouds
 //	V	: view direction
-float3 GetDynamicSkyColor(in float3 V, Texture2D<float4> skyViewLutTexture, Texture2D<float4> transmittanceLUT, Texture2D<float4> multiScatteringLUT, bool sun_enabled = true, bool clouds_enabled = true, bool dark_enabled = false, bool realistic_sky_stationary = false)
+float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enabled = true, bool dark_enabled = false, bool realistic_sky_stationary = false)
 {
 	if (g_xFrame_Options & OPTION_BIT_SIMPLE_SKY)
 	{
@@ -257,9 +257,9 @@ float3 GetDynamicSkyColor(in float3 V, Texture2D<float4> skyViewLutTexture, Text
 	{
 		sky = AccurateAtmosphericScattering
         (
-            skyViewLutTexture,          // Sky View Lut (combination of precomputed atmospheric LUTs)
-            transmittanceLUT,
-            multiScatteringLUT,
+            texture_skyviewlut,          // Sky View Lut (combination of precomputed atmospheric LUTs)
+            texture_transmittancelut,
+            texture_multiscatteringlut,
             g_xCamera_CamPos,           // Ray origin
             V,                          // Ray direction
             sunDirection,               // Position of the sun
