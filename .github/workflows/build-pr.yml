@@ -1,7 +1,7 @@
-name: Build
+name: Pull Request Verification
 
 on:
-  push:
+  pull_request:
     branches: [ master ]
 
 jobs:
@@ -105,9 +105,7 @@ jobs:
       with:
         name: Editor (Ubuntu 20.04)
         path: |
-          WickedEngine/shaders/*.cso
-          WickedEngine/shaders/hlsl6/*.cso
-          WickedEngine/shaders/spirv/*.cso
+          WickedEngine/shaders/
           WickedEngine/fonts/
           images/
           models/
@@ -129,9 +127,7 @@ jobs:
       with:
         name: Tests (Ubuntu 20.04)
         path: |
-          WickedEngine/shaders/*.cso
-          WickedEngine/shaders/hlsl6/*.cso
-          WickedEngine/shaders/spirv/*.cso
+          WickedEngine/shaders/
           WickedEngine/fonts/
           images/
           models/
