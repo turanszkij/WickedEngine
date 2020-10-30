@@ -7,7 +7,7 @@
 namespace wiGraphics
 {
 	typedef uint8_t CommandList;
-	static const CommandList COMMANDLIST_COUNT = 16;
+	static const CommandList COMMANDLIST_COUNT = 32;
 
 	class GraphicsDevice
 	{

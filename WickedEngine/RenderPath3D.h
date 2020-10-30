@@ -171,7 +171,6 @@ protected:
 
 	virtual void RenderFrameSetUp(wiGraphics::CommandList cmd) const;
 	virtual void RenderReflections(wiGraphics::CommandList cmd) const;
-	virtual void RenderShadows(wiGraphics::CommandList cmd) const;
 
 	virtual void RenderSSS(wiGraphics::CommandList cmd) const;
 	virtual void RenderDeferredComposition(wiGraphics::CommandList cmd) const;

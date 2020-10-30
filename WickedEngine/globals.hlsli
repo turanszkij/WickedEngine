@@ -301,8 +301,8 @@ inline float3 reconstructPosition(in float2 uv, in float z)
 	return reconstructPosition(uv, z, g_xCamera_InvVP);
 }
 
-
-// For storing normal in gbuffer in world space, we convert to spherical coordinates:
+#if 0
+// http://aras-p.info/texts/CompactNormalStorage.html Method#3: Spherical coords
 //  [Commented out optimized parts, because we don't need to normalize range when storing to float format]
 inline float2 encodeNormal(in float3 N)
 {
@@ -316,6 +316,24 @@ inline float3 decodeNormal(in float2 spherical)
 	sinCosPhi = float2(sqrt(1.0 - spherical.y * spherical.y), spherical.y);
 	return float3(sinCosTheta.y * sinCosPhi.x, sinCosTheta.x * sinCosPhi.x, sinCosPhi.y);
 }
+#else
+// http://aras-p.info/texts/CompactNormalStorage.html Method#4: Spheremap transform
+half2 encodeNormal(half3 n)
+{
+	half f = sqrt(8 * n.z + 8);
+	return n.xy / f + 0.5;
+}
+half3 decodeNormal(half2 enc)
+{
+	half2 fenc = enc * 4 - 2;
+	half f = dot(fenc, fenc);
+	half g = sqrt(1 - f / 4);
+	half3 n;
+	n.xy = fenc * g;
+	n.z = 1 - f / 2;
+	return n;
+}
+#endif 
 
 
 // Convert texture coordinates on a cubemap face to cubemap sampling coordinates:

@@ -635,11 +635,25 @@ void RenderPath3D::Render() const
 
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) { RenderFrameSetUp(cmd); });
-	cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) { RenderShadows(cmd); });
+
+	if (getShadowsEnabled() && !wiRenderer::GetRaytracedShadowsEnabled())
+	{
+		cmd = device->BeginCommandList();
+		wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+			wiRenderer::DrawShadowmaps(wiRenderer::GetCamera(), cmd, getLayerMask());
+			});
+	}
+
+	if (wiRenderer::GetVoxelRadianceEnabled())
+	{
+		cmd = device->BeginCommandList();
+		wiJobSystem::Execute(ctx, [cmd](wiJobArgs args) {
+			wiRenderer::VoxelRadiance(cmd);
+			});
+	}
 
 	cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+	wiJobSystem::Execute(ctx, [cmd](wiJobArgs args) {
 		wiRenderer::BindCommonResources(cmd);
 		wiRenderer::RefreshDecalAtlas(cmd);
 		wiRenderer::RefreshLightmapAtlas(cmd);
@@ -884,15 +898,6 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 	}
 
 	wiProfiler::EndRange(range); // Reflection Rendering
-}
-void RenderPath3D::RenderShadows(CommandList cmd) const
-{
-	if (getShadowsEnabled() && !wiRenderer::GetRaytracedShadowsEnabled())
-	{
-		wiRenderer::DrawShadowmaps(wiRenderer::GetCamera(), cmd, getLayerMask());
-	}
-
-	wiRenderer::VoxelRadiance(cmd);
 }
 
 void RenderPath3D::RenderSSS(CommandList cmd) const
