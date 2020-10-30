@@ -318,17 +318,17 @@ inline float3 decodeNormal(in float2 spherical)
 }
 #else
 // http://aras-p.info/texts/CompactNormalStorage.html Method#4: Spheremap transform
-half2 encodeNormal(half3 n)
+float2 encodeNormal(float3 n)
 {
-	half f = sqrt(8 * n.z + 8);
+	float f = sqrt(8 * n.z + 8);
 	return n.xy / f + 0.5;
 }
-half3 decodeNormal(half2 enc)
+float3 decodeNormal(float2 enc)
 {
-	half2 fenc = enc * 4 - 2;
-	half f = dot(fenc, fenc);
-	half g = sqrt(1 - f / 4);
-	half3 n;
+	float2 fenc = enc * 4 - 2;
+	float f = dot(fenc, fenc);
+	float g = sqrt(1 - f / 4);
+	float3 n;
 	n.xy = fenc * g;
 	n.z = 1 - f / 2;
 	return n;
