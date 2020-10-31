@@ -1,7 +1,8 @@
-name: Pull Request Verification
+name: Nightly Build
 
 on:
-  pull_request
+  schedule:
+    - cron:  '0 0 * * *'
 
 jobs:
   windows:
@@ -104,7 +105,9 @@ jobs:
       with:
         name: Editor (Ubuntu 20.04)
         path: |
-          WickedEngine/shaders/
+          WickedEngine/shaders/*.cso
+          WickedEngine/shaders/hlsl6/*.cso
+          WickedEngine/shaders/spirv/*.cso
           WickedEngine/fonts/
           images/
           models/
@@ -126,7 +129,9 @@ jobs:
       with:
         name: Tests (Ubuntu 20.04)
         path: |
-          WickedEngine/shaders/
+          WickedEngine/shaders/*.cso
+          WickedEngine/shaders/hlsl6/*.cso
+          WickedEngine/shaders/spirv/*.cso
           WickedEngine/fonts/
           images/
           models/
