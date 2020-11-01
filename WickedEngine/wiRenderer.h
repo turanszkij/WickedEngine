@@ -100,6 +100,9 @@ namespace wiRenderer
 		uint32_t flags = DRAWSCENE_OPAQUE
 	);
 
+	// Render mip levels for textures that reqested it:
+	void ProcessDeferredMipGenRequests(wiGraphics::CommandList cmd);
+
 	// Compute essential atmospheric scattering textures for skybox, fog and clouds
 	void RenderAtmosphericScatteringTextures(wiGraphics::CommandList cmd);
 	// Update atmospheric scattering primarily for environment probes.

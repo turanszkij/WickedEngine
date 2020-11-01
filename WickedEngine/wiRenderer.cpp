@@ -3386,6 +3386,18 @@ void RenderImpostors(
 	}
 }
 
+void ProcessDeferredMipGenRequests(CommandList cmd)
+{
+	deferredMIPGenLock.lock();
+	for (auto& it : deferredMIPGens)
+	{
+		MIPGEN_OPTIONS mipopt;
+		mipopt.preserve_coverage = it.second;
+		GenerateMipChain(*it.first->texture, MIPGENFILTER_LINEAR, cmd, mipopt);
+	}
+	deferredMIPGens.clear();
+	deferredMIPGenLock.unlock();
+}
 
 void UpdatePerFrameData(float dt, uint32_t layerMask)
 {
@@ -3917,17 +3929,6 @@ void UpdateRenderData(CommandList cmd)
 	const Scene& scene = GetScene();
 
 	BindCommonResources(cmd);
-
-	// Process deferred MIP generation:
-	deferredMIPGenLock.lock();
-	for (auto& it : deferredMIPGens)
-	{
-		MIPGEN_OPTIONS mipopt;
-		mipopt.preserve_coverage = it.second;
-		GenerateMipChain(*it.first->texture, MIPGENFILTER_LINEAR, cmd, mipopt);
-	}
-	deferredMIPGens.clear();
-	deferredMIPGenLock.unlock();
 
 	// Update material constant buffers:
 	for (auto& materialIndex : pendingMaterialUpdates)

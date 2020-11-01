@@ -178,6 +178,8 @@ void RenderPath2D::Render() const
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	CommandList cmd = device->BeginCommandList();
 
+	wiRenderer::ProcessDeferredMipGenRequests(cmd);
+
 	wiRenderer::GetDevice()->BindResource(PS, GetGUIBlurredBackground(), TEXSLOT_IMAGE_BACKGROUND, cmd);
 
 	// Special care for internal resolution, because stencil buffer is of internal resolution, 
