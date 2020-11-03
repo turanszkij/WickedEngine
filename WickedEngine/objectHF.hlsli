@@ -719,10 +719,6 @@ GBUFFEROutputType main(PIXELINPUT input)
 
 // shader base:
 {
-#ifdef SPIRV
-	input.pos.w = rcp(input.pos.w);
-#endif // SPIRV
-
 	float2 pixel = input.pos.xy;
 	float2 ScreenCoord = pixel * g_xFrame_InternalResolution_rcp;
 

@@ -53,6 +53,7 @@ for item in root.iter():
             cmd += " -spirv "
             cmd += " -fspv-target-env=vulkan1.2 "
             cmd += " -fvk-use-dx-layout "
+            cmd += " -fvk-use-dx-position-w "
             cmd += " -flegacy-macro-expansion "
             
             if profile == "VS" or profile == "DS" or profile == "GS":

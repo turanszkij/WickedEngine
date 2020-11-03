@@ -11,10 +11,6 @@ TEXTURE2D(texture_gradientmap, float4, TEXSLOT_ONDEMAND1);
 [earlydepthstencil]
 float4 main(PSIn input) : SV_TARGET
 {
-#ifdef SPIRV
-	input.pos.w = rcp(input.pos.w);
-#endif // SPIRV
-
 	float2 gradient = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv).xy;
 
 	float4 color = float4(xOceanWaterColor, 1);
