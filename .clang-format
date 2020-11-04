@@ -8,13 +8,13 @@ AccessModifierOffset: -4
 ColumnLimit: 0
 
 # The way to use tab characters in the resulting file. Possible values: Never, ForIndentation, Always.
-UseTab: Never
+UseTab: Always
 
 # The number of columns to use for indentation.
 IndentWidth: 4
 
 # The indentation used for namespaces. Possible values: None, Inner, All.
-NamespaceIndentation: All
+NamespaceIndentation: Inner
 
 # If true, always break after the template<...> of a template declaration.
 AlwaysBreakTemplateDeclarations: false
@@ -25,7 +25,7 @@ ConstructorInitializerAllOnOneLineOrOnePerLine: true
 AllowShortBlocksOnASingleLine: false
 
 # Dependent on the value, int f() { return 0; } can be put on a single line. Possible values: None, Inline, All.
-AllowShortFunctionsOnASingleLine: None
+AllowShortFunctionsOnASingleLine: Inline
 
 # If true, if (a) return; can be put on a single line.
 AllowShortIfStatementsOnASingleLine: false
@@ -43,8 +43,8 @@ AlignEscapedNewlinesLeft: true
 AlignTrailingComments: false
 
 # If true, a space may be inserted after C style casts.
-SpaceAfterCStyleCast: true
-SpaceAfterTemplateKeyword: true
+SpaceAfterCStyleCast: false
+SpaceAfterTemplateKeyword: false
 SpaceBeforeAssignmentOperators: true
 SpaceBeforeCtorInitializerColon: true
 SpaceBeforeInheritanceColon: true

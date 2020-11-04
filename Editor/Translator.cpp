@@ -29,8 +29,8 @@ namespace Translator_Internal
 		{
 			PipelineStateDesc desc;
 
-			desc.vs = wiRenderer::GetVertexShader(VSTYPE_VERTEXCOLOR);
-			desc.ps = wiRenderer::GetPixelShader(PSTYPE_VERTEXCOLOR);
+			desc.vs = wiRenderer::GetShader(VSTYPE_VERTEXCOLOR);
+			desc.ps = wiRenderer::GetShader(PSTYPE_VERTEXCOLOR);
 			desc.il = wiRenderer::GetInputLayout(ILTYPE_VERTEXCOLOR);
 			desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
 			desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
@@ -43,8 +43,8 @@ namespace Translator_Internal
 		{
 			PipelineStateDesc desc;
 
-			desc.vs = wiRenderer::GetVertexShader(VSTYPE_VERTEXCOLOR);
-			desc.ps = wiRenderer::GetPixelShader(PSTYPE_VERTEXCOLOR);
+			desc.vs = wiRenderer::GetShader(VSTYPE_VERTEXCOLOR);
+			desc.ps = wiRenderer::GetShader(PSTYPE_VERTEXCOLOR);
 			desc.il = wiRenderer::GetInputLayout(ILTYPE_VERTEXCOLOR);
 			desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
 			desc.rs = wiRenderer::GetRasterizerState(RSTYPE_WIRE_DOUBLESIDED_SMOOTH);

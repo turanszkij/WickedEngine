@@ -258,8 +258,8 @@ namespace wiWidget_Internal
 	void LoadShaders()
 	{
 		PipelineStateDesc desc;
-		desc.vs = wiRenderer::GetVertexShader(VSTYPE_VERTEXCOLOR);
-		desc.ps = wiRenderer::GetPixelShader(PSTYPE_VERTEXCOLOR);
+		desc.vs = wiRenderer::GetShader(VSTYPE_VERTEXCOLOR);
+		desc.ps = wiRenderer::GetShader(PSTYPE_VERTEXCOLOR);
 		desc.il = wiRenderer::GetInputLayout(ILTYPE_VERTEXCOLOR);
 		desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
 		desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);

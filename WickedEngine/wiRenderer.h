@@ -19,12 +19,7 @@ namespace wiRenderer
 	}
 
 	const wiGraphics::Sampler* GetSampler(int slot);
-	const wiGraphics::Shader* GetVertexShader(VSTYPES id);
-	const wiGraphics::Shader* GetHullShader(HSTYPES id);
-	const wiGraphics::Shader* GetDomainShader(DSTYPES id);
-	const wiGraphics::Shader* GetGeometryShader(GSTYPES id);
-	const wiGraphics::Shader* GetPixelShader(PSTYPES id);
-	const wiGraphics::Shader* GetComputeShader(CSTYPES id);
+	const wiGraphics::Shader* GetShader(SHADERTYPE id);
 	const wiGraphics::InputLayout* GetInputLayout(ILTYPES id);
 	const wiGraphics::RasterizerState* GetRasterizerState(RSTYPES id);
 	const wiGraphics::DepthStencilState* GetDepthStencilState(DSSTYPES id);
@@ -374,7 +369,7 @@ namespace wiRenderer
 		wiGraphics::GPUBuffer rayIndexBuffer[2];
 		wiGraphics::GPUBuffer rayCountBuffer[2];
 		wiGraphics::GPUBuffer raySortBuffer;
-		void Create(wiGraphics::GraphicsDevice* device, uint32_t newRayCapacity);
+		void Create(uint32_t newRayCapacity);
 	};
 	// Generate rays for every pixel of the internal resolution
 	RayBuffers* GenerateScreenRayBuffers(const wiScene::CameraComponent& camera, wiGraphics::CommandList cmd);

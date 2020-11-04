@@ -323,7 +323,7 @@ void PaintToolWindow::Update(float dt)
 				device->CreateBuffer(&desc, nullptr, &cbuf);
 			}
 
-			device->BindComputeShader(wiRenderer::GetComputeShader(CSTYPE_PAINT_TEXTURE), cmd);
+			device->BindComputeShader(wiRenderer::GetShader(CSTYPE_PAINT_TEXTURE), cmd);
 
 			wiRenderer::BindCommonResources(cmd);
 			device->BindResource(CS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
