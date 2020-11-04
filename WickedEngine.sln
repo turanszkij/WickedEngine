@@ -35,6 +35,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Shaders_HLSL6", "WickedEngi
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Supplementary", "Supplementary", "{BF8FCAB8-D7D3-4DAE-92DE-4B5037E9A0ED}"
 	ProjectSection(SolutionItems) = preProject
+		.clang-format = .clang-format
+		.gitattributes = .gitattributes
+		.gitignore = .gitignore
 		appveyor.yml = appveyor.yml
 		.github\workflows\build-nightly.yml = .github\workflows\build-nightly.yml
 		.github\workflows\build-pr.yml = .github\workflows\build-pr.yml
