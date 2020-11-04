@@ -3,15 +3,15 @@
 #include "objectHF.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+TEXTURE2D(texture_diffuse, float4, TEXSLOT_ONDEMAND0);
+TEXTURE2D(texture_specular, float4, TEXSLOT_ONDEMAND1);
 
 float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_TARGET
 {
 	float3 albedo = texture_gbuffer0[pos.xy].rgb;
-
 	float  depth = texture_depth[pos.xy];
-
-	float3 diffuse = texture_0[pos.xy].rgb; // light diffuse
-	float3 specular = texture_1[pos.xy].rgb; // light specular
+	float3 diffuse = texture_diffuse[pos.xy].rgb;
+	float3 specular = texture_specular[pos.xy].rgb;
 
 	float4 color = float4(albedo * diffuse + specular, 1);
 

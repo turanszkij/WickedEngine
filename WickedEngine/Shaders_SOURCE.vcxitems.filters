@@ -560,9 +560,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)vertexcolorPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)trailPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)upsample_bilateralPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>

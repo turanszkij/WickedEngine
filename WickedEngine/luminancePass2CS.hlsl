@@ -1,7 +1,9 @@
 #include "globals.hlsli"
 // Calculate average luminance by reduction
 
-RWTEXTURE2D(tex, float, 0);
+TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
+
+RWTEXTURE2D(output, float, 0);
 
 
 #define SIZEX 16
@@ -17,8 +19,8 @@ void main(
 	uint groupIndex : SV_GroupIndex)
 {
 	uint2 dim;
-	texture_0.GetDimensions(dim.x, dim.y);
-	accumulator[groupIndex] = (dispatchThreadId.x > dim.x || dispatchThreadId.y > dim.y)? 0.5: texture_0.Load(uint3(dispatchThreadId.xy,0)).r;
+	input.GetDimensions(dim.x, dim.y);
+	accumulator[groupIndex] = (dispatchThreadId.x > dim.x || dispatchThreadId.y > dim.y)? 0.5 : input[dispatchThreadId.xy].r;
 	GroupMemoryBarrierWithGroupSync();
 
 	[unroll]
@@ -30,5 +32,5 @@ void main(
 	}
 	if (groupIndex != 0) { return; }
 
-	tex[groupId.xy] = max(0, lerp(tex[groupId.xy], accumulator[0] / (GROUPSIZE), g_xFrame_DeltaTime * 2));
+	output[groupId.xy] = max(0, lerp(output[groupId.xy], accumulator[0] / (GROUPSIZE), g_xFrame_DeltaTime * 2));
 }

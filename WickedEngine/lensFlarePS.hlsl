@@ -1,5 +1,13 @@
 #include "globals.hlsli"
 
+TEXTURE2D(texture_0, float4, TEXSLOT_ONDEMAND0);
+TEXTURE2D(texture_1, float4, TEXSLOT_ONDEMAND1);
+TEXTURE2D(texture_2, float4, TEXSLOT_ONDEMAND2);
+TEXTURE2D(texture_3, float4, TEXSLOT_ONDEMAND3);
+TEXTURE2D(texture_4, float4, TEXSLOT_ONDEMAND4);
+TEXTURE2D(texture_5, float4, TEXSLOT_ONDEMAND5);
+TEXTURE2D(texture_6, float4, TEXSLOT_ONDEMAND6);
+
 struct VertextoPixel{
 	float4 pos					: SV_POSITION;
 	float3 texPos				: TEXCOORD0;

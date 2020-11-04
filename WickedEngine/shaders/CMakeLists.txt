@@ -169,7 +169,6 @@ set(SHADERS_PS
         "volumetricLight_DirectionalPS.hlsl"
         "voxelPS.hlsl"
         "vertexcolorPS.hlsl"
-        "trailPS.hlsl"
         "upsample_bilateralPS.hlsl"
         "sunPS.hlsl"
         "sssPS.hlsl"

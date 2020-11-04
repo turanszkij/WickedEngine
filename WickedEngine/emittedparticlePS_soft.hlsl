@@ -3,14 +3,16 @@
 #include "ShaderInterop_EmittedParticle.h"
 #include "objectHF.hlsli"
 
+TEXTURE2D(texture_color, float4, TEXSLOT_ONDEMAND0);
+
 float4 main(VertextoPixel input) : SV_TARGET
 {
-	float4 color = texture_0.Sample(sampler_linear_clamp, input.tex.xy);
+    float4 color = texture_color.Sample(sampler_linear_clamp, input.tex.xy);
 
 	[branch]
 	if (xEmitterOptions & EMITTER_OPTION_BIT_FRAME_BLENDING_ENABLED)
 	{
-		float4 color2 = texture_0.Sample(sampler_linear_clamp, input.tex.zw);
+	    float4 color2 = texture_color.Sample(sampler_linear_clamp, input.tex.zw);
 		color = lerp(color, color2, input.frameBlend);
 	}
 
