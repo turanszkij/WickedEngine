@@ -76,6 +76,10 @@ struct Surface
 		BdotV = dot(B, V);
 		at = max(0, alphaRoughness * (1.0 + anisotropy));
 		ab = max(0, alphaRoughness * (1.0 - anisotropy));
+
+#ifdef BRDF_CARTOON
+		F = smoothstep(0.05, 0.1, F);
+#endif // BRDF_CARTOON
 	}
 };
 inline Surface CreateSurface(
@@ -151,6 +155,11 @@ inline SurfaceToLight CreateSurfaceToLight(in Surface surface, in float3 L)
 	surfaceToLight.BdotL = dot(surface.B, L);
 	surfaceToLight.TdotH = dot(surface.T, surfaceToLight.H);
 	surfaceToLight.BdotH = dot(surface.B, surfaceToLight.H);
+
+#ifdef BRDF_CARTOON
+	surfaceToLight.NdotL = smoothstep(0.005, 0.05, surfaceToLight.NdotL);
+	surfaceToLight.NdotH = smoothstep(0.98, 0.99, surfaceToLight.NdotH);
+#endif // BRDF_CARTOON
 
 	return surfaceToLight;
 }

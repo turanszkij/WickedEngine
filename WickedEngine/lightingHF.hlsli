@@ -5,6 +5,10 @@
 #include "voxelConeTracingHF.hlsli"
 #include "skyHF.hlsli"
 
+#ifdef BRDF_CARTOON
+#define DISABLE_SOFT_SHADOWMAP
+#endif // BRDF_CARTOON
+
 struct LightingContribution
 {
 	float diffuse;
@@ -38,13 +42,6 @@ inline Lighting CreateLighting(
 // Combine the direct and indirect lighting into final contribution
 inline LightingPart CombineLighting(in Surface surface, in Lighting lighting)
 {
-#ifdef LIGHTING_CARTOON
-	lighting.direct.diffuse = smoothstep(0.005, 0.05, lighting.direct.diffuse);
-	lighting.direct.specular = max(lighting.direct.specular.r, max(lighting.direct.specular.g, lighting.direct.specular.b));
-	lighting.direct.specular = step(0.05, lighting.direct.specular);
-	lighting.indirect.specular = smoothstep(0.008, 0.098, lighting.indirect.specular);
-#endif // LIGHTING_CARTOON
-
 	LightingPart result;
 	result.diffuse = lighting.direct.diffuse + lighting.indirect.diffuse * surface.occlusion;
 	result.specular = lighting.direct.specular + lighting.indirect.specular * surface.F * surface.occlusion;
@@ -110,11 +107,14 @@ inline float shadowTrace(in Surface surface, in float3 L, in float dist)
 	ray.TMin = 0.001;
 	ray.TMax = dist;
 	ray.Origin = surface.P + surface.N * 0.01;
+	ray.Direction = L;
 
+#ifndef BRDF_CARTOON
 	float seed = g_xFrame_FrameCount * 0.001f;
 	float2 uv = surface.screenUV;
 	float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1; // todo: should be specific to light surface
-	ray.Direction = normalize(L + sampling_offset * 0.025f);
+	ray.Direction = normalize(ray.Direction + sampling_offset * 0.025f);
+#endif // BRDF_CARTOON
 
 	q.TraceRayInline(scene_acceleration_structure, 0, 0xFF, ray);
 	q.Proceed();
