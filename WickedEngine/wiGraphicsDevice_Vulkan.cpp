@@ -633,6 +633,33 @@ namespace Vulkan_Internal
 
 		return true;
 	}
+
+	VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsMessengerCallback(
+		VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, 
+		VkDebugUtilsMessageTypeFlagsEXT message_type,
+		const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
+		void* user_data)
+	{
+	    // Log debug messge
+	    std::stringstream ss("");
+
+	    if (message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+	    {
+			ss << "[Vulkan Warning]: " << callback_data->pMessage << std::endl;
+	    }
+	    else if (message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+	    {
+			ss << "[Vulkan Error]: " << callback_data->pMessage << std::endl;
+	    }
+
+		std::clog << ss.str();
+#ifdef _WIN32
+	    OutputDebugStringA(ss.str().c_str());
+#endif
+
+	    return VK_FALSE;
+	}
+
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 		VkDebugReportFlagsEXT flags,
 		VkDebugReportObjectTypeEXT objType,
@@ -653,6 +680,25 @@ namespace Vulkan_Internal
 
 		return VK_FALSE;
 	}
+	VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pMessenger)
+	{
+	    auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+	    if (func != nullptr)
+	    {
+		return func(instance, pCreateInfo, pAllocator, pMessenger);
+	    }
+
+		return VK_ERROR_EXTENSION_NOT_PRESENT;
+	}
+	void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT messenger, const VkAllocationCallbacks* pAllocator)
+	{
+	    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+	    if (func != nullptr)
+	    {
+			func(instance, messenger, pAllocator);
+	    }
+	}
+
 	VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback) {
 		auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
 		if (func != nullptr) {
@@ -2208,13 +2254,31 @@ using namespace Vulkan_Internal;
 		uint32_t extensionCount = 0;
 		res = vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
 		assert(res == VK_SUCCESS);
-		std::vector<VkExtensionProperties> extensions(extensionCount);
-		res = vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
+		std::vector<VkExtensionProperties> availableInstanceExtensions(extensionCount);
+		res = vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, availableInstanceExtensions.data());
 		assert(res == VK_SUCCESS);
 
 		std::vector<const char*> extensionNames;
+
+		// Check if VK_EXT_debug_utils is supported, which supersedes VK_EXT_Debug_Report
+		bool debugUtils = false;
+		for (auto& available_extension : availableInstanceExtensions)
+		{
+		    if (strcmp(available_extension.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
+		    {
+				debugUtils = true;
+				extensionNames.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+				break;
+		    }
+		}
+
+		if (!debugUtils)
+		{
+		    extensionNames.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+		}
+
+		
 		extensionNames.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-		extensionNames.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #ifdef _WIN32
 		extensionNames.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #elif SDL2
@@ -2231,13 +2295,10 @@ using namespace Vulkan_Internal;
 
 		bool enableValidationLayers = debuglayer;
 		
-		if (enableValidationLayers && !checkValidationLayerSupport()) {
+		if (enableValidationLayers && !checkValidationLayerSupport())
+		{
 			wiHelper::messageBox("Vulkan validation layer requested but not available!");
 			enableValidationLayers = false;
-		}
-		else if (enableValidationLayers)
-		{
-			extensionNames.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 		}
 
 		// Create instance:
@@ -2260,12 +2321,24 @@ using namespace Vulkan_Internal;
 		// Register validation layer callback:
 		if (enableValidationLayers)
 		{
-			VkDebugReportCallbackCreateInfoEXT createInfo = {};
-			createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-			createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
-			createInfo.pfnCallback = debugCallback;
-			res = CreateDebugReportCallbackEXT(instance, &createInfo, nullptr, &callback);
-			assert(res == VK_SUCCESS);
+			if(debugUtils)
+		    {
+			    VkDebugUtilsMessengerCreateInfoEXT createInfo = {VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
+				createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+			    createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+				createInfo.pfnUserCallback = debugUtilsMessengerCallback;
+			    res = CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugUtilsMessenger);
+				assert(res == VK_SUCCESS);
+			}
+		    else
+		    {
+				VkDebugReportCallbackCreateInfoEXT createInfo = {};
+				createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+				createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+				createInfo.pfnCallback = debugCallback;
+				res = CreateDebugReportCallbackEXT(instance, &createInfo, nullptr, &debugReportCallback);
+				assert(res == VK_SUCCESS);
+		    }
 		}
 
 
@@ -2850,7 +2923,16 @@ using namespace Vulkan_Internal;
 		}
 		vkDestroySwapchainKHR(device, swapChain, nullptr);
 
-		DestroyDebugReportCallbackEXT(instance, callback, nullptr);
+		if (debugUtilsMessenger != VK_NULL_HANDLE)
+		{
+		    DestroyDebugUtilsMessengerEXT(instance, debugUtilsMessenger, nullptr);
+		}
+
+		if (debugReportCallback != VK_NULL_HANDLE)
+		{
+		    DestroyDebugReportCallbackEXT(instance, debugReportCallback, nullptr);
+		}
+
 		vkDestroySurfaceKHR(instance, surface, nullptr);
 	}
 
