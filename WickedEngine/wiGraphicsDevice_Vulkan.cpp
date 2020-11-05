@@ -2585,12 +2585,17 @@ using namespace Vulkan_Internal;
 			VkSemaphoreCreateInfo semaphoreInfo = {};
 			semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-			res = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore);
+			res = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &copySemaphore);
 			assert(res == VK_SUCCESS);
-			res = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore);
-			assert(res == VK_SUCCESS);
-			res = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &copySema);
-			assert(res == VK_SUCCESS);
+
+			for (uint32_t i = 0; i < BACKBUFFER_COUNT; i++)
+			{
+			    res = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &frames[i].swapchainAcquireSemaphore);
+			    assert(res == VK_SUCCESS);
+			    res = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &frames[i].swapchainReleaseSemaphore);
+			    assert(res == VK_SUCCESS);
+			}
+			
 		}
 
 
@@ -2801,11 +2806,12 @@ using namespace Vulkan_Internal;
 			{
 				descriptormanager.destroy();
 			}
+
+			vkDestroySemaphore(device, frame.swapchainAcquireSemaphore, nullptr);
+			vkDestroySemaphore(device, frame.swapchainReleaseSemaphore, nullptr);
 		}
 
-		vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
-		vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
-		vkDestroySemaphore(device, copySema, nullptr);
+		vkDestroySemaphore(device, copySemaphore, nullptr);
 
 		for (auto& x : pipelines_worker)
 		{
@@ -5615,11 +5621,21 @@ using namespace Vulkan_Internal;
 
 	void GraphicsDevice_Vulkan::PresentBegin(CommandList cmd)
 	{
+	    VkSemaphore acquireSemaphore = GetFrameResources().swapchainAcquireSemaphore;
+
+		VkResult res = vkAcquireNextImageKHR(device, swapChain, 0xFFFFFFFFFFFFFFFF, acquireSemaphore, VK_NULL_HANDLE, &swapChainImageIndex);
+	    if (res != VK_SUCCESS)
+	    {
+			// Handle outdated error in acquire.
+			if (res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR)
+			{
+				CreateBackBufferResources();
+			    PresentBegin(cmd);
+				return;
+			}
+	    }
+
 		VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-
-		VkResult res = vkAcquireNextImageKHR(device, swapChain, 0xFFFFFFFFFFFFFFFF, imageAvailableSemaphore, VK_NULL_HANDLE, &swapChainImageIndex);
-		assert(res == VK_SUCCESS);
-
 		VkRenderPassBeginInfo renderPassInfo = {};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		renderPassInfo.renderPass = defaultRenderPass;
@@ -5640,7 +5656,7 @@ using namespace Vulkan_Internal;
 		VkPresentInfoKHR presentInfo = {};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
-		VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
+		VkSemaphore signalSemaphores[] = { frames[swapChainImageIndex].swapchainReleaseSemaphore };
 		presentInfo.waitSemaphoreCount = arraysize(signalSemaphores);
 		presentInfo.pWaitSemaphores = signalSemaphores;
 
@@ -5770,7 +5786,7 @@ using namespace Vulkan_Internal;
 				VkResult res = vkEndCommandBuffer(frame.copyCommandBuffer);
 				assert(res == VK_SUCCESS);
 
-				VkSemaphore semaphores[] = { copySema };
+				VkSemaphore semaphores[] = { copySemaphore };
 
 				VkSubmitInfo submitInfo = {};
 				submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -5851,7 +5867,7 @@ using namespace Vulkan_Internal;
 			VkSubmitInfo submitInfo = {};
 			submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-			VkSemaphore waitSemaphores[] = { imageAvailableSemaphore, copySema };
+			VkSemaphore waitSemaphores[] = {frame.swapchainAcquireSemaphore, copySemaphore};
 			VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT };
 			if (copyQueueUse)
 			{
@@ -5866,7 +5882,7 @@ using namespace Vulkan_Internal;
 			submitInfo.commandBufferCount = counter;
 			submitInfo.pCommandBuffers = cmdLists;
 
-			VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
+			VkSemaphore signalSemaphores[] = {frame.swapchainReleaseSemaphore};
 			submitInfo.signalSemaphoreCount = arraysize(signalSemaphores);
 			submitInfo.pSignalSemaphores = signalSemaphores;
 

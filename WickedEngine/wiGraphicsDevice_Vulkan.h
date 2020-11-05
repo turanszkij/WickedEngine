@@ -69,9 +69,6 @@ namespace wiGraphics
 		VkPhysicalDeviceRayTracingFeaturesKHR raytracing_features = {};
 		VkPhysicalDeviceMeshShaderFeaturesNV mesh_shader_features = {};
 
-		VkSemaphore imageAvailableSemaphore = VK_NULL_HANDLE;
-		VkSemaphore renderFinishedSemaphore = VK_NULL_HANDLE;
-
 		VkSwapchainKHR swapChain = VK_NULL_HANDLE;
 		VkFormat swapChainImageFormat;
 		VkExtent2D swapChainExtent;
@@ -113,7 +110,7 @@ namespace wiGraphics
 
 		std::mutex copyQueueLock;
 		bool copyQueueUse = false;
-		VkSemaphore copySema = VK_NULL_HANDLE;
+		VkSemaphore copySemaphore = VK_NULL_HANDLE;
 
 		struct FrameResources
 		{
@@ -128,6 +125,9 @@ namespace wiGraphics
 			VkCommandPool transitionCommandPool = VK_NULL_HANDLE;
 			VkCommandBuffer transitionCommandBuffer = VK_NULL_HANDLE;
 			std::vector<VkImageMemoryBarrier> loadedimagetransitions;
+
+			VkSemaphore swapchainAcquireSemaphore = VK_NULL_HANDLE;
+			VkSemaphore swapchainReleaseSemaphore = VK_NULL_HANDLE;
 
 			struct DescriptorTableFrameAllocator
 			{

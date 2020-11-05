@@ -80,6 +80,7 @@ namespace wiGraphics
 		inline bool GetVSyncEnabled() const { return VSYNC; }
 		virtual void SetVSyncEnabled(bool value) { VSYNC = value; }
 		inline uint64_t GetFrameCount() const { return FRAMECOUNT; }
+		inline uint64_t GetFrameIndex() const { return FRAMECOUNT % BACKBUFFER_COUNT; }
 
 		// Returns native resolution width of back buffer in pixels:
 		inline int GetResolutionWidth() const { return RESOLUTIONWIDTH; }

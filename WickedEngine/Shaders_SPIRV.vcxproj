@@ -55,7 +55,7 @@
       <AdditionalOptions>-flegacy-macro-expansion -spirv -fvk-use-dx-layout %(AdditionalOptions)</AdditionalOptions>
     </FxCompile>
     <PreBuildEvent>
-      <Command>compile_shaders_spirv.py
+      <Command>python compile_shaders_spirv.py
 </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
