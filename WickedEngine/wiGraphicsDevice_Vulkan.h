@@ -49,7 +49,9 @@ namespace wiGraphics
 	private:
 
 		VkInstance instance = VK_NULL_HANDLE;
-		VkDebugReportCallbackEXT callback = VK_NULL_HANDLE;
+	    VkDebugUtilsMessengerEXT debugUtilsMessenger{VK_NULL_HANDLE};
+		/// Deprecated
+	    VkDebugReportCallbackEXT debugReportCallback = VK_NULL_HANDLE;
 		VkSurfaceKHR surface = VK_NULL_HANDLE;
 		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 		VkDevice device = VK_NULL_HANDLE;
@@ -68,9 +70,6 @@ namespace wiGraphics
 		VkPhysicalDeviceVulkan12Features features_1_2 = {};
 		VkPhysicalDeviceRayTracingFeaturesKHR raytracing_features = {};
 		VkPhysicalDeviceMeshShaderFeaturesNV mesh_shader_features = {};
-
-		VkSemaphore imageAvailableSemaphore = VK_NULL_HANDLE;
-		VkSemaphore renderFinishedSemaphore = VK_NULL_HANDLE;
 
 		VkSwapchainKHR swapChain = VK_NULL_HANDLE;
 		VkFormat swapChainImageFormat;
@@ -113,7 +112,7 @@ namespace wiGraphics
 
 		std::mutex copyQueueLock;
 		bool copyQueueUse = false;
-		VkSemaphore copySema = VK_NULL_HANDLE;
+		VkSemaphore copySemaphore = VK_NULL_HANDLE;
 
 		struct FrameResources
 		{
@@ -128,6 +127,9 @@ namespace wiGraphics
 			VkCommandPool transitionCommandPool = VK_NULL_HANDLE;
 			VkCommandBuffer transitionCommandBuffer = VK_NULL_HANDLE;
 			std::vector<VkImageMemoryBarrier> loadedimagetransitions;
+
+			VkSemaphore swapchainAcquireSemaphore = VK_NULL_HANDLE;
+			VkSemaphore swapchainReleaseSemaphore = VK_NULL_HANDLE;
 
 			struct DescriptorTableFrameAllocator
 			{
