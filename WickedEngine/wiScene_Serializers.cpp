@@ -336,6 +336,18 @@ namespace wiScene
 				archive >> vertex_tangents;
 			}
 
+			if (archive.GetVersion() >= 53)
+			{
+			    size_t targetCount;
+			    archive >> targetCount;
+			    targets.resize(targetCount);
+			    for (size_t i = 0; i < targetCount; ++i)
+			    {
+					archive >> targets[i].vertex_positions;
+					archive >> targets[i].weight;
+			    }
+			}
+
 			wiJobSystem::Execute(seri.ctx, [&](wiJobArgs args) {
 				CreateRenderData();
 			});
@@ -383,6 +395,16 @@ namespace wiScene
 			if (archive.GetVersion() >= 51)
 			{
 				archive << vertex_tangents;
+			}
+
+			if (archive.GetVersion() >= 53)
+			{
+			    archive << targets.size();
+			    for (size_t i = 0; i < targets.size(); ++i)
+			    {
+				archive << targets[i].vertex_positions;
+				archive << targets[i].weight;
+			    }
 			}
 
 		}
