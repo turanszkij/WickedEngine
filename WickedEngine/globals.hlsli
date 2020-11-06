@@ -7,7 +7,9 @@ TEXTURE2D(texture_depth, float, TEXSLOT_DEPTH);
 TEXTURE2D(texture_lineardepth, float, TEXSLOT_LINEARDEPTH);
 TEXTURE2D(texture_gbuffer0, float4, TEXSLOT_GBUFFER0);
 TEXTURE2D(texture_gbuffer1, float4, TEXSLOT_GBUFFER1);
+#ifdef RAYTRACING_INLINE
 RAYTRACINGACCELERATIONSTRUCTURE(scene_acceleration_structure, TEXSLOT_ACCELERATION_STRUCTURE);
+#endif // RAYTRACING_INLINE
 TEXTURECUBE(texture_globalenvmap, float4, TEXSLOT_GLOBALENVMAP);
 TEXTURE2D(texture_globallightmap, float4, TEXSLOT_GLOBALLIGHTMAP);
 TEXTURECUBEARRAY(texture_envmaparray, float4, TEXSLOT_ENVMAPARRAY);

@@ -1,4 +1,5 @@
 import os
+import threading
 import xml.etree.ElementTree as ET
 from subprocess import check_output
 
@@ -8,11 +9,19 @@ from subprocess import check_output
 tree = ET.parse('Shaders_SOURCE.vcxitems.filters')
 root = tree.getroot()
 
-outputdir = "spirv"
-
 from pathlib import Path
-Path("shaders/" + outputdir).mkdir(parents=True, exist_ok=True)
+Path("shaders/spirv").mkdir(parents=True, exist_ok=True)
 
+threads = []
+
+def compile(cmd):
+    try:
+        print(cmd)
+        result = check_output(cmd, shell=True).decode()
+        if len(result) > 0:
+            print(result)
+    except:
+        print("DXC error")
 
 namespace = "{http://schemas.microsoft.com/developer/msbuild/2003}"
 for item in root.iter():
@@ -48,8 +57,6 @@ for item in root.iter():
             
             cmd += "_6_5 "
             
-            cmd += " -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso "
-            
             cmd += " -spirv "
             cmd += " -fspv-target-env=vulkan1.2 "
             cmd += " -fvk-use-dx-layout "
@@ -65,19 +72,20 @@ for item in root.iter():
             cmd += " -fvk-s-shift 3000 all "
             
             cmd += " -D SPIRV "
-            #cmd += " -D RAYTRACING_INLINE "
-            #cmd += " -D RAYTRACING_GEOMETRYINDEX "
+
+            output_name = os.path.splitext(name)[0] + ".cso "
             
-            print(cmd)
-            
-            try:
-                print(check_output(cmd, shell=True).decode())
-            except:
-                print("DXC error")
+            cmd += " -Fo " + "shaders/spirv/" + output_name
+            t = threading.Thread(target=compile, args=(cmd,))
+            threads.append(t)
+            t.start()
             
             break
             
     except:
         continue
+        
 
+for t in threads:
+    t.join()
 
