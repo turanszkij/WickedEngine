@@ -864,6 +864,17 @@ bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
 	{
 		return device->CreateShader(stage, buffer.data(), buffer.size(), &shader);
 	}
+	else
+	{
+	    std::string name = filename;
+	    wiHelper::RemoveExtensionFromFileName(name);
+	    name = wiHelper::GetOriginalWorkingDirectory() + name + ".hlsl";
+		// TODO compile
+	    if (wiHelper::FileExists(filename))
+	    {
+			return LoadShader(stage, shader, name);
+	    }
+	}
 	wiHelper::messageBox("Shader not found: " + SHADERPATH + filename);
 	return false;
 }
@@ -985,17 +996,6 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
 		InputLayoutDesc layout[] =
 		{
-			{ "POSITION", 0, FORMAT_R32G32B32_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, FORMAT_R32G32_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 1, FORMAT_R32G32B32A32_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		};
-		LoadShader(VS, shaders[VSTYPE_TRAIL], "trailVS.cso");
-		device->CreateInputLayout(layout, arraysize(layout), &shaders[VSTYPE_TRAIL], &inputLayouts[ILTYPE_TRAIL]);
-		});
-
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
-		InputLayoutDesc layout[] =
-		{
 			{ "POSITION_NORMAL_WIND",		0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 			{ "ATLAS",						0, MeshComponent::Vertex_TEX::FORMAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
@@ -1096,7 +1096,6 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_SHADOW_ALPHATEST], "shadowPS_alphatest.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_SHADOW_TRANSPARENT], "shadowPS_transparent.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_SHADOW_WATER], "shadowPS_water.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_TRAIL], "trailPS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_VOXELIZER], "objectPS_voxelizer.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_VOXELIZER_TERRAIN], "objectPS_voxelizer_terrain.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_VOXEL], "voxelPS.cso"); });

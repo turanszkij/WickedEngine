@@ -244,7 +244,6 @@ set(SHADERS_VS
         "vPointLightVS.hlsl"
         "vRectangleLightVS.hlsl"
         "vSphereLightVS.hlsl"
-        "trailVS.hlsl"
         "sphereVS.hlsl"
         "skyVS.hlsl"
         "shadowVS_transparent.hlsl"

@@ -722,9 +722,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)vSphereLightVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)trailVS.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)sphereVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
