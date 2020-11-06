@@ -6,6 +6,10 @@
 #include "stochasticSSRHF.hlsli"
 #include "lightingHF.hlsli"
 
+#ifndef RAYTRACING_INLINE
+RAYTRACINGACCELERATIONSTRUCTURE(scene_acceleration_structure, TEXSLOT_ACCELERATION_STRUCTURE);
+#endif // RAYTRACING_INLINE
+
 RWTEXTURE2D(output, float4, 0);
 
 ConstantBuffer<ShaderMaterial> subsets_material[MAX_DESCRIPTOR_INDEXING] : register(b0, space1);

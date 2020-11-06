@@ -104,6 +104,11 @@ void MainComponent::Initialize()
 #endif
 		}
 
+		if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
+		{
+		    wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "inlinert/");
+		}
+
 	}
 
 
