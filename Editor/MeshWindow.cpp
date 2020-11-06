@@ -513,6 +513,32 @@ void MeshWindow::Create(EditorComponent* editor)
 	AddWidget(&terrainGenButton);
 
 
+	morphTargetCombo.Create("Morph Target:");
+	morphTargetCombo.SetSize(XMFLOAT2(100, hei));
+	morphTargetCombo.SetPos(XMFLOAT2(x + 280, y += step));
+	morphTargetCombo.OnSelect([&](wiEventArgs args) {
+	    MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
+	    if (mesh != nullptr && args.iValue < mesh->targets.size())
+	    {
+			morphTargetSlider.SetValue(mesh->targets[args.iValue].weight);
+	    }
+	});
+	morphTargetCombo.SetTooltip("Choose a morph target to edit weight.");
+	AddWidget(&morphTargetCombo);
+
+	morphTargetSlider.Create(0, 1, 0, 100000, "Weight: ");
+	morphTargetSlider.SetTooltip("Set the weight for morph target");
+	morphTargetSlider.SetSize(XMFLOAT2(100, hei));
+	morphTargetSlider.SetPos(XMFLOAT2(x + 280, y += step));
+	morphTargetSlider.OnSlide([&](wiEventArgs args) {
+	    MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
+	    if (mesh != nullptr && morphTargetCombo.GetSelected() < mesh->targets.size())
+	    {
+			mesh->targets[morphTargetCombo.GetSelected()].weight = args.fValue;
+			mesh->CreateRenderData();
+	    }
+	});
+	AddWidget(&morphTargetSlider);
 
 	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 1000, 80, 0));
 	SetVisible(false);
@@ -602,6 +628,17 @@ void MeshWindow::SetEntity(Entity entity)
 			softbodyCheckBox.SetCheck(true);
 			massSlider.SetValue(physicscomponent->mass);
 			frictionSlider.SetValue(physicscomponent->friction);
+		}
+
+		uint8_t selected = morphTargetCombo.GetSelected();
+		morphTargetCombo.ClearItems();
+		for (size_t i = 0; i < mesh->targets.size(); i++)
+		{
+		    morphTargetCombo.AddItem(std::to_string(i).c_str());
+		}
+		if (selected < mesh->targets.size())
+		{
+		    morphTargetCombo.SetSelected(selected);
 		}
 		SetEnabled(true);
 	}

@@ -31,5 +31,8 @@ public:
 	wiComboBox terrainMat2Combo;
 	wiComboBox terrainMat3Combo;
 	wiButton terrainGenButton;
+
+	wiComboBox morphTargetCombo;
+	wiSlider morphTargetSlider;
 };
 
