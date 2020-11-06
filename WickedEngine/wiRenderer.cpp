@@ -864,17 +864,6 @@ bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
 	{
 		return device->CreateShader(stage, buffer.data(), buffer.size(), &shader);
 	}
-	else
-	{
-	    std::string name = filename;
-	    wiHelper::RemoveExtensionFromFileName(name);
-	    name = wiHelper::GetOriginalWorkingDirectory() + name + ".hlsl";
-		// TODO compile
-	    if (wiHelper::FileExists(filename))
-	    {
-			return LoadShader(stage, shader, name);
-	    }
-	}
 	wiHelper::messageBox("Shader not found: " + SHADERPATH + filename);
 	return false;
 }
