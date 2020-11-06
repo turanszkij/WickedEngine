@@ -582,6 +582,12 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		Entity meshEntity = scene.Entity_CreateMesh(x.name);
 		MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);
 
+		mesh.targets.resize(x.weights.size());
+		for (size_t i = 0; i < mesh.targets.size(); i++)
+		{
+		    mesh.targets[i].weight = static_cast<float_t>(x.weights[i]);
+		}
+
 		for (auto& prim : x.primitives)
 		{
 			assert(prim.indices >= 0);
@@ -781,6 +787,33 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					}
 				}
 
+				for (size_t i = 0; i < mesh.targets.size(); i++)
+				{
+				    for (auto& attr : prim.targets[i])
+				    {
+						const string& attr_name = attr.first;
+						int attr_data = attr.second;
+
+						const tinygltf::Accessor& accessor = state.gltfModel.accessors[attr_data];
+						const tinygltf::BufferView& bufferView = state.gltfModel.bufferViews[accessor.bufferView];
+						const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
+
+						int stride = accessor.ByteStride(bufferView);
+						size_t vertexCount = accessor.count;
+
+						const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
+
+						if (!attr_name.compare("POSITION"))
+						{
+							mesh.targets[i].vertex_positions.resize(vertexOffset + vertexCount);
+							assert(stride == 12);
+							for (size_t j = 0; j < vertexCount; ++j)
+							{
+								mesh.targets[i].vertex_positions[vertexOffset + j] = ((XMFLOAT3*)data)[j];
+							}
+						}
+				    }
+				}
 			}
 
 		}

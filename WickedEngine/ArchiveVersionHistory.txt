@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+53: Support Morph Target
 52: Serialized MaterialComponent::subsurfaceProfile
 51: Serialized MeshComponent::vertex_tangents
 50: Serialized MaterialComponent::SHADERTYPE

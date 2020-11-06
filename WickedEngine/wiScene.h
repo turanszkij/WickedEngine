@@ -305,6 +305,14 @@ namespace wiScene
 		wiECS::Entity terrain_material2 = wiECS::INVALID_ENTITY;
 		wiECS::Entity terrain_material3 = wiECS::INVALID_ENTITY;
 
+		// Morph Targets
+		struct MeshMorphTarget
+		{
+		    std::vector<XMFLOAT3> vertex_positions;
+		    float_t weight;
+		};
+		std::vector<MeshMorphTarget> targets;
+
 		// Non-serialized attributes:
 		AABB aabb;
 		wiGraphics::GPUBuffer indexBuffer;

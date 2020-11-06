@@ -429,6 +429,13 @@ namespace wiScene
 				const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
 				vertices[i].FromFULL(pos, nor, wind);
 
+				for (size_t j = 0; j < targets.size(); j++)
+				{
+				    vertices[i].pos.x += targets[j].weight * targets[j].vertex_positions[i].x;
+				    vertices[i].pos.y += targets[j].weight * targets[j].vertex_positions[i].y;
+				    vertices[i].pos.z += targets[j].weight * targets[j].vertex_positions[i].z;
+				}
+
 				_min = wiMath::Min(_min, pos);
 				_max = wiMath::Max(_max, pos);
 			}
