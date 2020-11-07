@@ -420,21 +420,20 @@ namespace wiScene
 
 		// vertexBuffer - POSITION + NORMAL + WIND:
 		{
+		    if (!targets.empty())
+		    {
+				vertex_positions_morphed.resize(vertex_positions.size());
+				SetDirtyMorph();
+		    }
+
 			std::vector<Vertex_POS> vertices(vertex_positions.size());
 			for (size_t i = 0; i < vertices.size(); ++i)
 			{
 				const XMFLOAT3& pos = vertex_positions[i];
-				XMFLOAT3 nor = vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : vertex_normals[i];
-				XMStoreFloat3(&nor, XMVector3Normalize(XMLoadFloat3(&nor)));
+			    XMFLOAT3 nor = vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : vertex_normals[i];
+			    XMStoreFloat3(&nor, XMVector3Normalize(XMLoadFloat3(&nor)));
 				const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
 				vertices[i].FromFULL(pos, nor, wind);
-
-				for (size_t j = 0; j < targets.size(); j++)
-				{
-				    vertices[i].pos.x += targets[j].weight * targets[j].vertex_positions[i].x;
-				    vertices[i].pos.y += targets[j].weight * targets[j].vertex_positions[i].y;
-				    vertices[i].pos.z += targets[j].weight * targets[j].vertex_positions[i].z;
-				}
 
 				_min = wiMath::Min(_min, pos);
 				_max = wiMath::Max(_max, pos);
@@ -2378,6 +2377,42 @@ namespace wiScene
 					}
 				}
 				subsetIndex++;
+			}
+
+			// Update morph targets if needed:
+			if (mesh.IsDirtyMorph() && !mesh.targets.empty())
+			{
+			    XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
+			    XMFLOAT3 _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+
+			    for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
+			    {
+					XMFLOAT3 pos = mesh.vertex_positions[i];
+					XMFLOAT3 nor = mesh.vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : mesh.vertex_normals[i];
+					const uint8_t wind = mesh.vertex_windweights.empty() ? 0xFF : mesh.vertex_windweights[i];
+
+					for (const MeshComponent::MeshMorphTarget& target : mesh.targets)
+					{
+						pos.x += target.weight * target.vertex_positions[i].x;
+						pos.y += target.weight * target.vertex_positions[i].y;
+						pos.z += target.weight * target.vertex_positions[i].z;
+
+						if (!target.vertex_normals.empty())
+						{
+							nor.x += target.weight * target.vertex_normals[i].x;
+							nor.y += target.weight * target.vertex_normals[i].y;
+							nor.z += target.weight * target.vertex_normals[i].z;
+						}
+					}
+
+					XMStoreFloat3(&nor, XMVector3Normalize(XMLoadFloat3(&nor)));
+					mesh.vertex_positions_morphed[i].FromFULL(pos, nor, wind);
+
+					_min = wiMath::Min(_min, pos);
+					_max = wiMath::Max(_max, pos);
+			    }
+
+			    mesh.aabb = AABB(_min, _max);
 			}
 
 		});
