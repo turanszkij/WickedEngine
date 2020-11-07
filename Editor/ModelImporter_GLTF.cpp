@@ -812,6 +812,15 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 								mesh.targets[i].vertex_positions[vertexOffset + j] = ((XMFLOAT3*)data)[j];
 							}
 						}
+						else if (!attr_name.compare("NORMAL"))
+						{
+						    mesh.targets[i].vertex_normals.resize(vertexOffset + vertexCount);
+						    assert(stride == 12);
+						    for (size_t j = 0; j < vertexCount; ++j)
+						    {
+								mesh.targets[i].vertex_normals[vertexOffset + j] = ((XMFLOAT3*)data)[j];
+						    }
+						}
 				    }
 				}
 			}
