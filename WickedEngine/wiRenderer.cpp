@@ -307,6 +307,7 @@ struct FrameCulling
 unordered_map<const CameraComponent*, FrameCulling> frameCullings;
 
 vector<size_t> pendingMaterialUpdates;
+vector<size_t> pendingMorphUpdates;
 
 enum AS_UPDATE_TYPE
 {
@@ -2524,6 +2525,7 @@ void ClearWorld()
 	packedLightmaps.clear();
 
 	pendingMaterialUpdates.clear();
+	pendingMorphUpdates.clear();
 	pendingBottomLevelBuilds.clear();
 }
 
@@ -3372,6 +3374,20 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 		}
 	});
 
+	// See which mesh morphs will need to update their GPU render data:
+	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
+	    for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
+	    {
+			MeshComponent& mesh = scene.meshes[i];
+
+			if (mesh.IsDirtyMorph())
+			{
+			    mesh.SetDirtyMorph(false);
+				pendingMorphUpdates.push_back(i);
+			}
+	    }
+	});
+
 	// Need to swap prev and current vertex buffers for any dynamic meshes BEFORE render threads are kicked 
 	//	and also create skinning bone buffers:
 	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
@@ -3856,6 +3872,17 @@ void UpdateRenderData(CommandList cmd)
 		}
 	}
 	pendingMaterialUpdates.clear();
+
+	// Update mesh morph buffers:
+	for (auto& meshIndex : pendingMorphUpdates)
+	{
+	    if (meshIndex < scene.meshes.GetCount())
+	    {
+			const MeshComponent& mesh = scene.meshes[meshIndex];
+			device->UpdateBuffer(&mesh.vertexBuffer_POS, mesh.vertex_positions_morphed.data(), cmd);
+	    }
+	}
+	pendingMorphUpdates.clear();
 
 
 	if (scene.weather.IsRealisticSky())

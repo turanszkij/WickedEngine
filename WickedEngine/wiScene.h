@@ -269,6 +269,7 @@ namespace wiScene
 			DOUBLE_SIDED = 1 << 1,
 			DYNAMIC = 1 << 2,
 			TERRAIN = 1 << 3,
+			DIRTY_MORPH = 1 << 4,
 		};
 		uint32_t _flags = RENDERABLE;
 
@@ -338,11 +339,13 @@ namespace wiScene
 		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
 		inline void SetDynamic(bool value) { if (value) { _flags |= DYNAMIC; } else { _flags &= ~DYNAMIC; } }
 		inline void SetTerrain(bool value) { if (value) { _flags |= TERRAIN; } else { _flags &= ~TERRAIN; } }
+		inline void SetDirtyMorph(bool value = true) { if (value) { _flags |= DIRTY_MORPH; } else { _flags &= ~DIRTY_MORPH; } }
 
 		inline bool IsRenderable() const { return _flags & RENDERABLE; }
 		inline bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
 		inline bool IsDynamic() const { return _flags & DYNAMIC; }
 		inline bool IsTerrain() const { return _flags & TERRAIN; }
+		inline bool IsDirtyMorph() const { return _flags & DIRTY_MORPH; }
 
 		inline float GetTessellationFactor() const { return tessellationFactor; }
 		inline wiGraphics::INDEXBUFFER_FORMAT GetIndexFormat() const { return vertex_positions.size() > 65535 ? wiGraphics::INDEXFORMAT_32BIT : wiGraphics::INDEXFORMAT_16BIT; }
@@ -500,6 +503,9 @@ namespace wiScene
 
 			static const wiGraphics::FORMAT FORMAT = wiGraphics::FORMAT::FORMAT_R8G8B8A8_UNORM;
 		};
+		
+		// Non serialized attributes:
+		std::vector<Vertex_POS> vertex_positions_morphed;
 
 	};
 
