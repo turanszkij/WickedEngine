@@ -344,6 +344,7 @@ namespace wiScene
 			    for (size_t i = 0; i < targetCount; ++i)
 			    {
 					archive >> targets[i].vertex_positions;
+					archive >> targets[i].vertex_normals;
 					archive >> targets[i].weight;
 			    }
 			}
@@ -402,8 +403,9 @@ namespace wiScene
 			    archive << targets.size();
 			    for (size_t i = 0; i < targets.size(); ++i)
 			    {
-				archive << targets[i].vertex_positions;
-				archive << targets[i].weight;
+					archive << targets[i].vertex_positions;
+					archive << targets[i].vertex_normals;
+					archive << targets[i].weight;
 			    }
 			}
 

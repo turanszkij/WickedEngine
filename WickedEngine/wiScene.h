@@ -309,6 +309,7 @@ namespace wiScene
 		struct MeshMorphTarget
 		{
 		    std::vector<XMFLOAT3> vertex_positions;
+		    std::vector<XMFLOAT3> vertex_normals;
 		    float_t weight;
 		};
 		std::vector<MeshMorphTarget> targets;
