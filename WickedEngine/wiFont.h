@@ -26,12 +26,13 @@ struct wiFontParams
 	wiFontAlign h_align, v_align;
 	wiColor color;
 	wiColor shadowColor;
+	wiColor outlineColor;
 	float h_wrap = -1; // wrap start width (-1 default for no wrap)
 	int style = 0;
 
 	wiFontParams(float posX = 0, float posY = 0, int size = WIFONTSIZE_DEFAULT, wiFontAlign h_align = WIFALIGN_LEFT, wiFontAlign v_align = WIFALIGN_TOP
-		, wiColor color = wiColor(255, 255, 255, 255), wiColor shadowColor = wiColor(0,0,0,0))
-		:posX(posX), posY(posY), size(size), h_align(h_align), v_align(v_align), color(color), shadowColor(shadowColor)
+		, wiColor color = wiColor(255, 255, 255, 255), wiColor shadowColor = wiColor(0,0,0,0), wiColor outlineColor = wiColor(0,0,0,0))
+	    : posX(posX), posY(posY), size(size), h_align(h_align), v_align(v_align), color(color), shadowColor(shadowColor), outlineColor(outlineColor)
 	{}
 };
 

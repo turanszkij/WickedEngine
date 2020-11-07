@@ -620,6 +620,46 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 		device->DrawInstanced(4, quadCount, 0, 0, cmd);
 	}
 
+	if (newProps.outlineColor.getA() > 0)
+	{
+		// font outline render:
+		XMStoreFloat4x4(&cb.g_xFont_Transform,
+			XMMatrixTranslation((float)newProps.posX - 1, (float)newProps.posY, 0)
+			* Projection
+		);
+		cb.g_xFont_Color = newProps.outlineColor.toFloat4();
+		device->UpdateBuffer(&constantBuffer, &cb, cmd);
+
+		device->DrawInstanced(4, quadCount, 0, 0, cmd);
+
+		XMStoreFloat4x4(&cb.g_xFont_Transform,
+			XMMatrixTranslation((float)newProps.posX, (float)newProps.posY - 1, 0)
+			* Projection
+		);
+		cb.g_xFont_Color = newProps.outlineColor.toFloat4();
+		device->UpdateBuffer(&constantBuffer, &cb, cmd);
+
+		device->DrawInstanced(4, quadCount, 0, 0, cmd);
+
+		XMStoreFloat4x4(&cb.g_xFont_Transform,
+			XMMatrixTranslation((float)newProps.posX + 1, (float)newProps.posY, 0)
+			* Projection
+		);
+		cb.g_xFont_Color = newProps.outlineColor.toFloat4();
+		device->UpdateBuffer(&constantBuffer, &cb, cmd);
+
+		device->DrawInstanced(4, quadCount, 0, 0, cmd);
+
+		XMStoreFloat4x4(&cb.g_xFont_Transform,
+			XMMatrixTranslation((float)newProps.posX, (float)newProps.posY + 1, 0)
+			* Projection
+		);
+		cb.g_xFont_Color = newProps.outlineColor.toFloat4();
+		device->UpdateBuffer(&constantBuffer, &cb, cmd);
+
+		device->DrawInstanced(4, quadCount, 0, 0, cmd);
+	}
+
 	// font base render:
 	XMStoreFloat4x4(&cb.g_xFont_Transform, 
 		XMMatrixTranslation((float)newProps.posX, (float)newProps.posY, 0)

@@ -514,6 +514,23 @@ void TestsRenderer::RunFontTest()
 	font_colored.params.posY = font_japanese.params.posY + font_japanese.textHeight();
 	font_colored.SetText("Colored font");
 	AddFont(&font_colored);
+
+	static wiSprite font_outline_background;
+	font_outline_background.params.pos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth() / 2, wiRenderer::GetDevice()->GetScreenHeight() / 2 + 25, 0.0f);
+	font_outline_background.params.siz = XMFLOAT2(wiRenderer::GetDevice()->GetScreenWidth() / 4, 50);
+	font_outline_background.params.pivot = XMFLOAT2(0.5f, 0.5f);
+	font_outline_background.params.color = XMFLOAT4(0, 1, 1, 1);
+	AddSprite(&font_outline_background);
+
+	static wiSpriteFont font_outline;
+	font_outline = font;
+	font_outline.params.posX = wiRenderer::GetDevice()->GetScreenWidth() / 2;
+	font_outline.params.posY = wiRenderer::GetDevice()->GetScreenHeight() / 2;
+	font_outline.params.size = 38;
+	font_outline.params.outlineColor = wiColor::Black();
+	font_outline.params.h_align = WIFALIGN_CENTER;
+	font_outline.SetText("White text, black outline");
+	AddFont(&font_outline);
 }
 void TestsRenderer::RunSpriteTest()
 {
