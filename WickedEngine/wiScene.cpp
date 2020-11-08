@@ -1525,14 +1525,16 @@ namespace wiScene
 
 		// Gather all descendants in the hierarchy:
 		std::unordered_map<Entity, size_t> descendants;
-		descendants[entity] = descendants.size();
+		size_t prefix = descendants.size();
+		descendants[entity] = prefix;
 		for (size_t i = 0; i < hierarchy.GetCount(); ++i)
 		{
 		    const HierarchyComponent& hier = hierarchy[i];
 			if (descendants.count(hier.parentID) != 0)
 			{
 			    Entity child = hierarchy.GetEntity(i);
-			    descendants[child] = descendants.size();
+			    prefix = descendants.size();
+			    descendants[child] = prefix;
 			    Entity_Serialize(archive, child);
 			}
 		}
