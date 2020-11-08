@@ -2856,7 +2856,15 @@ namespace wiScene
 
 	XMVECTOR SkinVertex(const MeshComponent& mesh, const ArmatureComponent& armature, uint32_t index, XMVECTOR* N)
 	{
-		XMVECTOR P = XMLoadFloat3(&mesh.vertex_positions[index]);
+		XMVECTOR P;
+		if (mesh.vertex_positions_morphed.empty())
+		{
+		    P = XMLoadFloat3(&mesh.vertex_positions[index]);
+		}
+		else
+		{
+		    P = mesh.vertex_positions_morphed[index].LoadPOS();
+		}
 		const XMUINT4& ind = mesh.vertex_boneindices[index];
 		const XMFLOAT4& wei = mesh.vertex_boneweights[index];
 
@@ -3012,9 +3020,18 @@ namespace wiScene
 						{
 							if (armature == nullptr)
 							{
-								p0 = XMLoadFloat3(&mesh.vertex_positions[i0]);
-								p1 = XMLoadFloat3(&mesh.vertex_positions[i1]);
-								p2 = XMLoadFloat3(&mesh.vertex_positions[i2]);
+								if (mesh.vertex_positions_morphed.empty())
+							    {
+									p0 = XMLoadFloat3(&mesh.vertex_positions[i0]);
+									p1 = XMLoadFloat3(&mesh.vertex_positions[i1]);
+									p2 = XMLoadFloat3(&mesh.vertex_positions[i2]);
+								}
+								else
+								{
+								    p0 = mesh.vertex_positions_morphed[i0].LoadPOS();
+								    p1 = mesh.vertex_positions_morphed[i1].LoadPOS();
+								    p2 = mesh.vertex_positions_morphed[i2].LoadPOS();
+								}
 							}
 							else
 							{
