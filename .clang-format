@@ -22,7 +22,7 @@ BreakConstructorInitializersBeforeComma: true
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 
 # Allows contracting simple braced statements to a single line.
-AllowShortBlocksOnASingleLine: false
+AllowShortBlocksOnASingleLine: true
 
 # Dependent on the value, int f() { return 0; } can be put on a single line. Possible values: None, Inline, All.
 AllowShortFunctionsOnASingleLine: Inline
