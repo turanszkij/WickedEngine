@@ -222,13 +222,18 @@ protected:
 
 	float scrollbar_delta = 0;
 
-	std::vector<std::string> items;
+	struct Item
+	{
+	    std::string name;
+	    uint64_t userdata = 0;
+	};
+	std::vector<Item> items;
 
 	float GetItemOffset(int index) const;
 public:
 	void Create(const std::string& name);
 
-	void AddItem(const std::string& item);
+	void AddItem(const std::string& name, uint64_t userdata = 0);
 	void RemoveItem(int index);
 	void ClearItems();
 	void SetMaxVisibleItemCount(int value);
@@ -237,6 +242,8 @@ public:
 	void SetSelected(int index);
 	int GetSelected() const;
 	std::string GetItemText(int index) const;
+	uint64_t GetItemUserData(int index) const;
+	size_t GetItemCount() const { return items.size(); }
 
 	void Update(wiGUI* gui, float dt ) override;
 	void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;

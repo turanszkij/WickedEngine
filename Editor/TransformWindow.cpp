@@ -42,7 +42,7 @@ void TransformWindow::Create(EditorComponent* editor)
 
 		if(args.iValue != 0)
 		{
-		    scene.Component_Attach(entity, scene.transforms.GetEntity(args.iValue - 1));
+		    scene.Component_Attach(entity, args.userdata);
 		}
 
 	});
@@ -234,12 +234,17 @@ void TransformWindow::SetEntity(Entity entity)
 		for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
 		{
 			Entity entity = scene.transforms.GetEntity(i);
+			if (entity == this->entity)
+			{
+			    continue; // Don't list selected (don't allow attach to self)
+			}
+
 			const NameComponent* name = scene.names.GetComponent(entity);
-			parentCombo.AddItem(name == nullptr ? std::to_string(entity) : name->name);
+			parentCombo.AddItem(name == nullptr ? std::to_string(entity) : name->name, entity);
 
 			if (hier != nullptr && hier->parentID == entity)
 			{
-				parentCombo.SetSelected((int)i + 1);
+				parentCombo.SetSelected(parentCombo.GetItemCount() - 1);
 			}
 		}
 

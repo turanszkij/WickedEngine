@@ -1292,7 +1292,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 
 	if (selected >= 0)
 	{
-		wiFont::Draw(items[selected], wiFontParams(translation.x + scale.x*0.5f, translation.y + scale.y*0.5f, WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER,
+		wiFont::Draw(items[selected].name, wiFontParams(translation.x + scale.x*0.5f, translation.y + scale.y*0.5f, WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER,
 			font.params.color, font.params.shadowColor), cmd);
 	}
 
@@ -1359,7 +1359,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 				}
 			}
 			wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
-			wiFont::Draw(items[i], wiFontParams(translation.x + scale.x*0.5f, translation.y + scale.y*0.5f + GetItemOffset(i), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER,
+			wiFont::Draw(items[i].name, wiFontParams(translation.x + scale.x*0.5f, translation.y + scale.y*0.5f + GetItemOffset(i), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER,
 				font.params.color, font.params.shadowColor), cmd);
 		}
 	}
@@ -1368,9 +1368,11 @@ void wiComboBox::OnSelect(function<void(wiEventArgs args)> func)
 {
 	onSelect = move(func);
 }
-void wiComboBox::AddItem(const std::string& item)
+void wiComboBox::AddItem(const std::string& name, uint64_t userdata)
 {
-	items.push_back(item);
+    items.emplace_back();
+    items.back().name = name;
+    items.back().userdata = userdata;
 
 	if (selected < 0)
 	{
@@ -1379,7 +1381,7 @@ void wiComboBox::AddItem(const std::string& item)
 }
 void wiComboBox::RemoveItem(int index)
 {
-	std::vector<string> newItems(0);
+	std::vector<Item> newItems(0);
 	newItems.reserve(items.size());
 	for (size_t i = 0; i < items.size(); ++i)
 	{
@@ -1416,15 +1418,24 @@ void wiComboBox::SetSelected(int index)
 	wiEventArgs args;
 	args.iValue = selected;
 	args.sValue = GetItemText(selected);
+	args.userdata = GetItemUserData(selected);
 	onSelect(args);
 }
 string wiComboBox::GetItemText(int index) const
 {
 	if (index >= 0)
 	{
-		return items[index];
+		return items[index].name;
 	}
 	return "";
+}
+uint64_t wiComboBox::GetItemUserData(int index) const
+{
+    if (index >= 0)
+    {
+		return items[index].userdata;
+    }
+    return 0;
 }
 int wiComboBox::GetSelected() const
 {
