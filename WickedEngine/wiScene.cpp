@@ -1519,13 +1519,44 @@ namespace wiScene
 	{
 		wiArchive archive;
 
-		// First write the entity to staging area:
+		// First write the root entity to staging area:
 		archive.SetReadModeAndResetPos(false);
 		Entity_Serialize(archive, entity);
 
-		// Then deserialize:
+		// Gather all descendants in the hierarchy:
+		std::unordered_map<Entity, size_t> descendants;
+		descendants[entity] = descendants.size();
+		for (size_t i = 0; i < hierarchy.GetCount(); ++i)
+		{
+		    const HierarchyComponent& hier = hierarchy[i];
+			if (descendants.count(hier.parentID) != 0)
+			{
+			    Entity child = hierarchy.GetEntity(i);
+			    descendants[child] = descendants.size();
+			    Entity_Serialize(archive, child);
+			}
+		}
+
+		// Then deserialize root:
 		archive.SetReadModeAndResetPos(true);
-		return Entity_Serialize(archive, entity);
+		Entity root = Entity_Serialize(archive);
+
+		// Deserialize descendants:
+		std::vector<Entity> remapping;
+		remapping.push_back(root);
+		for (size_t i = 0; i < descendants.size() - 1; ++i)
+		{
+		    Entity descendant = Entity_Serialize(archive);
+		    remapping.push_back(descendant);
+		    HierarchyComponent* hier = hierarchy.GetComponent(descendant);
+			if (hier != nullptr)
+			{
+				// remap from old parent to new parent:
+			    size_t remap_idx = descendants[hier->parentID];
+				hier->parentID = remapping[remap_idx];
+			}
+		}
+		return root;
 	}
 	Entity Scene::Entity_CreateMaterial(
 		const std::string& name

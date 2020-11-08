@@ -37,26 +37,15 @@ void TransformWindow::Create(EditorComponent* editor)
 	parentCombo.SetEnabled(false);
 	parentCombo.OnSelect([&](wiEventArgs args) {
 		Scene& scene = wiScene::GetScene();
-		HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
 
-		if (args.iValue == 0 && hier != nullptr)
+		scene.Component_Detach(entity);
+
+		if(args.iValue != 0)
 		{
-			scene.hierarchy.Remove_KeepSorted(entity);
-		}
-		else if(args.iValue != 0)
-		{
-			if (hier == nullptr)
-			{
-				hier = &scene.hierarchy.Create(entity);
-			}
-			hier->parentID = scene.transforms.GetEntity(args.iValue - 1);
-			if (hier->parentID == entity)
-			{
-				scene.hierarchy.Remove_KeepSorted(entity);
-			}
+		    scene.Component_Attach(entity, scene.transforms.GetEntity(args.iValue - 1));
 		}
 
-		});
+	});
 	parentCombo.SetTooltip("Choose a parent entity for the transform");
 	AddWidget(&parentCombo);
 
