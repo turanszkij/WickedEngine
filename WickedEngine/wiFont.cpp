@@ -584,53 +584,52 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 	}
 	volatile FontVertex* textBuffer = (volatile FontVertex*)mem.data;
 	const uint32_t quadCount = WriteVertices(textBuffer, text, newProps);
-	UpdatePendingGlyphs();
 
-	if (quadCount <= 0)
+	if (quadCount > 0)
 	{
-	    return;
-	}
+		device->EventBegin("Font", cmd);
 
-	device->EventBegin("Font", cmd);
+		device->BindPipelineState(&PSO, cmd);
 
-	device->BindPipelineState(&PSO, cmd);
+		device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
+		device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
+		device->BindResource(PS, &texture, TEXSLOT_FONTATLAS, cmd);
+		device->BindSampler(PS, &sampler, SSLOT_ONDEMAND1, cmd);
 
-	device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
-	device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
-	device->BindResource(PS, &texture, TEXSLOT_FONTATLAS, cmd);
-	device->BindSampler(PS, &sampler, SSLOT_ONDEMAND1, cmd);
+		device->BindResource(VS, mem.buffer, 0, cmd);
 
-	device->BindResource(VS, mem.buffer, 0, cmd);
+		FontCB cb;
+		cb.g_xFont_BufferOffset = mem.offset;
 
-	FontCB cb;
-	cb.g_xFont_BufferOffset = mem.offset;
+		XMMATRIX Projection = device->GetScreenProjection();
 
-	XMMATRIX Projection = device->GetScreenProjection();
+		if (newProps.shadowColor.getA() > 0)
+		{
+			// font shadow render:
+			XMStoreFloat4x4(&cb.g_xFont_Transform,
+				XMMatrixTranslation((float)newProps.posX + 1, (float)newProps.posY + 1, 0)
+				* Projection
+			);
+			cb.g_xFont_Color = newProps.shadowColor.toFloat4();
+			device->UpdateBuffer(&constantBuffer, &cb, cmd);
 
-	if (newProps.shadowColor.getA() > 0)
-	{
-		// font shadow render:
+			device->DrawInstanced(4, quadCount, 0, 0, cmd);
+		}
+
+		// font base render:
 		XMStoreFloat4x4(&cb.g_xFont_Transform,
-			XMMatrixTranslation((float)newProps.posX + 1, (float)newProps.posY + 1, 0)
+			XMMatrixTranslation((float)newProps.posX, (float)newProps.posY, 0)
 			* Projection
 		);
-		cb.g_xFont_Color = newProps.shadowColor.toFloat4();
+		cb.g_xFont_Color = newProps.color.toFloat4();
 		device->UpdateBuffer(&constantBuffer, &cb, cmd);
 
 		device->DrawInstanced(4, quadCount, 0, 0, cmd);
+
+		device->EventEnd(cmd);
 	}
 
-	// font base render:
-	XMStoreFloat4x4(&cb.g_xFont_Transform, 
-		XMMatrixTranslation((float)newProps.posX, (float)newProps.posY, 0)
-		* Projection
-	);
-	cb.g_xFont_Color = newProps.color.toFloat4();
-	device->UpdateBuffer(&constantBuffer, &cb, cmd);
-
-	device->DrawInstanced(4, quadCount, 0, 0, cmd);
-
-	device->EventEnd(cmd);
+	UpdatePendingGlyphs();
 }
 
 void Draw(const char* text, const wiFontParams& params, CommandList cmd)
