@@ -163,11 +163,17 @@ void MeshWindow::Create(EditorComponent* editor)
 	impostorCreateButton.SetSize(XMFLOAT2(240, hei));
 	impostorCreateButton.SetPos(XMFLOAT2(x - 50, y += step));
 	impostorCreateButton.OnClick([&](wiEventArgs args) {
-		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
-		if (mesh != nullptr)
+	    Scene& scene = wiScene::GetScene();
+		ImpostorComponent* impostor = scene.impostors.GetComponent(entity);
+	    if (impostor == nullptr)
 		{
-			Scene& scene = wiScene::GetScene();
+		    impostorCreateButton.SetText("Delete Impostor");
 			scene.impostors.Create(entity).swapInDistance = impostorDistanceSlider.GetValue();
+		}
+	    else
+		{
+			impostorCreateButton.SetText("Create Impostor");
+			scene.impostors.Remove(entity);
 		}
 	});
 	AddWidget(&impostorCreateButton);
