@@ -3,7 +3,7 @@
 #ifdef WICKEDENGINE_BUILD_VULKAN
 #pragma comment(lib,"vulkan-1.lib")
 
-#include "Utility/spirv_reflect.hpp"
+#include "Utility/spirv_reflect.h"
 
 #include "wiGraphicsDevice_SharedInternals.h"
 #include "wiHelper.h"
@@ -982,8 +982,6 @@ namespace Vulkan_Internal
 		VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
 		std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
 		std::vector<VkImageViewType> imageViewTypes;
-
-		std::vector<spirv_cross::EntryPoint> entrypoints;
 
 		~Shader_Vulkan()
 		{
@@ -3753,173 +3751,105 @@ using namespace Vulkan_Internal;
 		if (pShader->rootSignature == nullptr)
 		{
 			// Perform shader reflection for shaders that don't specify a root signature:
-			spirv_cross::Compiler comp((uint32_t*)pShader->code.data(), pShader->code.size() / sizeof(uint32_t));
-			auto entrypoints = comp.get_entry_points_and_stages();
-			auto active = comp.get_active_interface_variables();
-			spirv_cross::ShaderResources resources = comp.get_shader_resources(active);
-			comp.set_enabled_interface_variables(move(active));
 
-			internal_state->entrypoints.reserve(entrypoints.size());
-			for (auto& x : entrypoints)
-			{
-				internal_state->entrypoints.push_back(x);
-			}
+			SpvReflectShaderModule module;
+			SpvReflectResult result = spvReflectCreateShaderModule(moduleInfo.codeSize, moduleInfo.pCode, &module);
+			assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+			uint32_t binding_count = 0;
+			result = spvReflectEnumerateEntryPointDescriptorBindings(
+				&module, internal_state->stageInfo.pName, &binding_count, nullptr
+			);
+			assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+			std::vector<SpvReflectDescriptorBinding*> bindings(binding_count);
+			result = spvReflectEnumerateEntryPointDescriptorBindings(
+				&module, internal_state->stageInfo.pName, &binding_count, bindings.data()
+			);
+			assert(result == SPV_REFLECT_RESULT_SUCCESS);
 
 			std::vector<VkDescriptorSetLayoutBinding>& layoutBindings = internal_state->layoutBindings;
 			std::vector<VkImageViewType>& imageViewTypes = internal_state->imageViewTypes;
 
-			for (auto& x : resources.separate_samplers)
+			for (auto& x : bindings)
 			{
-				VkDescriptorSetLayoutBinding layoutBinding = {};
-				layoutBinding.stageFlags = internal_state->stageInfo.stage;
-				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-				layoutBinding.binding = comp.get_decoration(x.id, spv::Decoration::DecorationBinding);
-				layoutBinding.descriptorCount = 1;
-				layoutBindings.push_back(layoutBinding);
 				imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_MAX_ENUM);
-			}
-			for (auto& x : resources.separate_images)
-			{
-				VkDescriptorSetLayoutBinding layoutBinding = {};
-				layoutBinding.stageFlags = internal_state->stageInfo.stage;
-				auto image = comp.get_type_from_variable(x.id).image;
-				switch (image.dim)
+				layoutBindings.emplace_back();
+				layoutBindings.back().stageFlags = internal_state->stageInfo.stage;
+				layoutBindings.back().binding = x->binding;
+				layoutBindings.back().descriptorCount = 1;
+
+				switch (x->descriptor_type)
 				{
-				case spv::Dim1D:
-					layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-					if (image.arrayed)
-					{
-						imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_1D_ARRAY);
-					}
-					else
-					{
-						imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_1D);
-					}
-					break;
-				case spv::Dim2D:
-					layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-					if (image.arrayed)
-					{
-						imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_2D_ARRAY);
-					}
-					else
-					{
-						imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_2D);
-					}
-					break;
-				case spv::Dim3D:
-					layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-					imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_3D);
-					break;
-				case spv::DimCube:
-					layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-					if (image.arrayed)
-					{
-						imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_CUBE_ARRAY);
-					}
-					else
-					{
-						imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_CUBE);
-					}
-					break;
-				case spv::DimBuffer:
-					layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-					imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_MAX_ENUM);
-					break;
 				default:
-					imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_MAX_ENUM);
+				case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER:
+				case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+					layoutBindings.back().descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+					break;
+				case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+				case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+					if (x->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
+					{
+						layoutBindings.back().descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+					}
+					else
+					{
+						layoutBindings.back().descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+					}
+					switch (x->image.dim)
+					{
+					default:
+					case SpvDim1D:
+						if (x->image.arrayed == 0)
+						{
+							imageViewTypes.back() = VK_IMAGE_VIEW_TYPE_1D;
+						}
+						else
+						{
+							imageViewTypes.back() = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
+						}
+						break;
+					case SpvDim2D:
+						if (x->image.arrayed == 0)
+						{
+							imageViewTypes.back() = VK_IMAGE_VIEW_TYPE_2D;
+						}
+						else
+						{
+							imageViewTypes.back() = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+						}
+						break;
+					case SpvDim3D:
+						imageViewTypes.back() = VK_IMAGE_VIEW_TYPE_3D;
+						break;
+					case SpvDimCube:
+						if (x->image.arrayed == 0)
+						{
+							imageViewTypes.back() = VK_IMAGE_VIEW_TYPE_CUBE;
+						}
+						else
+						{
+							imageViewTypes.back() = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+						}
+						break;
+					}
+					break;
+				case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+					layoutBindings.back().descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+					break;
+				case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+					layoutBindings.back().descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+					break;
+				case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+					layoutBindings.back().descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+					break;
+				case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+					layoutBindings.back().descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
 					break;
 				}
-				layoutBinding.binding = comp.get_decoration(x.id, spv::Decoration::DecorationBinding);
-				layoutBinding.descriptorCount = 1;
-				layoutBindings.push_back(layoutBinding);
 			}
-			for (auto& x : resources.storage_images)
-			{
-				VkDescriptorSetLayoutBinding layoutBinding = {};
-				layoutBinding.stageFlags = internal_state->stageInfo.stage;
-				auto image = comp.get_type_from_variable(x.id).image;
-				switch (image.dim)
-				{
-				case spv::Dim1D:
-					layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-					if (image.arrayed)
-					{
-						imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_1D_ARRAY);
-					}
-					else
-					{
-						imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_1D);
-					}
-					break;
-				case spv::Dim2D:
-					layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-					if (image.arrayed)
-					{
-						imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_2D_ARRAY);
-					}
-					else
-					{
-						imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_2D);
-					}
-					break;
-				case spv::Dim3D:
-					layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-					imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_3D);
-					break;
-				case spv::DimCube:
-					layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-					if (image.arrayed)
-					{
-						imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_CUBE_ARRAY);
-					}
-					else
-					{
-						imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_CUBE);
-					}
-					break;
-				case spv::DimBuffer:
-					layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-					imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_MAX_ENUM);
-					break;
-				default:
-					imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_MAX_ENUM);
-					break;
-				}
-				layoutBinding.binding = comp.get_decoration(x.id, spv::Decoration::DecorationBinding);
-				layoutBinding.descriptorCount = 1;
-				layoutBindings.push_back(layoutBinding);
-			}
-			for (auto& x : resources.uniform_buffers)
-			{
-				VkDescriptorSetLayoutBinding layoutBinding = {};
-				layoutBinding.stageFlags = internal_state->stageInfo.stage;
-				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-				layoutBinding.binding = comp.get_decoration(x.id, spv::Decoration::DecorationBinding);
-				layoutBinding.descriptorCount = 1;
-				layoutBindings.push_back(layoutBinding);
-				imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_MAX_ENUM);
-			}
-			for (auto& x : resources.storage_buffers)
-			{
-				VkDescriptorSetLayoutBinding layoutBinding = {};
-				layoutBinding.stageFlags = internal_state->stageInfo.stage;
-				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-				layoutBinding.binding = comp.get_decoration(x.id, spv::Decoration::DecorationBinding);
-				layoutBinding.descriptorCount = 1;
-				layoutBindings.push_back(layoutBinding);
-				imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_MAX_ENUM);
-			}
-			for (auto& x : resources.acceleration_structures)
-			{
-				VkDescriptorSetLayoutBinding layoutBinding = {};
-				layoutBinding.stageFlags = internal_state->stageInfo.stage;
-				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-				layoutBinding.binding = comp.get_decoration(x.id, spv::Decoration::DecorationBinding);
-				layoutBinding.descriptorCount = 1;
-				layoutBindings.push_back(layoutBinding);
-				imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_MAX_ENUM);
-			}
+
+			spvReflectDestroyShaderModule(&module);
 
 			if (stage == CS || stage == SHADERSTAGE_COUNT)
 			{

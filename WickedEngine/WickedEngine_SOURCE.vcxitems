@@ -254,24 +254,10 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXMathCommon.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXPackedVector.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\GLSL.std.450.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\include\spirv\unified1\spirv.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\replace_new.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\sal.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv.hpp" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_cfg.hpp" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_common.hpp" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_cpp.hpp" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_cross.hpp" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_cross_c.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_cross_containers.hpp" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_cross_error_handling.hpp" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_cross_parsed_ir.hpp" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_cross_util.hpp" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_glsl.hpp" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_hlsl.hpp" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_msl.hpp" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_parser.hpp" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_reflect.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_reflect.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image_write.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_truetype.h" />
@@ -529,17 +515,16 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_PathTracing.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\D3D12MemAlloc.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_cfg.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_cpp.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_cross.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_cross_c.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_cross_parsed_ir.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_cross_util.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_glsl.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_hlsl.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_msl.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_parser.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_reflect.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_reflect.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</CompileAsWinRT>
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsWinRT>
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">false</CompileAsWinRT>
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</CompileAsWinRT>
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">false</CompileAsWinRT>
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsWinRT>
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">false</CompileAsWinRT>
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
+    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\stb_vorbis.c">
       <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</CompileAsWinRT>
       <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsWinRT>

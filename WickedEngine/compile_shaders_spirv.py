@@ -58,13 +58,17 @@ for item in root.iter():
             cmd += "_6_5 "
             
             cmd += " -spirv "
-            cmd += " -fspv-target-env=vulkan1.2 "
             cmd += " -fvk-use-dx-layout "
             cmd += " -fvk-use-dx-position-w "
             cmd += " -flegacy-macro-expansion "
             
             if profile == "VS" or profile == "DS" or profile == "GS":
                 cmd += " -fvk-invert-y "
+
+            if profile == "LIB":
+                cmd += " -fspv-target-env=vulkan1.2 "
+            else:
+                cmd += " -fspv-target-env=vulkan1.1 "
 
             #cmd += " -fvk-b-shift 0 all "
             cmd += " -fvk-t-shift 1000 all "
