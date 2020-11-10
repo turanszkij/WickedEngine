@@ -42,7 +42,7 @@ void TransformWindow::Create(EditorComponent* editor)
 
 		if(args.iValue != 0)
 		{
-		    scene.Component_Attach(entity, args.userdata);
+		    scene.Component_Attach(entity, (Entity)args.userdata);
 		}
 
 	});
@@ -244,7 +244,7 @@ void TransformWindow::SetEntity(Entity entity)
 
 			if (hier != nullptr && hier->parentID == entity)
 			{
-				parentCombo.SetSelected(parentCombo.GetItemCount() - 1);
+				parentCombo.SetSelected((int)parentCombo.GetItemCount() - 1);
 			}
 		}
 
