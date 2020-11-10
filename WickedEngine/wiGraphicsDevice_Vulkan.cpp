@@ -3,6 +3,8 @@
 #ifdef WICKEDENGINE_BUILD_VULKAN
 #pragma comment(lib,"vulkan-1.lib")
 
+#include "Utility/spirv_reflect.h"
+
 #include "wiGraphicsDevice_SharedInternals.h"
 #include "wiHelper.h"
 #include "wiBackLog.h"
@@ -17,12 +19,6 @@
 #include <iostream>
 #include <set>
 #include <algorithm>
-
-#if __has_include("vulkan/vulkan.h")
-#include <SPIRV-Reflect/spirv_reflect.c>
-#else
-#error Vulkan SDK 1.2.154.1 or greater required! (Need to have Spirv_reflect library)
-#endif
 
 #ifdef SDL2
 #include <SDL2/SDL_vulkan.h>

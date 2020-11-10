@@ -1125,6 +1125,12 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSDLInput.h">
       <Filter>ENGINE\Input</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_reflect.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\include\spirv\unified1\spirv.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1866,6 +1872,9 @@
       <Filter>ENGINE\Input</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\stb_vorbis.c">
+      <Filter>UTILITY</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_reflect.c">
       <Filter>UTILITY</Filter>
     </ClCompile>
   </ItemGroup>
