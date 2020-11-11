@@ -86,7 +86,7 @@ target_include_directories(WickedEngine PUBLIC
 
 target_link_libraries(WickedEngine PUBLIC
 	Vulkan::Vulkan
-	${SDL2_LIBRARIES}
+	${SDL2_LIBRARIES} SDL2::SDL2
 	Bullet
 	LUA
 	Utility
