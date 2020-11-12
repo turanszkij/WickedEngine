@@ -99,7 +99,7 @@ void main(point InVert p[1], inout TriangleStream<VertextoPixel> triStream)
 		for (float x = -range.x; x <= range.x; x += step.x)
 		{
 			samples += 1.0f;
-			accdepth += texture_depth.SampleLevel(sampler_point_clamp, xSunPos.xy + float2(x, y), 0).r < referenceDepth ? 1 : 0;
+			accdepth += texture_depth.SampleLevel(sampler_point_clamp, xSunPos.xy + float2(x, y), 0).r <= referenceDepth ? 1 : 0;
 		}
 	}
 	accdepth /= samples;
