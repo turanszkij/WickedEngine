@@ -75,7 +75,7 @@ protected:
 	wiGraphics::Texture rtWaterRipple; // water ripple sprite normal maps are rendered into this
 	wiGraphics::Texture rtParticleDistortion; // contains distortive particles
 	wiGraphics::Texture rtParticleDistortion_Resolved; // contains distortive particles
-	wiGraphics::Texture rtVolumetricLights; // contains the volumetric light results
+	wiGraphics::Texture rtVolumetricLights[2]; // contains the volumetric light results
 	wiGraphics::Texture rtTemporalAA[2]; // temporal AA history buffer
 	wiGraphics::Texture rtBloom; // contains the bright parts of the image + mipchain
 	wiGraphics::Texture rtBloom_tmp; // temporary for bloom downsampling

@@ -2,22 +2,14 @@
 #include "cullingShaderHF.hlsli"
 #include "lightingHF.hlsli"
 
+#define entityCount (g_xFrame_LightArrayCount + g_xFrame_DecalArrayCount + g_xFrame_EnvProbeArrayCount)
+
 TEXTURE2D(texture_ao, float, TEXSLOT_RENDERPATH_AO);
 TEXTURE2D(texture_ssr, float4, TEXSLOT_RENDERPATH_SSR);
-
 STRUCTUREDBUFFER(in_Frustums, Frustum, SBSLOT_TILEFRUSTUMS);
 
-#define entityCount xDispatchParams_value0
-
-
 RWSTRUCTUREDBUFFER(EntityTiles_Transparent, uint, 0);
-
-#ifdef DEFERRED
-RWTEXTURE2D(deferred_Diffuse, float4, 1);
-RWTEXTURE2D(deferred_Specular, float4, 2);
-#else
 RWSTRUCTUREDBUFFER(EntityTiles_Opaque, uint, 1);
-#endif
 
 
 #ifdef DEBUG_TILEDLIGHTCULLING
@@ -100,7 +92,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	uint i = 0;
 
 	// Compute addresses and load frustum:
-	const uint flatTileIndex = flatten2D(Gid.xy, xDispatchParams_numThreadGroups.xy);
+	const uint flatTileIndex = flatten2D(Gid.xy, g_xFrame_EntityCullingTileCount.xy);
 	const uint tileBucketsAddress = flatTileIndex * SHADER_ENTITY_TILE_BUCKET_COUNT;
 	const uint bucketIndex = groupIndex;
 	Frustum GroupFrustum = in_Frustums[flatTileIndex];
@@ -315,200 +307,9 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	// Each thread will export one bucket from LDS to global memory:
 	for (i = bucketIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
-#ifndef DEFERRED
 		EntityTiles_Opaque[tileBucketsAddress + i] = tile_opaque[i];
-#endif
 		EntityTiles_Transparent[tileBucketsAddress + i] = tile_transparent[i];
 	}
-
-#ifdef DEFERRED
-	// Do not unroll this loop because compiler will choke on it (force loop by introducing g_xFrame_ConstantOne from constant buffer because fxc doesn't respect [loop]):
-	[loop]
-	for (granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY * g_xFrame_ConstantOne; ++granularity)
-	{
-		// Light the pixels:
-		uint2 pixel = DTid.xy * uint2(TILED_CULLING_GRANULARITY, TILED_CULLING_GRANULARITY) + unflatten2D(granularity, TILED_CULLING_GRANULARITY);
-		if (pixel.x >= (uint)GetInternalResolution().x || pixel.y >= (uint)GetInternalResolution().y)
-			continue;
-
-		float4 g0 = texture_gbuffer0[pixel];
-		float4 g1 = texture_gbuffer1[pixel];
-		float4 g2 = texture_gbuffer2[pixel];
-		float3 ld = deferred_Diffuse[pixel].rgb;
-		float3 ls = deferred_Specular[pixel].rgb;
-		float3 N = decodeNormal(g1.xy);
-		float2 ScreenCoord = (pixel + 0.5f) * g_xFrame_InternalResolution_rcp;
-		float3 P = reconstructPosition(ScreenCoord, depth[granularity]);
-		float3 V = normalize(g_xCamera_CamPos - P);
-		Surface surface = CreateSurface(P, N, V, float4(g0.rgb, 1), g2.r, g2.g, g2.b, g2.a);
-		Lighting lighting = CreateLighting(0, ls, ld, 0);
-
-#ifndef DISABLE_ENVMAPS
-		// Apply environment maps:
-		float4 envmapAccumulation = 0;
-		const float envMapMIP = surface.roughness * g_xFrame_EnvProbeMipCount;
-
-#ifndef DISABLE_LOCALENVPMAPS
-		[branch]
-		if (g_xFrame_EnvProbeArrayCount > 0)
-		{
-			// Loop through envprobe buckets in the tile:
-			const uint first_item = g_xFrame_EnvProbeArrayOffset;
-			const uint last_item = first_item + g_xFrame_EnvProbeArrayCount - 1;
-			const uint first_bucket = first_item / 32;
-			const uint last_bucket = min(last_item / 32, max(0, SHADER_ENTITY_TILE_BUCKET_COUNT - 1));
-			[loop]
-			for (uint bucket = first_bucket; bucket <= last_bucket; ++bucket)
-			{
-				uint bucket_bits = tile_opaque[bucket];
-
-				[loop]
-				while (bucket_bits != 0)
-				{
-					// Retrieve global entity index from local bucket, then remove bit from local bucket:
-					const uint bucket_bit_index = firstbitlow(bucket_bits);
-					const uint entity_index = bucket * 32 + bucket_bit_index;
-					bucket_bits ^= 1 << bucket_bit_index;
-
-					[branch]
-					if (entity_index >= first_item && entity_index <= last_item && envmapAccumulation.a < 1)
-					{
-						ShaderEntity probe = EntityArray[entity_index];
-
-						const float4x4 probeProjection = MatrixArray[probe.userdata];
-						const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
-						const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
-						[branch]
-						if (is_saturated(uvw))
-						{
-							const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos, envMapMIP);
-							// perform manual blending of probes:
-							//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-							envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
-							envmapAccumulation.a = envmapColor.a + (1 - envmapColor.a) * envmapAccumulation.a;
-							[branch]
-							if (envmapAccumulation.a >= 1.0)
-							{
-								// force exit:
-								bucket = SHADER_ENTITY_TILE_BUCKET_COUNT;
-								break;
-							}
-						}
-					}
-					else if (entity_index > last_item)
-					{
-						// force exit:
-						bucket = SHADER_ENTITY_TILE_BUCKET_COUNT;
-						break;
-					}
-
-				}
-			}
-		}
-#endif // DISABLE_LOCALENVPMAPS
-
-		// Apply global envmap where there is no local envmap information:
-		[branch]
-		if (envmapAccumulation.a < 0.99f)
-		{
-			envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
-		}
-		lighting.indirect.specular += max(0, envmapAccumulation.rgb);
-#endif // DISABLE_ENVMAPS
-
-#ifndef DISABLE_VOXELGI
-		VoxelGI(surface, lighting);
-#endif //DISABLE_VOXELGI
-
-		[branch]
-		if (g_xFrame_LightArrayCount > 0)
-		{
-			// Loop through light buckets in the tile:
-			const uint first_item = g_xFrame_LightArrayOffset;
-			const uint last_item = first_item + g_xFrame_LightArrayCount - 1;
-			const uint first_bucket = first_item / 32;
-			const uint last_bucket = min(last_item / 32, max(0, SHADER_ENTITY_TILE_BUCKET_COUNT - 1));
-			[loop]
-			for (uint bucket = first_bucket; bucket <= last_bucket; ++bucket)
-			{
-				uint bucket_bits = tile_opaque[bucket];
-
-				[loop]
-				while (bucket_bits != 0)
-				{
-					// Retrieve global entity index from local bucket, then remove bit from local bucket:
-					const uint bucket_bit_index = firstbitlow(bucket_bits);
-					const uint entity_index = bucket * 32 + bucket_bit_index;
-					bucket_bits ^= 1 << bucket_bit_index;
-
-					[branch]
-					if (entity_index >= first_item && entity_index <= last_item)
-					{
-						ShaderEntity light = EntityArray[entity_index];
-
-						switch (light.GetType())
-						{
-						case ENTITY_TYPE_DIRECTIONALLIGHT:
-						{
-							DirectionalLight(light, surface, lighting);
-						}
-						break;
-						case ENTITY_TYPE_POINTLIGHT:
-						{
-							PointLight(light, surface, lighting);
-						}
-						break;
-						case ENTITY_TYPE_SPOTLIGHT:
-						{
-							SpotLight(light, surface, lighting);
-						}
-						break;
-						case ENTITY_TYPE_SPHERELIGHT:
-						{
-							SphereLight(light, surface, lighting);
-						}
-						break;
-						case ENTITY_TYPE_DISCLIGHT:
-						{
-							DiscLight(light, surface, lighting);
-						}
-						break;
-						case ENTITY_TYPE_RECTANGLELIGHT:
-						{
-							RectangleLight(light, surface, lighting);
-						}
-						break;
-						case ENTITY_TYPE_TUBELIGHT:
-						{
-							TubeLight(light, surface, lighting);
-						}
-						break;
-						}
-					}
-					else if (entity_index > last_item)
-					{
-						// force exit:
-						bucket = SHADER_ENTITY_TILE_BUCKET_COUNT;
-						break;
-					}
-
-				}
-			}
-		}
-
-		float2 velocity = g1.zw;
-		float2 ReprojectedScreenCoord = ScreenCoord + velocity;
-		float4 ssr = texture_ssr.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
-		lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb, ssr.a);
-
-		float ssao = texture_ao.SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
-		surface.occlusion *= ssao;
-
-		LightingPart combined_lighting = CombineLighting(surface, lighting);
-		deferred_Diffuse[pixel] = float4(combined_lighting.diffuse, 1);
-		deferred_Specular[pixel] = float4(combined_lighting.specular, 1);
-	}
-#endif // DEFERRED
 
 #ifdef DEBUG_TILEDLIGHTCULLING
 	for (granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY; ++granularity)

@@ -360,13 +360,5 @@ CBUFFER(TessellationCB, CBSLOT_RENDERER_TESSELLATION)
 	float4 g_f4TessFactors;
 };
 
-CBUFFER(DispatchParamsCB, CBSLOT_RENDERER_DISPATCHPARAMS)
-{
-	uint3	xDispatchParams_numThreadGroups;
-	uint	xDispatchParams_value0;
-	uint3	xDispatchParams_numThreads;
-	uint	xDispatchParams_value1;
-};
-
 
 #endif // WI_SHADERINTEROP_RENDERER_H

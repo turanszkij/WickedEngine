@@ -1906,10 +1906,6 @@ void LoadBuffers()
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_TESSELLATION]);
 	device->SetName(&constantBuffers[CBTYPE_TESSELLATION], "TessellationCB");
 
-	bd.ByteWidth = sizeof(DispatchParamsCB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_DISPATCHPARAMS]);
-	device->SetName(&constantBuffers[CBTYPE_DISPATCHPARAMS], "DispatchParamsCB");
-
 	bd.ByteWidth = sizeof(RaytracingCB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_RAYTRACE]);
 	device->SetName(&constantBuffers[CBTYPE_RAYTRACE], "RayTraceCB");
@@ -7412,17 +7408,12 @@ void ComputeTiledLightCulling(
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 		device->BindComputeShader(&shaders[CSTYPE_TILEFRUSTUMS], cmd);
 
-		DispatchParamsCB dispatchParams;
-		dispatchParams.xDispatchParams_numThreads.x = tileCount.x;
-		dispatchParams.xDispatchParams_numThreads.y = tileCount.y;
-		dispatchParams.xDispatchParams_numThreads.z = 1;
-		dispatchParams.xDispatchParams_numThreadGroups.x = (dispatchParams.xDispatchParams_numThreads.x + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE;
-		dispatchParams.xDispatchParams_numThreadGroups.y = (dispatchParams.xDispatchParams_numThreads.y + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE;
-		dispatchParams.xDispatchParams_numThreadGroups.z = 1;
-		device->UpdateBuffer(&constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, cmd);
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), cmd);
-
-		device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, cmd);
+		device->Dispatch(
+			(tileCount.x + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
+			(tileCount.y + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
+			1,
+			cmd
+		);
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 
 		GPUBarrier barriers[] = {
@@ -7468,18 +7459,6 @@ void ComputeTiledLightCulling(
 
 		const FrameCulling& frameCulling = frameCullings.at(&GetCamera());
 
-
-		DispatchParamsCB dispatchParams;
-		dispatchParams.xDispatchParams_numThreadGroups.x = tileCount.x;
-		dispatchParams.xDispatchParams_numThreadGroups.y = tileCount.y;
-		dispatchParams.xDispatchParams_numThreadGroups.z = 1;
-		dispatchParams.xDispatchParams_numThreads.x = dispatchParams.xDispatchParams_numThreadGroups.x * TILED_CULLING_BLOCKSIZE;
-		dispatchParams.xDispatchParams_numThreads.y = dispatchParams.xDispatchParams_numThreadGroups.y * TILED_CULLING_BLOCKSIZE;
-		dispatchParams.xDispatchParams_numThreads.z = 1;
-		dispatchParams.xDispatchParams_value0 = (uint32_t)(frameCulling.culledLights.size() + frameCulling.culledEnvProbes.size() + frameCulling.culledDecals.size());
-		device->UpdateBuffer(&constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, cmd);
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), cmd);
-
 		BindConstantBuffers(CS, cmd);
 
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
@@ -7490,7 +7469,7 @@ void ComputeTiledLightCulling(
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
-		device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, cmd);
+		device->Dispatch(tileCount.x, tileCount.y, 1, cmd);
 		
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(),

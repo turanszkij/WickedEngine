@@ -151,11 +151,13 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.Format = FORMAT_R16G16B16A16_FLOAT;
-		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Width = wiRenderer::GetInternalResolution().x / 4;
 		desc.Height = wiRenderer::GetInternalResolution().y / 4;
-		device->CreateTexture(&desc, nullptr, &rtVolumetricLights);
-		device->SetName(&rtVolumetricLights, "rtVolumetricLights");
+		device->CreateTexture(&desc, nullptr, &rtVolumetricLights[0]);
+		device->SetName(&rtVolumetricLights[0], "rtVolumetricLights[0]");
+		device->CreateTexture(&desc, nullptr, &rtVolumetricLights[1]);
+		device->SetName(&rtVolumetricLights[1], "rtVolumetricLights[1]");
 	}
 	{
 		TextureDesc desc;
@@ -583,7 +585,7 @@ void RenderPath3D::ResizeBuffers()
 	}
 	{
 		RenderPassDesc desc;
-		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtVolumetricLights, RenderPassAttachment::LOADOP_CLEAR));
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtVolumetricLights[0], RenderPassAttachment::LOADOP_CLEAR));
 
 		device->CreateRenderPass(&desc, &renderpass_volumetriclight);
 	}
@@ -1108,18 +1110,30 @@ void RenderPath3D::RenderVolumetrics(CommandList cmd) const
 {
 	if (getVolumeLightsEnabled() && wiRenderer::IsRequestedVolumetricLightRendering())
 	{
+		auto range = wiProfiler::BeginRangeGPU("Volumetric Lights", cmd);
+
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		device->RenderPassBegin(&renderpass_volumetriclight, cmd);
 
 		Viewport vp;
-		vp.Width = (float)rtVolumetricLights.GetDesc().Width;
-		vp.Height = (float)rtVolumetricLights.GetDesc().Height;
+		vp.Width = (float)rtVolumetricLights[0].GetDesc().Width;
+		vp.Height = (float)rtVolumetricLights[0].GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
 
 		wiRenderer::DrawVolumeLights(wiRenderer::GetCamera(), depthBuffer_Copy, cmd);
 
 		device->RenderPassEnd(cmd);
+
+		wiRenderer::Postprocess_Blur_Bilateral(
+			rtVolumetricLights[0],
+			rtLinearDepth,
+			rtVolumetricLights[1],
+			rtVolumetricLights[0],
+			cmd
+		);
+
+		wiProfiler::EndRange(range);
 	}
 }
 void RenderPath3D::RenderSceneMIPChain(CommandList cmd) const
@@ -1209,7 +1223,7 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 	if (getVolumeLightsEnabled() && wiRenderer::IsRequestedVolumetricLightRendering())
 	{
 		device->EventBegin("Contribute Volumetric Lights", cmd);
-		wiRenderer::Postprocess_Upsample_Bilateral(rtVolumetricLights, rtLinearDepth, 
+		wiRenderer::Postprocess_Upsample_Bilateral(rtVolumetricLights[0], rtLinearDepth, 
 			*renderpass_transparent.desc.attachments[0].texture, cmd, true, 1.5f);
 		device->EventEnd(cmd);
 	}

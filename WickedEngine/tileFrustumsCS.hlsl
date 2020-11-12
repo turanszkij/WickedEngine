@@ -42,8 +42,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	frustum.planes[3] = ComputePlane(viewSpace[3], eyePos, viewSpace[2]);
 
 	// Store the computed frustum in global memory (if our thread ID is in bounds of the grid).
-	if (DTid.x < xDispatchParams_numThreads.x && DTid.y < xDispatchParams_numThreads.y)
+	if (DTid.x < g_xFrame_EntityCullingTileCount.x && DTid.y < g_xFrame_EntityCullingTileCount.y)
 	{
-		out_Frustums[flatten2D(DTid.xy, xDispatchParams_numThreads.xy)] = frustum;
+		out_Frustums[flatten2D(DTid.xy, g_xFrame_EntityCullingTileCount.xy)] = frustum;
 	}
 }

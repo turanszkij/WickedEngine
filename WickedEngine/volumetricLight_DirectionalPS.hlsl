@@ -26,8 +26,11 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 	float3 rayEnd = g_xCamera_CamPos;
 
-	const uint sampleCount = 128;
+	const uint sampleCount = 16;
 	const float stepSize = length(P - rayEnd) / sampleCount;
+
+	// dither ray start to help with undersampling:
+	P = P + V * stepSize * dither(input.pos.xy);
 
 	// Perform ray marching to integrate light volume along view ray:
 	[loop]
