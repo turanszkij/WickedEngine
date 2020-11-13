@@ -323,6 +323,7 @@ function(Generate_Shaders SHADERS_SRC_LIST SHADER_TYPE)
                 -spirv
 #                -O1
                 -fvk-use-dx-layout
+                -fvk-use-dx-position-w
                 -flegacy-macro-expansion
                 -Fo ${SPIRV_OUTPUT}
                 -fspv-target-env="${VK_VERSION}"
