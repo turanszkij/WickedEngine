@@ -304,6 +304,11 @@ function(Generate_Shaders SHADERS_SRC_LIST SHADER_TYPE)
         if (${SHADER_TYPE} STREQUAL vs OR ${SHADER_TYPE} STREQUAL ds OR ${SHADER_TYPE} STREQUAL gs)
             set(INVERT_Y TRUE)
         endif()
+        if(${SHADER_TYPE} STREQUAL lib)
+		    set(VK_VERSION "vulkan1.2")
+        else()
+		    set(VK_VERSION "vulkan1.1")
+        endif()
         set(SPIRV_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/${OUTPUT_DIR}/${FILE_NAME}.cso")
         set(SPIRV_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/../${Shader}")
         add_custom_command(
@@ -320,11 +325,7 @@ function(Generate_Shaders SHADERS_SRC_LIST SHADER_TYPE)
                 -fvk-use-dx-layout
                 -flegacy-macro-expansion
                 -Fo ${SPIRV_OUTPUT}
-				if(${SHADER_TYPE} STREQUAL lib)
-                    -fspv-target-env=vulkan1.2
-				else()
-                    -fspv-target-env=vulkan1.1
-				endif()
+                -fspv-target-env="${VK_VERSION}"
                 -fvk-t-shift 1000 all
                 -fvk-u-shift 2000 all
                 -fvk-s-shift 3000 all
