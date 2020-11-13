@@ -320,7 +320,11 @@ function(Generate_Shaders SHADERS_SRC_LIST SHADER_TYPE)
                 -fvk-use-dx-layout
                 -flegacy-macro-expansion
                 -Fo ${SPIRV_OUTPUT}
-                -fspv-target-env=vulkan1.2
+				if(${SHADER_TYPE} STREQUAL lib)
+                    -fspv-target-env=vulkan1.2
+				else()
+                    -fspv-target-env=vulkan1.1
+				endif()
                 -fvk-t-shift 1000 all
                 -fvk-u-shift 2000 all
                 -fvk-s-shift 3000 all
