@@ -316,17 +316,18 @@ function(Generate_Shaders SHADERS_SRC_LIST SHADER_TYPE)
                 -T "${SHADER_TYPE}_6_5"
                 -I "${CMAKE_CURRENT_SOURCE_DIR}/../"
                 -D SPIRV
+                $<$<BOOL:${INVERT_Y}>:-fvk-invert-y>
                 -spirv
                 #-O1
                 -fvk-use-dx-layout
                 -fvk-use-dx-position-w
                 -flegacy-macro-expansion
+                -Fo ${SPIRV_OUTPUT}
                 -fspv-target-env=${VK_VERSION}
                 -fvk-t-shift 1000 all
                 -fvk-u-shift 2000 all
                 -fvk-s-shift 3000 all
                 #-fspv-extension=KHR
-                -Fo ${SPIRV_OUTPUT}
                 )
 
         # Determine include dependencies (recursively)
@@ -361,7 +362,6 @@ function(Generate_Shaders SHADERS_SRC_LIST SHADER_TYPE)
                 OUTPUT ${SPIRV_OUTPUT}
                 COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/spirv/"
                 COMMAND ${COMMAND_PARAMS}
-                    $<$<BOOL:${INVERT_Y}>:-fvk-invert-y>
                 DEPENDS ${SPIRV_SOURCE} ${INCLUDE_DEPENDENCIES}
         )
         list(APPEND SPIRV_BINARY_FILES ${SPIRV_OUTPUT})
