@@ -27,18 +27,6 @@ void wiSprite::Draw(CommandList cmd) const
 		return;
 	wiImage::Draw(textureResource != nullptr ? textureResource->texture : wiTextureHelper::getWhite(), params, cmd);
 }
-void wiSprite::DrawNormal(CommandList cmd) const
-{
-	if (IsHidden())
-		return;
-	if (params.opacity > 0 && ((params.blendFlag == BLENDMODE_ADDITIVE && params.fade < 1) || params.blendFlag != BLENDMODE_ADDITIVE))
-	{
-		wiImageParams effectsMod(params);
-		effectsMod.blendFlag = BLENDMODE_ADDITIVE;
-		effectsMod.enableExtractNormalMap();
-		wiImage::Draw(textureResource != nullptr ? textureResource->texture : wiTextureHelper::getWhite(), effectsMod, cmd);
-	}
-}
 
 void wiSprite::FixedUpdate()
 {

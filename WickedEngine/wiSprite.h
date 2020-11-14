@@ -27,7 +27,6 @@ public:
 	virtual void FixedUpdate();
 	virtual void Update(float dt);
 	virtual void Draw(wiGraphics::CommandList cmd) const;
-	void DrawNormal(wiGraphics::CommandList cmd) const;
 
 	constexpr void SetHidden(bool value = true) { if (value) { _flags |= HIDDEN; } else { _flags &= ~HIDDEN; } }
 	constexpr bool IsHidden() const { return _flags & HIDDEN; }

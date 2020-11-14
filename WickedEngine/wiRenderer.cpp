@@ -4499,6 +4499,8 @@ void EndFrame()
 void PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
 {
 	wiSprite img(image);
+	img.params.enableExtractNormalMap();
+	img.params.blendFlag = BLENDMODE_ADDITIVE;
 	img.anim.fad = 0.01f;
 	img.anim.scaleX = 0.2f;
 	img.anim.scaleY = 0.2f;
@@ -4526,7 +4528,7 @@ void DrawWaterRipples(CommandList cmd)
 	device->EventBegin("Water Ripples", cmd);
 	for(auto& x : waterRipples)
 	{
-		x.DrawNormal(cmd);
+		x.Draw(cmd);
 	}
 	device->EventEnd(cmd);
 }
