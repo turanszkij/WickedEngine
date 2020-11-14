@@ -14,9 +14,12 @@ struct RenderItem2D
 	{
 		SPRITE,
 		FONT,
-	} type;
-	wiSprite* sprite = nullptr;
-	wiSpriteFont* font = nullptr;
+	} type = SPRITE;
+	union
+	{
+		wiSprite* sprite = nullptr;
+		wiSpriteFont* font;
+	};
 	int order = 0;
 };
 struct RenderLayer2D

@@ -6,15 +6,19 @@ using namespace wiGraphics;
 
 void wiSpriteFont::FixedUpdate()
 {
-
+	if (IsDisableUpdate())
+		return;
 }
 void wiSpriteFont::Update(float dt)
 {
-
+	if (IsDisableUpdate())
+		return;
 }
 
 void wiSpriteFont::Draw(CommandList cmd) const
 {
+	if (IsHidden())
+		return;
 	wiFont::Draw(text, params, cmd);
 }
 

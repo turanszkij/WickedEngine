@@ -149,9 +149,21 @@ void RenderPath2D::Update(float dt)
 	{
 		for (auto& y : x.items)
 		{
-			if (y.sprite != nullptr)
+			switch (y.type)
 			{
-				y.sprite->Update(dt);
+			default:
+			case RenderItem2D::SPRITE:
+				if (y.sprite != nullptr)
+				{
+					y.sprite->Update(dt);
+				}
+				break;
+			case RenderItem2D::FONT:
+				if (y.font != nullptr)
+				{
+					y.font->Update(dt);
+				}
+				break;
 			}
 		}
 	}
@@ -164,9 +176,21 @@ void RenderPath2D::FixedUpdate()
 	{
 		for (auto& y : x.items)
 		{
-			if (y.sprite != nullptr)
+			switch (y.type)
 			{
-				y.sprite->FixedUpdate();
+			default:
+			case RenderItem2D::SPRITE:
+				if (y.sprite != nullptr)
+				{
+					y.sprite->FixedUpdate();
+				}
+				break;
+			case RenderItem2D::FONT:
+				if (y.font != nullptr)
+				{
+					y.font->FixedUpdate();
+				}
+				break;
 			}
 		}
 	}
@@ -198,7 +222,9 @@ void RenderPath2D::Render() const
 		{
 			for (auto& y : x.items)
 			{
-				if (y.sprite != nullptr && y.sprite->params.stencilComp != STENCILMODE_DISABLED)
+				if (y.type == RenderItem2D::SPRITE &&
+					y.sprite != nullptr &&
+					y.sprite->params.stencilComp != STENCILMODE_DISABLED)
 				{
 					y.sprite->Draw(cmd);
 				}
@@ -240,7 +266,9 @@ void RenderPath2D::Render() const
 			{
 				for (auto& y : x.items)
 				{
-					if (y.sprite != nullptr && y.sprite->params.stencilComp != STENCILMODE_DISABLED)
+					if (y.type == RenderItem2D::SPRITE &&
+						y.sprite != nullptr &&
+						y.sprite->params.stencilComp != STENCILMODE_DISABLED)
 					{
 						y.sprite->Draw(cmd);
 					}
@@ -255,13 +283,21 @@ void RenderPath2D::Render() const
 	{
 		for (auto& y : x.items)
 		{
-			if (y.sprite != nullptr && y.sprite->params.stencilComp == STENCILMODE_DISABLED)
+			switch (y.type)
 			{
-				y.sprite->Draw(cmd);
-			}
-			if (y.font != nullptr)
-			{
-				y.font->Draw(cmd);
+			default:
+			case RenderItem2D::SPRITE:
+				if (y.sprite != nullptr && y.sprite->params.stencilComp == STENCILMODE_DISABLED)
+				{
+					y.sprite->Draw(cmd);
+				}
+				break;
+			case RenderItem2D::FONT:
+				if (y.font != nullptr)
+				{
+					y.font->Draw(cmd);
+				}
+				break;
 			}
 		}
 	}
@@ -304,7 +340,7 @@ void RenderPath2D::RemoveSprite(wiSprite* sprite)
 	{
 		for (auto& y : x.items)
 		{
-			if (y.sprite == sprite)
+			if (y.type == RenderItem2D::SPRITE && y.sprite == sprite)
 			{
 				y.sprite = nullptr;
 			}
@@ -318,7 +354,10 @@ void RenderPath2D::ClearSprites()
 	{
 		for (auto& y : x.items)
 		{
-			y.sprite = nullptr;
+			if (y.type == RenderItem2D::SPRITE)
+			{
+				y.sprite = nullptr;
+			}
 		}
 	}
 	CleanLayers();
@@ -357,7 +396,7 @@ void RenderPath2D::RemoveFont(wiSpriteFont* font)
 	{
 		for (auto& y : x.items)
 		{
-			if (y.font == font)
+			if (y.type == RenderItem2D::FONT && y.font == font)
 			{
 				y.font = nullptr;
 			}
@@ -371,7 +410,10 @@ void RenderPath2D::ClearFonts()
 	{
 		for (auto& y : x.items)
 		{
-			y.font = nullptr;
+			if (y.type == RenderItem2D::FONT)
+			{
+				y.font = nullptr;
+			}
 		}
 	}
 	CleanLayers();

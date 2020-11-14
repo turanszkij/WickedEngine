@@ -23,10 +23,14 @@ wiSprite::wiSprite(const std::string& newTexture, const std::string& newMask)
 
 void wiSprite::Draw(CommandList cmd) const
 {
+	if (IsHidden())
+		return;
 	wiImage::Draw(textureResource != nullptr ? textureResource->texture : wiTextureHelper::getWhite(), params, cmd);
 }
 void wiSprite::DrawNormal(CommandList cmd) const
 {
+	if (IsHidden())
+		return;
 	if (params.opacity > 0 && ((params.blendFlag == BLENDMODE_ADDITIVE && params.fade < 1) || params.blendFlag != BLENDMODE_ADDITIVE))
 	{
 		wiImageParams effectsMod(params);
@@ -38,11 +42,14 @@ void wiSprite::DrawNormal(CommandList cmd) const
 
 void wiSprite::FixedUpdate()
 {
-
+	if (IsDisableUpdate())
+		return;
 }
 
 void wiSprite::Update(float dt)
 {
+	if (IsDisableUpdate())
+		return;
 	params.pos.x += anim.vel.x*dt;
 	params.pos.y += anim.vel.y*dt;
 	params.pos.z += anim.vel.z*dt;
