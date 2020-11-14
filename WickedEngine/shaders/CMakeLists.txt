@@ -300,7 +300,7 @@ SET(SPIRV_BINARY_FILES)
 function(Generate_Shaders SHADERS_SRC_LIST SHADER_TYPE)
     foreach (Shader IN LISTS ${SHADERS_SRC_LIST})
         get_filename_component(FILE_NAME ${Shader} NAME_WLE)
-        message(STATUS "SHADER ${SHADER_TYPE} ${FILE_NAME}")
+        message(STATUS "CALCULATING DEPENDENCIES FOR SHADER ${SHADER_TYPE} ${FILE_NAME}")
         if (${SHADER_TYPE} STREQUAL vs OR ${SHADER_TYPE} STREQUAL ds OR ${SHADER_TYPE} STREQUAL gs)
             set(INVERT_Y TRUE)
         endif()
@@ -311,27 +311,58 @@ function(Generate_Shaders SHADERS_SRC_LIST SHADER_TYPE)
         endif()
         set(SPIRV_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/${OUTPUT_DIR}/${FILE_NAME}.cso")
         set(SPIRV_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/../${Shader}")
-        add_custom_command(
-                OUTPUT ${SPIRV_OUTPUT}
-                COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/spirv/"
-                COMMAND "dxc"
+        set(COMMAND_PARAMS "dxc"
                 "${SPIRV_SOURCE}"
                 -T "${SHADER_TYPE}_6_5"
                 -I "${CMAKE_CURRENT_SOURCE_DIR}/../"
                 -D SPIRV
-                $<$<BOOL:${INVERT_Y}>:-fvk-invert-y>
                 -spirv
-#                -O1
+                #-O1
                 -fvk-use-dx-layout
                 -fvk-use-dx-position-w
                 -flegacy-macro-expansion
-                -Fo ${SPIRV_OUTPUT}
-                -fspv-target-env="${VK_VERSION}"
+                -fspv-target-env=${VK_VERSION}
                 -fvk-t-shift 1000 all
                 -fvk-u-shift 2000 all
                 -fvk-s-shift 3000 all
-#                -fspv-extension=KHR
-                DEPENDS ${SPIRV_SOURCE}
+                #-fspv-extension=KHR
+                -Fo ${SPIRV_OUTPUT}
+                )
+
+        # Determine include dependencies (recursively)
+        #
+        # This works by compiling the shader with the option -Vi,
+        # which seems to print all inclusion operations done during compilation.
+        # The process is quite slow, it would be nice to have a dedicated option
+        # in dxc to do this properly, like the -MM option in gcc/clang.
+        execute_process(COMMAND ${COMMAND_PARAMS} -Vi
+                ERROR_VARIABLE INCLUDE_DEPENDENCIES
+                OUTPUT_VARIABLE CMD_OUT
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_STRIP_TRAILING_WHITESPACE)
+        if(INCLUDE_DEPENDENCIES)
+            string(REPLACE "\n" ";" INCLUDE_DEPENDENCIES ${INCLUDE_DEPENDENCIES}) # transform lines in cmake list
+            list(FILTER INCLUDE_DEPENDENCIES INCLUDE REGEX "Opening file") # remove non dependencies lines
+            list(LENGTH INCLUDE_DEPENDENCIES INCLUDE_DEPENDENCIES_LENGTH)
+            if(${INCLUDE_DEPENDENCIES_LENGTH} GREATER 0)
+                #filter out [inplace] filename from program output
+                list(TRANSFORM INCLUDE_DEPENDENCIES
+                        REPLACE "Opening file \\[(.+)\\], stack top.*"
+                                "\\1")
+            endif()
+        endif()
+
+        #DEBUG PRINT
+#        foreach(ELEM ${INCLUDE_DEPENDENCIES})
+#            message(${ELEM})
+#        endforeach()
+
+        add_custom_command(
+                OUTPUT ${SPIRV_OUTPUT}
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/spirv/"
+                COMMAND ${COMMAND_PARAMS}
+                    $<$<BOOL:${INVERT_Y}>:-fvk-invert-y>
+                DEPENDS ${SPIRV_SOURCE} ${INCLUDE_DEPENDENCIES}
         )
         list(APPEND SPIRV_BINARY_FILES ${SPIRV_OUTPUT})
     endforeach()
