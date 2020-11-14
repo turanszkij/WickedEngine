@@ -8,5 +8,5 @@ void main(VertexToPixel input)
 	clip(dither(input.pos.xy + GetTemporalAASampleRotation()) - input.fade);
 
 	float4 color = texture_color.Sample(sampler_linear_clamp,input.tex);
-	ALPHATEST(color.a)
+	clip(color.a - 0.5f);
 }

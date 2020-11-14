@@ -1890,10 +1890,6 @@ void LoadBuffers()
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_MISC]);
 	device->SetName(&constantBuffers[CBTYPE_MISC], "MiscCB");
 
-	bd.ByteWidth = sizeof(APICB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_API]);
-	device->SetName(&constantBuffers[CBTYPE_API], "APICB");
-
 	bd.ByteWidth = sizeof(VolumeLightCB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_VOLUMELIGHT]);
 	device->SetName(&constantBuffers[CBTYPE_VOLUMELIGHT], "VolumelightCB");
@@ -2722,7 +2718,6 @@ void BindConstantBuffers(SHADERSTAGE stage, CommandList cmd)
 {
 	device->BindConstantBuffer(stage, &constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), cmd);
 	device->BindConstantBuffer(stage, &constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), cmd);
-	device->BindConstantBuffer(stage, &constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), cmd);
 }
 void BindShadowmaps(SHADERSTAGE stage, CommandList cmd)
 {
@@ -3089,8 +3084,6 @@ void RenderMeshes(
 				}
 				boundVBType_Prev = boundVBType;
 
-				SetAlphaRef(material.alphaRef, cmd);
-
 				STENCILREF engineStencilRef = material.engineStencilRef;
 				uint8_t userStencilRef = userStencilRefOverride > 0 ? userStencilRefOverride : material.userStencilRef;
 				uint32_t stencilRef = CombineStencilrefs(engineStencilRef, userStencilRef);
@@ -3214,8 +3207,6 @@ void RenderMeshes(
 			}
 		}
 
-		ResetAlphaRef(cmd);
-
 		GetRenderFrameAllocator(cmd).free(sizeof(InstancedBatch) * instancedBatchCount);
 
 		device->EventEnd(cmd);
@@ -3284,7 +3275,6 @@ void RenderImpostors(
 
 		device->BindStencilRef(STENCILREF_DEFAULT, cmd);
 		device->BindPipelineState(impostorRequest, cmd);
-		SetAlphaRef(0.75f, cmd);
 
 		MiscCB cb;
 		cb.g_xColor.x = (float)instances.offset;
@@ -8631,8 +8621,6 @@ const Texture* GetGlobalLightmap()
 
 void BindCommonResources(CommandList cmd)
 {
-	ResetAlphaRef(cmd);
-
 	for (int i = 0; i < SHADERSTAGE_COUNT; ++i)
 	{
 		SHADERSTAGE stage = (SHADERSTAGE)i;
@@ -8830,6 +8818,7 @@ void UpdateCameraCB(const CameraComponent& camera, CommandList cmd)
 	cb.g_xCamera_ZFarP_rcp = 1.0f / std::max(0.0001f, cb.g_xCamera_ZFarP);
 	cb.g_xCamera_ZRange = abs(cb.g_xCamera_ZFarP - cb.g_xCamera_ZNearP);
 	cb.g_xCamera_ZRange_rcp = 1.0f / std::max(0.0001f, cb.g_xCamera_ZRange);
+	cb.g_xCamera_ClipPlane = camera.clipPlane;
 
 	static_assert(arraysize(camera.frustum.planes) == arraysize(cb.g_xCamera_FrustumPlanes), "Mismatch!");
 	for (int i = 0; i < arraysize(camera.frustum.planes); ++i)
@@ -8838,21 +8827,6 @@ void UpdateCameraCB(const CameraComponent& camera, CommandList cmd)
 	}
 
 	device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
-}
-
-APICB apiCB[COMMANDLIST_COUNT];
-void SetClipPlane(const XMFLOAT4& clipPlane, CommandList cmd)
-{
-	apiCB[cmd].g_xClipPlane = clipPlane;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_API], &apiCB[cmd], cmd);
-}
-void SetAlphaRef(float alphaRef, CommandList cmd)
-{
-	if (alphaRef != apiCB[cmd].g_xAlphaRef)
-	{
-		apiCB[cmd].g_xAlphaRef = 1 - alphaRef + 1.0f / 256.0f; // 256 so that it is just about smaller than 1 unorm unit (1.0/255.0)
-		device->UpdateBuffer(&constantBuffers[CBTYPE_API], &apiCB[cmd], cmd);
-	}
 }
 
 const Texture* ComputeLuminance(const Texture& sourceImage, CommandList cmd)

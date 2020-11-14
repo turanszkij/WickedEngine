@@ -877,24 +877,10 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 		vp.Height = (float)depthBuffer_Reflection.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
 
-		// reverse clipping if underwater
-		XMFLOAT4 water = wiRenderer::GetWaterPlane();
-		float d = XMVectorGetX(XMPlaneDotCoord(XMLoadFloat4(&water), wiRenderer::GetCamera().GetEye()));
-		if (d < 0)
-		{
-			water.x *= -1;
-			water.y *= -1;
-			water.z *= -1;
-		}
-
-		wiRenderer::SetClipPlane(water, cmd);
-
 		device->RenderPassBegin(&renderpass_reflection, cmd);
 
 		wiRenderer::DrawScene(wiRenderer::GetRefCamera(), RENDERPASS_TEXTURE, cmd);
 		wiRenderer::DrawSky(cmd);
-
-		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), cmd);
 
 		device->RenderPassEnd(cmd);
 	}

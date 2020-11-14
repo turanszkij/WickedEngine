@@ -25,7 +25,11 @@ float4 main(VertextoPixel input) : SV_TARGET
 		color = 1;
 	}
 	color *= input.color;
-	ALPHATEST(color.a);
+
+#ifndef DISABLE_ALPHATEST
+	clip(color.a - g_xMaterial.alphaTest);
+#endif // DISABLE_ALPHATEST
+
 	float opacity = color.a;
 
 	color.rgb *= 1 - opacity;

@@ -7,8 +7,7 @@
 // Common buffers:
 // These are usable by all shaders
 #define CBSLOT_RENDERER_FRAME					0
-#define CBSLOT_RENDERER_CAMERA					2
-#define CBSLOT_API								3
+#define CBSLOT_RENDERER_CAMERA					1
 
 
 

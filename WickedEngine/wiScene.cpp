@@ -289,6 +289,7 @@ namespace wiScene
 		dest->uvset_displacementMap = displacementMap == nullptr ? -1 : (int)uvset_displacementMap;
 		dest->uvset_emissiveMap = emissiveMap == nullptr ? -1 : (int)uvset_emissiveMap;
 		dest->uvset_occlusionMap = occlusionMap == nullptr ? -1 : (int)uvset_occlusionMap;
+		dest->alphaTest = 1 - alphaRef + 1.0f / 256.0f; // 256 so that it is just about smaller than 1 unorm unit (1.0/255.0)
 		dest->options = 0;
 		if (IsUsingVertexColors())
 		{
@@ -1296,6 +1297,17 @@ namespace wiScene
 		XMVECTOR _At = XMLoadFloat3(&At);
 		XMVECTOR _Up = XMLoadFloat3(&Up);
 		XMMATRIX _Ref = XMMatrixReflect(XMLoadFloat4(&plane));
+
+		// reverse clipping if behind clip plane ("if underwater")
+		clipPlane = plane;
+		float d = XMVectorGetX(XMPlaneDotCoord(XMLoadFloat4(&clipPlane), _Eye));
+		if (d < 0)
+		{
+			clipPlane.x *= -1;
+			clipPlane.y *= -1;
+			clipPlane.z *= -1;
+			clipPlane.w *= -1;
+		}
 
 		_Eye = XMVector3Transform(_Eye, _Ref);
 		_At = XMVector3TransformNormal(_At, _Ref);

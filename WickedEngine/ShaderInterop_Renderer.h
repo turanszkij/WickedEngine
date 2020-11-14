@@ -22,7 +22,7 @@ struct ShaderMaterial
 
 	float		normalMapStrength;
 	float		parallaxOcclusionMapping;
-	float		padding0;
+	float		alphaTest;
 	float		padding1;
 
 	float		displacementMapping;
@@ -257,15 +257,11 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 {
 	float4x4	g_xCamera_VP;			// View*Projection
-	float4x4	g_xCamera_View;
-	float4x4	g_xCamera_Proj;
+
+	float4		g_xCamera_ClipPlane;
 
 	float3		g_xCamera_CamPos;
 	float		g_xCamera_DistanceFromOrigin;
-
-	float4x4	g_xCamera_InvV;			// Inverse View
-	float4x4	g_xCamera_InvP;			// Inverse Projection
-	float4x4	g_xCamera_InvVP;		// Inverse View-Projection
 
 	float3		g_xCamera_At;
 	float		g_xCamera_ZNearP;
@@ -278,14 +274,13 @@ CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 	float		g_xCamera_ZRange;
 	float		g_xCamera_ZRange_rcp;
 
-	float4		g_xCamera_FrustumPlanes[6];
-};
+	float4x4	g_xCamera_View;
+	float4x4	g_xCamera_Proj;
+	float4x4	g_xCamera_InvV;			// Inverse View
+	float4x4	g_xCamera_InvP;			// Inverse Projection
+	float4x4	g_xCamera_InvVP;		// Inverse View-Projection
 
-CBUFFER(APICB, CBSLOT_API)
-{
-	float4		g_xClipPlane;
-	float3		g_xPadding0_APICB;
-	float		g_xAlphaRef;
+	float4		g_xCamera_FrustumPlanes[6];
 };
 
 

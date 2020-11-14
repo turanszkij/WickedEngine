@@ -15,7 +15,7 @@ PixelInputType main(Input_Object_ALL input)
 	surface.normal = normalize(mul((float3x3)WORLD, surface.normal));
 	surface.tangent.xyz = normalize(mul((float3x3)WORLD, surface.tangent.xyz));
 
-	Out.clip = dot(surface.position, g_xClipPlane);
+	Out.clip = dot(surface.position, g_xCamera_ClipPlane);
 
 	Out.pos = mul(g_xCamera_VP, surface.position);
 	Out.pos2DPrev = mul(g_xFrame_MainCamera_PrevVP, surface.prevPos);

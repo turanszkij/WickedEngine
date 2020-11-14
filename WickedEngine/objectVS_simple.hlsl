@@ -9,7 +9,7 @@ PixelInputType_Simple main(Input_Object_POS_TEX input)
 
 	surface.position = mul(WORLD, surface.position);
 
-	Out.clip = dot(surface.position, g_xClipPlane);
+	Out.clip = dot(surface.position, g_xCamera_ClipPlane);
 
 	Out.pos = mul(g_xCamera_VP, surface.position);
 	Out.color = surface.color;

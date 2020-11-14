@@ -71,12 +71,7 @@ namespace wiRenderer
 	void UpdateFrameCB(wiGraphics::CommandList cmd);
 	// Updates the per camera constant buffer need to call for each different camera that is used when calling DrawScene() and the like
 	void UpdateCameraCB(const wiScene::CameraComponent& camera, wiGraphics::CommandList cmd);
-	// Set a global clipping plane state that is available to use in any shader (access as float4 g_xClipPlane)
-	void SetClipPlane(const XMFLOAT4& clipPlane, wiGraphics::CommandList cmd);
-	// Set a global alpha reference value that can be used by any shaders to perform alpha-testing (access as float g_xAlphaRef)
-	void SetAlphaRef(float alphaRef, wiGraphics::CommandList cmd);
-	// Resets the global shader alpha reference value to float g_xAlphaRef = 0.75f
-	inline void ResetAlphaRef(wiGraphics::CommandList cmd) { SetAlphaRef(0.75f, cmd); }
+
 
 	enum DRAWSCENE_FLAGS
 	{

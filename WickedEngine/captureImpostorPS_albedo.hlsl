@@ -15,7 +15,7 @@ float4 main(PixelInputType input) : SV_Target0
 		color = 1;
 	}
 	color *= input.color;
-	ALPHATEST(color.a);
+	clip(color.a - 0.5);
 	color.a = 1;
 
 	return color;

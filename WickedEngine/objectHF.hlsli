@@ -768,7 +768,10 @@ GBUFFEROutputType main(PIXELINPUT input)
 		color = 1;
 	}
 	color *= input.color;
-	ALPHATEST(color.a);
+
+#ifndef DISABLE_ALPHATEST
+	clip(color.a - g_xMaterial.alphaTest);
+#endif // DISABLE_ALPHATEST
 
 #ifndef SIMPLE_INPUT
 	float3 bumpColor = 0;

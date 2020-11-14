@@ -830,6 +830,7 @@ namespace wiScene
 		Frustum frustum;
 		XMFLOAT4X4 InvView, InvProjection, InvVP;
 		XMFLOAT2 jitter;
+		XMFLOAT4 clipPlane = XMFLOAT4(0, 0, 0, 0); // deafult: no clip plane
 
 		void CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV = XM_PI / 3.0f);
 		void UpdateCamera();

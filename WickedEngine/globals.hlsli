@@ -47,12 +47,6 @@ inline bool is_saturated(float2 a) { return is_saturated(a.x) && is_saturated(a.
 inline bool is_saturated(float3 a) { return is_saturated(a.x) && is_saturated(a.y) && is_saturated(a.z); }
 inline bool is_saturated(float4 a) { return is_saturated(a.x) && is_saturated(a.y) && is_saturated(a.z) && is_saturated(a.w); }
 
-#ifdef DISABLE_ALPHATEST
-#define ALPHATEST(x)
-#else
-#define ALPHATEST(x)	clip((x) - g_xAlphaRef);
-#endif
-
 #define DEGAMMA_SKY(x)	pow(abs(x),g_xFrame_StaticSkyGamma)
 #define DEGAMMA(x)		pow(abs(x),g_xFrame_Gamma)
 #define GAMMA(x)		pow(abs(x),1.0/g_xFrame_Gamma)
