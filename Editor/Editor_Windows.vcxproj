@@ -124,6 +124,9 @@
       <ShaderModel>5.0</ShaderModel>
       <ObjectFileOutput>shaders/%(Filename).cso</ObjectFileOutput>
     </FxCompile>
+    <PostBuildEvent>
+      <Command>xcopy $(SolutionDir)WickedEngine\dxcompiler.dll $(OutDir) /c /y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -150,6 +153,9 @@
       <ShaderModel>5.0</ShaderModel>
       <ObjectFileOutput>shaders/%(Filename).cso</ObjectFileOutput>
     </FxCompile>
+    <PostBuildEvent>
+      <Command>xcopy $(SolutionDir)WickedEngine\dxcompiler.dll $(OutDir) /c /y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -180,6 +186,9 @@
       <ShaderModel>5.0</ShaderModel>
       <ObjectFileOutput>shaders/%(Filename).cso</ObjectFileOutput>
     </FxCompile>
+    <PostBuildEvent>
+      <Command>xcopy $(SolutionDir)WickedEngine\dxcompiler.dll $(OutDir) /c /y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -206,6 +215,9 @@
       <ShaderModel>5.0</ShaderModel>
       <ObjectFileOutput>shaders/%(Filename).cso</ObjectFileOutput>
     </FxCompile>
+    <PostBuildEvent>
+      <Command>xcopy $(SolutionDir)WickedEngine\dxcompiler.dll $(OutDir) /c /y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="main_Windows.h" />
