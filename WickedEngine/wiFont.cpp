@@ -77,7 +77,6 @@ namespace wiFont_Internal
 		vector<uint8_t> fontBuffer;
 		stbtt_fontinfo fontInfo;
 		int ascent, descent, lineGap;
-		float fontScaling;
 		void Create(const string& newName)
 		{
 			name = newName;
@@ -106,6 +105,9 @@ namespace wiFont_Internal
 	template<typename T>
 	uint32_t WriteVertices(volatile FontVertex* vertexList, const T* text, wiFontParams params)
 	{
+		const wiFontStyle& fontStyle = fontStyles[params.style];
+		const float fontScale = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, (float)params.size);
+
 		uint32_t quadCount = 0;
 		float line = 0;
 		float pos = 0;
@@ -133,7 +135,8 @@ namespace wiFont_Internal
 		size_t i = 0;
 		while(text[i] != 0)
 		{
-			int code = (int)text[i++];
+			T character = text[i++];
+			int code = (int)character;
 			const int32_t hash = glyphhash(code, params.style, params.size);
 
 			if (glyph_lookup.count(hash) == 0)
@@ -184,9 +187,8 @@ namespace wiFont_Internal
 
 				if (code_prev != 0)
 				{
-					const wiFontStyle& style = fontStyles[params.style];
-					int kern = stbtt_GetCodepointKernAdvance(&style.fontInfo, code_prev, code);
-					pos += kern * style.fontScaling;
+					int kern = stbtt_GetCodepointKernAdvance(&fontStyle.fontInfo, code_prev, code);
+					pos += kern * fontScale;
 				}
 				code_prev = code;
 
@@ -353,18 +355,17 @@ void UpdatePendingGlyphs()
 		// Pad the glyph rects in the atlas to avoid bleeding from nearby texels:
 		const int borderPadding = 1;
 
-		// Font resolution is DPI upscaled:
-		const float dpiscaling = wiPlatform::GetDPIScaling();
+		// Font resolution is upscaled to make it sharper:
+		const float upscaling = std::max(2.0f, wiPlatform::GetDPIScaling());
 
 		for (int32_t hash : pendingGlyphs)
 		{
 			const int code = codefromhash(hash);
 			const int style = stylefromhash(hash);
-			const float height = (float)heightfromhash(hash) * dpiscaling;
+			const float height = (float)heightfromhash(hash) * upscaling;
 			wiFontStyle& fontStyle = fontStyles[style];
 
 			float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, height);
-			fontStyle.fontScaling = fontScaling / dpiscaling;
 
 			// get bounding box for character (may be offset to account for chars that dip above or below the line
 			int left, top, right, bottom;
@@ -378,10 +379,10 @@ void UpdatePendingGlyphs()
 			glyph.height = float(bottom - top);
 
 			// Remove dpi upscaling:
-			glyph.x = glyph.x / dpiscaling;
-			glyph.y = glyph.y / dpiscaling;
-			glyph.width = glyph.width / dpiscaling;
-			glyph.height = glyph.height / dpiscaling;
+			glyph.x = glyph.x / upscaling;
+			glyph.y = glyph.y / upscaling;
+			glyph.width = glyph.width / upscaling;
+			glyph.height = glyph.height / upscaling;
 
 			// Add padding to the rectangle that will be packed in the atlas:
 			right += borderPadding * 2;
@@ -420,8 +421,8 @@ void UpdatePendingGlyphs()
 				const int32_t hash = it.first;
 				const wchar_t code = codefromhash(hash);
 				const int style = stylefromhash(hash);
-				const float height = (float)heightfromhash(hash) * dpiscaling;
-				wiFontStyle& fontStyle = fontStyles[style];
+				const float height = (float)heightfromhash(hash) * upscaling;
+				const wiFontStyle& fontStyle = fontStyles[style];
 				rect_xywh& rect = it.second;
 				Glyph& glyph = glyph_lookup[hash];
 
