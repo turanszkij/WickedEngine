@@ -1758,7 +1758,7 @@ using namespace DX12_Internal;
 				rs.DepthClipEnable = pRasterizerStateDesc.DepthClipEnable;
 				rs.MultisampleEnable = pRasterizerStateDesc.MultisampleEnable;
 				rs.AntialiasedLineEnable = pRasterizerStateDesc.AntialiasedLineEnable;
-				rs.ConservativeRaster = ((CONSERVATIVE_RASTERIZATION && pRasterizerStateDesc.ConservativeRasterizationEnable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+				rs.ConservativeRaster = ((CheckCapability(GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION) && pRasterizerStateDesc.ConservativeRasterizationEnable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
 				rs.ForcedSampleCount = pRasterizerStateDesc.ForcedSampleCount;
 				stream.RS = rs;
 
@@ -2005,7 +2005,7 @@ using namespace DX12_Internal;
 	// Engine functions
 	GraphicsDevice_DX12::GraphicsDevice_DX12(wiPlatform::window_type window, bool fullscreen, bool debuglayer)
 	{
-		DESCRIPTOR_MANAGEMENT = true;
+		capabilities |= GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT;
 		SHADER_IDENTIFIER_SIZE = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
 
@@ -2013,7 +2013,7 @@ using namespace DX12_Internal;
 		FULLSCREEN = fullscreen;
 
 #ifndef PLATFORM_UWP
-		RECT rect = RECT();
+		RECT rect;
 		GetClientRect(window, &rect);
 		RESOLUTIONWIDTH = rect.right - rect.left;
 		RESOLUTIONHEIGHT = rect.bottom - rect.top;
@@ -2189,37 +2189,61 @@ using namespace DX12_Internal;
 
 		// Query features:
 
-		TESSELLATION = true;
+		capabilities |= GRAPHICSDEVICE_CAPABILITY_TESSELLATION;
 
 		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &features_0, sizeof(features_0));
-		CONSERVATIVE_RASTERIZATION = features_0.ConservativeRasterizationTier >= D3D12_CONSERVATIVE_RASTERIZATION_TIER_1;
-		RASTERIZER_ORDERED_VIEWS = features_0.ROVsSupported == TRUE;
-		RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS = features_0.VPAndRTArrayIndexFromAnyShaderFeedingRasterizerSupportedWithoutGSEmulation == TRUE;
+		if (features_0.ConservativeRasterizationTier >= D3D12_CONSERVATIVE_RASTERIZATION_TIER_1)
+		{
+			capabilities |= GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION;
+		}
+		if (features_0.ROVsSupported == TRUE)
+		{
+			capabilities |= GRAPHICSDEVICE_CAPABILITY_RASTERIZER_ORDERED_VIEWS;
+		}
+		if (features_0.VPAndRTArrayIndexFromAnyShaderFeedingRasterizerSupportedWithoutGSEmulation == TRUE)
+		{
+			capabilities |= GRAPHICSDEVICE_CAPABILITY_RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS;
+		}
 
 		if (features_0.TypedUAVLoadAdditionalFormats)
 		{
 			// More info about UAV format load support: https://docs.microsoft.com/en-us/windows/win32/direct3d12/typed-unordered-access-view-loads
-			UAV_LOAD_FORMAT_COMMON = true;
+			capabilities |= GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_COMMON;
 
 			D3D12_FEATURE_DATA_FORMAT_SUPPORT FormatSupport = { DXGI_FORMAT_R11G11B10_FLOAT, D3D12_FORMAT_SUPPORT1_NONE, D3D12_FORMAT_SUPPORT2_NONE };
 			hr = device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &FormatSupport, sizeof(FormatSupport));
 			if (SUCCEEDED(hr) && (FormatSupport.Support2 & D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD) != 0)
 			{
-				UAV_LOAD_FORMAT_R11G11B10_FLOAT = true;
+				capabilities |= GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT;
 			}
 		}
 
 		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &features_5, sizeof(features_5));
-		RAYTRACING = features_5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0;
-		RAYTRACING_INLINE = features_5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1;
+		if (features_5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0)
+		{
+			capabilities |= GRAPHICSDEVICE_CAPABILITY_RAYTRACING;
+			if (features_5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1)
+			{
+				capabilities |= GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE;
+			}
+		}
 
 		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &features_6, sizeof(features_6));
-		VARIABLE_RATE_SHADING = features_6.VariableShadingRateTier >= D3D12_VARIABLE_SHADING_RATE_TIER_1;
-		VARIABLE_RATE_SHADING_TIER2 = features_6.VariableShadingRateTier >= D3D12_VARIABLE_SHADING_RATE_TIER_2;
-		VARIABLE_RATE_SHADING_TILE_SIZE = features_6.ShadingRateImageTileSize;
+		if (features_6.VariableShadingRateTier >= D3D12_VARIABLE_SHADING_RATE_TIER_1)
+		{
+			capabilities |= GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING;
+			if (features_6.VariableShadingRateTier >= D3D12_VARIABLE_SHADING_RATE_TIER_2)
+			{
+				capabilities |= GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2;
+				VARIABLE_RATE_SHADING_TILE_SIZE = features_6.ShadingRateImageTileSize;
+			}
+		}
 
 		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &features_7, sizeof(features_7));
-		MESH_SHADER = features_7.MeshShaderTier >= D3D12_MESH_SHADER_TIER_1;
+		if (features_7.MeshShaderTier >= D3D12_MESH_SHADER_TIER_1)
+		{
+			capabilities |= GRAPHICSDEVICE_CAPABILITY_MESH_SHADER;
+		}
 		
 		// Create common indirect command signatures:
 
@@ -2252,7 +2276,7 @@ using namespace DX12_Internal;
 		hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&drawIndexedInstancedIndirectCommandSignature));
 		assert(SUCCEEDED(hr));
 
-		if (MESH_SHADER)
+		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
 		{
 			D3D12_INDIRECT_ARGUMENT_DESC dispatchMeshArgs[1];
 			dispatchMeshArgs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
@@ -4708,7 +4732,7 @@ using namespace DX12_Internal;
 		prev_shadingrate[cmd] = D3D12_SHADING_RATE_1X1;
 		dirty_pso[cmd] = false;
 
-		if (VARIABLE_RATE_SHADING)
+		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING))
 		{
 			D3D12_SHADING_RATE_COMBINER combiners[] =
 			{
@@ -5129,7 +5153,7 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::BindVertexBuffers(const GPUBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd)
 	{
 		assert(count <= 8);
-		D3D12_VERTEX_BUFFER_VIEW res[8] = { 0 };
+		D3D12_VERTEX_BUFFER_VIEW res[8] = {};
 		for (uint32_t i = 0; i < count; ++i)
 		{
 			if (vertexBuffers[i] != nullptr)
@@ -5173,7 +5197,7 @@ using namespace DX12_Internal;
 		D3D12_SHADING_RATE _rate = D3D12_SHADING_RATE_1X1;
 		WriteShadingRateValue(rate, &_rate);
 
-		if (VARIABLE_RATE_SHADING && prev_shadingrate[cmd] != _rate)
+		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING) && prev_shadingrate[cmd] != _rate)
 		{
 			prev_shadingrate[cmd] = _rate;
 			// Combiners are set to MAX by default in BeginCommandList
@@ -5182,7 +5206,7 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::BindShadingRateImage(const Texture* texture, CommandList cmd)
 	{
-		if (VARIABLE_RATE_SHADING_TIER2)
+		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
 		{
 			if (texture == nullptr)
 			{

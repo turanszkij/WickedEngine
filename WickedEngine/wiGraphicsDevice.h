@@ -20,18 +20,7 @@ namespace wiGraphics
 		bool FULLSCREEN = false;
 		FORMAT BACKBUFFER_FORMAT = FORMAT_R10G10B10A2_UNORM;
 		static const uint32_t BACKBUFFER_COUNT = 2;
-		bool TESSELLATION = false;
-		bool CONSERVATIVE_RASTERIZATION = false;
-		bool RASTERIZER_ORDERED_VIEWS = false;
-		bool UAV_LOAD_FORMAT_COMMON = false;
-		bool UAV_LOAD_FORMAT_R11G11B10_FLOAT = false;
-		bool RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS = false;
-		bool RAYTRACING = false;
-		bool RAYTRACING_INLINE = false;
-		bool DESCRIPTOR_MANAGEMENT = false;
-		bool VARIABLE_RATE_SHADING = false;
-		bool VARIABLE_RATE_SHADING_TIER2 = false;
-		bool MESH_SHADER = false;
+		uint32_t capabilities = 0;
 		size_t SHADER_IDENTIFIER_SIZE = 0;
 		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
 		uint32_t VARIABLE_RATE_SHADING_TILE_SIZE = 0;
@@ -97,7 +86,7 @@ namespace wiGraphics
 
 		virtual Texture GetBackBuffer() = 0;
 
-		bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const;
+		inline bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const { return capabilities & capability; }
 
 		uint32_t GetFormatStride(FORMAT value) const;
 		bool IsFormatUnorm(FORMAT value) const;
