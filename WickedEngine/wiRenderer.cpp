@@ -2159,7 +2159,8 @@ void SetUpStates()
 	rs.DepthClipEnable = true;
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
-	rs.ConservativeRasterizationEnable = false; // do it in the shader for now...
+	rs.ConservativeRasterizationEnable = false;
+	rs.ForcedSampleCount = 8;
 	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_VOXELIZE]);
 
 
