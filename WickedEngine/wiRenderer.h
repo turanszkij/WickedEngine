@@ -89,6 +89,11 @@ namespace wiRenderer
 		std::atomic<uint32_t> light_counter;
 		std::atomic<uint32_t> decal_counter;
 
+		wiSpinLock locker;
+		bool request_reflections = false;
+		float closestRefPlane = FLT_MAX;
+		XMFLOAT4 reflectionPlane = XMFLOAT4(0, 0, 0, 0);
+
 		void Clear()
 		{
 			visibleObjects.clear();
@@ -101,6 +106,9 @@ namespace wiRenderer
 			object_counter.store(0);
 			light_counter.store(0);
 			decal_counter.store(0);
+
+			closestRefPlane = FLT_MAX;
+			request_reflections = false;
 		}
 	};
 
@@ -565,9 +573,7 @@ namespace wiRenderer
 	int GetVoxelRadianceNumCones();
 	float GetVoxelRadianceRayStepSize();
 	void SetVoxelRadianceRayStepSize(float value);
-	bool IsRequestedReflectionRendering();
 	bool IsRequestedVolumetricLightRendering();
-	const XMFLOAT4& GetWaterPlane();
 	void SetGameSpeed(float value);
 	float GetGameSpeed();
 	void OceanRegenerate(const wiScene::WeatherComponent& weather); // regeenrates ocean if it is already created

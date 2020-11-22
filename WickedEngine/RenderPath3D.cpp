@@ -883,7 +883,7 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 {
 	auto range = wiProfiler::BeginRangeGPU("Reflection rendering", cmd);
 
-	if (wiRenderer::IsRequestedReflectionRendering())
+	if (visibility_main.request_reflections)
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 

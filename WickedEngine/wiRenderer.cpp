@@ -92,7 +92,6 @@ bool debugForceFields = false;
 bool debugCameras = false;
 bool gridHelper = false;
 bool voxelHelper = false;
-bool requestReflectionRendering = false;
 bool requestVolumetricLightRendering = false;
 bool advancedLightCulling = true;
 bool variableRateShadingClassification = false;
@@ -3248,10 +3247,6 @@ void UpdateVisibility(const Scene& scene, Visibility& vis, uint32_t layerMask)
 {
 	// Perform parallel frustum culling and obtain closest reflector:
 	wiJobSystem::context ctx;
-	wiSpinLock locker;
-	float closestRefPlane = FLT_MAX;
-	requestReflectionRendering = false;
-	requestVolumetricLightRendering = false;
 	auto range = wiProfiler::BeginRangeCPU("Frustum Culling");
 
 	// The parallel frustum culling is first performed in shared memory, 
@@ -3297,27 +3292,26 @@ void UpdateVisibility(const Scene& scene, Visibility& vis, uint32_t layerMask)
 				// Local stream compaction:
 				group_list[group_count++] = args.jobIndex;
 
-				// Main camera can request reflection rendering:
 				if (vis.flags & Visibility::ALLOW_REQUEST_REFLECTION)
 				{
 					const ObjectComponent& object = scene.objects[args.jobIndex];
 					if (object.IsRequestPlanarReflection())
 					{
 						float dist = wiMath::DistanceEstimated(vis.camera.Eye, object.center);
-						locker.lock();
-						if (dist < closestRefPlane)
+						vis.locker.lock();
+						if (dist < vis.closestRefPlane)
 						{
-							closestRefPlane = dist;
+							vis.closestRefPlane = dist;
 							const TransformComponent& transform = scene.transforms[object.transform_index];
 							XMVECTOR P = transform.GetPositionV();
 							XMVECTOR N = XMVectorSet(0, 1, 0, 0);
 							N = XMVector3TransformNormal(N, XMLoadFloat4x4(&transform.world));
 							XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
-							XMStoreFloat4(&waterPlane, _refPlane);
+							XMStoreFloat4(&vis.reflectionPlane, _refPlane);
 
-							requestReflectionRendering = true;
+							vis.request_reflections = true;
 						}
-						locker.unlock();
+						vis.locker.unlock();
 					}
 				}
 			}
@@ -3488,6 +3482,14 @@ void UpdateVisibility(const Scene& scene, Visibility& vis, uint32_t layerMask)
 	vis.visibleLights.resize((size_t)vis.light_counter.load());
 	vis.visibleDecals.resize((size_t)vis.decal_counter.load());
 
+	if ((vis.flags & Visibility::ALLOW_REQUEST_REFLECTION) && scene.weather.IsOceanEnabled())
+	{
+		// Ocean will override any current reflectors
+		vis.request_reflections = true;
+		XMVECTOR _refPlane = XMPlaneFromPointNormal(XMVectorSet(0, scene.weather.oceanParameters.waterHeight, 0, 0), XMVectorSet(0, 1, 0, 0));
+		XMStoreFloat4(&vis.reflectionPlane, _refPlane);
+	}
+
 	wiProfiler::EndRange(range); // Frustum Culling
 }
 void UpdatePerFrameData(Scene& scene, const Visibility& vis, float dt)
@@ -3527,7 +3529,9 @@ void UpdatePerFrameData(Scene& scene, const Visibility& vis, float dt)
 
 	GetCamera().UpdateCamera();
 	GetRefCamera() = GetCamera();
-	GetRefCamera().Reflect(waterPlane);
+	GetRefCamera().Reflect(vis.reflectionPlane);
+
+	waterPlane = vis.reflectionPlane;
 
 	// Need to swap prev and current vertex buffers for any dynamic meshes BEFORE render threads are kicked 
 	//	and also create skinning bone buffers:
@@ -3714,13 +3718,8 @@ void UpdatePerFrameData(Scene& scene, const Visibility& vis, float dt)
 			});
 	}
 
-	// Ocean will override any current reflectors
 	if (scene.weather.IsOceanEnabled())
 	{
-		requestReflectionRendering = true; 
-		XMVECTOR _refPlane = XMPlaneFromPointNormal(XMVectorSet(0, scene.weather.oceanParameters.waterHeight, 0, 0), XMVectorSet(0, 1, 0, 0));
-		XMStoreFloat4(&waterPlane, _refPlane);
-
 		if (ocean == nullptr)
 		{
 			ocean = std::make_unique<wiOcean>(scene.weather);
@@ -12277,11 +12276,6 @@ void Postprocess_Denoise(
 	device->EventEnd(cmd);
 }
 
-const XMFLOAT4& GetWaterPlane()
-{
-	return waterPlane;
-}
-
 
 RAY GetPickRay(long cursorX, long cursorY) 
 {
@@ -12452,7 +12446,6 @@ void SetVoxelRadianceNumCones(int value) { voxelSceneData.numCones = value; }
 int GetVoxelRadianceNumCones() { return voxelSceneData.numCones; }
 float GetVoxelRadianceRayStepSize() { return voxelSceneData.rayStepSize; }
 void SetVoxelRadianceRayStepSize(float value) { voxelSceneData.rayStepSize = value; }
-bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
 bool IsRequestedVolumetricLightRendering() { return requestVolumetricLightRendering; }
 void SetGameSpeed(float value) { GameSpeed = std::max(0.0f, value); }
 float GetGameSpeed() { return GameSpeed; }
