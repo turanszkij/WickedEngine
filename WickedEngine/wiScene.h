@@ -176,6 +176,8 @@ namespace wiScene
 		uint32_t uvset_emissiveMap = 0;
 		uint32_t uvset_occlusionMap = 0;
 
+		int customShaderID = -1;
+
 		// Non-serialized attributes:
 		std::shared_ptr<wiResource> baseColorMap;
 		std::shared_ptr<wiResource> surfaceMap;
@@ -184,8 +186,6 @@ namespace wiScene
 		std::shared_ptr<wiResource> emissiveMap;
 		std::shared_ptr<wiResource> occlusionMap;
 		wiGraphics::GPUBuffer constantBuffer;
-
-		int customShaderID = -1; // for now, this is not serialized; need to consider actual proper use case first
 
 		// User stencil value can be in range [0, 15]
 		inline void SetUserStencilRef(uint8_t value)
