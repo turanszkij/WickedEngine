@@ -90,7 +90,7 @@ namespace wiRenderer
 		std::atomic<uint32_t> decal_counter;
 
 		wiSpinLock locker;
-		bool request_reflections = false;
+		bool planar_reflections_visible = false;
 		float closestRefPlane = FLT_MAX;
 		XMFLOAT4 reflectionPlane = XMFLOAT4(0, 0, 0, 0);
 
@@ -108,7 +108,7 @@ namespace wiRenderer
 			decal_counter.store(0);
 
 			closestRefPlane = FLT_MAX;
-			request_reflections = false;
+			planar_reflections_visible = false;
 		}
 	};
 

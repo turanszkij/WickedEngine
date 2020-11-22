@@ -3311,7 +3311,7 @@ void UpdateVisibility(const Scene& scene, Visibility& vis, uint32_t layerMask)
 							XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
 							XMStoreFloat4(&vis.reflectionPlane, _refPlane);
 
-							vis.request_reflections = true;
+							vis.planar_reflections_visible = true;
 						}
 						vis.locker.unlock();
 					}
@@ -3487,7 +3487,7 @@ void UpdateVisibility(const Scene& scene, Visibility& vis, uint32_t layerMask)
 	if ((vis.flags & Visibility::ALLOW_REQUEST_REFLECTION) && scene.weather.IsOceanEnabled())
 	{
 		// Ocean will override any current reflectors
-		vis.request_reflections = true;
+		vis.planar_reflections_visible = true;
 		XMVECTOR _refPlane = XMPlaneFromPointNormal(XMVectorSet(0, scene.weather.oceanParameters.waterHeight, 0, 0), XMVectorSet(0, 1, 0, 0));
 		XMStoreFloat4(&vis.reflectionPlane, _refPlane);
 	}

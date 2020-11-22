@@ -627,17 +627,22 @@ void RenderPath3D::Update(float dt)
 	wiScene::Scene& scene = wiScene::GetScene();
 	scene.Update(dt * wiRenderer::GetGameSpeed());
 
+	// Frusutm culling for main camera:
 	visibility_main.camera = wiRenderer::GetCamera();
 	visibility_main.flags |= wiRenderer::Visibility::ALLOW_REQUEST_REFLECTION;
 	wiRenderer::UpdateVisibility(scene, visibility_main, getLayerMask());
 
-	visibility_reflection.camera = wiRenderer::GetRefCamera();
-	visibility_reflection.flags |= wiRenderer::Visibility::DISABLE_LIGHTS;
-	visibility_reflection.flags |= wiRenderer::Visibility::DISABLE_DECALS;
-	visibility_reflection.flags |= wiRenderer::Visibility::DISABLE_ENVPROBES;
-	visibility_reflection.flags |= wiRenderer::Visibility::DISABLE_EMITTERS;
-	visibility_reflection.flags |= wiRenderer::Visibility::DISABLE_HAIRS;
-	wiRenderer::UpdateVisibility(scene, visibility_reflection, getLayerMask());
+	if (visibility_main.planar_reflections_visible)
+	{
+		// Frustum culling for planar reflections:
+		visibility_reflection.camera = wiRenderer::GetRefCamera();
+		visibility_reflection.flags |= wiRenderer::Visibility::DISABLE_LIGHTS;
+		visibility_reflection.flags |= wiRenderer::Visibility::DISABLE_DECALS;
+		visibility_reflection.flags |= wiRenderer::Visibility::DISABLE_ENVPROBES;
+		visibility_reflection.flags |= wiRenderer::Visibility::DISABLE_EMITTERS;
+		visibility_reflection.flags |= wiRenderer::Visibility::DISABLE_HAIRS;
+		wiRenderer::UpdateVisibility(scene, visibility_reflection, getLayerMask());
+	}
 
 	wiRenderer::OcclusionCulling_Read(scene, visibility_main);
 	wiRenderer::UpdatePerFrameData(scene, visibility_main, dt);
@@ -883,7 +888,7 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 {
 	auto range = wiProfiler::BeginRangeGPU("Reflection rendering", cmd);
 
-	if (visibility_main.request_reflections)
+	if (visibility_main.planar_reflections_visible)
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
