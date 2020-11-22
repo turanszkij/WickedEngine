@@ -4708,7 +4708,6 @@ void DrawLensFlares(
 	if (IsWireRender())
 		return;
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
 	device->EventBegin("Lens Flares", cmd);
 
 	device->BindResource(GS, &depthbuffer, TEXSLOT_DEPTH, cmd);
@@ -8849,8 +8848,6 @@ void DeferredComposition(
 	CommandList cmd
 )
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
 	device->EventBegin("DeferredComposition", cmd);
 
 	device->BindPipelineState(&PSO_deferredcomposition, cmd);
@@ -10324,8 +10321,6 @@ void Postprocess_SSR(
 	CommandList cmd
 )
 {
-	GraphicsDevice* device = GetDevice();
-
 	device->EventBegin("Postprocess_SSR", cmd);
 	auto range = wiProfiler::BeginRangeGPU("SSR", cmd);
 
@@ -10525,8 +10520,6 @@ void Postprocess_SSS(
 	float amount
 )
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
 	device->EventBegin("Postprocess_SSS", cmd);
 	auto range = wiProfiler::BeginRangeGPU("SSS", cmd);
 
@@ -12211,8 +12204,6 @@ void Postprocess_Denoise(
 	CommandList cmd
 )
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
 	device->EventBegin("Postprocess_Denoise", cmd);
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DENOISE], cmd);
 
@@ -12418,7 +12409,7 @@ void SetOcclusionCullingEnabled(bool value)
 
 		for (int i = 0; i < arraysize(occlusionQueries); ++i)
 		{
-			occlusionQueries[i].Create(GetDevice(), &desc);
+			occlusionQueries[i].Create(device.get(), &desc);
 		}
 	}
 
