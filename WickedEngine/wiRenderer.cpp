@@ -3255,8 +3255,8 @@ void UpdateVisibility(const Scene& scene, Visibility& vis, uint32_t layerMask)
 	//	then each group writes out it's local list to global memory
 	//	The shared memory approach reduces atomics and helps the list to remain
 	//	more coherent (less randomly organized compared to original order)
-	const uint32_t groupSize = 64;
-	const size_t sharedmemory_size = (groupSize + 1) * sizeof(uint32_t); // list + counter per group
+	static const uint32_t groupSize = 64;
+	static const size_t sharedmemory_size = (groupSize + 1) * sizeof(uint32_t); // list + counter per group
 
 	// Initialize visible indices:
 	vis.Clear();
