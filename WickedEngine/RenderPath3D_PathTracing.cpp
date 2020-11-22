@@ -117,11 +117,12 @@ void RenderPath3D_PathTracing::Render() const
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
-		wiRenderer::UpdateRenderData(cmd);
+		const wiScene::Scene& scene = wiScene::GetScene();
+		wiRenderer::UpdateRenderData(scene, visibility_main, cmd);
 
 		if (sam == 0)
 		{
-			wiRenderer::BuildSceneBVH(cmd);
+			wiRenderer::BuildSceneBVH(scene, cmd);
 		}
 	});
 
@@ -153,7 +154,7 @@ void RenderPath3D_PathTracing::Render() const
 			wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 
 			wiRenderer::RayBuffers* rayBuffers = wiRenderer::GenerateScreenRayBuffers(wiRenderer::GetCamera(), cmd);
-			wiRenderer::RayTraceScene(rayBuffers, &traceResult, sam, cmd);
+			wiRenderer::RayTraceScene(wiScene::GetScene(), rayBuffers, &traceResult, sam, cmd);
 
 
 			wiProfiler::EndRange(range); // Traced Scene

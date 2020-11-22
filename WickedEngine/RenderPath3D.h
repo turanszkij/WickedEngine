@@ -184,6 +184,9 @@ protected:
 	virtual void RenderSceneMIPChain(wiGraphics::CommandList cmd) const;
 	virtual void RenderTransparents(wiGraphics::CommandList cmd) const;
 	virtual void RenderPostprocessChain(wiGraphics::CommandList cmd) const;
+
+	wiRenderer::Visibility visibility_main;
+	wiRenderer::Visibility visibility_reflection;
 	
 public:
 	const wiGraphics::Texture* GetDepthStencil() const override { return &depthBuffer; }

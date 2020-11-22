@@ -126,7 +126,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - PutWaterRipple(String imagename, Vector position)
 - PutDecal(Decal decal)
 - PutEnvProbe(Vector pos)
-- ClearWorld()
+- ClearWorld(opt Scene scene) -- Clears the global scene and the associated renderer resources
 - ReloadShaders(opt string path)
 
 ### Sprite

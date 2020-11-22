@@ -624,7 +624,23 @@ void RenderPath3D::Update(float dt)
 {
 	RenderPath2D::Update(dt);
 
-	wiRenderer::UpdatePerFrameData(dt, getLayerMask());
+	wiScene::Scene& scene = wiScene::GetScene();
+	scene.Update(dt * wiRenderer::GetGameSpeed());
+
+	visibility_main.camera = wiRenderer::GetCamera();
+	visibility_main.flags |= wiRenderer::Visibility::ALLOW_REQUEST_REFLECTION;
+	wiRenderer::UpdateVisibility(scene, visibility_main, getLayerMask());
+
+	visibility_reflection.camera = wiRenderer::GetRefCamera();
+	visibility_reflection.flags |= wiRenderer::Visibility::DISABLE_LIGHTS;
+	visibility_reflection.flags |= wiRenderer::Visibility::DISABLE_DECALS;
+	visibility_reflection.flags |= wiRenderer::Visibility::DISABLE_ENVPROBES;
+	visibility_reflection.flags |= wiRenderer::Visibility::DISABLE_EMITTERS;
+	visibility_reflection.flags |= wiRenderer::Visibility::DISABLE_HAIRS;
+	wiRenderer::UpdateVisibility(scene, visibility_reflection, getLayerMask());
+
+	wiRenderer::OcclusionCulling_Read(scene, visibility_main);
+	wiRenderer::UpdatePerFrameData(scene, visibility_main, dt);
 
 	std::swap(depthBuffer_Copy, depthBuffer_Copy1);
 }
@@ -642,7 +658,7 @@ void RenderPath3D::Render() const
 	{
 		cmd = device->BeginCommandList();
 		wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
-			wiRenderer::DrawShadowmaps(wiRenderer::GetCamera(), cmd, getLayerMask());
+			wiRenderer::DrawShadowmaps(wiScene::GetScene(), visibility_main, cmd, getLayerMask());
 			});
 	}
 
@@ -650,17 +666,17 @@ void RenderPath3D::Render() const
 	{
 		cmd = device->BeginCommandList();
 		wiJobSystem::Execute(ctx, [cmd](wiJobArgs args) {
-			wiRenderer::VoxelRadiance(cmd);
+			wiRenderer::VoxelRadiance(wiScene::GetScene(), cmd);
 			});
 	}
 
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [cmd](wiJobArgs args) {
 		wiRenderer::BindCommonResources(cmd);
-		wiRenderer::RefreshDecalAtlas(cmd);
-		wiRenderer::RefreshLightmapAtlas(cmd);
-		wiRenderer::RefreshEnvProbes(cmd);
-		wiRenderer::RefreshImpostors(cmd);
+		wiRenderer::RefreshDecalAtlas(wiScene::GetScene(), cmd);
+		wiRenderer::RefreshLightmapAtlas(wiScene::GetScene(), cmd);
+		wiRenderer::RefreshEnvProbes(wiScene::GetScene(), cmd);
+		wiRenderer::RefreshImpostors(wiScene::GetScene(), cmd);
 		});
 
 	cmd = device->BeginCommandList();
@@ -692,7 +708,7 @@ void RenderPath3D::Render() const
 			vp.Height = (float)depthBuffer.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
-			wiRenderer::DrawScene(wiRenderer::GetCamera(), RENDERPASS_DEPTHONLY, cmd, drawscene_flags);
+			wiRenderer::DrawScene(wiScene::GetScene(), visibility_main, RENDERPASS_DEPTHONLY, cmd, drawscene_flags);
 
 			device->RenderPassEnd(cmd);
 
@@ -777,7 +793,7 @@ void RenderPath3D::Render() const
 			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
 			device->BindResource(PS, getAOEnabled() ? &rtAO : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_AO, cmd);
 			device->BindResource(PS, getSSREnabled() || getRaytracedReflectionEnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
-			wiRenderer::DrawScene(wiRenderer::GetCamera(), RENDERPASS_MAIN, cmd, drawscene_flags);
+			wiRenderer::DrawScene(wiScene::GetScene(), visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
 			
 			device->RenderPassEnd(cmd);
 
@@ -842,13 +858,14 @@ void RenderPath3D::Compose(CommandList cmd) const
 void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
+	const wiScene::Scene& scene = wiScene::GetScene();
 
 	device->BindResource(CS, &depthBuffer_Copy1, TEXSLOT_DEPTH, cmd);
-	wiRenderer::UpdateRenderData(cmd);
+	wiRenderer::UpdateRenderData(scene, visibility_main, cmd);
 
 	if (getAO() == AO_RTAO || wiRenderer::GetRaytracedShadowsEnabled() || getRaytracedReflectionEnabled())
 	{
-		wiRenderer::UpdateRaytracingAccelerationStructures(cmd);
+		wiRenderer::UpdateRaytracingAccelerationStructures(scene, cmd);
 	}
 	
 	Viewport viewport;
@@ -858,7 +875,7 @@ void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
 
 	device->RenderPassBegin(&renderpass_occlusionculling, cmd);
 
-	wiRenderer::OcclusionCulling_Render(cmd);
+	wiRenderer::OcclusionCulling_Render(wiScene::GetScene(), visibility_main, cmd);
 
 	device->RenderPassEnd(cmd);
 }
@@ -879,8 +896,8 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 
 		device->RenderPassBegin(&renderpass_reflection, cmd);
 
-		wiRenderer::DrawScene(wiRenderer::GetRefCamera(), RENDERPASS_TEXTURE, cmd);
-		wiRenderer::DrawSky(cmd);
+		wiRenderer::DrawScene(wiScene::GetScene(), visibility_reflection, RENDERPASS_TEXTURE, cmd);
+		wiRenderer::DrawSky(wiScene::GetScene(), cmd);
 
 		device->RenderPassEnd(cmd);
 	}
@@ -947,7 +964,7 @@ void RenderPath3D::RenderDeferredComposition(CommandList cmd) const
 		cmd
 	);
 
-	wiRenderer::DrawSky(cmd);
+	wiRenderer::DrawSky(wiScene::Scene(), cmd);
 
 	RenderOutline(cmd);
 
@@ -996,6 +1013,7 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 			break;
 		case AO_RTAO:
 			wiRenderer::Postprocess_RTAO(
+				wiScene::GetScene(),
 				depthBuffer_Copy,
 				rtLinearDepth,
 				depthBuffer_Copy1,
@@ -1014,6 +1032,7 @@ void RenderPath3D::RenderSSR(CommandList cmd) const
 	if (getRaytracedReflectionEnabled())
 	{
 		wiRenderer::Postprocess_RTReflection(
+			wiScene::GetScene(),
 			depthBuffer_Copy, 
 			GetGbuffer_Read(),
 			rtSSR, 
@@ -1107,7 +1126,7 @@ void RenderPath3D::RenderVolumetrics(CommandList cmd) const
 		vp.Height = (float)rtVolumetricLights[0].GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
 
-		wiRenderer::DrawVolumeLights(wiRenderer::GetCamera(), depthBuffer_Copy, cmd);
+		wiRenderer::DrawVolumeLights(wiScene::GetScene(), visibility_main, depthBuffer_Copy, cmd);
 
 		device->RenderPassEnd(cmd);
 
@@ -1193,16 +1212,16 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 		drawscene_flags |= wiRenderer::DRAWSCENE_TRANSPARENT;
 		drawscene_flags |= wiRenderer::DRAWSCENE_OCCLUSIONCULLING;
 		drawscene_flags |= wiRenderer::DRAWSCENE_HAIRPARTICLE;
-		wiRenderer::DrawScene(wiRenderer::GetCamera(), RENDERPASS_MAIN, cmd, drawscene_flags);
+		wiRenderer::DrawScene(wiScene::GetScene(), visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
 
 		wiProfiler::EndRange(range); // Transparent Scene
 	}
 
-	wiRenderer::DrawLightVisualizers(wiRenderer::GetCamera(), cmd);
+	wiRenderer::DrawLightVisualizers(wiScene::GetScene(), visibility_main, cmd);
 
 	{
 		auto range = wiProfiler::BeginRangeGPU("EmittedParticles - Render", cmd);
-		wiRenderer::DrawSoftParticles(wiRenderer::GetCamera(), rtLinearDepth, false, cmd);
+		wiRenderer::DrawSoftParticles(wiScene::GetScene(), visibility_main, rtLinearDepth, false, cmd);
 		wiProfiler::EndRange(range);
 	}
 
@@ -1226,10 +1245,10 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 
 	if (getLensFlareEnabled())
 	{
-		wiRenderer::DrawLensFlares(wiRenderer::GetCamera(), depthBuffer_Copy, cmd);
+		wiRenderer::DrawLensFlares(wiScene::GetScene(), visibility_main, depthBuffer_Copy, cmd);
 	}
 
-	wiRenderer::DrawDebugWorld(wiRenderer::GetCamera(), cmd);
+	wiRenderer::DrawDebugWorld(wiScene::GetScene(), wiRenderer::GetCamera(), cmd);
 
 	device->RenderPassEnd(cmd);
 
@@ -1243,7 +1262,7 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 		vp.Height = (float)rtParticleDistortion.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
 
-		wiRenderer::DrawSoftParticles(wiRenderer::GetCamera(), rtLinearDepth, true, cmd);
+		wiRenderer::DrawSoftParticles(wiScene::GetScene(), visibility_main, rtLinearDepth, true, cmd);
 
 		device->RenderPassEnd(cmd);
 		wiProfiler::EndRange(range);

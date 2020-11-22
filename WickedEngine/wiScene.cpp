@@ -8,6 +8,7 @@
 #include "wiJobSystem.h"
 #include "wiSpinLock.h"
 #include "wiHelper.h"
+#include "wiRenderer.h"
 
 #include <functional>
 #include <unordered_map>
@@ -366,6 +367,10 @@ namespace wiScene
 		{
 			occlusionMap = wiResourceManager::Load(content_dir + occlusionMapName);
 		}
+	}
+	uint32_t MaterialComponent::GetStencilRef() const
+	{
+		return wiRenderer::CombineStencilrefs(engineStencilRef, userStencilRef);
 	}
 
 	void MeshComponent::CreateRenderData()
@@ -2458,6 +2463,9 @@ namespace wiScene
 			    }
 
 			    mesh.aabb = AABB(_min, _max);
+
+				mesh.SetDirtyMorph(false);
+				wiRenderer::AddDeferredMorphUpdate(args.jobIndex);
 			}
 
 		});
@@ -2496,6 +2504,12 @@ namespace wiScene
 			else if (material.subsurfaceProfile == MaterialComponent::SUBSURFACE_SNOW)
 			{
 				material.engineStencilRef = STENCILREF_SNOW;
+			}
+
+			if (material.IsDirty())
+			{
+				material.SetDirty(false);
+				wiRenderer::AddDeferredMaterialUpdate(args.jobIndex);
 			}
 
 		});
