@@ -200,7 +200,7 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd
 	);
 	// Call once per frame to re-render out of date environment probes
-	void RefreshEnvProbes(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
+	void RefreshEnvProbes(const wiScene::Scene& scene, const Visibility& vis, wiGraphics::CommandList cmd);
 	// Call once per frame to re-render out of date impostors
 	void RefreshImpostors(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 	// Call once per frame to repack out of date decals in the atlas
@@ -208,7 +208,7 @@ namespace wiRenderer
 	// Call once per frame to repack out of date lightmaps in the atlas
 	void RefreshLightmapAtlas(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 	// Voxelize the scene into a voxel grid 3D texture
-	void VoxelRadiance(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
+	void VoxelRadiance(const wiScene::Scene& scene, const Visibility& vis, wiGraphics::CommandList cmd);
 	// Compute light grid tiles
 	void ComputeTiledLightCulling(
 		const wiGraphics::Texture& depthbuffer,

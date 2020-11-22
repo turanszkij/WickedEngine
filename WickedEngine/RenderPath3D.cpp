@@ -665,17 +665,17 @@ void RenderPath3D::Render() const
 	if (wiRenderer::GetVoxelRadianceEnabled())
 	{
 		cmd = device->BeginCommandList();
-		wiJobSystem::Execute(ctx, [cmd](wiJobArgs args) {
-			wiRenderer::VoxelRadiance(wiScene::GetScene(), cmd);
+		wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
+			wiRenderer::VoxelRadiance(wiScene::GetScene(), visibility_main, cmd);
 			});
 	}
 
 	cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [cmd](wiJobArgs args) {
+	wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
 		wiRenderer::BindCommonResources(cmd);
 		wiRenderer::RefreshDecalAtlas(wiScene::GetScene(), cmd);
 		wiRenderer::RefreshLightmapAtlas(wiScene::GetScene(), cmd);
-		wiRenderer::RefreshEnvProbes(wiScene::GetScene(), cmd);
+		wiRenderer::RefreshEnvProbes(wiScene::GetScene(), visibility_main, cmd);
 		wiRenderer::RefreshImpostors(wiScene::GetScene(), cmd);
 		});
 

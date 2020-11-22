@@ -2617,7 +2617,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 }
 
 
-ForwardEntityMaskCB ForwardEntityCullingCPU(const Scene& scene, const AABB& batch_aabb, RENDERPASS renderPass)
+ForwardEntityMaskCB ForwardEntityCullingCPU(const Scene& scene, const Visibility& vis, const AABB& batch_aabb, RENDERPASS renderPass)
 {
 	// Performs CPU light culling for a renderable batch:
 	//	Similar to GPU-based tiled light culling, but this is only for simple forward passes (drawcall-granularity)
@@ -2628,45 +2628,45 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const Scene& scene, const AABB& batc
 	cb.xForwardDecalMask = 0;
 	cb.xForwardEnvProbeMask = 0;
 
-	//uint32_t buckets[2] = { 0,0 };
-	//for (size_t i = 0; i < std::min(size_t(64), vis.visibleLights.size()); ++i) // only support indexing 64 lights at max for now
-	//{
-	//	const uint32_t lightIndex = vis.visibleLights[i];
-	//	const AABB& light_aabb = scene.aabb_lights[lightIndex];
-	//	if (light_aabb.intersects(batch_aabb))
-	//	{
-	//		const uint8_t bucket_index = uint8_t(i / 32);
-	//		const uint8_t bucket_place = uint8_t(i % 32);
-	//		buckets[bucket_index] |= 1 << bucket_place;
-	//	}
-	//}
-	//cb.xForwardLightMask.x = buckets[0];
-	//cb.xForwardLightMask.y = buckets[1];
+	uint32_t buckets[2] = { 0,0 };
+	for (size_t i = 0; i < std::min(size_t(64), vis.visibleLights.size()); ++i) // only support indexing 64 lights at max for now
+	{
+		const uint32_t lightIndex = vis.visibleLights[i];
+		const AABB& light_aabb = scene.aabb_lights[lightIndex];
+		if (light_aabb.intersects(batch_aabb))
+		{
+			const uint8_t bucket_index = uint8_t(i / 32);
+			const uint8_t bucket_place = uint8_t(i % 32);
+			buckets[bucket_index] |= 1 << bucket_place;
+		}
+	}
+	cb.xForwardLightMask.x = buckets[0];
+	cb.xForwardLightMask.y = buckets[1];
 
-	//for (size_t i = 0; i < std::min(size_t(32), vis.visibleDecals.size()); ++i)
-	//{
-	//	const uint32_t decalIndex = vis.visibleDecals[vis.visibleDecals.size() - 1 - i]; // note: reverse order, for correct blending!
-	//	const AABB& decal_aabb = scene.aabb_decals[decalIndex];
-	//	if (decal_aabb.intersects(batch_aabb))
-	//	{
-	//		const uint8_t bucket_place = uint8_t(i % 32);
-	//		cb.xForwardDecalMask |= 1 << bucket_place;
-	//	}
-	//}
+	for (size_t i = 0; i < std::min(size_t(32), vis.visibleDecals.size()); ++i)
+	{
+		const uint32_t decalIndex = vis.visibleDecals[vis.visibleDecals.size() - 1 - i]; // note: reverse order, for correct blending!
+		const AABB& decal_aabb = scene.aabb_decals[decalIndex];
+		if (decal_aabb.intersects(batch_aabb))
+		{
+			const uint8_t bucket_place = uint8_t(i % 32);
+			cb.xForwardDecalMask |= 1 << bucket_place;
+		}
+	}
 
-	//if (renderPass != RENDERPASS_ENVMAPCAPTURE)
-	//{
-	//	for (size_t i = 0; i < std::min(size_t(32), vis.visibleEnvProbes.size()); ++i)
-	//	{
-	//		const uint32_t probeIndex = vis.visibleEnvProbes[vis.visibleEnvProbes.size() - 1 - i]; // note: reverse order, for correct blending!
-	//		const AABB& probe_aabb = scene.aabb_probes[probeIndex];
-	//		if (probe_aabb.intersects(batch_aabb))
-	//		{
-	//			const uint8_t bucket_place = uint8_t(i % 32);
-	//			cb.xForwardEnvProbeMask |= 1 << bucket_place;
-	//		}
-	//	}
-	//}
+	if (renderPass != RENDERPASS_ENVMAPCAPTURE)
+	{
+		for (size_t i = 0; i < std::min(size_t(32), vis.visibleEnvProbes.size()); ++i)
+		{
+			const uint32_t probeIndex = vis.visibleEnvProbes[vis.visibleEnvProbes.size() - 1 - i]; // note: reverse order, for correct blending!
+			const AABB& probe_aabb = scene.aabb_probes[probeIndex];
+			if (probe_aabb.intersects(batch_aabb))
+			{
+				const uint8_t bucket_place = uint8_t(i % 32);
+				cb.xForwardEnvProbeMask |= 1 << bucket_place;
+			}
+		}
+	}
 
 	return cb;
 }
@@ -2694,7 +2694,8 @@ void RenderMeshes(
 	CommandList cmd,
 	bool tessellation = false,
 	const Frustum* frusta = nullptr,
-	uint32_t frustum_count = 1
+	uint32_t frustum_count = 1,
+	const Visibility* vis = nullptr
 )
 {
 	if (!renderQueue.empty())
@@ -2862,7 +2863,8 @@ void RenderMeshes(
 
 			if (forwardLightmaskRequest)
 			{
-				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(scene, instancedBatch.aabb, renderPass);
+				assert(vis != nullptr);
+				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(scene, *vis, instancedBatch.aabb, renderPass);
 				device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
 				device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
 			}
@@ -6662,7 +6664,7 @@ void ManageEnvProbes(Scene& scene)
 		}
 	}
 }
-void RefreshEnvProbes(const Scene& scene, CommandList cmd)
+void RefreshEnvProbes(const Scene& scene, const Visibility& vis, CommandList cmd)
 {
 	if (probesToRefresh.empty())
 	{
@@ -6760,7 +6762,7 @@ void RefreshEnvProbes(const Scene& scene, CommandList cmd)
 			BindShadowmaps(PS, cmd);
 			device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
 
-			RenderMeshes(scene, renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_ALL, cmd, false, frusta, arraysize(frusta));
+			RenderMeshes(scene, renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_ALL, cmd, false, frusta, arraysize(frusta), &vis);
 
 			GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 		}
@@ -7045,7 +7047,7 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 	device->EventEnd(cmd);
 }
 
-void VoxelRadiance(const Scene& scene, CommandList cmd)
+void VoxelRadiance(const Scene& scene, const Visibility& vis, CommandList cmd)
 {
 	if (!GetVoxelRadianceEnabled())
 	{
@@ -7154,7 +7156,7 @@ void VoxelRadiance(const Scene& scene, CommandList cmd)
 		BindConstantBuffers(PS, cmd);
 
 		device->RenderPassBegin(&renderpass_voxelize, cmd);
-		RenderMeshes(scene, renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, cmd);
+		RenderMeshes(scene, renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, cmd, false, nullptr, 1, &vis);
 		device->RenderPassEnd(cmd);
 
 		GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
