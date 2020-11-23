@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Editor.h"
 #include "wiRenderer.h"
 
@@ -791,7 +791,7 @@ void EditorComponent::Load()
 	clearButton.SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
 	clearButton.OnClick([&](wiEventArgs args) {
 		translator.selected.clear();
-		wiRenderer::ClearWorld();
+		wiRenderer::ClearWorld(wiScene::GetScene());
 		objectWnd.SetEntity(INVALID_ENTITY);
 		meshWnd.SetEntity(INVALID_ENTITY);
 		lightWnd.SetEntity(INVALID_ENTITY);

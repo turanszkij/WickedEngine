@@ -126,7 +126,7 @@ void TestsRenderer::Load()
 		wiRenderer::GetDevice()->SetVSyncEnabled(true);
 		wiRenderer::SetToDrawGridHelper(false);
 		wiRenderer::SetTemporalAAEnabled(false);
-		wiRenderer::ClearWorld();
+		wiRenderer::ClearWorld(wiScene::GetScene());
 		wiScene::GetScene().weather = WeatherComponent();
 		this->ClearSprites();
 		this->ClearFonts();

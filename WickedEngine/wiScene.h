@@ -7,7 +7,6 @@
 #include "ShaderInterop_Renderer.h"
 #include "wiJobSystem.h"
 #include "wiAudio.h"
-#include "wiRenderer.h"
 #include "wiResourceManager.h"
 #include "wiSpinLock.h"
 
@@ -193,10 +192,7 @@ namespace wiScene
 			assert(value < 16);
 			userStencilRef = value & 0x0F;
 		}
-		inline uint32_t GetStencilRef() const
-		{
-			return wiRenderer::CombineStencilrefs(engineStencilRef, userStencilRef);
-		}
+		uint32_t GetStencilRef() const;
 
 		const wiGraphics::Texture* GetBaseColorMap() const;
 		const wiGraphics::Texture* GetNormalMap() const;
@@ -577,6 +573,7 @@ namespace wiScene
 		uint32_t occlusionHistory = ~0;
 		// occlusion query pool index
 		int occlusionQueryID = -1;
+		int occlusionQueryAge = -1;
 
 		inline bool IsOccluded() const
 		{

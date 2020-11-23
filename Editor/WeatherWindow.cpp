@@ -182,7 +182,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 		weather.SetOceanEnabled(args.bValue);
 		if (!weather.IsOceanEnabled())
 		{
-			wiRenderer::OceanRegenerate();
+			wiRenderer::OceanRegenerate(weather);
 		}
 		});
 	AddWidget(&ocean_enabledCheckBox);
@@ -200,7 +200,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 			if (std::abs(weather.oceanParameters.patch_length - args.fValue) > FLT_EPSILON)
 			{
 				weather.oceanParameters.patch_length = args.fValue;
-				wiRenderer::OceanRegenerate();
+				wiRenderer::OceanRegenerate(weather);
 			}
 		}
 		});
@@ -218,7 +218,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 			if (std::abs(weather.oceanParameters.wave_amplitude - args.fValue) > FLT_EPSILON)
 			{
 				weather.oceanParameters.wave_amplitude = args.fValue;
-				wiRenderer::OceanRegenerate();
+				wiRenderer::OceanRegenerate(weather);
 			}
 		}
 		});
@@ -250,7 +250,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 			if (std::abs(weather.oceanParameters.wind_dependency - args.fValue) > FLT_EPSILON)
 			{
 				weather.oceanParameters.wind_dependency = args.fValue;
-				wiRenderer::OceanRegenerate();
+				wiRenderer::OceanRegenerate(weather);
 			}
 		}
 		});

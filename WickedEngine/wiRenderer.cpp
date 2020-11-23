@@ -92,7 +92,6 @@ bool debugForceFields = false;
 bool debugCameras = false;
 bool gridHelper = false;
 bool voxelHelper = false;
-bool requestReflectionRendering = false;
 bool requestVolumetricLightRendering = false;
 bool advancedLightCulling = true;
 bool variableRateShadingClassification = false;
@@ -105,7 +104,7 @@ float deltaTime = 0;
 XMFLOAT2 temporalAAJitter = XMFLOAT2(0, 0);
 XMFLOAT2 temporalAAJitterPrev = XMFLOAT2(0, 0);
 float RESOLUTIONSCALE = 1.0f;
-GPUQueryRing<GraphicsDevice::GetBackBufferCount() + 1> occlusionQueries[256];
+GPUQueryRing<GraphicsDevice::GetBackBufferCount()> occlusionQueries[256];
 uint32_t entityArrayOffset_Lights = 0;
 uint32_t entityArrayCount_Lights = 0;
 uint32_t entityArrayOffset_Decals = 0;
@@ -227,7 +226,6 @@ struct RenderBatch
 // This is just a utility that points to a linear array of render batches:
 struct RenderQueue
 {
-	const CameraComponent* camera = nullptr;
 	RenderBatch* batchArray = nullptr;
 	uint32_t batchCount = 0;
 
@@ -274,37 +272,6 @@ struct RenderQueue
 		}
 	}
 };
-
-// This is a storage for component indices inside the camera frustum. These can directly index the corresponding ComponentManagers:
-struct FrameCulling
-{
-	Frustum frustum;
-	vector<uint32_t> culledObjects;
-	vector<uint32_t> culledLights;
-	vector<uint32_t> culledDecals;
-	vector<uint32_t> culledEnvProbes;
-	vector<uint32_t> culledEmitters;
-	vector<uint32_t> culledHairs;
-
-	atomic<uint32_t> object_counter;
-	atomic<uint32_t> light_counter;
-	atomic<uint32_t> decal_counter;
-
-	void Clear()
-	{
-		culledObjects.clear();
-		culledLights.clear();
-		culledDecals.clear();
-		culledEnvProbes.clear();
-		culledEmitters.clear();
-		culledHairs.clear();
-
-		object_counter.store(0);
-		light_counter.store(0);
-		decal_counter.store(0);
-	}
-};
-unordered_map<const CameraComponent*, FrameCulling> frameCullings;
 
 vector<size_t> pendingMaterialUpdates;
 vector<size_t> pendingMorphUpdates;
@@ -570,7 +537,7 @@ ILTYPES GetILTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool
 }
 SHADERTYPE GetVSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool transparent)
 {
-    SHADERTYPE realVS = VSTYPE_OBJECT_SIMPLE;
+	SHADERTYPE realVS = VSTYPE_OBJECT_SIMPLE;
 
 	switch (renderPass)
 	{
@@ -650,7 +617,7 @@ SHADERTYPE GetVSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 }
 SHADERTYPE GetGSTYPE(RENDERPASS renderPass, bool alphatest)
 {
-    SHADERTYPE realGS = SHADERTYPE_COUNT;
+	SHADERTYPE realGS = SHADERTYPE_COUNT;
 
 	switch (renderPass)
 	{
@@ -685,7 +652,7 @@ SHADERTYPE GetHSTYPE(RENDERPASS renderPass, bool tessellation)
 	case RENDERPASS_TEXTURE:
 	case RENDERPASS_DEPTHONLY:
 	case RENDERPASS_MAIN:
-            return tessellation ? HSTYPE_OBJECT : SHADERTYPE_COUNT;
+			return tessellation ? HSTYPE_OBJECT : SHADERTYPE_COUNT;
 		break;
 	}
 
@@ -698,7 +665,7 @@ SHADERTYPE GetDSTYPE(RENDERPASS renderPass, bool tessellation)
 	case RENDERPASS_TEXTURE:
 	case RENDERPASS_DEPTHONLY:
 	case RENDERPASS_MAIN:
-            return tessellation ? DSTYPE_OBJECT : SHADERTYPE_COUNT;
+			return tessellation ? DSTYPE_OBJECT : SHADERTYPE_COUNT;
 		break;
 	}
 
@@ -706,7 +673,7 @@ SHADERTYPE GetDSTYPE(RENDERPASS renderPass, bool tessellation)
 }
 SHADERTYPE GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, MaterialComponent::SHADERTYPE shaderType)
 {
-    SHADERTYPE realPS = SHADERTYPE_COUNT;
+	SHADERTYPE realPS = SHADERTYPE_COUNT;
 
 	switch (renderPass)
 	{
@@ -2461,9 +2428,6 @@ void Initialize()
 	camera_setup(0);
 	static wiEvent::Handle handle1 = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [=](uint64_t userdata) { camera_setup(userdata); });
 
-	frameCullings[&GetCamera()].Clear();
-	frameCullings[&GetRefCamera()].Clear();
-
 	SetUpStates();
 	LoadBuffers();
 
@@ -2494,11 +2458,11 @@ void Initialize()
 
 	wiBackLog::post("wiRenderer Initialized");
 }
-void ClearWorld()
+void ClearWorld(Scene& scene)
 {
-	waterRipples.clear();
+	scene.Clear();
 
-	GetScene().Clear();
+	waterRipples.clear();
 
 	sceneBVH.Clear();
 	scene_bvh_invalid = true;
@@ -2506,13 +2470,6 @@ void ClearWorld()
 	deferredMIPGenLock.lock();
 	deferredMIPGens.clear();
 	deferredMIPGenLock.unlock();
-
-
-	for (auto& x : frameCullings)
-	{
-		FrameCulling& culling = x.second;
-		culling.Clear();
-	}
 
 	packedDecals.clear();
 	packedLightmaps.clear();
@@ -2659,12 +2616,10 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 }
 
 
-ForwardEntityMaskCB ForwardEntityCullingCPU(const FrameCulling& culling, const AABB& batch_aabb, RENDERPASS renderPass)
+ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& batch_aabb, RENDERPASS renderPass)
 {
 	// Performs CPU light culling for a renderable batch:
 	//	Similar to GPU-based tiled light culling, but this is only for simple forward passes (drawcall-granularity)
-
-	const Scene& scene = GetScene();
 
 	ForwardEntityMaskCB cb;
 	cb.xForwardLightMask.x = 0;
@@ -2673,10 +2628,10 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const FrameCulling& culling, const A
 	cb.xForwardEnvProbeMask = 0;
 
 	uint32_t buckets[2] = { 0,0 };
-	for (size_t i = 0; i < std::min(size_t(64), culling.culledLights.size()); ++i) // only support indexing 64 lights at max for now
+	for (size_t i = 0; i < std::min(size_t(64), vis.visibleLights.size()); ++i) // only support indexing 64 lights at max for now
 	{
-		const uint32_t lightIndex = culling.culledLights[i];
-		const AABB& light_aabb = scene.aabb_lights[lightIndex];
+		const uint32_t lightIndex = vis.visibleLights[i];
+		const AABB& light_aabb = vis.scene->aabb_lights[lightIndex];
 		if (light_aabb.intersects(batch_aabb))
 		{
 			const uint8_t bucket_index = uint8_t(i / 32);
@@ -2687,10 +2642,10 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const FrameCulling& culling, const A
 	cb.xForwardLightMask.x = buckets[0];
 	cb.xForwardLightMask.y = buckets[1];
 
-	for (size_t i = 0; i < std::min(size_t(32), culling.culledDecals.size()); ++i)
+	for (size_t i = 0; i < std::min(size_t(32), vis.visibleDecals.size()); ++i)
 	{
-		const uint32_t decalIndex = culling.culledDecals[culling.culledDecals.size() - 1 - i]; // note: reverse order, for correct blending!
-		const AABB& decal_aabb = scene.aabb_decals[decalIndex];
+		const uint32_t decalIndex = vis.visibleDecals[vis.visibleDecals.size() - 1 - i]; // note: reverse order, for correct blending!
+		const AABB& decal_aabb = vis.scene->aabb_decals[decalIndex];
 		if (decal_aabb.intersects(batch_aabb))
 		{
 			const uint8_t bucket_place = uint8_t(i % 32);
@@ -2700,10 +2655,10 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const FrameCulling& culling, const A
 
 	if (renderPass != RENDERPASS_ENVMAPCAPTURE)
 	{
-		for (size_t i = 0; i < std::min(size_t(32), culling.culledEnvProbes.size()); ++i)
+		for (size_t i = 0; i < std::min(size_t(32), vis.visibleEnvProbes.size()); ++i)
 		{
-			const uint32_t probeIndex = culling.culledEnvProbes[culling.culledEnvProbes.size() - 1 - i]; // note: reverse order, for correct blending!
-			const AABB& probe_aabb = scene.aabb_probes[probeIndex];
+			const uint32_t probeIndex = vis.visibleEnvProbes[vis.visibleEnvProbes.size() - 1 - i]; // note: reverse order, for correct blending!
+			const AABB& probe_aabb = vis.scene->aabb_probes[probeIndex];
 			if (probe_aabb.intersects(batch_aabb))
 			{
 				const uint8_t bucket_place = uint8_t(i % 32);
@@ -2729,22 +2684,9 @@ void BindShadowmaps(SHADERSTAGE stage, CommandList cmd)
 		device->BindResource(stage, &shadowMapArray_Transparent, TEXSLOT_SHADOWARRAY_TRANSPARENT, cmd);
 	}
 }
-void BindEnvironmentTextures(SHADERSTAGE stage, CommandList cmd)
-{
-	device->BindResource(stage, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, cmd);
-	device->BindResource(stage, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, cmd);
-	device->BindResource(stage, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
-	device->BindResource(stage, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-	device->BindResource(stage, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
-	device->BindResource(stage, GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, cmd);
-
-	if (GetScene().weather.skyMap != nullptr)
-	{
-		device->BindResource(stage, GetScene().weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
-	}
-}
 
 void RenderMeshes(
+	const Visibility& vis,
 	const RenderQueue& renderQueue,
 	RENDERPASS renderPass,
 	uint32_t renderTypeFlags,
@@ -2756,8 +2698,6 @@ void RenderMeshes(
 {
 	if (!renderQueue.empty())
 	{
-		const Scene& scene = GetScene();
-
 		device->EventBegin("RenderMeshes", cmd);
 
 		tessellation = tessellation && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
@@ -2821,7 +2761,7 @@ void RenderMeshes(
 			const RenderBatch& batch = renderQueue.batchArray[batchID];
 			const uint32_t meshIndex = batch.GetMeshIndex();
 			const uint32_t instanceIndex = batch.GetInstanceIndex();
-			const ObjectComponent& instance = scene.objects[instanceIndex];
+			const ObjectComponent& instance = vis.scene->objects[instanceIndex];
 			const uint8_t userStencilRefOverride = instance.userStencilRef;
 
 			// When we encounter a new mesh inside the global instance array, we begin a new InstancedBatch:
@@ -2861,14 +2801,14 @@ void RenderMeshes(
 				current_batch.forceAlphatestForDithering = 1;
 			}
 
-			const AABB& instanceAABB = scene.aabb_objects[instanceIndex];
+			const AABB& instanceAABB = vis.scene->aabb_objects[instanceIndex];
 
 			if (forwardLightmaskRequest)
 			{
 				current_batch.aabb = AABB::Merge(current_batch.aabb, instanceAABB);
 			}
 
-			const XMFLOAT4X4& worldMatrix = instance.transform_index >= 0 ? scene.transforms[instance.transform_index].world : IDENTITYMATRIX;
+			const XMFLOAT4X4& worldMatrix = instance.transform_index >= 0 ? vis.scene->transforms[instance.transform_index].world : IDENTITYMATRIX;
 
 			for (uint32_t frustum_index = 0; frustum_index < frustum_count; ++frustum_index)
 			{
@@ -2883,7 +2823,7 @@ void RenderMeshes(
 				{
 					((volatile InstBuf*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index);
 
-					const XMFLOAT4X4& prev_worldMatrix = instance.prev_transform_index >= 0 ? scene.prev_transforms[instance.prev_transform_index].world_prev : IDENTITYMATRIX;
+					const XMFLOAT4X4& prev_worldMatrix = instance.prev_transform_index >= 0 ? vis.scene->prev_transforms[instance.prev_transform_index].world_prev : IDENTITYMATRIX;
 					((volatile InstBuf*)instances.data)[instanceCount].instancePrev.Create(prev_worldMatrix);
 					((volatile InstBuf*)instances.data)[instanceCount].instanceAtlas.Create(instance.globalLightMapMulAdd);
 				}
@@ -2903,7 +2843,7 @@ void RenderMeshes(
 		for (int instancedBatchID = 0; instancedBatchID < instancedBatchCount; ++instancedBatchID)
 		{
 			const InstancedBatch& instancedBatch = instancedBatchArray[instancedBatchID];
-			const MeshComponent& mesh = scene.meshes[instancedBatch.meshIndex];
+			const MeshComponent& mesh = vis.scene->meshes[instancedBatch.meshIndex];
 			const bool forceAlphaTestForDithering = instancedBatch.forceAlphatestForDithering != 0;
 			const uint8_t userStencilRefOverride = instancedBatch.userStencilRefOverride;
 
@@ -2921,9 +2861,7 @@ void RenderMeshes(
 
 			if (forwardLightmaskRequest)
 			{
-				const CameraComponent* camera = renderQueue.camera == nullptr ? &GetCamera() : renderQueue.camera;
-				const FrameCulling& culling = frameCullings.at(camera);
-				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, instancedBatch.aabb, renderPass);
+				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, instancedBatch.aabb, renderPass);
 				device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
 				device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
 			}
@@ -2945,7 +2883,7 @@ void RenderMeshes(
 				{
 					continue;
 				}
-				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
+				const MaterialComponent& material = *vis.scene->materials.GetComponent(subset.materialID);
 
 				bool subsetRenderable = renderTypeFlags & material.GetRenderTypes();
 
@@ -3131,7 +3069,7 @@ void RenderMeshes(
 
 				if (terrain)
 				{
-					if (mesh.terrain_material1 == INVALID_ENTITY || !scene.materials.Contains(mesh.terrain_material1))
+					if (mesh.terrain_material1 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material1))
 					{
 						const GPUResource* res[] = {
 							material.GetBaseColorMap(),
@@ -3144,7 +3082,7 @@ void RenderMeshes(
 					}
 					else
 					{
-						const MaterialComponent& blendmat = *scene.materials.GetComponent(mesh.terrain_material1);
+						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material1);
 						const GPUResource* res[] = {
 							blendmat.GetBaseColorMap(),
 							blendmat.GetNormalMap(),
@@ -3155,7 +3093,7 @@ void RenderMeshes(
 						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
 					}
 
-					if (mesh.terrain_material2 == INVALID_ENTITY || !scene.materials.Contains(mesh.terrain_material2))
+					if (mesh.terrain_material2 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material2))
 					{
 						const GPUResource* res[] = {
 							material.GetBaseColorMap(),
@@ -3168,7 +3106,7 @@ void RenderMeshes(
 					}
 					else
 					{
-						const MaterialComponent& blendmat = *scene.materials.GetComponent(mesh.terrain_material2);
+						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material2);
 						const GPUResource* res[] = {
 							blendmat.GetBaseColorMap(),
 							blendmat.GetNormalMap(),
@@ -3179,7 +3117,7 @@ void RenderMeshes(
 						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
 					}
 
-					if (mesh.terrain_material3 == INVALID_ENTITY || !scene.materials.Contains(mesh.terrain_material3))
+					if (mesh.terrain_material3 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material3))
 					{
 						const GPUResource* res[] = {
 							material.GetBaseColorMap(),
@@ -3192,7 +3130,7 @@ void RenderMeshes(
 					}
 					else
 					{
-						const MaterialComponent& blendmat = *scene.materials.GetComponent(mesh.terrain_material3);
+						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material3);
 						const GPUResource* res[] = {
 							blendmat.GetBaseColorMap(),
 							blendmat.GetNormalMap(),
@@ -3215,21 +3153,20 @@ void RenderMeshes(
 }
 
 void RenderImpostors(
-	const CameraComponent& camera, 
+	const Visibility& vis,
 	RENDERPASS renderPass, 
 	CommandList cmd
 )
 {
-	const Scene& scene = GetScene();
 	const PipelineState* impostorRequest = GetImpostorPSO(renderPass);
 
-	if (scene.impostors.GetCount() > 0 && impostorRequest != nullptr)
+	if (vis.scene->impostors.GetCount() > 0 && impostorRequest != nullptr)
 	{
 		uint32_t instanceCount = 0;
-		for (size_t impostorID = 0; impostorID < scene.impostors.GetCount(); ++impostorID)
+		for (size_t impostorID = 0; impostorID < vis.scene->impostors.GetCount(); ++impostorID)
 		{
-			const ImpostorComponent& impostor = scene.impostors[impostorID];
-			if (camera.frustum.CheckBoxFast(impostor.aabb))
+			const ImpostorComponent& impostor = vis.scene->impostors[impostorID];
+			if (vis.camera->frustum.CheckBoxFast(impostor.aabb))
 			{
 				instanceCount += (uint32_t)impostor.instanceMatrices.size();
 			}
@@ -3248,10 +3185,10 @@ void RenderImpostors(
 		GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
 
 		uint32_t drawableInstanceCount = 0;
-		for (size_t impostorID = 0; impostorID < scene.impostors.GetCount(); ++impostorID)
+		for (size_t impostorID = 0; impostorID < vis.scene->impostors.GetCount(); ++impostorID)
 		{
-			const ImpostorComponent& impostor = scene.impostors[impostorID];
-			if (!camera.frustum.CheckBoxFast(impostor.aabb))
+			const ImpostorComponent& impostor = vis.scene->impostors[impostorID];
+			if (!vis.camera->frustum.CheckBoxFast(impostor.aabb))
 			{
 				continue;
 			}
@@ -3259,7 +3196,7 @@ void RenderImpostors(
 			for (auto& mat : impostor.instanceMatrices)
 			{
 				const XMFLOAT3 center = *((XMFLOAT3*)&mat._41);
-				float distance = wiMath::Distance(camera.Eye, center);
+				float distance = wiMath::Distance(vis.camera->Eye, center);
 
 				if (distance < impostor.swapInDistance - impostor.fadeThresholdRadius)
 				{
@@ -3304,15 +3241,263 @@ void ProcessDeferredMipGenRequests(CommandList cmd)
 	deferredMIPGenLock.unlock();
 }
 
-void UpdatePerFrameData(float dt, uint32_t layerMask)
+void UpdateVisibility(Visibility& vis, uint32_t layerMask)
+{
+	// Perform parallel frustum culling and obtain closest reflector:
+	wiJobSystem::context ctx;
+	auto range = wiProfiler::BeginRangeCPU("Frustum Culling");
+
+	assert(vis.scene != nullptr); // User must provide a scene!
+	assert(vis.camera != nullptr); // User must provide a camera!
+
+	// The parallel frustum culling is first performed in shared memory, 
+	//	then each group writes out it's local list to global memory
+	//	The shared memory approach reduces atomics and helps the list to remain
+	//	more coherent (less randomly organized compared to original order)
+	static const uint32_t groupSize = 64;
+	static const size_t sharedmemory_size = (groupSize + 1) * sizeof(uint32_t); // list + counter per group
+
+	// Initialize visible indices:
+	vis.Clear();
+
+	if (!freezeCullingCamera)
+	{
+		vis.frustum = vis.camera->frustum;
+	}
+
+	if (vis.flags & Visibility::ALLOW_OBJECTS)
+	{
+		// Cull objects:
+		vis.visibleObjects.resize(vis.scene->aabb_objects.GetCount());
+		wiJobSystem::Dispatch(ctx, (uint32_t)vis.scene->aabb_objects.GetCount(), groupSize, [&](wiJobArgs args) {
+
+			Entity entity = vis.scene->aabb_objects.GetEntity(args.jobIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+			{
+				return;
+			}
+
+			const AABB& aabb = vis.scene->aabb_objects[args.jobIndex];
+
+			// Setup stream compaction:
+			uint32_t& group_count = *(uint32_t*)args.sharedmemory;
+			uint32_t* group_list = (uint32_t*)args.sharedmemory + 1;
+			if (args.isFirstJobInGroup)
+			{
+				group_count = 0; // first thread initializes local counter
+			}
+
+			if (vis.frustum.CheckBoxFast(aabb))
+			{
+				// Local stream compaction:
+				group_list[group_count++] = args.jobIndex;
+
+				if (vis.flags & Visibility::ALLOW_REQUEST_REFLECTION)
+				{
+					const ObjectComponent& object = vis.scene->objects[args.jobIndex];
+					if (object.IsRequestPlanarReflection())
+					{
+						float dist = wiMath::DistanceEstimated(vis.camera->Eye, object.center);
+						vis.locker.lock();
+						if (dist < vis.closestRefPlane)
+						{
+							vis.closestRefPlane = dist;
+							const TransformComponent& transform = vis.scene->transforms[object.transform_index];
+							XMVECTOR P = transform.GetPositionV();
+							XMVECTOR N = XMVectorSet(0, 1, 0, 0);
+							N = XMVector3TransformNormal(N, XMLoadFloat4x4(&transform.world));
+							XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
+							XMStoreFloat4(&vis.reflectionPlane, _refPlane);
+
+							vis.planar_reflection_visible = true;
+						}
+						vis.locker.unlock();
+					}
+				}
+			}
+
+			// Global stream compaction:
+			if (args.isLastJobInGroup && group_count > 0)
+			{
+				uint32_t prev_count = vis.object_counter.fetch_add(group_count);
+				for (uint32_t i = 0; i < group_count; ++i)
+				{
+					vis.visibleObjects[prev_count + i] = group_list[i];
+				}
+			}
+
+			}, sharedmemory_size);
+	}
+
+	if (vis.flags & Visibility::ALLOW_DECALS)
+	{
+		vis.visibleDecals.resize(vis.scene->aabb_decals.GetCount());
+		wiJobSystem::Dispatch(ctx, (uint32_t)vis.scene->aabb_decals.GetCount(), groupSize, [&](wiJobArgs args) {
+
+			Entity entity = vis.scene->aabb_decals.GetEntity(args.jobIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+			{
+				return;
+			}
+
+			const AABB& aabb = vis.scene->aabb_decals[args.jobIndex];
+
+			// Setup stream compaction:
+			uint32_t& group_count = *(uint32_t*)args.sharedmemory;
+			uint32_t* group_list = (uint32_t*)args.sharedmemory + 1;
+			if (args.isFirstJobInGroup)
+			{
+				group_count = 0; // first thread initializes local counter
+			}
+
+			if (vis.frustum.CheckBoxFast(aabb))
+			{
+				// Local stream compaction:
+				group_list[group_count++] = args.jobIndex;
+			}
+
+			// Global stream compaction:
+			if (args.isLastJobInGroup && group_count > 0)
+			{
+				uint32_t prev_count = vis.decal_counter.fetch_add(group_count);
+				for (uint32_t i = 0; i < group_count; ++i)
+				{
+					vis.visibleDecals[prev_count + i] = group_list[i];
+				}
+			}
+
+			}, sharedmemory_size);
+	}
+
+	if (vis.flags & Visibility::ALLOW_ENVPROBES)
+	{
+		wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
+			// Cull probes:
+			for (size_t i = 0; i < vis.scene->aabb_probes.GetCount(); ++i)
+			{
+				Entity entity = vis.scene->aabb_probes.GetEntity(i);
+				const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+				if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+				{
+					continue;
+				}
+
+				const AABB& aabb = vis.scene->aabb_probes[i];
+
+				if (vis.frustum.CheckBoxFast(aabb))
+				{
+					vis.visibleEnvProbes.push_back((uint32_t)i);
+				}
+			}
+			});
+	}
+
+	if (vis.flags & Visibility::ALLOW_LIGHTS)
+	{
+		// Cull lights:
+		vis.visibleLights.resize(vis.scene->aabb_lights.GetCount());
+		wiJobSystem::Dispatch(ctx, (uint32_t)vis.scene->aabb_lights.GetCount(), groupSize, [&](wiJobArgs args) {
+
+			Entity entity = vis.scene->aabb_lights.GetEntity(args.jobIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+			{
+				return;
+			}
+
+			const AABB& aabb = vis.scene->aabb_lights[args.jobIndex];
+
+			// Setup stream compaction:
+			uint32_t& group_count = *(uint32_t*)args.sharedmemory;
+			uint32_t* group_list = (uint32_t*)args.sharedmemory + 1;
+			if (args.isFirstJobInGroup)
+			{
+				group_count = 0; // first thread initializes local counter
+			}
+
+			if (vis.frustum.CheckBoxFast(aabb))
+			{
+				// Local stream compaction:
+				group_list[group_count++] = args.jobIndex;
+			}
+
+			// Global stream compaction:
+			if (args.isLastJobInGroup && group_count > 0)
+			{
+				uint32_t prev_count = vis.light_counter.fetch_add(group_count);
+				for (uint32_t i = 0; i < group_count; ++i)
+				{
+					vis.visibleLights[prev_count + i] = group_list[i];
+				}
+			}
+
+			}, sharedmemory_size);
+	}
+
+	if (vis.flags & Visibility::ALLOW_EMITTERS)
+	{
+		wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
+			// Cull emitters:
+			for (size_t i = 0; i < vis.scene->emitters.GetCount(); ++i)
+			{
+				Entity entity = vis.scene->emitters.GetEntity(i);
+				const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+				if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+				{
+					continue;
+				}
+				vis.visibleEmitters.push_back((uint32_t)i);
+			}
+			});
+	}
+
+	if (vis.flags & Visibility::ALLOW_HAIRS)
+	{
+		wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
+			// Cull hairs:
+			for (size_t i = 0; i < vis.scene->hairs.GetCount(); ++i)
+			{
+				Entity entity = vis.scene->hairs.GetEntity(i);
+				const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+				if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+				{
+					continue;
+				}
+
+				const wiHairParticle& hair = vis.scene->hairs[i];
+				if (hair.meshID == INVALID_ENTITY || !vis.frustum.CheckBoxFast(hair.aabb))
+				{
+					continue;
+				}
+				vis.visibleHairs.push_back((uint32_t)i);
+			}
+			});
+	}
+
+	wiJobSystem::Wait(ctx);
+
+	// finalize stream compaction:
+	vis.visibleObjects.resize((size_t)vis.object_counter.load());
+	vis.visibleLights.resize((size_t)vis.light_counter.load());
+	vis.visibleDecals.resize((size_t)vis.decal_counter.load());
+
+	if ((vis.flags & Visibility::ALLOW_REQUEST_REFLECTION) && vis.scene->weather.IsOceanEnabled())
+	{
+		// Ocean will override any current reflectors
+		vis.planar_reflection_visible = true;
+		XMVECTOR _refPlane = XMPlaneFromPointNormal(XMVectorSet(0, vis.scene->weather.oceanParameters.waterHeight, 0, 0), XMVectorSet(0, 1, 0, 0));
+		XMStoreFloat4(&vis.reflectionPlane, _refPlane);
+	}
+
+	wiProfiler::EndRange(range); // Frustum Culling
+}
+void UpdatePerFrameData(Scene& scene, const Visibility& vis, float dt)
 {
 	renderTime_Prev = renderTime;
 	deltaTime = dt * GetGameSpeed();
 	renderTime += deltaTime;
-
-	Scene& scene = GetScene();
-
-	scene.Update(deltaTime);
 
 	wiJobSystem::context ctx;
 
@@ -3344,36 +3529,14 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 	}
 
 	GetCamera().UpdateCamera();
-	GetRefCamera() = GetCamera();
-	GetRefCamera().Reflect(waterPlane);
 
-	// See which materials will need to update their GPU render data:
-	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-		for (size_t i = 0; i < scene.materials.GetCount(); ++i)
-		{
-			MaterialComponent& material = scene.materials[i];
+	if (vis.planar_reflection_visible)
+	{
+		GetRefCamera() = GetCamera();
+		GetRefCamera().Reflect(vis.reflectionPlane);
+	}
 
-			if (material.IsDirty())
-			{
-				material.SetDirty(false);
-				pendingMaterialUpdates.push_back(i);
-			}
-		}
-	});
-
-	// See which mesh morphs will need to update their GPU render data:
-	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-	    for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
-	    {
-			MeshComponent& mesh = scene.meshes[i];
-
-			if (mesh.IsDirtyMorph())
-			{
-			    mesh.SetDirtyMorph(false);
-				pendingMorphUpdates.push_back(i);
-			}
-	    }
-	});
+	waterPlane = vis.reflectionPlane;
 
 	// Need to swap prev and current vertex buffers for any dynamic meshes BEFORE render threads are kicked 
 	//	and also create skinning bone buffers:
@@ -3492,323 +3655,76 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 		});
 	}
 
-	// Perform parallel frustum culling and obtain closest reflector:
-	wiSpinLock locker;
-	float closestRefPlane = FLT_MAX;
-	requestReflectionRendering = false;
-	requestVolumetricLightRendering = false;
-	auto range = wiProfiler::BeginRangeCPU("Frustum Culling");
-	{
-		// The parallel frustum culling is first performed in shared memory, 
-		//	then each group writes out it's local list to global memory
-		//	The shared memory approach reduces atomics and helps the list to remain
-		//	more coherent (less randomly organized compared to original order)
-		const uint32_t groupSize = 64;
-		const size_t sharedmemory_size = (groupSize + 1) * sizeof(uint32_t); // list + counter per group
-
-		for (auto& x : frameCullings)
-		{
-			auto& camera = x.first;
-			FrameCulling& culling = x.second;
-			culling.Clear();
-
-			if (!freezeCullingCamera)
-			{
-				culling.frustum = camera->frustum;
-			}
-
-			// Cull objects for each camera:
-			culling.culledObjects.resize(scene.aabb_objects.GetCount());
-			wiJobSystem::Dispatch(ctx, (uint32_t)scene.aabb_objects.GetCount(), groupSize, [&](wiJobArgs args) {
-
-				Entity entity = scene.aabb_objects.GetEntity(args.jobIndex);
-				const LayerComponent* layer = scene.layers.GetComponent(entity);
-				if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
-				{
-					return;
-				}
-
-				const AABB& aabb = scene.aabb_objects[args.jobIndex];
-
-				// Setup stream compaction:
-				uint32_t& group_count = *(uint32_t*)args.sharedmemory;
-				uint32_t* group_list = (uint32_t*)args.sharedmemory + 1;
-				if (args.isFirstJobInGroup)
-				{
-					group_count = 0; // first thread initializes local counter
-				}
-
-				if (culling.frustum.CheckBoxFast(aabb))
-				{
-					// Local stream compaction:
-					group_list[group_count++] = args.jobIndex;
-
-					// Main camera can request reflection rendering:
-					if (camera == &GetCamera())
-					{
-						const ObjectComponent& object = scene.objects[args.jobIndex];
-						if (object.IsRequestPlanarReflection())
-						{
-							float dist = wiMath::DistanceEstimated(camera->Eye, object.center);
-							locker.lock();
-							if (dist < closestRefPlane)
-							{
-								closestRefPlane = dist;
-								const TransformComponent& transform = scene.transforms[object.transform_index];
-								XMVECTOR P = transform.GetPositionV();
-								XMVECTOR N = XMVectorSet(0, 1, 0, 0);
-								N = XMVector3TransformNormal(N, XMLoadFloat4x4(&transform.world));
-								XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
-								XMStoreFloat4(&waterPlane, _refPlane);
-
-								requestReflectionRendering = true;
-							}
-							locker.unlock();
-						}
-					}
-				}
-
-				// Global stream compaction:
-				if (args.isLastJobInGroup && group_count > 0)
-				{
-					uint32_t prev_count = culling.object_counter.fetch_add(group_count);
-					for (uint32_t i = 0; i < group_count; ++i)
-					{
-						culling.culledObjects[prev_count + i] = group_list[i];
-					}
-				}
-
-			}, sharedmemory_size);
-
-			// the following cullings will be only for the main camera:
-			if (camera == &GetCamera())
-			{
-				culling.culledDecals.resize(scene.aabb_decals.GetCount());
-				wiJobSystem::Dispatch(ctx, (uint32_t)scene.aabb_decals.GetCount(), groupSize, [&](wiJobArgs args) {
-
-					Entity entity = scene.aabb_decals.GetEntity(args.jobIndex);
-					const LayerComponent* layer = scene.layers.GetComponent(entity);
-					if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
-					{
-						return;
-					}
-
-					const AABB& aabb = scene.aabb_decals[args.jobIndex];
-
-					// Setup stream compaction:
-					uint32_t& group_count = *(uint32_t*)args.sharedmemory;
-					uint32_t* group_list = (uint32_t*)args.sharedmemory + 1;
-					if (args.isFirstJobInGroup)
-					{
-						group_count = 0; // first thread initializes local counter
-					}
-
-					if (culling.frustum.CheckBoxFast(aabb))
-					{
-						// Local stream compaction:
-						group_list[group_count++] = args.jobIndex;
-					}
-
-					// Global stream compaction:
-					if (args.isLastJobInGroup && group_count > 0)
-					{
-						uint32_t prev_count = culling.decal_counter.fetch_add(group_count);
-						for (uint32_t i = 0; i < group_count; ++i)
-						{
-							culling.culledDecals[prev_count + i] = group_list[i];
-						}
-					}
-
-				}, sharedmemory_size);
-
-				wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-					// Cull probes:
-					for (size_t i = 0; i < scene.aabb_probes.GetCount(); ++i)
-					{
-						Entity entity = scene.aabb_probes.GetEntity(i);
-						const LayerComponent* layer = scene.layers.GetComponent(entity);
-						if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
-						{
-							continue;
-						}
-
-						const AABB& aabb = scene.aabb_probes[i];
-
-						if (culling.frustum.CheckBoxFast(aabb))
-						{
-							culling.culledEnvProbes.push_back((uint32_t)i);
-						}
-					}
-				});
-
-				// Cull lights:
-				culling.culledLights.resize(scene.aabb_lights.GetCount());
-				wiJobSystem::Dispatch(ctx, (uint32_t)scene.aabb_lights.GetCount(), groupSize, [&](wiJobArgs args) {
-
-					Entity entity = scene.aabb_lights.GetEntity(args.jobIndex);
-					const LayerComponent* layer = scene.layers.GetComponent(entity);
-					if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
-					{
-						return;
-					}
-
-					const AABB& aabb = scene.aabb_lights[args.jobIndex];
-
-					// Setup stream compaction:
-					uint32_t& group_count = *(uint32_t*)args.sharedmemory;
-					uint32_t* group_list = (uint32_t*)args.sharedmemory + 1;
-					if (args.isFirstJobInGroup)
-					{
-						group_count = 0; // first thread initializes local counter
-					}
-
-					if (culling.frustum.CheckBoxFast(aabb))
-					{
-						// Local stream compaction:
-						group_list[group_count++] = args.jobIndex;
-					}
-
-					// Global stream compaction:
-					if (args.isLastJobInGroup && group_count > 0)
-					{
-						uint32_t prev_count = culling.light_counter.fetch_add(group_count);
-						for (uint32_t i = 0; i < group_count; ++i)
-						{
-							culling.culledLights[prev_count + i] = group_list[i];
-						}
-					}
-
-				}, sharedmemory_size);
-
-				wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-					// Cull emitters:
-					for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
-					{
-						Entity entity = scene.emitters.GetEntity(i);
-						const LayerComponent* layer = scene.layers.GetComponent(entity);
-						if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
-						{
-							continue;
-						}
-						culling.culledEmitters.push_back((uint32_t)i);
-					}
-				});
-
-				wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-					// Cull hairs:
-					for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
-					{
-						Entity entity = scene.hairs.GetEntity(i);
-						const LayerComponent* layer = scene.layers.GetComponent(entity);
-						if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
-						{
-							continue;
-						}
-
-						const wiHairParticle& hair = scene.hairs[i];
-						if (hair.meshID == INVALID_ENTITY || !culling.frustum.CheckBoxFast(hair.aabb))
-						{
-							continue;
-						}
-						culling.culledHairs.push_back((uint32_t)i);
-					}
-				});
-			}
-
-		}
-	}
-	wiJobSystem::Wait(ctx);
-	// finalize stream compaction:
-	for (auto& x : frameCullings)
-	{
-		FrameCulling& culling = x.second;
-		culling.culledObjects.resize((size_t)culling.object_counter.load());
-		culling.culledLights.resize((size_t)culling.light_counter.load());
-		culling.culledDecals.resize((size_t)culling.decal_counter.load());
-	}
-	wiProfiler::EndRange(range); // Frustum Culling
-
 	// Light sorting:
-	for (auto& x : frameCullings)
+	if (!vis.visibleLights.empty())
 	{
-		FrameCulling& culling = x.second;
+		wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
+			// Sort lights based on distance so that closer lights will receive shadow map priority:
+			const size_t lightCount = vis.visibleLights.size();
+			assert(lightCount < 0x0000FFFF); // watch out for sorting hash truncation!
+			uint32_t* lightSortingHashes = (uint32_t*)GetUpdateFrameAllocator().allocate(sizeof(uint32_t) * lightCount);
+			for (size_t i = 0; i < lightCount; ++i)
+			{
+				const uint32_t lightIndex = vis.visibleLights[i];
+				const LightComponent& light = scene.lights[lightIndex];
+				float distance = wiMath::DistanceEstimated(light.position, vis.camera->Eye);
+				lightSortingHashes[i] = 0;
+				lightSortingHashes[i] |= (uint32_t)i & 0x0000FFFF;
+				lightSortingHashes[i] |= ((uint32_t)(distance * 10) & 0x0000FFFF) << 16;
+			}
+			std::sort(lightSortingHashes, lightSortingHashes + lightCount, std::less<uint32_t>());
 
-		if (!culling.culledLights.empty())
-		{
-			wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-				// Sort lights based on distance so that closer lights will receive shadow map priority:
-				const CameraComponent* camera = x.first;
-				const size_t lightCount = culling.culledLights.size();
-				assert(lightCount < 0x0000FFFF); // watch out for sorting hash truncation!
-				uint32_t* lightSortingHashes = (uint32_t*)GetUpdateFrameAllocator().allocate(sizeof(uint32_t) * lightCount);
-				for (size_t i = 0; i < lightCount; ++i)
+			uint32_t shadowCounter_2D = 0;
+			uint32_t shadowCounter_Cube = 0;
+			for (size_t i = 0; i < lightCount; ++i)
+			{
+				const uint32_t lightIndex = vis.visibleLights[lightSortingHashes[i] & 0x0000FFFF];
+				LightComponent& light = scene.lights[lightIndex];
+				requestVolumetricLightRendering |= light.IsVolumetricsEnabled();
+
+				// Link shadowmaps to lights till there are free slots
+
+				light.shadowMap_index = -1;
+
+				if (light.IsCastingShadow())
 				{
-					const uint32_t lightIndex = culling.culledLights[i];
-					const LightComponent& light = scene.lights[lightIndex];
-					float distance = wiMath::DistanceEstimated(light.position, camera->Eye);
-					lightSortingHashes[i] = 0;
-					lightSortingHashes[i] |= (uint32_t)i & 0x0000FFFF;
-					lightSortingHashes[i] |= ((uint32_t)(distance * 10) & 0x0000FFFF) << 16;
-				}
-				std::sort(lightSortingHashes, lightSortingHashes + lightCount, std::less<uint32_t>());
-
-				uint32_t shadowCounter_2D = 0;
-				uint32_t shadowCounter_Cube = 0;
-				for (size_t i = 0; i < lightCount; ++i)
-				{
-					const uint32_t lightIndex = culling.culledLights[lightSortingHashes[i] & 0x0000FFFF];
-					LightComponent& light = scene.lights[lightIndex];
-					requestVolumetricLightRendering |= light.IsVolumetricsEnabled();
-
-					// Link shadowmaps to lights till there are free slots
-
-					light.shadowMap_index = -1;
-
-					if (light.IsCastingShadow())
+					switch (light.GetType())
 					{
-						switch (light.GetType())
+					case LightComponent::DIRECTIONAL:
+						if ((shadowCounter_2D + CASCADE_COUNT - 1) < SHADOWCOUNT_2D)
 						{
-						case LightComponent::DIRECTIONAL:
-							if ((shadowCounter_2D + CASCADE_COUNT - 1) < SHADOWCOUNT_2D)
-							{
-								light.shadowMap_index = shadowCounter_2D;
-								shadowCounter_2D += CASCADE_COUNT;
-							}
-							break;
-						case LightComponent::SPOT:
-							if (shadowCounter_2D < SHADOWCOUNT_2D)
-							{
-								light.shadowMap_index = shadowCounter_2D;
-								shadowCounter_2D++;
-							}
-							break;
-						case LightComponent::POINT:
-						case LightComponent::SPHERE:
-						case LightComponent::DISC:
-						case LightComponent::RECTANGLE:
-						case LightComponent::TUBE:
-							if (shadowCounter_Cube < SHADOWCOUNT_CUBE)
-							{
-								light.shadowMap_index = shadowCounter_Cube;
-								shadowCounter_Cube++;
-							}
-							break;
-						default:
-							break;
+							light.shadowMap_index = shadowCounter_2D;
+							shadowCounter_2D += CASCADE_COUNT;
 						}
+						break;
+					case LightComponent::SPOT:
+						if (shadowCounter_2D < SHADOWCOUNT_2D)
+						{
+							light.shadowMap_index = shadowCounter_2D;
+							shadowCounter_2D++;
+						}
+						break;
+					case LightComponent::POINT:
+					case LightComponent::SPHERE:
+					case LightComponent::DISC:
+					case LightComponent::RECTANGLE:
+					case LightComponent::TUBE:
+						if (shadowCounter_Cube < SHADOWCOUNT_CUBE)
+						{
+							light.shadowMap_index = shadowCounter_Cube;
+							shadowCounter_Cube++;
+						}
+						break;
+					default:
+						break;
 					}
 				}
+			}
 			});
-		}
 	}
 
-	// Ocean will override any current reflectors
 	if (scene.weather.IsOceanEnabled())
 	{
-		requestReflectionRendering = true; 
-		XMVECTOR _refPlane = XMPlaneFromPointNormal(XMVectorSet(0, scene.weather.oceanParameters.waterHeight, 0, 0), XMVectorSet(0, 1, 0, 0));
-		XMStoreFloat4(&waterPlane, _refPlane);
-
 		if (ocean == nullptr)
 		{
 			ocean = std::make_unique<wiOcean>(scene.weather);
@@ -3820,16 +3736,16 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 	}
 
 	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-		ManageDecalAtlas();
+		ManageDecalAtlas(scene);
 	});
 	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-		ManageLightmapAtlas();
+		ManageLightmapAtlas(scene);
 	});
 	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-		ManageImpostors();
+		ManageImpostors(scene);
 	});
 	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-		ManageEnvProbes();
+		ManageEnvProbes(scene);
 	});
 	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
 		for (auto& x : waterRipples)
@@ -3841,18 +3757,16 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 
 	wiJobSystem::Wait(ctx);
 }
-void UpdateRenderData(CommandList cmd)
+void UpdateRenderData(const Visibility& vis, CommandList cmd)
 {
-	const Scene& scene = GetScene();
-
 	BindCommonResources(cmd);
 
 	// Update material constant buffers:
 	for (auto& materialIndex : pendingMaterialUpdates)
 	{
-		if (materialIndex < scene.materials.GetCount())
+		if (materialIndex < vis.scene->materials.GetCount())
 		{
-			const MaterialComponent& material = scene.materials[materialIndex];
+			const MaterialComponent& material = vis.scene->materials[materialIndex];
 			ShaderMaterial materialGPUData;
 			material.WriteShaderMaterial(&materialGPUData);
 			device->UpdateBuffer(&material.constantBuffer, &materialGPUData, cmd);
@@ -3863,22 +3777,20 @@ void UpdateRenderData(CommandList cmd)
 	// Update mesh morph buffers:
 	for (auto& meshIndex : pendingMorphUpdates)
 	{
-	    if (meshIndex < scene.meshes.GetCount())
-	    {
-			const MeshComponent& mesh = scene.meshes[meshIndex];
+		if (meshIndex < vis.scene->meshes.GetCount())
+		{
+			const MeshComponent& mesh = vis.scene->meshes[meshIndex];
 			device->UpdateBuffer(&mesh.vertexBuffer_POS, mesh.vertex_positions_morphed.data(), cmd);
-	    }
+		}
 	}
 	pendingMorphUpdates.clear();
 
 
-	if (scene.weather.IsRealisticSky())
+	if (vis.scene->weather.IsRealisticSky())
 	{
 		// Render Atmospheric Scattering textures for lighting and sky
 		RenderAtmosphericScatteringTextures(cmd);
 	}
-
-	const FrameCulling& mainCameraCulling = frameCullings.at(&GetCamera());
 
 	// Fill Entity Array with decals + envprobes + lights in the frustum:
 	{
@@ -3902,7 +3814,7 @@ void UpdateRenderData(CommandList cmd)
 
 		// Write decals into entity array:
 		entityArrayOffset_Decals = entityCounter;
-		for (size_t i = 0; i < mainCameraCulling.culledDecals.size(); ++i)
+		for (size_t i = 0; i < vis.visibleDecals.size(); ++i)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
@@ -3916,8 +3828,8 @@ void UpdateRenderData(CommandList cmd)
 				matrixCounter--;
 				break;
 			}
-			const uint32_t decalIndex = mainCameraCulling.culledDecals[mainCameraCulling.culledDecals.size() - 1 - i]; // note: reverse order, for correct blending!
-			const DecalComponent& decal = scene.decals[decalIndex];
+			const uint32_t decalIndex = vis.visibleDecals[vis.visibleDecals.size() - 1 - i]; // note: reverse order, for correct blending!
+			const DecalComponent& decal = vis.scene->decals[decalIndex];
 
 			entityArray[entityCounter].SetType(ENTITY_TYPE_DECAL);
 			entityArray[entityCounter].positionWS = decal.position;
@@ -3937,7 +3849,7 @@ void UpdateRenderData(CommandList cmd)
 
 		// Write environment probes into entity array:
 		entityArrayOffset_EnvProbes = entityCounter;
-		for (size_t i = 0; i < mainCameraCulling.culledEnvProbes.size(); ++i)
+		for (size_t i = 0; i < vis.visibleEnvProbes.size(); ++i)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
@@ -3952,8 +3864,8 @@ void UpdateRenderData(CommandList cmd)
 				break;
 			}
 
-			const uint32_t probeIndex = mainCameraCulling.culledEnvProbes[mainCameraCulling.culledEnvProbes.size() - 1 - i]; // note: reverse order, for correct blending!
-			const EnvironmentProbeComponent& probe = scene.probes[probeIndex];
+			const uint32_t probeIndex = vis.visibleEnvProbes[vis.visibleEnvProbes.size() - 1 - i]; // note: reverse order, for correct blending!
+			const EnvironmentProbeComponent& probe = vis.scene->probes[probeIndex];
 			if (probe.textureIndex < 0)
 			{
 				continue;
@@ -3975,7 +3887,7 @@ void UpdateRenderData(CommandList cmd)
 
 		// Write lights into entity array:
 		entityArrayOffset_Lights = entityCounter;
-		for (uint32_t lightIndex : mainCameraCulling.culledLights)
+		for (uint32_t lightIndex : vis.visibleLights)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
@@ -3984,7 +3896,7 @@ void UpdateRenderData(CommandList cmd)
 				break;
 			}
 
-			const LightComponent& light = scene.lights[lightIndex];
+			const LightComponent& light = vis.scene->lights[lightIndex];
 
 			entityArray[entityCounter].SetType(light.GetType());
 			entityArray[entityCounter].positionWS = light.position;
@@ -4082,7 +3994,7 @@ void UpdateRenderData(CommandList cmd)
 
 		// Write force fields into entity array:
 		entityArrayOffset_ForceFields = entityCounter;
-		for (size_t i = 0; i < scene.forces.GetCount(); ++i)
+		for (size_t i = 0; i < vis.scene->forces.GetCount(); ++i)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
@@ -4091,7 +4003,7 @@ void UpdateRenderData(CommandList cmd)
 				break;
 			}
 
-			const ForceFieldComponent& force = scene.forces[i];
+			const ForceFieldComponent& force = vis.scene->forces[i];
 
 			entityArray[entityCounter].SetType(force.type);
 			entityArray[entityCounter].positionWS = force.position;
@@ -4114,7 +4026,7 @@ void UpdateRenderData(CommandList cmd)
 		GetRenderFrameAllocator(cmd).free(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
 	}
 
-	UpdateFrameCB(cmd);
+	UpdateFrameCB(*vis.scene, cmd);
 
 	GetPrevCamera() = GetCamera();
 
@@ -4124,14 +4036,14 @@ void UpdateRenderData(CommandList cmd)
 		bool streamOutSetUp = false;
 		SHADERTYPE lastCS = CSTYPE_SKINNING_LDS;
 
-		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
+		for (size_t i = 0; i < vis.scene->meshes.GetCount(); ++i)
 		{
-			Entity entity = scene.meshes.GetEntity(i);
-			const MeshComponent& mesh = scene.meshes[i];
+			Entity entity = vis.scene->meshes.GetEntity(i);
+			const MeshComponent& mesh = vis.scene->meshes[i];
 
-			if (mesh.IsSkinned() && scene.armatures.Contains(mesh.armatureID))
+			if (mesh.IsSkinned() && vis.scene->armatures.Contains(mesh.armatureID))
 			{
-				const SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(entity);
+				const SoftBodyPhysicsComponent* softbody = vis.scene->softbodies.GetComponent(entity);
 				if (softbody != nullptr && softbody->physicsobject != nullptr)
 				{
 					// If soft body simulation is active, don't perform skinning.
@@ -4139,7 +4051,7 @@ void UpdateRenderData(CommandList cmd)
 					continue;
 				}
 
-				const ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
+				const ArmatureComponent& armature = *vis.scene->armatures.GetComponent(mesh.armatureID);
 
 				if (!streamOutSetUp)
 				{
@@ -4208,16 +4120,16 @@ void UpdateRenderData(CommandList cmd)
 	wiProfiler::EndRange(range); // skinning
 
 	// Update soft body vertex buffers:
-	for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
+	for (size_t i = 0; i < vis.scene->softbodies.GetCount(); ++i)
 	{
-		const SoftBodyPhysicsComponent& softbody = scene.softbodies[i];
+		const SoftBodyPhysicsComponent& softbody = vis.scene->softbodies[i];
 		if (softbody.vertex_positions_simulation.empty())
 		{
 			continue;
 		}
 
-		Entity entity = scene.softbodies.GetEntity(i);
-		const MeshComponent& mesh = *scene.meshes.GetComponent(entity);
+		Entity entity = vis.scene->softbodies.GetEntity(i);
+		const MeshComponent& mesh = *vis.scene->meshes.GetComponent(entity);
 
 		device->UpdateBuffer(&mesh.streamoutBuffer_POS, softbody.vertex_positions_simulation.data(), cmd, 
 			(uint32_t)(sizeof(MeshComponent::Vertex_POS) * softbody.vertex_positions_simulation.size()));
@@ -4227,16 +4139,16 @@ void UpdateRenderData(CommandList cmd)
 	}
 
 	// GPU Particle systems simulation/sorting/culling:
-	if (!mainCameraCulling.culledEmitters.empty())
+	if (!vis.visibleEmitters.empty())
 	{
 		range = wiProfiler::BeginRangeGPU("EmittedParticles - Simulate", cmd);
-		for (uint32_t emitterIndex : mainCameraCulling.culledEmitters)
+		for (uint32_t emitterIndex : vis.visibleEmitters)
 		{
-			const wiEmittedParticle& emitter = scene.emitters[emitterIndex];
-			Entity entity = scene.emitters.GetEntity(emitterIndex);
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-			const MaterialComponent& material = *scene.materials.GetComponent(entity);
-			const MeshComponent* mesh = scene.meshes.GetComponent(emitter.meshID);
+			const wiEmittedParticle& emitter = vis.scene->emitters[emitterIndex];
+			Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
+			const TransformComponent& transform = *vis.scene->transforms.GetComponent(entity);
+			const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
+			const MeshComponent* mesh = vis.scene->meshes.GetComponent(emitter.meshID);
 
 			emitter.UpdateGPU(transform, material, mesh, cmd);
 		}
@@ -4244,18 +4156,18 @@ void UpdateRenderData(CommandList cmd)
 	}
 
 	// Hair particle systems GPU simulation:
-	if (!mainCameraCulling.culledHairs.empty())
+	if (!vis.visibleHairs.empty())
 	{
 		range = wiProfiler::BeginRangeGPU("HairParticles - Simulate", cmd);
-		for (uint32_t hairIndex : mainCameraCulling.culledHairs)
+		for (uint32_t hairIndex : vis.visibleHairs)
 		{
-			const wiHairParticle& hair = scene.hairs[hairIndex];
-			const MeshComponent* mesh = scene.meshes.GetComponent(hair.meshID);
+			const wiHairParticle& hair = vis.scene->hairs[hairIndex];
+			const MeshComponent* mesh = vis.scene->meshes.GetComponent(hair.meshID);
 
 			if (mesh != nullptr)
 			{
-				Entity entity = scene.hairs.GetEntity(hairIndex);
-				const MaterialComponent& material = *scene.materials.GetComponent(entity);
+				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
+				const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
 
 				hair.UpdateGPU(*mesh, material, cmd);
 			}
@@ -4264,16 +4176,15 @@ void UpdateRenderData(CommandList cmd)
 	}
 
 	// Compute water simulation:
-	if (scene.weather.IsOceanEnabled() && ocean != nullptr)
+	if (vis.scene->weather.IsOceanEnabled() && ocean != nullptr)
 	{
 		range = wiProfiler::BeginRangeGPU("Ocean - Simulate", cmd);
-		ocean->UpdateDisplacementMap(scene.weather, renderTime, cmd);
+		ocean->UpdateDisplacementMap(vis.scene->weather, renderTime, cmd);
 		wiProfiler::EndRange(range);
 	}
 }
-void UpdateRaytracingAccelerationStructures(CommandList cmd)
+void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 {
-	const Scene& scene = GetScene();
 	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) || !scene.TLAS.IsValid())
 	{
 		return;
@@ -4354,33 +4265,80 @@ void UpdateRaytracingAccelerationStructures(CommandList cmd)
 	device->EventEnd(cmd);
 	wiProfiler::EndRange(range);
 }
-void OcclusionCulling_Render(CommandList cmd)
+void OcclusionCulling_Render(const Visibility& vis, CommandList cmd)
 {
 	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
 	{
 		return;
 	}
 
-	const FrameCulling& culling = frameCullings.at(&GetCamera());
-
 	auto range = wiProfiler::BeginRangeGPU("Occlusion Culling Render", cmd);
 
-	int queryID = 0;
-
-	if (!culling.culledObjects.empty())
+	if (!vis.visibleObjects.empty())
 	{
 		device->EventBegin("Occlusion Culling Render", cmd);
 
 		device->BindPipelineState(&PSO_occlusionquery, cmd);
 
-		// TODO: This is not const, so not thread safe!
-		Scene& scene = GetScene();
-
-		int queryID = 0;
+		XMMATRIX VP = GetPrevCamera().GetViewProjection();
 
 		MiscCB cb;
 
-		for (uint32_t instanceIndex : culling.culledObjects)
+		for (uint32_t instanceIndex : vis.visibleObjects)
+		{
+			const ObjectComponent& object = vis.scene->objects[instanceIndex];
+			if (!object.IsRenderable())
+			{
+				continue;
+			}
+
+			if (object.occlusionQueryID < 0 || object.occlusionQueryID >= arraysize(occlusionQueries))
+			{
+				// object doesn't have a valid occlusion query
+				continue;
+			}
+
+			// If a query could be retrieved from the pool for the instance, the instance can be occluded, so render it
+			GPUQuery* query = occlusionQueries[object.occlusionQueryID].Get_GPU();
+			if (query == nullptr || !query->IsValid())
+			{
+				continue;
+			}
+
+			const AABB& aabb = vis.scene->aabb_objects[instanceIndex];
+
+			// previous frame view*projection because these are drawn against the previous depth buffer:
+			XMStoreFloat4x4(&cb.g_xTransform, aabb.getAsBoxMatrix() * VP);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &cb, cmd);
+			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+
+			// render bounding box to later read the occlusion status
+			device->QueryBegin(query, cmd);
+			device->Draw(14, 0, cmd);
+			device->QueryEnd(query, cmd);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+	wiProfiler::EndRange(range); // Occlusion Culling Render
+}
+void OcclusionCulling_Read(Scene& scene, const Visibility& vis)
+{
+	assert(&scene == vis.scene);
+
+	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
+	{
+		return;
+	}
+
+	auto range = wiProfiler::BeginRangeCPU("Occlusion Culling Read");
+
+	int queryID = 0;
+
+	if (!vis.visibleObjects.empty())
+	{
+		for (uint32_t instanceIndex : vis.visibleObjects)
 		{
 			ObjectComponent& object = scene.objects[instanceIndex];
 			if (!object.IsRenderable())
@@ -4388,18 +4346,7 @@ void OcclusionCulling_Render(CommandList cmd)
 				continue;
 			}
 
-			if (queryID >= arraysize(occlusionQueries))
-			{
-				object.occlusionQueryID = -1; // assign an invalid id from the pool
-				continue;
-			}
-
-			// If a query could be retrieved from the pool for the instance, the instance can be occluded, so render it
-			GPUQuery* query = occlusionQueries[queryID].Get_GPU();
-			if (query == nullptr || !query->IsValid())
-			{
-				continue;
-			}
+			object.occlusionHistory <<= 1; // advance history by 1 frame
 
 			const AABB& aabb = scene.aabb_objects[instanceIndex];
 
@@ -4410,76 +4357,46 @@ void OcclusionCulling_Render(CommandList cmd)
 			}
 			else
 			{
-				// only query for occlusion if the camera is outside the instance
-				object.occlusionQueryID = queryID; // just assign the id from the pool
-				queryID++;
+				// Check occlusion result:
+				if (object.occlusionQueryID >= 0 && object.occlusionQueryID < arraysize(occlusionQueries))
+				{
+					GPUQuery* query = occlusionQueries[object.occlusionQueryID].Get_CPU();
+					if (query == nullptr || !query->IsValid())
+					{
+						// occlusion query not available for CPU read
+						object.occlusionHistory |= 1; // mark this frame as visible
+					}
+					else
+					{
+						GPUQueryResult result;
+						bool query_ready = device->QueryRead(query, &result);
+						if (result.result_passed_sample_count > 0)
+						{
+							object.occlusionHistory |= 1; // mark this frame as visible
+						}
+						else
+						{
+							// leave this frame as occluded
+						}
+					}
 
-				// previous frame view*projection because these are drawn against the previous depth buffer:
-				XMStoreFloat4x4(&cb.g_xTransform, aabb.getAsBoxMatrix()*GetPrevCamera().GetViewProjection()); // todo: obb
-				device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &cb, cmd);
-				device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+					object.occlusionQueryAge++;
+				}
 
-				// render bounding box to later read the occlusion status
-				device->QueryBegin(query, cmd);
-				device->Draw(14, 0, cmd);
-				device->QueryEnd(query, cmd);
-			}
-		}
-
-		device->EventEnd(cmd);
-	}
-
-	wiProfiler::EndRange(range); // Occlusion Culling Render
-}
-void OcclusionCulling_Read()
-{
-	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
-	{
-		return;
-	}
-
-	auto range = wiProfiler::BeginRangeCPU("Occlusion Culling Read");
-
-	const FrameCulling& culling = frameCullings.at(&GetCamera());
-
-	if (!culling.culledObjects.empty())
-	{
-		Scene& scene = GetScene();
-
-		for (uint32_t instanceIndex : culling.culledObjects)
-		{
-			ObjectComponent& object = scene.objects[instanceIndex];
-			if (!object.IsRenderable())
-			{
-				continue;
-			}
-
-			object.occlusionHistory <<= 1; // advance history by 1 frame
-			if (object.occlusionQueryID < 0)
-			{
-				// object doesn't have an occlusion query
-				object.occlusionHistory |= 1; // mark this frame as visible
-				continue;
-			}
-
-			GPUQuery* query = occlusionQueries[object.occlusionQueryID].Get_CPU();
-			if (query == nullptr || !query->IsValid())
-			{
-				// occlusion query not available for CPU read
-				object.occlusionHistory |= 1; // mark this frame as visible
-				continue;
-			}
-
-			GPUQueryResult query_result;
-			bool query_ready = device->QueryRead(query, &query_result);
-
-			if (query_result.result_passed_sample_count > 0 || !query_ready)
-			{
-				object.occlusionHistory |= 1; // mark this frame as visible
-			}
-			else
-			{
-				// leave this frame as occluded
+				if (object.occlusionQueryAge < 0 || object.occlusionQueryAge >= (int)GraphicsDevice::GetBackBufferCount())
+				{
+					// Assign query for next frame:
+					if (queryID < arraysize(occlusionQueries))
+					{
+						object.occlusionQueryID = queryID; // just assign the id from the pool
+						queryID++;
+					}
+					else
+					{
+						object.occlusionQueryID = -1; // no free queries to assign!
+					}
+					object.occlusionQueryAge = -1;
+				}
 			}
 		}
 	}
@@ -4488,8 +4405,6 @@ void OcclusionCulling_Read()
 }
 void EndFrame()
 {
-	OcclusionCulling_Read();
-
 	updateFrameAllocator.reset();
 	for (int i = 0; i < COMMANDLIST_COUNT; ++i)
 	{
@@ -4537,15 +4452,13 @@ void DrawWaterRipples(CommandList cmd)
 
 
 void DrawSoftParticles(
-	const CameraComponent& camera,
+	const Visibility& vis,
 	const Texture& lineardepth,
 	bool distortion, 
 	CommandList cmd
 )
 {
-	const Scene& scene = GetScene();
-	const FrameCulling& culling = frameCullings.at(&camera);
-	size_t emitterCount = culling.culledEmitters.size();
+	size_t emitterCount = vis.visibleEmitters.size();
 	if (emitterCount == 0)
 	{
 		return;
@@ -4558,9 +4471,9 @@ void DrawSoftParticles(
 	uint32_t* emitterSortingHashes = (uint32_t*)GetRenderFrameAllocator(cmd).allocate(sizeof(uint32_t) * emitterCount);
 	for (size_t i = 0; i < emitterCount; ++i)
 	{
-		const uint32_t emitterIndex = culling.culledEmitters[i];
-		const wiEmittedParticle& emitter = scene.emitters[emitterIndex];
-		float distance = wiMath::DistanceEstimated(emitter.center, camera.Eye);
+		const uint32_t emitterIndex = vis.visibleEmitters[i];
+		const wiEmittedParticle& emitter = vis.scene->emitters[emitterIndex];
+		float distance = wiMath::DistanceEstimated(emitter.center, vis.camera->Eye);
 		emitterSortingHashes[i] = 0;
 		emitterSortingHashes[i] |= (uint32_t)i & 0x0000FFFF;
 		emitterSortingHashes[i] |= ((uint32_t)(distance * 10) & 0x0000FFFF) << 16;
@@ -4569,18 +4482,18 @@ void DrawSoftParticles(
 
 	for (size_t i = 0; i < emitterCount; ++i)
 	{
-		const uint32_t emitterIndex = culling.culledEmitters[emitterSortingHashes[i] & 0x0000FFFF];
-		const wiEmittedParticle& emitter = scene.emitters[emitterIndex];
-		const Entity entity = scene.emitters.GetEntity(emitterIndex);
-		const MaterialComponent& material = *scene.materials.GetComponent(entity);
+		const uint32_t emitterIndex = vis.visibleEmitters[emitterSortingHashes[i] & 0x0000FFFF];
+		const wiEmittedParticle& emitter = vis.scene->emitters[emitterIndex];
+		const Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
+		const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
 
 		if (distortion && emitter.shaderType == wiEmittedParticle::SOFT_DISTORTION)
 		{
-			emitter.Draw(camera, material, cmd);
+			emitter.Draw(*vis.camera, material, cmd);
 		}
 		else if (!distortion && (emitter.shaderType == wiEmittedParticle::SOFT || emitter.shaderType == wiEmittedParticle::SOFT_LIGHTING || emitter.shaderType == wiEmittedParticle::SIMPLEST || IsWireRender()))
 		{
-			emitter.Draw(camera, material, cmd);
+			emitter.Draw(*vis.camera, material, cmd);
 		}
 	}
 
@@ -4588,31 +4501,27 @@ void DrawSoftParticles(
 
 }
 void DrawLightVisualizers(
-	const CameraComponent& camera, 
+	const Visibility& vis,
 	CommandList cmd
 )
 {
-	const FrameCulling& culling = frameCullings.at(&camera);
-
-	if (!culling.culledLights.empty())
+	if (!vis.visibleLights.empty())
 	{
-		const Scene& scene = GetScene();
-
 		device->EventBegin("Light Visualizer Render", cmd);
 
 		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), cmd);
 		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), cmd);
 
-		XMMATRIX camrot = XMLoadFloat3x3(&camera.rotationMatrix);
-
+		XMMATRIX camrot = XMLoadFloat3x3(&vis.camera->rotationMatrix);
+		XMMATRIX VP = vis.camera->GetViewProjection();
 
 		for (int type = LightComponent::POINT; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 		{
 			device->BindPipelineState(&PSO_lightvisualizer[type], cmd);
 
-			for (uint32_t lightIndex : culling.culledLights)
+			for (uint32_t lightIndex : vis.visibleLights)
 			{
-				const LightComponent& light = scene.lights[lightIndex];
+				const LightComponent& light = vis.scene->lights[lightIndex];
 
 				if (light.GetType() == type && light.IsVisualizerEnabled())
 				{
@@ -4654,7 +4563,7 @@ void DrawLightVisualizers(
 							XMMatrixScaling(light.radius, light.radius, light.radius)*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
-							camera.GetViewProjection()
+							VP
 						);
 
 						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, cmd);
@@ -4667,7 +4576,7 @@ void DrawLightVisualizers(
 							XMMatrixScaling(light.radius, light.radius, light.radius)*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
-							camera.GetViewProjection()
+							VP
 						);
 
 						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, cmd);
@@ -4680,7 +4589,7 @@ void DrawLightVisualizers(
 							XMMatrixScaling(light.width * 0.5f * light.scale.x, light.height * 0.5f * light.scale.y, 0.5f)*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
-							camera.GetViewProjection()
+							VP
 						);
 
 						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, cmd);
@@ -4693,7 +4602,7 @@ void DrawLightVisualizers(
 							XMMatrixScaling(std::max(light.width * 0.5f, light.radius) * light.scale.x, light.radius, light.radius)*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
-							camera.GetViewProjection()
+							VP
 						);
 
 						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, cmd);
@@ -4710,14 +4619,13 @@ void DrawLightVisualizers(
 	}
 }
 void DrawVolumeLights(
-	const CameraComponent& camera,
+	const Visibility& vis,
 	const Texture& depthbuffer,
 	CommandList cmd
 )
 {
-	const FrameCulling& culling = frameCullings.at(&camera);
 
-	if (!culling.culledLights.empty())
+	if (!vis.visibleLights.empty())
 	{
 		device->EventBegin("Volumetric Light Render", cmd);
 
@@ -4725,7 +4633,7 @@ void DrawVolumeLights(
 
 		device->BindResource(PS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 
-		const Scene& scene = GetScene();
+		XMMATRIX VP = vis.camera->GetViewProjection();
 
 		for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 		{
@@ -4738,10 +4646,10 @@ void DrawVolumeLights(
 
 			device->BindPipelineState(&pso, cmd);
 
-			for (size_t i = 0; i < culling.culledLights.size(); ++i)
+			for (size_t i = 0; i < vis.visibleLights.size(); ++i)
 			{
-				const uint32_t lightIndex = culling.culledLights[i];
-				const LightComponent& light = scene.lights[lightIndex];
+				const uint32_t lightIndex = vis.visibleLights[i];
+				const LightComponent& light = vis.scene->lights[lightIndex];
 				if (light.GetType() == type && light.IsVolumetricsEnabled())
 				{
 
@@ -4767,7 +4675,7 @@ void DrawVolumeLights(
 						MiscCB miscCb;
 						miscCb.g_xColor.x = float(entityArrayOffset_Lights + i);
 						float sca = light.GetRange() + 1;
-						XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * camera.GetViewProjection());
+						XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * VP);
 						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
 						device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 						device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
@@ -4784,7 +4692,7 @@ void DrawVolumeLights(
 							XMMatrixScaling(coneS*light.GetRange(), light.GetRange(), coneS*light.GetRange())*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) *
-							camera.GetViewProjection()
+							VP
 						);
 						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
 						device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
@@ -4806,7 +4714,7 @@ void DrawVolumeLights(
 
 }
 void DrawLensFlares(
-	const CameraComponent& camera,
+	const Visibility& vis,
 	const Texture& depthbuffer,
 	CommandList cmd
 )
@@ -4814,18 +4722,13 @@ void DrawLensFlares(
 	if (IsWireRender())
 		return;
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
 	device->EventBegin("Lens Flares", cmd);
-
-	const FrameCulling& culling = frameCullings.at(&camera);
-
-	const Scene& scene = GetScene();
 
 	device->BindResource(GS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 
-	for (uint32_t lightIndex : culling.culledLights)
+	for (uint32_t lightIndex : vis.visibleLights)
 	{
-		const LightComponent& light = scene.lights[lightIndex];
+		const LightComponent& light = vis.scene->lights[lightIndex];
 
 		if (!light.lensFlareRimTextures.empty())
 		{
@@ -4840,16 +4743,16 @@ void DrawLensFlares(
 			{
 				// directional light flare will be placed at infinite position along direction vector:
 				POS = 
-					camera.GetEye() + 
-					XMVector3Normalize(-XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)))) * camera.zFarP;
+					vis.camera->GetEye() + 
+					XMVector3Normalize(-XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)))) * vis.camera->zFarP;
 			}
 
-			if (XMVectorGetX(XMVector3Dot(XMVectorSubtract(POS, camera.GetEye()), camera.GetAt())) > 0) // check if the camera is facing towards the flare or not
+			if (XMVectorGetX(XMVector3Dot(XMVectorSubtract(POS, vis.camera->GetEye()), vis.camera->GetAt())) > 0) // check if the camera is facing towards the flare or not
 			{
 				device->BindPipelineState(&PSO_lensflare, cmd);
 
 				// Get the screen position of the flare:
-				XMVECTOR flarePos = XMVector3Project(POS, 0, 0, 1, 1, 1, 0, camera.GetProjection(), camera.GetView(), XMMatrixIdentity());
+				XMVECTOR flarePos = XMVector3Project(POS, 0, 0, 1, 1, 1, 0, vis.camera->GetProjection(), vis.camera->GetView(), XMMatrixIdentity());
 				LensFlareCB cb;
 				XMStoreFloat4(&cb.xSunPos, flarePos);
 				cb.xScreen = XMFLOAT4((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0, 0);
@@ -5023,14 +4926,16 @@ void SetShadowPropsCube(int resolution, int count)
 	}
 
 }
-void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t layerMask)
+void DrawShadowmaps(
+	const Visibility& vis,
+	CommandList cmd,
+	uint32_t layerMask
+)
 {
 	if (IsWireRender())
 		return;
 
-	const FrameCulling& culling = frameCullings.at(&GetCamera());
-
-	if (!culling.culledLights.empty())
+	if (!vis.visibleLights.empty())
 	{
 		device->EventBegin("DrawShadowmaps", cmd);
 		auto range = wiProfiler::BeginRangeGPU("Shadow Rendering", cmd);
@@ -5040,18 +4945,16 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 		BindConstantBuffers(PS, cmd);
 
 		BoundingFrustum cam_frustum;
-		BoundingFrustum::CreateFromMatrix(cam_frustum, camera.GetProjection());
+		BoundingFrustum::CreateFromMatrix(cam_frustum, vis.camera->GetProjection());
 		std::swap(cam_frustum.Near, cam_frustum.Far);
-		cam_frustum.Transform(cam_frustum, camera.GetInvView());
+		cam_frustum.Transform(cam_frustum, vis.camera->GetInvView());
 		XMStoreFloat4(&cam_frustum.Orientation, XMQuaternionNormalize(XMLoadFloat4(&cam_frustum.Orientation)));
-
-		const Scene& scene = GetScene();
 
 		device->UnbindResources(TEXSLOT_SHADOWARRAY_2D, 2, cmd);
 
-		for (uint32_t lightIndex : culling.culledLights)
+		for (uint32_t lightIndex : vis.visibleLights)
 		{
-			const LightComponent& light = scene.lights[lightIndex];
+			const LightComponent& light = vis.scene->lights[lightIndex];
 			if (light.shadowMap_index < 0 || !light.IsCastingShadow() || light.IsStatic())
 			{
 				continue;
@@ -5062,29 +4965,29 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 			case LightComponent::DIRECTIONAL:
 			{
 				std::array<SHCAM, CASCADE_COUNT> shcams;
-				CreateDirLightShadowCams(light, camera, shcams);
+				CreateDirLightShadowCams(light, *vis.camera, shcams);
 
 				for (uint32_t cascade = 0; cascade < CASCADE_COUNT; ++cascade)
 				{
 					RenderQueue renderQueue;
 					bool transparentShadowsRequested = false;
-					for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
+					for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 					{
-						const AABB& aabb = scene.aabb_objects[i];
+						const AABB& aabb = vis.scene->aabb_objects[i];
 						if (shcams[cascade].frustum.CheckBoxFast(aabb))
 						{
-							const ObjectComponent& object = scene.objects[i];
+							const ObjectComponent& object = vis.scene->objects[i];
 							if (object.IsRenderable() && cascade >= object.cascadeMask && object.IsCastingShadow())
 							{
-								Entity cullable_entity = scene.aabb_objects.GetEntity(i);
-								const LayerComponent* layer = scene.layers.GetComponent(cullable_entity);
+								Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
+								const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
 								if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 								{
 									continue;
 								}
 
 								RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
-								size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+								size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
 								batch->Create(meshIndex, i, 0);
 								renderQueue.add(batch);
 
@@ -5111,14 +5014,14 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 						device->BindViewports(1, &vp, cmd);
 
 						device->RenderPassBegin(&renderpasses_shadow2D[light.shadowMap_index + cascade], cmd);
-						RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
+						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
 						device->RenderPassEnd(cmd);
 
 						// Transparent renderpass will always be started so that it is clear:
 						device->RenderPassBegin(&renderpasses_shadow2DTransparent[light.shadowMap_index + cascade], cmd);
 						if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 						{
-							RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
+							RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
 						}
 						device->RenderPassEnd(cmd);
 
@@ -5137,23 +5040,23 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 
 				RenderQueue renderQueue;
 				bool transparentShadowsRequested = false;
-				for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
+				for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 				{
-					const AABB& aabb = scene.aabb_objects[i];
+					const AABB& aabb = vis.scene->aabb_objects[i];
 					if (shcam.frustum.CheckBoxFast(aabb))
 					{
-						const ObjectComponent& object = scene.objects[i];
+						const ObjectComponent& object = vis.scene->objects[i];
 						if (object.IsRenderable() && object.IsCastingShadow())
 						{
-							Entity cullable_entity = scene.aabb_objects.GetEntity(i);
-							const LayerComponent* layer = scene.layers.GetComponent(cullable_entity);
+							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
+							const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
 							if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 							{
 								continue;
 							}
 
 							RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
-							size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+							size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
 							batch->Create(meshIndex, i, 0);
 							renderQueue.add(batch);
 
@@ -5180,14 +5083,14 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 					device->BindViewports(1, &vp, cmd);
 
 					device->RenderPassBegin(&renderpasses_shadow2D[light.shadowMap_index], cmd);
-					RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
+					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
 					device->RenderPassEnd(cmd);
 
 					// Transparent renderpass will always be started so that it is clear:
 					device->RenderPassBegin(&renderpasses_shadow2DTransparent[light.shadowMap_index], cmd);
 					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 					{
-						RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
+						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
 					}
 					device->RenderPassEnd(cmd);
 
@@ -5205,23 +5108,23 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 				SPHERE boundingsphere = SPHERE(light.position, light.GetRange());
 
 				RenderQueue renderQueue;
-				for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
+				for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 				{
-					const AABB& aabb = scene.aabb_objects[i];
+					const AABB& aabb = vis.scene->aabb_objects[i];
 					if (boundingsphere.intersects(aabb))
 					{
-						const ObjectComponent& object = scene.objects[i];
+						const ObjectComponent& object = vis.scene->objects[i];
 						if (object.IsRenderable() && object.IsCastingShadow() && object.GetRenderTypes() == RENDERTYPE_OPAQUE)
 						{
-							Entity cullable_entity = scene.aabb_objects.GetEntity(i);
-							const LayerComponent* layer = scene.layers.GetComponent(cullable_entity);
+							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
+							const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
 							if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 							{
 								continue;
 							}
 
 							RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
-							size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+							size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
 							batch->Create(meshIndex, i, 0);
 							renderQueue.add(batch);
 						}
@@ -5272,7 +5175,7 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 					device->BindViewports(1, &vp, cmd);
 
 					device->RenderPassBegin(&renderpasses_shadowCube[light.shadowMap_index], cmd);
-					RenderMeshes(renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, cmd, false, frusta, frustum_count);
+					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, cmd, false, frusta, frustum_count);
 					device->RenderPassEnd(cmd);
 
 					GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
@@ -5289,15 +5192,12 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 }
 
 void DrawScene(
-	const CameraComponent& camera,
+	const Visibility& vis,
 	RENDERPASS renderPass,
 	CommandList cmd,
 	uint32_t flags
 )
 {
-	const Scene& scene = GetScene();
-	const FrameCulling& culling = frameCullings.at(&camera);
-
 	const bool opaque = flags & RENDERTYPE_OPAQUE;
 	const bool transparent = flags & DRAWSCENE_TRANSPARENT;
 	const bool tessellation = (flags & DRAWSCENE_TESSELLATION) && GetTessellationEnabled();
@@ -5307,14 +5207,31 @@ void DrawScene(
 
 	BindCommonResources(cmd);
 	BindShadowmaps(PS, cmd);
-	BindEnvironmentTextures(PS, cmd);
 	BindConstantBuffers(VS, cmd);
 	BindConstantBuffers(PS, cmd);
+
+	device->BindResource(PS, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, cmd);
+	device->BindResource(PS, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, cmd);
+	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
+	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
+	device->BindResource(PS, GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, cmd);
+
+	if (vis.scene->weather.skyMap != nullptr)
+	{
+		device->BindResource(PS, vis.scene->weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
+	}
 
 	device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
 	if (decalAtlas.IsValid())
 	{
 		device->BindResource(PS, &decalAtlas, TEXSLOT_DECALATLAS, cmd);
+	}
+
+	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	{
+		device->BindResource(PS, &vis.scene->TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+		device->BindResource(CS, &vis.scene->TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 	}
 
 	if (transparent)
@@ -5325,7 +5242,7 @@ void DrawScene(
 		}
 		if (ocean != nullptr)
 		{
-			ocean->Render(camera, scene.weather, renderTime, cmd);
+			ocean->Render(*vis.camera, vis.scene->weather, renderTime, cmd);
 		}
 	}
 	else
@@ -5340,19 +5257,18 @@ void DrawScene(
 	{
 		if (!transparent)
 		{
-			// transparent pass only renders hair when alpha composition enabled
-			for (uint32_t hairIndex : culling.culledHairs)
+			for (uint32_t hairIndex : vis.visibleHairs)
 			{
-				const wiHairParticle& hair = scene.hairs[hairIndex];
-				Entity entity = scene.hairs.GetEntity(hairIndex);
-				const MaterialComponent& material = *scene.materials.GetComponent(entity);
+				const wiHairParticle& hair = vis.scene->hairs[hairIndex];
+				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
+				const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
 
-				hair.Draw(camera, material, renderPass, cmd);
+				hair.Draw(*vis.camera, material, renderPass, cmd);
 			}
 		}
 	}
 
-	RenderImpostors(camera, renderPass, cmd);
+	RenderImpostors(vis, renderPass, cmd);
 
 	uint32_t renderTypeFlags = 0;
 	if (opaque)
@@ -5366,23 +5282,22 @@ void DrawScene(
 	}
 
 	RenderQueue renderQueue;
-	renderQueue.camera = &camera;
-	for (uint32_t instanceIndex : culling.culledObjects)
+	for (uint32_t instanceIndex : vis.visibleObjects)
 	{
-		const ObjectComponent& object = scene.objects[instanceIndex];
+		const ObjectComponent& object = vis.scene->objects[instanceIndex];
 
 		if (GetOcclusionCullingEnabled() && occlusionCulling && object.IsOccluded())
 			continue;
 
 		if (object.IsRenderable() && (object.GetRenderTypes() & renderTypeFlags))
 		{
-			const float distance = wiMath::Distance(camera.Eye, object.center);
+			const float distance = wiMath::Distance(vis.camera->Eye, object.center);
 			if (object.IsImpostorPlacement() && distance > object.impostorSwapDistance + object.impostorFadeThresholdRadius)
 			{
 				continue;
 			}
 			RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
-			size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+			size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
 			batch->Create(meshIndex, instanceIndex, distance);
 			renderQueue.add(batch);
 		}
@@ -5390,7 +5305,7 @@ void DrawScene(
 	if (!renderQueue.empty())
 	{
 		renderQueue.sort(transparent ? RenderQueue::SORT_BACK_TO_FRONT : RenderQueue::SORT_FRONT_TO_BACK);
-		RenderMeshes(renderQueue, renderPass, renderTypeFlags, cmd, tessellation);
+		RenderMeshes(vis, renderQueue, renderPass, renderTypeFlags, cmd, tessellation);
 
 		GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 	}
@@ -5400,10 +5315,12 @@ void DrawScene(
 
 }
 
-void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
+void DrawDebugWorld(
+	const Scene& scene,
+	const CameraComponent& camera,
+	CommandList cmd
+)
 {
-	const Scene& scene = GetScene();
-
 	static GPUBuffer wirecubeVB;
 	static GPUBuffer wirecubeIB;
 	if (!wirecubeVB.IsValid())
@@ -6587,10 +6504,8 @@ void RefreshAtmosphericScatteringTextures(CommandList cmd)
 
 	device->EventEnd(cmd);
 }
-void DrawSky(CommandList cmd)
+void DrawSky(const Scene& scene, CommandList cmd)
 {
-	const Scene& scene = GetScene();
-
 	device->EventBegin("DrawSky", cmd);
 	
 	if (scene.weather.skyMap != nullptr)
@@ -6638,11 +6553,9 @@ static const uint32_t envmapMIPs = 8;
 static Texture envrenderingDepthBuffer;
 static std::vector<RenderPass> renderpasses_envmap;
 vector<uint32_t> probesToRefresh(envmapCount);
-void ManageEnvProbes()
+void ManageEnvProbes(Scene& scene)
 {
 	probesToRefresh.clear();
-
-	Scene& scene = GetScene();
 
 	// reconstruct envmap array status:
 	bool envmapTaken[envmapCount] = {};
@@ -6761,14 +6674,12 @@ void ManageEnvProbes()
 		}
 	}
 }
-void RefreshEnvProbes(CommandList cmd)
+void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 {
 	if (probesToRefresh.empty())
 	{
 		return;
 	}
-
-	const Scene& scene = GetScene();
 
 	device->EventBegin("EnvironmentProbe Refresh", cmd);
 
@@ -6782,8 +6693,8 @@ void RefreshEnvProbes(CommandList cmd)
 
 	for (uint32_t probeIndex : probesToRefresh)
 	{
-		const EnvironmentProbeComponent& probe = scene.probes[probeIndex];
-		Entity entity = scene.probes.GetEntity(probeIndex);
+		const EnvironmentProbeComponent& probe = vis.scene->probes[probeIndex];
+		Entity entity = vis.scene->probes.GetEntity(probeIndex);
 
 		const SHCAM cameras[] = {
 			SHCAM(probe.position, XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
@@ -6811,29 +6722,29 @@ void RefreshEnvProbes(CommandList cmd)
 		camcb.g_xCamera_CamPos = probe.position; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
 		device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &camcb, cmd);
 
-		const LayerComponent* probe_layer = scene.layers.GetComponent(entity);
+		const LayerComponent* probe_layer = vis.scene->layers.GetComponent(entity);
 		const uint32_t layerMask = probe_layer == nullptr ?  ~0 : probe_layer->GetLayerMask();
 
 		SPHERE culler = SPHERE(probe.position, zFarP);
 
 		RenderQueue renderQueue;
-		for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
+		for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 		{
-			const AABB& aabb = scene.aabb_objects[i];
+			const AABB& aabb = vis.scene->aabb_objects[i];
 			if (culler.intersects(aabb))
 			{
-				Entity cullable_entity = scene.aabb_objects.GetEntity(i);
-				const LayerComponent* layer = scene.layers.GetComponent(cullable_entity);
+				Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
+				const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
 				if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 				{
 					continue;
 				}
 
-				const ObjectComponent& object = scene.objects[i];
+				const ObjectComponent& object = vis.scene->objects[i];
 				if (object.IsRenderable())
 				{
 					RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
-					size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+					size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
 					batch->Create(meshIndex, i, 0);
 					renderQueue.add(batch);
 				}
@@ -6845,7 +6756,7 @@ void RefreshEnvProbes(CommandList cmd)
 
 		device->RenderPassBegin(&renderpasses_envmap[probe.textureIndex], cmd);
 
-		if (scene.weather.IsRealisticSky())
+		if (vis.scene->weather.IsRealisticSky())
 		{
 			// Refresh atmospheric textures, since each probe has different positions
 			RefreshAtmosphericScatteringTextures(cmd);
@@ -6861,17 +6772,17 @@ void RefreshEnvProbes(CommandList cmd)
 			BindShadowmaps(PS, cmd);
 			device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
 
-			RenderMeshes(renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_ALL, cmd, false, frusta, arraysize(frusta));
+			RenderMeshes(vis, renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_ALL, cmd, false, frusta, arraysize(frusta));
 
 			GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 		}
 
 		// sky
 		{
-			if (scene.weather.skyMap != nullptr)
+			if (vis.scene->weather.skyMap != nullptr)
 			{
 				device->BindPipelineState(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], cmd);
-				device->BindResource(PS, scene.weather.skyMap->texture, TEXSLOT_ONDEMAND0, cmd);
+				device->BindResource(PS, vis.scene->weather.skyMap->texture, TEXSLOT_ONDEMAND0, cmd);
 			}
 			else
 			{
@@ -6944,11 +6855,9 @@ static const uint32_t impostorTextureDim = 128;
 static Texture impostorDepthStencil;
 static std::vector<RenderPass> renderpasses_impostor;
 vector<uint32_t> impostorsToRefresh(maxImpostorCount);
-void ManageImpostors()
+void ManageImpostors(Scene& scene)
 {
 	impostorsToRefresh.clear();
-
-	Scene& scene = GetScene();
 
 	for (size_t impostorIndex = 0; impostorIndex < std::min((size_t)maxImpostorCount, scene.impostors.GetCount()); ++impostorIndex)
 	{
@@ -7004,14 +6913,12 @@ void ManageImpostors()
 		}
 	}
 }
-void RefreshImpostors(CommandList cmd)
+void RefreshImpostors(const Scene& scene, CommandList cmd)
 {
 	if (impostorsToRefresh.empty())
 	{
 		return;
 	}
-
-	const Scene& scene = GetScene();
 
 	device->EventBegin("Impostor Refresh", cmd);
 
@@ -7150,7 +7057,7 @@ void RefreshImpostors(CommandList cmd)
 	device->EventEnd(cmd);
 }
 
-void VoxelRadiance(CommandList cmd)
+void VoxelRadiance(const Visibility& vis, CommandList cmd)
 {
 	if (!GetVoxelRadianceEnabled())
 	{
@@ -7159,8 +7066,6 @@ void VoxelRadiance(CommandList cmd)
 
 	device->EventBegin("Voxel Radiance", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Voxel Radiance", cmd);
-
-	const Scene& scene = GetScene();
 
 	static RenderPass renderpass_voxelize;
 
@@ -7229,16 +7134,16 @@ void VoxelRadiance(CommandList cmd)
 
 
 	RenderQueue renderQueue;
-	for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
+	for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 	{
-		const AABB& aabb = scene.aabb_objects[i];
+		const AABB& aabb = vis.scene->aabb_objects[i];
 		if (bbox.intersects(aabb))
 		{
-			const ObjectComponent& object = scene.objects[i];
+			const ObjectComponent& object = vis.scene->objects[i];
 			if (object.IsRenderable())
 			{
 				RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
-				size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+				size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
 				batch->Create(meshIndex, i, 0);
 				renderQueue.add(batch);
 			}
@@ -7261,7 +7166,7 @@ void VoxelRadiance(CommandList cmd)
 		BindConstantBuffers(PS, cmd);
 
 		device->RenderPassBegin(&renderpass_voxelize, cmd);
-		RenderMeshes(renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, cmd);
+		RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, cmd, false, nullptr, 1);
 		device->RenderPassEnd(cmd);
 
 		GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
@@ -7442,15 +7347,13 @@ void ComputeTiledLightCulling(
 
 		if (GetDebugLightCulling())
 		{
-		    device->BindComputeShader(&shaders[GetAdvancedLightCulling() ? CSTYPE_LIGHTCULLING_ADVANCED_DEBUG : CSTYPE_LIGHTCULLING_DEBUG], cmd);
+			device->BindComputeShader(&shaders[GetAdvancedLightCulling() ? CSTYPE_LIGHTCULLING_ADVANCED_DEBUG : CSTYPE_LIGHTCULLING_DEBUG], cmd);
 			device->BindUAV(CS, &textures[TEXTYPE_2D_DEBUGUAV], 3, cmd);
 		}
 		else
 		{
-		    device->BindComputeShader(&shaders[GetAdvancedLightCulling() ? CSTYPE_LIGHTCULLING_ADVANCED : CSTYPE_LIGHTCULLING], cmd);
+			device->BindComputeShader(&shaders[GetAdvancedLightCulling() ? CSTYPE_LIGHTCULLING_ADVANCED : CSTYPE_LIGHTCULLING], cmd);
 		}
-
-		const FrameCulling& frameCulling = frameCullings.at(&GetCamera());
 
 		BindConstantBuffers(CS, cmd);
 
@@ -7838,10 +7741,8 @@ void CopyTexture2D(const Texture& dst, uint32_t DstMIP, uint32_t DstX, uint32_t 
 }
 
 
-void BuildSceneBVH(CommandList cmd)
+void BuildSceneBVH(const Scene& scene, CommandList cmd)
 {
-	const Scene& scene = GetScene();
-
 	sceneBVH.Build(scene, cmd);
 }
 
@@ -7944,14 +7845,13 @@ RayBuffers* GenerateScreenRayBuffers(const CameraComponent& camera, CommandList 
 	return &screenRayBuffers;
 }
 void RayTraceScene(
+	const Scene& scene,
 	const RayBuffers* rayBuffers, 
 	const Texture* result, 
 	int accumulation_sample, 
 	CommandList cmd
 )
 {
-	const Scene& scene = GetScene();
-
 	device->EventBegin("RayTraceScene", cmd);
 
 
@@ -8183,11 +8083,9 @@ void RayTraceSceneBVH(CommandList cmd)
 
 
 bool repackAtlas_Decal = false;
-void ManageDecalAtlas()
+void ManageDecalAtlas(Scene& scene)
 {
 	repackAtlas_Decal = false;
-
-	Scene& scene = GetScene();
 
 	using namespace wiRectPacker;
 
@@ -8279,11 +8177,9 @@ void ManageDecalAtlas()
 
 	}
 }
-void RefreshDecalAtlas(CommandList cmd)
+void RefreshDecalAtlas(const Scene& scene, CommandList cmd)
 {
 	using namespace wiRectPacker;
-
-	const Scene& scene = GetScene();
 
 	if (repackAtlas_Decal)
 	{
@@ -8302,12 +8198,10 @@ void RefreshDecalAtlas(CommandList cmd)
 
 bool repackAtlas_Lightmap = false;
 vector<uint32_t> lightmapsToRefresh;
-void ManageLightmapAtlas()
+void ManageLightmapAtlas(Scene& scene)
 {
 	lightmapsToRefresh.clear(); 
 	repackAtlas_Lightmap = false;
-
-	Scene& scene = GetScene();
 
 	using namespace wiRectPacker;
 
@@ -8465,10 +8359,8 @@ void ManageLightmapAtlas()
 		}
 	}
 }
-void RenderObjectLightMap(const ObjectComponent& object, CommandList cmd)
+void RenderObjectLightMap(const Scene& scene, const ObjectComponent& object, CommandList cmd)
 {
-	const Scene& scene = GetScene();
-
 	device->EventBegin("RenderObjectLightMap", cmd);
 
 	const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
@@ -8554,10 +8446,8 @@ void RenderObjectLightMap(const ObjectComponent& object, CommandList cmd)
 
 	device->EventEnd(cmd);
 }
-void RefreshLightmapAtlas(CommandList cmd)
+void RefreshLightmapAtlas(const Scene& scene, CommandList cmd)
 {
-	const Scene& scene = GetScene();
-
 	if (!lightmapsToRefresh.empty())
 	{
 		auto range = wiProfiler::BeginRangeGPU("Lightmap Processing", cmd);
@@ -8567,7 +8457,7 @@ void RefreshLightmapAtlas(CommandList cmd)
 			if (scene_bvh_invalid)
 			{
 				scene_bvh_invalid = false;
-				BuildSceneBVH(cmd);
+				BuildSceneBVH(scene, cmd);
 			}
 			sceneBVH.Bind(PS, cmd);
 		}
@@ -8579,7 +8469,7 @@ void RefreshLightmapAtlas(CommandList cmd)
 
 			if (object.IsLightmapRenderRequested())
 			{
-				RenderObjectLightMap(object, cmd);
+				RenderObjectLightMap(scene, object, cmd);
 			}
 		}
 
@@ -8644,19 +8534,10 @@ void BindCommonResources(CommandList cmd)
 	device->BindResources(VS, resources, SBSLOT_ENTITYARRAY, arraysize(resources), cmd);
 	device->BindResources(PS, resources, SBSLOT_ENTITYARRAY, arraysize(resources), cmd);
 	device->BindResources(CS, resources, SBSLOT_ENTITYARRAY, arraysize(resources), cmd);
-
-	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
-	{
-		const Scene& scene = GetScene();
-		device->BindResource(PS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
-		device->BindResource(CS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
-	}
 }
 
-void UpdateFrameCB(CommandList cmd)
+void UpdateFrameCB(const Scene& scene, CommandList cmd)
 {
-	const Scene& scene = GetScene();
-
 	FrameCB cb;
 
 	cb.g_xFrame_ConstantOne = 1;
@@ -8978,8 +8859,6 @@ void DeferredComposition(
 	CommandList cmd
 )
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
 	device->EventBegin("DeferredComposition", cmd);
 
 	device->BindPipelineState(&PSO_deferredcomposition, cmd);
@@ -9854,6 +9733,7 @@ void Postprocess_MSAO(
 	device->EventEnd(cmd);
 }
 void Postprocess_RTAO(
+	const Scene& scene,
 	const Texture& depthbuffer,
 	const Texture& lineardepth,
 	const Texture& depth_history,
@@ -9869,7 +9749,6 @@ void Postprocess_RTAO(
 	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT))
 		return;
 
-	const Scene& scene = wiScene::GetScene();
 	if (scene.objects.GetCount() <= 0)
 	{
 		return;
@@ -10172,6 +10051,7 @@ void Postprocess_RTAO(
 	device->EventEnd(cmd);
 }
 void Postprocess_RTReflection(
+	const Scene& scene,
 	const Texture& depthbuffer,
 	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& output,
@@ -10184,7 +10064,6 @@ void Postprocess_RTReflection(
 	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT))
 		return;
 
-	const Scene& scene = wiScene::GetScene();
 	if (scene.objects.GetCount() <= 0)
 	{
 		return;
@@ -10453,8 +10332,6 @@ void Postprocess_SSR(
 	CommandList cmd
 )
 {
-	GraphicsDevice* device = GetDevice();
-
 	device->EventBegin("Postprocess_SSR", cmd);
 	auto range = wiProfiler::BeginRangeGPU("SSR", cmd);
 
@@ -10654,8 +10531,6 @@ void Postprocess_SSS(
 	float amount
 )
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
 	device->EventBegin("Postprocess_SSS", cmd);
 	auto range = wiProfiler::BeginRangeGPU("SSS", cmd);
 
@@ -12340,8 +12215,6 @@ void Postprocess_Denoise(
 	CommandList cmd
 )
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
 	device->EventBegin("Postprocess_Denoise", cmd);
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DENOISE], cmd);
 
@@ -12407,11 +12280,6 @@ void Postprocess_Denoise(
 	device->EventEnd(cmd);
 }
 
-const XMFLOAT4& GetWaterPlane()
-{
-	return waterPlane;
-}
-
 
 RAY GetPickRay(long cursorX, long cursorY) 
 {
@@ -12474,7 +12342,20 @@ void AddDeferredMIPGen(std::shared_ptr<wiResource> resource, bool preserve_cover
 	deferredMIPGens.push_back(std::make_pair(resource, preserve_coverage));
 	deferredMIPGenLock.unlock();
 }
-
+void AddDeferredMaterialUpdate(size_t index)
+{
+	static std::mutex locker;
+	locker.lock();
+	pendingMaterialUpdates.push_back(index);
+	locker.unlock();
+}
+void AddDeferredMorphUpdate(size_t index)
+{
+	static std::mutex locker;
+	locker.lock();
+	pendingMorphUpdates.push_back(index);
+	locker.unlock();
+}
 
 
 
@@ -12539,7 +12420,7 @@ void SetOcclusionCullingEnabled(bool value)
 
 		for (int i = 0; i < arraysize(occlusionQueries); ++i)
 		{
-			occlusionQueries[i].Create(GetDevice(), &desc);
+			occlusionQueries[i].Create(device.get(), &desc);
 		}
 	}
 
@@ -12569,11 +12450,10 @@ void SetVoxelRadianceNumCones(int value) { voxelSceneData.numCones = value; }
 int GetVoxelRadianceNumCones() { return voxelSceneData.numCones; }
 float GetVoxelRadianceRayStepSize() { return voxelSceneData.rayStepSize; }
 void SetVoxelRadianceRayStepSize(float value) { voxelSceneData.rayStepSize = value; }
-bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
 bool IsRequestedVolumetricLightRendering() { return requestVolumetricLightRendering; }
 void SetGameSpeed(float value) { GameSpeed = std::max(0.0f, value); }
 float GetGameSpeed() { return GameSpeed; }
-void OceanRegenerate() { if (ocean != nullptr) ocean = std::make_unique<wiOcean>(GetScene().weather); }
+void OceanRegenerate(const WeatherComponent& weather) { if (ocean != nullptr) ocean = std::make_unique<wiOcean>(weather); }
 void InvalidateBVH() { scene_bvh_invalid = true; }
 void SetRaytraceBounceCount(uint32_t bounces)
 {

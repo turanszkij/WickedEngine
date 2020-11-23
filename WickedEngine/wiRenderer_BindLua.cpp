@@ -386,7 +386,15 @@ namespace wiRenderer_BindLua
 
 	int ClearWorld(lua_State* L)
 	{
-		wiRenderer::ClearWorld();
+		Scene_BindLua* scene = Luna<Scene_BindLua>::lightcheck(L, 1);
+		if (scene == nullptr)
+		{
+			wiRenderer::ClearWorld(wiScene::GetScene());
+		}
+		else
+		{
+			wiRenderer::ClearWorld(*scene->scene);
+		}
 		return 0;
 	}
 	int ReloadShaders(lua_State* L)
