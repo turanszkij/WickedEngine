@@ -4265,7 +4265,7 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 	device->EventEnd(cmd);
 	wiProfiler::EndRange(range);
 }
-void OcclusionCulling_Render(Scene& scene, const Visibility& vis, CommandList cmd)
+void OcclusionCulling_Render(const Visibility& vis, CommandList cmd)
 {
 	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
 	{
@@ -4274,62 +4274,48 @@ void OcclusionCulling_Render(Scene& scene, const Visibility& vis, CommandList cm
 
 	auto range = wiProfiler::BeginRangeGPU("Occlusion Culling Render", cmd);
 
-	int queryID = 0;
-
 	if (!vis.visibleObjects.empty())
 	{
 		device->EventBegin("Occlusion Culling Render", cmd);
 
 		device->BindPipelineState(&PSO_occlusionquery, cmd);
 
-		int queryID = 0;
+		XMMATRIX VP = GetPrevCamera().GetViewProjection();
 
 		MiscCB cb;
 
 		for (uint32_t instanceIndex : vis.visibleObjects)
 		{
-			ObjectComponent& object = scene.objects[instanceIndex];
+			const ObjectComponent& object = vis.scene->objects[instanceIndex];
 			if (!object.IsRenderable())
 			{
 				continue;
 			}
 
-			if (queryID >= arraysize(occlusionQueries))
+			if (object.occlusionQueryID < 0 || object.occlusionQueryID >= arraysize(occlusionQueries))
 			{
-				object.occlusionQueryID = -1; // assign an invalid id from the pool
+				// object doesn't have a valid occlusion query
 				continue;
 			}
 
 			// If a query could be retrieved from the pool for the instance, the instance can be occluded, so render it
-			GPUQuery* query = occlusionQueries[queryID].Get_GPU();
+			GPUQuery* query = occlusionQueries[object.occlusionQueryID].Get_GPU();
 			if (query == nullptr || !query->IsValid())
 			{
 				continue;
 			}
 
-			const AABB& aabb = scene.aabb_objects[instanceIndex];
+			const AABB& aabb = vis.scene->aabb_objects[instanceIndex];
 
-			if (aabb.intersects(GetCamera().Eye))
-			{
-				// camera is inside the instance, mark it as visible in this frame:
-				object.occlusionHistory |= 1;
-			}
-			else
-			{
-				// only query for occlusion if the camera is outside the instance
-				object.occlusionQueryID = queryID; // just assign the id from the pool
-				queryID++;
+			// previous frame view*projection because these are drawn against the previous depth buffer:
+			XMStoreFloat4x4(&cb.g_xTransform, aabb.getAsBoxMatrix() * VP);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &cb, cmd);
+			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
-				// previous frame view*projection because these are drawn against the previous depth buffer:
-				XMStoreFloat4x4(&cb.g_xTransform, aabb.getAsBoxMatrix()*GetPrevCamera().GetViewProjection()); // todo: obb
-				device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &cb, cmd);
-				device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-
-				// render bounding box to later read the occlusion status
-				device->QueryBegin(query, cmd);
-				device->Draw(14, 0, cmd);
-				device->QueryEnd(query, cmd);
-			}
+			// render bounding box to later read the occlusion status
+			device->QueryBegin(query, cmd);
+			device->Draw(14, 0, cmd);
+			device->QueryEnd(query, cmd);
 		}
 
 		device->EventEnd(cmd);
@@ -4339,12 +4325,36 @@ void OcclusionCulling_Render(Scene& scene, const Visibility& vis, CommandList cm
 }
 void OcclusionCulling_Read(Scene& scene, const Visibility& vis)
 {
+	assert(&scene == vis.scene);
+
 	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
 	{
 		return;
 	}
 
 	auto range = wiProfiler::BeginRangeCPU("Occlusion Culling Read");
+
+	// Make sure that all queries are read that were started:
+	static GPUQueryResult results[arraysize(occlusionQueries)];
+	for (int i = 0; i < arraysize(occlusionQueries); ++i)
+	{
+		GPUQuery* query = occlusionQueries[i].Get_CPU();
+		if (query == nullptr || !query->IsValid())
+		{
+			// occlusion query not available for CPU read
+			results[i].result_passed_sample_count = 1; // set it as "visible"
+		}
+		else
+		{
+			bool query_ready = device->QueryRead(query, &results[i]);
+			if (query_ready)
+			{
+				results[i].result_passed_sample_count = 1; // set it as "visible"
+			}
+		}
+	}
+
+	int queryID = 0;
 
 	if (!vis.visibleObjects.empty())
 	{
@@ -4357,31 +4367,39 @@ void OcclusionCulling_Read(Scene& scene, const Visibility& vis)
 			}
 
 			object.occlusionHistory <<= 1; // advance history by 1 frame
-			if (object.occlusionQueryID < 0)
-			{
-				// object doesn't have an occlusion query
-				object.occlusionHistory |= 1; // mark this frame as visible
-				continue;
-			}
 
-			GPUQuery* query = occlusionQueries[object.occlusionQueryID].Get_CPU();
-			if (query == nullptr || !query->IsValid())
-			{
-				// occlusion query not available for CPU read
-				object.occlusionHistory |= 1; // mark this frame as visible
-				continue;
-			}
+			const AABB& aabb = scene.aabb_objects[instanceIndex];
 
-			GPUQueryResult query_result;
-			bool query_ready = device->QueryRead(query, &query_result);
-
-			if (query_result.result_passed_sample_count > 0 || !query_ready)
+			if (aabb.intersects(GetCamera().Eye))
 			{
-				object.occlusionHistory |= 1; // mark this frame as visible
+				// camera is inside the instance, mark it as visible in this frame:
+				object.occlusionHistory |= 1;
 			}
 			else
 			{
-				// leave this frame as occluded
+				// Check occlusion result:
+				if (object.occlusionQueryID >= 0 && object.occlusionQueryID < arraysize(occlusionQueries))
+				{
+					if (results[object.occlusionQueryID].result_passed_sample_count > 0)
+					{
+						object.occlusionHistory |= 1; // mark this frame as visible
+					}
+					else
+					{
+						// leave this frame as occluded
+					}
+				}
+
+				// Assign query for next frame:
+				if (queryID < arraysize(occlusionQueries))
+				{
+					object.occlusionQueryID = queryID; // just assign the id from the pool
+					queryID++;
+				}
+				else
+				{
+					object.occlusionQueryID = -1; // no free queries to assign!
+				}
 			}
 		}
 	}

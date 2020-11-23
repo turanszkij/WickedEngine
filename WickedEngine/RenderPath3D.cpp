@@ -882,7 +882,7 @@ void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
 
 	device->RenderPassBegin(&renderpass_occlusionculling, cmd);
 
-	wiRenderer::OcclusionCulling_Render(wiScene::GetScene(), visibility_main, cmd);
+	wiRenderer::OcclusionCulling_Render(visibility_main, cmd);
 
 	device->RenderPassEnd(cmd);
 }

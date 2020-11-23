@@ -449,7 +449,7 @@ namespace wiRenderer
 	void RayTraceSceneBVH(wiGraphics::CommandList cmd);
 
 	// Render occluders against a depth buffer
-	void OcclusionCulling_Render(wiScene::Scene& scene, const Visibility& vis, wiGraphics::CommandList cmd);
+	void OcclusionCulling_Render(const Visibility& vis, wiGraphics::CommandList cmd);
 	// Read the occlusion culling results of the previous call to OcclusionCulling_Render. This must be done on the main thread!
 	void OcclusionCulling_Read(wiScene::Scene& scene, const Visibility& vis);
 	// Issue end-of frame operations
