@@ -97,7 +97,7 @@ inline void ResolverAABB(Texture2D<float4> currentColor, SamplerState currentSam
 float2 CalculateCustomMotion(float4 worldPosition)
 {
     float4 thisClip = mul(g_xCamera_VP, worldPosition);
-    float4 prevClip = mul(g_xFrame_MainCamera_PrevVP, worldPosition);
+    float4 prevClip = mul(g_xCamera_PrevVP, worldPosition);
     
     float2 thisScreen = thisClip.xy * rcp(thisClip.w);
     float2 prevScreen = prevClip.xy * rcp(prevClip.w);
@@ -112,7 +112,7 @@ float2 CalculateCustomMotion(float depth, float2 uv)
     float4 sampleWorldPosition = float4(reconstructPosition(uv, depth, g_xCamera_InvVP), 1.0f);
     
     float4 thisClip = mul(g_xCamera_VP, sampleWorldPosition);
-    float4 prevClip = mul(g_xFrame_MainCamera_PrevVP, sampleWorldPosition);
+    float4 prevClip = mul(g_xCamera_PrevVP, sampleWorldPosition);
     
     float2 thisScreen = thisClip.xy * rcp(thisClip.w);
     float2 prevScreen = prevClip.xy * rcp(prevClip.w);

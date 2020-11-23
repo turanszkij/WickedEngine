@@ -121,8 +121,10 @@ public:
 	void ResizeLayout() override;
 	void Load() override;
 	void Start() override;
+	void PreUpdate() override;
 	void FixedUpdate() override;
 	void Update(float dt) override;
+	void PostUpdate() override;
 	void Render() const override;
 	void Compose(wiGraphics::CommandList cmd) const override;
 

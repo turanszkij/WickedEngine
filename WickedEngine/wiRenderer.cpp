@@ -101,10 +101,7 @@ bool scene_bvh_invalid = true;
 float renderTime = 0;
 float renderTime_Prev = 0;
 float deltaTime = 0;
-XMFLOAT2 temporalAAJitter = XMFLOAT2(0, 0);
-XMFLOAT2 temporalAAJitterPrev = XMFLOAT2(0, 0);
 float RESOLUTIONSCALE = 1.0f;
-GPUQueryRing<GraphicsDevice::GetBackBufferCount()> occlusionQueries[256];
 uint32_t entityArrayOffset_Lights = 0;
 uint32_t entityArrayCount_Lights = 0;
 uint32_t entityArrayOffset_Decals = 0;
@@ -2405,16 +2402,6 @@ CameraComponent& GetCamera()
 	static CameraComponent camera;
 	return camera;
 }
-CameraComponent& GetPrevCamera()
-{
-	static CameraComponent camera;
-	return camera;
-}
-CameraComponent& GetRefCamera()
-{
-	static CameraComponent camera;
-	return camera;
-}
 void AttachCamera(wiECS::Entity entity)
 {
 	cameraTransform = entity;
@@ -3516,25 +3503,15 @@ void UpdatePerFrameData(Scene& scene, const Visibility& vis, float dt)
 	if (GetTemporalAAEnabled())
 	{
 		const XMFLOAT4& halton = wiMath::GetHaltonSequence(device->GetFrameCount() % 256);
-		static float jitter = 1.0f;
-		temporalAAJitterPrev = temporalAAJitter;
-		temporalAAJitter.x = jitter * (halton.x * 2 - 1) / (float)GetInternalResolution().x;
-		temporalAAJitter.y = jitter * (halton.y * 2 - 1) / (float)GetInternalResolution().y;
-		GetCamera().jitter = temporalAAJitter;
+		GetCamera().jitter.x = (halton.x * 2 - 1) / (float)GetInternalResolution().x;
+		GetCamera().jitter.y = (halton.y * 2 - 1) / (float)GetInternalResolution().y;
 	}
 	else
 	{
-		temporalAAJitter = XMFLOAT2(0, 0);
-		temporalAAJitterPrev = XMFLOAT2(0, 0);
+		GetCamera().jitter = XMFLOAT2(0, 0);
 	}
 
 	GetCamera().UpdateCamera();
-
-	if (vis.planar_reflection_visible)
-	{
-		GetRefCamera() = GetCamera();
-		GetRefCamera().Reflect(vis.reflectionPlane);
-	}
 
 	waterPlane = vis.reflectionPlane;
 
@@ -3641,7 +3618,7 @@ void UpdatePerFrameData(Scene& scene, const Visibility& vis, float dt)
 		wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
 			// We don't update it if the scene is empty, this even makes it easier to debug
 			const float f = 0.05f / voxelSceneData.voxelsize;
-			XMFLOAT3 center = XMFLOAT3(floorf(GetCamera().Eye.x * f) / f, floorf(GetCamera().Eye.y * f) / f, floorf(GetCamera().Eye.z * f) / f);
+			XMFLOAT3 center = XMFLOAT3(floorf(vis.camera->Eye.x * f) / f, floorf(vis.camera->Eye.y * f) / f, floorf(vis.camera->Eye.z * f) / f);
 			if (wiMath::DistanceSquared(center, voxelSceneData.center) > 0)
 			{
 				voxelSceneData.centerChangedThisFrame = true;
@@ -3798,7 +3775,7 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 		ShaderEntity* entityArray = (ShaderEntity*)GetRenderFrameAllocator(cmd).allocate(sizeof(ShaderEntity)*SHADER_ENTITY_COUNT);
 		XMMATRIX* matrixArray = (XMMATRIX*)GetRenderFrameAllocator(cmd).allocate(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
 
-		const XMMATRIX viewMatrix = GetCamera().GetView();
+		const XMMATRIX viewMatrix = vis.camera->GetView();
 
 		uint32_t entityCounter = 0;
 		uint32_t matrixCounter = 0;
@@ -3923,7 +3900,7 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 				if (shadow)
 				{
 					std::array<SHCAM, CASCADE_COUNT> shcams;
-					CreateDirLightShadowCams(light, GetCamera(), shcams);
+					CreateDirLightShadowCams(light, *vis.camera, shcams);
 					matrixArray[matrixCounter++] = shcams[0].VP;
 					matrixArray[matrixCounter++] = shcams[1].VP;
 					matrixArray[matrixCounter++] = shcams[2].VP;
@@ -4027,8 +4004,6 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 	}
 
 	UpdateFrameCB(*vis.scene, cmd);
-
-	GetPrevCamera() = GetCamera();
 
 	auto range = wiProfiler::BeginRangeGPU("Skinning", cmd);
 	device->EventBegin("Skinning", cmd);
@@ -4265,7 +4240,7 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 	device->EventEnd(cmd);
 	wiProfiler::EndRange(range);
 }
-void OcclusionCulling_Render(const Visibility& vis, CommandList cmd)
+void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visibility& vis, CommandList cmd)
 {
 	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
 	{
@@ -4280,7 +4255,7 @@ void OcclusionCulling_Render(const Visibility& vis, CommandList cmd)
 
 		device->BindPipelineState(&PSO_occlusionquery, cmd);
 
-		XMMATRIX VP = GetPrevCamera().GetViewProjection();
+		XMMATRIX VP = camera_previous.GetViewProjection();
 
 		MiscCB cb;
 
@@ -4292,16 +4267,12 @@ void OcclusionCulling_Render(const Visibility& vis, CommandList cmd)
 				continue;
 			}
 
-			if (object.occlusionQueryID < 0 || object.occlusionQueryID >= arraysize(occlusionQueries))
+			int queryIndex = (object.queryIndex - 1) % arraysize(object.occlusionQueries);
+			const GPUQuery& query = object.occlusionQueries[queryIndex];
+
+			if (!object.occlusionQueries[queryIndex].IsValid())
 			{
 				// object doesn't have a valid occlusion query
-				continue;
-			}
-
-			// If a query could be retrieved from the pool for the instance, the instance can be occluded, so render it
-			GPUQuery* query = occlusionQueries[object.occlusionQueryID].Get_GPU();
-			if (query == nullptr || !query->IsValid())
-			{
 				continue;
 			}
 
@@ -4313,9 +4284,9 @@ void OcclusionCulling_Render(const Visibility& vis, CommandList cmd)
 			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 			// render bounding box to later read the occlusion status
-			device->QueryBegin(query, cmd);
+			device->QueryBegin(&query, cmd);
 			device->Draw(14, 0, cmd);
-			device->QueryEnd(query, cmd);
+			device->QueryEnd(&query, cmd);
 		}
 
 		device->EventEnd(cmd);
@@ -4334,8 +4305,6 @@ void OcclusionCulling_Read(Scene& scene, const Visibility& vis)
 
 	auto range = wiProfiler::BeginRangeCPU("Occlusion Culling Read");
 
-	int queryID = 0;
-
 	if (!vis.visibleObjects.empty())
 	{
 		for (uint32_t instanceIndex : vis.visibleObjects)
@@ -4350,52 +4319,37 @@ void OcclusionCulling_Read(Scene& scene, const Visibility& vis)
 
 			const AABB& aabb = scene.aabb_objects[instanceIndex];
 
-			if (aabb.intersects(GetCamera().Eye))
+			if (aabb.intersects(vis.camera->Eye))
 			{
 				// camera is inside the instance, mark it as visible in this frame:
 				object.occlusionHistory |= 1;
 			}
 			else
 			{
-				// Check occlusion result:
-				if (object.occlusionQueryID >= 0 && object.occlusionQueryID < arraysize(occlusionQueries))
+				if (object.occlusionQueries[object.queryIndex].IsValid())
 				{
-					GPUQuery* query = occlusionQueries[object.occlusionQueryID].Get_CPU();
-					if (query == nullptr || !query->IsValid())
+					// query exists, read it:
+					GPUQueryResult result;
+					bool success = device->QueryRead(&object.occlusionQueries[object.queryIndex], &result);
+					if (!success || result.result_passed_sample_count > 0)
 					{
-						// occlusion query not available for CPU read
-						object.occlusionHistory |= 1; // mark this frame as visible
+						object.occlusionHistory |= 1; // visible
 					}
-					else
-					{
-						GPUQueryResult result;
-						bool query_ready = device->QueryRead(query, &result);
-						if (result.result_passed_sample_count > 0)
-						{
-							object.occlusionHistory |= 1; // mark this frame as visible
-						}
-						else
-						{
-							// leave this frame as occluded
-						}
-					}
+					// (else it is left as occluded)
 
-					object.occlusionQueryAge++;
+					object.queryIndex = (object.queryIndex + 1) % arraysize(object.occlusionQueries);
 				}
-
-				if (object.occlusionQueryAge < 0 || object.occlusionQueryAge >= (int)GraphicsDevice::GetBackBufferCount())
+				else
 				{
-					// Assign query for next frame:
-					if (queryID < arraysize(occlusionQueries))
+					// query doesn't exist, create it:
+					object.occlusionHistory |= 1; // visible
+
+					GPUQueryDesc desc;
+					desc.Type = GPU_QUERY_TYPE_OCCLUSION_PREDICATE;
+					for (int i = 0; i < arraysize(object.occlusionQueries); ++i)
 					{
-						object.occlusionQueryID = queryID; // just assign the id from the pool
-						queryID++;
+						device->CreateQuery(&desc, &object.occlusionQueries[i]);
 					}
-					else
-					{
-						object.occlusionQueryID = -1; // no free queries to assign!
-					}
-					object.occlusionQueryAge = -1;
 				}
 			}
 		}
@@ -5202,6 +5156,7 @@ void DrawScene(
 	const bool transparent = flags & DRAWSCENE_TRANSPARENT;
 	const bool tessellation = (flags & DRAWSCENE_TESSELLATION) && GetTessellationEnabled();
 	const bool hairparticle = flags & DRAWSCENE_HAIRPARTICLE;
+	const bool occlusion = flags & DRAWSCENE_OCCLUSIONCULLING;
 
 	device->EventBegin("DrawScene", cmd);
 
@@ -5286,7 +5241,7 @@ void DrawScene(
 	{
 		const ObjectComponent& object = vis.scene->objects[instanceIndex];
 
-		if (GetOcclusionCullingEnabled() && occlusionCulling && object.IsOccluded())
+		if (GetOcclusionCullingEnabled() && occlusion && object.IsOccluded())
 			continue;
 
 		if (object.IsRenderable() && (object.GetRenderTypes() & renderTypeFlags))
@@ -6688,8 +6643,8 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 	vp.Width = envmapRes;
 	device->BindViewports(1, &vp, cmd);
 
-	const float zNearP = GetCamera().zNearP;
-	const float zFarP = GetCamera().zFarP;
+	const float zNearP = vis.camera->zNearP;
+	const float zFarP = vis.camera->zFarP;
 
 	for (uint32_t probeIndex : probesToRefresh)
 	{
@@ -7023,7 +6978,7 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 				impostorcamera.TransformCamera(camera_transform);
 				impostorcamera.UpdateCamera();
 
-				UpdateCameraCB(impostorcamera, cmd);
+				UpdateCameraCB(impostorcamera, impostorcamera, impostorcamera, cmd);
 
 				for (auto& subset : mesh.subsets)
 				{
@@ -7051,8 +7006,6 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 		}
 
 	}
-
-	UpdateCameraCB(GetCamera(), cmd);
 
 	device->EventEnd(cmd);
 }
@@ -7234,6 +7187,7 @@ inline XMUINT3 GetEntityCullingTileCount()
 		1);
 }
 void ComputeTiledLightCulling(
+	const CameraComponent& camera,
 	const Texture& depthbuffer,
 	CommandList cmd
 )
@@ -7290,9 +7244,9 @@ void ComputeTiledLightCulling(
 	// calculate the per-tile frustums once:
 	static bool frustumsComplete = false;
 	static XMFLOAT4X4 _savedProjection;
-	if (memcmp(&_savedProjection, &GetCamera().Projection, sizeof(XMFLOAT4X4)) != 0)
+	if (memcmp(&_savedProjection, &camera.Projection, sizeof(XMFLOAT4X4)) != 0)
 	{
-		_savedProjection = GetCamera().Projection;
+		_savedProjection = camera.Projection;
 		frustumsComplete = false;
 	}
 	if(!frustumsComplete || _resolutionChanged)
@@ -8626,16 +8580,6 @@ void UpdateFrameCB(const Scene& scene, CommandList cmd)
 		}
 		cb.g_xFrame_TemporalAASampleRotation = (x & 0x000000FF) | ((y & 0x000000FF) << 8);
 	}
-	cb.g_xFrame_TemporalAAJitter = temporalAAJitter;
-	cb.g_xFrame_TemporalAAJitterPrev = temporalAAJitterPrev;
-
-	const auto& prevCam = GetPrevCamera();
-	const auto& reflCam = GetRefCamera();
-	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_PrevV, prevCam.GetView());
-	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_PrevP, prevCam.GetProjection());
-	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_PrevVP, prevCam.GetViewProjection());
-	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_PrevInvVP, prevCam.GetInvViewProjection());
-	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_ReflVP, reflCam.GetViewProjection());
 
 	cb.g_xFrame_WorldBoundsMin = scene.bounds.getMin();
 	cb.g_xFrame_WorldBoundsMax = scene.bounds.getMax();
@@ -8682,7 +8626,12 @@ void UpdateFrameCB(const Scene& scene, CommandList cmd)
 
 	device->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &cb, cmd);
 }
-void UpdateCameraCB(const CameraComponent& camera, CommandList cmd)
+void UpdateCameraCB(
+	const CameraComponent& camera,
+	const CameraComponent& camera_previous,
+	const CameraComponent& camera_reflection,
+	CommandList cmd
+)
 {
 	CameraCB cb;
 
@@ -8709,6 +8658,15 @@ void UpdateCameraCB(const CameraComponent& camera, CommandList cmd)
 	{
 		cb.g_xCamera_FrustumPlanes[i] = camera.frustum.planes[i];
 	}
+
+	cb.g_xFrame_TemporalAAJitter = camera.jitter;
+	cb.g_xFrame_TemporalAAJitterPrev = camera_previous.jitter;
+
+	XMStoreFloat4x4(&cb.g_xCamera_PrevV, camera_previous.GetView());
+	XMStoreFloat4x4(&cb.g_xCamera_PrevP, camera_previous.GetProjection());
+	XMStoreFloat4x4(&cb.g_xCamera_PrevVP, camera_previous.GetViewProjection());
+	XMStoreFloat4x4(&cb.g_xCamera_PrevInvVP, camera_previous.GetInvViewProjection());
+	XMStoreFloat4x4(&cb.g_xCamera_ReflVP, camera_reflection.GetViewProjection());
 
 	device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
 }
@@ -9188,6 +9146,7 @@ void Postprocess_SSAO(
 	device->EventEnd(cmd);
 }
 void Postprocess_HBAO(
+	const CameraComponent& camera,
 	const Texture& lineardepth,
 	const Texture& output,
 	CommandList cmd,
@@ -9230,7 +9189,6 @@ void Postprocess_HBAO(
 	cb.xPPParams0.y = 0;
 	cb.hbao_power = power;
 
-	const CameraComponent& camera = GetCamera();
 	// Load first element of projection matrix which is the cotangent of the horizontal FOV divided by 2.
 	const float TanHalfFovH = 1.0f / camera.Projection.m[0][0];
 	const float FocalLenX = 1.0f / TanHalfFovH * ((float)cb.xPPResolution.y / (float)cb.xPPResolution.x);
@@ -9308,6 +9266,7 @@ void Postprocess_HBAO(
 	device->EventEnd(cmd);
 }
 void Postprocess_MSAO(
+	const CameraComponent& camera,
 	const Texture& lineardepth,
 	const Texture& output,
 	CommandList cmd,
@@ -9495,8 +9454,6 @@ void Postprocess_MSAO(
 		const TextureDesc& desc = read_depth.GetDesc();
 
 		MSAOCB cb;
-
-		const CameraComponent& camera = GetCamera();
 
 		// Load first element of projection matrix which is the cotangent of the horizontal FOV divided by 2.
 		const float TanHalfFovH = 1.0f / camera.Projection.m[0][0];
@@ -12281,12 +12238,11 @@ void Postprocess_Denoise(
 }
 
 
-RAY GetPickRay(long cursorX, long cursorY) 
+RAY GetPickRay(long cursorX, long cursorY, const CameraComponent& camera)
 {
 	float screenW = device->GetScreenWidth();
 	float screenH = device->GetScreenHeight();
 
-	const CameraComponent& camera = GetCamera();
 	XMMATRIX V = camera.GetView();
 	XMMATRIX P = camera.GetProjection();
 	XMMATRIX W = XMMatrixIdentity();
@@ -12409,21 +12365,6 @@ void SetVariableRateShadingClassificationDebug(bool enabled) { variableRateShadi
 bool GetVariableRateShadingClassificationDebug() { return variableRateShadingClassificationDebug; }
 void SetOcclusionCullingEnabled(bool value)
 {
-	static bool initialized = false;
-
-	if (!initialized && value == true)
-	{
-		initialized = true;
-
-		GPUQueryDesc desc;
-		desc.Type = GPU_QUERY_TYPE_OCCLUSION_PREDICATE;
-
-		for (int i = 0; i < arraysize(occlusionQueries); ++i)
-		{
-			occlusionQueries[i].Create(device.get(), &desc);
-		}
-	}
-
 	occlusionCulling = value;
 }
 bool GetOcclusionCullingEnabled() { return occlusionCulling; }

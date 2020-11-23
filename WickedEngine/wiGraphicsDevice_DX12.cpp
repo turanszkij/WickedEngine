@@ -3003,44 +3003,31 @@ using namespace DX12_Internal;
 		internal_state->allocationhandler = allocationhandler;
 		pQuery->internal_state = internal_state;
 
-		HRESULT hr = E_FAIL;
-
 		pQuery->desc = *pDesc;
 		internal_state->query_type = pQuery->desc.Type;
 
 		switch (pDesc->Type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			if (allocationhandler->free_timestampqueries.pop_front(internal_state->query_index))
-			{
-				hr = S_OK;
-			}
-			else
+			if (!allocationhandler->free_timestampqueries.pop_front(internal_state->query_index))
 			{
 				internal_state->query_type = GPU_QUERY_TYPE_INVALID;
-				assert(0);
+				return false;
 			}
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
-			hr = S_OK;
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-			if (allocationhandler->free_occlusionqueries.pop_front(internal_state->query_index))
-			{
-				hr = S_OK;
-			}
-			else
+			if (!allocationhandler->free_occlusionqueries.pop_front(internal_state->query_index))
 			{
 				internal_state->query_type = GPU_QUERY_TYPE_INVALID;
-				assert(0);
+				return false;
 			}
 			break;
 		}
 
-		assert(SUCCEEDED(hr));
-
-		return SUCCEEDED(hr);
+		return true;
 	}
 	bool GraphicsDevice_DX12::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
 	{
@@ -4576,7 +4563,7 @@ using namespace DX12_Internal;
 		D3D12_RANGE nullrange = {};
 		void* data = nullptr;
 
-		switch (query->desc.Type)
+		switch (internal_state->query_type)
 		{
 		case GPU_QUERY_TYPE_EVENT:
 			assert(0); // not implemented yet
@@ -4603,6 +4590,8 @@ using namespace DX12_Internal;
 			result->result_passed_sample_count = *(uint64_t*)((size_t)data + range.Begin);
 			querypool_occlusion_readback->Unmap(0, &nullrange);
 			break;
+		default:
+			false;
 		}
 
 		return true;
@@ -5416,7 +5405,7 @@ using namespace DX12_Internal;
 	{
 		auto internal_state = to_internal(query);
 
-		switch (query->desc.Type)
+		switch (internal_state->query_type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
 			GetDirectCommandList(cmd)->BeginQuery(querypool_timestamp.Get(), D3D12_QUERY_TYPE_TIMESTAMP, internal_state->query_index);
@@ -5433,7 +5422,7 @@ using namespace DX12_Internal;
 	{
 		auto internal_state = to_internal(query);
 
-		switch (query->desc.Type)
+		switch (internal_state->query_type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
 			GetDirectCommandList(cmd)->EndQuery(querypool_timestamp.Get(), D3D12_QUERY_TYPE_TIMESTAMP, internal_state->query_index);
@@ -5446,10 +5435,13 @@ using namespace DX12_Internal;
 			break;
 		}
 
-		query_resolves[cmd].emplace_back();
-		Query_Resolve& resolver = query_resolves[cmd].back();
-		resolver.type = query->desc.Type;
-		resolver.index = internal_state->query_index;
+		if (internal_state->query_type != GPU_QUERY_TYPE_INVALID)
+		{
+			query_resolves[cmd].emplace_back();
+			Query_Resolve& resolver = query_resolves[cmd].back();
+			resolver.type = query->desc.Type;
+			resolver.index = internal_state->query_index;
+		}
 	}
 	void GraphicsDevice_DX12::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{

@@ -51,10 +51,6 @@ namespace wiRenderer
 
 	// Returns the main camera that is currently being used in rendering (and also for post processing)
 	wiScene::CameraComponent& GetCamera();
-	// Returns the previous frame's camera that is currently being used in rendering to reproject
-	wiScene::CameraComponent& GetPrevCamera();
-	// Returns the planar reflection camera that is currently being used in rendering
-	wiScene::CameraComponent& GetRefCamera();
 	// Attach camera to entity for the current frame
 	void AttachCamera(wiECS::Entity entity);
 
@@ -129,7 +125,14 @@ namespace wiRenderer
 	// Updates the per frame constant buffer (need to call at least once per frame)
 	void UpdateFrameCB(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 	// Updates the per camera constant buffer need to call for each different camera that is used when calling DrawScene() and the like
-	void UpdateCameraCB(const wiScene::CameraComponent& camera, wiGraphics::CommandList cmd);
+	//	camera_previous : camera from previous frame, used for reprojection effects.
+	//	camera_reflection : camera that renders planar reflection
+	void UpdateCameraCB(
+		const wiScene::CameraComponent& camera,
+		const wiScene::CameraComponent& camera_previous,
+		const wiScene::CameraComponent& camera_reflection,
+		wiGraphics::CommandList cmd
+	);
 
 
 	enum DRAWSCENE_FLAGS
@@ -208,6 +211,7 @@ namespace wiRenderer
 	void VoxelRadiance(const Visibility& vis, wiGraphics::CommandList cmd);
 	// Compute light grid tiles
 	void ComputeTiledLightCulling(
+		const wiScene::CameraComponent& camera,
 		const wiGraphics::Texture& depthbuffer,
 		wiGraphics::CommandList cmd
 	);
@@ -260,12 +264,14 @@ namespace wiRenderer
 		float power = 2.0f
 	);
 	void Postprocess_HBAO(
+		const wiScene::CameraComponent& camera,
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float power = 2.0f
 		);
 	void Postprocess_MSAO(
+		const wiScene::CameraComponent& camera,
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
@@ -449,7 +455,7 @@ namespace wiRenderer
 	void RayTraceSceneBVH(wiGraphics::CommandList cmd);
 
 	// Render occluders against a depth buffer
-	void OcclusionCulling_Render(const Visibility& vis, wiGraphics::CommandList cmd);
+	void OcclusionCulling_Render(const wiScene::CameraComponent& camera_previous, const Visibility& vis, wiGraphics::CommandList cmd);
 	// Read the occlusion culling results of the previous call to OcclusionCulling_Render. This must be done on the main thread!
 	void OcclusionCulling_Read(wiScene::Scene& scene, const Visibility& vis);
 	// Issue end-of frame operations
@@ -587,7 +593,7 @@ namespace wiRenderer
 	const wiGraphics::Texture* GetGlobalLightmap();
 
 	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()
-	RAY GetPickRay(long cursorX, long cursorY);
+	RAY GetPickRay(long cursorX, long cursorY, const wiScene::CameraComponent& camera = GetCamera());
 
 
 	// Add box to render in next frame. It will be rendered in DrawDebugWorld()

@@ -81,7 +81,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 			// NOTE: We are using the textures from previous frame, so reproject against those! (PrevVP)
 
-			float4 pos2D = mul(g_xFrame_MainCamera_PrevVP, float4(particle.position, 1));
+			float4 pos2D = mul(g_xCamera_PrevVP, float4(particle.position, 1));
 			pos2D.xyz /= pos2D.w;
 
 			if (pos2D.x > -1 && pos2D.x < 1 && pos2D.y > -1 && pos2D.y < 1)
@@ -103,9 +103,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 					float depth1 = texture_depth[pixel + uint2(1, 0)];
 					float depth2 = texture_depth[pixel + uint2(0, -1)];
 
-					float3 p0 = reconstructPosition(uv, depth0, g_xFrame_MainCamera_PrevInvVP);
-					float3 p1 = reconstructPosition(uv + float2(1, 0) * g_xFrame_InternalResolution_rcp, depth1, g_xFrame_MainCamera_PrevInvVP);
-					float3 p2 = reconstructPosition(uv + float2(0, -1) * g_xFrame_InternalResolution_rcp, depth2, g_xFrame_MainCamera_PrevInvVP);
+					float3 p0 = reconstructPosition(uv, depth0, g_xCamera_PrevInvVP);
+					float3 p1 = reconstructPosition(uv + float2(1, 0) * g_xFrame_InternalResolution_rcp, depth1, g_xCamera_PrevInvVP);
+					float3 p2 = reconstructPosition(uv + float2(0, -1) * g_xFrame_InternalResolution_rcp, depth2, g_xCamera_PrevInvVP);
 
 					float3 surfaceNormal = normalize(cross(p2 - p0, p1 - p0));
 

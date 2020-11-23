@@ -14,11 +14,15 @@ public:
 	virtual void Start() {}
 	// called when RenderPath gets deactivated (for example when switching to an other RenderPath)
 	virtual void Stop() {}
+	// executed before Update()
+	virtual void PreUpdate() {}
 	// update with fixed frequency
 	virtual void FixedUpdate() {}
 	// update once per frame
 	//	dt : elapsed time since last call in seconds
 	virtual void Update(float dt) {}
+	// executed after Update()
+	virtual void PostUpdate() {}
 	// Render to layers, rendertargets, etc
 	// This will be rendered offscreen
 	virtual void Render() const {}

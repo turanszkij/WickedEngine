@@ -243,15 +243,6 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 
 	float3		g_xFrame_WorldBoundsExtents_rcp;	// world enclosing AABB 1.0f / abs(max - min)
 	uint		g_xFrame_TemporalAASampleRotation;
-
-	float2		g_xFrame_TemporalAAJitter;
-	float2		g_xFrame_TemporalAAJitterPrev;
-
-	float4x4	g_xFrame_MainCamera_PrevV;
-	float4x4	g_xFrame_MainCamera_PrevP;
-	float4x4	g_xFrame_MainCamera_PrevVP;			// PrevView*PrevProjection
-	float4x4	g_xFrame_MainCamera_PrevInvVP;		// Inverse(PrevView*PrevProjection)
-	float4x4	g_xFrame_MainCamera_ReflVP;			// ReflectionView*ReflectionProjection
 };
 
 CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
@@ -281,6 +272,15 @@ CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 	float4x4	g_xCamera_InvVP;		// Inverse View-Projection
 
 	float4		g_xCamera_FrustumPlanes[6];
+
+	float2		g_xFrame_TemporalAAJitter;
+	float2		g_xFrame_TemporalAAJitterPrev;
+
+	float4x4	g_xCamera_PrevV;
+	float4x4	g_xCamera_PrevP;
+	float4x4	g_xCamera_PrevVP;		// PrevView*PrevProjection
+	float4x4	g_xCamera_PrevInvVP;	// Inverse(PrevView*PrevProjection)
+	float4x4	g_xCamera_ReflVP;		// ReflectionView*ReflectionProjection
 };
 
 

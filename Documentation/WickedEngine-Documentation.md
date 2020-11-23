@@ -182,13 +182,17 @@ Calls Compose for the active RenderPath
 [[Header]](../WickedEngine/RenderPath.h)
 This is an empty base class that can be activated with a MainComponent. It calls its Start(), Update(), FixedUpdate(), Render(), Compose(), Stop() functions as needed. Override this to perform custom gameplay or rendering logic. <br/>
 The order in which the functions are executed every frame: <br/>
-1. FixedUpdate() <br/>
+1. PreUpdate() <br/>
+This will be called once per frame before any script that calls Update().
+2. FixedUpdate() <br/>
 This will be called in a manner that is deterministic, so logic will be running in the frequency that is specified with MainComponent::setTargetFrameRate(float framespersecond)
-2. Update(float deltatime) <br/>
+3. Update(float deltatime) <br/>
 This will be called once per frame, and the elapsed time in seconds since the last Update() is provided as parameter
-3. Render() const <br/>
+4. PostUpdate() <br/>
+This will be called once per frame after any script that calls Update().
+5. Render() const <br/>
 This will be called once per frame. It is const, so it shouldn't modify state. When running this, it is not defined which thread it is running on. Multiple threads and job system can be used within this. The main purpose is to record mass rendering commands in multiple threads and command lists. Command list can be safely retrieved at this point from the graphics device. 
-4. Compose(CommandList cmd) const <br/>
+6. Compose(CommandList cmd) const <br/>
 It is called once per frame. It is running on a single command list that it receives as a parameter. These rendering commands will directly record onto the last submitted command list in the frame. The render target is the back buffer at this point, so rendering will happen to the screen.
 
 Apart from the functions that will be run every frame, the RenderPath has the following functions:

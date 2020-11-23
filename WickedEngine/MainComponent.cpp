@@ -235,12 +235,18 @@ void MainComponent::Update(float dt)
 {
 	auto range = wiProfiler::BeginRangeCPU("Update");
 
+	if (GetActivePath() != nullptr)
+	{
+		GetActivePath()->PreUpdate();
+	}
+
 	wiLua::SetDeltaTime(double(dt));
 	wiLua::Update();
 
 	if (GetActivePath() != nullptr)
 	{
 		GetActivePath()->Update(dt);
+		GetActivePath()->PostUpdate();
 	}
 
 	wiProfiler::EndRange(range); // Update

@@ -68,9 +68,9 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 void RenderPath3D_PathTracing::Update(float dt)
 {
-	if (wiRenderer::GetCamera().IsDirty())
+	if (camera->IsDirty())
 	{
-		wiRenderer::GetCamera().SetDirty(false);
+		camera->SetDirty(false);
 		sam = -1;
 	}
 	else
@@ -128,6 +128,13 @@ void RenderPath3D_PathTracing::Render() const
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
+
+		wiRenderer::UpdateCameraCB(
+			*camera,
+			*camera,
+			*camera,
+			cmd
+		);
 		wiRenderer::BindCommonResources(cmd);
 
 		if (wiRenderer::GetRaytraceDebugBVHVisualizerEnabled())
@@ -139,7 +146,6 @@ void RenderPath3D_PathTracing::Render() const
 			vp.Height = (float)traceResult.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
-			wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 			wiRenderer::RayTraceSceneBVH(cmd);
 
 			device->RenderPassEnd(cmd);
@@ -148,9 +154,7 @@ void RenderPath3D_PathTracing::Render() const
 		{
 			auto range = wiProfiler::BeginRangeGPU("Traced Scene", cmd);
 
-			wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
-
-			wiRenderer::RayBuffers* rayBuffers = wiRenderer::GenerateScreenRayBuffers(wiRenderer::GetCamera(), cmd);
+			wiRenderer::RayBuffers* rayBuffers = wiRenderer::GenerateScreenRayBuffers(*camera, cmd);
 			wiRenderer::RayTraceScene(*scene, rayBuffers, &traceResult, sam, cmd);
 
 

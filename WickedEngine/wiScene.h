@@ -571,9 +571,8 @@ namespace wiScene
 
 		// occlusion result history bitfield (32 bit->32 frame history)
 		uint32_t occlusionHistory = ~0;
-		// occlusion query pool index
-		int occlusionQueryID = -1;
-		int occlusionQueryAge = -1;
+		wiGraphics::GPUQuery occlusionQueries[wiGraphics::GraphicsDevice::GetBackBufferCount()];
+		int queryIndex = 0;
 
 		inline bool IsOccluded() const
 		{
@@ -581,7 +580,7 @@ namespace wiScene
 			// If it is visible in any frames in the history, it is determined visible in this frame
 			// But if all queries failed in the history, it is occluded.
 			// If it pops up for a frame after occluded, it is visible again for some frames
-			return ((occlusionQueryID >= 0) && (occlusionHistory & 0xFFFFFFFF) == 0);
+			return (occlusionQueries[queryIndex].IsValid() && occlusionHistory == 0);
 		}
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }

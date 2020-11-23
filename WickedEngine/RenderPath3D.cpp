@@ -619,6 +619,11 @@ void RenderPath3D::ResizeBuffers()
 	RenderPath2D::ResizeBuffers();
 }
 
+void RenderPath3D::PreUpdate()
+{
+	camera_previous = *camera;
+}
+
 void RenderPath3D::Update(float dt)
 {
 	RenderPath2D::Update(dt);
@@ -627,7 +632,7 @@ void RenderPath3D::Update(float dt)
 
 	// Frustum culling for main camera:
 	visibility_main.scene = scene;
-	visibility_main.camera = &wiRenderer::GetCamera();
+	visibility_main.camera = camera;
 	visibility_main.flags |= wiRenderer::Visibility::ALLOW_OBJECTS;
 	visibility_main.flags |= wiRenderer::Visibility::ALLOW_LIGHTS;
 	visibility_main.flags |= wiRenderer::Visibility::ALLOW_DECALS;
@@ -640,8 +645,10 @@ void RenderPath3D::Update(float dt)
 	if (visibility_main.planar_reflection_visible)
 	{
 		// Frustum culling for planar reflections:
+		camera_reflection = *camera;
+		camera_reflection.Reflect(visibility_main.reflectionPlane);
 		visibility_reflection.scene = scene;
-		visibility_reflection.camera = &wiRenderer::GetRefCamera();
+		visibility_reflection.camera = &camera_reflection;
 		visibility_reflection.flags |= wiRenderer::Visibility::ALLOW_OBJECTS;
 		wiRenderer::UpdateVisibility(visibility_reflection, getLayerMask());
 	}
@@ -680,10 +687,10 @@ void RenderPath3D::Render() const
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
 		wiRenderer::BindCommonResources(cmd);
-		wiRenderer::RefreshDecalAtlas(wiScene::GetScene(), cmd);
-		wiRenderer::RefreshLightmapAtlas(wiScene::GetScene(), cmd);
+		wiRenderer::RefreshDecalAtlas(*scene, cmd);
+		wiRenderer::RefreshLightmapAtlas(*scene, cmd);
 		wiRenderer::RefreshEnvProbes(visibility_main, cmd);
-		wiRenderer::RefreshImpostors(wiScene::GetScene(), cmd);
+		wiRenderer::RefreshImpostors(*scene, cmd);
 		});
 
 	cmd = device->BeginCommandList();
@@ -702,7 +709,13 @@ void RenderPath3D::Render() const
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
+
+		wiRenderer::UpdateCameraCB(
+			*camera,
+			camera_previous,
+			camera_reflection,
+			cmd
+		);
 
 		// depth prepass
 		{
@@ -773,6 +786,7 @@ void RenderPath3D::Render() const
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		wiRenderer::ComputeTiledLightCulling(
+			*camera,
 			depthBuffer_Copy,
 			cmd
 		);
@@ -814,7 +828,13 @@ void RenderPath3D::Render() const
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
+
+		wiRenderer::UpdateCameraCB(
+			*camera,
+			camera_previous,
+			camera_reflection,
+			cmd
+		);
 		wiRenderer::BindCommonResources(cmd);
 
 		RenderSSS(cmd);
@@ -865,14 +885,13 @@ void RenderPath3D::Compose(CommandList cmd) const
 void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
-	const wiScene::Scene& scene = wiScene::GetScene();
 
 	device->BindResource(CS, &depthBuffer_Copy1, TEXSLOT_DEPTH, cmd);
 	wiRenderer::UpdateRenderData(visibility_main, cmd);
 
 	if (getAO() == AO_RTAO || wiRenderer::GetRaytracedShadowsEnabled() || getRaytracedReflectionEnabled())
 	{
-		wiRenderer::UpdateRaytracingAccelerationStructures(scene, cmd);
+		wiRenderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
 	}
 	
 	Viewport viewport;
@@ -882,7 +901,7 @@ void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
 
 	device->RenderPassBegin(&renderpass_occlusionculling, cmd);
 
-	wiRenderer::OcclusionCulling_Render(visibility_main, cmd);
+	wiRenderer::OcclusionCulling_Render(camera_previous, visibility_main, cmd);
 
 	device->RenderPassEnd(cmd);
 }
@@ -894,7 +913,13 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		wiRenderer::UpdateCameraCB(wiRenderer::GetRefCamera(), cmd);
+
+		wiRenderer::UpdateCameraCB(
+			camera_reflection,
+			camera_reflection,
+			camera_reflection,
+			cmd
+		);
 
 		Viewport vp;
 		vp.Width = (float)depthBuffer_Reflection.GetDesc().Width;
@@ -904,7 +929,7 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 		device->RenderPassBegin(&renderpass_reflection, cmd);
 
 		wiRenderer::DrawScene(visibility_reflection, RENDERPASS_TEXTURE, cmd);
-		wiRenderer::DrawSky(wiScene::GetScene(), cmd);
+		wiRenderer::DrawSky(*scene, cmd);
 
 		device->RenderPassEnd(cmd);
 	}
@@ -1004,6 +1029,7 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 			break;
 		case AO_HBAO:
 			wiRenderer::Postprocess_HBAO(
+				*camera,
 				rtLinearDepth,
 				rtAO,
 				cmd,
@@ -1012,6 +1038,7 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 			break;
 		case AO_MSAO:
 			wiRenderer::Postprocess_MSAO(
+				*camera,
 				rtLinearDepth,
 				rtAO,
 				cmd,
@@ -1020,7 +1047,7 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 			break;
 		case AO_RTAO:
 			wiRenderer::Postprocess_RTAO(
-				wiScene::GetScene(),
+				*scene,
 				depthBuffer_Copy,
 				rtLinearDepth,
 				depthBuffer_Copy1,
@@ -1039,7 +1066,7 @@ void RenderPath3D::RenderSSR(CommandList cmd) const
 	if (getRaytracedReflectionEnabled())
 	{
 		wiRenderer::Postprocess_RTReflection(
-			wiScene::GetScene(),
+			*scene,
 			depthBuffer_Copy, 
 			GetGbuffer_Read(),
 			rtSSR, 
@@ -1082,8 +1109,8 @@ void RenderPath3D::RenderOutline(CommandList cmd) const
 }
 void RenderPath3D::RenderLightShafts(CommandList cmd) const
 {
-	XMVECTOR sunDirection = XMLoadFloat3(&wiScene::GetScene().weather.sunDirection);
-	if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, wiRenderer::GetCamera().GetAt())) > 0)
+	XMVECTOR sunDirection = XMLoadFloat3(&scene->weather.sunDirection);
+	if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, camera->GetAt())) > 0)
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -1108,7 +1135,7 @@ void RenderPath3D::RenderLightShafts(CommandList cmd) const
 		{
 			XMVECTOR sunPos = XMVector3Project(sunDirection * 100000, 0, 0,
 				1.0f, 1.0f, 0.1f, 1.0f,
-				wiRenderer::GetCamera().GetProjection(), wiRenderer::GetCamera().GetView(), XMMatrixIdentity());
+				camera->GetProjection(), camera->GetView(), XMMatrixIdentity());
 			{
 				XMFLOAT2 sun;
 				XMStoreFloat2(&sun, sunPos);
@@ -1255,7 +1282,7 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 		wiRenderer::DrawLensFlares(visibility_main, depthBuffer_Copy, cmd);
 	}
 
-	wiRenderer::DrawDebugWorld(wiScene::GetScene(), wiRenderer::GetCamera(), cmd);
+	wiRenderer::DrawDebugWorld(*scene, *camera, cmd);
 
 	device->RenderPassEnd(cmd);
 
