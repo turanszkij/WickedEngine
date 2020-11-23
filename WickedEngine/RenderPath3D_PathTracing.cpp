@@ -68,8 +68,6 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 void RenderPath3D_PathTracing::Update(float dt)
 {
-	const Scene& scene = wiScene::GetScene();
-
 	if (wiRenderer::GetCamera().IsDirty())
 	{
 		wiRenderer::GetCamera().SetDirty(false);
@@ -77,9 +75,9 @@ void RenderPath3D_PathTracing::Update(float dt)
 	}
 	else
 	{
-		for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
+		for (size_t i = 0; i < scene->transforms.GetCount(); ++i)
 		{
-			const TransformComponent& transform = scene.transforms[i];
+			const TransformComponent& transform = scene->transforms[i];
 
 			if (transform.IsDirty())
 			{
@@ -90,9 +88,9 @@ void RenderPath3D_PathTracing::Update(float dt)
 
 		if (sam >= 0)
 		{
-			for (size_t i = 0; i < scene.materials.GetCount(); ++i)
+			for (size_t i = 0; i < scene->materials.GetCount(); ++i)
 			{
-				const MaterialComponent& material = scene.materials[i];
+				const MaterialComponent& material = scene->materials[i];
 
 				if (material.IsDirty())
 				{
@@ -117,12 +115,11 @@ void RenderPath3D_PathTracing::Render() const
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
-		const wiScene::Scene& scene = wiScene::GetScene();
-		wiRenderer::UpdateRenderData(scene, visibility_main, cmd);
+		wiRenderer::UpdateRenderData(visibility_main, cmd);
 
 		if (sam == 0)
 		{
-			wiRenderer::BuildSceneBVH(scene, cmd);
+			wiRenderer::BuildSceneBVH(*scene, cmd);
 		}
 	});
 
@@ -154,7 +151,7 @@ void RenderPath3D_PathTracing::Render() const
 			wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 
 			wiRenderer::RayBuffers* rayBuffers = wiRenderer::GenerateScreenRayBuffers(wiRenderer::GetCamera(), cmd);
-			wiRenderer::RayTraceScene(wiScene::GetScene(), rayBuffers, &traceResult, sam, cmd);
+			wiRenderer::RayTraceScene(*scene, rayBuffers, &traceResult, sam, cmd);
 
 
 			wiProfiler::EndRange(range); // Traced Scene

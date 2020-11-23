@@ -62,17 +62,20 @@ namespace wiRenderer
 	struct Visibility
 	{
 		// User fills these:
-		wiScene::CameraComponent camera;
+		const wiScene::Scene* scene = nullptr;
+		const wiScene::CameraComponent* camera = nullptr;
 		enum FLAGS
 		{
 			EMPTY = 0,
-			ALLOW_REQUEST_REFLECTION = 1 << 0,
-			DISABLE_OBJECTS = 1 << 1,
-			DISABLE_LIGHTS = 1 << 2,
-			DISABLE_DECALS = 1 << 3,
-			DISABLE_ENVPROBES = 1 << 4,
-			DISABLE_EMITTERS = 1 << 5,
-			DISABLE_HAIRS = 1 << 6,
+			ALLOW_OBJECTS = 1 << 0,
+			ALLOW_LIGHTS = 1 << 1,
+			ALLOW_DECALS = 1 << 2,
+			ALLOW_ENVPROBES = 1 << 3,
+			ALLOW_EMITTERS = 1 << 4,
+			ALLOW_HAIRS = 1 << 5,
+			ALLOW_REQUEST_REFLECTION = 1 << 6,
+
+			ALLOW_EVERYTHING = ~0u
 		};
 		uint32_t flags = EMPTY;
 
@@ -90,9 +93,9 @@ namespace wiRenderer
 		std::atomic<uint32_t> decal_counter;
 
 		wiSpinLock locker;
-		bool planar_reflections_visible = false;
+		bool planar_reflection_visible = false;
 		float closestRefPlane = FLT_MAX;
-		XMFLOAT4 reflectionPlane = XMFLOAT4(0, 0, 0, 0);
+		XMFLOAT4 reflectionPlane = XMFLOAT4(0, 1, 0, 0);
 
 		void Clear()
 		{
@@ -108,16 +111,16 @@ namespace wiRenderer
 			decal_counter.store(0);
 
 			closestRefPlane = FLT_MAX;
-			planar_reflections_visible = false;
+			planar_reflection_visible = false;
 		}
 	};
 
 	// Performs frustum culling. Specify layerMask to only include specific layers in rendering
-	void UpdateVisibility(const wiScene::Scene& scene, Visibility& vis, uint32_t layerMask = ~0);
+	void UpdateVisibility(Visibility& vis, uint32_t layerMask = ~0);
 	// Prepares the scene for rendering
 	void UpdatePerFrameData(wiScene::Scene& scene, const Visibility& vis, float dt);
 	// Updates the GPU state according to the previously called UpdatePerFrameData()
-	void UpdateRenderData(const wiScene::Scene& scene, const Visibility& vis, wiGraphics::CommandList cmd);
+	void UpdateRenderData(const Visibility& vis, wiGraphics::CommandList cmd);
 	// Updates all acceleration structures for raytracing API
 	void UpdateRaytracingAccelerationStructures(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 
@@ -140,7 +143,6 @@ namespace wiRenderer
 
 	// Draw the world from a camera. You must call UpdateCameraCB() at least once in this frame prior to this
 	void DrawScene(
-		const wiScene::Scene& scene,
 		const Visibility& vis,
 		RENDERPASS renderPass,
 		wiGraphics::CommandList cmd,
@@ -160,7 +162,6 @@ namespace wiRenderer
 	void DrawSun(wiGraphics::CommandList cmd);
 	// Draw shadow maps for each visible light that has associated shadow maps
 	void DrawShadowmaps(
-		const wiScene::Scene& scene,
 		const Visibility& vis,
 		wiGraphics::CommandList cmd,
 		uint32_t layerMask = ~0
@@ -173,7 +174,6 @@ namespace wiRenderer
 	);
 	// Draw Soft offscreen particles.
 	void DrawSoftParticles(
-		const wiScene::Scene& scene,
 		const Visibility& vis,
 		const wiGraphics::Texture& lineardepth,
 		bool distortion, 
@@ -181,26 +181,23 @@ namespace wiRenderer
 	);
 	// Draw simple light visualizer geometries
 	void DrawLightVisualizers(
-		const wiScene::Scene& scene,
 		const Visibility& vis,
 		wiGraphics::CommandList cmd
 	);
 	// Draw volumetric light scattering effects
 	void DrawVolumeLights(
-		const wiScene::Scene& scene,
 		const Visibility& vis,
 		const wiGraphics::Texture& depthbuffer,
 		wiGraphics::CommandList cmd
 	);
 	// Draw Lens Flares for lights that have them enabled
 	void DrawLensFlares(
-		const wiScene::Scene& scene,
 		const Visibility& vis,
 		const wiGraphics::Texture& depthbuffer,
 		wiGraphics::CommandList cmd
 	);
 	// Call once per frame to re-render out of date environment probes
-	void RefreshEnvProbes(const wiScene::Scene& scene, const Visibility& vis, wiGraphics::CommandList cmd);
+	void RefreshEnvProbes(const Visibility& vis, wiGraphics::CommandList cmd);
 	// Call once per frame to re-render out of date impostors
 	void RefreshImpostors(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 	// Call once per frame to repack out of date decals in the atlas
@@ -208,7 +205,7 @@ namespace wiRenderer
 	// Call once per frame to repack out of date lightmaps in the atlas
 	void RefreshLightmapAtlas(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 	// Voxelize the scene into a voxel grid 3D texture
-	void VoxelRadiance(const wiScene::Scene& scene, const Visibility& vis, wiGraphics::CommandList cmd);
+	void VoxelRadiance(const Visibility& vis, wiGraphics::CommandList cmd);
 	// Compute light grid tiles
 	void ComputeTiledLightCulling(
 		const wiGraphics::Texture& depthbuffer,

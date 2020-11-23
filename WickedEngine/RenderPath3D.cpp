@@ -3,7 +3,6 @@
 #include "wiImage.h"
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
-#include "wiScene.h"
 #include "ResourceMapping.h"
 #include "wiProfiler.h"
 
@@ -624,28 +623,31 @@ void RenderPath3D::Update(float dt)
 {
 	RenderPath2D::Update(dt);
 
-	wiScene::Scene& scene = wiScene::GetScene();
-	scene.Update(dt * wiRenderer::GetGameSpeed());
+	scene->Update(dt * wiRenderer::GetGameSpeed());
 
-	// Frusutm culling for main camera:
-	visibility_main.camera = wiRenderer::GetCamera();
+	// Frustum culling for main camera:
+	visibility_main.scene = scene;
+	visibility_main.camera = &wiRenderer::GetCamera();
+	visibility_main.flags |= wiRenderer::Visibility::ALLOW_OBJECTS;
+	visibility_main.flags |= wiRenderer::Visibility::ALLOW_LIGHTS;
+	visibility_main.flags |= wiRenderer::Visibility::ALLOW_DECALS;
+	visibility_main.flags |= wiRenderer::Visibility::ALLOW_ENVPROBES;
+	visibility_main.flags |= wiRenderer::Visibility::ALLOW_EMITTERS;
+	visibility_main.flags |= wiRenderer::Visibility::ALLOW_HAIRS;
 	visibility_main.flags |= wiRenderer::Visibility::ALLOW_REQUEST_REFLECTION;
-	wiRenderer::UpdateVisibility(scene, visibility_main, getLayerMask());
+	wiRenderer::UpdateVisibility(visibility_main, getLayerMask());
 
-	if (visibility_main.planar_reflections_visible)
+	if (visibility_main.planar_reflection_visible)
 	{
 		// Frustum culling for planar reflections:
-		visibility_reflection.camera = wiRenderer::GetRefCamera();
-		visibility_reflection.flags |= wiRenderer::Visibility::DISABLE_LIGHTS;
-		visibility_reflection.flags |= wiRenderer::Visibility::DISABLE_DECALS;
-		visibility_reflection.flags |= wiRenderer::Visibility::DISABLE_ENVPROBES;
-		visibility_reflection.flags |= wiRenderer::Visibility::DISABLE_EMITTERS;
-		visibility_reflection.flags |= wiRenderer::Visibility::DISABLE_HAIRS;
-		wiRenderer::UpdateVisibility(scene, visibility_reflection, getLayerMask());
+		visibility_reflection.scene = scene;
+		visibility_reflection.camera = &wiRenderer::GetRefCamera();
+		visibility_reflection.flags |= wiRenderer::Visibility::ALLOW_OBJECTS;
+		wiRenderer::UpdateVisibility(visibility_reflection, getLayerMask());
 	}
 
-	wiRenderer::OcclusionCulling_Read(scene, visibility_main);
-	wiRenderer::UpdatePerFrameData(scene, visibility_main, dt);
+	wiRenderer::OcclusionCulling_Read(*scene, visibility_main);
+	wiRenderer::UpdatePerFrameData(*scene, visibility_main, dt);
 
 	std::swap(depthBuffer_Copy, depthBuffer_Copy1);
 }
@@ -663,7 +665,7 @@ void RenderPath3D::Render() const
 	{
 		cmd = device->BeginCommandList();
 		wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
-			wiRenderer::DrawShadowmaps(wiScene::GetScene(), visibility_main, cmd, getLayerMask());
+			wiRenderer::DrawShadowmaps(visibility_main, cmd, getLayerMask());
 			});
 	}
 
@@ -671,7 +673,7 @@ void RenderPath3D::Render() const
 	{
 		cmd = device->BeginCommandList();
 		wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
-			wiRenderer::VoxelRadiance(wiScene::GetScene(), visibility_main, cmd);
+			wiRenderer::VoxelRadiance(visibility_main, cmd);
 			});
 	}
 
@@ -680,7 +682,7 @@ void RenderPath3D::Render() const
 		wiRenderer::BindCommonResources(cmd);
 		wiRenderer::RefreshDecalAtlas(wiScene::GetScene(), cmd);
 		wiRenderer::RefreshLightmapAtlas(wiScene::GetScene(), cmd);
-		wiRenderer::RefreshEnvProbes(wiScene::GetScene(), visibility_main, cmd);
+		wiRenderer::RefreshEnvProbes(visibility_main, cmd);
 		wiRenderer::RefreshImpostors(wiScene::GetScene(), cmd);
 		});
 
@@ -713,7 +715,7 @@ void RenderPath3D::Render() const
 			vp.Height = (float)depthBuffer.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
-			wiRenderer::DrawScene(wiScene::GetScene(), visibility_main, RENDERPASS_DEPTHONLY, cmd, drawscene_flags);
+			wiRenderer::DrawScene(visibility_main, RENDERPASS_DEPTHONLY, cmd, drawscene_flags);
 
 			device->RenderPassEnd(cmd);
 
@@ -798,7 +800,7 @@ void RenderPath3D::Render() const
 			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
 			device->BindResource(PS, getAOEnabled() ? &rtAO : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_AO, cmd);
 			device->BindResource(PS, getSSREnabled() || getRaytracedReflectionEnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
-			wiRenderer::DrawScene(wiScene::GetScene(), visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
+			wiRenderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
 			
 			device->RenderPassEnd(cmd);
 
@@ -866,7 +868,7 @@ void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
 	const wiScene::Scene& scene = wiScene::GetScene();
 
 	device->BindResource(CS, &depthBuffer_Copy1, TEXSLOT_DEPTH, cmd);
-	wiRenderer::UpdateRenderData(scene, visibility_main, cmd);
+	wiRenderer::UpdateRenderData(visibility_main, cmd);
 
 	if (getAO() == AO_RTAO || wiRenderer::GetRaytracedShadowsEnabled() || getRaytracedReflectionEnabled())
 	{
@@ -888,7 +890,7 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 {
 	auto range = wiProfiler::BeginRangeGPU("Reflection rendering", cmd);
 
-	if (visibility_main.planar_reflections_visible)
+	if (visibility_main.planar_reflection_visible)
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -901,7 +903,7 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 
 		device->RenderPassBegin(&renderpass_reflection, cmd);
 
-		wiRenderer::DrawScene(wiScene::GetScene(), visibility_reflection, RENDERPASS_TEXTURE, cmd);
+		wiRenderer::DrawScene(visibility_reflection, RENDERPASS_TEXTURE, cmd);
 		wiRenderer::DrawSky(wiScene::GetScene(), cmd);
 
 		device->RenderPassEnd(cmd);
@@ -1131,7 +1133,7 @@ void RenderPath3D::RenderVolumetrics(CommandList cmd) const
 		vp.Height = (float)rtVolumetricLights[0].GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
 
-		wiRenderer::DrawVolumeLights(wiScene::GetScene(), visibility_main, depthBuffer_Copy, cmd);
+		wiRenderer::DrawVolumeLights(visibility_main, depthBuffer_Copy, cmd);
 
 		device->RenderPassEnd(cmd);
 
@@ -1217,16 +1219,16 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 		drawscene_flags |= wiRenderer::DRAWSCENE_TRANSPARENT;
 		drawscene_flags |= wiRenderer::DRAWSCENE_OCCLUSIONCULLING;
 		drawscene_flags |= wiRenderer::DRAWSCENE_HAIRPARTICLE;
-		wiRenderer::DrawScene(wiScene::GetScene(), visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
+		wiRenderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
 
 		wiProfiler::EndRange(range); // Transparent Scene
 	}
 
-	wiRenderer::DrawLightVisualizers(wiScene::GetScene(), visibility_main, cmd);
+	wiRenderer::DrawLightVisualizers(visibility_main, cmd);
 
 	{
 		auto range = wiProfiler::BeginRangeGPU("EmittedParticles - Render", cmd);
-		wiRenderer::DrawSoftParticles(wiScene::GetScene(), visibility_main, rtLinearDepth, false, cmd);
+		wiRenderer::DrawSoftParticles(visibility_main, rtLinearDepth, false, cmd);
 		wiProfiler::EndRange(range);
 	}
 
@@ -1250,7 +1252,7 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 
 	if (getLensFlareEnabled())
 	{
-		wiRenderer::DrawLensFlares(wiScene::GetScene(), visibility_main, depthBuffer_Copy, cmd);
+		wiRenderer::DrawLensFlares(visibility_main, depthBuffer_Copy, cmd);
 	}
 
 	wiRenderer::DrawDebugWorld(wiScene::GetScene(), wiRenderer::GetCamera(), cmd);
@@ -1267,7 +1269,7 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 		vp.Height = (float)rtParticleDistortion.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
 
-		wiRenderer::DrawSoftParticles(wiScene::GetScene(), visibility_main, rtLinearDepth, true, cmd);
+		wiRenderer::DrawSoftParticles(visibility_main, rtLinearDepth, true, cmd);
 
 		device->RenderPassEnd(cmd);
 		wiProfiler::EndRange(range);

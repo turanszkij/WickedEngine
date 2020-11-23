@@ -3,6 +3,7 @@
 #include "wiRenderer.h"
 #include "wiGraphicsDevice.h"
 #include "wiResourceManager.h"
+#include "wiScene.h"
 
 #include <memory>
 
@@ -185,6 +186,7 @@ protected:
 	virtual void RenderTransparents(wiGraphics::CommandList cmd) const;
 	virtual void RenderPostprocessChain(wiGraphics::CommandList cmd) const;
 
+	wiScene::Scene* scene = &wiScene::GetScene();
 	wiRenderer::Visibility visibility_main;
 	wiRenderer::Visibility visibility_reflection;
 	

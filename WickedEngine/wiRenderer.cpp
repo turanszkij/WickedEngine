@@ -226,7 +226,6 @@ struct RenderBatch
 // This is just a utility that points to a linear array of render batches:
 struct RenderQueue
 {
-	const CameraComponent* camera = nullptr;
 	RenderBatch* batchArray = nullptr;
 	uint32_t batchCount = 0;
 
@@ -2617,7 +2616,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 }
 
 
-ForwardEntityMaskCB ForwardEntityCullingCPU(const Scene& scene, const Visibility& vis, const AABB& batch_aabb, RENDERPASS renderPass)
+ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& batch_aabb, RENDERPASS renderPass)
 {
 	// Performs CPU light culling for a renderable batch:
 	//	Similar to GPU-based tiled light culling, but this is only for simple forward passes (drawcall-granularity)
@@ -2632,7 +2631,7 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const Scene& scene, const Visibility
 	for (size_t i = 0; i < std::min(size_t(64), vis.visibleLights.size()); ++i) // only support indexing 64 lights at max for now
 	{
 		const uint32_t lightIndex = vis.visibleLights[i];
-		const AABB& light_aabb = scene.aabb_lights[lightIndex];
+		const AABB& light_aabb = vis.scene->aabb_lights[lightIndex];
 		if (light_aabb.intersects(batch_aabb))
 		{
 			const uint8_t bucket_index = uint8_t(i / 32);
@@ -2646,7 +2645,7 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const Scene& scene, const Visibility
 	for (size_t i = 0; i < std::min(size_t(32), vis.visibleDecals.size()); ++i)
 	{
 		const uint32_t decalIndex = vis.visibleDecals[vis.visibleDecals.size() - 1 - i]; // note: reverse order, for correct blending!
-		const AABB& decal_aabb = scene.aabb_decals[decalIndex];
+		const AABB& decal_aabb = vis.scene->aabb_decals[decalIndex];
 		if (decal_aabb.intersects(batch_aabb))
 		{
 			const uint8_t bucket_place = uint8_t(i % 32);
@@ -2659,7 +2658,7 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const Scene& scene, const Visibility
 		for (size_t i = 0; i < std::min(size_t(32), vis.visibleEnvProbes.size()); ++i)
 		{
 			const uint32_t probeIndex = vis.visibleEnvProbes[vis.visibleEnvProbes.size() - 1 - i]; // note: reverse order, for correct blending!
-			const AABB& probe_aabb = scene.aabb_probes[probeIndex];
+			const AABB& probe_aabb = vis.scene->aabb_probes[probeIndex];
 			if (probe_aabb.intersects(batch_aabb))
 			{
 				const uint8_t bucket_place = uint8_t(i % 32);
@@ -2687,15 +2686,14 @@ void BindShadowmaps(SHADERSTAGE stage, CommandList cmd)
 }
 
 void RenderMeshes(
-	const Scene& scene,
+	const Visibility& vis,
 	const RenderQueue& renderQueue,
 	RENDERPASS renderPass,
 	uint32_t renderTypeFlags,
 	CommandList cmd,
 	bool tessellation = false,
 	const Frustum* frusta = nullptr,
-	uint32_t frustum_count = 1,
-	const Visibility* vis = nullptr
+	uint32_t frustum_count = 1
 )
 {
 	if (!renderQueue.empty())
@@ -2763,7 +2761,7 @@ void RenderMeshes(
 			const RenderBatch& batch = renderQueue.batchArray[batchID];
 			const uint32_t meshIndex = batch.GetMeshIndex();
 			const uint32_t instanceIndex = batch.GetInstanceIndex();
-			const ObjectComponent& instance = scene.objects[instanceIndex];
+			const ObjectComponent& instance = vis.scene->objects[instanceIndex];
 			const uint8_t userStencilRefOverride = instance.userStencilRef;
 
 			// When we encounter a new mesh inside the global instance array, we begin a new InstancedBatch:
@@ -2803,14 +2801,14 @@ void RenderMeshes(
 				current_batch.forceAlphatestForDithering = 1;
 			}
 
-			const AABB& instanceAABB = scene.aabb_objects[instanceIndex];
+			const AABB& instanceAABB = vis.scene->aabb_objects[instanceIndex];
 
 			if (forwardLightmaskRequest)
 			{
 				current_batch.aabb = AABB::Merge(current_batch.aabb, instanceAABB);
 			}
 
-			const XMFLOAT4X4& worldMatrix = instance.transform_index >= 0 ? scene.transforms[instance.transform_index].world : IDENTITYMATRIX;
+			const XMFLOAT4X4& worldMatrix = instance.transform_index >= 0 ? vis.scene->transforms[instance.transform_index].world : IDENTITYMATRIX;
 
 			for (uint32_t frustum_index = 0; frustum_index < frustum_count; ++frustum_index)
 			{
@@ -2825,7 +2823,7 @@ void RenderMeshes(
 				{
 					((volatile InstBuf*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index);
 
-					const XMFLOAT4X4& prev_worldMatrix = instance.prev_transform_index >= 0 ? scene.prev_transforms[instance.prev_transform_index].world_prev : IDENTITYMATRIX;
+					const XMFLOAT4X4& prev_worldMatrix = instance.prev_transform_index >= 0 ? vis.scene->prev_transforms[instance.prev_transform_index].world_prev : IDENTITYMATRIX;
 					((volatile InstBuf*)instances.data)[instanceCount].instancePrev.Create(prev_worldMatrix);
 					((volatile InstBuf*)instances.data)[instanceCount].instanceAtlas.Create(instance.globalLightMapMulAdd);
 				}
@@ -2845,7 +2843,7 @@ void RenderMeshes(
 		for (int instancedBatchID = 0; instancedBatchID < instancedBatchCount; ++instancedBatchID)
 		{
 			const InstancedBatch& instancedBatch = instancedBatchArray[instancedBatchID];
-			const MeshComponent& mesh = scene.meshes[instancedBatch.meshIndex];
+			const MeshComponent& mesh = vis.scene->meshes[instancedBatch.meshIndex];
 			const bool forceAlphaTestForDithering = instancedBatch.forceAlphatestForDithering != 0;
 			const uint8_t userStencilRefOverride = instancedBatch.userStencilRefOverride;
 
@@ -2863,8 +2861,7 @@ void RenderMeshes(
 
 			if (forwardLightmaskRequest)
 			{
-				assert(vis != nullptr);
-				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(scene, *vis, instancedBatch.aabb, renderPass);
+				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, instancedBatch.aabb, renderPass);
 				device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
 				device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
 			}
@@ -2886,7 +2883,7 @@ void RenderMeshes(
 				{
 					continue;
 				}
-				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
+				const MaterialComponent& material = *vis.scene->materials.GetComponent(subset.materialID);
 
 				bool subsetRenderable = renderTypeFlags & material.GetRenderTypes();
 
@@ -3072,7 +3069,7 @@ void RenderMeshes(
 
 				if (terrain)
 				{
-					if (mesh.terrain_material1 == INVALID_ENTITY || !scene.materials.Contains(mesh.terrain_material1))
+					if (mesh.terrain_material1 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material1))
 					{
 						const GPUResource* res[] = {
 							material.GetBaseColorMap(),
@@ -3085,7 +3082,7 @@ void RenderMeshes(
 					}
 					else
 					{
-						const MaterialComponent& blendmat = *scene.materials.GetComponent(mesh.terrain_material1);
+						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material1);
 						const GPUResource* res[] = {
 							blendmat.GetBaseColorMap(),
 							blendmat.GetNormalMap(),
@@ -3096,7 +3093,7 @@ void RenderMeshes(
 						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
 					}
 
-					if (mesh.terrain_material2 == INVALID_ENTITY || !scene.materials.Contains(mesh.terrain_material2))
+					if (mesh.terrain_material2 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material2))
 					{
 						const GPUResource* res[] = {
 							material.GetBaseColorMap(),
@@ -3109,7 +3106,7 @@ void RenderMeshes(
 					}
 					else
 					{
-						const MaterialComponent& blendmat = *scene.materials.GetComponent(mesh.terrain_material2);
+						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material2);
 						const GPUResource* res[] = {
 							blendmat.GetBaseColorMap(),
 							blendmat.GetNormalMap(),
@@ -3120,7 +3117,7 @@ void RenderMeshes(
 						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
 					}
 
-					if (mesh.terrain_material3 == INVALID_ENTITY || !scene.materials.Contains(mesh.terrain_material3))
+					if (mesh.terrain_material3 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material3))
 					{
 						const GPUResource* res[] = {
 							material.GetBaseColorMap(),
@@ -3133,7 +3130,7 @@ void RenderMeshes(
 					}
 					else
 					{
-						const MaterialComponent& blendmat = *scene.materials.GetComponent(mesh.terrain_material3);
+						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material3);
 						const GPUResource* res[] = {
 							blendmat.GetBaseColorMap(),
 							blendmat.GetNormalMap(),
@@ -3156,21 +3153,20 @@ void RenderMeshes(
 }
 
 void RenderImpostors(
-	const Scene& scene,
-	const CameraComponent& camera, 
+	const Visibility& vis,
 	RENDERPASS renderPass, 
 	CommandList cmd
 )
 {
 	const PipelineState* impostorRequest = GetImpostorPSO(renderPass);
 
-	if (scene.impostors.GetCount() > 0 && impostorRequest != nullptr)
+	if (vis.scene->impostors.GetCount() > 0 && impostorRequest != nullptr)
 	{
 		uint32_t instanceCount = 0;
-		for (size_t impostorID = 0; impostorID < scene.impostors.GetCount(); ++impostorID)
+		for (size_t impostorID = 0; impostorID < vis.scene->impostors.GetCount(); ++impostorID)
 		{
-			const ImpostorComponent& impostor = scene.impostors[impostorID];
-			if (camera.frustum.CheckBoxFast(impostor.aabb))
+			const ImpostorComponent& impostor = vis.scene->impostors[impostorID];
+			if (vis.camera->frustum.CheckBoxFast(impostor.aabb))
 			{
 				instanceCount += (uint32_t)impostor.instanceMatrices.size();
 			}
@@ -3189,10 +3185,10 @@ void RenderImpostors(
 		GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
 
 		uint32_t drawableInstanceCount = 0;
-		for (size_t impostorID = 0; impostorID < scene.impostors.GetCount(); ++impostorID)
+		for (size_t impostorID = 0; impostorID < vis.scene->impostors.GetCount(); ++impostorID)
 		{
-			const ImpostorComponent& impostor = scene.impostors[impostorID];
-			if (!camera.frustum.CheckBoxFast(impostor.aabb))
+			const ImpostorComponent& impostor = vis.scene->impostors[impostorID];
+			if (!vis.camera->frustum.CheckBoxFast(impostor.aabb))
 			{
 				continue;
 			}
@@ -3200,7 +3196,7 @@ void RenderImpostors(
 			for (auto& mat : impostor.instanceMatrices)
 			{
 				const XMFLOAT3 center = *((XMFLOAT3*)&mat._41);
-				float distance = wiMath::Distance(camera.Eye, center);
+				float distance = wiMath::Distance(vis.camera->Eye, center);
 
 				if (distance < impostor.swapInDistance - impostor.fadeThresholdRadius)
 				{
@@ -3245,11 +3241,14 @@ void ProcessDeferredMipGenRequests(CommandList cmd)
 	deferredMIPGenLock.unlock();
 }
 
-void UpdateVisibility(const Scene& scene, Visibility& vis, uint32_t layerMask)
+void UpdateVisibility(Visibility& vis, uint32_t layerMask)
 {
 	// Perform parallel frustum culling and obtain closest reflector:
 	wiJobSystem::context ctx;
 	auto range = wiProfiler::BeginRangeCPU("Frustum Culling");
+
+	assert(vis.scene != nullptr); // User must provide a scene!
+	assert(vis.camera != nullptr); // User must provide a camera!
 
 	// The parallel frustum culling is first performed in shared memory, 
 	//	then each group writes out it's local list to global memory
@@ -3263,23 +3262,23 @@ void UpdateVisibility(const Scene& scene, Visibility& vis, uint32_t layerMask)
 
 	if (!freezeCullingCamera)
 	{
-		vis.frustum = vis.camera.frustum;
+		vis.frustum = vis.camera->frustum;
 	}
 
-	if (!(vis.flags & Visibility::DISABLE_OBJECTS))
+	if (vis.flags & Visibility::ALLOW_OBJECTS)
 	{
 		// Cull objects:
-		vis.visibleObjects.resize(scene.aabb_objects.GetCount());
-		wiJobSystem::Dispatch(ctx, (uint32_t)scene.aabb_objects.GetCount(), groupSize, [&](wiJobArgs args) {
+		vis.visibleObjects.resize(vis.scene->aabb_objects.GetCount());
+		wiJobSystem::Dispatch(ctx, (uint32_t)vis.scene->aabb_objects.GetCount(), groupSize, [&](wiJobArgs args) {
 
-			Entity entity = scene.aabb_objects.GetEntity(args.jobIndex);
-			const LayerComponent* layer = scene.layers.GetComponent(entity);
+			Entity entity = vis.scene->aabb_objects.GetEntity(args.jobIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
 			if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 			{
 				return;
 			}
 
-			const AABB& aabb = scene.aabb_objects[args.jobIndex];
+			const AABB& aabb = vis.scene->aabb_objects[args.jobIndex];
 
 			// Setup stream compaction:
 			uint32_t& group_count = *(uint32_t*)args.sharedmemory;
@@ -3296,22 +3295,22 @@ void UpdateVisibility(const Scene& scene, Visibility& vis, uint32_t layerMask)
 
 				if (vis.flags & Visibility::ALLOW_REQUEST_REFLECTION)
 				{
-					const ObjectComponent& object = scene.objects[args.jobIndex];
+					const ObjectComponent& object = vis.scene->objects[args.jobIndex];
 					if (object.IsRequestPlanarReflection())
 					{
-						float dist = wiMath::DistanceEstimated(vis.camera.Eye, object.center);
+						float dist = wiMath::DistanceEstimated(vis.camera->Eye, object.center);
 						vis.locker.lock();
 						if (dist < vis.closestRefPlane)
 						{
 							vis.closestRefPlane = dist;
-							const TransformComponent& transform = scene.transforms[object.transform_index];
+							const TransformComponent& transform = vis.scene->transforms[object.transform_index];
 							XMVECTOR P = transform.GetPositionV();
 							XMVECTOR N = XMVectorSet(0, 1, 0, 0);
 							N = XMVector3TransformNormal(N, XMLoadFloat4x4(&transform.world));
 							XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
 							XMStoreFloat4(&vis.reflectionPlane, _refPlane);
 
-							vis.planar_reflections_visible = true;
+							vis.planar_reflection_visible = true;
 						}
 						vis.locker.unlock();
 					}
@@ -3331,19 +3330,19 @@ void UpdateVisibility(const Scene& scene, Visibility& vis, uint32_t layerMask)
 			}, sharedmemory_size);
 	}
 
-	if (!(vis.flags & Visibility::DISABLE_DECALS))
+	if (vis.flags & Visibility::ALLOW_DECALS)
 	{
-		vis.visibleDecals.resize(scene.aabb_decals.GetCount());
-		wiJobSystem::Dispatch(ctx, (uint32_t)scene.aabb_decals.GetCount(), groupSize, [&](wiJobArgs args) {
+		vis.visibleDecals.resize(vis.scene->aabb_decals.GetCount());
+		wiJobSystem::Dispatch(ctx, (uint32_t)vis.scene->aabb_decals.GetCount(), groupSize, [&](wiJobArgs args) {
 
-			Entity entity = scene.aabb_decals.GetEntity(args.jobIndex);
-			const LayerComponent* layer = scene.layers.GetComponent(entity);
+			Entity entity = vis.scene->aabb_decals.GetEntity(args.jobIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
 			if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 			{
 				return;
 			}
 
-			const AABB& aabb = scene.aabb_decals[args.jobIndex];
+			const AABB& aabb = vis.scene->aabb_decals[args.jobIndex];
 
 			// Setup stream compaction:
 			uint32_t& group_count = *(uint32_t*)args.sharedmemory;
@@ -3372,20 +3371,20 @@ void UpdateVisibility(const Scene& scene, Visibility& vis, uint32_t layerMask)
 			}, sharedmemory_size);
 	}
 
-	if (!(vis.flags & Visibility::DISABLE_ENVPROBES))
+	if (vis.flags & Visibility::ALLOW_ENVPROBES)
 	{
 		wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
 			// Cull probes:
-			for (size_t i = 0; i < scene.aabb_probes.GetCount(); ++i)
+			for (size_t i = 0; i < vis.scene->aabb_probes.GetCount(); ++i)
 			{
-				Entity entity = scene.aabb_probes.GetEntity(i);
-				const LayerComponent* layer = scene.layers.GetComponent(entity);
+				Entity entity = vis.scene->aabb_probes.GetEntity(i);
+				const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
 				if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 				{
 					continue;
 				}
 
-				const AABB& aabb = scene.aabb_probes[i];
+				const AABB& aabb = vis.scene->aabb_probes[i];
 
 				if (vis.frustum.CheckBoxFast(aabb))
 				{
@@ -3395,20 +3394,20 @@ void UpdateVisibility(const Scene& scene, Visibility& vis, uint32_t layerMask)
 			});
 	}
 
-	if (!(vis.flags & Visibility::DISABLE_LIGHTS))
+	if (vis.flags & Visibility::ALLOW_LIGHTS)
 	{
 		// Cull lights:
-		vis.visibleLights.resize(scene.aabb_lights.GetCount());
-		wiJobSystem::Dispatch(ctx, (uint32_t)scene.aabb_lights.GetCount(), groupSize, [&](wiJobArgs args) {
+		vis.visibleLights.resize(vis.scene->aabb_lights.GetCount());
+		wiJobSystem::Dispatch(ctx, (uint32_t)vis.scene->aabb_lights.GetCount(), groupSize, [&](wiJobArgs args) {
 
-			Entity entity = scene.aabb_lights.GetEntity(args.jobIndex);
-			const LayerComponent* layer = scene.layers.GetComponent(entity);
+			Entity entity = vis.scene->aabb_lights.GetEntity(args.jobIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
 			if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 			{
 				return;
 			}
 
-			const AABB& aabb = scene.aabb_lights[args.jobIndex];
+			const AABB& aabb = vis.scene->aabb_lights[args.jobIndex];
 
 			// Setup stream compaction:
 			uint32_t& group_count = *(uint32_t*)args.sharedmemory;
@@ -3437,14 +3436,14 @@ void UpdateVisibility(const Scene& scene, Visibility& vis, uint32_t layerMask)
 			}, sharedmemory_size);
 	}
 
-	if (!(vis.flags & Visibility::DISABLE_EMITTERS))
+	if (vis.flags & Visibility::ALLOW_EMITTERS)
 	{
 		wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
 			// Cull emitters:
-			for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
+			for (size_t i = 0; i < vis.scene->emitters.GetCount(); ++i)
 			{
-				Entity entity = scene.emitters.GetEntity(i);
-				const LayerComponent* layer = scene.layers.GetComponent(entity);
+				Entity entity = vis.scene->emitters.GetEntity(i);
+				const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
 				if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 				{
 					continue;
@@ -3454,20 +3453,20 @@ void UpdateVisibility(const Scene& scene, Visibility& vis, uint32_t layerMask)
 			});
 	}
 
-	if (!(vis.flags & Visibility::DISABLE_HAIRS))
+	if (vis.flags & Visibility::ALLOW_HAIRS)
 	{
 		wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
 			// Cull hairs:
-			for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+			for (size_t i = 0; i < vis.scene->hairs.GetCount(); ++i)
 			{
-				Entity entity = scene.hairs.GetEntity(i);
-				const LayerComponent* layer = scene.layers.GetComponent(entity);
+				Entity entity = vis.scene->hairs.GetEntity(i);
+				const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
 				if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 				{
 					continue;
 				}
 
-				const wiHairParticle& hair = scene.hairs[i];
+				const wiHairParticle& hair = vis.scene->hairs[i];
 				if (hair.meshID == INVALID_ENTITY || !vis.frustum.CheckBoxFast(hair.aabb))
 				{
 					continue;
@@ -3484,11 +3483,11 @@ void UpdateVisibility(const Scene& scene, Visibility& vis, uint32_t layerMask)
 	vis.visibleLights.resize((size_t)vis.light_counter.load());
 	vis.visibleDecals.resize((size_t)vis.decal_counter.load());
 
-	if ((vis.flags & Visibility::ALLOW_REQUEST_REFLECTION) && scene.weather.IsOceanEnabled())
+	if ((vis.flags & Visibility::ALLOW_REQUEST_REFLECTION) && vis.scene->weather.IsOceanEnabled())
 	{
 		// Ocean will override any current reflectors
-		vis.planar_reflections_visible = true;
-		XMVECTOR _refPlane = XMPlaneFromPointNormal(XMVectorSet(0, scene.weather.oceanParameters.waterHeight, 0, 0), XMVectorSet(0, 1, 0, 0));
+		vis.planar_reflection_visible = true;
+		XMVECTOR _refPlane = XMPlaneFromPointNormal(XMVectorSet(0, vis.scene->weather.oceanParameters.waterHeight, 0, 0), XMVectorSet(0, 1, 0, 0));
 		XMStoreFloat4(&vis.reflectionPlane, _refPlane);
 	}
 
@@ -3530,8 +3529,12 @@ void UpdatePerFrameData(Scene& scene, const Visibility& vis, float dt)
 	}
 
 	GetCamera().UpdateCamera();
-	GetRefCamera() = GetCamera();
-	GetRefCamera().Reflect(vis.reflectionPlane);
+
+	if (vis.planar_reflection_visible)
+	{
+		GetRefCamera() = GetCamera();
+		GetRefCamera().Reflect(vis.reflectionPlane);
+	}
 
 	waterPlane = vis.reflectionPlane;
 
@@ -3664,7 +3667,7 @@ void UpdatePerFrameData(Scene& scene, const Visibility& vis, float dt)
 			{
 				const uint32_t lightIndex = vis.visibleLights[i];
 				const LightComponent& light = scene.lights[lightIndex];
-				float distance = wiMath::DistanceEstimated(light.position, vis.camera.Eye);
+				float distance = wiMath::DistanceEstimated(light.position, vis.camera->Eye);
 				lightSortingHashes[i] = 0;
 				lightSortingHashes[i] |= (uint32_t)i & 0x0000FFFF;
 				lightSortingHashes[i] |= ((uint32_t)(distance * 10) & 0x0000FFFF) << 16;
@@ -3754,16 +3757,16 @@ void UpdatePerFrameData(Scene& scene, const Visibility& vis, float dt)
 
 	wiJobSystem::Wait(ctx);
 }
-void UpdateRenderData(const Scene& scene, const Visibility& vis, CommandList cmd)
+void UpdateRenderData(const Visibility& vis, CommandList cmd)
 {
 	BindCommonResources(cmd);
 
 	// Update material constant buffers:
 	for (auto& materialIndex : pendingMaterialUpdates)
 	{
-		if (materialIndex < scene.materials.GetCount())
+		if (materialIndex < vis.scene->materials.GetCount())
 		{
-			const MaterialComponent& material = scene.materials[materialIndex];
+			const MaterialComponent& material = vis.scene->materials[materialIndex];
 			ShaderMaterial materialGPUData;
 			material.WriteShaderMaterial(&materialGPUData);
 			device->UpdateBuffer(&material.constantBuffer, &materialGPUData, cmd);
@@ -3774,16 +3777,16 @@ void UpdateRenderData(const Scene& scene, const Visibility& vis, CommandList cmd
 	// Update mesh morph buffers:
 	for (auto& meshIndex : pendingMorphUpdates)
 	{
-		if (meshIndex < scene.meshes.GetCount())
+		if (meshIndex < vis.scene->meshes.GetCount())
 		{
-			const MeshComponent& mesh = scene.meshes[meshIndex];
+			const MeshComponent& mesh = vis.scene->meshes[meshIndex];
 			device->UpdateBuffer(&mesh.vertexBuffer_POS, mesh.vertex_positions_morphed.data(), cmd);
 		}
 	}
 	pendingMorphUpdates.clear();
 
 
-	if (scene.weather.IsRealisticSky())
+	if (vis.scene->weather.IsRealisticSky())
 	{
 		// Render Atmospheric Scattering textures for lighting and sky
 		RenderAtmosphericScatteringTextures(cmd);
@@ -3826,7 +3829,7 @@ void UpdateRenderData(const Scene& scene, const Visibility& vis, CommandList cmd
 				break;
 			}
 			const uint32_t decalIndex = vis.visibleDecals[vis.visibleDecals.size() - 1 - i]; // note: reverse order, for correct blending!
-			const DecalComponent& decal = scene.decals[decalIndex];
+			const DecalComponent& decal = vis.scene->decals[decalIndex];
 
 			entityArray[entityCounter].SetType(ENTITY_TYPE_DECAL);
 			entityArray[entityCounter].positionWS = decal.position;
@@ -3862,7 +3865,7 @@ void UpdateRenderData(const Scene& scene, const Visibility& vis, CommandList cmd
 			}
 
 			const uint32_t probeIndex = vis.visibleEnvProbes[vis.visibleEnvProbes.size() - 1 - i]; // note: reverse order, for correct blending!
-			const EnvironmentProbeComponent& probe = scene.probes[probeIndex];
+			const EnvironmentProbeComponent& probe = vis.scene->probes[probeIndex];
 			if (probe.textureIndex < 0)
 			{
 				continue;
@@ -3893,7 +3896,7 @@ void UpdateRenderData(const Scene& scene, const Visibility& vis, CommandList cmd
 				break;
 			}
 
-			const LightComponent& light = scene.lights[lightIndex];
+			const LightComponent& light = vis.scene->lights[lightIndex];
 
 			entityArray[entityCounter].SetType(light.GetType());
 			entityArray[entityCounter].positionWS = light.position;
@@ -3991,7 +3994,7 @@ void UpdateRenderData(const Scene& scene, const Visibility& vis, CommandList cmd
 
 		// Write force fields into entity array:
 		entityArrayOffset_ForceFields = entityCounter;
-		for (size_t i = 0; i < scene.forces.GetCount(); ++i)
+		for (size_t i = 0; i < vis.scene->forces.GetCount(); ++i)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
@@ -4000,7 +4003,7 @@ void UpdateRenderData(const Scene& scene, const Visibility& vis, CommandList cmd
 				break;
 			}
 
-			const ForceFieldComponent& force = scene.forces[i];
+			const ForceFieldComponent& force = vis.scene->forces[i];
 
 			entityArray[entityCounter].SetType(force.type);
 			entityArray[entityCounter].positionWS = force.position;
@@ -4023,7 +4026,7 @@ void UpdateRenderData(const Scene& scene, const Visibility& vis, CommandList cmd
 		GetRenderFrameAllocator(cmd).free(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
 	}
 
-	UpdateFrameCB(scene, cmd);
+	UpdateFrameCB(*vis.scene, cmd);
 
 	GetPrevCamera() = GetCamera();
 
@@ -4033,14 +4036,14 @@ void UpdateRenderData(const Scene& scene, const Visibility& vis, CommandList cmd
 		bool streamOutSetUp = false;
 		SHADERTYPE lastCS = CSTYPE_SKINNING_LDS;
 
-		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
+		for (size_t i = 0; i < vis.scene->meshes.GetCount(); ++i)
 		{
-			Entity entity = scene.meshes.GetEntity(i);
-			const MeshComponent& mesh = scene.meshes[i];
+			Entity entity = vis.scene->meshes.GetEntity(i);
+			const MeshComponent& mesh = vis.scene->meshes[i];
 
-			if (mesh.IsSkinned() && scene.armatures.Contains(mesh.armatureID))
+			if (mesh.IsSkinned() && vis.scene->armatures.Contains(mesh.armatureID))
 			{
-				const SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(entity);
+				const SoftBodyPhysicsComponent* softbody = vis.scene->softbodies.GetComponent(entity);
 				if (softbody != nullptr && softbody->physicsobject != nullptr)
 				{
 					// If soft body simulation is active, don't perform skinning.
@@ -4048,7 +4051,7 @@ void UpdateRenderData(const Scene& scene, const Visibility& vis, CommandList cmd
 					continue;
 				}
 
-				const ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
+				const ArmatureComponent& armature = *vis.scene->armatures.GetComponent(mesh.armatureID);
 
 				if (!streamOutSetUp)
 				{
@@ -4117,16 +4120,16 @@ void UpdateRenderData(const Scene& scene, const Visibility& vis, CommandList cmd
 	wiProfiler::EndRange(range); // skinning
 
 	// Update soft body vertex buffers:
-	for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
+	for (size_t i = 0; i < vis.scene->softbodies.GetCount(); ++i)
 	{
-		const SoftBodyPhysicsComponent& softbody = scene.softbodies[i];
+		const SoftBodyPhysicsComponent& softbody = vis.scene->softbodies[i];
 		if (softbody.vertex_positions_simulation.empty())
 		{
 			continue;
 		}
 
-		Entity entity = scene.softbodies.GetEntity(i);
-		const MeshComponent& mesh = *scene.meshes.GetComponent(entity);
+		Entity entity = vis.scene->softbodies.GetEntity(i);
+		const MeshComponent& mesh = *vis.scene->meshes.GetComponent(entity);
 
 		device->UpdateBuffer(&mesh.streamoutBuffer_POS, softbody.vertex_positions_simulation.data(), cmd, 
 			(uint32_t)(sizeof(MeshComponent::Vertex_POS) * softbody.vertex_positions_simulation.size()));
@@ -4141,11 +4144,11 @@ void UpdateRenderData(const Scene& scene, const Visibility& vis, CommandList cmd
 		range = wiProfiler::BeginRangeGPU("EmittedParticles - Simulate", cmd);
 		for (uint32_t emitterIndex : vis.visibleEmitters)
 		{
-			const wiEmittedParticle& emitter = scene.emitters[emitterIndex];
-			Entity entity = scene.emitters.GetEntity(emitterIndex);
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-			const MaterialComponent& material = *scene.materials.GetComponent(entity);
-			const MeshComponent* mesh = scene.meshes.GetComponent(emitter.meshID);
+			const wiEmittedParticle& emitter = vis.scene->emitters[emitterIndex];
+			Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
+			const TransformComponent& transform = *vis.scene->transforms.GetComponent(entity);
+			const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
+			const MeshComponent* mesh = vis.scene->meshes.GetComponent(emitter.meshID);
 
 			emitter.UpdateGPU(transform, material, mesh, cmd);
 		}
@@ -4158,13 +4161,13 @@ void UpdateRenderData(const Scene& scene, const Visibility& vis, CommandList cmd
 		range = wiProfiler::BeginRangeGPU("HairParticles - Simulate", cmd);
 		for (uint32_t hairIndex : vis.visibleHairs)
 		{
-			const wiHairParticle& hair = scene.hairs[hairIndex];
-			const MeshComponent* mesh = scene.meshes.GetComponent(hair.meshID);
+			const wiHairParticle& hair = vis.scene->hairs[hairIndex];
+			const MeshComponent* mesh = vis.scene->meshes.GetComponent(hair.meshID);
 
 			if (mesh != nullptr)
 			{
-				Entity entity = scene.hairs.GetEntity(hairIndex);
-				const MaterialComponent& material = *scene.materials.GetComponent(entity);
+				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
+				const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
 
 				hair.UpdateGPU(*mesh, material, cmd);
 			}
@@ -4173,10 +4176,10 @@ void UpdateRenderData(const Scene& scene, const Visibility& vis, CommandList cmd
 	}
 
 	// Compute water simulation:
-	if (scene.weather.IsOceanEnabled() && ocean != nullptr)
+	if (vis.scene->weather.IsOceanEnabled() && ocean != nullptr)
 	{
 		range = wiProfiler::BeginRangeGPU("Ocean - Simulate", cmd);
-		ocean->UpdateDisplacementMap(scene.weather, renderTime, cmd);
+		ocean->UpdateDisplacementMap(vis.scene->weather, renderTime, cmd);
 		wiProfiler::EndRange(range);
 	}
 }
@@ -4262,7 +4265,7 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 	device->EventEnd(cmd);
 	wiProfiler::EndRange(range);
 }
-void OcclusionCulling_Render(wiScene::Scene& scene, const Visibility& vis, CommandList cmd)
+void OcclusionCulling_Render(Scene& scene, const Visibility& vis, CommandList cmd)
 {
 	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
 	{
@@ -4334,7 +4337,7 @@ void OcclusionCulling_Render(wiScene::Scene& scene, const Visibility& vis, Comma
 
 	wiProfiler::EndRange(range); // Occlusion Culling Render
 }
-void OcclusionCulling_Read(wiScene::Scene& scene, const Visibility& vis)
+void OcclusionCulling_Read(Scene& scene, const Visibility& vis)
 {
 	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
 	{
@@ -4434,7 +4437,6 @@ void DrawWaterRipples(CommandList cmd)
 
 
 void DrawSoftParticles(
-	const Scene& scene,
 	const Visibility& vis,
 	const Texture& lineardepth,
 	bool distortion, 
@@ -4455,8 +4457,8 @@ void DrawSoftParticles(
 	for (size_t i = 0; i < emitterCount; ++i)
 	{
 		const uint32_t emitterIndex = vis.visibleEmitters[i];
-		const wiEmittedParticle& emitter = scene.emitters[emitterIndex];
-		float distance = wiMath::DistanceEstimated(emitter.center, vis.camera.Eye);
+		const wiEmittedParticle& emitter = vis.scene->emitters[emitterIndex];
+		float distance = wiMath::DistanceEstimated(emitter.center, vis.camera->Eye);
 		emitterSortingHashes[i] = 0;
 		emitterSortingHashes[i] |= (uint32_t)i & 0x0000FFFF;
 		emitterSortingHashes[i] |= ((uint32_t)(distance * 10) & 0x0000FFFF) << 16;
@@ -4466,17 +4468,17 @@ void DrawSoftParticles(
 	for (size_t i = 0; i < emitterCount; ++i)
 	{
 		const uint32_t emitterIndex = vis.visibleEmitters[emitterSortingHashes[i] & 0x0000FFFF];
-		const wiEmittedParticle& emitter = scene.emitters[emitterIndex];
-		const Entity entity = scene.emitters.GetEntity(emitterIndex);
-		const MaterialComponent& material = *scene.materials.GetComponent(entity);
+		const wiEmittedParticle& emitter = vis.scene->emitters[emitterIndex];
+		const Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
+		const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
 
 		if (distortion && emitter.shaderType == wiEmittedParticle::SOFT_DISTORTION)
 		{
-			emitter.Draw(vis.camera, material, cmd);
+			emitter.Draw(*vis.camera, material, cmd);
 		}
 		else if (!distortion && (emitter.shaderType == wiEmittedParticle::SOFT || emitter.shaderType == wiEmittedParticle::SOFT_LIGHTING || emitter.shaderType == wiEmittedParticle::SIMPLEST || IsWireRender()))
 		{
-			emitter.Draw(vis.camera, material, cmd);
+			emitter.Draw(*vis.camera, material, cmd);
 		}
 	}
 
@@ -4484,7 +4486,6 @@ void DrawSoftParticles(
 
 }
 void DrawLightVisualizers(
-	const Scene& scene,
 	const Visibility& vis,
 	CommandList cmd
 )
@@ -4496,8 +4497,8 @@ void DrawLightVisualizers(
 		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), cmd);
 		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), cmd);
 
-		XMMATRIX camrot = XMLoadFloat3x3(&vis.camera.rotationMatrix);
-		XMMATRIX VP = vis.camera.GetViewProjection();
+		XMMATRIX camrot = XMLoadFloat3x3(&vis.camera->rotationMatrix);
+		XMMATRIX VP = vis.camera->GetViewProjection();
 
 		for (int type = LightComponent::POINT; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 		{
@@ -4505,7 +4506,7 @@ void DrawLightVisualizers(
 
 			for (uint32_t lightIndex : vis.visibleLights)
 			{
-				const LightComponent& light = scene.lights[lightIndex];
+				const LightComponent& light = vis.scene->lights[lightIndex];
 
 				if (light.GetType() == type && light.IsVisualizerEnabled())
 				{
@@ -4603,7 +4604,6 @@ void DrawLightVisualizers(
 	}
 }
 void DrawVolumeLights(
-	const Scene& scene,
 	const Visibility& vis,
 	const Texture& depthbuffer,
 	CommandList cmd
@@ -4618,7 +4618,7 @@ void DrawVolumeLights(
 
 		device->BindResource(PS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 
-		XMMATRIX VP = vis.camera.GetViewProjection();
+		XMMATRIX VP = vis.camera->GetViewProjection();
 
 		for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 		{
@@ -4634,7 +4634,7 @@ void DrawVolumeLights(
 			for (size_t i = 0; i < vis.visibleLights.size(); ++i)
 			{
 				const uint32_t lightIndex = vis.visibleLights[i];
-				const LightComponent& light = scene.lights[lightIndex];
+				const LightComponent& light = vis.scene->lights[lightIndex];
 				if (light.GetType() == type && light.IsVolumetricsEnabled())
 				{
 
@@ -4699,7 +4699,6 @@ void DrawVolumeLights(
 
 }
 void DrawLensFlares(
-	const Scene& scene,
 	const Visibility& vis,
 	const Texture& depthbuffer,
 	CommandList cmd
@@ -4714,7 +4713,7 @@ void DrawLensFlares(
 
 	for (uint32_t lightIndex : vis.visibleLights)
 	{
-		const LightComponent& light = scene.lights[lightIndex];
+		const LightComponent& light = vis.scene->lights[lightIndex];
 
 		if (!light.lensFlareRimTextures.empty())
 		{
@@ -4729,16 +4728,16 @@ void DrawLensFlares(
 			{
 				// directional light flare will be placed at infinite position along direction vector:
 				POS = 
-					vis.camera.GetEye() + 
-					XMVector3Normalize(-XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)))) * vis.camera.zFarP;
+					vis.camera->GetEye() + 
+					XMVector3Normalize(-XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)))) * vis.camera->zFarP;
 			}
 
-			if (XMVectorGetX(XMVector3Dot(XMVectorSubtract(POS, vis.camera.GetEye()), vis.camera.GetAt())) > 0) // check if the camera is facing towards the flare or not
+			if (XMVectorGetX(XMVector3Dot(XMVectorSubtract(POS, vis.camera->GetEye()), vis.camera->GetAt())) > 0) // check if the camera is facing towards the flare or not
 			{
 				device->BindPipelineState(&PSO_lensflare, cmd);
 
 				// Get the screen position of the flare:
-				XMVECTOR flarePos = XMVector3Project(POS, 0, 0, 1, 1, 1, 0, vis.camera.GetProjection(), vis.camera.GetView(), XMMatrixIdentity());
+				XMVECTOR flarePos = XMVector3Project(POS, 0, 0, 1, 1, 1, 0, vis.camera->GetProjection(), vis.camera->GetView(), XMMatrixIdentity());
 				LensFlareCB cb;
 				XMStoreFloat4(&cb.xSunPos, flarePos);
 				cb.xScreen = XMFLOAT4((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0, 0);
@@ -4913,7 +4912,6 @@ void SetShadowPropsCube(int resolution, int count)
 
 }
 void DrawShadowmaps(
-	const wiScene::Scene& scene,
 	const Visibility& vis,
 	CommandList cmd,
 	uint32_t layerMask
@@ -4932,16 +4930,16 @@ void DrawShadowmaps(
 		BindConstantBuffers(PS, cmd);
 
 		BoundingFrustum cam_frustum;
-		BoundingFrustum::CreateFromMatrix(cam_frustum, vis.camera.GetProjection());
+		BoundingFrustum::CreateFromMatrix(cam_frustum, vis.camera->GetProjection());
 		std::swap(cam_frustum.Near, cam_frustum.Far);
-		cam_frustum.Transform(cam_frustum, vis.camera.GetInvView());
+		cam_frustum.Transform(cam_frustum, vis.camera->GetInvView());
 		XMStoreFloat4(&cam_frustum.Orientation, XMQuaternionNormalize(XMLoadFloat4(&cam_frustum.Orientation)));
 
 		device->UnbindResources(TEXSLOT_SHADOWARRAY_2D, 2, cmd);
 
 		for (uint32_t lightIndex : vis.visibleLights)
 		{
-			const LightComponent& light = scene.lights[lightIndex];
+			const LightComponent& light = vis.scene->lights[lightIndex];
 			if (light.shadowMap_index < 0 || !light.IsCastingShadow() || light.IsStatic())
 			{
 				continue;
@@ -4952,29 +4950,29 @@ void DrawShadowmaps(
 			case LightComponent::DIRECTIONAL:
 			{
 				std::array<SHCAM, CASCADE_COUNT> shcams;
-				CreateDirLightShadowCams(light, vis.camera, shcams);
+				CreateDirLightShadowCams(light, *vis.camera, shcams);
 
 				for (uint32_t cascade = 0; cascade < CASCADE_COUNT; ++cascade)
 				{
 					RenderQueue renderQueue;
 					bool transparentShadowsRequested = false;
-					for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
+					for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 					{
-						const AABB& aabb = scene.aabb_objects[i];
+						const AABB& aabb = vis.scene->aabb_objects[i];
 						if (shcams[cascade].frustum.CheckBoxFast(aabb))
 						{
-							const ObjectComponent& object = scene.objects[i];
+							const ObjectComponent& object = vis.scene->objects[i];
 							if (object.IsRenderable() && cascade >= object.cascadeMask && object.IsCastingShadow())
 							{
-								Entity cullable_entity = scene.aabb_objects.GetEntity(i);
-								const LayerComponent* layer = scene.layers.GetComponent(cullable_entity);
+								Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
+								const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
 								if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 								{
 									continue;
 								}
 
 								RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
-								size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+								size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
 								batch->Create(meshIndex, i, 0);
 								renderQueue.add(batch);
 
@@ -5001,14 +4999,14 @@ void DrawShadowmaps(
 						device->BindViewports(1, &vp, cmd);
 
 						device->RenderPassBegin(&renderpasses_shadow2D[light.shadowMap_index + cascade], cmd);
-						RenderMeshes(scene, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
+						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
 						device->RenderPassEnd(cmd);
 
 						// Transparent renderpass will always be started so that it is clear:
 						device->RenderPassBegin(&renderpasses_shadow2DTransparent[light.shadowMap_index + cascade], cmd);
 						if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 						{
-							RenderMeshes(scene, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
+							RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
 						}
 						device->RenderPassEnd(cmd);
 
@@ -5027,23 +5025,23 @@ void DrawShadowmaps(
 
 				RenderQueue renderQueue;
 				bool transparentShadowsRequested = false;
-				for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
+				for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 				{
-					const AABB& aabb = scene.aabb_objects[i];
+					const AABB& aabb = vis.scene->aabb_objects[i];
 					if (shcam.frustum.CheckBoxFast(aabb))
 					{
-						const ObjectComponent& object = scene.objects[i];
+						const ObjectComponent& object = vis.scene->objects[i];
 						if (object.IsRenderable() && object.IsCastingShadow())
 						{
-							Entity cullable_entity = scene.aabb_objects.GetEntity(i);
-							const LayerComponent* layer = scene.layers.GetComponent(cullable_entity);
+							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
+							const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
 							if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 							{
 								continue;
 							}
 
 							RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
-							size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+							size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
 							batch->Create(meshIndex, i, 0);
 							renderQueue.add(batch);
 
@@ -5070,14 +5068,14 @@ void DrawShadowmaps(
 					device->BindViewports(1, &vp, cmd);
 
 					device->RenderPassBegin(&renderpasses_shadow2D[light.shadowMap_index], cmd);
-					RenderMeshes(scene, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
+					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
 					device->RenderPassEnd(cmd);
 
 					// Transparent renderpass will always be started so that it is clear:
 					device->RenderPassBegin(&renderpasses_shadow2DTransparent[light.shadowMap_index], cmd);
 					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 					{
-						RenderMeshes(scene, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
+						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
 					}
 					device->RenderPassEnd(cmd);
 
@@ -5095,23 +5093,23 @@ void DrawShadowmaps(
 				SPHERE boundingsphere = SPHERE(light.position, light.GetRange());
 
 				RenderQueue renderQueue;
-				for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
+				for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 				{
-					const AABB& aabb = scene.aabb_objects[i];
+					const AABB& aabb = vis.scene->aabb_objects[i];
 					if (boundingsphere.intersects(aabb))
 					{
-						const ObjectComponent& object = scene.objects[i];
+						const ObjectComponent& object = vis.scene->objects[i];
 						if (object.IsRenderable() && object.IsCastingShadow() && object.GetRenderTypes() == RENDERTYPE_OPAQUE)
 						{
-							Entity cullable_entity = scene.aabb_objects.GetEntity(i);
-							const LayerComponent* layer = scene.layers.GetComponent(cullable_entity);
+							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
+							const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
 							if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 							{
 								continue;
 							}
 
 							RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
-							size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+							size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
 							batch->Create(meshIndex, i, 0);
 							renderQueue.add(batch);
 						}
@@ -5162,7 +5160,7 @@ void DrawShadowmaps(
 					device->BindViewports(1, &vp, cmd);
 
 					device->RenderPassBegin(&renderpasses_shadowCube[light.shadowMap_index], cmd);
-					RenderMeshes(scene, renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, cmd, false, frusta, frustum_count);
+					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, cmd, false, frusta, frustum_count);
 					device->RenderPassEnd(cmd);
 
 					GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
@@ -5179,7 +5177,6 @@ void DrawShadowmaps(
 }
 
 void DrawScene(
-	const Scene& scene,
 	const Visibility& vis,
 	RENDERPASS renderPass,
 	CommandList cmd,
@@ -5205,9 +5202,9 @@ void DrawScene(
 	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 	device->BindResource(PS, GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, cmd);
 
-	if (scene.weather.skyMap != nullptr)
+	if (vis.scene->weather.skyMap != nullptr)
 	{
-		device->BindResource(PS, scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
+		device->BindResource(PS, vis.scene->weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
 	}
 
 	device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
@@ -5218,8 +5215,8 @@ void DrawScene(
 
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 	{
-		device->BindResource(PS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
-		device->BindResource(CS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+		device->BindResource(PS, &vis.scene->TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+		device->BindResource(CS, &vis.scene->TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 	}
 
 	if (transparent)
@@ -5230,7 +5227,7 @@ void DrawScene(
 		}
 		if (ocean != nullptr)
 		{
-			ocean->Render(vis.camera, scene.weather, renderTime, cmd);
+			ocean->Render(*vis.camera, vis.scene->weather, renderTime, cmd);
 		}
 	}
 	else
@@ -5247,16 +5244,16 @@ void DrawScene(
 		{
 			for (uint32_t hairIndex : vis.visibleHairs)
 			{
-				const wiHairParticle& hair = scene.hairs[hairIndex];
-				Entity entity = scene.hairs.GetEntity(hairIndex);
-				const MaterialComponent& material = *scene.materials.GetComponent(entity);
+				const wiHairParticle& hair = vis.scene->hairs[hairIndex];
+				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
+				const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
 
-				hair.Draw(vis.camera, material, renderPass, cmd);
+				hair.Draw(*vis.camera, material, renderPass, cmd);
 			}
 		}
 	}
 
-	RenderImpostors(scene, vis.camera, renderPass, cmd);
+	RenderImpostors(vis, renderPass, cmd);
 
 	uint32_t renderTypeFlags = 0;
 	if (opaque)
@@ -5270,23 +5267,22 @@ void DrawScene(
 	}
 
 	RenderQueue renderQueue;
-	renderQueue.camera = &vis.camera;
 	for (uint32_t instanceIndex : vis.visibleObjects)
 	{
-		const ObjectComponent& object = scene.objects[instanceIndex];
+		const ObjectComponent& object = vis.scene->objects[instanceIndex];
 
 		if (GetOcclusionCullingEnabled() && occlusionCulling && object.IsOccluded())
 			continue;
 
 		if (object.IsRenderable() && (object.GetRenderTypes() & renderTypeFlags))
 		{
-			const float distance = wiMath::Distance(vis.camera.Eye, object.center);
+			const float distance = wiMath::Distance(vis.camera->Eye, object.center);
 			if (object.IsImpostorPlacement() && distance > object.impostorSwapDistance + object.impostorFadeThresholdRadius)
 			{
 				continue;
 			}
 			RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
-			size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+			size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
 			batch->Create(meshIndex, instanceIndex, distance);
 			renderQueue.add(batch);
 		}
@@ -5294,7 +5290,7 @@ void DrawScene(
 	if (!renderQueue.empty())
 	{
 		renderQueue.sort(transparent ? RenderQueue::SORT_BACK_TO_FRONT : RenderQueue::SORT_FRONT_TO_BACK);
-		RenderMeshes(scene, renderQueue, renderPass, renderTypeFlags, cmd, tessellation);
+		RenderMeshes(vis, renderQueue, renderPass, renderTypeFlags, cmd, tessellation);
 
 		GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 	}
@@ -6663,7 +6659,7 @@ void ManageEnvProbes(Scene& scene)
 		}
 	}
 }
-void RefreshEnvProbes(const Scene& scene, const Visibility& vis, CommandList cmd)
+void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 {
 	if (probesToRefresh.empty())
 	{
@@ -6682,8 +6678,8 @@ void RefreshEnvProbes(const Scene& scene, const Visibility& vis, CommandList cmd
 
 	for (uint32_t probeIndex : probesToRefresh)
 	{
-		const EnvironmentProbeComponent& probe = scene.probes[probeIndex];
-		Entity entity = scene.probes.GetEntity(probeIndex);
+		const EnvironmentProbeComponent& probe = vis.scene->probes[probeIndex];
+		Entity entity = vis.scene->probes.GetEntity(probeIndex);
 
 		const SHCAM cameras[] = {
 			SHCAM(probe.position, XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
@@ -6711,29 +6707,29 @@ void RefreshEnvProbes(const Scene& scene, const Visibility& vis, CommandList cmd
 		camcb.g_xCamera_CamPos = probe.position; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
 		device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &camcb, cmd);
 
-		const LayerComponent* probe_layer = scene.layers.GetComponent(entity);
+		const LayerComponent* probe_layer = vis.scene->layers.GetComponent(entity);
 		const uint32_t layerMask = probe_layer == nullptr ?  ~0 : probe_layer->GetLayerMask();
 
 		SPHERE culler = SPHERE(probe.position, zFarP);
 
 		RenderQueue renderQueue;
-		for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
+		for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 		{
-			const AABB& aabb = scene.aabb_objects[i];
+			const AABB& aabb = vis.scene->aabb_objects[i];
 			if (culler.intersects(aabb))
 			{
-				Entity cullable_entity = scene.aabb_objects.GetEntity(i);
-				const LayerComponent* layer = scene.layers.GetComponent(cullable_entity);
+				Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
+				const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
 				if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 				{
 					continue;
 				}
 
-				const ObjectComponent& object = scene.objects[i];
+				const ObjectComponent& object = vis.scene->objects[i];
 				if (object.IsRenderable())
 				{
 					RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
-					size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+					size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
 					batch->Create(meshIndex, i, 0);
 					renderQueue.add(batch);
 				}
@@ -6745,7 +6741,7 @@ void RefreshEnvProbes(const Scene& scene, const Visibility& vis, CommandList cmd
 
 		device->RenderPassBegin(&renderpasses_envmap[probe.textureIndex], cmd);
 
-		if (scene.weather.IsRealisticSky())
+		if (vis.scene->weather.IsRealisticSky())
 		{
 			// Refresh atmospheric textures, since each probe has different positions
 			RefreshAtmosphericScatteringTextures(cmd);
@@ -6761,17 +6757,17 @@ void RefreshEnvProbes(const Scene& scene, const Visibility& vis, CommandList cmd
 			BindShadowmaps(PS, cmd);
 			device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
 
-			RenderMeshes(scene, renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_ALL, cmd, false, frusta, arraysize(frusta), &vis);
+			RenderMeshes(vis, renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_ALL, cmd, false, frusta, arraysize(frusta));
 
 			GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 		}
 
 		// sky
 		{
-			if (scene.weather.skyMap != nullptr)
+			if (vis.scene->weather.skyMap != nullptr)
 			{
 				device->BindPipelineState(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], cmd);
-				device->BindResource(PS, scene.weather.skyMap->texture, TEXSLOT_ONDEMAND0, cmd);
+				device->BindResource(PS, vis.scene->weather.skyMap->texture, TEXSLOT_ONDEMAND0, cmd);
 			}
 			else
 			{
@@ -7046,7 +7042,7 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 	device->EventEnd(cmd);
 }
 
-void VoxelRadiance(const Scene& scene, const Visibility& vis, CommandList cmd)
+void VoxelRadiance(const Visibility& vis, CommandList cmd)
 {
 	if (!GetVoxelRadianceEnabled())
 	{
@@ -7123,16 +7119,16 @@ void VoxelRadiance(const Scene& scene, const Visibility& vis, CommandList cmd)
 
 
 	RenderQueue renderQueue;
-	for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
+	for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 	{
-		const AABB& aabb = scene.aabb_objects[i];
+		const AABB& aabb = vis.scene->aabb_objects[i];
 		if (bbox.intersects(aabb))
 		{
-			const ObjectComponent& object = scene.objects[i];
+			const ObjectComponent& object = vis.scene->objects[i];
 			if (object.IsRenderable())
 			{
 				RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
-				size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+				size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
 				batch->Create(meshIndex, i, 0);
 				renderQueue.add(batch);
 			}
@@ -7155,7 +7151,7 @@ void VoxelRadiance(const Scene& scene, const Visibility& vis, CommandList cmd)
 		BindConstantBuffers(PS, cmd);
 
 		device->RenderPassBegin(&renderpass_voxelize, cmd);
-		RenderMeshes(scene, renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, cmd, false, nullptr, 1, &vis);
+		RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, cmd, false, nullptr, 1);
 		device->RenderPassEnd(cmd);
 
 		GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
@@ -8348,7 +8344,7 @@ void ManageLightmapAtlas(Scene& scene)
 		}
 	}
 }
-void RenderObjectLightMap(const wiScene::Scene& scene, const ObjectComponent& object, CommandList cmd)
+void RenderObjectLightMap(const Scene& scene, const ObjectComponent& object, CommandList cmd)
 {
 	device->EventBegin("RenderObjectLightMap", cmd);
 
