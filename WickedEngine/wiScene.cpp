@@ -1585,7 +1585,7 @@ namespace wiScene
 
 		names.Create(entity) = name;
 
-		materials.Create(entity);
+		materials.Create(entity).SetDirty();
 
 		return entity;
 	}
