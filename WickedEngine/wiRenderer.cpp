@@ -4334,26 +4334,6 @@ void OcclusionCulling_Read(Scene& scene, const Visibility& vis)
 
 	auto range = wiProfiler::BeginRangeCPU("Occlusion Culling Read");
 
-	// Make sure that all queries are read that were started:
-	static GPUQueryResult results[arraysize(occlusionQueries)];
-	for (int i = 0; i < arraysize(occlusionQueries); ++i)
-	{
-		GPUQuery* query = occlusionQueries[i].Get_CPU();
-		if (query == nullptr || !query->IsValid())
-		{
-			// occlusion query not available for CPU read
-			results[i].result_passed_sample_count = 1; // set it as "visible"
-		}
-		else
-		{
-			bool query_ready = device->QueryRead(query, &results[i]);
-			if (query_ready)
-			{
-				results[i].result_passed_sample_count = 1; // set it as "visible"
-			}
-		}
-	}
-
 	int queryID = 0;
 
 	if (!vis.visibleObjects.empty())
@@ -4380,25 +4360,42 @@ void OcclusionCulling_Read(Scene& scene, const Visibility& vis)
 				// Check occlusion result:
 				if (object.occlusionQueryID >= 0 && object.occlusionQueryID < arraysize(occlusionQueries))
 				{
-					if (results[object.occlusionQueryID].result_passed_sample_count > 0)
+					GPUQuery* query = occlusionQueries[object.occlusionQueryID].Get_CPU();
+					if (query == nullptr || !query->IsValid())
 					{
+						// occlusion query not available for CPU read
 						object.occlusionHistory |= 1; // mark this frame as visible
 					}
 					else
 					{
-						// leave this frame as occluded
+						GPUQueryResult result;
+						bool query_ready = device->QueryRead(query, &result);
+						if (result.result_passed_sample_count > 0)
+						{
+							object.occlusionHistory |= 1; // mark this frame as visible
+						}
+						else
+						{
+							// leave this frame as occluded
+						}
 					}
+
+					object.occlusionQueryAge++;
 				}
 
-				// Assign query for next frame:
-				if (queryID < arraysize(occlusionQueries))
+				if (object.occlusionQueryAge < 0 || object.occlusionQueryAge >= (int)GraphicsDevice::GetBackBufferCount())
 				{
-					object.occlusionQueryID = queryID; // just assign the id from the pool
-					queryID++;
-				}
-				else
-				{
-					object.occlusionQueryID = -1; // no free queries to assign!
+					// Assign query for next frame:
+					if (queryID < arraysize(occlusionQueries))
+					{
+						object.occlusionQueryID = queryID; // just assign the id from the pool
+						queryID++;
+					}
+					else
+					{
+						object.occlusionQueryID = -1; // no free queries to assign!
+					}
+					object.occlusionQueryAge = -1;
 				}
 			}
 		}

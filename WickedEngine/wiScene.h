@@ -573,6 +573,7 @@ namespace wiScene
 		uint32_t occlusionHistory = ~0;
 		// occlusion query pool index
 		int occlusionQueryID = -1;
+		int occlusionQueryAge = -1;
 
 		inline bool IsOccluded() const
 		{
