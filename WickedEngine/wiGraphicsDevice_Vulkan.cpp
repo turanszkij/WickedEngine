@@ -4126,44 +4126,31 @@ using namespace Vulkan_Internal;
 		internal_state->allocationhandler = allocationhandler;
 		pQuery->internal_state = internal_state;
 
-		bool hr = false;
-
 		pQuery->desc = *pDesc;
 		internal_state->query_type = pQuery->desc.Type;
 
 		switch (pDesc->Type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			if (allocationhandler->free_timestampqueries.pop_front(internal_state->query_index))
-			{
-				hr = true;
-			}
-			else
+			if (!allocationhandler->free_timestampqueries.pop_front(internal_state->query_index))
 			{
 				internal_state->query_type = GPU_QUERY_TYPE_INVALID;
-				assert(0);
+				return false;
 			}
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
-			hr = true;
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-			if (allocationhandler->free_occlusionqueries.pop_front(internal_state->query_index))
-			{
-				hr = true;
-			}
-			else
+			if (!allocationhandler->free_occlusionqueries.pop_front(internal_state->query_index))
 			{
 				internal_state->query_type = GPU_QUERY_TYPE_INVALID;
-				assert(0);
+				return false;
 			}
 			break;
 		}
 
-		assert(hr);
-
-		return hr;
+		return true;
 	}
 	bool GraphicsDevice_Vulkan::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
 	{
@@ -5588,7 +5575,7 @@ using namespace Vulkan_Internal;
 
 		VkResult res = VK_SUCCESS;
 
-		switch (query->desc.Type)
+		switch (internal_state->query_type)
 		{
 		case GPU_QUERY_TYPE_EVENT:
 			assert(0); // not implemented yet
@@ -5612,6 +5599,9 @@ using namespace Vulkan_Internal;
 			{
 				occlusions_to_reset.push_back((uint32_t)internal_state->query_index);
 			}
+			break;
+		default:
+			return false;
 			break;
 		}
 
@@ -6450,7 +6440,7 @@ using namespace Vulkan_Internal;
 	{
 		auto internal_state = to_internal(query);
 
-		switch (query->desc.Type)
+		switch (internal_state->query_type)
 		{
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
 			vkCmdBeginQuery(GetDirectCommandList(cmd), querypool_occlusion, (uint32_t)internal_state->query_index, 0);
@@ -6464,7 +6454,7 @@ using namespace Vulkan_Internal;
 	{
 		auto internal_state = to_internal(query);
 
-		switch (query->desc.Type)
+		switch (internal_state->query_type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
 			vkCmdWriteTimestamp(GetDirectCommandList(cmd), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, querypool_timestamp, internal_state->query_index);

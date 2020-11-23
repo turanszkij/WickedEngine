@@ -59,7 +59,7 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 	Out.tex = tex;
 	Out.dither = 1 - color_dither.a;
 	Out.instanceColor = pack_rgba(float4(color_dither.rgb, 1));
-	Out.pos2DPrev = mul(g_xFrame_MainCamera_PrevVP, float4(Out.pos3D, 1));
+	Out.pos2DPrev = mul(g_xCamera_PrevVP, float4(Out.pos3D, 1));
 
 	return Out;
 }

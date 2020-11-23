@@ -1895,7 +1895,6 @@ bool GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuer
 	}
 
 	HRESULT hr = device->CreateQuery(&desc, &internal_state->resource);
-	assert(SUCCEEDED(hr));
 
 	return SUCCEEDED(hr);
 }
@@ -2474,6 +2473,9 @@ bool GraphicsDevice_DX11::QueryRead(const GPUQuery* query, GPUQueryResult* resul
 	const uint32_t _flags = D3D11_ASYNC_GETDATA_DONOTFLUSH;
 
 	auto internal_state = to_internal(query);
+	if (internal_state->resource == nullptr)
+		return false;
+
 	ID3D11Query* QUERY = internal_state->resource.Get();
 
 	HRESULT hr = S_OK;
@@ -3144,11 +3146,15 @@ void GraphicsDevice_DX11::UpdateBuffer(const GPUBuffer* buffer, const void* data
 void GraphicsDevice_DX11::QueryBegin(const GPUQuery* query, CommandList cmd)
 {
 	auto internal_state = to_internal(query);
+	if (internal_state->resource == nullptr)
+		return;
 	deviceContexts[cmd]->Begin(internal_state->resource.Get());
 }
 void GraphicsDevice_DX11::QueryEnd(const GPUQuery* query, CommandList cmd)
 {
 	auto internal_state = to_internal(query);
+	if (internal_state->resource == nullptr)
+		return;
 	deviceContexts[cmd]->End(internal_state->resource.Get());
 }
 

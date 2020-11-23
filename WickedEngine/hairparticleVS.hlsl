@@ -93,7 +93,7 @@ VertexToPixel main(uint vertexID : SV_VERTEXID, uint instanceID : SV_INSTANCEID)
 		Out.nor = normalize(normal + wind);
 		Out.tex = uv;
 
-		Out.pos2DPrev = mul(g_xFrame_MainCamera_PrevVP, float4(savedPos + windPrev, 1));
+		Out.pos2DPrev = mul(g_xCamera_PrevVP, float4(savedPos + windPrev, 1));
 
 		Out.color = xColor.rgb;
 	}

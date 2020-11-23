@@ -986,13 +986,18 @@ void EditorComponent::Start()
 {
 	RenderPath2D::Start();
 }
+void EditorComponent::PreUpdate()
+{
+	RenderPath2D::PreUpdate();
+
+	renderPath->PreUpdate();
+}
 void EditorComponent::FixedUpdate()
 {
 	RenderPath2D::FixedUpdate();
 
 	renderPath->FixedUpdate();
 }
-
 void EditorComponent::Update(float dt)
 {
 	wiProfiler::range_id profrange = wiProfiler::BeginRangeCPU("Editor Update");
@@ -1688,6 +1693,12 @@ void EditorComponent::Update(float dt)
 	RenderPath2D::Update(dt);
 
 	renderPath->Update(dt);
+}
+void EditorComponent::PostUpdate()
+{
+	RenderPath2D::PostUpdate();
+
+	renderPath->PostUpdate();
 }
 void EditorComponent::Render() const
 {

@@ -56,7 +56,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
     float4 pos = float4(reconstructPosition(uv, depth, g_xCamera_InvVP), 1.0f);
 
     float4 thisClip = mul(g_xCamera_VP, pos);
-    float4 prevClip = mul(g_xFrame_MainCamera_PrevVP, pos);
+    float4 prevClip = mul(g_xCamera_PrevVP, pos);
 
     float2 thisScreen = thisClip.xy * rcp(thisClip.w);
     float2 prevScreen = prevClip.xy * rcp(prevClip.w);

@@ -149,7 +149,7 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	Out.clip = dot(vertexPosition, g_xCamera_ClipPlane);
 	
 	Out.pos = mul(g_xCamera_VP, vertexPosition);
-	Out.pos2DPrev = mul(g_xFrame_MainCamera_PrevVP, vertexPositionPrev);
+	Out.pos2DPrev = mul(g_xCamera_PrevVP, vertexPositionPrev);
 	Out.pos3D = vertexPosition.xyz;
 	Out.uvsets = vertexUvsets;
 	Out.atl = vertexAtlas;

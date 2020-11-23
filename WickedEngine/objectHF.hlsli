@@ -146,7 +146,7 @@ inline void NormalMapping(inout float4 uvsets, in float3 V, inout float3 N, in f
 
 inline float3 PlanarReflection(in Surface surface, in float2 bumpColor)
 {
-	float4 reflectionUV = mul(g_xFrame_MainCamera_ReflVP, float4(surface.P, 1));
+	float4 reflectionUV = mul(g_xCamera_ReflVP, float4(surface.P, 1));
 	reflectionUV.xy /= reflectionUV.w;
 	reflectionUV.xy = reflectionUV.xy * float2(0.5f, -0.5f) + 0.5f;
 	return texture_reflection.SampleLevel(sampler_linear_clamp, reflectionUV.xy + bumpColor*g_xMaterial.normalMapStrength, 0).rgb;
@@ -1089,7 +1089,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 	bumpColor *= g_xMaterial.normalMapStrength;
 
 	//REFLECTION
-	float4 reflectionUV = mul(g_xFrame_MainCamera_ReflVP, float4(surface.P, 1));
+	float4 reflectionUV = mul(g_xCamera_ReflVP, float4(surface.P, 1));
 	reflectionUV.xy /= reflectionUV.w;
 	reflectionUV.xy = reflectionUV.xy * float2(0.5f, -0.5f) + 0.5f;
 	lighting.indirect.specular += texture_reflection.SampleLevel(sampler_linear_mirror, reflectionUV.xy + bumpColor.rg, 0).rgb;
