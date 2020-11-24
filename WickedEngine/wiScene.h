@@ -118,7 +118,7 @@ namespace wiScene
 			OCCLUSION_SECONDARY = 1 << 8,
 			USE_WIND = 1 << 9,
 		};
-		uint32_t _flags = DIRTY | CAST_SHADOW;
+		uint32_t _flags = CAST_SHADOW;
 
 		enum SHADERTYPE
 		{

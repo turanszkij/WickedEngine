@@ -337,12 +337,6 @@ namespace wiScene
 	}
 	void MaterialComponent::CreateRenderData(const std::string& content_dir)
 	{
-		GPUBufferDesc desc;
-		desc.Usage = USAGE_DEFAULT;
-		desc.BindFlags = BIND_CONSTANT_BUFFER;
-		desc.ByteWidth = sizeof(MaterialCB);
-		wiRenderer::GetDevice()->CreateBuffer(&desc, nullptr, &constantBuffer);
-
 		if (!baseColorMapName.empty())
 		{
 			baseColorMap = wiResourceManager::Load(content_dir + baseColorMapName);
@@ -367,6 +361,19 @@ namespace wiScene
 		{
 			occlusionMap = wiResourceManager::Load(content_dir + occlusionMapName);
 		}
+
+
+		ShaderMaterial shadermat;
+		WriteShaderMaterial(&shadermat);
+
+		SubresourceData data;
+		data.pSysMem = &shadermat;
+
+		GPUBufferDesc desc;
+		desc.Usage = USAGE_DEFAULT;
+		desc.BindFlags = BIND_CONSTANT_BUFFER;
+		desc.ByteWidth = sizeof(MaterialCB);
+		wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &constantBuffer);
 	}
 	uint32_t MaterialComponent::GetStencilRef() const
 	{
@@ -1585,7 +1592,7 @@ namespace wiScene
 
 		names.Create(entity) = name;
 
-		materials.Create(entity).SetDirty();
+		materials.Create(entity);
 
 		return entity;
 	}

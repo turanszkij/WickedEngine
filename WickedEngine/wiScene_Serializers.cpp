@@ -173,8 +173,6 @@ namespace wiScene
 				archive >> (uint32_t&)subsurfaceProfile;
 			}
 
-			SetDirty();
-
 			wiJobSystem::Execute(seri.ctx, [&](wiJobArgs args) {
 				CreateRenderData(dir);
 			});
