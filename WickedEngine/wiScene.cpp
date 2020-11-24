@@ -1633,7 +1633,8 @@ namespace wiScene
 		const XMFLOAT3& position,
 		const XMFLOAT3& color,
 		float energy,
-		float range)
+		float range,
+		LightComponent::LightType type)
 	{
 		Entity entity = CreateEntity();
 
@@ -1652,7 +1653,7 @@ namespace wiScene
 		light.range_local = range;
 		light.fov = XM_PIDIV4;
 		light.color = color;
-		light.SetType(LightComponent::POINT);
+		light.SetType(type);
 
 		return entity;
 	}
