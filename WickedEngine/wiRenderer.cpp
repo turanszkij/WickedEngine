@@ -28,10 +28,9 @@
 #include "wiPlatform.h"
 
 #include <algorithm>
-#include <unordered_set>
+#include <unordered_map>
 #include <deque>
 #include <array>
-#include <atomic>
 
 using namespace std;
 using namespace wiGraphics;
@@ -721,7 +720,7 @@ SHADERTYPE GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, Ma
 	case RENDERPASS_SHADOW:
 		if (transparent)
 		{
-			realPS = PSTYPE_SHADOW_TRANSPARENT;
+			realPS = shaderType == MaterialComponent::SHADERTYPE_WATER ? PSTYPE_SHADOW_WATER : PSTYPE_SHADOW_TRANSPARENT;
 		}
 		else
 		{
@@ -1251,7 +1250,7 @@ void LoadShaders()
 							case RENDERPASS_DEPTHONLY:
 							case RENDERPASS_SHADOW:
 							case RENDERPASS_SHADOWCUBE:
-								desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOWMAP : BSTYPE_COLORWRITEDISABLE];
+								desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENT : BSTYPE_COLORWRITEDISABLE];
 								break;
 							default:
 								break;
@@ -2362,19 +2361,6 @@ void SetUpStates()
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = false;
 	device->CreateBlendState(&bd, &blendStates[BSTYPE_MULTIPLY]);
-
-
-	bd.RenderTarget[0].SrcBlend = BLEND_DEST_COLOR;
-	bd.RenderTarget[0].DestBlend = BLEND_ZERO;
-	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
-	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
-	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-	bd.RenderTarget[0].BlendEnable = true;
-	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-	bd.AlphaToCoverageEnable = false;
-	bd.IndependentBlendEnable = false;
-	device->CreateBlendState(&bd, &blendStates[BSTYPE_TRANSPARENTSHADOWMAP]);
 }
 
 void ModifySampler(const SamplerDesc& desc, int slot)
@@ -3029,6 +3015,7 @@ void RenderMeshes(
 				{
 					const GPUResource* res[] = {
 						material.GetBaseColorMap(),
+						material.GetNormalMap(), //reminder: transparent shadow might need it!
 					};
 					device->BindResources(PS, res, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(res), cmd);
 				}
@@ -4773,9 +4760,8 @@ void SetShadowProps2D(int resolution, int count, int softShadowQuality)
 		device->CreateTexture(&desc, nullptr, &shadowMapArray_2D);
 
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.Format = FORMAT_R8G8B8A8_UNORM;
+		desc.Format = FORMAT_R11G11B10_FLOAT;
 		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
-		// RGB: Shadow tint (multiplicative), A: Refraction caustics(additive)
 		desc.clear.color[0] = 1;
 		desc.clear.color[1] = 1;
 		desc.clear.color[2] = 1;

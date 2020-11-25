@@ -32,12 +32,8 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 	float opacity = color.a;
 
-	// Water does not generate shadows to not mess up the smooth falloff on geometry intersections:
-	//  This could be resolved if this shader could sample depth, but the depthbuffer is currently bound
-	//  so leave it at this for the moment
-	color.rgb = 1;
+	color.rgb = 1; // disable water shadow because it has already fog
 
-	// Use the alpha channel for refraction caustics effect:
 	[branch]
 	if (g_xMaterial.uvset_normalMap >= 0)
 	{
@@ -53,7 +49,12 @@ float4 main(VertextoPixel input) : SV_TARGET
 		bumpColor.rg *= g_xMaterial.normalMapStrength;
 		bumpColor = normalize(max(bumpColor, float3(0, 0, 0.0001f)));
 
-		color.a = 1 - saturate(abs(dot(bumpColor, float3(0, 0, 1))));
+		float caustic = abs(dot(bumpColor, float3(0, 1, 0)));
+		caustic = saturate(caustic);
+		caustic = pow(caustic, 2);
+		caustic *= 20;
+
+		color.rgb += caustic;
 	}
 
 	return color;

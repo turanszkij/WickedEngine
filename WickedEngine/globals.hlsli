@@ -19,7 +19,7 @@ TEXTURE2D(texture_transmittancelut, float4, TEXSLOT_TRANSMITTANCELUT);
 TEXTURE2D(texture_multiscatteringlut, float4, TEXSLOT_MULTISCATTERINGLUT);
 TEXTURE2DARRAY(texture_shadowarray_2d, float, TEXSLOT_SHADOWARRAY_2D);
 TEXTURECUBEARRAY(texture_shadowarray_cube, float, TEXSLOT_SHADOWARRAY_CUBE);
-TEXTURE2DARRAY(texture_shadowarray_transparent, float4, TEXSLOT_SHADOWARRAY_TRANSPARENT);
+TEXTURE2DARRAY(texture_shadowarray_transparent, float3, TEXSLOT_SHADOWARRAY_TRANSPARENT);
 TEXTURE3D(texture_voxelradiance, float4, TEXSLOT_VOXELRADIANCE);
 STRUCTUREDBUFFER(EntityTiles, uint, SBSLOT_ENTITYTILES);
 STRUCTUREDBUFFER(EntityArray, ShaderEntity, SBSLOT_ENTITYARRAY);

@@ -61,7 +61,7 @@ inline float3 shadowCascade(in ShaderEntity light, in float3 shadowPos, in float
 		[loop]
 		for (float x = -range; x <= range; x += 1.0f)
 		{
-			shadow.x += texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(shadowUV + float2(x, y) * light.shadowKernel, light.GetShadowMapIndex() + cascade), realDistance).r;
+			shadow.x += texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(shadowUV + float2(x, y) * light.shadowKernel, light.GetShadowMapIndex() + cascade), realDistance);
 			shadow.y++;
 		}
 	}
@@ -73,15 +73,7 @@ inline float3 shadowCascade(in ShaderEntity light, in float3 shadowPos, in float
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
 	if (g_xFrame_Options & OPTION_BIT_TRANSPARENTSHADOWS_ENABLED)
 	{
-		// unfortunately transparents will not receive transparent shadow map
-		// because we cannot distinguish without using secondary depth buffer for transparents
-		// but I don't wanna do that, not overly important for now
-		float4 transparent_shadowmap = texture_shadowarray_transparent.SampleLevel(sampler_linear_clamp, float3(shadowUV, light.GetShadowMapIndex() + cascade), 0).rgba;
-		// Tint the shadow:
-		shadow *= transparent_shadowmap.rgb;
-		// Reduce shadow by caustics (caustics can also increase total light above maximum):
-		const float causticsStrength = 20;
-		shadow += transparent_shadowmap.a * causticsStrength;
+		shadow *= texture_shadowarray_transparent.SampleLevel(sampler_linear_clamp, float3(shadowUV, light.GetShadowMapIndex() + cascade), 0);
 	}
 #endif //DISABLE_TRANSPARENT_SHADOWMAP
 
