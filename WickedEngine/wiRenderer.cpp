@@ -5144,6 +5144,9 @@ void DrawScene(
 	const bool hairparticle = flags & DRAWSCENE_HAIRPARTICLE;
 	const bool occlusion = flags & DRAWSCENE_OCCLUSIONCULLING;
 
+	if(IsWireRender() && !transparent)
+		return;
+
 	device->EventBegin("DrawScene", cmd);
 
 	BindCommonResources(cmd);
@@ -5220,6 +5223,11 @@ void DrawScene(
 	{
 		renderTypeFlags |= RENDERTYPE_TRANSPARENT;
 		renderTypeFlags |= RENDERTYPE_WATER;
+	}
+
+	if (IsWireRender())
+	{
+		renderTypeFlags = RENDERTYPE_ALL;
 	}
 
 	RenderQueue renderQueue;
