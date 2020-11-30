@@ -351,19 +351,6 @@ Luna<Scene_BindLua>::PropertyType Scene_BindLua::properties[] = {
 	{ NULL, NULL }
 };
 
-Scene_BindLua::Scene_BindLua(lua_State *L)
-{
-	owning = true;
-	scene = new Scene;
-}
-Scene_BindLua::~Scene_BindLua()
-{
-	if (owning)
-	{
-		delete scene;
-	}
-}
-
 
 int Scene_BindLua::Update(lua_State* L)
 {

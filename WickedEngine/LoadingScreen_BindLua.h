@@ -6,6 +6,8 @@
 
 class LoadingScreen_BindLua : public RenderPath2D_BindLua
 {
+private:
+	LoadingScreen loadingscreen;
 public:
 	static const char className[];
 	static Luna<LoadingScreen_BindLua>::FunctionType methods[];
@@ -17,8 +19,7 @@ public:
 	}
 	LoadingScreen_BindLua(lua_State* L)
 	{
-		component = new LoadingScreen;
-		owning = true;
+		this->component = &loadingscreen;
 	}
 
 	int AddLoadingTask(lua_State* L);

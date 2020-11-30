@@ -24,11 +24,13 @@ namespace wiEvent
 
 		~EventInternal()
 		{
+			manager->locker.lock();
 			auto it = manager->subscribers.find(id);
 			if (it != manager->subscribers.end())
 			{
 				it->second.remove(&callback);
 			}
+			manager->locker.unlock();
 		}
 	};
 

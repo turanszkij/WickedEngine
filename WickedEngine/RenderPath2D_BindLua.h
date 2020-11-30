@@ -6,6 +6,8 @@
 
 class RenderPath2D_BindLua : public RenderPath_BindLua
 {
+private:
+	RenderPath2D renderpath;
 public:
 	static const char className[];
 	static Luna<RenderPath2D_BindLua>::FunctionType methods[];
@@ -18,8 +20,7 @@ public:
 	}
 	RenderPath2D_BindLua(lua_State* L) 
 	{
-		component = new RenderPath2D;
-		owning = true;
+		this->component = &renderpath;
 	}
 
 	int AddSprite(lua_State *L);

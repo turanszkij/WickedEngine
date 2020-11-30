@@ -1,7 +1,7 @@
 #pragma once
 #include "wiLua.h"
 #include "wiLuna.h"
-#include "wiScene_Decl.h"
+#include "wiScene.h"
 
 namespace wiScene_BindLua
 {
@@ -9,8 +9,9 @@ namespace wiScene_BindLua
 
 	class Scene_BindLua
 	{
+	private:
+		wiScene::Scene customScene;
 	public:
-		bool owning = false;
 		wiScene::Scene* scene = nullptr;
 
 		static const char className[];
@@ -18,8 +19,10 @@ namespace wiScene_BindLua
 		static Luna<Scene_BindLua>::PropertyType properties[];
 
 		Scene_BindLua(wiScene::Scene* scene) :scene(scene) {}
-		Scene_BindLua(lua_State *L);
-		~Scene_BindLua();
+		Scene_BindLua(lua_State* L)
+		{
+			this->scene = &customScene;
+		}
 
 		int Update(lua_State* L);
 		int Clear(lua_State* L);
