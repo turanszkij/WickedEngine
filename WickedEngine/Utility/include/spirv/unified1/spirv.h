@@ -77,6 +77,8 @@ typedef enum SpvExecutionModel_ {
     SpvExecutionModelFragment = 4,
     SpvExecutionModelGLCompute = 5,
     SpvExecutionModelKernel = 6,
+    SpvExecutionModelTaskNV = 5267,
+    SpvExecutionModelMeshNV = 5268,
     SpvExecutionModelMax = 0x7fffffff,
 } SpvExecutionModel;
 
@@ -135,6 +137,8 @@ typedef enum SpvExecutionMode_ {
     SpvExecutionModeLocalSizeHintId = 39,
     SpvExecutionModePostDepthCoverage = 4446,
     SpvExecutionModeStencilRefReplacingEXT = 5027,
+    SpvExecutionModeOutputPrimitivesNV = 5270,
+    SpvExecutionModeOutputTrianglesNV = 5298,
     SpvExecutionModeMax = 0x7fffffff,
 } SpvExecutionMode;
 
