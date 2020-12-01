@@ -13,6 +13,8 @@ struct ShaderMaterial
 {
 	float4		baseColor;
 	float4		emissiveColor;
+	float4		subsurfaceScattering;
+	float4		subsurfaceScattering_inv;
 	float4		texMulAdd;
 
 	float		roughness;
@@ -23,9 +25,9 @@ struct ShaderMaterial
 	float		normalMapStrength;
 	float		parallaxOcclusionMapping;
 	float		alphaTest;
-	float		padding1;
-
 	float		displacementMapping;
+
+	int			padding0;
 	int			uvset_baseColorMap;
 	int			uvset_surfaceMap;
 	int			uvset_normalMap;

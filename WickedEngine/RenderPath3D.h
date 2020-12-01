@@ -35,7 +35,6 @@ private:
 	uint32_t aoSampleCount = 16;
 	float aoPower = 2.0f;
 	float chromaticAberrationAmount = 2.0f;
-	float sssBlurAmount = 1.0f;
 
 	AO ao = AO_DISABLED;
 	bool fxaaEnabled = false;
@@ -50,7 +49,6 @@ private:
 	bool lightShaftsEnabled = false;
 	bool lensFlareEnabled = true;
 	bool motionBlurEnabled = false;
-	bool sssEnabled = true;
 	bool depthOfFieldEnabled = false;
 	bool eyeAdaptionEnabled = false;
 	bool sharpenFilterEnabled = false;
@@ -65,10 +63,6 @@ private:
 protected:
 	wiGraphics::Texture rtGbuffer[GBUFFER_COUNT];
 	wiGraphics::Texture rtGbuffer_resolved[GBUFFER_COUNT];
-	wiGraphics::Texture rtDeferred;
-	wiGraphics::Texture rtDeferred_resolved;
-	wiGraphics::Texture rtSSS[2];
-	wiGraphics::Texture rtSSS_resolved;
 	wiGraphics::Texture rtReflection; // contains the scene rendered for planar reflections
 	wiGraphics::Texture rtSSR; // standard screen-space reflection results
 	wiGraphics::Texture rtSceneCopy; // contains the rendered scene that can be fed into transparent pass for distortion effect
@@ -85,8 +79,6 @@ protected:
 	wiGraphics::Texture rtSun_resolved; // sun render target, but the resolved version if MSAA is enabled
 	wiGraphics::Texture rtGUIBlurredBackground[3];	// downsampled, gaussian blurred scene for GUI
 	wiGraphics::Texture rtShadingRate; // UINT8 shading rate per tile
-	wiGraphics::Texture rtDiffuseTemporal[2];	// raytraced shadows denoise
-	wiGraphics::Texture rtSpecularTemporal[2];	// raytraced shadows denoise
 
 	wiGraphics::Texture rtPostprocess_HDR; // ping-pong with main scene RT in HDR post-process chain
 	wiGraphics::Texture rtPostprocess_LDR[2]; // ping-pong with itself in LDR post-process chain
@@ -109,8 +101,6 @@ protected:
 	wiGraphics::RenderPass renderpass_volumetriclight;
 	wiGraphics::RenderPass renderpass_particledistortion;
 	wiGraphics::RenderPass renderpass_waterripples;
-	wiGraphics::RenderPass renderpass_deferredcomposition;
-	wiGraphics::RenderPass renderpass_SSS[3];
 
 	const constexpr wiGraphics::Texture* GetGbuffer_Read() const
 	{
@@ -134,28 +124,6 @@ protected:
 			return &rtGbuffer[i];
 		}
 	}
-	const constexpr wiGraphics::Texture* GetDeferred_Read() const
-	{
-		if (getMSAASampleCount() > 1)
-		{
-			return &rtDeferred_resolved;
-		}
-		else
-		{
-			return &rtDeferred;
-		}
-	}
-	const constexpr wiGraphics::Texture* GetSSS_Read(int i) const
-	{
-		if (getMSAASampleCount() > 1)
-		{
-			return &rtSSS_resolved;
-		}
-		else
-		{
-			return &rtSSS[i];
-		}
-	}
 
 	// Post-processes are ping-ponged, this function helps to obtain the last postprocess render target that was written
 	const wiGraphics::Texture* GetLastPostprocessRT() const
@@ -173,8 +141,6 @@ protected:
 	virtual void RenderFrameSetUp(wiGraphics::CommandList cmd) const;
 	virtual void RenderReflections(wiGraphics::CommandList cmd) const;
 
-	virtual void RenderSSS(wiGraphics::CommandList cmd) const;
-	virtual void RenderDeferredComposition(wiGraphics::CommandList cmd) const;
 	virtual void RenderLinearDepth(wiGraphics::CommandList cmd) const;
 	virtual void RenderAO(wiGraphics::CommandList cmd) const;
 	virtual void RenderSSR(wiGraphics::CommandList cmd) const;
@@ -213,7 +179,6 @@ public:
 	constexpr uint32_t getAOSampleCount() const { return aoSampleCount; }
 	constexpr float getAOPower() const { return aoPower; }
 	constexpr float getChromaticAberrationAmount() const { return chromaticAberrationAmount; }
-	constexpr float getSSSBlurAmount() const { return sssBlurAmount; }
 
 	constexpr bool getAOEnabled() const { return ao != AO_DISABLED; }
 	constexpr AO getAO() const { return ao; }
@@ -229,7 +194,6 @@ public:
 	constexpr bool getLightShaftsEnabled() const { return lightShaftsEnabled; }
 	constexpr bool getLensFlareEnabled() const { return lensFlareEnabled; }
 	constexpr bool getMotionBlurEnabled() const { return motionBlurEnabled; }
-	constexpr bool getSSSEnabled() const { return sssEnabled; }
 	constexpr bool getDepthOfFieldEnabled() const { return depthOfFieldEnabled; }
 	constexpr bool getEyeAdaptionEnabled() const { return eyeAdaptionEnabled; }
 	constexpr bool getSharpenFilterEnabled() const { return sharpenFilterEnabled && getSharpenFilterAmount() > 0; }
@@ -255,7 +219,6 @@ public:
 	constexpr void setAOSampleCount(uint32_t value) { aoSampleCount = value; }
 	constexpr void setAOPower(float value) { aoPower = value; }
 	constexpr void setChromaticAberrationAmount(float value) { chromaticAberrationAmount = value; }
-	constexpr void setSSSBlurAmount(float value) { sssBlurAmount = value; }
 
 	constexpr void setAO(AO value) { ao = value; }
 	constexpr void setSSREnabled(bool value){ ssrEnabled = value; }
@@ -270,7 +233,6 @@ public:
 	constexpr void setLightShaftsEnabled(bool value){ lightShaftsEnabled = value; }
 	constexpr void setLensFlareEnabled(bool value){ lensFlareEnabled = value; }
 	constexpr void setMotionBlurEnabled(bool value){ motionBlurEnabled = value; }
-	constexpr void setSSSEnabled(bool value){ sssEnabled = value; }
 	constexpr void setDepthOfFieldEnabled(bool value){ depthOfFieldEnabled = value; }
 	constexpr void setEyeAdaptionEnabled(bool value) { eyeAdaptionEnabled = value; }
 	constexpr void setSharpenFilterEnabled(bool value) { sharpenFilterEnabled = value; }

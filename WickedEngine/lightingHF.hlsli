@@ -127,9 +127,9 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 	SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
 	[branch]
-	if (surfaceToLight.NdotL > 0)
+	if (any(surfaceToLight.NdotL_sss))
 	{
-		float3 sh = surfaceToLight.NdotL.xxx;
+		float3 shadow = 1;
 
 		[branch]
 		if (light.IsCastingShadow())
@@ -137,11 +137,11 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 			[branch]
 			if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
 			{
-				sh *= shadowTrace(surface, normalize(L), 100000);
+				shadow *= shadowTrace(surface, normalize(L), 100000);
 			}
 			else
 			{
-				// Loop through cascades from closest (smallest) to farest (biggest)
+				// Loop through cascades from closest (smallest) to furthest (biggest)
 				[loop]
 				for (uint cascade = 0; cascade < g_xFrame_ShadowCascadeCount; ++cascade)
 				{
@@ -167,11 +167,11 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 							ShTex = ShPos * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 							const float3 shadow_fallback = shadowCascade(light, ShPos, ShTex.xy, cascade);
 
-							sh *= lerp(shadow_main, shadow_fallback, cascade_fade);
+							shadow *= lerp(shadow_main, shadow_fallback, cascade_fade);
 						}
 						else
 						{
-							sh *= shadow_main;
+							shadow *= shadow_main;
 						}
 						break;
 					}
@@ -180,7 +180,7 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 		}
 
 		[branch]
-		if (any(sh))
+		if (any(shadow))
 		{
 			float3 atmosphereTransmittance = 1.0;
 			if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
@@ -189,9 +189,13 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 				atmosphereTransmittance = GetAtmosphericLightTransmittance(Atmosphere, surface.P, L, texture_transmittancelut);
 			}
 			
-			float3 lightColor = light.GetColor().rgb * light.energy * sh * atmosphereTransmittance;			
-			lighting.direct.diffuse += max(0.0f, lightColor * BRDF_GetDiffuse(surface, surfaceToLight));
-			lighting.direct.specular += max(0.0f, lightColor * BRDF_GetSpecular(surface, surfaceToLight));
+			float3 lightColor = light.GetColor().rgb * light.energy * atmosphereTransmittance;
+
+			lighting.direct.diffuse +=
+				max(0.0f, lightColor * shadow * surfaceToLight.NdotL_sss * BRDF_GetDiffuse(surface, surfaceToLight));
+
+			lighting.direct.specular +=
+				max(0.0f, lightColor * shadow * surfaceToLight.NdotL * BRDF_GetSpecular(surface, surfaceToLight));
 		}
 	}
 }
@@ -211,9 +215,9 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 		SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
 		[branch]
-		if (surfaceToLight.NdotL > 0)
+		if (any(surfaceToLight.NdotL_sss))
 		{
-			float sh = surfaceToLight.NdotL;
+			float shadow = 1;
 
 			[branch]
 			if (light.IsCastingShadow())
@@ -221,25 +225,28 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 				[branch]
 				if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
 				{
-					sh *= shadowTrace(surface, L, dist);
+					shadow *= shadowTrace(surface, L, dist);
 				}
 				else
 				{
-					sh *= shadowCube(light, Lunnormalized);
+					shadow *= shadowCube(light, Lunnormalized);
 				}
 			}
 
 			[branch]
-			if (sh > 0)
+			if (any(shadow))
 			{
-				float3 lightColor = light.GetColor().rgb * light.energy * sh;
+				float3 lightColor = light.GetColor().rgb * light.energy;
 
 				const float att = saturate(1.0 - (dist2 / range2));
 				const float attenuation = att * att;
 				lightColor *= attenuation;
 
-				lighting.direct.diffuse += max(0.0f, lightColor * BRDF_GetDiffuse(surface, surfaceToLight));
-				lighting.direct.specular += max(0.0f, lightColor * BRDF_GetSpecular(surface, surfaceToLight));
+				lighting.direct.diffuse +=
+					max(0.0f, lightColor * shadow * surfaceToLight.NdotL_sss * BRDF_GetDiffuse(surface, surfaceToLight));
+
+				lighting.direct.specular +=
+					max(0.0f, lightColor * shadow * surfaceToLight.NdotL * BRDF_GetSpecular(surface, surfaceToLight));
 			}
 		}
 	}
@@ -259,7 +266,7 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 		SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
 		[branch]
-		if (surfaceToLight.NdotL > 0)
+		if (any(surfaceToLight.NdotL_sss))
 		{
 			const float SpotFactor = dot(L, light.directionWS);
 			const float spotCutOff = light.coneAngleCos;
@@ -267,7 +274,7 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 			[branch]
 			if (SpotFactor > spotCutOff)
 			{
-				float3 sh = surfaceToLight.NdotL.xxx;
+				float3 shadow = 1;
 
 				[branch]
 				if (light.IsCastingShadow())
@@ -275,7 +282,7 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 					[branch]
 					if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
 					{
-						sh *= shadowTrace(surface, L, dist);
+						shadow *= shadowTrace(surface, L, dist);
 					}
 					else
 					{
@@ -285,23 +292,26 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 						[branch]
 						if (is_saturated(ShTex))
 						{
-							sh *= shadowCascade(light, ShPos.xyz, ShTex.xy, 0);
+							shadow *= shadowCascade(light, ShPos.xyz, ShTex.xy, 0);
 						}
 					}
 				}
 
 				[branch]
-				if (any(sh))
+				if (any(shadow))
 				{
-					float3 lightColor = light.GetColor().rgb * light.energy * sh;
+					float3 lightColor = light.GetColor().rgb * light.energy;
 
 					const float att = saturate(1.0 - (dist2 / range2));
 					float attenuation = att * att;
 					attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
 					lightColor *= attenuation;
 
-					lighting.direct.diffuse += max(0.0f, lightColor * BRDF_GetDiffuse(surface, surfaceToLight));
-					lighting.direct.specular += max(0.0f, lightColor * BRDF_GetSpecular(surface, surfaceToLight));
+					lighting.direct.diffuse +=
+						max(0.0f, lightColor * shadow * surfaceToLight.NdotL_sss * BRDF_GetDiffuse(surface, surfaceToLight));
+
+					lighting.direct.specular +=
+						max(0.0f, lightColor * shadow * surfaceToLight.NdotL * BRDF_GetSpecular(surface, surfaceToLight));
 				}
 			}
 		}

@@ -1056,9 +1056,6 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_RENDERLIGHTMAP], "renderlightmapPS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_RAYTRACE_DEBUGBVH], "raytrace_debugbvhPS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_DOWNSAMPLEDEPTHBUFFER], "downsampleDepthBuffer4xPS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_DEFERREDCOMPOSITION], "deferredPS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_POSTPROCESS_SSS_SKIN], "sssPS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_POSTPROCESS_SSS_SNOW], "sssPS_snow.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL], "upsample_bilateralPS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_POSTPROCESS_OUTLINE], "outlinePS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_LENSFLARE], "lensFlarePS.cso"); });
@@ -1588,36 +1585,6 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
 		PipelineStateDesc desc;
 		desc.vs = &shaders[VSTYPE_SCREEN];
-		desc.ps = &shaders[PSTYPE_DEFERREDCOMPOSITION];
-		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
-		desc.bs = &blendStates[BSTYPE_OPAQUE];
-		desc.dss = &depthStencils[DSSTYPE_DEFERREDCOMPOSITION];
-
-		device->CreatePipelineState(&desc, &PSO_deferredcomposition);
-		});
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
-		PipelineStateDesc desc;
-		desc.vs = &shaders[VSTYPE_SCREEN];
-		desc.ps = &shaders[PSTYPE_POSTPROCESS_SSS_SKIN];
-		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
-		desc.bs = &blendStates[BSTYPE_OPAQUE];
-		desc.dss = &depthStencils[DSSTYPE_SSS];
-
-		device->CreatePipelineState(&desc, &PSO_sss_skin);
-		});
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
-		PipelineStateDesc desc;
-		desc.vs = &shaders[VSTYPE_SCREEN];
-		desc.ps = &shaders[PSTYPE_POSTPROCESS_SSS_SNOW];
-		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
-		desc.bs = &blendStates[BSTYPE_OPAQUE];
-		desc.dss = &depthStencils[DSSTYPE_SSS];
-
-		device->CreatePipelineState(&desc, &PSO_sss_snow);
-		});
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
-		PipelineStateDesc desc;
-		desc.vs = &shaders[VSTYPE_SCREEN];
 		desc.ps = &shaders[PSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL];
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 		desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
@@ -2014,7 +1981,7 @@ void SetUpStates()
 
 
 	rs.FillMode = FILL_SOLID;
-	rs.CullMode = CULL_BACK;
+	rs.CullMode = CULL_FRONT;
 	rs.FrontCounterClockwise = true;
 	rs.DepthBias = 0;
 	rs.DepthBiasClamp = 0;
@@ -8805,26 +8772,6 @@ void ComputeShadingRateClassification(
 	device->EventEnd(cmd);
 }
 
-void DeferredComposition(
-	const Texture gbuffer[GBUFFER_COUNT],
-	const Texture& depth,
-	CommandList cmd
-)
-{
-	device->EventBegin("DeferredComposition", cmd);
-
-	device->BindPipelineState(&PSO_deferredcomposition, cmd);
-
-	device->BindResource(PS, &gbuffer[GBUFFER_ALBEDO_ROUGHNESS], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(PS, &gbuffer[GBUFFER_LIGHTBUFFER_DIFFUSE], TEXSLOT_ONDEMAND0, cmd);
-	device->BindResource(PS, &gbuffer[GBUFFER_LIGHTBUFFER_SPECULAR], TEXSLOT_ONDEMAND1, cmd);
-	device->BindResource(PS, &depth, TEXSLOT_DEPTH, cmd);
-
-	device->Draw(3, 0, cmd);
-
-	device->EventEnd(cmd);
-}
-
 void Postprocess_Blur_Gaussian(
 	const Texture& input,
 	const Texture& temp,
@@ -10147,7 +10094,7 @@ void Postprocess_RTReflection(
 	device->WriteDescriptor(&descriptorTable, 0, 0, &temp);
 	device->WriteDescriptor(&descriptorTable, 1, 0, &scene.TLAS);
 	device->WriteDescriptor(&descriptorTable, 2, 0, &depthbuffer);
-	device->WriteDescriptor(&descriptorTable, 3, 0, &gbuffer[GBUFFER_ALBEDO_ROUGHNESS]);
+	device->WriteDescriptor(&descriptorTable, 3, 0, &gbuffer[GBUFFER_COLOR_ROUGHNESS]);
 	device->WriteDescriptor(&descriptorTable, 4, 0, &gbuffer[GBUFFER_NORMAL_VELOCITY]);
 	device->WriteDescriptor(&descriptorTable, 5, 0, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
 	device->WriteDescriptor(&descriptorTable, 6, 0, &shadowMapArray_2D);
@@ -10341,7 +10288,7 @@ void Postprocess_SSR(
 
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-		device->BindResource(CS, &gbuffer[GBUFFER_ALBEDO_ROUGHNESS], TEXSLOT_GBUFFER0, cmd);
+		device->BindResource(CS, &gbuffer[GBUFFER_COLOR_ROUGHNESS], TEXSLOT_GBUFFER0, cmd);
 		device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
 
@@ -10467,112 +10414,6 @@ void Postprocess_SSR(
 
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
-	}
-
-	wiProfiler::EndRange(range);
-	device->EventEnd(cmd);
-}
-void Postprocess_SSS(
-	const Texture& lineardepth,
-	const Texture gbuffer[GBUFFER_COUNT],
-	const RenderPass& input_output_lightbuffer_diffuse,
-	const RenderPass& input_output_temp1,
-	const RenderPass& input_output_temp2,
-	CommandList cmd,
-	float amount
-)
-{
-	device->EventBegin("Postprocess_SSS", cmd);
-	auto range = wiProfiler::BeginRangeGPU("SSS", cmd);
-
-	device->BindResource(PS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-
-	for (uint32_t stencilref = STENCILREF_SKIN; stencilref <= STENCILREF_SNOW; ++stencilref)
-	{
-		device->BindStencilRef(stencilref, cmd);
-
-		switch (stencilref)
-		{
-		case STENCILREF_SKIN:
-			device->BindPipelineState(&PSO_sss_skin, cmd);
-			break;
-		case STENCILREF_SNOW:
-			device->BindPipelineState(&PSO_sss_snow, cmd);
-			break;
-		default:
-			assert(0);
-			break;
-		}
-
-		const RenderPass* rt_read = &input_output_lightbuffer_diffuse;
-		const RenderPass* rt_write = &input_output_temp1;
-
-		static int sssPassCount = 6;
-		for (int i = 0; i < sssPassCount; ++i)
-		{
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
-
-			if (i == sssPassCount - 1)
-			{
-				// last pass will write into light buffer, but still use the previous ping-pong result:
-				rt_write = &input_output_lightbuffer_diffuse;
-			}
-
-			const TextureDesc& desc = rt_write->GetDesc().attachments[0].texture->GetDesc();
-
-			device->RenderPassBegin(rt_write, cmd);
-
-			Viewport vp;
-			vp.Width = (float)desc.Width;
-			vp.Height = (float)desc.Height;
-			device->BindViewports(1, &vp, cmd);
-
-
-			PostProcessCB cb;
-			cb.xPPResolution.x = desc.Width;
-			cb.xPPResolution.y = desc.Height;
-			cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-			cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-			const float blur_strength = 400.0f * amount;
-			if (i % 2 == 0)
-			{
-				cb.sss_step.x = blur_strength * cb.xPPResolution_rcp.x;
-				cb.sss_step.y = 0;
-			}
-			else
-			{
-				cb.sss_step.x = 0;
-				cb.sss_step.y = blur_strength * cb.xPPResolution_rcp.y;
-			}
-			device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
-
-			if (rt_read->GetDesc().attachments.size() > 2)
-			{
-				// resolved input!
-				device->BindResource(PS, rt_read->GetDesc().attachments[2].texture, TEXSLOT_ONDEMAND0, cmd);
-			}
-			else
-			{
-				device->BindResource(PS, rt_read->GetDesc().attachments[0].texture, TEXSLOT_ONDEMAND0, cmd);
-			}
-
-			device->Draw(3, 0, cmd);
-
-			device->RenderPassEnd(cmd);
-
-			if (i == 0)
-			{
-				// first pass was reading from lightbuffer, so correct here for next pass ping-pong:
-				rt_read = &input_output_temp1;
-				rt_write = &input_output_temp2;
-			}
-			else
-			{
-				// ping-pong between temp render targets:
-				std::swap(rt_read, rt_write);
-			}
-		}
 	}
 
 	wiProfiler::EndRange(range);

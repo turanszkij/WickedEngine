@@ -35,7 +35,6 @@ Luna<RenderPath3D_BindLua>::FunctionType RenderPath3D_BindLua::methods[] = {
 	lunamethod(RenderPath3D_BindLua, SetLightShaftsEnabled),
 	lunamethod(RenderPath3D_BindLua, SetLensFlareEnabled),
 	lunamethod(RenderPath3D_BindLua, SetMotionBlurEnabled),
-	lunamethod(RenderPath3D_BindLua, SetSSSEnabled),
 	lunamethod(RenderPath3D_BindLua, SetDitherEnabled),
 	lunamethod(RenderPath3D_BindLua, SetDepthOfFieldEnabled),
 	lunamethod(RenderPath3D_BindLua, SetEyeAdaptionEnabled),
@@ -227,19 +226,6 @@ int RenderPath3D_BindLua::SetMotionBlurEnabled(lua_State* L)
 		((RenderPath3D*)component)->setMotionBlurEnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetMotionBlurEnabled(bool value) not enough arguments!");
-	return 0;
-}
-int RenderPath3D_BindLua::SetSSSEnabled(lua_State* L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "SetSSSEnabled(bool value) component is null!");
-		return 0;
-	}
-	if (wiLua::SGetArgCount(L) > 0)
-		((RenderPath3D*)component)->setSSSEnabled(wiLua::SGetBool(L, 1));
-	else
-		wiLua::SError(L, "SetSSSEnabled(bool value) not enough arguments!");
 	return 0;
 }
 int RenderPath3D_BindLua::SetDitherEnabled(lua_State* L)

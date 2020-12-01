@@ -36,7 +36,6 @@ public:
 	int SetLightShaftsEnabled(lua_State* L);
 	int SetLensFlareEnabled(lua_State* L);
 	int SetMotionBlurEnabled(lua_State* L);
-	int SetSSSEnabled(lua_State* L);
 	int SetDitherEnabled(lua_State* L);
 	int SetDepthOfFieldEnabled(lua_State* L);
 	int SetEyeAdaptionEnabled(lua_State* L);

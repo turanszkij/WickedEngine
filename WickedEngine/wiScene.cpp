@@ -284,6 +284,14 @@ namespace wiScene
 		dest->normalMapStrength = (normalMap == nullptr ? 0 : normalMapStrength);
 		dest->parallaxOcclusionMapping = parallaxOcclusionMapping;
 		dest->displacementMapping = displacementMapping;
+		dest->subsurfaceScattering = subsurfaceScattering;
+		dest->subsurfaceScattering.x *= dest->subsurfaceScattering.w;
+		dest->subsurfaceScattering.y *= dest->subsurfaceScattering.w;
+		dest->subsurfaceScattering.z *= dest->subsurfaceScattering.w;
+		dest->subsurfaceScattering_inv.x = 1.0f / (1 + dest->subsurfaceScattering.x);
+		dest->subsurfaceScattering_inv.y = 1.0f / (1 + dest->subsurfaceScattering.y);
+		dest->subsurfaceScattering_inv.z = 1.0f / (1 + dest->subsurfaceScattering.z);
+		dest->subsurfaceScattering_inv.w = 1.0f / (1 + dest->subsurfaceScattering.w);
 		dest->uvset_baseColorMap = baseColorMap == nullptr ? -1 : (int)uvset_baseColorMap;
 		dest->uvset_surfaceMap = surfaceMap == nullptr ? -1 : (int)uvset_surfaceMap;
 		dest->uvset_normalMap = normalMap == nullptr ? -1 : (int)uvset_normalMap;
@@ -2503,15 +2511,6 @@ namespace wiScene
 			if (material.IsCustomShader())
 			{
 				material.engineStencilRef = STENCILREF_CUSTOMSHADER;
-			}
-
-			if (material.subsurfaceProfile == MaterialComponent::SUBSURFACE_SKIN)
-			{
-				material.engineStencilRef = STENCILREF_SKIN;
-			}
-			else if (material.subsurfaceProfile == MaterialComponent::SUBSURFACE_SNOW)
-			{
-				material.engineStencilRef = STENCILREF_SNOW;
 			}
 
 			if (material.IsDirty())

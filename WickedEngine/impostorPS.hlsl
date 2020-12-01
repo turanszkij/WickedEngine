@@ -34,5 +34,9 @@ GBUFFEROutputType main(VSOut input)
 
 	TiledLighting(surface, lighting);
 
-	return CreateGbuffer(surface, velocity, lighting);
+	ApplyLighting(surface, lighting, color);
+
+	ApplyFog(dist, color);
+
+	return CreateGbuffer(color, surface, velocity, lighting);
 }
