@@ -1981,7 +1981,7 @@ void SetUpStates()
 
 
 	rs.FillMode = FILL_SOLID;
-	rs.CullMode = CULL_FRONT;
+	rs.CullMode = CULL_BACK;
 	rs.FrontCounterClockwise = true;
 	rs.DepthBias = 0;
 	rs.DepthBiasClamp = 0;
