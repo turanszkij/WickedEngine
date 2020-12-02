@@ -777,10 +777,10 @@ namespace wiScene
 		float energy = 1.0f;
 		float range_local = 10.0f;
 		float fov = XM_PIDIV4;
-		float shadowBias = 0.0001f;
-		float radius = 1.0f; // area light
-		float width = 1.0f;  // area light
-		float height = 1.0f; // area light
+		float shadowBias = 0.0001f; // deprecated!
+		float radius = 1.0f; // area light only
+		float width = 1.0f;  // area light only
+		float height = 1.0f; // area light only
 
 		std::vector<std::string> lensFlareNames;
 

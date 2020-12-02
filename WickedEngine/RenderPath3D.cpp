@@ -994,6 +994,7 @@ void RenderPath3D::RenderSceneMIPChain(CommandList cmd) const
 	fx.enableFullScreen();
 	fx.sampleFlag = SAMPLEMODE_CLAMP;
 	fx.quality = QUALITY_LINEAR;
+	fx.blendFlag = BLENDMODE_OPAQUE;
 	wiImage::Draw(GetGbuffer_Read(GBUFFER_COLOR_ROUGHNESS), fx, cmd);
 
 	device->RenderPassEnd(cmd);
@@ -1010,8 +1011,8 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	// Water ripple rendering:
+	if(wiRenderer::IsWaterrippleRendering())
 	{
-		// todo: refactor water ripples and avoid clear if there is none!
 		device->RenderPassBegin(&renderpass_waterripples, cmd);
 
 		Viewport vp;

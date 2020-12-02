@@ -49,21 +49,30 @@ struct ShaderMaterial
 	inline bool IsUsingWind() { return options & SHADERMATERIAL_OPTION_BIT_USE_WIND; }
 };
 
+// Warning: the size of this structure directly affects shader performance.
+//	Try to reduce it as much as possible!
+//	Keep it aligned to 16 bytes for best performance!
+//	Right now, this is 96 bytes total
 struct ShaderEntity
 {
 	float3 positionVS;
 	uint params;
+
 	float3 directionVS;
 	float range;
+
 	float3 positionWS;
 	float energy;
+
 	float3 directionWS;
 	uint color;
+
 	float4 texMulAdd;
+
 	float coneAngleCos;
-	float shadowKernel;
-	float shadowBias;
-	uint userdata;
+	uint indices;
+	uint userdata0;
+	uint userdata1;
 
 	inline uint GetType()
 	{
@@ -83,22 +92,22 @@ struct ShaderEntity
 		params |= (flags & 0xFFFF) << 16;
 	}
 
-	inline void SetShadowIndices(uint shadowMatrixIndex, uint shadowMapIndex)
+	inline void SetIndices(uint matrixIndex, uint textureIndex)
 	{
-		userdata = shadowMatrixIndex & 0xFFFF;
-		userdata |= (shadowMapIndex & 0xFFFF) << 16;
+		indices = matrixIndex & 0xFFFF;
+		indices |= (textureIndex & 0xFFFF) << 16;
 	}
-	inline uint GetShadowMatrixIndex()
+	inline uint GetMatrixIndex()
 	{
-		return userdata & 0xFFFF;
+		return indices & 0xFFFF;
 	}
-	inline uint GetShadowMapIndex()
+	inline uint GetTextureIndex()
 	{
-		return (userdata >> 16) & 0xFFFF;
+		return (indices >> 16) & 0xFFFF;
 	}
 	inline bool IsCastingShadow()
 	{
-		return userdata != ~0;
+		return indices != ~0;
 	}
 
 	// Load uncompressed color:
@@ -106,10 +115,10 @@ struct ShaderEntity
 	{
 		float4 fColor;
 
-		fColor.x = (float)((color >> 0) & 0x000000FF) / 255.0f;
-		fColor.y = (float)((color >> 8) & 0x000000FF) / 255.0f;
-		fColor.z = (float)((color >> 16) & 0x000000FF) / 255.0f;
-		fColor.w = (float)((color >> 24) & 0x000000FF) / 255.0f;
+		fColor.x = (float)((color >> 0) & 0xFF) / 255.0f;
+		fColor.y = (float)((color >> 8) & 0xFF) / 255.0f;
+		fColor.z = (float)((color >> 16) & 0xFF) / 255.0f;
+		fColor.w = (float)((color >> 24) & 0xFF) / 255.0f;
 
 		return fColor;
 	}
@@ -245,6 +254,10 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 
 	float3		g_xFrame_WorldBoundsExtents_rcp;	// world enclosing AABB 1.0f / abs(max - min)
 	uint		g_xFrame_TemporalAASampleRotation;
+
+	float		g_xFrame_ShadowKernel2D;
+	float		g_xFrame_ShadowKernelCube;
+	float2		g_xFrame_padding0;
 };
 
 CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)

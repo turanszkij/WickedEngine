@@ -228,7 +228,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			{
 				ShaderEntity decal = EntityArray[g_xFrame_DecalArrayOffset + entity_index];
 
-				const float4x4 decalProjection = MatrixArray[decal.userdata];
+				const float4x4 decalProjection = MatrixArray[decal.GetMatrixIndex()];
 				const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
 				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 				[branch]
@@ -294,7 +294,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			{
 				ShaderEntity probe = EntityArray[g_xFrame_EnvProbeArrayOffset + entity_index];
 
-				const float4x4 probeProjection = MatrixArray[probe.userdata];
+				const float4x4 probeProjection = MatrixArray[probe.GetMatrixIndex()];
 				const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
 				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 				[branch]
@@ -450,7 +450,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 				{
 					ShaderEntity decal = EntityArray[entity_index];
 
-					const float4x4 decalProjection = MatrixArray[decal.userdata];
+					const float4x4 decalProjection = MatrixArray[decal.GetMatrixIndex()];
 					const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
 					const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 					[branch]
@@ -529,7 +529,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 				{
 					ShaderEntity probe = EntityArray[entity_index];
 
-					const float4x4 probeProjection = MatrixArray[probe.userdata];
+					const float4x4 probeProjection = MatrixArray[probe.GetMatrixIndex()];
 					const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
 					const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 					[branch]

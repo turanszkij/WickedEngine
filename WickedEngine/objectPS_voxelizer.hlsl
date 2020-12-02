@@ -284,7 +284,7 @@ void main(PSInput input)
 							if (light.IsCastingShadow() >= 0)
 							{
 								const uint cascade = g_xFrame_ShadowCascadeCount - 1; // biggest cascade (coarsest resolution) will be used to voxelize
-								float3 ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + cascade], float4(P, 1)).xyz; // ortho matrix, no divide by .w
+								float3 ShPos = mul(MatrixArray[light.GetMatrixIndex() + cascade], float4(P, 1)).xyz; // ortho matrix, no divide by .w
 								float3 ShTex = ShPos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
 								[branch] if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y) && (saturate(ShTex.z) == ShTex.z))
@@ -361,7 +361,7 @@ void main(PSInput input)
 									[branch]
 									if (light.IsCastingShadow() >= 0)
 									{
-										float4 ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + 0], float4(P, 1));
+										float4 ShPos = mul(MatrixArray[light.GetMatrixIndex() + 0], float4(P, 1));
 										ShPos.xyz /= ShPos.w;
 										float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 										[branch]

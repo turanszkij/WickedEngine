@@ -404,15 +404,6 @@ namespace wiRenderer
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
-	void Postprocess_Denoise(
-		const wiGraphics::Texture& input_output_current,
-		const wiGraphics::Texture& temporal_history,
-		const wiGraphics::Texture& temporal_current,
-		const wiGraphics::Texture& velocity,
-		const wiGraphics::Texture& lineardepth,
-		const wiGraphics::Texture& depth_history,
-		wiGraphics::CommandList cmd
-	);
 
 	// Build the scene BVH on GPU that can be used by ray traced rendering
 	void BuildSceneBVH(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
@@ -574,6 +565,7 @@ namespace wiRenderer
 	bool GetRaytracedShadowsEnabled();
 	void SetTessellationEnabled(bool value);
 	bool GetTessellationEnabled();
+	bool IsWaterrippleRendering();
 
 	const wiGraphics::Texture* GetGlobalLightmap();
 

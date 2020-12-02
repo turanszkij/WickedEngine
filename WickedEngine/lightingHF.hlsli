@@ -7,6 +7,7 @@
 
 #ifdef BRDF_CARTOON
 #define DISABLE_SOFT_SHADOWMAP
+#define DISABLE_SOFT_RTSHADOW
 #endif // BRDF_CARTOON
 
 struct LightingContribution
@@ -51,7 +52,7 @@ inline LightingPart CombineLighting(in Surface surface, in Lighting lighting)
 
 inline float3 shadowCascade(in ShaderEntity light, in float3 shadowPos, in float2 shadowUV, in uint cascade) 
 {
-	const float realDistance = shadowPos.z + light.shadowBias;
+	const float realDistance = shadowPos.z;
 	float3 shadow = 0;
 #ifndef DISABLE_SOFT_SHADOWMAP
 	const float range = 1.5f;
@@ -61,19 +62,19 @@ inline float3 shadowCascade(in ShaderEntity light, in float3 shadowPos, in float
 		[loop]
 		for (float x = -range; x <= range; x += 1.0f)
 		{
-			shadow.x += texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(shadowUV + float2(x, y) * light.shadowKernel, light.GetShadowMapIndex() + cascade), realDistance);
+			shadow.x += texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(shadowUV + float2(x, y) * g_xFrame_ShadowKernel2D, light.GetTextureIndex() + cascade), realDistance);
 			shadow.y++;
 		}
 	}
 	shadow = shadow.x / shadow.y;
 #else
-	shadow = texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(shadowUV, light.GetShadowMapIndex() + cascade), realDistance).r;
+	shadow = texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(shadowUV, light.GetTextureIndex() + cascade), realDistance).r;
 #endif // DISABLE_SOFT_SHADOWMAP
 
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
 	if (g_xFrame_Options & OPTION_BIT_TRANSPARENTSHADOWS_ENABLED)
 	{
-		shadow *= texture_shadowarray_transparent.SampleLevel(sampler_linear_clamp, float3(shadowUV, light.GetShadowMapIndex() + cascade), 0);
+		shadow *= texture_shadowarray_transparent.SampleLevel(sampler_linear_clamp, float3(shadowUV, light.GetTextureIndex() + cascade), 0);
 	}
 #endif //DISABLE_TRANSPARENT_SHADOWMAP
 
@@ -83,7 +84,7 @@ inline float3 shadowCascade(in ShaderEntity light, in float3 shadowPos, in float
 inline float shadowCube(in ShaderEntity light, float3 Lunnormalized)
 {
 	const float remappedDistance = light.GetCubemapDepthRemapNear() + light.GetCubemapDepthRemapFar() / max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z));
-	return texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-Lunnormalized, light.GetShadowMapIndex()), remappedDistance + light.shadowBias).r;
+	return texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-Lunnormalized, light.GetTextureIndex()), remappedDistance).r;
 }
 
 inline float shadowTrace(in Surface surface, in float3 L, in float dist)
@@ -101,7 +102,7 @@ inline float shadowTrace(in Surface surface, in float3 L, in float dist)
 	ray.Origin = surface.P + surface.N * 0.01;
 	ray.Direction = L;
 
-#ifndef BRDF_CARTOON
+#ifndef DISABLE_SOFT_RTSHADOW
 	float seed = g_xFrame_FrameCount * 0.001f;
 	float2 uv = surface.screenUV;
 	float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1; // todo: should be specific to light surface
@@ -146,7 +147,7 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 				for (uint cascade = 0; cascade < g_xFrame_ShadowCascadeCount; ++cascade)
 				{
 					// Project into shadow map space (no need to divide by .w because ortho projection!):
-					float3 ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + cascade], float4(surface.P, 1)).xyz;
+					float3 ShPos = mul(MatrixArray[light.GetMatrixIndex() + cascade], float4(surface.P, 1)).xyz;
 					float3 ShTex = ShPos * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
 					// Determine if pixel is inside current cascade bounds and compute shadow if it is:
@@ -163,7 +164,7 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 						{
 							// Project into next shadow cascade (no need to divide by .w because ortho projection!):
 							cascade += 1;
-							ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + cascade], float4(surface.P, 1)).xyz;
+							ShPos = mul(MatrixArray[light.GetMatrixIndex() + cascade], float4(surface.P, 1)).xyz;
 							ShTex = ShPos * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 							const float3 shadow_fallback = shadowCascade(light, ShPos, ShTex.xy, cascade);
 
@@ -286,7 +287,7 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 					}
 					else
 					{
-						float4 ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + 0], float4(surface.P, 1));
+						float4 ShPos = mul(MatrixArray[light.GetMatrixIndex() + 0], float4(surface.P, 1));
 						ShPos.xyz /= ShPos.w;
 						float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 						[branch]
@@ -871,7 +872,7 @@ inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity pr
 	float3 R_parallaxCorrected = IntersectPositionWS - probe.positionWS;
 
 	// Sample cubemap texture:
-	float3 envmapColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.shadowBias), MIP).rgb; // shadowBias stores textureIndex here...
+	float3 envmapColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.GetTextureIndex()), MIP).rgb; // GetFlags() stores textureIndex here...
 	// blend out if close to any cube edge:
 	float edgeBlend = 1 - pow(saturate(max(abs(clipSpacePos.x), max(abs(clipSpacePos.y), abs(clipSpacePos.z)))), 8);
 

@@ -103,20 +103,6 @@ void LightWindow::Create(EditorComponent* editor)
 	fovSlider.SetTooltip("Adjust the cone aperture for spotlight.");
 	AddWidget(&fovSlider);
 
-	biasSlider.Create(0.0f, 0.2f, 0, 100000, "ShadowBias: ");
-	biasSlider.SetSize(XMFLOAT2(100, hei));
-	biasSlider.SetPos(XMFLOAT2(x, y += step));
-	biasSlider.OnSlide([&](wiEventArgs args) {
-		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
-		if (light != nullptr)
-		{
-			light->shadowBias = args.fValue;
-		}
-	});
-	biasSlider.SetEnabled(false);
-	biasSlider.SetTooltip("Adjust the shadow bias if shadow artifacts occur.");
-	AddWidget(&biasSlider);
-
 	shadowCheckBox.Create("Shadow: ");
 	shadowCheckBox.SetSize(XMFLOAT2(hei, hei));
 	shadowCheckBox.SetPos(XMFLOAT2(x, y += step));
@@ -218,7 +204,6 @@ void LightWindow::Create(EditorComponent* editor)
 		{
 			light->SetType((LightComponent::LightType)args.iValue);
 			SetLightType(light->GetType());
-			biasSlider.SetValue(light->shadowBias);
 		}
 	});
 	typeSelectorComboBox.AddItem("Directional");
@@ -311,8 +296,6 @@ void LightWindow::SetEntity(Entity entity)
 		widthSlider.SetValue(light->width);
 		heightSlider.SetValue(light->height);
 		fovSlider.SetValue(light->fov);
-		biasSlider.SetEnabled(true);
-		biasSlider.SetValue(light->shadowBias);
 		shadowCheckBox.SetEnabled(true);
 		shadowCheckBox.SetCheck(light->IsCastingShadow());
 		haloCheckBox.SetEnabled(true);
@@ -347,7 +330,6 @@ void LightWindow::SetEntity(Entity entity)
 		widthSlider.SetEnabled(false);
 		heightSlider.SetEnabled(false);
 		fovSlider.SetEnabled(false);
-		biasSlider.SetEnabled(false);
 		shadowCheckBox.SetEnabled(false);
 		haloCheckBox.SetEnabled(false);
 		volumetricsCheckBox.SetEnabled(false);

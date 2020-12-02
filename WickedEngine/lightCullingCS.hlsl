@@ -285,7 +285,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
 				// frustum AABB in world space transformed into the space of the probe/decal OBB:
 				AABB b = GroupAABB_WS;
-				AABBtransform(b, MatrixArray[entity.userdata]);
+				AABBtransform(b, MatrixArray[entity.GetMatrixIndex()]);
 
 				if (IntersectAABB(a, b))
 				{

@@ -1179,7 +1179,6 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_UNORM4], "upsample_bilateral_unorm4CS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_DOWNSAMPLE4X], "downsample4xCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_NORMALSFROMDEPTH], "normalsfromdepthCS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_DENOISE], "denoiseCS.cso"); });
 
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(HS, shaders[HSTYPE_OBJECT], "objectHS.cso"); });
@@ -1983,25 +1982,15 @@ void SetUpStates()
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_BACK;
 	rs.FrontCounterClockwise = true;
-	rs.DepthBias = 0;
+	rs.DepthBias = -2;
 	rs.DepthBiasClamp = 0;
-	rs.SlopeScaledDepthBias = -2.0f;
+	rs.SlopeScaledDepthBias = -4.0f;
 	rs.DepthClipEnable = true;
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
 	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_SHADOW]);
-
-	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_NONE;
-	rs.FrontCounterClockwise = true;
-	rs.DepthBias = 0;
-	rs.DepthBiasClamp = 0;
-	rs.SlopeScaledDepthBias = -2.0f;
-	rs.DepthClipEnable = true;
-	rs.MultisampleEnable = false;
-	rs.AntialiasedLineEnable = false;
-	rs.ConservativeRasterizationEnable = false;
 	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_SHADOW_DOUBLESIDED]);
 
 	rs.FillMode = FILL_WIREFRAME;
@@ -2125,55 +2114,6 @@ void SetUpStates()
 	dsd.DepthFunc = COMPARISON_GREATER;
 	dsd.StencilEnable = false;
 	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_CAPTUREIMPOSTOR]);
-
-	dsd.DepthEnable = true;
-	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthFunc = COMPARISON_LESS;
-	dsd.StencilEnable = false;
-	dsd.StencilReadMask = 0;
-	dsd.StencilWriteMask = 0;
-	dsd.FrontFace.StencilFunc = COMPARISON_GREATER_EQUAL;
-	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = COMPARISON_GREATER_EQUAL;
-	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	//device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DEFERREDLIGHT]);
-
-	dsd.DepthEnable = true;
-	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthFunc = COMPARISON_LESS;
-	dsd.StencilEnable = false;
-	dsd.StencilReadMask = 0;
-	dsd.StencilWriteMask = 0;
-	dsd.FrontFace.StencilFunc = COMPARISON_LESS_EQUAL;
-	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = COMPARISON_LESS_EQUAL;
-	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DEFERREDCOMPOSITION]);
-
-
-	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthEnable = false;
-	dsd.StencilEnable = true;
-	dsd.DepthFunc = COMPARISON_GREATER;
-	dsd.StencilReadMask = STENCILREF_MASK_ENGINE;
-	dsd.StencilWriteMask = 0x00;
-	dsd.FrontFace.StencilFunc = COMPARISON_EQUAL;
-	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = COMPARISON_EQUAL;
-	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_SSS]);
 
 
 	dsd.DepthEnable = true;
@@ -3770,7 +3710,7 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 			entityArray[entityCounter].color = wiMath::CompressColor(XMFLOAT4(decal.color.x, decal.color.y, decal.color.z, decal.GetOpacity()));
 			entityArray[entityCounter].energy = decal.emissive;
 
-			entityArray[entityCounter].userdata = matrixCounter;
+			entityArray[entityCounter].SetIndices(matrixCounter, 0);
 			matrixArray[matrixCounter] = XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world));
 			matrixCounter++;
 
@@ -3806,9 +3746,8 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 			entityArray[entityCounter].positionWS = probe.position;
 			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&probe.position), viewMatrix));
 			entityArray[entityCounter].range = probe.range;
-			entityArray[entityCounter].shadowBias = (float)probe.textureIndex;
 
-			entityArray[entityCounter].userdata = matrixCounter;
+			entityArray[entityCounter].SetIndices(matrixCounter, (uint32_t)probe.textureIndex);
 			matrixArray[matrixCounter] = XMLoadFloat4x4(&probe.inverseMatrix);
 			matrixCounter++;
 
@@ -3835,13 +3774,12 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 			entityArray[entityCounter].range = light.GetRange();
 			entityArray[entityCounter].color = wiMath::CompressColor(light.color);
 			entityArray[entityCounter].energy = light.energy;
-			entityArray[entityCounter].shadowBias = light.shadowBias;
-			entityArray[entityCounter].userdata = ~0;
+			entityArray[entityCounter].indices = ~0;
 
 			const bool shadow = light.IsCastingShadow() && light.shadowMap_index >= 0;
 			if (shadow)
 			{
-				entityArray[entityCounter].SetShadowIndices(matrixCounter, (uint)light.shadowMap_index);
+				entityArray[entityCounter].SetIndices(matrixCounter, (uint)light.shadowMap_index);
 			}
 
 			switch (light.GetType())
@@ -3849,7 +3787,6 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 			case LightComponent::DIRECTIONAL:
 			{
 				entityArray[entityCounter].directionWS = light.direction;
-				entityArray[entityCounter].shadowKernel = 1.0f / SHADOWRES_2D;
 
 				if (shadow)
 				{
@@ -3866,7 +3803,6 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 				entityArray[entityCounter].coneAngleCos = cosf(light.fov * 0.5f);
 				entityArray[entityCounter].directionWS = light.direction;
 				XMStoreFloat3(&entityArray[entityCounter].directionVS, XMVector3TransformNormal(XMLoadFloat3(&entityArray[entityCounter].directionWS), viewMatrix));
-				entityArray[entityCounter].shadowKernel = 1.0f / SHADOWRES_2D;
 
 				if (shadow)
 				{
@@ -3874,11 +3810,6 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 					CreateSpotLightShadowCam(light, shcam);
 					matrixArray[matrixCounter++] = shcam.VP;
 				}
-			}
-			break;
-			case LightComponent::POINT:
-			{
-				entityArray[entityCounter].shadowKernel = 1.0f / SHADOWRES_CUBE;
 			}
 			break;
 			case LightComponent::SPHERE:
@@ -8541,6 +8472,8 @@ void UpdateFrameCB(const Scene& scene, CommandList cmd)
 		}
 		cb.g_xFrame_TemporalAASampleRotation = (x & 0x000000FF) | ((y & 0x000000FF) << 8);
 	}
+	cb.g_xFrame_ShadowKernel2D = 1.0f / SHADOWRES_2D;
+	cb.g_xFrame_ShadowKernelCube = 1.0f / SHADOWRES_CUBE;
 
 	cb.g_xFrame_WorldBoundsMin = scene.bounds.getMin();
 	cb.g_xFrame_WorldBoundsMax = scene.bounds.getMax();
@@ -11997,80 +11930,6 @@ void Postprocess_NormalsFromDepth(
 	device->UnbindUAVs(0, arraysize(uavs), cmd);
 	device->EventEnd(cmd);
 }
-void Postprocess_Denoise(
-	const Texture& input_output_current,
-	const Texture& temporal_history,
-	const Texture& temporal_current,
-	const Texture& velocity,
-	const Texture& lineardepth,
-	const Texture& depth_history,
-	CommandList cmd
-)
-{
-	device->EventBegin("Postprocess_Denoise", cmd);
-	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DENOISE], cmd);
-
-	const TextureDesc& desc = input_output_current.GetDesc();
-
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
-
-	device->BindResource(CS, &velocity, TEXSLOT_GBUFFER1, cmd);
-
-	{
-		device->BindResource(CS, &input_output_current, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &temporal_history, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
-		device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-
-		const GPUResource* uavs[] = {
-			&temporal_current,
-		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-		device->Dispatch(
-			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			1,
-			cmd
-		);
-
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
-	}
-	{
-		device->BindResource(CS, &temporal_current, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &temporal_history, TEXSLOT_ONDEMAND1, cmd);
-
-		const GPUResource* uavs[] = {
-			&input_output_current,
-		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-		device->Dispatch(
-			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			1,
-			cmd
-		);
-
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
-	}
-
-	device->EventEnd(cmd);
-}
 
 
 RAY GetPickRay(long cursorX, long cursorY, const CameraComponent& camera)
@@ -12262,6 +12121,10 @@ void SetTessellationEnabled(bool value)
 bool GetTessellationEnabled()
 {
 	return tessellationEnabled;
+}
+bool IsWaterrippleRendering()
+{
+	return !waterRipples.empty();
 }
 
 }

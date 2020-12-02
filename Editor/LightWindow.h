@@ -19,7 +19,6 @@ public:
 	wiSlider widthSlider;
 	wiSlider heightSlider;
 	wiSlider fovSlider;
-	wiSlider biasSlider;
 	wiCheckBox	shadowCheckBox;
 	wiCheckBox	haloCheckBox;
 	wiCheckBox	volumetricsCheckBox;

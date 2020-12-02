@@ -140,7 +140,6 @@ set(SHADERS_CS
 		"volumetricCloud_finalCS.hlsl"
 		"shadingRateClassificationCS.hlsl"
 		"shadingRateClassificationCS_DEBUG.hlsl"
-        "denoiseCS.hlsl"
         "skyAtmosphere_transmittanceLutCS.hlsl"
         "skyAtmosphere_skyViewLutCS.hlsl"
         "skyAtmosphere_multiScatteredLuminanceLutCS.hlsl"
