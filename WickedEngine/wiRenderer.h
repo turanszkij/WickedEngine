@@ -228,12 +228,6 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd
 	);
 
-	void DeferredComposition(
-		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
-		const wiGraphics::Texture& depth,
-		wiGraphics::CommandList cmd
-	);
-
 	void Postprocess_Blur_Gaussian(
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& temp,
@@ -303,15 +297,6 @@ namespace wiRenderer
 		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
-	);
-	void Postprocess_SSS(
-		const wiGraphics::Texture& lineardepth,
-		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
-		const wiGraphics::RenderPass& input_output_lightbuffer_diffuse,
-		const wiGraphics::RenderPass& input_output_temp1,
-		const wiGraphics::RenderPass& input_output_temp2,
-		wiGraphics::CommandList cmd,
-		float amount = 1.0f
 	);
 	void Postprocess_LightShafts(
 		const wiGraphics::Texture& input,
@@ -417,15 +402,6 @@ namespace wiRenderer
 	void Postprocess_NormalsFromDepth(
 		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture& output,
-		wiGraphics::CommandList cmd
-	);
-	void Postprocess_Denoise(
-		const wiGraphics::Texture& input_output_current,
-		const wiGraphics::Texture& temporal_history,
-		const wiGraphics::Texture& temporal_current,
-		const wiGraphics::Texture& velocity,
-		const wiGraphics::Texture& lineardepth,
-		const wiGraphics::Texture& depth_history,
 		wiGraphics::CommandList cmd
 	);
 
@@ -589,6 +565,7 @@ namespace wiRenderer
 	bool GetRaytracedShadowsEnabled();
 	void SetTessellationEnabled(bool value);
 	bool GetTessellationEnabled();
+	bool IsWaterrippleRendering();
 
 	const wiGraphics::Texture* GetGlobalLightmap();
 

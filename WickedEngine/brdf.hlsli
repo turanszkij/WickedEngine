@@ -42,6 +42,8 @@ struct Surface
 	float3 T;				// tangent
 	float3 B;				// bitangent
 	float anisotropy;		// anisotropy factor [0 -> 1]
+	float4 sss;				// subsurface scattering color * amount
+	float4 sss_inv;			// 1 / (1 + sss)
 
 	float alphaRoughness;	// roughness remapped from perceptual to a "more linear change in roughness"
 	float alphaRoughnessSq;	// roughness input to brdf functions
@@ -111,6 +113,8 @@ inline Surface CreateSurface(
 	surface.pixel = 0;
 	surface.screenUV = 0;
 	surface.anisotropy = anisotropy;
+	surface.sss = 0;
+	surface.sss_inv = 1;
 	surface.T = T;
 	surface.B = B;
 
@@ -124,6 +128,7 @@ struct SurfaceToLight
 	float3 L;		// surface to light vector (normalized)
 	float3 H;		// half-vector between view vector and light vector
 	float NdotL;	// cos angle between normal and light direction
+	float3 NdotL_sss;	// NdotL with subsurface parameters applied
 	float NdotV;	// cos angle between normal and view direction
 	float NdotH;	// cos angle between normal and half vector
 	float LdotH;	// cos angle between light direction and half vector
@@ -143,7 +148,10 @@ inline SurfaceToLight CreateSurfaceToLight(in Surface surface, in float3 L)
 	surfaceToLight.L = L;
 	surfaceToLight.H = normalize(L + surface.V);
 
-	surfaceToLight.NdotL = saturate(dot(surfaceToLight.L, surface.N));
+	surfaceToLight.NdotL = dot(surfaceToLight.L, surface.N);
+
+	surfaceToLight.NdotL_sss = (surfaceToLight.NdotL + surface.sss.rgb) * surface.sss_inv.rgb;
+
 	surfaceToLight.NdotV = saturate(dot(surface.N, surface.V));
 	surfaceToLight.NdotH = saturate(dot(surface.N, surfaceToLight.H));
 	surfaceToLight.LdotH = saturate(dot(surfaceToLight.L, surfaceToLight.H));
@@ -157,9 +165,21 @@ inline SurfaceToLight CreateSurfaceToLight(in Surface surface, in float3 L)
 	surfaceToLight.BdotH = dot(surface.B, surfaceToLight.H);
 
 #ifdef BRDF_CARTOON
+	// SSS is handled differently in cartoon shader:
+	//	1) The diffuse wraparound is monochrome at first to avoid banding with smoothstep()
+	surfaceToLight.NdotL_sss = (surfaceToLight.NdotL + surface.sss.a) * surface.sss_inv.a;
+
 	surfaceToLight.NdotL = smoothstep(0.005, 0.05, surfaceToLight.NdotL);
+	surfaceToLight.NdotL_sss = smoothstep(0.005, 0.05, surfaceToLight.NdotL_sss);
 	surfaceToLight.NdotH = smoothstep(0.98, 0.99, surfaceToLight.NdotH);
+
+	// SSS is handled differently in cartoon shader:
+	//	2) The diffuse wraparound is tinted after smoothstep
+	surfaceToLight.NdotL_sss = (surfaceToLight.NdotL_sss + surface.sss.rgb) * surface.sss_inv.rgb;
 #endif // BRDF_CARTOON
+
+	surfaceToLight.NdotL = saturate(surfaceToLight.NdotL);
+	surfaceToLight.NdotL_sss = saturate(surfaceToLight.NdotL_sss);
 
 	return surfaceToLight;
 }
@@ -256,7 +276,9 @@ float3 BRDF_GetSpecular(in Surface surface, in SurfaceToLight surfaceToLight)
 }
 float3 BRDF_GetDiffuse(in Surface surface, in SurfaceToLight surfaceToLight)
 {
-	return (1.0 - surfaceToLight.F) / PI;
+	// Note: subsurface scattering will remove Fresnel (F), because otherwise
+	//	there would be artifact on backside where diffuse wraps
+	return (1.0 - lerp(surfaceToLight.F, 0, saturate(surface.sss.a))) / PI;
 }
 
 #endif // WI_BRDF_HF

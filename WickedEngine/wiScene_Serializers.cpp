@@ -104,12 +104,7 @@ namespace wiScene
 			archive >> refractionIndex;
 			if (archive.GetVersion() < 52)
 			{
-				float subsurfaceScattering;
-				archive >> subsurfaceScattering;
-				if (subsurfaceScattering > 0)
-				{
-					subsurfaceProfile = SUBSURFACE_SKIN;
-				}
+				archive >> subsurfaceScattering.w;
 			}
 			archive >> normalMapStrength;
 			archive >> parallaxOcclusionMapping;
@@ -168,9 +163,15 @@ namespace wiScene
 				}
 			}
 
-			if (archive.GetVersion() >= 52)
+			if (archive.GetVersion() >= 52 && archive.GetVersion() < 54)
 			{
-				archive >> (uint32_t&)subsurfaceProfile;
+				uint32_t subsurfaceProfile;
+				archive >> subsurfaceProfile;
+			}
+
+			if (archive.GetVersion() >= 54)
+			{
+				archive >> subsurfaceScattering;
 			}
 
 			wiJobSystem::Execute(seri.ctx, [&](wiJobArgs args) {
@@ -278,9 +279,9 @@ namespace wiScene
 				archive << customShaderID;
 			}
 
-			if (archive.GetVersion() >= 52)
+			if (archive.GetVersion() >= 54)
 			{
-				archive << (uint32_t&)subsurfaceProfile;
+				archive << subsurfaceScattering;
 			}
 		}
 	}

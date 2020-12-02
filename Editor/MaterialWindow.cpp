@@ -144,23 +144,6 @@ void MaterialWindow::Create(EditorComponent* editor)
 	blendModeComboBox.SetTooltip("Set the blend mode of the material.");
 	AddWidget(&blendModeComboBox);
 
-	sssComboBox.Create("Subsurface profile: ");
-	sssComboBox.SetPos(XMFLOAT2(x, y += step));
-	sssComboBox.SetSize(XMFLOAT2(wid, hei));
-	sssComboBox.OnSelect([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr && args.iValue >= 0)
-		{
-			material->subsurfaceProfile = (MaterialComponent::SUBSURFACE_PROFILE)args.iValue;
-		}
-		});
-	sssComboBox.AddItem("Solid");
-	sssComboBox.AddItem("Skin");
-	sssComboBox.AddItem("Snow");
-	sssComboBox.SetEnabled(false);
-	sssComboBox.SetTooltip("Set the subsurface profile of the material. Needs the SSS prost process enabled.");
-	AddWidget(&sssComboBox);
-
 	shadingRateComboBox.Create("Shading Rate: ");
 	shadingRateComboBox.SetTooltip("Select shading rate for this material. \nSelecting larger shading rate will decrease rendering quality of this material, \nbut increases performance.\nDX12 only and requires Tier1 hardware support for variable shading rate");
 	shadingRateComboBox.SetPos(XMFLOAT2(x, y += step));
@@ -234,7 +217,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	AddWidget(&metalnessSlider);
 
 	alphaRefSlider.Create(0, 1, 1.0f, 1000, "AlphaRef: ");
-	alphaRefSlider.SetTooltip("Adjust the alpha cutoff threshold. Some performance optimizations will be disabled.");
+	alphaRefSlider.SetTooltip("Adjust the alpha cutoff threshold. Alpha cutout can affect performance");
 	alphaRefSlider.SetSize(XMFLOAT2(wid, hei));
 	alphaRefSlider.SetPos(XMFLOAT2(x, y += step));
 	alphaRefSlider.OnSlide([&](wiEventArgs args) {
@@ -287,6 +270,17 @@ void MaterialWindow::Create(EditorComponent* editor)
 			material->SetDisplacementMapping(args.fValue);
 	});
 	AddWidget(&displacementMappingSlider);
+
+	subsurfaceScatteringSlider.Create(0, 2, 0.0f, 1000, "Subsurface Scattering: ");
+	subsurfaceScatteringSlider.SetTooltip("Subsurface scattering amount. \nYou can also adjust the subsurface color by selecting it in the color picker");
+	subsurfaceScatteringSlider.SetSize(XMFLOAT2(wid, hei));
+	subsurfaceScatteringSlider.SetPos(XMFLOAT2(x, y += step));
+	subsurfaceScatteringSlider.OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+			material->SetSubsurfaceScatteringAmount(args.fValue);
+	});
+	AddWidget(&subsurfaceScatteringSlider);
 
 	texAnimFrameRateSlider.Create(0, 60, 0, 60, "Texcoord anim FPS: ");
 	texAnimFrameRateSlider.SetTooltip("Adjust the texture animation frame rate (frames per second). Any value above 0 will make the material dynamic.");
@@ -752,6 +746,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	colorComboBox.SetPos(XMFLOAT2(x + 150, y += step));
 	colorComboBox.AddItem("Base color");
 	colorComboBox.AddItem("Emissive color");
+	colorComboBox.AddItem("Subsurface color");
 	colorComboBox.SetTooltip("Choose the destination data of the color picker.");
 	AddWidget(&colorComboBox);
 
@@ -776,6 +771,9 @@ void MaterialWindow::Create(EditorComponent* editor)
 				XMFLOAT3 col = args.color.toFloat3();
 				material->SetEmissiveColor(XMFLOAT4(col.x, col.y, col.z, material->GetEmissiveStrength()));
 			}
+			break;
+			case 2:
+				material->SetSubsurfaceScatteringColor(args.color.toFloat3());
 			break;
 			}
 		}
@@ -819,6 +817,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		emissiveSlider.SetValue(material->emissiveColor.w);
 		pomSlider.SetValue(material->parallaxOcclusionMapping);
 		displacementMappingSlider.SetValue(material->displacementMapping);
+		subsurfaceScatteringSlider.SetValue(material->subsurfaceScattering.w);
 		texAnimFrameRateSlider.SetValue(material->texAnimFrameRate);
 		texAnimDirectionSliderU.SetValue(material->texAnimDirection.x);
 		texAnimDirectionSliderV.SetValue(material->texAnimDirection.y);
@@ -826,7 +825,6 @@ void MaterialWindow::SetEntity(Entity entity)
 		texMulSliderY.SetValue(material->texMulAdd.y);
 		alphaRefSlider.SetValue(material->alphaRef);
 		blendModeComboBox.SetSelected((int)material->userBlendMode);
-		sssComboBox.SetSelected((int)material->subsurfaceProfile);
 		if (material->GetCustomShaderID() >= 0)
 		{
 			shaderTypeComboBox.SetSelected(MaterialComponent::SHADERTYPE_COUNT + material->GetCustomShaderID());
@@ -863,6 +861,9 @@ void MaterialWindow::SetEntity(Entity entity)
 			break;
 		case 1:
 			colorPicker.SetPickColor(wiColor::fromFloat3(XMFLOAT3(material->emissiveColor.x, material->emissiveColor.y, material->emissiveColor.z)));
+			break;
+		case 2:
+			colorPicker.SetPickColor(wiColor::fromFloat3(XMFLOAT3(material->subsurfaceScattering.x, material->subsurfaceScattering.y, material->subsurfaceScattering.z)));
 			break;
 		}
 

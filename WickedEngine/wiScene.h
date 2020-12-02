@@ -141,19 +141,13 @@ namespace wiScene
 			SHADERTYPE_COUNT
 		} shaderType = SHADERTYPE_PBR;
 
-		enum SUBSURFACE_PROFILE
-		{
-			SUBSURFACE_SOLID,
-			SUBSURFACE_SKIN,
-			SUBSURFACE_SNOW,
-		} subsurfaceProfile = SUBSURFACE_SOLID;
-
 		STENCILREF engineStencilRef = STENCILREF_DEFAULT;
 		uint8_t userStencilRef = 0;
 		BLENDMODE userBlendMode = BLENDMODE_OPAQUE;
 
 		XMFLOAT4 baseColor = XMFLOAT4(1, 1, 1, 1);
 		XMFLOAT4 emissiveColor = XMFLOAT4(1, 1, 1, 0);
+		XMFLOAT4 subsurfaceScattering = XMFLOAT4(1, 1, 1, 0);
 		XMFLOAT4 texMulAdd = XMFLOAT4(1, 1, 0, 0);
 		float roughness = 0.2f;
 		float reflectance = 0.02f;
@@ -243,6 +237,14 @@ namespace wiScene
 		inline void SetNormalMapStrength(float value) { SetDirty(); normalMapStrength = value; }
 		inline void SetParallaxOcclusionMapping(float value) { SetDirty(); parallaxOcclusionMapping = value; }
 		inline void SetDisplacementMapping(float value) { SetDirty(); displacementMapping = value; }
+		inline void SetSubsurfaceScatteringColor(XMFLOAT3 value)
+		{
+			SetDirty();
+			subsurfaceScattering.x = value.x;
+			subsurfaceScattering.y = value.y;
+			subsurfaceScattering.z = value.z;
+		}
+		inline void SetSubsurfaceScatteringAmount(float value) { SetDirty(); subsurfaceScattering.w = value; }
 		inline void SetOpacity(float value) { SetDirty(); baseColor.w = value; }
 		inline void SetAlphaRef(float value) { SetDirty();  alphaRef = value; }
 		inline void SetUseVertexColors(bool value) { SetDirty(); if (value) { _flags |= USE_VERTEXCOLORS; } else { _flags &= ~USE_VERTEXCOLORS; } }
@@ -775,10 +777,10 @@ namespace wiScene
 		float energy = 1.0f;
 		float range_local = 10.0f;
 		float fov = XM_PIDIV4;
-		float shadowBias = 0.0001f;
-		float radius = 1.0f; // area light
-		float width = 1.0f;  // area light
-		float height = 1.0f; // area light
+		float shadowBias = 0.0001f; // deprecated!
+		float radius = 1.0f; // area light only
+		float width = 1.0f;  // area light only
+		float height = 1.0f; // area light only
 
 		std::vector<std::string> lensFlareNames;
 

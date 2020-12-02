@@ -47,7 +47,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 			[branch]
 			if (light.IsCastingShadow())
 			{
-				float4 ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + 0], float4(P, 1));
+				float4 ShPos = mul(MatrixArray[light.GetMatrixIndex() + 0], float4(P, 1));
 				ShPos.xyz /= ShPos.w;
 				float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 				[branch]

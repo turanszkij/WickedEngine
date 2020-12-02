@@ -89,18 +89,18 @@ struct GBUFFEROutputType
 {
 	float4 g0	: SV_Target0;		// texture_gbuffer0
 	float4 g1	: SV_Target1;		// texture_gbuffer1
-	float4 diffuse	: SV_Target2;
-	float4 specular	: SV_Target3;
+	//float4 diffuse	: SV_Target2;
+	//float4 specular	: SV_Target3;
 };
-inline GBUFFEROutputType CreateGbuffer(in Surface surface, in float2 velocity, in Lighting lighting)
+inline GBUFFEROutputType CreateGbuffer(in float4 color, in Surface surface, in float2 velocity, in Lighting lighting)
 {
-	LightingPart combined_lighting = CombineLighting(surface, lighting);
+	//LightingPart combined_lighting = CombineLighting(surface, lighting);
 
 	GBUFFEROutputType Out;
-	Out.g0 = float4(surface.albedo, surface.roughness);		/*FORMAT_R8G8B8A8_UNORM*/
+	Out.g0 = float4(color.rgb, surface.roughness);		/*FORMAT_R16G16B16A16_FLOAT*/
 	Out.g1 = float4(encodeNormal(surface.N), velocity);		/*FORMAT_R16G16B16A16_FLOAT*/
-	Out.diffuse = float4(combined_lighting.diffuse, 1);		/*FORMAT_R11G11B10_FLOAT*/
-	Out.specular = float4(combined_lighting.specular, 1);	/*FORMAT_R11G11B10_FLOAT*/
+	//Out.diffuse = float4(combined_lighting.diffuse, 1);		/*FORMAT_R11G11B10_FLOAT*/
+	//Out.specular = float4(combined_lighting.specular, 1);	/*FORMAT_R11G11B10_FLOAT*/
 	return Out;
 }
 
@@ -228,7 +228,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			{
 				ShaderEntity decal = EntityArray[g_xFrame_DecalArrayOffset + entity_index];
 
-				const float4x4 decalProjection = MatrixArray[decal.userdata];
+				const float4x4 decalProjection = MatrixArray[decal.GetMatrixIndex()];
 				const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
 				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 				[branch]
@@ -294,7 +294,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			{
 				ShaderEntity probe = EntityArray[g_xFrame_EnvProbeArrayOffset + entity_index];
 
-				const float4x4 probeProjection = MatrixArray[probe.userdata];
+				const float4x4 probeProjection = MatrixArray[probe.GetMatrixIndex()];
 				const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
 				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 				[branch]
@@ -450,7 +450,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 				{
 					ShaderEntity decal = EntityArray[entity_index];
 
-					const float4x4 decalProjection = MatrixArray[decal.userdata];
+					const float4x4 decalProjection = MatrixArray[decal.GetMatrixIndex()];
 					const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
 					const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 					[branch]
@@ -529,7 +529,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 				{
 					ShaderEntity probe = EntityArray[entity_index];
 
-					const float4x4 probeProjection = MatrixArray[probe.userdata];
+					const float4x4 probeProjection = MatrixArray[probe.GetMatrixIndex()];
 					const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
 					const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 					[branch]
@@ -1061,10 +1061,16 @@ GBUFFEROutputType main(PIXELINPUT input)
 #endif // BRDF_ANISOTROPIC
 	);
 
+	surface.sss = g_xMaterial.subsurfaceScattering;
+	surface.sss_inv = g_xMaterial.subsurfaceScattering_inv;
+
 	surface.pixel = pixel;
 	surface.screenUV = ScreenCoord;
 
-	Lighting lighting = CreateLighting(0, 0, GetAmbient(surface.N), 0);
+	float3 ambient = GetAmbient(surface.N);
+	ambient = lerp(ambient, ambient * surface.sss.rgb, saturate(surface.sss.a));
+
+	Lighting lighting = CreateLighting(0, 0, ambient, 0);
 
 #ifndef SIMPLE_INPUT
 
@@ -1174,7 +1180,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 	// end point:
 #ifndef ALPHATESTONLY
 #ifdef OUTPUT_GBUFFER
-	return CreateGbuffer(surface, velocity, lighting);
+	return CreateGbuffer(color, surface, velocity, lighting);
 #else
 	return color;
 #endif // OUTPUT_GBUFFER

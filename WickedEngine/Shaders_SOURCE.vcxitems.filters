@@ -542,9 +542,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)oceanSurfacePS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)deferredPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)volumetricLight_SpotPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -564,9 +561,6 @@
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)sunPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)sssPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)skyPS_dynamic.hlsl">
@@ -887,9 +881,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)volumetriclight_spotVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)denoiseCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_anisotropic.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -906,9 +897,6 @@
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_transparent_unlit.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)sssPS_snow.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)hairparticle_finishUpdateCS.hlsl">

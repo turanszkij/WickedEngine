@@ -11,7 +11,7 @@ using namespace wiGraphics;
 void PostprocessWindow::Create(EditorComponent* editor)
 {
 	wiWindow::Create("PostProcess Window");
-	SetSize(XMFLOAT2(420, 520));
+	SetSize(XMFLOAT2(420, 500));
 
 	float x = 150;
 	float y = 10;
@@ -155,27 +155,6 @@ void PostprocessWindow::Create(EditorComponent* editor)
 		});
 	AddWidget(&raytracedReflectionsCheckBox);
 	raytracedReflectionsCheckBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING));
-
-	sssCheckBox.Create("SSS: ");
-	sssCheckBox.SetTooltip("Enable Subsurface Scattering. Only for PBR shaders.");
-	sssCheckBox.SetScriptTip("RenderPath3D::SetSSSEnabled(bool value)");
-	sssCheckBox.SetSize(XMFLOAT2(hei, hei));
-	sssCheckBox.SetPos(XMFLOAT2(x, y += step));
-	sssCheckBox.SetCheck(editor->renderPath->getSSSEnabled());
-	sssCheckBox.OnClick([=](wiEventArgs args) {
-		editor->renderPath->setSSSEnabled(args.bValue);
-	});
-	AddWidget(&sssCheckBox);
-
-	sssSlider.Create(0.0f, 2.0f, 1, 1000, "Amount: ");
-	sssSlider.SetTooltip("Set SSS amount for subsurface materials.");
-	sssSlider.SetSize(XMFLOAT2(100, hei));
-	sssSlider.SetPos(XMFLOAT2(x + 100, y));
-	sssSlider.SetValue((float)editor->renderPath->getSSSBlurAmount());
-	sssSlider.OnSlide([=](wiEventArgs args) {
-		editor->renderPath->setSSSBlurAmount(args.fValue);
-		});
-	AddWidget(&sssSlider);
 
 	eyeAdaptionCheckBox.Create("EyeAdaption: ");
 	eyeAdaptionCheckBox.SetTooltip("Enable eye adaption for the overall screen luminance");

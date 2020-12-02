@@ -27,6 +27,7 @@ public:
 	wiSlider emissiveSlider;
 	wiSlider pomSlider;
 	wiSlider displacementMappingSlider;
+	wiSlider subsurfaceScatteringSlider;
 	wiSlider texAnimFrameRateSlider;
 	wiSlider texAnimDirectionSliderU;
 	wiSlider texAnimDirectionSliderV;
@@ -35,7 +36,6 @@ public:
 	wiSlider alphaRefSlider;
 	wiComboBox shaderTypeComboBox;
 	wiComboBox blendModeComboBox;
-	wiComboBox sssComboBox;
 	wiComboBox shadingRateComboBox;
 
 	wiLabel texture_baseColor_Label;
