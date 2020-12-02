@@ -686,6 +686,8 @@ void RenderPath3D::Render() const
 			wiRenderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
 			wiRenderer::DrawSky(*scene, cmd);
 
+			RenderOutline(cmd);
+
 			device->RenderPassEnd(cmd);
 
 			wiProfiler::EndRange(range); // Opaque Scene
