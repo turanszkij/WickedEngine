@@ -1982,7 +1982,7 @@ void SetUpStates()
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_BACK;
 	rs.FrontCounterClockwise = true;
-	rs.DepthBias = -2;
+	rs.DepthBias = -1;
 	rs.DepthBiasClamp = 0;
 	rs.SlopeScaledDepthBias = -4.0f;
 	rs.DepthClipEnable = true;
@@ -3702,13 +3702,17 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 			const uint32_t decalIndex = vis.visibleDecals[vis.visibleDecals.size() - 1 - i]; // note: reverse order, for correct blending!
 			const DecalComponent& decal = vis.scene->decals[decalIndex];
 
+			entityArray[entityCounter] = {}; // zero out!
+
 			entityArray[entityCounter].SetType(ENTITY_TYPE_DECAL);
 			entityArray[entityCounter].positionWS = decal.position;
-			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&decal.position), viewMatrix));
-			entityArray[entityCounter].range = decal.range;
-			entityArray[entityCounter].texMulAdd = decal.atlasMulAdd;
+			float3 positionVS;
+			XMStoreFloat3(&positionVS, XMVector3TransformCoord(XMLoadFloat3(&decal.position), viewMatrix));
+			entityArray[entityCounter].SetPositionVS(positionVS);
+			entityArray[entityCounter].SetRange(decal.range);
+			entityArray[entityCounter].SetTexMulAdd(decal.atlasMulAdd);
 			entityArray[entityCounter].color = wiMath::CompressColor(XMFLOAT4(decal.color.x, decal.color.y, decal.color.z, decal.GetOpacity()));
-			entityArray[entityCounter].energy = decal.emissive;
+			entityArray[entityCounter].SetEnergy(decal.emissive);
 
 			entityArray[entityCounter].SetIndices(matrixCounter, 0);
 			matrixArray[matrixCounter] = XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world));
@@ -3742,10 +3746,14 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 				continue;
 			}
 
+			entityArray[entityCounter] = {}; // zero out!
+
 			entityArray[entityCounter].SetType(ENTITY_TYPE_ENVMAP);
 			entityArray[entityCounter].positionWS = probe.position;
-			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&probe.position), viewMatrix));
-			entityArray[entityCounter].range = probe.range;
+			float3 positionVS;
+			XMStoreFloat3(&positionVS, XMVector3TransformCoord(XMLoadFloat3(&probe.position), viewMatrix));
+			entityArray[entityCounter].SetPositionVS(positionVS);
+			entityArray[entityCounter].SetRange(probe.range);
 
 			entityArray[entityCounter].SetIndices(matrixCounter, (uint32_t)probe.textureIndex);
 			matrixArray[matrixCounter] = XMLoadFloat4x4(&probe.inverseMatrix);
@@ -3768,12 +3776,16 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 
 			const LightComponent& light = vis.scene->lights[lightIndex];
 
+			entityArray[entityCounter] = {}; // zero out!
+
 			entityArray[entityCounter].SetType(light.GetType());
 			entityArray[entityCounter].positionWS = light.position;
-			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&entityArray[entityCounter].positionWS), viewMatrix));
-			entityArray[entityCounter].range = light.GetRange();
+			float3 positionVS;
+			XMStoreFloat3(&positionVS, XMVector3TransformCoord(XMLoadFloat3(&entityArray[entityCounter].positionWS), viewMatrix));
+			entityArray[entityCounter].SetPositionVS(positionVS);
+			entityArray[entityCounter].SetRange(light.GetRange());
 			entityArray[entityCounter].color = wiMath::CompressColor(light.color);
-			entityArray[entityCounter].energy = light.energy;
+			entityArray[entityCounter].SetEnergy(light.energy);
 			entityArray[entityCounter].indices = ~0;
 
 			const bool shadow = light.IsCastingShadow() && light.shadowMap_index >= 0;
@@ -3782,11 +3794,13 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 				entityArray[entityCounter].SetIndices(matrixCounter, (uint)light.shadowMap_index);
 			}
 
+			float4 texMulAdd = {};
+
 			switch (light.GetType())
 			{
 			case LightComponent::DIRECTIONAL:
 			{
-				entityArray[entityCounter].directionWS = light.direction;
+				entityArray[entityCounter].SetDirectionWS(light.direction);
 
 				if (shadow)
 				{
@@ -3800,9 +3814,11 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 			break;
 			case LightComponent::SPOT:
 			{
-				entityArray[entityCounter].coneAngleCos = cosf(light.fov * 0.5f);
-				entityArray[entityCounter].directionWS = light.direction;
-				XMStoreFloat3(&entityArray[entityCounter].directionVS, XMVector3TransformNormal(XMLoadFloat3(&entityArray[entityCounter].directionWS), viewMatrix));
+				entityArray[entityCounter].SetConeAngleCos(cosf(light.fov * 0.5f));
+				entityArray[entityCounter].SetDirectionWS(light.direction);
+				float3 directionVS;
+				XMStoreFloat3(&directionVS, XMVector3TransformNormal(XMLoadFloat3(&light.direction), viewMatrix));
+				entityArray[entityCounter].SetDirectionVS(directionVS);
 
 				if (shadow)
 				{
@@ -3818,10 +3834,10 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 			case LightComponent::TUBE:
 			{
 				// Note: area lights are facing back by default
-				entityArray[entityCounter].directionWS = light.right;
-				entityArray[entityCounter].directionVS = light.direction;
-				entityArray[entityCounter].positionVS = light.front;
-				entityArray[entityCounter].texMulAdd = XMFLOAT4(light.radius, light.width, light.height, 0);
+				entityArray[entityCounter].SetDirectionWS(light.right);
+				entityArray[entityCounter].SetDirectionVS(light.direction);
+				entityArray[entityCounter].SetPositionVS(light.front);
+				texMulAdd = float4(light.radius, light.width, light.height, 0);
 			}
 			break;
 			}
@@ -3835,15 +3851,17 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 			case LightComponent::TUBE:
 			{
 				const float FarZ = 0.1f;	// watch out: reversed depth buffer! Also, light near plane is constant for simplicity, this should match on cpu side!
-				const float NearZ = std::max(1.0f, entityArray[entityCounter].range); // watch out: reversed depth buffer!
+				const float NearZ = std::max(1.0f, light.GetRange()); // watch out: reversed depth buffer!
 				const float fRange = FarZ / (FarZ - NearZ);
 				const float cubemapDepthRemapNear = fRange;
 				const float cubemapDepthRemapFar = -fRange * NearZ;
-				entityArray[entityCounter].texMulAdd.w = cubemapDepthRemapNear;
-				entityArray[entityCounter].coneAngleCos = cubemapDepthRemapFar;
+				texMulAdd.w = cubemapDepthRemapNear;
+				entityArray[entityCounter].SetConeAngleCos(cubemapDepthRemapFar);
 			}
 			break;
 			}
+
+			entityArray[entityCounter].SetTexMulAdd(texMulAdd);
 
 			if (light.IsStatic())
 			{
@@ -3867,13 +3885,15 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 
 			const ForceFieldComponent& force = vis.scene->forces[i];
 
+			entityArray[entityCounter] = {}; // zero out!
+
 			entityArray[entityCounter].SetType(force.type);
 			entityArray[entityCounter].positionWS = force.position;
-			entityArray[entityCounter].energy = force.gravity;
-			entityArray[entityCounter].range = 1.0f / std::max(0.0001f, force.GetRange()); // avoid division in shader
-			entityArray[entityCounter].coneAngleCos = force.GetRange(); // this will be the real range in the less common shaders...
+			entityArray[entityCounter].SetEnergy(force.gravity);
+			entityArray[entityCounter].SetRange(1.0f / std::max(0.0001f, force.GetRange())); // avoid division in shader
+			entityArray[entityCounter].SetConeAngleCos(force.GetRange()); // this will be the real range in the less common shaders...
 			// The default planar force field is facing upwards, and thus the pull direction is downwards:
-			entityArray[entityCounter].directionWS = force.direction;
+			entityArray[entityCounter].SetDirectionWS(force.direction);
 
 			entityCounter++;
 		}

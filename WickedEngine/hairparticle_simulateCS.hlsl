@@ -33,9 +33,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		forceFields[groupIndex].type = (uint)forceField.GetType();
 		forceFields[groupIndex].position = forceField.positionWS;
-		forceFields[groupIndex].gravity = forceField.energy;
-		forceFields[groupIndex].range_rcp = forceField.range; // it is actually uploaded from CPU as 1.0f / range
-		forceFields[groupIndex].normal = forceField.directionWS;
+		forceFields[groupIndex].gravity = forceField.GetEnergy();
+		forceFields[groupIndex].range_rcp = forceField.GetRange(); // it is actually uploaded from CPU as 1.0f / range
+		forceFields[groupIndex].normal = forceField.GetDirectionWS();
 	}
 	GroupMemoryBarrierWithGroupSync();
 

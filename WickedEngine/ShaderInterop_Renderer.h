@@ -52,50 +52,71 @@ struct ShaderMaterial
 // Warning: the size of this structure directly affects shader performance.
 //	Try to reduce it as much as possible!
 //	Keep it aligned to 16 bytes for best performance!
-//	Right now, this is 96 bytes total
+//	Right now, this is 64 bytes total
 struct ShaderEntity
 {
-	float3 positionVS;
-	uint params;
-
-	float3 directionVS;
-	float range;
+	uint3 positionVS16_directionVS16;
+	uint type8_flags8_coneAngleCos16;
 
 	float3 positionWS;
-	float energy;
+	uint range16_energy16;
 
-	float3 directionWS;
+	uint2 directionWS16; // 16 bits free
 	uint color;
-
-	float4 texMulAdd;
-
-	float coneAngleCos;
 	uint indices;
-	uint userdata0;
-	uint userdata1;
 
+	uint2 texMul16_texAdd16;
+	uint layerMask;
+	uint userdata;
+
+#ifndef __cplusplus
+	// Shader-side:
+	inline float3 GetPositionVS()
+	{
+		return f16tof32(positionVS16_directionVS16 & 0xFFFF);
+	}
+	inline float3 GetDirectionVS()
+	{
+		return f16tof32((positionVS16_directionVS16 >> 16) & 0xFFFF);
+	}
 	inline uint GetType()
 	{
-		return params & 0xFFFF;
+		return type8_flags8_coneAngleCos16 & 0xFF;
 	}
 	inline uint GetFlags()
 	{
-		return (params >> 16) & 0xFFFF;
+		return (type8_flags8_coneAngleCos16 >> 8) & 0xFF;
 	}
+	inline float GetConeAngleCos()
+	{
+		return f16tof32((type8_flags8_coneAngleCos16 >> 16) & 0xFFFF);
+	}
+	inline float GetRange()
+	{
+		return f16tof32(range16_energy16 & 0xFFFF);
+	}
+	inline float GetEnergy()
+	{
+		return f16tof32((range16_energy16 >> 16) & 0xFFFF);
+	}
+	inline float3 GetDirectionWS()
+	{
+		return float3(
+			f16tof32(directionWS16.x & 0xFFFF),
+			f16tof32((directionWS16.x >> 16) & 0xFFFF),
+			f16tof32(directionWS16.y & 0xFFFF)
+		);
+	}
+	inline float4 GetColor()
+	{
+		float4 fColor;
 
-	inline void SetType(uint type)
-	{
-		params = type & 0xFFFF; // also initializes to zero, so flags must be set after the type
-	}
-	inline void SetFlags(uint flags)
-	{
-		params |= (flags & 0xFFFF) << 16;
-	}
+		fColor.x = (float)((color >> 0) & 0xFF) / 255.0f;
+		fColor.y = (float)((color >> 8) & 0xFF) / 255.0f;
+		fColor.z = (float)((color >> 16) & 0xFF) / 255.0f;
+		fColor.w = (float)((color >> 24) & 0xFF) / 255.0f;
 
-	inline void SetIndices(uint matrixIndex, uint textureIndex)
-	{
-		indices = matrixIndex & 0xFFFF;
-		indices |= (textureIndex & 0xFFFF) << 16;
+		return fColor;
 	}
 	inline uint GetMatrixIndex()
 	{
@@ -109,34 +130,85 @@ struct ShaderEntity
 	{
 		return indices != ~0;
 	}
-
-	// Load uncompressed color:
-	inline float4 GetColor()
+	inline float4 GetTexMulAdd()
 	{
-		float4 fColor;
-
-		fColor.x = (float)((color >> 0) & 0xFF) / 255.0f;
-		fColor.y = (float)((color >> 8) & 0xFF) / 255.0f;
-		fColor.z = (float)((color >> 16) & 0xFF) / 255.0f;
-		fColor.w = (float)((color >> 24) & 0xFF) / 255.0f;
-
-		return fColor;
+		return float4(
+			f16tof32(texMul16_texAdd16.x & 0xFFFF),
+			f16tof32((texMul16_texAdd16.x >> 16) & 0xFFFF),
+			f16tof32(texMul16_texAdd16.y & 0xFFFF),
+			f16tof32((texMul16_texAdd16.y >> 16) & 0xFFFF)
+		);
 	}
 
 	// Load area light props:
-	inline float3 GetRight() { return directionWS; }
-	inline float3 GetUp() { return directionVS; }
-	inline float3 GetFront() { return positionVS; }
-	inline float GetRadius() { return texMulAdd.x; }
-	inline float GetWidth() { return texMulAdd.y; }
-	inline float GetHeight() { return texMulAdd.z; }
+	inline float3 GetRight() { return GetDirectionWS(); }
+	inline float3 GetUp() { return GetDirectionVS(); }
+	inline float3 GetFront() { return GetPositionVS(); }
+	inline float GetRadius() { return GetTexMulAdd().x; }
+	inline float GetWidth() { return GetTexMulAdd().y; }
+	inline float GetHeight() { return GetTexMulAdd().z; }
 
 	// Load cubemap depth remap props:
-	inline float GetCubemapDepthRemapNear() { return texMulAdd.w; }
-	inline float GetCubemapDepthRemapFar() { return coneAngleCos; }
+	inline float GetCubemapDepthRemapNear() { return GetTexMulAdd().w; }
+	inline float GetCubemapDepthRemapFar() { return GetConeAngleCos(); }
 
 	// Load decal props:
-	inline float GetEmissive() { return energy; }
+	inline float GetEmissive() { return GetEnergy(); }
+
+#else
+	// Application-side:
+	inline void SetPositionVS(float3 value)
+	{
+		positionVS16_directionVS16.x |= XMConvertFloatToHalf(value.x);
+		positionVS16_directionVS16.y |= XMConvertFloatToHalf(value.y);
+		positionVS16_directionVS16.z |= XMConvertFloatToHalf(value.z);
+	}
+	inline void SetDirectionVS(float3 value)
+	{
+		positionVS16_directionVS16.x |= XMConvertFloatToHalf(value.x) << 16;
+		positionVS16_directionVS16.y |= XMConvertFloatToHalf(value.y) << 16;
+		positionVS16_directionVS16.z |= XMConvertFloatToHalf(value.z) << 16;
+	}
+	inline void SetType(uint type)
+	{
+		type8_flags8_coneAngleCos16 |= type & 0xFF;
+	}
+	inline void SetFlags(uint flags)
+	{
+		type8_flags8_coneAngleCos16 |= (flags & 0xFF) << 8;
+	}
+	inline void SetConeAngleCos(float value)
+	{
+		type8_flags8_coneAngleCos16 |= XMConvertFloatToHalf(value) << 16;
+	}
+	inline void SetRange(float value)
+	{
+		range16_energy16 |= XMConvertFloatToHalf(value);
+	}
+	inline void SetEnergy(float value)
+	{
+		range16_energy16 |= XMConvertFloatToHalf(value) << 16;
+	}
+	inline void SetDirectionWS(float3 value)
+	{
+		directionWS16.x |= XMConvertFloatToHalf(value.x);
+		directionWS16.x |= XMConvertFloatToHalf(value.y) << 16;
+		directionWS16.y |= XMConvertFloatToHalf(value.z);
+	}
+	inline void SetIndices(uint matrixIndex, uint textureIndex)
+	{
+		indices = matrixIndex & 0xFFFF;
+		indices |= (textureIndex & 0xFFFF) << 16;
+	}
+	inline void SetTexMulAdd(float4 value)
+	{
+		texMul16_texAdd16.x |= XMConvertFloatToHalf(value.x);
+		texMul16_texAdd16.x |= XMConvertFloatToHalf(value.y) << 16;
+		texMul16_texAdd16.y |= XMConvertFloatToHalf(value.z);
+		texMul16_texAdd16.y |= XMConvertFloatToHalf(value.w) << 16;
+	}
+
+#endif // __cplusplus
 };
 
 static const uint ENTITY_TYPE_DIRECTIONALLIGHT = 0;

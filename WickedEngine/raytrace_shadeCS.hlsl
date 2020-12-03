@@ -164,7 +164,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			{
 				dist = INFINITE_RAYHIT;
 
-				L = light.directionWS.xyz;
+				L = light.GetDirectionWS().xyz;
 				SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 				NdotL = surfaceToLight.NdotL;
 
@@ -178,7 +178,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 						atmosphereTransmittance = GetAtmosphericLightTransmittance(Atmosphere, surface.P, L, texture_transmittancelut);
 					}
 					
-					float3 lightColor = light.GetColor().rgb * light.energy * atmosphereTransmittance;
+					float3 lightColor = light.GetColor().rgb * light.GetEnergy() * atmosphereTransmittance;
 
 					lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
 					lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
@@ -189,7 +189,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			{
 				L = light.positionWS - P;
 				const float dist2 = dot(L, L);
-				const float range2 = light.range * light.range;
+				const float range2 = light.GetRange() * light.GetRange();
 
 				[branch]
 				if (dist2 < range2)
@@ -203,12 +203,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					[branch]
 					if (NdotL > 0)
 					{
-						const float3 lightColor = light.GetColor().rgb * light.energy;
+						const float3 lightColor = light.GetColor().rgb * light.GetEnergy();
 
 						lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
 						lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
 
-						const float range2 = light.range * light.range;
+						const float range2 = light.GetRange() * light.GetRange();
 						const float att = saturate(1.0 - (dist2 / range2));
 						const float attenuation = att * att;
 
@@ -222,7 +222,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			{
 				L = light.positionWS - surface.P;
 				const float dist2 = dot(L, L);
-				const float range2 = light.range * light.range;
+				const float range2 = light.GetRange() * light.GetRange();
 
 				[branch]
 				if (dist2 < range2)
@@ -236,18 +236,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					[branch]
 					if (NdotL > 0)
 					{
-						const float SpotFactor = dot(L, light.directionWS);
-						const float spotCutOff = light.coneAngleCos;
+						const float SpotFactor = dot(L, light.GetDirectionWS());
+						const float spotCutOff = light.GetConeAngleCos();
 
 						[branch]
 						if (SpotFactor > spotCutOff)
 						{
-							const float3 lightColor = light.GetColor().rgb * light.energy;
+							const float3 lightColor = light.GetColor().rgb * light.GetEnergy();
 
 							lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
 							lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
 
-							const float range2 = light.range * light.range;
+							const float range2 = light.GetRange() * light.GetRange();
 							const float att = saturate(1.0 - (dist2 / range2));
 							float attenuation = att * att;
 							attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));

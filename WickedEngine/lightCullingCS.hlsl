@@ -221,7 +221,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		{
 		case ENTITY_TYPE_POINTLIGHT:
 		{
-			Sphere sphere = { entity.positionVS.xyz, entity.range };
+			Sphere sphere = { entity.GetPositionVS().xyz, entity.GetRange() };
 			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 			{
 				AppendEntity_Transparent(i);
@@ -241,8 +241,8 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		case ENTITY_TYPE_SPOTLIGHT:
 		{
 			// Construct a tight fitting sphere around the spotlight cone:
-			const float r = entity.range * 0.5f / (entity.coneAngleCos * entity.coneAngleCos);
-			Sphere sphere = { entity.positionVS.xyz - entity.directionVS * r, r };
+			const float r = entity.GetRange() * 0.5f / (entity.GetConeAngleCos() * entity.GetConeAngleCos());
+			Sphere sphere = { entity.GetPositionVS().xyz - entity.GetDirectionVS() * r, r };
 			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 			{
 				AppendEntity_Transparent(i);
@@ -273,7 +273,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		case ENTITY_TYPE_DECAL:
 		case ENTITY_TYPE_ENVMAP:
 		{
-			Sphere sphere = { entity.positionVS.xyz, entity.range };
+			Sphere sphere = { entity.GetPositionVS().xyz, entity.GetRange() };
 			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 			{
 				AppendEntity_Transparent(i);

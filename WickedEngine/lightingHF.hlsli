@@ -124,7 +124,7 @@ inline float shadowTrace(in Surface surface, in float3 L, in float dist)
 
 inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
-	float3 L = light.directionWS.xyz;
+	float3 L = light.GetDirectionWS().xyz;
 	SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
 	[branch]
@@ -190,7 +190,7 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 				atmosphereTransmittance = GetAtmosphericLightTransmittance(Atmosphere, surface.P, L, texture_transmittancelut);
 			}
 			
-			float3 lightColor = light.GetColor().rgb * light.energy * atmosphereTransmittance;
+			float3 lightColor = light.GetColor().rgb * light.GetEnergy() * atmosphereTransmittance;
 
 			lighting.direct.diffuse +=
 				max(0.0f, lightColor * shadow * surfaceToLight.NdotL_sss * BRDF_GetDiffuse(surface, surfaceToLight));
@@ -204,7 +204,7 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 {
 	float3 L = light.positionWS - surface.P;
 	const float dist2 = dot(L, L);
-	const float range2 = light.range * light.range;
+	const float range2 = light.GetRange() * light.GetRange();
 
 	[branch]
 	if (dist2 < range2)
@@ -237,7 +237,7 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 			[branch]
 			if (any(shadow))
 			{
-				float3 lightColor = light.GetColor().rgb * light.energy;
+				float3 lightColor = light.GetColor().rgb * light.GetEnergy();
 
 				const float att = saturate(1.0 - (dist2 / range2));
 				const float attenuation = att * att;
@@ -256,7 +256,7 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 {
 	float3 L = light.positionWS - surface.P;
 	const float dist2 = dot(L, L);
-	const float range2 = light.range * light.range;
+	const float range2 = light.GetRange() * light.GetRange();
 
 	[branch]
 	if (dist2 < range2)
@@ -269,8 +269,8 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 		[branch]
 		if (any(surfaceToLight.NdotL_sss))
 		{
-			const float SpotFactor = dot(L, light.directionWS);
-			const float spotCutOff = light.coneAngleCos;
+			const float SpotFactor = dot(L, light.GetDirectionWS());
+			const float spotCutOff = light.GetConeAngleCos();
 
 			[branch]
 			if (SpotFactor > spotCutOff)
@@ -301,7 +301,7 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 				[branch]
 				if (any(shadow))
 				{
-					float3 lightColor = light.GetColor().rgb * light.energy;
+					float3 lightColor = light.GetColor().rgb * light.GetEnergy();
 
 					const float att = saturate(1.0 - (dist2 / range2));
 					float attenuation = att * att;
@@ -455,7 +455,7 @@ inline void SphereLight(in ShaderEntity light, in Surface surface, inout Lightin
 				L = normalize(closestPoint);
 			}
 
-			float3 lightColor = light.GetColor().rgb * light.energy * fLight;
+			float3 lightColor = light.GetColor().rgb * light.GetEnergy() * fLight;
 
 
 			SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
@@ -518,7 +518,7 @@ inline void DiscLight(in ShaderEntity light, in Surface surface, inout Lighting 
 				L = normalize(closestPoint);
 			}
 
-			float3 lightColor = light.GetColor().rgb * light.energy * fLight;
+			float3 lightColor = light.GetColor().rgb * light.GetEnergy() * fLight;
 
 			SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
@@ -642,7 +642,7 @@ inline void RectangleLight(in ShaderEntity light, in Surface surface, inout Ligh
 				L = normalize(L); // TODO: Is it necessary?
 			}
 
-			float3 lightColor = light.GetColor().rgb * light.energy * fLight;
+			float3 lightColor = light.GetColor().rgb * light.GetEnergy() * fLight;
 
 			SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
@@ -740,7 +740,7 @@ inline void TubeLight(in ShaderEntity light, in Surface surface, inout Lighting 
 				L = normalize(closestPoint);
 			}
 
-			float3 lightColor = light.GetColor().rgb * light.energy * fLight;
+			float3 lightColor = light.GetColor().rgb * light.GetEnergy() * fLight;
 
 			SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 

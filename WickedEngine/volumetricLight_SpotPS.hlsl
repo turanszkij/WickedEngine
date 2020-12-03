@@ -33,13 +33,13 @@ float4 main(VertexToPixel input) : SV_TARGET
 		const float dist = sqrt(dist2);
 		L /= dist;
 
-		float SpotFactor = dot(L, light.directionWS);
-		float spotCutOff = light.coneAngleCos;
+		float SpotFactor = dot(L, light.GetDirectionWS());
+		float spotCutOff = light.GetConeAngleCos();
 
 		[branch]
 		if (SpotFactor > spotCutOff)
 		{
-			const float range2 = light.range * light.range;
+			const float range2 = light.GetRange() * light.GetRange();
 			const float att = saturate(1.0 - (dist2 / range2));
 			float3 attenuation = att * att;
 			attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
@@ -68,5 +68,5 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 	accumulation /= sampleCount;
 
-	return max(0, float4(accumulation * light.GetColor().rgb * light.energy, 1));
+	return max(0, float4(accumulation * light.GetColor().rgb * light.GetEnergy(), 1));
 }

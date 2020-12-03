@@ -22,7 +22,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float marchedDistance = 0;
 	float3 accumulation = 0;
 
-	const float3 L = light.directionWS;
+	const float3 L = light.GetDirectionWS();
 
 	float3 rayEnd = g_xCamera_CamPos;
 
@@ -67,5 +67,5 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 	accumulation /= sampleCount;
 
-	return max(0, float4(accumulation * light.GetColor().rgb * light.energy, 1));
+	return max(0, float4(accumulation * light.GetColor().rgb * light.GetEnergy(), 1));
 }

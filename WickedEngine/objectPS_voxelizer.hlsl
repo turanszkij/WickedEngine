@@ -272,13 +272,13 @@ void main(PSInput input)
 					{
 					case ENTITY_TYPE_DIRECTIONALLIGHT:
 					{
-						float3 L = light.directionWS;
+						float3 L = light.GetDirectionWS();
 						const float NdotL = saturate(dot(L, N));
 
 						[branch]
 						if (NdotL > 0)
 						{
-							float3 lightColor = light.GetColor().rgb * light.energy * NdotL;
+							float3 lightColor = light.GetColor().rgb * light.GetEnergy() * NdotL;
 
 							[branch]
 							if (light.IsCastingShadow() >= 0)
@@ -301,7 +301,7 @@ void main(PSInput input)
 					{
 						float3 L = light.positionWS - P;
 						const float dist2 = dot(L, L);
-						const float range2 = light.range * light.range;
+						const float range2 = light.GetRange() * light.GetRange();
 
 						[branch]
 						if (dist2 < range2)
@@ -317,7 +317,7 @@ void main(PSInput input)
 								const float att = saturate(1.0 - (dist2 / range2));
 								const float attenuation = att * att;
 
-								float3 lightColor = light.GetColor().rgb * light.energy * NdotL * attenuation;
+								float3 lightColor = light.GetColor().rgb * light.GetEnergy() * NdotL * attenuation;
 
 								[branch]
 								if (light.IsCastingShadow() >= 0) {
@@ -333,7 +333,7 @@ void main(PSInput input)
 					{
 						float3 L = light.positionWS - P;
 						const float dist2 = dot(L, L);
-						const float range2 = light.range * light.range;
+						const float range2 = light.GetRange() * light.GetRange();
 
 						[branch]
 						if (dist2 < range2)
@@ -345,18 +345,18 @@ void main(PSInput input)
 							[branch]
 							if (NdotL > 0)
 							{
-								const float SpotFactor = dot(L, light.directionWS);
-								const float spotCutOff = light.coneAngleCos;
+								const float SpotFactor = dot(L, light.GetDirectionWS());
+								const float spotCutOff = light.GetConeAngleCos();
 
 								[branch]
 								if (SpotFactor > spotCutOff)
 								{
-									const float range2 = light.range * light.range;
+									const float range2 = light.GetRange() * light.GetRange();
 									const float att = saturate(1.0 - (dist2 / range2));
 									float attenuation = att * att;
 									attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
 
-									float3 lightColor = light.GetColor().rgb * light.energy * NdotL * attenuation;
+									float3 lightColor = light.GetColor().rgb * light.GetEnergy() * NdotL * attenuation;
 
 									[branch]
 									if (light.IsCastingShadow() >= 0)

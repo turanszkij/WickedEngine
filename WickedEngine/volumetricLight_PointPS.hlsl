@@ -16,10 +16,10 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float accumulation = 0;
 
 	float3 rayEnd = g_xCamera_CamPos;
-	if (length(rayEnd - light.positionWS) > light.range)
+	if (length(rayEnd - light.positionWS) > light.GetRange())
 	{
 		// if we are outside the light volume, then rayEnd will be the traced sphere frontface:
-		float t = Trace_sphere(rayEnd, -V, light.positionWS, light.range);
+		float t = Trace_sphere(rayEnd, -V, light.positionWS, light.GetRange());
 		rayEnd = rayEnd - t * V;
 	}
 
@@ -39,7 +39,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 		const float dist = sqrt(dist2);
 		L /= dist;
 
-		const float range2 = light.range * light.range;
+		const float range2 = light.GetRange() * light.GetRange();
 		const float att = saturate(1.0 - (dist2 / range2));
 		float attenuation = att * att;
 
@@ -58,5 +58,5 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 	accumulation /= sampleCount;
 
-	return max(0, float4(accumulation.xxx * light.GetColor().rgb * light.energy, 1));
+	return max(0, float4(accumulation.xxx * light.GetColor().rgb * light.GetEnergy(), 1));
 }
