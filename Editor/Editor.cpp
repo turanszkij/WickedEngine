@@ -407,19 +407,31 @@ void EditorComponent::Load()
 	});
 #endif // PLATFORM_UWP
 
-	wiJobSystem::context ctx;
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { pointLightTex = wiResourceManager::Load("images/pointlight.dds"); });
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { spotLightTex = wiResourceManager::Load("images/spotlight.dds"); });
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { dirLightTex = wiResourceManager::Load("images/directional_light.dds"); });
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { areaLightTex = wiResourceManager::Load("images/arealight.dds"); });
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { decalTex = wiResourceManager::Load("images/decal.dds"); });
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { forceFieldTex = wiResourceManager::Load("images/forcefield.dds"); });
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { emitterTex = wiResourceManager::Load("images/emitter.dds"); });
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { hairTex = wiResourceManager::Load("images/hair.dds"); });
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { cameraTex = wiResourceManager::Load("images/camera.dds"); });
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { armatureTex = wiResourceManager::Load("images/armature.dds"); });
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { soundTex = wiResourceManager::Load("images/sound.dds"); });
-	// wait for ctx is at the end of this function!
+	//wiJobSystem::context ctx;
+	//wiJobSystem::Execute(ctx, [this](wiJobArgs args) { pointLightTex = wiResourceManager::Load("images/pointlight.dds"); });
+	//wiJobSystem::Execute(ctx, [this](wiJobArgs args) { spotLightTex = wiResourceManager::Load("images/spotlight.dds"); });
+	//wiJobSystem::Execute(ctx, [this](wiJobArgs args) { dirLightTex = wiResourceManager::Load("images/directional_light.dds"); });
+	//wiJobSystem::Execute(ctx, [this](wiJobArgs args) { areaLightTex = wiResourceManager::Load("images/arealight.dds"); });
+	//wiJobSystem::Execute(ctx, [this](wiJobArgs args) { decalTex = wiResourceManager::Load("images/decal.dds"); });
+	//wiJobSystem::Execute(ctx, [this](wiJobArgs args) { forceFieldTex = wiResourceManager::Load("images/forcefield.dds"); });
+	//wiJobSystem::Execute(ctx, [this](wiJobArgs args) { emitterTex = wiResourceManager::Load("images/emitter.dds"); });
+	//wiJobSystem::Execute(ctx, [this](wiJobArgs args) { hairTex = wiResourceManager::Load("images/hair.dds"); });
+	//wiJobSystem::Execute(ctx, [this](wiJobArgs args) { cameraTex = wiResourceManager::Load("images/camera.dds"); });
+	//wiJobSystem::Execute(ctx, [this](wiJobArgs args) { armatureTex = wiResourceManager::Load("images/armature.dds"); });
+	//wiJobSystem::Execute(ctx, [this](wiJobArgs args) { soundTex = wiResourceManager::Load("images/sound.dds"); });
+	//// wait for ctx is at the end of this function!
+
+	pointLightTex = wiResourceManager::Load("images/pointlight.dds");
+	spotLightTex = wiResourceManager::Load("images/spotlight.dds");
+	dirLightTex = wiResourceManager::Load("images/directional_light.dds");
+	areaLightTex = wiResourceManager::Load("images/arealight.dds");
+	decalTex = wiResourceManager::Load("images/decal.dds");
+	forceFieldTex = wiResourceManager::Load("images/forcefield.dds");
+	emitterTex = wiResourceManager::Load("images/emitter.dds");
+	hairTex = wiResourceManager::Load("images/hair.dds");
+	cameraTex = wiResourceManager::Load("images/camera.dds");
+	armatureTex = wiResourceManager::Load("images/armature.dds");
+	soundTex = wiResourceManager::Load("images/sound.dds");
 
 	translator.Create();
 	translator.enabled = false;
@@ -978,7 +990,7 @@ void EditorComponent::Load()
 
 	cameraWnd.ResetCam();
 
-	wiJobSystem::Wait(ctx);
+	//wiJobSystem::Wait(ctx);
 
     RenderPath2D::Load();
 }
