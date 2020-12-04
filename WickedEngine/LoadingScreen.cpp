@@ -1,14 +1,14 @@
 #include "LoadingScreen.h"
 #include "MainComponent.h"
 
-using namespace std;
+#include <thread>
 
 bool LoadingScreen::isActive()
 {
-	return wiJobSystem::IsBusy(ctx_main) || wiJobSystem::IsBusy(ctx_finish);
+	return wiJobSystem::IsBusy(ctx);
 }
 
-void LoadingScreen::addLoadingFunction(function<void(wiJobArgs)> loadingFunction)
+void LoadingScreen::addLoadingFunction(std::function<void(wiJobArgs)> loadingFunction)
 {
 	if (loadingFunction != nullptr)
 	{
@@ -26,7 +26,7 @@ void LoadingScreen::addLoadingComponent(RenderPath* component, MainComponent* ma
 	});
 }
 
-void LoadingScreen::onFinished(function<void()> finishFunction)
+void LoadingScreen::onFinished(std::function<void()> finishFunction)
 {
 	if (finishFunction != nullptr)
 		finish = finishFunction;
@@ -36,12 +36,12 @@ void LoadingScreen::Start()
 {
 	for (auto& x : tasks)
 	{
-		wiJobSystem::Execute(ctx_main, x);
+		wiJobSystem::Execute(ctx, x);
 	}
-	wiJobSystem::Execute(ctx_finish, [this](wiJobArgs args) {
-		wiJobSystem::Wait(ctx_main);
+	std::thread([this]() {
+		wiJobSystem::Wait(ctx);
 		finish();
-	});
+	}).detach();
 
 	RenderPath2D::Start();
 }

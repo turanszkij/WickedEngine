@@ -11,8 +11,7 @@ class LoadingScreen :
 	public RenderPath2D
 {
 private:
-	wiJobSystem::context ctx_main;
-	wiJobSystem::context ctx_finish;
+	wiJobSystem::context ctx;
 	std::vector<std::function<void(wiJobArgs)>> tasks;
 	std::function<void()> finish;
 public:
