@@ -89,18 +89,12 @@ struct GBUFFEROutputType
 {
 	float4 g0	: SV_Target0;		// texture_gbuffer0
 	float4 g1	: SV_Target1;		// texture_gbuffer1
-	//float4 diffuse	: SV_Target2;
-	//float4 specular	: SV_Target3;
 };
 inline GBUFFEROutputType CreateGbuffer(in float4 color, in Surface surface, in float2 velocity, in Lighting lighting)
 {
-	//LightingPart combined_lighting = CombineLighting(surface, lighting);
-
 	GBUFFEROutputType Out;
 	Out.g0 = float4(color.rgb, surface.roughness);		/*FORMAT_R16G16B16A16_FLOAT*/
 	Out.g1 = float4(encodeNormal(surface.N), velocity);		/*FORMAT_R16G16B16A16_FLOAT*/
-	//Out.diffuse = float4(combined_lighting.diffuse, 1);		/*FORMAT_R11G11B10_FLOAT*/
-	//Out.specular = float4(combined_lighting.specular, 1);	/*FORMAT_R11G11B10_FLOAT*/
 	return Out;
 }
 
@@ -127,7 +121,7 @@ inline void LightMapping(in float2 ATLAS, inout Lighting lighting)
 	}
 }
 
-inline void NormalMapping(inout float4 uvsets, in float3 V, inout float3 N, in float3x3 TBN, out float3 bumpColor)
+inline void NormalMapping(inout float4 uvsets, inout float3 N, in float3x3 TBN, out float3 bumpColor)
 {
 	[branch]
 	if (g_xMaterial.normalMapStrength > 0 && g_xMaterial.uvset_normalMap >= 0)
@@ -785,7 +779,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 	const float2 ReprojectedScreenCoord = ScreenCoord + velocity;
 
 #ifndef WATER
-	NormalMapping(input.uvsets, surface.P, surface.N, TBN, bumpColor);
+	NormalMapping(input.uvsets, surface.N, TBN, bumpColor);
 #endif // WATER
 
 #endif // ENVMAPRENDERING
