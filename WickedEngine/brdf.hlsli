@@ -4,7 +4,7 @@
 
 float3 F_Schlick(in float3 f0, in float f90, in float u)
 {
-	return f0 + (f90 - f0) * pow(1.f - u, 5.f);
+	return f0 + (f90 - f0) * pow(1 - u, 5);
 }
 float3 F_Fresnel(float3 SpecularColor, float VoH)
 {
@@ -65,7 +65,7 @@ struct Surface
 		alphaRoughness = roughness * roughness;
 		alphaRoughnessSq = alphaRoughness * alphaRoughness;
 
-		NdotV = abs(dot(N, V)) + 1e-5f;
+		NdotV = abs(dot(N, V)) + 1e-5;
 
 		albedo = ComputeAlbedo(baseColor, reflectance, metalness);
 		f0 = ComputeF0(baseColor, reflectance, metalness);
@@ -76,8 +76,8 @@ struct Surface
 
 		TdotV = dot(T, V);
 		BdotV = dot(B, V);
-		at = max(0, alphaRoughness * (1.0 + anisotropy));
-		ab = max(0, alphaRoughness * (1.0 - anisotropy));
+		at = max(0, alphaRoughness * (1 + anisotropy));
+		ab = max(0, alphaRoughness * (1 - anisotropy));
 
 #ifdef BRDF_CARTOON
 		F = smoothstep(0.05, 0.1, F);
@@ -255,7 +255,7 @@ float3 BRDF_GetDiffuse(in Surface surface, in SurfaceToLight surfaceToLight)
 {
 	// Note: subsurface scattering will remove Fresnel (F), because otherwise
 	//	there would be artifact on backside where diffuse wraps
-	return (1.0 - lerp(surfaceToLight.F, 0, saturate(surface.sss.a))) / PI;
+	return (1 - lerp(surfaceToLight.F, 0, saturate(surface.sss.a))) / PI;
 }
 
 #endif // WI_BRDF_HF

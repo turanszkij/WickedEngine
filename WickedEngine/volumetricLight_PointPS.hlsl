@@ -1,4 +1,5 @@
 #define DISABLE_TRANSPARENT_SHADOWMAP
+#define DISABLE_SOFT_SHADOWMAP
 #include "volumetricLightHF.hlsli"
 
 float4 main(VertexToPixel input) : SV_TARGET
@@ -45,7 +46,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 		[branch]
 		if (light.IsCastingShadow()) {
-			attenuation *= shadowCube(light, Lunnormalized);
+			attenuation *= shadowCube(light, L, Lunnormalized);
 		}
 
 		attenuation *= GetFogAmount(cameraDistance - marchedDistance);

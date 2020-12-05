@@ -67,22 +67,22 @@ TEXTURE2D(texture_ssr, float4, TEXSLOT_RENDERPATH_SSR);						// rgb: screen spac
 
 struct PixelInputType_Simple
 {
-	float4 pos								: SV_POSITION;
-	float  clip								: SV_ClipDistance0;
-	float4 color							: COLOR;
-	float4 uvsets							: UVSETS;
+	float4 pos		: SV_POSITION;
+	float  clip		: SV_ClipDistance0;
+	float4 color	: COLOR;
+	float4 uvsets	: UVSETS;
 };
 struct PixelInputType
 {
-	float4 pos								: SV_POSITION;
-	float  clip								: SV_ClipDistance0;
-	float4 color							: COLOR;
-	float4 uvsets							: UVSETS;
-	float2 atl								: ATLAS;
-	float3 nor								: NORMAL;
-	float4 tan								: TANGENT;
-	float3 pos3D							: WORLDPOSITION;
-	float4 pos2DPrev						: SCREENPOSITIONPREV;
+	float4 pos		 : SV_POSITION;
+	float  clip		 : SV_ClipDistance0;
+	float4 color	 : COLOR;
+	float4 uvsets	 : UVSETS;
+	float2 atl		 : ATLAS;
+	float3 nor		 : NORMAL;
+	float4 tan		 : TANGENT;
+	float3 pos3D	 : WORLDPOSITION;
+	float4 pos2DPrev : SCREENPOSITIONPREV;
 };
 
 struct GBUFFEROutputType
@@ -94,7 +94,7 @@ inline GBUFFEROutputType CreateGbuffer(in float4 color, in Surface surface, in f
 {
 	GBUFFEROutputType Out;
 	Out.g0 = float4(color.rgb, surface.roughness);		/*FORMAT_R16G16B16A16_FLOAT*/
-	Out.g1 = float4(encodeNormal(surface.N), velocity);		/*FORMAT_R16G16B16A16_FLOAT*/
+	Out.g1 = float4(encodeNormal(surface.N), velocity);	/*FORMAT_R16G16B16A16_FLOAT*/
 	return Out;
 }
 
@@ -113,11 +113,10 @@ inline void LightMapping(in float2 ATLAS, inout Lighting lighting)
 	if (any(ATLAS))
 	{
 #ifdef LIGHTMAP_QUALITY_BICUBIC
-		float4 lightmap = SampleTextureCatmullRom(texture_globallightmap, sampler_linear_clamp, ATLAS);
+		lighting.indirect.diffuse = SampleTextureCatmullRom(texture_globallightmap, sampler_linear_clamp, ATLAS).rgb;
 #else
-		float4 lightmap = texture_globallightmap.SampleLevel(sampler_linear_clamp, ATLAS, 0);
+		lighting.indirect.diffuse = texture_globallightmap.SampleLevel(sampler_linear_clamp, ATLAS, 0);
 #endif // LIGHTMAP_QUALITY_BICUBIC
-		lighting.indirect.diffuse = lerp(lighting.indirect.diffuse, lightmap.rgb, lightmap.a);
 	}
 }
 
@@ -142,7 +141,7 @@ inline float3 PlanarReflection(in Surface surface, in float2 bumpColor)
 {
 	float4 reflectionUV = mul(g_xCamera_ReflVP, float4(surface.P, 1));
 	reflectionUV.xy /= reflectionUV.w;
-	reflectionUV.xy = reflectionUV.xy * float2(0.5f, -0.5f) + 0.5f;
+	reflectionUV.xy = reflectionUV.xy * float2(0.5, -0.5) + 0.5;
 	return texture_reflection.SampleLevel(sampler_linear_clamp, reflectionUV.xy + bumpColor*g_xMaterial.normalMapStrength, 0).rgb;
 }
 
@@ -224,7 +223,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 
 				const float4x4 decalProjection = MatrixArray[decal.GetMatrixIndex()];
 				const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
-				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+				const float3 uvw = clipSpacePos.xyz * float3(0.5, -0.5, 0.5) + 0.5;
 				[branch]
 				if (is_saturated(uvw))
 				{
@@ -290,7 +289,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 
 				const float4x4 probeProjection = MatrixArray[probe.GetMatrixIndex()];
 				const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
-				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+				const float3 uvw = clipSpacePos.xyz * float3(0.5, -0.5, 0.5) + 0.5;
 				[branch]
 				if (is_saturated(uvw))
 				{
@@ -320,7 +319,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 
 	// Apply global envmap where there is no local envmap information:
 	[branch]
-	if (envmapAccumulation.a < 0.99f)
+	if (envmapAccumulation.a < 0.99)
 	{
 		envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
 	}
@@ -446,7 +445,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 
 					const float4x4 decalProjection = MatrixArray[decal.GetMatrixIndex()];
 					const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
-					const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+					const float3 uvw = clipSpacePos.xyz * float3(0.5, -0.5, 0.5) + 0.5;
 					[branch]
 					if (is_saturated(uvw))
 					{
@@ -525,7 +524,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 
 					const float4x4 probeProjection = MatrixArray[probe.GetMatrixIndex()];
 					const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
-					const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+					const float3 uvw = clipSpacePos.xyz * float3(0.5, -0.5, 0.5) + 0.5;
 					[branch]
 					if (is_saturated(uvw))
 					{
@@ -557,7 +556,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 	
 	// Apply global envmap where there is no local envmap information:
 	[branch]
-	if (envmapAccumulation.a < 0.99f)
+	if (envmapAccumulation.a < 0.99)
 	{
 		envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
 	}
@@ -775,7 +774,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 	pos2D.y *= -1;
 	input.pos2DPrev.xy /= input.pos2DPrev.w;
 
-	const float2 velocity = ((input.pos2DPrev.xy - g_xFrame_TemporalAAJitterPrev) - (pos2D.xy - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
+	const float2 velocity = ((input.pos2DPrev.xy - g_xFrame_TemporalAAJitterPrev) - (pos2D.xy - g_xFrame_TemporalAAJitter)) * float2(0.5, -0.5);
 	const float2 ReprojectedScreenCoord = ScreenCoord + velocity;
 
 #ifndef WATER
@@ -1080,8 +1079,8 @@ GBUFFEROutputType main(PIXELINPUT input)
 	if (g_xMaterial.uvset_normalMap >= 0)
 	{
 		const float2 UV_normalMap = g_xMaterial.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-		bumpColor0 = 2.0f * texture_normalmap.Sample(sampler_objectshader, UV_normalMap - g_xMaterial.texMulAdd.ww).rg - 1.0f;
-		bumpColor1 = 2.0f * texture_normalmap.Sample(sampler_objectshader, UV_normalMap + g_xMaterial.texMulAdd.zw).rg - 1.0f;
+		bumpColor0 = 2 * texture_normalmap.Sample(sampler_objectshader, UV_normalMap - g_xMaterial.texMulAdd.ww).rg - 1;
+		bumpColor1 = 2 * texture_normalmap.Sample(sampler_objectshader, UV_normalMap + g_xMaterial.texMulAdd.zw).rg - 1;
 	}
 	bumpColor2 = texture_waterriples.SampleLevel(sampler_objectshader, ScreenCoord, 0).rg;
 	bumpColor = float3(bumpColor0 + bumpColor1 + bumpColor2, 1)  * g_xMaterial.refractionIndex;
@@ -1091,7 +1090,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 	//REFLECTION
 	float4 reflectionUV = mul(g_xCamera_ReflVP, float4(surface.P, 1));
 	reflectionUV.xy /= reflectionUV.w;
-	reflectionUV.xy = reflectionUV.xy * float2(0.5f, -0.5f) + 0.5f;
+	reflectionUV.xy = reflectionUV.xy * float2(0.5, -0.5) + 0.5;
 	lighting.indirect.specular += texture_reflection.SampleLevel(sampler_linear_mirror, reflectionUV.xy + bumpColor.rg, 0).rgb;
 #endif // WATER
 
@@ -1141,7 +1140,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 		depth_difference = sampled_lineardepth - lineardepth;
 	}
 	// WATER FOG:
-	surface.refraction.a = 1 - saturate(surface.baseColor.a * 0.1f * depth_difference);
+	surface.refraction.a = 1 - saturate(surface.baseColor.a * 0.1 * depth_difference);
 #endif // WATER
 
 #ifdef UNLIT

@@ -44,7 +44,7 @@ float4 main(Input input) : SV_TARGET
 			{
 			case ENTITY_TYPE_DIRECTIONALLIGHT:
 			{
-				dist = INFINITE_RAYHIT;
+				dist = FLT_MAX;
 
 				L = light.GetDirectionWS().xyz; 
 				NdotL = saturate(dot(L, N));
@@ -169,7 +169,7 @@ float4 main(Input input) : SV_TARGET
 		// Sample primary ray (scene materials, sky, etc):
 		RayHit hit = TraceRay_Closest(ray);
 
-		if (hit.distance >= INFINITE_RAYHIT - 1)
+		if (hit.distance >= FLT_MAX - 1)
 		{
 			float3 envColor;
 			[branch]

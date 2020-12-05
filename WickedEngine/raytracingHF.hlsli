@@ -5,16 +5,12 @@
 #include "ShaderInterop_BVH.h"
 #include "lightingHF.hlsli"
 
-
-static const float INFINITE_RAYHIT = 1000000;
-static const float EPSILON = 0.0001f;
-
 // returns a position that is sligtly above the surface position to avoid self intersection
 //	P	: surface postion
 //	N	: surface normal
 inline float3 trace_bias_position(in float3 P, in float3 N)
 {
-	return P + N * EPSILON; // this is the original version
+	return P + N * 0.0001;
 }
 
 struct Ray
@@ -99,7 +95,7 @@ inline Ray CreateRay(float3 origin, float3 direction)
 
 inline Ray CreateCameraRay(float2 clipspace)
 {
-	float4 unprojected = mul(g_xCamera_InvVP, float4(clipspace, 0.0f, 1.0f));
+	float4 unprojected = mul(g_xCamera_InvVP, float4(clipspace, 0, 1));
 	unprojected.xyz /= unprojected.w;
 
 	const float3 origin = g_xCamera_CamPos;
@@ -119,8 +115,8 @@ struct RayHit
 inline RayHit CreateRayHit()
 {
 	RayHit hit;
-	hit.distance = INFINITE_RAYHIT;
-	hit.position = float3(0.0f, 0.0f, 0.0f);
+	hit.distance = FLT_MAX;
+	hit.position = 0;
 	hit.primitiveID = 0xFFFFFFFF;
 	hit.bary = 0;
 	return hit;
@@ -168,11 +164,11 @@ inline void IntersectTriangle(in Ray ray, inout RayHit bestHit, in BVHPrimitive 
 #ifdef RAY_BACKFACE_CULLING 
 	// if the determinant is negative the triangle is backfacing
 	// if the determinant is close to 0, the ray misses the triangle
-	if (det < 0.000001f)
+	if (det < 0.000001)
 		return;
 #else 
 	// ray and triangle are parallel if det is close to 0
-	if (abs(det) < 0.000001f)
+	if (abs(det) < 0.000001)
 		return;
 #endif 
 	float invDet = 1 / det;
@@ -207,11 +203,11 @@ inline bool IntersectTriangleANY(in Ray ray, in float maxDistance, in BVHPrimiti
 #ifdef RAY_BACKFACE_CULLING 
 	// if the determinant is negative the triangle is backfacing
 	// if the determinant is close to 0, the ray misses the triangle
-	if (det < 0.000001f)
+	if (det < 0.000001)
 		return false;
 #else 
 	// ray and triangle are parallel if det is close to 0
-	if (abs(det) < 0.000001f)
+	if (abs(det) < 0.000001)
 		return false;
 #endif 
 	float invDet = 1 / det;
@@ -289,7 +285,7 @@ STRUCTUREDBUFFER(primitiveDataBuffer, BVHPrimitiveData, TEXSLOT_ONDEMAND4);
 STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND5);
 
 
-// Returns the closest hit primitive if any (useful for generic trace). If nothing was hit, then rayHit.distance will be equal to INFINITE_RAYHIT
+// Returns the closest hit primitive if any (useful for generic trace). If nothing was hit, then rayHit.distance will be equal to FLT_MAX
 inline RayHit TraceRay_Closest(Ray ray, uint groupIndex = 0)
 {
 	RayHit bestHit = CreateRayHit();

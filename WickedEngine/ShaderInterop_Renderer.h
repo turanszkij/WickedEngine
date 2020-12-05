@@ -65,7 +65,7 @@ struct ShaderEntity
 	uint color;
 	uint indices;
 
-	uint2 texMul16_texAdd16;
+	uint2 texMulAdd16;
 	uint layerMask;
 	uint userdata;
 
@@ -133,10 +133,10 @@ struct ShaderEntity
 	inline float4 GetTexMulAdd()
 	{
 		return float4(
-			f16tof32(texMul16_texAdd16.x & 0xFFFF),
-			f16tof32((texMul16_texAdd16.x >> 16) & 0xFFFF),
-			f16tof32(texMul16_texAdd16.y & 0xFFFF),
-			f16tof32((texMul16_texAdd16.y >> 16) & 0xFFFF)
+			f16tof32(texMulAdd16.x & 0xFFFF),
+			f16tof32((texMulAdd16.x >> 16) & 0xFFFF),
+			f16tof32(texMulAdd16.y & 0xFFFF),
+			f16tof32((texMulAdd16.y >> 16) & 0xFFFF)
 		);
 	}
 
@@ -202,10 +202,10 @@ struct ShaderEntity
 	}
 	inline void SetTexMulAdd(float4 value)
 	{
-		texMul16_texAdd16.x |= XMConvertFloatToHalf(value.x);
-		texMul16_texAdd16.x |= XMConvertFloatToHalf(value.y) << 16;
-		texMul16_texAdd16.y |= XMConvertFloatToHalf(value.z);
-		texMul16_texAdd16.y |= XMConvertFloatToHalf(value.w) << 16;
+		texMulAdd16.x |= XMConvertFloatToHalf(value.x);
+		texMulAdd16.x |= XMConvertFloatToHalf(value.y) << 16;
+		texMulAdd16.y |= XMConvertFloatToHalf(value.z);
+		texMulAdd16.y |= XMConvertFloatToHalf(value.w) << 16;
 	}
 
 #endif // __cplusplus
