@@ -188,6 +188,7 @@ namespace wiScene
 		std::shared_ptr<wiResource> emissiveMap;
 		std::shared_ptr<wiResource> occlusionMap;
 		wiGraphics::GPUBuffer constantBuffer;
+		uint32_t layerMask = ~0u;
 
 		// User stencil value can be in range [0, 15]
 		inline void SetUserStencilRef(uint8_t value)

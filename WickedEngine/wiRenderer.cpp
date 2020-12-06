@@ -3702,6 +3702,14 @@ void UpdateRenderData(
 			const DecalComponent& decal = vis.scene->decals[decalIndex];
 
 			entityArray[entityCounter] = {}; // zero out!
+			entityArray[entityCounter].layerMask = ~0u;
+
+			Entity entity = vis.scene->decals.GetEntity(decalIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				entityArray[entityCounter].layerMask = layer->layerMask;
+			}
 
 			entityArray[entityCounter].SetType(ENTITY_TYPE_DECAL);
 			entityArray[entityCounter].position = decal.position;
@@ -3744,6 +3752,14 @@ void UpdateRenderData(
 			}
 
 			entityArray[entityCounter] = {}; // zero out!
+			entityArray[entityCounter].layerMask = ~0u;
+
+			Entity entity = vis.scene->probes.GetEntity(probeIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				entityArray[entityCounter].layerMask = layer->layerMask;
+			}
 
 			entityArray[entityCounter].SetType(ENTITY_TYPE_ENVMAP);
 			entityArray[entityCounter].position = probe.position;
@@ -3772,6 +3788,14 @@ void UpdateRenderData(
 			const LightComponent& light = vis.scene->lights[lightIndex];
 
 			entityArray[entityCounter] = {}; // zero out!
+			entityArray[entityCounter].layerMask = ~0u;
+
+			Entity entity = vis.scene->lights.GetEntity(lightIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				entityArray[entityCounter].layerMask = layer->layerMask;
+			}
 
 			entityArray[entityCounter].SetType(light.GetType());
 			entityArray[entityCounter].position = light.position;
@@ -3881,6 +3905,14 @@ void UpdateRenderData(
 			const ForceFieldComponent& force = vis.scene->forces[i];
 
 			entityArray[entityCounter] = {}; // zero out!
+			entityArray[entityCounter].layerMask = ~0u;
+
+			Entity entity = vis.scene->forces.GetEntity(i);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				entityArray[entityCounter].layerMask = layer->layerMask;
+			}
 
 			entityArray[entityCounter].SetType(force.type);
 			entityArray[entityCounter].position = force.position;

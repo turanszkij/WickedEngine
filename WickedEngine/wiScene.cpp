@@ -299,6 +299,7 @@ namespace wiScene
 		dest->uvset_emissiveMap = emissiveMap == nullptr ? -1 : (int)uvset_emissiveMap;
 		dest->uvset_occlusionMap = occlusionMap == nullptr ? -1 : (int)uvset_occlusionMap;
 		dest->alphaTest = 1 - alphaRef + 1.0f / 256.0f; // 256 so that it is just about smaller than 1 unorm unit (1.0/255.0)
+		dest->layerMask = layerMask;
 		dest->options = 0;
 		if (IsUsingVertexColors())
 		{
@@ -2121,7 +2122,7 @@ namespace wiScene
 			LayerComponent* layer_parent = layers.GetComponent(parentcomponent.parentID);
 			if (layer_child != nullptr && layer_parent != nullptr)
 			{
-				layer_child->layerMask = parentcomponent.layerMask_bind & layer_parent->GetLayerMask();
+				layer_child->layerMask &= layer_parent->GetLayerMask();
 			}
 
 		}
@@ -2491,6 +2492,12 @@ namespace wiScene
 		wiJobSystem::Dispatch(ctx, (uint32_t)materials.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
 			MaterialComponent& material = materials[args.jobIndex];
+			Entity entity = materials.GetEntity(args.jobIndex);
+			const LayerComponent* layer = layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				material.layerMask = layer->layerMask;
+			}
 
 			if (!material.constantBuffer.IsValid())
 			{

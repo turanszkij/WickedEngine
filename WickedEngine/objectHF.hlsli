@@ -220,6 +220,8 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			if (decalAccumulation.a < 1)
 			{
 				ShaderEntity decal = EntityArray[g_xFrame_DecalArrayOffset + entity_index];
+				if ((decal.layerMask & g_xMaterial.layerMask) == 0)
+					continue;
 
 				float4x4 decalProjection = MatrixArray[decal.GetMatrixIndex()];
 				float4 texMulAdd = decalProjection[3];
@@ -288,6 +290,8 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			if (envmapAccumulation.a < 1)
 			{
 				ShaderEntity probe = EntityArray[g_xFrame_EnvProbeArrayOffset + entity_index];
+				if ((probe.layerMask & g_xMaterial.layerMask) == 0)
+					continue;
 
 				const float4x4 probeProjection = MatrixArray[probe.GetMatrixIndex()];
 				const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
@@ -424,6 +428,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 				if (entity_index >= first_item && entity_index <= last_item && decalAccumulation.a < 1)
 				{
 					ShaderEntity decal = EntityArray[entity_index];
+					if ((decal.layerMask & g_xMaterial.layerMask) == 0)
+						continue;
 
 					float4x4 decalProjection = MatrixArray[decal.GetMatrixIndex()];
 					float4 texMulAdd = decalProjection[3];
@@ -505,6 +511,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 				if (entity_index >= first_item && entity_index <= last_item && envmapAccumulation.a < 1)
 				{
 					ShaderEntity probe = EntityArray[entity_index];
+					if ((probe.layerMask & g_xMaterial.layerMask) == 0)
+						continue;
 
 					const float4x4 probeProjection = MatrixArray[probe.GetMatrixIndex()];
 					const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
@@ -1023,6 +1031,8 @@ GBUFFEROutputType main(PIXELINPUT input)
 
 	surface.pixel = pixel;
 	surface.screenUV = ScreenCoord;
+
+	surface.layerMask = g_xMaterial.layerMask;
 
 	float3 ambient = GetAmbient(surface.N);
 	ambient = lerp(ambient, ambient * surface.sss.rgb, saturate(surface.sss.a));

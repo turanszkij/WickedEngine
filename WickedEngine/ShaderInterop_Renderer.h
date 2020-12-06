@@ -27,7 +27,7 @@ struct ShaderMaterial
 	float		alphaTest;
 	float		displacementMapping;
 
-	int			padding0;
+	uint		layerMask;
 	int			uvset_baseColorMap;
 	int			uvset_surfaceMap;
 	int			uvset_normalMap;
