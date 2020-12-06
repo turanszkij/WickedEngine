@@ -58,6 +58,7 @@ namespace wiRenderer
 	struct Visibility
 	{
 		// User fills these:
+		uint32_t layerMask = ~0u;
 		const wiScene::Scene* scene = nullptr;
 		const wiScene::CameraComponent* camera = nullptr;
 		enum FLAGS
@@ -131,8 +132,8 @@ namespace wiRenderer
 		}
 	};
 
-	// Performs frustum culling. Specify layerMask to only include specific layers in rendering
-	void UpdateVisibility(Visibility& vis, uint32_t layerMask = ~0);
+	// Performs frustum culling.
+	void UpdateVisibility(Visibility& vis);
 	// Prepares the scene for rendering
 	void UpdatePerFrameData(wiScene::Scene& scene, const Visibility& vis, float dt);
 	// Updates the GPU state according to the previously called UpdatePerFrameData()
@@ -186,8 +187,7 @@ namespace wiRenderer
 	// Draw shadow maps for each visible light that has associated shadow maps
 	void DrawShadowmaps(
 		const Visibility& vis,
-		wiGraphics::CommandList cmd,
-		uint32_t layerMask = ~0
+		wiGraphics::CommandList cmd
 	);
 	// Draw debug world. You must also enable what parts to draw, eg. SetToDrawGridHelper, etc, see implementation for details what can be enabled.
 	void DrawDebugWorld(

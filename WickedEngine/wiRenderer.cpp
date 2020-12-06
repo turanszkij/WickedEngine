@@ -3111,7 +3111,7 @@ void ProcessDeferredMipGenRequests(CommandList cmd)
 	deferredMIPGenLock.unlock();
 }
 
-void UpdateVisibility(Visibility& vis, uint32_t layerMask)
+void UpdateVisibility(Visibility& vis)
 {
 	// Perform parallel frustum culling and obtain closest reflector:
 	wiJobSystem::context ctx;
@@ -3144,7 +3144,7 @@ void UpdateVisibility(Visibility& vis, uint32_t layerMask)
 
 			Entity entity = vis.scene->aabb_lights.GetEntity(args.jobIndex);
 			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-			if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+			if (layer != nullptr && !(layer->GetLayerMask() & vis.layerMask))
 			{
 				return;
 			}
@@ -3196,7 +3196,7 @@ void UpdateVisibility(Visibility& vis, uint32_t layerMask)
 
 			Entity entity = vis.scene->aabb_objects.GetEntity(args.jobIndex);
 			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-			if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+			if (layer != nullptr && !(layer->GetLayerMask() & vis.layerMask))
 			{
 				return;
 			}
@@ -3260,7 +3260,7 @@ void UpdateVisibility(Visibility& vis, uint32_t layerMask)
 
 			Entity entity = vis.scene->aabb_decals.GetEntity(args.jobIndex);
 			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-			if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+			if (layer != nullptr && !(layer->GetLayerMask() & vis.layerMask))
 			{
 				return;
 			}
@@ -3302,7 +3302,7 @@ void UpdateVisibility(Visibility& vis, uint32_t layerMask)
 			{
 				Entity entity = vis.scene->aabb_probes.GetEntity(i);
 				const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-				if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+				if (layer != nullptr && !(layer->GetLayerMask() & vis.layerMask))
 				{
 					continue;
 				}
@@ -3325,7 +3325,7 @@ void UpdateVisibility(Visibility& vis, uint32_t layerMask)
 			{
 				Entity entity = vis.scene->emitters.GetEntity(i);
 				const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-				if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+				if (layer != nullptr && !(layer->GetLayerMask() & vis.layerMask))
 				{
 					continue;
 				}
@@ -3342,7 +3342,7 @@ void UpdateVisibility(Visibility& vis, uint32_t layerMask)
 			{
 				Entity entity = vis.scene->hairs.GetEntity(i);
 				const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-				if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+				if (layer != nullptr && !(layer->GetLayerMask() & vis.layerMask))
 				{
 					continue;
 				}
@@ -4746,8 +4746,7 @@ void SetShadowPropsCube(int resolution, int count)
 }
 void DrawShadowmaps(
 	const Visibility& vis,
-	CommandList cmd,
-	uint32_t layerMask
+	CommandList cmd
 )
 {
 	if (IsWireRender())
@@ -4817,7 +4816,7 @@ void DrawShadowmaps(
 							{
 								Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
 								const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
-								if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+								if (layer != nullptr && !(layer->GetLayerMask() & vis.layerMask))
 								{
 									continue;
 								}
@@ -4893,7 +4892,7 @@ void DrawShadowmaps(
 						{
 							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
 							const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
-							if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+							if (layer != nullptr && !(layer->GetLayerMask() & vis.layerMask))
 							{
 								continue;
 							}
@@ -4968,7 +4967,7 @@ void DrawShadowmaps(
 						{
 							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
 							const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
-							if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+							if (layer != nullptr && !(layer->GetLayerMask() & vis.layerMask))
 							{
 								continue;
 							}

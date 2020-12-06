@@ -501,20 +501,22 @@ void RenderPath3D::Update(float dt)
 	scene->Update(dt * wiRenderer::GetGameSpeed());
 
 	// Frustum culling for main camera:
+	visibility_main.layerMask = getLayerMask();
 	visibility_main.scene = scene;
 	visibility_main.camera = camera;
 	visibility_main.flags = wiRenderer::Visibility::ALLOW_EVERYTHING;
-	wiRenderer::UpdateVisibility(visibility_main, getLayerMask());
+	wiRenderer::UpdateVisibility(visibility_main);
 
 	if (visibility_main.planar_reflection_visible)
 	{
 		// Frustum culling for planar reflections:
 		camera_reflection = *camera;
 		camera_reflection.Reflect(visibility_main.reflectionPlane);
+		visibility_reflection.layerMask = getLayerMask();
 		visibility_reflection.scene = scene;
 		visibility_reflection.camera = &camera_reflection;
 		visibility_reflection.flags = wiRenderer::Visibility::ALLOW_OBJECTS;
-		wiRenderer::UpdateVisibility(visibility_reflection, getLayerMask());
+		wiRenderer::UpdateVisibility(visibility_reflection);
 	}
 
 	wiRenderer::OcclusionCulling_Read(*scene, visibility_main);
@@ -536,7 +538,7 @@ void RenderPath3D::Render() const
 	{
 		cmd = device->BeginCommandList();
 		wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
-			wiRenderer::DrawShadowmaps(visibility_main, cmd, getLayerMask());
+			wiRenderer::DrawShadowmaps(visibility_main, cmd);
 			});
 	}
 
