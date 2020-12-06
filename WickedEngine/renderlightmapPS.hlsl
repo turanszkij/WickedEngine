@@ -46,7 +46,7 @@ float4 main(Input input) : SV_TARGET
 			{
 				dist = FLT_MAX;
 
-				L = light.GetDirectionWS().xyz; 
+				L = light.GetDirection().xyz; 
 				NdotL = saturate(dot(L, N));
 
 				[branch]
@@ -67,7 +67,7 @@ float4 main(Input input) : SV_TARGET
 			break;
 			case ENTITY_TYPE_POINTLIGHT:
 			{
-				L = light.positionWS - P;
+				L = light.position - P;
 				const float dist2 = dot(L, L);
 				const float range2 = light.GetRange() * light.GetRange();
 
@@ -96,7 +96,7 @@ float4 main(Input input) : SV_TARGET
 			break;
 			case ENTITY_TYPE_SPOTLIGHT:
 			{
-				L = light.positionWS - P;
+				L = light.position - P;
 				const float dist2 = dot(L, L);
 				const float range2 = light.GetRange() * light.GetRange();
 
@@ -110,7 +110,7 @@ float4 main(Input input) : SV_TARGET
 					[branch]
 					if (NdotL > 0)
 					{
-						const float SpotFactor = dot(L, light.GetDirectionWS());
+						const float SpotFactor = dot(L, light.GetDirection());
 						const float spotCutOff = light.GetConeAngleCos();
 
 						[branch]
@@ -129,22 +129,6 @@ float4 main(Input input) : SV_TARGET
 						}
 					}
 				}
-			}
-			break;
-			case ENTITY_TYPE_SPHERELIGHT:
-			{
-			}
-			break;
-			case ENTITY_TYPE_DISCLIGHT:
-			{
-			}
-			break;
-			case ENTITY_TYPE_RECTANGLELIGHT:
-			{
-			}
-			break;
-			case ENTITY_TYPE_TUBELIGHT:
-			{
 			}
 			break;
 			}

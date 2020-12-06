@@ -138,7 +138,7 @@ void TestsRenderer::Load()
 		TransformComponent transform;
 		transform.Translate(XMFLOAT3(0, 2.f, -4.5f));
 		transform.UpdateTransform();
-		wiRenderer::GetCamera().TransformCamera(transform);
+		wiScene::GetCamera().TransformCamera(transform);
 
 		float screenW = wiRenderer::GetDevice()->GetScreenWidth();
 		float screenH = wiRenderer::GetDevice()->GetScreenHeight();

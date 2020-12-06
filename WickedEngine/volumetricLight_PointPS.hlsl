@@ -4,7 +4,7 @@
 
 float4 main(VertexToPixel input) : SV_TARGET
 {
-	ShaderEntity light = EntityArray[(uint)g_xColor.x];
+	ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + (uint)g_xColor.x];
 
 	float2 ScreenCoord = input.pos2D.xy / input.pos2D.w * float2(0.5f, -0.5f) + 0.5f;
 	float depth = max(input.pos.z, texture_depth.SampleLevel(sampler_linear_clamp, ScreenCoord, 0));
@@ -17,10 +17,10 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float accumulation = 0;
 
 	float3 rayEnd = g_xCamera_CamPos;
-	if (length(rayEnd - light.positionWS) > light.GetRange())
+	if (length(rayEnd - light.position) > light.GetRange())
 	{
 		// if we are outside the light volume, then rayEnd will be the traced sphere frontface:
-		float t = Trace_sphere(rayEnd, -V, light.positionWS, light.GetRange());
+		float t = Trace_sphere(rayEnd, -V, light.position, light.GetRange());
 		rayEnd = rayEnd - t * V;
 	}
 
@@ -34,7 +34,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	[loop]
 	for(uint i = 0; i < sampleCount; ++i)
 	{
-		float3 L = light.positionWS - P;
+		float3 L = light.position - P;
 		const float3 Lunnormalized = L;
 		const float dist2 = dot(L, L);
 		const float dist = sqrt(dist2);

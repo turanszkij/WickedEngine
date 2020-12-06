@@ -19,19 +19,6 @@ using namespace wiIntersect_BindLua;
 
 namespace wiRenderer_BindLua
 {
-	int SetResolutionScale(lua_State* L)
-	{
-		int argc = wiLua::SGetArgCount(L);
-		if (argc > 0)
-		{
-			wiRenderer::SetResolutionScale(wiLua::SGetFloat(L, 1));
-		}
-		else
-		{
-			wiLua::SError(L, "SetResolutionScale(float) not enough arguments!");
-		}
-		return 0;
-	}
 	int SetGamma(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
@@ -73,26 +60,6 @@ namespace wiRenderer_BindLua
 	{
 		wiLua::SSetFloat(L, wiRenderer::GetDevice()->GetScreenHeight());
 		return 1;
-	}
-
-	int GetCamera(lua_State* L)
-	{
-		Luna<CameraComponent_BindLua>::push(L, new CameraComponent_BindLua(&wiRenderer::GetCamera()));
-		return 1;
-	}
-	int AttachCamera(lua_State* L)
-	{
-		int argc = wiLua::SGetArgCount(L);
-		if (argc > 0)
-		{
-			Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
-			wiRenderer::AttachCamera(entity);
-		}
-		else
-		{
-			wiLua::SError(L, "AttachCamera(Entity entity) not enough arguments!");
-		}
-		return 0;
 	}
 
 	int SetShadowProps2D(lua_State* L)
@@ -410,16 +377,12 @@ namespace wiRenderer_BindLua
 		{
 			initialized = true;
 
-			wiLua::RegisterFunc("SetResolutionScale", SetResolutionScale);
 			wiLua::RegisterFunc("SetGamma", SetGamma);
 			wiLua::RegisterFunc("SetGameSpeed", SetGameSpeed);
 			wiLua::RegisterFunc("GetGameSpeed", GetGameSpeed);
 
 			wiLua::RegisterFunc("GetScreenWidth", GetScreenWidth);
 			wiLua::RegisterFunc("GetScreenHeight", GetScreenHeight);
-
-			wiLua::RegisterFunc("GetCamera", GetCamera);
-			wiLua::RegisterFunc("AttachCamera", AttachCamera);
 
 			wiLua::RegisterFunc("SetShadowProps2D", SetShadowProps2D);
 			wiLua::RegisterFunc("SetShadowPropsCube", SetShadowPropsCube);

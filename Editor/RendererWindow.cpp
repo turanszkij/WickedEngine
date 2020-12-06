@@ -42,9 +42,15 @@ void RendererWindow::Create(EditorComponent* editor)
 	resolutionScaleSlider.SetTooltip("Adjust the internal rendering resolution.");
 	resolutionScaleSlider.SetSize(XMFLOAT2(100, itemheight));
 	resolutionScaleSlider.SetPos(XMFLOAT2(x, y += step));
-	resolutionScaleSlider.SetValue(wiRenderer::GetResolutionScale());
-	resolutionScaleSlider.OnSlide([&](wiEventArgs args) {
-		wiRenderer::SetResolutionScale(args.fValue);
+	resolutionScaleSlider.SetValue(editor->resolutionScale);
+	resolutionScaleSlider.OnSlide([editor](wiEventArgs args) {
+		if (editor->resolutionScale != args.fValue)
+		{
+			editor->resolutionScale = args.fValue;
+			editor->ResizeBuffers();
+			editor->renderPath->resolutionScale = args.fValue;
+			editor->renderPath->ResizeBuffers();
+		}
 	});
 	AddWidget(&resolutionScaleSlider);
 

@@ -545,6 +545,7 @@ void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialCompon
 
 	device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), cmd);
 	device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), cmd);
+	device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
 
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
 	{

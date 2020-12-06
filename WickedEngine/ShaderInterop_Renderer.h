@@ -52,60 +52,58 @@ struct ShaderMaterial
 // Warning: the size of this structure directly affects shader performance.
 //	Try to reduce it as much as possible!
 //	Keep it aligned to 16 bytes for best performance!
-//	Right now, this is 64 bytes total
+//	Right now, this is 48 bytes total
 struct ShaderEntity
 {
-	uint3 positionVS16_directionVS16;
-	uint type8_flags8_coneAngleCos16;
+	float3 position;
+	uint type8_flags8_range16;
 
-	float3 positionWS;
-	uint range16_energy16;
-
-	uint2 directionWS16; // 16 bits free
+	uint2 direction16_coneAngleCos16;
+	uint energy16_X16; // 16 bits free
 	uint color;
-	uint indices;
 
-	uint2 texMulAdd16;
 	uint layerMask;
+	uint indices;
+	uint cubeRemap;
 	uint userdata;
 
 #ifndef __cplusplus
 	// Shader-side:
-	inline float3 GetPositionVS()
-	{
-		return f16tof32(positionVS16_directionVS16 & 0xFFFF);
-	}
-	inline float3 GetDirectionVS()
-	{
-		return f16tof32((positionVS16_directionVS16 >> 16) & 0xFFFF);
-	}
 	inline uint GetType()
 	{
-		return type8_flags8_coneAngleCos16 & 0xFF;
+		return type8_flags8_range16 & 0xFF;
 	}
 	inline uint GetFlags()
 	{
-		return (type8_flags8_coneAngleCos16 >> 8) & 0xFF;
-	}
-	inline float GetConeAngleCos()
-	{
-		return f16tof32((type8_flags8_coneAngleCos16 >> 16) & 0xFFFF);
+		return (type8_flags8_range16 >> 8) & 0xFF;
 	}
 	inline float GetRange()
 	{
-		return f16tof32(range16_energy16 & 0xFFFF);
+		return f16tof32((type8_flags8_range16 >> 16) & 0xFFFF);
+	}
+	inline float3 GetDirection()
+	{
+		return float3(
+			f16tof32(direction16_coneAngleCos16.x & 0xFFFF),
+			f16tof32((direction16_coneAngleCos16.x >> 16) & 0xFFFF),
+			f16tof32(direction16_coneAngleCos16.y & 0xFFFF)
+		);
+	}
+	inline float GetConeAngleCos()
+	{
+		return f16tof32((direction16_coneAngleCos16.y >> 16) & 0xFFFF);
 	}
 	inline float GetEnergy()
 	{
-		return f16tof32((range16_energy16 >> 16) & 0xFFFF);
+		return f16tof32(energy16_X16 & 0xFFFF);
 	}
-	inline float3 GetDirectionWS()
+	inline float GetCubemapDepthRemapNear()
 	{
-		return float3(
-			f16tof32(directionWS16.x & 0xFFFF),
-			f16tof32((directionWS16.x >> 16) & 0xFFFF),
-			f16tof32(directionWS16.y & 0xFFFF)
-		);
+		return f16tof32(cubeRemap & 0xFFFF);
+	}
+	inline float GetCubemapDepthRemapFar()
+	{
+		return f16tof32((cubeRemap >> 16) & 0xFFFF);
 	}
 	inline float4 GetColor()
 	{
@@ -130,82 +128,50 @@ struct ShaderEntity
 	{
 		return indices != ~0;
 	}
-	inline float4 GetTexMulAdd()
-	{
-		return float4(
-			f16tof32(texMulAdd16.x & 0xFFFF),
-			f16tof32((texMulAdd16.x >> 16) & 0xFFFF),
-			f16tof32(texMulAdd16.y & 0xFFFF),
-			f16tof32((texMulAdd16.y >> 16) & 0xFFFF)
-		);
-	}
-
-	// Load area light props:
-	inline float3 GetRight() { return GetDirectionWS(); }
-	inline float3 GetUp() { return GetDirectionVS(); }
-	inline float3 GetFront() { return GetPositionVS(); }
-	inline float GetRadius() { return GetTexMulAdd().x; }
-	inline float GetWidth() { return GetTexMulAdd().y; }
-	inline float GetHeight() { return GetTexMulAdd().z; }
-
-	// Load cubemap depth remap props:
-	inline float GetCubemapDepthRemapNear() { return GetTexMulAdd().w; }
-	inline float GetCubemapDepthRemapFar() { return GetConeAngleCos(); }
 
 	// Load decal props:
 	inline float GetEmissive() { return GetEnergy(); }
 
 #else
 	// Application-side:
-	inline void SetPositionVS(float3 value)
-	{
-		positionVS16_directionVS16.x |= XMConvertFloatToHalf(value.x);
-		positionVS16_directionVS16.y |= XMConvertFloatToHalf(value.y);
-		positionVS16_directionVS16.z |= XMConvertFloatToHalf(value.z);
-	}
-	inline void SetDirectionVS(float3 value)
-	{
-		positionVS16_directionVS16.x |= XMConvertFloatToHalf(value.x) << 16;
-		positionVS16_directionVS16.y |= XMConvertFloatToHalf(value.y) << 16;
-		positionVS16_directionVS16.z |= XMConvertFloatToHalf(value.z) << 16;
-	}
 	inline void SetType(uint type)
 	{
-		type8_flags8_coneAngleCos16 |= type & 0xFF;
+		type8_flags8_range16 |= type & 0xFF;
 	}
 	inline void SetFlags(uint flags)
 	{
-		type8_flags8_coneAngleCos16 |= (flags & 0xFF) << 8;
-	}
-	inline void SetConeAngleCos(float value)
-	{
-		type8_flags8_coneAngleCos16 |= XMConvertFloatToHalf(value) << 16;
+		type8_flags8_range16 |= (flags & 0xFF) << 8;
 	}
 	inline void SetRange(float value)
 	{
-		range16_energy16 |= XMConvertFloatToHalf(value);
+		type8_flags8_range16 |= XMConvertFloatToHalf(value) << 16;
+	}
+	inline void SetDirection(float3 value)
+	{
+		direction16_coneAngleCos16.x |= XMConvertFloatToHalf(value.x);
+		direction16_coneAngleCos16.x |= XMConvertFloatToHalf(value.y) << 16;
+		direction16_coneAngleCos16.y |= XMConvertFloatToHalf(value.z);
+	}
+	inline void SetConeAngleCos(float value)
+	{
+		direction16_coneAngleCos16.y |= XMConvertFloatToHalf(value) << 16;
 	}
 	inline void SetEnergy(float value)
 	{
-		range16_energy16 |= XMConvertFloatToHalf(value) << 16;
+		energy16_X16 |= XMConvertFloatToHalf(value);
 	}
-	inline void SetDirectionWS(float3 value)
+	inline void SetCubeRemapNear(float value)
 	{
-		directionWS16.x |= XMConvertFloatToHalf(value.x);
-		directionWS16.x |= XMConvertFloatToHalf(value.y) << 16;
-		directionWS16.y |= XMConvertFloatToHalf(value.z);
+		cubeRemap |= XMConvertFloatToHalf(value);
+	}
+	inline void SetCubeRemapFar(float value)
+	{
+		cubeRemap |= XMConvertFloatToHalf(value) << 16;
 	}
 	inline void SetIndices(uint matrixIndex, uint textureIndex)
 	{
 		indices = matrixIndex & 0xFFFF;
 		indices |= (textureIndex & 0xFFFF) << 16;
-	}
-	inline void SetTexMulAdd(float4 value)
-	{
-		texMulAdd16.x |= XMConvertFloatToHalf(value.x);
-		texMulAdd16.x |= XMConvertFloatToHalf(value.y) << 16;
-		texMulAdd16.y |= XMConvertFloatToHalf(value.z);
-		texMulAdd16.y |= XMConvertFloatToHalf(value.w) << 16;
 	}
 
 #endif // __cplusplus
@@ -214,10 +180,10 @@ struct ShaderEntity
 static const uint ENTITY_TYPE_DIRECTIONALLIGHT = 0;
 static const uint ENTITY_TYPE_POINTLIGHT = 1;
 static const uint ENTITY_TYPE_SPOTLIGHT = 2;
-static const uint ENTITY_TYPE_SPHERELIGHT = 3;
-static const uint ENTITY_TYPE_DISCLIGHT = 4;
-static const uint ENTITY_TYPE_RECTANGLELIGHT = 5;
-static const uint ENTITY_TYPE_TUBELIGHT = 6;
+//static const uint ENTITY_TYPE_SPHERELIGHT = 3;
+//static const uint ENTITY_TYPE_DISCLIGHT = 4;
+//static const uint ENTITY_TYPE_RECTANGLELIGHT = 5;
+//static const uint ENTITY_TYPE_TUBELIGHT = 6;
 static const uint ENTITY_TYPE_DECAL = 100;
 static const uint ENTITY_TYPE_ENVMAP = 101;
 static const uint ENTITY_TYPE_FORCEFIELD_POINT = 200;

@@ -29,7 +29,7 @@ void EnvProbeWindow::Create(EditorComponent* editor)
 	generateButton.SetPos(XMFLOAT2(x, y += step));
 	generateButton.OnClick([=](wiEventArgs args) {
 		XMFLOAT3 pos;
-		XMStoreFloat3(&pos, XMVectorAdd(wiRenderer::GetCamera().GetEye(), wiRenderer::GetCamera().GetAt() * 4));
+		XMStoreFloat3(&pos, XMVectorAdd(wiScene::GetCamera().GetEye(), wiScene::GetCamera().GetAt() * 4));
 		Entity entity = wiScene::GetScene().Entity_CreateEnvironmentProbe("editorProbe", pos);
 		editor->ClearSelected();
 		editor->AddSelected(entity);

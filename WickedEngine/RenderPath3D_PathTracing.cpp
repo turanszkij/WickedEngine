@@ -24,8 +24,8 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE | BIND_RENDER_TARGET;
 		desc.Format = FORMAT_R32G32B32A32_FLOAT;
-		desc.Width = wiRenderer::GetInternalResolution().x;
-		desc.Height = wiRenderer::GetInternalResolution().y;
+		desc.Width = GetInternalResolution().x;
+		desc.Height = GetInternalResolution().y;
 		device->CreateTexture(&desc, nullptr, &traceResult);
 		device->SetName(&traceResult, "traceResult");
 	}
@@ -33,8 +33,8 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Format = defaultTextureFormat;
-		desc.Width = wiRenderer::GetInternalResolution().x;
-		desc.Height = wiRenderer::GetInternalResolution().y;
+		desc.Width = GetInternalResolution().x;
+		desc.Height = GetInternalResolution().y;
 		device->CreateTexture(&desc, nullptr, &rtPostprocess_LDR[0]);
 		device->SetName(&rtPostprocess_LDR[0], "rtPostprocess_LDR[0]");
 
@@ -115,7 +115,7 @@ void RenderPath3D_PathTracing::Render() const
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
-		wiRenderer::UpdateRenderData(visibility_main, cmd);
+		wiRenderer::UpdateRenderData(visibility_main, frameCB, cmd);
 
 		if (sam == 0)
 		{
@@ -154,7 +154,7 @@ void RenderPath3D_PathTracing::Render() const
 		{
 			auto range = wiProfiler::BeginRangeGPU("Traced Scene", cmd);
 
-			wiRenderer::RayBuffers* rayBuffers = wiRenderer::GenerateScreenRayBuffers(*camera, cmd);
+			wiRenderer::RayBuffers* rayBuffers = wiRenderer::GenerateScreenRayBuffers(*camera, GetInternalResolution().x, GetInternalResolution().y, cmd);
 			wiRenderer::RayTraceScene(*scene, rayBuffers, &traceResult, sam, cmd);
 
 

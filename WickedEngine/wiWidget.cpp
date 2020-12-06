@@ -10,8 +10,6 @@
 #include "wiEvent.h"
 #include "wiBackLog.h"
 
-#include <sstream>
-
 using namespace std;
 using namespace wiGraphics;
 using namespace wiScene;
@@ -154,9 +152,7 @@ void wiWidget::SetName(const std::string& value)
 	if (value.length() <= 0)
 	{
 		static atomic<uint32_t> widgetID{ 0 };
-		stringstream ss("");
-		ss << "widget_" << widgetID.fetch_add(1);
-		name = ss.str();
+		name = "widget_" + std::to_string(widgetID.fetch_add(1));
 	}
 	else
 	{
@@ -529,15 +525,11 @@ void wiTextInputField::SetValue(const std::string& newValue)
 }
 void wiTextInputField::SetValue(int newValue)
 {
-	stringstream ss("");
-	ss << newValue;
-	font.SetText(ss.str());
+	font.SetText(std::to_string(newValue));
 }
 void wiTextInputField::SetValue(float newValue)
 {
-	stringstream ss("");
-	ss << newValue;
-	font.SetText(ss.str());
+	font.SetText(std::to_string(newValue));
 }
 const std::string wiTextInputField::GetValue()
 {

@@ -701,19 +701,7 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)vSpotLightVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)vTubeLightVS.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)vDiscLightVS.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)vPointLightVS.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)vRectangleLightVS.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)vSphereLightVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)sphereVS.hlsl">

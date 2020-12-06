@@ -267,7 +267,7 @@ void wiOcean::initHeightMap(const WeatherComponent& weather, XMFLOAT2* out_h0, f
 	}
 }
 
-void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time, CommandList cmd) const
+void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, CommandList cmd) const
 {
 	auto& params = weather.oceanParameters;
 
@@ -290,7 +290,7 @@ void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time,
 	device->BindUAVs(CS, cs0_uavs, 0, arraysize(cs0_uavs), cmd);
 
 	Ocean_Simulation_PerFrameCB perFrameData;
-	perFrameData.g_Time = time * params.time_scale;
+	perFrameData.g_TimeScale = params.time_scale;
 	perFrameData.g_ChoppyScale = params.choppy_scale;
 	perFrameData.g_GridLen = params.dmap_dim / params.patch_length;
 	device->UpdateBuffer(&perFrameCB, &perFrameData, cmd);
@@ -349,7 +349,7 @@ void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time,
 }
 
 
-void wiOcean::Render(const CameraComponent& camera, const WeatherComponent& weather, float time, CommandList cmd) const
+void wiOcean::Render(const CameraComponent& camera, const WeatherComponent& weather, CommandList cmd) const
 {
 	auto& params = weather.oceanParameters;
 

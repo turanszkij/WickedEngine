@@ -176,7 +176,7 @@ void Translator::Update()
 	dragEnded = false;
 
 	XMFLOAT4 pointer = wiInput::GetPointer();
-	const CameraComponent& cam = wiRenderer::GetCamera();
+	const CameraComponent& cam = wiScene::GetCamera();
 	XMVECTOR pos = transform.GetPositionV();
 
 	if (enabled)

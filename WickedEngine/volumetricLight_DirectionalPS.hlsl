@@ -4,7 +4,7 @@
 
 float4 main(VertexToPixel input) : SV_TARGET
 {
-	ShaderEntity light = EntityArray[(uint)g_xColor.x];
+	ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + (uint)g_xColor.x];
 
 	if (!light.IsCastingShadow())
 	{
@@ -22,7 +22,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float marchedDistance = 0;
 	float3 accumulation = 0;
 
-	const float3 L = light.GetDirectionWS();
+	const float3 L = light.GetDirection();
 
 	float3 rayEnd = g_xCamera_CamPos;
 

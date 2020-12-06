@@ -15,7 +15,7 @@ void LightWindow::Create(EditorComponent* editor)
 	SetSize(XMFLOAT2(650, 500));
 
 	float x = 450;
-	float y = 0;
+	float y = 20;
 	float hei = 18;
 	float step = hei + 2;
 
@@ -47,47 +47,47 @@ void LightWindow::Create(EditorComponent* editor)
 	rangeSlider.SetTooltip("Adjust the maximum range the light can affect.");
 	AddWidget(&rangeSlider);
 
-	radiusSlider.Create(0.01f, 10, 0, 100000, "Radius: ");
-	radiusSlider.SetSize(XMFLOAT2(100, hei));
-	radiusSlider.SetPos(XMFLOAT2(x, y += step));
-	radiusSlider.OnSlide([&](wiEventArgs args) {
-		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
-		if (light != nullptr)
-		{
-			light->radius = args.fValue;
-		}
-	});
-	radiusSlider.SetEnabled(false);
-	radiusSlider.SetTooltip("Adjust the radius of an area light.");
-	AddWidget(&radiusSlider);
+	//radiusSlider.Create(0.01f, 10, 0, 100000, "Radius: ");
+	//radiusSlider.SetSize(XMFLOAT2(100, hei));
+	//radiusSlider.SetPos(XMFLOAT2(x, y += step));
+	//radiusSlider.OnSlide([&](wiEventArgs args) {
+	//	LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
+	//	if (light != nullptr)
+	//	{
+	//		light->radius = args.fValue;
+	//	}
+	//});
+	//radiusSlider.SetEnabled(false);
+	//radiusSlider.SetTooltip("Adjust the radius of an area light.");
+	//AddWidget(&radiusSlider);
 
-	widthSlider.Create(1, 10, 0, 100000, "Width: ");
-	widthSlider.SetSize(XMFLOAT2(100, hei));
-	widthSlider.SetPos(XMFLOAT2(x, y += step));
-	widthSlider.OnSlide([&](wiEventArgs args) {
-		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
-		if (light != nullptr)
-		{
-			light->width = args.fValue;
-		}
-	});
-	widthSlider.SetEnabled(false);
-	widthSlider.SetTooltip("Adjust the width of an area light.");
-	AddWidget(&widthSlider);
+	//widthSlider.Create(1, 10, 0, 100000, "Width: ");
+	//widthSlider.SetSize(XMFLOAT2(100, hei));
+	//widthSlider.SetPos(XMFLOAT2(x, y += step));
+	//widthSlider.OnSlide([&](wiEventArgs args) {
+	//	LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
+	//	if (light != nullptr)
+	//	{
+	//		light->width = args.fValue;
+	//	}
+	//});
+	//widthSlider.SetEnabled(false);
+	//widthSlider.SetTooltip("Adjust the width of an area light.");
+	//AddWidget(&widthSlider);
 
-	heightSlider.Create(1, 10, 0, 100000, "Height: ");
-	heightSlider.SetSize(XMFLOAT2(100, hei));
-	heightSlider.SetPos(XMFLOAT2(x, y += step));
-	heightSlider.OnSlide([&](wiEventArgs args) {
-		LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
-		if (light != nullptr)
-		{
-			light->height = args.fValue;
-		}
-	});
-	heightSlider.SetEnabled(false);
-	heightSlider.SetTooltip("Adjust the height of an area light.");
-	AddWidget(&heightSlider);
+	//heightSlider.Create(1, 10, 0, 100000, "Height: ");
+	//heightSlider.SetSize(XMFLOAT2(100, hei));
+	//heightSlider.SetPos(XMFLOAT2(x, y += step));
+	//heightSlider.OnSlide([&](wiEventArgs args) {
+	//	LightComponent* light = wiScene::GetScene().lights.GetComponent(entity);
+	//	if (light != nullptr)
+	//	{
+	//		light->height = args.fValue;
+	//	}
+	//});
+	//heightSlider.SetEnabled(false);
+	//heightSlider.SetTooltip("Adjust the height of an area light.");
+	//AddWidget(&heightSlider);
 
 	fovSlider.Create(0.1f, XM_PI - 0.01f, 0, 100000, "FOV: ");
 	fovSlider.SetSize(XMFLOAT2(100, hei));
@@ -209,10 +209,10 @@ void LightWindow::Create(EditorComponent* editor)
 	typeSelectorComboBox.AddItem("Directional");
 	typeSelectorComboBox.AddItem("Point");
 	typeSelectorComboBox.AddItem("Spot");
-	typeSelectorComboBox.AddItem("Sphere");
-	typeSelectorComboBox.AddItem("Disc");
-	typeSelectorComboBox.AddItem("Rectangle");
-	typeSelectorComboBox.AddItem("Tube");
+	//typeSelectorComboBox.AddItem("Sphere");
+	//typeSelectorComboBox.AddItem("Disc");
+	//typeSelectorComboBox.AddItem("Rectangle");
+	//typeSelectorComboBox.AddItem("Tube");
 	typeSelectorComboBox.SetTooltip("Choose the light source type...");
 	typeSelectorComboBox.SetSelected((int)LightComponent::POINT);
 	AddWidget(&typeSelectorComboBox);
@@ -292,9 +292,9 @@ void LightWindow::SetEntity(Entity entity)
 		energySlider.SetEnabled(true);
 		energySlider.SetValue(light->energy);
 		rangeSlider.SetValue(light->range_local);
-		radiusSlider.SetValue(light->radius);
-		widthSlider.SetValue(light->width);
-		heightSlider.SetValue(light->height);
+		//radiusSlider.SetValue(light->radius);
+		//widthSlider.SetValue(light->width);
+		//heightSlider.SetValue(light->height);
 		fovSlider.SetValue(light->fov);
 		shadowCheckBox.SetEnabled(true);
 		shadowCheckBox.SetCheck(light->IsCastingShadow());
@@ -352,15 +352,15 @@ void LightWindow::SetLightType(LightComponent::LightType type)
 	}
 	else
 	{
-		if (type == LightComponent::SPHERE || type == LightComponent::DISC || type == LightComponent::RECTANGLE || type == LightComponent::TUBE)
-		{
-			rangeSlider.SetEnabled(false);
-			radiusSlider.SetEnabled(true);
-			widthSlider.SetEnabled(true);
-			heightSlider.SetEnabled(true);
-			fovSlider.SetEnabled(false);
-		}
-		else
+		//if (type == LightComponent::SPHERE || type == LightComponent::DISC || type == LightComponent::RECTANGLE || type == LightComponent::TUBE)
+		//{
+		//	rangeSlider.SetEnabled(false);
+		//	radiusSlider.SetEnabled(true);
+		//	widthSlider.SetEnabled(true);
+		//	heightSlider.SetEnabled(true);
+		//	fovSlider.SetEnabled(false);
+		//}
+		//else
 		{
 			rangeSlider.SetEnabled(true);
 			radiusSlider.SetEnabled(false);

@@ -136,8 +136,6 @@ protected:
 		return &rtPostprocess_LDR[rt_index];
 	}
 
-	void ResizeBuffers() override;
-
 	virtual void RenderFrameSetUp(wiGraphics::CommandList cmd) const;
 	virtual void RenderReflections(wiGraphics::CommandList cmd) const;
 
@@ -154,13 +152,17 @@ protected:
 	
 public:
 
-	wiScene::CameraComponent* camera = &wiRenderer::GetCamera();
+	void ResizeBuffers() override;
+
+	wiScene::CameraComponent* camera = &wiScene::GetCamera();
 	wiScene::CameraComponent camera_previous;
 	wiScene::CameraComponent camera_reflection;
 
 	wiScene::Scene* scene = &wiScene::GetScene();
 	wiRenderer::Visibility visibility_main;
 	wiRenderer::Visibility visibility_reflection;
+
+	FrameCB frameCB = {};
 
 	const wiGraphics::Texture* GetDepthStencil() const override { return &depthBuffer; }
 	const wiGraphics::Texture* GetGUIBlurredBackground() const override { return &rtGUIBlurredBackground[2]; }

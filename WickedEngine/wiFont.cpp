@@ -14,7 +14,6 @@
 #include "Utility/stb_truetype.h"
 
 #include <fstream>
-#include <sstream>
 #include <atomic>
 #include <unordered_map>
 #include <unordered_set>
@@ -86,9 +85,8 @@ namespace wiFont_Internal
 
 			if (!stbtt_InitFont(&fontInfo, fontBuffer.data(), offset))
 			{
-				stringstream ss("");
-				ss << "Failed to load font: " << name;
-				wiHelper::messageBox(ss.str());
+				string ss = "Failed to load font: " + name;
+				wiHelper::messageBox(ss.c_str());
 			}
 
 			stbtt_GetFontVMetrics(&fontInfo, &ascent, &descent, &lineGap);

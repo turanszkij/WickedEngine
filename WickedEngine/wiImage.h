@@ -47,11 +47,6 @@ enum QUALITY
 	QUALITY_ANISOTROPIC,
 	QUALITY_COUNT
 };
-enum ImageType
-{
-	SCREEN,
-	WORLD,
-};
 
 struct wiImageParams
 {
@@ -73,7 +68,6 @@ struct wiImageParams
 	XMFLOAT4 color;
 	XMFLOAT4 drawRect;
 	XMFLOAT4 drawRect2;
-	XMFLOAT4 lookAt;			//(x,y,z) : direction, (w) :isenabled?
 	XMFLOAT2 texOffset;
 	XMFLOAT2 texOffset2;
 	XMFLOAT2 pivot;				// (0,0) : upperleft, (0.5,0.5) : center, (1,1) : bottomright
@@ -81,12 +75,13 @@ struct wiImageParams
 	float fade;
 	float opacity;
 	XMFLOAT2 corners[4];		// you can deform the image by its corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
+	const XMMATRIX* customRotation = nullptr;
+	const XMMATRIX* customProjection = nullptr;
 
 	uint8_t stencilRef;
 	STENCILMODE stencilComp;
 	STENCILREFMODE stencilRefMode;
 	BLENDMODE blendFlag;
-	ImageType typeFlag;
 	SAMPLEMODE sampleFlag;
 	QUALITY quality;
 
@@ -105,7 +100,6 @@ struct wiImageParams
 		drawRect2 = XMFLOAT4(0, 0, 0, 0);
 		texOffset = XMFLOAT2(0, 0);
 		texOffset2 = XMFLOAT2(0, 0);
-		lookAt = XMFLOAT4(0, 0, 0, 0);
 		pivot = XMFLOAT2(0, 0);
 		fade = 0;
 		rotation = 0;
@@ -114,7 +108,6 @@ struct wiImageParams
 		stencilComp = STENCILMODE_DISABLED;
 		stencilRefMode = STENCILREFMODE_ALL;
 		blendFlag = BLENDMODE_ALPHA;
-		typeFlag = SCREEN;
 		sampleFlag = SAMPLEMODE_MIRROR;
 		quality = QUALITY_LINEAR;
 		maskMap = nullptr;
@@ -122,6 +115,8 @@ struct wiImageParams
 		corners[1] = XMFLOAT2(1, 0);
 		corners[2] = XMFLOAT2(0, 1);
 		corners[3] = XMFLOAT2(1, 1);
+		customRotation = nullptr;
+		customProjection = nullptr;
 	}
 
 	constexpr bool isDrawRectEnabled() const { return _flags & DRAWRECT; }

@@ -5,6 +5,7 @@
 #include "wiScene.h"
 #include "wiECS.h"
 #include "wiIntersect.h"
+#include "ShaderInterop_Renderer.h"
 
 #include <memory>
 
@@ -48,11 +49,6 @@ namespace wiRenderer
 	void ReloadShaders();
 
 	bool LoadShader(wiGraphics::SHADERSTAGE stage, wiGraphics::Shader& shader, const std::string& filename);
-
-	// Returns the main camera that is currently being used in rendering (and also for post processing)
-	wiScene::CameraComponent& GetCamera();
-	// Attach camera to entity for the current frame
-	void AttachCamera(wiECS::Entity entity);
 
 
 	struct Visibility
@@ -135,16 +131,27 @@ namespace wiRenderer
 	// Performs frustum culling.
 	void UpdateVisibility(Visibility& vis);
 	// Prepares the scene for rendering
-	void UpdatePerFrameData(wiScene::Scene& scene, const Visibility& vis, float dt);
+	void UpdatePerFrameData(
+		wiScene::Scene& scene,
+		const Visibility& vis,
+		FrameCB& frameCB,
+		XMUINT2 internalResolution,
+		float dt
+	);
 	// Updates the GPU state according to the previously called UpdatePerFrameData()
-	void UpdateRenderData(const Visibility& vis, wiGraphics::CommandList cmd);
+	void UpdateRenderData(
+		const Visibility& vis,
+		const FrameCB& frameCB,
+		wiGraphics::CommandList cmd
+	);
 	// Updates all acceleration structures for raytracing API
-	void UpdateRaytracingAccelerationStructures(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
+	void UpdateRaytracingAccelerationStructures(
+		const wiScene::Scene& scene,
+		wiGraphics::CommandList cmd
+	);
 
 	// Binds all common constant buffers and samplers that may be used in all shaders
 	void BindCommonResources(wiGraphics::CommandList cmd);
-	// Updates the per frame constant buffer (need to call at least once per frame)
-	void UpdateFrameCB(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 	// Updates the per camera constant buffer need to call for each different camera that is used when calling DrawScene() and the like
 	//	camera_previous : camera from previous frame, used for reprojection effects.
 	//	camera_reflection : camera that renders planar reflection
@@ -438,7 +445,7 @@ namespace wiRenderer
 		void Create(uint32_t newRayCapacity);
 	};
 	// Generate rays for every pixel of the internal resolution
-	RayBuffers* GenerateScreenRayBuffers(const wiScene::CameraComponent& camera, wiGraphics::CommandList cmd);
+	RayBuffers* GenerateScreenRayBuffers(const wiScene::CameraComponent& camera, uint32_t width, uint32_t height, wiGraphics::CommandList cmd);
 	// Render the scene with ray tracing. You provide the ray buffer, where each ray maps to one pixel of the result testure
 	void RayTraceScene(
 		const wiScene::Scene& scene,
@@ -496,7 +503,7 @@ namespace wiRenderer
 
 	void PutWaterRipple(const std::string& image, const XMFLOAT3& pos);
 	void ManageWaterRipples();
-	void DrawWaterRipples(wiGraphics::CommandList cmd);
+	void DrawWaterRipples(const Visibility& vis, wiGraphics::CommandList cmd);
 
 
 
@@ -512,11 +519,8 @@ namespace wiRenderer
 
 
 
-	void SetResolutionScale(float value);
-	float GetResolutionScale();
 	void SetTransparentShadowsEnabled(float value);
 	float GetTransparentShadowsEnabled();
-	XMUINT2 GetInternalResolution();
 	void SetGamma(float value);
 	float GetGamma();
 	void SetWireRender(bool value);
@@ -587,7 +591,7 @@ namespace wiRenderer
 	const wiGraphics::Texture* GetGlobalLightmap();
 
 	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()
-	RAY GetPickRay(long cursorX, long cursorY, const wiScene::CameraComponent& camera = GetCamera());
+	RAY GetPickRay(long cursorX, long cursorY, const wiScene::CameraComponent& camera = wiScene::GetCamera());
 
 
 	// Add box to render in next frame. It will be rendered in DrawDebugWorld()

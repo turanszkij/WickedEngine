@@ -33,7 +33,7 @@ void RTAO_Raygen()
     const float3 P = reconstructPosition(uv, depth);
     float3 N = normalize(texture_normals.SampleLevel(sampler_point_clamp, uv, 0) * 2 - 1);
 
-    float seed = rtao_seed;
+    float seed = g_xFrame_Time;
 
     RayDesc ray;
     ray.TMin = 0.001;
