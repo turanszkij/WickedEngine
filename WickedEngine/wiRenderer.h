@@ -78,11 +78,20 @@ namespace wiRenderer
 		// wiRenderer::UpdateVisibility() fills these:
 		Frustum frustum;
 		std::vector<uint32_t> visibleObjects;
-		std::vector<uint32_t> visibleLights;
 		std::vector<uint32_t> visibleDecals;
 		std::vector<uint32_t> visibleEnvProbes;
 		std::vector<uint32_t> visibleEmitters;
 		std::vector<uint32_t> visibleHairs;
+
+		struct VisibleLight
+		{
+			uint16_t index;
+			uint16_t distance;
+			bool operator<(const VisibleLight& other) {
+				return uint32_t(index | (uint32_t(distance) << 16)) < uint32_t(other.index | (uint32_t(other.distance) << 16));
+			}
+		};
+		std::vector<VisibleLight> visibleLights;
 
 		std::atomic<uint32_t> object_counter;
 		std::atomic<uint32_t> light_counter;
@@ -92,6 +101,7 @@ namespace wiRenderer
 		bool planar_reflection_visible = false;
 		float closestRefPlane = FLT_MAX;
 		XMFLOAT4 reflectionPlane = XMFLOAT4(0, 1, 0, 0);
+		std::atomic_bool volumetriclight_request{ false };
 
 		void Clear()
 		{
@@ -108,6 +118,16 @@ namespace wiRenderer
 
 			closestRefPlane = FLT_MAX;
 			planar_reflection_visible = false;
+			volumetriclight_request.store(false);
+		}
+
+		bool IsRequestedPlanarReflections() const
+		{
+			return planar_reflection_visible;
+		}
+		bool IsRequestedVolumetricLights() const
+		{
+			return volumetriclight_request.load();
 		}
 	};
 
@@ -434,8 +454,6 @@ namespace wiRenderer
 	void OcclusionCulling_Render(const wiScene::CameraComponent& camera_previous, const Visibility& vis, wiGraphics::CommandList cmd);
 	// Read the occlusion culling results of the previous call to OcclusionCulling_Render. This must be done on the main thread!
 	void OcclusionCulling_Read(wiScene::Scene& scene, const Visibility& vis);
-	// Issue end-of frame operations
-	void EndFrame();
 
 
 	enum MIPGENFILTER
@@ -483,7 +501,7 @@ namespace wiRenderer
 
 
 	// Set any param to -1 if don't want to modify
-	void SetShadowProps2D(int resolution, int count, int softShadowQuality);
+	void SetShadowProps2D(int resolution, int count);
 	// Set any param to -1 if don't want to modify
 	void SetShadowPropsCube(int resolution, int count);
 
@@ -552,7 +570,6 @@ namespace wiRenderer
 	int GetVoxelRadianceNumCones();
 	float GetVoxelRadianceRayStepSize();
 	void SetVoxelRadianceRayStepSize(float value);
-	bool IsRequestedVolumetricLightRendering();
 	void SetGameSpeed(float value);
 	float GetGameSpeed();
 	void OceanRegenerate(const wiScene::WeatherComponent& weather); // regeenrates ocean if it is already created

@@ -110,7 +110,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - GetCamera() : Camera result		-- returns the main camera
 - AttachCamera(Entity entity)	-- attaches camera to an entity in the current frame
 - HairParticleSettings(opt int lod0, opt int lod1, opt int lod2)
-- SetShadowProps2D(int resolution, int count, int softShadowQuality)
+- SetShadowProps2D(int resolution, int count)
 - SetShadowPropsCube(int resolution, int count)
 - SetDebugPartitionTreeEnabled(bool enabled)
 - SetDebugBonesEnabled(bool enabled)

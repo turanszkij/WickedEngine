@@ -100,10 +100,10 @@ namespace wiRenderer_BindLua
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 1)
 		{
-			wiRenderer::SetShadowProps2D(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2), wiLua::SGetInt(L, 3));
+			wiRenderer::SetShadowProps2D(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2));
 		}
 		else
-			wiLua::SError(L, "SetShadowProps2D(int resolution, int count, int softShadowQuality) not enough arguments!");
+			wiLua::SError(L, "SetShadowProps2D(int resolution, int count) not enough arguments!");
 		return 0;
 	}
 	int SetShadowPropsCube(lua_State* L)

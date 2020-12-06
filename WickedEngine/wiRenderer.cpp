@@ -55,16 +55,7 @@ Sampler					samplers[SSLOT_COUNT];
 
 string SHADERPATH = wiHelper::GetOriginalWorkingDirectory() + "../WickedEngine/shaders/";
 
-LinearAllocator updateFrameAllocator; // can be used by an update thread
 LinearAllocator renderFrameAllocators[COMMANDLIST_COUNT]; // can be used by graphics threads
-inline LinearAllocator& GetUpdateFrameAllocator()
-{
-	if (updateFrameAllocator.get_capacity() == 0)
-	{
-		updateFrameAllocator.reserve(4 * 1024 * 1024);
-	}
-	return updateFrameAllocator;
-}
 inline LinearAllocator& GetRenderFrameAllocator(CommandList cmd)
 {
 	if (renderFrameAllocators[cmd].get_capacity() == 0)
@@ -79,7 +70,6 @@ uint32_t SHADOWRES_2D = 1024;
 uint32_t SHADOWRES_CUBE = 256;
 uint32_t SHADOWCOUNT_2D = 5 + 3 + 3;
 uint32_t SHADOWCOUNT_CUBE = 5;
-uint32_t SOFTSHADOWQUALITY_2D = 2;
 bool TRANSPARENTSHADOWSENABLED = false;
 bool wireRender = false;
 bool debugBoneLines = false;
@@ -91,7 +81,6 @@ bool debugForceFields = false;
 bool debugCameras = false;
 bool gridHelper = false;
 bool voxelHelper = false;
-bool requestVolumetricLightRendering = false;
 bool advancedLightCulling = true;
 bool variableRateShadingClassification = false;
 bool variableRateShadingClassificationDebug = false;
@@ -2314,7 +2303,7 @@ void Initialize()
 	static wiEvent::Handle handle2 = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 	LoadShaders();
 
-	SetShadowProps2D(SHADOWRES_2D, SHADOWCOUNT_2D, SOFTSHADOWQUALITY_2D);
+	SetShadowProps2D(SHADOWRES_2D, SHADOWCOUNT_2D);
 	SetShadowPropsCube(SHADOWRES_CUBE, SHADOWCOUNT_CUBE);
 
 
@@ -2510,7 +2499,7 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& b
 	uint32_t buckets[2] = { 0,0 };
 	for (size_t i = 0; i < std::min(size_t(64), vis.visibleLights.size()); ++i) // only support indexing 64 lights at max for now
 	{
-		const uint32_t lightIndex = vis.visibleLights[i];
+		const uint16_t lightIndex = vis.visibleLights[i].index;
 		const AABB& light_aabb = vis.scene->aabb_lights[lightIndex];
 		if (light_aabb.intersects(batch_aabb))
 		{
@@ -3126,6 +3115,7 @@ void UpdateVisibility(Visibility& vis, uint32_t layerMask)
 {
 	// Perform parallel frustum culling and obtain closest reflector:
 	wiJobSystem::context ctx;
+	wiJobSystem::context ctx_lights;
 	auto range = wiProfiler::BeginRangeCPU("Frustum Culling");
 
 	assert(vis.scene != nullptr); // User must provide a scene!
@@ -3144,6 +3134,58 @@ void UpdateVisibility(Visibility& vis, uint32_t layerMask)
 	if (!freezeCullingCamera)
 	{
 		vis.frustum = vis.camera->frustum;
+	}
+
+	if (vis.flags & Visibility::ALLOW_LIGHTS)
+	{
+		// Cull lights:
+		vis.visibleLights.resize(vis.scene->aabb_lights.GetCount());
+		wiJobSystem::Dispatch(ctx_lights, (uint32_t)vis.scene->aabb_lights.GetCount(), groupSize, [&](wiJobArgs args) {
+
+			Entity entity = vis.scene->aabb_lights.GetEntity(args.jobIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+			{
+				return;
+			}
+
+			const AABB& aabb = vis.scene->aabb_lights[args.jobIndex];
+
+			// Setup stream compaction:
+			uint32_t& group_count = *(uint32_t*)args.sharedmemory;
+			Visibility::VisibleLight* group_list = (Visibility::VisibleLight*)args.sharedmemory + 1;
+			if (args.isFirstJobInGroup)
+			{
+				group_count = 0; // first thread initializes local counter
+			}
+
+			if (vis.frustum.CheckBoxFast(aabb))
+			{
+				// Local stream compaction:
+				//	(also compute light distance for shadow priority sorting)
+				assert(args.jobIndex < 0xFFFF);
+				group_list[group_count].index = (uint16_t)args.jobIndex;
+				const LightComponent& lightcomponent = vis.scene->lights[args.jobIndex];
+				float distance = wiMath::DistanceEstimated(lightcomponent.position, vis.camera->Eye);
+				group_list[group_count].distance = uint16_t(distance * 10);
+				group_count++;
+				if (lightcomponent.IsVolumetricsEnabled())
+				{
+					vis.volumetriclight_request.store(true);
+				}
+			}
+
+			// Global stream compaction:
+			if (args.isLastJobInGroup && group_count > 0)
+			{
+				uint32_t prev_count = vis.light_counter.fetch_add(group_count);
+				for (uint32_t i = 0; i < group_count; ++i)
+				{
+					vis.visibleLights[prev_count + i] = group_list[i];
+				}
+			}
+
+			}, sharedmemory_size);
 	}
 
 	if (vis.flags & Visibility::ALLOW_OBJECTS)
@@ -3275,48 +3317,6 @@ void UpdateVisibility(Visibility& vis, uint32_t layerMask)
 			});
 	}
 
-	if (vis.flags & Visibility::ALLOW_LIGHTS)
-	{
-		// Cull lights:
-		vis.visibleLights.resize(vis.scene->aabb_lights.GetCount());
-		wiJobSystem::Dispatch(ctx, (uint32_t)vis.scene->aabb_lights.GetCount(), groupSize, [&](wiJobArgs args) {
-
-			Entity entity = vis.scene->aabb_lights.GetEntity(args.jobIndex);
-			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-			if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
-			{
-				return;
-			}
-
-			const AABB& aabb = vis.scene->aabb_lights[args.jobIndex];
-
-			// Setup stream compaction:
-			uint32_t& group_count = *(uint32_t*)args.sharedmemory;
-			uint32_t* group_list = (uint32_t*)args.sharedmemory + 1;
-			if (args.isFirstJobInGroup)
-			{
-				group_count = 0; // first thread initializes local counter
-			}
-
-			if (vis.frustum.CheckBoxFast(aabb))
-			{
-				// Local stream compaction:
-				group_list[group_count++] = args.jobIndex;
-			}
-
-			// Global stream compaction:
-			if (args.isLastJobInGroup && group_count > 0)
-			{
-				uint32_t prev_count = vis.light_counter.fetch_add(group_count);
-				for (uint32_t i = 0; i < group_count; ++i)
-				{
-					vis.visibleLights[prev_count + i] = group_list[i];
-				}
-			}
-
-			}, sharedmemory_size);
-	}
-
 	if (vis.flags & Visibility::ALLOW_EMITTERS)
 	{
 		wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
@@ -3357,11 +3357,18 @@ void UpdateVisibility(Visibility& vis, uint32_t layerMask)
 			});
 	}
 
+	if (vis.flags & Visibility::ALLOW_LIGHTS)
+	{
+		wiJobSystem::Wait(ctx_lights);
+		vis.visibleLights.resize((size_t)vis.light_counter.load());
+		// Sort lights based on distance so that closer lights will receive shadow map priority:
+		std::sort(vis.visibleLights.begin(), vis.visibleLights.end());
+	}
+
 	wiJobSystem::Wait(ctx);
 
 	// finalize stream compaction:
 	vis.visibleObjects.resize((size_t)vis.object_counter.load());
-	vis.visibleLights.resize((size_t)vis.light_counter.load());
 	vis.visibleDecals.resize((size_t)vis.decal_counter.load());
 
 	if ((vis.flags & Visibility::ALLOW_REQUEST_REFLECTION) && vis.scene->weather.IsOceanEnabled())
@@ -3376,6 +3383,11 @@ void UpdateVisibility(Visibility& vis, uint32_t layerMask)
 }
 void UpdatePerFrameData(Scene& scene, const Visibility& vis, float dt)
 {
+	for (int i = 0; i < COMMANDLIST_COUNT; ++i)
+	{
+		renderFrameAllocators[i].reset();
+	}
+
 	renderTime_Prev = renderTime;
 	deltaTime = dt * GetGameSpeed();
 	renderTime += deltaTime;
@@ -3524,74 +3536,6 @@ void UpdatePerFrameData(Scene& scene, const Visibility& vis, float dt)
 			voxelSceneData.center = center;
 			voxelSceneData.extents = XMFLOAT3(voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize);
 		});
-	}
-
-	// Light sorting:
-	if (!vis.visibleLights.empty())
-	{
-		wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-			// Sort lights based on distance so that closer lights will receive shadow map priority:
-			const size_t lightCount = vis.visibleLights.size();
-			assert(lightCount < 0x0000FFFF); // watch out for sorting hash truncation!
-			uint32_t* lightSortingHashes = (uint32_t*)GetUpdateFrameAllocator().allocate(sizeof(uint32_t) * lightCount);
-			for (size_t i = 0; i < lightCount; ++i)
-			{
-				const uint32_t lightIndex = vis.visibleLights[i];
-				const LightComponent& light = scene.lights[lightIndex];
-				float distance = wiMath::DistanceEstimated(light.position, vis.camera->Eye);
-				lightSortingHashes[i] = 0;
-				lightSortingHashes[i] |= (uint32_t)i & 0x0000FFFF;
-				lightSortingHashes[i] |= ((uint32_t)(distance * 10) & 0x0000FFFF) << 16;
-			}
-			std::sort(lightSortingHashes, lightSortingHashes + lightCount, std::less<uint32_t>());
-
-			uint32_t shadowCounter_2D = 0;
-			uint32_t shadowCounter_Cube = 0;
-			for (size_t i = 0; i < lightCount; ++i)
-			{
-				const uint32_t lightIndex = vis.visibleLights[lightSortingHashes[i] & 0x0000FFFF];
-				LightComponent& light = scene.lights[lightIndex];
-				requestVolumetricLightRendering |= light.IsVolumetricsEnabled();
-
-				// Link shadowmaps to lights till there are free slots
-
-				light.shadowMap_index = -1;
-
-				if (light.IsCastingShadow())
-				{
-					switch (light.GetType())
-					{
-					case LightComponent::DIRECTIONAL:
-						if ((shadowCounter_2D + CASCADE_COUNT - 1) < SHADOWCOUNT_2D)
-						{
-							light.shadowMap_index = shadowCounter_2D;
-							shadowCounter_2D += CASCADE_COUNT;
-						}
-						break;
-					case LightComponent::SPOT:
-						if (shadowCounter_2D < SHADOWCOUNT_2D)
-						{
-							light.shadowMap_index = shadowCounter_2D;
-							shadowCounter_2D++;
-						}
-						break;
-					case LightComponent::POINT:
-					case LightComponent::SPHERE:
-					case LightComponent::DISC:
-					case LightComponent::RECTANGLE:
-					case LightComponent::TUBE:
-						if (shadowCounter_Cube < SHADOWCOUNT_CUBE)
-						{
-							light.shadowMap_index = shadowCounter_Cube;
-							shadowCounter_Cube++;
-						}
-						break;
-					default:
-						break;
-					}
-				}
-			}
-			});
 	}
 
 	if (scene.weather.IsOceanEnabled())
@@ -3765,7 +3709,9 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 
 		// Write lights into entity array:
 		entityArrayOffset_Lights = entityCounter;
-		for (uint32_t lightIndex : vis.visibleLights)
+		uint32_t shadowCounter_2D = 0;
+		uint32_t shadowCounter_Cube = 0;
+		for (auto visibleLight : vis.visibleLights)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
@@ -3774,6 +3720,7 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 				break;
 			}
 
+			uint16_t lightIndex = visibleLight.index;
 			const LightComponent& light = vis.scene->lights[lightIndex];
 
 			entityArray[entityCounter] = {}; // zero out!
@@ -3788,10 +3735,33 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 			entityArray[entityCounter].SetEnergy(light.energy);
 			entityArray[entityCounter].indices = ~0;
 
-			const bool shadow = light.IsCastingShadow() && light.shadowMap_index >= 0;
+			bool shadow = light.IsCastingShadow() && !light.IsStatic();
 			if (shadow)
 			{
-				entityArray[entityCounter].SetIndices(matrixCounter, (uint)light.shadowMap_index);
+				switch (light.GetType())
+				{
+				case LightComponent::DIRECTIONAL:
+					if (shadowCounter_2D < SHADOWCOUNT_2D - CASCADE_COUNT + 1)
+					{
+						entityArray[entityCounter].SetIndices(matrixCounter, shadowCounter_2D);
+						shadowCounter_2D += CASCADE_COUNT;
+					}
+					break;
+				case LightComponent::SPOT:
+					if (shadowCounter_2D < SHADOWCOUNT_2D)
+					{
+						entityArray[entityCounter].SetIndices(matrixCounter, shadowCounter_2D);
+						shadowCounter_2D += 1;
+					}
+					break;
+				default:
+					if (shadowCounter_Cube < SHADOWCOUNT_CUBE)
+					{
+						entityArray[entityCounter].SetIndices(matrixCounter, shadowCounter_Cube);
+						shadowCounter_Cube += 1;
+					}
+					break;
+				}
 			}
 
 			float4 texMulAdd = {};
@@ -4262,14 +4232,6 @@ void OcclusionCulling_Read(Scene& scene, const Visibility& vis)
 
 	wiProfiler::EndRange(range); // Occlusion Culling Read
 }
-void EndFrame()
-{
-	updateFrameAllocator.reset();
-	for (int i = 0; i < COMMANDLIST_COUNT; ++i)
-	{
-		renderFrameAllocators[i].reset();
-	}
-}
 
 void PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
 {
@@ -4378,8 +4340,9 @@ void DrawLightVisualizers(
 		{
 			device->BindPipelineState(&PSO_lightvisualizer[type], cmd);
 
-			for (uint32_t lightIndex : vis.visibleLights)
+			for (auto visibleLight : vis.visibleLights)
 			{
+				uint16_t lightIndex = visibleLight.index;
 				const LightComponent& light = vis.scene->lights[lightIndex];
 
 				if (light.GetType() == type && light.IsVisualizerEnabled())
@@ -4507,7 +4470,7 @@ void DrawVolumeLights(
 
 			for (size_t i = 0; i < vis.visibleLights.size(); ++i)
 			{
-				const uint32_t lightIndex = vis.visibleLights[i];
+				const uint32_t lightIndex = vis.visibleLights[i].index;
 				const LightComponent& light = vis.scene->lights[lightIndex];
 				if (light.GetType() == type && light.IsVolumetricsEnabled())
 				{
@@ -4585,8 +4548,9 @@ void DrawLensFlares(
 
 	device->BindResource(GS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 
-	for (uint32_t lightIndex : vis.visibleLights)
+	for (auto visibleLight : vis.visibleLights)
 	{
+		uint16_t lightIndex = visibleLight.index;
 		const LightComponent& light = vis.scene->lights[lightIndex];
 
 		if (!light.lensFlareRimTextures.empty())
@@ -4645,7 +4609,7 @@ void DrawLensFlares(
 }
 
 
-void SetShadowProps2D(int resolution, int count, int softShadowQuality)
+void SetShadowProps2D(int resolution, int count)
 {
 	if (resolution >= 0)
 	{
@@ -4654,10 +4618,6 @@ void SetShadowProps2D(int resolution, int count, int softShadowQuality)
 	if (count >= 0)
 	{
 		SHADOWCOUNT_2D = count;
-	}
-	if (softShadowQuality >= 0)
-	{
-		SOFTSHADOWQUALITY_2D = softShadowQuality;
 	}
 
 	if (SHADOWCOUNT_2D > 0 && SHADOWRES_2D > 0)
@@ -4810,10 +4770,21 @@ void DrawShadowmaps(
 
 		device->UnbindResources(TEXSLOT_SHADOWARRAY_2D, 2, cmd);
 
-		for (uint32_t lightIndex : vis.visibleLights)
+		uint32_t shadowCounter_2D = 0;
+		uint32_t shadowCounter_Cube = 0;
+
+		for (auto visibleLight : vis.visibleLights)
 		{
+			if (shadowCounter_2D >= SHADOWCOUNT_2D && shadowCounter_Cube >= SHADOWCOUNT_CUBE)
+			{
+				break;
+			}
+
+			uint16_t lightIndex = visibleLight.index;
 			const LightComponent& light = vis.scene->lights[lightIndex];
-			if (light.shadowMap_index < 0 || !light.IsCastingShadow() || light.IsStatic())
+			
+			bool shadow = light.IsCastingShadow() && !light.IsStatic();
+			if (!shadow)
 			{
 				continue;
 			}
@@ -4822,6 +4793,13 @@ void DrawShadowmaps(
 			{
 			case LightComponent::DIRECTIONAL:
 			{
+				if (shadowCounter_2D >= SHADOWCOUNT_2D - CASCADE_COUNT + 1)
+				{
+					break;
+				}
+				uint32_t slice = shadowCounter_2D;
+				shadowCounter_2D += CASCADE_COUNT;
+
 				std::array<SHCAM, CASCADE_COUNT> shcams;
 				CreateDirLightShadowCams(light, *vis.camera, shcams);
 
@@ -4871,12 +4849,12 @@ void DrawShadowmaps(
 						vp.MaxDepth = 1.0f;
 						device->BindViewports(1, &vp, cmd);
 
-						device->RenderPassBegin(&renderpasses_shadow2D[light.shadowMap_index + cascade], cmd);
+						device->RenderPassBegin(&renderpasses_shadow2D[slice + cascade], cmd);
 						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
 						device->RenderPassEnd(cmd);
 
 						// Transparent renderpass will always be started so that it is clear:
-						device->RenderPassBegin(&renderpasses_shadow2DTransparent[light.shadowMap_index + cascade], cmd);
+						device->RenderPassBegin(&renderpasses_shadow2DTransparent[slice + cascade], cmd);
 						if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 						{
 							RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
@@ -4891,6 +4869,13 @@ void DrawShadowmaps(
 			break;
 			case LightComponent::SPOT:
 			{
+				if (shadowCounter_2D >= SHADOWCOUNT_2D)
+				{
+					break;
+				}
+				uint32_t slice = shadowCounter_2D;
+				shadowCounter_2D += 1;
+
 				SHCAM shcam;
 				CreateSpotLightShadowCam(light, shcam);
 				if (!cam_frustum.Intersects(shcam.boundingfrustum))
@@ -4940,12 +4925,12 @@ void DrawShadowmaps(
 					vp.MaxDepth = 1.0f;
 					device->BindViewports(1, &vp, cmd);
 
-					device->RenderPassBegin(&renderpasses_shadow2D[light.shadowMap_index], cmd);
+					device->RenderPassBegin(&renderpasses_shadow2D[slice], cmd);
 					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
 					device->RenderPassEnd(cmd);
 
 					// Transparent renderpass will always be started so that it is clear:
-					device->RenderPassBegin(&renderpasses_shadow2DTransparent[light.shadowMap_index], cmd);
+					device->RenderPassBegin(&renderpasses_shadow2DTransparent[slice], cmd);
 					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 					{
 						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
@@ -4963,6 +4948,13 @@ void DrawShadowmaps(
 			case LightComponent::RECTANGLE:
 			case LightComponent::TUBE:
 			{
+				if (shadowCounter_Cube >= SHADOWCOUNT_CUBE)
+				{
+					break;
+				}
+				uint32_t slice = shadowCounter_Cube;
+				shadowCounter_Cube += 1;
+
 				SPHERE boundingsphere = SPHERE(light.position, light.GetRange());
 
 				RenderQueue renderQueue;
@@ -5032,7 +5024,7 @@ void DrawShadowmaps(
 					vp.MaxDepth = 1.0f;
 					device->BindViewports(1, &vp, cmd);
 
-					device->RenderPassBegin(&renderpasses_shadowCube[light.shadowMap_index], cmd);
+					device->RenderPassBegin(&renderpasses_shadowCube[slice], cmd);
 					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, cmd, false, frusta, frustum_count);
 					device->RenderPassEnd(cmd);
 
@@ -12105,7 +12097,6 @@ void SetVoxelRadianceNumCones(int value) { voxelSceneData.numCones = value; }
 int GetVoxelRadianceNumCones() { return voxelSceneData.numCones; }
 float GetVoxelRadianceRayStepSize() { return voxelSceneData.rayStepSize; }
 void SetVoxelRadianceRayStepSize(float value) { voxelSceneData.rayStepSize = value; }
-bool IsRequestedVolumetricLightRendering() { return requestVolumetricLightRendering; }
 void SetGameSpeed(float value) { GameSpeed = std::max(0.0f, value); }
 float GetGameSpeed() { return GameSpeed; }
 void OceanRegenerate(const WeatherComponent& weather) { if (ocean != nullptr) ocean = std::make_unique<wiOcean>(weather); }

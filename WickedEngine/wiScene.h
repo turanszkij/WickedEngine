@@ -792,7 +792,6 @@ namespace wiScene
 		XMFLOAT3 scale;
 		XMFLOAT3 front;
 		XMFLOAT3 right;
-		int shadowMap_index = -1;
 
 		std::vector<std::shared_ptr<wiResource>> lensFlareRimTextures;
 

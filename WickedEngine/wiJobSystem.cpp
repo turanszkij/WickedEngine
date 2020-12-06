@@ -129,7 +129,7 @@ namespace wiJobSystem
 		job.sharedmemory_size = 0;
 
 		// Try to push a new job until it is pushed successfully:
-		while (!jobQueue.push_back(job)) { wakeCondition.notify_all(); }
+		while (!jobQueue.push_back(job)) { wakeCondition.notify_all(); work(); }
 
 		// Wake any one thread that might be sleeping:
 		wakeCondition.notify_one();
@@ -160,7 +160,7 @@ namespace wiJobSystem
 			job.groupJobEnd = std::min(job.groupJobOffset + groupSize, jobCount);
 
 			// Try to push a new job until it is pushed successfully:
-			while (!jobQueue.push_back(job)) { wakeCondition.notify_all(); }
+			while (!jobQueue.push_back(job)) { wakeCondition.notify_all(); work(); }
 		}
 
 		// Wake any threads that might be sleeping:

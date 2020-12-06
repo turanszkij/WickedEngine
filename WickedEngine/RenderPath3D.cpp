@@ -503,13 +503,7 @@ void RenderPath3D::Update(float dt)
 	// Frustum culling for main camera:
 	visibility_main.scene = scene;
 	visibility_main.camera = camera;
-	visibility_main.flags |= wiRenderer::Visibility::ALLOW_OBJECTS;
-	visibility_main.flags |= wiRenderer::Visibility::ALLOW_LIGHTS;
-	visibility_main.flags |= wiRenderer::Visibility::ALLOW_DECALS;
-	visibility_main.flags |= wiRenderer::Visibility::ALLOW_ENVPROBES;
-	visibility_main.flags |= wiRenderer::Visibility::ALLOW_EMITTERS;
-	visibility_main.flags |= wiRenderer::Visibility::ALLOW_HAIRS;
-	visibility_main.flags |= wiRenderer::Visibility::ALLOW_REQUEST_REFLECTION;
+	visibility_main.flags = wiRenderer::Visibility::ALLOW_EVERYTHING;
 	wiRenderer::UpdateVisibility(visibility_main, getLayerMask());
 
 	if (visibility_main.planar_reflection_visible)
@@ -519,7 +513,7 @@ void RenderPath3D::Update(float dt)
 		camera_reflection.Reflect(visibility_main.reflectionPlane);
 		visibility_reflection.scene = scene;
 		visibility_reflection.camera = &camera_reflection;
-		visibility_reflection.flags |= wiRenderer::Visibility::ALLOW_OBJECTS;
+		visibility_reflection.flags = wiRenderer::Visibility::ALLOW_OBJECTS;
 		wiRenderer::UpdateVisibility(visibility_reflection, getLayerMask());
 	}
 
@@ -777,7 +771,7 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 {
 	auto range = wiProfiler::BeginRangeGPU("Reflection rendering", cmd);
 
-	if (visibility_main.planar_reflection_visible)
+	if (visibility_main.IsRequestedPlanarReflections())
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -948,7 +942,7 @@ void RenderPath3D::RenderLightShafts(CommandList cmd) const
 }
 void RenderPath3D::RenderVolumetrics(CommandList cmd) const
 {
-	if (getVolumeLightsEnabled() && wiRenderer::IsRequestedVolumetricLightRendering())
+	if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
 	{
 		auto range = wiProfiler::BeginRangeGPU("Volumetric Lights", cmd);
 
@@ -1061,7 +1055,7 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 		wiProfiler::EndRange(range);
 	}
 
-	if (getVolumeLightsEnabled() && wiRenderer::IsRequestedVolumetricLightRendering())
+	if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
 	{
 		device->EventBegin("Contribute Volumetric Lights", cmd);
 		wiRenderer::Postprocess_Upsample_Bilateral(rtVolumetricLights[0], rtLinearDepth, 

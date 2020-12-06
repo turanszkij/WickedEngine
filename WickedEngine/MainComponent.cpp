@@ -227,8 +227,6 @@ void MainComponent::Run()
 		wiProfiler::EndFrame(cmd); // End before Present() so that GPU queries are properly recorded
 	}
 	wiRenderer::GetDevice()->PresentEnd(cmd);
-
-	wiRenderer::EndFrame();
 }
 
 void MainComponent::Update(float dt)
