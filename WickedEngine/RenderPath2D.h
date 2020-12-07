@@ -42,15 +42,13 @@ private:
 
 	wiGUI GUI;
 	wiEvent::Handle resolutionChange_handle;
-	wiEvent::Handle resolutionScaleChange_handle;
 	wiEvent::Handle dpiChange_handle;
 
-protected:
+public:
 	// create resolution dependant resources, such as render targets
 	virtual void ResizeBuffers();
 	// update resolution dependent elements, such as elements dependent on current monitor DPI
 	virtual void ResizeLayout() {}
-public:
 
 	void Load() override;
 	void Start() override;
@@ -83,5 +81,8 @@ public:
 
 	const wiGUI& GetGUI() const { return GUI; }
 	wiGUI& GetGUI() { return GUI; }
+
+	float resolutionScale = 1.0f;
+	virtual XMUINT2 GetInternalResolution() const;
 };
 

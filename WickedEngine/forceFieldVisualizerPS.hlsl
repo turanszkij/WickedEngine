@@ -17,15 +17,15 @@ float4 main(PSIn input) : SV_TARGET
 	if (forceField.GetType() == ENTITY_TYPE_FORCEFIELD_POINT)
 	{
 		// point-like forcefield:
-		float3 centerToPos = normalize(input.pos3D.xyz - forceField.positionWS.xyz);
-		float3 eyeToCenter = normalize(forceField.positionWS.xyz - g_xColor.xyz);
+		float3 centerToPos = normalize(input.pos3D.xyz - forceField.position.xyz);
+		float3 eyeToCenter = normalize(forceField.position.xyz - g_xColor.xyz);
 		color.a *= pow(saturate(dot(centerToPos, eyeToCenter)), 1.0f / max(0.0001f, abs(forceField.GetEnergy())));
 	}
 	else
 	{
 		// planar forcefield:
-		float3 dir = forceField.positionWS - input.pos3D.xyz;
-		float dist = dot(forceField.GetDirectionWS(), dir);
+		float3 dir = forceField.position - input.pos3D.xyz;
+		float dist = dot(forceField.GetDirection(), dir);
 		color.a *= pow(1 - saturate(dist * forceField.GetRange()), 1.0f / max(0.0001f, abs(forceField.GetEnergy())));
 	}
 

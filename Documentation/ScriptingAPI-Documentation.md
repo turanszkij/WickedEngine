@@ -100,15 +100,12 @@ This is the graphics renderer, which is also responsible for managing the scene 
 parent-child relationships between the scene hierarchy, updating the world, animating armatures.
 You can use the Renderer with the following functions, all of which are in the global scope:
 - GetGameSpeed() : float result
-- SetResolutionScale(float scale)
 - SetGamma(float gamma)
 - SetGameSpeed(float speed)
 - GetScreenWidth() : float result
 - GetScreenHeight() : float result
 - GetRenderWidth() : float result
 - GetRenderHeight(): float result
-- GetCamera() : Camera result		-- returns the main camera
-- AttachCamera(Entity entity)	-- attaches camera to an entity in the current frame
 - HairParticleSettings(opt int lod0, opt int lod1, opt int lod2)
 - SetShadowProps2D(int resolution, int count)
 - SetShadowPropsCube(int resolution, int count)
@@ -417,6 +414,7 @@ An entity is just an int value (int in LUA and uint32 in C++) and works as a han
 The scene holds components. Entity handles can be used to retrieve associated components through the scene.
 - [constructor]Scene() : Scene result  -- creates a custom scene
 - [outer]GetScene() : Scene result  -- returns the global scene
+- [outer]GetCamera() : Camera result  -- returns the global camera
 - [outer]LoadModel(string fileName, opt Matrix transform) : int rootEntity	-- Load Model from file. returns a root entity that everything in this model is attached to
 - [outer]LoadModel(Scene scene, string fileName, opt Matrix transform) : int rootEntity	-- Load Model from file into specified scene. returns a root entity that everything in this model is attached to
 - [outer]Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified.

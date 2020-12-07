@@ -76,7 +76,7 @@ void RTReflection_Raygen()
 
     const float3 R = -reflect(V, H.xyz);
 
-    float seed = rtreflection_seed;
+    float seed = g_xFrame_Time;
 
     RayDesc ray;
     ray.TMin = 0.001;
@@ -187,26 +187,6 @@ void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
         case ENTITY_TYPE_SPOTLIGHT:
         {
             SpotLight(light, surface, lighting);
-        }
-        break;
-        case ENTITY_TYPE_SPHERELIGHT:
-        {
-            SphereLight(light, surface, lighting);
-        }
-        break;
-        case ENTITY_TYPE_DISCLIGHT:
-        {
-            DiscLight(light, surface, lighting);
-        }
-        break;
-        case ENTITY_TYPE_RECTANGLELIGHT:
-        {
-            RectangleLight(light, surface, lighting);
-        }
-        break;
-        case ENTITY_TYPE_TUBELIGHT:
-        {
-            TubeLight(light, surface, lighting);
         }
         break;
         }

@@ -188,6 +188,7 @@ namespace wiScene
 		std::shared_ptr<wiResource> emissiveMap;
 		std::shared_ptr<wiResource> occlusionMap;
 		wiGraphics::GPUBuffer constantBuffer;
+		uint32_t layerMask = ~0u;
 
 		// User stencil value can be in range [0, 15]
 		inline void SetUserStencilRef(uint8_t value)
@@ -766,10 +767,10 @@ namespace wiScene
 			DIRECTIONAL = ENTITY_TYPE_DIRECTIONALLIGHT,
 			POINT = ENTITY_TYPE_POINTLIGHT,
 			SPOT = ENTITY_TYPE_SPOTLIGHT,
-			SPHERE = ENTITY_TYPE_SPHERELIGHT,
-			DISC = ENTITY_TYPE_DISCLIGHT,
-			RECTANGLE = ENTITY_TYPE_RECTANGLELIGHT,
-			TUBE = ENTITY_TYPE_TUBELIGHT,
+			//SPHERE = ENTITY_TYPE_SPHERELIGHT,
+			//DISC = ENTITY_TYPE_DISCLIGHT,
+			//RECTANGLE = ENTITY_TYPE_RECTANGLELIGHT,
+			//TUBE = ENTITY_TYPE_TUBELIGHT,
 			LIGHTTYPE_COUNT,
 			ENUM_FORCE_UINT32 = 0xFFFFFFFF,
 		};
@@ -777,10 +778,6 @@ namespace wiScene
 		float energy = 1.0f;
 		float range_local = 10.0f;
 		float fov = XM_PIDIV4;
-		float shadowBias = 0.0001f; // deprecated!
-		float radius = 1.0f; // area light only
-		float width = 1.0f;  // area light only
-		float height = 1.0f; // area light only
 
 		std::vector<std::string> lensFlareNames;
 
@@ -825,7 +822,7 @@ namespace wiScene
 
 		float width = 0.0f;
 		float height = 0.0f;
-		float zNearP = 0.001f;
+		float zNearP = 0.1f;
 		float zFarP = 800.0f;
 		float fov = XM_PI / 3.0f;
 
@@ -1337,6 +1334,13 @@ namespace wiScene
 	{
 		static Scene scene;
 		return scene;
+	}
+
+	// Helper that manages a global camera
+	inline CameraComponent& GetCamera()
+	{
+		static CameraComponent camera;
+		return camera;
 	}
 
 	// Helper function to open a wiscene file and add the contents to the global scene

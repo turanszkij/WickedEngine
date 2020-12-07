@@ -164,7 +164,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			{
 				dist = FLT_MAX;
 
-				L = light.GetDirectionWS().xyz;
+				L = light.GetDirection().xyz;
 				SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 				NdotL = surfaceToLight.NdotL;
 
@@ -187,7 +187,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			break;
 			case ENTITY_TYPE_POINTLIGHT:
 			{
-				L = light.positionWS - P;
+				L = light.position - P;
 				const float dist2 = dot(L, L);
 				const float range2 = light.GetRange() * light.GetRange();
 
@@ -220,7 +220,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			break;
 			case ENTITY_TYPE_SPOTLIGHT:
 			{
-				L = light.positionWS - surface.P;
+				L = light.position - surface.P;
 				const float dist2 = dot(L, L);
 				const float range2 = light.GetRange() * light.GetRange();
 
@@ -236,7 +236,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					[branch]
 					if (NdotL > 0)
 					{
-						const float SpotFactor = dot(L, light.GetDirectionWS());
+						const float SpotFactor = dot(L, light.GetDirection());
 						const float spotCutOff = light.GetConeAngleCos();
 
 						[branch]
@@ -257,22 +257,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 						}
 					}
 				}
-			}
-			break;
-			case ENTITY_TYPE_SPHERELIGHT:
-			{
-			}
-			break;
-			case ENTITY_TYPE_DISCLIGHT:
-			{
-			}
-			break;
-			case ENTITY_TYPE_RECTANGLELIGHT:
-			{
-			}
-			break;
-			case ENTITY_TYPE_TUBELIGHT:
-			{
 			}
 			break;
 			}

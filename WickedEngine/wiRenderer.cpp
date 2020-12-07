@@ -12,7 +12,6 @@
 #include "wiBackLog.h"
 #include "wiProfiler.h"
 #include "wiOcean.h"
-#include "ShaderInterop_Renderer.h"
 #include "ShaderInterop_Postprocess.h"
 #include "ShaderInterop_Skinning.h"
 #include "ShaderInterop_Raytracing.h"
@@ -86,18 +85,6 @@ bool variableRateShadingClassification = false;
 bool variableRateShadingClassificationDebug = false;
 bool ldsSkinningEnabled = true;
 bool scene_bvh_invalid = true;
-float renderTime = 0;
-float renderTime_Prev = 0;
-float deltaTime = 0;
-float RESOLUTIONSCALE = 1.0f;
-uint32_t entityArrayOffset_Lights = 0;
-uint32_t entityArrayCount_Lights = 0;
-uint32_t entityArrayOffset_Decals = 0;
-uint32_t entityArrayCount_Decals = 0;
-uint32_t entityArrayOffset_ForceFields = 0;
-uint32_t entityArrayCount_ForceFields = 0;
-uint32_t entityArrayOffset_EnvProbes = 0;
-uint32_t entityArrayCount_EnvProbes = 0;
 float GameSpeed = 1;
 bool debugLightCulling = false;
 bool occlusionCulling = false;
@@ -107,7 +94,6 @@ uint32_t raytraceBounceCount = 2;
 bool raytraceDebugVisualizer = false;
 bool raytracedShadows = false;
 bool tessellationEnabled = false;
-Entity cameraTransform = INVALID_ENTITY;
 
 
 struct VoxelizedSceneData
@@ -146,8 +132,6 @@ std::vector<RenderablePoint> renderablePoints;
 std::vector<RenderableTriangle> renderableTriangles_solid;
 std::vector<RenderableTriangle> renderableTriangles_wireframe;
 std::vector<PaintRadius> paintrads;
-
-XMFLOAT4 waterPlane = XMFLOAT4(0, 1, 0, 0);
 
 wiSpinLock deferredMIPGenLock;
 std::vector<std::pair<std::shared_ptr<wiResource>, bool>> deferredMIPGens;
@@ -809,6 +793,15 @@ enum DEBUGRENDERING
 };
 PipelineState PSO_debug[DEBUGRENDERING_COUNT];
 
+XMUINT3 GetEntityCullingTileCount(XMUINT2 internalResolution)
+{
+	return XMUINT3(
+		(internalResolution.x + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
+		(internalResolution.y + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
+		1
+	);
+}
+
 
 bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
 {
@@ -957,10 +950,6 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_VOLUMETRICLIGHT_SPOT], "volumetriclight_spotVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_LIGHTVISUALIZER_SPOTLIGHT], "vSpotLightVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_LIGHTVISUALIZER_POINTLIGHT], "vPointLightVS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_LIGHTVISUALIZER_SPHERELIGHT], "vSphereLightVS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_LIGHTVISUALIZER_DISCLIGHT], "vDiscLightVS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_LIGHTVISUALIZER_RECTANGLELIGHT], "vRectangleLightVS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_LIGHTVISUALIZER_TUBELIGHT], "vTubeLightVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_SPHERE], "sphereVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_CUBE], "cubeVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_SKY], "skyVS.cso"); });
@@ -1494,26 +1483,6 @@ void LoadShaders()
 				desc.bs = &blendStates[BSTYPE_ADDITIVE];
 				desc.vs = &shaders[VSTYPE_LIGHTVISUALIZER_SPOTLIGHT];
 				desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
-				break;
-			case LightComponent::SPHERE:
-				desc.bs = &blendStates[BSTYPE_OPAQUE];
-				desc.vs = &shaders[VSTYPE_LIGHTVISUALIZER_SPHERELIGHT];
-				desc.rs = &rasterizers[RSTYPE_FRONT];
-				break;
-			case LightComponent::DISC:
-				desc.bs = &blendStates[BSTYPE_OPAQUE];
-				desc.vs = &shaders[VSTYPE_LIGHTVISUALIZER_DISCLIGHT];
-				desc.rs = &rasterizers[RSTYPE_FRONT];
-				break;
-			case LightComponent::RECTANGLE:
-				desc.bs = &blendStates[BSTYPE_OPAQUE];
-				desc.vs = &shaders[VSTYPE_LIGHTVISUALIZER_RECTANGLELIGHT];
-				desc.rs = &rasterizers[RSTYPE_BACK];
-				break;
-			case LightComponent::TUBE:
-				desc.bs = &blendStates[BSTYPE_OPAQUE];
-				desc.vs = &shaders[VSTYPE_LIGHTVISUALIZER_TUBELIGHT];
-				desc.rs = &rasterizers[RSTYPE_FRONT];
 				break;
 			}
 
@@ -2279,24 +2248,9 @@ void ReloadShaders()
 	wiEvent::FireEvent(SYSTEM_EVENT_RELOAD_SHADERS, 0);
 }
 
-CameraComponent& GetCamera()
-{
-	static CameraComponent camera;
-	return camera;
-}
-void AttachCamera(wiECS::Entity entity)
-{
-	cameraTransform = entity;
-}
 
 void Initialize()
 {
-	auto camera_setup = [](uint64_t userdata) {
-		GetCamera().CreatePerspective((float)GetInternalResolution().x, (float)GetInternalResolution().y, 0.1f, 800);
-	};
-	camera_setup(0);
-	static wiEvent::Handle handle1 = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [=](uint64_t userdata) { camera_setup(userdata); });
-
 	SetUpStates();
 	LoadBuffers();
 
@@ -3166,7 +3120,11 @@ void UpdateVisibility(Visibility& vis)
 				assert(args.jobIndex < 0xFFFF);
 				group_list[group_count].index = (uint16_t)args.jobIndex;
 				const LightComponent& lightcomponent = vis.scene->lights[args.jobIndex];
-				float distance = wiMath::DistanceEstimated(lightcomponent.position, vis.camera->Eye);
+				float distance = 0;
+				if (lightcomponent.type != LightComponent::DIRECTIONAL)
+				{
+					distance = wiMath::DistanceEstimated(lightcomponent.position, vis.camera->Eye);
+				}
 				group_list[group_count].distance = uint16_t(distance * 10);
 				group_count++;
 				if (lightcomponent.IsVolumetricsEnabled())
@@ -3381,45 +3339,20 @@ void UpdateVisibility(Visibility& vis)
 
 	wiProfiler::EndRange(range); // Frustum Culling
 }
-void UpdatePerFrameData(Scene& scene, const Visibility& vis, float dt)
+void UpdatePerFrameData(
+	Scene& scene,
+	const Visibility& vis,
+	FrameCB& frameCB,
+	XMUINT2 internalResolution,
+	float dt
+)
 {
 	for (int i = 0; i < COMMANDLIST_COUNT; ++i)
 	{
 		renderFrameAllocators[i].reset();
 	}
 
-	renderTime_Prev = renderTime;
-	deltaTime = dt * GetGameSpeed();
-	renderTime += deltaTime;
-
 	wiJobSystem::context ctx;
-
-	// Because main camera is not part of the scene, update it if it is attached to an entity here:
-	if (cameraTransform != INVALID_ENTITY)
-	{
-		const TransformComponent* transform = scene.transforms.GetComponent(cameraTransform);
-		if (transform != nullptr)
-		{
-			GetCamera().TransformCamera(*transform);
-			GetCamera().UpdateCamera();
-		}
-		cameraTransform = INVALID_ENTITY; // but this is only active for the current frame
-	}
-
-	if (GetTemporalAAEnabled())
-	{
-		const XMFLOAT4& halton = wiMath::GetHaltonSequence(device->GetFrameCount() % 256);
-		GetCamera().jitter.x = (halton.x * 2 - 1) / (float)GetInternalResolution().x;
-		GetCamera().jitter.y = (halton.y * 2 - 1) / (float)GetInternalResolution().y;
-	}
-	else
-	{
-		GetCamera().jitter = XMFLOAT2(0, 0);
-	}
-
-	GetCamera().UpdateCamera();
-
-	waterPlane = vis.reflectionPlane;
 
 	// Need to swap prev and current vertex buffers for any dynamic meshes BEFORE render threads are kicked 
 	//	and also create skinning bone buffers:
@@ -3571,9 +3504,152 @@ void UpdatePerFrameData(Scene& scene, const Visibility& vis, float dt)
 	});
 
 	wiJobSystem::Wait(ctx);
+
+
+	// Update CPU-side frame constant buffer:
+	frameCB.g_xFrame_ConstantOne = 1;
+	frameCB.g_xFrame_ScreenWidthHeight = float2((float)device->GetScreenWidth(), (float)device->GetScreenHeight());
+	frameCB.g_xFrame_ScreenWidthHeight_rcp = float2(1.0f / frameCB.g_xFrame_ScreenWidthHeight.x, 1.0f / frameCB.g_xFrame_ScreenWidthHeight.y);
+	frameCB.g_xFrame_InternalResolution = float2((float)internalResolution.x, (float)internalResolution.y);
+	frameCB.g_xFrame_InternalResolution_rcp = float2(1.0f / frameCB.g_xFrame_InternalResolution.x, 1.0f / frameCB.g_xFrame_InternalResolution.y);
+	frameCB.g_xFrame_Gamma = GetGamma();
+	frameCB.g_xFrame_SunColor = vis.scene->weather.sunColor;
+	frameCB.g_xFrame_SunDirection = vis.scene->weather.sunDirection;
+	frameCB.g_xFrame_SunEnergy = vis.scene->weather.sunEnergy;
+	frameCB.g_xFrame_ShadowCascadeCount = CASCADE_COUNT;
+	frameCB.g_xFrame_Ambient = vis.scene->weather.ambient;
+	frameCB.g_xFrame_Cloudiness = vis.scene->weather.cloudiness;
+	frameCB.g_xFrame_CloudScale = vis.scene->weather.cloudScale;
+	frameCB.g_xFrame_CloudSpeed = vis.scene->weather.cloudSpeed;
+	frameCB.g_xFrame_Fog = float3(vis.scene->weather.fogStart, vis.scene->weather.fogEnd, vis.scene->weather.fogHeight);
+	frameCB.g_xFrame_Horizon = vis.scene->weather.horizon;
+	frameCB.g_xFrame_Zenith = vis.scene->weather.zenith;
+	frameCB.g_xFrame_VoxelRadianceMaxDistance = voxelSceneData.maxDistance;
+	frameCB.g_xFrame_VoxelRadianceDataSize = voxelSceneData.voxelsize;
+	frameCB.g_xFrame_VoxelRadianceDataSize_rcp = 1.0f / (float)frameCB.g_xFrame_VoxelRadianceDataSize;
+	frameCB.g_xFrame_VoxelRadianceDataRes = GetVoxelRadianceEnabled() ? (uint)voxelSceneData.res : 0;
+	frameCB.g_xFrame_VoxelRadianceDataRes_rcp = 1.0f / (float)frameCB.g_xFrame_VoxelRadianceDataRes;
+	frameCB.g_xFrame_VoxelRadianceDataMIPs = voxelSceneData.mips;
+	frameCB.g_xFrame_VoxelRadianceNumCones = std::max(std::min(voxelSceneData.numCones, 16u), 1u);
+	frameCB.g_xFrame_VoxelRadianceNumCones_rcp = 1.0f / (float)frameCB.g_xFrame_VoxelRadianceNumCones;
+	frameCB.g_xFrame_VoxelRadianceRayStepSize = voxelSceneData.rayStepSize;
+	frameCB.g_xFrame_VoxelRadianceDataCenter = voxelSceneData.center;
+	frameCB.g_xFrame_EntityCullingTileCount = GetEntityCullingTileCount(internalResolution);
+
+	// The order is very important here:
+	frameCB.g_xFrame_DecalArrayOffset = 0;
+	frameCB.g_xFrame_DecalArrayCount = (uint)vis.visibleDecals.size();
+	frameCB.g_xFrame_EnvProbeArrayOffset = frameCB.g_xFrame_DecalArrayCount;
+	frameCB.g_xFrame_EnvProbeArrayCount = (uint)vis.visibleEnvProbes.size();
+	frameCB.g_xFrame_LightArrayOffset = frameCB.g_xFrame_EnvProbeArrayOffset + frameCB.g_xFrame_EnvProbeArrayCount;
+	frameCB.g_xFrame_LightArrayCount = (uint)vis.visibleLights.size();
+	frameCB.g_xFrame_ForceFieldArrayOffset = frameCB.g_xFrame_LightArrayOffset + frameCB.g_xFrame_LightArrayCount;
+	frameCB.g_xFrame_ForceFieldArrayCount = (uint)vis.scene->forces.GetCount();
+
+	frameCB.g_xFrame_GlobalEnvProbeIndex = -1;
+	frameCB.g_xFrame_EnvProbeMipCount = 0;
+	frameCB.g_xFrame_EnvProbeMipCount_rcp = 1.0f;
+	if (vis.scene->probes.GetCount() > 0)
+	{
+		frameCB.g_xFrame_GlobalEnvProbeIndex = 0; // for now, the global envprobe will be the first probe in the array. Easy change later on if required...
+	}
+	if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY].IsValid())
+	{
+		frameCB.g_xFrame_EnvProbeMipCount = textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY].GetDesc().MipLevels;
+		frameCB.g_xFrame_EnvProbeMipCount_rcp = 1.0f / (float)frameCB.g_xFrame_EnvProbeMipCount;
+	}
+
+	frameCB.g_xFrame_DeltaTime = dt * GetGameSpeed();
+	frameCB.g_xFrame_TimePrev = frameCB.g_xFrame_Time;
+	frameCB.g_xFrame_Time += frameCB.g_xFrame_DeltaTime;
+	frameCB.g_xFrame_WindSpeed = vis.scene->weather.windSpeed;
+	frameCB.g_xFrame_WindRandomness = vis.scene->weather.windRandomness;
+	frameCB.g_xFrame_WindWaveSize = vis.scene->weather.windWaveSize;
+	frameCB.g_xFrame_WindDirection = vis.scene->weather.windDirection;
+	frameCB.g_xFrame_StaticSkyGamma = 0.0f;
+	if (vis.scene->weather.skyMap != nullptr)
+	{
+		bool hdr = !device->IsFormatUnorm(vis.scene->weather.skyMap->texture->GetDesc().Format);
+		frameCB.g_xFrame_StaticSkyGamma = hdr ? 1.0f : frameCB.g_xFrame_Gamma;
+	}
+	frameCB.g_xFrame_FrameCount = (uint)device->GetFrameCount();
+	frameCB.g_xFrame_TemporalAASampleRotation = 0;
+	if (GetTemporalAAEnabled())
+	{
+		uint id = frameCB.g_xFrame_FrameCount % 4;
+		uint x = 0;
+		uint y = 0;
+		switch (id)
+		{
+		case 1:
+			x = 1;
+			break;
+		case 2:
+			y = 1;
+			break;
+		case 3:
+			x = 1;
+			y = 1;
+			break;
+		default:
+			break;
+		}
+		frameCB.g_xFrame_TemporalAASampleRotation = (x & 0x000000FF) | ((y & 0x000000FF) << 8);
+	}
+	frameCB.g_xFrame_ShadowKernel2D = 1.0f / SHADOWRES_2D;
+	frameCB.g_xFrame_ShadowKernelCube = 1.0f / SHADOWRES_CUBE;
+
+	frameCB.g_xFrame_WorldBoundsMin = vis.scene->bounds.getMin();
+	frameCB.g_xFrame_WorldBoundsMax = vis.scene->bounds.getMax();
+	frameCB.g_xFrame_WorldBoundsExtents.x = abs(frameCB.g_xFrame_WorldBoundsMax.x - frameCB.g_xFrame_WorldBoundsMin.x);
+	frameCB.g_xFrame_WorldBoundsExtents.y = abs(frameCB.g_xFrame_WorldBoundsMax.y - frameCB.g_xFrame_WorldBoundsMin.y);
+	frameCB.g_xFrame_WorldBoundsExtents.z = abs(frameCB.g_xFrame_WorldBoundsMax.z - frameCB.g_xFrame_WorldBoundsMin.z);
+	frameCB.g_xFrame_WorldBoundsExtents_rcp.x = 1.0f / frameCB.g_xFrame_WorldBoundsExtents.x;
+	frameCB.g_xFrame_WorldBoundsExtents_rcp.y = 1.0f / frameCB.g_xFrame_WorldBoundsExtents.y;
+	frameCB.g_xFrame_WorldBoundsExtents_rcp.z = 1.0f / frameCB.g_xFrame_WorldBoundsExtents.z;
+
+	frameCB.g_xFrame_Options = 0;
+	if (GetTemporalAAEnabled())
+	{
+		frameCB.g_xFrame_Options |= OPTION_BIT_TEMPORALAA_ENABLED;
+	}
+	if (GetTransparentShadowsEnabled())
+	{
+		frameCB.g_xFrame_Options |= OPTION_BIT_TRANSPARENTSHADOWS_ENABLED;
+	}
+	if (GetVoxelRadianceEnabled())
+	{
+		frameCB.g_xFrame_Options |= OPTION_BIT_VOXELGI_ENABLED;
+	}
+	if (GetVoxelRadianceReflectionsEnabled())
+	{
+		frameCB.g_xFrame_Options |= OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED;
+	}
+	if (voxelSceneData.centerChangedThisFrame)
+	{
+		frameCB.g_xFrame_Options |= OPTION_BIT_VOXELGI_RETARGETTED;
+	}
+	if (vis.scene->weather.IsSimpleSky())
+	{
+		frameCB.g_xFrame_Options |= OPTION_BIT_SIMPLE_SKY;
+	}
+	if (vis.scene->weather.IsRealisticSky())
+	{
+		frameCB.g_xFrame_Options |= OPTION_BIT_REALISTIC_SKY;
+	}
+	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && GetRaytracedShadowsEnabled())
+	{
+		frameCB.g_xFrame_Options |= OPTION_BIT_RAYTRACED_SHADOWS;
+	}
 }
-void UpdateRenderData(const Visibility& vis, CommandList cmd)
+void UpdateRenderData(
+	const Visibility& vis,
+	const FrameCB& frameCB,
+	CommandList cmd
+)
 {
+	device->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &frameCB, cmd);
+
 	BindCommonResources(cmd);
 
 	// Update material constant buffers:
@@ -3600,13 +3676,6 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 	}
 	pendingMorphUpdates.clear();
 
-
-	if (vis.scene->weather.IsRealisticSky())
-	{
-		// Render Atmospheric Scattering textures for lighting and sky
-		RenderAtmosphericScatteringTextures(cmd);
-	}
-
 	// Fill Entity Array with decals + envprobes + lights in the frustum:
 	{
 		// Reserve temporary entity array for GPU data upload:
@@ -3618,17 +3687,7 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 		uint32_t entityCounter = 0;
 		uint32_t matrixCounter = 0;
 
-		entityArrayOffset_Lights = 0;
-		entityArrayCount_Lights = 0;
-		entityArrayOffset_Decals = 0;
-		entityArrayCount_Decals = 0;
-		entityArrayOffset_ForceFields = 0;
-		entityArrayCount_ForceFields = 0;
-		entityArrayOffset_EnvProbes = 0;
-		entityArrayCount_EnvProbes = 0;
-
 		// Write decals into entity array:
-		entityArrayOffset_Decals = entityCounter;
 		for (size_t i = 0; i < vis.visibleDecals.size(); ++i)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
@@ -3647,27 +3706,33 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 			const DecalComponent& decal = vis.scene->decals[decalIndex];
 
 			entityArray[entityCounter] = {}; // zero out!
+			entityArray[entityCounter].layerMask = ~0u;
+
+			Entity entity = vis.scene->decals.GetEntity(decalIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				entityArray[entityCounter].layerMask = layer->layerMask;
+			}
 
 			entityArray[entityCounter].SetType(ENTITY_TYPE_DECAL);
-			entityArray[entityCounter].positionWS = decal.position;
-			float3 positionVS;
-			XMStoreFloat3(&positionVS, XMVector3TransformCoord(XMLoadFloat3(&decal.position), viewMatrix));
-			entityArray[entityCounter].SetPositionVS(positionVS);
+			entityArray[entityCounter].position = decal.position;
 			entityArray[entityCounter].SetRange(decal.range);
-			entityArray[entityCounter].SetTexMulAdd(decal.atlasMulAdd);
 			entityArray[entityCounter].color = wiMath::CompressColor(XMFLOAT4(decal.color.x, decal.color.y, decal.color.z, decal.GetOpacity()));
 			entityArray[entityCounter].SetEnergy(decal.emissive);
 
 			entityArray[entityCounter].SetIndices(matrixCounter, 0);
 			matrixArray[matrixCounter] = XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world));
+			matrixArray[matrixCounter].r[0] = XMVectorSetW(matrixArray[matrixCounter].r[0], decal.atlasMulAdd.x);
+			matrixArray[matrixCounter].r[1] = XMVectorSetW(matrixArray[matrixCounter].r[1], decal.atlasMulAdd.y);
+			matrixArray[matrixCounter].r[2] = XMVectorSetW(matrixArray[matrixCounter].r[2], decal.atlasMulAdd.z);
+			matrixArray[matrixCounter].r[3] = XMVectorSetW(matrixArray[matrixCounter].r[3], decal.atlasMulAdd.w);
 			matrixCounter++;
 
 			entityCounter++;
 		}
-		entityArrayCount_Decals = entityCounter - entityArrayOffset_Decals;
 
 		// Write environment probes into entity array:
-		entityArrayOffset_EnvProbes = entityCounter;
 		for (size_t i = 0; i < vis.visibleEnvProbes.size(); ++i)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
@@ -3691,12 +3756,17 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 			}
 
 			entityArray[entityCounter] = {}; // zero out!
+			entityArray[entityCounter].layerMask = ~0u;
+
+			Entity entity = vis.scene->probes.GetEntity(probeIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				entityArray[entityCounter].layerMask = layer->layerMask;
+			}
 
 			entityArray[entityCounter].SetType(ENTITY_TYPE_ENVMAP);
-			entityArray[entityCounter].positionWS = probe.position;
-			float3 positionVS;
-			XMStoreFloat3(&positionVS, XMVector3TransformCoord(XMLoadFloat3(&probe.position), viewMatrix));
-			entityArray[entityCounter].SetPositionVS(positionVS);
+			entityArray[entityCounter].position = probe.position;
 			entityArray[entityCounter].SetRange(probe.range);
 
 			entityArray[entityCounter].SetIndices(matrixCounter, (uint32_t)probe.textureIndex);
@@ -3705,10 +3775,8 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 
 			entityCounter++;
 		}
-		entityArrayCount_EnvProbes = entityCounter - entityArrayOffset_EnvProbes;
 
 		// Write lights into entity array:
-		entityArrayOffset_Lights = entityCounter;
 		uint32_t shadowCounter_2D = 0;
 		uint32_t shadowCounter_Cube = 0;
 		for (auto visibleLight : vis.visibleLights)
@@ -3724,53 +3792,67 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 			const LightComponent& light = vis.scene->lights[lightIndex];
 
 			entityArray[entityCounter] = {}; // zero out!
+			entityArray[entityCounter].layerMask = ~0u;
+
+			Entity entity = vis.scene->lights.GetEntity(lightIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				entityArray[entityCounter].layerMask = layer->layerMask;
+			}
 
 			entityArray[entityCounter].SetType(light.GetType());
-			entityArray[entityCounter].positionWS = light.position;
-			float3 positionVS;
-			XMStoreFloat3(&positionVS, XMVector3TransformCoord(XMLoadFloat3(&entityArray[entityCounter].positionWS), viewMatrix));
-			entityArray[entityCounter].SetPositionVS(positionVS);
+			entityArray[entityCounter].position = light.position;
 			entityArray[entityCounter].SetRange(light.GetRange());
 			entityArray[entityCounter].color = wiMath::CompressColor(light.color);
 			entityArray[entityCounter].SetEnergy(light.energy);
+
+			// mark as no shadow by default:
 			entityArray[entityCounter].indices = ~0;
 
 			bool shadow = light.IsCastingShadow() && !light.IsStatic();
-			if (shadow)
+
+			if (GetRaytracedShadowsEnabled() && shadow)
 			{
-				switch (light.GetType())
+				entityArray[entityCounter].SetIndices(matrixCounter, 0);
+			}
+			else if(shadow)
+			{
+				shadow = light.IsCastingShadow() && !light.IsStatic();
+				if (shadow)
 				{
-				case LightComponent::DIRECTIONAL:
-					if (shadowCounter_2D < SHADOWCOUNT_2D - CASCADE_COUNT + 1)
+					switch (light.GetType())
 					{
-						entityArray[entityCounter].SetIndices(matrixCounter, shadowCounter_2D);
-						shadowCounter_2D += CASCADE_COUNT;
+					case LightComponent::DIRECTIONAL:
+						if (shadowCounter_2D < SHADOWCOUNT_2D - CASCADE_COUNT + 1)
+						{
+							entityArray[entityCounter].SetIndices(matrixCounter, shadowCounter_2D);
+							shadowCounter_2D += CASCADE_COUNT;
+						}
+						break;
+					case LightComponent::SPOT:
+						if (shadowCounter_2D < SHADOWCOUNT_2D)
+						{
+							entityArray[entityCounter].SetIndices(matrixCounter, shadowCounter_2D);
+							shadowCounter_2D += 1;
+						}
+						break;
+					default:
+						if (shadowCounter_Cube < SHADOWCOUNT_CUBE)
+						{
+							entityArray[entityCounter].SetIndices(matrixCounter, shadowCounter_Cube);
+							shadowCounter_Cube += 1;
+						}
+						break;
 					}
-					break;
-				case LightComponent::SPOT:
-					if (shadowCounter_2D < SHADOWCOUNT_2D)
-					{
-						entityArray[entityCounter].SetIndices(matrixCounter, shadowCounter_2D);
-						shadowCounter_2D += 1;
-					}
-					break;
-				default:
-					if (shadowCounter_Cube < SHADOWCOUNT_CUBE)
-					{
-						entityArray[entityCounter].SetIndices(matrixCounter, shadowCounter_Cube);
-						shadowCounter_Cube += 1;
-					}
-					break;
 				}
 			}
-
-			float4 texMulAdd = {};
 
 			switch (light.GetType())
 			{
 			case LightComponent::DIRECTIONAL:
 			{
-				entityArray[entityCounter].SetDirectionWS(light.direction);
+				entityArray[entityCounter].SetDirection(light.direction);
 
 				if (shadow)
 				{
@@ -3782,13 +3864,24 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 				}
 			}
 			break;
+			case LightComponent::POINT:
+			{
+				if (shadow)
+				{
+					const float FarZ = 0.1f;	// watch out: reversed depth buffer! Also, light near plane is constant for simplicity, this should match on cpu side!
+					const float NearZ = std::max(1.0f, light.GetRange()); // watch out: reversed depth buffer!
+					const float fRange = FarZ / (FarZ - NearZ);
+					const float cubemapDepthRemapNear = fRange;
+					const float cubemapDepthRemapFar = -fRange * NearZ;
+					entityArray[entityCounter].SetCubeRemapNear(cubemapDepthRemapNear);
+					entityArray[entityCounter].SetCubeRemapFar(cubemapDepthRemapFar);
+				}
+			}
+			break;
 			case LightComponent::SPOT:
 			{
 				entityArray[entityCounter].SetConeAngleCos(cosf(light.fov * 0.5f));
-				entityArray[entityCounter].SetDirectionWS(light.direction);
-				float3 directionVS;
-				XMStoreFloat3(&directionVS, XMVector3TransformNormal(XMLoadFloat3(&light.direction), viewMatrix));
-				entityArray[entityCounter].SetDirectionVS(directionVS);
+				entityArray[entityCounter].SetDirection(light.direction);
 
 				if (shadow)
 				{
@@ -3798,40 +3891,7 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 				}
 			}
 			break;
-			case LightComponent::SPHERE:
-			case LightComponent::DISC:
-			case LightComponent::RECTANGLE:
-			case LightComponent::TUBE:
-			{
-				// Note: area lights are facing back by default
-				entityArray[entityCounter].SetDirectionWS(light.right);
-				entityArray[entityCounter].SetDirectionVS(light.direction);
-				entityArray[entityCounter].SetPositionVS(light.front);
-				texMulAdd = float4(light.radius, light.width, light.height, 0);
 			}
-			break;
-			}
-
-			switch (light.GetType())
-			{
-			case LightComponent::POINT:
-			case LightComponent::SPHERE:
-			case LightComponent::DISC:
-			case LightComponent::RECTANGLE:
-			case LightComponent::TUBE:
-			{
-				const float FarZ = 0.1f;	// watch out: reversed depth buffer! Also, light near plane is constant for simplicity, this should match on cpu side!
-				const float NearZ = std::max(1.0f, light.GetRange()); // watch out: reversed depth buffer!
-				const float fRange = FarZ / (FarZ - NearZ);
-				const float cubemapDepthRemapNear = fRange;
-				const float cubemapDepthRemapFar = -fRange * NearZ;
-				texMulAdd.w = cubemapDepthRemapNear;
-				entityArray[entityCounter].SetConeAngleCos(cubemapDepthRemapFar);
-			}
-			break;
-			}
-
-			entityArray[entityCounter].SetTexMulAdd(texMulAdd);
 
 			if (light.IsStatic())
 			{
@@ -3840,10 +3900,8 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 
 			entityCounter++;
 		}
-		entityArrayCount_Lights = entityCounter - entityArrayOffset_Lights;
 
 		// Write force fields into entity array:
-		entityArrayOffset_ForceFields = entityCounter;
 		for (size_t i = 0; i < vis.scene->forces.GetCount(); ++i)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
@@ -3856,18 +3914,25 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 			const ForceFieldComponent& force = vis.scene->forces[i];
 
 			entityArray[entityCounter] = {}; // zero out!
+			entityArray[entityCounter].layerMask = ~0u;
+
+			Entity entity = vis.scene->forces.GetEntity(i);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				entityArray[entityCounter].layerMask = layer->layerMask;
+			}
 
 			entityArray[entityCounter].SetType(force.type);
-			entityArray[entityCounter].positionWS = force.position;
+			entityArray[entityCounter].position = force.position;
 			entityArray[entityCounter].SetEnergy(force.gravity);
 			entityArray[entityCounter].SetRange(1.0f / std::max(0.0001f, force.GetRange())); // avoid division in shader
 			entityArray[entityCounter].SetConeAngleCos(force.GetRange()); // this will be the real range in the less common shaders...
 			// The default planar force field is facing upwards, and thus the pull direction is downwards:
-			entityArray[entityCounter].SetDirectionWS(force.direction);
+			entityArray[entityCounter].SetDirection(force.direction);
 
 			entityCounter++;
 		}
-		entityArrayCount_ForceFields = entityCounter - entityArrayOffset_ForceFields;
 
 		// Issue GPU entity array update:
 		device->UpdateBuffer(&resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, cmd, sizeof(ShaderEntity)*entityCounter);
@@ -3877,8 +3942,6 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 		GetRenderFrameAllocator(cmd).free(sizeof(ShaderEntity)*SHADER_ENTITY_COUNT);
 		GetRenderFrameAllocator(cmd).free(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
 	}
-
-	UpdateFrameCB(*vis.scene, cmd);
 
 	auto range = wiProfiler::BeginRangeGPU("Skinning", cmd);
 	device->EventBegin("Skinning", cmd);
@@ -4029,8 +4092,14 @@ void UpdateRenderData(const Visibility& vis, CommandList cmd)
 	if (vis.scene->weather.IsOceanEnabled() && ocean != nullptr)
 	{
 		range = wiProfiler::BeginRangeGPU("Ocean - Simulate", cmd);
-		ocean->UpdateDisplacementMap(vis.scene->weather, renderTime, cmd);
+		ocean->UpdateDisplacementMap(vis.scene->weather, cmd);
 		wiProfiler::EndRange(range);
+	}
+
+	if (vis.scene->weather.IsRealisticSky())
+	{
+		// Render Atmospheric Scattering textures for lighting and sky
+		RenderAtmosphericScatteringTextures(cmd);
 	}
 }
 void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
@@ -4244,11 +4313,8 @@ void PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
 	img.params.pos = pos;
 	img.params.rotation = (wiRandom::getRandom(0, 1000)*0.001f) * 2 * 3.1415f;
 	img.params.siz = XMFLOAT2(1, 1);
-	img.params.typeFlag = WORLD;
 	img.params.quality = QUALITY_ANISOTROPIC;
 	img.params.pivot = XMFLOAT2(0.5f, 0.5f);
-	img.params.lookAt = waterPlane;
-	img.params.lookAt.w = 1;
 	waterRipples.push_back(img);
 }
 void ManageWaterRipples(){
@@ -4260,11 +4326,23 @@ void ManageWaterRipples(){
 		waterRipples.pop_front();
 	}
 }
-void DrawWaterRipples(CommandList cmd)
+void DrawWaterRipples(const Visibility& vis, CommandList cmd)
 {
+	// remove camera jittering
+	CameraComponent cam = *vis.camera;
+	cam.jitter = XMFLOAT2(0, 0);
+	cam.UpdateCamera();
+	const XMMATRIX VP = cam.GetViewProjection();
+
+	XMVECTOR vvv = abs(vis.reflectionPlane.x) > 0.99f ? XMVectorSet(0, 1, 0, 0) : XMVectorSet(1, 0, 0, 0);
+	XMVECTOR dir = XMLoadFloat4(&vis.reflectionPlane);
+	XMMATRIX R = XMMatrixLookToLH(XMVectorZero(), dir, XMVector3Cross(vvv, dir));
+
 	device->EventBegin("Water Ripples", cmd);
 	for(auto& x : waterRipples)
 	{
+		x.params.customRotation = &R;
+		x.params.customProjection = &VP;
 		x.Draw(cmd);
 	}
 	device->EventEnd(cmd);
@@ -4379,58 +4457,6 @@ void DrawLightVisualizers(
 
 						device->Draw(192, 0, cmd); // cone
 					}
-					else if (type == LightComponent::SPHERE)
-					{
-						XMStoreFloat4x4(&lcb.lightWorld, 
-							XMMatrixScaling(light.radius, light.radius, light.radius)*
-							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
-							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
-							VP
-						);
-
-						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, cmd);
-
-						device->Draw(2880, 0, cmd); // uv-sphere
-					}
-					else if (type == LightComponent::DISC)
-					{
-						XMStoreFloat4x4(&lcb.lightWorld, 
-							XMMatrixScaling(light.radius, light.radius, light.radius)*
-							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
-							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
-							VP
-						);
-
-						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, cmd);
-
-						device->Draw(108, 0, cmd); // circle
-					}
-					else if (type == LightComponent::RECTANGLE)
-					{
-						XMStoreFloat4x4(&lcb.lightWorld, 
-							XMMatrixScaling(light.width * 0.5f * light.scale.x, light.height * 0.5f * light.scale.y, 0.5f)*
-							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
-							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
-							VP
-						);
-
-						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, cmd);
-
-						device->Draw(6, 0, cmd); // quad
-					}
-					else if (type == LightComponent::TUBE)
-					{
-						XMStoreFloat4x4(&lcb.lightWorld, 
-							XMMatrixScaling(std::max(light.width * 0.5f, light.radius) * light.scale.x, light.radius, light.radius)*
-							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
-							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
-							VP
-						);
-
-						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, cmd);
-
-						device->Draw(384, 0, cmd); // cylinder
-					}
 				}
 			}
 
@@ -4478,13 +4504,9 @@ void DrawVolumeLights(
 					switch (type)
 					{
 					case LightComponent::DIRECTIONAL:
-					case LightComponent::SPHERE:
-					case LightComponent::DISC:
-					case LightComponent::RECTANGLE:
-					case LightComponent::TUBE:
 					{
 						MiscCB miscCb;
-						miscCb.g_xColor.x = float(entityArrayOffset_Lights + i);
+						miscCb.g_xColor.x = float(i);
 						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
 						device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 						device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
@@ -4495,7 +4517,7 @@ void DrawVolumeLights(
 					case LightComponent::POINT:
 					{
 						MiscCB miscCb;
-						miscCb.g_xColor.x = float(entityArrayOffset_Lights + i);
+						miscCb.g_xColor.x = float(i);
 						float sca = light.GetRange() + 1;
 						XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * VP);
 						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
@@ -4508,7 +4530,7 @@ void DrawVolumeLights(
 					case LightComponent::SPOT:
 					{
 						MiscCB miscCb;
-						miscCb.g_xColor.x = float(entityArrayOffset_Lights + i);
+						miscCb.g_xColor.x = float(i);
 						const float coneS = (const float)(light.fov / XM_PIDIV4);
 						XMStoreFloat4x4(&miscCb.g_xTransform, 
 							XMMatrixScaling(coneS*light.GetRange(), light.GetRange(), coneS*light.GetRange())*
@@ -4578,7 +4600,7 @@ void DrawLensFlares(
 				XMVECTOR flarePos = XMVector3Project(POS, 0, 0, 1, 1, 1, 0, vis.camera->GetProjection(), vis.camera->GetView(), XMMatrixIdentity());
 				LensFlareCB cb;
 				XMStoreFloat4(&cb.xSunPos, flarePos);
-				cb.xScreen = XMFLOAT4((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0, 0);
+				cb.xScreen = XMFLOAT4((float)depthbuffer.desc.Width, (float)depthbuffer.desc.Height, 0, 0);
 
 				device->UpdateBuffer(&constantBuffers[CBTYPE_LENSFLARE], &cb, cmd);
 				device->BindConstantBuffer(GS, &constantBuffers[CBTYPE_LENSFLARE], CB_GETBINDSLOT(LensFlareCB), cmd);
@@ -4942,10 +4964,6 @@ void DrawShadowmaps(
 			}
 			break;
 			case LightComponent::POINT:
-			case LightComponent::SPHERE:
-			case LightComponent::DISC:
-			case LightComponent::RECTANGLE:
-			case LightComponent::TUBE:
 			{
 				if (shadowCounter_Cube >= SHADOWCOUNT_CUBE)
 				{
@@ -5095,7 +5113,7 @@ void DrawScene(
 		}
 		if (ocean != nullptr)
 		{
-			ocean->Render(*vis.camera, vis.scene->weather, renderTime, cmd);
+			ocean->Render(*vis.camera, vis.scene->weather, cmd);
 		}
 	}
 	else
@@ -7082,13 +7100,6 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 
 
-inline XMUINT3 GetEntityCullingTileCount()
-{
-	return XMUINT3(
-		(GetInternalResolution().x + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
-		(GetInternalResolution().y + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
-		1);
-}
 void ComputeTiledLightCulling(
 	const CameraComponent& camera,
 	const Texture& depthbuffer,
@@ -7097,10 +7108,10 @@ void ComputeTiledLightCulling(
 {
 	auto range = wiProfiler::BeginRangeGPU("Entity Culling", cmd);
 
-	int _width = GetInternalResolution().x;
-	int _height = GetInternalResolution().y;
+	int _width = (int)depthbuffer.desc.Width;
+	int _height = (int)depthbuffer.desc.Height;
 
-	const XMUINT3 tileCount = GetEntityCullingTileCount();
+	const XMUINT3 tileCount = GetEntityCullingTileCount(XMUINT2(depthbuffer.desc.Width, depthbuffer.desc.Height));
 
 	static int _savedWidth = 0;
 	static int _savedHeight = 0;
@@ -7645,19 +7656,17 @@ void RayBuffers::Create(uint32_t newRayCapacity)
 	device->SetName(&rayCountBuffer[1], "rayCountBuffer[1]");
 }
 
-RayBuffers* GenerateScreenRayBuffers(const CameraComponent& camera, CommandList cmd)
+RayBuffers* GenerateScreenRayBuffers(const CameraComponent& camera, uint32_t width, uint32_t height, CommandList cmd)
 {
-	uint _width = GetInternalResolution().x;
-	uint _height = GetInternalResolution().y;
 	static uint RayCountPrev = 0;
-	const uint _raycount = _width * _height;
+	const uint raycount = width * height;
 
 	static RayBuffers screenRayBuffers;
 
-	if (RayCountPrev != _raycount)
+	if (RayCountPrev != raycount)
 	{
-		RayCountPrev = _raycount;
-		screenRayBuffers.Create(_raycount);
+		RayCountPrev = raycount;
+		screenRayBuffers.Create(raycount);
 	}
 
 
@@ -7668,8 +7677,8 @@ RayBuffers* GenerateScreenRayBuffers(const CameraComponent& camera, CommandList 
 		const XMFLOAT4& halton = wiMath::GetHaltonSequence((int)device->GetFrameCount());
 		RaytracingCB cb;
 		cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
-		cb.xTraceResolution.x = _width;
-		cb.xTraceResolution.y = _height;
+		cb.xTraceResolution.x = width;
+		cb.xTraceResolution.y = height;
 		cb.xTraceResolution_rcp.x = 1.0f / cb.xTraceResolution.x;
 		cb.xTraceResolution_rcp.y = 1.0f / cb.xTraceResolution.y;
 		device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
@@ -7682,8 +7691,8 @@ RayBuffers* GenerateScreenRayBuffers(const CameraComponent& camera, CommandList 
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 		device->Dispatch(
-			(_width + RAYTRACING_LAUNCH_BLOCKSIZE - 1) / RAYTRACING_LAUNCH_BLOCKSIZE,
-			(_height + RAYTRACING_LAUNCH_BLOCKSIZE - 1) / RAYTRACING_LAUNCH_BLOCKSIZE,
+			(width + RAYTRACING_LAUNCH_BLOCKSIZE - 1) / RAYTRACING_LAUNCH_BLOCKSIZE,
+			(height + RAYTRACING_LAUNCH_BLOCKSIZE - 1) / RAYTRACING_LAUNCH_BLOCKSIZE,
 			1, 
 			cmd);
 
@@ -7762,7 +7771,7 @@ void RayTraceScene(
 
 		cb.xTraceUserData.x = (bounce == 1 && accumulation_sample == 0) ? 1 : 0; // pre-clear result texture?
 		cb.xTraceUserData.y = bounce == raytraceBounceCount ? 1 : 0; // accumulation step?
-		cb.xTraceRandomSeed = renderTime * (float)(bounce + 1);
+		cb.xTraceRandomSeed = (float)accumulation_sample * (float)(bounce + 1);
 		device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
 		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
 
@@ -7951,7 +7960,7 @@ void ManageDecalAtlas(Scene& scene)
 	{
 		const DecalComponent& decal = scene.decals[i];
 
-		if (decal.texture != nullptr)
+		if (decal.texture != nullptr && decal.texture->texture != nullptr)
 		{
 			if (packedDecals.find(decal.texture) == packedDecals.end())
 			{
@@ -8393,144 +8402,6 @@ void BindCommonResources(CommandList cmd)
 	device->BindResources(CS, resources, SBSLOT_ENTITYARRAY, arraysize(resources), cmd);
 }
 
-void UpdateFrameCB(const Scene& scene, CommandList cmd)
-{
-	FrameCB cb;
-
-	cb.g_xFrame_ConstantOne = 1;
-	cb.g_xFrame_ScreenWidthHeight = float2((float)device->GetScreenWidth(), (float)device->GetScreenHeight());
-	cb.g_xFrame_ScreenWidthHeight_rcp = float2(1.0f / cb.g_xFrame_ScreenWidthHeight.x, 1.0f / cb.g_xFrame_ScreenWidthHeight.y);
-	cb.g_xFrame_InternalResolution = float2((float)GetInternalResolution().x, (float)GetInternalResolution().y);
-	cb.g_xFrame_InternalResolution_rcp = float2(1.0f / cb.g_xFrame_InternalResolution.x, 1.0f / cb.g_xFrame_InternalResolution.y);
-	cb.g_xFrame_Gamma = GetGamma();
-	cb.g_xFrame_SunColor = scene.weather.sunColor;
-	cb.g_xFrame_SunDirection = scene.weather.sunDirection;
-	cb.g_xFrame_SunEnergy = scene.weather.sunEnergy;
-	cb.g_xFrame_ShadowCascadeCount = CASCADE_COUNT;
-	cb.g_xFrame_Ambient = scene.weather.ambient;
-	cb.g_xFrame_Cloudiness = scene.weather.cloudiness;
-	cb.g_xFrame_CloudScale = scene.weather.cloudScale;
-	cb.g_xFrame_CloudSpeed = scene.weather.cloudSpeed;
-	cb.g_xFrame_Fog = float3(scene.weather.fogStart, scene.weather.fogEnd, scene.weather.fogHeight);
-	cb.g_xFrame_Horizon = scene.weather.horizon;
-	cb.g_xFrame_Zenith = scene.weather.zenith;
-	cb.g_xFrame_VoxelRadianceMaxDistance = voxelSceneData.maxDistance;
-	cb.g_xFrame_VoxelRadianceDataSize = voxelSceneData.voxelsize;
-	cb.g_xFrame_VoxelRadianceDataSize_rcp = 1.0f / (float)cb.g_xFrame_VoxelRadianceDataSize;
-	cb.g_xFrame_VoxelRadianceDataRes = GetVoxelRadianceEnabled() ? (uint)voxelSceneData.res : 0;
-	cb.g_xFrame_VoxelRadianceDataRes_rcp = 1.0f / (float)cb.g_xFrame_VoxelRadianceDataRes;
-	cb.g_xFrame_VoxelRadianceDataMIPs = voxelSceneData.mips;
-	cb.g_xFrame_VoxelRadianceNumCones = std::max(std::min(voxelSceneData.numCones, 16u), 1u);
-	cb.g_xFrame_VoxelRadianceNumCones_rcp = 1.0f / (float)cb.g_xFrame_VoxelRadianceNumCones;
-	cb.g_xFrame_VoxelRadianceRayStepSize = voxelSceneData.rayStepSize;
-	cb.g_xFrame_VoxelRadianceDataCenter = voxelSceneData.center;
-	cb.g_xFrame_EntityCullingTileCount = GetEntityCullingTileCount();
-	cb.g_xFrame_GlobalEnvProbeIndex = -1;
-	cb.g_xFrame_EnvProbeMipCount = 0;
-	cb.g_xFrame_EnvProbeMipCount_rcp = 1.0f;
-	if (scene.probes.GetCount() > 0)
-	{
-		cb.g_xFrame_GlobalEnvProbeIndex = 0; // for now, the global envprobe will be the first probe in the array. Easy change later on if required...
-	}
-	if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY].IsValid())
-	{
-		cb.g_xFrame_EnvProbeMipCount = textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY].GetDesc().MipLevels;
-		cb.g_xFrame_EnvProbeMipCount_rcp = 1.0f / (float)cb.g_xFrame_EnvProbeMipCount;
-	}
-
-	cb.g_xFrame_Time = renderTime;
-	cb.g_xFrame_TimePrev = renderTime_Prev;
-	cb.g_xFrame_DeltaTime = deltaTime;
-	cb.g_xFrame_LightArrayOffset = entityArrayOffset_Lights;
-	cb.g_xFrame_LightArrayCount = entityArrayCount_Lights;
-	cb.g_xFrame_DecalArrayOffset = entityArrayOffset_Decals;
-	cb.g_xFrame_DecalArrayCount = entityArrayCount_Decals;
-	cb.g_xFrame_ForceFieldArrayOffset = entityArrayOffset_ForceFields;
-	cb.g_xFrame_ForceFieldArrayCount = entityArrayCount_ForceFields;
-	cb.g_xFrame_EnvProbeArrayOffset = entityArrayOffset_EnvProbes;
-	cb.g_xFrame_EnvProbeArrayCount = entityArrayCount_EnvProbes;
-	cb.g_xFrame_WindSpeed = scene.weather.windSpeed;
-	cb.g_xFrame_WindRandomness = scene.weather.windRandomness;
-	cb.g_xFrame_WindWaveSize = scene.weather.windWaveSize;
-	cb.g_xFrame_WindDirection = scene.weather.windDirection;
-	cb.g_xFrame_StaticSkyGamma = 0.0f;
-	if (scene.weather.skyMap != nullptr)
-	{
-		bool hdr = !device->IsFormatUnorm(scene.weather.skyMap->texture->GetDesc().Format);
-		cb.g_xFrame_StaticSkyGamma = hdr ? 1.0f : cb.g_xFrame_Gamma;
-	}
-	cb.g_xFrame_FrameCount = (uint)device->GetFrameCount();
-	cb.g_xFrame_TemporalAASampleRotation = 0;
-	if (GetTemporalAAEnabled())
-	{
-		uint id = cb.g_xFrame_FrameCount % 4;
-		uint x = 0;
-		uint y = 0;
-		switch (id)
-		{
-		case 1:
-			x = 1;
-			break;
-		case 2:
-			y = 1;
-			break;
-		case 3:
-			x = 1;
-			y = 1;
-			break;
-		default:
-			break;
-		}
-		cb.g_xFrame_TemporalAASampleRotation = (x & 0x000000FF) | ((y & 0x000000FF) << 8);
-	}
-	cb.g_xFrame_ShadowKernel2D = 1.0f / SHADOWRES_2D;
-	cb.g_xFrame_ShadowKernelCube = 1.0f / SHADOWRES_CUBE;
-
-	cb.g_xFrame_WorldBoundsMin = scene.bounds.getMin();
-	cb.g_xFrame_WorldBoundsMax = scene.bounds.getMax();
-	cb.g_xFrame_WorldBoundsExtents.x = abs(cb.g_xFrame_WorldBoundsMax.x - cb.g_xFrame_WorldBoundsMin.x);
-	cb.g_xFrame_WorldBoundsExtents.y = abs(cb.g_xFrame_WorldBoundsMax.y - cb.g_xFrame_WorldBoundsMin.y);
-	cb.g_xFrame_WorldBoundsExtents.z = abs(cb.g_xFrame_WorldBoundsMax.z - cb.g_xFrame_WorldBoundsMin.z);
-	cb.g_xFrame_WorldBoundsExtents_rcp.x = 1.0f / cb.g_xFrame_WorldBoundsExtents.x;
-	cb.g_xFrame_WorldBoundsExtents_rcp.y = 1.0f / cb.g_xFrame_WorldBoundsExtents.y;
-	cb.g_xFrame_WorldBoundsExtents_rcp.z = 1.0f / cb.g_xFrame_WorldBoundsExtents.z;
-
-	cb.g_xFrame_Options = 0;
-	if (GetTemporalAAEnabled())
-	{
-		cb.g_xFrame_Options |= OPTION_BIT_TEMPORALAA_ENABLED;
-	}
-	if (GetTransparentShadowsEnabled())
-	{
-		cb.g_xFrame_Options |= OPTION_BIT_TRANSPARENTSHADOWS_ENABLED;
-	}
-	if (GetVoxelRadianceEnabled())
-	{
-		cb.g_xFrame_Options |= OPTION_BIT_VOXELGI_ENABLED;
-	}
-	if (GetVoxelRadianceReflectionsEnabled())
-	{
-		cb.g_xFrame_Options |= OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED;
-	}
-	if (voxelSceneData.centerChangedThisFrame)
-	{
-		cb.g_xFrame_Options |= OPTION_BIT_VOXELGI_RETARGETTED;
-	}
-	if (scene.weather.IsSimpleSky())
-	{
-		cb.g_xFrame_Options |= OPTION_BIT_SIMPLE_SKY;
-	}
-	if (scene.weather.IsRealisticSky())
-	{
-		cb.g_xFrame_Options |= OPTION_BIT_REALISTIC_SKY;
-	}
-	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && GetRaytracedShadowsEnabled())
-	{
-		cb.g_xFrame_Options |= OPTION_BIT_RAYTRACED_SHADOWS;
-	}
-
-	device->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &cb, cmd);
-}
 void UpdateCameraCB(
 	const CameraComponent& camera,
 	const CameraComponent& camera_previous,
@@ -9727,7 +9598,6 @@ void Postprocess_RTAO(
 	cb.rtao_range = range;
 	cb.rtao_samplecount = (float)samplecount;
 	cb.rtao_power = power;
-	cb.rtao_seed = renderTime;
 	GraphicsDevice::GPUAllocation cb_alloc = device->AllocateGPU(sizeof(cb), cmd);
 	memcpy(cb_alloc.data, &cb, sizeof(cb));
 
@@ -10030,7 +9900,6 @@ void Postprocess_RTReflection(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.rtreflection_range = range;
-	cb.rtreflection_seed = renderTime;
 	GraphicsDevice::GPUAllocation cb_alloc = device->AllocateGPU(sizeof(cb), cmd);
 	memcpy(cb_alloc.data, &cb, sizeof(cb));
 
@@ -12020,26 +11889,10 @@ void AddDeferredMorphUpdate(size_t index)
 
 
 
-void SetResolutionScale(float value) 
-{ 
-	if (RESOLUTIONSCALE != value)
-	{
-		RESOLUTIONSCALE = value;
-		union UserData
-		{
-			float fValue;
-			uint64_t ullValue;
-		} data;
-		data.fValue = value;
-		wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_RESOLUTION_SCALE, data.ullValue);
-	}
-}
-float GetResolutionScale() { return RESOLUTIONSCALE; }
 int GetShadowRes2D() { return SHADOWRES_2D; }
 int GetShadowResCube() { return SHADOWRES_CUBE; }
 void SetTransparentShadowsEnabled(float value) { TRANSPARENTSHADOWSENABLED = value; }
 float GetTransparentShadowsEnabled() { return TRANSPARENTSHADOWSENABLED; }
-XMUINT2 GetInternalResolution() { return XMUINT2((uint32_t)ceilf(device->GetResolutionWidth()*GetResolutionScale()), (uint32_t)ceilf(device->GetResolutionHeight()*GetResolutionScale())); }
 void SetGamma(float value) { GAMMA = value; }
 float GetGamma() { return GAMMA; }
 void SetWireRender(bool value) { wireRender = value; }

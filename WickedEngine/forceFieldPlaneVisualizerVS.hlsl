@@ -17,7 +17,7 @@ PSIn main(uint vID : SV_VERTEXID)
 	ShaderEntity forceField = EntityArray[forceFieldID];
 
 	Out.pos.xyz *= forceField.GetConeAngleCos(); // range...
-	Out.pos.xyz += forceField.positionWS;
+	Out.pos.xyz += forceField.position;
 
 	Out.pos3D = Out.pos;
 

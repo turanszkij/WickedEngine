@@ -283,12 +283,10 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 		if (node.name.empty())
 		{
 			static int camID = 0;
-			stringstream ss("");
-			ss << "cam" << camID++;
-			node.name = ss.str();
+			node.name = "cam" + std::to_string(camID++);
 		}
 
-		entity = scene.Entity_CreateCamera(node.name, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
+		entity = scene.Entity_CreateCamera(node.name, wiScene::GetCamera().width, wiScene::GetCamera().height, 0.1f, 800);
 	}
 
 	if (entity == INVALID_ENTITY)

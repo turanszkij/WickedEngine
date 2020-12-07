@@ -10,8 +10,6 @@
 #define DISABLE_SOFT_RTSHADOW
 #endif // BRDF_CARTOON
 
-//#define DISABLE_AREALIGHT
-
 struct LightingPart
 {
 	float3 diffuse;
@@ -81,8 +79,8 @@ inline float3 shadowCascade(in ShaderEntity light, in float3 shadowPos, in float
 inline float shadowCube(in ShaderEntity light, in float3 L, in float3 Lunnormalized)
 {
 	const float slice = light.GetTextureIndex();
-	float remappedDistance = light.GetCubemapDepthRemapNear() + light.GetCubemapDepthRemapFar() / max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z));
-	remappedDistance += 0.0005; // removes the border sampling artifact
+	float remappedDistance = light.GetCubemapDepthRemapNear() +
+		light.GetCubemapDepthRemapFar() / (max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z)) * 0.989); // little bias to avoid border sampling artifact
 	float shadow = 0;
 #ifndef DISABLE_SOFT_SHADOWMAP
 	// sample along a cube pattern around center:
@@ -140,7 +138,7 @@ inline float shadowTrace(in Surface surface, in float3 L, in float dist)
 
 inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
-	float3 L = light.GetDirectionWS().xyz;
+	float3 L = light.GetDirection().xyz;
 	SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
 	[branch]
@@ -218,7 +216,7 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 }
 inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
-	float3 L = light.positionWS - surface.P;
+	float3 L = light.position - surface.P;
 	const float dist2 = dot(L, L);
 	const float range2 = light.GetRange() * light.GetRange();
 
@@ -270,7 +268,7 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 }
 inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
-	float3 L = light.positionWS - surface.P;
+	float3 L = light.position - surface.P;
 	const float dist2 = dot(L, L);
 	const float range2 = light.GetRange() * light.GetRange();
 
@@ -285,7 +283,7 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 		[branch]
 		if (any(surfaceToLight.NdotL_sss))
 		{
-			const float SpotFactor = dot(L, light.GetDirectionWS());
+			const float SpotFactor = dot(L, light.GetDirection());
 			const float spotCutOff = light.GetConeAngleCos();
 
 			[branch]
@@ -337,7 +335,7 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 
 
 
-
+#if 0 // Currently area lights are disabled
 // AREA LIGHTS
 
 // Based on the Frostbite presentation: 
@@ -773,6 +771,7 @@ inline void TubeLight(in ShaderEntity light, in Surface surface, inout Lighting 
 	}
 #endif // DISABLE_AREALIGHT
 }
+#endif // AREA LIGHTS
 
 
 // VOXEL RADIANCE
@@ -876,7 +875,7 @@ inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity pr
 	float3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
 	float Distance = min(FurthestPlane.x, min(FurthestPlane.y, FurthestPlane.z));
 	float3 IntersectPositionWS = surface.P + surface.R * Distance;
-	float3 R_parallaxCorrected = IntersectPositionWS - probe.positionWS;
+	float3 R_parallaxCorrected = IntersectPositionWS - probe.position;
 
 	// Sample cubemap texture:
 	float3 envmapColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.GetTextureIndex()), MIP).rgb; // GetFlags() stores textureIndex here...

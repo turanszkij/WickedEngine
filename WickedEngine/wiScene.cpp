@@ -288,10 +288,10 @@ namespace wiScene
 		dest->subsurfaceScattering.x *= dest->subsurfaceScattering.w;
 		dest->subsurfaceScattering.y *= dest->subsurfaceScattering.w;
 		dest->subsurfaceScattering.z *= dest->subsurfaceScattering.w;
-		dest->subsurfaceScattering_inv.x = 1.0f / (1 + dest->subsurfaceScattering.x);
-		dest->subsurfaceScattering_inv.y = 1.0f / (1 + dest->subsurfaceScattering.y);
-		dest->subsurfaceScattering_inv.z = 1.0f / (1 + dest->subsurfaceScattering.z);
-		dest->subsurfaceScattering_inv.w = 1.0f / (1 + dest->subsurfaceScattering.w);
+		dest->subsurfaceScattering_inv.x = 1.0f / ((1 + dest->subsurfaceScattering.x) * (1 + dest->subsurfaceScattering.x));
+		dest->subsurfaceScattering_inv.y = 1.0f / ((1 + dest->subsurfaceScattering.y) * (1 + dest->subsurfaceScattering.y));
+		dest->subsurfaceScattering_inv.z = 1.0f / ((1 + dest->subsurfaceScattering.z) * (1 + dest->subsurfaceScattering.z));
+		dest->subsurfaceScattering_inv.w = 1.0f / ((1 + dest->subsurfaceScattering.w) * (1 + dest->subsurfaceScattering.w));
 		dest->uvset_baseColorMap = baseColorMap == nullptr ? -1 : (int)uvset_baseColorMap;
 		dest->uvset_surfaceMap = surfaceMap == nullptr ? -1 : (int)uvset_surfaceMap;
 		dest->uvset_normalMap = normalMap == nullptr ? -1 : (int)uvset_normalMap;
@@ -299,6 +299,7 @@ namespace wiScene
 		dest->uvset_emissiveMap = emissiveMap == nullptr ? -1 : (int)uvset_emissiveMap;
 		dest->uvset_occlusionMap = occlusionMap == nullptr ? -1 : (int)uvset_occlusionMap;
 		dest->alphaTest = 1 - alphaRef + 1.0f / 256.0f; // 256 so that it is just about smaller than 1 unorm unit (1.0/255.0)
+		dest->layerMask = layerMask;
 		dest->options = 0;
 		if (IsUsingVertexColors())
 		{
@@ -2121,7 +2122,7 @@ namespace wiScene
 			LayerComponent* layer_parent = layers.GetComponent(parentcomponent.parentID);
 			if (layer_child != nullptr && layer_parent != nullptr)
 			{
-				layer_child->layerMask = parentcomponent.layerMask_bind & layer_parent->GetLayerMask();
+				layer_child->layerMask &= layer_parent->GetLayerMask();
 			}
 
 		}
@@ -2491,6 +2492,12 @@ namespace wiScene
 		wiJobSystem::Dispatch(ctx, (uint32_t)materials.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
 			MaterialComponent& material = materials[args.jobIndex];
+			Entity entity = materials.GetEntity(args.jobIndex);
+			const LayerComponent* layer = layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				material.layerMask = layer->layerMask;
+			}
 
 			if (!material.constantBuffer.IsValid())
 			{
@@ -2781,7 +2788,7 @@ namespace wiScene
 			{
 			default:
 			case LightComponent::DIRECTIONAL:
-				aabb.createFromHalfWidth(wiRenderer::GetCamera().Eye, XMFLOAT3(10000, 10000, 10000));
+				aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX));
 				locker.lock();
 				if (args.jobIndex < weather.most_important_light_index)
 				{
@@ -2797,15 +2804,6 @@ namespace wiScene
 				break;
 			case LightComponent::POINT:
 				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.GetRange(), light.GetRange(), light.GetRange()));
-				break;
-			case LightComponent::SPHERE:
-			case LightComponent::DISC:
-			case LightComponent::RECTANGLE:
-			case LightComponent::TUBE:
-				XMStoreFloat3(&light.right, XMVector3TransformNormal(XMVectorSet(-1, 0, 0, 0), W));
-				XMStoreFloat3(&light.front, XMVector3TransformNormal(XMVectorSet(0, 0, -1, 0), W));
-				// area lights have no bounds, just like directional lights (todo: but they should have real bounds)
-				aabb.createFromHalfWidth(wiRenderer::GetCamera().Eye, XMFLOAT3(10000, 10000, 10000));
 				break;
 			}
 
@@ -2850,7 +2848,7 @@ namespace wiScene
 	}
 	void Scene::RunSoundUpdateSystem(wiJobSystem::context& ctx)
 	{
-		const CameraComponent& camera = wiRenderer::GetCamera();
+		const CameraComponent& camera = GetCamera();
 		wiAudio::SoundInstance3D instance3D;
 		instance3D.listenerPos = camera.Eye;
 		instance3D.listenerUp = camera.Up;

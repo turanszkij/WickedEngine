@@ -27,10 +27,8 @@ CBUFFER(PostProcessCB, CBSLOT_RENDERER_POSTPROCESS)
 #define rtao_range ssao_range
 #define rtao_samplecount ssao_samplecount
 #define rtao_power ssao_power
-#define rtao_seed xPPParams0.w
 
 #define rtreflection_range ssao_range
-#define rtreflection_seed xPPParams0.w
 
 static const uint POSTPROCESS_HBAO_THREADCOUNT = 320;
 #define hbao_direction xPPParams0.xy

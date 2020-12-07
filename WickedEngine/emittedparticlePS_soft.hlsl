@@ -25,10 +25,10 @@ float4 main(VertextoPixel input) : SV_TARGET
 	float fade = saturate(1.0 / input.size*(max(max(depthScene.x, depthScene.y), max(depthScene.z, depthScene.w)) - depthFragment));
 
 	float4 inputColor;
-	inputColor.r = ((input.color >> 0)  & 0x000000FF) / 255.0f;
-	inputColor.g = ((input.color >> 8)  & 0x000000FF) / 255.0f;
-	inputColor.b = ((input.color >> 16) & 0x000000FF) / 255.0f;
-	inputColor.a = ((input.color >> 24) & 0x000000FF) / 255.0f;
+	inputColor.r = ((input.color >> 0)  & 0xFF) / 255.0f;
+	inputColor.g = ((input.color >> 8)  & 0xFF) / 255.0f;
+	inputColor.b = ((input.color >> 16) & 0xFF) / 255.0f;
+	inputColor.a = ((input.color >> 24) & 0xFF) / 255.0f;
 
 	float opacity = saturate(color.a * inputColor.a * fade);
 
@@ -52,6 +52,8 @@ float4 main(VertextoPixel input) : SV_TARGET
 	Lighting lighting = CreateLighting(0, 0, GetAmbient(N), 0);
 	Surface surface = CreateSurface(input.P, N, 0, color, 1, 1, 0, 0);
 	surface.pixel = pixel;
+	surface.sss = g_xMaterial.subsurfaceScattering;
+	surface.sss_inv = g_xMaterial.subsurfaceScattering_inv;
 
 	TiledLighting(surface, lighting);
 

@@ -2,12 +2,11 @@
 #include "wiHelper.h"
 
 #include <fstream>
-#include <sstream>
 
 using namespace std;
 
 // this should always be only INCREMENTED and only if a new serialization is implemeted somewhere!
-uint64_t __archiveVersion = 54;
+uint64_t __archiveVersion = 55;
 // this is the version number of which below the archive is not compatible with the current version
 uint64_t __archiveVersionBarrier = 22;
 
@@ -29,17 +28,14 @@ wiArchive::wiArchive(const std::string& fileName, bool readMode) : fileName(file
 				(*this) >> version;
 				if (version < __archiveVersionBarrier)
 				{
-					stringstream ss("");
-					ss << "The archive version (" << version << ") is no longer supported!";
-					wiHelper::messageBox(ss.str(), "Error!");
+					string ss = "The archive version (" + std::to_string(version) + ") is no longer supported!";
+					wiHelper::messageBox(ss.c_str(), "Error!");
 					Close();
 				}
 				if (version > __archiveVersion)
 				{
-					stringstream ss("");
-
-					ss << "The archive version (" << version << ") is higher than the program's ("<<__archiveVersion<<")!";
-					wiHelper::messageBox(ss.str(), "Error!");
+					string ss = "The archive version (" + std::to_string(version) + ") is higher than the program's (" + std::to_string(__archiveVersion) + ")!";
+					wiHelper::messageBox(ss.c_str(), "Error!");
 					Close();
 				}
 			}

@@ -220,17 +220,21 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			if (decalAccumulation.a < 1)
 			{
 				ShaderEntity decal = EntityArray[g_xFrame_DecalArrayOffset + entity_index];
+				if ((decal.layerMask & g_xMaterial.layerMask) == 0)
+					continue;
 
-				const float4x4 decalProjection = MatrixArray[decal.GetMatrixIndex()];
+				float4x4 decalProjection = MatrixArray[decal.GetMatrixIndex()];
+				float4 texMulAdd = decalProjection[3];
+				decalProjection[3] = float4(0, 0, 0, 1);
 				const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
 				const float3 uvw = clipSpacePos.xyz * float3(0.5, -0.5, 0.5) + 0.5;
 				[branch]
 				if (is_saturated(uvw))
 				{
 					// mipmapping needs to be performed by hand:
-					const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy * decal.GetTexMulAdd().xy;
-					const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy * decal.GetTexMulAdd().xy;
-					float4 decalColor = texture_decalatlas.SampleGrad(sampler_linear_clamp, uvw.xy*decal.GetTexMulAdd().xy + decal.GetTexMulAdd().zw, decalDX, decalDY);
+					const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy * texMulAdd.xy;
+					const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy * texMulAdd.xy;
+					float4 decalColor = texture_decalatlas.SampleGrad(sampler_linear_clamp, uvw.xy * texMulAdd.xy + texMulAdd.zw, decalDX, decalDY);
 					// blend out if close to cube Z:
 					float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
 					decalColor.a *= edgeBlend;
@@ -286,6 +290,8 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			if (envmapAccumulation.a < 1)
 			{
 				ShaderEntity probe = EntityArray[g_xFrame_EnvProbeArrayOffset + entity_index];
+				if ((probe.layerMask & g_xMaterial.layerMask) == 0)
+					continue;
 
 				const float4x4 probeProjection = MatrixArray[probe.GetMatrixIndex()];
 				const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
@@ -375,26 +381,6 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 					SpotLight(light, surface, lighting);
 				}
 				break;
-				case ENTITY_TYPE_SPHERELIGHT:
-				{
-					SphereLight(light, surface, lighting);
-				}
-				break;
-				case ENTITY_TYPE_DISCLIGHT:
-				{
-					DiscLight(light, surface, lighting);
-				}
-				break;
-				case ENTITY_TYPE_RECTANGLELIGHT:
-				{
-					RectangleLight(light, surface, lighting);
-				}
-				break;
-				case ENTITY_TYPE_TUBELIGHT:
-				{
-					TubeLight(light, surface, lighting);
-				}
-				break;
 				}
 			}
 		}
@@ -442,17 +428,21 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 				if (entity_index >= first_item && entity_index <= last_item && decalAccumulation.a < 1)
 				{
 					ShaderEntity decal = EntityArray[entity_index];
+					if ((decal.layerMask & g_xMaterial.layerMask) == 0)
+						continue;
 
-					const float4x4 decalProjection = MatrixArray[decal.GetMatrixIndex()];
+					float4x4 decalProjection = MatrixArray[decal.GetMatrixIndex()];
+					float4 texMulAdd = decalProjection[3];
+					decalProjection[3] = float4(0, 0, 0, 1);
 					const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
 					const float3 uvw = clipSpacePos.xyz * float3(0.5, -0.5, 0.5) + 0.5;
 					[branch]
 					if (is_saturated(uvw))
 					{
 						// mipmapping needs to be performed by hand:
-						const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy * decal.GetTexMulAdd().xy;
-						const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy * decal.GetTexMulAdd().xy;
-						float4 decalColor = texture_decalatlas.SampleGrad(sampler_linear_clamp, uvw.xy*decal.GetTexMulAdd().xy + decal.GetTexMulAdd().zw, decalDX, decalDY);
+						const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy * texMulAdd.xy;
+						const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy * texMulAdd.xy;
+						float4 decalColor = texture_decalatlas.SampleGrad(sampler_linear_clamp, uvw.xy * texMulAdd.xy + texMulAdd.zw, decalDX, decalDY);
 						// blend out if close to cube Z:
 						float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
 						decalColor.a *= edgeBlend;
@@ -521,6 +511,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 				if (entity_index >= first_item && entity_index <= last_item && envmapAccumulation.a < 1)
 				{
 					ShaderEntity probe = EntityArray[entity_index];
+					if ((probe.layerMask & g_xMaterial.layerMask) == 0)
+						continue;
 
 					const float4x4 probeProjection = MatrixArray[probe.GetMatrixIndex()];
 					const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
@@ -617,26 +609,6 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 					case ENTITY_TYPE_SPOTLIGHT:
 					{
 						SpotLight(light, surface, lighting);
-					}
-					break;
-					case ENTITY_TYPE_SPHERELIGHT:
-					{
-						SphereLight(light, surface, lighting);
-					}
-					break;
-					case ENTITY_TYPE_DISCLIGHT:
-					{
-						DiscLight(light, surface, lighting);
-					}
-					break;
-					case ENTITY_TYPE_RECTANGLELIGHT:
-					{
-						RectangleLight(light, surface, lighting);
-					}
-					break;
-					case ENTITY_TYPE_TUBELIGHT:
-					{
-						TubeLight(light, surface, lighting);
 					}
 					break;
 					}
@@ -1059,6 +1031,8 @@ GBUFFEROutputType main(PIXELINPUT input)
 
 	surface.pixel = pixel;
 	surface.screenUV = ScreenCoord;
+
+	surface.layerMask = g_xMaterial.layerMask;
 
 	float3 ambient = GetAmbient(surface.N);
 	ambient = lerp(ambient, ambient * surface.sss.rgb, saturate(surface.sss.a));

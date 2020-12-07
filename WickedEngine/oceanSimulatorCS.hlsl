@@ -1,6 +1,5 @@
+#include "globals.hlsli"
 #include "ShaderInterop_Ocean.h"
-
-#define PI 3.1415926536f
 
 STRUCTUREDBUFFER(g_InputH0, float2, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(g_InputOmega, float, TEXSLOT_ONDEMAND1);
@@ -18,7 +17,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 h0_k = g_InputH0[in_index];
 	float2 h0_mk = g_InputH0[in_mindex];
 	float sin_v, cos_v;
-	sincos(g_InputOmega[in_index] * g_Time, sin_v, cos_v);
+	sincos(g_InputOmega[in_index] * g_xFrame_Time * g_TimeScale, sin_v, cos_v);
 
 	float2 ht;
 	ht.x = (h0_k.x + h0_mk.x) * cos_v - (h0_k.y + h0_mk.y) * sin_v;

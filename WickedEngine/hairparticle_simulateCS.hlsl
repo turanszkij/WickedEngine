@@ -32,10 +32,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		ShaderEntity forceField = EntityArray[forceFieldID];
 
 		forceFields[groupIndex].type = (uint)forceField.GetType();
-		forceFields[groupIndex].position = forceField.positionWS;
+		forceFields[groupIndex].position = forceField.position;
 		forceFields[groupIndex].gravity = forceField.GetEnergy();
 		forceFields[groupIndex].range_rcp = forceField.GetRange(); // it is actually uploaded from CPU as 1.0f / range
-		forceFields[groupIndex].normal = forceField.GetDirectionWS();
+		forceFields[groupIndex].normal = forceField.GetDirection();
 	}
 	GroupMemoryBarrierWithGroupSync();
 

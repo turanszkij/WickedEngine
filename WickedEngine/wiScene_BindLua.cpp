@@ -21,6 +21,11 @@ int CreateEntity_BindLua(lua_State* L)
 	return 1;
 }
 
+int GetCamera(lua_State* L)
+{
+	Luna<CameraComponent_BindLua>::push(L, new CameraComponent_BindLua(&wiScene::GetCamera()));
+	return 1;
+}
 int GetScene(lua_State* L)
 {
 	Luna<Scene_BindLua>::push(L, new Scene_BindLua(&wiScene::GetScene()));
@@ -266,6 +271,7 @@ void Bind()
 		wiLua::RunText("STENCILREF_SKIN = 3");
 		wiLua::RunText("STENCILREF_SNOW = 4");
 
+		wiLua::RegisterFunc("GetCamera", GetCamera);
 		wiLua::RegisterFunc("GetScene", GetScene);
 		wiLua::RegisterFunc("LoadModel", LoadModel);
 		wiLua::RegisterFunc("Pick", Pick);

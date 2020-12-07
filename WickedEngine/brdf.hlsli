@@ -44,6 +44,7 @@ struct Surface
 	float anisotropy;		// anisotropy factor [0 -> 1]
 	float4 sss;				// subsurface scattering color * amount
 	float4 sss_inv;			// 1 / (1 + sss)
+	uint layerMask;
 
 	float alphaRoughness;	// roughness remapped from perceptual to a "more linear change in roughness"
 	float alphaRoughnessSq;	// roughness input to brdf functions
@@ -117,6 +118,7 @@ inline Surface CreateSurface(
 	surface.sss_inv = 1;
 	surface.T = T;
 	surface.B = B;
+	surface.layerMask = ~0;
 
 	surface.Update();
 

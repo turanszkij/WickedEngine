@@ -19,7 +19,7 @@ CBUFFER(Ocean_Simulation_ImmutableCB, CBSLOT_OTHER_OCEAN_SIMULATION_IMMUTABLE)
 
 CBUFFER(Ocean_Simulation_PerFrameCB, CBSLOT_OTHER_OCEAN_SIMULATION_PERFRAME)
 {
-	float g_Time;
+	float g_TimeScale;
 	float g_ChoppyScale;
 	float g_GridLen;
 	float Ocean_Simulation_PerFrameCB_padding;

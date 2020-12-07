@@ -12,7 +12,7 @@ void CameraWindow::ResetCam()
 	camera_transform.ClearTransform();
 	camera_transform.Translate(XMFLOAT3(0, 2, -10));
 	camera_transform.UpdateTransform();
-	wiRenderer::GetCamera().TransformCamera(camera_transform);
+	wiScene::GetCamera().TransformCamera(camera_transform);
 
 	camera_target.ClearTransform();
 	camera_target.UpdateTransform();
@@ -21,7 +21,7 @@ void CameraWindow::ResetCam()
 void CameraWindow::Create(EditorComponent* editor)
 {
 	wiWindow::Create("Camera Window");
-	camera_transform.MatrixTransform(wiRenderer::GetCamera().GetInvView());
+	camera_transform.MatrixTransform(wiScene::GetCamera().GetInvView());
 	camera_transform.UpdateTransform();
 
 	SetSize(XMFLOAT2(380, 260));
@@ -34,10 +34,10 @@ void CameraWindow::Create(EditorComponent* editor)
 	farPlaneSlider.Create(1, 5000, 1000, 100000, "Far Plane: ");
 	farPlaneSlider.SetSize(XMFLOAT2(100, hei));
 	farPlaneSlider.SetPos(XMFLOAT2(x, y += step));
-	farPlaneSlider.SetValue(wiRenderer::GetCamera().zFarP);
+	farPlaneSlider.SetValue(wiScene::GetCamera().zFarP);
 	farPlaneSlider.OnSlide([&](wiEventArgs args) {
 		Scene& scene = wiScene::GetScene();
-		CameraComponent& camera = wiRenderer::GetCamera();
+		CameraComponent& camera = wiScene::GetCamera();
 		camera.zFarP = args.fValue;
 		camera.UpdateCamera();
 	});
@@ -46,10 +46,10 @@ void CameraWindow::Create(EditorComponent* editor)
 	nearPlaneSlider.Create(0.01f, 10, 0.1f, 10000, "Near Plane: ");
 	nearPlaneSlider.SetSize(XMFLOAT2(100, hei));
 	nearPlaneSlider.SetPos(XMFLOAT2(x, y += step));
-	nearPlaneSlider.SetValue(wiRenderer::GetCamera().zNearP);
+	nearPlaneSlider.SetValue(wiScene::GetCamera().zNearP);
 	nearPlaneSlider.OnSlide([&](wiEventArgs args) {
 		Scene& scene = wiScene::GetScene();
-		CameraComponent& camera = wiRenderer::GetCamera();
+		CameraComponent& camera = wiScene::GetCamera();
 		camera.zNearP = args.fValue;
 		camera.UpdateCamera();
 	});
@@ -60,7 +60,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	fovSlider.SetPos(XMFLOAT2(x, y += step));
 	fovSlider.OnSlide([&](wiEventArgs args) {
 		Scene& scene = wiScene::GetScene();
-		CameraComponent& camera = wiRenderer::GetCamera();
+		CameraComponent& camera = wiScene::GetCamera();
 		camera.fov = args.fValue / 180.f * XM_PI;
 		camera.UpdateCamera();
 	});
@@ -98,7 +98,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	proxyButton.SetPos(XMFLOAT2(x, y += step * 2));
 	proxyButton.OnClick([=](wiEventArgs args) {
 
-		const CameraComponent& camera = wiRenderer::GetCamera();
+		const CameraComponent& camera = wiScene::GetCamera();
 
 		Scene& scene = wiScene::GetScene();
 

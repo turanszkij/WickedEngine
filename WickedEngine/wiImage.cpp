@@ -4,7 +4,6 @@
 #include "wiHelper.h"
 #include "SamplerMapping.h"
 #include "ResourceMapping.h"
-#include "wiScene.h"
 #include "ShaderInterop_Image.h"
 #include "wiBackLog.h"
 #include "wiEvent.h"
@@ -105,54 +104,30 @@ namespace wiImage
 			return;
 		}
 
-		XMMATRIX M;
-		if (params.typeFlag == SCREEN)
+		XMMATRIX M = XMMatrixScaling(params.scale.x * params.siz.x, params.scale.y * params.siz.y, 1);
+		M = M * XMMatrixRotationZ(params.rotation);
+
+		if (params.customRotation != nullptr)
 		{
-			M =
-				XMMatrixScaling(params.scale.x*params.siz.x, params.scale.y*params.siz.y, 1)
-				* XMMatrixRotationZ(params.rotation)
-				* XMMatrixTranslation(params.pos.x, params.pos.y, 0)
-				* device->GetScreenProjection()
-				;
+			M = M * (*params.customRotation);
 		}
-		else if (params.typeFlag == WORLD)
+
+		M = M * XMMatrixTranslation(params.pos.x, params.pos.y, params.pos.z);
+
+		if (params.customProjection != nullptr)
 		{
-			XMMATRIX faceRot = XMMatrixIdentity();
-			if (params.lookAt.w)
-			{
-				XMVECTOR vvv = (params.lookAt.x == 1 && !params.lookAt.y && !params.lookAt.z) ? XMVectorSet(0, 1, 0, 0) : XMVectorSet(1, 0, 0, 0);
-				faceRot =
-					XMMatrixLookAtLH(XMVectorSet(0, 0, 0, 0)
-						, XMLoadFloat4(&params.lookAt)
-						, XMVector3Cross(
-							vvv, XMLoadFloat4(&params.lookAt)
-						)
-					);
-			}
-			else
-			{
-				faceRot = XMLoadFloat3x3(&wiRenderer::GetCamera().rotationMatrix);
-			}
-
-			XMMATRIX view = wiRenderer::GetCamera().GetView();
-			XMMATRIX projection = wiRenderer::GetCamera().GetProjection();
-			// Remove possible jittering from temporal camera:
-			projection.r[2] = XMVectorSetX(projection.r[2], 0);
-			projection.r[2] = XMVectorSetY(projection.r[2], 0);
-
-			M =
-				XMMatrixScaling(params.scale.x*params.siz.x, -1 * params.scale.y*params.siz.y, 1)
-				*XMMatrixRotationZ(params.rotation)
-				*faceRot
-				*XMMatrixTranslation(params.pos.x, params.pos.y, params.pos.z)
-				*view * projection
-				;
+			M = XMMatrixScaling(1, -1, 1) * M; // reason: screen projection is Y down (like UV-space) and that is the common case for image rendering. But custom projections will use the "world space"
+			M = M * (*params.customProjection);
+		}
+		else
+		{
+			M = M * device->GetScreenProjection();
 		}
 
 		for (int i = 0; i < 4; ++i)
 		{
 			XMVECTOR V = XMVectorSet(params.corners[i].x - params.pivot.x, params.corners[i].y - params.pivot.y, 0, 1);
-			V = XMVector2Transform(V, M);
+			V = XMVector2Transform(V, M); // division by w will happen on GPU
 			XMStoreFloat4(&cb.xCorners[i], V);
 		}
 
@@ -313,7 +288,7 @@ namespace wiImage
 		rs.DepthBias = 0;
 		rs.DepthBiasClamp = 0;
 		rs.SlopeScaledDepthBias = 0;
-		rs.DepthClipEnable = false;
+		rs.DepthClipEnable = true;
 		rs.MultisampleEnable = false;
 		rs.AntialiasedLineEnable = false;
 		device->CreateRasterizerState(&rs, &rasterizerState);

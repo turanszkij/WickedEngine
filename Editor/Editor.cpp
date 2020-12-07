@@ -119,6 +119,8 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 		break;
 	}
 
+	renderPath->resolutionScale = resolutionScale;
+
 	renderPath->setShadowsEnabled(true);
 	renderPath->setReflectionsEnabled(true);
 	renderPath->setAO(RenderPath3D::AO_DISABLED);
@@ -159,8 +161,8 @@ void EditorComponent::ResizeBuffers()
 	if(renderPath != nullptr && renderPath->GetDepthStencil() != nullptr)
 	{
 		TextureDesc desc;
-		desc.Width = wiRenderer::GetInternalResolution().x;
-		desc.Height = wiRenderer::GetInternalResolution().y;
+		desc.Width = GetInternalResolution().x;
+		desc.Height = GetInternalResolution().y;
 
 		desc.Format = FORMAT_R8_UNORM;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
@@ -1003,7 +1005,7 @@ void EditorComponent::Update(float dt)
 	wiProfiler::range_id profrange = wiProfiler::BeginRangeCPU("Editor Update");
 
 	Scene& scene = wiScene::GetScene();
-	CameraComponent& camera = wiRenderer::GetCamera();
+	CameraComponent& camera = wiScene::GetCamera();
 
 	animWnd.Update();
 	weatherWnd.Update();
@@ -1904,7 +1906,7 @@ void EditorComponent::Compose(CommandList cmd) const
 		device->EventEnd(cmd);
 	}
 
-	const CameraComponent& camera = wiRenderer::GetCamera();
+	const CameraComponent& camera = wiScene::GetCamera();
 
 	Scene& scene = wiScene::GetScene();
 
@@ -1912,6 +1914,18 @@ void EditorComponent::Compose(CommandList cmd) const
 	const wiColor hoveredEntityColor = wiColor::fromFloat4(XMFLOAT4(1, 1, 1, 1));
 	const XMFLOAT4 glow = wiMath::Lerp(wiMath::Lerp(XMFLOAT4(1, 1, 1, 1), selectionColor, 0.4f), selectionColor, selectionColorIntensity);
 	const wiColor selectedEntityColor = wiColor::fromFloat4(glow);
+
+	// remove camera jittering
+	CameraComponent cam = *renderPath->camera;
+	cam.jitter = XMFLOAT2(0, 0);
+	cam.UpdateCamera();
+	const XMMATRIX VP = cam.GetViewProjection();
+
+	const XMMATRIX R = XMLoadFloat3x3(&cam.rotationMatrix);
+
+	wiImageParams fx;
+	fx.customRotation = &R;
+	fx.customProjection = &VP;
 
 	if (rendererWnd.GetPickType() & PICK_LIGHT)
 	{
@@ -1923,10 +1937,8 @@ void EditorComponent::Compose(CommandList cmd) const
 
 			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
-			wiImageParams fx;
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
-			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
 			fx.color = inactiveEntityColor;
 
@@ -1971,10 +1983,8 @@ void EditorComponent::Compose(CommandList cmd) const
 
 			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
-			wiImageParams fx;
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
-			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
 			fx.color = inactiveEntityColor;
 
@@ -2006,10 +2016,8 @@ void EditorComponent::Compose(CommandList cmd) const
 
 			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
-			wiImageParams fx;
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
-			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
 			fx.color = inactiveEntityColor;
 
@@ -2041,10 +2049,8 @@ void EditorComponent::Compose(CommandList cmd) const
 
 			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
-			wiImageParams fx;
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
-			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
 			fx.color = inactiveEntityColor;
 
@@ -2075,10 +2081,8 @@ void EditorComponent::Compose(CommandList cmd) const
 
 			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
-			wiImageParams fx;
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
-			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
 			fx.color = inactiveEntityColor;
 
@@ -2109,10 +2113,8 @@ void EditorComponent::Compose(CommandList cmd) const
 
 			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
-			wiImageParams fx;
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
-			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
 			fx.color = inactiveEntityColor;
 
@@ -2143,10 +2145,8 @@ void EditorComponent::Compose(CommandList cmd) const
 
 			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
-			wiImageParams fx;
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
-			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
 			fx.color = inactiveEntityColor;
 
@@ -2177,10 +2177,8 @@ void EditorComponent::Compose(CommandList cmd) const
 
 			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
-			wiImageParams fx;
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
-			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
 			fx.color = inactiveEntityColor;
 

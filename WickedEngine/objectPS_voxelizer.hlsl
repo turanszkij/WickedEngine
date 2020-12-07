@@ -272,7 +272,7 @@ void main(PSInput input)
 					{
 					case ENTITY_TYPE_DIRECTIONALLIGHT:
 					{
-						float3 L = light.GetDirectionWS();
+						float3 L = light.GetDirection();
 						const float NdotL = saturate(dot(L, N));
 
 						[branch]
@@ -299,7 +299,7 @@ void main(PSInput input)
 					break;
 					case ENTITY_TYPE_POINTLIGHT:
 					{
-						float3 L = light.positionWS - P;
+						float3 L = light.position - P;
 						const float dist2 = dot(L, L);
 						const float range2 = light.GetRange() * light.GetRange();
 
@@ -331,7 +331,7 @@ void main(PSInput input)
 					break;
 					case ENTITY_TYPE_SPOTLIGHT:
 					{
-						float3 L = light.positionWS - P;
+						float3 L = light.position - P;
 						const float dist2 = dot(L, L);
 						const float range2 = light.GetRange() * light.GetRange();
 
@@ -345,7 +345,7 @@ void main(PSInput input)
 							[branch]
 							if (NdotL > 0)
 							{
-								const float SpotFactor = dot(L, light.GetDirectionWS());
+								const float SpotFactor = dot(L, light.GetDirection());
 								const float spotCutOff = light.GetConeAngleCos();
 
 								[branch]
