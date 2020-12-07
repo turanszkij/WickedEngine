@@ -3807,12 +3807,17 @@ void UpdateRenderData(
 			entityArray[entityCounter].color = wiMath::CompressColor(light.color);
 			entityArray[entityCounter].SetEnergy(light.energy);
 
-			bool shadow = false;
-			if (!GetRaytracedShadowsEnabled())
-			{
-				// Shadow selection only for shadowmaps, no need if raytraced:
-				entityArray[entityCounter].indices = ~0;
+			// mark as no shadow by default:
+			entityArray[entityCounter].indices = ~0;
 
+			bool shadow = light.IsCastingShadow() && !light.IsStatic();
+
+			if (GetRaytracedShadowsEnabled() && shadow)
+			{
+				entityArray[entityCounter].SetIndices(matrixCounter, 0);
+			}
+			else if(shadow)
+			{
 				shadow = light.IsCastingShadow() && !light.IsStatic();
 				if (shadow)
 				{
@@ -7955,7 +7960,7 @@ void ManageDecalAtlas(Scene& scene)
 	{
 		const DecalComponent& decal = scene.decals[i];
 
-		if (decal.texture != nullptr)
+		if (decal.texture != nullptr && decal.texture->texture != nullptr)
 		{
 			if (packedDecals.find(decal.texture) == packedDecals.end())
 			{
