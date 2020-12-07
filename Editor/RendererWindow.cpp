@@ -622,8 +622,20 @@ void RendererWindow::Create(EditorComponent* editor)
 	freezeCullingCameraCheckBox.OnClick([](wiEventArgs args) {
 		wiRenderer::SetFreezeCullingCameraEnabled(args.bValue);
 	});
-	freezeCullingCameraCheckBox.SetCheck(wiRenderer::GetToDrawDebugForceFields());
+	freezeCullingCameraCheckBox.SetCheck(wiRenderer::GetFreezeCullingCameraEnabled());
 	AddWidget(&freezeCullingCameraCheckBox);
+
+
+
+	disableAlbedoMapsCheckBox.Create("Disable Albedo maps: ");
+	disableAlbedoMapsCheckBox.SetTooltip("Disables albedo maps on objects for easier lighting debugging");
+	disableAlbedoMapsCheckBox.SetPos(XMFLOAT2(x, y += step));
+	disableAlbedoMapsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	disableAlbedoMapsCheckBox.OnClick([](wiEventArgs args) {
+		wiRenderer::SetDisableAlbedoMaps(args.bValue);
+		});
+	disableAlbedoMapsCheckBox.SetCheck(wiRenderer::IsDisableAlbedoMaps());
+	AddWidget(&disableAlbedoMapsCheckBox);
 
 
 

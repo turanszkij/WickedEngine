@@ -544,25 +544,13 @@ void RenderPath3D::Render() const
 	wiJobSystem::context ctx;
 	CommandList cmd;
 
+	// Preparing the frame:
 	cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) { RenderFrameSetUp(cmd); });
+	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+		RenderFrameSetUp(cmd);
+		});
 
-	if (getShadowsEnabled() && !wiRenderer::GetRaytracedShadowsEnabled())
-	{
-		cmd = device->BeginCommandList();
-		wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
-			wiRenderer::DrawShadowmaps(visibility_main, cmd);
-			});
-	}
-
-	if (wiRenderer::GetVoxelRadianceEnabled())
-	{
-		cmd = device->BeginCommandList();
-		wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
-			wiRenderer::VoxelRadiance(visibility_main, cmd);
-			});
-	}
-
+	// Updating texture atlases:
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
 		wiRenderer::BindCommonResources(cmd);
@@ -572,9 +560,6 @@ void RenderPath3D::Render() const
 		wiRenderer::RefreshImpostors(*scene, cmd);
 		});
 
-	cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) { RenderReflections(cmd); });
-
 
 	static const uint32_t drawscene_flags =
 		wiRenderer::DRAWSCENE_OPAQUE |
@@ -583,10 +568,13 @@ void RenderPath3D::Render() const
 		wiRenderer::DRAWSCENE_OCCLUSIONCULLING
 		;
 
+	// Depth prepass + AO + light culling:
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
+
+		auto range = wiProfiler::BeginRangeGPU("Z-Prepass", cmd);
 
 		wiRenderer::UpdateCameraCB(
 			*camera,
@@ -595,23 +583,18 @@ void RenderPath3D::Render() const
 			cmd
 		);
 
-		// depth prepass
-		{
-			auto range = wiProfiler::BeginRangeGPU("Z-Prepass", cmd);
+		device->RenderPassBegin(&renderpass_depthprepass, cmd);
 
-			device->RenderPassBegin(&renderpass_depthprepass, cmd);
+		Viewport vp;
+		vp.Width = (float)depthBuffer.GetDesc().Width;
+		vp.Height = (float)depthBuffer.GetDesc().Height;
+		device->BindViewports(1, &vp, cmd);
 
-			Viewport vp;
-			vp.Width = (float)depthBuffer.GetDesc().Width;
-			vp.Height = (float)depthBuffer.GetDesc().Height;
-			device->BindViewports(1, &vp, cmd);
+		wiRenderer::DrawScene(visibility_main, RENDERPASS_DEPTHONLY, cmd, drawscene_flags);
 
-			wiRenderer::DrawScene(visibility_main, RENDERPASS_DEPTHONLY, cmd, drawscene_flags);
+		device->RenderPassEnd(cmd);
 
-			device->RenderPassEnd(cmd);
-
-			wiProfiler::EndRange(range);
-		}
+		wiProfiler::EndRange(range);
 
 		if (getMSAASampleCount() > 1)
 		{
@@ -654,18 +637,80 @@ void RenderPath3D::Render() const
 			}
 		}
 
-		RenderLinearDepth(cmd);
+		wiRenderer::Postprocess_Lineardepth(depthBuffer_Copy, rtLinearDepth, cmd);
 
 		RenderAO(cmd);
+
+		wiRenderer::ComputeTiledLightCulling(
+			*camera,
+			depthBuffer_Copy,
+			cmd
+		);
+
 		});
 
+	// Shadow maps:
+	if (getShadowsEnabled() && !wiRenderer::GetRaytracedShadowsEnabled())
+	{
+		cmd = device->BeginCommandList();
+		wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+			wiRenderer::DrawShadowmaps(visibility_main, cmd);
+			});
+	}
+
+	// Voxel GI:
+	if (wiRenderer::GetVoxelRadianceEnabled())
+	{
+		cmd = device->BeginCommandList();
+		wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
+			wiRenderer::VoxelRadiance(visibility_main, cmd);
+			});
+	}
+
+	// Planar reflections:
+	if (visibility_main.IsRequestedPlanarReflections())
+	{
+		cmd = device->BeginCommandList();
+		wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
+			auto range = wiProfiler::BeginRangeGPU("Planar Reflections", cmd);
+
+			GraphicsDevice* device = wiRenderer::GetDevice();
+
+			wiRenderer::UpdateCameraCB(
+				camera_reflection,
+				camera_reflection,
+				camera_reflection,
+				cmd
+			);
+
+			Viewport vp;
+			vp.Width = (float)depthBuffer_Reflection.GetDesc().Width;
+			vp.Height = (float)depthBuffer_Reflection.GetDesc().Height;
+			device->BindViewports(1, &vp, cmd);
+
+			device->RenderPassBegin(&renderpass_reflection, cmd);
+
+			wiRenderer::DrawScene(visibility_reflection, RENDERPASS_TEXTURE, cmd);
+			wiRenderer::DrawSky(*scene, cmd);
+
+			device->RenderPassEnd(cmd);
+
+			wiProfiler::EndRange(range); // Planar Reflections
+			});
+	}
+
+	// Opaque scene:
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		wiRenderer::ComputeTiledLightCulling(
+
+		auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
+
+		wiRenderer::UpdateCameraCB(
 			*camera,
-			depthBuffer_Copy,
+			camera_previous,
+			camera_reflection,
 			cmd
 		);
 
@@ -678,33 +723,29 @@ void RenderPath3D::Render() const
 
 		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 
-		// Opaque scene:
-		{
-			auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
+		device->RenderPassBegin(&renderpass_main, cmd);
 
-			device->RenderPassBegin(&renderpass_main, cmd);
+		Viewport vp;
+		vp.Width = (float)depthBuffer.GetDesc().Width;
+		vp.Height = (float)depthBuffer.GetDesc().Height;
+		device->BindViewports(1, &vp, cmd);
 
-			Viewport vp;
-			vp.Width = (float)depthBuffer.GetDesc().Width;
-			vp.Height = (float)depthBuffer.GetDesc().Height;
-			device->BindViewports(1, &vp, cmd);
+		device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
+		device->BindResource(PS, getAOEnabled() ? &rtAO : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_AO, cmd);
+		device->BindResource(PS, getSSREnabled() || getRaytracedReflectionEnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
+		wiRenderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
+		wiRenderer::DrawSky(*scene, cmd);
 
-			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
-			device->BindResource(PS, getAOEnabled() ? &rtAO : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_AO, cmd);
-			device->BindResource(PS, getSSREnabled() || getRaytracedReflectionEnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
-			wiRenderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
-			wiRenderer::DrawSky(*scene, cmd);
+		RenderOutline(cmd);
 
-			RenderOutline(cmd);
-
-			device->RenderPassEnd(cmd);
-
-			wiProfiler::EndRange(range); // Opaque Scene
-		}
+		device->RenderPassEnd(cmd);
 
 		device->BindShadingRateImage(nullptr, cmd);
+
+		wiProfiler::EndRange(range); // Opaque Scene
 		});
 
+	// Transparents, post processes, etc:
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
@@ -718,8 +759,6 @@ void RenderPath3D::Render() const
 		);
 		wiRenderer::BindCommonResources(cmd);
 
-		DownsampleDepthBuffer(cmd);
-
 		RenderLightShafts(cmd);
 
 		RenderVolumetrics(cmd);
@@ -727,6 +766,8 @@ void RenderPath3D::Render() const
 		RenderSceneMIPChain(cmd);
 
 		RenderSSR(cmd);
+
+		DownsampleDepthBuffer(cmd);
 
 		RenderTransparents(cmd);
 
@@ -782,42 +823,7 @@ void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
 
 	device->RenderPassEnd(cmd);
 }
-void RenderPath3D::RenderReflections(CommandList cmd) const
-{
-	auto range = wiProfiler::BeginRangeGPU("Reflection rendering", cmd);
 
-	if (visibility_main.IsRequestedPlanarReflections())
-	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
-
-
-		wiRenderer::UpdateCameraCB(
-			camera_reflection,
-			camera_reflection,
-			camera_reflection,
-			cmd
-		);
-
-		Viewport vp;
-		vp.Width = (float)depthBuffer_Reflection.GetDesc().Width;
-		vp.Height = (float)depthBuffer_Reflection.GetDesc().Height;
-		device->BindViewports(1, &vp, cmd);
-
-		device->RenderPassBegin(&renderpass_reflection, cmd);
-
-		wiRenderer::DrawScene(visibility_reflection, RENDERPASS_TEXTURE, cmd);
-		wiRenderer::DrawSky(*scene, cmd);
-
-		device->RenderPassEnd(cmd);
-	}
-
-	wiProfiler::EndRange(range); // Reflection Rendering
-}
-
-void RenderPath3D::RenderLinearDepth(CommandList cmd) const
-{
-	wiRenderer::Postprocess_Lineardepth(depthBuffer_Copy, rtLinearDepth, cmd);
-}
 void RenderPath3D::RenderAO(CommandList cmd) const
 {
 	wiRenderer::GetDevice()->UnbindResources(TEXSLOT_RENDERPATH_AO, 1, cmd);
@@ -1183,7 +1189,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 		rt_write = &rtPostprocess_LDR[0];
 
 		wiRenderer::Postprocess_Tonemap(
-			*rt_read,
+			rt_first == nullptr ? *rt_read : *rt_first,
 			getEyeAdaptionEnabled() ? *wiRenderer::ComputeLuminance(*GetGbuffer_Read(GBUFFER_COLOR_ROUGHNESS), cmd) : *wiTextureHelper::getColor(wiColor::Gray()),
 			getMSAASampleCount() > 1 ? rtParticleDistortion_Resolved : rtParticleDistortion,
 			*rt_write,
@@ -1193,6 +1199,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			getColorGradingEnabled() ? (colorGradingTex != nullptr ? colorGradingTex->texture : wiTextureHelper::getColorGradeDefault()) : nullptr
 		);
 
+		rt_first = nullptr;
 		rt_read = rt_write;
 		rt_write = &rtPostprocess_LDR[1];
 		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);

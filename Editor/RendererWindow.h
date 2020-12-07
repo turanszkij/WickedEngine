@@ -72,6 +72,7 @@ public:
 	wiSlider raytraceBounceCountSlider;
 
 	wiCheckBox freezeCullingCameraCheckBox;
+	wiCheckBox disableAlbedoMapsCheckBox;
 
     uint32_t GetPickType() const;
 };

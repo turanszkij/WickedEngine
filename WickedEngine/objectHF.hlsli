@@ -722,7 +722,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 
 	float4 color;
 	[branch]
-	if (g_xMaterial.uvset_baseColorMap >= 0)
+	if (g_xMaterial.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 	{
 		const float2 UV_baseColorMap = g_xMaterial.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 		color = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap);
@@ -804,7 +804,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 	if (blend_weights.x > 0)
 	{
 		[branch]
-		if (g_xMaterial.uvset_baseColorMap >= 0)
+		if (g_xMaterial.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
 			float2 uv = g_xMaterial.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam = texture_basecolormap.Sample(sampler_objectshader, uv);
@@ -851,7 +851,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 	if (blend_weights.y > 0)
 	{
 		[branch]
-		if (g_xMaterial_blend1.uvset_baseColorMap >= 0)
+		if (g_xMaterial_blend1.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
 			float2 uv = g_xMaterial_blend1.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam = texture_blend1_basecolormap.Sample(sampler_objectshader, uv);
@@ -898,7 +898,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 	if (blend_weights.z > 0)
 	{
 		[branch]
-		if (g_xMaterial_blend2.uvset_baseColorMap >= 0)
+		if (g_xMaterial_blend2.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
 			float2 uv = g_xMaterial_blend2.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam = texture_blend2_basecolormap.Sample(sampler_objectshader, uv);
@@ -945,7 +945,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 	if (blend_weights.w > 0)
 	{
 		[branch]
-		if (g_xMaterial_blend3.uvset_baseColorMap >= 0)
+		if (g_xMaterial_blend3.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
 			float2 uv = g_xMaterial_blend3.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam = texture_blend3_basecolormap.Sample(sampler_objectshader, uv);

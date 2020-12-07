@@ -141,7 +141,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
 
     float4 baseColor;
     [branch]
-    if (material.uvset_baseColorMap >= 0)
+    if (material.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
     {
         const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
         baseColor = subsets_texture_baseColor[descriptorIndex].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 2);

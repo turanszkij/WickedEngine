@@ -137,9 +137,6 @@ protected:
 	}
 
 	virtual void RenderFrameSetUp(wiGraphics::CommandList cmd) const;
-	virtual void RenderReflections(wiGraphics::CommandList cmd) const;
-
-	virtual void RenderLinearDepth(wiGraphics::CommandList cmd) const;
 	virtual void RenderAO(wiGraphics::CommandList cmd) const;
 	virtual void RenderSSR(wiGraphics::CommandList cmd) const;
 	virtual void DownsampleDepthBuffer(wiGraphics::CommandList cmd) const;

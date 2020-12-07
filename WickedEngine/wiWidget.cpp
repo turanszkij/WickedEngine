@@ -10,6 +10,8 @@
 #include "wiEvent.h"
 #include "wiBackLog.h"
 
+#include <sstream>
+
 using namespace std;
 using namespace wiGraphics;
 using namespace wiScene;
@@ -129,8 +131,8 @@ void wiWidget::RenderTooltip(const wiGUI* gui, CommandList cmd) const
 			tooltipFont.params.posY += 40;
 		}
 
-		wiImage::Draw(wiTextureHelper::getWhite(), 
-			wiImageParams(tooltipFont.params.posX - _border, tooltipFont.params.posY - _border, 
+		wiImage::Draw(wiTextureHelper::getWhite(),
+			wiImageParams(tooltipFont.params.posX - _border, tooltipFont.params.posY - _border,
 				textWidth, textHeight, wiColor(255, 234, 165)), cmd);
 		tooltipFont.SetText(tooltip);
 		tooltipFont.Draw(cmd);
@@ -152,7 +154,9 @@ void wiWidget::SetName(const std::string& value)
 	if (value.length() <= 0)
 	{
 		static atomic<uint32_t> widgetID{ 0 };
-		name = "widget_" + std::to_string(widgetID.fetch_add(1));
+		stringstream ss("");
+		ss << "widget_" << widgetID.fetch_add(1);
+		name = ss.str();
 	}
 	else
 	{
@@ -525,11 +529,15 @@ void wiTextInputField::SetValue(const std::string& newValue)
 }
 void wiTextInputField::SetValue(int newValue)
 {
-	font.SetText(std::to_string(newValue));
+	stringstream ss("");
+	ss << newValue;
+	font.SetText(ss.str());
 }
 void wiTextInputField::SetValue(float newValue)
 {
-	font.SetText(std::to_string(newValue));
+	stringstream ss("");
+	ss << newValue;
+	font.SetText(ss.str());
 }
 const std::string wiTextInputField::GetValue()
 {
@@ -704,7 +712,7 @@ void wiSlider::Create(float start, float end, float defaultValue, float step, co
 	valueInputField.Create(name + "_endInputField");
 	valueInputField.SetTooltip("Enter number to modify value even outside slider limits. Enter \"reset\" to reset slider to initial state.");
 	valueInputField.SetValue(end);
-	valueInputField.OnInputAccepted([this, start,end,defaultValue](wiEventArgs args) {
+	valueInputField.OnInputAccepted([this, start, end, defaultValue](wiEventArgs args) {
 		if (args.sValue.compare("reset") != string::npos)
 		{
 			this->value = defaultValue;
@@ -720,7 +728,7 @@ void wiSlider::Create(float start, float end, float defaultValue, float step, co
 			this->end = std::max(this->end, args.fValue);
 		}
 		onSlide(args);
-	});
+		});
 
 	for (int i = IDLE; i < WIDGETSTATE_COUNT; ++i)
 	{
@@ -1284,7 +1292,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 
 	if (selected >= 0)
 	{
-		wiFont::Draw(items[selected].name, wiFontParams(translation.x + scale.x*0.5f, translation.y + scale.y*0.5f, WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER,
+		wiFont::Draw(items[selected].name, wiFontParams(translation.x + scale.x * 0.5f, translation.y + scale.y * 0.5f, WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER,
 			font.params.color, font.params.shadowColor), cmd);
 	}
 
@@ -1351,7 +1359,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 				}
 			}
 			wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
-			wiFont::Draw(items[i].name, wiFontParams(translation.x + scale.x*0.5f, translation.y + scale.y*0.5f + GetItemOffset(i), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER,
+			wiFont::Draw(items[i].name, wiFontParams(translation.x + scale.x * 0.5f, translation.y + scale.y * 0.5f + GetItemOffset(i), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER,
 				font.params.color, font.params.shadowColor), cmd);
 		}
 	}
@@ -1362,9 +1370,9 @@ void wiComboBox::OnSelect(function<void(wiEventArgs args)> func)
 }
 void wiComboBox::AddItem(const std::string& name, uint64_t userdata)
 {
-    items.emplace_back();
-    items.back().name = name;
-    items.back().userdata = userdata;
+	items.emplace_back();
+	items.back().name = name;
+	items.back().userdata = userdata;
 
 	if (selected < 0)
 	{
@@ -1423,11 +1431,11 @@ string wiComboBox::GetItemText(int index) const
 }
 uint64_t wiComboBox::GetItemUserData(int index) const
 {
-    if (index >= 0)
-    {
+	if (index >= 0)
+	{
 		return items[index].userdata;
-    }
-    return 0;
+	}
+	return 0;
 }
 int wiComboBox::GetSelected() const
 {
@@ -1446,8 +1454,8 @@ void wiWindow::Create(const std::string& name, bool window_controls)
 
 	SetName(name);
 	SetText(name);
-	SetSize(XMFLOAT2(640, 480)); 
-	
+	SetSize(XMFLOAT2(640, 480));
+
 	for (int i = IDLE + 1; i < WIDGETSTATE_COUNT; ++i)
 	{
 		sprites[i].params.color = sprites[IDLE].params.color;
@@ -1698,7 +1706,7 @@ void wiWindow::Render(const wiGUI* gui, CommandList cmd) const
 	// body
 	if (!IsMinimized())
 	{
-		wiImageParams fx(translation.x-2, translation.y-2, scale.x+4, scale.y+4, wiColor(0, 0, 0, 100));
+		wiImageParams fx(translation.x - 2, translation.y - 2, scale.x + 4, scale.y + 4, wiColor(0, 0, 0, 100));
 		wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd); // simple shadow under the window
 		sprites[state].Draw(cmd);
 	}
@@ -2024,7 +2032,7 @@ void wiColorPicker::Update(wiGUI* gui, float dt)
 		XMFLOAT2 center = XMFLOAT2(translation.x + scale.x * 0.4f, translation.y + scale.y * 0.5f);
 		XMFLOAT2 pointer = gui->GetPointerHitbox().pos;
 		float distance = wiMath::Distance(center, pointer);
-		bool hover_hue = (distance > colorpicker_radius * sca) && (distance < (colorpicker_radius + colorpicker_width) * sca);
+		bool hover_hue = (distance > colorpicker_radius * sca) && (distance < (colorpicker_radius + colorpicker_width)* sca);
 
 		float distTri = 0;
 		XMFLOAT4 A, B, C;
@@ -2368,12 +2376,12 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 		vertices_saturation[8].col = vertices_saturation[2].col;
 		vertices_saturation[9].col = vertices_saturation[0].col; vertices_saturation[9].col.w = 0;
 		vertices_saturation[10].col = vertices_saturation[0].col;
-		
+
 		size_t alloc_size = sizeof(Vertex) * vertices_saturation.size();
 		GraphicsDevice::GPUAllocation vb_saturation = device->AllocateGPU(alloc_size, cmd);
 		memcpy(vb_saturation.data, vertices_saturation.data(), alloc_size);
 
-		XMStoreFloat4x4(&cb.g_xTransform, 
+		XMStoreFloat4x4(&cb.g_xTransform,
 			XMMatrixRotationZ(-angle) *
 			W *
 			Projection
@@ -2412,10 +2420,10 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	}
 
 	// render hue picker
-	if(IsEnabled())
+	if (IsEnabled())
 	{
 		XMStoreFloat4x4(&cb.g_xTransform,
-			XMMatrixRotationZ(-hue / 360.0f * XM_2PI)*
+			XMMatrixRotationZ(-hue / 360.0f * XM_2PI) *
 			W *
 			Projection
 		);
@@ -2472,7 +2480,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 
 		XMVECTOR picker_center = u * _A + v * _B + w * _C;
 
-		XMStoreFloat4x4(&cb.g_xTransform, 
+		XMStoreFloat4x4(&cb.g_xTransform,
 			XMMatrixTranslationFromVector(picker_center) *
 			W *
 			Projection
@@ -2491,7 +2499,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 
 	// render preview
 	{
-		XMStoreFloat4x4(&cb.g_xTransform, 
+		XMStoreFloat4x4(&cb.g_xTransform,
 			XMMatrixScaling(sca, sca, 1) *
 			XMMatrixTranslation(translation.x + scale.x - 40 * sca, translation.y + 40, 0) *
 			Projection
@@ -2594,7 +2602,7 @@ Hitbox2D wiTreeList::GetHitbox_ItemOpener(int visible_count, int level) const
 }
 bool wiTreeList::HasScrollbar() const
 {
-	return scale.y < (int)items.size() * item_height();
+	return scale.y < (int)items.size()* item_height();
 }
 void wiTreeList::Update(wiGUI* gui, float dt)
 {
@@ -2877,15 +2885,15 @@ void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 				, wiImageParams(name_box.pos.x, name_box.pos.y, name_box.siz.x, name_box.siz.y,
 					sprites[item.selected ? FOCUS : IDLE].params.color), cmd);
 		}
-		
+
 		// opened flag triangle:
 		{
 			device->BindPipelineState(&PSO_colored, cmd);
 
 			MiscCB cb;
 			cb.g_xColor = opener_highlight == i ? wiColor::White().toFloat4() : sprites[FOCUS].params.color;
-			XMStoreFloat4x4(&cb.g_xTransform, XMMatrixScaling(item_height() * 0.3f, item_height() * 0.3f, 1) * 
-				XMMatrixRotationZ(item.open ? XM_PIDIV2 : 0) * 
+			XMStoreFloat4x4(&cb.g_xTransform, XMMatrixScaling(item_height() * 0.3f, item_height() * 0.3f, 1) *
+				XMMatrixRotationZ(item.open ? XM_PIDIV2 : 0) *
 				XMMatrixTranslation(open_box.pos.x + open_box.siz.x * 0.5f, open_box.pos.y + open_box.siz.y * 0.25f, 0) *
 				Projection
 			);
@@ -2901,7 +2909,7 @@ void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 
 			device->Draw(3, 0, cmd);
 		}
-		
+
 		// Item name text:
 		wiFont::Draw(item.name, wiFontParams(name_box.pos.x + 1, name_box.pos.y + name_box.siz.y * 0.5f, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_CENTER,
 			font.params.color, font.params.shadowColor), cmd);

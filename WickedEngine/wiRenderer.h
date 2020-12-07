@@ -587,6 +587,8 @@ namespace wiRenderer
 	void SetTessellationEnabled(bool value);
 	bool GetTessellationEnabled();
 	bool IsWaterrippleRendering();
+	void SetDisableAlbedoMaps(bool value);
+	bool IsDisableAlbedoMaps();
 
 	const wiGraphics::Texture* GetGlobalLightmap();
 

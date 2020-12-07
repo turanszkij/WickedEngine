@@ -94,6 +94,7 @@ uint32_t raytraceBounceCount = 2;
 bool raytraceDebugVisualizer = false;
 bool raytracedShadows = false;
 bool tessellationEnabled = false;
+bool disableAlbedoMaps = false;
 
 
 struct VoxelizedSceneData
@@ -3640,6 +3641,10 @@ void UpdatePerFrameData(
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && GetRaytracedShadowsEnabled())
 	{
 		frameCB.g_xFrame_Options |= OPTION_BIT_RAYTRACED_SHADOWS;
+	}
+	if (disableAlbedoMaps)
+	{
+		frameCB.g_xFrame_Options |= OPTION_BIT_DISABLE_ALBEDO_MAPS;
 	}
 }
 void UpdateRenderData(
@@ -11988,6 +11993,14 @@ bool GetTessellationEnabled()
 bool IsWaterrippleRendering()
 {
 	return !waterRipples.empty();
+}
+void SetDisableAlbedoMaps(bool value)
+{
+	disableAlbedoMaps = value;
+}
+bool IsDisableAlbedoMaps()
+{
+	return disableAlbedoMaps;
 }
 
 }
