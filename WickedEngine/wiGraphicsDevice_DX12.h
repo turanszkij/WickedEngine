@@ -14,7 +14,7 @@
 
 #include "Utility/D3D12MemAlloc.h"
 
-#include <dxgi1_4.h>
+#include <dxgi1_6.h>
 #include <d3d12.h>
 #include <wrl/client.h> // ComPtr
 
@@ -30,6 +30,8 @@ namespace wiGraphics
 	{
 	private:
 		Microsoft::WRL::ComPtr<ID3D12Device5> device;
+		Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter;
+		Microsoft::WRL::ComPtr<IDXGIFactory6> factory;
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> directQueue;
 		Microsoft::WRL::ComPtr<ID3D12Fence> frameFence;
 		HANDLE frameFenceEvent;

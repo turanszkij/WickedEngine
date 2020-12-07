@@ -2045,8 +2045,40 @@ using namespace DX12_Internal;
 			}
 		}
 #endif
+		hr = CreateDXGIFactory2(debuglayer ? DXGI_CREATE_FACTORY_DEBUG : 0, IID_PPV_ARGS(&factory));
+		if (FAILED(hr))
+		{
+			std::stringstream ss("");
+			ss << "Failed to create DXGI factory! ERROR: " << std::hex << hr;
+			wiHelper::messageBox(ss.str(), "Error!");
+			assert(0);
+			wiPlatform::Exit();
+		}
 
-		hr = D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device));
+		// pick the highest performance adapter that is able to create the device
+		Microsoft::WRL::ComPtr<IDXGIAdapter1> candidateAdapter;
+		for (uint32_t i = 0;
+			factory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&candidateAdapter)) != DXGI_ERROR_NOT_FOUND; ++i)
+		{
+			DXGI_ADAPTER_DESC1 adapterDesc;
+			candidateAdapter->GetDesc1(&adapterDesc);
+
+			// ignore software adapter and check device creation succeeds
+			if (!(adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) &&
+				SUCCEEDED(D3D12CreateDevice(candidateAdapter.Get(), D3D_FEATURE_LEVEL_12_1, __uuidof(ID3D12Device), nullptr)))
+			{
+				candidateAdapter.As(&adapter);
+				break;
+			}
+		}
+		if (candidateAdapter == nullptr)
+		{
+			wiHelper::messageBox("No capable adapter found!", "Error!");
+			assert(0);
+			wiPlatform::Exit();
+		}
+
+		hr = D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device));
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
@@ -2058,6 +2090,7 @@ using namespace DX12_Internal;
 
 		D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
 		allocatorDesc.pDevice = device.Get();
+		allocatorDesc.pAdapter = adapter.Get();
 
 		allocationhandler = std::make_shared<AllocationHandler>();
 		allocationhandler->device = device;
