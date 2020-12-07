@@ -3120,7 +3120,11 @@ void UpdateVisibility(Visibility& vis)
 				assert(args.jobIndex < 0xFFFF);
 				group_list[group_count].index = (uint16_t)args.jobIndex;
 				const LightComponent& lightcomponent = vis.scene->lights[args.jobIndex];
-				float distance = wiMath::DistanceEstimated(lightcomponent.position, vis.camera->Eye);
+				float distance = 0;
+				if (lightcomponent.type != LightComponent::DIRECTIONAL)
+				{
+					distance = wiMath::DistanceEstimated(lightcomponent.position, vis.camera->Eye);
+				}
 				group_list[group_count].distance = uint16_t(distance * 10);
 				group_count++;
 				if (lightcomponent.IsVolumetricsEnabled())

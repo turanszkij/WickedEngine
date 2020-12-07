@@ -79,8 +79,8 @@ inline float3 shadowCascade(in ShaderEntity light, in float3 shadowPos, in float
 inline float shadowCube(in ShaderEntity light, in float3 L, in float3 Lunnormalized)
 {
 	const float slice = light.GetTextureIndex();
-	float remappedDistance = light.GetCubemapDepthRemapNear() + light.GetCubemapDepthRemapFar() / max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z));
-	remappedDistance += 0.0005; // removes the border sampling artifact
+	float remappedDistance = light.GetCubemapDepthRemapNear() +
+		light.GetCubemapDepthRemapFar() / (max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z)) * 0.989); // little bias to avoid border sampling artifact
 	float shadow = 0;
 #ifndef DISABLE_SOFT_SHADOWMAP
 	// sample along a cube pattern around center:
