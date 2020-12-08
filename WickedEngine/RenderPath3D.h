@@ -88,14 +88,11 @@ protected:
 	wiGraphics::Texture depthBuffer_Copy1; // used for disocclusion check
 	wiGraphics::Texture depthBuffer_Reflection; // used for reflection, single sample
 	wiGraphics::Texture rtLinearDepth; // linear depth result + mipchain (max filter)
-	wiGraphics::Texture smallDepth; // downsampled depth buffer
 
 	wiGraphics::RenderPass renderpass_depthprepass;
 	wiGraphics::RenderPass renderpass_main;
 	wiGraphics::RenderPass renderpass_transparent;
-	wiGraphics::RenderPass renderpass_occlusionculling;
 	wiGraphics::RenderPass renderpass_reflection;
-	wiGraphics::RenderPass renderpass_downsampledepthbuffer;
 	wiGraphics::RenderPass renderpass_downsamplescene;
 	wiGraphics::RenderPass renderpass_lightshafts;
 	wiGraphics::RenderPass renderpass_volumetriclight;
@@ -139,7 +136,6 @@ protected:
 	virtual void RenderFrameSetUp(wiGraphics::CommandList cmd) const;
 	virtual void RenderAO(wiGraphics::CommandList cmd) const;
 	virtual void RenderSSR(wiGraphics::CommandList cmd) const;
-	virtual void DownsampleDepthBuffer(wiGraphics::CommandList cmd) const;
 	virtual void RenderOutline(wiGraphics::CommandList cmd) const;
 	virtual void RenderLightShafts(wiGraphics::CommandList cmd) const;
 	virtual void RenderVolumetrics(wiGraphics::CommandList cmd) const;

@@ -46,10 +46,10 @@ void RendererWindow::Create(EditorComponent* editor)
 	resolutionScaleSlider.OnSlide([editor](wiEventArgs args) {
 		if (editor->resolutionScale != args.fValue)
 		{
-			editor->resolutionScale = args.fValue;
-			editor->ResizeBuffers();
 			editor->renderPath->resolutionScale = args.fValue;
 			editor->renderPath->ResizeBuffers();
+			editor->resolutionScale = args.fValue;
+			editor->ResizeBuffers();
 		}
 	});
 	AddWidget(&resolutionScaleSlider);

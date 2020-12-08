@@ -2005,11 +2005,11 @@ void SetUpStates()
 	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_BACK]);
 
 	rs.FillMode = FILL_SOLID;
-	rs.CullMode = CULL_FRONT;
+	rs.CullMode = CULL_NONE;
 	rs.FrontCounterClockwise = true;
-	rs.DepthBias = 0;
+	rs.DepthBias = 2;
 	rs.DepthBiasClamp = 0;
-	rs.SlopeScaledDepthBias = 0;
+	rs.SlopeScaledDepthBias = 2;
 	rs.DepthClipEnable = true;
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
@@ -4227,7 +4227,6 @@ void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visib
 
 			const AABB& aabb = vis.scene->aabb_objects[instanceIndex];
 
-			// previous frame view*projection because these are drawn against the previous depth buffer:
 			XMStoreFloat4x4(&cb.g_xTransform, aabb.getAsBoxMatrix() * VP);
 			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &cb, cmd);
 			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
@@ -4367,6 +4366,9 @@ void DrawSoftParticles(
 	{
 		return;
 	}
+	auto range = distortion ?
+		wiProfiler::BeginRangeGPU("EmittedParticles - Render (Distortion)", cmd) :
+		wiProfiler::BeginRangeGPU("EmittedParticles - Render", cmd);
 
 	device->BindResource(PS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
@@ -4403,6 +4405,7 @@ void DrawSoftParticles(
 
 	GetRenderFrameAllocator(cmd).free(sizeof(uint32_t) * emitterCount);
 
+	wiProfiler::EndRange(range);
 }
 void DrawLightVisualizers(
 	const Visibility& vis,
