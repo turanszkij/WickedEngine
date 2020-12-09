@@ -1371,8 +1371,8 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 
 				D3D11_MESSAGE_ID hide[] =
 				{
-				D3D11_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS,
-				// Add more message IDs here as needed
+					D3D11_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS,
+					// Add more message IDs here as needed
 				};
 
 				D3D11_INFO_QUEUE_FILTER filter = {};

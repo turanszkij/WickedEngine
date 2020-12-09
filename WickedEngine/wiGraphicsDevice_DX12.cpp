@@ -2036,11 +2036,12 @@ using namespace DX12_Internal;
 					GetProcAddress(dx12, "D3D12GetDebugInterface"));
 			if (pD3D12GetDebugInterface)
 			{
-				ID3D12Debug* debugController;
+				ID3D12Debug* d3dDebug;
 				if (SUCCEEDED(pD3D12GetDebugInterface(
-					IID_PPV_ARGS(&debugController))))
+					IID_PPV_ARGS(&d3dDebug))))
 				{
-					debugController->EnableDebugLayer();
+					d3dDebug->EnableDebugLayer();
+					d3dDebug->Release();
 				}
 			}
 		}
@@ -2086,6 +2087,28 @@ using namespace DX12_Internal;
 			wiHelper::messageBox(ss.str(), "Error!");
 			assert(0);
 			wiPlatform::Exit();
+		}
+
+		if (debuglayer)
+		{
+			ID3D12InfoQueue* d3dInfoQueue = nullptr;
+			if (SUCCEEDED(device->QueryInterface(__uuidof(ID3D12InfoQueue), (void**)&d3dInfoQueue)))
+			{
+				d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
+				d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
+
+				D3D12_MESSAGE_ID hide[] =
+				{
+					D3D12_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS,
+					// Add more message IDs here as needed
+				};
+
+				D3D12_INFO_QUEUE_FILTER filter = {};
+				filter.DenyList.NumIDs = _countof(hide);
+				filter.DenyList.pIDList = hide;
+				d3dInfoQueue->AddStorageFilterEntries(&filter);
+				d3dInfoQueue->Release();
+			}
 		}
 
 		D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
@@ -2217,7 +2240,7 @@ using namespace DX12_Internal;
 			}
 		}
 
-		hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&copyFence));
+		hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&copyFence));
 		assert(SUCCEEDED(hr));
 
 		// Query features:
@@ -2711,15 +2734,19 @@ using namespace DX12_Internal;
 			assert(upload_success);
 			ID3D12Resource* upload_resource = to_internal(&uploadbuffer)->resource.Get();
 
-			uint8_t* pData;
+			void* pData;
 			CD3DX12_RANGE readRange(0, 0);
-			hr = upload_resource->Map(0, &readRange, (void**)&pData);
+			hr = upload_resource->Map(0, &readRange, &pData);
 			assert(SUCCEEDED(hr));
 
 			for (uint32_t i = 0; i < dataCount; ++i)
 			{
-				if (rowSizesInBytes[i] > (SIZE_T)-1) return 0;
-				D3D12_MEMCPY_DEST DestData = { pData + layouts[i].Offset, layouts[i].Footprint.RowPitch, layouts[i].Footprint.RowPitch * numRows[i] };
+				if (rowSizesInBytes[i] > (SIZE_T)-1)
+					return 0;
+				D3D12_MEMCPY_DEST DestData = {};
+				DestData.pData = (void*)((UINT64)pData + layouts[i].Offset);
+				DestData.RowPitch = (SIZE_T)layouts[i].Footprint.RowPitch;
+				DestData.SlicePitch = (SIZE_T)layouts[i].Footprint.RowPitch * (SIZE_T)numRows[i];
 				MemcpySubresource(&DestData, &data[i], (SIZE_T)rowSizesInBytes[i], numRows[i], layouts[i].Footprint.Depth);
 			}
 
@@ -4781,9 +4808,8 @@ using namespace DX12_Internal;
 			frame.copyQueue->ExecuteCommandLists(1, commandlists);
 
 			// Signal and increment the fence value.
-			HRESULT hr = frame.copyQueue->Signal(copyFence.Get(), FRAMECOUNT);
-			assert(SUCCEEDED(hr));
-			hr = frame.copyQueue->Wait(copyFence.Get(), FRAMECOUNT);
+			copyFenceValue++;
+			HRESULT hr = frame.copyQueue->Signal(copyFence.Get(), copyFenceValue);
 			assert(SUCCEEDED(hr));
 		}
 
@@ -4838,6 +4864,8 @@ using namespace DX12_Internal;
 				pipelines_worker[cmd].clear();
 			}
 
+			HRESULT hr = directQueue->Wait(copyFence.Get(), copyFenceValue);
+			assert(SUCCEEDED(hr));
 			directQueue->ExecuteCommandLists(counter, cmdLists);
 		}
 
