@@ -99,6 +99,11 @@ protected:
 	wiGraphics::RenderPass renderpass_particledistortion;
 	wiGraphics::RenderPass renderpass_waterripples;
 
+	wiGraphics::GPUBuffer tileFrustums; // entity culling frustums
+	wiGraphics::GPUBuffer entityTiles_Opaque; // culled entity indices (for opaque pass)
+	wiGraphics::GPUBuffer entityTiles_Transparent; // culled entity indices (for transparent pass)
+	wiGraphics::Texture debugUAV; // debug UAV can be used by some shaders...
+
 	const constexpr wiGraphics::Texture* GetGbuffer_Read() const
 	{
 		if (getMSAASampleCount() > 1)

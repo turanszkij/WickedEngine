@@ -457,6 +457,54 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateRenderPass(&desc, &renderpass_waterripples);
 	}
 
+
+	// Other resources:
+
+	const XMUINT3 tileCount = wiRenderer::GetEntityCullingTileCount(internalResolution);
+
+	{
+		GPUBufferDesc bd;
+		bd.StructureByteStride = sizeof(XMFLOAT4) * 4; // storing 4 planes for every tile
+		bd.ByteWidth = bd.StructureByteStride * tileCount.x * tileCount.y;
+		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.Usage = USAGE_DEFAULT;
+		bd.CPUAccessFlags = 0;
+		device->CreateBuffer(&bd, nullptr, &tileFrustums);
+
+		device->SetName(&tileFrustums, "tileFrustums");
+	}
+	{
+		GPUBufferDesc bd;
+		bd.StructureByteStride = sizeof(uint);
+		bd.ByteWidth = tileCount.x * tileCount.y * bd.StructureByteStride * SHADER_ENTITY_TILE_BUCKET_COUNT;
+		bd.Usage = USAGE_DEFAULT;
+		bd.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		bd.CPUAccessFlags = 0;
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		device->CreateBuffer(&bd, nullptr, &entityTiles_Opaque);
+		device->CreateBuffer(&bd, nullptr, &entityTiles_Transparent);
+
+		device->SetName(&entityTiles_Opaque, "entityTiles_Opaque");
+		device->SetName(&entityTiles_Transparent, "entityTiles_Transparent");
+	}
+	{
+		TextureDesc desc;
+		desc.Width = internalResolution.x;
+		desc.Height = internalResolution.y;
+		desc.MipLevels = 1;
+		desc.ArraySize = 1;
+		desc.Format = FORMAT_R8G8B8A8_UNORM;
+		desc.SampleCount = 1;
+		desc.Usage = USAGE_DEFAULT;
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.CPUAccessFlags = 0;
+		desc.MiscFlags = 0;
+
+		device->CreateTexture(&desc, nullptr, &debugUAV);
+		device->SetName(&debugUAV, "debugUAV");
+	}
+
 	RenderPath2D::ResizeBuffers();
 }
 
@@ -606,8 +654,23 @@ void RenderPath3D::Render() const
 		wiRenderer::ComputeTiledLightCulling(
 			*camera,
 			depthBuffer_Copy,
+			tileFrustums,
+			entityTiles_Opaque,
+			entityTiles_Transparent,
+			debugUAV,
 			cmd
 		);
+
+		if (wiRenderer::GetVariableRateShadingClassification() && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
+		{
+			wiRenderer::ComputeShadingRateClassification(
+				GetGbuffer_Read(),
+				rtLinearDepth,
+				rtShadingRate,
+				debugUAV,
+				cmd
+			);
+		}
 
 		});
 
@@ -686,7 +749,12 @@ void RenderPath3D::Render() const
 
 		if (wiRenderer::GetVariableRateShadingClassification() && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
 		{
-			wiRenderer::ComputeShadingRateClassification(GetGbuffer_Read(), rtLinearDepth, rtShadingRate, cmd);
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(&rtShadingRate),
+				GPUBarrier::Image(&rtShadingRate,IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADING_RATE_SOURCE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+
 			device->BindShadingRate(SHADING_RATE_1X1, cmd);
 			device->BindShadingRateImage(&rtShadingRate, cmd);
 		}
@@ -702,6 +770,12 @@ void RenderPath3D::Render() const
 		vp.Height = (float)depthBuffer.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
 
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(&entityTiles_Opaque),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+
+		device->BindResource(PS, &entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
 		device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
 		device->BindResource(PS, getAOEnabled() ? &rtAO : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_AO, cmd);
 		device->BindResource(PS, getSSREnabled() || getRaytracedReflectionEnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
@@ -764,7 +838,7 @@ void RenderPath3D::Compose(CommandList cmd) const
 
 	if (wiRenderer::GetDebugLightCulling() || wiRenderer::GetVariableRateShadingClassificationDebug())
 	{
-		wiImage::Draw((Texture*)wiRenderer::GetTexture(TEXTYPE_2D_DEBUGUAV), wiImageParams((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight()), cmd);
+		wiImage::Draw(&debugUAV, wiImageParams((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight()), cmd);
 	}
 
 	RenderPath2D::Compose(cmd);
@@ -998,6 +1072,12 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 	{
 		auto range = wiProfiler::BeginRangeGPU("Transparent Scene", cmd);
 
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(&entityTiles_Transparent),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+
+		device->BindResource(PS, &entityTiles_Transparent, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
 		device->BindResource(PS, &rtLinearDepth, TEXSLOT_LINEARDEPTH, cmd);
 		device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
 		device->BindResource(PS, &rtSceneCopy, TEXSLOT_RENDERPATH_REFRACTION, cmd);

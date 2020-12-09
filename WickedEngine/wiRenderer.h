@@ -19,6 +19,15 @@ namespace wiRenderer
 		return (userStencilRef << 4) | static_cast<uint8_t>(engineStencilRef);
 	}
 
+	inline XMUINT3 GetEntityCullingTileCount(XMUINT2 internalResolution)
+	{
+		return XMUINT3(
+			(internalResolution.x + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
+			(internalResolution.y + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
+			1
+		);
+	}
+
 	const wiGraphics::Sampler* GetSampler(int slot);
 	const wiGraphics::Shader* GetShader(SHADERTYPE id);
 	const wiGraphics::InputLayout* GetInputLayout(ILTYPES id);
@@ -240,6 +249,10 @@ namespace wiRenderer
 	void ComputeTiledLightCulling(
 		const wiScene::CameraComponent& camera,
 		const wiGraphics::Texture& depthbuffer,
+		const wiGraphics::GPUBuffer& tileFrustums,
+		const wiGraphics::GPUBuffer& entityTiles_Opaque,
+		const wiGraphics::GPUBuffer& entityTiles_Transparent,
+		const wiGraphics::Texture& debugUAV,
 		wiGraphics::CommandList cmd
 	);
 	// Run a compute shader that will resolve a MSAA depth buffer to a single-sample texture
@@ -252,6 +265,7 @@ namespace wiRenderer
 		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& output,
+		const wiGraphics::Texture& debugUAV,
 		wiGraphics::CommandList cmd
 	);
 

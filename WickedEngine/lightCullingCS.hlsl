@@ -4,9 +4,7 @@
 
 #define entityCount (g_xFrame_LightArrayCount + g_xFrame_DecalArrayCount + g_xFrame_EnvProbeArrayCount)
 
-TEXTURE2D(texture_ao, float, TEXSLOT_RENDERPATH_AO);
-TEXTURE2D(texture_ssr, float4, TEXSLOT_RENDERPATH_SSR);
-STRUCTUREDBUFFER(in_Frustums, Frustum, SBSLOT_TILEFRUSTUMS);
+STRUCTUREDBUFFER(in_Frustums, Frustum, TEXSLOT_ONDEMAND0);
 
 RWSTRUCTUREDBUFFER(EntityTiles_Transparent, uint, 0);
 RWSTRUCTUREDBUFFER(EntityTiles_Opaque, uint, 1);

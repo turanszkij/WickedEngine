@@ -794,15 +794,6 @@ enum DEBUGRENDERING
 };
 PipelineState PSO_debug[DEBUGRENDERING_COUNT];
 
-XMUINT3 GetEntityCullingTileCount(XMUINT2 internalResolution)
-{
-	return XMUINT3(
-		(internalResolution.x + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
-		(internalResolution.y + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
-		1
-	);
-}
-
 
 bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
 {
@@ -5113,23 +5104,9 @@ void DrawScene(
 		device->BindResource(CS, &vis.scene->TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 	}
 
-	if (transparent)
+	if (transparent && ocean != nullptr)
 	{
-		if (renderPass == RENDERPASS_MAIN)
-		{
-			device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], SBSLOT_ENTITYTILES, cmd);
-		}
-		if (ocean != nullptr)
-		{
-			ocean->Render(*vis.camera, vis.scene->weather, cmd);
-		}
-	}
-	else
-	{
-		if (renderPass == RENDERPASS_MAIN)
-		{
-			device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE], SBSLOT_ENTITYTILES, cmd);
-		}
+		ocean->Render(*vis.camera, vis.scene->weather, cmd);
 	}
 
 	if (hairparticle)
@@ -7107,76 +7084,28 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 }
 
 
-
 void ComputeTiledLightCulling(
 	const CameraComponent& camera,
 	const Texture& depthbuffer,
+	const GPUBuffer& tileFrustums,
+	const GPUBuffer& entityTiles_Opaque,
+	const GPUBuffer& entityTiles_Transparent,
+	const Texture& debugUAV,
 	CommandList cmd
 )
 {
 	auto range = wiProfiler::BeginRangeGPU("Entity Culling", cmd);
 
-	int _width = (int)depthbuffer.desc.Width;
-	int _height = (int)depthbuffer.desc.Height;
-
 	const XMUINT3 tileCount = GetEntityCullingTileCount(XMUINT2(depthbuffer.desc.Width, depthbuffer.desc.Height));
-
-	static int _savedWidth = 0;
-	static int _savedHeight = 0;
-	bool _resolutionChanged = false;
-	if (_savedWidth != _width || _savedHeight != _height)
-	{
-		_resolutionChanged = true;
-		_savedWidth = _width;
-		_savedHeight = _height;
-	}
-
-	static GPUBuffer frustumBuffer;
-	if (!frustumBuffer.IsValid() || _resolutionChanged)
-	{
-		GPUBufferDesc bd;
-		bd.StructureByteStride = sizeof(XMFLOAT4) * 4; // storing 4 planes for every tile
-		bd.ByteWidth = bd.StructureByteStride * tileCount.x * tileCount.y;
-		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		bd.Usage = USAGE_DEFAULT;
-		bd.CPUAccessFlags = 0;
-		device->CreateBuffer(&bd, nullptr, &frustumBuffer);
-
-		device->SetName(&frustumBuffer, "FrustumBuffer");
-	}
-	if (_resolutionChanged)
-	{
-		GPUBufferDesc bd;
-		bd.StructureByteStride = sizeof(uint);
-		bd.ByteWidth = tileCount.x * tileCount.y * bd.StructureByteStride * SHADER_ENTITY_TILE_BUCKET_COUNT;
-		bd.Usage = USAGE_DEFAULT;
-		bd.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-		bd.CPUAccessFlags = 0;
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE]);
-		device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT]);
-
-		device->SetName(&resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE], "EntityTiles_Opaque");
-		device->SetName(&resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], "EntityTiles_Transparent");
-	}
 
 	BindCommonResources(cmd);
 
-	// calculate the per-tile frustums once:
-	static bool frustumsComplete = false;
-	static XMFLOAT4X4 _savedProjection;
-	if (memcmp(&_savedProjection, &camera.Projection, sizeof(XMFLOAT4X4)) != 0)
+	// Frustum computation
 	{
-		_savedProjection = camera.Projection;
-		frustumsComplete = false;
-	}
-	if(!frustumsComplete || _resolutionChanged)
-	{
-		frustumsComplete = true;
+		device->EventBegin("Tile Frustums", cmd);
 
 		const GPUResource* uavs[] = { 
-			&frustumBuffer 
+			&tileFrustums 
 		};
 
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
@@ -7191,40 +7120,23 @@ void ComputeTiledLightCulling(
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
+			GPUBarrier::Memory(&tileFrustums),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
 
-	if (!textures[TEXTYPE_2D_DEBUGUAV].IsValid() || _resolutionChanged)
-	{
-		TextureDesc desc;
-		desc.Width = (uint32_t)_width;
-		desc.Height = (uint32_t)_height;
-		desc.MipLevels = 1;
-		desc.ArraySize = 1;
-		desc.Format = FORMAT_R8G8B8A8_UNORM;
-		desc.SampleCount = 1;
-		desc.Usage = USAGE_DEFAULT;
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.CPUAccessFlags = 0;
-		desc.MiscFlags = 0;
-
-		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_DEBUGUAV]);
+		device->EventEnd(cmd);
 	}
 
 	// Perform the culling
 	{
 		device->EventBegin("Entity Culling", cmd);
 
-		device->UnbindResources(SBSLOT_ENTITYTILES, 1, cmd);
-
-		device->BindResource(CS, &frustumBuffer, SBSLOT_TILEFRUSTUMS, cmd);
+		device->BindResource(CS, &tileFrustums, TEXSLOT_ONDEMAND0, cmd);
 
 		if (GetDebugLightCulling())
 		{
 			device->BindComputeShader(&shaders[GetAdvancedLightCulling() ? CSTYPE_LIGHTCULLING_ADVANCED_DEBUG : CSTYPE_LIGHTCULLING_DEBUG], cmd);
-			device->BindUAV(CS, &textures[TEXTYPE_2D_DEBUGUAV], 3, cmd);
+			device->BindUAV(CS, &debugUAV, 3, cmd);
 		}
 		else
 		{
@@ -7235,20 +7147,17 @@ void ComputeTiledLightCulling(
 
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 
-		GPUResource* uavs[] = {
-			&resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT],
-			&resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE],
+		const GPUResource* uavs[] = {
+			&entityTiles_Transparent,
+			&entityTiles_Opaque,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 		device->Dispatch(tileCount.x, tileCount.y, 1, cmd);
-		
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
 
-		device->UnbindUAVs(0, 8, cmd); // this unbinds pretty much every uav
+		// No barrier here, caller should barrier.
+
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -8542,6 +8451,7 @@ void ComputeShadingRateClassification(
 	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& lineardepth,
 	const Texture& output,
+	const Texture& debugUAV,
 	CommandList cmd
 )
 {
@@ -8550,7 +8460,7 @@ void ComputeShadingRateClassification(
 
 	if (GetVariableRateShadingClassificationDebug())
 	{
-		device->BindUAV(CS, &textures[TEXTYPE_2D_DEBUGUAV], 1, cmd);
+		device->BindUAV(CS, &debugUAV, 1, cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SHADINGRATECLASSIFICATION_DEBUG], cmd);
 	}
 	else
@@ -8583,11 +8493,7 @@ void ComputeShadingRateClassification(
 	// Whole threadgroup for each tile:
 	device->Dispatch(desc.Width, desc.Height, 1, cmd);
 
-	GPUBarrier barriers[] = {
-		GPUBarrier::Memory(),
-		GPUBarrier::Image(&output,IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADING_RATE_SOURCE),
-	};
-	device->Barrier(barriers, arraysize(barriers), cmd);
+	// Noa barrier here, caller should barrier.
 
 	device->UnbindUAVs(0, arraysize(uavs), cmd);
 
