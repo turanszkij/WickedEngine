@@ -43,11 +43,11 @@ namespace wiGraphics
 		ID3D11ComputeShader* prev_cs[COMMANDLIST_COUNT] = {};
 		XMFLOAT4 prev_blendfactor[COMMANDLIST_COUNT] = {};
 		uint32_t prev_samplemask[COMMANDLIST_COUNT] = {};
-		ID3D11BlendState* prev_bs[COMMANDLIST_COUNT] = {};
-		ID3D11RasterizerState* prev_rs[COMMANDLIST_COUNT] = {};
+		const BlendState* prev_bs[COMMANDLIST_COUNT] = {};
+		const RasterizerState* prev_rs[COMMANDLIST_COUNT] = {};
 		uint32_t prev_stencilRef[COMMANDLIST_COUNT] = {};
-		ID3D11DepthStencilState* prev_dss[COMMANDLIST_COUNT] = {};
-		ID3D11InputLayout* prev_il[COMMANDLIST_COUNT] = {};
+		const DepthStencilState* prev_dss[COMMANDLIST_COUNT] = {};
+		const InputLayout* prev_il[COMMANDLIST_COUNT] = {};
 		PRIMITIVETOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
 
 		const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
@@ -82,11 +82,7 @@ namespace wiGraphics
 
 		bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) override;
 		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) override;
-		bool CreateInputLayout(const InputLayoutDesc *pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout *pInputLayout) override;
 		bool CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) override;
-		bool CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState) override;
-		bool CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState) override;
-		bool CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState) override;
 		bool CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) override;
 		bool CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) override;
 		bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;

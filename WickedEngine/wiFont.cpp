@@ -278,7 +278,7 @@ void Initialize()
 
 
 
-	RasterizerStateDesc rs;
+	RasterizerState rs;
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_FRONT;
 	rs.FrontCounterClockwise = true;
@@ -288,9 +288,9 @@ void Initialize()
 	rs.DepthClipEnable = false;
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
-	device->CreateRasterizerState(&rs, &rasterizerState);
+	rasterizerState = rs;
 
-	BlendStateDesc bd;
+	BlendState bd;
 	bd.RenderTarget[0].BlendEnable = true;
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
@@ -300,12 +300,12 @@ void Initialize()
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.IndependentBlendEnable = false;
-	device->CreateBlendState(&bd, &blendState);
+	blendState = bd;
 
-	DepthStencilStateDesc dsd;
+	DepthStencilState dsd;
 	dsd.DepthEnable = false;
 	dsd.StencilEnable = false;
-	device->CreateDepthStencilState(&dsd, &depthStencilState);
+	depthStencilState = dsd;
 
 	SamplerDesc samplerDesc;
 	samplerDesc.Filter = FILTER_MIN_MAG_LINEAR_MIP_POINT;

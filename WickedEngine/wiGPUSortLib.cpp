@@ -85,23 +85,24 @@ namespace wiGPUSortLib
 			};
 			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Buffer(&indirectBuffer, BUFFER_STATE_INDIRECT_ARGUMENT, BUFFER_STATE_UNORDERED_ACCESS)
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
 			device->Dispatch(1, 1, 1, cmd);
 
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Memory(),
+					GPUBarrier::Buffer(&indirectBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDIRECT_ARGUMENT)
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
 
 			device->UnbindUAVs(0, arraysize(uavs), cmd);
-
-			{
-				GPUBarrier barrier;
-				barrier.type = GPUBarrier::BUFFER_BARRIER;
-				barrier.buffer.buffer = &indirectBuffer;
-				barrier.buffer.state_before = BUFFER_STATE_UNORDERED_ACCESS;
-				barrier.buffer.state_after = BUFFER_STATE_INDIRECT_ARGUMENT;
-				device->Barrier(&barrier, 1, cmd);
-			}
 		}
 
 

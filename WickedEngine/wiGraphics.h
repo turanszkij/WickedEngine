@@ -8,10 +8,6 @@
 namespace wiGraphics
 {
 	struct Shader;
-	struct BlendState;
-	struct RasterizerState;
-	struct DepthStencilState;
-	struct InputLayout;
 	struct GPUResource;
 	struct GPUBuffer;
 	struct Texture;
@@ -363,17 +359,21 @@ namespace wiGraphics
 		float MinDepth = 0.0f;
 		float MaxDepth = 1.0f;
 	};
-	struct InputLayoutDesc
+	struct InputLayout
 	{
 		static const uint32_t APPEND_ALIGNED_ELEMENT = 0xffffffff; // automatically figure out AlignedByteOffset depending on Format
 
-		std::string SemanticName;
-		uint32_t SemanticIndex = 0;
-		FORMAT Format = FORMAT_UNKNOWN;
-		uint32_t InputSlot = 0;
-		uint32_t AlignedByteOffset = APPEND_ALIGNED_ELEMENT;
-		INPUT_CLASSIFICATION InputSlotClass = INPUT_CLASSIFICATION::INPUT_PER_VERTEX_DATA;
-		uint32_t InstanceDataStepRate = 0;
+		struct Element
+		{
+			std::string SemanticName;
+			uint32_t SemanticIndex = 0;
+			FORMAT Format = FORMAT_UNKNOWN;
+			uint32_t InputSlot = 0;
+			uint32_t AlignedByteOffset = APPEND_ALIGNED_ELEMENT;
+			INPUT_CLASSIFICATION InputSlotClass = INPUT_CLASSIFICATION::INPUT_PER_VERTEX_DATA;
+			uint32_t InstanceDataStepRate = 0;
+		};
+		std::vector<Element> elements;
 	};
 	union ClearValue
 	{
@@ -419,7 +419,7 @@ namespace wiGraphics
 		float MinLOD = 0.0f;
 		float MaxLOD = FLT_MAX;
 	};
-	struct RasterizerStateDesc
+	struct RasterizerState
 	{
 		FILL_MODE FillMode = FILL_SOLID;
 		CULL_MODE CullMode = CULL_NONE;
@@ -433,14 +433,7 @@ namespace wiGraphics
 		bool ConservativeRasterizationEnable = false;
 		uint32_t ForcedSampleCount = 0;
 	};
-	struct DepthStencilOpDesc
-	{
-		STENCIL_OP StencilFailOp = STENCIL_OP_KEEP;
-		STENCIL_OP StencilDepthFailOp = STENCIL_OP_KEEP;
-		STENCIL_OP StencilPassOp = STENCIL_OP_KEEP;
-		COMPARISON_FUNC StencilFunc = COMPARISON_NEVER;
-	};
-	struct DepthStencilStateDesc
+	struct DepthStencilState
 	{
 		bool DepthEnable = false;
 		DEPTH_WRITE_MASK DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
@@ -448,25 +441,34 @@ namespace wiGraphics
 		bool StencilEnable = false;
 		uint8_t StencilReadMask = 0xff;
 		uint8_t StencilWriteMask = 0xff;
-		DepthStencilOpDesc FrontFace;
-		DepthStencilOpDesc BackFace;
+
+		struct DepthStencilOp
+		{
+			STENCIL_OP StencilFailOp = STENCIL_OP_KEEP;
+			STENCIL_OP StencilDepthFailOp = STENCIL_OP_KEEP;
+			STENCIL_OP StencilPassOp = STENCIL_OP_KEEP;
+			COMPARISON_FUNC StencilFunc = COMPARISON_NEVER;
+		};
+		DepthStencilOp FrontFace;
+		DepthStencilOp BackFace;
 	};
-	struct RenderTargetBlendStateDesc
-	{
-		bool BlendEnable = false;
-		BLEND SrcBlend = BLEND_SRC_ALPHA;
-		BLEND DestBlend = BLEND_INV_SRC_ALPHA;
-		BLEND_OP BlendOp = BLEND_OP_ADD;
-		BLEND SrcBlendAlpha = BLEND_ONE;
-		BLEND DestBlendAlpha = BLEND_ONE;
-		BLEND_OP BlendOpAlpha = BLEND_OP_ADD;
-		uint8_t RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-	};
-	struct BlendStateDesc
+	struct BlendState
 	{
 		bool AlphaToCoverageEnable = false;
 		bool IndependentBlendEnable = false;
-		RenderTargetBlendStateDesc RenderTarget[8];
+
+		struct RenderTargetBlendState
+		{
+			bool BlendEnable = false;
+			BLEND SrcBlend = BLEND_SRC_ALPHA;
+			BLEND DestBlend = BLEND_INV_SRC_ALPHA;
+			BLEND_OP BlendOp = BLEND_OP_ADD;
+			BLEND SrcBlendAlpha = BLEND_ONE;
+			BLEND DestBlendAlpha = BLEND_ONE;
+			BLEND_OP BlendOpAlpha = BLEND_OP_ADD;
+			uint8_t RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
+		};
+		RenderTargetBlendState RenderTarget[8];
 	};
 	struct GPUBufferDesc
 	{
@@ -490,20 +492,20 @@ namespace wiGraphics
 	};
 	struct PipelineStateDesc
 	{
-		const RootSignature* rootSignature = nullptr;
-		const Shader*				vs = nullptr;
-		const Shader*				ps = nullptr;
-		const Shader*				hs = nullptr;
-		const Shader*				ds = nullptr;
-		const Shader*				gs = nullptr;
-		const Shader*				ms = nullptr;
-		const Shader*				as = nullptr;
-		const BlendState*			bs = nullptr;
-		const RasterizerState*		rs = nullptr;
-		const DepthStencilState*	dss = nullptr;
-		const InputLayout*			il = nullptr;
-		PRIMITIVETOPOLOGY			pt = TRIANGLELIST;
-		uint32_t					sampleMask = 0xFFFFFFFF;
+		const RootSignature*	rootSignature = nullptr;
+		const Shader*			vs = nullptr;
+		const Shader*			ps = nullptr;
+		const Shader*			hs = nullptr;
+		const Shader*			ds = nullptr;
+		const Shader*			gs = nullptr;
+		const Shader*			ms = nullptr;
+		const Shader*			as = nullptr;
+		const BlendState*		bs = nullptr;
+		const RasterizerState*	rs = nullptr;
+		const DepthStencilState* dss = nullptr;
+		const InputLayout*		il = nullptr;
+		PRIMITIVETOPOLOGY		pt = TRIANGLELIST;
+		uint32_t				sampleMask = 0xFFFFFFFF;
 	};
 	struct GPUBarrier
 	{
@@ -743,32 +745,6 @@ namespace wiGraphics
 		GPUBufferDesc desc;
 
 		const GPUBufferDesc& GetDesc() const { return desc; }
-	};
-
-	struct InputLayout : public GraphicsDeviceChild
-	{
-		std::vector<InputLayoutDesc> desc;
-	};
-
-	struct BlendState : public GraphicsDeviceChild
-	{
-		BlendStateDesc desc;
-
-		const BlendStateDesc& GetDesc() const { return desc; }
-	};
-
-	struct DepthStencilState : public GraphicsDeviceChild
-	{
-		DepthStencilStateDesc desc;
-
-		const DepthStencilStateDesc& GetDesc() const { return desc; }
-	};
-
-	struct RasterizerState : public GraphicsDeviceChild
-	{
-		RasterizerStateDesc desc;
-
-		const RasterizerStateDesc& GetDesc() const { return desc; }
 	};
 
 	struct Texture : public GPUResource

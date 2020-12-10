@@ -1814,13 +1814,13 @@ using namespace Vulkan_Internal;
 				if (pso->desc.il != nullptr)
 				{
 					uint32_t lastBinding = 0xFFFFFFFF;
-					for (auto& x : pso->desc.il->desc)
+					for (auto& x : pso->desc.il->elements)
 					{
 						VkVertexInputBindingDescription bind = {};
 						bind.binding = x.InputSlot;
 						bind.inputRate = x.InputSlotClass == INPUT_PER_VERTEX_DATA ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
 						bind.stride = x.AlignedByteOffset;
-						if (bind.stride == InputLayoutDesc::APPEND_ALIGNED_ELEMENT)
+						if (bind.stride == InputLayout::APPEND_ALIGNED_ELEMENT)
 						{
 							// need to manually resolve this from the format spec.
 							bind.stride = GetFormatStride(x.Format);
@@ -1840,7 +1840,7 @@ using namespace Vulkan_Internal;
 					uint32_t offset = 0;
 					uint32_t i = 0;
 					lastBinding = 0xFFFFFFFF;
-					for (auto& x : pso->desc.il->desc)
+					for (auto& x : pso->desc.il->elements)
 					{
 						VkVertexInputAttributeDescription attr = {};
 						attr.binding = x.InputSlot;
@@ -1852,7 +1852,7 @@ using namespace Vulkan_Internal;
 						attr.format = _ConvertFormat(x.Format);
 						attr.location = i;
 						attr.offset = x.AlignedByteOffset;
-						if (attr.offset == InputLayoutDesc::APPEND_ALIGNED_ELEMENT)
+						if (attr.offset == InputLayout::APPEND_ALIGNED_ELEMENT)
 						{
 							// need to manually resolve this from the format spec.
 							attr.offset = offset;
@@ -1924,7 +1924,7 @@ using namespace Vulkan_Internal;
 
 				if (pso->desc.rs != nullptr)
 				{
-					const RasterizerStateDesc& desc = pso->desc.rs->desc;
+					const RasterizerState& desc = *pso->desc.rs;
 
 					switch (desc.FillMode)
 					{
@@ -1992,27 +1992,27 @@ using namespace Vulkan_Internal;
 				depthstencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 				if (pso->desc.dss != nullptr)
 				{
-					depthstencil.depthTestEnable = pso->desc.dss->desc.DepthEnable ? VK_TRUE : VK_FALSE;
-					depthstencil.depthWriteEnable = pso->desc.dss->desc.DepthWriteMask == DEPTH_WRITE_MASK_ZERO ? VK_FALSE : VK_TRUE;
-					depthstencil.depthCompareOp = _ConvertComparisonFunc(pso->desc.dss->desc.DepthFunc);
+					depthstencil.depthTestEnable = pso->desc.dss->DepthEnable ? VK_TRUE : VK_FALSE;
+					depthstencil.depthWriteEnable = pso->desc.dss->DepthWriteMask == DEPTH_WRITE_MASK_ZERO ? VK_FALSE : VK_TRUE;
+					depthstencil.depthCompareOp = _ConvertComparisonFunc(pso->desc.dss->DepthFunc);
 
-					depthstencil.stencilTestEnable = pso->desc.dss->desc.StencilEnable ? VK_TRUE : VK_FALSE;
+					depthstencil.stencilTestEnable = pso->desc.dss->StencilEnable ? VK_TRUE : VK_FALSE;
 
-					depthstencil.front.compareMask = pso->desc.dss->desc.StencilReadMask;
-					depthstencil.front.writeMask = pso->desc.dss->desc.StencilWriteMask;
+					depthstencil.front.compareMask = pso->desc.dss->StencilReadMask;
+					depthstencil.front.writeMask = pso->desc.dss->StencilWriteMask;
 					depthstencil.front.reference = 0; // runtime supplied
-					depthstencil.front.compareOp = _ConvertComparisonFunc(pso->desc.dss->desc.FrontFace.StencilFunc);
-					depthstencil.front.passOp = _ConvertStencilOp(pso->desc.dss->desc.FrontFace.StencilPassOp);
-					depthstencil.front.failOp = _ConvertStencilOp(pso->desc.dss->desc.FrontFace.StencilFailOp);
-					depthstencil.front.depthFailOp = _ConvertStencilOp(pso->desc.dss->desc.FrontFace.StencilDepthFailOp);
+					depthstencil.front.compareOp = _ConvertComparisonFunc(pso->desc.dss->FrontFace.StencilFunc);
+					depthstencil.front.passOp = _ConvertStencilOp(pso->desc.dss->FrontFace.StencilPassOp);
+					depthstencil.front.failOp = _ConvertStencilOp(pso->desc.dss->FrontFace.StencilFailOp);
+					depthstencil.front.depthFailOp = _ConvertStencilOp(pso->desc.dss->FrontFace.StencilDepthFailOp);
 
-					depthstencil.back.compareMask = pso->desc.dss->desc.StencilReadMask;
-					depthstencil.back.writeMask = pso->desc.dss->desc.StencilWriteMask;
+					depthstencil.back.compareMask = pso->desc.dss->StencilReadMask;
+					depthstencil.back.writeMask = pso->desc.dss->StencilWriteMask;
 					depthstencil.back.reference = 0; // runtime supplied
-					depthstencil.back.compareOp = _ConvertComparisonFunc(pso->desc.dss->desc.BackFace.StencilFunc);
-					depthstencil.back.passOp = _ConvertStencilOp(pso->desc.dss->desc.BackFace.StencilPassOp);
-					depthstencil.back.failOp = _ConvertStencilOp(pso->desc.dss->desc.BackFace.StencilFailOp);
-					depthstencil.back.depthFailOp = _ConvertStencilOp(pso->desc.dss->desc.BackFace.StencilDepthFailOp);
+					depthstencil.back.compareOp = _ConvertComparisonFunc(pso->desc.dss->BackFace.StencilFunc);
+					depthstencil.back.passOp = _ConvertStencilOp(pso->desc.dss->BackFace.StencilPassOp);
+					depthstencil.back.failOp = _ConvertStencilOp(pso->desc.dss->BackFace.StencilFailOp);
+					depthstencil.back.depthFailOp = _ConvertStencilOp(pso->desc.dss->BackFace.StencilDepthFailOp);
 
 					depthstencil.depthBoundsTestEnable = VK_FALSE;
 				}
@@ -2031,7 +2031,7 @@ using namespace Vulkan_Internal;
 				}
 				if (pso->desc.rs != nullptr)
 				{
-					const RasterizerStateDesc& desc = pso->desc.rs->desc;
+					const RasterizerState& desc = *pso->desc.rs;
 					if (desc.ForcedSampleCount > 1)
 					{
 						multisampling.rasterizationSamples = (VkSampleCountFlagBits)desc.ForcedSampleCount;
@@ -2057,7 +2057,7 @@ using namespace Vulkan_Internal;
 						continue;
 					}
 
-					RenderTargetBlendStateDesc desc = pso->desc.bs->desc.RenderTarget[numBlendAttachments];
+					const auto& desc = pso->desc.bs->RenderTarget[numBlendAttachments];
 					VkPipelineColorBlendAttachmentState& attachment = colorBlendAttachments[numBlendAttachments];
 					numBlendAttachments++;
 
@@ -3698,19 +3698,6 @@ using namespace Vulkan_Internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateInputLayout(const InputLayoutDesc *pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout *pInputLayout)
-	{
-		pInputLayout->internal_state = allocationhandler;
-
-		pInputLayout->desc.clear();
-		pInputLayout->desc.reserve((size_t)NumElements);
-		for (uint32_t i = 0; i < NumElements; ++i)
-		{
-			pInputLayout->desc.push_back(pInputElementDescs[i]);
-		}
-
-		return true;
-	}
 	bool GraphicsDevice_Vulkan::CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader)
 	{
 		auto internal_state = std::make_shared<Shader_Vulkan>();
@@ -3916,27 +3903,6 @@ using namespace Vulkan_Internal;
 		}
 
 		return res == VK_SUCCESS;
-	}
-	bool GraphicsDevice_Vulkan::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
-	{
-		pBlendState->internal_state = allocationhandler;
-
-		pBlendState->desc = *pBlendStateDesc;
-		return true;
-	}
-	bool GraphicsDevice_Vulkan::CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState)
-	{
-		pDepthStencilState->internal_state = allocationhandler;
-
-		pDepthStencilState->desc = *pDepthStencilStateDesc;
-		return true;
-	}
-	bool GraphicsDevice_Vulkan::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
-	{
-		pRasterizerState->internal_state = allocationhandler;
-
-		pRasterizerState->desc = *pRasterizerStateDesc;
-		return true;
 	}
 	bool GraphicsDevice_Vulkan::CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
 	{

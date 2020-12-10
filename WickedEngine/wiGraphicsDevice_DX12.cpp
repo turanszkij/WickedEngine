@@ -1747,7 +1747,7 @@ using namespace DX12_Internal;
 					stream.AS = { pso->desc.as->code.data(), pso->desc.as->code.size() };
 				}
 
-				RasterizerStateDesc pRasterizerStateDesc = pso->desc.rs != nullptr ? pso->desc.rs->GetDesc() : RasterizerStateDesc();
+				RasterizerState pRasterizerStateDesc = pso->desc.rs != nullptr ? *pso->desc.rs : RasterizerState();
 				CD3DX12_RASTERIZER_DESC rs = {};
 				rs.FillMode = _ConvertFillMode(pRasterizerStateDesc.FillMode);
 				rs.CullMode = _ConvertCullMode(pRasterizerStateDesc.CullMode);
@@ -1762,7 +1762,7 @@ using namespace DX12_Internal;
 				rs.ForcedSampleCount = pRasterizerStateDesc.ForcedSampleCount;
 				stream.RS = rs;
 
-				DepthStencilStateDesc pDepthStencilStateDesc = pso->desc.dss != nullptr ? pso->desc.dss->GetDesc() : DepthStencilStateDesc();
+				DepthStencilState pDepthStencilStateDesc = pso->desc.dss != nullptr ? *pso->desc.dss : DepthStencilState();
 				CD3DX12_DEPTH_STENCIL_DESC dss = {};
 				dss.DepthEnable = pDepthStencilStateDesc.DepthEnable;
 				dss.DepthWriteMask = _ConvertDepthWriteMask(pDepthStencilStateDesc.DepthWriteMask);
@@ -1780,7 +1780,7 @@ using namespace DX12_Internal;
 				dss.BackFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilPassOp);
 				stream.DSS = dss;
 
-				BlendStateDesc pBlendStateDesc = pso->desc.bs != nullptr ? pso->desc.bs->GetDesc() : BlendStateDesc();
+				BlendState pBlendStateDesc = pso->desc.bs != nullptr ? *pso->desc.bs : BlendState();
 				CD3DX12_BLEND_DESC bd = {};
 				bd.AlphaToCoverageEnable = pBlendStateDesc.AlphaToCoverageEnable;
 				bd.IndependentBlendEnable = pBlendStateDesc.IndependentBlendEnable;
@@ -1801,19 +1801,19 @@ using namespace DX12_Internal;
 				D3D12_INPUT_LAYOUT_DESC il = {};
 				if (pso->desc.il != nullptr)
 				{
-					il.NumElements = (uint32_t)pso->desc.il->desc.size();
+					il.NumElements = (uint32_t)pso->desc.il->elements.size();
 					elements.resize(il.NumElements);
 					for (uint32_t i = 0; i < il.NumElements; ++i)
 					{
-						elements[i].SemanticName = pso->desc.il->desc[i].SemanticName.c_str();
-						elements[i].SemanticIndex = pso->desc.il->desc[i].SemanticIndex;
-						elements[i].Format = _ConvertFormat(pso->desc.il->desc[i].Format);
-						elements[i].InputSlot = pso->desc.il->desc[i].InputSlot;
-						elements[i].AlignedByteOffset = pso->desc.il->desc[i].AlignedByteOffset;
-						if (elements[i].AlignedByteOffset == InputLayoutDesc::APPEND_ALIGNED_ELEMENT)
+						elements[i].SemanticName = pso->desc.il->elements[i].SemanticName.c_str();
+						elements[i].SemanticIndex = pso->desc.il->elements[i].SemanticIndex;
+						elements[i].Format = _ConvertFormat(pso->desc.il->elements[i].Format);
+						elements[i].InputSlot = pso->desc.il->elements[i].InputSlot;
+						elements[i].AlignedByteOffset = pso->desc.il->elements[i].AlignedByteOffset;
+						if (elements[i].AlignedByteOffset == InputLayout::APPEND_ALIGNED_ELEMENT)
 							elements[i].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-						elements[i].InputSlotClass = _ConvertInputClassification(pso->desc.il->desc[i].InputSlotClass);
-						elements[i].InstanceDataStepRate = pso->desc.il->desc[i].InstanceDataStepRate;
+						elements[i].InputSlotClass = _ConvertInputClassification(pso->desc.il->elements[i].InputSlotClass);
+						elements[i].InstanceDataStepRate = pso->desc.il->elements[i].InstanceDataStepRate;
 					}
 				}
 				il.pInputElementDescs = elements.data();
@@ -2793,19 +2793,6 @@ using namespace DX12_Internal;
 
 		return SUCCEEDED(hr);
 	}
-	bool GraphicsDevice_DX12::CreateInputLayout(const InputLayoutDesc* pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout* pInputLayout)
-	{
-		pInputLayout->internal_state = allocationhandler;
-
-		pInputLayout->desc.clear();
-		pInputLayout->desc.reserve((size_t)NumElements);
-		for (uint32_t i = 0; i < NumElements; ++i)
-		{
-			pInputLayout->desc.push_back(pInputElementDescs[i]);
-		}
-
-		return true;
-	}
 	bool GraphicsDevice_DX12::CreateShader(SHADERSTAGE stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader)
 	{
 		auto internal_state = std::make_shared<PipelineState_DX12>();
@@ -3008,27 +2995,6 @@ using namespace DX12_Internal;
 		}
 
 		return SUCCEEDED(hr);
-	}
-	bool GraphicsDevice_DX12::CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState)
-	{
-		pBlendState->internal_state = allocationhandler;
-
-		pBlendState->desc = *pBlendStateDesc;
-		return true;
-	}
-	bool GraphicsDevice_DX12::CreateDepthStencilState(const DepthStencilStateDesc* pDepthStencilStateDesc, DepthStencilState* pDepthStencilState)
-	{
-		pDepthStencilState->internal_state = allocationhandler;
-
-		pDepthStencilState->desc = *pDepthStencilStateDesc;
-		return true;
-	}
-	bool GraphicsDevice_DX12::CreateRasterizerState(const RasterizerStateDesc* pRasterizerStateDesc, RasterizerState* pRasterizerState)
-	{
-		pRasterizerState->internal_state = allocationhandler;
-
-		pRasterizerState->desc = *pRasterizerStateDesc;
-		return true;
 	}
 	bool GraphicsDevice_DX12::CreateSampler(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState)
 	{

@@ -281,7 +281,7 @@ namespace wiImage
 			device->CreateBuffer(&bd, nullptr, &constantBuffer);
 		}
 
-		RasterizerStateDesc rs;
+		RasterizerState rs;
 		rs.FillMode = FILL_SOLID;
 		rs.CullMode = CULL_NONE;
 		rs.FrontCounterClockwise = false;
@@ -291,17 +291,17 @@ namespace wiImage
 		rs.DepthClipEnable = true;
 		rs.MultisampleEnable = false;
 		rs.AntialiasedLineEnable = false;
-		device->CreateRasterizerState(&rs, &rasterizerState);
+		rasterizerState = rs;
 
 
 
 
 		for (int i = 0; i < STENCILREFMODE_COUNT; ++i)
 		{
-			DepthStencilStateDesc dsd;
+			DepthStencilState dsd;
 			dsd.DepthEnable = false;
 			dsd.StencilEnable = false;
-			device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_DISABLED][i]);
+			depthStencilStates[STENCILMODE_DISABLED][i] = dsd;
 
 			dsd.StencilEnable = true;
 			switch (i)
@@ -326,35 +326,35 @@ namespace wiImage
 
 			dsd.FrontFace.StencilFunc = COMPARISON_EQUAL;
 			dsd.BackFace.StencilFunc = COMPARISON_EQUAL;
-			device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_EQUAL][i]);
+			depthStencilStates[STENCILMODE_EQUAL][i] = dsd;
 
 			dsd.FrontFace.StencilFunc = COMPARISON_LESS;
 			dsd.BackFace.StencilFunc = COMPARISON_LESS;
-			device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_LESS][i]);
+			depthStencilStates[STENCILMODE_LESS][i] = dsd;
 
 			dsd.FrontFace.StencilFunc = COMPARISON_LESS_EQUAL;
 			dsd.BackFace.StencilFunc = COMPARISON_LESS_EQUAL;
-			device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_LESSEQUAL][i]);
+			depthStencilStates[STENCILMODE_LESSEQUAL][i] = dsd;
 
 			dsd.FrontFace.StencilFunc = COMPARISON_GREATER;
 			dsd.BackFace.StencilFunc = COMPARISON_GREATER;
-			device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_GREATER][i]);
+			depthStencilStates[STENCILMODE_GREATER][i] = dsd;
 
 			dsd.FrontFace.StencilFunc = COMPARISON_GREATER_EQUAL;
 			dsd.BackFace.StencilFunc = COMPARISON_GREATER_EQUAL;
-			device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_GREATEREQUAL][i]);
+			depthStencilStates[STENCILMODE_GREATEREQUAL][i] = dsd;
 
 			dsd.FrontFace.StencilFunc = COMPARISON_NOT_EQUAL;
 			dsd.BackFace.StencilFunc = COMPARISON_NOT_EQUAL;
-			device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_NOT][i]);
+			depthStencilStates[STENCILMODE_NOT][i] = dsd;
 
 			dsd.FrontFace.StencilFunc = COMPARISON_ALWAYS;
 			dsd.BackFace.StencilFunc = COMPARISON_ALWAYS;
-			device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_ALWAYS][i]);
+			depthStencilStates[STENCILMODE_ALWAYS][i] = dsd;
 		}
 
 
-		BlendStateDesc bd;
+		BlendState bd;
 		bd.RenderTarget[0].BlendEnable = true;
 		bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 		bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
@@ -364,7 +364,7 @@ namespace wiImage
 		bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 		bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 		bd.IndependentBlendEnable = false;
-		device->CreateBlendState(&bd, &blendStates[BLENDMODE_ALPHA]);
+		blendStates[BLENDMODE_ALPHA] = bd;
 
 		bd.RenderTarget[0].BlendEnable = true;
 		bd.RenderTarget[0].SrcBlend = BLEND_ONE;
@@ -375,12 +375,12 @@ namespace wiImage
 		bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 		bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 		bd.IndependentBlendEnable = false;
-		device->CreateBlendState(&bd, &blendStates[BLENDMODE_PREMULTIPLIED]);
+		blendStates[BLENDMODE_PREMULTIPLIED] = bd;
 
 		bd.RenderTarget[0].BlendEnable = false;
 		bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 		bd.IndependentBlendEnable = false;
-		device->CreateBlendState(&bd, &blendStates[BLENDMODE_OPAQUE]);
+		blendStates[BLENDMODE_OPAQUE] = bd;
 
 		bd.RenderTarget[0].BlendEnable = true;
 		bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
@@ -391,7 +391,7 @@ namespace wiImage
 		bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 		bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 		bd.IndependentBlendEnable = false;
-		device->CreateBlendState(&bd, &blendStates[BLENDMODE_ADDITIVE]);
+		blendStates[BLENDMODE_ADDITIVE] = bd;
 
 		static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();

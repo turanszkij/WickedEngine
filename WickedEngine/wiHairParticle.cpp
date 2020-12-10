@@ -404,7 +404,7 @@ namespace wiHairParticle_Internal
 void wiHairParticle::Initialize()
 {
 
-	RasterizerStateDesc rsd;
+	RasterizerState rsd;
 	rsd.FillMode = FILL_SOLID;
 	rsd.CullMode = CULL_BACK;
 	rsd.FrontCounterClockwise = true;
@@ -414,7 +414,7 @@ void wiHairParticle::Initialize()
 	rsd.DepthClipEnable = true;
 	rsd.MultisampleEnable = false;
 	rsd.AntialiasedLineEnable = false;
-	wiRenderer::GetDevice()->CreateRasterizerState(&rsd, &rs);
+	rs = rsd;
 
 	rsd.FillMode = FILL_SOLID;
 	rsd.CullMode = CULL_NONE;
@@ -425,7 +425,7 @@ void wiHairParticle::Initialize()
 	rsd.DepthClipEnable = true;
 	rsd.MultisampleEnable = false;
 	rsd.AntialiasedLineEnable = false;
-	wiRenderer::GetDevice()->CreateRasterizerState(&rsd, &ncrs);
+	ncrs = rsd;
 
 	rsd.FillMode = FILL_WIREFRAME;
 	rsd.CullMode = CULL_NONE;
@@ -436,10 +436,10 @@ void wiHairParticle::Initialize()
 	rsd.DepthClipEnable = true;
 	rsd.MultisampleEnable = false;
 	rsd.AntialiasedLineEnable = false;
-	wiRenderer::GetDevice()->CreateRasterizerState(&rsd, &wirers);
+	wirers = rsd;
 
 
-	DepthStencilStateDesc dsd;
+	DepthStencilState dsd;
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	dsd.DepthFunc = COMPARISON_GREATER;
@@ -455,17 +455,17 @@ void wiHairParticle::Initialize()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_REPLACE;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &dss_default);
+	dss_default = dsd;
 
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthFunc = COMPARISON_EQUAL;
-	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &dss_equal);
+	dss_equal = dsd;
 
 
-	BlendStateDesc bld;
+	BlendState bld;
 	bld.RenderTarget[0].BlendEnable = false;
 	bld.AlphaToCoverageEnable = false; // maybe for msaa
-	wiRenderer::GetDevice()->CreateBlendState(&bld, &bs);
+	bs = bld;
 
 	static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { wiHairParticle_Internal::LoadShaders(); });
 	wiHairParticle_Internal::LoadShaders();

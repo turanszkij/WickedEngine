@@ -761,6 +761,11 @@ void RenderPath3D::Render() const
 
 		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(&entityTiles_Opaque),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+
 		device->RenderPassBegin(&renderpass_main, cmd);
 
 		auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
@@ -769,11 +774,6 @@ void RenderPath3D::Render() const
 		vp.Width = (float)depthBuffer.GetDesc().Width;
 		vp.Height = (float)depthBuffer.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
-
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(&entityTiles_Opaque),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
 
 		device->BindResource(PS, &entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
 		device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
@@ -1061,21 +1061,21 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 	device->UnbindResources(TEXSLOT_GBUFFER0, 1, cmd);
 	device->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, cmd);
 
+	GPUBarrier barriers[] = {
+		GPUBarrier::Memory(&entityTiles_Transparent),
+	};
+	device->Barrier(barriers, arraysize(barriers), cmd);
+
 	device->RenderPassBegin(&renderpass_transparent, cmd);
 
 	Viewport vp;
-	vp.Width = (float)renderpass_transparent.desc.attachments[0].texture->GetDesc().Width;
-	vp.Height = (float)renderpass_transparent.desc.attachments[0].texture->GetDesc().Height;
+	vp.Width = (float)depthBuffer.GetDesc().Width;
+	vp.Height = (float)depthBuffer.GetDesc().Height;
 	device->BindViewports(1, &vp, cmd);
 
 	// Transparent scene
 	{
 		auto range = wiProfiler::BeginRangeGPU("Transparent Scene", cmd);
-
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(&entityTiles_Transparent),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
 
 		device->BindResource(PS, &entityTiles_Transparent, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
 		device->BindResource(PS, &rtLinearDepth, TEXSLOT_LINEARDEPTH, cmd);
