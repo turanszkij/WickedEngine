@@ -4777,6 +4777,8 @@ using namespace DX12_Internal;
 			copyFenceValue++;
 			HRESULT hr = frame.copyQueue->Signal(copyFence.Get(), copyFenceValue);
 			assert(SUCCEEDED(hr));
+			hr = directQueue->Wait(copyFence.Get(), copyFenceValue);
+			assert(SUCCEEDED(hr));
 		}
 
 		// Execute deferred command lists:
@@ -4830,8 +4832,6 @@ using namespace DX12_Internal;
 				pipelines_worker[cmd].clear();
 			}
 
-			HRESULT hr = directQueue->Wait(copyFence.Get(), copyFenceValue);
-			assert(SUCCEEDED(hr));
 			directQueue->ExecuteCommandLists(counter, cmdLists);
 		}
 
