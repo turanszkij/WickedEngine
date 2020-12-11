@@ -3632,6 +3632,12 @@ void UpdateRenderData(
 )
 {
 	device->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &frameCB, cmd);
+	UpdateCameraCB(
+		*vis.camera,
+		*vis.camera,
+		*vis.camera,
+		cmd
+	);
 
 	BindCommonResources(cmd);
 

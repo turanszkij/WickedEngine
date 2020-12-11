@@ -591,52 +591,8 @@ void RenderPath3D::Render() const
 		wiRenderer::DRAWSCENE_OCCLUSIONCULLING
 		;
 	static const uint32_t drawscene_flags_reflections =
-		wiRenderer::DRAWSCENE_OPAQUE |
-		wiRenderer::DRAWSCENE_OCCLUSIONCULLING
+		wiRenderer::DRAWSCENE_OPAQUE
 		;
-
-	// Planar reflections depth prepass + Light culling:
-	if (visibility_main.IsRequestedPlanarReflections())
-	{
-		cmd = device->BeginCommandList();
-		wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
-			auto range = wiProfiler::BeginRangeGPU("Planar Reflections Z-Prepass", cmd);
-
-			GraphicsDevice* device = wiRenderer::GetDevice();
-			device->EventBegin("Planar reflections Z-Prepass", cmd);
-
-			wiRenderer::UpdateCameraCB(
-				camera_reflection,
-				camera_reflection,
-				camera_reflection,
-				cmd
-			);
-
-			Viewport vp;
-			vp.Width = (float)depthBuffer_Reflection.GetDesc().Width;
-			vp.Height = (float)depthBuffer_Reflection.GetDesc().Height;
-			device->BindViewports(1, &vp, cmd);
-
-			device->RenderPassBegin(&renderpass_reflection_depthprepass, cmd);
-
-			wiRenderer::DrawScene(visibility_reflection, RENDERPASS_DEPTHONLY, cmd, drawscene_flags_reflections);
-
-			device->RenderPassEnd(cmd);
-
-			wiRenderer::ComputeTiledLightCulling(
-				*camera,
-				depthBuffer_Reflection,
-				tileFrustums,
-				entityTiles_Opaque,
-				entityTiles_Transparent,
-				debugUAV,
-				cmd
-			);
-
-			device->EventEnd(cmd);
-			wiProfiler::EndRange(range); // Planar Reflections
-			});
-	}
 
 	// Depth prepass + Occlusion culling + AO:
 	cmd = device->BeginCommandList();
@@ -727,6 +683,49 @@ void RenderPath3D::Render() const
 
 		device->EventEnd(cmd);
 		});
+
+	// Planar reflections depth prepass + Light culling:
+	if (visibility_main.IsRequestedPlanarReflections())
+	{
+		cmd = device->BeginCommandList();
+		wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
+			auto range = wiProfiler::BeginRangeGPU("Planar Reflections Z-Prepass", cmd);
+
+			GraphicsDevice* device = wiRenderer::GetDevice();
+			device->EventBegin("Planar reflections Z-Prepass", cmd);
+
+			wiRenderer::UpdateCameraCB(
+				camera_reflection,
+				camera_reflection,
+				camera_reflection,
+				cmd
+			);
+
+			Viewport vp;
+			vp.Width = (float)depthBuffer_Reflection.GetDesc().Width;
+			vp.Height = (float)depthBuffer_Reflection.GetDesc().Height;
+			device->BindViewports(1, &vp, cmd);
+
+			device->RenderPassBegin(&renderpass_reflection_depthprepass, cmd);
+
+			wiRenderer::DrawScene(visibility_reflection, RENDERPASS_DEPTHONLY, cmd, drawscene_flags_reflections);
+
+			device->RenderPassEnd(cmd);
+
+			wiRenderer::ComputeTiledLightCulling(
+				*camera,
+				depthBuffer_Reflection,
+				tileFrustums,
+				entityTiles_Opaque,
+				entityTiles_Transparent,
+				debugUAV,
+				cmd
+			);
+
+			device->EventEnd(cmd);
+			wiProfiler::EndRange(range); // Planar Reflections
+			});
+	}
 
 	// Shadow maps:
 	if (getShadowsEnabled() && !wiRenderer::GetRaytracedShadowsEnabled())
