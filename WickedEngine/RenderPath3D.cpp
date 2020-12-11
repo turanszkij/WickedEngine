@@ -289,11 +289,11 @@ void RenderPath3D::ResizeBuffers()
 	}
 	{
 		TextureDesc desc;
-		desc.BindFlags = BIND_DEPTH_STENCIL;
-		desc.Format = FORMAT_D16_UNORM;
+		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
+		desc.Format = FORMAT_R32_TYPELESS;
 		desc.Width = internalResolution.x / 4;
 		desc.Height = internalResolution.y / 4;
-		desc.layout = IMAGE_LAYOUT_DEPTHSTENCIL;
+		desc.layout = IMAGE_LAYOUT_DEPTHSTENCIL_READONLY;
 		device->CreateTexture(&desc, nullptr, &depthBuffer_Reflection);
 		device->SetName(&depthBuffer_Reflection, "depthBuffer_Reflection");
 	}
@@ -374,6 +374,21 @@ void RenderPath3D::ResizeBuffers()
 	{
 		RenderPassDesc desc;
 		desc.attachments.push_back(
+			RenderPassAttachment::DepthStencil(
+				&depthBuffer_Reflection,
+				RenderPassAttachment::LOADOP_CLEAR,
+				RenderPassAttachment::STOREOP_STORE,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL,
+				IMAGE_LAYOUT_SHADER_RESOURCE
+			)
+		);
+
+		device->CreateRenderPass(&desc, &renderpass_reflection_depthprepass);
+	}
+	{
+		RenderPassDesc desc;
+		desc.attachments.push_back(
 			RenderPassAttachment::RenderTarget(
 				&rtReflection,
 				RenderPassAttachment::LOADOP_DONTCARE,
@@ -386,11 +401,11 @@ void RenderPath3D::ResizeBuffers()
 		desc.attachments.push_back(
 			RenderPassAttachment::DepthStencil(
 				&depthBuffer_Reflection, 
-				RenderPassAttachment::LOADOP_CLEAR, 
-				RenderPassAttachment::STOREOP_DONTCARE, 
-				IMAGE_LAYOUT_DEPTHSTENCIL, 
-				IMAGE_LAYOUT_DEPTHSTENCIL, 
-				IMAGE_LAYOUT_DEPTHSTENCIL
+				RenderPassAttachment::LOADOP_LOAD, 
+				RenderPassAttachment::STOREOP_DONTCARE,
+				IMAGE_LAYOUT_SHADER_RESOURCE,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
 			)
 		);
 
@@ -530,6 +545,7 @@ void RenderPath3D::Update(float dt)
 	{
 		// Frustum culling for planar reflections:
 		camera_reflection = *camera;
+		camera_reflection.jitter = XMFLOAT2(0, 0);
 		camera_reflection.Reflect(visibility_main.reflectionPlane);
 		visibility_reflection.layerMask = getLayerMask();
 		visibility_reflection.scene = scene;
@@ -568,19 +584,66 @@ void RenderPath3D::Render() const
 		RenderFrameSetUp(cmd);
 		});
 
-
 	static const uint32_t drawscene_flags =
 		wiRenderer::DRAWSCENE_OPAQUE |
 		wiRenderer::DRAWSCENE_HAIRPARTICLE |
 		wiRenderer::DRAWSCENE_TESSELLATION |
 		wiRenderer::DRAWSCENE_OCCLUSIONCULLING
 		;
+	static const uint32_t drawscene_flags_reflections =
+		wiRenderer::DRAWSCENE_OPAQUE |
+		wiRenderer::DRAWSCENE_OCCLUSIONCULLING
+		;
 
-	// Depth prepass + Occlusion culling + AO + light culling:
+	// Planar reflections depth prepass + Light culling:
+	if (visibility_main.IsRequestedPlanarReflections())
+	{
+		cmd = device->BeginCommandList();
+		wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
+			auto range = wiProfiler::BeginRangeGPU("Planar Reflections Z-Prepass", cmd);
+
+			GraphicsDevice* device = wiRenderer::GetDevice();
+			device->EventBegin("Planar reflections Z-Prepass", cmd);
+
+			wiRenderer::UpdateCameraCB(
+				camera_reflection,
+				camera_reflection,
+				camera_reflection,
+				cmd
+			);
+
+			Viewport vp;
+			vp.Width = (float)depthBuffer_Reflection.GetDesc().Width;
+			vp.Height = (float)depthBuffer_Reflection.GetDesc().Height;
+			device->BindViewports(1, &vp, cmd);
+
+			device->RenderPassBegin(&renderpass_reflection_depthprepass, cmd);
+
+			wiRenderer::DrawScene(visibility_reflection, RENDERPASS_DEPTHONLY, cmd, drawscene_flags_reflections);
+
+			device->RenderPassEnd(cmd);
+
+			wiRenderer::ComputeTiledLightCulling(
+				*camera,
+				depthBuffer_Reflection,
+				tileFrustums,
+				entityTiles_Opaque,
+				entityTiles_Transparent,
+				debugUAV,
+				cmd
+			);
+
+			device->EventEnd(cmd);
+			wiProfiler::EndRange(range); // Planar Reflections
+			});
+	}
+
+	// Depth prepass + Occlusion culling + AO:
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
+		device->EventBegin("Opaque Z-prepass", cmd);
 
 		wiRenderer::UpdateCameraCB(
 			*camera,
@@ -651,16 +714,6 @@ void RenderPath3D::Render() const
 
 		RenderAO(cmd);
 
-		wiRenderer::ComputeTiledLightCulling(
-			*camera,
-			depthBuffer_Copy,
-			tileFrustums,
-			entityTiles_Opaque,
-			entityTiles_Transparent,
-			debugUAV,
-			cmd
-		);
-
 		if (wiRenderer::GetVariableRateShadingClassification() && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
 		{
 			wiRenderer::ComputeShadingRateClassification(
@@ -672,6 +725,7 @@ void RenderPath3D::Render() const
 			);
 		}
 
+		device->EventEnd(cmd);
 		});
 
 	// Shadow maps:
@@ -710,6 +764,7 @@ void RenderPath3D::Render() const
 			auto range = wiProfiler::BeginRangeGPU("Planar Reflections", cmd);
 
 			GraphicsDevice* device = wiRenderer::GetDevice();
+			device->EventBegin("Planar reflections", cmd);
 
 			wiRenderer::UpdateCameraCB(
 				camera_reflection,
@@ -723,22 +778,34 @@ void RenderPath3D::Render() const
 			vp.Height = (float)depthBuffer_Reflection.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(&entityTiles_Opaque),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+			device->UnbindResources(TEXSLOT_DEPTH, 1, cmd);
+
 			device->RenderPassBegin(&renderpass_reflection, cmd);
 
-			wiRenderer::DrawScene(visibility_reflection, RENDERPASS_TEXTURE, cmd);
+			device->BindResource(PS, &entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
+			device->BindResource(PS, wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
+			device->BindResource(PS, wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_AO, cmd);
+			device->BindResource(PS, wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
+			wiRenderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, drawscene_flags_reflections);
 			wiRenderer::DrawSky(*scene, cmd);
 
 			device->RenderPassEnd(cmd);
 
+			device->EventEnd(cmd);
 			wiProfiler::EndRange(range); // Planar Reflections
 			});
 	}
 
-	// Opaque scene:
+	// Opaque scene + Light culling:
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
+		device->EventBegin("Opaque Scene", cmd);
 
 		wiRenderer::UpdateCameraCB(
 			*camera,
@@ -761,10 +828,23 @@ void RenderPath3D::Render() const
 
 		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(&entityTiles_Opaque),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
+		{
+			auto range = wiProfiler::BeginRangeGPU("Entity Culling", cmd);
+			wiRenderer::ComputeTiledLightCulling(
+				*camera,
+				depthBuffer_Copy,
+				tileFrustums,
+				entityTiles_Opaque,
+				entityTiles_Transparent,
+				debugUAV,
+				cmd
+			);
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(&entityTiles_Opaque),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+			wiProfiler::EndRange(range);
+		}
 
 		device->RenderPassBegin(&renderpass_main, cmd);
 
@@ -789,6 +869,8 @@ void RenderPath3D::Render() const
 		device->RenderPassEnd(cmd);
 
 		device->BindShadingRateImage(nullptr, cmd);
+
+		device->EventEnd(cmd);
 		});
 
 	// Transparents, post processes, etc:
@@ -1076,6 +1158,7 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 	// Transparent scene
 	{
 		auto range = wiProfiler::BeginRangeGPU("Transparent Scene", cmd);
+		device->EventBegin("Transparent Scene", cmd);
 
 		device->BindResource(PS, &entityTiles_Transparent, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
 		device->BindResource(PS, &rtLinearDepth, TEXSLOT_LINEARDEPTH, cmd);
@@ -1089,6 +1172,7 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 		drawscene_flags |= wiRenderer::DRAWSCENE_HAIRPARTICLE;
 		wiRenderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
 
+		device->EventEnd(cmd);
 		wiProfiler::EndRange(range); // Transparent Scene
 	}
 

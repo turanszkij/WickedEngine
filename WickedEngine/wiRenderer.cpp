@@ -7081,11 +7081,11 @@ void ComputeTiledLightCulling(
 	CommandList cmd
 )
 {
-	auto range = wiProfiler::BeginRangeGPU("Entity Culling", cmd);
-
 	const XMUINT3 tileCount = GetEntityCullingTileCount(XMUINT2(depthbuffer.desc.Width, depthbuffer.desc.Height));
 
 	BindCommonResources(cmd);
+
+	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 
 	// Frustum computation
 	{
@@ -7130,10 +7130,6 @@ void ComputeTiledLightCulling(
 			device->BindComputeShader(&shaders[GetAdvancedLightCulling() ? CSTYPE_LIGHTCULLING_ADVANCED : CSTYPE_LIGHTCULLING], cmd);
 		}
 
-		BindConstantBuffers(CS, cmd);
-
-		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-
 		const GPUResource* uavs[] = {
 			&entityTiles_Transparent,
 			&entityTiles_Opaque,
@@ -7148,8 +7144,6 @@ void ComputeTiledLightCulling(
 
 		device->EventEnd(cmd);
 	}
-
-	wiProfiler::EndRange(range);
 }
 
 

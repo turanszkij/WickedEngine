@@ -47,10 +47,10 @@ float4 ClipToView(float4 clip)
 	return view;
 }
 // Convert screen space coordinates to view space.
-float4 ScreenToView(float4 screen)
+float4 ScreenToView(float4 screen, float2 dim_rcp)
 {
 	// Convert to normalized texture coordinates
-	float2 texCoord = screen.xy * g_xFrame_InternalResolution_rcp;
+	float2 texCoord = screen.xy * dim_rcp;
 
 	// Convert to clip space
 	float4 clip = float4(float2(texCoord.x, 1.0f - texCoord.y) * 2.0f - 1.0f, screen.z, screen.w);

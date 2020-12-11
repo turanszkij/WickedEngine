@@ -92,6 +92,7 @@ protected:
 	wiGraphics::RenderPass renderpass_depthprepass;
 	wiGraphics::RenderPass renderpass_main;
 	wiGraphics::RenderPass renderpass_transparent;
+	wiGraphics::RenderPass renderpass_reflection_depthprepass;
 	wiGraphics::RenderPass renderpass_reflection;
 	wiGraphics::RenderPass renderpass_downsamplescene;
 	wiGraphics::RenderPass renderpass_lightshafts;
