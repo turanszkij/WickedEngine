@@ -4747,16 +4747,6 @@ using namespace DX12_Internal;
 		prev_shadingrate[cmd] = D3D12_SHADING_RATE_1X1;
 		dirty_pso[cmd] = false;
 
-		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING))
-		{
-			D3D12_SHADING_RATE_COMBINER combiners[] =
-			{
-				D3D12_SHADING_RATE_COMBINER_MAX,
-				D3D12_SHADING_RATE_COMBINER_MAX,
-			};
-			GetDirectCommandList(cmd)->RSSetShadingRate(D3D12_SHADING_RATE_1X1, combiners);
-		}
-
 		return cmd;
 	}
 	void GraphicsDevice_DX12::SubmitCommandLists()
@@ -5216,8 +5206,12 @@ using namespace DX12_Internal;
 		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING) && prev_shadingrate[cmd] != _rate)
 		{
 			prev_shadingrate[cmd] = _rate;
-			// Combiners are set to MAX by default in BeginCommandList
-			GetDirectCommandList(cmd)->RSSetShadingRate(_rate, nullptr);
+			D3D12_SHADING_RATE_COMBINER combiners[] =
+			{
+				D3D12_SHADING_RATE_COMBINER_MAX,
+				D3D12_SHADING_RATE_COMBINER_MAX,
+			};
+			GetDirectCommandList(cmd)->RSSetShadingRate(_rate, combiners);
 		}
 	}
 	void GraphicsDevice_DX12::BindShadingRateImage(const Texture* texture, CommandList cmd)
