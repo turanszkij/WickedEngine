@@ -83,7 +83,7 @@ protected:
 	wiGraphics::Texture rtPostprocess_HDR; // ping-pong with main scene RT in HDR post-process chain
 	wiGraphics::Texture rtPostprocess_LDR[2]; // ping-pong with itself in LDR post-process chain
 
-	wiGraphics::Texture depthBuffer; // used for depth-testing, can be MSAA
+	wiGraphics::Texture depthBuffer_Main; // used for depth-testing, can be MSAA
 	wiGraphics::Texture depthBuffer_Copy; // used for shader resource, single sample
 	wiGraphics::Texture depthBuffer_Copy1; // used for disocclusion check
 	wiGraphics::Texture depthBuffer_Reflection; // used for reflection, single sample
@@ -163,7 +163,7 @@ public:
 
 	FrameCB frameCB = {};
 
-	const wiGraphics::Texture* GetDepthStencil() const override { return &depthBuffer; }
+	const wiGraphics::Texture* GetDepthStencil() const override { return &depthBuffer_Main; }
 	const wiGraphics::Texture* GetGUIBlurredBackground() const override { return &rtGUIBlurredBackground[2]; }
 
 	constexpr float getExposure() const { return exposure; }

@@ -267,8 +267,8 @@ void RenderPath3D::ResizeBuffers()
 			desc.Format = FORMAT_D32_FLOAT_S8X24_UINT;
 			desc.BindFlags = BIND_DEPTH_STENCIL;
 		}
-		device->CreateTexture(&desc, nullptr, &depthBuffer);
-		device->SetName(&depthBuffer, "depthBuffer");
+		device->CreateTexture(&desc, nullptr, &depthBuffer_Main);
+		device->SetName(&depthBuffer_Main, "depthBuffer_Main");
 
 		if (getMSAASampleCount() > 1)
 		{
@@ -322,7 +322,7 @@ void RenderPath3D::ResizeBuffers()
 		RenderPassDesc desc;
 		desc.attachments.push_back(
 			RenderPassAttachment::DepthStencil(
-				&depthBuffer,
+				&depthBuffer_Main,
 				RenderPassAttachment::LOADOP_CLEAR,
 				RenderPassAttachment::STOREOP_STORE,
 				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
@@ -337,7 +337,7 @@ void RenderPath3D::ResizeBuffers()
 		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtGbuffer[GBUFFER_NORMAL_VELOCITY], RenderPassAttachment::LOADOP_CLEAR));
 		desc.attachments.push_back(
 			RenderPassAttachment::DepthStencil(
-				&depthBuffer,
+				&depthBuffer_Main,
 				RenderPassAttachment::LOADOP_LOAD,
 				RenderPassAttachment::STOREOP_STORE,
 				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
@@ -357,11 +357,11 @@ void RenderPath3D::ResizeBuffers()
 		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtGbuffer[GBUFFER_COLOR_ROUGHNESS], RenderPassAttachment::LOADOP_LOAD));
 		desc.attachments.push_back(
 			RenderPassAttachment::DepthStencil(
-				&depthBuffer,
+				&depthBuffer_Main,
 				RenderPassAttachment::LOADOP_LOAD,
 				RenderPassAttachment::STOREOP_STORE,
 				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
-				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_DEPTHSTENCIL,
 				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
 			)
 		);
@@ -421,7 +421,7 @@ void RenderPath3D::ResizeBuffers()
 		RenderPassDesc desc;
 		desc.attachments.push_back(
 			RenderPassAttachment::DepthStencil(
-				&depthBuffer,
+				&depthBuffer_Main,
 				RenderPassAttachment::LOADOP_LOAD,
 				RenderPassAttachment::STOREOP_STORE,
 				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
@@ -449,7 +449,7 @@ void RenderPath3D::ResizeBuffers()
 		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtParticleDistortion, RenderPassAttachment::LOADOP_CLEAR));
 		desc.attachments.push_back(
 			RenderPassAttachment::DepthStencil(
-				&depthBuffer,
+				&depthBuffer_Main,
 				RenderPassAttachment::LOADOP_LOAD,
 				RenderPassAttachment::STOREOP_STORE,
 				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
@@ -613,8 +613,8 @@ void RenderPath3D::Render() const
 		auto range = wiProfiler::BeginRangeGPU("Z-Prepass", cmd);
 
 		Viewport vp;
-		vp.Width = (float)depthBuffer.GetDesc().Width;
-		vp.Height = (float)depthBuffer.GetDesc().Height;
+		vp.Width = (float)depthBuffer_Main.GetDesc().Width;
+		vp.Height = (float)depthBuffer_Main.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
 		wiRenderer::DrawScene(visibility_main, RENDERPASS_DEPTHONLY, cmd, drawscene_flags);
 
@@ -629,18 +629,18 @@ void RenderPath3D::Render() const
 		{
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_SHADER_RESOURCE),
-					GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_GENERAL)
+					GPUBarrier::Image(&depthBuffer_Main, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_SHADER_RESOURCE),
+					GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_UNORDERED_ACCESS)
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 
-			wiRenderer::ResolveMSAADepthBuffer(depthBuffer_Copy, depthBuffer, cmd);
+			wiRenderer::ResolveMSAADepthBuffer(depthBuffer_Copy, depthBuffer_Main, cmd);
 
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY),
-					GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_GENERAL, IMAGE_LAYOUT_SHADER_RESOURCE)
+					GPUBarrier::Image(&depthBuffer_Main, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY),
+					GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADER_RESOURCE)
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -649,17 +649,17 @@ void RenderPath3D::Render() const
 		{
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_COPY_SRC),
+					GPUBarrier::Image(&depthBuffer_Main, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_COPY_SRC),
 					GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_COPY_DST)
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 
-			device->CopyResource(&depthBuffer_Copy, &depthBuffer, cmd);
+			device->CopyResource(&depthBuffer_Copy, &depthBuffer_Main, cmd);
 
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&depthBuffer, IMAGE_LAYOUT_COPY_SRC, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY),
+					GPUBarrier::Image(&depthBuffer_Main, IMAGE_LAYOUT_COPY_SRC, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY),
 					GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_COPY_DST, IMAGE_LAYOUT_SHADER_RESOURCE)
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
@@ -850,8 +850,8 @@ void RenderPath3D::Render() const
 		auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
 
 		Viewport vp;
-		vp.Width = (float)depthBuffer.GetDesc().Width;
-		vp.Height = (float)depthBuffer.GetDesc().Height;
+		vp.Width = (float)depthBuffer_Main.GetDesc().Width;
+		vp.Height = (float)depthBuffer_Main.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
 
 		device->BindResource(PS, &entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
@@ -1037,8 +1037,8 @@ void RenderPath3D::RenderLightShafts(CommandList cmd) const
 			device->RenderPassBegin(&renderpass_lightshafts, cmd);
 
 			Viewport vp;
-			vp.Width = (float)depthBuffer.GetDesc().Width;
-			vp.Height = (float)depthBuffer.GetDesc().Height;
+			vp.Width = (float)depthBuffer_Main.GetDesc().Width;
+			vp.Height = (float)depthBuffer_Main.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
 			wiRenderer::DrawSun(cmd);
@@ -1150,8 +1150,8 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 	device->RenderPassBegin(&renderpass_transparent, cmd);
 
 	Viewport vp;
-	vp.Width = (float)depthBuffer.GetDesc().Width;
-	vp.Height = (float)depthBuffer.GetDesc().Height;
+	vp.Width = (float)depthBuffer_Main.GetDesc().Width;
+	vp.Height = (float)depthBuffer_Main.GetDesc().Height;
 	device->BindViewports(1, &vp, cmd);
 
 	// Transparent scene
