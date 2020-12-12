@@ -1020,7 +1020,7 @@ namespace Vulkan_Internal
 		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VkRenderPass renderpass = VK_NULL_HANDLE;
 		VkFramebuffer framebuffer = VK_NULL_HANDLE;
-		VkRenderPassBeginInfo beginInfo;
+		VkRenderPassBeginInfo beginInfo = {};
 		VkClearValue clearColors[9] = {};
 
 		~RenderPass_Vulkan()
@@ -4403,20 +4403,21 @@ using namespace Vulkan_Internal;
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		framebufferInfo.renderPass = internal_state->renderpass;
 		framebufferInfo.attachmentCount = validAttachmentCount;
-		framebufferInfo.pAttachments = attachments;
 
 		if (validAttachmentCount > 0)
 		{
 			const TextureDesc& texdesc = desc.attachments[0].texture->desc;
+			framebufferInfo.pAttachments = attachments;
 			framebufferInfo.width = texdesc.Width;
 			framebufferInfo.height = texdesc.Height;
 			framebufferInfo.layers = texdesc.MiscFlags & RESOURCE_MISC_TEXTURECUBE ? 6 : 1; // todo figure out better! can't use ArraySize here, it will crash!
 		}
 		else
 		{
-			framebufferInfo.width = 1;
-			framebufferInfo.height = 1;
-			framebufferInfo.layers = 1;
+			framebufferInfo.pAttachments = nullptr;
+			framebufferInfo.width = device_properties.properties.limits.maxFramebufferWidth;
+			framebufferInfo.height = device_properties.properties.limits.maxFramebufferHeight;
+			framebufferInfo.layers = device_properties.properties.limits.maxFramebufferLayers;
 		}
 
 		res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &internal_state->framebuffer);
@@ -4426,14 +4427,14 @@ using namespace Vulkan_Internal;
 		internal_state->beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		internal_state->beginInfo.renderPass = internal_state->renderpass;
 		internal_state->beginInfo.framebuffer = internal_state->framebuffer;
+		internal_state->beginInfo.renderArea.offset = { 0, 0 };
+		internal_state->beginInfo.renderArea.extent.width = framebufferInfo.width;
+		internal_state->beginInfo.renderArea.extent.height = framebufferInfo.height;
 
 		if (validAttachmentCount > 0)
 		{
 			const TextureDesc& texdesc = desc.attachments[0].texture->desc;
 
-			internal_state->beginInfo.renderArea.offset = { 0, 0 };
-			internal_state->beginInfo.renderArea.extent.width = texdesc.Width;
-			internal_state->beginInfo.renderArea.extent.height = texdesc.Height;
 			internal_state->beginInfo.clearValueCount = validAttachmentCount;
 			internal_state->beginInfo.pClearValues = internal_state->clearColors;
 
