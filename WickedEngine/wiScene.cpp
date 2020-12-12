@@ -1355,6 +1355,7 @@ namespace wiScene
 			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_POSITION_NORMAL_WIND] = { RAWBUFFER, MAX_DESCRIPTOR_INDEXING * 2, MAX_DESCRIPTOR_INDEXING };
 			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_UV0] = { TYPEDBUFFER, MAX_DESCRIPTOR_INDEXING * 3, MAX_DESCRIPTOR_INDEXING };
 			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_UV1] = { TYPEDBUFFER, MAX_DESCRIPTOR_INDEXING * 4, MAX_DESCRIPTOR_INDEXING };
+			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_TEXTURE_EMISSIVE] = { TEXTURE2D, MAX_DESCRIPTOR_INDEXING * 5, MAX_DESCRIPTOR_INDEXING };
 
 			bool success = device->CreateDescriptorTable(&descriptorTable);
 			assert(success);
@@ -2420,6 +2421,12 @@ namespace wiScene
 							DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_UV1,
 							global_geometryIndex,
 							&mesh.vertexBuffer_UV1
+						);
+						device->WriteDescriptor(
+							&descriptorTable,
+							DESCRIPTORTABLE_ENTRY_SUBSETS_TEXTURE_EMISSIVE,
+							global_geometryIndex,
+							material->emissiveMap ? material->emissiveMap->texture : nullptr
 						);
 					}
 

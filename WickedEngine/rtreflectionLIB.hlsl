@@ -18,6 +18,7 @@ Buffer<uint> subsets_indexBuffer[MAX_DESCRIPTOR_INDEXING] : register(t100000, sp
 ByteAddressBuffer subsets_vertexBuffer_POS[MAX_DESCRIPTOR_INDEXING] : register(t200000, space1);
 Buffer<float2> subsets_vertexBuffer_UV0[MAX_DESCRIPTOR_INDEXING] : register(t300000, space1);
 Buffer<float2> subsets_vertexBuffer_UV1[MAX_DESCRIPTOR_INDEXING] : register(t400000, space1);
+Texture2D<float4> subsets_texture_emissivemap[MAX_DESCRIPTOR_INDEXING] : register(t500000, space1);
 
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
 struct RayPayload
@@ -154,6 +155,14 @@ void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
     baseColor *= material.baseColor;
     float4 color = baseColor;
     float4 emissiveColor = material.emissiveColor;
+	[branch]
+	if (material.uvset_emissiveMap >= 0)
+	{
+		const float2 UV_emissiveMap = material.uvset_emissiveMap == 0 ? uvsets.xy : uvsets.zw;
+		float4 emissiveMap = subsets_texture_emissivemap[descriptorIndex].SampleLevel(sampler_linear_wrap, UV_emissiveMap, 2);
+		emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
+		emissiveColor *= emissiveMap;
+	}
 
 
     // Light sampling:
