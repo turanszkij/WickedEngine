@@ -2215,29 +2215,27 @@ using namespace DX12_Internal;
 		resource_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		sampler_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
+		D3D12_COMMAND_QUEUE_DESC copyQueueDesc = {};
+		copyQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+		copyQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+		copyQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+		copyQueueDesc.NodeMask = 0;
+		hr = device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&copyQueue));
+		assert(SUCCEEDED(hr));
+
 		// Create frame-resident resources:
 		for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 		{
 			hr = swapChain->GetBuffer(fr, IID_PPV_ARGS(&backBuffers[fr]));
 			assert(SUCCEEDED(hr));
 
-			// Create copy queue:
-			{
-				D3D12_COMMAND_QUEUE_DESC copyQueueDesc = {};
-				copyQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
-				copyQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-				copyQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-				copyQueueDesc.NodeMask = 0;
-				hr = device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&frames[fr].copyQueue));
-				assert(SUCCEEDED(hr));
-				hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&frames[fr].copyAllocator));
-				assert(SUCCEEDED(hr));
-				hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, frames[fr].copyAllocator.Get(), nullptr, IID_PPV_ARGS(&frames[fr].copyCommandList));
-				assert(SUCCEEDED(hr));
+			hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&frames[fr].copyAllocator));
+			assert(SUCCEEDED(hr));
+			hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, frames[fr].copyAllocator.Get(), nullptr, IID_PPV_ARGS(&frames[fr].copyCommandList));
+			assert(SUCCEEDED(hr));
 
-				hr = static_cast<ID3D12GraphicsCommandList*>(frames[fr].copyCommandList.Get())->Close();
-				assert(SUCCEEDED(hr));
-			}
+			hr = static_cast<ID3D12GraphicsCommandList*>(frames[fr].copyCommandList.Get())->Close();
+			assert(SUCCEEDED(hr));
 		}
 
 		hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&copyFence));
@@ -4761,11 +4759,11 @@ using namespace DX12_Internal;
 			ID3D12CommandList* commandlists[] = {
 				frame.copyCommandList.Get()
 			};
-			frame.copyQueue->ExecuteCommandLists(1, commandlists);
+			copyQueue->ExecuteCommandLists(1, commandlists);
 
 			// Signal and increment the fence value.
 			copyFenceValue++;
-			HRESULT hr = frame.copyQueue->Signal(copyFence.Get(), copyFenceValue);
+			HRESULT hr = copyQueue->Signal(copyFence.Get(), copyFenceValue);
 			assert(SUCCEEDED(hr));
 			hr = directQueue->Wait(copyFence.Get(), copyFenceValue);
 			assert(SUCCEEDED(hr));

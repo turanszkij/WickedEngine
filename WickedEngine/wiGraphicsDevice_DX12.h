@@ -69,6 +69,7 @@ namespace wiGraphics
 		D3D12_CPU_DESCRIPTOR_HANDLE rtv_descriptor_heap_start = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE dsv_descriptor_heap_start = {};
 
+		Microsoft::WRL::ComPtr<ID3D12CommandQueue> copyQueue;
 		std::mutex copyQueueLock;
 		bool copyQueueUse = false;
 		Microsoft::WRL::ComPtr<ID3D12Fence> copyFence; // GPU only
@@ -79,7 +80,6 @@ namespace wiGraphics
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[COMMANDLIST_COUNT];
 			Microsoft::WRL::ComPtr<ID3D12CommandList> commandLists[COMMANDLIST_COUNT];
 
-			Microsoft::WRL::ComPtr<ID3D12CommandQueue> copyQueue;
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> copyAllocator;
 			Microsoft::WRL::ComPtr<ID3D12CommandList> copyCommandList;
 

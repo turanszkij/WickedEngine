@@ -107,6 +107,7 @@ namespace wiGraphics
 
 		void CreateBackBufferResources();
 
+		VkQueue copyQueue = VK_NULL_HANDLE;
 		std::mutex copyQueueLock;
 		bool copyQueueUse = false;
 		VkSemaphore copySemaphore = VK_NULL_HANDLE;
@@ -117,7 +118,6 @@ namespace wiGraphics
 			VkCommandPool commandPools[COMMANDLIST_COUNT] = {};
 			VkCommandBuffer commandBuffers[COMMANDLIST_COUNT] = {};
 
-			VkQueue copyQueue = VK_NULL_HANDLE;
 			VkCommandPool copyCommandPool = VK_NULL_HANDLE;
 			VkCommandBuffer copyCommandBuffer = VK_NULL_HANDLE;
 

@@ -2512,7 +2512,7 @@ using namespace Vulkan_Internal;
 			if (mesh_shader_features.meshShader == VK_TRUE && mesh_shader_features.taskShader == VK_TRUE)
 			{
 				// Enable mesh shader here (problematic with certain driver versions, disabled by default): 
-				//MESH_SHADER = true;
+				//capabilities |= GRAPHICSDEVICE_CAPABILITY_MESH_SHADER;
 			}
 
 			assert(features_1_2.hostQueryReset == VK_TRUE);
@@ -2596,6 +2596,8 @@ using namespace Vulkan_Internal;
 
 		QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
 
+		vkGetDeviceQueue(device, queueIndices.copyFamily, 0, &copyQueue);
+
 		// Create frame resources:
 		{
 			for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
@@ -2640,8 +2642,6 @@ using namespace Vulkan_Internal;
 
 				// Create resources for copy (transfer) queue:
 				{
-					vkGetDeviceQueue(device, queueIndices.copyFamily, 0, &frames[fr].copyQueue);
-
 					VkCommandPoolCreateInfo poolInfo = {};
 					poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 					poolInfo.queueFamilyIndex = queueFamilyIndices.copyFamily;
@@ -5761,7 +5761,7 @@ using namespace Vulkan_Internal;
 				submitInfo.pSignalSemaphores = semaphores;
 				submitInfo.signalSemaphoreCount = arraysize(semaphores);
 
-				res = vkQueueSubmit(frame.copyQueue, 1, &submitInfo, VK_NULL_HANDLE);
+				res = vkQueueSubmit(copyQueue, 1, &submitInfo, VK_NULL_HANDLE);
 				assert(res == VK_SUCCESS);
 
 			}

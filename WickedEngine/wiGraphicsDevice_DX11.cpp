@@ -2596,15 +2596,13 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 void GraphicsDevice_DX11::SubmitCommandLists()
 {
 	// Execute deferred command lists:
+	CommandList cmd_last = cmd_count.load();
+	cmd_count.store(0);
+	for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
 	{
-		CommandList cmd_last = cmd_count.load();
-		cmd_count.store(0);
-		for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
-		{
-			deviceContexts[cmd]->FinishCommandList(false, &commandLists[cmd]);
-			immediateContext->ExecuteCommandList(commandLists[cmd].Get(), false);
-			commandLists[cmd].Reset();
-		}
+		deviceContexts[cmd]->FinishCommandList(false, &commandLists[cmd]);
+		immediateContext->ExecuteCommandList(commandLists[cmd].Get(), false);
+		commandLists[cmd].Reset();
 	}
 	immediateContext->ClearState();
 
