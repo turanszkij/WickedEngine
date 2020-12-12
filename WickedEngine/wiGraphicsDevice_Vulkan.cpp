@@ -2514,6 +2514,8 @@ using namespace Vulkan_Internal;
 				// Enable mesh shader here (problematic with certain driver versions, disabled by default): 
 				//MESH_SHADER = true;
 			}
+
+			assert(features_1_2.hostQueryReset == VK_TRUE);
 			
 			VkFormatProperties formatProperties = {};
 			vkGetPhysicalDeviceFormatProperties(physicalDevice, _ConvertFormat(FORMAT_R11G11B10_FLOAT), &formatProperties);
@@ -2858,7 +2860,7 @@ using namespace Vulkan_Internal;
 			poolInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
 			res = vkCreateQueryPool(device, &poolInfo, nullptr, &querypool_timestamp);
 			assert(res == VK_SUCCESS);
-			timestamps_to_reset.reserve(timestamp_query_count);
+			vkResetQueryPool(device, querypool_timestamp, 0, poolInfo.queryCount);
 
 			for (uint32_t i = 0; i < occlusion_query_count; ++i)
 			{
@@ -2868,7 +2870,7 @@ using namespace Vulkan_Internal;
 			poolInfo.queryType = VK_QUERY_TYPE_OCCLUSION;
 			res = vkCreateQueryPool(device, &poolInfo, nullptr, &querypool_occlusion);
 			assert(res == VK_SUCCESS);
-			occlusions_to_reset.reserve(occlusion_query_count);
+			vkResetQueryPool(device, querypool_occlusion, 0, poolInfo.queryCount);
 		}
 
 		wiBackLog::post("Created GraphicsDevice_Vulkan");
@@ -5553,10 +5555,6 @@ using namespace Vulkan_Internal;
 		case GPU_QUERY_TYPE_TIMESTAMP:
 			res = vkGetQueryPoolResults(device, querypool_timestamp, (uint32_t)internal_state->query_index, 1, sizeof(uint64_t),
 				&result->result_timestamp, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
-			if (timestamps_to_reset.empty() || timestamps_to_reset.back() != (uint32_t)internal_state->query_index)
-			{
-				timestamps_to_reset.push_back((uint32_t)internal_state->query_index);
-			}
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
 			result->result_timestamp_frequency = timestamp_frequency;
@@ -5565,10 +5563,6 @@ using namespace Vulkan_Internal;
 		case GPU_QUERY_TYPE_OCCLUSION:
 			res = vkGetQueryPoolResults(device, querypool_occlusion, (uint32_t)internal_state->query_index, 1, sizeof(uint64_t),
 				&result->result_passed_sample_count, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_PARTIAL_BIT);
-			if (occlusions_to_reset.empty() || occlusions_to_reset.back() != (uint32_t)internal_state->query_index)
-			{
-				occlusions_to_reset.push_back((uint32_t)internal_state->query_index);
-			}
 			break;
 		default:
 			return false;
@@ -5735,23 +5729,6 @@ using namespace Vulkan_Internal;
 
 		// reset immediate resource allocators:
 		GetFrameResources().resourceBuffer[cmd].clear();
-
-		if (!initial_querypool_reset)
-		{
-			initial_querypool_reset = true;
-			vkCmdResetQueryPool(GetDirectCommandList(cmd), querypool_timestamp, 0, timestamp_query_count);
-			vkCmdResetQueryPool(GetDirectCommandList(cmd), querypool_occlusion, 0, occlusion_query_count);
-		}
-		for (auto& x : timestamps_to_reset)
-		{
-			vkCmdResetQueryPool(GetDirectCommandList(cmd), querypool_timestamp, x, 1);
-		}
-		timestamps_to_reset.clear();
-		for (auto& x : occlusions_to_reset)
-		{
-			vkCmdResetQueryPool(GetDirectCommandList(cmd), querypool_occlusion, x, 1);
-		}
-		occlusions_to_reset.clear();
 
 		prev_pipeline_hash[cmd] = 0;
 		active_pso[cmd] = nullptr;
@@ -6413,9 +6390,11 @@ using namespace Vulkan_Internal;
 		switch (internal_state->query_type)
 		{
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+			vkResetQueryPool(device, querypool_occlusion, (uint32_t)internal_state->query_index, 1);
 			vkCmdBeginQuery(GetDirectCommandList(cmd), querypool_occlusion, (uint32_t)internal_state->query_index, 0);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
+			vkResetQueryPool(device, querypool_occlusion, (uint32_t)internal_state->query_index, 1);
 			vkCmdBeginQuery(GetDirectCommandList(cmd), querypool_occlusion, (uint32_t)internal_state->query_index, VK_QUERY_CONTROL_PRECISE_BIT);
 			break;
 		}
@@ -6427,6 +6406,7 @@ using namespace Vulkan_Internal;
 		switch (internal_state->query_type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
+			vkResetQueryPool(device, querypool_timestamp, (uint32_t)internal_state->query_index, 1);
 			vkCmdWriteTimestamp(GetDirectCommandList(cmd), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, querypool_timestamp, internal_state->query_index);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:

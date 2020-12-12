@@ -104,9 +104,6 @@ namespace wiGraphics
 		VkQueryPool querypool_occlusion = VK_NULL_HANDLE;
 		static const size_t timestamp_query_count = 1024;
 		static const size_t occlusion_query_count = 1024;
-		bool initial_querypool_reset = false;
-		std::vector<uint32_t> timestamps_to_reset;
-		std::vector<uint32_t> occlusions_to_reset;
 
 		void CreateBackBufferResources();
 
