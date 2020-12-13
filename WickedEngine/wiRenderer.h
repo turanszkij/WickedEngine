@@ -603,6 +603,8 @@ namespace wiRenderer
 	bool IsWaterrippleRendering();
 	void SetDisableAlbedoMaps(bool value);
 	bool IsDisableAlbedoMaps();
+	void SetRaytracedShadowsSampleCount(uint32_t value);
+	uint32_t GetRaytracedShadowsSampleCount();
 
 	const wiGraphics::Texture* GetGlobalLightmap();
 

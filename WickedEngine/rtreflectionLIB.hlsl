@@ -12,13 +12,13 @@ RAYTRACINGACCELERATIONSTRUCTURE(scene_acceleration_structure, TEXSLOT_ACCELERATI
 
 RWTEXTURE2D(output, float4, 0);
 
-ConstantBuffer<ShaderMaterial> subsets_material[MAX_DESCRIPTOR_INDEXING] : register(b0, space1);
-Texture2D<float4> subsets_texture_baseColor[MAX_DESCRIPTOR_INDEXING] : register(t0, space1);
-Buffer<uint> subsets_indexBuffer[MAX_DESCRIPTOR_INDEXING] : register(t100000, space1);
-ByteAddressBuffer subsets_vertexBuffer_POS[MAX_DESCRIPTOR_INDEXING] : register(t200000, space1);
-Buffer<float2> subsets_vertexBuffer_UV0[MAX_DESCRIPTOR_INDEXING] : register(t300000, space1);
-Buffer<float2> subsets_vertexBuffer_UV1[MAX_DESCRIPTOR_INDEXING] : register(t400000, space1);
-Texture2D<float4> subsets_texture_emissivemap[MAX_DESCRIPTOR_INDEXING] : register(t500000, space1);
+ConstantBuffer<ShaderMaterial> subsets_material[] : register(b0, space1);
+Texture2D<float4> subsets_texture_baseColor[] : register(t0, space2);
+Buffer<uint> subsets_indexBuffer[] : register(t0, space3);
+ByteAddressBuffer subsets_vertexBuffer_POS[] : register(t0, space4);
+Buffer<float2> subsets_vertexBuffer_UV0[] : register(t0, space5);
+Buffer<float2> subsets_vertexBuffer_UV1[] : register(t0, space6);
+Texture2D<float4> subsets_texture_emissivemap[] : register(t0, space7);
 
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
 struct RayPayload
@@ -106,17 +106,12 @@ void RTReflection_Raygen()
 [shader("closesthit")]
 void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
 {
-#ifndef SPIRV
     float u = attr.barycentrics.x;
     float v = attr.barycentrics.y;
     float w = 1 - u - v;
     uint primitiveIndex = PrimitiveIndex();
     uint geometryOffset = InstanceID();
-#ifdef RAYTRACING_GEOMETRYINDEX
     uint geometryIndex = GeometryIndex(); // requires tier_1_1 GeometryIndex feature!!
-#else
-    uint geometryIndex = 0;
-#endif // RAYTRACING_GEOMETRYINDEX
     uint descriptorIndex = geometryOffset + geometryIndex;
     ShaderMaterial material = subsets_material[descriptorIndex];
     uint i0 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 0];
@@ -167,7 +162,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
 
     // Light sampling:
     float3 P = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
-    float3 V = normalize(g_xCamera_CamPos - P);
+    float3 V = -WorldRayDirection();
     Surface surface = CreateSurface(P, N, V, baseColor, material.roughness, 1, material.metalness, material.reflectance);
     Lighting lighting = CreateLighting(0, 0, GetAmbient(surface.N), 0);
 
@@ -202,27 +197,19 @@ void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
     }
 
     LightingPart combined_lighting = CombineLighting(surface, lighting);
-    payload.color = baseColor.rgb * combined_lighting.diffuse + emissiveColor.rgb * emissiveColor.a;
+    payload.color = baseColor.rgb * combined_lighting.diffuse + combined_lighting.specular + emissiveColor.rgb * emissiveColor.a;
 
-#else
-    payload.color = float3(1, 0, 0);
-#endif // SPIRV
 }
 
 [shader("anyhit")]
 void RTReflection_AnyHit(inout RayPayload payload, in MyAttributes attr)
 {
-#ifndef SPIRV
     float u = attr.barycentrics.x;
     float v = attr.barycentrics.y;
     float w = 1 - u - v;
     uint primitiveIndex = PrimitiveIndex();
     uint geometryOffset = InstanceID();
-#ifdef RAYTRACING_GEOMETRYINDEX
     uint geometryIndex = GeometryIndex(); // requires tier_1_1 GeometryIndex feature!!
-#else
-    uint geometryIndex = 0;
-#endif // RAYTRACING_GEOMETRYINDEX
     uint descriptorIndex = geometryOffset + geometryIndex;
     ShaderMaterial material = subsets_material[descriptorIndex];
     if (material.uvset_baseColorMap < 0)
@@ -253,7 +240,6 @@ void RTReflection_AnyHit(inout RayPayload payload, in MyAttributes attr)
     {
         IgnoreHit();
     }
-#endif // SPIRV
 }
 
 [shader("miss")]

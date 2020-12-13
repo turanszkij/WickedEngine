@@ -10,11 +10,11 @@ TEXTURE2D(texture_normals, float3, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(output, unorm float, 0);
 
-ConstantBuffer<ShaderMaterial> subsets_material[MAX_DESCRIPTOR_INDEXING] : register(b0, space1);
-Texture2D<float4> subsets_texture_baseColor[MAX_DESCRIPTOR_INDEXING] : register(t0, space1);
-Buffer<uint> subsets_indexBuffer[MAX_DESCRIPTOR_INDEXING] : register(t100000, space1);
-Buffer<float2> subsets_vertexBuffer_UV0[MAX_DESCRIPTOR_INDEXING] : register(t300000, space1);
-Buffer<float2> subsets_vertexBuffer_UV1[MAX_DESCRIPTOR_INDEXING] : register(t400000, space1);
+ConstantBuffer<ShaderMaterial> subsets_material[] : register(b0, space1);
+Texture2D<float4> subsets_texture_baseColor[] : register(t0, space2);
+Buffer<uint> subsets_indexBuffer[] : register(t0, space3);
+Buffer<float2> subsets_vertexBuffer_UV0[] : register(t0, space4);
+Buffer<float2> subsets_vertexBuffer_UV1[] : register(t0, space5);
 
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
 struct RayPayload
@@ -72,17 +72,13 @@ void RTAO_ClosestHit(inout RayPayload payload, in MyAttributes attr)
 [shader("anyhit")]
 void RTAO_AnyHit(inout RayPayload payload, in MyAttributes attr)
 {
-#ifndef SPIRV
+#ifndef SPIRV // for some reason this wouldn't compile as SPIRV (Invalid OpAccessChain)
     float u = attr.barycentrics.x;
     float v = attr.barycentrics.y;
     float w = 1 - u - v;
     uint primitiveIndex = PrimitiveIndex();
     uint geometryOffset = InstanceID();
-#ifdef RAYTRACING_GEOMETRYINDEX
     uint geometryIndex = GeometryIndex(); // requires tier_1_1 GeometryIndex feature!!
-#else
-    uint geometryIndex = 0;
-#endif // RAYTRACING_GEOMETRYINDEX
     uint descriptorIndex = geometryOffset + geometryIndex;
     ShaderMaterial material = subsets_material[descriptorIndex];
     if (material.uvset_baseColorMap < 0)
@@ -109,7 +105,7 @@ void RTAO_AnyHit(inout RayPayload payload, in MyAttributes attr)
     float2 uv = uv0 * w + uv1 * u + uv2 * v;
     float alpha = subsets_texture_baseColor[descriptorIndex].SampleLevel(sampler_point_wrap, uv, 2).a;
 
-    if (alpha > 0.9)
+    if (alpha - material.alphaTest > 0)
     {
         AcceptHitAndEndSearch();
     }

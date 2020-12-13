@@ -2516,6 +2516,11 @@ using namespace Vulkan_Internal;
 			}
 
 			assert(features_1_2.hostQueryReset == VK_TRUE);
+
+			if (features_1_2.descriptorIndexing)
+			{
+				capabilities |= GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS;
+			}
 			
 			VkFormatProperties formatProperties = {};
 			vkGetPhysicalDeviceFormatProperties(physicalDevice, _ConvertFormat(FORMAT_R11G11B10_FLOAT), &formatProperties);
@@ -5553,6 +5558,8 @@ using namespace Vulkan_Internal;
 			assert(0); // not implemented yet
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP:
+			if (internal_state->query_index == ~0)
+				return false;
 			res = vkGetQueryPoolResults(device, querypool_timestamp, (uint32_t)internal_state->query_index, 1, sizeof(uint64_t),
 				&result->result_timestamp, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
 			break;
@@ -5561,6 +5568,8 @@ using namespace Vulkan_Internal;
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
 		case GPU_QUERY_TYPE_OCCLUSION:
+			if (internal_state->query_index == ~0)
+				return false;
 			res = vkGetQueryPoolResults(device, querypool_occlusion, (uint32_t)internal_state->query_index, 1, sizeof(uint64_t),
 				&result->result_passed_sample_count, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_PARTIAL_BIT);
 			break;

@@ -1999,6 +1999,7 @@ using namespace DX12_Internal;
 	GraphicsDevice_DX12::GraphicsDevice_DX12(wiPlatform::window_type window, bool fullscreen, bool debuglayer)
 	{
 		capabilities |= GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT;
+		capabilities |= GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS;
 		SHADER_IDENTIFIER_SIZE = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
 
@@ -4586,6 +4587,8 @@ using namespace DX12_Internal;
 			assert(0); // not implemented yet
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP:
+			if (internal_state->query_index == ~0)
+				return false;
 			querypool_timestamp_readback->Map(0, &range, &data);
 			result->result_timestamp = *(uint64_t*)((size_t)data + range.Begin);
 			querypool_timestamp_readback->Unmap(0, &nullrange);
@@ -4595,6 +4598,8 @@ using namespace DX12_Internal;
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
 		{
+			if (internal_state->query_index == ~0)
+				return false;
 			BOOL passed = FALSE;
 			querypool_occlusion_readback->Map(0, &range, &data);
 			passed = *(BOOL*)((size_t)data + range.Begin);
@@ -4603,6 +4608,8 @@ using namespace DX12_Internal;
 			break;
 		}
 		case GPU_QUERY_TYPE_OCCLUSION:
+			if (internal_state->query_index == ~0)
+				return false;
 			querypool_occlusion_readback->Map(0, &range, &data);
 			result->result_passed_sample_count = *(uint64_t*)((size_t)data + range.Begin);
 			querypool_occlusion_readback->Unmap(0, &nullrange);

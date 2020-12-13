@@ -1346,19 +1346,21 @@ namespace wiScene
 	void Scene::Update(float dt)
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT) && !descriptorTable.IsValid())
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT) && !descriptorTables[0].IsValid())
 		{
-			descriptorTable.resources.resize(DESCRIPTORTABLE_ENTRY_COUNT);
-			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_MATERIAL] = { CONSTANTBUFFER, 0, MAX_DESCRIPTOR_INDEXING };
-			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_TEXTURE_BASECOLOR] = { TEXTURE2D, 0, MAX_DESCRIPTOR_INDEXING };
-			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_INDEXBUFFER] = { TYPEDBUFFER, MAX_DESCRIPTOR_INDEXING, MAX_DESCRIPTOR_INDEXING };
-			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_POSITION_NORMAL_WIND] = { RAWBUFFER, MAX_DESCRIPTOR_INDEXING * 2, MAX_DESCRIPTOR_INDEXING };
-			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_UV0] = { TYPEDBUFFER, MAX_DESCRIPTOR_INDEXING * 3, MAX_DESCRIPTOR_INDEXING };
-			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_UV1] = { TYPEDBUFFER, MAX_DESCRIPTOR_INDEXING * 4, MAX_DESCRIPTOR_INDEXING };
-			descriptorTable.resources[DESCRIPTORTABLE_ENTRY_SUBSETS_TEXTURE_EMISSIVE] = { TEXTURE2D, MAX_DESCRIPTOR_INDEXING * 5, MAX_DESCRIPTOR_INDEXING };
+			descriptorTables[DESCRIPTORTABLE_SUBSETS_MATERIAL].resources.push_back({ CONSTANTBUFFER, 0, MAX_DESCRIPTOR_INDEXING });
+			descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURE_BASECOLOR].resources.push_back({ TEXTURE2D, 0, MAX_DESCRIPTOR_INDEXING });
+			descriptorTables[DESCRIPTORTABLE_SUBSETS_INDEXBUFFER].resources.push_back({ TYPEDBUFFER, 0, MAX_DESCRIPTOR_INDEXING });
+			descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_POSITION_NORMAL_WIND].resources.push_back({ RAWBUFFER, 0, MAX_DESCRIPTOR_INDEXING });
+			descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UV0].resources.push_back({ TYPEDBUFFER, 0, MAX_DESCRIPTOR_INDEXING });
+			descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UV1].resources.push_back({ TYPEDBUFFER, 0, MAX_DESCRIPTOR_INDEXING });
+			descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURE_EMISSIVE].resources.push_back({ TEXTURE2D, 0, MAX_DESCRIPTOR_INDEXING });
 
-			bool success = device->CreateDescriptorTable(&descriptorTable);
-			assert(success);
+			for (int i = 0; i < DESCRIPTORTABLE_COUNT; ++i)
+			{
+				bool success = device->CreateDescriptorTable(&descriptorTables[i]);
+				assert(success);
+			}
 		}
 
 		wiJobSystem::context ctx;
@@ -2382,49 +2384,49 @@ namespace wiScene
 				const MaterialComponent* material = materials.GetComponent(subset.materialID);
 				if (material != nullptr)
 				{
-					if (descriptorTable.IsValid())
+					if (descriptorTables[0].IsValid())
 					{
 						uint32_t global_geometryIndex = mesh.TLAS_geometryOffset + subsetIndex;
 						device->WriteDescriptor(
-							&descriptorTable,
-							DESCRIPTORTABLE_ENTRY_SUBSETS_MATERIAL,
+							&descriptorTables[DESCRIPTORTABLE_SUBSETS_MATERIAL],
+							0,
 							global_geometryIndex,
 							&material->constantBuffer
 						);
 						device->WriteDescriptor(
-							&descriptorTable,
-							DESCRIPTORTABLE_ENTRY_SUBSETS_TEXTURE_BASECOLOR,
+							&descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURE_BASECOLOR],
+							0,
 							global_geometryIndex,
 							material->baseColorMap ? material->baseColorMap->texture : nullptr
 						);
 						device->WriteDescriptor(
-							&descriptorTable,
-							DESCRIPTORTABLE_ENTRY_SUBSETS_INDEXBUFFER,
+							&descriptorTables[DESCRIPTORTABLE_SUBSETS_INDEXBUFFER],
+							0,
 							global_geometryIndex,
 							&mesh.indexBuffer,
 							subset.indexBuffer_subresource
 						);
 						device->WriteDescriptor(
-							&descriptorTable,
-							DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_POSITION_NORMAL_WIND,
+							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_POSITION_NORMAL_WIND],
+							0,
 							global_geometryIndex,
 							&mesh.vertexBuffer_POS
 						);
 						device->WriteDescriptor(
-							&descriptorTable,
-							DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_UV0,
+							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UV0],
+							0,
 							global_geometryIndex,
 							&mesh.vertexBuffer_UV0
 						);
 						device->WriteDescriptor(
-							&descriptorTable,
-							DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_UV1,
+							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UV1],
+							0,
 							global_geometryIndex,
 							&mesh.vertexBuffer_UV1
 						);
 						device->WriteDescriptor(
-							&descriptorTable,
-							DESCRIPTORTABLE_ENTRY_SUBSETS_TEXTURE_EMISSIVE,
+							&descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURE_EMISSIVE],
+							0,
 							global_geometryIndex,
 							material->emissiveMap ? material->emissiveMap->texture : nullptr
 						);

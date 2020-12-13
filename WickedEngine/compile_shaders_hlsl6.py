@@ -76,7 +76,6 @@ for item in root.iter():
             #inline raytracing enabled:
             cmd2 = cmd
             cmd2 += " -D RAYTRACING_INLINE "
-            cmd2 += " -D RAYTRACING_GEOMETRYINDEX "
             cmd2 += " -Fo " + "shaders/hlsl6/inlinert/" + output_name
             t = threading.Thread(target=compile, args=(cmd2,))
             threads.append(t)
