@@ -12,7 +12,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	wiRenderer::SetToDrawGridHelper(true);
 	wiRenderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 520));
+	SetSize(XMFLOAT2(580, 530));
 
 	float x = 220, y = 5, step = 20, itemheight = 18;
 
@@ -249,7 +249,6 @@ void RendererWindow::Create(EditorComponent* editor)
 		}
 		});
 	shadowTypeComboBox.SetSelected(0);
-	shadowTypeComboBox.SetEnabled(true);
 	shadowTypeComboBox.SetTooltip("Choose between shadowmaps and ray traced shadows (if available).\n(ray traced shadows experimental, needs hardware support and shaders compiled with HLSL6.5)");
 	AddWidget(&shadowTypeComboBox);
 
@@ -293,7 +292,6 @@ void RendererWindow::Create(EditorComponent* editor)
 		}
 	});
 	shadowProps2DComboBox.SetSelected(4);
-	shadowProps2DComboBox.SetEnabled(true);
 	shadowProps2DComboBox.SetTooltip("Choose a shadow quality preset for 2D shadow maps (spotlights, directional lights)...");
 	shadowProps2DComboBox.SetScriptTip("SetShadowProps2D(int resolution, int count, int softShadowQuality)");
 	AddWidget(&shadowProps2DComboBox);
@@ -337,7 +335,6 @@ void RendererWindow::Create(EditorComponent* editor)
 		}
 	});
 	shadowPropsCubeComboBox.SetSelected(2);
-	shadowPropsCubeComboBox.SetEnabled(true);
 	shadowPropsCubeComboBox.SetTooltip("Choose a shadow quality preset for cube shadow maps (pointlights, area lights)...");
 	shadowPropsCubeComboBox.SetScriptTip("SetShadowPropsCube(int resolution, int count)");
 	AddWidget(&shadowPropsCubeComboBox);
@@ -370,7 +367,6 @@ void RendererWindow::Create(EditorComponent* editor)
 		editor->ResizeBuffers();
 	});
 	MSAAComboBox.SetSelected(0);
-	MSAAComboBox.SetEnabled(true);
 	MSAAComboBox.SetTooltip("Multisampling Anti Aliasing quality. ");
 	AddWidget(&MSAAComboBox);
 
@@ -382,11 +378,11 @@ void RendererWindow::Create(EditorComponent* editor)
 	raytracedShadowsSlider.OnSlide([&](wiEventArgs args) {
 		wiRenderer::SetRaytracedShadowsSampleCount((uint32_t)args.iValue);
 		});
+	AddWidget(&raytracedShadowsSlider);
 	if (!wiRenderer::GetDevice()->CheckCapability(wiGraphics::GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 	{
 		raytracedShadowsSlider.SetEnabled(false);
 	}
-	AddWidget(&raytracedShadowsSlider);
 
 	temporalAACheckBox.Create("Temporal AA: ");
 	temporalAACheckBox.SetTooltip("Toggle Temporal Anti Aliasing. It is a supersampling techique which is performed across multiple frames.");
@@ -441,7 +437,6 @@ void RendererWindow::Create(EditorComponent* editor)
 
 	});
 	textureQualityComboBox.SetSelected(3);
-	textureQualityComboBox.SetEnabled(true);
 	textureQualityComboBox.SetTooltip("Choose a texture sampling method for material textures.");
 	AddWidget(&textureQualityComboBox);
 
@@ -480,7 +475,6 @@ void RendererWindow::Create(EditorComponent* editor)
 		wiRenderer::SetToDrawDebugPartitionTree(args.bValue);
 	});
 	partitionBoxesCheckBox.SetCheck(wiRenderer::GetToDrawDebugPartitionTree());
-	partitionBoxesCheckBox.SetEnabled(false); // SP tree is not implemented at the moment anymore
 	AddWidget(&partitionBoxesCheckBox);
 
 	boneLinesCheckBox.Create("Bone line visualizer: ");
