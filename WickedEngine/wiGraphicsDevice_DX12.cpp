@@ -19,15 +19,11 @@
 #pragma comment(lib,"Dxgi.lib")
 #pragma comment(lib,"dxguid.lib")
 
-#ifdef _WIN64
-#ifndef PLATFORM_UWP
-#pragma comment(lib,"dxcompiler.lib")
-#endif // PLATFORM_UWP
-#endif // _X64
-
 #ifdef _DEBUG
 #include <d3d12sdklayers.h>
 #endif // _DEBUG
+
+static DxcCreateInstanceProc pfn_DxcCreateInstance = nullptr;
 
 #include <sstream>
 #include <algorithm>
@@ -2388,6 +2384,18 @@ using namespace DX12_Internal;
 			assert(SUCCEEDED(hr));
 		}
 
+		if (pfn_DxcCreateInstance == nullptr)
+		{
+#ifdef PLATFORM_UWP
+			HMODULE dll = LoadPackagedLibrary(L"dxcompiler.dll", 0);
+#else
+			HMODULE dll = LoadLibrary(L"dxcompiler.dll");
+#endif // PLATFORM_UWP
+			assert(dll != NULL);
+			pfn_DxcCreateInstance = (DxcCreateInstanceProc)GetProcAddress(dll, "DxcCreateInstance");
+			assert(pfn_DxcCreateInstance != nullptr);
+		}
+
 		wiBackLog::post("Created GraphicsDevice_DX12");
 	}
 	GraphicsDevice_DX12::~GraphicsDevice_DX12()
@@ -2801,8 +2809,6 @@ using namespace DX12_Internal;
 
 		if (pShader->rootSignature == nullptr)
 		{
-#ifdef _WIN64 // TODO: Can't use dxcompiler.dll in 32-bit, so can't use shader reflection
-#ifndef PLATFORM_UWP // TODO: Can't use dxcompiler.dll in UWP, so can't use shader reflection
 			struct ShaderBlob : public IDxcBlob
 			{
 				LPVOID address;
@@ -2818,7 +2824,7 @@ using namespace DX12_Internal;
 			blob.size = BytecodeLength;
 
 			ComPtr<IDxcContainerReflection> container_reflection;
-			hr = DxcCreateInstance(CLSID_DxcContainerReflection, __uuidof(IDxcContainerReflection), (void**)&container_reflection);
+			hr = pfn_DxcCreateInstance(CLSID_DxcContainerReflection, __uuidof(IDxcContainerReflection), (void**)&container_reflection);
 			assert(SUCCEEDED(hr));
 			hr = container_reflection->Load(&blob);
 			assert(SUCCEEDED(hr));
@@ -2920,8 +2926,6 @@ using namespace DX12_Internal;
 					insert_descriptor(desc);
 				}
 			}
-#endif // PLATFORM_UWP
-#endif // _X64
 
 
 			if (stage == CS || stage == SHADERSTAGE_COUNT)
