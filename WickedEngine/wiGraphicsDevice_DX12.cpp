@@ -1502,7 +1502,6 @@ using namespace DX12_Internal;
 							{
 								auto internal_state = to_internal(resource);
 
-								D3D12_CPU_DESCRIPTOR_HANDLE src = {};
 								if (subresource < 0)
 								{
 									device->device->CreateUnorderedAccessView(internal_state->resource.Get(), nullptr, &internal_state->uav, dst);
@@ -1511,12 +1510,6 @@ using namespace DX12_Internal;
 								{
 									device->device->CreateUnorderedAccessView(internal_state->resource.Get(), nullptr, &internal_state->subresources_uav[subresource], dst);
 								}
-
-								if (src.ptr != 0)
-								{
-									device->device->CopyDescriptorsSimple(1, dst, src, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								}
-
 							}
 						}
 						break;
@@ -4646,10 +4639,13 @@ using namespace DX12_Internal;
 		GetDirectCommandList(cmd)->ResourceBarrier(1, &barrier);
 
 		const float clearcolor[] = { 0,0,0,1 };
-		device->CreateRenderTargetView(backBuffers[backbuffer_index].Get(), nullptr, rtv_descriptor_heap_start);
+
+		D3D12_CPU_DESCRIPTOR_HANDLE descriptors_RTV = rtv_descriptor_heap_start;
+		descriptors_RTV.ptr += rtv_descriptor_size * D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT * cmd;
+		device->CreateRenderTargetView(backBuffers[backbuffer_index].Get(), nullptr, descriptors_RTV);
 
 		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTV = {};
-		RTV.cpuDescriptor = rtv_descriptor_heap_start;
+		RTV.cpuDescriptor = descriptors_RTV;
 		RTV.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
 		RTV.BeginningAccess.Clear.ClearValue.Color[0] = clearcolor[0];
 		RTV.BeginningAccess.Clear.ClearValue.Color[1] = clearcolor[1];
