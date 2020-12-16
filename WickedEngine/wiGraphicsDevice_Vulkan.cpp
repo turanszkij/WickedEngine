@@ -25,9 +25,6 @@
 #include "sdl2.h"
 #endif
 
-// Enabling ray tracing might crash RenderDoc:
-#define ENABLE_RAYTRACING_EXTENSION
-
 // These shifts are made so that Vulkan resource bindings slots don't interfere with each other across shader stages:
 //	These are also defined in compile_shaders_spirv.py as shift numbers, and it needs to be synced!
 #define VULKAN_BINDING_SHIFT_B 0
@@ -40,12 +37,12 @@ namespace wiGraphics
 
 	PFN_vkCreateRayTracingPipelinesKHR GraphicsDevice_Vulkan::createRayTracingPipelinesKHR = nullptr;
 	PFN_vkCreateAccelerationStructureKHR GraphicsDevice_Vulkan::createAccelerationStructureKHR = nullptr;
-	PFN_vkBindAccelerationStructureMemoryKHR GraphicsDevice_Vulkan::bindAccelerationStructureMemoryKHR = nullptr;
 	PFN_vkDestroyAccelerationStructureKHR GraphicsDevice_Vulkan::destroyAccelerationStructureKHR = nullptr;
-	PFN_vkGetAccelerationStructureMemoryRequirementsKHR GraphicsDevice_Vulkan::getAccelerationStructureMemoryRequirementsKHR = nullptr;
+	PFN_vkGetAccelerationStructureBuildSizesKHR GraphicsDevice_Vulkan::getAccelerationStructureBuildSizesKHR = nullptr;
 	PFN_vkGetAccelerationStructureDeviceAddressKHR GraphicsDevice_Vulkan::getAccelerationStructureDeviceAddressKHR = nullptr;
 	PFN_vkGetRayTracingShaderGroupHandlesKHR GraphicsDevice_Vulkan::getRayTracingShaderGroupHandlesKHR = nullptr;
-	PFN_vkCmdBuildAccelerationStructureKHR GraphicsDevice_Vulkan::cmdBuildAccelerationStructureKHR = nullptr;
+	PFN_vkCmdBuildAccelerationStructuresKHR GraphicsDevice_Vulkan::cmdBuildAccelerationStructuresKHR = nullptr;
+	PFN_vkBuildAccelerationStructuresKHR GraphicsDevice_Vulkan::buildAccelerationStructuresKHR = nullptr;
 	PFN_vkCmdTraceRaysKHR GraphicsDevice_Vulkan::cmdTraceRaysKHR = nullptr;
 
 	PFN_vkCmdDrawMeshTasksNV GraphicsDevice_Vulkan::cmdDrawMeshTasksNV = nullptr;
@@ -857,6 +854,7 @@ namespace Vulkan_Internal
 		VkBufferView uav = VK_NULL_HANDLE;
 		std::vector<VkBufferView> subresources_srv;
 		std::vector<VkBufferView> subresources_uav;
+		VkDeviceAddress address = 0;
 
 		GraphicsDevice::GPUAllocation dynamic[COMMANDLIST_COUNT];
 
@@ -1041,9 +1039,12 @@ namespace Vulkan_Internal
 		VkBuffer buffer = VK_NULL_HANDLE;
 		VkAccelerationStructureKHR resource = VK_NULL_HANDLE;
 
-		VkAccelerationStructureCreateInfoKHR info = {};
-		std::vector<VkAccelerationStructureCreateGeometryTypeInfoKHR> geometries;
-		VkDeviceSize scratch_offset = 0;
+		VkAccelerationStructureBuildGeometryInfoKHR buildInfo = {};
+		VkAccelerationStructureBuildSizesInfoKHR sizeInfo = {};
+		VkAccelerationStructureCreateInfoKHR createInfo = {};
+		std::vector<VkAccelerationStructureGeometryKHR> geometries;
+		std::vector<uint32_t> primitiveCounts;
+		VkDeviceAddress scratch_address = 0;
 		VkDeviceAddress as_address = 0;
 
 		~BVH_Vulkan()
@@ -1198,6 +1199,10 @@ using namespace Vulkan_Internal;
 		bufferInfo.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 		bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 		bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+		if (device->features_1_2.bufferDeviceAddress == VK_TRUE)
+		{
+			bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+		}
 		bufferInfo.flags = 0;
 
 		VkResult res;
@@ -1208,6 +1213,14 @@ using namespace Vulkan_Internal;
 
 		res = vmaCreateBuffer(device->allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
 		assert(res == VK_SUCCESS);
+
+		if (bufferInfo.usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
+		{
+			VkBufferDeviceAddressInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+			info.buffer = internal_state->resource;
+			internal_state->address = vkGetBufferDeviceAddress(device->device, &info);
+		}
 
 		void* pData = internal_state->allocation->GetMappedData();
 		dataCur = dataBegin = reinterpret_cast<uint8_t*>(pData);
@@ -2268,21 +2281,23 @@ using namespace Vulkan_Internal;
 
 		// Check if VK_EXT_debug_utils is supported, which supersedes VK_EXT_Debug_Report
 		bool debugUtils = false;
-		for (auto& available_extension : availableInstanceExtensions)
+		if (debuglayer)
 		{
-			if (strcmp(available_extension.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
+			for (auto& available_extension : availableInstanceExtensions)
 			{
-				debugUtils = true;
-				extensionNames.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-				break;
+				if (strcmp(available_extension.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
+				{
+					debugUtils = true;
+					extensionNames.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+					break;
+				}
+			}
+
+			if (!debugUtils)
+			{
+				extensionNames.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 			}
 		}
-
-		if (!debugUtils)
-		{
-			extensionNames.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-		}
-
 		
 		extensionNames.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 #ifdef _WIN32
@@ -2298,13 +2313,11 @@ using namespace Vulkan_Internal;
 					extensionNames_sdl.cbegin(), extensionNames_sdl.cend());
 		}
 #endif // _WIN32
-
-		bool enableValidationLayers = debuglayer;
 		
-		if (enableValidationLayers && !checkValidationLayerSupport())
+		if (debuglayer && !checkValidationLayerSupport())
 		{
 			wiHelper::messageBox("Vulkan validation layer requested but not available!");
-			enableValidationLayers = false;
+			debuglayer = false;
 		}
 
 		// Create instance:
@@ -2315,7 +2328,7 @@ using namespace Vulkan_Internal;
 			createInfo.enabledExtensionCount = static_cast<uint32_t>(extensionNames.size());
 			createInfo.ppEnabledExtensionNames = extensionNames.data();
 			createInfo.enabledLayerCount = 0;
-			if (enableValidationLayers)
+			if (debuglayer)
 			{
 				createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
 				createInfo.ppEnabledLayerNames = validationLayers.data();
@@ -2325,7 +2338,7 @@ using namespace Vulkan_Internal;
 		}
 
 		// Register validation layer callback:
-		if (enableValidationLayers)
+		if (debuglayer)
 		{
 			if(debugUtils)
 			{
@@ -2390,12 +2403,14 @@ using namespace Vulkan_Internal;
 			device_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 			device_properties_1_1.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
 			device_properties_1_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES;
-			raytracing_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_KHR;
+			acceleration_structure_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR;
+			raytracing_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
 			mesh_shader_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
 
 			device_properties.pNext = &device_properties_1_1;
 			device_properties_1_1.pNext = &device_properties_1_2;
-			device_properties_1_2.pNext = &raytracing_properties;
+			device_properties_1_2.pNext = &acceleration_structure_properties;
+			acceleration_structure_properties.pNext = &raytracing_properties;
 			raytracing_properties.pNext = &mesh_shader_properties;
 
 			for (const auto& device : devices) 
@@ -2457,32 +2472,41 @@ using namespace Vulkan_Internal;
 			device_features2.pNext = &features_1_1;
 			features_1_1.pNext = &features_1_2;
 
-#ifdef ENABLE_RAYTRACING_EXTENSION
-			raytracing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_FEATURES_KHR;
-			if (checkDeviceExtensionSupport(VK_KHR_RAY_TRACING_EXTENSION_NAME, available_deviceExtensions))
-			{
-				capabilities |= GRAPHICSDEVICE_CAPABILITY_RAYTRACING;
-				SHADER_IDENTIFIER_SIZE = raytracing_properties.shaderGroupHandleSize;
-				enabled_deviceExtensions.push_back(VK_KHR_RAY_TRACING_EXTENSION_NAME);
-				enabled_deviceExtensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);
-				enabled_deviceExtensions.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
-				enabled_deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
-				features_1_2.pNext = &raytracing_features;
-			}
-#endif // ENABLE_RAYTRACING_EXTENSION
+			void** features_chain = &features_1_2.pNext;
 
-			mesh_shader_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
+			if (checkDeviceExtensionSupport(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, available_deviceExtensions))
+			{
+				enabled_deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+				acceleration_structure_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+				*features_chain = &acceleration_structure_features;
+				features_chain = &acceleration_structure_features.pNext;
+
+				if (checkDeviceExtensionSupport(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME, available_deviceExtensions))
+				{
+					SHADER_IDENTIFIER_SIZE = raytracing_properties.shaderGroupHandleSize;
+					enabled_deviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+					enabled_deviceExtensions.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
+					raytracing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+					*features_chain = &raytracing_features;
+					features_chain = &raytracing_features.pNext;
+				}
+
+				if (checkDeviceExtensionSupport(VK_KHR_RAY_QUERY_EXTENSION_NAME, available_deviceExtensions))
+				{
+					enabled_deviceExtensions.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+					enabled_deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+					raytracing_query_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
+					*features_chain = &raytracing_query_features;
+					features_chain = &raytracing_query_features.pNext;
+				}
+			}
+
 			if (checkDeviceExtensionSupport(VK_NV_MESH_SHADER_EXTENSION_NAME, available_deviceExtensions))
 			{
 				enabled_deviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
-				if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
-				{
-					raytracing_features.pNext = &mesh_shader_features;
-				}
-				else
-				{
-					features_1_2.pNext = &mesh_shader_features;
-				}
+				mesh_shader_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
+				*features_chain = &mesh_shader_features;
+				features_chain = &mesh_shader_features.pNext;
 			}
 
 			vkGetPhysicalDeviceFeatures2(physicalDevice, &device_features2);
@@ -2504,11 +2528,18 @@ using namespace Vulkan_Internal;
 			}
 			capabilities |= GRAPHICSDEVICE_CAPABILITY_RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS; // let's hope for the best...
 
-			if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+			if (raytracing_features.rayTracingPipeline == VK_TRUE)
 			{
+				assert(acceleration_structure_features.accelerationStructure == VK_TRUE);
 				assert(features_1_2.bufferDeviceAddress == VK_TRUE);
+				capabilities |= GRAPHICSDEVICE_CAPABILITY_RAYTRACING;
 			}
-
+			if (raytracing_query_features.rayQuery == VK_TRUE)
+			{
+				assert(acceleration_structure_features.accelerationStructure == VK_TRUE);
+				assert(features_1_2.bufferDeviceAddress == VK_TRUE);
+				//capabilities |= GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE;
+			}
 			if (mesh_shader_features.meshShader == VK_TRUE && mesh_shader_features.taskShader == VK_TRUE)
 			{
 				// Enable mesh shader here (problematic with certain driver versions, disabled by default): 
@@ -2541,11 +2572,13 @@ using namespace Vulkan_Internal;
 			createInfo.enabledExtensionCount = static_cast<uint32_t>(enabled_deviceExtensions.size());
 			createInfo.ppEnabledExtensionNames = enabled_deviceExtensions.data();
 
-			if (enableValidationLayers) {
+			if (debuglayer)
+			{
 				createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
 				createInfo.ppEnabledLayerNames = validationLayers.data();
 			}
-			else {
+			else
+			{
 				createInfo.enabledLayerCount = 0;
 			}
 
@@ -2582,12 +2615,12 @@ using namespace Vulkan_Internal;
 		{
 			createRayTracingPipelinesKHR = (PFN_vkCreateRayTracingPipelinesKHR)vkGetDeviceProcAddr(device, "vkCreateRayTracingPipelinesKHR");
 			createAccelerationStructureKHR = (PFN_vkCreateAccelerationStructureKHR)vkGetDeviceProcAddr(device, "vkCreateAccelerationStructureKHR");
-			bindAccelerationStructureMemoryKHR = (PFN_vkBindAccelerationStructureMemoryKHR)vkGetDeviceProcAddr(device, "vkBindAccelerationStructureMemoryKHR");
 			destroyAccelerationStructureKHR = (PFN_vkDestroyAccelerationStructureKHR)vkGetDeviceProcAddr(device, "vkDestroyAccelerationStructureKHR");
-			getAccelerationStructureMemoryRequirementsKHR = (PFN_vkGetAccelerationStructureMemoryRequirementsKHR)vkGetDeviceProcAddr(device, "vkGetAccelerationStructureMemoryRequirementsKHR");
+			getAccelerationStructureBuildSizesKHR = (PFN_vkGetAccelerationStructureBuildSizesKHR)vkGetDeviceProcAddr(device, "vkGetAccelerationStructureBuildSizesKHR");
 			getAccelerationStructureDeviceAddressKHR = (PFN_vkGetAccelerationStructureDeviceAddressKHR)vkGetDeviceProcAddr(device, "vkGetAccelerationStructureDeviceAddressKHR");
 			getRayTracingShaderGroupHandlesKHR = (PFN_vkGetRayTracingShaderGroupHandlesKHR)vkGetDeviceProcAddr(device, "vkGetRayTracingShaderGroupHandlesKHR");
-			cmdBuildAccelerationStructureKHR = (PFN_vkCmdBuildAccelerationStructureKHR)vkGetDeviceProcAddr(device, "vkCmdBuildAccelerationStructureKHR");
+			cmdBuildAccelerationStructuresKHR = (PFN_vkCmdBuildAccelerationStructuresKHR)vkGetDeviceProcAddr(device, "vkCmdBuildAccelerationStructuresKHR");
+			buildAccelerationStructuresKHR = (PFN_vkBuildAccelerationStructuresKHR)vkGetDeviceProcAddr(device, "vkBuildAccelerationStructuresKHR");
 			cmdTraceRaysKHR = (PFN_vkCmdTraceRaysKHR)vkGetDeviceProcAddr(device, "vkCmdTraceRaysKHR");
 		}
 
@@ -3239,7 +3272,7 @@ using namespace Vulkan_Internal;
 		}
 		if (pBuffer->desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
 		{
-			bufferInfo.usage |= VK_BUFFER_USAGE_RAY_TRACING_BIT_KHR;
+			bufferInfo.usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
 		}
 		if (features_1_2.bufferDeviceAddress == VK_TRUE)
 		{
@@ -3275,6 +3308,14 @@ using namespace Vulkan_Internal;
 
 		res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
 		assert(res == VK_SUCCESS);
+
+		if (bufferInfo.usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
+		{
+			VkBufferDeviceAddressInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+			info.buffer = internal_state->resource;
+			internal_state->address = vkGetBufferDeviceAddress(device, &info);
+		}
 
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
@@ -4483,60 +4524,63 @@ using namespace Vulkan_Internal;
 
 		bvh->desc = *pDesc;
 
-		VkAccelerationStructureCreateInfoKHR info = {};
-		info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
-
-		if (pDesc->_flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE)
+		internal_state->buildInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+		internal_state->buildInfo.flags = 0;
+		if (bvh->desc._flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE)
 		{
-			info.flags |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
+			internal_state->buildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
 		}
-		if (pDesc->_flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_COMPACTION)
+		if (bvh->desc._flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_COMPACTION)
 		{
-			info.flags |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR;
+			internal_state->buildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR;
 		}
-		if (pDesc->_flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE)
+		if (bvh->desc._flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE)
 		{
-			info.flags |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+			internal_state->buildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
 		}
-		if (pDesc->_flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD)
+		if (bvh->desc._flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD)
 		{
-			info.flags |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR;
+			internal_state->buildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR;
 		}
-		if (pDesc->_flags & RaytracingAccelerationStructureDesc::FLAG_MINIMIZE_MEMORY)
+		if (bvh->desc._flags & RaytracingAccelerationStructureDesc::FLAG_MINIMIZE_MEMORY)
 		{
-			info.flags |= VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_KHR;
+			internal_state->buildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_KHR;
 		}
 
 		switch (pDesc->type)
 		{
 		case RaytracingAccelerationStructureDesc::BOTTOMLEVEL:
 		{
-			info.type = VkAccelerationStructureTypeKHR::VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+			internal_state->buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
 
 			for (auto& x : pDesc->bottomlevel.geometries)
 			{
 				internal_state->geometries.emplace_back();
 				auto& geometry = internal_state->geometries.back();
 				geometry = {};
-				geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
+				geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
 
-				if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_USE_TRANSFORM)
-				{
-					geometry.allowsTransforms = VK_TRUE;
-				}
+				internal_state->primitiveCounts.emplace_back();
+				uint32_t& primitiveCount = internal_state->primitiveCounts.back();
 
 				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES)
 				{
 					geometry.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-					geometry.maxPrimitiveCount = x.triangles.indexCount / 3;
-					geometry.indexType = x.triangles.indexFormat == INDEXFORMAT_16BIT ? VkIndexType::VK_INDEX_TYPE_UINT16 : VkIndexType::VK_INDEX_TYPE_UINT32;
-					geometry.maxVertexCount = x.triangles.vertexCount;
-					geometry.vertexFormat = _ConvertFormat(x.triangles.vertexFormat);
+					geometry.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+					geometry.geometry.triangles.indexType = x.triangles.indexFormat == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
+					geometry.geometry.triangles.maxVertex = x.triangles.vertexCount;
+					geometry.geometry.triangles.vertexStride = x.triangles.vertexStride;
+					geometry.geometry.triangles.vertexFormat = _ConvertFormat(x.triangles.vertexFormat);
+
+					primitiveCount = x.triangles.indexCount / 3;
 				}
 				else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::PROCEDURAL_AABBS)
 				{
 					geometry.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR;
-					geometry.maxPrimitiveCount = x.aabbs.count;
+					geometry.geometry.aabbs.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
+					geometry.geometry.aabbs.stride = sizeof(float) * 6; // min - max corners
+
+					primitiveCount = x.aabbs.count;
 				}
 			}
 
@@ -4545,54 +4589,44 @@ using namespace Vulkan_Internal;
 		break;
 		case RaytracingAccelerationStructureDesc::TOPLEVEL:
 		{
-			info.type = VkAccelerationStructureTypeKHR::VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+			internal_state->buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
 
 			internal_state->geometries.emplace_back();
 			auto& geometry = internal_state->geometries.back();
 			geometry = {};
-			geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
+			geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
 			geometry.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
-			geometry.allowsTransforms = VK_TRUE;
-			geometry.maxPrimitiveCount = pDesc->toplevel.count;
+			geometry.geometry.instances.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
+			geometry.geometry.instances.arrayOfPointers = VK_FALSE;
+
+			internal_state->primitiveCounts.emplace_back();
+			uint32_t& primitiveCount = internal_state->primitiveCounts.back();
+			primitiveCount = pDesc->toplevel.count;
 		}
 		break;
 		}
 
-		info.pGeometryInfos = internal_state->geometries.data();
-		info.maxGeometryCount = (uint32_t)internal_state->geometries.size();
-		internal_state->info = info;
+		internal_state->buildInfo.geometryCount = (uint32_t)internal_state->geometries.size();
+		internal_state->buildInfo.pGeometries = internal_state->geometries.data();
 
-		VkResult res = createAccelerationStructureKHR(device, &info, nullptr, &internal_state->resource);
-		assert(res == VK_SUCCESS);
+		internal_state->sizeInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
 
-		VkAccelerationStructureMemoryRequirementsInfoKHR meminfo = {};
-		meminfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_KHR;
-		meminfo.accelerationStructure = internal_state->resource;
+		// Compute memory requirements:
+		getAccelerationStructureBuildSizesKHR(
+			device,
+			VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+			&internal_state->buildInfo,
+			internal_state->primitiveCounts.data(),
+			&internal_state->sizeInfo
+		);
 
-		meminfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_KHR;
-		VkMemoryRequirements2 memrequirements = {};
-		memrequirements.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
-		getAccelerationStructureMemoryRequirementsKHR(device, &meminfo, &memrequirements);
-
-
-		meminfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR;
-		VkMemoryRequirements2 memrequirements_scratch_build = {};
-		memrequirements_scratch_build.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
-		getAccelerationStructureMemoryRequirementsKHR(device, &meminfo, &memrequirements_scratch_build);
-
-		meminfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_UPDATE_SCRATCH_KHR;
-		VkMemoryRequirements2 memrequirements_scratch_update = {};
-		memrequirements_scratch_update.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
-		getAccelerationStructureMemoryRequirementsKHR(device, &meminfo, &memrequirements_scratch_update);
-
-
-		// Main backing memory:
+		// Backing memory as buffer:
 		VkBufferCreateInfo bufferInfo = {};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = memrequirements.memoryRequirements.size + 
-			std::max(memrequirements_scratch_build.memoryRequirements.size, memrequirements_scratch_update.memoryRequirements.size);
-		bufferInfo.usage = VK_BUFFER_USAGE_RAY_TRACING_BIT_KHR | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-		assert(features_1_2.bufferDeviceAddress == VK_TRUE);
+		bufferInfo.size = internal_state->sizeInfo.accelerationStructureSize +
+			std::max(internal_state->sizeInfo.buildScratchSize, internal_state->sizeInfo.updateScratchSize);
+		bufferInfo.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR;
+		bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; // scratch
 		bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 		bufferInfo.flags = 0;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -4601,22 +4635,52 @@ using namespace Vulkan_Internal;
 		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 		allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 
-		res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->buffer, &internal_state->allocation, nullptr);
+		VkResult res = vmaCreateBuffer(
+			allocationhandler->allocator,
+			&bufferInfo,
+			&allocInfo,
+			&internal_state->buffer,
+			&internal_state->allocation,
+			nullptr
+		);
 		assert(res == VK_SUCCESS);
 
-		VkBindAccelerationStructureMemoryInfoKHR bind_info = {};
-		bind_info.sType = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_KHR;
-		bind_info.accelerationStructure = internal_state->resource;
-		bind_info.memory = internal_state->allocation->GetMemory();
-		res = bindAccelerationStructureMemoryKHR(device, 1, &bind_info);
+		// Create the acceleration structure:
+		internal_state->createInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+		internal_state->createInfo.type = internal_state->buildInfo.type;
+		internal_state->createInfo.buffer = internal_state->buffer;
+		internal_state->createInfo.size = internal_state->sizeInfo.accelerationStructureSize;
+
+		res = createAccelerationStructureKHR(
+			device,
+			&internal_state->createInfo,
+			nullptr,
+			&internal_state->resource
+		);
 		assert(res == VK_SUCCESS);
 
+		// Get the device address for the acceleration structure:
 		VkAccelerationStructureDeviceAddressInfoKHR addrinfo = {};
 		addrinfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
 		addrinfo.accelerationStructure = internal_state->resource;
 		internal_state->as_address = getAccelerationStructureDeviceAddressKHR(device, &addrinfo);
 
-		internal_state->scratch_offset = memrequirements.memoryRequirements.size;
+		// Get scratch address:
+		VkBufferDeviceAddressInfo addressinfo = {};
+		addressinfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+		addressinfo.buffer = internal_state->buffer;
+		internal_state->scratch_address = vkGetBufferDeviceAddress(device, &addressinfo)
+			+ internal_state->sizeInfo.accelerationStructureSize;
+
+#if 0
+		buildAccelerationStructuresKHR(
+			device,
+			VK_NULL_HANDLE,
+			1,
+			&info,
+			&pRangeInfo
+		);
+#endif
 
 		return res == VK_SUCCESS;
 	}
@@ -4631,8 +4695,6 @@ using namespace Vulkan_Internal;
 		VkRayTracingPipelineCreateInfoKHR info = {};
 		info.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
 		info.flags = 0;
-
-		info.libraries.sType = VK_STRUCTURE_TYPE_PIPELINE_LIBRARY_CREATE_INFO_KHR;
 
 		std::vector<VkPipelineShaderStageCreateInfo> stages;
 		for (auto& x : pDesc->shaderlibraries)
@@ -4695,7 +4757,7 @@ using namespace Vulkan_Internal;
 		info.groupCount = (uint32_t)groups.size();
 		info.pGroups = groups.data();
 
-		info.maxRecursionDepth = pDesc->max_trace_recursion_depth;
+		info.maxPipelineRayRecursionDepth = pDesc->max_trace_recursion_depth;
 
 		if (pDesc->rootSignature == nullptr)
 		{
@@ -4706,16 +4768,24 @@ using namespace Vulkan_Internal;
 			info.layout = to_internal(pDesc->rootSignature)->pipelineLayout;
 		}
 
-		VkRayTracingPipelineInterfaceCreateInfoKHR library_interface = {};
-		library_interface.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_INTERFACE_CREATE_INFO_KHR;
-		library_interface.maxPayloadSize = pDesc->max_payload_size_in_bytes;
-		library_interface.maxAttributeSize = pDesc->max_attribute_size_in_bytes;
-		library_interface.maxCallableSize = 0;
+		//VkRayTracingPipelineInterfaceCreateInfoKHR library_interface = {};
+		//library_interface.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_INTERFACE_CREATE_INFO_KHR;
+		//library_interface.maxPipelineRayPayloadSize = pDesc->max_payload_size_in_bytes;
+		//library_interface.maxPipelineRayHitAttributeSize = pDesc->max_attribute_size_in_bytes;
+		//info.pLibraryInterface = &library_interface;
 
 		info.basePipelineHandle = VK_NULL_HANDLE;
 		info.basePipelineIndex = 0;
 
-		VkResult res = createRayTracingPipelinesKHR(device, VK_NULL_HANDLE, 1, &info, nullptr, &internal_state->pipeline);
+		VkResult res = createRayTracingPipelinesKHR(
+			device,
+			VK_NULL_HANDLE,
+			VK_NULL_HANDLE,
+			1,
+			&info,
+			nullptr,
+			&internal_state->pipeline
+		);
 		assert(res == VK_SUCCESS);
 
 		return res == VK_SUCCESS;
@@ -6530,51 +6600,40 @@ using namespace Vulkan_Internal;
 	{
 		auto dst_internal = to_internal(dst);
 
-		VkAccelerationStructureBuildGeometryInfoKHR info = {};
-		info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-		info.flags = dst_internal->info.flags;
+		VkAccelerationStructureBuildGeometryInfoKHR info = dst_internal->buildInfo;
 		info.dstAccelerationStructure = dst_internal->resource;
 		info.srcAccelerationStructure = VK_NULL_HANDLE;
-		info.update = VK_FALSE;
-		info.geometryArrayOfPointers = VK_FALSE;
+		info.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
 
-		VkBufferDeviceAddressInfo addressinfo = {};
-		addressinfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
-		addressinfo.buffer = dst_internal->buffer;
-		info.scratchData.deviceAddress = vkGetBufferDeviceAddress(device, &addressinfo) + dst_internal->scratch_offset;
+		info.scratchData.deviceAddress = dst_internal->scratch_address;
 
 		if (src != nullptr)
 		{
-			info.update = VK_TRUE;
+			info.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR;
 
 			auto src_internal = to_internal(src);
 			info.srcAccelerationStructure = src_internal->resource;
 		}
 
-		std::vector<VkAccelerationStructureGeometryKHR> geometries;
-		std::vector<VkAccelerationStructureBuildOffsetInfoKHR> offsetinfos;
+		std::vector<VkAccelerationStructureGeometryKHR> geometries = dst_internal->geometries; // copy!
+		std::vector<VkAccelerationStructureBuildRangeInfoKHR> ranges;
+
+		info.type = dst_internal->createInfo.type;
+		info.geometryCount = (uint32_t)geometries.size();
+		ranges.reserve(info.geometryCount);
 
 		switch (dst->desc.type)
 		{
 		case RaytracingAccelerationStructureDesc::BOTTOMLEVEL:
 		{
-			info.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-			info.geometryCount = (uint32_t)dst->desc.bottomlevel.geometries.size();
-			geometries.reserve(info.geometryCount);
-			offsetinfos.reserve(info.geometryCount);
-
 			size_t i = 0;
 			for (auto& x : dst->desc.bottomlevel.geometries)
 			{
-				geometries.emplace_back();
-				offsetinfos.emplace_back();
+				auto& geometry = geometries[i];
 
-				auto& geometry = geometries.back();
-				geometry = {};
-				geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-
-				auto& offset = offsetinfos.back();
-				offset = {};
+				ranges.emplace_back();
+				auto& range = ranges.back();
+				range = {};
 
 				if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE)
 				{
@@ -6587,78 +6646,57 @@ using namespace Vulkan_Internal;
 
 				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES)
 				{
-					geometry.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-					geometry.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-					geometry.geometry.triangles.vertexStride = x.triangles.vertexStride;
-					geometry.geometry.triangles.vertexFormat = _ConvertFormat(x.triangles.vertexFormat);
-					geometry.geometry.triangles.indexType = x.triangles.indexFormat == INDEXFORMAT_16BIT ? VkIndexType::VK_INDEX_TYPE_UINT16 : VkIndexType::VK_INDEX_TYPE_UINT32;
-
-					addressinfo.buffer = to_internal(&x.triangles.vertexBuffer)->resource;
-					geometry.geometry.triangles.vertexData.deviceAddress = vkGetBufferDeviceAddress(device, &addressinfo) + 
+					geometry.geometry.triangles.vertexData.deviceAddress = to_internal(&x.triangles.vertexBuffer)->address +
 						x.triangles.vertexByteOffset;
 
-					addressinfo.buffer = to_internal(&x.triangles.indexBuffer)->resource;
-					geometry.geometry.triangles.indexData.deviceAddress = vkGetBufferDeviceAddress(device, &addressinfo) +
+					geometry.geometry.triangles.indexData.deviceAddress = to_internal(&x.triangles.indexBuffer)->address +
 						x.triangles.indexOffset * (x.triangles.indexFormat == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? sizeof(uint16_t) : sizeof(uint32_t));
 
 					if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_USE_TRANSFORM)
 					{
-						addressinfo.buffer = to_internal(&x.triangles.transform3x4Buffer)->resource;
-						geometry.geometry.triangles.transformData.deviceAddress = vkGetBufferDeviceAddress(device, &addressinfo);
-						offset.transformOffset = x.triangles.transform3x4BufferOffset;
+						geometry.geometry.triangles.transformData.deviceAddress = to_internal(&x.triangles.transform3x4Buffer)->address;
+						range.transformOffset = x.triangles.transform3x4BufferOffset;
 					}
 
-					offset.primitiveCount = x.triangles.indexCount / 3;
+					range.primitiveCount = x.triangles.indexCount / 3;
+					range.primitiveOffset = 0;
 				}
 				else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::PROCEDURAL_AABBS)
 				{
-					geometry.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR;
-					geometry.geometry.aabbs.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
-					geometry.geometry.aabbs.stride = x.aabbs.stride;
+					geometry.geometry.aabbs.data.deviceAddress = to_internal(&x.aabbs.aabbBuffer)->address;
 
-					addressinfo.buffer = to_internal(&x.aabbs.aabbBuffer)->resource;
-					geometry.geometry.aabbs.data.deviceAddress = vkGetBufferDeviceAddress(device, &addressinfo);
-
-					offset.primitiveCount = x.aabbs.offset;
-					offset.primitiveOffset = x.aabbs.offset;
+					range.primitiveCount = x.aabbs.count;
+					range.primitiveOffset = x.aabbs.offset;
 				}
+
+				i++;
 			}
 		}
 		break;
 		case RaytracingAccelerationStructureDesc::TOPLEVEL:
 		{
-			info.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-			info.geometryCount = 1;
-			geometries.reserve(info.geometryCount);
-			offsetinfos.reserve(info.geometryCount);
-
-			geometries.emplace_back();
-			offsetinfos.emplace_back();
-
 			auto& geometry = geometries.back();
-			geometry = {};
-			geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-			geometry.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
-			geometry.geometry.instances.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
-			geometry.geometry.instances.arrayOfPointers = VK_FALSE;
+			geometry.geometry.instances.data.deviceAddress = to_internal(&dst->desc.toplevel.instanceBuffer)->address;
 
-			addressinfo.buffer = to_internal(&dst->desc.toplevel.instanceBuffer)->resource;
-			geometry.geometry.instances.data.deviceAddress = vkGetBufferDeviceAddress(device, &addressinfo);
-
-			auto& offset = offsetinfos.back();
-			offset = {};
-			offset.primitiveCount = dst->desc.toplevel.count;
-			offset.primitiveOffset = dst->desc.toplevel.offset;
+			ranges.emplace_back();
+			auto& range = ranges.back();
+			range = {};
+			range.primitiveCount = dst->desc.toplevel.count;
+			range.primitiveOffset = dst->desc.toplevel.offset;
 		}
 		break;
 		}
 
-		VkAccelerationStructureGeometryKHR* pGeomtries = geometries.data();
-		info.ppGeometries = &pGeomtries;
+		info.pGeometries = geometries.data();
 
-		VkAccelerationStructureBuildOffsetInfoKHR* pOffsetinfo = offsetinfos.data();
+		VkAccelerationStructureBuildRangeInfoKHR* pRangeInfo = ranges.data();
 
-		cmdBuildAccelerationStructureKHR(GetDirectCommandList(cmd), 1, &info, &pOffsetinfo);
+		cmdBuildAccelerationStructuresKHR(
+			GetDirectCommandList(cmd),
+			1,
+			&info,
+			&pRangeInfo
+		);
 	}
 	void GraphicsDevice_Vulkan::BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd)
 	{
@@ -6673,27 +6711,27 @@ using namespace Vulkan_Internal;
 	{
 		preraytrace(cmd);
 
-		VkStridedBufferRegionKHR raygen = {};
-		raygen.buffer = desc->raygeneration.buffer ? to_internal(desc->raygeneration.buffer)->resource : VK_NULL_HANDLE;
-		raygen.offset = desc->raygeneration.offset;
+		VkStridedDeviceAddressRegionKHR raygen = {};
+		raygen.deviceAddress = desc->raygeneration.buffer ? to_internal(desc->raygeneration.buffer)->address : 0;
+		raygen.deviceAddress += desc->raygeneration.offset;
 		raygen.size = desc->raygeneration.size;
 		raygen.stride = desc->raygeneration.stride;
-
-		VkStridedBufferRegionKHR miss = {};
-		miss.buffer = desc->miss.buffer ? to_internal(desc->miss.buffer)->resource : VK_NULL_HANDLE;
-		miss.offset = desc->miss.offset;
+		
+		VkStridedDeviceAddressRegionKHR miss = {};
+		miss.deviceAddress = desc->miss.buffer ? to_internal(desc->miss.buffer)->address : 0;
+		miss.deviceAddress += desc->miss.offset;
 		miss.size = desc->miss.size;
 		miss.stride = desc->miss.stride;
 
-		VkStridedBufferRegionKHR hitgroup = {};
-		hitgroup.buffer = desc->hitgroup.buffer ? to_internal(desc->hitgroup.buffer)->resource : VK_NULL_HANDLE;
-		hitgroup.offset = desc->hitgroup.offset;
+		VkStridedDeviceAddressRegionKHR hitgroup = {};
+		hitgroup.deviceAddress = desc->hitgroup.buffer ? to_internal(desc->hitgroup.buffer)->address : 0;
+		hitgroup.deviceAddress += desc->hitgroup.offset;
 		hitgroup.size = desc->hitgroup.size;
 		hitgroup.stride = desc->hitgroup.stride;
 
-		VkStridedBufferRegionKHR callable = {};
-		callable.buffer = desc->callable.buffer ? to_internal(desc->callable.buffer)->resource : VK_NULL_HANDLE;
-		callable.offset = desc->callable.offset;
+		VkStridedDeviceAddressRegionKHR callable = {};
+		callable.deviceAddress = desc->callable.buffer ? to_internal(desc->callable.buffer)->address : 0;
+		callable.deviceAddress += desc->callable.offset;
 		callable.size = desc->callable.size;
 		callable.stride = desc->callable.stride;
 
