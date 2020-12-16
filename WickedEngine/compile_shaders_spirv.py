@@ -70,6 +70,8 @@ for item in root.iter():
             cmd += " -fvk-t-shift 1000 all "
             cmd += " -fvk-u-shift 2000 all "
             cmd += " -fvk-s-shift 3000 all "
+
+            cmd += " -Vd " #DISABLE VALIDATION: There is currently a validation bug with raytracing RayTCurrent()!!!
             
             cmd += " -D SPIRV "
 
