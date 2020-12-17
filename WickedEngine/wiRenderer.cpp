@@ -9431,10 +9431,9 @@ void Postprocess_RTAO(
 		rootSignature = RootSignature();
 		rootSignature.tables.push_back(descriptorTable);
 		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_MATERIAL]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_TEXTURE_BASECOLOR]);
+		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_TEXTURES]);
 		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_INDEXBUFFER]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UV0]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UV1]);
+		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS]);
 		device->CreateRootSignature(&rootSignature);
 
 		shaders[RTTYPE_RTAO].rootSignature = &rootSignature;
@@ -9780,12 +9779,10 @@ void Postprocess_RTReflection(
 		rootSignature = RootSignature();
 		rootSignature.tables.push_back(descriptorTable);
 		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_MATERIAL]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_TEXTURE_BASECOLOR]);
+		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_TEXTURES]);
 		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_INDEXBUFFER]);
 		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_POSITION_NORMAL_WIND]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UV0]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UV1]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_TEXTURE_EMISSIVE]);
+		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS]);
 		device->CreateRootSignature(&rootSignature);
 
 		shaders[RTTYPE_RTREFLECTION].rootSignature = &rootSignature;

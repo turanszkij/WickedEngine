@@ -13,12 +13,10 @@ RAYTRACINGACCELERATIONSTRUCTURE(scene_acceleration_structure, TEXSLOT_ACCELERATI
 RWTEXTURE2D(output, float4, 0);
 
 ConstantBuffer<ShaderMaterial> subsets_material[] : register(b0, space1);
-Texture2D<float4> subsets_texture_baseColor[] : register(t0, space2);
+Texture2D<float4> subsets_textures[] : register(t0, space2);
 Buffer<uint> subsets_indexBuffer[] : register(t0, space3);
 ByteAddressBuffer subsets_vertexBuffer_POS[] : register(t0, space4);
-Buffer<float2> subsets_vertexBuffer_UV0[] : register(t0, space5);
-Buffer<float2> subsets_vertexBuffer_UV1[] : register(t0, space6);
-Texture2D<float4> subsets_texture_emissivemap[] : register(t0, space7);
+Buffer<float2> subsets_vertexBuffer_UVSETS[] : register(t0, space5);
 
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
 struct RayPayload
@@ -118,12 +116,12 @@ void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
     uint i1 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 1];
     uint i2 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 2];
     float4 uv0, uv1, uv2;
-    uv0.xy = subsets_vertexBuffer_UV0[descriptorIndex][i0];
-    uv1.xy = subsets_vertexBuffer_UV0[descriptorIndex][i1];
-    uv2.xy = subsets_vertexBuffer_UV0[descriptorIndex][i2];
-    uv0.zw = subsets_vertexBuffer_UV1[descriptorIndex][i0];
-    uv1.zw = subsets_vertexBuffer_UV1[descriptorIndex][i1];
-    uv2.zw = subsets_vertexBuffer_UV1[descriptorIndex][i2];
+    uv0.xy = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i0];
+    uv1.xy = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i1];
+    uv2.xy = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i2];
+    uv0.zw = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i0];
+	uv1.zw = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i1];
+	uv2.zw = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i2];
     float3 n0, n1, n2;
     n0 = unpack_unitvector(subsets_vertexBuffer_POS[descriptorIndex].Load4(i0 * 16).w);
     n1 = unpack_unitvector(subsets_vertexBuffer_POS[descriptorIndex].Load4(i1 * 16).w);
@@ -140,7 +138,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
     if (material.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
     {
         const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
-        baseColor = subsets_texture_baseColor[descriptorIndex].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 2);
+        baseColor = subsets_textures[descriptorIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_BASECOLOR].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 2);
         baseColor.rgb = DEGAMMA(baseColor.rgb);
     }
     else
@@ -154,7 +152,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
 	if (material.uvset_emissiveMap >= 0)
 	{
 		const float2 UV_emissiveMap = material.uvset_emissiveMap == 0 ? uvsets.xy : uvsets.zw;
-		float4 emissiveMap = subsets_texture_emissivemap[descriptorIndex].SampleLevel(sampler_linear_wrap, UV_emissiveMap, 2);
+		float4 emissiveMap = subsets_textures[descriptorIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_EMISSIVE].SampleLevel(sampler_linear_wrap, UV_emissiveMap, 2);
 		emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
 		emissiveColor *= emissiveMap;
 	}
@@ -222,19 +220,19 @@ void RTReflection_AnyHit(inout RayPayload payload, in MyAttributes attr)
     float2 uv0, uv1, uv2;
     if (material.uvset_baseColorMap == 0)
     {
-        uv0 = subsets_vertexBuffer_UV0[descriptorIndex][i0];
-        uv1 = subsets_vertexBuffer_UV0[descriptorIndex][i1];
-        uv2 = subsets_vertexBuffer_UV0[descriptorIndex][i2];
+        uv0 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i0];
+        uv1 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i1];
+        uv2 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i2];
     }
     else
     {
-        uv0 = subsets_vertexBuffer_UV1[descriptorIndex][i0];
-        uv1 = subsets_vertexBuffer_UV1[descriptorIndex][i1];
-        uv2 = subsets_vertexBuffer_UV1[descriptorIndex][i2];
+        uv0 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i0];
+		uv1 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i1];
+		uv2 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i2];
     }
 
     float2 uv = uv0 * w + uv1 * u + uv2 * v;
-    float alpha = subsets_texture_baseColor[descriptorIndex].SampleLevel(sampler_point_wrap, uv, 2).a;
+    float alpha = subsets_textures[descriptorIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_BASECOLOR].SampleLevel(sampler_point_wrap, uv, 2).a;
 
     if (alpha < 0.9)
     {

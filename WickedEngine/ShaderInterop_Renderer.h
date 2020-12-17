@@ -202,6 +202,15 @@ static const uint TILED_CULLING_GRANULARITY = TILED_CULLING_BLOCKSIZE / TILED_CU
 
 static const int impostorCaptureAngles = 36;
 
+// More can be added later for shader access when needed:
+static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_BASECOLOR = 0;
+static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_EMISSIVE = 1;
+static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT = 2;
+
+static const uint VERTEXBUFFER_DESCRIPTOR_UV_0 = 0;
+static const uint VERTEXBUFFER_DESCRIPTOR_UV_1 = 1;
+static const uint VERTEXBUFFER_DESCRIPTOR_UV_COUNT = 2;
+
 // These option bits can be read from g_xFrame_Options constant buffer value:
 static const uint OPTION_BIT_TEMPORALAA_ENABLED = 1 << 0;
 static const uint OPTION_BIT_TRANSPARENTSHADOWS_ENABLED = 1 << 1;
