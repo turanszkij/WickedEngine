@@ -1131,6 +1131,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\include\spirv\unified1\spirv.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiBlueNoise.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">

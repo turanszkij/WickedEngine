@@ -2,9 +2,25 @@
 #ifndef WI_STOCHASTICSSR_HF
 #define WI_STOCHASTICSSR_HF
 
+// Stochastic Screen Space Reflections reference:
+// https://www.ea.com/frostbite/news/stochastic-screen-space-reflections
+
+
+#define GGX_SAMPLE_VISIBLE
+
+// Bias used on GGX importance sample when denoising, to remove part of the tale that create a lot more noise.
+#define GGX_IMPORTANCE_SAMPLE_BIAS 0.1
+
 // Shared SSR settings:
 static const float SSRMaxRoughness = 1.0f; // Specify max roughness, this can improve performance in complex scenes.
+static const float SSRIntensity = 1.0f;
+static const float SSRResolveConeMip = 1.0f; // Control overall filtering of the importance sampling. 
+static const float SSRResolveSpatialSize = 3.0f; // Seems to work best with the temporal pass in the [-3;3] range
+static const float SSRBlendScreenEdgeFade = 5.0f;
+
+// Temporary
 static const float BRDFBias = 0.7f;
+
 
 float ComputeRoughnessMaskScale(in float maxRoughness)
 {
