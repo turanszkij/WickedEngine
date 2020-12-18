@@ -25,6 +25,7 @@
 #include "wiSpinLock.h"
 #include "wiEvent.h"
 #include "wiPlatform.h"
+#include "wiBlueNoise.h"
 
 #include <algorithm>
 #include <unordered_map>
@@ -10002,9 +10003,12 @@ void Postprocess_SSR(
 
 	static TextureDesc initialized_desc;
 	static Texture texture_raytrace;
-	static Texture texture_mask;
 	static Texture texture_resolve;
 	static Texture texture_temporal[2];
+
+	static GPUBuffer sobolSequenceBuffer;
+	static GPUBuffer scramblingTileBuffer;
+	static GPUBuffer rankingTileBuffer;
 
 	// Initialize once
 	if (initialized_desc.Width != desc.Width || initialized_desc.Height != desc.Height)
@@ -10018,8 +10022,6 @@ void Postprocess_SSR(
 		cast_desc.Format = FORMAT_R16G16B16A16_FLOAT;
 		cast_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		device->CreateTexture(&cast_desc, nullptr, &texture_raytrace);
-		cast_desc.Format = FORMAT_R16G16_FLOAT;
-		device->CreateTexture(&cast_desc, nullptr, &texture_mask);
 
 		TextureDesc buffer_desc;
 		buffer_desc.type = TextureDesc::TEXTURE_2D;
@@ -10030,6 +10032,45 @@ void Postprocess_SSR(
 		device->CreateTexture(&buffer_desc, nullptr, &texture_resolve);
 		device->CreateTexture(&buffer_desc, nullptr, &texture_temporal[0]);
 		device->CreateTexture(&buffer_desc, nullptr, &texture_temporal[1]);
+
+		// Blue noise buffers
+
+		GPUBufferDesc bd;
+		bd.Usage = USAGE_DEFAULT; // Long lifetime, fast read, slow update
+		bd.CPUAccessFlags = 0;
+		bd.BindFlags = BIND_SHADER_RESOURCE; // Read only
+		bd.MiscFlags = 0;
+		bd.StructureByteStride = sizeof(uint32_t);
+		bd.Format = FORMAT_R32_UINT;
+
+		SubresourceData initData;
+
+		// Sobol
+
+		const uint32_t sobolSequenceLength = uint32_t(sizeof(wiBlueNoise::sobol_256spp_256d) / sizeof(wiBlueNoise::sobol_256spp_256d[0]));
+		bd.ByteWidth = bd.StructureByteStride * sobolSequenceLength;
+
+		initData.pSysMem = &wiBlueNoise::sobol_256spp_256d;
+		device->CreateBuffer(&bd, &initData, &sobolSequenceBuffer);
+		device->SetName(&sobolSequenceBuffer, "blueNoise_sobolSequenceBuffer");
+
+		// Scrambling tile
+
+		const uint32_t scramblingTileLength = uint32_t(sizeof(wiBlueNoise::scramblingTile) / sizeof(wiBlueNoise::scramblingTile[0]));
+		bd.ByteWidth = bd.StructureByteStride * scramblingTileLength;
+
+		initData.pSysMem = &wiBlueNoise::scramblingTile;
+		device->CreateBuffer(&bd, &initData, &scramblingTileBuffer);
+		device->SetName(&scramblingTileBuffer, "blueNoise_scramblingTileSequence");
+
+		// Ranking tile
+
+		const uint32_t rankingTileLength = uint32_t(sizeof(wiBlueNoise::rankingTile) / sizeof(wiBlueNoise::rankingTile[0]));
+		bd.ByteWidth = bd.StructureByteStride * rankingTileLength;
+
+		initData.pSysMem = &wiBlueNoise::rankingTile;
+		device->CreateBuffer(&bd, &initData, &rankingTileBuffer);
+		device->SetName(&rankingTileBuffer, "blueNoise_rankingTileSequence");
 	}
 
 	// Switch to half res
@@ -10053,10 +10094,12 @@ void Postprocess_SSR(
 		device->BindResource(CS, &gbuffer[GBUFFER_COLOR_ROUGHNESS], TEXSLOT_GBUFFER0, cmd);
 		device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &sobolSequenceBuffer, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &scramblingTileBuffer, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(CS, &rankingTileBuffer, TEXSLOT_ONDEMAND3, cmd);
 
 		const GPUResource* uavs[] = {
 			&texture_raytrace,
-			&texture_mask,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
@@ -10092,8 +10135,7 @@ void Postprocess_SSR(
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 		device->BindResource(CS, &texture_raytrace, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &texture_mask, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &input, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(CS, &input, TEXSLOT_ONDEMAND1, cmd);
 
 		const GPUResource* uavs[] = {
 			&texture_resolve,
