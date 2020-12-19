@@ -5070,6 +5070,7 @@ void DrawScene(
 		return;
 
 	device->EventBegin("DrawScene", cmd);
+	device->BindShadingRate(SHADING_RATE_1X1, cmd);
 
 	BindCommonResources(cmd);
 	BindShadowmaps(PS, cmd);

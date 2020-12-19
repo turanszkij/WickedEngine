@@ -48,6 +48,8 @@ namespace wiGraphics
 	PFN_vkCmdDrawMeshTasksNV GraphicsDevice_Vulkan::cmdDrawMeshTasksNV = nullptr;
 	PFN_vkCmdDrawMeshTasksIndirectNV GraphicsDevice_Vulkan::cmdDrawMeshTasksIndirectNV = nullptr;
 
+	PFN_vkCmdSetFragmentShadingRateKHR GraphicsDevice_Vulkan::cmdSetFragmentShadingRateKHR = nullptr;
+
 namespace Vulkan_Internal
 {
 	// Converters:
@@ -453,6 +455,8 @@ namespace Vulkan_Internal
 			return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 		case wiGraphics::IMAGE_LAYOUT_COPY_DST:
 			return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		case wiGraphics::IMAGE_LAYOUT_SHADING_RATE_SOURCE:
+			return VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
 		}
 		return VK_IMAGE_LAYOUT_UNDEFINED;
 	}
@@ -2131,7 +2135,8 @@ using namespace Vulkan_Internal;
 					VK_DYNAMIC_STATE_VIEWPORT,
 					VK_DYNAMIC_STATE_SCISSOR,
 					VK_DYNAMIC_STATE_STENCIL_REFERENCE,
-					VK_DYNAMIC_STATE_BLEND_CONSTANTS
+					VK_DYNAMIC_STATE_BLEND_CONSTANTS,
+					VK_DYNAMIC_STATE_FRAGMENT_SHADING_RATE_KHR
 				};
 
 				VkPipelineDynamicStateCreateInfo dynamicState = {};
@@ -2406,12 +2411,14 @@ using namespace Vulkan_Internal;
 			acceleration_structure_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR;
 			raytracing_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
 			mesh_shader_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
+			fragment_shading_rate_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_PROPERTIES_KHR;
 
 			device_properties.pNext = &device_properties_1_1;
 			device_properties_1_1.pNext = &device_properties_1_2;
 			device_properties_1_2.pNext = &acceleration_structure_properties;
 			acceleration_structure_properties.pNext = &raytracing_properties;
 			raytracing_properties.pNext = &mesh_shader_properties;
+			mesh_shader_properties.pNext = &fragment_shading_rate_properties;
 
 			for (const auto& device : devices) 
 			{
@@ -2501,6 +2508,15 @@ using namespace Vulkan_Internal;
 				}
 			}
 
+			if (checkDeviceExtensionSupport(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME, available_deviceExtensions))
+			{
+				VARIABLE_RATE_SHADING_TILE_SIZE = std::min(fragment_shading_rate_properties.maxFragmentShadingRateAttachmentTexelSize.width, fragment_shading_rate_properties.maxFragmentShadingRateAttachmentTexelSize.height);
+				enabled_deviceExtensions.push_back(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME);
+				fragment_shading_rate_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR;
+				*features_chain = &fragment_shading_rate_features;
+				features_chain = &fragment_shading_rate_features.pNext;
+			}
+
 			if (checkDeviceExtensionSupport(VK_NV_MESH_SHADER_EXTENSION_NAME, available_deviceExtensions))
 			{
 				enabled_deviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
@@ -2551,6 +2567,16 @@ using namespace Vulkan_Internal;
 			if (features_1_2.descriptorIndexing)
 			{
 				capabilities |= GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS;
+			}
+
+			if (fragment_shading_rate_features.pipelineFragmentShadingRate)
+			{
+				capabilities |= GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING;
+			}
+
+			if (fragment_shading_rate_features.attachmentFragmentShadingRate)
+			{
+				capabilities |= GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2;
 			}
 			
 			VkFormatProperties formatProperties = {};
@@ -2628,6 +2654,11 @@ using namespace Vulkan_Internal;
 		{
 			cmdDrawMeshTasksNV = (PFN_vkCmdDrawMeshTasksNV)vkGetDeviceProcAddr(device, "vkCmdDrawMeshTasksNV");
 			cmdDrawMeshTasksIndirectNV = (PFN_vkCmdDrawMeshTasksIndirectNV)vkGetDeviceProcAddr(device, "vkCmdDrawMeshTasksIndirectNV");
+		}
+
+		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING))
+		{
+			cmdSetFragmentShadingRateKHR = (PFN_vkCmdSetFragmentShadingRateKHR)vkGetDeviceProcAddr(device, "vkCmdSetFragmentShadingRateKHR");
 		}
 
 		CreateBackBufferResources();
@@ -4274,21 +4305,31 @@ using namespace Vulkan_Internal;
 		wiHelper::hash_combine(renderpass->hash, pDesc->attachments.size());
 		for (auto& attachment : pDesc->attachments)
 		{
-			wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.Format);
-			wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.SampleCount);
+			if (attachment.type == RenderPassAttachment::RENDERTARGET || attachment.type == RenderPassAttachment::DEPTH_STENCIL)
+			{
+				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.Format);
+				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.SampleCount);
+			}
 		}
 
 		VkResult res;
 
-		VkImageView attachments[17] = {};
-		VkAttachmentDescription attachmentDescriptions[17] = {};
-		VkAttachmentReference colorAttachmentRefs[8] = {};
-		VkAttachmentReference resolveAttachmentRefs[8] = {};
-		VkAttachmentReference depthAttachmentRef = {};
+		VkImageView attachments[18] = {};
+		VkAttachmentDescription2 attachmentDescriptions[18] = {};
+		VkAttachmentReference2 colorAttachmentRefs[8] = {};
+		VkAttachmentReference2 resolveAttachmentRefs[8] = {};
+		VkAttachmentReference2 shadingRateAttachmentRef = {};
+		VkAttachmentReference2 depthAttachmentRef = {};
+
+		VkFragmentShadingRateAttachmentInfoKHR shading_rate_attachment = {};
+		shading_rate_attachment.sType = VK_STRUCTURE_TYPE_FRAGMENT_SHADING_RATE_ATTACHMENT_INFO_KHR;
+		shading_rate_attachment.pFragmentShadingRateAttachment = &shadingRateAttachmentRef;
+		shading_rate_attachment.shadingRateAttachmentTexelSize.width = VARIABLE_RATE_SHADING_TILE_SIZE;
+		shading_rate_attachment.shadingRateAttachmentTexelSize.height = VARIABLE_RATE_SHADING_TILE_SIZE;
 
 		int resolvecount = 0;
 
-		VkSubpassDescription subpass = {};
+		VkSubpassDescription2 subpass = {};
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
 		const RenderPassDesc& desc = renderpass->desc;
@@ -4432,19 +4473,46 @@ using namespace Vulkan_Internal;
 				resolvecount++;
 				subpass.pResolveAttachments = resolveAttachmentRefs;
 			}
+			else if (attachment.type == RenderPassAttachment::SHADING_RATE_SOURCE && CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
+			{
+				if (attachment.texture == nullptr)
+				{
+					shadingRateAttachmentRef.attachment = VK_ATTACHMENT_UNUSED;
+				}
+				else
+				{
+					if (subresource < 0 || texture_internal_state->subresources_uav.empty())
+					{
+						attachments[validAttachmentCount] = texture_internal_state->uav;
+					}
+					else
+					{
+						assert(texture_internal_state->subresources_uav.size() > size_t(subresource) && "Invalid UAV subresource!");
+						attachments[validAttachmentCount] = texture_internal_state->subresources_uav[subresource];
+					}
+					if (attachments[validAttachmentCount] == VK_NULL_HANDLE)
+					{
+						continue;
+					}
+					shadingRateAttachmentRef.attachment = validAttachmentCount;
+					shadingRateAttachmentRef.layout = VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
+				}
+
+				subpass.pNext = &shading_rate_attachment;
+			}
 
 			validAttachmentCount++;
 		}
 		assert(renderpass->desc.attachments.size() == validAttachmentCount);
 
-		VkRenderPassCreateInfo renderPassInfo = {};
+		VkRenderPassCreateInfo2 renderPassInfo = {};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 		renderPassInfo.attachmentCount = validAttachmentCount;
 		renderPassInfo.pAttachments = attachmentDescriptions;
 		renderPassInfo.subpassCount = 1;
 		renderPassInfo.pSubpasses = &subpass;
 
-		res = vkCreateRenderPass(device, &renderPassInfo, nullptr, &internal_state->renderpass);
+		res = vkCreateRenderPass2(device, &renderPassInfo, nullptr, &internal_state->renderpass);
 		assert(res == VK_SUCCESS);
 
 		VkFramebufferCreateInfo framebufferInfo = {};
@@ -5308,6 +5376,38 @@ using namespace Vulkan_Internal;
 		return -1;
 	}
 
+	void GraphicsDevice_Vulkan::WriteShadingRateValue(SHADING_RATE rate, void* dest)
+	{
+		// How to compute shading rate value texel data:
+		// https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#primsrast-fragment-shading-rate-attachment
+
+		switch (rate)
+		{
+		default:
+		case wiGraphics::SHADING_RATE_1X1:
+			*(uint8_t*)dest = 0;
+			break;
+		case wiGraphics::SHADING_RATE_1X2:
+			*(uint8_t*)dest = 0x1;
+			break;
+		case wiGraphics::SHADING_RATE_2X1:
+			*(uint8_t*)dest = 0x4;
+			break;
+		case wiGraphics::SHADING_RATE_2X2:
+			*(uint8_t*)dest = 0x5;
+			break;
+		case wiGraphics::SHADING_RATE_2X4:
+			*(uint8_t*)dest = 0x6;
+			break;
+		case wiGraphics::SHADING_RATE_4X2:
+			*(uint8_t*)dest = 0x9;
+			break;
+		case wiGraphics::SHADING_RATE_4X4:
+			*(uint8_t*)dest = 0xa;
+			break;
+		}
+
+	}
 	void GraphicsDevice_Vulkan::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest)
 	{
 		VkAccelerationStructureInstanceKHR* desc = (VkAccelerationStructureInstanceKHR*)dest;
@@ -5815,6 +5915,7 @@ using namespace Vulkan_Internal;
 		active_rt[cmd] = nullptr;
 		active_renderpass[cmd] = VK_NULL_HANDLE;
 		dirty_pso[cmd] = false;
+		prev_shadingrate[cmd] = SHADING_RATE_INVALID;
 
 		return cmd;
 	}
@@ -6144,6 +6245,82 @@ using namespace Vulkan_Internal;
 	{
 		float blendConstants[] = { r, g, b, a };
 		vkCmdSetBlendConstants(GetDirectCommandList(cmd), blendConstants);
+	}
+	void GraphicsDevice_Vulkan::BindShadingRate(SHADING_RATE rate, CommandList cmd)
+	{
+		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING) && prev_shadingrate[cmd] != rate)
+		{
+			prev_shadingrate[cmd] = rate;
+
+			VkExtent2D fragmentSize;
+			switch (rate)
+			{
+			case wiGraphics::SHADING_RATE_1X1:
+				fragmentSize.width = 1;
+				fragmentSize.height = 1;
+				break;
+			case wiGraphics::SHADING_RATE_1X2:
+				fragmentSize.width = 1;
+				fragmentSize.height = 2;
+				break;
+			case wiGraphics::SHADING_RATE_2X1:
+				fragmentSize.width = 2;
+				fragmentSize.height = 1;
+				break;
+			case wiGraphics::SHADING_RATE_2X2:
+				fragmentSize.width = 2;
+				fragmentSize.height = 2;
+				break;
+			case wiGraphics::SHADING_RATE_2X4:
+				fragmentSize.width = 2;
+				fragmentSize.height = 4;
+				break;
+			case wiGraphics::SHADING_RATE_4X2:
+				fragmentSize.width = 4;
+				fragmentSize.height = 2;
+				break;
+			case wiGraphics::SHADING_RATE_4X4:
+				fragmentSize.width = 4;
+				fragmentSize.height = 4;
+				break;
+			default:
+				break;
+			}
+
+			VkFragmentShadingRateCombinerOpKHR combiner[] = {
+				VK_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_KHR,
+				VK_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_KHR
+			};
+
+			if (fragment_shading_rate_properties.fragmentShadingRateNonTrivialCombinerOps == VK_TRUE)
+			{
+				if (fragment_shading_rate_features.primitiveFragmentShadingRate == VK_TRUE)
+				{
+					combiner[0] = VK_FRAGMENT_SHADING_RATE_COMBINER_OP_MAX_KHR;
+				}
+				if (fragment_shading_rate_features.attachmentFragmentShadingRate == VK_TRUE)
+				{
+					combiner[1] = VK_FRAGMENT_SHADING_RATE_COMBINER_OP_MAX_KHR;
+				}
+			}
+			else
+			{
+				if (fragment_shading_rate_features.primitiveFragmentShadingRate == VK_TRUE)
+				{
+					combiner[0] = VK_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_KHR;
+				}
+				if (fragment_shading_rate_features.attachmentFragmentShadingRate == VK_TRUE)
+				{
+					combiner[1] = VK_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_KHR;
+				}
+			}
+
+			cmdSetFragmentShadingRateKHR(
+				GetDirectCommandList(cmd),
+				&fragmentSize,
+				combiner
+			);
+		}
 	}
 	void GraphicsDevice_Vulkan::BindPipelineState(const PipelineState* pso, CommandList cmd)
 	{

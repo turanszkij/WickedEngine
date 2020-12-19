@@ -1104,6 +1104,7 @@ namespace DX12_Internal
 		uint32_t num_barriers_begin = 0;
 		D3D12_RESOURCE_BARRIER barrierdescs_end[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 		uint32_t num_barriers_end = 0;
+		bool shading_rate_image_bound = false;
 	};
 	struct DescriptorTable_DX12
 	{
@@ -3198,8 +3199,16 @@ using namespace DX12_Internal;
 		wiHelper::hash_combine(renderpass->hash, pDesc->attachments.size());
 		for (auto& attachment : pDesc->attachments)
 		{
-			wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.Format);
-			wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.SampleCount);
+			if (attachment.type == RenderPassAttachment::RENDERTARGET || attachment.type == RenderPassAttachment::DEPTH_STENCIL)
+			{
+				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.Format);
+				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.SampleCount);
+			}
+
+			if (attachment.type == RenderPassAttachment::SHADING_RATE_SOURCE)
+			{
+				internal_state->shading_rate_image_bound = true;
+			}
 		}
 
 
@@ -4749,7 +4758,7 @@ using namespace DX12_Internal;
 		active_rootsig_graphics[cmd] = nullptr;
 		active_rootsig_compute[cmd] = nullptr;
 		active_renderpass[cmd] = nullptr;
-		prev_shadingrate[cmd] = D3D12_SHADING_RATE_1X1;
+		prev_shadingrate[cmd] = SHADING_RATE_INVALID;
 		dirty_pso[cmd] = false;
 
 		return cmd;
@@ -5043,6 +5052,13 @@ using namespace DX12_Internal;
 				}
 				resolve_dst_counter++;
 			}
+			else if (attachment.type == RenderPassAttachment::SHADING_RATE_SOURCE)
+			{
+				if (texture != nullptr)
+				{
+					GetDirectCommandList(cmd)->RSSetShadingRateImage(texture_internal->resource.Get());
+				}
+			}
 
 		}
 
@@ -5059,6 +5075,12 @@ using namespace DX12_Internal;
 		GetDirectCommandList(cmd)->EndRenderPass();
 
 		auto internal_state = to_internal(active_renderpass[cmd]);
+
+		if (internal_state->shading_rate_image_bound)
+		{
+			GetDirectCommandList(cmd)->RSSetShadingRateImage(nullptr);
+		}
+
 		if (internal_state->num_barriers_end > 0)
 		{
 			GetDirectCommandList(cmd)->ResourceBarrier(internal_state->num_barriers_end, internal_state->barrierdescs_end);
@@ -5205,33 +5227,19 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::BindShadingRate(SHADING_RATE rate, CommandList cmd)
 	{
-		D3D12_SHADING_RATE _rate = D3D12_SHADING_RATE_1X1;
-		WriteShadingRateValue(rate, &_rate);
-
-		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING) && prev_shadingrate[cmd] != _rate)
+		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING) && prev_shadingrate[cmd] != rate)
 		{
-			prev_shadingrate[cmd] = _rate;
+			prev_shadingrate[cmd] = rate;
+
+			D3D12_SHADING_RATE _rate = D3D12_SHADING_RATE_1X1;
+			WriteShadingRateValue(rate, &_rate);
+
 			D3D12_SHADING_RATE_COMBINER combiners[] =
 			{
 				D3D12_SHADING_RATE_COMBINER_MAX,
 				D3D12_SHADING_RATE_COMBINER_MAX,
 			};
 			GetDirectCommandList(cmd)->RSSetShadingRate(_rate, combiners);
-		}
-	}
-	void GraphicsDevice_DX12::BindShadingRateImage(const Texture* texture, CommandList cmd)
-	{
-		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
-		{
-			if (texture == nullptr)
-			{
-				GetDirectCommandList(cmd)->RSSetShadingRateImage(nullptr);
-			}
-			else
-			{
-				assert(texture->desc.Format == FORMAT_R8_UINT);
-				GetDirectCommandList(cmd)->RSSetShadingRateImage(to_internal(texture)->resource.Get());
-			}
 		}
 	}
 	void GraphicsDevice_DX12::BindPipelineState(const PipelineState* pso, CommandList cmd)

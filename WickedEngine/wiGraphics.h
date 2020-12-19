@@ -302,7 +302,9 @@ namespace wiGraphics
 		SHADING_RATE_2X2,
 		SHADING_RATE_2X4,
 		SHADING_RATE_4X2,
-		SHADING_RATE_4X4
+		SHADING_RATE_4X4,
+
+		SHADING_RATE_INVALID
 	};
 
 	// Flags ////////////////////////////////////////////
@@ -573,6 +575,7 @@ namespace wiGraphics
 			RENDERTARGET,
 			DEPTH_STENCIL,
 			RESOLVE,
+			SHADING_RATE_SOURCE
 		} type = RENDERTARGET;
 		enum LOAD_OPERATION
 		{
@@ -641,6 +644,21 @@ namespace wiGraphics
 			attachment.type = RESOLVE;
 			attachment.texture = resource;
 			attachment.initial_layout = initial_layout;
+			attachment.final_layout = final_layout;
+			return attachment;
+		}
+
+		static RenderPassAttachment ShadingRateSource(
+			const Texture* resource = nullptr,
+			IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_GENERAL,
+			IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_GENERAL
+		)
+		{
+			RenderPassAttachment attachment;
+			attachment.type = SHADING_RATE_SOURCE;
+			attachment.texture = resource;
+			attachment.initial_layout = initial_layout;
+			attachment.subpass_layout = IMAGE_LAYOUT_SHADING_RATE_SOURCE;
 			attachment.final_layout = final_layout;
 			return attachment;
 		}

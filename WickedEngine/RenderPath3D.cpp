@@ -245,7 +245,16 @@ void RenderPath3D::ResizeBuffers()
 		desc.Format = FORMAT_R8_UINT;
 		desc.Width = (internalResolution.x + tileSize - 1) / tileSize;
 		desc.Height = (internalResolution.y + tileSize - 1) / tileSize;
-		device->CreateTexture(&desc, nullptr, &rtShadingRate);
+
+		std::vector<uint8_t> data(desc.Width * desc.Height);
+		uint8_t default_shadingrate;
+		device->WriteShadingRateValue(SHADING_RATE_1X1, &default_shadingrate);
+		std::fill(data.begin(), data.end(), default_shadingrate);
+
+		SubresourceData initData;
+		initData.pSysMem = data.data();
+		initData.SysMemPitch = sizeof(uint8_t) * desc.Width;
+		device->CreateTexture(&desc, &initData, &rtShadingRate);
 		device->SetName(&rtShadingRate, "rtShadingRate");
 	}
 
@@ -350,6 +359,12 @@ void RenderPath3D::ResizeBuffers()
 			desc.attachments.push_back(RenderPassAttachment::Resolve(GetGbuffer_Read(GBUFFER_COLOR_ROUGHNESS)));
 			desc.attachments.push_back(RenderPassAttachment::Resolve(GetGbuffer_Read(GBUFFER_NORMAL_VELOCITY)));
 		}
+
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
+		{
+			desc.attachments.push_back(RenderPassAttachment::ShadingRateSource(&rtShadingRate));
+		}
+
 		device->CreateRenderPass(&desc, &renderpass_main);
 	}
 	{
@@ -813,18 +828,6 @@ void RenderPath3D::Render() const
 			cmd
 		);
 
-		if (wiRenderer::GetVariableRateShadingClassification() && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(&rtShadingRate),
-				GPUBarrier::Image(&rtShadingRate,IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADING_RATE_SOURCE),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-
-			device->BindShadingRate(SHADING_RATE_1X1, cmd);
-			device->BindShadingRateImage(&rtShadingRate, cmd);
-		}
-
 		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 
 		{
@@ -866,8 +869,6 @@ void RenderPath3D::Render() const
 		RenderOutline(cmd);
 
 		device->RenderPassEnd(cmd);
-
-		device->BindShadingRateImage(nullptr, cmd);
 
 		device->EventEnd(cmd);
 		});
