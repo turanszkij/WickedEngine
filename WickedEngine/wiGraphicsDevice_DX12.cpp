@@ -1824,7 +1824,9 @@ using namespace DX12_Internal;
 				{
 					for (auto& attachment : active_renderpass[cmd]->desc.attachments)
 					{
-						if (attachment.type == RenderPassAttachment::RESOLVE || attachment.texture == nullptr)
+						if (attachment.type == RenderPassAttachment::RESOLVE ||
+							attachment.type == RenderPassAttachment::SHADING_RATE_SOURCE ||
+							attachment.texture == nullptr)
 							continue;
 
 						switch (attachment.type)

@@ -4557,7 +4557,9 @@ using namespace Vulkan_Internal;
 			int i = 0;
 			for (auto& attachment : desc.attachments)
 			{
-				if (desc.attachments[i].type == RenderPassAttachment::RESOLVE || attachment.texture == nullptr)
+				if (desc.attachments[i].type == RenderPassAttachment::RESOLVE ||
+					desc.attachments[i].type == RenderPassAttachment::SHADING_RATE_SOURCE ||
+					attachment.texture == nullptr)
 					continue;
 
 				const ClearValue& clear = desc.attachments[i].texture->desc.clear;

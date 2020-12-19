@@ -203,7 +203,7 @@ namespace wiHelper
 		};
 
 		string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(fileName));
-		if (!extension.compare("JPG"))
+		if (!extension.compare("JPG") || !extension.compare("JPEG"))
 		{
 			write_result = stbi_write_jpg_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, textureData.data(), 100);
 		}
