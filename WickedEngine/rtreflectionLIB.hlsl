@@ -146,23 +146,29 @@ void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
         baseColor = 1;
     }
     baseColor *= material.baseColor;
-    float4 color = baseColor;
-    float4 emissiveColor = material.emissiveColor;
+
+	Surface surface;
+	surface.create(material, baseColor, 1);
+
+    surface.emissiveColor = material.emissiveColor;
 	[branch]
 	if (material.uvset_emissiveMap >= 0)
 	{
 		const float2 UV_emissiveMap = material.uvset_emissiveMap == 0 ? uvsets.xy : uvsets.zw;
 		float4 emissiveMap = subsets_textures[descriptorIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_EMISSIVE].SampleLevel(sampler_linear_wrap, UV_emissiveMap, 2);
 		emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
-		emissiveColor *= emissiveMap;
+		surface.emissiveColor *= emissiveMap;
 	}
 
 
     // Light sampling:
-    float3 P = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
-    float3 V = -WorldRayDirection();
-    Surface surface = CreateSurface(P, N, V, baseColor, material.roughness, 1, material.metalness, material.reflectance);
-    Lighting lighting = CreateLighting(0, 0, GetAmbient(surface.N), 0);
+	surface.P = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
+	surface.V = -WorldRayDirection();
+	surface.N = N;
+	surface.update();
+
+    Lighting lighting;
+	lighting.create(0, 0, GetAmbient(surface.N), 0);
 
     [loop]
     for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
@@ -195,7 +201,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
     }
 
     LightingPart combined_lighting = CombineLighting(surface, lighting);
-    payload.color = baseColor.rgb * combined_lighting.diffuse + combined_lighting.specular + emissiveColor.rgb * emissiveColor.a;
+    payload.color = surface.albedo * combined_lighting.diffuse + combined_lighting.specular + surface.emissiveColor.rgb * surface.emissiveColor.a;
 
 }
 

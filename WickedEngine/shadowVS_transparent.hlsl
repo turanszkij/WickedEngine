@@ -12,7 +12,9 @@ VertexOut main(Input_Object_POS_TEX input)
 	VertexOut Out;
 
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.inst);
-	VertexSurface surface = MakeVertexSurfaceFromInput(input);
+
+	VertexSurface surface;
+	surface.create(g_xMaterial, input);
 
 	surface.position = mul(WORLD, surface.position);
 

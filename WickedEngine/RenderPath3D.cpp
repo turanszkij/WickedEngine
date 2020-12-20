@@ -614,7 +614,6 @@ void RenderPath3D::Render() const
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		device->EventBegin("Opaque Z-prepass", cmd);
 
 		wiRenderer::UpdateCameraCB(
 			*camera,
@@ -625,6 +624,7 @@ void RenderPath3D::Render() const
 
 		device->RenderPassBegin(&renderpass_depthprepass, cmd);
 
+		device->EventBegin("Opaque Z-prepass", cmd);
 		auto range = wiProfiler::BeginRangeGPU("Z-Prepass", cmd);
 
 		Viewport vp;
@@ -634,6 +634,7 @@ void RenderPath3D::Render() const
 		wiRenderer::DrawScene(visibility_main, RENDERPASS_DEPTHONLY, cmd, drawscene_flags);
 
 		wiProfiler::EndRange(range);
+		device->EventEnd(cmd);
 
 		wiRenderer::OcclusionCulling_Render(*camera, visibility_main, cmd);
 
@@ -696,7 +697,6 @@ void RenderPath3D::Render() const
 			);
 		}
 
-		device->EventEnd(cmd);
 		});
 
 	// Planar reflections depth prepass + Light culling:
@@ -704,10 +704,8 @@ void RenderPath3D::Render() const
 	{
 		cmd = device->BeginCommandList();
 		wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
-			auto range = wiProfiler::BeginRangeGPU("Planar Reflections Z-Prepass", cmd);
 
 			GraphicsDevice* device = wiRenderer::GetDevice();
-			device->EventBegin("Planar reflections Z-Prepass", cmd);
 
 			wiRenderer::UpdateCameraCB(
 				camera_reflection,
@@ -715,6 +713,9 @@ void RenderPath3D::Render() const
 				camera_reflection,
 				cmd
 			);
+
+			device->EventBegin("Planar reflections Z-Prepass", cmd);
+			auto range = wiProfiler::BeginRangeGPU("Planar Reflections Z-Prepass", cmd);
 
 			Viewport vp;
 			vp.Width = (float)depthBuffer_Reflection.GetDesc().Width;
@@ -727,8 +728,10 @@ void RenderPath3D::Render() const
 
 			device->RenderPassEnd(cmd);
 
+			wiProfiler::EndRange(range); // Planar Reflections
+			device->EventEnd(cmd);
+
 			wiRenderer::ComputeTiledLightCulling(
-				*camera,
 				depthBuffer_Reflection,
 				tileFrustums,
 				entityTiles_Opaque,
@@ -737,8 +740,6 @@ void RenderPath3D::Render() const
 				cmd
 			);
 
-			device->EventEnd(cmd);
-			wiProfiler::EndRange(range); // Planar Reflections
 			});
 	}
 
@@ -775,10 +776,8 @@ void RenderPath3D::Render() const
 	{
 		cmd = device->BeginCommandList();
 		wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
-			auto range = wiProfiler::BeginRangeGPU("Planar Reflections", cmd);
 
 			GraphicsDevice* device = wiRenderer::GetDevice();
-			device->EventBegin("Planar reflections", cmd);
 
 			wiRenderer::UpdateCameraCB(
 				camera_reflection,
@@ -786,6 +785,9 @@ void RenderPath3D::Render() const
 				camera_reflection,
 				cmd
 			);
+
+			device->EventBegin("Planar reflections", cmd);
+			auto range = wiProfiler::BeginRangeGPU("Planar Reflections", cmd);
 
 			Viewport vp;
 			vp.Width = (float)depthBuffer_Reflection.GetDesc().Width;
@@ -809,8 +811,8 @@ void RenderPath3D::Render() const
 
 			device->RenderPassEnd(cmd);
 
-			device->EventEnd(cmd);
 			wiProfiler::EndRange(range); // Planar Reflections
+			device->EventEnd(cmd);
 			});
 	}
 
@@ -833,7 +835,6 @@ void RenderPath3D::Render() const
 		{
 			auto range = wiProfiler::BeginRangeGPU("Entity Culling", cmd);
 			wiRenderer::ComputeTiledLightCulling(
-				*camera,
 				depthBuffer_Copy,
 				tileFrustums,
 				entityTiles_Opaque,

@@ -174,6 +174,11 @@ namespace wiScene
 				archive >> subsurfaceScattering;
 			}
 
+			if (archive.GetVersion() >= 56)
+			{
+				archive >> specularColor;
+			}
+
 			wiJobSystem::Execute(seri.ctx, [&](wiJobArgs args) {
 				CreateRenderData(dir);
 			});
@@ -282,6 +287,11 @@ namespace wiScene
 			if (archive.GetVersion() >= 54)
 			{
 				archive << subsurfaceScattering;
+			}
+
+			if (archive.GetVersion() >= 56)
+			{
+				archive << specularColor;
 			}
 		}
 	}

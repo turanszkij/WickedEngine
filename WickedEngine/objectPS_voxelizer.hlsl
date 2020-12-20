@@ -168,7 +168,8 @@ void main(PSInput input)
 
 #endif // TERRAIN
 
-		Lighting lighting = CreateLighting(0, 0, 0, 0);
+		Lighting lighting;
+		lighting.create(0, 0, 0, 0);
 
 		[branch]
 		if (any(xForwardLightMask))

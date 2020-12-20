@@ -12,6 +12,7 @@ static const uint SHADERMATERIAL_OPTION_BIT_USE_WIND = 1 << 4;
 struct ShaderMaterial
 {
 	float4		baseColor;
+	float4		specularColor;
 	float4		emissiveColor;
 	float4		subsurfaceScattering;
 	float4		subsurfaceScattering_inv;

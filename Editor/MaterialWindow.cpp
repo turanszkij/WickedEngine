@@ -48,6 +48,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetUseSpecularGlossinessWorkflow(args.bValue);
+		SetEntity(entity);
 	});
 	AddWidget(&specularGlossinessCheckBox);
 
@@ -195,7 +196,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	AddWidget(&roughnessSlider);
 
 	reflectanceSlider.Create(0, 1, 0.5f, 1000, "Reflectance: ");
-	reflectanceSlider.SetTooltip("Adjust the overall surface reflectivity.");
+	reflectanceSlider.SetTooltip("Adjust the overall surface reflectivity.\nNote: this is not available in specular-glossiness workflow");
 	reflectanceSlider.SetSize(XMFLOAT2(wid, hei));
 	reflectanceSlider.SetPos(XMFLOAT2(x, y += step));
 	reflectanceSlider.OnSlide([&](wiEventArgs args) {
@@ -206,7 +207,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	AddWidget(&reflectanceSlider);
 
 	metalnessSlider.Create(0, 1, 0.0f, 1000, "Metalness: ");
-	metalnessSlider.SetTooltip("The more metal-like the surface is, the more the its color will contribute to the reflection color.");
+	metalnessSlider.SetTooltip("The more metal-like the surface is, the more the its color will contribute to the reflection color.\nNote: this is not available in specular-glossiness workflow");
 	metalnessSlider.SetSize(XMFLOAT2(wid, hei));
 	metalnessSlider.SetPos(XMFLOAT2(x, y += step));
 	metalnessSlider.OnSlide([&](wiEventArgs args) {
@@ -512,7 +513,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 
 	texture_surface_Button.Create("SurfaceMap");
 	texture_surface_Button.SetText("");
-	texture_surface_Button.SetTooltip("Load the surface property texture: R: Occlusion, G: Roughness, B: Metalness, A: Reflectance");
+	texture_surface_Button.SetTooltip("Load the surface property texture.\nDefault workflow: R: Occlusion, G: Roughness, B: Metalness, A: Reflectance\nSpecular-glossiness workflow: RGB: Specular color (f0), A: smoothness");
 	texture_surface_Button.SetPos(XMFLOAT2(x + 122, y));
 	texture_surface_Button.SetSize(XMFLOAT2(260, 20));
 	texture_surface_Button.OnClick([&](wiEventArgs args) {
@@ -751,6 +752,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	colorComboBox.SetSize(XMFLOAT2(120, hei));
 	colorComboBox.SetPos(XMFLOAT2(x + 150, y += step));
 	colorComboBox.AddItem("Base color");
+	colorComboBox.AddItem("Specular color");
 	colorComboBox.AddItem("Emissive color");
 	colorComboBox.AddItem("Subsurface color");
 	colorComboBox.SetTooltip("Choose the destination data of the color picker.");
@@ -773,12 +775,15 @@ void MaterialWindow::Create(EditorComponent* editor)
 				material->SetBaseColor(args.color.toFloat4());
 				break;
 			case 1:
+				material->SetSpecularColor(args.color.toFloat4());
+				break;
+			case 2:
 			{
 				XMFLOAT3 col = args.color.toFloat3();
 				material->SetEmissiveColor(XMFLOAT4(col.x, col.y, col.z, material->GetEmissiveStrength()));
 			}
 			break;
-			case 2:
+			case 3:
 				material->SetSubsurfaceScatteringColor(args.color.toFloat3());
 			break;
 			}
@@ -866,9 +871,12 @@ void MaterialWindow::SetEntity(Entity entity)
 			colorPicker.SetPickColor(wiColor::fromFloat4(material->baseColor));
 			break;
 		case 1:
-			colorPicker.SetPickColor(wiColor::fromFloat3(XMFLOAT3(material->emissiveColor.x, material->emissiveColor.y, material->emissiveColor.z)));
+			colorPicker.SetPickColor(wiColor::fromFloat4(material->specularColor));
 			break;
 		case 2:
+			colorPicker.SetPickColor(wiColor::fromFloat3(XMFLOAT3(material->emissiveColor.x, material->emissiveColor.y, material->emissiveColor.z)));
+			break;
+		case 3:
 			colorPicker.SetPickColor(wiColor::fromFloat3(XMFLOAT3(material->subsurfaceScattering.x, material->subsurfaceScattering.y, material->subsurfaceScattering.z)));
 			break;
 		}
@@ -891,6 +899,12 @@ void MaterialWindow::SetEntity(Entity entity)
 		}
 
 		shadingRateComboBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING));
+
+		if (material->IsUsingSpecularGlossinessWorkflow())
+		{
+			reflectanceSlider.SetEnabled(false);
+			metalnessSlider.SetEnabled(false);
+		}
 	}
 	else
 	{

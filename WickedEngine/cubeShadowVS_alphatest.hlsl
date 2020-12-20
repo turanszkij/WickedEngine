@@ -17,7 +17,9 @@ VertexOut main(Input_Object_POS_TEX input)
 	VertexOut output;
 
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.inst);
-	VertexSurface surface = MakeVertexSurfaceFromInput(input);
+
+	VertexSurface surface;
+	surface.create(g_xMaterial, input);
 
 	uint frustum_index = input.inst.userdata.y;
 	output.RTIndex = xCubemapRenderCams[frustum_index].properties.x;

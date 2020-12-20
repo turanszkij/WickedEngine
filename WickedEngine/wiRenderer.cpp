@@ -7110,7 +7110,6 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 
 void ComputeTiledLightCulling(
-	const CameraComponent& camera,
 	const Texture& depthbuffer,
 	const GPUBuffer& tileFrustums,
 	const GPUBuffer& entityTiles_Opaque,

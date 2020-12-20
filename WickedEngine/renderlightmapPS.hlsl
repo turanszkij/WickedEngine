@@ -29,7 +29,9 @@ float4 main(Input input) : SV_TARGET
 		for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
 		{
 			ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + iterator];
-			Lighting lighting = CreateLighting(0, 0, 0, 0);
+
+			Lighting lighting;
+			lighting.create(0, 0, 0, 0);
 
 			if (!(light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC))
 			{
@@ -206,37 +208,28 @@ float4 main(Input input) : SV_TARGET
 		}
 		baseColor *= color;
 
-		float4 surface_occlusion_roughness_metallic_reflectance;
+		float4 surfaceMap = 1;
 		[branch]
 		if (material.uvset_surfaceMap >= 0)
 		{
 			const float2 UV_surfaceMap = material.uvset_surfaceMap == 0 ? uvsets.xy : uvsets.zw;
-			surface_occlusion_roughness_metallic_reflectance = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_surfaceMap * material.surfaceMapAtlasMulAdd.xy + material.surfaceMapAtlasMulAdd.zw, 0);
-			if (material.IsUsingSpecularGlossinessWorkflow())
-			{
-				ConvertToSpecularGlossiness(surface_occlusion_roughness_metallic_reflectance);
-			}
-		}
-		else
-		{
-			surface_occlusion_roughness_metallic_reflectance = 1;
+			surfaceMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_surfaceMap * material.surfaceMapAtlasMulAdd.xy + material.surfaceMapAtlasMulAdd.zw, 0);
 		}
 
-		float roughness = material.roughness * surface_occlusion_roughness_metallic_reflectance.g;
-		float metalness = material.metalness * surface_occlusion_roughness_metallic_reflectance.b;
-		float reflectance = material.reflectance * surface_occlusion_roughness_metallic_reflectance.a;
-		roughness = sqr(roughness); // convert linear roughness to cone aperture
-		float4 emissiveColor = material.emissiveColor;
+		Surface surface;
+		surface.create(material, baseColor, surfaceMap);
+
+		surface.emissiveColor = material.emissiveColor;
 		[branch]
 		if (material.emissiveColor.a > 0 && material.uvset_emissiveMap >= 0)
 		{
 			const float2 UV_emissiveMap = material.uvset_emissiveMap == 0 ? uvsets.xy : uvsets.zw;
 			float4 emissiveMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_emissiveMap * material.emissiveMapAtlasMulAdd.xy + material.emissiveMapAtlasMulAdd.zw, 0);
 			emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
-			emissiveColor *= emissiveMap;
+			surface.emissiveColor *= emissiveMap;
 		}
 
-		ray.color += max(0, ray.energy * emissiveColor.rgb * emissiveColor.a);
+		ray.color += max(0, ray.energy * surface.emissiveColor.rgb * surface.emissiveColor.a);
 
 		[branch]
 		if (material.uvset_normalMap >= 0)
@@ -251,13 +244,16 @@ float4 main(Input input) : SV_TARGET
 		// Calculate chances of reflection types:
 		const float refractChance = 1 - baseColor.a;
 
+		// Roughness to cone aperture:
+		float alphaRoughness = surface.roughness * surface.roughness;
+
 		// Roulette-select the ray's path
 		float roulette = rand(seed, uv);
 		if (roulette < refractChance)
 		{
 			// Refraction
 			const float3 R = refract(ray.direction, N, 1 - material.refractionIndex);
-			ray.direction = lerp(R, SampleHemisphere_cos(R, seed, uv), roughness);
+			ray.direction = lerp(R, SampleHemisphere_cos(R, seed, uv), alphaRoughness);
 			ray.energy *= lerp(baseColor.rgb, 1, refractChance);
 
 			// The ray penetrates the surface, so push DOWN along normal to avoid self-intersection:
@@ -266,9 +262,7 @@ float4 main(Input input) : SV_TARGET
 		else
 		{
 			// Calculate chances of reflection types:
-			const float3 albedo = ComputeAlbedo(baseColor, reflectance, metalness);
-			const float3 f0 = ComputeF0(baseColor, reflectance, metalness);
-			const float3 F = F_Fresnel(f0, saturate(dot(-ray.direction, N)));
+			const float3 F = F_Fresnel(surface.f0, saturate(dot(-ray.direction, N)));
 			const float specChance = dot(F, 0.333f);
 
 			roulette = rand(seed, uv);
@@ -276,14 +270,14 @@ float4 main(Input input) : SV_TARGET
 			{
 				// Specular reflection
 				const float3 R = reflect(ray.direction, N);
-				ray.direction = lerp(R, SampleHemisphere_cos(R, seed, uv), roughness);
+				ray.direction = lerp(R, SampleHemisphere_cos(R, seed, uv), alphaRoughness);
 				ray.energy *= F / specChance;
 			}
 			else
 			{
 				// Diffuse reflection
 				ray.direction = SampleHemisphere_cos(N, seed, uv);
-				ray.energy *= albedo / (1 - specChance);
+				ray.energy *= surface.albedo / (1 - specChance);
 			}
 
 			// Ray reflects from surface, so push UP along normal to avoid self-intersection:

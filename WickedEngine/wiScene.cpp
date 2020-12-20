@@ -275,6 +275,7 @@ namespace wiScene
 	void MaterialComponent::WriteShaderMaterial(ShaderMaterial* dest) const
 	{
 		dest->baseColor = baseColor;
+		dest->specularColor = specularColor;
 		dest->emissiveColor = emissiveColor;
 		dest->texMulAdd = texMulAdd;
 		dest->roughness = roughness;
@@ -610,9 +611,12 @@ namespace wiScene
 			device->CreateBuffer(&bd, nullptr, &streamoutBuffer_POS);
 			device->SetName(&streamoutBuffer_POS, "streamoutBuffer_POS");
 
-			bd.ByteWidth = (uint32_t)(sizeof(Vertex_TAN) * vertex_tangents.size());
-			device->CreateBuffer(&bd, nullptr, &streamoutBuffer_TAN);
-			device->SetName(&streamoutBuffer_TAN, "streamoutBuffer_TAN");
+			if (!vertex_tangents.empty())
+			{
+				bd.ByteWidth = (uint32_t)(sizeof(Vertex_TAN) * vertex_tangents.size());
+				device->CreateBuffer(&bd, nullptr, &streamoutBuffer_TAN);
+				device->SetName(&streamoutBuffer_TAN, "streamoutBuffer_TAN");
+			}
 		}
 
 		// vertexBuffer - UV SET 0

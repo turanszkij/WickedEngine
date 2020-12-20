@@ -19,21 +19,20 @@ struct Lighting
 {
 	LightingPart direct;
 	LightingPart indirect;
-};
 
-inline Lighting CreateLighting(
-	in float3 diffuse_direct,
-	in float3 specular_direct,
-	in float3 diffuse_indirect,
-	in float3 specular_indirect)
-{
-	Lighting lighting;
-	lighting.direct.diffuse = diffuse_direct;
-	lighting.direct.specular = specular_direct;
-	lighting.indirect.diffuse = diffuse_indirect;
-	lighting.indirect.specular = specular_indirect;
-	return lighting;
-}
+	inline void create(
+		in float3 diffuse_direct,
+		in float3 specular_direct,
+		in float3 diffuse_indirect,
+		in float3 specular_indirect
+	)
+	{
+		direct.diffuse = diffuse_direct;
+		direct.specular = specular_direct;
+		indirect.diffuse = diffuse_indirect;
+		indirect.specular = specular_indirect;
+	}
+};
 
 // Combine the direct and indirect lighting into final contribution
 inline LightingPart CombineLighting(in Surface surface, in Lighting lighting)
@@ -151,7 +150,9 @@ inline float shadowTrace(in Surface surface, in float3 L, in float dist)
 inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
 	float3 L = light.GetDirection().xyz;
-	SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+
+	SurfaceToLight surfaceToLight;
+	surfaceToLight.create(surface, L);
 
 	[branch]
 	if (any(surfaceToLight.NdotL_sss))
@@ -239,7 +240,8 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 		const float dist = sqrt(dist2);
 		L /= dist;
 
-		SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+		SurfaceToLight surfaceToLight;
+		surfaceToLight.create(surface, L);
 
 		[branch]
 		if (any(surfaceToLight.NdotL_sss))
@@ -290,7 +292,8 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 		const float dist = sqrt(dist2);
 		L /= dist;
 
-		SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+		SurfaceToLight surfaceToLight;
+		surfaceToLight.create(surface, L);
 
 		[branch]
 		if (any(surfaceToLight.NdotL_sss))
@@ -486,7 +489,8 @@ inline void SphereLight(in ShaderEntity light, in Surface surface, inout Lightin
 			float3 lightColor = light.GetColor().rgb * light.GetEnergy() * fLight;
 
 
-			SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+			SurfaceToLight surfaceToLight;
+			surfaceToLight.Create(surface, L);
 
 			lighting.direct.specular += max(0, lightColor * BRDF_GetSpecular(surface, surfaceToLight));
 			lighting.direct.diffuse += max(0, lightColor / PI);
@@ -550,7 +554,8 @@ inline void DiscLight(in ShaderEntity light, in Surface surface, inout Lighting 
 
 			float3 lightColor = light.GetColor().rgb * light.GetEnergy() * fLight;
 
-			SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+			SurfaceToLight surfaceToLight;
+			surfaceToLight.Create(surface, L);
 
 			lighting.direct.specular += max(0, specularAttenuation * lightColor * BRDF_GetSpecular(surface, surfaceToLight));
 			lighting.direct.diffuse += max(0, lightColor / PI);
@@ -675,7 +680,8 @@ inline void RectangleLight(in ShaderEntity light, in Surface surface, inout Ligh
 
 			float3 lightColor = light.GetColor().rgb * light.GetEnergy() * fLight;
 
-			SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+			SurfaceToLight surfaceToLight;
+			surfaceToLight.Create(surface, L);
 
 			lighting.direct.specular += max(0, specularAttenuation * lightColor * BRDF_GetSpecular(surface, surfaceToLight));
 			lighting.direct.diffuse += max(0, lightColor / PI);
@@ -775,7 +781,8 @@ inline void TubeLight(in ShaderEntity light, in Surface surface, inout Lighting 
 
 			float3 lightColor = light.GetColor().rgb * light.GetEnergy() * fLight;
 
-			SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+			SurfaceToLight surfaceToLight;
+			surfaceToLight.Create(surface, L);
 
 			lighting.direct.specular += max(0, lightColor * BRDF_GetSpecular(surface, surfaceToLight));
 			lighting.direct.diffuse += max(0, lightColor / PI);

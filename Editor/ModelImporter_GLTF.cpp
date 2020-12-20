@@ -549,14 +549,14 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				material.baseColor.z = factor.ArrayLen() > 2 ? float(factor.Get(2).IsNumber() ? factor.Get(2).Get<double>() : factor.Get(2).Get<int>()) : 1.0f;
 				material.baseColor.w = factor.ArrayLen() > 3 ? float(factor.Get(3).IsNumber() ? factor.Get(3).Get<double>() : factor.Get(3).Get<int>()) : 1.0f;
 			}
-			//if (specularGlossinessWorkflow->second.Has("specularFactor"))
-			//{
-			//	auto& factor = specularGlossinessWorkflow->second.Get("specularFactor");
-			//	material.baseColor.x = factor.ArrayLen() > 0 ? float(factor.Get(0).IsNumber() ? factor.Get(0).Get<double>() : factor.Get(0).Get<int>()) : 1.0f;
-			//	material.baseColor.y = factor.ArrayLen() > 0 ? float(factor.Get(1).IsNumber() ? factor.Get(1).Get<double>() : factor.Get(1).Get<int>()) : 1.0f;
-			//	material.baseColor.z = factor.ArrayLen() > 0 ? float(factor.Get(2).IsNumber() ? factor.Get(2).Get<double>() : factor.Get(2).Get<int>()) : 1.0f;
-			//	material.baseColor.w = factor.ArrayLen() > 0 ? float(factor.Get(3).IsNumber() ? factor.Get(3).Get<double>() : factor.Get(3).Get<int>()) : 1.0f;
-			//}
+			if (specularGlossinessWorkflow->second.Has("specularFactor"))
+			{
+				auto& factor = specularGlossinessWorkflow->second.Get("specularFactor");
+				material.specularColor.x = factor.ArrayLen() > 0 ? float(factor.Get(0).IsNumber() ? factor.Get(0).Get<double>() : factor.Get(0).Get<int>()) : 1.0f;
+				material.specularColor.y = factor.ArrayLen() > 0 ? float(factor.Get(1).IsNumber() ? factor.Get(1).Get<double>() : factor.Get(1).Get<int>()) : 1.0f;
+				material.specularColor.z = factor.ArrayLen() > 0 ? float(factor.Get(2).IsNumber() ? factor.Get(2).Get<double>() : factor.Get(2).Get<int>()) : 1.0f;
+				material.specularColor.w = factor.ArrayLen() > 0 ? float(factor.Get(3).IsNumber() ? factor.Get(3).Get<double>() : factor.Get(3).Get<int>()) : 1.0f;
+			}
 			if (specularGlossinessWorkflow->second.Has("glossinessFactor"))
 			{
 				auto& factor = specularGlossinessWorkflow->second.Get("glossinessFactor");
@@ -605,6 +605,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			mesh.subsets.back().indexCount = (uint32_t)indexCount;
 
 			mesh.subsets.back().materialID = scene.materials.GetEntity(max(0, prim.material));
+			MaterialComponent* material = scene.materials.GetComponent(mesh.subsets.back().materialID);
 
 			uint32_t vertexOffset = (uint32_t)mesh.vertex_positions.size();
 
@@ -774,6 +775,10 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				}
 				else if (!attr_name.compare("COLOR_0"))
 				{
+					if(material != nullptr)
+					{
+						material->SetUseVertexColors(true);
+					}
 					mesh.vertex_colors.resize(vertexOffset + vertexCount);
 					assert(stride == 16);
 					for (size_t i = 0; i < vertexCount; ++i)

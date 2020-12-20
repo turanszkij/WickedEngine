@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+56: serialized Material specularColor (specular-glossiness workflow)
 55: removed area lights
 54: MaterialComponent::subsurfaceScattering color instead of profile
 53: Support Morph Target

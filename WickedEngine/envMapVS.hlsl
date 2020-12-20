@@ -7,7 +7,9 @@ PSIn_EnvmapRendering main(Input_Object_ALL input)
 	PSIn_EnvmapRendering output;
 
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.inst);
-	VertexSurface surface = MakeVertexSurfaceFromInput(input);
+
+	VertexSurface surface;
+	surface.create(g_xMaterial, input);
 
 	surface.normal = normalize(mul((float3x3)WORLD, surface.normal));
 	surface.tangent.xyz = normalize(mul((float3x3)WORLD, surface.tangent.xyz));

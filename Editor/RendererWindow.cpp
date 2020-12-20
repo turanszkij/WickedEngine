@@ -155,7 +155,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	AddWidget(&wireFrameCheckBox);
 
 	variableRateShadingClassificationCheckBox.Create("VRS Classification: ");
-	variableRateShadingClassificationCheckBox.SetTooltip("Enable classification of variable rate shading on the screen. Less important parts will be shaded with lesser resolution.\nDX12 only and requires Tier1 hardware support for variable shading rate");
+	variableRateShadingClassificationCheckBox.SetTooltip("Enable classification of variable rate shading on the screen. Less important parts will be shaded with lesser resolution.\nRequires Tier2 support for variable shading rate");
 	variableRateShadingClassificationCheckBox.SetPos(XMFLOAT2(x, y += step));
 	variableRateShadingClassificationCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	variableRateShadingClassificationCheckBox.OnClick([](wiEventArgs args) {

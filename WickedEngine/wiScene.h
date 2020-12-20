@@ -146,6 +146,7 @@ namespace wiScene
 		BLENDMODE userBlendMode = BLENDMODE_OPAQUE;
 
 		XMFLOAT4 baseColor = XMFLOAT4(1, 1, 1, 1);
+		XMFLOAT4 specularColor = XMFLOAT4(1, 1, 1, 1);
 		XMFLOAT4 emissiveColor = XMFLOAT4(1, 1, 1, 0);
 		XMFLOAT4 subsurfaceScattering = XMFLOAT4(1, 1, 1, 0);
 		XMFLOAT4 texMulAdd = XMFLOAT4(1, 1, 0, 0);
@@ -229,6 +230,7 @@ namespace wiScene
 		inline bool IsCustomShader() const { return customShaderID >= 0; }
 
 		inline void SetBaseColor(const XMFLOAT4& value) { SetDirty(); baseColor = value; }
+		inline void SetSpecularColor(const XMFLOAT4& value) { SetDirty(); specularColor = value; }
 		inline void SetEmissiveColor(const XMFLOAT4& value) { SetDirty(); emissiveColor = value; }
 		inline void SetRoughness(float value) { SetDirty(); roughness = value; }
 		inline void SetReflectance(float value) { SetDirty(); reflectance = value; }

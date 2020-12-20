@@ -247,7 +247,6 @@ namespace wiRenderer
 	void VoxelRadiance(const Visibility& vis, wiGraphics::CommandList cmd);
 	// Compute light grid tiles
 	void ComputeTiledLightCulling(
-		const wiScene::CameraComponent& camera,
 		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::GPUBuffer& tileFrustums,
 		const wiGraphics::GPUBuffer& entityTiles_Opaque,

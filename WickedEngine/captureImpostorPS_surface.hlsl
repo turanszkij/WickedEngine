@@ -11,7 +11,7 @@ float4 main(PixelInputType input) : SV_Target0
 
 		if (g_xMaterial.IsUsingSpecularGlossinessWorkflow())
 		{
-			ConvertToSpecularGlossiness(surface_occlusion_roughness_metallic_reflectance);
+			//ConvertToSpecularGlossiness(surface_occlusion_roughness_metallic_reflectance);
 		}
 	}
 	else
