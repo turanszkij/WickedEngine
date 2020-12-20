@@ -563,6 +563,7 @@ namespace wiScene
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 			bd.StructureByteStride = sizeof(Vertex_TAN);
 			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
+			bd.Format = Vertex_TAN::FORMAT;
 
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();
@@ -1357,6 +1358,7 @@ namespace wiScene
 			descriptorTables[DESCRIPTORTABLE_SUBSETS_INDEXBUFFER].resources.push_back({ TYPEDBUFFER, 0, MAX_SUBSET_DESCRIPTOR_INDEXING });
 			descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_POSITION_NORMAL_WIND].resources.push_back({ RAWBUFFER, 0, MAX_SUBSET_DESCRIPTOR_INDEXING });
 			descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS].resources.push_back({ TYPEDBUFFER, 0, MAX_SUBSET_DESCRIPTOR_INDEXING * VERTEXBUFFER_DESCRIPTOR_UV_COUNT });
+			descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_TAN].resources.push_back({ TYPEDBUFFER, 0, MAX_SUBSET_DESCRIPTOR_INDEXING });
 
 			for (int i = 0; i < DESCRIPTORTABLE_COUNT; ++i)
 			{
@@ -2404,6 +2406,24 @@ namespace wiScene
 						device->WriteDescriptor(
 							&descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURES],
 							0,
+							global_geometryIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_NORMAL,
+							material->normalMap ? material->normalMap->texture : nullptr
+						);
+						device->WriteDescriptor(
+							&descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURES],
+							0,
+							global_geometryIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_SURFACE,
+							material->surfaceMap ? material->surfaceMap->texture : nullptr
+						);
+						device->WriteDescriptor(
+							&descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURES],
+							0,
+							global_geometryIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_OCCLUSION,
+							material->occlusionMap ? material->occlusionMap->texture : nullptr
+						);
+						device->WriteDescriptor(
+							&descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURES],
+							0,
 							global_geometryIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_EMISSIVE,
 							material->emissiveMap ? material->emissiveMap->texture : nullptr
 						);
@@ -2431,6 +2451,12 @@ namespace wiScene
 							0,
 							global_geometryIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1,
 							&mesh.vertexBuffer_UV1
+						);
+						device->WriteDescriptor(
+							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_TAN],
+							0,
+							global_geometryIndex,
+							&mesh.vertexBuffer_TAN
 						);
 					}
 

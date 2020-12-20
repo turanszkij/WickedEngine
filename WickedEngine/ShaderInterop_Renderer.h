@@ -205,8 +205,11 @@ static const int impostorCaptureAngles = 36;
 
 // More can be added later for shader access when needed:
 static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_BASECOLOR = 0;
-static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_EMISSIVE = 1;
-static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT = 2;
+static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_NORMAL = 1;
+static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_SURFACE = 2;
+static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_OCCLUSION = 3;
+static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_EMISSIVE = 4;
+static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT = 5;
 
 static const uint VERTEXBUFFER_DESCRIPTOR_UV_0 = 0;
 static const uint VERTEXBUFFER_DESCRIPTOR_UV_1 = 1;

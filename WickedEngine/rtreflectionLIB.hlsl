@@ -17,6 +17,7 @@ Texture2D<float4> subsets_textures[] : register(t0, space2);
 Buffer<uint> subsets_indexBuffer[] : register(t0, space3);
 ByteAddressBuffer subsets_vertexBuffer_POS[] : register(t0, space4);
 Buffer<float2> subsets_vertexBuffer_UVSETS[] : register(t0, space5);
+Buffer<float4> subsets_vertexBuffer_TAN[] : register(t0, space6);
 
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
 struct RayPayload
@@ -133,22 +134,54 @@ void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
     N = mul((float3x3)ObjectToWorld3x4(), N);
     N = normalize(N);
 
-    float4 baseColor;
+	float4 baseColor = material.baseColor;
     [branch]
     if (material.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
     {
         const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
         baseColor = subsets_textures[descriptorIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_BASECOLOR].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 2);
-        baseColor.rgb = DEGAMMA(baseColor.rgb);
+        baseColor.rgb *= DEGAMMA(baseColor.rgb);
     }
-    else
-    {
-        baseColor = 1;
-    }
-    baseColor *= material.baseColor;
+
+#ifndef HLSL6 // TODO: DX12 has some visual problem with this part, Vulkan is fine
+	[branch]
+	if (material.normalMapStrength > 0 && material.uvset_normalMap >= 0)
+	{
+		float4 t0, t1, t2;
+		t0 = subsets_vertexBuffer_TAN[descriptorIndex][i0];
+		t1 = subsets_vertexBuffer_TAN[descriptorIndex][i1];
+		t2 = subsets_vertexBuffer_TAN[descriptorIndex][i2];
+		float4 T = t0 * w + t1 * u + t2 * v;
+		T = T * 2 - 1;
+		T.xyz = mul((float3x3)ObjectToWorld3x4(), T.xyz);
+		T.xyz = normalize(T.xyz);
+		float3 B = normalize(cross(T.xyz, N) * T.w);
+		float3x3 TBN = float3x3(T.xyz, B, N);
+
+		const float2 UV_normalMap = material.uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
+		float3 normalMap = subsets_textures[descriptorIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_NORMAL].SampleLevel(sampler_linear_wrap, UV_normalMap, 2).rgb;
+		normalMap = normalMap * 2 - 1;
+		N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
+	}
+#endif // HLSL6
+
+	float4 surfaceMap = 1;
+	[branch]
+	if (material.uvset_surfaceMap >= 0)
+	{
+		const float2 UV_surfaceMap = material.uvset_surfaceMap == 0 ? uvsets.xy : uvsets.zw;
+		surfaceMap = subsets_textures[descriptorIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_SURFACE].SampleLevel(sampler_linear_wrap, UV_surfaceMap, 2);
+	}
 
 	Surface surface;
-	surface.create(material, baseColor, 1);
+	surface.create(material, baseColor, surfaceMap);
+
+	[branch]
+	if (material.IsOcclusionEnabled_Secondary() && material.uvset_occlusionMap >= 0)
+	{
+		const float2 UV_occlusionMap = material.uvset_occlusionMap == 0 ? uvsets.xy : uvsets.zw;
+		surface.occlusion *= subsets_textures[descriptorIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_OCCLUSION].SampleLevel(sampler_linear_wrap, UV_occlusionMap, 2).r;
+	}
 
     surface.emissiveColor = material.emissiveColor;
 	[branch]
@@ -240,7 +273,7 @@ void RTReflection_AnyHit(inout RayPayload payload, in MyAttributes attr)
     float2 uv = uv0 * w + uv1 * u + uv2 * v;
     float alpha = subsets_textures[descriptorIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_BASECOLOR].SampleLevel(sampler_point_wrap, uv, 2).a;
 
-    if (alpha < 0.9)
+    if (alpha - material.alphaTest < 0)
     {
         IgnoreHit();
     }

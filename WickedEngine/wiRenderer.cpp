@@ -9784,6 +9784,7 @@ void Postprocess_RTReflection(
 		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_INDEXBUFFER]);
 		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_POSITION_NORMAL_WIND]);
 		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS]);
+		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_TAN]);
 		device->CreateRootSignature(&rootSignature);
 
 		shaders[RTTYPE_RTREFLECTION].rootSignature = &rootSignature;
