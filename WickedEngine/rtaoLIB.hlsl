@@ -71,7 +71,6 @@ void RTAO_ClosestHit(inout RayPayload payload, in MyAttributes attr)
 [shader("anyhit")]
 void RTAO_AnyHit(inout RayPayload payload, in MyAttributes attr)
 {
-#ifndef SPIRV // for some reason this wouldn't compile as SPIRV (Invalid OpAccessChain)
     float u = attr.barycentrics.x;
     float v = attr.barycentrics.y;
     float w = 1 - u - v;
@@ -112,7 +111,6 @@ void RTAO_AnyHit(inout RayPayload payload, in MyAttributes attr)
     {
         IgnoreHit();
     }
-#endif // SPIRV
 }
 
 [shader("miss")]

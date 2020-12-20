@@ -1219,14 +1219,14 @@ namespace wiScene
 			DESCRIPTORTABLE_SUBSETS_MATERIAL,
 			DESCRIPTORTABLE_SUBSETS_TEXTURES,
 			DESCRIPTORTABLE_SUBSETS_INDEXBUFFER,
-			DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_POSITION_NORMAL_WIND,
+			DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_RAW,
 			DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS,
 
 			DESCRIPTORTABLE_COUNT
 		};
 		wiGraphics::DescriptorTable descriptorTables[DESCRIPTORTABLE_COUNT];
 		std::atomic<uint32_t> geometryOffset;
-		uint32_t MAX_SUBSET_DESCRIPTOR_INDEXING = 100000;
+		uint32_t MAX_SUBSET_DESCRIPTOR_INDEXING = 10000;
 
 		// Update all components by a given timestep (in seconds):
 		//	This is an expensive function, prefer to call it only once per frame!
