@@ -28,7 +28,8 @@ struct RayPayload
 [shader("raygeneration")]
 void RTReflection_Raygen()
 {
-    const float2 uv = ((float2)DispatchRaysIndex() + 0.5f) / (float2)DispatchRaysDimensions();
+	uint2 DTid = DispatchRaysIndex().xy;
+    const float2 uv = ((float2)DTid.xy + 0.5) / (float2)DispatchRaysDimensions();
     const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
     if (depth == 0.0f)
         return;
@@ -40,40 +41,37 @@ void RTReflection_Raygen()
     const float3 V = normalize(g_xCamera_CamPos - P);
 
 
-    float4 H;
-    if (roughness > 0.1f)
-    {
-        const float surfaceMargin = 0.0f;
-        const float maxRegenCount = 15.0f;
+	// The ray direction selection part is the same as in from ssr_raytraceCS.hlsl:
+	float4 H;
+	float3 L;
+	if (roughness > 0.05f)
+	{
+		float3x3 tangentBasis = GetTangentBasis(N);
+		float3 tangentV = mul(tangentBasis, V);
 
-        uint2 Random = Rand_PCG16(int3((DispatchRaysIndex().xy + 0.5f), g_xFrame_FrameCount)).xy;
 
-        // Pick the best rays
+		float2 Xi;
+		Xi.x = BNDSequenceSample(DTid.xy, g_xFrame_FrameCount, 0);
+		Xi.y = BNDSequenceSample(DTid.xy, g_xFrame_FrameCount, 1);
 
-        float RdotN = 0.0f;
-        float regenCount = 0;
-        [loop]
-        for (; RdotN <= surfaceMargin && regenCount < maxRegenCount; regenCount++)
-        {
-            // Low-discrepancy sequence
-            //float2 Xi = float2(Random) * rcp(65536.0); // equivalent to HammersleyRandom(0, 1, Random).
-            float2 Xi = HammersleyRandom16(regenCount, Random); // SingleSPP
+		Xi.y = lerp(Xi.y, 0.0f, GGX_IMPORTANCE_SAMPLE_BIAS);
 
-            Xi.y = lerp(Xi.y, 0.0f, BRDFBias);
+		H = ImportanceSampleVisibleGGX(SampleDisk(Xi), roughness, tangentV);
 
-            // I should probably use importance sampling of visible normals http://jcgt.org/published/0007/04/01/paper.pdf
-            H = ImportanceSampleGGX(Xi, roughness);
-            H = TangentToWorld(H, N);
+		// Tangent to world
+		H.xyz = mul(H.xyz, tangentBasis);
 
-            RdotN = dot(N, reflect(-V, H.xyz));
-        }
-    }
-    else
-    {
-        H = float4(N.xyz, 1.0f);
-    }
 
-    const float3 R = -reflect(V, H.xyz);
+		L = reflect(-V, H.xyz);
+	}
+	else
+	{
+		H = float4(N.xyz, 1.0f);
+		L = reflect(-V, H.xyz);
+	}
+
+
+    const float3 R = L;
 
     float seed = g_xFrame_Time;
 
@@ -98,7 +96,7 @@ void RTReflection_Raygen()
         payload                         // Payload
     );
 
-    output[DispatchRaysIndex().xy] = float4(payload.color, 1);
+    output[DTid.xy] = float4(payload.color, 1);
 }
 
 [shader("closesthit")]

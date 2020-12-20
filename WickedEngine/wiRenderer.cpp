@@ -1814,7 +1814,45 @@ void LoadBuffers()
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_SHADINGRATECLASSIFICATION]);
 	device->SetName(&constantBuffers[CBTYPE_SHADINGRATECLASSIFICATION], "ShadingRateClassificationCB");
 
+	{
+		// Blue noise buffers
 
+		GPUBufferDesc bd;
+		bd.Usage = USAGE_DEFAULT; // Long lifetime, fast read, slow update
+		bd.CPUAccessFlags = 0;
+		bd.BindFlags = BIND_SHADER_RESOURCE; // Read only
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.StructureByteStride = sizeof(uint32_t);
+
+		SubresourceData initData;
+
+		// Sobol
+
+		const uint32_t sobolSequenceLength = uint32_t(sizeof(wiBlueNoise::sobol_256spp_256d) / sizeof(wiBlueNoise::sobol_256spp_256d[0]));
+		bd.ByteWidth = bd.StructureByteStride * sobolSequenceLength;
+
+		initData.pSysMem = &wiBlueNoise::sobol_256spp_256d;
+		device->CreateBuffer(&bd, &initData, &resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE]);
+		device->SetName(&resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE], "resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE]");
+
+		// Scrambling tile
+
+		const uint32_t scramblingTileLength = uint32_t(sizeof(wiBlueNoise::scramblingTile) / sizeof(wiBlueNoise::scramblingTile[0]));
+		bd.ByteWidth = bd.StructureByteStride * scramblingTileLength;
+
+		initData.pSysMem = &wiBlueNoise::scramblingTile;
+		device->CreateBuffer(&bd, &initData, &resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE]);
+		device->SetName(&resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE], "resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE]");
+
+		// Ranking tile
+
+		const uint32_t rankingTileLength = uint32_t(sizeof(wiBlueNoise::rankingTile) / sizeof(wiBlueNoise::rankingTile[0]));
+		bd.ByteWidth = bd.StructureByteStride * rankingTileLength;
+
+		initData.pSysMem = &wiBlueNoise::rankingTile;
+		device->CreateBuffer(&bd, &initData, &resourceBuffers[RBTYPE_BLUENOISE_RANKING_TILE]);
+		device->SetName(&resourceBuffers[RBTYPE_BLUENOISE_RANKING_TILE], "resourceBuffers[RBTYPE_BLUENOISE_RANKING_TILE]");
+	}
 }
 void SetUpStates()
 {
@@ -9767,6 +9805,9 @@ void Postprocess_RTReflection(
 		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_SKYVIEWLUT });
 		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_TRANSMITTANCELUT });
 		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_MULTISCATTERINGLUT });
+		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, TEXSLOT_ONDEMAND1 });
+		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, TEXSLOT_ONDEMAND2 });
+		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, TEXSLOT_ONDEMAND3 });
 		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(FrameCB) });
 		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(CameraCB) });
 		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(PostProcessCB) });
@@ -9866,6 +9907,9 @@ void Postprocess_RTReflection(
 	device->WriteDescriptor(&descriptorTable, 11, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT]);
 	device->WriteDescriptor(&descriptorTable, 12, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT]);
 	device->WriteDescriptor(&descriptorTable, 13, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT]);
+	device->WriteDescriptor(&descriptorTable, 14, 0, &resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE]);
+	device->WriteDescriptor(&descriptorTable, 15, 0, &resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE]);
+	device->WriteDescriptor(&descriptorTable, 16, 0, &resourceBuffers[RBTYPE_BLUENOISE_RANKING_TILE]);
 	for (size_t i = 0; i < rootSignature.tables.size(); ++i)
 	{
 		device->BindDescriptorTable(RAYTRACING, (uint32_t)i, &rootSignature.tables[i], cmd);
@@ -10006,10 +10050,6 @@ void Postprocess_SSR(
 	static Texture texture_resolve;
 	static Texture texture_temporal[2];
 
-	static GPUBuffer sobolSequenceBuffer;
-	static GPUBuffer scramblingTileBuffer;
-	static GPUBuffer rankingTileBuffer;
-
 	// Initialize once
 	if (initialized_desc.Width != desc.Width || initialized_desc.Height != desc.Height)
 	{
@@ -10032,45 +10072,6 @@ void Postprocess_SSR(
 		device->CreateTexture(&buffer_desc, nullptr, &texture_resolve);
 		device->CreateTexture(&buffer_desc, nullptr, &texture_temporal[0]);
 		device->CreateTexture(&buffer_desc, nullptr, &texture_temporal[1]);
-
-		// Blue noise buffers
-
-		GPUBufferDesc bd;
-		bd.Usage = USAGE_DEFAULT; // Long lifetime, fast read, slow update
-		bd.CPUAccessFlags = 0;
-		bd.BindFlags = BIND_SHADER_RESOURCE; // Read only
-		bd.MiscFlags = 0;
-		bd.StructureByteStride = sizeof(uint32_t);
-		bd.Format = FORMAT_R32_UINT;
-
-		SubresourceData initData;
-
-		// Sobol
-
-		const uint32_t sobolSequenceLength = uint32_t(sizeof(wiBlueNoise::sobol_256spp_256d) / sizeof(wiBlueNoise::sobol_256spp_256d[0]));
-		bd.ByteWidth = bd.StructureByteStride * sobolSequenceLength;
-
-		initData.pSysMem = &wiBlueNoise::sobol_256spp_256d;
-		device->CreateBuffer(&bd, &initData, &sobolSequenceBuffer);
-		device->SetName(&sobolSequenceBuffer, "blueNoise_sobolSequenceBuffer");
-
-		// Scrambling tile
-
-		const uint32_t scramblingTileLength = uint32_t(sizeof(wiBlueNoise::scramblingTile) / sizeof(wiBlueNoise::scramblingTile[0]));
-		bd.ByteWidth = bd.StructureByteStride * scramblingTileLength;
-
-		initData.pSysMem = &wiBlueNoise::scramblingTile;
-		device->CreateBuffer(&bd, &initData, &scramblingTileBuffer);
-		device->SetName(&scramblingTileBuffer, "blueNoise_scramblingTileSequence");
-
-		// Ranking tile
-
-		const uint32_t rankingTileLength = uint32_t(sizeof(wiBlueNoise::rankingTile) / sizeof(wiBlueNoise::rankingTile[0]));
-		bd.ByteWidth = bd.StructureByteStride * rankingTileLength;
-
-		initData.pSysMem = &wiBlueNoise::rankingTile;
-		device->CreateBuffer(&bd, &initData, &rankingTileBuffer);
-		device->SetName(&rankingTileBuffer, "blueNoise_rankingTileSequence");
 	}
 
 	// Switch to half res
@@ -10094,9 +10095,9 @@ void Postprocess_SSR(
 		device->BindResource(CS, &gbuffer[GBUFFER_COLOR_ROUGHNESS], TEXSLOT_GBUFFER0, cmd);
 		device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &sobolSequenceBuffer, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &scramblingTileBuffer, TEXSLOT_ONDEMAND2, cmd);
-		device->BindResource(CS, &rankingTileBuffer, TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(CS, &resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE], TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE], TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(CS, &resourceBuffers[RBTYPE_BLUENOISE_RANKING_TILE], TEXSLOT_ONDEMAND3, cmd);
 
 		const GPUResource* uavs[] = {
 			&texture_raytrace,
