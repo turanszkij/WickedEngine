@@ -77,10 +77,9 @@ struct Surface
 		init();
 
 		roughness = material.roughness;
-		float metalness = material.metalness;
-		float reflectance = material.reflectance;
 		f0 = material.specularColor.rgb * material.specularColor.a;
 
+		[branch]
 		if (material.IsUsingSpecularGlossinessWorkflow())
 		{
 			// Specular-glossiness workflow:
@@ -96,10 +95,10 @@ struct Surface
 				occlusion = surfaceMap.r;
 			}
 			roughness *= surfaceMap.g;
-			metalness *= surfaceMap.b;
-			reflectance *= surfaceMap.a;
+			float metalness = material.metalness * surfaceMap.b;
+			float reflectance = material.reflectance * surfaceMap.a;
 			albedo = lerp(lerp(baseColor.rgb, float3(0, 0, 0), reflectance), float3(0, 0, 0), metalness);
-			f0 = lerp(lerp(float3(0, 0, 0), float3(1, 1, 1), reflectance), baseColor.rgb, metalness);
+			f0 *= lerp(lerp(float3(0, 0, 0), float3(1, 1, 1), reflectance), baseColor.rgb, metalness);
 		}
 	}
 
