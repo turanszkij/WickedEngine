@@ -15,9 +15,8 @@ RWTEXTURE2D(output, float4, 0);
 ConstantBuffer<ShaderMaterial> subsets_material[] : register(b0, space1);
 Texture2D<float4> subsets_textures[] : register(t0, space2);
 Buffer<uint> subsets_indexBuffer[] : register(t0, space3);
-ByteAddressBuffer subsets_vertexBuffer_POS[] : register(t0, space4);
+ByteAddressBuffer subsets_vertexBuffer_RAW[] : register(t0, space4);
 Buffer<float2> subsets_vertexBuffer_UVSETS[] : register(t0, space5);
-Buffer<float4> subsets_vertexBuffer_TAN[] : register(t0, space6);
 
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
 struct RayPayload
@@ -124,9 +123,10 @@ void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
 	uv1.zw = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i1];
 	uv2.zw = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i2];
     float3 n0, n1, n2;
-    n0 = unpack_unitvector(subsets_vertexBuffer_POS[descriptorIndex].Load4(i0 * 16).w);
-    n1 = unpack_unitvector(subsets_vertexBuffer_POS[descriptorIndex].Load4(i1 * 16).w);
-    n2 = unpack_unitvector(subsets_vertexBuffer_POS[descriptorIndex].Load4(i2 * 16).w);
+	const uint stride_POS = 16;
+    n0 = unpack_unitvector(subsets_vertexBuffer_RAW[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_POS].Load4(i0 * stride_POS).w);
+    n1 = unpack_unitvector(subsets_vertexBuffer_RAW[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_POS].Load4(i1 * stride_POS).w);
+    n2 = unpack_unitvector(subsets_vertexBuffer_RAW[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_POS].Load4(i2 * stride_POS).w);
 
     float4 uvsets = uv0 * w + uv1 * u + uv2 * v;
     float3 N = n0 * w + n1 * u + n2 * v;
@@ -143,14 +143,26 @@ void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
         baseColor.rgb *= DEGAMMA(baseColor.rgb);
     }
 
-#ifndef HLSL6 // TODO: DX12 has some visual problem with this part, Vulkan is fine
+	[branch]
+	if (material.IsUsingVertexColors())
+	{
+		float4 c0, c1, c2;
+		const uint stride_COL = 4;
+		c0 = unpack_rgba(subsets_vertexBuffer_RAW[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_COL].Load(i0 * stride_COL));
+		c1 = unpack_rgba(subsets_vertexBuffer_RAW[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_COL].Load(i1 * stride_COL));
+		c2 = unpack_rgba(subsets_vertexBuffer_RAW[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_COL].Load(i2 * stride_COL));
+		float4 vertexColor = c0 * w + c1 * u + c2 * v;
+		baseColor *= vertexColor;
+	}
+
 	[branch]
 	if (material.normalMapStrength > 0 && material.uvset_normalMap >= 0)
 	{
 		float4 t0, t1, t2;
-		t0 = subsets_vertexBuffer_TAN[descriptorIndex][i0];
-		t1 = subsets_vertexBuffer_TAN[descriptorIndex][i1];
-		t2 = subsets_vertexBuffer_TAN[descriptorIndex][i2];
+		const uint stride_TAN = 4;
+		t0 = unpack_utangent(subsets_vertexBuffer_RAW[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_TAN].Load(i0 * stride_TAN));
+		t1 = unpack_utangent(subsets_vertexBuffer_RAW[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_TAN].Load(i1 * stride_TAN));
+		t2 = unpack_utangent(subsets_vertexBuffer_RAW[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_TAN].Load(i2 * stride_TAN));
 		float4 T = t0 * w + t1 * u + t2 * v;
 		T = T * 2 - 1;
 		T.xyz = mul((float3x3)ObjectToWorld3x4(), T.xyz);
@@ -163,7 +175,6 @@ void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
 		normalMap = normalMap * 2 - 1;
 		N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
 	}
-#endif // HLSL6
 
 	float4 surfaceMap = 1;
 	[branch]

@@ -422,6 +422,25 @@ inline float3 unpack_unitvector(in uint value)
 	return retVal;
 }
 
+inline uint pack_utangent(in float4 value)
+{
+	uint retVal = 0;
+	retVal |= (uint)((value.x * 0.5 + 0.5) * 255.0) << 0;
+	retVal |= (uint)((value.y * 0.5 + 0.5) * 255.0) << 8;
+	retVal |= (uint)((value.z * 0.5 + 0.5) * 255.0) << 16;
+	retVal |= (uint)((value.w * 0.5 + 0.5) * 255.0) << 24;
+	return retVal;
+}
+inline float4 unpack_utangent(in uint value)
+{
+	float4 retVal;
+	retVal.x = (float)((value >> 0) & 0xFF) / 255.0;
+	retVal.y = (float)((value >> 8) & 0xFF) / 255.0;
+	retVal.z = (float)((value >> 16) & 0xFF) / 255.0;
+	retVal.w = (float)((value >> 24) & 0xFF) / 255.0;
+	return retVal;
+}
+
 inline uint pack_rgba(in float4 value)
 {
 	uint retVal = 0;

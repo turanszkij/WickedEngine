@@ -563,7 +563,6 @@ namespace wiScene
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 			bd.StructureByteStride = sizeof(Vertex_TAN);
 			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
-			bd.Format = Vertex_TAN::FORMAT;
 
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();
@@ -1356,9 +1355,8 @@ namespace wiScene
 			descriptorTables[DESCRIPTORTABLE_SUBSETS_MATERIAL].resources.push_back({ CONSTANTBUFFER, 0, MAX_SUBSET_DESCRIPTOR_INDEXING });
 			descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURES].resources.push_back({ TEXTURE2D, 0, MAX_SUBSET_DESCRIPTOR_INDEXING * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT });
 			descriptorTables[DESCRIPTORTABLE_SUBSETS_INDEXBUFFER].resources.push_back({ TYPEDBUFFER, 0, MAX_SUBSET_DESCRIPTOR_INDEXING });
-			descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_POSITION_NORMAL_WIND].resources.push_back({ RAWBUFFER, 0, MAX_SUBSET_DESCRIPTOR_INDEXING });
+			descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_RAW].resources.push_back({ RAWBUFFER, 0, MAX_SUBSET_DESCRIPTOR_INDEXING * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT });
 			descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS].resources.push_back({ TYPEDBUFFER, 0, MAX_SUBSET_DESCRIPTOR_INDEXING * VERTEXBUFFER_DESCRIPTOR_UV_COUNT });
-			descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_TAN].resources.push_back({ TYPEDBUFFER, 0, MAX_SUBSET_DESCRIPTOR_INDEXING });
 
 			for (int i = 0; i < DESCRIPTORTABLE_COUNT; ++i)
 			{
@@ -2435,10 +2433,22 @@ namespace wiScene
 							subset.indexBuffer_subresource
 						);
 						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_POSITION_NORMAL_WIND],
+							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_RAW],
 							0,
-							global_geometryIndex,
+							global_geometryIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_POS,
 							&mesh.vertexBuffer_POS
+						);
+						device->WriteDescriptor(
+							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_RAW],
+							0,
+							global_geometryIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_TAN,
+							&mesh.vertexBuffer_TAN
+						);
+						device->WriteDescriptor(
+							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_RAW],
+							0,
+							global_geometryIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_COL,
+							&mesh.vertexBuffer_COL
 						);
 						device->WriteDescriptor(
 							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS],
@@ -2453,10 +2463,10 @@ namespace wiScene
 							&mesh.vertexBuffer_UV1
 						);
 						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_TAN],
+							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS],
 							0,
-							global_geometryIndex,
-							&mesh.vertexBuffer_TAN
+							global_geometryIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_ATL,
+							&mesh.vertexBuffer_ATL
 						);
 					}
 
