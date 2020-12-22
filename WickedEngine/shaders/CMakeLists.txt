@@ -192,7 +192,6 @@ set(SHADERS_PS
         "objectPS_hologram.hlsl"
         "objectPS_paintradius.hlsl"
         "objectPS_simplest.hlsl"
-        "objectPS_blackout.hlsl"
         "objectPS_debug.hlsl"
         "objectPS_alphatestonly.hlsl"
         "objectPS_anisotropic.hlsl"

@@ -5,6 +5,7 @@
 
 TEXTURE2D(texture_color, float4, TEXSLOT_ONDEMAND0);
 
+[earlydepthstencil]
 float4 main(VertextoPixel input) : SV_TARGET
 {
     float4 color = texture_color.Sample(sampler_linear_clamp, input.tex.xy);
@@ -15,8 +16,6 @@ float4 main(VertextoPixel input) : SV_TARGET
 	    float4 color2 = texture_color.Sample(sampler_linear_clamp, input.tex.zw);
 		color = lerp(color, color2, input.frameBlend);
 	}
-
-	clip(color.a - 1.0f / 255.0f);
 
 	float2 pixel = input.pos.xy;
 	float2 ScreenCoord = pixel * g_xFrame_InternalResolution_rcp;

@@ -1,5 +1,6 @@
 #include "objectHF.hlsli"
 
+[earlydepthstencil]
 float4 main(PixelInputType input) : SV_TARGET
 {
 	float4 color;

@@ -8,6 +8,7 @@ struct VertextoPixel
 	float4 uvsets			: UVSETS;
 };
 
+[earlydepthstencil]
 float4 main(VertextoPixel input) : SV_TARGET
 {
 	float2 pixel = input.pos.xy;
@@ -25,10 +26,6 @@ float4 main(VertextoPixel input) : SV_TARGET
 		color = 1;
 	}
 	color *= input.color;
-
-#ifndef DISABLE_ALPHATEST
-	clip(color.a - g_xMaterial.alphaTest);
-#endif // DISABLE_ALPHATEST
 
 	float opacity = color.a;
 

@@ -1,14 +1,6 @@
 #ifndef WI_OBJECTSHADER_HF
 #define WI_OBJECTSHADER_HF
 
-#if (defined(TILEDFORWARD) || defined(FORWARD)) && !defined(TRANSPARENT)
-#define DISABLE_ALPHATEST
-#endif
-
-#ifdef TERRAIN
-#define DISABLE_ALPHATEST
-#endif
-
 #ifdef TRANSPARENT
 #define DISABLE_TRANSPARENT_SHADOWMAP
 #endif
@@ -21,7 +13,6 @@
 #ifdef WATER
 #define DISABLE_VOXELGI
 #endif
-
 
 #define LIGHTMAP_QUALITY_BICUBIC
 
@@ -116,7 +107,7 @@ inline void LightMapping(in float2 ATLAS, inout Lighting lighting)
 #ifdef LIGHTMAP_QUALITY_BICUBIC
 		lighting.indirect.diffuse = SampleTextureCatmullRom(texture_globallightmap, sampler_linear_clamp, ATLAS).rgb;
 #else
-		lighting.indirect.diffuse = texture_globallightmap.SampleLevel(sampler_linear_clamp, ATLAS, 0);
+		lighting.indirect.diffuse = texture_globallightmap.SampleLevel(sampler_linear_clamp, ATLAS, 0).rgb;
 #endif // LIGHTMAP_QUALITY_BICUBIC
 	}
 }
@@ -667,6 +658,11 @@ inline void ApplyFog(in float dist, inout float4 color)
 #endif // SIMPLE_INPUT
 
 
+#ifdef DISABLE_ALPHATEST
+[earlydepthstencil]
+#endif // DISABLE_ALPHATEST
+
+
 // entry point:
 #if defined(ALPHATESTONLY)
 void main(PIXELINPUT input)
@@ -677,7 +673,6 @@ float4 main(PIXELINPUT input) : SV_TARGET
 #elif defined(ENVMAPRENDERING)
 float4 main(PSIn_EnvmapRendering input) : SV_TARGET
 #else
-[earlydepthstencil]
 GBUFFEROutputType main(PIXELINPUT input)
 #endif // ALPHATESTONLY
 

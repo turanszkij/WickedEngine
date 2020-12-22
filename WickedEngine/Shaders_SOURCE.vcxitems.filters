@@ -608,9 +608,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_simplest.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_blackout.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_debug.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
