@@ -1,14 +1,6 @@
 #include "wiGraphicsDevice.h"
 #include "wiPlatform.h"
 
-#ifdef _WIN32
-// These will let the driver select the dedicated GPU in favour of the integrated one:
-extern "C" {
-	_declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
-	_declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
-}
-#endif // _WIN32
-
 using namespace wiGraphics;
 
 uint32_t GraphicsDevice::GetFormatStride(FORMAT value) const

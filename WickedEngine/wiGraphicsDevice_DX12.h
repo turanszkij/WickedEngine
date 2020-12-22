@@ -85,7 +85,7 @@ namespace wiGraphics
 
 			struct DescriptorTableFrameAllocator
 			{
-				GraphicsDevice_DX12*	device = nullptr;
+				GraphicsDevice_DX12* device = nullptr;
 				struct DescriptorHeap
 				{
 					D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
@@ -99,7 +99,8 @@ namespace wiGraphics
 				uint32_t current_resource_heap = 0;
 				uint32_t current_sampler_heap = 0;
 				bool heaps_bound = false;
-				bool dirty = false;
+				bool dirty_res = false;
+				bool dirty_sam = false;
 
 				const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
 				const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
