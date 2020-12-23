@@ -28,7 +28,7 @@ namespace wiGraphics
 {
 	class GraphicsDevice_DX12 : public GraphicsDevice
 	{
-	private:
+	public:
 		Microsoft::WRL::ComPtr<ID3D12Device5> device;
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter;
 		Microsoft::WRL::ComPtr<IDXGIFactory6> factory;
@@ -68,6 +68,77 @@ namespace wiGraphics
 
 		D3D12_CPU_DESCRIPTOR_HANDLE rtv_descriptor_heap_start = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE dsv_descriptor_heap_start = {};
+
+		struct DescriptorAllocator
+		{
+			GraphicsDevice_DX12* device = nullptr;
+			std::mutex locker;
+			D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+			std::vector<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>> heaps;
+			uint32_t descriptor_size = 0;
+			std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> freelist;
+
+			void block_allocate()
+			{
+				heaps.emplace_back();
+				HRESULT hr = device->device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&heaps.back()));
+				assert(SUCCEEDED(hr));
+				D3D12_CPU_DESCRIPTOR_HANDLE heap_start = heaps.back()->GetCPUDescriptorHandleForHeapStart();
+				for (UINT i = 0; i < desc.NumDescriptors; ++i)
+				{
+					D3D12_CPU_DESCRIPTOR_HANDLE handle = heap_start;
+					handle.ptr += i * descriptor_size;
+					freelist.push_back(handle);
+				}
+			}
+			void init(GraphicsDevice_DX12* device, D3D12_DESCRIPTOR_HEAP_TYPE type)
+			{
+				this->device = device;
+				desc.Type = type;
+				desc.NumDescriptors = 1024;
+				descriptor_size = device->device->GetDescriptorHandleIncrementSize(type);
+				block_allocate();
+			}
+			D3D12_CPU_DESCRIPTOR_HANDLE allocate()
+			{
+				locker.lock();
+				if (freelist.empty())
+				{
+					block_allocate();
+				}
+				assert(!freelist.empty());
+				D3D12_CPU_DESCRIPTOR_HANDLE handle = freelist.back();
+				freelist.pop_back();
+				locker.unlock();
+				return handle;
+			}
+			void free(D3D12_CPU_DESCRIPTOR_HANDLE index)
+			{
+				locker.lock();
+				freelist.push_back(index);
+				locker.unlock();
+			}
+		};
+		std::shared_ptr<DescriptorAllocator> descriptors_res;
+		std::shared_ptr<DescriptorAllocator> descriptors_sam;
+
+		D3D12_CPU_DESCRIPTOR_HANDLE nullCBV = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSAM = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_buffer = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texture1d = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texture1darray = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texture2d = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texture2darray = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texturecube = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texturecubearray = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texture3d = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_accelerationstructure = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_buffer = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture1d = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture1darray = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture2d = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture2darray = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture3d = {};
 
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> copyQueue;
 		std::mutex copyQueueLock;
