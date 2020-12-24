@@ -344,6 +344,11 @@ namespace wiPhysicsEngine
 					physicsTransform.setOrigin(T);
 					physicsTransform.setRotation(R);
 					motionState->setWorldTransform(physicsTransform);
+
+					btCollisionShape* shape = rigidbody->getCollisionShape();
+					XMFLOAT3 scale = transform.GetScale();
+					btVector3 S(scale.x, scale.y, scale.z);
+					shape->setLocalScaling(S);
 				}
 			}
 		});
