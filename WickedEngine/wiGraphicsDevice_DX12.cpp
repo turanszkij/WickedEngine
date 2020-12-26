@@ -2645,12 +2645,11 @@ using namespace DX12_Internal;
 
 		HRESULT hr = E_FAIL;
 
-		uint32_t alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+		size_t alignedSize = pDesc->ByteWidth;
 		if (pDesc->BindFlags & BIND_CONSTANT_BUFFER)
 		{
-			alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
+			alignedSize = Align(alignedSize, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 		}
-		size_t alignedSize = Align(pDesc->ByteWidth, alignment);
 
 		D3D12_RESOURCE_DESC desc;
 		desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -2793,10 +2792,6 @@ using namespace DX12_Internal;
 			{
 				desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 			}
-		}
-		else if (desc.SampleDesc.Count == 1)
-		{
-			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
 		}
 		if (pDesc->BindFlags & BIND_RENDER_TARGET)
 		{
@@ -3591,7 +3586,6 @@ using namespace DX12_Internal;
 
 		D3D12MA::ALLOCATION_DESC allocationDesc = {};
 		allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-		allocationDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
 
 		HRESULT hr = allocationhandler->allocator->CreateResource(
 			&allocationDesc,

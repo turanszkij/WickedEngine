@@ -893,10 +893,12 @@ namespace Vulkan_Internal
 		VkImageView uav = VK_NULL_HANDLE;
 		VkImageView rtv = VK_NULL_HANDLE;
 		VkImageView dsv = VK_NULL_HANDLE;
+		uint32_t framebuffer_layercount = 0;
 		std::vector<VkImageView> subresources_srv;
 		std::vector<VkImageView> subresources_uav;
 		std::vector<VkImageView> subresources_rtv;
 		std::vector<VkImageView> subresources_dsv;
+		std::vector<uint32_t> subresources_framebuffer_layercount;
 
 		VkSubresourceLayout subresourcelayout = {};
 
@@ -4523,10 +4525,19 @@ using namespace Vulkan_Internal;
 		if (validAttachmentCount > 0)
 		{
 			const TextureDesc& texdesc = desc.attachments[0].texture->desc;
+			auto texture_internal = to_internal(desc.attachments[0].texture);
 			framebufferInfo.pAttachments = attachments;
 			framebufferInfo.width = texdesc.Width;
 			framebufferInfo.height = texdesc.Height;
-			framebufferInfo.layers = texdesc.MiscFlags & RESOURCE_MISC_TEXTURECUBE ? 6 : 1; // todo figure out better! can't use ArraySize here, it will crash!
+			if (desc.attachments[0].subresource >= 0)
+			{
+				framebufferInfo.layers = texture_internal->subresources_framebuffer_layercount[0];
+			}
+			else
+			{
+				framebufferInfo.layers = texture_internal->framebuffer_layercount;
+			}
+			framebufferInfo.layers = std::min(framebufferInfo.layers, texdesc.ArraySize);
 		}
 		else
 		{
@@ -5257,9 +5268,11 @@ using namespace Vulkan_Internal;
 				if (internal_state->rtv == VK_NULL_HANDLE)
 				{
 					internal_state->rtv = rtv;
+					internal_state->framebuffer_layercount = view_desc.subresourceRange.layerCount;
 					return -1;
 				}
 				internal_state->subresources_rtv.push_back(rtv);
+				internal_state->subresources_framebuffer_layercount.push_back(view_desc.subresourceRange.layerCount);
 				return int(internal_state->subresources_rtv.size() - 1);
 			}
 			else
@@ -5299,9 +5312,11 @@ using namespace Vulkan_Internal;
 				if (internal_state->dsv == VK_NULL_HANDLE)
 				{
 					internal_state->dsv = dsv;
+					internal_state->framebuffer_layercount = view_desc.subresourceRange.layerCount;
 					return -1;
 				}
 				internal_state->subresources_dsv.push_back(dsv);
+				internal_state->subresources_framebuffer_layercount.push_back(view_desc.subresourceRange.layerCount);
 				return int(internal_state->subresources_dsv.size() - 1);
 			}
 			else
