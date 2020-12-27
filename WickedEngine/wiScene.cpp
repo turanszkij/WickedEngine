@@ -2676,7 +2676,7 @@ namespace wiScene
 			    mesh.aabb = AABB(_min, _max);
 
 				mesh.SetDirtyMorph(false);
-				wiRenderer::AddDeferredMorphUpdate(args.jobIndex);
+				wiRenderer::AddDeferredMorphUpdate(meshes.GetEntity(args.jobIndex));
 			}
 
 		});
@@ -2717,7 +2717,7 @@ namespace wiScene
 			if (material.IsDirty())
 			{
 				material.SetDirty(false);
-				wiRenderer::AddDeferredMaterialUpdate(args.jobIndex);
+				wiRenderer::AddDeferredMaterialUpdate(entity);
 			}
 
 		});

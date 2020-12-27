@@ -245,8 +245,8 @@ struct RenderQueue
 	}
 };
 
-vector<size_t> pendingMaterialUpdates;
-vector<size_t> pendingMorphUpdates;
+vector<Entity> pendingMaterialUpdates;
+vector<Entity> pendingMorphUpdates;
 
 enum AS_UPDATE_TYPE
 {
@@ -3682,25 +3682,25 @@ void UpdateRenderData(
 	BindCommonResources(cmd);
 
 	// Update material constant buffers:
-	for (auto& materialIndex : pendingMaterialUpdates)
+	for (Entity entity : pendingMaterialUpdates)
 	{
-		if (materialIndex < vis.scene->materials.GetCount())
+		const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
+		if (material != nullptr)
 		{
-			const MaterialComponent& material = vis.scene->materials[materialIndex];
 			ShaderMaterial materialGPUData;
-			material.WriteShaderMaterial(&materialGPUData);
-			device->UpdateBuffer(&material.constantBuffer, &materialGPUData, cmd);
+			material->WriteShaderMaterial(&materialGPUData);
+			device->UpdateBuffer(&material->constantBuffer, &materialGPUData, cmd);
 		}
 	}
 	pendingMaterialUpdates.clear();
 
 	// Update mesh morph buffers:
-	for (auto& meshIndex : pendingMorphUpdates)
+	for (Entity entity : pendingMorphUpdates)
 	{
-		if (meshIndex < vis.scene->meshes.GetCount())
+		const MeshComponent* mesh = vis.scene->meshes.GetComponent(entity);
+		if (mesh != nullptr && !mesh->vertex_positions_morphed.empty())
 		{
-			const MeshComponent& mesh = vis.scene->meshes[meshIndex];
-			device->UpdateBuffer(&mesh.vertexBuffer_POS, mesh.vertex_positions_morphed.data(), cmd);
+			device->UpdateBuffer(&mesh->vertexBuffer_POS, mesh->vertex_positions_morphed.data(), cmd);
 		}
 	}
 	pendingMorphUpdates.clear();
@@ -11863,18 +11863,18 @@ void AddDeferredMIPGen(std::shared_ptr<wiResource> resource, bool preserve_cover
 	deferredMIPGens.push_back(std::make_pair(resource, preserve_coverage));
 	deferredMIPGenLock.unlock();
 }
-void AddDeferredMaterialUpdate(size_t index)
+void AddDeferredMaterialUpdate(Entity entity)
 {
 	static std::mutex locker;
 	locker.lock();
-	pendingMaterialUpdates.push_back(index);
+	pendingMaterialUpdates.push_back(entity);
 	locker.unlock();
 }
-void AddDeferredMorphUpdate(size_t index)
+void AddDeferredMorphUpdate(Entity entity)
 {
 	static std::mutex locker;
 	locker.lock();
-	pendingMorphUpdates.push_back(index);
+	pendingMorphUpdates.push_back(entity);
 	locker.unlock();
 }
 
