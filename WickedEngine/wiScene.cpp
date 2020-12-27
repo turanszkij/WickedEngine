@@ -1993,10 +1993,36 @@ namespace wiScene
 
 				float left = animationdata->keyframe_times[keyLeft];
 
-				TransformComponent& target_transform = *transforms.GetComponent(channel.target);
-				TransformComponent transform = target_transform;
+				TransformComponent transform;
 
-				if (sampler.mode == AnimationComponent::AnimationSampler::Mode::STEP || keyLeft == keyRight)
+				TransformComponent* target_transform = nullptr;
+				MeshComponent* target_mesh = nullptr;
+
+				if (channel.path == AnimationComponent::AnimationChannel::Path::WEIGHTS)
+				{
+					ObjectComponent* object = objects.GetComponent(channel.target);
+					assert(object != nullptr);
+					if (object == nullptr)
+						continue;
+					target_mesh = meshes.GetComponent(object->meshID);
+					assert(target_mesh != nullptr);
+					if (target_mesh == nullptr)
+						continue;
+					animation.morph_weights_temp.resize(target_mesh->targets.size());
+				}
+				else
+				{
+					target_transform = transforms.GetComponent(channel.target);
+					assert(target_transform != nullptr);
+					if (target_transform == nullptr)
+						continue;
+					transform = *target_transform;
+				}
+
+				switch (sampler.mode)
+				{
+				default:
+				case AnimationComponent::AnimationSampler::Mode::STEP:
 				{
 					// Nearest neighbor method (snap to left):
 					switch (channel.path)
@@ -2020,13 +2046,31 @@ namespace wiScene
 						transform.scale_local = ((const XMFLOAT3*)animationdata->keyframe_data.data())[keyLeft];
 					}
 					break;
+					case AnimationComponent::AnimationChannel::Path::WEIGHTS:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size());
+						for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+						{
+							animation.morph_weights_temp[j] = animationdata->keyframe_data[keyLeft * animation.morph_weights_temp.size() + j];
+						}
+					}
+					break;
 					}
 				}
-				else
+				break;
+				case AnimationComponent::AnimationSampler::Mode::LINEAR:
 				{
 					// Linear interpolation method:
-					float right = animationdata->keyframe_times[keyRight];
-					float t = (animation.timer - left) / (right - left);
+					float t;
+					if (keyLeft == keyRight)
+					{
+						t = 0;
+					}
+					else
+					{
+						float right = animationdata->keyframe_times[keyRight];
+						t = (animation.timer - left) / (right - left);
+					}
 
 					switch (channel.path)
 					{
@@ -2062,28 +2106,131 @@ namespace wiScene
 						XMStoreFloat3(&transform.scale_local, vAnim);
 					}
 					break;
+					case AnimationComponent::AnimationChannel::Path::WEIGHTS:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size());
+						for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+						{
+							float vLeft = animationdata->keyframe_data[keyLeft * animation.morph_weights_temp.size() + j];
+							float vRight = animationdata->keyframe_data[keyLeft * animation.morph_weights_temp.size() + j];
+							float vAnim = wiMath::Lerp(vLeft, vRight, t);
+							animation.morph_weights_temp[j] = vAnim;
+						}
+					}
+					break;
 					}
 				}
+				break;
+				case AnimationComponent::AnimationSampler::Mode::CUBICSPLINE:
+				{
+					// Cubic Spline interpolation method:
+					float t;
+					if (keyLeft == keyRight)
+					{
+						t = 0;
+					}
+					else
+					{
+						float right = animationdata->keyframe_times[keyRight];
+						t = (animation.timer - left) / (right - left);
+					}
 
-				target_transform.SetDirty();
+					const float t2 = t * t;
+					const float t3 = t2 * t;
 
-				const float t = animation.amount;
+					switch (channel.path)
+					{
+					default:
+					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3 * 3);
+						const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
+						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft * 3 + 1]);
+						XMVECTOR vLeftTanOut = dt * XMLoadFloat3(&data[keyLeft * 3 + 2]);
+						XMVECTOR vRightTanIn = dt * XMLoadFloat3(&data[keyRight * 3 + 0]);
+						XMVECTOR vRight = XMLoadFloat3(&data[keyRight * 3 + 1]);
+						XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+						XMStoreFloat3(&transform.translation_local, vAnim);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::ROTATION:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4 * 3);
+						const XMFLOAT4* data = (const XMFLOAT4*)animationdata->keyframe_data.data();
+						XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft * 3 + 1]);
+						XMVECTOR vLeftTanOut = dt * XMLoadFloat4(&data[keyLeft * 3 + 2]);
+						XMVECTOR vRightTanIn = dt * XMLoadFloat4(&data[keyRight * 3 + 0]);
+						XMVECTOR vRight = XMLoadFloat4(&data[keyRight * 3 + 1]);
+						XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+						vAnim = XMQuaternionNormalize(vAnim);
+						XMStoreFloat4(&transform.rotation_local, vAnim);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::SCALE:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3 * 3);
+						const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
+						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft * 3 + 1]);
+						XMVECTOR vLeftTanOut = dt * XMLoadFloat3(&data[keyLeft * 3 + 2]);
+						XMVECTOR vRightTanIn = dt * XMLoadFloat3(&data[keyRight * 3 + 0]);
+						XMVECTOR vRight = XMLoadFloat3(&data[keyRight * 3 + 1]);
+						XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+						XMStoreFloat3(&transform.scale_local, vAnim);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::WEIGHTS:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size() * 3);
+						for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+						{
+							float vLeft = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 1];
+							float vLeftTanOut = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 2];
+							float vRightTanIn = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 0];
+							float vRight = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 1];
+							float vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+							animation.morph_weights_temp[j] = vAnim;
+						}
+					}
+					break;
+					}
+				}
+				break;
+				}
 
-				const XMVECTOR aS = XMLoadFloat3(&target_transform.scale_local);
-				const XMVECTOR aR = XMLoadFloat4(&target_transform.rotation_local);
-				const XMVECTOR aT = XMLoadFloat3(&target_transform.translation_local);
+				if (target_transform != nullptr)
+				{
+					target_transform->SetDirty();
 
-				const XMVECTOR bS = XMLoadFloat3(&transform.scale_local);
-				const XMVECTOR bR = XMLoadFloat4(&transform.rotation_local);
-				const XMVECTOR bT = XMLoadFloat3(&transform.translation_local);
+					const float t = animation.amount;
 
-				const XMVECTOR S = XMVectorLerp(aS, bS, t);
-				const XMVECTOR R = XMQuaternionSlerp(aR, bR, t);
-				const XMVECTOR T = XMVectorLerp(aT, bT, t);
+					const XMVECTOR aS = XMLoadFloat3(&target_transform->scale_local);
+					const XMVECTOR aR = XMLoadFloat4(&target_transform->rotation_local);
+					const XMVECTOR aT = XMLoadFloat3(&target_transform->translation_local);
 
-				XMStoreFloat3(&target_transform.scale_local, S);
-				XMStoreFloat4(&target_transform.rotation_local, R);
-				XMStoreFloat3(&target_transform.translation_local, T);
+					const XMVECTOR bS = XMLoadFloat3(&transform.scale_local);
+					const XMVECTOR bR = XMLoadFloat4(&transform.rotation_local);
+					const XMVECTOR bT = XMLoadFloat3(&transform.translation_local);
+
+					const XMVECTOR S = XMVectorLerp(aS, bS, t);
+					const XMVECTOR R = XMQuaternionSlerp(aR, bR, t);
+					const XMVECTOR T = XMVectorLerp(aT, bT, t);
+
+					XMStoreFloat3(&target_transform->scale_local, S);
+					XMStoreFloat4(&target_transform->rotation_local, R);
+					XMStoreFloat3(&target_transform->translation_local, T);
+				}
+
+				if (target_mesh != nullptr)
+				{
+					const float t = animation.amount;
+
+					for (size_t j = 0; j < target_mesh->targets.size(); ++j)
+					{
+						target_mesh->targets[j].weight = wiMath::Lerp(target_mesh->targets[j].weight, animation.morph_weights_temp[j], t);
+					}
+
+					target_mesh->SetDirtyMorph(true);
+				}
 
 			}
 

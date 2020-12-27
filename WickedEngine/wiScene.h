@@ -980,6 +980,7 @@ namespace wiScene
 				TRANSLATION,
 				ROTATION,
 				SCALE,
+				WEIGHTS,
 				UNKNOWN,
 				TYPE_FORCE_UINT32 = 0xFFFFFFFF
 			} path = TRANSLATION;
@@ -998,6 +999,7 @@ namespace wiScene
 			{
 				LINEAR,
 				STEP,
+				CUBICSPLINE,
 				MODE_FORCE_UINT32 = 0xFFFFFFFF
 			} mode = LINEAR;
 
@@ -1006,6 +1008,9 @@ namespace wiScene
 		};
 		std::vector<AnimationChannel> channels;
 		std::vector<AnimationSampler> samplers;
+
+		// Non-serialzied attributes:
+		std::vector<float> morph_weights_temp;
 
 		inline bool IsPlaying() const { return _flags & PLAYING; }
 		inline bool IsLooped() const { return _flags & LOOPED; }

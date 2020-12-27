@@ -904,6 +904,10 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			{
 				animationcomponent.samplers[i].mode = AnimationComponent::AnimationSampler::Mode::STEP;
 			}
+			else if (!sam.interpolation.compare("CUBICSPLINE"))
+			{
+				animationcomponent.samplers[i].mode = AnimationComponent::AnimationSampler::Mode::CUBICSPLINE;
+			}
 
 			animationcomponent.samplers[i].data = CreateEntity();
 			AnimationDataComponent& animationdata = scene.animation_datas.Create(animationcomponent.samplers[i].data);
@@ -948,6 +952,16 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 				switch (accessor.type)
 				{
+				case TINYGLTF_TYPE_SCALAR:
+				{
+					assert(stride == sizeof(float));
+					animationdata.keyframe_data.resize(count);
+					for (size_t j = 0; j < count; ++j)
+					{
+						animationdata.keyframe_data[j] = ((float*)data)[j];
+					}
+				}
+				break;
 				case TINYGLTF_TYPE_VEC3:
 				{
 					assert(stride == sizeof(XMFLOAT3));
@@ -995,6 +1009,10 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			else if (!channel.target_path.compare("translation"))
 			{
 				animationcomponent.channels[i].path = AnimationComponent::AnimationChannel::Path::TRANSLATION;
+			}
+			else if (!channel.target_path.compare("weights"))
+			{
+				animationcomponent.channels[i].path = AnimationComponent::AnimationChannel::Path::WEIGHTS;
 			}
 			else
 			{
