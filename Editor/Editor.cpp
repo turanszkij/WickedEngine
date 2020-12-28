@@ -337,7 +337,7 @@ void EditorComponent::ResizeLayout()
 	exitButton.SetSize(XMFLOAT2(50, 40));
 
 	profilerEnabledCheckBox.SetSize(XMFLOAT2(20, 20));
-	profilerEnabledCheckBox.SetPos(XMFLOAT2(screenW - 520, 45));
+	profilerEnabledCheckBox.SetPos(XMFLOAT2(screenW - 530, 45));
 
 	physicsEnabledCheckBox.SetSize(XMFLOAT2(20, 20));
 	physicsEnabledCheckBox.SetPos(XMFLOAT2(screenW - 370, 45));
@@ -879,12 +879,12 @@ void EditorComponent::Load()
 	profilerEnabledCheckBox.SetCheck(wiProfiler::IsEnabled());
 	GetGUI().AddWidget(&profilerEnabledCheckBox);
 
-	physicsEnabledCheckBox.Create("Physics Enabled: ");
-	physicsEnabledCheckBox.SetTooltip("Toggle Physics Engine On/Off");
+	physicsEnabledCheckBox.Create("Physics Simulation: ");
+	physicsEnabledCheckBox.SetTooltip("Toggle Physics Simulation On/Off");
 	physicsEnabledCheckBox.OnClick([&](wiEventArgs args) {
-		wiPhysicsEngine::SetEnabled(args.bValue);
+		wiPhysicsEngine::SetSimulationEnabled(args.bValue);
 	});
-	physicsEnabledCheckBox.SetCheck(wiPhysicsEngine::IsEnabled());
+	physicsEnabledCheckBox.SetCheck(wiPhysicsEngine::IsSimulationEnabled());
 	GetGUI().AddWidget(&physicsEnabledCheckBox);
 
 	cinemaModeCheckBox.Create("Cinema Mode: ");
@@ -1597,6 +1597,7 @@ void EditorComponent::Update(float dt)
 		const wiScene::PickResult& picked = translator.selected.back();
 
 		assert(picked.entity != INVALID_ENTITY);
+		objectWnd.SetEntity(picked.entity);
 
 		for (auto& x : translator.selected)
 		{

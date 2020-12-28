@@ -485,7 +485,19 @@ namespace wiScene
 			archive >> mass;
 			archive >> friction;
 			archive >> restitution;
-			archive >> damping;
+			archive >> damping_linear;
+
+			if (archive.GetVersion() >= 57)
+			{
+				archive >> damping_angular;
+			}
+			else
+			{
+				// these were previously untested:
+				friction = 0.5f;
+				restitution = 0.0f;
+				damping_linear = 0;
+			}
 		}
 		else
 		{
@@ -494,7 +506,12 @@ namespace wiScene
 			archive << mass;
 			archive << friction;
 			archive << restitution;
-			archive << damping;
+			archive << damping_linear;
+
+			if (archive.GetVersion() >= 57)
+			{
+				archive << damping_angular;
+			}
 		}
 	}
 	void SoftBodyPhysicsComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
@@ -514,6 +531,16 @@ namespace wiScene
 				archive >> temp;
 			}
 
+			if (archive.GetVersion() >= 57)
+			{
+				archive >> restitution;
+			}
+			else
+			{
+				// these were previously untested:
+				friction = 0.5f;
+			}
+
 			_flags &= ~SAFE_TO_REGISTER;
 		}
 		else
@@ -524,6 +551,11 @@ namespace wiScene
 			archive << physicsToGraphicsVertexMapping;
 			archive << graphicsToPhysicsVertexMapping;
 			archive << weights;
+
+			if (archive.GetVersion() >= 57)
+			{
+				archive << restitution;
+			}
 		}
 	}
 	void ArmatureComponent::Serialize(wiArchive& archive, EntitySerializer& seri)

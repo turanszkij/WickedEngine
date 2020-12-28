@@ -16,6 +16,7 @@ public:
 	wiCheckBox softbodyCheckBox;
 	wiSlider massSlider;
 	wiSlider frictionSlider;
+	wiSlider restitutionSlider;
 	wiButton impostorCreateButton;
 	wiSlider impostorDistanceSlider;
 	wiSlider tessellationFactorSlider;

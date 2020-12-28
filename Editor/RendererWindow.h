@@ -35,6 +35,7 @@ public:
 	wiSlider voxelRadianceConeTracingSlider;
 	wiSlider voxelRadianceRayStepSizeSlider;
 	wiSlider voxelRadianceMaxDistanceSlider;
+	wiCheckBox physicsDebugCheckBox;
 	wiCheckBox partitionBoxesCheckBox;
 	wiCheckBox boneLinesCheckBox;
 	wiCheckBox debugEmittersCheckBox;

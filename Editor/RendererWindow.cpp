@@ -2,6 +2,7 @@
 #include "RendererWindow.h"
 #include "RenderPath3D.h"
 #include "Editor.h"
+#include "wiPhysicsEngine.h"
 
 
 void RendererWindow::Create(EditorComponent* editor)
@@ -466,8 +467,18 @@ void RendererWindow::Create(EditorComponent* editor)
 	// Visualizer toggles:
 	x = 540, y = 5;
 
+	physicsDebugCheckBox.Create("Physics visualizer: ");
+	physicsDebugCheckBox.SetTooltip("Visualize the physics world");
+	physicsDebugCheckBox.SetPos(XMFLOAT2(x, y += step));
+	physicsDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	physicsDebugCheckBox.OnClick([](wiEventArgs args) {
+		wiPhysicsEngine::SetDebugDrawEnabled(args.bValue);
+		});
+	physicsDebugCheckBox.SetCheck(wiPhysicsEngine::IsDebugDrawEnabled());
+	AddWidget(&physicsDebugCheckBox);
+
 	partitionBoxesCheckBox.Create("SPTree visualizer: ");
-	partitionBoxesCheckBox.SetTooltip("Visualize the world space partitioning tree as boxes");
+	partitionBoxesCheckBox.SetTooltip("Visualize the scene bounding boxes");
 	partitionBoxesCheckBox.SetScriptTip("SetDebugPartitionTreeEnabled(bool enabled)");
 	partitionBoxesCheckBox.SetPos(XMFLOAT2(x, y += step));
 	partitionBoxesCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));

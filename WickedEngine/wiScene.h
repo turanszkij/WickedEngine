@@ -656,9 +656,24 @@ namespace wiScene
 		};
 		CollisionShape shape;
 		float mass = 1.0f;
-		float friction = 1.0f;
-		float restitution = 1.0f;
-		float damping = 1.0f;
+		float friction = 0.5f;
+		float restitution = 0.0f;
+		float damping_linear = 0.0f;
+		float damping_angular = 0.0f;
+
+		struct BoxParams
+		{
+			XMFLOAT3 halfextents = XMFLOAT3(1, 1, 1);
+		} box;
+		struct SphereParams
+		{
+			float radius = 1;
+		} sphere;
+		struct CapsuleParams
+		{
+			float radius = 1;
+			float height = 1;
+		} capsule;
 
 		// Non-serialized attributes:
 		void* physicsobject = nullptr;
@@ -684,7 +699,8 @@ namespace wiScene
 		uint32_t _flags = DISABLE_DEACTIVATION;
 
 		float mass = 1.0f;
-		float friction = 1.0f;
+		float friction = 0.5f;
+		float restitution = 0.0f;
 		std::vector<uint32_t> physicsToGraphicsVertexMapping; // maps graphics vertex index to physics vertex index of the same position
 		std::vector<uint32_t> graphicsToPhysicsVertexMapping; // maps a physics vertex index to first graphics vertex index of the same position
 		std::vector<float> weights; // weight per physics vertex controlling the mass. (0: disable weight (no physics, only animation), 1: default weight)

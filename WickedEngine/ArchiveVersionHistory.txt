@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+57: serialized RigidBodyPhysicsComponent::damping_angular and SoftBodyPhysicsComponent::restitution
 56: serialized Material specularColor (specular-glossiness workflow)
 55: removed area lights
 54: MaterialComponent::subsurfaceScattering color instead of profile
