@@ -118,6 +118,7 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 		std::vector<XMFLOAT3> positions(mesh.vertexCount);
 		std::vector<XMFLOAT2> atlas(mesh.vertexCount);
 		std::vector<XMFLOAT3> normals;
+		std::vector<XMFLOAT4> tangents;
 		std::vector<XMFLOAT2> uvset_0;
 		std::vector<XMFLOAT2> uvset_1;
 		std::vector<uint32_t> colors;
@@ -126,6 +127,10 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 		if (!meshcomponent.vertex_normals.empty())
 		{
 			normals.resize(mesh.vertexCount);
+		}
+		if (!meshcomponent.vertex_tangents.empty())
+		{
+			tangents.resize(mesh.vertexCount);
 		}
 		if (!meshcomponent.vertex_uvset_0.empty())
 		{
@@ -160,6 +165,10 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 			{
 				normals[ind] = meshcomponent.vertex_normals[v.xref];
 			}
+			if (!tangents.empty())
+			{
+				tangents[ind] = meshcomponent.vertex_tangents[v.xref];
+			}
 			if (!uvset_0.empty())
 			{
 				uvset_0[ind] = meshcomponent.vertex_uvset_0[v.xref];
@@ -187,6 +196,10 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 		if (!normals.empty())
 		{
 			meshcomponent.vertex_normals = normals;
+		}
+		if (!tangents.empty())
+		{
+			meshcomponent.vertex_tangents = tangents;
 		}
 		if (!uvset_0.empty())
 		{
