@@ -925,6 +925,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		texture_displacement_Button.SetText(wiHelper::GetFileNameFromPath(material->displacementMapName));
 		texture_emissive_Button.SetText(wiHelper::GetFileNameFromPath(material->emissiveMapName));
 		texture_occlusion_Button.SetText(wiHelper::GetFileNameFromPath(material->occlusionMapName));
+		texture_transmission_Button.SetText(wiHelper::GetFileNameFromPath(material->transmissionMapName));
 
 		texture_baseColor_uvset_Field.SetText(std::to_string(material->uvset_baseColorMap));
 		texture_normal_uvset_Field.SetText(std::to_string(material->uvset_normalMap));
@@ -932,6 +933,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		texture_displacement_uvset_Field.SetText(std::to_string(material->uvset_displacementMap));
 		texture_emissive_uvset_Field.SetText(std::to_string(material->uvset_emissiveMap));
 		texture_occlusion_uvset_Field.SetText(std::to_string(material->uvset_occlusionMap));
+		texture_transmission_uvset_Field.SetText(std::to_string(material->uvset_transmissionMap));
 
 
 		colorComboBox.SetEnabled(true);

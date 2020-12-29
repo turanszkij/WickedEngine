@@ -76,7 +76,7 @@ struct TerraGen : public wiWindow
 void MeshWindow::Create(EditorComponent* editor)
 {
 	wiWindow::Create("Mesh Window");
-	SetSize(XMFLOAT2(580, 500));
+	SetSize(XMFLOAT2(580, 520));
 
 	float x = 150;
 	float y = 0;
