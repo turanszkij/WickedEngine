@@ -498,6 +498,14 @@ namespace wiScene
 				restitution = 0.0f;
 				damping_linear = 0;
 			}
+
+			if (archive.GetVersion() >= 58)
+			{
+				archive >> box.halfextents;
+				archive >> sphere.radius;
+				archive >> capsule.height;
+				archive >> capsule.radius;
+			}
 		}
 		else
 		{
@@ -511,6 +519,14 @@ namespace wiScene
 			if (archive.GetVersion() >= 57)
 			{
 				archive << damping_angular;
+			}
+
+			if (archive.GetVersion() >= 58)
+			{
+				archive << box.halfextents;
+				archive << sphere.radius;
+				archive << capsule.height;
+				archive << capsule.radius;
 			}
 		}
 	}
