@@ -2896,6 +2896,7 @@ void RenderMeshes(
 						material.GetEmissiveMap(),
 						material.GetDisplacementMap(),
 						material.GetOcclusionMap(),
+						material.GetTransmissionMap(),
 					};
 					device->BindResources(PS, res, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(res), cmd);
 				}

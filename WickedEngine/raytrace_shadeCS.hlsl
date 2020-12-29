@@ -99,7 +99,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		if (roulette < refractChance)
 		{
 			// Refraction
-			const float3 R = refract(ray.direction, N, 1 - material.refractionIndex);
+			const float3 R = refract(ray.direction, N, 1 - material.refraction);
 			ray.direction = lerp(R, SampleHemisphere_cos(R, seed, uv), alphaRoughness);
 			ray.energy *= lerp(baseColor.rgb, 1, refractChance);
 

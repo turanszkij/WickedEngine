@@ -21,7 +21,7 @@ struct ShaderMaterial
 	float		roughness;
 	float		reflectance;
 	float		metalness;
-	float		refractionIndex;
+	float		refraction;
 
 	float		normalMapStrength;
 	float		parallaxOcclusionMapping;
@@ -36,6 +36,10 @@ struct ShaderMaterial
 	int			uvset_displacementMap;
 	int			uvset_emissiveMap;
 	int			uvset_occlusionMap;
+	int			uvset_transmissionMap;
+
+	float2		padding0;
+	float		transmission;
 	uint		options;
 
 	float4		baseColorAtlasMulAdd;

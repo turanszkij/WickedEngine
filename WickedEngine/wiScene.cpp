@@ -272,6 +272,14 @@ namespace wiScene
 		}
 		return wiTextureHelper::getWhite();
 	}
+	const Texture* MaterialComponent::GetTransmissionMap() const
+	{
+		if (transmissionMap != nullptr)
+		{
+			return transmissionMap->texture;
+		}
+		return wiTextureHelper::getWhite();
+	}
 	void MaterialComponent::WriteShaderMaterial(ShaderMaterial* dest) const
 	{
 		dest->baseColor = baseColor;
@@ -281,7 +289,7 @@ namespace wiScene
 		dest->roughness = roughness;
 		dest->reflectance = reflectance;
 		dest->metalness = metalness;
-		dest->refractionIndex = refractionIndex;
+		dest->refraction = refraction;
 		dest->normalMapStrength = (normalMap == nullptr ? 0 : normalMapStrength);
 		dest->parallaxOcclusionMapping = parallaxOcclusionMapping;
 		dest->displacementMapping = displacementMapping;
@@ -299,8 +307,10 @@ namespace wiScene
 		dest->uvset_displacementMap = displacementMap == nullptr ? -1 : (int)uvset_displacementMap;
 		dest->uvset_emissiveMap = emissiveMap == nullptr ? -1 : (int)uvset_emissiveMap;
 		dest->uvset_occlusionMap = occlusionMap == nullptr ? -1 : (int)uvset_occlusionMap;
+		dest->uvset_transmissionMap = transmissionMap == nullptr ? -1 : (int)uvset_transmissionMap;
 		dest->alphaTest = 1 - alphaRef + 1.0f / 256.0f; // 256 so that it is just about smaller than 1 unorm unit (1.0/255.0)
 		dest->layerMask = layerMask;
+		dest->transmission = transmission;
 		dest->options = 0;
 		if (IsUsingVertexColors())
 		{
@@ -339,6 +349,10 @@ namespace wiScene
 		{
 			return RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
 		}
+		if (transmission > 0)
+		{
+			return RENDERTYPE_TRANSPARENT;
+		}
 		if (userBlendMode == BLENDMODE_OPAQUE)
 		{
 			return RENDERTYPE_OPAQUE;
@@ -370,6 +384,10 @@ namespace wiScene
 		if (!occlusionMapName.empty())
 		{
 			occlusionMap = wiResourceManager::Load(content_dir + occlusionMapName);
+		}
+		if (!transmissionMapName.empty())
+		{
+			transmissionMap = wiResourceManager::Load(content_dir + transmissionMapName);
 		}
 
 

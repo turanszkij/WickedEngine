@@ -101,7 +101,7 @@ namespace wiScene
 			{
 				archive >> emissiveColor.w;
 			}
-			archive >> refractionIndex;
+			archive >> refraction;
 			if (archive.GetVersion() < 52)
 			{
 				archive >> subsurfaceScattering.w;
@@ -179,6 +179,13 @@ namespace wiScene
 				archive >> specularColor;
 			}
 
+			if (archive.GetVersion() >= 59)
+			{
+				archive >> transmission;
+				archive >> transmissionMapName;
+				archive >> uvset_transmissionMap;
+			}
+
 			wiJobSystem::Execute(seri.ctx, [&](wiJobArgs args) {
 				CreateRenderData(dir);
 			});
@@ -202,7 +209,7 @@ namespace wiScene
 			{
 				archive << emissiveColor.w;
 			}
-			archive << refractionIndex;
+			archive << refraction;
 			if (archive.GetVersion() < 52)
 			{
 				float subsurfaceScattering = 0;
@@ -246,6 +253,18 @@ namespace wiScene
 				if (found != std::string::npos)
 				{
 					emissiveMapName = emissiveMapName.substr(found + dir.length());
+				}
+
+				found = occlusionMapName.rfind(dir);
+				if (found != std::string::npos)
+				{
+					occlusionMapName = occlusionMapName.substr(found + dir.length());
+				}
+
+				found = transmissionMapName.rfind(dir);
+				if (found != std::string::npos)
+				{
+					transmissionMapName = transmissionMapName.substr(found + dir.length());
 				}
 			}
 
@@ -292,6 +311,13 @@ namespace wiScene
 			if (archive.GetVersion() >= 56)
 			{
 				archive << specularColor;
+			}
+
+			if (archive.GetVersion() >= 59)
+			{
+				archive << transmission;
+				archive << transmissionMapName;
+				archive << uvset_transmissionMap;
 			}
 		}
 	}

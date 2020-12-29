@@ -46,7 +46,7 @@ namespace tinygltf
 #else
 
 #if defined(TARGET_OS_IPHONE) || defined(TARGET_IPHONE_SIMULATOR) || \
-    defined(__ANDROID__) || defined(__EMSCRIPTEN__)
+	defined(__ANDROID__) || defined(__EMSCRIPTEN__)
 		// no expansion
 		std::string s = filepath;
 #else
@@ -510,13 +510,32 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			}
 		}
 
-		auto unlit = x.extensions.find("KHR_materials_unlit");
-		if (unlit != x.extensions.end())
+		auto ext_unlit = x.extensions.find("KHR_materials_unlit");
+		if (ext_unlit != x.extensions.end())
 		{
 			material.shaderType = MaterialComponent::SHADERTYPE_UNLIT;
 		}
 
-		// specular-glossiness workflow (todo):
+		auto ext_transmission = x.extensions.find("KHR_materials_transmission");
+		if (ext_transmission != x.extensions.end())
+		{
+			if (ext_transmission->second.Has("transmissionFactor"))
+			{
+				auto& factor = ext_transmission->second.Get("transmissionFactor");
+				material.transmission = float(factor.IsNumber() ? factor.Get<double>() : factor.Get<int>());
+			}
+			if (ext_transmission->second.Has("transmissionTexture"))
+			{
+				int index = ext_transmission->second.Get("transmissionTexture").Get("index").Get<int>();
+				auto& tex = state.gltfModel.textures[index];
+				auto& img = state.gltfModel.images[tex.source];
+				material.transmissionMap = RegisterTexture(&img, "transmission");
+				material.transmissionMapName = img.uri;
+				material.uvset_transmissionMap = (uint32_t)ext_transmission->second.Get("transmissionTexture").Get("texCoord").Get<int>();
+			}
+		}
+
+		// specular-glossiness workflow:
 		auto specularGlossinessWorkflow = x.extensions.find("KHR_materials_pbrSpecularGlossiness");
 		if (specularGlossinessWorkflow != x.extensions.end())
 		{
@@ -583,7 +602,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		mesh.targets.resize(x.weights.size());
 		for (size_t i = 0; i < mesh.targets.size(); i++)
 		{
-		    mesh.targets[i].weight = static_cast<float_t>(x.weights[i]);
+			mesh.targets[i].weight = static_cast<float_t>(x.weights[i]);
 		}
 
 		for (auto& prim : x.primitives)
@@ -792,8 +811,8 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 				for (size_t i = 0; i < mesh.targets.size(); i++)
 				{
-				    for (auto& attr : prim.targets[i])
-				    {
+					for (auto& attr : prim.targets[i])
+					{
 						const string& attr_name = attr.first;
 						int attr_data = attr.second;
 
@@ -817,14 +836,14 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 						}
 						else if (!attr_name.compare("NORMAL"))
 						{
-						    mesh.targets[i].vertex_normals.resize(vertexOffset + vertexCount);
-						    assert(stride == 12);
-						    for (size_t j = 0; j < vertexCount; ++j)
-						    {
+							mesh.targets[i].vertex_normals.resize(vertexOffset + vertexCount);
+							assert(stride == 12);
+							for (size_t j = 0; j < vertexCount; ++j)
+							{
 								mesh.targets[i].vertex_normals[vertexOffset + j] = ((XMFLOAT3*)data)[j];
-						    }
+							}
 						}
-				    }
+					}
 				}
 			}
 

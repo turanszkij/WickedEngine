@@ -153,10 +153,11 @@ namespace wiScene
 		float roughness = 0.2f;
 		float reflectance = 0.02f;
 		float metalness = 0.0f;
-		float refractionIndex = 0.0f;
 		float normalMapStrength = 1.0f;
 		float parallaxOcclusionMapping = 0.0f;
 		float displacementMapping = 0.0f;
+		float refraction = 0.0f;
+		float transmission = 0.0f;
 
 		float alphaRef = 1.0f;
 		wiGraphics::SHADING_RATE shadingRate = wiGraphics::SHADING_RATE_1X1;
@@ -171,6 +172,7 @@ namespace wiScene
 		std::string displacementMapName;
 		std::string emissiveMapName;
 		std::string occlusionMapName;
+		std::string transmissionMapName;
 
 		uint32_t uvset_baseColorMap = 0;
 		uint32_t uvset_surfaceMap = 0;
@@ -178,6 +180,7 @@ namespace wiScene
 		uint32_t uvset_displacementMap = 0;
 		uint32_t uvset_emissiveMap = 0;
 		uint32_t uvset_occlusionMap = 0;
+		uint32_t uvset_transmissionMap = 0;
 
 		int customShaderID = -1;
 
@@ -188,6 +191,7 @@ namespace wiScene
 		std::shared_ptr<wiResource> displacementMap;
 		std::shared_ptr<wiResource> emissiveMap;
 		std::shared_ptr<wiResource> occlusionMap;
+		std::shared_ptr<wiResource> transmissionMap;
 		wiGraphics::GPUBuffer constantBuffer;
 		uint32_t layerMask = ~0u;
 
@@ -205,6 +209,7 @@ namespace wiScene
 		const wiGraphics::Texture* GetDisplacementMap() const;
 		const wiGraphics::Texture* GetEmissiveMap() const;
 		const wiGraphics::Texture* GetOcclusionMap() const;
+		const wiGraphics::Texture* GetTransmissionMap() const;
 
 		inline float GetOpacity() const { return baseColor.w; }
 		inline float GetEmissiveStrength() const { return emissiveColor.w; }
@@ -236,7 +241,8 @@ namespace wiScene
 		inline void SetReflectance(float value) { SetDirty(); reflectance = value; }
 		inline void SetMetalness(float value) { SetDirty(); metalness = value; }
 		inline void SetEmissiveStrength(float value) { SetDirty(); emissiveColor.w = value; }
-		inline void SetRefractionIndex(float value) { SetDirty(); refractionIndex = value; }
+		inline void SetTransmissionAmount(float value) { SetDirty(); transmission = value; }
+		inline void SetRefractionAmount(float value) { SetDirty(); refraction = value; }
 		inline void SetNormalMapStrength(float value) { SetDirty(); normalMapStrength = value; }
 		inline void SetParallaxOcclusionMapping(float value) { SetDirty(); parallaxOcclusionMapping = value; }
 		inline void SetDisplacementMapping(float value) { SetDirty(); displacementMapping = value; }
@@ -261,6 +267,7 @@ namespace wiScene
 		inline void SetUVSet_DisplacementMap(uint32_t value) { uvset_displacementMap = value; SetDirty(); }
 		inline void SetUVSet_EmissiveMap(uint32_t value) { uvset_emissiveMap = value; SetDirty(); }
 		inline void SetUVSet_OcclusionMap(uint32_t value) { uvset_occlusionMap = value; SetDirty(); }
+		inline void SetUVSet_TransmissionMap(uint32_t value) { uvset_transmissionMap = value; SetDirty(); }
 
 		// The MaterialComponent will be written to ShaderMaterial (a struct that is optimized for GPU use)
 		void WriteShaderMaterial(ShaderMaterial* dest) const;

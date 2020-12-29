@@ -12,7 +12,7 @@ using namespace wiScene;
 void MaterialWindow::Create(EditorComponent* editor)
 {
 	wiWindow::Create("Material Window");
-	SetSize(XMFLOAT2(720, 520));
+	SetSize(XMFLOAT2(720, 540));
 
 	float x = 670, y = 0;
 	float hei = 18;
@@ -228,17 +228,6 @@ void MaterialWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&alphaRefSlider);
 
-	refractionIndexSlider.Create(0, 1.0f, 0.02f, 1000, "Refraction Index: ");
-	refractionIndexSlider.SetTooltip("Adjust the IOR (index of refraction). It controls the amount of distortion of the scene visible through the transparent object. No effect when BlendMode is set to OPAQUE.");
-	refractionIndexSlider.SetSize(XMFLOAT2(wid, hei));
-	refractionIndexSlider.SetPos(XMFLOAT2(x, y += step));
-	refractionIndexSlider.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-			material->SetRefractionIndex(args.fValue);
-	});
-	AddWidget(&refractionIndexSlider);
-
 	emissiveSlider.Create(0, 1, 0.0f, 1000, "Emissive: ");
 	emissiveSlider.SetTooltip("Adjust the light emission of the surface. The color of the light emitted is that of the color of the material.");
 	emissiveSlider.SetSize(XMFLOAT2(wid, hei));
@@ -249,6 +238,28 @@ void MaterialWindow::Create(EditorComponent* editor)
 			material->SetEmissiveStrength(args.fValue);
 	});
 	AddWidget(&emissiveSlider);
+
+	transmissionSlider.Create(0, 1.0f, 0.02f, 1000, "Transmission: ");
+	transmissionSlider.SetTooltip("Adjust the transmissiveness. More transmissiveness means more diffuse light is transmitted instead of absorbed.");
+	transmissionSlider.SetSize(XMFLOAT2(wid, hei));
+	transmissionSlider.SetPos(XMFLOAT2(x, y += step));
+	transmissionSlider.OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+			material->SetTransmissionAmount(args.fValue);
+		});
+	AddWidget(&transmissionSlider);
+
+	refractionSlider.Create(0, 1, 0, 1000, "Refraction: ");
+	refractionSlider.SetTooltip("Adjust the refraction amount for transmissive materials.");
+	refractionSlider.SetSize(XMFLOAT2(wid, hei));
+	refractionSlider.SetPos(XMFLOAT2(x, y += step));
+	refractionSlider.OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+			material->SetRefractionAmount(args.fValue);
+		});
+	AddWidget(&refractionSlider);
 
 	pomSlider.Create(0, 0.1f, 0.0f, 1000, "Parallax Occlusion Mapping: ");
 	pomSlider.SetTooltip("Adjust how much the bump map should modulate the surface parallax effect. \nOnly works with PBR + Parallax shader.");
@@ -746,7 +757,68 @@ void MaterialWindow::Create(EditorComponent* editor)
 	AddWidget(&texture_occlusion_uvset_Field);
 
 
-	y = 180;
+
+
+	texture_transmission_Label.Create("TransmissionMap: ");
+	texture_transmission_Label.SetPos(XMFLOAT2(x, y += step));
+	texture_transmission_Label.SetSize(XMFLOAT2(120, 20));
+	AddWidget(&texture_transmission_Label);
+
+	texture_transmission_Button.Create("TransmissionMap");
+	texture_transmission_Button.SetText("");
+	texture_transmission_Button.SetTooltip("Load the transmission map texture. R: transmission factor");
+	texture_transmission_Button.SetPos(XMFLOAT2(x + 122, y));
+	texture_transmission_Button.SetSize(XMFLOAT2(260, 20));
+	texture_transmission_Button.OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material == nullptr)
+			return;
+
+		if (material->transmissionMap != nullptr)
+		{
+			material->transmissionMap = nullptr;
+			material->transmissionMapName = "";
+			material->SetDirty();
+			texture_transmission_Button.SetText("");
+		}
+		else
+		{
+			wiHelper::FileDialogParams params;
+			params.type = wiHelper::FileDialogParams::OPEN;
+			params.description = "Texture";
+			params.extensions.push_back("dds");
+			params.extensions.push_back("png");
+			params.extensions.push_back("jpg");
+			params.extensions.push_back("jpeg");
+			params.extensions.push_back("tga");
+			wiHelper::FileDialog(params, [this, material](std::string fileName) {
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					material->transmissionMap = wiResourceManager::Load(fileName);
+					material->transmissionMapName = fileName;
+					material->SetDirty();
+					texture_transmission_Button.SetText(wiHelper::GetFileNameFromPath(fileName));
+					});
+				});
+		}
+		});
+	AddWidget(&texture_transmission_Button);
+
+	texture_transmission_uvset_Field.Create("uvset_transmission");
+	texture_transmission_uvset_Field.SetText("");
+	texture_transmission_uvset_Field.SetTooltip("uv set number");
+	texture_transmission_uvset_Field.SetPos(XMFLOAT2(x + 392, y));
+	texture_transmission_uvset_Field.SetSize(XMFLOAT2(20, 20));
+	texture_transmission_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
+			material->SetUVSet_TransmissionMap(args.iValue);
+		}
+		});
+	AddWidget(&texture_transmission_uvset_Field);
+
+
+	y = 200;
 
 	colorComboBox.Create("Color picker mode: ");
 	colorComboBox.SetSize(XMFLOAT2(120, hei));
@@ -824,7 +896,8 @@ void MaterialWindow::SetEntity(Entity entity)
 		roughnessSlider.SetValue(material->roughness);
 		reflectanceSlider.SetValue(material->reflectance);
 		metalnessSlider.SetValue(material->metalness);
-		refractionIndexSlider.SetValue(material->refractionIndex);
+		transmissionSlider.SetValue(material->transmission);
+		refractionSlider.SetValue(material->refraction);
 		emissiveSlider.SetValue(material->emissiveColor.w);
 		pomSlider.SetValue(material->parallaxOcclusionMapping);
 		displacementMappingSlider.SetValue(material->displacementMapping);
