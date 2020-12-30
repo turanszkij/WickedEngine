@@ -29,12 +29,74 @@ namespace wiGraphics
 	class GraphicsDevice_DX12 : public GraphicsDevice
 	{
 	public:
+		struct Fence
+		{
+			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
+			HANDLE eventHandle;
+			uint64_t completedValue;
+			uint64_t nextValue;
+			std::mutex fenceLock;
+
+			void init(GraphicsDevice_DX12* device)
+			{
+				HRESULT hr = device->device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
+				assert(SUCCEEDED(hr));
+				eventHandle = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
+
+				completedValue = fence->GetCompletedValue();
+				nextValue = completedValue + 1;
+			}
+
+			void free()
+			{
+				CloseHandle(eventHandle);
+			}
+
+			uint64_t signal(ID3D12CommandQueue* queue)
+			{
+				fenceLock.lock();
+
+				HRESULT hr = queue->Signal(fence.Get(), nextValue);
+				assert(SUCCEEDED(hr));
+				completedValue = fence->GetCompletedValue();
+				uint64_t oldValue = nextValue;
+				++nextValue;
+
+				fenceLock.unlock();
+				return oldValue;
+			}
+
+			void waitGPU(ID3D12CommandQueue* queue, uint64_t value)
+			{
+				HRESULT hr = queue->Wait(fence.Get(), value);
+				assert(SUCCEEDED(hr));
+			}
+
+			void waitCPU(uint64_t value)
+			{
+				if (fence->GetCompletedValue() < value)
+				{
+					HRESULT hr = fence->SetEventOnCompletion(value, eventHandle);
+					WaitForSingleObject(eventHandle, INFINITE);
+				}
+			}
+
+			void waitForIdle(ID3D12CommandQueue* queue)
+			{
+				uint64_t value = nextValue;
+				signal(queue);
+				waitCPU(value);
+			}
+		};
+
 		Microsoft::WRL::ComPtr<ID3D12Device5> device;
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter;
 		Microsoft::WRL::ComPtr<IDXGIFactory6> factory;
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> directQueue;
-		Microsoft::WRL::ComPtr<ID3D12Fence> frameFence;
-		HANDLE frameFenceEvent;
+
+		Fence m_frameFence;
+		Fence m_copyFence;
+		Fence m_directQueueFence;
 
 		uint32_t backbuffer_index = 0;
 		Microsoft::WRL::ComPtr<ID3D12Resource> backBuffers[BACKBUFFER_COUNT];
@@ -143,8 +205,6 @@ namespace wiGraphics
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> copyQueue;
 		std::mutex copyQueueLock;
 		bool copyQueueUse = false;
-		Microsoft::WRL::ComPtr<ID3D12Fence> copyFence; // GPU only
-		UINT64 copyFenceValue = 0;
 
 		struct FrameResources
 		{

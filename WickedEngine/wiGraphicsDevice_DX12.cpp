@@ -2164,14 +2164,11 @@ using namespace DX12_Internal;
 		assert(SUCCEEDED(hr));
 
 		// Create fences for command queue:
-		hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameFence));
-		assert(SUCCEEDED(hr));
-		frameFenceEvent = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
-
-
+		m_frameFence.init(this);
+		m_copyFence.init(this);
+		m_directQueueFence.init(this);
 
 		// Create swapchain
-
 		ComPtr<IDXGIFactory4> pIDXGIFactory;
 		hr = CreateDXGIFactory1(IID_PPV_ARGS(&pIDXGIFactory));
 		assert(SUCCEEDED(hr));
@@ -2270,9 +2267,6 @@ using namespace DX12_Internal;
 			hr = static_cast<ID3D12GraphicsCommandList*>(frames[fr].copyCommandList.Get())->Close();
 			assert(SUCCEEDED(hr));
 		}
-
-		hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&copyFence));
-		assert(SUCCEEDED(hr));
 
 		// Query features:
 
@@ -2580,7 +2574,9 @@ using namespace DX12_Internal;
 	{
 		WaitForGPU();
 
-		CloseHandle(frameFenceEvent);
+		m_frameFence.free();
+		m_copyFence.free();
+		m_directQueueFence.free();
 
 		allocation_querypool_timestamp_readback->Release();
 		allocation_querypool_occlusion_readback->Release();
@@ -2592,6 +2588,8 @@ using namespace DX12_Internal;
 		{
 			RESOLUTIONWIDTH = width;
 			RESOLUTIONHEIGHT = height;
+
+			WaitForGPU();
 
 			for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 			{
@@ -5005,11 +5003,8 @@ using namespace DX12_Internal;
 			copyQueue->ExecuteCommandLists(1, commandlists);
 
 			// Signal and increment the fence value.
-			copyFenceValue++;
-			HRESULT hr = copyQueue->Signal(copyFence.Get(), copyFenceValue);
-			assert(SUCCEEDED(hr));
-			hr = directQueue->Wait(copyFence.Get(), copyFenceValue);
-			assert(SUCCEEDED(hr));
+			uint64_t value = m_copyFence.signal(copyQueue.Get());
+			m_copyFence.waitGPU(copyQueue.Get(), value);
 		}
 
 		// Execute deferred command lists:
@@ -5067,32 +5062,26 @@ using namespace DX12_Internal;
 		}
 
 		// This acts as a barrier, following this we will be using the next frame's resources when calling GetFrameResources()!
+		m_frameFence.nextValue = FRAMECOUNT;
+		m_frameFence.signal(directQueue.Get());
 		FRAMECOUNT++;
-		HRESULT hr = directQueue->Signal(frameFence.Get(), FRAMECOUNT);
 
 		// Determine the last frame that we should not wait on:
 		const uint64_t lastFrameToAllowLatency = std::max(uint64_t(BACKBUFFER_COUNT - 1u), FRAMECOUNT) - (BACKBUFFER_COUNT - 1);
 
 		// Wait if too many frames are being incomplete:
-		if (frameFence->GetCompletedValue() < lastFrameToAllowLatency)
-		{
-			hr = frameFence->SetEventOnCompletion(lastFrameToAllowLatency, frameFenceEvent);
-			WaitForSingleObject(frameFenceEvent, INFINITE);
-		}
+		m_frameFence.waitCPU(lastFrameToAllowLatency);
 
 		allocationhandler->Update(FRAMECOUNT, BACKBUFFER_COUNT);
-
 		copyQueueLock.unlock();
 	}
 
 	void GraphicsDevice_DX12::WaitForGPU()
 	{
-		if (frameFence->GetCompletedValue() < FRAMECOUNT)
-		{
-			HRESULT result = frameFence->SetEventOnCompletion(FRAMECOUNT, frameFenceEvent);
-			WaitForSingleObject(frameFenceEvent, INFINITE);
-		}
+		m_copyFence.waitForIdle(copyQueue.Get());
+		m_directQueueFence.waitForIdle(directQueue.Get());
 	}
+
 	void GraphicsDevice_DX12::ClearPipelineStateCache()
 	{
 		allocationhandler->destroylocker.lock();
