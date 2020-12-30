@@ -1,14 +1,6 @@
 #ifndef WI_OBJECTSHADER_HF
 #define WI_OBJECTSHADER_HF
 
-#if (defined(TILEDFORWARD) || defined(FORWARD)) && !defined(TRANSPARENT)
-#define DISABLE_ALPHATEST
-#endif
-
-#ifdef TERRAIN
-#define DISABLE_ALPHATEST
-#endif
-
 #ifdef TRANSPARENT
 #define DISABLE_TRANSPARENT_SHADOWMAP
 #endif
@@ -21,7 +13,6 @@
 #ifdef WATER
 #define DISABLE_VOXELGI
 #endif
-
 
 #define LIGHTMAP_QUALITY_BICUBIC
 
@@ -41,6 +32,7 @@ TEXTURE2D(texture_surfacemap, float4, TEXSLOT_RENDERER_SURFACEMAP);				// r: occ
 TEXTURE2D(texture_emissivemap, float4, TEXSLOT_RENDERER_EMISSIVEMAP);			// rgba: emissive
 TEXTURE2D(texture_displacementmap, float, TEXSLOT_RENDERER_DISPLACEMENTMAP);	// r: heightmap
 TEXTURE2D(texture_occlusionmap, float, TEXSLOT_RENDERER_OCCLUSIONMAP);			// r: occlusion
+TEXTURE2D(texture_transmissionmap, float, TEXSLOT_RENDERER_TRANSMISSIONMAP);			// r: occlusion
 
 TEXTURE2D(texture_blend1_basecolormap, float4, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP);	// rgb: baseColor, a: opacity
 TEXTURE2D(texture_blend1_normalmap, float3, TEXSLOT_RENDERER_BLEND1_NORMALMAP);			// rgb: normal
@@ -58,6 +50,7 @@ TEXTURE2D(texture_blend3_surfacemap, float4, TEXSLOT_RENDERER_BLEND3_SURFACEMAP)
 TEXTURE2D(texture_blend3_emissivemap, float4, TEXSLOT_RENDERER_BLEND3_EMISSIVEMAP);		// rgba: emissive
 
 // These are bound by RenderPath (based on Render Path):
+STRUCTUREDBUFFER(EntityTiles, uint, TEXSLOT_RENDERPATH_ENTITYTILES);
 TEXTURE2D(texture_reflection, float4, TEXSLOT_RENDERPATH_REFLECTION);		// rgba: scene color from reflected camera angle
 TEXTURE2D(texture_refraction, float4, TEXSLOT_RENDERPATH_REFRACTION);		// rgba: scene color from primary camera angle
 TEXTURE2D(texture_waterriples, float4, TEXSLOT_RENDERPATH_WATERRIPPLES);	// rgb: snorm8 water ripple normal map
@@ -115,7 +108,7 @@ inline void LightMapping(in float2 ATLAS, inout Lighting lighting)
 #ifdef LIGHTMAP_QUALITY_BICUBIC
 		lighting.indirect.diffuse = SampleTextureCatmullRom(texture_globallightmap, sampler_linear_clamp, ATLAS).rgb;
 #else
-		lighting.indirect.diffuse = texture_globallightmap.SampleLevel(sampler_linear_clamp, ATLAS, 0);
+		lighting.indirect.diffuse = texture_globallightmap.SampleLevel(sampler_linear_clamp, ATLAS, 0).rgb;
 #endif // LIGHTMAP_QUALITY_BICUBIC
 	}
 }
@@ -176,22 +169,6 @@ inline void ParallaxOcclusionMapping(inout float4 uvsets, in float3 V, in float3
 		float2 finalTextureCoords = prevTCoords * weight + currentTextureCoords * (1.0 - weight);
 		float2 difference = finalTextureCoords - originalTextureCoords;
 		uvsets += difference.xyxy;
-	}
-}
-
-inline void Refraction(in float2 ScreenCoord, inout Surface surface, inout float4 color, inout Lighting lighting)
-{
-	[branch]
-	if (g_xMaterial.refractionIndex > 0)
-	{
-		float2 size;
-		float mipLevels;
-		texture_refraction.GetDimensions(0, size.x, size.y, mipLevels);
-		const float2 normal2D = mul((float3x3)g_xCamera_View, surface.N.xyz).xy;
-		float2 perturbatedRefrTexCoords = ScreenCoord.xy + normal2D * g_xMaterial.refractionIndex;
-		float4 refractiveColor = texture_refraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, surface.roughness * mipLevels);
-		surface.refraction = float4(refractiveColor.rgb, 1 - color.a);
-		color.a = 1;
 	}
 }
 
@@ -666,6 +643,11 @@ inline void ApplyFog(in float dist, inout float4 color)
 #endif // SIMPLE_INPUT
 
 
+#ifdef DISABLE_ALPHATEST
+[earlydepthstencil]
+#endif // DISABLE_ALPHATEST
+
+
 // entry point:
 #if defined(ALPHATESTONLY)
 void main(PIXELINPUT input)
@@ -676,7 +658,6 @@ float4 main(PIXELINPUT input) : SV_TARGET
 #elif defined(ENVMAPRENDERING)
 float4 main(PSIn_EnvmapRendering input) : SV_TARGET
 #else
-[earlydepthstencil]
 GBUFFEROutputType main(PIXELINPUT input)
 #endif // ALPHATESTONLY
 
@@ -720,17 +701,13 @@ GBUFFEROutputType main(PIXELINPUT input)
 	ParallaxOcclusionMapping(input.uvsets, surface.V, TBN);
 #endif // POM
 
-	float4 color;
+	float4 color = 1;
 	[branch]
-	if (g_xMaterial.uvset_baseColorMap >= 0)
+	if (g_xMaterial.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 	{
 		const float2 UV_baseColorMap = g_xMaterial.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 		color = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap);
 		color.rgb = DEGAMMA(color.rgb);
-	}
-	else
-	{
-		color = 1;
 	}
 	color *= input.color;
 
@@ -757,76 +734,63 @@ GBUFFEROutputType main(PIXELINPUT input)
 #endif // SIMPLE_INPUT
 
 	// Surface map:
-	float4 surface_occlusion_roughness_metallic_reflectance;
+	float4 surfaceMap = 1;
 	[branch]
 	if (g_xMaterial.uvset_surfaceMap >= 0)
 	{
 		const float2 UV_surfaceMap = g_xMaterial.uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-		surface_occlusion_roughness_metallic_reflectance = texture_surfacemap.Sample(sampler_objectshader, UV_surfaceMap);
-		if (!g_xMaterial.IsOcclusionEnabled_Primary())
-		{
-			surface_occlusion_roughness_metallic_reflectance.r = 1;
-		}
-		if (g_xMaterial.IsUsingSpecularGlossinessWorkflow())
-		{
-			ConvertToSpecularGlossiness(surface_occlusion_roughness_metallic_reflectance);
-		}
+		surfaceMap = texture_surfacemap.Sample(sampler_objectshader, UV_surfaceMap);
 	}
-	else
-	{
-		surface_occlusion_roughness_metallic_reflectance = 1;
-	}
-	surface_occlusion_roughness_metallic_reflectance *= float4(1, g_xMaterial.roughness, g_xMaterial.metalness, g_xMaterial.reflectance);
+
+	surface.create(g_xMaterial, color, surfaceMap);
 
 	// Emissive map:
-	float4 emissiveColor = g_xMaterial.emissiveColor;
+	surface.emissiveColor = g_xMaterial.emissiveColor;
 	[branch]
-	if (emissiveColor.a > 0 && g_xMaterial.uvset_emissiveMap >= 0)
+	if (surface.emissiveColor.a > 0 && g_xMaterial.uvset_emissiveMap >= 0)
 	{
 		const float2 UV_emissiveMap = g_xMaterial.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 		float4 emissiveMap = texture_emissivemap.Sample(sampler_objectshader, UV_emissiveMap);
 		emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
-		emissiveColor *= emissiveMap;
+		surface.emissiveColor *= emissiveMap;
 	}
 
-
 #ifdef TERRAIN
-	color = 0;
-	surface_occlusion_roughness_metallic_reflectance = 0;
-	emissiveColor = 0;
+	surface.N = 0;
+	surface.albedo = 0;
+	surface.f0 = 0;
+	surface.roughness = 0;
+	surface.occlusion = 0;
+	surface.emissiveColor = 0;
+
+	float4 sam;
 	float4 blend_weights = input.color;
 	blend_weights /= blend_weights.x + blend_weights.y + blend_weights.z + blend_weights.w;
-	float4 sam;
 	float3 baseN = normalize(input.nor);
-	surface.N = 0;
 
 	[branch]
 	if (blend_weights.x > 0)
 	{
+		float4 color2 = 1;
 		[branch]
-		if (g_xMaterial.uvset_baseColorMap >= 0)
+		if (g_xMaterial.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
 			float2 uv = g_xMaterial.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			sam = texture_basecolormap.Sample(sampler_objectshader, uv);
-			sam.rgb = DEGAMMA(sam.rgb);
+			color2 = texture_basecolormap.Sample(sampler_objectshader, uv);
+			color2.rgb = DEGAMMA(color2.rgb);
 		}
-		else
-		{
-			sam = 1;
-		}
-		color += sam * g_xMaterial.baseColor * blend_weights.x;
 
+		float4 surfaceMap2 = 1;
 		[branch]
 		if (g_xMaterial.uvset_surfaceMap >= 0)
 		{
 			float2 uv = g_xMaterial.uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			sam = texture_surfacemap.Sample(sampler_objectshader, uv);
+			surfaceMap2 = texture_surfacemap.Sample(sampler_objectshader, uv);
 		}
-		else
-		{
-			sam = 1;
-		}
-		surface_occlusion_roughness_metallic_reflectance += sam * float4(1, g_xMaterial.roughness, g_xMaterial.metalness, g_xMaterial.reflectance) * blend_weights.x;
+
+		Surface surface2;
+		surface2.N = baseN;
+		surface2.create(g_xMaterial, color2, surfaceMap2);
 
 		[branch]
 		if (g_xMaterial.normalMapStrength > 0 && g_xMaterial.uvset_normalMap >= 0)
@@ -834,46 +798,50 @@ GBUFFEROutputType main(PIXELINPUT input)
 			float2 uv = g_xMaterial.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam.rgb = texture_normalmap.Sample(sampler_objectshader, uv);
 			sam.rgb = sam.rgb * 2 - 1;
-			surface.N += lerp(baseN, mul(sam.rgb, TBN), g_xMaterial.normalMapStrength) * blend_weights.x;
+			surface2.N = lerp(baseN, mul(sam.rgb, TBN), g_xMaterial.normalMapStrength);
 		}
 
+		surface2.emissiveColor = g_xMaterial.emissiveColor;
 		[branch]
 		if (g_xMaterial.uvset_emissiveMap >= 0 && any(g_xMaterial.emissiveColor))
 		{
 			float2 uv = g_xMaterial.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam = texture_emissivemap.Sample(sampler_objectshader, uv);
 			sam.rgb = DEGAMMA(sam.rgb);
-			emissiveColor += sam * g_xMaterial.emissiveColor * blend_weights.x;
+			surface2.emissiveColor *= sam;
 		}
+
+		surface.N += surface2.N * blend_weights.x;
+		surface.albedo += surface2.albedo * blend_weights.x;
+		surface.f0 += surface2.f0 * blend_weights.x;
+		surface.roughness += surface2.roughness * blend_weights.x;
+		surface.occlusion += surface2.occlusion * blend_weights.x;
+		surface.emissiveColor += surface2.emissiveColor * blend_weights.x;
 	}
 
 	[branch]
 	if (blend_weights.y > 0)
 	{
+		float4 color2 = 1;
 		[branch]
-		if (g_xMaterial_blend1.uvset_baseColorMap >= 0)
+		if (g_xMaterial_blend1.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
 			float2 uv = g_xMaterial_blend1.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			sam = texture_blend1_basecolormap.Sample(sampler_objectshader, uv);
-			sam.rgb = DEGAMMA(sam.rgb);
+			color2 = texture_blend1_basecolormap.Sample(sampler_objectshader, uv);
+			color2.rgb = DEGAMMA(color2.rgb);
 		}
-		else
-		{
-			sam = 1;
-		}
-		color += sam * g_xMaterial_blend1.baseColor * blend_weights.y;
 
+		float4 surfaceMap2 = 1;
 		[branch]
 		if (g_xMaterial_blend1.uvset_surfaceMap >= 0)
 		{
 			float2 uv = g_xMaterial_blend1.uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			sam = texture_blend1_surfacemap.Sample(sampler_objectshader, uv);
+			surfaceMap2 = texture_blend1_surfacemap.Sample(sampler_objectshader, uv);
 		}
-		else
-		{
-			sam = 1;
-		}
-		surface_occlusion_roughness_metallic_reflectance += sam * float4(1, g_xMaterial_blend1.roughness, g_xMaterial_blend1.metalness, g_xMaterial_blend1.reflectance) * blend_weights.y;
+
+		Surface surface2;
+		surface2.N = baseN;
+		surface2.create(g_xMaterial_blend1, color2, surfaceMap2);
 
 		[branch]
 		if (g_xMaterial_blend1.normalMapStrength > 0 && g_xMaterial_blend1.uvset_normalMap >= 0)
@@ -881,46 +849,50 @@ GBUFFEROutputType main(PIXELINPUT input)
 			float2 uv = g_xMaterial_blend1.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam.rgb = texture_blend1_normalmap.Sample(sampler_objectshader, uv);
 			sam.rgb = sam.rgb * 2 - 1;
-			surface.N += lerp(baseN, mul(sam.rgb, TBN), g_xMaterial_blend1.normalMapStrength) * blend_weights.y;
+			surface2.N = lerp(baseN, mul(sam.rgb, TBN), g_xMaterial_blend1.normalMapStrength);
 		}
 
+		surface2.emissiveColor = g_xMaterial_blend1.emissiveColor;
 		[branch]
-		if (g_xMaterial_blend1.uvset_emissiveMap >= 0 && any(g_xMaterial_blend1.emissiveColor))
+		if (g_xMaterial_blend1.uvset_emissiveMap >= 0 && any(g_xMaterial.emissiveColor))
 		{
 			float2 uv = g_xMaterial_blend1.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam = texture_blend1_emissivemap.Sample(sampler_objectshader, uv);
 			sam.rgb = DEGAMMA(sam.rgb);
-			emissiveColor += sam * g_xMaterial_blend1.emissiveColor * blend_weights.y;
+			surface2.emissiveColor *= sam;
 		}
+
+		surface.N += surface2.N * blend_weights.y;
+		surface.albedo += surface2.albedo * blend_weights.y;
+		surface.f0 += surface2.f0 * blend_weights.y;
+		surface.roughness += surface2.roughness * blend_weights.y;
+		surface.occlusion += surface2.occlusion * blend_weights.y;
+		surface.emissiveColor += surface2.emissiveColor * blend_weights.y;
 	}
 
 	[branch]
 	if (blend_weights.z > 0)
 	{
+		float4 color2 = 1;
 		[branch]
-		if (g_xMaterial_blend2.uvset_baseColorMap >= 0)
+		if (g_xMaterial_blend2.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
 			float2 uv = g_xMaterial_blend2.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			sam = texture_blend2_basecolormap.Sample(sampler_objectshader, uv);
-			sam.rgb = DEGAMMA(sam.rgb);
+			color2 = texture_blend2_basecolormap.Sample(sampler_objectshader, uv);
+			color2.rgb = DEGAMMA(color2.rgb);
 		}
-		else
-		{
-			sam = 1;
-		}
-		color += sam * g_xMaterial_blend2.baseColor * blend_weights.z;
 
+		float4 surfaceMap2 = 1;
 		[branch]
 		if (g_xMaterial_blend2.uvset_surfaceMap >= 0)
 		{
 			float2 uv = g_xMaterial_blend2.uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			sam = texture_blend2_surfacemap.Sample(sampler_objectshader, uv);
+			surfaceMap2 = texture_blend2_surfacemap.Sample(sampler_objectshader, uv);
 		}
-		else
-		{
-			sam = 1;
-		}
-		surface_occlusion_roughness_metallic_reflectance += sam * float4(1, g_xMaterial_blend2.roughness, g_xMaterial_blend2.metalness, g_xMaterial_blend2.reflectance) * blend_weights.z;
+
+		Surface surface2;
+		surface2.N = baseN;
+		surface2.create(g_xMaterial_blend2, color2, surfaceMap2);
 
 		[branch]
 		if (g_xMaterial_blend2.normalMapStrength > 0 && g_xMaterial_blend2.uvset_normalMap >= 0)
@@ -928,46 +900,50 @@ GBUFFEROutputType main(PIXELINPUT input)
 			float2 uv = g_xMaterial_blend2.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam.rgb = texture_blend2_normalmap.Sample(sampler_objectshader, uv);
 			sam.rgb = sam.rgb * 2 - 1;
-			surface.N += lerp(baseN, mul(sam.rgb, TBN), g_xMaterial_blend2.normalMapStrength) * blend_weights.z;
+			surface2.N = lerp(baseN, mul(sam.rgb, TBN), g_xMaterial_blend2.normalMapStrength);
 		}
 
+		surface2.emissiveColor = g_xMaterial_blend2.emissiveColor;
 		[branch]
 		if (g_xMaterial_blend2.uvset_emissiveMap >= 0 && any(g_xMaterial_blend2.emissiveColor))
 		{
 			float2 uv = g_xMaterial_blend2.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam = texture_blend2_emissivemap.Sample(sampler_objectshader, uv);
 			sam.rgb = DEGAMMA(sam.rgb);
-			emissiveColor += sam * g_xMaterial_blend2.emissiveColor * blend_weights.z;
+			surface2.emissiveColor *= sam;
 		}
+
+		surface.N += surface2.N * blend_weights.z;
+		surface.albedo += surface2.albedo * blend_weights.z;
+		surface.f0 += surface2.f0 * blend_weights.z;
+		surface.roughness += surface2.roughness * blend_weights.z;
+		surface.occlusion += surface2.occlusion * blend_weights.z;
+		surface.emissiveColor += surface2.emissiveColor * blend_weights.z;
 	}
 
 	[branch]
 	if (blend_weights.w > 0)
 	{
+		float4 color2 = 1;
 		[branch]
-		if (g_xMaterial_blend3.uvset_baseColorMap >= 0)
+		if (g_xMaterial_blend3.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
 			float2 uv = g_xMaterial_blend3.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			sam = texture_blend3_basecolormap.Sample(sampler_objectshader, uv);
-			sam.rgb = DEGAMMA(sam.rgb);
+			color2 = texture_blend3_basecolormap.Sample(sampler_objectshader, uv);
+			color2.rgb = DEGAMMA(color2.rgb);
 		}
-		else
-		{
-			sam = 1;
-		}
-		color += sam * g_xMaterial_blend3.baseColor * blend_weights.w;
 
+		float4 surfaceMap2 = 1;
 		[branch]
 		if (g_xMaterial_blend3.uvset_surfaceMap >= 0)
 		{
 			float2 uv = g_xMaterial_blend3.uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			sam = texture_blend3_surfacemap.Sample(sampler_objectshader, uv);
+			surfaceMap2 = texture_blend3_surfacemap.Sample(sampler_objectshader, uv);
 		}
-		else
-		{
-			sam = 1;
-		}
-		surface_occlusion_roughness_metallic_reflectance += sam * float4(1, g_xMaterial_blend3.roughness, g_xMaterial_blend3.metalness, g_xMaterial_blend3.reflectance) * blend_weights.w;
+
+		Surface surface2;
+		surface2.N = baseN;
+		surface2.create(g_xMaterial_blend3, color2, surfaceMap2);
 
 		[branch]
 		if (g_xMaterial_blend3.normalMapStrength > 0 && g_xMaterial_blend3.uvset_normalMap >= 0)
@@ -975,20 +951,27 @@ GBUFFEROutputType main(PIXELINPUT input)
 			float2 uv = g_xMaterial_blend3.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam.rgb = texture_blend3_normalmap.Sample(sampler_objectshader, uv);
 			sam.rgb = sam.rgb * 2 - 1;
-			surface.N += lerp(baseN, mul(sam.rgb, TBN), g_xMaterial_blend3.normalMapStrength) * blend_weights.w;
+			surface2.N = lerp(baseN, mul(sam.rgb, TBN), g_xMaterial_blend3.normalMapStrength);
 		}
 
+		surface2.emissiveColor = g_xMaterial_blend3.emissiveColor;
 		[branch]
 		if (g_xMaterial_blend3.uvset_emissiveMap >= 0 && any(g_xMaterial_blend3.emissiveColor))
 		{
 			float2 uv = g_xMaterial_blend3.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam = texture_blend3_emissivemap.Sample(sampler_objectshader, uv);
 			sam.rgb = DEGAMMA(sam.rgb);
-			emissiveColor += sam * g_xMaterial_blend3.emissiveColor * blend_weights.w;
+			surface2.emissiveColor *= sam;
 		}
+
+		surface.N += surface2.N * blend_weights.w;
+		surface.albedo += surface2.albedo * blend_weights.w;
+		surface.f0 += surface2.f0 * blend_weights.w;
+		surface.roughness += surface2.roughness * blend_weights.w;
+		surface.occlusion += surface2.occlusion * blend_weights.w;
+		surface.emissiveColor += surface2.emissiveColor * blend_weights.w;
 	}
 
-	color.a = 1;
 	surface.N = normalize(surface.N);
 
 #endif // TERRAIN
@@ -998,33 +981,22 @@ GBUFFEROutputType main(PIXELINPUT input)
 	if (g_xMaterial.IsOcclusionEnabled_Secondary() && g_xMaterial.uvset_occlusionMap >= 0)
 	{
 		const float2 UV_occlusionMap = g_xMaterial.uvset_occlusionMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-		surface_occlusion_roughness_metallic_reflectance.r *= texture_occlusionmap.Sample(sampler_objectshader, UV_occlusionMap).r;
+		surface.occlusion *= texture_occlusionmap.Sample(sampler_objectshader, UV_occlusionMap).r;
 	}
 
 #ifndef SIMPLE_INPUT
 #ifndef ENVMAPRENDERING
 #ifndef TRANSPARENT
-	surface_occlusion_roughness_metallic_reflectance.r *= texture_ao.SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
+	surface.occlusion *= texture_ao.SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
 #endif // TRANSPARENT
 #endif // ENVMAPRENDERING
 #endif // SIMPLE_INPUT
 
-	surface = CreateSurface(
-		surface.P, 
-		surface.N, 
-		surface.V, 
-		color,
-		surface_occlusion_roughness_metallic_reflectance.g,
-		surface_occlusion_roughness_metallic_reflectance.r,
-		surface_occlusion_roughness_metallic_reflectance.b,
-		surface_occlusion_roughness_metallic_reflectance.a,
-		emissiveColor
 #ifdef BRDF_ANISOTROPIC
-		, g_xMaterial.parallaxOcclusionMapping,
-		tangent.xyz,
-		normalize(cross(tangent.xyz, surface.N) * tangent.w) // Compute bitangent again after normal mapping
+	surface.anisotropy = g_xMaterial.parallaxOcclusionMapping;
+	surface.T = tangent.xyz;
+	surface.B = normalize(cross(tangent.xyz, surface.N) * tangent.w); // Compute bitangent again after normal mapping
 #endif // BRDF_ANISOTROPIC
-	);
 
 	surface.sss = g_xMaterial.subsurfaceScattering;
 	surface.sss_inv = g_xMaterial.subsurfaceScattering_inv;
@@ -1034,10 +1006,13 @@ GBUFFEROutputType main(PIXELINPUT input)
 
 	surface.layerMask = g_xMaterial.layerMask;
 
+	surface.update();
+
 	float3 ambient = GetAmbient(surface.N);
 	ambient = lerp(ambient, ambient * surface.sss.rgb, saturate(surface.sss.a));
 
-	Lighting lighting = CreateLighting(0, 0, ambient, 0);
+	Lighting lighting;
+	lighting.create(0, 0, ambient, 0);
 
 #ifndef SIMPLE_INPUT
 
@@ -1057,7 +1032,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 		bumpColor1 = 2 * texture_normalmap.Sample(sampler_objectshader, UV_normalMap + g_xMaterial.texMulAdd.zw).rg - 1;
 	}
 	bumpColor2 = texture_waterriples.SampleLevel(sampler_objectshader, ScreenCoord, 0).rg;
-	bumpColor = float3(bumpColor0 + bumpColor1 + bumpColor2, 1)  * g_xMaterial.refractionIndex;
+	bumpColor = float3(bumpColor0 + bumpColor1 + bumpColor2, 1)  * g_xMaterial.refraction;
 	surface.N = normalize(lerp(surface.N, mul(normalize(bumpColor), TBN), g_xMaterial.normalMapStrength));
 	bumpColor *= g_xMaterial.normalMapStrength;
 
@@ -1067,6 +1042,31 @@ GBUFFEROutputType main(PIXELINPUT input)
 	reflectionUV.xy = reflectionUV.xy * float2(0.5, -0.5) + 0.5;
 	lighting.indirect.specular += texture_reflection.SampleLevel(sampler_linear_mirror, reflectionUV.xy + bumpColor.rg, 0).rgb;
 #endif // WATER
+
+
+
+#ifdef TRANSPARENT
+	[branch]
+	if (g_xMaterial.transmission > 0)
+	{
+		float transmission = g_xMaterial.transmission;
+		[branch]
+		if (g_xMaterial.uvset_transmissionMap >= 0)
+		{
+			const float2 UV_transmissionMap = g_xMaterial.uvset_transmissionMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			float transmissionMap = texture_transmissionmap.Sample(sampler_objectshader, UV_transmissionMap);
+			transmission *= transmissionMap;
+		}
+		float2 size;
+		float mipLevels;
+		texture_refraction.GetDimensions(0, size.x, size.y, mipLevels);
+		const float2 normal2D = mul((float3x3)g_xCamera_View, surface.N.xyz).xy;
+		float2 perturbatedRefrTexCoords = ScreenCoord.xy + normal2D * g_xMaterial.refraction;
+		float4 refractiveColor = texture_refraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, surface.roughness * mipLevels);
+		surface.refraction.rgb = surface.albedo * refractiveColor.rgb;
+		surface.refraction.a = transmission;
+	}
+#endif // TRANSPARENT
 
 
 
@@ -1092,9 +1092,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 
 #ifndef WATER
 #ifndef ENVMAPRENDERING
-#ifdef TRANSPARENT
-	Refraction(ScreenCoord, surface, color, lighting);
-#else
+#ifndef TRANSPARENT
 	float4 ssr = texture_ssr.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
 	lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb, ssr.a);
 #endif // TRANSPARENT
@@ -1114,7 +1112,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 		depth_difference = sampled_lineardepth - lineardepth;
 	}
 	// WATER FOG:
-	surface.refraction.a = 1 - saturate(surface.baseColor.a * 0.1 * depth_difference);
+	surface.refraction.a = 1 - saturate(color.a * 0.1 * depth_difference);
 #endif // WATER
 
 #ifdef UNLIT

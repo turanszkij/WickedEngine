@@ -25,9 +25,6 @@
 #include "sdl2.h"
 #endif
 
-// Enabling ray tracing might crash RenderDoc:
-#define ENABLE_RAYTRACING_EXTENSION
-
 // These shifts are made so that Vulkan resource bindings slots don't interfere with each other across shader stages:
 //	These are also defined in compile_shaders_spirv.py as shift numbers, and it needs to be synced!
 #define VULKAN_BINDING_SHIFT_B 0
@@ -40,16 +37,18 @@ namespace wiGraphics
 
 	PFN_vkCreateRayTracingPipelinesKHR GraphicsDevice_Vulkan::createRayTracingPipelinesKHR = nullptr;
 	PFN_vkCreateAccelerationStructureKHR GraphicsDevice_Vulkan::createAccelerationStructureKHR = nullptr;
-	PFN_vkBindAccelerationStructureMemoryKHR GraphicsDevice_Vulkan::bindAccelerationStructureMemoryKHR = nullptr;
 	PFN_vkDestroyAccelerationStructureKHR GraphicsDevice_Vulkan::destroyAccelerationStructureKHR = nullptr;
-	PFN_vkGetAccelerationStructureMemoryRequirementsKHR GraphicsDevice_Vulkan::getAccelerationStructureMemoryRequirementsKHR = nullptr;
+	PFN_vkGetAccelerationStructureBuildSizesKHR GraphicsDevice_Vulkan::getAccelerationStructureBuildSizesKHR = nullptr;
 	PFN_vkGetAccelerationStructureDeviceAddressKHR GraphicsDevice_Vulkan::getAccelerationStructureDeviceAddressKHR = nullptr;
 	PFN_vkGetRayTracingShaderGroupHandlesKHR GraphicsDevice_Vulkan::getRayTracingShaderGroupHandlesKHR = nullptr;
-	PFN_vkCmdBuildAccelerationStructureKHR GraphicsDevice_Vulkan::cmdBuildAccelerationStructureKHR = nullptr;
+	PFN_vkCmdBuildAccelerationStructuresKHR GraphicsDevice_Vulkan::cmdBuildAccelerationStructuresKHR = nullptr;
+	PFN_vkBuildAccelerationStructuresKHR GraphicsDevice_Vulkan::buildAccelerationStructuresKHR = nullptr;
 	PFN_vkCmdTraceRaysKHR GraphicsDevice_Vulkan::cmdTraceRaysKHR = nullptr;
 
 	PFN_vkCmdDrawMeshTasksNV GraphicsDevice_Vulkan::cmdDrawMeshTasksNV = nullptr;
 	PFN_vkCmdDrawMeshTasksIndirectNV GraphicsDevice_Vulkan::cmdDrawMeshTasksIndirectNV = nullptr;
+
+	PFN_vkCmdSetFragmentShadingRateKHR GraphicsDevice_Vulkan::cmdSetFragmentShadingRateKHR = nullptr;
 
 namespace Vulkan_Internal
 {
@@ -456,6 +455,8 @@ namespace Vulkan_Internal
 			return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 		case wiGraphics::IMAGE_LAYOUT_COPY_DST:
 			return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		case wiGraphics::IMAGE_LAYOUT_SHADING_RATE_SOURCE:
+			return VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
 		}
 		return VK_IMAGE_LAYOUT_UNDEFINED;
 	}
@@ -857,6 +858,7 @@ namespace Vulkan_Internal
 		VkBufferView uav = VK_NULL_HANDLE;
 		std::vector<VkBufferView> subresources_srv;
 		std::vector<VkBufferView> subresources_uav;
+		VkDeviceAddress address = 0;
 
 		GraphicsDevice::GPUAllocation dynamic[COMMANDLIST_COUNT];
 
@@ -891,10 +893,12 @@ namespace Vulkan_Internal
 		VkImageView uav = VK_NULL_HANDLE;
 		VkImageView rtv = VK_NULL_HANDLE;
 		VkImageView dsv = VK_NULL_HANDLE;
+		uint32_t framebuffer_layercount = 0;
 		std::vector<VkImageView> subresources_srv;
 		std::vector<VkImageView> subresources_uav;
 		std::vector<VkImageView> subresources_rtv;
 		std::vector<VkImageView> subresources_dsv;
+		std::vector<uint32_t> subresources_framebuffer_layercount;
 
 		VkSubresourceLayout subresourcelayout = {};
 
@@ -1020,7 +1024,7 @@ namespace Vulkan_Internal
 		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VkRenderPass renderpass = VK_NULL_HANDLE;
 		VkFramebuffer framebuffer = VK_NULL_HANDLE;
-		VkRenderPassBeginInfo beginInfo;
+		VkRenderPassBeginInfo beginInfo = {};
 		VkClearValue clearColors[9] = {};
 
 		~RenderPass_Vulkan()
@@ -1041,9 +1045,12 @@ namespace Vulkan_Internal
 		VkBuffer buffer = VK_NULL_HANDLE;
 		VkAccelerationStructureKHR resource = VK_NULL_HANDLE;
 
-		VkAccelerationStructureCreateInfoKHR info = {};
-		std::vector<VkAccelerationStructureCreateGeometryTypeInfoKHR> geometries;
-		VkDeviceSize scratch_offset = 0;
+		VkAccelerationStructureBuildGeometryInfoKHR buildInfo = {};
+		VkAccelerationStructureBuildSizesInfoKHR sizeInfo = {};
+		VkAccelerationStructureCreateInfoKHR createInfo = {};
+		std::vector<VkAccelerationStructureGeometryKHR> geometries;
+		std::vector<uint32_t> primitiveCounts;
+		VkDeviceAddress scratch_address = 0;
 		VkDeviceAddress as_address = 0;
 
 		~BVH_Vulkan()
@@ -1198,6 +1205,10 @@ using namespace Vulkan_Internal;
 		bufferInfo.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 		bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 		bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+		if (device->features_1_2.bufferDeviceAddress == VK_TRUE)
+		{
+			bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+		}
 		bufferInfo.flags = 0;
 
 		VkResult res;
@@ -1208,6 +1219,14 @@ using namespace Vulkan_Internal;
 
 		res = vmaCreateBuffer(device->allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
 		assert(res == VK_SUCCESS);
+
+		if (bufferInfo.usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
+		{
+			VkBufferDeviceAddressInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+			info.buffer = internal_state->resource;
+			internal_state->address = vkGetBufferDeviceAddress(device->device, &info);
+		}
 
 		void* pData = internal_state->allocation->GetMappedData();
 		dataCur = dataBegin = reinterpret_cast<uint8_t*>(pData);
@@ -1814,13 +1833,13 @@ using namespace Vulkan_Internal;
 				if (pso->desc.il != nullptr)
 				{
 					uint32_t lastBinding = 0xFFFFFFFF;
-					for (auto& x : pso->desc.il->desc)
+					for (auto& x : pso->desc.il->elements)
 					{
 						VkVertexInputBindingDescription bind = {};
 						bind.binding = x.InputSlot;
 						bind.inputRate = x.InputSlotClass == INPUT_PER_VERTEX_DATA ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
 						bind.stride = x.AlignedByteOffset;
-						if (bind.stride == InputLayoutDesc::APPEND_ALIGNED_ELEMENT)
+						if (bind.stride == InputLayout::APPEND_ALIGNED_ELEMENT)
 						{
 							// need to manually resolve this from the format spec.
 							bind.stride = GetFormatStride(x.Format);
@@ -1840,7 +1859,7 @@ using namespace Vulkan_Internal;
 					uint32_t offset = 0;
 					uint32_t i = 0;
 					lastBinding = 0xFFFFFFFF;
-					for (auto& x : pso->desc.il->desc)
+					for (auto& x : pso->desc.il->elements)
 					{
 						VkVertexInputAttributeDescription attr = {};
 						attr.binding = x.InputSlot;
@@ -1852,7 +1871,7 @@ using namespace Vulkan_Internal;
 						attr.format = _ConvertFormat(x.Format);
 						attr.location = i;
 						attr.offset = x.AlignedByteOffset;
-						if (attr.offset == InputLayoutDesc::APPEND_ALIGNED_ELEMENT)
+						if (attr.offset == InputLayout::APPEND_ALIGNED_ELEMENT)
 						{
 							// need to manually resolve this from the format spec.
 							attr.offset = offset;
@@ -1924,7 +1943,7 @@ using namespace Vulkan_Internal;
 
 				if (pso->desc.rs != nullptr)
 				{
-					const RasterizerStateDesc& desc = pso->desc.rs->desc;
+					const RasterizerState& desc = *pso->desc.rs;
 
 					switch (desc.FillMode)
 					{
@@ -1992,27 +2011,27 @@ using namespace Vulkan_Internal;
 				depthstencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 				if (pso->desc.dss != nullptr)
 				{
-					depthstencil.depthTestEnable = pso->desc.dss->desc.DepthEnable ? VK_TRUE : VK_FALSE;
-					depthstencil.depthWriteEnable = pso->desc.dss->desc.DepthWriteMask == DEPTH_WRITE_MASK_ZERO ? VK_FALSE : VK_TRUE;
-					depthstencil.depthCompareOp = _ConvertComparisonFunc(pso->desc.dss->desc.DepthFunc);
+					depthstencil.depthTestEnable = pso->desc.dss->DepthEnable ? VK_TRUE : VK_FALSE;
+					depthstencil.depthWriteEnable = pso->desc.dss->DepthWriteMask == DEPTH_WRITE_MASK_ZERO ? VK_FALSE : VK_TRUE;
+					depthstencil.depthCompareOp = _ConvertComparisonFunc(pso->desc.dss->DepthFunc);
 
-					depthstencil.stencilTestEnable = pso->desc.dss->desc.StencilEnable ? VK_TRUE : VK_FALSE;
+					depthstencil.stencilTestEnable = pso->desc.dss->StencilEnable ? VK_TRUE : VK_FALSE;
 
-					depthstencil.front.compareMask = pso->desc.dss->desc.StencilReadMask;
-					depthstencil.front.writeMask = pso->desc.dss->desc.StencilWriteMask;
+					depthstencil.front.compareMask = pso->desc.dss->StencilReadMask;
+					depthstencil.front.writeMask = pso->desc.dss->StencilWriteMask;
 					depthstencil.front.reference = 0; // runtime supplied
-					depthstencil.front.compareOp = _ConvertComparisonFunc(pso->desc.dss->desc.FrontFace.StencilFunc);
-					depthstencil.front.passOp = _ConvertStencilOp(pso->desc.dss->desc.FrontFace.StencilPassOp);
-					depthstencil.front.failOp = _ConvertStencilOp(pso->desc.dss->desc.FrontFace.StencilFailOp);
-					depthstencil.front.depthFailOp = _ConvertStencilOp(pso->desc.dss->desc.FrontFace.StencilDepthFailOp);
+					depthstencil.front.compareOp = _ConvertComparisonFunc(pso->desc.dss->FrontFace.StencilFunc);
+					depthstencil.front.passOp = _ConvertStencilOp(pso->desc.dss->FrontFace.StencilPassOp);
+					depthstencil.front.failOp = _ConvertStencilOp(pso->desc.dss->FrontFace.StencilFailOp);
+					depthstencil.front.depthFailOp = _ConvertStencilOp(pso->desc.dss->FrontFace.StencilDepthFailOp);
 
-					depthstencil.back.compareMask = pso->desc.dss->desc.StencilReadMask;
-					depthstencil.back.writeMask = pso->desc.dss->desc.StencilWriteMask;
+					depthstencil.back.compareMask = pso->desc.dss->StencilReadMask;
+					depthstencil.back.writeMask = pso->desc.dss->StencilWriteMask;
 					depthstencil.back.reference = 0; // runtime supplied
-					depthstencil.back.compareOp = _ConvertComparisonFunc(pso->desc.dss->desc.BackFace.StencilFunc);
-					depthstencil.back.passOp = _ConvertStencilOp(pso->desc.dss->desc.BackFace.StencilPassOp);
-					depthstencil.back.failOp = _ConvertStencilOp(pso->desc.dss->desc.BackFace.StencilFailOp);
-					depthstencil.back.depthFailOp = _ConvertStencilOp(pso->desc.dss->desc.BackFace.StencilDepthFailOp);
+					depthstencil.back.compareOp = _ConvertComparisonFunc(pso->desc.dss->BackFace.StencilFunc);
+					depthstencil.back.passOp = _ConvertStencilOp(pso->desc.dss->BackFace.StencilPassOp);
+					depthstencil.back.failOp = _ConvertStencilOp(pso->desc.dss->BackFace.StencilFailOp);
+					depthstencil.back.depthFailOp = _ConvertStencilOp(pso->desc.dss->BackFace.StencilDepthFailOp);
 
 					depthstencil.depthBoundsTestEnable = VK_FALSE;
 				}
@@ -2031,7 +2050,7 @@ using namespace Vulkan_Internal;
 				}
 				if (pso->desc.rs != nullptr)
 				{
-					const RasterizerStateDesc& desc = pso->desc.rs->desc;
+					const RasterizerState& desc = *pso->desc.rs;
 					if (desc.ForcedSampleCount > 1)
 					{
 						multisampling.rasterizationSamples = (VkSampleCountFlagBits)desc.ForcedSampleCount;
@@ -2057,7 +2076,7 @@ using namespace Vulkan_Internal;
 						continue;
 					}
 
-					RenderTargetBlendStateDesc desc = pso->desc.bs->desc.RenderTarget[numBlendAttachments];
+					const auto& desc = pso->desc.bs->RenderTarget[numBlendAttachments];
 					VkPipelineColorBlendAttachmentState& attachment = colorBlendAttachments[numBlendAttachments];
 					numBlendAttachments++;
 
@@ -2118,7 +2137,8 @@ using namespace Vulkan_Internal;
 					VK_DYNAMIC_STATE_VIEWPORT,
 					VK_DYNAMIC_STATE_SCISSOR,
 					VK_DYNAMIC_STATE_STENCIL_REFERENCE,
-					VK_DYNAMIC_STATE_BLEND_CONSTANTS
+					VK_DYNAMIC_STATE_BLEND_CONSTANTS,
+					VK_DYNAMIC_STATE_FRAGMENT_SHADING_RATE_KHR
 				};
 
 				VkPipelineDynamicStateCreateInfo dynamicState = {};
@@ -2268,21 +2288,23 @@ using namespace Vulkan_Internal;
 
 		// Check if VK_EXT_debug_utils is supported, which supersedes VK_EXT_Debug_Report
 		bool debugUtils = false;
-		for (auto& available_extension : availableInstanceExtensions)
+		if (debuglayer)
 		{
-			if (strcmp(available_extension.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
+			for (auto& available_extension : availableInstanceExtensions)
 			{
-				debugUtils = true;
-				extensionNames.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-				break;
+				if (strcmp(available_extension.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
+				{
+					debugUtils = true;
+					extensionNames.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+					break;
+				}
+			}
+
+			if (!debugUtils)
+			{
+				extensionNames.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 			}
 		}
-
-		if (!debugUtils)
-		{
-			extensionNames.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-		}
-
 		
 		extensionNames.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 #ifdef _WIN32
@@ -2298,13 +2320,11 @@ using namespace Vulkan_Internal;
 					extensionNames_sdl.cbegin(), extensionNames_sdl.cend());
 		}
 #endif // _WIN32
-
-		bool enableValidationLayers = debuglayer;
 		
-		if (enableValidationLayers && !checkValidationLayerSupport())
+		if (debuglayer && !checkValidationLayerSupport())
 		{
 			wiHelper::messageBox("Vulkan validation layer requested but not available!");
-			enableValidationLayers = false;
+			debuglayer = false;
 		}
 
 		// Create instance:
@@ -2315,7 +2335,7 @@ using namespace Vulkan_Internal;
 			createInfo.enabledExtensionCount = static_cast<uint32_t>(extensionNames.size());
 			createInfo.ppEnabledExtensionNames = extensionNames.data();
 			createInfo.enabledLayerCount = 0;
-			if (enableValidationLayers)
+			if (debuglayer)
 			{
 				createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
 				createInfo.ppEnabledLayerNames = validationLayers.data();
@@ -2325,7 +2345,7 @@ using namespace Vulkan_Internal;
 		}
 
 		// Register validation layer callback:
-		if (enableValidationLayers)
+		if (debuglayer)
 		{
 			if(debugUtils)
 			{
@@ -2390,13 +2410,17 @@ using namespace Vulkan_Internal;
 			device_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 			device_properties_1_1.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
 			device_properties_1_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES;
-			raytracing_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_KHR;
+			acceleration_structure_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR;
+			raytracing_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
 			mesh_shader_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
+			fragment_shading_rate_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_PROPERTIES_KHR;
 
 			device_properties.pNext = &device_properties_1_1;
 			device_properties_1_1.pNext = &device_properties_1_2;
-			device_properties_1_2.pNext = &raytracing_properties;
+			device_properties_1_2.pNext = &acceleration_structure_properties;
+			acceleration_structure_properties.pNext = &raytracing_properties;
 			raytracing_properties.pNext = &mesh_shader_properties;
+			mesh_shader_properties.pNext = &fragment_shading_rate_properties;
 
 			for (const auto& device : devices) 
 			{
@@ -2457,32 +2481,50 @@ using namespace Vulkan_Internal;
 			device_features2.pNext = &features_1_1;
 			features_1_1.pNext = &features_1_2;
 
-#ifdef ENABLE_RAYTRACING_EXTENSION
-			raytracing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_FEATURES_KHR;
-			if (checkDeviceExtensionSupport(VK_KHR_RAY_TRACING_EXTENSION_NAME, available_deviceExtensions))
-			{
-				capabilities |= GRAPHICSDEVICE_CAPABILITY_RAYTRACING;
-				SHADER_IDENTIFIER_SIZE = raytracing_properties.shaderGroupHandleSize;
-				enabled_deviceExtensions.push_back(VK_KHR_RAY_TRACING_EXTENSION_NAME);
-				enabled_deviceExtensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);
-				enabled_deviceExtensions.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
-				enabled_deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
-				features_1_2.pNext = &raytracing_features;
-			}
-#endif // ENABLE_RAYTRACING_EXTENSION
+			void** features_chain = &features_1_2.pNext;
 
-			mesh_shader_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
+			if (checkDeviceExtensionSupport(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, available_deviceExtensions))
+			{
+				enabled_deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+				acceleration_structure_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+				*features_chain = &acceleration_structure_features;
+				features_chain = &acceleration_structure_features.pNext;
+
+				if (checkDeviceExtensionSupport(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME, available_deviceExtensions))
+				{
+					SHADER_IDENTIFIER_SIZE = raytracing_properties.shaderGroupHandleSize;
+					enabled_deviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+					enabled_deviceExtensions.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
+					raytracing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+					*features_chain = &raytracing_features;
+					features_chain = &raytracing_features.pNext;
+				}
+
+				if (checkDeviceExtensionSupport(VK_KHR_RAY_QUERY_EXTENSION_NAME, available_deviceExtensions))
+				{
+					enabled_deviceExtensions.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+					enabled_deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+					raytracing_query_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
+					*features_chain = &raytracing_query_features;
+					features_chain = &raytracing_query_features.pNext;
+				}
+			}
+
+			if (checkDeviceExtensionSupport(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME, available_deviceExtensions))
+			{
+				VARIABLE_RATE_SHADING_TILE_SIZE = std::min(fragment_shading_rate_properties.maxFragmentShadingRateAttachmentTexelSize.width, fragment_shading_rate_properties.maxFragmentShadingRateAttachmentTexelSize.height);
+				enabled_deviceExtensions.push_back(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME);
+				fragment_shading_rate_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR;
+				*features_chain = &fragment_shading_rate_features;
+				features_chain = &fragment_shading_rate_features.pNext;
+			}
+
 			if (checkDeviceExtensionSupport(VK_NV_MESH_SHADER_EXTENSION_NAME, available_deviceExtensions))
 			{
 				enabled_deviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
-				if (RAYTRACING)
-				{
-					raytracing_features.pNext = &mesh_shader_features;
-				}
-				else
-				{
-					features_1_2.pNext = &mesh_shader_features;
-				}
+				mesh_shader_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
+				*features_chain = &mesh_shader_features;
+				features_chain = &mesh_shader_features.pNext;
 			}
 
 			vkGetPhysicalDeviceFeatures2(physicalDevice, &device_features2);
@@ -2504,15 +2546,39 @@ using namespace Vulkan_Internal;
 			}
 			capabilities |= GRAPHICSDEVICE_CAPABILITY_RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS; // let's hope for the best...
 
-			if (RAYTRACING)
+			if (raytracing_features.rayTracingPipeline == VK_TRUE)
 			{
+				assert(acceleration_structure_features.accelerationStructure == VK_TRUE);
 				assert(features_1_2.bufferDeviceAddress == VK_TRUE);
+				capabilities |= GRAPHICSDEVICE_CAPABILITY_RAYTRACING;
 			}
-
+			if (raytracing_query_features.rayQuery == VK_TRUE)
+			{
+				assert(acceleration_structure_features.accelerationStructure == VK_TRUE);
+				assert(features_1_2.bufferDeviceAddress == VK_TRUE);
+				//capabilities |= GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE;
+			}
 			if (mesh_shader_features.meshShader == VK_TRUE && mesh_shader_features.taskShader == VK_TRUE)
 			{
 				// Enable mesh shader here (problematic with certain driver versions, disabled by default): 
-				//MESH_SHADER = true;
+				//capabilities |= GRAPHICSDEVICE_CAPABILITY_MESH_SHADER;
+			}
+
+			assert(features_1_2.hostQueryReset == VK_TRUE);
+
+			if (features_1_2.descriptorIndexing)
+			{
+				capabilities |= GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS;
+			}
+
+			if (fragment_shading_rate_features.pipelineFragmentShadingRate)
+			{
+				capabilities |= GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING;
+			}
+
+			if (fragment_shading_rate_features.attachmentFragmentShadingRate)
+			{
+				capabilities |= GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2;
 			}
 			
 			VkFormatProperties formatProperties = {};
@@ -2534,11 +2600,13 @@ using namespace Vulkan_Internal;
 			createInfo.enabledExtensionCount = static_cast<uint32_t>(enabled_deviceExtensions.size());
 			createInfo.ppEnabledExtensionNames = enabled_deviceExtensions.data();
 
-			if (enableValidationLayers) {
+			if (debuglayer)
+			{
 				createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
 				createInfo.ppEnabledLayerNames = validationLayers.data();
 			}
-			else {
+			else
+			{
 				createInfo.enabledLayerCount = 0;
 			}
 
@@ -2571,16 +2639,16 @@ using namespace Vulkan_Internal;
 		cmdEndDebugUtilsLabelEXT = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdEndDebugUtilsLabelEXT");
 		cmdInsertDebugUtilsLabelEXT = (PFN_vkCmdInsertDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdInsertDebugUtilsLabelEXT");
 
-		if (RAYTRACING)
+		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			createRayTracingPipelinesKHR = (PFN_vkCreateRayTracingPipelinesKHR)vkGetDeviceProcAddr(device, "vkCreateRayTracingPipelinesKHR");
 			createAccelerationStructureKHR = (PFN_vkCreateAccelerationStructureKHR)vkGetDeviceProcAddr(device, "vkCreateAccelerationStructureKHR");
-			bindAccelerationStructureMemoryKHR = (PFN_vkBindAccelerationStructureMemoryKHR)vkGetDeviceProcAddr(device, "vkBindAccelerationStructureMemoryKHR");
 			destroyAccelerationStructureKHR = (PFN_vkDestroyAccelerationStructureKHR)vkGetDeviceProcAddr(device, "vkDestroyAccelerationStructureKHR");
-			getAccelerationStructureMemoryRequirementsKHR = (PFN_vkGetAccelerationStructureMemoryRequirementsKHR)vkGetDeviceProcAddr(device, "vkGetAccelerationStructureMemoryRequirementsKHR");
+			getAccelerationStructureBuildSizesKHR = (PFN_vkGetAccelerationStructureBuildSizesKHR)vkGetDeviceProcAddr(device, "vkGetAccelerationStructureBuildSizesKHR");
 			getAccelerationStructureDeviceAddressKHR = (PFN_vkGetAccelerationStructureDeviceAddressKHR)vkGetDeviceProcAddr(device, "vkGetAccelerationStructureDeviceAddressKHR");
 			getRayTracingShaderGroupHandlesKHR = (PFN_vkGetRayTracingShaderGroupHandlesKHR)vkGetDeviceProcAddr(device, "vkGetRayTracingShaderGroupHandlesKHR");
-			cmdBuildAccelerationStructureKHR = (PFN_vkCmdBuildAccelerationStructureKHR)vkGetDeviceProcAddr(device, "vkCmdBuildAccelerationStructureKHR");
+			cmdBuildAccelerationStructuresKHR = (PFN_vkCmdBuildAccelerationStructuresKHR)vkGetDeviceProcAddr(device, "vkCmdBuildAccelerationStructuresKHR");
+			buildAccelerationStructuresKHR = (PFN_vkBuildAccelerationStructuresKHR)vkGetDeviceProcAddr(device, "vkBuildAccelerationStructuresKHR");
 			cmdTraceRaysKHR = (PFN_vkCmdTraceRaysKHR)vkGetDeviceProcAddr(device, "vkCmdTraceRaysKHR");
 		}
 
@@ -2590,9 +2658,16 @@ using namespace Vulkan_Internal;
 			cmdDrawMeshTasksIndirectNV = (PFN_vkCmdDrawMeshTasksIndirectNV)vkGetDeviceProcAddr(device, "vkCmdDrawMeshTasksIndirectNV");
 		}
 
+		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING))
+		{
+			cmdSetFragmentShadingRateKHR = (PFN_vkCmdSetFragmentShadingRateKHR)vkGetDeviceProcAddr(device, "vkCmdSetFragmentShadingRateKHR");
+		}
+
 		CreateBackBufferResources();
 
 		QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
+
+		vkGetDeviceQueue(device, queueIndices.copyFamily, 0, &copyQueue);
 
 		// Create frame resources:
 		{
@@ -2638,8 +2713,6 @@ using namespace Vulkan_Internal;
 
 				// Create resources for copy (transfer) queue:
 				{
-					vkGetDeviceQueue(device, queueIndices.copyFamily, 0, &frames[fr].copyQueue);
-
 					VkCommandPoolCreateInfo poolInfo = {};
 					poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 					poolInfo.queueFamilyIndex = queueFamilyIndices.copyFamily;
@@ -2858,7 +2931,7 @@ using namespace Vulkan_Internal;
 			poolInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
 			res = vkCreateQueryPool(device, &poolInfo, nullptr, &querypool_timestamp);
 			assert(res == VK_SUCCESS);
-			timestamps_to_reset.reserve(timestamp_query_count);
+			vkResetQueryPool(device, querypool_timestamp, 0, poolInfo.queryCount);
 
 			for (uint32_t i = 0; i < occlusion_query_count; ++i)
 			{
@@ -2868,7 +2941,7 @@ using namespace Vulkan_Internal;
 			poolInfo.queryType = VK_QUERY_TYPE_OCCLUSION;
 			res = vkCreateQueryPool(device, &poolInfo, nullptr, &querypool_occlusion);
 			assert(res == VK_SUCCESS);
-			occlusions_to_reset.reserve(occlusion_query_count);
+			vkResetQueryPool(device, querypool_occlusion, 0, poolInfo.queryCount);
 		}
 
 		wiBackLog::post("Created GraphicsDevice_Vulkan");
@@ -3232,7 +3305,7 @@ using namespace Vulkan_Internal;
 		}
 		if (pBuffer->desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
 		{
-			bufferInfo.usage |= VK_BUFFER_USAGE_RAY_TRACING_BIT_KHR;
+			bufferInfo.usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
 		}
 		if (features_1_2.bufferDeviceAddress == VK_TRUE)
 		{
@@ -3268,6 +3341,14 @@ using namespace Vulkan_Internal;
 
 		res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
 		assert(res == VK_SUCCESS);
+
+		if (bufferInfo.usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
+		{
+			VkBufferDeviceAddressInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+			info.buffer = internal_state->resource;
+			internal_state->address = vkGetBufferDeviceAddress(device, &info);
+		}
 
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
@@ -3698,19 +3779,6 @@ using namespace Vulkan_Internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateInputLayout(const InputLayoutDesc *pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout *pInputLayout)
-	{
-		pInputLayout->internal_state = allocationhandler;
-
-		pInputLayout->desc.clear();
-		pInputLayout->desc.reserve((size_t)NumElements);
-		for (uint32_t i = 0; i < NumElements; ++i)
-		{
-			pInputLayout->desc.push_back(pInputElementDescs[i]);
-		}
-
-		return true;
-	}
 	bool GraphicsDevice_Vulkan::CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader)
 	{
 		auto internal_state = std::make_shared<Shader_Vulkan>();
@@ -3916,27 +3984,6 @@ using namespace Vulkan_Internal;
 		}
 
 		return res == VK_SUCCESS;
-	}
-	bool GraphicsDevice_Vulkan::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
-	{
-		pBlendState->internal_state = allocationhandler;
-
-		pBlendState->desc = *pBlendStateDesc;
-		return true;
-	}
-	bool GraphicsDevice_Vulkan::CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState)
-	{
-		pDepthStencilState->internal_state = allocationhandler;
-
-		pDepthStencilState->desc = *pDepthStencilStateDesc;
-		return true;
-	}
-	bool GraphicsDevice_Vulkan::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
-	{
-		pRasterizerState->internal_state = allocationhandler;
-
-		pRasterizerState->desc = *pRasterizerStateDesc;
-		return true;
 	}
 	bool GraphicsDevice_Vulkan::CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
 	{
@@ -4260,21 +4307,31 @@ using namespace Vulkan_Internal;
 		wiHelper::hash_combine(renderpass->hash, pDesc->attachments.size());
 		for (auto& attachment : pDesc->attachments)
 		{
-			wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.Format);
-			wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.SampleCount);
+			if (attachment.type == RenderPassAttachment::RENDERTARGET || attachment.type == RenderPassAttachment::DEPTH_STENCIL)
+			{
+				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.Format);
+				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.SampleCount);
+			}
 		}
 
 		VkResult res;
 
-		VkImageView attachments[17] = {};
-		VkAttachmentDescription attachmentDescriptions[17] = {};
-		VkAttachmentReference colorAttachmentRefs[8] = {};
-		VkAttachmentReference resolveAttachmentRefs[8] = {};
-		VkAttachmentReference depthAttachmentRef = {};
+		VkImageView attachments[18] = {};
+		VkAttachmentDescription2 attachmentDescriptions[18] = {};
+		VkAttachmentReference2 colorAttachmentRefs[8] = {};
+		VkAttachmentReference2 resolveAttachmentRefs[8] = {};
+		VkAttachmentReference2 shadingRateAttachmentRef = {};
+		VkAttachmentReference2 depthAttachmentRef = {};
+
+		VkFragmentShadingRateAttachmentInfoKHR shading_rate_attachment = {};
+		shading_rate_attachment.sType = VK_STRUCTURE_TYPE_FRAGMENT_SHADING_RATE_ATTACHMENT_INFO_KHR;
+		shading_rate_attachment.pFragmentShadingRateAttachment = &shadingRateAttachmentRef;
+		shading_rate_attachment.shadingRateAttachmentTexelSize.width = VARIABLE_RATE_SHADING_TILE_SIZE;
+		shading_rate_attachment.shadingRateAttachmentTexelSize.height = VARIABLE_RATE_SHADING_TILE_SIZE;
 
 		int resolvecount = 0;
 
-		VkSubpassDescription subpass = {};
+		VkSubpassDescription2 subpass = {};
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
 		const RenderPassDesc& desc = renderpass->desc;
@@ -4418,39 +4475,76 @@ using namespace Vulkan_Internal;
 				resolvecount++;
 				subpass.pResolveAttachments = resolveAttachmentRefs;
 			}
+			else if (attachment.type == RenderPassAttachment::SHADING_RATE_SOURCE && CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
+			{
+				if (attachment.texture == nullptr)
+				{
+					shadingRateAttachmentRef.attachment = VK_ATTACHMENT_UNUSED;
+				}
+				else
+				{
+					if (subresource < 0 || texture_internal_state->subresources_uav.empty())
+					{
+						attachments[validAttachmentCount] = texture_internal_state->uav;
+					}
+					else
+					{
+						assert(texture_internal_state->subresources_uav.size() > size_t(subresource) && "Invalid UAV subresource!");
+						attachments[validAttachmentCount] = texture_internal_state->subresources_uav[subresource];
+					}
+					if (attachments[validAttachmentCount] == VK_NULL_HANDLE)
+					{
+						continue;
+					}
+					shadingRateAttachmentRef.attachment = validAttachmentCount;
+					shadingRateAttachmentRef.layout = VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
+				}
+
+				subpass.pNext = &shading_rate_attachment;
+			}
 
 			validAttachmentCount++;
 		}
 		assert(renderpass->desc.attachments.size() == validAttachmentCount);
 
-		VkRenderPassCreateInfo renderPassInfo = {};
+		VkRenderPassCreateInfo2 renderPassInfo = {};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 		renderPassInfo.attachmentCount = validAttachmentCount;
 		renderPassInfo.pAttachments = attachmentDescriptions;
 		renderPassInfo.subpassCount = 1;
 		renderPassInfo.pSubpasses = &subpass;
 
-		res = vkCreateRenderPass(device, &renderPassInfo, nullptr, &internal_state->renderpass);
+		res = vkCreateRenderPass2(device, &renderPassInfo, nullptr, &internal_state->renderpass);
 		assert(res == VK_SUCCESS);
 
 		VkFramebufferCreateInfo framebufferInfo = {};
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		framebufferInfo.renderPass = internal_state->renderpass;
 		framebufferInfo.attachmentCount = validAttachmentCount;
-		framebufferInfo.pAttachments = attachments;
 
 		if (validAttachmentCount > 0)
 		{
 			const TextureDesc& texdesc = desc.attachments[0].texture->desc;
+			auto texture_internal = to_internal(desc.attachments[0].texture);
+			framebufferInfo.pAttachments = attachments;
 			framebufferInfo.width = texdesc.Width;
 			framebufferInfo.height = texdesc.Height;
-			framebufferInfo.layers = texdesc.MiscFlags & RESOURCE_MISC_TEXTURECUBE ? 6 : 1; // todo figure out better! can't use ArraySize here, it will crash!
+			if (desc.attachments[0].subresource >= 0)
+			{
+				framebufferInfo.layers = texture_internal->subresources_framebuffer_layercount[0];
+			}
+			else
+			{
+				framebufferInfo.layers = texture_internal->framebuffer_layercount;
+			}
+			framebufferInfo.layers = std::min(framebufferInfo.layers, texdesc.ArraySize);
 		}
 		else
 		{
-			framebufferInfo.width = 1;
-			framebufferInfo.height = 1;
-			framebufferInfo.layers = 1;
+			framebufferInfo.pAttachments = nullptr;
+			framebufferInfo.width = device_properties.properties.limits.maxFramebufferWidth;
+			framebufferInfo.height = device_properties.properties.limits.maxFramebufferHeight;
+			framebufferInfo.layers = device_properties.properties.limits.maxFramebufferLayers;
 		}
 
 		res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &internal_state->framebuffer);
@@ -4460,21 +4554,23 @@ using namespace Vulkan_Internal;
 		internal_state->beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		internal_state->beginInfo.renderPass = internal_state->renderpass;
 		internal_state->beginInfo.framebuffer = internal_state->framebuffer;
+		internal_state->beginInfo.renderArea.offset = { 0, 0 };
+		internal_state->beginInfo.renderArea.extent.width = framebufferInfo.width;
+		internal_state->beginInfo.renderArea.extent.height = framebufferInfo.height;
 
 		if (validAttachmentCount > 0)
 		{
 			const TextureDesc& texdesc = desc.attachments[0].texture->desc;
 
-			internal_state->beginInfo.renderArea.offset = { 0, 0 };
-			internal_state->beginInfo.renderArea.extent.width = texdesc.Width;
-			internal_state->beginInfo.renderArea.extent.height = texdesc.Height;
 			internal_state->beginInfo.clearValueCount = validAttachmentCount;
 			internal_state->beginInfo.pClearValues = internal_state->clearColors;
 
 			int i = 0;
 			for (auto& attachment : desc.attachments)
 			{
-				if (desc.attachments[i].type == RenderPassAttachment::RESOLVE || attachment.texture == nullptr)
+				if (desc.attachments[i].type == RenderPassAttachment::RESOLVE ||
+					desc.attachments[i].type == RenderPassAttachment::SHADING_RATE_SOURCE ||
+					attachment.texture == nullptr)
 					continue;
 
 				const ClearValue& clear = desc.attachments[i].texture->desc.clear;
@@ -4509,60 +4605,63 @@ using namespace Vulkan_Internal;
 
 		bvh->desc = *pDesc;
 
-		VkAccelerationStructureCreateInfoKHR info = {};
-		info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
-
-		if (pDesc->_flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE)
+		internal_state->buildInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+		internal_state->buildInfo.flags = 0;
+		if (bvh->desc._flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE)
 		{
-			info.flags |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
+			internal_state->buildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
 		}
-		if (pDesc->_flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_COMPACTION)
+		if (bvh->desc._flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_COMPACTION)
 		{
-			info.flags |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR;
+			internal_state->buildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR;
 		}
-		if (pDesc->_flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE)
+		if (bvh->desc._flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE)
 		{
-			info.flags |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+			internal_state->buildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
 		}
-		if (pDesc->_flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD)
+		if (bvh->desc._flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD)
 		{
-			info.flags |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR;
+			internal_state->buildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR;
 		}
-		if (pDesc->_flags & RaytracingAccelerationStructureDesc::FLAG_MINIMIZE_MEMORY)
+		if (bvh->desc._flags & RaytracingAccelerationStructureDesc::FLAG_MINIMIZE_MEMORY)
 		{
-			info.flags |= VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_KHR;
+			internal_state->buildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_KHR;
 		}
 
 		switch (pDesc->type)
 		{
 		case RaytracingAccelerationStructureDesc::BOTTOMLEVEL:
 		{
-			info.type = VkAccelerationStructureTypeKHR::VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+			internal_state->buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
 
 			for (auto& x : pDesc->bottomlevel.geometries)
 			{
 				internal_state->geometries.emplace_back();
 				auto& geometry = internal_state->geometries.back();
 				geometry = {};
-				geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
+				geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
 
-				if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_USE_TRANSFORM)
-				{
-					geometry.allowsTransforms = VK_TRUE;
-				}
+				internal_state->primitiveCounts.emplace_back();
+				uint32_t& primitiveCount = internal_state->primitiveCounts.back();
 
 				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES)
 				{
 					geometry.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-					geometry.maxPrimitiveCount = x.triangles.indexCount / 3;
-					geometry.indexType = x.triangles.indexFormat == INDEXFORMAT_16BIT ? VkIndexType::VK_INDEX_TYPE_UINT16 : VkIndexType::VK_INDEX_TYPE_UINT32;
-					geometry.maxVertexCount = x.triangles.vertexCount;
-					geometry.vertexFormat = _ConvertFormat(x.triangles.vertexFormat);
+					geometry.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+					geometry.geometry.triangles.indexType = x.triangles.indexFormat == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
+					geometry.geometry.triangles.maxVertex = x.triangles.vertexCount;
+					geometry.geometry.triangles.vertexStride = x.triangles.vertexStride;
+					geometry.geometry.triangles.vertexFormat = _ConvertFormat(x.triangles.vertexFormat);
+
+					primitiveCount = x.triangles.indexCount / 3;
 				}
 				else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::PROCEDURAL_AABBS)
 				{
 					geometry.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR;
-					geometry.maxPrimitiveCount = x.aabbs.count;
+					geometry.geometry.aabbs.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
+					geometry.geometry.aabbs.stride = sizeof(float) * 6; // min - max corners
+
+					primitiveCount = x.aabbs.count;
 				}
 			}
 
@@ -4571,54 +4670,44 @@ using namespace Vulkan_Internal;
 		break;
 		case RaytracingAccelerationStructureDesc::TOPLEVEL:
 		{
-			info.type = VkAccelerationStructureTypeKHR::VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+			internal_state->buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
 
 			internal_state->geometries.emplace_back();
 			auto& geometry = internal_state->geometries.back();
 			geometry = {};
-			geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
+			geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
 			geometry.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
-			geometry.allowsTransforms = VK_TRUE;
-			geometry.maxPrimitiveCount = pDesc->toplevel.count;
+			geometry.geometry.instances.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
+			geometry.geometry.instances.arrayOfPointers = VK_FALSE;
+
+			internal_state->primitiveCounts.emplace_back();
+			uint32_t& primitiveCount = internal_state->primitiveCounts.back();
+			primitiveCount = pDesc->toplevel.count;
 		}
 		break;
 		}
 
-		info.pGeometryInfos = internal_state->geometries.data();
-		info.maxGeometryCount = (uint32_t)internal_state->geometries.size();
-		internal_state->info = info;
+		internal_state->buildInfo.geometryCount = (uint32_t)internal_state->geometries.size();
+		internal_state->buildInfo.pGeometries = internal_state->geometries.data();
 
-		VkResult res = createAccelerationStructureKHR(device, &info, nullptr, &internal_state->resource);
-		assert(res == VK_SUCCESS);
+		internal_state->sizeInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
 
-		VkAccelerationStructureMemoryRequirementsInfoKHR meminfo = {};
-		meminfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_KHR;
-		meminfo.accelerationStructure = internal_state->resource;
+		// Compute memory requirements:
+		getAccelerationStructureBuildSizesKHR(
+			device,
+			VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+			&internal_state->buildInfo,
+			internal_state->primitiveCounts.data(),
+			&internal_state->sizeInfo
+		);
 
-		meminfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_KHR;
-		VkMemoryRequirements2 memrequirements = {};
-		memrequirements.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
-		getAccelerationStructureMemoryRequirementsKHR(device, &meminfo, &memrequirements);
-
-
-		meminfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR;
-		VkMemoryRequirements2 memrequirements_scratch_build = {};
-		memrequirements_scratch_build.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
-		getAccelerationStructureMemoryRequirementsKHR(device, &meminfo, &memrequirements_scratch_build);
-
-		meminfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_UPDATE_SCRATCH_KHR;
-		VkMemoryRequirements2 memrequirements_scratch_update = {};
-		memrequirements_scratch_update.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
-		getAccelerationStructureMemoryRequirementsKHR(device, &meminfo, &memrequirements_scratch_update);
-
-
-		// Main backing memory:
+		// Backing memory as buffer:
 		VkBufferCreateInfo bufferInfo = {};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = memrequirements.memoryRequirements.size + 
-			std::max(memrequirements_scratch_build.memoryRequirements.size, memrequirements_scratch_update.memoryRequirements.size);
-		bufferInfo.usage = VK_BUFFER_USAGE_RAY_TRACING_BIT_KHR | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-		assert(features_1_2.bufferDeviceAddress == VK_TRUE);
+		bufferInfo.size = internal_state->sizeInfo.accelerationStructureSize +
+			std::max(internal_state->sizeInfo.buildScratchSize, internal_state->sizeInfo.updateScratchSize);
+		bufferInfo.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR;
+		bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; // scratch
 		bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 		bufferInfo.flags = 0;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -4627,22 +4716,52 @@ using namespace Vulkan_Internal;
 		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 		allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 
-		res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->buffer, &internal_state->allocation, nullptr);
+		VkResult res = vmaCreateBuffer(
+			allocationhandler->allocator,
+			&bufferInfo,
+			&allocInfo,
+			&internal_state->buffer,
+			&internal_state->allocation,
+			nullptr
+		);
 		assert(res == VK_SUCCESS);
 
-		VkBindAccelerationStructureMemoryInfoKHR bind_info = {};
-		bind_info.sType = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_KHR;
-		bind_info.accelerationStructure = internal_state->resource;
-		bind_info.memory = internal_state->allocation->GetMemory();
-		res = bindAccelerationStructureMemoryKHR(device, 1, &bind_info);
+		// Create the acceleration structure:
+		internal_state->createInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+		internal_state->createInfo.type = internal_state->buildInfo.type;
+		internal_state->createInfo.buffer = internal_state->buffer;
+		internal_state->createInfo.size = internal_state->sizeInfo.accelerationStructureSize;
+
+		res = createAccelerationStructureKHR(
+			device,
+			&internal_state->createInfo,
+			nullptr,
+			&internal_state->resource
+		);
 		assert(res == VK_SUCCESS);
 
+		// Get the device address for the acceleration structure:
 		VkAccelerationStructureDeviceAddressInfoKHR addrinfo = {};
 		addrinfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
 		addrinfo.accelerationStructure = internal_state->resource;
 		internal_state->as_address = getAccelerationStructureDeviceAddressKHR(device, &addrinfo);
 
-		internal_state->scratch_offset = memrequirements.memoryRequirements.size;
+		// Get scratch address:
+		VkBufferDeviceAddressInfo addressinfo = {};
+		addressinfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+		addressinfo.buffer = internal_state->buffer;
+		internal_state->scratch_address = vkGetBufferDeviceAddress(device, &addressinfo)
+			+ internal_state->sizeInfo.accelerationStructureSize;
+
+#if 0
+		buildAccelerationStructuresKHR(
+			device,
+			VK_NULL_HANDLE,
+			1,
+			&info,
+			&pRangeInfo
+		);
+#endif
 
 		return res == VK_SUCCESS;
 	}
@@ -4657,8 +4776,6 @@ using namespace Vulkan_Internal;
 		VkRayTracingPipelineCreateInfoKHR info = {};
 		info.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
 		info.flags = 0;
-
-		info.libraries.sType = VK_STRUCTURE_TYPE_PIPELINE_LIBRARY_CREATE_INFO_KHR;
 
 		std::vector<VkPipelineShaderStageCreateInfo> stages;
 		for (auto& x : pDesc->shaderlibraries)
@@ -4721,7 +4838,7 @@ using namespace Vulkan_Internal;
 		info.groupCount = (uint32_t)groups.size();
 		info.pGroups = groups.data();
 
-		info.maxRecursionDepth = pDesc->max_trace_recursion_depth;
+		info.maxPipelineRayRecursionDepth = pDesc->max_trace_recursion_depth;
 
 		if (pDesc->rootSignature == nullptr)
 		{
@@ -4732,16 +4849,24 @@ using namespace Vulkan_Internal;
 			info.layout = to_internal(pDesc->rootSignature)->pipelineLayout;
 		}
 
-		VkRayTracingPipelineInterfaceCreateInfoKHR library_interface = {};
-		library_interface.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_INTERFACE_CREATE_INFO_KHR;
-		library_interface.maxPayloadSize = pDesc->max_payload_size_in_bytes;
-		library_interface.maxAttributeSize = pDesc->max_attribute_size_in_bytes;
-		library_interface.maxCallableSize = 0;
+		//VkRayTracingPipelineInterfaceCreateInfoKHR library_interface = {};
+		//library_interface.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_INTERFACE_CREATE_INFO_KHR;
+		//library_interface.maxPipelineRayPayloadSize = pDesc->max_payload_size_in_bytes;
+		//library_interface.maxPipelineRayHitAttributeSize = pDesc->max_attribute_size_in_bytes;
+		//info.pLibraryInterface = &library_interface;
 
 		info.basePipelineHandle = VK_NULL_HANDLE;
 		info.basePipelineIndex = 0;
 
-		VkResult res = createRayTracingPipelinesKHR(device, VK_NULL_HANDLE, 1, &info, nullptr, &internal_state->pipeline);
+		VkResult res = createRayTracingPipelinesKHR(
+			device,
+			VK_NULL_HANDLE,
+			VK_NULL_HANDLE,
+			1,
+			&info,
+			nullptr,
+			&internal_state->pipeline
+		);
 		assert(res == VK_SUCCESS);
 
 		return res == VK_SUCCESS;
@@ -5143,9 +5268,11 @@ using namespace Vulkan_Internal;
 				if (internal_state->rtv == VK_NULL_HANDLE)
 				{
 					internal_state->rtv = rtv;
+					internal_state->framebuffer_layercount = view_desc.subresourceRange.layerCount;
 					return -1;
 				}
 				internal_state->subresources_rtv.push_back(rtv);
+				internal_state->subresources_framebuffer_layercount.push_back(view_desc.subresourceRange.layerCount);
 				return int(internal_state->subresources_rtv.size() - 1);
 			}
 			else
@@ -5185,9 +5312,11 @@ using namespace Vulkan_Internal;
 				if (internal_state->dsv == VK_NULL_HANDLE)
 				{
 					internal_state->dsv = dsv;
+					internal_state->framebuffer_layercount = view_desc.subresourceRange.layerCount;
 					return -1;
 				}
 				internal_state->subresources_dsv.push_back(dsv);
+				internal_state->subresources_framebuffer_layercount.push_back(view_desc.subresourceRange.layerCount);
 				return int(internal_state->subresources_dsv.size() - 1);
 			}
 			else
@@ -5264,6 +5393,38 @@ using namespace Vulkan_Internal;
 		return -1;
 	}
 
+	void GraphicsDevice_Vulkan::WriteShadingRateValue(SHADING_RATE rate, void* dest)
+	{
+		// How to compute shading rate value texel data:
+		// https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#primsrast-fragment-shading-rate-attachment
+
+		switch (rate)
+		{
+		default:
+		case wiGraphics::SHADING_RATE_1X1:
+			*(uint8_t*)dest = 0;
+			break;
+		case wiGraphics::SHADING_RATE_1X2:
+			*(uint8_t*)dest = 0x1;
+			break;
+		case wiGraphics::SHADING_RATE_2X1:
+			*(uint8_t*)dest = 0x4;
+			break;
+		case wiGraphics::SHADING_RATE_2X2:
+			*(uint8_t*)dest = 0x5;
+			break;
+		case wiGraphics::SHADING_RATE_2X4:
+			*(uint8_t*)dest = 0x6;
+			break;
+		case wiGraphics::SHADING_RATE_4X2:
+			*(uint8_t*)dest = 0x9;
+			break;
+		case wiGraphics::SHADING_RATE_4X4:
+			*(uint8_t*)dest = 0xa;
+			break;
+		}
+
+	}
 	void GraphicsDevice_Vulkan::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest)
 	{
 		VkAccelerationStructureInstanceKHR* desc = (VkAccelerationStructureInstanceKHR*)dest;
@@ -5584,24 +5745,20 @@ using namespace Vulkan_Internal;
 			assert(0); // not implemented yet
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP:
+			if (internal_state->query_index == ~0)
+				return false;
 			res = vkGetQueryPoolResults(device, querypool_timestamp, (uint32_t)internal_state->query_index, 1, sizeof(uint64_t),
 				&result->result_timestamp, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
-			if (timestamps_to_reset.empty() || timestamps_to_reset.back() != (uint32_t)internal_state->query_index)
-			{
-				timestamps_to_reset.push_back((uint32_t)internal_state->query_index);
-			}
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
 			result->result_timestamp_frequency = timestamp_frequency;
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
 		case GPU_QUERY_TYPE_OCCLUSION:
+			if (internal_state->query_index == ~0)
+				return false;
 			res = vkGetQueryPoolResults(device, querypool_occlusion, (uint32_t)internal_state->query_index, 1, sizeof(uint64_t),
 				&result->result_passed_sample_count, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_PARTIAL_BIT);
-			if (occlusions_to_reset.empty() || occlusions_to_reset.back() != (uint32_t)internal_state->query_index)
-			{
-				occlusions_to_reset.push_back((uint32_t)internal_state->query_index);
-			}
 			break;
 		default:
 			return false;
@@ -5769,29 +5926,13 @@ using namespace Vulkan_Internal;
 		// reset immediate resource allocators:
 		GetFrameResources().resourceBuffer[cmd].clear();
 
-		if (!initial_querypool_reset)
-		{
-			initial_querypool_reset = true;
-			vkCmdResetQueryPool(GetDirectCommandList(cmd), querypool_timestamp, 0, timestamp_query_count);
-			vkCmdResetQueryPool(GetDirectCommandList(cmd), querypool_occlusion, 0, occlusion_query_count);
-		}
-		for (auto& x : timestamps_to_reset)
-		{
-			vkCmdResetQueryPool(GetDirectCommandList(cmd), querypool_timestamp, x, 1);
-		}
-		timestamps_to_reset.clear();
-		for (auto& x : occlusions_to_reset)
-		{
-			vkCmdResetQueryPool(GetDirectCommandList(cmd), querypool_occlusion, x, 1);
-		}
-		occlusions_to_reset.clear();
-
 		prev_pipeline_hash[cmd] = 0;
 		active_pso[cmd] = nullptr;
 		active_cs[cmd] = nullptr;
 		active_rt[cmd] = nullptr;
 		active_renderpass[cmd] = VK_NULL_HANDLE;
 		dirty_pso[cmd] = false;
+		prev_shadingrate[cmd] = SHADING_RATE_INVALID;
 
 		return cmd;
 	}
@@ -5817,7 +5958,7 @@ using namespace Vulkan_Internal;
 				submitInfo.pSignalSemaphores = semaphores;
 				submitInfo.signalSemaphoreCount = arraysize(semaphores);
 
-				res = vkQueueSubmit(frame.copyQueue, 1, &submitInfo, VK_NULL_HANDLE);
+				res = vkQueueSubmit(copyQueue, 1, &submitInfo, VK_NULL_HANDLE);
 				assert(res == VK_SUCCESS);
 
 			}
@@ -6121,6 +6262,82 @@ using namespace Vulkan_Internal;
 	{
 		float blendConstants[] = { r, g, b, a };
 		vkCmdSetBlendConstants(GetDirectCommandList(cmd), blendConstants);
+	}
+	void GraphicsDevice_Vulkan::BindShadingRate(SHADING_RATE rate, CommandList cmd)
+	{
+		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING) && prev_shadingrate[cmd] != rate)
+		{
+			prev_shadingrate[cmd] = rate;
+
+			VkExtent2D fragmentSize;
+			switch (rate)
+			{
+			case wiGraphics::SHADING_RATE_1X1:
+				fragmentSize.width = 1;
+				fragmentSize.height = 1;
+				break;
+			case wiGraphics::SHADING_RATE_1X2:
+				fragmentSize.width = 1;
+				fragmentSize.height = 2;
+				break;
+			case wiGraphics::SHADING_RATE_2X1:
+				fragmentSize.width = 2;
+				fragmentSize.height = 1;
+				break;
+			case wiGraphics::SHADING_RATE_2X2:
+				fragmentSize.width = 2;
+				fragmentSize.height = 2;
+				break;
+			case wiGraphics::SHADING_RATE_2X4:
+				fragmentSize.width = 2;
+				fragmentSize.height = 4;
+				break;
+			case wiGraphics::SHADING_RATE_4X2:
+				fragmentSize.width = 4;
+				fragmentSize.height = 2;
+				break;
+			case wiGraphics::SHADING_RATE_4X4:
+				fragmentSize.width = 4;
+				fragmentSize.height = 4;
+				break;
+			default:
+				break;
+			}
+
+			VkFragmentShadingRateCombinerOpKHR combiner[] = {
+				VK_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_KHR,
+				VK_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_KHR
+			};
+
+			if (fragment_shading_rate_properties.fragmentShadingRateNonTrivialCombinerOps == VK_TRUE)
+			{
+				if (fragment_shading_rate_features.primitiveFragmentShadingRate == VK_TRUE)
+				{
+					combiner[0] = VK_FRAGMENT_SHADING_RATE_COMBINER_OP_MAX_KHR;
+				}
+				if (fragment_shading_rate_features.attachmentFragmentShadingRate == VK_TRUE)
+				{
+					combiner[1] = VK_FRAGMENT_SHADING_RATE_COMBINER_OP_MAX_KHR;
+				}
+			}
+			else
+			{
+				if (fragment_shading_rate_features.primitiveFragmentShadingRate == VK_TRUE)
+				{
+					combiner[0] = VK_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_KHR;
+				}
+				if (fragment_shading_rate_features.attachmentFragmentShadingRate == VK_TRUE)
+				{
+					combiner[1] = VK_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_KHR;
+				}
+			}
+
+			cmdSetFragmentShadingRateKHR(
+				GetDirectCommandList(cmd),
+				&fragmentSize,
+				combiner
+			);
+		}
 	}
 	void GraphicsDevice_Vulkan::BindPipelineState(const PipelineState* pso, CommandList cmd)
 	{
@@ -6446,9 +6663,11 @@ using namespace Vulkan_Internal;
 		switch (internal_state->query_type)
 		{
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+			vkResetQueryPool(device, querypool_occlusion, (uint32_t)internal_state->query_index, 1);
 			vkCmdBeginQuery(GetDirectCommandList(cmd), querypool_occlusion, (uint32_t)internal_state->query_index, 0);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
+			vkResetQueryPool(device, querypool_occlusion, (uint32_t)internal_state->query_index, 1);
 			vkCmdBeginQuery(GetDirectCommandList(cmd), querypool_occlusion, (uint32_t)internal_state->query_index, VK_QUERY_CONTROL_PRECISE_BIT);
 			break;
 		}
@@ -6460,6 +6679,7 @@ using namespace Vulkan_Internal;
 		switch (internal_state->query_type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
+			vkResetQueryPool(device, querypool_timestamp, (uint32_t)internal_state->query_index, 1);
 			vkCmdWriteTimestamp(GetDirectCommandList(cmd), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, querypool_timestamp, internal_state->query_index);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
@@ -6493,7 +6713,7 @@ using namespace Vulkan_Internal;
 				barrierdesc.pNext = nullptr;
 				barrierdesc.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 				barrierdesc.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
-				if (RAYTRACING)
+				if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 				{
 					barrierdesc.srcAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
 					barrierdesc.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
@@ -6555,7 +6775,7 @@ using namespace Vulkan_Internal;
 		VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 		VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 
-		if (RAYTRACING)
+		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			srcStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 			dstStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
@@ -6574,51 +6794,40 @@ using namespace Vulkan_Internal;
 	{
 		auto dst_internal = to_internal(dst);
 
-		VkAccelerationStructureBuildGeometryInfoKHR info = {};
-		info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-		info.flags = dst_internal->info.flags;
+		VkAccelerationStructureBuildGeometryInfoKHR info = dst_internal->buildInfo;
 		info.dstAccelerationStructure = dst_internal->resource;
 		info.srcAccelerationStructure = VK_NULL_HANDLE;
-		info.update = VK_FALSE;
-		info.geometryArrayOfPointers = VK_FALSE;
+		info.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
 
-		VkBufferDeviceAddressInfo addressinfo = {};
-		addressinfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
-		addressinfo.buffer = dst_internal->buffer;
-		info.scratchData.deviceAddress = vkGetBufferDeviceAddress(device, &addressinfo) + dst_internal->scratch_offset;
+		info.scratchData.deviceAddress = dst_internal->scratch_address;
 
 		if (src != nullptr)
 		{
-			info.update = VK_TRUE;
+			info.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR;
 
 			auto src_internal = to_internal(src);
 			info.srcAccelerationStructure = src_internal->resource;
 		}
 
-		std::vector<VkAccelerationStructureGeometryKHR> geometries;
-		std::vector<VkAccelerationStructureBuildOffsetInfoKHR> offsetinfos;
+		std::vector<VkAccelerationStructureGeometryKHR> geometries = dst_internal->geometries; // copy!
+		std::vector<VkAccelerationStructureBuildRangeInfoKHR> ranges;
+
+		info.type = dst_internal->createInfo.type;
+		info.geometryCount = (uint32_t)geometries.size();
+		ranges.reserve(info.geometryCount);
 
 		switch (dst->desc.type)
 		{
 		case RaytracingAccelerationStructureDesc::BOTTOMLEVEL:
 		{
-			info.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-			info.geometryCount = (uint32_t)dst->desc.bottomlevel.geometries.size();
-			geometries.reserve(info.geometryCount);
-			offsetinfos.reserve(info.geometryCount);
-
 			size_t i = 0;
 			for (auto& x : dst->desc.bottomlevel.geometries)
 			{
-				geometries.emplace_back();
-				offsetinfos.emplace_back();
+				auto& geometry = geometries[i];
 
-				auto& geometry = geometries.back();
-				geometry = {};
-				geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-
-				auto& offset = offsetinfos.back();
-				offset = {};
+				ranges.emplace_back();
+				auto& range = ranges.back();
+				range = {};
 
 				if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE)
 				{
@@ -6631,78 +6840,57 @@ using namespace Vulkan_Internal;
 
 				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES)
 				{
-					geometry.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-					geometry.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-					geometry.geometry.triangles.vertexStride = x.triangles.vertexStride;
-					geometry.geometry.triangles.vertexFormat = _ConvertFormat(x.triangles.vertexFormat);
-					geometry.geometry.triangles.indexType = x.triangles.indexFormat == INDEXFORMAT_16BIT ? VkIndexType::VK_INDEX_TYPE_UINT16 : VkIndexType::VK_INDEX_TYPE_UINT32;
-
-					addressinfo.buffer = to_internal(&x.triangles.vertexBuffer)->resource;
-					geometry.geometry.triangles.vertexData.deviceAddress = vkGetBufferDeviceAddress(device, &addressinfo) + 
+					geometry.geometry.triangles.vertexData.deviceAddress = to_internal(&x.triangles.vertexBuffer)->address +
 						x.triangles.vertexByteOffset;
 
-					addressinfo.buffer = to_internal(&x.triangles.indexBuffer)->resource;
-					geometry.geometry.triangles.indexData.deviceAddress = vkGetBufferDeviceAddress(device, &addressinfo) +
+					geometry.geometry.triangles.indexData.deviceAddress = to_internal(&x.triangles.indexBuffer)->address +
 						x.triangles.indexOffset * (x.triangles.indexFormat == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? sizeof(uint16_t) : sizeof(uint32_t));
 
 					if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_USE_TRANSFORM)
 					{
-						addressinfo.buffer = to_internal(&x.triangles.transform3x4Buffer)->resource;
-						geometry.geometry.triangles.transformData.deviceAddress = vkGetBufferDeviceAddress(device, &addressinfo);
-						offset.transformOffset = x.triangles.transform3x4BufferOffset;
+						geometry.geometry.triangles.transformData.deviceAddress = to_internal(&x.triangles.transform3x4Buffer)->address;
+						range.transformOffset = x.triangles.transform3x4BufferOffset;
 					}
 
-					offset.primitiveCount = x.triangles.indexCount / 3;
+					range.primitiveCount = x.triangles.indexCount / 3;
+					range.primitiveOffset = 0;
 				}
 				else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::PROCEDURAL_AABBS)
 				{
-					geometry.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR;
-					geometry.geometry.aabbs.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
-					geometry.geometry.aabbs.stride = x.aabbs.stride;
+					geometry.geometry.aabbs.data.deviceAddress = to_internal(&x.aabbs.aabbBuffer)->address;
 
-					addressinfo.buffer = to_internal(&x.aabbs.aabbBuffer)->resource;
-					geometry.geometry.aabbs.data.deviceAddress = vkGetBufferDeviceAddress(device, &addressinfo);
-
-					offset.primitiveCount = x.aabbs.offset;
-					offset.primitiveOffset = x.aabbs.offset;
+					range.primitiveCount = x.aabbs.count;
+					range.primitiveOffset = x.aabbs.offset;
 				}
+
+				i++;
 			}
 		}
 		break;
 		case RaytracingAccelerationStructureDesc::TOPLEVEL:
 		{
-			info.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-			info.geometryCount = 1;
-			geometries.reserve(info.geometryCount);
-			offsetinfos.reserve(info.geometryCount);
-
-			geometries.emplace_back();
-			offsetinfos.emplace_back();
-
 			auto& geometry = geometries.back();
-			geometry = {};
-			geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-			geometry.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
-			geometry.geometry.instances.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
-			geometry.geometry.instances.arrayOfPointers = VK_FALSE;
+			geometry.geometry.instances.data.deviceAddress = to_internal(&dst->desc.toplevel.instanceBuffer)->address;
 
-			addressinfo.buffer = to_internal(&dst->desc.toplevel.instanceBuffer)->resource;
-			geometry.geometry.instances.data.deviceAddress = vkGetBufferDeviceAddress(device, &addressinfo);
-
-			auto& offset = offsetinfos.back();
-			offset = {};
-			offset.primitiveCount = dst->desc.toplevel.count;
-			offset.primitiveOffset = dst->desc.toplevel.offset;
+			ranges.emplace_back();
+			auto& range = ranges.back();
+			range = {};
+			range.primitiveCount = dst->desc.toplevel.count;
+			range.primitiveOffset = dst->desc.toplevel.offset;
 		}
 		break;
 		}
 
-		VkAccelerationStructureGeometryKHR* pGeomtries = geometries.data();
-		info.ppGeometries = &pGeomtries;
+		info.pGeometries = geometries.data();
 
-		VkAccelerationStructureBuildOffsetInfoKHR* pOffsetinfo = offsetinfos.data();
+		VkAccelerationStructureBuildRangeInfoKHR* pRangeInfo = ranges.data();
 
-		cmdBuildAccelerationStructureKHR(GetDirectCommandList(cmd), 1, &info, &pOffsetinfo);
+		cmdBuildAccelerationStructuresKHR(
+			GetDirectCommandList(cmd),
+			1,
+			&info,
+			&pRangeInfo
+		);
 	}
 	void GraphicsDevice_Vulkan::BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd)
 	{
@@ -6717,27 +6905,27 @@ using namespace Vulkan_Internal;
 	{
 		preraytrace(cmd);
 
-		VkStridedBufferRegionKHR raygen = {};
-		raygen.buffer = desc->raygeneration.buffer ? to_internal(desc->raygeneration.buffer)->resource : VK_NULL_HANDLE;
-		raygen.offset = desc->raygeneration.offset;
+		VkStridedDeviceAddressRegionKHR raygen = {};
+		raygen.deviceAddress = desc->raygeneration.buffer ? to_internal(desc->raygeneration.buffer)->address : 0;
+		raygen.deviceAddress += desc->raygeneration.offset;
 		raygen.size = desc->raygeneration.size;
 		raygen.stride = desc->raygeneration.stride;
-
-		VkStridedBufferRegionKHR miss = {};
-		miss.buffer = desc->miss.buffer ? to_internal(desc->miss.buffer)->resource : VK_NULL_HANDLE;
-		miss.offset = desc->miss.offset;
+		
+		VkStridedDeviceAddressRegionKHR miss = {};
+		miss.deviceAddress = desc->miss.buffer ? to_internal(desc->miss.buffer)->address : 0;
+		miss.deviceAddress += desc->miss.offset;
 		miss.size = desc->miss.size;
 		miss.stride = desc->miss.stride;
 
-		VkStridedBufferRegionKHR hitgroup = {};
-		hitgroup.buffer = desc->hitgroup.buffer ? to_internal(desc->hitgroup.buffer)->resource : VK_NULL_HANDLE;
-		hitgroup.offset = desc->hitgroup.offset;
+		VkStridedDeviceAddressRegionKHR hitgroup = {};
+		hitgroup.deviceAddress = desc->hitgroup.buffer ? to_internal(desc->hitgroup.buffer)->address : 0;
+		hitgroup.deviceAddress += desc->hitgroup.offset;
 		hitgroup.size = desc->hitgroup.size;
 		hitgroup.stride = desc->hitgroup.stride;
 
-		VkStridedBufferRegionKHR callable = {};
-		callable.buffer = desc->callable.buffer ? to_internal(desc->callable.buffer)->resource : VK_NULL_HANDLE;
-		callable.offset = desc->callable.offset;
+		VkStridedDeviceAddressRegionKHR callable = {};
+		callable.deviceAddress = desc->callable.buffer ? to_internal(desc->callable.buffer)->address : 0;
+		callable.deviceAddress += desc->callable.offset;
 		callable.size = desc->callable.size;
 		callable.stride = desc->callable.stride;
 

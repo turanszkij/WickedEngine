@@ -16,7 +16,6 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #endif // _WIN32
 
-#define VK_ENABLE_BETA_EXTENSIONS
 #include <vulkan/vulkan.h>
 
 #include "Utility/vk_mem_alloc.h"
@@ -62,13 +61,18 @@ namespace wiGraphics
 		VkPhysicalDeviceProperties2 device_properties = {};
 		VkPhysicalDeviceVulkan11Properties device_properties_1_1 = {};
 		VkPhysicalDeviceVulkan12Properties device_properties_1_2 = {};
-		VkPhysicalDeviceRayTracingPropertiesKHR raytracing_properties = {};
+		VkPhysicalDeviceAccelerationStructurePropertiesKHR acceleration_structure_properties = {};
+		VkPhysicalDeviceRayTracingPipelinePropertiesKHR raytracing_properties = {};
+		VkPhysicalDeviceFragmentShadingRatePropertiesKHR fragment_shading_rate_properties = {};
 		VkPhysicalDeviceMeshShaderPropertiesNV mesh_shader_properties = {};
 
 		VkPhysicalDeviceFeatures2 device_features2 = {};
 		VkPhysicalDeviceVulkan11Features features_1_1 = {};
 		VkPhysicalDeviceVulkan12Features features_1_2 = {};
-		VkPhysicalDeviceRayTracingFeaturesKHR raytracing_features = {};
+		VkPhysicalDeviceAccelerationStructureFeaturesKHR acceleration_structure_features = {};
+		VkPhysicalDeviceRayTracingPipelineFeaturesKHR raytracing_features = {};
+		VkPhysicalDeviceRayQueryFeaturesKHR raytracing_query_features = {};
+		VkPhysicalDeviceFragmentShadingRateFeaturesKHR fragment_shading_rate_features = {};
 		VkPhysicalDeviceMeshShaderFeaturesNV mesh_shader_features = {};
 
 		VkSwapchainKHR swapChain = VK_NULL_HANDLE;
@@ -104,12 +108,10 @@ namespace wiGraphics
 		VkQueryPool querypool_occlusion = VK_NULL_HANDLE;
 		static const size_t timestamp_query_count = 1024;
 		static const size_t occlusion_query_count = 1024;
-		bool initial_querypool_reset = false;
-		std::vector<uint32_t> timestamps_to_reset;
-		std::vector<uint32_t> occlusions_to_reset;
 
 		void CreateBackBufferResources();
 
+		VkQueue copyQueue = VK_NULL_HANDLE;
 		std::mutex copyQueueLock;
 		bool copyQueueUse = false;
 		VkSemaphore copySemaphore = VK_NULL_HANDLE;
@@ -120,7 +122,6 @@ namespace wiGraphics
 			VkCommandPool commandPools[COMMANDLIST_COUNT] = {};
 			VkCommandBuffer commandBuffers[COMMANDLIST_COUNT] = {};
 
-			VkQueue copyQueue = VK_NULL_HANDLE;
 			VkCommandPool copyCommandPool = VK_NULL_HANDLE;
 			VkCommandBuffer copyCommandBuffer = VK_NULL_HANDLE;
 
@@ -141,7 +142,7 @@ namespace wiGraphics
 				std::vector<VkDescriptorBufferInfo> bufferInfos;
 				std::vector<VkDescriptorImageInfo> imageInfos;
 				std::vector<VkBufferView> texelBufferViews;
-				std::vector<VkWriteDescriptorSetAccelerationStructureNV> accelerationStructureViews;
+				std::vector<VkWriteDescriptorSetAccelerationStructureKHR> accelerationStructureViews;
 				bool dirty = false;
 
 				const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
@@ -189,6 +190,7 @@ namespace wiGraphics
 		const Shader* active_cs[COMMANDLIST_COUNT] = {};
 		const RaytracingPipelineState* active_rt[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
+		SHADING_RATE prev_shadingrate[COMMANDLIST_COUNT] = {};
 
 		bool dirty_pso[COMMANDLIST_COUNT] = {};
 		void pso_validate(CommandList cmd);
@@ -201,16 +203,18 @@ namespace wiGraphics
 
 		static PFN_vkCreateRayTracingPipelinesKHR createRayTracingPipelinesKHR;
 		static PFN_vkCreateAccelerationStructureKHR createAccelerationStructureKHR;
-		static PFN_vkBindAccelerationStructureMemoryKHR bindAccelerationStructureMemoryKHR;
 		static PFN_vkDestroyAccelerationStructureKHR destroyAccelerationStructureKHR;
-		static PFN_vkGetAccelerationStructureMemoryRequirementsKHR getAccelerationStructureMemoryRequirementsKHR;
+		static PFN_vkGetAccelerationStructureBuildSizesKHR getAccelerationStructureBuildSizesKHR;
 		static PFN_vkGetAccelerationStructureDeviceAddressKHR getAccelerationStructureDeviceAddressKHR;
 		static PFN_vkGetRayTracingShaderGroupHandlesKHR getRayTracingShaderGroupHandlesKHR;
-		static PFN_vkCmdBuildAccelerationStructureKHR cmdBuildAccelerationStructureKHR;
+		static PFN_vkCmdBuildAccelerationStructuresKHR cmdBuildAccelerationStructuresKHR;
+		static PFN_vkBuildAccelerationStructuresKHR buildAccelerationStructuresKHR;
 		static PFN_vkCmdTraceRaysKHR cmdTraceRaysKHR;
 
 		static PFN_vkCmdDrawMeshTasksNV cmdDrawMeshTasksNV;
 		static PFN_vkCmdDrawMeshTasksIndirectNV cmdDrawMeshTasksIndirectNV;
+
+		static PFN_vkCmdSetFragmentShadingRateKHR cmdSetFragmentShadingRateKHR;
 
 	public:
 		GraphicsDevice_Vulkan(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false);
@@ -218,11 +222,7 @@ namespace wiGraphics
 
 		bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) override;
 		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) override;
-		bool CreateInputLayout(const InputLayoutDesc *pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout *pInputLayout) override;
 		bool CreateShader(SHADERSTAGE stafe, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) override;
-		bool CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState) override;
-		bool CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState) override;
-		bool CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState) override;
 		bool CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) override;
 		bool CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) override;
 		bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
@@ -235,6 +235,7 @@ namespace wiGraphics
 		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
 		int CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) override;
 
+		void WriteShadingRateValue(SHADING_RATE rate, void* dest) override;
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
 		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) override;
 		void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const GPUResource* resource, int subresource = -1, uint64_t offset = 0) override;
@@ -279,6 +280,7 @@ namespace wiGraphics
 		void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd) override;
 		void BindStencilRef(uint32_t value, CommandList cmd) override;
 		void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) override;
+		void BindShadingRate(SHADING_RATE rate, CommandList cmd) override;
 		void BindPipelineState(const PipelineState* pso, CommandList cmd) override;
 		void BindComputeShader(const Shader* cs, CommandList cmd) override;
 		void Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) override;

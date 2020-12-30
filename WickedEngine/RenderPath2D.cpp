@@ -30,6 +30,11 @@ void RenderPath2D::ResizeBuffers()
 			device->SetName(&rtStenciled_resolved, "rtStenciled_resolved");
 		}
 	}
+	else
+	{
+		rtStenciled = Texture(); // this will be deleted here
+	}
+
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;

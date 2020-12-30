@@ -25,6 +25,7 @@
 #include "wiSpinLock.h"
 #include "wiEvent.h"
 #include "wiPlatform.h"
+#include "wiBlueNoise.h"
 
 #include <algorithm>
 #include <unordered_map>
@@ -42,15 +43,15 @@ namespace wiRenderer
 
 std::shared_ptr<GraphicsDevice> device;
 
-Shader					shaders[SHADERTYPE_COUNT];
-Texture					textures[TEXTYPE_COUNT];
-InputLayout				inputLayouts[ILTYPE_COUNT];
-RasterizerState			rasterizers[RSTYPE_COUNT];
-DepthStencilState		depthStencils[DSSTYPE_COUNT];
-BlendState				blendStates[BSTYPE_COUNT];
-GPUBuffer				constantBuffers[CBTYPE_COUNT];
-GPUBuffer				resourceBuffers[RBTYPE_COUNT];
-Sampler					samplers[SSLOT_COUNT];
+Shader				shaders[SHADERTYPE_COUNT];
+Texture				textures[TEXTYPE_COUNT];
+InputLayout			inputLayouts[ILTYPE_COUNT];
+RasterizerState		rasterizers[RSTYPE_COUNT];
+DepthStencilState	depthStencils[DSSTYPE_COUNT];
+BlendState			blendStates[BSTYPE_COUNT];
+GPUBuffer			constantBuffers[CBTYPE_COUNT];
+GPUBuffer			resourceBuffers[RBTYPE_COUNT];
+Sampler				samplers[SSLOT_COUNT];
 
 string SHADERPATH = wiHelper::GetOriginalWorkingDirectory() + "../WickedEngine/shaders/";
 
@@ -94,6 +95,8 @@ uint32_t raytraceBounceCount = 2;
 bool raytraceDebugVisualizer = false;
 bool raytracedShadows = false;
 bool tessellationEnabled = false;
+bool disableAlbedoMaps = false;
+uint32_t raytracedShadowsSampleCount = 1;
 
 
 struct VoxelizedSceneData
@@ -242,8 +245,8 @@ struct RenderQueue
 	}
 };
 
-vector<size_t> pendingMaterialUpdates;
-vector<size_t> pendingMorphUpdates;
+vector<Entity> pendingMaterialUpdates;
+vector<Entity> pendingMorphUpdates;
 
 enum AS_UPDATE_TYPE
 {
@@ -793,15 +796,6 @@ enum DEBUGRENDERING
 };
 PipelineState PSO_debug[DEBUGRENDERING_COUNT];
 
-XMUINT3 GetEntityCullingTileCount(XMUINT2 internalResolution)
-{
-	return XMUINT3(
-		(internalResolution.x + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
-		(internalResolution.y + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
-		1
-	);
-}
-
 
 bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
 {
@@ -820,126 +814,113 @@ void LoadShaders()
 	wiJobSystem::context ctx;
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
-		InputLayoutDesc layout[] =
+		inputLayouts[ILTYPE_OBJECT_DEBUG].elements =
 		{
-			{ "POSITION_NORMAL_WIND",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_WIND",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		LoadShader(VS, shaders[VSTYPE_OBJECT_DEBUG], "objectVS_debug.cso");
-		device->CreateInputLayout(layout, arraysize(layout), &shaders[VSTYPE_OBJECT_DEBUG], &inputLayouts[ILTYPE_OBJECT_DEBUG]);
 		});
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
-		InputLayoutDesc layout[] =
+		inputLayouts[ILTYPE_OBJECT_ALL].elements =
 		{
-			{ "POSITION_NORMAL_WIND",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "UVSET",					0, MeshComponent::Vertex_TEX::FORMAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "UVSET",					1, MeshComponent::Vertex_TEX::FORMAT, 2, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "ATLAS",					0, MeshComponent::Vertex_TEX::FORMAT, 3, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "COLOR",					0, MeshComponent::Vertex_COL::FORMAT, 4, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TANGENT",				0, MeshComponent::Vertex_TAN::FORMAT, 5, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, 6, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_WIND",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "UVSET",					0, MeshComponent::Vertex_TEX::FORMAT, 1, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "UVSET",					1, MeshComponent::Vertex_TEX::FORMAT, 2, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "ATLAS",					0, MeshComponent::Vertex_TEX::FORMAT, 3, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "COLOR",					0, MeshComponent::Vertex_COL::FORMAT, 4, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TANGENT",				0, MeshComponent::Vertex_TAN::FORMAT, 5, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, 6, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT,  7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIXPREV",		0, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIXPREV",		1, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIXPREV",		2, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEATLAS",			0, FORMAT_R32G32B32A32_FLOAT, 7, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 7, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 7, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 7, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT,  7, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",		0, FORMAT_R32G32B32A32_FLOAT, 7, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",		1, FORMAT_R32G32B32A32_FLOAT, 7, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",		2, FORMAT_R32G32B32A32_FLOAT, 7, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEATLAS",			0, FORMAT_R32G32B32A32_FLOAT, 7, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		LoadShader(VS, shaders[VSTYPE_OBJECT_COMMON], "objectVS_common.cso");
-		device->CreateInputLayout(layout, arraysize(layout), &shaders[VSTYPE_OBJECT_COMMON], &inputLayouts[ILTYPE_OBJECT_ALL]);
 		});
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
-		InputLayoutDesc layout[] =
+		inputLayouts[ILTYPE_OBJECT_POS].elements =
 		{
-			{ "POSITION_NORMAL_WIND",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_WIND",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 1, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 1, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 1, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 1, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		LoadShader(VS, shaders[VSTYPE_OBJECT_POSITIONSTREAM], "objectVS_positionstream.cso");
-		device->CreateInputLayout(layout, arraysize(layout), &shaders[VSTYPE_OBJECT_POSITIONSTREAM], &inputLayouts[ILTYPE_OBJECT_POS]);
-
 		});
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
-		InputLayoutDesc layout[] =
+		inputLayouts[ILTYPE_OBJECT_POS_TEX].elements =
 		{
-			{ "POSITION_NORMAL_WIND",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "UVSET",					0, MeshComponent::Vertex_TEX::FORMAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "UVSET",					1, MeshComponent::Vertex_TEX::FORMAT, 2, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_WIND",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "UVSET",					0, MeshComponent::Vertex_TEX::FORMAT, 1, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "UVSET",					1, MeshComponent::Vertex_TEX::FORMAT, 2, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 3, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 3, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 3, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 3, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 3, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 3, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 3, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 3, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		LoadShader(VS, shaders[VSTYPE_OBJECT_SIMPLE], "objectVS_simple.cso");
-		device->CreateInputLayout(layout, arraysize(layout), &shaders[VSTYPE_OBJECT_SIMPLE], &inputLayouts[ILTYPE_OBJECT_POS_TEX]);
-
 		});
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
-		InputLayoutDesc layout[] =
+		inputLayouts[ILTYPE_SHADOW_POS].elements =
 		{
-			{ "POSITION_NORMAL_WIND",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_WIND",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 1, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 1, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 1, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 1, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		LoadShader(VS, shaders[VSTYPE_SHADOW], "shadowVS.cso");
-		device->CreateInputLayout(layout, arraysize(layout), &shaders[VSTYPE_SHADOW], &inputLayouts[ILTYPE_SHADOW_POS]);
-
 		});
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
-		InputLayoutDesc layout[] =
+		inputLayouts[ILTYPE_SHADOW_POS_TEX].elements =
 		{
-			{ "POSITION_NORMAL_WIND",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "UVSET",					0, MeshComponent::Vertex_TEX::FORMAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "UVSET",					1, MeshComponent::Vertex_TEX::FORMAT, 2, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_WIND",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "UVSET",					0, MeshComponent::Vertex_TEX::FORMAT, 1, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "UVSET",					1, MeshComponent::Vertex_TEX::FORMAT, 2, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 3, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 3, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 3, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 3, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 3, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 3, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 3, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEUSERDATA",		0, FORMAT_R32G32B32A32_UINT, 3, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		LoadShader(VS, shaders[VSTYPE_SHADOW_ALPHATEST], "shadowVS_alphatest.cso");
-		device->CreateInputLayout(layout, arraysize(layout), &shaders[VSTYPE_SHADOW_ALPHATEST], &inputLayouts[ILTYPE_SHADOW_POS_TEX]);
-
 		LoadShader(VS, shaders[VSTYPE_SHADOW_TRANSPARENT], "shadowVS_transparent.cso");
 		});
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
-		InputLayoutDesc layout[] =
+		inputLayouts[ILTYPE_VERTEXCOLOR].elements =
 		{
-			{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, FORMAT_R32G32B32A32_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, FORMAT_R32G32B32A32_FLOAT, 0, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		LoadShader(VS, shaders[VSTYPE_VERTEXCOLOR], "vertexcolorVS.cso");
-		device->CreateInputLayout(layout, arraysize(layout), &shaders[VSTYPE_VERTEXCOLOR], &inputLayouts[ILTYPE_VERTEXCOLOR]);
-
 		});
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
-		InputLayoutDesc layout[] =
+		inputLayouts[ILTYPE_RENDERLIGHTMAP].elements =
 		{
-			{ "POSITION_NORMAL_WIND",		0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "ATLAS",						0, MeshComponent::Vertex_TEX::FORMAT, 1, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_WIND",		0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "ATLAS",						0, MeshComponent::Vertex_TEX::FORMAT, 1, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "INSTANCEMATRIXPREV",			0, FORMAT_R32G32B32A32_FLOAT, 2, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIXPREV",			1, FORMAT_R32G32B32A32_FLOAT, 2, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEMATRIXPREV",			2, FORMAT_R32G32B32A32_FLOAT, 2, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",			0, FORMAT_R32G32B32A32_FLOAT, 2, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",			1, FORMAT_R32G32B32A32_FLOAT, 2, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",			2, FORMAT_R32G32B32A32_FLOAT, 2, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		LoadShader(VS, shaders[VSTYPE_RENDERLIGHTMAP], "renderlightmapVS.cso");
-		device->CreateInputLayout(layout, arraysize(layout), &shaders[VSTYPE_RENDERLIGHTMAP], &inputLayouts[ILTYPE_RENDERLIGHTMAP]);
 		});
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_OBJECT_COMMON_TESSELLATION], "objectVS_common_tessellation.cso"); });
@@ -1002,7 +983,6 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_DEBUG], "objectPS_debug.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_PAINTRADIUS], "objectPS_paintradius.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_SIMPLEST], "objectPS_simplest.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_BLACKOUT], "objectPS_blackout.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_TEXTUREONLY], "objectPS_textureonly.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_ALPHATESTONLY], "objectPS_alphatestonly.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_IMPOSTOR_ALPHATESTONLY], "impostorPS_alphatestonly.cso"); });
@@ -1833,7 +1813,45 @@ void LoadBuffers()
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_SHADINGRATECLASSIFICATION]);
 	device->SetName(&constantBuffers[CBTYPE_SHADINGRATECLASSIFICATION], "ShadingRateClassificationCB");
 
+	{
+		// Blue noise buffers
 
+		GPUBufferDesc bd;
+		bd.Usage = USAGE_DEFAULT; // Long lifetime, fast read, slow update
+		bd.CPUAccessFlags = 0;
+		bd.BindFlags = BIND_SHADER_RESOURCE; // Read only
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.StructureByteStride = sizeof(uint32_t);
+
+		SubresourceData initData;
+
+		// Sobol
+
+		const uint32_t sobolSequenceLength = uint32_t(sizeof(wiBlueNoise::sobol_256spp_256d) / sizeof(wiBlueNoise::sobol_256spp_256d[0]));
+		bd.ByteWidth = bd.StructureByteStride * sobolSequenceLength;
+
+		initData.pSysMem = &wiBlueNoise::sobol_256spp_256d;
+		device->CreateBuffer(&bd, &initData, &resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE]);
+		device->SetName(&resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE], "resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE]");
+
+		// Scrambling tile
+
+		const uint32_t scramblingTileLength = uint32_t(sizeof(wiBlueNoise::scramblingTile) / sizeof(wiBlueNoise::scramblingTile[0]));
+		bd.ByteWidth = bd.StructureByteStride * scramblingTileLength;
+
+		initData.pSysMem = &wiBlueNoise::scramblingTile;
+		device->CreateBuffer(&bd, &initData, &resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE]);
+		device->SetName(&resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE], "resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE]");
+
+		// Ranking tile
+
+		const uint32_t rankingTileLength = uint32_t(sizeof(wiBlueNoise::rankingTile) / sizeof(wiBlueNoise::rankingTile[0]));
+		bd.ByteWidth = bd.StructureByteStride * rankingTileLength;
+
+		initData.pSysMem = &wiBlueNoise::rankingTile;
+		device->CreateBuffer(&bd, &initData, &resourceBuffers[RBTYPE_BLUENOISE_RANKING_TILE]);
+		device->SetName(&resourceBuffers[RBTYPE_BLUENOISE_RANKING_TILE], "resourceBuffers[RBTYPE_BLUENOISE_RANKING_TILE]");
+	}
 }
 void SetUpStates()
 {
@@ -1923,7 +1941,7 @@ void SetUpStates()
 
 
 
-	RasterizerStateDesc rs;
+	RasterizerState rs;
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_BACK;
 	rs.FrontCounterClockwise = true;
@@ -1934,7 +1952,7 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_FRONT]);
+	rasterizers[RSTYPE_FRONT] = rs;
 
 
 	rs.FillMode = FILL_SOLID;
@@ -1947,9 +1965,9 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_SHADOW]);
+	rasterizers[RSTYPE_SHADOW] = rs;
 	rs.CullMode = CULL_NONE;
-	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_SHADOW_DOUBLESIDED]);
+	rasterizers[RSTYPE_SHADOW_DOUBLESIDED] = rs;
 
 	rs.FillMode = FILL_WIREFRAME;
 	rs.CullMode = CULL_BACK;
@@ -1961,9 +1979,9 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_WIRE]);
+	rasterizers[RSTYPE_WIRE] = rs;
 	rs.AntialiasedLineEnable = true;
-	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_WIRE_SMOOTH]);
+	rasterizers[RSTYPE_WIRE_SMOOTH] = rs;
 
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_NONE;
@@ -1975,7 +1993,7 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_DOUBLESIDED]);
+	rasterizers[RSTYPE_DOUBLESIDED] = rs;
 
 	rs.FillMode = FILL_WIREFRAME;
 	rs.CullMode = CULL_NONE;
@@ -1987,9 +2005,9 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_WIRE_DOUBLESIDED]);
+	rasterizers[RSTYPE_WIRE_DOUBLESIDED] = rs;
 	rs.AntialiasedLineEnable = true;
-	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH]);
+	rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH] = rs;
 
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_FRONT;
@@ -2001,19 +2019,19 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_BACK]);
+	rasterizers[RSTYPE_BACK] = rs;
 
 	rs.FillMode = FILL_SOLID;
-	rs.CullMode = CULL_FRONT;
+	rs.CullMode = CULL_NONE;
 	rs.FrontCounterClockwise = true;
-	rs.DepthBias = 0;
+	rs.DepthBias = 2;
 	rs.DepthBiasClamp = 0;
-	rs.SlopeScaledDepthBias = 0;
+	rs.SlopeScaledDepthBias = 2;
 	rs.DepthClipEnable = true;
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_OCCLUDEE]);
+	rasterizers[RSTYPE_OCCLUDEE] = rs;
 
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_FRONT;
@@ -2025,7 +2043,7 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_SKY]);
+	rasterizers[RSTYPE_SKY] = rs;
 
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_NONE;
@@ -2038,12 +2056,12 @@ void SetUpStates()
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
 	rs.ForcedSampleCount = 8;
-	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_VOXELIZE]);
+	rasterizers[RSTYPE_VOXELIZE] = rs;
 
 
 
 
-	DepthStencilStateDesc dsd;
+	DepthStencilState dsd;
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	dsd.DepthFunc = COMPARISON_GREATER;
@@ -2059,53 +2077,53 @@ void SetUpStates()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_REPLACE;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DEFAULT]);
+	depthStencils[DSSTYPE_DEFAULT] = dsd;
 
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	dsd.DepthFunc = COMPARISON_GREATER;
 	dsd.StencilEnable = false;
-	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_SHADOW]);
+	depthStencils[DSSTYPE_SHADOW] = dsd;
 
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	dsd.DepthFunc = COMPARISON_GREATER;
 	dsd.StencilEnable = false;
-	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_CAPTUREIMPOSTOR]);
+	depthStencils[DSSTYPE_CAPTUREIMPOSTOR] = dsd;
 
 
 	dsd.DepthEnable = true;
 	dsd.StencilEnable = false;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthFunc = COMPARISON_GREATER_EQUAL;
-	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DEPTHREAD]);
+	depthStencils[DSSTYPE_DEPTHREAD] = dsd;
 
 	dsd.DepthEnable = false;
 	dsd.StencilEnable = false;
-	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_XRAY]);
+	depthStencils[DSSTYPE_XRAY] = dsd;
 
 
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthFunc = COMPARISON_EQUAL;
-	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DEPTHREADEQUAL]);
+	depthStencils[DSSTYPE_DEPTHREADEQUAL] = dsd;
 
 
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	dsd.DepthFunc = COMPARISON_GREATER;
-	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_ENVMAP]);
+	depthStencils[DSSTYPE_ENVMAP] = dsd;
 
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	dsd.DepthFunc = COMPARISON_ALWAYS;
 	dsd.StencilEnable = false;
-	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_WRITEONLY]);
+	depthStencils[DSSTYPE_WRITEONLY] = dsd;
 
 
 
 
-	BlendStateDesc bd;
+	BlendState bd;
 	bd.RenderTarget[0].BlendEnable = false;
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
@@ -2116,7 +2134,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = false;
-	device->CreateBlendState(&bd, &blendStates[BSTYPE_OPAQUE]);
+	blendStates[BSTYPE_OPAQUE] = bd;
 
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
@@ -2128,7 +2146,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = false;
-	device->CreateBlendState(&bd, &blendStates[BSTYPE_TRANSPARENT]);
+	blendStates[BSTYPE_TRANSPARENT] = bd;
 
 	bd.RenderTarget[0].BlendEnable = true;
 	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
@@ -2140,7 +2158,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.IndependentBlendEnable = false;
 	bd.AlphaToCoverageEnable = false;
-	device->CreateBlendState(&bd, &blendStates[BSTYPE_PREMULTIPLIED]);
+	blendStates[BSTYPE_PREMULTIPLIED] = bd;
 
 
 	bd.RenderTarget[0].BlendEnable = true;
@@ -2153,14 +2171,14 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.IndependentBlendEnable = false,
 		bd.AlphaToCoverageEnable = false;
-	device->CreateBlendState(&bd, &blendStates[BSTYPE_ADDITIVE]);
+	blendStates[BSTYPE_ADDITIVE] = bd;
 
 
 	bd.RenderTarget[0].BlendEnable = false;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_DISABLE;
 	bd.IndependentBlendEnable = false,
 		bd.AlphaToCoverageEnable = false;
-	device->CreateBlendState(&bd, &blendStates[BSTYPE_COLORWRITEDISABLE]);
+	blendStates[BSTYPE_COLORWRITEDISABLE] = bd;
 
 
 	bd.RenderTarget[0].BlendEnable = true;
@@ -2185,7 +2203,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN | COLOR_WRITE_ENABLE_BLUE; // alpha is not written by deferred lights!
 	bd.IndependentBlendEnable = false;
 	bd.AlphaToCoverageEnable = false;
-	device->CreateBlendState(&bd, &blendStates[BSTYPE_ENVIRONMENTALLIGHT]);
+	blendStates[BSTYPE_ENVIRONMENTALLIGHT] = bd;
 
 	bd.RenderTarget[0].SrcBlend = BLEND_INV_SRC_COLOR;
 	bd.RenderTarget[0].DestBlend = BLEND_INV_DEST_COLOR;
@@ -2197,7 +2215,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = false;
-	device->CreateBlendState(&bd, &blendStates[BSTYPE_INVERSE]);
+	blendStates[BSTYPE_INVERSE] = bd;
 
 
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
@@ -2212,7 +2230,7 @@ void SetUpStates()
 	bd.RenderTarget[1].RenderTargetWriteMask = COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN;
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = true;
-	device->CreateBlendState(&bd, &blendStates[BSTYPE_DECAL]);
+	blendStates[BSTYPE_DECAL] = bd;
 
 
 	bd.RenderTarget[0].SrcBlend = BLEND_DEST_COLOR;
@@ -2225,7 +2243,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = false;
-	device->CreateBlendState(&bd, &blendStates[BSTYPE_MULTIPLY]);
+	blendStates[BSTYPE_MULTIPLY] = bd;
 }
 
 void ModifySampler(const SamplerDesc& desc, int slot)
@@ -2851,7 +2869,7 @@ void RenderMeshes(
 				uint32_t stencilRef = CombineStencilrefs(engineStencilRef, userStencilRef);
 				device->BindStencilRef(stencilRef, cmd);
 
-				if (renderPass != RENDERPASS_DEPTHONLY) // depth only alpha test will be full res
+				if (renderPass != RENDERPASS_DEPTHONLY && renderPass != RENDERPASS_VOXELIZE) // depth only alpha test will be full res
 				{
 					device->BindShadingRate(material.shadingRate, cmd);
 				}
@@ -2878,6 +2896,7 @@ void RenderMeshes(
 						material.GetEmissiveMap(),
 						material.GetDisplacementMap(),
 						material.GetOcclusionMap(),
+						material.GetTransmissionMap(),
 					};
 					device->BindResources(PS, res, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(res), cmd);
 				}
@@ -3598,6 +3617,7 @@ void UpdatePerFrameData(
 	}
 	frameCB.g_xFrame_ShadowKernel2D = 1.0f / SHADOWRES_2D;
 	frameCB.g_xFrame_ShadowKernelCube = 1.0f / SHADOWRES_CUBE;
+	frameCB.g_xFrame_RaytracedShadowsSampleCount = raytracedShadowsSampleCount;
 
 	frameCB.g_xFrame_WorldBoundsMin = vis.scene->bounds.getMin();
 	frameCB.g_xFrame_WorldBoundsMax = vis.scene->bounds.getMax();
@@ -3641,6 +3661,10 @@ void UpdatePerFrameData(
 	{
 		frameCB.g_xFrame_Options |= OPTION_BIT_RAYTRACED_SHADOWS;
 	}
+	if (disableAlbedoMaps)
+	{
+		frameCB.g_xFrame_Options |= OPTION_BIT_DISABLE_ALBEDO_MAPS;
+	}
 }
 void UpdateRenderData(
 	const Visibility& vis,
@@ -3649,29 +3673,35 @@ void UpdateRenderData(
 )
 {
 	device->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &frameCB, cmd);
+	UpdateCameraCB(
+		*vis.camera,
+		*vis.camera,
+		*vis.camera,
+		cmd
+	);
 
 	BindCommonResources(cmd);
 
 	// Update material constant buffers:
-	for (auto& materialIndex : pendingMaterialUpdates)
+	for (Entity entity : pendingMaterialUpdates)
 	{
-		if (materialIndex < vis.scene->materials.GetCount())
+		const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
+		if (material != nullptr)
 		{
-			const MaterialComponent& material = vis.scene->materials[materialIndex];
 			ShaderMaterial materialGPUData;
-			material.WriteShaderMaterial(&materialGPUData);
-			device->UpdateBuffer(&material.constantBuffer, &materialGPUData, cmd);
+			material->WriteShaderMaterial(&materialGPUData);
+			device->UpdateBuffer(&material->constantBuffer, &materialGPUData, cmd);
 		}
 	}
 	pendingMaterialUpdates.clear();
 
 	// Update mesh morph buffers:
-	for (auto& meshIndex : pendingMorphUpdates)
+	for (Entity entity : pendingMorphUpdates)
 	{
-		if (meshIndex < vis.scene->meshes.GetCount())
+		const MeshComponent* mesh = vis.scene->meshes.GetComponent(entity);
+		if (mesh != nullptr && !mesh->vertex_positions_morphed.empty())
 		{
-			const MeshComponent& mesh = vis.scene->meshes[meshIndex];
-			device->UpdateBuffer(&mesh.vertexBuffer_POS, mesh.vertex_positions_morphed.data(), cmd);
+			device->UpdateBuffer(&mesh->vertexBuffer_POS, mesh->vertex_positions_morphed.data(), cmd);
 		}
 	}
 	pendingMorphUpdates.clear();
@@ -4222,7 +4252,6 @@ void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visib
 
 			const AABB& aabb = vis.scene->aabb_objects[instanceIndex];
 
-			// previous frame view*projection because these are drawn against the previous depth buffer:
 			XMStoreFloat4x4(&cb.g_xTransform, aabb.getAsBoxMatrix() * VP);
 			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &cb, cmd);
 			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
@@ -4362,6 +4391,9 @@ void DrawSoftParticles(
 	{
 		return;
 	}
+	auto range = distortion ?
+		wiProfiler::BeginRangeGPU("EmittedParticles - Render (Distortion)", cmd) :
+		wiProfiler::BeginRangeGPU("EmittedParticles - Render", cmd);
 
 	device->BindResource(PS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
@@ -4398,6 +4430,7 @@ void DrawSoftParticles(
 
 	GetRenderFrameAllocator(cmd).free(sizeof(uint32_t) * emitterCount);
 
+	wiProfiler::EndRange(range);
 }
 void DrawLightVisualizers(
 	const Visibility& vis,
@@ -5075,6 +5108,7 @@ void DrawScene(
 		return;
 
 	device->EventBegin("DrawScene", cmd);
+	device->BindShadingRate(SHADING_RATE_1X1, cmd);
 
 	BindCommonResources(cmd);
 	BindShadowmaps(PS, cmd);
@@ -5105,23 +5139,9 @@ void DrawScene(
 		device->BindResource(CS, &vis.scene->TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 	}
 
-	if (transparent)
+	if (transparent && ocean != nullptr)
 	{
-		if (renderPass == RENDERPASS_MAIN)
-		{
-			device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], SBSLOT_ENTITYTILES, cmd);
-		}
-		if (ocean != nullptr)
-		{
-			ocean->Render(*vis.camera, vis.scene->weather, cmd);
-		}
-	}
-	else
-	{
-		if (renderPass == RENDERPASS_MAIN)
-		{
-			device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE], SBSLOT_ENTITYTILES, cmd);
-		}
+		ocean->Render(*vis.camera, vis.scene->weather, cmd);
 	}
 
 	if (hairparticle)
@@ -7045,6 +7065,13 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 		GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
 		// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene emission data. The cone tracing will operate on the 3D texture
 		device->EventBegin("Voxel Scene Copy - Clear", cmd);
 		device->BindUAV(CS, &resourceBuffers[RBTYPE_VOXELSCENE], 0, cmd);
@@ -7062,6 +7089,13 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 		device->Dispatch((uint32_t)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, cmd);
 		device->EventEnd(cmd);
 
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
 		if (voxelSceneData.secondaryBounceEnabled)
 		{
 			device->EventBegin("Voxel Radiance Secondary Bounce", cmd);
@@ -7075,12 +7109,26 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			device->Dispatch((uint32_t)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 64), 1, 1, cmd);
 			device->EventEnd(cmd);
 
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Memory(),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
 			device->EventBegin("Voxel Scene Clear Normals", cmd);
 			device->UnbindResources(1, 1, cmd);
 			device->BindUAV(CS, &resourceBuffers[RBTYPE_VOXELSCENE], 0, cmd);
 			device->BindComputeShader(&shaders[CSTYPE_VOXELCLEARONLYNORMAL], cmd);
 			device->Dispatch((uint32_t)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, cmd);
 			device->EventEnd(cmd);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Memory(),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
 
 			result = &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER];
 		}
@@ -7099,76 +7147,27 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 }
 
 
-
 void ComputeTiledLightCulling(
-	const CameraComponent& camera,
 	const Texture& depthbuffer,
+	const GPUBuffer& tileFrustums,
+	const GPUBuffer& entityTiles_Opaque,
+	const GPUBuffer& entityTiles_Transparent,
+	const Texture& debugUAV,
 	CommandList cmd
 )
 {
-	auto range = wiProfiler::BeginRangeGPU("Entity Culling", cmd);
-
-	int _width = (int)depthbuffer.desc.Width;
-	int _height = (int)depthbuffer.desc.Height;
-
 	const XMUINT3 tileCount = GetEntityCullingTileCount(XMUINT2(depthbuffer.desc.Width, depthbuffer.desc.Height));
-
-	static int _savedWidth = 0;
-	static int _savedHeight = 0;
-	bool _resolutionChanged = false;
-	if (_savedWidth != _width || _savedHeight != _height)
-	{
-		_resolutionChanged = true;
-		_savedWidth = _width;
-		_savedHeight = _height;
-	}
-
-	static GPUBuffer frustumBuffer;
-	if (!frustumBuffer.IsValid() || _resolutionChanged)
-	{
-		GPUBufferDesc bd;
-		bd.StructureByteStride = sizeof(XMFLOAT4) * 4; // storing 4 planes for every tile
-		bd.ByteWidth = bd.StructureByteStride * tileCount.x * tileCount.y;
-		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		bd.Usage = USAGE_DEFAULT;
-		bd.CPUAccessFlags = 0;
-		device->CreateBuffer(&bd, nullptr, &frustumBuffer);
-
-		device->SetName(&frustumBuffer, "FrustumBuffer");
-	}
-	if (_resolutionChanged)
-	{
-		GPUBufferDesc bd;
-		bd.StructureByteStride = sizeof(uint);
-		bd.ByteWidth = tileCount.x * tileCount.y * bd.StructureByteStride * SHADER_ENTITY_TILE_BUCKET_COUNT;
-		bd.Usage = USAGE_DEFAULT;
-		bd.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-		bd.CPUAccessFlags = 0;
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE]);
-		device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT]);
-
-		device->SetName(&resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE], "EntityTiles_Opaque");
-		device->SetName(&resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], "EntityTiles_Transparent");
-	}
 
 	BindCommonResources(cmd);
 
-	// calculate the per-tile frustums once:
-	static bool frustumsComplete = false;
-	static XMFLOAT4X4 _savedProjection;
-	if (memcmp(&_savedProjection, &camera.Projection, sizeof(XMFLOAT4X4)) != 0)
+	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+
+	// Frustum computation
 	{
-		_savedProjection = camera.Projection;
-		frustumsComplete = false;
-	}
-	if(!frustumsComplete || _resolutionChanged)
-	{
-		frustumsComplete = true;
+		device->EventBegin("Tile Frustums", cmd);
 
 		const GPUResource* uavs[] = { 
-			&frustumBuffer 
+			&tileFrustums 
 		};
 
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
@@ -7183,69 +7182,43 @@ void ComputeTiledLightCulling(
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
+			GPUBarrier::Memory(&tileFrustums),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
 
-	if (!textures[TEXTYPE_2D_DEBUGUAV].IsValid() || _resolutionChanged)
-	{
-		TextureDesc desc;
-		desc.Width = (uint32_t)_width;
-		desc.Height = (uint32_t)_height;
-		desc.MipLevels = 1;
-		desc.ArraySize = 1;
-		desc.Format = FORMAT_R8G8B8A8_UNORM;
-		desc.SampleCount = 1;
-		desc.Usage = USAGE_DEFAULT;
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.CPUAccessFlags = 0;
-		desc.MiscFlags = 0;
-
-		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_DEBUGUAV]);
+		device->EventEnd(cmd);
 	}
 
 	// Perform the culling
 	{
 		device->EventBegin("Entity Culling", cmd);
 
-		device->UnbindResources(SBSLOT_ENTITYTILES, 1, cmd);
-
-		device->BindResource(CS, &frustumBuffer, SBSLOT_TILEFRUSTUMS, cmd);
+		device->BindResource(CS, &tileFrustums, TEXSLOT_ONDEMAND0, cmd);
 
 		if (GetDebugLightCulling())
 		{
 			device->BindComputeShader(&shaders[GetAdvancedLightCulling() ? CSTYPE_LIGHTCULLING_ADVANCED_DEBUG : CSTYPE_LIGHTCULLING_DEBUG], cmd);
-			device->BindUAV(CS, &textures[TEXTYPE_2D_DEBUGUAV], 3, cmd);
+			device->BindUAV(CS, &debugUAV, 3, cmd);
 		}
 		else
 		{
 			device->BindComputeShader(&shaders[GetAdvancedLightCulling() ? CSTYPE_LIGHTCULLING_ADVANCED : CSTYPE_LIGHTCULLING], cmd);
 		}
 
-		BindConstantBuffers(CS, cmd);
-
-		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-
-		GPUResource* uavs[] = {
-			&resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT],
-			&resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE],
+		const GPUResource* uavs[] = {
+			&entityTiles_Transparent,
+			&entityTiles_Opaque,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 		device->Dispatch(tileCount.x, tileCount.y, 1, cmd);
-		
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
 
-		device->UnbindUAVs(0, 8, cmd); // this unbinds pretty much every uav
+		// No barrier here, caller should barrier.
+
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
 
 		device->EventEnd(cmd);
 	}
-
-	wiProfiler::EndRange(range);
 }
 
 
@@ -7792,17 +7765,24 @@ void RayTraceScene(
 			};
 			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Buffer(&indirectBuffer, BUFFER_STATE_INDIRECT_ARGUMENT, BUFFER_STATE_UNORDERED_ACCESS)
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
 			device->Dispatch(1, 1, 1, cmd);
 
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Memory(),
+					GPUBarrier::Buffer(&indirectBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDIRECT_ARGUMENT)
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
 
 			device->UnbindUAVs(0, arraysize(uavs), cmd);
-
-			GPUBarrier barrier_uav_indirect = GPUBarrier::Buffer(&indirectBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDIRECT_ARGUMENT);
-			device->Barrier(&barrier_uav_indirect, 1, cmd);
 		}
 		device->EventEnd(cmd);
 
@@ -8534,6 +8514,7 @@ void ComputeShadingRateClassification(
 	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& lineardepth,
 	const Texture& output,
+	const Texture& debugUAV,
 	CommandList cmd
 )
 {
@@ -8542,7 +8523,7 @@ void ComputeShadingRateClassification(
 
 	if (GetVariableRateShadingClassificationDebug())
 	{
-		device->BindUAV(CS, &textures[TEXTYPE_2D_DEBUGUAV], 1, cmd);
+		device->BindUAV(CS, &debugUAV, 1, cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SHADINGRATECLASSIFICATION_DEBUG], cmd);
 	}
 	else
@@ -8575,11 +8556,7 @@ void ComputeShadingRateClassification(
 	// Whole threadgroup for each tile:
 	device->Dispatch(desc.Width, desc.Height, 1, cmd);
 
-	GPUBarrier barriers[] = {
-		GPUBarrier::Memory(),
-		GPUBarrier::Image(&output,IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADING_RATE_SOURCE),
-	};
-	device->Barrier(barriers, arraysize(barriers), cmd);
+	// Noa barrier here, caller should barrier.
 
 	device->UnbindUAVs(0, arraysize(uavs), cmd);
 
@@ -9492,7 +9469,10 @@ void Postprocess_RTAO(
 
 		rootSignature = RootSignature();
 		rootSignature.tables.push_back(descriptorTable);
-		rootSignature.tables.push_back(scene.descriptorTable);
+		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_MATERIAL]);
+		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_TEXTURES]);
+		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_INDEXBUFFER]);
+		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS]);
 		device->CreateRootSignature(&rootSignature);
 
 		shaders[RTTYPE_RTAO].rootSignature = &rootSignature;
@@ -9606,8 +9586,10 @@ void Postprocess_RTAO(
 	device->WriteDescriptor(&descriptorTable, 1, 0, &normals);
 	device->WriteDescriptor(&descriptorTable, 2, 0, &scene.TLAS);
 	device->WriteDescriptor(&descriptorTable, 3, 0, &temp);
-	device->BindDescriptorTable(RAYTRACING, 0, &descriptorTable, cmd);
-	device->BindDescriptorTable(RAYTRACING, 1, &scene.descriptorTable, cmd);
+	for (size_t i = 0; i < rootSignature.tables.size(); ++i)
+	{
+		device->BindDescriptorTable(RAYTRACING, (uint32_t)i, &rootSignature.tables[i], cmd);
+	}
 	device->BindRootDescriptor(RAYTRACING, 0, &constantBuffers[CBTYPE_FRAME], 0, cmd);
 	device->BindRootDescriptor(RAYTRACING, 1, &constantBuffers[CBTYPE_CAMERA], 0, cmd);
 	device->BindRootDescriptor(RAYTRACING, 2, cb_alloc.buffer, cb_alloc.offset, cmd);
@@ -9823,6 +9805,9 @@ void Postprocess_RTReflection(
 		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_SKYVIEWLUT });
 		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_TRANSMITTANCELUT });
 		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_MULTISCATTERINGLUT });
+		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, TEXSLOT_ONDEMAND1 });
+		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, TEXSLOT_ONDEMAND2 });
+		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, TEXSLOT_ONDEMAND3 });
 		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(FrameCB) });
 		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(CameraCB) });
 		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(PostProcessCB) });
@@ -9835,7 +9820,11 @@ void Postprocess_RTReflection(
 
 		rootSignature = RootSignature();
 		rootSignature.tables.push_back(descriptorTable);
-		rootSignature.tables.push_back(scene.descriptorTable);
+		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_MATERIAL]);
+		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_TEXTURES]);
+		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_INDEXBUFFER]);
+		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_RAW]);
+		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS]);
 		device->CreateRootSignature(&rootSignature);
 
 		shaders[RTTYPE_RTREFLECTION].rootSignature = &rootSignature;
@@ -9918,8 +9907,13 @@ void Postprocess_RTReflection(
 	device->WriteDescriptor(&descriptorTable, 11, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT]);
 	device->WriteDescriptor(&descriptorTable, 12, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT]);
 	device->WriteDescriptor(&descriptorTable, 13, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT]);
-	device->BindDescriptorTable(RAYTRACING, 0, &descriptorTable, cmd);
-	device->BindDescriptorTable(RAYTRACING, 1, &scene.descriptorTable, cmd);
+	device->WriteDescriptor(&descriptorTable, 14, 0, &resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE]);
+	device->WriteDescriptor(&descriptorTable, 15, 0, &resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE]);
+	device->WriteDescriptor(&descriptorTable, 16, 0, &resourceBuffers[RBTYPE_BLUENOISE_RANKING_TILE]);
+	for (size_t i = 0; i < rootSignature.tables.size(); ++i)
+	{
+		device->BindDescriptorTable(RAYTRACING, (uint32_t)i, &rootSignature.tables[i], cmd);
+	}
 	device->BindRootDescriptor(RAYTRACING, 0, &constantBuffers[CBTYPE_FRAME], 0, cmd);
 	device->BindRootDescriptor(RAYTRACING, 1, &constantBuffers[CBTYPE_CAMERA], 0, cmd);
 	device->BindRootDescriptor(RAYTRACING, 2, cb_alloc.buffer, cb_alloc.offset, cmd);
@@ -10053,7 +10047,6 @@ void Postprocess_SSR(
 
 	static TextureDesc initialized_desc;
 	static Texture texture_raytrace;
-	static Texture texture_mask;
 	static Texture texture_resolve;
 	static Texture texture_temporal[2];
 
@@ -10069,8 +10062,6 @@ void Postprocess_SSR(
 		cast_desc.Format = FORMAT_R16G16B16A16_FLOAT;
 		cast_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		device->CreateTexture(&cast_desc, nullptr, &texture_raytrace);
-		cast_desc.Format = FORMAT_R16G16_FLOAT;
-		device->CreateTexture(&cast_desc, nullptr, &texture_mask);
 
 		TextureDesc buffer_desc;
 		buffer_desc.type = TextureDesc::TEXTURE_2D;
@@ -10104,10 +10095,12 @@ void Postprocess_SSR(
 		device->BindResource(CS, &gbuffer[GBUFFER_COLOR_ROUGHNESS], TEXSLOT_GBUFFER0, cmd);
 		device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE], TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE], TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(CS, &resourceBuffers[RBTYPE_BLUENOISE_RANKING_TILE], TEXSLOT_ONDEMAND3, cmd);
 
 		const GPUResource* uavs[] = {
 			&texture_raytrace,
-			&texture_mask,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
@@ -10143,8 +10136,7 @@ void Postprocess_SSR(
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 		device->BindResource(CS, &texture_raytrace, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &texture_mask, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &input, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(CS, &input, TEXSLOT_ONDEMAND1, cmd);
 
 		const GPUResource* uavs[] = {
 			&texture_resolve,
@@ -11872,18 +11864,18 @@ void AddDeferredMIPGen(std::shared_ptr<wiResource> resource, bool preserve_cover
 	deferredMIPGens.push_back(std::make_pair(resource, preserve_coverage));
 	deferredMIPGenLock.unlock();
 }
-void AddDeferredMaterialUpdate(size_t index)
+void AddDeferredMaterialUpdate(Entity entity)
 {
 	static std::mutex locker;
 	locker.lock();
-	pendingMaterialUpdates.push_back(index);
+	pendingMaterialUpdates.push_back(entity);
 	locker.unlock();
 }
-void AddDeferredMorphUpdate(size_t index)
+void AddDeferredMorphUpdate(Entity entity)
 {
 	static std::mutex locker;
 	locker.lock();
-	pendingMorphUpdates.push_back(index);
+	pendingMorphUpdates.push_back(entity);
 	locker.unlock();
 }
 
@@ -11988,6 +11980,22 @@ bool GetTessellationEnabled()
 bool IsWaterrippleRendering()
 {
 	return !waterRipples.empty();
+}
+void SetDisableAlbedoMaps(bool value)
+{
+	disableAlbedoMaps = value;
+}
+bool IsDisableAlbedoMaps()
+{
+	return disableAlbedoMaps;
+}
+void SetRaytracedShadowsSampleCount(uint32_t value)
+{
+	raytracedShadowsSampleCount = value;
+}
+uint32_t GetRaytracedShadowsSampleCount()
+{
+	return raytracedShadowsSampleCount;
 }
 
 }

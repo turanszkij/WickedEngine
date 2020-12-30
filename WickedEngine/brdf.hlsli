@@ -14,27 +14,19 @@ float3 F_Fresnel(float3 SpecularColor, float VoH)
 	return 0.5 * sqr((g - VoH) / (g + VoH)) * (1 + sqr(((g + VoH) * VoH - 1) / ((g - VoH) * VoH + 1)));
 }
 
-float3 ComputeAlbedo(in float4 baseColor, in float reflectance, in float metalness)
-{
-	return lerp(lerp(baseColor.rgb, float3(0, 0, 0), reflectance), float3(0, 0, 0), metalness);
-}
-float3 ComputeF0(in float4 baseColor, in float reflectance, in float metalness)
-{
-	return lerp(lerp(float3(0, 0, 0), float3(1, 1, 1), reflectance), baseColor.rgb, metalness);
-}
-
 
 
 struct Surface
 {
+	// Fill these yourself:
 	float3 P;				// world space position
 	float3 N;				// world space normal
 	float3 V;				// world space view vector
-	float4 baseColor;		// base color [0 -> 1] (rgba)
+
+	float3 albedo;			// diffuse light absorbtion value (rgb)
+	float3 f0;				// fresnel value (rgb) (reflectance at incidence angle, also known as specular color)
 	float roughness;		// roughness: [0:smooth -> 1:rough] (perceptual)
 	float occlusion;		// occlusion [0 -> 1]
-	float metalness;		// metalness [0:dielectric -> 1:metal]
-	float reflectance;		// reflectivity [0:diffuse -> 1:specular]
 	float4 emissiveColor;	// light emission [0 -> 1]
 	float4 refraction;		// refraction color (rgb), refraction amount (a)
 	float2 pixel;			// pixel coordinate (used for randomization effects)
@@ -46,33 +38,79 @@ struct Surface
 	float4 sss_inv;			// 1 / (1 + sss)
 	uint layerMask;
 
+	// These will be computed when calling Update():
 	float alphaRoughness;	// roughness remapped from perceptual to a "more linear change in roughness"
 	float alphaRoughnessSq;	// roughness input to brdf functions
 	float NdotV;			// cos(angle between normal and view vector)
-	float3 f0;				// fresnel value (rgb) (reflectance at incidence angle)
 	float f90;				// reflectance at grazing angle
-	float3 albedo;			// diffuse light absorbtion value (rgb)
 	float3 R;				// reflection vector
 	float3 F;				// fresnel term computed from NdotV
-
-	// Aniso params:
 	float TdotV;
 	float BdotV;
 	float at;
 	float ab;
 
-	inline void Update()
+	inline void init()
+	{
+		albedo = 1;
+		f0 = 0;
+		roughness = 1;
+		occlusion = 1;
+		emissiveColor = 0;
+		refraction = 0;
+		pixel = 0;
+		screenUV = 0;
+		T = 0;
+		B = 0;
+		anisotropy = 0;
+		sss = 0;
+		sss_inv = 1;
+		layerMask = ~0;
+	}
+
+	inline void create(
+		in ShaderMaterial material,
+		in float4 baseColor,
+		in float4 surfaceMap
+	)
+	{
+		init();
+
+		roughness = material.roughness;
+		f0 = material.specularColor.rgb * material.specularColor.a;
+
+		[branch]
+		if (material.IsUsingSpecularGlossinessWorkflow())
+		{
+			// Specular-glossiness workflow:
+			roughness *= saturate(1 - surfaceMap.a);
+			f0 *= DEGAMMA(surfaceMap.rgb);
+			albedo = baseColor.rgb;
+		}
+		else
+		{
+			// Metallic-roughness workflow:
+			if (material.IsOcclusionEnabled_Primary())
+			{
+				occlusion = surfaceMap.r;
+			}
+			roughness *= surfaceMap.g;
+			float metalness = material.metalness * surfaceMap.b;
+			float reflectance = material.reflectance * surfaceMap.a;
+			albedo = lerp(lerp(baseColor.rgb, float3(0, 0, 0), reflectance), float3(0, 0, 0), metalness);
+			f0 *= lerp(lerp(float3(0, 0, 0), float3(1, 1, 1), reflectance), baseColor.rgb, metalness);
+		}
+	}
+
+	inline void update()
 	{
 		alphaRoughness = roughness * roughness;
 		alphaRoughnessSq = alphaRoughness * alphaRoughness;
 
 		NdotV = abs(dot(N, V)) + 1e-5;
 
-		albedo = ComputeAlbedo(baseColor, reflectance, metalness);
-		f0 = ComputeF0(baseColor, reflectance, metalness);
-
-		R = -reflect(V, N);
 		f90 = saturate(50.0 * dot(f0, 0.33));
+		R = -reflect(V, N);
 		F = F_Schlick(f0, f90, NdotV);
 
 		TdotV = dot(T, V);
@@ -85,45 +123,6 @@ struct Surface
 #endif // BRDF_CARTOON
 	}
 };
-inline Surface CreateSurface(
-	in float3 P, 
-	in float3 N, 
-	in float3 V, 
-	in float4 baseColor,
-	in float roughness,
-	in float occlusion,
-	in float metalness,
-	in float reflectance, 
-	in float4 emissiveColor = 0,
-	in float anisotropy = 0,
-	in float3 T = 0,
-	in float3 B = 0)
-{
-	Surface surface;
-
-	surface.P = P;
-	surface.N = N;
-	surface.V = V;
-	surface.baseColor = baseColor;
-	surface.roughness = roughness;
-	surface.occlusion = occlusion;
-	surface.metalness = metalness;
-	surface.reflectance = reflectance;
-	surface.emissiveColor = emissiveColor;
-	surface.refraction = 0;
-	surface.pixel = 0;
-	surface.screenUV = 0;
-	surface.anisotropy = anisotropy;
-	surface.sss = 0;
-	surface.sss_inv = 1;
-	surface.T = T;
-	surface.B = B;
-	surface.layerMask = ~0;
-
-	surface.Update();
-
-	return surface;
-}
 
 struct SurfaceToLight
 {
@@ -142,49 +141,46 @@ struct SurfaceToLight
 	float BdotL;
 	float TdotH;
 	float BdotH;
-};
-inline SurfaceToLight CreateSurfaceToLight(in Surface surface, in float3 L)
-{
-	SurfaceToLight surfaceToLight;
 
-	surfaceToLight.L = L;
-	surfaceToLight.H = normalize(L + surface.V);
+	inline void create(in Surface surface, in float3 Lnormalized)
+	{
+		L = Lnormalized;
+		H = normalize(L + surface.V);
 
-	surfaceToLight.NdotL = dot(surfaceToLight.L, surface.N);
+		NdotL = dot(L, surface.N);
 
-	surfaceToLight.NdotL_sss = (surfaceToLight.NdotL + surface.sss.rgb) * surface.sss_inv.rgb;
+		NdotL_sss = (NdotL + surface.sss.rgb) * surface.sss_inv.rgb;
 
-	surfaceToLight.NdotV = saturate(dot(surface.N, surface.V));
-	surfaceToLight.NdotH = saturate(dot(surface.N, surfaceToLight.H));
-	surfaceToLight.LdotH = saturate(dot(surfaceToLight.L, surfaceToLight.H));
-	surfaceToLight.VdotH = saturate(dot(surface.V, surfaceToLight.H));
+		NdotV = saturate(dot(surface.N, surface.V));
+		NdotH = saturate(dot(surface.N, H));
+		LdotH = saturate(dot(L, H));
+		VdotH = saturate(dot(surface.V, H));
 
-	surfaceToLight.F = F_Schlick(surface.f0, surface.f90, surfaceToLight.VdotH);
+		F = F_Schlick(surface.f0, surface.f90, VdotH);
 
-	surfaceToLight.TdotL = dot(surface.T, L);
-	surfaceToLight.BdotL = dot(surface.B, L);
-	surfaceToLight.TdotH = dot(surface.T, surfaceToLight.H);
-	surfaceToLight.BdotH = dot(surface.B, surfaceToLight.H);
+		TdotL = dot(surface.T, L);
+		BdotL = dot(surface.B, L);
+		TdotH = dot(surface.T, H);
+		BdotH = dot(surface.B, H);
 
 #ifdef BRDF_CARTOON
-	// SSS is handled differently in cartoon shader:
-	//	1) The diffuse wraparound is monochrome at first to avoid banding with smoothstep()
-	surfaceToLight.NdotL_sss = (surfaceToLight.NdotL + surface.sss.a) * surface.sss_inv.a;
+		// SSS is handled differently in cartoon shader:
+		//	1) The diffuse wraparound is monochrome at first to avoid banding with smoothstep()
+		NdotL_sss = (NdotL + surface.sss.a) * surface.sss_inv.a;
 
-	surfaceToLight.NdotL = smoothstep(0.005, 0.05, surfaceToLight.NdotL);
-	surfaceToLight.NdotL_sss = smoothstep(0.005, 0.05, surfaceToLight.NdotL_sss);
-	surfaceToLight.NdotH = smoothstep(0.98, 0.99, surfaceToLight.NdotH);
+		NdotL = smoothstep(0.005, 0.05, NdotL);
+		NdotL_sss = smoothstep(0.005, 0.05, NdotL_sss);
+		NdotH = smoothstep(0.98, 0.99, NdotH);
 
-	// SSS is handled differently in cartoon shader:
-	//	2) The diffuse wraparound is tinted after smoothstep
-	surfaceToLight.NdotL_sss = (surfaceToLight.NdotL_sss + surface.sss.rgb) * surface.sss_inv.rgb;
+		// SSS is handled differently in cartoon shader:
+		//	2) The diffuse wraparound is tinted after smoothstep
+		NdotL_sss = (NdotL_sss + surface.sss.rgb) * surface.sss_inv.rgb;
 #endif // BRDF_CARTOON
 
-	surfaceToLight.NdotL = saturate(surfaceToLight.NdotL);
-	surfaceToLight.NdotL_sss = saturate(surfaceToLight.NdotL_sss);
-
-	return surfaceToLight;
-}
+		NdotL = saturate(NdotL);
+		NdotL_sss = saturate(NdotL_sss);
+	}
+};
 
 // Smith Joint GGX
 // Note: Vis = G / (4 * NdotL * NdotV)

@@ -17,9 +17,18 @@ GBUFFEROutputType main(VertexToPixel input)
 	float dist = length(V);
 	V /= dist;
 	float emissive = 0;
-	Surface surface = CreateSurface(input.pos3D, input.nor, V, color, 1, 1, 0, 0);
-	Lighting lighting = CreateLighting(0, 0, GetAmbient(surface.N), 0);
+
+	Surface surface;
+	surface.create(g_xMaterial, color, 0);
+	surface.P = input.pos3D;
+	surface.N = input.nor;
+	surface.V = V;
 	surface.pixel = input.pos.xy;
+	surface.update();
+
+	Lighting lighting;
+	lighting.create(0, 0, GetAmbient(surface.N), 0);
+
 	float depth = input.pos.z;
 	float3 reflection = 0;
 

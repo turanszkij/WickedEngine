@@ -1,4 +1,3 @@
-#define DISABLE_ALPHATEST
 #define DISABLE_DECALS
 #define DISABLE_ENVMAPS
 #define DISABLE_TRANSPARENT_SHADOWMAP
@@ -19,8 +18,20 @@ float4 main(PSIn input) : SV_TARGET
 	float dist = length(V);
 	V /= dist;
 	float emissive = 0;
-	Surface surface = CreateSurface(input.pos3D, normalize(float3(gradient.x, xOceanTexelLength * 2, gradient.y)), V, color, 0.1, 1, 0, 0.02);
-	Lighting lighting = CreateLighting(0, 0, GetAmbient(surface.N), 0);
+
+	Surface surface;
+	surface.init();
+	surface.albedo = color.rgb;
+	surface.f0 = 0.02;
+	surface.roughness = 0.1;
+	surface.P = input.pos3D;
+	surface.N = normalize(float3(gradient.x, xOceanTexelLength * 2, gradient.y));
+	surface.V = V;
+	surface.update();
+
+	Lighting lighting;
+	lighting.create(0, 0, GetAmbient(surface.N), 0);
+
 	surface.pixel = input.pos.xy;
 	float depth = input.pos.z;
 
@@ -49,7 +60,7 @@ float4 main(PSIn input) : SV_TARGET
 		depth_difference = sampled_lineardepth - lineardepth;
 	}
 	// WATER FOG:
-	surface.refraction.a = 1 - saturate(surface.baseColor.a * 0.1f * depth_difference);
+	surface.refraction.a = 1 - saturate(color.a * 0.1f * depth_difference);
 
 	ApplyLighting(surface, lighting, color);
 

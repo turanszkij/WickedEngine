@@ -33,6 +33,7 @@ namespace wiResourceManager
 
 	static const std::unordered_map<std::string, wiResource::DATA_TYPE> types = {
 		std::make_pair("JPG", wiResource::IMAGE),
+		std::make_pair("JPEG", wiResource::IMAGE),
 		std::make_pair("PNG", wiResource::IMAGE),
 		std::make_pair("DDS", wiResource::IMAGE),
 		std::make_pair("TGA", wiResource::IMAGE),
@@ -65,7 +66,7 @@ namespace wiResourceManager
 			return nullptr;
 		}
 
-		std::string ext = wiHelper::toUpper(name.substr(name.length() - 3, name.length()));
+		std::string ext = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(name));
 		wiResource::DATA_TYPE type;
 
 		// dynamic type selection:

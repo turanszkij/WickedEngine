@@ -1,10 +1,30 @@
-
 #ifndef WI_STOCHASTICSSR_HF
 #define WI_STOCHASTICSSR_HF
 
+// Blue noise resources:
+STRUCTUREDBUFFER(sobolSequenceBuffer, uint, TEXSLOT_ONDEMAND1);
+STRUCTUREDBUFFER(scramblingTileBuffer, uint, TEXSLOT_ONDEMAND2);
+STRUCTUREDBUFFER(rankingTileBuffer, uint, TEXSLOT_ONDEMAND3);
+
+// Stochastic Screen Space Reflections reference:
+// https://www.ea.com/frostbite/news/stochastic-screen-space-reflections
+
+
+#define GGX_SAMPLE_VISIBLE
+
+// Bias used on GGX importance sample when denoising, to remove part of the tale that create a lot more noise.
+#define GGX_IMPORTANCE_SAMPLE_BIAS 0.1
+
 // Shared SSR settings:
 static const float SSRMaxRoughness = 1.0f; // Specify max roughness, this can improve performance in complex scenes.
+static const float SSRIntensity = 1.0f;
+static const float SSRResolveConeMip = 1.0f; // Control overall filtering of the importance sampling. 
+static const float SSRResolveSpatialSize = 3.0f; // Seems to work best with the temporal pass in the [-3;3] range
+static const float SSRBlendScreenEdgeFade = 5.0f;
+
+// Temporary
 static const float BRDFBias = 0.7f;
+
 
 float ComputeRoughnessMaskScale(in float maxRoughness)
 {
@@ -138,6 +158,79 @@ float4 TangentToWorld(float4 H, float3 tangentZ)
 float3 WorldToTangent(float3 vec, float3 tangentZ)
 {
     return mul(GetTangentBasis(tangentZ), vec);
+}
+
+
+float2 SampleDisk(float2 Xi)
+{
+	float theta = 2 * PI * Xi.x;
+	float radius = sqrt(Xi.y);
+	return radius * float2(cos(theta), sin(theta));
+}
+
+// Adapted from: "Sampling the GGX Distribution of Visible Normals", by E. Heitz
+// http://jcgt.org/published/0007/04/01/paper.pdf
+float4 ImportanceSampleVisibleGGX(float2 diskXi, float roughness, float3 V)
+{
+	float alphaRoughness = roughness * roughness;
+	float alphaRoughnessSq = alphaRoughness * alphaRoughness;
+
+	// Transform the view direction to hemisphere configuration
+	float3 Vh = normalize(float3(alphaRoughness * V.xy, V.z));
+
+	// Orthonormal basis
+	// tangent0 is orthogonal to N.
+	float3 tangent0 = (Vh.z < 0.9999) ? normalize(cross(float3(0, 0, 1), Vh)) : float3(1, 0, 0);
+	float3 tangent1 = cross(Vh, tangent0);
+
+	float2 p = diskXi;
+	float s = 0.5 + 0.5 * Vh.z;
+	p.y = (1 - s) * sqrt(1 - p.x * p.x) + s * p.y;
+
+	// Reproject onto hemisphere
+	float3 H;
+	H = p.x * tangent0;
+	H += p.y * tangent1;
+	H += sqrt(saturate(1 - dot(p, p))) * Vh;
+
+	// Transform the normal back to the ellipsoid configuration
+	H = normalize(float3(alphaRoughness * H.xy, max(0.0, H.z)));
+
+	float NdotV = V.z;
+	float NdotH = H.z;
+	float VdotH = dot(V, H);
+
+	// Microfacet Distribution
+	float f = (NdotH * alphaRoughnessSq - NdotH) * NdotH + 1;
+	float D = alphaRoughnessSq / (PI * f * f);
+
+	// Smith Joint masking function
+	float SmithGGXMasking = 2.0 * NdotV / (sqrt(NdotV * (NdotV - NdotV * alphaRoughnessSq) + alphaRoughnessSq) + NdotV);
+
+	// D_Ve(Ne) = G1(Ve) * max(0, dot(Ve, Ne)) * D(Ne) / Ve.z
+	float PDF = SmithGGXMasking * VdotH * D / NdotV;
+
+	return float4(H, PDF);
+}
+
+// "A Low-Discrepancy Sampler that Distributes Monte Carlo Errors as a Blue Noise in Screen Space" by Heitz et al.
+float BNDSequenceSample(uint2 pixelCoord, uint sampleIndex, uint sampleDimension)
+{
+	pixelCoord = pixelCoord & 127u;
+	sampleIndex = sampleIndex & 255u;
+	sampleDimension = sampleDimension & 255u;
+
+	// xor index based on optimized ranking
+	const uint rankedSampleIndex = sampleIndex ^ rankingTileBuffer[sampleDimension + (pixelCoord.x + pixelCoord.y * 128u) * 8u];
+
+	// Fetch value in sequence
+	uint value = sobolSequenceBuffer[sampleDimension + rankedSampleIndex * 256u];
+
+	// If the dimension is optimized, xor sequence value based on optimized scrambling
+	value = value ^ scramblingTileBuffer[(sampleDimension % 8u) + (pixelCoord.x + pixelCoord.y * 128u) * 8u];
+
+	// Convert to float and return
+	return (value + 0.5f) / 256.0f;
 }
 
 #endif // WI_STOCHASTICSSR_HF

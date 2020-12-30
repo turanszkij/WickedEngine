@@ -46,7 +46,7 @@ namespace tinygltf
 #else
 
 #if defined(TARGET_OS_IPHONE) || defined(TARGET_IPHONE_SIMULATOR) || \
-    defined(__ANDROID__) || defined(__EMSCRIPTEN__)
+	defined(__ANDROID__) || defined(__EMSCRIPTEN__)
 		// no expansion
 		std::string s = filepath;
 #else
@@ -510,13 +510,32 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			}
 		}
 
-		auto unlit = x.extensions.find("KHR_materials_unlit");
-		if (unlit != x.extensions.end())
+		auto ext_unlit = x.extensions.find("KHR_materials_unlit");
+		if (ext_unlit != x.extensions.end())
 		{
 			material.shaderType = MaterialComponent::SHADERTYPE_UNLIT;
 		}
 
-		// specular-glossiness workflow (todo):
+		auto ext_transmission = x.extensions.find("KHR_materials_transmission");
+		if (ext_transmission != x.extensions.end())
+		{
+			if (ext_transmission->second.Has("transmissionFactor"))
+			{
+				auto& factor = ext_transmission->second.Get("transmissionFactor");
+				material.transmission = float(factor.IsNumber() ? factor.Get<double>() : factor.Get<int>());
+			}
+			if (ext_transmission->second.Has("transmissionTexture"))
+			{
+				int index = ext_transmission->second.Get("transmissionTexture").Get("index").Get<int>();
+				auto& tex = state.gltfModel.textures[index];
+				auto& img = state.gltfModel.images[tex.source];
+				material.transmissionMap = RegisterTexture(&img, "transmission");
+				material.transmissionMapName = img.uri;
+				material.uvset_transmissionMap = (uint32_t)ext_transmission->second.Get("transmissionTexture").Get("texCoord").Get<int>();
+			}
+		}
+
+		// specular-glossiness workflow:
 		auto specularGlossinessWorkflow = x.extensions.find("KHR_materials_pbrSpecularGlossiness");
 		if (specularGlossinessWorkflow != x.extensions.end())
 		{
@@ -549,14 +568,14 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				material.baseColor.z = factor.ArrayLen() > 2 ? float(factor.Get(2).IsNumber() ? factor.Get(2).Get<double>() : factor.Get(2).Get<int>()) : 1.0f;
 				material.baseColor.w = factor.ArrayLen() > 3 ? float(factor.Get(3).IsNumber() ? factor.Get(3).Get<double>() : factor.Get(3).Get<int>()) : 1.0f;
 			}
-			//if (specularGlossinessWorkflow->second.Has("specularFactor"))
-			//{
-			//	auto& factor = specularGlossinessWorkflow->second.Get("specularFactor");
-			//	material.baseColor.x = factor.ArrayLen() > 0 ? float(factor.Get(0).IsNumber() ? factor.Get(0).Get<double>() : factor.Get(0).Get<int>()) : 1.0f;
-			//	material.baseColor.y = factor.ArrayLen() > 0 ? float(factor.Get(1).IsNumber() ? factor.Get(1).Get<double>() : factor.Get(1).Get<int>()) : 1.0f;
-			//	material.baseColor.z = factor.ArrayLen() > 0 ? float(factor.Get(2).IsNumber() ? factor.Get(2).Get<double>() : factor.Get(2).Get<int>()) : 1.0f;
-			//	material.baseColor.w = factor.ArrayLen() > 0 ? float(factor.Get(3).IsNumber() ? factor.Get(3).Get<double>() : factor.Get(3).Get<int>()) : 1.0f;
-			//}
+			if (specularGlossinessWorkflow->second.Has("specularFactor"))
+			{
+				auto& factor = specularGlossinessWorkflow->second.Get("specularFactor");
+				material.specularColor.x = factor.ArrayLen() > 0 ? float(factor.Get(0).IsNumber() ? factor.Get(0).Get<double>() : factor.Get(0).Get<int>()) : 1.0f;
+				material.specularColor.y = factor.ArrayLen() > 0 ? float(factor.Get(1).IsNumber() ? factor.Get(1).Get<double>() : factor.Get(1).Get<int>()) : 1.0f;
+				material.specularColor.z = factor.ArrayLen() > 0 ? float(factor.Get(2).IsNumber() ? factor.Get(2).Get<double>() : factor.Get(2).Get<int>()) : 1.0f;
+				material.specularColor.w = factor.ArrayLen() > 0 ? float(factor.Get(3).IsNumber() ? factor.Get(3).Get<double>() : factor.Get(3).Get<int>()) : 1.0f;
+			}
 			if (specularGlossinessWorkflow->second.Has("glossinessFactor"))
 			{
 				auto& factor = specularGlossinessWorkflow->second.Get("glossinessFactor");
@@ -583,7 +602,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		mesh.targets.resize(x.weights.size());
 		for (size_t i = 0; i < mesh.targets.size(); i++)
 		{
-		    mesh.targets[i].weight = static_cast<float_t>(x.weights[i]);
+			mesh.targets[i].weight = static_cast<float_t>(x.weights[i]);
 		}
 
 		for (auto& prim : x.primitives)
@@ -605,6 +624,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			mesh.subsets.back().indexCount = (uint32_t)indexCount;
 
 			mesh.subsets.back().materialID = scene.materials.GetEntity(max(0, prim.material));
+			MaterialComponent* material = scene.materials.GetComponent(mesh.subsets.back().materialID);
 
 			uint32_t vertexOffset = (uint32_t)mesh.vertex_positions.size();
 
@@ -774,6 +794,10 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				}
 				else if (!attr_name.compare("COLOR_0"))
 				{
+					if(material != nullptr)
+					{
+						material->SetUseVertexColors(true);
+					}
 					mesh.vertex_colors.resize(vertexOffset + vertexCount);
 					assert(stride == 16);
 					for (size_t i = 0; i < vertexCount; ++i)
@@ -787,8 +811,8 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 				for (size_t i = 0; i < mesh.targets.size(); i++)
 				{
-				    for (auto& attr : prim.targets[i])
-				    {
+					for (auto& attr : prim.targets[i])
+					{
 						const string& attr_name = attr.first;
 						int attr_data = attr.second;
 
@@ -812,14 +836,14 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 						}
 						else if (!attr_name.compare("NORMAL"))
 						{
-						    mesh.targets[i].vertex_normals.resize(vertexOffset + vertexCount);
-						    assert(stride == 12);
-						    for (size_t j = 0; j < vertexCount; ++j)
-						    {
+							mesh.targets[i].vertex_normals.resize(vertexOffset + vertexCount);
+							assert(stride == 12);
+							for (size_t j = 0; j < vertexCount; ++j)
+							{
 								mesh.targets[i].vertex_normals[vertexOffset + j] = ((XMFLOAT3*)data)[j];
-						    }
+							}
 						}
-				    }
+					}
 				}
 			}
 
@@ -899,6 +923,10 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			{
 				animationcomponent.samplers[i].mode = AnimationComponent::AnimationSampler::Mode::STEP;
 			}
+			else if (!sam.interpolation.compare("CUBICSPLINE"))
+			{
+				animationcomponent.samplers[i].mode = AnimationComponent::AnimationSampler::Mode::CUBICSPLINE;
+			}
 
 			animationcomponent.samplers[i].data = CreateEntity();
 			AnimationDataComponent& animationdata = scene.animation_datas.Create(animationcomponent.samplers[i].data);
@@ -943,6 +971,16 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 				switch (accessor.type)
 				{
+				case TINYGLTF_TYPE_SCALAR:
+				{
+					assert(stride == sizeof(float));
+					animationdata.keyframe_data.resize(count);
+					for (size_t j = 0; j < count; ++j)
+					{
+						animationdata.keyframe_data[j] = ((float*)data)[j];
+					}
+				}
+				break;
 				case TINYGLTF_TYPE_VEC3:
 				{
 					assert(stride == sizeof(XMFLOAT3));
@@ -990,6 +1028,10 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			else if (!channel.target_path.compare("translation"))
 			{
 				animationcomponent.channels[i].path = AnimationComponent::AnimationChannel::Path::TRANSLATION;
+			}
+			else if (!channel.target_path.compare("weights"))
+			{
+				animationcomponent.channels[i].path = AnimationComponent::AnimationChannel::Path::WEIGHTS;
 			}
 			else
 			{

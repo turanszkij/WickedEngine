@@ -21,7 +21,6 @@ TEXTURE2DARRAY(texture_shadowarray_2d, float, TEXSLOT_SHADOWARRAY_2D);
 TEXTURECUBEARRAY(texture_shadowarray_cube, float, TEXSLOT_SHADOWARRAY_CUBE);
 TEXTURE2DARRAY(texture_shadowarray_transparent, float3, TEXSLOT_SHADOWARRAY_TRANSPARENT);
 TEXTURE3D(texture_voxelradiance, float4, TEXSLOT_VOXELRADIANCE);
-STRUCTUREDBUFFER(EntityTiles, uint, SBSLOT_ENTITYTILES);
 STRUCTUREDBUFFER(EntityArray, ShaderEntity, SBSLOT_ENTITYARRAY);
 STRUCTUREDBUFFER(MatrixArray, float4x4, SBSLOT_MATRIXARRAY);
 
@@ -66,13 +65,6 @@ inline float2 GetInternalResolution() { return g_xFrame_InternalResolution; }
 inline float GetTime() { return g_xFrame_Time; }
 inline uint2 GetTemporalAASampleRotation() { return uint2((g_xFrame_TemporalAASampleRotation >> 0) & 0x000000FF, (g_xFrame_TemporalAASampleRotation >> 8) & 0x000000FF); }
 inline bool IsStaticSky() { return g_xFrame_StaticSkyGamma > 0.0; }
-inline void ConvertToSpecularGlossiness(inout float4 surface_occlusion_roughness_metallic_reflectance)
-{
-	surface_occlusion_roughness_metallic_reflectance.r = 1;
-	surface_occlusion_roughness_metallic_reflectance.g = 1 - surface_occlusion_roughness_metallic_reflectance.a;
-	surface_occlusion_roughness_metallic_reflectance.b = max(surface_occlusion_roughness_metallic_reflectance.r, max(surface_occlusion_roughness_metallic_reflectance.g, surface_occlusion_roughness_metallic_reflectance.b));
-	surface_occlusion_roughness_metallic_reflectance.a = 0.02;
-}
 
 inline float GetFogAmount(float dist)
 {
@@ -427,6 +419,25 @@ inline float3 unpack_unitvector(in uint value)
 	retVal.x = (float)((value >> 0) & 0xFF) / 255.0 * 2 - 1;
 	retVal.y = (float)((value >> 8) & 0xFF) / 255.0 * 2 - 1;
 	retVal.z = (float)((value >> 16) & 0xFF) / 255.0 * 2 - 1;
+	return retVal;
+}
+
+inline uint pack_utangent(in float4 value)
+{
+	uint retVal = 0;
+	retVal |= (uint)((value.x * 0.5 + 0.5) * 255.0) << 0;
+	retVal |= (uint)((value.y * 0.5 + 0.5) * 255.0) << 8;
+	retVal |= (uint)((value.z * 0.5 + 0.5) * 255.0) << 16;
+	retVal |= (uint)((value.w * 0.5 + 0.5) * 255.0) << 24;
+	return retVal;
+}
+inline float4 unpack_utangent(in uint value)
+{
+	float4 retVal;
+	retVal.x = (float)((value >> 0) & 0xFF) / 255.0;
+	retVal.y = (float)((value >> 8) & 0xFF) / 255.0;
+	retVal.z = (float)((value >> 16) & 0xFF) / 255.0;
+	retVal.w = (float)((value >> 24) & 0xFF) / 255.0;
 	return retVal;
 }
 

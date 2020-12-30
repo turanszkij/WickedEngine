@@ -23,8 +23,9 @@ public:
 	wiSlider roughnessSlider;
 	wiSlider reflectanceSlider;
 	wiSlider metalnessSlider;
-	wiSlider refractionIndexSlider;
 	wiSlider emissiveSlider;
+	wiSlider transmissionSlider;
+	wiSlider refractionSlider;
 	wiSlider pomSlider;
 	wiSlider displacementMappingSlider;
 	wiSlider subsurfaceScatteringSlider;
@@ -44,6 +45,7 @@ public:
 	wiLabel texture_displacement_Label;
 	wiLabel texture_emissive_Label;
 	wiLabel texture_occlusion_Label;
+	wiLabel texture_transmission_Label;
 
 	wiButton texture_baseColor_Button;
 	wiButton texture_normal_Button;
@@ -51,6 +53,7 @@ public:
 	wiButton texture_displacement_Button;
 	wiButton texture_emissive_Button;
 	wiButton texture_occlusion_Button;
+	wiButton texture_transmission_Button;
 
 	wiTextInputField texture_baseColor_uvset_Field;
 	wiTextInputField texture_normal_uvset_Field;
@@ -58,6 +61,7 @@ public:
 	wiTextInputField texture_displacement_uvset_Field;
 	wiTextInputField texture_emissive_uvset_Field;
 	wiTextInputField texture_occlusion_uvset_Field;
+	wiTextInputField texture_transmission_uvset_Field;
 
 	wiComboBox colorComboBox;
 	wiColorPicker colorPicker;

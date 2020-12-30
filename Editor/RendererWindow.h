@@ -35,6 +35,7 @@ public:
 	wiSlider voxelRadianceConeTracingSlider;
 	wiSlider voxelRadianceRayStepSizeSlider;
 	wiSlider voxelRadianceMaxDistanceSlider;
+	wiCheckBox physicsDebugCheckBox;
 	wiCheckBox partitionBoxesCheckBox;
 	wiCheckBox boneLinesCheckBox;
 	wiCheckBox debugEmittersCheckBox;
@@ -65,6 +66,7 @@ public:
 	wiComboBox shadowProps2DComboBox;
 	wiComboBox shadowPropsCubeComboBox;
 	wiComboBox MSAAComboBox;
+	wiSlider raytracedShadowsSlider;
 	wiCheckBox temporalAACheckBox;
 	wiCheckBox temporalAADebugCheckBox;
 	wiComboBox textureQualityComboBox;
@@ -72,6 +74,7 @@ public:
 	wiSlider raytraceBounceCountSlider;
 
 	wiCheckBox freezeCullingCameraCheckBox;
+	wiCheckBox disableAlbedoMapsCheckBox;
 
     uint32_t GetPickType() const;
 };

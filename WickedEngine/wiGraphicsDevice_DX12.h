@@ -28,7 +28,7 @@ namespace wiGraphics
 {
 	class GraphicsDevice_DX12 : public GraphicsDevice
 	{
-	private:
+	public:
 		Microsoft::WRL::ComPtr<ID3D12Device5> device;
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter;
 		Microsoft::WRL::ComPtr<IDXGIFactory6> factory;
@@ -69,22 +69,94 @@ namespace wiGraphics
 		D3D12_CPU_DESCRIPTOR_HANDLE rtv_descriptor_heap_start = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE dsv_descriptor_heap_start = {};
 
+		struct DescriptorAllocator
+		{
+			GraphicsDevice_DX12* device = nullptr;
+			std::mutex locker;
+			D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+			std::vector<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>> heaps;
+			uint32_t descriptor_size = 0;
+			std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> freelist;
+
+			void block_allocate()
+			{
+				heaps.emplace_back();
+				HRESULT hr = device->device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&heaps.back()));
+				assert(SUCCEEDED(hr));
+				D3D12_CPU_DESCRIPTOR_HANDLE heap_start = heaps.back()->GetCPUDescriptorHandleForHeapStart();
+				for (UINT i = 0; i < desc.NumDescriptors; ++i)
+				{
+					D3D12_CPU_DESCRIPTOR_HANDLE handle = heap_start;
+					handle.ptr += i * descriptor_size;
+					freelist.push_back(handle);
+				}
+			}
+			void init(GraphicsDevice_DX12* device, D3D12_DESCRIPTOR_HEAP_TYPE type)
+			{
+				this->device = device;
+				desc.Type = type;
+				desc.NumDescriptors = 1024;
+				descriptor_size = device->device->GetDescriptorHandleIncrementSize(type);
+				block_allocate();
+			}
+			D3D12_CPU_DESCRIPTOR_HANDLE allocate()
+			{
+				locker.lock();
+				if (freelist.empty())
+				{
+					block_allocate();
+				}
+				assert(!freelist.empty());
+				D3D12_CPU_DESCRIPTOR_HANDLE handle = freelist.back();
+				freelist.pop_back();
+				locker.unlock();
+				return handle;
+			}
+			void free(D3D12_CPU_DESCRIPTOR_HANDLE index)
+			{
+				locker.lock();
+				freelist.push_back(index);
+				locker.unlock();
+			}
+		};
+		std::shared_ptr<DescriptorAllocator> descriptors_res;
+		std::shared_ptr<DescriptorAllocator> descriptors_sam;
+
+		D3D12_CPU_DESCRIPTOR_HANDLE nullCBV = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSAM = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_buffer = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texture1d = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texture1darray = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texture2d = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texture2darray = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texturecube = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texturecubearray = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texture3d = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_accelerationstructure = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_buffer = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture1d = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture1darray = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture2d = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture2darray = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture3d = {};
+
+		Microsoft::WRL::ComPtr<ID3D12CommandQueue> copyQueue;
 		std::mutex copyQueueLock;
 		bool copyQueueUse = false;
 		Microsoft::WRL::ComPtr<ID3D12Fence> copyFence; // GPU only
+		UINT64 copyFenceValue = 0;
 
 		struct FrameResources
 		{
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[COMMANDLIST_COUNT];
 			Microsoft::WRL::ComPtr<ID3D12CommandList> commandLists[COMMANDLIST_COUNT];
 
-			Microsoft::WRL::ComPtr<ID3D12CommandQueue> copyQueue;
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> copyAllocator;
 			Microsoft::WRL::ComPtr<ID3D12CommandList> copyCommandList;
 
 			struct DescriptorTableFrameAllocator
 			{
-				GraphicsDevice_DX12*	device = nullptr;
+				GraphicsDevice_DX12* device = nullptr;
 				struct DescriptorHeap
 				{
 					D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
@@ -98,7 +170,8 @@ namespace wiGraphics
 				uint32_t current_resource_heap = 0;
 				uint32_t current_sampler_heap = 0;
 				bool heaps_bound = false;
-				bool dirty = false;
+				bool dirty_res = false;
+				bool dirty_sam = false;
 
 				const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
 				const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
@@ -156,7 +229,7 @@ namespace wiGraphics
 		const RootSignature* active_rootsig_compute[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 		D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS resolve_subresources[COMMANDLIST_COUNT][D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
-		D3D12_SHADING_RATE prev_shadingrate[COMMANDLIST_COUNT] = {};
+		SHADING_RATE prev_shadingrate[COMMANDLIST_COUNT] = {};
 
 		bool dirty_pso[COMMANDLIST_COUNT] = {};
 		void pso_validate(CommandList cmd);
@@ -180,11 +253,7 @@ namespace wiGraphics
 
 		bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) override;
 		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) override;
-		bool CreateInputLayout(const InputLayoutDesc *pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout *pInputLayout) override;
 		bool CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) override;
-		bool CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState) override;
-		bool CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState) override;
-		bool CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState) override;
 		bool CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) override;
 		bool CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) override;
 		bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
@@ -241,7 +310,6 @@ namespace wiGraphics
 		void BindStencilRef(uint32_t value, CommandList cmd) override;
 		void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) override;
 		void BindShadingRate(SHADING_RATE rate, CommandList cmd) override;
-		void BindShadingRateImage(const Texture* texture, CommandList cmd) override;
 		void BindPipelineState(const PipelineState* pso, CommandList cmd) override;
 		void BindComputeShader(const Shader* cs, CommandList cmd) override;
 		void Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) override;

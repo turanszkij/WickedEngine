@@ -5,6 +5,7 @@
 
 TEXTURE2D(texture_color, float4, TEXSLOT_ONDEMAND0);
 
+[earlydepthstencil]
 float4 main(VertextoPixel input) : SV_TARGET
 {
     float4 color = texture_color.Sample(sampler_linear_clamp, input.tex.xy);
@@ -15,8 +16,6 @@ float4 main(VertextoPixel input) : SV_TARGET
 	    float4 color2 = texture_color.Sample(sampler_linear_clamp, input.tex.zw);
 		color = lerp(color, color2, input.frameBlend);
 	}
-
-	clip(color.a - 1.0f / 255.0f);
 
 	float2 pixel = input.pos.xy;
 	float2 ScreenCoord = pixel * g_xFrame_InternalResolution_rcp;
@@ -49,11 +48,18 @@ float4 main(VertextoPixel input) : SV_TARGET
 	N = mul((float3x3)g_xCamera_InvV, N);
 	N = normalize(N);
 
-	Lighting lighting = CreateLighting(0, 0, GetAmbient(N), 0);
-	Surface surface = CreateSurface(input.P, N, 0, color, 1, 1, 0, 0);
+	Lighting lighting;
+	lighting.create(0, 0, GetAmbient(N), 0);
+
+	Surface surface;
+	surface.create(g_xMaterial, color, 0);
+	surface.P = input.P;
+	surface.N = N;
+	surface.V = 0;
 	surface.pixel = pixel;
 	surface.sss = g_xMaterial.subsurfaceScattering;
 	surface.sss_inv = g_xMaterial.subsurfaceScattering_inv;
+	surface.update();
 
 	TiledLighting(surface, lighting);
 

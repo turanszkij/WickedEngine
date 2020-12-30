@@ -101,7 +101,7 @@ namespace wiScene
 			{
 				archive >> emissiveColor.w;
 			}
-			archive >> refractionIndex;
+			archive >> refraction;
 			if (archive.GetVersion() < 52)
 			{
 				archive >> subsurfaceScattering.w;
@@ -174,6 +174,18 @@ namespace wiScene
 				archive >> subsurfaceScattering;
 			}
 
+			if (archive.GetVersion() >= 56)
+			{
+				archive >> specularColor;
+			}
+
+			if (archive.GetVersion() >= 59)
+			{
+				archive >> transmission;
+				archive >> transmissionMapName;
+				archive >> uvset_transmissionMap;
+			}
+
 			wiJobSystem::Execute(seri.ctx, [&](wiJobArgs args) {
 				CreateRenderData(dir);
 			});
@@ -197,7 +209,7 @@ namespace wiScene
 			{
 				archive << emissiveColor.w;
 			}
-			archive << refractionIndex;
+			archive << refraction;
 			if (archive.GetVersion() < 52)
 			{
 				float subsurfaceScattering = 0;
@@ -242,6 +254,18 @@ namespace wiScene
 				{
 					emissiveMapName = emissiveMapName.substr(found + dir.length());
 				}
+
+				found = occlusionMapName.rfind(dir);
+				if (found != std::string::npos)
+				{
+					occlusionMapName = occlusionMapName.substr(found + dir.length());
+				}
+
+				found = transmissionMapName.rfind(dir);
+				if (found != std::string::npos)
+				{
+					transmissionMapName = transmissionMapName.substr(found + dir.length());
+				}
 			}
 
 			archive << baseColorMapName;
@@ -282,6 +306,18 @@ namespace wiScene
 			if (archive.GetVersion() >= 54)
 			{
 				archive << subsurfaceScattering;
+			}
+
+			if (archive.GetVersion() >= 56)
+			{
+				archive << specularColor;
+			}
+
+			if (archive.GetVersion() >= 59)
+			{
+				archive << transmission;
+				archive << transmissionMapName;
+				archive << uvset_transmissionMap;
 			}
 		}
 	}
@@ -475,7 +511,27 @@ namespace wiScene
 			archive >> mass;
 			archive >> friction;
 			archive >> restitution;
-			archive >> damping;
+			archive >> damping_linear;
+
+			if (archive.GetVersion() >= 57)
+			{
+				archive >> damping_angular;
+			}
+			else
+			{
+				// these were previously untested:
+				friction = 0.5f;
+				restitution = 0.0f;
+				damping_linear = 0;
+			}
+
+			if (archive.GetVersion() >= 58)
+			{
+				archive >> box.halfextents;
+				archive >> sphere.radius;
+				archive >> capsule.height;
+				archive >> capsule.radius;
+			}
 		}
 		else
 		{
@@ -484,7 +540,20 @@ namespace wiScene
 			archive << mass;
 			archive << friction;
 			archive << restitution;
-			archive << damping;
+			archive << damping_linear;
+
+			if (archive.GetVersion() >= 57)
+			{
+				archive << damping_angular;
+			}
+
+			if (archive.GetVersion() >= 58)
+			{
+				archive << box.halfextents;
+				archive << sphere.radius;
+				archive << capsule.height;
+				archive << capsule.radius;
+			}
 		}
 	}
 	void SoftBodyPhysicsComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
@@ -504,6 +573,16 @@ namespace wiScene
 				archive >> temp;
 			}
 
+			if (archive.GetVersion() >= 57)
+			{
+				archive >> restitution;
+			}
+			else
+			{
+				// these were previously untested:
+				friction = 0.5f;
+			}
+
 			_flags &= ~SAFE_TO_REGISTER;
 		}
 		else
@@ -514,6 +593,11 @@ namespace wiScene
 			archive << physicsToGraphicsVertexMapping;
 			archive << graphicsToPhysicsVertexMapping;
 			archive << weights;
+
+			if (archive.GetVersion() >= 57)
+			{
+				archive << restitution;
+			}
 		}
 	}
 	void ArmatureComponent::Serialize(wiArchive& archive, EntitySerializer& seri)

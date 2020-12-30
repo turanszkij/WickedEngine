@@ -290,6 +290,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 			params.extensions.push_back("dds");
 			params.extensions.push_back("png");
 			params.extensions.push_back("jpg");
+			params.extensions.push_back("jpeg");
 			params.extensions.push_back("tga");
 			wiHelper::FileDialog(params, [=](std::string fileName) {
 				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {

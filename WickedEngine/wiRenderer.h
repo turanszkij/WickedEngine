@@ -19,6 +19,15 @@ namespace wiRenderer
 		return (userStencilRef << 4) | static_cast<uint8_t>(engineStencilRef);
 	}
 
+	inline XMUINT3 GetEntityCullingTileCount(XMUINT2 internalResolution)
+	{
+		return XMUINT3(
+			(internalResolution.x + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
+			(internalResolution.y + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
+			1
+		);
+	}
+
 	const wiGraphics::Sampler* GetSampler(int slot);
 	const wiGraphics::Shader* GetShader(SHADERTYPE id);
 	const wiGraphics::InputLayout* GetInputLayout(ILTYPES id);
@@ -238,8 +247,11 @@ namespace wiRenderer
 	void VoxelRadiance(const Visibility& vis, wiGraphics::CommandList cmd);
 	// Compute light grid tiles
 	void ComputeTiledLightCulling(
-		const wiScene::CameraComponent& camera,
 		const wiGraphics::Texture& depthbuffer,
+		const wiGraphics::GPUBuffer& tileFrustums,
+		const wiGraphics::GPUBuffer& entityTiles_Opaque,
+		const wiGraphics::GPUBuffer& entityTiles_Transparent,
+		const wiGraphics::Texture& debugUAV,
 		wiGraphics::CommandList cmd
 	);
 	// Run a compute shader that will resolve a MSAA depth buffer to a single-sample texture
@@ -252,6 +264,7 @@ namespace wiRenderer
 		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& output,
+		const wiGraphics::Texture& debugUAV,
 		wiGraphics::CommandList cmd
 	);
 
@@ -587,6 +600,10 @@ namespace wiRenderer
 	void SetTessellationEnabled(bool value);
 	bool GetTessellationEnabled();
 	bool IsWaterrippleRendering();
+	void SetDisableAlbedoMaps(bool value);
+	bool IsDisableAlbedoMaps();
+	void SetRaytracedShadowsSampleCount(uint32_t value);
+	uint32_t GetRaytracedShadowsSampleCount();
 
 	const wiGraphics::Texture* GetGlobalLightmap();
 
@@ -653,8 +670,8 @@ namespace wiRenderer
 
 	// Add a texture that should be mipmapped whenever it is feasible to do so
 	void AddDeferredMIPGen(std::shared_ptr<wiResource> res, bool preserve_coverage = false);
-	void AddDeferredMaterialUpdate(size_t index);
-	void AddDeferredMorphUpdate(size_t index);
+	void AddDeferredMaterialUpdate(wiECS::Entity entity);
+	void AddDeferredMorphUpdate(wiECS::Entity entity);
 
 	struct CustomShader
 	{

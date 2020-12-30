@@ -17,7 +17,9 @@ HullInputType main(Input_Object_ALL input)
 	HullInputType Out;
 
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.inst);
-	VertexSurface surface = MakeVertexSurfaceFromInput(input);
+
+	VertexSurface surface;
+	surface.create(g_xMaterial, input);
 
 	surface.position = mul(WORLD, surface.position);
 	surface.normal = normalize(mul((float3x3)WORLD, surface.normal));

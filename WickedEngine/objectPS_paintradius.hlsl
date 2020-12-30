@@ -1,6 +1,7 @@
 #include "objectHF.hlsli"
 #include "ShaderInterop_Paint.h"
 
+[earlydepthstencil]
 float4 main(PixelInputType_Simple PSIn) : SV_TARGET
 {
 	const float2 pixel = (xPaintRadUVSET == 0 ? PSIn.uvsets.xy : PSIn.uvsets.zw) * xPaintRadResolution;

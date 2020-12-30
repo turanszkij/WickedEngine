@@ -23,9 +23,20 @@ GBUFFEROutputType main(VSOut input)
 	float3 V = g_xCamera_CamPos - input.pos3D;
 	float dist = length(V);
 	V /= dist;
-	Surface surface = CreateSurface(input.pos3D, N, V, color, roughness, ao, metalness, reflectance);
-	Lighting lighting = CreateLighting(0, 0, GetAmbient(surface.N), 0);
+
+	Surface surface;
+	surface.init();
+	surface.roughness = roughness;
+	surface.albedo = lerp(lerp(color.rgb, float3(0, 0, 0), reflectance), float3(0, 0, 0), metalness);
+	surface.f0 = lerp(lerp(float3(0, 0, 0), float3(1, 1, 1), reflectance), color.rgb, metalness);
+	surface.P = input.pos3D;
+	surface.N = N;
+	surface.V = V;
 	surface.pixel = input.pos.xy;
+	surface.update();
+
+	Lighting lighting;
+	lighting.create(0, 0, GetAmbient(surface.N), 0);
 
 	float2 ScreenCoord = surface.pixel * g_xFrame_InternalResolution_rcp;
 	float2 pos2D = ScreenCoord * 2 - 1;

@@ -83,24 +83,27 @@ protected:
 	wiGraphics::Texture rtPostprocess_HDR; // ping-pong with main scene RT in HDR post-process chain
 	wiGraphics::Texture rtPostprocess_LDR[2]; // ping-pong with itself in LDR post-process chain
 
-	wiGraphics::Texture depthBuffer; // used for depth-testing, can be MSAA
+	wiGraphics::Texture depthBuffer_Main; // used for depth-testing, can be MSAA
 	wiGraphics::Texture depthBuffer_Copy; // used for shader resource, single sample
 	wiGraphics::Texture depthBuffer_Copy1; // used for disocclusion check
 	wiGraphics::Texture depthBuffer_Reflection; // used for reflection, single sample
 	wiGraphics::Texture rtLinearDepth; // linear depth result + mipchain (max filter)
-	wiGraphics::Texture smallDepth; // downsampled depth buffer
 
 	wiGraphics::RenderPass renderpass_depthprepass;
 	wiGraphics::RenderPass renderpass_main;
 	wiGraphics::RenderPass renderpass_transparent;
-	wiGraphics::RenderPass renderpass_occlusionculling;
+	wiGraphics::RenderPass renderpass_reflection_depthprepass;
 	wiGraphics::RenderPass renderpass_reflection;
-	wiGraphics::RenderPass renderpass_downsampledepthbuffer;
 	wiGraphics::RenderPass renderpass_downsamplescene;
 	wiGraphics::RenderPass renderpass_lightshafts;
 	wiGraphics::RenderPass renderpass_volumetriclight;
 	wiGraphics::RenderPass renderpass_particledistortion;
 	wiGraphics::RenderPass renderpass_waterripples;
+
+	wiGraphics::GPUBuffer tileFrustums; // entity culling frustums
+	wiGraphics::GPUBuffer entityTiles_Opaque; // culled entity indices (for opaque pass)
+	wiGraphics::GPUBuffer entityTiles_Transparent; // culled entity indices (for transparent pass)
+	wiGraphics::Texture debugUAV; // debug UAV can be used by some shaders...
 
 	const constexpr wiGraphics::Texture* GetGbuffer_Read() const
 	{
@@ -137,12 +140,8 @@ protected:
 	}
 
 	virtual void RenderFrameSetUp(wiGraphics::CommandList cmd) const;
-	virtual void RenderReflections(wiGraphics::CommandList cmd) const;
-
-	virtual void RenderLinearDepth(wiGraphics::CommandList cmd) const;
 	virtual void RenderAO(wiGraphics::CommandList cmd) const;
 	virtual void RenderSSR(wiGraphics::CommandList cmd) const;
-	virtual void DownsampleDepthBuffer(wiGraphics::CommandList cmd) const;
 	virtual void RenderOutline(wiGraphics::CommandList cmd) const;
 	virtual void RenderLightShafts(wiGraphics::CommandList cmd) const;
 	virtual void RenderVolumetrics(wiGraphics::CommandList cmd) const;
@@ -164,7 +163,7 @@ public:
 
 	FrameCB frameCB = {};
 
-	const wiGraphics::Texture* GetDepthStencil() const override { return &depthBuffer; }
+	const wiGraphics::Texture* GetDepthStencil() const override { return &depthBuffer_Main; }
 	const wiGraphics::Texture* GetGUIBlurredBackground() const override { return &rtGUIBlurredBackground[2]; }
 
 	constexpr float getExposure() const { return exposure; }

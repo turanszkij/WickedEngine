@@ -49,7 +49,7 @@ If you have questions or stuck, please use the `windows` communication channel o
 The Linux support is experimental. You can find a sample build script for Ubuntu 20.04 [here](.github/workflows/build.yml) (in the linux section). You might need to install some dependencies, such as Vulkan SDK 1.2 or greater, SDL2, cmake 3.7 and g++ compiler (C++ 17 compliant version). For Ubuntu 20.04, you can use the following commands to install dependencies:
 ```bash
 wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
-sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.148-focal.list https://packages.lunarg.com/vulkan/1.2.148/lunarg-vulkan-1.2.148-focal.list
+sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.162-focal.list https://packages.lunarg.com/vulkan/1.2.162/lunarg-vulkan-1.2.162-focal.list
 sudo apt update
 sudo apt install vulkan-sdk
 sudo apt install libsdl2-dev

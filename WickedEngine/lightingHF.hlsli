@@ -19,21 +19,20 @@ struct Lighting
 {
 	LightingPart direct;
 	LightingPart indirect;
-};
 
-inline Lighting CreateLighting(
-	in float3 diffuse_direct,
-	in float3 specular_direct,
-	in float3 diffuse_indirect,
-	in float3 specular_indirect)
-{
-	Lighting lighting;
-	lighting.direct.diffuse = diffuse_direct;
-	lighting.direct.specular = specular_direct;
-	lighting.indirect.diffuse = diffuse_indirect;
-	lighting.indirect.specular = specular_indirect;
-	return lighting;
-}
+	inline void create(
+		in float3 diffuse_direct,
+		in float3 specular_direct,
+		in float3 diffuse_indirect,
+		in float3 specular_indirect
+	)
+	{
+		direct.diffuse = diffuse_direct;
+		direct.specular = specular_direct;
+		indirect.diffuse = diffuse_indirect;
+		indirect.specular = specular_indirect;
+	}
+};
 
 // Combine the direct and indirect lighting into final contribution
 inline LightingPart CombineLighting(in Surface surface, in Lighting lighting)
@@ -110,26 +109,38 @@ inline float shadowTrace(in Surface surface, in float3 L, in float dist)
 		RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH
 	> q;
 
+	float seed = g_xFrame_FrameCount * 0.001;
+	float2 uv = surface.screenUV;
+
 	RayDesc ray;
 	ray.TMin = 0.001;
 	ray.TMax = dist;
 	ray.Origin = surface.P + surface.N * 0.01;
-	ray.Direction = L;
+
+	float shadow = 0;
+	uint sampleCount = 1;
 
 #ifndef DISABLE_SOFT_RTSHADOW
-	float seed = g_xFrame_FrameCount * 0.001;
-	float2 uv = surface.screenUV;
-	float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1; // todo: should be specific to light surface
-	ray.Direction = normalize(ray.Direction + sampling_offset * 0.025);
-#endif // BRDF_CARTOON
-
-	q.TraceRayInline(scene_acceleration_structure, 0, 0xFF, ray);
-	q.Proceed();
-
-	if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
+	sampleCount = g_xFrame_RaytracedShadowsSampleCount;
+	for (uint i = 0; i < sampleCount; ++i)
 	{
-		return 0;
+		float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1; // todo: should be specific to light surface
+		ray.Direction = normalize(L + sampling_offset * 0.025);
+#else
+	{
+		ray.Direction = L;
+#endif // DISABLE_SOFT_RTSHADOW
+
+		q.TraceRayInline(scene_acceleration_structure, 0, 0xFF, ray);
+		q.Proceed();
+
+		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
+		{
+			shadow += 1;
+		}
 	}
+
+	return shadow / sampleCount;
 #endif // RAYTRACING_INLINE
 
 	return 1;
@@ -139,7 +150,9 @@ inline float shadowTrace(in Surface surface, in float3 L, in float dist)
 inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
 	float3 L = light.GetDirection().xyz;
-	SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+
+	SurfaceToLight surfaceToLight;
+	surfaceToLight.create(surface, L);
 
 	[branch]
 	if (any(surfaceToLight.NdotL_sss))
@@ -227,7 +240,8 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 		const float dist = sqrt(dist2);
 		L /= dist;
 
-		SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+		SurfaceToLight surfaceToLight;
+		surfaceToLight.create(surface, L);
 
 		[branch]
 		if (any(surfaceToLight.NdotL_sss))
@@ -278,7 +292,8 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 		const float dist = sqrt(dist2);
 		L /= dist;
 
-		SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+		SurfaceToLight surfaceToLight;
+		surfaceToLight.create(surface, L);
 
 		[branch]
 		if (any(surfaceToLight.NdotL_sss))
@@ -474,7 +489,8 @@ inline void SphereLight(in ShaderEntity light, in Surface surface, inout Lightin
 			float3 lightColor = light.GetColor().rgb * light.GetEnergy() * fLight;
 
 
-			SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+			SurfaceToLight surfaceToLight;
+			surfaceToLight.Create(surface, L);
 
 			lighting.direct.specular += max(0, lightColor * BRDF_GetSpecular(surface, surfaceToLight));
 			lighting.direct.diffuse += max(0, lightColor / PI);
@@ -538,7 +554,8 @@ inline void DiscLight(in ShaderEntity light, in Surface surface, inout Lighting 
 
 			float3 lightColor = light.GetColor().rgb * light.GetEnergy() * fLight;
 
-			SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+			SurfaceToLight surfaceToLight;
+			surfaceToLight.Create(surface, L);
 
 			lighting.direct.specular += max(0, specularAttenuation * lightColor * BRDF_GetSpecular(surface, surfaceToLight));
 			lighting.direct.diffuse += max(0, lightColor / PI);
@@ -663,7 +680,8 @@ inline void RectangleLight(in ShaderEntity light, in Surface surface, inout Ligh
 
 			float3 lightColor = light.GetColor().rgb * light.GetEnergy() * fLight;
 
-			SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+			SurfaceToLight surfaceToLight;
+			surfaceToLight.Create(surface, L);
 
 			lighting.direct.specular += max(0, specularAttenuation * lightColor * BRDF_GetSpecular(surface, surfaceToLight));
 			lighting.direct.diffuse += max(0, lightColor / PI);
@@ -763,7 +781,8 @@ inline void TubeLight(in ShaderEntity light, in Surface surface, inout Lighting 
 
 			float3 lightColor = light.GetColor().rgb * light.GetEnergy() * fLight;
 
-			SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+			SurfaceToLight surfaceToLight;
+			surfaceToLight.Create(surface, L);
 
 			lighting.direct.specular += max(0, lightColor * BRDF_GetSpecular(surface, surfaceToLight));
 			lighting.direct.diffuse += max(0, lightColor / PI);

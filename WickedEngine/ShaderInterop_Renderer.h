@@ -12,6 +12,7 @@ static const uint SHADERMATERIAL_OPTION_BIT_USE_WIND = 1 << 4;
 struct ShaderMaterial
 {
 	float4		baseColor;
+	float4		specularColor;
 	float4		emissiveColor;
 	float4		subsurfaceScattering;
 	float4		subsurfaceScattering_inv;
@@ -20,7 +21,7 @@ struct ShaderMaterial
 	float		roughness;
 	float		reflectance;
 	float		metalness;
-	float		refractionIndex;
+	float		refraction;
 
 	float		normalMapStrength;
 	float		parallaxOcclusionMapping;
@@ -35,6 +36,10 @@ struct ShaderMaterial
 	int			uvset_displacementMap;
 	int			uvset_emissiveMap;
 	int			uvset_occlusionMap;
+	int			uvset_transmissionMap;
+
+	float2		padding0;
+	float		transmission;
 	uint		options;
 
 	float4		baseColorAtlasMulAdd;
@@ -202,7 +207,22 @@ static const uint TILED_CULLING_GRANULARITY = TILED_CULLING_BLOCKSIZE / TILED_CU
 
 static const int impostorCaptureAngles = 36;
 
-static const uint MAX_DESCRIPTOR_INDEXING = 100000;
+static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_BASECOLOR = 0;
+static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_NORMAL = 1;
+static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_SURFACE = 2;
+static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_OCCLUSION = 3;
+static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_EMISSIVE = 4;
+static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT = 5;
+
+static const uint VERTEXBUFFER_DESCRIPTOR_RAW_POS = 0;
+static const uint VERTEXBUFFER_DESCRIPTOR_RAW_TAN = 1;
+static const uint VERTEXBUFFER_DESCRIPTOR_RAW_COL = 1;
+static const uint VERTEXBUFFER_DESCRIPTOR_RAW_COUNT = 2;
+
+static const uint VERTEXBUFFER_DESCRIPTOR_UV_0 = 0;
+static const uint VERTEXBUFFER_DESCRIPTOR_UV_1 = 1;
+static const uint VERTEXBUFFER_DESCRIPTOR_UV_ATL = 2;
+static const uint VERTEXBUFFER_DESCRIPTOR_UV_COUNT = 3;
 
 // These option bits can be read from g_xFrame_Options constant buffer value:
 static const uint OPTION_BIT_TEMPORALAA_ENABLED = 1 << 0;
@@ -213,6 +233,7 @@ static const uint OPTION_BIT_VOXELGI_RETARGETTED = 1 << 4;
 static const uint OPTION_BIT_SIMPLE_SKY = 1 << 5;
 static const uint OPTION_BIT_REALISTIC_SKY = 1 << 6;
 static const uint OPTION_BIT_RAYTRACED_SHADOWS = 1 << 7;
+static const uint OPTION_BIT_DISABLE_ALBEDO_MAPS = 1 << 8;
 
 // ---------- Common Constant buffers: -----------------
 
@@ -295,7 +316,8 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 
 	float		g_xFrame_ShadowKernel2D;
 	float		g_xFrame_ShadowKernelCube;
-	float2		g_xFrame_padding0;
+	uint		g_xFrame_RaytracedShadowsSampleCount;
+	float		g_xFrame_padding0;
 };
 
 CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)

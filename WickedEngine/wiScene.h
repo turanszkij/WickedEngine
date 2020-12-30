@@ -146,16 +146,18 @@ namespace wiScene
 		BLENDMODE userBlendMode = BLENDMODE_OPAQUE;
 
 		XMFLOAT4 baseColor = XMFLOAT4(1, 1, 1, 1);
+		XMFLOAT4 specularColor = XMFLOAT4(1, 1, 1, 1);
 		XMFLOAT4 emissiveColor = XMFLOAT4(1, 1, 1, 0);
 		XMFLOAT4 subsurfaceScattering = XMFLOAT4(1, 1, 1, 0);
 		XMFLOAT4 texMulAdd = XMFLOAT4(1, 1, 0, 0);
 		float roughness = 0.2f;
 		float reflectance = 0.02f;
 		float metalness = 0.0f;
-		float refractionIndex = 0.0f;
 		float normalMapStrength = 1.0f;
 		float parallaxOcclusionMapping = 0.0f;
 		float displacementMapping = 0.0f;
+		float refraction = 0.0f;
+		float transmission = 0.0f;
 
 		float alphaRef = 1.0f;
 		wiGraphics::SHADING_RATE shadingRate = wiGraphics::SHADING_RATE_1X1;
@@ -170,6 +172,7 @@ namespace wiScene
 		std::string displacementMapName;
 		std::string emissiveMapName;
 		std::string occlusionMapName;
+		std::string transmissionMapName;
 
 		uint32_t uvset_baseColorMap = 0;
 		uint32_t uvset_surfaceMap = 0;
@@ -177,6 +180,7 @@ namespace wiScene
 		uint32_t uvset_displacementMap = 0;
 		uint32_t uvset_emissiveMap = 0;
 		uint32_t uvset_occlusionMap = 0;
+		uint32_t uvset_transmissionMap = 0;
 
 		int customShaderID = -1;
 
@@ -187,6 +191,7 @@ namespace wiScene
 		std::shared_ptr<wiResource> displacementMap;
 		std::shared_ptr<wiResource> emissiveMap;
 		std::shared_ptr<wiResource> occlusionMap;
+		std::shared_ptr<wiResource> transmissionMap;
 		wiGraphics::GPUBuffer constantBuffer;
 		uint32_t layerMask = ~0u;
 
@@ -204,6 +209,7 @@ namespace wiScene
 		const wiGraphics::Texture* GetDisplacementMap() const;
 		const wiGraphics::Texture* GetEmissiveMap() const;
 		const wiGraphics::Texture* GetOcclusionMap() const;
+		const wiGraphics::Texture* GetTransmissionMap() const;
 
 		inline float GetOpacity() const { return baseColor.w; }
 		inline float GetEmissiveStrength() const { return emissiveColor.w; }
@@ -229,12 +235,14 @@ namespace wiScene
 		inline bool IsCustomShader() const { return customShaderID >= 0; }
 
 		inline void SetBaseColor(const XMFLOAT4& value) { SetDirty(); baseColor = value; }
+		inline void SetSpecularColor(const XMFLOAT4& value) { SetDirty(); specularColor = value; }
 		inline void SetEmissiveColor(const XMFLOAT4& value) { SetDirty(); emissiveColor = value; }
 		inline void SetRoughness(float value) { SetDirty(); roughness = value; }
 		inline void SetReflectance(float value) { SetDirty(); reflectance = value; }
 		inline void SetMetalness(float value) { SetDirty(); metalness = value; }
 		inline void SetEmissiveStrength(float value) { SetDirty(); emissiveColor.w = value; }
-		inline void SetRefractionIndex(float value) { SetDirty(); refractionIndex = value; }
+		inline void SetTransmissionAmount(float value) { SetDirty(); transmission = value; }
+		inline void SetRefractionAmount(float value) { SetDirty(); refraction = value; }
 		inline void SetNormalMapStrength(float value) { SetDirty(); normalMapStrength = value; }
 		inline void SetParallaxOcclusionMapping(float value) { SetDirty(); parallaxOcclusionMapping = value; }
 		inline void SetDisplacementMapping(float value) { SetDirty(); displacementMapping = value; }
@@ -259,6 +267,7 @@ namespace wiScene
 		inline void SetUVSet_DisplacementMap(uint32_t value) { uvset_displacementMap = value; SetDirty(); }
 		inline void SetUVSet_EmissiveMap(uint32_t value) { uvset_emissiveMap = value; SetDirty(); }
 		inline void SetUVSet_OcclusionMap(uint32_t value) { uvset_occlusionMap = value; SetDirty(); }
+		inline void SetUVSet_TransmissionMap(uint32_t value) { uvset_transmissionMap = value; SetDirty(); }
 
 		// The MaterialComponent will be written to ShaderMaterial (a struct that is optimized for GPU use)
 		void WriteShaderMaterial(ShaderMaterial* dest) const;
@@ -654,9 +663,24 @@ namespace wiScene
 		};
 		CollisionShape shape;
 		float mass = 1.0f;
-		float friction = 1.0f;
-		float restitution = 1.0f;
-		float damping = 1.0f;
+		float friction = 0.5f;
+		float restitution = 0.0f;
+		float damping_linear = 0.0f;
+		float damping_angular = 0.0f;
+
+		struct BoxParams
+		{
+			XMFLOAT3 halfextents = XMFLOAT3(1, 1, 1);
+		} box;
+		struct SphereParams
+		{
+			float radius = 1;
+		} sphere;
+		struct CapsuleParams
+		{
+			float radius = 1;
+			float height = 1;
+		} capsule;
 
 		// Non-serialized attributes:
 		void* physicsobject = nullptr;
@@ -682,7 +706,8 @@ namespace wiScene
 		uint32_t _flags = DISABLE_DEACTIVATION;
 
 		float mass = 1.0f;
-		float friction = 1.0f;
+		float friction = 0.5f;
+		float restitution = 0.0f;
 		std::vector<uint32_t> physicsToGraphicsVertexMapping; // maps graphics vertex index to physics vertex index of the same position
 		std::vector<uint32_t> graphicsToPhysicsVertexMapping; // maps a physics vertex index to first graphics vertex index of the same position
 		std::vector<float> weights; // weight per physics vertex controlling the mass. (0: disable weight (no physics, only animation), 1: default weight)
@@ -978,6 +1003,7 @@ namespace wiScene
 				TRANSLATION,
 				ROTATION,
 				SCALE,
+				WEIGHTS,
 				UNKNOWN,
 				TYPE_FORCE_UINT32 = 0xFFFFFFFF
 			} path = TRANSLATION;
@@ -996,6 +1022,7 @@ namespace wiScene
 			{
 				LINEAR,
 				STEP,
+				CUBICSPLINE,
 				MODE_FORCE_UINT32 = 0xFFFFFFFF
 			} mode = LINEAR;
 
@@ -1004,6 +1031,9 @@ namespace wiScene
 		};
 		std::vector<AnimationChannel> channels;
 		std::vector<AnimationSampler> samplers;
+
+		// Non-serialzied attributes:
+		std::vector<float> morph_weights_temp;
 
 		inline bool IsPlaying() const { return _flags & PLAYING; }
 		inline bool IsLooped() const { return _flags & LOOPED; }
@@ -1212,19 +1242,19 @@ namespace wiScene
 		std::vector<AABB> parallel_bounds;
 		WeatherComponent weather;
 		wiGraphics::RaytracingAccelerationStructure TLAS;
-		wiGraphics::DescriptorTable descriptorTable;
 		enum DESCRIPTORTABLE_ENTRY
 		{
-			DESCRIPTORTABLE_ENTRY_SUBSETS_MATERIAL,
-			DESCRIPTORTABLE_ENTRY_SUBSETS_TEXTURE_BASECOLOR,
-			DESCRIPTORTABLE_ENTRY_SUBSETS_INDEXBUFFER,
-			DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_POSITION_NORMAL_WIND,
-			DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_UV0,
-			DESCRIPTORTABLE_ENTRY_SUBSETS_VERTEXBUFFER_UV1,
+			DESCRIPTORTABLE_SUBSETS_MATERIAL,
+			DESCRIPTORTABLE_SUBSETS_TEXTURES,
+			DESCRIPTORTABLE_SUBSETS_INDEXBUFFER,
+			DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_RAW,
+			DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS,
 
-			DESCRIPTORTABLE_ENTRY_COUNT
+			DESCRIPTORTABLE_COUNT
 		};
+		wiGraphics::DescriptorTable descriptorTables[DESCRIPTORTABLE_COUNT];
 		std::atomic<uint32_t> geometryOffset;
+		uint32_t MAX_SUBSET_DESCRIPTOR_INDEXING = 10000;
 
 		// Update all components by a given timestep (in seconds):
 		//	This is an expensive function, prefer to call it only once per frame!

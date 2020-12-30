@@ -10,11 +10,10 @@ TEXTURE2D(texture_normals, float3, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(output, unorm float, 0);
 
-ConstantBuffer<ShaderMaterial> subsets_material[MAX_DESCRIPTOR_INDEXING] : register(b0, space1);
-Texture2D<float4> subsets_texture_baseColor[MAX_DESCRIPTOR_INDEXING] : register(t0, space1);
-Buffer<uint> subsets_indexBuffer[MAX_DESCRIPTOR_INDEXING] : register(t100000, space1);
-Buffer<float2> subsets_vertexBuffer_UV0[MAX_DESCRIPTOR_INDEXING] : register(t300000, space1);
-Buffer<float2> subsets_vertexBuffer_UV1[MAX_DESCRIPTOR_INDEXING] : register(t400000, space1);
+ConstantBuffer<ShaderMaterial> subsets_material[] : register(b0, space1);
+Texture2D<float4> subsets_textures[] : register(t0, space2);
+Buffer<uint> subsets_indexBuffer[] : register(t0, space3);
+Buffer<float2> subsets_vertexBuffer_UVSETS[] : register(t0, space4);
 
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
 struct RayPayload
@@ -72,17 +71,12 @@ void RTAO_ClosestHit(inout RayPayload payload, in MyAttributes attr)
 [shader("anyhit")]
 void RTAO_AnyHit(inout RayPayload payload, in MyAttributes attr)
 {
-#ifndef SPIRV
     float u = attr.barycentrics.x;
     float v = attr.barycentrics.y;
     float w = 1 - u - v;
     uint primitiveIndex = PrimitiveIndex();
     uint geometryOffset = InstanceID();
-#ifdef RAYTRACING_GEOMETRYINDEX
     uint geometryIndex = GeometryIndex(); // requires tier_1_1 GeometryIndex feature!!
-#else
-    uint geometryIndex = 0;
-#endif // RAYTRACING_GEOMETRYINDEX
     uint descriptorIndex = geometryOffset + geometryIndex;
     ShaderMaterial material = subsets_material[descriptorIndex];
     if (material.uvset_baseColorMap < 0)
@@ -95,21 +89,21 @@ void RTAO_AnyHit(inout RayPayload payload, in MyAttributes attr)
     float2 uv0, uv1, uv2;
     if (material.uvset_baseColorMap == 0)
     {
-        uv0 = subsets_vertexBuffer_UV0[descriptorIndex][i0];
-        uv1 = subsets_vertexBuffer_UV0[descriptorIndex][i1];
-        uv2 = subsets_vertexBuffer_UV0[descriptorIndex][i2];
+        uv0 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i0];
+		uv1 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i1];
+		uv2 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i2];
     }
     else
     {
-        uv0 = subsets_vertexBuffer_UV1[descriptorIndex][i0];
-        uv1 = subsets_vertexBuffer_UV1[descriptorIndex][i1];
-        uv2 = subsets_vertexBuffer_UV1[descriptorIndex][i2];
+        uv0 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i0];
+		uv1 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i1];
+		uv2 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i2];
     }
 
     float2 uv = uv0 * w + uv1 * u + uv2 * v;
-    float alpha = subsets_texture_baseColor[descriptorIndex].SampleLevel(sampler_point_wrap, uv, 2).a;
+    float alpha = subsets_textures[descriptorIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_BASECOLOR].SampleLevel(sampler_point_wrap, uv, 2).a;
 
-    if (alpha > 0.9)
+    if (alpha - material.alphaTest > 0)
     {
         AcceptHitAndEndSearch();
     }
@@ -117,7 +111,6 @@ void RTAO_AnyHit(inout RayPayload payload, in MyAttributes attr)
     {
         IgnoreHit();
     }
-#endif // SPIRV
 }
 
 [shader("miss")]

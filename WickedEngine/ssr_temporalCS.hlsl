@@ -9,7 +9,7 @@ RWTEXTURE2D(output, float4, 0);
 
 static const float temporalResponseMin = 0.85;
 static const float temporalResponseMax = 0.98f;
-static const float temporalScale = 2.0;
+static const float temporalScale = 3.0;
 static const float temporalExposure = 10.0f;
 
 inline float Luma4(float3 color)

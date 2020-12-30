@@ -2,6 +2,7 @@
 #include "RendererWindow.h"
 #include "RenderPath3D.h"
 #include "Editor.h"
+#include "wiPhysicsEngine.h"
 
 
 void RendererWindow::Create(EditorComponent* editor)
@@ -12,7 +13,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	wiRenderer::SetToDrawGridHelper(true);
 	wiRenderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 520));
+	SetSize(XMFLOAT2(580, 530));
 
 	float x = 220, y = 5, step = 20, itemheight = 18;
 
@@ -46,10 +47,10 @@ void RendererWindow::Create(EditorComponent* editor)
 	resolutionScaleSlider.OnSlide([editor](wiEventArgs args) {
 		if (editor->resolutionScale != args.fValue)
 		{
-			editor->resolutionScale = args.fValue;
-			editor->ResizeBuffers();
 			editor->renderPath->resolutionScale = args.fValue;
 			editor->renderPath->ResizeBuffers();
+			editor->resolutionScale = args.fValue;
+			editor->ResizeBuffers();
 		}
 	});
 	AddWidget(&resolutionScaleSlider);
@@ -155,7 +156,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	AddWidget(&wireFrameCheckBox);
 
 	variableRateShadingClassificationCheckBox.Create("VRS Classification: ");
-	variableRateShadingClassificationCheckBox.SetTooltip("Enable classification of variable rate shading on the screen. Less important parts will be shaded with lesser resolution.\nDX12 only and requires Tier1 hardware support for variable shading rate");
+	variableRateShadingClassificationCheckBox.SetTooltip("Enable classification of variable rate shading on the screen. Less important parts will be shaded with lesser resolution.\nRequires Tier2 support for variable shading rate");
 	variableRateShadingClassificationCheckBox.SetPos(XMFLOAT2(x, y += step));
 	variableRateShadingClassificationCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	variableRateShadingClassificationCheckBox.OnClick([](wiEventArgs args) {
@@ -249,7 +250,6 @@ void RendererWindow::Create(EditorComponent* editor)
 		}
 		});
 	shadowTypeComboBox.SetSelected(0);
-	shadowTypeComboBox.SetEnabled(true);
 	shadowTypeComboBox.SetTooltip("Choose between shadowmaps and ray traced shadows (if available).\n(ray traced shadows experimental, needs hardware support and shaders compiled with HLSL6.5)");
 	AddWidget(&shadowTypeComboBox);
 
@@ -293,7 +293,6 @@ void RendererWindow::Create(EditorComponent* editor)
 		}
 	});
 	shadowProps2DComboBox.SetSelected(4);
-	shadowProps2DComboBox.SetEnabled(true);
 	shadowProps2DComboBox.SetTooltip("Choose a shadow quality preset for 2D shadow maps (spotlights, directional lights)...");
 	shadowProps2DComboBox.SetScriptTip("SetShadowProps2D(int resolution, int count, int softShadowQuality)");
 	AddWidget(&shadowProps2DComboBox);
@@ -337,7 +336,6 @@ void RendererWindow::Create(EditorComponent* editor)
 		}
 	});
 	shadowPropsCubeComboBox.SetSelected(2);
-	shadowPropsCubeComboBox.SetEnabled(true);
 	shadowPropsCubeComboBox.SetTooltip("Choose a shadow quality preset for cube shadow maps (pointlights, area lights)...");
 	shadowPropsCubeComboBox.SetScriptTip("SetShadowPropsCube(int resolution, int count)");
 	AddWidget(&shadowPropsCubeComboBox);
@@ -370,9 +368,22 @@ void RendererWindow::Create(EditorComponent* editor)
 		editor->ResizeBuffers();
 	});
 	MSAAComboBox.SetSelected(0);
-	MSAAComboBox.SetEnabled(true);
 	MSAAComboBox.SetTooltip("Multisampling Anti Aliasing quality. ");
 	AddWidget(&MSAAComboBox);
+
+	raytracedShadowsSlider.Create(1, 16, 1, 15, "Raytraced Shadow Quality: ");
+	raytracedShadowsSlider.SetTooltip("Sample count of raytraced shadows (per light). Higher numbers increase quality, but reduce performance.\nTip: Temporal AA will also help to improve quality.");
+	raytracedShadowsSlider.SetSize(XMFLOAT2(100, itemheight));
+	raytracedShadowsSlider.SetPos(XMFLOAT2(x, y += step));
+	raytracedShadowsSlider.SetValue((float)wiRenderer::GetRaytracedShadowsSampleCount());
+	raytracedShadowsSlider.OnSlide([&](wiEventArgs args) {
+		wiRenderer::SetRaytracedShadowsSampleCount((uint32_t)args.iValue);
+		});
+	AddWidget(&raytracedShadowsSlider);
+	if (!wiRenderer::GetDevice()->CheckCapability(wiGraphics::GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
+	{
+		raytracedShadowsSlider.SetEnabled(false);
+	}
 
 	temporalAACheckBox.Create("Temporal AA: ");
 	temporalAACheckBox.SetTooltip("Toggle Temporal Anti Aliasing. It is a supersampling techique which is performed across multiple frames.");
@@ -427,7 +438,6 @@ void RendererWindow::Create(EditorComponent* editor)
 
 	});
 	textureQualityComboBox.SetSelected(3);
-	textureQualityComboBox.SetEnabled(true);
 	textureQualityComboBox.SetTooltip("Choose a texture sampling method for material textures.");
 	AddWidget(&textureQualityComboBox);
 
@@ -457,8 +467,18 @@ void RendererWindow::Create(EditorComponent* editor)
 	// Visualizer toggles:
 	x = 540, y = 5;
 
+	physicsDebugCheckBox.Create("Physics visualizer: ");
+	physicsDebugCheckBox.SetTooltip("Visualize the physics world");
+	physicsDebugCheckBox.SetPos(XMFLOAT2(x, y += step));
+	physicsDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	physicsDebugCheckBox.OnClick([](wiEventArgs args) {
+		wiPhysicsEngine::SetDebugDrawEnabled(args.bValue);
+		});
+	physicsDebugCheckBox.SetCheck(wiPhysicsEngine::IsDebugDrawEnabled());
+	AddWidget(&physicsDebugCheckBox);
+
 	partitionBoxesCheckBox.Create("SPTree visualizer: ");
-	partitionBoxesCheckBox.SetTooltip("Visualize the world space partitioning tree as boxes");
+	partitionBoxesCheckBox.SetTooltip("Visualize the scene bounding boxes");
 	partitionBoxesCheckBox.SetScriptTip("SetDebugPartitionTreeEnabled(bool enabled)");
 	partitionBoxesCheckBox.SetPos(XMFLOAT2(x, y += step));
 	partitionBoxesCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
@@ -466,7 +486,6 @@ void RendererWindow::Create(EditorComponent* editor)
 		wiRenderer::SetToDrawDebugPartitionTree(args.bValue);
 	});
 	partitionBoxesCheckBox.SetCheck(wiRenderer::GetToDrawDebugPartitionTree());
-	partitionBoxesCheckBox.SetEnabled(false); // SP tree is not implemented at the moment anymore
 	AddWidget(&partitionBoxesCheckBox);
 
 	boneLinesCheckBox.Create("Bone line visualizer: ");
@@ -622,8 +641,20 @@ void RendererWindow::Create(EditorComponent* editor)
 	freezeCullingCameraCheckBox.OnClick([](wiEventArgs args) {
 		wiRenderer::SetFreezeCullingCameraEnabled(args.bValue);
 	});
-	freezeCullingCameraCheckBox.SetCheck(wiRenderer::GetToDrawDebugForceFields());
+	freezeCullingCameraCheckBox.SetCheck(wiRenderer::GetFreezeCullingCameraEnabled());
 	AddWidget(&freezeCullingCameraCheckBox);
+
+
+
+	disableAlbedoMapsCheckBox.Create("Disable Albedo maps: ");
+	disableAlbedoMapsCheckBox.SetTooltip("Disables albedo maps on objects for easier lighting debugging");
+	disableAlbedoMapsCheckBox.SetPos(XMFLOAT2(x, y += step));
+	disableAlbedoMapsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	disableAlbedoMapsCheckBox.OnClick([](wiEventArgs args) {
+		wiRenderer::SetDisableAlbedoMaps(args.bValue);
+		});
+	disableAlbedoMapsCheckBox.SetCheck(wiRenderer::IsDisableAlbedoMaps());
+	AddWidget(&disableAlbedoMapsCheckBox);
 
 
 

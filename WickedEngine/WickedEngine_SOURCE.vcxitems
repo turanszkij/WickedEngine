@@ -267,6 +267,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAudio.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAudio_BindLua.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiBlueNoise.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiContainers.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiECS.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiEvent.h" />

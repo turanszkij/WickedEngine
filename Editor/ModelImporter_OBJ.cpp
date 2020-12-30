@@ -118,7 +118,7 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 			material.emissiveColor.y = obj_material.emission[1];
 			material.emissiveColor.z = obj_material.emission[2];
 			material.emissiveColor.w = max(obj_material.emission[0], max(obj_material.emission[1], obj_material.emission[2]));
-			material.refractionIndex = obj_material.ior;
+			//material.refractionIndex = obj_material.ior;
 			material.metalness = obj_material.metallic;
 			material.normalMapName = obj_material.normal_texname;
 			material.surfaceMapName = obj_material.specular_texname;
