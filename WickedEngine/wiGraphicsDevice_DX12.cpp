@@ -2273,6 +2273,13 @@ using namespace DX12_Internal;
 
 		hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&copyFence));
 		assert(SUCCEEDED(hr));
+		copyFenceEvent = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
+		copyFenceValue = copyFence->GetCompletedValue();
+
+		hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&directFence));
+		assert(SUCCEEDED(hr));
+		directFenceEvent = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
+		directFenceValue = directFence->GetCompletedValue();
 
 		// Query features:
 
@@ -2581,6 +2588,8 @@ using namespace DX12_Internal;
 		WaitForGPU();
 
 		CloseHandle(frameFenceEvent);
+		CloseHandle(copyFenceEvent);
+		CloseHandle(directFenceEvent);
 
 		allocation_querypool_timestamp_readback->Release();
 		allocation_querypool_occlusion_readback->Release();
@@ -2592,6 +2601,8 @@ using namespace DX12_Internal;
 		{
 			RESOLUTIONWIDTH = width;
 			RESOLUTIONHEIGHT = height;
+
+			WaitForGPU();
 
 			for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 			{
@@ -5087,11 +5098,26 @@ using namespace DX12_Internal;
 
 	void GraphicsDevice_DX12::WaitForGPU()
 	{
-		if (frameFence->GetCompletedValue() < FRAMECOUNT)
+		// wait for copy and direct queues to be idle
+		copyFenceValue++;
+		HRESULT hr = copyQueue->Signal(copyFence.Get(), copyFenceValue);
+		assert(SUCCEEDED(hr));
+		if (copyFence->GetCompletedValue() < copyFenceValue)
 		{
-			HRESULT result = frameFence->SetEventOnCompletion(FRAMECOUNT, frameFenceEvent);
-			WaitForSingleObject(frameFenceEvent, INFINITE);
+			hr = copyFence->SetEventOnCompletion(copyFenceValue, copyFenceEvent);
+			WaitForSingleObject(copyFenceEvent, INFINITE);
 		}
+		assert(SUCCEEDED(hr));
+
+		directFenceValue++;
+		hr = directQueue->Signal(directFence.Get(), directFenceValue);
+		assert(SUCCEEDED(hr));
+		if (directFence->GetCompletedValue() < directFenceValue)
+		{
+			hr = directFence->SetEventOnCompletion(directFenceValue, directFenceEvent);
+			WaitForSingleObject(directFenceEvent, INFINITE);
+		}
+		assert(SUCCEEDED(hr));
 	}
 	void GraphicsDevice_DX12::ClearPipelineStateCache()
 	{
