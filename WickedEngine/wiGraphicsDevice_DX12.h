@@ -33,7 +33,6 @@ namespace wiGraphics
 		{
 			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 			HANDLE eventHandle;
-			uint64_t completedValue;
 			uint64_t nextValue;
 			std::mutex fenceLock;
 
@@ -42,9 +41,7 @@ namespace wiGraphics
 				HRESULT hr = device->device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
 				assert(SUCCEEDED(hr));
 				eventHandle = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
-
-				completedValue = fence->GetCompletedValue();
-				nextValue = completedValue + 1;
+				nextValue = fence->GetCompletedValue() + 1;
 			}
 
 			void free()
@@ -58,7 +55,6 @@ namespace wiGraphics
 
 				HRESULT hr = queue->Signal(fence.Get(), nextValue);
 				assert(SUCCEEDED(hr));
-				completedValue = fence->GetCompletedValue();
 				uint64_t oldValue = nextValue;
 				++nextValue;
 
@@ -83,8 +79,7 @@ namespace wiGraphics
 
 			void waitForIdle(ID3D12CommandQueue* queue)
 			{
-				uint64_t value = nextValue;
-				signal(queue);
+				uint64_t value = signal(queue);
 				waitCPU(value);
 			}
 		};
