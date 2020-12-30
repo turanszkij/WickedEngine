@@ -144,7 +144,12 @@ namespace wiGraphics
 		std::mutex copyQueueLock;
 		bool copyQueueUse = false;
 		Microsoft::WRL::ComPtr<ID3D12Fence> copyFence; // GPU only
+		HANDLE copyFenceEvent;
 		UINT64 copyFenceValue = 0;
+
+		Microsoft::WRL::ComPtr<ID3D12Fence> directFence;
+		HANDLE directFenceEvent;
+		UINT64 directFenceValue = 0;
 
 		struct FrameResources
 		{
