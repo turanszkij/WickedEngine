@@ -74,7 +74,7 @@ struct VertexSurface
 	float4 color;
 	float3 normal;
 	float4 tangent;
-	float4 prevPos;
+	float4 positionPrev;
 
 	inline void create(in ShaderMaterial material, in Input_Object_POS input)
 	{
@@ -93,9 +93,7 @@ struct VertexSurface
 			const float waveoffset = dot(position.xyz, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + (position.x + position.y + position.z) * g_xFrame_WindRandomness;
 			const float3 wavedir = g_xFrame_WindDirection * windweight;
 			const float3 wind = sin(g_xFrame_Time * g_xFrame_WindSpeed + waveoffset) * wavedir;
-			const float3 windPrev = sin(g_xFrame_TimePrev * g_xFrame_WindSpeed + waveoffset) * wavedir;
 			position.xyz += wind;
-			prevPos.xyz += windPrev;
 		}
 	}
 	inline void create(in ShaderMaterial material, in Input_Object_POS_TEX input)
@@ -115,9 +113,7 @@ struct VertexSurface
 			const float waveoffset = dot(position.xyz, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + (position.x + position.y + position.z) * g_xFrame_WindRandomness;
 			const float3 wavedir = g_xFrame_WindDirection * windweight;
 			const float3 wind = sin(g_xFrame_Time * g_xFrame_WindSpeed + waveoffset) * wavedir;
-			const float3 windPrev = sin(g_xFrame_TimePrev * g_xFrame_WindSpeed + waveoffset) * wavedir;
 			position.xyz += wind;
-			prevPos.xyz += windPrev;
 		}
 
 		uvsets = float4(input.uv0 * material.texMulAdd.xy + material.texMulAdd.zw, input.uv1);
@@ -126,6 +122,7 @@ struct VertexSurface
 	inline void create(in ShaderMaterial material, in Input_Object_ALL input)
 	{
 		position = float4(input.pos.xyz, 1);
+		positionPrev = float4(input.pre.xyz, 1);
 
 		color = material.baseColor * unpack_rgba(input.inst.userdata.x);
 
@@ -145,18 +142,17 @@ struct VertexSurface
 		{
 			const float windweight = ((normal_wind >> 24) & 0xFF) / 255.0f;
 			const float waveoffset = dot(position.xyz, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + (position.x + position.y + position.z) * g_xFrame_WindRandomness;
+			const float waveoffsetPrev = dot(positionPrev.xyz, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + (positionPrev.x + positionPrev.y + positionPrev.z) * g_xFrame_WindRandomness;
 			const float3 wavedir = g_xFrame_WindDirection * windweight;
 			const float3 wind = sin(g_xFrame_Time * g_xFrame_WindSpeed + waveoffset) * wavedir;
-			const float3 windPrev = sin(g_xFrame_TimePrev * g_xFrame_WindSpeed + waveoffset) * wavedir;
+			const float3 windPrev = sin(g_xFrame_TimePrev * g_xFrame_WindSpeed + waveoffsetPrev) * wavedir;
 			position.xyz += wind;
-			prevPos.xyz += windPrev;
+			positionPrev.xyz += windPrev;
 		}
 
 		uvsets = float4(input.uv0 * material.texMulAdd.xy + material.texMulAdd.zw, input.uv1);
 
 		atlas = input.atl * input.instAtlas.atlasMulAdd.xy + input.instAtlas.atlasMulAdd.zw;
-
-		prevPos = float4(input.pre.xyz, 1);
 	}
 };
 

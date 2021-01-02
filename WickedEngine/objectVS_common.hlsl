@@ -13,14 +13,14 @@ PixelInputType main(Input_Object_ALL input)
 	surface.create(g_xMaterial, input);
 
 	surface.position = mul(WORLD, surface.position);
-	surface.prevPos = mul(WORLDPREV, surface.prevPos);
+	surface.positionPrev = mul(WORLDPREV, surface.positionPrev);
 	surface.normal = normalize(mul((float3x3)WORLD, surface.normal));
 	surface.tangent.xyz = normalize(mul((float3x3)WORLD, surface.tangent.xyz));
 
 	Out.clip = dot(surface.position, g_xCamera_ClipPlane);
 
 	Out.pos = mul(g_xCamera_VP, surface.position);
-	Out.pos2DPrev = mul(g_xCamera_PrevVP, surface.prevPos);
+	Out.pos2DPrev = mul(g_xCamera_PrevVP, surface.positionPrev);
 	Out.pos3D = surface.position.xyz;
 	Out.color = surface.color;
 	Out.uvsets = surface.uvsets;

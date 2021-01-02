@@ -24,7 +24,7 @@ HullInputType main(Input_Object_ALL input)
 	surface.create(g_xMaterial, input);
 
 	surface.position = mul(WORLD, surface.position);
-	surface.prevPos = mul(WORLDPREV, surface.prevPos);
+	surface.positionPrev = mul(WORLDPREV, surface.positionPrev);
 	surface.normal = normalize(mul((float3x3)WORLD, surface.normal));
 	surface.tangent.xyz = normalize(mul((float3x3)WORLD, surface.tangent.xyz));
 
@@ -34,7 +34,7 @@ HullInputType main(Input_Object_ALL input)
 	Out.atlas = surface.atlas.xyxy;
 	Out.nor = float4(surface.normal, 1);
 	Out.tan = surface.tangent;
-	Out.posPrev = surface.prevPos;
+	Out.posPrev = surface.positionPrev;
 
 	return Out;
 }
