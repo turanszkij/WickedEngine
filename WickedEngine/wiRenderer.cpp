@@ -4824,8 +4824,8 @@ void DrawShadowmaps(
 
 		device->UnbindResources(TEXSLOT_SHADOWARRAY_2D, 2, cmd);
 
-		uint32_t shadowCounter_2D = 0;
-		uint32_t shadowCounter_Cube = 0;
+		uint32_t shadowCounter_2D = SHADOWRES_2D > 0 ? 0 : SHADOWCOUNT_2D;
+		uint32_t shadowCounter_Cube = SHADOWRES_CUBE > 0 ? 0 : SHADOWCOUNT_CUBE;
 
 		for (auto visibleLight : vis.visibleLights)
 		{
@@ -4847,8 +4847,6 @@ void DrawShadowmaps(
 			{
 			case LightComponent::DIRECTIONAL:
 			{
-				if (SHADOWRES_2D == 0)
-					break;
 				if (shadowCounter_2D >= SHADOWCOUNT_2D - CASCADE_COUNT + 1)
 					break;
 				uint32_t slice = shadowCounter_2D;
@@ -4923,8 +4921,6 @@ void DrawShadowmaps(
 			break;
 			case LightComponent::SPOT:
 			{
-				if (SHADOWRES_2D == 0)
-					break;
 				if (shadowCounter_2D >= SHADOWCOUNT_2D)
 					break;
 				uint32_t slice = shadowCounter_2D;
@@ -4998,8 +4994,6 @@ void DrawShadowmaps(
 			break;
 			case LightComponent::POINT:
 			{
-				if (SHADOWRES_CUBE == 0)
-					break;
 				if (shadowCounter_Cube >= SHADOWCOUNT_CUBE)
 					break;
 				uint32_t slice = shadowCounter_Cube;
