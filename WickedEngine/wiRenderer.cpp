@@ -3807,8 +3807,8 @@ void UpdateRenderData(
 		}
 
 		// Write lights into entity array:
-		uint32_t shadowCounter_2D = 0;
-		uint32_t shadowCounter_Cube = 0;
+		uint32_t shadowCounter_2D = SHADOWRES_2D > 0 ? 0 : SHADOWCOUNT_2D;
+		uint32_t shadowCounter_Cube = SHADOWRES_CUBE > 0 ? 0 : SHADOWCOUNT_CUBE;
 		for (auto visibleLight : vis.visibleLights)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
@@ -4847,10 +4847,10 @@ void DrawShadowmaps(
 			{
 			case LightComponent::DIRECTIONAL:
 			{
-				if (shadowCounter_2D >= SHADOWCOUNT_2D - CASCADE_COUNT + 1)
-				{
+				if (SHADOWRES_2D == 0)
 					break;
-				}
+				if (shadowCounter_2D >= SHADOWCOUNT_2D - CASCADE_COUNT + 1)
+					break;
 				uint32_t slice = shadowCounter_2D;
 				shadowCounter_2D += CASCADE_COUNT;
 
@@ -4923,10 +4923,10 @@ void DrawShadowmaps(
 			break;
 			case LightComponent::SPOT:
 			{
-				if (shadowCounter_2D >= SHADOWCOUNT_2D)
-				{
+				if (SHADOWRES_2D == 0)
 					break;
-				}
+				if (shadowCounter_2D >= SHADOWCOUNT_2D)
+					break;
 				uint32_t slice = shadowCounter_2D;
 				shadowCounter_2D += 1;
 
@@ -4998,10 +4998,10 @@ void DrawShadowmaps(
 			break;
 			case LightComponent::POINT:
 			{
-				if (shadowCounter_Cube >= SHADOWCOUNT_CUBE)
-				{
+				if (SHADOWRES_CUBE == 0)
 					break;
-				}
+				if (shadowCounter_Cube >= SHADOWCOUNT_CUBE)
+					break;
 				uint32_t slice = shadowCounter_Cube;
 				shadowCounter_Cube += 1;
 
