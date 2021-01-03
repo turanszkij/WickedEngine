@@ -54,63 +54,7 @@ namespace wiGraphics
 		uint32_t resource_descriptor_size = 0;
 		uint32_t sampler_descriptor_size = 0;
 
-		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorheap_RTV;
-		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorheap_DSV;
-
-		D3D12_CPU_DESCRIPTOR_HANDLE rtv_descriptor_heap_start = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE dsv_descriptor_heap_start = {};
-
-		struct DescriptorAllocator
-		{
-			GraphicsDevice_DX12* device = nullptr;
-			std::mutex locker;
-			D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-			std::vector<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>> heaps;
-			uint32_t descriptor_size = 0;
-			std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> freelist;
-
-			void init(GraphicsDevice_DX12* device, D3D12_DESCRIPTOR_HEAP_TYPE type)
-			{
-				this->device = device;
-				desc.Type = type;
-				desc.NumDescriptors = 1024;
-				descriptor_size = device->device->GetDescriptorHandleIncrementSize(type);
-			}
-			void block_allocate()
-			{
-				heaps.emplace_back();
-				HRESULT hr = device->device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&heaps.back()));
-				assert(SUCCEEDED(hr));
-				D3D12_CPU_DESCRIPTOR_HANDLE heap_start = heaps.back()->GetCPUDescriptorHandleForHeapStart();
-				for (UINT i = 0; i < desc.NumDescriptors; ++i)
-				{
-					D3D12_CPU_DESCRIPTOR_HANDLE handle = heap_start;
-					handle.ptr += i * descriptor_size;
-					freelist.push_back(handle);
-				}
-			}
-			D3D12_CPU_DESCRIPTOR_HANDLE allocate()
-			{
-				locker.lock();
-				if (freelist.empty())
-				{
-					block_allocate();
-				}
-				assert(!freelist.empty());
-				D3D12_CPU_DESCRIPTOR_HANDLE handle = freelist.back();
-				freelist.pop_back();
-				locker.unlock();
-				return handle;
-			}
-			void free(D3D12_CPU_DESCRIPTOR_HANDLE index)
-			{
-				locker.lock();
-				freelist.push_back(index);
-				locker.unlock();
-			}
-		};
-		std::shared_ptr<DescriptorAllocator> descriptors_res;
-		std::shared_ptr<DescriptorAllocator> descriptors_sam;
+		D3D12_CPU_DESCRIPTOR_HANDLE backbufferRTV[BACKBUFFER_COUNT] = {};
 
 		D3D12_CPU_DESCRIPTOR_HANDLE nullCBV = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE nullSAM = {};
@@ -140,6 +84,8 @@ namespace wiGraphics
 		Microsoft::WRL::ComPtr<ID3D12Fence> directFence;
 		HANDLE directFenceEvent;
 		UINT64 directFenceValue = 0;
+
+		RenderPass dummyRenderpass;
 
 		struct FrameResources
 		{
@@ -223,7 +169,6 @@ namespace wiGraphics
 		const RootSignature* active_rootsig_graphics[COMMANDLIST_COUNT] = {};
 		const RootSignature* active_rootsig_compute[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
-		D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS resolve_subresources[COMMANDLIST_COUNT][D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 		SHADING_RATE prev_shadingrate[COMMANDLIST_COUNT] = {};
 
 		bool dirty_pso[COMMANDLIST_COUNT] = {};
@@ -232,6 +177,8 @@ namespace wiGraphics
 		void predraw(CommandList cmd);
 		void predispatch(CommandList cmd);
 		void preraytrace(CommandList cmd);
+
+		void deferred_queryresolve(CommandList cmd);
 
 		struct Query_Resolve
 		{
@@ -344,6 +291,60 @@ namespace wiGraphics
 			Microsoft::WRL::ComPtr<ID3D12Device> device;
 			uint64_t framecount = 0;
 			std::mutex destroylocker;
+
+			struct DescriptorAllocator
+			{
+				GraphicsDevice_DX12* device = nullptr;
+				std::mutex locker;
+				D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+				std::vector<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>> heaps;
+				uint32_t descriptor_size = 0;
+				std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> freelist;
+
+				void init(GraphicsDevice_DX12* device, D3D12_DESCRIPTOR_HEAP_TYPE type)
+				{
+					this->device = device;
+					desc.Type = type;
+					desc.NumDescriptors = 1024;
+					descriptor_size = device->device->GetDescriptorHandleIncrementSize(type);
+				}
+				void block_allocate()
+				{
+					heaps.emplace_back();
+					HRESULT hr = device->device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&heaps.back()));
+					assert(SUCCEEDED(hr));
+					D3D12_CPU_DESCRIPTOR_HANDLE heap_start = heaps.back()->GetCPUDescriptorHandleForHeapStart();
+					for (UINT i = 0; i < desc.NumDescriptors; ++i)
+					{
+						D3D12_CPU_DESCRIPTOR_HANDLE handle = heap_start;
+						handle.ptr += i * descriptor_size;
+						freelist.push_back(handle);
+					}
+				}
+				D3D12_CPU_DESCRIPTOR_HANDLE allocate()
+				{
+					locker.lock();
+					if (freelist.empty())
+					{
+						block_allocate();
+					}
+					assert(!freelist.empty());
+					D3D12_CPU_DESCRIPTOR_HANDLE handle = freelist.back();
+					freelist.pop_back();
+					locker.unlock();
+					return handle;
+				}
+				void free(D3D12_CPU_DESCRIPTOR_HANDLE index)
+				{
+					locker.lock();
+					freelist.push_back(index);
+					locker.unlock();
+				}
+			};
+			DescriptorAllocator descriptors_res;
+			DescriptorAllocator descriptors_sam;
+			DescriptorAllocator descriptors_rtv;
+			DescriptorAllocator descriptors_dsv;
 
 			struct QueryAllocator
 			{

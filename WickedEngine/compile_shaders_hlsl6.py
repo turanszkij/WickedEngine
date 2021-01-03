@@ -58,6 +58,10 @@ for item in root.iter():
                 cmd += "as"
 
             cmd += "_6_5 "
+
+            cmd += " -pack-optimized "
+            cmd += " -res-may-alias "
+            cmd += " -no-legacy-cbuf-layout "
             
             cmd += " -flegacy-macro-expansion "
             

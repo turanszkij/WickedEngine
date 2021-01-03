@@ -169,7 +169,7 @@ wiOcean::wiOcean(const WeatherComponent& weather)
 	tex_desc.ArraySize = 1;
 	tex_desc.SampleCount = 1;
 	tex_desc.Usage = USAGE_DEFAULT;
-	tex_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS | BIND_RENDER_TARGET;
+	tex_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 	tex_desc.CPUAccessFlags = 0;
 
 	tex_desc.Format = FORMAT_R16G16B16A16_FLOAT;

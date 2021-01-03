@@ -980,49 +980,90 @@ namespace DX12_Internal
 
 	struct SingleDescriptor
 	{
-		std::shared_ptr<GraphicsDevice_DX12::DescriptorAllocator> allocator;
+		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		D3D12_CPU_DESCRIPTOR_HANDLE handle = {};
+		D3D12_DESCRIPTOR_HEAP_TYPE type = {};
 		union
 		{
 			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv;
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uav;
 			D3D12_SAMPLER_DESC sam;
+			D3D12_RENDER_TARGET_VIEW_DESC rtv;
+			D3D12_DEPTH_STENCIL_VIEW_DESC dsv;
 		};
 		bool IsValid() const { return handle.ptr != 0; }
 		void init(GraphicsDevice_DX12* device, const D3D12_CONSTANT_BUFFER_VIEW_DESC& cbv)
 		{
 			this->cbv = cbv;
-			this->allocator = device->descriptors_res;
-			handle = allocator->allocate();
+			this->allocationhandler = device->allocationhandler;
+			type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+			handle = allocationhandler->descriptors_res.allocate();
 			device->device->CreateConstantBufferView(&cbv, handle);
 		}
 		void init(GraphicsDevice_DX12* device, const D3D12_SHADER_RESOURCE_VIEW_DESC& srv, ID3D12Resource* res)
 		{
 			this->srv = srv;
-			this->allocator = device->descriptors_res;
-			handle = allocator->allocate();
+			this->allocationhandler = device->allocationhandler;
+			type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+			handle = allocationhandler->descriptors_res.allocate();
 			device->device->CreateShaderResourceView(res, &srv, handle);
 		}
 		void init(GraphicsDevice_DX12* device, const D3D12_UNORDERED_ACCESS_VIEW_DESC& uav, ID3D12Resource* res)
 		{
 			this->uav = uav;
-			this->allocator = device->descriptors_res;
-			handle = allocator->allocate();
+			this->allocationhandler = device->allocationhandler;
+			type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+			handle = allocationhandler->descriptors_res.allocate();
 			device->device->CreateUnorderedAccessView(res, nullptr, &uav, handle);
 		}
 		void init(GraphicsDevice_DX12* device, const D3D12_SAMPLER_DESC& sam)
 		{
 			this->sam = sam;
-			this->allocator = device->descriptors_sam;
-			handle = allocator->allocate();
+			this->allocationhandler = device->allocationhandler;
+			type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+			handle = allocationhandler->descriptors_sam.allocate();
 			device->device->CreateSampler(&sam, handle);
+		}
+		void init(GraphicsDevice_DX12* device, const D3D12_RENDER_TARGET_VIEW_DESC& rtv, ID3D12Resource* res)
+		{
+			this->rtv = rtv;
+			this->allocationhandler = device->allocationhandler;
+			type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+			handle = allocationhandler->descriptors_rtv.allocate();
+			device->device->CreateRenderTargetView(res, &rtv, handle);
+		}
+		void init(GraphicsDevice_DX12* device, const D3D12_DEPTH_STENCIL_VIEW_DESC& dsv, ID3D12Resource* res)
+		{
+			this->dsv = dsv;
+			this->allocationhandler = device->allocationhandler;
+			type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+			handle = allocationhandler->descriptors_dsv.allocate();
+			device->device->CreateDepthStencilView(res, &dsv, handle);
 		}
 		void destroy()
 		{
 			if (IsValid())
 			{
-				allocator->free(handle);
+				switch (type)
+				{
+				case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV:
+					allocationhandler->descriptors_res.free(handle);
+					break;
+				case D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:
+					allocationhandler->descriptors_sam.free(handle);
+					break;
+				case D3D12_DESCRIPTOR_HEAP_TYPE_RTV:
+					allocationhandler->descriptors_rtv.free(handle);
+					break;
+				case D3D12_DESCRIPTOR_HEAP_TYPE_DSV:
+					allocationhandler->descriptors_dsv.free(handle);
+					break;
+				case D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES:
+				default:
+					assert(0);
+					break;
+				}
 			}
 		}
 	};
@@ -1067,16 +1108,27 @@ namespace DX12_Internal
 	};
 	struct Texture_DX12 : public Resource_DX12
 	{
-		D3D12_RENDER_TARGET_VIEW_DESC rtv = {};
-		D3D12_DEPTH_STENCIL_VIEW_DESC dsv = {};
-		std::vector<D3D12_RENDER_TARGET_VIEW_DESC> subresources_rtv;
-		std::vector<D3D12_DEPTH_STENCIL_VIEW_DESC> subresources_dsv;
+		SingleDescriptor rtv = {};
+		SingleDescriptor dsv = {};
+		std::vector<SingleDescriptor> subresources_rtv;
+		std::vector<SingleDescriptor> subresources_dsv;
 
 		~Texture_DX12() override
 		{
 			allocationhandler->destroylocker.lock();
 			uint64_t framecount = allocationhandler->framecount;
 			allocationhandler->destroylocker.unlock();
+
+			rtv.destroy();
+			dsv.destroy();
+			for (auto& x : subresources_rtv)
+			{
+				x.destroy();
+			}
+			for (auto& x : subresources_dsv)
+			{
+				x.destroy();
+			}
 		}
 	};
 	struct Sampler_DX12
@@ -1172,7 +1224,15 @@ namespace DX12_Internal
 		uint32_t num_barriers_begin = 0;
 		D3D12_RESOURCE_BARRIER barrierdescs_end[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 		uint32_t num_barriers_end = 0;
-		bool shading_rate_image_bound = false;
+
+		D3D12_RENDER_PASS_FLAGS flags = D3D12_RENDER_PASS_FLAG_NONE;
+		uint32_t rt_count = 0;
+		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTVs[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+		D3D12_RENDER_PASS_DEPTH_STENCIL_DESC DSV = {};
+		const Texture* shading_rate_image = nullptr;
+
+		// Due to a API bug, this resolve_subresources array must be kept alive between BeginRenderpass() and EndRenderpass()!
+		D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS resolve_subresources[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 	};
 	struct DescriptorTable_DX12
 	{
@@ -1855,7 +1915,7 @@ using namespace DX12_Internal;
 				DXGI_SAMPLE_DESC sampleDesc = {};
 				sampleDesc.Count = 1;
 				sampleDesc.Quality = 0;
-				if (active_renderpass[cmd] == nullptr)
+				if (active_renderpass[cmd] == &dummyRenderpass)
 				{
 					formats.NumRenderTargets = 1;
 					formats.RTFormats[0] = _ConvertFormat(BACKBUFFER_FORMAT);
@@ -2032,6 +2092,50 @@ using namespace DX12_Internal;
 		{
 			GetFrameResources().descriptors[cmd].validate(false, cmd);
 		}
+	}
+
+	void GraphicsDevice_DX12::deferred_queryresolve(CommandList cmd)
+	{
+		assert(active_renderpass[cmd] == nullptr);
+
+		// Perform query resolves (must be outside of render pass):
+		for (auto& x : query_resolves[cmd])
+		{
+			switch (x.type)
+			{
+			case GPU_QUERY_TYPE_TIMESTAMP:
+				GetDirectCommandList(cmd)->ResolveQueryData(
+					allocationhandler->queries_timestamp.blocks[x.block].pool.Get(),
+					D3D12_QUERY_TYPE_TIMESTAMP,
+					x.index,
+					1,
+					allocationhandler->queries_timestamp.blocks[x.block].readback.Get(),
+					(uint64_t)x.index * sizeof(uint64_t)
+				);
+				break;
+			case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+				GetDirectCommandList(cmd)->ResolveQueryData(
+					allocationhandler->queries_occlusion.blocks[x.block].pool.Get(),
+					D3D12_QUERY_TYPE_BINARY_OCCLUSION,
+					x.index,
+					1,
+					allocationhandler->queries_occlusion.blocks[x.block].readback.Get(),
+					(uint64_t)x.index * sizeof(uint64_t)
+				);
+				break;
+			case GPU_QUERY_TYPE_OCCLUSION:
+				GetDirectCommandList(cmd)->ResolveQueryData(
+					allocationhandler->queries_occlusion.blocks[x.block].pool.Get(),
+					D3D12_QUERY_TYPE_OCCLUSION,
+					x.index,
+					1,
+					allocationhandler->queries_occlusion.blocks[x.block].readback.Get(),
+					(uint64_t)x.index * sizeof(uint64_t)
+				);
+				break;
+			}
+		}
+		query_resolves[cmd].clear();
 	}
 
 	// Engine functions
@@ -2218,33 +2322,8 @@ using namespace DX12_Internal;
 		hr = _swapChain.As(&swapChain);
 		assert(SUCCEEDED(hr));
 
-
-
-		// Create common descriptor heaps
-
-		{
-			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
-			heapDesc.NodeMask = 0;
-			heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-			heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-			heapDesc.NumDescriptors = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT * COMMANDLIST_COUNT;
-			HRESULT hr = device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&descriptorheap_RTV));
-			assert(SUCCEEDED(hr));
-			rtv_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-			rtv_descriptor_heap_start = descriptorheap_RTV->GetCPUDescriptorHandleForHeapStart();
-		}
-		{
-			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
-			heapDesc.NodeMask = 0;
-			heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-			heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-			heapDesc.NumDescriptors = COMMANDLIST_COUNT;
-			HRESULT hr = device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&descriptorheap_DSV));
-			assert(SUCCEEDED(hr));
-			dsv_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-			dsv_descriptor_heap_start = descriptorheap_DSV->GetCPUDescriptorHandleForHeapStart();
-		}
-
+		rtv_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		dsv_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 		resource_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		sampler_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
@@ -2382,14 +2461,20 @@ using namespace DX12_Internal;
 			assert(SUCCEEDED(hr));
 		}
 
-		descriptors_res = std::make_shared<DescriptorAllocator>();
-		descriptors_sam = std::make_shared<DescriptorAllocator>();
-		descriptors_res->init(this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		descriptors_sam->init(this, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+		allocationhandler->descriptors_res.init(this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		allocationhandler->descriptors_sam.init(this, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+		allocationhandler->descriptors_rtv.init(this, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		allocationhandler->descriptors_dsv.init(this, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
+		for (int i = 0; i < arraysize(backBuffers); ++i)
+		{
+			backbufferRTV[i] = allocationhandler->descriptors_rtv.allocate();
+			device->CreateRenderTargetView(backBuffers[i].Get(), nullptr, backbufferRTV[i]);
+		}
 
 		{
 			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
-			nullCBV = descriptors_res->allocate();
+			nullCBV = allocationhandler->descriptors_res.allocate();
 			device->CreateConstantBufferView(&cbv_desc, nullCBV);
 		}
 		{
@@ -2399,7 +2484,7 @@ using namespace DX12_Internal;
 			sampler_desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 			sampler_desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
 			sampler_desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-			nullSAM = descriptors_sam->allocate();
+			nullSAM = allocationhandler->descriptors_sam.allocate();
 			device->CreateSampler(&sampler_desc, nullSAM);
 		}
 		{
@@ -2407,7 +2492,7 @@ using namespace DX12_Internal;
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			srv_desc.Format = DXGI_FORMAT_R32_UINT;
 			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-			nullSRV_buffer = descriptors_res->allocate();
+			nullSRV_buffer = allocationhandler->descriptors_res.allocate();
 			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV_buffer);
 		}
 		{
@@ -2415,7 +2500,7 @@ using namespace DX12_Internal;
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
-			nullSRV_texture1d = descriptors_res->allocate();
+			nullSRV_texture1d = allocationhandler->descriptors_res.allocate();
 			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV_texture1d);
 		}
 		{
@@ -2423,7 +2508,7 @@ using namespace DX12_Internal;
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1DARRAY;
-			nullSRV_texture1darray = descriptors_res->allocate();
+			nullSRV_texture1darray = allocationhandler->descriptors_res.allocate();
 			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV_texture1darray);
 		}
 		{
@@ -2431,7 +2516,7 @@ using namespace DX12_Internal;
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			nullSRV_texture2d = descriptors_res->allocate();
+			nullSRV_texture2d = allocationhandler->descriptors_res.allocate();
 			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV_texture2d);
 		}
 		{
@@ -2439,7 +2524,7 @@ using namespace DX12_Internal;
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
-			nullSRV_texture2darray = descriptors_res->allocate();
+			nullSRV_texture2darray = allocationhandler->descriptors_res.allocate();
 			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV_texture2darray);
 		}
 		{
@@ -2447,7 +2532,7 @@ using namespace DX12_Internal;
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
-			nullSRV_texturecube = descriptors_res->allocate();
+			nullSRV_texturecube = allocationhandler->descriptors_res.allocate();
 			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV_texturecube);
 		}
 		{
@@ -2455,7 +2540,7 @@ using namespace DX12_Internal;
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
-			nullSRV_texturecubearray = descriptors_res->allocate();
+			nullSRV_texturecubearray = allocationhandler->descriptors_res.allocate();
 			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV_texturecubearray);
 		}
 		{
@@ -2463,7 +2548,7 @@ using namespace DX12_Internal;
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
-			nullSRV_texture3d = descriptors_res->allocate();
+			nullSRV_texture3d = allocationhandler->descriptors_res.allocate();
 			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV_texture3d);
 		}
 		{
@@ -2471,49 +2556,49 @@ using namespace DX12_Internal;
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			srv_desc.Format = DXGI_FORMAT_UNKNOWN;
 			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
-			nullSRV_accelerationstructure = descriptors_res->allocate();
+			nullSRV_accelerationstructure = allocationhandler->descriptors_res.allocate();
 			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV_accelerationstructure);
 		}
 		{
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
 			uav_desc.Format = DXGI_FORMAT_R32_UINT;
 			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-			nullUAV_buffer = descriptors_res->allocate();
+			nullUAV_buffer = allocationhandler->descriptors_res.allocate();
 			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, nullUAV_buffer);
 		}
 		{
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
 			uav_desc.Format = DXGI_FORMAT_R32_UINT;
 			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE1D;
-			nullUAV_texture1d = descriptors_res->allocate();
+			nullUAV_texture1d = allocationhandler->descriptors_res.allocate();
 			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, nullUAV_texture1d);
 		}
 		{
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
 			uav_desc.Format = DXGI_FORMAT_R32_UINT;
 			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE1DARRAY;
-			nullUAV_texture1darray = descriptors_res->allocate();
+			nullUAV_texture1darray = allocationhandler->descriptors_res.allocate();
 			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, nullUAV_texture1darray);
 		}
 		{
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
 			uav_desc.Format = DXGI_FORMAT_R32_UINT;
 			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-			nullUAV_texture2d = descriptors_res->allocate();
+			nullUAV_texture2d = allocationhandler->descriptors_res.allocate();
 			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, nullUAV_texture2d);
 		}
 		{
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
 			uav_desc.Format = DXGI_FORMAT_R32_UINT;
 			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
-			nullUAV_texture2darray = descriptors_res->allocate();
+			nullUAV_texture2darray = allocationhandler->descriptors_res.allocate();
 			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, nullUAV_texture2darray);
 		}
 		{
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
 			uav_desc.Format = DXGI_FORMAT_R32_UINT;
 			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
-			nullUAV_texture3d = descriptors_res->allocate();
+			nullUAV_texture3d = allocationhandler->descriptors_res.allocate();
 			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, nullUAV_texture3d);
 		}
 
@@ -2553,19 +2638,21 @@ using namespace DX12_Internal;
 
 			WaitForGPU();
 
-			for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+			for (int i = 0; i < arraysize(backBuffers); ++i)
 			{
-				backBuffers[fr].Reset();
+				backBuffers[i].Reset();
 			}
 
 			HRESULT hr = swapChain->ResizeBuffers(GetBackBufferCount(), width, height, _ConvertFormat(GetBackBufferFormat()), 0);
 			assert(SUCCEEDED(hr));
-
-			for (uint32_t i = 0; i < BACKBUFFER_COUNT; ++i)
+			
+			for (int i = 0; i < arraysize(backBuffers); ++i)
 			{
 				uint32_t fr = (GetFrameCount() + i) % BACKBUFFER_COUNT;
 				hr = swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffers[fr]));
 				assert(SUCCEEDED(hr));
+
+				device->CreateRenderTargetView(backBuffers[fr].Get(), nullptr, backbufferRTV[fr]);
 			}
 		}
 	}
@@ -2575,8 +2662,6 @@ using namespace DX12_Internal;
 		auto internal_state = std::make_shared<Texture_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		internal_state->resource = backBuffers[backbuffer_index];
-		internal_state->rtv = {};
-		internal_state->rtv.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 
 		D3D12_RESOURCE_DESC desc = internal_state->resource->GetDesc();
 		device->GetCopyableFootprints(&desc, 0, 1, 0, &internal_state->footprint, nullptr, nullptr, nullptr);
@@ -3346,8 +3431,14 @@ using namespace DX12_Internal;
 
 		renderpass->desc = *pDesc;
 
+		if (renderpass->desc._flags & RenderPassDesc::FLAG_ALLOW_UAV_WRITES)
+		{
+			internal_state->flags |= D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES;
+		}
+
 		renderpass->hash = 0;
 		wiHelper::hash_combine(renderpass->hash, pDesc->attachments.size());
+		int resolve_dst_counter = 0;
 		for (auto& attachment : pDesc->attachments)
 		{
 			if (attachment.type == RenderPassAttachment::RENDERTARGET || attachment.type == RenderPassAttachment::DEPTH_STENCIL)
@@ -3356,9 +3447,143 @@ using namespace DX12_Internal;
 				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.SampleCount);
 			}
 
-			if (attachment.type == RenderPassAttachment::SHADING_RATE_SOURCE)
+			const Texture* texture = attachment.texture;
+			int subresource = attachment.subresource;
+			auto texture_internal = to_internal(texture);
+
+			D3D12_CLEAR_VALUE clear_value;
+			clear_value.Format = _ConvertFormat(texture->desc.Format);
+
+			if (attachment.type == RenderPassAttachment::RENDERTARGET)
 			{
-				internal_state->shading_rate_image_bound = true;
+
+				if (subresource < 0 || texture_internal->subresources_rtv.empty())
+				{
+					internal_state->RTVs[internal_state->rt_count].cpuDescriptor = texture_internal->rtv.handle;
+				}
+				else
+				{
+					assert(texture_internal->subresources_rtv.size() > size_t(subresource) && "Invalid RTV subresource!");
+					internal_state->RTVs[internal_state->rt_count].cpuDescriptor = texture_internal->subresources_rtv[subresource].handle;
+				}
+
+				switch (attachment.loadop)
+				{
+				default:
+				case RenderPassAttachment::LOADOP_LOAD:
+					internal_state->RTVs[internal_state->rt_count].BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+					break;
+				case RenderPassAttachment::LOADOP_CLEAR:
+					internal_state->RTVs[internal_state->rt_count].BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+					clear_value.Color[0] = texture->desc.clear.color[0];
+					clear_value.Color[1] = texture->desc.clear.color[1];
+					clear_value.Color[2] = texture->desc.clear.color[2];
+					clear_value.Color[3] = texture->desc.clear.color[3];
+					internal_state->RTVs[internal_state->rt_count].BeginningAccess.Clear.ClearValue = clear_value;
+					break;
+				case RenderPassAttachment::LOADOP_DONTCARE:
+					internal_state->RTVs[internal_state->rt_count].BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
+					break;
+				}
+
+				switch (attachment.storeop)
+				{
+				default:
+				case RenderPassAttachment::STOREOP_STORE:
+					internal_state->RTVs[internal_state->rt_count].EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+					break;
+				case RenderPassAttachment::STOREOP_DONTCARE:
+					internal_state->RTVs[internal_state->rt_count].EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
+					break;
+				}
+
+				internal_state->rt_count++;
+			}
+			else if (attachment.type == RenderPassAttachment::DEPTH_STENCIL)
+			{
+				if (subresource < 0 || texture_internal->subresources_dsv.empty())
+				{
+					internal_state->DSV.cpuDescriptor = texture_internal->dsv.handle;
+				}
+				else
+				{
+					assert(texture_internal->subresources_dsv.size() > size_t(subresource) && "Invalid DSV subresource!");
+					internal_state->DSV.cpuDescriptor = texture_internal->subresources_dsv[subresource].handle;
+				}
+
+				switch (attachment.loadop)
+				{
+				default:
+				case RenderPassAttachment::LOADOP_LOAD:
+					internal_state->DSV.DepthBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+					internal_state->DSV.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+					break;
+				case RenderPassAttachment::LOADOP_CLEAR:
+					internal_state->DSV.DepthBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+					internal_state->DSV.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+					clear_value.DepthStencil.Depth = texture->desc.clear.depthstencil.depth;
+					clear_value.DepthStencil.Stencil = texture->desc.clear.depthstencil.stencil;
+					internal_state->DSV.DepthBeginningAccess.Clear.ClearValue = clear_value;
+					internal_state->DSV.StencilBeginningAccess.Clear.ClearValue = clear_value;
+					break;
+				case RenderPassAttachment::LOADOP_DONTCARE:
+					internal_state->DSV.DepthBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
+					internal_state->DSV.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
+					break;
+				}
+
+				switch (attachment.storeop)
+				{
+				default:
+				case RenderPassAttachment::STOREOP_STORE:
+					internal_state->DSV.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+					internal_state->DSV.StencilEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+					break;
+				case RenderPassAttachment::STOREOP_DONTCARE:
+					internal_state->DSV.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
+					internal_state->DSV.StencilEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
+					break;
+				}
+			}
+			else if (attachment.type == RenderPassAttachment::RESOLVE)
+			{
+				if (texture != nullptr)
+				{
+					int resolve_src_counter = 0;
+					for (auto& src : renderpass->desc.attachments)
+					{
+						if (src.type == RenderPassAttachment::RENDERTARGET && src.texture != nullptr)
+						{
+							if (resolve_src_counter == resolve_dst_counter)
+							{
+								auto src_internal = to_internal(src.texture);
+
+								D3D12_RENDER_PASS_RENDER_TARGET_DESC& src_RTV = internal_state->RTVs[resolve_src_counter];
+								src_RTV.EndingAccess.Resolve.PreserveResolveSource = src_RTV.EndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+								src_RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
+								src_RTV.EndingAccess.Resolve.Format = clear_value.Format;
+								src_RTV.EndingAccess.Resolve.ResolveMode = D3D12_RESOLVE_MODE_AVERAGE;
+								src_RTV.EndingAccess.Resolve.SubresourceCount = 1;
+								src_RTV.EndingAccess.Resolve.pDstResource = texture_internal->resource.Get();
+								src_RTV.EndingAccess.Resolve.pSrcResource = src_internal->resource.Get();
+
+								src_RTV.EndingAccess.Resolve.pSubresourceParameters = &internal_state->resolve_subresources[resolve_src_counter];
+								internal_state->resolve_subresources[resolve_src_counter].SrcRect.left = 0;
+								internal_state->resolve_subresources[resolve_src_counter].SrcRect.right = (LONG)texture->desc.Width;
+								internal_state->resolve_subresources[resolve_src_counter].SrcRect.bottom = (LONG)texture->desc.Height;
+								internal_state->resolve_subresources[resolve_src_counter].SrcRect.top = 0;
+
+								break;
+							}
+							resolve_src_counter++;
+						}
+					}
+				}
+				resolve_dst_counter++;
+			}
+			else if (attachment.type == RenderPassAttachment::SHADING_RATE_SOURCE)
+			{
+				internal_state->shading_rate_image = texture;
 			}
 		}
 
@@ -4280,12 +4505,15 @@ using namespace DX12_Internal;
 				rtv_desc.Texture3D.WSize = -1;
 			}
 
-			if (internal_state->rtv.ViewDimension == D3D12_RTV_DIMENSION_UNKNOWN)
+			SingleDescriptor descriptor;
+			descriptor.init(this, rtv_desc, internal_state->resource.Get());
+
+			if (!internal_state->rtv.IsValid())
 			{
-				internal_state->rtv = rtv_desc;
+				internal_state->rtv = descriptor;
 				return -1;
 			}
-			internal_state->subresources_rtv.push_back(rtv_desc);
+			internal_state->subresources_rtv.push_back(descriptor);
 			return int(internal_state->subresources_rtv.size() - 1);
 		}
 		break;
@@ -4360,12 +4588,15 @@ using namespace DX12_Internal;
 				}
 			}
 
-			if (internal_state->dsv.ViewDimension == D3D12_DSV_DIMENSION_UNKNOWN)
+			SingleDescriptor descriptor;
+			descriptor.init(this, dsv_desc, internal_state->resource.Get());
+
+			if (!internal_state->dsv.IsValid())
 			{
-				internal_state->dsv = dsv_desc;
+				internal_state->dsv = descriptor;
 				return -1;
 			}
-			internal_state->subresources_dsv.push_back(dsv_desc);
+			internal_state->subresources_dsv.push_back(descriptor);
 			return int(internal_state->subresources_dsv.size() - 1);
 		}
 		break;
@@ -4839,12 +5070,8 @@ using namespace DX12_Internal;
 
 		const float clearcolor[] = { 0,0,0,1 };
 
-		D3D12_CPU_DESCRIPTOR_HANDLE descriptors_RTV = rtv_descriptor_heap_start;
-		descriptors_RTV.ptr += rtv_descriptor_size * D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT * cmd;
-		device->CreateRenderTargetView(backBuffers[backbuffer_index].Get(), nullptr, descriptors_RTV);
-
 		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTV = {};
-		RTV.cpuDescriptor = descriptors_RTV;
+		RTV.cpuDescriptor = backbufferRTV[backbuffer_index];
 		RTV.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
 		RTV.BeginningAccess.Clear.ClearValue.Color[0] = clearcolor[0];
 		RTV.BeginningAccess.Clear.ClearValue.Color[1] = clearcolor[1];
@@ -4853,10 +5080,14 @@ using namespace DX12_Internal;
 		RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
 		GetDirectCommandList(cmd)->BeginRenderPass(1, &RTV, nullptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
 
+		active_renderpass[cmd] = &dummyRenderpass;
 	}
 	void GraphicsDevice_DX12::PresentEnd(CommandList cmd)
 	{
 		GetDirectCommandList(cmd)->EndRenderPass();
+
+		active_renderpass[cmd] = nullptr;
+		deferred_queryresolve(cmd);
 
 		// Indicate that the back buffer will now be used to present.
 		D3D12_RESOURCE_BARRIER barrier = {};
@@ -4974,45 +5205,6 @@ using namespace DX12_Internal;
 			cmd_count.store(0);
 			for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
 			{
-				// Perform query resolves (must be outside of render pass):
-				for (auto& x : query_resolves[cmd])
-				{
-					switch (x.type)
-					{
-					case GPU_QUERY_TYPE_TIMESTAMP:
-						GetDirectCommandList(cmd)->ResolveQueryData(
-							allocationhandler->queries_timestamp.blocks[x.block].pool.Get(),
-							D3D12_QUERY_TYPE_TIMESTAMP,
-							x.index,
-							1,
-							allocationhandler->queries_timestamp.blocks[x.block].readback.Get(),
-							(uint64_t)x.index * sizeof(uint64_t)
-						);
-						break;
-					case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-						GetDirectCommandList(cmd)->ResolveQueryData(
-							allocationhandler->queries_occlusion.blocks[x.block].pool.Get(),
-							D3D12_QUERY_TYPE_BINARY_OCCLUSION,
-							x.index,
-							1,
-							allocationhandler->queries_occlusion.blocks[x.block].readback.Get(),
-							(uint64_t)x.index * sizeof(uint64_t)
-						);
-						break;
-					case GPU_QUERY_TYPE_OCCLUSION:
-						GetDirectCommandList(cmd)->ResolveQueryData(
-							allocationhandler->queries_occlusion.blocks[x.block].pool.Get(),
-							D3D12_QUERY_TYPE_OCCLUSION,
-							x.index,
-							1,
-							allocationhandler->queries_occlusion.blocks[x.block].readback.Get(),
-							(uint64_t)x.index * sizeof(uint64_t)
-						);
-						break;
-					}
-				}
-				query_resolves[cmd].clear();
-
 				HRESULT hr = GetDirectCommandList(cmd)->Close();
 				assert(SUCCEEDED(hr));
 
@@ -5106,183 +5298,23 @@ using namespace DX12_Internal;
 		active_renderpass[cmd] = renderpass;
 
 		auto internal_state = to_internal(active_renderpass[cmd]);
+
 		if (internal_state->num_barriers_begin > 0)
 		{
 			GetDirectCommandList(cmd)->ResourceBarrier(internal_state->num_barriers_begin, internal_state->barrierdescs_begin);
 		}
 
-		const RenderPassDesc& desc = renderpass->GetDesc();
-
-		D3D12_CPU_DESCRIPTOR_HANDLE descriptors_RTV = rtv_descriptor_heap_start;
-		descriptors_RTV.ptr += rtv_descriptor_size * D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT * cmd;
-
-		D3D12_CPU_DESCRIPTOR_HANDLE descriptors_DSV = dsv_descriptor_heap_start;
-		descriptors_DSV.ptr += dsv_descriptor_size * cmd;
-
-		uint32_t rt_count = 0;
-		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTVs[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
-		bool dsv = false;
-		D3D12_RENDER_PASS_DEPTH_STENCIL_DESC DSV = {};
-		int resolve_dst_counter = 0;
-		for (auto& attachment : desc.attachments)
+		if (internal_state->shading_rate_image != nullptr)
 		{
-			const Texture* texture = attachment.texture;
-			int subresource = attachment.subresource;
-			auto texture_internal = to_internal(texture);
-
-			D3D12_CLEAR_VALUE clear_value;
-			clear_value.Format = _ConvertFormat(texture->desc.Format);
-
-			if (attachment.type == RenderPassAttachment::RENDERTARGET)
-			{
-				RTVs[rt_count].cpuDescriptor = descriptors_RTV;
-				RTVs[rt_count].cpuDescriptor.ptr += rtv_descriptor_size * rt_count;
-
-				if (subresource < 0 || texture_internal->subresources_rtv.empty())
-				{
-					device->CreateRenderTargetView(texture_internal->resource.Get(), &texture_internal->rtv, RTVs[rt_count].cpuDescriptor);
-				}
-				else
-				{
-					assert(texture_internal->subresources_rtv.size() > size_t(subresource) && "Invalid RTV subresource!");
-					device->CreateRenderTargetView(texture_internal->resource.Get(), &texture_internal->subresources_rtv[subresource], RTVs[rt_count].cpuDescriptor);
-				}
-
-				switch (attachment.loadop)
-				{
-				default:
-				case RenderPassAttachment::LOADOP_LOAD:
-					RTVs[rt_count].BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
-					break;
-				case RenderPassAttachment::LOADOP_CLEAR:
-					RTVs[rt_count].BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
-					clear_value.Color[0] = texture->desc.clear.color[0];
-					clear_value.Color[1] = texture->desc.clear.color[1];
-					clear_value.Color[2] = texture->desc.clear.color[2];
-					clear_value.Color[3] = texture->desc.clear.color[3];
-					RTVs[rt_count].BeginningAccess.Clear.ClearValue = clear_value;
-					break;
-				case RenderPassAttachment::LOADOP_DONTCARE:
-					RTVs[rt_count].BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
-					break;
-				}
-
-				switch (attachment.storeop)
-				{
-				default:
-				case RenderPassAttachment::STOREOP_STORE:
-					RTVs[rt_count].EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
-					break;
-				case RenderPassAttachment::STOREOP_DONTCARE:
-					RTVs[rt_count].EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
-					break;
-				}
-
-				rt_count++;
-			}
-			else if (attachment.type == RenderPassAttachment::DEPTH_STENCIL)
-			{
-				dsv = true;
-
-				DSV.cpuDescriptor = descriptors_DSV;
-
-				if (subresource < 0 || texture_internal->subresources_dsv.empty())
-				{
-					device->CreateDepthStencilView(texture_internal->resource.Get(), &texture_internal->dsv, DSV.cpuDescriptor);
-				}
-				else
-				{
-					assert(texture_internal->subresources_dsv.size() > size_t(subresource) && "Invalid DSV subresource!");
-					device->CreateDepthStencilView(texture_internal->resource.Get(), &texture_internal->subresources_dsv[subresource], DSV.cpuDescriptor);
-				}
-
-				switch (attachment.loadop)
-				{
-				default:
-				case RenderPassAttachment::LOADOP_LOAD:
-					DSV.DepthBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
-					DSV.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
-					break;
-				case RenderPassAttachment::LOADOP_CLEAR:
-					DSV.DepthBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
-					DSV.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
-					clear_value.DepthStencil.Depth = texture->desc.clear.depthstencil.depth;
-					clear_value.DepthStencil.Stencil = texture->desc.clear.depthstencil.stencil;
-					DSV.DepthBeginningAccess.Clear.ClearValue = clear_value;
-					DSV.StencilBeginningAccess.Clear.ClearValue = clear_value;
-					break;
-				case RenderPassAttachment::LOADOP_DONTCARE:
-					DSV.DepthBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
-					DSV.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
-					break;
-				}
-
-				switch (attachment.storeop)
-				{
-				default:
-				case RenderPassAttachment::STOREOP_STORE:
-					DSV.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
-					DSV.StencilEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
-					break;
-				case RenderPassAttachment::STOREOP_DONTCARE:
-					DSV.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
-					DSV.StencilEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
-					break;
-				}
-			}
-			else if (attachment.type == RenderPassAttachment::RESOLVE)
-			{
-				if (texture != nullptr)
-				{
-					int resolve_src_counter = 0;
-					for (auto& src : active_renderpass[cmd]->desc.attachments)
-					{
-						if (src.type == RenderPassAttachment::RENDERTARGET && src.texture != nullptr)
-						{
-							if (resolve_src_counter == resolve_dst_counter)
-							{
-								auto src_internal = to_internal(src.texture);
-
-								D3D12_RENDER_PASS_RENDER_TARGET_DESC& src_RTV = RTVs[resolve_src_counter];
-								src_RTV.EndingAccess.Resolve.PreserveResolveSource = src_RTV.EndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
-								src_RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
-								src_RTV.EndingAccess.Resolve.Format = clear_value.Format;
-								src_RTV.EndingAccess.Resolve.ResolveMode = D3D12_RESOLVE_MODE_AVERAGE;
-								src_RTV.EndingAccess.Resolve.SubresourceCount = 1;
-								src_RTV.EndingAccess.Resolve.pDstResource = texture_internal->resource.Get();
-								src_RTV.EndingAccess.Resolve.pSrcResource = src_internal->resource.Get();
-
-								// Due to a API bug, this resolve_subresources array must be kept alive between BeginRenderpass() and EndRenderpass()!
-								src_RTV.EndingAccess.Resolve.pSubresourceParameters = &resolve_subresources[cmd][resolve_src_counter];
-								resolve_subresources[cmd][resolve_src_counter].SrcRect.left = 0;
-								resolve_subresources[cmd][resolve_src_counter].SrcRect.right = (LONG)texture->desc.Width;
-								resolve_subresources[cmd][resolve_src_counter].SrcRect.bottom = (LONG)texture->desc.Height;
-								resolve_subresources[cmd][resolve_src_counter].SrcRect.top = 0;
-
-								break;
-							}
-							resolve_src_counter++;
-						}
-					}
-				}
-				resolve_dst_counter++;
-			}
-			else if (attachment.type == RenderPassAttachment::SHADING_RATE_SOURCE)
-			{
-				if (texture != nullptr)
-				{
-					GetDirectCommandList(cmd)->RSSetShadingRateImage(texture_internal->resource.Get());
-				}
-			}
-
+			GetDirectCommandList(cmd)->RSSetShadingRateImage(to_internal(internal_state->shading_rate_image)->resource.Get());
 		}
 
-		D3D12_RENDER_PASS_FLAGS flags = D3D12_RENDER_PASS_FLAG_NONE;
-		if (desc._flags & RenderPassDesc::FLAG_ALLOW_UAV_WRITES)
-		{
-			flags &= D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES;
-		}
-		GetDirectCommandList(cmd)->BeginRenderPass(rt_count, RTVs, dsv ? &DSV : nullptr, flags);
+		GetDirectCommandList(cmd)->BeginRenderPass(
+			internal_state->rt_count,
+			internal_state->RTVs,
+			internal_state->DSV.cpuDescriptor.ptr == 0 ? nullptr : &internal_state->DSV,
+			internal_state->flags
+		);
 
 	}
 	void GraphicsDevice_DX12::RenderPassEnd(CommandList cmd)
@@ -5291,7 +5323,7 @@ using namespace DX12_Internal;
 
 		auto internal_state = to_internal(active_renderpass[cmd]);
 
-		if (internal_state->shading_rate_image_bound)
+		if (internal_state->shading_rate_image != nullptr)
 		{
 			GetDirectCommandList(cmd)->RSSetShadingRateImage(nullptr);
 		}
@@ -5302,6 +5334,8 @@ using namespace DX12_Internal;
 		}
 
 		active_renderpass[cmd] = nullptr;
+
+		deferred_queryresolve(cmd);
 	}
 	void GraphicsDevice_DX12::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) {
 		assert(rects != nullptr);
@@ -5676,18 +5710,64 @@ using namespace DX12_Internal;
 		switch (internal_state->query_type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			GetDirectCommandList(cmd)->EndQuery(allocationhandler->queries_timestamp.blocks[internal_state->query.block].pool.Get(), D3D12_QUERY_TYPE_TIMESTAMP, internal_state->query.index);
+			GetDirectCommandList(cmd)->EndQuery(
+				allocationhandler->queries_timestamp.blocks[internal_state->query.block].pool.Get(),
+				D3D12_QUERY_TYPE_TIMESTAMP,
+				internal_state->query.index
+			);
+			if (active_renderpass[cmd] == nullptr)
+			{
+				GetDirectCommandList(cmd)->ResolveQueryData(
+					allocationhandler->queries_timestamp.blocks[internal_state->query.block].pool.Get(),
+					D3D12_QUERY_TYPE_TIMESTAMP,
+					internal_state->query.index,
+					1,
+					allocationhandler->queries_timestamp.blocks[internal_state->query.block].readback.Get(),
+					(uint64_t)internal_state->query.index * sizeof(uint64_t)
+				);
+			}
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-			GetDirectCommandList(cmd)->EndQuery(allocationhandler->queries_occlusion.blocks[internal_state->query.block].pool.Get(), D3D12_QUERY_TYPE_BINARY_OCCLUSION, internal_state->query.index);
+			GetDirectCommandList(cmd)->EndQuery(
+				allocationhandler->queries_occlusion.blocks[internal_state->query.block].pool.Get(),
+				D3D12_QUERY_TYPE_BINARY_OCCLUSION,
+				internal_state->query.index
+			);
+			if (active_renderpass[cmd] == nullptr)
+			{
+				GetDirectCommandList(cmd)->ResolveQueryData(
+					allocationhandler->queries_occlusion.blocks[internal_state->query.block].pool.Get(),
+					D3D12_QUERY_TYPE_BINARY_OCCLUSION,
+					internal_state->query.index,
+					1,
+					allocationhandler->queries_occlusion.blocks[internal_state->query.block].readback.Get(),
+					(uint64_t)internal_state->query.index * sizeof(uint64_t)
+				);
+			}
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
-			GetDirectCommandList(cmd)->EndQuery(allocationhandler->queries_occlusion.blocks[internal_state->query.block].pool.Get(), D3D12_QUERY_TYPE_OCCLUSION, internal_state->query.index);
+			GetDirectCommandList(cmd)->EndQuery(
+				allocationhandler->queries_occlusion.blocks[internal_state->query.block].pool.Get(),
+				D3D12_QUERY_TYPE_OCCLUSION,
+				internal_state->query.index
+			);
+			if (active_renderpass[cmd] == nullptr)
+			{
+				GetDirectCommandList(cmd)->ResolveQueryData(
+					allocationhandler->queries_occlusion.blocks[internal_state->query.block].pool.Get(),
+					D3D12_QUERY_TYPE_OCCLUSION,
+					internal_state->query.index,
+					1,
+					allocationhandler->queries_occlusion.blocks[internal_state->query.block].readback.Get(),
+					(uint64_t)internal_state->query.index * sizeof(uint64_t)
+				);
+			}
 			break;
 		}
 
-		if (internal_state->query_type != GPU_QUERY_TYPE_INVALID)
+		if (active_renderpass[cmd] != nullptr && internal_state->query_type != GPU_QUERY_TYPE_INVALID)
 		{
+			// Defer query resolves to outside of render pass:
 			query_resolves[cmd].emplace_back();
 			Query_Resolve& resolver = query_resolves[cmd].back();
 			resolver.type = query->desc.Type;

@@ -55,8 +55,6 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 	{
 		RenderPassDesc desc;
-		//desc.numAttachments = 1;
-		//desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,&traceResult,-1 };
 		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&traceResult, RenderPassAttachment::LOADOP_CLEAR));
 
 		device->CreateRenderPass(&desc, &renderpass_debugbvh);
