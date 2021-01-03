@@ -716,123 +716,6 @@ namespace Vulkan_Internal
 		}
 	}
 
-	// Queue families:
-	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface) {
-		QueueFamilyIndices indices;
-
-		uint32_t queueFamilyCount = 0;
-		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-
-		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-
-		int i = 0;
-		for (const auto& queueFamily : queueFamilies) {
-			VkBool32 presentSupport = false;
-			VkResult res = vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
-			assert(res == VK_SUCCESS);
-
-			if (indices.presentFamily < 0 && queueFamily.queueCount > 0 && presentSupport) {
-				indices.presentFamily = i;
-			}
-
-			if (indices.graphicsFamily < 0 && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-				indices.graphicsFamily = i;
-			}
-
-			if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) {
-				indices.copyFamily = i;
-			}
-
-			i++;
-		}
-
-		return indices;
-	}
-
-	// Swapchain helpers:
-	struct SwapChainSupportDetails {
-		VkSurfaceCapabilitiesKHR capabilities;
-		std::vector<VkSurfaceFormatKHR> formats;
-		std::vector<VkPresentModeKHR> presentModes;
-	};
-	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface) {
-		SwapChainSupportDetails details;
-
-		VkResult res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
-		assert(res == VK_SUCCESS);
-
-		uint32_t formatCount;
-		res = vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
-		assert(res == VK_SUCCESS);
-
-		if (formatCount != 0) {
-			details.formats.resize(formatCount);
-			res = vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
-			assert(res == VK_SUCCESS);
-		}
-
-		uint32_t presentModeCount;
-		res = vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
-		assert(res == VK_SUCCESS);
-
-		if (presentModeCount != 0) {
-			details.presentModes.resize(presentModeCount);
-			res = vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
-			assert(res == VK_SUCCESS);
-		}
-
-		return details;
-	}
-
-	uint32_t findMemoryType(VkPhysicalDevice device, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
-		VkPhysicalDeviceMemoryProperties memProperties;
-		vkGetPhysicalDeviceMemoryProperties(device, &memProperties);
-
-		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-			if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-				return i;
-			}
-		}
-
-		assert(0);
-		return ~0;
-	}
-
-	// Device selection helpers:
-	const std::vector<const char*> required_deviceExtensions = {
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-		VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME,
-	};
-	bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) 
-	{
-		QueueFamilyIndices indices = findQueueFamilies(device, surface);
-		if (!indices.isComplete())
-		{
-			return false;
-		}
-
-		uint32_t extensionCount;
-		VkResult res = vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-		assert(res == VK_SUCCESS);
-		std::vector<VkExtensionProperties> available(extensionCount);
-		res = vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, available.data());
-		assert(res == VK_SUCCESS);
-
-		for (auto& x : required_deviceExtensions)
-		{
-			if (!checkDeviceExtensionSupport(x, available))
-			{
-				return false; // device doesn't have a required extension
-			}
-		}
-
-		SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device, surface);
-
-		return !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
-	}
-
-
 
 	// Memory tools:
 
@@ -952,13 +835,13 @@ namespace Vulkan_Internal
 	{
 		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		GPU_QUERY_TYPE query_type = GPU_QUERY_TYPE_INVALID;
-		uint32_t query_index = ~0;
+		GraphicsDevice_Vulkan::AllocationHandler::QueryAllocator::Query query;
 
 		~Query_Vulkan()
 		{
 			if (allocationhandler == nullptr)
 				return;
-			if (query_index != ~0)
+			if (query.index != ~0)
 			{
 				allocationhandler->destroylocker.lock();
 				uint64_t framecount = allocationhandler->framecount;
@@ -966,10 +849,10 @@ namespace Vulkan_Internal
 				{
 				case wiGraphics::GPU_QUERY_TYPE_OCCLUSION:
 				case wiGraphics::GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-					allocationhandler->destroyer_queries_occlusion.push_back(std::make_pair(query_index, framecount));
+					allocationhandler->destroyer_queries_occlusion.push_back(std::make_pair(query, framecount));
 					break;
 				case wiGraphics::GPU_QUERY_TYPE_TIMESTAMP:
-					allocationhandler->destroyer_queries_timestamp.push_back(std::make_pair(query_index, framecount));
+					allocationhandler->destroyer_queries_timestamp.push_back(std::make_pair(query, framecount));
 					break;
 				}
 				allocationhandler->destroylocker.unlock();
@@ -2422,9 +2305,59 @@ using namespace Vulkan_Internal;
 			raytracing_properties.pNext = &mesh_shader_properties;
 			mesh_shader_properties.pNext = &fragment_shading_rate_properties;
 
+			const std::vector<const char*> required_deviceExtensions = {
+				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+				VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME,
+			};
+
 			for (const auto& device : devices) 
 			{
-				if (isDeviceSuitable(device, surface)) 
+				bool suitable = true;
+
+				uint32_t extensionCount;
+				VkResult res = vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+				assert(res == VK_SUCCESS);
+				std::vector<VkExtensionProperties> available(extensionCount);
+				res = vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, available.data());
+				assert(res == VK_SUCCESS);
+
+				for (auto& x : required_deviceExtensions)
+				{
+					if (!checkDeviceExtensionSupport(x, available))
+					{
+						suitable = false; // device doesn't have a required extension
+					}
+				}
+				if (!suitable)
+					continue;
+
+				// Swapchain query:
+				res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &swapchain_capabilities);
+				assert(res == VK_SUCCESS);
+
+				uint32_t formatCount;
+				res = vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+				assert(res == VK_SUCCESS);
+
+				if (formatCount != 0) {
+					swapchain_formats.resize(formatCount);
+					res = vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, swapchain_formats.data());
+					assert(res == VK_SUCCESS);
+				}
+
+				uint32_t presentModeCount;
+				res = vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+				assert(res == VK_SUCCESS);
+
+				if (presentModeCount != 0) {
+					swapchain_presentModes.resize(presentModeCount);
+					res = vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, swapchain_presentModes.data());
+					assert(res == VK_SUCCESS);
+				}
+
+				suitable = !swapchain_formats.empty() && !swapchain_presentModes.empty();
+
+				if (suitable) 
 				{
 					vkGetPhysicalDeviceProperties2(device, &device_properties);
 					bool discrete = device_properties.properties.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
@@ -2444,13 +2377,41 @@ using namespace Vulkan_Internal;
 				assert(0);
 			}
 
-			queueIndices = findQueueFamilies(physicalDevice, surface);
+			// Find queue families:
+			uint32_t queueFamilyCount = 0;
+			vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
+
+			std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+			vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
+
+			int i = 0;
+			for (const auto& queueFamily : queueFamilies)
+			{
+				VkBool32 presentSupport = false;
+				VkResult res = vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentSupport);
+				assert(res == VK_SUCCESS);
+
+				if (presentFamily < 0 && queueFamily.queueCount > 0 && presentSupport) {
+					presentFamily = i;
+				}
+
+				if (graphicsFamily < 0 && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+					graphicsFamily = i;
+				}
+
+				if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) {
+					copyFamily = i;
+				}
+
+				i++;
+			}
 
 			std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-			std::set<int> uniqueQueueFamilies = { queueIndices.graphicsFamily, queueIndices.presentFamily, queueIndices.copyFamily };
+			std::set<int> uniqueQueueFamilies = { graphicsFamily, presentFamily, copyFamily };
 
 			float queuePriority = 1.0f;
-			for (int queueFamily : uniqueQueueFamilies) {
+			for (int queueFamily : uniqueQueueFamilies)
+			{
 				VkDeviceQueueCreateInfo queueCreateInfo = {};
 				queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 				queueCreateInfo.queueFamilyIndex = queueFamily;
@@ -2613,8 +2574,8 @@ using namespace Vulkan_Internal;
 			res = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
 			assert(res == VK_SUCCESS);
 
-			vkGetDeviceQueue(device, queueIndices.graphicsFamily, 0, &graphicsQueue);
-			vkGetDeviceQueue(device, queueIndices.presentFamily, 0, &presentQueue);
+			vkGetDeviceQueue(device, graphicsFamily, 0, &graphicsQueue);
+			vkGetDeviceQueue(device, presentFamily, 0, &presentQueue);
 		}
 
 		allocationhandler = std::make_shared<AllocationHandler>();
@@ -2665,9 +2626,7 @@ using namespace Vulkan_Internal;
 
 		CreateBackBufferResources();
 
-		QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
-
-		vkGetDeviceQueue(device, queueIndices.copyFamily, 0, &copyQueue);
+		vkGetDeviceQueue(device, copyFamily, 0, &copyQueue);
 
 		// Create frame resources:
 		{
@@ -2686,7 +2645,7 @@ using namespace Vulkan_Internal;
 				{
 					VkCommandPoolCreateInfo poolInfo = {};
 					poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-					poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+					poolInfo.queueFamilyIndex = graphicsFamily;
 					poolInfo.flags = 0; // Optional
 
 					res = vkCreateCommandPool(device, &poolInfo, nullptr, &frames[fr].transitionCommandPool);
@@ -2715,7 +2674,7 @@ using namespace Vulkan_Internal;
 				{
 					VkCommandPoolCreateInfo poolInfo = {};
 					poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-					poolInfo.queueFamilyIndex = queueFamilyIndices.copyFamily;
+					poolInfo.queueFamilyIndex = copyFamily;
 					poolInfo.flags = 0; // Optional
 
 					res = vkCreateCommandPool(device, &poolInfo, nullptr, &frames[fr].copyCommandPool);
@@ -2917,32 +2876,9 @@ using namespace Vulkan_Internal;
 		}
 
 		// GPU Queries:
-		{
-			timestamp_frequency = uint64_t(1.0 / double(device_properties.properties.limits.timestampPeriod) * 1000 * 1000 * 1000);
-
-			VkQueryPoolCreateInfo poolInfo = {};
-			poolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-
-			for (uint32_t i = 0; i < timestamp_query_count; ++i)
-			{
-				allocationhandler->free_timestampqueries.push_back(i);
-			}
-			poolInfo.queryCount = timestamp_query_count;
-			poolInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
-			res = vkCreateQueryPool(device, &poolInfo, nullptr, &querypool_timestamp);
-			assert(res == VK_SUCCESS);
-			vkResetQueryPool(device, querypool_timestamp, 0, poolInfo.queryCount);
-
-			for (uint32_t i = 0; i < occlusion_query_count; ++i)
-			{
-				allocationhandler->free_occlusionqueries.push_back(i);
-			}
-			poolInfo.queryCount = occlusion_query_count;
-			poolInfo.queryType = VK_QUERY_TYPE_OCCLUSION;
-			res = vkCreateQueryPool(device, &poolInfo, nullptr, &querypool_occlusion);
-			assert(res == VK_SUCCESS);
-			vkResetQueryPool(device, querypool_occlusion, 0, poolInfo.queryCount);
-		}
+		timestamp_frequency = uint64_t(1.0 / double(device_properties.properties.limits.timestampPeriod) * 1000 * 1000 * 1000);
+		allocationhandler->queries_occlusion.init(allocationhandler.get(), VK_QUERY_TYPE_OCCLUSION);
+		allocationhandler->queries_timestamp.init(allocationhandler.get(), VK_QUERY_TYPE_TIMESTAMP);
 
 		wiBackLog::post("Created GraphicsDevice_Vulkan");
 	}
@@ -2986,9 +2922,6 @@ using namespace Vulkan_Internal;
 			vkDestroyPipeline(device, x.second, nullptr);
 		}
 
-		vkDestroyQueryPool(device, querypool_timestamp, nullptr);
-		vkDestroyQueryPool(device, querypool_occlusion, nullptr);
-
 		vmaDestroyBuffer(allocationhandler->allocator, nullBuffer, nullBufferAllocation);
 		vkDestroyBufferView(device, nullBufferView, nullptr);
 		vmaDestroyImage(allocationhandler->allocator, nullImage1D, nullImageAllocation1D);
@@ -3026,13 +2959,11 @@ using namespace Vulkan_Internal;
 
 	void GraphicsDevice_Vulkan::CreateBackBufferResources()
 	{
-		SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice, surface);
-
 		VkSurfaceFormatKHR surfaceFormat = {};
 		surfaceFormat.format = _ConvertFormat(BACKBUFFER_FORMAT);
 		bool valid = false;
 
-		for (const auto& format : swapChainSupport.formats)
+		for (const auto& format : swapchain_formats)
 		{
 			if (format.format == surfaceFormat.format)
 			{
@@ -3048,8 +2979,8 @@ using namespace Vulkan_Internal;
 		}
 
 		swapChainExtent = { static_cast<uint32_t>(RESOLUTIONWIDTH), static_cast<uint32_t>(RESOLUTIONHEIGHT) };
-		swapChainExtent.width = std::max(swapChainSupport.capabilities.minImageExtent.width, std::min(swapChainSupport.capabilities.maxImageExtent.width, swapChainExtent.width));
-		swapChainExtent.height = std::max(swapChainSupport.capabilities.minImageExtent.height, std::min(swapChainSupport.capabilities.maxImageExtent.height, swapChainExtent.height));
+		swapChainExtent.width = std::max(swapchain_capabilities.minImageExtent.width, std::min(swapchain_capabilities.maxImageExtent.width, swapChainExtent.width));
+		swapChainExtent.height = std::max(swapchain_capabilities.minImageExtent.height, std::min(swapchain_capabilities.maxImageExtent.height, swapChainExtent.height));
 
 
 		uint32_t imageCount = BACKBUFFER_COUNT;
@@ -3064,9 +2995,9 @@ using namespace Vulkan_Internal;
 		createInfo.imageArrayLayers = 1;
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
-		uint32_t queueFamilyIndices[] = { (uint32_t)queueIndices.graphicsFamily, (uint32_t)queueIndices.presentFamily };
+		uint32_t queueFamilyIndices[] = { (uint32_t)graphicsFamily, (uint32_t)presentFamily };
 
-		if (queueIndices.graphicsFamily != queueIndices.presentFamily) {
+		if (graphicsFamily != presentFamily) {
 			createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 			createInfo.queueFamilyIndexCount = 2;
 			createInfo.pQueueFamilyIndices = queueFamilyIndices;
@@ -3077,13 +3008,13 @@ using namespace Vulkan_Internal;
 			createInfo.pQueueFamilyIndices = nullptr; // Optional
 		}
 
-		createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
+		createInfo.preTransform = swapchain_capabilities.currentTransform;
 		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 		createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR; // The only one that is always supported
 		if (!VSYNC)
 		{
 			// The immediate present mode is not necessarily supported:
-			for (auto& presentmode : swapChainSupport.presentModes)
+			for (auto& presentmode : swapchain_presentModes)
 			{
 				if (presentmode == VK_PRESENT_MODE_IMMEDIATE_KHR)
 				{
@@ -3441,8 +3372,8 @@ using namespace Vulkan_Internal;
 				}
 
 				// transfer queue-ownership from copy to graphics:
-				barrier.srcQueueFamilyIndex = queueIndices.copyFamily;
-				barrier.dstQueueFamilyIndex = queueIndices.graphicsFamily;
+				barrier.srcQueueFamilyIndex = copyFamily;
+				barrier.dstQueueFamilyIndex = graphicsFamily;
 
 				vkCmdPipelineBarrier(
 					frame.copyCommandBuffer,
@@ -4182,21 +4113,13 @@ using namespace Vulkan_Internal;
 		switch (pDesc->Type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			if (!allocationhandler->free_timestampqueries.pop_front(internal_state->query_index))
-			{
-				internal_state->query_type = GPU_QUERY_TYPE_INVALID;
-				return false;
-			}
+			internal_state->query = allocationhandler->queries_timestamp.allocate();
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-			if (!allocationhandler->free_occlusionqueries.pop_front(internal_state->query_index))
-			{
-				internal_state->query_type = GPU_QUERY_TYPE_INVALID;
-				return false;
-			}
+			internal_state->query = allocationhandler->queries_occlusion.allocate();
 			break;
 		}
 
@@ -5745,9 +5668,9 @@ using namespace Vulkan_Internal;
 			assert(0); // not implemented yet
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			if (internal_state->query_index == ~0)
+			if (internal_state->query.index == ~0)
 				return false;
-			res = vkGetQueryPoolResults(device, querypool_timestamp, (uint32_t)internal_state->query_index, 1, sizeof(uint64_t),
+			res = vkGetQueryPoolResults(device, allocationhandler->queries_timestamp.blocks[internal_state->query.block], (uint32_t)internal_state->query.index, 1, sizeof(uint64_t),
 				&result->result_timestamp, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
@@ -5755,9 +5678,9 @@ using namespace Vulkan_Internal;
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
 		case GPU_QUERY_TYPE_OCCLUSION:
-			if (internal_state->query_index == ~0)
+			if (internal_state->query.index == ~0)
 				return false;
-			res = vkGetQueryPoolResults(device, querypool_occlusion, (uint32_t)internal_state->query_index, 1, sizeof(uint64_t),
+			res = vkGetQueryPoolResults(device, allocationhandler->queries_occlusion.blocks[internal_state->query.block], (uint32_t)internal_state->query.index, 1, sizeof(uint64_t),
 				&result->result_passed_sample_count, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_PARTIAL_BIT);
 			break;
 		default:
@@ -5859,13 +5782,11 @@ using namespace Vulkan_Internal;
 			// need to create one more command list:
 			assert(cmd < COMMANDLIST_COUNT);
 
-			QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
-
 			for (auto& frame : frames)
 			{
 				VkCommandPoolCreateInfo poolInfo = {};
 				poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-				poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+				poolInfo.queueFamilyIndex = graphicsFamily;
 				poolInfo.flags = 0; // Optional
 
 				res = vkCreateCommandPool(device, &poolInfo, nullptr, &frame.commandPools[cmd]);
@@ -6663,12 +6584,12 @@ using namespace Vulkan_Internal;
 		switch (internal_state->query_type)
 		{
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-			vkResetQueryPool(device, querypool_occlusion, (uint32_t)internal_state->query_index, 1);
-			vkCmdBeginQuery(GetDirectCommandList(cmd), querypool_occlusion, (uint32_t)internal_state->query_index, 0);
+			vkResetQueryPool(device, allocationhandler->queries_occlusion.blocks[internal_state->query.block], (uint32_t)internal_state->query.index, 1);
+			vkCmdBeginQuery(GetDirectCommandList(cmd), allocationhandler->queries_occlusion.blocks[internal_state->query.block], (uint32_t)internal_state->query.index, 0);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
-			vkResetQueryPool(device, querypool_occlusion, (uint32_t)internal_state->query_index, 1);
-			vkCmdBeginQuery(GetDirectCommandList(cmd), querypool_occlusion, (uint32_t)internal_state->query_index, VK_QUERY_CONTROL_PRECISE_BIT);
+			vkResetQueryPool(device, allocationhandler->queries_occlusion.blocks[internal_state->query.block], (uint32_t)internal_state->query.index, 1);
+			vkCmdBeginQuery(GetDirectCommandList(cmd), allocationhandler->queries_occlusion.blocks[internal_state->query.block], (uint32_t)internal_state->query.index, VK_QUERY_CONTROL_PRECISE_BIT);
 			break;
 		}
 	}
@@ -6679,14 +6600,14 @@ using namespace Vulkan_Internal;
 		switch (internal_state->query_type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			vkResetQueryPool(device, querypool_timestamp, (uint32_t)internal_state->query_index, 1);
-			vkCmdWriteTimestamp(GetDirectCommandList(cmd), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, querypool_timestamp, internal_state->query_index);
+			vkResetQueryPool(device, allocationhandler->queries_timestamp.blocks[internal_state->query.block], (uint32_t)internal_state->query.index, 1);
+			vkCmdWriteTimestamp(GetDirectCommandList(cmd), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, allocationhandler->queries_timestamp.blocks[internal_state->query.block], internal_state->query.index);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-			vkCmdEndQuery(GetDirectCommandList(cmd), querypool_occlusion, internal_state->query_index);
+			vkCmdEndQuery(GetDirectCommandList(cmd), allocationhandler->queries_occlusion.blocks[internal_state->query.block], internal_state->query.index);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
-			vkCmdEndQuery(GetDirectCommandList(cmd), querypool_occlusion, internal_state->query_index);
+			vkCmdEndQuery(GetDirectCommandList(cmd), allocationhandler->queries_occlusion.blocks[internal_state->query.block], internal_state->query.index);
 			break;
 		}
 	}

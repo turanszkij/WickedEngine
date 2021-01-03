@@ -32,16 +32,6 @@ namespace wiGraphics
 	struct FrameResources;
 	struct DescriptorTableFrameAllocator;
 
-	struct QueueFamilyIndices {
-		int graphicsFamily = -1;
-		int presentFamily = -1;
-		int copyFamily = -1;
-
-		bool isComplete() {
-			return graphicsFamily >= 0 && presentFamily >= 0 && copyFamily >= 0;
-		}
-	};
-
 	class GraphicsDevice_Vulkan : public GraphicsDevice
 	{
 		friend struct DescriptorTableFrameAllocator;
@@ -54,7 +44,9 @@ namespace wiGraphics
 		VkSurfaceKHR surface = VK_NULL_HANDLE;
 		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 		VkDevice device = VK_NULL_HANDLE;
-		QueueFamilyIndices queueIndices;
+		int graphicsFamily = -1;
+		int presentFamily = -1;
+		int copyFamily = -1;
 		VkQueue graphicsQueue = VK_NULL_HANDLE;
 		VkQueue presentQueue = VK_NULL_HANDLE;
 
@@ -74,6 +66,10 @@ namespace wiGraphics
 		VkPhysicalDeviceRayQueryFeaturesKHR raytracing_query_features = {};
 		VkPhysicalDeviceFragmentShadingRateFeaturesKHR fragment_shading_rate_features = {};
 		VkPhysicalDeviceMeshShaderFeaturesNV mesh_shader_features = {};
+
+		VkSurfaceCapabilitiesKHR swapchain_capabilities;
+		std::vector<VkSurfaceFormatKHR> swapchain_formats;
+		std::vector<VkPresentModeKHR> swapchain_presentModes;
 
 		VkSwapchainKHR swapChain = VK_NULL_HANDLE;
 		VkFormat swapChainImageFormat;
@@ -104,10 +100,6 @@ namespace wiGraphics
 		VkImageView		nullImageView3D = VK_NULL_HANDLE;
 
 		uint64_t timestamp_frequency = 0;
-		VkQueryPool querypool_timestamp = VK_NULL_HANDLE;
-		VkQueryPool querypool_occlusion = VK_NULL_HANDLE;
-		static const size_t timestamp_query_count = 1024;
-		static const size_t occlusion_query_count = 1024;
 
 		void CreateBackBufferResources();
 
@@ -320,6 +312,75 @@ namespace wiGraphics
 			VkInstance instance;
 			uint64_t framecount = 0;
 			std::mutex destroylocker;
+
+			struct QueryAllocator
+			{
+				AllocationHandler* allocationhandler = nullptr;
+				std::mutex locker;
+				VkQueryPoolCreateInfo poolInfo = {};
+
+				std::vector<VkQueryPool> blocks;
+
+				struct Query
+				{
+					uint32_t block = ~0;
+					uint32_t index = ~0;
+				};
+				std::vector<Query> freelist;
+
+				void init(AllocationHandler* allocationhandler, VkQueryType type)
+				{
+					this->allocationhandler = allocationhandler;
+
+					poolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+					poolInfo.queryCount = 1024;
+					poolInfo.queryType = type;
+				}
+				void destroy()
+				{
+					for (auto& x : blocks)
+					{
+						vkDestroyQueryPool(allocationhandler->device, x, nullptr);
+					}
+				}
+				void block_allocate()
+				{
+					uint32_t block_index = (uint32_t)blocks.size();
+					blocks.emplace_back();
+					auto& block = blocks.back();
+					VkResult res = vkCreateQueryPool(allocationhandler->device, &poolInfo, nullptr, &block);
+					assert(res == VK_SUCCESS);
+					vkResetQueryPool(allocationhandler->device, block, 0, poolInfo.queryCount);
+					for (uint32_t i = 0; i < poolInfo.queryCount; ++i)
+					{
+						freelist.emplace_back();
+						freelist.back().block = block_index;
+						freelist.back().index = i;
+					}
+				}
+				Query allocate()
+				{
+					locker.lock();
+					if (freelist.empty())
+					{
+						block_allocate();
+					}
+					assert(!freelist.empty());
+					auto query = freelist.back();
+					freelist.pop_back();
+					locker.unlock();
+					return query;
+				}
+				void free(Query query)
+				{
+					locker.lock();
+					freelist.push_back(query);
+					locker.unlock();
+				}
+			};
+			QueryAllocator queries_timestamp;
+			QueryAllocator queries_occlusion;
+
 			std::deque<std::pair<std::pair<VkImage, VmaAllocation>, uint64_t>> destroyer_images;
 			std::deque<std::pair<VkImageView, uint64_t>> destroyer_imageviews;
 			std::deque<std::pair<std::pair<VkBuffer, VmaAllocation>, uint64_t>> destroyer_buffers;
@@ -334,15 +395,14 @@ namespace wiGraphics
 			std::deque<std::pair<VkPipeline, uint64_t>> destroyer_pipelines;
 			std::deque<std::pair<VkRenderPass, uint64_t>> destroyer_renderpasses;
 			std::deque<std::pair<VkFramebuffer, uint64_t>> destroyer_framebuffers;
-			std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_occlusion;
-			std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_timestamp;
-
-			wiContainers::ThreadSafeRingBuffer<uint32_t, timestamp_query_count> free_timestampqueries;
-			wiContainers::ThreadSafeRingBuffer<uint32_t, occlusion_query_count> free_occlusionqueries;
+			std::deque<std::pair<QueryAllocator::Query, uint64_t>> destroyer_queries_occlusion;
+			std::deque<std::pair<QueryAllocator::Query, uint64_t>> destroyer_queries_timestamp;
 
 			~AllocationHandler()
 			{
 				Update(~0, 0); // destroy all remaining
+				queries_occlusion.destroy();
+				queries_timestamp.destroy();
 				vmaDestroyAllocator(allocator);
 				vkDestroyDevice(device, nullptr);
 				vkDestroyInstance(instance, nullptr);
@@ -541,7 +601,7 @@ namespace wiGraphics
 					{
 						auto item = destroyer_queries_occlusion.front();
 						destroyer_queries_occlusion.pop_front();
-						free_occlusionqueries.push_back(item.first);
+						queries_occlusion.free(item.first);
 					}
 					else
 					{
@@ -554,7 +614,7 @@ namespace wiGraphics
 					{
 						auto item = destroyer_queries_timestamp.front();
 						destroyer_queries_timestamp.pop_front();
-						free_timestampqueries.push_back(item.first);
+						queries_timestamp.free(item.first);
 					}
 					else
 					{

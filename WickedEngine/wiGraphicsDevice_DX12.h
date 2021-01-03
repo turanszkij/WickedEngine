@@ -44,15 +44,6 @@ namespace wiGraphics
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawIndexedInstancedIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchMeshIndirectCommandSignature;
 
-		Microsoft::WRL::ComPtr<ID3D12QueryHeap> querypool_timestamp;
-		Microsoft::WRL::ComPtr<ID3D12QueryHeap> querypool_occlusion;
-		static const size_t timestamp_query_count = 1024;
-		static const size_t occlusion_query_count = 1024;
-		Microsoft::WRL::ComPtr<ID3D12Resource> querypool_timestamp_readback;
-		Microsoft::WRL::ComPtr<ID3D12Resource> querypool_occlusion_readback;
-		D3D12MA::Allocation* allocation_querypool_timestamp_readback = nullptr;
-		D3D12MA::Allocation* allocation_querypool_occlusion_readback = nullptr;
-
 		D3D12_FEATURE_DATA_D3D12_OPTIONS features_0;
 		D3D12_FEATURE_DATA_D3D12_OPTIONS5 features_5;
 		D3D12_FEATURE_DATA_D3D12_OPTIONS6 features_6;
@@ -78,6 +69,13 @@ namespace wiGraphics
 			uint32_t descriptor_size = 0;
 			std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> freelist;
 
+			void init(GraphicsDevice_DX12* device, D3D12_DESCRIPTOR_HEAP_TYPE type)
+			{
+				this->device = device;
+				desc.Type = type;
+				desc.NumDescriptors = 1024;
+				descriptor_size = device->device->GetDescriptorHandleIncrementSize(type);
+			}
 			void block_allocate()
 			{
 				heaps.emplace_back();
@@ -90,14 +88,6 @@ namespace wiGraphics
 					handle.ptr += i * descriptor_size;
 					freelist.push_back(handle);
 				}
-			}
-			void init(GraphicsDevice_DX12* device, D3D12_DESCRIPTOR_HEAP_TYPE type)
-			{
-				this->device = device;
-				desc.Type = type;
-				desc.NumDescriptors = 1024;
-				descriptor_size = device->device->GetDescriptorHandleIncrementSize(type);
-				block_allocate();
 			}
 			D3D12_CPU_DESCRIPTOR_HANDLE allocate()
 			{
@@ -246,7 +236,8 @@ namespace wiGraphics
 		struct Query_Resolve
 		{
 			GPU_QUERY_TYPE type;
-			UINT index;
+			uint32_t block;
+			uint32_t index;
 		};
 		std::vector<Query_Resolve> query_resolves[COMMANDLIST_COUNT] = {};
 
@@ -353,21 +344,118 @@ namespace wiGraphics
 			Microsoft::WRL::ComPtr<ID3D12Device> device;
 			uint64_t framecount = 0;
 			std::mutex destroylocker;
+
+			struct QueryAllocator
+			{
+				AllocationHandler* allocationhandler = nullptr;
+				std::mutex locker;
+				D3D12_QUERY_HEAP_DESC desc = {};
+
+				struct Block
+				{
+					Microsoft::WRL::ComPtr<ID3D12QueryHeap> pool;
+					Microsoft::WRL::ComPtr<ID3D12Resource> readback;
+					D3D12MA::Allocation* allocation = nullptr;
+				};
+				std::vector<Block> blocks;
+
+				struct Query
+				{
+					uint32_t block = ~0;
+					uint32_t index = ~0;
+				};
+				std::vector<Query> freelist;
+
+				void init(AllocationHandler* allocationhandler, D3D12_QUERY_HEAP_TYPE type)
+				{
+					this->allocationhandler = allocationhandler;
+					desc.Type = type;
+					desc.Count = 1024;
+				}
+				void destroy()
+				{
+					for (auto& x : blocks)
+					{
+						x.allocation->Release();
+					}
+				}
+				void block_allocate()
+				{
+					uint32_t block_index = (uint32_t)blocks.size();
+					blocks.emplace_back();
+					auto& block = blocks.back();
+					HRESULT hr = allocationhandler->device->CreateQueryHeap(&desc, IID_PPV_ARGS(&block.pool));
+					assert(SUCCEEDED(hr));
+					for (UINT i = 0; i < desc.Count; ++i)
+					{
+						freelist.emplace_back();
+						freelist.back().block = block_index;
+						freelist.back().index = i;
+					}
+
+					D3D12MA::ALLOCATION_DESC allocationDesc = {};
+					allocationDesc.HeapType = D3D12_HEAP_TYPE_READBACK;
+
+					D3D12_RESOURCE_DESC resdesc = {};
+					resdesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+					resdesc.Format = DXGI_FORMAT_UNKNOWN;
+					resdesc.Width = (UINT64)(desc.Count * sizeof(uint64_t));
+					resdesc.Height = 1;
+					resdesc.MipLevels = 1;
+					resdesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+					resdesc.DepthOrArraySize = 1;
+					resdesc.Alignment = 0;
+					resdesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+					resdesc.SampleDesc.Count = 1;
+					resdesc.SampleDesc.Quality = 0;
+
+					hr = allocationhandler->allocator->CreateResource(
+						&allocationDesc,
+						&resdesc,
+						D3D12_RESOURCE_STATE_COPY_DEST,
+						nullptr,
+						&block.allocation,
+						IID_PPV_ARGS(&block.readback)
+					);
+					assert(SUCCEEDED(hr));
+				}
+				Query allocate()
+				{
+					locker.lock();
+					if (freelist.empty())
+					{
+						block_allocate();
+					}
+					assert(!freelist.empty());
+					auto query = freelist.back();
+					freelist.pop_back();
+					locker.unlock();
+					return query;
+				}
+				void free(Query query)
+				{
+					locker.lock();
+					freelist.push_back(query);
+					locker.unlock();
+				}
+			};
+			QueryAllocator queries_timestamp;
+			QueryAllocator queries_occlusion;
+
 			std::deque<std::pair<D3D12MA::Allocation*, uint64_t>> destroyer_allocations;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, uint64_t>> destroyer_resources;
-			std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_timestamp;
-			std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_occlusion;
+			std::deque<std::pair<QueryAllocator::Query, uint64_t>> destroyer_queries_timestamp;
+			std::deque<std::pair<QueryAllocator::Query, uint64_t>> destroyer_queries_occlusion;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12PipelineState>, uint64_t>> destroyer_pipelines;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12RootSignature>, uint64_t>> destroyer_rootSignatures;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12StateObject>, uint64_t>> destroyer_stateobjects;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>, uint64_t>> destroyer_descriptorHeaps;
 
-			wiContainers::ThreadSafeRingBuffer<uint32_t, timestamp_query_count> free_timestampqueries;
-			wiContainers::ThreadSafeRingBuffer<uint32_t, occlusion_query_count> free_occlusionqueries;
-
 			~AllocationHandler()
 			{
 				Update(~0, 0); // destroy all remaining
+				queries_occlusion.destroy();
+				queries_timestamp.destroy();
 				if (allocator) allocator->Release();
 			}
 
@@ -407,7 +495,7 @@ namespace wiGraphics
 					{
 						auto item = destroyer_queries_occlusion.front();
 						destroyer_queries_occlusion.pop_front();
-						free_occlusionqueries.push_back(item.first);
+						queries_occlusion.free(item.first);
 					}
 					else
 					{
@@ -420,7 +508,7 @@ namespace wiGraphics
 					{
 						auto item = destroyer_queries_timestamp.front();
 						destroyer_queries_timestamp.pop_front();
-						free_timestampqueries.push_back(item.first);
+						queries_timestamp.free(item.first);
 					}
 					else
 					{

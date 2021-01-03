@@ -1097,11 +1097,11 @@ namespace DX12_Internal
 	{
 		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		GPU_QUERY_TYPE query_type = GPU_QUERY_TYPE_INVALID;
-		uint32_t query_index = ~0;
+		GraphicsDevice_DX12::AllocationHandler::QueryAllocator::Query query;
 
 		~Query_DX12()
 		{
-			if (query_index != ~0) 
+			if (query.index != ~0) 
 			{
 				allocationhandler->destroylocker.lock();
 				uint64_t framecount = allocationhandler->framecount;
@@ -1109,10 +1109,10 @@ namespace DX12_Internal
 				{
 				case wiGraphics::GPU_QUERY_TYPE_OCCLUSION:
 				case wiGraphics::GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-					allocationhandler->destroyer_queries_occlusion.push_back(std::make_pair(query_index, framecount));
+					allocationhandler->destroyer_queries_occlusion.push_back(std::make_pair(query, framecount));
 					break;
 				case wiGraphics::GPU_QUERY_TYPE_TIMESTAMP:
-					allocationhandler->destroyer_queries_timestamp.push_back(std::make_pair(query_index, framecount));
+					allocationhandler->destroyer_queries_timestamp.push_back(std::make_pair(query, framecount));
 					break;
 				}
 				allocationhandler->destroylocker.unlock();
@@ -2518,56 +2518,8 @@ using namespace DX12_Internal;
 		}
 
 		// GPU Queries:
-		{
-			D3D12_QUERY_HEAP_DESC queryheapdesc = {};
-			queryheapdesc.NodeMask = 0;
-
-			for (uint32_t i = 0; i < timestamp_query_count; ++i)
-			{
-				allocationhandler->free_timestampqueries.push_back(i);
-			}
-			queryheapdesc.Count = timestamp_query_count;
-			queryheapdesc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
-			hr = device->CreateQueryHeap(&queryheapdesc, IID_PPV_ARGS(&querypool_timestamp));
-			assert(SUCCEEDED(hr));
-
-			for (uint32_t i = 0; i < occlusion_query_count; ++i)
-			{
-				allocationhandler->free_occlusionqueries.push_back(i);
-			}
-			queryheapdesc.Count = occlusion_query_count;
-			queryheapdesc.Type = D3D12_QUERY_HEAP_TYPE_OCCLUSION;
-			hr = device->CreateQueryHeap(&queryheapdesc, IID_PPV_ARGS(&querypool_occlusion));
-			assert(SUCCEEDED(hr));
-
-
-			D3D12MA::ALLOCATION_DESC allocationDesc = {};
-			allocationDesc.HeapType = D3D12_HEAP_TYPE_READBACK;
-
-			CD3DX12_RESOURCE_DESC resdesc = CD3DX12_RESOURCE_DESC::Buffer(timestamp_query_count * sizeof(uint64_t));
-
-			hr = allocationhandler->allocator->CreateResource(
-				&allocationDesc,
-				&resdesc,
-				D3D12_RESOURCE_STATE_COPY_DEST,
-				nullptr,
-				&allocation_querypool_timestamp_readback,
-				IID_PPV_ARGS(&querypool_timestamp_readback)
-			);
-			assert(SUCCEEDED(hr));
-
-			resdesc = CD3DX12_RESOURCE_DESC::Buffer(occlusion_query_count * sizeof(uint64_t));
-
-			hr = allocationhandler->allocator->CreateResource(
-				&allocationDesc,
-				&resdesc,
-				D3D12_RESOURCE_STATE_COPY_DEST,
-				nullptr,
-				&allocation_querypool_occlusion_readback,
-				IID_PPV_ARGS(&querypool_occlusion_readback)
-			);
-			assert(SUCCEEDED(hr));
-		}
+		allocationhandler->queries_occlusion.init(allocationhandler.get(), D3D12_QUERY_HEAP_TYPE_OCCLUSION);
+		allocationhandler->queries_timestamp.init(allocationhandler.get(), D3D12_QUERY_HEAP_TYPE_TIMESTAMP);
 
 		if (pfn_DxcCreateInstance == nullptr)
 		{
@@ -2590,9 +2542,6 @@ using namespace DX12_Internal;
 		CloseHandle(frameFenceEvent);
 		CloseHandle(copyFenceEvent);
 		CloseHandle(directFenceEvent);
-
-		allocation_querypool_timestamp_readback->Release();
-		allocation_querypool_occlusion_readback->Release();
 	}
 
 	void GraphicsDevice_DX12::SetResolution(int width, int height)
@@ -3236,21 +3185,13 @@ using namespace DX12_Internal;
 		switch (pDesc->Type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			if (!allocationhandler->free_timestampqueries.pop_front(internal_state->query_index))
-			{
-				internal_state->query_type = GPU_QUERY_TYPE_INVALID;
-				return false;
-			}
+			internal_state->query = allocationhandler->queries_timestamp.allocate();
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-			if (!allocationhandler->free_occlusionqueries.pop_front(internal_state->query_index))
-			{
-				internal_state->query_type = GPU_QUERY_TYPE_INVALID;
-				return false;
-			}
+			internal_state->query = allocationhandler->queries_occlusion.allocate();
 			break;
 		}
 
@@ -4827,7 +4768,7 @@ using namespace DX12_Internal;
 		auto internal_state = to_internal(query);
 
 		D3D12_RANGE range;
-		range.Begin = (size_t)internal_state->query_index * sizeof(size_t);
+		range.Begin = (size_t)internal_state->query.index * sizeof(uint64_t);
 		range.End = range.Begin + sizeof(uint64_t);
 		D3D12_RANGE nullrange = {};
 		void* data = nullptr;
@@ -4838,32 +4779,32 @@ using namespace DX12_Internal;
 			assert(0); // not implemented yet
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			if (internal_state->query_index == ~0)
+			if (internal_state->query.index == ~0)
 				return false;
-			querypool_timestamp_readback->Map(0, &range, &data);
+			allocationhandler->queries_timestamp.blocks[internal_state->query.block].readback->Map(0, &range, &data);
 			result->result_timestamp = *(uint64_t*)((size_t)data + range.Begin);
-			querypool_timestamp_readback->Unmap(0, &nullrange);
+			allocationhandler->queries_timestamp.blocks[internal_state->query.block].readback->Unmap(0, &nullrange);
 			break;
 		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
 			directQueue->GetTimestampFrequency(&result->result_timestamp_frequency);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
 		{
-			if (internal_state->query_index == ~0)
+			if (internal_state->query.index == ~0)
 				return false;
 			BOOL passed = FALSE;
-			querypool_occlusion_readback->Map(0, &range, &data);
+			allocationhandler->queries_occlusion.blocks[internal_state->query.block].readback->Map(0, &range, &data);
 			passed = *(BOOL*)((size_t)data + range.Begin);
-			querypool_occlusion_readback->Unmap(0, &nullrange);
+			allocationhandler->queries_occlusion.blocks[internal_state->query.block].readback->Unmap(0, &nullrange);
 			result->result_passed_sample_count = (uint64_t)passed;
 			break;
 		}
 		case GPU_QUERY_TYPE_OCCLUSION:
-			if (internal_state->query_index == ~0)
+			if (internal_state->query.index == ~0)
 				return false;
-			querypool_occlusion_readback->Map(0, &range, &data);
+			allocationhandler->queries_occlusion.blocks[internal_state->query.block].readback->Map(0, &range, &data);
 			result->result_passed_sample_count = *(uint64_t*)((size_t)data + range.Begin);
-			querypool_occlusion_readback->Unmap(0, &nullrange);
+			allocationhandler->queries_occlusion.blocks[internal_state->query.block].readback->Unmap(0, &nullrange);
 			break;
 		default:
 			return false;
@@ -5039,13 +4980,34 @@ using namespace DX12_Internal;
 					switch (x.type)
 					{
 					case GPU_QUERY_TYPE_TIMESTAMP:
-						GetDirectCommandList(cmd)->ResolveQueryData(querypool_timestamp.Get(), D3D12_QUERY_TYPE_TIMESTAMP, x.index, 1, querypool_timestamp_readback.Get(), (uint64_t)x.index * sizeof(uint64_t));
+						GetDirectCommandList(cmd)->ResolveQueryData(
+							allocationhandler->queries_timestamp.blocks[x.block].pool.Get(),
+							D3D12_QUERY_TYPE_TIMESTAMP,
+							x.index,
+							1,
+							allocationhandler->queries_timestamp.blocks[x.block].readback.Get(),
+							(uint64_t)x.index * sizeof(uint64_t)
+						);
 						break;
 					case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-						GetDirectCommandList(cmd)->ResolveQueryData(querypool_occlusion.Get(), D3D12_QUERY_TYPE_BINARY_OCCLUSION, x.index, 1, querypool_occlusion_readback.Get(), (uint64_t)x.index * sizeof(uint64_t));
+						GetDirectCommandList(cmd)->ResolveQueryData(
+							allocationhandler->queries_occlusion.blocks[x.block].pool.Get(),
+							D3D12_QUERY_TYPE_BINARY_OCCLUSION,
+							x.index,
+							1,
+							allocationhandler->queries_occlusion.blocks[x.block].readback.Get(),
+							(uint64_t)x.index * sizeof(uint64_t)
+						);
 						break;
 					case GPU_QUERY_TYPE_OCCLUSION:
-						GetDirectCommandList(cmd)->ResolveQueryData(querypool_occlusion.Get(), D3D12_QUERY_TYPE_OCCLUSION, x.index, 1, querypool_occlusion_readback.Get(), (uint64_t)x.index * sizeof(uint64_t));
+						GetDirectCommandList(cmd)->ResolveQueryData(
+							allocationhandler->queries_occlusion.blocks[x.block].pool.Get(),
+							D3D12_QUERY_TYPE_OCCLUSION,
+							x.index,
+							1,
+							allocationhandler->queries_occlusion.blocks[x.block].readback.Get(),
+							(uint64_t)x.index * sizeof(uint64_t)
+						);
 						break;
 					}
 				}
@@ -5697,13 +5659,13 @@ using namespace DX12_Internal;
 		switch (internal_state->query_type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			GetDirectCommandList(cmd)->BeginQuery(querypool_timestamp.Get(), D3D12_QUERY_TYPE_TIMESTAMP, internal_state->query_index);
+			GetDirectCommandList(cmd)->BeginQuery(allocationhandler->queries_timestamp.blocks[internal_state->query.block].pool.Get(), D3D12_QUERY_TYPE_TIMESTAMP, internal_state->query.index);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-			GetDirectCommandList(cmd)->BeginQuery(querypool_occlusion.Get(), D3D12_QUERY_TYPE_BINARY_OCCLUSION, internal_state->query_index);
+			GetDirectCommandList(cmd)->BeginQuery(allocationhandler->queries_occlusion.blocks[internal_state->query.block].pool.Get(), D3D12_QUERY_TYPE_BINARY_OCCLUSION, internal_state->query.index);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
-			GetDirectCommandList(cmd)->BeginQuery(querypool_occlusion.Get(), D3D12_QUERY_TYPE_OCCLUSION, internal_state->query_index);
+			GetDirectCommandList(cmd)->BeginQuery(allocationhandler->queries_occlusion.blocks[internal_state->query.block].pool.Get(), D3D12_QUERY_TYPE_OCCLUSION, internal_state->query.index);
 			break;
 		}
 	}
@@ -5714,13 +5676,13 @@ using namespace DX12_Internal;
 		switch (internal_state->query_type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			GetDirectCommandList(cmd)->EndQuery(querypool_timestamp.Get(), D3D12_QUERY_TYPE_TIMESTAMP, internal_state->query_index);
+			GetDirectCommandList(cmd)->EndQuery(allocationhandler->queries_timestamp.blocks[internal_state->query.block].pool.Get(), D3D12_QUERY_TYPE_TIMESTAMP, internal_state->query.index);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-			GetDirectCommandList(cmd)->EndQuery(querypool_occlusion.Get(), D3D12_QUERY_TYPE_BINARY_OCCLUSION, internal_state->query_index);
+			GetDirectCommandList(cmd)->EndQuery(allocationhandler->queries_occlusion.blocks[internal_state->query.block].pool.Get(), D3D12_QUERY_TYPE_BINARY_OCCLUSION, internal_state->query.index);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
-			GetDirectCommandList(cmd)->EndQuery(querypool_occlusion.Get(), D3D12_QUERY_TYPE_OCCLUSION, internal_state->query_index);
+			GetDirectCommandList(cmd)->EndQuery(allocationhandler->queries_occlusion.blocks[internal_state->query.block].pool.Get(), D3D12_QUERY_TYPE_OCCLUSION, internal_state->query.index);
 			break;
 		}
 
@@ -5729,7 +5691,8 @@ using namespace DX12_Internal;
 			query_resolves[cmd].emplace_back();
 			Query_Resolve& resolver = query_resolves[cmd].back();
 			resolver.type = query->desc.Type;
-			resolver.index = internal_state->query_index;
+			resolver.block = internal_state->query.block;
+			resolver.index = internal_state->query.index;
 		}
 	}
 	void GraphicsDevice_DX12::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
