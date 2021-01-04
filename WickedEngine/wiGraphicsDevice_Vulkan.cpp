@@ -870,6 +870,8 @@ namespace Vulkan_Internal
 		std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
 		std::vector<VkImageViewType> imageViewTypes;
 
+		size_t binding_hash = 0;
+
 		~Shader_Vulkan()
 		{
 			if (allocationhandler == nullptr)
@@ -890,6 +892,8 @@ namespace Vulkan_Internal
 		VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
 		std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
 		std::vector<VkImageViewType> imageViewTypes;
+
+		size_t binding_hash = 0;
 
 		~PipelineState_Vulkan()
 		{
@@ -2978,6 +2982,9 @@ using namespace Vulkan_Internal;
 			BACKBUFFER_FORMAT = FORMAT_B8G8R8A8_UNORM;
 		}
 
+		VkResult res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &swapchain_capabilities);
+		assert(res == VK_SUCCESS);
+
 		swapChainExtent = { static_cast<uint32_t>(RESOLUTIONWIDTH), static_cast<uint32_t>(RESOLUTIONHEIGHT) };
 		swapChainExtent.width = std::max(swapchain_capabilities.minImageExtent.width, std::min(swapchain_capabilities.maxImageExtent.width, swapChainExtent.width));
 		swapChainExtent.height = std::max(swapchain_capabilities.minImageExtent.height, std::min(swapchain_capabilities.maxImageExtent.height, swapChainExtent.height));
@@ -3026,7 +3033,7 @@ using namespace Vulkan_Internal;
 		createInfo.clipped = VK_TRUE;
 		createInfo.oldSwapchain = swapChain;
 
-		VkResult res = vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain);
+		res = vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain);
 		assert(res == VK_SUCCESS);
 
 		if (createInfo.oldSwapchain != VK_NULL_HANDLE)
@@ -3888,6 +3895,17 @@ using namespace Vulkan_Internal;
 				res = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &internal_state->pipelineLayout_cs);
 				assert(res == VK_SUCCESS);
 			}
+
+			internal_state->binding_hash = 0;
+			size_t i = 0;
+			for (auto& x : internal_state->layoutBindings)
+			{
+				wiHelper::hash_combine(internal_state->binding_hash, x.binding);
+				wiHelper::hash_combine(internal_state->binding_hash, x.descriptorCount);
+				wiHelper::hash_combine(internal_state->binding_hash, x.descriptorType);
+				wiHelper::hash_combine(internal_state->binding_hash, x.stageFlags);
+				wiHelper::hash_combine(internal_state->binding_hash, internal_state->imageViewTypes[i++]);
+			}
 		}
 
 		if (stage == CS)
@@ -4213,6 +4231,17 @@ using namespace Vulkan_Internal;
 			res = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &internal_state->pipelineLayout);
 			assert(res == VK_SUCCESS);
 
+			internal_state->binding_hash = 0;
+			size_t i = 0;
+			for (auto& x : internal_state->layoutBindings)
+			{
+				wiHelper::hash_combine(internal_state->binding_hash, x.binding);
+				wiHelper::hash_combine(internal_state->binding_hash, x.descriptorCount);
+				wiHelper::hash_combine(internal_state->binding_hash, x.descriptorType);
+				wiHelper::hash_combine(internal_state->binding_hash, x.stageFlags);
+				wiHelper::hash_combine(internal_state->binding_hash, internal_state->imageViewTypes[i++]);
+			}
+
 			return res == VK_SUCCESS;
 		}
 
@@ -4255,6 +4284,7 @@ using namespace Vulkan_Internal;
 		int resolvecount = 0;
 
 		VkSubpassDescription2 subpass = {};
+		subpass.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2;
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
 		const RenderPassDesc& desc = renderpass->desc;
@@ -4267,6 +4297,7 @@ using namespace Vulkan_Internal;
 			int subresource = attachment.subresource;
 			auto texture_internal_state = to_internal(texture);
 
+			attachmentDescriptions[validAttachmentCount].sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2;
 			attachmentDescriptions[validAttachmentCount].format = _ConvertFormat(texdesc.Format);
 			attachmentDescriptions[validAttachmentCount].samples = (VkSampleCountFlagBits)texdesc.SampleCount;
 
@@ -4317,6 +4348,7 @@ using namespace Vulkan_Internal;
 					continue;
 				}
 
+				colorAttachmentRefs[subpass.colorAttachmentCount].sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
 				colorAttachmentRefs[subpass.colorAttachmentCount].attachment = validAttachmentCount;
 				colorAttachmentRefs[subpass.colorAttachmentCount].layout = _ConvertImageLayout(attachment.subpass_layout);
 				subpass.colorAttachmentCount++;
@@ -4366,12 +4398,15 @@ using namespace Vulkan_Internal;
 					}
 				}
 
+				depthAttachmentRef.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
 				depthAttachmentRef.attachment = validAttachmentCount;
 				depthAttachmentRef.layout = _ConvertImageLayout(attachment.subpass_layout);
 				subpass.pDepthStencilAttachment = &depthAttachmentRef;
 			}
 			else if (attachment.type == RenderPassAttachment::RESOLVE)
 			{
+				resolveAttachmentRefs[resolvecount].sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
+
 				if (attachment.texture == nullptr)
 				{
 					resolveAttachmentRefs[resolvecount].attachment = VK_ATTACHMENT_UNUSED;
@@ -4400,6 +4435,8 @@ using namespace Vulkan_Internal;
 			}
 			else if (attachment.type == RenderPassAttachment::SHADING_RATE_SOURCE && CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
 			{
+				shadingRateAttachmentRef.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
+
 				if (attachment.texture == nullptr)
 				{
 					shadingRateAttachmentRef.attachment = VK_ATTACHMENT_UNUSED;
@@ -4431,7 +4468,7 @@ using namespace Vulkan_Internal;
 		assert(renderpass->desc.attachments.size() == validAttachmentCount);
 
 		VkRenderPassCreateInfo2 renderPassInfo = {};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2;
 		renderPassInfo.attachmentCount = validAttachmentCount;
 		renderPassInfo.pAttachments = attachmentDescriptions;
 		renderPassInfo.subpassCount = 1;
@@ -6274,7 +6311,20 @@ using namespace Vulkan_Internal;
 		}
 		prev_pipeline_hash[cmd] = pipeline_hash;
 
-		GetFrameResources().descriptors[cmd].dirty = true;
+		if (active_pso[cmd] == nullptr)
+		{
+			GetFrameResources().descriptors[cmd].dirty = true;
+		}
+		else
+		{
+			auto internal_state = to_internal(pso);
+			auto active_internal = to_internal(active_pso[cmd]);
+			if (internal_state->binding_hash != active_internal->binding_hash)
+			{
+				GetFrameResources().descriptors[cmd].dirty = true;
+			}
+		}
+
 		active_pso[cmd] = pso;
 		dirty_pso[cmd] = true;
 	}
@@ -6283,7 +6333,20 @@ using namespace Vulkan_Internal;
 		assert(cs->stage == CS);
 		if (active_cs[cmd] != cs)
 		{
-			GetFrameResources().descriptors[cmd].dirty = true;
+			if (active_cs[cmd] == nullptr)
+			{
+				GetFrameResources().descriptors[cmd].dirty = true;
+			}
+			else
+			{
+				auto internal_state = to_internal(cs);
+				auto active_internal = to_internal(active_cs[cmd]);
+				if (internal_state->binding_hash != active_internal->binding_hash)
+				{
+					GetFrameResources().descriptors[cmd].dirty = true;
+				}
+			}
+
 			active_cs[cmd] = cs;
 			auto internal_state = to_internal(cs);
 			vkCmdBindPipeline(GetDirectCommandList(cmd), VK_PIPELINE_BIND_POINT_COMPUTE, internal_state->pipeline_cs);

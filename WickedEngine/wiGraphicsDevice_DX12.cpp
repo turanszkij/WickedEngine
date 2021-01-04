@@ -1183,6 +1183,9 @@ namespace DX12_Internal
 		uint32_t bindpoint_res = 0;
 		uint32_t bindpoint_sam = 0;
 
+		size_t resource_binding_hash = 0;
+		size_t sampler_binding_hash = 0;
+
 		~PipelineState_DX12()
 		{
 			allocationhandler->destroylocker.lock();
@@ -3225,6 +3228,28 @@ using namespace DX12_Internal;
 
 					hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&internal_state->resource));
 					assert(SUCCEEDED(hr));
+
+					internal_state->resource_binding_hash = 0;
+					for (auto& x : internal_state->resources)
+					{
+						wiHelper::hash_combine(internal_state->resource_binding_hash, x.BaseShaderRegister);
+						wiHelper::hash_combine(internal_state->resource_binding_hash, x.NumDescriptors);
+						wiHelper::hash_combine(internal_state->resource_binding_hash, x.Flags);
+						wiHelper::hash_combine(internal_state->resource_binding_hash, x.OffsetInDescriptorsFromTableStart);
+						wiHelper::hash_combine(internal_state->resource_binding_hash, x.RangeType);
+						wiHelper::hash_combine(internal_state->resource_binding_hash, x.RegisterSpace);
+					}
+
+					internal_state->sampler_binding_hash = 0;
+					for (auto& x : internal_state->samplers)
+					{
+						wiHelper::hash_combine(internal_state->sampler_binding_hash, x.BaseShaderRegister);
+						wiHelper::hash_combine(internal_state->sampler_binding_hash, x.NumDescriptors);
+						wiHelper::hash_combine(internal_state->sampler_binding_hash, x.Flags);
+						wiHelper::hash_combine(internal_state->sampler_binding_hash, x.OffsetInDescriptorsFromTableStart);
+						wiHelper::hash_combine(internal_state->sampler_binding_hash, x.RangeType);
+						wiHelper::hash_combine(internal_state->sampler_binding_hash, x.RegisterSpace);
+					}
 				}
 			}
 		}
@@ -3418,6 +3443,28 @@ using namespace DX12_Internal;
 			}
 			hr = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&internal_state->rootSignature));
 			assert(SUCCEEDED(hr));
+
+			internal_state->resource_binding_hash = 0;
+			for (auto& x : internal_state->resources)
+			{
+				wiHelper::hash_combine(internal_state->resource_binding_hash, x.BaseShaderRegister);
+				wiHelper::hash_combine(internal_state->resource_binding_hash, x.NumDescriptors);
+				wiHelper::hash_combine(internal_state->resource_binding_hash, x.Flags);
+				wiHelper::hash_combine(internal_state->resource_binding_hash, x.OffsetInDescriptorsFromTableStart);
+				wiHelper::hash_combine(internal_state->resource_binding_hash, x.RangeType);
+				wiHelper::hash_combine(internal_state->resource_binding_hash, x.RegisterSpace);
+			}
+
+			internal_state->sampler_binding_hash = 0;
+			for (auto& x : internal_state->samplers)
+			{
+				wiHelper::hash_combine(internal_state->sampler_binding_hash, x.BaseShaderRegister);
+				wiHelper::hash_combine(internal_state->sampler_binding_hash, x.NumDescriptors);
+				wiHelper::hash_combine(internal_state->sampler_binding_hash, x.Flags);
+				wiHelper::hash_combine(internal_state->sampler_binding_hash, x.OffsetInDescriptorsFromTableStart);
+				wiHelper::hash_combine(internal_state->sampler_binding_hash, x.RangeType);
+				wiHelper::hash_combine(internal_state->sampler_binding_hash, x.RegisterSpace);
+			}
 
 			return SUCCEEDED(hr);
 		}
@@ -5516,8 +5563,25 @@ using namespace DX12_Internal;
 			GetDirectCommandList(cmd)->SetGraphicsRootSignature(to_internal(pso->desc.rootSignature)->resource.Get());
 		}
 
-		GetFrameResources().descriptors[cmd].dirty_res = true;
-		GetFrameResources().descriptors[cmd].dirty_sam = true;
+		if (active_pso[cmd] == nullptr)
+		{
+			GetFrameResources().descriptors[cmd].dirty_res = true;
+			GetFrameResources().descriptors[cmd].dirty_sam = true;
+		}
+		else
+		{
+			auto internal_state = to_internal(pso);
+			auto active_internal = to_internal(active_pso[cmd]);
+			if (internal_state->resource_binding_hash != active_internal->resource_binding_hash)
+			{
+				GetFrameResources().descriptors[cmd].dirty_res = true;
+			}
+			if (internal_state->sampler_binding_hash != active_internal->sampler_binding_hash)
+			{
+				GetFrameResources().descriptors[cmd].dirty_sam = true;
+			}
+		}
+
 		active_pso[cmd] = pso;
 		dirty_pso[cmd] = true;
 	}
@@ -5527,8 +5591,26 @@ using namespace DX12_Internal;
 		if (active_cs[cmd] != cs)
 		{
 			prev_pipeline_hash[cmd] = 0;
-			GetFrameResources().descriptors[cmd].dirty_res = true;
-			GetFrameResources().descriptors[cmd].dirty_sam = true;
+
+			if (active_cs[cmd] == nullptr)
+			{
+				GetFrameResources().descriptors[cmd].dirty_res = true;
+				GetFrameResources().descriptors[cmd].dirty_sam = true;
+			}
+			else
+			{
+				auto internal_state = to_internal(cs);
+				auto active_internal = to_internal(active_cs[cmd]);
+				if (internal_state->resource_binding_hash != active_internal->resource_binding_hash)
+				{
+					GetFrameResources().descriptors[cmd].dirty_res = true;
+				}
+				if (internal_state->sampler_binding_hash != active_internal->sampler_binding_hash)
+				{
+					GetFrameResources().descriptors[cmd].dirty_sam = true;
+				}
+			}
+
 			active_cs[cmd] = cs;
 
 			auto internal_state = to_internal(cs);

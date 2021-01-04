@@ -370,6 +370,7 @@ enum OBJECTRENDERING_DOUBLESIDED
 {
 	OBJECTRENDERING_DOUBLESIDED_DISABLED,
 	OBJECTRENDERING_DOUBLESIDED_ENABLED,
+	OBJECTRENDERING_DOUBLESIDED_BACKSIDE,
 	OBJECTRENDERING_DOUBLESIDED_COUNT
 };
 enum OBJECTRENDERING_TESSELLATION
@@ -406,53 +407,6 @@ const std::vector<CustomShader>& GetCustomShaders()
 	return customShaders;
 }
 
-inline const PipelineState* GetObjectPSO(
-	RENDERPASS renderPass,
-	uint32_t renderTypeFlags,
-	const MeshComponent& mesh,
-	const MaterialComponent& material,
-	bool tessellation,
-	bool forceAlphaTestForDithering
-)
-{
-	if (IsWireRender())
-	{
-		switch (renderPass)
-		{
-		case RENDERPASS_TEXTURE:
-		case RENDERPASS_MAIN:
-			return &PSO_object_wire;
-		}
-		return nullptr;
-	}
-
-	if (mesh.IsTerrain())
-	{
-		return &PSO_object_terrain[renderPass];
-	}
-
-
-	if (material.customShaderID >= 0 && material.customShaderID < (int)customShaders.size())
-	{
-		const CustomShader& customShader = customShaders[material.customShaderID];
-		if (renderTypeFlags & customShader.renderTypeFlags)
-		{
-			return &customShader.pso[renderPass];
-		}
-		else
-		{
-			return nullptr;
-		}
-	}
-
-	const BLENDMODE blendMode = material.GetBlendMode();
-	const bool doublesided = mesh.IsDoubleSided();
-	const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
-
-	const PipelineState& pso = PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellation][alphatest];
-	assert(pso.IsValid());
-	return &pso;
-}
 
 ILTYPES GetILTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool transparent)
 {
@@ -1254,7 +1208,19 @@ void LoadShaders()
 								desc.rs = &rasterizers[RSTYPE_VOXELIZE];
 								break;
 							default:
-								desc.rs = &rasterizers[doublesided ? RSTYPE_DOUBLESIDED : RSTYPE_FRONT];
+								switch (doublesided)
+								{
+								default:
+								case OBJECTRENDERING_DOUBLESIDED_DISABLED:
+									desc.rs = &rasterizers[RSTYPE_FRONT];
+									break;
+								case OBJECTRENDERING_DOUBLESIDED_ENABLED:
+									desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+									break;
+								case OBJECTRENDERING_DOUBLESIDED_BACKSIDE:
+									desc.rs = &rasterizers[RSTYPE_BACK];
+									break;
+								}
 								break;
 							}
 
@@ -2562,12 +2528,6 @@ void RenderMeshes(
 				renderPass == RENDERPASS_VOXELIZE
 				);
 
-		// Do we need to bind all textures or just a reduced amount for this pass?
-		const bool easyTextureBind =
-			renderPass == RENDERPASS_SHADOW ||
-			renderPass == RENDERPASS_SHADOWCUBE ||
-			renderPass == RENDERPASS_DEPTHONLY;
-
 		// Do we need to compute a light mask for this pass on the CPU?
 		const bool forwardLightmaskRequest =
 			renderPass == RENDERPASS_ENVMAPCAPTURE ||
@@ -2738,7 +2698,46 @@ void RenderMeshes(
 					continue;
 				}
 
-				const PipelineState* pso = GetObjectPSO(renderPass, renderTypeFlags, mesh, material, tessellatorRequested, forceAlphaTestForDithering);
+				const PipelineState* pso = nullptr;
+				const PipelineState* pso_backside = nullptr; // only when separate backside rendering is required (transparent doublesided)
+				{
+					if (IsWireRender())
+					{
+						switch (renderPass)
+						{
+						case RENDERPASS_TEXTURE:
+						case RENDERPASS_MAIN:
+							pso = &PSO_object_wire;
+						}
+					}
+					else if (mesh.IsTerrain())
+					{
+						pso = &PSO_object_terrain[renderPass];
+					}
+					else if (material.customShaderID >= 0 && material.customShaderID < (int)customShaders.size())
+					{
+						const CustomShader& customShader = customShaders[material.customShaderID];
+						if (renderTypeFlags & customShader.renderTypeFlags)
+						{
+							pso = &customShader.pso[renderPass];
+						}
+					}
+					else
+					{
+						const BLENDMODE blendMode = material.GetBlendMode();
+						const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
+						OBJECTRENDERING_DOUBLESIDED doublesided = mesh.IsDoubleSided() ? OBJECTRENDERING_DOUBLESIDED_ENABLED : OBJECTRENDERING_DOUBLESIDED_DISABLED;
+
+						pso = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellation][alphatest];
+						assert(pso->IsValid());
+
+						if ((renderTypeFlags & RENDERTYPE_TRANSPARENT) && doublesided == OBJECTRENDERING_DOUBLESIDED_ENABLED)
+						{
+							doublesided = OBJECTRENDERING_DOUBLESIDED_BACKSIDE;
+							pso_backside = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellation][alphatest];
+						}
+					}
+				}
 
 				if (pso == nullptr || !pso->IsValid())
 				{
@@ -2874,20 +2873,10 @@ void RenderMeshes(
 					device->BindShadingRate(material.shadingRate, cmd);
 				}
 
-				device->BindPipelineState(pso, cmd);
-
 				device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
 				device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
 
-				if (easyTextureBind)
-				{
-					const GPUResource* res[] = {
-						material.GetBaseColorMap(),
-						material.GetNormalMap(), //reminder: transparent shadow might need it!
-					};
-					device->BindResources(PS, res, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(res), cmd);
-				}
-				else
+				// Bind all material textures:
 				{
 					const GPUResource* res[] = {
 						material.GetBaseColorMap(),
@@ -2985,6 +2974,13 @@ void RenderMeshes(
 					}
 				}
 
+				if (pso_backside != nullptr)
+				{
+					device->BindPipelineState(pso_backside, cmd);
+					device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
+				}
+
+				device->BindPipelineState(pso, cmd);
 				device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
 			}
 		}
