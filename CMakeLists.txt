@@ -12,7 +12,7 @@ elseif(UNIX)
     find_package(SDL2 REQUIRED)
     set(PLATFORM "SDL2")
     add_compile_definitions(SDL2=1)
-	target_link_libraries(dl)
+	target_link_libraries(volk PUBLIC dl)
 endif()
 
 add_subdirectory(WickedEngine)
