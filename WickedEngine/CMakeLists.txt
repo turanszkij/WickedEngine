@@ -90,7 +90,6 @@ target_link_libraries(WickedEngine PUBLIC
 	Bullet
 	LUA
 	Utility
-	-ldl
 )
 
 add_dependencies(WickedEngine
