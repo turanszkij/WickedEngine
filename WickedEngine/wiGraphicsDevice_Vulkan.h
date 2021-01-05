@@ -16,8 +16,7 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #endif // _WIN32
 
-#include <vulkan/vulkan.h>
-
+#include "Utility/volk.h"
 #include "Utility/vk_mem_alloc.h"
 
 #include <vector>

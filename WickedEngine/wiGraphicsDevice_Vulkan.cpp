@@ -1,7 +1,9 @@
 #include "wiGraphicsDevice_Vulkan.h"
 
 #ifdef WICKEDENGINE_BUILD_VULKAN
-#pragma comment(lib,"vulkan-1.lib")
+
+#define VOLK_IMPLEMENTATION
+#include "Utility/volk.h"
 
 #include "Utility/spirv_reflect.h"
 
@@ -2153,6 +2155,8 @@ using namespace Vulkan_Internal;
 
 		VkResult res;
 
+		res = volkInitialize();
+		assert(res == VK_SUCCESS);
 
 		// Fill out application info:
 		VkApplicationInfo appInfo = {};
@@ -2229,6 +2233,8 @@ using namespace Vulkan_Internal;
 			}
 			res = vkCreateInstance(&createInfo, nullptr, &instance);
 			assert(res == VK_SUCCESS);
+
+			volkLoadInstance(instance);
 		}
 
 		// Register validation layer callback:
@@ -2577,6 +2583,8 @@ using namespace Vulkan_Internal;
 
 			res = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
 			assert(res == VK_SUCCESS);
+
+			volkLoadDevice(device);
 
 			vkGetDeviceQueue(device, graphicsFamily, 0, &graphicsQueue);
 			vkGetDeviceQueue(device, presentFamily, 0, &presentQueue);
