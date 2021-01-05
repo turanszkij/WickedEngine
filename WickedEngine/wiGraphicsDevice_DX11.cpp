@@ -6,8 +6,14 @@
 #include "ResourceMapping.h"
 #include "wiBackLog.h"
 
+#ifdef PLATFORM_UWP
+// UWP will use static link + /DELAYLOAD linker feature for the dlls (optionally)
 #pragma comment(lib,"d3d11.lib")
-#pragma comment(lib,"Dxgi.lib")
+#define dll_D3D11CreateDevice D3D11CreateDevice
+#else
+static PFN_D3D11_CREATE_DEVICE dll_D3D11CreateDevice = nullptr;
+#endif // PLATFORM_UWP
+
 #pragma comment(lib,"dxguid.lib")
 
 #include <sstream>
@@ -1295,6 +1301,14 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 	RESOLUTIONHEIGHT = int(window->Bounds.Height * dpiscale);
 #endif
 
+
+#ifndef PLATFORM_UWP
+	HMODULE dx11 = LoadLibraryEx(L"d3d11.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+
+	dll_D3D11CreateDevice = (PFN_D3D11_CREATE_DEVICE)GetProcAddress(dx11, "D3D11CreateDevice");
+	assert(dll_D3D11CreateDevice != nullptr);
+#endif // PLATFORM_UWP
+
 	HRESULT hr = E_FAIL;
 
 	uint32_t createDeviceFlags = 0;
@@ -1322,7 +1336,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 	for (uint32_t driverTypeIndex = 0; driverTypeIndex < numDriverTypes; driverTypeIndex++)
 	{
 		driverType = driverTypes[driverTypeIndex];
-		hr = D3D11CreateDevice(nullptr, driverType, nullptr, createDeviceFlags, featureLevels, numFeatureLevels, D3D11_SDK_VERSION, &device
+		hr = dll_D3D11CreateDevice(nullptr, driverType, nullptr, createDeviceFlags, featureLevels, numFeatureLevels, D3D11_SDK_VERSION, &device
 			, &featureLevel, &immediateContext);
 
 		if (SUCCEEDED(hr))
