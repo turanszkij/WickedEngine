@@ -92,6 +92,9 @@ target_link_libraries(WickedEngine PUBLIC
 	Utility
 )
 
+if(not win32)
+	target_link_libraries(WickedEngine PRIVATE dl)
+
 add_dependencies(WickedEngine
 	Shaders_SPIRV)
 
