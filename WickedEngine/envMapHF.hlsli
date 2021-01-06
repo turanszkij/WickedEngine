@@ -12,6 +12,7 @@ struct PSIn_EnvmapRendering
 	float3 nor : NORMAL;
 	float4 tan : TANGENT;
 	float3 pos3D : WORLDPOSITION;
+	uint emissiveColor : EMISSIVECOLOR;
 #ifdef VPRT_EMULATION
 	uint RTIndex	: RTINDEX;
 #else

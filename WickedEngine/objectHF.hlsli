@@ -75,6 +75,7 @@ struct PixelInputType
 	float3 nor		 : NORMAL;
 	float4 tan		 : TANGENT;
 	float3 pos3D	 : WORLDPOSITION;
+	uint emissiveColor : EMISSIVECOLOR;
 	float4 pos2DPrev : SCREENPOSITIONPREV;
 };
 
@@ -975,6 +976,14 @@ GBUFFEROutputType main(PIXELINPUT input)
 	surface.N = normalize(surface.N);
 
 #endif // TERRAIN
+
+
+
+#ifndef SIMPLE_INPUT
+	surface.emissiveColor *= unpack_rgba(input.emissiveColor);
+#endif // SIMPLE_INPUT
+
+
 
 	// Secondary occlusion map:
 	[branch]

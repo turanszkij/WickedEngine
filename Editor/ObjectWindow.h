@@ -16,6 +16,8 @@ public:
 	wiCheckBox renderableCheckBox;
 	wiSlider ditherSlider;
 	wiSlider cascadeMaskSlider;
+
+	wiComboBox colorComboBox;
 	wiColorPicker colorPicker;
 
 	wiLabel physicsLabel;

@@ -33,17 +33,20 @@ struct ConstantOutputType
 	float4 posPrev0 : POSITIONPREV0;
 	float4 posPrev1 : POSITIONPREV1;
 	float4 posPrev2 : POSITIONPREV2;
+
+	uint emissiveColor : EMISSIVECOLOR;
 };
 
 struct HullOutputType
 {
-	float4 pos								: POSITION;
-	float4 color							: COLOR;
-	float4 uvsets							: UVSETS;
-	float4 atlas							: ATLAS;
-	float4 nor								: NORMAL;
-	float4 tan								: TANGENT;
-	float4 posPrev							: POSITIONPREV;
+	float4 pos			: POSITION;
+	float4 color		: COLOR;
+	float4 uvsets		: UVSETS;
+	float4 atlas		: ATLAS;
+	float4 nor			: NORMAL;
+	float4 tan			: TANGENT;
+	float4 posPrev		: POSITIONPREV;
+	uint emissiveColor	: EMISSIVECOLOR;
 };
 
 
@@ -156,6 +159,7 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	Out.color = vertexColor;
 	Out.nor = vertexNormal;
 	Out.tan = vertexTangent;
+	Out.emissiveColor = patch[0].emissiveColor;
 
 	return Out;
 }

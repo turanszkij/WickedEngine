@@ -263,7 +263,13 @@ struct Instance
 	XMFLOAT4 mat2;
 	XMUINT4 userdata;
 
-	inline void Create(const XMFLOAT4X4& matIn, const XMFLOAT4& colorIn = XMFLOAT4(1, 1, 1, 1), float dither = 0, uint32_t subInstance = 0) volatile
+	inline void Create(
+		const XMFLOAT4X4& matIn,
+		const XMFLOAT4& colorIn = XMFLOAT4(1, 1, 1, 1),
+		float dither = 0,
+		uint32_t subInstance = 0,
+		const XMFLOAT4& emissiveColor = XMFLOAT4(1, 1, 1, 1)
+	) volatile
 	{
 		mat0.x = matIn._11;
 		mat0.y = matIn._21;
@@ -285,7 +291,7 @@ struct Instance
 		userdata.x = wiMath::CompressColor(color);
 		userdata.y = subInstance;
 
-		userdata.z = 0;
+		userdata.z = wiMath::CompressColor(emissiveColor);
 		userdata.w = 0;
 	}
 };
@@ -2622,7 +2628,7 @@ void RenderMeshes(
 				// Write into actual GPU-buffer:
 				if (advancedVBRequest)
 				{
-					((volatile InstBuf*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index);
+					((volatile InstBuf*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
 
 					const XMFLOAT4X4& prev_worldMatrix = instance.prev_transform_index >= 0 ? vis.scene->prev_transforms[instance.prev_transform_index].world_prev : IDENTITYMATRIX;
 					((volatile InstBuf*)instances.data)[instanceCount].instancePrev.Create(prev_worldMatrix);
@@ -2630,7 +2636,7 @@ void RenderMeshes(
 				}
 				else
 				{
-					((volatile Instance*)instances.data)[instanceCount].Create(worldMatrix, instance.color, dither, frustum_index);
+					((volatile Instance*)instances.data)[instanceCount].Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
 				}
 
 				current_batch.instanceCount++; // next instance in current InstancedBatch
@@ -2728,13 +2734,13 @@ void RenderMeshes(
 						const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
 						OBJECTRENDERING_DOUBLESIDED doublesided = mesh.IsDoubleSided() ? OBJECTRENDERING_DOUBLESIDED_ENABLED : OBJECTRENDERING_DOUBLESIDED_DISABLED;
 
-						pso = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellation][alphatest];
+						pso = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest];
 						assert(pso->IsValid());
 
 						if ((renderTypeFlags & RENDERTYPE_TRANSPARENT) && doublesided == OBJECTRENDERING_DOUBLESIDED_ENABLED)
 						{
 							doublesided = OBJECTRENDERING_DOUBLESIDED_BACKSIDE;
-							pso_backside = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellation][alphatest];
+							pso_backside = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest];
 						}
 					}
 				}

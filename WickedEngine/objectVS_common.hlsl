@@ -27,6 +27,7 @@ PixelInputType main(Input_Object_ALL input)
 	Out.atl = surface.atlas;
 	Out.nor = surface.normal;
 	Out.tan = surface.tangent;
+	Out.emissiveColor = surface.emissiveColor;
 
 	return Out;
 }

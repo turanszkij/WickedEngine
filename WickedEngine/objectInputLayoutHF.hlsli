@@ -75,12 +75,14 @@ struct VertexSurface
 	float3 normal;
 	float4 tangent;
 	float4 positionPrev;
+	uint emissiveColor;
 
 	inline void create(in ShaderMaterial material, in Input_Object_POS input)
 	{
 		position = float4(input.pos.xyz, 1);
 
 		color = material.baseColor * unpack_rgba(input.inst.userdata.x);
+		emissiveColor = input.inst.userdata.z;
 
 		uint normal_wind = asuint(input.pos.w);
 		normal.x = (float)((normal_wind >> 0) & 0xFF) / 255.0f * 2.0f - 1.0f;
@@ -101,6 +103,7 @@ struct VertexSurface
 		position = float4(input.pos.xyz, 1);
 
 		color = material.baseColor * unpack_rgba(input.inst.userdata.x);
+		emissiveColor = input.inst.userdata.z;
 
 		uint normal_wind = asuint(input.pos.w);
 		normal.x = (float)((normal_wind >> 0) & 0xFF) / 255.0f * 2.0f - 1.0f;
@@ -125,6 +128,7 @@ struct VertexSurface
 		positionPrev = float4(input.pre.xyz, 1);
 
 		color = material.baseColor * unpack_rgba(input.inst.userdata.x);
+		emissiveColor = input.inst.userdata.z;
 
 		if (material.IsUsingVertexColors())
 		{

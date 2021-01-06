@@ -3,12 +3,14 @@
 
 struct HullInputType
 {
-	float4 pos								: POSITION;
-	float4 color							: COLOR;
-	float4 uvsets							: UVSETS;
-	float4 atlas							: ATLAS;
-	float4 nor								: NORMAL;
-	float4 posPrev							: POSITIONPREV;
+	float4 pos			: POSITION;
+	float4 color		: COLOR;
+	float4 uvsets		: UVSETS;
+	float4 atlas		: ATLAS;
+	float4 nor			: NORMAL;
+	float4 tan			: TANGENT;
+	float4 posPrev		: POSITIONPREV;
+	uint emissiveColor	: EMISSIVECOLOR;
 };
 
 
@@ -32,6 +34,8 @@ HullInputType main(Input_Object_ALL input)
 
 	// todo: leave these but I'm lazy to create appropriate hull/domain shaders now...
 	Out.posPrev = 0;
+	Out.tan = 0;
+	Out.emissiveColor = 0;
 
 	return Out;
 }

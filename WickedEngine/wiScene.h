@@ -573,6 +573,7 @@ namespace wiScene
 		uint32_t cascadeMask = 0; // which shadow cascades to skip (0: skip none, 1: skip first, etc...)
 		uint32_t rendertypeMask = 0;
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
+		XMFLOAT4 emissiveColor = XMFLOAT4(1, 1, 1, 1);
 
 		uint32_t lightmapWidth = 0;
 		uint32_t lightmapHeight = 0;
