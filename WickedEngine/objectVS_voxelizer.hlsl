@@ -6,6 +6,7 @@ struct VSOut
 	float4 color : COLOR;
 	float4 uvsets : UVSETS;
 	float3 nor : NORMAL;
+	nointerpolation uint emissiveColor : EMISSIVECOLOR;
 };
 
 VSOut main(Input_Object_ALL input)
@@ -21,6 +22,7 @@ VSOut main(Input_Object_ALL input)
 	Out.color = surface.color;
 	Out.uvsets = surface.uvsets;
 	Out.nor = normalize(mul((float3x3)WORLD, surface.normal));
+	Out.emissiveColor = surface.emissiveColor;
 
 	return Out;
 }

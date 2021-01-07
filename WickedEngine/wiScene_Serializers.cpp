@@ -481,6 +481,10 @@ namespace wiScene
 			{
 				archive >> userStencilRef;
 			}
+			if (archive.GetVersion() >= 60)
+			{
+				archive >> emissiveColor;
+			}
 		}
 		else
 		{
@@ -499,6 +503,10 @@ namespace wiScene
 			if (archive.GetVersion() >= 31)
 			{
 				archive << userStencilRef;
+			}
+			if (archive.GetVersion() >= 60)
+			{
+				archive << emissiveColor;
 			}
 		}
 	}

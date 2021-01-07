@@ -4,13 +4,14 @@
 
 struct HullInputType
 {
-	float4 pos								: POSITION;
-	float4 color							: COLOR;
-	float4 uvsets							: UVSETS;
-	float4 atlas							: ATLAS;
-	float4 nor								: NORMAL;
-	float4 tan								: TANGENT;
-	float4 posPrev							: POSITIONPREV;
+	float4 pos			: POSITION;
+	float4 color		: COLOR;
+	float4 uvsets		: UVSETS;
+	float4 atlas		: ATLAS;
+	float4 nor			: NORMAL;
+	float4 tan			: TANGENT;
+	float4 posPrev		: POSITIONPREV;
+	uint emissiveColor	: EMISSIVECOLOR;
 };
 
 //The ConstantOutputType structure is what will be the output from the patch constant function.
@@ -46,18 +47,21 @@ struct ConstantOutputType
 	float4 posPrev0 : POSITIONPREV0;
 	float4 posPrev1 : POSITIONPREV1;
 	float4 posPrev2 : POSITIONPREV2;
+
+	uint emissiveColor : EMISSIVECOLOR;
 };
 
 //The HullOutputType structure is what will be the output from the hull shader.
 struct HullOutputType
 {
-	float4 pos								: POSITION;
-	float4 color							: COLOR;
-	float4 uvsets							: UVSETS;
-	float4 atlas							: ATLAS;
-	float4 nor								: NORMAL;
-	float4 tan								: TANGENT;
-	float4 posPrev							: POSITIONPREV;
+	float4 pos		: POSITION;
+	float4 color	: COLOR;
+	float4 uvsets	: UVSETS;
+	float4 atlas	: ATLAS;
+	float4 nor		: NORMAL;
+	float4 tan		: TANGENT;
+	float4 posPrev	: POSITIONPREV;
+	uint emissiveColor : EMISSIVECOLOR;
 };
 
 
@@ -144,6 +148,8 @@ ConstantOutputType PatchConstantFunction(InputPatch<HullInputType, 3> I)
 	Out.posPrev0 = I[0].posPrev;
 	Out.posPrev1 = I[1].posPrev;
 	Out.posPrev2 = I[2].posPrev;
+
+	Out.emissiveColor = I[0].emissiveColor;
            
     return Out;
 }
@@ -167,6 +173,7 @@ HullOutputType main(InputPatch<HullInputType, 3> patch, uint pointId : SV_Output
     Out.nor				= patch[pointId].nor;
     Out.tan				= patch[pointId].tan;
 	Out.posPrev			= patch[pointId].posPrev;
+	Out.emissiveColor	= patch[pointId].emissiveColor;
 
     return Out;
 }

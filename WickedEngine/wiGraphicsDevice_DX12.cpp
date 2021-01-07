@@ -15,19 +15,28 @@
 #include <dxcapi.h>
 #include <d3d12shader.h>
 
-#pragma comment(lib,"d3d12.lib")
-#pragma comment(lib,"Dxgi.lib")
-#pragma comment(lib,"dxguid.lib")
-
 #ifdef _DEBUG
 #include <d3d12sdklayers.h>
 #endif // _DEBUG
 
-static DxcCreateInstanceProc pfn_DxcCreateInstance = nullptr;
-
 #include <sstream>
 #include <algorithm>
 #include <wincodec.h>
+
+#ifdef PLATFORM_UWP
+// UWP will use static link + /DELAYLOAD linker feature for the dlls (optionally)
+#pragma comment(lib,"d3d12.lib")
+#pragma comment(lib,"dxgi.lib")
+#define dll_CreateDXGIFactory2 CreateDXGIFactory2
+#define dll_D3D12CreateDevice D3D12CreateDevice
+#define dll_D3D12SerializeVersionedRootSignature D3D12SerializeVersionedRootSignature
+#else
+static decltype(&CreateDXGIFactory2) dll_CreateDXGIFactory2 = nullptr;
+static PFN_D3D12_CREATE_DEVICE dll_D3D12CreateDevice = nullptr;
+static PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE dll_D3D12SerializeVersionedRootSignature = nullptr;
+#endif // PLATFORM_UWP
+
+static DxcCreateInstanceProc dll_DxcCreateInstance = nullptr;
 
 using namespace Microsoft::WRL;
 
@@ -2163,17 +2172,34 @@ using namespace DX12_Internal;
 		RESOLUTIONHEIGHT = int(window->Bounds.Height * dpiscale);
 #endif
 
+
+#ifdef PLATFORM_UWP
+		HMODULE dxcompiler = LoadPackagedLibrary(L"dxcompiler.dll", 0);
+#else
+		HMODULE dxgi = LoadLibraryEx(L"dxgi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+		HMODULE dx12 = LoadLibraryEx(L"d3d12.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+		HMODULE dxcompiler = LoadLibrary(L"dxcompiler.dll");
+
+		dll_CreateDXGIFactory2 = (decltype(&CreateDXGIFactory2))GetProcAddress(dxgi, "CreateDXGIFactory2");
+		assert(dll_CreateDXGIFactory2 != nullptr);
+
+		dll_D3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(dx12, "D3D12CreateDevice");
+		assert(dll_D3D12CreateDevice != nullptr);
+
+		dll_D3D12SerializeVersionedRootSignature = (PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE)GetProcAddress(dx12, "D3D12SerializeVersionedRootSignature");
+		assert(dll_D3D12SerializeVersionedRootSignature != nullptr);
+#endif // PLATFORM_UWP
+
+		dll_DxcCreateInstance = (DxcCreateInstanceProc)GetProcAddress(dxcompiler, "DxcCreateInstance");
+		assert(dll_DxcCreateInstance != nullptr);
+
 		HRESULT hr = E_FAIL;
 
 #if !defined(PLATFORM_UWP)
 		if (debuglayer)
 		{
 			// Enable the debug layer.
-			HMODULE dx12 = LoadLibraryEx(L"d3d12.dll",
-				nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
-			auto pD3D12GetDebugInterface =
-				reinterpret_cast<PFN_D3D12_GET_DEBUG_INTERFACE>(
-					GetProcAddress(dx12, "D3D12GetDebugInterface"));
+			auto pD3D12GetDebugInterface = reinterpret_cast<PFN_D3D12_GET_DEBUG_INTERFACE>(GetProcAddress(dx12, "D3D12GetDebugInterface"));
 			if (pD3D12GetDebugInterface)
 			{
 				ID3D12Debug* d3dDebug;
@@ -2186,7 +2212,8 @@ using namespace DX12_Internal;
 			}
 		}
 #endif
-		hr = CreateDXGIFactory2(debuglayer ? DXGI_CREATE_FACTORY_DEBUG : 0, IID_PPV_ARGS(&factory));
+
+		hr = dll_CreateDXGIFactory2(debuglayer ? DXGI_CREATE_FACTORY_DEBUG : 0, IID_PPV_ARGS(&factory));
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
@@ -2206,7 +2233,7 @@ using namespace DX12_Internal;
 
 			// ignore software adapter and check device creation succeeds
 			if (!(adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) &&
-				SUCCEEDED(D3D12CreateDevice(candidateAdapter.Get(), D3D_FEATURE_LEVEL_12_1, __uuidof(ID3D12Device), nullptr)))
+				SUCCEEDED(dll_D3D12CreateDevice(candidateAdapter.Get(), D3D_FEATURE_LEVEL_12_1, __uuidof(ID3D12Device), nullptr)))
 			{
 				candidateAdapter.As(&adapter);
 				break;
@@ -2219,7 +2246,7 @@ using namespace DX12_Internal;
 			wiPlatform::Exit();
 		}
 
-		hr = D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device));
+		hr = dll_D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device));
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
@@ -2278,11 +2305,6 @@ using namespace DX12_Internal;
 
 
 		// Create swapchain
-
-		ComPtr<IDXGIFactory4> pIDXGIFactory;
-		hr = CreateDXGIFactory1(IID_PPV_ARGS(&pIDXGIFactory));
-		assert(SUCCEEDED(hr));
-
 		ComPtr<IDXGISwapChain1> _swapChain;
 
 		DXGI_SWAP_CHAIN_DESC1 sd = {};
@@ -2307,12 +2329,12 @@ using namespace DX12_Internal;
 		fullscreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED; // needs to be unspecified for correct fullscreen scaling!
 		fullscreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
 		fullscreenDesc.Windowed = !fullscreen;
-		hr = pIDXGIFactory->CreateSwapChainForHwnd(directQueue.Get(), window, &sd, &fullscreenDesc, nullptr, &_swapChain);
+		hr = factory->CreateSwapChainForHwnd(directQueue.Get(), window, &sd, &fullscreenDesc, nullptr, &_swapChain);
 #else
 		sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // All Windows Store apps must use this SwapEffect.
 		sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
-		hr = pIDXGIFactory->CreateSwapChainForCoreWindow(directQueue.Get(), reinterpret_cast<IUnknown*>(window.Get()), &sd, nullptr, &_swapChain);
+		hr = factory->CreateSwapChainForCoreWindow(directQueue.Get(), reinterpret_cast<IUnknown*>(window.Get()), &sd, nullptr, &_swapChain);
 #endif
 
 		if (FAILED(hr))
@@ -2608,18 +2630,6 @@ using namespace DX12_Internal;
 		// GPU Queries:
 		allocationhandler->queries_occlusion.init(allocationhandler.get(), D3D12_QUERY_HEAP_TYPE_OCCLUSION);
 		allocationhandler->queries_timestamp.init(allocationhandler.get(), D3D12_QUERY_HEAP_TYPE_TIMESTAMP);
-
-		if (pfn_DxcCreateInstance == nullptr)
-		{
-#ifdef PLATFORM_UWP
-			HMODULE dll = LoadPackagedLibrary(L"dxcompiler.dll", 0);
-#else
-			HMODULE dll = LoadLibrary(L"dxcompiler.dll");
-#endif // PLATFORM_UWP
-			assert(dll != NULL);
-			pfn_DxcCreateInstance = (DxcCreateInstanceProc)GetProcAddress(dll, "DxcCreateInstance");
-			assert(pfn_DxcCreateInstance != nullptr);
-		}
 
 		wiBackLog::post("Created GraphicsDevice_DX12");
 	}
@@ -3046,7 +3056,7 @@ using namespace DX12_Internal;
 			blob.size = BytecodeLength;
 
 			ComPtr<IDxcContainerReflection> container_reflection;
-			hr = pfn_DxcCreateInstance(CLSID_DxcContainerReflection, __uuidof(IDxcContainerReflection), (void**)&container_reflection);
+			hr = dll_DxcCreateInstance(CLSID_DxcContainerReflection, __uuidof(IDxcContainerReflection), (void**)&container_reflection);
 			assert(SUCCEEDED(hr));
 			hr = container_reflection->Load(&blob);
 			assert(SUCCEEDED(hr));
@@ -3202,7 +3212,7 @@ using namespace DX12_Internal;
 
 				ID3DBlob* rootSigBlob;
 				ID3DBlob* rootSigError;
-				hr = D3D12SerializeVersionedRootSignature(&versioned_rs, &rootSigBlob, &rootSigError);
+				hr = dll_D3D12SerializeVersionedRootSignature(&versioned_rs, &rootSigBlob, &rootSigError);
 				if (FAILED(hr))
 				{
 					OutputDebugStringA((char*)rootSigError->GetBufferPointer());
@@ -3435,7 +3445,7 @@ using namespace DX12_Internal;
 
 			ID3DBlob* rootSigBlob;
 			ID3DBlob* rootSigError;
-			HRESULT hr = D3D12SerializeVersionedRootSignature(&versioned_rs, &rootSigBlob, &rootSigError);
+			HRESULT hr = dll_D3D12SerializeVersionedRootSignature(&versioned_rs, &rootSigBlob, &rootSigError);
 			if (FAILED(hr))
 			{
 				assert(0);
@@ -4268,7 +4278,7 @@ using namespace DX12_Internal;
 
 		ID3DBlob* rootSigBlob;
 		ID3DBlob* rootSigError;
-		HRESULT hr = D3D12SerializeVersionedRootSignature(&versioned_rs, &rootSigBlob, &rootSigError);
+		HRESULT hr = dll_D3D12SerializeVersionedRootSignature(&versioned_rs, &rootSigBlob, &rootSigError);
 		if (FAILED(hr))
 		{
 			OutputDebugStringA((char*)rootSigError->GetBufferPointer());

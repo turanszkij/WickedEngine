@@ -10,6 +10,7 @@ struct HullInputType
 	float4 nor								: NORMAL;
 	float4 tan								: TANGENT;
 	float4 posPrev							: POSITIONPREV;
+	uint emissiveColor						: EMISSIVECOLOR;
 };
 
 
@@ -35,6 +36,7 @@ HullInputType main(Input_Object_ALL input)
 	Out.nor = float4(surface.normal, 1);
 	Out.tan = surface.tangent;
 	Out.posPrev = surface.positionPrev;
+	Out.emissiveColor = surface.emissiveColor;
 
 	return Out;
 }

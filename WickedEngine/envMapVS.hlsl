@@ -24,6 +24,7 @@ PSIn_EnvmapRendering main(Input_Object_ALL input)
 	output.atl = surface.atlas;
 	output.nor = surface.normal;
 	output.tan = surface.tangent;
+	output.emissiveColor = surface.emissiveColor;
 
 	return output;
 }
