@@ -16,7 +16,7 @@ elseif(UNIX)
         pkg_check_modules(SDL2 sdl2)
     endif()
 
-    if (NOT EXISTS ${SDL2_FOUND})
+    if (NOT DEFINED SDL2_FOUND)
        	find_package(SDL2 REQUIRED)
     endif()
 
