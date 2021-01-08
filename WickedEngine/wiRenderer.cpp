@@ -1164,7 +1164,7 @@ void LoadShaders()
 							case RENDERPASS_DEPTHONLY:
 							case RENDERPASS_SHADOW:
 							case RENDERPASS_SHADOWCUBE:
-								desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENT : BSTYPE_COLORWRITEDISABLE];
+								desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOW : BSTYPE_COLORWRITEDISABLE];
 								break;
 							default:
 								break;
@@ -2216,6 +2216,18 @@ void SetUpStates()
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = false;
 	blendStates[BSTYPE_MULTIPLY] = bd;
+
+	bd.RenderTarget[0].SrcBlend = BLEND_ZERO;
+	bd.RenderTarget[0].DestBlend = BLEND_SRC_COLOR;
+	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_MAX;
+	bd.RenderTarget[0].BlendEnable = true;
+	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
+	bd.AlphaToCoverageEnable = false;
+	bd.IndependentBlendEnable = false;
+	blendStates[BSTYPE_TRANSPARENTSHADOW] = bd;
 }
 
 void ModifySampler(const SamplerDesc& desc, int slot)
@@ -4695,7 +4707,7 @@ void SetShadowProps2D(int resolution, int count)
 		device->CreateTexture(&desc, nullptr, &shadowMapArray_2D);
 
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.Format = FORMAT_R11G11B10_FLOAT;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
 		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
 		desc.clear.color[0] = 1;
 		desc.clear.color[1] = 1;

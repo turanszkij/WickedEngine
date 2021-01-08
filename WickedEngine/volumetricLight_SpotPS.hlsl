@@ -1,4 +1,3 @@
-#define DISABLE_TRANSPARENT_SHADOWMAP
 #include "volumetricLightHF.hlsli"
 
 float4 main(VertexToPixel input) : SV_TARGET

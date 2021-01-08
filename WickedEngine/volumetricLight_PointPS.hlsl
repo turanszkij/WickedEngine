@@ -1,4 +1,3 @@
-#define DISABLE_TRANSPARENT_SHADOWMAP
 #define DISABLE_SOFT_SHADOWMAP
 #include "volumetricLightHF.hlsli"
 

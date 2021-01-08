@@ -54,5 +54,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 		color.rgb += caustic;
 	}
 
+	color.a = input.pos.z; // secondary depth
+
 	return color;
 }

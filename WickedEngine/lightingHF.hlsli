@@ -68,7 +68,12 @@ inline float3 shadowCascade(in ShaderEntity light, in float3 shadowPos, in float
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
 	if (g_xFrame_Options & OPTION_BIT_TRANSPARENTSHADOWS_ENABLED)
 	{
-		shadow *= texture_shadowarray_transparent.SampleLevel(sampler_linear_clamp, float3(shadowUV, slice), 0);
+		float4 transparent_shadow = texture_shadowarray_transparent.SampleLevel(sampler_linear_clamp, float3(shadowUV, slice), 0);
+		float transparent_shadow_depth = transparent_shadow.a;
+		if (transparent_shadow_depth > realDistance)
+		{
+			shadow *= transparent_shadow.rgb;
+		}
 	}
 #endif //DISABLE_TRANSPARENT_SHADOWMAP
 

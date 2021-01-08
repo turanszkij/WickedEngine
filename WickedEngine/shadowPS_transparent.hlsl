@@ -45,5 +45,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 	color.rgb *= 1 - opacity; // if fully opaque, then black (not let through any light)
 
+	color.a = input.pos.z; // secondary depth
+
 	return color;
 }
