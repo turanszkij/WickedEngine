@@ -11,8 +11,6 @@ struct VertextoPixel
 [earlydepthstencil]
 float4 main(VertextoPixel input) : SV_TARGET
 {
-	float2 pixel = input.pos.xy;
-
 	float4 color;
 	[branch]
 	if (g_xMaterial.uvset_baseColorMap >= 0)

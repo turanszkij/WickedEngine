@@ -1,4 +1,5 @@
 #define DISABLE_SOFT_SHADOWMAP
+#define TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK // fix the lack of depth testing
 #include "volumetricLightHF.hlsli"
 
 float4 main(VertexToPixel input) : SV_TARGET
@@ -13,7 +14,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	V /= cameraDistance;
 
 	float marchedDistance = 0;
-	float accumulation = 0;
+	float3 accumulation = 0;
 
 	float3 rayEnd = g_xCamera_CamPos;
 	if (length(rayEnd - light.position) > light.GetRange())
@@ -41,7 +42,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 		const float range2 = light.GetRange() * light.GetRange();
 		const float att = saturate(1.0 - (dist2 / range2));
-		float attenuation = att * att;
+		float3 attenuation = att * att;
 
 		[branch]
 		if (light.IsCastingShadow()) {
@@ -58,5 +59,5 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 	accumulation /= sampleCount;
 
-	return max(0, float4(accumulation.xxx * light.GetColor().rgb * light.GetEnergy(), 1));
+	return max(0, float4(accumulation * light.GetColor().rgb * light.GetEnergy(), 1));
 }

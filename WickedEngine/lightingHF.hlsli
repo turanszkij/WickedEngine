@@ -68,9 +68,10 @@ inline float3 shadowCascade(in ShaderEntity light, in float3 shadowPos, in float
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
 	if (g_xFrame_Options & OPTION_BIT_TRANSPARENTSHADOWS_ENABLED)
 	{
-		float4 transparent_shadow = texture_shadowarray_transparent.SampleLevel(sampler_linear_clamp, float3(shadowUV, slice), 0);
-		float transparent_shadow_depth = transparent_shadow.a;
-		if (transparent_shadow_depth > realDistance)
+		float4 transparent_shadow = texture_shadowarray_transparent_2d.SampleLevel(sampler_linear_clamp, float3(shadowUV, slice), 0);
+#ifdef TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
+		if (transparent_shadow.a > realDistance)
+#endif // TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 		{
 			shadow *= transparent_shadow.rgb;
 		}
@@ -80,12 +81,12 @@ inline float3 shadowCascade(in ShaderEntity light, in float3 shadowPos, in float
 	return shadow;
 }
 
-inline float shadowCube(in ShaderEntity light, in float3 L, in float3 Lunnormalized)
+inline float3 shadowCube(in ShaderEntity light, in float3 L, in float3 Lunnormalized)
 {
 	const float slice = light.GetTextureIndex();
 	float remappedDistance = light.GetCubemapDepthRemapNear() +
 		light.GetCubemapDepthRemapFar() / (max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z)) * 0.989); // little bias to avoid border sampling artifact
-	float shadow = 0;
+	float3 shadow = 0;
 #ifndef DISABLE_SOFT_SHADOWMAP
 	// sample along a cube pattern around center:
 	L = -L;
@@ -102,6 +103,20 @@ inline float shadowCube(in ShaderEntity light, in float3 L, in float3 Lunnormali
 #else
 	shadow = texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-Lunnormalized, slice), remappedDistance).r;
 #endif // DISABLE_SOFT_SHADOWMAP
+
+#ifndef DISABLE_TRANSPARENT_SHADOWMAP
+	if (g_xFrame_Options & OPTION_BIT_TRANSPARENTSHADOWS_ENABLED)
+	{
+		float4 transparent_shadow = texture_shadowarray_transparent_cube.SampleLevel(sampler_linear_clamp, float4(-Lunnormalized, slice), 0);
+#ifdef TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
+		if (transparent_shadow.a > remappedDistance)
+#endif // TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
+		{
+			shadow *= transparent_shadow.rgb;
+		}
+	}
+#endif //DISABLE_TRANSPARENT_SHADOWMAP
+
 	return shadow;
 }
 
@@ -251,7 +266,7 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 		[branch]
 		if (any(surfaceToLight.NdotL_sss))
 		{
-			float shadow = 1;
+			float3 shadow = 1;
 
 			[branch]
 			if (light.IsCastingShadow())

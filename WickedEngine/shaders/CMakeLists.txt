@@ -263,6 +263,8 @@ set(SHADERS_VS
         "cubeShadowVS_alphatest.hlsl"
         "cubeShadowVS_emulation.hlsl"
         "cubeShadowVS_alphatest_emulation.hlsl"
+        "cubeShadowVS_transparent.hlsl"
+        "cubeShadowVS_transparent_emulation.hlsl"
         "cubeVS.hlsl"
 )
 
@@ -271,6 +273,7 @@ set(SHADERS_GS
         "envMapGS_emulation.hlsl"
         "cubeShadowGS_emulation.hlsl"
         "cubeShadowGS_alphatest_emulation.hlsl"
+        "cubeShadowGS_transparent_emulation.hlsl"
         "voxelGS.hlsl"
         "objectGS_voxelizer.hlsl"
         "lensFlareGS.hlsl"
