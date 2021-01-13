@@ -32,7 +32,7 @@ namespace wiGraphics
 	{
 	private:
 		VkInstance instance = VK_NULL_HANDLE;
-	    VkDebugUtilsMessengerEXT debugUtilsMessenger{VK_NULL_HANDLE};
+	    VkDebugUtilsMessengerEXT debugUtilsMessenger = VK_NULL_HANDLE;
 	    VkDebugReportCallbackEXT debugReportCallback = VK_NULL_HANDLE; // Deprecated
 		VkSurfaceKHR surface = VK_NULL_HANDLE;
 		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
@@ -185,21 +185,6 @@ namespace wiGraphics
 		void preraytrace(CommandList cmd);
 
 		std::atomic<CommandList> cmd_count{ 0 };
-
-		static PFN_vkCreateRayTracingPipelinesKHR createRayTracingPipelinesKHR;
-		static PFN_vkCreateAccelerationStructureKHR createAccelerationStructureKHR;
-		static PFN_vkDestroyAccelerationStructureKHR destroyAccelerationStructureKHR;
-		static PFN_vkGetAccelerationStructureBuildSizesKHR getAccelerationStructureBuildSizesKHR;
-		static PFN_vkGetAccelerationStructureDeviceAddressKHR getAccelerationStructureDeviceAddressKHR;
-		static PFN_vkGetRayTracingShaderGroupHandlesKHR getRayTracingShaderGroupHandlesKHR;
-		static PFN_vkCmdBuildAccelerationStructuresKHR cmdBuildAccelerationStructuresKHR;
-		static PFN_vkBuildAccelerationStructuresKHR buildAccelerationStructuresKHR;
-		static PFN_vkCmdTraceRaysKHR cmdTraceRaysKHR;
-
-		static PFN_vkCmdDrawMeshTasksNV cmdDrawMeshTasksNV;
-		static PFN_vkCmdDrawMeshTasksIndirectNV cmdDrawMeshTasksIndirectNV;
-
-		static PFN_vkCmdSetFragmentShadingRateKHR cmdSetFragmentShadingRateKHR;
 
 	public:
 		GraphicsDevice_Vulkan(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false);
@@ -464,7 +449,7 @@ namespace wiGraphics
 					{
 						auto item = destroyer_bvhs.front();
 						destroyer_bvhs.pop_front();
-						destroyAccelerationStructureKHR(device, item.first, nullptr);
+						vkDestroyAccelerationStructureKHR(device, item.first, nullptr);
 					}
 					else
 					{
