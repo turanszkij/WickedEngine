@@ -87,6 +87,24 @@ namespace wiGraphics
 
 		RenderPass dummyRenderpass;
 
+		struct DescriptorHeap
+		{
+			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+			Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> heap_GPU;
+			D3D12_CPU_DESCRIPTOR_HANDLE start_cpu = {};
+			D3D12_GPU_DESCRIPTOR_HANDLE start_gpu = {};
+
+			// CPU status:
+			std::atomic<uint64_t> allocationOffset{ 0 };
+
+			// GPU status:
+			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
+			HANDLE fenceEvent;
+			uint64_t fenceValue = 0;
+		};
+		DescriptorHeap descriptorheap_res;
+		DescriptorHeap descriptorheap_sam;
+
 		struct FrameResources
 		{
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[COMMANDLIST_COUNT];
@@ -98,19 +116,8 @@ namespace wiGraphics
 			struct DescriptorTableFrameAllocator
 			{
 				GraphicsDevice_DX12* device = nullptr;
-				struct DescriptorHeap
-				{
-					D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
-					Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> heap_GPU;
-					D3D12_CPU_DESCRIPTOR_HANDLE start_cpu = {};
-					D3D12_GPU_DESCRIPTOR_HANDLE start_gpu = {};
-					uint32_t ringOffset = 0;
-				};
-				std::vector<DescriptorHeap> heaps_resource;
-				std::vector<DescriptorHeap> heaps_sampler;
-				uint32_t current_resource_heap = 0;
-				uint32_t current_sampler_heap = 0;
-				bool heaps_bound = false;
+				uint32_t ringOffset_res = 0;
+				uint32_t ringOffset_sam = 0;
 				bool dirty_res = false;
 				bool dirty_sam = false;
 

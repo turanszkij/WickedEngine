@@ -2,6 +2,7 @@
 #include "wiPlatform.h"
 #include "wiRenderer.h"
 #include "wiBackLog.h"
+#include "wiEvent.h"
 
 #include "Utility/stb_image_write.h"
 
@@ -45,12 +46,21 @@ namespace wiHelper
 
 	void messageBox(const std::string& msg, const std::string& caption)
 	{
-		auto& state = wiPlatform::GetWindowState();
-		state.messagemutex.lock();
-		state.messages.emplace_back();
-		StringConvert(msg, state.messages.back().message);
-		StringConvert(caption, state.messages.back().caption);
-		state.messagemutex.unlock();
+#ifdef _WIN32
+#ifndef PLATFORM_UWP
+		MessageBoxA(wiPlatform::GetWindow(), msg.c_str(), caption.c_str(), 0);
+#else
+		wstring wmessage, wcaption;
+		StringConvert(msg, wmessage);
+		StringConvert(caption, wcaption);
+		// UWP can only show message box on main thread:
+		wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+			Windows::UI::Popups::MessageDialog(ref new Platform::String(wmessage.c_str()), ref new Platform::String(wcaption.c_str())).ShowAsync();
+		});
+#endif // PLATFORM_UWP
+#elif SDL2
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, caption.c_str(), msg.c_str(), NULL);
+#endif // _WIN32
 	}
 
 	void screenshot(const std::string& name)

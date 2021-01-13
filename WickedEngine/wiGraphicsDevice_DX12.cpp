@@ -1427,25 +1427,13 @@ using namespace DX12_Internal;
 
 		// Reset state to empty:
 		reset();
-
-		heaps_resource.resize(1);
-		heaps_sampler.resize(1);
 	}
 	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::reset()
 	{
 		dirty_res = true;
 		dirty_sam = true;
-		heaps_bound = false;
-		for (auto& x : heaps_resource)
-		{
-			x.ringOffset = 0;
-		}
-		for (auto& x : heaps_sampler)
-		{
-			x.ringOffset = 0;
-		}
-		current_resource_heap = 0;
-		current_sampler_heap = 0;
+		ringOffset_res = 0;
+		ringOffset_sam = 0;
 
 		memset(CBV, 0, sizeof(CBV));
 		memset(SRV, 0, sizeof(SRV));
@@ -1456,111 +1444,67 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::request_heaps(uint32_t resources, uint32_t samplers, CommandList cmd)
 	{
-		// This function allocatesGPU visible descriptor heaps that can fit the requested table sizes.
-		//	First, they grow the heaps until the size fits the dx12 resource limits (tier 1 resource limit = 1 million, sampler limit is 2048)
-		//	When the limits are reached, and there is still a need to allocate, then completely new heap blocks are started
-		//	
-		//	The function will automatically bind descriptor heaps when there was a new (growing or block allocation)
+		// Remarks:
+		//	This is allocating from the global shader visible descriptor heaps in a simple incrementing
+		//	lockless ring buffer fashion.
+		//	In this lockless method, a descriptor array that is to be allocated might not fit without
+		//	completely wrapping the beginning of the allocation.
+		//	But completely wrapping after the fact we discovered that the array couldn't fit,
+		//	it wouldn't be thread safe any more without introducing locks
+		//	For that reason, we are reserving an excess amount of descriptors at the end which can't be normally
+		//	allocated, but any out of bounds descriptors can still be safely written into it
+		//
+		//	This method wastes a number of descriptors essentially at the end of the heap, but it is simple
+		//	and safe to implement
+		//
+		//	The excess amount is essentially equal to the maximum number of descriptors that can be allocated at once.
 
-		DescriptorHeap& heap_resource = heaps_resource[current_resource_heap];
-		uint32_t allocation = heap_resource.ringOffset + resources;
-		if (heap_resource.heapDesc.NumDescriptors < allocation || heap_resource.heapDesc.NumDescriptors == 0)
+		if (resources > 0)
 		{
-			if (allocation > 1000000) // tier 1 limit
+			// The reservation is the maximum amount of descriptors that can be allocated once
+			//	It can be increased if needed
+			const uint32_t wrap_reservation = 100000;
+			const uint32_t wrap_effective_size = device->descriptorheap_res.heapDesc.NumDescriptors - wrap_reservation;
+			assert(wrap_reservation > resources); // for correct lockless wrap behaviour
+
+			uint64_t offset = device->descriptorheap_res.allocationOffset.fetch_add(resources);
+			uint64_t wrapped_offset = offset % wrap_effective_size;
+			ringOffset_res = (uint32_t)wrapped_offset;
+			uint64_t wrapped_offset_end = wrapped_offset + resources;
+			
+			uint64_t gpu_offset = device->descriptorheap_res.fence->GetCompletedValue();
+			uint64_t wrapped_gpu_offset = gpu_offset % wrap_effective_size;
+			if (wrapped_offset < wrapped_gpu_offset && wrapped_offset_end > wrapped_gpu_offset)
 			{
-				// need new block
-				allocation -= heap_resource.ringOffset;
-				current_resource_heap++;
-				if (heaps_resource.size() <= current_resource_heap)
-				{
-					heaps_resource.resize(current_resource_heap + 1);
-				}
-			}
-			DescriptorHeap& heap = heaps_resource[current_resource_heap];
-
-			// Need to re-check if growing is necessary (maybe step into new block is enough):
-			if (heap.heapDesc.NumDescriptors < allocation || heap.heapDesc.NumDescriptors == 0)
-			{
-				// grow rate is controlled here:
-				allocation = std::max(512u, allocation);
-				allocation = wiMath::GetNextPowerOfTwo(allocation);
-				allocation = std::min(1000000u, allocation);
-
-				// Issue destruction of the old heap:
-				device->allocationhandler->destroylocker.lock();
-				uint64_t framecount = device->allocationhandler->framecount;
-				device->allocationhandler->destroyer_descriptorHeaps.push_back(std::make_pair(heap.heap_GPU, framecount));
-				device->allocationhandler->destroylocker.unlock();
-
-				heap.heapDesc.NodeMask = 0;
-				heap.heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-				heap.heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-				heap.heapDesc.NumDescriptors = allocation;
-				HRESULT hr = device->device->CreateDescriptorHeap(&heap.heapDesc, IID_PPV_ARGS(&heap.heap_GPU));
+				assert(device->descriptorheap_res.fenceValue > wrapped_offset_end); // simply not enough space, even with GPU drain
+				HRESULT hr = device->descriptorheap_res.fence->SetEventOnCompletion(device->descriptorheap_res.fenceValue, device->descriptorheap_res.fenceEvent);
 				assert(SUCCEEDED(hr));
-
-				// Save heap properties:
-				heap.start_cpu = heap.heap_GPU->GetCPUDescriptorHandleForHeapStart();
-				heap.start_gpu = heap.heap_GPU->GetGPUDescriptorHandleForHeapStart();
+				WaitForSingleObject(device->descriptorheap_res.fenceEvent, INFINITE);
 			}
-
-			heaps_bound = false;
 		}
 
-		DescriptorHeap& heap_sampler = heaps_sampler[current_sampler_heap];
-		allocation = heap_sampler.ringOffset + samplers;
-		if (heap_sampler.heapDesc.NumDescriptors < allocation || heap_sampler.heapDesc.NumDescriptors == 0)
+		if (samplers > 0)
 		{
-			if (allocation > 2048) // sampler limit
+			// The reservation is the maximum amount of descriptors that can be allocated once
+			//	It can be increased if needed
+			const uint32_t wrap_reservation = 16;
+			const uint32_t wrap_effective_size = device->descriptorheap_sam.heapDesc.NumDescriptors - wrap_reservation;
+			assert(wrap_reservation > samplers); // for correct lockless wrap behaviour
+
+			uint64_t offset = device->descriptorheap_sam.allocationOffset.fetch_add(samplers);
+			uint64_t wrapped_offset = offset % wrap_effective_size;
+			ringOffset_sam = (uint32_t)wrapped_offset;
+			uint64_t wrapped_offset_end = wrapped_offset + samplers;
+
+			uint64_t gpu_offset = device->descriptorheap_sam.fence->GetCompletedValue();
+			uint64_t wrapped_gpu_offset = gpu_offset % wrap_effective_size;
+			if (wrapped_offset < wrapped_gpu_offset && wrapped_offset_end > wrapped_gpu_offset)
 			{
-				// need new block
-				allocation -= heap_sampler.ringOffset;
-				current_sampler_heap++;
-				if (heaps_sampler.size() <= current_sampler_heap)
-				{
-					heaps_sampler.resize(current_sampler_heap + 1);
-				}
-			}
-			DescriptorHeap& heap = heaps_sampler[current_sampler_heap];
-
-			// Need to re-check if growing is necessary (maybe step into new block is enough):
-			if (heap.heapDesc.NumDescriptors < allocation || heap.heapDesc.NumDescriptors == 0)
-			{
-				// grow rate is controlled here:
-				allocation = std::max(512u, allocation);
-				allocation = wiMath::GetNextPowerOfTwo(allocation);
-				allocation = std::min(2048u, allocation);
-
-				// Issue destruction of the old heap:
-				device->allocationhandler->destroylocker.lock();
-				uint64_t framecount = device->allocationhandler->framecount;
-				device->allocationhandler->destroyer_descriptorHeaps.push_back(std::make_pair(heap.heap_GPU, framecount));
-				device->allocationhandler->destroylocker.unlock();
-
-				heap.heapDesc.NodeMask = 0;
-				heap.heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-				heap.heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-				heap.heapDesc.NumDescriptors = allocation;
-				HRESULT hr = device->device->CreateDescriptorHeap(&heap.heapDesc, IID_PPV_ARGS(&heap.heap_GPU));
+				assert(device->descriptorheap_sam.fenceValue > wrapped_offset_end); // simply not enough space, even with GPU drain
+				HRESULT hr = device->descriptorheap_sam.fence->SetEventOnCompletion(device->descriptorheap_sam.fenceValue, device->descriptorheap_sam.fenceEvent);
 				assert(SUCCEEDED(hr));
-
-				// Save heap properties:
-				heap.start_cpu = heap.heap_GPU->GetCPUDescriptorHandleForHeapStart();
-				heap.start_gpu = heap.heap_GPU->GetGPUDescriptorHandleForHeapStart();
+				WaitForSingleObject(device->descriptorheap_sam.fenceEvent, INFINITE);
 			}
-
-			heaps_bound = false;
-		}
-
-		if (!heaps_bound)
-		{
-			heaps_bound = true;
-			// definitely re-index the heap blocks!
-			ID3D12DescriptorHeap* heaps[2] = {
-				heaps_resource[current_resource_heap].heap_GPU.Get(),
-				heaps_sampler[current_sampler_heap].heap_GPU.Get()
-			};
-			device->GetDirectCommandList(cmd)->SetDescriptorHeaps(arraysize(heaps), heaps);
 		}
 	}
 	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::validate(bool graphics, CommandList cmd)
@@ -1578,14 +1522,14 @@ using namespace DX12_Internal;
 		if (!pso_internal->resources.empty() && dirty_res)
 		{
 			dirty_res = false;
-			DescriptorHeap& heap = heaps_resource[current_resource_heap];
+			auto& heap = device->descriptorheap_res;
 			D3D12_GPU_DESCRIPTOR_HANDLE binding_table = heap.start_gpu;
-			binding_table.ptr += (UINT64)heap.ringOffset * (UINT64)device->resource_descriptor_size;
+			binding_table.ptr += (UINT64)ringOffset_res * (UINT64)device->resource_descriptor_size;
 
 			for (auto& x : pso_internal->resources)
 			{
 				D3D12_CPU_DESCRIPTOR_HANDLE dst = heap.start_cpu;
-				uint32_t ringOffset = heap.ringOffset++;
+				uint32_t ringOffset = ringOffset_res++;
 				dst.ptr += ringOffset * device->resource_descriptor_size;
 
 				switch (x.RangeType)
@@ -1691,14 +1635,14 @@ using namespace DX12_Internal;
 		if (!pso_internal->samplers.empty() && dirty_sam)
 		{
 			dirty_sam = false;
-			DescriptorHeap& heap = heaps_sampler[current_sampler_heap];
+			auto& heap = device->descriptorheap_sam;
 			D3D12_GPU_DESCRIPTOR_HANDLE binding_table = heap.start_gpu;
-			binding_table.ptr += (UINT64)heap.ringOffset * (UINT64)device->sampler_descriptor_size;
+			binding_table.ptr += (UINT64)ringOffset_sam * (UINT64)device->sampler_descriptor_size;
 
 			for (auto& x : pso_internal->samplers)
 			{
 				D3D12_CPU_DESCRIPTOR_HANDLE dst = heap.start_cpu;
-				uint32_t ringOffset = heap.ringOffset++;
+				uint32_t ringOffset = ringOffset_sam++;
 				dst.ptr += ringOffset * device->sampler_descriptor_size;
 
 				const Sampler* sampler = SAM[x.BaseShaderRegister];
@@ -1735,12 +1679,11 @@ using namespace DX12_Internal;
 
 		if (!internal_state->sampler_heap.ranges.empty())
 		{
-			DescriptorHeap& heap = heaps_sampler[current_sampler_heap];
+			auto& heap = device->descriptorheap_sam;
 			D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle = heap.start_cpu;
 			D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle = heap.start_gpu;
-			cpu_handle.ptr += heap.ringOffset * device->sampler_descriptor_size;
-			gpu_handle.ptr += heap.ringOffset * device->sampler_descriptor_size;
-			heap.ringOffset += internal_state->sampler_heap.desc.NumDescriptors;
+			cpu_handle.ptr += ringOffset_sam * device->sampler_descriptor_size;
+			gpu_handle.ptr += ringOffset_sam * device->sampler_descriptor_size;
 			device->device->CopyDescriptorsSimple(
 				internal_state->sampler_heap.desc.NumDescriptors,
 				cpu_handle,
@@ -1752,12 +1695,11 @@ using namespace DX12_Internal;
 
 		if (!internal_state->resource_heap.ranges.empty())
 		{
-			DescriptorHeap& heap = heaps_resource[current_resource_heap];
+			auto& heap = device->descriptorheap_res;
 			D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle = heap.start_cpu;
 			D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle = heap.start_gpu;
-			cpu_handle.ptr += heap.ringOffset * device->resource_descriptor_size;
-			gpu_handle.ptr += heap.ringOffset * device->resource_descriptor_size;
-			heap.ringOffset += internal_state->resource_heap.desc.NumDescriptors;
+			cpu_handle.ptr += ringOffset_res * device->resource_descriptor_size;
+			gpu_handle.ptr += ringOffset_res * device->resource_descriptor_size;
 			device->device->CopyDescriptorsSimple(
 				internal_state->resource_heap.desc.NumDescriptors,
 				cpu_handle,
@@ -2352,6 +2294,42 @@ using namespace DX12_Internal;
 		resource_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		sampler_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
+		// Resource descriptor heap (shader visible):
+		{
+			descriptorheap_res.heapDesc.NodeMask = 0;
+			descriptorheap_res.heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+			descriptorheap_res.heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+			descriptorheap_res.heapDesc.NumDescriptors = 1000000; // tier 1 limit
+			hr = device->CreateDescriptorHeap(&descriptorheap_res.heapDesc, IID_PPV_ARGS(&descriptorheap_res.heap_GPU));
+			assert(SUCCEEDED(hr));
+
+			descriptorheap_res.start_cpu = descriptorheap_res.heap_GPU->GetCPUDescriptorHandleForHeapStart();
+			descriptorheap_res.start_gpu = descriptorheap_res.heap_GPU->GetGPUDescriptorHandleForHeapStart();
+
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&descriptorheap_res.fence));
+			assert(SUCCEEDED(hr));
+			descriptorheap_res.fenceEvent = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
+			descriptorheap_res.fenceValue = descriptorheap_res.fence->GetCompletedValue();
+		}
+
+		// Sampler descriptor heap (shader visible):
+		{
+			descriptorheap_sam.heapDesc.NodeMask = 0;
+			descriptorheap_sam.heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+			descriptorheap_sam.heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+			descriptorheap_sam.heapDesc.NumDescriptors = 2048; // tier 1 limit
+			hr = device->CreateDescriptorHeap(&descriptorheap_sam.heapDesc, IID_PPV_ARGS(&descriptorheap_sam.heap_GPU));
+			assert(SUCCEEDED(hr));
+
+			descriptorheap_sam.start_cpu = descriptorheap_sam.heap_GPU->GetCPUDescriptorHandleForHeapStart();
+			descriptorheap_sam.start_gpu = descriptorheap_sam.heap_GPU->GetGPUDescriptorHandleForHeapStart();
+
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&descriptorheap_sam.fence));
+			assert(SUCCEEDED(hr));
+			descriptorheap_sam.fenceEvent = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
+			descriptorheap_sam.fenceValue = descriptorheap_sam.fence->GetCompletedValue();
+		}
+
 		D3D12_COMMAND_QUEUE_DESC copyQueueDesc = {};
 		copyQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
 		copyQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
@@ -2365,6 +2343,8 @@ using namespace DX12_Internal;
 		{
 			hr = swapChain->GetBuffer(fr, IID_PPV_ARGS(&backBuffers[fr]));
 			assert(SUCCEEDED(hr));
+
+			auto& frame = frames[fr];
 
 			hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&frames[fr].copyAllocator));
 			assert(SUCCEEDED(hr));
@@ -5195,6 +5175,12 @@ using namespace DX12_Internal;
 		hr = GetDirectCommandList(cmd)->Reset(GetFrameResources().commandAllocators[cmd].Get(), nullptr);
 		assert(SUCCEEDED(hr));
 
+		ID3D12DescriptorHeap* heaps[2] = {
+			descriptorheap_res.heap_GPU.Get(),
+			descriptorheap_sam.heap_GPU.Get()
+		};
+		GetDirectCommandList(cmd)->SetDescriptorHeaps(arraysize(heaps), heaps);
+
 		GetFrameResources().descriptors[cmd].reset();
 		GetFrameResources().resourceBuffer[cmd].clear();
 
@@ -5291,6 +5277,15 @@ using namespace DX12_Internal;
 		// This acts as a barrier, following this we will be using the next frame's resources when calling GetFrameResources()!
 		FRAMECOUNT++;
 		HRESULT hr = directQueue->Signal(frameFence.Get(), FRAMECOUNT);
+		assert(SUCCEEDED(hr));
+
+		// Descriptor heaps' progress is recorded by the GPU:
+		descriptorheap_res.fenceValue = descriptorheap_res.allocationOffset.load();
+		hr = directQueue->Signal(descriptorheap_res.fence.Get(), descriptorheap_res.fenceValue);
+		assert(SUCCEEDED(hr));
+		descriptorheap_sam.fenceValue = descriptorheap_sam.allocationOffset.load();
+		hr = directQueue->Signal(descriptorheap_sam.fence.Get(), descriptorheap_sam.fenceValue);
+		assert(SUCCEEDED(hr));
 
 		// Determine the last frame that we should not wait on:
 		const uint64_t lastFrameToAllowLatency = std::max(uint64_t(BACKBUFFER_COUNT - 1u), FRAMECOUNT) - (BACKBUFFER_COUNT - 1);
@@ -5301,6 +5296,11 @@ using namespace DX12_Internal;
 			hr = frameFence->SetEventOnCompletion(lastFrameToAllowLatency, frameFenceEvent);
 			WaitForSingleObject(frameFenceEvent, INFINITE);
 		}
+
+
+		//WaitForGPU();
+		//descriptorheap_res.allocationOffset.store(0);
+		//descriptorheap_sam.allocationOffset.store(0);
 
 		allocationhandler->Update(FRAMECOUNT, BACKBUFFER_COUNT);
 

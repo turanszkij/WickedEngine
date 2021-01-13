@@ -44,18 +44,10 @@ namespace wiPlatform
 	using window_type = int;
 #endif // _WIN32
 
-	struct DeferredMessageBox
-	{
-		std::wstring caption;
-		std::wstring message;
-	};
-
 	struct WindowState
 	{
 		window_type window;
 		int dpi = 96;
-		std::vector<DeferredMessageBox> messages;
-		std::mutex messagemutex;
 	};
 	inline WindowState& GetWindowState()
 	{
@@ -120,26 +112,5 @@ namespace wiPlatform
 		Windows::ApplicationModel::Core::CoreApplication::Exit();
 #endif // PLATFORM_UWP
 #endif // _WIN32
-	}
-	inline void PopMessages()
-	{
-		auto& state = GetWindowState();
-		state.messagemutex.lock();
-		for (auto& x : state.messages)
-		{
-#ifdef _WIN32
-#ifndef PLATFORM_UWP
-			MessageBox(wiPlatform::GetWindow(), x.message.c_str(), x.caption.c_str(), 0);
-#else
-			Windows::UI::Popups::MessageDialog(ref new Platform::String(x.message.c_str()), ref new Platform::String(x.caption.c_str())).ShowAsync();
-#endif // PLATFORM_UWP
-#elif SDL2
-			std::string title(x.caption.begin(), x.caption.end());
-			std::string message(x.message.begin(), x.message.end());
-            SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title.c_str(), message.c_str(), NULL);
-#endif // _WIN32
-		}
-		state.messages.clear();
-		state.messagemutex.unlock();
 	}
 }
