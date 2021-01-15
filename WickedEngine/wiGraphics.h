@@ -731,18 +731,24 @@ namespace wiGraphics
 		inline bool IsValid() const { return internal_state.get() != nullptr; }
 	};
 
-	struct Shader : public GraphicsDeviceChild
-	{
-		SHADERSTAGE stage = SHADERSTAGE_COUNT;
-		std::vector<uint8_t> code;
-		const RootSignature* rootSignature = nullptr;
-	};
-
 	struct Sampler : public GraphicsDeviceChild
 	{
 		SamplerDesc desc;
 
 		const SamplerDesc& GetDesc() const { return desc; }
+	};
+	struct StaticSampler
+	{
+		Sampler sampler;
+		uint32_t slot = 0;
+	};
+
+	struct Shader : public GraphicsDeviceChild
+	{
+		SHADERSTAGE stage = SHADERSTAGE_COUNT;
+		std::vector<uint8_t> code;
+		const RootSignature* rootSignature = nullptr;
+		std::vector<StaticSampler> auto_samplers; // ability to set static samplers without explicit root signature
 	};
 
 	struct GPUResource : public GraphicsDeviceChild
@@ -992,11 +998,6 @@ namespace wiGraphics
 	{
 		uint32_t slot = 0;
 		uint32_t count = 1;
-	};
-	struct StaticSampler
-	{
-		Sampler sampler;
-		uint32_t slot = 0;
 	};
 	struct DescriptorTable : public GraphicsDeviceChild
 	{

@@ -239,6 +239,11 @@ void LoadShaders()
 
 	wiRenderer::LoadShader(VS, vertexShader, "fontVS.cso");
 
+
+	pixelShader.auto_samplers.emplace_back();
+	pixelShader.auto_samplers.back().sampler = sampler;
+	pixelShader.auto_samplers.back().slot = SSLOT_ONDEMAND1;
+
 	wiRenderer::LoadShader(PS, pixelShader, "fontPS.cso");
 
 
@@ -593,7 +598,6 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 		device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
 		device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
 		device->BindResource(PS, &texture, TEXSLOT_FONTATLAS, cmd);
-		device->BindSampler(PS, &sampler, SSLOT_ONDEMAND1, cmd);
 
 		device->BindResource(VS, mem.buffer, 0, cmd);
 

@@ -509,12 +509,14 @@ Unordered Access Views, in other words resources with read-write access. `GPUBuf
 - Constant buffers<br/>
 Only `GPUBuffer`s can be set as constant buffers if they were created with a `BindFlags` in their description that has the `BIND_CONSTANT_BUFFER` bit set. The resource can't be a constant buffer at the same time when it is also a shader resource or a UAV or a vertex buffer or an index buffer. Use the `GraphicsDevice::BindConstantBuffer()` function to bind constant buffers.
 - Samplers<br/>
-Only `Sampler` can be bound as sampler. Use the `GraphicsDevice::BindSampler()` function to bind samplers.
+Only `Sampler` can be bound as sampler. Use the `GraphicsDevice::BindSampler()` function to bind samplers. Additionally, you can specify auto samplers and common samplers and avoid binding them every time.
 
 There are some limitations on the maximum value of slots that can be used, these are defined as compile time constants in [Graphics device SharedInternals](../WickedEngine/wiGraphicsDevice_SharedInternals.h). The user can modify these and recompile the engine if the predefined slots are not enough. This could slightly affect performance.
 
 Remarks:
 - Vulkan and DX12 devices make an effort to combine descriptors across shader stages, so overlapping descriptors will not be supported with those APIs to some extent. For example it is OK, to have a constant buffer on slot 0 (b0) in a vertex shader while having a Texture2D on slot 0 (t0) in pixel shader. However, having a StructuredBuffer on vertex shader slot 0 (t0) and a Texture2D in pixel shader slot 0 (t0) will not work correctly, as only one of them will be bound to a pipeline state. This is made for performance reasons and to retain compatibility with the [advanced binding model](#resource-binding-advanced).
+- Auto samplers can be added to `Shader`s. These sasmplers will always be bound to the shader stage as static samplers. The user doesn't need to use `BindSampler()` function for these.
+- Common Samplers can be set on the graphics device. These samplers will be bound to all shaders that are created after the common sampler have been set. The user doesn't need to use `BindSampler()` function for these.
 
 ##### Resource Binding (Advanced)
 This resource binding model is based on a combination of DirectX 12 and Vulkan resource binding model and allows the developer to use a more fine grained resource management that can be fitted for specific use cases more optimally. For example, a bindless descriptor model could be implemented with descriptor arrays, or a system where descriptors are grouped by update frequency into tables. The developer can query whether the `GraphicsDevice` supports advanced binding model, by querying the `GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT` capability with `GraphicsDevice::CheckCapability()`.

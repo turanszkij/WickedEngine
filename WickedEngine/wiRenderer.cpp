@@ -156,6 +156,133 @@ unordered_map<const void*, wiRectPacker::rect_xywh> packedLightmaps;
 void SetDevice(std::shared_ptr<GraphicsDevice> newDevice)
 {
 	device = newDevice;
+
+	SamplerDesc samplerDesc;
+	samplerDesc.Filter = FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
+	samplerDesc.MipLODBias = 0.0f;
+	samplerDesc.MaxAnisotropy = 0;
+	samplerDesc.ComparisonFunc = COMPARISON_NEVER;
+	samplerDesc.BorderColor[0] = 0;
+	samplerDesc.BorderColor[1] = 0;
+	samplerDesc.BorderColor[2] = 0;
+	samplerDesc.BorderColor[3] = 0;
+	samplerDesc.MinLOD = 0;
+	samplerDesc.MaxLOD = FLT_MAX;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_LINEAR_MIRROR]);
+
+	samplerDesc.Filter = FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_LINEAR_CLAMP]);
+
+	samplerDesc.Filter = FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_LINEAR_WRAP]);
+
+	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_POINT_MIRROR]);
+
+	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_POINT_WRAP]);
+
+
+	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_POINT_CLAMP]);
+
+	samplerDesc.Filter = FILTER_ANISOTROPIC;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.MaxAnisotropy = 16;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_ANISO_CLAMP]);
+
+	samplerDesc.Filter = FILTER_ANISOTROPIC;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
+	samplerDesc.MaxAnisotropy = 16;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_ANISO_WRAP]);
+
+	samplerDesc.Filter = FILTER_ANISOTROPIC;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
+	samplerDesc.MaxAnisotropy = 16;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_ANISO_MIRROR]);
+
+	samplerDesc.Filter = FILTER_ANISOTROPIC;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
+	samplerDesc.MaxAnisotropy = 16;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_OBJECTSHADER]);
+
+	samplerDesc.Filter = FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.MipLODBias = 0.0f;
+	samplerDesc.MaxAnisotropy = 0;
+	samplerDesc.ComparisonFunc = COMPARISON_GREATER_EQUAL;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_CMP_DEPTH]);
+
+
+	StaticSampler sam;
+
+	sam.sampler = samplers[SSLOT_CMP_DEPTH];
+	sam.slot = SSLOT_CMP_DEPTH;
+	device->SetCommonSampler(&sam);
+
+	sam.sampler = samplers[SSLOT_LINEAR_MIRROR];
+	sam.slot = SSLOT_LINEAR_MIRROR;
+	device->SetCommonSampler(&sam);
+
+	sam.sampler = samplers[SSLOT_LINEAR_CLAMP];
+	sam.slot = SSLOT_LINEAR_CLAMP;
+	device->SetCommonSampler(&sam);
+
+	sam.sampler = samplers[SSLOT_LINEAR_WRAP];
+	sam.slot = SSLOT_LINEAR_WRAP;
+	device->SetCommonSampler(&sam);
+
+	sam.sampler = samplers[SSLOT_POINT_MIRROR];
+	sam.slot = SSLOT_POINT_MIRROR;
+	device->SetCommonSampler(&sam);
+
+	sam.sampler = samplers[SSLOT_POINT_WRAP];
+	sam.slot = SSLOT_POINT_WRAP;
+	device->SetCommonSampler(&sam);
+
+	sam.sampler = samplers[SSLOT_POINT_CLAMP];
+	sam.slot = SSLOT_POINT_CLAMP;
+	device->SetCommonSampler(&sam);
+
+	sam.sampler = samplers[SSLOT_ANISO_CLAMP];
+	sam.slot = SSLOT_ANISO_CLAMP;
+	device->SetCommonSampler(&sam);
+
+	sam.sampler = samplers[SSLOT_ANISO_WRAP];
+	sam.slot = SSLOT_ANISO_WRAP;
+	device->SetCommonSampler(&sam);
+
+	sam.sampler = samplers[SSLOT_ANISO_MIRROR];
+	sam.slot = SSLOT_ANISO_MIRROR;
+	device->SetCommonSampler(&sam);
 }
 GraphicsDevice* GetDevice()
 {
@@ -1834,92 +1961,6 @@ void LoadBuffers()
 }
 void SetUpStates()
 {
-	SamplerDesc samplerDesc;
-	samplerDesc.Filter = FILTER_MIN_MAG_MIP_LINEAR;
-	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 0;
-	samplerDesc.ComparisonFunc = COMPARISON_NEVER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = FLT_MAX;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_LINEAR_MIRROR]);
-
-	samplerDesc.Filter = FILTER_MIN_MAG_MIP_LINEAR;
-	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_LINEAR_CLAMP]);
-
-	samplerDesc.Filter = FILTER_MIN_MAG_MIP_LINEAR;
-	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_LINEAR_WRAP]);
-
-	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
-	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_POINT_MIRROR]);
-
-	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
-	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_POINT_WRAP]);
-
-
-	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
-	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_POINT_CLAMP]);
-
-	samplerDesc.Filter = FILTER_ANISOTROPIC;
-	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.MaxAnisotropy = 16;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_ANISO_CLAMP]);
-
-	samplerDesc.Filter = FILTER_ANISOTROPIC;
-	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
-	samplerDesc.MaxAnisotropy = 16;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_ANISO_WRAP]);
-
-	samplerDesc.Filter = FILTER_ANISOTROPIC;
-	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.MaxAnisotropy = 16;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_ANISO_MIRROR]);
-
-	samplerDesc.Filter = FILTER_ANISOTROPIC;
-	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
-	samplerDesc.MaxAnisotropy = 16;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_OBJECTSHADER]);
-
-	samplerDesc.Filter = FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
-	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 0;
-	samplerDesc.ComparisonFunc = COMPARISON_GREATER_EQUAL;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_CMP_DEPTH]);
-
-
-
 	RasterizerState rs;
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_BACK;
@@ -2237,9 +2278,9 @@ void SetUpStates()
 	blendStates[BSTYPE_TRANSPARENTSHADOW] = bd;
 }
 
-void ModifySampler(const SamplerDesc& desc, int slot)
+void ModifyObjectSampler(const SamplerDesc& desc)
 {
-	device->CreateSampler(&desc, &samplers[slot]);
+	device->CreateSampler(&desc, &samplers[SSLOT_OBJECTSHADER]);
 }
 
 const std::string& GetShaderPath()
@@ -8402,10 +8443,7 @@ void BindCommonResources(CommandList cmd)
 	{
 		SHADERSTAGE stage = (SHADERSTAGE)i;
 
-		for (int i = 0; i < SSLOT_COUNT; ++i)
-		{
-			device->BindSampler(stage, &samplers[i], i, cmd);
-		}
+		device->BindSampler(stage, &samplers[SSLOT_OBJECTSHADER], SSLOT_OBJECTSHADER, cmd);
 
 		BindConstantBuffers(stage, cmd);
 	}
@@ -11477,6 +11515,14 @@ void Postprocess_Lineardepth(
 )
 {
 	device->EventBegin("Postprocess_Lineardepth", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Linear Depth Pyramid", cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_UNORDERED_ACCESS)
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -11509,13 +11555,17 @@ void Postprocess_Lineardepth(
 		cmd
 	);
 
-	GPUBarrier barriers[] = {
-		GPUBarrier::Memory(),
-	};
-	device->Barrier(barriers, arraysize(barriers), cmd);
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+			GPUBarrier::Image(&output, IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADER_RESOURCE)
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 
 	device->UnbindUAVs(0, 6, cmd);
 
+	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
 }
 void Postprocess_Sharpen(

@@ -6,14 +6,6 @@
 #include "ResourceMapping.h"
 #include "wiBackLog.h"
 
-#ifdef PLATFORM_UWP
-// UWP will use static link + /DELAYLOAD linker feature for the dlls (optionally)
-#pragma comment(lib,"d3d11.lib")
-#define dll_D3D11CreateDevice D3D11CreateDevice
-#else
-static PFN_D3D11_CREATE_DEVICE dll_D3D11CreateDevice = nullptr;
-#endif // PLATFORM_UWP
-
 #pragma comment(lib,"dxguid.lib")
 
 #include <sstream>
@@ -32,6 +24,14 @@ namespace wiGraphics
 
 namespace DX11_Internal
 {
+
+#ifdef PLATFORM_UWP
+	// UWP will use static link + /DELAYLOAD linker feature for the dlls (optionally)
+#pragma comment(lib,"d3d11.lib")
+#else
+	static PFN_D3D11_CREATE_DEVICE D3D11CreateDevice = nullptr;
+#endif // PLATFORM_UWP
+
 	// Engine -> Native converters
 
 	constexpr uint32_t _ParseBindFlags(uint32_t value)
@@ -1188,30 +1188,70 @@ void GraphicsDevice_DX11::pso_validate(CommandList cmd)
 	{
 		deviceContexts[cmd]->VSSetShader(vs, nullptr, 0);
 		prev_vs[cmd] = vs;
+
+		if (desc.vs != nullptr)
+		{
+			for (auto& x : desc.vs->auto_samplers)
+			{
+				BindSampler(VS, &x.sampler, x.slot, cmd);
+			}
+		}
 	}
 	ID3D11PixelShader* ps = desc.ps == nullptr ? nullptr : static_cast<PixelShader_DX11*>(desc.ps->internal_state.get())->resource.Get();
 	if (ps != prev_ps[cmd])
 	{
 		deviceContexts[cmd]->PSSetShader(ps, nullptr, 0);
 		prev_ps[cmd] = ps;
+
+		if (desc.ps != nullptr)
+		{
+			for (auto& x : desc.ps->auto_samplers)
+			{
+				BindSampler(PS, &x.sampler, x.slot, cmd);
+			}
+		}
 	}
 	ID3D11HullShader* hs = desc.hs == nullptr ? nullptr : static_cast<HullShader_DX11*>(desc.hs->internal_state.get())->resource.Get();
 	if (hs != prev_hs[cmd])
 	{
 		deviceContexts[cmd]->HSSetShader(hs, nullptr, 0);
 		prev_hs[cmd] = hs;
+
+		if (desc.hs != nullptr)
+		{
+			for (auto& x : desc.hs->auto_samplers)
+			{
+				BindSampler(HS, &x.sampler, x.slot, cmd);
+			}
+		}
 	}
 	ID3D11DomainShader* ds = desc.ds == nullptr ? nullptr : static_cast<DomainShader_DX11*>(desc.ds->internal_state.get())->resource.Get();
 	if (ds != prev_ds[cmd])
 	{
 		deviceContexts[cmd]->DSSetShader(ds, nullptr, 0);
 		prev_ds[cmd] = ds;
+
+		if (desc.ds != nullptr)
+		{
+			for (auto& x : desc.ds->auto_samplers)
+			{
+				BindSampler(DS, &x.sampler, x.slot, cmd);
+			}
+		}
 	}
 	ID3D11GeometryShader* gs = desc.gs == nullptr ? nullptr : static_cast<GeometryShader_DX11*>(desc.gs->internal_state.get())->resource.Get();
 	if (gs != prev_gs[cmd])
 	{
 		deviceContexts[cmd]->GSSetShader(gs, nullptr, 0);
 		prev_gs[cmd] = gs;
+
+		if (desc.gs != nullptr)
+		{
+			for (auto& x : desc.gs->auto_samplers)
+			{
+				BindSampler(GS, &x.sampler, x.slot, cmd);
+			}
+		}
 	}
 
 	ID3D11BlendState* bs = desc.bs == nullptr ? nullptr : internal_state->bs.Get();
@@ -1305,8 +1345,8 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 #ifndef PLATFORM_UWP
 	HMODULE dx11 = LoadLibraryEx(L"d3d11.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
 
-	dll_D3D11CreateDevice = (PFN_D3D11_CREATE_DEVICE)GetProcAddress(dx11, "D3D11CreateDevice");
-	assert(dll_D3D11CreateDevice != nullptr);
+	D3D11CreateDevice = (PFN_D3D11_CREATE_DEVICE)GetProcAddress(dx11, "D3D11CreateDevice");
+	assert(D3D11CreateDevice != nullptr);
 #endif // PLATFORM_UWP
 
 	HRESULT hr = E_FAIL;
@@ -1336,7 +1376,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 	for (uint32_t driverTypeIndex = 0; driverTypeIndex < numDriverTypes; driverTypeIndex++)
 	{
 		driverType = driverTypes[driverTypeIndex];
-		hr = dll_D3D11CreateDevice(nullptr, driverType, nullptr, createDeviceFlags, featureLevels, numFeatureLevels, D3D11_SDK_VERSION, &device
+		hr = D3D11CreateDevice(nullptr, driverType, nullptr, createDeviceFlags, featureLevels, numFeatureLevels, D3D11_SDK_VERSION, &device
 			, &featureLevel, &immediateContext);
 
 		if (SUCCEEDED(hr))
@@ -2515,6 +2555,11 @@ bool GraphicsDevice_DX11::QueryRead(const GPUQuery* query, GPUQueryResult* resul
 	return hr != S_FALSE;
 }
 
+void GraphicsDevice_DX11::SetCommonSampler(const StaticSampler* sam)
+{
+	common_samplers.push_back(*sam);
+}
+
 void GraphicsDevice_DX11::SetName(GPUResource* pResource, const char* name)
 {
 	auto internal_state = to_internal(pResource);
@@ -2565,6 +2610,14 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 
 	BindPipelineState(nullptr, cmd);
 	BindComputeShader(nullptr, cmd);
+
+	for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
+	{
+		for (auto& sam : common_samplers)
+		{
+			BindSampler((SHADERSTAGE)stage, &sam.sampler, sam.slot, cmd);
+		}
+	}
 
 	D3D11_VIEWPORT vp = {};
 	vp.Width = (float)RESOLUTIONWIDTH;
@@ -3048,6 +3101,14 @@ void GraphicsDevice_DX11::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
 		deviceContexts[cmd]->CSSetShader(_cs, nullptr, 0);
 		prev_cs[cmd] = _cs;
+
+		if (cs != nullptr)
+		{
+			for (auto& x : cs->auto_samplers)
+			{
+				BindSampler(CS, &x.sampler, x.slot, cmd);
+			}
+		}
 	}
 }
 void GraphicsDevice_DX11::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) 

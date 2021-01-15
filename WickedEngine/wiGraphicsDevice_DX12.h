@@ -28,7 +28,7 @@ namespace wiGraphics
 {
 	class GraphicsDevice_DX12 : public GraphicsDevice
 	{
-	public:
+	protected:
 		Microsoft::WRL::ComPtr<ID3D12Device5> device;
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter;
 		Microsoft::WRL::ComPtr<IDXGIFactory6> factory;
@@ -74,6 +74,8 @@ namespace wiGraphics
 		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture2darray = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture3d = {};
 
+		std::vector<D3D12_STATIC_SAMPLER_DESC> common_samplers;
+
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> copyQueue;
 		std::mutex copyQueueLock;
 		bool copyQueueUse = false;
@@ -99,8 +101,8 @@ namespace wiGraphics
 
 			// GPU status:
 			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
-			HANDLE fenceEvent;
 			uint64_t fenceValue = 0;
+			uint64_t cached_completedValue = 0;
 		};
 		DescriptorHeap descriptorheap_res;
 		DescriptorHeap descriptorheap_sam;
@@ -127,6 +129,9 @@ namespace wiGraphics
 				const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
 				int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
 				const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
+
+				uint32_t dirty_root_cbvs_gfx = 0; // bitmask
+				uint32_t dirty_root_cbvs_compute = 0; // bitmask
 
 				struct DescriptorHandles
 				{
@@ -225,6 +230,8 @@ namespace wiGraphics
 		void Map(const GPUResource* resource, Mapping* mapping) override;
 		void Unmap(const GPUResource* resource) override;
 		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
+
+		void SetCommonSampler(const StaticSampler* sam) override;
 
 		void SetName(GPUResource* pResource, const char* name) override;
 

@@ -51,6 +51,8 @@ namespace wiGraphics
 		virtual void Unmap(const GPUResource* resource) = 0;
 		virtual bool QueryRead(const GPUQuery* query, GPUQueryResult* result) = 0;
 
+		virtual void SetCommonSampler(const StaticSampler* sam) = 0;
+
 		virtual void SetName(GPUResource* pResource, const char* name) = 0;
 
 		virtual void PresentBegin(CommandList cmd) = 0;

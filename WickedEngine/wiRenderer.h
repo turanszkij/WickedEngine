@@ -37,7 +37,7 @@ namespace wiRenderer
 	const wiGraphics::GPUBuffer* GetConstantBuffer(CBTYPES id);
 	const wiGraphics::Texture* GetTexture(TEXTYPES id);
 
-	void ModifySampler(const wiGraphics::SamplerDesc& desc, int slot);
+	void ModifyObjectSampler(const wiGraphics::SamplerDesc& desc);
 
 
 	void Initialize();

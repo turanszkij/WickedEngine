@@ -30,10 +30,9 @@ namespace wiGraphics
 {
 	class GraphicsDevice_Vulkan : public GraphicsDevice
 	{
-	private:
+	protected:
 		VkInstance instance = VK_NULL_HANDLE;
 	    VkDebugUtilsMessengerEXT debugUtilsMessenger = VK_NULL_HANDLE;
-	    VkDebugReportCallbackEXT debugReportCallback = VK_NULL_HANDLE; // Deprecated
 		VkSurfaceKHR surface = VK_NULL_HANDLE;
 		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 		VkDevice device = VK_NULL_HANDLE;
@@ -186,6 +185,8 @@ namespace wiGraphics
 
 		std::atomic<CommandList> cmd_count{ 0 };
 
+		std::vector<StaticSampler> common_samplers;
+
 	public:
 		GraphicsDevice_Vulkan(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false);
 		virtual ~GraphicsDevice_Vulkan();
@@ -214,6 +215,8 @@ namespace wiGraphics
 		void Map(const GPUResource* resource, Mapping* mapping) override;
 		void Unmap(const GPUResource* resource) override;
 		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
+
+		void SetCommonSampler(const StaticSampler* sam) override;
 
 		void SetName(GPUResource* pResource, const char* name) override;
 
