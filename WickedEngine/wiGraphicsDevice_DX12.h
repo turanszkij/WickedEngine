@@ -76,12 +76,114 @@ namespace wiGraphics
 
 		std::vector<D3D12_STATIC_SAMPLER_DESC> common_samplers;
 
-		Microsoft::WRL::ComPtr<ID3D12CommandQueue> copyQueue;
-		std::mutex copyQueueLock;
-		bool copyQueueUse = false;
-		Microsoft::WRL::ComPtr<ID3D12Fence> copyFence; // GPU only
-		HANDLE copyFenceEvent;
-		UINT64 copyFenceValue = 0;
+		struct CopyAllocator
+		{
+			Microsoft::WRL::ComPtr<ID3D12Device5> device;
+			Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue;
+			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
+			uint64_t fenceValue = 0;
+			std::mutex locker;
+			bool submitted = false;
+
+			struct CopyCMD
+			{
+				Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator;
+				Microsoft::WRL::ComPtr<ID3D12CommandList> commandList;
+				uint64_t target = 0;
+				GPUBuffer uploadbuffer;
+			};
+			std::vector<CopyCMD> freelist;
+			std::deque<CopyCMD> worklist;
+
+			void Create(Microsoft::WRL::ComPtr<ID3D12Device5> device)
+			{
+				this->device = device;
+
+				D3D12_COMMAND_QUEUE_DESC copyQueueDesc = {};
+				copyQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+				copyQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_HIGH;
+				copyQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+				copyQueueDesc.NodeMask = 0;
+				HRESULT hr = device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&queue));
+				assert(SUCCEEDED(hr));
+
+				hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&fence));
+				assert(SUCCEEDED(hr));
+				fenceValue = fence->GetCompletedValue();
+			}
+
+			CopyCMD allocate(uint32_t staging_size = 0)
+			{
+				locker.lock();
+
+				// pop the finished command lists if there are any:
+				while (!worklist.empty() && worklist.front().target <= fence->GetCompletedValue())
+				{
+					freelist.push_back(worklist.front());
+					worklist.pop_front();
+				}
+
+				// create a new command list if there are no free ones:
+				if (freelist.empty())
+				{
+					CopyCMD cmd;
+
+					HRESULT hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&cmd.commandAllocator));
+					assert(SUCCEEDED(hr));
+					hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, cmd.commandAllocator.Get(), nullptr, IID_PPV_ARGS(&cmd.commandList));
+					assert(SUCCEEDED(hr));
+
+					hr = static_cast<ID3D12GraphicsCommandList*>(cmd.commandList.Get())->Close();
+					assert(SUCCEEDED(hr));
+
+					freelist.push_back(cmd);
+				}
+
+				CopyCMD cmd = freelist.back();
+				if (cmd.uploadbuffer.desc.ByteWidth < staging_size)
+				{
+					// Try to search for a staging buffer that is good:
+					for (size_t i = 0; i < freelist.size(); ++i)
+					{
+						if (freelist[i].uploadbuffer.desc.ByteWidth >= staging_size)
+						{
+							cmd = freelist[i];
+							std::swap(freelist[i], freelist.back());
+							break;
+						}
+					}
+				}
+
+				// begin command list in valid state:
+				HRESULT hr = cmd.commandAllocator->Reset();
+				assert(SUCCEEDED(hr));
+				hr = static_cast<ID3D12GraphicsCommandList*>(cmd.commandList.Get())->Reset(cmd.commandAllocator.Get(), nullptr);
+				assert(SUCCEEDED(hr));
+
+				freelist.pop_back();
+				locker.unlock();
+
+				return cmd;
+			}
+			void submit(CopyCMD cmd)
+			{
+				static_cast<ID3D12GraphicsCommandList*>(cmd.commandList.Get())->Close();
+				ID3D12CommandList* commandlists[] = {
+					cmd.commandList.Get()
+				};
+				queue->ExecuteCommandLists(1, commandlists);
+
+				locker.lock();
+				submitted = true;
+
+				cmd.target = ++fenceValue;
+				queue->Signal(fence.Get(), cmd.target);
+
+				worklist.push_back(cmd);
+				locker.unlock();
+			}
+		};
+		CopyAllocator copyAllocator;
 
 		Microsoft::WRL::ComPtr<ID3D12Fence> directFence;
 		HANDLE directFenceEvent;
@@ -111,9 +213,6 @@ namespace wiGraphics
 		{
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[COMMANDLIST_COUNT];
 			Microsoft::WRL::ComPtr<ID3D12CommandList> commandLists[COMMANDLIST_COUNT];
-
-			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> copyAllocator;
-			Microsoft::WRL::ComPtr<ID3D12CommandList> copyCommandList;
 
 			struct DescriptorTableFrameAllocator
 			{

@@ -2482,35 +2482,14 @@ using namespace DX12_Internal;
 			descriptorheap_sam.fenceValue = descriptorheap_sam.fence->GetCompletedValue();
 		}
 
-		D3D12_COMMAND_QUEUE_DESC copyQueueDesc = {};
-		copyQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
-		copyQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-		copyQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-		copyQueueDesc.NodeMask = 0;
-		hr = device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&copyQueue));
-		assert(SUCCEEDED(hr));
-
 		// Create frame-resident resources:
 		for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 		{
 			hr = swapChain->GetBuffer(fr, IID_PPV_ARGS(&backBuffers[fr]));
 			assert(SUCCEEDED(hr));
-
-			auto& frame = frames[fr];
-
-			hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&frames[fr].copyAllocator));
-			assert(SUCCEEDED(hr));
-			hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, frames[fr].copyAllocator.Get(), nullptr, IID_PPV_ARGS(&frames[fr].copyCommandList));
-			assert(SUCCEEDED(hr));
-
-			hr = static_cast<ID3D12GraphicsCommandList*>(frames[fr].copyCommandList.Get())->Close();
-			assert(SUCCEEDED(hr));
 		}
 
-		hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&copyFence));
-		assert(SUCCEEDED(hr));
-		copyFenceEvent = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
-		copyFenceValue = copyFence->GetCompletedValue();
+		copyAllocator.Create(device);
 
 		hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&directFence));
 		assert(SUCCEEDED(hr));
@@ -2770,7 +2749,6 @@ using namespace DX12_Internal;
 		WaitForGPU();
 
 		CloseHandle(frameFenceEvent);
-		CloseHandle(copyFenceEvent);
 		CloseHandle(directFenceEvent);
 	}
 
@@ -2896,10 +2874,15 @@ using namespace DX12_Internal;
 			GPUBufferDesc uploaddesc;
 			uploaddesc.ByteWidth = pDesc->ByteWidth;
 			uploaddesc.Usage = USAGE_STAGING;
-			GPUBuffer uploadbuffer;
-			bool upload_success = CreateBuffer(&uploaddesc, nullptr, &uploadbuffer);
-			assert(upload_success);
-			ID3D12Resource* upload_resource = to_internal(&uploadbuffer)->resource.Get();
+
+			auto cmd = copyAllocator.allocate(uploaddesc.ByteWidth);
+			if (cmd.uploadbuffer.desc.ByteWidth < uploaddesc.ByteWidth)
+			{
+				bool upload_success = CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
+				assert(upload_success);
+			}
+
+			ID3D12Resource* upload_resource = to_internal(&cmd.uploadbuffer)->resource.Get();
 
 			void* pData;
 			CD3DX12_RANGE readRange(0, 0);
@@ -2907,22 +2890,10 @@ using namespace DX12_Internal;
 			assert(SUCCEEDED(hr));
 			memcpy(pData, pInitialData->pSysMem, pDesc->ByteWidth);
 
-			copyQueueLock.lock();
-			{
-				auto& frame = GetFrameResources();
-				if (!copyQueueUse)
-				{
-					copyQueueUse = true;
+			static_cast<ID3D12GraphicsCommandList*>(cmd.commandList.Get())->CopyBufferRegion(
+				internal_state->resource.Get(), 0, upload_resource, 0, pDesc->ByteWidth);
 
-					HRESULT hr = frame.copyAllocator->Reset();
-					assert(SUCCEEDED(hr));
-					hr = static_cast<ID3D12GraphicsCommandList*>(frame.copyCommandList.Get())->Reset(frame.copyAllocator.Get(), nullptr);
-					assert(SUCCEEDED(hr));
-				}
-				static_cast<ID3D12GraphicsCommandList*>(frame.copyCommandList.Get())->CopyBufferRegion(
-					internal_state->resource.Get(), 0, upload_resource, 0, pDesc->ByteWidth);
-			}
-			copyQueueLock.unlock();
+			copyAllocator.submit(cmd);
 		}
 
 
@@ -3097,10 +3068,15 @@ using namespace DX12_Internal;
 			GPUBufferDesc uploaddesc;
 			uploaddesc.ByteWidth = (uint32_t)RequiredSize;
 			uploaddesc.Usage = USAGE_STAGING;
-			GPUBuffer uploadbuffer;
-			bool upload_success = CreateBuffer(&uploaddesc, nullptr, &uploadbuffer);
-			assert(upload_success);
-			ID3D12Resource* upload_resource = to_internal(&uploadbuffer)->resource.Get();
+
+			auto cmd = copyAllocator.allocate(uploaddesc.ByteWidth);
+			if (cmd.uploadbuffer.desc.ByteWidth < uploaddesc.ByteWidth)
+			{
+				bool upload_success = CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
+				assert(upload_success);
+			}
+
+			ID3D12Resource* upload_resource = to_internal(&cmd.uploadbuffer)->resource.Get();
 
 			void* pData;
 			CD3DX12_RANGE readRange(0, 0);
@@ -3110,7 +3086,7 @@ using namespace DX12_Internal;
 			for (uint32_t i = 0; i < dataCount; ++i)
 			{
 				if (rowSizesInBytes[i] > (SIZE_T)-1)
-					return 0;
+					continue;
 				D3D12_MEMCPY_DEST DestData = {};
 				DestData.pData = (void*)((UINT64)pData + layouts[i].Offset);
 				DestData.RowPitch = (SIZE_T)layouts[i].Footprint.RowPitch;
@@ -3118,28 +3094,21 @@ using namespace DX12_Internal;
 				MemcpySubresource(&DestData, &data[i], (SIZE_T)rowSizesInBytes[i], numRows[i], layouts[i].Footprint.Depth);
 			}
 
-			copyQueueLock.lock();
+			for (UINT i = 0; i < dataCount; ++i)
 			{
-				auto& frame = GetFrameResources();
-				if (!copyQueueUse)
-				{
-					copyQueueUse = true;
-
-					HRESULT hr = frame.copyAllocator->Reset();
-					assert(SUCCEEDED(hr));
-					hr = static_cast<ID3D12GraphicsCommandList*>(frame.copyCommandList.Get())->Reset(frame.copyAllocator.Get(), nullptr);
-					assert(SUCCEEDED(hr));
-				}
-
-				for (UINT i = 0; i < dataCount; ++i)
-				{
-					CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state->resource.Get(), i);
-					CD3DX12_TEXTURE_COPY_LOCATION Src(upload_resource, layouts[i]);
-					static_cast<ID3D12GraphicsCommandList*>(frame.copyCommandList.Get())->
-						CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
-				}
+				CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state->resource.Get(), i);
+				CD3DX12_TEXTURE_COPY_LOCATION Src(upload_resource, layouts[i]);
+				static_cast<ID3D12GraphicsCommandList*>(cmd.commandList.Get())->CopyTextureRegion(
+					&Dst,
+					0,
+					0,
+					0,
+					&Src,
+					nullptr
+				);
 			}
-			copyQueueLock.unlock();
+
+			copyAllocator.submit(cmd);
 		}
 
 		if (pTexture->desc.BindFlags & BIND_RENDER_TARGET)
@@ -5614,24 +5583,14 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::SubmitCommandLists()
 	{
 		// Sync up copy queue:
-		copyQueueLock.lock();
-		if (copyQueueUse)
+		copyAllocator.locker.lock();
+		if(copyAllocator.submitted)
 		{
-			copyQueueUse = false;
-			auto& frame = GetFrameResources();
-			static_cast<ID3D12GraphicsCommandList*>(frame.copyCommandList.Get())->Close();
-			ID3D12CommandList* commandlists[] = {
-				frame.copyCommandList.Get()
-			};
-			copyQueue->ExecuteCommandLists(1, commandlists);
-
-			// Signal and increment the fence value.
-			copyFenceValue++;
-			HRESULT hr = copyQueue->Signal(copyFence.Get(), copyFenceValue);
+			HRESULT hr = directQueue->Wait(copyAllocator.fence.Get(), copyAllocator.fenceValue);
 			assert(SUCCEEDED(hr));
-			hr = directQueue->Wait(copyFence.Get(), copyFenceValue);
-			assert(SUCCEEDED(hr));
+			copyAllocator.submitted = false;
 		}
+		copyAllocator.locker.unlock();
 
 		// Execute deferred command lists:
 		{
@@ -5696,24 +5655,12 @@ using namespace DX12_Internal;
 
 		allocationhandler->Update(FRAMECOUNT, BACKBUFFER_COUNT);
 
-		copyQueueLock.unlock();
 	}
 
 	void GraphicsDevice_DX12::WaitForGPU()
 	{
-		// wait for copy and direct queues to be idle
-		copyFenceValue++;
-		HRESULT hr = copyQueue->Signal(copyFence.Get(), copyFenceValue);
-		assert(SUCCEEDED(hr));
-		if (copyFence->GetCompletedValue() < copyFenceValue)
-		{
-			hr = copyFence->SetEventOnCompletion(copyFenceValue, copyFenceEvent);
-			WaitForSingleObject(copyFenceEvent, INFINITE);
-		}
-		assert(SUCCEEDED(hr));
-
 		directFenceValue++;
-		hr = directQueue->Signal(directFence.Get(), directFenceValue);
+		HRESULT hr = directQueue->Signal(directFence.Get(), directFenceValue);
 		assert(SUCCEEDED(hr));
 		if (directFence->GetCompletedValue() < directFenceValue)
 		{

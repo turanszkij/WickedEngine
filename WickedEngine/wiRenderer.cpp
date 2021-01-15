@@ -11517,13 +11517,6 @@ void Postprocess_Lineardepth(
 	device->EventBegin("Postprocess_Lineardepth", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Linear Depth Pyramid", cmd);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_UNORDERED_ACCESS)
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
-
 	const TextureDesc& desc = output.GetDesc();
 
 	PostProcessCB cb;
@@ -11558,7 +11551,6 @@ void Postprocess_Lineardepth(
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(),
-			GPUBarrier::Image(&output, IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADER_RESOURCE)
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}

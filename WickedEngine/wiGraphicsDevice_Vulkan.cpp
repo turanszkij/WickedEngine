@@ -3531,22 +3531,6 @@ using namespace Vulkan_Internal;
 		{
 			copyQueueLock.lock();
 
-			auto& frame = GetFrameResources();
-			if (!copyQueueUse)
-			{
-				copyQueueUse = true;
-
-				res = vkResetCommandPool(device, frame.copyCommandPool, 0);
-				assert(res == VK_SUCCESS);
-
-				VkCommandBufferBeginInfo beginInfo = {};
-				beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-				beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-				beginInfo.pInheritanceInfo = nullptr; // Optional
-
-				res = vkBeginCommandBuffer(frame.copyCommandBuffer, &beginInfo);
-				assert(res == VK_SUCCESS);
-			}
 
 			VkImageMemoryBarrier barrier = {};
 			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -3573,6 +3557,8 @@ using namespace Vulkan_Internal;
 			barrier.subresourceRange.levelCount = imageInfo.mipLevels;
 			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+			auto& frame = GetFrameResources();
 			frame.loadedimagetransitions.push_back(barrier);
 
 			copyQueueLock.unlock();
@@ -5816,12 +5802,12 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::SubmitCommandLists()
 	{
+		auto& frame = GetFrameResources();
+
 		// Sync up copy queue and transitions:
 		copyQueueLock.lock();
 		if (copyQueueUse)
 		{
-			auto& frame = GetFrameResources();
-
 			// Copies:
 			{
 				VkResult res = vkEndCommandBuffer(frame.copyCommandBuffer);
@@ -5840,6 +5826,13 @@ using namespace Vulkan_Internal;
 				assert(res == VK_SUCCESS);
 
 			}
+		}
+
+		// Execute deferred command lists:
+		{
+
+			VkCommandBuffer cmdLists[COMMANDLIST_COUNT];
+			uint32_t counter = 0;
 
 			// Transitions:
 			{
@@ -5860,23 +5853,8 @@ using namespace Vulkan_Internal;
 				VkResult res = vkEndCommandBuffer(frame.transitionCommandBuffer);
 				assert(res == VK_SUCCESS);
 
-				VkSubmitInfo submitInfo = {};
-				submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-				submitInfo.commandBufferCount = 1;
-				submitInfo.pCommandBuffers = &frame.transitionCommandBuffer;
-
-				res = vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-				assert(res == VK_SUCCESS);
+				cmdLists[counter++] = frame.transitionCommandBuffer;
 			}
-		}
-
-		// Execute deferred command lists:
-		{
-			auto& frame = GetFrameResources();
-
-			VkCommandBuffer cmdLists[COMMANDLIST_COUNT];
-			CommandList cmds[COMMANDLIST_COUNT];
-			uint32_t counter = 0;
 
 			CommandList cmd_last = cmd_count.load();
 			cmd_count.store(0);
@@ -5885,9 +5863,7 @@ using namespace Vulkan_Internal;
 				VkResult res = vkEndCommandBuffer(GetDirectCommandList(cmd));
 				assert(res == VK_SUCCESS);
 
-				cmdLists[counter] = GetDirectCommandList(cmd);
-				cmds[counter] = cmd;
-				counter++;
+				cmdLists[counter++] = GetDirectCommandList(cmd);
 
 				for (auto& x : pipelines_worker[cmd])
 				{
