@@ -143,9 +143,9 @@ set(SHADERS_CS
         "skyAtmosphere_transmittanceLutCS.hlsl"
         "skyAtmosphere_skyViewLutCS.hlsl"
         "skyAtmosphere_multiScatteredLuminanceLutCS.hlsl"
-		"rtao_denoise_blurCS.hlsl"
-		"rtao_denoise_temporalCS.hlsl"
-		"rtshadow_denoise_temporalCS.hlsl"
+        "rtao_denoise_blurCS.hlsl"
+        "rtao_denoise_temporalCS.hlsl"
+        "rtshadow_denoise_temporalCS.hlsl"
 )
 
 set(SHADERS_DS
@@ -305,9 +305,9 @@ function(Generate_Shaders SHADERS_SRC_LIST SHADER_TYPE)
             set(INVERT_Y TRUE)
         endif()
         if(${SHADER_TYPE} STREQUAL lib)
-		    set(VK_VERSION "vulkan1.2")
+            set(VK_VERSION "vulkan1.2")
         else()
-		    set(VK_VERSION "vulkan1.1")
+            set(VK_VERSION "vulkan1.1")
         endif()
         set(SPIRV_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/${OUTPUT_DIR}/${FILE_NAME}.cso")
         set(SPIRV_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/../${Shader}")
@@ -317,10 +317,10 @@ function(Generate_Shaders SHADERS_SRC_LIST SHADER_TYPE)
                 -I "${CMAKE_CURRENT_SOURCE_DIR}/../"
                 -D SPIRV
                 $<$<BOOL:${INVERT_Y}>:-fvk-invert-y>
-				-all-resources-bound
-				-pack-optimized
-				-res-may-alias
-				-no-legacy-cbuf-layout
+                -all-resources-bound
+                -pack-optimized
+                -res-may-alias
+                -no-legacy-cbuf-layout
                 -spirv
                 -fspv-target-env=${VK_VERSION}
                 -fvk-use-dx-layout
