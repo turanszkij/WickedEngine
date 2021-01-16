@@ -132,6 +132,9 @@
     <None Include="$(MSBuildThisFileDirectory)skyAtmosphere.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)rtshadowLIB.hlsl">
+      <Filter>LIB</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="$(MSBuildThisFileDirectory)hairparticle_simulateCS.hlsl">
@@ -928,9 +931,6 @@
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)cubeShadowGS_transparent_emulation.hlsl">
       <Filter>GS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)rtshadowLIB.hlsl">
-      <Filter>LIB</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>
