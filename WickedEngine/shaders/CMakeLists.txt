@@ -128,18 +128,18 @@ set(SHADERS_CS
         "blur_bilateral_float3CS.hlsl"
         "blur_bilateral_float4CS.hlsl"
         "blur_bilateral_unorm1CS.hlsl"
-		"bloomcombineCS.hlsl"
-		"voxelSceneCopyClearCS_TemporalSmoothing.hlsl"
-		"normalsfromdepthCS.hlsl"
-		"volumetricCloud_shapenoiseCS.hlsl"
-		"volumetricCloud_detailnoiseCS.hlsl"
-		"volumetricCloud_curlnoiseCS.hlsl"
-		"volumetricCloud_weathermapCS.hlsl"
-		"volumetricCloud_renderCS.hlsl"
-		"volumetricCloud_reprojectCS.hlsl"
-		"volumetricCloud_finalCS.hlsl"
-		"shadingRateClassificationCS.hlsl"
-		"shadingRateClassificationCS_DEBUG.hlsl"
+        "bloomcombineCS.hlsl"
+        "voxelSceneCopyClearCS_TemporalSmoothing.hlsl"
+        "normalsfromdepthCS.hlsl"
+        "volumetricCloud_shapenoiseCS.hlsl"
+        "volumetricCloud_detailnoiseCS.hlsl"
+        "volumetricCloud_curlnoiseCS.hlsl"
+        "volumetricCloud_weathermapCS.hlsl"
+        "volumetricCloud_renderCS.hlsl"
+        "volumetricCloud_reprojectCS.hlsl"
+        "volumetricCloud_finalCS.hlsl"
+        "shadingRateClassificationCS.hlsl"
+        "shadingRateClassificationCS_DEBUG.hlsl"
         "skyAtmosphere_transmittanceLutCS.hlsl"
         "skyAtmosphere_skyViewLutCS.hlsl"
         "skyAtmosphere_multiScatteredLuminanceLutCS.hlsl"
@@ -284,6 +284,9 @@ set(SHADERS_HS
 )
 
 set(SHADERS_LIB
+        "rtaoLIB.hlsl"
+        "rtreflectionLIB.hlsl"
+        "rtshadowLIB.hlsl"
 )
 
 
@@ -298,11 +301,6 @@ function(Generate_Shaders SHADERS_SRC_LIST SHADER_TYPE)
         if (${SHADER_TYPE} STREQUAL vs OR ${SHADER_TYPE} STREQUAL ds OR ${SHADER_TYPE} STREQUAL gs)
             set(INVERT_Y TRUE)
         endif()
-        if(${SHADER_TYPE} STREQUAL lib)
-		    set(VK_VERSION "vulkan1.2")
-        else()
-		    set(VK_VERSION "vulkan1.1")
-        endif()
         set(SPIRV_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/${OUTPUT_DIR}/${FILE_NAME}.cso")
         set(SPIRV_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/../${Shader}")
         set(COMMAND_PARAMS "dxc"
@@ -311,18 +309,21 @@ function(Generate_Shaders SHADERS_SRC_LIST SHADER_TYPE)
                 -I "${CMAKE_CURRENT_SOURCE_DIR}/../"
                 -D SPIRV
                 $<$<BOOL:${INVERT_Y}>:-fvk-invert-y>
+				-all-resources-bound
+				-pack-optimized
+				-res-may-alias
+				-no-legacy-cbuf-layout
                 -spirv
-                #-O1
+				-fspv-target-env=vulkan1.2
                 -fvk-use-dx-layout
                 -fvk-use-dx-position-w
                 -flegacy-macro-expansion
                 -Fo ${SPIRV_OUTPUT}
-                -fspv-target-env=${VK_VERSION}
                 -fvk-t-shift 1000 all
                 -fvk-u-shift 2000 all
                 -fvk-s-shift 3000 all
                 #-fspv-extension=KHR
-				-Vd #DISABLE VALIDATION: There is currently a validation bug with raytracing RayTCurrent()!!!
+                -Vd #DISABLE VALIDATION: There is currently a validation bug with raytracing RayTCurrent()!!!
                 )
 
         # Determine include dependencies (recursively)
