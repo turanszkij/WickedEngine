@@ -1229,6 +1229,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_UNORM1], "upsample_bilateral_unorm1CS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_FLOAT4], "upsample_bilateral_float4CS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_UNORM4], "upsample_bilateral_unorm4CS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_UINT4], "upsample_bilateral_uint4CS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_DOWNSAMPLE4X], "downsample4xCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_NORMALSFROMDEPTH], "normalsfromdepthCS.cso"); });
 
@@ -9523,6 +9524,8 @@ void Postprocess_RTAO(
 	device->EventBegin("Postprocess_RTAO", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("RTAO", cmd);
 
+	BindCommonResources(cmd);
+
 	static RaytracingPipelineState RTPSO;
 	static DescriptorTable descriptorTable;
 	static RootSignature rootSignature;
@@ -9705,6 +9708,9 @@ void Postprocess_RTAO(
 	device->Barrier(barriers, arraysize(barriers), cmd);
 
 	device->EventEnd(cmd);
+
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	int temporal_output = device->GetFrameCount() % 2;
 	int temporal_history = 1 - temporal_output;
@@ -10120,6 +10126,8 @@ void Postprocess_SSR(
 
 	device->UnbindResources(TEXSLOT_RENDERPATH_SSR, 1, cmd);
 
+	BindCommonResources(cmd);
+
 	const TextureDesc& input_desc = input.GetDesc();
 	const TextureDesc& desc = output.GetDesc();
 
@@ -10325,6 +10333,8 @@ void Postprocess_RTShadow(
 	device->EventBegin("Postprocess_RTShadow", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("RTShadow", cmd);
 
+	BindCommonResources(cmd);
+
 	static RaytracingPipelineState RTPSO;
 	static DescriptorTable descriptorTable;
 	static RootSignature rootSignature;
@@ -10404,9 +10414,7 @@ void Postprocess_RTShadow(
 		success = device->CreateRaytracingPipelineState(&rtdesc, &RTPSO);
 		assert(success);
 
-		success = LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_TEMPORAL], "rtao_denoise_temporalCS.cso");
-		assert(success);
-		success = LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_BLUR], "rtao_denoise_blurCS.cso");
+		success = LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTSHADOW_DENOISE_TEMPORAL], "rtshadow_denoise_temporalCS.cso");
 		assert(success);
 	};
 
@@ -10417,6 +10425,8 @@ void Postprocess_RTShadow(
 	}
 
 	static TextureDesc saved_desc;
+	static Texture temp;
+	static Texture temporal[2];
 	static Texture normals;
 
 	const TextureDesc& lineardepth_desc = lineardepth.GetDesc();
@@ -10426,18 +10436,27 @@ void Postprocess_RTShadow(
 		saved_desc.MipLevels = 1;
 
 		TextureDesc desc = saved_desc;
-		desc.Width = desc.Width;
-		desc.Height = desc.Height;
+		desc.Width = (desc.Width + 1) / 2;
+		desc.Height = (desc.Height + 1) / 2;
+		desc.Format = FORMAT_R32G32B32A32_UINT;
+		device->CreateTexture(&desc, nullptr, &temp);
+		device->SetName(&temp, "rtshadow_temp");
+
+		device->CreateTexture(&desc, nullptr, &temporal[0]);
+		device->SetName(&temporal[0], "rtao_temporal[0]");
+		device->CreateTexture(&desc, nullptr, &temporal[1]);
+		device->SetName(&temporal[1], "rtao_temporal[1]");
+
 		desc.Format = FORMAT_R11G11B10_FLOAT;
 		device->CreateTexture(&desc, nullptr, &normals);
-		device->SetName(&normals, "rtao_normals");
+		device->SetName(&normals, "rtshadow_normals");
 	}
 
 	Postprocess_NormalsFromDepth(depthbuffer, normals, cmd);
 
 	device->EventBegin("Raytrace", cmd);
 
-	const TextureDesc& desc = output.GetDesc();
+	const TextureDesc& desc = temp.GetDesc();
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width;
@@ -10454,7 +10473,7 @@ void Postprocess_RTShadow(
 	device->WriteDescriptor(&descriptorTable, 2, 0, &scene.TLAS);
 	device->WriteDescriptor(&descriptorTable, 3, 0, &resourceBuffers[RBTYPE_ENTITYARRAY]);
 	device->WriteDescriptor(&descriptorTable, 4, 0, &entityTiles_Opaque);
-	device->WriteDescriptor(&descriptorTable, 5, 0, &output);
+	device->WriteDescriptor(&descriptorTable, 5, 0, &temp);
 	for (size_t i = 0; i < rootSignature.tables.size(); ++i)
 	{
 		device->BindDescriptorTable(RAYTRACING, (uint32_t)i, &rootSignature.tables[i], cmd);
@@ -10498,6 +10517,45 @@ void Postprocess_RTShadow(
 	device->Barrier(barriers, arraysize(barriers), cmd);
 
 	device->EventEnd(cmd);
+
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	int temporal_output = device->GetFrameCount() % 2;
+	int temporal_history = 1 - temporal_output;
+
+	// Temporal pass:
+	{
+		device->EventBegin("Temporal Denoise", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTSHADOW_DENOISE_TEMPORAL], cmd);
+
+		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(CS, &temp, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
+
+		const GPUResource* uavs[] = {
+			&temporal[temporal_output],
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(temporal[temporal_output].GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(temporal[temporal_output].GetDesc().Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
+
+	Postprocess_Upsample_Bilateral(temporal[temporal_output], lineardepth, output, cmd);
 
 	wiProfiler::EndRange(prof_range);
 	device->EventEnd(cmd);
@@ -11930,6 +11988,10 @@ void Postprocess_Upsample_Bilateral(
 	cb.xPPParams0.z = 1.0f / (float)input.GetDesc().Height;
 	// select mip from lowres depth mipchain:
 	cb.xPPParams0.w = floorf(std::max(1.0f, log2f(std::max((float)desc.Width / (float)input.GetDesc().Width, (float)desc.Height / (float)input.GetDesc().Height))));
+	cb.xPPParams1.x = (float)input.GetDesc().Width;
+	cb.xPPParams1.y = (float)input.GetDesc().Height;
+	cb.xPPParams1.z = 1.0f / cb.xPPParams1.x;
+	cb.xPPParams1.w = 1.0f / cb.xPPParams1.y;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 
 	if (pixelshader)
@@ -11966,6 +12028,9 @@ void Postprocess_Upsample_Bilateral(
 		case FORMAT_R16G16B16A16_FLOAT:
 		case FORMAT_R32G32B32A32_FLOAT:
 			cs = CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_FLOAT4;
+			break;
+		case FORMAT_R32G32B32A32_UINT:
+			cs = CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_UINT4;
 			break;
 		default:
 			assert(0); // implement format!

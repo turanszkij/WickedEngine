@@ -27,24 +27,24 @@ Buffer<float2> subsets_vertexBuffer_UVSETS[] : register(t0, space5);
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
 struct RayPayload
 {
-    float3 color;
-    float roughness;
+	float3 color;
+	float roughness;
 };
 
 [shader("raygeneration")]
 void RTReflection_Raygen()
 {
 	uint2 DTid = DispatchRaysIndex().xy;
-    const float2 uv = ((float2)DTid.xy + 0.5) / (float2)DispatchRaysDimensions();
-    const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
-    if (depth == 0.0f)
-        return;
+	const float2 uv = ((float2)DTid.xy + 0.5) / (float2)DispatchRaysDimensions();
+	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
+	if (depth == 0.0f)
+		return;
 
-    const float roughness = texture_gbuffer0.SampleLevel(sampler_linear_clamp, uv, 0).a;
+	const float roughness = texture_gbuffer0.SampleLevel(sampler_linear_clamp, uv, 0).a;
 
-    const float3 P = reconstructPosition(uv, depth);
-    const float3 N = decodeNormal(texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy);
-    const float3 V = normalize(g_xCamera_CamPos - P);
+	const float3 P = reconstructPosition(uv, depth);
+	const float3 N = decodeNormal(texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy);
+	const float3 V = normalize(g_xCamera_CamPos - P);
 
 
 	// The ray direction selection part is the same as in from ssr_raytraceCS.hlsl:
@@ -77,75 +77,75 @@ void RTReflection_Raygen()
 	}
 
 
-    const float3 R = L;
+	const float3 R = L;
 
-    float seed = g_xFrame_Time;
+	float seed = g_xFrame_Time;
 
-    RayDesc ray;
-    ray.TMin = 0.001;
-    ray.TMax = rtreflection_range;
-    ray.Origin = P + N * 0.1;
-    ray.Direction = normalize(R);
+	RayDesc ray;
+	ray.TMin = 0.1;
+	ray.TMax = rtreflection_range;
+	ray.Origin = P;
+	ray.Direction = normalize(R);
 
-    RayPayload payload;
-    payload.color = 0;
-    payload.roughness = roughness;
+	RayPayload payload;
+	payload.color = 0;
+	payload.roughness = roughness;
 
-    TraceRay(
-        scene_acceleration_structure,   // AccelerationStructure
-        0,                              // RayFlags
-        ~0,                             // InstanceInclusionMask
-        0,                              // RayContributionToHitGroupIndex
-        0,                              // MultiplierForGeomtryContributionToShaderIndex
-        0,                              // MissShaderIndex
-        ray,                            // Ray
-        payload                         // Payload
-    );
+	TraceRay(
+		scene_acceleration_structure,   // AccelerationStructure
+		0,                              // RayFlags
+		~0,                             // InstanceInclusionMask
+		0,                              // RayContributionToHitGroupIndex
+		0,                              // MultiplierForGeomtryContributionToShaderIndex
+		0,                              // MissShaderIndex
+		ray,                            // Ray
+		payload                         // Payload
+	);
 
-    output[DTid.xy] = float4(payload.color, 1);
+	output[DTid.xy] = float4(payload.color, 1);
 }
 
 [shader("closesthit")]
 void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
 {
-    float u = attr.barycentrics.x;
-    float v = attr.barycentrics.y;
-    float w = 1 - u - v;
-    uint primitiveIndex = PrimitiveIndex();
-    uint geometryOffset = InstanceID();
-    uint geometryIndex = GeometryIndex(); // requires tier_1_1 GeometryIndex feature!!
-    uint descriptorIndex = geometryOffset + geometryIndex;
-    ShaderMaterial material = subsets_material[descriptorIndex];
-    uint i0 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 0];
-    uint i1 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 1];
-    uint i2 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 2];
-    float4 uv0, uv1, uv2;
-    uv0.xy = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i0];
-    uv1.xy = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i1];
-    uv2.xy = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i2];
-    uv0.zw = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i0];
+	float u = attr.barycentrics.x;
+	float v = attr.barycentrics.y;
+	float w = 1 - u - v;
+	uint primitiveIndex = PrimitiveIndex();
+	uint geometryOffset = InstanceID();
+	uint geometryIndex = GeometryIndex(); // requires tier_1_1 GeometryIndex feature!!
+	uint descriptorIndex = geometryOffset + geometryIndex;
+	ShaderMaterial material = subsets_material[descriptorIndex];
+	uint i0 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 0];
+	uint i1 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 1];
+	uint i2 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 2];
+	float4 uv0, uv1, uv2;
+	uv0.xy = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i0];
+	uv1.xy = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i1];
+	uv2.xy = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i2];
+	uv0.zw = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i0];
 	uv1.zw = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i1];
 	uv2.zw = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i2];
-    float3 n0, n1, n2;
+	float3 n0, n1, n2;
 	const uint stride_POS = 16;
-    n0 = unpack_unitvector(subsets_vertexBuffer_RAW[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_POS].Load4(i0 * stride_POS).w);
-    n1 = unpack_unitvector(subsets_vertexBuffer_RAW[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_POS].Load4(i1 * stride_POS).w);
-    n2 = unpack_unitvector(subsets_vertexBuffer_RAW[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_POS].Load4(i2 * stride_POS).w);
+	n0 = unpack_unitvector(subsets_vertexBuffer_RAW[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_POS].Load4(i0 * stride_POS).w);
+	n1 = unpack_unitvector(subsets_vertexBuffer_RAW[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_POS].Load4(i1 * stride_POS).w);
+	n2 = unpack_unitvector(subsets_vertexBuffer_RAW[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_POS].Load4(i2 * stride_POS).w);
 
-    float4 uvsets = uv0 * w + uv1 * u + uv2 * v;
-    float3 N = n0 * w + n1 * u + n2 * v;
+	float4 uvsets = uv0 * w + uv1 * u + uv2 * v;
+	float3 N = n0 * w + n1 * u + n2 * v;
 
-    N = mul((float3x3)ObjectToWorld3x4(), N);
-    N = normalize(N);
+	N = mul((float3x3)ObjectToWorld3x4(), N);
+	N = normalize(N);
 
 	float4 baseColor = material.baseColor;
-    [branch]
-    if (material.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
-    {
-        const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
-        baseColor = subsets_textures[descriptorIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_BASECOLOR].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 2);
-        baseColor.rgb *= DEGAMMA(baseColor.rgb);
-    }
+	[branch]
+	if (material.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+	{
+		const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
+		baseColor = subsets_textures[descriptorIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_BASECOLOR].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 2);
+		baseColor.rgb *= DEGAMMA(baseColor.rgb);
+	}
 
 	[branch]
 	if (material.IsUsingVertexColors())
@@ -201,7 +201,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
 		surface.occlusion *= subsets_textures[descriptorIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_OCCLUSION].SampleLevel(sampler_linear_wrap, UV_occlusionMap, 2).r;
 	}
 
-    surface.emissiveColor = material.emissiveColor;
+	surface.emissiveColor = material.emissiveColor;
 	[branch]
 	if (material.uvset_emissiveMap >= 0)
 	{
@@ -212,96 +212,96 @@ void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
 	}
 
 
-    // Light sampling:
+	// Light sampling:
 	surface.P = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
 	surface.V = -WorldRayDirection();
 	surface.N = N;
 	surface.update();
 
-    Lighting lighting;
+	Lighting lighting;
 	lighting.create(0, 0, GetAmbient(surface.N), 0);
 
-    [loop]
-    for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
-    {
-        ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + iterator];
+	[loop]
+	for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
+	{
+		ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + iterator];
 
-        if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
-        {
-            continue; // static lights will be skipped (they are used in lightmap baking)
-        }
+		if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+		{
+			continue; // static lights will be skipped (they are used in lightmap baking)
+		}
 
-        switch (light.GetType())
-        {
-        case ENTITY_TYPE_DIRECTIONALLIGHT:
-        {
-            DirectionalLight(light, surface, lighting);
-        }
-        break;
-        case ENTITY_TYPE_POINTLIGHT:
-        {
-            PointLight(light, surface, lighting);
-        }
-        break;
-        case ENTITY_TYPE_SPOTLIGHT:
-        {
-            SpotLight(light, surface, lighting);
-        }
-        break;
-        }
-    }
+		switch (light.GetType())
+		{
+		case ENTITY_TYPE_DIRECTIONALLIGHT:
+		{
+			DirectionalLight(light, surface, lighting);
+		}
+		break;
+		case ENTITY_TYPE_POINTLIGHT:
+		{
+			PointLight(light, surface, lighting);
+		}
+		break;
+		case ENTITY_TYPE_SPOTLIGHT:
+		{
+			SpotLight(light, surface, lighting);
+		}
+		break;
+		}
+	}
 
-    LightingPart combined_lighting = CombineLighting(surface, lighting);
-    payload.color = surface.albedo * combined_lighting.diffuse + combined_lighting.specular + surface.emissiveColor.rgb * surface.emissiveColor.a;
+	LightingPart combined_lighting = CombineLighting(surface, lighting);
+	payload.color = surface.albedo * combined_lighting.diffuse + combined_lighting.specular + surface.emissiveColor.rgb * surface.emissiveColor.a;
 
 }
 
 [shader("anyhit")]
 void RTReflection_AnyHit(inout RayPayload payload, in MyAttributes attr)
 {
-    float u = attr.barycentrics.x;
-    float v = attr.barycentrics.y;
-    float w = 1 - u - v;
-    uint primitiveIndex = PrimitiveIndex();
-    uint geometryOffset = InstanceID();
-    uint geometryIndex = GeometryIndex(); // requires tier_1_1 GeometryIndex feature!!
-    uint descriptorIndex = geometryOffset + geometryIndex;
-    ShaderMaterial material = subsets_material[descriptorIndex];
-    if (material.uvset_baseColorMap < 0)
-    {
-        return;
-    }
-    uint i0 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 0];
-    uint i1 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 1];
-    uint i2 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 2];
-    float2 uv0, uv1, uv2;
-    if (material.uvset_baseColorMap == 0)
-    {
-        uv0 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i0];
-        uv1 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i1];
-        uv2 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i2];
-    }
-    else
-    {
-        uv0 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i0];
+	float u = attr.barycentrics.x;
+	float v = attr.barycentrics.y;
+	float w = 1 - u - v;
+	uint primitiveIndex = PrimitiveIndex();
+	uint geometryOffset = InstanceID();
+	uint geometryIndex = GeometryIndex(); // requires tier_1_1 GeometryIndex feature!!
+	uint descriptorIndex = geometryOffset + geometryIndex;
+	ShaderMaterial material = subsets_material[descriptorIndex];
+	if (material.uvset_baseColorMap < 0)
+	{
+		return;
+	}
+	uint i0 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 0];
+	uint i1 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 1];
+	uint i2 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 2];
+	float2 uv0, uv1, uv2;
+	if (material.uvset_baseColorMap == 0)
+	{
+		uv0 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i0];
+		uv1 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i1];
+		uv2 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i2];
+	}
+	else
+	{
+		uv0 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i0];
 		uv1 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i1];
 		uv2 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i2];
-    }
+	}
 
-    float2 uv = uv0 * w + uv1 * u + uv2 * v;
-    float alpha = subsets_textures[descriptorIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_BASECOLOR].SampleLevel(sampler_point_wrap, uv, 2).a;
+	float2 uv = uv0 * w + uv1 * u + uv2 * v;
+	float alpha = subsets_textures[descriptorIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_BASECOLOR].SampleLevel(sampler_point_wrap, uv, 2).a;
 
-    if (alpha - material.alphaTest < 0)
-    {
-        IgnoreHit();
-    }
+	if (alpha - material.alphaTest < 0)
+	{
+		IgnoreHit();
+	}
 }
 
 [shader("miss")]
 void RTReflection_Miss(inout RayPayload payload)
 {
-    Surface surface;
-    surface.roughness = payload.roughness;
-    surface.R = WorldRayDirection();
-    payload.color = EnvironmentReflection_Global(surface, surface.roughness * g_xFrame_EnvProbeMipCount);
+	Surface surface;
+	surface.roughness = payload.roughness;
+	surface.R = WorldRayDirection();
+	payload.color = EnvironmentReflection_Global(surface, surface.roughness * g_xFrame_EnvProbeMipCount);
 }

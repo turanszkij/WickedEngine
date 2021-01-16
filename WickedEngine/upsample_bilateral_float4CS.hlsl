@@ -24,8 +24,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 
 	const float threshold = xPPParams0.x;
-	const float2 lowres_texel_size = xPPParams0.yz;
 	const float lowres_depthchain_mip = xPPParams0.w;
+	const float2 lowres_size = xPPParams1.xy;
+	const float2 lowres_texel_size = xPPParams1.zw;
 
 	const float2 uv00 = uv - 0.5f * lowres_texel_size;
 	const float2 uv10 = uv00 + float2(lowres_texel_size.x, 0);
@@ -48,8 +49,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	[branch]
 	if (accum_diff < threshold)
 	{
+#ifdef UPSAMPLE_DISABLE_FILTERING
+		color = input[floor(uv * lowres_size)];
+#else
 		// small error, take bilinear sample:
 		color = input.SampleLevel(sampler_linear_clamp, uv, 0);
+#endif // UPSAMPLE_DISABLE_FILTERING
 	}
 	else
 	{
@@ -75,7 +80,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			min_depth_diff = depth_diff[3];
 		}
 
+#ifdef UPSAMPLE_DISABLE_FILTERING
+		color = input[floor(uv_nearest * lowres_size)];
+#else
 		color = input.SampleLevel(sampler_point_clamp, uv_nearest, 0);
+#endif // UPSAMPLE_DISABLE_FILTERING
 	}
 
 #ifdef USE_PIXELSHADER
