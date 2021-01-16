@@ -347,6 +347,7 @@ enum SHADERTYPE
     // raytracing shaders
     RTTYPE_RTAO,
     RTTYPE_RTREFLECTION,
+    RTTYPE_RTSHADOW,
 
 
 

@@ -2,9 +2,7 @@
 #include "ShaderInterop_Postprocess.h"
 #include "raytracingHF.hlsli"
 
-#ifndef RAYTRACING_INLINE
 RAYTRACINGACCELERATIONSTRUCTURE(scene_acceleration_structure, TEXSLOT_ACCELERATION_STRUCTURE);
-#endif // RAYTRACING_INLINE
 
 TEXTURE2D(texture_normals, float3, TEXSLOT_ONDEMAND0);
 

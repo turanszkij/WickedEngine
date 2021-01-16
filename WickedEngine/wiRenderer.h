@@ -338,6 +338,15 @@ namespace wiRenderer
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
+	void Postprocess_RTShadow(
+		const wiScene::Scene& scene,
+		const wiGraphics::Texture& depthbuffer,
+		const wiGraphics::Texture& lineardepth,
+		const wiGraphics::Texture& depth_history,
+		const wiGraphics::GPUBuffer& entityTiles_Opaque,
+		const wiGraphics::Texture& output,
+		wiGraphics::CommandList cmd
+	);
 	void Postprocess_LightShafts(
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& output,

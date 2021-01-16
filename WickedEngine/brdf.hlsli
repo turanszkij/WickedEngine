@@ -149,6 +149,10 @@ struct SurfaceToLight
 
 		NdotL = dot(L, surface.N);
 
+#ifdef BRDF_NDOTL_BIAS
+		NdotL += BRDF_NDOTL_BIAS;
+#endif // BRDF_NDOTL_BIAS
+
 		NdotL_sss = (NdotL + surface.sss.rgb) * surface.sss_inv.rgb;
 
 		NdotV = saturate(dot(surface.N, surface.V));

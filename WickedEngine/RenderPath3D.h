@@ -75,6 +75,7 @@ public:
 	wiGraphics::Texture rtBloom; // contains the bright parts of the image + mipchain
 	wiGraphics::Texture rtBloom_tmp; // temporary for bloom downsampling
 	wiGraphics::Texture rtAO; // full res AO
+	wiGraphics::Texture rtShadow; // raytraced shadows mask
 	wiGraphics::Texture rtSun[2]; // 0: sun render target used for lightshafts (can be MSAA), 1: radial blurred lightshafts
 	wiGraphics::Texture rtSun_resolved; // sun render target, but the resolved version if MSAA is enabled
 	wiGraphics::Texture rtGUIBlurredBackground[3];	// downsampled, gaussian blurred scene for GUI

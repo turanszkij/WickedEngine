@@ -929,5 +929,8 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)cubeShadowGS_transparent_emulation.hlsl">
       <Filter>GS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)rtshadowLIB.hlsl">
+      <Filter>LIB</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

@@ -146,7 +146,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	AddWidget(&blendModeComboBox);
 
 	shadingRateComboBox.Create("Shading Rate: ");
-	shadingRateComboBox.SetTooltip("Select shading rate for this material. \nSelecting larger shading rate will decrease rendering quality of this material, \nbut increases performance.\nDX12 only and requires Tier1 hardware support for variable shading rate");
+	shadingRateComboBox.SetTooltip("Select shading rate for this material. \nSelecting larger shading rate will decrease rendering quality of this material, \nbut increases performance.\nRequires hardware support for variable shading rate");
 	shadingRateComboBox.SetPos(XMFLOAT2(x, y += step));
 	shadingRateComboBox.SetSize(XMFLOAT2(wid, hei));
 	shadingRateComboBox.OnSelect([&](wiEventArgs args) {

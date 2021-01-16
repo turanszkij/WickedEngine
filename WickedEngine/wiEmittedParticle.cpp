@@ -46,6 +46,8 @@ static DepthStencilState	depthStencilState;
 static PipelineState		PSO[BLENDMODE_COUNT][wiEmittedParticle::PARTICLESHADERTYPE_COUNT];
 static PipelineState		PSO_wire;
 
+static bool ALLOW_MESH_SHADER = false;
+
 
 void wiEmittedParticle::SetMaxParticleCount(uint32_t value)
 {
@@ -280,7 +282,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		{
 			cb.xEmitterOptions |= EMITTER_OPTION_BIT_FRAME_BLENDING_ENABLED;
 		}
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
+		if (ALLOW_MESH_SHADER && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
 		{
 			cb.xEmitterOptions |= EMITTER_OPTION_BIT_MESH_SHADER_ENABLED;
 		}
@@ -547,7 +549,7 @@ void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialCompon
 	device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), cmd);
 	device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
 
-	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
+	if (ALLOW_MESH_SHADER && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
 	{
 		const GPUResource* res[] = {
 			&counterBuffer,
@@ -579,7 +581,7 @@ namespace wiEmittedParticle_Internal
 
 		wiRenderer::LoadShader(VS, vertexShader, "emittedparticleVS.cso");
 
-		if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
+		if (ALLOW_MESH_SHADER && wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
 		{
 			wiRenderer::LoadShader(MS, meshShader, "emittedparticleMS.cso");
 		}
@@ -611,7 +613,7 @@ namespace wiEmittedParticle_Internal
 		{
 			PipelineStateDesc desc;
 			desc.pt = TRIANGLESTRIP;
-			if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
+			if (ALLOW_MESH_SHADER && wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
 			{
 				desc.ms = &meshShader;
 			}
@@ -632,7 +634,7 @@ namespace wiEmittedParticle_Internal
 
 		{
 			PipelineStateDesc desc;
-			if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
+			if (ALLOW_MESH_SHADER && wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
 			{
 				desc.ms = &meshShader;
 			}
