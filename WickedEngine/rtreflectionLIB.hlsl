@@ -1,12 +1,20 @@
 #define DISABLE_SOFT_SHADOWMAP
 #define DISABLE_TRANSPARENT_SHADOWMAP
+
+#ifndef SPIRV
+// Vulkan shader compiler has problem with this
+//	https://github.com/microsoft/DirectXShaderCompiler/issues/3119
+#define RAYTRACING_INLINE
+#endif // SPIRV
+
 #include "globals.hlsli"
+
+RAYTRACINGACCELERATIONSTRUCTURE(scene_acceleration_structure, TEXSLOT_ACCELERATION_STRUCTURE);
+
 #include "ShaderInterop_Postprocess.h"
 #include "raytracingHF.hlsli"
 #include "stochasticSSRHF.hlsli"
 #include "lightingHF.hlsli"
-
-RAYTRACINGACCELERATIONSTRUCTURE(scene_acceleration_structure, TEXSLOT_ACCELERATION_STRUCTURE);
 
 RWTEXTURE2D(output, float4, 0);
 
@@ -182,6 +190,9 @@ void RTReflection_ClosestHit(inout RayPayload payload, in MyAttributes attr)
 
 	Surface surface;
 	surface.create(material, baseColor, surfaceMap);
+
+	surface.pixel = DispatchRaysIndex().xy;
+	surface.screenUV = surface.pixel / (float2)DispatchRaysDimensions().xy;
 
 	[branch]
 	if (material.IsOcclusionEnabled_Secondary() && material.uvset_occlusionMap >= 0)

@@ -775,6 +775,11 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">Compute</ShaderType>
     </FxCompile>
+    <None Include="$(MSBuildThisFileDirectory)rtshadowLIB.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
+      <FileType>Document</FileType>
+    </None>
     <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_multiScatteredLuminanceLutCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>

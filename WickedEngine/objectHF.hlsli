@@ -56,6 +56,7 @@ TEXTURE2D(texture_refraction, float4, TEXSLOT_RENDERPATH_REFRACTION);		// rgba: 
 TEXTURE2D(texture_waterriples, float4, TEXSLOT_RENDERPATH_WATERRIPPLES);	// rgb: snorm8 water ripple normal map
 TEXTURE2D(texture_ao, float, TEXSLOT_RENDERPATH_AO);						// r: ambient occlusion
 TEXTURE2D(texture_ssr, float4, TEXSLOT_RENDERPATH_SSR);						// rgb: screen space ray-traced reflections, a: reflection blend based on ray hit or miss
+TEXTURE2D(texture_rtshadow, uint4, TEXSLOT_RENDERPATH_RTSHADOW);			// bitmask for max 16 shadows' visibility
 
 
 struct PixelInputType_Simple
@@ -1089,6 +1090,11 @@ GBUFFEROutputType main(PIXELINPUT input)
 #endif
 
 
+	[branch]
+	if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
+	{
+		lighting.shadow_mask = texture_rtshadow[surface.pixel];
+	}
 
 
 #ifdef FORWARD

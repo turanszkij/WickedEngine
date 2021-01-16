@@ -140,6 +140,16 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateTexture(&desc, nullptr, &rtAO);
 		device->SetName(&rtAO, "rtAO");
 	}
+	if(device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	{
+		TextureDesc desc;
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.Format = FORMAT_R32G32B32A32_UINT;
+		desc.Width = internalResolution.x;
+		desc.Height = internalResolution.y;
+		device->CreateTexture(&desc, nullptr, &rtShadow);
+		device->SetName(&rtShadow, "rtShadow");
+	}
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
@@ -847,6 +857,20 @@ void RenderPath3D::Render() const
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 			wiProfiler::EndRange(range);
+		}
+
+		if (wiRenderer::GetRaytracedShadowsEnabled())
+		{
+			wiRenderer::Postprocess_RTShadow(
+				*scene,
+				depthBuffer_Copy,
+				rtLinearDepth,
+				depthBuffer_Copy1,
+				entityTiles_Opaque,
+				rtShadow,
+				cmd
+			);
+			device->BindResource(PS, &rtShadow, TEXSLOT_RENDERPATH_RTSHADOW, cmd);
 		}
 
 		device->RenderPassBegin(&renderpass_main, cmd);
