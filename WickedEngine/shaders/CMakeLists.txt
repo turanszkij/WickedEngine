@@ -143,6 +143,9 @@ set(SHADERS_CS
         "skyAtmosphere_transmittanceLutCS.hlsl"
         "skyAtmosphere_skyViewLutCS.hlsl"
         "skyAtmosphere_multiScatteredLuminanceLutCS.hlsl"
+		"rtao_denoise_blurCS.hlsl"
+		"rtao_denoise_temporalCS.hlsl"
+		"rtshadow_denoise_temporalCS.hlsl"
 )
 
 set(SHADERS_DS

@@ -39,7 +39,7 @@ void RTAO_Raygen()
 	surface.P = P;
 	surface.N = N;
 
-	const uint2 tileIndex = uint2(floor(surface.pixel / TILED_CULLING_BLOCKSIZE));
+	const uint2 tileIndex = uint2(floor(surface.pixel * 2 / TILED_CULLING_BLOCKSIZE));
 	const uint flatTileIndex = flatten2D(tileIndex, g_xFrame_EntityCullingTileCount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 
 	uint4 shadow_mask = 0;
@@ -86,9 +86,9 @@ void RTAO_Raygen()
 					}
 
 					RayDesc ray;
-					ray.TMin = 0.001;
+					ray.TMin = 0.1;
 					ray.TMax = 0;
-					ray.Origin = surface.P + surface.N * 0.1;
+					ray.Origin = surface.P;
 
 					float3 L;
 

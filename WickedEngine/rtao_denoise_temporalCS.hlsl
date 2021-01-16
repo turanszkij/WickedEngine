@@ -66,13 +66,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
     float2 velocity = thisScreen - prevScreen;
 
     float2 prevUV = uv - velocity;
+	if (!is_saturated(prevUV))
+	{
+		output[DTid.xy] = resolve_current[DTid.xy];
+		return;
+	}
 
     // Disocclusion fallback:
     float depth_current = getLinearDepth(depth);
     float depth_history = getLinearDepth(texture_depth_history.SampleLevel(sampler_point_clamp, prevUV, 0));
-    if (length(velocity) > 0.0025 && abs(depth_current - depth_history) > 1)
+    if (abs(depth_current - depth_history) > 1)
     {
-        output[DTid.xy] = resolve_current.SampleLevel(sampler_linear_clamp, uv, 0);
+		output[DTid.xy] = resolve_current[DTid.xy];
         return;
     }
 

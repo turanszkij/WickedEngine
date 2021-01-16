@@ -6440,18 +6440,24 @@ using namespace DX12_Internal;
 
 	void GraphicsDevice_DX12::BindDescriptorTable(BINDPOINT bindpoint, uint32_t space, const DescriptorTable* table, CommandList cmd)
 	{
+		GetFrameResources().descriptors[cmd].dirty_res = true;
+		GetFrameResources().descriptors[cmd].dirty_sam = true;
+
 		const RootSignature* rootsig = nullptr;
 		switch (bindpoint)
 		{
 		default:
 		case wiGraphics::GRAPHICS:
 			rootsig = active_pso[cmd]->desc.rootSignature;
+			GetFrameResources().descriptors[cmd].dirty_root_cbvs_gfx = ~0;
 			break;
 		case wiGraphics::COMPUTE:
 			rootsig = active_cs[cmd]->rootSignature;
+			GetFrameResources().descriptors[cmd].dirty_root_cbvs_compute = ~0;
 			break;
 		case wiGraphics::RAYTRACING:
 			rootsig = active_rt[cmd]->desc.rootSignature;
+			GetFrameResources().descriptors[cmd].dirty_root_cbvs_compute = ~0;
 			break;
 		}
 		auto rootsig_internal = to_internal(rootsig);
@@ -6490,18 +6496,24 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd)
 	{
+		GetFrameResources().descriptors[cmd].dirty_res = true;
+		GetFrameResources().descriptors[cmd].dirty_sam = true;
+
 		const RootSignature* rootsig = nullptr;
 		switch (bindpoint)
 		{
 		default:
 		case wiGraphics::GRAPHICS:
 			rootsig = active_pso[cmd]->desc.rootSignature;
+			GetFrameResources().descriptors[cmd].dirty_root_cbvs_gfx = ~0;
 			break;
 		case wiGraphics::COMPUTE:
 			rootsig = active_cs[cmd]->rootSignature;
+			GetFrameResources().descriptors[cmd].dirty_root_cbvs_compute = ~0;
 			break;
 		case wiGraphics::RAYTRACING:
 			rootsig = active_rt[cmd]->desc.rootSignature;
+			GetFrameResources().descriptors[cmd].dirty_root_cbvs_compute = ~0;
 			break;
 		}
 		auto rootsig_internal = to_internal(rootsig);
@@ -6559,18 +6571,24 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::BindRootConstants(BINDPOINT bindpoint, uint32_t index, const void* srcdata, CommandList cmd)
 	{
+		GetFrameResources().descriptors[cmd].dirty_res = true;
+		GetFrameResources().descriptors[cmd].dirty_sam = true;
+
 		const RootSignature* rootsig = nullptr;
 		switch (bindpoint)
 		{
 		default:
 		case wiGraphics::GRAPHICS:
 			rootsig = active_pso[cmd]->desc.rootSignature;
+			GetFrameResources().descriptors[cmd].dirty_root_cbvs_gfx = ~0;
 			break;
 		case wiGraphics::COMPUTE:
 			rootsig = active_cs[cmd]->rootSignature;
+			GetFrameResources().descriptors[cmd].dirty_root_cbvs_compute = ~0;
 			break;
 		case wiGraphics::RAYTRACING:
 			rootsig = active_rt[cmd]->desc.rootSignature;
+			GetFrameResources().descriptors[cmd].dirty_root_cbvs_compute = ~0;
 			break;
 		}
 		auto rootsig_internal = to_internal(rootsig);

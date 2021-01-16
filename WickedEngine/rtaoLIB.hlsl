@@ -33,9 +33,9 @@ void RTAO_Raygen()
     float seed = g_xFrame_Time;
 
     RayDesc ray;
-    ray.TMin = 0.001;
+    ray.TMin = 0.1;
     ray.TMax = rtao_range;
-    ray.Origin = P + N * 0.1;
+    ray.Origin = P;
 
     RayPayload payload;
     payload.color = 0;
