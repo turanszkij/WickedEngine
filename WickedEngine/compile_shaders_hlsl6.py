@@ -70,19 +70,8 @@ for item in root.iter():
 
             output_name = os.path.splitext(name)[0] + ".cso "
 
-            #inline raytracing disabled:
-            cmd1 = cmd
-            cmd1 += " -Fo " + "shaders/hlsl6/" + output_name
-            t = threading.Thread(target=compile, args=(cmd1,))
-            threads.append(t)
-            t.start()
-
-                
-            #inline raytracing enabled:
-            cmd2 = cmd
-            cmd2 += " -D RAYTRACING_INLINE "
-            cmd2 += " -Fo " + "shaders/hlsl6/inlinert/" + output_name
-            t = threading.Thread(target=compile, args=(cmd2,))
+            cmd += " -Fo " + "shaders/hlsl6/" + output_name
+            t = threading.Thread(target=compile, args=(cmd,))
             threads.append(t)
             t.start()
             
