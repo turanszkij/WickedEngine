@@ -65,6 +65,7 @@ struct PixelInputType_Simple
 	float  clip		: SV_ClipDistance0;
 	float4 color	: COLOR;
 	float4 uvsets	: UVSETS;
+	float4 pos2DPrev : SCREENPOSITIONPREV;
 };
 struct PixelInputType
 {
@@ -80,17 +81,17 @@ struct PixelInputType
 	float4 pos2DPrev : SCREENPOSITIONPREV;
 };
 
-struct GBUFFEROutputType
+struct GBuffer
 {
-	float4 g0	: SV_Target0;		// texture_gbuffer0
-	float4 g1	: SV_Target1;		// texture_gbuffer1
+	float4 g0 : SV_TARGET0;	/*FORMAT_R11G11B10_FLOAT*/
+	float4 g1 : SV_TARGET1;	/*FORMAT_R8G8B8A8_FLOAT*/
 };
-inline GBUFFEROutputType CreateGbuffer(in float4 color, in Surface surface, in float2 velocity, in Lighting lighting)
+inline GBuffer CreateGBuffer(in float4 color, in Surface surface)
 {
-	GBUFFEROutputType Out;
-	Out.g0 = float4(color.rgb, surface.roughness);		/*FORMAT_R16G16B16A16_FLOAT*/
-	Out.g1 = float4(encodeNormal(surface.N), velocity);	/*FORMAT_R16G16B16A16_FLOAT*/
-	return Out;
+	GBuffer gbuffer;
+	gbuffer.g0 = color;
+	gbuffer.g1 = float4(surface.N * 0.5f + 0.5f, surface.roughness);
+	return gbuffer;
 }
 
 
@@ -625,25 +626,27 @@ inline void ApplyFog(in float dist, inout float4 color)
 #if defined(COMPILE_OBJECTSHADER_PS)
 
 // Possible switches:
-//	ALPHATESTONLY		-	assemble object shader for depth only rendering + alpha test
-//	TEXTUREONLY			-	assemble object shader for rendering only with base textures, no lighting
+//	PREPASS				-	assemble object shader for depth prepass rendering
 //	TRANSPARENT			-	assemble object shader for forward or tile forward transparent rendering
 //	ENVMAPRENDERING		-	modify object shader for envmap rendering
 //	PLANARREFLECTION	-	include planar reflection sampling
 //	POM					-	include parallax occlusion mapping computation
 //	WATER				-	include specialized water shader code
-//	BLACKOUT			-	include specialized blackout shader code
 //	TERRAIN				-	include specialized terrain material blending code
 
-#if defined(ALPHATESTONLY) || defined(TEXTUREONLY)
+#if defined(PREPASS)
 #define SIMPLE_INPUT
 #endif // APLHATESTONLY
 
+#ifdef ENVMAPRENDERING
+#define PIXELINPUT PSIn_EnvmapRendering
+#else
 #ifdef SIMPLE_INPUT
 #define PIXELINPUT PixelInputType_Simple
 #else
 #define PIXELINPUT PixelInputType
 #endif // SIMPLE_INPUT
+#endif // ENVMAPRENDERING
 
 
 #ifdef DISABLE_ALPHATEST
@@ -652,24 +655,26 @@ inline void ApplyFog(in float dist, inout float4 color)
 
 
 // entry point:
-#if defined(ALPHATESTONLY)
-void main(PIXELINPUT input)
-#elif defined(TEXTUREONLY)
-float4 main(PIXELINPUT input) : SV_TARGET
-#elif defined(TRANSPARENT)
-float4 main(PIXELINPUT input) : SV_TARGET
-#elif defined(ENVMAPRENDERING)
-float4 main(PSIn_EnvmapRendering input) : SV_TARGET
+#ifdef OUTPUT_GBUFFER
+GBuffer main(PIXELINPUT input)
 #else
-GBUFFEROutputType main(PIXELINPUT input)
-#endif // ALPHATESTONLY
-
+float4 main(PIXELINPUT input) : SV_TARGET
+#endif // OUTPUT_GBUFFER
 
 
 // shader base:
 {
-	float2 pixel = input.pos.xy;
-	float2 ScreenCoord = pixel * g_xFrame_InternalResolution_rcp;
+	const float depth = input.pos.z;
+	const float lineardepth = input.pos.w;
+	const float2 pixel = input.pos.xy;
+	const float2 ScreenCoord = pixel * g_xFrame_InternalResolution_rcp;
+
+#ifdef PREPASS
+	float2 pos2D = ScreenCoord * 2 - 1;
+	pos2D.y *= -1;
+	input.pos2DPrev.xy /= input.pos2DPrev.w;
+	const float2 velocity = ((input.pos2DPrev.xy - g_xFrame_TemporalAAJitterPrev) - (pos2D.xy - g_xFrame_TemporalAAJitter)) * float2(0.5, -0.5);
+#endif // PREPASS
 
 #ifndef DISABLE_ALPHATEST
 #ifndef TRANSPARENT
@@ -681,13 +686,15 @@ GBUFFEROutputType main(PIXELINPUT input)
 #endif // ENVMAPRENDERING
 
 	Surface surface;
+	surface.init();
 
 #ifndef SIMPLE_INPUT
+	surface.N = normalize(input.nor);
 	surface.P = input.pos3D;
 	surface.V = g_xCamera_CamPos - surface.P;
 	float dist = length(surface.V);
 	surface.V /= dist;
-	surface.N = normalize(input.nor);
+	float3 bumpColor = 0;
 
 #if 0
 	float3x3 TBN = compute_tangent_frame(surface.N, surface.P, input.uvsets.xy);
@@ -718,23 +725,15 @@ GBUFFEROutputType main(PIXELINPUT input)
 	clip(color.a - g_xMaterial.alphaTest);
 #endif // DISABLE_ALPHATEST
 
+
 #ifndef SIMPLE_INPUT
-	float3 bumpColor = 0;
-	float depth = input.pos.z;
 #ifndef ENVMAPRENDERING
-	float2 pos2D = ScreenCoord * 2 - 1;
-	pos2D.y *= -1;
-	input.pos2DPrev.xy /= input.pos2DPrev.w;
-
-	const float2 velocity = ((input.pos2DPrev.xy - g_xFrame_TemporalAAJitterPrev) - (pos2D.xy - g_xFrame_TemporalAAJitter)) * float2(0.5, -0.5);
-	const float2 ReprojectedScreenCoord = ScreenCoord + velocity;
-
 #ifndef WATER
 	NormalMapping(input.uvsets, surface.N, TBN, bumpColor);
 #endif // WATER
-
 #endif // ENVMAPRENDERING
 #endif // SIMPLE_INPUT
+
 
 	// Surface map:
 	float4 surfaceMap = 1;
@@ -1109,7 +1108,7 @@ GBUFFEROutputType main(PIXELINPUT input)
 #ifndef WATER
 #ifndef ENVMAPRENDERING
 #ifndef TRANSPARENT
-	float4 ssr = texture_ssr.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
+	float4 ssr = texture_ssr.SampleLevel(sampler_linear_clamp, ScreenCoord, 0);
 	lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb, ssr.a);
 #endif // TRANSPARENT
 #endif // ENVMAPRENDERING
@@ -1117,7 +1116,6 @@ GBUFFEROutputType main(PIXELINPUT input)
 
 #ifdef WATER
 	// WATER REFRACTION
-	float lineardepth = input.pos.w;
 	float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + bumpColor.rg, 0) * g_xCamera_ZFarP;
 	float depth_difference = sampled_lineardepth - lineardepth;
 	surface.refraction.rgb = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + bumpColor.rg * saturate(0.5 * depth_difference), 0).rgb;
@@ -1159,13 +1157,15 @@ GBUFFEROutputType main(PIXELINPUT input)
 
 
 	// end point:
-#ifndef ALPHATESTONLY
+#ifdef PREPASS
+	return float4(velocity, 0, 0); /*FORMAT_R16G16_FLOAT*/
+#else
 #ifdef OUTPUT_GBUFFER
-	return CreateGbuffer(color, surface, velocity, lighting);
+	return CreateGBuffer(color, surface);
 #else
 	return color;
 #endif // OUTPUT_GBUFFER
-#endif // ALPHATESTONLY
+#endif // PREPASS
 
 }
 

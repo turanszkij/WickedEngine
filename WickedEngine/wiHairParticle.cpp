@@ -20,7 +20,7 @@ namespace wiScene
 {
 
 static Shader vs;
-static Shader ps_alphatestonly;
+static Shader ps_prepass;
 static Shader ps;
 static Shader ps_simplest;
 static Shader cs_simulate;
@@ -254,7 +254,7 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 
 	if (wiRenderer::IsWireRender())
 	{
-		if (renderPass == RENDERPASS_DEPTHONLY)
+		if (renderPass == RENDERPASS_PREPASS)
 		{
 			return;
 		}
@@ -271,7 +271,7 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 		device->BindResources(PS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 		device->BindResources(VS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
-		if (renderPass != RENDERPASS_DEPTHONLY) // depth only alpha test will be full res
+		if (renderPass != RENDERPASS_PREPASS) // depth only alpha test will be full res
 		{
 			device->BindShadingRate(material.shadingRate, cmd);
 		}
@@ -353,7 +353,7 @@ namespace wiHairParticle_Internal
 		wiRenderer::LoadShader(VS, vs, "hairparticleVS.cso");
 
 		wiRenderer::LoadShader(PS, ps_simplest, "hairparticlePS_simplest.cso");
-		wiRenderer::LoadShader(PS, ps_alphatestonly, "hairparticlePS_alphatestonly.cso");
+		wiRenderer::LoadShader(PS, ps_prepass, "hairparticlePS_prepass.cso");
 		wiRenderer::LoadShader(PS, ps, "hairparticlePS.cso");
 
 		wiRenderer::LoadShader(CS, cs_simulate, "hairparticle_simulateCS.cso");
@@ -363,7 +363,7 @@ namespace wiHairParticle_Internal
 
 		for (int i = 0; i < RENDERPASS_COUNT; ++i)
 		{
-			if (i == RENDERPASS_DEPTHONLY || i == RENDERPASS_MAIN)
+			if (i == RENDERPASS_PREPASS || i == RENDERPASS_MAIN)
 			{
 				PipelineStateDesc desc;
 				desc.vs = &vs;
@@ -374,8 +374,8 @@ namespace wiHairParticle_Internal
 
 				switch (i)
 				{
-				case RENDERPASS_DEPTHONLY:
-					desc.ps = &ps_alphatestonly;
+				case RENDERPASS_PREPASS:
+					desc.ps = &ps_prepass;
 					break;
 				case RENDERPASS_MAIN:
 					desc.ps = &ps;

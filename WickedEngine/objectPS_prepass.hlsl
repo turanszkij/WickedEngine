@@ -1,4 +1,5 @@
 #define COMPILE_OBJECTSHADER_PS
-#define ALPHATESTONLY
+#define PREPASS
+#define DISABLE_ALPHATEST
 #include "objectHF.hlsli"
 

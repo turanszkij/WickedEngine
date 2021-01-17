@@ -69,19 +69,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
 	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
 
-	float4 pos = float4(reconstructPosition(uv, depth, g_xCamera_InvVP), 1.0f);
-
-	float4 thisClip = mul(g_xCamera_VP, pos);
-	float4 prevClip = mul(g_xCamera_PrevVP, pos);
-
-	float2 thisScreen = thisClip.xy * rcp(thisClip.w);
-	float2 prevScreen = prevClip.xy * rcp(prevClip.w);
-	thisScreen = thisScreen.xy * float2(0.5, -0.5) + 0.5;
-	prevScreen = prevScreen.xy * float2(0.5, -0.5) + 0.5;
-
-	float2 velocity = thisScreen - prevScreen;
-
-	float2 prevUV = uv - velocity;
+	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
+	const float2 prevUV = uv + velocity;
 	if (!is_saturated(prevUV))
 	{
 		output[DTid.xy] = resolve_current[DTid.xy];

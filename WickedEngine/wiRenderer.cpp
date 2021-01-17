@@ -562,7 +562,7 @@ ILTYPES GetILTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool
 	case RENDERPASS_VOXELIZE:
 		realVL = ILTYPE_OBJECT_ALL;
 		break;
-	case RENDERPASS_DEPTHONLY:
+	case RENDERPASS_PREPASS:
 		if (tessellation)
 		{
 			realVL = ILTYPE_OBJECT_ALL;
@@ -620,7 +620,7 @@ SHADERTYPE GetVSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 			realVS = VSTYPE_OBJECT_COMMON;
 		}
 		break;
-	case RENDERPASS_DEPTHONLY:
+	case RENDERPASS_PREPASS:
 		if (tessellation)
 		{
 			realVS = VSTYPE_OBJECT_SIMPLE_TESSELLATION;
@@ -723,7 +723,7 @@ SHADERTYPE GetHSTYPE(RENDERPASS renderPass, bool tessellation)
 	switch (renderPass)
 	{
 	case RENDERPASS_TEXTURE:
-	case RENDERPASS_DEPTHONLY:
+	case RENDERPASS_PREPASS:
 	case RENDERPASS_MAIN:
 			return tessellation ? HSTYPE_OBJECT : SHADERTYPE_COUNT;
 		break;
@@ -736,7 +736,7 @@ SHADERTYPE GetDSTYPE(RENDERPASS renderPass, bool tessellation)
 	switch (renderPass)
 	{
 	case RENDERPASS_TEXTURE:
-	case RENDERPASS_DEPTHONLY:
+	case RENDERPASS_PREPASS:
 	case RENDERPASS_MAIN:
 			return tessellation ? DSTYPE_OBJECT : SHADERTYPE_COUNT;
 		break;
@@ -781,14 +781,14 @@ SHADERTYPE GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, Ma
 			break;
 		}
 		break;
-	case RENDERPASS_DEPTHONLY:
+	case RENDERPASS_PREPASS:
 		if (alphatest)
 		{
-			realPS = PSTYPE_OBJECT_ALPHATESTONLY;
+			realPS = PSTYPE_OBJECT_PREPASS_ALPHATEST;
 		}
 		else
 		{
-			realPS = SHADERTYPE_COUNT;
+			realPS = PSTYPE_OBJECT_PREPASS;
 		}
 		break;
 	case RENDERPASS_ENVMAPCAPTURE:
@@ -864,6 +864,7 @@ enum SKYRENDERING
 	SKYRENDERING_STATIC,
 	SKYRENDERING_DYNAMIC,
 	SKYRENDERING_SUN,
+	SKYRENDERING_VELOCITY,
 	SKYRENDERING_ENVMAPCAPTURE_STATIC,
 	SKYRENDERING_ENVMAPCAPTURE_DYNAMIC,
 	SKYRENDERING_COUNT
@@ -1078,8 +1079,9 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_PAINTRADIUS], "objectPS_paintradius.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_SIMPLEST], "objectPS_simplest.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_TEXTUREONLY], "objectPS_textureonly.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_ALPHATESTONLY], "objectPS_alphatestonly.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_IMPOSTOR_ALPHATESTONLY], "impostorPS_alphatestonly.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_PREPASS], "objectPS_prepass.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_PREPASS_ALPHATEST], "objectPS_prepass_alphatest.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_IMPOSTOR_PREPASS_ALPHATEST], "impostorPS_prepass_alphatest.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_IMPOSTOR_SIMPLE], "impostorPS_simple.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_IMPOSTOR_WIRE], "impostorPS_wire.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_LIGHTVISUALIZER], "lightVisualizerPS.cso"); });
@@ -1097,6 +1099,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_VERTEXCOLOR], "vertexcolorPS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_SKY_STATIC], "skyPS_static.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_SKY_DYNAMIC], "skyPS_dynamic.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_SKY_VELOCITY], "skyPS_velocity.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_SUN], "sunPS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_SHADOW_ALPHATEST], "shadowPS_alphatest.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_SHADOW_TRANSPARENT], "shadowPS_transparent.cso"); });
@@ -1296,7 +1299,6 @@ void LoadShaders()
 
 							switch (renderPass)
 							{
-							case RENDERPASS_DEPTHONLY:
 							case RENDERPASS_SHADOW:
 							case RENDERPASS_SHADOWCUBE:
 								desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOW : BSTYPE_COLORWRITEDISABLE];
@@ -1403,8 +1405,8 @@ void LoadShaders()
 			desc.dss = &depthStencils[DSSTYPE_DEPTHREADEQUAL];
 			desc.ps = &shaders[PSTYPE_OBJECT_TERRAIN];
 			break;
-		case RENDERPASS_DEPTHONLY:
-			desc.ps = nullptr;
+		case RENDERPASS_PREPASS:
+			desc.ps = &shaders[PSTYPE_OBJECT_PREPASS];
 			break;
 		case RENDERPASS_VOXELIZE:
 			desc.dss = &depthStencils[DSSTYPE_XRAY];
@@ -1503,9 +1505,9 @@ void LoadShaders()
 			desc.vs = &shaders[VSTYPE_IMPOSTOR];
 			desc.ps = &shaders[PSTYPE_IMPOSTOR];
 			break;
-		case RENDERPASS_DEPTHONLY:
+		case RENDERPASS_PREPASS:
 			desc.vs = &shaders[VSTYPE_IMPOSTOR];
-			desc.ps = &shaders[PSTYPE_IMPOSTOR_ALPHATESTONLY];
+			desc.ps = &shaders[PSTYPE_IMPOSTOR_PREPASS_ALPHATEST];
 			break;
 		default:
 			desc.vs = &shaders[VSTYPE_IMPOSTOR];
@@ -1679,6 +1681,11 @@ void LoadShaders()
 			desc.bs = &blendStates[BSTYPE_ADDITIVE];
 			desc.vs = &shaders[VSTYPE_SKY];
 			desc.ps = &shaders[PSTYPE_SUN];
+			break;
+		case SKYRENDERING_VELOCITY:
+			desc.bs = &blendStates[BSTYPE_OPAQUE];
+			desc.vs = &shaders[VSTYPE_SKY];
+			desc.ps = &shaders[PSTYPE_SKY_VELOCITY];
 			break;
 		case SKYRENDERING_ENVMAPCAPTURE_STATIC:
 			desc.bs = &blendStates[BSTYPE_OPAQUE];
@@ -2820,7 +2827,7 @@ void RenderMeshes(
 				else
 				{
 					// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
-					if ((renderPass == RENDERPASS_DEPTHONLY || renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_SHADOWCUBE) && !material.IsAlphaTestEnabled() && !forceAlphaTestForDithering)
+					if ((renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_SHADOWCUBE) && !material.IsAlphaTestEnabled() && !forceAlphaTestForDithering)
 					{
 						if ((renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_SHADOWCUBE ) && (renderTypeFlags & RENDERTYPE_TRANSPARENT))
 						{
@@ -2936,7 +2943,7 @@ void RenderMeshes(
 				uint32_t stencilRef = CombineStencilrefs(engineStencilRef, userStencilRef);
 				device->BindStencilRef(stencilRef, cmd);
 
-				if (renderPass != RENDERPASS_DEPTHONLY && renderPass != RENDERPASS_VOXELIZE) // depth only alpha test will be full res
+				if (renderPass != RENDERPASS_PREPASS && renderPass != RENDERPASS_VOXELIZE) // depth only alpha test will be full res
 				{
 					device->BindShadingRate(material.shadingRate, cmd);
 				}
@@ -6504,6 +6511,19 @@ void DrawSky(const Scene& scene, CommandList cmd)
 
 	device->EventEnd(cmd);
 }
+void DrawSkyVelocity(CommandList cmd)
+{
+	device->EventBegin("DrawSkyVelocity", cmd);
+
+	device->BindPipelineState(&PSO_sky[SKYRENDERING_VELOCITY], cmd);
+
+	BindConstantBuffers(VS, cmd);
+	BindConstantBuffers(PS, cmd);
+
+	device->Draw(3, 0, cmd);
+
+	device->EventEnd(cmd);
+}
 void DrawSun(CommandList cmd)
 {
 	device->EventBegin("DrawSun", cmd);
@@ -8608,7 +8628,7 @@ void ComputeShadingRateClassification(
 		device->BindComputeShader(&shaders[CSTYPE_SHADINGRATECLASSIFICATION], cmd);
 	}
 
-	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_VELOCITY], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
 	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
@@ -8633,7 +8653,7 @@ void ComputeShadingRateClassification(
 	// Whole threadgroup for each tile:
 	device->Dispatch(desc.Width, desc.Height, 1, cmd);
 
-	// Noa barrier here, caller should barrier.
+	// No barrier here, caller should barrier.
 
 	device->UnbindUAVs(0, arraysize(uavs), cmd);
 
@@ -9504,6 +9524,7 @@ void Postprocess_RTAO(
 	const Texture& depthbuffer,
 	const Texture& lineardepth,
 	const Texture& depth_history,
+	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& output,
 	CommandList cmd,
 	float range,
@@ -9712,6 +9733,10 @@ void Postprocess_RTAO(
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
+	device->BindResource(CS, &gbuffer[GBUFFER_COLOR], TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
+
 	int temporal_output = device->GetFrameCount() % 2;
 	int temporal_history = 1 - temporal_output;
 
@@ -9878,6 +9903,7 @@ void Postprocess_RTReflection(
 		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_DEPTH });
 		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_GBUFFER0 });
 		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_GBUFFER1 });
+		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_GBUFFER2 });
 		descriptorTable.resources.push_back({ TEXTURECUBEARRAY, TEXSLOT_ENVMAPARRAY });
 		descriptorTable.resources.push_back({ TEXTURE2DARRAY, TEXSLOT_SHADOWARRAY_2D });
 		descriptorTable.resources.push_back({ TEXTURECUBEARRAY, TEXSLOT_SHADOWARRAY_CUBE });
@@ -9979,21 +10005,22 @@ void Postprocess_RTReflection(
 	device->WriteDescriptor(&descriptorTable, 0, 0, &temp);
 	device->WriteDescriptor(&descriptorTable, 1, 0, &scene.TLAS);
 	device->WriteDescriptor(&descriptorTable, 2, 0, &depthbuffer);
-	device->WriteDescriptor(&descriptorTable, 3, 0, &gbuffer[GBUFFER_COLOR_ROUGHNESS]);
-	device->WriteDescriptor(&descriptorTable, 4, 0, &gbuffer[GBUFFER_NORMAL_VELOCITY]);
-	device->WriteDescriptor(&descriptorTable, 5, 0, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
-	device->WriteDescriptor(&descriptorTable, 6, 0, &shadowMapArray_2D);
-	device->WriteDescriptor(&descriptorTable, 7, 0, &shadowMapArray_Cube);
-	device->WriteDescriptor(&descriptorTable, 8, 0, &shadowMapArray_Transparent_2D);
-	device->WriteDescriptor(&descriptorTable, 9, 0, &shadowMapArray_Transparent_Cube);
-	device->WriteDescriptor(&descriptorTable, 10, 0, &resourceBuffers[RBTYPE_ENTITYARRAY]);
-	device->WriteDescriptor(&descriptorTable, 11, 0, &resourceBuffers[RBTYPE_MATRIXARRAY]);
-	device->WriteDescriptor(&descriptorTable, 12, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT]);
-	device->WriteDescriptor(&descriptorTable, 13, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT]);
-	device->WriteDescriptor(&descriptorTable, 14, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT]);
-	device->WriteDescriptor(&descriptorTable, 15, 0, &resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE]);
-	device->WriteDescriptor(&descriptorTable, 16, 0, &resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE]);
-	device->WriteDescriptor(&descriptorTable, 17, 0, &resourceBuffers[RBTYPE_BLUENOISE_RANKING_TILE]);
+	device->WriteDescriptor(&descriptorTable, 3, 0, &gbuffer[GBUFFER_COLOR]);
+	device->WriteDescriptor(&descriptorTable, 4, 0, &gbuffer[GBUFFER_NORMAL_ROUGHNESS]);
+	device->WriteDescriptor(&descriptorTable, 5, 0, &gbuffer[GBUFFER_VELOCITY]);
+	device->WriteDescriptor(&descriptorTable, 6, 0, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
+	device->WriteDescriptor(&descriptorTable, 7, 0, &shadowMapArray_2D);
+	device->WriteDescriptor(&descriptorTable, 8, 0, &shadowMapArray_Cube);
+	device->WriteDescriptor(&descriptorTable, 9, 0, &shadowMapArray_Transparent_2D);
+	device->WriteDescriptor(&descriptorTable, 10, 0, &shadowMapArray_Transparent_Cube);
+	device->WriteDescriptor(&descriptorTable, 11, 0, &resourceBuffers[RBTYPE_ENTITYARRAY]);
+	device->WriteDescriptor(&descriptorTable, 12, 0, &resourceBuffers[RBTYPE_MATRIXARRAY]);
+	device->WriteDescriptor(&descriptorTable, 13, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT]);
+	device->WriteDescriptor(&descriptorTable, 14, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT]);
+	device->WriteDescriptor(&descriptorTable, 15, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT]);
+	device->WriteDescriptor(&descriptorTable, 16, 0, &resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE]);
+	device->WriteDescriptor(&descriptorTable, 17, 0, &resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE]);
+	device->WriteDescriptor(&descriptorTable, 18, 0, &resourceBuffers[RBTYPE_BLUENOISE_RANKING_TILE]);
 	for (size_t i = 0; i < rootSignature.tables.size(); ++i)
 	{
 		device->BindDescriptorTable(RAYTRACING, (uint32_t)i, &rootSignature.tables[i], cmd);
@@ -10038,6 +10065,10 @@ void Postprocess_RTReflection(
 
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	device->BindResource(CS, &gbuffer[GBUFFER_COLOR], TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
 
 	int temporal_output = device->GetFrameCount() % 2;
 	int temporal_history = 1 - temporal_output;
@@ -10178,8 +10209,9 @@ void Postprocess_SSR(
 
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-		device->BindResource(CS, &gbuffer[GBUFFER_COLOR_ROUGHNESS], TEXSLOT_GBUFFER0, cmd);
-		device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_VELOCITY], TEXSLOT_GBUFFER1, cmd);
+		device->BindResource(CS, &gbuffer[GBUFFER_COLOR], TEXSLOT_GBUFFER0, cmd);
+		device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
+		device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
 		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, &resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE], TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(CS, &resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE], TEXSLOT_ONDEMAND2, cmd);
@@ -10220,7 +10252,7 @@ void Postprocess_SSR(
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_RESOLVE], cmd);
 
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_VELOCITY], TEXSLOT_GBUFFER1, cmd);
+		device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
 		device->BindResource(CS, &texture_raytrace, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, &input, TEXSLOT_ONDEMAND1, cmd);
 
@@ -10315,7 +10347,8 @@ void Postprocess_RTShadow(
 	const Texture& depthbuffer,
 	const Texture& lineardepth,
 	const Texture& depth_history,
-	const wiGraphics::GPUBuffer& entityTiles_Opaque,
+	const GPUBuffer& entityTiles_Opaque,
+	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& output,
 	CommandList cmd
 )
@@ -10520,6 +10553,10 @@ void Postprocess_RTShadow(
 
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	device->BindResource(CS, &gbuffer[GBUFFER_COLOR], TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
 
 	int temporal_output = device->GetFrameCount() % 2;
 	int temporal_history = 1 - temporal_output;
@@ -11031,8 +11068,8 @@ void Postprocess_Outline(
 }
 void Postprocess_MotionBlur(
 	const Texture& input,
-	const Texture& velocity,
 	const Texture& lineardepth,
+	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& output,
 	CommandList cmd,
 	float strength
@@ -11042,7 +11079,7 @@ void Postprocess_MotionBlur(
 	auto range = wiProfiler::BeginRangeGPU("MotionBlur", cmd);
 
 	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(CS, &velocity, TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -11715,9 +11752,9 @@ void Postprocess_FXAA(
 void Postprocess_TemporalAA(
 	const Texture& input_current,
 	const Texture& input_history,
-	const Texture& velocity,
 	const Texture& lineardepth,
 	const Texture& depth_history,
+	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& output,
 	CommandList cmd
 )
@@ -11731,7 +11768,7 @@ void Postprocess_TemporalAA(
 	device->BindResource(CS, &input_history, TEXSLOT_ONDEMAND1, cmd);
 	device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
 	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(CS, &velocity, TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 

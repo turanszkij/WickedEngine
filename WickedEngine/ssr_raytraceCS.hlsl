@@ -226,20 +226,29 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
 	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
-	if (depth == 0.0f)
+	if (depth == 0)
 		return;
 
+	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
+	const float2 prevUV = uv + velocity;
+	if(!is_saturated(prevUV))
+	{
+		texture_raytrace[DTid.xy] = 0;
+		return;
+	}
+
     // Everything in view space:
+	const float4 g1 = texture_gbuffer1.SampleLevel(sampler_linear_clamp, prevUV, 0);
 	const float3 P = reconstructPosition(uv, depth, g_xCamera_InvP);
-	const float3 N = mul((float3x3) g_xCamera_View, decodeNormal(texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy)).xyz;
+	const float3 N = mul((float3x3) g_xCamera_View, g1.rgb * 2 - 1).xyz;
 	const float3 V = normalize(-P);
 
-	const float roughness = GetRoughness(texture_gbuffer0.SampleLevel(sampler_point_clamp, uv, 0).a);
+	const float roughness = GetRoughness(g1.a);
     
 	const float roughnessFade = GetRoughnessFade(roughness, SSRMaxRoughness);
-	if (roughnessFade <= 0.0f)
+	if (roughnessFade <= 0)
 	{
-		texture_raytrace[DTid.xy] = 0.0;
+		texture_raytrace[DTid.xy] = 0;
 		return;
 	}
     

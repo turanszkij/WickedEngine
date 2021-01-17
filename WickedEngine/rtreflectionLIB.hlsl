@@ -36,14 +36,22 @@ void RTReflection_Raygen()
 	uint2 DTid = DispatchRaysIndex().xy;
 	const float2 uv = ((float2)DTid.xy + 0.5) / (float2)DispatchRaysDimensions();
 	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
-	if (depth == 0.0f)
+	if (depth == 0)
 		return;
 
-	const float roughness = texture_gbuffer0.SampleLevel(sampler_linear_clamp, uv, 0).a;
+	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
+	const float2 prevUV = uv + velocity;
+	if (!is_saturated(prevUV))
+	{
+		output[DTid.xy] = 0;
+		return;
+	}
 
+	const float4 g1 = texture_gbuffer1.SampleLevel(sampler_linear_clamp, prevUV, 0);
 	const float3 P = reconstructPosition(uv, depth);
-	const float3 N = decodeNormal(texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy);
+	const float3 N = g1.rgb * 2 - 1;
 	const float3 V = normalize(g_xCamera_CamPos - P);
+	const float roughness = g1.a;
 
 
 	// The ray direction selection part is the same as in from ssr_raytraceCS.hlsl:

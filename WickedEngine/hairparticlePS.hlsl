@@ -7,7 +7,7 @@
 TEXTURE2D(texture_color, float4, TEXSLOT_ONDEMAND0);
 
 [earlydepthstencil]
-GBUFFEROutputType main(VertexToPixel input)
+GBuffer main(VertexToPixel input)
 {
 	float4 color = texture_color.Sample(sampler_linear_wrap, input.tex);
 	color.rgb = DEGAMMA(color.rgb);
@@ -43,5 +43,5 @@ GBUFFEROutputType main(VertexToPixel input)
 
 	ApplyFog(dist, color);
 
-	return CreateGbuffer(color, surface, velocity, lighting);
+	return CreateGBuffer(color, surface);
 }
