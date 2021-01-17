@@ -1,15 +1,9 @@
-#include "globals.hlsli"
+#define OBJECTSHADER_LAYOUT_POS_TEX
+#define OBJECTSHADER_USE_COLOR
 #include "objectHF.hlsli"
 
-struct VertextoPixel
-{
-	float4 pos				: SV_POSITION;
-	float4 color			: COLOR;
-	float4 uvsets			: UVSETS;
-};
-
 [earlydepthstencil]
-float4 main(VertextoPixel input) : SV_TARGET
+float4 main(PixelInput input) : SV_TARGET
 {
 	float2 pixel = input.pos.xy;
 

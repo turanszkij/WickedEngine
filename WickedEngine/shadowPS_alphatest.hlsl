@@ -1,13 +1,8 @@
-#include "globals.hlsli"
+#define OBJECTSHADER_LAYOUT_POS_TEX
 #include "objectHF.hlsli"
 
-struct VertextoPixel
+void main(PixelInput input)
 {
-	float4 pos				: SV_POSITION;
-	float2 uv				: UV;
-};
-
-void main(VertextoPixel PSIn)
-{
-	clip(texture_basecolormap.Sample(sampler_linear_wrap, PSIn.uv).a - g_xMaterial.alphaTest);
+	const float2 UV_baseColorMap = g_xMaterial.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+	clip(texture_basecolormap.Sample(sampler_linear_wrap, UV_baseColorMap).a - g_xMaterial.alphaTest);
 }

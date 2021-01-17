@@ -1,3 +1,4 @@
+#define OBJECTSHADER_LAYOUT_COMMON
 #include "objectHF.hlsli"
 
 
@@ -9,7 +10,7 @@ struct ConstantOutputType
 	float4 pos0 : POSITION0;
 	float4 pos1 : POSITION1;
 	float4 pos2 : POSITION2;
-
+	
 	float4 color0 : COLOR0;
 	float4 color1 : COLOR1;
 	float4 color2 : COLOR2;
@@ -106,9 +107,9 @@ float4 PhongTangent(float u, float v, float w, ConstantOutputType hsc)
 // Domain Shader
 ////////////////////////////////////////////////////////////////////////////////
 [domain("tri")]
-PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocation, const OutputPatch<HullOutputType, 3> patch)
+PixelInput main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocation, const OutputPatch<HullOutputType, 3> patch)
 {
-    PixelInputType Out;
+	PixelInput Out;
 
 
 	float4 vertexPosition;
@@ -152,7 +153,6 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	Out.clip = dot(vertexPosition, g_xCamera_ClipPlane);
 	
 	Out.pos = mul(g_xCamera_VP, vertexPosition);
-	Out.pos2DPrev = mul(g_xCamera_PrevVP, vertexPositionPrev);
 	Out.pos3D = vertexPosition.xyz;
 	Out.uvsets = vertexUvsets;
 	Out.atl = vertexAtlas;
