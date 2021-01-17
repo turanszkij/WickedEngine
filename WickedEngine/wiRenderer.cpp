@@ -10374,37 +10374,37 @@ void Postprocess_RTShadow(
 
 		rtdesc.shaderlibraries.emplace_back();
 		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTSHADOW];
-		rtdesc.shaderlibraries.back().function_name = "RTAO_Raygen";
+		rtdesc.shaderlibraries.back().function_name = "RTShadow_Raygen";
 		rtdesc.shaderlibraries.back().type = ShaderLibrary::RAYGENERATION;
 
 		rtdesc.shaderlibraries.emplace_back();
 		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTSHADOW];
-		rtdesc.shaderlibraries.back().function_name = "RTAO_ClosestHit";
+		rtdesc.shaderlibraries.back().function_name = "RTShadow_ClosestHit";
 		rtdesc.shaderlibraries.back().type = ShaderLibrary::CLOSESTHIT;
 
 		rtdesc.shaderlibraries.emplace_back();
 		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTSHADOW];
-		rtdesc.shaderlibraries.back().function_name = "RTAO_AnyHit";
+		rtdesc.shaderlibraries.back().function_name = "RTShadow_AnyHit";
 		rtdesc.shaderlibraries.back().type = ShaderLibrary::ANYHIT;
 
 		rtdesc.shaderlibraries.emplace_back();
 		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTSHADOW];
-		rtdesc.shaderlibraries.back().function_name = "RTAO_Miss";
+		rtdesc.shaderlibraries.back().function_name = "RTShadow_Miss";
 		rtdesc.shaderlibraries.back().type = ShaderLibrary::MISS;
 
 		rtdesc.hitgroups.emplace_back();
 		rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
-		rtdesc.hitgroups.back().name = "RTAO_Raygen";
+		rtdesc.hitgroups.back().name = "RTShadow_Raygen";
 		rtdesc.hitgroups.back().general_shader = 0;
 
 		rtdesc.hitgroups.emplace_back();
 		rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
-		rtdesc.hitgroups.back().name = "RTAO_Miss";
+		rtdesc.hitgroups.back().name = "RTShadow_Miss";
 		rtdesc.hitgroups.back().general_shader = 3;
 
 		rtdesc.hitgroups.emplace_back();
 		rtdesc.hitgroups.back().type = ShaderHitGroup::TRIANGLES;
-		rtdesc.hitgroups.back().name = "RTAO_Hitgroup";
+		rtdesc.hitgroups.back().name = "RTShadow_Hitgroup";
 		rtdesc.hitgroups.back().closesthit_shader = 1;
 		rtdesc.hitgroups.back().anyhit_shader = 2;
 
@@ -10443,9 +10443,9 @@ void Postprocess_RTShadow(
 		device->SetName(&temp, "rtshadow_temp");
 
 		device->CreateTexture(&desc, nullptr, &temporal[0]);
-		device->SetName(&temporal[0], "rtao_temporal[0]");
+		device->SetName(&temporal[0], "rtshadow_temporal[0]");
 		device->CreateTexture(&desc, nullptr, &temporal[1]);
-		device->SetName(&temporal[1], "rtao_temporal[1]");
+		device->SetName(&temporal[1], "rtshadow_temporal[1]");
 
 		desc.Format = FORMAT_R11G11B10_FLOAT;
 		device->CreateTexture(&desc, nullptr, &normals);

@@ -13,7 +13,6 @@ Texture2D<float4> subsets_textures[] : register(t0, space2);
 Buffer<uint> subsets_indexBuffer[] : register(t0, space3);
 Buffer<float2> subsets_vertexBuffer_UVSETS[] : register(t0, space4);
 
-typedef BuiltInTriangleIntersectionAttributes MyAttributes;
 struct RayPayload
 {
 	float color;
@@ -33,9 +32,9 @@ void RTAO_Raygen()
 	float seed = g_xFrame_Time;
 
 	RayDesc ray;
-	ray.TMin = 0.1;
+	ray.TMin = 0.01;
 	ray.TMax = rtao_range;
-	ray.Origin = P;
+	ray.Origin = P + N * 0.01;
 
 	RayPayload payload;
 	payload.color = 0;
@@ -61,13 +60,13 @@ void RTAO_Raygen()
 }
 
 [shader("closesthit")]
-void RTAO_ClosestHit(inout RayPayload payload, in MyAttributes attr)
+void RTAO_ClosestHit(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attr)
 {
 	//payload.color = 0;
 }
 
 [shader("anyhit")]
-void RTAO_AnyHit(inout RayPayload payload, in MyAttributes attr)
+void RTAO_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attr)
 {
 	float u = attr.barycentrics.x;
 	float v = attr.barycentrics.y;
