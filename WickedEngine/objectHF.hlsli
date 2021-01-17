@@ -160,11 +160,30 @@ struct VertexInput
 	float4 matPrev0 : INSTANCEMATRIXPREV0;
 	float4 matPrev1 : INSTANCEMATRIXPREV1;
 	float4 matPrev2 : INSTANCEMATRIXPREV2;
+	float4x4 GetInstanceMatrixPrev()
+	{
+		return  float4x4(
+			matPrev0,
+			matPrev1,
+			matPrev2,
+			float4(0, 0, 0, 1)
+			);
+	}
 #endif // OBJECTSHADER_INPUT_PRE
 
 #ifdef OBJECTSHADER_INPUT_ATL
 	float4 atlasMulAdd : INSTANCEATLAS;
 #endif // OBJECTSHADER_INPUT_ATL
+
+	float4x4 GetInstanceMatrix()
+	{
+		return  float4x4(
+			mat0,
+			mat1,
+			mat2,
+			float4(0, 0, 0, 1)
+			);
+	}
 };
 
 
@@ -181,12 +200,7 @@ struct VertexSurface
 
 	inline void create(in ShaderMaterial material, in VertexInput input)
 	{
-		float4x4 WORLD = float4x4(
-			input.mat0,
-			input.mat1,
-			input.mat2,
-			float4(0, 0, 0, 1)
-			);
+		float4x4 WORLD = input.GetInstanceMatrix();
 		position = float4(input.pos.xyz, 1);
 		color = material.baseColor * unpack_rgba(input.userdata.x);
 		emissiveColor = input.userdata.z;
@@ -241,13 +255,7 @@ struct VertexSurface
 		position = mul(WORLD, position);
 
 #ifdef OBJECTSHADER_INPUT_PRE
-		float4x4 WORLDPREV = float4x4(
-			input.matPrev0,
-			input.matPrev1,
-			input.matPrev2,
-			float4(0, 0, 0, 1)
-			);
-		positionPrev = mul(WORLDPREV, positionPrev);
+		positionPrev = mul(input.GetInstanceMatrixPrev(), positionPrev);
 #else
 		positionPrev = position;
 #endif // OBJECTSHADER_INPUT_PRE

@@ -932,7 +932,7 @@ void LoadShaders()
 			{ "INSTANCEMATRIXPREV",		1, FORMAT_R32G32B32A32_FLOAT, 4, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "INSTANCEMATRIXPREV",		2, FORMAT_R32G32B32A32_FLOAT, 4, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
-		LoadShader(VS, shaders[VSTYPE_OBJECT_PREPASS_ALPHATEST], "objectVS_simple.cso");
+		LoadShader(VS, shaders[VSTYPE_OBJECT_PREPASS_ALPHATEST], "objectVS_prepass_alphatest.cso");
 		});
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
@@ -2556,7 +2556,7 @@ void RenderMeshes(
 			BindConstantBuffers(DS, cmd);
 		}
 
-		// Do we need to bind every vertex buffer or just a reduced amount for this pass?
+		// Do we need to bind every common buffers or just a reduced amount for this pass?
 		const bool commonVBRequest =
 			!IsWireRender() && (
 				renderPass == RENDERPASS_MAIN ||
