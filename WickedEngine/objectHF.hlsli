@@ -91,6 +91,8 @@ TEXTURE2D(texture_rtshadow, uint4, TEXSLOT_RENDERPATH_RTSHADOW);			// bitmask fo
 //#define OBJECTSHADER_USE_POSITIONPREV				- shader will use previous frame positions
 //#define OBJECTSHADER_USE_EMISSIVE					- shader will use emissive
 //#define OBJECTSHADER_USE_RENDERTARGETARRAYINDEX	- shader will use dynamic render target slice selection
+//#define OBJECTSHADER_USE_NOCAMERA					- shader will not use camera space transform
+
 
 #ifdef OBJECTSHADER_LAYOUT_POS // used by opaque shadows
 #define OBJECTSHADER_INPUT_POS
@@ -283,8 +285,12 @@ struct PixelInput
 	float4 pos : SV_POSITION;
 
 #ifdef OBJECTSHADER_USE_CLIPPLANE
-	float  clip	: SV_ClipDistance0;
+	float  clip : SV_ClipDistance0;
 #endif // OBJECTSHADER_USE_CLIPPLANE
+
+#ifdef OBJECTSHADER_USE_POSITIONPREV
+	float4 pre : PREVIOUSPOSITION;
+#endif // OBJECTSHADER_USE_POSITIONPREV
 
 #ifdef OBJECTSHADER_USE_COLOR
 	float4 color : COLOR;
@@ -317,10 +323,6 @@ struct PixelInput
 #ifdef OBJECTSHADER_USE_EMISSIVE
 	uint emissiveColor : EMISSIVECOLOR;
 #endif // OBJECTSHADER_USE_EMISSIVE
-
-#ifdef OBJECTSHADER_USE_POSITIONPREV
-	float4 pos2DPrev : PREVIOUSPOSITION;
-#endif // OBJECTSHADER_USE_POSITIONPREV
 
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 #ifdef VPRT_EMULATION
@@ -883,14 +885,21 @@ PixelInput main(VertexInput input)
 	VertexSurface surface;
 	surface.create(g_xMaterial, input);
 
-	Out.pos = mul(g_xCamera_VP, surface.position);
+	Out.pos = surface.position;
+
+#ifndef OBJECTSHADER_USE_NOCAMERA
+	Out.pos = mul(g_xCamera_VP, Out.pos);
+#endif // OBJECTSHADER_USE_NOCAMERA
 
 #ifdef OBJECTSHADER_USE_CLIPPLANE
 	Out.clip = dot(surface.position, g_xCamera_ClipPlane);
 #endif // OBJECTSHADER_USE_CLIPPLANE
 
 #ifdef OBJECTSHADER_USE_POSITIONPREV
-	Out.pos2DPrev = mul(g_xCamera_PrevVP, surface.positionPrev);
+	Out.pre = surface.positionPrev;
+#ifndef OBJECTSHADER_USE_NOCAMERA
+	Out.pre = mul(g_xCamera_PrevVP, Out.pre);
+#endif // OBJECTSHADER_USE_NOCAMERA
 #endif // OBJECTSHADER_USE_POSITIONPREV
 
 #ifdef OBJECTSHADER_USE_POSITION3D
@@ -926,9 +935,11 @@ PixelInput main(VertexInput input)
 #endif // OBJECTSHADER_USE_EMISSIVE
 
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
-	uint frustum_index = input.userdata.y;
+	const uint frustum_index = input.userdata.y;
 	Out.RTIndex = xCubemapRenderCams[frustum_index].properties.x;
+#ifndef OBJECTSHADER_USE_NOCAMERA
 	Out.pos = mul(xCubemapRenderCams[frustum_index].VP, surface.position);
+#endif // OBJECTSHADER_USE_NOCAMERA
 #endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 
 	return Out;
@@ -987,8 +998,8 @@ float4 main(PixelInput input) : SV_TARGET
 #ifdef OBJECTSHADER_USE_POSITIONPREV
 	float2 pos2D = ScreenCoord * 2 - 1;
 	pos2D.y *= -1;
-	input.pos2DPrev.xy /= input.pos2DPrev.w;
-	const float2 velocity = ((input.pos2DPrev.xy - g_xFrame_TemporalAAJitterPrev) - (pos2D.xy - g_xFrame_TemporalAAJitter)) * float2(0.5, -0.5);
+	input.pre.xy /= input.pre.w;
+	const float2 velocity = ((input.pre.xy - g_xFrame_TemporalAAJitterPrev) - (pos2D.xy - g_xFrame_TemporalAAJitter)) * float2(0.5, -0.5);
 #endif // OBJECTSHADER_USE_POSITIONPREV
 
 

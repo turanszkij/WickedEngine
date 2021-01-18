@@ -129,6 +129,9 @@
     <None Include="$(MSBuildThisFileDirectory)rtshadowLIB.hlsl">
       <Filter>LIB</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)objectHF_tessellation.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="$(MSBuildThisFileDirectory)hairparticle_simulateCS.hlsl">
@@ -716,9 +719,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)objectVS_simple.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)objectVS_simple_tessellation.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)objectVS_voxelizer.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
@@ -937,6 +937,24 @@
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)objectVS_prepass.hlsl">
       <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)objectVS_prepass_tessellation.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)objectVS_prepass_alphatest_tessellation.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)objectHS_prepass.hlsl">
+      <Filter>HS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)objectHS_prepass_alphatest.hlsl">
+      <Filter>HS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)objectDS_prepass.hlsl">
+      <Filter>DS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)objectDS_prepass_alphatest.hlsl">
+      <Filter>DS</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

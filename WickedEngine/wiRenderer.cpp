@@ -94,7 +94,7 @@ bool temporalAADEBUG = false;
 uint32_t raytraceBounceCount = 2;
 bool raytraceDebugVisualizer = false;
 bool raytracedShadows = false;
-bool tessellationEnabled = false;
+bool tessellationEnabled = true;
 bool disableAlbedoMaps = false;
 uint32_t raytracedShadowsSampleCount = 1;
 
@@ -594,11 +594,18 @@ SHADERTYPE GetVSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 		}
 		break;
 	case RENDERPASS_PREPASS:
-		//if (tessellation)
-		//{
-		//	realVS = VSTYPE_OBJECT_SIMPLE_TESSELLATION;
-		//}
-		//else
+		if (tessellation)
+		{
+			if (alphatest)
+			{
+				realVS = VSTYPE_OBJECT_PREPASS_ALPHATEST_TESSELLATION;
+			}
+			else
+			{
+				realVS = VSTYPE_OBJECT_PREPASS_TESSELLATION;
+			}
+		}
+		else
 		{
 			if (alphatest)
 			{
@@ -691,26 +698,48 @@ SHADERTYPE GetGSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent)
 
 	return realGS;
 }
-SHADERTYPE GetHSTYPE(RENDERPASS renderPass, bool tessellation)
+SHADERTYPE GetHSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest)
 {
-	switch (renderPass)
+	if (tessellation)
 	{
-	case RENDERPASS_PREPASS:
-	case RENDERPASS_MAIN:
-			return tessellation ? HSTYPE_OBJECT : SHADERTYPE_COUNT;
-		break;
+		switch (renderPass)
+		{
+		case RENDERPASS_PREPASS:
+			if (alphatest)
+			{
+				return HSTYPE_OBJECT_PREPASS_ALPHATEST;
+			}
+			else
+			{
+				return HSTYPE_OBJECT_PREPASS;
+			}
+			break;
+		case RENDERPASS_MAIN:
+			return HSTYPE_OBJECT;
+			break;
+		}
 	}
 
 	return SHADERTYPE_COUNT;
 }
-SHADERTYPE GetDSTYPE(RENDERPASS renderPass, bool tessellation)
+SHADERTYPE GetDSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest)
 {
-	switch (renderPass)
+	if (tessellation)
 	{
-	case RENDERPASS_PREPASS:
-	case RENDERPASS_MAIN:
-			return tessellation ? DSTYPE_OBJECT : SHADERTYPE_COUNT;
-		break;
+		switch (renderPass)
+		{
+		case RENDERPASS_PREPASS:
+			if (alphatest)
+			{
+				return DSTYPE_OBJECT_PREPASS_ALPHATEST;
+			}
+			else
+			{
+				return DSTYPE_OBJECT_PREPASS;
+			}
+		case RENDERPASS_MAIN:
+			return DSTYPE_OBJECT;
+		}
 	}
 
 	return SHADERTYPE_COUNT;
@@ -988,7 +1017,8 @@ void LoadShaders()
 		});
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_OBJECT_COMMON_TESSELLATION], "objectVS_common_tessellation.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_OBJECT_SIMPLE_TESSELLATION], "objectVS_simple_tessellation.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_OBJECT_PREPASS_TESSELLATION], "objectVS_prepass_tessellation.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_OBJECT_PREPASS_ALPHATEST_TESSELLATION], "objectVS_prepass_alphatest_tessellation.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_IMPOSTOR], "impostorVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_VOLUMETRICLIGHT_DIRECTIONAL], "volumetriclight_directionalVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_VOLUMETRICLIGHT_POINT], "volumetriclight_pointVS.cso"); });
@@ -1209,8 +1239,12 @@ void LoadShaders()
 
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(HS, shaders[HSTYPE_OBJECT], "objectHS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(HS, shaders[HSTYPE_OBJECT_PREPASS], "objectHS_prepass.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(HS, shaders[HSTYPE_OBJECT_PREPASS_ALPHATEST], "objectHS_prepass_alphatest.cso"); });
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(DS, shaders[DSTYPE_OBJECT], "objectDS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(DS, shaders[DSTYPE_OBJECT_PREPASS], "objectDS_prepass.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(DS, shaders[DSTYPE_OBJECT_PREPASS_ALPHATEST], "objectDS_prepass_alphatest.cso"); });
 
 	wiJobSystem::Wait(ctx);
 
@@ -1231,8 +1265,8 @@ void LoadShaders()
 							const bool transparency = blendMode != BLENDMODE_OPAQUE;
 							SHADERTYPE realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
 							ILTYPES realVL = GetILTYPE((RENDERPASS)renderPass, alphatest, transparency);
-							SHADERTYPE realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation);
-							SHADERTYPE realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation);
+							SHADERTYPE realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
+							SHADERTYPE realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
 							SHADERTYPE realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest, transparency);
 							SHADERTYPE realPS = GetPSTYPE((RENDERPASS)renderPass, alphatest, transparency, shaderType);
 
@@ -2556,6 +2590,7 @@ void RenderMeshes(
 			BindConstantBuffers(DS, cmd);
 		}
 
+
 		// Do we need to bind every common buffers or just a reduced amount for this pass?
 		const bool commonVBRequest =
 			!IsWireRender() && (
@@ -2723,7 +2758,7 @@ void RenderMeshes(
 			if (tessellatorRequested)
 			{
 				TessellationCB tessCB;
-				tessCB.g_f4TessFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
+				tessCB.xTessellationFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
 				device->UpdateBuffer(&constantBuffers[CBTYPE_TESSELLATION], &tessCB, cmd);
 				device->BindConstantBuffer(HS, &constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, cmd);
 			}
@@ -2820,7 +2855,7 @@ void RenderMeshes(
 				}
 				else
 				{
-					// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
+					// simple vertex buffers are used in some passes
 					if (renderPass == RENDERPASS_PREPASS)
 					{
 						if (!material.IsAlphaTestEnabled() && !forceAlphaTestForDithering)
@@ -6730,6 +6765,8 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 	device->EventBegin("EnvironmentProbe Refresh", cmd);
 
+	BindCommonResources(cmd);
+
 	Viewport vp;
 	vp.Height = envmapRes;
 	vp.Width = envmapRes;
@@ -6969,8 +7006,7 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 
 	device->EventBegin("Impostor Refresh", cmd);
 
-	BindConstantBuffers(VS, cmd);
-	BindConstantBuffers(PS, cmd);
+	BindCommonResources(cmd);
 
 	struct InstBuf
 	{
@@ -7204,8 +7240,6 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 		BindCommonResources(cmd);
 		BindShadowmaps(PS, cmd);
-		BindConstantBuffers(VS, cmd);
-		BindConstantBuffers(PS, cmd);
 
 		device->RenderPassBegin(&renderpass_voxelize, cmd);
 		RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, cmd, false, nullptr, 1);

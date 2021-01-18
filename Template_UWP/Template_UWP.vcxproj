@@ -474,11 +474,6 @@
   <ItemGroup>
     <Font Include="..\WickedEngine\fonts\arial.ttf" />
   </ItemGroup>
-  <ItemGroup>
-    <FxCompile Update="C:\PROJECTS\WickedEngine\WickedEngine\objectVS_prepass.hlsl">
-      <FileType>Document</FileType>
-    </FxCompile>
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VSINSTALLDIR)\Common7\IDE\Extensions\Microsoft\VsGraphics\ImageContentTask.targets" />

@@ -148,10 +148,6 @@ set(SHADERS_CS
         "rtshadow_denoise_temporalCS.hlsl"
 )
 
-set(SHADERS_DS
-        "objectDS.hlsl"
-)
-
 set(SHADERS_PS
         "emittedparticlePS_soft.hlsl"
         "screenPS.hlsl"
@@ -249,13 +245,14 @@ set(SHADERS_VS
         "raytrace_screenVS.hlsl"
         "oceanSurfaceVS.hlsl"
         "objectVS_simple.hlsl"
-        "objectVS_simple_tessellation.hlsl"
         "objectVS_voxelizer.hlsl"
         "objectVS_common.hlsl"
         "objectVS_common_tessellation.hlsl"
-        "objectVS_debug.hlsl"
         "objectVS_prepass.hlsl"
         "objectVS_prepass_alphatest.hlsl"
+        "objectVS_prepass_tessellation.hlsl"
+        "objectVS_prepass_alphatest_tessellation.hlsl"
+        "objectVS_debug.hlsl"
         "lensFlareVS.hlsl"
         "impostorVS.hlsl"
         "forceFieldPointVisualizerVS.hlsl"
@@ -286,6 +283,14 @@ set(SHADERS_GS
 
 set(SHADERS_HS
         "objectHS.hlsl"
+        "objectHS_prepass.hlsl"
+        "objectHS_prepass_alphatest.hlsl"
+)
+
+set(SHADERS_DS
+        "objectDS.hlsl"
+        "objectDS_prepass.hlsl"
+        "objectDS_prepass_alphatest.hlsl"
 )
 
 set(SHADERS_LIB
