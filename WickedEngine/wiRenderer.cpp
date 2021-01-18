@@ -7001,7 +7001,6 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 			&mesh.vertexBuffer_ATL,
 			&mesh.vertexBuffer_COL,
 			&mesh.vertexBuffer_TAN,
-			mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
 			mem.buffer
 		};
 		uint32_t strides[] = {
@@ -7011,11 +7010,9 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 			sizeof(MeshComponent::Vertex_TEX),
 			sizeof(MeshComponent::Vertex_COL),
 			sizeof(MeshComponent::Vertex_TAN),
-			sizeof(MeshComponent::Vertex_POS),
 			sizeof(InstBuf)
 		};
 		uint32_t offsets[] = {
-			0,
 			0,
 			0,
 			0,

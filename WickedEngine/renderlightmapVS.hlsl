@@ -1,5 +1,4 @@
 #include "globals.hlsli"
-#include "objectInputLayoutHF.hlsli"
 #include "ShaderInterop_Raytracing.h"
 
 struct Input

@@ -18,6 +18,7 @@ namespace wiTextureHelper
 		HELPERTEXTURE_COLORGRADEDEFAULT,
 		HELPERTEXTURE_NORMALMAPDEFAULT,
 		HELPERTEXTURE_BLACKCUBEMAP,
+		HELPERTEXTURE_UINT4,
 		HELPERTEXTURE_COUNT
 	};
 	wiGraphics::Texture helperTextures[HELPERTEXTURE_COUNT];
@@ -115,6 +116,13 @@ namespace wiTextureHelper
 			wiRenderer::GetDevice()->SetName(&helperTextures[HELPERTEXTURE_BLACKCUBEMAP], "HELPERTEXTURE_BLACKCUBEMAP");
 		}
 
+		// UINT4:
+		{
+			uint8_t data[16] = {};
+			CreateTexture(helperTextures[HELPERTEXTURE_UINT4], data, 1, 1, FORMAT_R32G32B32A32_UINT);
+			wiRenderer::GetDevice()->SetName(&helperTextures[HELPERTEXTURE_UINT4], "HELPERTEXTURE_UINT4");
+		}
+
 		wiBackLog::post("wiTextureHelper Initialized");
 	}
 
@@ -136,6 +144,11 @@ namespace wiTextureHelper
 	const Texture* getBlackCubeMap()
 	{
 		return &helperTextures[HELPERTEXTURE_BLACKCUBEMAP];
+	}
+
+	const Texture* getUINT4()
+	{
+		return &helperTextures[HELPERTEXTURE_UINT4];
 	}
 
 	const Texture* getWhite()

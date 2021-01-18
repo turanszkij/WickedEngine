@@ -75,9 +75,6 @@
     <None Include="$(MSBuildThisFileDirectory)oceanSurfaceHF.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="$(MSBuildThisFileDirectory)objectInputLayoutHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
     <None Include="$(MSBuildThisFileDirectory)impostorHF.hlsli">
       <Filter>HF</Filter>
     </None>
@@ -88,9 +85,6 @@
       <Filter>HF</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)fxaa.hlsli">
-      <Filter>HF</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)envMapHF.hlsli">
       <Filter>HF</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)cylinder.hlsli">

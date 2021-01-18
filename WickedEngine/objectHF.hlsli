@@ -18,7 +18,6 @@
 
 
 #include "globals.hlsli"
-#include "objectInputLayoutHF.hlsli"
 #include "brdf.hlsli"
 #include "lightingHF.hlsli"
 
@@ -58,39 +57,55 @@ TEXTURE2D(texture_ao, float, TEXSLOT_RENDERPATH_AO);						// r: ambient occlusio
 TEXTURE2D(texture_ssr, float4, TEXSLOT_RENDERPATH_SSR);						// rgb: screen space ray-traced reflections, a: reflection blend based on ray hit or miss
 TEXTURE2D(texture_rtshadow, uint4, TEXSLOT_RENDERPATH_RTSHADOW);			// bitmask for max 16 shadows' visibility
 
+// Use these to compile this file as shader prototype:
+//#define OBJECTSHADER_COMPILE_VS				- compile vertex shader prototype
+//#define OBJECTSHADER_COMPILE_PS				- compile pixel shader prototype
+
 // Use these to define the expected input layout for the shader:
-//#define OBJECTSHADER_LAYOUT_POS
-//#define OBJECTSHADER_LAYOUT_POS_TEX
-//#define OBJECTSHADER_LAYOUT_POS_PREVPOS
-//#define OBJECTSHADER_LAYOUT_POS_PREVPOS_TEX
-//#define OBJECTSHADER_LAYOUT_COMMON
+//#define OBJECTSHADER_LAYOUT_POS				- input layout that has position and instance matrix
+//#define OBJECTSHADER_LAYOUT_POS_TEX			- input layout that has position and texture coords
+//#define OBJECTSHADER_LAYOUT_POS_PREVPOS		- input layout that has position and previous frame position
+//#define OBJECTSHADER_LAYOUT_POS_PREVPOS_TEX	- input layout that has position, previous frame position and texture coords
+//#define OBJECTSHADER_LAYOUT_COMMON			- input layout that has all the required inputs for common shaders
+
+// Use these to define the expected input layout for the shader, but in a fine grained manner:
+//	(These will not define additional capabilities)
+//#define OBJECTSHADER_INPUT_POS				- adds position to input layout
+//#define OBJECTSHADER_INPUT_PRE				- adds previous frame position to input layout
+//#define OBJECTSHADER_INPUT_TEX				- adds texture coordinates to input layout
+//#define OBJECTSHADER_INPUT_ATL				- adds atlas texture coords to input layout
+//#define OBJECTSHADER_INPUT_COL				- adds vertex colors to input layout
+//#define OBJECTSHADER_INPUT_TAN				- adds tangents to input layout
 
 // Use these to enable features for the shader:
-//#define OBJECTSHADER_USE_CLIPPLANE
-//#define OBJECTSHADER_USE_WIND
-//#define OBJECTSHADER_USE_COLOR
-//#define OBJECTSHADER_USE_UVSETS
-//#define OBJECTSHADER_USE_ATLAS
-//#define OBJECTSHADER_USE_NORMAL
-//#define OBJECTSHADER_USE_TANGENT
-//#define OBJECTSHADER_USE_POSITION3D
-//#define OBJECTSHADER_USE_POSITIONPREV
-//#define OBJECTSHADER_USE_EMISSIVE
-//#define OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
+//	(Some of these are enabled automatically with OBJECTSHADER_LAYOUT defines)
+//#define OBJECTSHADER_USE_CLIPPLANE				- shader will be clipped according to camera clip planes
+//#define OBJECTSHADER_USE_WIND						- shader will use procedural wind animation
+//#define OBJECTSHADER_USE_COLOR					- shader will use colors (material color, vertex color...)
+//#define OBJECTSHADER_USE_DITHERING				- shader will use dithered transparency
+//#define OBJECTSHADER_USE_UVSETS					- shader will sample textures with uv sets
+//#define OBJECTSHADER_USE_ATLAS					- shader will use atlas
+//#define OBJECTSHADER_USE_NORMAL					- shader will use normals
+//#define OBJECTSHADER_USE_TANGENT					- shader will use tangents, normal mapping
+//#define OBJECTSHADER_USE_POSITION3D				- shader will use world space positions
+//#define OBJECTSHADER_USE_POSITIONPREV				- shader will use previous frame positions
+//#define OBJECTSHADER_USE_EMISSIVE					- shader will use emissive
+//#define OBJECTSHADER_USE_RENDERTARGETARRAYINDEX	- shader will use dynamic render target slice selection
 
-#ifdef OBJECTSHADER_LAYOUT_POS
+#ifdef OBJECTSHADER_LAYOUT_POS // used by opaque shadows
 #define OBJECTSHADER_INPUT_POS
 #define OBJECTSHADER_USE_WIND
 #endif // OBJECTSHADER_LAYOUT_POS
 
-#ifdef OBJECTSHADER_LAYOUT_POS_TEX
+#ifdef OBJECTSHADER_LAYOUT_POS_TEX // used by shadows with alpha test or transparency
 #define OBJECTSHADER_INPUT_POS
 #define OBJECTSHADER_INPUT_TEX
 #define OBJECTSHADER_USE_WIND
 #define OBJECTSHADER_USE_UVSETS
+#define OBJECTSHADER_USE_COLOR
 #endif // OBJECTSHADER_LAYOUT_POS_TEX
 
-#ifdef OBJECTSHADER_LAYOUT_POS_PREVPOS
+#ifdef OBJECTSHADER_LAYOUT_POS_PREVPOS // used by depth prepass
 #define OBJECTSHADER_INPUT_POS
 #define OBJECTSHADER_INPUT_PRE
 #define OBJECTSHADER_USE_CLIPPLANE
@@ -98,7 +113,7 @@ TEXTURE2D(texture_rtshadow, uint4, TEXSLOT_RENDERPATH_RTSHADOW);			// bitmask fo
 #define OBJECTSHADER_USE_POSITIONPREV
 #endif // OBJECTSHADER_LAYOUT_POS
 
-#ifdef OBJECTSHADER_LAYOUT_POS_PREVPOS_TEX
+#ifdef OBJECTSHADER_LAYOUT_POS_PREVPOS_TEX // used by depth prepass with alpha test or dithered transparency
 #define OBJECTSHADER_INPUT_POS
 #define OBJECTSHADER_INPUT_PRE
 #define OBJECTSHADER_INPUT_TEX
@@ -106,9 +121,10 @@ TEXTURE2D(texture_rtshadow, uint4, TEXSLOT_RENDERPATH_RTSHADOW);			// bitmask fo
 #define OBJECTSHADER_USE_WIND
 #define OBJECTSHADER_USE_POSITIONPREV
 #define OBJECTSHADER_USE_UVSETS
+#define OBJECTSHADER_USE_DITHERING
 #endif // OBJECTSHADER_LAYOUT_POS_TEX
 
-#ifdef OBJECTSHADER_LAYOUT_COMMON
+#ifdef OBJECTSHADER_LAYOUT_COMMON // used by common render passes
 #define OBJECTSHADER_INPUT_POS
 #define OBJECTSHADER_INPUT_TEX
 #define OBJECTSHADER_INPUT_ATL
@@ -273,6 +289,10 @@ struct PixelInput
 #ifdef OBJECTSHADER_USE_COLOR
 	float4 color : COLOR;
 #endif // OBJECTSHADER_USE_COLOR
+
+#ifdef OBJECTSHADER_USE_DITHERING
+	nointerpolation float dither : DITHER;
+#endif // OBJECTSHADER_USE_DITHERING
 
 #ifdef OBJECTSHADER_USE_UVSETS
 	float4 uvsets : UVSETS;
@@ -853,7 +873,7 @@ inline void ApplyFog(in float dist, inout float4 color)
 // OBJECT SHADER PROTOTYPE
 ///////////////////////////
 
-#ifdef COMPILE_OBJECTSHADER_VS
+#ifdef OBJECTSHADER_COMPILE_VS
 
 // Vertex shader base:
 PixelInput main(VertexInput input)
@@ -880,6 +900,10 @@ PixelInput main(VertexInput input)
 #ifdef OBJECTSHADER_USE_COLOR
 	Out.color = surface.color;
 #endif // OBJECTSHADER_USE_COLOR
+
+#ifdef OBJECTSHADER_USE_DITHERING
+	Out.dither = surface.color.a;
+#endif // OBJECTSHADER_USE_DITHERING
 
 #ifdef OBJECTSHADER_USE_UVSETS
 	Out.uvsets = surface.uvsets;
@@ -910,11 +934,11 @@ PixelInput main(VertexInput input)
 	return Out;
 }
 
-#endif // COMPILE_OBJECTSHADER_VS
+#endif // OBJECTSHADER_COMPILE_VS
 
 
 
-#ifdef COMPILE_OBJECTSHADER_PS
+#ifdef OBJECTSHADER_COMPILE_PS
 
 // Possible switches:
 //	OUTPUT_GBUFFER		-	assemble object shader for gbuffer exporting
@@ -948,6 +972,17 @@ float4 main(PixelInput input) : SV_TARGET
 	const float2 ScreenCoord = pixel * g_xFrame_InternalResolution_rcp;
 	float3 bumpColor = 0;
 
+#ifndef DISABLE_ALPHATEST
+#ifndef TRANSPARENT
+#ifndef ENVMAPRENDERING
+#ifdef OBJECTSHADER_USE_DITHERING
+	// apply dithering:
+	clip(dither(pixel + GetTemporalAASampleRotation()) - (1 - input.dither));
+#endif // OBJECTSHADER_USE_DITHERING
+#endif // DISABLE_ALPHATEST
+#endif // TRANSPARENT
+#endif // ENVMAPRENDERING
+
 
 #ifdef OBJECTSHADER_USE_POSITIONPREV
 	float2 pos2D = ScreenCoord * 2 - 1;
@@ -955,18 +990,6 @@ float4 main(PixelInput input) : SV_TARGET
 	input.pos2DPrev.xy /= input.pos2DPrev.w;
 	const float2 velocity = ((input.pos2DPrev.xy - g_xFrame_TemporalAAJitterPrev) - (pos2D.xy - g_xFrame_TemporalAAJitter)) * float2(0.5, -0.5);
 #endif // OBJECTSHADER_USE_POSITIONPREV
-
-
-#ifndef DISABLE_ALPHATEST
-#ifndef TRANSPARENT
-#ifndef ENVMAPRENDERING
-#ifdef OBJECTSHADER_USE_COLOR
-	// apply dithering:
-	clip(dither(pixel + GetTemporalAASampleRotation()) - (1 - input.color.a));
-#endif // OBJECTSHADER_USE_COLOR
-#endif // DISABLE_ALPHATEST
-#endif // TRANSPARENT
-#endif // ENVMAPRENDERING
 
 
 	Surface surface;
@@ -1528,7 +1551,7 @@ float4 main(PixelInput input) : SV_TARGET
 }
 
 
-#endif // COMPILE_OBJECTSHADER_PS
+#endif // OBJECTSHADER_COMPILE_PS
 
 
 

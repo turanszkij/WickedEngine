@@ -12,17 +12,14 @@ struct VSOut
 
 VSOut main(VertexInput input)
 {
-	VSOut Out;
-
-	float4x4 WORLD = input.GetInstanceMatrix();
-
 	VertexSurface surface;
 	surface.create(g_xMaterial, input);
 
-	Out.pos = mul(WORLD, surface.position);
+	VSOut Out;
+	Out.pos = surface.position;
 	Out.color = surface.color;
 	Out.uvsets = surface.uvsets;
-	Out.nor = normalize(mul((float3x3)WORLD, surface.normal));
+	Out.nor = surface.normal;
 	Out.emissiveColor = surface.emissiveColor;
 
 	return Out;

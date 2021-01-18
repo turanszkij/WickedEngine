@@ -23,7 +23,6 @@
     <None Include="$(MSBuildThisFileDirectory)cylinder.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)depthoffieldHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)emittedparticleHF.hlsli" />
-    <None Include="$(MSBuildThisFileDirectory)envMapHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)fxaa.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)globals.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)hairparticleHF.hlsli" />
@@ -32,7 +31,6 @@
     <None Include="$(MSBuildThisFileDirectory)impostorHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)lightingHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)objectHF.hlsli" />
-    <None Include="$(MSBuildThisFileDirectory)objectInputLayoutHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)oceanSurfaceHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)quad.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)raytracingHF.hlsli" />

@@ -1,7 +1,6 @@
 #define OBJECTSHADER_USE_NORMAL
 #define OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 #include "objectHF.hlsli"
-#include "envMapHF.hlsli"
 #include "lightingHF.hlsli"
 #include "skyHF.hlsli"
 
