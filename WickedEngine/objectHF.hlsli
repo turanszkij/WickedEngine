@@ -366,7 +366,7 @@ inline void LightMapping(in float2 ATLAS, inout Lighting lighting)
 	}
 }
 
-inline void NormalMapping(inout float4 uvsets, inout float3 N, in float3x3 TBN, out float3 bumpColor)
+inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out float3 bumpColor)
 {
 	[branch]
 	if (g_xMaterial.normalMapStrength > 0 && g_xMaterial.uvset_normalMap >= 0)
@@ -1050,9 +1050,11 @@ float4 main(PixelInput input) : SV_TARGET
 
 
 
+#ifndef WATER
 #ifdef OBJECTSHADER_USE_TANGENT
 	NormalMapping(input.uvsets, surface.N, TBN, bumpColor);
 #endif // OBJECTSHADER_USE_TANGENT
+#endif // WATER
 
 
 	float4 surfaceMap = 1;
