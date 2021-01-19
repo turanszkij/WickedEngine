@@ -346,6 +346,13 @@ CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 	float4x4	g_xCamera_InvP;			// Inverse Projection
 	float4x4	g_xCamera_InvVP;		// Inverse View-Projection
 
+	// Frustum planes:
+	//	0 : near
+	//	1 : far
+	//	2 : left
+	//	3 : right
+	//	4 : top
+	//	5 : bottom
 	float4		g_xCamera_FrustumPlanes[6];
 
 	float2		g_xFrame_TemporalAAJitter;

@@ -328,6 +328,7 @@ namespace wiRenderer
 	void Postprocess_RTReflection(
 		const wiScene::Scene& scene,
 		const wiGraphics::Texture& depthbuffer,
+		const wiGraphics::Texture& depth_history,
 		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
@@ -337,6 +338,7 @@ namespace wiRenderer
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture& lineardepth,
+		const wiGraphics::Texture& depth_history,
 		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd

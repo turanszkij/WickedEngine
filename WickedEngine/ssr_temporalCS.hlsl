@@ -4,6 +4,7 @@
 
 TEXTURE2D(resolve_current, float4, TEXSLOT_ONDEMAND0);
 TEXTURE2D(resolve_history, float4, TEXSLOT_ONDEMAND1);
+TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND2);
 
 RWTEXTURE2D(output, float4, 0);
 
@@ -90,34 +91,28 @@ inline void ResolverAABB(Texture2D<float4> currentColor, SamplerState currentSam
     currentAverage = mean;
 }
 
-float2 CalculateCustomMotion(float depth, float2 uv)
-{
-    // Velocity buffer not good, because that contains object motion, and reflection is camera relative
-    float4 sampleWorldPosition = float4(reconstructPosition(uv, depth, g_xCamera_InvVP), 1.0f);
-    
-    float4 thisClip = mul(g_xCamera_VP, sampleWorldPosition);
-    float4 prevClip = mul(g_xCamera_PrevVP, sampleWorldPosition);
-    
-    float2 thisScreen = thisClip.xy * rcp(thisClip.w);
-    float2 prevScreen = prevClip.xy * rcp(prevClip.w);
-    thisScreen = thisScreen.xy * float2(0.5, -0.5) + 0.5;
-    prevScreen = prevScreen.xy * float2(0.5, -0.5) + 0.5;
-    
-    return thisScreen - prevScreen;
-}
-
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
     const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
-    const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
-    
-    // Normal velocity seems to work best in most scenarios
-    float2 customVelocity = CalculateCustomMotion(depth, uv);
-    //float2 hitCustomVelocity = CalculateCustomMotion(hitDepth, uv); 
-    
-    float2 velocity = customVelocity;
-    float2 prevUV = uv - velocity;
+
+	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
+	const float2 prevUV = uv + velocity;
+	if (!is_saturated(prevUV))
+	{
+		output[DTid.xy] = resolve_current[DTid.xy];
+		return;
+	}
+
+	// Disocclusion fallback:
+	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
+	float depth_current = getLinearDepth(depth);
+	float depth_history = getLinearDepth(texture_depth_history.SampleLevel(sampler_point_clamp, prevUV, 0));
+	if (abs(depth_current - depth_history) > 1)
+	{
+		output[DTid.xy] = resolve_current[DTid.xy];
+		return;
+	}
     
     float4 previous = resolve_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
 

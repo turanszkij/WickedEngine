@@ -556,7 +556,8 @@ Shaders still need to be created with `GraphicsDevice::CreateShader()` in a simi
 - `GS`: Geometry Shader
 - `PS`: Pixel Shader
 - `CS`: Compute Shader
-- `SHADERSTAGE_COUNT`: Invalid Shader. This also denotes a library of shaders (usable for raytracing). As an other feature, this can be used to enumerate through all shader stages like:
+- `LIB`: Library shader
+- `SHADERSTAGE_COUNT`: Invalid Shader. This can be used to enumerate through all shader stages like:
 
 ```cpp
 for(int i = 0; i < SHADERSTAGE_COUNT; ++i)

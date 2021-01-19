@@ -23,6 +23,7 @@ namespace wiGraphics
 		GS,
 		PS,
 		CS,
+		LIB,
 		SHADERSTAGE_COUNT,
 	};
 	enum PRIMITIVETOPOLOGY

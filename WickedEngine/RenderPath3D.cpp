@@ -1047,7 +1047,8 @@ void RenderPath3D::RenderSSR(CommandList cmd) const
 	{
 		wiRenderer::Postprocess_RTReflection(
 			*scene,
-			depthBuffer_Copy, 
+			depthBuffer_Copy,
+			depthBuffer_Copy1,
 			GetGbuffer_Read(),
 			rtSSR, 
 			cmd
@@ -1059,6 +1060,7 @@ void RenderPath3D::RenderSSR(CommandList cmd) const
 			rtSceneCopy, 
 			depthBuffer_Copy, 
 			rtLinearDepth,
+			depthBuffer_Copy1,
 			GetGbuffer_Read(),
 			rtSSR, 
 			cmd

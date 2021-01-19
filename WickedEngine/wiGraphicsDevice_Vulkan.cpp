@@ -468,7 +468,6 @@ namespace Vulkan_Internal
 		case wiGraphics::CS:
 			return VK_SHADER_STAGE_COMPUTE_BIT;
 		default:
-		case wiGraphics::SHADERSTAGE_COUNT:
 			return VK_SHADER_STAGE_ALL;
 		}
 	}
@@ -1607,7 +1606,7 @@ using namespace Vulkan_Internal;
 				// Shaders:
 
 				uint32_t shaderStageCount = 0;
-				VkPipelineShaderStageCreateInfo shaderStages[SHADERSTAGE_COUNT - 1];
+				VkPipelineShaderStageCreateInfo shaderStages[SHADERSTAGE_COUNT];
 				if (pso->desc.ms != nullptr && pso->desc.ms->IsValid())
 				{
 					shaderStages[shaderStageCount++] = to_internal(pso->desc.ms)->stageInfo;
@@ -3774,7 +3773,7 @@ using namespace Vulkan_Internal;
 
 			spvReflectDestroyShaderModule(&module);
 
-			if (stage == CS || stage == SHADERSTAGE_COUNT)
+			if (stage == CS || stage == LIB)
 			{
 				VkDescriptorSetLayoutCreateInfo descriptorSetlayoutInfo = {};
 				descriptorSetlayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;

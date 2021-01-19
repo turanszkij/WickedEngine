@@ -97,11 +97,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
 	const float2 prevUV = uv + velocity;
-	if (!is_saturated(prevUV))
-	{
-		texture_resolve[DTid.xy] = 0;
-		return;
-	}
 
     // Everthing in view space:
 	const float4 g1 = texture_gbuffer1.SampleLevel(sampler_linear_clamp, prevUV, 0);

@@ -67,7 +67,6 @@ inline void ResolverAABB(in uint shadow_index, float sharpness, float exposureSc
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
-	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
 
 	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
 	const float2 prevUV = uv + velocity;
@@ -78,6 +77,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	}
 
 	// Disocclusion fallback:
+	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
 	float depth_current = getLinearDepth(depth);
 	float depth_history = getLinearDepth(texture_depth_history.SampleLevel(sampler_point_clamp, prevUV, 0));
 	if (abs(depth_current - depth_history) > 1)

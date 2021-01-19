@@ -41,11 +41,6 @@ void RTReflection_Raygen()
 
 	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
 	const float2 prevUV = uv + velocity;
-	if (!is_saturated(prevUV))
-	{
-		output[DTid.xy] = 0;
-		return;
-	}
 
 	const float4 g1 = texture_gbuffer1.SampleLevel(sampler_linear_clamp, prevUV, 0);
 	const float3 P = reconstructPosition(uv, depth);

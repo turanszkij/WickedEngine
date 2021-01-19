@@ -2553,7 +2553,16 @@ using namespace DX12_Internal;
 		{
 			capabilities |= GRAPHICSDEVICE_CAPABILITY_MESH_SHADER;
 		}
-		
+
+		D3D12_FEATURE_DATA_ROOT_SIGNATURE features_rootsignature = {};
+		features_rootsignature.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+		hr = device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &features_rootsignature, sizeof(features_rootsignature));
+		if (features_rootsignature.HighestVersion < D3D_ROOT_SIGNATURE_VERSION_1_1)
+		{
+			wiBackLog::post("DX12: Root signature version 1.1 not supported!");
+			assert(0);
+		}
+
 		// Create common indirect command signatures:
 
 		D3D12_COMMAND_SIGNATURE_DESC cmd_desc = {};
@@ -3344,7 +3353,7 @@ using namespace DX12_Internal;
 				}
 			};
 
-			if (stage == SHADERSTAGE_COUNT) // Library reflection
+			if (stage == LIB)
 			{
 				ComPtr<ID3D12LibraryReflection> reflection;
 				hr = container_reflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(&reflection));
@@ -3415,8 +3424,6 @@ using namespace DX12_Internal;
 				case PS:
 					sam.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 					break;
-				case CS:
-				case SHADERSTAGE_COUNT:
 				default:
 					sam.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 					break;
@@ -3424,7 +3431,7 @@ using namespace DX12_Internal;
 			}
 
 
-			if (stage == CS || stage == SHADERSTAGE_COUNT)
+			if (stage == CS || stage == LIB)
 			{
 				std::vector<D3D12_ROOT_PARAMETER1> params;
 

@@ -2883,7 +2883,6 @@ void GraphicsDevice_DX11::BindResource(SHADERSTAGE stage, const GPUResource* res
 			deviceContexts[cmd]->CSSetShaderResources(slot, 1, &SRV);
 			break;
 		default:
-			assert(0);
 			break;
 		}
 	}
@@ -2918,7 +2917,6 @@ void GraphicsDevice_DX11::BindResources(SHADERSTAGE stage, const GPUResource *co
 		deviceContexts[cmd]->CSSetShaderResources(slot, count, srvs);
 		break;
 	default:
-		assert(0);
 		break;
 	}
 }
@@ -3020,11 +3018,7 @@ void GraphicsDevice_DX11::BindSampler(SHADERSTAGE stage, const Sampler* sampler,
 		case wiGraphics::CS:
 			deviceContexts[cmd]->CSSetSamplers(slot, 1, &SAM);
 			break;
-		case MS:
-		case AS:
-			break;
 		default:
-			assert(0);
 			break;
 		}
 	}
@@ -3052,11 +3046,7 @@ void GraphicsDevice_DX11::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer*
 	case wiGraphics::CS:
 		deviceContexts[cmd]->CSSetConstantBuffers(slot, 1, &res);
 		break;
-	case MS:
-	case AS:
-		break;
 	default:
-		assert(0);
 		break;
 	}
 }

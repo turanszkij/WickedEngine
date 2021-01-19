@@ -7147,60 +7147,11 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 	static RenderPass renderpass_voxelize;
 
-	if (!textures[TEXTYPE_3D_VOXELRADIANCE].IsValid())
+	if (!renderpass_voxelize.IsValid())
 	{
-		TextureDesc desc;
-		desc.type = TextureDesc::TEXTURE_3D;
-		desc.Width = voxelSceneData.res;
-		desc.Height = voxelSceneData.res;
-		desc.Depth = voxelSceneData.res;
-		desc.MipLevels = 0;
-		desc.Format = FORMAT_R16G16B16A16_FLOAT;
-		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-		desc.Usage = USAGE_DEFAULT;
-		desc.CPUAccessFlags = 0;
-		desc.MiscFlags = 0;
-
-		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_VOXELRADIANCE]);
-
-		for (uint32_t i = 0; i < textures[TEXTYPE_3D_VOXELRADIANCE].GetDesc().MipLevels; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(&textures[TEXTYPE_3D_VOXELRADIANCE], SRV, 0, 1, i, 1);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&textures[TEXTYPE_3D_VOXELRADIANCE], UAV, 0, 1, i, 1);
-			assert(subresource_index == i);
-		}
-
 		RenderPassDesc renderpassdesc;
 		renderpassdesc._flags = RenderPassDesc::FLAG_ALLOW_UAV_WRITES;
 		device->CreateRenderPass(&renderpassdesc, &renderpass_voxelize);
-	}
-	if (voxelSceneData.secondaryBounceEnabled && !textures[TEXTYPE_3D_VOXELRADIANCE_HELPER].IsValid())
-	{
-		const TextureDesc& desc = textures[TEXTYPE_3D_VOXELRADIANCE].GetDesc();
-		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
-
-		for (uint32_t i = 0; i < desc.MipLevels; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], SRV, 0, 1, i, 1);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], UAV, 0, 1, i, 1);
-			assert(subresource_index == i);
-		}
-	}
-	if (!resourceBuffers[RBTYPE_VOXELSCENE].IsValid())
-	{
-		GPUBufferDesc desc;
-		desc.StructureByteStride = sizeof(uint32_t) * 2;
-		desc.ByteWidth = desc.StructureByteStride * voxelSceneData.res * voxelSceneData.res * voxelSceneData.res;
-		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-		desc.CPUAccessFlags = 0;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-
-		device->CreateBuffer(&desc, nullptr, &resourceBuffers[RBTYPE_VOXELSCENE]);
 	}
 
 	Texture* result = &textures[TEXTYPE_3D_VOXELRADIANCE];
@@ -9658,7 +9609,7 @@ void Postprocess_RTAO(
 		device->CreateRootSignature(&rootSignature);
 
 		shaders[RTTYPE_RTAO].rootSignature = &rootSignature;
-		bool success = LoadShader(SHADERSTAGE_COUNT, shaders[RTTYPE_RTAO], "rtaoLIB.cso");
+		bool success = LoadShader(LIB, shaders[RTTYPE_RTAO], "rtaoLIB.cso");
 		assert(success);
 
 		RaytracingPipelineStateDesc rtdesc;
@@ -9936,6 +9887,7 @@ void Postprocess_RTAO(
 void Postprocess_RTReflection(
 	const Scene& scene,
 	const Texture& depthbuffer,
+	const Texture& depth_history,
 	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& output,
 	CommandList cmd,
@@ -10019,7 +9971,7 @@ void Postprocess_RTReflection(
 		device->CreateRootSignature(&rootSignature);
 
 		shaders[RTTYPE_RTREFLECTION].rootSignature = &rootSignature;
-		bool success = LoadShader(SHADERSTAGE_COUNT, shaders[RTTYPE_RTREFLECTION], "rtreflectionLIB.cso");
+		bool success = LoadShader(LIB, shaders[RTTYPE_RTREFLECTION], "rtreflectionLIB.cso");
 		assert(success);
 
 		RaytracingPipelineStateDesc rtdesc;
@@ -10163,6 +10115,7 @@ void Postprocess_RTReflection(
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(CS, &temp, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, &texture_temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
 
 		const GPUResource* uavs[] = {
 			&texture_temporal[temporal_output],
@@ -10229,6 +10182,7 @@ void Postprocess_SSR(
 	const Texture& input,
 	const Texture& depthbuffer,
 	const Texture& lineardepth,
+	const Texture& depth_history,
 	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& output,
 	CommandList cmd
@@ -10273,6 +10227,12 @@ void Postprocess_SSR(
 		device->CreateTexture(&buffer_desc, nullptr, &texture_temporal[1]);
 	}
 
+	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_COLOR], TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
+
 	// Switch to half res
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width / 2;
@@ -10289,11 +10249,6 @@ void Postprocess_SSR(
 		device->EventBegin("Stochastic Raytrace pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_RAYTRACE], cmd);
 
-		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-		device->BindResource(CS, &gbuffer[GBUFFER_COLOR], TEXSLOT_GBUFFER0, cmd);
-		device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
-		device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
 		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, &resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE], TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(CS, &resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE], TEXSLOT_ONDEMAND2, cmd);
@@ -10333,10 +10288,9 @@ void Postprocess_SSR(
 		device->EventBegin("Resolve pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_RESOLVE], cmd);
 
-		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
 		device->BindResource(CS, &texture_raytrace, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, &input, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
 
 		const GPUResource* uavs[] = {
 			&texture_resolve,
@@ -10367,9 +10321,9 @@ void Postprocess_SSR(
 		device->EventBegin("Temporal pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_TEMPORAL], cmd);
 
-		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(CS, &texture_resolve, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, &texture_temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
 
 		const GPUResource* uavs[] = {
 			&texture_temporal[temporal_output],
@@ -10397,7 +10351,6 @@ void Postprocess_SSR(
 		device->EventBegin("Median blur pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_MEDIAN], cmd);
 
-		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(CS, &texture_temporal[temporal_output], TEXSLOT_ONDEMAND0, cmd);
 
 		const GPUResource* uavs[] = {
@@ -10481,7 +10434,7 @@ void Postprocess_RTShadow(
 		device->CreateRootSignature(&rootSignature);
 
 		shaders[RTTYPE_RTSHADOW].rootSignature = &rootSignature;
-		bool success = LoadShader(SHADERSTAGE_COUNT, shaders[RTTYPE_RTSHADOW], "rtshadowLIB.cso");
+		bool success = LoadShader(LIB, shaders[RTTYPE_RTSHADOW], "rtshadowLIB.cso");
 		assert(success);
 
 		RaytracingPipelineStateDesc rtdesc;
@@ -12392,7 +12345,61 @@ void SetTemporalAADebugEnabled(bool enabled) { temporalAADEBUG = enabled; }
 bool GetTemporalAADebugEnabled() { return temporalAADEBUG; }
 void SetFreezeCullingCameraEnabled(bool enabled) { freezeCullingCamera = enabled; }
 bool GetFreezeCullingCameraEnabled() { return freezeCullingCamera; }
-void SetVoxelRadianceEnabled(bool enabled) { voxelSceneData.enabled = enabled; }
+void SetVoxelRadianceEnabled(bool enabled)
+{
+	voxelSceneData.enabled = enabled;
+	if (!textures[TEXTYPE_3D_VOXELRADIANCE].IsValid())
+	{
+		TextureDesc desc;
+		desc.type = TextureDesc::TEXTURE_3D;
+		desc.Width = voxelSceneData.res;
+		desc.Height = voxelSceneData.res;
+		desc.Depth = voxelSceneData.res;
+		desc.MipLevels = 0;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		desc.Usage = USAGE_DEFAULT;
+		desc.CPUAccessFlags = 0;
+		desc.MiscFlags = 0;
+
+		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_VOXELRADIANCE]);
+
+		for (uint32_t i = 0; i < textures[TEXTYPE_3D_VOXELRADIANCE].GetDesc().MipLevels; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(&textures[TEXTYPE_3D_VOXELRADIANCE], SRV, 0, 1, i, 1);
+			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(&textures[TEXTYPE_3D_VOXELRADIANCE], UAV, 0, 1, i, 1);
+			assert(subresource_index == i);
+		}
+	}
+	if (voxelSceneData.secondaryBounceEnabled && !textures[TEXTYPE_3D_VOXELRADIANCE_HELPER].IsValid())
+	{
+		const TextureDesc& desc = textures[TEXTYPE_3D_VOXELRADIANCE].GetDesc();
+		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
+
+		for (uint32_t i = 0; i < desc.MipLevels; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], SRV, 0, 1, i, 1);
+			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], UAV, 0, 1, i, 1);
+			assert(subresource_index == i);
+		}
+	}
+	if (!resourceBuffers[RBTYPE_VOXELSCENE].IsValid())
+	{
+		GPUBufferDesc desc;
+		desc.StructureByteStride = sizeof(uint32_t) * 2;
+		desc.ByteWidth = desc.StructureByteStride * voxelSceneData.res * voxelSceneData.res * voxelSceneData.res;
+		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		desc.CPUAccessFlags = 0;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+
+		device->CreateBuffer(&desc, nullptr, &resourceBuffers[RBTYPE_VOXELSCENE]);
+	}
+}
 bool GetVoxelRadianceEnabled() { return voxelSceneData.enabled; }
 void SetVoxelRadianceSecondaryBounceEnabled(bool enabled) { voxelSceneData.secondaryBounceEnabled = enabled; }
 bool GetVoxelRadianceSecondaryBounceEnabled() { return voxelSceneData.secondaryBounceEnabled; }

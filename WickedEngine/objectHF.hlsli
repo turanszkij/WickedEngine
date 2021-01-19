@@ -241,11 +241,11 @@ struct VertexSurface
 		normal.x = (float)((normal_wind >> 0) & 0xFF) / 255.0f * 2.0f - 1.0f;
 		normal.y = (float)((normal_wind >> 8) & 0xFF) / 255.0f * 2.0f - 1.0f;
 		normal.z = (float)((normal_wind >> 16) & 0xFF) / 255.0f * 2.0f - 1.0f;
-		normal = mul((float3x3)WORLD, normal);
+		normal = normalize(mul((float3x3)WORLD, normal));
 
 #ifdef OBJECTSHADER_INPUT_TAN
 		tangent = input.tan * 2 - 1;
-		tangent.xyz = mul((float3x3)WORLD, tangent.xyz);
+		tangent.xyz = normalize(mul((float3x3)WORLD, tangent.xyz));
 #endif // OBJECTSHADER_INPUT_TAN
 
 #ifdef OBJECTSHADER_USE_WIND
