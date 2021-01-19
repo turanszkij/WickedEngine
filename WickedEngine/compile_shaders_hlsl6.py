@@ -12,7 +12,6 @@ root = tree.getroot()
 
 from pathlib import Path
 Path("shaders/hlsl6").mkdir(parents=True, exist_ok=True)
-Path("shaders/hlsl6/inlinert").mkdir(parents=True, exist_ok=True)
 
 threads = []
 
@@ -63,7 +62,7 @@ for item in root.iter():
             cmd += "_6_5 "
 
             cmd += " -all-resources-bound "
-            cmd += " -pack-optimized "
+            #cmd += " -pack-optimized "
             cmd += " -res-may-alias "
             cmd += " -no-legacy-cbuf-layout "
             

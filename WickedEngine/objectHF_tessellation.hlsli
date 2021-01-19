@@ -8,37 +8,6 @@ struct ConstantOutputType
 
 #ifdef OBJECTSHADER_COMPILE_HS
 
-
-//--------------------------------------------------------------------------------------
-// Returns the dot product between the viewing vector and the patch edge
-//--------------------------------------------------------------------------------------
-float GetEdgeDotProduct(
-	float3 f3EdgeNormal0,   // Normalized normal of the first control point of the given patch edge 
-	float3 f3EdgeNormal1,   // Normalized normal of the second control point of the given patch edge 
-	float3 f3ViewVector     // Normalized viewing vector
-)
-{
-	float3 f3EdgeNormal = normalize((f3EdgeNormal0 + f3EdgeNormal1) * 0.5f);
-
-	float fEdgeDotProduct = dot(f3EdgeNormal, f3ViewVector);
-
-	return fEdgeDotProduct;
-}
-//--------------------------------------------------------------------------------------
-// Returns the orientation adaptive tessellation factor (0.0f -> 1.0f)
-//--------------------------------------------------------------------------------------
-float GetOrientationAdaptiveScaleFactor(
-	float fEdgeDotProduct,      // Dot product of edge normal with view vector
-	float fSilhouetteEpsilon    // Epsilon to determine the range of values considered to be silhoutte
-)
-{
-	float fScale = 1.0f - abs(fEdgeDotProduct);
-
-	fScale = saturate((fScale - fSilhouetteEpsilon) / (1.0f - fSilhouetteEpsilon));
-
-	return fScale;
-}
-
 ConstantOutputType PatchConstantFunction(InputPatch<PixelInput, 3> I)
 {
 	ConstantOutputType Out;

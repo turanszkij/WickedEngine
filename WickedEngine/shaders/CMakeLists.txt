@@ -308,9 +308,6 @@ function(Generate_Shaders SHADERS_SRC_LIST SHADER_TYPE)
     foreach (Shader IN LISTS ${SHADERS_SRC_LIST})
         get_filename_component(FILE_NAME ${Shader} NAME_WLE)
         message(STATUS "CALCULATING DEPENDENCIES FOR SHADER ${SHADER_TYPE} ${FILE_NAME}")
-        if (${SHADER_TYPE} STREQUAL vs OR ${SHADER_TYPE} STREQUAL ds OR ${SHADER_TYPE} STREQUAL gs)
-            set(INVERT_Y TRUE)
-        endif()
         if(${SHADER_TYPE} STREQUAL lib)
             set(VK_VERSION "vulkan1.2")
         else()
@@ -323,7 +320,6 @@ function(Generate_Shaders SHADERS_SRC_LIST SHADER_TYPE)
                 -T "${SHADER_TYPE}_6_5"
                 -I "${CMAKE_CURRENT_SOURCE_DIR}/../"
                 -D SPIRV
-                $<$<BOOL:${INVERT_Y}>:-fvk-invert-y>
                 -all-resources-bound
                 -pack-optimized
                 -res-may-alias

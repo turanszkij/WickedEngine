@@ -5758,17 +5758,17 @@ using namespace Vulkan_Internal;
 		res = vkBeginCommandBuffer(GetFrameResources().commandBuffers[cmd], &beginInfo);
 		assert(res == VK_SUCCESS);
 
-		VkViewport viewports[6];
+		Viewport viewports[6];
 		for (uint32_t i = 0; i < arraysize(viewports); ++i)
 		{
-			viewports[i].x = 0;
-			viewports[i].y = 0;
-			viewports[i].width = (float)RESOLUTIONWIDTH;
-			viewports[i].height = (float)RESOLUTIONHEIGHT;
-			viewports[i].minDepth = 0;
-			viewports[i].maxDepth = 1;
+			viewports[i].TopLeftX = 0;
+			viewports[i].TopLeftY = 0;
+			viewports[i].Width = (float)RESOLUTIONWIDTH;
+			viewports[i].Height = (float)RESOLUTIONHEIGHT;
+			viewports[i].MinDepth = 0;
+			viewports[i].MaxDepth = 1;
 		}
-		vkCmdSetViewport(GetDirectCommandList(cmd), 0, arraysize(viewports), viewports);
+		BindViewports(arraysize(viewports), viewports, cmd);
 
 		VkRect2D scissors[8];
 		for (int i = 0; i < arraysize(scissors); ++i)
@@ -5999,9 +5999,9 @@ using namespace Vulkan_Internal;
 		for (uint32_t i = 0; i < NumViewports; ++i)
 		{
 			viewports[i].x = pViewports[i].TopLeftX;
-			viewports[i].y = pViewports[i].TopLeftY;
+			viewports[i].y = pViewports[i].TopLeftY + pViewports[i].Height;
 			viewports[i].width = pViewports[i].Width;
-			viewports[i].height = pViewports[i].Height;
+			viewports[i].height = -pViewports[i].Height;
 			viewports[i].minDepth = pViewports[i].MinDepth;
 			viewports[i].maxDepth = pViewports[i].MaxDepth;
 		}
