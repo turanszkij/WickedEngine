@@ -1,7 +1,8 @@
+#define OBJECTSHADER_LAYOUT_COMMON
 #include "objectHF.hlsli"
 
 [earlydepthstencil]
-float4 main(PixelInputType input) : SV_TARGET
+float4 main(PixelInput input) : SV_TARGET
 {
 	float4 color;
 	[branch]

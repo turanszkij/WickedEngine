@@ -1,12 +1,14 @@
 #include "globals.hlsli"
-#include "objectInputLayoutHF.hlsli"
 #include "ShaderInterop_Raytracing.h"
 
 struct Input
 {
 	float4 pos : POSITION_NORMAL_WIND;
 	float2 atl : ATLAS;
-	Input_InstancePrev instance;
+
+	float4 matPrev0 : INSTANCEMATRIXPREV0;
+	float4 matPrev1 : INSTANCEMATRIXPREV1;
+	float4 matPrev2 : INSTANCEMATRIXPREV2;
 };
 
 struct Output
@@ -21,7 +23,12 @@ Output main(Input input)
 {
 	Output output;
 
-	float4x4 WORLD = MakeWorldMatrixFromInstance(input.instance);
+	float4x4 WORLD = float4x4(
+		input.matPrev0,
+		input.matPrev1,
+		input.matPrev2,
+		float4(0, 0, 0, 1)
+		);
 
 	output.pos = float4(input.atl, 0, 1);
 	output.pos.xy = output.pos.xy * 2 - 1;

@@ -3,7 +3,7 @@
 #include "objectHF.hlsli"
 
 [earlydepthstencil]
-GBUFFEROutputType main(VSOut input)
+GBuffer main(VSOut input)
 {
 	float3 uv_col = input.tex;
 	float3 uv_nor = uv_col;
@@ -49,5 +49,5 @@ GBUFFEROutputType main(VSOut input)
 
 	ApplyFog(dist, color);
 
-	return CreateGbuffer(color, surface, velocity, lighting);
+	return CreateGBuffer(color, surface);
 }

@@ -1,6 +1,7 @@
+#define OBJECTSHADER_LAYOUT_COMMON
 #include "objectHF.hlsli"
 
-float4 main(PixelInputType input) : SV_Target0
+float4 main(PixelInput input) : SV_Target0
 {
 	float3 N = normalize(input.nor);
 	float3 P = input.pos3D;

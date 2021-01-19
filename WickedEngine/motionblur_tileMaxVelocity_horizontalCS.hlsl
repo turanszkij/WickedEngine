@@ -17,7 +17,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	for (uint i = 0; i < MOTIONBLUR_TILESIZE.x; ++i)
 	{
 		const uint2 pixel = uint2(tile_upperleft.x + i, tile_upperleft.y);
-		const float2 velocity = texture_gbuffer1[pixel].zw;
+		const float2 velocity = texture_gbuffer2[pixel].xy;
 		const float magnitude = length(velocity);
 		if (magnitude > max_magnitude)
 		{

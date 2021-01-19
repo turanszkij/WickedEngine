@@ -62,7 +62,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 	const float neighborhood_velocity_magnitude = length(neighborhood_velocity);
 	const float4 center_color = input[pixel];
 
-	const float2 center_velocity = texture_gbuffer1[pixel].zw * motionblur_strength;
+	const float2 center_velocity = texture_gbuffer2[pixel].xy * motionblur_strength;
 	const float center_velocity_magnitude = length(center_velocity);
 	const float center_depth = texture_lineardepth[pixel];
 
@@ -85,12 +85,12 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 	for (float i = -range; i <= range; i += 2.0f)
 	{
 		const float depth1 = texture_lineardepth.SampleLevel(sampler_point_clamp, uv2, 0);
-		const float2 velocity1 = texture_gbuffer1.SampleLevel(sampler_point_clamp, uv2, 0).zw;
+		const float2 velocity1 = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv2, 0).xy;
 		const float velocity_magnitude1 = length(velocity1);
 		const float3 color1 = input.SampleLevel(sampler_point_clamp, uv2, 0).rgb;
 		uv2 += sampling_direction;
 		const float depth2 = texture_lineardepth.SampleLevel(sampler_point_clamp, uv2, 0);
-		const float2 velocity2 = texture_gbuffer1.SampleLevel(sampler_point_clamp, uv2, 0).zw;
+		const float2 velocity2 = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv2, 0).xy;
 		const float velocity_magnitude2 = length(velocity2);
 		const float3 color2 = input.SampleLevel(sampler_point_clamp, uv2, 0).rgb;
 		uv2 += sampling_direction;

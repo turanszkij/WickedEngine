@@ -148,10 +148,6 @@ set(SHADERS_CS
         "rtshadow_denoise_temporalCS.hlsl"
 )
 
-set(SHADERS_DS
-        "objectDS.hlsl"
-)
-
 set(SHADERS_PS
         "emittedparticlePS_soft.hlsl"
         "screenPS.hlsl"
@@ -174,6 +170,7 @@ set(SHADERS_PS
         "sunPS.hlsl"
         "skyPS_dynamic.hlsl"
         "skyPS_static.hlsl"
+        "skyPS_velocity.hlsl"
         "shadowPS_transparent.hlsl"
         "shadowPS_water.hlsl"
         "shadowPS_alphatest.hlsl"
@@ -190,13 +187,13 @@ set(SHADERS_PS
         "objectPS_planarreflection.hlsl"
         "objectPS_pom.hlsl"
         "objectPS_terrain.hlsl"
-        "objectPS_textureonly.hlsl"
         "objectPS.hlsl"
         "objectPS_hologram.hlsl"
         "objectPS_paintradius.hlsl"
         "objectPS_simplest.hlsl"
         "objectPS_debug.hlsl"
-        "objectPS_alphatestonly.hlsl"
+        "objectPS_prepass.hlsl"
+        "objectPS_prepass_alphatest.hlsl"
         "objectPS_anisotropic.hlsl"
         "objectPS_transparent_anisotropic.hlsl"
         "objectPS_cartoon.hlsl"
@@ -207,9 +204,9 @@ set(SHADERS_PS
         "lensFlarePS.hlsl"
         "impostorPS_wire.hlsl"
         "impostorPS_simple.hlsl"
-        "impostorPS_alphatestonly.hlsl"
+        "impostorPS_prepass.hlsl"
         "hairparticlePS_simplest.hlsl"
-        "hairparticlePS_alphatestonly.hlsl"
+        "hairparticlePS_prepass.hlsl"
         "forceFieldVisualizerPS.hlsl"
         "fontPS.hlsl"
         "envMap_skyPS_static.hlsl"
@@ -248,12 +245,14 @@ set(SHADERS_VS
         "raytrace_screenVS.hlsl"
         "oceanSurfaceVS.hlsl"
         "objectVS_simple.hlsl"
-        "objectVS_simple_tessellation.hlsl"
         "objectVS_voxelizer.hlsl"
         "objectVS_common.hlsl"
         "objectVS_common_tessellation.hlsl"
+        "objectVS_prepass.hlsl"
+        "objectVS_prepass_alphatest.hlsl"
+        "objectVS_prepass_tessellation.hlsl"
+        "objectVS_prepass_alphatest_tessellation.hlsl"
         "objectVS_debug.hlsl"
-        "objectVS_positionstream.hlsl"
         "lensFlareVS.hlsl"
         "impostorVS.hlsl"
         "forceFieldPointVisualizerVS.hlsl"
@@ -284,6 +283,14 @@ set(SHADERS_GS
 
 set(SHADERS_HS
         "objectHS.hlsl"
+        "objectHS_prepass.hlsl"
+        "objectHS_prepass_alphatest.hlsl"
+)
+
+set(SHADERS_DS
+        "objectDS.hlsl"
+        "objectDS_prepass.hlsl"
+        "objectDS_prepass_alphatest.hlsl"
 )
 
 set(SHADERS_LIB
@@ -301,9 +308,6 @@ function(Generate_Shaders SHADERS_SRC_LIST SHADER_TYPE)
     foreach (Shader IN LISTS ${SHADERS_SRC_LIST})
         get_filename_component(FILE_NAME ${Shader} NAME_WLE)
         message(STATUS "CALCULATING DEPENDENCIES FOR SHADER ${SHADER_TYPE} ${FILE_NAME}")
-        if (${SHADER_TYPE} STREQUAL vs OR ${SHADER_TYPE} STREQUAL ds OR ${SHADER_TYPE} STREQUAL gs)
-            set(INVERT_Y TRUE)
-        endif()
         if(${SHADER_TYPE} STREQUAL lib)
             set(VK_VERSION "vulkan1.2")
         else()
@@ -316,7 +320,6 @@ function(Generate_Shaders SHADERS_SRC_LIST SHADER_TYPE)
                 -T "${SHADER_TYPE}_6_5"
                 -I "${CMAKE_CURRENT_SOURCE_DIR}/../"
                 -D SPIRV
-                $<$<BOOL:${INVERT_Y}>:-fvk-invert-y>
                 -all-resources-bound
                 -pack-optimized
                 -res-may-alias

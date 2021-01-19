@@ -427,7 +427,7 @@ CBUFFER(CubemapRenderCB, CBSLOT_RENDERER_CUBEMAPRENDER)
 
 CBUFFER(TessellationCB, CBSLOT_RENDERER_TESSELLATION)
 {
-	float4 g_f4TessFactors;
+	float4 xTessellationFactors;
 };
 
 

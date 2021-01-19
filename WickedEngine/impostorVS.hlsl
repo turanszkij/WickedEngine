@@ -1,6 +1,5 @@
 #include "globals.hlsli"
 #include "impostorHF.hlsli"
-#include "objectInputLayoutHF.hlsli"
 
 static const float3 BILLBOARD[] = {
 	float3(-1, -1, 0),
@@ -20,16 +19,20 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 
 	uint byteOffset = (uint)g_xColor.x + instanceID * 64;
 
-	Input_Instance instance;
-	instance.mat0 = asfloat(instanceBuffer.Load4(byteOffset + 0));
-	instance.mat1 = asfloat(instanceBuffer.Load4(byteOffset + 16));
-	instance.mat2 = asfloat(instanceBuffer.Load4(byteOffset + 32));
-	instance.userdata = instanceBuffer.Load4(byteOffset + 48);
+	float4 mat0 = asfloat(instanceBuffer.Load4(byteOffset + 0));
+	float4 mat1 = asfloat(instanceBuffer.Load4(byteOffset + 16));
+	float4 mat2 = asfloat(instanceBuffer.Load4(byteOffset + 32));
+	uint4 userdata = instanceBuffer.Load4(byteOffset + 48);
 
-	float4x4 WORLD = MakeWorldMatrixFromInstance(instance);
+	float4x4 WORLD = WORLD = float4x4(
+		mat0,
+		mat1,
+		mat2,
+		float4(0, 0, 0, 1)
+		);
 
 	float3 pos = BILLBOARD[vertexID];
-	float3 tex = float3(pos.xy * float2(0.5f, -0.5f) + 0.5f, instance.userdata.y);
+	float3 tex = float3(pos.xy * float2(0.5f, -0.5f) + 0.5f, userdata.y);
 
 	// We rotate the billboard to face camera, but unlike emitted particles, 
 	//	they don't rotate according to camera rotation, but the camera position relative
@@ -51,7 +54,7 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 	angle *= 0.5f;
 	tex.z += floor(angle * impostorCaptureAngles);
 
-	float4 color_dither = unpack_rgba(instance.userdata.x);
+	float4 color_dither = unpack_rgba(userdata.x);
 
 	VSOut Out;
 	Out.pos3D = mul(WORLD, float4(pos, 1)).xyz;

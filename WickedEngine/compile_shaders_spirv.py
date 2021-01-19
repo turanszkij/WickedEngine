@@ -61,7 +61,7 @@ for item in root.iter():
             cmd += "_6_5 "
             
             cmd += " -all-resources-bound "
-            cmd += " -pack-optimized "
+            #cmd += " -pack-optimized "
             cmd += " -res-may-alias "
             cmd += " -no-legacy-cbuf-layout "
             
@@ -70,9 +70,13 @@ for item in root.iter():
             cmd += " -fvk-use-dx-layout "
             cmd += " -fvk-use-dx-position-w "
             cmd += " -flegacy-macro-expansion "
-            
-            if profile == "VS" or profile == "DS" or profile == "GS":
-                cmd += " -fvk-invert-y "
+
+            # NOTE: Don't use -fvk-invert-y because it's not trivial when multiple connecting
+            #   shader stages are using SV_POSITION.
+            #   But when sharing structs between stages, it is not feasible to modify SV_POSITION to custom semantic
+            #   This will be handled by flipping the viewport instead
+            #if profile == "VS" or profile == "DS" or profile == "GS":
+            #    cmd += " -fvk-invert-y "
 
             #cmd += " -fvk-b-shift 0 all "
             cmd += " -fvk-t-shift 1000 all "

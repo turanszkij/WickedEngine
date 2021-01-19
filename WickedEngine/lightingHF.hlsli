@@ -33,7 +33,7 @@ struct Lighting
 		direct.specular = specular_direct;
 		indirect.diffuse = diffuse_indirect;
 		indirect.specular = specular_indirect;
-		shadow_mask = 0;
+		shadow_mask = 1; // fully lit by default
 		shadow_index = 0;
 	}
 };

@@ -290,8 +290,8 @@ void ObjectWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&renderableCheckBox);
 
-	ditherSlider.Create(0, 1, 0, 1000, "Dither: ");
-	ditherSlider.SetTooltip("Adjust dithered transparency of the object. This disables some optimizations so performance can be affected.");
+	ditherSlider.Create(0, 1, 0, 1000, "Transparency: ");
+	ditherSlider.SetTooltip("Adjust transparency of the object. Opaque materials will use dithered transparency in this case!");
 	ditherSlider.SetSize(XMFLOAT2(100, hei));
 	ditherSlider.SetPos(XMFLOAT2(x, y += step));
 	ditherSlider.OnSlide([&](wiEventArgs args) {
