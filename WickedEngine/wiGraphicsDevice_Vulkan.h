@@ -1,11 +1,13 @@
 #pragma once
+#include "CommonInclude.h"
+#include "wiPlatform.h"
 
+#ifndef PLATFORM_UWP
 #define WICKEDENGINE_BUILD_VULKAN
+#endif // PLATFORM_UWP
 
 #ifdef WICKEDENGINE_BUILD_VULKAN
-#include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
-#include "wiPlatform.h"
 #include "wiSpinLock.h"
 #include "wiContainers.h"
 #include "wiGraphicsDevice_SharedInternals.h"

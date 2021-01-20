@@ -1,13 +1,13 @@
 #pragma once
+#include "CommonInclude.h"
+#include "wiPlatform.h"
 
 #ifdef _WIN32
 #define WICKEDENGINE_BUILD_DX12
 #endif // _WIN32
 
 #ifdef WICKEDENGINE_BUILD_DX12
-#include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
-#include "wiPlatform.h"
 #include "wiSpinLock.h"
 #include "wiContainers.h"
 #include "wiGraphicsDevice_SharedInternals.h"
