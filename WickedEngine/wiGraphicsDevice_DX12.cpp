@@ -8,12 +8,13 @@
 #include "ResourceMapping.h"
 #include "wiBackLog.h"
 
-#include "Utility/d3dx12.h"
+#include "Utility/dx12/d3dx12.h"
 #include "Utility/D3D12MemAlloc.h"
 
+#include "Utility/dxcapi.h"
+#include "Utility/dx12/d3d12shader.h"
+
 #include <pix.h>
-#include <dxcapi.h>
-#include <d3d12shader.h>
 
 #ifdef _DEBUG
 #include <d3d12sdklayers.h>
@@ -46,7 +47,7 @@ namespace DX12_Internal
 	static PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature = nullptr;
 #endif // PLATFORM_UWP
 
-	static DxcCreateInstanceProc DxcCreateInstance = nullptr;
+	ComPtr<IDxcUtils> dxcUtils;
 
 	// Engine -> Native converters
 
@@ -2286,10 +2287,13 @@ using namespace DX12_Internal;
 		assert(D3D12SerializeVersionedRootSignature != nullptr);
 #endif // PLATFORM_UWP
 
-		DxcCreateInstance = (DxcCreateInstanceProc)GetProcAddress(dxcompiler, "DxcCreateInstance");
+		DxcCreateInstanceProc DxcCreateInstance = (DxcCreateInstanceProc)GetProcAddress(dxcompiler, "DxcCreateInstance");
 		assert(DxcCreateInstance != nullptr);
 
-		HRESULT hr = E_FAIL;
+		HRESULT hr;
+
+		hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils));
+		assert(SUCCEEDED(hr));
 
 #if !defined(PLATFORM_UWP)
 		if (debuglayer)
@@ -3156,30 +3160,6 @@ using namespace DX12_Internal;
 
 		if (pShader->rootSignature == nullptr)
 		{
-			struct ShaderBlob : public IDxcBlob
-			{
-				LPVOID address;
-				SIZE_T size;
-				LPVOID STDMETHODCALLTYPE GetBufferPointer() override { return address; }
-				SIZE_T STDMETHODCALLTYPE GetBufferSize() override { return size; }
-				HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, _COM_Outptr_ void __RPC_FAR* __RPC_FAR* ppvObject) { return E_FAIL; }
-				ULONG STDMETHODCALLTYPE AddRef(void) { return 0; }
-				ULONG STDMETHODCALLTYPE Release(void) { return 0; }
-			};
-			ShaderBlob blob;
-			blob.address = (LPVOID)pShaderBytecode;
-			blob.size = BytecodeLength;
-
-			ComPtr<IDxcContainerReflection> container_reflection;
-			hr = DxcCreateInstance(CLSID_DxcContainerReflection, __uuidof(IDxcContainerReflection), (void**)&container_reflection);
-			assert(SUCCEEDED(hr));
-			hr = container_reflection->Load(&blob);
-			assert(SUCCEEDED(hr));
-
-			UINT32 shaderIdx;
-			hr = container_reflection->FindFirstPartKind('LIXD', &shaderIdx); // Say 'DXIL' in Little-Endian
-			assert(SUCCEEDED(hr));
-
 			auto insert_descriptor = [&](const D3D12_SHADER_INPUT_BIND_DESC& desc)
 			{
 				if (desc.Type == D3D_SIT_SAMPLER)
@@ -3353,10 +3333,15 @@ using namespace DX12_Internal;
 				}
 			};
 
+			DxcBuffer ReflectionData;
+			ReflectionData.Encoding = DXC_CP_ACP;
+			ReflectionData.Ptr = pShaderBytecode;
+			ReflectionData.Size = (SIZE_T)BytecodeLength;
+
 			if (stage == LIB)
 			{
 				ComPtr<ID3D12LibraryReflection> reflection;
-				hr = container_reflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(&reflection));
+				hr = dxcUtils->CreateReflection(&ReflectionData, IID_PPV_ARGS(&reflection));
 				assert(SUCCEEDED(hr));
 
 				D3D12_LIBRARY_DESC library_desc;
@@ -3382,8 +3367,8 @@ using namespace DX12_Internal;
 			}
 			else // Shader reflection
 			{
-				ComPtr<ID3D12ShaderReflection> reflection;
-				hr = container_reflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(&reflection));
+				ComPtr<ID3D12ShaderReflection > reflection;
+				hr = dxcUtils->CreateReflection(&ReflectionData, IID_PPV_ARGS(&reflection));
 				assert(SUCCEEDED(hr));
 
 				D3D12_SHADER_DESC shader_desc;

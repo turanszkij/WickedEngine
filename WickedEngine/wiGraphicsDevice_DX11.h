@@ -1,13 +1,13 @@
 #pragma once
+#include "CommonInclude.h"
+#include "wiPlatform.h"
 
 #if __has_include("d3d11_3.h")
 #define WICKEDENGINE_BUILD_DX11
 #endif // HAS DX11
 
 #ifdef WICKEDENGINE_BUILD_DX11
-#include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
-#include "wiPlatform.h"
 
 #include <d3d11_3.h>
 #include <DXGI1_3.h>

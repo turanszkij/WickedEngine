@@ -2802,6 +2802,7 @@ void RenderMeshes(
 				0,
 				instancedBatch.dataOffset
 			};
+			static_assert(arraysize(vbs) == INPUT_SLOT_COUNT, "This layout must conform to OBJECT_VERTEXINPUT enum!");
 			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 
 			for (const MeshComponent::MeshSubset& subset : mesh.subsets)

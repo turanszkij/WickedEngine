@@ -51,19 +51,19 @@ void MainComponent::Initialize()
 
 #ifndef WICKEDENGINE_BUILD_DX11
         if (use_dx11) {
-            wiHelper::messageBox("DirectX 11 not found during build! DirectX 11 API disabled!", "Error");
+            wiHelper::messageBox("The engine was built without DX11 support!", "Error");
             use_dx11 = false;
         }
 #endif
 #ifndef WICKEDENGINE_BUILD_DX12
         if (use_dx12) {
-            wiHelper::messageBox("DirectX 12 not found during build! DirectX 12 API disabled!", "Error");
+            wiHelper::messageBox("The engine was built without DX12 support!", "Error");
             use_dx12 = false;
         }
 #endif
 #ifndef WICKEDENGINE_BUILD_VULKAN
         if (use_vulkan) {
-            wiHelper::messageBox("Vulkan SDK not found during build! Vulkan API disabled!", "Error");
+            wiHelper::messageBox("The engine was built without Vulkan support!", "Error");
             use_vulkan = false;
         }
 #endif

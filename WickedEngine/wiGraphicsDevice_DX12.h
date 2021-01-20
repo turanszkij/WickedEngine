@@ -1,22 +1,23 @@
 #pragma once
+#include "CommonInclude.h"
+#include "wiPlatform.h"
 
-#if __has_include("d3d12.h")
+#ifdef _WIN32
 #define WICKEDENGINE_BUILD_DX12
-#endif // HAS DX12
+#endif // _WIN32
 
 #ifdef WICKEDENGINE_BUILD_DX12
-#include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
-#include "wiPlatform.h"
 #include "wiSpinLock.h"
 #include "wiContainers.h"
 #include "wiGraphicsDevice_SharedInternals.h"
 
-#include "Utility/D3D12MemAlloc.h"
-
 #include <dxgi1_6.h>
-#include <d3d12.h>
 #include <wrl/client.h> // ComPtr
+
+#include "Utility/dx12/d3d12.h"
+#define D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
+#include "Utility/D3D12MemAlloc.h"
 
 #include <unordered_map>
 #include <deque>
