@@ -1,8 +1,6 @@
 #pragma once
 
-#if __has_include("vulkan/vulkan.h")
 #define WICKEDENGINE_BUILD_VULKAN
-#endif // HAS VULKAN
 
 #ifdef WICKEDENGINE_BUILD_VULKAN
 #include "CommonInclude.h"
@@ -16,6 +14,8 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #endif // _WIN32
 
+#define VK_NO_PROTOTYPES
+#include "Utility/vulkan/vulkan.h"
 #include "Utility/volk.h"
 #include "Utility/vk_mem_alloc.h"
 
@@ -193,7 +193,7 @@ namespace wiGraphics
 
 		bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) override;
 		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) override;
-		bool CreateShader(SHADERSTAGE stafe, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) override;
+		bool CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) override;
 		bool CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) override;
 		bool CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) override;
 		bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
