@@ -278,6 +278,7 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 	}
 
 	device->BindConstantBuffer(VS, &cb, CB_GETBINDSLOT(HairParticleCB), cmd);
+	device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
 
 	device->BindResource(VS, &particleBuffer, 0, cmd);
 	device->BindResource(VS, &culledIndexBuffer, 1, cmd);

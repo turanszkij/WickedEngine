@@ -107,7 +107,7 @@ struct Surface
 		alphaRoughness = roughness * roughness;
 		alphaRoughnessSq = alphaRoughness * alphaRoughness;
 
-		NdotV = abs(dot(N, V)) + 1e-5;
+		NdotV = saturate(abs(dot(N, V)) + 1e-5);
 
 		f90 = saturate(50.0 * dot(f0, 0.33));
 		R = -reflect(V, N);
@@ -130,7 +130,6 @@ struct SurfaceToLight
 	float3 H;		// half-vector between view vector and light vector
 	float NdotL;	// cos angle between normal and light direction
 	float3 NdotL_sss;	// NdotL with subsurface parameters applied
-	float NdotV;	// cos angle between normal and view direction
 	float NdotH;	// cos angle between normal and half vector
 	float LdotH;	// cos angle between light direction and half vector
 	float VdotH;	// cos angle between view direction and half vector
@@ -155,7 +154,6 @@ struct SurfaceToLight
 
 		NdotL_sss = (NdotL + surface.sss.rgb) * surface.sss_inv.rgb;
 
-		NdotV = saturate(dot(surface.N, surface.V));
 		NdotH = saturate(dot(surface.N, H));
 		LdotH = saturate(dot(L, H));
 		VdotH = saturate(dot(surface.V, H));
@@ -193,8 +191,8 @@ struct SurfaceToLight
 // see https://google.github.io/filament/Filament.md.html#materialsystem/specularbrdf/geometricshadowing(specularg)
 float visibilityOcclusion(in Surface surface, in SurfaceToLight surfaceToLight)
 {
-	float GGXV = surfaceToLight.NdotL * sqrt(surfaceToLight.NdotV * surfaceToLight.NdotV * (1.0 - surface.alphaRoughnessSq) + surface.alphaRoughnessSq);
-	float GGXL = surfaceToLight.NdotV * sqrt(surfaceToLight.NdotL * surfaceToLight.NdotL * (1.0 - surface.alphaRoughnessSq) + surface.alphaRoughnessSq);
+	float GGXV = surfaceToLight.NdotL * sqrt(surface.NdotV * surface.NdotV * (1.0 - surface.alphaRoughnessSq) + surface.alphaRoughnessSq);
+	float GGXL = surface.NdotV * sqrt(surfaceToLight.NdotL * surfaceToLight.NdotL * (1.0 - surface.alphaRoughnessSq) + surface.alphaRoughnessSq);
 
 	float GGX = GGXV + GGXL;
 	if (GGX > 0.0)

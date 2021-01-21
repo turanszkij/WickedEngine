@@ -73,11 +73,11 @@ void GetSampleInfo(float2 velocity, float2 neighborUV, float2 uv, float3 P, floa
     
 	Surface surface;
 	surface.alphaRoughnessSq = pow(roughness, 4);
+	surface.NdotV = NdotV;
     
 	SurfaceToLight surfaceToLight;
 	surfaceToLight.NdotH = NdotH;
 	surfaceToLight.NdotL = NdotL;
-	surfaceToLight.NdotV = NdotV;
     
     // Calculate BRDF where Fresnel = 1
 	float Vis = visibilityOcclusion(surface, surfaceToLight);

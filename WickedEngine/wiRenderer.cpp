@@ -1942,29 +1942,20 @@ void LoadBuffers()
 		SubresourceData initData;
 
 		// Sobol
-
-		const uint32_t sobolSequenceLength = uint32_t(sizeof(wiBlueNoise::sobol_256spp_256d) / sizeof(wiBlueNoise::sobol_256spp_256d[0]));
-		bd.ByteWidth = bd.StructureByteStride * sobolSequenceLength;
-
-		initData.pSysMem = &wiBlueNoise::sobol_256spp_256d;
+		bd.ByteWidth = wiBlueNoise::GetSobolSequenceSize();
+		initData.pSysMem = wiBlueNoise::GetSobolSequenceData();
 		device->CreateBuffer(&bd, &initData, &resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE]);
 		device->SetName(&resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE], "resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE]");
 
 		// Scrambling tile
-
-		const uint32_t scramblingTileLength = uint32_t(sizeof(wiBlueNoise::scramblingTile) / sizeof(wiBlueNoise::scramblingTile[0]));
-		bd.ByteWidth = bd.StructureByteStride * scramblingTileLength;
-
-		initData.pSysMem = &wiBlueNoise::scramblingTile;
+		bd.ByteWidth = wiBlueNoise::GetScramblingTileSize();
+		initData.pSysMem = wiBlueNoise::GetScramblingTileData();
 		device->CreateBuffer(&bd, &initData, &resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE]);
 		device->SetName(&resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE], "resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE]");
 
 		// Ranking tile
-
-		const uint32_t rankingTileLength = uint32_t(sizeof(wiBlueNoise::rankingTile) / sizeof(wiBlueNoise::rankingTile[0]));
-		bd.ByteWidth = bd.StructureByteStride * rankingTileLength;
-
-		initData.pSysMem = &wiBlueNoise::rankingTile;
+		bd.ByteWidth = wiBlueNoise::GetRankingTileSize();
+		initData.pSysMem = wiBlueNoise::GetRankingTileData();
 		device->CreateBuffer(&bd, &initData, &resourceBuffers[RBTYPE_BLUENOISE_RANKING_TILE]);
 		device->SetName(&resourceBuffers[RBTYPE_BLUENOISE_RANKING_TILE], "resourceBuffers[RBTYPE_BLUENOISE_RANKING_TILE]");
 	}
@@ -2715,7 +2706,7 @@ void RenderMeshes(
 			{
 				if (frusta != nullptr && !frusta[frustum_index].CheckBoxFast(instanceAABB))
 				{
-					// In case shadow cameras were provided and no intersection detected with frustum, we don't add the instance for the face:
+					// In case multiple cameras were provided and no intersection detected with frustum, we don't add the instance for the face:
 					continue;
 				}
 
@@ -2803,6 +2794,8 @@ void RenderMeshes(
 				instancedBatch.dataOffset
 			};
 			static_assert(arraysize(vbs) == INPUT_SLOT_COUNT, "This layout must conform to OBJECT_VERTEXINPUT enum!");
+			static_assert(arraysize(vbs) == arraysize(strides), "Mismatch between vertex buffers and strides!");
+			static_assert(arraysize(vbs) == arraysize(offsets), "Mismatch between vertex buffers and offsets!");
 			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 
 			for (const MeshComponent::MeshSubset& subset : mesh.subsets)

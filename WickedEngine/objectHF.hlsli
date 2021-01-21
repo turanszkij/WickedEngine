@@ -1486,13 +1486,13 @@ float4 main(PixelInput input) : SV_TARGET
 #endif
 
 
-#ifndef TRANSPARENT
+#ifdef RAYTRACED_SHADOWS_ENABLED
 	[branch]
 	if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
 	{
 		lighting.shadow_mask = texture_rtshadow[surface.pixel];
 	}
-#endif // TRANSPARENT
+#endif // RAYTRACED_SHADOWS_ENABLED
 
 
 #ifdef FORWARD

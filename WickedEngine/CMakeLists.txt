@@ -77,6 +77,7 @@ add_library(WickedEngine STATIC
     wiVersion.cpp
     wiWidget.cpp
     wiXInput.cpp
+	wiBlueNoise.cpp
 )
 
 target_include_directories(WickedEngine PUBLIC

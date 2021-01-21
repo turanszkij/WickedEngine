@@ -541,6 +541,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArchive.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiAudio.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiAudio_BindLua.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiBlueNoise.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiEvent.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFFTGenerator.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUBVH.cpp" />

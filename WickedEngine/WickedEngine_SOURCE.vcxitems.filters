@@ -1883,6 +1883,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_reflect.c">
       <Filter>UTILITY</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiBlueNoise.cpp">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)ArchiveVersionHistory.txt" />

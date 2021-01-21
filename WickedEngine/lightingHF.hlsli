@@ -186,6 +186,7 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 		[branch]
 		if (light.IsCastingShadow())
 		{
+#ifdef RAYTRACED_SHADOWS_ENABLED
 			[branch]
 			if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
 			{
@@ -199,6 +200,7 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 #endif // RAYTRACING_INLINE
 			}
 			else
+#endif // RAYTRACED_SHADOWS_ENABLED
 			{
 				// Loop through cascades from closest (smallest) to furthest (biggest)
 				[loop]
@@ -258,6 +260,8 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 		}
 	}
 
+#ifdef RAYTRACED_SHADOWS_ENABLED
+#ifndef RAYTRACING_INLINE
 	[branch]
 	if (light.IsCastingShadow())
 	{
@@ -269,6 +273,8 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 		//	Read more about this in rtshadowLIB.hlsl file (**)
 		lighting.shadow_index++;
 	}
+#endif // RAYTRACING_INLINE
+#endif // RAYTRACED_SHADOWS_ENABLED
 }
 inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
@@ -294,6 +300,7 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 			[branch]
 			if (light.IsCastingShadow())
 			{
+#ifdef RAYTRACED_SHADOWS_ENABLED
 				[branch]
 				if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
 				{
@@ -307,6 +314,7 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 #endif // RAYTRACING_INLINE
 				}
 				else
+#endif // RAYTRACED_SHADOWS_ENABLED
 				{
 					shadow *= shadowCube(light, L, Lunnormalized);
 				}
@@ -330,6 +338,8 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 		}
 	}
 
+#ifdef RAYTRACED_SHADOWS_ENABLED
+#ifndef RAYTRACING_INLINE
 	[branch]
 	if (light.IsCastingShadow())
 	{
@@ -341,6 +351,8 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 		//	Read more about this in rtshadowLIB.hlsl file (**)
 		lighting.shadow_index++;
 	}
+#endif // RAYTRACING_INLINE
+#endif // RAYTRACED_SHADOWS_ENABLED
 }
 inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
@@ -371,6 +383,7 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 				[branch]
 				if (light.IsCastingShadow())
 				{
+#ifdef RAYTRACED_SHADOWS_ENABLED
 					[branch]
 					if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
 					{
@@ -384,6 +397,7 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 #endif // RAYTRACING_INLINE
 					}
 					else
+#endif // RAYTRACED_SHADOWS_ENABLED
 					{
 						float4 ShPos = mul(MatrixArray[light.GetMatrixIndex() + 0], float4(surface.P, 1));
 						ShPos.xyz /= ShPos.w;
@@ -416,6 +430,8 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 		}
 	}
 
+#ifdef RAYTRACED_SHADOWS_ENABLED
+#ifndef RAYTRACING_INLINE
 	[branch]
 	if (light.IsCastingShadow())
 	{
@@ -427,6 +443,8 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 		//	Read more about this in rtshadowLIB.hlsl file (**)
 		lighting.shadow_index++;
 	}
+#endif // RAYTRACING_INLINE
+#endif // RAYTRACED_SHADOWS_ENABLED
 }
 
 

@@ -713,8 +713,6 @@ void RenderPath3D::Render() const
 
 		RenderAO(cmd);
 
-		RenderSSR(cmd);
-
 		if (wiRenderer::GetVariableRateShadingClassification() && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
 		{
 			wiRenderer::ComputeShadingRateClassification(
@@ -773,7 +771,7 @@ void RenderPath3D::Render() const
 	}
 
 	// Shadow maps:
-	if (getShadowsEnabled() && !wiRenderer::GetRaytracedShadowsEnabled())
+	if (getShadowsEnabled())
 	{
 		cmd = device->BeginCommandList();
 		wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
@@ -846,12 +844,11 @@ void RenderPath3D::Render() const
 			});
 	}
 
-	// Opaque scene + Light culling:
+	// Lighting effects:
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		device->EventBegin("Opaque Scene", cmd);
 
 		wiRenderer::UpdateCameraCB(
 			*camera,
@@ -859,8 +856,6 @@ void RenderPath3D::Render() const
 			camera_reflection,
 			cmd
 		);
-
-		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 
 		{
 			auto range = wiProfiler::BeginRangeGPU("Entity Culling", cmd);
@@ -879,6 +874,8 @@ void RenderPath3D::Render() const
 			wiProfiler::EndRange(range);
 		}
 
+		RenderSSR(cmd);
+
 		if (wiRenderer::GetRaytracedShadowsEnabled())
 		{
 			wiRenderer::Postprocess_RTShadow(
@@ -891,12 +888,15 @@ void RenderPath3D::Render() const
 				rtShadow,
 				cmd
 			);
-			device->BindResource(PS, &rtShadow, TEXSLOT_RENDERPATH_RTSHADOW, cmd);
 		}
-		else
-		{
-			device->BindResource(PS, wiTextureHelper::getUINT4(), TEXSLOT_RENDERPATH_RTSHADOW, cmd);
-		}
+		});
+
+	// Opaque scene:
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		device->EventBegin("Opaque Scene", cmd);
 
 		device->RenderPassBegin(&renderpass_main, cmd);
 
@@ -906,6 +906,15 @@ void RenderPath3D::Render() const
 		vp.Width = (float)depthBuffer_Main.GetDesc().Width;
 		vp.Height = (float)depthBuffer_Main.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
+
+		if (wiRenderer::GetRaytracedShadowsEnabled())
+		{
+			device->BindResource(PS, &rtShadow, TEXSLOT_RENDERPATH_RTSHADOW, cmd);
+		}
+		else
+		{
+			device->BindResource(PS, wiTextureHelper::getUINT4(), TEXSLOT_RENDERPATH_RTSHADOW, cmd);
+		}
 
 		device->BindResource(PS, &entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
 		device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
