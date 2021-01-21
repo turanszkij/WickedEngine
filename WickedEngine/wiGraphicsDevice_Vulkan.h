@@ -73,6 +73,9 @@ namespace wiGraphics
 		std::vector<VkImageView> swapChainImageViews;
 		std::vector<VkFramebuffer> swapChainFramebuffers;
 
+		std::vector<VkDynamicState> pso_dynamicStates;
+		VkPipelineDynamicStateCreateInfo dynamicStateInfo = {};
+
 		VkRenderPass defaultRenderPass = VK_NULL_HANDLE;
 
 		VkBuffer		nullBuffer = VK_NULL_HANDLE;

@@ -1089,37 +1089,50 @@ using namespace Vulkan_Internal;
 
 		// Create descriptor pool:
 		VkDescriptorPoolSize poolSizes[9] = {};
+		uint32_t count = 0;
 
 		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		poolSizes[0].descriptorCount = GPU_RESOURCE_HEAP_CBV_COUNT * poolSize;
+		count++;
 
 		poolSizes[1].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 		poolSizes[1].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT * poolSize;
+		count++;
 
 		poolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
 		poolSizes[2].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT * poolSize;
+		count++;
 
 		poolSizes[3].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		poolSizes[3].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT * poolSize;
+		count++;
 
 		poolSizes[4].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 		poolSizes[4].descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT * poolSize;
+		count++;
 
 		poolSizes[5].type = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
 		poolSizes[5].descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT * poolSize;
+		count++;
 
 		poolSizes[6].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		poolSizes[6].descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT * poolSize;
+		count++;
 
 		poolSizes[7].type = VK_DESCRIPTOR_TYPE_SAMPLER;
 		poolSizes[7].descriptorCount = GPU_SAMPLER_HEAP_COUNT * poolSize;
+		count++;
 
-		poolSizes[8].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-		poolSizes[8].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT * poolSize;
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		{
+			poolSizes[8].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+			poolSizes[8].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT * poolSize;
+			count++;
+		}
 
 		VkDescriptorPoolCreateInfo poolInfo = {};
 		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.poolSizeCount = arraysize(poolSizes);
+		poolInfo.poolSizeCount = count;
 		poolInfo.pPoolSizes = poolSizes;
 		poolInfo.maxSets = poolSize;
 		//poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
@@ -1946,23 +1959,7 @@ using namespace Vulkan_Internal;
 				pipelineInfo.pTessellationState = &tessellationInfo;
 
 
-
-
-				// Dynamic state will be specified at runtime:
-				VkDynamicState dynamicStates[] = {
-					VK_DYNAMIC_STATE_VIEWPORT,
-					VK_DYNAMIC_STATE_SCISSOR,
-					VK_DYNAMIC_STATE_STENCIL_REFERENCE,
-					VK_DYNAMIC_STATE_BLEND_CONSTANTS,
-					VK_DYNAMIC_STATE_FRAGMENT_SHADING_RATE_KHR
-				};
-
-				VkPipelineDynamicStateCreateInfo dynamicState = {};
-				dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-				dynamicState.dynamicStateCount = arraysize(dynamicStates);
-				dynamicState.pDynamicStates = dynamicStates;
-
-				pipelineInfo.pDynamicState = &dynamicState;
+				pipelineInfo.pDynamicState = &dynamicStateInfo;
 
 				VkResult res = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
 				assert(res == VK_SUCCESS);
@@ -2764,6 +2761,20 @@ using namespace Vulkan_Internal;
 		allocationhandler->queries_occlusion.init(allocationhandler.get(), VK_QUERY_TYPE_OCCLUSION);
 		allocationhandler->queries_timestamp.init(allocationhandler.get(), VK_QUERY_TYPE_TIMESTAMP);
 
+		// Dynamic PSO states:
+		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_VIEWPORT);
+		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR);
+		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
+		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_BLEND_CONSTANTS);
+		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING))
+		{
+			pso_dynamicStates.push_back(VK_DYNAMIC_STATE_FRAGMENT_SHADING_RATE_KHR);
+		}
+
+		dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		dynamicStateInfo.dynamicStateCount = (uint32_t)pso_dynamicStates.size();
+		dynamicStateInfo.pDynamicStates = pso_dynamicStates.data();
+
 		wiBackLog::post("Created GraphicsDevice_Vulkan");
 	}
 	GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
@@ -3139,6 +3150,7 @@ using namespace Vulkan_Internal;
 		VkResult res;
 
 		VmaAllocationCreateInfo allocInfo = {};
+		//allocInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_MEMORY_BIT;
 		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 		if (pDesc->Usage == USAGE_STAGING)
 		{
@@ -3153,6 +3165,10 @@ using namespace Vulkan_Internal;
 				allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 				bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 			}
+		}
+		if (pDesc->Usage == USAGE_DYNAMIC)
+		{
+			allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 		}
 
 		res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
@@ -4247,6 +4263,7 @@ using namespace Vulkan_Internal;
 				colorAttachmentRefs[subpass.colorAttachmentCount].sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
 				colorAttachmentRefs[subpass.colorAttachmentCount].attachment = validAttachmentCount;
 				colorAttachmentRefs[subpass.colorAttachmentCount].layout = _ConvertImageLayout(attachment.subpass_layout);
+				colorAttachmentRefs[subpass.colorAttachmentCount].aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				subpass.colorAttachmentCount++;
 				subpass.pColorAttachments = colorAttachmentRefs;
 			}
@@ -4266,8 +4283,15 @@ using namespace Vulkan_Internal;
 					continue;
 				}
 
+				depthAttachmentRef.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
+				depthAttachmentRef.attachment = validAttachmentCount;
+				depthAttachmentRef.layout = _ConvertImageLayout(attachment.subpass_layout);
+				depthAttachmentRef.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				subpass.pDepthStencilAttachment = &depthAttachmentRef;
+
 				if (IsFormatStencilSupport(texdesc.Format))
 				{
+					depthAttachmentRef.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 					switch (attachment.loadop)
 					{
 					default:
@@ -4293,15 +4317,11 @@ using namespace Vulkan_Internal;
 						break;
 					}
 				}
-
-				depthAttachmentRef.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
-				depthAttachmentRef.attachment = validAttachmentCount;
-				depthAttachmentRef.layout = _ConvertImageLayout(attachment.subpass_layout);
-				subpass.pDepthStencilAttachment = &depthAttachmentRef;
 			}
 			else if (attachment.type == RenderPassAttachment::RESOLVE)
 			{
 				resolveAttachmentRefs[resolvecount].sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
+				resolveAttachmentRefs[resolvecount].aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
 				if (attachment.texture == nullptr)
 				{
