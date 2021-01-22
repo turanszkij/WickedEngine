@@ -1226,6 +1226,8 @@ namespace DX12_Internal
 
 		std::vector<D3D12_STATIC_SAMPLER_DESC> staticsamplers;
 
+		std::vector<uint8_t> shadercode;
+
 		~PipelineState_DX12()
 		{
 			allocationhandler->destroylocker.lock();
@@ -1918,32 +1920,39 @@ using namespace DX12_Internal;
 
 				if (pso->desc.vs != nullptr)
 				{
-					stream.VS = { pso->desc.vs->code.data(), pso->desc.vs->code.size() };
+					auto shader_internal = to_internal(pso->desc.vs);
+					stream.VS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
 				}
 				if (pso->desc.hs != nullptr)
 				{
-					stream.HS = { pso->desc.hs->code.data(), pso->desc.hs->code.size() };
+					auto shader_internal = to_internal(pso->desc.hs);
+					stream.HS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
 				}
 				if (pso->desc.ds != nullptr)
 				{
-					stream.DS = { pso->desc.ds->code.data(), pso->desc.ds->code.size() };
+					auto shader_internal = to_internal(pso->desc.ds);
+					stream.DS = { shader_internal->shadercode.data(),shader_internal->shadercode.size() };
 				}
 				if (pso->desc.gs != nullptr)
 				{
-					stream.GS = { pso->desc.gs->code.data(), pso->desc.gs->code.size() };
+					auto shader_internal = to_internal(pso->desc.gs);
+					stream.GS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
 				}
 				if (pso->desc.ps != nullptr)
 				{
-					stream.PS = { pso->desc.ps->code.data(), pso->desc.ps->code.size() };
+					auto shader_internal = to_internal(pso->desc.ps);
+					stream.PS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
 				}
 
 				if (pso->desc.ms != nullptr)
 				{
-					stream.MS = { pso->desc.ms->code.data(), pso->desc.ms->code.size() };
+					auto shader_internal = to_internal(pso->desc.ms);
+					stream.MS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
 				}
 				if (pso->desc.as != nullptr)
 				{
-					stream.AS = { pso->desc.as->code.data(), pso->desc.as->code.size() };
+					auto shader_internal = to_internal(pso->desc.as);
+					stream.AS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
 				}
 
 				RasterizerState pRasterizerStateDesc = pso->desc.rs != nullptr ? *pso->desc.rs : RasterizerState();
@@ -3150,11 +3159,11 @@ using namespace DX12_Internal;
 		internal_state->allocationhandler = allocationhandler;
 		pShader->internal_state = internal_state;
 
-		pShader->code.resize(BytecodeLength);
-		std::memcpy(pShader->code.data(), pShaderBytecode, BytecodeLength);
+		internal_state->shadercode.resize(BytecodeLength);
+		std::memcpy(internal_state->shadercode.data(), pShaderBytecode, BytecodeLength);
 		pShader->stage = stage;
 
-		HRESULT hr = (pShader->code.empty() ? E_FAIL : S_OK);
+		HRESULT hr = (internal_state->shadercode.empty() ? E_FAIL : S_OK);
 		assert(SUCCEEDED(hr));
 
 
@@ -3517,7 +3526,7 @@ using namespace DX12_Internal;
 			{
 				stream.pRootSignature = to_internal(pShader->rootSignature)->resource.Get();
 			}
-			stream.CS = { pShader->code.data(), pShader->code.size() };
+			stream.CS = { internal_state->shadercode.data(), internal_state->shadercode.size() };
 
 			D3D12_PIPELINE_STATE_STREAM_DESC streamDesc = {};
 			streamDesc.pPipelineStateSubobjectStream = &stream;
@@ -4253,8 +4262,9 @@ using namespace DX12_Internal;
 			internal_state->library_descs.emplace_back();
 			auto& library_desc = internal_state->library_descs.back();
 			library_desc = {};
-			library_desc.DXILLibrary.pShaderBytecode = x.shader->code.data();
-			library_desc.DXILLibrary.BytecodeLength = x.shader->code.size();
+			auto shader_internal = to_internal(x.shader);
+			library_desc.DXILLibrary.pShaderBytecode = shader_internal->shadercode.data();
+			library_desc.DXILLibrary.BytecodeLength = shader_internal->shadercode.size();
 			library_desc.NumExports = 1;
 
 			internal_state->exports.emplace_back();

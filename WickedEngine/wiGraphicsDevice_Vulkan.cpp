@@ -1078,7 +1078,7 @@ using namespace Vulkan_Internal;
 	{
 		this->device = device;
 
-		// Important that these don't reallocate themselves during writing dexcriptors!
+		// Important that these don't reallocate themselves during writing descriptors!
 		descriptorWrites.reserve(128);
 		bufferInfos.reserve(128);
 		imageInfos.reserve(128);
@@ -3088,6 +3088,8 @@ using namespace Vulkan_Internal;
 			return true;
 		}
 
+		pBuffer->desc.ByteWidth = (uint32_t)Align((size_t)pBuffer->desc.ByteWidth, 4);
+
 		VkBufferCreateInfo bufferInfo = {};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 		bufferInfo.size = pBuffer->desc.ByteWidth;
@@ -3151,6 +3153,7 @@ using namespace Vulkan_Internal;
 
 		VmaAllocationCreateInfo allocInfo = {};
 		//allocInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_MEMORY_BIT;
+		allocInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_FRAGMENTATION_BIT;
 		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 		if (pDesc->Usage == USAGE_STAGING)
 		{
@@ -3185,19 +3188,25 @@ using namespace Vulkan_Internal;
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
-			GPUBufferDesc uploaddesc;
-			uploaddesc.ByteWidth = pDesc->ByteWidth;
-			uploaddesc.Usage = USAGE_STAGING;
-			GPUBuffer uploadbuffer;
-			bool upload_success = CreateBuffer(&uploaddesc, nullptr, &uploadbuffer);
-			assert(upload_success);
-			VkBuffer upload_resource = to_internal(&uploadbuffer)->resource;
-			VmaAllocation upload_allocation = to_internal(&uploadbuffer)->allocation;
+			const bool use_updatebuffer = pBuffer->desc.ByteWidth < 65536;
+			VkBuffer upload_resource = VK_NULL_HANDLE;
 
-			void* pData = upload_allocation->GetMappedData();
-			assert(pData != nullptr);
+			if (!use_updatebuffer)
+			{
+				GPUBufferDesc uploaddesc;
+				uploaddesc.ByteWidth = pDesc->ByteWidth;
+				uploaddesc.Usage = USAGE_STAGING;
+				GPUBuffer uploadbuffer;
+				bool upload_success = CreateBuffer(&uploaddesc, nullptr, &uploadbuffer);
+				assert(upload_success);
+				upload_resource = to_internal(&uploadbuffer)->resource;
+				VmaAllocation upload_allocation = to_internal(&uploadbuffer)->allocation;
 
-			memcpy(pData, pInitialData->pSysMem, pBuffer->desc.ByteWidth);
+				void* pData = upload_allocation->GetMappedData();
+				assert(pData != nullptr);
+
+				memcpy(pData, pInitialData->pSysMem, pBuffer->desc.ByteWidth);
+			}
 
 			copyQueueLock.lock();
 			{
@@ -3217,11 +3226,6 @@ using namespace Vulkan_Internal;
 					res = vkBeginCommandBuffer(frame.copyCommandBuffer, &beginInfo);
 					assert(res == VK_SUCCESS);
 				}
-
-				VkBufferCopy copyRegion = {};
-				copyRegion.size = pBuffer->desc.ByteWidth;
-				copyRegion.srcOffset = 0;
-				copyRegion.dstOffset = 0;
 
 				VkBufferMemoryBarrier barrier = {};
 				barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -3244,8 +3248,31 @@ using namespace Vulkan_Internal;
 				);
 
 
-				vkCmdCopyBuffer(frame.copyCommandBuffer, upload_resource, internal_state->resource, 1, &copyRegion);
+				if (use_updatebuffer)
+				{
+					vkCmdUpdateBuffer(
+						frame.copyCommandBuffer,
+						internal_state->resource,
+						0,
+						pBuffer->desc.ByteWidth,
+						pInitialData->pSysMem
+					);
+				}
+				else
+				{
+					VkBufferCopy copyRegion = {};
+					copyRegion.size = pBuffer->desc.ByteWidth;
+					copyRegion.srcOffset = 0;
+					copyRegion.dstOffset = 0;
 
+					vkCmdCopyBuffer(
+						frame.copyCommandBuffer,
+						upload_resource,
+						internal_state->resource,
+						1,
+						&copyRegion
+					);
+				}
 
 				VkAccessFlags tmp = barrier.srcAccessMask;
 				barrier.srcAccessMask = barrier.dstAccessMask;
@@ -3319,6 +3346,8 @@ using namespace Vulkan_Internal;
 		}
 
 		VmaAllocationCreateInfo allocInfo = {};
+		//allocInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_MEMORY_BIT;
+		allocInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_FRAGMENTATION_BIT;
 		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
 		VkImageCreateInfo imageInfo = {};
@@ -3603,16 +3632,14 @@ using namespace Vulkan_Internal;
 		internal_state->allocationhandler = allocationhandler;
 		pShader->internal_state = internal_state;
 
-		pShader->code.resize(BytecodeLength);
-		std::memcpy(pShader->code.data(), pShaderBytecode, BytecodeLength);
 		pShader->stage = stage;
 
 		VkResult res = VK_SUCCESS;
 
 		VkShaderModuleCreateInfo moduleInfo = {};
 		moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-		moduleInfo.codeSize = pShader->code.size();
-		moduleInfo.pCode = (uint32_t*)pShader->code.data();
+		moduleInfo.codeSize = BytecodeLength;
+		moduleInfo.pCode = (const uint32_t*)pShaderBytecode;
 		res = vkCreateShaderModule(device, &moduleInfo, nullptr, &internal_state->shaderModule);
 		assert(res == VK_SUCCESS);
 
@@ -4321,7 +4348,6 @@ using namespace Vulkan_Internal;
 			else if (attachment.type == RenderPassAttachment::RESOLVE)
 			{
 				resolveAttachmentRefs[resolvecount].sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
-				resolveAttachmentRefs[resolvecount].aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
 				if (attachment.texture == nullptr)
 				{
@@ -4344,6 +4370,7 @@ using namespace Vulkan_Internal;
 					}
 					resolveAttachmentRefs[resolvecount].attachment = validAttachmentCount;
 					resolveAttachmentRefs[resolvecount].layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+					resolveAttachmentRefs[resolvecount].aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				}
 
 				resolvecount++;
@@ -4374,6 +4401,7 @@ using namespace Vulkan_Internal;
 					}
 					shadingRateAttachmentRef.attachment = validAttachmentCount;
 					shadingRateAttachmentRef.layout = VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
+					shadingRateAttachmentRef.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				}
 
 				subpass.pNext = &shading_rate_attachment;

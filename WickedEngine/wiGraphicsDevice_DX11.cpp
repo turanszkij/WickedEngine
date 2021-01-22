@@ -1109,6 +1109,7 @@ namespace DX11_Internal
 	struct VertexShader_DX11
 	{
 		ComPtr<ID3D11VertexShader> resource;
+		std::vector<uint8_t> shadercode;
 	};
 	struct HullShader_DX11
 	{
@@ -1684,8 +1685,6 @@ bool GraphicsDevice_DX11::CreateTexture(const TextureDesc* pDesc, const Subresou
 }
 bool GraphicsDevice_DX11::CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader)
 {
-	pShader->code.resize(BytecodeLength);
-	std::memcpy(pShader->code.data(), pShaderBytecode, BytecodeLength);
 	pShader->stage = stage;
 
 	HRESULT hr = E_FAIL;
@@ -1696,6 +1695,8 @@ bool GraphicsDevice_DX11::CreateShader(SHADERSTAGE stage, const void *pShaderByt
 	{
 		auto internal_state = std::make_shared<VertexShader_DX11>();
 		pShader->internal_state = internal_state;
+		internal_state->shadercode.resize(BytecodeLength);
+		std::memcpy(internal_state->shadercode.data(), pShaderBytecode, BytecodeLength);
 		hr = device->CreateVertexShader(pShaderBytecode, BytecodeLength, nullptr, &internal_state->resource);
 	}
 	break;
@@ -1830,7 +1831,8 @@ bool GraphicsDevice_DX11::CreatePipelineState(const PipelineStateDesc* pDesc, Pi
 		}
 
 		assert(pDesc->vs != nullptr);
-		hr = device->CreateInputLayout(desc.data(), (UINT)desc.size(), pDesc->vs->code.data(), pDesc->vs->code.size(), &internal_state->il);
+		auto vs_internal = static_cast<VertexShader_DX11*>(pDesc->vs->internal_state.get());
+		hr = device->CreateInputLayout(desc.data(), (UINT)desc.size(), vs_internal->shadercode.data(), vs_internal->shadercode.size(), &internal_state->il);
 		assert(SUCCEEDED(hr));
 	}
 

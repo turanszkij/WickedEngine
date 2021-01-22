@@ -4,10 +4,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 16.0.29519.87
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Editor_Windows", "Editor\Editor_Windows.vcxproj", "{5FE97B9B-A445-4EEA-A42D-9DE60B891D48}"
-	ProjectSection(ProjectDependencies) = postProject
-		{9C8F8910-CCA3-41CB-A2FA-3545CDD5D8BF} = {9C8F8910-CCA3-41CB-A2FA-3545CDD5D8BF}
-		{DF832DE3-02FA-4D00-B853-1229A9505E14} = {DF832DE3-02FA-4D00-B853-1229A9505E14}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Editor_UWP", "Editor\Editor_UWP.vcxproj", "{FA78BFAD-4B23-4A6B-92FA-A48CE56BED03}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -17,16 +13,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Editor_SOURCE", "Editor\Editor_SOURCE.vcxitems", "{867FEBCA-09C4-4FE7-8A4C-4D9B1C27E7D0}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tests", "Tests\Tests.vcxproj", "{3A9EA3D0-A795-46ED-A737-7164E90DC309}"
-	ProjectSection(ProjectDependencies) = postProject
-		{9C8F8910-CCA3-41CB-A2FA-3545CDD5D8BF} = {9C8F8910-CCA3-41CB-A2FA-3545CDD5D8BF}
-		{DF832DE3-02FA-4D00-B853-1229A9505E14} = {DF832DE3-02FA-4D00-B853-1229A9505E14}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Template_Windows", "Template_Windows\Template_Windows.vcxproj", "{76AA3D37-3252-4785-9334-3FC6B8CC07DE}"
-	ProjectSection(ProjectDependencies) = postProject
-		{9C8F8910-CCA3-41CB-A2FA-3545CDD5D8BF} = {9C8F8910-CCA3-41CB-A2FA-3545CDD5D8BF}
-		{DF832DE3-02FA-4D00-B853-1229A9505E14} = {DF832DE3-02FA-4D00-B853-1229A9505E14}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Template_UWP", "Template_UWP\Template_UWP.vcxproj", "{C222218B-B6D1-406B-B2C0-8C1CED4A8D19}"
 	ProjectSection(ProjectDependencies) = postProject

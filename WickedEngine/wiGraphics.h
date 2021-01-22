@@ -747,7 +747,6 @@ namespace wiGraphics
 	struct Shader : public GraphicsDeviceChild
 	{
 		SHADERSTAGE stage = SHADERSTAGE_COUNT;
-		std::vector<uint8_t> code;
 		const RootSignature* rootSignature = nullptr;
 		std::vector<StaticSampler> auto_samplers; // ability to set static samplers without explicit root signature
 	};
