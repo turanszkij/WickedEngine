@@ -2114,6 +2114,15 @@ available through VmaAllocatorCreateInfo::pRecordSettings.
     #endif
 #endif
 
+// Defined to 1 when VK_EXT_memory_priority device extension is defined in Vulkan headers.
+#if !defined(VMA_MEMORY_PRIORITY)
+    #if VK_EXT_memory_priority
+        #define VMA_MEMORY_PRIORITY 1
+    #else
+        #define VMA_MEMORY_PRIORITY 0
+    #endif
+#endif
+
 // Define these macros to decorate all public functions with additional code,
 // before and after returned type, appropriately. This may be useful for
 // exporting the functions when compiling VMA as a separate library. Example:
@@ -2316,6 +2325,23 @@ typedef enum VmaAllocatorCreateFlagBits {
     For more information, see documentation chapter \ref enabling_buffer_device_address.
     */
     VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT = 0x00000020,
+    /**
+    Enables usage of VK_EXT_memory_priority extension in the library.
+
+    You may set this flag only if you found available and enabled this device extension,
+    along with `VkPhysicalDeviceMemoryPriorityFeaturesEXT::memoryPriority == VK_TRUE`,
+    while creating Vulkan device passed as VmaAllocatorCreateInfo::device.
+
+    When this flag is used, VmaAllocationCreateInfo::priority and VmaPoolCreateInfo::priority
+    are used to set priorities of allocated Vulkan memory. Without it, these variables are ignored.
+
+    A priority must be a floating-point value between 0 and 1, indicating the priority of the allocation relative to other memory allocations.
+    Larger values are higher priority. The granularity of the priorities is implementation-dependent.
+    It is automatically passed to every call to `vkAllocateMemory` done by the library using structure `VkMemoryPriorityAllocateInfoEXT`.
+    The value to be used for default priority is 0.5.
+    For more details, see the documentation of the VK_EXT_memory_priority extension.
+    */
+    VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT = 0x00000040,
 
     VMA_ALLOCATOR_CREATE_FLAG_BITS_MAX_ENUM = 0x7FFFFFFF
 } VmaAllocatorCreateFlagBits;
@@ -2892,6 +2918,13 @@ typedef struct VmaAllocationCreateInfo
     internal buffer, so it doesn't need to be valid after allocation call.
     */
     void* VMA_NULLABLE pUserData;
+    /** \brief A floating-point value between 0 and 1, indicating the priority of the allocation relative to other memory allocations.
+    
+    It is used only when #VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT flag was used during creation of the #VmaAllocator object
+    and this allocation ends up as dedicated or is explicitly forced as dedicated using #VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT.
+    Otherwise, it has the priority of a memory block where it is placed and this variable is ignored.
+    */
+    float priority;
 } VmaAllocationCreateInfo;
 
 /**
@@ -3056,6 +3089,12 @@ typedef struct VmaPoolCreateInfo {
     become lost, set this value to 0.
     */
     uint32_t frameInUseCount;
+    /** \brief A floating-point value between 0 and 1, indicating the priority of the allocations in this pool relative to other memory allocations.
+
+    It is used only when #VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT flag was used during creation of the #VmaAllocator object.
+    Otherwise, this variable is ignored.
+    */
+    float priority;
 } VmaPoolCreateInfo;
 
 /** \brief Describes parameter of existing #VmaPool.
@@ -7029,7 +7068,8 @@ public:
         VkDeviceSize bufferImageGranularity,
         uint32_t frameInUseCount,
         bool explicitBlockSize,
-        uint32_t algorithm);
+        uint32_t algorithm,
+        float priority);
     ~VmaBlockVector();
 
     VkResult CreateMinBlocks();
@@ -7112,6 +7152,7 @@ private:
     const uint32_t m_FrameInUseCount;
     const bool m_ExplicitBlockSize;
     const uint32_t m_Algorithm;
+    const float m_Priority;
     VMA_RW_MUTEX m_Mutex;
 
     /* There can be at most one allocation that is completely empty (except when minBlockCount > 0) -
@@ -7855,6 +7896,7 @@ public:
     bool m_UseExtMemoryBudget;
     bool m_UseAmdDeviceCoherentMemory;
     bool m_UseKhrBufferDeviceAddress;
+    bool m_UseExtMemoryPriority;
     VkDevice m_hDevice;
     VkInstance m_hInstance;
     bool m_AllocationCallbacksSpecified;
@@ -8125,6 +8167,7 @@ private:
         bool map,
         bool isUserDataString,
         void* pUserData,
+        float priority,
         VkBuffer dedicatedBuffer,
         VkBufferUsageFlags dedicatedBufferUsage,
         VkImage dedicatedImage,
@@ -12562,7 +12605,8 @@ VmaPool_T::VmaPool_T(
         (createInfo.flags & VMA_POOL_CREATE_IGNORE_BUFFER_IMAGE_GRANULARITY_BIT) != 0 ? 1 : hAllocator->GetBufferImageGranularity(),
         createInfo.frameInUseCount,
         createInfo.blockSize != 0, // explicitBlockSize
-        createInfo.flags & VMA_POOL_CREATE_ALGORITHM_MASK), // algorithm
+        createInfo.flags & VMA_POOL_CREATE_ALGORITHM_MASK,
+        createInfo.priority), // algorithm
     m_Id(0),
     m_Name(VMA_NULL)
 {
@@ -12601,7 +12645,8 @@ VmaBlockVector::VmaBlockVector(
     VkDeviceSize bufferImageGranularity,
     uint32_t frameInUseCount,
     bool explicitBlockSize,
-    uint32_t algorithm) :
+    uint32_t algorithm,
+    float priority) :
     m_hAllocator(hAllocator),
     m_hParentPool(hParentPool),
     m_MemoryTypeIndex(memoryTypeIndex),
@@ -12612,6 +12657,7 @@ VmaBlockVector::VmaBlockVector(
     m_FrameInUseCount(frameInUseCount),
     m_ExplicitBlockSize(explicitBlockSize),
     m_Algorithm(algorithm),
+    m_Priority(priority),
     m_HasEmptyBlock(false),
     m_Blocks(VmaStlAllocator<VmaDeviceMemoryBlock*>(hAllocator->GetAllocationCallbacks())),
     m_NextBlockId(0)
@@ -13307,6 +13353,15 @@ VkResult VmaBlockVector::CreateBlock(VkDeviceSize blockSize, size_t* pNewBlockIn
         VmaPnextChainPushFront(&allocInfo, &allocFlagsInfo);
     }
 #endif // #if VMA_BUFFER_DEVICE_ADDRESS
+
+#if VMA_MEMORY_PRIORITY
+    VkMemoryPriorityAllocateInfoEXT priorityInfo = { VK_STRUCTURE_TYPE_MEMORY_PRIORITY_ALLOCATE_INFO_EXT };
+    if(m_hAllocator->m_UseExtMemoryPriority)
+    {
+        priorityInfo.priority = m_Priority;
+        VmaPnextChainPushFront(&allocInfo, &priorityInfo);
+    }
+#endif // #if VMA_MEMORY_PRIORITY
 
     VkDeviceMemory mem = VK_NULL_HANDLE;
     VkResult res = m_hAllocator->AllocateVulkanMemory(&allocInfo, &mem);
@@ -15666,6 +15721,7 @@ VmaAllocator_T::VmaAllocator_T(const VmaAllocatorCreateInfo* pCreateInfo) :
     m_UseExtMemoryBudget((pCreateInfo->flags & VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT) != 0),
     m_UseAmdDeviceCoherentMemory((pCreateInfo->flags & VMA_ALLOCATOR_CREATE_AMD_DEVICE_COHERENT_MEMORY_BIT) != 0),
     m_UseKhrBufferDeviceAddress((pCreateInfo->flags & VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT) != 0),
+    m_UseExtMemoryPriority((pCreateInfo->flags & VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT) != 0),
     m_hDevice(pCreateInfo->device),
     m_hInstance(pCreateInfo->instance),
     m_AllocationCallbacksSpecified(pCreateInfo->pAllocationCallbacks != VMA_NULL),
@@ -15737,6 +15793,12 @@ VmaAllocator_T::VmaAllocator_T(const VmaAllocatorCreateInfo* pCreateInfo) :
         VMA_ASSERT(0 && "vulkanApiVersion >= VK_API_VERSION_1_1 but required Vulkan version is disabled by preprocessor macros.");
     }
 #endif
+#if !(VMA_MEMORY_PRIORITY)
+    if(m_UseExtMemoryPriority)
+    {
+        VMA_ASSERT(0 && "VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT is set but required extension is not available in your Vulkan header or its support in VMA has been disabled by a preprocessor macro.");
+    }
+#endif
 
     memset(&m_DeviceMemoryCallbacks, 0 ,sizeof(m_DeviceMemoryCallbacks));
     memset(&m_PhysicalDeviceProperties, 0, sizeof(m_PhysicalDeviceProperties));
@@ -15798,7 +15860,8 @@ VmaAllocator_T::VmaAllocator_T(const VmaAllocatorCreateInfo* pCreateInfo) :
             GetBufferImageGranularity(),
             pCreateInfo->frameInUseCount,
             false, // explicitBlockSize
-            false); // linearAlgorithm
+            false, // linearAlgorithm
+            0.5f); // priority (0.5 is the default per Vulkan spec)
         // No need to call m_pBlockVectors[memTypeIndex][blockVectorTypeIndex]->CreateMinBlocks here,
         // becase minBlockCount is 0.
         m_pDedicatedAllocations[memTypeIndex] = vma_new(this, AllocationVectorType)(VmaStlAllocator<VmaAllocation>(GetAllocationCallbacks()));
@@ -16153,6 +16216,7 @@ VkResult VmaAllocator_T::AllocateMemoryOfType(
                 (finalCreateInfo.flags & VMA_ALLOCATION_CREATE_MAPPED_BIT) != 0,
                 (finalCreateInfo.flags & VMA_ALLOCATION_CREATE_USER_DATA_COPY_STRING_BIT) != 0,
                 finalCreateInfo.pUserData,
+                finalCreateInfo.priority,
                 dedicatedBuffer,
                 dedicatedBufferUsage,
                 dedicatedImage,
@@ -16190,6 +16254,7 @@ VkResult VmaAllocator_T::AllocateMemoryOfType(
                 (finalCreateInfo.flags & VMA_ALLOCATION_CREATE_MAPPED_BIT) != 0,
                 (finalCreateInfo.flags & VMA_ALLOCATION_CREATE_USER_DATA_COPY_STRING_BIT) != 0,
                 finalCreateInfo.pUserData,
+                finalCreateInfo.priority,
                 dedicatedBuffer,
                 dedicatedBufferUsage,
                 dedicatedImage,
@@ -16219,6 +16284,7 @@ VkResult VmaAllocator_T::AllocateDedicatedMemory(
     bool map,
     bool isUserDataString,
     void* pUserData,
+    float priority,
     VkBuffer dedicatedBuffer,
     VkBufferUsageFlags dedicatedBufferUsage,
     VkImage dedicatedImage,
@@ -16281,6 +16347,15 @@ VkResult VmaAllocator_T::AllocateDedicatedMemory(
         }
     }
 #endif // #if VMA_BUFFER_DEVICE_ADDRESS
+
+#if VMA_MEMORY_PRIORITY
+    VkMemoryPriorityAllocateInfoEXT priorityInfo = { VK_STRUCTURE_TYPE_MEMORY_PRIORITY_ALLOCATE_INFO_EXT };
+    if(m_UseExtMemoryPriority)
+    {
+        priorityInfo.priority = priority;
+        VmaPnextChainPushFront(&allocInfo, &priorityInfo);
+    }
+#endif // #if VMA_MEMORY_PRIORITY
 
     size_t allocIndex;
     VkResult res = VK_SUCCESS;

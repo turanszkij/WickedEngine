@@ -2308,15 +2308,14 @@ using namespace DX12_Internal;
 		if (debuglayer)
 		{
 			// Enable the debug layer.
-			auto pD3D12GetDebugInterface = reinterpret_cast<PFN_D3D12_GET_DEBUG_INTERFACE>(GetProcAddress(dx12, "D3D12GetDebugInterface"));
-			if (pD3D12GetDebugInterface)
+			auto D3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(dx12, "D3D12GetDebugInterface");
+			if (D3D12GetDebugInterface)
 			{
-				ID3D12Debug* d3dDebug;
-				if (SUCCEEDED(pD3D12GetDebugInterface(
-					IID_PPV_ARGS(&d3dDebug))))
+				ComPtr<ID3D12Debug1> d3dDebug;
+				if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&d3dDebug))))
 				{
 					d3dDebug->EnableDebugLayer();
-					d3dDebug->Release();
+					//d3dDebug->SetEnableGPUBasedValidation(TRUE);
 				}
 			}
 		}
@@ -2334,8 +2333,7 @@ using namespace DX12_Internal;
 
 		// pick the highest performance adapter that is able to create the device
 		Microsoft::WRL::ComPtr<IDXGIAdapter1> candidateAdapter;
-		for (uint32_t i = 0;
-			factory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&candidateAdapter)) != DXGI_ERROR_NOT_FOUND; ++i)
+		for (uint32_t i = 0; factory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&candidateAdapter)) != DXGI_ERROR_NOT_FOUND; ++i)
 		{
 			DXGI_ADAPTER_DESC1 adapterDesc;
 			candidateAdapter->GetDesc1(&adapterDesc);
@@ -2398,19 +2396,18 @@ using namespace DX12_Internal;
 		assert(SUCCEEDED(hr));
 
 		// Create command queue
-		D3D12_COMMAND_QUEUE_DESC directQueueDesc = {};
-		directQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-		directQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-		directQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-		directQueueDesc.NodeMask = 0;
-		hr = device->CreateCommandQueue(&directQueueDesc, IID_PPV_ARGS(&directQueue));
+		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+		queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+		queueDesc.NodeMask = 0;
+		hr = device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&directQueue));
 		assert(SUCCEEDED(hr));
 
 		// Create fences for command queue:
 		hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameFence));
 		assert(SUCCEEDED(hr));
 		frameFenceEvent = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
-
 
 
 		// Create swapchain
@@ -2913,8 +2910,13 @@ using namespace DX12_Internal;
 			assert(SUCCEEDED(hr));
 			memcpy(pData, pInitialData->pSysMem, pDesc->ByteWidth);
 
-			static_cast<ID3D12GraphicsCommandList*>(cmd.commandList.Get())->CopyBufferRegion(
-				internal_state->resource.Get(), 0, upload_resource, 0, pDesc->ByteWidth);
+			cmd.commandList->CopyBufferRegion(
+				internal_state->resource.Get(),
+				0,
+				upload_resource,
+				0,
+				pDesc->ByteWidth
+			);
 
 			copyAllocator.submit(cmd);
 		}
@@ -2985,6 +2987,7 @@ using namespace DX12_Internal;
 		if (pDesc->BindFlags & BIND_UNORDERED_ACCESS)
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+			//desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
 			if (pInitialData == nullptr)
 			{
 				allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
@@ -3121,7 +3124,7 @@ using namespace DX12_Internal;
 			{
 				CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state->resource.Get(), i);
 				CD3DX12_TEXTURE_COPY_LOCATION Src(upload_resource, layouts[i]);
-				static_cast<ID3D12GraphicsCommandList*>(cmd.commandList.Get())->CopyTextureRegion(
+				cmd.commandList->CopyTextureRegion(
 					&Dst,
 					0,
 					0,
@@ -3486,27 +3489,88 @@ using namespace DX12_Internal;
 					param.DescriptorTable.pDescriptorRanges = internal_state->samplers.data();
 				}
 
-				D3D12_ROOT_SIGNATURE_DESC1 rootSigDesc = {};
-				rootSigDesc.NumStaticSamplers = (UINT)internal_state->staticsamplers.size();
-				rootSigDesc.pStaticSamplers = internal_state->staticsamplers.data();
-				rootSigDesc.NumParameters = (UINT)params.size();
-				rootSigDesc.pParameters = params.data();
-				rootSigDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
-
-				D3D12_VERSIONED_ROOT_SIGNATURE_DESC versioned_rs = {};
-				versioned_rs.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
-				versioned_rs.Desc_1_1 = rootSigDesc;
-
-				ID3DBlob* rootSigBlob;
-				ID3DBlob* rootSigError;
-				hr = D3D12SerializeVersionedRootSignature(&versioned_rs, &rootSigBlob, &rootSigError);
-				if (FAILED(hr))
+				internal_state->root_binding_hash = 0;
+				for (auto& x : internal_state->root_cbvs)
 				{
-					OutputDebugStringA((char*)rootSigError->GetBufferPointer());
-					assert(0);
+					wiHelper::hash_combine(internal_state->root_binding_hash, x.Flags);
+					wiHelper::hash_combine(internal_state->root_binding_hash, x.ShaderRegister);
+					wiHelper::hash_combine(internal_state->root_binding_hash, x.RegisterSpace);
 				}
-				hr = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&internal_state->rootSignature));
-				assert(SUCCEEDED(hr));
+
+				internal_state->resource_binding_hash = 0;
+				for (auto& x : internal_state->resources)
+				{
+					wiHelper::hash_combine(internal_state->resource_binding_hash, x.BaseShaderRegister);
+					wiHelper::hash_combine(internal_state->resource_binding_hash, x.NumDescriptors);
+					wiHelper::hash_combine(internal_state->resource_binding_hash, x.Flags);
+					wiHelper::hash_combine(internal_state->resource_binding_hash, x.OffsetInDescriptorsFromTableStart);
+					wiHelper::hash_combine(internal_state->resource_binding_hash, x.RangeType);
+					wiHelper::hash_combine(internal_state->resource_binding_hash, x.RegisterSpace);
+				}
+
+				internal_state->sampler_binding_hash = 0;
+				for (auto& x : internal_state->samplers)
+				{
+					wiHelper::hash_combine(internal_state->sampler_binding_hash, x.BaseShaderRegister);
+					wiHelper::hash_combine(internal_state->sampler_binding_hash, x.NumDescriptors);
+					wiHelper::hash_combine(internal_state->sampler_binding_hash, x.Flags);
+					wiHelper::hash_combine(internal_state->sampler_binding_hash, x.OffsetInDescriptorsFromTableStart);
+					wiHelper::hash_combine(internal_state->sampler_binding_hash, x.RangeType);
+					wiHelper::hash_combine(internal_state->sampler_binding_hash, x.RegisterSpace);
+				}
+
+				size_t rootsig_hash = 0;
+				wiHelper::hash_combine(rootsig_hash, internal_state->root_binding_hash);
+				wiHelper::hash_combine(rootsig_hash, internal_state->resource_binding_hash);
+				wiHelper::hash_combine(rootsig_hash, internal_state->sampler_binding_hash);
+				for (auto& x : internal_state->staticsamplers)
+				{
+					wiHelper::hash_combine(rootsig_hash, x.AddressU);
+					wiHelper::hash_combine(rootsig_hash, x.AddressV);
+					wiHelper::hash_combine(rootsig_hash, x.AddressW);
+					wiHelper::hash_combine(rootsig_hash, x.BorderColor);
+					wiHelper::hash_combine(rootsig_hash, x.ComparisonFunc);
+					wiHelper::hash_combine(rootsig_hash, x.Filter);
+					wiHelper::hash_combine(rootsig_hash, x.MaxAnisotropy);
+					wiHelper::hash_combine(rootsig_hash, x.MaxLOD);
+					wiHelper::hash_combine(rootsig_hash, x.MinLOD);
+					wiHelper::hash_combine(rootsig_hash, x.MipLODBias);
+					wiHelper::hash_combine(rootsig_hash, x.RegisterSpace);
+					wiHelper::hash_combine(rootsig_hash, x.ShaderRegister);
+					wiHelper::hash_combine(rootsig_hash, x.ShaderVisibility);
+				}
+
+				rootsignature_cache_mutex.lock();
+				if (rootsignature_cache[rootsig_hash])
+				{
+					internal_state->rootSignature = rootsignature_cache[rootsig_hash];
+				}
+				else
+				{
+					D3D12_ROOT_SIGNATURE_DESC1 rootSigDesc = {};
+					rootSigDesc.NumStaticSamplers = (UINT)internal_state->staticsamplers.size();
+					rootSigDesc.pStaticSamplers = internal_state->staticsamplers.data();
+					rootSigDesc.NumParameters = (UINT)params.size();
+					rootSigDesc.pParameters = params.data();
+					rootSigDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+
+					D3D12_VERSIONED_ROOT_SIGNATURE_DESC versioned_rs = {};
+					versioned_rs.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
+					versioned_rs.Desc_1_1 = rootSigDesc;
+
+					ID3DBlob* rootSigBlob;
+					ID3DBlob* rootSigError;
+					hr = D3D12SerializeVersionedRootSignature(&versioned_rs, &rootSigBlob, &rootSigError);
+					if (FAILED(hr))
+					{
+						OutputDebugStringA((char*)rootSigError->GetBufferPointer());
+						assert(0);
+					}
+					hr = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&internal_state->rootSignature));
+					assert(SUCCEEDED(hr));
+					rootsignature_cache[rootsig_hash] = internal_state->rootSignature;
+				}
+				rootsignature_cache_mutex.unlock();
 			}
 		}
 
@@ -3534,36 +3598,6 @@ using namespace DX12_Internal;
 
 			hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&internal_state->resource));
 			assert(SUCCEEDED(hr));
-
-			internal_state->root_binding_hash = 0;
-			for (auto& x : internal_state->root_cbvs)
-			{
-				wiHelper::hash_combine(internal_state->root_binding_hash, x.Flags);
-				wiHelper::hash_combine(internal_state->root_binding_hash, x.ShaderRegister);
-				wiHelper::hash_combine(internal_state->root_binding_hash, x.RegisterSpace);
-			}
-
-			internal_state->resource_binding_hash = 0;
-			for (auto& x : internal_state->resources)
-			{
-				wiHelper::hash_combine(internal_state->resource_binding_hash, x.BaseShaderRegister);
-				wiHelper::hash_combine(internal_state->resource_binding_hash, x.NumDescriptors);
-				wiHelper::hash_combine(internal_state->resource_binding_hash, x.Flags);
-				wiHelper::hash_combine(internal_state->resource_binding_hash, x.OffsetInDescriptorsFromTableStart);
-				wiHelper::hash_combine(internal_state->resource_binding_hash, x.RangeType);
-				wiHelper::hash_combine(internal_state->resource_binding_hash, x.RegisterSpace);
-			}
-
-			internal_state->sampler_binding_hash = 0;
-			for (auto& x : internal_state->samplers)
-			{
-				wiHelper::hash_combine(internal_state->sampler_binding_hash, x.BaseShaderRegister);
-				wiHelper::hash_combine(internal_state->sampler_binding_hash, x.NumDescriptors);
-				wiHelper::hash_combine(internal_state->sampler_binding_hash, x.Flags);
-				wiHelper::hash_combine(internal_state->sampler_binding_hash, x.OffsetInDescriptorsFromTableStart);
-				wiHelper::hash_combine(internal_state->sampler_binding_hash, x.RangeType);
-				wiHelper::hash_combine(internal_state->sampler_binding_hash, x.RegisterSpace);
-			}
 		}
 
 		return SUCCEEDED(hr);
@@ -3778,28 +3812,6 @@ using namespace DX12_Internal;
 				param.DescriptorTable.pDescriptorRanges = internal_state->samplers.data();
 			}
 
-			D3D12_ROOT_SIGNATURE_DESC1 rootSigDesc = {};
-			rootSigDesc.NumStaticSamplers = (UINT)internal_state->staticsamplers.size();
-			rootSigDesc.pStaticSamplers = internal_state->staticsamplers.data();
-			rootSigDesc.NumParameters = (UINT)params.size();
-			rootSigDesc.pParameters = params.data();
-			rootSigDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-
-			D3D12_VERSIONED_ROOT_SIGNATURE_DESC versioned_rs = {};
-			versioned_rs.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
-			versioned_rs.Desc_1_1 = rootSigDesc;
-
-			ID3DBlob* rootSigBlob;
-			ID3DBlob* rootSigError;
-			HRESULT hr = D3D12SerializeVersionedRootSignature(&versioned_rs, &rootSigBlob, &rootSigError);
-			if (FAILED(hr))
-			{
-				OutputDebugStringA((char*)rootSigError->GetBufferPointer());
-				assert(0);
-			}
-			hr = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&internal_state->rootSignature));
-			assert(SUCCEEDED(hr));
-
 			internal_state->root_binding_hash = 0;
 			for (auto& x : internal_state->root_cbvs)
 			{
@@ -3829,6 +3841,60 @@ using namespace DX12_Internal;
 				wiHelper::hash_combine(internal_state->sampler_binding_hash, x.RangeType);
 				wiHelper::hash_combine(internal_state->sampler_binding_hash, x.RegisterSpace);
 			}
+
+			size_t rootsig_hash = 0;
+			wiHelper::hash_combine(rootsig_hash, internal_state->root_binding_hash);
+			wiHelper::hash_combine(rootsig_hash, internal_state->resource_binding_hash);
+			wiHelper::hash_combine(rootsig_hash, internal_state->sampler_binding_hash);
+			for (auto& x : internal_state->staticsamplers)
+			{
+				wiHelper::hash_combine(rootsig_hash, x.AddressU);
+				wiHelper::hash_combine(rootsig_hash, x.AddressV);
+				wiHelper::hash_combine(rootsig_hash, x.AddressW);
+				wiHelper::hash_combine(rootsig_hash, x.BorderColor);
+				wiHelper::hash_combine(rootsig_hash, x.ComparisonFunc);
+				wiHelper::hash_combine(rootsig_hash, x.Filter);
+				wiHelper::hash_combine(rootsig_hash, x.MaxAnisotropy);
+				wiHelper::hash_combine(rootsig_hash, x.MaxLOD);
+				wiHelper::hash_combine(rootsig_hash, x.MinLOD);
+				wiHelper::hash_combine(rootsig_hash, x.MipLODBias);
+				wiHelper::hash_combine(rootsig_hash, x.RegisterSpace);
+				wiHelper::hash_combine(rootsig_hash, x.ShaderRegister);
+				wiHelper::hash_combine(rootsig_hash, x.ShaderVisibility);
+			}
+
+			HRESULT hr = S_OK;
+
+			rootsignature_cache_mutex.lock();
+			if (rootsignature_cache[rootsig_hash])
+			{
+				internal_state->rootSignature = rootsignature_cache[rootsig_hash];
+			}
+			else
+			{
+				D3D12_ROOT_SIGNATURE_DESC1 rootSigDesc = {};
+				rootSigDesc.NumStaticSamplers = (UINT)internal_state->staticsamplers.size();
+				rootSigDesc.pStaticSamplers = internal_state->staticsamplers.data();
+				rootSigDesc.NumParameters = (UINT)params.size();
+				rootSigDesc.pParameters = params.data();
+				rootSigDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+				D3D12_VERSIONED_ROOT_SIGNATURE_DESC versioned_rs = {};
+				versioned_rs.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
+				versioned_rs.Desc_1_1 = rootSigDesc;
+
+				ID3DBlob* rootSigBlob;
+				ID3DBlob* rootSigError;
+				hr = D3D12SerializeVersionedRootSignature(&versioned_rs, &rootSigBlob, &rootSigError);
+				if (FAILED(hr))
+				{
+					OutputDebugStringA((char*)rootSigError->GetBufferPointer());
+					assert(0);
+				}
+				hr = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&internal_state->rootSignature));
+				assert(SUCCEEDED(hr));
+			}
+			rootsignature_cache_mutex.unlock();
 
 			return SUCCEEDED(hr);
 		}
@@ -5508,6 +5574,12 @@ using namespace DX12_Internal;
 		HRESULT hr = swapChain->Present(VSYNC, 0);
 		assert(SUCCEEDED(hr));
 		backbuffer_index = (backbuffer_index + 1) % BACKBUFFER_COUNT;
+
+#if 0
+		D3D12MA::Stats stats = {};
+		allocationhandler->allocator->CalculateStats(&stats);
+		std::cout << "D3D12MA Stats: " << stats.Total.UsedBytes;
+#endif
 	}
 
 	CommandList GraphicsDevice_DX12::BeginCommandList()
@@ -5523,14 +5595,14 @@ using namespace DX12_Internal;
 			{
 				hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&frames[fr].commandAllocators[cmd]));
 				hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[fr].commandAllocators[cmd].Get(), nullptr, IID_PPV_ARGS(&frames[fr].commandLists[cmd]));
-				hr = static_cast<ID3D12GraphicsCommandList5*>(frames[fr].commandLists[cmd].Get())->Close();
+				hr = frames[fr].commandLists[cmd]->Close();
 
 				frames[fr].descriptors[cmd].init(this);
 				frames[fr].resourceBuffer[cmd].init(this, 1024 * 1024); // 1 MB starting size
 
 				std::wstringstream wss;
 				wss << "cmd" << cmd;
-				frames[fr].commandLists[cmd].Get()->SetName(wss.str().c_str());
+				frames[fr].commandLists[cmd]->SetName(wss.str().c_str());
 			}
 		}
 
@@ -5675,6 +5747,14 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::ClearPipelineStateCache()
 	{
 		allocationhandler->destroylocker.lock();
+
+		rootsignature_cache_mutex.lock();
+		for (auto& x : rootsignature_cache)
+		{
+			if (x.second) allocationhandler->destroyer_rootSignatures.push_back(std::make_pair(x.second, FRAMECOUNT));
+		}
+		rootsignature_cache_mutex.unlock();
+
 		for (auto& x : pipelines_global)
 		{
 			allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
@@ -5928,15 +6008,12 @@ using namespace DX12_Internal;
 		}
 		prev_pipeline_hash[cmd] = pipeline_hash;
 
-		if (pso->desc.rootSignature == nullptr)
+		auto internal_state = to_internal(pso);
+
+		if (active_rootsig_graphics[cmd] != internal_state->rootSignature.Get())
 		{
-			active_rootsig_graphics[cmd] = nullptr;
-			GetDirectCommandList(cmd)->SetGraphicsRootSignature(to_internal(pso)->rootSignature.Get());
-		}
-		else if (active_pso[cmd] != pso && active_rootsig_graphics[cmd] != pso->desc.rootSignature)
-		{
-			active_rootsig_graphics[cmd] = pso->desc.rootSignature;
-			GetDirectCommandList(cmd)->SetGraphicsRootSignature(to_internal(pso->desc.rootSignature)->resource.Get());
+			active_rootsig_graphics[cmd] = internal_state->rootSignature.Get();
+			GetDirectCommandList(cmd)->SetGraphicsRootSignature(internal_state->rootSignature.Get());
 		}
 
 		if (active_pso[cmd] == nullptr)
@@ -5947,7 +6024,6 @@ using namespace DX12_Internal;
 		}
 		else
 		{
-			auto internal_state = to_internal(pso);
 			auto active_internal = to_internal(active_pso[cmd]);
 			if (internal_state->root_binding_hash != active_internal->root_binding_hash)
 			{
@@ -6002,15 +6078,10 @@ using namespace DX12_Internal;
 			auto internal_state = to_internal(cs);
 			GetDirectCommandList(cmd)->SetPipelineState(internal_state->resource.Get());
 
-			if (cs->rootSignature == nullptr)
+			if (active_rootsig_compute[cmd] != internal_state->rootSignature.Get())
 			{
-				active_rootsig_compute[cmd] = nullptr;
+				active_rootsig_compute[cmd] = internal_state->rootSignature.Get();
 				GetDirectCommandList(cmd)->SetComputeRootSignature(internal_state->rootSignature.Get());
-			}
-			else if (active_rootsig_compute[cmd] != cs->rootSignature)
-			{
-				active_rootsig_compute[cmd] = cs->rootSignature;
-				GetDirectCommandList(cmd)->SetComputeRootSignature(to_internal(cs->rootSignature)->resource.Get());
 			}
 		}
 	}
@@ -6379,9 +6450,9 @@ using namespace DX12_Internal;
 				active_rootsig_compute[cmd] = nullptr;
 				GetDirectCommandList(cmd)->SetComputeRootSignature(to_internal(active_cs[cmd])->rootSignature.Get());
 			}
-			else if (active_rootsig_compute[cmd] != rtpso->desc.rootSignature)
+			else if (active_rootsig_compute[cmd] != to_internal(rtpso->desc.rootSignature)->resource.Get())
 			{
-				active_rootsig_compute[cmd] = rtpso->desc.rootSignature;
+				active_rootsig_compute[cmd] = to_internal(rtpso->desc.rootSignature)->resource.Get();
 				GetDirectCommandList(cmd)->SetComputeRootSignature(to_internal(rtpso->desc.rootSignature)->resource.Get());
 			}
 		}

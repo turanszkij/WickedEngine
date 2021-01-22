@@ -101,7 +101,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     // Everthing in view space:
 	const float4 g1 = texture_gbuffer1.SampleLevel(sampler_linear_clamp, prevUV, 0);
 	const float3 P = reconstructPosition(uv, depth, g_xCamera_InvP);
-	const float3 N = mul((float3x3) g_xCamera_View, g1.rgb * 2 - 1).xyz;
+	const float3 N = normalize(mul((float3x3)g_xCamera_View, g1.rgb * 2 - 1).xyz);
 	const float3 V = normalize(-P);
 	const float NdotV = saturate(dot(N, V));
     

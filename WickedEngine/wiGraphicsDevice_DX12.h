@@ -89,7 +89,7 @@ namespace wiGraphics
 			struct CopyCMD
 			{
 				Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator;
-				Microsoft::WRL::ComPtr<ID3D12CommandList> commandList;
+				Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList6> commandList;
 				uint64_t target = 0;
 				GPUBuffer uploadbuffer;
 			};
@@ -102,7 +102,7 @@ namespace wiGraphics
 
 				D3D12_COMMAND_QUEUE_DESC copyQueueDesc = {};
 				copyQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
-				copyQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_HIGH;
+				copyQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
 				copyQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 				copyQueueDesc.NodeMask = 0;
 				HRESULT hr = device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&queue));
@@ -213,7 +213,7 @@ namespace wiGraphics
 		struct FrameResources
 		{
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[COMMANDLIST_COUNT];
-			Microsoft::WRL::ComPtr<ID3D12CommandList> commandLists[COMMANDLIST_COUNT];
+			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList6> commandLists[COMMANDLIST_COUNT];
 
 			struct DescriptorTableFrameAllocator
 			{
@@ -266,11 +266,14 @@ namespace wiGraphics
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
-		inline ID3D12GraphicsCommandList6* GetDirectCommandList(CommandList cmd) { return static_cast<ID3D12GraphicsCommandList6*>(GetFrameResources().commandLists[cmd].Get()); }
+		inline ID3D12GraphicsCommandList6* GetDirectCommandList(CommandList cmd) { return GetFrameResources().commandLists[cmd].Get(); }
 
 		Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain;
 
 		PRIMITIVETOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
+
+		std::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12RootSignature>> rootsignature_cache;
+		std::mutex rootsignature_cache_mutex;
 
 		std::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_global;
 		std::vector<std::pair<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker[COMMANDLIST_COUNT];
@@ -278,8 +281,8 @@ namespace wiGraphics
 		const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
 		const Shader* active_cs[COMMANDLIST_COUNT] = {};
 		const RaytracingPipelineState* active_rt[COMMANDLIST_COUNT] = {};
-		const RootSignature* active_rootsig_graphics[COMMANDLIST_COUNT] = {};
-		const RootSignature* active_rootsig_compute[COMMANDLIST_COUNT] = {};
+		const ID3D12RootSignature* active_rootsig_graphics[COMMANDLIST_COUNT] = {};
+		const ID3D12RootSignature* active_rootsig_compute[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 		SHADING_RATE prev_shadingrate[COMMANDLIST_COUNT] = {};
 

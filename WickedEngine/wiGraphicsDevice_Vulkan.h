@@ -41,8 +41,15 @@ namespace wiGraphics
 		int graphicsFamily = -1;
 		int presentFamily = -1;
 		int copyFamily = -1;
+		int computeFamily = -1;
 		VkQueue graphicsQueue = VK_NULL_HANDLE;
 		VkQueue presentQueue = VK_NULL_HANDLE;
+		VkQueue computeQueue = VK_NULL_HANDLE;
+
+		VkQueue copyQueue = VK_NULL_HANDLE;
+		std::mutex copyQueueLock;
+		bool copyQueueUse = false;
+		VkSemaphore copySemaphore = VK_NULL_HANDLE;
 
 		VkPhysicalDeviceProperties2 device_properties = {};
 		VkPhysicalDeviceVulkan11Properties device_properties_1_1 = {};
@@ -99,11 +106,6 @@ namespace wiGraphics
 		uint64_t timestamp_frequency = 0;
 
 		void CreateBackBufferResources();
-
-		VkQueue copyQueue = VK_NULL_HANDLE;
-		std::mutex copyQueueLock;
-		bool copyQueueUse = false;
-		VkSemaphore copySemaphore = VK_NULL_HANDLE;
 
 		struct FrameResources
 		{
@@ -171,6 +173,14 @@ namespace wiGraphics
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
 		inline VkCommandBuffer GetDirectCommandList(CommandList cmd) { return GetFrameResources().commandBuffers[cmd]; }
+
+		struct PSOLayout
+		{
+			VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+			VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
+		};
+		std::unordered_map<size_t, PSOLayout> pso_layout_cache;
+		std::mutex pso_layout_cache_mutex;
 
 		std::unordered_map<size_t, VkPipeline> pipelines_global;
 		std::vector<std::pair<size_t, VkPipeline>> pipelines_worker[COMMANDLIST_COUNT];

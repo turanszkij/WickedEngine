@@ -35,7 +35,11 @@ void RTReflection_Raygen()
 {
 	uint2 DTid = DispatchRaysIndex().xy;
 	const float2 uv = ((float2)DTid.xy + 0.5) / (float2)DispatchRaysDimensions();
-	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
+	const float depth00 = texture_depth[DispatchRaysIndex().xy * 2 + uint2(0, 0)];
+	const float depth10 = texture_depth[DispatchRaysIndex().xy * 2 + uint2(1, 0)];
+	const float depth01 = texture_depth[DispatchRaysIndex().xy * 2 + uint2(0, 1)];
+	const float depth11 = texture_depth[DispatchRaysIndex().xy * 2 + uint2(1, 1)];
+	const float depth = max(depth00, max(depth10, max(depth01, depth11)));
 	if (depth == 0)
 		return;
 
@@ -44,7 +48,7 @@ void RTReflection_Raygen()
 
 	const float4 g1 = texture_gbuffer1.SampleLevel(sampler_linear_clamp, prevUV, 0);
 	const float3 P = reconstructPosition(uv, depth);
-	const float3 N = g1.rgb * 2 - 1;
+	const float3 N = normalize(g1.rgb * 2 - 1);
 	const float3 V = normalize(g_xCamera_CamPos - P);
 	const float roughness = g1.a;
 
@@ -86,7 +90,7 @@ void RTReflection_Raygen()
 	RayDesc ray;
 	ray.TMin = 0.01;
 	ray.TMax = rtreflection_range;
-	ray.Origin = P + N * 0.01;
+	ray.Origin = trace_bias_position(P, N);
 	ray.Direction = normalize(R);
 
 	RayPayload payload;
