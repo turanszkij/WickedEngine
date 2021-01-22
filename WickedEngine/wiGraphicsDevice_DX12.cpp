@@ -5753,6 +5753,7 @@ using namespace DX12_Internal;
 		{
 			if (x.second) allocationhandler->destroyer_rootSignatures.push_back(std::make_pair(x.second, FRAMECOUNT));
 		}
+		rootsignature_cache.clear();
 		rootsignature_cache_mutex.unlock();
 
 		for (auto& x : pipelines_global)
