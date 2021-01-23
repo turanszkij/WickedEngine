@@ -3,7 +3,6 @@
 
 TEXTURE2D(texture_input, float4, TEXSLOT_ONDEMAND0);
 TEXTURE2D(texture_reproject, float4, TEXSLOT_ONDEMAND1);
-TEXTURE2D(texture_weather, float4, TEXSLOT_ONDEMAND2);
 
 RWTEXTURE2D(output, float4, 0);
 

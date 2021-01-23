@@ -1293,12 +1293,9 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 	{
 		if (getVolumetricCloudsEnabled())
 		{
-			const Texture* lightShaftTemp = nullptr;
-
 			wiRenderer::Postprocess_VolumetricClouds(
 				*rt_read,
 				*rt_write,
-				*lightShaftTemp,
 				rtLinearDepth,
 				depthBuffer_Copy,
 				cmd
