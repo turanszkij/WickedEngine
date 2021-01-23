@@ -51,15 +51,15 @@ namespace wiGraphics
 		bool copyQueueUse = false;
 		VkSemaphore copySemaphore = VK_NULL_HANDLE;
 
-		VkPhysicalDeviceProperties2 device_properties = {};
-		VkPhysicalDeviceVulkan11Properties device_properties_1_1 = {};
-		VkPhysicalDeviceVulkan12Properties device_properties_1_2 = {};
+		VkPhysicalDeviceProperties2 properties2 = {};
+		VkPhysicalDeviceVulkan11Properties properties_1_1 = {};
+		VkPhysicalDeviceVulkan12Properties properties_1_2 = {};
 		VkPhysicalDeviceAccelerationStructurePropertiesKHR acceleration_structure_properties = {};
 		VkPhysicalDeviceRayTracingPipelinePropertiesKHR raytracing_properties = {};
 		VkPhysicalDeviceFragmentShadingRatePropertiesKHR fragment_shading_rate_properties = {};
 		VkPhysicalDeviceMeshShaderPropertiesNV mesh_shader_properties = {};
 
-		VkPhysicalDeviceFeatures2 device_features2 = {};
+		VkPhysicalDeviceFeatures2 features2 = {};
 		VkPhysicalDeviceVulkan11Features features_1_1 = {};
 		VkPhysicalDeviceVulkan12Features features_1_2 = {};
 		VkPhysicalDeviceAccelerationStructureFeaturesKHR acceleration_structure_features = {};

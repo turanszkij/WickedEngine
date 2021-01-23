@@ -2185,26 +2185,6 @@ using namespace Vulkan_Internal;
 			res = vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 			assert(res == VK_SUCCESS);
 
-
-			device_features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-			features_1_1.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
-			features_1_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-
-			device_features2.pNext = &features_1_1;
-			features_1_1.pNext = &features_1_2;
-
-			void** features_chain = &features_1_2.pNext;
-
-
-			device_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-			device_properties_1_1.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
-			device_properties_1_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES;
-
-			device_properties.pNext = &device_properties_1_1;
-			device_properties_1_1.pNext = &device_properties_1_2;
-
-			void** properties_chain = &device_properties_1_2.pNext;
-
 			const std::vector<const char*> required_deviceExtensions = {
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 				VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME,
@@ -2261,6 +2241,29 @@ using namespace Vulkan_Internal;
 
 				if (suitable) 
 				{
+					features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+					features_1_1.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+					features_1_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+					features2.pNext = &features_1_1;
+					features_1_1.pNext = &features_1_2;
+					void** features_chain = &features_1_2.pNext;
+					acceleration_structure_features = {};
+					raytracing_features = {};
+					raytracing_query_features = {};
+					fragment_shading_rate_features = {};
+					mesh_shader_features = {};
+
+					properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+					properties_1_1.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
+					properties_1_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES;
+					properties2.pNext = &properties_1_1;
+					properties_1_1.pNext = &properties_1_2;
+					void** properties_chain = &properties_1_2.pNext;
+					acceleration_structure_properties = {};
+					raytracing_properties = {};
+					fragment_shading_rate_properties = {};
+					mesh_shader_properties = {};
+
 					enabled_deviceExtensions = required_deviceExtensions;
 
 					if (checkExtensionSupport(VK_KHR_SPIRV_1_4_EXTENSION_NAME, available_deviceExtensions))
@@ -2323,8 +2326,9 @@ using namespace Vulkan_Internal;
 						properties_chain = &mesh_shader_properties.pNext;
 					}
 
-					vkGetPhysicalDeviceProperties2(dev, &device_properties);
-					bool discrete = device_properties.properties.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+					vkGetPhysicalDeviceProperties2(dev, &properties2);
+
+					bool discrete = properties2.properties.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
 					if (discrete || physicalDevice == VK_NULL_HANDLE)
 					{
 						physicalDevice = dev;
@@ -2336,27 +2340,28 @@ using namespace Vulkan_Internal;
 				}
 			}
 
-			if (physicalDevice == VK_NULL_HANDLE) {
+			if (physicalDevice == VK_NULL_HANDLE)
+			{
 				wiHelper::messageBox("failed to find a suitable GPU!");
 				assert(0);
 			}
 
-			assert(device_properties.properties.limits.timestampComputeAndGraphics == VK_TRUE);
+			assert(properties2.properties.limits.timestampComputeAndGraphics == VK_TRUE);
 
-			vkGetPhysicalDeviceFeatures2(physicalDevice, &device_features2);
+			vkGetPhysicalDeviceFeatures2(physicalDevice, &features2);
 
-			assert(device_features2.features.imageCubeArray == VK_TRUE);
-			assert(device_features2.features.independentBlend == VK_TRUE);
-			assert(device_features2.features.geometryShader == VK_TRUE);
-			assert(device_features2.features.samplerAnisotropy == VK_TRUE);
-			assert(device_features2.features.shaderClipDistance == VK_TRUE);
-			assert(device_features2.features.textureCompressionBC == VK_TRUE);
-			assert(device_features2.features.occlusionQueryPrecise == VK_TRUE);
-			if (device_features2.features.tessellationShader == VK_TRUE)
+			assert(features2.features.imageCubeArray == VK_TRUE);
+			assert(features2.features.independentBlend == VK_TRUE);
+			assert(features2.features.geometryShader == VK_TRUE);
+			assert(features2.features.samplerAnisotropy == VK_TRUE);
+			assert(features2.features.shaderClipDistance == VK_TRUE);
+			assert(features2.features.textureCompressionBC == VK_TRUE);
+			assert(features2.features.occlusionQueryPrecise == VK_TRUE);
+			if (features2.features.tessellationShader == VK_TRUE)
 			{
 				capabilities |= GRAPHICSDEVICE_CAPABILITY_TESSELLATION;
 			}
-			if (device_features2.features.shaderStorageImageExtendedFormats == VK_TRUE)
+			if (features2.features.shaderStorageImageExtendedFormats == VK_TRUE)
 			{
 				capabilities |= GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_COMMON;
 			}
@@ -2480,7 +2485,7 @@ using namespace Vulkan_Internal;
 			createInfo.pQueueCreateInfos = queueCreateInfos.data();
 
 			createInfo.pEnabledFeatures = nullptr;
-			createInfo.pNext = &device_features2;
+			createInfo.pNext = &features2;
 
 			createInfo.enabledExtensionCount = static_cast<uint32_t>(enabled_deviceExtensions.size());
 			createInfo.ppEnabledExtensionNames = enabled_deviceExtensions.data();
@@ -2768,7 +2773,7 @@ using namespace Vulkan_Internal;
 		}
 
 		// GPU Queries:
-		timestamp_frequency = uint64_t(1.0 / double(device_properties.properties.limits.timestampPeriod) * 1000 * 1000 * 1000);
+		timestamp_frequency = uint64_t(1.0 / double(properties2.properties.limits.timestampPeriod) * 1000 * 1000 * 1000);
 		allocationhandler->queries_occlusion.init(allocationhandler.get(), VK_QUERY_TYPE_OCCLUSION);
 		allocationhandler->queries_timestamp.init(allocationhandler.get(), VK_QUERY_TYPE_TIMESTAMP);
 
@@ -3279,7 +3284,7 @@ using namespace Vulkan_Internal;
 				}
 				if (pBuffer->desc.BindFlags & BIND_VERTEX_BUFFER)
 				{
-					barrier.dstAccessMask |= VK_ACCESS_INDEX_READ_BIT;
+					barrier.dstAccessMask |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
 				}
 				if (pBuffer->desc.BindFlags & BIND_INDEX_BUFFER)
 				{
@@ -4464,9 +4469,9 @@ using namespace Vulkan_Internal;
 		else
 		{
 			framebufferInfo.pAttachments = nullptr;
-			framebufferInfo.width = device_properties.properties.limits.maxFramebufferWidth;
-			framebufferInfo.height = device_properties.properties.limits.maxFramebufferHeight;
-			framebufferInfo.layers = device_properties.properties.limits.maxFramebufferLayers;
+			framebufferInfo.width = properties2.properties.limits.maxFramebufferWidth;
+			framebufferInfo.height = properties2.properties.limits.maxFramebufferHeight;
+			framebufferInfo.layers = properties2.properties.limits.maxFramebufferLayers;
 		}
 
 		res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &internal_state->framebuffer);
@@ -5273,7 +5278,7 @@ using namespace Vulkan_Internal;
 			srv_desc.buffer = internal_state->resource;
 			srv_desc.flags = 0;
 			srv_desc.format = _ConvertFormat(desc.Format);
-			srv_desc.offset = Align(offset, device_properties.properties.limits.minTexelBufferOffsetAlignment); // damn, if this needs alignment, that could break a lot of things! (index buffer, index offset?)
+			srv_desc.offset = Align(offset, properties2.properties.limits.minTexelBufferOffsetAlignment); // damn, if this needs alignment, that could break a lot of things! (index buffer, index offset?)
 			srv_desc.range = std::min(size, (uint64_t)desc.ByteWidth - srv_desc.offset);
 
 			VkBufferView view;
@@ -6976,7 +6981,7 @@ using namespace Vulkan_Internal;
 			switch (rootsig_internal->last_tables[cmd][remap.space]->resources[remap.rangeIndex].binding)
 			{
 			case ROOT_CONSTANTBUFFER:
-				bufferInfo.range = std::min(buffer->desc.ByteWidth, device_properties.properties.limits.maxUniformBufferRange);
+				bufferInfo.range = std::min(buffer->desc.ByteWidth, properties2.properties.limits.maxUniformBufferRange);
 				write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 				break;
 			case ROOT_RAWBUFFER:
