@@ -395,7 +395,6 @@ namespace wiRenderer
 	void Postprocess_VolumetricClouds(
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& output,
-		const wiGraphics::Texture& lightshaftoutput,
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& depthbuffer,
 		wiGraphics::CommandList cmd
