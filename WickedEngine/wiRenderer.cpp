@@ -11691,9 +11691,9 @@ void Postprocess_DepthPyramid(
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd, 0);
+	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd, 0); // full res native depth
 
-	device->BindUAV(CS, &lineardepth, 0, cmd, 0); // linear depth full res
+	device->BindUAV(CS, &lineardepth, 0, cmd, 0); // full res linear depth
 	device->BindUAV(CS, &lineardepth, 1, cmd, 1); // 2x downsample linear depth
 	device->BindUAV(CS, &lineardepth, 2, cmd, 2); // 4x downsample linear depth
 	device->BindUAV(CS, &lineardepth, 3, cmd, 3); // 8x downsample linear depth

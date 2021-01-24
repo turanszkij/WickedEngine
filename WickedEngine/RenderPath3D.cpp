@@ -373,7 +373,7 @@ void RenderPath3D::ResizeBuffers()
 				&depthBuffer_Main,
 				RenderPassAttachment::LOADOP_LOAD,
 				RenderPassAttachment::STOREOP_STORE,
-				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
+				IMAGE_LAYOUT_SHADER_RESOURCE,
 				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
 				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
 			)
@@ -675,12 +675,6 @@ void RenderPath3D::Render() const
 		else
 		{
 			wiRenderer::CopyTexture2D(depthBuffer_Copy, 0, 0, 0, depthBuffer_Main, 0, cmd);
-		}
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&depthBuffer_Main, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
 		wiRenderer::Postprocess_DepthPyramid(depthBuffer_Copy, rtLinearDepth, cmd);
