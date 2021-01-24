@@ -11668,37 +11668,40 @@ void Postprocess_TemporalAA(
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
 }
-void Postprocess_Lineardepth(
-	const Texture& input,
-	const Texture& output,
+void Postprocess_DepthPyramid(
+	const Texture& depthbuffer,
+	const Texture& lineardepth,
 	CommandList cmd
 )
 {
-	device->EventBegin("Postprocess_Lineardepth", cmd);
-	auto range = wiProfiler::BeginRangeGPU("Linear Depth Pyramid", cmd);
+	device->EventBegin("Postprocess_DepthPyramid", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Depth Pyramid", cmd);
 
-	const TextureDesc& desc = output.GetDesc();
+	const TextureDesc& desc = lineardepth.GetDesc();
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width / 2;  // downsample res
 	cb.xPPResolution.y = desc.Height / 2; // downsample res
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.xPPParams0.x = (float)input.GetDesc().Width;
-	cb.xPPParams0.y = (float)input.GetDesc().Height;
+	cb.xPPParams0.x = (float)depthbuffer.GetDesc().Width;
+	cb.xPPParams0.y = (float)depthbuffer.GetDesc().Height;
 	cb.xPPParams0.z = 1.0f / cb.xPPParams0.x;
 	cb.xPPParams0.w = 1.0f / cb.xPPParams0.y;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd, 0);
 
-	device->BindUAV(CS, &output, 0, cmd, 0);
-	device->BindUAV(CS, &output, 1, cmd, 1);
-	device->BindUAV(CS, &output, 2, cmd, 2);
-	device->BindUAV(CS, &output, 3, cmd, 3);
-	device->BindUAV(CS, &output, 4, cmd, 4);
-	device->BindUAV(CS, &output, 5, cmd, 5);
+	device->BindUAV(CS, &lineardepth, 0, cmd, 0); // linear depth full res
+	device->BindUAV(CS, &lineardepth, 1, cmd, 1); // 2x downsample linear depth
+	device->BindUAV(CS, &lineardepth, 2, cmd, 2); // 4x downsample linear depth
+	device->BindUAV(CS, &lineardepth, 3, cmd, 3); // 8x downsample linear depth
+	device->BindUAV(CS, &lineardepth, 4, cmd, 4); // 16x downsample linear depth
+	device->BindUAV(CS, &lineardepth, 5, cmd, 5); // 32x downsample linear depth
+
+	device->BindUAV(CS, &depthbuffer, 6, cmd, 1); // 2x downsample native depth
+	device->BindUAV(CS, &depthbuffer, 7, cmd, 2); // 4x downsample native depth
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_LINEARDEPTH], cmd);
 	device->Dispatch(
@@ -11715,7 +11718,7 @@ void Postprocess_Lineardepth(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->UnbindUAVs(0, 6, cmd);
+	device->UnbindUAVs(0, 8, cmd);
 
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -12024,6 +12027,7 @@ void Postprocess_NormalsFromDepth(
 	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	cb.xPPParams0.x = floorf(std::max(1.0f, log2f(std::max((float)desc.Width / (float)depthbuffer.GetDesc().Width, (float)desc.Height / (float)depthbuffer.GetDesc().Height))));
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 

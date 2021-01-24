@@ -413,9 +413,9 @@ namespace wiRenderer
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
-	void Postprocess_Lineardepth(
-		const wiGraphics::Texture& input,
-		const wiGraphics::Texture& output,
+	void Postprocess_DepthPyramid(
+		const wiGraphics::Texture& depthbuffer,
+		const wiGraphics::Texture& lineardepth,
 		wiGraphics::CommandList cmd
 	);
 	void Postprocess_Sharpen(

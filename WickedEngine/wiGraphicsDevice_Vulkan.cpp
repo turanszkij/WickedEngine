@@ -6551,7 +6551,7 @@ using namespace Vulkan_Internal;
 			}
 			if (buffer->desc.BindFlags & BIND_VERTEX_BUFFER)
 			{
-				barrier.srcAccessMask |= VK_ACCESS_INDEX_READ_BIT;
+				barrier.srcAccessMask |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
 				stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
 			}
 			if (buffer->desc.BindFlags & BIND_INDEX_BUFFER)

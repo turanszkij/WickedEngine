@@ -14,12 +14,14 @@ groupshared float tile_Z[TILE_SIZE * TILE_SIZE];
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
+	const float depth_mip = xPPParams0.x;
+
 	const int2 tile_upperleft = Gid.xy * POSTPROCESS_BLOCKSIZE - TILE_BORDER;
 	for (uint t = groupIndex; t < TILE_SIZE * TILE_SIZE; t += POSTPROCESS_BLOCKSIZE * POSTPROCESS_BLOCKSIZE)
 	{
 		const uint2 pixel = tile_upperleft + unflatten2D(t, TILE_SIZE);
 		const float2 uv = (pixel + 0.5f) * xPPResolution_rcp;
-		const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
+		const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, depth_mip);
 		const float3 position = reconstructPosition(uv, depth);
 		tile_XY[t] = position.xy;
 		tile_Z[t] = position.z;

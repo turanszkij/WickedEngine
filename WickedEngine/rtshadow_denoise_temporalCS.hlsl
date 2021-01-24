@@ -77,7 +77,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	}
 
 	// Disocclusion fallback:
-	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
+	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 1);
 	float depth_current = getLinearDepth(depth);
 	float depth_history = getLinearDepth(texture_depth_history.SampleLevel(sampler_point_clamp, prevUV, 0));
 	if (abs(depth_current - depth_history) > 1)

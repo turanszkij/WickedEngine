@@ -287,35 +287,33 @@ void RenderPath3D::ResizeBuffers()
 
 		desc.SampleCount = getMSAASampleCount();
 		desc.layout = IMAGE_LAYOUT_DEPTHSTENCIL_READONLY;
-		if (getMSAASampleCount() > 1)
-		{
-			desc.Format = FORMAT_R32G8X24_TYPELESS;
-			desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
-		}
-		else
-		{
-			desc.Format = FORMAT_D32_FLOAT_S8X24_UINT;
-			desc.BindFlags = BIND_DEPTH_STENCIL;
-		}
+		desc.Format = FORMAT_R32G8X24_TYPELESS;
+		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 		device->CreateTexture(&desc, nullptr, &depthBuffer_Main);
 		device->SetName(&depthBuffer_Main, "depthBuffer_Main");
 
-		if (getMSAASampleCount() > 1)
-		{
-			desc.Format = FORMAT_R32_FLOAT;
-			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		}
-		else
-		{
-			desc.Format = FORMAT_R32G8X24_TYPELESS;
-			desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
-		}
+		desc.layout = IMAGE_LAYOUT_GENERAL;
+		desc.Format = FORMAT_R32_FLOAT;
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.SampleCount = 1;
-		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
+		desc.MipLevels = 3;
 		device->CreateTexture(&desc, nullptr, &depthBuffer_Copy);
 		device->SetName(&depthBuffer_Copy, "depthBuffer_Copy");
 		device->CreateTexture(&desc, nullptr, &depthBuffer_Copy1);
 		device->SetName(&depthBuffer_Copy1, "depthBuffer_Copy1");
+
+		for (uint32_t i = 0; i < depthBuffer_Copy.desc.MipLevels; ++i)
+		{
+			int subresource = 0;
+			subresource = device->CreateSubresource(&depthBuffer_Copy, SRV, 0, 1, i, 1);
+			assert(subresource == i);
+			subresource = device->CreateSubresource(&depthBuffer_Copy, UAV, 0, 1, i, 1);
+			assert(subresource == i);
+			subresource = device->CreateSubresource(&depthBuffer_Copy1, SRV, 0, 1, i, 1);
+			assert(subresource == i);
+			subresource = device->CreateSubresource(&depthBuffer_Copy1, UAV, 0, 1, i, 1);
+			assert(subresource == i);
+		}
 	}
 	{
 		TextureDesc desc;
@@ -357,7 +355,7 @@ void RenderPath3D::ResizeBuffers()
 				RenderPassAttachment::STOREOP_STORE,
 				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
 				IMAGE_LAYOUT_DEPTHSTENCIL,
-				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+				IMAGE_LAYOUT_SHADER_RESOURCE
 			)
 		);
 		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtGbuffer[GBUFFER_VELOCITY], RenderPassAttachment::LOADOP_CLEAR));
@@ -667,49 +665,25 @@ void RenderPath3D::Render() const
 
 		device->RenderPassEnd(cmd);
 
-		// Make a readable copy for depth buffer:
+		// Create the top mip of depth pyramid from main depth buffer:
 		if (getMSAASampleCount() > 1)
 		{
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&depthBuffer_Main, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_SHADER_RESOURCE),
-					GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_UNORDERED_ACCESS)
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
 
 			wiRenderer::ResolveMSAADepthBuffer(depthBuffer_Copy, depthBuffer_Main, cmd);
 
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&depthBuffer_Main, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY),
-					GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADER_RESOURCE)
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
 		}
 		else
 		{
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&depthBuffer_Main, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, IMAGE_LAYOUT_COPY_SRC),
-					GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_COPY_DST)
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-
-			device->CopyResource(&depthBuffer_Copy, &depthBuffer_Main, cmd);
-
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&depthBuffer_Main, IMAGE_LAYOUT_COPY_SRC, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY),
-					GPUBarrier::Image(&depthBuffer_Copy, IMAGE_LAYOUT_COPY_DST, IMAGE_LAYOUT_SHADER_RESOURCE)
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
+			wiRenderer::CopyTexture2D(depthBuffer_Copy, 0, 0, 0, depthBuffer_Main, 0, cmd);
+		}
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&depthBuffer_Main, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_DEPTHSTENCIL_READONLY),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		wiRenderer::Postprocess_Lineardepth(depthBuffer_Copy, rtLinearDepth, cmd);
+		wiRenderer::Postprocess_DepthPyramid(depthBuffer_Copy, rtLinearDepth, cmd);
 
 		RenderAO(cmd);
 
