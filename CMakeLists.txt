@@ -10,16 +10,6 @@ if (WIN32)
     # add_compile_definitions(_WIN32=1) this is a given from the compiler
 elseif(UNIX)
     set(PLATFORM "SDL2")
-
-    find_package(PkgConfig)
-    if (${PKG_CONFIG_FOUND})
-        pkg_check_modules(SDL2 sdl2)
-    endif()
-
-    if (NOT DEFINED SDL2_FOUND)
-       	find_package(SDL2 REQUIRED)
-    endif()
-
     add_compile_definitions(SDL2=1)
 endif()
 

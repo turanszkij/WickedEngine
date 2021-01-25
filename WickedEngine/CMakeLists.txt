@@ -1,6 +1,20 @@
 find_package(Vulkan REQUIRED)
 find_package(SDL2 REQUIRED)
 
+if(NOT TARGET SDL2::SDL2)
+	# using old SDL2 cmake, lets create a SDL2 target ourselves
+	find_library(SDL2_LIBRARY_FILE_LOCATION SDL2 REQUIRED)
+
+	add_library(SDL2::SDL2 SHARED IMPORTED)
+	set_target_properties(SDL2::SDL2 PROPERTIES
+		INTERFACE_INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIRS}
+		INTERFACE_LINK_LIBRARIES ${SDL2_LIBRARIES}
+		IMPORTED_LOCATION ${SDL2_LIBRARY_FILE_LOCATION}
+	)
+
+	unset(SDL2_LIBRARY_FILE_LOCATION)
+endif()
+
 add_subdirectory(BULLET)
 add_subdirectory(LUA)
 add_subdirectory(Utility)
@@ -80,13 +94,12 @@ add_library(WickedEngine STATIC
 )
 
 target_include_directories(WickedEngine PUBLIC
-	${SDL2_INCLUDE_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_link_libraries(WickedEngine PUBLIC
 	Vulkan::Vulkan
-	${SDL2_LIBRARIES}
+	SDL2::SDL2
 	Bullet
 	LUA
 	Utility
