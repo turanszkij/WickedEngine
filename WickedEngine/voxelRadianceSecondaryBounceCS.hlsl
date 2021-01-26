@@ -8,10 +8,10 @@ RWTEXTURE3D(output, float4, 0);
 
 
 
-[numthreads(64, 1, 1)]
+[numthreads(8, 8, 8)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
-	const uint3 writecoord = unflatten3D(DTid.x, g_xFrame_VoxelRadianceDataRes);
+	const uint3 writecoord = DTid;
 
 	float4 emission = input_emission[writecoord];
 

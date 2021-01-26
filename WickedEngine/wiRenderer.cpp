@@ -7074,11 +7074,12 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			device->UnbindUAVs(1, 1, cmd);
 			// Pre-integrate the voxel texture by creating blurred mip levels:
 			GenerateMipChain(textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, cmd);
-			device->BindUAV(CS, &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, cmd);
+
 			device->BindResource(CS, &textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
 			device->BindResource(CS, &resourceBuffers[RBTYPE_VOXELSCENE], 1, cmd);
+			device->BindUAV(CS, &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, cmd);
 			device->BindComputeShader(&shaders[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], cmd);
-			device->Dispatch((uint32_t)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 64), 1, 1, cmd);
+			device->Dispatch(voxelSceneData.res / 8, voxelSceneData.res / 8, voxelSceneData.res / 8, cmd);
 			device->EventEnd(cmd);
 
 			{
@@ -12207,7 +12208,7 @@ void SetVoxelRadianceEnabled(bool enabled)
 			assert(subresource_index == i);
 		}
 	}
-	if (voxelSceneData.secondaryBounceEnabled && !textures[TEXTYPE_3D_VOXELRADIANCE_HELPER].IsValid())
+	if (!textures[TEXTYPE_3D_VOXELRADIANCE_HELPER].IsValid())
 	{
 		const TextureDesc& desc = textures[TEXTYPE_3D_VOXELRADIANCE].GetDesc();
 		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
