@@ -9,7 +9,6 @@ if (WIN32)
     add_compile_definitions(WIN32=1)
     # add_compile_definitions(_WIN32=1) this is a given from the compiler
 elseif(UNIX)
-    find_package(SDL2 REQUIRED)
     set(PLATFORM "SDL2")
     add_compile_definitions(SDL2=1)
 endif()
