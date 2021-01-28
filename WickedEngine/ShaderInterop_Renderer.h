@@ -234,6 +234,7 @@ static const uint OPTION_BIT_SIMPLE_SKY = 1 << 5;
 static const uint OPTION_BIT_REALISTIC_SKY = 1 << 6;
 static const uint OPTION_BIT_RAYTRACED_SHADOWS = 1 << 7;
 static const uint OPTION_BIT_DISABLE_ALBEDO_MAPS = 1 << 8;
+static const uint OPTION_BIT_SHADOW_MASK = 1 << 9;
 
 // ---------- Common Constant buffers: -----------------
 

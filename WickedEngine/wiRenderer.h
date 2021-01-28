@@ -353,6 +353,15 @@ namespace wiRenderer
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
+	void Postprocess_ScreenSpaceShadow(
+		const wiGraphics::Texture& depthbuffer,
+		const wiGraphics::Texture& lineardepth,
+		const wiGraphics::GPUBuffer& entityTiles_Opaque,
+		const wiGraphics::Texture& output,
+		wiGraphics::CommandList cmd,
+		float range = 1,
+		uint32_t samplecount = 16
+	);
 	void Postprocess_LightShafts(
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& output,
@@ -618,6 +627,8 @@ namespace wiRenderer
 	bool IsDisableAlbedoMaps();
 	void SetRaytracedShadowsSampleCount(uint32_t value);
 	uint32_t GetRaytracedShadowsSampleCount();
+	void SetScreenSpaceShadowsEnabled(bool value);
+	bool GetScreenSpaceShadowsEnabled();
 
 	const wiGraphics::Texture* GetGlobalLightmap();
 

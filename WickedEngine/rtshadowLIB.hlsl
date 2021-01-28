@@ -48,6 +48,10 @@ void RTShadow_Raygen()
 	uint4 shadow_mask = 0;
 	uint shadow_index = 0;
 
+	RayDesc ray;
+	ray.TMin = 0.01;
+	ray.Origin = surface.P + surface.N * 0.1;
+
 	[branch]
 	if (g_xFrame_LightArrayCount > 0)
 	{
@@ -88,10 +92,7 @@ void RTShadow_Raygen()
 						continue; // static lights will be skipped (they are used in lightmap baking)
 					}
 
-					RayDesc ray;
-					ray.TMin = 0.01;
 					ray.TMax = 0;
-					ray.Origin = trace_bias_position(surface.P, surface.N);
 
 					float3 L;
 

@@ -11,7 +11,7 @@ using namespace wiGraphics;
 void PostprocessWindow::Create(EditorComponent* editor)
 {
 	wiWindow::Create("PostProcess Window");
-	SetSize(XMFLOAT2(420, 500));
+	SetSize(XMFLOAT2(420, 520));
 
 	float x = 150;
 	float y = 10;
@@ -155,6 +155,36 @@ void PostprocessWindow::Create(EditorComponent* editor)
 		});
 	AddWidget(&raytracedReflectionsCheckBox);
 	raytracedReflectionsCheckBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING));
+
+	screenSpaceShadowsCheckBox.Create("SS Shadows: ");
+	screenSpaceShadowsCheckBox.SetTooltip("Enable screen space contact shadows. This can add small shadows details to shadow maps in screen space.");
+	screenSpaceShadowsCheckBox.SetSize(XMFLOAT2(hei, hei));
+	screenSpaceShadowsCheckBox.SetPos(XMFLOAT2(x, y += step));
+	screenSpaceShadowsCheckBox.SetCheck(wiRenderer::GetScreenSpaceShadowsEnabled());
+	screenSpaceShadowsCheckBox.OnClick([=](wiEventArgs args) {
+		wiRenderer::SetScreenSpaceShadowsEnabled(args.bValue);
+		});
+	AddWidget(&screenSpaceShadowsCheckBox);
+
+	screenSpaceShadowsRangeSlider.Create(0.1f, 10.0f, 1, 1000, "Range: ");
+	screenSpaceShadowsRangeSlider.SetTooltip("Range of contact shadows");
+	screenSpaceShadowsRangeSlider.SetSize(XMFLOAT2(100, hei));
+	screenSpaceShadowsRangeSlider.SetPos(XMFLOAT2(x + 100, y));
+	screenSpaceShadowsRangeSlider.SetValue((float)editor->renderPath->getScreenSpaceShadowRange());
+	screenSpaceShadowsRangeSlider.OnSlide([=](wiEventArgs args) {
+		editor->renderPath->setScreenSpaceShadowRange(args.fValue);
+		});
+	AddWidget(&screenSpaceShadowsRangeSlider);
+
+	screenSpaceShadowsStepCountSlider.Create(4, 128, 16, 128 - 4, "Sample Count: ");
+	screenSpaceShadowsStepCountSlider.SetTooltip("Sample count of contact shadows. Higher values are better quality but slower.");
+	screenSpaceShadowsStepCountSlider.SetSize(XMFLOAT2(100, hei));
+	screenSpaceShadowsStepCountSlider.SetPos(XMFLOAT2(x + 100, y += step));
+	screenSpaceShadowsStepCountSlider.SetValue((float)editor->renderPath->getScreenSpaceShadowSampleCount());
+	screenSpaceShadowsStepCountSlider.OnSlide([=](wiEventArgs args) {
+		editor->renderPath->setScreenSpaceShadowSampleCount(args.iValue);
+		});
+	AddWidget(&screenSpaceShadowsStepCountSlider);
 
 	eyeAdaptionCheckBox.Create("EyeAdaption: ");
 	eyeAdaptionCheckBox.SetTooltip("Enable eye adaption for the overall screen luminance");

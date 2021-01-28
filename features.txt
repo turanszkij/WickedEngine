@@ -87,3 +87,4 @@ Springs
 Terrain Rendering (material blending)
 Variable Rate Shading
 Real time ray tracing: ambient occlusion, shadows, reflections (DXR and Vulkan raytracing)
+Screen Space Contact Shadows

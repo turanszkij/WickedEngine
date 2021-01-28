@@ -151,7 +151,6 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateTexture(&desc, nullptr, &rtAO);
 		device->SetName(&rtAO, "rtAO");
 	}
-	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
@@ -844,6 +843,19 @@ void RenderPath3D::Render() const
 
 		RenderSSR(cmd);
 
+		if (wiRenderer::GetScreenSpaceShadowsEnabled())
+		{
+			wiRenderer::Postprocess_ScreenSpaceShadow(
+				depthBuffer_Copy,
+				rtLinearDepth,
+				entityTiles_Opaque,
+				rtShadow,
+				cmd,
+				getScreenSpaceShadowRange(),
+				getScreenSpaceShadowSampleCount()
+			);
+		}
+
 		if (wiRenderer::GetRaytracedShadowsEnabled())
 		{
 			wiRenderer::Postprocess_RTShadow(
@@ -857,6 +869,7 @@ void RenderPath3D::Render() const
 				cmd
 			);
 		}
+
 		});
 
 	// Opaque scene:
@@ -875,7 +888,7 @@ void RenderPath3D::Render() const
 		vp.Height = (float)depthBuffer_Main.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
 
-		if (wiRenderer::GetRaytracedShadowsEnabled())
+		if (wiRenderer::GetRaytracedShadowsEnabled() || wiRenderer::GetScreenSpaceShadowsEnabled())
 		{
 			device->BindResource(PS, &rtShadow, TEXSLOT_RENDERPATH_RTSHADOW, cmd);
 		}

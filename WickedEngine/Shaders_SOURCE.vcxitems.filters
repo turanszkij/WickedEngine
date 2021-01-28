@@ -956,5 +956,8 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)objectDS_prepass_alphatest.hlsl">
       <Filter>DS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)screenspaceshadowCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

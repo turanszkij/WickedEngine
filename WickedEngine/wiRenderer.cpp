@@ -97,6 +97,7 @@ bool raytracedShadows = false;
 bool tessellationEnabled = true;
 bool disableAlbedoMaps = false;
 uint32_t raytracedShadowsSampleCount = 1;
+bool SCREENSPACESHADOWS = false;
 
 
 struct VoxelizedSceneData
@@ -1236,6 +1237,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_UINT4], "upsample_bilateral_uint4CS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_DOWNSAMPLE4X], "downsample4xCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_NORMALSFROMDEPTH], "normalsfromdepthCS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_SCREENSPACESHADOW], "screenspaceshadowCS.cso"); });
 
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(HS, shaders[HSTYPE_OBJECT], "objectHS.cso"); });
@@ -3656,10 +3658,15 @@ void UpdatePerFrameData(
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && GetRaytracedShadowsEnabled())
 	{
 		frameCB.g_xFrame_Options |= OPTION_BIT_RAYTRACED_SHADOWS;
+		frameCB.g_xFrame_Options |= OPTION_BIT_SHADOW_MASK;
 	}
-	if (disableAlbedoMaps)
+	if (IsDisableAlbedoMaps())
 	{
 		frameCB.g_xFrame_Options |= OPTION_BIT_DISABLE_ALBEDO_MAPS;
+	}
+	if (GetScreenSpaceShadowsEnabled())
+	{
+		frameCB.g_xFrame_Options |= OPTION_BIT_SHADOW_MASK;
 	}
 }
 void UpdateRenderData(
@@ -10472,6 +10479,93 @@ void Postprocess_RTShadow(
 	wiProfiler::EndRange(prof_range);
 	device->EventEnd(cmd);
 }
+void Postprocess_ScreenSpaceShadow(
+	const Texture& depthbuffer,
+	const Texture& lineardepth,
+	const GPUBuffer& entityTiles_Opaque,
+	const Texture& output,
+	CommandList cmd,
+	float range,
+	uint32_t samplecount
+)
+{
+	device->EventBegin("Postprocess_ScreenSpaceShadow", cmd);
+	auto prof_range = wiProfiler::BeginRangeGPU("ScreenSpaceShadow", cmd);
+
+	static TextureDesc saved_desc;
+	static Texture temp;
+	static Texture temporal[2];
+	static Texture normals;
+
+	const TextureDesc& lineardepth_desc = lineardepth.GetDesc();
+	if (saved_desc.Width != lineardepth_desc.Width || saved_desc.Height != lineardepth_desc.Height)
+	{
+		saved_desc = lineardepth_desc; // <- this must already have SRV and UAV request flags set up!
+		saved_desc.MipLevels = 1;
+
+		TextureDesc desc = saved_desc;
+		desc.Width = (desc.Width + 1) / 2;
+		desc.Height = (desc.Height + 1) / 2;
+		desc.Format = FORMAT_R32G32B32A32_UINT;
+		device->CreateTexture(&desc, nullptr, &temp);
+		device->SetName(&temp, "rtshadow_temp");
+
+		device->CreateTexture(&desc, nullptr, &temporal[0]);
+		device->SetName(&temporal[0], "rtshadow_temporal[0]");
+		device->CreateTexture(&desc, nullptr, &temporal[1]);
+		device->SetName(&temporal[1], "rtshadow_temporal[1]");
+
+		desc.Format = FORMAT_R11G11B10_FLOAT;
+		device->CreateTexture(&desc, nullptr, &normals);
+		device->SetName(&normals, "rtshadow_normals");
+	}
+
+	Postprocess_NormalsFromDepth(depthbuffer, normals, cmd);
+
+	const TextureDesc& desc = temp.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	cb.xPPParams0.x = range;
+	cb.xPPParams0.y = (float)samplecount;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SCREENSPACESHADOW], cmd);
+
+	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+
+	device->BindResource(CS, &normals, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(CS, &entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
+
+	const GPUResource* uavs[] = {
+		&temp,
+	};
+	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+	device->Dispatch(
+		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		1,
+		cmd
+	);
+
+	GPUBarrier barriers[] = {
+		GPUBarrier::Memory(),
+	};
+	device->Barrier(barriers, arraysize(barriers), cmd);
+
+	device->UnbindUAVs(0, arraysize(uavs), cmd);
+
+	Postprocess_Upsample_Bilateral(temp, lineardepth, output, cmd);
+
+	wiProfiler::EndRange(prof_range);
+	device->EventEnd(cmd);
+}
 void Postprocess_LightShafts(
 	const Texture& input,
 	const Texture& output,
@@ -12304,6 +12398,14 @@ void SetRaytracedShadowsSampleCount(uint32_t value)
 uint32_t GetRaytracedShadowsSampleCount()
 {
 	return raytracedShadowsSampleCount;
+}
+void SetScreenSpaceShadowsEnabled(bool value)
+{
+	SCREENSPACESHADOWS = value;
+}
+bool GetScreenSpaceShadowsEnabled()
+{
+	return SCREENSPACESHADOWS;
 }
 
 }

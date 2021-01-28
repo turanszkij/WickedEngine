@@ -1,6 +1,6 @@
 #define DISABLE_DECALS
 #define DISABLE_ENVMAPS
-#define RAYTRACED_SHADOWS_ENABLED
+#define SHADOW_MASK_ENABLED
 #include "globals.hlsli"
 #include "objectHF.hlsli"
 #include "hairparticleHF.hlsli"
@@ -30,13 +30,13 @@ GBuffer main(VertexToPixel input)
 	Lighting lighting;
 	lighting.create(0, 0, GetAmbient(surface.N), 0);
 
-#ifdef RAYTRACED_SHADOWS_ENABLED
+#ifdef SHADOW_MASK_ENABLED
 	[branch]
 	if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
 	{
 		lighting.shadow_mask = texture_rtshadow[surface.pixel];
 	}
-#endif // RAYTRACED_SHADOWS_ENABLED
+#endif // SHADOW_MASK_ENABLED
 
 	float depth = input.pos.z;
 	float3 reflection = 0;
