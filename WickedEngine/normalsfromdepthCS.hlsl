@@ -21,7 +21,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	{
 		const uint2 pixel = tile_upperleft + unflatten2D(t, TILE_SIZE);
 		const float2 uv = (pixel + 0.5f) * xPPResolution_rcp;
-		const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, depth_mip);
+		const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, depth_mip);
 		const float3 position = reconstructPosition(uv, depth);
 		tile_XY[t] = position.xy;
 		tile_Z[t] = position.z;

@@ -22,11 +22,7 @@ struct RayPayload
 void RTAO_Raygen()
 {
 	const float2 uv = ((float2)DispatchRaysIndex() + 0.5f) / (float2)DispatchRaysDimensions();
-	const float depth00 = texture_depth[DispatchRaysIndex().xy * 2 + uint2(0, 0)];
-	const float depth10 = texture_depth[DispatchRaysIndex().xy * 2 + uint2(1, 0)];
-	const float depth01 = texture_depth[DispatchRaysIndex().xy * 2 + uint2(0, 1)];
-	const float depth11 = texture_depth[DispatchRaysIndex().xy * 2 + uint2(1, 1)];
-	const float depth = max(depth00, max(depth10, max(depth01, depth11)));
+	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
 	if (depth == 0.0f)
 		return;
 

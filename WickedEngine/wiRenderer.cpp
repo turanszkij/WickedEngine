@@ -10488,8 +10488,6 @@ void Postprocess_ScreenSpaceShadow(
 
 	static TextureDesc saved_desc;
 	static Texture temp;
-	static Texture temporal[2];
-	static Texture normals;
 
 	const TextureDesc& lineardepth_desc = lineardepth.GetDesc();
 	if (saved_desc.Width != lineardepth_desc.Width || saved_desc.Height != lineardepth_desc.Height)
@@ -10502,19 +10500,8 @@ void Postprocess_ScreenSpaceShadow(
 		desc.Height = (desc.Height + 1) / 2;
 		desc.Format = FORMAT_R32G32B32A32_UINT;
 		device->CreateTexture(&desc, nullptr, &temp);
-		device->SetName(&temp, "rtshadow_temp");
-
-		device->CreateTexture(&desc, nullptr, &temporal[0]);
-		device->SetName(&temporal[0], "rtshadow_temporal[0]");
-		device->CreateTexture(&desc, nullptr, &temporal[1]);
-		device->SetName(&temporal[1], "rtshadow_temporal[1]");
-
-		desc.Format = FORMAT_R11G11B10_FLOAT;
-		device->CreateTexture(&desc, nullptr, &normals);
-		device->SetName(&normals, "rtshadow_normals");
+		device->SetName(&temp, "screenspaceshadow_temp");
 	}
-
-	Postprocess_NormalsFromDepth(depthbuffer, normals, cmd);
 
 	const TextureDesc& desc = temp.GetDesc();
 
@@ -10533,7 +10520,6 @@ void Postprocess_ScreenSpaceShadow(
 	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
-	device->BindResource(CS, &normals, TEXSLOT_ONDEMAND0, cmd);
 	device->BindResource(CS, &entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
 
 	const GPUResource* uavs[] = {
