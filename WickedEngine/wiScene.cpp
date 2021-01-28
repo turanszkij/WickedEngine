@@ -1909,8 +1909,7 @@ namespace wiScene
 		{
 			layer_child = &layers.Create(entity);
 		}
-		// Save the initial layermask of the child so that it can be restored if detached:
-		parentcomponent.layerMask_bind = layer_child->GetLayerMask();
+		layer_child->propagationMask = layer_parent->GetLayerMask();
 	}
 	void Scene::Component_Detach(Entity entity)
 	{
@@ -1927,7 +1926,7 @@ namespace wiScene
 			LayerComponent* layer = layers.GetComponent(entity);
 			if (layer != nullptr)
 			{
-				layer->layerMask = parent->layerMask_bind;
+				layer->propagationMask = ~0;
 			}
 
 			hierarchy.Remove_KeepSorted(entity);
@@ -2292,7 +2291,7 @@ namespace wiScene
 			LayerComponent* layer_parent = layers.GetComponent(parentcomponent.parentID);
 			if (layer_child != nullptr && layer_parent != nullptr)
 			{
-				layer_child->layerMask &= layer_parent->GetLayerMask();
+				layer_child->propagationMask = layer_parent->GetLayerMask();
 			}
 
 		}

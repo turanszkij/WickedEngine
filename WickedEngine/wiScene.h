@@ -36,7 +36,10 @@ namespace wiScene
 	{
 		uint32_t layerMask = ~0;
 
-		inline uint32_t GetLayerMask() const { return layerMask; }
+		// Non-serialized attributes:
+		uint32_t propagationMask = ~0; // This shouldn't be modified by user usually
+
+		inline uint32_t GetLayerMask() const { return layerMask & propagationMask; }
 
 		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
