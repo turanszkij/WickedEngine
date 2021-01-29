@@ -97,8 +97,14 @@ namespace wiRawInput
 			const RAWMOUSE& rawmouse = raw.data.mouse;
 			if (raw.data.mouse.usFlags == MOUSE_MOVE_RELATIVE)
 			{
-				mouse.delta_position.x += (float)rawmouse.lLastX;
-				mouse.delta_position.y += (float)rawmouse.lLastY;
+				if (std::abs(rawmouse.lLastX) < 30000)
+				{
+					mouse.delta_position.x += (float)rawmouse.lLastX;
+				}
+				if (std::abs(rawmouse.lLastY) < 30000)
+				{
+					mouse.delta_position.y += (float)rawmouse.lLastY;
+				}
 				if (rawmouse.usButtonFlags == RI_MOUSE_WHEEL)
 				{
 					mouse.delta_wheel += float((SHORT)rawmouse.usButtonData) / float(WHEEL_DELTA);
