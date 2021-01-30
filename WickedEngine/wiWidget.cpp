@@ -1421,6 +1421,17 @@ void wiComboBox::SetSelected(int index)
 	args.userdata = GetItemUserData(selected);
 	onSelect(args);
 }
+void wiComboBox::SetSelectedByUserdata(uint64_t userdata)
+{
+	for (int i = 0; i < GetItemCount(); ++i)
+	{
+		if (userdata == GetItemUserData(i))
+		{
+			SetSelected(i);
+			return;
+		}
+	}
+}
 string wiComboBox::GetItemText(int index) const
 {
 	if (index >= 0)

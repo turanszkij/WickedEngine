@@ -280,6 +280,46 @@ namespace wiScene
 		}
 		return wiTextureHelper::getWhite();
 	}
+	const Texture* MaterialComponent::GetSheenColorMap() const
+	{
+		if (sheenColorMap != nullptr)
+		{
+			return sheenColorMap->texture;
+		}
+		return wiTextureHelper::getWhite();
+	}
+	const Texture* MaterialComponent::GetSheenRoughnessMap() const
+	{
+		if (sheenRoughnessMap != nullptr)
+		{
+			return sheenRoughnessMap->texture;
+		}
+		return wiTextureHelper::getWhite();
+	}
+	const Texture* MaterialComponent::GetClearcoatMap() const
+	{
+		if (clearcoatMap != nullptr)
+		{
+			return clearcoatMap->texture;
+		}
+		return nullptr;
+	}
+	const Texture* MaterialComponent::GetClearcoatRoughnessMap() const
+	{
+		if (clearcoatRoughnessMap != nullptr)
+		{
+			return clearcoatRoughnessMap->texture;
+		}
+		return nullptr;
+	}
+	const Texture* MaterialComponent::GetClearcoatNormalMap() const
+	{
+		if (clearcoatNormalMap != nullptr)
+		{
+			return clearcoatNormalMap->texture;
+		}
+		return nullptr;
+	}
 	void MaterialComponent::WriteShaderMaterial(ShaderMaterial* dest) const
 	{
 		dest->baseColor = baseColor;
@@ -308,6 +348,15 @@ namespace wiScene
 		dest->uvset_emissiveMap = emissiveMap == nullptr ? -1 : (int)uvset_emissiveMap;
 		dest->uvset_occlusionMap = occlusionMap == nullptr ? -1 : (int)uvset_occlusionMap;
 		dest->uvset_transmissionMap = transmissionMap == nullptr ? -1 : (int)uvset_transmissionMap;
+		dest->uvset_sheenColorMap = sheenColorMap == nullptr ? -1 : (int)uvset_sheenColorMap;
+		dest->uvset_sheenRoughnessMap = sheenRoughnessMap == nullptr ? -1 : (int)uvset_sheenRoughnessMap;
+		dest->uvset_clearcoatMap = clearcoatMap == nullptr ? -1 : (int)uvset_clearcoatMap;
+		dest->uvset_clearcoatRoughnessMap = clearcoatRoughnessMap == nullptr ? -1 : (int)uvset_clearcoatRoughnessMap;
+		dest->uvset_clearcoatNormalMap = clearcoatNormalMap == nullptr ? -1 : (int)uvset_clearcoatNormalMap;
+		dest->sheenColor = sheenColor;
+		dest->sheenRoughness = sheenRoughness;
+		dest->clearcoat = clearcoat;
+		dest->clearcoatRoughness = clearcoatRoughness;
 		dest->alphaTest = 1 - alphaRef + 1.0f / 256.0f; // 256 so that it is just about smaller than 1 unorm unit (1.0/255.0)
 		dest->layerMask = layerMask;
 		dest->transmission = transmission;

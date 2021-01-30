@@ -141,6 +141,9 @@ namespace wiScene
 			SHADERTYPE_WATER,
 			SHADERTYPE_CARTOON,
 			SHADERTYPE_UNLIT,
+			SHADERTYPE_PBR_CLOTH,
+			SHADERTYPE_PBR_CLEARCOAT,
+			SHADERTYPE_PBR_CLOTH_CLEARCOAT,
 			SHADERTYPE_COUNT
 		} shaderType = SHADERTYPE_PBR;
 
@@ -161,8 +164,13 @@ namespace wiScene
 		float displacementMapping = 0.0f;
 		float refraction = 0.0f;
 		float transmission = 0.0f;
-
 		float alphaRef = 1.0f;
+
+		XMFLOAT4 sheenColor = XMFLOAT4(1, 1, 1, 1);
+		float sheenRoughness = 0;
+		float clearcoat = 0;
+		float clearcoatRoughness = 0;
+
 		wiGraphics::SHADING_RATE shadingRate = wiGraphics::SHADING_RATE_1X1;
 		
 		XMFLOAT2 texAnimDirection = XMFLOAT2(0, 0);
@@ -176,6 +184,11 @@ namespace wiScene
 		std::string emissiveMapName;
 		std::string occlusionMapName;
 		std::string transmissionMapName;
+		std::string sheenColorMapName;
+		std::string sheenRoughnessMapName;
+		std::string clearcoatMapName;
+		std::string clearcoatRoughnessMapName;
+		std::string clearcoatNormalMapName;
 
 		uint32_t uvset_baseColorMap = 0;
 		uint32_t uvset_surfaceMap = 0;
@@ -184,6 +197,11 @@ namespace wiScene
 		uint32_t uvset_emissiveMap = 0;
 		uint32_t uvset_occlusionMap = 0;
 		uint32_t uvset_transmissionMap = 0;
+		uint32_t uvset_sheenColorMap = 0;
+		uint32_t uvset_sheenRoughnessMap = 0;
+		uint32_t uvset_clearcoatMap = 0;
+		uint32_t uvset_clearcoatRoughnessMap = 0;
+		uint32_t uvset_clearcoatNormalMap = 0;
 
 		int customShaderID = -1;
 
@@ -195,6 +213,11 @@ namespace wiScene
 		std::shared_ptr<wiResource> emissiveMap;
 		std::shared_ptr<wiResource> occlusionMap;
 		std::shared_ptr<wiResource> transmissionMap;
+		std::shared_ptr<wiResource> sheenColorMap;
+		std::shared_ptr<wiResource> sheenRoughnessMap;
+		std::shared_ptr<wiResource> clearcoatMap;
+		std::shared_ptr<wiResource> clearcoatRoughnessMap;
+		std::shared_ptr<wiResource> clearcoatNormalMap;
 		wiGraphics::GPUBuffer constantBuffer;
 		uint32_t layerMask = ~0u;
 
@@ -213,6 +236,11 @@ namespace wiScene
 		const wiGraphics::Texture* GetEmissiveMap() const;
 		const wiGraphics::Texture* GetOcclusionMap() const;
 		const wiGraphics::Texture* GetTransmissionMap() const;
+		const wiGraphics::Texture* GetSheenColorMap() const;
+		const wiGraphics::Texture* GetSheenRoughnessMap() const;
+		const wiGraphics::Texture* GetClearcoatMap() const;
+		const wiGraphics::Texture* GetClearcoatRoughnessMap() const;
+		const wiGraphics::Texture* GetClearcoatNormalMap() const;
 
 		inline float GetOpacity() const { return baseColor.w; }
 		inline float GetEmissiveStrength() const { return emissiveColor.w; }

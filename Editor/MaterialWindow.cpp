@@ -106,19 +106,21 @@ void MaterialWindow::Create(EditorComponent* editor)
 			}
 			else
 			{
-				material->shaderType = (MaterialComponent::SHADERTYPE)args.iValue;
+				material->shaderType = (MaterialComponent::SHADERTYPE)args.userdata;
 				material->SetCustomShaderID(-1);
 				blendModeComboBox.SetEnabled(true);
 			}
 		}
 		});
-	shaderTypeComboBox.AddItem("PBR");
-	shaderTypeComboBox.AddItem("PBR + Planar reflections");
-	shaderTypeComboBox.AddItem("PBR + Par. occl. mapping");
-	shaderTypeComboBox.AddItem("PBR + Anisotropic");
-	shaderTypeComboBox.AddItem("Water");
-	shaderTypeComboBox.AddItem("Cartoon");
-	shaderTypeComboBox.AddItem("Unlit");
+	shaderTypeComboBox.AddItem("PBR", MaterialComponent::SHADERTYPE_PBR);
+	shaderTypeComboBox.AddItem("PBR + Planar reflections", MaterialComponent::SHADERTYPE_PBR_PLANARREFLECTION);
+	shaderTypeComboBox.AddItem("PBR + Par. occl. mapping", MaterialComponent::SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING);
+	shaderTypeComboBox.AddItem("PBR + Anisotropic", MaterialComponent::SHADERTYPE_PBR_ANISOTROPIC);
+	shaderTypeComboBox.AddItem("PBR + Cloth", MaterialComponent::SHADERTYPE_PBR_CLOTH);
+	shaderTypeComboBox.AddItem("PBR + Clear coat", MaterialComponent::SHADERTYPE_PBR_CLEARCOAT);
+	shaderTypeComboBox.AddItem("Water", MaterialComponent::SHADERTYPE_WATER);
+	shaderTypeComboBox.AddItem("Cartoon", MaterialComponent::SHADERTYPE_CARTOON);
+	shaderTypeComboBox.AddItem("Unlit", MaterialComponent::SHADERTYPE_UNLIT);
 	for (auto& x : wiRenderer::GetCustomShaders())
 	{
 		shaderTypeComboBox.AddItem("*" + x.name);
@@ -915,7 +917,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		}
 		else
 		{
-			shaderTypeComboBox.SetSelected((int)material->shaderType);
+			shaderTypeComboBox.SetSelectedByUserdata(material->shaderType);
 		}
 		shadingRateComboBox.SetSelected((int)material->shadingRate);
 

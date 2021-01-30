@@ -38,7 +38,18 @@ struct ShaderMaterial
 	int			uvset_occlusionMap;
 	int			uvset_transmissionMap;
 
-	float2		padding0;
+	int			uvset_sheenColorMap;
+	int			uvset_sheenRoughnessMap;
+	float		sheenRoughness;
+	float4		sheenColor;
+
+	int			uvset_clearcoatMap;
+	int			uvset_clearcoatRoughnessMap;
+	int			uvset_clearcoatNormalMap;
+	float		clearcoat;
+	float		clearcoatRoughness;
+
+	float2		padding1;
 	float		transmission;
 	uint		options;
 

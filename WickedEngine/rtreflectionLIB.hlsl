@@ -305,5 +305,5 @@ void RTReflection_Miss(inout RayPayload payload)
 	Surface surface;
 	surface.roughness = payload.roughness;
 	surface.R = WorldRayDirection();
-	payload.color = EnvironmentReflection_Global(surface, surface.roughness * g_xFrame_EnvProbeMipCount);
+	payload.color = EnvironmentReflection_Global(surface);
 }

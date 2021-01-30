@@ -262,7 +262,7 @@ float4 main(Input input) : SV_TARGET
 		else
 		{
 			// Calculate chances of reflection types:
-			const float3 F = F_Fresnel(surface.f0, saturate(dot(-ray.direction, N)));
+			const float3 F = F_Schlick(surface.f0, saturate(dot(-ray.direction, N)));
 			const float specChance = dot(F, 0.333f);
 
 			roulette = rand(seed, uv);

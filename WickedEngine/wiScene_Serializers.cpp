@@ -186,6 +186,25 @@ namespace wiScene
 				archive >> uvset_transmissionMap;
 			}
 
+			if (archive.GetVersion() >= 61)
+			{
+				archive >> sheenColor;
+				archive >> sheenRoughness;
+				archive >> sheenColorMapName;
+				archive >> sheenRoughnessMapName;
+				archive >> uvset_sheenColorMap;
+				archive >> uvset_sheenRoughnessMap;
+
+				archive >> clearcoat;
+				archive >> clearcoatRoughness;
+				archive >> clearcoatMapName;
+				archive >> clearcoatRoughnessMapName;
+				archive >> clearcoatNormalMapName;
+				archive >> uvset_clearcoatMap;
+				archive >> uvset_clearcoatRoughnessMap;
+				archive >> uvset_clearcoatNormalMap;
+			}
+
 			wiJobSystem::Execute(seri.ctx, [&](wiJobArgs args) {
 				CreateRenderData(dir);
 			});
@@ -266,6 +285,36 @@ namespace wiScene
 				{
 					transmissionMapName = transmissionMapName.substr(found + dir.length());
 				}
+
+				found = sheenColorMapName.rfind(dir);
+				if (found != std::string::npos)
+				{
+					sheenColorMapName = sheenColorMapName.substr(found + dir.length());
+				}
+
+				found = sheenRoughnessMapName.rfind(dir);
+				if (found != std::string::npos)
+				{
+					sheenRoughnessMapName = sheenRoughnessMapName.substr(found + dir.length());
+				}
+
+				found = clearcoatMapName.rfind(dir);
+				if (found != std::string::npos)
+				{
+					clearcoatMapName = clearcoatMapName.substr(found + dir.length());
+				}
+
+				found = clearcoatRoughnessMapName.rfind(dir);
+				if (found != std::string::npos)
+				{
+					clearcoatRoughnessMapName = clearcoatRoughnessMapName.substr(found + dir.length());
+				}
+
+				found = clearcoatNormalMapName.rfind(dir);
+				if (found != std::string::npos)
+				{
+					clearcoatNormalMapName = clearcoatNormalMapName.substr(found + dir.length());
+				}
 			}
 
 			archive << baseColorMapName;
@@ -318,6 +367,25 @@ namespace wiScene
 				archive << transmission;
 				archive << transmissionMapName;
 				archive << uvset_transmissionMap;
+			}
+
+			if (archive.GetVersion() >= 61)
+			{
+				archive << sheenColor;
+				archive << sheenRoughness;
+				archive << sheenColorMapName;
+				archive << sheenRoughnessMapName;
+				archive << uvset_sheenColorMap;
+				archive << uvset_sheenRoughnessMap;
+
+				archive << clearcoat;
+				archive << clearcoatRoughness;
+				archive << clearcoatMapName;
+				archive << clearcoatRoughnessMapName;
+				archive << clearcoatNormalMapName;
+				archive << uvset_clearcoatMap;
+				archive << uvset_clearcoatRoughnessMap;
+				archive << uvset_clearcoatNormalMap;
 			}
 		}
 	}
