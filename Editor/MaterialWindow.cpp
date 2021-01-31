@@ -1179,7 +1179,9 @@ void MaterialWindow::Create(EditorComponent* editor)
 	AddWidget(&texture_clearcoatNormal_uvset_Field);
 
 
-	y = 290;
+
+
+
 
 	colorComboBox.Create("Color picker mode: ");
 	colorComboBox.SetSize(XMFLOAT2(120, hei));
@@ -1347,19 +1349,49 @@ void MaterialWindow::SetEntity(Entity entity)
 		sheenRoughnessSlider.SetEnabled(false);
 		clearcoatSlider.SetEnabled(false);
 		clearcoatRoughnessSlider.SetEnabled(false);
+		texture_sheenColor_Button.SetEnabled(false);
+		texture_sheenColor_uvset_Field.SetEnabled(false);
+		texture_sheenRoughness_Button.SetEnabled(false);
+		texture_sheenRoughness_uvset_Field.SetEnabled(false);
+		texture_clearcoat_Button.SetEnabled(false);
+		texture_clearcoat_uvset_Field.SetEnabled(false);
+		texture_clearcoatRoughness_Button.SetEnabled(false);
+		texture_clearcoatRoughness_uvset_Field.SetEnabled(false);
+		texture_clearcoatNormal_Button.SetEnabled(false);
+		texture_clearcoatNormal_uvset_Field.SetEnabled(false);
 		switch (material->shaderType)
 		{
 		case MaterialComponent::SHADERTYPE_PBR_CLOTH:
 			sheenRoughnessSlider.SetEnabled(true);
+			texture_sheenColor_Button.SetEnabled(true);
+			texture_sheenColor_uvset_Field.SetEnabled(true);
+			texture_sheenRoughness_Button.SetEnabled(true);
+			texture_sheenRoughness_uvset_Field.SetEnabled(true);
 			break;
 		case MaterialComponent::SHADERTYPE_PBR_CLEARCOAT:
 			clearcoatSlider.SetEnabled(true);
 			clearcoatRoughnessSlider.SetEnabled(true);
+			texture_clearcoat_Button.SetEnabled(true);
+			texture_clearcoat_uvset_Field.SetEnabled(true);
+			texture_clearcoatRoughness_Button.SetEnabled(true);
+			texture_clearcoatRoughness_uvset_Field.SetEnabled(true);
+			texture_clearcoatNormal_Button.SetEnabled(true);
+			texture_clearcoatNormal_uvset_Field.SetEnabled(true);
 			break;
 		case MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT:
 			sheenRoughnessSlider.SetEnabled(true);
 			clearcoatSlider.SetEnabled(true);
 			clearcoatRoughnessSlider.SetEnabled(true);
+			texture_sheenColor_Button.SetEnabled(true);
+			texture_sheenColor_uvset_Field.SetEnabled(true);
+			texture_sheenRoughness_Button.SetEnabled(true);
+			texture_sheenRoughness_uvset_Field.SetEnabled(true);
+			texture_clearcoat_Button.SetEnabled(true);
+			texture_clearcoat_uvset_Field.SetEnabled(true);
+			texture_clearcoatRoughness_Button.SetEnabled(true);
+			texture_clearcoatRoughness_uvset_Field.SetEnabled(true);
+			texture_clearcoatNormal_Button.SetEnabled(true);
+			texture_clearcoatNormal_uvset_Field.SetEnabled(true);
 			break;
 		}
 		sheenRoughnessSlider.SetValue(material->sheenRoughness);
