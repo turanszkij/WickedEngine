@@ -6628,18 +6628,6 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 	BindCommonResources(cmd);
 
-	if (vis.scene->weather.IsRealisticSky())
-	{
-		// Refresh atmospheric textures, since each probe has different positions
-		RefreshAtmosphericScatteringTextures(cmd);
-	}
-
-	// Bind the atmospheric textures, as lighting and sky needs them
-	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
-	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
-
-
 	Viewport vp;
 	vp.Height = envmapRes;
 	vp.Width = envmapRes;
@@ -6674,6 +6662,18 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		CameraCB camcb;
 		camcb.g_xCamera_CamPos = probe.position; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
 		device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &camcb, cmd);
+
+		if (vis.scene->weather.IsRealisticSky())
+		{
+			// Refresh atmospheric textures, since each probe has different positions
+			RefreshAtmosphericScatteringTextures(cmd);
+		}
+
+		// Bind the atmospheric textures, as lighting and sky needs them
+		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
+		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
+
 
 		device->RenderPassBegin(&renderpasses_envmap[probe.textureIndex], cmd);
 

@@ -44,7 +44,7 @@ float4 main(PSIn input) : SV_TARGET
 	float NdotV = abs(dot(surface.N, surface.V));
 	float ramp = pow(abs(1.0f / (1.0f + NdotV)), 16);
 	reflectiveColor.rgb = lerp(float3(0.38f, 0.45f, 0.56f), reflectiveColor.rgb, ramp); // skycolor hack
-	lighting.indirect.specular += reflectiveColor.rgb;
+	lighting.indirect.specular += reflectiveColor.rgb * surface.F;
 
 	TiledLighting(surface, lighting);
 

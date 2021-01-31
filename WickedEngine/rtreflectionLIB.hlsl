@@ -302,9 +302,5 @@ void RTReflection_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectio
 [shader("miss")]
 void RTReflection_Miss(inout RayPayload payload)
 {
-	Surface surface;
-	surface.roughness = payload.roughness;
-	surface.R = WorldRayDirection();
-	surface.F = 1;
-	payload.color = EnvironmentReflection_Global(surface);
+	payload.color = GetDynamicSkyColor(WorldRayDirection());
 }
