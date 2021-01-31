@@ -242,6 +242,7 @@ struct Surface
 		R = -reflect(V, N);
 		clearcoat.R = -reflect(V, clearcoat.N);
 
+		// Sheen energy compensation: https://dassaultsystemes-technology.github.io/EnterprisePBRShadingModel/spec-2021x.md.html#figure_energy-compensation-sheen-e
 		sheen.DFG = texture_sheenlut.SampleLevel(sampler_linear_clamp, float2(NdotV, roughness), 0).r;
 		sheen.albedoScaling = 1.0 - max3(sheen.color) * sheen.DFG;
 
