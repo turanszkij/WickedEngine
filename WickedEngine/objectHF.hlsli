@@ -33,7 +33,7 @@ TEXTURE2D(texture_displacementmap, float, TEXSLOT_RENDERER_DISPLACEMENTMAP);	// 
 TEXTURE2D(texture_occlusionmap, float, TEXSLOT_RENDERER_OCCLUSIONMAP);			// r: occlusion
 TEXTURE2D(texture_transmissionmap, float, TEXSLOT_RENDERER_TRANSMISSIONMAP);	// r: transmission factor
 TEXTURE2D(texture_sheencolormap, float4, TEXSLOT_RENDERER_SHEENCOLORMAP);
-TEXTURE2D(texture_sheenroughnessmap, float, TEXSLOT_RENDERER_SHEENROUGHNESSMAP);
+TEXTURE2D(texture_sheenroughnessmap, float4, TEXSLOT_RENDERER_SHEENROUGHNESSMAP);
 TEXTURE2D(texture_clearcoatmap, float, TEXSLOT_RENDERER_CLEARCOATMAP);
 TEXTURE2D(texture_clearcoatroughnessmap, float2, TEXSLOT_RENDERER_CLEARCOATROUGHNESSMAP);
 TEXTURE2D(texture_clearcoatnormalmap, float3, TEXSLOT_RENDERER_CLEARCOATNORMALMAP);
@@ -1420,7 +1420,7 @@ float4 main(PixelInput input) : SV_TARGET
 	if (g_xMaterial.uvset_sheenRoughnessMap >= 0)
 	{
 		const float2 uvset_sheenRoughnessMap = g_xMaterial.uvset_sheenRoughnessMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-		surface.sheen.roughness *= texture_sheenroughnessmap.Sample(sampler_objectshader, uvset_sheenRoughnessMap);
+		surface.sheen.roughness *= texture_sheenroughnessmap.Sample(sampler_objectshader, uvset_sheenRoughnessMap).a;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 #endif // BRDF_SHEEN

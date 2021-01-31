@@ -290,6 +290,14 @@ namespace wiScene
 		inline void SetUseVertexColors(bool value) { SetDirty(); if (value) { _flags |= USE_VERTEXCOLORS; } else { _flags &= ~USE_VERTEXCOLORS; } }
 		inline void SetUseWind(bool value) { SetDirty(); if (value) { _flags |= USE_WIND; } else { _flags &= ~USE_WIND; } }
 		inline void SetUseSpecularGlossinessWorkflow(bool value) { SetDirty(); if (value) { _flags |= SPECULAR_GLOSSINESS_WORKFLOW; } else { _flags &= ~SPECULAR_GLOSSINESS_WORKFLOW; }  }
+		inline void SetSheenColor(const XMFLOAT3& value)
+		{
+			sheenColor = XMFLOAT4(value.x, value.y, value.z, sheenColor.w);
+			SetDirty();
+		}
+		inline void SetSheenRoughness(float value) { sheenRoughness = value; SetDirty(); }
+		inline void SetClearcoatFactor(float value) { clearcoat = value; SetDirty(); }
+		inline void SetClearcoatRoughness(float value) { clearcoatRoughness = value; SetDirty(); }
 		inline void SetCustomShaderID(int id) { customShaderID = id; }
 		inline void DisableCustomShader() { customShaderID = -1; }
 		inline void SetUVSet_BaseColorMap(uint32_t value) { uvset_baseColorMap = value; SetDirty(); }
@@ -299,6 +307,11 @@ namespace wiScene
 		inline void SetUVSet_EmissiveMap(uint32_t value) { uvset_emissiveMap = value; SetDirty(); }
 		inline void SetUVSet_OcclusionMap(uint32_t value) { uvset_occlusionMap = value; SetDirty(); }
 		inline void SetUVSet_TransmissionMap(uint32_t value) { uvset_transmissionMap = value; SetDirty(); }
+		inline void SetUVSet_SheenColorMap(uint32_t value) { uvset_sheenColorMap = value; SetDirty(); }
+		inline void SetUVSet_SheenRoughnessMap(uint32_t value) { uvset_sheenRoughnessMap = value; SetDirty(); }
+		inline void SetUVSet_ClearcoatMap(uint32_t value) { uvset_clearcoatMap = value; SetDirty(); }
+		inline void SetUVSet_ClearcoatRoughnessMap(uint32_t value) { uvset_clearcoatRoughnessMap = value; SetDirty(); }
+		inline void SetUVSet_ClearcoatNormalMap(uint32_t value) { uvset_clearcoatNormalMap = value; SetDirty(); }
 
 		// The MaterialComponent will be written to ShaderMaterial (a struct that is optimized for GPU use)
 		void WriteShaderMaterial(ShaderMaterial* dest) const;
