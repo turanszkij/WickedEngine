@@ -109,6 +109,7 @@ struct SheenSurface
 	// computed values:
 	float roughnessBRDF;
 	float3 F;
+	float DFG;
 	float albedoScaling;
 };
 
@@ -241,10 +242,8 @@ struct Surface
 		R = -reflect(V, N);
 		clearcoat.R = -reflect(V, clearcoat.N);
 
-		// TODO E(): https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_materials_sheen#albedo-scaling-technique
-		//  and: https://dassaultsystemes-technology.github.io/EnterprisePBRShadingModel/spec-2021x.md.html#figure_energy-compensation-sheen-e
-#define E(x) (x)
-		sheen.albedoScaling = 1.0 - max3(sheen.color) * E(NdotV);
+		sheen.DFG = texture_sheenlut.SampleLevel(sampler_linear_clamp, float2(NdotV, roughness), 0).r;
+		sheen.albedoScaling = 1.0 - max3(sheen.color) * sheen.DFG;
 
 		TdotV = dot(T, V);
 		BdotV = dot(B, V);

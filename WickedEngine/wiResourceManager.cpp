@@ -35,6 +35,7 @@ namespace wiResourceManager
 		std::make_pair("JPG", wiResource::IMAGE),
 		std::make_pair("JPEG", wiResource::IMAGE),
 		std::make_pair("PNG", wiResource::IMAGE),
+		std::make_pair("BMP", wiResource::IMAGE),
 		std::make_pair("DDS", wiResource::IMAGE),
 		std::make_pair("TGA", wiResource::IMAGE),
 		std::make_pair("WAV", wiResource::SOUND),

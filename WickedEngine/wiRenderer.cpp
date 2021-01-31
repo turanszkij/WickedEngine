@@ -26,6 +26,7 @@
 #include "wiEvent.h"
 #include "wiPlatform.h"
 #include "wiBlueNoise.h"
+#include "wiSheenLUT.h"
 
 #include <algorithm>
 #include <unordered_map>
@@ -2316,7 +2317,6 @@ void ReloadShaders()
 	wiEvent::FireEvent(SYSTEM_EVENT_RELOAD_SHADERS, 0);
 }
 
-
 void Initialize()
 {
 	SetUpStates();
@@ -2346,6 +2346,15 @@ void Initialize()
 	desc.Format = FORMAT_R11G11B10_FLOAT;
 	desc.BindFlags = BIND_SHADER_RESOURCE;
 	device->CreateTexture(&desc, nullptr, &globalLightmap);
+
+	desc.BindFlags = BIND_SHADER_RESOURCE;
+	desc.Format = FORMAT_R8_UNORM;
+	desc.Height = uint32_t(16);
+	desc.Width = uint32_t(16);
+	SubresourceData InitData;
+	InitData.pSysMem = sheenLUTdata;
+	InitData.SysMemPitch = desc.Width;
+	device->CreateTexture(&desc, &InitData, &textures[TEXTYPE_2D_SHEENLUT]);
 
 	wiBackLog::post("wiRenderer Initialized");
 }
@@ -8362,6 +8371,9 @@ void BindCommonResources(CommandList cmd)
 
 		BindConstantBuffers(stage, cmd);
 	}
+
+	device->BindResource(PS, &textures[TEXTYPE_2D_SHEENLUT], TEXSLOT_SHEENLUT, cmd);
+	device->BindResource(CS, &textures[TEXTYPE_2D_SHEENLUT], TEXSLOT_SHEENLUT, cmd);
 
 	// Bind the GPU entity array for all shaders that need it here:
 	GPUResource* resources[] = {

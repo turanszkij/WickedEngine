@@ -971,7 +971,7 @@ inline float3 EnvironmentReflection_Global(in Surface surface)
 #ifdef BRDF_SHEEN
 		envColor *= surface.sheen.albedoScaling;
 		MIP = surface.sheen.roughness * g_xFrame_EnvProbeMipCount;
-		envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, g_xFrame_GlobalEnvProbeIndex), MIP).rgb * surface.sheen.F;
+		envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, g_xFrame_GlobalEnvProbeIndex), MIP).rgb * surface.sheen.F * surface.sheen.DFG;
 #endif // BRDF_SHEEN
 
 #ifdef BRDF_CLEARCOAT
@@ -1021,7 +1021,7 @@ inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity pr
 #ifdef BRDF_SHEEN
 	envColor *= surface.sheen.albedoScaling;
 	MIP = surface.sheen.roughness * g_xFrame_EnvProbeMipCount;
-	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.GetTextureIndex()), MIP).rgb * surface.sheen.F;
+	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.GetTextureIndex()), MIP).rgb * surface.sheen.F * surface.sheen.DFG;
 #endif // BRDF_SHEEN
 
 #ifdef BRDF_CLEARCOAT
