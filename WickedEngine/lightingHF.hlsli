@@ -934,21 +934,20 @@ inline float3 GetAmbient(in float3 N)
 {
 	float3 ambient;
 
-#ifndef ENVMAPRENDERING
-	[branch]
-	if (g_xFrame_GlobalEnvProbeIndex >= 0)
-	{
-		ambient = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(N, g_xFrame_GlobalEnvProbeIndex), g_xFrame_EnvProbeMipCount).rgb;
-	}
-	else
+#ifdef ENVMAPRENDERING
+
+	// Set realistic_sky_stationary to true so we capture ambient at float3(0.0, 0.0, 0.0), similar to the standard sky to avoid flickering and weird behavior
+	ambient = lerp(
+		GetDynamicSkyColor(float3(0, -1, 0), false, false, false, true),
+		GetDynamicSkyColor(float3(0, 1, 0), false, false, false, true),
+		saturate(N.y * 0.5 + 0.5));
+
+#else
+
+	ambient = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(N, g_xFrame_GlobalEnvProbeIndex), g_xFrame_EnvProbeMipCount).rgb;
+	ambient += GetAmbientColor();
+
 #endif // ENVMAPRENDERING
-	{
-		// Also set realistic_sky_stationary to true so we capture ambient at float3(0.0, 0.0, 0.0), similar to the standard sky to avoid flickering and weird behavior
-		ambient = lerp(
-			GetDynamicSkyColor(float3(0, -1, 0), false, false, false, true),
-			GetDynamicSkyColor(float3(0, 1, 0), false, false, false, true),
-			saturate(N.y * 0.5 + 0.5)) + GetAmbientColor();
-	}
 
 	return ambient;
 }
@@ -960,39 +959,36 @@ inline float3 EnvironmentReflection_Global(in Surface surface)
 {
 	float3 envColor;
 
-#ifndef ENVMAPRENDERING
-	[branch]
-	if (g_xFrame_GlobalEnvProbeIndex >= 0)
-	{
-		// We have envmap information in a texture:
-		float MIP = surface.roughness * g_xFrame_EnvProbeMipCount;
-		envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, g_xFrame_GlobalEnvProbeIndex), MIP).rgb * surface.F;
+#ifdef ENVMAPRENDERING
+
+	// There is no access to envmaps, so approximate sky color:
+	// Set realistic_sky_stationary to true so we capture environment at float3(0.0, 0.0, 0.0), similar to the standard sky to avoid flickering and weird behavior
+	float3 realSkyColor = GetDynamicSkyColor(surface.R, false, false, false, true); // false: disable sun disk and clouds
+	float3 roughSkyColor = lerp(
+		GetDynamicSkyColor(float3(0, -1, 0), false, false, false, true),
+		GetDynamicSkyColor(float3(0, 1, 0), false, false, false, true),
+		saturate(surface.R.y * 0.5 + 0.5));
+
+	envColor = lerp(realSkyColor, roughSkyColor, saturate(surface.roughness)) * surface.F;
+
+#else
+
+	float MIP = surface.roughness * g_xFrame_EnvProbeMipCount;
+	envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, g_xFrame_GlobalEnvProbeIndex), MIP).rgb * surface.F;
 
 #ifdef BRDF_SHEEN
-		envColor *= surface.sheen.albedoScaling;
-		MIP = surface.sheen.roughness * g_xFrame_EnvProbeMipCount;
-		envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, g_xFrame_GlobalEnvProbeIndex), MIP).rgb * surface.sheen.F * surface.sheen.DFG;
+	envColor *= surface.sheen.albedoScaling;
+	MIP = surface.sheen.roughness * g_xFrame_EnvProbeMipCount;
+	envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, g_xFrame_GlobalEnvProbeIndex), MIP).rgb * surface.sheen.F * surface.sheen.DFG;
 #endif // BRDF_SHEEN
 
 #ifdef BRDF_CLEARCOAT
-		envColor *= 1 - surface.clearcoat.F;
-		MIP = surface.clearcoat.roughness * g_xFrame_EnvProbeMipCount;
-		envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.clearcoat.R, g_xFrame_GlobalEnvProbeIndex), MIP).rgb * surface.clearcoat.F;
+	envColor *= 1 - surface.clearcoat.F;
+	MIP = surface.clearcoat.roughness * g_xFrame_EnvProbeMipCount;
+	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.clearcoat.R, g_xFrame_GlobalEnvProbeIndex), MIP).rgb * surface.clearcoat.F;
 #endif // BRDF_CLEARCOAT
-	}
-	else
+
 #endif // ENVMAPRENDERING
-	{
-		// There are no envmaps, approximate sky color:
-		// Also set realistic_sky_stationary to true so we capture environment at float3(0.0, 0.0, 0.0), similar to the standard sky to avoid flickering and weird behavior
-		float3 realSkyColor = GetDynamicSkyColor(surface.R, false, false, false, true); // false: disable sun disk and clouds
-		float3 roughSkyColor = lerp(
-			GetDynamicSkyColor(float3(0, -1, 0), false, false, false, true),
-			GetDynamicSkyColor(float3(0, 1, 0), false, false, false, true),
-			saturate(surface.R.y * 0.5 + 0.5));
-		
-		envColor = lerp(realSkyColor, roughSkyColor, saturate(surface.roughness));
-	}
 
 	return envColor;
 }

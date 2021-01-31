@@ -1503,7 +1503,7 @@ float4 main(PixelInput input) : SV_TARGET
 	float4 reflectionUV = mul(g_xCamera_ReflVP, float4(surface.P, 1));
 	reflectionUV.xy /= reflectionUV.w;
 	reflectionUV.xy = reflectionUV.xy * float2(0.5, -0.5) + 0.5;
-	lighting.indirect.specular += texture_reflection.SampleLevel(sampler_linear_mirror, reflectionUV.xy + bumpColor.rg, 0).rgb;
+	lighting.indirect.specular += texture_reflection.SampleLevel(sampler_linear_mirror, reflectionUV.xy + bumpColor.rg, 0).rgb * surface.F;
 #endif // WATER
 
 
@@ -1547,7 +1547,7 @@ float4 main(PixelInput input) : SV_TARGET
 
 
 #ifdef PLANARREFLECTION
-	lighting.indirect.specular += PlanarReflection(surface, bumpColor.rg);
+	lighting.indirect.specular += PlanarReflection(surface, bumpColor.rg) * surface.F;
 #endif
 
 
@@ -1574,7 +1574,7 @@ float4 main(PixelInput input) : SV_TARGET
 #ifndef ENVMAPRENDERING
 #ifndef TRANSPARENT
 	float4 ssr = texture_ssr.SampleLevel(sampler_linear_clamp, ScreenCoord, 0);
-	lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb, ssr.a);
+	lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb * surface.F, ssr.a);
 #endif // TRANSPARENT
 #endif // ENVMAPRENDERING
 #endif // WATER
