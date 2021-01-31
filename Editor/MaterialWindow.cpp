@@ -118,7 +118,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	shaderTypeComboBox.AddItem("PBR + Anisotropic", MaterialComponent::SHADERTYPE_PBR_ANISOTROPIC);
 	shaderTypeComboBox.AddItem("PBR + Cloth", MaterialComponent::SHADERTYPE_PBR_CLOTH);
 	shaderTypeComboBox.AddItem("PBR + Clear coat", MaterialComponent::SHADERTYPE_PBR_CLEARCOAT);
-	shaderTypeComboBox.AddItem("PBR + Sheen + Clear coat", MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT);
+	shaderTypeComboBox.AddItem("PBR + Cloth + Clear coat", MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT);
 	shaderTypeComboBox.AddItem("Water", MaterialComponent::SHADERTYPE_WATER);
 	shaderTypeComboBox.AddItem("Cartoon", MaterialComponent::SHADERTYPE_CARTOON);
 	shaderTypeComboBox.AddItem("Unlit", MaterialComponent::SHADERTYPE_UNLIT);

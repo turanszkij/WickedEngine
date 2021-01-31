@@ -43,7 +43,7 @@ inline LightingPart CombineLighting(in Surface surface, in Lighting lighting)
 {
 	LightingPart result;
 	result.diffuse = lighting.direct.diffuse + lighting.indirect.diffuse * surface.occlusion;
-	result.specular = lighting.direct.specular + lighting.indirect.specular * surface.F * surface.occlusion;
+	result.specular = lighting.direct.specular + lighting.indirect.specular * surface.occlusion;
 
 	return result;
 }
@@ -966,11 +966,12 @@ inline float3 EnvironmentReflection_Global(in Surface surface)
 	{
 		// We have envmap information in a texture:
 		float MIP = surface.roughness * g_xFrame_EnvProbeMipCount;
-		envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, g_xFrame_GlobalEnvProbeIndex), MIP).rgb;
+		envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, g_xFrame_GlobalEnvProbeIndex), MIP).rgb * surface.F;
 
 #ifdef BRDF_CLEARCOAT
-		MIP = surface.clearcoatRoughness * g_xFrame_EnvProbeMipCount;
-		envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.clearcoatR, g_xFrame_GlobalEnvProbeIndex), MIP).rgb;
+		envColor *= 1 - surface.clearcoat.F;
+		MIP = surface.clearcoat.roughness * g_xFrame_EnvProbeMipCount;
+		envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.clearcoat.R, g_xFrame_GlobalEnvProbeIndex), MIP).rgb * surface.clearcoat.F;
 #endif // BRDF_CLEARCOAT
 	}
 	else
@@ -1009,17 +1010,26 @@ inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity pr
 
 	// Sample cubemap texture:
 	float MIP = surface.roughness * g_xFrame_EnvProbeMipCount;
-	float3 envmapColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.GetTextureIndex()), MIP).rgb;
+	float3 envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.GetTextureIndex()), MIP).rgb * surface.F;
 
 #ifdef BRDF_CLEARCOAT
-	MIP = surface.clearcoatRoughness * g_xFrame_EnvProbeMipCount;
-	envmapColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.GetTextureIndex()), MIP).rgb;
+	RayLS = mul(surface.clearcoat.R, (float3x3)probeProjection);
+	FirstPlaneIntersect = (float3(1, 1, 1) - clipSpacePos) / RayLS;
+	SecondPlaneIntersect = (-float3(1, 1, 1) - clipSpacePos) / RayLS;
+	FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
+	Distance = min(FurthestPlane.x, min(FurthestPlane.y, FurthestPlane.z));
+	IntersectPositionWS = surface.P + surface.clearcoat.R * Distance;
+	R_parallaxCorrected = IntersectPositionWS - probe.position;
+
+	envColor *= 1 - surface.clearcoat.F;
+	MIP = surface.clearcoat.roughness * g_xFrame_EnvProbeMipCount;
+	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.GetTextureIndex()), MIP).rgb * surface.clearcoat.F;
 #endif // BRDF_CLEARCOAT
 
 	// blend out if close to any cube edge:
 	float edgeBlend = 1 - pow(saturate(max(abs(clipSpacePos.x), max(abs(clipSpacePos.y), abs(clipSpacePos.z)))), 8);
 
-	return float4(envmapColor, edgeBlend);
+	return float4(envColor, edgeBlend);
 }
 
 #endif // WI_LIGHTING_HF

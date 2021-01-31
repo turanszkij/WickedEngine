@@ -72,7 +72,7 @@ void GetSampleInfo(float2 velocity, float2 neighborUV, float2 uv, float3 P, floa
 	float NdotL = saturate(dot(N, L));
     
 	Surface surface;
-	surface.roughness2 = roughness * roughness;
+	surface.roughnessBRDF = roughness * roughness;
 	surface.NdotV = NdotV;
     
 	SurfaceToLight surfaceToLight;
@@ -80,10 +80,8 @@ void GetSampleInfo(float2 velocity, float2 neighborUV, float2 uv, float3 P, floa
 	surfaceToLight.NdotL = NdotL;
     
     // Calculate BRDF where Fresnel = 1
-	//float Vis = visibilityOcclusion(surface, surfaceToLight);
-	//float D = microfacetDistribution(surface, surfaceToLight);
-	float Vis = V_SmithGGXCorrelated(surface.roughness2, surface.NdotV, surfaceToLight.NdotL);
-	float D = D_GGX(surface.roughness2, surfaceToLight.NdotH, surfaceToLight.H);
+	float Vis = V_SmithGGXCorrelated(surface.roughnessBRDF, surface.NdotV, surfaceToLight.NdotL);
+	float D = D_GGX(surface.roughnessBRDF, surfaceToLight.NdotH, surfaceToLight.H);
 	float specularLight = Vis * D * PI / 4.0;
 
 	weight = specularLight / max(hitPDF, 0.00001f);

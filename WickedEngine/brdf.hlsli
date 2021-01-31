@@ -100,6 +100,27 @@ float F_Schlick(float f0, float f90, float VoH)
 
 // Surface descriptors:
 
+struct SheenSurface
+{
+	float4 color;
+	float roughness;
+
+	// computed values:
+	float roughnessBRDF;
+};
+
+struct ClearcoatSurface
+{
+	float factor;
+	float roughness;
+	float3 N;
+
+	// computed values:
+	float roughnessBRDF;
+	float3 R;
+	float3 F;
+};
+
 struct Surface
 {
 	// Fill these yourself:
@@ -121,14 +142,9 @@ struct Surface
 	float4 sss;				// subsurface scattering color * amount
 	float4 sss_inv;			// 1 / (1 + sss)
 	uint layerMask;			// the engine-side layer mask
-	float4 sheenColor;
-	float sheenRoughness;
-	float clearcoat;
-	float clearcoatRoughness;
-	float3 clearcoatN;
 
 	// These will be computed when calling Update():
-	float roughness2;		// BRDF roughness
+	float roughnessBRDF;	// roughness input for BRDF functions
 	float NdotV;			// cos(angle between normal and view vector)
 	float f90;				// reflectance at grazing angle
 	float3 R;				// reflection vector
@@ -137,10 +153,9 @@ struct Surface
 	float BdotV;
 	float at;
 	float ab;
-	float sheenRoughness2;
-	float clearcoatRoughness2;
-	float3 clearcoatR;
-	float3 clearcoatF;
+
+	SheenSurface sheen;
+	ClearcoatSurface clearcoat;
 
 	inline void init()
 	{
@@ -158,11 +173,13 @@ struct Surface
 		sss = 0;
 		sss_inv = 1;
 		layerMask = ~0;
-		sheenColor = 0;
-		sheenRoughness = 0;
-		clearcoat = 0;
-		clearcoatRoughness = 0;
-		clearcoatN = 0;
+
+		sheen.color = 0;
+		sheen.roughness = 0;
+
+		clearcoat.factor = 0;
+		clearcoat.roughness = 0;
+		clearcoat.N = 0;
 	}
 
 	inline void create(
@@ -202,28 +219,28 @@ struct Surface
 	inline void update()
 	{
 		roughness = clamp(roughness, 0.045, 1);
-		roughness2 = roughness * roughness;
+		roughnessBRDF = roughness * roughness;
 
-		sheenRoughness = clamp(sheenRoughness, 0.045, 1);
-		sheenRoughness2 = sheenRoughness * sheenRoughness;
+		sheen.roughness = clamp(sheen.roughness, 0.045, 1);
+		sheen.roughnessBRDF = sheen.roughness * sheen.roughness;
 
-		clearcoatRoughness = clamp(clearcoatRoughness, 0.045, 1);
-		clearcoatRoughness2 = clearcoatRoughness * clearcoatRoughness;
+		clearcoat.roughness = clamp(clearcoat.roughness, 0.045, 1);
+		clearcoat.roughnessBRDF = clearcoat.roughness * clearcoat.roughness;
 
 		NdotV = saturate(abs(dot(N, V)) + 1e-5);
 
 		f90 = saturate(50.0 * dot(f0, 0.33));
 		F = F_Schlick(f0, f90, NdotV);
-		clearcoatF = F_Schlick(f0, f90, saturate(abs(dot(clearcoatN, V)) + 1e-5));
-		clearcoatF *= clearcoat;
+		clearcoat.F = F_Schlick(f0, f90, saturate(abs(dot(clearcoat.N, V)) + 1e-5));
+		clearcoat.F *= clearcoat.factor;
 
 		R = -reflect(V, N);
-		clearcoatR = -reflect(V, clearcoatN);
+		clearcoat.R = -reflect(V, clearcoat.N);
 
 		TdotV = dot(T, V);
 		BdotV = dot(B, V);
-		at = max(0, roughness2 * (1 + anisotropy));
-		ab = max(0, roughness2 * (1 - anisotropy));
+		at = max(0, roughnessBRDF * (1 + anisotropy));
+		ab = max(0, roughnessBRDF * (1 - anisotropy));
 
 #ifdef BRDF_CARTOON
 		F = smoothstep(0.05, 0.1, F);
@@ -298,26 +315,27 @@ float3 BRDF_GetSpecular(in Surface surface, in SurfaceToLight surfaceToLight)
 {
 #ifdef BRDF_ANISOTROPIC
 	float D = D_GGX_Anisotropic(surface.at, surface.ab, surfaceToLight.TdotH, surfaceToLight.BdotH, surfaceToLight.NdotH);
-	float V = V_SmithGGXCorrelated_Anisotropic(surface.at, surface.ab, surface.TdotV, surface.BdotV,
+	float Vis = V_SmithGGXCorrelated_Anisotropic(surface.at, surface.ab, surface.TdotV, surface.BdotV,
 		surfaceToLight.TdotL, surfaceToLight.BdotL, surface.NdotV, surfaceToLight.NdotL);
 #else
-	float D = D_GGX(surface.roughness2, surfaceToLight.NdotH, surfaceToLight.H);
-	float V = V_SmithGGXCorrelated(surface.roughness2, surface.NdotV, surfaceToLight.NdotL);
+	float D = D_GGX(surface.roughnessBRDF, surfaceToLight.NdotH, surfaceToLight.H);
+	float Vis = V_SmithGGXCorrelated(surface.roughnessBRDF, surface.NdotV, surfaceToLight.NdotL);
 #endif // BRDF_ANISOTROPIC
 
-	float3 specular = D * V * surfaceToLight.F;
+	float3 specular = D * Vis * surfaceToLight.F;
 
 #ifdef BRDF_SHEEN
-	D = D_Charlie(surface.sheenRoughness2, surfaceToLight.NdotH);
-	V = V_Neubelt(surface.NdotV, surfaceToLight.NdotL);
-	specular += D * V * surface.sheenColor.rgb;
+	D = D_Charlie(surface.sheen.roughnessBRDF, surfaceToLight.NdotH);
+	Vis = V_Neubelt(surface.NdotV, surfaceToLight.NdotL);
+	specular += D * Vis * surface.sheen.color.rgb;
 #endif // BRDF_SHEEN
 
 #ifdef BRDF_CLEARCOAT
-	float NdotH = saturate(dot(surface.clearcoatN, surfaceToLight.H));
-	D = D_GGX(surface.clearcoatRoughness2, NdotH, surfaceToLight.H);
-	V = V_Kelemen(surfaceToLight.LdotH);
-	specular += D * V * surface.clearcoatF;
+	specular *= 1 - surface.clearcoat.F;
+	float NdotH = saturate(dot(surface.clearcoat.N, surfaceToLight.H));
+	D = D_GGX(surface.clearcoat.roughnessBRDF, NdotH, surfaceToLight.H);
+	Vis = V_Kelemen(surfaceToLight.LdotH);
+	specular += D * Vis * surface.clearcoat.F;
 #endif // BRDF_CLEARCOAT
 
 	return specular;
@@ -326,7 +344,13 @@ float3 BRDF_GetDiffuse(in Surface surface, in SurfaceToLight surfaceToLight)
 {
 	// Note: subsurface scattering will remove Fresnel (F), because otherwise
 	//	there would be artifact on backside where diffuse wraps
-	return (1 - lerp(surfaceToLight.F, 0, saturate(surface.sss.a))) / PI;
+	float3 diffuse = (1 - lerp(surfaceToLight.F, 0, saturate(surface.sss.a))) / PI;
+
+#ifdef BRDF_CLEARCOAT
+	diffuse *= 1 - surface.clearcoat.F;
+#endif // BRDF_CLEARCOAT
+
+	return diffuse;
 }
 
 #endif // WI_BRDF_HF

@@ -35,7 +35,7 @@ TEXTURE2D(texture_transmissionmap, float, TEXSLOT_RENDERER_TRANSMISSIONMAP);	// 
 TEXTURE2D(texture_sheencolormap, float4, TEXSLOT_RENDERER_SHEENCOLORMAP);
 TEXTURE2D(texture_sheenroughnessmap, float, TEXSLOT_RENDERER_SHEENROUGHNESSMAP);
 TEXTURE2D(texture_clearcoatmap, float, TEXSLOT_RENDERER_CLEARCOATMAP);
-TEXTURE2D(texture_clearcoatroughnessmap, float, TEXSLOT_RENDERER_CLEARCOATROUGHNESSMAP);
+TEXTURE2D(texture_clearcoatroughnessmap, float2, TEXSLOT_RENDERER_CLEARCOATROUGHNESSMAP);
 TEXTURE2D(texture_clearcoatnormalmap, float3, TEXSLOT_RENDERER_CLEARCOATNORMALMAP);
 
 TEXTURE2D(texture_blend1_basecolormap, float4, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP);	// rgb: baseColor, a: opacity
@@ -347,7 +347,11 @@ inline GBuffer CreateGBuffer(in float4 color, in Surface surface)
 {
 	GBuffer gbuffer;
 	gbuffer.g0 = color;
+#ifdef BRDF_CLEARCOAT
+	gbuffer.g1 = float4(surface.clearcoat.N * 0.5f + 0.5f, surface.clearcoat.roughness);
+#else
 	gbuffer.g1 = float4(surface.N * 0.5f + 0.5f, surface.roughness);
+#endif // BRDF_CLEARCOAT
 	return gbuffer;
 }
 
@@ -1402,43 +1406,43 @@ float4 main(PixelInput input) : SV_TARGET
 
 
 #ifdef BRDF_SHEEN
-	surface.sheenColor = g_xMaterial.sheenColor;
-	surface.sheenRoughness = g_xMaterial.sheenRoughness;
+	surface.sheen.color = g_xMaterial.sheenColor;
+	surface.sheen.roughness = g_xMaterial.sheenRoughness;
 
 #ifdef OBJECTSHADER_USE_UVSETS
 	[branch]
 	if (g_xMaterial.uvset_sheenColorMap >= 0)
 	{
 		const float2 UV_sheenColorMap = g_xMaterial.uvset_sheenColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-		surface.sheenColor *= DEGAMMA(texture_sheencolormap.Sample(sampler_objectshader, UV_sheenColorMap));
+		surface.sheen.color *= DEGAMMA(texture_sheencolormap.Sample(sampler_objectshader, UV_sheenColorMap));
 	}
 	[branch]
 	if (g_xMaterial.uvset_sheenRoughnessMap >= 0)
 	{
 		const float2 uvset_sheenRoughnessMap = g_xMaterial.uvset_sheenRoughnessMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-		surface.sheenRoughness *= texture_sheenroughnessmap.Sample(sampler_objectshader, uvset_sheenRoughnessMap);
+		surface.sheen.roughness *= texture_sheenroughnessmap.Sample(sampler_objectshader, uvset_sheenRoughnessMap);
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 #endif // BRDF_SHEEN
 
 
 #ifdef BRDF_CLEARCOAT
-	surface.clearcoat = g_xMaterial.clearcoat;
-	surface.clearcoatRoughness = g_xMaterial.clearcoatRoughness;
-	surface.clearcoatN = surface.N;
+	surface.clearcoat.factor = g_xMaterial.clearcoat;
+	surface.clearcoat.roughness = g_xMaterial.clearcoatRoughness;
+	surface.clearcoat.N = input.nor;
 
 #ifdef OBJECTSHADER_USE_UVSETS
 	[branch]
 	if (g_xMaterial.uvset_clearcoatMap >= 0)
 	{
 		const float2 UV_clearcoatMap = g_xMaterial.uvset_clearcoatMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-		surface.clearcoat *= texture_clearcoatmap.Sample(sampler_objectshader, UV_clearcoatMap);
+		surface.clearcoat.factor *= texture_clearcoatmap.Sample(sampler_objectshader, UV_clearcoatMap);
 	}
 	[branch]
 	if (g_xMaterial.uvset_clearcoatRoughnessMap >= 0)
 	{
 		const float2 uvset_clearcoatRoughnessMap = g_xMaterial.uvset_clearcoatRoughnessMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-		surface.clearcoatRoughness *= texture_clearcoatroughnessmap.Sample(sampler_objectshader, uvset_clearcoatRoughnessMap);
+		surface.clearcoat.roughness *= texture_clearcoatroughnessmap.Sample(sampler_objectshader, uvset_clearcoatRoughnessMap).g;
 	}
 #ifdef OBJECTSHADER_USE_TANGENT
 	[branch]
@@ -1448,9 +1452,12 @@ float4 main(PixelInput input) : SV_TARGET
 		float3 clearcoatNormalMap = texture_clearcoatnormalmap.Sample(sampler_objectshader, uvset_clearcoatNormalMap);
 		clearcoatNormalMap.b = clearcoatNormalMap.b == 0 ? 1 : clearcoatNormalMap.b; // fix for missing blue channel
 		clearcoatNormalMap = clearcoatNormalMap * 2 - 1;
-		surface.clearcoatN = normalize(mul(clearcoatNormalMap, TBN));
+		surface.clearcoat.N = mul(clearcoatNormalMap, TBN);
 	}
 #endif // OBJECTSHADER_USE_TANGENT
+
+	surface.clearcoat.N = normalize(surface.clearcoat.N);
+
 #endif // OBJECTSHADER_USE_UVSETS
 #endif // BRDF_CLEARCOAT
 

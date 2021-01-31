@@ -438,6 +438,26 @@ namespace wiScene
 		{
 			transmissionMap = wiResourceManager::Load(content_dir + transmissionMapName);
 		}
+		if (!sheenColorMapName.empty())
+		{
+			sheenColorMap = wiResourceManager::Load(content_dir + sheenColorMapName);
+		}
+		if (!sheenRoughnessMapName.empty())
+		{
+			sheenRoughnessMap = wiResourceManager::Load(content_dir + sheenRoughnessMapName);
+		}
+		if (!clearcoatMapName.empty())
+		{
+			clearcoatMap = wiResourceManager::Load(content_dir + clearcoatMapName);
+		}
+		if (!clearcoatRoughnessMapName.empty())
+		{
+			clearcoatRoughnessMap = wiResourceManager::Load(content_dir + clearcoatRoughnessMapName);
+		}
+		if (!clearcoatNormalMapName.empty())
+		{
+			clearcoatNormalMap = wiResourceManager::Load(content_dir + clearcoatNormalMapName);
+		}
 
 
 		ShaderMaterial shadermat;
