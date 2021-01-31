@@ -968,6 +968,12 @@ inline float3 EnvironmentReflection_Global(in Surface surface)
 		float MIP = surface.roughness * g_xFrame_EnvProbeMipCount;
 		envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, g_xFrame_GlobalEnvProbeIndex), MIP).rgb * surface.F;
 
+#ifdef BRDF_SHEEN
+		envColor *= surface.sheen.albedoScaling;
+		MIP = surface.sheen.roughness * g_xFrame_EnvProbeMipCount;
+		envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, g_xFrame_GlobalEnvProbeIndex), MIP).rgb * surface.sheen.F;
+#endif // BRDF_SHEEN
+
 #ifdef BRDF_CLEARCOAT
 		envColor *= 1 - surface.clearcoat.F;
 		MIP = surface.clearcoat.roughness * g_xFrame_EnvProbeMipCount;
@@ -1011,6 +1017,12 @@ inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity pr
 	// Sample cubemap texture:
 	float MIP = surface.roughness * g_xFrame_EnvProbeMipCount;
 	float3 envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.GetTextureIndex()), MIP).rgb * surface.F;
+
+#ifdef BRDF_SHEEN
+	envColor *= surface.sheen.albedoScaling;
+	MIP = surface.sheen.roughness * g_xFrame_EnvProbeMipCount;
+	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.GetTextureIndex()), MIP).rgb * surface.sheen.F;
+#endif // BRDF_SHEEN
 
 #ifdef BRDF_CLEARCOAT
 	RayLS = mul(surface.clearcoat.R, (float3x3)probeProjection);

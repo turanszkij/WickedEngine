@@ -8,6 +8,7 @@
 #define saturateMediump(x) min(x, MEDIUMP_FLT_MAX)
 #define highp
 #define pow5(x) pow(x, 5)
+#define max3(v) max(max(v.x, v.y), v.z)
 
 float D_GGX(float roughness, float NoH, const float3 h)
 {
@@ -107,6 +108,8 @@ struct SheenSurface
 
 	// computed values:
 	float roughnessBRDF;
+	float3 F;
+	float albedoScaling;
 };
 
 struct ClearcoatSurface
@@ -231,11 +234,17 @@ struct Surface
 
 		f90 = saturate(50.0 * dot(f0, 0.33));
 		F = F_Schlick(f0, f90, NdotV);
+		sheen.F = sheen.color.rgb;
 		clearcoat.F = F_Schlick(f0, f90, saturate(abs(dot(clearcoat.N, V)) + 1e-5));
 		clearcoat.F *= clearcoat.factor;
 
 		R = -reflect(V, N);
 		clearcoat.R = -reflect(V, clearcoat.N);
+
+		// TODO E(): https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_materials_sheen#albedo-scaling-technique
+		//  and: https://dassaultsystemes-technology.github.io/EnterprisePBRShadingModel/spec-2021x.md.html#figure_energy-compensation-sheen-e
+#define E(x) (x)
+		sheen.albedoScaling = 1.0 - max3(sheen.color) * E(NdotV);
 
 		TdotV = dot(T, V);
 		BdotV = dot(B, V);
@@ -325,9 +334,10 @@ float3 BRDF_GetSpecular(in Surface surface, in SurfaceToLight surfaceToLight)
 	float3 specular = D * Vis * surfaceToLight.F;
 
 #ifdef BRDF_SHEEN
+	specular *= surface.sheen.albedoScaling;
 	D = D_Charlie(surface.sheen.roughnessBRDF, surfaceToLight.NdotH);
 	Vis = V_Neubelt(surface.NdotV, surfaceToLight.NdotL);
-	specular += D * Vis * surface.sheen.color.rgb;
+	specular += D * Vis * surface.sheen.F;
 #endif // BRDF_SHEEN
 
 #ifdef BRDF_CLEARCOAT
@@ -345,6 +355,10 @@ float3 BRDF_GetDiffuse(in Surface surface, in SurfaceToLight surfaceToLight)
 	// Note: subsurface scattering will remove Fresnel (F), because otherwise
 	//	there would be artifact on backside where diffuse wraps
 	float3 diffuse = (1 - lerp(surfaceToLight.F, 0, saturate(surface.sss.a))) / PI;
+
+#ifdef BRDF_SHEEN
+	diffuse *= surface.sheen.albedoScaling;
+#endif // BRDF_SHEEN
 
 #ifdef BRDF_CLEARCOAT
 	diffuse *= 1 - surface.clearcoat.F;
