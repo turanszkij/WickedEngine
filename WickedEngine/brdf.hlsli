@@ -103,12 +103,11 @@ float F_Schlick(float f0, float f90, float VoH)
 
 struct SheenSurface
 {
-	float4 color;
+	float3 color;
 	float roughness;
 
 	// computed values:
 	float roughnessBRDF;
-	float3 F;
 	float DFG;
 	float albedoScaling;
 };
@@ -235,7 +234,6 @@ struct Surface
 
 		f90 = saturate(50.0 * dot(f0, 0.33));
 		F = F_Schlick(f0, f90, NdotV);
-		sheen.F = sheen.color.rgb;
 		clearcoat.F = F_Schlick(f0, f90, saturate(abs(dot(clearcoat.N, V)) + 1e-5));
 		clearcoat.F *= clearcoat.factor;
 
@@ -337,7 +335,7 @@ float3 BRDF_GetSpecular(in Surface surface, in SurfaceToLight surfaceToLight)
 	specular *= surface.sheen.albedoScaling;
 	D = D_Charlie(surface.sheen.roughnessBRDF, surfaceToLight.NdotH);
 	Vis = V_Neubelt(surface.NdotV, surfaceToLight.NdotL);
-	specular += D * Vis * surface.sheen.F;
+	specular += D * Vis * surface.sheen.color;
 #endif // BRDF_SHEEN
 
 #ifdef BRDF_CLEARCOAT
