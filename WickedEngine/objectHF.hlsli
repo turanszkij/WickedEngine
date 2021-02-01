@@ -31,7 +31,12 @@ TEXTURE2D(texture_surfacemap, float4, TEXSLOT_RENDERER_SURFACEMAP);				// r: occ
 TEXTURE2D(texture_emissivemap, float4, TEXSLOT_RENDERER_EMISSIVEMAP);			// rgba: emissive
 TEXTURE2D(texture_displacementmap, float, TEXSLOT_RENDERER_DISPLACEMENTMAP);	// r: heightmap
 TEXTURE2D(texture_occlusionmap, float, TEXSLOT_RENDERER_OCCLUSIONMAP);			// r: occlusion
-TEXTURE2D(texture_transmissionmap, float, TEXSLOT_RENDERER_TRANSMISSIONMAP);			// r: occlusion
+TEXTURE2D(texture_transmissionmap, float, TEXSLOT_RENDERER_TRANSMISSIONMAP);	// r: transmission factor
+TEXTURE2D(texture_sheencolormap, float3, TEXSLOT_RENDERER_SHEENCOLORMAP);					// rgb
+TEXTURE2D(texture_sheenroughnessmap, float4, TEXSLOT_RENDERER_SHEENROUGHNESSMAP);			// a
+TEXTURE2D(texture_clearcoatmap, float, TEXSLOT_RENDERER_CLEARCOATMAP);						// r
+TEXTURE2D(texture_clearcoatroughnessmap, float2, TEXSLOT_RENDERER_CLEARCOATROUGHNESSMAP);	// g
+TEXTURE2D(texture_clearcoatnormalmap, float3, TEXSLOT_RENDERER_CLEARCOATNORMALMAP);			// rgb
 
 TEXTURE2D(texture_blend1_basecolormap, float4, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP);	// rgb: baseColor, a: opacity
 TEXTURE2D(texture_blend1_normalmap, float3, TEXSLOT_RENDERER_BLEND1_NORMALMAP);			// rgb: normal
@@ -342,7 +347,11 @@ inline GBuffer CreateGBuffer(in float4 color, in Surface surface)
 {
 	GBuffer gbuffer;
 	gbuffer.g0 = color;
+#ifdef BRDF_CLEARCOAT
+	gbuffer.g1 = float4(surface.clearcoat.N * 0.5f + 0.5f, surface.clearcoat.roughness);
+#else
 	gbuffer.g1 = float4(surface.N * 0.5f + 0.5f, surface.roughness);
+#endif // BRDF_CLEARCOAT
 	return gbuffer;
 }
 
@@ -502,7 +511,6 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 #ifndef DISABLE_ENVMAPS
 	// Apply environment maps:
 	float4 envmapAccumulation = 0;
-	const float envMapMIP = surface.roughness * g_xFrame_EnvProbeMipCount;
 
 #ifndef ENVMAPRENDERING
 #ifndef DISABLE_LOCALENVPMAPS
@@ -532,7 +540,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 				[branch]
 				if (is_saturated(uvw))
 				{
-					const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos, envMapMIP);
+					const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos);
 					// perform manual blending of probes:
 					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
 					envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
@@ -560,7 +568,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 	[branch]
 	if (envmapAccumulation.a < 0.99)
 	{
-		envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
+		envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface), envmapAccumulation.rgb, envmapAccumulation.a);
 	}
 	lighting.indirect.specular += max(0, envmapAccumulation.rgb);
 #endif // DISABLE_ENVMAPS
@@ -713,7 +721,6 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 #ifndef DISABLE_ENVMAPS
 	// Apply environment maps:
 	float4 envmapAccumulation = 0;
-	const float envMapMIP = surface.roughness * g_xFrame_EnvProbeMipCount;
 
 #ifndef DISABLE_LOCALENVPMAPS
 	[branch]
@@ -753,7 +760,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 					[branch]
 					if (is_saturated(uvw))
 					{
-						const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos, envMapMIP);
+						const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos);
 						// perform manual blending of probes:
 						//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
 						envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
@@ -783,7 +790,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 	[branch]
 	if (envmapAccumulation.a < 0.99)
 	{
-		envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
+		envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface), envmapAccumulation.rgb, envmapAccumulation.a);
 	}
 	lighting.indirect.specular += max(0, envmapAccumulation.rgb);
 #endif // DISABLE_ENVMAPS
@@ -1397,6 +1404,64 @@ float4 main(PixelInput input) : SV_TARGET
 	surface.B = normalize(cross(tangent.xyz, surface.N) * tangent.w); // Compute bitangent again after normal mapping
 #endif // BRDF_ANISOTROPIC
 
+
+#ifdef BRDF_SHEEN
+	surface.sheen.color = g_xMaterial.sheenColor.rgb;
+	surface.sheen.roughness = g_xMaterial.sheenRoughness;
+
+#ifdef OBJECTSHADER_USE_UVSETS
+	[branch]
+	if (g_xMaterial.uvset_sheenColorMap >= 0)
+	{
+		const float2 UV_sheenColorMap = g_xMaterial.uvset_sheenColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		surface.sheen.color *= DEGAMMA(texture_sheencolormap.Sample(sampler_objectshader, UV_sheenColorMap));
+	}
+	[branch]
+	if (g_xMaterial.uvset_sheenRoughnessMap >= 0)
+	{
+		const float2 uvset_sheenRoughnessMap = g_xMaterial.uvset_sheenRoughnessMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		surface.sheen.roughness *= texture_sheenroughnessmap.Sample(sampler_objectshader, uvset_sheenRoughnessMap).a;
+	}
+#endif // OBJECTSHADER_USE_UVSETS
+#endif // BRDF_SHEEN
+
+
+#ifdef BRDF_CLEARCOAT
+	surface.clearcoat.factor = g_xMaterial.clearcoat;
+	surface.clearcoat.roughness = g_xMaterial.clearcoatRoughness;
+	surface.clearcoat.N = input.nor;
+
+#ifdef OBJECTSHADER_USE_UVSETS
+	[branch]
+	if (g_xMaterial.uvset_clearcoatMap >= 0)
+	{
+		const float2 UV_clearcoatMap = g_xMaterial.uvset_clearcoatMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		surface.clearcoat.factor *= texture_clearcoatmap.Sample(sampler_objectshader, UV_clearcoatMap);
+	}
+	[branch]
+	if (g_xMaterial.uvset_clearcoatRoughnessMap >= 0)
+	{
+		const float2 uvset_clearcoatRoughnessMap = g_xMaterial.uvset_clearcoatRoughnessMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		surface.clearcoat.roughness *= texture_clearcoatroughnessmap.Sample(sampler_objectshader, uvset_clearcoatRoughnessMap).g;
+	}
+#ifdef OBJECTSHADER_USE_TANGENT
+	[branch]
+	if (g_xMaterial.uvset_clearcoatNormalMap >= 0)
+	{
+		const float2 uvset_clearcoatNormalMap = g_xMaterial.uvset_clearcoatNormalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		float3 clearcoatNormalMap = texture_clearcoatnormalmap.Sample(sampler_objectshader, uvset_clearcoatNormalMap);
+		clearcoatNormalMap.b = clearcoatNormalMap.b == 0 ? 1 : clearcoatNormalMap.b; // fix for missing blue channel
+		clearcoatNormalMap = clearcoatNormalMap * 2 - 1;
+		surface.clearcoat.N = mul(clearcoatNormalMap, TBN);
+	}
+#endif // OBJECTSHADER_USE_TANGENT
+
+	surface.clearcoat.N = normalize(surface.clearcoat.N);
+
+#endif // OBJECTSHADER_USE_UVSETS
+#endif // BRDF_CLEARCOAT
+
+
 	surface.sss = g_xMaterial.subsurfaceScattering;
 	surface.sss_inv = g_xMaterial.subsurfaceScattering_inv;
 
@@ -1438,7 +1503,7 @@ float4 main(PixelInput input) : SV_TARGET
 	float4 reflectionUV = mul(g_xCamera_ReflVP, float4(surface.P, 1));
 	reflectionUV.xy /= reflectionUV.w;
 	reflectionUV.xy = reflectionUV.xy * float2(0.5, -0.5) + 0.5;
-	lighting.indirect.specular += texture_reflection.SampleLevel(sampler_linear_mirror, reflectionUV.xy + bumpColor.rg, 0).rgb;
+	lighting.indirect.specular += texture_reflection.SampleLevel(sampler_linear_mirror, reflectionUV.xy + bumpColor.rg, 0).rgb * surface.F;
 #endif // WATER
 
 
@@ -1482,7 +1547,7 @@ float4 main(PixelInput input) : SV_TARGET
 
 
 #ifdef PLANARREFLECTION
-	lighting.indirect.specular += PlanarReflection(surface, bumpColor.rg);
+	lighting.indirect.specular += PlanarReflection(surface, bumpColor.rg) * surface.F;
 #endif
 
 
@@ -1509,7 +1574,7 @@ float4 main(PixelInput input) : SV_TARGET
 #ifndef ENVMAPRENDERING
 #ifndef TRANSPARENT
 	float4 ssr = texture_ssr.SampleLevel(sampler_linear_clamp, ScreenCoord, 0);
-	lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb, ssr.a);
+	lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb * surface.F, ssr.a);
 #endif // TRANSPARENT
 #endif // ENVMAPRENDERING
 #endif // WATER

@@ -583,8 +583,99 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			}
 		}
 
-		// Avoid zero roughness factors:
-		material.roughness = max(0.001f, material.roughness);
+		auto ext_sheen = x.extensions.find("KHR_materials_sheen");
+		if (ext_sheen != x.extensions.end())
+		{
+			material.shaderType = MaterialComponent::SHADERTYPE_PBR_CLOTH;
+
+			if (ext_sheen->second.Has("sheenColorFactor"))
+			{
+				auto& factor = ext_sheen->second.Get("sheenColorFactor");
+				material.sheenColor.x = factor.ArrayLen() > 0 ? float(factor.Get(0).IsNumber() ? factor.Get(0).Get<double>() : factor.Get(0).Get<int>()) : 1.0f;
+				material.sheenColor.y = factor.ArrayLen() > 0 ? float(factor.Get(1).IsNumber() ? factor.Get(1).Get<double>() : factor.Get(1).Get<int>()) : 1.0f;
+				material.sheenColor.z = factor.ArrayLen() > 0 ? float(factor.Get(2).IsNumber() ? factor.Get(2).Get<double>() : factor.Get(2).Get<int>()) : 1.0f;
+				material.sheenColor.w = factor.ArrayLen() > 0 ? float(factor.Get(3).IsNumber() ? factor.Get(3).Get<double>() : factor.Get(3).Get<int>()) : 1.0f;
+			}
+			if (ext_sheen->second.Has("sheenColorTexture"))
+			{
+				auto& param = ext_sheen->second.Get("sheenColorTexture");
+				int index = param.Get("index").Get<int>();
+				auto& tex = state.gltfModel.textures[index];
+				auto& img = state.gltfModel.images[tex.source];
+				material.sheenColorMap = RegisterTexture(&img, "sheenColor");
+				material.sheenColorMapName = img.uri;
+				material.uvset_sheenColorMap = (uint32_t)param.Get("texCoord").Get<int>();
+			}
+			if (ext_sheen->second.Has("sheenRoughnessFactor"))
+			{
+				auto& factor = ext_sheen->second.Get("sheenRoughnessFactor");
+				material.sheenRoughness = float(factor.IsNumber() ? factor.Get<double>() : factor.Get<int>());
+			}
+			if (ext_sheen->second.Has("sheenRoughnessTexture"))
+			{
+				auto& param = ext_sheen->second.Get("sheenRoughnessTexture");
+				int index = param.Get("index").Get<int>();
+				auto& tex = state.gltfModel.textures[index];
+				auto& img = state.gltfModel.images[tex.source];
+				material.sheenRoughnessMap = RegisterTexture(&img, "sheenRoughness");
+				material.sheenRoughnessMapName = img.uri;
+				material.uvset_sheenRoughnessMap = (uint32_t)param.Get("texCoord").Get<int>();
+			}
+		}
+
+		auto ext_clearcoat = x.extensions.find("KHR_materials_clearcoat");
+		if (ext_clearcoat != x.extensions.end())
+		{
+			if (material.shaderType == MaterialComponent::SHADERTYPE_PBR_CLOTH)
+			{
+				material.shaderType = MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT;
+			}
+			else
+			{
+				material.shaderType = MaterialComponent::SHADERTYPE_PBR_CLEARCOAT;
+			}
+
+			if (ext_clearcoat->second.Has("clearcoatFactor"))
+			{
+				auto& factor = ext_clearcoat->second.Get("clearcoatFactor");
+				material.clearcoat = float(factor.IsNumber() ? factor.Get<double>() : factor.Get<int>());
+			}
+			if (ext_clearcoat->second.Has("clearcoatTexture"))
+			{
+				auto& param = ext_clearcoat->second.Get("clearcoatTexture");
+				int index = param.Get("index").Get<int>();
+				auto& tex = state.gltfModel.textures[index];
+				auto& img = state.gltfModel.images[tex.source];
+				material.clearcoatMap = RegisterTexture(&img, "clearcoat");
+				material.clearcoatMapName = img.uri;
+				material.uvset_clearcoatMap = (uint32_t)param.Get("texCoord").Get<int>();
+			}
+			if (ext_clearcoat->second.Has("clearcoatRoughnessFactor"))
+			{
+				auto& factor = ext_clearcoat->second.Get("clearcoatRoughnessFactor");
+				material.clearcoatRoughness = float(factor.IsNumber() ? factor.Get<double>() : factor.Get<int>());
+			}
+			if (ext_clearcoat->second.Has("clearcoatRoughnessTexture"))
+			{
+				auto& param = ext_clearcoat->second.Get("clearcoatRoughnessTexture");
+				int index = param.Get("index").Get<int>();
+				auto& tex = state.gltfModel.textures[index];
+				auto& img = state.gltfModel.images[tex.source];
+				material.clearcoatRoughnessMap = RegisterTexture(&img, "clearcoatRoughness");
+				material.clearcoatRoughnessMapName = img.uri;
+				material.uvset_clearcoatRoughnessMap = (uint32_t)param.Get("texCoord").Get<int>();
+			}
+			if (ext_clearcoat->second.Has("clearcoatNormalTexture"))
+			{
+				auto& param = ext_clearcoat->second.Get("clearcoatNormalTexture");
+				int index = param.Get("index").Get<int>();
+				auto& tex = state.gltfModel.textures[index];
+				auto& img = state.gltfModel.images[tex.source];
+				material.clearcoatNormalMap = RegisterTexture(&img, "clearcoatNormal");
+				material.clearcoatNormalMapName = img.uri;
+				material.uvset_clearcoatNormalMap = (uint32_t)param.Get("texCoord").Get<int>();
+			}
+		}
 
 	}
 

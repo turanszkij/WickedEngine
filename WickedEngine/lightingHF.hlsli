@@ -43,7 +43,7 @@ inline LightingPart CombineLighting(in Surface surface, in Lighting lighting)
 {
 	LightingPart result;
 	result.diffuse = lighting.direct.diffuse + lighting.indirect.diffuse * surface.occlusion;
-	result.specular = lighting.direct.specular + lighting.indirect.specular * surface.F * surface.occlusion;
+	result.specular = lighting.direct.specular + lighting.indirect.specular * surface.occlusion;
 
 	return result;
 }
@@ -934,21 +934,20 @@ inline float3 GetAmbient(in float3 N)
 {
 	float3 ambient;
 
-#ifndef ENVMAPRENDERING
-	[branch]
-	if (g_xFrame_GlobalEnvProbeIndex >= 0)
-	{
-		ambient = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(N, g_xFrame_GlobalEnvProbeIndex), g_xFrame_EnvProbeMipCount).rgb;
-	}
-	else
+#ifdef ENVMAPRENDERING
+
+	// Set realistic_sky_stationary to true so we capture ambient at float3(0.0, 0.0, 0.0), similar to the standard sky to avoid flickering and weird behavior
+	ambient = lerp(
+		GetDynamicSkyColor(float3(0, -1, 0), false, false, false, true),
+		GetDynamicSkyColor(float3(0, 1, 0), false, false, false, true),
+		saturate(N.y * 0.5 + 0.5));
+
+#else
+
+	ambient = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(N, g_xFrame_GlobalEnvProbeIndex), g_xFrame_EnvProbeMipCount).rgb;
+	ambient += GetAmbientColor();
+
 #endif // ENVMAPRENDERING
-	{
-		// Also set realistic_sky_stationary to true so we capture ambient at float3(0.0, 0.0, 0.0), similar to the standard sky to avoid flickering and weird behavior
-		ambient = lerp(
-			GetDynamicSkyColor(float3(0, -1, 0), false, false, false, true),
-			GetDynamicSkyColor(float3(0, 1, 0), false, false, false, true),
-			saturate(N.y * 0.5 + 0.5)) + GetAmbientColor();
-	}
 
 	return ambient;
 }
@@ -956,30 +955,40 @@ inline float3 GetAmbient(in float3 N)
 // surface:				surface descriptor
 // MIP:					mip level to sample
 // return:				color of the environment color (rgb)
-inline float3 EnvironmentReflection_Global(in Surface surface, in float MIP)
+inline float3 EnvironmentReflection_Global(in Surface surface)
 {
 	float3 envColor;
 
-#ifndef ENVMAPRENDERING
-	[branch]
-	if (g_xFrame_GlobalEnvProbeIndex >= 0)
-	{
-		// We have envmap information in a texture:
-		envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, g_xFrame_GlobalEnvProbeIndex), MIP).rgb;
-	}
-	else
+#ifdef ENVMAPRENDERING
+
+	// There is no access to envmaps, so approximate sky color:
+	// Set realistic_sky_stationary to true so we capture environment at float3(0.0, 0.0, 0.0), similar to the standard sky to avoid flickering and weird behavior
+	float3 realSkyColor = GetDynamicSkyColor(surface.R, false, false, false, true); // false: disable sun disk and clouds
+	float3 roughSkyColor = lerp(
+		GetDynamicSkyColor(float3(0, -1, 0), false, false, false, true),
+		GetDynamicSkyColor(float3(0, 1, 0), false, false, false, true),
+		saturate(surface.R.y * 0.5 + 0.5));
+
+	envColor = lerp(realSkyColor, roughSkyColor, saturate(surface.roughness)) * surface.F;
+
+#else
+
+	float MIP = surface.roughness * g_xFrame_EnvProbeMipCount;
+	envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, g_xFrame_GlobalEnvProbeIndex), MIP).rgb * surface.F;
+
+#ifdef BRDF_SHEEN
+	envColor *= surface.sheen.albedoScaling;
+	MIP = surface.sheen.roughness * g_xFrame_EnvProbeMipCount;
+	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, g_xFrame_GlobalEnvProbeIndex), MIP).rgb * surface.sheen.color * surface.sheen.DFG;
+#endif // BRDF_SHEEN
+
+#ifdef BRDF_CLEARCOAT
+	envColor *= 1 - surface.clearcoat.F;
+	MIP = surface.clearcoat.roughness * g_xFrame_EnvProbeMipCount;
+	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.clearcoat.R, g_xFrame_GlobalEnvProbeIndex), MIP).rgb * surface.clearcoat.F;
+#endif // BRDF_CLEARCOAT
+
 #endif // ENVMAPRENDERING
-	{
-		// There are no envmaps, approximate sky color:
-		// Also set realistic_sky_stationary to true so we capture environment at float3(0.0, 0.0, 0.0), similar to the standard sky to avoid flickering and weird behavior
-		float3 realSkyColor = GetDynamicSkyColor(surface.R, false, false, false, true); // false: disable sun disk and clouds
-		float3 roughSkyColor = lerp(
-			GetDynamicSkyColor(float3(0, -1, 0), false, false, false, true),
-			GetDynamicSkyColor(float3(0, 1, 0), false, false, false, true),
-			saturate(surface.R.y * 0.5 + 0.5));
-		
-		envColor = lerp(realSkyColor, roughSkyColor, saturate(surface.roughness));
-	}
 
 	return envColor;
 }
@@ -990,7 +999,7 @@ inline float3 EnvironmentReflection_Global(in Surface surface, in float MIP)
 // clipSpacePos:		world space pixel position transformed into OBB space by probeProjection matrix
 // MIP:					mip level to sample
 // return:				color of the environment map (rgb), blend factor of the environment map (a)
-inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity probe, in float4x4 probeProjection, in float3 clipSpacePos, in float MIP)
+inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity probe, in float4x4 probeProjection, in float3 clipSpacePos)
 {
 	// Perform parallax correction of reflection ray (R) into OBB:
 	float3 RayLS = mul(surface.R, (float3x3)probeProjection);
@@ -1002,11 +1011,33 @@ inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity pr
 	float3 R_parallaxCorrected = IntersectPositionWS - probe.position;
 
 	// Sample cubemap texture:
-	float3 envmapColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.GetTextureIndex()), MIP).rgb; // GetFlags() stores textureIndex here...
+	float MIP = surface.roughness * g_xFrame_EnvProbeMipCount;
+	float3 envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.GetTextureIndex()), MIP).rgb * surface.F;
+
+#ifdef BRDF_SHEEN
+	envColor *= surface.sheen.albedoScaling;
+	MIP = surface.sheen.roughness * g_xFrame_EnvProbeMipCount;
+	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.GetTextureIndex()), MIP).rgb * surface.sheen.color * surface.sheen.DFG;
+#endif // BRDF_SHEEN
+
+#ifdef BRDF_CLEARCOAT
+	RayLS = mul(surface.clearcoat.R, (float3x3)probeProjection);
+	FirstPlaneIntersect = (float3(1, 1, 1) - clipSpacePos) / RayLS;
+	SecondPlaneIntersect = (-float3(1, 1, 1) - clipSpacePos) / RayLS;
+	FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
+	Distance = min(FurthestPlane.x, min(FurthestPlane.y, FurthestPlane.z));
+	IntersectPositionWS = surface.P + surface.clearcoat.R * Distance;
+	R_parallaxCorrected = IntersectPositionWS - probe.position;
+
+	envColor *= 1 - surface.clearcoat.F;
+	MIP = surface.clearcoat.roughness * g_xFrame_EnvProbeMipCount;
+	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.GetTextureIndex()), MIP).rgb * surface.clearcoat.F;
+#endif // BRDF_CLEARCOAT
+
 	// blend out if close to any cube edge:
 	float edgeBlend = 1 - pow(saturate(max(abs(clipSpacePos.x), max(abs(clipSpacePos.y), abs(clipSpacePos.z)))), 8);
 
-	return float4(envmapColor, edgeBlend);
+	return float4(envColor, edgeBlend);
 }
 
 #endif // WI_LIGHTING_HF

@@ -12,7 +12,7 @@ using namespace wiScene;
 void MaterialWindow::Create(EditorComponent* editor)
 {
 	wiWindow::Create("Material Window");
-	SetSize(XMFLOAT2(720, 540));
+	SetSize(XMFLOAT2(720, 600));
 
 	float x = 670, y = 0;
 	float hei = 18;
@@ -106,19 +106,22 @@ void MaterialWindow::Create(EditorComponent* editor)
 			}
 			else
 			{
-				material->shaderType = (MaterialComponent::SHADERTYPE)args.iValue;
+				material->shaderType = (MaterialComponent::SHADERTYPE)args.userdata;
 				material->SetCustomShaderID(-1);
 				blendModeComboBox.SetEnabled(true);
 			}
 		}
 		});
-	shaderTypeComboBox.AddItem("PBR");
-	shaderTypeComboBox.AddItem("PBR + Planar reflections");
-	shaderTypeComboBox.AddItem("PBR + Par. occl. mapping");
-	shaderTypeComboBox.AddItem("PBR + Anisotropic");
-	shaderTypeComboBox.AddItem("Water");
-	shaderTypeComboBox.AddItem("Cartoon");
-	shaderTypeComboBox.AddItem("Unlit");
+	shaderTypeComboBox.AddItem("PBR", MaterialComponent::SHADERTYPE_PBR);
+	shaderTypeComboBox.AddItem("PBR + Planar reflections", MaterialComponent::SHADERTYPE_PBR_PLANARREFLECTION);
+	shaderTypeComboBox.AddItem("PBR + Par. occl. mapping", MaterialComponent::SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING);
+	shaderTypeComboBox.AddItem("PBR + Anisotropic", MaterialComponent::SHADERTYPE_PBR_ANISOTROPIC);
+	shaderTypeComboBox.AddItem("PBR + Cloth", MaterialComponent::SHADERTYPE_PBR_CLOTH);
+	shaderTypeComboBox.AddItem("PBR + Clear coat", MaterialComponent::SHADERTYPE_PBR_CLEARCOAT);
+	shaderTypeComboBox.AddItem("PBR + Cloth + Clear coat", MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT);
+	shaderTypeComboBox.AddItem("Water", MaterialComponent::SHADERTYPE_WATER);
+	shaderTypeComboBox.AddItem("Cartoon", MaterialComponent::SHADERTYPE_CARTOON);
+	shaderTypeComboBox.AddItem("Unlit", MaterialComponent::SHADERTYPE_UNLIT);
 	for (auto& x : wiRenderer::GetCustomShaders())
 	{
 		shaderTypeComboBox.AddItem("*" + x.name);
@@ -362,12 +365,53 @@ void MaterialWindow::Create(EditorComponent* editor)
 	AddWidget(&texMulSliderY);
 
 
+	sheenRoughnessSlider.Create(0, 1, 0, 1000, "Sheen Roughness: ");
+	sheenRoughnessSlider.SetTooltip("This affects roughness of sheen layer for cloth shading.");
+	sheenRoughnessSlider.SetSize(XMFLOAT2(wid, hei));
+	sheenRoughnessSlider.SetPos(XMFLOAT2(x, y += step));
+	sheenRoughnessSlider.OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
+			material->SetSheenRoughness(args.fValue);
+		}
+		});
+	AddWidget(&sheenRoughnessSlider);
+
+	clearcoatSlider.Create(0, 1, 0, 1000, "Clearcoat: ");
+	clearcoatSlider.SetTooltip("This affects clearcoat layer blending.");
+	clearcoatSlider.SetSize(XMFLOAT2(wid, hei));
+	clearcoatSlider.SetPos(XMFLOAT2(x, y += step));
+	clearcoatSlider.OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
+			material->SetClearcoatFactor(args.fValue);
+		}
+		});
+	AddWidget(&clearcoatSlider);
+
+	clearcoatRoughnessSlider.Create(0, 1, 0, 1000, "Clearcoat Roughness: ");
+	clearcoatRoughnessSlider.SetTooltip("This affects roughness of clear coat layer.");
+	clearcoatRoughnessSlider.SetSize(XMFLOAT2(wid, hei));
+	clearcoatRoughnessSlider.SetPos(XMFLOAT2(x, y += step));
+	clearcoatRoughnessSlider.OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
+			material->SetClearcoatRoughness(args.fValue);
+		}
+		});
+	AddWidget(&clearcoatRoughnessSlider);
+
+
 	// Textures:
 
 	x = 10;
 	y = 0;
 	hei = 20;
 	step = hei + 2;
+	float uvset_offset = 385;
 
 	materialNameField.Create("MaterialName");
 	materialNameField.SetTooltip("Set a name for the material...");
@@ -429,6 +473,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("jpeg");
 			params.extensions.push_back("tga");
+			params.extensions.push_back("bmp");
 			wiHelper::FileDialog(params, [this, material](std::string fileName) {
 				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					material->baseColorMap = wiResourceManager::Load(fileName);
@@ -444,7 +489,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	texture_baseColor_uvset_Field.Create("uvset_baseColor");
 	texture_baseColor_uvset_Field.SetText("");
 	texture_baseColor_uvset_Field.SetTooltip("uv set number");
-	texture_baseColor_uvset_Field.SetPos(XMFLOAT2(x + 392, y));
+	texture_baseColor_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
 	texture_baseColor_uvset_Field.SetSize(XMFLOAT2(20, 20));
 	texture_baseColor_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -489,6 +534,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("jpeg");
 			params.extensions.push_back("tga");
+			params.extensions.push_back("bmp");
 			wiHelper::FileDialog(params, [this, material](std::string fileName) {
 				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					material->normalMap = wiResourceManager::Load(fileName);
@@ -504,7 +550,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	texture_normal_uvset_Field.Create("uvset_normal");
 	texture_normal_uvset_Field.SetText("");
 	texture_normal_uvset_Field.SetTooltip("uv set number");
-	texture_normal_uvset_Field.SetPos(XMFLOAT2(x + 392, y));
+	texture_normal_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
 	texture_normal_uvset_Field.SetSize(XMFLOAT2(20, 20));
 	texture_normal_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -549,6 +595,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("jpeg");
 			params.extensions.push_back("tga");
+			params.extensions.push_back("bmp");
 			wiHelper::FileDialog(params, [this, material](std::string fileName) {
 				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					material->surfaceMap = wiResourceManager::Load(fileName);
@@ -564,7 +611,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	texture_surface_uvset_Field.Create("uvset_surface");
 	texture_surface_uvset_Field.SetText("");
 	texture_surface_uvset_Field.SetTooltip("uv set number");
-	texture_surface_uvset_Field.SetPos(XMFLOAT2(x + 392, y));
+	texture_surface_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
 	texture_surface_uvset_Field.SetSize(XMFLOAT2(20, 20));
 	texture_surface_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -609,6 +656,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("jpeg");
 			params.extensions.push_back("tga");
+			params.extensions.push_back("bmp");
 			wiHelper::FileDialog(params, [this, material](std::string fileName) {
 				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					material->emissiveMap = wiResourceManager::Load(fileName);
@@ -624,7 +672,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	texture_emissive_uvset_Field.Create("uvset_emissive");
 	texture_emissive_uvset_Field.SetText("");
 	texture_emissive_uvset_Field.SetTooltip("uv set number");
-	texture_emissive_uvset_Field.SetPos(XMFLOAT2(x + 392, y));
+	texture_emissive_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
 	texture_emissive_uvset_Field.SetSize(XMFLOAT2(20, 20));
 	texture_emissive_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -669,6 +717,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("jpeg");
 			params.extensions.push_back("tga");
+			params.extensions.push_back("bmp");
 			wiHelper::FileDialog(params, [this, material](std::string fileName) {
 				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					material->displacementMap = wiResourceManager::Load(fileName);
@@ -684,7 +733,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	texture_displacement_uvset_Field.Create("uvset_displacement");
 	texture_displacement_uvset_Field.SetText("");
 	texture_displacement_uvset_Field.SetTooltip("uv set number");
-	texture_displacement_uvset_Field.SetPos(XMFLOAT2(x + 392, y));
+	texture_displacement_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
 	texture_displacement_uvset_Field.SetSize(XMFLOAT2(20, 20));
 	texture_displacement_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -730,6 +779,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("jpeg");
 			params.extensions.push_back("tga");
+			params.extensions.push_back("bmp");
 			wiHelper::FileDialog(params, [this, material](std::string fileName) {
 				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					material->occlusionMap = wiResourceManager::Load(fileName);
@@ -745,7 +795,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	texture_occlusion_uvset_Field.Create("uvset_occlusion");
 	texture_occlusion_uvset_Field.SetText("");
 	texture_occlusion_uvset_Field.SetTooltip("uv set number");
-	texture_occlusion_uvset_Field.SetPos(XMFLOAT2(x + 392, y));
+	texture_occlusion_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
 	texture_occlusion_uvset_Field.SetSize(XMFLOAT2(20, 20));
 	texture_occlusion_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -791,6 +841,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 			params.extensions.push_back("jpg");
 			params.extensions.push_back("jpeg");
 			params.extensions.push_back("tga");
+			params.extensions.push_back("bmp");
 			wiHelper::FileDialog(params, [this, material](std::string fileName) {
 				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					material->transmissionMap = wiResourceManager::Load(fileName);
@@ -806,7 +857,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	texture_transmission_uvset_Field.Create("uvset_transmission");
 	texture_transmission_uvset_Field.SetText("");
 	texture_transmission_uvset_Field.SetTooltip("uv set number");
-	texture_transmission_uvset_Field.SetPos(XMFLOAT2(x + 392, y));
+	texture_transmission_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
 	texture_transmission_uvset_Field.SetSize(XMFLOAT2(20, 20));
 	texture_transmission_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -818,7 +869,319 @@ void MaterialWindow::Create(EditorComponent* editor)
 	AddWidget(&texture_transmission_uvset_Field);
 
 
-	y = 200;
+
+
+	texture_sheenColor_Label.Create("SheenColorMap: ");
+	texture_sheenColor_Label.SetPos(XMFLOAT2(x, y += step));
+	texture_sheenColor_Label.SetSize(XMFLOAT2(120, 20));
+	AddWidget(&texture_sheenColor_Label);
+
+	texture_sheenColor_Button.Create("SheenColorMap");
+	texture_sheenColor_Button.SetText("");
+	texture_sheenColor_Button.SetTooltip("Load the sheen color texture (for cloth shader). RGB: sheen color");
+	texture_sheenColor_Button.SetPos(XMFLOAT2(x + 122, y));
+	texture_sheenColor_Button.SetSize(XMFLOAT2(260, 20));
+	texture_sheenColor_Button.OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material == nullptr)
+			return;
+
+		if (material->sheenColorMap != nullptr)
+		{
+			material->sheenColorMap = nullptr;
+			material->sheenColorMapName = "";
+			material->SetDirty();
+			texture_sheenColor_Button.SetText("");
+		}
+		else
+		{
+			wiHelper::FileDialogParams params;
+			params.type = wiHelper::FileDialogParams::OPEN;
+			params.description = "Texture";
+			params.extensions.push_back("dds");
+			params.extensions.push_back("png");
+			params.extensions.push_back("jpg");
+			params.extensions.push_back("jpeg");
+			params.extensions.push_back("tga");
+			params.extensions.push_back("bmp");
+			wiHelper::FileDialog(params, [this, material](std::string fileName) {
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					material->sheenColorMap = wiResourceManager::Load(fileName);
+					material->sheenColorMapName = fileName;
+					material->SetDirty();
+					texture_sheenColor_Button.SetText(wiHelper::GetFileNameFromPath(fileName));
+					});
+				});
+		}
+		});
+	AddWidget(&texture_sheenColor_Button);
+
+	texture_sheenColor_uvset_Field.Create("uvset_sheenColor");
+	texture_sheenColor_uvset_Field.SetText("");
+	texture_sheenColor_uvset_Field.SetTooltip("uv set number");
+	texture_sheenColor_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
+	texture_sheenColor_uvset_Field.SetSize(XMFLOAT2(20, 20));
+	texture_sheenColor_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
+			material->SetUVSet_SheenColorMap(args.iValue);
+		}
+		});
+	AddWidget(&texture_sheenColor_uvset_Field);
+
+
+
+
+	texture_sheenRoughness_Label.Create("SheenRoughMap: ");
+	texture_sheenRoughness_Label.SetPos(XMFLOAT2(x, y += step));
+	texture_sheenRoughness_Label.SetSize(XMFLOAT2(120, 20));
+	AddWidget(&texture_sheenRoughness_Label);
+
+	texture_sheenRoughness_Button.Create("SheenRoughnessMap");
+	texture_sheenRoughness_Button.SetText("");
+	texture_sheenRoughness_Button.SetTooltip("Load the sheen roughness texture. A: roughness");
+	texture_sheenRoughness_Button.SetPos(XMFLOAT2(x + 122, y));
+	texture_sheenRoughness_Button.SetSize(XMFLOAT2(260, 20));
+	texture_sheenRoughness_Button.OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material == nullptr)
+			return;
+
+		if (material->sheenRoughnessMap != nullptr)
+		{
+			material->sheenRoughnessMap = nullptr;
+			material->sheenRoughnessMapName = "";
+			material->SetDirty();
+			texture_sheenRoughness_Button.SetText("");
+		}
+		else
+		{
+			wiHelper::FileDialogParams params;
+			params.type = wiHelper::FileDialogParams::OPEN;
+			params.description = "Texture";
+			params.extensions.push_back("dds");
+			params.extensions.push_back("png");
+			params.extensions.push_back("jpg");
+			params.extensions.push_back("jpeg");
+			params.extensions.push_back("tga");
+			params.extensions.push_back("bmp");
+			wiHelper::FileDialog(params, [this, material](std::string fileName) {
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					material->sheenRoughnessMap = wiResourceManager::Load(fileName);
+					material->sheenRoughnessMapName = fileName;
+					material->SetDirty();
+					texture_sheenRoughness_Button.SetText(wiHelper::GetFileNameFromPath(fileName));
+					});
+				});
+		}
+		});
+	AddWidget(&texture_sheenRoughness_Button);
+
+	texture_sheenRoughness_uvset_Field.Create("uvset_sheenRoughness");
+	texture_sheenRoughness_uvset_Field.SetText("");
+	texture_sheenRoughness_uvset_Field.SetTooltip("uv set number");
+	texture_sheenRoughness_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
+	texture_sheenRoughness_uvset_Field.SetSize(XMFLOAT2(20, 20));
+	texture_sheenRoughness_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
+			material->SetUVSet_SheenRoughnessMap(args.iValue);
+		}
+		});
+	AddWidget(&texture_sheenRoughness_uvset_Field);
+
+
+
+
+	texture_clearcoat_Label.Create("ClearcoatMap: ");
+	texture_clearcoat_Label.SetPos(XMFLOAT2(x, y += step));
+	texture_clearcoat_Label.SetSize(XMFLOAT2(120, 20));
+	AddWidget(&texture_clearcoat_Label);
+
+	texture_clearcoat_Button.Create("ClearcoatMap");
+	texture_clearcoat_Button.SetText("");
+	texture_clearcoat_Button.SetTooltip("Load the clearcoat factor texture. R: clearcoat factor");
+	texture_clearcoat_Button.SetPos(XMFLOAT2(x + 122, y));
+	texture_clearcoat_Button.SetSize(XMFLOAT2(260, 20));
+	texture_clearcoat_Button.OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material == nullptr)
+			return;
+
+		if (material->clearcoatMap != nullptr)
+		{
+			material->clearcoatMap = nullptr;
+			material->clearcoatMapName = "";
+			material->SetDirty();
+			texture_clearcoat_Button.SetText("");
+		}
+		else
+		{
+			wiHelper::FileDialogParams params;
+			params.type = wiHelper::FileDialogParams::OPEN;
+			params.description = "Texture";
+			params.extensions.push_back("dds");
+			params.extensions.push_back("png");
+			params.extensions.push_back("jpg");
+			params.extensions.push_back("jpeg");
+			params.extensions.push_back("tga");
+			params.extensions.push_back("bmp");
+			wiHelper::FileDialog(params, [this, material](std::string fileName) {
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					material->clearcoatMap = wiResourceManager::Load(fileName);
+					material->clearcoatMapName = fileName;
+					material->SetDirty();
+					texture_clearcoat_Button.SetText(wiHelper::GetFileNameFromPath(fileName));
+					});
+				});
+		}
+		});
+	AddWidget(&texture_clearcoat_Button);
+
+	texture_clearcoat_uvset_Field.Create("uvset_clearcoat");
+	texture_clearcoat_uvset_Field.SetText("");
+	texture_clearcoat_uvset_Field.SetTooltip("uv set number");
+	texture_clearcoat_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
+	texture_clearcoat_uvset_Field.SetSize(XMFLOAT2(20, 20));
+	texture_clearcoat_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
+			material->SetUVSet_ClearcoatMap(args.iValue);
+		}
+		});
+	AddWidget(&texture_clearcoat_uvset_Field);
+
+
+
+
+	texture_clearcoatRoughness_Label.Create("ClearcoatRoughMap: ");
+	texture_clearcoatRoughness_Label.SetPos(XMFLOAT2(x, y += step));
+	texture_clearcoatRoughness_Label.SetSize(XMFLOAT2(120, 20));
+	AddWidget(&texture_clearcoatRoughness_Label);
+
+	texture_clearcoatRoughness_Button.Create("ClearcoatRoughnessMap");
+	texture_clearcoatRoughness_Button.SetText("");
+	texture_clearcoatRoughness_Button.SetTooltip("Load the clearcoat roughness texture. G: roughness");
+	texture_clearcoatRoughness_Button.SetPos(XMFLOAT2(x + 122, y));
+	texture_clearcoatRoughness_Button.SetSize(XMFLOAT2(260, 20));
+	texture_clearcoatRoughness_Button.OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material == nullptr)
+			return;
+
+		if (material->clearcoatRoughnessMap != nullptr)
+		{
+			material->clearcoatRoughnessMap = nullptr;
+			material->clearcoatRoughnessMapName = "";
+			material->SetDirty();
+			texture_clearcoatRoughness_Button.SetText("");
+		}
+		else
+		{
+			wiHelper::FileDialogParams params;
+			params.type = wiHelper::FileDialogParams::OPEN;
+			params.description = "Texture";
+			params.extensions.push_back("dds");
+			params.extensions.push_back("png");
+			params.extensions.push_back("jpg");
+			params.extensions.push_back("jpeg");
+			params.extensions.push_back("tga");
+			params.extensions.push_back("bmp");
+			wiHelper::FileDialog(params, [this, material](std::string fileName) {
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					material->clearcoatRoughnessMap = wiResourceManager::Load(fileName);
+					material->clearcoatRoughnessMapName = fileName;
+					material->SetDirty();
+					texture_clearcoatRoughness_Button.SetText(wiHelper::GetFileNameFromPath(fileName));
+					});
+				});
+		}
+		});
+	AddWidget(&texture_clearcoatRoughness_Button);
+
+	texture_clearcoatRoughness_uvset_Field.Create("uvset_clearcoatRoughness");
+	texture_clearcoatRoughness_uvset_Field.SetText("");
+	texture_clearcoatRoughness_uvset_Field.SetTooltip("uv set number");
+	texture_clearcoatRoughness_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
+	texture_clearcoatRoughness_uvset_Field.SetSize(XMFLOAT2(20, 20));
+	texture_clearcoatRoughness_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
+			material->SetUVSet_ClearcoatRoughnessMap(args.iValue);
+		}
+		});
+	AddWidget(&texture_clearcoatRoughness_uvset_Field);
+
+
+
+
+	texture_clearcoatNormal_Label.Create("ClearcoatNormMap: ");
+	texture_clearcoatNormal_Label.SetPos(XMFLOAT2(x, y += step));
+	texture_clearcoatNormal_Label.SetSize(XMFLOAT2(120, 20));
+	AddWidget(&texture_clearcoatNormal_Label);
+
+	texture_clearcoatNormal_Button.Create("ClearcoatNormalMap");
+	texture_clearcoatNormal_Button.SetText("");
+	texture_clearcoatNormal_Button.SetTooltip("Load the clearcoat normal map texture. RGB: normal");
+	texture_clearcoatNormal_Button.SetPos(XMFLOAT2(x + 122, y));
+	texture_clearcoatNormal_Button.SetSize(XMFLOAT2(260, 20));
+	texture_clearcoatNormal_Button.OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material == nullptr)
+			return;
+
+		if (material->clearcoatNormalMap != nullptr)
+		{
+			material->clearcoatNormalMap = nullptr;
+			material->clearcoatNormalMapName = "";
+			material->SetDirty();
+			texture_clearcoatNormal_Button.SetText("");
+		}
+		else
+		{
+			wiHelper::FileDialogParams params;
+			params.type = wiHelper::FileDialogParams::OPEN;
+			params.description = "Texture";
+			params.extensions.push_back("dds");
+			params.extensions.push_back("png");
+			params.extensions.push_back("jpg");
+			params.extensions.push_back("jpeg");
+			params.extensions.push_back("tga");
+			params.extensions.push_back("bmp");
+			wiHelper::FileDialog(params, [this, material](std::string fileName) {
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					material->clearcoatNormalMap = wiResourceManager::Load(fileName);
+					material->clearcoatNormalMapName = fileName;
+					material->SetDirty();
+					texture_clearcoatNormal_Button.SetText(wiHelper::GetFileNameFromPath(fileName));
+					});
+				});
+		}
+		});
+	AddWidget(&texture_clearcoatNormal_Button);
+
+	texture_clearcoatNormal_uvset_Field.Create("uvset_clearcoatNormal");
+	texture_clearcoatNormal_uvset_Field.SetText("");
+	texture_clearcoatNormal_uvset_Field.SetTooltip("uv set number");
+	texture_clearcoatNormal_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
+	texture_clearcoatNormal_uvset_Field.SetSize(XMFLOAT2(20, 20));
+	texture_clearcoatNormal_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
+			material->SetUVSet_ClearcoatNormalMap(args.iValue);
+		}
+		});
+	AddWidget(&texture_clearcoatNormal_uvset_Field);
+
+
+
+
+
 
 	colorComboBox.Create("Color picker mode: ");
 	colorComboBox.SetSize(XMFLOAT2(120, hei));
@@ -827,10 +1190,9 @@ void MaterialWindow::Create(EditorComponent* editor)
 	colorComboBox.AddItem("Specular color");
 	colorComboBox.AddItem("Emissive color");
 	colorComboBox.AddItem("Subsurface color");
+	colorComboBox.AddItem("Sheen color");
 	colorComboBox.SetTooltip("Choose the destination data of the color picker.");
 	AddWidget(&colorComboBox);
-
-	y += 10;
 
 	colorPicker.Create("Color", false);
 	colorPicker.SetPos(XMFLOAT2(10, y += step));
@@ -858,6 +1220,9 @@ void MaterialWindow::Create(EditorComponent* editor)
 			case 3:
 				material->SetSubsurfaceScatteringColor(args.color.toFloat3());
 			break;
+			case 4:
+				material->SetSheenColor(args.color.toFloat3());
+				break;
 			}
 		}
 	});
@@ -915,7 +1280,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		}
 		else
 		{
-			shaderTypeComboBox.SetSelected((int)material->shaderType);
+			shaderTypeComboBox.SetSelectedByUserdata(material->shaderType);
 		}
 		shadingRateComboBox.SetSelected((int)material->shadingRate);
 
@@ -934,6 +1299,11 @@ void MaterialWindow::SetEntity(Entity entity)
 		texture_emissive_uvset_Field.SetText(std::to_string(material->uvset_emissiveMap));
 		texture_occlusion_uvset_Field.SetText(std::to_string(material->uvset_occlusionMap));
 		texture_transmission_uvset_Field.SetText(std::to_string(material->uvset_transmissionMap));
+		texture_sheenColor_uvset_Field.SetText(std::to_string(material->uvset_sheenColorMap));
+		texture_sheenRoughness_uvset_Field.SetText(std::to_string(material->uvset_sheenRoughnessMap));
+		texture_clearcoat_uvset_Field.SetText(std::to_string(material->uvset_clearcoatMap));
+		texture_clearcoatRoughness_uvset_Field.SetText(std::to_string(material->uvset_clearcoatRoughnessMap));
+		texture_clearcoatNormal_uvset_Field.SetText(std::to_string(material->uvset_clearcoatNormalMap));
 
 
 		colorComboBox.SetEnabled(true);
@@ -954,6 +1324,9 @@ void MaterialWindow::SetEntity(Entity entity)
 		case 3:
 			colorPicker.SetPickColor(wiColor::fromFloat3(XMFLOAT3(material->subsurfaceScattering.x, material->subsurfaceScattering.y, material->subsurfaceScattering.z)));
 			break;
+		case 4:
+			colorPicker.SetPickColor(wiColor::fromFloat3(XMFLOAT3(material->sheenColor.x, material->sheenColor.y, material->sheenColor.z)));
+			break;
 		}
 
 		switch (material->shaderType)
@@ -972,6 +1345,58 @@ void MaterialWindow::SetEntity(Entity entity)
 			pomSlider.SetEnabled(false);
 			break;
 		}
+
+		sheenRoughnessSlider.SetEnabled(false);
+		clearcoatSlider.SetEnabled(false);
+		clearcoatRoughnessSlider.SetEnabled(false);
+		texture_sheenColor_Button.SetEnabled(false);
+		texture_sheenColor_uvset_Field.SetEnabled(false);
+		texture_sheenRoughness_Button.SetEnabled(false);
+		texture_sheenRoughness_uvset_Field.SetEnabled(false);
+		texture_clearcoat_Button.SetEnabled(false);
+		texture_clearcoat_uvset_Field.SetEnabled(false);
+		texture_clearcoatRoughness_Button.SetEnabled(false);
+		texture_clearcoatRoughness_uvset_Field.SetEnabled(false);
+		texture_clearcoatNormal_Button.SetEnabled(false);
+		texture_clearcoatNormal_uvset_Field.SetEnabled(false);
+		switch (material->shaderType)
+		{
+		case MaterialComponent::SHADERTYPE_PBR_CLOTH:
+			sheenRoughnessSlider.SetEnabled(true);
+			texture_sheenColor_Button.SetEnabled(true);
+			texture_sheenColor_uvset_Field.SetEnabled(true);
+			texture_sheenRoughness_Button.SetEnabled(true);
+			texture_sheenRoughness_uvset_Field.SetEnabled(true);
+			break;
+		case MaterialComponent::SHADERTYPE_PBR_CLEARCOAT:
+			clearcoatSlider.SetEnabled(true);
+			clearcoatRoughnessSlider.SetEnabled(true);
+			texture_clearcoat_Button.SetEnabled(true);
+			texture_clearcoat_uvset_Field.SetEnabled(true);
+			texture_clearcoatRoughness_Button.SetEnabled(true);
+			texture_clearcoatRoughness_uvset_Field.SetEnabled(true);
+			texture_clearcoatNormal_Button.SetEnabled(true);
+			texture_clearcoatNormal_uvset_Field.SetEnabled(true);
+			break;
+		case MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT:
+			sheenRoughnessSlider.SetEnabled(true);
+			clearcoatSlider.SetEnabled(true);
+			clearcoatRoughnessSlider.SetEnabled(true);
+			texture_sheenColor_Button.SetEnabled(true);
+			texture_sheenColor_uvset_Field.SetEnabled(true);
+			texture_sheenRoughness_Button.SetEnabled(true);
+			texture_sheenRoughness_uvset_Field.SetEnabled(true);
+			texture_clearcoat_Button.SetEnabled(true);
+			texture_clearcoat_uvset_Field.SetEnabled(true);
+			texture_clearcoatRoughness_Button.SetEnabled(true);
+			texture_clearcoatRoughness_uvset_Field.SetEnabled(true);
+			texture_clearcoatNormal_Button.SetEnabled(true);
+			texture_clearcoatNormal_uvset_Field.SetEnabled(true);
+			break;
+		}
+		sheenRoughnessSlider.SetValue(material->sheenRoughness);
+		clearcoatSlider.SetValue(material->clearcoat);
+		clearcoatRoughnessSlider.SetValue(material->clearcoatRoughness);
 
 		shadingRateComboBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING));
 
@@ -1001,6 +1426,12 @@ void MaterialWindow::SetEntity(Entity entity)
 		texture_displacement_uvset_Field.SetText("");
 		texture_emissive_uvset_Field.SetText("");
 		texture_occlusion_uvset_Field.SetText("");
+		texture_transmission_uvset_Field.SetText("");
+		texture_sheenColor_uvset_Field.SetText("");
+		texture_sheenRoughness_uvset_Field.SetText("");
+		texture_clearcoat_uvset_Field.SetText("");
+		texture_clearcoatRoughness_uvset_Field.SetText("");
+		texture_clearcoatNormal_uvset_Field.SetText("");
 	}
 
 	newMaterialButton.SetEnabled(true);

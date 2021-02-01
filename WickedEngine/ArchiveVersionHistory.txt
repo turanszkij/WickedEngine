@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+61: serialized sheen and clearcoat material properties
 60: serializer ObjectComponent::emissiveColor
 59: serialized MaterialComponent transmission parameters
 58: serialized RigidBodyPhysicsComponent capsule, sphere and box parameters

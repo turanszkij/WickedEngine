@@ -83,6 +83,8 @@ namespace wiHelper
 	};
 	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess);
 
+	bool Bin2H(const uint8_t* data, size_t size, const std::string& dst_filename, const char* dataName);
+
 	void StringConvert(const std::string& from, std::wstring& to);
 
 	void StringConvert(const std::wstring& from, std::string& to);

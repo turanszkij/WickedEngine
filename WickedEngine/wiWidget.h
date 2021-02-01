@@ -240,6 +240,7 @@ public:
 	bool HasScrollbar() const;
 
 	void SetSelected(int index);
+	void SetSelectedByUserdata(uint64_t userdata);
 	int GetSelected() const;
 	std::string GetItemText(int index) const;
 	uint64_t GetItemUserData(int index) const;

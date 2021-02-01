@@ -2,19 +2,127 @@
 #define WI_BRDF_HF
 #include "globals.hlsli"
 
-float3 F_Schlick(in float3 f0, in float f90, in float u)
+// BRDF functions source: https://github.com/google/filament/blob/main/shaders/src/brdf.fs
+
+#define MEDIUMP_FLT_MAX    65504.0
+#define saturateMediump(x) min(x, MEDIUMP_FLT_MAX)
+#define highp
+#define pow5(x) pow(x, 5)
+#define max3(v) max(max(v.x, v.y), v.z)
+
+float D_GGX(float roughness, float NoH, const float3 h)
 {
-	return f0 + (f90 - f0) * pow(1 - u, 5);
+	// Walter et al. 2007, "Microfacet Models for Refraction through Rough Surfaces"
+	float oneMinusNoHSquared = 1.0 - NoH * NoH;
+
+	float a = NoH * roughness;
+	float k = roughness / (oneMinusNoHSquared + a * a);
+	float d = k * k * (1.0 / PI);
+	return saturateMediump(d);
 }
-float3 F_Fresnel(float3 SpecularColor, float VoH)
+
+float D_GGX_Anisotropic(float at, float ab, float ToH, float BoH, float NoH)
 {
-	float3 SpecularColorSqrt = sqrt(min(SpecularColor, float3(0.99, 0.99, 0.99)));
-	float3 n = (1 + SpecularColorSqrt) / (1 - SpecularColorSqrt);
-	float3 g = sqrt(n * n + VoH * VoH - 1);
-	return 0.5 * sqr((g - VoH) / (g + VoH)) * (1 + sqr(((g + VoH) * VoH - 1) / ((g - VoH) * VoH + 1)));
+	// Burley 2012, "Physically-Based Shading at Disney"
+
+	// The values at and ab are perceptualRoughness^2, a2 is therefore perceptualRoughness^4
+	// The dot product below computes perceptualRoughness^8. We cannot fit in fp16 without clamping
+	// the roughness to too high values so we perform the dot product and the division in fp32
+	float a2 = at * ab;
+	highp float3 d = float3(ab * ToH, at * BoH, a2 * NoH);
+	highp float d2 = dot(d, d);
+	float b2 = a2 / d2;
+	return a2 * b2 * b2 * (1.0 / PI);
+}
+
+float D_Charlie(float roughness, float NoH)
+{
+	// Estevez and Kulla 2017, "Production Friendly Microfacet Sheen BRDF"
+	float invAlpha = 1.0 / roughness;
+	float cos2h = NoH * NoH;
+	float sin2h = max(1.0 - cos2h, 0.0078125); // 2^(-14/2), so sin2h^2 > 0 in fp16
+	return (2.0 + invAlpha) * pow(sin2h, invAlpha * 0.5) / (2.0 * PI);
+}
+
+float V_SmithGGXCorrelated(float roughness, float NoV, float NoL)
+{
+	// Heitz 2014, "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
+	float a2 = roughness * roughness;
+	// TODO: lambdaV can be pre-computed for all the lights, it should be moved out of this function
+	float lambdaV = NoL * sqrt((NoV - a2 * NoV) * NoV + a2);
+	float lambdaL = NoV * sqrt((NoL - a2 * NoL) * NoL + a2);
+	float v = 0.5 / (lambdaV + lambdaL);
+	// a2=0 => v = 1 / 4*NoL*NoV   => min=1/4, max=+inf
+	// a2=1 => v = 1 / 2*(NoL+NoV) => min=1/4, max=+inf
+	// clamp to the maximum value representable in mediump
+	return saturateMediump(v);
+}
+
+float V_SmithGGXCorrelated_Anisotropic(float at, float ab, float ToV, float BoV,
+	float ToL, float BoL, float NoV, float NoL)
+{
+	// Heitz 2014, "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
+	// TODO: lambdaV can be pre-computed for all the lights, it should be moved out of this function
+	float lambdaV = NoL * length(float3(at * ToV, ab * BoV, NoV));
+	float lambdaL = NoV * length(float3(at * ToL, ab * BoL, NoL));
+	float v = 0.5 / (lambdaV + lambdaL);
+	return saturateMediump(v);
+}
+
+float V_Kelemen(float LoH)
+{
+	// Kelemen 2001, "A Microfacet Based Coupled Specular-Matte BRDF Model with Importance Sampling"
+	return saturateMediump(0.25 / (LoH * LoH));
+}
+
+float V_Neubelt(float NoV, float NoL)
+{
+	// Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
+	return saturateMediump(1.0 / (4.0 * (NoL + NoV - NoL * NoV)));
+}
+
+float3 F_Schlick(const float3 f0, float f90, float VoH)
+{
+	// Schlick 1994, "An Inexpensive BRDF Model for Physically-Based Rendering"
+	return f0 + (f90 - f0) * pow5(1.0 - VoH);
+}
+
+float3 F_Schlick(const float3 f0, float VoH)
+{
+	float f = pow(1.0 - VoH, 5.0);
+	return f + f0 * (1.0 - f);
+}
+
+float F_Schlick(float f0, float f90, float VoH)
+{
+	return f0 + (f90 - f0) * pow5(1.0 - VoH);
 }
 
 
+// Surface descriptors:
+
+struct SheenSurface
+{
+	float3 color;
+	float roughness;
+
+	// computed values:
+	float roughnessBRDF;
+	float DFG;
+	float albedoScaling;
+};
+
+struct ClearcoatSurface
+{
+	float factor;
+	float roughness;
+	float3 N;
+
+	// computed values:
+	float roughnessBRDF;
+	float3 R;
+	float3 F;
+};
 
 struct Surface
 {
@@ -36,11 +144,10 @@ struct Surface
 	float anisotropy;		// anisotropy factor [0 -> 1]
 	float4 sss;				// subsurface scattering color * amount
 	float4 sss_inv;			// 1 / (1 + sss)
-	uint layerMask;
+	uint layerMask;			// the engine-side layer mask
 
 	// These will be computed when calling Update():
-	float alphaRoughness;	// roughness remapped from perceptual to a "more linear change in roughness"
-	float alphaRoughnessSq;	// roughness input to brdf functions
+	float roughnessBRDF;	// roughness input for BRDF functions
 	float NdotV;			// cos(angle between normal and view vector)
 	float f90;				// reflectance at grazing angle
 	float3 R;				// reflection vector
@@ -49,6 +156,9 @@ struct Surface
 	float BdotV;
 	float at;
 	float ab;
+
+	SheenSurface sheen;
+	ClearcoatSurface clearcoat;
 
 	inline void init()
 	{
@@ -66,6 +176,13 @@ struct Surface
 		sss = 0;
 		sss_inv = 1;
 		layerMask = ~0;
+
+		sheen.color = 0;
+		sheen.roughness = 0;
+
+		clearcoat.factor = 0;
+		clearcoat.roughness = 0;
+		clearcoat.N = 0;
 	}
 
 	inline void create(
@@ -104,19 +221,33 @@ struct Surface
 
 	inline void update()
 	{
-		alphaRoughness = roughness * roughness;
-		alphaRoughnessSq = alphaRoughness * alphaRoughness;
+		roughness = clamp(roughness, 0.045, 1);
+		roughnessBRDF = roughness * roughness;
+
+		sheen.roughness = clamp(sheen.roughness, 0.045, 1);
+		sheen.roughnessBRDF = sheen.roughness * sheen.roughness;
+
+		clearcoat.roughness = clamp(clearcoat.roughness, 0.045, 1);
+		clearcoat.roughnessBRDF = clearcoat.roughness * clearcoat.roughness;
 
 		NdotV = saturate(abs(dot(N, V)) + 1e-5);
 
 		f90 = saturate(50.0 * dot(f0, 0.33));
-		R = -reflect(V, N);
 		F = F_Schlick(f0, f90, NdotV);
+		clearcoat.F = F_Schlick(f0, f90, saturate(abs(dot(clearcoat.N, V)) + 1e-5));
+		clearcoat.F *= clearcoat.factor;
+
+		R = -reflect(V, N);
+		clearcoat.R = -reflect(V, clearcoat.N);
+
+		// Sheen energy compensation: https://dassaultsystemes-technology.github.io/EnterprisePBRShadingModel/spec-2021x.md.html#figure_energy-compensation-sheen-e
+		sheen.DFG = texture_sheenlut.SampleLevel(sampler_linear_clamp, float2(NdotV, sheen.roughness), 0).r;
+		sheen.albedoScaling = 1.0 - max3(sheen.color) * sheen.DFG;
 
 		TdotV = dot(T, V);
 		BdotV = dot(B, V);
-		at = max(0, alphaRoughness * (1 + anisotropy));
-		ab = max(0, alphaRoughness * (1 - anisotropy));
+		at = max(0, roughnessBRDF * (1 + anisotropy));
+		ab = max(0, roughnessBRDF * (1 - anisotropy));
 
 #ifdef BRDF_CARTOON
 		F = smoothstep(0.05, 0.1, F);
@@ -184,78 +315,54 @@ struct SurfaceToLight
 	}
 };
 
-// Smith Joint GGX
-// Note: Vis = G / (4 * NdotL * NdotV)
-// see Eric Heitz. 2014. Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs. Journal of Computer Graphics Techniques, 3
-// see Real-Time Rendering. Page 331 to 336.
-// see https://google.github.io/filament/Filament.md.html#materialsystem/specularbrdf/geometricshadowing(specularg)
-float visibilityOcclusion(in Surface surface, in SurfaceToLight surfaceToLight)
-{
-	float GGXV = surfaceToLight.NdotL * sqrt(surface.NdotV * surface.NdotV * (1.0 - surface.alphaRoughnessSq) + surface.alphaRoughnessSq);
-	float GGXL = surface.NdotV * sqrt(surfaceToLight.NdotL * surfaceToLight.NdotL * (1.0 - surface.alphaRoughnessSq) + surface.alphaRoughnessSq);
-
-	float GGX = GGXV + GGXL;
-	if (GGX > 0.0)
-	{
-		return 0.5 / GGX;
-	}
-	return 0.0;
-}
-
-// The following equation(s) model the distribution of microfacet normals across the area being drawn (aka D())
-// Implementation from "Average Irregularity Representation of a Roughened Surface for Ray Reflection" by T. S. Trowbridge, and K. P. Reitz
-// Follows the distribution function recommended in the SIGGRAPH 2013 course notes from EPIC Games [1], Equation 3.
-float microfacetDistribution(in Surface surface, in SurfaceToLight surfaceToLight)
-{
-	float f = (surfaceToLight.NdotH * surface.alphaRoughnessSq - surfaceToLight.NdotH) * surfaceToLight.NdotH + 1.0;
-	return surface.alphaRoughnessSq / (PI * f * f);
-}
-
-
-// Aniso functions source: https://github.com/google/filament/blob/main/shaders/src/brdf.fs
-
-float D_GGX_Anisotropic(in Surface surface, in SurfaceToLight surfaceToLight)
-{
-	// Burley 2012, "Physically-Based Shading at Disney"
-
-	// The values at and ab are perceptualRoughness^2, a2 is therefore perceptualRoughness^4
-	// The dot product below computes perceptualRoughness^8. We cannot fit in fp16 without clamping
-	// the roughness to too high values so we perform the dot product and the division in fp32
-	float a2 = surface.at * surface.ab;
-	float3 d = float3(surface.ab * surfaceToLight.TdotH, surface.at * surfaceToLight.BdotH, a2 * surfaceToLight.NdotH);
-	float d2 = dot(d, d);
-	float b2 = a2 / d2;
-	return a2 * b2 * b2 / PI;
-}
-float V_SmithGGXCorrelated_Anisotropic(in Surface surface, in SurfaceToLight surfaceToLight)
-{
-	// Heitz 2014, "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
-	// TODO: lambdaV can be pre-computed for all the lights, it should be moved out of this function
-	float lambdaV = surfaceToLight.NdotL * length(float3(surface.at * surface.TdotV, surface.ab * surface.BdotV, surface.NdotV));
-	float lambdaL = surface.NdotV * length(float3(surface.at * surfaceToLight.TdotL, surface.ab * surfaceToLight.BdotL, surfaceToLight.NdotL));
-	float v = 0.5 / (lambdaV + lambdaL);
-	return saturate(v);
-}
-
 
 // These are the functions that will be used by shaders:
+
 float3 BRDF_GetSpecular(in Surface surface, in SurfaceToLight surfaceToLight)
 {
 #ifdef BRDF_ANISOTROPIC
-	float Vis = V_SmithGGXCorrelated_Anisotropic(surface, surfaceToLight);
-	float D = D_GGX_Anisotropic(surface, surfaceToLight);
+	float D = D_GGX_Anisotropic(surface.at, surface.ab, surfaceToLight.TdotH, surfaceToLight.BdotH, surfaceToLight.NdotH);
+	float Vis = V_SmithGGXCorrelated_Anisotropic(surface.at, surface.ab, surface.TdotV, surface.BdotV,
+		surfaceToLight.TdotL, surfaceToLight.BdotL, surface.NdotV, surfaceToLight.NdotL);
 #else
-	float Vis = visibilityOcclusion(surface, surfaceToLight);
-	float D = microfacetDistribution(surface, surfaceToLight);
+	float D = D_GGX(surface.roughnessBRDF, surfaceToLight.NdotH, surfaceToLight.H);
+	float Vis = V_SmithGGXCorrelated(surface.roughnessBRDF, surface.NdotV, surfaceToLight.NdotL);
 #endif // BRDF_ANISOTROPIC
 
-	return surfaceToLight.F * Vis * D;
+	float3 specular = D * Vis * surfaceToLight.F;
+
+#ifdef BRDF_SHEEN
+	specular *= surface.sheen.albedoScaling;
+	D = D_Charlie(surface.sheen.roughnessBRDF, surfaceToLight.NdotH);
+	Vis = V_Neubelt(surface.NdotV, surfaceToLight.NdotL);
+	specular += D * Vis * surface.sheen.color;
+#endif // BRDF_SHEEN
+
+#ifdef BRDF_CLEARCOAT
+	specular *= 1 - surface.clearcoat.F;
+	float NdotH = saturate(dot(surface.clearcoat.N, surfaceToLight.H));
+	D = D_GGX(surface.clearcoat.roughnessBRDF, NdotH, surfaceToLight.H);
+	Vis = V_Kelemen(surfaceToLight.LdotH);
+	specular += D * Vis * surface.clearcoat.F;
+#endif // BRDF_CLEARCOAT
+
+	return specular;
 }
 float3 BRDF_GetDiffuse(in Surface surface, in SurfaceToLight surfaceToLight)
 {
 	// Note: subsurface scattering will remove Fresnel (F), because otherwise
 	//	there would be artifact on backside where diffuse wraps
-	return (1 - lerp(surfaceToLight.F, 0, saturate(surface.sss.a))) / PI;
+	float3 diffuse = (1 - lerp(surfaceToLight.F, 0, saturate(surface.sss.a))) / PI;
+
+#ifdef BRDF_SHEEN
+	diffuse *= surface.sheen.albedoScaling;
+#endif // BRDF_SHEEN
+
+#ifdef BRDF_CLEARCOAT
+	diffuse *= 1 - surface.clearcoat.F;
+#endif // BRDF_CLEARCOAT
+
+	return diffuse;
 }
 
 #endif // WI_BRDF_HF

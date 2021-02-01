@@ -26,6 +26,7 @@
 #include "wiEvent.h"
 #include "wiPlatform.h"
 #include "wiBlueNoise.h"
+#include "wiSheenLUT.h"
 
 #include <algorithm>
 #include <unordered_map>
@@ -766,6 +767,15 @@ SHADERTYPE GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, Ma
 		case wiScene::MaterialComponent::SHADERTYPE_PBR_ANISOTROPIC:
 			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_ANISOTROPIC : PSTYPE_OBJECT_ANISOTROPIC;
 			break;
+		case wiScene::MaterialComponent::SHADERTYPE_PBR_CLOTH:
+			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_CLOTH : PSTYPE_OBJECT_CLOTH;
+			break;
+		case wiScene::MaterialComponent::SHADERTYPE_PBR_CLEARCOAT:
+			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_CLEARCOAT : PSTYPE_OBJECT_CLEARCOAT;
+			break;
+		case wiScene::MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT:
+			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_CLOTH_CLEARCOAT : PSTYPE_OBJECT_CLOTH_CLEARCOAT;
+			break;
 		case wiScene::MaterialComponent::SHADERTYPE_WATER:
 			realPS = transparent ? PSTYPE_OBJECT_WATER : SHADERTYPE_COUNT;
 			break;
@@ -1068,6 +1078,12 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_TRANSPARENT_POM], "objectPS_transparent_pom.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_ANISOTROPIC], "objectPS_anisotropic.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_TRANSPARENT_ANISOTROPIC], "objectPS_transparent_anisotropic.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_CLOTH], "objectPS_cloth.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_TRANSPARENT_CLOTH], "objectPS_transparent_cloth.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_CLEARCOAT], "objectPS_clearcoat.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_TRANSPARENT_CLEARCOAT], "objectPS_transparent_clearcoat.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_CLOTH_CLEARCOAT], "objectPS_cloth_clearcoat.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_TRANSPARENT_CLOTH_CLEARCOAT], "objectPS_transparent_cloth_clearcoat.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_CARTOON], "objectPS_cartoon.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_TRANSPARENT_CARTOON], "objectPS_transparent_cartoon.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_UNLIT], "objectPS_unlit.cso"); });
@@ -2301,7 +2317,6 @@ void ReloadShaders()
 	wiEvent::FireEvent(SYSTEM_EVENT_RELOAD_SHADERS, 0);
 }
 
-
 void Initialize()
 {
 	SetUpStates();
@@ -2331,6 +2346,15 @@ void Initialize()
 	desc.Format = FORMAT_R11G11B10_FLOAT;
 	desc.BindFlags = BIND_SHADER_RESOURCE;
 	device->CreateTexture(&desc, nullptr, &globalLightmap);
+
+	desc.BindFlags = BIND_SHADER_RESOURCE;
+	desc.Format = FORMAT_R8_UNORM;
+	desc.Height = uint32_t(16);
+	desc.Width = uint32_t(16);
+	SubresourceData InitData;
+	InitData.pSysMem = sheenLUTdata;
+	InitData.SysMemPitch = desc.Width;
+	device->CreateTexture(&desc, &InitData, &textures[TEXTYPE_2D_SHEENLUT]);
 
 	wiBackLog::post("wiRenderer Initialized");
 }
@@ -2888,6 +2912,11 @@ void RenderMeshes(
 						material.GetDisplacementMap(),
 						material.GetOcclusionMap(),
 						material.GetTransmissionMap(),
+						material.GetSheenColorMap(),
+						material.GetSheenRoughnessMap(),
+						material.GetClearcoatMap(),
+						material.GetClearcoatRoughnessMap(),
+						material.GetClearcoatNormalMap(),
 					};
 					device->BindResources(PS, res, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(res), cmd);
 				}
@@ -3557,13 +3586,9 @@ void UpdatePerFrameData(
 	frameCB.g_xFrame_ForceFieldArrayOffset = frameCB.g_xFrame_LightArrayOffset + frameCB.g_xFrame_LightArrayCount;
 	frameCB.g_xFrame_ForceFieldArrayCount = (uint)vis.scene->forces.GetCount();
 
-	frameCB.g_xFrame_GlobalEnvProbeIndex = -1;
+	frameCB.g_xFrame_GlobalEnvProbeIndex = 0;
 	frameCB.g_xFrame_EnvProbeMipCount = 0;
 	frameCB.g_xFrame_EnvProbeMipCount_rcp = 1.0f;
-	if (vis.scene->probes.GetCount() > 0)
-	{
-		frameCB.g_xFrame_GlobalEnvProbeIndex = 0; // for now, the global envprobe will be the first probe in the array. Easy change later on if required...
-	}
 	if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY].IsValid())
 	{
 		frameCB.g_xFrame_EnvProbeMipCount = textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY].GetDesc().MipLevels;
@@ -6528,7 +6553,7 @@ void ManageEnvProbes(Scene& scene)
 		probesToRefresh.push_back((uint32_t)probeIndex);
 	}
 
-	if (!probesToRefresh.empty() && !textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY].IsValid())
+	if (!textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY].IsValid())
 	{
 		TextureDesc desc;
 		desc.ArraySize = 6;
@@ -6598,12 +6623,8 @@ void ManageEnvProbes(Scene& scene)
 }
 void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 {
-	if (probesToRefresh.empty())
-	{
-		return;
-	}
-
 	device->EventBegin("EnvironmentProbe Refresh", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Environment Probe Refresh", cmd);
 
 	BindCommonResources(cmd);
 
@@ -6615,10 +6636,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 	const float zNearP = vis.camera->zNearP;
 	const float zFarP = vis.camera->zFarP;
 
-	for (uint32_t probeIndex : probesToRefresh)
-	{
-		const EnvironmentProbeComponent& probe = vis.scene->probes[probeIndex];
-		Entity entity = vis.scene->probes.GetEntity(probeIndex);
+	auto render_probe = [&](const EnvironmentProbeComponent& probe, Entity entity) {
 
 		const SHCAM cameras[] = {
 			SHCAM(probe.position, XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
@@ -6641,44 +6659,9 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		device->UpdateBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, cmd);
 		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), cmd);
 
-
 		CameraCB camcb;
 		camcb.g_xCamera_CamPos = probe.position; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
 		device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &camcb, cmd);
-
-		const LayerComponent* probe_layer = vis.scene->layers.GetComponent(entity);
-		const uint32_t layerMask = probe_layer == nullptr ?  ~0 : probe_layer->GetLayerMask();
-
-		SPHERE culler = SPHERE(probe.position, zFarP);
-
-		RenderQueue renderQueue;
-		for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
-		{
-			const AABB& aabb = vis.scene->aabb_objects[i];
-			if (culler.intersects(aabb))
-			{
-				Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
-				const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
-				if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
-				{
-					continue;
-				}
-
-				const ObjectComponent& object = vis.scene->objects[i];
-				if (object.IsRenderable())
-				{
-					RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
-					size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
-					batch->Create(meshIndex, i, 0);
-					renderQueue.add(batch);
-				}
-			}
-		}
-
-		BindConstantBuffers(VS, cmd);
-		BindConstantBuffers(PS, cmd);
-
-		device->RenderPassBegin(&renderpasses_envmap[probe.textureIndex], cmd);
 
 		if (vis.scene->weather.IsRealisticSky())
 		{
@@ -6691,14 +6674,50 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
 		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 
-		if (!renderQueue.empty())
+
+		device->RenderPassBegin(&renderpasses_envmap[probe.textureIndex], cmd);
+
+		// Scene will only be rendered if this is a real probe entity:
+		if (entity != INVALID_ENTITY)
 		{
-			BindShadowmaps(PS, cmd);
-			device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
+			const LayerComponent* probe_layer = vis.scene->layers.GetComponent(entity);
+			const uint32_t layerMask = probe_layer == nullptr ? ~0 : probe_layer->GetLayerMask();
 
-			RenderMeshes(vis, renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_ALL, cmd, false, frusta, arraysize(frusta));
+			SPHERE culler = SPHERE(probe.position, zFarP);
 
-			GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
+			RenderQueue renderQueue;
+			for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
+			{
+				const AABB& aabb = vis.scene->aabb_objects[i];
+				if (culler.intersects(aabb))
+				{
+					Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
+					const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
+					if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+					{
+						continue;
+					}
+
+					const ObjectComponent& object = vis.scene->objects[i];
+					if (object.IsRenderable())
+					{
+						RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
+						size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
+						batch->Create(meshIndex, i, 0);
+						renderQueue.add(batch);
+					}
+				}
+			}
+
+			if (!renderQueue.empty())
+			{
+				BindShadowmaps(PS, cmd);
+				device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
+
+				RenderMeshes(vis, renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_ALL, cmd, false, frusta, arraysize(frusta));
+
+				GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
+			}
 		}
 
 		// sky
@@ -6767,9 +6786,27 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			device->UnbindUAVs(0, 1, cmd);
 		}
 		device->EventEnd(cmd);
+	};
 
+	if (vis.scene->probes.GetCount() == 0)
+	{
+		// In this case, there are no probes, so the sky will be rendered to first envmap:
+		EnvironmentProbeComponent probe;
+		probe.textureIndex = 0;
+		probe.position = vis.camera->Eye;
+		render_probe(probe, INVALID_ENTITY);
+	}
+	else
+	{
+		for (uint32_t probeIndex : probesToRefresh)
+		{
+			const EnvironmentProbeComponent& probe = vis.scene->probes[probeIndex];
+			Entity entity = vis.scene->probes.GetEntity(probeIndex);
+			render_probe(probe, entity);
+		}
 	}
 
+	wiProfiler::EndRange(range);
 	device->EventEnd(cmd); // EnvironmentProbe Refresh
 }
 
@@ -8342,6 +8379,9 @@ void BindCommonResources(CommandList cmd)
 
 		BindConstantBuffers(stage, cmd);
 	}
+
+	device->BindResource(PS, &textures[TEXTYPE_2D_SHEENLUT], TEXSLOT_SHEENLUT, cmd);
+	device->BindResource(CS, &textures[TEXTYPE_2D_SHEENLUT], TEXSLOT_SHEENLUT, cmd);
 
 	// Bind the GPU entity array for all shaders that need it here:
 	GPUResource* resources[] = {

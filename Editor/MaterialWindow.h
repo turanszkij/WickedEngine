@@ -38,6 +38,9 @@ public:
 	wiComboBox shaderTypeComboBox;
 	wiComboBox blendModeComboBox;
 	wiComboBox shadingRateComboBox;
+	wiSlider sheenRoughnessSlider;
+	wiSlider clearcoatSlider;
+	wiSlider clearcoatRoughnessSlider;
 
 	wiLabel texture_baseColor_Label;
 	wiLabel texture_normal_Label;
@@ -46,6 +49,11 @@ public:
 	wiLabel texture_emissive_Label;
 	wiLabel texture_occlusion_Label;
 	wiLabel texture_transmission_Label;
+	wiLabel texture_sheenColor_Label;
+	wiLabel texture_sheenRoughness_Label;
+	wiLabel texture_clearcoat_Label;
+	wiLabel texture_clearcoatRoughness_Label;
+	wiLabel texture_clearcoatNormal_Label;
 
 	wiButton texture_baseColor_Button;
 	wiButton texture_normal_Button;
@@ -54,6 +62,11 @@ public:
 	wiButton texture_emissive_Button;
 	wiButton texture_occlusion_Button;
 	wiButton texture_transmission_Button;
+	wiButton texture_sheenColor_Button;
+	wiButton texture_sheenRoughness_Button;
+	wiButton texture_clearcoat_Button;
+	wiButton texture_clearcoatRoughness_Button;
+	wiButton texture_clearcoatNormal_Button;
 
 	wiTextInputField texture_baseColor_uvset_Field;
 	wiTextInputField texture_normal_uvset_Field;
@@ -62,6 +75,11 @@ public:
 	wiTextInputField texture_emissive_uvset_Field;
 	wiTextInputField texture_occlusion_uvset_Field;
 	wiTextInputField texture_transmission_uvset_Field;
+	wiTextInputField texture_sheenColor_uvset_Field;
+	wiTextInputField texture_sheenRoughness_uvset_Field;
+	wiTextInputField texture_clearcoat_uvset_Field;
+	wiTextInputField texture_clearcoatRoughness_uvset_Field;
+	wiTextInputField texture_clearcoatNormal_uvset_Field;
 
 	wiComboBox colorComboBox;
 	wiColorPicker colorPicker;
