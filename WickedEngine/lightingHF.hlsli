@@ -921,7 +921,7 @@ inline void VoxelGI(in Surface surface, inout Lighting lighting)
 		{
 			float4 reflection = ConeTraceReflection(texture_voxelradiance, surface.P, surface.N, surface.V, surface.roughness);
 
-			lighting.indirect.specular = lerp(lighting.indirect.specular, reflection.rgb, reflection.a * blend);
+			lighting.indirect.specular = lerp(lighting.indirect.specular, reflection.rgb * surface.F, reflection.a * blend);
 		}
 	}
 }
