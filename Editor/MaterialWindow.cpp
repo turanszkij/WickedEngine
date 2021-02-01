@@ -1291,6 +1291,11 @@ void MaterialWindow::SetEntity(Entity entity)
 		texture_emissive_Button.SetText(wiHelper::GetFileNameFromPath(material->emissiveMapName));
 		texture_occlusion_Button.SetText(wiHelper::GetFileNameFromPath(material->occlusionMapName));
 		texture_transmission_Button.SetText(wiHelper::GetFileNameFromPath(material->transmissionMapName));
+		texture_sheenColor_Button.SetText(wiHelper::GetFileNameFromPath(material->sheenColorMapName));
+		texture_sheenRoughness_Button.SetText(wiHelper::GetFileNameFromPath(material->sheenRoughnessMapName));
+		texture_clearcoat_Button.SetText(wiHelper::GetFileNameFromPath(material->clearcoatMapName));
+		texture_clearcoatRoughness_Button.SetText(wiHelper::GetFileNameFromPath(material->clearcoatRoughnessMapName));
+		texture_clearcoatNormal_Button.SetText(wiHelper::GetFileNameFromPath(material->clearcoatNormalMapName));
 
 		texture_baseColor_uvset_Field.SetText(std::to_string(material->uvset_baseColorMap));
 		texture_normal_uvset_Field.SetText(std::to_string(material->uvset_normalMap));
