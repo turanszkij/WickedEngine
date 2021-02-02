@@ -243,9 +243,9 @@ struct VertexSurface
 		
 		uint normal_wind = asuint(input.pos.w);
 
-		normal.x = (float)((normal_wind >> 0) & 0xFF) / 255.0f * 2.0f - 1.0f;
-		normal.y = (float)((normal_wind >> 8) & 0xFF) / 255.0f * 2.0f - 1.0f;
-		normal.z = (float)((normal_wind >> 16) & 0xFF) / 255.0f * 2.0f - 1.0f;
+		normal.x = (float)((normal_wind >> 0) & 0xFF) / 255.0 * 2 - 1;
+		normal.y = (float)((normal_wind >> 8) & 0xFF) / 255.0 * 2 - 1;
+		normal.z = (float)((normal_wind >> 16) & 0xFF) / 255.0 * 2 - 1;
 		normal = normalize(mul((float3x3)WORLD, normal));
 
 #ifdef OBJECTSHADER_INPUT_TAN
@@ -256,7 +256,7 @@ struct VertexSurface
 #ifdef OBJECTSHADER_USE_WIND
 		if (material.IsUsingWind())
 		{
-			const float windweight = ((normal_wind >> 24) & 0xFF) / 255.0f;
+			const float windweight = ((normal_wind >> 24) & 0xFF) / 255.0;
 			const float waveoffset = dot(position.xyz, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + (position.x + position.y + position.z) * g_xFrame_WindRandomness;
 			const float waveoffsetPrev = dot(positionPrev.xyz, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + (positionPrev.x + positionPrev.y + positionPrev.z) * g_xFrame_WindRandomness;
 			const float3 wavedir = g_xFrame_WindDirection * windweight;
@@ -287,7 +287,7 @@ struct VertexSurface
 
 struct PixelInput
 {
-	float4 pos : SV_POSITION;
+	precise float4 pos : SV_POSITION;
 
 #ifdef OBJECTSHADER_USE_CLIPPLANE
 	float  clip : SV_ClipDistance0;

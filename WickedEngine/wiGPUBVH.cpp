@@ -48,21 +48,21 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 			{
 				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
-				if (material.baseColorMap != nullptr)
+				if (material.textures[MaterialComponent::BASECOLORMAP].resource != nullptr)
 				{
-					sceneTextures.insert(material.baseColorMap);
+					sceneTextures.insert(material.textures[MaterialComponent::BASECOLORMAP].resource);
 				}
-				if (material.surfaceMap != nullptr)
+				if (material.textures[MaterialComponent::SURFACEMAP].resource != nullptr)
 				{
-					sceneTextures.insert(material.surfaceMap);
+					sceneTextures.insert(material.textures[MaterialComponent::SURFACEMAP].resource);
 				}
-				if (material.emissiveMap != nullptr)
+				if (material.textures[MaterialComponent::EMISSIVEMAP].resource != nullptr)
 				{
-					sceneTextures.insert(material.emissiveMap);
+					sceneTextures.insert(material.textures[MaterialComponent::EMISSIVEMAP].resource);
 				}
-				if (material.normalMap != nullptr)
+				if (material.textures[MaterialComponent::NORMALMAP].resource != nullptr)
 				{
-					sceneTextures.insert(material.normalMap);
+					sceneTextures.insert(material.textures[MaterialComponent::NORMALMAP].resource);
 				}
 			}
 		}
@@ -150,9 +150,9 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 				// Add extended properties:
 				const TextureDesc& desc = globalMaterialAtlas.GetDesc();
 
-				if (material.baseColorMap != nullptr)
+				if (material.textures[MaterialComponent::BASECOLORMAP].resource != nullptr)
 				{
-					rect_xywh rect = storedTextures[material.baseColorMap];
+					rect_xywh rect = storedTextures[material.textures[MaterialComponent::BASECOLORMAP].resource];
 					// eliminate border expansion:
 					rect.x += atlasWrapBorder;
 					rect.y += atlasWrapBorder;
@@ -162,9 +162,9 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 						(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
 				}
 
-				if (material.surfaceMap != nullptr)
+				if (material.textures[MaterialComponent::SURFACEMAP].resource != nullptr)
 				{
-					rect_xywh rect = storedTextures[material.surfaceMap];
+					rect_xywh rect = storedTextures[material.textures[MaterialComponent::SURFACEMAP].resource];
 					// eliminate border expansion:
 					rect.x += atlasWrapBorder;
 					rect.y += atlasWrapBorder;
@@ -174,9 +174,9 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 						(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
 				}
 
-				if (material.emissiveMap != nullptr)
+				if (material.textures[MaterialComponent::EMISSIVEMAP].resource != nullptr)
 				{
-					rect_xywh rect = storedTextures[material.emissiveMap];
+					rect_xywh rect = storedTextures[material.textures[MaterialComponent::EMISSIVEMAP].resource];
 					// eliminate border expansion:
 					rect.x += atlasWrapBorder;
 					rect.y += atlasWrapBorder;
@@ -186,9 +186,9 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 						(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
 				}
 
-				if (material.normalMap != nullptr)
+				if (material.textures[MaterialComponent::NORMALMAP].resource != nullptr)
 				{
-					rect_xywh rect = storedTextures[material.normalMap];
+					rect_xywh rect = storedTextures[material.textures[MaterialComponent::NORMALMAP].resource];
 					// eliminate border expansion:
 					rect.x += atlasWrapBorder;
 					rect.y += atlasWrapBorder;

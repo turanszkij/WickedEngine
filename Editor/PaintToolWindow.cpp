@@ -132,12 +132,18 @@ void PaintToolWindow::Create(EditorComponent* editor)
 	textureSlotComboBox.SetTooltip("Choose texture slot of the selected material to paint (texture paint mode only)");
 	textureSlotComboBox.SetPos(XMFLOAT2(x, y += step));
 	textureSlotComboBox.SetSize(XMFLOAT2(200, hei));
-	textureSlotComboBox.AddItem("BaseColor (RGBA)");
-	textureSlotComboBox.AddItem("Normal (RGB)");
-	textureSlotComboBox.AddItem("SurfaceMap (RGBA)");
-	textureSlotComboBox.AddItem("DisplacementMap (R)");
-	textureSlotComboBox.AddItem("EmissiveMap (RGBA)");
-	textureSlotComboBox.AddItem("OcclusionMap (R)");
+	textureSlotComboBox.AddItem("BaseColor (RGBA)", MaterialComponent::BASECOLORMAP);
+	textureSlotComboBox.AddItem("Normal (RGB)", MaterialComponent::NORMALMAP);
+	textureSlotComboBox.AddItem("SurfaceMap (RGBA)", MaterialComponent::SURFACEMAP);
+	textureSlotComboBox.AddItem("DisplacementMap (R)", MaterialComponent::DISPLACEMENTMAP);
+	textureSlotComboBox.AddItem("EmissiveMap (RGBA)", MaterialComponent::EMISSIVEMAP);
+	textureSlotComboBox.AddItem("OcclusionMap (R)", MaterialComponent::OCCLUSIONMAP);
+	textureSlotComboBox.AddItem("TransmissionMap (R)", MaterialComponent::TRANSMISSIONMAP);
+	textureSlotComboBox.AddItem("SheenColorMap (R)", MaterialComponent::SHEENCOLORMAP);
+	textureSlotComboBox.AddItem("SheenRoughMap (R)", MaterialComponent::SHEENROUGHNESSMAP);
+	textureSlotComboBox.AddItem("ClearcoatMap (R)", MaterialComponent::CLEARCOATMAP);
+	textureSlotComboBox.AddItem("ClearcoatRoughMap (R)", MaterialComponent::CLEARCOATROUGHNESSMAP);
+	textureSlotComboBox.AddItem("ClearcoatNormMap (R)", MaterialComponent::CLEARCOATNORMALMAP);
 	textureSlotComboBox.SetSelected(0);
 	textureSlotComboBox.SetEnabled(false);
 	AddWidget(&textureSlotComboBox);
@@ -166,29 +172,8 @@ void PaintToolWindow::Create(EditorComponent* editor)
 
 		std::string* slotname = nullptr;
 
-		int sel = textureSlotComboBox.GetSelected();
-		switch (sel)
-		{
-		default:
-		case 0:
-			slotname = &material->baseColorMapName;
-			break;
-		case 1:
-			slotname = &material->normalMapName;
-			break;
-		case 2:
-			slotname = &material->surfaceMapName;
-			break;
-		case 3:
-			slotname = &material->displacementMapName;
-			break;
-		case 4:
-			slotname = &material->emissiveMapName;
-			break;
-		case 5:
-			slotname = &material->occlusionMapName;
-			break;
-		}
+		uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
+		slotname = &material->textures[sel].name;
 
 		wiHelper::RemoveExtensionFromFileName(*slotname);
 		*slotname = *slotname + "_0.png";
@@ -1259,53 +1244,13 @@ void PaintToolWindow::ConsumeHistoryOperation(wiArchive& archive, bool undo)
 }
 std::shared_ptr<wiResource> PaintToolWindow::GetEditTextureSlot(const MaterialComponent& material, int* uvset)
 {
-	int sel = textureSlotComboBox.GetSelected();
-	switch (sel)
-	{
-	default:
-	case 0:
-		if (uvset) *uvset = material.uvset_baseColorMap;
-		return material.baseColorMap;
-	case 1:
-		if (uvset) *uvset = material.uvset_normalMap;
-		return material.normalMap;
-	case 2:
-		if (uvset) *uvset = material.uvset_surfaceMap;
-		return material.surfaceMap;
-	case 3:
-		if (uvset) *uvset = material.uvset_displacementMap;
-		return material.displacementMap;
-	case 4:
-		if (uvset) *uvset = material.uvset_emissiveMap;
-		return material.emissiveMap;
-	case 5:
-		if (uvset) *uvset = material.uvset_occlusionMap;
-		return material.occlusionMap;
-	}
+	uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
+	if (uvset)
+		*uvset = material.textures[sel].uvset;
+	return material.textures[sel].resource;
 }
 void PaintToolWindow::ReplaceEditTextureSlot(wiScene::MaterialComponent& material, std::shared_ptr<wiResource> resource)
 {
-	int sel = textureSlotComboBox.GetSelected();
-	switch (sel)
-	{
-	default:
-	case 0:
-		material.baseColorMap = resource;
-		break;
-	case 1:
-		material.normalMap = resource;
-		break;
-	case 2:
-		material.surfaceMap = resource;
-		break;
-	case 3:
-		material.displacementMap = resource;
-		break;
-	case 4:
-		material.emissiveMap = resource;
-		break;
-	case 5:
-		material.occlusionMap = resource;
-		break;
-	}
+	uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
+	material.textures[sel].resource = resource;
 }

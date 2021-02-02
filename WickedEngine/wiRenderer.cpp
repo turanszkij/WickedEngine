@@ -2903,30 +2903,13 @@ void RenderMeshes(
 				device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
 
 				// Bind all material textures:
-				{
-					const GPUResource* res[] = {
-						material.GetBaseColorMap(),
-						material.GetNormalMap(),
-						material.GetSurfaceMap(),
-						material.GetEmissiveMap(),
-						material.GetDisplacementMap(),
-						material.GetOcclusionMap(),
-						material.GetTransmissionMap(),
-						material.GetSheenColorMap(),
-						material.GetSheenRoughnessMap(),
-						material.GetClearcoatMap(),
-						material.GetClearcoatRoughnessMap(),
-						material.GetClearcoatNormalMap(),
-					};
-					device->BindResources(PS, res, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(res), cmd);
-				}
+				const GPUResource* materialtextures[MaterialComponent::TEXTURESLOT_COUNT];
+				material.WriteTextures(materialtextures, arraysize(materialtextures));
+				device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
 
 				if (tessellatorRequested)
 				{
-					const GPUResource* res[] = {
-						material.GetDisplacementMap(),
-					};
-					device->BindResources(DS, res, TEXSLOT_RENDERER_DISPLACEMENTMAP, arraysize(res), cmd);
+					device->BindResources(DS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
 					device->BindConstantBuffer(DS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
 				}
 
@@ -2934,72 +2917,42 @@ void RenderMeshes(
 				{
 					if (mesh.terrain_material1 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material1))
 					{
-						const GPUResource* res[] = {
-							material.GetBaseColorMap(),
-							material.GetNormalMap(),
-							material.GetSurfaceMap(),
-							material.GetEmissiveMap(),
-						};
-						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, arraysize(res), cmd);
+						device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, 4, cmd);
 						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
 					}
 					else
 					{
 						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material1);
-						const GPUResource* res[] = {
-							blendmat.GetBaseColorMap(),
-							blendmat.GetNormalMap(),
-							blendmat.GetSurfaceMap(),
-							blendmat.GetEmissiveMap(),
-						};
+						const GPUResource* res[4];
+						blendmat.WriteTextures(res, arraysize(res));
 						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, arraysize(res), cmd);
 						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
 					}
 
 					if (mesh.terrain_material2 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material2))
 					{
-						const GPUResource* res[] = {
-							material.GetBaseColorMap(),
-							material.GetNormalMap(),
-							material.GetSurfaceMap(),
-							material.GetEmissiveMap(),
-						};
-						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, arraysize(res), cmd);
+						device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, 4, cmd);
 						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
 					}
 					else
 					{
 						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material2);
-						const GPUResource* res[] = {
-							blendmat.GetBaseColorMap(),
-							blendmat.GetNormalMap(),
-							blendmat.GetSurfaceMap(),
-							blendmat.GetEmissiveMap(),
-						};
+						const GPUResource* res[4];
+						blendmat.WriteTextures(res, arraysize(res));
 						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, arraysize(res), cmd);
 						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
 					}
 
 					if (mesh.terrain_material3 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material3))
 					{
-						const GPUResource* res[] = {
-							material.GetBaseColorMap(),
-							material.GetNormalMap(),
-							material.GetSurfaceMap(),
-							material.GetEmissiveMap(),
-						};
-						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, arraysize(res), cmd);
+						device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, 4, cmd);
 						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
 					}
 					else
 					{
 						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material3);
-						const GPUResource* res[] = {
-							blendmat.GetBaseColorMap(),
-							blendmat.GetNormalMap(),
-							blendmat.GetSurfaceMap(),
-							blendmat.GetEmissiveMap(),
-						};
+						const GPUResource* res[4];
+						blendmat.WriteTextures(res, arraysize(res));
 						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, arraysize(res), cmd);
 						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
 					}
@@ -6192,17 +6145,29 @@ void DrawDebugWorld(
 
 			const GPUBuffer* vbs[] = {
 				mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
+				nullptr,
 				&mesh.vertexBuffer_UV0,
 				&mesh.vertexBuffer_UV1,
+				nullptr,
+				nullptr,
+				nullptr,
 				mem.buffer
 			};
 			uint32_t strides[] = {
 				sizeof(MeshComponent::Vertex_POS),
+				sizeof(MeshComponent::Vertex_POS),
 				sizeof(MeshComponent::Vertex_TEX),
 				sizeof(MeshComponent::Vertex_TEX),
+				sizeof(MeshComponent::Vertex_TEX),
+				sizeof(MeshComponent::Vertex_COL),
+				sizeof(MeshComponent::Vertex_TAN),
 				sizeof(Instance)
 			};
 			uint32_t offsets[] = {
+				0,
+				0,
+				0,
+				0,
 				0,
 				0,
 				0,
@@ -6993,11 +6958,8 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 					device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
 					device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
 
-					const GPUResource* res[] = {
-						material.GetBaseColorMap(),
-						material.GetNormalMap(),
-						material.GetSurfaceMap(),
-					};
+					const GPUResource* res[4];
+					material.WriteTextures(res, arraysize(res));
 					device->BindResources(PS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
 					device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);

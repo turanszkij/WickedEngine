@@ -438,41 +438,41 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		{
 			auto& tex = state.gltfModel.textures[baseColorTexture->second.TextureIndex()];
 			auto& img = state.gltfModel.images[tex.source];
-			material.baseColorMap = RegisterTexture(&img, "basecolor");
-			material.baseColorMapName = img.uri;
-			material.uvset_baseColorMap = baseColorTexture->second.TextureTexCoord();
+			material.textures[MaterialComponent::BASECOLORMAP].resource = RegisterTexture(&img, "basecolor");
+			material.textures[MaterialComponent::BASECOLORMAP].name = img.uri;
+			material.textures[MaterialComponent::BASECOLORMAP].uvset = baseColorTexture->second.TextureTexCoord();
 		}
 		if (normalTexture != x.additionalValues.end())
 		{
 			auto& tex = state.gltfModel.textures[normalTexture->second.TextureIndex()];
 			auto& img = state.gltfModel.images[tex.source];
-			material.normalMap = RegisterTexture(&img, "normal");
-			material.normalMapName = img.uri;
-			material.uvset_normalMap = normalTexture->second.TextureTexCoord();
+			material.textures[MaterialComponent::NORMALMAP].resource = RegisterTexture(&img, "normal");
+			material.textures[MaterialComponent::NORMALMAP].name = img.uri;
+			material.textures[MaterialComponent::NORMALMAP].uvset = normalTexture->second.TextureTexCoord();
 		}
 		if (metallicRoughnessTexture != x.values.end())
 		{
 			auto& tex = state.gltfModel.textures[metallicRoughnessTexture->second.TextureIndex()];
 			auto& img = state.gltfModel.images[tex.source];
-			material.surfaceMap = RegisterTexture(&img, "roughness_metallic");
-			material.surfaceMapName = img.uri;
-			material.uvset_surfaceMap = metallicRoughnessTexture->second.TextureTexCoord();
+			material.textures[MaterialComponent::SURFACEMAP].resource = RegisterTexture(&img, "roughness_metallic");
+			material.textures[MaterialComponent::SURFACEMAP].name = img.uri;
+			material.textures[MaterialComponent::SURFACEMAP].uvset = metallicRoughnessTexture->second.TextureTexCoord();
 		}
 		if (emissiveTexture != x.additionalValues.end())
 		{
 			auto& tex = state.gltfModel.textures[emissiveTexture->second.TextureIndex()];
 			auto& img = state.gltfModel.images[tex.source];
-			material.emissiveMap = RegisterTexture(&img, "emissive");
-			material.emissiveMapName = img.uri;
-			material.uvset_emissiveMap = emissiveTexture->second.TextureTexCoord();
+			material.textures[MaterialComponent::EMISSIVEMAP].resource = RegisterTexture(&img, "emissive");
+			material.textures[MaterialComponent::EMISSIVEMAP].name = img.uri;
+			material.textures[MaterialComponent::EMISSIVEMAP].uvset = emissiveTexture->second.TextureTexCoord();
 		}
 		if (occlusionTexture != x.additionalValues.end())
 		{
 			auto& tex = state.gltfModel.textures[occlusionTexture->second.TextureIndex()];
 			auto& img = state.gltfModel.images[tex.source];
-			material.occlusionMap = RegisterTexture(&img, "occlusion");
-			material.occlusionMapName = img.uri;
-			material.uvset_occlusionMap = occlusionTexture->second.TextureTexCoord();
+			material.textures[MaterialComponent::OCCLUSIONMAP].resource = RegisterTexture(&img, "occlusion");
+			material.textures[MaterialComponent::OCCLUSIONMAP].name = img.uri;
+			material.textures[MaterialComponent::OCCLUSIONMAP].uvset = occlusionTexture->second.TextureTexCoord();
 			material.SetOcclusionEnabled_Secondary(true);
 		}
 
@@ -529,9 +529,9 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				int index = ext_transmission->second.Get("transmissionTexture").Get("index").Get<int>();
 				auto& tex = state.gltfModel.textures[index];
 				auto& img = state.gltfModel.images[tex.source];
-				material.transmissionMap = RegisterTexture(&img, "transmission");
-				material.transmissionMapName = img.uri;
-				material.uvset_transmissionMap = (uint32_t)ext_transmission->second.Get("transmissionTexture").Get("texCoord").Get<int>();
+				material.textures[MaterialComponent::TRANSMISSIONMAP].resource = RegisterTexture(&img, "transmission");
+				material.textures[MaterialComponent::TRANSMISSIONMAP].name = img.uri;
+				material.textures[MaterialComponent::TRANSMISSIONMAP].uvset = (uint32_t)ext_transmission->second.Get("transmissionTexture").Get("texCoord").Get<int>();
 			}
 		}
 
@@ -546,18 +546,18 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				int index = specularGlossinessWorkflow->second.Get("diffuseTexture").Get("index").Get<int>();
 				auto& tex = state.gltfModel.textures[index];
 				auto& img = state.gltfModel.images[tex.source];
-				material.baseColorMap = RegisterTexture(&img, "diffuse");
-				material.baseColorMapName = img.uri;
-				material.uvset_baseColorMap = (uint32_t)specularGlossinessWorkflow->second.Get("diffuseTexture").Get("texCoord").Get<int>();
+				material.textures[MaterialComponent::BASECOLORMAP].resource = RegisterTexture(&img, "diffuse");
+				material.textures[MaterialComponent::BASECOLORMAP].name = img.uri;
+				material.textures[MaterialComponent::BASECOLORMAP].uvset = (uint32_t)specularGlossinessWorkflow->second.Get("diffuseTexture").Get("texCoord").Get<int>();
 			}
 			if (specularGlossinessWorkflow->second.Has("specularGlossinessTexture"))
 			{
 				int index = specularGlossinessWorkflow->second.Get("specularGlossinessTexture").Get("index").Get<int>();
 				auto& tex = state.gltfModel.textures[index];
 				auto& img = state.gltfModel.images[tex.source];
-				material.surfaceMap = RegisterTexture(&img, "specular_glossiness");
-				material.surfaceMapName = img.uri;
-				material.uvset_surfaceMap = (uint32_t)specularGlossinessWorkflow->second.Get("specularGlossinessTexture").Get("texCoord").Get<int>();
+				material.textures[MaterialComponent::SURFACEMAP].resource = RegisterTexture(&img, "specular_glossiness");
+				material.textures[MaterialComponent::SURFACEMAP].name = img.uri;
+				material.textures[MaterialComponent::SURFACEMAP].uvset = (uint32_t)specularGlossinessWorkflow->second.Get("specularGlossinessTexture").Get("texCoord").Get<int>();
 			}
 
 			if (specularGlossinessWorkflow->second.Has("diffuseFactor"))
@@ -602,9 +602,9 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				int index = param.Get("index").Get<int>();
 				auto& tex = state.gltfModel.textures[index];
 				auto& img = state.gltfModel.images[tex.source];
-				material.sheenColorMap = RegisterTexture(&img, "sheenColor");
-				material.sheenColorMapName = img.uri;
-				material.uvset_sheenColorMap = (uint32_t)param.Get("texCoord").Get<int>();
+				material.textures[MaterialComponent::SHEENCOLORMAP].resource = RegisterTexture(&img, "sheenColor");
+				material.textures[MaterialComponent::SHEENCOLORMAP].name = img.uri;
+				material.textures[MaterialComponent::SHEENCOLORMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
 			}
 			if (ext_sheen->second.Has("sheenRoughnessFactor"))
 			{
@@ -617,9 +617,9 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				int index = param.Get("index").Get<int>();
 				auto& tex = state.gltfModel.textures[index];
 				auto& img = state.gltfModel.images[tex.source];
-				material.sheenRoughnessMap = RegisterTexture(&img, "sheenRoughness");
-				material.sheenRoughnessMapName = img.uri;
-				material.uvset_sheenRoughnessMap = (uint32_t)param.Get("texCoord").Get<int>();
+				material.textures[MaterialComponent::SHEENROUGHNESSMAP].resource = RegisterTexture(&img, "sheenRoughness");
+				material.textures[MaterialComponent::SHEENROUGHNESSMAP].name = img.uri;
+				material.textures[MaterialComponent::SHEENROUGHNESSMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
 			}
 		}
 
@@ -646,9 +646,9 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				int index = param.Get("index").Get<int>();
 				auto& tex = state.gltfModel.textures[index];
 				auto& img = state.gltfModel.images[tex.source];
-				material.clearcoatMap = RegisterTexture(&img, "clearcoat");
-				material.clearcoatMapName = img.uri;
-				material.uvset_clearcoatMap = (uint32_t)param.Get("texCoord").Get<int>();
+				material.textures[MaterialComponent::CLEARCOATMAP].resource = RegisterTexture(&img, "clearcoat");
+				material.textures[MaterialComponent::CLEARCOATMAP].name = img.uri;
+				material.textures[MaterialComponent::CLEARCOATMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
 			}
 			if (ext_clearcoat->second.Has("clearcoatRoughnessFactor"))
 			{
@@ -661,9 +661,9 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				int index = param.Get("index").Get<int>();
 				auto& tex = state.gltfModel.textures[index];
 				auto& img = state.gltfModel.images[tex.source];
-				material.clearcoatRoughnessMap = RegisterTexture(&img, "clearcoatRoughness");
-				material.clearcoatRoughnessMapName = img.uri;
-				material.uvset_clearcoatRoughnessMap = (uint32_t)param.Get("texCoord").Get<int>();
+				material.textures[MaterialComponent::CLEARCOATROUGHNESSMAP].resource = RegisterTexture(&img, "clearcoatRoughness");
+				material.textures[MaterialComponent::CLEARCOATROUGHNESSMAP].name = img.uri;
+				material.textures[MaterialComponent::CLEARCOATROUGHNESSMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
 			}
 			if (ext_clearcoat->second.Has("clearcoatNormalTexture"))
 			{
@@ -671,9 +671,9 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				int index = param.Get("index").Get<int>();
 				auto& tex = state.gltfModel.textures[index];
 				auto& img = state.gltfModel.images[tex.source];
-				material.clearcoatNormalMap = RegisterTexture(&img, "clearcoatNormal");
-				material.clearcoatNormalMapName = img.uri;
-				material.uvset_clearcoatNormalMap = (uint32_t)param.Get("texCoord").Get<int>();
+				material.textures[MaterialComponent::CLEARCOATNORMALMAP].resource = RegisterTexture(&img, "clearcoatNormal");
+				material.textures[MaterialComponent::CLEARCOATNORMALMAP].name = img.uri;
+				material.textures[MaterialComponent::CLEARCOATNORMALMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
 			}
 		}
 

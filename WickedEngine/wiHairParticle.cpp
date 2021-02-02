@@ -162,7 +162,11 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	device->EventBegin("HairParticle - UpdateRenderData", cmd);
 
-	const TextureDesc& desc = material.GetBaseColorMap()->GetDesc();
+	TextureDesc desc;
+	if (material.textures[MaterialComponent::BASECOLORMAP].resource != nullptr)
+	{
+		desc = material.textures[MaterialComponent::BASECOLORMAP].resource->texture->GetDesc();
+	}
 
 	HairParticleCB hcb;
 	hcb.xWorld = world;
@@ -184,7 +188,7 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 	hcb.xHairFrameCount = std::max(1u, frameCount);
 	hcb.xHairFrameStart = frameStart;
 	hcb.xHairTexMul = float2(1.0f / (float)hcb.xHairFramesXY.x, 1.0f / (float)hcb.xHairFramesXY.y);
-	hcb.xHairAspect = (float)desc.Width / (float)desc.Height;
+	hcb.xHairAspect = (float)std::max(1u, desc.Width) / (float)std::max(1u, desc.Height);
 	device->UpdateBuffer(&cb, &hcb, cmd);
 
 	// Simulate:
@@ -265,11 +269,16 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 	{
 		device->BindPipelineState(&PSO[renderPass], cmd);
 
-		const GPUResource* res[] = {
-			material.GetBaseColorMap()
-		};
-		device->BindResources(PS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
-		device->BindResources(VS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+		if (material.textures[MaterialComponent::BASECOLORMAP].resource == nullptr)
+		{
+			device->BindResource(PS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
+			device->BindResource(VS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
+		}
+		else
+		{
+			device->BindResource(PS, material.textures[MaterialComponent::BASECOLORMAP].GetGPUResource(), TEXSLOT_ONDEMAND0, cmd);
+			device->BindResource(VS, material.textures[MaterialComponent::BASECOLORMAP].GetGPUResource(), TEXSLOT_ONDEMAND0, cmd);
+		}
 
 		if (renderPass != RENDERPASS_PREPASS) // depth only alpha test will be full res
 		{

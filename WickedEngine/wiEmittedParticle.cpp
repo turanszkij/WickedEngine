@@ -541,7 +541,14 @@ void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialCompon
 	{
 		const BLENDMODE blendMode = material.GetBlendMode();
 		device->BindPipelineState(&PSO[blendMode][shaderType], cmd);
-		device->BindResource(PS, material.GetBaseColorMap(), TEXSLOT_ONDEMAND0, cmd);
+		if (material.textures[MaterialComponent::BASECOLORMAP].resource == nullptr)
+		{
+			device->BindResource(PS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
+		}
+		else
+		{
+			device->BindResource(PS, material.textures[MaterialComponent::BASECOLORMAP].GetGPUResource(), TEXSLOT_ONDEMAND0, cmd);
+		}
 		device->BindShadingRate(material.shadingRate, cmd);
 	}
 

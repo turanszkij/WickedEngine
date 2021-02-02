@@ -425,7 +425,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 
 			editor->RefreshSceneGraphView();
 		}
-	});
+		});
 	AddWidget(&materialNameField);
 
 	newMaterialButton.Create("New Material");
@@ -438,750 +438,132 @@ void MaterialWindow::Create(EditorComponent* editor)
 		editor->AddSelected(entity);
 		editor->RefreshSceneGraphView();
 		SetEntity(entity);
-	});
+		});
 	AddWidget(&newMaterialButton);
 
-	texture_baseColor_Label.Create("BaseColorMap: ");
-	texture_baseColor_Label.SetPos(XMFLOAT2(x, y += step));
-	texture_baseColor_Label.SetSize(XMFLOAT2(120, 20));
-	AddWidget(&texture_baseColor_Label);
-
-	texture_baseColor_Button.Create("BaseColor");
-	texture_baseColor_Button.SetText("");
-	texture_baseColor_Button.SetTooltip("Load the basecolor texture. RGB: Albedo Base Color, A: Opacity");
-	texture_baseColor_Button.SetPos(XMFLOAT2(x + 122, y));
-	texture_baseColor_Button.SetSize(XMFLOAT2(260, 20));
-	texture_baseColor_Button.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material == nullptr)
-			return;
-
-		if (material->baseColorMap != nullptr)
-		{
-			material->baseColorMap = nullptr;
-			material->baseColorMapName = "";
-			material->SetDirty();
-			texture_baseColor_Button.SetText("");
-		}
-		else
-		{
-			wiHelper::FileDialogParams params;
-			params.type = wiHelper::FileDialogParams::OPEN;
-			params.description = "Texture";
-			params.extensions.push_back("dds");
-			params.extensions.push_back("png");
-			params.extensions.push_back("jpg");
-			params.extensions.push_back("jpeg");
-			params.extensions.push_back("tga");
-			params.extensions.push_back("bmp");
-			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					material->baseColorMap = wiResourceManager::Load(fileName);
-					material->baseColorMapName = fileName;
-					material->SetDirty();
-					texture_baseColor_Button.SetText(wiHelper::GetFileNameFromPath(fileName));
-				});
-			});
-		}
-	});
-	AddWidget(&texture_baseColor_Button);
-
-	texture_baseColor_uvset_Field.Create("uvset_baseColor");
-	texture_baseColor_uvset_Field.SetText("");
-	texture_baseColor_uvset_Field.SetTooltip("uv set number");
-	texture_baseColor_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
-	texture_baseColor_uvset_Field.SetSize(XMFLOAT2(20, 20));
-	texture_baseColor_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			material->SetUVSet_BaseColorMap(args.iValue);
-		}
-	});
-	AddWidget(&texture_baseColor_uvset_Field);
 
 
 
-	texture_normal_Label.Create("NormalMap: ");
-	texture_normal_Label.SetPos(XMFLOAT2(x, y += step));
-	texture_normal_Label.SetSize(XMFLOAT2(120, 20));
-	AddWidget(&texture_normal_Label);
+	auto add_texturemap_controls = [&](MaterialComponent::TEXTURESLOT i)
+	{
+		auto& slot = slots[i];
 
-	texture_normal_Button.Create("NormalMap");
-	texture_normal_Button.SetText("");
-	texture_normal_Button.SetTooltip("Load the normalmap texture. RGB: Normal");
-	texture_normal_Button.SetPos(XMFLOAT2(x + 122, y));
-	texture_normal_Button.SetSize(XMFLOAT2(260, 20));
-	texture_normal_Button.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material == nullptr)
-			return;
+		slot.label.Create("");
+		slot.label.SetPos(XMFLOAT2(x, y += step));
+		slot.label.SetSize(XMFLOAT2(120, 20));
+		AddWidget(&slot.label);
 
-		if (material->normalMap != nullptr)
-		{
-			material->normalMap = nullptr;
-			material->normalMapName = "";
-			material->SetDirty();
-			texture_normal_Button.SetText("");
-		}
-		else
-		{
-			wiHelper::FileDialogParams params;
-			params.type = wiHelper::FileDialogParams::OPEN;
-			params.description = "Texture";
-			params.extensions.push_back("dds");
-			params.extensions.push_back("png");
-			params.extensions.push_back("jpg");
-			params.extensions.push_back("jpeg");
-			params.extensions.push_back("tga");
-			params.extensions.push_back("bmp");
-			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					material->normalMap = wiResourceManager::Load(fileName);
-					material->normalMapName = fileName;
-					material->SetDirty();
-					texture_normal_Button.SetText(wiHelper::GetFileNameFromPath(fileName));
-				});
-			});
-		}
-	});
-	AddWidget(&texture_normal_Button);
+		slot.button.Create("");
+		slot.button.SetPos(XMFLOAT2(x + 122, y));
+		slot.button.SetSize(XMFLOAT2(260, 20));
+		slot.button.OnClick([&](wiEventArgs args) {
+			MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+			if (material == nullptr)
+				return;
 
-	texture_normal_uvset_Field.Create("uvset_normal");
-	texture_normal_uvset_Field.SetText("");
-	texture_normal_uvset_Field.SetTooltip("uv set number");
-	texture_normal_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
-	texture_normal_uvset_Field.SetSize(XMFLOAT2(20, 20));
-	texture_normal_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			material->SetUVSet_NormalMap(args.iValue);
-		}
-	});
-	AddWidget(&texture_normal_uvset_Field);
-
-
-
-	texture_surface_Label.Create("SurfaceMap: ");
-	texture_surface_Label.SetPos(XMFLOAT2(x, y += step));
-	texture_surface_Label.SetSize(XMFLOAT2(120, 20));
-	AddWidget(&texture_surface_Label);
-
-	texture_surface_Button.Create("SurfaceMap");
-	texture_surface_Button.SetText("");
-	texture_surface_Button.SetTooltip("Load the surface property texture.\nDefault workflow: R: Occlusion, G: Roughness, B: Metalness, A: Reflectance\nSpecular-glossiness workflow: RGB: Specular color (f0), A: smoothness");
-	texture_surface_Button.SetPos(XMFLOAT2(x + 122, y));
-	texture_surface_Button.SetSize(XMFLOAT2(260, 20));
-	texture_surface_Button.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material == nullptr)
-			return;
-
-		if (material->surfaceMap != nullptr)
-		{
-			material->surfaceMap = nullptr;
-			material->surfaceMapName = "";
-			material->SetDirty();
-			texture_surface_Button.SetText("");
-		}
-		else
-		{
-			wiHelper::FileDialogParams params;
-			params.type = wiHelper::FileDialogParams::OPEN;
-			params.description = "Texture";
-			params.extensions.push_back("dds");
-			params.extensions.push_back("png");
-			params.extensions.push_back("jpg");
-			params.extensions.push_back("jpeg");
-			params.extensions.push_back("tga");
-			params.extensions.push_back("bmp");
-			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					material->surfaceMap = wiResourceManager::Load(fileName);
-					material->surfaceMapName = fileName;
-					material->SetDirty();
-					texture_surface_Button.SetText(wiHelper::GetFileNameFromPath(fileName));
-				});
-			});
-		}
-	});
-	AddWidget(&texture_surface_Button);
-
-	texture_surface_uvset_Field.Create("uvset_surface");
-	texture_surface_uvset_Field.SetText("");
-	texture_surface_uvset_Field.SetTooltip("uv set number");
-	texture_surface_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
-	texture_surface_uvset_Field.SetSize(XMFLOAT2(20, 20));
-	texture_surface_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			material->SetUVSet_SurfaceMap(args.iValue);
-		}
-	});
-	AddWidget(&texture_surface_uvset_Field);
-
-
-
-	texture_emissive_Label.Create("EmissiveMap: ");
-	texture_emissive_Label.SetPos(XMFLOAT2(x, y += step));
-	texture_emissive_Label.SetSize(XMFLOAT2(120, 20));
-	AddWidget(&texture_emissive_Label);
-
-	texture_emissive_Button.Create("EmissiveMap");
-	texture_emissive_Button.SetText("");
-	texture_emissive_Button.SetTooltip("Load the emissive map texture.");
-	texture_emissive_Button.SetPos(XMFLOAT2(x + 122, y));
-	texture_emissive_Button.SetSize(XMFLOAT2(260, 20));
-	texture_emissive_Button.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material == nullptr)
-			return;
-
-		if (material->emissiveMap != nullptr)
-		{
-			material->emissiveMap = nullptr;
-			material->emissiveMapName = "";
-			material->SetDirty();
-			texture_emissive_Button.SetText("");
-		}
-		else
-		{
-			wiHelper::FileDialogParams params;
-			params.type = wiHelper::FileDialogParams::OPEN;
-			params.description = "Texture";
-			params.extensions.push_back("dds");
-			params.extensions.push_back("png");
-			params.extensions.push_back("jpg");
-			params.extensions.push_back("jpeg");
-			params.extensions.push_back("tga");
-			params.extensions.push_back("bmp");
-			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					material->emissiveMap = wiResourceManager::Load(fileName);
-					material->emissiveMapName = fileName;
-					material->SetDirty();
-					texture_emissive_Button.SetText(wiHelper::GetFileNameFromPath(fileName));
-				});
-			});
-		}
-	});
-	AddWidget(&texture_emissive_Button);
-
-	texture_emissive_uvset_Field.Create("uvset_emissive");
-	texture_emissive_uvset_Field.SetText("");
-	texture_emissive_uvset_Field.SetTooltip("uv set number");
-	texture_emissive_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
-	texture_emissive_uvset_Field.SetSize(XMFLOAT2(20, 20));
-	texture_emissive_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			material->SetUVSet_EmissiveMap(args.iValue);
-		}
-		});
-	AddWidget(&texture_emissive_uvset_Field);
-
-
-
-	texture_displacement_Label.Create("DisplacementMap: ");
-	texture_displacement_Label.SetPos(XMFLOAT2(x, y += step));
-	texture_displacement_Label.SetSize(XMFLOAT2(120, 20));
-	AddWidget(&texture_displacement_Label);
-
-	texture_displacement_Button.Create("DisplacementMap");
-	texture_displacement_Button.SetText("");
-	texture_displacement_Button.SetTooltip("Load the displacement map texture.");
-	texture_displacement_Button.SetPos(XMFLOAT2(x + 122, y));
-	texture_displacement_Button.SetSize(XMFLOAT2(260, 20));
-	texture_displacement_Button.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material == nullptr)
-			return;
-
-		if (material->displacementMap != nullptr)
-		{
-			material->displacementMap = nullptr;
-			material->displacementMapName = "";
-			material->SetDirty();
-			texture_displacement_Button.SetText("");
-		}
-		else
-		{
-			wiHelper::FileDialogParams params;
-			params.type = wiHelper::FileDialogParams::OPEN;
-			params.description = "Texture";
-			params.extensions.push_back("dds");
-			params.extensions.push_back("png");
-			params.extensions.push_back("jpg");
-			params.extensions.push_back("jpeg");
-			params.extensions.push_back("tga");
-			params.extensions.push_back("bmp");
-			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					material->displacementMap = wiResourceManager::Load(fileName);
-					material->displacementMapName = fileName;
-					material->SetDirty();
-					texture_displacement_Button.SetText(wiHelper::GetFileNameFromPath(fileName));
-				});
-			});
-		}
-	});
-	AddWidget(&texture_displacement_Button);
-
-	texture_displacement_uvset_Field.Create("uvset_displacement");
-	texture_displacement_uvset_Field.SetText("");
-	texture_displacement_uvset_Field.SetTooltip("uv set number");
-	texture_displacement_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
-	texture_displacement_uvset_Field.SetSize(XMFLOAT2(20, 20));
-	texture_displacement_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			material->SetUVSet_DisplacementMap(args.iValue);
-		}
-	});
-	AddWidget(&texture_displacement_uvset_Field);
-
-
-
-
-	texture_occlusion_Label.Create("OcclusionMap: ");
-	texture_occlusion_Label.SetPos(XMFLOAT2(x, y += step));
-	texture_occlusion_Label.SetSize(XMFLOAT2(120, 20));
-	AddWidget(&texture_occlusion_Label);
-
-	texture_occlusion_Button.Create("OcclusionMap");
-	texture_occlusion_Button.SetText("");
-	texture_occlusion_Button.SetTooltip("Load the occlusion map texture. R: occlusion factor");
-	texture_occlusion_Button.SetPos(XMFLOAT2(x + 122, y));
-	texture_occlusion_Button.SetSize(XMFLOAT2(260, 20));
-	texture_occlusion_Button.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material == nullptr)
-			return;
-
-		if (material->occlusionMap != nullptr)
-		{
-			material->occlusionMap = nullptr;
-			material->occlusionMapName = "";
-			material->SetDirty();
-			texture_occlusion_Button.SetText("");
-		}
-		else
-		{
-			wiHelper::FileDialogParams params;
-			params.type = wiHelper::FileDialogParams::OPEN;
-			params.description = "Texture";
-			params.extensions.push_back("dds");
-			params.extensions.push_back("png");
-			params.extensions.push_back("jpg");
-			params.extensions.push_back("jpeg");
-			params.extensions.push_back("tga");
-			params.extensions.push_back("bmp");
-			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					material->occlusionMap = wiResourceManager::Load(fileName);
-					material->occlusionMapName = fileName;
-					material->SetDirty();
-					texture_occlusion_Button.SetText(wiHelper::GetFileNameFromPath(fileName));
-				});
-			});
-		}
-	});
-	AddWidget(&texture_occlusion_Button);
-
-	texture_occlusion_uvset_Field.Create("uvset_occlusion");
-	texture_occlusion_uvset_Field.SetText("");
-	texture_occlusion_uvset_Field.SetTooltip("uv set number");
-	texture_occlusion_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
-	texture_occlusion_uvset_Field.SetSize(XMFLOAT2(20, 20));
-	texture_occlusion_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			material->SetUVSet_OcclusionMap(args.iValue);
-		}
-	});
-	AddWidget(&texture_occlusion_uvset_Field);
-
-
-
-
-	texture_transmission_Label.Create("TransmissionMap: ");
-	texture_transmission_Label.SetPos(XMFLOAT2(x, y += step));
-	texture_transmission_Label.SetSize(XMFLOAT2(120, 20));
-	AddWidget(&texture_transmission_Label);
-
-	texture_transmission_Button.Create("TransmissionMap");
-	texture_transmission_Button.SetText("");
-	texture_transmission_Button.SetTooltip("Load the transmission map texture. R: transmission factor");
-	texture_transmission_Button.SetPos(XMFLOAT2(x + 122, y));
-	texture_transmission_Button.SetSize(XMFLOAT2(260, 20));
-	texture_transmission_Button.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material == nullptr)
-			return;
-
-		if (material->transmissionMap != nullptr)
-		{
-			material->transmissionMap = nullptr;
-			material->transmissionMapName = "";
-			material->SetDirty();
-			texture_transmission_Button.SetText("");
-		}
-		else
-		{
-			wiHelper::FileDialogParams params;
-			params.type = wiHelper::FileDialogParams::OPEN;
-			params.description = "Texture";
-			params.extensions.push_back("dds");
-			params.extensions.push_back("png");
-			params.extensions.push_back("jpg");
-			params.extensions.push_back("jpeg");
-			params.extensions.push_back("tga");
-			params.extensions.push_back("bmp");
-			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					material->transmissionMap = wiResourceManager::Load(fileName);
-					material->transmissionMapName = fileName;
-					material->SetDirty();
-					texture_transmission_Button.SetText(wiHelper::GetFileNameFromPath(fileName));
+			if (material->textures[i].resource != nullptr)
+			{
+				material->textures[i].resource = nullptr;
+				material->textures[i].name = "";
+				material->SetDirty();
+				slot.button.SetText("");
+			}
+			else
+			{
+				wiHelper::FileDialogParams params;
+				params.type = wiHelper::FileDialogParams::OPEN;
+				params.description = "Texture";
+				params.extensions.push_back("dds");
+				params.extensions.push_back("png");
+				params.extensions.push_back("jpg");
+				params.extensions.push_back("jpeg");
+				params.extensions.push_back("tga");
+				params.extensions.push_back("bmp");
+				wiHelper::FileDialog(params, [this, material, &slot, i](std::string fileName) {
+					wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+						material->textures[i].resource = wiResourceManager::Load(fileName);
+						material->textures[i].name = fileName;
+						material->SetDirty();
+						slots[i].button.SetText(wiHelper::GetFileNameFromPath(fileName));
+						});
 					});
-				});
-		}
-		});
-	AddWidget(&texture_transmission_Button);
+			}
+			});
+		AddWidget(&slot.button);
 
-	texture_transmission_uvset_Field.Create("uvset_transmission");
-	texture_transmission_uvset_Field.SetText("");
-	texture_transmission_uvset_Field.SetTooltip("uv set number");
-	texture_transmission_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
-	texture_transmission_uvset_Field.SetSize(XMFLOAT2(20, 20));
-	texture_transmission_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		slot.uvsetField.Create("uvset");
+		slot.uvsetField.SetText("");
+		slot.uvsetField.SetTooltip("uv set number");
+		slot.uvsetField.SetPos(XMFLOAT2(x + uvset_offset, y));
+		slot.uvsetField.SetSize(XMFLOAT2(20, 20));
+		slot.uvsetField.OnInputAccepted([&](wiEventArgs args) {
+			MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+			if (material != nullptr)
+			{
+				material->textures[i].uvset = (uint32_t)args.iValue;
+			}
+			});
+		AddWidget(&slot.uvsetField);
+	};
+
+	for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
+	{
+		add_texturemap_controls((MaterialComponent::TEXTURESLOT)i);
+
+		switch (i)
 		{
-			material->SetUVSet_TransmissionMap(args.iValue);
+		case MaterialComponent::BASECOLORMAP:
+			slots[i].label.SetText("BaseColorMap:");
+			slots[i].button.SetTooltip("RGBA: Basecolor");
+			break;
+		case MaterialComponent::NORMALMAP:
+			slots[i].label.SetText("NormalMap:");
+			slots[i].button.SetTooltip("RGB: Normal");
+			break;
+		case MaterialComponent::SURFACEMAP:
+			slots[i].label.SetText("SurfaceMap:");
+			slots[i].button.SetTooltip("Default workflow: R: Occlusion, G: Roughness, B: Metalness, A: Reflectance\nSpecular-glossiness workflow: RGB: Specular color (f0), A: smoothness");
+			break;
+		case MaterialComponent::EMISSIVEMAP:
+			slots[i].label.SetText("EmissiveMap:");
+			slots[i].button.SetTooltip("RGBA: Emissive");
+			break;
+		case MaterialComponent::OCCLUSIONMAP:
+			slots[i].label.SetText("OcclusionMap:");
+			slots[i].button.SetTooltip("R: Occlusion");
+			break;
+		case MaterialComponent::DISPLACEMENTMAP:
+			slots[i].label.SetText("DisplacementMap:");
+			slots[i].button.SetTooltip("R: Displacement heightmap");
+			break;
+		case MaterialComponent::TRANSMISSIONMAP:
+			slots[i].label.SetText("TransmissionMap:");
+			slots[i].button.SetTooltip("R: Transmission factor");
+			break;
+		case MaterialComponent::SHEENCOLORMAP:
+			slots[i].label.SetText("SheenColorMap:");
+			slots[i].button.SetTooltip("RGB: Sheen color");
+			break;
+		case MaterialComponent::SHEENROUGHNESSMAP:
+			slots[i].label.SetText("SheenRoughMap:");
+			slots[i].button.SetTooltip("A: Roughness");
+			break;
+		case MaterialComponent::CLEARCOATMAP:
+			slots[i].label.SetText("ClearcoatMap:");
+			slots[i].button.SetTooltip("R: Clearcoat factor");
+			break;
+		case MaterialComponent::CLEARCOATROUGHNESSMAP:
+			slots[i].label.SetText("ClearcoatRoughMap:");
+			slots[i].button.SetTooltip("G: Roughness");
+			break;
+		case MaterialComponent::CLEARCOATNORMALMAP:
+			slots[i].label.SetText("ClearcoatNormMap:");
+			slots[i].button.SetTooltip("RGB: Normal");
+			break;
+		default:
+			break;
 		}
-		});
-	AddWidget(&texture_transmission_uvset_Field);
-
-
-
-
-	texture_sheenColor_Label.Create("SheenColorMap: ");
-	texture_sheenColor_Label.SetPos(XMFLOAT2(x, y += step));
-	texture_sheenColor_Label.SetSize(XMFLOAT2(120, 20));
-	AddWidget(&texture_sheenColor_Label);
-
-	texture_sheenColor_Button.Create("SheenColorMap");
-	texture_sheenColor_Button.SetText("");
-	texture_sheenColor_Button.SetTooltip("Load the sheen color texture (for cloth shader). RGB: sheen color");
-	texture_sheenColor_Button.SetPos(XMFLOAT2(x + 122, y));
-	texture_sheenColor_Button.SetSize(XMFLOAT2(260, 20));
-	texture_sheenColor_Button.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material == nullptr)
-			return;
-
-		if (material->sheenColorMap != nullptr)
-		{
-			material->sheenColorMap = nullptr;
-			material->sheenColorMapName = "";
-			material->SetDirty();
-			texture_sheenColor_Button.SetText("");
-		}
-		else
-		{
-			wiHelper::FileDialogParams params;
-			params.type = wiHelper::FileDialogParams::OPEN;
-			params.description = "Texture";
-			params.extensions.push_back("dds");
-			params.extensions.push_back("png");
-			params.extensions.push_back("jpg");
-			params.extensions.push_back("jpeg");
-			params.extensions.push_back("tga");
-			params.extensions.push_back("bmp");
-			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					material->sheenColorMap = wiResourceManager::Load(fileName);
-					material->sheenColorMapName = fileName;
-					material->SetDirty();
-					texture_sheenColor_Button.SetText(wiHelper::GetFileNameFromPath(fileName));
-					});
-				});
-		}
-		});
-	AddWidget(&texture_sheenColor_Button);
-
-	texture_sheenColor_uvset_Field.Create("uvset_sheenColor");
-	texture_sheenColor_uvset_Field.SetText("");
-	texture_sheenColor_uvset_Field.SetTooltip("uv set number");
-	texture_sheenColor_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
-	texture_sheenColor_uvset_Field.SetSize(XMFLOAT2(20, 20));
-	texture_sheenColor_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			material->SetUVSet_SheenColorMap(args.iValue);
-		}
-		});
-	AddWidget(&texture_sheenColor_uvset_Field);
-
-
-
-
-	texture_sheenRoughness_Label.Create("SheenRoughMap: ");
-	texture_sheenRoughness_Label.SetPos(XMFLOAT2(x, y += step));
-	texture_sheenRoughness_Label.SetSize(XMFLOAT2(120, 20));
-	AddWidget(&texture_sheenRoughness_Label);
-
-	texture_sheenRoughness_Button.Create("SheenRoughnessMap");
-	texture_sheenRoughness_Button.SetText("");
-	texture_sheenRoughness_Button.SetTooltip("Load the sheen roughness texture. A: roughness");
-	texture_sheenRoughness_Button.SetPos(XMFLOAT2(x + 122, y));
-	texture_sheenRoughness_Button.SetSize(XMFLOAT2(260, 20));
-	texture_sheenRoughness_Button.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material == nullptr)
-			return;
-
-		if (material->sheenRoughnessMap != nullptr)
-		{
-			material->sheenRoughnessMap = nullptr;
-			material->sheenRoughnessMapName = "";
-			material->SetDirty();
-			texture_sheenRoughness_Button.SetText("");
-		}
-		else
-		{
-			wiHelper::FileDialogParams params;
-			params.type = wiHelper::FileDialogParams::OPEN;
-			params.description = "Texture";
-			params.extensions.push_back("dds");
-			params.extensions.push_back("png");
-			params.extensions.push_back("jpg");
-			params.extensions.push_back("jpeg");
-			params.extensions.push_back("tga");
-			params.extensions.push_back("bmp");
-			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					material->sheenRoughnessMap = wiResourceManager::Load(fileName);
-					material->sheenRoughnessMapName = fileName;
-					material->SetDirty();
-					texture_sheenRoughness_Button.SetText(wiHelper::GetFileNameFromPath(fileName));
-					});
-				});
-		}
-		});
-	AddWidget(&texture_sheenRoughness_Button);
-
-	texture_sheenRoughness_uvset_Field.Create("uvset_sheenRoughness");
-	texture_sheenRoughness_uvset_Field.SetText("");
-	texture_sheenRoughness_uvset_Field.SetTooltip("uv set number");
-	texture_sheenRoughness_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
-	texture_sheenRoughness_uvset_Field.SetSize(XMFLOAT2(20, 20));
-	texture_sheenRoughness_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			material->SetUVSet_SheenRoughnessMap(args.iValue);
-		}
-		});
-	AddWidget(&texture_sheenRoughness_uvset_Field);
-
-
-
-
-	texture_clearcoat_Label.Create("ClearcoatMap: ");
-	texture_clearcoat_Label.SetPos(XMFLOAT2(x, y += step));
-	texture_clearcoat_Label.SetSize(XMFLOAT2(120, 20));
-	AddWidget(&texture_clearcoat_Label);
-
-	texture_clearcoat_Button.Create("ClearcoatMap");
-	texture_clearcoat_Button.SetText("");
-	texture_clearcoat_Button.SetTooltip("Load the clearcoat factor texture. R: clearcoat factor");
-	texture_clearcoat_Button.SetPos(XMFLOAT2(x + 122, y));
-	texture_clearcoat_Button.SetSize(XMFLOAT2(260, 20));
-	texture_clearcoat_Button.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material == nullptr)
-			return;
-
-		if (material->clearcoatMap != nullptr)
-		{
-			material->clearcoatMap = nullptr;
-			material->clearcoatMapName = "";
-			material->SetDirty();
-			texture_clearcoat_Button.SetText("");
-		}
-		else
-		{
-			wiHelper::FileDialogParams params;
-			params.type = wiHelper::FileDialogParams::OPEN;
-			params.description = "Texture";
-			params.extensions.push_back("dds");
-			params.extensions.push_back("png");
-			params.extensions.push_back("jpg");
-			params.extensions.push_back("jpeg");
-			params.extensions.push_back("tga");
-			params.extensions.push_back("bmp");
-			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					material->clearcoatMap = wiResourceManager::Load(fileName);
-					material->clearcoatMapName = fileName;
-					material->SetDirty();
-					texture_clearcoat_Button.SetText(wiHelper::GetFileNameFromPath(fileName));
-					});
-				});
-		}
-		});
-	AddWidget(&texture_clearcoat_Button);
-
-	texture_clearcoat_uvset_Field.Create("uvset_clearcoat");
-	texture_clearcoat_uvset_Field.SetText("");
-	texture_clearcoat_uvset_Field.SetTooltip("uv set number");
-	texture_clearcoat_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
-	texture_clearcoat_uvset_Field.SetSize(XMFLOAT2(20, 20));
-	texture_clearcoat_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			material->SetUVSet_ClearcoatMap(args.iValue);
-		}
-		});
-	AddWidget(&texture_clearcoat_uvset_Field);
-
-
-
-
-	texture_clearcoatRoughness_Label.Create("ClearcoatRoughMap: ");
-	texture_clearcoatRoughness_Label.SetPos(XMFLOAT2(x, y += step));
-	texture_clearcoatRoughness_Label.SetSize(XMFLOAT2(120, 20));
-	AddWidget(&texture_clearcoatRoughness_Label);
-
-	texture_clearcoatRoughness_Button.Create("ClearcoatRoughnessMap");
-	texture_clearcoatRoughness_Button.SetText("");
-	texture_clearcoatRoughness_Button.SetTooltip("Load the clearcoat roughness texture. G: roughness");
-	texture_clearcoatRoughness_Button.SetPos(XMFLOAT2(x + 122, y));
-	texture_clearcoatRoughness_Button.SetSize(XMFLOAT2(260, 20));
-	texture_clearcoatRoughness_Button.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material == nullptr)
-			return;
-
-		if (material->clearcoatRoughnessMap != nullptr)
-		{
-			material->clearcoatRoughnessMap = nullptr;
-			material->clearcoatRoughnessMapName = "";
-			material->SetDirty();
-			texture_clearcoatRoughness_Button.SetText("");
-		}
-		else
-		{
-			wiHelper::FileDialogParams params;
-			params.type = wiHelper::FileDialogParams::OPEN;
-			params.description = "Texture";
-			params.extensions.push_back("dds");
-			params.extensions.push_back("png");
-			params.extensions.push_back("jpg");
-			params.extensions.push_back("jpeg");
-			params.extensions.push_back("tga");
-			params.extensions.push_back("bmp");
-			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					material->clearcoatRoughnessMap = wiResourceManager::Load(fileName);
-					material->clearcoatRoughnessMapName = fileName;
-					material->SetDirty();
-					texture_clearcoatRoughness_Button.SetText(wiHelper::GetFileNameFromPath(fileName));
-					});
-				});
-		}
-		});
-	AddWidget(&texture_clearcoatRoughness_Button);
-
-	texture_clearcoatRoughness_uvset_Field.Create("uvset_clearcoatRoughness");
-	texture_clearcoatRoughness_uvset_Field.SetText("");
-	texture_clearcoatRoughness_uvset_Field.SetTooltip("uv set number");
-	texture_clearcoatRoughness_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
-	texture_clearcoatRoughness_uvset_Field.SetSize(XMFLOAT2(20, 20));
-	texture_clearcoatRoughness_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			material->SetUVSet_ClearcoatRoughnessMap(args.iValue);
-		}
-		});
-	AddWidget(&texture_clearcoatRoughness_uvset_Field);
-
-
-
-
-	texture_clearcoatNormal_Label.Create("ClearcoatNormMap: ");
-	texture_clearcoatNormal_Label.SetPos(XMFLOAT2(x, y += step));
-	texture_clearcoatNormal_Label.SetSize(XMFLOAT2(120, 20));
-	AddWidget(&texture_clearcoatNormal_Label);
-
-	texture_clearcoatNormal_Button.Create("ClearcoatNormalMap");
-	texture_clearcoatNormal_Button.SetText("");
-	texture_clearcoatNormal_Button.SetTooltip("Load the clearcoat normal map texture. RGB: normal");
-	texture_clearcoatNormal_Button.SetPos(XMFLOAT2(x + 122, y));
-	texture_clearcoatNormal_Button.SetSize(XMFLOAT2(260, 20));
-	texture_clearcoatNormal_Button.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material == nullptr)
-			return;
-
-		if (material->clearcoatNormalMap != nullptr)
-		{
-			material->clearcoatNormalMap = nullptr;
-			material->clearcoatNormalMapName = "";
-			material->SetDirty();
-			texture_clearcoatNormal_Button.SetText("");
-		}
-		else
-		{
-			wiHelper::FileDialogParams params;
-			params.type = wiHelper::FileDialogParams::OPEN;
-			params.description = "Texture";
-			params.extensions.push_back("dds");
-			params.extensions.push_back("png");
-			params.extensions.push_back("jpg");
-			params.extensions.push_back("jpeg");
-			params.extensions.push_back("tga");
-			params.extensions.push_back("bmp");
-			wiHelper::FileDialog(params, [this, material](std::string fileName) {
-				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					material->clearcoatNormalMap = wiResourceManager::Load(fileName);
-					material->clearcoatNormalMapName = fileName;
-					material->SetDirty();
-					texture_clearcoatNormal_Button.SetText(wiHelper::GetFileNameFromPath(fileName));
-					});
-				});
-		}
-		});
-	AddWidget(&texture_clearcoatNormal_Button);
-
-	texture_clearcoatNormal_uvset_Field.Create("uvset_clearcoatNormal");
-	texture_clearcoatNormal_uvset_Field.SetText("");
-	texture_clearcoatNormal_uvset_Field.SetTooltip("uv set number");
-	texture_clearcoatNormal_uvset_Field.SetPos(XMFLOAT2(x + uvset_offset, y));
-	texture_clearcoatNormal_uvset_Field.SetSize(XMFLOAT2(20, 20));
-	texture_clearcoatNormal_uvset_Field.OnInputAccepted([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			material->SetUVSet_ClearcoatNormalMap(args.iValue);
-		}
-		});
-	AddWidget(&texture_clearcoatNormal_uvset_Field);
-
-
-
-
-
+	}
 
 	colorComboBox.Create("Color picker mode: ");
 	colorComboBox.SetSize(XMFLOAT2(120, hei));
@@ -1284,32 +666,11 @@ void MaterialWindow::SetEntity(Entity entity)
 		}
 		shadingRateComboBox.SetSelected((int)material->shadingRate);
 
-		texture_baseColor_Button.SetText(wiHelper::GetFileNameFromPath(material->baseColorMapName));
-		texture_normal_Button.SetText(wiHelper::GetFileNameFromPath(material->normalMapName));
-		texture_surface_Button.SetText(wiHelper::GetFileNameFromPath(material->surfaceMapName));
-		texture_displacement_Button.SetText(wiHelper::GetFileNameFromPath(material->displacementMapName));
-		texture_emissive_Button.SetText(wiHelper::GetFileNameFromPath(material->emissiveMapName));
-		texture_occlusion_Button.SetText(wiHelper::GetFileNameFromPath(material->occlusionMapName));
-		texture_transmission_Button.SetText(wiHelper::GetFileNameFromPath(material->transmissionMapName));
-		texture_sheenColor_Button.SetText(wiHelper::GetFileNameFromPath(material->sheenColorMapName));
-		texture_sheenRoughness_Button.SetText(wiHelper::GetFileNameFromPath(material->sheenRoughnessMapName));
-		texture_clearcoat_Button.SetText(wiHelper::GetFileNameFromPath(material->clearcoatMapName));
-		texture_clearcoatRoughness_Button.SetText(wiHelper::GetFileNameFromPath(material->clearcoatRoughnessMapName));
-		texture_clearcoatNormal_Button.SetText(wiHelper::GetFileNameFromPath(material->clearcoatNormalMapName));
-
-		texture_baseColor_uvset_Field.SetText(std::to_string(material->uvset_baseColorMap));
-		texture_normal_uvset_Field.SetText(std::to_string(material->uvset_normalMap));
-		texture_surface_uvset_Field.SetText(std::to_string(material->uvset_surfaceMap));
-		texture_displacement_uvset_Field.SetText(std::to_string(material->uvset_displacementMap));
-		texture_emissive_uvset_Field.SetText(std::to_string(material->uvset_emissiveMap));
-		texture_occlusion_uvset_Field.SetText(std::to_string(material->uvset_occlusionMap));
-		texture_transmission_uvset_Field.SetText(std::to_string(material->uvset_transmissionMap));
-		texture_sheenColor_uvset_Field.SetText(std::to_string(material->uvset_sheenColorMap));
-		texture_sheenRoughness_uvset_Field.SetText(std::to_string(material->uvset_sheenRoughnessMap));
-		texture_clearcoat_uvset_Field.SetText(std::to_string(material->uvset_clearcoatMap));
-		texture_clearcoatRoughness_uvset_Field.SetText(std::to_string(material->uvset_clearcoatRoughnessMap));
-		texture_clearcoatNormal_uvset_Field.SetText(std::to_string(material->uvset_clearcoatNormalMap));
-
+		for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
+		{
+			slots[i].button.SetText(material->textures[i].name);
+			slots[i].uvsetField.SetText(std::to_string(material->textures[i].uvset));
+		}
 
 		colorComboBox.SetEnabled(true);
 		colorPicker.SetEnabled(true);
@@ -1354,49 +715,34 @@ void MaterialWindow::SetEntity(Entity entity)
 		sheenRoughnessSlider.SetEnabled(false);
 		clearcoatSlider.SetEnabled(false);
 		clearcoatRoughnessSlider.SetEnabled(false);
-		texture_sheenColor_Button.SetEnabled(false);
-		texture_sheenColor_uvset_Field.SetEnabled(false);
-		texture_sheenRoughness_Button.SetEnabled(false);
-		texture_sheenRoughness_uvset_Field.SetEnabled(false);
-		texture_clearcoat_Button.SetEnabled(false);
-		texture_clearcoat_uvset_Field.SetEnabled(false);
-		texture_clearcoatRoughness_Button.SetEnabled(false);
-		texture_clearcoatRoughness_uvset_Field.SetEnabled(false);
-		texture_clearcoatNormal_Button.SetEnabled(false);
-		texture_clearcoatNormal_uvset_Field.SetEnabled(false);
+		slots[MaterialComponent::SHEENCOLORMAP].SetEnabled(false);
+		slots[MaterialComponent::SHEENROUGHNESSMAP].SetEnabled(false);
+		slots[MaterialComponent::CLEARCOATMAP].SetEnabled(false);
+		slots[MaterialComponent::CLEARCOATROUGHNESSMAP].SetEnabled(false);
+		slots[MaterialComponent::CLEARCOATNORMALMAP].SetEnabled(false);
 		switch (material->shaderType)
 		{
 		case MaterialComponent::SHADERTYPE_PBR_CLOTH:
 			sheenRoughnessSlider.SetEnabled(true);
-			texture_sheenColor_Button.SetEnabled(true);
-			texture_sheenColor_uvset_Field.SetEnabled(true);
-			texture_sheenRoughness_Button.SetEnabled(true);
-			texture_sheenRoughness_uvset_Field.SetEnabled(true);
+			slots[MaterialComponent::SHEENCOLORMAP].SetEnabled(true);
+			slots[MaterialComponent::SHEENROUGHNESSMAP].SetEnabled(true);
 			break;
 		case MaterialComponent::SHADERTYPE_PBR_CLEARCOAT:
 			clearcoatSlider.SetEnabled(true);
 			clearcoatRoughnessSlider.SetEnabled(true);
-			texture_clearcoat_Button.SetEnabled(true);
-			texture_clearcoat_uvset_Field.SetEnabled(true);
-			texture_clearcoatRoughness_Button.SetEnabled(true);
-			texture_clearcoatRoughness_uvset_Field.SetEnabled(true);
-			texture_clearcoatNormal_Button.SetEnabled(true);
-			texture_clearcoatNormal_uvset_Field.SetEnabled(true);
+			slots[MaterialComponent::CLEARCOATMAP].SetEnabled(true);
+			slots[MaterialComponent::CLEARCOATROUGHNESSMAP].SetEnabled(true);
+			slots[MaterialComponent::CLEARCOATNORMALMAP].SetEnabled(true);
 			break;
 		case MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT:
 			sheenRoughnessSlider.SetEnabled(true);
 			clearcoatSlider.SetEnabled(true);
 			clearcoatRoughnessSlider.SetEnabled(true);
-			texture_sheenColor_Button.SetEnabled(true);
-			texture_sheenColor_uvset_Field.SetEnabled(true);
-			texture_sheenRoughness_Button.SetEnabled(true);
-			texture_sheenRoughness_uvset_Field.SetEnabled(true);
-			texture_clearcoat_Button.SetEnabled(true);
-			texture_clearcoat_uvset_Field.SetEnabled(true);
-			texture_clearcoatRoughness_Button.SetEnabled(true);
-			texture_clearcoatRoughness_uvset_Field.SetEnabled(true);
-			texture_clearcoatNormal_Button.SetEnabled(true);
-			texture_clearcoatNormal_uvset_Field.SetEnabled(true);
+			slots[MaterialComponent::SHEENCOLORMAP].SetEnabled(true);
+			slots[MaterialComponent::SHEENROUGHNESSMAP].SetEnabled(true);
+			slots[MaterialComponent::CLEARCOATMAP].SetEnabled(true);
+			slots[MaterialComponent::CLEARCOATROUGHNESSMAP].SetEnabled(true);
+			slots[MaterialComponent::CLEARCOATNORMALMAP].SetEnabled(true);
 			break;
 		}
 		sheenRoughnessSlider.SetValue(material->sheenRoughness);
@@ -1418,25 +764,11 @@ void MaterialWindow::SetEntity(Entity entity)
 		colorComboBox.SetEnabled(false);
 		colorPicker.SetEnabled(false);
 
-		texture_baseColor_Button.SetText("");
-		texture_normal_Button.SetText("");
-		texture_surface_Button.SetText("");
-		texture_displacement_Button.SetText("");
-		texture_emissive_Button.SetText("");
-		texture_occlusion_Button.SetText("");
-
-		texture_baseColor_uvset_Field.SetText("");
-		texture_normal_uvset_Field.SetText("");
-		texture_surface_uvset_Field.SetText("");
-		texture_displacement_uvset_Field.SetText("");
-		texture_emissive_uvset_Field.SetText("");
-		texture_occlusion_uvset_Field.SetText("");
-		texture_transmission_uvset_Field.SetText("");
-		texture_sheenColor_uvset_Field.SetText("");
-		texture_sheenRoughness_uvset_Field.SetText("");
-		texture_clearcoat_uvset_Field.SetText("");
-		texture_clearcoatRoughness_uvset_Field.SetText("");
-		texture_clearcoatNormal_uvset_Field.SetText("");
+		for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
+		{
+			slots[i].button.SetText("");
+			slots[i].uvsetField.SetText("");
+		}
 	}
 
 	newMaterialButton.SetEnabled(true);

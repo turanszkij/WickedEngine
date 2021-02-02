@@ -177,47 +177,46 @@ namespace wiScene
 		float texAnimFrameRate = 0.0f;
 		float texAnimElapsedTime = 0.0f;
 
-		std::string baseColorMapName;
-		std::string surfaceMapName;
-		std::string normalMapName;
-		std::string displacementMapName;
-		std::string emissiveMapName;
-		std::string occlusionMapName;
-		std::string transmissionMapName;
-		std::string sheenColorMapName;
-		std::string sheenRoughnessMapName;
-		std::string clearcoatMapName;
-		std::string clearcoatRoughnessMapName;
-		std::string clearcoatNormalMapName;
+		enum TEXTURESLOT
+		{
+			BASECOLORMAP,
+			NORMALMAP,
+			SURFACEMAP,
+			EMISSIVEMAP,
+			DISPLACEMENTMAP,
+			OCCLUSIONMAP,
+			TRANSMISSIONMAP,
+			SHEENCOLORMAP,
+			SHEENROUGHNESSMAP,
+			CLEARCOATMAP,
+			CLEARCOATROUGHNESSMAP,
+			CLEARCOATNORMALMAP,
 
-		uint32_t uvset_baseColorMap = 0;
-		uint32_t uvset_surfaceMap = 0;
-		uint32_t uvset_normalMap = 0;
-		uint32_t uvset_displacementMap = 0;
-		uint32_t uvset_emissiveMap = 0;
-		uint32_t uvset_occlusionMap = 0;
-		uint32_t uvset_transmissionMap = 0;
-		uint32_t uvset_sheenColorMap = 0;
-		uint32_t uvset_sheenRoughnessMap = 0;
-		uint32_t uvset_clearcoatMap = 0;
-		uint32_t uvset_clearcoatRoughnessMap = 0;
-		uint32_t uvset_clearcoatNormalMap = 0;
+			TEXTURESLOT_COUNT
+		};
+		struct TextureMap
+		{
+			std::string name;
+			uint32_t uvset = 0;
+			std::shared_ptr<wiResource> resource;
+			const wiGraphics::GPUResource* GetGPUResource() const
+			{
+				if (resource == nullptr)
+					return nullptr;
+				return resource->texture;
+			}
+			int GetUVSet() const
+			{
+				if (resource == nullptr)
+					return -1;
+				return (int)uvset;
+			}
+		};
+		TextureMap textures[TEXTURESLOT_COUNT];
 
 		int customShaderID = -1;
 
 		// Non-serialized attributes:
-		std::shared_ptr<wiResource> baseColorMap;
-		std::shared_ptr<wiResource> surfaceMap;
-		std::shared_ptr<wiResource> normalMap;
-		std::shared_ptr<wiResource> displacementMap;
-		std::shared_ptr<wiResource> emissiveMap;
-		std::shared_ptr<wiResource> occlusionMap;
-		std::shared_ptr<wiResource> transmissionMap;
-		std::shared_ptr<wiResource> sheenColorMap;
-		std::shared_ptr<wiResource> sheenRoughnessMap;
-		std::shared_ptr<wiResource> clearcoatMap;
-		std::shared_ptr<wiResource> clearcoatRoughnessMap;
-		std::shared_ptr<wiResource> clearcoatNormalMap;
 		wiGraphics::GPUBuffer constantBuffer;
 		uint32_t layerMask = ~0u;
 
@@ -228,19 +227,6 @@ namespace wiScene
 			userStencilRef = value & 0x0F;
 		}
 		uint32_t GetStencilRef() const;
-
-		const wiGraphics::Texture* GetBaseColorMap() const;
-		const wiGraphics::Texture* GetNormalMap() const;
-		const wiGraphics::Texture* GetSurfaceMap() const;
-		const wiGraphics::Texture* GetDisplacementMap() const;
-		const wiGraphics::Texture* GetEmissiveMap() const;
-		const wiGraphics::Texture* GetOcclusionMap() const;
-		const wiGraphics::Texture* GetTransmissionMap() const;
-		const wiGraphics::Texture* GetSheenColorMap() const;
-		const wiGraphics::Texture* GetSheenRoughnessMap() const;
-		const wiGraphics::Texture* GetClearcoatMap() const;
-		const wiGraphics::Texture* GetClearcoatRoughnessMap() const;
-		const wiGraphics::Texture* GetClearcoatNormalMap() const;
 
 		inline float GetOpacity() const { return baseColor.w; }
 		inline float GetEmissiveStrength() const { return emissiveColor.w; }
@@ -300,21 +286,12 @@ namespace wiScene
 		inline void SetClearcoatRoughness(float value) { clearcoatRoughness = value; SetDirty(); }
 		inline void SetCustomShaderID(int id) { customShaderID = id; }
 		inline void DisableCustomShader() { customShaderID = -1; }
-		inline void SetUVSet_BaseColorMap(uint32_t value) { uvset_baseColorMap = value; SetDirty(); }
-		inline void SetUVSet_NormalMap(uint32_t value) { uvset_normalMap = value; SetDirty(); }
-		inline void SetUVSet_SurfaceMap(uint32_t value) { uvset_surfaceMap = value; SetDirty(); }
-		inline void SetUVSet_DisplacementMap(uint32_t value) { uvset_displacementMap = value; SetDirty(); }
-		inline void SetUVSet_EmissiveMap(uint32_t value) { uvset_emissiveMap = value; SetDirty(); }
-		inline void SetUVSet_OcclusionMap(uint32_t value) { uvset_occlusionMap = value; SetDirty(); }
-		inline void SetUVSet_TransmissionMap(uint32_t value) { uvset_transmissionMap = value; SetDirty(); }
-		inline void SetUVSet_SheenColorMap(uint32_t value) { uvset_sheenColorMap = value; SetDirty(); }
-		inline void SetUVSet_SheenRoughnessMap(uint32_t value) { uvset_sheenRoughnessMap = value; SetDirty(); }
-		inline void SetUVSet_ClearcoatMap(uint32_t value) { uvset_clearcoatMap = value; SetDirty(); }
-		inline void SetUVSet_ClearcoatRoughnessMap(uint32_t value) { uvset_clearcoatRoughnessMap = value; SetDirty(); }
-		inline void SetUVSet_ClearcoatNormalMap(uint32_t value) { uvset_clearcoatNormalMap = value; SetDirty(); }
 
 		// The MaterialComponent will be written to ShaderMaterial (a struct that is optimized for GPU use)
 		void WriteShaderMaterial(ShaderMaterial* dest) const;
+
+		// Retrieve the array of textures from the material
+		void WriteTextures(const wiGraphics::GPUResource** dest, int count) const;
 
 		// Returns the bitwise OR of all the RENDERTYPE flags applicable to this material
 		uint32_t GetRenderTypes() const;
