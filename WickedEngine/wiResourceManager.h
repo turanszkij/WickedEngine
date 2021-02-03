@@ -28,8 +28,14 @@ struct wiResource
 
 namespace wiResourceManager
 {
+	enum FLAGS
+	{
+		EMPTY = 0,
+		IMPORT_COLORGRADINGLUT = 1 << 0,
+	};
+
 	// Load a resource
-	std::shared_ptr<wiResource> Load(const std::string& name);
+	std::shared_ptr<wiResource> Load(const std::string& name, uint32_t flags = EMPTY);
 	// Check if a resource is currently loaded
 	bool Contains(const std::string& name);
 	// Register a pre-created resource

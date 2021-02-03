@@ -306,7 +306,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	AddWidget(&colorGradingCheckBox);
 
 	colorGradingButton.Create("Load Color Grading LUT...");
-	colorGradingButton.SetTooltip("Load a color grading lookup texture...");
+	colorGradingButton.SetTooltip("Load a color grading lookup texture. It must be a 256x16 RGBA image!");
 	colorGradingButton.SetPos(XMFLOAT2(x + 35, y));
 	colorGradingButton.SetSize(XMFLOAT2(200, hei));
 	colorGradingButton.OnClick([=](wiEventArgs args) {
@@ -317,15 +317,12 @@ void PostprocessWindow::Create(EditorComponent* editor)
 			wiHelper::FileDialogParams params;
 			params.type = wiHelper::FileDialogParams::OPEN;
 			params.description = "Texture";
-			params.extensions.push_back("dds");
 			params.extensions.push_back("png");
-			params.extensions.push_back("jpg");
-			params.extensions.push_back("jpeg");
 			params.extensions.push_back("tga");
 			params.extensions.push_back("bmp");
 			wiHelper::FileDialog(params, [=](std::string fileName) {
 				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					editor->renderPath->setColorGradingTexture(wiResourceManager::Load(fileName));
+					editor->renderPath->setColorGradingTexture(wiResourceManager::Load(fileName, wiResourceManager::IMPORT_COLORGRADINGLUT));
 					if (editor->renderPath->getColorGradingTexture() != nullptr)
 					{
 						colorGradingButton.SetText(fileName);

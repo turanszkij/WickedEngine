@@ -78,6 +78,8 @@ public:
 		bool heap_allocation_counter = false;
 		// text size
 		int size = 16;
+		// display default color grading helper texture in top left corner of the screen
+		bool colorgrading_helper = false;
 	};
 	// display all-time engine information text
 	InfoDisplayer infoDisplay;

@@ -42,7 +42,7 @@ namespace wiResourceManager
 		std::make_pair("OGG", wiResource::SOUND),
 	};
 
-	std::shared_ptr<wiResource> Load(const std::string& name)
+	std::shared_ptr<wiResource> Load(const std::string& name, uint32_t flags)
 	{
 		locker.lock();
 		std::weak_ptr<wiResource>& weak_resource = resources[name];
@@ -89,6 +89,7 @@ namespace wiResourceManager
 		{
 		case wiResource::IMAGE:
 		{
+			GraphicsDevice* device = wiRenderer::GetDevice();
 			if (!ext.compare(std::string("DDS")))
 			{
 				// Load dds
@@ -222,8 +223,8 @@ namespace wiResourceManager
 					}
 
 					Texture* image = new Texture;
-					wiRenderer::GetDevice()->CreateTexture(&desc, InitData.data(), image);
-					wiRenderer::GetDevice()->SetName(image, name.c_str());
+					device->CreateTexture(&desc, InitData.data(), image);
+					device->SetName(image, name.c_str());
 					success = image;
 				}
 				else assert(0); // failed to load DDS
@@ -239,39 +240,80 @@ namespace wiResourceManager
 
 				if (rgb != nullptr)
 				{
-					GraphicsDevice* device = wiRenderer::GetDevice();
+					Texture* image = nullptr;
 
 					TextureDesc desc;
-					desc.ArraySize = 1;
-					desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-					desc.CPUAccessFlags = 0;
-					desc.Format = FORMAT_R8G8B8A8_UNORM;
-					desc.Height = static_cast<uint32_t>(height);
-					desc.Width = static_cast<uint32_t>(width);
-					desc.MipLevels = (uint32_t)log2(std::max(width, height)) + 1;
-					desc.MiscFlags = 0;
-					desc.Usage = USAGE_DEFAULT;
+					desc.Height = uint32_t(height);
+					desc.Width = uint32_t(width);
 
-					uint32_t mipwidth = width;
-					std::vector<SubresourceData> InitData(desc.MipLevels);
-					for (uint32_t mip = 0; mip < desc.MipLevels; ++mip)
+					if (flags & IMPORT_COLORGRADINGLUT)
 					{
-						InitData[mip].pSysMem = rgb; // attention! we don't fill the mips here correctly, just always point to the mip0 data by default. Mip levels will be created using compute shader when needed!
-						InitData[mip].SysMemPitch = static_cast<uint32_t>(mipwidth * channelCount);
-						mipwidth = std::max(1u, mipwidth / 2);
+						if (desc.type != TextureDesc::TEXTURE_2D ||
+							desc.Width != 256 ||
+							desc.Height != 16)
+						{
+							wiHelper::messageBox("The Dimensions must be 256 x 16 for color grading LUT!", "Error");
+						}
+						else
+						{
+							uint32_t data[16 * 16 * 16];
+							int pixel = 0;
+							for (int z = 0; z < 16; ++z)
+							{
+								for (int y = 0; y < 16; ++y)
+								{
+									for (int x = 0; x < 16; ++x)
+									{
+										int coord = x + y * 256 + z * 16;
+										data[pixel++] = ((uint32_t*)rgb)[coord];
+									}
+								}
+							}
+
+							desc.type = TextureDesc::TEXTURE_3D;
+							desc.Width = 16;
+							desc.Height = 16;
+							desc.Depth = 16;
+							desc.Format = FORMAT_R8G8B8A8_UNORM;
+							desc.BindFlags = BIND_SHADER_RESOURCE;
+							SubresourceData InitData;
+							InitData.pSysMem = data;
+							InitData.SysMemPitch = 16 * sizeof(uint32_t);
+							InitData.SysMemSlicePitch = 16 * InitData.SysMemPitch;
+							image = new Texture;
+							wiRenderer::GetDevice()->CreateTexture(&desc, &InitData, image);
+						}
 					}
-
-					Texture* image = new Texture;
-					device->CreateTexture(&desc, InitData.data(), image);
-					device->SetName(image, name.c_str());
-
-					for (uint32_t i = 0; i < image->GetDesc().MipLevels; ++i)
+					else
 					{
-						int subresource_index;
-						subresource_index = device->CreateSubresource(image, SRV, 0, 1, i, 1);
-						assert(subresource_index == i);
-						subresource_index = device->CreateSubresource(image, UAV, 0, 1, i, 1);
-						assert(subresource_index == i);
+						desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+						desc.CPUAccessFlags = 0;
+						desc.Format = FORMAT_R8G8B8A8_UNORM;
+						desc.MipLevels = (uint32_t)log2(std::max(width, height)) + 1;
+						desc.MiscFlags = 0;
+						desc.Usage = USAGE_DEFAULT;
+
+						uint32_t mipwidth = width;
+						std::vector<SubresourceData> InitData(desc.MipLevels);
+						for (uint32_t mip = 0; mip < desc.MipLevels; ++mip)
+						{
+							InitData[mip].pSysMem = rgb; // attention! we don't fill the mips here correctly, just always point to the mip0 data by default. Mip levels will be created using compute shader when needed!
+							InitData[mip].SysMemPitch = static_cast<uint32_t>(mipwidth * channelCount);
+							mipwidth = std::max(1u, mipwidth / 2);
+						}
+
+						image = new Texture;
+						device->CreateTexture(&desc, InitData.data(), image);
+						device->SetName(image, name.c_str());
+
+						for (uint32_t i = 0; i < image->GetDesc().MipLevels; ++i)
+						{
+							int subresource_index;
+							subresource_index = device->CreateSubresource(image, SRV, 0, 1, i, 1);
+							assert(subresource_index == i);
+							subresource_index = device->CreateSubresource(image, UAV, 0, 1, i, 1);
+							assert(subresource_index == i);
+						}
 					}
 
 					success = image;

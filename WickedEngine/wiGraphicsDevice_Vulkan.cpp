@@ -3469,45 +3469,44 @@ using namespace Vulkan_Internal;
 
 			size_t cpyoffset = 0;
 			uint32_t initDataIdx = 0;
-			for (uint32_t slice = 0; slice < pDesc->ArraySize; ++slice)
+			uint32_t width = imageInfo.extent.width;
+			uint32_t height = imageInfo.extent.height;
+			uint32_t depth = imageInfo.extent.depth;
+			for (uint32_t mip = 0; mip < pDesc->MipLevels; ++mip)
 			{
-				uint32_t width = pDesc->Width;
-				uint32_t height = pDesc->Height;
-				for (uint32_t mip = 0; mip < pDesc->MipLevels; ++mip)
+				const SubresourceData& subresourceData = pInitialData[initDataIdx++];
+				size_t cpysize = subresourceData.SysMemPitch * height * depth;
+				if (IsFormatBlockCompressed(pDesc->Format))
 				{
-					const SubresourceData& subresourceData = pInitialData[initDataIdx++];
-					size_t cpysize = subresourceData.SysMemPitch * height;
-					if (IsFormatBlockCompressed(pDesc->Format))
-					{
-						cpysize /= 4;
-					}
-					uint8_t* cpyaddr = (uint8_t*)pData + cpyoffset;
-					memcpy(cpyaddr, subresourceData.pSysMem, cpysize);
-
-					VkBufferImageCopy copyRegion = {};
-					copyRegion.bufferOffset = cpyoffset;
-					copyRegion.bufferRowLength = 0;
-					copyRegion.bufferImageHeight = 0;
-
-					copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-					copyRegion.imageSubresource.mipLevel = mip;
-					copyRegion.imageSubresource.baseArrayLayer = slice;
-					copyRegion.imageSubresource.layerCount = 1;
-
-					copyRegion.imageOffset = { 0, 0, 0 };
-					copyRegion.imageExtent = {
-						width,
-						height,
-						1
-					};
-
-					width = std::max(1u, width / 2);
-					height = std::max(1u, height / 2);
-
-					copyRegions.push_back(copyRegion);
-
-					cpyoffset += Align(cpysize, GetFormatStride(pDesc->Format));
+					cpysize /= 4;
 				}
+				uint8_t* cpyaddr = (uint8_t*)pData + cpyoffset;
+				memcpy(cpyaddr, subresourceData.pSysMem, cpysize);
+
+				VkBufferImageCopy copyRegion = {};
+				copyRegion.bufferOffset = cpyoffset;
+				copyRegion.bufferRowLength = 0;
+				copyRegion.bufferImageHeight = 0;
+
+				copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				copyRegion.imageSubresource.mipLevel = mip;
+				copyRegion.imageSubresource.baseArrayLayer = 0;
+				copyRegion.imageSubresource.layerCount = 1;
+
+				copyRegion.imageOffset = { 0, 0, 0 };
+				copyRegion.imageExtent = {
+					width,
+					height,
+					depth
+				};
+
+				width = std::max(1u, width / 2);
+				height = std::max(1u, height / 2);
+				depth = std::max(1u, depth / 2);
+
+				copyRegions.push_back(copyRegion);
+
+				cpyoffset += Align(cpysize, GetFormatStride(pDesc->Format));
 			}
 
 			copyQueueLock.lock();

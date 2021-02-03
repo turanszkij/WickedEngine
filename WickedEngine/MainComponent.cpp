@@ -372,6 +372,11 @@ void MainComponent::Compose(CommandList cmd)
 
 		ss.precision(2);
 		wiFont::Draw(ss.str(), wiFontParams(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, wiColor(255,255,255,255), wiColor(0,0,0,255)), cmd);
+
+		if (infoDisplay.colorgrading_helper)
+		{
+			wiImage::Draw(wiTextureHelper::getColorGradeDefault(), wiImageParams(0, 0, 256.0f / wiPlatform::GetDPIScaling(), 16.0f / wiPlatform::GetDPIScaling()), cmd);
+		}
 	}
 
 	wiProfiler::DrawData(4, 120, cmd);

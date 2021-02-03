@@ -193,7 +193,7 @@ public:
 	constexpr bool getFXAAEnabled() const { return fxaaEnabled; }
 	constexpr bool getBloomEnabled() const { return bloomEnabled; }
 	constexpr bool getVolumetricCloudsEnabled() const { return volumetricCloudsEnabled; }
-	constexpr bool getColorGradingEnabled() const { return colorGradingEnabled; }
+	constexpr bool getColorGradingEnabled() const { return colorGradingEnabled && colorGradingTex != nullptr; }
 	constexpr bool getVolumeLightsEnabled() const { return volumeLightsEnabled; }
 	constexpr bool getLightShaftsEnabled() const { return lightShaftsEnabled; }
 	constexpr bool getLensFlareEnabled() const { return lensFlareEnabled; }

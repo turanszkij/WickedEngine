@@ -11864,7 +11864,7 @@ void Postprocess_Tonemap(
 	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
 	device->BindResource(CS, &input_luminance, TEXSLOT_ONDEMAND1, cmd);
 	device->BindResource(CS, &input_distortion, TEXSLOT_ONDEMAND2, cmd);
-	device->BindResource(CS, colorgrade_lookuptable == nullptr ? wiTextureHelper::getColorGradeDefault() : colorgrade_lookuptable, TEXSLOT_ONDEMAND3, cmd);
+	device->BindResource(CS, colorgrade_lookuptable, TEXSLOT_ONDEMAND3, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 

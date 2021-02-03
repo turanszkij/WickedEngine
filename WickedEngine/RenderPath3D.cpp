@@ -1358,7 +1358,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			cmd,
 			getExposure(),
 			getDitherEnabled(),
-			getColorGradingEnabled() ? (colorGradingTex != nullptr ? colorGradingTex->texture : wiTextureHelper::getColorGradeDefault()) : nullptr
+			getColorGradingEnabled() ? colorGradingTex->texture : nullptr
 		);
 
 		rt_first = nullptr;
