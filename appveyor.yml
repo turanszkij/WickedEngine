@@ -17,7 +17,6 @@ build_script:
 
 platform:
   - x64
-  - Win32
   
 after_build:
 #Editor:

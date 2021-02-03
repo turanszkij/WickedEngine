@@ -27,8 +27,8 @@ You can download the engine by using Git and cloning the repository, or download
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/physics.gif"/>
 
 ### Platforms:
-- Windows 10 Desktop (x86, x64) [Visual Studio 2019]
-- UWP (x86, x64, ARM, Phone, XBOX One) [Visual Studio 2019]
+- Windows 10 Desktop [Visual Studio 2019]
+- UWP [Visual Studio 2019]
 - Linux [CMake 3.7]
 
 ### How to build: 
@@ -44,6 +44,7 @@ You can also dowload prebuilt and packaged versions of the Editor and Tests here
 
 If you have questions or stuck, please use the `windows` communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
 
+Note: Building 32-bit and ARM versions are possible, but no longer provided by default. The developer will need to configure the solution themselves for these platforms. For ARM platform, also use the `-D BT_USE_DOUBLE_PRECISION=1` definition when compiling.
 
 #### Linux
 The Linux support is experimental. You can find a sample build script for Ubuntu 20.04 [here](.github/workflows/build.yml) (in the linux section). You might need to install some dependencies, such as Vulkan SDK 1.2 or greater (to get DirectXShaderCompiler), SDL2, cmake 3.7 and g++ compiler (C++ 17 compliant version). For Ubuntu 20.04, you can use the following commands to install dependencies:
