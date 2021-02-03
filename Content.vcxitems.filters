@@ -491,6 +491,15 @@
     <Image Include="$(MSBuildThisFileDirectory)scripts\hp_bar.png">
       <Filter>scripts</Filter>
     </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\colorgradinglut_default.png">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\colorgradinglut_filter.png">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\colorgradinglut_sepia.png">
+      <Filter>models</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Media Include="$(MSBuildThisFileDirectory)models\water.wav">

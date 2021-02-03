@@ -597,6 +597,9 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="$(MSBuildThisFileDirectory)models\billboardredflowers.png" />
+    <Image Include="$(MSBuildThisFileDirectory)models\colorgradinglut_default.png" />
+    <Image Include="$(MSBuildThisFileDirectory)models\colorgradinglut_filter.png" />
+    <Image Include="$(MSBuildThisFileDirectory)models\colorgradinglut_sepia.png" />
     <Image Include="$(MSBuildThisFileDirectory)models\fire.jpg" />
     <Image Include="$(MSBuildThisFileDirectory)models\flare0.jpg" />
     <Image Include="$(MSBuildThisFileDirectory)models\flare1.jpg" />
