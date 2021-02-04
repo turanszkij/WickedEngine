@@ -19,7 +19,6 @@ void RenderPath2D::ResizeBuffers()
 		TextureDesc desc = GetDepthStencil()->GetDesc();
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = defaultTextureFormat;
-		desc.layout = IMAGE_LAYOUT_GENERAL;
 		device->CreateTexture(&desc, nullptr, &rtStenciled);
 		device->SetName(&rtStenciled, "rtStenciled");
 
