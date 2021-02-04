@@ -15,6 +15,7 @@ TEXTURE2D(texture_decalatlas, float4, TEXSLOT_DECALATLAS);
 TEXTURE2D(texture_skyviewlut, float4, TEXSLOT_SKYVIEWLUT);
 TEXTURE2D(texture_transmittancelut, float4, TEXSLOT_TRANSMITTANCELUT);
 TEXTURE2D(texture_multiscatteringlut, float4, TEXSLOT_MULTISCATTERINGLUT);
+TEXTURE2D(texture_skyluminancelut, float4, TEXSLOT_SKYLUMINANCELUT);
 TEXTURE2DARRAY(texture_shadowarray_2d, float, TEXSLOT_SHADOWARRAY_2D);
 TEXTURECUBEARRAY(texture_shadowarray_cube, float, TEXSLOT_SHADOWARRAY_CUBE);
 TEXTURE2DARRAY(texture_shadowarray_transparent_2d, float4, TEXSLOT_SHADOWARRAY_TRANSPARENT_2D);
