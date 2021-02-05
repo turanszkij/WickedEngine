@@ -426,8 +426,8 @@ namespace Vulkan_Internal
 	{
 		switch (value)
 		{
-		case wiGraphics::IMAGE_LAYOUT_GENERAL:
-			return VK_IMAGE_LAYOUT_GENERAL;
+		case wiGraphics::IMAGE_LAYOUT_UNDEFINED:
+			return VK_IMAGE_LAYOUT_UNDEFINED;
 		case wiGraphics::IMAGE_LAYOUT_RENDERTARGET:
 			return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		case wiGraphics::IMAGE_LAYOUT_DEPTHSTENCIL:
@@ -479,13 +479,7 @@ namespace Vulkan_Internal
 
 		switch (value)
 		{
-		case wiGraphics::IMAGE_LAYOUT_GENERAL:
-			flags |= VK_ACCESS_SHADER_READ_BIT;
-			flags |= VK_ACCESS_SHADER_WRITE_BIT;
-			flags |= VK_ACCESS_TRANSFER_READ_BIT;
-			flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
-			flags |= VK_ACCESS_MEMORY_READ_BIT;
-			flags |= VK_ACCESS_MEMORY_WRITE_BIT;
+		case wiGraphics::IMAGE_LAYOUT_UNDEFINED:
 			break;
 		case wiGraphics::IMAGE_LAYOUT_RENDERTARGET:
 			flags |= VK_ACCESS_SHADER_WRITE_BIT;
@@ -519,19 +513,7 @@ namespace Vulkan_Internal
 
 		switch (value)
 		{
-		case wiGraphics::BUFFER_STATE_GENERAL:
-			flags |= VK_ACCESS_SHADER_READ_BIT;
-			flags |= VK_ACCESS_SHADER_WRITE_BIT;
-			flags |= VK_ACCESS_TRANSFER_READ_BIT;
-			flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
-			flags |= VK_ACCESS_HOST_READ_BIT;
-			flags |= VK_ACCESS_HOST_WRITE_BIT;
-			flags |= VK_ACCESS_MEMORY_READ_BIT;
-			flags |= VK_ACCESS_MEMORY_WRITE_BIT;
-			flags |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
-			flags |= VK_ACCESS_INDEX_READ_BIT;
-			flags |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-			flags |= VK_ACCESS_UNIFORM_READ_BIT;
+		case wiGraphics::BUFFER_STATE_UNDEFINED:
 			break;
 		case wiGraphics::BUFFER_STATE_VERTEX_BUFFER:
 			flags |= VK_ACCESS_SHADER_READ_BIT;
@@ -1251,7 +1233,6 @@ using namespace Vulkan_Internal;
 				imageInfos.emplace_back();
 				write.pImageInfo = &imageInfos.back();
 				imageInfos.back() = {};
-				imageInfos.back().imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 				const uint32_t original_binding = x.binding - VULKAN_BINDING_SHIFT_T;
 				const GPUResource* resource = SRV[original_binding];
@@ -1285,6 +1266,7 @@ using namespace Vulkan_Internal;
 					default:
 						break;
 					}
+					imageInfos.back().imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 				}
 				else
 				{
@@ -1299,13 +1281,7 @@ using namespace Vulkan_Internal;
 						imageInfos.back().imageView = to_internal(texture)->srv;
 					}
 
-					VkImageLayout layout = _ConvertImageLayout(texture->desc.layout);
-					if (layout != VK_IMAGE_LAYOUT_GENERAL && layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-					{
-						// Means texture initial layout is not compatible, so it must have been transitioned
-						layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-					}
-					imageInfos.back().imageLayout = layout;
+					imageInfos.back().imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 				}
 			}
 			break;
@@ -3558,7 +3534,7 @@ using namespace Vulkan_Internal;
 				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 				barrier.newLayout = _ConvertImageLayout(pTexture->desc.layout);
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+				barrier.dstAccessMask = _ParseImageLayout(pTexture->desc.layout);
 
 				frame.loadedimagetransitions.push_back(barrier);
 
@@ -3576,7 +3552,7 @@ using namespace Vulkan_Internal;
 			barrier.oldLayout = imageInfo.initialLayout;
 			barrier.newLayout = _ConvertImageLayout(pTexture->desc.layout);
 			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+			barrier.dstAccessMask = _ParseImageLayout(pTexture->desc.layout);
 			if (pTexture->desc.BindFlags & BIND_DEPTH_STENCIL)
 			{
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -5425,7 +5401,6 @@ using namespace Vulkan_Internal;
 		case TEXTURECUBE:
 		case TEXTURECUBEARRAY:
 		case TEXTURE3D:
-			descriptor.imageinfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 			descriptor.imageinfo.sampler = VK_NULL_HANDLE;
 			if (resource == nullptr || !resource->IsValid())
 			{
@@ -5453,6 +5428,7 @@ using namespace Vulkan_Internal;
 					descriptor.imageinfo.imageView = nullImageView3D;
 					break;
 				};
+				descriptor.imageinfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 			}
 			else if (resource->IsTexture())
 			{
@@ -5466,13 +5442,7 @@ using namespace Vulkan_Internal;
 				{
 					descriptor.imageinfo.imageView = internal_state->subresources_srv[subresource];
 				}
-				VkImageLayout layout = _ConvertImageLayout(texture->desc.layout);
-				if (layout != VK_IMAGE_LAYOUT_GENERAL && layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-				{
-					// Means texture initial layout is not compatible, so it must have been transitioned
-					layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-				}
-				descriptor.imageinfo.imageLayout = layout;
+				descriptor.imageinfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			}
 			else
 			{
@@ -6656,9 +6626,9 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
-		VkMemoryBarrier memorybarriers[8];
-		VkImageMemoryBarrier imagebarriers[8];
-		VkBufferMemoryBarrier bufferbarriers[8];
+		VkMemoryBarrier memorybarriers[32];
+		VkImageMemoryBarrier imagebarriers[32];
+		VkBufferMemoryBarrier bufferbarriers[32];
 		uint32_t memorybarrier_count = 0;
 		uint32_t imagebarrier_count = 0;
 		uint32_t bufferbarrier_count = 0;
@@ -6709,10 +6679,20 @@ using namespace Vulkan_Internal;
 				{
 					barrierdesc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				}
-				barrierdesc.subresourceRange.baseArrayLayer = 0;
-				barrierdesc.subresourceRange.layerCount = desc.ArraySize;
-				barrierdesc.subresourceRange.baseMipLevel = 0;
-				barrierdesc.subresourceRange.levelCount = desc.MipLevels;
+				if (barrier.image.mip >= 0 || barrier.image.slice >= 0)
+				{
+					barrierdesc.subresourceRange.baseMipLevel = (uint32_t)std::max(0, barrier.image.mip);
+					barrierdesc.subresourceRange.levelCount = 1;
+					barrierdesc.subresourceRange.baseArrayLayer = (uint32_t)std::max(0, barrier.image.slice);
+					barrierdesc.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS; // this should be 1 but cubemap array complains in debug layer...
+				}
+				else
+				{
+					barrierdesc.subresourceRange.baseMipLevel = 0;
+					barrierdesc.subresourceRange.levelCount = desc.MipLevels;
+					barrierdesc.subresourceRange.baseArrayLayer = 0;
+					barrierdesc.subresourceRange.layerCount = desc.ArraySize;
+				}
 				barrierdesc.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrierdesc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			}

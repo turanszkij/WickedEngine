@@ -506,25 +506,43 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
-		device->Dispatch(1, 1, 1, cmd);
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Buffer(&counterBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
+				GPUBarrier::Buffer(&indirectBuffers, BUFFER_STATE_INDIRECT_ARGUMENT, BUFFER_STATE_UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
 
-		GPUBarrier barrier_memory = GPUBarrier::Memory();
-		device->Barrier(&barrier_memory, 1, cmd);
+		device->Dispatch(1, 1, 1, cmd);
 
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->UnbindResources(TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 		device->EventEnd(cmd);
 
+	}
 
-		const GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&particleBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
-			GPUBarrier::Buffer(&aliveList[1], BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+			GPUBarrier::Buffer(&counterBuffer, BUFFER_STATE_SHADER_RESOURCE, BUFFER_STATE_COPY_SRC),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
 	// Statistics is copied to readback:
 	device->CopyResource(&statisticsReadbackBuffer[(statisticsReadBackIndex - 1) % arraysize(statisticsReadbackBuffer)], &counterBuffer, cmd);
+
+	{
+		const GPUBarrier barriers[] = {
+			GPUBarrier::Buffer(&indirectBuffers, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDIRECT_ARGUMENT),
+			GPUBarrier::Buffer(&counterBuffer, BUFFER_STATE_COPY_SRC, BUFFER_STATE_SHADER_RESOURCE),
+			GPUBarrier::Buffer(&particleBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
+			GPUBarrier::Buffer(&aliveList[1], BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 }
 
 

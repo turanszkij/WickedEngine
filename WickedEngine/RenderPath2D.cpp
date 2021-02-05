@@ -17,9 +17,9 @@ void RenderPath2D::ResizeBuffers()
 	if(dsv != nullptr && (resolutionScale != 1.0f ||  dsv->GetDesc().SampleCount > 1))
 	{
 		TextureDesc desc = GetDepthStencil()->GetDesc();
+		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = defaultTextureFormat;
-		desc.layout = IMAGE_LAYOUT_GENERAL;
 		device->CreateTexture(&desc, nullptr, &rtStenciled);
 		device->SetName(&rtStenciled, "rtStenciled");
 

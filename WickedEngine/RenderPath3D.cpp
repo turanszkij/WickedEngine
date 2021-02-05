@@ -138,7 +138,6 @@ void RenderPath3D::ResizeBuffers()
 		desc.Format = FORMAT_R11G11B10_FLOAT;
 		desc.Width = internalResolution.x / 4;
 		desc.Height = internalResolution.y / 4;
-		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
 		device->CreateTexture(&desc, nullptr, &rtReflection);
 		device->SetName(&rtReflection, "rtReflection");
 	}
@@ -261,6 +260,7 @@ void RenderPath3D::ResizeBuffers()
 		uint32_t tileSize = device->GetVariableRateShadingTileSize();
 
 		TextureDesc desc;
+		desc.layout = IMAGE_LAYOUT_UNDEFINED;
 		desc.BindFlags = BIND_UNORDERED_ACCESS;
 		desc.Format = FORMAT_R8_UINT;
 		desc.Width = (internalResolution.x + tileSize - 1) / tileSize;
@@ -291,7 +291,7 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateTexture(&desc, nullptr, &depthBuffer_Main);
 		device->SetName(&depthBuffer_Main, "depthBuffer_Main");
 
-		desc.layout = IMAGE_LAYOUT_GENERAL;
+		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
 		desc.Format = FORMAT_R32_FLOAT;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.SampleCount = 1;
@@ -385,7 +385,7 @@ void RenderPath3D::ResizeBuffers()
 
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
 		{
-			desc.attachments.push_back(RenderPassAttachment::ShadingRateSource(&rtShadingRate));
+			desc.attachments.push_back(RenderPassAttachment::ShadingRateSource(&rtShadingRate, IMAGE_LAYOUT_UNDEFINED, IMAGE_LAYOUT_UNDEFINED));
 		}
 
 		device->CreateRenderPass(&desc, &renderpass_main);
@@ -788,10 +788,6 @@ void RenderPath3D::Render() const
 			vp.Height = (float)depthBuffer_Reflection.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(&entityTiles_Opaque),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
 			device->UnbindResources(TEXSLOT_DEPTH, 1, cmd);
 
 			device->RenderPassBegin(&renderpass_reflection, cmd);
@@ -834,10 +830,6 @@ void RenderPath3D::Render() const
 				debugUAV,
 				cmd
 			);
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(&entityTiles_Opaque),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
 			wiProfiler::EndRange(range);
 		}
 
@@ -1183,11 +1175,6 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 
 	device->UnbindResources(TEXSLOT_GBUFFER0, 1, cmd);
 	device->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, cmd);
-
-	GPUBarrier barriers[] = {
-		GPUBarrier::Memory(&entityTiles_Transparent),
-	};
-	device->Barrier(barriers, arraysize(barriers), cmd);
 
 	device->RenderPassBegin(&renderpass_transparent, cmd);
 

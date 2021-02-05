@@ -644,7 +644,6 @@ namespace DX12_Internal
 		switch (value)
 		{
 		case wiGraphics::IMAGE_LAYOUT_UNDEFINED:
-		case wiGraphics::IMAGE_LAYOUT_GENERAL:
 			return D3D12_RESOURCE_STATE_COMMON;
 		case wiGraphics::IMAGE_LAYOUT_RENDERTARGET:
 			return D3D12_RESOURCE_STATE_RENDER_TARGET;
@@ -670,7 +669,7 @@ namespace DX12_Internal
 	{
 		switch (value)
 		{
-		case wiGraphics::BUFFER_STATE_GENERAL:
+		case wiGraphics::BUFFER_STATE_UNDEFINED:
 			return D3D12_RESOURCE_STATE_COMMON;
 		case wiGraphics::BUFFER_STATE_VERTEX_BUFFER:
 			return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
@@ -3035,6 +3034,11 @@ using namespace DX12_Internal;
 
 		D3D12_RESOURCE_STATES resourceState = _ConvertImageLayout(pTexture->desc.layout);
 
+		if (pInitialData != nullptr)
+		{
+			resourceState = D3D12_RESOURCE_STATE_COMMON;
+		}
+
 		if (pTexture->desc.Usage == USAGE_STAGING)
 		{
 			UINT64 RequiredSize = 0;
@@ -3221,7 +3225,7 @@ using namespace DX12_Internal;
 					case D3D_SIT_TBUFFER:
 					case D3D_SIT_STRUCTURED:
 					case D3D_SIT_BYTEADDRESS:
-						descriptor.Flags |= D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS;
+						descriptor.Flags |= D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE;
 						descriptor.Flags |= D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE;
 						descriptor.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 						break;
@@ -6015,29 +6019,11 @@ using namespace DX12_Internal;
 		{
 			active_rootsig_graphics[cmd] = internal_state->rootSignature.Get();
 			GetDirectCommandList(cmd)->SetGraphicsRootSignature(internal_state->rootSignature.Get());
-		}
 
-		if (active_pso[cmd] == nullptr)
-		{
+			// Invalidate graphics root bindings:
 			GetFrameResources().descriptors[cmd].dirty_res = true;
 			GetFrameResources().descriptors[cmd].dirty_sam = true;
 			GetFrameResources().descriptors[cmd].dirty_root_cbvs_gfx = ~0;
-		}
-		else
-		{
-			auto active_internal = to_internal(active_pso[cmd]);
-			if (internal_state->root_binding_hash != active_internal->root_binding_hash)
-			{
-				GetFrameResources().descriptors[cmd].dirty_root_cbvs_gfx = ~0;
-			}
-			if (internal_state->resource_binding_hash != active_internal->resource_binding_hash)
-			{
-				GetFrameResources().descriptors[cmd].dirty_res = true;
-			}
-			if (internal_state->sampler_binding_hash != active_internal->sampler_binding_hash)
-			{
-				GetFrameResources().descriptors[cmd].dirty_sam = true;
-			}
 		}
 
 		active_pso[cmd] = pso;
@@ -6050,30 +6036,6 @@ using namespace DX12_Internal;
 		{
 			prev_pipeline_hash[cmd] = 0;
 
-			if (active_cs[cmd] == nullptr)
-			{
-				GetFrameResources().descriptors[cmd].dirty_res = true;
-				GetFrameResources().descriptors[cmd].dirty_sam = true;
-				GetFrameResources().descriptors[cmd].dirty_root_cbvs_compute = ~0;
-			}
-			else
-			{
-				auto internal_state = to_internal(cs);
-				auto active_internal = to_internal(active_cs[cmd]);
-				if (internal_state->root_binding_hash != active_internal->root_binding_hash)
-				{
-					GetFrameResources().descriptors[cmd].dirty_root_cbvs_compute = ~0;
-				}
-				if (internal_state->resource_binding_hash != active_internal->resource_binding_hash)
-				{
-					GetFrameResources().descriptors[cmd].dirty_res = true;
-				}
-				if (internal_state->sampler_binding_hash != active_internal->sampler_binding_hash)
-				{
-					GetFrameResources().descriptors[cmd].dirty_sam = true;
-				}
-			}
-
 			active_cs[cmd] = cs;
 
 			auto internal_state = to_internal(cs);
@@ -6083,6 +6045,11 @@ using namespace DX12_Internal;
 			{
 				active_rootsig_compute[cmd] = internal_state->rootSignature.Get();
 				GetDirectCommandList(cmd)->SetComputeRootSignature(internal_state->rootSignature.Get());
+
+				// Invalidate compute root bindings:
+				GetFrameResources().descriptors[cmd].dirty_res = true;
+				GetFrameResources().descriptors[cmd].dirty_sam = true;
+				GetFrameResources().descriptors[cmd].dirty_root_cbvs_compute = ~0;
 			}
 		}
 	}
@@ -6194,7 +6161,7 @@ using namespace DX12_Internal;
 			assert(active_renderpass[cmd] == nullptr);
 
 			// Contents will be transferred to device memory:
-			auto internal_state_src = std::static_pointer_cast<Resource_DX12>(GetFrameResources().resourceBuffer[cmd].buffer.internal_state);
+			auto internal_state_src = to_internal(&GetFrameResources().resourceBuffer[cmd].buffer);
 			auto internal_state_dst = to_internal(buffer);
 
 			D3D12_RESOURCE_BARRIER barrier = {};
@@ -6320,7 +6287,8 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
-		D3D12_RESOURCE_BARRIER barrierdescs[8];
+		D3D12_RESOURCE_BARRIER barrierdescs[32];
+		assert(numBarriers < arraysize(barrierdescs));
 
 		for (uint32_t i = 0; i < numBarriers; ++i)
 		{
@@ -6344,7 +6312,20 @@ using namespace DX12_Internal;
 				barrierdesc.Transition.pResource = to_internal(barrier.image.texture)->resource.Get();
 				barrierdesc.Transition.StateBefore = _ConvertImageLayout(barrier.image.layout_before);
 				barrierdesc.Transition.StateAfter = _ConvertImageLayout(barrier.image.layout_after);
-				barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+				if (barrier.image.mip >= 0 || barrier.image.slice >= 0)
+				{
+					barrierdesc.Transition.Subresource = D3D12CalcSubresource(
+						(UINT)std::max(0, barrier.image.mip),
+						(UINT)std::max(0, barrier.image.slice),
+						0,
+						barrier.image.texture->desc.MipLevels,
+						barrier.image.texture->desc.ArraySize
+					);
+				}
+				else
+				{
+					barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+				}
 			}
 			break;
 			case GPUBarrier::BUFFER_BARRIER:
