@@ -234,7 +234,10 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 		device->Dispatch(1, 1, 1, cmd);
 
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory()
+			GPUBarrier::Memory(),
+			GPUBarrier::Buffer(&indirectBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDIRECT_ARGUMENT),
+			GPUBarrier::Buffer(&culledIndexBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
+			GPUBarrier::Buffer(&particleBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 
@@ -469,6 +472,7 @@ void wiHairParticle::Initialize()
 
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthFunc = COMPARISON_EQUAL;
+	dsd.StencilEnable = false;
 	dss_equal = dsd;
 
 

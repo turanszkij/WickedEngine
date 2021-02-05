@@ -788,10 +788,6 @@ void RenderPath3D::Render() const
 			vp.Height = (float)depthBuffer_Reflection.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(&entityTiles_Opaque),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
 			device->UnbindResources(TEXSLOT_DEPTH, 1, cmd);
 
 			device->RenderPassBegin(&renderpass_reflection, cmd);
@@ -834,10 +830,6 @@ void RenderPath3D::Render() const
 				debugUAV,
 				cmd
 			);
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(&entityTiles_Opaque),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
 			wiProfiler::EndRange(range);
 		}
 
@@ -1183,11 +1175,6 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 
 	device->UnbindResources(TEXSLOT_GBUFFER0, 1, cmd);
 	device->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, cmd);
-
-	GPUBarrier barriers[] = {
-		GPUBarrier::Memory(&entityTiles_Transparent),
-	};
-	device->Barrier(barriers, arraysize(barriers), cmd);
 
 	device->RenderPassBegin(&renderpass_transparent, cmd);
 
