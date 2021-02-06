@@ -123,7 +123,7 @@ namespace wiGraphics
 			VkSemaphore swapchainAcquireSemaphore = VK_NULL_HANDLE;
 			VkSemaphore swapchainReleaseSemaphore = VK_NULL_HANDLE;
 
-			struct DescriptorTableFrameAllocator
+			struct DescriptorBinder
 			{
 				GraphicsDevice_Vulkan* device;
 				VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
@@ -150,7 +150,7 @@ namespace wiGraphics
 				void validate(bool graphics, CommandList cmd, bool raytracing = false);
 				VkDescriptorSet commit(const DescriptorTable* table);
 			};
-			DescriptorTableFrameAllocator descriptors[COMMANDLIST_COUNT];
+			DescriptorBinder descriptors[COMMANDLIST_COUNT];
 
 
 			struct ResourceFrameAllocator
@@ -168,14 +168,14 @@ namespace wiGraphics
 				uint64_t calculateOffset(uint8_t* address);
 			};
 			ResourceFrameAllocator resourceBuffer[COMMANDLIST_COUNT];
-
-			std::vector<VkMemoryBarrier> memoryBarriers[COMMANDLIST_COUNT];
-			std::vector<VkImageMemoryBarrier> imageBarriers[COMMANDLIST_COUNT];
-			std::vector<VkBufferMemoryBarrier> bufferBarriers[COMMANDLIST_COUNT];
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
 		inline VkCommandBuffer GetDirectCommandList(CommandList cmd) { return GetFrameResources().commandBuffers[cmd]; }
+
+		std::vector<VkMemoryBarrier> frame_memoryBarriers[COMMANDLIST_COUNT];
+		std::vector<VkImageMemoryBarrier> frame_imageBarriers[COMMANDLIST_COUNT];
+		std::vector<VkBufferMemoryBarrier> frame_bufferBarriers[COMMANDLIST_COUNT];
 
 		struct PSOLayout
 		{

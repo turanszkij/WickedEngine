@@ -1042,7 +1042,7 @@ using namespace Vulkan_Internal;
 		return static_cast<uint64_t>(address - dataBegin);
 	}
 
-	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::init(GraphicsDevice_Vulkan* device)
+	void GraphicsDevice_Vulkan::FrameResources::DescriptorBinder::init(GraphicsDevice_Vulkan* device)
 	{
 		this->device = device;
 
@@ -1111,7 +1111,7 @@ using namespace Vulkan_Internal;
 		reset();
 
 	}
-	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::destroy()
+	void GraphicsDevice_Vulkan::FrameResources::DescriptorBinder::destroy()
 	{
 		if (descriptorPool != VK_NULL_HANDLE)
 		{
@@ -1119,7 +1119,7 @@ using namespace Vulkan_Internal;
 			descriptorPool = VK_NULL_HANDLE;
 		}
 	}
-	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::reset()
+	void GraphicsDevice_Vulkan::FrameResources::DescriptorBinder::reset()
 	{
 		dirty = true;
 
@@ -1136,7 +1136,7 @@ using namespace Vulkan_Internal;
 		memset(UAV_index, -1, sizeof(UAV_index));
 		memset(SAM, 0, sizeof(SAM));
 	}
-	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::validate(bool graphics, CommandList cmd, bool raytracing)
+	void GraphicsDevice_Vulkan::FrameResources::DescriptorBinder::validate(bool graphics, CommandList cmd, bool raytracing)
 	{
 		if (!dirty)
 			return;
@@ -1508,7 +1508,7 @@ using namespace Vulkan_Internal;
 			pipelineLayout, 0, 1, &descriptorSet, 0, nullptr
 		);
 	}
-	VkDescriptorSet GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::commit(const DescriptorTable* table)
+	VkDescriptorSet GraphicsDevice_Vulkan::FrameResources::DescriptorBinder::commit(const DescriptorTable* table)
 	{
 		auto internal_state = to_internal(table);
 
@@ -1940,9 +1940,9 @@ using namespace Vulkan_Internal;
 
 	void GraphicsDevice_Vulkan::barrier_flush(CommandList cmd)
 	{
-		auto& memoryBarriers = GetFrameResources().memoryBarriers[cmd];
-		auto& imageBarriers = GetFrameResources().imageBarriers[cmd];
-		auto& bufferBarriers = GetFrameResources().bufferBarriers[cmd];
+		auto& memoryBarriers = frame_memoryBarriers[cmd];
+		auto& imageBarriers = frame_imageBarriers[cmd];
+		auto& bufferBarriers = frame_bufferBarriers[cmd];
 
 		if (!memoryBarriers.empty() ||
 			!bufferBarriers.empty() ||
@@ -6614,7 +6614,7 @@ using namespace Vulkan_Internal;
 			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.size = VK_WHOLE_SIZE;
 
-			GetFrameResources().bufferBarriers[cmd].push_back(barrier);
+			frame_bufferBarriers[cmd].push_back(barrier);
 			barrier_flush(cmd);
 
 			// issue data copy:
@@ -6635,7 +6635,7 @@ using namespace Vulkan_Internal;
 			// reverse barrier:
 			std::swap(barrier.srcAccessMask, barrier.dstAccessMask);
 
-			GetFrameResources().bufferBarriers[cmd].push_back(barrier);
+			frame_bufferBarriers[cmd].push_back(barrier);
 
 		}
 
@@ -6676,9 +6676,9 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
-		auto& memoryBarriers = GetFrameResources().memoryBarriers[cmd];
-		auto& imageBarriers = GetFrameResources().imageBarriers[cmd];
-		auto& bufferBarriers = GetFrameResources().bufferBarriers[cmd];
+		auto& memoryBarriers = frame_memoryBarriers[cmd];
+		auto& imageBarriers = frame_imageBarriers[cmd];
+		auto& bufferBarriers = frame_bufferBarriers[cmd];
 
 		for (uint32_t i = 0; i < numBarriers; ++i)
 		{
@@ -6810,6 +6810,8 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src)
 	{
+		barrier_flush(cmd);
+
 		auto dst_internal = to_internal(dst);
 
 		VkAccelerationStructureBuildGeometryInfoKHR info = dst_internal->buildInfo;

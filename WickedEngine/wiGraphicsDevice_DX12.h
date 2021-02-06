@@ -215,39 +215,6 @@ namespace wiGraphics
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[COMMANDLIST_COUNT];
 			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList6> commandLists[COMMANDLIST_COUNT];
 
-			struct DescriptorTableFrameAllocator
-			{
-				GraphicsDevice_DX12* device = nullptr;
-				uint32_t ringOffset_res = 0;
-				uint32_t ringOffset_sam = 0;
-				bool dirty_res = false;
-				bool dirty_sam = false;
-
-				const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
-				const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
-				int SRV_index[GPU_RESOURCE_HEAP_SRV_COUNT];
-				const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
-				int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
-				const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
-
-				uint32_t dirty_root_cbvs_gfx = 0; // bitmask
-				uint32_t dirty_root_cbvs_compute = 0; // bitmask
-
-				struct DescriptorHandles
-				{
-					D3D12_GPU_DESCRIPTOR_HANDLE sampler_handle = {};
-					D3D12_GPU_DESCRIPTOR_HANDLE resource_handle = {};
-				};
-
-				void init(GraphicsDevice_DX12* device);
-
-				void reset();
-				void request_heaps(uint32_t resources, uint32_t samplers, CommandList cmd);
-				void validate(bool graphics, CommandList cmd);
-				DescriptorHandles commit(const DescriptorTable* table, CommandList cmd);
-			};
-			DescriptorTableFrameAllocator descriptors[COMMANDLIST_COUNT];
-
 			struct ResourceFrameAllocator
 			{
 				GraphicsDevice_DX12*	device = nullptr;
@@ -263,14 +230,47 @@ namespace wiGraphics
 				uint64_t calculateOffset(uint8_t* address);
 			};
 			ResourceFrameAllocator resourceBuffer[COMMANDLIST_COUNT];
-
-			std::vector<D3D12_RESOURCE_BARRIER> barriers[COMMANDLIST_COUNT];
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
 		inline ID3D12GraphicsCommandList6* GetDirectCommandList(CommandList cmd) { return GetFrameResources().commandLists[cmd].Get(); }
 
+		struct DescriptorBinder
+		{
+			GraphicsDevice_DX12* device = nullptr;
+			uint32_t ringOffset_res = 0;
+			uint32_t ringOffset_sam = 0;
+			bool dirty_res = false;
+			bool dirty_sam = false;
+
+			const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
+			const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
+			int SRV_index[GPU_RESOURCE_HEAP_SRV_COUNT];
+			const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
+			int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
+			const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
+
+			uint32_t dirty_root_cbvs_gfx = 0; // bitmask
+			uint32_t dirty_root_cbvs_compute = 0; // bitmask
+
+			struct DescriptorHandles
+			{
+				D3D12_GPU_DESCRIPTOR_HANDLE sampler_handle = {};
+				D3D12_GPU_DESCRIPTOR_HANDLE resource_handle = {};
+			};
+
+			void init(GraphicsDevice_DX12* device);
+
+			void reset();
+			void request_heaps(uint32_t resources, uint32_t samplers, CommandList cmd);
+			void validate(bool graphics, CommandList cmd);
+			DescriptorHandles commit(const DescriptorTable* table, CommandList cmd);
+		};
+		DescriptorBinder descriptors[COMMANDLIST_COUNT];
+
 		Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain;
+
+		std::vector<D3D12_RESOURCE_BARRIER> frame_barriers[COMMANDLIST_COUNT];
 
 		PRIMITIVETOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
 
@@ -291,20 +291,18 @@ namespace wiGraphics
 		bool dirty_pso[COMMANDLIST_COUNT] = {};
 		void pso_validate(CommandList cmd);
 
+		void query_flush(CommandList cmd);
 		void barrier_flush(CommandList cmd);
 		void predraw(CommandList cmd);
 		void predispatch(CommandList cmd);
 		void preraytrace(CommandList cmd);
 
-		void deferred_queryresolve(CommandList cmd);
-
-		struct Query_Resolve
-		{
-			GPU_QUERY_TYPE type;
-			uint32_t block;
-			uint32_t index;
-		};
-		std::vector<Query_Resolve> query_resolves[COMMANDLIST_COUNT] = {};
+		constexpr uint64_t QueryResolveCreate(uint32_t block, uint32_t index) const { return (uint64_t(block) << 32) | uint64_t(index); }
+		constexpr uint32_t QueryResolveBlock(uint64_t resolve) const { return resolve >> 32; }
+		constexpr uint32_t QueryResolveIndex(uint64_t resolve) const { return resolve & 0xFFFFFFFF; }
+		std::vector<uint64_t> query_resolves_timestamp[COMMANDLIST_COUNT] = {};
+		std::vector<uint64_t> query_resolves_occlusion[COMMANDLIST_COUNT] = {};
+		std::vector<uint64_t> query_resolves_occlusionpred[COMMANDLIST_COUNT] = {};
 
 		std::atomic<CommandList> cmd_count{ 0 };
 

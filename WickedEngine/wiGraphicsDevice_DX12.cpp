@@ -1454,14 +1454,14 @@ using namespace DX12_Internal;
 		return static_cast<uint64_t>(address - dataBegin);
 	}
 
-	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::init(GraphicsDevice_DX12* device)
+	void GraphicsDevice_DX12::DescriptorBinder::init(GraphicsDevice_DX12* device)
 	{
 		this->device = device;
 
 		// Reset state to empty:
 		reset();
 	}
-	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::reset()
+	void GraphicsDevice_DX12::DescriptorBinder::reset()
 	{
 		dirty_res = true;
 		dirty_sam = true;
@@ -1475,7 +1475,7 @@ using namespace DX12_Internal;
 		memset(UAV_index, -1, sizeof(UAV_index));
 		memset(SAM, 0, sizeof(SAM));
 	}
-	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::request_heaps(uint32_t resources, uint32_t samplers, CommandList cmd)
+	void GraphicsDevice_DX12::DescriptorBinder::request_heaps(uint32_t resources, uint32_t samplers, CommandList cmd)
 	{
 		// Remarks:
 		//	This is allocating from the global shader visible descriptor heaps in a simple incrementing
@@ -1538,7 +1538,7 @@ using namespace DX12_Internal;
 			}
 		}
 	}
-	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::validate(bool graphics, CommandList cmd)
+	void GraphicsDevice_DX12::DescriptorBinder::validate(bool graphics, CommandList cmd)
 	{
 		auto pso_internal = graphics ? to_internal(device->active_pso[cmd]) : to_internal(device->active_cs[cmd]);
 
@@ -1825,8 +1825,8 @@ using namespace DX12_Internal;
 		}
 
 	}
-	GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::DescriptorHandles
-		GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::commit(const DescriptorTable* table, CommandList cmd)
+	GraphicsDevice_DX12::DescriptorBinder::DescriptorHandles
+		GraphicsDevice_DX12::DescriptorBinder::commit(const DescriptorTable* table, CommandList cmd)
 	{
 		auto internal_state = to_internal(table);
 
@@ -2188,9 +2188,68 @@ using namespace DX12_Internal;
 		}
 	}
 
+	void GraphicsDevice_DX12::query_flush(CommandList cmd)
+	{
+		// Perform query resolves (must be outside of render pass):
+		assert(active_renderpass[cmd] == nullptr);
+
+		if (!query_resolves_timestamp[cmd].empty())
+		{
+			for (auto& x : query_resolves_timestamp[cmd])
+			{
+				uint32_t block = QueryResolveBlock(x);
+				uint32_t index = QueryResolveIndex(x);
+				GetDirectCommandList(cmd)->ResolveQueryData(
+					allocationhandler->queries_timestamp.blocks[block].pool.Get(),
+					D3D12_QUERY_TYPE_TIMESTAMP,
+					index,
+					1,
+					allocationhandler->queries_timestamp.blocks[block].readback.Get(),
+					(uint64_t)index * sizeof(uint64_t)
+				);
+			}
+			query_resolves_timestamp[cmd].clear();
+		}
+
+		if (!query_resolves_occlusion[cmd].empty())
+		{
+			for (auto& x : query_resolves_occlusion[cmd])
+			{
+				uint32_t block = QueryResolveBlock(x);
+				uint32_t index = QueryResolveIndex(x);
+				GetDirectCommandList(cmd)->ResolveQueryData(
+					allocationhandler->queries_occlusion.blocks[block].pool.Get(),
+					D3D12_QUERY_TYPE_OCCLUSION,
+					index,
+					1,
+					allocationhandler->queries_occlusion.blocks[block].readback.Get(),
+					(uint64_t)index * sizeof(uint64_t)
+				);
+			}
+			query_resolves_occlusion[cmd].clear();
+		}
+
+		if (!query_resolves_occlusionpred[cmd].empty())
+		{
+			for (auto& x : query_resolves_occlusionpred[cmd])
+			{
+				uint32_t block = QueryResolveBlock(x);
+				uint32_t index = QueryResolveIndex(x);
+				GetDirectCommandList(cmd)->ResolveQueryData(
+					allocationhandler->queries_occlusion.blocks[block].pool.Get(),
+					D3D12_QUERY_TYPE_BINARY_OCCLUSION,
+					index,
+					1,
+					allocationhandler->queries_occlusion.blocks[block].readback.Get(),
+					(uint64_t)index * sizeof(uint64_t)
+				);
+			}
+			query_resolves_occlusionpred[cmd].clear();
+		}
+	}
 	void GraphicsDevice_DX12::barrier_flush(CommandList cmd)
 	{
-		auto& barriers = GetFrameResources().barriers[cmd];
+		auto& barriers = frame_barriers[cmd];
 		if (!barriers.empty())
 		{
 			// Remove NOP barriers:
@@ -2218,7 +2277,7 @@ using namespace DX12_Internal;
 
 		if (active_pso[cmd]->desc.rootSignature == nullptr)
 		{
-			GetFrameResources().descriptors[cmd].validate(true, cmd);
+			descriptors[cmd].validate(true, cmd);
 		}
 	}
 	void GraphicsDevice_DX12::predispatch(CommandList cmd)
@@ -2226,7 +2285,7 @@ using namespace DX12_Internal;
 		barrier_flush(cmd);
 		if (active_cs[cmd]->rootSignature == nullptr)
 		{
-			GetFrameResources().descriptors[cmd].validate(false, cmd);
+			descriptors[cmd].validate(false, cmd);
 		}
 	}
 	void GraphicsDevice_DX12::preraytrace(CommandList cmd)
@@ -2234,53 +2293,10 @@ using namespace DX12_Internal;
 		barrier_flush(cmd);
 		if (active_rt[cmd]->desc.rootSignature == nullptr)
 		{
-			GetFrameResources().descriptors[cmd].validate(false, cmd);
+			descriptors[cmd].validate(false, cmd);
 		}
 	}
 
-	void GraphicsDevice_DX12::deferred_queryresolve(CommandList cmd)
-	{
-		assert(active_renderpass[cmd] == nullptr);
-
-		// Perform query resolves (must be outside of render pass):
-		for (auto& x : query_resolves[cmd])
-		{
-			switch (x.type)
-			{
-			case GPU_QUERY_TYPE_TIMESTAMP:
-				GetDirectCommandList(cmd)->ResolveQueryData(
-					allocationhandler->queries_timestamp.blocks[x.block].pool.Get(),
-					D3D12_QUERY_TYPE_TIMESTAMP,
-					x.index,
-					1,
-					allocationhandler->queries_timestamp.blocks[x.block].readback.Get(),
-					(uint64_t)x.index * sizeof(uint64_t)
-				);
-				break;
-			case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-				GetDirectCommandList(cmd)->ResolveQueryData(
-					allocationhandler->queries_occlusion.blocks[x.block].pool.Get(),
-					D3D12_QUERY_TYPE_BINARY_OCCLUSION,
-					x.index,
-					1,
-					allocationhandler->queries_occlusion.blocks[x.block].readback.Get(),
-					(uint64_t)x.index * sizeof(uint64_t)
-				);
-				break;
-			case GPU_QUERY_TYPE_OCCLUSION:
-				GetDirectCommandList(cmd)->ResolveQueryData(
-					allocationhandler->queries_occlusion.blocks[x.block].pool.Get(),
-					D3D12_QUERY_TYPE_OCCLUSION,
-					x.index,
-					1,
-					allocationhandler->queries_occlusion.blocks[x.block].readback.Get(),
-					(uint64_t)x.index * sizeof(uint64_t)
-				);
-				break;
-			}
-		}
-		query_resolves[cmd].clear();
-	}
 
 	// Engine functions
 	GraphicsDevice_DX12::GraphicsDevice_DX12(wiPlatform::window_type window, bool fullscreen, bool debuglayer)
@@ -5591,7 +5607,6 @@ using namespace DX12_Internal;
 		GetDirectCommandList(cmd)->EndRenderPass();
 
 		active_renderpass[cmd] = nullptr;
-		deferred_queryresolve(cmd);
 
 		// Indicate that the back buffer will now be used to present.
 		D3D12_RESOURCE_BARRIER barrier = {};
@@ -5601,7 +5616,7 @@ using namespace DX12_Internal;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		GetFrameResources().barriers[cmd].push_back(barrier);
+		frame_barriers[cmd].push_back(barrier);
 
 		SubmitCommandLists();
 
@@ -5631,7 +5646,7 @@ using namespace DX12_Internal;
 				hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[fr].commandAllocators[cmd].Get(), nullptr, IID_PPV_ARGS(&frames[fr].commandLists[cmd]));
 				hr = frames[fr].commandLists[cmd]->Close();
 
-				frames[fr].descriptors[cmd].init(this);
+				descriptors[cmd].init(this);
 				frames[fr].resourceBuffer[cmd].init(this, 1024 * 1024); // 1 MB starting size
 
 				std::wstringstream wss;
@@ -5654,7 +5669,7 @@ using namespace DX12_Internal;
 		};
 		GetDirectCommandList(cmd)->SetDescriptorHeaps(arraysize(heaps), heaps);
 
-		GetFrameResources().descriptors[cmd].reset();
+		descriptors[cmd].reset();
 		GetFrameResources().resourceBuffer[cmd].clear();
 
 		D3D12_VIEWPORT vp = {};
@@ -5711,6 +5726,7 @@ using namespace DX12_Internal;
 			cmd_count.store(0);
 			for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
 			{
+				query_flush(cmd);
 				barrier_flush(cmd);
 
 				HRESULT hr = GetDirectCommandList(cmd)->Close();
@@ -5817,7 +5833,7 @@ using namespace DX12_Internal;
 
 		for (uint32_t i = 0; i < internal_state->num_barriers_begin; ++i)
 		{
-			GetFrameResources().barriers[cmd].push_back(internal_state->barrierdescs_begin[i]);
+			frame_barriers[cmd].push_back(internal_state->barrierdescs_begin[i]);
 		}
 		barrier_flush(cmd);
 
@@ -5847,12 +5863,12 @@ using namespace DX12_Internal;
 
 		for (uint32_t i = 0; i < internal_state->num_barriers_end; ++i)
 		{
-			GetFrameResources().barriers[cmd].push_back(internal_state->barrierdescs_end[i]);
+			frame_barriers[cmd].push_back(internal_state->barrierdescs_end[i]);
 		}
 
 		active_renderpass[cmd] = nullptr;
 
-		deferred_queryresolve(cmd);
+		query_flush(cmd);
 	}
 	void GraphicsDevice_DX12::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) {
 		assert(rects != nullptr);
@@ -5884,12 +5900,11 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::BindResource(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_SRV_COUNT);
-		auto& descriptors = GetFrameResources().descriptors[cmd];
-		if (descriptors.SRV[slot] != resource || descriptors.SRV_index[slot] != subresource)
+		if (descriptors[cmd].SRV[slot] != resource || descriptors[cmd].SRV_index[slot] != subresource)
 		{
-			descriptors.SRV[slot] = resource;
-			descriptors.SRV_index[slot] = subresource;
-			descriptors.dirty_res = true;
+			descriptors[cmd].SRV[slot] = resource;
+			descriptors[cmd].SRV_index[slot] = subresource;
+			descriptors[cmd].dirty_res = true;
 		}
 	}
 	void GraphicsDevice_DX12::BindResources(SHADERSTAGE stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
@@ -5905,12 +5920,11 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::BindUAV(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_UAV_COUNT);
-		auto& descriptors = GetFrameResources().descriptors[cmd];
-		if (descriptors.UAV[slot] != resource || descriptors.UAV_index[slot] != subresource)
+		if (descriptors[cmd].UAV[slot] != resource || descriptors[cmd].UAV_index[slot] != subresource)
 		{
-			descriptors.UAV[slot] = resource;
-			descriptors.UAV_index[slot] = subresource;
-			descriptors.dirty_res = true;
+			descriptors[cmd].UAV[slot] = resource;
+			descriptors[cmd].UAV_index[slot] = subresource;
+			descriptors[cmd].dirty_res = true;
 		}
 	}
 	void GraphicsDevice_DX12::BindUAVs(SHADERSTAGE stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
@@ -5932,21 +5946,19 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::BindSampler(SHADERSTAGE stage, const Sampler* sampler, uint32_t slot, CommandList cmd)
 	{
 		assert(slot < GPU_SAMPLER_HEAP_COUNT);
-		auto& descriptors = GetFrameResources().descriptors[cmd];
-		if (descriptors.SAM[slot] != sampler)
+		if (descriptors[cmd].SAM[slot] != sampler)
 		{
-			descriptors.SAM[slot] = sampler;
-			descriptors.dirty_sam = true;
+			descriptors[cmd].SAM[slot] = sampler;
+			descriptors[cmd].dirty_sam = true;
 		}
 	}
 	void GraphicsDevice_DX12::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_CBV_COUNT);
-		auto& descriptors = GetFrameResources().descriptors[cmd];
-		if (buffer->desc.Usage == USAGE_DYNAMIC || descriptors.CBV[slot] != buffer)
+		if (buffer->desc.Usage == USAGE_DYNAMIC || descriptors[cmd].CBV[slot] != buffer)
 		{
-			descriptors.CBV[slot] = buffer;
-			descriptors.dirty_res = true;
+			descriptors[cmd].CBV[slot] = buffer;
+			descriptors[cmd].dirty_res = true;
 
 			// Root constant buffer root signature state tracking:
 			auto internal_state = to_internal(buffer);
@@ -5964,12 +5976,12 @@ using namespace DX12_Internal;
 			if (stage == CS)
 			{
 				internal_state->cbv_mask_compute[cmd] |= 1 << slot;
-				descriptors.dirty_root_cbvs_compute |= 1 << slot;
+				descriptors[cmd].dirty_root_cbvs_compute |= 1 << slot;
 			}
 			else
 			{
 				internal_state->cbv_mask_gfx[cmd] |= 1 << slot;
-				descriptors.dirty_root_cbvs_gfx |= 1 << slot;
+				descriptors[cmd].dirty_root_cbvs_gfx |= 1 << slot;
 			}
 		}
 	}
@@ -6054,9 +6066,9 @@ using namespace DX12_Internal;
 			GetDirectCommandList(cmd)->SetGraphicsRootSignature(internal_state->rootSignature.Get());
 
 			// Invalidate graphics root bindings:
-			GetFrameResources().descriptors[cmd].dirty_res = true;
-			GetFrameResources().descriptors[cmd].dirty_sam = true;
-			GetFrameResources().descriptors[cmd].dirty_root_cbvs_gfx = ~0;
+			descriptors[cmd].dirty_res = true;
+			descriptors[cmd].dirty_sam = true;
+			descriptors[cmd].dirty_root_cbvs_gfx = ~0;
 		}
 
 		active_pso[cmd] = pso;
@@ -6080,9 +6092,9 @@ using namespace DX12_Internal;
 				GetDirectCommandList(cmd)->SetComputeRootSignature(internal_state->rootSignature.Get());
 
 				// Invalidate compute root bindings:
-				GetFrameResources().descriptors[cmd].dirty_res = true;
-				GetFrameResources().descriptors[cmd].dirty_sam = true;
-				GetFrameResources().descriptors[cmd].dirty_root_cbvs_compute = ~0;
+				descriptors[cmd].dirty_res = true;
+				descriptors[cmd].dirty_sam = true;
+				descriptors[cmd].dirty_root_cbvs_compute = ~0;
 			}
 		}
 	}
@@ -6186,9 +6198,9 @@ using namespace DX12_Internal;
 			internal_state->dynamic[cmd] = allocation;
 
 			// The proper binding slot is not tracked properly, but instead all the previous bindings are invalidated:
-			GetFrameResources().descriptors[cmd].dirty_res = true;
-			GetFrameResources().descriptors[cmd].dirty_root_cbvs_gfx |= internal_state->cbv_mask_gfx[cmd];
-			GetFrameResources().descriptors[cmd].dirty_root_cbvs_compute |= internal_state->cbv_mask_compute[cmd];
+			descriptors[cmd].dirty_res = true;
+			descriptors[cmd].dirty_root_cbvs_gfx |= internal_state->cbv_mask_gfx[cmd];
+			descriptors[cmd].dirty_root_cbvs_compute |= internal_state->cbv_mask_compute[cmd];
 		}
 		else
 		{
@@ -6213,7 +6225,7 @@ using namespace DX12_Internal;
 			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
 			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			GetFrameResources().barriers[cmd].push_back(barrier);
+			frame_barriers[cmd].push_back(barrier);
 			barrier_flush(cmd);
 
 			uint8_t* dest = GetFrameResources().resourceBuffer[cmd].allocate(dataSize, 1);
@@ -6226,7 +6238,7 @@ using namespace DX12_Internal;
 
 			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
 			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
-			GetFrameResources().barriers[cmd].push_back(barrier);
+			frame_barriers[cmd].push_back(barrier);
 
 		}
 
@@ -6251,6 +6263,7 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::QueryEnd(const GPUQuery* query, CommandList cmd)
 	{
 		auto internal_state = to_internal(query);
+		uint64_t resolver = QueryResolveCreate(internal_state->query.block, internal_state->query.index);
 
 		switch (internal_state->query_type)
 		{
@@ -6260,17 +6273,7 @@ using namespace DX12_Internal;
 				D3D12_QUERY_TYPE_TIMESTAMP,
 				internal_state->query.index
 			);
-			if (active_renderpass[cmd] == nullptr)
-			{
-				GetDirectCommandList(cmd)->ResolveQueryData(
-					allocationhandler->queries_timestamp.blocks[internal_state->query.block].pool.Get(),
-					D3D12_QUERY_TYPE_TIMESTAMP,
-					internal_state->query.index,
-					1,
-					allocationhandler->queries_timestamp.blocks[internal_state->query.block].readback.Get(),
-					(uint64_t)internal_state->query.index * sizeof(uint64_t)
-				);
-			}
+			query_resolves_timestamp[cmd].push_back(resolver);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
 			GetDirectCommandList(cmd)->EndQuery(
@@ -6278,17 +6281,7 @@ using namespace DX12_Internal;
 				D3D12_QUERY_TYPE_BINARY_OCCLUSION,
 				internal_state->query.index
 			);
-			if (active_renderpass[cmd] == nullptr)
-			{
-				GetDirectCommandList(cmd)->ResolveQueryData(
-					allocationhandler->queries_occlusion.blocks[internal_state->query.block].pool.Get(),
-					D3D12_QUERY_TYPE_BINARY_OCCLUSION,
-					internal_state->query.index,
-					1,
-					allocationhandler->queries_occlusion.blocks[internal_state->query.block].readback.Get(),
-					(uint64_t)internal_state->query.index * sizeof(uint64_t)
-				);
-			}
+			query_resolves_occlusionpred[cmd].push_back(resolver);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
 			GetDirectCommandList(cmd)->EndQuery(
@@ -6296,33 +6289,13 @@ using namespace DX12_Internal;
 				D3D12_QUERY_TYPE_OCCLUSION,
 				internal_state->query.index
 			);
-			if (active_renderpass[cmd] == nullptr)
-			{
-				GetDirectCommandList(cmd)->ResolveQueryData(
-					allocationhandler->queries_occlusion.blocks[internal_state->query.block].pool.Get(),
-					D3D12_QUERY_TYPE_OCCLUSION,
-					internal_state->query.index,
-					1,
-					allocationhandler->queries_occlusion.blocks[internal_state->query.block].readback.Get(),
-					(uint64_t)internal_state->query.index * sizeof(uint64_t)
-				);
-			}
+			query_resolves_occlusion[cmd].push_back(resolver);
 			break;
-		}
-
-		if (active_renderpass[cmd] != nullptr && internal_state->query_type != GPU_QUERY_TYPE_INVALID)
-		{
-			// Defer query resolves to outside of render pass:
-			query_resolves[cmd].emplace_back();
-			Query_Resolve& resolver = query_resolves[cmd].back();
-			resolver.type = query->desc.Type;
-			resolver.block = internal_state->query.block;
-			resolver.index = internal_state->query.index;
 		}
 	}
 	void GraphicsDevice_DX12::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
-		auto& barrierdescs = GetFrameResources().barriers[cmd];
+		auto& barrierdescs = frame_barriers[cmd];
 
 		for (uint32_t i = 0; i < numBarriers; ++i)
 		{
@@ -6405,6 +6378,8 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src)
 	{
+		barrier_flush(cmd);
+
 		auto dst_internal = to_internal(dst);
 
 		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC desc = {};
@@ -6479,8 +6454,8 @@ using namespace DX12_Internal;
 		{
 			prev_pipeline_hash[cmd] = 0;
 			active_rt[cmd] = rtpso;
-			GetFrameResources().descriptors[cmd].dirty_res = true;
-			GetFrameResources().descriptors[cmd].dirty_sam = true;
+			descriptors[cmd].dirty_res = true;
+			descriptors[cmd].dirty_sam = true;
 
 			auto internal_state = to_internal(rtpso);
 			GetDirectCommandList(cmd)->SetPipelineState1(internal_state->resource.Get());
@@ -6556,8 +6531,8 @@ using namespace DX12_Internal;
 
 	void GraphicsDevice_DX12::BindDescriptorTable(BINDPOINT bindpoint, uint32_t space, const DescriptorTable* table, CommandList cmd)
 	{
-		GetFrameResources().descriptors[cmd].dirty_res = true;
-		GetFrameResources().descriptors[cmd].dirty_sam = true;
+		descriptors[cmd].dirty_res = true;
+		descriptors[cmd].dirty_sam = true;
 
 		const RootSignature* rootsig = nullptr;
 		switch (bindpoint)
@@ -6565,21 +6540,20 @@ using namespace DX12_Internal;
 		default:
 		case wiGraphics::GRAPHICS:
 			rootsig = active_pso[cmd]->desc.rootSignature;
-			GetFrameResources().descriptors[cmd].dirty_root_cbvs_gfx = ~0;
+			descriptors[cmd].dirty_root_cbvs_gfx = ~0;
 			break;
 		case wiGraphics::COMPUTE:
 			rootsig = active_cs[cmd]->rootSignature;
-			GetFrameResources().descriptors[cmd].dirty_root_cbvs_compute = ~0;
+			descriptors[cmd].dirty_root_cbvs_compute = ~0;
 			break;
 		case wiGraphics::RAYTRACING:
 			rootsig = active_rt[cmd]->desc.rootSignature;
-			GetFrameResources().descriptors[cmd].dirty_root_cbvs_compute = ~0;
+			descriptors[cmd].dirty_root_cbvs_compute = ~0;
 			break;
 		}
 		auto rootsig_internal = to_internal(rootsig);
 		uint32_t bind_point_remap = rootsig_internal->table_bind_point_remap[space];
-		auto& descriptors = GetFrameResources().descriptors[cmd];
-		auto handles = descriptors.commit(table, cmd);
+		auto handles = descriptors[cmd].commit(table, cmd);
 		if (handles.resource_handle.ptr != 0)
 		{
 			switch (bindpoint)
@@ -6612,8 +6586,8 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd)
 	{
-		GetFrameResources().descriptors[cmd].dirty_res = true;
-		GetFrameResources().descriptors[cmd].dirty_sam = true;
+		descriptors[cmd].dirty_res = true;
+		descriptors[cmd].dirty_sam = true;
 
 		const RootSignature* rootsig = nullptr;
 		switch (bindpoint)
@@ -6621,15 +6595,15 @@ using namespace DX12_Internal;
 		default:
 		case wiGraphics::GRAPHICS:
 			rootsig = active_pso[cmd]->desc.rootSignature;
-			GetFrameResources().descriptors[cmd].dirty_root_cbvs_gfx = ~0;
+			descriptors[cmd].dirty_root_cbvs_gfx = ~0;
 			break;
 		case wiGraphics::COMPUTE:
 			rootsig = active_cs[cmd]->rootSignature;
-			GetFrameResources().descriptors[cmd].dirty_root_cbvs_compute = ~0;
+			descriptors[cmd].dirty_root_cbvs_compute = ~0;
 			break;
 		case wiGraphics::RAYTRACING:
 			rootsig = active_rt[cmd]->desc.rootSignature;
-			GetFrameResources().descriptors[cmd].dirty_root_cbvs_compute = ~0;
+			descriptors[cmd].dirty_root_cbvs_compute = ~0;
 			break;
 		}
 		auto rootsig_internal = to_internal(rootsig);
@@ -6687,8 +6661,8 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::BindRootConstants(BINDPOINT bindpoint, uint32_t index, const void* srcdata, CommandList cmd)
 	{
-		GetFrameResources().descriptors[cmd].dirty_res = true;
-		GetFrameResources().descriptors[cmd].dirty_sam = true;
+		descriptors[cmd].dirty_res = true;
+		descriptors[cmd].dirty_sam = true;
 
 		const RootSignature* rootsig = nullptr;
 		switch (bindpoint)
@@ -6696,15 +6670,15 @@ using namespace DX12_Internal;
 		default:
 		case wiGraphics::GRAPHICS:
 			rootsig = active_pso[cmd]->desc.rootSignature;
-			GetFrameResources().descriptors[cmd].dirty_root_cbvs_gfx = ~0;
+			descriptors[cmd].dirty_root_cbvs_gfx = ~0;
 			break;
 		case wiGraphics::COMPUTE:
 			rootsig = active_cs[cmd]->rootSignature;
-			GetFrameResources().descriptors[cmd].dirty_root_cbvs_compute = ~0;
+			descriptors[cmd].dirty_root_cbvs_compute = ~0;
 			break;
 		case wiGraphics::RAYTRACING:
 			rootsig = active_rt[cmd]->desc.rootSignature;
-			GetFrameResources().descriptors[cmd].dirty_root_cbvs_compute = ~0;
+			descriptors[cmd].dirty_root_cbvs_compute = ~0;
 			break;
 		}
 		auto rootsig_internal = to_internal(rootsig);
