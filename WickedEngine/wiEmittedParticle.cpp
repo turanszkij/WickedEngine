@@ -314,11 +314,22 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
-		const GPUResource* resources[] = {
-			mesh == nullptr ? nullptr : &mesh->indexBuffer,
-			mesh == nullptr ? nullptr : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
-		};
-		device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, arraysize(resources), cmd);
+		if (mesh != nullptr)
+		{
+			const GPUResource* resources[] = {
+				&mesh->indexBuffer,
+				(mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
+			};
+			device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, arraysize(resources), cmd);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Buffer(&mesh->indexBuffer, BUFFER_STATE_INDEX_BUFFER, BUFFER_STATE_SHADER_RESOURCE),
+					GPUBarrier::Buffer((mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS), BUFFER_STATE_VERTEX_BUFFER, BUFFER_STATE_SHADER_RESOURCE),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+		}
 
 		GPUBarrier barrier_indirect_uav = GPUBarrier::Buffer(&indirectBuffers, BUFFER_STATE_INDIRECT_ARGUMENT, BUFFER_STATE_UNORDERED_ACCESS);
 		GPUBarrier barrier_uav_indirect = GPUBarrier::Buffer(&indirectBuffers, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDIRECT_ARGUMENT);
@@ -448,7 +459,6 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 
 		device->EventBegin("Simulate", cmd);
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-		device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, arraysize(resources), cmd);
 
 		// update CURRENT alive list, write NEW alive list
 		if (IsSorted())
@@ -479,7 +489,6 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 
 
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
-		device->UnbindResources(TEXSLOT_ONDEMAND0, arraysize(resources), cmd);
 
 		device->EventEnd(cmd);
 
@@ -540,6 +549,15 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 			GPUBarrier::Buffer(&counterBuffer, BUFFER_STATE_COPY_SRC, BUFFER_STATE_SHADER_RESOURCE),
 			GPUBarrier::Buffer(&particleBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
 			GPUBarrier::Buffer(&aliveList[1], BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	if (mesh != nullptr)
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Buffer(&mesh->indexBuffer, BUFFER_STATE_SHADER_RESOURCE, BUFFER_STATE_INDEX_BUFFER),
+			GPUBarrier::Buffer((mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS), BUFFER_STATE_SHADER_RESOURCE, BUFFER_STATE_VERTEX_BUFFER),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}

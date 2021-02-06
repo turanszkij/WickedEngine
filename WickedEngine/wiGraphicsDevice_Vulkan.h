@@ -169,6 +169,9 @@ namespace wiGraphics
 			};
 			ResourceFrameAllocator resourceBuffer[COMMANDLIST_COUNT];
 
+			std::vector<VkMemoryBarrier> memoryBarriers[COMMANDLIST_COUNT];
+			std::vector<VkImageMemoryBarrier> imageBarriers[COMMANDLIST_COUNT];
+			std::vector<VkBufferMemoryBarrier> bufferBarriers[COMMANDLIST_COUNT];
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
@@ -194,6 +197,7 @@ namespace wiGraphics
 		bool dirty_pso[COMMANDLIST_COUNT] = {};
 		void pso_validate(CommandList cmd);
 
+		void barrier_flush(CommandList cmd);
 		void predraw(CommandList cmd);
 		void predispatch(CommandList cmd);
 		void preraytrace(CommandList cmd);

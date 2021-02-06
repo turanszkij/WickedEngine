@@ -263,6 +263,8 @@ namespace wiGraphics
 				uint64_t calculateOffset(uint8_t* address);
 			};
 			ResourceFrameAllocator resourceBuffer[COMMANDLIST_COUNT];
+
+			std::vector<D3D12_RESOURCE_BARRIER> barriers[COMMANDLIST_COUNT];
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
@@ -289,6 +291,7 @@ namespace wiGraphics
 		bool dirty_pso[COMMANDLIST_COUNT] = {};
 		void pso_validate(CommandList cmd);
 
+		void barrier_flush(CommandList cmd);
 		void predraw(CommandList cmd);
 		void predispatch(CommandList cmd);
 		void preraytrace(CommandList cmd);

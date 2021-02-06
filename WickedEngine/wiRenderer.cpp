@@ -3954,6 +3954,8 @@ void UpdateRenderData(
 	{
 		bool streamOutSetUp = false;
 		SHADERTYPE lastCS = CSTYPE_SKINNING_LDS;
+		GPUBarrier* barriers_start = (GPUBarrier*)GetRenderFrameAllocator(cmd).top();
+		uint32_t numBarriers = 0;
 
 		for (size_t i = 0; i < vis.scene->meshes.GetCount(); ++i)
 		{
@@ -4015,6 +4017,12 @@ void UpdateRenderData(
 					&mesh.streamoutBuffer_TAN,
 				};
 
+				numBarriers += arraysize(uavs);
+				GPUBarrier* barriers = (GPUBarrier*)GetRenderFrameAllocator(cmd).allocate(sizeof(GPUBarrier) * arraysize(uavs));
+				barriers[0] = GPUBarrier::Buffer(&mesh.streamoutBuffer_POS, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_VERTEX_BUFFER);
+				barriers[1] = GPUBarrier::Buffer(&mesh.streamoutBuffer_TAN, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_VERTEX_BUFFER);
+				// Barriers will be issued later...
+
 				device->BindResources(CS, vbs, SKINNINGSLOT_IN_VERTEX_POS, arraysize(vbs), cmd);
 				device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
@@ -4025,32 +4033,12 @@ void UpdateRenderData(
 
 		if (streamOutSetUp)
 		{
-			// wait all skinning to finish (but they can overlap)
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-			for (size_t i = 0; i < vis.scene->meshes.GetCount(); ++i)
-			{
-				Entity entity = vis.scene->meshes.GetEntity(i);
-				const MeshComponent& mesh = vis.scene->meshes[i];
+			numBarriers++;
+			GPUBarrier* barriers = (GPUBarrier*)GetRenderFrameAllocator(cmd).allocate(sizeof(GPUBarrier));
+			barriers[0] = GPUBarrier::Memory();
+			device->Barrier(barriers_start, numBarriers, cmd);
+			GetRenderFrameAllocator(cmd).free(sizeof(GPUBarrier) * numBarriers);
 
-				if (mesh.IsSkinned() && vis.scene->armatures.Contains(mesh.armatureID))
-				{
-					const SoftBodyPhysicsComponent* softbody = vis.scene->softbodies.GetComponent(entity);
-					if (softbody != nullptr && softbody->physicsobject != nullptr)
-					{
-						// If soft body simulation is active, don't perform skinning.
-						//	(Soft body animated vertices are skinned in simulation phase by physics system)
-						continue;
-					}
-					GPUBarrier barriers[] = {
-						GPUBarrier::Buffer(&mesh.streamoutBuffer_POS, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_VERTEX_BUFFER),
-						GPUBarrier::Buffer(&mesh.streamoutBuffer_TAN, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_VERTEX_BUFFER),
-					};
-					device->Barrier(barriers, arraysize(barriers), cmd);
-				}
-			}
 			device->UnbindUAVs(0, 2, cmd);
 			device->UnbindResources(SKINNINGSLOT_IN_VERTEX_POS, 4, cmd);
 		}
@@ -7616,7 +7604,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 	}
 }
 
-void CopyTexture2D(const Texture& dst, uint32_t DstMIP, uint32_t DstX, uint32_t DstY, const Texture& src, uint32_t SrcMIP, CommandList cmd, BORDEREXPANDSTYLE borderExpand)
+void CopyTexture2D(const Texture& dst, int DstMIP, int DstX, int DstY, const Texture& src, int SrcMIP, CommandList cmd, BORDEREXPANDSTYLE borderExpand)
 {
 	const TextureDesc& desc_dst = dst.GetDesc();
 	const TextureDesc& desc_src = src.GetDesc();
@@ -7666,19 +7654,11 @@ void CopyTexture2D(const Texture& dst, uint32_t DstMIP, uint32_t DstX, uint32_t 
 
 	device->BindResource(CS, &src, TEXSLOT_ONDEMAND0, cmd);
 
-	if (DstMIP > 0)
-	{
-		assert(desc_dst.MipLevels > DstMIP);
-		device->BindUAV(CS, &dst, 0, cmd, DstMIP);
-	}
-	else
-	{
-		device->BindUAV(CS, &dst, 0, cmd);
-	}
+	device->BindUAV(CS, &dst, 0, cmd, DstMIP);
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&dst,dst.desc.layout,IMAGE_LAYOUT_UNORDERED_ACCESS),
+			GPUBarrier::Image(&dst,dst.desc.layout,IMAGE_LAYOUT_UNORDERED_ACCESS, DstMIP),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -7690,7 +7670,7 @@ void CopyTexture2D(const Texture& dst, uint32_t DstMIP, uint32_t DstX, uint32_t 
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(),
-			GPUBarrier::Image(&dst,IMAGE_LAYOUT_UNORDERED_ACCESS,dst.desc.layout),
+			GPUBarrier::Image(&dst,IMAGE_LAYOUT_UNORDERED_ACCESS,dst.desc.layout, DstMIP),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -8448,7 +8428,7 @@ void RefreshLightmapAtlas(const Scene& scene, CommandList cmd)
 					if (object.lightmap.IsValid())
 					{
 						const auto& rec = packedLightmaps.at(object.lightmap.internal_state.get());
-						CopyTexture2D(globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap, 0, cmd);
+						CopyTexture2D(globalLightmap, -1, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap, 0, cmd);
 					}
 				}
 			}
@@ -8459,7 +8439,7 @@ void RefreshLightmapAtlas(const Scene& scene, CommandList cmd)
 				{
 					const ObjectComponent& object = scene.objects[objectIndex];
 					const auto& rec = packedLightmaps.at(object.lightmap.internal_state.get());
-					CopyTexture2D(globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap, 0, cmd);
+					CopyTexture2D(globalLightmap, -1, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap, 0, cmd);
 				}
 			}
 			device->EventEnd(cmd);

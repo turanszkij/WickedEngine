@@ -2187,6 +2187,30 @@ using namespace DX12_Internal;
 		}
 	}
 
+	void GraphicsDevice_DX12::barrier_flush(CommandList cmd)
+	{
+		auto& barriers = GetFrameResources().barriers[cmd];
+		if (!barriers.empty())
+		{
+			// Remove NOP barriers:
+			for (size_t i = 0; i < barriers.size(); ++i)
+			{
+				auto& barrier = barriers[i];
+				if (barrier.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION &&
+					barrier.Transition.StateBefore == barrier.Transition.StateAfter)
+				{
+					barrier = barriers.back();
+					barriers.pop_back();
+					i--;
+				}
+			}
+			GetDirectCommandList(cmd)->ResourceBarrier(
+				(UINT)barriers.size(),
+				barriers.data()
+			);
+			barriers.clear();
+		}
+	}
 	void GraphicsDevice_DX12::predraw(CommandList cmd)
 	{
 		pso_validate(cmd);
@@ -2198,6 +2222,7 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::predispatch(CommandList cmd)
 	{
+		barrier_flush(cmd);
 		if (active_cs[cmd]->rootSignature == nullptr)
 		{
 			GetFrameResources().descriptors[cmd].validate(false, cmd);
@@ -2205,6 +2230,7 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::preraytrace(CommandList cmd)
 	{
+		barrier_flush(cmd);
 		if (active_rt[cmd]->desc.rootSignature == nullptr)
 		{
 			GetFrameResources().descriptors[cmd].validate(false, cmd);
@@ -5571,7 +5597,7 @@ using namespace DX12_Internal;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		GetDirectCommandList(cmd)->ResourceBarrier(1, &barrier);
+		GetFrameResources().barriers[cmd].push_back(barrier);
 
 		SubmitCommandLists();
 
@@ -5681,6 +5707,8 @@ using namespace DX12_Internal;
 			cmd_count.store(0);
 			for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
 			{
+				barrier_flush(cmd);
+
 				HRESULT hr = GetDirectCommandList(cmd)->Close();
 				assert(SUCCEEDED(hr));
 
@@ -5783,10 +5811,11 @@ using namespace DX12_Internal;
 
 		auto internal_state = to_internal(active_renderpass[cmd]);
 
-		if (internal_state->num_barriers_begin > 0)
+		for (uint32_t i = 0; i < internal_state->num_barriers_begin; ++i)
 		{
-			GetDirectCommandList(cmd)->ResourceBarrier(internal_state->num_barriers_begin, internal_state->barrierdescs_begin);
+			GetFrameResources().barriers[cmd].push_back(internal_state->barrierdescs_begin[i]);
 		}
+		barrier_flush(cmd);
 
 		if (internal_state->shading_rate_image != nullptr)
 		{
@@ -5812,10 +5841,11 @@ using namespace DX12_Internal;
 			GetDirectCommandList(cmd)->RSSetShadingRateImage(nullptr);
 		}
 
-		if (internal_state->num_barriers_end > 0)
+		for (uint32_t i = 0; i < internal_state->num_barriers_end; ++i)
 		{
-			GetDirectCommandList(cmd)->ResourceBarrier(internal_state->num_barriers_end, internal_state->barrierdescs_end);
+			GetFrameResources().barriers[cmd].push_back(internal_state->barrierdescs_end[i]);
 		}
+		barrier_flush(cmd);
 
 		active_renderpass[cmd] = nullptr;
 
@@ -6109,6 +6139,7 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 	{
+		barrier_flush(cmd);
 		auto internal_state_src = to_internal(pSrc);
 		auto internal_state_dst = to_internal(pDst);
 		D3D12_RESOURCE_DESC desc_src = internal_state_src->resource->GetDesc();
@@ -6179,7 +6210,8 @@ using namespace DX12_Internal;
 			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
 			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			GetDirectCommandList(cmd)->ResourceBarrier(1, &barrier);
+			GetFrameResources().barriers[cmd].push_back(barrier);
+			barrier_flush(cmd);
 
 			uint8_t* dest = GetFrameResources().resourceBuffer[cmd].allocate(dataSize, 1);
 			memcpy(dest, data, dataSize);
@@ -6191,7 +6223,7 @@ using namespace DX12_Internal;
 
 			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
 			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
-			GetDirectCommandList(cmd)->ResourceBarrier(1, &barrier);
+			GetFrameResources().barriers[cmd].push_back(barrier);
 
 		}
 
@@ -6287,13 +6319,13 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
-		D3D12_RESOURCE_BARRIER barrierdescs[32];
-		assert(numBarriers < arraysize(barrierdescs));
+		auto& barrierdescs = GetFrameResources().barriers[cmd];
 
 		for (uint32_t i = 0; i < numBarriers; ++i)
 		{
 			const GPUBarrier& barrier = barriers[i];
-			D3D12_RESOURCE_BARRIER& barrierdesc = barrierdescs[i];
+
+			D3D12_RESOURCE_BARRIER barrierdesc = {};
 
 			switch (barrier.type)
 			{
@@ -6339,9 +6371,34 @@ using namespace DX12_Internal;
 			}
 			break;
 			}
-		}
 
-		GetDirectCommandList(cmd)->ResourceBarrier(numBarriers, barrierdescs);
+			// Try to detect redundant barriers:
+			bool found = false;
+			for (auto& x : barrierdescs)
+			{
+				if (x.Type == barrierdesc.Type && x.Flags == barrierdesc.Flags)
+				{
+					switch (x.Type)
+					{
+					default:
+					case D3D12_RESOURCE_BARRIER_TYPE_TRANSITION:
+						if (x.Transition.pResource == barrierdesc.Transition.pResource &&
+							x.Transition.Subresource == barrierdesc.Transition.Subresource)
+						{
+							found = true;
+							x.Transition.StateAfter = barrierdesc.Transition.StateAfter;
+						}
+						break;
+					}
+				}
+				if (found)
+					break;
+			}
+			if (!found)
+			{
+				barrierdescs.push_back(barrierdesc);
+			}
+		}
 	}
 	void GraphicsDevice_DX12::BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src)
 	{

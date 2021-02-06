@@ -667,9 +667,7 @@ void RenderPath3D::Render() const
 		// Create the top mip of depth pyramid from main depth buffer:
 		if (getMSAASampleCount() > 1)
 		{
-
 			wiRenderer::ResolveMSAADepthBuffer(depthBuffer_Copy, depthBuffer_Main, cmd);
-
 		}
 		else
 		{

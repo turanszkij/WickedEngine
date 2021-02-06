@@ -969,7 +969,7 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 				subresource_index = device->CreateSubresource(newTex, UAV, 0, 1, i, 1);
 				assert(subresource_index == i);
 			}
-			wiRenderer::CopyTexture2D(*newTex, 0, 0, 0, *resource->texture, 0, cmd);
+			wiRenderer::CopyTexture2D(*newTex, -1, 0, 0, *resource->texture, 0, cmd);
 			std::stringstream ss("");
 			ss << "painttool_" << wiRandom::getRandom(INT_MAX);
 			auto newRes = wiResourceManager::Register(ss.str(), newTex, wiResource::DATA_TYPE::IMAGE);

@@ -1938,6 +1938,73 @@ using namespace Vulkan_Internal;
 		vkCmdBindPipeline(GetDirectCommandList(cmd), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 	}
 
+	void GraphicsDevice_Vulkan::barrier_flush(CommandList cmd)
+	{
+		auto& memoryBarriers = GetFrameResources().memoryBarriers[cmd];
+		auto& imageBarriers = GetFrameResources().imageBarriers[cmd];
+		auto& bufferBarriers = GetFrameResources().bufferBarriers[cmd];
+
+		if (!memoryBarriers.empty() ||
+			!bufferBarriers.empty() ||
+			!imageBarriers.empty()
+			)
+		{
+			// Remove NOP barriers:
+			for (size_t i = 0; i < memoryBarriers.size(); ++i)
+			{
+				auto& barrier = memoryBarriers[i];
+				if (barrier.srcAccessMask == barrier.dstAccessMask)
+				{
+					barrier = memoryBarriers.back();
+					memoryBarriers.pop_back();
+					i--;
+				}
+			}
+			for (size_t i = 0; i < bufferBarriers.size(); ++i)
+			{
+				auto& barrier = bufferBarriers[i];
+				if (barrier.srcAccessMask == barrier.dstAccessMask)
+				{
+					barrier = bufferBarriers.back();
+					bufferBarriers.pop_back();
+					i--;
+				}
+			}
+			for (size_t i = 0; i < imageBarriers.size(); ++i)
+			{
+				auto& barrier = imageBarriers[i];
+				if (barrier.oldLayout == barrier.newLayout)
+				{
+					barrier = imageBarriers.back();
+					imageBarriers.pop_back();
+					i--;
+				}
+			}
+
+			VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+			VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
+			if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+			{
+				srcStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+				dstStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+			}
+
+			vkCmdPipelineBarrier(
+				GetDirectCommandList(cmd),
+				srcStage,
+				dstStage,
+				0,
+				(uint32_t)memoryBarriers.size(), memoryBarriers.data(),
+				(uint32_t)bufferBarriers.size(), bufferBarriers.data(),
+				(uint32_t)imageBarriers.size(), imageBarriers.data()
+			);
+
+			memoryBarriers.clear();
+			imageBarriers.clear();
+			bufferBarriers.clear();
+		}
+	}
 	void GraphicsDevice_Vulkan::predraw(CommandList cmd)
 	{
 		pso_validate(cmd);
@@ -1967,6 +2034,8 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::predispatch(CommandList cmd)
 	{
+		barrier_flush(cmd);
+
 		if (active_cs[cmd]->rootSignature == nullptr)
 		{
 			GetFrameResources().descriptors[cmd].validate(false, cmd);
@@ -1993,6 +2062,8 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::preraytrace(CommandList cmd)
 	{
+		barrier_flush(cmd);
+
 		if (active_rt[cmd]->desc.rootSignature == nullptr)
 		{
 			GetFrameResources().descriptors[cmd].validate(false, cmd, true);
@@ -5881,18 +5952,15 @@ using namespace Vulkan_Internal;
 
 			// Transitions:
 			{
-				for (auto& barrier : frame.loadedimagetransitions)
-				{
-					vkCmdPipelineBarrier(
-						frame.transitionCommandBuffer,
-						VK_PIPELINE_STAGE_TRANSFER_BIT,
-						VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-						0,
-						0, nullptr,
-						0, nullptr,
-						1, &barrier
-					);
-				}
+				vkCmdPipelineBarrier(
+					frame.transitionCommandBuffer,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+					0,
+					0, nullptr,
+					0, nullptr,
+					(uint32_t)frame.loadedimagetransitions.size(), frame.loadedimagetransitions.data()
+				);
 				frame.loadedimagetransitions.clear();
 
 				VkResult res = vkEndCommandBuffer(frame.transitionCommandBuffer);
@@ -5905,6 +5973,8 @@ using namespace Vulkan_Internal;
 			cmd_count.store(0);
 			for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
 			{
+				barrier_flush(cmd);
+
 				VkResult res = vkEndCommandBuffer(GetDirectCommandList(cmd));
 				assert(res == VK_SUCCESS);
 
@@ -6024,6 +6094,8 @@ using namespace Vulkan_Internal;
 
 	void GraphicsDevice_Vulkan::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 	{
+		barrier_flush(cmd);
+
 		active_renderpass[cmd] = renderpass;
 
 		auto internal_state = to_internal(renderpass);
@@ -6358,6 +6430,8 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 	{
+		barrier_flush(cmd);
+
 		if (pDst->type == GPUResource::GPU_RESOURCE_TYPE::TEXTURE && pSrc->type == GPUResource::GPU_RESOURCE_TYPE::TEXTURE)
 		{
 			auto internal_state_src = to_internal((const Texture*)pSrc);
@@ -6507,8 +6581,6 @@ using namespace Vulkan_Internal;
 
 			assert(active_renderpass[cmd] == nullptr); // must not be inside render pass
 
-			VkPipelineStageFlags stages = 0;
-
 			VkBufferMemoryBarrier barrier = {};
 			barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
 			barrier.buffer = internal_state->resource;
@@ -6516,48 +6588,34 @@ using namespace Vulkan_Internal;
 			if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
 			{
 				barrier.srcAccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
-				stages = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 			}
 			if (buffer->desc.BindFlags & BIND_VERTEX_BUFFER)
 			{
 				barrier.srcAccessMask |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-				stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
 			}
 			if (buffer->desc.BindFlags & BIND_INDEX_BUFFER)
 			{
 				barrier.srcAccessMask |= VK_ACCESS_INDEX_READ_BIT;
-				stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
 			}
 			if (buffer->desc.BindFlags & BIND_SHADER_RESOURCE)
 			{
 				barrier.srcAccessMask |= VK_ACCESS_SHADER_READ_BIT;
-				stages = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 			}
 			if (buffer->desc.BindFlags & BIND_UNORDERED_ACCESS)
 			{
 				barrier.srcAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
-				stages = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 			}
 			if (buffer->desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
 			{
 				barrier.srcAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
-				stages = VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
 			}
 			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.size = VK_WHOLE_SIZE;
 
-			vkCmdPipelineBarrier(
-				GetDirectCommandList(cmd),
-				stages,
-				VK_PIPELINE_STAGE_TRANSFER_BIT,
-				0,
-				0, nullptr,
-				1, &barrier,
-				0, nullptr
-			);
-
+			GetFrameResources().bufferBarriers[cmd].push_back(barrier);
+			barrier_flush(cmd);
 
 			// issue data copy:
 			uint8_t* dest = GetFrameResources().resourceBuffer[cmd].allocate(dataSize, 1);
@@ -6577,15 +6635,7 @@ using namespace Vulkan_Internal;
 			// reverse barrier:
 			std::swap(barrier.srcAccessMask, barrier.dstAccessMask);
 
-			vkCmdPipelineBarrier(
-				GetDirectCommandList(cmd),
-				VK_PIPELINE_STAGE_TRANSFER_BIT,
-				stages,
-				0,
-				0, nullptr,
-				1, &barrier,
-				0, nullptr
-			);
+			GetFrameResources().bufferBarriers[cmd].push_back(barrier);
 
 		}
 
@@ -6626,12 +6676,9 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
-		VkMemoryBarrier memorybarriers[32];
-		VkImageMemoryBarrier imagebarriers[32];
-		VkBufferMemoryBarrier bufferbarriers[32];
-		uint32_t memorybarrier_count = 0;
-		uint32_t imagebarrier_count = 0;
-		uint32_t bufferbarrier_count = 0;
+		auto& memoryBarriers = GetFrameResources().memoryBarriers[cmd];
+		auto& imageBarriers = GetFrameResources().imageBarriers[cmd];
+		auto& bufferBarriers = GetFrameResources().bufferBarriers[cmd];
 
 		for (uint32_t i = 0; i < numBarriers; ++i)
 		{
@@ -6642,7 +6689,7 @@ using namespace Vulkan_Internal;
 			default:
 			case GPUBarrier::MEMORY_BARRIER:
 			{
-				VkMemoryBarrier& barrierdesc = memorybarriers[memorybarrier_count++];
+				VkMemoryBarrier barrierdesc = {};
 				barrierdesc.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
 				barrierdesc.pNext = nullptr;
 				barrierdesc.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
@@ -6652,6 +6699,8 @@ using namespace Vulkan_Internal;
 					barrierdesc.srcAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
 					barrierdesc.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
 				}
+
+				memoryBarriers.push_back(barrierdesc);
 			}
 			break;
 			case GPUBarrier::IMAGE_BARRIER:
@@ -6659,7 +6708,7 @@ using namespace Vulkan_Internal;
 				const TextureDesc& desc = barrier.image.texture->GetDesc();
 				auto internal_state = to_internal(barrier.image.texture);
 
-				VkImageMemoryBarrier& barrierdesc = imagebarriers[imagebarrier_count++];
+				VkImageMemoryBarrier barrierdesc = {};
 				barrierdesc.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 				barrierdesc.pNext = nullptr;
 				barrierdesc.image = internal_state->resource;
@@ -6689,19 +6738,42 @@ using namespace Vulkan_Internal;
 				else
 				{
 					barrierdesc.subresourceRange.baseMipLevel = 0;
-					barrierdesc.subresourceRange.levelCount = desc.MipLevels;
+					barrierdesc.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
 					barrierdesc.subresourceRange.baseArrayLayer = 0;
-					barrierdesc.subresourceRange.layerCount = desc.ArraySize;
+					barrierdesc.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 				}
 				barrierdesc.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrierdesc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+				bool found = false;
+				for (auto& x : imageBarriers)
+				{
+					// Two duplicate barriers will be combined into one:
+					if (x.image == barrierdesc.image &&
+						x.subresourceRange.baseMipLevel == barrierdesc.subresourceRange.baseMipLevel &&
+						x.subresourceRange.levelCount == barrierdesc.subresourceRange.levelCount &&
+						x.subresourceRange.baseArrayLayer == barrierdesc.subresourceRange.baseArrayLayer &&
+						x.subresourceRange.layerCount == barrierdesc.subresourceRange.layerCount
+						)
+					{
+						found = true;
+						x.newLayout = barrierdesc.newLayout;
+						x.dstAccessMask |= barrierdesc.dstAccessMask;
+						break;
+					}
+				}
+
+				if (!found)
+				{
+					imageBarriers.push_back(barrierdesc);
+				}
 			}
 			break;
 			case GPUBarrier::BUFFER_BARRIER:
 			{
 				auto internal_state = to_internal(barrier.buffer.buffer);
 
-				VkBufferMemoryBarrier& barrierdesc = bufferbarriers[bufferbarrier_count++];
+				VkBufferMemoryBarrier barrierdesc = {};
 				barrierdesc.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
 				barrierdesc.pNext = nullptr;
 				barrierdesc.buffer = internal_state->resource;
@@ -6711,28 +6783,30 @@ using namespace Vulkan_Internal;
 				barrierdesc.dstAccessMask = _ParseBufferState(barrier.buffer.state_after);
 				barrierdesc.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrierdesc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+				bool found = false;
+				for (auto& x : bufferBarriers)
+				{
+					// Two duplicate barriers will be combined into one:
+					if (x.buffer == barrierdesc.buffer &&
+						x.srcAccessMask == barrierdesc.srcAccessMask &&
+						x.dstAccessMask == barrierdesc.dstAccessMask
+						)
+					{
+						found = true;
+						x.dstAccessMask |= barrierdesc.dstAccessMask;
+						break;
+					}
+				}
+
+				if (!found)
+				{
+					bufferBarriers.push_back(barrierdesc);
+				}
 			}
 			break;
 			}
 		}
-
-		VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-		VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-
-		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
-		{
-			srcStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
-			dstStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
-		}
-
-		vkCmdPipelineBarrier(GetDirectCommandList(cmd),
-			srcStage,
-			dstStage,
-			0,
-			memorybarrier_count, memorybarriers,
-			bufferbarrier_count, bufferbarriers,
-			imagebarrier_count, imagebarriers
-		);
 	}
 	void GraphicsDevice_Vulkan::BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src)
 	{
