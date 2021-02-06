@@ -7,6 +7,7 @@
 #include "wiMath.h"
 #include "ResourceMapping.h"
 #include "wiBackLog.h"
+#include "wiStartupArguments.h"
 
 #include "Utility/dx12/d3dx12.h"
 #include "Utility/D3D12MemAlloc.h"
@@ -2340,7 +2341,10 @@ using namespace DX12_Internal;
 				if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&d3dDebug))))
 				{
 					d3dDebug->EnableDebugLayer();
-					//d3dDebug->SetEnableGPUBasedValidation(TRUE);
+					if (wiStartupArguments::HasArgument("gpuvalidation"))
+					{
+						d3dDebug->SetEnableGPUBasedValidation(TRUE);
+					}
 				}
 			}
 		}
@@ -5845,7 +5849,6 @@ using namespace DX12_Internal;
 		{
 			GetFrameResources().barriers[cmd].push_back(internal_state->barrierdescs_end[i]);
 		}
-		barrier_flush(cmd);
 
 		active_renderpass[cmd] = nullptr;
 

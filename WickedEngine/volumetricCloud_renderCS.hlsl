@@ -23,9 +23,6 @@
  *
  */
 
-
-TEXTURE2D(texture_input, float4, TEXSLOT_ONDEMAND0);
-
 TEXTURE3D(texture_shapeNoise, float4, TEXSLOT_ONDEMAND1);
 TEXTURE3D(texture_detailNoise, float4, TEXSLOT_ONDEMAND2);
 TEXTURE2D(texture_curlNoise, float4, TEXSLOT_ONDEMAND3);

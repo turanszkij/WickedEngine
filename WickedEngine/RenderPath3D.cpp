@@ -1121,6 +1121,16 @@ void RenderPath3D::RenderVolumetrics(CommandList cmd) const
 
 		wiProfiler::EndRange(range);
 	}
+
+	if (getVolumetricCloudsEnabled())
+	{
+		wiRenderer::Postprocess_VolumetricClouds(
+			*GetGbuffer_Read(GBUFFER_COLOR),
+			rtLinearDepth,
+			depthBuffer_Copy,
+			cmd
+		);
+	}
 }
 void RenderPath3D::RenderSceneMIPChain(CommandList cmd) const
 {
@@ -1257,20 +1267,6 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 
 	// 1.) HDR post process chain
 	{
-		if (getVolumetricCloudsEnabled())
-		{
-			wiRenderer::Postprocess_VolumetricClouds(
-				*rt_read,
-				*rt_write,
-				rtLinearDepth,
-				depthBuffer_Copy,
-				cmd
-			);
-			
-			std::swap(rt_read, rt_write);
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
-		}
-
 		if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
 		{
 			GraphicsDevice* device = wiRenderer::GetDevice();
