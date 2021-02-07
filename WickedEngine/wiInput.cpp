@@ -400,7 +400,7 @@ namespace wiInput
 			case wiInput::KEYBOARD_BUTTON_LSHIFT:
 				keycode = VK_LSHIFT;
 				break;
-			case wiInput::KEYBOARD_BUTTON_F1:
+			case wiInput::KEYBOARD_BUTTON_F1: 
 				keycode = VK_F1;
 				break;
 			case wiInput::KEYBOARD_BUTTON_F2:
@@ -548,6 +548,120 @@ namespace wiInput
                 case wiInput::KEYBOARD_BUTTON_PAGEUP:
                     keycode = SDL_SCANCODE_PAGEUP;
                     break;
+				//Translating engine's keycode mapping (which comes from Win32 i presume) to the matching SDL2 keycode
+				//Win32 Link: https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
+				//SDL2 Link: https://wiki.libsdl.org/SDL_Keycode
+				//Numbers start from enum 48 to 57, 58 to 64 are undefined, 65 to 90 are alphabets.
+				//Usage: the same as win32 platform, which is (for example) wiInput::Down((wiInput::BUTTON)'A' (referenced from Editor.cpp for the engine's editor program)
+				case 48:
+					keycode = SDL_SCANCODE_0;
+					break;
+				case 49:
+					keycode = SDL_SCANCODE_1;
+					break;
+				case 50:
+					keycode = SDL_SCANCODE_2;
+					break;
+				case 51:
+					keycode = SDL_SCANCODE_3;
+					break;
+				case 52:
+					keycode = SDL_SCANCODE_4;
+					break;
+				case 53:
+					keycode = SDL_SCANCODE_5;
+					break;
+				case 54:
+					keycode = SDL_SCANCODE_6;
+					break;
+				case 55:
+					keycode = SDL_SCANCODE_7;
+					break;
+				case 56:
+					keycode = SDL_SCANCODE_8;
+					break;
+				case 57:
+					keycode = SDL_SCANCODE_9;
+					break;
+				case 65:
+					keycode = SDL_SCANCODE_A;
+					break;
+				case 66:
+					keycode = SDL_SCANCODE_B;
+					break;
+				case 67:
+					keycode = SDL_SCANCODE_C;
+					break;
+				case 68:
+					keycode = SDL_SCANCODE_D;
+					break;
+				case 69:
+					keycode = SDL_SCANCODE_E;
+					break;
+				case 70:
+					keycode = SDL_SCANCODE_F;
+					break;
+				case 71:
+					keycode = SDL_SCANCODE_G;
+					break;
+				case 72:
+					keycode = SDL_SCANCODE_H;
+					break;
+				case 73:
+					keycode = SDL_SCANCODE_I;
+					break;
+				case 74:
+					keycode = SDL_SCANCODE_J;
+					break;
+				case 75:
+					keycode = SDL_SCANCODE_K;
+					break;
+				case 76:
+					keycode = SDL_SCANCODE_L;
+					break;
+				case 77:
+					keycode = SDL_SCANCODE_M;
+					break;
+				case 78:
+					keycode = SDL_SCANCODE_N;
+					break;
+				case 79:
+					keycode = SDL_SCANCODE_O;
+					break;
+				case 80:
+					keycode = SDL_SCANCODE_P;
+					break;
+				case 81:
+					keycode = SDL_SCANCODE_Q;
+					break;
+				case 82:
+					keycode = SDL_SCANCODE_R;
+					break;
+				case 83:
+					keycode = SDL_SCANCODE_S;
+					break;
+				case 84:
+					keycode = SDL_SCANCODE_T;
+					break;
+				case 85:
+					keycode = SDL_SCANCODE_U;
+					break;
+				case 86:
+					keycode = SDL_SCANCODE_V;
+					break;
+				case 87:
+					keycode = SDL_SCANCODE_W;
+					break;
+				case 88:
+					keycode = SDL_SCANCODE_X;
+					break;
+				case 89:
+					keycode = SDL_SCANCODE_Y;
+					break;
+				case 90:
+					keycode = SDL_SCANCODE_Z;
+					break;
+				
 #endif // _WIN32
 			}
 
@@ -657,7 +771,7 @@ namespace wiInput
 		}
 #endif
 #elif SDL2
-		SDL_ShowCursor(value ? SDL_ENABLE : SDL_DISABLE);
+		SDL_ShowCursor(value ? SDL_DISABLE : SDL_ENABLE);
 #endif // _WIN32
 	}
 
