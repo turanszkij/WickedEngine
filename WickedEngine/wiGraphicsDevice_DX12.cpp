@@ -1179,30 +1179,21 @@ namespace DX12_Internal
 			descriptor.destroy();
 		}
 	};
-	struct Query_DX12
+	struct QueryHeap_DX12
 	{
 		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
-		GPU_QUERY_TYPE query_type = GPU_QUERY_TYPE_INVALID;
-		GraphicsDevice_DX12::AllocationHandler::QueryAllocator::Query query;
+		D3D12MA::Allocation* allocation = nullptr;
+		Microsoft::WRL::ComPtr<ID3D12Resource> resource;
+		Microsoft::WRL::ComPtr<ID3D12QueryHeap> heap;
 
-		~Query_DX12()
+		~QueryHeap_DX12()
 		{
-			if (query.index != ~0) 
-			{
-				allocationhandler->destroylocker.lock();
-				uint64_t framecount = allocationhandler->framecount;
-				switch (query_type)
-				{
-				case wiGraphics::GPU_QUERY_TYPE_OCCLUSION:
-				case wiGraphics::GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-					allocationhandler->destroyer_queries_occlusion.push_back(std::make_pair(query, framecount));
-					break;
-				case wiGraphics::GPU_QUERY_TYPE_TIMESTAMP:
-					allocationhandler->destroyer_queries_timestamp.push_back(std::make_pair(query, framecount));
-					break;
-				}
-				allocationhandler->destroylocker.unlock();
-			}
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+			if (allocation) allocationhandler->destroyer_allocations.push_back(std::make_pair(allocation, framecount));
+			if (resource) allocationhandler->destroyer_resources.push_back(std::make_pair(resource, framecount));
+			if (heap) allocationhandler->destroyer_queryheaps.push_back(std::make_pair(heap, framecount));
+			allocationhandler->destroylocker.unlock();
 		}
 	};
 	struct PipelineState_DX12
@@ -1345,9 +1336,9 @@ namespace DX12_Internal
 	{
 		return static_cast<Sampler_DX12*>(param->internal_state.get());
 	}
-	Query_DX12* to_internal(const GPUQuery* param)
+	QueryHeap_DX12* to_internal(const GPUQueryHeap* param)
 	{
-		return static_cast<Query_DX12*>(param->internal_state.get());
+		return static_cast<QueryHeap_DX12*>(param->internal_state.get());
 	}
 	PipelineState_DX12* to_internal(const Shader* param)
 	{
@@ -2193,58 +2184,48 @@ using namespace DX12_Internal;
 		// Perform query resolves (must be outside of render pass):
 		assert(active_renderpass[cmd] == nullptr);
 
-		if (!query_resolves_timestamp[cmd].empty())
+		if (!query_resolves[cmd].empty())
 		{
-			for (auto& x : query_resolves_timestamp[cmd])
+			for (auto& x : query_resolves[cmd])
 			{
-				uint32_t block = QueryResolveBlock(x);
-				uint32_t index = QueryResolveIndex(x);
-				GetDirectCommandList(cmd)->ResolveQueryData(
-					allocationhandler->queries_timestamp.blocks[block].pool.Get(),
-					D3D12_QUERY_TYPE_TIMESTAMP,
-					index,
-					1,
-					allocationhandler->queries_timestamp.blocks[block].readback.Get(),
-					(uint64_t)index * sizeof(uint64_t)
-				);
-			}
-			query_resolves_timestamp[cmd].clear();
-		}
+				auto internal_state = to_internal(x.heap);
 
-		if (!query_resolves_occlusion[cmd].empty())
-		{
-			for (auto& x : query_resolves_occlusion[cmd])
-			{
-				uint32_t block = QueryResolveBlock(x);
-				uint32_t index = QueryResolveIndex(x);
-				GetDirectCommandList(cmd)->ResolveQueryData(
-					allocationhandler->queries_occlusion.blocks[block].pool.Get(),
-					D3D12_QUERY_TYPE_OCCLUSION,
-					index,
-					1,
-					allocationhandler->queries_occlusion.blocks[block].readback.Get(),
-					(uint64_t)index * sizeof(uint64_t)
-				);
-			}
-			query_resolves_occlusion[cmd].clear();
-		}
+				switch (x.heap->desc.type)
+				{
+				case GPU_QUERY_TYPE_TIMESTAMP:
+					GetDirectCommandList(cmd)->ResolveQueryData(
+						internal_state->heap.Get(),
+						D3D12_QUERY_TYPE_TIMESTAMP,
+						x.index,
+						x.count,
+						internal_state->resource.Get(),
+						sizeof(uint64_t) * x.index
+					);
+					break;
+				case GPU_QUERY_TYPE_OCCLUSION_BINARY:
+					GetDirectCommandList(cmd)->ResolveQueryData(
+						internal_state->heap.Get(),
+						D3D12_QUERY_TYPE_BINARY_OCCLUSION,
+						x.index,
+						x.count,
+						internal_state->resource.Get(),
+						sizeof(uint64_t) * x.index
+					);
+					break;
+				case GPU_QUERY_TYPE_OCCLUSION:
+					GetDirectCommandList(cmd)->ResolveQueryData(
+						internal_state->heap.Get(),
+						D3D12_QUERY_TYPE_OCCLUSION,
+						x.index,
+						x.count,
+						internal_state->resource.Get(),
+						sizeof(uint64_t) * x.index
+					);
+					break;
+				}
 
-		if (!query_resolves_occlusionpred[cmd].empty())
-		{
-			for (auto& x : query_resolves_occlusionpred[cmd])
-			{
-				uint32_t block = QueryResolveBlock(x);
-				uint32_t index = QueryResolveIndex(x);
-				GetDirectCommandList(cmd)->ResolveQueryData(
-					allocationhandler->queries_occlusion.blocks[block].pool.Get(),
-					D3D12_QUERY_TYPE_BINARY_OCCLUSION,
-					index,
-					1,
-					allocationhandler->queries_occlusion.blocks[block].readback.Get(),
-					(uint64_t)index * sizeof(uint64_t)
-				);
 			}
-			query_resolves_occlusionpred[cmd].clear();
+			query_resolves[cmd].clear();
 		}
 	}
 	void GraphicsDevice_DX12::barrier_flush(CommandList cmd)
@@ -2802,10 +2783,6 @@ using namespace DX12_Internal;
 			nullUAV_texture3d = allocationhandler->descriptors_res.allocate();
 			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, nullUAV_texture3d);
 		}
-
-		// GPU Queries:
-		allocationhandler->queries_occlusion.init(allocationhandler.get(), D3D12_QUERY_HEAP_TYPE_OCCLUSION);
-		allocationhandler->queries_timestamp.init(allocationhandler.get(), D3D12_QUERY_HEAP_TYPE_TIMESTAMP);
 
 		wiBackLog::post("Created GraphicsDevice_DX12");
 	}
@@ -3679,29 +3656,59 @@ using namespace DX12_Internal;
 
 		return true;
 	}
-	bool GraphicsDevice_DX12::CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery)
+	bool GraphicsDevice_DX12::CreateQueryHeap(const GPUQueryHeapDesc* pDesc, GPUQueryHeap* pQueryHeap)
 	{
-		auto internal_state = std::make_shared<Query_DX12>();
+		auto internal_state = std::make_shared<QueryHeap_DX12>();
 		internal_state->allocationhandler = allocationhandler;
-		pQuery->internal_state = internal_state;
+		pQueryHeap->internal_state = internal_state;
 
-		pQuery->desc = *pDesc;
-		internal_state->query_type = pQuery->desc.Type;
+		pQueryHeap->desc = *pDesc;
 
-		switch (pDesc->Type)
+		D3D12_QUERY_HEAP_DESC desc = {};
+		desc.Count = pDesc->queryCount;
+
+		switch (pDesc->type)
 		{
+		default:
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			internal_state->query = allocationhandler->queries_timestamp.allocate();
-			break;
-		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
+			desc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
-		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-			internal_state->query = allocationhandler->queries_occlusion.allocate();
+		case GPU_QUERY_TYPE_OCCLUSION_BINARY:
+			desc.Type = D3D12_QUERY_HEAP_TYPE_OCCLUSION;
 			break;
 		}
 
-		return true;
+		HRESULT hr = allocationhandler->device->CreateQueryHeap(&desc, IID_PPV_ARGS(&internal_state->heap));
+		assert(SUCCEEDED(hr));
+
+		D3D12MA::ALLOCATION_DESC allocationDesc = {};
+		allocationDesc.HeapType = D3D12_HEAP_TYPE_READBACK;
+
+		D3D12_RESOURCE_DESC resdesc = {};
+		resdesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		resdesc.Format = DXGI_FORMAT_UNKNOWN;
+		resdesc.Width = (UINT64)(desc.Count * sizeof(uint64_t));
+		resdesc.Height = 1;
+		resdesc.MipLevels = 1;
+		resdesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+		resdesc.DepthOrArraySize = 1;
+		resdesc.Alignment = 0;
+		resdesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+		resdesc.SampleDesc.Count = 1;
+		resdesc.SampleDesc.Quality = 0;
+
+		hr = allocationhandler->allocator->CreateResource(
+			&allocationDesc,
+			&resdesc,
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr,
+			&internal_state->allocation,
+			IID_PPV_ARGS(&internal_state->resource)
+		);
+		assert(SUCCEEDED(hr));
+
+		return SUCCEEDED(hr);
 	}
 	bool GraphicsDevice_DX12::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
 	{
@@ -5509,54 +5516,25 @@ using namespace DX12_Internal;
 		auto internal_state = to_internal(resource);
 		internal_state->resource->Unmap(0, nullptr);
 	}
-	bool GraphicsDevice_DX12::QueryRead(const GPUQuery* query, GPUQueryResult* result)
+	void GraphicsDevice_DX12::QueryRead(const GPUQueryHeap* heap, uint32_t index, uint32_t count, uint64_t* results)
 	{
-		auto internal_state = to_internal(query);
+		if (count == 0)
+			return;
+
+		auto internal_state = to_internal(heap);
 
 		D3D12_RANGE range;
-		range.Begin = (size_t)internal_state->query.index * sizeof(uint64_t);
-		range.End = range.Begin + sizeof(uint64_t);
+		range.Begin = (size_t)index * sizeof(uint64_t);
+		range.End = range.Begin + sizeof(uint64_t) * count;
 		D3D12_RANGE nullrange = {};
 		void* data = nullptr;
 
-		switch (internal_state->query_type)
+		HRESULT hr = internal_state->resource->Map(0, &range, &data);
+		if (SUCCEEDED(hr))
 		{
-		case GPU_QUERY_TYPE_EVENT:
-			assert(0); // not implemented yet
-			break;
-		case GPU_QUERY_TYPE_TIMESTAMP:
-			if (internal_state->query.index == ~0)
-				return false;
-			allocationhandler->queries_timestamp.blocks[internal_state->query.block].readback->Map(0, &range, &data);
-			result->result_timestamp = *(uint64_t*)((size_t)data + range.Begin);
-			allocationhandler->queries_timestamp.blocks[internal_state->query.block].readback->Unmap(0, &nullrange);
-			break;
-		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
-			directQueue->GetTimestampFrequency(&result->result_timestamp_frequency);
-			break;
-		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-		{
-			if (internal_state->query.index == ~0)
-				return false;
-			BOOL passed = FALSE;
-			allocationhandler->queries_occlusion.blocks[internal_state->query.block].readback->Map(0, &range, &data);
-			passed = *(BOOL*)((size_t)data + range.Begin);
-			allocationhandler->queries_occlusion.blocks[internal_state->query.block].readback->Unmap(0, &nullrange);
-			result->result_passed_sample_count = (uint64_t)passed;
-			break;
+			std::memcpy(results, (void*)((size_t)data + range.Begin), sizeof(uint64_t) * count);
+			internal_state->resource->Unmap(0, &nullrange);
 		}
-		case GPU_QUERY_TYPE_OCCLUSION:
-			if (internal_state->query.index == ~0)
-				return false;
-			allocationhandler->queries_occlusion.blocks[internal_state->query.block].readback->Map(0, &range, &data);
-			result->result_passed_sample_count = *(uint64_t*)((size_t)data + range.Begin);
-			allocationhandler->queries_occlusion.blocks[internal_state->query.block].readback->Unmap(0, &nullrange);
-			break;
-		default:
-			return false;
-		}
-
-		return true;
 	}
 
 	void GraphicsDevice_DX12::SetCommonSampler(const StaticSampler* sam)
@@ -5769,6 +5747,9 @@ using namespace DX12_Internal;
 		hr = directQueue->Signal(descriptorheap_sam.fence.Get(), descriptorheap_sam.fenceValue);
 		assert(SUCCEEDED(hr));
 		descriptorheap_sam.cached_completedValue = descriptorheap_sam.fence->GetCompletedValue();
+
+		hr = directQueue->GetTimestampFrequency(&TIMESTAMP_FREQUENCY);
+		assert(SUCCEEDED(hr));
 
 		// Determine the last frame that we should not wait on:
 		const uint64_t lastFrameToAllowLatency = std::max(uint64_t(BACKBUFFER_COUNT - 1u), FRAMECOUNT) - (BACKBUFFER_COUNT - 1);
@@ -6243,55 +6224,74 @@ using namespace DX12_Internal;
 		}
 
 	}
-	void GraphicsDevice_DX12::QueryBegin(const GPUQuery* query, CommandList cmd)
+	void GraphicsDevice_DX12::QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)
 	{
-		auto internal_state = to_internal(query);
+		auto internal_state = to_internal(heap);
 
-		switch (internal_state->query_type)
+		switch (heap->desc.type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			GetDirectCommandList(cmd)->BeginQuery(allocationhandler->queries_timestamp.blocks[internal_state->query.block].pool.Get(), D3D12_QUERY_TYPE_TIMESTAMP, internal_state->query.index);
+			GetDirectCommandList(cmd)->BeginQuery(
+				internal_state->heap.Get(),
+				D3D12_QUERY_TYPE_TIMESTAMP,
+				index
+			);
 			break;
-		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-			GetDirectCommandList(cmd)->BeginQuery(allocationhandler->queries_occlusion.blocks[internal_state->query.block].pool.Get(), D3D12_QUERY_TYPE_BINARY_OCCLUSION, internal_state->query.index);
+		case GPU_QUERY_TYPE_OCCLUSION_BINARY:
+			GetDirectCommandList(cmd)->BeginQuery(
+				internal_state->heap.Get(),
+				D3D12_QUERY_TYPE_BINARY_OCCLUSION,
+				index
+			);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
-			GetDirectCommandList(cmd)->BeginQuery(allocationhandler->queries_occlusion.blocks[internal_state->query.block].pool.Get(), D3D12_QUERY_TYPE_OCCLUSION, internal_state->query.index);
+			GetDirectCommandList(cmd)->BeginQuery(
+				internal_state->heap.Get(),
+				D3D12_QUERY_TYPE_OCCLUSION,
+				index
+			);
 			break;
 		}
 	}
-	void GraphicsDevice_DX12::QueryEnd(const GPUQuery* query, CommandList cmd)
+	void GraphicsDevice_DX12::QueryEnd(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)
 	{
-		auto internal_state = to_internal(query);
-		uint64_t resolver = QueryResolveCreate(internal_state->query.block, internal_state->query.index);
+		auto internal_state = to_internal(heap);
 
-		switch (internal_state->query_type)
+		switch (heap->desc.type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
 			GetDirectCommandList(cmd)->EndQuery(
-				allocationhandler->queries_timestamp.blocks[internal_state->query.block].pool.Get(),
+				internal_state->heap.Get(),
 				D3D12_QUERY_TYPE_TIMESTAMP,
-				internal_state->query.index
+				index
 			);
-			query_resolves_timestamp[cmd].push_back(resolver);
 			break;
-		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+		case GPU_QUERY_TYPE_OCCLUSION_BINARY:
 			GetDirectCommandList(cmd)->EndQuery(
-				allocationhandler->queries_occlusion.blocks[internal_state->query.block].pool.Get(),
+				internal_state->heap.Get(),
 				D3D12_QUERY_TYPE_BINARY_OCCLUSION,
-				internal_state->query.index
+				index
 			);
-			query_resolves_occlusionpred[cmd].push_back(resolver);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
 			GetDirectCommandList(cmd)->EndQuery(
-				allocationhandler->queries_occlusion.blocks[internal_state->query.block].pool.Get(),
+				internal_state->heap.Get(),
 				D3D12_QUERY_TYPE_OCCLUSION,
-				internal_state->query.index
+				index
 			);
-			query_resolves_occlusion[cmd].push_back(resolver);
 			break;
 		}
+	}
+	void GraphicsDevice_DX12::QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, CommandList cmd)
+	{
+		if (count == 0)
+			return;
+
+		QueryResolver resolver;
+		resolver.heap = heap;
+		resolver.index = index;
+		resolver.count = count;
+		query_resolves[cmd].push_back(resolver);
 	}
 	void GraphicsDevice_DX12::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{

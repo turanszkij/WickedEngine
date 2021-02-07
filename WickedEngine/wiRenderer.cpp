@@ -4251,6 +4251,9 @@ void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visib
 	{
 		device->EventBegin("Occlusion Culling Render", cmd);
 
+		int query_write = vis.scene->query_write;
+		const GPUQueryHeap& queryHeap = vis.scene->queryHeap[query_write];
+
 		device->BindPipelineState(&PSO_occlusionquery, cmd);
 
 		XMMATRIX VP = camera_previous.GetViewProjection();
@@ -4265,26 +4268,28 @@ void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visib
 				continue;
 			}
 
-			int queryIndex = (object.queryIndex - 1) % arraysize(object.occlusionQueries);
-			const GPUQuery& query = object.occlusionQueries[queryIndex];
-
-			if (!object.occlusionQueries[queryIndex].IsValid())
+			int queryIndex = object.occlusionQueries[query_write];
+			if (queryIndex >= 0)
 			{
-				// object doesn't have a valid occlusion query
-				continue;
+				const AABB& aabb = vis.scene->aabb_objects[instanceIndex];
+
+				XMStoreFloat4x4(&cb.g_xTransform, aabb.getAsBoxMatrix() * VP);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &cb, cmd);
+				device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+
+				// render bounding box to later read the occlusion status
+				device->QueryBegin(&queryHeap, queryIndex, cmd);
+				device->Draw(14, 0, cmd);
+				device->QueryEnd(&queryHeap, queryIndex, cmd);
 			}
-
-			const AABB& aabb = vis.scene->aabb_objects[instanceIndex];
-
-			XMStoreFloat4x4(&cb.g_xTransform, aabb.getAsBoxMatrix() * VP);
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &cb, cmd);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-
-			// render bounding box to later read the occlusion status
-			device->QueryBegin(&query, cmd);
-			device->Draw(14, 0, cmd);
-			device->QueryEnd(&query, cmd);
 		}
+
+		device->QueryResolve(
+			&queryHeap,
+			0,
+			vis.scene->writtenQueries[query_write],
+			cmd
+		);
 
 		device->EventEnd(cmd);
 	}
@@ -4304,6 +4309,33 @@ void OcclusionCulling_Read(Scene& scene, const Visibility& vis)
 
 	if (!vis.visibleObjects.empty())
 	{
+		if (scene.queryResults.empty())
+		{
+			GPUQueryHeapDesc desc;
+			desc.type = GPU_QUERY_TYPE_OCCLUSION_BINARY;
+			desc.queryCount = 2048;
+			for (int i = 0; i < arraysize(scene.queryHeap); ++i)
+			{
+				bool success = wiRenderer::GetDevice()->CreateQueryHeap(&desc, &scene.queryHeap[i]);
+				assert(success);
+			}
+			scene.queryResults.resize(desc.queryCount);
+		}
+
+		scene.nextQuery = 0;
+		scene.query_write++;
+		scene.query_read = scene.query_write + 1;
+		scene.query_write %= arraysize(scene.queryHeap);
+		scene.query_read %= arraysize(scene.queryHeap);
+
+		device->QueryRead(
+			&scene.queryHeap[scene.query_read],
+			0,
+			scene.writtenQueries[scene.query_read],
+			scene.queryResults.data()
+		);
+		scene.writtenQueries[scene.query_read] = 0;
+
 		for (uint32_t instanceIndex : vis.visibleObjects)
 		{
 			ObjectComponent& object = scene.objects[instanceIndex];
@@ -4323,34 +4355,39 @@ void OcclusionCulling_Read(Scene& scene, const Visibility& vis)
 			}
 			else
 			{
-				if (object.occlusionQueries[object.queryIndex].IsValid())
+				uint32_t writeQuery = scene.nextQuery++; // allocate new occlusion query from heap
+				if(writeQuery < scene.queryHeap[scene.query_write].desc.queryCount)
+				{
+					object.occlusionQueries[scene.query_write] = writeQuery;
+				}
+				else
+				{
+					object.occlusionQueries[scene.query_write] = -1; // query owerflow
+				}
+				int queryIndex = object.occlusionQueries[scene.query_read];
+				if (queryIndex >= 0)
 				{
 					// query exists, read it:
-					GPUQueryResult result;
-					bool success = device->QueryRead(&object.occlusionQueries[object.queryIndex], &result);
-					if (!success || result.result_passed_sample_count > 0)
+					uint64_t visible = scene.queryResults[queryIndex];
+					if (visible)
 					{
 						object.occlusionHistory |= 1; // visible
 					}
 					// (else it is left as occluded)
 
-					object.queryIndex = (object.queryIndex + 1) % arraysize(object.occlusionQueries);
+					object.occlusionQueries[scene.query_read] = -1;
 				}
 				else
 				{
-					// query doesn't exist, create it:
+					// query doesn't exist, mar it as visible:
 					object.occlusionHistory |= 1; // visible
-
-					GPUQueryDesc desc;
-					desc.Type = GPU_QUERY_TYPE_OCCLUSION_PREDICATE;
-					for (int i = 0; i < arraysize(object.occlusionQueries); ++i)
-					{
-						device->CreateQuery(&desc, &object.occlusionQueries[i]);
-					}
 				}
 			}
 		}
 	}
+
+	scene.nextQuery = std::min(scene.nextQuery, scene.queryHeap[scene.query_write].desc.queryCount);
+	scene.writtenQueries[scene.query_write] = scene.nextQuery; // save allocated query amount
 
 	wiProfiler::EndRange(range); // Occlusion Culling Read
 }

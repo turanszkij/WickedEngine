@@ -735,32 +735,19 @@ namespace Vulkan_Internal
 			allocationhandler->destroylocker.unlock();
 		}
 	};
-	struct Query_Vulkan
+	struct QueryHeap_Vulkan
 	{
 		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
-		GPU_QUERY_TYPE query_type = GPU_QUERY_TYPE_INVALID;
-		GraphicsDevice_Vulkan::AllocationHandler::QueryAllocator::Query query;
+		VkQueryPool pool = VK_NULL_HANDLE;
 
-		~Query_Vulkan()
+		~QueryHeap_Vulkan()
 		{
 			if (allocationhandler == nullptr)
 				return;
-			if (query.index != ~0)
-			{
-				allocationhandler->destroylocker.lock();
-				uint64_t framecount = allocationhandler->framecount;
-				switch (query_type)
-				{
-				case wiGraphics::GPU_QUERY_TYPE_OCCLUSION:
-				case wiGraphics::GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-					allocationhandler->destroyer_queries_occlusion.push_back(std::make_pair(query, framecount));
-					break;
-				case wiGraphics::GPU_QUERY_TYPE_TIMESTAMP:
-					allocationhandler->destroyer_queries_timestamp.push_back(std::make_pair(query, framecount));
-					break;
-				}
-				allocationhandler->destroylocker.unlock();
-			}
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+			if (pool) allocationhandler->destroyer_querypools.push_back(std::make_pair(pool, framecount));
+			allocationhandler->destroylocker.unlock();
 		}
 	};
 	struct Shader_Vulkan
@@ -931,9 +918,9 @@ namespace Vulkan_Internal
 	{
 		return static_cast<Sampler_Vulkan*>(param->internal_state.get());
 	}
-	Query_Vulkan* to_internal(const GPUQuery* param)
+	QueryHeap_Vulkan* to_internal(const GPUQueryHeap* param)
 	{
-		return static_cast<Query_Vulkan*>(param->internal_state.get());
+		return static_cast<QueryHeap_Vulkan*>(param->internal_state.get());
 	}
 	Shader_Vulkan* to_internal(const Shader* param)
 	{
@@ -2820,7 +2807,7 @@ using namespace Vulkan_Internal;
 		}
 
 		// GPU Queries:
-		timestamp_frequency = uint64_t(1.0 / double(properties2.properties.limits.timestampPeriod) * 1000 * 1000 * 1000);
+		TIMESTAMP_FREQUENCY = uint64_t(1.0 / double(properties2.properties.limits.timestampPeriod) * 1000 * 1000 * 1000);
 		allocationhandler->queries_occlusion.init(allocationhandler.get(), VK_QUERY_TYPE_OCCLUSION);
 		allocationhandler->queries_timestamp.init(allocationhandler.get(), VK_QUERY_TYPE_TIMESTAMP);
 
@@ -4112,29 +4099,34 @@ using namespace Vulkan_Internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
+	bool GraphicsDevice_Vulkan::CreateQueryHeap(const GPUQueryHeapDesc* pDesc, GPUQueryHeap* pQueryHeap)
 	{
-		auto internal_state = std::make_shared<Query_Vulkan>();
+		auto internal_state = std::make_shared<QueryHeap_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
-		pQuery->internal_state = internal_state;
+		pQueryHeap->internal_state = internal_state;
 
-		pQuery->desc = *pDesc;
-		internal_state->query_type = pQuery->desc.Type;
+		pQueryHeap->desc = *pDesc;
 
-		switch (pDesc->Type)
+		VkQueryPoolCreateInfo poolInfo = {};
+		poolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+		poolInfo.queryCount = pDesc->queryCount;
+
+		switch (pDesc->type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			internal_state->query = allocationhandler->queries_timestamp.allocate();
-			break;
-		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
+			poolInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
-		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-			internal_state->query = allocationhandler->queries_occlusion.allocate();
+		case GPU_QUERY_TYPE_OCCLUSION_BINARY:
+			poolInfo.queryType = VK_QUERY_TYPE_OCCLUSION;
 			break;
 		}
 
-		return true;
+		VkResult res = vkCreateQueryPool(device, &poolInfo, nullptr, &internal_state->pool);
+		assert(res == VK_SUCCESS);
+		vkResetQueryPool(device, internal_state->pool, 0, poolInfo.queryCount);
+
+		return res == VK_SUCCESS;
 	}
 	bool GraphicsDevice_Vulkan::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
 	{
@@ -5700,39 +5692,31 @@ using namespace Vulkan_Internal;
 			vkUnmapMemory(device, internal_state->allocation->GetMemory());
 		}
 	}
-	bool GraphicsDevice_Vulkan::QueryRead(const GPUQuery* query, GPUQueryResult* result)
+	void GraphicsDevice_Vulkan::QueryRead(const GPUQueryHeap* heap, uint32_t index, uint32_t count, uint64_t* results)
 	{
-		auto internal_state = to_internal(query);
+		if (count == 0)
+			return;
 
-		VkResult res = VK_SUCCESS;
+		auto internal_state = to_internal(heap);
 
-		switch (internal_state->query_type)
-		{
-		case GPU_QUERY_TYPE_EVENT:
-			assert(0); // not implemented yet
-			break;
-		case GPU_QUERY_TYPE_TIMESTAMP:
-			if (internal_state->query.index == ~0)
-				return false;
-			res = vkGetQueryPoolResults(device, allocationhandler->queries_timestamp.blocks[internal_state->query.block], (uint32_t)internal_state->query.index, 1, sizeof(uint64_t),
-				&result->result_timestamp, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
-			break;
-		case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
-			result->result_timestamp_frequency = timestamp_frequency;
-			break;
-		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-		case GPU_QUERY_TYPE_OCCLUSION:
-			if (internal_state->query.index == ~0)
-				return false;
-			res = vkGetQueryPoolResults(device, allocationhandler->queries_occlusion.blocks[internal_state->query.block], (uint32_t)internal_state->query.index, 1, sizeof(uint64_t),
-				&result->result_passed_sample_count, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_PARTIAL_BIT);
-			break;
-		default:
-			return false;
-			break;
-		}
+		VkResult res = vkGetQueryPoolResults(
+			device,
+			internal_state->pool,
+			index,
+			count,
+			sizeof(uint64_t) * count,
+			results,
+			sizeof(uint64_t),
+			VK_QUERY_RESULT_64_BIT
+		);
+		assert(res == VK_SUCCESS);
 
-		return res == VK_SUCCESS;
+		vkResetQueryPool(
+			device,
+			internal_state->pool,
+			index,
+			count
+		);
 	}
 
 	void GraphicsDevice_Vulkan::SetCommonSampler(const StaticSampler* sam)
@@ -6640,37 +6624,32 @@ using namespace Vulkan_Internal;
 		}
 
 	}
-	void GraphicsDevice_Vulkan::QueryBegin(const GPUQuery *query, CommandList cmd)
+	void GraphicsDevice_Vulkan::QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)
 	{
-		auto internal_state = to_internal(query);
+		auto internal_state = to_internal(heap);
 
-		switch (internal_state->query_type)
+		switch (heap->desc.type)
 		{
-		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-			vkResetQueryPool(device, allocationhandler->queries_occlusion.blocks[internal_state->query.block], (uint32_t)internal_state->query.index, 1);
-			vkCmdBeginQuery(GetDirectCommandList(cmd), allocationhandler->queries_occlusion.blocks[internal_state->query.block], (uint32_t)internal_state->query.index, 0);
+		case GPU_QUERY_TYPE_OCCLUSION_BINARY:
+			vkCmdBeginQuery(GetDirectCommandList(cmd), internal_state->pool, index, 0);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
-			vkResetQueryPool(device, allocationhandler->queries_occlusion.blocks[internal_state->query.block], (uint32_t)internal_state->query.index, 1);
-			vkCmdBeginQuery(GetDirectCommandList(cmd), allocationhandler->queries_occlusion.blocks[internal_state->query.block], (uint32_t)internal_state->query.index, VK_QUERY_CONTROL_PRECISE_BIT);
+			vkCmdBeginQuery(GetDirectCommandList(cmd), internal_state->pool, index, VK_QUERY_CONTROL_PRECISE_BIT);
 			break;
 		}
 	}
-	void GraphicsDevice_Vulkan::QueryEnd(const GPUQuery *query, CommandList cmd)
+	void GraphicsDevice_Vulkan::QueryEnd(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)
 	{
-		auto internal_state = to_internal(query);
+		auto internal_state = to_internal(heap);
 
-		switch (internal_state->query_type)
+		switch (heap->desc.type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			vkResetQueryPool(device, allocationhandler->queries_timestamp.blocks[internal_state->query.block], (uint32_t)internal_state->query.index, 1);
-			vkCmdWriteTimestamp(GetDirectCommandList(cmd), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, allocationhandler->queries_timestamp.blocks[internal_state->query.block], internal_state->query.index);
+			vkCmdWriteTimestamp(GetDirectCommandList(cmd), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, internal_state->pool, index);
 			break;
-		case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-			vkCmdEndQuery(GetDirectCommandList(cmd), allocationhandler->queries_occlusion.blocks[internal_state->query.block], internal_state->query.index);
-			break;
+		case GPU_QUERY_TYPE_OCCLUSION_BINARY:
 		case GPU_QUERY_TYPE_OCCLUSION:
-			vkCmdEndQuery(GetDirectCommandList(cmd), allocationhandler->queries_occlusion.blocks[internal_state->query.block], internal_state->query.index);
+			vkCmdEndQuery(GetDirectCommandList(cmd), internal_state->pool, index);
 			break;
 		}
 	}

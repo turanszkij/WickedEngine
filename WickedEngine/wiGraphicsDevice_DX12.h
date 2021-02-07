@@ -297,12 +297,13 @@ namespace wiGraphics
 		void predispatch(CommandList cmd);
 		void preraytrace(CommandList cmd);
 
-		constexpr uint64_t QueryResolveCreate(uint32_t block, uint32_t index) const { return (uint64_t(block) << 32) | uint64_t(index); }
-		constexpr uint32_t QueryResolveBlock(uint64_t resolve) const { return resolve >> 32; }
-		constexpr uint32_t QueryResolveIndex(uint64_t resolve) const { return resolve & 0xFFFFFFFF; }
-		std::vector<uint64_t> query_resolves_timestamp[COMMANDLIST_COUNT] = {};
-		std::vector<uint64_t> query_resolves_occlusion[COMMANDLIST_COUNT] = {};
-		std::vector<uint64_t> query_resolves_occlusionpred[COMMANDLIST_COUNT] = {};
+		struct QueryResolver
+		{
+			const GPUQueryHeap* heap = nullptr;
+			uint32_t index = 0;
+			uint32_t count = 0;
+		};
+		std::vector<QueryResolver> query_resolves[COMMANDLIST_COUNT];
 
 		std::atomic<CommandList> cmd_count{ 0 };
 
@@ -314,7 +315,7 @@ namespace wiGraphics
 		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) override;
 		bool CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) override;
 		bool CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) override;
-		bool CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) override;
+		bool CreateQueryHeap(const GPUQueryHeapDesc* pDesc, GPUQueryHeap* pQueryHeap) override;
 		bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
 		bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
 		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) override;
@@ -333,7 +334,7 @@ namespace wiGraphics
 
 		void Map(const GPUResource* resource, Mapping* mapping) override;
 		void Unmap(const GPUResource* resource) override;
-		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
+		void QueryRead(const GPUQueryHeap* heap, uint32_t index, uint32_t count, uint64_t* results) override;
 
 		void SetCommonSampler(const StaticSampler* sam) override;
 
@@ -385,8 +386,9 @@ namespace wiGraphics
 		void DispatchMeshIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
 		void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) override;
 		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) override;
-		void QueryBegin(const GPUQuery *query, CommandList cmd) override;
-		void QueryEnd(const GPUQuery *query, CommandList cmd) override;
+		void QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd) override;
+		void QueryEnd(const GPUQueryHeap* heap, uint32_t index, CommandList cmd) override;
+		void QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, CommandList cmd) override;
 		void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) override;
 		void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) override;
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
@@ -464,107 +466,9 @@ namespace wiGraphics
 			DescriptorAllocator descriptors_rtv;
 			DescriptorAllocator descriptors_dsv;
 
-			struct QueryAllocator
-			{
-				AllocationHandler* allocationhandler = nullptr;
-				std::mutex locker;
-				D3D12_QUERY_HEAP_DESC desc = {};
-
-				struct Block
-				{
-					Microsoft::WRL::ComPtr<ID3D12QueryHeap> pool;
-					Microsoft::WRL::ComPtr<ID3D12Resource> readback;
-					D3D12MA::Allocation* allocation = nullptr;
-				};
-				std::vector<Block> blocks;
-
-				struct Query
-				{
-					uint32_t block = ~0;
-					uint32_t index = ~0;
-				};
-				std::vector<Query> freelist;
-
-				void init(AllocationHandler* allocationhandler, D3D12_QUERY_HEAP_TYPE type)
-				{
-					this->allocationhandler = allocationhandler;
-					desc.Type = type;
-					desc.Count = 1024;
-				}
-				void destroy()
-				{
-					for (auto& x : blocks)
-					{
-						x.allocation->Release();
-					}
-				}
-				void block_allocate()
-				{
-					uint32_t block_index = (uint32_t)blocks.size();
-					blocks.emplace_back();
-					auto& block = blocks.back();
-					HRESULT hr = allocationhandler->device->CreateQueryHeap(&desc, IID_PPV_ARGS(&block.pool));
-					assert(SUCCEEDED(hr));
-					for (UINT i = 0; i < desc.Count; ++i)
-					{
-						freelist.emplace_back();
-						freelist.back().block = block_index;
-						freelist.back().index = i;
-					}
-
-					D3D12MA::ALLOCATION_DESC allocationDesc = {};
-					allocationDesc.HeapType = D3D12_HEAP_TYPE_READBACK;
-
-					D3D12_RESOURCE_DESC resdesc = {};
-					resdesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-					resdesc.Format = DXGI_FORMAT_UNKNOWN;
-					resdesc.Width = (UINT64)(desc.Count * sizeof(uint64_t));
-					resdesc.Height = 1;
-					resdesc.MipLevels = 1;
-					resdesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-					resdesc.DepthOrArraySize = 1;
-					resdesc.Alignment = 0;
-					resdesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-					resdesc.SampleDesc.Count = 1;
-					resdesc.SampleDesc.Quality = 0;
-
-					hr = allocationhandler->allocator->CreateResource(
-						&allocationDesc,
-						&resdesc,
-						D3D12_RESOURCE_STATE_COPY_DEST,
-						nullptr,
-						&block.allocation,
-						IID_PPV_ARGS(&block.readback)
-					);
-					assert(SUCCEEDED(hr));
-				}
-				Query allocate()
-				{
-					locker.lock();
-					if (freelist.empty())
-					{
-						block_allocate();
-					}
-					assert(!freelist.empty());
-					auto query = freelist.back();
-					freelist.pop_back();
-					locker.unlock();
-					return query;
-				}
-				void free(Query query)
-				{
-					locker.lock();
-					freelist.push_back(query);
-					locker.unlock();
-				}
-			};
-			QueryAllocator queries_timestamp;
-			QueryAllocator queries_occlusion;
-
 			std::deque<std::pair<D3D12MA::Allocation*, uint64_t>> destroyer_allocations;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, uint64_t>> destroyer_resources;
-			std::deque<std::pair<QueryAllocator::Query, uint64_t>> destroyer_queries_timestamp;
-			std::deque<std::pair<QueryAllocator::Query, uint64_t>> destroyer_queries_occlusion;
+			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12QueryHeap>, uint64_t>> destroyer_queryheaps;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12PipelineState>, uint64_t>> destroyer_pipelines;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12RootSignature>, uint64_t>> destroyer_rootSignatures;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12StateObject>, uint64_t>> destroyer_stateobjects;
@@ -573,8 +477,6 @@ namespace wiGraphics
 			~AllocationHandler()
 			{
 				Update(~0, 0); // destroy all remaining
-				queries_occlusion.destroy();
-				queries_timestamp.destroy();
 				if (allocator) allocator->Release();
 			}
 
@@ -608,26 +510,12 @@ namespace wiGraphics
 						break;
 					}
 				}
-				while (!destroyer_queries_occlusion.empty())
+				while (!destroyer_queryheaps.empty())
 				{
-					if (destroyer_queries_occlusion.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_queryheaps.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
 					{
-						auto item = destroyer_queries_occlusion.front();
-						destroyer_queries_occlusion.pop_front();
-						queries_occlusion.free(item.first);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_queries_timestamp.empty())
-				{
-					if (destroyer_queries_timestamp.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_queries_timestamp.front();
-						destroyer_queries_timestamp.pop_front();
-						queries_timestamp.free(item.first);
+						destroyer_queryheaps.pop_front();
+						// comptr auto delete
 					}
 					else
 					{

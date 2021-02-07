@@ -250,12 +250,9 @@ namespace wiGraphics
 	};
 	enum GPU_QUERY_TYPE
 	{
-		GPU_QUERY_TYPE_INVALID,				// do not use! Indicates if query was not created.
-		GPU_QUERY_TYPE_EVENT,				// has the GPU reached this point?
-		GPU_QUERY_TYPE_OCCLUSION,			// how many samples passed depthstencil test?
-		GPU_QUERY_TYPE_OCCLUSION_PREDICATE, // are there any samples that passed depthstencil test
 		GPU_QUERY_TYPE_TIMESTAMP,			// retrieve time point of gpu execution
-		GPU_QUERY_TYPE_TIMESTAMP_DISJOINT,	// timestamp frequency information
+		GPU_QUERY_TYPE_OCCLUSION,			// how many samples passed depth test?
+		GPU_QUERY_TYPE_OCCLUSION_BINARY,	// depth test passed or not?
 	};
 	enum INDEXBUFFER_FORMAT
 	{
@@ -483,15 +480,10 @@ namespace wiGraphics
 		uint32_t StructureByteStride = 0; // needed for typed and structured buffer types!
 		FORMAT Format = FORMAT_UNKNOWN; // only needed for typed buffer!
 	};
-	struct GPUQueryDesc
+	struct GPUQueryHeapDesc
 	{
-		GPU_QUERY_TYPE Type = GPU_QUERY_TYPE_INVALID;
-	};
-	struct GPUQueryResult
-	{
-		uint64_t	result_passed_sample_count = 0;
-		uint64_t	result_timestamp = 0;
-		uint64_t	result_timestamp_frequency = 0;
+		GPU_QUERY_TYPE type = GPU_QUERY_TYPE_TIMESTAMP;
+		uint32_t queryCount = 0;
 	};
 	struct PipelineStateDesc
 	{
@@ -783,11 +775,11 @@ namespace wiGraphics
 		const TextureDesc& GetDesc() const { return desc; }
 	};
 
-	struct GPUQuery : public GraphicsDeviceChild
+	struct GPUQueryHeap : public GraphicsDeviceChild
 	{
-		GPUQueryDesc desc;
+		GPUQueryHeapDesc desc;
 
-		const GPUQueryDesc& GetDesc() const { return desc; }
+		const GPUQueryHeapDesc& GetDesc() const { return desc; }
 	};
 
 	struct PipelineState : public GraphicsDeviceChild

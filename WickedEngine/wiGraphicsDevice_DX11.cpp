@@ -1142,9 +1142,9 @@ namespace DX11_Internal
 	{
 		ComPtr<ID3D11SamplerState> resource;
 	};
-	struct Query_DX11
+	struct QueryHeap_DX11
 	{
-		ComPtr<ID3D11Query> resource;
+		std::vector<ComPtr<ID3D11Query>> resources;
 	};
 
 	Resource_DX11* to_internal(const GPUResource* param)
@@ -1167,9 +1167,9 @@ namespace DX11_Internal
 	{
 		return static_cast<Sampler_DX11*>(param->internal_state.get());
 	}
-	Query_DX11* to_internal(const GPUQuery* param)
+	QueryHeap_DX11* to_internal(const GPUQueryHeap* param)
 	{
-		return static_cast<Query_DX11*>(param->internal_state.get());
+		return static_cast<QueryHeap_DX11*>(param->internal_state.get());
 	}
 }
 using namespace DX11_Internal;
@@ -1468,6 +1468,13 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 	// ensures that the application will only render after each VSync, minimizing power consumption.
 	hr = pDXGIDevice->SetMaximumFrameLatency(1);
 
+	D3D11_QUERY_DESC queryDesc = {};
+	queryDesc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
+	for (auto& x : disjointQueries)
+	{
+		hr = device->CreateQuery(&queryDesc, &x);
+		assert(SUCCEEDED(hr));
+	}
 
 	D3D_FEATURE_LEVEL aquiredFeatureLevel = device->GetFeatureLevel();
 	if (aquiredFeatureLevel >= D3D_FEATURE_LEVEL_11_0)
@@ -1767,40 +1774,41 @@ bool GraphicsDevice_DX11::CreateSampler(const SamplerDesc *pSamplerDesc, Sampler
 
 	return SUCCEEDED(hr);
 }
-bool GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
+bool GraphicsDevice_DX11::CreateQueryHeap(const GPUQueryHeapDesc* pDesc, GPUQueryHeap* pQueryHeap)
 {
-	auto internal_state = std::make_shared<Query_DX11>();
-	pQuery->internal_state = internal_state;
+	auto internal_state = std::make_shared<QueryHeap_DX11>();
+	pQueryHeap->internal_state = internal_state;
 
-	pQuery->desc = *pDesc;
+	pQueryHeap->desc = *pDesc;
 
 	D3D11_QUERY_DESC desc;
 	desc.MiscFlags = 0;
 	desc.Query = D3D11_QUERY_EVENT;
-	if (pDesc->Type == GPU_QUERY_TYPE_EVENT)
+	switch (pDesc->type)
 	{
-		desc.Query = D3D11_QUERY_EVENT;
-	}
-	else if (pDesc->Type == GPU_QUERY_TYPE_OCCLUSION)
-	{
-		desc.Query = D3D11_QUERY_OCCLUSION;
-	}
-	else if (pDesc->Type == GPU_QUERY_TYPE_OCCLUSION_PREDICATE)
-	{
-		desc.Query = D3D11_QUERY_OCCLUSION_PREDICATE;
-	}
-	else if (pDesc->Type == GPU_QUERY_TYPE_TIMESTAMP)
-	{
+	default:
+	case GPU_QUERY_TYPE_TIMESTAMP:
 		desc.Query = D3D11_QUERY_TIMESTAMP;
+		break;
+	case GPU_QUERY_TYPE_OCCLUSION:
+		desc.Query = D3D11_QUERY_OCCLUSION;
+		break;
+	case GPU_QUERY_TYPE_OCCLUSION_BINARY:
+		desc.Query = D3D11_QUERY_OCCLUSION_PREDICATE;
+		break;
 	}
-	else if (pDesc->Type == GPU_QUERY_TYPE_TIMESTAMP_DISJOINT)
+
+	internal_state->resources.resize(pDesc->queryCount);
+	for (uint32_t i = 0; i < pDesc->queryCount; ++i)
 	{
-		desc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
+		HRESULT hr = device->CreateQuery(&desc, &internal_state->resources[i]);
+		if (!SUCCEEDED(hr))
+		{
+			return false;
+		}
 	}
 
-	HRESULT hr = device->CreateQuery(&desc, &internal_state->resource);
-
-	return SUCCEEDED(hr);
+	return true;
 }
 bool GraphicsDevice_DX11::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
 {
@@ -2518,43 +2526,39 @@ void GraphicsDevice_DX11::Unmap(const GPUResource* resource)
 	auto internal_state = to_internal(resource);
 	immediateContext->Unmap(internal_state->resource.Get(), 0);
 }
-bool GraphicsDevice_DX11::QueryRead(const GPUQuery* query, GPUQueryResult* result)
+void GraphicsDevice_DX11::QueryRead(const GPUQueryHeap* heap, uint32_t index, uint32_t count, uint64_t* results)
 {
+	if (count == 0)
+		return;
+
+	auto internal_state = to_internal(heap);
+
 	const uint32_t _flags = D3D11_ASYNC_GETDATA_DONOTFLUSH;
 
-	auto internal_state = to_internal(query);
-	if (internal_state->resource == nullptr)
-		return false;
-
-	ID3D11Query* QUERY = internal_state->resource.Get();
-
 	HRESULT hr = S_OK;
-	switch (query->desc.Type)
-	{
-	case GPU_QUERY_TYPE_TIMESTAMP:
-		hr = immediateContext->GetData(QUERY, &result->result_timestamp, sizeof(uint64_t), _flags);
-		break;
-	case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
-	{
-		D3D11_QUERY_DATA_TIMESTAMP_DISJOINT _temp;
-		hr = immediateContext->GetData(QUERY, &_temp, sizeof(_temp), _flags);
-		result->result_timestamp_frequency = _temp.Frequency;
-	}
-	break;
-	case GPU_QUERY_TYPE_EVENT:
-	case GPU_QUERY_TYPE_OCCLUSION:
-		hr = immediateContext->GetData(QUERY, &result->result_passed_sample_count, sizeof(uint64_t), _flags);
-		break;
-	case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-	{
-		BOOL passed = FALSE;
-		hr = immediateContext->GetData(QUERY, &passed, sizeof(BOOL), _flags);
-		result->result_passed_sample_count = (uint64_t)passed;
-		break;
-	}
-	}
 
-	return hr != S_FALSE;
+	assert(index + count <= internal_state->resources.size());
+	for (uint32_t i = 0; i < count; ++i)
+	{
+		ID3D11Query* QUERY = internal_state->resources[index + i].Get();
+
+		switch (heap->desc.type)
+		{
+		case GPU_QUERY_TYPE_TIMESTAMP:
+			hr = immediateContext->GetData(QUERY, &results[i], sizeof(uint64_t), _flags);
+			break;
+		case GPU_QUERY_TYPE_OCCLUSION:
+			hr = immediateContext->GetData(QUERY, &results[i], sizeof(uint64_t), _flags);
+			break;
+		case GPU_QUERY_TYPE_OCCLUSION_BINARY:
+		{
+			BOOL passed = FALSE;
+			hr = immediateContext->GetData(QUERY, &passed, sizeof(BOOL), _flags);
+			results[i] = (uint64_t)passed;
+			break;
+		}
+		}
+	}
 }
 
 void GraphicsDevice_DX11::SetCommonSampler(const StaticSampler* sam)
@@ -2670,16 +2674,34 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 }
 void GraphicsDevice_DX11::SubmitCommandLists()
 {
+	const int disjoint_write = FRAMECOUNT % arraysize(disjointQueries);
+	const int disjoint_read = (FRAMECOUNT + 1) % arraysize(disjointQueries);
+	immediateContext->Begin(disjointQueries[disjoint_write].Get());
+
 	// Execute deferred command lists:
 	CommandList cmd_last = cmd_count.load();
 	cmd_count.store(0);
 	for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
 	{
-		deviceContexts[cmd]->FinishCommandList(false, &commandLists[cmd]);
+		HRESULT hr = deviceContexts[cmd]->FinishCommandList(false, &commandLists[cmd]);
+		assert(SUCCEEDED(hr));
 		immediateContext->ExecuteCommandList(commandLists[cmd].Get(), false);
 		commandLists[cmd].Reset();
 	}
 	immediateContext->ClearState();
+
+	immediateContext->End(disjointQueries[disjoint_write].Get());
+	D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjoint;
+	HRESULT hr = immediateContext->GetData(
+		disjointQueries[disjoint_read].Get(),
+		&disjoint,
+		sizeof(disjoint),
+		D3D11_ASYNC_GETDATA_DONOTFLUSH
+	);
+	if (disjoint.Disjoint == FALSE && hr == S_OK)
+	{
+		TIMESTAMP_FREQUENCY = disjoint.Frequency;
+	}
 
 	FRAMECOUNT++;
 }
@@ -2688,15 +2710,17 @@ void GraphicsDevice_DX11::WaitForGPU()
 {
 	immediateContext->Flush();
 
-	GPUQuery query;
-	GPUQueryDesc desc;
-	desc.Type = GPU_QUERY_TYPE_EVENT;
-	bool success = CreateQuery(&desc, &query);
-	assert(success);
-	auto internal_state = to_internal(&query);
-	immediateContext->End(internal_state->resource.Get());
+
+	D3D11_QUERY_DESC desc;
+	desc.MiscFlags = 0;
+	desc.Query = D3D11_QUERY_EVENT;
+
+	ComPtr<ID3D11Query> query;
+	HRESULT hr = device->CreateQuery(&desc, &query);
+	assert(SUCCEEDED(hr));
+	immediateContext->End(query.Get());
 	BOOL result;
-	while (immediateContext->GetData(internal_state->resource.Get(), &result, sizeof(result), 0) == S_FALSE);
+	while (immediateContext->GetData(query.Get(), &result, sizeof(result), 0) == S_FALSE);
 	assert(result == TRUE);
 }
 
@@ -3202,19 +3226,15 @@ void GraphicsDevice_DX11::UpdateBuffer(const GPUBuffer* buffer, const void* data
 		deviceContexts[cmd]->UpdateSubresource(internal_state->resource.Get(), 0, &box, data, 0, 0);
 	}
 }
-void GraphicsDevice_DX11::QueryBegin(const GPUQuery* query, CommandList cmd)
+void GraphicsDevice_DX11::QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)
 {
-	auto internal_state = to_internal(query);
-	if (internal_state->resource == nullptr)
-		return;
-	deviceContexts[cmd]->Begin(internal_state->resource.Get());
+	auto internal_state = to_internal(heap);
+	deviceContexts[cmd]->Begin(internal_state->resources[index].Get());
 }
-void GraphicsDevice_DX11::QueryEnd(const GPUQuery* query, CommandList cmd)
+void GraphicsDevice_DX11::QueryEnd(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)
 {
-	auto internal_state = to_internal(query);
-	if (internal_state->resource == nullptr)
-		return;
-	deviceContexts[cmd]->End(internal_state->resource.Get());
+	auto internal_state = to_internal(heap);
+	deviceContexts[cmd]->End(internal_state->resources[index].Get());
 }
 
 GraphicsDevice::GPUAllocation GraphicsDevice_DX11::AllocateGPU(size_t dataSize, CommandList cmd)
