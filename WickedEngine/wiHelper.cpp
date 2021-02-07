@@ -383,12 +383,9 @@ namespace wiHelper
 	{
 #ifndef PLATFORM_UWP
 #ifdef SDL_FILESYSTEM_UNIX
-		std::string unixPath = fileName;
-		std::replace(unixPath.begin(), unixPath.end(), '\\', '/');
-		ifstream file(unixPath, ios::binary | ios::ate);
-#else
-		ifstream file(fileName, ios::binary | ios::ate);
+		std::replace(fileName.begin(), fileName.end(), '\\', '/');	
 #endif // SDL_FILESYSTEM_UNIX
+		ifstream file(fileName, ios::binary | ios::ate);
 		if (file.is_open())
 		{
 			size_t dataSize = (size_t)file.tellg();
