@@ -382,11 +382,13 @@ namespace wiHelper
 	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data)
 	{
 #ifndef PLATFORM_UWP
-		std::string filepath = fileName;
 #ifdef SDL_FILESYSTEM_UNIX
-		std::replace(filepath.begin(), filepath.end(), '\\', '/');	
-#endif // SDL_FILESYSTEM_UNIX
+		std::string filepath = fileName;
+		std::replace(filepath.begin(), filepath.end(), '\\', '/');
 		ifstream file(filepath, ios::binary | ios::ate);
+#else
+		ifstream file(fileName, ios::binary | ios::ate);
+#endif // SDL_FILESYSTEM_UNIX
 		if (file.is_open())
 		{
 			size_t dataSize = (size_t)file.tellg();
