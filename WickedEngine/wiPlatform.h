@@ -112,5 +112,8 @@ namespace wiPlatform
 		Windows::ApplicationModel::Core::CoreApplication::Exit();
 #endif // PLATFORM_UWP
 #endif // _WIN32
+#ifdef SDL2
+		SDL_Quit();
+#endif
 	}
 }
