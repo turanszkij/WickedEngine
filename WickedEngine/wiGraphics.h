@@ -250,12 +250,9 @@ namespace wiGraphics
 	};
 	enum GPU_QUERY_TYPE
 	{
-		GPU_QUERY_TYPE_INVALID,				// do not use! Indicates if query was not created.
-		GPU_QUERY_TYPE_EVENT,				// has the GPU reached this point?
-		GPU_QUERY_TYPE_OCCLUSION,			// how many samples passed depthstencil test?
-		GPU_QUERY_TYPE_OCCLUSION_PREDICATE, // are there any samples that passed depthstencil test
 		GPU_QUERY_TYPE_TIMESTAMP,			// retrieve time point of gpu execution
-		GPU_QUERY_TYPE_TIMESTAMP_DISJOINT,	// timestamp frequency information
+		GPU_QUERY_TYPE_OCCLUSION,			// how many samples passed depth test?
+		GPU_QUERY_TYPE_OCCLUSION_BINARY,	// depth test passed or not?
 	};
 	enum INDEXBUFFER_FORMAT
 	{
@@ -271,8 +268,7 @@ namespace wiGraphics
 	};
 	enum IMAGE_LAYOUT
 	{
-		IMAGE_LAYOUT_UNDEFINED,					// discard contents
-		IMAGE_LAYOUT_GENERAL,					// supports everything
+		IMAGE_LAYOUT_UNDEFINED,					// invalid state
 		IMAGE_LAYOUT_RENDERTARGET,				// render target, write enabled
 		IMAGE_LAYOUT_DEPTHSTENCIL,				// depth stencil, write enabled
 		IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,		// depth stencil, read only
@@ -284,7 +280,7 @@ namespace wiGraphics
 	};
 	enum BUFFER_STATE
 	{
-		BUFFER_STATE_GENERAL,					// supports everything
+		BUFFER_STATE_UNDEFINED,					// invalid state
 		BUFFER_STATE_VERTEX_BUFFER,				// vertex buffer, read only
 		BUFFER_STATE_INDEX_BUFFER,				// index buffer, read only
 		BUFFER_STATE_CONSTANT_BUFFER,			// constant buffer, read only
@@ -408,7 +404,7 @@ namespace wiGraphics
 		uint32_t CPUAccessFlags = 0;
 		uint32_t MiscFlags = 0;
 		ClearValue clear = {};
-		IMAGE_LAYOUT layout = IMAGE_LAYOUT_GENERAL;
+		IMAGE_LAYOUT layout = IMAGE_LAYOUT_SHADER_RESOURCE;
 	};
 	struct SamplerDesc
 	{
@@ -484,15 +480,10 @@ namespace wiGraphics
 		uint32_t StructureByteStride = 0; // needed for typed and structured buffer types!
 		FORMAT Format = FORMAT_UNKNOWN; // only needed for typed buffer!
 	};
-	struct GPUQueryDesc
+	struct GPUQueryHeapDesc
 	{
-		GPU_QUERY_TYPE Type = GPU_QUERY_TYPE_INVALID;
-	};
-	struct GPUQueryResult
-	{
-		uint64_t	result_passed_sample_count = 0;
-		uint64_t	result_timestamp = 0;
-		uint64_t	result_timestamp_frequency = 0;
+		GPU_QUERY_TYPE type = GPU_QUERY_TYPE_TIMESTAMP;
+		uint32_t queryCount = 0;
 	};
 	struct PipelineStateDesc
 	{
@@ -529,6 +520,8 @@ namespace wiGraphics
 			const Texture* texture;
 			IMAGE_LAYOUT layout_before;
 			IMAGE_LAYOUT layout_after;
+			int mip;
+			int slice;
 		};
 		struct Buffer
 		{
@@ -550,13 +543,16 @@ namespace wiGraphics
 			barrier.memory.resource = resource;
 			return barrier;
 		}
-		static GPUBarrier Image(const Texture* texture, IMAGE_LAYOUT before, IMAGE_LAYOUT after)
+		static GPUBarrier Image(const Texture* texture, IMAGE_LAYOUT before, IMAGE_LAYOUT after,
+			int mip = -1, int slice = -1)
 		{
 			GPUBarrier barrier;
 			barrier.type = IMAGE_BARRIER;
 			barrier.image.texture = texture;
 			barrier.image.layout_before = before;
 			barrier.image.layout_after = after;
+			barrier.image.mip = mip;
+			barrier.image.slice = slice;
 			return barrier;
 		}
 		static GPUBarrier Buffer(const GPUBuffer* buffer, BUFFER_STATE before, BUFFER_STATE after)
@@ -591,17 +587,17 @@ namespace wiGraphics
 			STOREOP_STORE,
 			STOREOP_DONTCARE,
 		} storeop = STOREOP_STORE;
-		IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_GENERAL;		// layout before the render pass
-		IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_GENERAL;		// layout after the render pass
-		IMAGE_LAYOUT subpass_layout = IMAGE_LAYOUT_RENDERTARGET;// layout within the render pass
+		IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_UNDEFINED;	// layout before the render pass
+		IMAGE_LAYOUT subpass_layout = IMAGE_LAYOUT_UNDEFINED;	// layout within the render pass
+		IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_UNDEFINED;		// layout after the render pass
 
 		static RenderPassAttachment RenderTarget(
 			const Texture* resource = nullptr,
 			LOAD_OPERATION load_op = LOADOP_LOAD,
 			STORE_OPERATION store_op = STOREOP_STORE,
-			IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_GENERAL,
+			IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_SHADER_RESOURCE,
 			IMAGE_LAYOUT subpass_layout = IMAGE_LAYOUT_RENDERTARGET,
-			IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_GENERAL
+			IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_SHADER_RESOURCE
 		)
 		{
 			RenderPassAttachment attachment;
@@ -637,8 +633,8 @@ namespace wiGraphics
 
 		static RenderPassAttachment Resolve(
 			const Texture* resource = nullptr,
-			IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_GENERAL,
-			IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_GENERAL
+			IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_SHADER_RESOURCE,
+			IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_SHADER_RESOURCE
 		)
 		{
 			RenderPassAttachment attachment;
@@ -651,8 +647,8 @@ namespace wiGraphics
 
 		static RenderPassAttachment ShadingRateSource(
 			const Texture* resource = nullptr,
-			IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_GENERAL,
-			IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_GENERAL
+			IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_SHADING_RATE_SOURCE,
+			IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_SHADING_RATE_SOURCE
 		)
 		{
 			RenderPassAttachment attachment;
@@ -779,11 +775,11 @@ namespace wiGraphics
 		const TextureDesc& GetDesc() const { return desc; }
 	};
 
-	struct GPUQuery : public GraphicsDeviceChild
+	struct GPUQueryHeap : public GraphicsDeviceChild
 	{
-		GPUQueryDesc desc;
+		GPUQueryHeapDesc desc;
 
-		const GPUQueryDesc& GetDesc() const { return desc; }
+		const GPUQueryHeapDesc& GetDesc() const { return desc; }
 	};
 
 	struct PipelineState : public GraphicsDeviceChild

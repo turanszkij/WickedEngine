@@ -977,5 +977,8 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_transparent_cloth_clearcoat.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_skyLuminanceLutCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

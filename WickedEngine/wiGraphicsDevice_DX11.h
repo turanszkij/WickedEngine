@@ -32,6 +32,8 @@ namespace wiGraphics
 		Microsoft::WRL::ComPtr<ID3D11CommandList> commandLists[COMMANDLIST_COUNT];
 		Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> userDefinedAnnotations[COMMANDLIST_COUNT];
 
+		Microsoft::WRL::ComPtr<ID3D11Query> disjointQueries[BACKBUFFER_COUNT + 3];
+
 		uint32_t	stencilRef[COMMANDLIST_COUNT];
 		XMFLOAT4	blendFactor[COMMANDLIST_COUNT];
 
@@ -86,7 +88,7 @@ namespace wiGraphics
 		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) override;
 		bool CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) override;
 		bool CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) override;
-		bool CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) override;
+		bool CreateQueryHeap(const GPUQueryHeapDesc *pDesc, GPUQueryHeap *pQueryHeap) override;
 		bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
 		bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
 
@@ -95,7 +97,7 @@ namespace wiGraphics
 
 		void Map(const GPUResource* resource, Mapping* mapping) override;
 		void Unmap(const GPUResource* resource) override;
-		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
+		void QueryRead(const GPUQueryHeap* resource, uint32_t index, uint32_t count, uint64_t* results) override;
 
 		void SetCommonSampler(const StaticSampler* sam) override;
 
@@ -143,8 +145,8 @@ namespace wiGraphics
 		void DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
 		void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) override;
 		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) override;
-		void QueryBegin(const GPUQuery *query, CommandList cmd) override;
-		void QueryEnd(const GPUQuery *query, CommandList cmd) override;
+		void QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd) override;
+		void QueryEnd(const GPUQueryHeap* heap, uint32_t index, CommandList cmd) override;
 		void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) override {}
 
 		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;

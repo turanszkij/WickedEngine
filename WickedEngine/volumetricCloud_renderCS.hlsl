@@ -23,9 +23,6 @@
  *
  */
 
-
-TEXTURE2D(texture_input, float4, TEXSLOT_ONDEMAND0);
-
 TEXTURE3D(texture_shapeNoise, float4, TEXSLOT_ONDEMAND1);
 TEXTURE3D(texture_detailNoise, float4, TEXSLOT_ONDEMAND2);
 TEXTURE2D(texture_curlNoise, float4, TEXSLOT_ONDEMAND3);
@@ -38,21 +35,14 @@ RWTEXTURE2D(texture_cloudPosition, float4, 1);
 // Octaves for multiple-scattering approximation. 1 means single-scattering only.
 #define MS_COUNT 2
 
-// Simple 0-1 ambient gradient
-//#define LIGHTING_AMBIENT_MODE_LINEAR
-
 // Simple FBM cloud model. Old but has its uses
 //#define CLOUD_MODE_SIMPLE_FBM
 
 
 // Lighting
-static const float3 g_CloudBaseColor = float3(0.8, 0.9, 1.0);
-static const float3 g_CloudTopColor = float3(1.0, 1.0, 1.0);
-static const float g_CloudAmbientGroundMultiplier = 2.5; // The blend between top and bottom ambient color
-static const float g_AmbientLightIntensity = 0.5;
-
+static const float g_CloudAmbientGroundMultiplier = 0.75; // [0; 1] Amount of ambient light to reach the bottom of clouds
 static const float3 g_Albedo = float3(1.0, 1.0, 1.0); // Cloud albedo is normally very close to 1
-static const float3 g_ExtinctionCoefficient = float3(0.71, 0.86, 1.0) * 0.01; // * 0.005 looks good too
+static const float3 g_ExtinctionCoefficient = float3(0.71, 0.86, 1.0) * 0.1; // * 0.05 looks good too
 static const float g_BeerPowder = 20.0;
 static const float g_BeerPowderPower = 0.5;
 static const float g_PhaseG = 0.5; // [-0.999; 0.999]
@@ -62,8 +52,8 @@ static const float g_MultiScatteringScattering = 1.0;
 static const float g_MultiScatteringExtinction = 0.1;
 static const float g_MultiScatteringEccentricity = 0.2;
 static const float g_ShadowStepLength = 3000.0;
-static const float g_HorizonBlendAmount = 0.7;
-static const float g_HorizonBlendPower = 1.5;
+static const float g_HorizonBlendAmount = 1.25;
+static const float g_HorizonBlendPower = 2.0;
 static const float g_WeatherDensityAmount = 0.0; // Rain clouds disabled by default.
 
 // Modelling
@@ -108,15 +98,13 @@ static const float4 g_CloudGradientLarge = float4(0.02, 0.07, 0.88, 1.0);
 
 // Performance
 static const int g_MaxStepCount = 128; // Maximum number of iterations. Higher gives better images but may be slow.
-static const float g_MaxMarchingDistance = 50000.0; // Clamping the marching steps to be within a certain distance.
+static const float g_MaxMarchingDistance = 30000.0; // Clamping the marching steps to be within a certain distance.
 static const float g_InverseDistanceStepCount = 15000.0; // Distance over which the raymarch steps will be evenly distributed.
-static const float g_RenderDistance = 150000.0; // Maximum distance to march before returning a miss.
+static const float g_RenderDistance = 70000.0; // Maximum distance to march before returning a miss.
 static const float g_LODDistance = 25000.0; // After a certain distance, noises will get higher LOD
 static const float g_LODMin = 0.0; // 
 static const float g_BigStepMarch = 3.0; // How long inital rays should be until they hit something. Lower values may ives a better image but may be slower.
 static const float g_TransmittanceThreshold = 0.005; // Default: 0.005. If the clouds transmittance has reached it's desired opacity, there's no need to keep raymarching for performance.
-static const float g_CloudDensityMultiplier = 10.0; // How dense the cloud sample should be. High values may affect lighting, but you can adjust g_ExtinctionCoefficient accordingly.
-																// High values may also give a higher framerate.
 
 
 float GetHeightFractionForPoint(AtmosphereParameters atmosphere, float3 pos)
@@ -243,7 +231,7 @@ float SampleCloudDensity(float3 p, float heightFraction, float3 weatherData, flo
 		cloudSample = Remap(cloudSample, highFrequenceNoiseModifier * g_DetailNoiseModifier, 1.0, 0.0, 1.0);
 	}
     
-	return max(cloudSample * g_CloudDensityMultiplier, 0.0);
+	return max(cloudSample, 0.0);
 }
 
 // Participating media is the term used to describe volumes filled with particles.
@@ -370,38 +358,30 @@ ParticipatingMediaPhase SampleParticipatingMediaPhase(float basePhase, float bas
 }
 
 // Exponential integral function (see https://mathworld.wolfram.com/ExponentialIntegral.html)
-float ExponentialIntegral(float x)
+/*float ExponentialIntegral(float x)
 {
     // For x != 0
 	return 0.5772156649015328606065 + log(1e-4 + abs(x)) + x * (1.0 + x * (0.25 + x * ((1.0 / 18.0) + x * ((1.0 / 96.0) + x * (1.0 / 600.0)))));
-}
+}*/
 
-// Approximation to ambient intensity assuming homogeneous radiance coming separately form top and bottom of clouds.
-// See Real-Time Volumetric Rendering course notes By Patapom / Bomb (http://patapom.com/topics/Revision2013/Revision%202013%20-%20Real-time%20Volumetric%20Rendering%20Course%20Notes.pdf)
-float3 SampleAmbientLight(float heightFraction, float cloudDensity)
+float3 SampleAmbientLight(float heightFraction)
 {
-#ifdef AMBIENT_MODE_LINEAR
+	// Early experiment by adding directionality to ambient, based on: http://patapom.com/topics/Revision2013/Revision%202013%20-%20Real-time%20Volumetric%20Rendering%20Course%20Notes.pdf
+	//float ambientTerm = -cloudDensity * (1.0 - saturate(g_CloudAmbientGroundMultiplier + heightFraction));
+	//float isotropicScatteringTopContribution = max(0.0, exp(ambientTerm) - ambientTerm * ExponentialIntegral(ambientTerm));
 
-    float groundHeightFraction = 1.0 - min(1.0, heightFraction * g_CloudAmbientGroundMultiplier);
-    float3 ambientColorTop = g_CloudTopColor * heightFraction;
-    float3 ambientColorBottom = g_CloudBaseColor * groundHeightFraction;
-    
-    return (ambientColorTop + ambientColorBottom) * g_AmbientLightIntensity;
-
-#else
-    
-	float ambientTerm = -cloudDensity * saturate(1.0 - heightFraction);
-	float3 isotropicScatteringTop = g_CloudTopColor * max(0.0, exp(ambientTerm) - ambientTerm * ExponentialIntegral(ambientTerm));
+	float isotropicScatteringTopContribution = saturate(g_CloudAmbientGroundMultiplier + heightFraction);
 	
-	ambientTerm = -cloudDensity * heightFraction;
-	float3 isotropicScatteringBottom = g_CloudBaseColor * max(0.0, exp(ambientTerm) - ambientTerm * ExponentialIntegral(ambientTerm));
-	
-	// Adjust ambient color by the height fraction
-	isotropicScatteringTop *= saturate(heightFraction * g_CloudAmbientGroundMultiplier);
-	
-	return (isotropicScatteringTop + isotropicScatteringBottom) * g_AmbientLightIntensity;
-    
-#endif
+	if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
+	{
+		float3 skyLuminance = texture_skyluminancelut.SampleLevel(sampler_point_clamp, float2(0.5, 0.5), 0).rgb;
+		return isotropicScatteringTopContribution * skyLuminance;
+	}
+	else
+	{
+		float3 skyColor = GetZenithColor();
+		return isotropicScatteringTopContribution * skyColor;
+	}
 }
 
 void VolumetricCloudLighting(AtmosphereParameters atmosphere, float3 startPosition, float3 worldPosition, float3 sunDirection, float3 sunIlluminance, float cosTheta,
@@ -433,9 +413,8 @@ void VolumetricCloudLighting(AtmosphereParameters atmosphere, float3 startPositi
 
 
 	// Sample environment lighting
-	// Todo: Sample from environment instead.
 	// Todo: Ground contribution?
-	float3 environmentLuminance = SampleAmbientLight(heightFraction, cloudDensity);
+	float3 environmentLuminance = SampleAmbientLight(heightFraction);
 	
 
 	// Update depth sampling
@@ -665,11 +644,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		
 		// Depth buffer intersection
 		float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0).r;
-		float lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, uv, 1).r; // Downsampled 2x
 		float3 depthWorldPosition = reconstructPosition(uv, depth);
 		float tToDepthBuffer = length(depthWorldPosition - rayOrigin);
-		tMax = lineardepth > 0.999 ? tMax : min(tMax, tToDepthBuffer); // Exclude skybox
-
+		tMax = depth == 0.0 ? tMax : min(tMax, tToDepthBuffer); // Exclude skybox
 		
 		const float marchingDistance = min(g_MaxMarchingDistance, tMax - tMin);
 		tMax = tMin + marchingDistance;
@@ -718,19 +695,17 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	float4 color = float4(luminance, grayScaleTransmittance);
 
-	
+	color.a = 1.0 - color.a; // Invert to match reprojection. Early returns has to be inverted too.
+
     // Blend clouds with horizon
 	if (depthWeightsSum > 0.0)
 	{
 		// Only apply to clouds
 		float atmosphereBlend = CalculateAtmosphereBlend(tDepth);
 
-		color.a = color.a * (1.0 - atmosphereBlend) + 1.0 * atmosphereBlend;
+		color *= 1.0 - atmosphereBlend;
 		//color.rgb = color.rgb * (1.0 - atmosphereBlend) + (float3(0.7, 0.8, 1.0) * 2.0) * atmosphereBlend;
 	}
-
-	color.a = 1.0 - color.a; // Invert to match reprojection. Early returns has to be inverted too.
-
 	
     // Output
 	texture_render[DTid.xy] = color;

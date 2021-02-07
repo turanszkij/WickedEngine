@@ -402,8 +402,7 @@ namespace wiRenderer
 		float threshold = 1.0f
 	);
 	void Postprocess_VolumetricClouds(
-		const wiGraphics::Texture& input,
-		const wiGraphics::Texture& output,
+		const wiGraphics::Texture& input_output,
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& depthbuffer,
 		wiGraphics::CommandList cmd
@@ -521,10 +520,11 @@ namespace wiRenderer
 		BORDEREXPAND_CLAMP,
 	};
 	// Performs copy operation even between different texture formats
+	//	NOTE: DstMIP can be specified as -1 to use main subresource, otherwise the subresource (>=0) must have been generated explicitly!
 	//	Can also expand border region according to desired sampler func
 	void CopyTexture2D(
-		const wiGraphics::Texture& dst, uint32_t DstMIP, uint32_t DstX, uint32_t DstY, 
-		const wiGraphics::Texture& src, uint32_t SrcMIP, 
+		const wiGraphics::Texture& dst, int DstMIP, int DstX, int DstY,
+		const wiGraphics::Texture& src, int SrcMIP, 
 		wiGraphics::CommandList cmd,
 		BORDEREXPANDSTYLE borderExpand = BORDEREXPAND_DISABLE);
 
@@ -708,50 +708,6 @@ namespace wiRenderer
 	//	Returns the ID of the custom shader that can be used with MaterialComponent::SetCustomShaderID()
 	int RegisterCustomShader(const CustomShader& customShader);
 	const std::vector<CustomShader>& GetCustomShaders();
-
-	// Helper utility to manage async GPU query readback from the CPU
-	//	GPUQueryRing<latency> here latency specifies the ring size of queries and 
-	//	directly correlates with the frame latency between Issue (GPU) <-> Read back (CPU)
-	template<int latency>
-	struct GPUQueryRing
-	{
-		wiGraphics::GPUQuery queries[latency];
-		int id = 0;
-		bool active[latency] = {};
-
-		// Creates a number of queries in the async ring
-		void Create(wiGraphics::GraphicsDevice* device, const wiGraphics::GPUQueryDesc* desc)
-		{
-			for (int i = 0; i < latency; ++i)
-			{
-				device->CreateQuery(desc, &queries[i]);
-				active[i] = false;
-				id = 0;
-			}
-		}
-
-		// Returns the current query suitable for GPU execution and marks it as active
-		//	Use this with GraphicsDevice::QueryBegin() and GraphicsDevice::QueryEnd()
-		inline wiGraphics::GPUQuery* Get_GPU()
-		{
-			active[id] = true;
-			return &queries[id];
-		}
-
-		// Returns the current query suitable for CPU readback and marks it as inactive
-		//	It will return nullptr if none of the queries are suitable for readback yet
-		//	Use this with GraphicsDevice::QueryRead(). Only call once per frame per QueryRing instance!
-		inline wiGraphics::GPUQuery* Get_CPU()
-		{
-			id = (id + 1) % latency;
-			if (!active[id])
-			{
-				return nullptr;
-			}
-			active[id] = false;
-			return &queries[id];
-		}
-	};
 
 };
 

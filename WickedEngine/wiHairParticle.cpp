@@ -211,6 +211,14 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 		};
 		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Buffer(&mesh.indexBuffer, BUFFER_STATE_INDEX_BUFFER, BUFFER_STATE_SHADER_RESOURCE),
+				GPUBarrier::Buffer((mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS), BUFFER_STATE_VERTEX_BUFFER, BUFFER_STATE_SHADER_RESOURCE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
 		device->Dispatch(hcb.xHairNumDispatchGroups, 1, 1, cmd);
 
 		GPUBarrier barriers[] = {
@@ -234,11 +242,22 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 		device->Dispatch(1, 1, 1, cmd);
 
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory()
+			GPUBarrier::Memory(),
+			GPUBarrier::Buffer(&indirectBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDIRECT_ARGUMENT),
+			GPUBarrier::Buffer(&culledIndexBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
+			GPUBarrier::Buffer(&particleBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
+	}
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Buffer(&mesh.indexBuffer, BUFFER_STATE_SHADER_RESOURCE, BUFFER_STATE_INDEX_BUFFER),
+			GPUBarrier::Buffer((mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS), BUFFER_STATE_SHADER_RESOURCE, BUFFER_STATE_VERTEX_BUFFER),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
 	device->EventEnd(cmd);
@@ -469,6 +488,7 @@ void wiHairParticle::Initialize()
 
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthFunc = COMPARISON_EQUAL;
+	dsd.StencilEnable = false;
 	dss_equal = dsd;
 
 

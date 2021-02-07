@@ -945,9 +945,13 @@ inline float3 GetAmbient(in float3 N)
 #else
 
 	ambient = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(N, g_xFrame_GlobalEnvProbeIndex), g_xFrame_EnvProbeMipCount).rgb;
-	ambient += GetAmbientColor();
 
 #endif // ENVMAPRENDERING
+
+	// This is not entirely correct if we have probes, because it shouldn't be added twice.
+	//	However, it is not correct if we leave it out from probes, because if we render a scene
+	//	with dark sky but ambient, we still want some visible result.
+	ambient += GetAmbientColor();
 
 	return ambient;
 }

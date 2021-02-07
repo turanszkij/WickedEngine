@@ -103,8 +103,6 @@ namespace wiGraphics
 		VkImageView		nullImageViewCubeArray = VK_NULL_HANDLE;
 		VkImageView		nullImageView3D = VK_NULL_HANDLE;
 
-		uint64_t timestamp_frequency = 0;
-
 		void CreateBackBufferResources();
 
 		struct FrameResources
@@ -123,7 +121,7 @@ namespace wiGraphics
 			VkSemaphore swapchainAcquireSemaphore = VK_NULL_HANDLE;
 			VkSemaphore swapchainReleaseSemaphore = VK_NULL_HANDLE;
 
-			struct DescriptorTableFrameAllocator
+			struct DescriptorBinder
 			{
 				GraphicsDevice_Vulkan* device;
 				VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
@@ -150,7 +148,7 @@ namespace wiGraphics
 				void validate(bool graphics, CommandList cmd, bool raytracing = false);
 				VkDescriptorSet commit(const DescriptorTable* table);
 			};
-			DescriptorTableFrameAllocator descriptors[COMMANDLIST_COUNT];
+			DescriptorBinder descriptors[COMMANDLIST_COUNT];
 
 
 			struct ResourceFrameAllocator
@@ -168,11 +166,14 @@ namespace wiGraphics
 				uint64_t calculateOffset(uint8_t* address);
 			};
 			ResourceFrameAllocator resourceBuffer[COMMANDLIST_COUNT];
-
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
 		inline VkCommandBuffer GetDirectCommandList(CommandList cmd) { return GetFrameResources().commandBuffers[cmd]; }
+
+		std::vector<VkMemoryBarrier> frame_memoryBarriers[COMMANDLIST_COUNT];
+		std::vector<VkImageMemoryBarrier> frame_imageBarriers[COMMANDLIST_COUNT];
+		std::vector<VkBufferMemoryBarrier> frame_bufferBarriers[COMMANDLIST_COUNT];
 
 		struct PSOLayout
 		{
@@ -194,6 +195,7 @@ namespace wiGraphics
 		bool dirty_pso[COMMANDLIST_COUNT] = {};
 		void pso_validate(CommandList cmd);
 
+		void barrier_flush(CommandList cmd);
 		void predraw(CommandList cmd);
 		void predispatch(CommandList cmd);
 		void preraytrace(CommandList cmd);
@@ -210,7 +212,7 @@ namespace wiGraphics
 		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) override;
 		bool CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) override;
 		bool CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) override;
-		bool CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) override;
+		bool CreateQueryHeap(const GPUQueryHeapDesc* pDesc, GPUQueryHeap* pQueryHeap) override;
 		bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
 		bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
 		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) override;
@@ -229,7 +231,7 @@ namespace wiGraphics
 
 		void Map(const GPUResource* resource, Mapping* mapping) override;
 		void Unmap(const GPUResource* resource) override;
-		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
+		void QueryRead(const GPUQueryHeap* heap, uint32_t index, uint32_t count, uint64_t* results) override;
 
 		void SetCommonSampler(const StaticSampler* sam) override;
 
@@ -283,8 +285,8 @@ namespace wiGraphics
 		void DispatchMeshIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
 		void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) override;
 		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) override;
-		void QueryBegin(const GPUQuery *query, CommandList cmd) override;
-		void QueryEnd(const GPUQuery *query, CommandList cmd) override;
+		void QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd) override;
+		void QueryEnd(const GPUQueryHeap* heap, uint32_t index, CommandList cmd) override;
 		void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) override;
 		void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) override;
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
@@ -309,74 +311,6 @@ namespace wiGraphics
 			uint64_t framecount = 0;
 			std::mutex destroylocker;
 
-			struct QueryAllocator
-			{
-				AllocationHandler* allocationhandler = nullptr;
-				std::mutex locker;
-				VkQueryPoolCreateInfo poolInfo = {};
-
-				std::vector<VkQueryPool> blocks;
-
-				struct Query
-				{
-					uint32_t block = ~0;
-					uint32_t index = ~0;
-				};
-				std::vector<Query> freelist;
-
-				void init(AllocationHandler* allocationhandler, VkQueryType type)
-				{
-					this->allocationhandler = allocationhandler;
-
-					poolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-					poolInfo.queryCount = 1024;
-					poolInfo.queryType = type;
-				}
-				void destroy()
-				{
-					for (auto& x : blocks)
-					{
-						vkDestroyQueryPool(allocationhandler->device, x, nullptr);
-					}
-				}
-				void block_allocate()
-				{
-					uint32_t block_index = (uint32_t)blocks.size();
-					blocks.emplace_back();
-					auto& block = blocks.back();
-					VkResult res = vkCreateQueryPool(allocationhandler->device, &poolInfo, nullptr, &block);
-					assert(res == VK_SUCCESS);
-					vkResetQueryPool(allocationhandler->device, block, 0, poolInfo.queryCount);
-					for (uint32_t i = 0; i < poolInfo.queryCount; ++i)
-					{
-						freelist.emplace_back();
-						freelist.back().block = block_index;
-						freelist.back().index = i;
-					}
-				}
-				Query allocate()
-				{
-					locker.lock();
-					if (freelist.empty())
-					{
-						block_allocate();
-					}
-					assert(!freelist.empty());
-					auto query = freelist.back();
-					freelist.pop_back();
-					locker.unlock();
-					return query;
-				}
-				void free(Query query)
-				{
-					locker.lock();
-					freelist.push_back(query);
-					locker.unlock();
-				}
-			};
-			QueryAllocator queries_timestamp;
-			QueryAllocator queries_occlusion;
-
 			std::deque<std::pair<std::pair<VkImage, VmaAllocation>, uint64_t>> destroyer_images;
 			std::deque<std::pair<VkImageView, uint64_t>> destroyer_imageviews;
 			std::deque<std::pair<std::pair<VkBuffer, VmaAllocation>, uint64_t>> destroyer_buffers;
@@ -391,14 +325,11 @@ namespace wiGraphics
 			std::deque<std::pair<VkPipeline, uint64_t>> destroyer_pipelines;
 			std::deque<std::pair<VkRenderPass, uint64_t>> destroyer_renderpasses;
 			std::deque<std::pair<VkFramebuffer, uint64_t>> destroyer_framebuffers;
-			std::deque<std::pair<QueryAllocator::Query, uint64_t>> destroyer_queries_occlusion;
-			std::deque<std::pair<QueryAllocator::Query, uint64_t>> destroyer_queries_timestamp;
+			std::deque<std::pair<VkQueryPool, uint64_t>> destroyer_querypools;
 
 			~AllocationHandler()
 			{
 				Update(~0, 0); // destroy all remaining
-				queries_occlusion.destroy();
-				queries_timestamp.destroy();
 				vmaDestroyAllocator(allocator);
 				vkDestroyDevice(device, nullptr);
 				vkDestroyInstance(instance, nullptr);
@@ -591,26 +522,13 @@ namespace wiGraphics
 						break;
 					}
 				}
-				while (!destroyer_queries_occlusion.empty())
+				while (!destroyer_querypools.empty())
 				{
-					if (destroyer_queries_occlusion.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_querypools.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
 					{
-						auto item = destroyer_queries_occlusion.front();
-						destroyer_queries_occlusion.pop_front();
-						queries_occlusion.free(item.first);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_queries_timestamp.empty())
-				{
-					if (destroyer_queries_timestamp.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_queries_timestamp.front();
-						destroyer_queries_timestamp.pop_front();
-						queries_timestamp.free(item.first);
+						auto item = destroyer_querypools.front();
+						destroyer_querypools.pop_front();
+						vkDestroyQueryPool(device, item.first, nullptr);
 					}
 					else
 					{

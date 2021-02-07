@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <memory>
+#include <cassert>
 
 namespace wiAllocators
 {
@@ -40,6 +41,11 @@ namespace wiAllocators
 		inline void reset()
 		{
 			offset = 0;
+		}
+
+		inline uint8_t* top()
+		{
+			return &buffer[offset];
 		}
 
 	private:

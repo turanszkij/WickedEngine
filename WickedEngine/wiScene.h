@@ -620,8 +620,7 @@ namespace wiScene
 
 		// occlusion result history bitfield (32 bit->32 frame history)
 		uint32_t occlusionHistory = ~0;
-		wiGraphics::GPUQuery occlusionQueries[wiGraphics::GraphicsDevice::GetBackBufferCount()];
-		int queryIndex = 0;
+		int occlusionQueries[wiGraphics::GraphicsDevice::GetBackBufferCount()] = {};
 
 		inline bool IsOccluded() const
 		{
@@ -629,7 +628,7 @@ namespace wiScene
 			// If it is visible in any frames in the history, it is determined visible in this frame
 			// But if all queries failed in the history, it is occluded.
 			// If it pops up for a frame after occluded, it is visible again for some frames
-			return (occlusionQueries[queryIndex].IsValid() && occlusionHistory == 0);
+			return occlusionHistory == 0;
 		}
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
@@ -1277,6 +1276,13 @@ namespace wiScene
 		wiGraphics::DescriptorTable descriptorTables[DESCRIPTORTABLE_COUNT];
 		std::atomic<uint32_t> geometryOffset;
 		uint32_t MAX_SUBSET_DESCRIPTOR_INDEXING = 10000;
+
+		wiGraphics::GPUQueryHeap queryHeap[arraysize(ObjectComponent::occlusionQueries)];
+		std::vector<uint64_t> queryResults;
+		uint32_t nextQuery = 0;
+		uint32_t writtenQueries[arraysize(queryHeap)] = {};
+		int query_write = 0;
+		int query_read = 0;
 
 		// Update all components by a given timestep (in seconds):
 		//	This is an expensive function, prefer to call it only once per frame!

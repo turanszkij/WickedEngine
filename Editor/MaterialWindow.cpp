@@ -456,7 +456,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 		slot.button.Create("");
 		slot.button.SetPos(XMFLOAT2(x + 122, y));
 		slot.button.SetSize(XMFLOAT2(260, 20));
-		slot.button.OnClick([&](wiEventArgs args) {
+		slot.button.OnClick([this, i, &slot](wiEventArgs args) {
 			MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
 			if (material == nullptr)
 				return;
@@ -496,7 +496,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 		slot.uvsetField.SetTooltip("uv set number");
 		slot.uvsetField.SetPos(XMFLOAT2(x + uvset_offset, y));
 		slot.uvsetField.SetSize(XMFLOAT2(20, 20));
-		slot.uvsetField.OnInputAccepted([&](wiEventArgs args) {
+		slot.uvsetField.OnInputAccepted([this, i](wiEventArgs args) {
 			MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
 			if (material != nullptr)
 			{
