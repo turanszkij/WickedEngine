@@ -311,74 +311,6 @@ namespace wiGraphics
 			uint64_t framecount = 0;
 			std::mutex destroylocker;
 
-			struct QueryAllocator
-			{
-				AllocationHandler* allocationhandler = nullptr;
-				std::mutex locker;
-				VkQueryPoolCreateInfo poolInfo = {};
-
-				std::vector<VkQueryPool> blocks;
-
-				struct Query
-				{
-					uint32_t block = ~0;
-					uint32_t index = ~0;
-				};
-				std::vector<Query> freelist;
-
-				void init(AllocationHandler* allocationhandler, VkQueryType type)
-				{
-					this->allocationhandler = allocationhandler;
-
-					poolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-					poolInfo.queryCount = 1024;
-					poolInfo.queryType = type;
-				}
-				void destroy()
-				{
-					for (auto& x : blocks)
-					{
-						vkDestroyQueryPool(allocationhandler->device, x, nullptr);
-					}
-				}
-				void block_allocate()
-				{
-					uint32_t block_index = (uint32_t)blocks.size();
-					blocks.emplace_back();
-					auto& block = blocks.back();
-					VkResult res = vkCreateQueryPool(allocationhandler->device, &poolInfo, nullptr, &block);
-					assert(res == VK_SUCCESS);
-					vkResetQueryPool(allocationhandler->device, block, 0, poolInfo.queryCount);
-					for (uint32_t i = 0; i < poolInfo.queryCount; ++i)
-					{
-						freelist.emplace_back();
-						freelist.back().block = block_index;
-						freelist.back().index = i;
-					}
-				}
-				Query allocate()
-				{
-					locker.lock();
-					if (freelist.empty())
-					{
-						block_allocate();
-					}
-					assert(!freelist.empty());
-					auto query = freelist.back();
-					freelist.pop_back();
-					locker.unlock();
-					return query;
-				}
-				void free(Query query)
-				{
-					locker.lock();
-					freelist.push_back(query);
-					locker.unlock();
-				}
-			};
-			QueryAllocator queries_timestamp;
-			QueryAllocator queries_occlusion;
-
 			std::deque<std::pair<std::pair<VkImage, VmaAllocation>, uint64_t>> destroyer_images;
 			std::deque<std::pair<VkImageView, uint64_t>> destroyer_imageviews;
 			std::deque<std::pair<std::pair<VkBuffer, VmaAllocation>, uint64_t>> destroyer_buffers;
@@ -398,8 +330,6 @@ namespace wiGraphics
 			~AllocationHandler()
 			{
 				Update(~0, 0); // destroy all remaining
-				queries_occlusion.destroy();
-				queries_timestamp.destroy();
 				vmaDestroyAllocator(allocator);
 				vkDestroyDevice(device, nullptr);
 				vkDestroyInstance(instance, nullptr);

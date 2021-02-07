@@ -2806,10 +2806,7 @@ using namespace Vulkan_Internal;
 			assert(res == VK_SUCCESS);
 		}
 
-		// GPU Queries:
 		TIMESTAMP_FREQUENCY = uint64_t(1.0 / double(properties2.properties.limits.timestampPeriod) * 1000 * 1000 * 1000);
-		allocationhandler->queries_occlusion.init(allocationhandler.get(), VK_QUERY_TYPE_OCCLUSION);
-		allocationhandler->queries_timestamp.init(allocationhandler.get(), VK_QUERY_TYPE_TIMESTAMP);
 
 		// Dynamic PSO states:
 		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_VIEWPORT);
