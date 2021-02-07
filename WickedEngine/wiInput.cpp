@@ -548,6 +548,11 @@ namespace wiInput
                 case wiInput::KEYBOARD_BUTTON_PAGEUP:
                     keycode = SDL_SCANCODE_PAGEUP;
                     break;
+				//Translating engine's keycode mapping (which comes from Win32 i presume) to the matching SDL2 keycode
+				//Win32 Link: https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
+				//SDL2 Link: https://wiki.libsdl.org/SDL_Keycode
+				//Numbers start from enum 48 to 57, 58 to 64 are undefined, 65 to 90 are alphabets.
+				//Usage: the same as win32 platform, which is (for example) wiInput::Down((wiInput::BUTTON)'A' (referenced from Editor.cpp for the engine's editor program)
 				case 48:
 					keycode = SDL_SCANCODE_0;
 					break;
