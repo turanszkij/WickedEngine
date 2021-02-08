@@ -10,11 +10,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 project(WickedEngine)
 
-# Configure CMake global variables
-set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
-set (CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib")
-set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib")
-
 if (WIN32)
     set(PLATFORM "Windows")
     add_compile_definitions(WIN32=1)
