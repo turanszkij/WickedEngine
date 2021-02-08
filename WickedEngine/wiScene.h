@@ -1135,10 +1135,12 @@ namespace wiScene
 		OceanParameters oceanParameters;
 
 		std::string skyMapName;
-		std::shared_ptr<wiResource> skyMap;
+		std::string colorGradingMapName;
 
 		// Non-serialized attributes:
 		uint32_t most_important_light_index = ~0;
+		std::shared_ptr<wiResource> skyMap;
+		std::shared_ptr<wiResource> colorGradingMap;
 
 		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};

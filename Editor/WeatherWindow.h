@@ -28,6 +28,7 @@ public:
 	wiCheckBox simpleskyCheckBox;
 	wiCheckBox realisticskyCheckBox;
 	wiButton skyButton;
+	wiButton colorgradingButton;
 
 	// ocean params:
 	wiCheckBox ocean_enabledCheckBox;

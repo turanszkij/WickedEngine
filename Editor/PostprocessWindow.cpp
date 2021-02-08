@@ -295,8 +295,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	AddWidget(&fxaaCheckBox);
 
 	colorGradingCheckBox.Create("Color Grading: ");
-	colorGradingCheckBox.SetTooltip("Enable color grading of the final render. An additional lookup texture must be set for it to take effect.");
-	colorGradingCheckBox.SetScriptTip("RenderPath3D::SetColorGradingEnabled(bool value)");
+	colorGradingCheckBox.SetTooltip("Enable color grading of the final render. An additional lookup texture must be set in the Weather!");
 	colorGradingCheckBox.SetSize(XMFLOAT2(hei, hei));
 	colorGradingCheckBox.SetPos(XMFLOAT2(x, y += step));
 	colorGradingCheckBox.SetCheck(editor->renderPath->getColorGradingEnabled());
@@ -304,40 +303,6 @@ void PostprocessWindow::Create(EditorComponent* editor)
 		editor->renderPath->setColorGradingEnabled(args.bValue);
 	});
 	AddWidget(&colorGradingCheckBox);
-
-	colorGradingButton.Create("Load Color Grading LUT...");
-	colorGradingButton.SetTooltip("Load a color grading lookup texture. It must be a 256x16 RGBA image!");
-	colorGradingButton.SetPos(XMFLOAT2(x + 35, y));
-	colorGradingButton.SetSize(XMFLOAT2(200, hei));
-	colorGradingButton.OnClick([=](wiEventArgs args) {
-		auto x = editor->renderPath->getColorGradingTexture();
-
-		if (x == nullptr)
-		{
-			wiHelper::FileDialogParams params;
-			params.type = wiHelper::FileDialogParams::OPEN;
-			params.description = "Texture";
-			params.extensions.push_back("png");
-			params.extensions.push_back("tga");
-			params.extensions.push_back("bmp");
-			wiHelper::FileDialog(params, [=](std::string fileName) {
-				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					editor->renderPath->setColorGradingTexture(wiResourceManager::Load(fileName, wiResourceManager::IMPORT_COLORGRADINGLUT));
-					if (editor->renderPath->getColorGradingTexture() != nullptr)
-					{
-						colorGradingButton.SetText(fileName);
-					}
-				});
-			});
-		}
-		else
-		{
-			editor->renderPath->setColorGradingTexture(nullptr);
-			colorGradingButton.SetText("Load Color Grading LUT...");
-		}
-
-	});
-	AddWidget(&colorGradingButton);
 
 	ditherCheckBox.Create("Dithering: ");
 	ditherCheckBox.SetTooltip("Toggle the full screen dithering effect. This helps to reduce color banding.");

@@ -121,17 +121,6 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 
 	renderPath->resolutionScale = resolutionScale;
 
-	renderPath->setShadowsEnabled(true);
-	renderPath->setReflectionsEnabled(true);
-	renderPath->setAO(RenderPath3D::AO_DISABLED);
-	renderPath->setSSREnabled(false);
-	renderPath->setMotionBlurEnabled(false);
-	renderPath->setColorGradingEnabled(false);
-	renderPath->setEyeAdaptionEnabled(false);
-	renderPath->setFXAAEnabled(false);
-	renderPath->setDepthOfFieldEnabled(false);
-	renderPath->setLightShaftsEnabled(false);
-
 	renderPath->Load();
 
 	wiGUI& gui = GetGUI();

@@ -945,6 +945,14 @@ namespace wiScene
 			{
 				archive >> windSpeed;
 			}
+			if (archive.GetVersion() >= 62)
+			{
+				archive >> colorGradingMapName;
+				if (!colorGradingMapName.empty())
+				{
+					colorGradingMap = wiResourceManager::Load(dir + colorGradingMapName, wiResourceManager::IMPORT_COLORGRADINGLUT);
+				}
+			}
 
 		}
 		else
@@ -978,22 +986,33 @@ namespace wiScene
 			archive << oceanParameters.surfaceDetail;
 			archive << oceanParameters.surfaceDisplacementTolerance;
 
+			// If detecting an absolute path in textures, remove it and convert to relative:
+			if (!dir.empty())
+			{
+				size_t found = skyMapName.rfind(dir);
+				if (found != std::string::npos)
+				{
+					skyMapName = skyMapName.substr(found + dir.length());
+				}
+
+				found = colorGradingMapName.rfind(dir);
+				if (found != std::string::npos)
+				{
+					colorGradingMapName = colorGradingMapName.substr(found + dir.length());
+				}
+			}
+
 			if (archive.GetVersion() >= 32)
 			{
-				// If detecting an absolute path in textures, remove it and convert to relative:
-				if (!dir.empty())
-				{
-					size_t found = skyMapName.rfind(dir);
-					if (found != std::string::npos)
-					{
-						skyMapName = skyMapName.substr(found + dir.length());
-					}
-				}
 				archive << skyMapName;
 			}
 			if (archive.GetVersion() >= 40)
 			{
 				archive << windSpeed;
+			}
+			if (archive.GetVersion() >= 62)
+			{
+				archive << colorGradingMapName;
 			}
 
 		}

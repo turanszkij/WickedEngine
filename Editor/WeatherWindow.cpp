@@ -171,6 +171,40 @@ void WeatherWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&skyButton);
 
+	colorgradingButton.Create("Load Color Grading LUT");
+	colorgradingButton.SetTooltip("Load a color grading lookup texture. It must be a 256x16 RGBA image!");
+	colorgradingButton.SetSize(XMFLOAT2(240, hei));
+	colorgradingButton.SetPos(XMFLOAT2(x - 100, y += step));
+	colorgradingButton.OnClick([=](wiEventArgs args) {
+		auto& weather = GetWeather();
+
+		if (weather.colorGradingMap == nullptr)
+		{
+			wiHelper::FileDialogParams params;
+			params.type = wiHelper::FileDialogParams::OPEN;
+			params.description = "Texture";
+			params.extensions.push_back("png");
+			params.extensions.push_back("tga");
+			params.extensions.push_back("bmp");
+			wiHelper::FileDialog(params, [=](std::string fileName) {
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					auto& weather = GetWeather();
+					weather.colorGradingMapName = fileName;
+					weather.colorGradingMap = wiResourceManager::Load(fileName, wiResourceManager::IMPORT_COLORGRADINGLUT);
+					colorgradingButton.SetText(fileName);
+					});
+				});
+		}
+		else
+		{
+			weather.colorGradingMap.reset();
+			weather.colorGradingMapName.clear();
+			colorgradingButton.SetText("Load Color Grading LUT");
+		}
+
+		});
+	AddWidget(&colorgradingButton);
+
 
 
 	// Ocean params:
@@ -498,6 +532,16 @@ void WeatherWindow::Update()
 	if (scene.weathers.GetCount() > 0)
 	{
 		auto& weather = scene.weathers[0];
+
+		if (!weather.skyMapName.empty())
+		{
+			skyButton.SetText(weather.skyMapName);
+		}
+
+		if (!weather.colorGradingMapName.empty())
+		{
+			colorgradingButton.SetText(weather.colorGradingMapName);
+		}
 
 		fogStartSlider.SetValue(weather.fogStart);
 		fogEndSlider.SetValue(weather.fogEnd);

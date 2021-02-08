@@ -1339,7 +1339,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			cmd,
 			getExposure(),
 			getDitherEnabled(),
-			getColorGradingEnabled() ? colorGradingTex->texture : nullptr
+			getColorGradingEnabled() ? (scene->weather.colorGradingMap == nullptr ? nullptr : scene->weather.colorGradingMap->texture) : nullptr
 		);
 
 		rt_first = nullptr;
