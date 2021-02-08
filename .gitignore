@@ -211,3 +211,6 @@ ModelManifest.xml
 
 # Visual studio code project files
 .vscode/
+
+# CMake build cache files
+.cache/

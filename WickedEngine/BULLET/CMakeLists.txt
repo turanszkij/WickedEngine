@@ -144,3 +144,4 @@ add_library(Bullet STATIC
 )
 
 target_include_directories(Bullet PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+set_property(TARGET "Bullet" PROPERTY FOLDER "ThirdParty")

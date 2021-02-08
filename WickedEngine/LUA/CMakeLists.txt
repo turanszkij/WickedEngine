@@ -34,3 +34,5 @@ add_library(LUA STATIC
     lvm.c
     lzio.c
 )
+
+set_property(TARGET "LUA" PROPERTY FOLDER "ThirdParty")
