@@ -1,4 +1,6 @@
-find_package(Threads REQUIRED)
+if (NOT WIN32)
+	find_package(Threads REQUIRED)
+endif ()
 
 set (SOURCE_FILES
 	stdafx.cpp
