@@ -41,13 +41,19 @@ namespace wiFont
 
 	const wiGraphics::Texture* GetAtlas();
 
-	// Returns the font directory
-	const std::string& GetFontPath();
-	// Sets the font directory
-	void SetFontPath(const std::string& path);
-
-	// Create a font. Returns fontStyleID that is reusable. If font already exists, just return its ID
+	// Create a font from a file. It must be an existing .ttf file.
+	//	fontName : path to .ttf font
+	//	Returns fontStyleID that is reusable. If font already exists, just return its ID
 	int AddFontStyle(const std::string& fontName);
+
+	// Create a font from binary data. It must be the binary data of a .ttf file
+	//	fontName : name of the font (it doesn't need to be a path)
+	//	data : binary data of the .ttf font
+	//	size : size of the font binary data
+	//	Returns fontStyleID that is reusable. If font already exists, just return its ID
+	//	NOTE: When loading font with this method, the developer must ensure that font data is
+	//	not deleted while the font is in use
+	int AddFontStyle(const std::string& fontName, const uint8_t* data, size_t size);
 
 	void Draw(const char* text, const wiFontParams& params, wiGraphics::CommandList cmd);
 	void Draw(const wchar_t* text, const wiFontParams& params, wiGraphics::CommandList cmd);

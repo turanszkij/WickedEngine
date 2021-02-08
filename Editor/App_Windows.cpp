@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "App_Windows.h"
 
 #include <ppltasks.h>
@@ -49,7 +49,6 @@ void App::Initialize(CoreApplicationView^ applicationView)
 	CoreApplication::Resuming +=
 		ref new EventHandler<Platform::Object^>(this, &App::OnResuming);
 	
-	wiFont::SetFontPath("");
 	wiRenderer::SetShaderPath("shaders/");
 }
 

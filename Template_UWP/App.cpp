@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "App.h"
 
 #include <ppltasks.h>
@@ -54,7 +54,6 @@ void App::Initialize(CoreApplicationView^ applicationView)
 	main.infoDisplay.resolution = true;
 	main.infoDisplay.fpsinfo = true;
 
-	wiFont::SetFontPath("");
 	wiRenderer::SetShaderPath("shaders/");
 }
 

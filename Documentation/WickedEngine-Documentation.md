@@ -867,6 +867,8 @@ Which will write the text <i>write this!</i> to 10, 20 pixel position onto the s
 - wiFontParams <br/>
 Describe all parameters of how and where to draw the font on the screen.
 
+The wiFont can load and render .ttf (TrueType) fonts. The default arial font style is embedded into the engine ([[arial.h]](../WickedEngine/Utility/arial.h) file). The developer can load additional fonts from files by using `wiFont::AddFontStyle()` functions. These can either load from a file, or take a provided byte data for the font. The `AddFontStyle()` will return an `int` that will indicate the font ID within the loaded font library. The `wiFontParams::style` can be set to the font ID to use a specific font that was previously loaded. If the developer added a font before wiFont::Initialize was called, then that will be the default font and the arial font will not be created.
+
 ### wiEmittedParticle
 [[Header]](../WickedEngine/wiEmittedParticle.h) [[Cpp]](../WickedEngine/wiEmittedParticle.cpp)
 GPU driven emitter particle system, used to draw large amount of camera facing quad billboards. Supports simulation with force fields and fluid simulation based on Smooth Particle Hydrodynamics computation.

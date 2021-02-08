@@ -447,7 +447,6 @@ void TestsRenderer::RunFontTest()
 {
 	static wiSpriteFont font;
 	static wiSpriteFont font_upscaled;
-	int arial = wiFont::AddFontStyle(wiFont::GetFontPath() + "arial.ttf");
 
 	font.SetText("This is Arial, size 32 wiFont");
 	font_upscaled.SetText("This is Arial, size 14 wiFont, but upscaled to 32");
@@ -459,8 +458,8 @@ void TestsRenderer::RunFontTest()
 	font_upscaled.params = font.params;
 	font_upscaled.params.posY += font.textHeight();
 
-	font.params.style = arial;
-	font_upscaled.params.style = arial;
+	font.params.style = 0; // 0 = default font
+	font_upscaled.params.style = 0; // 0 = default font
 	font_upscaled.params.size = 14;
 	font_upscaled.params.scaling = 32.0f / 14.0f;
 
