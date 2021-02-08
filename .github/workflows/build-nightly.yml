@@ -31,7 +31,6 @@ jobs:
           WickedEngine/shaders/*.cso
           WickedEngine/shaders/hlsl6/*.cso
           WickedEngine/shaders/spirv/*.cso
-          WickedEngine/fonts/
           images/
           models/
           scripts/
@@ -56,7 +55,6 @@ jobs:
           WickedEngine/shaders/*.cso
           WickedEngine/shaders/hlsl6/*.cso
           WickedEngine/shaders/spirv/*.cso
-          WickedEngine/fonts/
           images/
           models/
           scripts/
@@ -108,7 +106,6 @@ jobs:
           WickedEngine/shaders/*.cso
           WickedEngine/shaders/hlsl6/*.cso
           WickedEngine/shaders/spirv/*.cso
-          WickedEngine/fonts/
           images/
           models/
           scripts/
@@ -132,7 +129,6 @@ jobs:
           WickedEngine/shaders/*.cso
           WickedEngine/shaders/hlsl6/*.cso
           WickedEngine/shaders/spirv/*.cso
-          WickedEngine/fonts/
           images/
           models/
           scripts/
