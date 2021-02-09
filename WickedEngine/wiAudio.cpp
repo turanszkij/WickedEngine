@@ -89,6 +89,12 @@ namespace wiAudio
 			hr = audioEngine->CreateMasteringVoice(&masteringVoice);
 			assert(SUCCEEDED(hr));
 
+			if (masteringVoice == nullptr)
+			{
+				wiBackLog::post("Failed to create XAudio2 mastering voice!");
+				return;
+			}
+
 			masteringVoice->GetVoiceDetails(&masteringVoiceDetails);
 
 			// Without clamping sample rate, it was crashing 32bit 192kHz audio devices
