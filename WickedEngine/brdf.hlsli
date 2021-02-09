@@ -145,6 +145,7 @@ struct Surface
 	float4 sss;				// subsurface scattering color * amount
 	float4 sss_inv;			// 1 / (1 + sss)
 	uint layerMask;			// the engine-side layer mask
+	bool receiveshadow;
 
 	// These will be computed when calling Update():
 	float roughnessBRDF;	// roughness input for BRDF functions
@@ -176,6 +177,7 @@ struct Surface
 		sss = 0;
 		sss_inv = 1;
 		layerMask = ~0;
+		receiveshadow = true;
 
 		sheen.color = 0;
 		sheen.roughness = 0;
@@ -217,6 +219,8 @@ struct Surface
 			albedo = lerp(lerp(baseColor.rgb, float3(0, 0, 0), reflectance), float3(0, 0, 0), metalness);
 			f0 *= lerp(lerp(float3(0, 0, 0), float3(1, 1, 1), reflectance), baseColor.rgb, metalness);
 		}
+
+		receiveshadow = material.IsReceiveShadow();
 	}
 
 	inline void update()
@@ -253,6 +257,8 @@ struct Surface
 		F = smoothstep(0.05, 0.1, F);
 #endif // BRDF_CARTOON
 	}
+
+	inline bool IsReceiveShadow() { return receiveshadow; }
 };
 
 struct SurfaceToLight

@@ -18,9 +18,20 @@ void MaterialWindow::Create(EditorComponent* editor)
 	float hei = 18;
 	float step = hei + 2;
 
+	shadowReceiveCheckBox.Create("Receive Shadow: ");
+	shadowReceiveCheckBox.SetTooltip("Receives shadow or not?");
+	shadowReceiveCheckBox.SetPos(XMFLOAT2(540, y += step));
+	shadowReceiveCheckBox.SetSize(XMFLOAT2(hei, hei));
+	shadowReceiveCheckBox.OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+			material->SetReceiveShadow(args.bValue);
+		});
+	AddWidget(&shadowReceiveCheckBox);
+
 	shadowCasterCheckBox.Create("Cast Shadow: ");
 	shadowCasterCheckBox.SetTooltip("The subset will contribute to the scene shadows if enabled.");
-	shadowCasterCheckBox.SetPos(XMFLOAT2(670, y += step));
+	shadowCasterCheckBox.SetPos(XMFLOAT2(670, y));
 	shadowCasterCheckBox.SetSize(XMFLOAT2(hei, hei));
 	shadowCasterCheckBox.OnClick([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -633,6 +644,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		const NameComponent& name = *scene.names.GetComponent(entity);
 
 		materialNameField.SetValue(name.name);
+		shadowReceiveCheckBox.SetCheck(material->IsReceiveShadow());
 		shadowCasterCheckBox.SetCheck(material->IsCastingShadow());
 		useVertexColorsCheckBox.SetCheck(material->IsUsingVertexColors());
 		specularGlossinessCheckBox.SetCheck(material->IsUsingSpecularGlossinessWorkflow());

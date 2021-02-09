@@ -285,6 +285,10 @@ namespace wiScene
 		{
 			dest->options |= SHADERMATERIAL_OPTION_BIT_USE_WIND;
 		}
+		if (IsReceiveShadow())
+		{
+			dest->options |= SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW;
+		}
 
 		dest->baseColorAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
 		dest->surfaceMapAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
