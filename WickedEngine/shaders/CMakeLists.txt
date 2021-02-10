@@ -1,7 +1,4 @@
-# compile shaders
-
-set(SPIRV_OUTPUT_DIR spirv)
-set(DXC_OUTPUT_DIR hlsl6)
+# Compile shaders
 
 set(SHADERS_CS
 		"hairparticle_simulateCS.hlsl"
@@ -312,6 +309,8 @@ SET(SPIRV_BINARY_FILES)
 SET(DXC_BINARY_FILES)
 
 #dxc (DirectX Shader Compiler) is installed as part of the Vulkan SDK
+set(SPIRV_OUTPUT_DIR spirv)
+
 function(Generate_Shaders_SPIRV SHADERS_SRC_LIST SHADER_TYPE)
 	foreach (Shader IN LISTS ${SHADERS_SRC_LIST})
 		get_filename_component(FILE_NAME ${Shader} NAME_WLE)
@@ -370,7 +369,7 @@ function(Generate_Shaders_SPIRV SHADERS_SRC_LIST SHADER_TYPE)
 
 		add_custom_command(
 				OUTPUT ${SPIRV_OUTPUT}
-				COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/spirv/"
+				COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/${SPIRV_OUTPUT_DIR}/"
 				COMMAND ${COMMAND_PARAMS}
 				DEPENDS ${SPIRV_SOURCE} ${INCLUDE_DEPENDENCIES}
 		)
@@ -378,7 +377,6 @@ function(Generate_Shaders_SPIRV SHADERS_SRC_LIST SHADER_TYPE)
 	endforeach()
 	set(SPIRV_BINARY_FILES ${SPIRV_BINARY_FILES} PARENT_SCOPE)
 endfunction()
-
 
 Generate_Shaders_SPIRV(SHADERS_VS vs)
 Generate_Shaders_SPIRV(SHADERS_HS hs)
@@ -388,15 +386,53 @@ Generate_Shaders_SPIRV(SHADERS_PS ps)
 Generate_Shaders_SPIRV(SHADERS_CS cs)
 Generate_Shaders_SPIRV(SHADERS_LIB lib)
 
-add_custom_target(
-		Shaders_SPIRV
-		DEPENDS ${SPIRV_BINARY_FILES}
-)
-
+add_custom_target(Shaders_SPIRV DEPENDS ${SPIRV_BINARY_FILES})
 set_property(TARGET "Shaders_SPIRV" PROPERTY FOLDER "Shaders")
 
 
 if (WIN32)
+	# Legacy Shader Model 5 for DirectX11
+	set(LEGACY_SHADER_SOURCES)
+	function(Generate_Shaders_Legacy SHADERS_SRC_LIST SHADER_TYPE)
+		foreach (Shader IN LISTS ${SHADERS_SRC_LIST})
+			get_filename_component(FILE_NAME ${Shader} NAME_WLE)
+
+			set(SHADER_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}//${FILE_NAME}.cso")
+			set(SHADER_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/../${Shader}")
+
+			set(COMMAND_PARAMS "fxc"
+				"${SHADER_SOURCE}"
+				/T "${SHADER_TYPE}_5_0"
+				/I "${CMAKE_CURRENT_SOURCE_DIR}/../"
+				/E "main"
+				/nologo
+				/Qstrip_reflect
+				/Qstrip_debug
+				/Fo ${SHADER_OUTPUT}
+			)
+			
+			add_custom_command(
+					OUTPUT ${SHADER_OUTPUT}
+					COMMAND ${COMMAND_PARAMS}
+					DEPENDS ${SHADER_SOURCE}
+			)
+			list(APPEND LEGACY_SHADER_BINARY_FILES ${SHADER_OUTPUT})
+		endforeach()
+		set(LEGACY_SHADER_BINARY_FILES ${LEGACY_SHADER_BINARY_FILES} PARENT_SCOPE)
+
+	endfunction()
+
+	Generate_Shaders_Legacy(SHADERS_VS vs)
+	Generate_Shaders_Legacy(SHADERS_HS hs)
+	Generate_Shaders_Legacy(SHADERS_DS ds)
+	Generate_Shaders_Legacy(SHADERS_GS gs)
+	Generate_Shaders_Legacy(SHADERS_PS ps)
+	Generate_Shaders_Legacy(SHADERS_CS cs)
+	add_custom_target(Shaders_Legacy DEPENDS ${LEGACY_SHADER_BINARY_FILES})
+	set_property(TARGET "Shaders_Legacy" PROPERTY FOLDER "Shaders")
+
+	# DXC (Shader Model 6.0+ for DirectX12)
+	set(DXC_OUTPUT_DIR hlsl6)
 	function(Generate_Shaders_DXC SHADERS_SRC_LIST SHADER_TYPE)
 		foreach (Shader IN LISTS ${SHADERS_SRC_LIST})
 			get_filename_component(FILE_NAME ${Shader} NAME_WLE)
@@ -418,9 +454,9 @@ if (WIN32)
 			
 			add_custom_command(
 					OUTPUT ${DXC_OUTPUT}
-					COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/hlsl6/"
+					COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/${DXC_OUTPUT_DIR}/"
 					COMMAND ${COMMAND_PARAMS}
-					DEPENDS ${SPIRV_SOURCE}
+					DEPENDS ${DXC_SOURCE}
 			)
 			list(APPEND DXC_BINARY_FILES ${DXC_OUTPUT})
 		endforeach()
@@ -436,10 +472,6 @@ if (WIN32)
 	Generate_Shaders_DXC(SHADERS_CS cs)
 	Generate_Shaders_DXC(SHADERS_LIB lib)
 
-	add_custom_target(
-			Shaders_DXC
-			DEPENDS ${DXC_BINARY_FILES}
-	)
-
+	add_custom_target(Shaders_DXC DEPENDS ${DXC_BINARY_FILES})
 	set_property(TARGET "Shaders_DXC" PROPERTY FOLDER "Shaders")
 endif ()
