@@ -5624,13 +5624,14 @@ using namespace DX12_Internal;
 				hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[fr].commandAllocators[cmd].Get(), nullptr, IID_PPV_ARGS(&frames[fr].commandLists[cmd]));
 				hr = frames[fr].commandLists[cmd]->Close();
 
-				descriptors[cmd].init(this);
 				frames[fr].resourceBuffer[cmd].init(this, 1024 * 1024); // 1 MB starting size
 
 				std::wstringstream wss;
 				wss << "cmd" << cmd;
 				frames[fr].commandLists[cmd]->SetName(wss.str().c_str());
 			}
+
+			descriptors[cmd].init(this);
 		}
 
 
