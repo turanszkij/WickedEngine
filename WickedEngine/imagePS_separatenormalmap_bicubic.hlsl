@@ -2,7 +2,8 @@
 
 float4 main(VertextoPixel input) : SV_TARGET
 {
-	float4 color = SampleTextureCatmullRom(texture_base, Sampler, input.uv0);
+	float4 uvsets = input.compute_uvs();
+	float4 color = SampleTextureCatmullRom(texture_base, Sampler, uvsets.xy);
 
 	color = 2 * color - 1;
 

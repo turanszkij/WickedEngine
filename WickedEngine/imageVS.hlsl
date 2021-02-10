@@ -12,12 +12,13 @@ VertextoPixel main(uint vI : SV_VERTEXID)
 	//	3--4
 
 	Out.pos = xCorners[vI];
-
-	Out.uv0 = float2(vI % 2, vI % 4 / 2);
-	Out.uv1 = Out.uv0;
-	Out.uv0 = Out.uv0 * xTexMulAdd.xy + xTexMulAdd.zw;
-	Out.uv1 = Out.uv1 * xTexMulAdd2.xy + xTexMulAdd2.zw;
 	Out.uv_screen = Out.pos;
+
+	// Set up inverse bilinear interpolation
+	Out.q = Out.pos.xy - xCorners[0].xy;
+	Out.b1 = xCorners[1].xy - xCorners[0].xy;
+	Out.b2 = xCorners[2].xy - xCorners[0].xy;
+	Out.b3 = xCorners[0].xy - xCorners[1].xy - xCorners[2].xy + xCorners[3].xy;
 
 	return Out;
 }
