@@ -101,6 +101,8 @@ add_library(${TARGET_NAME} STATIC
 	wiBlueNoise.cpp
 )
 
+target_compile_definitions(${TARGET_NAME} PRIVATE WICKED_DEFAULT_SHADERS_DIRECTORY=\"${CMAKE_CURRENT_SOURCE_DIR}/shaders/\")
+
 target_include_directories(${TARGET_NAME} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}
 )
@@ -117,7 +119,7 @@ if (WIN32)
 	)
 
 	add_dependencies(${TARGET_NAME}
-                Shaders_Legacy
+		Shaders_Legacy
 		Shaders_DXC
 	)
 else ()
