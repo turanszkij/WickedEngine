@@ -55,11 +55,7 @@ GPUBuffer			resourceBuffers[RBTYPE_COUNT];
 Sampler				samplers[SSLOT_COUNT];
 
 // Specify shader folder using macro when running from CMake
-#ifdef WICKED_DEFAULT_SHADERS_DIRECTORY
-string SHADERPATH = WICKED_DEFAULT_SHADERS_DIRECTORY;
-#else
 string SHADERPATH = wiHelper::GetOriginalWorkingDirectory() + "../WickedEngine/shaders/";
-#endif
 
 LinearAllocator renderFrameAllocators[COMMANDLIST_COUNT]; // can be used by graphics threads
 inline LinearAllocator& GetRenderFrameAllocator(CommandList cmd)

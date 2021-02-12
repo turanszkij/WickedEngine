@@ -145,6 +145,8 @@ set(SHADERS_CS
 		"rtao_denoise_blurCS.hlsl"
 		"rtao_denoise_temporalCS.hlsl"
 		"rtshadow_denoise_temporalCS.hlsl"
+		"upsample_bilateral_uint4CS.hlsl"
+		"screenspaceshadowCS.hlsl"
 )
 
 set(SHADERS_PS
