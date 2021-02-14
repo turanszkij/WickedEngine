@@ -117,6 +117,7 @@ if (WIN32)
 	)
 
 	add_dependencies(${TARGET_NAME}
+		Shaders_Legacy
 		Shaders_DXC
 	)
 else ()

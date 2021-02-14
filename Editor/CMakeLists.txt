@@ -45,9 +45,7 @@ if (WIN32)
 		WickedEngine_Windows 
 	)
 
-	if (MSVC)
-		set_property(TARGET WickedEngineEditor PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
-	endif ()
+	set_property(TARGET WickedEngineEditor PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 else ()
 	add_executable(WickedEngineEditor ${SOURCE_FILES})
 

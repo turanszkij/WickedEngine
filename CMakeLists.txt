@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.7)
+cmake_minimum_required(VERSION 3.8)
 
 # Configure CMake global variables
 set(CMAKE_CXX_STANDARD 17)
