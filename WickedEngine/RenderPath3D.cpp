@@ -100,7 +100,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.Format = FORMAT_R8G8B8A8_SNORM;
+		desc.Format = FORMAT_R8G8_SNORM;
 		desc.Width = internalResolution.x;
 		desc.Height = internalResolution.y;
 		device->CreateTexture(&desc, nullptr, &rtWaterRipple);
