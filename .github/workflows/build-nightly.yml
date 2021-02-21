@@ -9,6 +9,7 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v2
+	- run: nuget restore Projects/MyProject.sln
     - name: Build
       shell: cmd
       run: |
