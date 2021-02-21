@@ -12,7 +12,7 @@ jobs:
     - name: Build
       shell: cmd
       run: |
-	    nuget restore Projects/MyProject.sln
+	    nuget restore WickedEngine.sln
         "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /p:Configuration=Release /p:Platform=x64
     
     - name: Move binaries
