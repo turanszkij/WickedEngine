@@ -10,6 +10,9 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 	- uses: nuget/setup-nuget@v1
+	  with:
+        nuget-api-key: ${{ secrets.NuGetAPIKey }}
+        nuget-version: '5.x'
     - name: Build
       shell: cmd
       run: |
