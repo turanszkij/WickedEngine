@@ -9,13 +9,20 @@
 #include <cassert>
 #include <cmath>
 
+using namespace std;
+using namespace wiGraphics;
+using namespace wiRectPacker;
+using namespace wiScene;
+using namespace wiECS;
+
+
 #ifdef PLATFORM_UWP
 #include <winrt/Windows.Storage.h>
 #include <winrt/Windows.Foundation.Collections.h>
 using namespace winrt::Windows::Storage;
-void copy_folder(StorageFolder src, StorageFolder dst)
+winrt::fire_and_forget copy_folder(StorageFolder src, StorageFolder dst)
 {
-	auto items = src.GetItemsAsync().get();
+	auto items = co_await src.GetItemsAsync();
 	for (auto item : items)
 	{
 		if (item.IsOfType(StorageItemTypes::File))
@@ -31,7 +38,7 @@ void copy_folder(StorageFolder src, StorageFolder dst)
 		else if (item.IsOfType(StorageItemTypes::Folder))
 		{
 			StorageFolder src_child = item.as<StorageFolder>();
-			auto dst_child = dst.CreateFolderAsync(item.Name(), CreationCollisionOption::OpenIfExists).get();
+			auto dst_child = co_await dst.CreateFolderAsync(item.Name(), CreationCollisionOption::OpenIfExists);
 			if (dst_child)
 			{
 				copy_folder(src_child, dst_child);
@@ -39,13 +46,61 @@ void copy_folder(StorageFolder src, StorageFolder dst)
 		}
 	}
 };
-#endif // PLATFORM_UWP
+winrt::fire_and_forget uwp_copy_assets()
+{
+	// On UWP we will copy the base content from application folder to 3D Objects directory
+	//	for easy access to the user:
+	StorageFolder location = KnownFolders::Objects3D();
 
-using namespace std;
-using namespace wiGraphics;
-using namespace wiRectPacker;
-using namespace wiScene;
-using namespace wiECS;
+	// Objects3D/WickedEngine
+	auto destfolder = co_await location.CreateFolderAsync(L"WickedEngine", CreationCollisionOption::OpenIfExists);
+
+	string rootdir = wiHelper::ExpandPath(wiHelper::GetOriginalWorkingDirectory());
+	wstring wstr;
+
+	// scripts:
+	{
+		wiHelper::StringConvert(rootdir + "scripts\\", wstr);
+		auto src = co_await StorageFolder::GetFolderFromPathAsync(wstr.c_str());
+		if (src)
+		{
+			auto dst = co_await destfolder.CreateFolderAsync(L"scripts", CreationCollisionOption::OpenIfExists);
+			if (dst)
+			{
+				copy_folder(src, dst);
+			}
+		}
+	}
+
+	// models:
+	{
+		wiHelper::StringConvert(rootdir + "models\\", wstr);
+		auto src = co_await StorageFolder::GetFolderFromPathAsync(wstr.c_str());
+		if (src)
+		{
+			auto dst = co_await destfolder.CreateFolderAsync(L"models", CreationCollisionOption::OpenIfExists);
+			if (dst)
+			{
+				copy_folder(src, dst);
+			}
+		}
+	}
+
+	// Documentation:
+	{
+		wiHelper::StringConvert(rootdir + "Documentation\\", wstr);
+		auto src = co_await StorageFolder::GetFolderFromPathAsync(wstr.c_str());
+		if (src)
+		{
+			auto dst = destfolder.CreateFolderAsync(L"Documentation", CreationCollisionOption::OpenIfExists).get();
+			if (dst)
+			{
+				copy_folder(src, dst);
+			}
+		}
+	}
+}
+#endif // PLATFORM_UWP
 
 void Editor::Initialize()
 {
@@ -336,65 +391,11 @@ void EditorComponent::ResizeLayout()
 }
 void EditorComponent::Load()
 {
-	wiJobSystem::context ctx;
-
 #ifdef PLATFORM_UWP
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) {
-		// On UWP we will copy the base content from application folder to 3D Objects directory
-		//	for easy access to the user:
-		StorageFolder location = KnownFolders::Objects3D();
-
-		// Objects3D/WickedEngine
-		auto destfolder = location.CreateFolderAsync(L"WickedEngine", CreationCollisionOption::OpenIfExists).get();
-
-		string rootdir = wiHelper::ExpandPath(wiHelper::GetOriginalWorkingDirectory());
-		wstring wstr;
-
-		// scripts:
-		{
-			wiHelper::StringConvert(rootdir + "scripts\\", wstr);
-			auto src = StorageFolder::GetFolderFromPathAsync(wstr.c_str()).get();
-			if (src)
-			{
-				auto dst = destfolder.CreateFolderAsync(L"scripts", CreationCollisionOption::OpenIfExists).get();
-				if (dst)
-				{
-					copy_folder(src, dst);
-				}
-			}
-		}
-
-		// models:
-		{
-			wiHelper::StringConvert(rootdir + "models\\", wstr);
-			auto src = StorageFolder::GetFolderFromPathAsync(wstr.c_str()).get();
-			if (src)
-			{
-				auto dst = destfolder.CreateFolderAsync(L"models", CreationCollisionOption::OpenIfExists).get();
-				if (dst)
-				{
-					copy_folder(src, dst);
-				}
-			}
-		}
-
-		// Documentation:
-		{
-			wiHelper::StringConvert(rootdir + "Documentation\\", wstr);
-			auto src = StorageFolder::GetFolderFromPathAsync(wstr.c_str()).get();
-			if (src)
-			{
-				auto dst = destfolder.CreateFolderAsync(L"Documentation", CreationCollisionOption::OpenIfExists).get();
-				if (dst)
-				{
-					copy_folder(src, dst);
-				}
-			}
-		}
-
-	});
+	uwp_copy_assets();
 #endif // PLATFORM_UWP
 
+	wiJobSystem::context ctx;
 	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { pointLightTex = wiResourceManager::Load("images/pointlight.dds"); });
 	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { spotLightTex = wiResourceManager::Load("images/spotlight.dds"); });
 	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { dirLightTex = wiResourceManager::Load("images/directional_light.dds"); });
