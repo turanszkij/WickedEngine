@@ -8,6 +8,7 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v2
+	- uses: nuget/setup-nuget@v1
     - name: Build
       shell: cmd
       run: |
