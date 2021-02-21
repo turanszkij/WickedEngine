@@ -8,6 +8,10 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v2
+    - uses: nuget/setup-nuget@v1
+      with:
+        nuget-api-key: ${{ secrets.NuGetAPIKey }}
+    - run: nuget restore WickedEngine.sln
     - name: Build
       shell: cmd
       run: |

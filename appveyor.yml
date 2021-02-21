@@ -6,6 +6,9 @@ branches:
 image: Visual Studio 2019
 configuration: Release
 
+before_build:
+  - nuget restore
+
 build_script:
   - msbuild "C:\projects\wickedengine\WickedEngine.sln" /t:Editor_Windows /m /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - msbuild "C:\projects\wickedengine\WickedEngine.sln" /t:Editor_UWP /m /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"

@@ -28,14 +28,14 @@
     <ClCompile Include="App_Windows.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="App_Windows.h" />
-  </ItemGroup>
-  <ItemGroup>
     <Image Include="Assets\StoreLogo.png">
       <Filter>Assets</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>
