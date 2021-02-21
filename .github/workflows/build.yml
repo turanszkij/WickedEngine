@@ -9,14 +9,13 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v2
-	- uses: nuget/setup-nuget@v1
-	  with:
+    - uses: nuget/setup-nuget@v1
+      with:
         nuget-api-key: ${{ secrets.NuGetAPIKey }}
-        nuget-version: '5.x'
+    - run: nuget restore WickedEngine.sln
     - name: Build
       shell: cmd
       run: |
-	    nuget restore WickedEngine.sln
         "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /p:Configuration=Release /p:Platform=x64
     
     - name: Move binaries
