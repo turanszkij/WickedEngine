@@ -10,40 +10,34 @@
 #include <cmath>
 
 #ifdef PLATFORM_UWP
-#include <collection.h>
-#include <ppltasks.h>
-using namespace concurrency;
-using namespace Platform;
-using namespace Windows::Storage;
-using namespace Windows::Storage::Pickers;
-using namespace Windows::Storage::AccessCache;
-using namespace Windows::Foundation::Collections;
-void copy_folder(StorageFolder^ src, StorageFolder^ dst) {
-	create_task(src->GetItemsAsync()).then([=](IVectorView<IStorageItem^>^ items) {
-		for (IStorageItem^ item : items)
+#include <winrt/Windows.Storage.h>
+#include <winrt/Windows.Foundation.Collections.h>
+using namespace winrt::Windows::Storage;
+void copy_folder(StorageFolder src, StorageFolder dst)
+{
+	auto items = src.GetItemsAsync().get();
+	for (auto item : items)
+	{
+		if (item.IsOfType(StorageItemTypes::File))
 		{
-			if (item->IsOfType(StorageItemTypes::File))
-			{
-				StorageFile^ file = (StorageFile^)item;
-				try {
-					file->CopyAsync(dst);
-				}
-				catch (...) {
-					// file already exists, we don't want to overwrite
-				}
+			StorageFile file = item.as<StorageFile>();
+			try {
+				file.CopyAsync(dst);
 			}
-			else if (item->IsOfType(StorageItemTypes::Folder))
-			{
-				StorageFolder^ src_child = (StorageFolder^)item;
-				create_task(dst->CreateFolderAsync(item->Name, CreationCollisionOption::OpenIfExists)).then([=](StorageFolder^ dst_child) {
-					if (dst_child)
-					{
-						copy_folder(src_child, dst_child);
-					}
-				});
+			catch (...) {
+				// file already exists, we don't want to overwrite
 			}
 		}
-	});
+		else if (item.IsOfType(StorageItemTypes::Folder))
+		{
+			StorageFolder src_child = item.as<StorageFolder>();
+			auto dst_child = dst.CreateFolderAsync(item.Name(), CreationCollisionOption::OpenIfExists).get();
+			if (dst_child)
+			{
+				copy_folder(src_child, dst_child);
+			}
+		}
+	}
 };
 #endif // PLATFORM_UWP
 
@@ -342,63 +336,65 @@ void EditorComponent::ResizeLayout()
 }
 void EditorComponent::Load()
 {
-#ifdef PLATFORM_UWP
-	// On UWP we will copy the base content from application folder to 3D Objects directory
-	//	for easy access to the user:
-	StorageFolder^ location = KnownFolders::Objects3D;
+	wiJobSystem::context ctx;
 
-	// Objects3D/WickedEngine
-	create_task(location->CreateFolderAsync("WickedEngine", CreationCollisionOption::OpenIfExists)).then([=](StorageFolder^ destfolder) {
+#ifdef PLATFORM_UWP
+	wiJobSystem::Execute(ctx, [this](wiJobArgs args) {
+		// On UWP we will copy the base content from application folder to 3D Objects directory
+		//	for easy access to the user:
+		StorageFolder location = KnownFolders::Objects3D();
+
+		// Objects3D/WickedEngine
+		auto destfolder = location.CreateFolderAsync(L"WickedEngine", CreationCollisionOption::OpenIfExists).get();
 
 		string rootdir = wiHelper::ExpandPath(wiHelper::GetOriginalWorkingDirectory());
 		wstring wstr;
 
 		// scripts:
-		wiHelper::StringConvert(rootdir + "scripts\\", wstr);
-		create_task(StorageFolder::GetFolderFromPathAsync(ref new String(wstr.c_str()))).then([=](StorageFolder^ src) {
+		{
+			wiHelper::StringConvert(rootdir + "scripts\\", wstr);
+			auto src = StorageFolder::GetFolderFromPathAsync(wstr.c_str()).get();
 			if (src)
 			{
-				create_task(destfolder->CreateFolderAsync("scripts", CreationCollisionOption::OpenIfExists)).then([=](StorageFolder^ dst) {
-					if (dst)
-					{
-						copy_folder(src, dst);
-					}
-				});
+				auto dst = destfolder.CreateFolderAsync(L"scripts", CreationCollisionOption::OpenIfExists).get();
+				if (dst)
+				{
+					copy_folder(src, dst);
+				}
 			}
-		});
+		}
 
 		// models:
-		wiHelper::StringConvert(rootdir + "models\\", wstr);
-		create_task(StorageFolder::GetFolderFromPathAsync(ref new String(wstr.c_str()))).then([=](StorageFolder^ src) {
+		{
+			wiHelper::StringConvert(rootdir + "models\\", wstr);
+			auto src = StorageFolder::GetFolderFromPathAsync(wstr.c_str()).get();
 			if (src)
 			{
-				create_task(destfolder->CreateFolderAsync("models", CreationCollisionOption::OpenIfExists)).then([=](StorageFolder^ dst) {
-					if (dst)
-					{
-						copy_folder(src, dst);
-					}
-				});
+				auto dst = destfolder.CreateFolderAsync(L"models", CreationCollisionOption::OpenIfExists).get();
+				if (dst)
+				{
+					copy_folder(src, dst);
+				}
 			}
-		});
+		}
 
 		// Documentation:
-		wiHelper::StringConvert(rootdir + "Documentation\\", wstr);
-		create_task(StorageFolder::GetFolderFromPathAsync(ref new String(wstr.c_str()))).then([=](StorageFolder^ src) {
+		{
+			wiHelper::StringConvert(rootdir + "Documentation\\", wstr);
+			auto src = StorageFolder::GetFolderFromPathAsync(wstr.c_str()).get();
 			if (src)
 			{
-				create_task(destfolder->CreateFolderAsync("Documentation", CreationCollisionOption::OpenIfExists)).then([=](StorageFolder^ dst) {
-					if (dst)
-					{
-						copy_folder(src, dst);
-					}
-				});
+				auto dst = destfolder.CreateFolderAsync(L"Documentation", CreationCollisionOption::OpenIfExists).get();
+				if (dst)
+				{
+					copy_folder(src, dst);
+				}
 			}
-		});
+		}
 
 	});
 #endif // PLATFORM_UWP
 
-	wiJobSystem::context ctx;
 	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { pointLightTex = wiResourceManager::Load("images/pointlight.dds"); });
 	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { spotLightTex = wiResourceManager::Load("images/spotlight.dds"); });
 	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { dirLightTex = wiResourceManager::Load("images/directional_light.dds"); });

@@ -1338,8 +1338,9 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 	RESOLUTIONHEIGHT = rect.bottom - rect.top;
 #else PLATFORM_UWP
 	float dpiscale = wiPlatform::GetDPIScaling();
-	RESOLUTIONWIDTH = int(window->Bounds.Width * dpiscale);
-	RESOLUTIONHEIGHT = int(window->Bounds.Height * dpiscale);
+	auto uwpwindow = winrt::Windows::UI::Core::CoreWindow::GetForCurrentThread();
+	RESOLUTIONWIDTH = int(uwpwindow.Bounds().Width * dpiscale);
+	RESOLUTIONHEIGHT = int(uwpwindow.Bounds().Height * dpiscale);
 #endif
 
 
@@ -1433,15 +1434,15 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 	sd.Height = RESOLUTIONHEIGHT;
 	sd.Format = _ConvertFormat(GetBackBufferFormat());
 	sd.Stereo = false;
-	sd.SampleDesc.Count = 1; // Don't use multi-sampling.
+	sd.SampleDesc.Count = 1;
 	sd.SampleDesc.Quality = 0;
 	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	sd.BufferCount = 2; // Use double-buffering to minimize latency.
+	sd.BufferCount = BACKBUFFER_COUNT;
 	sd.Flags = 0;
 	sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+	sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
 #ifndef PLATFORM_UWP
-	sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 	sd.Scaling = DXGI_SCALING_STRETCH;
 
 	DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
@@ -1452,10 +1453,9 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 	fullscreenDesc.Windowed = !fullscreen;
 	hr = pIDXGIFactory->CreateSwapChainForHwnd(device.Get(), window, &sd, &fullscreenDesc, nullptr, &swapChain);
 #else
-	sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // All Windows Store apps must use this SwapEffect.
 	sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
-	hr = pIDXGIFactory->CreateSwapChainForCoreWindow(device.Get(), reinterpret_cast<IUnknown*>(window.Get()), &sd, nullptr, &swapChain);
+	hr = pIDXGIFactory->CreateSwapChainForCoreWindow(device.Get(), static_cast<IUnknown*>(winrt::get_abi(uwpwindow)), &sd, nullptr, &swapChain);
 #endif
 
 	if (FAILED(hr))

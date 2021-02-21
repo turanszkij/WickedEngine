@@ -2297,8 +2297,9 @@ using namespace DX12_Internal;
 		RESOLUTIONHEIGHT = rect.bottom - rect.top;
 #else PLATFORM_UWP
 		float dpiscale = wiPlatform::GetDPIScaling();
-		RESOLUTIONWIDTH = int(window->Bounds.Width * dpiscale);
-		RESOLUTIONHEIGHT = int(window->Bounds.Height * dpiscale);
+		auto uwpwindow = winrt::Windows::UI::Core::CoreWindow::GetForCurrentThread();
+		RESOLUTIONWIDTH = int(uwpwindow.Bounds().Width * dpiscale);
+		RESOLUTIONHEIGHT = int(uwpwindow.Bounds().Height * dpiscale);
 #endif
 
 
@@ -2444,15 +2445,15 @@ using namespace DX12_Internal;
 		sd.Height = RESOLUTIONHEIGHT;
 		sd.Format = _ConvertFormat(GetBackBufferFormat());
 		sd.Stereo = false;
-		sd.SampleDesc.Count = 1; // Don't use multi-sampling.
+		sd.SampleDesc.Count = 1;
 		sd.SampleDesc.Quality = 0;
 		sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		sd.BufferCount = BACKBUFFER_COUNT;
 		sd.Flags = 0;
 		sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+		sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
 #ifndef PLATFORM_UWP
-		sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 		sd.Scaling = DXGI_SCALING_STRETCH;
 
 		DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
@@ -2463,10 +2464,9 @@ using namespace DX12_Internal;
 		fullscreenDesc.Windowed = !fullscreen;
 		hr = factory->CreateSwapChainForHwnd(directQueue.Get(), window, &sd, &fullscreenDesc, nullptr, &_swapChain);
 #else
-		sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // All Windows Store apps must use this SwapEffect.
 		sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
-		hr = factory->CreateSwapChainForCoreWindow(directQueue.Get(), reinterpret_cast<IUnknown*>(window.Get()), &sd, nullptr, &_swapChain);
+		hr = factory->CreateSwapChainForCoreWindow(directQueue.Get(), static_cast<IUnknown*>(winrt::get_abi(uwpwindow)), &sd, nullptr, &_swapChain);
 #endif
 
 		if (FAILED(hr))
