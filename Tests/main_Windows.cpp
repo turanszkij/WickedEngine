@@ -184,6 +184,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_INPUT:
 		wiRawInput::ParseMessage((void*)lParam);
 		break;
+	case WM_KILLFOCUS:
+		tests.is_window_active = false;
+		break;
+	case WM_SETFOCUS:
+		tests.is_window_active = true;
+		break;
     case WM_PAINT:
         {
             PAINTSTRUCT ps;

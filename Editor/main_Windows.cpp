@@ -117,6 +117,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    hInst = hInstance; // Store instance handle in our global variable
 
    int x = CW_USEDEFAULT, y = 0, w = CW_USEDEFAULT, h = 0;
+   bool fullscreen = false;
    bool borderless = false;
    string voidStr = "";
 
@@ -127,7 +128,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	   file >> voidStr >> enabled;
 	   if (enabled != 0)
 	   {
-		   file >> voidStr >> x >> voidStr >> y >> voidStr >> w >> voidStr >> h >> voidStr >> editor.fullscreen >> voidStr >> borderless;
+		   file >> voidStr >> x >> voidStr >> y >> voidStr >> w >> voidStr >> h >> voidStr >> fullscreen >> voidStr >> borderless;
 	   }
    }
    file.close();
@@ -158,7 +159,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
-   editor.SetWindow(hWnd);
+   editor.SetWindow(hWnd, fullscreen);
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
@@ -241,6 +242,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_INPUT:
 		wiRawInput::ParseMessage((void*)lParam);
+		break;
+	case WM_KILLFOCUS:
+		editor.is_window_active = false;
+		break;
+	case WM_SETFOCUS:
+		editor.is_window_active = true;
 		break;
     case WM_PAINT:
         {

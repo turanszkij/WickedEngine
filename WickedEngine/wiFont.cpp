@@ -369,7 +369,7 @@ void UpdatePendingGlyphs()
 		const int borderPadding = 1;
 
 		// Font resolution is upscaled to make it sharper:
-		const float upscaling = std::max(2.0f, wiPlatform::GetDPIScaling());
+		const float upscaling = std::max(2.0f, wiRenderer::GetDevice()->GetDPIScaling());
 
 		for (int32_t hash : pendingGlyphs)
 		{

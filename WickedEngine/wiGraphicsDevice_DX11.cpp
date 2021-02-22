@@ -1332,15 +1332,16 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 	FULLSCREEN = fullscreen;
 
 #ifndef PLATFORM_UWP
+	dpi = GetDpiForWindow(window);
 	RECT rect;
 	GetClientRect(window, &rect);
 	RESOLUTIONWIDTH = rect.right - rect.left;
 	RESOLUTIONHEIGHT = rect.bottom - rect.top;
 #else PLATFORM_UWP
-	float dpiscale = wiPlatform::GetDPIScaling();
-	auto uwpwindow = winrt::Windows::UI::Core::CoreWindow::GetForCurrentThread();
-	RESOLUTIONWIDTH = int(uwpwindow.Bounds().Width * dpiscale);
-	RESOLUTIONHEIGHT = int(uwpwindow.Bounds().Height * dpiscale);
+	dpi = (int)winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView().LogicalDpi();
+	float dpiscale = GetDPIScaling();
+	RESOLUTIONWIDTH = int(window.Bounds().Width * dpiscale);
+	RESOLUTIONHEIGHT = int(window.Bounds().Height * dpiscale);
 #endif
 
 
@@ -1455,7 +1456,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 #else
 	sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
-	hr = pIDXGIFactory->CreateSwapChainForCoreWindow(device.Get(), static_cast<IUnknown*>(winrt::get_abi(uwpwindow)), &sd, nullptr, &swapChain);
+	hr = pIDXGIFactory->CreateSwapChainForCoreWindow(device.Get(), static_cast<IUnknown*>(winrt::get_abi(window)), &sd, nullptr, &swapChain);
 #endif
 
 	if (FAILED(hr))

@@ -58,6 +58,7 @@ int main(int argc, char *argv[])
 
     //TODO read config.ini
     int x = 1920, y = 0, w = 1080, h = 0;
+	bool fullscreen = false;
     bool borderless = false;
     string voidStr = "";
 
@@ -68,7 +69,7 @@ int main(int argc, char *argv[])
         file >> voidStr >> enabled;
         if (enabled != 0)
         {
-            file >> voidStr >> x >> voidStr >> y >> voidStr >> w >> voidStr >> h >> voidStr >> editor.fullscreen >> voidStr >> borderless;
+            file >> voidStr >> x >> voidStr >> y >> voidStr >> w >> voidStr >> h >> voidStr >> fullscreen >> voidStr >> borderless;
         }
     }
     file.close();
@@ -82,7 +83,7 @@ int main(int argc, char *argv[])
         throw sdl2::SDLError("Error creating window");
     }
 
-    if(editor.fullscreen) SDL_SetWindowFullscreen(window.get(), SDL_TRUE);
+    if(fullscreen) SDL_SetWindowFullscreen(window.get(), SDL_TRUE);
 
     editor.SetWindow(window.get());
 

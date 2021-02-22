@@ -2291,15 +2291,16 @@ using namespace DX12_Internal;
 		FULLSCREEN = fullscreen;
 
 #ifndef PLATFORM_UWP
+		dpi = GetDpiForWindow(window);
 		RECT rect;
 		GetClientRect(window, &rect);
 		RESOLUTIONWIDTH = rect.right - rect.left;
 		RESOLUTIONHEIGHT = rect.bottom - rect.top;
 #else PLATFORM_UWP
-		float dpiscale = wiPlatform::GetDPIScaling();
-		auto uwpwindow = winrt::Windows::UI::Core::CoreWindow::GetForCurrentThread();
-		RESOLUTIONWIDTH = int(uwpwindow.Bounds().Width * dpiscale);
-		RESOLUTIONHEIGHT = int(uwpwindow.Bounds().Height * dpiscale);
+		dpi = (int)winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView().LogicalDpi();
+		float dpiscale = GetDPIScaling();
+		RESOLUTIONWIDTH = int(window.Bounds().Width * dpiscale);
+		RESOLUTIONHEIGHT = int(window.Bounds().Height * dpiscale);
 #endif
 
 
@@ -2466,7 +2467,7 @@ using namespace DX12_Internal;
 #else
 		sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
-		hr = factory->CreateSwapChainForCoreWindow(directQueue.Get(), static_cast<IUnknown*>(winrt::get_abi(uwpwindow)), &sd, nullptr, &_swapChain);
+		hr = factory->CreateSwapChainForCoreWindow(directQueue.Get(), static_cast<IUnknown*>(winrt::get_abi(window)), &sd, nullptr, &_swapChain);
 #endif
 
 		if (FAILED(hr))

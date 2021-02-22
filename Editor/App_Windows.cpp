@@ -90,7 +90,7 @@ public:
 		m_logicalWidth = window.Bounds().Width;
 		m_logicalHeight = window.Bounds().Height;
 
-		main.SetWindow(&window);
+		main.SetWindow(window);
 	}
 
 	void Load(winrt::hstring const&) noexcept
@@ -145,7 +145,7 @@ protected:
 		m_logicalWidth = sender.Bounds().Width;
 		m_logicalHeight = sender.Bounds().Height;
 
-		float dpiscale = wiPlatform::GetDPIScaling();
+		float dpiscale = wiRenderer::GetDevice()->GetDPIScaling();
 		uint64_t data = 0;
 		data |= int(m_logicalWidth * dpiscale);
 		data |= int(m_logicalHeight * dpiscale) << 16;
