@@ -2086,6 +2086,7 @@ using namespace Vulkan_Internal;
 		FULLSCREEN = fullscreen;
 
 #ifdef _WIN32
+		dpi = GetDpiForWindow(window);
 		RECT rect;
 		GetClientRect(window, &rect);
 		RESOLUTIONWIDTH = rect.right - rect.left;

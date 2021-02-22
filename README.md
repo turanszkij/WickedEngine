@@ -85,7 +85,7 @@ If you have questions or stuck, please use the `linux` communication channel on 
 // Declare main component once per application:
 MainComponent main;
 
-// Set the window to render to like this:
+// Assign window that you will render to:
 main.SetWindow(hWnd);
 
 // Run the application:

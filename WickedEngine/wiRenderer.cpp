@@ -2391,11 +2391,6 @@ void Initialize()
 		device->SetResolution(width, height);
 	});
 
-	static wiEvent::Handle handle4 = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [](uint64_t userdata) {
-		int dpi = userdata & 0xFFFF;
-		wiPlatform::GetWindowState().dpi = dpi;
-	});
-
 	wiBackLog::post("wiRenderer Initialized");
 }
 void ClearWorld(Scene& scene)

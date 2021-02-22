@@ -112,6 +112,18 @@ namespace wiInput
         mouse.left_button_press |= KEY_DOWN(VK_LBUTTON);
         mouse.middle_button_press |= KEY_DOWN(VK_MBUTTON);
         mouse.right_button_press |= KEY_DOWN(VK_RBUTTON);
+
+#ifndef PLATFORM_UWP
+		// Since raw input doesn't contain absolute mouse position, we get it with regular winapi:
+		HWND hWnd = GetActiveWindow();
+		POINT p;
+		GetCursorPos(&p);
+		ScreenToClient(hWnd, &p);
+		const float dpiscaling = (float)GetDpiForWindow(hWnd) / 96.0f;
+		mouse.position.x = (float)p.x / dpiscaling;
+		mouse.position.y = (float)p.y / dpiscaling;
+#endif // PLATFORM_UWP
+
 #elif SDL2
 		wiSDLInput::GetMouseState(&mouse);
 		wiSDLInput::GetKeyboardState(&keyboard);
@@ -704,25 +716,18 @@ namespace wiInput
 	}
 	XMFLOAT4 GetPointer()
 	{
-#if defined(_WIN32) && !defined(PLATFORM_UWP)
-		POINT p;
-		GetCursorPos(&p);
-		ScreenToClient(wiPlatform::GetWindow(), &p);
-		const float dpiscaling = wiPlatform::GetDPIScaling();
-		return XMFLOAT4((float)p.x / dpiscaling, (float)p.y / dpiscaling, mouse.delta_wheel, mouse.pressure);
-#else
 		return XMFLOAT4(mouse.position.x, mouse.position.y, mouse.delta_wheel, mouse.pressure);
-#endif
 	}
 	void SetPointer(const XMFLOAT4& props)
 	{
 #ifdef _WIN32
 #ifndef PLATFORM_UWP
-		const float dpiscaling = wiPlatform::GetDPIScaling();
+		HWND hWnd = GetActiveWindow();
+		const float dpiscaling = (float)GetDpiForWindow(hWnd) / 96.0f;
 		POINT p;
 		p.x = (LONG)(props.x * dpiscaling);
 		p.y = (LONG)(props.y * dpiscaling);
-		ClientToScreen(wiPlatform::GetWindow(), &p);
+		ClientToScreen(hWnd, &p);
 		SetCursorPos(p.x, p.y);
 #else
 		auto window = winrt::Windows::UI::Core::CoreWindow::GetForCurrentThread();

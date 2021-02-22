@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiGraphics.h"
+#include "wiEvent.h"
 
 #include <memory>
 
@@ -25,6 +26,9 @@ namespace wiGraphics
 		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
 		uint32_t VARIABLE_RATE_SHADING_TILE_SIZE = 0;
 		uint64_t TIMESTAMP_FREQUENCY = 0;
+
+		int dpi = 96;
+		wiEvent::Handle dpi_change_event = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [this](uint64_t userdata) { dpi = int(userdata & 0xFFFF); });
 
 	public:
 		virtual bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) = 0;
@@ -74,6 +78,9 @@ namespace wiGraphics
 		inline int GetResolutionWidth() const { return RESOLUTIONWIDTH; }
 		// Returns native resolution height of back buffer in pixels:
 		inline int GetResolutionHeight() const { return RESOLUTIONHEIGHT; }
+
+		constexpr int GetDPI() const { return dpi; }
+		constexpr float GetDPIScaling() const { return (float)GetDPI() / 96.f; }
 
 		// Returns the width of the screen with DPI scaling applied (subpixel size):
 		float GetScreenWidth() const;
