@@ -101,10 +101,19 @@ public:
 	wiGraphics::RenderPass renderpass_particledistortion;
 	wiGraphics::RenderPass renderpass_waterripples;
 
-	wiGraphics::GPUBuffer tileFrustums; // entity culling frustums
-	wiGraphics::GPUBuffer entityTiles_Opaque; // culled entity indices (for opaque pass)
-	wiGraphics::GPUBuffer entityTiles_Transparent; // culled entity indices (for transparent pass)
 	wiGraphics::Texture debugUAV; // debug UAV can be used by some shaders...
+	wiRenderer::TiledLightResources tiledLightResources;
+	wiRenderer::LuminanceResources luminanceResources;
+	wiRenderer::SSAOResources ssaoResources;
+	wiRenderer::MSAOResources msaoResources;
+	wiRenderer::RTAOResources rtaoResources;
+	wiRenderer::RTReflectionResources rtreflectionResources;
+	wiRenderer::SSRResources ssrResources;
+	wiRenderer::RTShadowResources rtshadowResources;
+	wiRenderer::ScreenSpaceShadowResources screenspaceshadowResources;
+	wiRenderer::DepthOfFieldResources depthoffieldResources;
+	wiRenderer::MotionBlurResources motionblurResources;
+	wiRenderer::VolumetricCloudResources volumetriccloudResources;
 
 	const constexpr wiGraphics::Texture* GetGbuffer_Read() const
 	{
