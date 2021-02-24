@@ -56,8 +56,7 @@ int main(int argc, char *argv[])
         throw sdl2::SDLError("Error creating SDL2 system");
     }
 
-    //TODO read config.ini
-    int x = 1920, y = 0, w = 1080, h = 0;
+    int x = 0, y = 0, w = 1920, h = 1080;
 	bool fullscreen = false;
     bool borderless = false;
     string voidStr = "";
