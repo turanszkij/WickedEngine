@@ -730,14 +730,4 @@
     <None Include="$(MSBuildThisFileDirectory)Utility\DirectXMathVector.inl" />
     <None Include="$(MSBuildThisFileDirectory)Utility\DirectXPackedVector.inl" />
   </ItemGroup>
-  <ItemGroup>
-    <Font Include="$(MSBuildThisFileDirectory)fonts\arial.ttf">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">false</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</DeploymentContent>
-    </Font>
-  </ItemGroup>
 </Project>

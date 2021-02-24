@@ -29,9 +29,11 @@ wiSprite_BindLua::wiSprite_BindLua(lua_State *L)
 	if (argc > 0)
 	{
 		name = wiLua::SGetString(L, 1);
+		name = wiLua::GetScriptPath() + name;
 		if (argc > 1)
 		{
 			mask = wiLua::SGetString(L, 2);
+			mask = wiLua::GetScriptPath() + mask;
 		}
 	}
 	sprite = wiSprite(name, mask);

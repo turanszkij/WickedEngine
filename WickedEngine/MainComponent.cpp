@@ -36,8 +36,6 @@ void MainComponent::Initialize()
 	}
 	initialized = true;
 
-	wiHelper::GetOriginalWorkingDirectory();
-
 	wiInitializer::InitializeComponentsAsync();
 }
 

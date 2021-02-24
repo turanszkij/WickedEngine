@@ -43,6 +43,7 @@ int LoadModel(lua_State* L)
 			if (argc > 1)
 			{
 				string fileName = wiLua::SGetString(L, 2);
+				fileName = wiLua::GetScriptPath() + fileName;
 				XMMATRIX transform = XMMatrixIdentity();
 				if (argc > 2)
 				{
@@ -70,6 +71,7 @@ int LoadModel(lua_State* L)
 		{
 			// Overload 2: global scene version
 			string fileName = wiLua::SGetString(L, 1);
+			fileName = wiLua::GetScriptPath() + fileName;
 			XMMATRIX transform = XMMatrixIdentity();
 			if (argc > 1)
 			{

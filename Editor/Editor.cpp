@@ -55,7 +55,7 @@ winrt::fire_and_forget uwp_copy_assets()
 	// Objects3D/WickedEngine
 	auto destfolder = co_await location.CreateFolderAsync(L"WickedEngine", CreationCollisionOption::OpenIfExists);
 
-	string rootdir = wiHelper::ExpandPath(wiHelper::GetOriginalWorkingDirectory());
+	string rootdir = wiHelper::ExpandPath(wiHelper::GetWorkingDirectory());
 	wstring wstr;
 
 	// scripts:
@@ -1343,7 +1343,7 @@ void EditorComponent::Update(float dt)
 						if (wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
 						{
 							// if water, then put a water ripple onto it:
-							wiRenderer::PutWaterRipple(wiHelper::GetOriginalWorkingDirectory() + "images/ripple.png", hovered.position);
+							wiRenderer::PutWaterRipple(wiHelper::GetWorkingDirectory() + "images/ripple.png", hovered.position);
 						}
 					}
 					else if (decalWnd.placementCheckBox.GetCheck() && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
@@ -1351,7 +1351,7 @@ void EditorComponent::Update(float dt)
 						// if not water or softbody, put a decal on it:
 						static int decalselector = 0;
 						decalselector = (decalselector + 1) % 2;
-						Entity entity = scene.Entity_CreateDecal("editorDecal", wiHelper::GetOriginalWorkingDirectory() + (decalselector == 0 ? "images/leaf.dds" : "images/blood1.png"));
+						Entity entity = scene.Entity_CreateDecal("editorDecal", wiHelper::GetWorkingDirectory() + (decalselector == 0 ? "images/leaf.dds" : "images/blood1.png"));
 						TransformComponent& transform = *scene.transforms.GetComponent(entity);
 						transform.MatrixTransform(hovered.orientation);
 						transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));

@@ -13,6 +13,7 @@
 #include <fstream>
 #include <sstream>
 #include <codecvt> // string conversion
+#include <filesystem>
 
 #ifdef _WIN32
 #include <direct.h>
@@ -29,7 +30,6 @@
 #include <WinBase.h>
 #endif // PLATFORM_UWP
 #else
-#include <filesystem>
 #include "Utility/portable-file-dialogs.h"
 #endif // _WIN32
 
@@ -73,7 +73,7 @@ namespace wiHelper
 		std::string directory;
 		if (name.empty())
 		{
-			directory = GetOriginalWorkingDirectory() + "screenshots";
+			directory = GetWorkingDirectory() + "screenshots";
 		}
 		else
 		{
@@ -261,43 +261,9 @@ namespace wiHelper
 		return ss.str();
 	}
 
-	string GetApplicationDirectory()
-	{
-#ifdef _WIN32
-		static std::string appDir;
-		if (appDir.empty())
-		{
-			CHAR fileName[1024] = {};
-			GetModuleFileNameA(NULL, fileName, arraysize(fileName));
-			appDir = GetDirectoryFromPath(fileName);
-		}
-#elif SDL2
-		static std::string appDir = std::string(SDL_GetBasePath());
-#else
-		static std::string appDir;
-#endif // _WIN32
-		return appDir;
-	}
-
-	string GetOriginalWorkingDirectory()
-	{
-#ifdef _WIN32
-		static std::string originalWorkingDir = std::string(_getcwd(NULL, 0)) + "/";
-#else
-		static std::string originalWorkingDir;
-#endif
-		return originalWorkingDir;
-	}
-
-	static std::string workingdir = GetOriginalWorkingDirectory();
 	string GetWorkingDirectory()
 	{
-		return workingdir;
-	}
-
-	void SetWorkingDirectory(const std::string& path)
-	{
-		workingdir = path;
+		return std::filesystem::current_path().string() + "/";
 	}
 
 	void SplitPath(const std::string& fullPath, string& dir, string& fileName)
@@ -645,10 +611,12 @@ namespace wiHelper
 			{
 			case FileDialogParams::OPEN:
 				ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+				ofn.Flags |= OFN_NOCHANGEDIR;
 				ok = GetOpenFileNameA(&ofn) == TRUE;
 				break;
 			case FileDialogParams::SAVE:
 				ofn.Flags = OFN_OVERWRITEPROMPT;
+				ofn.Flags |= OFN_NOCHANGEDIR;
 				ok = GetSaveFileNameA(&ofn) == TRUE;
 				break;
 			}
@@ -694,9 +662,6 @@ namespace wiHelper
 					wstring wstr = file.Path().data();
 					string str;
 					StringConvert(wstr, str);
-
-					// The desktop file picker also modifies the working directory:
-					SetWorkingDirectory(GetDirectoryFromPath(str));
 
 					onSuccess(str);
 				}
@@ -758,7 +723,7 @@ namespace wiHelper
 			case FileDialogParams::OPEN: {
 				std::vector<std::string> selection = pfd::open_file(
 						params.description,
-						wiHelper::GetOriginalWorkingDirectory(),
+						wiHelper::GetWorkingDirectory(),
 						extensions
 						// allow multi selection here
 				).result();
@@ -772,7 +737,7 @@ namespace wiHelper
 			}
 			case FileDialogParams::SAVE: {
 				std::string destination = pfd::save_file(params.description,
-						wiHelper::GetOriginalWorkingDirectory(),
+						wiHelper::GetWorkingDirectory(),
 						extensions
 						// remove overwrite warning here
 				).result();
