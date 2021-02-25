@@ -175,14 +175,23 @@ void PaintToolWindow::Create(EditorComponent* editor)
 		uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
 		slotname = &material->textures[sel].name;
 
-		wiHelper::RemoveExtensionFromFileName(*slotname);
-		*slotname = *slotname + "_0.png";
-		std::string filename = wiHelper::GetWorkingDirectory() + *slotname;
+		wiHelper::FileDialogParams params;
+		params.type = wiHelper::FileDialogParams::SAVE;
+		params.description = "Image";
+		params.extensions.push_back("png");
+		wiHelper::FileDialog(params, [=](std::string fileName) {
+			wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 
-		if (!wiHelper::saveTextureToFile(*resource->texture, filename))
-		{
-			wiHelper::messageBox("Saving texture failed! Check filename of texture slot in the material!");
-		}
+				*slotname = fileName;
+
+				if (!wiHelper::saveTextureToFile(*resource->texture, fileName))
+				{
+					wiHelper::messageBox("Saving texture failed! :(");
+				}
+
+			});
+		});
+
 	});
 	AddWidget(&saveTextureButton);
 

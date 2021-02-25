@@ -73,17 +73,17 @@ namespace wiHelper
 		std::string directory;
 		if (name.empty())
 		{
-			directory = GetWorkingDirectory() + "screenshots";
+			directory = "screenshots";
 		}
 		else
 		{
 			directory = GetDirectoryFromPath(name);
 		}
-#ifdef _WIN32
-		CreateDirectoryA(directory.c_str(), 0);
-#elif SDL2
-		std::filesystem::create_directory(directory.c_str());
-#endif // _WIN32
+
+		if (!std::filesystem::create_directory(directory.c_str()))
+		{
+			wiBackLog::post(("Directory couoldn't be created: " + directory).c_str());
+		}
 
 		std::string filename = name;
 		if (filename.empty())
@@ -261,41 +261,18 @@ namespace wiHelper
 		return ss.str();
 	}
 
-	string GetWorkingDirectory()
+	string GetFileNameFromPath(const std::string& path)
 	{
-		return std::filesystem::current_path().string() + "/";
+		std::filesystem::path filepath = path;
+		filepath = std::filesystem::absolute(filepath);
+		return filepath.filename().string();
 	}
 
-	void SplitPath(const std::string& fullPath, string& dir, string& fileName)
+	string GetDirectoryFromPath(const std::string& path)
 	{
-		size_t found;
-		found = fullPath.find_last_of("/\\");
-		dir = fullPath.substr(0, found + 1);
-		fileName = fullPath.substr(found + 1);
-	}
-
-	string GetFileNameFromPath(const std::string& fullPath)
-	{
-		if (fullPath.empty())
-		{
-			return fullPath;
-		}
-
-		string ret, empty;
-		SplitPath(fullPath, empty, ret);
-		return ret;
-	}
-
-	string GetDirectoryFromPath(const std::string& fullPath)
-	{
-		if (fullPath.empty())
-		{
-			return fullPath;
-		}
-
-		string ret, empty;
-		SplitPath(fullPath, ret, empty);
-		return ret;
+		std::filesystem::path filepath = path;
+		filepath = std::filesystem::absolute(filepath);
+		return filepath.parent_path().string() + "/";
 	}
 
 	string GetExtensionFromFileName(const string& filename)
@@ -307,47 +284,9 @@ namespace wiHelper
 			std::string extension = filename.substr(idx + 1);
 			return extension;
 		}
-		
+
 		// No extension found
 		return "";
-	}
-
-	void RemoveExtensionFromFileName(std::string& filename)
-	{
-		string extension = GetExtensionFromFileName(filename);
-
-		if (!extension.empty())
-		{
-			filename = filename.substr(0, filename.length() - extension.length() - 1);
-		}
-	}
-
-	std::string ExpandPath(const std::string& path)
-	{
-		std::string expanded = path;
-
-		// First make the path absolute if it's not (if it doesn't start with a drive letter):
-		if (expanded.find(":\\") == string::npos)
-		{
-			expanded = GetWorkingDirectory() + expanded;
-		}
-
-		// Replace all slashes with backslashes:
-#ifdef PLATFORM_UWP
-		std::replace(expanded.begin(), expanded.end(), '/', '\\');
-#endif // PLATFORM_UWP
-
-		size_t pos;
-		while ((pos = expanded.find("..")) != string::npos)
-		{
-			std::string parent = expanded.substr(0, pos - 1);
-			size_t pos2 = parent.find_last_of("\\");
-			parent = parent.substr(0, pos2);
-			std::string child = expanded.substr(pos + 2);
-			expanded = parent + child;
-		}
-
-		return expanded;
 	}
 
 	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data)
@@ -374,8 +313,9 @@ namespace wiHelper
 		using namespace winrt::Windows::Storage::Streams;
 		using namespace winrt::Windows::Foundation;
 		wstring wstr;
-		string filepath = ExpandPath(fileName);
-		StringConvert(filepath, wstr);
+		std::filesystem::path filepath = fileName;
+		filepath = std::filesystem::absolute(filepath);
+		StringConvert(filepath.string(), wstr);
 		bool success = false;
 
 		auto async_helper = [&]() -> IAsyncAction {
@@ -447,8 +387,9 @@ namespace wiHelper
 		using namespace winrt::Windows::Storage::Streams;
 		using namespace winrt::Windows::Foundation;
 		wstring wstr;
-		string filepath = ExpandPath(fileName);
-		StringConvert(filepath, wstr);
+		std::filesystem::path filepath = fileName;
+		filepath = std::filesystem::absolute(filepath);
+		StringConvert(filepath.string(), wstr);
 
 		CREATEFILE2_EXTENDED_PARAMETERS params = {};
 		params.dwSize = (DWORD)size;
@@ -508,9 +449,8 @@ namespace wiHelper
 #else
 		using namespace winrt::Windows::Storage;
 		using namespace winrt::Windows::Foundation;
-		string filepath = ExpandPath(fileName);
-		string directory, name;
-		SplitPath(filepath, directory, name);
+		string directory = GetDirectoryFromPath(fileName);
+		string name = GetFileNameFromPath(fileName);
 		wstring wdir, wname;
 		StringConvert(directory, wdir);
 		StringConvert(name, wname);
@@ -723,7 +663,7 @@ namespace wiHelper
 			case FileDialogParams::OPEN: {
 				std::vector<std::string> selection = pfd::open_file(
 						params.description,
-						wiHelper::GetWorkingDirectory(),
+						std::filesystem::current_path().string(),
 						extensions
 						// allow multi selection here
 				).result();
@@ -737,7 +677,7 @@ namespace wiHelper
 			}
 			case FileDialogParams::SAVE: {
 				std::string destination = pfd::save_file(params.description,
-						wiHelper::GetWorkingDirectory(),
+						std::filesystem::current_path().string(),
 						extensions
 						// remove overwrite warning here
 				).result();

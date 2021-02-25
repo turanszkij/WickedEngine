@@ -74,8 +74,8 @@ static const bool transform_to_LH = true;
 
 void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 {
-	string directory, name;
-	wiHelper::SplitPath(fileName, directory, name);
+	string directory = wiHelper::GetDirectoryFromPath(fileName);
+	string name = wiHelper::GetFileNameFromPath(fileName);
 
 	tinyobj::attrib_t obj_attrib;
 	vector<tinyobj::shape_t> obj_shapes;

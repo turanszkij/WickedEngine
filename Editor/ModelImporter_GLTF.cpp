@@ -350,8 +350,8 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 
 void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 {
-	string directory, name;
-	wiHelper::SplitPath(fileName, directory, name);
+	string directory = wiHelper::GetDirectoryFromPath(fileName);
+	string name = wiHelper::GetFileNameFromPath(fileName);
 	string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(name));
 
 

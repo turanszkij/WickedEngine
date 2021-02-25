@@ -54,7 +54,7 @@ GPUBuffer			constantBuffers[CBTYPE_COUNT];
 GPUBuffer			resourceBuffers[RBTYPE_COUNT];
 Sampler				samplers[SSLOT_COUNT];
 
-string SHADERPATH = wiHelper::GetWorkingDirectory() + "../WickedEngine/shaders/";
+string SHADERPATH = "../WickedEngine/shaders/";
 
 LinearAllocator renderFrameAllocators[COMMANDLIST_COUNT]; // can be used by graphics threads
 inline LinearAllocator& GetRenderFrameAllocator(CommandList cmd)
