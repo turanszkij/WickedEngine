@@ -28,6 +28,7 @@ public:
 	wiSlider spacingSlider;
 	wiCheckBox backfaceCheckBox;
 	wiCheckBox wireCheckBox;
+	wiCheckBox pressureCheckBox;
 	wiColorPicker colorPicker;
 	wiComboBox textureSlotComboBox;
 	wiButton saveTextureButton;
