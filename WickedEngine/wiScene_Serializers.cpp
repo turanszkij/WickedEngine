@@ -246,11 +246,7 @@ namespace wiScene
 			{
 				for (auto& x : textures)
 				{
-					size_t found = x.name.rfind(dir);
-					if (found != std::string::npos)
-					{
-						x.name = x.name.substr(found + dir.length());
-					}
+					wiHelper::MakePathRelative(dir, x.name);
 				}
 			}
 
@@ -727,11 +723,7 @@ namespace wiScene
 			{
 				for (size_t i = 0; i < lensFlareNames.size(); ++i)
 				{
-					size_t found = lensFlareNames[i].rfind(dir);
-					if (found != std::string::npos)
-					{
-						lensFlareNames[i] = lensFlareNames[i].substr(found + dir.length());
-					}
+					wiHelper::MakePathRelative(dir, lensFlareNames[i]);
 				}
 			}
 			archive << lensFlareNames;
@@ -986,21 +978,8 @@ namespace wiScene
 			archive << oceanParameters.surfaceDetail;
 			archive << oceanParameters.surfaceDisplacementTolerance;
 
-			// If detecting an absolute path in textures, remove it and convert to relative:
-			if (!dir.empty())
-			{
-				size_t found = skyMapName.rfind(dir);
-				if (found != std::string::npos)
-				{
-					skyMapName = skyMapName.substr(found + dir.length());
-				}
-
-				found = colorGradingMapName.rfind(dir);
-				if (found != std::string::npos)
-				{
-					colorGradingMapName = colorGradingMapName.substr(found + dir.length());
-				}
-			}
+			wiHelper::MakePathRelative(dir, skyMapName);
+			wiHelper::MakePathRelative(dir, colorGradingMapName);
 
 			if (archive.GetVersion() >= 32)
 			{
@@ -1038,15 +1017,7 @@ namespace wiScene
 		}
 		else
 		{
-			// If detecting an absolute path in textures, remove it and convert to relative:
-			if(!dir.empty())
-			{
-				size_t found = filename.rfind(dir);
-				if (found != std::string::npos)
-				{
-					filename = filename.substr(found + dir.length());
-				}
-			}
+			wiHelper::MakePathRelative(dir, filename);
 
 			archive << _flags;
 			archive << filename;

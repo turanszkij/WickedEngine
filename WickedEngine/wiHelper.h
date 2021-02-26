@@ -45,11 +45,15 @@ namespace wiHelper
 
 	std::string getCurrentDateTimeAsString();
 
+	void SplitPath(const std::string& fullPath, std::string& dir, std::string& fileName);
+
 	std::string GetFileNameFromPath(const std::string& path);
 
 	std::string GetDirectoryFromPath(const std::string& path);
 
 	std::string GetExtensionFromFileName(const std::string& filename);
+
+	void MakePathRelative(const std::string& rootdir, std::string& path);
 
 	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data);
 

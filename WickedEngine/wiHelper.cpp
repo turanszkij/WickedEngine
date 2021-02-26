@@ -261,18 +261,36 @@ namespace wiHelper
 		return ss.str();
 	}
 
-	string GetFileNameFromPath(const std::string& path)
+	void SplitPath(const std::string& fullPath, string& dir, string& fileName)
 	{
-		std::filesystem::path filepath = path;
-		filepath = std::filesystem::absolute(filepath);
-		return filepath.filename().string();
+		size_t found;
+		found = fullPath.find_last_of("/\\");
+		dir = fullPath.substr(0, found + 1);
+		fileName = fullPath.substr(found + 1);
 	}
 
-	string GetDirectoryFromPath(const std::string& path)
+	string GetFileNameFromPath(const std::string& fullPath)
 	{
-		std::filesystem::path filepath = path;
-		filepath = std::filesystem::absolute(filepath);
-		return filepath.parent_path().string() + "/";
+		if (fullPath.empty())
+		{
+			return fullPath;
+		}
+
+		string ret, empty;
+		SplitPath(fullPath, empty, ret);
+		return ret;
+	}
+
+	string GetDirectoryFromPath(const std::string& fullPath)
+	{
+		if (fullPath.empty())
+		{
+			return fullPath;
+		}
+
+		string ret, empty;
+		SplitPath(fullPath, ret, empty);
+		return ret;
 	}
 
 	string GetExtensionFromFileName(const string& filename)
@@ -287,6 +305,20 @@ namespace wiHelper
 
 		// No extension found
 		return "";
+	}
+
+	void MakePathRelative(const std::string& rootdir, std::string& path)
+	{
+		if (rootdir.empty() || path.empty())
+		{
+			return;
+		}
+
+		size_t found = path.rfind(rootdir);
+		if (found != std::string::npos)
+		{
+			path = path.substr(found + rootdir.length());
+		}
 	}
 
 	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data)
