@@ -526,13 +526,11 @@ namespace wiRenderer
 	{
 		wiGraphics::Texture texture_cloudRender;
 		wiGraphics::Texture texture_cloudPosition;
-		wiGraphics::Texture texture_cloudRender_upsample;
 		wiGraphics::Texture texture_reproject[2];
 	};
 	void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resolution);
 	void Postprocess_VolumetricClouds(
 		const VolumetricCloudResources& res,
-		const wiGraphics::Texture& input_output,
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& depthbuffer,
 		wiGraphics::CommandList cmd

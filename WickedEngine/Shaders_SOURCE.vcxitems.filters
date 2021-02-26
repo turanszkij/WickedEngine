@@ -779,9 +779,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_detailnoiseCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_finalCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_renderCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>

@@ -22,10 +22,6 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		if (getMSAASampleCount() == 1)
-		{
-			desc.BindFlags |= BIND_UNORDERED_ACCESS;
-		}
 		desc.Width = internalResolution.x;
 		desc.Height = internalResolution.y;
 		desc.SampleCount = getMSAASampleCount();
@@ -676,6 +672,16 @@ void RenderPath3D::Render() const
 			);
 		}
 
+		if (getVolumetricCloudsEnabled())
+		{
+			wiRenderer::Postprocess_VolumetricClouds(
+				volumetriccloudResources,
+				rtLinearDepth,
+				depthBuffer_Copy,
+				cmd
+			);
+		}
+
 		});
 
 	// Planar reflections depth prepass + Light culling:
@@ -882,6 +888,20 @@ void RenderPath3D::Render() const
 		wiProfiler::EndRange(range); // Opaque Scene
 
 		RenderOutline(cmd);
+
+		// Upsample + Blend the volumetric clouds on top:
+		if (getVolumetricCloudsEnabled())
+		{
+			device->EventBegin("Volumetric Clouds Upsample + Blend", cmd);
+			wiRenderer::Postprocess_Upsample_Bilateral(
+				volumetriccloudResources.texture_reproject[device->GetFrameCount() % 2],
+				rtLinearDepth,
+				*GetGbuffer_Read(GBUFFER_COLOR), // only desc is taken if pixel shader upsampling is used
+				cmd,
+				true // pixel shader upsampling
+			);
+			device->EventEnd(cmd);
+		}
 
 		device->RenderPassEnd(cmd);
 
@@ -1111,17 +1131,6 @@ void RenderPath3D::RenderVolumetrics(CommandList cmd) const
 		);
 
 		wiProfiler::EndRange(range);
-	}
-
-	if (getVolumetricCloudsEnabled())
-	{
-		wiRenderer::Postprocess_VolumetricClouds(
-			volumetriccloudResources,
-			*GetGbuffer_Read(GBUFFER_COLOR),
-			rtLinearDepth,
-			depthBuffer_Copy,
-			cmd
-		);
 	}
 }
 void RenderPath3D::RenderSceneMIPChain(CommandList cmd) const

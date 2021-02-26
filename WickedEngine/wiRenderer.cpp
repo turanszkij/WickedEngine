@@ -1240,7 +1240,6 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_WEATHERMAP], "volumetricCloud_weathermapCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER], "volumetricCloud_renderCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_REPROJECT], "volumetricCloud_reprojectCS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_FINAL], "volumetricCloud_finalCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_FXAA], "fxaaCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_TEMPORALAA], "temporalaaCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_LINEARDEPTH], "lineardepthCS.cso"); });
@@ -11955,12 +11954,6 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 	device->SetName(&res.texture_cloudRender, "texture_cloudRender");
 	device->CreateTexture(&desc, nullptr, &res.texture_cloudPosition);
 	device->SetName(&res.texture_cloudPosition, "texture_cloudPosition");
-
-	desc.Width = resolution.x;
-	desc.Height = resolution.y;
-	desc.Format = FORMAT_R16G16B16A16_FLOAT;
-	device->CreateTexture(&desc, nullptr, &res.texture_cloudRender_upsample);
-	device->SetName(&res.texture_cloudRender_upsample, "texture_cloudRender_upsample");
 	device->CreateTexture(&desc, nullptr, &res.texture_reproject[0]);
 	device->SetName(&res.texture_reproject[0], "texture_reproject[0]");
 	device->CreateTexture(&desc, nullptr, &res.texture_reproject[1]);
@@ -11968,7 +11961,6 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 }
 void Postprocess_VolumetricClouds(
 	const VolumetricCloudResources& res,
-	const Texture& input_output,
 	const Texture& lineardepth,
 	const Texture& depthbuffer,
 	CommandList cmd
@@ -11976,8 +11968,6 @@ void Postprocess_VolumetricClouds(
 {
 	device->EventBegin("Postprocess_VolumetricClouds", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Volumetric Clouds", cmd);
-
-	const TextureDesc& desc = input_output.GetDesc();
 
 	static Texture texture_shapeNoise;
 	static Texture texture_detailNoise;
@@ -12170,10 +12160,10 @@ void Postprocess_VolumetricClouds(
 		}
 	}
 
-	// Switch to half res:
+	const TextureDesc& desc = res.texture_reproject[0].GetDesc();
 	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width / 2;
-	cb.xPPResolution.y = desc.Height / 2;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	//const XMFLOAT4& halton = wiMath::GetHaltonSequence((int)device->GetFrameCount());
@@ -12219,6 +12209,7 @@ void Postprocess_VolumetricClouds(
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
 				GPUBarrier::Image(&res.texture_cloudRender, IMAGE_LAYOUT_UNORDERED_ACCESS, res.texture_cloudRender.desc.layout),
+				GPUBarrier::Image(&res.texture_cloudPosition, IMAGE_LAYOUT_UNORDERED_ACCESS, res.texture_cloudPosition.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -12227,19 +12218,8 @@ void Postprocess_VolumetricClouds(
 		device->EventEnd(cmd);
 	}
 
-	// Upsample cloud render from half-res to full-res
-	Postprocess_Upsample_Bilateral(res.texture_cloudRender, lineardepth, res.texture_cloudRender_upsample, cmd);
-
 	int temporal_output = device->GetFrameCount() % 2;
 	int temporal_history = 1 - temporal_output;
-
-	// Switch to full-res:
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Reprojection pass:
 	{
@@ -12247,7 +12227,7 @@ void Postprocess_VolumetricClouds(
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_REPROJECT], cmd);
 
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(CS, &res.texture_cloudRender_upsample, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &res.texture_cloudRender, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, &res.texture_cloudPosition, TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(CS, &res.texture_reproject[temporal_history], TEXSLOT_ONDEMAND2, cmd);
 
@@ -12259,9 +12239,6 @@ void Postprocess_VolumetricClouds(
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Image(&res.texture_reproject[temporal_output], res.texture_reproject[temporal_output].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-
-				GPUBarrier::Image(&res.texture_cloudRender_upsample, IMAGE_LAYOUT_UNORDERED_ACCESS, res.texture_cloudRender_upsample.desc.layout),
-				GPUBarrier::Image(&res.texture_cloudPosition, IMAGE_LAYOUT_UNORDERED_ACCESS, res.texture_cloudPosition.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -12273,43 +12250,10 @@ void Postprocess_VolumetricClouds(
 			cmd
 		);
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
-		device->EventEnd(cmd);
-	}
-
-	// Final pass:
-	{
-		device->EventBegin("Volumetric Cloud Final", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_FINAL], cmd);
-
-		device->BindResource(CS, &res.texture_reproject[temporal_output], TEXSLOT_ONDEMAND1, cmd);
-
-		const GPUResource* uavs[] = {
-			&input_output,
-		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
-				GPUBarrier::Image(&input_output, input_output.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-
 				GPUBarrier::Image(&res.texture_reproject[temporal_output], IMAGE_LAYOUT_UNORDERED_ACCESS, res.texture_reproject[temporal_output].desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->Dispatch(
-			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			1,
-			cmd
-		);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&input_output, IMAGE_LAYOUT_UNORDERED_ACCESS, input_output.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
