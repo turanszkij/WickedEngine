@@ -10,9 +10,9 @@ class PaintToolWindow : public wiWindow
 	bool history_needs_recording_start = false;
 	bool history_needs_recording_end = false;
 	size_t history_textureIndex = 0;
-	std::vector<std::shared_ptr<wiResource>> history_textures; // we'd like to keep history tetures in GPU memory to avoid GPU readback
-	std::shared_ptr<wiResource> GetEditTextureSlot(const wiScene::MaterialComponent& material, int* uvset = nullptr);
-	void ReplaceEditTextureSlot(wiScene::MaterialComponent& material, std::shared_ptr<wiResource> resource);
+	std::vector<wiGraphics::Texture> history_textures; // we'd like to keep history textures in GPU memory to avoid GPU readback
+	wiGraphics::Texture GetEditTextureSlot(const wiScene::MaterialComponent& material, int* uvset = nullptr);
+	void ReplaceEditTextureSlot(wiScene::MaterialComponent& material, const wiGraphics::Texture& texture);
 public:
 	void Create(EditorComponent* editor);
 

@@ -165,7 +165,7 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 	TextureDesc desc;
 	if (material.textures[MaterialComponent::BASECOLORMAP].resource != nullptr)
 	{
-		desc = material.textures[MaterialComponent::BASECOLORMAP].resource->texture->GetDesc();
+		desc = material.textures[MaterialComponent::BASECOLORMAP].resource->texture.GetDesc();
 	}
 
 	HairParticleCB hcb;

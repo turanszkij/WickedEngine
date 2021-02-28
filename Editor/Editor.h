@@ -90,6 +90,7 @@ public:
 	wiCheckBox isRotatorCheckBox;
 	wiCheckBox isTranslatorCheckBox;
 	wiButton saveButton;
+	wiComboBox saveModeComboBox;
 	wiButton modelButton;
 	wiButton scriptButton;
 	wiButton shaderButton;

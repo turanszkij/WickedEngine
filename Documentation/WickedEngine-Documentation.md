@@ -1031,6 +1031,17 @@ Provides the ability to pack multiple rectangles into a bigger rectangle, while 
 [[Header]](../WickedEngine/wiResourceManager.h) [[Cpp]](../WickedEngine/wiResourceManager.cpp)
 This can load images and sounds. It will hold on to resources until there is at least something that is referencing them, otherwise deletes them. One resource can have multiple owners, too. This is thread safe.
 
+- `Load()` : Load a resource, or return a resource handle if it already exists. The resources are identified by file names. The user can specify import flags (optional). The user can provide a file data buffer that was loaded externally (optional). This function will return a resource handle. The resource handle equals to `nullptr` if it was not loaded successfully, otherwise a valid handle is returned.
+- `Contains()` : Check whether a resource exists or not.
+- `Clear()` : Clear all resources. This will clear the resource library, but resources that are still used somewhere will remain usable. 
+
+The resource manager can support different modes that can be set with `SetMode(MODE param)` function:
+- `MODE_DISCARD_FILEDATA_AFTER_LOAD` : this is the default behaviour. The resource will not hold on to file data, even if the user specified `IMPORT_RETAIN_FILEDATA` flag when loading the resource. This will result in the resource manager unable to serialize (save) itself.
+- `MODE_ALLOW_RETAIN_FILEDATA` : this mode can be used to keep the file data buffers alive inside resources. This way the resource manager can be serialized (saved). Only the resources that still hold onto their file data will be serialized (saved). When loading a resource, the user can specify `IMPORT_RETAIN_FILEDATA` flag to keep the file data for a specific resource instead of discarding it.
+- `MODE_ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING` : Keep all file data, but don't write them while serializing. This is useful to disable resource embedding temporarily without destroying file data buffers.
+
+The resource manager can always be serialized in read mode. File data retention will be based on existing file import flags and the global resource manager mode.
+
 ### wiSpinLock
 [[Header]](../WickedEngine/wiSpinLock.h) [[Cpp]](../WickedEngine/wiSpinLock.cpp)
 This can be used to guarantee exclusive access to a block in multithreaded race condition scenario instead of a mutex. The difference to a mutex that this doesn't let the thread to yield, but instead spin on an atomic flag until the spinlock can be locked.

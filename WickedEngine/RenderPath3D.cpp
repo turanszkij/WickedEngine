@@ -22,6 +22,10 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		if (getMSAASampleCount() == 1)
+		{
+			desc.BindFlags |= BIND_UNORDERED_ACCESS;
+		}
 		desc.Width = internalResolution.x;
 		desc.Height = internalResolution.y;
 		desc.SampleCount = getMSAASampleCount();
@@ -30,6 +34,7 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_COLOR]);
 		device->SetName(&rtGbuffer[GBUFFER_COLOR], "rtGbuffer[GBUFFER_COLOR]");
 
+		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = FORMAT_R8G8B8A8_UNORM;
 		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_NORMAL_ROUGHNESS]);
 		device->SetName(&rtGbuffer[GBUFFER_NORMAL_ROUGHNESS], "rtGbuffer[GBUFFER_NORMAL_ROUGHNESS]");
@@ -179,31 +184,6 @@ void RenderPath3D::ResizeBuffers()
 			desc.SampleCount = 1;
 			device->CreateTexture(&desc, nullptr, &rtSun_resolved);
 			device->SetName(&rtSun_resolved, "rtSun_resolved");
-		}
-	}
-	{
-		TextureDesc desc;
-		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = FORMAT_R11G11B10_FLOAT;
-		desc.Width = internalResolution.x / 4;
-		desc.Height = internalResolution.y / 4;
-		desc.MipLevels = std::min(5u, (uint32_t)std::log2(std::max(desc.Width, desc.Height)));
-		device->CreateTexture(&desc, nullptr, &rtBloom);
-		device->SetName(&rtBloom, "rtBloom");
-		device->CreateTexture(&desc, nullptr, &rtBloom_tmp);
-		device->SetName(&rtBloom_tmp, "rtBloom_tmp");
-
-		for (uint32_t i = 0; i < rtBloom.GetDesc().MipLevels; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(&rtBloom, SRV, 0, 1, i, 1);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&rtBloom_tmp, SRV, 0, 1, i, 1);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&rtBloom, UAV, 0, 1, i, 1);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&rtBloom_tmp, UAV, 0, 1, i, 1);
-			assert(subresource_index == i);
 		}
 	}
 	{
@@ -533,6 +513,7 @@ void RenderPath3D::ResizeBuffers()
 	wiRenderer::CreateDepthOfFieldResources(depthoffieldResources, internalResolution);
 	wiRenderer::CreateMotionBlurResources(motionblurResources, internalResolution);
 	wiRenderer::CreateVolumetricCloudResources(volumetriccloudResources, internalResolution);
+	wiRenderer::CreateBloomResources(bloomResources, internalResolution);
 
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 	{
@@ -1322,7 +1303,13 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 
 		if (getBloomEnabled())
 		{
-			wiRenderer::Postprocess_Bloom(rt_first == nullptr ? *rt_read : *rt_first, rtBloom, rtBloom_tmp, *rt_write, cmd, getBloomThreshold());
+			wiRenderer::Postprocess_Bloom(
+				bloomResources,
+				rt_first == nullptr ? *rt_read : *rt_first,
+				*rt_write,
+				cmd,
+				getBloomThreshold()
+			);
 			rt_first = nullptr;
 
 			std::swap(rt_read, rt_write);
@@ -1342,7 +1329,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			cmd,
 			getExposure(),
 			getDitherEnabled(),
-			getColorGradingEnabled() ? (scene->weather.colorGradingMap == nullptr ? nullptr : scene->weather.colorGradingMap->texture) : nullptr
+			getColorGradingEnabled() ? (scene->weather.colorGradingMap == nullptr ? nullptr : &scene->weather.colorGradingMap->texture) : nullptr
 		);
 
 		rt_first = nullptr;

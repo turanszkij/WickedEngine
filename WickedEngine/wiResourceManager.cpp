@@ -10,26 +10,20 @@
 
 using namespace wiGraphics;
 
-wiResource::~wiResource()
-{
-	if (data != nullptr)
-	{
-		switch (type)
-		{
-		case wiResource::IMAGE:
-			delete texture;
-			break;
-		case wiResource::SOUND:
-			delete sound;
-			break;
-		};
-	}
-}
-
 namespace wiResourceManager
 {
 	std::mutex locker;
 	std::unordered_map<std::string, std::weak_ptr<wiResource>> resources;
+	MODE mode = MODE_DISCARD_FILEDATA_AFTER_LOAD;
+
+	void SetMode(MODE param)
+	{
+		mode = param;
+	}
+	MODE GetMode()
+	{
+		return mode;
+	}
 
 	static const std::unordered_map<std::string, wiResource::DATA_TYPE> types = {
 		std::make_pair("JPG", wiResource::IMAGE),
@@ -42,8 +36,13 @@ namespace wiResourceManager
 		std::make_pair("OGG", wiResource::SOUND),
 	};
 
-	std::shared_ptr<wiResource> Load(const std::string& name, uint32_t flags)
+	std::shared_ptr<wiResource> Load(const std::string& name, uint32_t flags, const uint8_t* filedata, size_t filesize)
 	{
+		if (mode == MODE_DISCARD_FILEDATA_AFTER_LOAD)
+		{
+			flags &= ~IMPORT_RETAIN_FILEDATA;
+		}
+
 		locker.lock();
 		std::weak_ptr<wiResource>& weak_resource = resources[name];
 		std::shared_ptr<wiResource> resource = weak_resource.lock();
@@ -60,11 +59,15 @@ namespace wiResourceManager
 			return resource;
 		}
 
-		std::vector<uint8_t> filedata;
-		if (!wiHelper::FileRead(name, filedata))
+		if (filedata == nullptr || filesize == 0)
 		{
-			resource.reset();
-			return nullptr;
+			if (!wiHelper::FileRead(name, resource->filedata))
+			{
+				resource.reset();
+				return nullptr;
+			}
+			filedata = resource->filedata.data();
+			filesize = resource->filedata.size();
 		}
 
 		std::string ext = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(name));
@@ -83,7 +86,7 @@ namespace wiResourceManager
 			}
 		}
 
-		void* success = nullptr;
+		bool success = false;
 
 		switch (type)
 		{
@@ -95,7 +98,7 @@ namespace wiResourceManager
 				// Load dds
 
 				tinyddsloader::DDSFile dds;
-				auto result = dds.Load(std::move(filedata));
+				auto result = dds.Load(filedata, filesize);
 
 				if (result == tinyddsloader::Result::Success)
 				{
@@ -223,10 +226,8 @@ namespace wiResourceManager
 						break;
 					}
 
-					Texture* image = new Texture;
-					device->CreateTexture(&desc, InitData.data(), image);
-					device->SetName(image, name.c_str());
-					success = image;
+					success = device->CreateTexture(&desc, InitData.data(), &resource->texture);
+					device->SetName(&resource->texture, name.c_str());
 				}
 				else assert(0); // failed to load DDS
 
@@ -237,12 +238,10 @@ namespace wiResourceManager
 
 				const int channelCount = 4;
 				int width, height, bpp;
-				unsigned char* rgb = stbi_load_from_memory(filedata.data(), (int)filedata.size(), &width, &height, &bpp, channelCount);
+				unsigned char* rgb = stbi_load_from_memory(filedata, (int)filesize, &width, &height, &bpp, channelCount);
 
 				if (rgb != nullptr)
 				{
-					Texture* image = nullptr;
-
 					TextureDesc desc;
 					desc.Height = uint32_t(height);
 					desc.Width = uint32_t(width);
@@ -282,8 +281,8 @@ namespace wiResourceManager
 							InitData.pSysMem = data;
 							InitData.SysMemPitch = 16 * sizeof(uint32_t);
 							InitData.SysMemSlicePitch = 16 * InitData.SysMemPitch;
-							image = new Texture;
-							wiRenderer::GetDevice()->CreateTexture(&desc, &InitData, image);
+							success = device->CreateTexture(&desc, &InitData, &resource->texture);
+							device->SetName(&resource->texture, name.c_str());
 						}
 					}
 					else
@@ -305,21 +304,18 @@ namespace wiResourceManager
 							mipwidth = std::max(1u, mipwidth / 2);
 						}
 
-						image = new Texture;
-						device->CreateTexture(&desc, InitData.data(), image);
-						device->SetName(image, name.c_str());
+						success = device->CreateTexture(&desc, InitData.data(), &resource->texture);
+						device->SetName(&resource->texture, name.c_str());
 
-						for (uint32_t i = 0; i < image->GetDesc().MipLevels; ++i)
+						for (uint32_t i = 0; i < resource->texture.desc.MipLevels; ++i)
 						{
 							int subresource_index;
-							subresource_index = device->CreateSubresource(image, SRV, 0, 1, i, 1);
+							subresource_index = device->CreateSubresource(&resource->texture, SRV, 0, 1, i, 1);
 							assert(subresource_index == i);
-							subresource_index = device->CreateSubresource(image, UAV, 0, 1, i, 1);
+							subresource_index = device->CreateSubresource(&resource->texture, UAV, 0, 1, i, 1);
 							assert(subresource_index == i);
 						}
 					}
-
-					success = image;
 				}
 
 				stbi_image_free(rgb);
@@ -328,21 +324,29 @@ namespace wiResourceManager
 		break;
 		case wiResource::SOUND:
 		{
-			wiAudio::Sound* sound = new wiAudio::Sound;
-			if (wiAudio::CreateSound(filedata, sound))
-			{
-				success = sound;
-			}
+			success = wiAudio::CreateSound(filedata, filesize, &resource->sound);
 		}
 		break;
 		};
 
-		if (success != nullptr)
+		if (success)
 		{
-			resource->data = success;
 			resource->type = type;
+			resource->flags = flags;
 
-			if (type == wiResource::IMAGE && resource->texture->GetDesc().MipLevels > 1 && resource->texture->GetDesc().BindFlags & BIND_UNORDERED_ACCESS)
+			if (resource->filedata.empty() && (flags & IMPORT_RETAIN_FILEDATA))
+			{
+				// resource was loaded with external filedata, and we want to retain filedata
+				resource->filedata.resize(filesize);
+				std::memcpy(resource->filedata.data(), filedata, filesize);
+			}
+			else if (!resource->filedata.empty() && (flags & IMPORT_RETAIN_FILEDATA) == 0)
+			{
+				// resource was loaded using file name, and we want to discard filedata
+				resource->filedata.clear();
+			}
+
+			if (type == wiResource::IMAGE && resource->texture.desc.MipLevels > 1 && resource->texture.desc.BindFlags & BIND_UNORDERED_ACCESS)
 			{
 				wiRenderer::AddDeferredMIPGen(resource, true);
 			}
@@ -361,32 +365,10 @@ namespace wiResourceManager
 		if (it != resources.end())
 		{
 			auto resource = it->second.lock();
-			result = resource != nullptr && resource->data != nullptr;
+			result = resource != nullptr && resource->type != wiResource::EMPTY;
 		}
 		locker.unlock();
 		return result;
-	}
-
-	std::shared_ptr<wiResource> Register(const std::string& name, void* data, wiResource::DATA_TYPE data_type)
-	{
-		std::shared_ptr<wiResource> resource;
-
-		locker.lock();
-		auto it = resources.find(name);
-		if (it == resources.end() || it->second.lock() == nullptr)
-		{
-			resource = std::make_shared<wiResource>();
-			resource->data = data;
-			resource->type = data_type;
-			resources.insert(make_pair(name, resource));
-		}
-		else
-		{
-			resource = it->second.lock();
-		}
-		locker.unlock();
-
-		return resource;
 	}
 
 	void Clear()
@@ -394,6 +376,91 @@ namespace wiResourceManager
 		locker.lock();
 		resources.clear();
 		locker.unlock();
+	}
+
+
+	void Serialize(wiArchive& archive, ResourceSerializer& seri)
+	{
+		if (archive.IsReadMode())
+		{
+			size_t serializable_count = 0;
+			archive >> serializable_count;
+
+			struct TempResource
+			{
+				std::string name;
+				uint32_t flags = 0;
+				std::vector<uint8_t> filedata;
+			};
+			std::vector<TempResource> temp_resources;
+			temp_resources.resize(serializable_count);
+
+			wiJobSystem::context ctx;
+			std::mutex seri_locker;
+			for (size_t i = 0; i < serializable_count; ++i)
+			{
+				auto& resource = temp_resources[i];
+
+				archive >> resource.name;
+				archive >> resource.flags;
+				archive >> resource.filedata;
+
+				resource.name = archive.GetSourceDirectory() + resource.name;
+
+				// "Loading" the resource can happen asynchronously to serialization of file data, to improve performance
+				wiJobSystem::Execute(ctx, [i, &temp_resources, &seri_locker, &seri](wiJobArgs args) {
+					auto& tmp_resource = temp_resources[i];
+					auto res = Load(tmp_resource.name, tmp_resource.flags, tmp_resource.filedata.data(), tmp_resource.filedata.size());
+					seri_locker.lock();
+					seri.resources.push_back(res);
+					seri_locker.unlock();
+				});
+			}
+
+			wiJobSystem::Wait(ctx);
+		}
+		else
+		{
+			locker.lock();
+			size_t serializable_count = 0;
+
+			if (mode == MODE_ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING)
+			{
+				// Simply not serialize any embedded resources
+				serializable_count = 0;
+				archive << serializable_count;
+			}
+			else
+			{
+				// Count embedded resources:
+				for (auto& it : resources)
+				{
+					std::shared_ptr<wiResource> resource = it.second.lock();
+					if (resource != nullptr && !resource->filedata.empty())
+					{
+						serializable_count++;
+					}
+				}
+
+				// Write all embedded resources:
+				archive << serializable_count;
+				for (auto& it : resources)
+				{
+					std::shared_ptr<wiResource> resource = it.second.lock();
+
+					if (resource != nullptr && !resource->filedata.empty())
+					{
+						std::string name = it.first;
+						wiHelper::MakePathRelative(archive.GetSourceDirectory(), name);
+
+						archive << name;
+						archive << resource->flags;
+						archive << resource->filedata;
+					}
+				}
+			}
+			locker.unlock();
+		}
 	}
 
 }

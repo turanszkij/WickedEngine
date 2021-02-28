@@ -107,6 +107,9 @@ void Editor::Initialize()
 {
 	MainComponent::Initialize();
 
+	// With this mode, file data for resources will be kept around. This allows serializing embedded resource data inside scenes
+	wiResourceManager::SetMode(wiResourceManager::MODE_ALLOW_RETAIN_FILEDATA);
+
 	infoDisplay.active = true;
 	infoDisplay.watermark = true;
 	infoDisplay.fpsinfo = true;
@@ -386,6 +389,9 @@ void EditorComponent::ResizeLayout()
 
 	renderPathComboBox.SetSize(XMFLOAT2(100, 20));
 	renderPathComboBox.SetPos(XMFLOAT2(screenW - 120, 45));
+
+	saveModeComboBox.SetSize(XMFLOAT2(120, 20));
+	saveModeComboBox.SetPos(XMFLOAT2(screenW - 140, 70));
 
 	sceneGraphView.SetSize(XMFLOAT2(260, 300));
 	sceneGraphView.SetPos(XMFLOAT2(0, screenH - sceneGraphView.scale_local.y));
@@ -676,6 +682,9 @@ void EditorComponent::Load()
 				{
 					Scene& scene = wiScene::GetScene();
 
+					wiResourceManager::MODE embed_mode = (wiResourceManager::MODE)saveModeComboBox.GetItemUserData(saveModeComboBox.GetSelected());
+					wiResourceManager::SetMode(embed_mode);
+
 					scene.Serialize(archive);
 
 					ResetHistory();
@@ -919,6 +928,15 @@ void EditorComponent::Load()
 	renderPathComboBox.SetEnabled(true);
 	renderPathComboBox.SetTooltip("Choose a render path...");
 	GetGUI().AddWidget(&renderPathComboBox);
+
+
+	saveModeComboBox.Create("Save Mode: ");
+	saveModeComboBox.SetColor(wiColor(0, 198, 101, 180), wiWidget::WIDGETSTATE::IDLE);
+	saveModeComboBox.SetColor(wiColor(0, 255, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
+	saveModeComboBox.AddItem("Embed resources", wiResourceManager::MODE_ALLOW_RETAIN_FILEDATA);
+	saveModeComboBox.AddItem("No embedding", wiResourceManager::MODE_ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING);
+	saveModeComboBox.SetTooltip("Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files");
+	GetGUI().AddWidget(&saveModeComboBox);
 
 
 	// Renderer and Postprocess windows are created in ChangeRenderPath(), because they deal with
@@ -1956,16 +1974,16 @@ void EditorComponent::Compose(CommandList cmd) const
 			switch (light.GetType())
 			{
 			case LightComponent::POINT:
-				wiImage::Draw(pointLightTex->texture, fx, cmd);
+				wiImage::Draw(&pointLightTex->texture, fx, cmd);
 				break;
 			case LightComponent::SPOT:
-				wiImage::Draw(spotLightTex->texture, fx, cmd);
+				wiImage::Draw(&spotLightTex->texture, fx, cmd);
 				break;
 			case LightComponent::DIRECTIONAL:
-				wiImage::Draw(dirLightTex->texture, fx, cmd);
+				wiImage::Draw(&dirLightTex->texture, fx, cmd);
 				break;
 			default:
-				wiImage::Draw(areaLightTex->texture, fx, cmd);
+				wiImage::Draw(&areaLightTex->texture, fx, cmd);
 				break;
 			}
 		}
@@ -2000,7 +2018,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(decalTex->texture, fx, cmd);
+			wiImage::Draw(&decalTex->texture, fx, cmd);
 
 		}
 	}
@@ -2033,7 +2051,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(forceFieldTex->texture, fx, cmd);
+			wiImage::Draw(&forceFieldTex->texture, fx, cmd);
 		}
 	}
 
@@ -2066,7 +2084,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(cameraTex->texture, fx, cmd);
+			wiImage::Draw(&cameraTex->texture, fx, cmd);
 		}
 	}
 
@@ -2098,7 +2116,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(armatureTex->texture, fx, cmd);
+			wiImage::Draw(&armatureTex->texture, fx, cmd);
 		}
 	}
 
@@ -2130,7 +2148,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(emitterTex->texture, fx, cmd);
+			wiImage::Draw(&emitterTex->texture, fx, cmd);
 		}
 	}
 
@@ -2162,7 +2180,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(hairTex->texture, fx, cmd);
+			wiImage::Draw(&hairTex->texture, fx, cmd);
 		}
 	}
 
@@ -2194,7 +2212,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(soundTex->texture, fx, cmd);
+			wiImage::Draw(&soundTex->texture, fx, cmd);
 		}
 	}
 

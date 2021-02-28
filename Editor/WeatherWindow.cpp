@@ -153,8 +153,8 @@ void WeatherWindow::Create(EditorComponent* editor)
 				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					auto& weather = GetWeather();
 					weather.skyMapName = fileName;
-					weather.skyMap = wiResourceManager::Load(fileName);
-					skyButton.SetText(fileName);
+					weather.skyMap = wiResourceManager::Load(fileName, wiResourceManager::IMPORT_RETAIN_FILEDATA);
+					skyButton.SetText(wiHelper::GetFileNameFromPath(fileName));
 				});
 			});
 		}
@@ -190,8 +190,8 @@ void WeatherWindow::Create(EditorComponent* editor)
 				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					auto& weather = GetWeather();
 					weather.colorGradingMapName = fileName;
-					weather.colorGradingMap = wiResourceManager::Load(fileName, wiResourceManager::IMPORT_COLORGRADINGLUT);
-					colorgradingButton.SetText(fileName);
+					weather.colorGradingMap = wiResourceManager::Load(fileName, wiResourceManager::IMPORT_COLORGRADINGLUT | wiResourceManager::IMPORT_RETAIN_FILEDATA);
+					colorgradingButton.SetText(wiHelper::GetFileNameFromPath(fileName));
 					});
 				});
 		}
@@ -535,12 +535,12 @@ void WeatherWindow::Update()
 
 		if (!weather.skyMapName.empty())
 		{
-			skyButton.SetText(weather.skyMapName);
+			skyButton.SetText(wiHelper::GetFileNameFromPath(weather.skyMapName));
 		}
 
 		if (!weather.colorGradingMapName.empty())
 		{
-			colorgradingButton.SetText(weather.colorGradingMapName);
+			colorgradingButton.SetText(wiHelper::GetFileNameFromPath(weather.colorGradingMapName));
 		}
 
 		fogStartSlider.SetValue(weather.fogStart);

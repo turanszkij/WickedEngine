@@ -114,6 +114,7 @@ public:
 	wiRenderer::DepthOfFieldResources depthoffieldResources;
 	wiRenderer::MotionBlurResources motionblurResources;
 	wiRenderer::VolumetricCloudResources volumetriccloudResources;
+	wiRenderer::BloomResources bloomResources;
 
 	const constexpr wiGraphics::Texture* GetGbuffer_Read() const
 	{

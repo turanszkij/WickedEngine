@@ -92,57 +92,39 @@ namespace tinygltf
 
 	bool LoadImageData(Image *image, const int image_idx, std::string *err,
 		std::string *warn, int req_width, int req_height,
-		const unsigned char *bytes, int size, void *)
+		const unsigned char *bytes, int size, void *userdata)
 	{
 		(void)warn;
 
-		const int requiredComponents = 4;
+		if (image->uri.empty())
+		{
+			// Force some image resource name:
+			stringstream ss;
+			do {
+				ss.str("");
+				ss << "gltfimport_" << wiRandom::getRandom(INT_MAX) << ".png";
+			} while (wiResourceManager::Contains(ss.str())); // this is to avoid overwriting an existing imported image
+			image->uri = ss.str();
+		}
 
-		int w, h, comp;
-		unsigned char *data = stbi_load_from_memory(bytes, size, &w, &h, &comp, requiredComponents);
-		if (!data) {
-			// NOTE: you can use `warn` instead of `err`
-			if (err) {
-				(*err) += "Unknown image format.\n";
-			}
+		auto resource = wiResourceManager::Load(
+			image->uri,
+			wiResourceManager::IMPORT_RETAIN_FILEDATA,
+			(const uint8_t*)bytes,
+			(size_t)size
+		);
+
+		if (resource == nullptr)
+		{
 			return false;
 		}
 
-		if (w < 1 || h < 1) {
-			free(data);
-			if (err) {
-				(*err) += "Invalid image data.\n";
-			}
-			return false;
-		}
+		image->width = resource->texture.desc.Width;
+		image->height = resource->texture.desc.Height;
+		image->component = 4;
 
-		if (req_width > 0) {
-			if (req_width != w) {
-				free(data);
-				if (err) {
-					(*err) += "Image width mismatch.\n";
-				}
-				return false;
-			}
-		}
-
-		if (req_height > 0) {
-			if (req_height != h) {
-				free(data);
-				if (err) {
-					(*err) += "Image height mismatch.\n";
-				}
-				return false;
-			}
-		}
-
-		image->width = w;
-		image->height = h;
-		image->component = requiredComponents;
-		image->image.resize(static_cast<size_t>(w * h * image->component));
-		std::copy(data, data + w * h * image->component, image->image.begin());
-
-		free(data);
+		wiResourceManager::ResourceSerializer* seri = (wiResourceManager::ResourceSerializer*)userdata;
+		seri->resources.push_back(resource);
 
 		return true;
 	}
@@ -153,83 +135,6 @@ namespace tinygltf
 		assert(0); // TODO
 		return false;
 	}
-}
-
-std::shared_ptr<wiResource> RegisterTexture(tinygltf::Image *image, const string& type_name)
-{
-	// We will load the texture2d by hand here and register to the resource manager (if it was not already registered)
-	if (!wiResourceManager::Contains(image->uri))
-	{
-		int width = image->width;
-		int height = image->height;
-		int channelCount = image->component;
-
-		if (!image->image.empty())
-		{
-			GraphicsDevice* device = wiRenderer::GetDevice();
-
-			TextureDesc desc;
-			desc.ArraySize = 1;
-			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-			desc.CPUAccessFlags = 0;
-			desc.Format = FORMAT_R8G8B8A8_UNORM;
-			desc.Height = uint32_t(height);
-			desc.Width = uint32_t(width);
-			desc.MipLevels = (uint32_t)log2(max(width, height));
-			desc.MiscFlags = 0;
-			desc.Usage = USAGE_DEFAULT;
-
-			uint32_t mipwidth = width;
-			vector<SubresourceData> InitData(desc.MipLevels);
-			for (uint32_t mip = 0; mip < desc.MipLevels; ++mip)
-			{
-				InitData[mip].pSysMem = image->image.data();
-				InitData[mip].SysMemPitch = uint32_t(mipwidth * channelCount);
-				mipwidth = std::max(1u, mipwidth / 2);
-			}
-
-			Texture* tex = new Texture;
-			if (device->CreateTexture(&desc, InitData.data(), tex))
-			{
-				for (uint32_t i = 0; i < tex->GetDesc().MipLevels; ++i)
-				{
-					int subresource_index;
-					subresource_index = device->CreateSubresource(tex, SRV, 0, 1, i, 1);
-					assert(subresource_index == i);
-					subresource_index = device->CreateSubresource(tex, UAV, 0, 1, i, 1);
-					assert(subresource_index == i);
-				}
-
-				if (tex != nullptr)
-				{
-					if (image->uri.empty())
-					{
-						// If the texture was embedded, export it as a file:
-						stringstream ss;
-						do {
-							ss.str("");
-							ss << "gltfimport_" << type_name << "_" << wiRandom::getRandom(INT_MAX) << ".png";
-						} while (wiHelper::FileExists(ss.str())); // this is to avoid overwriting an existing exported image
-						image->uri = ss.str();
-						bool success = wiHelper::saveTextureToFile(image->image, desc, ss.str());
-						assert(success);
-					}
-
-					// We loaded the texture2d, so register to the resource manager to be retrieved later:
-					auto resource = wiResourceManager::Register(image->uri, tex, wiResource::IMAGE);
-					wiRenderer::AddDeferredMIPGen(resource, true);
-					return resource;
-				}
-			}
-			else
-			{
-				assert(0);
-			}
-
-		}
-	}
-
-	return nullptr;
 }
 
 
@@ -367,7 +272,8 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	callbacks.ExpandFilePath = tinygltf::ExpandFilePath;
 	loader.SetFsCallbacks(callbacks);
 
-	loader.SetImageLoader(tinygltf::LoadImageData, nullptr);
+	wiResourceManager::ResourceSerializer seri; // keep this alive to not delete loaded images while importing gltf
+	loader.SetImageLoader(tinygltf::LoadImageData, &seri);
 	loader.SetImageWriter(tinygltf::WriteImageData, nullptr);
 	
 	LoaderState state;
@@ -438,7 +344,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		{
 			auto& tex = state.gltfModel.textures[baseColorTexture->second.TextureIndex()];
 			auto& img = state.gltfModel.images[tex.source];
-			material.textures[MaterialComponent::BASECOLORMAP].resource = RegisterTexture(&img, "basecolor");
+			material.textures[MaterialComponent::BASECOLORMAP].resource = wiResourceManager::Load(img.uri);
 			material.textures[MaterialComponent::BASECOLORMAP].name = img.uri;
 			material.textures[MaterialComponent::BASECOLORMAP].uvset = baseColorTexture->second.TextureTexCoord();
 		}
@@ -446,7 +352,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		{
 			auto& tex = state.gltfModel.textures[normalTexture->second.TextureIndex()];
 			auto& img = state.gltfModel.images[tex.source];
-			material.textures[MaterialComponent::NORMALMAP].resource = RegisterTexture(&img, "normal");
+			material.textures[MaterialComponent::NORMALMAP].resource = wiResourceManager::Load(img.uri);
 			material.textures[MaterialComponent::NORMALMAP].name = img.uri;
 			material.textures[MaterialComponent::NORMALMAP].uvset = normalTexture->second.TextureTexCoord();
 		}
@@ -454,7 +360,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		{
 			auto& tex = state.gltfModel.textures[metallicRoughnessTexture->second.TextureIndex()];
 			auto& img = state.gltfModel.images[tex.source];
-			material.textures[MaterialComponent::SURFACEMAP].resource = RegisterTexture(&img, "roughness_metallic");
+			material.textures[MaterialComponent::SURFACEMAP].resource = wiResourceManager::Load(img.uri);
 			material.textures[MaterialComponent::SURFACEMAP].name = img.uri;
 			material.textures[MaterialComponent::SURFACEMAP].uvset = metallicRoughnessTexture->second.TextureTexCoord();
 		}
@@ -462,7 +368,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		{
 			auto& tex = state.gltfModel.textures[emissiveTexture->second.TextureIndex()];
 			auto& img = state.gltfModel.images[tex.source];
-			material.textures[MaterialComponent::EMISSIVEMAP].resource = RegisterTexture(&img, "emissive");
+			material.textures[MaterialComponent::EMISSIVEMAP].resource = wiResourceManager::Load(img.uri);
 			material.textures[MaterialComponent::EMISSIVEMAP].name = img.uri;
 			material.textures[MaterialComponent::EMISSIVEMAP].uvset = emissiveTexture->second.TextureTexCoord();
 		}
@@ -470,7 +376,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		{
 			auto& tex = state.gltfModel.textures[occlusionTexture->second.TextureIndex()];
 			auto& img = state.gltfModel.images[tex.source];
-			material.textures[MaterialComponent::OCCLUSIONMAP].resource = RegisterTexture(&img, "occlusion");
+			material.textures[MaterialComponent::OCCLUSIONMAP].resource = wiResourceManager::Load(img.uri);
 			material.textures[MaterialComponent::OCCLUSIONMAP].name = img.uri;
 			material.textures[MaterialComponent::OCCLUSIONMAP].uvset = occlusionTexture->second.TextureTexCoord();
 			material.SetOcclusionEnabled_Secondary(true);
@@ -529,7 +435,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				int index = ext_transmission->second.Get("transmissionTexture").Get("index").Get<int>();
 				auto& tex = state.gltfModel.textures[index];
 				auto& img = state.gltfModel.images[tex.source];
-				material.textures[MaterialComponent::TRANSMISSIONMAP].resource = RegisterTexture(&img, "transmission");
+				material.textures[MaterialComponent::TRANSMISSIONMAP].resource = wiResourceManager::Load(img.uri);
 				material.textures[MaterialComponent::TRANSMISSIONMAP].name = img.uri;
 				material.textures[MaterialComponent::TRANSMISSIONMAP].uvset = (uint32_t)ext_transmission->second.Get("transmissionTexture").Get("texCoord").Get<int>();
 			}
@@ -546,7 +452,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				int index = specularGlossinessWorkflow->second.Get("diffuseTexture").Get("index").Get<int>();
 				auto& tex = state.gltfModel.textures[index];
 				auto& img = state.gltfModel.images[tex.source];
-				material.textures[MaterialComponent::BASECOLORMAP].resource = RegisterTexture(&img, "diffuse");
+				material.textures[MaterialComponent::BASECOLORMAP].resource = wiResourceManager::Load(img.uri);
 				material.textures[MaterialComponent::BASECOLORMAP].name = img.uri;
 				material.textures[MaterialComponent::BASECOLORMAP].uvset = (uint32_t)specularGlossinessWorkflow->second.Get("diffuseTexture").Get("texCoord").Get<int>();
 			}
@@ -555,7 +461,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				int index = specularGlossinessWorkflow->second.Get("specularGlossinessTexture").Get("index").Get<int>();
 				auto& tex = state.gltfModel.textures[index];
 				auto& img = state.gltfModel.images[tex.source];
-				material.textures[MaterialComponent::SURFACEMAP].resource = RegisterTexture(&img, "specular_glossiness");
+				material.textures[MaterialComponent::SURFACEMAP].resource = wiResourceManager::Load(img.uri);
 				material.textures[MaterialComponent::SURFACEMAP].name = img.uri;
 				material.textures[MaterialComponent::SURFACEMAP].uvset = (uint32_t)specularGlossinessWorkflow->second.Get("specularGlossinessTexture").Get("texCoord").Get<int>();
 			}
@@ -602,7 +508,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				int index = param.Get("index").Get<int>();
 				auto& tex = state.gltfModel.textures[index];
 				auto& img = state.gltfModel.images[tex.source];
-				material.textures[MaterialComponent::SHEENCOLORMAP].resource = RegisterTexture(&img, "sheenColor");
+				material.textures[MaterialComponent::SHEENCOLORMAP].resource = wiResourceManager::Load(img.uri);
 				material.textures[MaterialComponent::SHEENCOLORMAP].name = img.uri;
 				material.textures[MaterialComponent::SHEENCOLORMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
 			}
@@ -617,7 +523,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				int index = param.Get("index").Get<int>();
 				auto& tex = state.gltfModel.textures[index];
 				auto& img = state.gltfModel.images[tex.source];
-				material.textures[MaterialComponent::SHEENROUGHNESSMAP].resource = RegisterTexture(&img, "sheenRoughness");
+				material.textures[MaterialComponent::SHEENROUGHNESSMAP].resource = wiResourceManager::Load(img.uri);
 				material.textures[MaterialComponent::SHEENROUGHNESSMAP].name = img.uri;
 				material.textures[MaterialComponent::SHEENROUGHNESSMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
 			}
@@ -646,7 +552,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				int index = param.Get("index").Get<int>();
 				auto& tex = state.gltfModel.textures[index];
 				auto& img = state.gltfModel.images[tex.source];
-				material.textures[MaterialComponent::CLEARCOATMAP].resource = RegisterTexture(&img, "clearcoat");
+				material.textures[MaterialComponent::CLEARCOATMAP].resource = wiResourceManager::Load(img.uri);
 				material.textures[MaterialComponent::CLEARCOATMAP].name = img.uri;
 				material.textures[MaterialComponent::CLEARCOATMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
 			}
@@ -661,7 +567,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				int index = param.Get("index").Get<int>();
 				auto& tex = state.gltfModel.textures[index];
 				auto& img = state.gltfModel.images[tex.source];
-				material.textures[MaterialComponent::CLEARCOATROUGHNESSMAP].resource = RegisterTexture(&img, "clearcoatRoughness");
+				material.textures[MaterialComponent::CLEARCOATROUGHNESSMAP].resource = wiResourceManager::Load(img.uri);
 				material.textures[MaterialComponent::CLEARCOATROUGHNESSMAP].name = img.uri;
 				material.textures[MaterialComponent::CLEARCOATROUGHNESSMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
 			}
@@ -671,7 +577,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				int index = param.Get("index").Get<int>();
 				auto& tex = state.gltfModel.textures[index];
 				auto& img = state.gltfModel.images[tex.source];
-				material.textures[MaterialComponent::CLEARCOATNORMALMAP].resource = RegisterTexture(&img, "clearcoatNormal");
+				material.textures[MaterialComponent::CLEARCOATNORMALMAP].resource = wiResourceManager::Load(img.uri);
 				material.textures[MaterialComponent::CLEARCOATNORMALMAP].name = img.uri;
 				material.textures[MaterialComponent::CLEARCOATNORMALMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
 			}

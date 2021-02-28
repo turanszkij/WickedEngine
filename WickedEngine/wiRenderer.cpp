@@ -3092,7 +3092,7 @@ void ProcessDeferredMipGenRequests(CommandList cmd)
 	{
 		MIPGEN_OPTIONS mipopt;
 		mipopt.preserve_coverage = it.second;
-		GenerateMipChain(*it.first->texture, MIPGENFILTER_LINEAR, cmd, mipopt);
+		GenerateMipChain(it.first->texture, MIPGENFILTER_LINEAR, cmd, mipopt);
 	}
 	deferredMIPGens.clear();
 	deferredMIPGenLock.unlock();
@@ -3592,7 +3592,7 @@ void UpdatePerFrameData(
 	frameCB.g_xFrame_StaticSkyGamma = 0.0f;
 	if (vis.scene->weather.skyMap != nullptr)
 	{
-		bool hdr = !device->IsFormatUnorm(vis.scene->weather.skyMap->texture->GetDesc().Format);
+		bool hdr = !device->IsFormatUnorm(vis.scene->weather.skyMap->texture.desc.Format);
 		frameCB.g_xFrame_StaticSkyGamma = hdr ? 1.0f : frameCB.g_xFrame_Gamma;
 	}
 	frameCB.g_xFrame_FrameCount = (uint)device->GetFrameCount();
@@ -4698,8 +4698,8 @@ void DrawLensFlares(
 				{
 					if (x != nullptr)
 					{
-						device->BindResource(PS, x->texture, TEXSLOT_ONDEMAND0 + i, cmd);
-						device->BindResource(GS, x->texture, TEXSLOT_ONDEMAND0 + i, cmd);
+						device->BindResource(PS, &x->texture, TEXSLOT_ONDEMAND0 + i, cmd);
+						device->BindResource(GS, &x->texture, TEXSLOT_ONDEMAND0 + i, cmd);
 						i++;
 						if (i == 7)
 						{
@@ -5196,7 +5196,7 @@ void DrawScene(
 
 	if (vis.scene->weather.skyMap != nullptr)
 	{
-		device->BindResource(PS, vis.scene->weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
+		device->BindResource(PS, &vis.scene->weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
 	}
 
 	device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
@@ -6535,7 +6535,7 @@ void DrawSky(const Scene& scene, CommandList cmd)
 	if (scene.weather.skyMap != nullptr)
 	{
 		device->BindPipelineState(&PSO_sky[SKYRENDERING_STATIC], cmd);
-		device->BindResource(PS, scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
+		device->BindResource(PS, &scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
 	}
 	else
 	{
@@ -6818,7 +6818,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			if (vis.scene->weather.skyMap != nullptr)
 			{
 				device->BindPipelineState(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], cmd);
-				device->BindResource(PS, vis.scene->weather.skyMap->texture, TEXSLOT_ONDEMAND0, cmd);
+				device->BindResource(PS, &vis.scene->weather.skyMap->texture, TEXSLOT_ONDEMAND0, cmd);
 			}
 			else
 			{
@@ -7911,7 +7911,7 @@ void RayTraceScene(
 
 	if (scene.weather.skyMap != nullptr)
 	{
-		device->BindResource(CS, scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
+		device->BindResource(CS, &scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
 	}
 	else
 	{
@@ -8132,12 +8132,12 @@ void ManageDecalAtlas(Scene& scene)
 	{
 		const DecalComponent& decal = scene.decals[i];
 
-		if (decal.texture != nullptr && decal.texture->texture != nullptr)
+		if (decal.texture != nullptr && decal.texture->texture.IsValid())
 		{
 			if (packedDecals.find(decal.texture) == packedDecals.end())
 			{
 				// we need to pack this decal texture into the atlas
-				rect_xywh newRect = rect_xywh(0, 0, decal.texture->texture->GetDesc().Width + atlasClampBorder * 2, decal.texture->texture->GetDesc().Height + atlasClampBorder * 2);
+				rect_xywh newRect = rect_xywh(0, 0, decal.texture->texture.desc.Width + atlasClampBorder * 2, decal.texture->texture.desc.Height + atlasClampBorder * 2);
 				packedDecals[decal.texture] = newRect;
 
 				repackAtlas_Decal = true;
@@ -8225,9 +8225,9 @@ void RefreshDecalAtlas(const Scene& scene, CommandList cmd)
 		{
 			for (auto& it : packedDecals)
 			{
-				if (mip < it.first->texture->GetDesc().MipLevels)
+				if (mip < it.first->texture.desc.MipLevels)
 				{
-					CopyTexture2D(decalAtlas, mip, (it.second.x >> mip) + atlasClampBorder, (it.second.y >> mip) + atlasClampBorder, *it.first->texture, mip, cmd, BORDEREXPAND_CLAMP);
+					CopyTexture2D(decalAtlas, mip, (it.second.x >> mip) + atlasClampBorder, (it.second.y >> mip) + atlasClampBorder, it.first->texture, mip, cmd, BORDEREXPAND_CLAMP);
 				}
 			}
 		}
@@ -8469,7 +8469,7 @@ void RenderObjectLightMap(const Scene& scene, const ObjectComponent& object, Com
 
 	if (scene.weather.skyMap != nullptr)
 	{
-		device->BindResource(PS, scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
+		device->BindResource(PS, &scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
 	}
 	else
 	{
@@ -11821,10 +11821,35 @@ void Postprocess_MotionBlur(
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
 }
+void CreateBloomResources(BloomResources& res, XMUINT2 resolution)
+{
+	TextureDesc desc;
+	desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+	desc.Format = FORMAT_R11G11B10_FLOAT;
+	desc.Width = resolution.x / 4;
+	desc.Height = resolution.y / 4;
+	desc.MipLevels = std::min(5u, (uint32_t)std::log2(std::max(desc.Width, desc.Height)));
+	device->CreateTexture(&desc, nullptr, &res.texture_bloom);
+	device->SetName(&res.texture_bloom, "bloom.texture_bloom");
+	device->CreateTexture(&desc, nullptr, &res.texture_temp);
+	device->SetName(&res.texture_temp, "bloom.texture_temp");
+
+	for (uint32_t i = 0; i < res.texture_bloom.desc.MipLevels; ++i)
+	{
+		int subresource_index;
+		subresource_index = device->CreateSubresource(&res.texture_bloom, SRV, 0, 1, i, 1);
+		assert(subresource_index == i);
+		subresource_index = device->CreateSubresource(&res.texture_temp, SRV, 0, 1, i, 1);
+		assert(subresource_index == i);
+		subresource_index = device->CreateSubresource(&res.texture_bloom, UAV, 0, 1, i, 1);
+		assert(subresource_index == i);
+		subresource_index = device->CreateSubresource(&res.texture_temp, UAV, 0, 1, i, 1);
+		assert(subresource_index == i);
+	}
+}
 void Postprocess_Bloom(
+	const BloomResources& res,
 	const Texture& input,
-	const Texture& bloom,
-	const Texture& bloom_tmp,
 	const Texture& output,
 	CommandList cmd,
 	float threshold
@@ -11837,7 +11862,7 @@ void Postprocess_Bloom(
 	{
 		device->EventBegin("Bloom Separate", cmd);
 
-		const TextureDesc& desc = bloom.GetDesc();
+		const TextureDesc& desc = res.texture_bloom.GetDesc();
 
 		PostProcessCB cb;
 		cb.xPPResolution.x = desc.Width;
@@ -11853,13 +11878,13 @@ void Postprocess_Bloom(
 		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
 
 		const GPUResource* uavs[] = {
-			&bloom,
+			&res.texture_bloom,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&bloom, bloom.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.texture_bloom, res.texture_bloom.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -11874,7 +11899,7 @@ void Postprocess_Bloom(
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
-				GPUBarrier::Image(&bloom, IMAGE_LAYOUT_UNORDERED_ACCESS, bloom.desc.layout),
+				GPUBarrier::Image(&res.texture_bloom, IMAGE_LAYOUT_UNORDERED_ACCESS, res.texture_bloom.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -11885,9 +11910,9 @@ void Postprocess_Bloom(
 
 	device->EventBegin("Bloom Mipchain", cmd);
 	MIPGEN_OPTIONS mipopt;
-	mipopt.gaussian_temp = &bloom_tmp;
+	mipopt.gaussian_temp = &res.texture_temp;
 	mipopt.wide_gauss = true;
-	GenerateMipChain(bloom, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd, mipopt);
+	GenerateMipChain(res.texture_bloom, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd, mipopt);
 	device->EventEnd(cmd);
 
 	// Combine image with bloom
@@ -11907,7 +11932,7 @@ void Postprocess_Bloom(
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_BLOOMCOMBINE], cmd);
 
 		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &bloom, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &res.texture_bloom, TEXSLOT_ONDEMAND1, cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
@@ -12524,8 +12549,15 @@ void Postprocess_Tonemap(
 	device->BindResource(CS, &input_luminance, TEXSLOT_ONDEMAND1, cmd);
 	device->BindResource(CS, &input_distortion, TEXSLOT_ONDEMAND2, cmd);
 
-	assert(colorgrade_lookuptable == nullptr || colorgrade_lookuptable->desc.type == TextureDesc::TEXTURE_3D); // This must be a 3D lut
-	device->BindResource(CS, colorgrade_lookuptable, TEXSLOT_ONDEMAND3, cmd);
+	if (colorgrade_lookuptable == nullptr)
+	{
+		device->UnbindResources(TEXSLOT_ONDEMAND3, 1, cmd);
+	}
+	else
+	{
+		assert(colorgrade_lookuptable == nullptr || colorgrade_lookuptable->desc.type == TextureDesc::TEXTURE_3D); // This must be a 3D lut
+		device->BindResource(CS, colorgrade_lookuptable, TEXSLOT_ONDEMAND3, cmd);
+	}
 
 	const TextureDesc& desc = output.GetDesc();
 

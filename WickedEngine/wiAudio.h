@@ -47,6 +47,7 @@ namespace wiAudio
 
 	bool CreateSound(const std::string& filename, Sound* sound);
 	bool CreateSound(const std::vector<uint8_t>& data, Sound* sound);
+	bool CreateSound(const uint8_t* data, size_t size, Sound* sound);
 	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance);
 
 	void Play(SoundInstance* instance);

@@ -133,7 +133,15 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 				material.textures[MaterialComponent::SURFACEMAP].name = obj_material.specular_highlight_texname;
 			}
 
-			material.CreateRenderData(directory);
+			for (auto& x : material.textures)
+			{
+				if (!x.name.empty())
+				{
+					x.name = directory + x.name;
+				}
+			}
+
+			material.CreateRenderData();
 
 			materialLibrary.push_back(materialEntity); // for subset-indexing...
 		}

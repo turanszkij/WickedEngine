@@ -101,7 +101,7 @@ namespace wiHelper
 		}
 	}
 
-	bool saveTextureToMemory(const wiGraphics::Texture& texture, std::vector<uint8_t>& data)
+	bool saveTextureToMemory(const wiGraphics::Texture& texture, std::vector<uint8_t>& texturedata)
 	{
 		using namespace wiGraphics;
 
@@ -112,7 +112,8 @@ namespace wiHelper
 		uint32_t data_stride = device->GetFormatStride(desc.Format);
 		uint32_t data_size = data_count * data_stride;
 
-		data.resize(data_size);
+		texturedata.clear();
+		texturedata.resize(data_size);
 
 		Texture stagingTex;
 		TextureDesc staging_desc = desc;
@@ -120,11 +121,28 @@ namespace wiHelper
 		staging_desc.CPUAccessFlags = CPU_ACCESS_READ;
 		staging_desc.BindFlags = 0;
 		staging_desc.MiscFlags = 0;
+		staging_desc.MipLevels = 1;
 		bool success = device->CreateTexture(&staging_desc, nullptr, &stagingTex);
 		assert(success);
 
 		CommandList cmd = device->BeginCommandList();
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&texture, texture.desc.layout, IMAGE_LAYOUT_COPY_SRC, 0)
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
 		device->CopyResource(&stagingTex, &texture, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&texture, IMAGE_LAYOUT_COPY_SRC, texture.desc.layout, 0)
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
 		device->SubmitCommandLists();
 		device->WaitForGPU();
 
@@ -141,14 +159,14 @@ namespace wiHelper
 				for (uint32_t i = 0; i < desc.Height; ++i)
 				{
 					void* src = (void*)((size_t)mapping.data + size_t(i * mapping.rowpitch));
-					void* dst = (void*)((size_t)data.data() + size_t(i * cpysize));
+					void* dst = (void*)((size_t)texturedata.data() + size_t(i * cpysize));
 					memcpy(dst, src, cpysize);
 				}
 			}
 			else
 			{
 				// Copy whole
-				std::memcpy(data.data(), mapping.data, data.size());
+				std::memcpy(texturedata.data(), mapping.data, texturedata.size());
 			}
 			device->Unmap(&stagingTex);
 		}
@@ -160,29 +178,28 @@ namespace wiHelper
 		return mapping.data != nullptr;
 	}
 
-	bool saveTextureToFile(const wiGraphics::Texture& texture, const string& fileName)
+	bool saveTextureToMemoryFile(const wiGraphics::Texture& texture, const std::string& fileExtension, std::vector<uint8_t>& filedata)
 	{
 		using namespace wiGraphics;
 		TextureDesc desc = texture.GetDesc();
-		std::vector<uint8_t> data;
-		if (saveTextureToMemory(texture, data))
+		std::vector<uint8_t> texturedata;
+		if (saveTextureToMemory(texture, texturedata))
 		{
-			return saveTextureToFile(data, desc, fileName);
+			return saveTextureToMemoryFile(texturedata, desc, fileExtension, filedata);
 		}
 		return false;
 	}
 
-	bool saveTextureToFile(const std::vector<uint8_t>& textureData, const wiGraphics::TextureDesc& desc, const std::string& fileName)
+	bool saveTextureToMemoryFile(const std::vector<uint8_t>& texturedata, const wiGraphics::TextureDesc& desc, const std::string& fileExtension, std::vector<uint8_t>& filedata)
 	{
 		using namespace wiGraphics;
-
 		uint32_t data_count = desc.Width * desc.Height;
 
 		if (desc.Format == FORMAT_R10G10B10A2_UNORM)
 		{
 			// So this should be converted first to rgba8 before saving to common format...
 
-			uint32_t* data32 = (uint32_t*)textureData.data();
+			uint32_t* data32 = (uint32_t*)texturedata.data();
 
 			for (uint32_t i = 0; i < data_count; ++i)
 			{
@@ -208,7 +225,7 @@ namespace wiHelper
 
 		int write_result = 0;
 
-		std::vector<uint8_t> filedata;
+		filedata.clear();
 		stbi_write_func* func = [](void* context, void* data, int size) {
 			std::vector<uint8_t>& filedata = *(std::vector<uint8_t>*)context;
 			for (int i = 0; i < size; ++i)
@@ -217,29 +234,50 @@ namespace wiHelper
 			}
 		};
 
-		string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(fileName));
+		string extension = wiHelper::toUpper(fileExtension);
 		if (!extension.compare("JPG") || !extension.compare("JPEG"))
 		{
-			write_result = stbi_write_jpg_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, textureData.data(), 100);
+			write_result = stbi_write_jpg_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, texturedata.data(), 100);
 		}
 		else if (!extension.compare("PNG"))
 		{
-			write_result = stbi_write_png_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, textureData.data(), 0);
+			write_result = stbi_write_png_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, texturedata.data(), 0);
 		}
 		else if (!extension.compare("TGA"))
 		{
-			write_result = stbi_write_tga_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, textureData.data());
+			write_result = stbi_write_tga_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, texturedata.data());
 		}
 		else if (!extension.compare("BMP"))
 		{
-			write_result = stbi_write_bmp_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, textureData.data());
+			write_result = stbi_write_bmp_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, texturedata.data());
 		}
 		else
 		{
 			assert(0 && "Unsupported extension");
 		}
 
-		if (write_result != 0)
+		return write_result != 0;
+	}
+
+	bool saveTextureToFile(const wiGraphics::Texture& texture, const string& fileName)
+	{
+		using namespace wiGraphics;
+		TextureDesc desc = texture.GetDesc();
+		std::vector<uint8_t> data;
+		if (saveTextureToMemory(texture, data))
+		{
+			return saveTextureToFile(data, desc, fileName);
+		}
+		return false;
+	}
+
+	bool saveTextureToFile(const std::vector<uint8_t>& texturedata, const wiGraphics::TextureDesc& desc, const std::string& fileName)
+	{
+		using namespace wiGraphics;
+
+		string ext = GetExtensionFromFileName(fileName);
+		std::vector<uint8_t> filedata;
+		if (saveTextureToMemoryFile(texturedata, desc, ext, filedata))
 		{
 			return FileWrite(fileName, filedata.data(), filedata.size());
 		}
@@ -314,11 +352,19 @@ namespace wiHelper
 			return;
 		}
 
-		size_t found = path.rfind(rootdir);
-		if (found != std::string::npos)
+		std::filesystem::path filepath = path;
+		std::filesystem::path rootpath = rootdir;
+		std::filesystem::path relative = std::filesystem::relative(path, rootdir);
+		if (!relative.empty())
 		{
-			path = path.substr(found + rootdir.length());
+			path = relative.string();
 		}
+
+		//size_t found = path.rfind(rootdir);
+		//if (found != std::string::npos)
+		//{
+		//	path = path.substr(found + rootdir.length());
+		//}
 	}
 
 	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data)

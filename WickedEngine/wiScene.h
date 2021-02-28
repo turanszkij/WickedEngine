@@ -204,7 +204,7 @@ namespace wiScene
 			{
 				if (resource == nullptr)
 					return nullptr;
-				return resource->texture;
+				return &resource->texture;
 			}
 			int GetUVSet() const
 			{
@@ -300,7 +300,7 @@ namespace wiScene
 		uint32_t GetRenderTypes() const;
 
 		// Create constant buffer and texture resources for GPU
-		void CreateRenderData(const std::string& content_dir = "");
+		void CreateRenderData();
 
 		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};

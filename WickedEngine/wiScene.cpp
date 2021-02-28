@@ -324,13 +324,13 @@ namespace wiScene
 		}
 		return RENDERTYPE_TRANSPARENT;
 	}
-	void MaterialComponent::CreateRenderData(const std::string& content_dir)
+	void MaterialComponent::CreateRenderData()
 	{
 		for (auto& x : textures)
 		{
 			if (!x.name.empty())
 			{
-				x.resource = wiResourceManager::Load(content_dir + x.name);
+				x.resource = wiResourceManager::Load(x.name, wiResourceManager::IMPORT_RETAIN_FILEDATA);
 			}
 		}
 
@@ -1768,8 +1768,8 @@ namespace wiScene
 
 		SoundComponent& sound = sounds.Create(entity);
 		sound.filename = filename;
-		sound.soundResource = wiResourceManager::Load(filename);
-		wiAudio::CreateSoundInstance(sound.soundResource->sound, &sound.soundinstance);
+		sound.soundResource = wiResourceManager::Load(filename, wiResourceManager::IMPORT_RETAIN_FILEDATA);
+		wiAudio::CreateSoundInstance(&sound.soundResource->sound, &sound.soundinstance);
 
 		TransformComponent& transform = transforms.Create(entity);
 		transform.Translate(position);

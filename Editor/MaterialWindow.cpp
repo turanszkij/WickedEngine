@@ -492,7 +492,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 				params.extensions.push_back("bmp");
 				wiHelper::FileDialog(params, [this, material, &slot, i](std::string fileName) {
 					wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-						material->textures[i].resource = wiResourceManager::Load(fileName);
+						material->textures[i].resource = wiResourceManager::Load(fileName, wiResourceManager::IMPORT_RETAIN_FILEDATA);
 						material->textures[i].name = fileName;
 						material->SetDirty();
 						slots[i].button.SetText(wiHelper::GetFileNameFromPath(fileName));
@@ -680,7 +680,7 @@ void MaterialWindow::SetEntity(Entity entity)
 
 		for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
 		{
-			slots[i].button.SetText(material->textures[i].name);
+			slots[i].button.SetText(wiHelper::GetFileNameFromPath(material->textures[i].name));
 			slots[i].uvsetField.SetText(std::to_string(material->textures[i].uvset));
 		}
 
