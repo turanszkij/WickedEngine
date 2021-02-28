@@ -2118,14 +2118,7 @@ using namespace DX12_Internal;
 
 				stream.STRIP = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
 
-				if (pso->desc.rootSignature == nullptr)
-				{
-					stream.pRootSignature = internal_state->rootSignature.Get();
-				}
-				else
-				{
-					stream.pRootSignature = to_internal(pso->desc.rootSignature)->resource.Get();
-				}
+				stream.pRootSignature = internal_state->rootSignature.Get();
 
 				D3D12_PIPELINE_STATE_STREAM_DESC streamDesc = {};
 				streamDesc.pPipelineStateSubobjectStream = &stream;
@@ -3955,6 +3948,10 @@ using namespace DX12_Internal;
 			rootsignature_cache_mutex.unlock();
 
 			return SUCCEEDED(hr);
+		}
+		else
+		{
+			internal_state->rootSignature = to_internal(pDesc->rootSignature)->resource;
 		}
 
 		return true;
