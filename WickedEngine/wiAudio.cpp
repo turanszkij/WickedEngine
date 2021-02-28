@@ -558,6 +558,7 @@ namespace wiAudio
 
 	bool CreateSound(const std::string& filename, Sound* sound) { return false; }
 	bool CreateSound(const std::vector<uint8_t>& data, Sound* sound) { return false; }
+	bool CreateSound(const uint8_t* data, size_t size, Sound* sound) { return false; }
 	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance) { return false; }
 
 	void Play(SoundInstance* instance) {}
