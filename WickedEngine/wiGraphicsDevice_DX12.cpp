@@ -4602,6 +4602,8 @@ using namespace DX12_Internal;
 			table_ranges_sampler.emplace_back();
 
 			uint32_t rangeIndex = 0;
+			uint32_t tableDescriptorIndex = 0;
+			uint32_t samplerDescriptorIndex = 0;
 			for (auto& binding : x.resources)
 			{
 				if (binding.binding < CONSTANTBUFFER)
@@ -4639,7 +4641,7 @@ using namespace DX12_Internal;
 					table_ranges_resource.back().emplace_back();
 					D3D12_DESCRIPTOR_RANGE1& range = table_ranges_resource.back().back();
 					auto table_internal = to_internal(&x);
-					range = table_internal->resource_heap.ranges[rangeIndex];
+					range = table_internal->resource_heap.ranges[tableDescriptorIndex++];
 					range.Flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE;
 					range.Flags |= D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE;
 					range.Flags |= D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE;
@@ -4653,7 +4655,7 @@ using namespace DX12_Internal;
 				table_ranges_sampler.back().emplace_back();
 				D3D12_DESCRIPTOR_RANGE1& range = table_ranges_sampler.back().back();
 				auto table_internal = to_internal(&x);
-				range = table_internal->sampler_heap.ranges[rangeIndex];
+				range = table_internal->sampler_heap.ranges[samplerDescriptorIndex++];
 				range.Flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE;
 				range.RegisterSpace = space;
 			}
