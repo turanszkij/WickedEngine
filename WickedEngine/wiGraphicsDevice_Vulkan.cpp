@@ -783,6 +783,21 @@ namespace Vulkan_Internal
 		std::vector<VkImageViewType> imageViewTypes;
 
 		size_t binding_hash = 0;
+
+		VkGraphicsPipelineCreateInfo pipelineInfo = {};
+		VkPipelineShaderStageCreateInfo shaderStages[SHADERSTAGE_COUNT] = {};
+		VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
+		std::vector<VkVertexInputBindingDescription> bindings;
+		std::vector<VkVertexInputAttributeDescription> attributes;
+		VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
+		VkPipelineRasterizationStateCreateInfo rasterizer = {};
+		VkPipelineRasterizationDepthClipStateCreateInfoEXT depthclip = {};
+		VkViewport viewport = {};
+		VkRect2D scissor = {};
+		VkPipelineViewportStateCreateInfo viewportState = {};
+		VkPipelineDepthStencilStateCreateInfo depthstencil = {};
+		VkSampleMask samplemask = {};
+		VkPipelineTessellationStateCreateInfo tessellationInfo = {};
 	};
 	struct RenderPass_Vulkan
 	{
@@ -1550,272 +1565,10 @@ using namespace Vulkan_Internal;
 
 			if (pipeline == VK_NULL_HANDLE)
 			{
-				VkGraphicsPipelineCreateInfo pipelineInfo = {};
-				//pipelineInfo.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
-				pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-				if (pso->desc.rootSignature == nullptr)
-				{
-					pipelineInfo.layout = to_internal(pso)->pipelineLayout;
-				}
-				else
-				{
-					pipelineInfo.layout = to_internal(pso->desc.rootSignature)->pipelineLayout;
-				}
+				auto internal_state = to_internal(pso);
+				VkGraphicsPipelineCreateInfo pipelineInfo = internal_state->pipelineInfo; // make a copy here
 				pipelineInfo.renderPass = active_renderpass[cmd] == nullptr ? defaultRenderPass : to_internal(active_renderpass[cmd])->renderpass;
 				pipelineInfo.subpass = 0;
-				pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-				// Shaders:
-
-				uint32_t shaderStageCount = 0;
-				VkPipelineShaderStageCreateInfo shaderStages[SHADERSTAGE_COUNT];
-				if (pso->desc.ms != nullptr && pso->desc.ms->IsValid())
-				{
-					shaderStages[shaderStageCount++] = to_internal(pso->desc.ms)->stageInfo;
-				}
-				if (pso->desc.as != nullptr && pso->desc.as->IsValid())
-				{
-					shaderStages[shaderStageCount++] = to_internal(pso->desc.as)->stageInfo;
-				}
-				if (pso->desc.vs != nullptr && pso->desc.vs->IsValid())
-				{
-					shaderStages[shaderStageCount++] = to_internal(pso->desc.vs)->stageInfo;
-				}
-				if (pso->desc.hs != nullptr && pso->desc.hs->IsValid())
-				{
-					shaderStages[shaderStageCount++] = to_internal(pso->desc.hs)->stageInfo;
-				}
-				if (pso->desc.ds != nullptr && pso->desc.ds->IsValid())
-				{
-					shaderStages[shaderStageCount++] = to_internal(pso->desc.ds)->stageInfo;
-				}
-				if (pso->desc.gs != nullptr && pso->desc.gs->IsValid())
-				{
-					shaderStages[shaderStageCount++] = to_internal(pso->desc.gs)->stageInfo;
-				}
-				if (pso->desc.ps != nullptr && pso->desc.ps->IsValid())
-				{
-					shaderStages[shaderStageCount++] = to_internal(pso->desc.ps)->stageInfo;
-				}
-				pipelineInfo.stageCount = shaderStageCount;
-				pipelineInfo.pStages = shaderStages;
-
-
-				// Fixed function states:
-
-				// Input layout:
-				VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
-				vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-				std::vector<VkVertexInputBindingDescription> bindings;
-				std::vector<VkVertexInputAttributeDescription> attributes;
-				if (pso->desc.il != nullptr)
-				{
-					uint32_t lastBinding = 0xFFFFFFFF;
-					for (auto& x : pso->desc.il->elements)
-					{
-						VkVertexInputBindingDescription bind = {};
-						bind.binding = x.InputSlot;
-						bind.inputRate = x.InputSlotClass == INPUT_PER_VERTEX_DATA ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
-						bind.stride = x.AlignedByteOffset;
-						if (bind.stride == InputLayout::APPEND_ALIGNED_ELEMENT)
-						{
-							// need to manually resolve this from the format spec.
-							bind.stride = GetFormatStride(x.Format);
-						}
-
-						if (lastBinding != bind.binding)
-						{
-							bindings.push_back(bind);
-							lastBinding = bind.binding;
-						}
-						else
-						{
-							bindings.back().stride += bind.stride;
-						}
-					}
-
-					uint32_t offset = 0;
-					uint32_t i = 0;
-					lastBinding = 0xFFFFFFFF;
-					for (auto& x : pso->desc.il->elements)
-					{
-						VkVertexInputAttributeDescription attr = {};
-						attr.binding = x.InputSlot;
-						if (attr.binding != lastBinding)
-						{
-							lastBinding = attr.binding;
-							offset = 0;
-						}
-						attr.format = _ConvertFormat(x.Format);
-						attr.location = i;
-						attr.offset = x.AlignedByteOffset;
-						if (attr.offset == InputLayout::APPEND_ALIGNED_ELEMENT)
-						{
-							// need to manually resolve this from the format spec.
-							attr.offset = offset;
-							offset += GetFormatStride(x.Format);
-						}
-
-						attributes.push_back(attr);
-
-						i++;
-					}
-
-					vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindings.size());
-					vertexInputInfo.pVertexBindingDescriptions = bindings.data();
-					vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributes.size());
-					vertexInputInfo.pVertexAttributeDescriptions = attributes.data();
-				}
-				pipelineInfo.pVertexInputState = &vertexInputInfo;
-
-				// Primitive type:
-				VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
-				inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-				switch (pso->desc.pt)
-				{
-				case POINTLIST:
-					inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-					break;
-				case LINELIST:
-					inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-					break;
-				case LINESTRIP:
-					inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
-					break;
-				case TRIANGLESTRIP:
-					inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-					break;
-				case TRIANGLELIST:
-					inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-					break;
-				case PATCHLIST:
-					inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
-					break;
-				default:
-					break;
-				}
-				inputAssembly.primitiveRestartEnable = VK_FALSE;
-
-				pipelineInfo.pInputAssemblyState = &inputAssembly;
-
-
-				// Rasterizer:
-				VkPipelineRasterizationStateCreateInfo rasterizer = {};
-				rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-				rasterizer.depthClampEnable = VK_TRUE;
-				rasterizer.rasterizerDiscardEnable = VK_FALSE;
-				rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-				rasterizer.lineWidth = 1.0f;
-				rasterizer.cullMode = VK_CULL_MODE_NONE;
-				rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
-				rasterizer.depthBiasEnable = VK_FALSE;
-				rasterizer.depthBiasConstantFactor = 0.0f;
-				rasterizer.depthBiasClamp = 0.0f;
-				rasterizer.depthBiasSlopeFactor = 0.0f;
-
-				// depth clip will be enabled via Vulkan 1.1 extension VK_EXT_depth_clip_enable:
-				VkPipelineRasterizationDepthClipStateCreateInfoEXT depthclip = {};
-				depthclip.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_DEPTH_CLIP_STATE_CREATE_INFO_EXT;
-				depthclip.depthClipEnable = VK_TRUE;
-				rasterizer.pNext = &depthclip;
-
-				if (pso->desc.rs != nullptr)
-				{
-					const RasterizerState& desc = *pso->desc.rs;
-
-					switch (desc.FillMode)
-					{
-					case FILL_WIREFRAME:
-						rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
-						break;
-					case FILL_SOLID:
-					default:
-						rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-						break;
-					}
-
-					switch (desc.CullMode)
-					{
-					case CULL_BACK:
-						rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-						break;
-					case CULL_FRONT:
-						rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
-						break;
-					case CULL_NONE:
-					default:
-						rasterizer.cullMode = VK_CULL_MODE_NONE;
-						break;
-					}
-
-					rasterizer.frontFace = desc.FrontCounterClockwise ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
-					rasterizer.depthBiasEnable = desc.DepthBias != 0 || desc.SlopeScaledDepthBias != 0;
-					rasterizer.depthBiasConstantFactor = static_cast<float>(desc.DepthBias);
-					rasterizer.depthBiasClamp = desc.DepthBiasClamp;
-					rasterizer.depthBiasSlopeFactor = desc.SlopeScaledDepthBias;
-
-					// depth clip is extension in Vulkan 1.1:
-					depthclip.depthClipEnable = desc.DepthClipEnable ? VK_TRUE : VK_FALSE;
-				}
-
-				pipelineInfo.pRasterizationState = &rasterizer;
-
-
-				// Viewport, Scissor:
-				VkViewport viewport = {};
-				viewport.x = 0;
-				viewport.y = 0;
-				viewport.width = 65535;
-				viewport.height = 65535;
-				viewport.minDepth = 0;
-				viewport.maxDepth = 1;
-
-				VkRect2D scissor = {};
-				scissor.extent.width = 65535;
-				scissor.extent.height = 65535;
-
-				VkPipelineViewportStateCreateInfo viewportState = {};
-				viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-				viewportState.viewportCount = 1;
-				viewportState.pViewports = &viewport;
-				viewportState.scissorCount = 1;
-				viewportState.pScissors = &scissor;
-
-				pipelineInfo.pViewportState = &viewportState;
-
-
-				// Depth-Stencil:
-				VkPipelineDepthStencilStateCreateInfo depthstencil = {};
-				depthstencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-				if (pso->desc.dss != nullptr)
-				{
-					depthstencil.depthTestEnable = pso->desc.dss->DepthEnable ? VK_TRUE : VK_FALSE;
-					depthstencil.depthWriteEnable = pso->desc.dss->DepthWriteMask == DEPTH_WRITE_MASK_ZERO ? VK_FALSE : VK_TRUE;
-					depthstencil.depthCompareOp = _ConvertComparisonFunc(pso->desc.dss->DepthFunc);
-
-					depthstencil.stencilTestEnable = pso->desc.dss->StencilEnable ? VK_TRUE : VK_FALSE;
-
-					depthstencil.front.compareMask = pso->desc.dss->StencilReadMask;
-					depthstencil.front.writeMask = pso->desc.dss->StencilWriteMask;
-					depthstencil.front.reference = 0; // runtime supplied
-					depthstencil.front.compareOp = _ConvertComparisonFunc(pso->desc.dss->FrontFace.StencilFunc);
-					depthstencil.front.passOp = _ConvertStencilOp(pso->desc.dss->FrontFace.StencilPassOp);
-					depthstencil.front.failOp = _ConvertStencilOp(pso->desc.dss->FrontFace.StencilFailOp);
-					depthstencil.front.depthFailOp = _ConvertStencilOp(pso->desc.dss->FrontFace.StencilDepthFailOp);
-
-					depthstencil.back.compareMask = pso->desc.dss->StencilReadMask;
-					depthstencil.back.writeMask = pso->desc.dss->StencilWriteMask;
-					depthstencil.back.reference = 0; // runtime supplied
-					depthstencil.back.compareOp = _ConvertComparisonFunc(pso->desc.dss->BackFace.StencilFunc);
-					depthstencil.back.passOp = _ConvertStencilOp(pso->desc.dss->BackFace.StencilPassOp);
-					depthstencil.back.failOp = _ConvertStencilOp(pso->desc.dss->BackFace.StencilFailOp);
-					depthstencil.back.depthFailOp = _ConvertStencilOp(pso->desc.dss->BackFace.StencilDepthFailOp);
-
-					depthstencil.depthBoundsTestEnable = VK_FALSE;
-				}
-
-				pipelineInfo.pDepthStencilState = &depthstencil;
-
 
 				// MSAA:
 				VkPipelineMultisampleStateCreateInfo multisampling = {};
@@ -1835,7 +1588,8 @@ using namespace Vulkan_Internal;
 					}
 				}
 				multisampling.minSampleShading = 1.0f;
-				VkSampleMask samplemask = pso->desc.sampleMask;
+				VkSampleMask& samplemask = internal_state->samplemask;
+				samplemask = pso->desc.sampleMask;
 				multisampling.pSampleMask = &samplemask;
 				multisampling.alphaToCoverageEnable = VK_FALSE;
 				multisampling.alphaToOneEnable = VK_FALSE;
@@ -1845,7 +1599,7 @@ using namespace Vulkan_Internal;
 
 				// Blending:
 				uint32_t numBlendAttachments = 0;
-				VkPipelineColorBlendAttachmentState colorBlendAttachments[8];
+				VkPipelineColorBlendAttachmentState colorBlendAttachments[8] = {};
 				const size_t blend_loopCount = active_renderpass[cmd] == nullptr ? 1 : active_renderpass[cmd]->desc.attachments.size();
 				for (size_t i = 0; i < blend_loopCount; ++i)
 				{
@@ -1898,17 +1652,6 @@ using namespace Vulkan_Internal;
 				colorBlending.blendConstants[3] = 1.0f;
 
 				pipelineInfo.pColorBlendState = &colorBlending;
-
-
-				// Tessellation:
-				VkPipelineTessellationStateCreateInfo tessellationInfo = {};
-				tessellationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-				tessellationInfo.patchControlPoints = 3;
-
-				pipelineInfo.pTessellationState = &tessellationInfo;
-
-
-				pipelineInfo.pDynamicState = &dynamicStateInfo;
 
 				VkResult res = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
 				assert(res == VK_SUCCESS);
@@ -4149,6 +3892,8 @@ using namespace Vulkan_Internal;
 		wiHelper::hash_combine(pso->hash, pDesc->pt);
 		wiHelper::hash_combine(pso->hash, pDesc->sampleMask);
 
+		VkResult res = VK_SUCCESS;
+
 		if (pDesc->rootSignature == nullptr)
 		{
 			// Descriptor set layout comes from reflection data when there is no root signature specified:
@@ -4209,8 +3954,6 @@ using namespace Vulkan_Internal;
 				wiHelper::hash_combine(internal_state->binding_hash, internal_state->imageViewTypes[i++]);
 			}
 
-			VkResult res = VK_SUCCESS;
-
 			pso_layout_cache_mutex.lock();
 			if (pso_layout_cache[internal_state->binding_hash].pipelineLayout == VK_NULL_HANDLE)
 			{
@@ -4238,12 +3981,285 @@ using namespace Vulkan_Internal;
 				internal_state->pipelineLayout = pso_layout_cache[internal_state->binding_hash].pipelineLayout;
 			}
 			pso_layout_cache_mutex.unlock();
-
-
-			return res == VK_SUCCESS;
 		}
 
-		return true;
+
+		VkGraphicsPipelineCreateInfo& pipelineInfo = internal_state->pipelineInfo;
+		//pipelineInfo.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		if (pso->desc.rootSignature == nullptr)
+		{
+			pipelineInfo.layout = internal_state->pipelineLayout;
+		}
+		else
+		{
+			pipelineInfo.layout = to_internal(pso->desc.rootSignature)->pipelineLayout;
+		}
+		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+
+		// Shaders:
+
+		uint32_t shaderStageCount = 0;
+		auto& shaderStages = internal_state->shaderStages;
+		if (pso->desc.ms != nullptr && pso->desc.ms->IsValid())
+		{
+			shaderStages[shaderStageCount++] = to_internal(pso->desc.ms)->stageInfo;
+		}
+		if (pso->desc.as != nullptr && pso->desc.as->IsValid())
+		{
+			shaderStages[shaderStageCount++] = to_internal(pso->desc.as)->stageInfo;
+		}
+		if (pso->desc.vs != nullptr && pso->desc.vs->IsValid())
+		{
+			shaderStages[shaderStageCount++] = to_internal(pso->desc.vs)->stageInfo;
+		}
+		if (pso->desc.hs != nullptr && pso->desc.hs->IsValid())
+		{
+			shaderStages[shaderStageCount++] = to_internal(pso->desc.hs)->stageInfo;
+		}
+		if (pso->desc.ds != nullptr && pso->desc.ds->IsValid())
+		{
+			shaderStages[shaderStageCount++] = to_internal(pso->desc.ds)->stageInfo;
+		}
+		if (pso->desc.gs != nullptr && pso->desc.gs->IsValid())
+		{
+			shaderStages[shaderStageCount++] = to_internal(pso->desc.gs)->stageInfo;
+		}
+		if (pso->desc.ps != nullptr && pso->desc.ps->IsValid())
+		{
+			shaderStages[shaderStageCount++] = to_internal(pso->desc.ps)->stageInfo;
+		}
+		pipelineInfo.stageCount = shaderStageCount;
+		pipelineInfo.pStages = shaderStages;
+
+
+		// Fixed function states:
+
+		// Input layout:
+		VkPipelineVertexInputStateCreateInfo& vertexInputInfo = internal_state->vertexInputInfo;
+		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+		auto& bindings = internal_state->bindings;
+		auto& attributes = internal_state->attributes;
+		if (pso->desc.il != nullptr)
+		{
+			uint32_t lastBinding = 0xFFFFFFFF;
+			for (auto& x : pso->desc.il->elements)
+			{
+				VkVertexInputBindingDescription bind = {};
+				bind.binding = x.InputSlot;
+				bind.inputRate = x.InputSlotClass == INPUT_PER_VERTEX_DATA ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
+				bind.stride = x.AlignedByteOffset;
+				if (bind.stride == InputLayout::APPEND_ALIGNED_ELEMENT)
+				{
+					// need to manually resolve this from the format spec.
+					bind.stride = GetFormatStride(x.Format);
+				}
+
+				if (lastBinding != bind.binding)
+				{
+					bindings.push_back(bind);
+					lastBinding = bind.binding;
+				}
+				else
+				{
+					bindings.back().stride += bind.stride;
+				}
+			}
+
+			uint32_t offset = 0;
+			uint32_t i = 0;
+			lastBinding = 0xFFFFFFFF;
+			for (auto& x : pso->desc.il->elements)
+			{
+				VkVertexInputAttributeDescription attr = {};
+				attr.binding = x.InputSlot;
+				if (attr.binding != lastBinding)
+				{
+					lastBinding = attr.binding;
+					offset = 0;
+				}
+				attr.format = _ConvertFormat(x.Format);
+				attr.location = i;
+				attr.offset = x.AlignedByteOffset;
+				if (attr.offset == InputLayout::APPEND_ALIGNED_ELEMENT)
+				{
+					// need to manually resolve this from the format spec.
+					attr.offset = offset;
+					offset += GetFormatStride(x.Format);
+				}
+
+				attributes.push_back(attr);
+
+				i++;
+			}
+
+			vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindings.size());
+			vertexInputInfo.pVertexBindingDescriptions = bindings.data();
+			vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributes.size());
+			vertexInputInfo.pVertexAttributeDescriptions = attributes.data();
+		}
+		pipelineInfo.pVertexInputState = &vertexInputInfo;
+
+		// Primitive type:
+		VkPipelineInputAssemblyStateCreateInfo& inputAssembly = internal_state->inputAssembly;
+		inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+		switch (pso->desc.pt)
+		{
+		case POINTLIST:
+			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+			break;
+		case LINELIST:
+			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+			break;
+		case LINESTRIP:
+			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+			break;
+		case TRIANGLESTRIP:
+			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+			break;
+		case TRIANGLELIST:
+			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+			break;
+		case PATCHLIST:
+			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
+			break;
+		default:
+			break;
+		}
+		inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+		pipelineInfo.pInputAssemblyState = &inputAssembly;
+
+
+		// Rasterizer:
+		VkPipelineRasterizationStateCreateInfo& rasterizer = internal_state->rasterizer;
+		rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+		rasterizer.depthClampEnable = VK_TRUE;
+		rasterizer.rasterizerDiscardEnable = VK_FALSE;
+		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+		rasterizer.lineWidth = 1.0f;
+		rasterizer.cullMode = VK_CULL_MODE_NONE;
+		rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+		rasterizer.depthBiasEnable = VK_FALSE;
+		rasterizer.depthBiasConstantFactor = 0.0f;
+		rasterizer.depthBiasClamp = 0.0f;
+		rasterizer.depthBiasSlopeFactor = 0.0f;
+
+		// depth clip will be enabled via Vulkan 1.1 extension VK_EXT_depth_clip_enable:
+		VkPipelineRasterizationDepthClipStateCreateInfoEXT& depthclip = internal_state->depthclip;
+		depthclip.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_DEPTH_CLIP_STATE_CREATE_INFO_EXT;
+		depthclip.depthClipEnable = VK_TRUE;
+		rasterizer.pNext = &depthclip;
+
+		if (pso->desc.rs != nullptr)
+		{
+			const RasterizerState& desc = *pso->desc.rs;
+
+			switch (desc.FillMode)
+			{
+			case FILL_WIREFRAME:
+				rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
+				break;
+			case FILL_SOLID:
+			default:
+				rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+				break;
+			}
+
+			switch (desc.CullMode)
+			{
+			case CULL_BACK:
+				rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+				break;
+			case CULL_FRONT:
+				rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
+				break;
+			case CULL_NONE:
+			default:
+				rasterizer.cullMode = VK_CULL_MODE_NONE;
+				break;
+			}
+
+			rasterizer.frontFace = desc.FrontCounterClockwise ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
+			rasterizer.depthBiasEnable = desc.DepthBias != 0 || desc.SlopeScaledDepthBias != 0;
+			rasterizer.depthBiasConstantFactor = static_cast<float>(desc.DepthBias);
+			rasterizer.depthBiasClamp = desc.DepthBiasClamp;
+			rasterizer.depthBiasSlopeFactor = desc.SlopeScaledDepthBias;
+
+			// depth clip is extension in Vulkan 1.1:
+			depthclip.depthClipEnable = desc.DepthClipEnable ? VK_TRUE : VK_FALSE;
+		}
+
+		pipelineInfo.pRasterizationState = &rasterizer;
+
+
+		// Viewport, Scissor:
+		VkViewport& viewport = internal_state->viewport;
+		viewport.x = 0;
+		viewport.y = 0;
+		viewport.width = 65535;
+		viewport.height = 65535;
+		viewport.minDepth = 0;
+		viewport.maxDepth = 1;
+
+		VkRect2D& scissor = internal_state->scissor;
+		scissor.extent.width = 65535;
+		scissor.extent.height = 65535;
+
+		VkPipelineViewportStateCreateInfo& viewportState = internal_state->viewportState;
+		viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+		viewportState.viewportCount = 1;
+		viewportState.pViewports = &viewport;
+		viewportState.scissorCount = 1;
+		viewportState.pScissors = &scissor;
+
+		pipelineInfo.pViewportState = &viewportState;
+
+
+		// Depth-Stencil:
+		VkPipelineDepthStencilStateCreateInfo& depthstencil = internal_state->depthstencil;
+		depthstencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		if (pso->desc.dss != nullptr)
+		{
+			depthstencil.depthTestEnable = pso->desc.dss->DepthEnable ? VK_TRUE : VK_FALSE;
+			depthstencil.depthWriteEnable = pso->desc.dss->DepthWriteMask == DEPTH_WRITE_MASK_ZERO ? VK_FALSE : VK_TRUE;
+			depthstencil.depthCompareOp = _ConvertComparisonFunc(pso->desc.dss->DepthFunc);
+
+			depthstencil.stencilTestEnable = pso->desc.dss->StencilEnable ? VK_TRUE : VK_FALSE;
+
+			depthstencil.front.compareMask = pso->desc.dss->StencilReadMask;
+			depthstencil.front.writeMask = pso->desc.dss->StencilWriteMask;
+			depthstencil.front.reference = 0; // runtime supplied
+			depthstencil.front.compareOp = _ConvertComparisonFunc(pso->desc.dss->FrontFace.StencilFunc);
+			depthstencil.front.passOp = _ConvertStencilOp(pso->desc.dss->FrontFace.StencilPassOp);
+			depthstencil.front.failOp = _ConvertStencilOp(pso->desc.dss->FrontFace.StencilFailOp);
+			depthstencil.front.depthFailOp = _ConvertStencilOp(pso->desc.dss->FrontFace.StencilDepthFailOp);
+
+			depthstencil.back.compareMask = pso->desc.dss->StencilReadMask;
+			depthstencil.back.writeMask = pso->desc.dss->StencilWriteMask;
+			depthstencil.back.reference = 0; // runtime supplied
+			depthstencil.back.compareOp = _ConvertComparisonFunc(pso->desc.dss->BackFace.StencilFunc);
+			depthstencil.back.passOp = _ConvertStencilOp(pso->desc.dss->BackFace.StencilPassOp);
+			depthstencil.back.failOp = _ConvertStencilOp(pso->desc.dss->BackFace.StencilFailOp);
+			depthstencil.back.depthFailOp = _ConvertStencilOp(pso->desc.dss->BackFace.StencilDepthFailOp);
+
+			depthstencil.depthBoundsTestEnable = VK_FALSE;
+		}
+
+		pipelineInfo.pDepthStencilState = &depthstencil;
+
+
+		// Tessellation:
+		VkPipelineTessellationStateCreateInfo& tessellationInfo = internal_state->tessellationInfo;
+		tessellationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+		tessellationInfo.patchControlPoints = 3;
+
+		pipelineInfo.pTessellationState = &tessellationInfo;
+
+
+		pipelineInfo.pDynamicState = &dynamicStateInfo;
+
+		return res == VK_TRUE;
 	}
 	bool GraphicsDevice_Vulkan::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
 	{

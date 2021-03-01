@@ -57,6 +57,8 @@ private:
 	bool outlineEnabled = false;
 	bool chromaticAberrationEnabled = false;
 	bool ditherEnabled = true;
+	bool occlusionCullingEnabled = true;
+	bool sceneUpdateEnabled = true;
 
 	uint32_t msaaSampleCount = 1;
 
@@ -212,6 +214,8 @@ public:
 	constexpr bool getOutlineEnabled() const { return outlineEnabled; }
 	constexpr bool getChromaticAberrationEnabled() const { return chromaticAberrationEnabled; }
 	constexpr bool getDitherEnabled() const { return ditherEnabled; }
+	constexpr bool getOcclusionCullingEnabled() const { return occlusionCullingEnabled; }
+	constexpr bool getSceneUpdateEnabled() const { return sceneUpdateEnabled; }
 
 	constexpr uint32_t getMSAASampleCount() const { return msaaSampleCount; }
 
@@ -251,6 +255,8 @@ public:
 	constexpr void setOutlineEnabled(bool value) { outlineEnabled = value; }
 	constexpr void setChromaticAberrationEnabled(bool value) { chromaticAberrationEnabled = value; }
 	constexpr void setDitherEnabled(bool value) { ditherEnabled = value; }
+	constexpr void setOcclusionCullingEnabled(bool value) { occlusionCullingEnabled = value; }
+	constexpr void setSceneUpdateEnabled(bool value) { sceneUpdateEnabled = value; }
 
 	virtual void setMSAASampleCount(uint32_t value) { if (msaaSampleCount != value) { msaaSampleCount = value; ResizeBuffers(); } }
 

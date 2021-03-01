@@ -534,7 +534,10 @@ void RenderPath3D::Update(float dt)
 {
 	RenderPath2D::Update(dt);
 
-	scene->Update(dt * wiRenderer::GetGameSpeed());
+	if (getSceneUpdateEnabled())
+	{
+		scene->Update(dt * wiRenderer::GetGameSpeed());
+	}
 
 	// Frustum culling for main camera:
 	visibility_main.layerMask = getLayerMask();
@@ -556,7 +559,10 @@ void RenderPath3D::Update(float dt)
 		wiRenderer::UpdateVisibility(visibility_reflection);
 	}
 
-	wiRenderer::OcclusionCulling_Read(*scene, visibility_main);
+	if (getOcclusionCullingEnabled())
+	{
+		wiRenderer::OcclusionCulling_Read(*scene, visibility_main);
+	}
 	wiRenderer::UpdatePerFrameData(*scene, visibility_main, frameCB, GetInternalResolution(), dt);
 
 	if (wiRenderer::GetTemporalAAEnabled())
@@ -624,7 +630,10 @@ void RenderPath3D::Render() const
 		wiProfiler::EndRange(range);
 		device->EventEnd(cmd);
 
-		wiRenderer::OcclusionCulling_Render(*camera, visibility_main, cmd);
+		if (getOcclusionCullingEnabled())
+		{
+			wiRenderer::OcclusionCulling_Render(*camera, visibility_main, cmd);
+		}
 
 		device->RenderPassEnd(cmd);
 

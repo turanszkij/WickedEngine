@@ -623,7 +623,7 @@ namespace wiScene
 
 		// occlusion result history bitfield (32 bit->32 frame history)
 		uint32_t occlusionHistory = ~0;
-		int occlusionQueries[wiGraphics::GraphicsDevice::GetBackBufferCount()] = {};
+		int occlusionQueries[wiGraphics::GraphicsDevice::GetBackBufferCount() + 1] = {};
 
 		inline bool IsOccluded() const
 		{
@@ -1284,7 +1284,6 @@ namespace wiScene
 
 		wiGraphics::GPUQueryHeap queryHeap[arraysize(ObjectComponent::occlusionQueries)];
 		std::vector<uint64_t> queryResults;
-		uint32_t nextQuery = 0;
 		uint32_t writtenQueries[arraysize(queryHeap)] = {};
 		int query_write = 0;
 		int query_read = 0;

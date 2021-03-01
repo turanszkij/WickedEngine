@@ -1219,6 +1219,31 @@ namespace DX12_Internal
 
 		std::vector<uint8_t> shadercode;
 
+		struct PSO_STREAM
+		{
+			CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
+			CD3DX12_PIPELINE_STATE_STREAM_VS VS;
+			CD3DX12_PIPELINE_STATE_STREAM_HS HS;
+			CD3DX12_PIPELINE_STATE_STREAM_DS DS;
+			CD3DX12_PIPELINE_STATE_STREAM_GS GS;
+			CD3DX12_PIPELINE_STATE_STREAM_PS PS;
+			CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER RS;
+			CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL DSS;
+			CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC BD;
+			CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PT;
+			CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT IL;
+			CD3DX12_PIPELINE_STATE_STREAM_IB_STRIP_CUT_VALUE STRIP;
+			CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSFormat;
+			CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS Formats;
+			CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC SampleDesc;
+			CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_MASK SampleMask;
+
+			CD3DX12_PIPELINE_STATE_STREAM_MS MS;
+			CD3DX12_PIPELINE_STATE_STREAM_AS AS;
+		} stream = {};
+
+		std::vector<D3D12_INPUT_ELEMENT_DESC> input_elements;
+
 		~PipelineState_DX12()
 		{
 			allocationhandler->destroylocker.lock();
@@ -1886,137 +1911,7 @@ using namespace DX12_Internal;
 
 			if (pipeline == nullptr)
 			{
-				struct PSO_STREAM
-				{
-					CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
-					CD3DX12_PIPELINE_STATE_STREAM_VS VS;
-					CD3DX12_PIPELINE_STATE_STREAM_HS HS;
-					CD3DX12_PIPELINE_STATE_STREAM_DS DS;
-					CD3DX12_PIPELINE_STATE_STREAM_GS GS;
-					CD3DX12_PIPELINE_STATE_STREAM_PS PS;
-					CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER RS;
-					CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL DSS;
-					CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC BD;
-					CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PT;
-					CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT IL;
-					CD3DX12_PIPELINE_STATE_STREAM_IB_STRIP_CUT_VALUE STRIP;
-					CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSFormat;
-					CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS Formats;
-					CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC SampleDesc;
-					CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_MASK SampleMask;
-
-					CD3DX12_PIPELINE_STATE_STREAM_MS MS;
-					CD3DX12_PIPELINE_STATE_STREAM_AS AS;
-				} stream = {};
-
-				if (pso->desc.vs != nullptr)
-				{
-					auto shader_internal = to_internal(pso->desc.vs);
-					stream.VS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
-				}
-				if (pso->desc.hs != nullptr)
-				{
-					auto shader_internal = to_internal(pso->desc.hs);
-					stream.HS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
-				}
-				if (pso->desc.ds != nullptr)
-				{
-					auto shader_internal = to_internal(pso->desc.ds);
-					stream.DS = { shader_internal->shadercode.data(),shader_internal->shadercode.size() };
-				}
-				if (pso->desc.gs != nullptr)
-				{
-					auto shader_internal = to_internal(pso->desc.gs);
-					stream.GS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
-				}
-				if (pso->desc.ps != nullptr)
-				{
-					auto shader_internal = to_internal(pso->desc.ps);
-					stream.PS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
-				}
-
-				if (pso->desc.ms != nullptr)
-				{
-					auto shader_internal = to_internal(pso->desc.ms);
-					stream.MS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
-				}
-				if (pso->desc.as != nullptr)
-				{
-					auto shader_internal = to_internal(pso->desc.as);
-					stream.AS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
-				}
-
-				RasterizerState pRasterizerStateDesc = pso->desc.rs != nullptr ? *pso->desc.rs : RasterizerState();
-				CD3DX12_RASTERIZER_DESC rs = {};
-				rs.FillMode = _ConvertFillMode(pRasterizerStateDesc.FillMode);
-				rs.CullMode = _ConvertCullMode(pRasterizerStateDesc.CullMode);
-				rs.FrontCounterClockwise = pRasterizerStateDesc.FrontCounterClockwise;
-				rs.DepthBias = pRasterizerStateDesc.DepthBias;
-				rs.DepthBiasClamp = pRasterizerStateDesc.DepthBiasClamp;
-				rs.SlopeScaledDepthBias = pRasterizerStateDesc.SlopeScaledDepthBias;
-				rs.DepthClipEnable = pRasterizerStateDesc.DepthClipEnable;
-				rs.MultisampleEnable = pRasterizerStateDesc.MultisampleEnable;
-				rs.AntialiasedLineEnable = pRasterizerStateDesc.AntialiasedLineEnable;
-				rs.ConservativeRaster = ((CheckCapability(GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION) && pRasterizerStateDesc.ConservativeRasterizationEnable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
-				rs.ForcedSampleCount = pRasterizerStateDesc.ForcedSampleCount;
-				stream.RS = rs;
-
-				DepthStencilState pDepthStencilStateDesc = pso->desc.dss != nullptr ? *pso->desc.dss : DepthStencilState();
-				CD3DX12_DEPTH_STENCIL_DESC dss = {};
-				dss.DepthEnable = pDepthStencilStateDesc.DepthEnable;
-				dss.DepthWriteMask = _ConvertDepthWriteMask(pDepthStencilStateDesc.DepthWriteMask);
-				dss.DepthFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.DepthFunc);
-				dss.StencilEnable = pDepthStencilStateDesc.StencilEnable;
-				dss.StencilReadMask = pDepthStencilStateDesc.StencilReadMask;
-				dss.StencilWriteMask = pDepthStencilStateDesc.StencilWriteMask;
-				dss.FrontFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilDepthFailOp);
-				dss.FrontFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilFailOp);
-				dss.FrontFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.FrontFace.StencilFunc);
-				dss.FrontFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilPassOp);
-				dss.BackFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilDepthFailOp);
-				dss.BackFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilFailOp);
-				dss.BackFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.BackFace.StencilFunc);
-				dss.BackFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilPassOp);
-				stream.DSS = dss;
-
-				BlendState pBlendStateDesc = pso->desc.bs != nullptr ? *pso->desc.bs : BlendState();
-				CD3DX12_BLEND_DESC bd = {};
-				bd.AlphaToCoverageEnable = pBlendStateDesc.AlphaToCoverageEnable;
-				bd.IndependentBlendEnable = pBlendStateDesc.IndependentBlendEnable;
-				for (int i = 0; i < 8; ++i)
-				{
-					bd.RenderTarget[i].BlendEnable = pBlendStateDesc.RenderTarget[i].BlendEnable;
-					bd.RenderTarget[i].SrcBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlend);
-					bd.RenderTarget[i].DestBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlend);
-					bd.RenderTarget[i].BlendOp = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOp);
-					bd.RenderTarget[i].SrcBlendAlpha = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlendAlpha);
-					bd.RenderTarget[i].DestBlendAlpha = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlendAlpha);
-					bd.RenderTarget[i].BlendOpAlpha = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOpAlpha);
-					bd.RenderTarget[i].RenderTargetWriteMask = _ParseColorWriteMask(pBlendStateDesc.RenderTarget[i].RenderTargetWriteMask);
-				}
-				stream.BD = bd;
-
-				std::vector<D3D12_INPUT_ELEMENT_DESC> elements;
-				D3D12_INPUT_LAYOUT_DESC il = {};
-				if (pso->desc.il != nullptr)
-				{
-					il.NumElements = (uint32_t)pso->desc.il->elements.size();
-					elements.resize(il.NumElements);
-					for (uint32_t i = 0; i < il.NumElements; ++i)
-					{
-						elements[i].SemanticName = pso->desc.il->elements[i].SemanticName.c_str();
-						elements[i].SemanticIndex = pso->desc.il->elements[i].SemanticIndex;
-						elements[i].Format = _ConvertFormat(pso->desc.il->elements[i].Format);
-						elements[i].InputSlot = pso->desc.il->elements[i].InputSlot;
-						elements[i].AlignedByteOffset = pso->desc.il->elements[i].AlignedByteOffset;
-						if (elements[i].AlignedByteOffset == InputLayout::APPEND_ALIGNED_ELEMENT)
-							elements[i].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-						elements[i].InputSlotClass = _ConvertInputClassification(pso->desc.il->elements[i].InputSlotClass);
-						elements[i].InstanceDataStepRate = pso->desc.il->elements[i].InstanceDataStepRate;
-					}
-				}
-				il.pInputElementDescs = elements.data();
-				stream.IL = il;
+				PipelineState_DX12::PSO_STREAM stream = internal_state->stream; // make a copy here
 
 				DXGI_FORMAT DSFormat = DXGI_FORMAT_UNKNOWN;
 				D3D12_RT_FORMAT_ARRAY formats = {};
@@ -2093,32 +1988,6 @@ using namespace DX12_Internal;
 				stream.DSFormat = DSFormat;
 				stream.Formats = formats;
 				stream.SampleDesc = sampleDesc;
-				stream.SampleMask = pso->desc.sampleMask;
-
-				switch (pso->desc.pt)
-				{
-				case POINTLIST:
-					stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-					break;
-				case LINELIST:
-				case LINESTRIP:
-					stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-					break;
-				case TRIANGLELIST:
-				case TRIANGLESTRIP:
-					stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-					break;
-				case PATCHLIST:
-					stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
-					break;
-				default:
-					stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
-					break;
-				}
-
-				stream.STRIP = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
-
-				stream.pRootSignature = internal_state->rootSignature.Get();
 
 				D3D12_PIPELINE_STATE_STREAM_DESC streamDesc = {};
 				streamDesc.pPipelineStateSubobjectStream = &stream;
@@ -3727,6 +3596,8 @@ using namespace DX12_Internal;
 		wiHelper::hash_combine(pso->hash, pDesc->pt);
 		wiHelper::hash_combine(pso->hash, pDesc->sampleMask);
 
+		HRESULT hr = S_OK;
+
 		if (pDesc->rootSignature == nullptr)
 		{
 			// Root signature comes from reflection data when there is no root signature specified:
@@ -3914,8 +3785,6 @@ using namespace DX12_Internal;
 				wiHelper::hash_combine(rootsig_hash, x.ShaderVisibility);
 			}
 
-			HRESULT hr = S_OK;
-
 			rootsignature_cache_mutex.lock();
 			if (rootsignature_cache[rootsig_hash])
 			{
@@ -3941,20 +3810,157 @@ using namespace DX12_Internal;
 				{
 					OutputDebugStringA((char*)rootSigError->GetBufferPointer());
 					assert(0);
+					return false;
 				}
 				hr = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&internal_state->rootSignature));
 				assert(SUCCEEDED(hr));
 			}
 			rootsignature_cache_mutex.unlock();
-
-			return SUCCEEDED(hr);
 		}
 		else
 		{
 			internal_state->rootSignature = to_internal(pDesc->rootSignature)->resource;
 		}
 
-		return true;
+		PipelineState_DX12::PSO_STREAM& stream = internal_state->stream;
+
+		if (pso->desc.vs != nullptr)
+		{
+			auto shader_internal = to_internal(pso->desc.vs);
+			stream.VS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
+		}
+		if (pso->desc.hs != nullptr)
+		{
+			auto shader_internal = to_internal(pso->desc.hs);
+			stream.HS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
+		}
+		if (pso->desc.ds != nullptr)
+		{
+			auto shader_internal = to_internal(pso->desc.ds);
+			stream.DS = { shader_internal->shadercode.data(),shader_internal->shadercode.size() };
+		}
+		if (pso->desc.gs != nullptr)
+		{
+			auto shader_internal = to_internal(pso->desc.gs);
+			stream.GS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
+		}
+		if (pso->desc.ps != nullptr)
+		{
+			auto shader_internal = to_internal(pso->desc.ps);
+			stream.PS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
+		}
+
+		if (pso->desc.ms != nullptr)
+		{
+			auto shader_internal = to_internal(pso->desc.ms);
+			stream.MS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
+		}
+		if (pso->desc.as != nullptr)
+		{
+			auto shader_internal = to_internal(pso->desc.as);
+			stream.AS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
+		}
+
+		RasterizerState pRasterizerStateDesc = pso->desc.rs != nullptr ? *pso->desc.rs : RasterizerState();
+		CD3DX12_RASTERIZER_DESC rs = {};
+		rs.FillMode = _ConvertFillMode(pRasterizerStateDesc.FillMode);
+		rs.CullMode = _ConvertCullMode(pRasterizerStateDesc.CullMode);
+		rs.FrontCounterClockwise = pRasterizerStateDesc.FrontCounterClockwise;
+		rs.DepthBias = pRasterizerStateDesc.DepthBias;
+		rs.DepthBiasClamp = pRasterizerStateDesc.DepthBiasClamp;
+		rs.SlopeScaledDepthBias = pRasterizerStateDesc.SlopeScaledDepthBias;
+		rs.DepthClipEnable = pRasterizerStateDesc.DepthClipEnable;
+		rs.MultisampleEnable = pRasterizerStateDesc.MultisampleEnable;
+		rs.AntialiasedLineEnable = pRasterizerStateDesc.AntialiasedLineEnable;
+		rs.ConservativeRaster = ((CheckCapability(GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION) && pRasterizerStateDesc.ConservativeRasterizationEnable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+		rs.ForcedSampleCount = pRasterizerStateDesc.ForcedSampleCount;
+		stream.RS = rs;
+
+		DepthStencilState pDepthStencilStateDesc = pso->desc.dss != nullptr ? *pso->desc.dss : DepthStencilState();
+		CD3DX12_DEPTH_STENCIL_DESC dss = {};
+		dss.DepthEnable = pDepthStencilStateDesc.DepthEnable;
+		dss.DepthWriteMask = _ConvertDepthWriteMask(pDepthStencilStateDesc.DepthWriteMask);
+		dss.DepthFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.DepthFunc);
+		dss.StencilEnable = pDepthStencilStateDesc.StencilEnable;
+		dss.StencilReadMask = pDepthStencilStateDesc.StencilReadMask;
+		dss.StencilWriteMask = pDepthStencilStateDesc.StencilWriteMask;
+		dss.FrontFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilDepthFailOp);
+		dss.FrontFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilFailOp);
+		dss.FrontFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.FrontFace.StencilFunc);
+		dss.FrontFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilPassOp);
+		dss.BackFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilDepthFailOp);
+		dss.BackFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilFailOp);
+		dss.BackFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.BackFace.StencilFunc);
+		dss.BackFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilPassOp);
+		stream.DSS = dss;
+
+		BlendState pBlendStateDesc = pso->desc.bs != nullptr ? *pso->desc.bs : BlendState();
+		CD3DX12_BLEND_DESC bd = {};
+		bd.AlphaToCoverageEnable = pBlendStateDesc.AlphaToCoverageEnable;
+		bd.IndependentBlendEnable = pBlendStateDesc.IndependentBlendEnable;
+		for (int i = 0; i < 8; ++i)
+		{
+			bd.RenderTarget[i].BlendEnable = pBlendStateDesc.RenderTarget[i].BlendEnable;
+			bd.RenderTarget[i].SrcBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlend);
+			bd.RenderTarget[i].DestBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlend);
+			bd.RenderTarget[i].BlendOp = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOp);
+			bd.RenderTarget[i].SrcBlendAlpha = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlendAlpha);
+			bd.RenderTarget[i].DestBlendAlpha = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlendAlpha);
+			bd.RenderTarget[i].BlendOpAlpha = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOpAlpha);
+			bd.RenderTarget[i].RenderTargetWriteMask = _ParseColorWriteMask(pBlendStateDesc.RenderTarget[i].RenderTargetWriteMask);
+		}
+		stream.BD = bd;
+
+		auto& elements = internal_state->input_elements;
+		D3D12_INPUT_LAYOUT_DESC il = {};
+		if (pso->desc.il != nullptr)
+		{
+			il.NumElements = (uint32_t)pso->desc.il->elements.size();
+			elements.resize(il.NumElements);
+			for (uint32_t i = 0; i < il.NumElements; ++i)
+			{
+				elements[i].SemanticName = pso->desc.il->elements[i].SemanticName.c_str();
+				elements[i].SemanticIndex = pso->desc.il->elements[i].SemanticIndex;
+				elements[i].Format = _ConvertFormat(pso->desc.il->elements[i].Format);
+				elements[i].InputSlot = pso->desc.il->elements[i].InputSlot;
+				elements[i].AlignedByteOffset = pso->desc.il->elements[i].AlignedByteOffset;
+				if (elements[i].AlignedByteOffset == InputLayout::APPEND_ALIGNED_ELEMENT)
+					elements[i].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+				elements[i].InputSlotClass = _ConvertInputClassification(pso->desc.il->elements[i].InputSlotClass);
+				elements[i].InstanceDataStepRate = pso->desc.il->elements[i].InstanceDataStepRate;
+			}
+		}
+		il.pInputElementDescs = elements.data();
+		stream.IL = il;
+
+		stream.SampleMask = pso->desc.sampleMask;
+
+		switch (pso->desc.pt)
+		{
+		case POINTLIST:
+			stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+			break;
+		case LINELIST:
+		case LINESTRIP:
+			stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+			break;
+		case TRIANGLELIST:
+		case TRIANGLESTRIP:
+			stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+			break;
+		case PATCHLIST:
+			stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
+			break;
+		default:
+			stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
+			break;
+		}
+
+		stream.STRIP = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
+
+		stream.pRootSignature = internal_state->rootSignature.Get();
+
+		return SUCCEEDED(hr);
 	}
 	bool GraphicsDevice_DX12::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
 	{

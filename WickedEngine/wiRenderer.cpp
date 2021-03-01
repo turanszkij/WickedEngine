@@ -4316,7 +4316,7 @@ void OcclusionCulling_Read(Scene& scene, const Visibility& vis)
 			scene.queryResults.resize(desc.queryCount);
 		}
 
-		scene.nextQuery = 0;
+		uint32_t nextQuery = 0;
 		scene.query_write++;
 		scene.query_read = scene.query_write + 1;
 		scene.query_write %= arraysize(scene.queryHeap);
@@ -4349,7 +4349,7 @@ void OcclusionCulling_Read(Scene& scene, const Visibility& vis)
 			}
 			else
 			{
-				uint32_t writeQuery = scene.nextQuery++; // allocate new occlusion query from heap
+				uint32_t writeQuery = nextQuery++; // allocate new occlusion query from heap
 				if(writeQuery < scene.queryHeap[scene.query_write].desc.queryCount)
 				{
 					object.occlusionQueries[scene.query_write] = writeQuery;
@@ -4373,15 +4373,15 @@ void OcclusionCulling_Read(Scene& scene, const Visibility& vis)
 				}
 				else
 				{
-					// query doesn't exist, mar it as visible:
+					// query doesn't exist, mark it as visible:
 					object.occlusionHistory |= 1; // visible
 				}
 			}
 		}
-	}
 
-	scene.nextQuery = std::min(scene.nextQuery, scene.queryHeap[scene.query_write].desc.queryCount);
-	scene.writtenQueries[scene.query_write] = scene.nextQuery; // save allocated query amount
+		nextQuery = std::min(nextQuery, scene.queryHeap[scene.query_write].desc.queryCount);
+		scene.writtenQueries[scene.query_write] = nextQuery; // save allocated query amount
+	}
 
 	wiProfiler::EndRange(range); // Occlusion Culling Read
 }

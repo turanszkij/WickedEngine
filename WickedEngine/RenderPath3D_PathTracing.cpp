@@ -68,6 +68,8 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 void RenderPath3D_PathTracing::Update(float dt)
 {
+	setOcclusionCullingEnabled(false);
+
 	if (camera->IsDirty())
 	{
 		camera->SetDirty(false);
