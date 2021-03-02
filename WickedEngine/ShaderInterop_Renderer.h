@@ -60,6 +60,21 @@ struct ShaderMaterial
 	float4		emissiveMapAtlasMulAdd;
 	float4		normalMapAtlasMulAdd;
 
+	int			texture_basecolormap;
+	int			texture_surfacemap;
+	int			texture_emissivemap;
+	int			texture_normalmap;
+
+	int			texture_displacementmap;
+	int			texture_occlusionmap;
+	int			texture_transmissionmap;
+	int			texture_sheencolormap;
+
+	int			texture_sheenroughnessmap;
+	int			texture_clearcoatmap;
+	int			texture_clearcoatroughnessmap;
+	int			texture_clearcoatnormalmap;
+
 	inline bool IsUsingVertexColors() { return options & SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS; }
 	inline bool IsUsingSpecularGlossinessWorkflow() { return options & SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW; }
 	inline bool IsOcclusionEnabled_Primary() { return options & SHADERMATERIAL_OPTION_BIT_OCCLUSION_PRIMARY; }

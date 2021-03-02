@@ -261,10 +261,11 @@ namespace wiGraphics
 	};
 	enum SUBRESOURCE_TYPE
 	{
-		SRV,
-		UAV,
-		RTV,
-		DSV,
+		CBV, // constant buffer view
+		SRV, // shader resource view
+		UAV, // unordered access view
+		RTV, // render target view
+		DSV, // depth stencil view
 	};
 	enum IMAGE_LAYOUT
 	{

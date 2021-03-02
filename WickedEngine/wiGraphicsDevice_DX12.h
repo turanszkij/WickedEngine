@@ -192,24 +192,6 @@ namespace wiGraphics
 
 		RenderPass dummyRenderpass;
 
-		struct DescriptorHeap
-		{
-			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
-			Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> heap_GPU;
-			D3D12_CPU_DESCRIPTOR_HANDLE start_cpu = {};
-			D3D12_GPU_DESCRIPTOR_HANDLE start_gpu = {};
-
-			// CPU status:
-			std::atomic<uint64_t> allocationOffset{ 0 };
-
-			// GPU status:
-			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
-			uint64_t fenceValue = 0;
-			uint64_t cached_completedValue = 0;
-		};
-		DescriptorHeap descriptorheap_res;
-		DescriptorHeap descriptorheap_sam;
-
 		struct FrameResources
 		{
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[COMMANDLIST_COUNT];
@@ -264,7 +246,6 @@ namespace wiGraphics
 			void reset();
 			void request_heaps(uint32_t resources, uint32_t samplers, CommandList cmd);
 			void validate(bool graphics, CommandList cmd);
-			DescriptorHandles commit(const DescriptorTable* table, CommandList cmd);
 		};
 		DescriptorBinder descriptors[COMMANDLIST_COUNT];
 
@@ -325,6 +306,9 @@ namespace wiGraphics
 
 		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
 		int CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) override;
+
+		int GetDescriptorIndex(const GPUResource* resource, SUBRESOURCE_TYPE type, int subresource = -1) override;
+		int GetDescriptorIndex(const Sampler* sampler) override;
 
 		void WriteShadingRateValue(SHADING_RATE rate, void* dest) override;
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
@@ -405,6 +389,25 @@ namespace wiGraphics
 		void SetMarker(const char* name, CommandList cmd) override;
 
 
+
+		struct DescriptorHeap
+		{
+			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+			Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> heap_GPU;
+			D3D12_CPU_DESCRIPTOR_HANDLE start_cpu = {};
+			D3D12_GPU_DESCRIPTOR_HANDLE start_gpu = {};
+
+			// CPU status:
+			std::atomic<uint64_t> allocationOffset{ 0 };
+
+			// GPU status:
+			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
+			uint64_t fenceValue = 0;
+			uint64_t cached_completedValue = 0;
+		};
+		DescriptorHeap descriptorheap_res;
+		DescriptorHeap descriptorheap_sam;
+
 		struct AllocationHandler
 		{
 			D3D12MA::Allocator* allocator = nullptr;
@@ -466,6 +469,9 @@ namespace wiGraphics
 			DescriptorAllocator descriptors_rtv;
 			DescriptorAllocator descriptors_dsv;
 
+			std::vector<int> free_bindless_res;
+			std::vector<int> free_bindless_sam;
+
 			std::deque<std::pair<D3D12MA::Allocation*, uint64_t>> destroyer_allocations;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, uint64_t>> destroyer_resources;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12QueryHeap>, uint64_t>> destroyer_queryheaps;
@@ -473,6 +479,8 @@ namespace wiGraphics
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12RootSignature>, uint64_t>> destroyer_rootSignatures;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12StateObject>, uint64_t>> destroyer_stateobjects;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>, uint64_t>> destroyer_descriptorHeaps;
+			std::deque<std::pair<int, uint64_t>> destroyer_bindless_res;
+			std::deque<std::pair<int, uint64_t>> destroyer_bindless_sam;
 
 			~AllocationHandler()
 			{
@@ -564,6 +572,32 @@ namespace wiGraphics
 					{
 						destroyer_descriptorHeaps.pop_front();
 						// comptr auto delete
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_bindless_res.empty())
+				{
+					if (destroyer_bindless_res.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						int index = destroyer_bindless_res.front().first;
+						destroyer_bindless_res.pop_front();
+						free_bindless_res.push_back(index);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_bindless_sam.empty())
+				{
+					if (destroyer_bindless_sam.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						int index = destroyer_bindless_sam.front().first;
+						destroyer_bindless_sam.pop_front();
+						free_bindless_sam.push_back(index);
 					}
 					else
 					{

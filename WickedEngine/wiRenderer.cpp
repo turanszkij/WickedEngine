@@ -2641,7 +2641,6 @@ void RenderMeshes(
 			BindConstantBuffers(DS, cmd);
 		}
 
-
 		// Do we need to bind every common buffers or just a reduced amount for this pass?
 		const bool commonVBRequest =
 			!IsWireRender() && (
@@ -2935,60 +2934,66 @@ void RenderMeshes(
 
 				device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
 				device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
-
-				// Bind all material textures:
-				const GPUResource* materialtextures[MaterialComponent::TEXTURESLOT_COUNT];
-				material.WriteTextures(materialtextures, arraysize(materialtextures));
-				device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
-
 				if (tessellatorRequested)
 				{
-					device->BindResources(DS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
 					device->BindConstantBuffer(DS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
 				}
 
-				if (terrain)
+				if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
 				{
-					if (mesh.terrain_material1 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material1))
+					// Bind all material textures:
+					const GPUResource* materialtextures[MaterialComponent::TEXTURESLOT_COUNT];
+					material.WriteTextures(materialtextures, arraysize(materialtextures));
+					device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
+
+					if (tessellatorRequested)
 					{
-						device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, 4, cmd);
-						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
-					}
-					else
-					{
-						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material1);
-						const GPUResource* res[4];
-						blendmat.WriteTextures(res, arraysize(res));
-						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, arraysize(res), cmd);
-						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
+						device->BindResources(DS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
 					}
 
-					if (mesh.terrain_material2 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material2))
+					if (terrain)
 					{
-						device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, 4, cmd);
-						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
-					}
-					else
-					{
-						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material2);
-						const GPUResource* res[4];
-						blendmat.WriteTextures(res, arraysize(res));
-						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, arraysize(res), cmd);
-						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
-					}
+						if (mesh.terrain_material1 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material1))
+						{
+							device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, 4, cmd);
+							device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
+						}
+						else
+						{
+							const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material1);
+							const GPUResource* res[4];
+							blendmat.WriteTextures(res, arraysize(res));
+							device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, arraysize(res), cmd);
+							device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
+						}
 
-					if (mesh.terrain_material3 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material3))
-					{
-						device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, 4, cmd);
-						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
-					}
-					else
-					{
-						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material3);
-						const GPUResource* res[4];
-						blendmat.WriteTextures(res, arraysize(res));
-						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, arraysize(res), cmd);
-						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
+						if (mesh.terrain_material2 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material2))
+						{
+							device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, 4, cmd);
+							device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
+						}
+						else
+						{
+							const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material2);
+							const GPUResource* res[4];
+							blendmat.WriteTextures(res, arraysize(res));
+							device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, arraysize(res), cmd);
+							device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
+						}
+
+						if (mesh.terrain_material3 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material3))
+						{
+							device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, 4, cmd);
+							device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
+						}
+						else
+						{
+							const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material3);
+							const GPUResource* res[4];
+							blendmat.WriteTextures(res, arraysize(res));
+							device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, arraysize(res), cmd);
+							device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
+						}
 					}
 				}
 

@@ -146,7 +146,6 @@ namespace wiGraphics
 
 				void reset();
 				void validate(bool graphics, CommandList cmd, bool raytracing = false);
-				VkDescriptorSet commit(const DescriptorTable* table);
 			};
 			DescriptorBinder descriptors[COMMANDLIST_COUNT];
 
@@ -179,6 +178,8 @@ namespace wiGraphics
 		{
 			VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 			VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
+			std::vector<VkDescriptorSet> bindlessSets;
+			uint32_t bindlessFirstSet = 0;
 		};
 		std::unordered_map<size_t, PSOLayout> pso_layout_cache;
 		std::mutex pso_layout_cache_mutex;
@@ -222,6 +223,9 @@ namespace wiGraphics
 
 		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
 		int CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) override;
+
+		int GetDescriptorIndex(const GPUResource* resource, SUBRESOURCE_TYPE type, int subresource = -1) override;
+		int GetDescriptorIndex(const Sampler* sampler) override;
 
 		void WriteShadingRateValue(SHADING_RATE rate, void* dest) override;
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
@@ -302,7 +306,6 @@ namespace wiGraphics
 		void EventEnd(CommandList cmd) override;
 		void SetMarker(const char* name, CommandList cmd) override;
 
-
 		struct AllocationHandler
 		{
 			VmaAllocator allocator = VK_NULL_HANDLE;
@@ -310,6 +313,99 @@ namespace wiGraphics
 			VkInstance instance;
 			uint64_t framecount = 0;
 			std::mutex destroylocker;
+
+			struct BindlessDescriptorHeap
+			{
+				VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
+				VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
+				VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+				std::vector<int> freelist;
+
+				void init(VkDevice device, VkDescriptorType type, uint32_t descriptorCount)
+				{
+					VkDescriptorPoolSize poolSize = {};
+					poolSize.type = type;
+					poolSize.descriptorCount = descriptorCount;
+
+					VkDescriptorPoolCreateInfo poolInfo = {};
+					poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+					poolInfo.poolSizeCount = 1;
+					poolInfo.pPoolSizes = &poolSize;
+					poolInfo.maxSets = 1;
+					poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+
+					VkResult res = vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool);
+					assert(res == VK_SUCCESS);
+
+					VkDescriptorSetLayoutBinding binding = {};
+					binding.descriptorType = type;
+					binding.binding = 0;
+					binding.descriptorCount = descriptorCount;
+					binding.stageFlags = VK_SHADER_STAGE_ALL;
+					binding.pImmutableSamplers = nullptr;
+
+					VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+					layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+					layoutInfo.bindingCount = 1;
+					layoutInfo.pBindings = &binding;
+					layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+
+					VkDescriptorBindingFlags bindingFlags =
+						VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT |
+						VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
+						VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT;
+					//| VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT;
+					VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo = {};
+					bindingFlagsInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+					bindingFlagsInfo.bindingCount = 1;
+					bindingFlagsInfo.pBindingFlags = &bindingFlags;
+					layoutInfo.pNext = &bindingFlagsInfo;
+
+					res = vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout);
+					assert(res == VK_SUCCESS);
+
+					VkDescriptorSetAllocateInfo allocInfo = {};
+					allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+					allocInfo.descriptorPool = descriptorPool;
+					allocInfo.descriptorSetCount = 1;
+					allocInfo.pSetLayouts = &descriptorSetLayout;
+					res = vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet);
+					assert(res == VK_SUCCESS);
+
+					for (int i = 0; i < (int)descriptorCount; ++i)
+					{
+						freelist.push_back((int)descriptorCount - i - 1);
+					}
+				}
+				void destroy(VkDevice device)
+				{
+					vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+					vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+				}
+
+				int allocate()
+				{
+					if (!freelist.empty())
+					{
+						int index = freelist.back();
+						freelist.pop_back();
+						return index;
+					}
+					return -1;
+				}
+				void free(int index)
+				{
+					freelist.push_back(index);
+				}
+			};
+			BindlessDescriptorHeap bindlessUniformBuffers;
+			BindlessDescriptorHeap bindlessSampledImages;
+			BindlessDescriptorHeap bindlessUniformTexelBuffers;
+			BindlessDescriptorHeap bindlessStorageBuffers;
+			BindlessDescriptorHeap bindlessStorageImages;
+			BindlessDescriptorHeap bindlessStorageTexelBuffers;
+			BindlessDescriptorHeap bindlessSamplers;
+			BindlessDescriptorHeap bindlessAccelerationStructures;
 
 			std::deque<std::pair<std::pair<VkImage, VmaAllocation>, uint64_t>> destroyer_images;
 			std::deque<std::pair<VkImageView, uint64_t>> destroyer_imageviews;
@@ -326,9 +422,25 @@ namespace wiGraphics
 			std::deque<std::pair<VkRenderPass, uint64_t>> destroyer_renderpasses;
 			std::deque<std::pair<VkFramebuffer, uint64_t>> destroyer_framebuffers;
 			std::deque<std::pair<VkQueryPool, uint64_t>> destroyer_querypools;
+			std::deque<std::pair<int, uint64_t>> destroyer_bindlessUniformBuffers;
+			std::deque<std::pair<int, uint64_t>> destroyer_bindlessSampledImages;
+			std::deque<std::pair<int, uint64_t>> destroyer_bindlessUniformTexelBuffers;
+			std::deque<std::pair<int, uint64_t>> destroyer_bindlessStorageBuffers;
+			std::deque<std::pair<int, uint64_t>> destroyer_bindlessStorageImages;
+			std::deque<std::pair<int, uint64_t>> destroyer_bindlessStorageTexelBuffers;
+			std::deque<std::pair<int, uint64_t>> destroyer_bindlessSamplers;
+			std::deque<std::pair<int, uint64_t>> destroyer_bindlessAccelerationStructures;
 
 			~AllocationHandler()
 			{
+				bindlessUniformBuffers.destroy(device);
+				bindlessSampledImages.destroy(device);
+				bindlessUniformTexelBuffers.destroy(device);
+				bindlessStorageBuffers.destroy(device);
+				bindlessStorageImages.destroy(device);
+				bindlessStorageTexelBuffers.destroy(device);
+				bindlessSamplers.destroy(device);
+				bindlessAccelerationStructures.destroy(device);
 				Update(~0, 0); // destroy all remaining
 				vmaDestroyAllocator(allocator);
 				vkDestroyDevice(device, nullptr);
@@ -529,6 +641,110 @@ namespace wiGraphics
 						auto item = destroyer_querypools.front();
 						destroyer_querypools.pop_front();
 						vkDestroyQueryPool(device, item.first, nullptr);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_bindlessUniformBuffers.empty())
+				{
+					if (destroyer_bindlessUniformBuffers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						int index= destroyer_bindlessUniformBuffers.front().first;
+						destroyer_bindlessUniformBuffers.pop_front();
+						bindlessUniformBuffers.free(index);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_bindlessSampledImages.empty())
+				{
+					if (destroyer_bindlessSampledImages.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						int index = destroyer_bindlessSampledImages.front().first;
+						destroyer_bindlessSampledImages.pop_front();
+						bindlessSampledImages.free(index);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_bindlessUniformTexelBuffers.empty())
+				{
+					if (destroyer_bindlessUniformTexelBuffers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						int index = destroyer_bindlessUniformTexelBuffers.front().first;
+						destroyer_bindlessUniformTexelBuffers.pop_front();
+						bindlessUniformTexelBuffers.free(index);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_bindlessStorageBuffers.empty())
+				{
+					if (destroyer_bindlessStorageBuffers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						int index = destroyer_bindlessStorageBuffers.front().first;
+						destroyer_bindlessStorageBuffers.pop_front();
+						bindlessStorageBuffers.free(index);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_bindlessStorageImages.empty())
+				{
+					if (destroyer_bindlessStorageImages.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						int index = destroyer_bindlessStorageImages.front().first;
+						destroyer_bindlessStorageImages.pop_front();
+						bindlessStorageImages.free(index);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_bindlessStorageTexelBuffers.empty())
+				{
+					if (destroyer_bindlessStorageTexelBuffers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						int index = destroyer_bindlessStorageTexelBuffers.front().first;
+						destroyer_bindlessStorageTexelBuffers.pop_front();
+						bindlessStorageTexelBuffers.free(index);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_bindlessSamplers.empty())
+				{
+					if (destroyer_bindlessSamplers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						int index = destroyer_bindlessSamplers.front().first;
+						destroyer_bindlessSamplers.pop_front();
+						bindlessSamplers.free(index);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_bindlessAccelerationStructures.empty())
+				{
+					if (destroyer_bindlessAccelerationStructures.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					{
+						int index = destroyer_bindlessAccelerationStructures.front().first;
+						destroyer_bindlessAccelerationStructures.pop_front();
+						bindlessAccelerationStructures.free(index);
 					}
 					else
 					{

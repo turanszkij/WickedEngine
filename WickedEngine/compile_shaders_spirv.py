@@ -78,14 +78,15 @@ for item in root.iter():
             #if profile == "VS" or profile == "DS" or profile == "GS":
             #    cmd += " -fvk-invert-y "
 
-            #cmd += " -fvk-b-shift 0 all "
-            cmd += " -fvk-t-shift 1000 all "
-            cmd += " -fvk-u-shift 2000 all "
-            cmd += " -fvk-s-shift 3000 all "
+            #cmd += " -fvk-b-shift 0 0 "
+            cmd += " -fvk-t-shift 1000 0 "
+            cmd += " -fvk-u-shift 2000 0 "
+            cmd += " -fvk-s-shift 3000 0 "
 
             cmd += " -Vd " #DISABLE VALIDATION: There is currently a validation bug with raytracing RayTCurrent()!!!
             
             cmd += " -D SPIRV "
+            cmd += " -D BINDLESS "
 
             output_name = os.path.splitext(name)[0] + ".cso "
             

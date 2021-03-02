@@ -290,6 +290,21 @@ namespace wiScene
 			dest->options |= SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW;
 		}
 
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		dest->texture_basecolormap = device->GetDescriptorIndex(textures[BASECOLORMAP].GetGPUResource(), SRV);
+		dest->texture_surfacemap = device->GetDescriptorIndex(textures[SURFACEMAP].GetGPUResource(), SRV);
+		dest->texture_emissivemap = device->GetDescriptorIndex(textures[EMISSIVEMAP].GetGPUResource(), SRV);
+		dest->texture_normalmap = device->GetDescriptorIndex(textures[NORMALMAP].GetGPUResource(), SRV);
+		dest->texture_displacementmap = device->GetDescriptorIndex(textures[DISPLACEMENTMAP].GetGPUResource(), SRV);
+		dest->texture_occlusionmap = device->GetDescriptorIndex(textures[OCCLUSIONMAP].GetGPUResource(), SRV);
+		dest->texture_transmissionmap = device->GetDescriptorIndex(textures[TRANSMISSIONMAP].GetGPUResource(), SRV);
+		dest->texture_sheencolormap = device->GetDescriptorIndex(textures[SHEENCOLORMAP].GetGPUResource(), SRV);
+		dest->texture_sheenroughnessmap = device->GetDescriptorIndex(textures[SHEENROUGHNESSMAP].GetGPUResource(), SRV);
+		dest->texture_clearcoatmap = device->GetDescriptorIndex(textures[CLEARCOATMAP].GetGPUResource(), SRV);
+		dest->texture_clearcoatroughnessmap = device->GetDescriptorIndex(textures[CLEARCOATROUGHNESSMAP].GetGPUResource(), SRV);
+		dest->texture_clearcoatnormalmap = device->GetDescriptorIndex(textures[CLEARCOATNORMALMAP].GetGPUResource(), SRV);
+
+
 		dest->baseColorAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
 		dest->surfaceMapAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
 		dest->emissiveMapAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
