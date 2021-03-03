@@ -269,6 +269,13 @@ namespace wiGraphics
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 		SHADING_RATE prev_shadingrate[COMMANDLIST_COUNT] = {};
 
+		struct DeferredPushConstantData
+		{
+			uint8_t data[128];
+			uint32_t size;
+		};
+		DeferredPushConstantData pushconstants[COMMANDLIST_COUNT] = {};
+
 		bool dirty_pso[COMMANDLIST_COUNT] = {};
 		void pso_validate(CommandList cmd);
 
@@ -377,6 +384,7 @@ namespace wiGraphics
 		void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) override;
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
 		void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
+		void PushConstants(const void* data, uint32_t size, CommandList cmd) override;
 
 		void BindDescriptorTable(BINDPOINT bindpoint, uint32_t space, const DescriptorTable* table, CommandList cmd) override;
 		void BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd) override;

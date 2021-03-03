@@ -25,7 +25,49 @@
 //////////////////
 
 #ifdef BINDLESS
-Texture2D<float4> bindless_textures[] : register(t0,space1);
+ConstantBuffer<ShaderMaterial> bindless_materials[] : register(b0, space1);
+Texture2D<float4> bindless_textures[] : register(t0, space5);
+struct PushConstants
+{
+	uint materialIndex;
+	uint materialIndex1;
+	uint materialIndex2;
+	uint materialIndex3;
+};
+PUSHCONSTANT(push, PushConstants);
+inline ShaderMaterial GetMaterial()
+{
+	return bindless_materials[push.materialIndex];
+}
+inline ShaderMaterial GetMaterial1()
+{
+	return bindless_materials[push.materialIndex1];
+}
+inline ShaderMaterial GetMaterial2()
+{
+	return bindless_materials[push.materialIndex2];
+}
+inline ShaderMaterial GetMaterial3()
+{
+	return bindless_materials[push.materialIndex3];
+}
+#else
+inline ShaderMaterial GetMaterial()
+{
+	return g_xMaterial;
+}
+inline ShaderMaterial GetMaterial1()
+{
+	return g_xMaterial_blend1;
+}
+inline ShaderMaterial GetMaterial2()
+{
+	return g_xMaterial_blend2;
+}
+inline ShaderMaterial GetMaterial3()
+{
+	return g_xMaterial_blend3;
+}
 #endif // BINDLESS
 
 // These are bound by wiRenderer (based on Material):
@@ -384,22 +426,22 @@ inline void LightMapping(in float2 ATLAS, inout Lighting lighting)
 inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out float3 bumpColor)
 {
 	[branch]
-	if (g_xMaterial.normalMapStrength > 0 && g_xMaterial.uvset_normalMap >= 0)
+	if (GetMaterial().normalMapStrength > 0 && GetMaterial().uvset_normalMap >= 0)
 	{
-		const float2 UV_normalMap = g_xMaterial.uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
+		const float2 UV_normalMap = GetMaterial().uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
 #ifdef BINDLESS
 		float3 normalMap = float3(0.5, 0.5, 1);
-		if (g_xMaterial.texture_normalmap >= 0)
+		if (GetMaterial().texture_normalmap >= 0)
 		{
-			normalMap = bindless_textures[g_xMaterial.texture_normalmap].Sample(sampler_objectshader, UV_normalMap).rgb;
+			normalMap = bindless_textures[GetMaterial().texture_normalmap].Sample(sampler_objectshader, UV_normalMap).rgb;
 		}
 #else
 		float3 normalMap = texture_normalmap.Sample(sampler_objectshader, UV_normalMap).rgb;
 #endif // BINDLESS
 		normalMap.b = normalMap.b == 0 ? 1 : normalMap.b; // fix for missing blue channel
 		bumpColor = normalMap.rgb * 2 - 1;
-		N = normalize(lerp(N, mul(bumpColor, TBN), g_xMaterial.normalMapStrength));
-		bumpColor *= g_xMaterial.normalMapStrength;
+		N = normalize(lerp(N, mul(bumpColor, TBN), GetMaterial().normalMapStrength));
+		bumpColor *= GetMaterial().normalMapStrength;
 	}
 	else
 	{
@@ -412,20 +454,20 @@ inline float3 PlanarReflection(in Surface surface, in float2 bumpColor)
 	float4 reflectionUV = mul(g_xCamera_ReflVP, float4(surface.P, 1));
 	reflectionUV.xy /= reflectionUV.w;
 	reflectionUV.xy = reflectionUV.xy * float2(0.5, -0.5) + 0.5;
-	return texture_reflection.SampleLevel(sampler_linear_clamp, reflectionUV.xy + bumpColor*g_xMaterial.normalMapStrength, 0).rgb;
+	return texture_reflection.SampleLevel(sampler_linear_clamp, reflectionUV.xy + bumpColor*GetMaterial().normalMapStrength, 0).rgb;
 }
 
 #define NUM_PARALLAX_OCCLUSION_STEPS 32
 inline void ParallaxOcclusionMapping(inout float4 uvsets, in float3 V, in float3x3 TBN)
 {
 	[branch]
-	if (g_xMaterial.parallaxOcclusionMapping > 0)
+	if (GetMaterial().parallaxOcclusionMapping > 0)
 	{
 		V = mul(TBN, V);
 		float layerHeight = 1.0 / NUM_PARALLAX_OCCLUSION_STEPS;
 		float curLayerHeight = 0;
-		float2 dtex = g_xMaterial.parallaxOcclusionMapping * V.xy / NUM_PARALLAX_OCCLUSION_STEPS;
-		float2 originalTextureCoords = g_xMaterial.uvset_displacementMap == 0 ? uvsets.xy : uvsets.zw;
+		float2 dtex = GetMaterial().parallaxOcclusionMapping * V.xy / NUM_PARALLAX_OCCLUSION_STEPS;
+		float2 originalTextureCoords = GetMaterial().uvset_displacementMap == 0 ? uvsets.xy : uvsets.zw;
 		float2 currentTextureCoords = originalTextureCoords;
 		float2 derivX = ddx_coarse(currentTextureCoords);
 		float2 derivY = ddy_coarse(currentTextureCoords);
@@ -474,7 +516,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			if (decalAccumulation.a < 1)
 			{
 				ShaderEntity decal = EntityArray[g_xFrame_DecalArrayOffset + entity_index];
-				if ((decal.layerMask & g_xMaterial.layerMask) == 0)
+				if ((decal.layerMask & GetMaterial().layerMask) == 0)
 					continue;
 
 				float4x4 decalProjection = MatrixArray[decal.GetMatrixIndex()];
@@ -543,7 +585,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			if (envmapAccumulation.a < 1)
 			{
 				ShaderEntity probe = EntityArray[g_xFrame_EnvProbeArrayOffset + entity_index];
-				if ((probe.layerMask & g_xMaterial.layerMask) == 0)
+				if ((probe.layerMask & GetMaterial().layerMask) == 0)
 					continue;
 
 				const float4x4 probeProjection = MatrixArray[probe.GetMatrixIndex()];
@@ -681,7 +723,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 				if (entity_index >= first_item && entity_index <= last_item && decalAccumulation.a < 1)
 				{
 					ShaderEntity decal = EntityArray[entity_index];
-					if ((decal.layerMask & g_xMaterial.layerMask) == 0)
+					if ((decal.layerMask & GetMaterial().layerMask) == 0)
 						continue;
 
 					float4x4 decalProjection = MatrixArray[decal.GetMatrixIndex()];
@@ -763,7 +805,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 				if (entity_index >= first_item && entity_index <= last_item && envmapAccumulation.a < 1)
 				{
 					ShaderEntity probe = EntityArray[entity_index];
-					if ((probe.layerMask & g_xMaterial.layerMask) == 0)
+					if ((probe.layerMask & GetMaterial().layerMask) == 0)
 						continue;
 
 					const float4x4 probeProjection = MatrixArray[probe.GetMatrixIndex()];
@@ -910,7 +952,7 @@ PixelInput main(VertexInput input)
 	PixelInput Out;
 
 	VertexSurface surface;
-	surface.create(g_xMaterial, input);
+	surface.create(GetMaterial(), input);
 
 	Out.pos = surface.position;
 
@@ -1067,13 +1109,13 @@ float4 main(PixelInput input) : SV_TARGET
 
 #ifdef OBJECTSHADER_USE_UVSETS
 	[branch]
-	if (g_xMaterial.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+	if (GetMaterial().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 	{
-		const float2 UV_baseColorMap = g_xMaterial.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		const float2 UV_baseColorMap = GetMaterial().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 #ifdef BINDLESS
-		if (g_xMaterial.texture_basecolormap >= 0)
+		if (GetMaterial().texture_basecolormap >= 0)
 		{
-			color = bindless_textures[g_xMaterial.texture_basecolormap].Sample(sampler_objectshader, UV_baseColorMap);
+			color = bindless_textures[GetMaterial().texture_basecolormap].Sample(sampler_objectshader, UV_baseColorMap);
 		}
 		else
 		{
@@ -1094,7 +1136,7 @@ float4 main(PixelInput input) : SV_TARGET
 
 
 #ifndef DISABLE_ALPHATEST
-	clip(color.a - g_xMaterial.alphaTest);
+	clip(color.a - GetMaterial().alphaTest);
 #endif // DISABLE_ALPHATEST
 
 
@@ -1110,13 +1152,13 @@ float4 main(PixelInput input) : SV_TARGET
 
 #ifdef OBJECTSHADER_USE_UVSETS
 	[branch]
-	if (g_xMaterial.uvset_surfaceMap >= 0)
+	if (GetMaterial().uvset_surfaceMap >= 0)
 	{
-		const float2 UV_surfaceMap = g_xMaterial.uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		const float2 UV_surfaceMap = GetMaterial().uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 #ifdef BINDLESS
-		if (g_xMaterial.texture_surfacemap >= 0)
+		if (GetMaterial().texture_surfacemap >= 0)
 		{
-			surfaceMap = bindless_textures[g_xMaterial.texture_surfacemap].Sample(sampler_objectshader, UV_surfaceMap);
+			surfaceMap = bindless_textures[GetMaterial().texture_surfacemap].Sample(sampler_objectshader, UV_surfaceMap);
 		}
 #else
 		surfaceMap = texture_surfacemap.Sample(sampler_objectshader, UV_surfaceMap);
@@ -1125,22 +1167,22 @@ float4 main(PixelInput input) : SV_TARGET
 #endif // OBJECTSHADER_USE_UVSETS
 
 
-	surface.create(g_xMaterial, color, surfaceMap);
+	surface.create(GetMaterial(), color, surfaceMap);
 
 
 	// Emissive map:
-	surface.emissiveColor = g_xMaterial.emissiveColor;
+	surface.emissiveColor = GetMaterial().emissiveColor;
 
 #ifdef OBJECTSHADER_USE_UVSETS
 	[branch]
-	if (surface.emissiveColor.a > 0 && g_xMaterial.uvset_emissiveMap >= 0)
+	if (surface.emissiveColor.a > 0 && GetMaterial().uvset_emissiveMap >= 0)
 	{
-		const float2 UV_emissiveMap = g_xMaterial.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		const float2 UV_emissiveMap = GetMaterial().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 #ifdef BINDLESS
 		float4 emissiveMap = 1;
-		if (g_xMaterial.texture_emissivemap >= 0)
+		if (GetMaterial().texture_emissivemap >= 0)
 		{
-			emissiveMap = bindless_textures[g_xMaterial.texture_emissivemap].Sample(sampler_objectshader, UV_emissiveMap);
+			emissiveMap = bindless_textures[GetMaterial().texture_emissivemap].Sample(sampler_objectshader, UV_emissiveMap);
 		}
 #else
 		float4 emissiveMap = texture_emissivemap.Sample(sampler_objectshader, UV_emissiveMap);
@@ -1172,9 +1214,9 @@ float4 main(PixelInput input) : SV_TARGET
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (g_xMaterial.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+		if (GetMaterial().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
-			float2 uv = g_xMaterial.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			float2 uv = GetMaterial().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			color2 = texture_basecolormap.Sample(sampler_objectshader, uv);
 			color2.rgb = DEGAMMA(color2.rgb);
 		}
@@ -1184,35 +1226,35 @@ float4 main(PixelInput input) : SV_TARGET
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (g_xMaterial.uvset_surfaceMap >= 0)
+		if (GetMaterial().uvset_surfaceMap >= 0)
 		{
-			float2 uv = g_xMaterial.uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			float2 uv = GetMaterial().uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			surfaceMap2 = texture_surfacemap.Sample(sampler_objectshader, uv);
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
 		Surface surface2;
 		surface2.N = baseN;
-		surface2.create(g_xMaterial, color2, surfaceMap2);
+		surface2.create(GetMaterial(), color2, surfaceMap2);
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (g_xMaterial.normalMapStrength > 0 && g_xMaterial.uvset_normalMap >= 0)
+		if (GetMaterial().normalMapStrength > 0 && GetMaterial().uvset_normalMap >= 0)
 		{
-			float2 uv = g_xMaterial.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			float2 uv = GetMaterial().uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam.rgb = texture_normalmap.Sample(sampler_objectshader, uv);
 			sam.rgb = sam.rgb * 2 - 1;
-			surface2.N = lerp(baseN, mul(sam.rgb, TBN), g_xMaterial.normalMapStrength);
+			surface2.N = lerp(baseN, mul(sam.rgb, TBN), GetMaterial().normalMapStrength);
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
-		surface2.emissiveColor = g_xMaterial.emissiveColor;
+		surface2.emissiveColor = GetMaterial().emissiveColor;
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (g_xMaterial.uvset_emissiveMap >= 0 && any(g_xMaterial.emissiveColor))
+		if (GetMaterial().uvset_emissiveMap >= 0 && any(GetMaterial().emissiveColor))
 		{
-			float2 uv = g_xMaterial.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			float2 uv = GetMaterial().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam = texture_emissivemap.Sample(sampler_objectshader, uv);
 			sam.rgb = DEGAMMA(sam.rgb);
 			surface2.emissiveColor *= sam;
@@ -1234,9 +1276,9 @@ float4 main(PixelInput input) : SV_TARGET
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (g_xMaterial_blend1.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+		if (GetMaterial1().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
-			float2 uv = g_xMaterial_blend1.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			float2 uv = GetMaterial1().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			color2 = texture_blend1_basecolormap.Sample(sampler_objectshader, uv);
 			color2.rgb = DEGAMMA(color2.rgb);
 		}
@@ -1246,35 +1288,35 @@ float4 main(PixelInput input) : SV_TARGET
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (g_xMaterial_blend1.uvset_surfaceMap >= 0)
+		if (GetMaterial1().uvset_surfaceMap >= 0)
 		{
-			float2 uv = g_xMaterial_blend1.uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			float2 uv = GetMaterial1().uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			surfaceMap2 = texture_blend1_surfacemap.Sample(sampler_objectshader, uv);
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
 		Surface surface2;
 		surface2.N = baseN;
-		surface2.create(g_xMaterial_blend1, color2, surfaceMap2);
+		surface2.create(GetMaterial1(), color2, surfaceMap2);
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (g_xMaterial_blend1.normalMapStrength > 0 && g_xMaterial_blend1.uvset_normalMap >= 0)
+		if (GetMaterial1().normalMapStrength > 0 && GetMaterial1().uvset_normalMap >= 0)
 		{
-			float2 uv = g_xMaterial_blend1.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			float2 uv = GetMaterial1().uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam.rgb = texture_blend1_normalmap.Sample(sampler_objectshader, uv);
 			sam.rgb = sam.rgb * 2 - 1;
-			surface2.N = lerp(baseN, mul(sam.rgb, TBN), g_xMaterial_blend1.normalMapStrength);
+			surface2.N = lerp(baseN, mul(sam.rgb, TBN), GetMaterial1().normalMapStrength);
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
-		surface2.emissiveColor = g_xMaterial_blend1.emissiveColor;
+		surface2.emissiveColor = GetMaterial1().emissiveColor;
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (g_xMaterial_blend1.uvset_emissiveMap >= 0 && any(g_xMaterial.emissiveColor))
+		if (GetMaterial1().uvset_emissiveMap >= 0 && any(GetMaterial().emissiveColor))
 		{
-			float2 uv = g_xMaterial_blend1.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			float2 uv = GetMaterial1().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam = texture_blend1_emissivemap.Sample(sampler_objectshader, uv);
 			sam.rgb = DEGAMMA(sam.rgb);
 			surface2.emissiveColor *= sam;
@@ -1296,9 +1338,9 @@ float4 main(PixelInput input) : SV_TARGET
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (g_xMaterial_blend2.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+		if (GetMaterial2().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
-			float2 uv = g_xMaterial_blend2.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			float2 uv = GetMaterial2().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			color2 = texture_blend2_basecolormap.Sample(sampler_objectshader, uv);
 			color2.rgb = DEGAMMA(color2.rgb);
 		}
@@ -1308,35 +1350,35 @@ float4 main(PixelInput input) : SV_TARGET
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (g_xMaterial_blend2.uvset_surfaceMap >= 0)
+		if (GetMaterial2().uvset_surfaceMap >= 0)
 		{
-			float2 uv = g_xMaterial_blend2.uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			float2 uv = GetMaterial2().uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			surfaceMap2 = texture_blend2_surfacemap.Sample(sampler_objectshader, uv);
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
 		Surface surface2;
 		surface2.N = baseN;
-		surface2.create(g_xMaterial_blend2, color2, surfaceMap2);
+		surface2.create(GetMaterial2(), color2, surfaceMap2);
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (g_xMaterial_blend2.normalMapStrength > 0 && g_xMaterial_blend2.uvset_normalMap >= 0)
+		if (GetMaterial2().normalMapStrength > 0 && GetMaterial2().uvset_normalMap >= 0)
 		{
-			float2 uv = g_xMaterial_blend2.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			float2 uv = GetMaterial2().uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam.rgb = texture_blend2_normalmap.Sample(sampler_objectshader, uv);
 			sam.rgb = sam.rgb * 2 - 1;
-			surface2.N = lerp(baseN, mul(sam.rgb, TBN), g_xMaterial_blend2.normalMapStrength);
+			surface2.N = lerp(baseN, mul(sam.rgb, TBN), GetMaterial2().normalMapStrength);
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
-		surface2.emissiveColor = g_xMaterial_blend2.emissiveColor;
+		surface2.emissiveColor = GetMaterial2().emissiveColor;
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (g_xMaterial_blend2.uvset_emissiveMap >= 0 && any(g_xMaterial_blend2.emissiveColor))
+		if (GetMaterial2().uvset_emissiveMap >= 0 && any(GetMaterial2().emissiveColor))
 		{
-			float2 uv = g_xMaterial_blend2.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			float2 uv = GetMaterial2().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam = texture_blend2_emissivemap.Sample(sampler_objectshader, uv);
 			sam.rgb = DEGAMMA(sam.rgb);
 			surface2.emissiveColor *= sam;
@@ -1358,9 +1400,9 @@ float4 main(PixelInput input) : SV_TARGET
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (g_xMaterial_blend3.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+		if (GetMaterial3().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
-			float2 uv = g_xMaterial_blend3.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			float2 uv = GetMaterial3().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			color2 = texture_blend3_basecolormap.Sample(sampler_objectshader, uv);
 			color2.rgb = DEGAMMA(color2.rgb);
 		}
@@ -1370,35 +1412,35 @@ float4 main(PixelInput input) : SV_TARGET
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (g_xMaterial_blend3.uvset_surfaceMap >= 0)
+		if (GetMaterial3().uvset_surfaceMap >= 0)
 		{
-			float2 uv = g_xMaterial_blend3.uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			float2 uv = GetMaterial3().uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			surfaceMap2 = texture_blend3_surfacemap.Sample(sampler_objectshader, uv);
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
 		Surface surface2;
 		surface2.N = baseN;
-		surface2.create(g_xMaterial_blend3, color2, surfaceMap2);
+		surface2.create(GetMaterial3(), color2, surfaceMap2);
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (g_xMaterial_blend3.normalMapStrength > 0 && g_xMaterial_blend3.uvset_normalMap >= 0)
+		if (GetMaterial3().normalMapStrength > 0 && GetMaterial3().uvset_normalMap >= 0)
 		{
-			float2 uv = g_xMaterial_blend3.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			float2 uv = GetMaterial3().uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam.rgb = texture_blend3_normalmap.Sample(sampler_objectshader, uv);
 			sam.rgb = sam.rgb * 2 - 1;
-			surface2.N = lerp(baseN, mul(sam.rgb, TBN), g_xMaterial_blend3.normalMapStrength);
+			surface2.N = lerp(baseN, mul(sam.rgb, TBN), GetMaterial3().normalMapStrength);
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
-		surface2.emissiveColor = g_xMaterial_blend3.emissiveColor;
+		surface2.emissiveColor = GetMaterial3().emissiveColor;
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (g_xMaterial_blend3.uvset_emissiveMap >= 0 && any(g_xMaterial_blend3.emissiveColor))
+		if (GetMaterial3().uvset_emissiveMap >= 0 && any(GetMaterial3().emissiveColor))
 		{
-			float2 uv = g_xMaterial_blend3.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			float2 uv = GetMaterial3().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam = texture_blend3_emissivemap.Sample(sampler_objectshader, uv);
 			sam.rgb = DEGAMMA(sam.rgb);
 			surface2.emissiveColor *= sam;
@@ -1427,13 +1469,13 @@ float4 main(PixelInput input) : SV_TARGET
 #ifdef OBJECTSHADER_USE_UVSETS
 	// Secondary occlusion map:
 	[branch]
-	if (g_xMaterial.IsOcclusionEnabled_Secondary() && g_xMaterial.uvset_occlusionMap >= 0)
+	if (GetMaterial().IsOcclusionEnabled_Secondary() && GetMaterial().uvset_occlusionMap >= 0)
 	{
-		const float2 UV_occlusionMap = g_xMaterial.uvset_occlusionMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		const float2 UV_occlusionMap = GetMaterial().uvset_occlusionMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 #ifdef BINDLESS
-		if (g_xMaterial.texture_occlusionmap >= 0)
+		if (GetMaterial().texture_occlusionmap >= 0)
 		{
-			surface.occlusion *= bindless_textures[g_xMaterial.texture_occlusionmap].Sample(sampler_objectshader, UV_occlusionMap).r;
+			surface.occlusion *= bindless_textures[GetMaterial().texture_occlusionmap].Sample(sampler_objectshader, UV_occlusionMap).r;
 		}
 #else
 		surface.occlusion *= texture_occlusionmap.Sample(sampler_objectshader, UV_occlusionMap).r;
@@ -1452,38 +1494,38 @@ float4 main(PixelInput input) : SV_TARGET
 
 
 #ifdef BRDF_ANISOTROPIC
-	surface.anisotropy = g_xMaterial.parallaxOcclusionMapping;
+	surface.anisotropy = GetMaterial().parallaxOcclusionMapping;
 	surface.T = tangent.xyz;
 	surface.B = normalize(cross(tangent.xyz, surface.N) * tangent.w); // Compute bitangent again after normal mapping
 #endif // BRDF_ANISOTROPIC
 
 
 #ifdef BRDF_SHEEN
-	surface.sheen.color = g_xMaterial.sheenColor.rgb;
-	surface.sheen.roughness = g_xMaterial.sheenRoughness;
+	surface.sheen.color = GetMaterial().sheenColor.rgb;
+	surface.sheen.roughness = GetMaterial().sheenRoughness;
 
 #ifdef OBJECTSHADER_USE_UVSETS
 	[branch]
-	if (g_xMaterial.uvset_sheenColorMap >= 0)
+	if (GetMaterial().uvset_sheenColorMap >= 0)
 	{
-		const float2 UV_sheenColorMap = g_xMaterial.uvset_sheenColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		const float2 UV_sheenColorMap = GetMaterial().uvset_sheenColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 #ifdef BINDLESS
-		if (g_xMaterial.texture_sheencolormap >= 0)
+		if (GetMaterial().texture_sheencolormap >= 0)
 		{
-			surface.sheen.color *= DEGAMMA(bindless_textures[g_xMaterial.texture_sheencolormap].Sample(sampler_objectshader, UV_sheenColorMap).rgb);
+			surface.sheen.color *= DEGAMMA(bindless_textures[GetMaterial().texture_sheencolormap].Sample(sampler_objectshader, UV_sheenColorMap).rgb);
 		}
 #else
 		surface.sheen.color *= DEGAMMA(texture_sheencolormap.Sample(sampler_objectshader, UV_sheenColorMap).rgb);
 #endif // BINDLESS
 	}
 	[branch]
-	if (g_xMaterial.uvset_sheenRoughnessMap >= 0)
+	if (GetMaterial().uvset_sheenRoughnessMap >= 0)
 	{
-		const float2 uvset_sheenRoughnessMap = g_xMaterial.uvset_sheenRoughnessMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		const float2 uvset_sheenRoughnessMap = GetMaterial().uvset_sheenRoughnessMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 #ifdef BINDLESS
-		if (g_xMaterial.texture_sheenroughnessmap >= 0)
+		if (GetMaterial().texture_sheenroughnessmap >= 0)
 		{
-			surface.sheen.roughness *= bindless_textures[g_xMaterial.texture_sheenroughnessmap].Sample(sampler_objectshader, uvset_sheenRoughnessMap).a;
+			surface.sheen.roughness *= bindless_textures[GetMaterial().texture_sheenroughnessmap].Sample(sampler_objectshader, uvset_sheenRoughnessMap).a;
 		}
 #else
 		surface.sheen.roughness *= texture_sheenroughnessmap.Sample(sampler_objectshader, uvset_sheenRoughnessMap).a;
@@ -1494,32 +1536,32 @@ float4 main(PixelInput input) : SV_TARGET
 
 
 #ifdef BRDF_CLEARCOAT
-	surface.clearcoat.factor = g_xMaterial.clearcoat;
-	surface.clearcoat.roughness = g_xMaterial.clearcoatRoughness;
+	surface.clearcoat.factor = GetMaterial().clearcoat;
+	surface.clearcoat.roughness = GetMaterial().clearcoatRoughness;
 	surface.clearcoat.N = input.nor;
 
 #ifdef OBJECTSHADER_USE_UVSETS
 	[branch]
-	if (g_xMaterial.uvset_clearcoatMap >= 0)
+	if (GetMaterial().uvset_clearcoatMap >= 0)
 	{
-		const float2 UV_clearcoatMap = g_xMaterial.uvset_clearcoatMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		const float2 UV_clearcoatMap = GetMaterial().uvset_clearcoatMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 #ifdef BINDLESS
-		if (g_xMaterial.texture_clearcoatmap >= 0)
+		if (GetMaterial().texture_clearcoatmap >= 0)
 		{
-			surface.clearcoat.factor *= bindless_textures[g_xMaterial.texture_clearcoatmap].Sample(sampler_objectshader, UV_clearcoatMap).r;
+			surface.clearcoat.factor *= bindless_textures[GetMaterial().texture_clearcoatmap].Sample(sampler_objectshader, UV_clearcoatMap).r;
 		}
 #else
 		surface.clearcoat.factor *= texture_clearcoatmap.Sample(sampler_objectshader, UV_clearcoatMap).r;
 #endif // BINDLESS
 	}
 	[branch]
-	if (g_xMaterial.uvset_clearcoatRoughnessMap >= 0)
+	if (GetMaterial().uvset_clearcoatRoughnessMap >= 0)
 	{
-		const float2 uvset_clearcoatRoughnessMap = g_xMaterial.uvset_clearcoatRoughnessMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		const float2 uvset_clearcoatRoughnessMap = GetMaterial().uvset_clearcoatRoughnessMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 #ifdef BINDLESS
-		if (g_xMaterial.texture_clearcoatroughnessmap >= 0)
+		if (GetMaterial().texture_clearcoatroughnessmap >= 0)
 		{
-			surface.clearcoat.roughness *= bindless_textures[g_xMaterial.texture_clearcoatroughnessmap].Sample(sampler_objectshader, uvset_clearcoatRoughnessMap).g;
+			surface.clearcoat.roughness *= bindless_textures[GetMaterial().texture_clearcoatroughnessmap].Sample(sampler_objectshader, uvset_clearcoatRoughnessMap).g;
 		}
 #else
 		surface.clearcoat.roughness *= texture_clearcoatroughnessmap.Sample(sampler_objectshader, uvset_clearcoatRoughnessMap).g;
@@ -1527,14 +1569,14 @@ float4 main(PixelInput input) : SV_TARGET
 	}
 #ifdef OBJECTSHADER_USE_TANGENT
 	[branch]
-	if (g_xMaterial.uvset_clearcoatNormalMap >= 0)
+	if (GetMaterial().uvset_clearcoatNormalMap >= 0)
 	{
-		const float2 uvset_clearcoatNormalMap = g_xMaterial.uvset_clearcoatNormalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		const float2 uvset_clearcoatNormalMap = GetMaterial().uvset_clearcoatNormalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 #ifdef BINDLESS
 		float3 clearcoatNormalMap = float3(0.5, 0.5, 1);
-		if (g_xMaterial.texture_clearcoatnormalmap >= 0)
+		if (GetMaterial().texture_clearcoatnormalmap >= 0)
 		{
-			clearcoatNormalMap = bindless_textures[g_xMaterial.texture_clearcoatnormalmap].Sample(sampler_objectshader, uvset_clearcoatNormalMap).rgb;
+			clearcoatNormalMap = bindless_textures[GetMaterial().texture_clearcoatnormalmap].Sample(sampler_objectshader, uvset_clearcoatNormalMap).rgb;
 		}
 #else
 		float3 clearcoatNormalMap = texture_clearcoatnormalmap.Sample(sampler_objectshader, uvset_clearcoatNormalMap).rgb;
@@ -1551,13 +1593,13 @@ float4 main(PixelInput input) : SV_TARGET
 #endif // BRDF_CLEARCOAT
 
 
-	surface.sss = g_xMaterial.subsurfaceScattering;
-	surface.sss_inv = g_xMaterial.subsurfaceScattering_inv;
+	surface.sss = GetMaterial().subsurfaceScattering;
+	surface.sss_inv = GetMaterial().subsurfaceScattering_inv;
 
 	surface.pixel = pixel;
 	surface.screenUV = ScreenCoord;
 
-	surface.layerMask = g_xMaterial.layerMask;
+	surface.layerMask = GetMaterial().layerMask;
 
 	surface.update();
 
@@ -1577,24 +1619,24 @@ float4 main(PixelInput input) : SV_TARGET
 	float2 bumpColor1 = 0;
 	float2 bumpColor2 = 0;
 	[branch]
-	if (g_xMaterial.uvset_normalMap >= 0)
+	if (GetMaterial().uvset_normalMap >= 0)
 	{
-		const float2 UV_normalMap = g_xMaterial.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		const float2 UV_normalMap = GetMaterial().uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 #ifdef BINDLESS
-		if (g_xMaterial.texture_normalmap >= 0)
+		if (GetMaterial().texture_normalmap >= 0)
 		{
-			bumpColor0 = 2 * bindless_textures[g_xMaterial.texture_normalmap].Sample(sampler_objectshader, UV_normalMap - g_xMaterial.texMulAdd.ww).rg - 1;
-			bumpColor1 = 2 * bindless_textures[g_xMaterial.texture_normalmap].Sample(sampler_objectshader, UV_normalMap + g_xMaterial.texMulAdd.zw).rg - 1;
+			bumpColor0 = 2 * bindless_textures[GetMaterial().texture_normalmap].Sample(sampler_objectshader, UV_normalMap - GetMaterial().texMulAdd.ww).rg - 1;
+			bumpColor1 = 2 * bindless_textures[GetMaterial().texture_normalmap].Sample(sampler_objectshader, UV_normalMap + GetMaterial().texMulAdd.zw).rg - 1;
 		}
 #else
-		bumpColor0 = 2 * texture_normalmap.Sample(sampler_objectshader, UV_normalMap - g_xMaterial.texMulAdd.ww).rg - 1;
-		bumpColor1 = 2 * texture_normalmap.Sample(sampler_objectshader, UV_normalMap + g_xMaterial.texMulAdd.zw).rg - 1;
+		bumpColor0 = 2 * texture_normalmap.Sample(sampler_objectshader, UV_normalMap - GetMaterial().texMulAdd.ww).rg - 1;
+		bumpColor1 = 2 * texture_normalmap.Sample(sampler_objectshader, UV_normalMap + GetMaterial().texMulAdd.zw).rg - 1;
 #endif // BINDLESS
 	}
 	bumpColor2 = texture_waterriples.SampleLevel(sampler_objectshader, ScreenCoord, 0).rg;
-	bumpColor = float3(bumpColor0 + bumpColor1 + bumpColor2, 1)  * g_xMaterial.refraction;
-	surface.N = normalize(lerp(surface.N, mul(normalize(bumpColor), TBN), g_xMaterial.normalMapStrength));
-	bumpColor *= g_xMaterial.normalMapStrength;
+	bumpColor = float3(bumpColor0 + bumpColor1 + bumpColor2, 1)  * GetMaterial().refraction;
+	surface.N = normalize(lerp(surface.N, mul(normalize(bumpColor), TBN), GetMaterial().normalMapStrength));
+	bumpColor *= GetMaterial().normalMapStrength;
 
 	//REFLECTION
 	float4 reflectionUV = mul(g_xCamera_ReflVP, float4(surface.P, 1));
@@ -1607,20 +1649,20 @@ float4 main(PixelInput input) : SV_TARGET
 
 #ifdef TRANSPARENT
 	[branch]
-	if (g_xMaterial.transmission > 0)
+	if (GetMaterial().transmission > 0)
 	{
-		float transmission = g_xMaterial.transmission;
+		float transmission = GetMaterial().transmission;
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (g_xMaterial.uvset_transmissionMap >= 0)
+		if (GetMaterial().uvset_transmissionMap >= 0)
 		{
-			const float2 UV_transmissionMap = g_xMaterial.uvset_transmissionMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			const float2 UV_transmissionMap = GetMaterial().uvset_transmissionMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 #ifdef BINDLESS
 			float transmissionMap = 1;
-			if (g_xMaterial.texture_transmissionmap >= 0)
+			if (GetMaterial().texture_transmissionmap >= 0)
 			{
-				transmissionMap = bindless_textures[g_xMaterial.texture_transmissionmap].Sample(sampler_objectshader, UV_transmissionMap).r;
+				transmissionMap = bindless_textures[GetMaterial().texture_transmissionmap].Sample(sampler_objectshader, UV_transmissionMap).r;
 			}
 #else
 			float transmissionMap = texture_transmissionmap.Sample(sampler_objectshader, UV_transmissionMap).r;
@@ -1633,7 +1675,7 @@ float4 main(PixelInput input) : SV_TARGET
 		float mipLevels;
 		texture_refraction.GetDimensions(0, size.x, size.y, mipLevels);
 		const float2 normal2D = mul((float3x3)g_xCamera_View, surface.N.xyz).xy;
-		float2 perturbatedRefrTexCoords = ScreenCoord.xy + normal2D * g_xMaterial.refraction;
+		float2 perturbatedRefrTexCoords = ScreenCoord.xy + normal2D * GetMaterial().refraction;
 		float4 refractiveColor = texture_refraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, surface.roughness * mipLevels);
 		surface.refraction.rgb = surface.albedo * refractiveColor.rgb;
 		surface.refraction.a = transmission;

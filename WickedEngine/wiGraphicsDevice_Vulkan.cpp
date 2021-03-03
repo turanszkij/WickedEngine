@@ -811,6 +811,8 @@ namespace Vulkan_Internal
 		std::vector<VkDescriptorSet> bindlessSets;
 		uint32_t bindlessFirstSet = 0;
 
+		VkPushConstantRange pushconstants = {};
+
 		size_t binding_hash = 0;
 
 		~Shader_Vulkan()
@@ -835,6 +837,8 @@ namespace Vulkan_Internal
 		std::vector<VkDescriptorSetLayoutBinding> bindlessBindings;
 		std::vector<VkDescriptorSet> bindlessSets;
 		uint32_t bindlessFirstSet = 0;
+
+		VkPushConstantRange pushconstants = {};
 
 		size_t binding_hash = 0;
 
@@ -1798,6 +1802,20 @@ using namespace Vulkan_Internal;
 			//	);
 			//}
 		}
+
+		if (pushconstants[cmd].size > 0)
+		{
+			auto pso_internal = to_internal(active_pso[cmd]);
+			vkCmdPushConstants(
+				GetDirectCommandList(cmd),
+				pso_internal->pipelineLayout,
+				pso_internal->pushconstants.stageFlags,
+				pso_internal->pushconstants.offset,
+				pso_internal->pushconstants.size,
+				pushconstants[cmd].data
+			);
+			pushconstants[cmd].size = 0;
+		}
 	}
 	void GraphicsDevice_Vulkan::predispatch(CommandList cmd)
 	{
@@ -1826,6 +1844,19 @@ using namespace Vulkan_Internal;
 			//}
 		}
 
+		if (pushconstants[cmd].size > 0)
+		{
+			auto cs_internal = to_internal(active_cs[cmd]);
+			vkCmdPushConstants(
+				GetDirectCommandList(cmd),
+				cs_internal->pipelineLayout_cs,
+				cs_internal->pushconstants.stageFlags,
+				cs_internal->pushconstants.offset,
+				cs_internal->pushconstants.size,
+				pushconstants[cmd].data
+			);
+			pushconstants[cmd].size = 0;
+		}
 	}
 	void GraphicsDevice_Vulkan::preraytrace(CommandList cmd)
 	{
@@ -3532,13 +3563,35 @@ using namespace Vulkan_Internal;
 			);
 			assert(result == SPV_REFLECT_RESULT_SUCCESS);
 
+			uint32_t push_count = 0;
+			result = spvReflectEnumeratePushConstantBlocks(&module, &push_count, nullptr);
+			assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+			std::vector<SpvReflectBlockVariable*> pushconstants(push_count);
+			result = spvReflectEnumeratePushConstantBlocks(&module, &push_count, pushconstants.data());
+			assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
 			std::vector<VkSampler> staticsamplers;
+
+			for (auto& x : pushconstants)
+			{
+				auto& push = internal_state->pushconstants;
+				push.stageFlags = internal_state->stageInfo.stage;
+				push.offset = x->offset;
+				push.size = x->size;
+			}
 
 			for (auto& x : bindings)
 			{
 				const bool bindless = x->count == 0 || x->count > 1 || x->set > 0; // strange: unbounded array returns count == 1
 
-				auto& descriptor = bindless ? internal_state->bindlessBindings.emplace_back() : internal_state->layoutBindings.emplace_back();
+				if (bindless)
+				{
+					// There can be padding between bindless spaces because sets need to be bound contiguously
+					internal_state->bindlessBindings.resize(std::max(internal_state->bindlessBindings.size(), (size_t)x->set));
+				}
+
+				auto& descriptor = bindless ? internal_state->bindlessBindings[x->set - 1] : internal_state->layoutBindings.emplace_back();
 				descriptor.stageFlags = internal_state->stageInfo.stage;
 				descriptor.binding = x->binding;
 				descriptor.descriptorCount = x->count;
@@ -3713,7 +3766,16 @@ using namespace Vulkan_Internal;
 					pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 					pipelineLayoutInfo.pSetLayouts = layouts.data();
 					pipelineLayoutInfo.setLayoutCount = (uint32_t)layouts.size();
-					pipelineLayoutInfo.pushConstantRangeCount = 0;
+					if (internal_state->pushconstants.size > 0)
+					{
+						pipelineLayoutInfo.pushConstantRangeCount = 1;
+						pipelineLayoutInfo.pPushConstantRanges = &internal_state->pushconstants;
+					}
+					else
+					{
+						pipelineLayoutInfo.pushConstantRangeCount = 0;
+						pipelineLayoutInfo.pPushConstantRanges = nullptr;
+					}
 
 					res = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &internal_state->pipelineLayout_cs);
 					assert(res == VK_SUCCESS);
@@ -4032,6 +4094,13 @@ using namespace Vulkan_Internal;
 					}
 					i++;
 				}
+
+				if (shader_internal->pushconstants.size > 0)
+				{
+					internal_state->pushconstants.offset = shader_internal->pushconstants.offset;
+					internal_state->pushconstants.size = shader_internal->pushconstants.size;
+					internal_state->pushconstants.stageFlags |= shader_internal->pushconstants.stageFlags;
+				}
 			};
 
 			insert_shader(pDesc->ms);
@@ -4152,7 +4221,16 @@ using namespace Vulkan_Internal;
 				pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 				pipelineLayoutInfo.pSetLayouts = layouts.data();
 				pipelineLayoutInfo.setLayoutCount = (uint32_t)layouts.size();
-				pipelineLayoutInfo.pushConstantRangeCount = 0;
+				if (internal_state->pushconstants.size > 0)
+				{
+					pipelineLayoutInfo.pushConstantRangeCount = 1;
+					pipelineLayoutInfo.pPushConstantRanges = &internal_state->pushconstants;
+				}
+				else
+				{
+					pipelineLayoutInfo.pushConstantRangeCount = 0;
+					pipelineLayoutInfo.pPushConstantRanges = nullptr;
+				}
 
 				res = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &internal_state->pipelineLayout);
 				assert(res == VK_SUCCESS);
@@ -6367,6 +6445,7 @@ using namespace Vulkan_Internal;
 		active_renderpass[cmd] = VK_NULL_HANDLE;
 		dirty_pso[cmd] = false;
 		prev_shadingrate[cmd] = SHADING_RATE_INVALID;
+		pushconstants[cmd] = {};
 
 		return cmd;
 	}
@@ -7437,6 +7516,11 @@ using namespace Vulkan_Internal;
 			desc->Height, 
 			desc->Depth
 		);
+	}
+	void GraphicsDevice_Vulkan::PushConstants(const void* data, uint32_t size, CommandList cmd)
+	{
+		std::memcpy(pushconstants[cmd].data, data, size);
+		pushconstants[cmd].size = size;
 	}
 
 	void GraphicsDevice_Vulkan::BindDescriptorTable(BINDPOINT bindpoint, uint32_t space, const DescriptorTable* table, CommandList cmd)

@@ -2932,15 +2932,27 @@ void RenderMeshes(
 					device->BindShadingRate(material.shadingRate, cmd);
 				}
 
-				device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
-				device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
-				if (tessellatorRequested)
+				if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
 				{
-					device->BindConstantBuffer(DS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+					struct PushConstants
+					{
+						uint materialIndex;
+						uint materialIndex1;
+						uint materialIndex2;
+						uint materialIndex3;
+					};
+					PushConstants push;
+					push.materialIndex = device->GetDescriptorIndex(&material.constantBuffer, CBV);
+					push.materialIndex1 = -1;
+					push.materialIndex2 = -1;
+					push.materialIndex3 = -1;
+					device->PushConstants(&push, sizeof(push), cmd);
 				}
-
-				if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+				else
 				{
+					device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+					device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+
 					// Bind all material textures:
 					const GPUResource* materialtextures[MaterialComponent::TEXTURESLOT_COUNT];
 					material.WriteTextures(materialtextures, arraysize(materialtextures));
@@ -2948,6 +2960,7 @@ void RenderMeshes(
 
 					if (tessellatorRequested)
 					{
+						device->BindConstantBuffer(DS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
 						device->BindResources(DS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
 					}
 
@@ -12550,20 +12563,6 @@ void Postprocess_Tonemap(
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_TONEMAP], cmd);
 
-	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
-	device->BindResource(CS, &input_luminance, TEXSLOT_ONDEMAND1, cmd);
-	device->BindResource(CS, &input_distortion, TEXSLOT_ONDEMAND2, cmd);
-
-	if (colorgrade_lookuptable == nullptr)
-	{
-		device->UnbindResources(TEXSLOT_ONDEMAND3, 1, cmd);
-	}
-	else
-	{
-		assert(colorgrade_lookuptable == nullptr || colorgrade_lookuptable->desc.type == TextureDesc::TEXTURE_3D); // This must be a 3D lut
-		device->BindResource(CS, colorgrade_lookuptable, TEXSLOT_ONDEMAND3, cmd);
-	}
-
 	const TextureDesc& desc = output.GetDesc();
 
 	PostProcessCB cb;
@@ -12574,13 +12573,44 @@ void Postprocess_Tonemap(
 	cb.tonemap_exposure = exposure;
 	cb.tonemap_dither = dither ? 1.0f : 0.0f;
 	cb.tonemap_colorgrading = colorgrade_lookuptable == nullptr ? 0.0f : 1.0f;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-	const GPUResource* uavs[] = {
-		&output,
-	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+	{
+		PushConstantsTonemap push = {};
+		push.xPPResolution_rcp = cb.xPPResolution_rcp;
+		push.exposure = cb.tonemap_exposure;
+		push.dither = cb.tonemap_dither;
+		push.colorgrading = cb.tonemap_colorgrading;
+		push.texture_input = device->GetDescriptorIndex(&input, SRV);
+		push.texture_input_luminance = device->GetDescriptorIndex(&input_luminance, SRV);
+		push.texture_input_distortion = device->GetDescriptorIndex(&input_distortion, SRV);
+		push.texture_colorgrade_lookuptable = device->GetDescriptorIndex(colorgrade_lookuptable, SRV);
+		push.texture_output = device->GetDescriptorIndex(&output, UAV);
+		device->PushConstants(&push, sizeof(push), cmd);
+	}
+	else
+	{
+		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &input_luminance, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &input_distortion, TEXSLOT_ONDEMAND2, cmd);
+
+		if (colorgrade_lookuptable == nullptr)
+		{
+			device->UnbindResources(TEXSLOT_ONDEMAND3, 1, cmd);
+		}
+		else
+		{
+			assert(colorgrade_lookuptable == nullptr || colorgrade_lookuptable->desc.type == TextureDesc::TEXTURE_3D); // This must be a 3D lut
+			device->BindResource(CS, colorgrade_lookuptable, TEXSLOT_ONDEMAND3, cmd);
+		}
+		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+		const GPUResource* uavs[] = {
+			&output,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	}
 
 	{
 		GPUBarrier barriers[] = {
@@ -12604,7 +12634,7 @@ void Postprocess_Tonemap(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
+	device->UnbindUAVs(0, 1, cmd);
 
 	device->EventEnd(cmd);
 }

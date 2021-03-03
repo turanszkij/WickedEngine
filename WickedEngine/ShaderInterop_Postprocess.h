@@ -14,6 +14,19 @@ CBUFFER(PostProcessCB, CBSLOT_RENDERER_POSTPROCESS)
 	float4 xPPParams1;
 };
 
+struct PushConstantsTonemap
+{
+	float2 xPPResolution_rcp;
+	float exposure;
+	float dither;
+	float colorgrading;
+	int texture_input;
+	int texture_input_luminance;
+	int texture_input_distortion;
+	int texture_colorgrade_lookuptable;
+	int texture_output;
+};
+
 #define lineardepth_inputresolution xPPParams0.xy
 #define lineardepth_inputresolution_rcp xPPParams0.zw
 

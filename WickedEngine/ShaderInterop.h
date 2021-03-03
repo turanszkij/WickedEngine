@@ -78,9 +78,9 @@ typedef XMINT4 int4;
 #endif // HLSL6 || SPIRV
 
 #ifdef SPIRV
-#define ROOTCONSTANTS(name, type, slot) [[vk::push_constant]] type name;
+#define PUSHCONSTANT(name, type) [[vk::push_constant]] type name;
 #else
-#define ROOTCONSTANTS(name, type, slot) CONSTANTBUFFER(name, type, slot)
+#define PUSHCONSTANT(name, type) ConstantBuffer<type> name : register(b999)
 #endif // SPIRV
 
 #endif // __cplusplus

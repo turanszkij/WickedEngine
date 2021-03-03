@@ -1285,15 +1285,18 @@ namespace DX12_Internal
 
 		std::vector<RESOURCEBINDING> resource_bindings;
 
-		uint32_t bindpoint_res = 0;
-		uint32_t bindpoint_sam = 0;
-
 		std::vector<D3D12_DESCRIPTOR_RANGE1> bindless_resources;
 		std::vector<D3D12_DESCRIPTOR_RANGE1> bindless_samplers;
-		std::vector<uint32_t> bindpoints_bindless_res;
-		std::vector<uint32_t> bindpoints_bindless_sam;
+
+		D3D12_ROOT_PARAMETER1 rootconstants;
 
 		std::vector<D3D12_STATIC_SAMPLER_DESC> staticsamplers;
+
+		uint32_t bindpoint_rootconstant = 0;
+		uint32_t bindpoint_rootdescriptor = 0;
+		uint32_t bindpoint_res = 0;
+		uint32_t bindpoint_sam = 0;
+		uint32_t bindpoint_bindless = 0;
 
 		std::vector<uint8_t> shadercode;
 
@@ -1644,7 +1647,7 @@ using namespace DX12_Internal;
 		// Bind root descriptors:
 		if ((dirty_root_cbvs_gfx != 0 && graphics) || (dirty_root_cbvs_compute != 0 && !graphics))
 		{
-			uint32_t root_param = 0;
+			uint32_t root_param = pso_internal->bindpoint_rootdescriptor;
 			for (auto& x : pso_internal->root_cbvs)
 			{
 				bool dirty;
@@ -2157,10 +2160,20 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::predraw(CommandList cmd)
 	{
 		pso_validate(cmd);
-
 		if (active_pso[cmd]->desc.rootSignature == nullptr)
 		{
 			descriptors[cmd].validate(true, cmd);
+		}
+		if (pushconstants[cmd].size > 0)
+		{
+			auto pso_internal = to_internal(active_pso[cmd]);
+			GetDirectCommandList(cmd)->SetGraphicsRoot32BitConstants(
+				pso_internal->bindpoint_rootconstant,
+				pushconstants[cmd].size / sizeof(uint32_t),
+				pushconstants[cmd].data,
+				0
+			);
+			pushconstants[cmd].size = 0;
 		}
 	}
 	void GraphicsDevice_DX12::predispatch(CommandList cmd)
@@ -2169,6 +2182,17 @@ using namespace DX12_Internal;
 		if (active_cs[cmd]->rootSignature == nullptr)
 		{
 			descriptors[cmd].validate(false, cmd);
+		}
+		if (pushconstants[cmd].size > 0)
+		{
+			auto cs_internal = to_internal(active_cs[cmd]);
+			GetDirectCommandList(cmd)->SetComputeRoot32BitConstants(
+				cs_internal->bindpoint_rootconstant,
+				pushconstants[cmd].size / sizeof(uint32_t),
+				pushconstants[cmd].data,
+				0
+			);
+			pushconstants[cmd].size = 0;
 		}
 	}
 	void GraphicsDevice_DX12::preraytrace(CommandList cmd)
@@ -3106,8 +3130,18 @@ using namespace DX12_Internal;
 
 		if (pShader->rootSignature == nullptr)
 		{
-			auto insert_descriptor = [&](const D3D12_SHADER_INPUT_BIND_DESC& desc)
+			auto insert_descriptor = [&](const D3D12_SHADER_INPUT_BIND_DESC& desc, const D3D12_SHADER_BUFFER_DESC& bufferdesc)
 			{
+				if (desc.Type == D3D_SIT_CBUFFER && desc.BindPoint >= 999)
+				{
+					internal_state->rootconstants.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+					internal_state->rootconstants.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+					internal_state->rootconstants.Constants.ShaderRegister = desc.BindPoint;
+					internal_state->rootconstants.Constants.RegisterSpace = desc.Space;
+					internal_state->rootconstants.Constants.Num32BitValues = bufferdesc.Size / sizeof(uint32_t);
+					return;
+				}
+
 				const bool bindless = desc.BindCount > 1 || desc.BindCount == 0;
 
 				if (desc.Type == D3D_SIT_SAMPLER)
@@ -3191,6 +3225,11 @@ using namespace DX12_Internal;
 					descriptor.NumDescriptors = desc.BindCount == 0 ? ~0 : desc.BindCount;
 					descriptor.RegisterSpace = desc.Space;
 					descriptor.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+					if (bindless)
+					{
+						return;
+					}
 
 					RESOURCEBINDING& binding = internal_state->resource_bindings.emplace_back();
 
@@ -3316,7 +3355,17 @@ using namespace DX12_Internal;
 						D3D12_SHADER_INPUT_BIND_DESC desc;
 						hr = function_reflection->GetResourceBindingDesc(i, &desc);
 						assert(SUCCEEDED(hr));
-						insert_descriptor(desc);
+						D3D12_SHADER_BUFFER_DESC bufferdesc = {};
+						if (desc.Type == D3D_SIT_CBUFFER)
+						{
+							auto constantbuffer = function_reflection->GetConstantBufferByIndex(i);
+							if (constantbuffer != nullptr)
+							{
+								hr = constantbuffer->GetDesc(&bufferdesc);
+								assert(SUCCEEDED(hr));
+							}
+						}
+						insert_descriptor(desc, bufferdesc);
 					}
 				}
 			}
@@ -3335,7 +3384,17 @@ using namespace DX12_Internal;
 					D3D12_SHADER_INPUT_BIND_DESC desc;
 					hr = reflection->GetResourceBindingDesc(i, &desc);
 					assert(SUCCEEDED(hr));
-					insert_descriptor(desc);
+					D3D12_SHADER_BUFFER_DESC bufferdesc = {};
+					if (desc.Type == D3D_SIT_CBUFFER)
+					{
+						auto constantbuffer = reflection->GetConstantBufferByIndex(i);
+						if (constantbuffer != nullptr)
+						{
+							hr = constantbuffer->GetDesc(&bufferdesc);
+							assert(SUCCEEDED(hr));
+						}
+					}
+					insert_descriptor(desc, bufferdesc);
 				}
 			}
 
@@ -3375,6 +3434,13 @@ using namespace DX12_Internal;
 			{
 				std::vector<D3D12_ROOT_PARAMETER1> params;
 
+				internal_state->bindpoint_rootconstant = (uint32_t)params.size();
+				if (internal_state->rootconstants.Constants.Num32BitValues > 0)
+				{
+					auto& param = params.emplace_back();
+					param = internal_state->rootconstants;
+				}
+
 				// Split resources into root descriptors and tables:
 				{
 					std::vector<D3D12_DESCRIPTOR_RANGE1> resources;
@@ -3400,6 +3466,7 @@ using namespace DX12_Internal;
 					internal_state->resource_bindings = bindings;
 				}
 
+				internal_state->bindpoint_rootdescriptor = (uint32_t)params.size();
 				for (auto& x : internal_state->root_cbvs)
 				{
 					D3D12_ROOT_PARAMETER1& param = params.emplace_back();
@@ -3408,9 +3475,9 @@ using namespace DX12_Internal;
 					param.Descriptor = x;
 				}
 
+				internal_state->bindpoint_res = (uint32_t)params.size();
 				if (!internal_state->resources.empty())
 				{
-					internal_state->bindpoint_res = (uint32_t)params.size();
 					D3D12_ROOT_PARAMETER1& param = params.emplace_back();
 					param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 					param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
@@ -3418,9 +3485,9 @@ using namespace DX12_Internal;
 					param.DescriptorTable.pDescriptorRanges = internal_state->resources.data();
 				}
 
+				internal_state->bindpoint_sam = (uint32_t)params.size();
 				if (!internal_state->samplers.empty())
 				{
-					internal_state->bindpoint_sam = (uint32_t)params.size();
 					D3D12_ROOT_PARAMETER1& param = params.emplace_back();
 					param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 					param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
@@ -3428,9 +3495,9 @@ using namespace DX12_Internal;
 					param.DescriptorTable.pDescriptorRanges = internal_state->samplers.data();
 				}
 
+				internal_state->bindpoint_bindless = (uint32_t)params.size();
 				for (auto& x : internal_state->bindless_resources)
 				{
-					internal_state->bindpoints_bindless_res.push_back((uint32_t)params.size());
 					D3D12_ROOT_PARAMETER1& param = params.emplace_back();
 					param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 					param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
@@ -3440,13 +3507,19 @@ using namespace DX12_Internal;
 
 				for (auto& x : internal_state->bindless_samplers)
 				{
-					internal_state->bindpoints_bindless_sam.push_back((uint32_t)params.size());
 					D3D12_ROOT_PARAMETER1& param = params.emplace_back();
 					param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 					param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 					param.DescriptorTable.NumDescriptorRanges = 1;
 					param.DescriptorTable.pDescriptorRanges = &x;
 				}
+
+				size_t rootconstant_hash = 0;
+				wiHelper::hash_combine(rootconstant_hash, internal_state->rootconstants.ShaderVisibility);
+				wiHelper::hash_combine(rootconstant_hash, internal_state->rootconstants.ParameterType);
+				wiHelper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.Num32BitValues);
+				wiHelper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.RegisterSpace);
+				wiHelper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.ShaderRegister);
 
 				size_t root_binding_hash = 0;
 				for (auto& x : internal_state->root_cbvs)
@@ -3499,6 +3572,7 @@ using namespace DX12_Internal;
 				}
 
 				size_t rootsig_hash = 0;
+				wiHelper::hash_combine(rootsig_hash, rootconstant_hash);
 				wiHelper::hash_combine(rootsig_hash, root_binding_hash);
 				wiHelper::hash_combine(rootsig_hash, resource_binding_hash);
 				wiHelper::hash_combine(rootsig_hash, sampler_binding_hash);
@@ -3754,6 +3828,11 @@ using namespace DX12_Internal;
 				{
 					internal_state->staticsamplers.push_back(x);
 				}
+
+				if (shader_internal->rootconstants.Constants.Num32BitValues > 0)
+				{
+					internal_state->rootconstants = shader_internal->rootconstants;
+				}
 			};
 
 			insert_shader(pDesc->ps); // prioritize ps root descriptor assignment
@@ -3765,6 +3844,13 @@ using namespace DX12_Internal;
 			insert_shader(pDesc->gs);
 
 			std::vector<D3D12_ROOT_PARAMETER1> params;
+
+			internal_state->bindpoint_rootconstant = (uint32_t)params.size();
+			if (internal_state->rootconstants.Constants.Num32BitValues > 0)
+			{
+				auto& param = params.emplace_back();
+				param = internal_state->rootconstants;
+			}
 
 			// Split resources into root descriptors and tables:
 			{
@@ -3791,6 +3877,7 @@ using namespace DX12_Internal;
 				internal_state->resource_bindings = bindings;
 			}
 
+			internal_state->bindpoint_rootdescriptor = (uint32_t)params.size();
 			for (auto& x : internal_state->root_cbvs)
 			{
 				D3D12_ROOT_PARAMETER1& param = params.emplace_back();
@@ -3799,9 +3886,9 @@ using namespace DX12_Internal;
 				param.Descriptor = x;
 			}
 
+			internal_state->bindpoint_res = (uint32_t)params.size();
 			if (!internal_state->resources.empty())
 			{
-				internal_state->bindpoint_res = (uint32_t)params.size();
 				D3D12_ROOT_PARAMETER1& param = params.emplace_back();
 				param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 				param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
@@ -3809,9 +3896,9 @@ using namespace DX12_Internal;
 				param.DescriptorTable.pDescriptorRanges = internal_state->resources.data();
 			}
 
+			internal_state->bindpoint_sam = (uint32_t)params.size();
 			if (!internal_state->samplers.empty())
 			{
-				internal_state->bindpoint_sam = (uint32_t)params.size();
 				D3D12_ROOT_PARAMETER1& param = params.emplace_back();
 				param = {};
 				param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
@@ -3819,6 +3906,8 @@ using namespace DX12_Internal;
 				param.DescriptorTable.NumDescriptorRanges = (UINT)internal_state->samplers.size();
 				param.DescriptorTable.pDescriptorRanges = internal_state->samplers.data();
 			}
+
+			internal_state->bindpoint_bindless = (uint32_t)params.size();
 
 			auto insert_shader_bindless = [&](const Shader* shader, D3D12_SHADER_VISIBILITY stage) {
 				if (shader == nullptr)
@@ -3829,7 +3918,6 @@ using namespace DX12_Internal;
 				for (auto& x : shader_internal->bindless_resources)
 				{
 					internal_state->bindless_resources.push_back(x);
-					internal_state->bindpoints_bindless_res.push_back((uint32_t)params.size());
 					D3D12_ROOT_PARAMETER1& param = params.emplace_back();
 					param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 					param.ShaderVisibility = stage;
@@ -3840,7 +3928,6 @@ using namespace DX12_Internal;
 				for (auto& x : shader_internal->bindless_samplers)
 				{
 					internal_state->bindless_samplers.push_back(x);
-					internal_state->bindpoints_bindless_sam.push_back((uint32_t)params.size());
 					D3D12_ROOT_PARAMETER1& param = params.emplace_back();
 					param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 					param.ShaderVisibility = stage;
@@ -3856,6 +3943,13 @@ using namespace DX12_Internal;
 			insert_shader_bindless(pDesc->ds, D3D12_SHADER_VISIBILITY_DOMAIN);
 			insert_shader_bindless(pDesc->gs, D3D12_SHADER_VISIBILITY_GEOMETRY);
 			insert_shader_bindless(pDesc->ps, D3D12_SHADER_VISIBILITY_PIXEL);
+
+			size_t rootconstant_hash = 0;
+			wiHelper::hash_combine(rootconstant_hash, internal_state->rootconstants.ShaderVisibility);
+			wiHelper::hash_combine(rootconstant_hash, internal_state->rootconstants.ParameterType);
+			wiHelper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.Num32BitValues);
+			wiHelper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.RegisterSpace);
+			wiHelper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.ShaderRegister);
 
 			size_t root_binding_hash = 0;
 			for (auto& x : internal_state->root_cbvs)
@@ -3887,10 +3981,32 @@ using namespace DX12_Internal;
 				wiHelper::hash_combine(sampler_binding_hash, x.RegisterSpace);
 			}
 
+			size_t bindless_hash = 0;
+			for (auto& x : internal_state->bindless_resources)
+			{
+				wiHelper::hash_combine(bindless_hash, x.BaseShaderRegister);
+				wiHelper::hash_combine(bindless_hash, x.NumDescriptors);
+				wiHelper::hash_combine(bindless_hash, x.Flags);
+				wiHelper::hash_combine(bindless_hash, x.OffsetInDescriptorsFromTableStart);
+				wiHelper::hash_combine(bindless_hash, x.RangeType);
+				wiHelper::hash_combine(bindless_hash, x.RegisterSpace);
+			}
+			for (auto& x : internal_state->bindless_samplers)
+			{
+				wiHelper::hash_combine(bindless_hash, x.BaseShaderRegister);
+				wiHelper::hash_combine(bindless_hash, x.NumDescriptors);
+				wiHelper::hash_combine(bindless_hash, x.Flags);
+				wiHelper::hash_combine(bindless_hash, x.OffsetInDescriptorsFromTableStart);
+				wiHelper::hash_combine(bindless_hash, x.RangeType);
+				wiHelper::hash_combine(bindless_hash, x.RegisterSpace);
+			}
+
 			size_t rootsig_hash = 0;
+			wiHelper::hash_combine(rootsig_hash, rootconstant_hash);
 			wiHelper::hash_combine(rootsig_hash, root_binding_hash);
 			wiHelper::hash_combine(rootsig_hash, resource_binding_hash);
 			wiHelper::hash_combine(rootsig_hash, sampler_binding_hash);
+			wiHelper::hash_combine(rootsig_hash, bindless_hash);
 			for (auto& x : internal_state->staticsamplers)
 			{
 				wiHelper::hash_combine(rootsig_hash, x.AddressU);
@@ -3933,6 +4049,7 @@ using namespace DX12_Internal;
 				{
 					OutputDebugStringA((char*)rootSigError->GetBufferPointer());
 					assert(0);
+					rootsignature_cache_mutex.unlock();
 					return false;
 				}
 				hr = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&internal_state->rootSignature));
@@ -5256,9 +5373,10 @@ using namespace DX12_Internal;
 		{
 		case wiGraphics::CBV:
 		{
+			size = std::min(size, (uint64_t)buffer->desc.ByteWidth);
 			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
 			cbv_desc.SizeInBytes = (uint32_t)Align(size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-			cbv_desc.BufferLocation = internal_state->gpu_address;
+			cbv_desc.BufferLocation = internal_state->gpu_address + offset;
 			internal_state->cbv.init(this, cbv_desc);
 			return -1;
 		}
@@ -5856,6 +5974,7 @@ using namespace DX12_Internal;
 		active_renderpass[cmd] = nullptr;
 		prev_shadingrate[cmd] = SHADING_RATE_INVALID;
 		dirty_pso[cmd] = false;
+		pushconstants[cmd] = {};
 
 		return cmd;
 	}
@@ -6227,20 +6346,17 @@ using namespace DX12_Internal;
 			descriptors[cmd].dirty_res = true;
 			descriptors[cmd].dirty_sam = true;
 			descriptors[cmd].dirty_root_cbvs_gfx = ~0;
-		}
 
-		// Set the bindless tables:
-		int i = 0;
-		for (auto& x : internal_state->bindless_resources)
-		{
-			uint32_t bindpoint = internal_state->bindpoints_bindless_res[i++];
-			GetDirectCommandList(cmd)->SetGraphicsRootDescriptorTable(bindpoint, descriptorheap_res.start_gpu);
-		}
-		i = 0;
-		for (auto& x : internal_state->bindless_samplers)
-		{
-			uint32_t bindpoint = internal_state->bindpoints_bindless_sam[i++];
-			GetDirectCommandList(cmd)->SetGraphicsRootDescriptorTable(bindpoint, descriptorheap_sam.start_gpu);
+			// Set the bindless tables:
+			uint32_t bindpoint = internal_state->bindpoint_bindless;
+			for (auto& x : internal_state->bindless_resources)
+			{
+				GetDirectCommandList(cmd)->SetGraphicsRootDescriptorTable(bindpoint++, descriptorheap_res.start_gpu);
+			}
+			for (auto& x : internal_state->bindless_samplers)
+			{
+				GetDirectCommandList(cmd)->SetGraphicsRootDescriptorTable(bindpoint++, descriptorheap_sam.start_gpu);
+			}
 		}
 
 		active_pso[cmd] = pso;
@@ -6267,21 +6383,19 @@ using namespace DX12_Internal;
 				descriptors[cmd].dirty_res = true;
 				descriptors[cmd].dirty_sam = true;
 				descriptors[cmd].dirty_root_cbvs_compute = ~0;
+
+				// Set the bindless tables:
+				uint32_t bindpoint = internal_state->bindpoint_bindless;
+				for (auto& x : internal_state->bindless_resources)
+				{
+					GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(bindpoint++, descriptorheap_res.start_gpu);
+				}
+				for (auto& x : internal_state->bindless_samplers)
+				{
+					GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(bindpoint++, descriptorheap_sam.start_gpu);
+				}
 			}
 
-			// Set the bindless tables:
-			int i = 0;
-			for (auto& x : internal_state->bindless_resources)
-			{
-				uint32_t bindpoint = internal_state->bindpoints_bindless_res[i++];
-				GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(bindpoint, descriptorheap_res.start_gpu);
-			}
-			i = 0;
-			for (auto& x : internal_state->bindless_samplers)
-			{
-				uint32_t bindpoint = internal_state->bindpoints_bindless_sam[i++];
-				GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(bindpoint, descriptorheap_sam.start_gpu);
-			}
 		}
 	}
 	void GraphicsDevice_DX12::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd)
@@ -6744,6 +6858,11 @@ using namespace DX12_Internal;
 		}
 
 		GetDirectCommandList(cmd)->DispatchRays(&dispatchrays_desc);
+	}
+	void GraphicsDevice_DX12::PushConstants(const void* data, uint32_t size, CommandList cmd)
+	{
+		std::memcpy(pushconstants[cmd].data, data, size);
+		pushconstants[cmd].size = size;
 	}
 
 	void GraphicsDevice_DX12::BindDescriptorTable(BINDPOINT bindpoint, uint32_t space, const DescriptorTable* table, CommandList cmd)
