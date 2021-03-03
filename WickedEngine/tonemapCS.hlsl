@@ -21,15 +21,15 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #ifdef BINDLESS
 	const float2 uv = (DTid.xy + 0.5f) * push.xPPResolution_rcp;
 	const float exposure = push.exposure;
-	const bool is_dither = push.dither;
-	const bool is_colorgrading = push.colorgrading;
+	const bool is_dither = push.dither != 0;
+	const bool is_colorgrading = push.colorgrading != 0;
 
 	const float2 distortion = bindless_textures[push.texture_input_distortion].SampleLevel(sampler_linear_clamp, uv, 0).rg;
 	float4 hdr = bindless_textures[push.texture_input].SampleLevel(sampler_linear_clamp, uv + distortion, 0);
 	float average_luminance = bindless_textures[push.texture_input_luminance][uint2(0, 0)].r;
 #else
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
-	const float exposure = tonemap_colorgrading;
+	const float exposure = tonemap_exposure;
 	const bool is_dither = tonemap_dither != 0;
 	const bool is_colorgrading = tonemap_colorgrading != 0;
 
