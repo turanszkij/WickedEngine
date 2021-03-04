@@ -44,6 +44,8 @@ namespace wiLua
 	void AddFuncArray(const luaL_Reg* functions);
 	//add int member to registered object
 	void AddInt(const std::string& name, int data);
+	//returns the path of the last executed script:
+	const std::string& GetScriptPath();
 
 	//set delta time to use with lua
 	void SetDeltaTime(double dt);
@@ -56,8 +58,6 @@ namespace wiLua
 
 	//send a signal to lua
 	void Signal(const std::string& name);
-	//try sending a signal to lua, which can fail because of thread conflicts
-	bool TrySignal(const std::string& name);
 
 	//kill every running background task (coroutine)
 	void KillProcesses();

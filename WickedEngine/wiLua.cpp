@@ -25,7 +25,6 @@
 #include <sstream>
 #include <memory>
 #include <vector>
-#include <mutex>
 
 #define WILUA_ERROR_PREFIX "[Lua Error] "
 
@@ -44,7 +43,7 @@ namespace wiLua
 		}
 	};
 	LuaInternal luainternal;
-	std::mutex lock;
+	string script_path;
 
 	int Internal_DoFile(lua_State* L)
 	{
@@ -53,6 +52,8 @@ namespace wiLua
 		if (argc > 0)
 		{
 			std::string filename = SGetString(L, 1);
+			filename = script_path + filename;
+			script_path = wiHelper::GetDirectoryFromPath(filename);
 			std::vector<uint8_t> filedata;
 			if (wiHelper::FileRead(filename, filedata))
 			{
@@ -62,8 +63,7 @@ namespace wiLua
 				{
 					status = lua_pcall(L, 0, LUA_MULTRET, 0);
 				}
-
-				if (status != 0)
+				else
 				{
 					const char* str = lua_tostring(L, -1);
 
@@ -131,63 +131,43 @@ namespace wiLua
 	string GetErrorMsg()
 	{
 		if (Failed()) {
-			lock.lock();
 			string retVal = lua_tostring(luainternal.m_luaState, -1);
-			lock.unlock();
 			return retVal;
 		}
 		return string("");
 	}
 	string PopErrorMsg()
 	{
-		lock.lock();
 		string retVal = lua_tostring(luainternal.m_luaState, -1);
 		lua_pop(luainternal.m_luaState, 1); // remove error message
-		lock.unlock();
 		return retVal;
 	}
 	void PostErrorMsg()
 	{
 		if (Failed())
 		{
-			lock.lock();
 			const char* str = lua_tostring(luainternal.m_luaState, -1);
-			lock.unlock();
 			if (str == nullptr)
 				return;
 			stringstream ss("");
 			ss << WILUA_ERROR_PREFIX << str;
 			wiBackLog::post(ss.str().c_str());
-			lock.lock();
 			lua_pop(luainternal.m_luaState, 1); // remove error message
-			lock.unlock();
 		}
 	}
 	bool RunFile(const std::string& filename)
 	{
+		script_path = wiHelper::GetDirectoryFromPath(filename);
 		std::vector<uint8_t> filedata;
 		if (wiHelper::FileRead(filename, filedata))
 		{
 			return RunText(string(filedata.begin(), filedata.end()));
 		}
 		return false;
-
-		//lock.lock();
-		//m_status = luaL_loadfile(m_luaState, filename.c_str());
-		//lock.unlock();
-		//
-		//if (Success()) {
-		//	return RunScript();
-		//}
-
-		//PostErrorMsg();
-		//return false;
 	}
 	bool RunScript()
 	{
-		lock.lock();
 		luainternal.m_status = lua_pcall(luainternal.m_luaState, 0, LUA_MULTRET, 0);
-		lock.unlock();
 		if (Failed())
 		{
 			PostErrorMsg();
@@ -197,9 +177,7 @@ namespace wiLua
 	}
 	bool RunText(const std::string& script)
 	{
-		lock.lock();
 		luainternal.m_status = luaL_loadstring(luainternal.m_luaState, script.c_str());
-		lock.unlock();
 		if (Success())
 		{
 			return RunScript();
@@ -210,9 +188,7 @@ namespace wiLua
 	}
 	bool RegisterFunc(const std::string& name, lua_CFunction function)
 	{
-		lock.lock();
 		lua_register(luainternal.m_luaState, name.c_str(), function);
-		lock.unlock();
 
 		PostErrorMsg();
 
@@ -220,25 +196,18 @@ namespace wiLua
 	}
 	void RegisterLibrary(const std::string& tableName, const luaL_Reg* functions)
 	{
-		lock.lock();
 		if (luaL_newmetatable(luainternal.m_luaState, tableName.c_str()) != 0)
 		{
 			//table is not yet present
 			lua_pushvalue(luainternal.m_luaState, -1);
 			lua_setfield(luainternal.m_luaState, -2, "__index"); // Object.__index = Object
-			lock.unlock();
 			AddFuncArray(functions);
-		}
-		else
-		{
-			lock.unlock();
 		}
 	}
 	bool RegisterObject(const std::string& tableName, const std::string& name, void* object)
 	{
 		RegisterLibrary(tableName, nullptr);
 
-		lock.lock();
 		// does this call need to be checked? eg. userData == nullptr?
 		void** userData = static_cast<void**>(lua_newuserdata(luainternal.m_luaState, sizeof(void*)));
 		*(userData) = object;
@@ -246,54 +215,47 @@ namespace wiLua
 		luaL_setmetatable(luainternal.m_luaState, tableName.c_str());
 		lua_setglobal(luainternal.m_luaState, name.c_str());
 
-		lock.unlock();
 		return true;
 	}
 	void AddFunc(const std::string& name, lua_CFunction function)
 	{
-		lock.lock();
-
 		lua_pushcfunction(luainternal.m_luaState, function);
 		lua_setfield(luainternal.m_luaState, -2, name.c_str());
-
-		lock.unlock();
 	}
 	void AddFuncArray(const luaL_Reg* functions)
 	{
 		if (functions != nullptr)
 		{
-			lock.lock();
 			luaL_setfuncs(luainternal.m_luaState, functions, 0);
-			lock.unlock();
 		}
 	}
 	void AddInt(const std::string& name, int data)
 	{
-		lock.lock();
 		lua_pushinteger(luainternal.m_luaState, data);
 		lua_setfield(luainternal.m_luaState, -2, name.c_str());
-		lock.unlock();
+	}
+	const std::string& GetScriptPath()
+	{
+		return script_path;
 	}
 
 	void SetDeltaTime(double dt)
 	{
-		lock.lock();
 		lua_getglobal(luainternal.m_luaState, "setDeltaTime");
 		SSetDouble(luainternal.m_luaState, dt);
 		lua_call(luainternal.m_luaState, 1, 0);
-		lock.unlock();
 	}
 	void FixedUpdate()
 	{
-		TrySignal("wickedengine_fixed_update_tick");
+		Signal("wickedengine_fixed_update_tick");
 	}
 	void Update()
 	{
-		TrySignal("wickedengine_update_tick");
+		Signal("wickedengine_update_tick");
 	}
 	void Render()
 	{
-		TrySignal("wickedengine_render_tick");
+		Signal("wickedengine_render_tick");
 	}
 
 	inline void SignalHelper(lua_State* L, const std::string& name)
@@ -304,17 +266,7 @@ namespace wiLua
 	}
 	void Signal(const std::string& name)
 	{
-		lock.lock();
 		SignalHelper(luainternal.m_luaState, name);
-		lock.unlock();
-	}
-	bool TrySignal(const std::string& name)
-	{
-		if (!lock.try_lock())
-			return false;
-		SignalHelper(luainternal.m_luaState, name);
-		lock.unlock();
-		return true;
 	}
 
 	void KillProcesses()

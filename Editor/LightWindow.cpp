@@ -266,7 +266,7 @@ void LightWindow::Create(EditorComponent* editor)
 				params.extensions.push_back("bmp");
 				wiHelper::FileDialog(params, [this, light, i](std::string fileName) {
 					wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-						light->lensFlareRimTextures[i] = wiResourceManager::Load(fileName);
+						light->lensFlareRimTextures[i] = wiResourceManager::Load(fileName, wiResourceManager::IMPORT_RETAIN_FILEDATA);
 						light->lensFlareNames[i] = fileName;
 						lensflare_Button[i].SetText(wiHelper::GetFileNameFromPath(fileName));
 					});
@@ -316,7 +316,7 @@ void LightWindow::SetEntity(Entity entity)
 		{
 			if (light->lensFlareRimTextures.size() > i && light->lensFlareRimTextures[i] && !light->lensFlareNames[i].empty())
 			{
-				lensflare_Button[i].SetText(light->lensFlareNames[i]);
+				lensflare_Button[i].SetText(wiHelper::GetFileNameFromPath(light->lensFlareNames[i]));
 			}
 			else
 			{

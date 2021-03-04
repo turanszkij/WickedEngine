@@ -89,6 +89,12 @@ namespace wiAudio
 			hr = audioEngine->CreateMasteringVoice(&masteringVoice);
 			assert(SUCCEEDED(hr));
 
+			if (masteringVoice == nullptr)
+			{
+				wiBackLog::post("Failed to create XAudio2 mastering voice!");
+				return;
+			}
+
 			masteringVoice->GetVoiceDetails(&masteringVoiceDetails);
 
 			// Without clamping sample rate, it was crashing 32bit 192kHz audio devices
@@ -257,6 +263,10 @@ namespace wiAudio
 	}
 	bool CreateSound(const std::vector<uint8_t>& data, Sound* sound)
 	{
+		return CreateSound(data.data(), data.size(), sound);
+	}
+	bool CreateSound(const uint8_t* data, size_t size, Sound* sound)
+	{
 		std::shared_ptr<SoundInternal> soundinternal = std::make_shared<SoundInternal>();
 		soundinternal->audio = audio;
 		sound->internal_state = soundinternal;
@@ -266,28 +276,28 @@ namespace wiAudio
 
 		bool success;
 
-		success = FindChunk(data.data(), fourccRIFF, dwChunkSize, dwChunkPosition);
+		success = FindChunk(data, fourccRIFF, dwChunkSize, dwChunkPosition);
 		if (success)
 		{
 			// Wav decoder:
 			DWORD filetype;
-			memcpy(&filetype, data.data() + dwChunkPosition, sizeof(DWORD));
+			memcpy(&filetype, data + dwChunkPosition, sizeof(DWORD));
 			if (filetype != fourccWAVE)
 			{
 				assert(0);
 				return false;
 			}
 
-			success = FindChunk(data.data(), fourccFMT, dwChunkSize, dwChunkPosition);
+			success = FindChunk(data, fourccFMT, dwChunkSize, dwChunkPosition);
 			if (!success)
 			{
 				assert(0);
 				return false;
 			}
-			memcpy(&soundinternal->wfx, data.data() + dwChunkPosition, dwChunkSize);
+			memcpy(&soundinternal->wfx, data + dwChunkPosition, dwChunkSize);
 			soundinternal->wfx.wFormatTag = WAVE_FORMAT_PCM;
 
-			success = FindChunk(data.data(), fourccDATA, dwChunkSize, dwChunkPosition);
+			success = FindChunk(data, fourccDATA, dwChunkSize, dwChunkPosition);
 			if (!success)
 			{
 				assert(0);
@@ -295,7 +305,7 @@ namespace wiAudio
 			}
 
 			soundinternal->audioData.resize(dwChunkSize);
-			memcpy(soundinternal->audioData.data(), data.data() + dwChunkPosition, dwChunkSize);
+			memcpy(soundinternal->audioData.data(), data + dwChunkPosition, dwChunkSize);
 		}
 		else
 		{
@@ -303,7 +313,7 @@ namespace wiAudio
 			int channels = 0;
 			int sample_rate = 0;
 			short* output = nullptr;
-			int samples = stb_vorbis_decode_memory(data.data(), (int)data.size(), &channels, &sample_rate, &output);
+			int samples = stb_vorbis_decode_memory(data, (int)size, &channels, &sample_rate, &output);
 			if (samples < 0)
 			{
 				assert(0);
@@ -548,6 +558,7 @@ namespace wiAudio
 
 	bool CreateSound(const std::string& filename, Sound* sound) { return false; }
 	bool CreateSound(const std::vector<uint8_t>& data, Sound* sound) { return false; }
+	bool CreateSound(const uint8_t* data, size_t size, Sound* sound) { return false; }
 	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance) { return false; }
 
 	void Play(SoundInstance* instance) {}

@@ -25,12 +25,12 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="App.cpp" />
     <ClCompile Include="pch.cpp" />
+    <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="App.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="StepTimer.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\StoreLogo.png">
@@ -41,8 +41,6 @@
     <AppxManifest Include="Package.appxmanifest" />
   </ItemGroup>
   <ItemGroup>
-    <Font Include="..\WickedEngine\fonts\arial.ttf">
-      <Filter>Assets</Filter>
-    </Font>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

@@ -13,6 +13,7 @@ public:
 
 	wiTextInputField materialNameField;
 	wiButton newMaterialButton;
+	wiCheckBox shadowReceiveCheckBox;
 	wiCheckBox shadowCasterCheckBox;
 	wiCheckBox useVertexColorsCheckBox;
 	wiCheckBox specularGlossinessCheckBox;

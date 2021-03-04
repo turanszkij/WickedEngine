@@ -64,16 +64,16 @@ public:
 
 	enum FLAGS
 	{
-		EMPTY = 0,
-		DEBUG = 1 << 0,
-		PAUSED = 1 << 1,
-		SORTING = 1 << 2,
-		DEPTHCOLLISION = 1 << 3,
-		SPH_FLUIDSIMULATION = 1 << 4,
-		HAS_VOLUME = 1 << 5,
-		FRAME_BLENDING = 1 << 6,
+		FLAG_EMPTY = 0,
+		FLAG_DEBUG = 1 << 0,
+		FLAG_PAUSED = 1 << 1,
+		FLAG_SORTING = 1 << 2,
+		FLAG_DEPTHCOLLISION = 1 << 3,
+		FLAG_SPH_FLUIDSIMULATION = 1 << 4,
+		FLAG_HAS_VOLUME = 1 << 5,
+		FLAG_FRAME_BLENDING = 1 << 6,
 	};
-	uint32_t _flags = EMPTY;
+	uint32_t _flags = FLAG_EMPTY;
 
 	PARTICLESHADERTYPE shaderType = SOFT;
 
@@ -113,21 +113,21 @@ public:
 	XMFLOAT3 center;
 	uint32_t statisticsReadBackIndex = 0;
 
-	inline bool IsDebug() const { return _flags & DEBUG; }
-	inline bool IsPaused() const { return _flags & PAUSED; }
-	inline bool IsSorted() const { return _flags & SORTING; }
-	inline bool IsDepthCollisionEnabled() const { return _flags & DEPTHCOLLISION; }
-	inline bool IsSPHEnabled() const { return _flags & SPH_FLUIDSIMULATION; }
-	inline bool IsVolumeEnabled() const { return _flags & HAS_VOLUME; }
-	inline bool IsFrameBlendingEnabled() const { return _flags & FRAME_BLENDING; }
+	inline bool IsDebug() const { return _flags & FLAG_DEBUG; }
+	inline bool IsPaused() const { return _flags & FLAG_PAUSED; }
+	inline bool IsSorted() const { return _flags & FLAG_SORTING; }
+	inline bool IsDepthCollisionEnabled() const { return _flags & FLAG_DEPTHCOLLISION; }
+	inline bool IsSPHEnabled() const { return _flags & FLAG_SPH_FLUIDSIMULATION; }
+	inline bool IsVolumeEnabled() const { return _flags & FLAG_HAS_VOLUME; }
+	inline bool IsFrameBlendingEnabled() const { return _flags & FLAG_FRAME_BLENDING; }
 
-	inline void SetDebug(bool value) { if (value) { _flags |= DEBUG; } else { _flags &= ~DEBUG; } }
-	inline void SetPaused(bool value) { if (value) { _flags |= PAUSED; } else { _flags &= ~PAUSED; } }
-	inline void SetSorted(bool value) { if (value) { _flags |= SORTING; } else { _flags &= ~SORTING; } }
-	inline void SetDepthCollisionEnabled(bool value) { if (value) { _flags |= DEPTHCOLLISION; } else { _flags &= ~DEPTHCOLLISION; } }
-	inline void SetSPHEnabled(bool value) { if (value) { _flags |= SPH_FLUIDSIMULATION; } else { _flags &= ~SPH_FLUIDSIMULATION; } }
-	inline void SetVolumeEnabled(bool value) { if (value) { _flags |= HAS_VOLUME; } else { _flags &= ~HAS_VOLUME; } }
-	inline void SetFrameBlendingEnabled(bool value) { if (value) { _flags |= FRAME_BLENDING; } else { _flags &= ~FRAME_BLENDING; } }
+	inline void SetDebug(bool value) { if (value) { _flags |= FLAG_DEBUG; } else { _flags &= ~FLAG_DEBUG; } }
+	inline void SetPaused(bool value) { if (value) { _flags |= FLAG_PAUSED; } else { _flags &= ~FLAG_PAUSED; } }
+	inline void SetSorted(bool value) { if (value) { _flags |= FLAG_SORTING; } else { _flags &= ~FLAG_SORTING; } }
+	inline void SetDepthCollisionEnabled(bool value) { if (value) { _flags |= FLAG_DEPTHCOLLISION; } else { _flags &= ~FLAG_DEPTHCOLLISION; } }
+	inline void SetSPHEnabled(bool value) { if (value) { _flags |= FLAG_SPH_FLUIDSIMULATION; } else { _flags &= ~FLAG_SPH_FLUIDSIMULATION; } }
+	inline void SetVolumeEnabled(bool value) { if (value) { _flags |= FLAG_HAS_VOLUME; } else { _flags &= ~FLAG_HAS_VOLUME; } }
+	inline void SetFrameBlendingEnabled(bool value) { if (value) { _flags |= FLAG_FRAME_BLENDING; } else { _flags &= ~FLAG_FRAME_BLENDING; } }
 
 	void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 

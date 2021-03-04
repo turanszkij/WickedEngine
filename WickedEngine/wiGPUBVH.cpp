@@ -81,7 +81,7 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 		if (storedTextures.find(res) == storedTextures.end())
 		{
 			// we need to pack this texture into the atlas
-			rect_xywh newRect = rect_xywh(0, 0, res->texture->GetDesc().Width + atlasWrapBorder * 2, res->texture->GetDesc().Height + atlasWrapBorder * 2);
+			rect_xywh newRect = rect_xywh(0, 0, res->texture.desc.Width + atlasWrapBorder * 2, res->texture.desc.Height + atlasWrapBorder * 2);
 			storedTextures[res] = newRect;
 
 			repackAtlas = true;
@@ -121,7 +121,7 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 
 			for (auto& it : storedTextures)
 			{
-				wiRenderer::CopyTexture2D(globalMaterialAtlas, -1, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, *it.first->texture, 0, cmd, wiRenderer::BORDEREXPAND_WRAP);
+				wiRenderer::CopyTexture2D(globalMaterialAtlas, -1, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, it.first->texture, 0, cmd, wiRenderer::BORDEREXPAND_WRAP);
 			}
 		}
 		else

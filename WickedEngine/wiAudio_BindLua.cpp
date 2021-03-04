@@ -31,7 +31,7 @@ int wiAudio_BindLua::CreateSound(lua_State* L)
 		wiSound_BindLua* sound = Luna<wiSound_BindLua>::lightcheck(L, 2);
 		if (sound != nullptr)
 		{
-			bool result = wiAudio::CreateSound(wiLua::SGetString(L, 1), &sound->sound);
+			bool result = wiAudio::CreateSound(wiLua::GetScriptPath() + wiLua::SGetString(L, 1), &sound->sound);
 			wiLua::SSetBool(L, result);
 		}
 		else

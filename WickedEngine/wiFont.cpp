@@ -11,6 +11,7 @@
 #include "wiPlatform.h"
 #include "wiEvent.h"
 
+#include "Utility/arial.h"
 #include "Utility/stb_truetype.h"
 
 #include <fstream>
@@ -30,7 +31,6 @@ using namespace wiRectPacker;
 
 namespace wiFont_Internal
 {
-	string				FONTPATH = wiHelper::GetOriginalWorkingDirectory() + "../WickedEngine/fonts/";
 	GPUBuffer			constantBuffer;
 	BlendState			blendState;
 	RasterizerState		rasterizerState;
@@ -73,23 +73,33 @@ namespace wiFont_Internal
 	struct wiFontStyle
 	{
 		string name;
-		vector<uint8_t> fontBuffer;
+		std::vector<uint8_t> fontBuffer; // only used if loaded from file, need to keep alive
 		stbtt_fontinfo fontInfo;
 		int ascent, descent, lineGap;
-		void Create(const string& newName)
+		void Create(const string& newName, const uint8_t* data, size_t size)
 		{
 			name = newName;
-			wiHelper::FileRead(newName, fontBuffer);
+			int offset = stbtt_GetFontOffsetForIndex(data, 0);
 
-			int offset = stbtt_GetFontOffsetForIndex(fontBuffer.data(), 0);
-
-			if (!stbtt_InitFont(&fontInfo, fontBuffer.data(), offset))
+			if (!stbtt_InitFont(&fontInfo, data, offset))
 			{
-				string ss = "Failed to load font: " + name;
-				wiHelper::messageBox(ss.c_str());
+				string error = "Failed to load font: " + name + " (file was unrecognized, it must be a .ttf file)";
+				wiBackLog::post(error.c_str());
 			}
 
 			stbtt_GetFontVMetrics(&fontInfo, &ascent, &descent, &lineGap);
+		}
+		void Create(const string& newName)
+		{
+			if (wiHelper::FileRead(newName, fontBuffer))
+			{
+				Create(newName, fontBuffer.data(), fontBuffer.size());
+			}
+			else
+			{
+				string error = "Failed to load font: " + name + " (file could not be opened)";
+				wiBackLog::post(error.c_str());
+			}
 		}
 	};
 	std::vector<wiFontStyle> fontStyles;
@@ -266,7 +276,7 @@ void Initialize()
 	// add default font if there is none yet:
 	if (fontStyles.empty())
 	{
-		AddFontStyle((FONTPATH + "arial.ttf").c_str());
+		AddFontStyle("arial", arial, sizeof(arial));
 	}
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -359,7 +369,7 @@ void UpdatePendingGlyphs()
 		const int borderPadding = 1;
 
 		// Font resolution is upscaled to make it sharper:
-		const float upscaling = std::max(2.0f, wiPlatform::GetDPIScaling());
+		const float upscaling = std::max(2.0f, wiRenderer::GetDevice()->GetDPIScaling());
 
 		for (int32_t hash : pendingGlyphs)
 		{
@@ -469,14 +479,6 @@ const Texture* GetAtlas()
 {
 	return &texture;
 }
-const std::string& GetFontPath()
-{
-	return FONTPATH;
-}
-void SetFontPath(const std::string& path)
-{
-	FONTPATH = path;
-}
 int AddFontStyle(const std::string& fontName)
 {
 	for (size_t i = 0; i < fontStyles.size(); i++)
@@ -489,6 +491,20 @@ int AddFontStyle(const std::string& fontName)
 	}
 	fontStyles.emplace_back();
 	fontStyles.back().Create(fontName);
+	return int(fontStyles.size() - 1);
+}
+int AddFontStyle(const std::string& fontName, const uint8_t* data, size_t size)
+{
+	for (size_t i = 0; i < fontStyles.size(); i++)
+	{
+		const wiFontStyle& fontStyle = fontStyles[i];
+		if (!fontStyle.name.compare(fontName))
+		{
+			return int(i);
+		}
+	}
+	fontStyles.emplace_back();
+	fontStyles.back().Create(fontName, data, size);
 	return int(fontStyles.size() - 1);
 }
 

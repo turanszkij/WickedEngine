@@ -1,5 +1,5 @@
 #include "wiGraphicsDevice.h"
-#include "wiPlatform.h"
+#include "wiEvent.h"
 
 using namespace wiGraphics;
 
@@ -160,9 +160,9 @@ bool GraphicsDevice::IsFormatStencilSupport(FORMAT value) const
 
 float GraphicsDevice::GetScreenWidth() const
 {
-	return (float)GetResolutionWidth() / wiPlatform::GetDPIScaling();
+	return (float)GetResolutionWidth() / GetDPIScaling();
 }
 float GraphicsDevice::GetScreenHeight() const
 {
-	return (float)GetResolutionHeight() / wiPlatform::GetDPIScaling();
+	return (float)GetResolutionHeight() / GetDPIScaling();
 }

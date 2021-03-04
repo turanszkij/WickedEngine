@@ -8,44 +8,7 @@
 #include <sstream>
 #include <cassert>
 #include <cmath>
-
-#ifdef PLATFORM_UWP
-#include <collection.h>
-#include <ppltasks.h>
-using namespace concurrency;
-using namespace Platform;
-using namespace Windows::Storage;
-using namespace Windows::Storage::Pickers;
-using namespace Windows::Storage::AccessCache;
-using namespace Windows::Foundation::Collections;
-void copy_folder(StorageFolder^ src, StorageFolder^ dst) {
-	create_task(src->GetItemsAsync()).then([=](IVectorView<IStorageItem^>^ items) {
-		for (IStorageItem^ item : items)
-		{
-			if (item->IsOfType(StorageItemTypes::File))
-			{
-				StorageFile^ file = (StorageFile^)item;
-				try {
-					file->CopyAsync(dst);
-				}
-				catch (...) {
-					// file already exists, we don't want to overwrite
-				}
-			}
-			else if (item->IsOfType(StorageItemTypes::Folder))
-			{
-				StorageFolder^ src_child = (StorageFolder^)item;
-				create_task(dst->CreateFolderAsync(item->Name, CreationCollisionOption::OpenIfExists)).then([=](StorageFolder^ dst_child) {
-					if (dst_child)
-					{
-						copy_folder(src_child, dst_child);
-					}
-				});
-			}
-		}
-	});
-};
-#endif // PLATFORM_UWP
+#include <filesystem>
 
 using namespace std;
 using namespace wiGraphics;
@@ -53,9 +16,99 @@ using namespace wiRectPacker;
 using namespace wiScene;
 using namespace wiECS;
 
+
+#ifdef PLATFORM_UWP
+#include <winrt/Windows.Storage.h>
+#include <winrt/Windows.Foundation.Collections.h>
+using namespace winrt::Windows::Storage;
+winrt::fire_and_forget copy_folder(StorageFolder src, StorageFolder dst)
+{
+	auto items = co_await src.GetItemsAsync();
+	for (auto item : items)
+	{
+		if (item.IsOfType(StorageItemTypes::File))
+		{
+			StorageFile file = item.as<StorageFile>();
+			try {
+				file.CopyAsync(dst);
+			}
+			catch (...) {
+				// file already exists, we don't want to overwrite
+			}
+		}
+		else if (item.IsOfType(StorageItemTypes::Folder))
+		{
+			StorageFolder src_child = item.as<StorageFolder>();
+			auto dst_child = co_await dst.CreateFolderAsync(item.Name(), CreationCollisionOption::OpenIfExists);
+			if (dst_child)
+			{
+				copy_folder(src_child, dst_child);
+			}
+		}
+	}
+};
+winrt::fire_and_forget uwp_copy_assets()
+{
+	// On UWP we will copy the base content from application folder to 3D Objects directory
+	//	for easy access to the user:
+	StorageFolder location = KnownFolders::Objects3D();
+
+	// Objects3D/WickedEngine
+	auto destfolder = co_await location.CreateFolderAsync(L"WickedEngine", CreationCollisionOption::OpenIfExists);
+
+	string rootdir = std::filesystem::current_path().string() + "\\";
+	wstring wstr;
+
+	// scripts:
+	{
+		wiHelper::StringConvert(rootdir + "scripts\\", wstr);
+		auto src = co_await StorageFolder::GetFolderFromPathAsync(wstr.c_str());
+		if (src)
+		{
+			auto dst = co_await destfolder.CreateFolderAsync(L"scripts", CreationCollisionOption::OpenIfExists);
+			if (dst)
+			{
+				copy_folder(src, dst);
+			}
+		}
+	}
+
+	// models:
+	{
+		wiHelper::StringConvert(rootdir + "models\\", wstr);
+		auto src = co_await StorageFolder::GetFolderFromPathAsync(wstr.c_str());
+		if (src)
+		{
+			auto dst = co_await destfolder.CreateFolderAsync(L"models", CreationCollisionOption::OpenIfExists);
+			if (dst)
+			{
+				copy_folder(src, dst);
+			}
+		}
+	}
+
+	// Documentation:
+	{
+		wiHelper::StringConvert(rootdir + "Documentation\\", wstr);
+		auto src = co_await StorageFolder::GetFolderFromPathAsync(wstr.c_str());
+		if (src)
+		{
+			auto dst = destfolder.CreateFolderAsync(L"Documentation", CreationCollisionOption::OpenIfExists).get();
+			if (dst)
+			{
+				copy_folder(src, dst);
+			}
+		}
+	}
+}
+#endif // PLATFORM_UWP
+
 void Editor::Initialize()
 {
 	MainComponent::Initialize();
+
+	// With this mode, file data for resources will be kept around. This allows serializing embedded resource data inside scenes
+	wiResourceManager::SetMode(wiResourceManager::MODE_ALLOW_RETAIN_FILEDATA);
 
 	infoDisplay.active = true;
 	infoDisplay.watermark = true;
@@ -120,17 +173,6 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	}
 
 	renderPath->resolutionScale = resolutionScale;
-
-	renderPath->setShadowsEnabled(true);
-	renderPath->setReflectionsEnabled(true);
-	renderPath->setAO(RenderPath3D::AO_DISABLED);
-	renderPath->setSSREnabled(false);
-	renderPath->setMotionBlurEnabled(false);
-	renderPath->setColorGradingEnabled(false);
-	renderPath->setEyeAdaptionEnabled(false);
-	renderPath->setFXAAEnabled(false);
-	renderPath->setDepthOfFieldEnabled(false);
-	renderPath->setLightShaftsEnabled(false);
 
 	renderPath->Load();
 
@@ -348,65 +390,16 @@ void EditorComponent::ResizeLayout()
 	renderPathComboBox.SetSize(XMFLOAT2(100, 20));
 	renderPathComboBox.SetPos(XMFLOAT2(screenW - 120, 45));
 
+	saveModeComboBox.SetSize(XMFLOAT2(120, 20));
+	saveModeComboBox.SetPos(XMFLOAT2(screenW - 140, 70));
+
 	sceneGraphView.SetSize(XMFLOAT2(260, 300));
 	sceneGraphView.SetPos(XMFLOAT2(0, screenH - sceneGraphView.scale_local.y));
 }
 void EditorComponent::Load()
 {
 #ifdef PLATFORM_UWP
-	// On UWP we will copy the base content from application folder to 3D Objects directory
-	//	for easy access to the user:
-	StorageFolder^ location = KnownFolders::Objects3D;
-
-	// Objects3D/WickedEngine
-	create_task(location->CreateFolderAsync("WickedEngine", CreationCollisionOption::OpenIfExists)).then([=](StorageFolder^ destfolder) {
-
-		string rootdir = wiHelper::ExpandPath(wiHelper::GetOriginalWorkingDirectory());
-		wstring wstr;
-
-		// scripts:
-		wiHelper::StringConvert(rootdir + "scripts\\", wstr);
-		create_task(StorageFolder::GetFolderFromPathAsync(ref new String(wstr.c_str()))).then([=](StorageFolder^ src) {
-			if (src)
-			{
-				create_task(destfolder->CreateFolderAsync("scripts", CreationCollisionOption::OpenIfExists)).then([=](StorageFolder^ dst) {
-					if (dst)
-					{
-						copy_folder(src, dst);
-					}
-				});
-			}
-		});
-
-		// models:
-		wiHelper::StringConvert(rootdir + "models\\", wstr);
-		create_task(StorageFolder::GetFolderFromPathAsync(ref new String(wstr.c_str()))).then([=](StorageFolder^ src) {
-			if (src)
-			{
-				create_task(destfolder->CreateFolderAsync("models", CreationCollisionOption::OpenIfExists)).then([=](StorageFolder^ dst) {
-					if (dst)
-					{
-						copy_folder(src, dst);
-					}
-				});
-			}
-		});
-
-		// Documentation:
-		wiHelper::StringConvert(rootdir + "Documentation\\", wstr);
-		create_task(StorageFolder::GetFolderFromPathAsync(ref new String(wstr.c_str()))).then([=](StorageFolder^ src) {
-			if (src)
-			{
-				create_task(destfolder->CreateFolderAsync("Documentation", CreationCollisionOption::OpenIfExists)).then([=](StorageFolder^ dst) {
-					if (dst)
-					{
-						copy_folder(src, dst);
-					}
-				});
-			}
-		});
-
-	});
+	uwp_copy_assets();
 #endif // PLATFORM_UWP
 
 	wiJobSystem::context ctx;
@@ -689,6 +682,9 @@ void EditorComponent::Load()
 				{
 					Scene& scene = wiScene::GetScene();
 
+					wiResourceManager::MODE embed_mode = (wiResourceManager::MODE)saveModeComboBox.GetItemUserData(saveModeComboBox.GetSelected());
+					wiResourceManager::SetMode(embed_mode);
+
 					scene.Serialize(archive);
 
 					ResetHistory();
@@ -932,6 +928,15 @@ void EditorComponent::Load()
 	renderPathComboBox.SetEnabled(true);
 	renderPathComboBox.SetTooltip("Choose a render path...");
 	GetGUI().AddWidget(&renderPathComboBox);
+
+
+	saveModeComboBox.Create("Save Mode: ");
+	saveModeComboBox.SetColor(wiColor(0, 198, 101, 180), wiWidget::WIDGETSTATE::IDLE);
+	saveModeComboBox.SetColor(wiColor(0, 255, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
+	saveModeComboBox.AddItem("Embed resources", wiResourceManager::MODE_ALLOW_RETAIN_FILEDATA);
+	saveModeComboBox.AddItem("No embedding", wiResourceManager::MODE_ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING);
+	saveModeComboBox.SetTooltip("Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files");
+	GetGUI().AddWidget(&saveModeComboBox);
 
 
 	// Renderer and Postprocess windows are created in ChangeRenderPath(), because they deal with
@@ -1357,7 +1362,7 @@ void EditorComponent::Update(float dt)
 						if (wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
 						{
 							// if water, then put a water ripple onto it:
-							wiRenderer::PutWaterRipple(wiHelper::GetOriginalWorkingDirectory() + "images/ripple.png", hovered.position);
+							wiRenderer::PutWaterRipple("images/ripple.png", hovered.position);
 						}
 					}
 					else if (decalWnd.placementCheckBox.GetCheck() && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
@@ -1365,7 +1370,7 @@ void EditorComponent::Update(float dt)
 						// if not water or softbody, put a decal on it:
 						static int decalselector = 0;
 						decalselector = (decalselector + 1) % 2;
-						Entity entity = scene.Entity_CreateDecal("editorDecal", wiHelper::GetOriginalWorkingDirectory() + (decalselector == 0 ? "images/leaf.dds" : "images/blood1.png"));
+						Entity entity = scene.Entity_CreateDecal("editorDecal", (decalselector == 0 ? "images/leaf.dds" : "images/blood1.png"));
 						TransformComponent& transform = *scene.transforms.GetComponent(entity);
 						transform.MatrixTransform(hovered.orientation);
 						transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
@@ -1969,16 +1974,16 @@ void EditorComponent::Compose(CommandList cmd) const
 			switch (light.GetType())
 			{
 			case LightComponent::POINT:
-				wiImage::Draw(pointLightTex->texture, fx, cmd);
+				wiImage::Draw(&pointLightTex->texture, fx, cmd);
 				break;
 			case LightComponent::SPOT:
-				wiImage::Draw(spotLightTex->texture, fx, cmd);
+				wiImage::Draw(&spotLightTex->texture, fx, cmd);
 				break;
 			case LightComponent::DIRECTIONAL:
-				wiImage::Draw(dirLightTex->texture, fx, cmd);
+				wiImage::Draw(&dirLightTex->texture, fx, cmd);
 				break;
 			default:
-				wiImage::Draw(areaLightTex->texture, fx, cmd);
+				wiImage::Draw(&areaLightTex->texture, fx, cmd);
 				break;
 			}
 		}
@@ -2013,7 +2018,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(decalTex->texture, fx, cmd);
+			wiImage::Draw(&decalTex->texture, fx, cmd);
 
 		}
 	}
@@ -2046,7 +2051,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(forceFieldTex->texture, fx, cmd);
+			wiImage::Draw(&forceFieldTex->texture, fx, cmd);
 		}
 	}
 
@@ -2079,7 +2084,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(cameraTex->texture, fx, cmd);
+			wiImage::Draw(&cameraTex->texture, fx, cmd);
 		}
 	}
 
@@ -2111,7 +2116,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(armatureTex->texture, fx, cmd);
+			wiImage::Draw(&armatureTex->texture, fx, cmd);
 		}
 	}
 
@@ -2143,7 +2148,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(emitterTex->texture, fx, cmd);
+			wiImage::Draw(&emitterTex->texture, fx, cmd);
 		}
 	}
 
@@ -2175,7 +2180,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(hairTex->texture, fx, cmd);
+			wiImage::Draw(&hairTex->texture, fx, cmd);
 		}
 	}
 
@@ -2207,7 +2212,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(soundTex->texture, fx, cmd);
+			wiImage::Draw(&soundTex->texture, fx, cmd);
 		}
 	}
 

@@ -18,9 +18,20 @@ void MaterialWindow::Create(EditorComponent* editor)
 	float hei = 18;
 	float step = hei + 2;
 
+	shadowReceiveCheckBox.Create("Receive Shadow: ");
+	shadowReceiveCheckBox.SetTooltip("Receives shadow or not?");
+	shadowReceiveCheckBox.SetPos(XMFLOAT2(540, y += step));
+	shadowReceiveCheckBox.SetSize(XMFLOAT2(hei, hei));
+	shadowReceiveCheckBox.OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+			material->SetReceiveShadow(args.bValue);
+		});
+	AddWidget(&shadowReceiveCheckBox);
+
 	shadowCasterCheckBox.Create("Cast Shadow: ");
 	shadowCasterCheckBox.SetTooltip("The subset will contribute to the scene shadows if enabled.");
-	shadowCasterCheckBox.SetPos(XMFLOAT2(670, y += step));
+	shadowCasterCheckBox.SetPos(XMFLOAT2(670, y));
 	shadowCasterCheckBox.SetSize(XMFLOAT2(hei, hei));
 	shadowCasterCheckBox.OnClick([&](wiEventArgs args) {
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
@@ -481,7 +492,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 				params.extensions.push_back("bmp");
 				wiHelper::FileDialog(params, [this, material, &slot, i](std::string fileName) {
 					wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-						material->textures[i].resource = wiResourceManager::Load(fileName);
+						material->textures[i].resource = wiResourceManager::Load(fileName, wiResourceManager::IMPORT_RETAIN_FILEDATA);
 						material->textures[i].name = fileName;
 						material->SetDirty();
 						slots[i].button.SetText(wiHelper::GetFileNameFromPath(fileName));
@@ -633,6 +644,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		const NameComponent& name = *scene.names.GetComponent(entity);
 
 		materialNameField.SetValue(name.name);
+		shadowReceiveCheckBox.SetCheck(material->IsReceiveShadow());
 		shadowCasterCheckBox.SetCheck(material->IsCastingShadow());
 		useVertexColorsCheckBox.SetCheck(material->IsUsingVertexColors());
 		specularGlossinessCheckBox.SetCheck(material->IsUsingSpecularGlossinessWorkflow());
@@ -668,7 +680,7 @@ void MaterialWindow::SetEntity(Entity entity)
 
 		for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
 		{
-			slots[i].button.SetText(material->textures[i].name);
+			slots[i].button.SetText(wiHelper::GetFileNameFromPath(material->textures[i].name));
 			slots[i].uvsetField.SetText(std::to_string(material->textures[i].uvset));
 		}
 

@@ -128,6 +128,13 @@ void PaintToolWindow::Create(EditorComponent* editor)
 	wireCheckBox.SetCheck(true);
 	AddWidget(&wireCheckBox);
 
+	pressureCheckBox.Create("Pressure: ");
+	pressureCheckBox.SetTooltip("Set whether to use pressure sensitivity (for example pen tablet)");
+	pressureCheckBox.SetSize(XMFLOAT2(hei, hei));
+	pressureCheckBox.SetPos(XMFLOAT2(x + 200, y));
+	pressureCheckBox.SetCheck(false);
+	AddWidget(&pressureCheckBox);
+
 	textureSlotComboBox.Create("Texture Slot: ");
 	textureSlotComboBox.SetTooltip("Choose texture slot of the selected material to paint (texture paint mode only)");
 	textureSlotComboBox.SetPos(XMFLOAT2(x, y += step));
@@ -149,7 +156,7 @@ void PaintToolWindow::Create(EditorComponent* editor)
 	AddWidget(&textureSlotComboBox);
 
 	saveTextureButton.Create("Save Texture");
-	saveTextureButton.SetTooltip("Save edited texture. This will append _0 postfix to texture name and save as new PNG texture.");
+	saveTextureButton.SetTooltip("Save edited texture.");
 	saveTextureButton.SetSize(XMFLOAT2(200, hei));
 	saveTextureButton.SetPos(XMFLOAT2(x, y += step));
 	saveTextureButton.SetEnabled(false);
@@ -168,21 +175,20 @@ void PaintToolWindow::Create(EditorComponent* editor)
 		if (material == nullptr)
 			return;
 
-		auto resource = GetEditTextureSlot(*material);
-
-		std::string* slotname = nullptr;
+		Texture editTexture = GetEditTextureSlot(*material);
 
 		uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
-		slotname = &material->textures[sel].name;
 
-		wiHelper::RemoveExtensionFromFileName(*slotname);
-		*slotname = *slotname + "_0.png";
-		std::string filename = wiHelper::GetWorkingDirectory() + *slotname;
-
-		if (!wiHelper::saveTextureToFile(*resource->texture, filename))
+		std::vector<uint8_t> texturefiledata;
+		if (wiHelper::saveTextureToMemoryFile(editTexture, "PNG", texturefiledata))
 		{
-			wiHelper::messageBox("Saving texture failed! Check filename of texture slot in the material!");
+			material->textures[sel].resource->filedata = texturefiledata;
 		}
+		else
+		{
+			wiHelper::messageBox("Saving texture failed! :(");
+		}
+
 	});
 	AddWidget(&saveTextureButton);
 
@@ -218,6 +224,7 @@ void PaintToolWindow::Update(float dt)
 	auto pointer = wiInput::GetPointer();
 	posNew = XMFLOAT2(pointer.x, pointer.y);
 	stroke_dist += wiMath::Distance(pos, posNew);
+	const float pressure = pressureCheckBox.GetCheck() ? pointer.w : 1.0f;
 
 	const float spacing = spacingSlider.GetValue();
 	const bool pointer_moved = stroke_dist >= spacing;
@@ -232,6 +239,7 @@ void PaintToolWindow::Update(float dt)
 
 	const MODE mode = GetMode();
 	const float radius = radiusSlider.GetValue();
+	const float pressure_radius = radius * pressure;
 	const float amount = amountSlider.GetValue();
 	const float falloff = falloffSlider.GetValue();
 	const wiColor color = colorPicker.GetPickColor();
@@ -269,10 +277,10 @@ void PaintToolWindow::Update(float dt)
 			break;
 
 		int uvset = 0;
-		auto resource = GetEditTextureSlot(*material, &uvset);
-		if (resource == nullptr)
+		Texture editTexture = GetEditTextureSlot(*material, &uvset);
+		if (!editTexture.IsValid())
 			break;
-		const TextureDesc& desc = resource->texture->GetDesc();
+		const TextureDesc& desc = editTexture.GetDesc();
 		auto& vertex_uvset = uvset == 0 ? mesh->vertex_uvset_0 : mesh->vertex_uvset_1;
 
 		const float u = intersect.bary.x;
@@ -295,7 +303,7 @@ void PaintToolWindow::Update(float dt)
 			RecordHistory(true, cmd);
 
 			// Need to requery this because RecordHistory might swap textures on material:
-			resource = GetEditTextureSlot(*material, &uvset);
+			editTexture = GetEditTextureSlot(*material, &uvset);
 
 			static GPUBuffer cbuf;
 			if (!cbuf.IsValid())
@@ -312,11 +320,11 @@ void PaintToolWindow::Update(float dt)
 
 			wiRenderer::BindCommonResources(cmd);
 			device->BindResource(CS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
-			device->BindUAV(CS, resource->texture, 0, cmd);
+			device->BindUAV(CS, &editTexture, 0, cmd);
 
 			PaintTextureCB cb;
 			cb.xPaintBrushCenter = center;
-			cb.xPaintBrushRadius = (uint32_t)radius;
+			cb.xPaintBrushRadius = (uint32_t)pressure_radius;
 			cb.xPaintBrushAmount = amount;
 			cb.xPaintBrushFalloff = falloff;
 			cb.xPaintBrushColor = color.rgba;
@@ -334,7 +342,7 @@ void PaintToolWindow::Update(float dt)
 
 			device->UnbindUAVs(0, 1, cmd);
 
-			wiRenderer::GenerateMipChain(*resource->texture, wiRenderer::MIPGENFILTER::MIPGENFILTER_LINEAR, cmd);
+			wiRenderer::GenerateMipChain(editTexture, wiRenderer::MIPGENFILTER::MIPGENFILTER_LINEAR, cmd);
 		}
 
 		wiRenderer::PaintRadius paintrad;
@@ -453,11 +461,11 @@ void PaintToolWindow::Update(float dt)
 
 				const float z = XMVectorGetZ(P);
 				const float dist = XMVectorGetX(XMVector2Length(C - P));
-				if (z >= 0 && z <= 1 && dist <= radius)
+				if (z >= 0 && z <= 1 && dist <= pressure_radius)
 				{
 					RecordHistory(true);
 					rebuild = true;
-					const float affection = amount * std::pow(1.0f - (dist / radius), falloff);
+					const float affection = amount * std::pow(1.0f - (dist / pressure_radius), falloff);
 
 					switch (mode)
 					{
@@ -581,10 +589,10 @@ void PaintToolWindow::Update(float dt)
 
 				const float z = XMVectorGetZ(P);
 				const float dist = XMVectorGetX(XMVector2Length(C - P));
-				if (z >= 0 && z <= 1 && dist <= radius)
+				if (z >= 0 && z <= 1 && dist <= pressure_radius)
 				{
 					averageNormal += N;
-					const float affection = amount * std::pow(1.0f - (dist / radius), falloff);
+					const float affection = amount * std::pow(1.0f - (dist / pressure_radius), falloff);
 					paintindices.push_back({ j, affection });
 				}
 			}
@@ -671,7 +679,7 @@ void PaintToolWindow::Update(float dt)
 				P = P * MUL + ADD;
 				P = P * SCREEN;
 				const float z = XMVectorGetZ(P);
-				if (z >= 0 && z <= 1 && XMVectorGetX(XMVector2Length(C - P)) <= radius)
+				if (z >= 0 && z <= 1 && XMVectorGetX(XMVector2Length(C - P)) <= pressure_radius)
 				{
 					RecordHistory(true);
 					softbody->weights[j] = (mode == MODE_SOFTBODY_PINNING ? 0.0f : 1.0f);
@@ -778,7 +786,7 @@ void PaintToolWindow::Update(float dt)
 
 				const float z = XMVectorGetZ(P);
 				const float dist = XMVectorGetX(XMVector2Length(C - P));
-				if (z >= 0 && z <= 1 && dist <= radius)
+				if (z >= 0 && z <= 1 && dist <= pressure_radius)
 				{
 					RecordHistory(true);
 					switch (mode)
@@ -792,7 +800,7 @@ void PaintToolWindow::Update(float dt)
 					case MODE_HAIRPARTICLE_LENGTH:
 						if (hair->vertex_lengths[j] > 0) // don't change distribution
 						{
-							const float affection = amount * std::pow(1.0f - (dist / radius), falloff);
+							const float affection = amount * std::pow(1.0f - (dist / pressure_radius), falloff);
 							hair->vertex_lengths[j] = wiMath::Lerp(hair->vertex_lengths[j], color_float.w, affection);
 							// don't let it "remove" the vertex by keeping its length above zero:
 							//	(because if removed, distribution also changes which might be distracting)
@@ -941,7 +949,7 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 		if (material == nullptr)
 			break;
 
-		auto resource = GetEditTextureSlot(*material);
+		auto editTexture = GetEditTextureSlot(*material);
 
 		archive << textureSlotComboBox.GetSelected();
 
@@ -949,7 +957,7 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 		{
 			history_textures.resize((history_textureIndex + 1) * 2);
 		}
-		history_textures[history_textureIndex] = resource;
+		history_textures[history_textureIndex] = editTexture;
 		archive << history_textureIndex;
 		history_textureIndex++;
 
@@ -957,23 +965,20 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 		{
 			// Make a copy of texture to edit and replace material resource:
 			GraphicsDevice* device = wiRenderer::GetDevice();
-			Texture* newTex = new Texture;
-			TextureDesc desc = resource->texture->GetDesc();
+			Texture newTex;
+			TextureDesc desc = editTexture.GetDesc();
 			desc.Format = FORMAT_R8G8B8A8_UNORM; // force format to one that is writable by GPU
-			device->CreateTexture(&desc, nullptr, newTex);
-			for (uint32_t i = 0; i < newTex->GetDesc().MipLevels; ++i)
+			device->CreateTexture(&desc, nullptr, &newTex);
+			for (uint32_t i = 0; i < newTex.GetDesc().MipLevels; ++i)
 			{
 				int subresource_index;
-				subresource_index = device->CreateSubresource(newTex, SRV, 0, 1, i, 1);
+				subresource_index = device->CreateSubresource(&newTex, SRV, 0, 1, i, 1);
 				assert(subresource_index == i);
-				subresource_index = device->CreateSubresource(newTex, UAV, 0, 1, i, 1);
+				subresource_index = device->CreateSubresource(&newTex, UAV, 0, 1, i, 1);
 				assert(subresource_index == i);
 			}
-			wiRenderer::CopyTexture2D(*newTex, -1, 0, 0, *resource->texture, 0, cmd);
-			std::stringstream ss("");
-			ss << "painttool_" << wiRandom::getRandom(INT_MAX);
-			auto newRes = wiResourceManager::Register(ss.str(), newTex, wiResource::DATA_TYPE::IMAGE);
-			ReplaceEditTextureSlot(*material, newRes);
+			wiRenderer::CopyTexture2D(newTex, -1, 0, 0, editTexture, 0, cmd);
+			ReplaceEditTextureSlot(*material, newTex);
 		}
 
 	}
@@ -1242,15 +1247,15 @@ void PaintToolWindow::ConsumeHistoryOperation(wiArchive& archive, bool undo)
 		break;
 	}
 }
-std::shared_ptr<wiResource> PaintToolWindow::GetEditTextureSlot(const MaterialComponent& material, int* uvset)
+Texture PaintToolWindow::GetEditTextureSlot(const MaterialComponent& material, int* uvset)
 {
 	uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
 	if (uvset)
 		*uvset = material.textures[sel].uvset;
-	return material.textures[sel].resource;
+	return material.textures[sel].resource->texture;
 }
-void PaintToolWindow::ReplaceEditTextureSlot(wiScene::MaterialComponent& material, std::shared_ptr<wiResource> resource)
+void PaintToolWindow::ReplaceEditTextureSlot(wiScene::MaterialComponent& material, const Texture& texture)
 {
 	uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
-	material.textures[sel].resource = resource;
+	material.textures[sel].resource->texture = texture;
 }

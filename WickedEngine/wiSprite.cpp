@@ -17,7 +17,7 @@ wiSprite::wiSprite(const std::string& newTexture, const std::string& newMask)
 	{
 		maskName = newMask;
 		maskResource = wiResourceManager::Load(newMask);
-		params.setMaskMap(maskResource->texture);
+		params.setMaskMap(&maskResource->texture);
 	}
 }
 
@@ -25,7 +25,7 @@ void wiSprite::Draw(CommandList cmd) const
 {
 	if (IsHidden())
 		return;
-	wiImage::Draw(textureResource != nullptr ? textureResource->texture : wiTextureHelper::getWhite(), params, cmd);
+	wiImage::Draw(textureResource != nullptr ? &textureResource->texture : wiTextureHelper::getWhite(), params, cmd);
 }
 
 void wiSprite::FixedUpdate()

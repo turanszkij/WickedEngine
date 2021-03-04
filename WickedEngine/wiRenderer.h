@@ -247,20 +247,37 @@ namespace wiRenderer
 	void RefreshLightmapAtlas(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 	// Voxelize the scene into a voxel grid 3D texture
 	void VoxelRadiance(const Visibility& vis, wiGraphics::CommandList cmd);
-	// Compute light grid tiles
-	void ComputeTiledLightCulling(
-		const wiGraphics::Texture& depthbuffer,
-		const wiGraphics::GPUBuffer& tileFrustums,
-		const wiGraphics::GPUBuffer& entityTiles_Opaque,
-		const wiGraphics::GPUBuffer& entityTiles_Transparent,
-		const wiGraphics::Texture& debugUAV,
-		wiGraphics::CommandList cmd
-	);
 	// Run a compute shader that will resolve a MSAA depth buffer to a single-sample texture
 	void ResolveMSAADepthBuffer(const wiGraphics::Texture& dst, const wiGraphics::Texture& src, wiGraphics::CommandList cmd);
 	void DownsampleDepthBuffer(const wiGraphics::Texture& src, wiGraphics::CommandList cmd);
+
+	struct TiledLightResources
+	{
+		wiGraphics::GPUBuffer tileFrustums; // entity culling frustums
+		wiGraphics::GPUBuffer entityTiles_Opaque; // culled entity indices (for opaque pass)
+		wiGraphics::GPUBuffer entityTiles_Transparent; // culled entity indices (for transparent pass)
+	};
+	void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution);
+	// Compute light grid tiles
+	void ComputeTiledLightCulling(
+		const TiledLightResources& res,
+		const wiGraphics::Texture& depthbuffer,
+		const wiGraphics::Texture& debugUAV,
+		wiGraphics::CommandList cmd
+	);
+
+	struct LuminanceResources
+	{
+		wiGraphics::Texture luminance_map;
+		std::vector<wiGraphics::Texture> luminance_avg;
+	};
+	void CreateLuminanceResources(LuminanceResources& res, XMUINT2 resolution);
 	// Compute the luminance for the source image and return the texture containing the luminance value in pixel [0,0]
-	const wiGraphics::Texture* ComputeLuminance(const wiGraphics::Texture& sourceImage, wiGraphics::CommandList cmd);
+	const wiGraphics::Texture* ComputeLuminance(
+		const LuminanceResources& res,
+		const wiGraphics::Texture& sourceImage,
+		wiGraphics::CommandList cmd
+	);
 
 	void ComputeShadingRateClassification(
 		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
@@ -290,7 +307,14 @@ namespace wiRenderer
 		int mip_dst = -1,
 		bool wide = false
 	);
+	struct SSAOResources
+	{
+		wiGraphics::Texture temp0;
+		wiGraphics::Texture temp1;
+	};
+	void CreateSSAOResources(SSAOResources& res, XMUINT2 resolution);
 	void Postprocess_SSAO(
+		const SSAOResources& res,
 		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& output,
@@ -300,20 +324,53 @@ namespace wiRenderer
 		float power = 2.0f
 	);
 	void Postprocess_HBAO(
+		const SSAOResources& res,
 		const wiScene::CameraComponent& camera,
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float power = 2.0f
 		);
+	struct MSAOResources
+	{
+		wiGraphics::Texture texture_lineardepth_downsize1;
+		wiGraphics::Texture texture_lineardepth_tiled1;
+		wiGraphics::Texture texture_lineardepth_downsize2;
+		wiGraphics::Texture texture_lineardepth_tiled2;
+		wiGraphics::Texture texture_lineardepth_downsize3;
+		wiGraphics::Texture texture_lineardepth_tiled3;
+		wiGraphics::Texture texture_lineardepth_downsize4;
+		wiGraphics::Texture texture_lineardepth_tiled4;
+		wiGraphics::Texture texture_ao_merged1;
+		wiGraphics::Texture texture_ao_hq1;
+		wiGraphics::Texture texture_ao_smooth1;
+		wiGraphics::Texture texture_ao_merged2;
+		wiGraphics::Texture texture_ao_hq2;
+		wiGraphics::Texture texture_ao_smooth2;
+		wiGraphics::Texture texture_ao_merged3;
+		wiGraphics::Texture texture_ao_hq3;
+		wiGraphics::Texture texture_ao_smooth3;
+		wiGraphics::Texture texture_ao_merged4;
+		wiGraphics::Texture texture_ao_hq4;
+	};
+	void CreateMSAOResources(MSAOResources& res, XMUINT2 resolution);
 	void Postprocess_MSAO(
+		const MSAOResources& res,
 		const wiScene::CameraComponent& camera,
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float power = 2.0f
 		);
+	struct RTAOResources
+	{
+		wiGraphics::Texture temp;
+		wiGraphics::Texture temporal[2];
+		wiGraphics::Texture normals;
+	};
+	void CreateRTAOResources(RTAOResources& res, XMUINT2 resolution);
 	void Postprocess_RTAO(
+		const RTAOResources& res,
 		const wiScene::Scene& scene,
 		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture& lineardepth,
@@ -325,7 +382,14 @@ namespace wiRenderer
 		uint32_t samplecount = 16,
 		float power = 2.0f
 	);
+	struct RTReflectionResources
+	{
+		wiGraphics::Texture temp;
+		wiGraphics::Texture texture_temporal[2];
+	};
+	void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution);
 	void Postprocess_RTReflection(
+		const RTReflectionResources& res,
 		const wiScene::Scene& scene,
 		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture& depth_history,
@@ -334,7 +398,15 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd,
 		float range = 1000.0f
 	);
+	struct SSRResources
+	{
+		wiGraphics::Texture texture_raytrace;
+		wiGraphics::Texture texture_resolve;
+		wiGraphics::Texture texture_temporal[2];
+	};
+	void CreateSSRResources(SSRResources& res, XMUINT2 resolution);
 	void Postprocess_SSR(
+		const SSRResources& res,
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture& lineardepth,
@@ -343,7 +415,16 @@ namespace wiRenderer
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
+	struct RTShadowResources
+	{
+		wiGraphics::TextureDesc saved_desc;
+		wiGraphics::Texture temp;
+		wiGraphics::Texture temporal[2];
+		wiGraphics::Texture normals;
+	};
+	void CreateRTShadowResources(RTShadowResources& res, XMUINT2 resolution);
 	void Postprocess_RTShadow(
+		const RTShadowResources& res,
 		const wiScene::Scene& scene,
 		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture& lineardepth,
@@ -353,7 +434,13 @@ namespace wiRenderer
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
+	struct ScreenSpaceShadowResources
+	{
+		wiGraphics::Texture temp;
+	};
+	void CreateScreenSpaceShadowResources(ScreenSpaceShadowResources& res, XMUINT2 resolution);
 	void Postprocess_ScreenSpaceShadow(
+		const ScreenSpaceShadowResources& res,
 		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::GPUBuffer& entityTiles_Opaque,
@@ -368,7 +455,27 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd,
 		const XMFLOAT2& center
 	);
+	struct DepthOfFieldResources
+	{
+		wiGraphics::Texture texture_tilemax_horizontal;
+		wiGraphics::Texture texture_tilemin_horizontal;
+		wiGraphics::Texture texture_tilemax;
+		wiGraphics::Texture texture_tilemin;
+		wiGraphics::Texture texture_neighborhoodmax;
+		wiGraphics::Texture texture_presort;
+		wiGraphics::Texture texture_prefilter;
+		wiGraphics::Texture texture_main;
+		wiGraphics::Texture texture_postfilter;
+		wiGraphics::Texture texture_alpha1;
+		wiGraphics::Texture texture_alpha2;
+		wiGraphics::GPUBuffer buffer_tile_statistics;
+		wiGraphics::GPUBuffer buffer_tiles_earlyexit;
+		wiGraphics::GPUBuffer buffer_tiles_cheap;
+		wiGraphics::GPUBuffer buffer_tiles_expensive;
+	};
+	void CreateDepthOfFieldResources(DepthOfFieldResources& res, XMUINT2 resolution);
 	void Postprocess_DepthOfField(
+		const DepthOfFieldResources& res,
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& output,
 		const wiGraphics::Texture& lineardepth,
@@ -385,7 +492,21 @@ namespace wiRenderer
 		float thickness = 1.0f,
 		const XMFLOAT4& color = XMFLOAT4(0, 0, 0, 1)
 	);
+	struct MotionBlurResources
+	{
+		wiGraphics::Texture texture_tilemin_horizontal;
+		wiGraphics::Texture texture_tilemax_horizontal;
+		wiGraphics::Texture texture_tilemax;
+		wiGraphics::Texture texture_tilemin;
+		wiGraphics::Texture texture_neighborhoodmax;
+		wiGraphics::GPUBuffer buffer_tile_statistics;
+		wiGraphics::GPUBuffer buffer_tiles_earlyexit;
+		wiGraphics::GPUBuffer buffer_tiles_cheap;
+		wiGraphics::GPUBuffer buffer_tiles_expensive;
+	};
+	void CreateMotionBlurResources(MotionBlurResources& res, XMUINT2 resolution);
 	void Postprocess_MotionBlur(
+		const MotionBlurResources& res,
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
@@ -393,16 +514,28 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd,
 		float strength = 100.0f
 	);
+	struct BloomResources
+	{
+		wiGraphics::Texture texture_bloom;
+		wiGraphics::Texture texture_temp;
+	};
+	void CreateBloomResources(BloomResources& res, XMUINT2 resolution);
 	void Postprocess_Bloom(
+		const BloomResources& res,
 		const wiGraphics::Texture& input,
-		const wiGraphics::Texture& bloom,
-		const wiGraphics::Texture& bloom_tmp,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float threshold = 1.0f
 	);
+	struct VolumetricCloudResources
+	{
+		wiGraphics::Texture texture_cloudRender;
+		wiGraphics::Texture texture_cloudPosition;
+		wiGraphics::Texture texture_reproject[2];
+	};
+	void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resolution);
 	void Postprocess_VolumetricClouds(
-		const wiGraphics::Texture& input_output,
+		const VolumetricCloudResources& res,
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& depthbuffer,
 		wiGraphics::CommandList cmd
@@ -477,14 +610,14 @@ namespace wiRenderer
 		wiGraphics::GPUBuffer rayIndexBuffer[2];
 		wiGraphics::GPUBuffer rayCountBuffer[2];
 		wiGraphics::GPUBuffer raySortBuffer;
-		void Create(uint32_t newRayCapacity);
 	};
+	void CreateRayBuffers(RayBuffers& value, uint32_t rayCount);
 	// Generate rays for every pixel of the internal resolution
-	RayBuffers* GenerateScreenRayBuffers(const wiScene::CameraComponent& camera, uint32_t width, uint32_t height, wiGraphics::CommandList cmd);
+	void GenerateScreenRayBuffers(const RayBuffers& rayBuffers, const wiScene::CameraComponent& camera, uint32_t width, uint32_t height, wiGraphics::CommandList cmd);
 	// Render the scene with ray tracing. You provide the ray buffer, where each ray maps to one pixel of the result testure
 	void RayTraceScene(
 		const wiScene::Scene& scene,
-		const RayBuffers* rayBuffers,
+		const RayBuffers& rayBuffers,
 		const wiGraphics::Texture* result,
 		int accumulation_sample,
 		wiGraphics::CommandList cmd

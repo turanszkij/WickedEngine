@@ -60,12 +60,16 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 		device->CreateRenderPass(&desc, &renderpass_debugbvh);
 	}
 
+	wiRenderer::CreateRayBuffers(rayBuffers, GetInternalResolution().x * GetInternalResolution().y);
+
 	// also reset accumulation buffer state:
 	sam = -1;
 }
 
 void RenderPath3D_PathTracing::Update(float dt)
 {
+	setOcclusionCullingEnabled(false);
+
 	if (camera->IsDirty())
 	{
 		camera->SetDirty(false);
@@ -152,7 +156,7 @@ void RenderPath3D_PathTracing::Render() const
 		{
 			auto range = wiProfiler::BeginRangeGPU("Traced Scene", cmd);
 
-			wiRenderer::RayBuffers* rayBuffers = wiRenderer::GenerateScreenRayBuffers(*camera, GetInternalResolution().x, GetInternalResolution().y, cmd);
+			wiRenderer::GenerateScreenRayBuffers(rayBuffers, *camera, GetInternalResolution().x, GetInternalResolution().y, cmd);
 			wiRenderer::RayTraceScene(*scene, rayBuffers, &traceResult, sam, cmd);
 
 

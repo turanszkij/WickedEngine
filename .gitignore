@@ -214,3 +214,8 @@ ModelManifest.xml
 
 # CMake build cache files
 .cache/
+
+# WINRT Generated files
+/Editor/Generated Files/winrt
+/Template_UWP/Generated Files/winrt
+/WickedEngine/Generated Files/winrt

@@ -13,6 +13,8 @@ protected:
 
 	wiGraphics::RenderPass renderpass_debugbvh;
 
+	wiRenderer::RayBuffers rayBuffers;
+
 	void ResizeBuffers() override;
 
 public:

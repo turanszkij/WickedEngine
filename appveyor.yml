@@ -6,6 +6,9 @@ branches:
 image: Visual Studio 2019
 configuration: Release
 
+before_build:
+  - nuget restore
+
 build_script:
   - msbuild "C:\projects\wickedengine\WickedEngine.sln" /t:Editor_Windows /m /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - msbuild "C:\projects\wickedengine\WickedEngine.sln" /t:Editor_UWP /m /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
@@ -22,11 +25,11 @@ after_build:
 #Editor:
   - cmd: move %APPVEYOR_BUILD_FOLDER%\BUILD\%PLATFORM%\Release\Editor_Windows\Editor_Windows.exe %APPVEYOR_BUILD_FOLDER%\Editor
   - cmd: xcopy C:\projects\wickedengine\WickedEngine\dxcompiler.dll %APPVEYOR_BUILD_FOLDER%\Editor
-  - cmd: 7z a WickedEngineEditor.zip WickedEngine\shaders\ WickedEngine\fonts\ images\ models\ scripts\ Documentation\ features.txt other_licenses.txt *.md Editor\*.exe Editor\images\ Editor\sound\ Editor\*.ini Editor\*.ico Editor\*.lua Editor\*.dll
+  - cmd: 7z a WickedEngineEditor.zip WickedEngine\shaders\ images\ models\ scripts\ Documentation\ features.txt other_licenses.txt *.md Editor\*.exe Editor\images\ Editor\sound\ Editor\*.ini Editor\*.ico Editor\*.lua Editor\*.dll
 #Tests:
   - cmd: move %APPVEYOR_BUILD_FOLDER%\BUILD\%PLATFORM%\Release\Tests\Tests.exe %APPVEYOR_BUILD_FOLDER%\Tests
   - cmd: xcopy C:\projects\wickedengine\WickedEngine\dxcompiler.dll %APPVEYOR_BUILD_FOLDER%\Tests
-  - cmd: 7z a WickedEngineTests.zip WickedEngine\shaders\ WickedEngine\fonts\ images\ models\ scripts\ Documentation\ features.txt other_licenses.txt *.md Tests\*.exe Tests\images\ Tests\sound\ Tests\*.ini Tests\*.ico Tests\*.lua Tests\*.dll Tests\*.ttf
+  - cmd: 7z a WickedEngineTests.zip WickedEngine\shaders\ images\ models\ scripts\ Documentation\ features.txt other_licenses.txt *.md Tests\*.exe Tests\images\ Tests\sound\ Tests\*.ini Tests\*.ico Tests\*.lua Tests\*.dll Tests\*.ttf
   
 artifacts:
 - path: WickedEngineEditor.zip

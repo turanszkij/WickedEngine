@@ -7,9 +7,6 @@
     <Filter Include="UTILITY">
       <UniqueIdentifier>{fd4f5329-f357-4486-b34c-7401d8d9f761}</UniqueIdentifier>
     </Filter>
-    <Filter Include="fonts">
-      <UniqueIdentifier>{2703bf0c-e01c-4b3b-bfd8-3709619da71e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ENGINE">
       <UniqueIdentifier>{2d30408b-f788-42a8-9648-41561036e10a}</UniqueIdentifier>
     </Filter>
@@ -1137,6 +1134,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\volk.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\arial.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1909,10 +1909,5 @@
     <None Include="$(MSBuildThisFileDirectory)Utility\DirectXPackedVector.inl">
       <Filter>UTILITY</Filter>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Font Include="$(MSBuildThisFileDirectory)fonts\arial.ttf">
-      <Filter>fonts</Filter>
-    </Font>
   </ItemGroup>
 </Project>

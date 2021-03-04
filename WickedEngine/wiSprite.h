@@ -19,8 +19,6 @@ private:
 	uint32_t _flags = EMPTY;
 
 	std::string textureName, maskName;
-	std::shared_ptr<wiResource> textureResource;
-	std::shared_ptr<wiResource> maskResource;
 public:
 	wiSprite(const std::string& newTexture = "", const std::string& newMask = "");
 
@@ -34,6 +32,8 @@ public:
 	constexpr bool IsDisableUpdate() const { return _flags & DISABLE_UPDATE; }
 
 	wiImageParams params;
+	std::shared_ptr<wiResource> textureResource;
+	std::shared_ptr<wiResource> maskResource;
 
 	struct Anim
 	{
@@ -92,13 +92,12 @@ public:
 		WobbleAnim wobbleAnim;
 	};
 	Anim anim;
-	
-	const wiGraphics::Texture* getTexture() { return textureResource->texture; }
-	void setTexture(const wiGraphics::Texture* texture)
+
+	const wiGraphics::Texture* getTexture() const
 	{
-		textureResource = std::make_shared<wiResource>();
-		textureResource->texture = texture;
-		textureResource->type = wiResource::IMAGE;
+		if(textureResource != nullptr)
+			return &textureResource->texture;
+		return nullptr;
 	}
 };
 

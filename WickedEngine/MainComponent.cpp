@@ -36,77 +36,6 @@ void MainComponent::Initialize()
 	}
 	initialized = true;
 
-	wiHelper::GetOriginalWorkingDirectory();
-
-	// User can also create a graphics device if custom logic is desired, but he must do before this function!
-	if (wiRenderer::GetDevice() == nullptr)
-	{
-		auto window = wiPlatform::GetWindow();
-
-		bool debugdevice = wiStartupArguments::HasArgument("debugdevice");
-
-        bool use_dx11 = wiStartupArguments::HasArgument("dx11");
-        bool use_dx12 = wiStartupArguments::HasArgument("dx12");
-        bool use_vulkan = wiStartupArguments::HasArgument("vulkan");
-
-#ifndef WICKEDENGINE_BUILD_DX11
-        if (use_dx11) {
-            wiHelper::messageBox("The engine was built without DX11 support!", "Error");
-            use_dx11 = false;
-        }
-#endif
-#ifndef WICKEDENGINE_BUILD_DX12
-        if (use_dx12) {
-            wiHelper::messageBox("The engine was built without DX12 support!", "Error");
-            use_dx12 = false;
-        }
-#endif
-#ifndef WICKEDENGINE_BUILD_VULKAN
-        if (use_vulkan) {
-            wiHelper::messageBox("The engine was built without Vulkan support!", "Error");
-            use_vulkan = false;
-        }
-#endif
-
-        if (!use_dx11 && !use_dx12 && !use_vulkan)
-        {
-#if defined(WICKEDENGINE_BUILD_DX11)
-            use_dx11 = true;
-#elif defined(WICKEDENGINE_BUILD_DX12)
-            use_dx12 = true;
-#elif defined(WICKEDENGINE_BUILD_VULKAN)
-            use_vulkan = true;
-#else
-            wiBackLog::post("No rendering backend is enabled! Please enable at least one so we can use it as default");
-            assert(false);
-#endif
-        }
-        assert(use_dx11 || use_dx12 || use_vulkan);
-
-		if (use_vulkan)
-		{
-#ifdef WICKEDENGINE_BUILD_VULKAN
-			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "spirv/");
-			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_Vulkan>(window, fullscreen, debugdevice));
-#endif
-		}
-		else if (use_dx12)
-		{
-#ifdef WICKEDENGINE_BUILD_DX12
-			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl6/");
-			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX12>(window, fullscreen, debugdevice));
-#endif
-		}
-		else if (use_dx11)
-		{
-#ifdef WICKEDENGINE_BUILD_DX11
-			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX11>(window, fullscreen, debugdevice));
-#endif
-		}
-
-	}
-
-
 	wiInitializer::InitializeComponentsAsync();
 }
 
@@ -162,7 +91,7 @@ void MainComponent::Run()
 	deltaTime = float(std::max(0.0, timer.elapsed() / 1000.0));
 	timer.record();
 
-	if (wiPlatform::IsWindowActive())
+	if (is_window_active)
 	{
 		// If the application is active, run Update loops:
 
@@ -277,12 +206,14 @@ void MainComponent::Compose(CommandList cmd)
 		GetActivePath()->Compose(cmd);
 	}
 
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
 	if (fadeManager.IsActive())
 	{
 		// display fade rect
 		static wiImageParams fx;
-		fx.siz.x = (float)wiRenderer::GetDevice()->GetScreenWidth();
-		fx.siz.y = (float)wiRenderer::GetDevice()->GetScreenHeight();
+		fx.siz.x = (float)device->GetScreenWidth();
+		fx.siz.y = (float)device->GetScreenHeight();
 		fx.opacity = fadeManager.opacity;
 		wiImage::Draw(wiTextureHelper::getColor(fadeManager.color), fx, cmd);
 	}
@@ -308,19 +239,19 @@ void MainComponent::Compose(CommandList cmd)
 #endif
 
 #ifdef WICKEDENGINE_BUILD_DX11
-			if (dynamic_cast<GraphicsDevice_DX11*>(wiRenderer::GetDevice()))
+			if (dynamic_cast<GraphicsDevice_DX11*>(device))
 			{
 				ss << "[DX11]";
 			}
 #endif
 #ifdef WICKEDENGINE_BUILD_DX12
-			if (dynamic_cast<GraphicsDevice_DX12*>(wiRenderer::GetDevice()))
+			if (dynamic_cast<GraphicsDevice_DX12*>(device))
 			{
 				ss << "[DX12]";
 			}
 #endif
 #ifdef WICKEDENGINE_BUILD_VULKAN
-			if (dynamic_cast<GraphicsDevice_Vulkan*>(wiRenderer::GetDevice()))
+			if (dynamic_cast<GraphicsDevice_Vulkan*>(device))
 			{
 				ss << "[Vulkan]";
 			}
@@ -329,7 +260,7 @@ void MainComponent::Compose(CommandList cmd)
 #ifdef _DEBUG
 			ss << "[DEBUG]";
 #endif
-			if (wiRenderer::GetDevice()->IsDebugDevice())
+			if (device->IsDebugDevice())
 			{
 				ss << "[debugdevice]";
 			}
@@ -337,7 +268,7 @@ void MainComponent::Compose(CommandList cmd)
 		}
 		if (infoDisplay.resolution)
 		{
-			ss << "Resolution: " << wiRenderer::GetDevice()->GetResolutionWidth() << " x " << wiRenderer::GetDevice()->GetResolutionHeight() << " (" << wiPlatform::GetDPI() << " dpi)" << endl;
+			ss << "Resolution: " << device->GetResolutionWidth() << " x " << device->GetResolutionHeight() << " (" << device->GetDPI() << " dpi)" << endl;
 		}
 		if (infoDisplay.fpsinfo)
 		{
@@ -375,7 +306,7 @@ void MainComponent::Compose(CommandList cmd)
 
 		if (infoDisplay.colorgrading_helper)
 		{
-			wiImage::Draw(wiTextureHelper::getColorGradeDefault(), wiImageParams(0, 0, 256.0f / wiPlatform::GetDPIScaling(), 16.0f / wiPlatform::GetDPIScaling()), cmd);
+			wiImage::Draw(wiTextureHelper::getColorGradeDefault(), wiImageParams(0, 0, 256.0f / device->GetDPIScaling(), 16.0f / device->GetDPIScaling()), cmd);
 		}
 	}
 
@@ -386,9 +317,71 @@ void MainComponent::Compose(CommandList cmd)
 	wiProfiler::EndRange(range); // Compose
 }
 
-void MainComponent::SetWindow(wiPlatform::window_type window)
+void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 {
-	wiPlatform::GetWindowState().window = window;
-	wiPlatform::InitDPI();
+	// User can also create a graphics device if custom logic is desired, but they must do before this function!
+	if (wiRenderer::GetDevice() == nullptr)
+	{
+		bool debugdevice = wiStartupArguments::HasArgument("debugdevice");
+
+		bool use_dx11 = wiStartupArguments::HasArgument("dx11");
+		bool use_dx12 = wiStartupArguments::HasArgument("dx12");
+		bool use_vulkan = wiStartupArguments::HasArgument("vulkan");
+
+#ifndef WICKEDENGINE_BUILD_DX11
+		if (use_dx11) {
+			wiHelper::messageBox("The engine was built without DX11 support!", "Error");
+			use_dx11 = false;
+		}
+#endif
+#ifndef WICKEDENGINE_BUILD_DX12
+		if (use_dx12) {
+			wiHelper::messageBox("The engine was built without DX12 support!", "Error");
+			use_dx12 = false;
+		}
+#endif
+#ifndef WICKEDENGINE_BUILD_VULKAN
+		if (use_vulkan) {
+			wiHelper::messageBox("The engine was built without Vulkan support!", "Error");
+			use_vulkan = false;
+		}
+#endif
+
+		if (!use_dx11 && !use_dx12 && !use_vulkan)
+		{
+#if defined(WICKEDENGINE_BUILD_DX11)
+			use_dx11 = true;
+#elif defined(WICKEDENGINE_BUILD_DX12)
+			use_dx12 = true;
+#elif defined(WICKEDENGINE_BUILD_VULKAN)
+			use_vulkan = true;
+#else
+			wiBackLog::post("No rendering backend is enabled! Please enable at least one so we can use it as default");
+			assert(false);
+#endif
+		}
+		assert(use_dx11 || use_dx12 || use_vulkan);
+
+		if (use_vulkan)
+		{
+#ifdef WICKEDENGINE_BUILD_VULKAN
+			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "spirv/");
+			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_Vulkan>(window, fullscreen, debugdevice));
+#endif
+		}
+		else if (use_dx12)
+		{
+#ifdef WICKEDENGINE_BUILD_DX12
+			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl6/");
+			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX12>(window, fullscreen, debugdevice));
+#endif
+		}
+		else if (use_dx11)
+		{
+#ifdef WICKEDENGINE_BUILD_DX11
+			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX11>(window, fullscreen, debugdevice));
+#endif
+		}
+	}
 }
 

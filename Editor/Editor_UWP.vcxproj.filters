@@ -28,9 +28,6 @@
     <ClCompile Include="App_Windows.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="App_Windows.h" />
-  </ItemGroup>
-  <ItemGroup>
     <Image Include="Assets\StoreLogo.png">
       <Filter>Assets</Filter>
     </Image>
@@ -39,8 +36,6 @@
     <AppxManifest Include="Package.appxmanifest" />
   </ItemGroup>
   <ItemGroup>
-    <Font Include="..\WickedEngine\fonts\arial.ttf">
-      <Filter>Assets</Filter>
-    </Font>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

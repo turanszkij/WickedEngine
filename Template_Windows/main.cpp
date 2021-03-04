@@ -188,6 +188,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 		}
 		break;
+	case WM_KILLFOCUS:
+		main.is_window_active = false;
+		break;
+	case WM_SETFOCUS:
+		main.is_window_active = true;
+		break;
     case WM_PAINT:
         {
             PAINTSTRUCT ps;

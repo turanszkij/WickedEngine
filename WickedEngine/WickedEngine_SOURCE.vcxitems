@@ -246,6 +246,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Ocean.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Skinning.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Utility.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\arial.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\D3D12MemAlloc.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\d3dx12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXCollision.h" />
@@ -728,15 +729,5 @@
     <None Include="$(MSBuildThisFileDirectory)Utility\DirectXMathMisc.inl" />
     <None Include="$(MSBuildThisFileDirectory)Utility\DirectXMathVector.inl" />
     <None Include="$(MSBuildThisFileDirectory)Utility\DirectXPackedVector.inl" />
-  </ItemGroup>
-  <ItemGroup>
-    <Font Include="$(MSBuildThisFileDirectory)fonts\arial.ttf">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">false</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</DeploymentContent>
-    </Font>
   </ItemGroup>
 </Project>

@@ -3,6 +3,10 @@
 #include "wiArchive.h"
 #include "wiRandom.h"
 #include "wiHelper.h"
+#include "wiBackLog.h"
+
+#include <chrono>
+#include <string>
 
 using namespace wiECS;
 
@@ -205,8 +209,16 @@ namespace wiScene
 				archive >> textures[CLEARCOATNORMALMAP].uvset;
 			}
 
+			for (auto& x : textures)
+			{
+				if (!x.name.empty())
+				{
+					x.name = dir + x.name;
+				}
+			}
+
 			wiJobSystem::Execute(seri.ctx, [&](wiJobArgs args) {
-				CreateRenderData(dir);
+				CreateRenderData();
 			});
 		}
 		else
@@ -241,17 +253,9 @@ namespace wiScene
 			archive << texAnimFrameRate;
 			archive << texAnimElapsedTime;
 
-			// If detecting an absolute path in textures, remove it and convert to relative:
-			if(!dir.empty())
+			for (auto& x : textures)
 			{
-				for (auto& x : textures)
-				{
-					size_t found = x.name.rfind(dir);
-					if (found != std::string::npos)
-					{
-						x.name = x.name.substr(found + dir.length());
-					}
-				}
+				wiHelper::MakePathRelative(dir, x.name);
 			}
 
 			archive << textures[BASECOLORMAP].name;
@@ -697,7 +701,8 @@ namespace wiScene
 				{
 					if (!lensFlareNames[i].empty())
 					{
-						lensFlareRimTextures[i] = wiResourceManager::Load(dir + lensFlareNames[i]);
+						lensFlareNames[i] = dir + lensFlareNames[i];
+						lensFlareRimTextures[i] = wiResourceManager::Load(dir + lensFlareNames[i], wiResourceManager::IMPORT_RETAIN_FILEDATA);
 					}
 				}
 			});
@@ -727,11 +732,7 @@ namespace wiScene
 			{
 				for (size_t i = 0; i < lensFlareNames.size(); ++i)
 				{
-					size_t found = lensFlareNames[i].rfind(dir);
-					if (found != std::string::npos)
-					{
-						lensFlareNames[i] = lensFlareNames[i].substr(found + dir.length());
-					}
+					wiHelper::MakePathRelative(dir, lensFlareNames[i]);
 				}
 			}
 			archive << lensFlareNames;
@@ -938,12 +939,22 @@ namespace wiScene
 				archive >> skyMapName;
 				if (!skyMapName.empty())
 				{
-					skyMap = wiResourceManager::Load(dir + skyMapName);
+					skyMapName = dir + skyMapName;
+					skyMap = wiResourceManager::Load(skyMapName, wiResourceManager::IMPORT_RETAIN_FILEDATA);
 				}
 			}
 			if (archive.GetVersion() >= 40)
 			{
 				archive >> windSpeed;
+			}
+			if (archive.GetVersion() >= 62)
+			{
+				archive >> colorGradingMapName;
+				if (!colorGradingMapName.empty())
+				{
+					colorGradingMapName = dir + colorGradingMapName;
+					colorGradingMap = wiResourceManager::Load(colorGradingMapName, wiResourceManager::IMPORT_COLORGRADINGLUT | wiResourceManager::IMPORT_RETAIN_FILEDATA);
+				}
 			}
 
 		}
@@ -978,22 +989,20 @@ namespace wiScene
 			archive << oceanParameters.surfaceDetail;
 			archive << oceanParameters.surfaceDisplacementTolerance;
 
+			wiHelper::MakePathRelative(dir, skyMapName);
+			wiHelper::MakePathRelative(dir, colorGradingMapName);
+
 			if (archive.GetVersion() >= 32)
 			{
-				// If detecting an absolute path in textures, remove it and convert to relative:
-				if (!dir.empty())
-				{
-					size_t found = skyMapName.rfind(dir);
-					if (found != std::string::npos)
-					{
-						skyMapName = skyMapName.substr(found + dir.length());
-					}
-				}
 				archive << skyMapName;
 			}
 			if (archive.GetVersion() >= 40)
 			{
 				archive << windSpeed;
+			}
+			if (archive.GetVersion() >= 62)
+			{
+				archive << colorGradingMapName;
 			}
 
 		}
@@ -1012,22 +1021,15 @@ namespace wiScene
 			wiJobSystem::Execute(seri.ctx, [&](wiJobArgs args) {
 				if (!filename.empty())
 				{
-					soundResource = wiResourceManager::Load(dir + filename);
-					wiAudio::CreateSoundInstance(soundResource->sound, &soundinstance);
+					filename = dir + filename;
+					soundResource = wiResourceManager::Load(filename, wiResourceManager::IMPORT_RETAIN_FILEDATA);
+					wiAudio::CreateSoundInstance(&soundResource->sound, &soundinstance);
 				}
 			});
 		}
 		else
 		{
-			// If detecting an absolute path in textures, remove it and convert to relative:
-			if(!dir.empty())
-			{
-				size_t found = filename.rfind(dir);
-				if (found != std::string::npos)
-				{
-					filename = filename.substr(found + dir.length());
-				}
-			}
+			wiHelper::MakePathRelative(dir, filename);
 
 			archive << _flags;
 			archive << filename;
@@ -1074,6 +1076,8 @@ namespace wiScene
 
 	void Scene::Serialize(wiArchive& archive)
 	{
+		std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+
 		if (archive.IsReadMode())
 		{
 			uint32_t reserved;
@@ -1083,6 +1087,13 @@ namespace wiScene
 		{
 			uint32_t reserved = 0;
 			archive << reserved;
+		}
+
+		// Keeping this alive to keep serialized resources alive until entity serialization ends:
+		wiResourceManager::ResourceSerializer resource_seri;
+		if (archive.GetVersion() >= 63)
+		{
+			wiResourceManager::Serialize(archive, resource_seri);
 		}
 
 		// With this we will ensure that serialized entities are unique and persistent across the scene:
@@ -1130,6 +1141,10 @@ namespace wiScene
 			animation_datas.Serialize(archive, seri);
 		}
 
+		std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+		double sec = time_span.count();
+		wiBackLog::post((std::string("Scene serialize took ") + std::to_string(sec) + std::string(" sec")).c_str());
 	}
 
 	Entity Scene::Entity_Serialize(wiArchive& archive, Entity entity)

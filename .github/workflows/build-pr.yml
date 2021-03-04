@@ -8,6 +8,10 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v2
+    - uses: nuget/setup-nuget@v1
+      with:
+        nuget-api-key: ${{ secrets.NuGetAPIKey }}
+    - run: nuget restore WickedEngine.sln
     - name: Build
       shell: cmd
       run: |
@@ -30,7 +34,6 @@ jobs:
           WickedEngine/shaders/*.cso
           WickedEngine/shaders/hlsl6/*.cso
           WickedEngine/shaders/spirv/*.cso
-          WickedEngine/fonts/
           images/
           models/
           scripts/
@@ -55,7 +58,6 @@ jobs:
           WickedEngine/shaders/*.cso
           WickedEngine/shaders/hlsl6/*.cso
           WickedEngine/shaders/spirv/*.cso
-          WickedEngine/fonts/
           images/
           models/
           scripts/
@@ -105,7 +107,6 @@ jobs:
         name: Editor (Ubuntu 20.04)
         path: |
           WickedEngine/shaders/
-          WickedEngine/fonts/
           images/
           models/
           scripts/
@@ -127,7 +128,6 @@ jobs:
         name: Tests (Ubuntu 20.04)
         path: |
           WickedEngine/shaders/
-          WickedEngine/fonts/
           images/
           models/
           scripts/

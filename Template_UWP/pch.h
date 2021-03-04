@@ -1,2 +1,2 @@
-﻿#pragma once
+#pragma once
 #include "WickedEngine.h"

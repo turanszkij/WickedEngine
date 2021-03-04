@@ -26,7 +26,7 @@ protected:
 	int fps_avg_counter = 0;
 
 public:
-	bool fullscreen = false;
+	bool is_window_active = true;
 
 	// Runs the main engine loop
 	void Run();
@@ -61,7 +61,7 @@ public:
 	virtual void Compose(wiGraphics::CommandList cmd);
 
 	// You need to call this before calling Run() or Initialize() if you want to render
-	void SetWindow(wiPlatform::window_type);
+	void SetWindow(wiPlatform::window_type, bool fullscreen = false);
 
 
 	struct InfoDisplayer
