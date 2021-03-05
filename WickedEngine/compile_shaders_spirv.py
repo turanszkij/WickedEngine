@@ -60,10 +60,10 @@ for item in root.iter():
             
             cmd += "_6_5 "
             
-            cmd += " -all-resources-bound "
+            #cmd += " -all-resources-bound "
             #cmd += " -pack-optimized "
-            cmd += " -res-may-alias "
-            cmd += " -no-legacy-cbuf-layout "
+            #cmd += " -res-may-alias "
+            #cmd += " -no-legacy-cbuf-layout "
             
             cmd += " -spirv "
             cmd += " -fspv-target-env=vulkan1.2 "

@@ -291,18 +291,18 @@ namespace wiScene
 		}
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		dest->texture_basecolormap = device->GetDescriptorIndex(textures[BASECOLORMAP].GetGPUResource(), SRV);
-		dest->texture_surfacemap = device->GetDescriptorIndex(textures[SURFACEMAP].GetGPUResource(), SRV);
-		dest->texture_emissivemap = device->GetDescriptorIndex(textures[EMISSIVEMAP].GetGPUResource(), SRV);
-		dest->texture_normalmap = device->GetDescriptorIndex(textures[NORMALMAP].GetGPUResource(), SRV);
-		dest->texture_displacementmap = device->GetDescriptorIndex(textures[DISPLACEMENTMAP].GetGPUResource(), SRV);
-		dest->texture_occlusionmap = device->GetDescriptorIndex(textures[OCCLUSIONMAP].GetGPUResource(), SRV);
-		dest->texture_transmissionmap = device->GetDescriptorIndex(textures[TRANSMISSIONMAP].GetGPUResource(), SRV);
-		dest->texture_sheencolormap = device->GetDescriptorIndex(textures[SHEENCOLORMAP].GetGPUResource(), SRV);
-		dest->texture_sheenroughnessmap = device->GetDescriptorIndex(textures[SHEENROUGHNESSMAP].GetGPUResource(), SRV);
-		dest->texture_clearcoatmap = device->GetDescriptorIndex(textures[CLEARCOATMAP].GetGPUResource(), SRV);
-		dest->texture_clearcoatroughnessmap = device->GetDescriptorIndex(textures[CLEARCOATROUGHNESSMAP].GetGPUResource(), SRV);
-		dest->texture_clearcoatnormalmap = device->GetDescriptorIndex(textures[CLEARCOATNORMALMAP].GetGPUResource(), SRV);
+		dest->texture_basecolormap_index = device->GetDescriptorIndex(textures[BASECOLORMAP].GetGPUResource(), SRV);
+		dest->texture_surfacemap_index = device->GetDescriptorIndex(textures[SURFACEMAP].GetGPUResource(), SRV);
+		dest->texture_emissivemap_index = device->GetDescriptorIndex(textures[EMISSIVEMAP].GetGPUResource(), SRV);
+		dest->texture_normalmap_index = device->GetDescriptorIndex(textures[NORMALMAP].GetGPUResource(), SRV);
+		dest->texture_displacementmap_index = device->GetDescriptorIndex(textures[DISPLACEMENTMAP].GetGPUResource(), SRV);
+		dest->texture_occlusionmap_index = device->GetDescriptorIndex(textures[OCCLUSIONMAP].GetGPUResource(), SRV);
+		dest->texture_transmissionmap_index = device->GetDescriptorIndex(textures[TRANSMISSIONMAP].GetGPUResource(), SRV);
+		dest->texture_sheencolormap_index = device->GetDescriptorIndex(textures[SHEENCOLORMAP].GetGPUResource(), SRV);
+		dest->texture_sheenroughnessmap_index = device->GetDescriptorIndex(textures[SHEENROUGHNESSMAP].GetGPUResource(), SRV);
+		dest->texture_clearcoatmap_index = device->GetDescriptorIndex(textures[CLEARCOATMAP].GetGPUResource(), SRV);
+		dest->texture_clearcoatroughnessmap_index = device->GetDescriptorIndex(textures[CLEARCOATROUGHNESSMAP].GetGPUResource(), SRV);
+		dest->texture_clearcoatnormalmap_index = device->GetDescriptorIndex(textures[CLEARCOATNORMALMAP].GetGPUResource(), SRV);
 
 
 		dest->baseColorAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
@@ -405,11 +405,6 @@ namespace wiScene
 
 				device->CreateBuffer(&bd, &initData, &indexBuffer);
 				device->SetName(&indexBuffer, "indexBuffer_16bit");
-			}
-
-			for (MeshSubset& subset : subsets)
-			{
-				subset.indexBuffer_subresource = device->CreateSubresource(&indexBuffer, SRV, subset.indexOffset * GetIndexStride());
 			}
 		}
 
@@ -771,6 +766,53 @@ namespace wiScene
 			assert(success);
 			device->SetName(&BLAS, "BLAS");
 		}
+
+		if(device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+		{
+			GPUBufferDesc desc;
+			desc.BindFlags = BIND_CONSTANT_BUFFER;
+			desc.ByteWidth = sizeof(ShaderMesh);
+			bool success = device->CreateBuffer(&desc, nullptr, &constantBuffer);
+			assert(success);
+
+			desc.BindFlags = BIND_SHADER_RESOURCE;
+			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+			desc.StructureByteStride = sizeof(ShaderMeshSubset);
+			desc.ByteWidth = desc.StructureByteStride * (uint32_t)subsets.size();
+			success = device->CreateBuffer(&desc, nullptr, &subsetBuffer);
+			assert(success);
+		}
+	}
+	void MeshComponent::WriteShaderMesh(ShaderMesh* dest) const
+	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		dest->ib = device->GetDescriptorIndex(&indexBuffer, SRV);
+		if (streamoutBuffer_POS.IsValid())
+		{
+			dest->vb_pos_nor_wind = device->GetDescriptorIndex(&streamoutBuffer_POS, SRV);
+		}
+		else
+		{
+			dest->vb_pos_nor_wind = device->GetDescriptorIndex(&vertexBuffer_POS, SRV);
+		}
+		if (streamoutBuffer_TAN.IsValid())
+		{
+			dest->vb_tan = device->GetDescriptorIndex(&streamoutBuffer_TAN, SRV);
+		}
+		else
+		{
+			dest->vb_tan = device->GetDescriptorIndex(&vertexBuffer_TAN, SRV);
+		}
+		dest->vb_uv0 = device->GetDescriptorIndex(&vertexBuffer_UV0, SRV);
+		dest->vb_uv1 = device->GetDescriptorIndex(&vertexBuffer_UV1, SRV);
+		dest->vb_bon = device->GetDescriptorIndex(&vertexBuffer_BON, SRV);
+		dest->vb_col = device->GetDescriptorIndex(&vertexBuffer_COL, SRV);
+		dest->vb_atl = device->GetDescriptorIndex(&vertexBuffer_ATL, SRV);
+		dest->vb_pre = device->GetDescriptorIndex(&vertexBuffer_PRE, SRV);
+		dest->blendmaterial1 = terrain_material1_index;
+		dest->blendmaterial2 = terrain_material2_index;
+		dest->blendmaterial3 = terrain_material3_index;
+		dest->subsetbuffer = device->GetDescriptorIndex(&subsetBuffer, SRV);
 	}
 	void MeshComponent::ComputeNormals(COMPUTE_NORMALS compute)
 	{
@@ -1325,22 +1367,6 @@ namespace wiScene
 
 	void Scene::Update(float dt)
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT) && !descriptorTables[0].IsValid())
-		{
-			descriptorTables[DESCRIPTORTABLE_SUBSETS_MATERIAL].resources.push_back({ CONSTANTBUFFER, 0, MAX_SUBSET_DESCRIPTOR_INDEXING });
-			descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURES].resources.push_back({ TEXTURE2D, 0, MAX_SUBSET_DESCRIPTOR_INDEXING * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT });
-			descriptorTables[DESCRIPTORTABLE_SUBSETS_INDEXBUFFER].resources.push_back({ TYPEDBUFFER, 0, MAX_SUBSET_DESCRIPTOR_INDEXING });
-			descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_RAW].resources.push_back({ RAWBUFFER, 0, MAX_SUBSET_DESCRIPTOR_INDEXING * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT });
-			descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS].resources.push_back({ TYPEDBUFFER, 0, MAX_SUBSET_DESCRIPTOR_INDEXING * VERTEXBUFFER_DESCRIPTOR_UV_COUNT });
-
-			for (int i = 0; i < DESCRIPTORTABLE_COUNT; ++i)
-			{
-				bool success = device->CreateDescriptorTable(&descriptorTables[i]);
-				assert(success);
-			}
-		}
-
 		wiJobSystem::context ctx;
 
 		RunPreviousFrameTransformUpdateSystem(ctx);
@@ -1367,7 +1393,9 @@ namespace wiScene
 
 		RunWeatherUpdateSystem(ctx);
 
-		wiPhysicsEngine::RunPhysicsUpdateSystem(ctx, *this, dt); // this syncs dependencies internally
+		wiPhysicsEngine::RunPhysicsUpdateSystem(ctx, *this, dt);
+
+		wiJobSystem::Wait(ctx); // dependencies
 
 		RunObjectUpdateSystem(ctx);
 
@@ -1394,6 +1422,7 @@ namespace wiScene
 			bounds = AABB::Merge(bounds, group_bound);
 		}
 
+		GraphicsDevice* device = wiRenderer::GetDevice();
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			// Recreate top level acceleration structure if the object count changed:
@@ -2486,12 +2515,9 @@ namespace wiScene
 	}
 	void Scene::RunMeshUpdateSystem(wiJobSystem::context& ctx)
 	{
-		geometryOffset.store(0);
-
 		wiJobSystem::Dispatch(ctx, (uint32_t)meshes.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
 			MeshComponent& mesh = meshes[args.jobIndex];
-			mesh.TLAS_geometryOffset = geometryOffset.fetch_add((uint32_t)mesh.subsets.size());
 
 			GraphicsDevice* device = wiRenderer::GetDevice();
 			uint32_t subsetIndex = 0;
@@ -2500,90 +2526,6 @@ namespace wiScene
 				const MaterialComponent* material = materials.GetComponent(subset.materialID);
 				if (material != nullptr)
 				{
-					if (descriptorTables[0].IsValid())
-					{
-						uint32_t global_geometryIndex = mesh.TLAS_geometryOffset + subsetIndex;
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_MATERIAL],
-							0,
-							global_geometryIndex,
-							&material->constantBuffer
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURES],
-							0,
-							global_geometryIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_BASECOLOR,
-							material->textures[MaterialComponent::BASECOLORMAP].GetGPUResource()
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURES],
-							0,
-							global_geometryIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_NORMAL,
-							material->textures[MaterialComponent::NORMALMAP].GetGPUResource()
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURES],
-							0,
-							global_geometryIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_SURFACE,
-							material->textures[MaterialComponent::SURFACEMAP].GetGPUResource()
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURES],
-							0,
-							global_geometryIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_OCCLUSION,
-							material->textures[MaterialComponent::OCCLUSIONMAP].GetGPUResource()
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURES],
-							0,
-							global_geometryIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_EMISSIVE,
-							material->textures[MaterialComponent::EMISSIVEMAP].GetGPUResource()
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_INDEXBUFFER],
-							0,
-							global_geometryIndex,
-							&mesh.indexBuffer,
-							subset.indexBuffer_subresource
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_RAW],
-							0,
-							global_geometryIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_POS,
-							&mesh.vertexBuffer_POS
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_RAW],
-							0,
-							global_geometryIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_TAN,
-							&mesh.vertexBuffer_TAN
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_RAW],
-							0,
-							global_geometryIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_COL,
-							&mesh.vertexBuffer_COL
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS],
-							0,
-							global_geometryIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0,
-							&mesh.vertexBuffer_UV0
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS],
-							0,
-							global_geometryIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1,
-							&mesh.vertexBuffer_UV1
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS],
-							0,
-							global_geometryIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_ATL,
-							&mesh.vertexBuffer_ATL
-						);
-					}
-
 					if (mesh.BLAS.IsValid())
 					{
 						uint32_t flags = mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags;
@@ -2644,6 +2586,34 @@ namespace wiScene
 
 				mesh.SetDirtyMorph(false);
 				wiRenderer::AddDeferredMorphUpdate(meshes.GetEntity(args.jobIndex));
+
+				if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+				{
+					if (mesh.terrain_material1 != INVALID_ENTITY)
+					{
+						const MaterialComponent* mat = materials.GetComponent(mesh.terrain_material1);
+						if (mat != nullptr)
+						{
+							mesh.terrain_material1_index = device->GetDescriptorIndex(&mat->constantBuffer, CBV);
+						}
+					}
+					if (mesh.terrain_material2 != INVALID_ENTITY)
+					{
+						const MaterialComponent* mat = materials.GetComponent(mesh.terrain_material2);
+						if (mat != nullptr)
+						{
+							mesh.terrain_material2_index = device->GetDescriptorIndex(&mat->constantBuffer, CBV);
+						}
+					}
+					if (mesh.terrain_material3 != INVALID_ENTITY)
+					{
+						const MaterialComponent* mat = materials.GetComponent(mesh.terrain_material3);
+						if (mat != nullptr)
+						{
+							mesh.terrain_material3_index = device->GetDescriptorIndex(&mat->constantBuffer, CBV);
+						}
+					}
+				}
 			}
 
 		});

@@ -613,12 +613,20 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 
 		device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
 		device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
-		device->BindResource(PS, &texture, TEXSLOT_FONTATLAS, cmd);
-
-		device->BindResource(VS, mem.buffer, 0, cmd);
 
 		FontCB cb;
 		cb.g_xFont_BufferOffset = mem.offset;
+
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+		{
+			cb.g_xFont_TextureIndex = device->GetDescriptorIndex(&texture, SRV);
+		}
+		else
+		{
+			device->BindResource(PS, &texture, TEXSLOT_FONTATLAS, cmd);
+		}
+
+		device->BindResource(VS, mem.buffer, 0, cmd);
 
 		XMMATRIX Projection = device->GetScreenProjection();
 

@@ -244,7 +244,6 @@ namespace wiGraphics
 			void init(GraphicsDevice_DX12* device);
 
 			void reset();
-			void request_heaps(uint32_t resources, uint32_t samplers, CommandList cmd);
 			void validate(bool graphics, CommandList cmd);
 		};
 		DescriptorBinder descriptors[COMMANDLIST_COUNT];
@@ -308,9 +307,7 @@ namespace wiGraphics
 		bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
 		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) override;
 		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) override;
-		bool CreateDescriptorTable(DescriptorTable* table) override;
-		bool CreateRootSignature(RootSignature* rootsig) override;
-
+		
 		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
 		int CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) override;
 
@@ -320,9 +317,7 @@ namespace wiGraphics
 		void WriteShadingRateValue(SHADING_RATE rate, void* dest) override;
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
 		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) override;
-		void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const GPUResource* resource, int subresource = -1, uint64_t offset = 0) override;
-		void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const Sampler* sampler) override;
-
+		
 		void Map(const GPUResource* resource, Mapping* mapping) override;
 		void Unmap(const GPUResource* resource) override;
 		void QueryRead(const GPUQueryHeap* heap, uint32_t index, uint32_t count, uint64_t* results) override;
@@ -385,10 +380,6 @@ namespace wiGraphics
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
 		void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
 		void PushConstants(const void* data, uint32_t size, CommandList cmd) override;
-
-		void BindDescriptorTable(BINDPOINT bindpoint, uint32_t space, const DescriptorTable* table, CommandList cmd) override;
-		void BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd) override;
-		void BindRootConstants(BINDPOINT bindpoint, uint32_t index, const void* srcdata, CommandList cmd) override;
 
 		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
 

@@ -29,7 +29,7 @@ float4 main(PixelInput input) : SV_TARGET
 		if (g_xMaterial.uvset_transmissionMap >= 0)
 		{
 			const float2 UV_transmissionMap = g_xMaterial.uvset_transmissionMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			float transmissionMap = texture_transmissionmap.Sample(sampler_objectshader, UV_transmissionMap);
+			float transmissionMap = texture_transmissionmap.Sample(sampler_objectshader, UV_transmissionMap).r;
 			transmission *= transmissionMap;
 		}
 		opacity *= 1 - transmission;

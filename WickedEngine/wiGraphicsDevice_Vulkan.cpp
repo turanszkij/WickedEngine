@@ -919,67 +919,6 @@ namespace Vulkan_Internal
 			allocationhandler->destroylocker.unlock();
 		}
 	};
-	struct DescriptorTable_Vulkan
-	{
-		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
-		VkDescriptorSetLayout layout = VK_NULL_HANDLE;
-		VkDescriptorUpdateTemplate updatetemplate = VK_NULL_HANDLE;
-
-		std::vector<size_t> resource_write_remap;
-		std::vector<size_t> sampler_write_remap;
-
-		struct Descriptor
-		{
-			union
-			{
-				VkDescriptorImageInfo imageinfo;
-				VkDescriptorBufferInfo bufferInfo;
-				VkBufferView bufferView;
-				VkAccelerationStructureKHR accelerationStructure;
-			};
-		};
-		std::vector<Descriptor> descriptors;
-
-		~DescriptorTable_Vulkan()
-		{
-			if (allocationhandler == nullptr)
-				return;
-			allocationhandler->destroylocker.lock();
-			uint64_t framecount = allocationhandler->framecount;
-			if (layout) allocationhandler->destroyer_descriptorSetLayouts.push_back(std::make_pair(layout, framecount));
-			if (updatetemplate) allocationhandler->destroyer_descriptorUpdateTemplates.push_back(std::make_pair(updatetemplate, framecount));
-			allocationhandler->destroylocker.unlock();
-		}
-	};
-	struct RootSignature_Vulkan
-	{
-		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
-		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
-
-		bool dirty[COMMANDLIST_COUNT] = {};
-		std::vector<const DescriptorTable*> last_tables[COMMANDLIST_COUNT];
-		std::vector<VkDescriptorSet> last_descriptorsets[COMMANDLIST_COUNT];
-		std::vector<const GPUBuffer*> root_descriptors[COMMANDLIST_COUNT];
-		std::vector<uint32_t> root_offsets[COMMANDLIST_COUNT];
-
-		struct RootRemap
-		{
-			uint32_t space = 0;
-			uint32_t binding = 0;
-			uint32_t rangeIndex = 0;
-		};
-		std::vector<RootRemap> root_remap;
-
-		~RootSignature_Vulkan()
-		{
-			if (allocationhandler == nullptr)
-				return;
-			allocationhandler->destroylocker.lock();
-			uint64_t framecount = allocationhandler->framecount;
-			if (pipelineLayout) allocationhandler->destroyer_pipelineLayouts.push_back(std::make_pair(pipelineLayout, framecount));
-			allocationhandler->destroylocker.unlock();
-		}
-	};
 
 	Buffer_Vulkan* to_internal(const GPUBuffer* param)
 	{
@@ -1016,14 +955,6 @@ namespace Vulkan_Internal
 	RTPipelineState_Vulkan* to_internal(const RaytracingPipelineState* param)
 	{
 		return static_cast<RTPipelineState_Vulkan*>(param->internal_state.get());
-	}
-	DescriptorTable_Vulkan* to_internal(const DescriptorTable* param)
-	{
-		return static_cast<DescriptorTable_Vulkan*>(param->internal_state.get());
-	}
-	RootSignature_Vulkan* to_internal(const RootSignature* param)
-	{
-		return static_cast<RootSignature_Vulkan*>(param->internal_state.get());
 	}
 }
 using namespace Vulkan_Internal;
@@ -1780,28 +1711,7 @@ using namespace Vulkan_Internal;
 	{
 		pso_validate(cmd);
 
-		if (active_pso[cmd]->desc.rootSignature == nullptr)
-		{
-			GetFrameResources().descriptors[cmd].validate(true, cmd);
-		}
-		else
-		{
-			//auto rootsig_internal = to_internal(active_pso[cmd]->desc.rootSignature);
-			//if (rootsig_internal->dirty[cmd])
-			//{
-			//	rootsig_internal->dirty[cmd] = false;
-			//	vkCmdBindDescriptorSets(
-			//		GetDirectCommandList(cmd),
-			//		VK_PIPELINE_BIND_POINT_GRAPHICS,
-			//		rootsig_internal->pipelineLayout,
-			//		0,
-			//		(uint32_t)rootsig_internal->last_descriptorsets[cmd].size(),
-			//		rootsig_internal->last_descriptorsets[cmd].data(),
-			//		(uint32_t)rootsig_internal->root_offsets[cmd].size(),
-			//		rootsig_internal->root_offsets[cmd].data()
-			//	);
-			//}
-		}
+		GetFrameResources().descriptors[cmd].validate(true, cmd);
 
 		if (pushconstants[cmd].size > 0)
 		{
@@ -1821,28 +1731,7 @@ using namespace Vulkan_Internal;
 	{
 		barrier_flush(cmd);
 
-		if (active_cs[cmd]->rootSignature == nullptr)
-		{
-			GetFrameResources().descriptors[cmd].validate(false, cmd);
-		}
-		else
-		{
-			//auto rootsig_internal = to_internal(active_cs[cmd]->rootSignature);
-			//if (rootsig_internal->dirty[cmd])
-			//{
-			//	rootsig_internal->dirty[cmd] = false;
-			//	vkCmdBindDescriptorSets(
-			//		GetDirectCommandList(cmd),
-			//		VK_PIPELINE_BIND_POINT_COMPUTE,
-			//		rootsig_internal->pipelineLayout,
-			//		0,
-			//		(uint32_t)rootsig_internal->last_descriptorsets[cmd].size(),
-			//		rootsig_internal->last_descriptorsets[cmd].data(),
-			//		(uint32_t)rootsig_internal->root_offsets[cmd].size(),
-			//		rootsig_internal->root_offsets[cmd].data()
-			//	);
-			//}
-		}
+		GetFrameResources().descriptors[cmd].validate(false, cmd);
 
 		if (pushconstants[cmd].size > 0)
 		{
@@ -1862,34 +1751,12 @@ using namespace Vulkan_Internal;
 	{
 		barrier_flush(cmd);
 
-		if (active_rt[cmd]->desc.rootSignature == nullptr)
-		{
-			GetFrameResources().descriptors[cmd].validate(false, cmd, true);
-		}
-		else
-		{
-			//auto rootsig_internal = to_internal(active_rt[cmd]->desc.rootSignature);
-			//if (rootsig_internal->dirty[cmd])
-			//{
-			//	rootsig_internal->dirty[cmd] = false;
-			//	vkCmdBindDescriptorSets(
-			//		GetDirectCommandList(cmd),
-			//		VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
-			//		rootsig_internal->pipelineLayout,
-			//		0,
-			//		(uint32_t)rootsig_internal->last_descriptorsets[cmd].size(),
-			//		rootsig_internal->last_descriptorsets[cmd].data(),
-			//		(uint32_t)rootsig_internal->root_offsets[cmd].size(),
-			//		rootsig_internal->root_offsets[cmd].data()
-			//	);
-			//}
-		}
+		GetFrameResources().descriptors[cmd].validate(false, cmd, true);
 	}
 
 	// Engine functions
 	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wiPlatform::window_type window, bool fullscreen, bool debuglayer)
 	{
-		capabilities |= GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT;
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(VkAccelerationStructureInstanceKHR);
 
 		DEBUGDEVICE = debuglayer;
@@ -3543,10 +3410,7 @@ using namespace Vulkan_Internal;
 			break;
 		}
 
-		if (pShader->rootSignature == nullptr)
 		{
-			// Perform shader reflection for shaders that don't specify a root signature:
-
 			SpvReflectShaderModule module;
 			SpvReflectResult result = spvReflectCreateShaderModule(moduleInfo.codeSize, moduleInfo.pCode, &module);
 			assert(result == SPV_REFLECT_RESULT_SUCCESS);
@@ -3794,16 +3658,7 @@ using namespace Vulkan_Internal;
 		{
 			VkComputePipelineCreateInfo pipelineInfo = {};
 			pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-			if (pShader->rootSignature == nullptr)
-			{
-				// pipeline layout from reflection:
-				pipelineInfo.layout = internal_state->pipelineLayout_cs;
-			}
-			else
-			{
-				// pipeline layout from root signature:
-				pipelineInfo.layout = to_internal(pShader->rootSignature)->pipelineLayout;
-			}
+			pipelineInfo.layout = internal_state->pipelineLayout_cs;
 			pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
 			// Create compute pipeline state in place:
@@ -4055,7 +3910,6 @@ using namespace Vulkan_Internal;
 
 		VkResult res = VK_SUCCESS;
 
-		if (pDesc->rootSignature == nullptr)
 		{
 			// Descriptor set layout comes from reflection data when there is no root signature specified:
 
@@ -4247,14 +4101,7 @@ using namespace Vulkan_Internal;
 		VkGraphicsPipelineCreateInfo& pipelineInfo = internal_state->pipelineInfo;
 		//pipelineInfo.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		if (pso->desc.rootSignature == nullptr)
-		{
-			pipelineInfo.layout = internal_state->pipelineLayout;
-		}
-		else
-		{
-			pipelineInfo.layout = to_internal(pso->desc.rootSignature)->pipelineLayout;
-		}
+		pipelineInfo.layout = internal_state->pipelineLayout;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
 		// Shaders:
@@ -5102,14 +4949,7 @@ using namespace Vulkan_Internal;
 
 		info.maxPipelineRayRecursionDepth = pDesc->max_trace_recursion_depth;
 
-		if (pDesc->rootSignature == nullptr)
-		{
-			info.layout = to_internal(pDesc->shaderlibraries.front().shader)->pipelineLayout_cs; // think better way
-		}
-		else
-		{
-			info.layout = to_internal(pDesc->rootSignature)->pipelineLayout;
-		}
+		info.layout = to_internal(pDesc->shaderlibraries.front().shader)->pipelineLayout_cs; // think better way
 
 		//VkRayTracingPipelineInterfaceCreateInfoKHR library_interface = {};
 		//library_interface.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_INTERFACE_CREATE_INFO_KHR;
@@ -5133,269 +4973,7 @@ using namespace Vulkan_Internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateDescriptorTable(DescriptorTable* table)
-	{
-		//auto internal_state = std::make_shared<DescriptorTable_Vulkan>();
-		//internal_state->allocationhandler = allocationhandler;
-		//table->internal_state = internal_state;
-
-		//std::vector<VkDescriptorSetLayoutBinding> bindings;
-		//bindings.reserve(table->samplers.size() + table->resources.size() + table->staticsamplers.size());
-
-		//std::vector<VkDescriptorUpdateTemplateEntry> entries;
-		//entries.reserve(table->samplers.size() + table->resources.size());
-
-		//internal_state->descriptors.reserve(table->samplers.size() + table->resources.size());
-
-		//size_t offset = 0;
-		//for (auto& x : table->resources)
-		//{
-		//	bindings.emplace_back();
-		//	auto& binding = bindings.back();
-		//	binding = {};
-		//	binding.stageFlags = _ConvertStageFlags(table->stage);
-		//	binding.descriptorCount = x.count;
-
-		//	switch (x.binding)
-		//	{
-		//	case ROOT_CONSTANTBUFFER:
-		//		binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-		//		binding.binding = x.slot + VULKAN_BINDING_SHIFT_B;
-		//		break;
-		//	case ROOT_RAWBUFFER:
-		//	case ROOT_STRUCTUREDBUFFER:
-		//	case ROOT_RWRAWBUFFER:
-		//	case ROOT_RWSTRUCTUREDBUFFER:
-		//		binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
-		//		binding.binding = x.slot + VULKAN_BINDING_SHIFT_T;
-		//		break;
-
-		//	case CONSTANTBUFFER:
-		//		binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		//		binding.binding = x.slot + VULKAN_BINDING_SHIFT_B;
-		//		break;
-		//	case RAWBUFFER:
-		//	case STRUCTUREDBUFFER:
-		//		binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		//		binding.binding = x.slot + VULKAN_BINDING_SHIFT_T;
-		//		break;
-		//	case TYPEDBUFFER:
-		//		binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-		//		binding.binding = x.slot + VULKAN_BINDING_SHIFT_T;
-		//		break;
-		//	case TEXTURE1D:
-		//	case TEXTURE1DARRAY:
-		//	case TEXTURE2D:
-		//	case TEXTURE2DARRAY:
-		//	case TEXTURECUBE:
-		//	case TEXTURECUBEARRAY:
-		//	case TEXTURE3D:
-		//		binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-		//		binding.binding = x.slot + VULKAN_BINDING_SHIFT_T;
-		//		break;
-		//	case ACCELERATIONSTRUCTURE:
-		//		binding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-		//		binding.binding = x.slot + VULKAN_BINDING_SHIFT_T;
-		//		break;
-		//	case RWRAWBUFFER:
-		//	case RWSTRUCTUREDBUFFER:
-		//		binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		//		binding.binding = x.slot + VULKAN_BINDING_SHIFT_U;
-		//		break;
-		//	case RWTYPEDBUFFER:
-		//		binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-		//		binding.binding = x.slot + VULKAN_BINDING_SHIFT_U;
-		//		break;
-		//	case RWTEXTURE1D:
-		//	case RWTEXTURE1DARRAY:
-		//	case RWTEXTURE2D:
-		//	case RWTEXTURE2DARRAY:
-		//	case RWTEXTURE3D:
-		//		binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		//		binding.binding = x.slot + VULKAN_BINDING_SHIFT_U;
-		//		break;
-		//	default:
-		//		assert(0);
-		//		break;
-		//	}
-
-		//	// Unroll, because we need the ability to update an array element individually:
-		//	internal_state->resource_write_remap.push_back(entries.size());
-		//	for (uint32_t i = 0; i < binding.descriptorCount; ++i)
-		//	{
-		//		internal_state->descriptors.emplace_back();
-		//		entries.emplace_back();
-		//		auto& entry = entries.back();
-		//		entry = {};
-		//		entry.descriptorCount = 1;
-		//		entry.descriptorType = binding.descriptorType;
-		//		entry.dstArrayElement = i;
-		//		entry.dstBinding = binding.binding;
-		//		entry.offset = offset;
-		//		entry.stride = sizeof(DescriptorTable_Vulkan::Descriptor);
-
-		//		offset += entry.stride;
-		//	}
-		//}
-		//for (auto& x : table->samplers)
-		//{
-		//	internal_state->descriptors.emplace_back();
-		//	bindings.emplace_back();
-		//	auto& binding = bindings.back();
-		//	binding = {};
-		//	binding.stageFlags = _ConvertStageFlags(table->stage);
-		//	binding.descriptorCount = x.count;
-		//	binding.binding = x.slot + VULKAN_BINDING_SHIFT_S;
-		//	binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-
-		//	// Unroll, because we need the ability to update an array element individually:
-		//	internal_state->sampler_write_remap.push_back(entries.size());
-		//	for (uint32_t i = 0; i < binding.descriptorCount; ++i)
-		//	{
-		//		entries.emplace_back();
-		//		auto& entry = entries.back();
-		//		entry = {};
-		//		entry.descriptorCount = 1;
-		//		entry.descriptorType = binding.descriptorType;
-		//		entry.dstArrayElement = i;
-		//		entry.dstBinding = binding.binding;
-		//		entry.offset = offset;
-		//		entry.stride = sizeof(DescriptorTable_Vulkan::Descriptor);
-
-		//		offset += entry.stride;
-		//	}
-		//}
-
-		//std::vector<VkSampler> immutableSamplers;
-		//immutableSamplers.reserve(table->staticsamplers.size());
-
-		//for (auto& x : table->staticsamplers)
-		//{
-		//	immutableSamplers.emplace_back();
-		//	auto& immutablesampler = immutableSamplers.back();
-		//	immutablesampler = to_internal(&x.sampler)->resource;
-
-		//	bindings.emplace_back();
-		//	auto& binding = bindings.back();
-		//	binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-		//	binding.stageFlags = VK_SHADER_STAGE_ALL;
-		//	binding.binding = x.slot + VULKAN_BINDING_SHIFT_S;
-		//	binding.descriptorCount = 1;
-		//	binding.pImmutableSamplers = &immutablesampler;
-		//}
-
-		//VkDescriptorSetLayoutCreateInfo layoutinfo = {};
-		//layoutinfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		//layoutinfo.flags = 0;
-		//layoutinfo.pBindings = bindings.data();
-		//layoutinfo.bindingCount = (uint32_t)bindings.size();
-		//VkResult res = vkCreateDescriptorSetLayout(device, &layoutinfo, nullptr, &internal_state->layout);
-		//assert(res == VK_SUCCESS);
-
-		//VkDescriptorUpdateTemplateCreateInfo updatetemplateinfo = {};
-		//updatetemplateinfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO;
-		//updatetemplateinfo.templateType = VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET;
-		//updatetemplateinfo.flags = 0;
-		//updatetemplateinfo.descriptorSetLayout = internal_state->layout;
-		//updatetemplateinfo.pDescriptorUpdateEntries = entries.data();
-		//updatetemplateinfo.descriptorUpdateEntryCount = (uint32_t)entries.size();
-		//res = vkCreateDescriptorUpdateTemplate(device, &updatetemplateinfo, nullptr, &internal_state->updatetemplate);
-		//assert(res == VK_SUCCESS);
-
-		//uint32_t slot = 0;
-		//for (auto& x : table->resources)
-		//{
-		//	for (uint32_t i = 0; i < x.count; ++i)
-		//	{
-		//		WriteDescriptor(table, slot, i, (const GPUResource*)nullptr);
-		//	}
-		//	slot++;
-		//}
-		//slot = 0;
-		//for (auto& x : table->samplers)
-		//{
-		//	for (uint32_t i = 0; i < x.count; ++i)
-		//	{
-		//		WriteDescriptor(table, slot, i, (const Sampler*)nullptr);
-		//	}
-		//	slot++;
-		//}
-
-		//return res == VK_SUCCESS;
-		return true;
-	}
-	bool GraphicsDevice_Vulkan::CreateRootSignature(RootSignature* rootsig)
-	{
-		//auto internal_state = std::make_shared<RootSignature_Vulkan>();
-		//internal_state->allocationhandler = allocationhandler;
-		//rootsig->internal_state = internal_state;
-
-		//std::vector<VkDescriptorSetLayout> layouts;
-		//layouts.reserve(rootsig->tables.size());
-		//uint32_t space = 0;
-		//for (auto& x : rootsig->tables)
-		//{
-		//	layouts.push_back(to_internal(&x)->layout);
-
-		//	uint32_t rangeIndex = 0;
-		//	for (auto& binding : x.resources)
-		//	{
-		//		if (binding.binding < CONSTANTBUFFER)
-		//		{
-		//			assert(binding.count == 1); // descriptor array not allowed in the root
-		//			internal_state->root_remap.emplace_back();
-		//			internal_state->root_remap.back().space = space;
-		//			internal_state->root_remap.back().binding = binding.slot;
-		//			internal_state->root_remap.back().rangeIndex = rangeIndex;
-		//		}
-		//		rangeIndex++;
-		//	}
-		//	space++;
-		//}
-
-		//for (CommandList cmd = 0; cmd < COMMANDLIST_COUNT; ++cmd)
-		//{
-		//	internal_state->last_tables[cmd].resize(layouts.size());
-		//	internal_state->last_descriptorsets[cmd].resize(layouts.size());
-
-		//	for (auto& x : rootsig->tables)
-		//	{
-		//		for (auto& binding : x.resources)
-		//		{
-		//			if (binding.binding < CONSTANTBUFFER)
-		//			{
-		//				internal_state->root_descriptors[cmd].emplace_back();
-		//				internal_state->root_offsets[cmd].emplace_back();
-		//			}
-		//		}
-		//	}
-		//}
-
-		//std::vector<VkPushConstantRange> pushranges;
-		//pushranges.reserve(rootsig->rootconstants.size());
-		//for (auto& x : rootsig->rootconstants)
-		//{
-		//	pushranges.emplace_back();
-		//	pushranges.back() = {};
-		//	pushranges.back().stageFlags = _ConvertStageFlags(x.stage);
-		//	pushranges.back().offset = 0;
-		//	pushranges.back().size = x.size;
-		//}
-
-		//VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-		//pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		//pipelineLayoutInfo.pSetLayouts = layouts.data();
-		//pipelineLayoutInfo.setLayoutCount = (uint32_t)layouts.size();
-		//pipelineLayoutInfo.pPushConstantRanges = pushranges.data();
-		//pipelineLayoutInfo.pushConstantRangeCount = (uint32_t)pushranges.size();
-
-		//VkResult res = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &internal_state->pipelineLayout);
-		//assert(res == VK_SUCCESS);
-
-		//return res == VK_SUCCESS;
-		return true;
-	}
-
+	
 	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount)
 	{
 		auto internal_state = to_internal(texture);
@@ -5956,240 +5534,7 @@ using namespace Vulkan_Internal;
 		VkResult res = vkGetRayTracingShaderGroupHandlesKHR(device, to_internal(rtpso)->pipeline, group_index, 1, SHADER_IDENTIFIER_SIZE, dest);
 		assert(res == VK_SUCCESS);
 	}
-	void GraphicsDevice_Vulkan::WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const GPUResource* resource, int subresource, uint64_t offset)
-	{
-		//auto table_internal = to_internal(table);
-		//size_t remap = table_internal->resource_write_remap[rangeIndex];
-		//auto& descriptor = table_internal->descriptors[remap + arrayIndex];
-
-		//switch (table->resources[rangeIndex].binding)
-		//{
-		//case CONSTANTBUFFER:
-		//case RAWBUFFER:
-		//case STRUCTUREDBUFFER:
-		//case ROOT_CONSTANTBUFFER:
-		//case ROOT_RAWBUFFER:
-		//case ROOT_STRUCTUREDBUFFER:
-		//	if (resource == nullptr || !resource->IsValid())
-		//	{
-		//		descriptor.bufferInfo.buffer = nullBuffer;
-		//		descriptor.bufferInfo.offset = 0;
-		//		descriptor.bufferInfo.range = VK_WHOLE_SIZE;
-		//	}
-		//	else if (resource->IsBuffer())
-		//	{
-		//		const GPUBuffer* buffer = (const GPUBuffer*)resource;
-		//		auto internal_state = to_internal(buffer);
-		//		descriptor.bufferInfo.buffer = internal_state->resource;
-		//		descriptor.bufferInfo.offset = offset;
-		//		descriptor.bufferInfo.range = VK_WHOLE_SIZE;
-		//	}
-		//	else
-		//	{
-		//		assert(0);
-		//	}
-		//	break;
-		//case TYPEDBUFFER:
-		//	if (resource == nullptr || !resource->IsValid())
-		//	{
-		//		descriptor.bufferView = nullBufferView;
-		//	}
-		//	else if (resource->IsBuffer())
-		//	{
-		//		const GPUBuffer* buffer = (const GPUBuffer*)resource;
-		//		auto internal_state = to_internal(buffer);
-		//		descriptor.bufferView = subresource < 0 ? internal_state->srv : internal_state->subresources_srv[subresource];
-		//	}
-		//	else
-		//	{
-		//		assert(0);
-		//	}
-		//	break;
-		//case TEXTURE1D:
-		//case TEXTURE1DARRAY:
-		//case TEXTURE2D:
-		//case TEXTURE2DARRAY:
-		//case TEXTURECUBE:
-		//case TEXTURECUBEARRAY:
-		//case TEXTURE3D:
-		//	descriptor.imageinfo.sampler = VK_NULL_HANDLE;
-		//	if (resource == nullptr || !resource->IsValid())
-		//	{
-		//		switch (table->resources[rangeIndex].binding)
-		//		{
-		//		case TEXTURE1D:
-		//			descriptor.imageinfo.imageView = nullImageView1D;
-		//			break;
-		//		case TEXTURE1DARRAY:
-		//			descriptor.imageinfo.imageView = nullImageView1DArray;
-		//			break;
-		//		case TEXTURE2D:
-		//			descriptor.imageinfo.imageView = nullImageView2D;
-		//			break;
-		//		case TEXTURE2DARRAY:
-		//			descriptor.imageinfo.imageView = nullImageView2DArray;
-		//			break;
-		//		case TEXTURECUBE:
-		//			descriptor.imageinfo.imageView = nullImageViewCube;
-		//			break;
-		//		case TEXTURECUBEARRAY:
-		//			descriptor.imageinfo.imageView = nullImageViewCubeArray;
-		//			break;
-		//		case TEXTURE3D:
-		//			descriptor.imageinfo.imageView = nullImageView3D;
-		//			break;
-		//		};
-		//		descriptor.imageinfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-		//	}
-		//	else if (resource->IsTexture())
-		//	{
-		//		const Texture* texture = (const Texture*)resource;
-		//		auto internal_state = to_internal(texture);
-		//		if (subresource < 0)
-		//		{
-		//			descriptor.imageinfo.imageView = internal_state->srv;
-		//		}
-		//		else
-		//		{
-		//			descriptor.imageinfo.imageView = internal_state->subresources_srv[subresource];
-		//		}
-		//		descriptor.imageinfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		//	}
-		//	else
-		//	{
-		//		assert(0);
-		//	}
-		//	break;
-		//case ACCELERATIONSTRUCTURE:
-		//	if (resource == nullptr || !resource->IsValid())
-		//	{
-		//		// nothing
-		//	}
-		//	else if (resource->IsAccelerationStructure())
-		//	{
-		//		auto internal_state = to_internal((const RaytracingAccelerationStructure*)resource);
-		//		descriptor.accelerationStructure = internal_state->resource;
-		//	}
-		//	else
-		//	{
-		//		assert(0);
-		//	}
-		//	break;
-		//case RWRAWBUFFER:
-		//case RWSTRUCTUREDBUFFER:
-		//case ROOT_RWRAWBUFFER:
-		//case ROOT_RWSTRUCTUREDBUFFER:
-		//	if (resource == nullptr || !resource->IsValid())
-		//	{
-		//		descriptor.bufferInfo.buffer = nullBuffer;
-		//		descriptor.bufferInfo.offset = 0;
-		//		descriptor.bufferInfo.range = VK_WHOLE_SIZE;
-		//	}
-		//	else if (resource->IsBuffer())
-		//	{
-		//		const GPUBuffer* buffer = (const GPUBuffer*)resource;
-		//		auto internal_state = to_internal(buffer);
-		//		descriptor.bufferInfo.buffer = internal_state->resource;
-		//		descriptor.bufferInfo.offset = offset;
-		//		descriptor.bufferInfo.range = VK_WHOLE_SIZE;
-		//	}
-		//	else
-		//	{
-		//		assert(0);
-		//	}
-		//	break;
-		//case RWTYPEDBUFFER:
-		//	if (resource == nullptr || !resource->IsValid())
-		//	{
-		//		descriptor.bufferView = nullBufferView;
-		//	}
-		//	else if (resource->IsBuffer())
-		//	{
-		//		const GPUBuffer* buffer = (const GPUBuffer*)resource;
-		//		auto internal_state = to_internal(buffer);
-		//		descriptor.bufferView = subresource < 0 ? internal_state->uav : internal_state->subresources_uav[subresource];
-		//	}
-		//	else
-		//	{
-		//		assert(0);
-		//	}
-		//	break;
-		//case RWTEXTURE1D:
-		//case RWTEXTURE1DARRAY:
-		//case RWTEXTURE2D:
-		//case RWTEXTURE2DARRAY:
-		//case RWTEXTURE3D:
-		//	descriptor.imageinfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-		//	descriptor.imageinfo.sampler = VK_NULL_HANDLE;
-		//	if (resource == nullptr || !resource->IsValid())
-		//	{
-		//		switch (table->resources[rangeIndex].binding)
-		//		{
-		//		case TEXTURE1D:
-		//			descriptor.imageinfo.imageView = nullImageView1D;
-		//			break;
-		//		case TEXTURE1DARRAY:
-		//			descriptor.imageinfo.imageView = nullImageView1DArray;
-		//			break;
-		//		case TEXTURE2D:
-		//			descriptor.imageinfo.imageView = nullImageView2D;
-		//			break;
-		//		case TEXTURE2DARRAY:
-		//			descriptor.imageinfo.imageView = nullImageView2DArray;
-		//			break;
-		//		case TEXTURECUBE:
-		//			descriptor.imageinfo.imageView = nullImageViewCube;
-		//			break;
-		//		case TEXTURECUBEARRAY:
-		//			descriptor.imageinfo.imageView = nullImageViewCubeArray;
-		//			break;
-		//		case TEXTURE3D:
-		//			descriptor.imageinfo.imageView = nullImageView3D;
-		//			break;
-		//		};
-		//	}
-		//	else if (resource->IsTexture())
-		//	{
-		//		const Texture* texture = (const Texture*)resource;
-		//		auto internal_state = to_internal(texture);
-		//		if (subresource < 0)
-		//		{
-		//			descriptor.imageinfo.imageView = internal_state->uav;
-		//		}
-		//		else
-		//		{
-		//			descriptor.imageinfo.imageView = internal_state->subresources_uav[subresource];
-		//		}
-		//	}
-		//	else
-		//	{
-		//		assert(0);
-		//	}
-		//	break;
-		//default:
-		//	break;
-		//}
-	}
-	void GraphicsDevice_Vulkan::WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const Sampler* sampler)
-	{
-		//auto table_internal = to_internal(table);
-		//size_t sampler_remap = table->resources.size() + (size_t)rangeIndex;
-		//size_t remap = table_internal->sampler_write_remap[rangeIndex];
-		//auto& descriptor = table_internal->descriptors[remap];
-		//descriptor.imageinfo.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		//descriptor.imageinfo.imageView = VK_NULL_HANDLE;
-
-		//if (sampler == nullptr || !sampler->IsValid())
-		//{
-		//	descriptor.imageinfo.sampler = nullSampler;
-		//}
-		//else
-		//{
-		//	auto internal_state = to_internal(sampler);
-		//	descriptor.imageinfo.sampler = internal_state->resource;
-		//}
-	}
-
+	
 	void GraphicsDevice_Vulkan::Map(const GPUResource* resource, Mapping* mapping)
 	{
 		VkDeviceMemory memory = VK_NULL_HANDLE;
@@ -7521,130 +6866,6 @@ using namespace Vulkan_Internal;
 	{
 		std::memcpy(pushconstants[cmd].data, data, size);
 		pushconstants[cmd].size = size;
-	}
-
-	void GraphicsDevice_Vulkan::BindDescriptorTable(BINDPOINT bindpoint, uint32_t space, const DescriptorTable* table, CommandList cmd)
-	{
-		//const RootSignature* rootsig = nullptr;
-		//switch (bindpoint)
-		//{
-		//default:
-		//case wiGraphics::GRAPHICS:
-		//	rootsig = active_pso[cmd]->desc.rootSignature;
-		//	break;
-		//case wiGraphics::COMPUTE:
-		//	rootsig = active_cs[cmd]->rootSignature;
-		//	break;
-		//case wiGraphics::RAYTRACING:
-		//	rootsig = active_rt[cmd]->desc.rootSignature;
-		//	break;
-		//}
-		//auto rootsig_internal = to_internal(rootsig);
-		//auto& descriptors = GetFrameResources().descriptors[cmd];
-		//rootsig_internal->last_tables[cmd][space] = table;
-		//rootsig_internal->last_descriptorsets[cmd][space] = descriptors.commit(table);
-		//rootsig_internal->dirty[cmd] = true;
-		//for (auto& x : rootsig_internal->root_descriptors[cmd])
-		//{
-		//	x = nullptr;
-		//}
-	}
-	void GraphicsDevice_Vulkan::BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd)
-	{
-		//const RootSignature* rootsig = nullptr;
-		//switch (bindpoint)
-		//{
-		//default:
-		//case wiGraphics::GRAPHICS:
-		//	rootsig = active_pso[cmd]->desc.rootSignature;
-		//	break;
-		//case wiGraphics::COMPUTE:
-		//	rootsig = active_cs[cmd]->rootSignature;
-		//	break;
-		//case wiGraphics::RAYTRACING:
-		//	rootsig = active_rt[cmd]->desc.rootSignature;
-		//	break;
-		//}
-		//auto rootsig_internal = to_internal(rootsig);
-		//rootsig_internal->root_offsets[cmd][index] = offset;
-
-		//if (buffer != rootsig_internal->root_descriptors[cmd][index])
-		//{
-		//	rootsig_internal->root_descriptors[cmd][index] = buffer;
-
-		//	auto remap = rootsig_internal->root_remap[index];
-
-		//	if (!rootsig_internal->dirty[cmd])
-		//	{
-		//		// Need to recommit descriptor set if root descriptor changes and the set is already bound:
-		//		auto& descriptors = GetFrameResources().descriptors[cmd];
-		//		VkDescriptorSet set = descriptors.commit(rootsig_internal->last_tables[cmd][remap.space]);
-		//		rootsig_internal->last_descriptorsets[cmd][remap.space] = set;
-		//	}
-
-		//	// Then write root descriptor on top:
-		//	VkDescriptorBufferInfo bufferInfo = {};
-		//	bufferInfo.buffer = to_internal(buffer)->resource;
-		//	bufferInfo.offset = 0;
-
-		//	VkWriteDescriptorSet write = {};
-		//	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		//	write.dstSet = rootsig_internal->last_descriptorsets[cmd][remap.space];
-		//	write.dstBinding = remap.binding;
-		//	write.dstArrayElement = 0;
-		//	write.descriptorCount = 1;
-		//	write.pBufferInfo = &bufferInfo;
-
-		//	switch (rootsig_internal->last_tables[cmd][remap.space]->resources[remap.rangeIndex].binding)
-		//	{
-		//	case ROOT_CONSTANTBUFFER:
-		//		bufferInfo.range = std::min(buffer->desc.ByteWidth, properties2.properties.limits.maxUniformBufferRange);
-		//		write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-		//		break;
-		//	case ROOT_RAWBUFFER:
-		//	case ROOT_STRUCTUREDBUFFER:
-		//	case ROOT_RWRAWBUFFER:
-		//	case ROOT_RWSTRUCTUREDBUFFER:
-		//		bufferInfo.range = VK_WHOLE_SIZE;
-		//		write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
-		//		break;
-		//	default:
-		//		assert(0); // this function is only usable for root buffers!
-		//		break;
-		//	}
-
-		//	vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
-		//}
-
-		//rootsig_internal->dirty[cmd] = true;
-	}
-	void GraphicsDevice_Vulkan::BindRootConstants(BINDPOINT bindpoint, uint32_t index, const void* srcdata, CommandList cmd)
-	{
-		//const RootSignature* rootsig = nullptr;
-		//switch (bindpoint)
-		//{
-		//default:
-		//case wiGraphics::GRAPHICS:
-		//	rootsig = active_pso[cmd]->desc.rootSignature;
-		//	break;
-		//case wiGraphics::COMPUTE:
-		//	rootsig = active_cs[cmd]->rootSignature;
-		//	break;
-		//case wiGraphics::RAYTRACING:
-		//	rootsig = active_rt[cmd]->desc.rootSignature;
-		//	break;
-		//}
-		//auto rootsig_internal = to_internal(rootsig);
-
-		//const RootConstantRange& range = rootsig->rootconstants[index];
-		//vkCmdPushConstants(
-		//	GetDirectCommandList(cmd),
-		//	rootsig_internal->pipelineLayout,
-		//	_ConvertStageFlags(range.stage),
-		//	range.offset,
-		//	range.size,
-		//	srcdata
-		//);
 	}
 
 	GraphicsDevice::GPUAllocation GraphicsDevice_Vulkan::AllocateGPU(size_t dataSize, CommandList cmd)

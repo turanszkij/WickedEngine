@@ -2857,6 +2857,14 @@ void RenderMeshes(
 			static_assert(arraysize(vbs) == arraysize(offsets), "Mismatch between vertex buffers and offsets!");
 			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 
+			struct PushConstantsObject
+			{
+				int subset_buffer_index;
+				uint subsetIndex;
+			} push;
+			push.subset_buffer_index = device->GetDescriptorIndex(&mesh.subsetBuffer, SRV);
+			push.subsetIndex = 0;
+
 			for (const MeshComponent::MeshSubset& subset : mesh.subsets)
 			{
 				if (subset.indexCount == 0)
@@ -2934,19 +2942,15 @@ void RenderMeshes(
 
 				if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
 				{
-					struct PushConstants
-					{
-						uint materialIndex;
-						uint materialIndex1;
-						uint materialIndex2;
-						uint materialIndex3;
-					};
-					PushConstants push;
-					push.materialIndex = device->GetDescriptorIndex(&material.constantBuffer, CBV);
-					push.materialIndex1 = -1;
-					push.materialIndex2 = -1;
-					push.materialIndex3 = -1;
+					//ShaderMeshSubset push;
+					//push.indexOffset = subset.indexOffset;
+					//push.indexCount = subset.indexCount;
+					//push.materialIndex = device->GetDescriptorIndex(&material.constantBuffer, CBV);
+					//push.meshIndex = device->GetDescriptorIndex(&mesh.constantBuffer, CBV);
+					//device->PushConstants(&push, sizeof(push), cmd);
+
 					device->PushConstants(&push, sizeof(push), cmd);
+					push.subsetIndex++;
 				}
 				else
 				{
@@ -3580,6 +3584,7 @@ void UpdatePerFrameData(
 	frameCB.g_xFrame_VoxelRadianceRayStepSize = voxelSceneData.rayStepSize;
 	frameCB.g_xFrame_VoxelRadianceDataCenter = voxelSceneData.center;
 	frameCB.g_xFrame_EntityCullingTileCount = GetEntityCullingTileCount(internalResolution);
+	frameCB.g_xFrame_ObjectShaderSamplerIndex = device->GetDescriptorIndex(&samplers[SSLOT_OBJECTSHADER]);
 
 	// The order is very important here:
 	frameCB.g_xFrame_DecalArrayOffset = 0;
@@ -4000,6 +4005,38 @@ void UpdateRenderData(
 		GetRenderFrameAllocator(cmd).free(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
 	}
 
+	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+	{
+		for (size_t i = 0; i < vis.scene->meshes.GetCount(); ++i)
+		{
+			const MeshComponent& mesh = vis.scene->meshes[i];
+			ShaderMesh shadermesh;
+			mesh.WriteShaderMesh(&shadermesh);
+			device->UpdateBuffer(&mesh.constantBuffer, &shadermesh, cmd);
+
+			int meshIndex = device->GetDescriptorIndex(&mesh.constantBuffer, CBV);
+
+			size_t alloc_size = sizeof(ShaderMeshSubset) * mesh.subsets.size();
+			ShaderMeshSubset* shadersubsets = (ShaderMeshSubset*)GetRenderFrameAllocator(cmd).allocate(alloc_size);
+			int j = 0;
+			for (auto& x : mesh.subsets)
+			{
+				ShaderMeshSubset& shadersubset = shadersubsets[j++];
+				shadersubset.indexOffset = x.indexOffset;
+				shadersubset.indexCount = x.indexCount;
+				shadersubset.meshIndex = meshIndex;
+
+				const MaterialComponent* material = vis.scene->materials.GetComponent(x.materialID);
+				if (material != nullptr)
+				{
+					shadersubset.materialIndex = device->GetDescriptorIndex(&material->constantBuffer, CBV);
+				}
+			}
+			device->UpdateBuffer(&mesh.subsetBuffer, shadersubsets, cmd, (int)alloc_size);
+			GetRenderFrameAllocator(cmd).free(alloc_size);
+		}
+	}
+
 	auto range = wiProfiler::BeginRangeGPU("Skinning", cmd);
 	device->EventBegin("Skinning", cmd);
 	{
@@ -4220,7 +4257,7 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 				transform._12, transform._22, transform._32, transform._42,
 				transform._13, transform._23, transform._33, transform._43
 			);
-			instance.InstanceID = mesh.TLAS_geometryOffset;
+			instance.InstanceID = (uint32_t)device->GetDescriptorIndex(&mesh.constantBuffer, CBV);
 			instance.InstanceMask = 1;
 			instance.bottomlevel = mesh.BLAS;
 
@@ -9808,8 +9845,6 @@ void Postprocess_RTAO(
 {
 	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		return;
-	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT))
-		return;
 
 	if (scene.objects.GetCount() <= 0)
 	{
@@ -9822,40 +9857,13 @@ void Postprocess_RTAO(
 	BindCommonResources(cmd);
 
 	static RaytracingPipelineState RTPSO;
-	static DescriptorTable descriptorTable;
-	static RootSignature rootSignature;
 
 	auto load_shaders = [&scene](uint64_t userdata) {
 
-		descriptorTable = DescriptorTable();
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_DEPTH });
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_ONDEMAND0 });
-		descriptorTable.resources.push_back({ ACCELERATIONSTRUCTURE, TEXSLOT_ACCELERATION_STRUCTURE });
-		descriptorTable.resources.push_back({ RWTEXTURE2D, 0 });
-		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(FrameCB) });
-		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(CameraCB) });
-		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(PostProcessCB) });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_POINT_CLAMP], SSLOT_POINT_CLAMP });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_LINEAR_CLAMP], SSLOT_LINEAR_CLAMP });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_POINT_WRAP], SSLOT_POINT_WRAP });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_LINEAR_WRAP], SSLOT_LINEAR_WRAP });
-		device->CreateDescriptorTable(&descriptorTable);
-
-		rootSignature = RootSignature();
-		rootSignature.tables.push_back(descriptorTable);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_MATERIAL]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_TEXTURES]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_INDEXBUFFER]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS]);
-		device->CreateRootSignature(&rootSignature);
-
-		shaders[RTTYPE_RTAO].rootSignature = &rootSignature;
 		bool success = LoadShader(LIB, shaders[RTTYPE_RTAO], "rtaoLIB.cso");
 		assert(success);
 
 		RaytracingPipelineStateDesc rtdesc;
-		rtdesc.rootSignature = &rootSignature;
-
 		rtdesc.shaderlibraries.emplace_back();
 		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTAO];
 		rtdesc.shaderlibraries.back().function_name = "RTAO_Raygen";
@@ -9928,17 +9936,6 @@ void Postprocess_RTAO(
 	memcpy(cb_alloc.data, &cb, sizeof(cb));
 
 	device->BindRaytracingPipelineState(&RTPSO, cmd);
-	device->WriteDescriptor(&descriptorTable, 0, 0, &depthbuffer);
-	device->WriteDescriptor(&descriptorTable, 1, 0, &res.normals);
-	device->WriteDescriptor(&descriptorTable, 2, 0, &scene.TLAS);
-	device->WriteDescriptor(&descriptorTable, 3, 0, &res.temp);
-	for (size_t i = 0; i < rootSignature.tables.size(); ++i)
-	{
-		device->BindDescriptorTable(RAYTRACING, (uint32_t)i, &rootSignature.tables[i], cmd);
-	}
-	device->BindRootDescriptor(RAYTRACING, 0, &constantBuffers[CBTYPE_FRAME], 0, cmd);
-	device->BindRootDescriptor(RAYTRACING, 1, &constantBuffers[CBTYPE_CAMERA], 0, cmd);
-	device->BindRootDescriptor(RAYTRACING, 2, cb_alloc.buffer, cb_alloc.offset, cmd);
 
 	size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
 	GraphicsDevice::GPUAllocation shadertable_raygen = device->AllocateGPU(shaderIdentifierSize, cmd);
@@ -10164,8 +10161,6 @@ void Postprocess_RTReflection(
 {
 	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		return;
-	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT))
-		return;
 
 	if (scene.objects.GetCount() <= 0)
 	{
@@ -10176,57 +10171,13 @@ void Postprocess_RTReflection(
 	auto prof_range = wiProfiler::BeginRangeGPU("RTReflection", cmd);
 
 	static RaytracingPipelineState RTPSO;
-	static DescriptorTable descriptorTable;
-	static RootSignature rootSignature;
 
 	auto load_shaders = [&scene](uint64_t userdata) {
 
-		descriptorTable = DescriptorTable();
-		descriptorTable.resources.push_back({ RWTEXTURE2D, 0 });
-		descriptorTable.resources.push_back({ ACCELERATIONSTRUCTURE, TEXSLOT_ACCELERATION_STRUCTURE });
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_DEPTH });
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_GBUFFER0 });
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_GBUFFER1 });
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_GBUFFER2 });
-		descriptorTable.resources.push_back({ TEXTURECUBEARRAY, TEXSLOT_ENVMAPARRAY });
-		descriptorTable.resources.push_back({ TEXTURE2DARRAY, TEXSLOT_SHADOWARRAY_2D });
-		descriptorTable.resources.push_back({ TEXTURECUBEARRAY, TEXSLOT_SHADOWARRAY_CUBE });
-		descriptorTable.resources.push_back({ TEXTURE2DARRAY, TEXSLOT_SHADOWARRAY_TRANSPARENT_2D });
-		descriptorTable.resources.push_back({ TEXTURECUBEARRAY, TEXSLOT_SHADOWARRAY_TRANSPARENT_CUBE });
-		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, SBSLOT_ENTITYARRAY });
-		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, SBSLOT_MATRIXARRAY });
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_SKYVIEWLUT });
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_TRANSMITTANCELUT });
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_MULTISCATTERINGLUT });
-		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, TEXSLOT_ONDEMAND1 });
-		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, TEXSLOT_ONDEMAND2 });
-		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, TEXSLOT_ONDEMAND3 });
-		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(FrameCB) });
-		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(CameraCB) });
-		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(PostProcessCB) });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_POINT_CLAMP], SSLOT_POINT_CLAMP });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_LINEAR_CLAMP], SSLOT_LINEAR_CLAMP });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_POINT_WRAP], SSLOT_POINT_WRAP });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_LINEAR_WRAP], SSLOT_LINEAR_WRAP });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_CMP_DEPTH], SSLOT_CMP_DEPTH });
-		device->CreateDescriptorTable(&descriptorTable);
-
-		rootSignature = RootSignature();
-		rootSignature.tables.push_back(descriptorTable);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_MATERIAL]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_TEXTURES]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_INDEXBUFFER]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_RAW]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS]);
-		device->CreateRootSignature(&rootSignature);
-
-		shaders[RTTYPE_RTREFLECTION].rootSignature = &rootSignature;
 		bool success = LoadShader(LIB, shaders[RTTYPE_RTREFLECTION], "rtreflectionLIB.cso");
 		assert(success);
 
 		RaytracingPipelineStateDesc rtdesc;
-		rtdesc.rootSignature = &rootSignature;
-
 		rtdesc.shaderlibraries.emplace_back();
 		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
 		rtdesc.shaderlibraries.back().function_name = "RTReflection_Raygen";
@@ -10286,32 +10237,6 @@ void Postprocess_RTReflection(
 	memcpy(cb_alloc.data, &cb, sizeof(cb));
 
 	device->BindRaytracingPipelineState(&RTPSO, cmd);
-	device->WriteDescriptor(&descriptorTable, 0, 0, &res.temp);
-	device->WriteDescriptor(&descriptorTable, 1, 0, &scene.TLAS);
-	device->WriteDescriptor(&descriptorTable, 2, 0, &depthbuffer);
-	device->WriteDescriptor(&descriptorTable, 3, 0, &gbuffer[GBUFFER_COLOR]);
-	device->WriteDescriptor(&descriptorTable, 4, 0, &gbuffer[GBUFFER_NORMAL_ROUGHNESS]);
-	device->WriteDescriptor(&descriptorTable, 5, 0, &gbuffer[GBUFFER_VELOCITY]);
-	device->WriteDescriptor(&descriptorTable, 6, 0, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
-	device->WriteDescriptor(&descriptorTable, 7, 0, &shadowMapArray_2D);
-	device->WriteDescriptor(&descriptorTable, 8, 0, &shadowMapArray_Cube);
-	device->WriteDescriptor(&descriptorTable, 9, 0, &shadowMapArray_Transparent_2D);
-	device->WriteDescriptor(&descriptorTable, 10, 0, &shadowMapArray_Transparent_Cube);
-	device->WriteDescriptor(&descriptorTable, 11, 0, &resourceBuffers[RBTYPE_ENTITYARRAY]);
-	device->WriteDescriptor(&descriptorTable, 12, 0, &resourceBuffers[RBTYPE_MATRIXARRAY]);
-	device->WriteDescriptor(&descriptorTable, 13, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT]);
-	device->WriteDescriptor(&descriptorTable, 14, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT]);
-	device->WriteDescriptor(&descriptorTable, 15, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT]);
-	device->WriteDescriptor(&descriptorTable, 16, 0, &resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE]);
-	device->WriteDescriptor(&descriptorTable, 17, 0, &resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE]);
-	device->WriteDescriptor(&descriptorTable, 18, 0, &resourceBuffers[RBTYPE_BLUENOISE_RANKING_TILE]);
-	for (size_t i = 0; i < rootSignature.tables.size(); ++i)
-	{
-		device->BindDescriptorTable(RAYTRACING, (uint32_t)i, &rootSignature.tables[i], cmd);
-	}
-	device->BindRootDescriptor(RAYTRACING, 0, &constantBuffers[CBTYPE_FRAME], 0, cmd);
-	device->BindRootDescriptor(RAYTRACING, 1, &constantBuffers[CBTYPE_CAMERA], 0, cmd);
-	device->BindRootDescriptor(RAYTRACING, 2, cb_alloc.buffer, cb_alloc.offset, cmd);
 
 	size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
 	GraphicsDevice::GPUAllocation shadertable_raygen = device->AllocateGPU(shaderIdentifierSize, cmd);
@@ -10722,8 +10647,6 @@ void Postprocess_RTShadow(
 {
 	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		return;
-	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT))
-		return;
 
 	if (scene.objects.GetCount() <= 0)
 	{
@@ -10736,41 +10659,13 @@ void Postprocess_RTShadow(
 	BindCommonResources(cmd);
 
 	static RaytracingPipelineState RTPSO;
-	static DescriptorTable descriptorTable;
-	static RootSignature rootSignature;
 
 	auto load_shaders = [&scene](uint64_t userdata) {
 
-		descriptorTable = DescriptorTable();
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_DEPTH });
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_ONDEMAND0 });
-		descriptorTable.resources.push_back({ ACCELERATIONSTRUCTURE, TEXSLOT_ACCELERATION_STRUCTURE });
-		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, SBSLOT_ENTITYARRAY });
-		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, TEXSLOT_RENDERPATH_ENTITYTILES });
-		descriptorTable.resources.push_back({ RWTEXTURE2D, 0 });
-		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(FrameCB) });
-		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(CameraCB) });
-		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(PostProcessCB) });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_POINT_CLAMP], SSLOT_POINT_CLAMP });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_LINEAR_CLAMP], SSLOT_LINEAR_CLAMP });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_POINT_WRAP], SSLOT_POINT_WRAP });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_LINEAR_WRAP], SSLOT_LINEAR_WRAP });
-		device->CreateDescriptorTable(&descriptorTable);
-
-		rootSignature = RootSignature();
-		rootSignature.tables.push_back(descriptorTable);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_MATERIAL]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_TEXTURES]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_INDEXBUFFER]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS]);
-		device->CreateRootSignature(&rootSignature);
-
-		shaders[RTTYPE_RTSHADOW].rootSignature = &rootSignature;
 		bool success = LoadShader(LIB, shaders[RTTYPE_RTSHADOW], "rtshadowLIB.cso");
 		assert(success);
 
 		RaytracingPipelineStateDesc rtdesc;
-		rtdesc.rootSignature = &rootSignature;
 
 		rtdesc.shaderlibraries.emplace_back();
 		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTSHADOW];
@@ -10839,20 +10734,6 @@ void Postprocess_RTShadow(
 	memcpy(cb_alloc.data, &cb, sizeof(cb));
 
 	device->BindRaytracingPipelineState(&RTPSO, cmd);
-	device->WriteDescriptor(&descriptorTable, 0, 0, &depthbuffer);
-	device->WriteDescriptor(&descriptorTable, 1, 0, &res.normals);
-	device->WriteDescriptor(&descriptorTable, 2, 0, &scene.TLAS);
-	device->WriteDescriptor(&descriptorTable, 2, 0, &scene.TLAS);
-	device->WriteDescriptor(&descriptorTable, 3, 0, &resourceBuffers[RBTYPE_ENTITYARRAY]);
-	device->WriteDescriptor(&descriptorTable, 4, 0, &entityTiles_Opaque);
-	device->WriteDescriptor(&descriptorTable, 5, 0, &res.temp);
-	for (size_t i = 0; i < rootSignature.tables.size(); ++i)
-	{
-		device->BindDescriptorTable(RAYTRACING, (uint32_t)i, &rootSignature.tables[i], cmd);
-	}
-	device->BindRootDescriptor(RAYTRACING, 0, &constantBuffers[CBTYPE_FRAME], 0, cmd);
-	device->BindRootDescriptor(RAYTRACING, 1, &constantBuffers[CBTYPE_CAMERA], 0, cmd);
-	device->BindRootDescriptor(RAYTRACING, 2, cb_alloc.buffer, cb_alloc.offset, cmd);
 
 	size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
 	GraphicsDevice::GPUAllocation shadertable_raygen = device->AllocateGPU(shaderIdentifierSize, cmd);
