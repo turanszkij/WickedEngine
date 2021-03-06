@@ -328,10 +328,9 @@ function(Generate_Shaders_SPIRV SHADERS_SRC_LIST SHADER_TYPE)
 				-T "${SHADER_TYPE}_6_5"
 				-I "${CMAKE_CURRENT_SOURCE_DIR}/../"
 				-D SPIRV
-				-D BINDLESS
 				#-all-resources-bound
 				#-pack-optimized
-				#-res-may-alias
+				-res-may-alias
 				#-no-legacy-cbuf-layout
 				-spirv
 				-fspv-target-env=${VK_VERSION}
@@ -446,10 +445,9 @@ if (WIN32)
 					-T "${SHADER_TYPE}_6_5"
 					-I "${CMAKE_CURRENT_SOURCE_DIR}/../"
 					-D HLSL6
-					-D BINDLESS
 					#-all-resources-bound
 					#-pack-optimized
-					#-res-may-alias
+					-res-may-alias
 					#-no-legacy-cbuf-layout
 					-flegacy-macro-expansion
 					-Fo ${DXC_OUTPUT}

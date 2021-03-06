@@ -514,9 +514,10 @@ Only `Sampler` can be bound as sampler. Use the `GraphicsDevice::BindSampler()` 
 There are some limitations on the maximum value of slots that can be used, these are defined as compile time constants in [Graphics device SharedInternals](../WickedEngine/wiGraphicsDevice_SharedInternals.h). The user can modify these and recompile the engine if the predefined slots are not enough. This could slightly affect performance.
 
 Remarks:
-- Vulkan and DX12 devices make an effort to combine descriptors across shader stages, so overlapping descriptors will not be supported with those APIs to some extent. For example it is OK, to have a constant buffer on slot 0 (b0) in a vertex shader while having a Texture2D on slot 0 (t0) in pixel shader. However, having a StructuredBuffer on vertex shader slot 0 (t0) and a Texture2D in pixel shader slot 0 (t0) will not work correctly, as only one of them will be bound to a pipeline state. This is made for performance reasons and to retain compatibility with the [advanced binding model](#resource-binding-advanced).
-- Auto samplers can be added to `Shader`s. These sasmplers will always be bound to the shader stage as static samplers. The user doesn't need to use `BindSampler()` function for these.
+- Vulkan and DX12 devices make an effort to combine descriptors across shader stages, so overlapping descriptors will not be supported with those APIs to some extent. For example it is OK, to have a constant buffer on slot 0 (b0) in a vertex shader while having a Texture2D on slot 0 (t0) in pixel shader. However, having a StructuredBuffer on vertex shader slot 0 (t0) and a Texture2D in pixel shader slot 0 (t0) will not work correctly, as only one of them will be bound to a pipeline state. This is made for performance reasons.
+- Auto samplers can be added to `Shader`s. These samplers will always be bound to the shader stage as static samplers. The user doesn't need to use `BindSampler()` function for these.
 - Common Samplers can be set on the graphics device. These samplers will be bound to all shaders that are created after the common sampler have been set. The user doesn't need to use `BindSampler()` function for these.
+- This slot based binding model has a CPU overhead that has to be kept in mind. Avoid binding massive amount of resources. The maximum slot numbers that should be used are: 15 for `BindConstantBuffer()`, 64 for `BindResource()` and 8 for `BindUAV()`. Consider using a [bindless model](#bindless-resources) when you need to bind more than a couple of resources.
 
 ##### Bindless resources
 
@@ -554,10 +555,14 @@ push.textureindex = device->GetDescriptorIndex(texture, SRV);
 device->PushConstants(&push, sizeof(push), cmd);
 ```
 
+The regular slot based binding model can will work alongside the bindless model seamlessly. The slot based bindings will always use `space0` implicitly, `space1` and greater should be used for the bindless model. Aim to keep space numbers as low as possible.
+
 ##### Subresources
 Resources like textures can have different views. For example, if a texture contains multiple mip levels, each mip level can be viewed as a separate texture with one mip level, or the whole texture can be viewed as a texture with multiple mip levels. When creating resources, a subresource that views the entire resource will be created. Functions that expect a subresource parameter can be provided with the value `-1` that means the whole resource. Usually, this parameter is optional.
 
-Other subresources can be create with the `GraphicsDevice::CreateSubresource()` function. The function will return an `int` value that can be used to refer to the subresource view that was created. In case the function returns `-1`, the subresource creation failed due to an incorrect parameter. Please use the [debug device](#debug-device) functionality to check for errors in this case.
+Other subresources can be create with the `GraphicsDevice::CreateSubresource()` function. The function will return an `int` value that can be used to refer to the subresource view that was created. In case the function returns `-1`, the subresource creation failed due to an incorrect parameter. Please use the [debug device](#debug-device) functionality to check for errors in this case. The use of `CreateSubresource()` function is thread safe on the device, but not on the resource, so only 1 thread must modify a given resource at a time.
+
+The subresource indices are valid as long as the resource is valid that they were created with.
 
 ##### Pipeline States and Shaders
 `PipelineState`s are used to define the graphics pipeline state, that includes which shaders are used, which blend mode, rasterizer state, input layout, depth stencil state and primitive topology, as well as sample mask are in effect. These states can only be bound atomically in a single call to `GraphicsDevice::SetPipelineState()`. This does not include compute shaders, which do not participate in the graphics pipeline state and can be bound individually using `GraphicsDevice::BindComputeShader()` method.

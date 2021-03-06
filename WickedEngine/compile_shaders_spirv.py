@@ -62,7 +62,7 @@ for item in root.iter():
             
             #cmd += " -all-resources-bound "
             #cmd += " -pack-optimized "
-            #cmd += " -res-may-alias "
+            cmd += " -res-may-alias "
             #cmd += " -no-legacy-cbuf-layout "
             
             cmd += " -spirv "
@@ -86,7 +86,6 @@ for item in root.iter():
             cmd += " -Vd " #DISABLE VALIDATION: There is currently a validation bug with raytracing RayTCurrent()!!!
             
             cmd += " -D SPIRV "
-            cmd += " -D BINDLESS "
 
             output_name = os.path.splitext(name)[0] + ".cso "
             

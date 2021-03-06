@@ -63,13 +63,12 @@ for item in root.iter():
 
             #cmd += " -all-resources-bound "
             #cmd += " -pack-optimized "
-            #cmd += " -res-may-alias "
+            cmd += " -res-may-alias "
             #cmd += " -no-legacy-cbuf-layout "
             
             cmd += " -flegacy-macro-expansion "
             
             cmd += " -D HLSL6 "
-            cmd += " -D BINDLESS "
 
             output_name = os.path.splitext(name)[0] + ".cso "
 
