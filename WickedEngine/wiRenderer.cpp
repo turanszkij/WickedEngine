@@ -3954,25 +3954,6 @@ void UpdateRenderData(
 	device->EventEnd(cmd);
 	wiProfiler::EndRange(range); // skinning
 
-	// Update soft body vertex buffers:
-	for (size_t i = 0; i < vis.scene->softbodies.GetCount(); ++i)
-	{
-		const SoftBodyPhysicsComponent& softbody = vis.scene->softbodies[i];
-		if (softbody.vertex_positions_simulation.empty())
-		{
-			continue;
-		}
-
-		Entity entity = vis.scene->softbodies.GetEntity(i);
-		const MeshComponent& mesh = *vis.scene->meshes.GetComponent(entity);
-
-		device->UpdateBuffer(&mesh.streamoutBuffer_POS, softbody.vertex_positions_simulation.data(), cmd, 
-			(uint32_t)(sizeof(MeshComponent::Vertex_POS) * softbody.vertex_positions_simulation.size()));
-
-		device->UpdateBuffer(&mesh.streamoutBuffer_TAN, softbody.vertex_tangents_simulation.data(), cmd,
-			(uint32_t)(sizeof(MeshComponent::Vertex_TAN)* softbody.vertex_tangents_simulation.size()));
-	}
-
 	// GPU Particle systems simulation/sorting/culling:
 	if (!vis.visibleEmitters.empty())
 	{
