@@ -5774,16 +5774,26 @@ using namespace Vulkan_Internal;
 				frame.descriptors[cmd].init(this);
 			}
 		}
-		res = vkResetCommandPool(device, GetFrameResources().commandPools[cmd], 0);
-		assert(res == VK_SUCCESS);
 
-		VkCommandBufferBeginInfo beginInfo = {};
-		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-		beginInfo.pInheritanceInfo = nullptr; // Optional
+		if (!stashed[cmd])
+		{
+			res = vkResetCommandPool(device, GetFrameResources().commandPools[cmd], 0);
+			assert(res == VK_SUCCESS);
 
-		res = vkBeginCommandBuffer(GetFrameResources().commandBuffers[cmd], &beginInfo);
-		assert(res == VK_SUCCESS);
+			VkCommandBufferBeginInfo beginInfo = {};
+			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+			beginInfo.pInheritanceInfo = nullptr; // Optional
+
+			res = vkBeginCommandBuffer(GetFrameResources().commandBuffers[cmd], &beginInfo);
+			assert(res == VK_SUCCESS);
+
+			// reset descriptor allocators:
+			GetFrameResources().descriptors[cmd].reset();
+
+			// reset immediate resource allocators:
+			GetFrameResources().resourceBuffer[cmd].clear();
+		}
 
 		Viewport viewports[6];
 		for (uint32_t i = 0; i < arraysize(viewports); ++i)
@@ -5809,12 +5819,6 @@ using namespace Vulkan_Internal;
 
 		float blendConstants[] = { 1,1,1,1 };
 		vkCmdSetBlendConstants(GetDirectCommandList(cmd), blendConstants);
-
-		// reset descriptor allocators:
-		GetFrameResources().descriptors[cmd].reset();
-
-		// reset immediate resource allocators:
-		GetFrameResources().resourceBuffer[cmd].clear();
 
 		prev_pipeline_hash[cmd] = 0;
 		active_pso[cmd] = nullptr;
@@ -5884,6 +5888,7 @@ using namespace Vulkan_Internal;
 			cmd_count.store(0);
 			for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
 			{
+				stashed[cmd] = false;
 				barrier_flush(cmd);
 
 				VkResult res = vkEndCommandBuffer(GetDirectCommandList(cmd));
@@ -5965,6 +5970,15 @@ using namespace Vulkan_Internal;
 
 		copyQueueUse = false;
 		copyQueueLock.unlock();
+	}
+	void GraphicsDevice_Vulkan::StashCommandLists()
+	{
+		CommandList active_count = cmd_count.load();
+		cmd_count.store(0);
+		for (CommandList cmd = 0; cmd < active_count; ++cmd)
+		{
+			stashed[cmd] = true;
+		}
 	}
 
 	void GraphicsDevice_Vulkan::WaitForGPU()

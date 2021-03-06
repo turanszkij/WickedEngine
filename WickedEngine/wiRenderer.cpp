@@ -374,9 +374,6 @@ struct RenderQueue
 	}
 };
 
-vector<Entity> pendingMaterialUpdates;
-vector<Entity> pendingMorphUpdates;
-
 enum AS_UPDATE_TYPE
 {
 	AS_COMPLETE,
@@ -2408,8 +2405,6 @@ void ClearWorld(Scene& scene)
 	packedDecals.clear();
 	packedLightmaps.clear();
 
-	pendingMaterialUpdates.clear();
-	pendingMorphUpdates.clear();
 	pendingBottomLevelBuilds.clear();
 }
 
@@ -3703,30 +3698,6 @@ void UpdateRenderData(
 
 	BindCommonResources(cmd);
 
-	// Update material constant buffers:
-	for (Entity entity : pendingMaterialUpdates)
-	{
-		const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			ShaderMaterial materialGPUData;
-			material->WriteShaderMaterial(&materialGPUData);
-			device->UpdateBuffer(&material->constantBuffer, &materialGPUData, cmd);
-		}
-	}
-	pendingMaterialUpdates.clear();
-
-	// Update mesh morph buffers:
-	for (Entity entity : pendingMorphUpdates)
-	{
-		const MeshComponent* mesh = vis.scene->meshes.GetComponent(entity);
-		if (mesh != nullptr && !mesh->vertex_positions_morphed.empty())
-		{
-			device->UpdateBuffer(&mesh->vertexBuffer_POS, mesh->vertex_positions_morphed.data(), cmd);
-		}
-	}
-	pendingMorphUpdates.clear();
-
 	// Fill Entity Array with decals + envprobes + lights in the frustum:
 	{
 		// Reserve temporary entity array for GPU data upload:
@@ -3992,38 +3963,6 @@ void UpdateRenderData(
 		// Temporary array for GPU entities can be freed now:
 		GetRenderFrameAllocator(cmd).free(sizeof(ShaderEntity)*SHADER_ENTITY_COUNT);
 		GetRenderFrameAllocator(cmd).free(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
-	}
-
-	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
-	{
-		for (size_t i = 0; i < vis.scene->meshes.GetCount(); ++i)
-		{
-			const MeshComponent& mesh = vis.scene->meshes[i];
-			ShaderMesh shadermesh;
-			mesh.WriteShaderMesh(&shadermesh);
-			device->UpdateBuffer(&mesh.constantBuffer, &shadermesh, cmd);
-
-			int mesh_descriptor = device->GetDescriptorIndex(&mesh.constantBuffer, CBV);
-
-			size_t alloc_size = sizeof(ShaderMeshSubset) * mesh.subsets.size();
-			ShaderMeshSubset* shadersubsets = (ShaderMeshSubset*)GetRenderFrameAllocator(cmd).allocate(alloc_size);
-			int j = 0;
-			for (auto& x : mesh.subsets)
-			{
-				ShaderMeshSubset& shadersubset = shadersubsets[j++];
-				shadersubset.indexOffset = x.indexOffset;
-				shadersubset.indexCount = x.indexCount;
-				shadersubset.mesh = mesh_descriptor;
-
-				const MaterialComponent* material = vis.scene->materials.GetComponent(x.materialID);
-				if (material != nullptr)
-				{
-					shadersubset.material = device->GetDescriptorIndex(&material->constantBuffer, CBV);
-				}
-			}
-			device->UpdateBuffer(&mesh.subsetBuffer, shadersubsets, cmd, (int)alloc_size);
-			GetRenderFrameAllocator(cmd).free(alloc_size);
-		}
 	}
 
 	auto range = wiProfiler::BeginRangeGPU("Skinning", cmd);
@@ -12894,20 +12833,6 @@ void AddDeferredMIPGen(std::shared_ptr<wiResource> resource, bool preserve_cover
 	deferredMIPGenLock.lock();
 	deferredMIPGens.push_back(std::make_pair(resource, preserve_coverage));
 	deferredMIPGenLock.unlock();
-}
-void AddDeferredMaterialUpdate(Entity entity)
-{
-	static std::mutex locker;
-	locker.lock();
-	pendingMaterialUpdates.push_back(entity);
-	locker.unlock();
-}
-void AddDeferredMorphUpdate(Entity entity)
-{
-	static std::mutex locker;
-	locker.lock();
-	pendingMorphUpdates.push_back(entity);
-	locker.unlock();
 }
 
 

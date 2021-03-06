@@ -768,6 +768,8 @@ namespace wiScene
 
 		if(device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
 		{
+			_flags |= DIRTY_BINDLESS;
+
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_CONSTANT_BUFFER;
 			desc.ByteWidth = sizeof(ShaderMesh);
@@ -1366,6 +1368,16 @@ namespace wiScene
 
 	void Scene::Update(float dt)
 	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		if (dt > 0)
+		{
+			cmd = device->BeginCommandList();
+		}
+		else
+		{
+			cmd = INVALID_COMMANDLIST;
+		}
+
 		wiJobSystem::context ctx;
 
 		RunPreviousFrameTransformUpdateSystem(ctx);
@@ -1421,7 +1433,6 @@ namespace wiScene
 			bounds = AABB::Merge(bounds, group_bound);
 		}
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			// Recreate top level acceleration structure if the object count changed:
@@ -1443,6 +1454,10 @@ namespace wiScene
 			}
 		}
 
+		if (dt > 0)
+		{
+			device->StashCommandLists();
+		}
 	}
 	void Scene::Clear()
 	{
@@ -2559,7 +2574,12 @@ namespace wiScene
 					const MaterialComponent* mat = materials.GetComponent(mesh.terrain_material1);
 					if (mat != nullptr)
 					{
-						mesh.terrain_material1_index = device->GetDescriptorIndex(&mat->constantBuffer, CBV);
+						int index = device->GetDescriptorIndex(&mat->constantBuffer, CBV);
+						if (mesh.terrain_material1_index != index)
+						{
+							mesh._flags |= MeshComponent::DIRTY_BINDLESS;
+							mesh.terrain_material1_index = index;
+						}
 					}
 				}
 				if (mesh.terrain_material2 != INVALID_ENTITY)
@@ -2567,7 +2587,12 @@ namespace wiScene
 					const MaterialComponent* mat = materials.GetComponent(mesh.terrain_material2);
 					if (mat != nullptr)
 					{
-						mesh.terrain_material2_index = device->GetDescriptorIndex(&mat->constantBuffer, CBV);
+						int index = device->GetDescriptorIndex(&mat->constantBuffer, CBV);
+						if (mesh.terrain_material2_index != index)
+						{
+							mesh._flags |= MeshComponent::DIRTY_BINDLESS;
+							mesh.terrain_material2_index = index;
+						}
 					}
 				}
 				if (mesh.terrain_material3 != INVALID_ENTITY)
@@ -2575,13 +2600,49 @@ namespace wiScene
 					const MaterialComponent* mat = materials.GetComponent(mesh.terrain_material3);
 					if (mat != nullptr)
 					{
-						mesh.terrain_material3_index = device->GetDescriptorIndex(&mat->constantBuffer, CBV);
+						int index = device->GetDescriptorIndex(&mat->constantBuffer, CBV);
+						if (mesh.terrain_material3_index != index)
+						{
+							mesh._flags |= MeshComponent::DIRTY_BINDLESS;
+							mesh.terrain_material3_index = index;
+						}
 					}
 				}
 			}
 
+			if (cmd != INVALID_COMMANDLIST && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS) && mesh._flags & MeshComponent::DIRTY_BINDLESS)
+			{
+				mesh._flags &= ~MeshComponent::DIRTY_BINDLESS;
+
+				ShaderMesh shadermesh;
+				mesh.WriteShaderMesh(&shadermesh);
+
+				int mesh_descriptor = device->GetDescriptorIndex(&mesh.constantBuffer, CBV);
+
+				mesh.shadersubsets.resize(mesh.subsets.size());
+				int j = 0;
+				for (auto& x : mesh.subsets)
+				{
+					ShaderMeshSubset& shadersubset = mesh.shadersubsets[j++];
+					shadersubset.indexOffset = x.indexOffset;
+					shadersubset.indexCount = x.indexCount;
+					shadersubset.mesh = mesh_descriptor;
+
+					const MaterialComponent* material = materials.GetComponent(x.materialID);
+					if (material != nullptr)
+					{
+						shadersubset.material = device->GetDescriptorIndex(&material->constantBuffer, CBV);
+					}
+				}
+
+				cmd_locker.lock();
+				device->UpdateBuffer(&mesh.constantBuffer, &shadermesh, cmd);
+				device->UpdateBuffer(&mesh.subsetBuffer, mesh.shadersubsets.data(), cmd);
+				cmd_locker.unlock();
+			}
+
 			// Update morph targets if needed:
-			if (mesh.IsDirtyMorph() && !mesh.targets.empty())
+			if (cmd != INVALID_COMMANDLIST && mesh.IsDirtyMorph() && !mesh.targets.empty())
 			{
 			    XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
 			    XMFLOAT3 _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
@@ -2616,7 +2677,9 @@ namespace wiScene
 			    mesh.aabb = AABB(_min, _max);
 
 				mesh.SetDirtyMorph(false);
-				wiRenderer::AddDeferredMorphUpdate(meshes.GetEntity(args.jobIndex));
+				cmd_locker.lock();
+				wiRenderer::GetDevice()->UpdateBuffer(&mesh.vertexBuffer_POS, mesh.vertex_positions_morphed.data(), cmd);
+				cmd_locker.unlock();
 			}
 
 		});
@@ -2654,10 +2717,14 @@ namespace wiScene
 				material.engineStencilRef = STENCILREF_CUSTOMSHADER;
 			}
 
-			if (material.IsDirty())
+			if (cmd != INVALID_COMMANDLIST && material.IsDirty())
 			{
 				material.SetDirty(false);
-				wiRenderer::AddDeferredMaterialUpdate(entity);
+				ShaderMaterial shadermaterial;
+				material.WriteShaderMaterial(&shadermaterial);
+				cmd_locker.lock();
+				wiRenderer::GetDevice()->UpdateBuffer(&material.constantBuffer, &shadermaterial, cmd);
+				cmd_locker.unlock();
 			}
 
 		});

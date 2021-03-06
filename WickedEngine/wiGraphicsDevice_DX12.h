@@ -292,6 +292,7 @@ namespace wiGraphics
 		std::vector<QueryResolver> query_resolves[COMMANDLIST_COUNT];
 
 		std::atomic<CommandList> cmd_count{ 0 };
+		bool stashed[COMMANDLIST_COUNT] = {};
 
 	public:
 		GraphicsDevice_DX12(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false);
@@ -330,6 +331,7 @@ namespace wiGraphics
 
 		CommandList BeginCommandList() override;
 		void SubmitCommandLists() override;
+		void StashCommandLists() override;
 
 		void WaitForGPU() override;
 		void ClearPipelineStateCache() override;

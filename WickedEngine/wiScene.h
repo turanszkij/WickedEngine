@@ -315,6 +315,7 @@ namespace wiScene
 			DYNAMIC = 1 << 2,
 			TERRAIN = 1 << 3,
 			DIRTY_MORPH = 1 << 4,
+			DIRTY_BINDLESS = 1 << 5,
 		};
 		uint32_t _flags = RENDERABLE;
 
@@ -384,6 +385,8 @@ namespace wiScene
 		int terrain_material1_index = -1;
 		int terrain_material2_index = -1;
 		int terrain_material3_index = -1;
+
+		std::vector<ShaderMeshSubset> shadersubsets;
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
@@ -1274,6 +1277,9 @@ namespace wiScene
 		std::vector<AABB> parallel_bounds;
 		WeatherComponent weather;
 		wiGraphics::RaytracingAccelerationStructure TLAS;
+
+		std::mutex cmd_locker;
+		wiGraphics::CommandList cmd; // for gpu data updates
 
 		wiGraphics::GPUQueryHeap queryHeap[arraysize(ObjectComponent::occlusionQueries)];
 		std::vector<uint64_t> queryResults;

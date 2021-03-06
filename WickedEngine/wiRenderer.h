@@ -828,8 +828,6 @@ namespace wiRenderer
 
 	// Add a texture that should be mipmapped whenever it is feasible to do so
 	void AddDeferredMIPGen(std::shared_ptr<wiResource> res, bool preserve_coverage = false);
-	void AddDeferredMaterialUpdate(wiECS::Entity entity);
-	void AddDeferredMorphUpdate(wiECS::Entity entity);
 
 	struct CustomShader
 	{
