@@ -3859,6 +3859,26 @@ using namespace Vulkan_Internal;
 		VkResult res = vkCreateSampler(device, &createInfo, nullptr, &internal_state->resource);
 		assert(res == VK_SUCCESS);
 
+		internal_state->index = allocationhandler->bindlessSamplers.allocate();
+		if (internal_state->index >= 0)
+		{
+			VkDescriptorImageInfo imageInfo = {};
+			imageInfo.sampler = internal_state->resource;
+			VkWriteDescriptorSet write = {};
+			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+			write.dstBinding = 0;
+			write.dstArrayElement = internal_state->index;
+			write.descriptorCount = 1;
+			write.dstSet = allocationhandler->bindlessSamplers.descriptorSet;
+			write.pImageInfo = &imageInfo;
+			vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+		}
+		else
+		{
+			assert(0);
+		}
+
 		return res == VK_SUCCESS;
 	}
 	bool GraphicsDevice_Vulkan::CreateQueryHeap(const GPUQueryHeapDesc* pDesc, GPUQueryHeap* pQueryHeap)
