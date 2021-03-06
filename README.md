@@ -217,6 +217,10 @@ You can specify command line arguments (without any prefix) to switch between re
     <td>debugdevice</td>
     <td>Use debug layer for graphics API validation. Performance will be degraded, but graphics warnings and errors will be written to "Output" window</td>
   </tr>
+  <tr>
+    <td>gpuvalidation</td>
+    <td>Use GPU Based Validation for graphics. This must be used together with `debugdevice` argument.</td>
+  </tr>
 </table>
 
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/soft.gif"/>
