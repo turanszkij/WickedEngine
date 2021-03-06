@@ -374,14 +374,6 @@ struct RenderQueue
 	}
 };
 
-enum AS_UPDATE_TYPE
-{
-	AS_COMPLETE,
-	AS_REBUILD,
-	AS_UPDATE,
-};
-unordered_map<Entity, AS_UPDATE_TYPE> pendingBottomLevelBuilds;
-
 struct Instance
 {
 	XMFLOAT4 mat0;
@@ -2404,8 +2396,6 @@ void ClearWorld(Scene& scene)
 
 	packedDecals.clear();
 	packedLightmaps.clear();
-
-	pendingBottomLevelBuilds.clear();
 }
 
 static const uint32_t CASCADE_COUNT = 3;
@@ -3387,135 +3377,6 @@ void UpdatePerFrameData(
 
 	wiJobSystem::context ctx;
 
-	// Need to swap prev and current vertex buffers for any dynamic meshes BEFORE render threads are kicked 
-	//	and also create skinning bone buffers:
-	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-		const bool raytracing_api = device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING);
-
-		for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
-		{
-			const SoftBodyPhysicsComponent& softbody = scene.softbodies[i];
-			if (softbody.vertex_positions_simulation.empty())
-			{
-				continue;
-			}
-
-			Entity entity = scene.softbodies.GetEntity(i);
-			MeshComponent& mesh = *scene.meshes.GetComponent(entity);
-
-			if (raytracing_api && !mesh.BLAS_build_pending)
-			{
-				pendingBottomLevelBuilds[entity] = AS_UPDATE;
-			}
-
-			if (!mesh.vertexBuffer_PRE.IsValid())
-			{
-				device->CreateBuffer(&mesh.vertexBuffer_POS.desc, nullptr, &mesh.streamoutBuffer_POS);
-				device->CreateBuffer(&mesh.vertexBuffer_POS.desc, nullptr, &mesh.vertexBuffer_PRE);
-
-				GPUBufferDesc tandesc = mesh.vertexBuffer_TAN.desc;
-				tandesc.Usage = USAGE_DEFAULT;
-				device->CreateBuffer(&tandesc, nullptr, &mesh.streamoutBuffer_TAN);
-
-				if (raytracing_api)
-				{
-					mesh.BLAS.desc._flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
-					device->CreateRaytracingAccelerationStructure(&mesh.BLAS.desc, &mesh.BLAS);
-				}
-			}
-			std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
-		}
-		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
-		{
-			Entity entity = scene.meshes.GetEntity(i);
-			MeshComponent& mesh = scene.meshes[i];
-
-			if (mesh.IsSkinned() && scene.armatures.Contains(mesh.armatureID))
-			{
-				const SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(entity);
-				if (softbody == nullptr || softbody->vertex_positions_simulation.empty())
-				{
-					if (raytracing_api && !mesh.BLAS_build_pending)
-					{
-						pendingBottomLevelBuilds[entity] = AS_UPDATE;
-					}
-
-					ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
-
-					if (!armature.boneBuffer.IsValid())
-					{
-						GPUBufferDesc bd;
-						bd.Usage = USAGE_DYNAMIC;
-						bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-
-						bd.ByteWidth = sizeof(ArmatureComponent::ShaderBoneType) * (uint32_t)armature.boneCollection.size();
-						bd.BindFlags = BIND_SHADER_RESOURCE;
-						bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-						bd.StructureByteStride = sizeof(ArmatureComponent::ShaderBoneType);
-
-						device->CreateBuffer(&bd, nullptr, &armature.boneBuffer);
-					}
-					if (!mesh.vertexBuffer_PRE.IsValid())
-					{
-						device->CreateBuffer(&mesh.streamoutBuffer_POS.GetDesc(), nullptr, &mesh.vertexBuffer_PRE);
-					}
-					std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
-				}
-			}
-
-			if (raytracing_api)
-			{
-				if (mesh.streamoutBuffer_POS.IsValid())
-				{
-					for (auto& geometry : mesh.BLAS.desc.bottomlevel.geometries)
-					{
-						// swapped dynamic vertex buffers in BLAS:
-						geometry.triangles.vertexBuffer = mesh.streamoutBuffer_POS;
-					}
-				}
-
-				if (mesh.BLAS_build_pending)
-				{
-					mesh.BLAS_build_pending = false;
-					pendingBottomLevelBuilds[entity] = AS_REBUILD;
-				}
-			}
-
-		}
-	});
-
-	// Update Voxelization parameters:
-	if (scene.objects.GetCount() > 0)
-	{
-		wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-			// We don't update it if the scene is empty, this even makes it easier to debug
-			const float f = 0.05f / voxelSceneData.voxelsize;
-			XMFLOAT3 center = XMFLOAT3(floorf(vis.camera->Eye.x * f) / f, floorf(vis.camera->Eye.y * f) / f, floorf(vis.camera->Eye.z * f) / f);
-			if (wiMath::DistanceSquared(center, voxelSceneData.center) > 0)
-			{
-				voxelSceneData.centerChangedThisFrame = true;
-			}
-			else
-			{
-				voxelSceneData.centerChangedThisFrame = false;
-			}
-			voxelSceneData.center = center;
-			voxelSceneData.extents = XMFLOAT3(voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize);
-		});
-	}
-
-	if (scene.weather.IsOceanEnabled())
-	{
-		if (ocean == nullptr)
-		{
-			ocean = std::make_unique<wiOcean>(scene.weather);
-		}
-	}
-	else if (ocean != nullptr)
-	{
-		ocean.reset();
-	}
-
 	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
 		ManageDecalAtlas(scene);
 	});
@@ -3535,6 +3396,36 @@ void UpdatePerFrameData(
 		}
 		ManageWaterRipples();
 	});
+
+	// Update Voxelization parameters:
+	if (scene.objects.GetCount() > 0)
+	{
+		// We don't update it if the scene is empty, this even makes it easier to debug
+		const float f = 0.05f / voxelSceneData.voxelsize;
+		XMFLOAT3 center = XMFLOAT3(floorf(vis.camera->Eye.x * f) / f, floorf(vis.camera->Eye.y * f) / f, floorf(vis.camera->Eye.z * f) / f);
+		if (wiMath::DistanceSquared(center, voxelSceneData.center) > 0)
+		{
+			voxelSceneData.centerChangedThisFrame = true;
+		}
+		else
+		{
+			voxelSceneData.centerChangedThisFrame = false;
+		}
+		voxelSceneData.center = center;
+		voxelSceneData.extents = XMFLOAT3(voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize);
+	}
+
+	if (scene.weather.IsOceanEnabled())
+	{
+		if (ocean == nullptr)
+		{
+			ocean = std::make_unique<wiOcean>(scene.weather);
+		}
+	}
+	else if (ocean != nullptr)
+	{
+		ocean.reset();
+	}
 
 	wiJobSystem::Wait(ctx);
 
@@ -4135,85 +4026,85 @@ void UpdateRenderData(
 }
 void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 {
-	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) || !scene.TLAS.IsValid())
-	{
-		return;
-	}
-	auto range = wiProfiler::BeginRangeGPU("Update Raytracing Acceleration Structures", cmd);
-	device->EventBegin("Update Raytracing Acceleration Structures", cmd);
+	//if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) || !scene.TLAS.IsValid())
+	//{
+	//	return;
+	//}
+	//auto range = wiProfiler::BeginRangeGPU("Update Raytracing Acceleration Structures", cmd);
+	//device->EventBegin("Update Raytracing Acceleration Structures", cmd);
 
-	bool bottomlevel_sync = false;
+	//bool bottomlevel_sync = false;
 
-	// Build bottom level:
-	for(auto& it : pendingBottomLevelBuilds)
-	{
-		AS_UPDATE_TYPE type = it.second;
-		if (type == AS_COMPLETE)
-			continue;
+	//// Build bottom level:
+	//for(auto& it : pendingBottomLevelBuilds)
+	//{
+	//	AS_UPDATE_TYPE type = it.second;
+	//	if (type == AS_COMPLETE)
+	//		continue;
 
-		Entity entity = it.first;
-		const MeshComponent* mesh = scene.meshes.GetComponent(entity);
+	//	Entity entity = it.first;
+	//	const MeshComponent* mesh = scene.meshes.GetComponent(entity);
 
-		if (mesh != nullptr)
-		{
-			// If src param is nullptr, rebuild happens, else update (if src == dst, then update happens in place)
-			//device->BuildRaytracingAccelerationStructure(&mesh->BLAS, cmd, type == AS_REBUILD ? nullptr : &mesh->BLAS);
-			device->BuildRaytracingAccelerationStructure(&mesh->BLAS, cmd, nullptr); // DX12 has some problem updating with new driver?
-			bottomlevel_sync = true;
-			it.second = AS_COMPLETE;
-		}
-	}
+	//	if (mesh != nullptr)
+	//	{
+	//		// If src param is nullptr, rebuild happens, else update (if src == dst, then update happens in place)
+	//		//device->BuildRaytracingAccelerationStructure(&mesh->BLAS, cmd, type == AS_REBUILD ? nullptr : &mesh->BLAS);
+	//		device->BuildRaytracingAccelerationStructure(&mesh->BLAS, cmd, nullptr); // DX12 has some problem updating with new driver?
+	//		bottomlevel_sync = true;
+	//		it.second = AS_COMPLETE;
+	//	}
+	//}
 
-	// Gather all instances for top level:
-	size_t instanceSize = device->GetTopLevelAccelerationStructureInstanceSize();
-	size_t instanceArraySize = (size_t)scene.TLAS.desc.toplevel.count * instanceSize;
-	void* instanceArray = GetRenderFrameAllocator(cmd).allocate(instanceArraySize);
-	size_t instanceOffset = 0;
-	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
-	{
-		const ObjectComponent& object = scene.objects[i];
+	//// Gather all instances for top level:
+	//size_t instanceSize = device->GetTopLevelAccelerationStructureInstanceSize();
+	//size_t instanceArraySize = (size_t)scene.TLAS.desc.toplevel.count * instanceSize;
+	//void* instanceArray = GetRenderFrameAllocator(cmd).allocate(instanceArraySize);
+	//size_t instanceOffset = 0;
+	//for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+	//{
+	//	const ObjectComponent& object = scene.objects[i];
 
-		if (object.meshID != INVALID_ENTITY)
-		{
-			const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+	//	if (object.meshID != INVALID_ENTITY)
+	//	{
+	//		const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
 
-			RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
-			const XMFLOAT4X4& transform = object.transform_index >= 0 ? scene.transforms[object.transform_index].world : IDENTITYMATRIX;
-			instance = {};
-			instance.transform = XMFLOAT3X4(
-				transform._11, transform._21, transform._31, transform._41,
-				transform._12, transform._22, transform._32, transform._42,
-				transform._13, transform._23, transform._33, transform._43
-			);
-			instance.InstanceID = (uint32_t)device->GetDescriptorIndex(&mesh.constantBuffer, CBV);
-			instance.InstanceMask = 1;
-			instance.bottomlevel = mesh.BLAS;
+	//		RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
+	//		const XMFLOAT4X4& transform = object.transform_index >= 0 ? scene.transforms[object.transform_index].world : IDENTITYMATRIX;
+	//		instance = {};
+	//		instance.transform = XMFLOAT3X4(
+	//			transform._11, transform._21, transform._31, transform._41,
+	//			transform._12, transform._22, transform._32, transform._42,
+	//			transform._13, transform._23, transform._33, transform._43
+	//		);
+	//		instance.InstanceID = (uint32_t)device->GetDescriptorIndex(&mesh.constantBuffer, CBV);
+	//		instance.InstanceMask = 1;
+	//		instance.bottomlevel = mesh.BLAS;
 
-			device->WriteTopLevelAccelerationStructureInstance(&instance, (void*)((size_t)instanceArray + instanceOffset));
-			instanceOffset += instanceSize;
-		}
-	}
-	device->UpdateBuffer(&scene.TLAS.desc.toplevel.instanceBuffer, instanceArray, cmd, (int)instanceArraySize);
-	GetRenderFrameAllocator(cmd).free(instanceArraySize);
+	//		device->WriteTopLevelAccelerationStructureInstance(&instance, (void*)((size_t)instanceArray + instanceOffset));
+	//		instanceOffset += instanceSize;
+	//	}
+	//}
+	//device->UpdateBuffer(&scene.TLAS.desc.toplevel.instanceBuffer, instanceArray, cmd, (int)instanceArraySize);
+	//GetRenderFrameAllocator(cmd).free(instanceArraySize);
 
-	// Sync with bottom level before building top level:
-	if (bottomlevel_sync)
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	//// Sync with bottom level before building top level:
+	//if (bottomlevel_sync)
+	//{
+	//	GPUBarrier barriers[] = {
+	//		GPUBarrier::Memory(),
+	//	};
+	//	device->Barrier(barriers, arraysize(barriers), cmd);
+	//}
 
-	// Build top level:
-	device->BuildRaytracingAccelerationStructure(&scene.TLAS, cmd, nullptr);
-	GPUBarrier barriers[] = {
-		GPUBarrier::Memory(&scene.TLAS),
-	};
-	device->Barrier(barriers, arraysize(barriers), cmd);
+	//// Build top level:
+	//device->BuildRaytracingAccelerationStructure(&scene.TLAS, cmd, nullptr);
+	//GPUBarrier barriers[] = {
+	//	GPUBarrier::Memory(&scene.TLAS),
+	//};
+	//device->Barrier(barriers, arraysize(barriers), cmd);
 
-	device->EventEnd(cmd);
-	wiProfiler::EndRange(range);
+	//device->EventEnd(cmd);
+	//wiProfiler::EndRange(range);
 }
 void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visibility& vis, CommandList cmd)
 {

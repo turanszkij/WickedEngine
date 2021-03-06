@@ -1258,4 +1258,5 @@ void PaintToolWindow::ReplaceEditTextureSlot(wiScene::MaterialComponent& materia
 {
 	uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
 	material.textures[sel].resource->texture = texture;
+	material.SetDirty();
 }

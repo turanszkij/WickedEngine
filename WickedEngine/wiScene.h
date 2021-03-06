@@ -316,6 +316,7 @@ namespace wiScene
 			TERRAIN = 1 << 3,
 			DIRTY_MORPH = 1 << 4,
 			DIRTY_BINDLESS = 1 << 5,
+			DIRTY_BLAS = 1 << 6,
 		};
 		uint32_t _flags = RENDERABLE;
 
@@ -379,7 +380,6 @@ namespace wiScene
 		wiGraphics::GPUBuffer subsetBuffer;
 
 		wiGraphics::RaytracingAccelerationStructure BLAS;
-		bool BLAS_build_pending = true;
 
 		// Only valid for 1 frame material component indices:
 		int terrain_material1_index = -1;
@@ -803,6 +803,8 @@ namespace wiScene
 		};
 		std::vector<ShaderBoneType> boneData;
 		wiGraphics::GPUBuffer boneBuffer;
+
+		void CreateRenderData();
 
 		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
@@ -1272,11 +1274,19 @@ namespace wiScene
 		wiECS::ComponentManager<SpringComponent> springs;
 
 		// Non-serialized attributes:
+		enum FLAGS
+		{
+			EMPTY = 0,
+			UPDATE_ACCELERATION_STRUCTURES = 1 << 0,
+		};
+		uint32_t flags = EMPTY;
+
 		wiSpinLock locker;
 		AABB bounds;
 		std::vector<AABB> parallel_bounds;
 		WeatherComponent weather;
 		wiGraphics::RaytracingAccelerationStructure TLAS;
+		std::vector<uint8_t> TLAS_instances;
 
 		std::mutex cmd_locker;
 		wiGraphics::CommandList cmd; // for gpu data updates

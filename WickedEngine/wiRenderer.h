@@ -153,11 +153,6 @@ namespace wiRenderer
 		const FrameCB& frameCB,
 		wiGraphics::CommandList cmd
 	);
-	// Updates all acceleration structures for raytracing API
-	void UpdateRaytracingAccelerationStructures(
-		const wiScene::Scene& scene,
-		wiGraphics::CommandList cmd
-	);
 
 	// Binds all common constant buffers and samplers that may be used in all shaders
 	void BindCommonResources(wiGraphics::CommandList cmd);

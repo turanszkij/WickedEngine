@@ -527,7 +527,7 @@ namespace wiScene
 			}
 
 			GPUBufferDesc bd;
-			bd.Usage = USAGE_IMMUTABLE;
+			bd.Usage = USAGE_DEFAULT;
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
@@ -715,7 +715,7 @@ namespace wiScene
 
 		if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
-			BLAS_build_pending = true;
+			_flags |= DIRTY_BLAS;
 
 			RaytracingAccelerationStructureDesc desc;
 			desc.type = RaytracingAccelerationStructureDesc::BOTTOMLEVEL;
@@ -1218,6 +1218,22 @@ namespace wiScene
 		return FORMAT_UNKNOWN;
 	}
 
+	void ArmatureComponent::CreateRenderData()
+	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
+
+		GPUBufferDesc bd;
+		bd.Usage = USAGE_DYNAMIC;
+		bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+
+		bd.ByteWidth = sizeof(ArmatureComponent::ShaderBoneType) * (uint32_t)boneCollection.size();
+		bd.BindFlags = BIND_SHADER_RESOURCE;
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.StructureByteStride = sizeof(ArmatureComponent::ShaderBoneType);
+
+		device->CreateBuffer(&bd, nullptr, &boneBuffer);
+	}
+
 	void SoftBodyPhysicsComponent::CreateFromMesh(const MeshComponent& mesh)
 	{
 		vertex_positions_simulation.resize(mesh.vertex_positions.size());
@@ -1378,6 +1394,11 @@ namespace wiScene
 			cmd = INVALID_COMMANDLIST;
 		}
 
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		{
+			TLAS_instances.resize(objects.GetCount() * device->GetTopLevelAccelerationStructureInstanceSize());
+		}
+
 		wiJobSystem::context ctx;
 
 		RunPreviousFrameTransformUpdateSystem(ctx);
@@ -1452,9 +1473,20 @@ namespace wiScene
 				assert(success);
 				device->SetName(&TLAS, "TLAS");
 			}
+
+			if (flags & UPDATE_ACCELERATION_STRUCTURES && cmd != INVALID_COMMANDLIST && TLAS.IsValid() && !TLAS_instances.empty())
+			{
+				device->UpdateBuffer(&TLAS.desc.toplevel.instanceBuffer, TLAS_instances.data(), cmd);
+				GPUBarrier barriers[] = {
+					GPUBarrier::Memory(),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+				device->BuildRaytracingAccelerationStructure(&TLAS, cmd, nullptr);
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
 		}
 
-		if (dt > 0)
+		if (cmd != INVALID_COMMANDLIST)
 		{
 			device->StashCommandLists();
 		}
@@ -2525,17 +2557,38 @@ namespace wiScene
 
 			armature.aabb = AABB(_min, _max);
 
+			if (!armature.boneBuffer.IsValid())
+			{
+				armature.CreateRenderData();
+			}
 		});
 	}
 	void Scene::RunMeshUpdateSystem(wiJobSystem::context& ctx)
 	{
 		wiJobSystem::Dispatch(ctx, (uint32_t)meshes.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
+			Entity entity = meshes.GetEntity(args.jobIndex);
 			MeshComponent& mesh = meshes[args.jobIndex];
-
 			GraphicsDevice* device = wiRenderer::GetDevice();
 
-			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+			if (mesh.IsSkinned() && armatures.Contains(mesh.armatureID))
+			{
+				const SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(entity);
+				if (softbody == nullptr || softbody->vertex_positions_simulation.empty())
+				{
+					if (!mesh.vertexBuffer_PRE.IsValid())
+					{
+						device->CreateBuffer(&mesh.streamoutBuffer_POS.GetDesc(), nullptr, &mesh.vertexBuffer_PRE);
+					}
+				}
+			}
+
+			if (mesh.streamoutBuffer_POS.IsValid() && mesh.vertexBuffer_PRE.IsValid())
+			{
+				std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
+			}
+
+			if (flags & UPDATE_ACCELERATION_STRUCTURES && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 			{
 				uint32_t subsetIndex = 0;
 				for (auto& subset : mesh.subsets)
@@ -2545,25 +2598,34 @@ namespace wiScene
 					{
 						if (mesh.BLAS.IsValid())
 						{
-							uint32_t flags = mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags;
+							auto& geometry = mesh.BLAS.desc.bottomlevel.geometries[subsetIndex];
+							uint32_t flags = geometry._flags;
 							if (material->IsAlphaTestEnabled() || (material->GetRenderTypes() & RENDERTYPE_TRANSPARENT))
 							{
-								mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags &=
-									~RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
+								mesh._flags |= MeshComponent::DIRTY_BLAS;
+								geometry._flags &= ~RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
 							}
 							else
 							{
-								mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags =
-									RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
+								mesh._flags |= MeshComponent::DIRTY_BLAS;
+								geometry._flags = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
 							}
-							if (flags != mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags)
+							if (mesh.streamoutBuffer_POS.IsValid())
 							{
-								// New flags invalidate BLAS
-								mesh.BLAS_build_pending = true;
+								mesh._flags |= MeshComponent::DIRTY_BLAS;
+								geometry.triangles.vertexBuffer = mesh.streamoutBuffer_POS;
 							}
 						}
 					}
 					subsetIndex++;
+				}
+
+				if (cmd != INVALID_COMMANDLIST && mesh._flags & MeshComponent::DIRTY_BLAS)
+				{
+					mesh._flags &= ~MeshComponent::DIRTY_BLAS;
+					cmd_locker.lock();
+					device->BuildRaytracingAccelerationStructure(&mesh.BLAS, cmd, nullptr);
+					cmd_locker.unlock();
 				}
 			}
 
@@ -2850,6 +2912,27 @@ namespace wiScene
 						// soft bodies have no transform, their vertices are simulated in world space
 						object.transform_index = -1;
 						object.prev_transform_index = -1;
+					}
+
+					GraphicsDevice* device = wiRenderer::GetDevice();
+					if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+					{
+						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
+						const XMFLOAT4X4& worldMatrix = object.transform_index >= 0 ? transforms[object.transform_index].world : IDENTITYMATRIX;
+						instance = {};
+						instance.transform = XMFLOAT3X4(
+							worldMatrix._11, worldMatrix._21, worldMatrix._31, worldMatrix._41,
+							worldMatrix._12, worldMatrix._22, worldMatrix._32, worldMatrix._42,
+							worldMatrix._13, worldMatrix._23, worldMatrix._33, worldMatrix._43
+						);
+						instance.InstanceID = (uint32_t)device->GetDescriptorIndex(&mesh->constantBuffer, CBV);
+						instance.InstanceMask = 1;
+						instance.bottomlevel = mesh->BLAS;
+
+						void* dest = (void*)((size_t)TLAS_instances.data() + (size_t)args.jobIndex * device->GetTopLevelAccelerationStructureInstanceSize());
+						cmd_locker.lock();
+						device->WriteTopLevelAccelerationStructureInstance(&instance, dest);
+						cmd_locker.unlock();
 					}
 				}
 
