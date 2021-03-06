@@ -446,10 +446,11 @@ if (WIN32)
 					-T "${SHADER_TYPE}_6_5"
 					-I "${CMAKE_CURRENT_SOURCE_DIR}/../"
 					-D HLSL6
-					-all-resources-bound
+					-D BINDLESS
+					#-all-resources-bound
 					#-pack-optimized
-					-res-may-alias
-					-no-legacy-cbuf-layout
+					#-res-may-alias
+					#-no-legacy-cbuf-layout
 					-flegacy-macro-expansion
 					-Fo ${DXC_OUTPUT}
 			)
