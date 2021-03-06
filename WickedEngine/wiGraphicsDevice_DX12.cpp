@@ -4494,8 +4494,6 @@ using namespace DX12_Internal;
 		internal_state->allocationhandler = allocationhandler;
 		rtpso->internal_state = internal_state;
 
-		auto shader_internal = to_internal(pDesc->shaderlibraries.front().shader); // think better way
-
 		rtpso->desc = *pDesc;
 
 		D3D12_STATE_OBJECT_DESC desc = {};
@@ -4527,6 +4525,7 @@ using namespace DX12_Internal;
 			auto& subobject = subobjects.emplace_back();
 			subobject = {};
 			subobject.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE;
+			auto shader_internal = to_internal(pDesc->shaderlibraries.front().shader); // think better way
 			global_rootsig.pGlobalRootSignature = shader_internal->rootSignature.Get();
 			subobject.pDesc = &global_rootsig;
 		}
