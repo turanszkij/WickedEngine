@@ -3925,6 +3925,7 @@ using namespace DX12_Internal;
 			}
 
 			size_t rootsig_hash = 0;
+			wiHelper::hash_combine(rootsig_hash, pDesc->il);
 			wiHelper::hash_combine(rootsig_hash, rootconstant_hash);
 			wiHelper::hash_combine(rootsig_hash, root_binding_hash);
 			wiHelper::hash_combine(rootsig_hash, resource_binding_hash);
@@ -3959,7 +3960,10 @@ using namespace DX12_Internal;
 				rootSigDesc.pStaticSamplers = internal_state->staticsamplers.data();
 				rootSigDesc.NumParameters = (UINT)params.size();
 				rootSigDesc.pParameters = params.data();
-				rootSigDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+				if (pDesc->il != nullptr)
+				{
+					rootSigDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+				}
 
 				D3D12_VERSIONED_ROOT_SIGNATURE_DESC versioned_rs = {};
 				versioned_rs.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
