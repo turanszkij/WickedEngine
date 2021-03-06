@@ -25,30 +25,19 @@
 //////////////////
 
 #ifdef BINDLESS
-ConstantBuffer<ShaderMaterial> bindless_materials[] : register(space1);
-ConstantBuffer<ShaderMesh> bindless_meshes[] : register(space2);
-StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(space3);
-Texture2D<float4> bindless_textures[] : register(space4);
-SamplerState bindless_samplers[] : register(space5);
+ConstantBuffer<ShaderMaterial> bindless_materials[] : register(b0, space1);
+ConstantBuffer<ShaderMesh> bindless_meshes[] : register(b0, space2);
+Texture2D<float4> bindless_textures[] : register(t0, space4);
+SamplerState bindless_samplers[] : register(t0, space5);
+PUSHCONSTANT(push, ShaderMeshSubset);
 
-struct PushConstantsObject
-{
-	int subset_buffer_index;
-	uint subsetIndex;
-};
-PUSHCONSTANT(push, PushConstantsObject);
-
-inline ShaderMeshSubset GetMeshSubset()
-{
-	return bindless_subsets[push.subset_buffer_index][push.subsetIndex];
-}
 inline ShaderMesh GetMesh()
 {
-	return bindless_meshes[GetMeshSubset().meshIndex];
+	return bindless_meshes[push.mesh];
 }
 inline ShaderMaterial GetMaterial()
 {
-	return bindless_materials[GetMeshSubset().materialIndex];
+	return bindless_materials[push.material];
 }
 inline ShaderMaterial GetMaterial1()
 {

@@ -145,7 +145,7 @@ namespace wiGraphics
 				void destroy();
 
 				void reset();
-				void validate(bool graphics, CommandList cmd, bool raytracing = false);
+				void validate(bool graphics, CommandList cmd);
 			};
 			DescriptorBinder descriptors[COMMANDLIST_COUNT];
 
@@ -206,7 +206,6 @@ namespace wiGraphics
 		void barrier_flush(CommandList cmd);
 		void predraw(CommandList cmd);
 		void predispatch(CommandList cmd);
-		void preraytrace(CommandList cmd);
 
 		std::atomic<CommandList> cmd_count{ 0 };
 
@@ -320,6 +319,7 @@ namespace wiGraphics
 				VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
 				VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 				std::vector<int> freelist;
+				std::mutex locker;
 
 				void init(VkDevice device, VkDescriptorType type, uint32_t descriptorCount)
 				{
@@ -385,17 +385,21 @@ namespace wiGraphics
 
 				int allocate()
 				{
+					locker.lock();
 					if (!freelist.empty())
 					{
 						int index = freelist.back();
 						freelist.pop_back();
+						locker.unlock();
 						return index;
 					}
 					return -1;
 				}
 				void free(int index)
 				{
+					locker.lock();
 					freelist.push_back(index);
+					locker.unlock();
 				}
 			};
 			BindlessDescriptorHeap bindlessUniformBuffers;

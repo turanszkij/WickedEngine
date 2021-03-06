@@ -202,13 +202,13 @@ namespace wiScene
 			std::shared_ptr<wiResource> resource;
 			const wiGraphics::GPUResource* GetGPUResource() const
 			{
-				if (resource == nullptr)
+				if (resource == nullptr || !resource->texture.IsValid())
 					return nullptr;
 				return &resource->texture;
 			}
 			int GetUVSet() const
 			{
-				if (resource == nullptr)
+				if (resource == nullptr || !resource->texture.IsValid())
 					return -1;
 				return (int)uvset;
 			}

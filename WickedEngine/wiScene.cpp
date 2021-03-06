@@ -304,7 +304,6 @@ namespace wiScene
 		dest->texture_clearcoatroughnessmap_index = device->GetDescriptorIndex(textures[CLEARCOATROUGHNESSMAP].GetGPUResource(), SRV);
 		dest->texture_clearcoatnormalmap_index = device->GetDescriptorIndex(textures[CLEARCOATNORMALMAP].GetGPUResource(), SRV);
 
-
 		dest->baseColorAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
 		dest->surfaceMapAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
 		dest->emissiveMapAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
@@ -2520,33 +2519,65 @@ namespace wiScene
 			MeshComponent& mesh = meshes[args.jobIndex];
 
 			GraphicsDevice* device = wiRenderer::GetDevice();
-			uint32_t subsetIndex = 0;
-			for (auto& subset : mesh.subsets)
+
+			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 			{
-				const MaterialComponent* material = materials.GetComponent(subset.materialID);
-				if (material != nullptr)
+				uint32_t subsetIndex = 0;
+				for (auto& subset : mesh.subsets)
 				{
-					if (mesh.BLAS.IsValid())
+					const MaterialComponent* material = materials.GetComponent(subset.materialID);
+					if (material != nullptr)
 					{
-						uint32_t flags = mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags;
-						if (material->IsAlphaTestEnabled() || (material->GetRenderTypes() & RENDERTYPE_TRANSPARENT))
+						if (mesh.BLAS.IsValid())
 						{
-							mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags &=
-								~RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
-						}
-						else
-						{
-							mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags =
-								RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
-						}
-						if (flags != mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags)
-						{
-							// New flags invalidate BLAS
-							mesh.BLAS_build_pending = true;
+							uint32_t flags = mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags;
+							if (material->IsAlphaTestEnabled() || (material->GetRenderTypes() & RENDERTYPE_TRANSPARENT))
+							{
+								mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags &=
+									~RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
+							}
+							else
+							{
+								mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags =
+									RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
+							}
+							if (flags != mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags)
+							{
+								// New flags invalidate BLAS
+								mesh.BLAS_build_pending = true;
+							}
 						}
 					}
+					subsetIndex++;
 				}
-				subsetIndex++;
+			}
+
+			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+			{
+				if (mesh.terrain_material1 != INVALID_ENTITY)
+				{
+					const MaterialComponent* mat = materials.GetComponent(mesh.terrain_material1);
+					if (mat != nullptr)
+					{
+						mesh.terrain_material1_index = device->GetDescriptorIndex(&mat->constantBuffer, CBV);
+					}
+				}
+				if (mesh.terrain_material2 != INVALID_ENTITY)
+				{
+					const MaterialComponent* mat = materials.GetComponent(mesh.terrain_material2);
+					if (mat != nullptr)
+					{
+						mesh.terrain_material2_index = device->GetDescriptorIndex(&mat->constantBuffer, CBV);
+					}
+				}
+				if (mesh.terrain_material3 != INVALID_ENTITY)
+				{
+					const MaterialComponent* mat = materials.GetComponent(mesh.terrain_material3);
+					if (mat != nullptr)
+					{
+						mesh.terrain_material3_index = device->GetDescriptorIndex(&mat->constantBuffer, CBV);
+					}
+				}
 			}
 
 			// Update morph targets if needed:
@@ -2586,34 +2617,6 @@ namespace wiScene
 
 				mesh.SetDirtyMorph(false);
 				wiRenderer::AddDeferredMorphUpdate(meshes.GetEntity(args.jobIndex));
-
-				if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
-				{
-					if (mesh.terrain_material1 != INVALID_ENTITY)
-					{
-						const MaterialComponent* mat = materials.GetComponent(mesh.terrain_material1);
-						if (mat != nullptr)
-						{
-							mesh.terrain_material1_index = device->GetDescriptorIndex(&mat->constantBuffer, CBV);
-						}
-					}
-					if (mesh.terrain_material2 != INVALID_ENTITY)
-					{
-						const MaterialComponent* mat = materials.GetComponent(mesh.terrain_material2);
-						if (mat != nullptr)
-						{
-							mesh.terrain_material2_index = device->GetDescriptorIndex(&mat->constantBuffer, CBV);
-						}
-					}
-					if (mesh.terrain_material3 != INVALID_ENTITY)
-					{
-						const MaterialComponent* mat = materials.GetComponent(mesh.terrain_material3);
-						if (mat != nullptr)
-						{
-							mesh.terrain_material3_index = device->GetDescriptorIndex(&mat->constantBuffer, CBV);
-						}
-					}
-				}
 			}
 
 		});

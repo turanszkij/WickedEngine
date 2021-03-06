@@ -2857,14 +2857,6 @@ void RenderMeshes(
 			static_assert(arraysize(vbs) == arraysize(offsets), "Mismatch between vertex buffers and offsets!");
 			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 
-			struct PushConstantsObject
-			{
-				int subset_buffer_index;
-				uint subsetIndex;
-			} push;
-			push.subset_buffer_index = device->GetDescriptorIndex(&mesh.subsetBuffer, SRV);
-			push.subsetIndex = 0;
-
 			for (const MeshComponent::MeshSubset& subset : mesh.subsets)
 			{
 				if (subset.indexCount == 0)
@@ -2942,15 +2934,12 @@ void RenderMeshes(
 
 				if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
 				{
-					//ShaderMeshSubset push;
-					//push.indexOffset = subset.indexOffset;
-					//push.indexCount = subset.indexCount;
-					//push.materialIndex = device->GetDescriptorIndex(&material.constantBuffer, CBV);
-					//push.meshIndex = device->GetDescriptorIndex(&mesh.constantBuffer, CBV);
-					//device->PushConstants(&push, sizeof(push), cmd);
-
+					ShaderMeshSubset push;
+					push.indexOffset = subset.indexOffset;
+					push.indexCount = subset.indexCount;
+					push.material = device->GetDescriptorIndex(&material.constantBuffer, CBV);
+					push.mesh = device->GetDescriptorIndex(&mesh.constantBuffer, CBV);
 					device->PushConstants(&push, sizeof(push), cmd);
-					push.subsetIndex++;
 				}
 				else
 				{
@@ -4014,7 +4003,7 @@ void UpdateRenderData(
 			mesh.WriteShaderMesh(&shadermesh);
 			device->UpdateBuffer(&mesh.constantBuffer, &shadermesh, cmd);
 
-			int meshIndex = device->GetDescriptorIndex(&mesh.constantBuffer, CBV);
+			int mesh_descriptor = device->GetDescriptorIndex(&mesh.constantBuffer, CBV);
 
 			size_t alloc_size = sizeof(ShaderMeshSubset) * mesh.subsets.size();
 			ShaderMeshSubset* shadersubsets = (ShaderMeshSubset*)GetRenderFrameAllocator(cmd).allocate(alloc_size);
@@ -4024,12 +4013,12 @@ void UpdateRenderData(
 				ShaderMeshSubset& shadersubset = shadersubsets[j++];
 				shadersubset.indexOffset = x.indexOffset;
 				shadersubset.indexCount = x.indexCount;
-				shadersubset.meshIndex = meshIndex;
+				shadersubset.mesh = mesh_descriptor;
 
 				const MaterialComponent* material = vis.scene->materials.GetComponent(x.materialID);
 				if (material != nullptr)
 				{
-					shadersubset.materialIndex = device->GetDescriptorIndex(&material->constantBuffer, CBV);
+					shadersubset.material = device->GetDescriptorIndex(&material->constantBuffer, CBV);
 				}
 			}
 			device->UpdateBuffer(&mesh.subsetBuffer, shadersubsets, cmd, (int)alloc_size);
@@ -9854,8 +9843,6 @@ void Postprocess_RTAO(
 	device->EventBegin("Postprocess_RTAO", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("RTAO", cmd);
 
-	BindCommonResources(cmd);
-
 	static RaytracingPipelineState RTPSO;
 
 	auto load_shaders = [&scene](uint64_t userdata) {
@@ -9918,11 +9905,22 @@ void Postprocess_RTAO(
 		load_shaders(0);
 	}
 
+	BindCommonResources(cmd);
+
 	Postprocess_NormalsFromDepth(depthbuffer, res.normals, cmd);
 
 	device->EventBegin("Raytrace", cmd);
 
 	const TextureDesc& desc = res.temp.GetDesc();
+
+	device->BindRaytracingPipelineState(&RTPSO, cmd);
+
+	device->BindResource(LIB, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+	device->BindResource(LIB, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(LIB, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(LIB, &res.normals, TEXSLOT_ONDEMAND0, cmd);
+
+	device->BindUAV(LIB, &res.temp, 0, cmd);
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width;
@@ -9932,10 +9930,8 @@ void Postprocess_RTAO(
 	cb.rtao_range = range;
 	cb.rtao_samplecount = (float)samplecount;
 	cb.rtao_power = power;
-	GraphicsDevice::GPUAllocation cb_alloc = device->AllocateGPU(sizeof(cb), cmd);
-	memcpy(cb_alloc.data, &cb, sizeof(cb));
-
-	device->BindRaytracingPipelineState(&RTPSO, cmd);
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
 	GraphicsDevice::GPUAllocation shadertable_raygen = device->AllocateGPU(shaderIdentifierSize, cmd);
@@ -10227,16 +10223,42 @@ void Postprocess_RTReflection(
 		load_shaders(0);
 	}
 
+	device->BindRaytracingPipelineState(&RTPSO, cmd);
+
+	BindCommonResources(cmd);
+
+	device->BindResource(LIB, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+	device->BindResource(LIB, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(LIB, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(LIB, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
+
+	device->BindResource(LIB, &resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, cmd);
+	device->BindResource(LIB, &resourceBuffers[RBTYPE_MATRIXARRAY], SBSLOT_MATRIXARRAY, cmd);
+	device->BindResource(LIB, &globalLightmap, TEXSLOT_GLOBALLIGHTMAP, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
+	device->BindResource(LIB, &shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, cmd);
+	device->BindResource(LIB, &shadowMapArray_Transparent_2D, TEXSLOT_SHADOWARRAY_TRANSPARENT_2D, cmd);
+	device->BindResource(LIB, &shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, cmd);
+	device->BindResource(LIB, &shadowMapArray_Transparent_Cube, TEXSLOT_SHADOWARRAY_TRANSPARENT_CUBE, cmd);
+
+	device->BindResource(LIB, &resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE], TEXSLOT_ONDEMAND1, cmd);
+	device->BindResource(LIB, &resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE], TEXSLOT_ONDEMAND2, cmd);
+	device->BindResource(LIB, &resourceBuffers[RBTYPE_BLUENOISE_RANKING_TILE], TEXSLOT_ONDEMAND3, cmd);
+
+	device->BindUAV(LIB, &res.temp, 0, cmd);
+
 	PostProcessCB cb;
 	cb.xPPResolution.x = res.temp.desc.Width;
 	cb.xPPResolution.y = res.temp.desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.rtreflection_range = range;
-	GraphicsDevice::GPUAllocation cb_alloc = device->AllocateGPU(sizeof(cb), cmd);
-	memcpy(cb_alloc.data, &cb, sizeof(cb));
-
-	device->BindRaytracingPipelineState(&RTPSO, cmd);
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
 	GraphicsDevice::GPUAllocation shadertable_raygen = device->AllocateGPU(shaderIdentifierSize, cmd);
@@ -10656,8 +10678,6 @@ void Postprocess_RTShadow(
 	device->EventBegin("Postprocess_RTShadow", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("RTShadow", cmd);
 
-	BindCommonResources(cmd);
-
 	static RaytracingPipelineState RTPSO;
 
 	auto load_shaders = [&scene](uint64_t userdata) {
@@ -10719,9 +10739,34 @@ void Postprocess_RTShadow(
 		load_shaders(0);
 	}
 
+	BindCommonResources(cmd);
+
 	Postprocess_NormalsFromDepth(depthbuffer, res.normals, cmd);
 
 	device->EventBegin("Raytrace", cmd);
+	device->BindRaytracingPipelineState(&RTPSO, cmd);
+
+	device->BindResource(LIB, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+	device->BindResource(LIB, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(LIB, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(LIB, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
+	device->BindResource(LIB, &res.normals, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(LIB, &entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
+
+	device->BindResource(LIB, &resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, cmd);
+	device->BindResource(LIB, &resourceBuffers[RBTYPE_MATRIXARRAY], SBSLOT_MATRIXARRAY, cmd);
+	device->BindResource(LIB, &globalLightmap, TEXSLOT_GLOBALLIGHTMAP, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
+	device->BindResource(LIB, &shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, cmd);
+	device->BindResource(LIB, &shadowMapArray_Transparent_2D, TEXSLOT_SHADOWARRAY_TRANSPARENT_2D, cmd);
+	device->BindResource(LIB, &shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, cmd);
+	device->BindResource(LIB, &shadowMapArray_Transparent_Cube, TEXSLOT_SHADOWARRAY_TRANSPARENT_CUBE, cmd);
+
+	device->BindUAV(LIB, &res.temp, 0, cmd);
 
 	const TextureDesc& desc = res.temp.GetDesc();
 
@@ -10730,10 +10775,9 @@ void Postprocess_RTShadow(
 	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	GraphicsDevice::GPUAllocation cb_alloc = device->AllocateGPU(sizeof(cb), cmd);
-	memcpy(cb_alloc.data, &cb, sizeof(cb));
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-	device->BindRaytracingPipelineState(&RTPSO, cmd);
 
 	size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
 	GraphicsDevice::GPUAllocation shadertable_raygen = device->AllocateGPU(shaderIdentifierSize, cmd);

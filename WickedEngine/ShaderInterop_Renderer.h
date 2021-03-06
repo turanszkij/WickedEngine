@@ -110,8 +110,8 @@ struct ShaderMeshSubset
 {
 	uint indexOffset;
 	uint indexCount;
-	int meshIndex;
-	int materialIndex;
+	int mesh;
+	int material;
 };
 
 // Warning: the size of this structure directly affects shader performance.

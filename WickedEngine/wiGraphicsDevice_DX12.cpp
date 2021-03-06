@@ -15,6 +15,9 @@
 #include "Utility/dxcapi.h"
 #include "Utility/dx12/d3d12shader.h"
 
+#include <string>
+#include <unordered_set>
+
 #include <pix.h>
 
 #ifdef _DEBUG
@@ -24,6 +27,10 @@
 #include <sstream>
 #include <algorithm>
 #include <wincodec.h>
+
+// Bindless allocation limits:
+#define BINDLESS_RESOURCE_CAPACITY		500000
+#define BINDLESS_SAMPLER_CAPACITY		256
 
 // Choose how many constant buffers will be placed in root in auto root signature:
 #define CONSTANT_BUFFER_AUTO_PLACEMENT_IN_ROOT 4
@@ -1285,8 +1292,7 @@ namespace DX12_Internal
 
 		std::vector<RESOURCEBINDING> resource_bindings;
 
-		std::vector<D3D12_DESCRIPTOR_RANGE1> bindless_resources;
-		std::vector<D3D12_DESCRIPTOR_RANGE1> bindless_samplers;
+		std::vector<D3D12_DESCRIPTOR_RANGE1> bindless;
 
 		D3D12_ROOT_PARAMETER1 rootconstants;
 
@@ -1351,11 +1357,6 @@ namespace DX12_Internal
 		std::vector<D3D12_DXIL_LIBRARY_DESC> library_descs;
 		std::vector<std::wstring> group_strings;
 		std::vector<D3D12_HIT_GROUP_DESC> hitgroup_descs;
-
-		std::vector<D3D12_DESCRIPTOR_RANGE1> bindless_resources;
-		std::vector<D3D12_DESCRIPTOR_RANGE1> bindless_samplers;
-		uint32_t bindpoint_bindless_res = 0;
-		uint32_t bindpoint_bindless_sam = 0;
 
 		~RTPipelineState_DX12()
 		{
@@ -1551,7 +1552,11 @@ using namespace DX12_Internal;
 
 				if (buffer == nullptr || !buffer->IsValid())
 				{
+					// this must not happen, root descriptor must be always valid!
+					// this happens when constant buffer was not bound by engine
+					//	TODO: use a null initialized GPU VA here for safety?
 					address = 0;
+					assert(0);
 				}
 				else
 				{
@@ -2133,12 +2138,6 @@ using namespace DX12_Internal;
 			);
 			pushconstants[cmd].size = 0;
 		}
-	}
-	void GraphicsDevice_DX12::preraytrace(CommandList cmd)
-	{
-		barrier_flush(cmd);
-
-		descriptors[cmd].validate(false, cmd);
 	}
 
 
@@ -3063,10 +3062,17 @@ using namespace DX12_Internal;
 		HRESULT hr = (internal_state->shadercode.empty() ? E_FAIL : S_OK);
 		assert(SUCCEEDED(hr));
 
+		std::unordered_set<std::string> library_binding_resolver;
 
 		{
 			auto insert_descriptor = [&](const D3D12_SHADER_INPUT_BIND_DESC& desc, const D3D12_SHADER_BUFFER_DESC& bufferdesc)
 			{
+				if (library_binding_resolver.count(desc.Name) != 0)
+				{
+					return;
+				}
+				library_binding_resolver.insert(desc.Name);
+
 				if (desc.Type == D3D_SIT_CBUFFER && desc.BindPoint >= 999)
 				{
 					internal_state->rootconstants.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
@@ -3101,7 +3107,7 @@ using namespace DX12_Internal;
 						}
 					}
 
-					D3D12_DESCRIPTOR_RANGE1& descriptor = bindless ? internal_state->bindless_samplers.emplace_back() : internal_state->samplers.emplace_back();
+					D3D12_DESCRIPTOR_RANGE1& descriptor = bindless ? internal_state->bindless.emplace_back() : internal_state->samplers.emplace_back();
 
 					descriptor.Flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE;
 
@@ -3118,7 +3124,7 @@ using namespace DX12_Internal;
 				}
 				else
 				{
-					D3D12_DESCRIPTOR_RANGE1& descriptor = bindless ? internal_state->bindless_resources.emplace_back() : internal_state->resources.emplace_back();
+					D3D12_DESCRIPTOR_RANGE1& descriptor = bindless ? internal_state->bindless.emplace_back() : internal_state->resources.emplace_back();
 
 					descriptor.Flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE;
 
@@ -3436,16 +3442,7 @@ using namespace DX12_Internal;
 				}
 
 				internal_state->bindpoint_bindless = (uint32_t)params.size();
-				for (auto& x : internal_state->bindless_resources)
-				{
-					D3D12_ROOT_PARAMETER1& param = params.emplace_back();
-					param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-					param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-					param.DescriptorTable.NumDescriptorRanges = 1;
-					param.DescriptorTable.pDescriptorRanges = &x;
-				}
-
-				for (auto& x : internal_state->bindless_samplers)
+				for (auto& x : internal_state->bindless)
 				{
 					D3D12_ROOT_PARAMETER1& param = params.emplace_back();
 					param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
@@ -3492,16 +3489,7 @@ using namespace DX12_Internal;
 				}
 
 				size_t bindless_hash = 0;
-				for (auto& x : internal_state->bindless_resources)
-				{
-					wiHelper::hash_combine(bindless_hash, x.BaseShaderRegister);
-					wiHelper::hash_combine(bindless_hash, x.NumDescriptors);
-					wiHelper::hash_combine(bindless_hash, x.Flags);
-					wiHelper::hash_combine(bindless_hash, x.OffsetInDescriptorsFromTableStart);
-					wiHelper::hash_combine(bindless_hash, x.RangeType);
-					wiHelper::hash_combine(bindless_hash, x.RegisterSpace);
-				}
-				for (auto& x : internal_state->bindless_samplers)
+				for (auto& x : internal_state->bindless)
 				{
 					wiHelper::hash_combine(bindless_hash, x.BaseShaderRegister);
 					wiHelper::hash_combine(bindless_hash, x.NumDescriptors);
@@ -3705,9 +3693,6 @@ using namespace DX12_Internal;
 
 				auto shader_internal = to_internal(shader);
 
-				if (shader_internal->resources.empty() && shader_internal->samplers.empty())
-					return;
-
 				size_t check_max = internal_state->resources.size(); // dont't check for duplicates within self table
 				int b = 0;
 				for (auto& x : shader_internal->resources)
@@ -3847,19 +3832,9 @@ using namespace DX12_Internal;
 
 				auto shader_internal = to_internal(shader);
 
-				for (auto& x : shader_internal->bindless_resources)
+				for (auto& x : shader_internal->bindless)
 				{
-					internal_state->bindless_resources.push_back(x);
-					D3D12_ROOT_PARAMETER1& param = params.emplace_back();
-					param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-					param.ShaderVisibility = stage;
-					param.DescriptorTable.NumDescriptorRanges = 1;
-					param.DescriptorTable.pDescriptorRanges = &x;
-				}
-
-				for (auto& x : shader_internal->bindless_samplers)
-				{
-					internal_state->bindless_samplers.push_back(x);
+					internal_state->bindless.push_back(x);
 					D3D12_ROOT_PARAMETER1& param = params.emplace_back();
 					param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 					param.ShaderVisibility = stage;
@@ -3914,16 +3889,7 @@ using namespace DX12_Internal;
 			}
 
 			size_t bindless_hash = 0;
-			for (auto& x : internal_state->bindless_resources)
-			{
-				wiHelper::hash_combine(bindless_hash, x.BaseShaderRegister);
-				wiHelper::hash_combine(bindless_hash, x.NumDescriptors);
-				wiHelper::hash_combine(bindless_hash, x.Flags);
-				wiHelper::hash_combine(bindless_hash, x.OffsetInDescriptorsFromTableStart);
-				wiHelper::hash_combine(bindless_hash, x.RangeType);
-				wiHelper::hash_combine(bindless_hash, x.RegisterSpace);
-			}
-			for (auto& x : internal_state->bindless_samplers)
+			for (auto& x : internal_state->bindless)
 			{
 				wiHelper::hash_combine(bindless_hash, x.BaseShaderRegister);
 				wiHelper::hash_combine(bindless_hash, x.NumDescriptors);
@@ -4499,6 +4465,8 @@ using namespace DX12_Internal;
 		internal_state->allocationhandler = allocationhandler;
 		rtpso->internal_state = internal_state;
 
+		auto shader_internal = to_internal(pDesc->shaderlibraries.front().shader); // think better way
+
 		rtpso->desc = *pDesc;
 
 		D3D12_STATE_OBJECT_DESC desc = {};
@@ -4530,7 +4498,6 @@ using namespace DX12_Internal;
 			auto& subobject = subobjects.emplace_back();
 			subobject = {};
 			subobject.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE;
-			auto shader_internal = to_internal(pDesc->shaderlibraries.front().shader); // think better way
 			global_rootsig.pGlobalRootSignature = shader_internal->rootSignature.Get();
 			subobject.pDesc = &global_rootsig;
 		}
@@ -5736,13 +5703,16 @@ using namespace DX12_Internal;
 
 			// Set the bindless tables:
 			uint32_t bindpoint = internal_state->bindpoint_bindless;
-			for (auto& x : internal_state->bindless_resources)
+			for (auto& x : internal_state->bindless)
 			{
-				GetDirectCommandList(cmd)->SetGraphicsRootDescriptorTable(bindpoint++, descriptorheap_res.start_gpu);
-			}
-			for (auto& x : internal_state->bindless_samplers)
-			{
-				GetDirectCommandList(cmd)->SetGraphicsRootDescriptorTable(bindpoint++, descriptorheap_sam.start_gpu);
+				if (x.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER)
+				{
+					GetDirectCommandList(cmd)->SetGraphicsRootDescriptorTable(bindpoint++, descriptorheap_sam.start_gpu);
+				}
+				else
+				{
+					GetDirectCommandList(cmd)->SetGraphicsRootDescriptorTable(bindpoint++, descriptorheap_res.start_gpu);
+				}
 			}
 		}
 
@@ -5751,7 +5721,7 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
-		assert(cs->stage == CS);
+		assert(cs->stage == CS || cs->stage == LIB);
 		if (active_cs[cmd] != cs)
 		{
 			prev_pipeline_hash[cmd] = 0;
@@ -5759,7 +5729,11 @@ using namespace DX12_Internal;
 			active_cs[cmd] = cs;
 
 			auto internal_state = to_internal(cs);
-			GetDirectCommandList(cmd)->SetPipelineState(internal_state->resource.Get());
+
+			if (cs->stage == CS)
+			{
+				GetDirectCommandList(cmd)->SetPipelineState(internal_state->resource.Get());
+			}
 
 			if (active_rootsig_compute[cmd] != internal_state->rootSignature.Get())
 			{
@@ -5773,13 +5747,16 @@ using namespace DX12_Internal;
 
 				// Set the bindless tables:
 				uint32_t bindpoint = internal_state->bindpoint_bindless;
-				for (auto& x : internal_state->bindless_resources)
+				for (auto& x : internal_state->bindless)
 				{
-					GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(bindpoint++, descriptorheap_res.start_gpu);
-				}
-				for (auto& x : internal_state->bindless_samplers)
-				{
-					GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(bindpoint++, descriptorheap_sam.start_gpu);
+					if (x.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER)
+					{
+						GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(bindpoint++, descriptorheap_sam.start_gpu);
+					}
+					else
+					{
+						GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(bindpoint++, descriptorheap_res.start_gpu);
+					}
 				}
 			}
 
@@ -6156,37 +6133,17 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd)
 	{
-		if (rtpso != active_rt[cmd])
-		{
-			prev_pipeline_hash[cmd] = 0;
-			active_rt[cmd] = rtpso;
-			descriptors[cmd].dirty_res = true;
-			descriptors[cmd].dirty_sam = true;
+		prev_pipeline_hash[cmd] = 0;
+		active_rt[cmd] = rtpso;
 
-			auto internal_state = to_internal(rtpso);
-			GetDirectCommandList(cmd)->SetPipelineState1(internal_state->resource.Get());
+		BindComputeShader(rtpso->desc.shaderlibraries.front().shader, cmd);
 
-			// we just take the first shader (todo: better)
-			active_cs[cmd] = rtpso->desc.shaderlibraries.front().shader;
-			active_rootsig_compute[cmd] = nullptr;
-			GetDirectCommandList(cmd)->SetComputeRootSignature(to_internal(active_cs[cmd])->rootSignature.Get());
-
-			// Set the bindless tables:
-			UINT param = internal_state->bindpoint_bindless_res;
-			for (auto& x : internal_state->bindless_resources)
-			{
-				GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(param++, descriptorheap_res.start_gpu);
-			}
-			param = internal_state->bindpoint_bindless_sam;
-			for (auto& x : internal_state->bindless_samplers)
-			{
-				GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(param++, descriptorheap_sam.start_gpu);
-			}
-		}
+		auto internal_state = to_internal(rtpso);
+		GetDirectCommandList(cmd)->SetPipelineState1(internal_state->resource.Get());
 	}
 	void GraphicsDevice_DX12::DispatchRays(const DispatchRaysDesc* desc, CommandList cmd)
 	{
-		preraytrace(cmd);
+		predispatch(cmd);
 
 		D3D12_DISPATCH_RAYS_DESC dispatchrays_desc = {};
 

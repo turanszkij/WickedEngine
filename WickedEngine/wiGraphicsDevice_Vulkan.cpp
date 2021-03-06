@@ -1129,7 +1129,7 @@ using namespace Vulkan_Internal;
 		memset(UAV_index, -1, sizeof(UAV_index));
 		memset(SAM, 0, sizeof(SAM));
 	}
-	void GraphicsDevice_Vulkan::FrameResources::DescriptorBinder::validate(bool graphics, CommandList cmd, bool raytracing)
+	void GraphicsDevice_Vulkan::FrameResources::DescriptorBinder::validate(bool graphics, CommandList cmd)
 	{
 		if (!dirty)
 			return;
@@ -1502,9 +1502,20 @@ using namespace Vulkan_Internal;
 			nullptr
 		);
 
+		VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		if (!graphics)
+		{
+			bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
+
+			if (device->active_cs[cmd]->stage == LIB)
+			{
+				bindPoint = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
+			}
+		}
+
 		vkCmdBindDescriptorSets(
 			device->GetDirectCommandList(cmd),
-			graphics ? VK_PIPELINE_BIND_POINT_GRAPHICS : (raytracing ? VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR : VK_PIPELINE_BIND_POINT_COMPUTE),
+			bindPoint,
 			pipelineLayout,
 			0,
 			1,
@@ -1746,12 +1757,6 @@ using namespace Vulkan_Internal;
 			);
 			pushconstants[cmd].size = 0;
 		}
-	}
-	void GraphicsDevice_Vulkan::preraytrace(CommandList cmd)
-	{
-		barrier_flush(cmd);
-
-		GetFrameResources().descriptors[cmd].validate(false, cmd, true);
 	}
 
 	// Engine functions
@@ -2502,16 +2507,16 @@ using namespace Vulkan_Internal;
 		dynamicStateInfo.pDynamicStates = pso_dynamicStates.data();
 
 
-		allocationhandler->bindlessUniformBuffers.init(device, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, BINDLESS_RESOURCE_CAPACITY);
-		allocationhandler->bindlessSampledImages.init(device, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, BINDLESS_RESOURCE_CAPACITY);
-		allocationhandler->bindlessUniformTexelBuffers.init(device, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, BINDLESS_RESOURCE_CAPACITY);
-		allocationhandler->bindlessStorageBuffers.init(device, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, BINDLESS_RESOURCE_CAPACITY);
-		allocationhandler->bindlessStorageImages.init(device, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, BINDLESS_RESOURCE_CAPACITY);
-		allocationhandler->bindlessStorageTexelBuffers.init(device, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, BINDLESS_RESOURCE_CAPACITY);
-		allocationhandler->bindlessSamplers.init(device, VK_DESCRIPTOR_TYPE_SAMPLER, BINDLESS_SAMPLER_CAPACITY);
+		allocationhandler->bindlessUniformBuffers.init(device, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindUniformBuffers / 4);
+		allocationhandler->bindlessSampledImages.init(device, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 4);
+		allocationhandler->bindlessUniformTexelBuffers.init(device, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 4);
+		allocationhandler->bindlessStorageBuffers.init(device, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindStorageBuffers / 4);
+		allocationhandler->bindlessStorageImages.init(device, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages / 4);
+		allocationhandler->bindlessStorageTexelBuffers.init(device, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages / 4);
+		allocationhandler->bindlessSamplers.init(device, VK_DESCRIPTOR_TYPE_SAMPLER, 256);
 		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
-			allocationhandler->bindlessAccelerationStructures.init(device, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, BINDLESS_ACCELERATION_STRUCTURE_CAPACITY);
+			allocationhandler->bindlessAccelerationStructures.init(device, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 32);
 		}
 
 
@@ -3405,8 +3410,8 @@ using namespace Vulkan_Internal;
 			internal_state->stageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
 			break;
 		default:
+			// also means library shader (ray tracing)
 			internal_state->stageInfo.stage = VK_SHADER_STAGE_ALL;
-			// library shader (ray tracing)
 			break;
 		}
 
@@ -3416,14 +3421,14 @@ using namespace Vulkan_Internal;
 			assert(result == SPV_REFLECT_RESULT_SUCCESS);
 
 			uint32_t binding_count = 0;
-			result = spvReflectEnumerateEntryPointDescriptorBindings(
-				&module, internal_state->stageInfo.pName, &binding_count, nullptr
+			result = spvReflectEnumerateDescriptorBindings(
+				&module, &binding_count, nullptr
 			);
 			assert(result == SPV_REFLECT_RESULT_SUCCESS);
 
 			std::vector<SpvReflectDescriptorBinding*> bindings(binding_count);
-			result = spvReflectEnumerateEntryPointDescriptorBindings(
-				&module, internal_state->stageInfo.pName, &binding_count, bindings.data()
+			result = spvReflectEnumerateDescriptorBindings(
+				&module, &binding_count, bindings.data()
 			);
 			assert(result == SPV_REFLECT_RESULT_SUCCESS);
 
@@ -5073,6 +5078,10 @@ using namespace Vulkan_Internal;
 				write.pImageInfo = &imageInfo;
 				vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
 			}
+			else
+			{
+				assert(0);
+			}
 
 			if (res == VK_SUCCESS)
 			{
@@ -5117,6 +5126,10 @@ using namespace Vulkan_Internal;
 				write.dstSet = allocationhandler->bindlessStorageImages.descriptorSet;
 				write.pImageInfo = &imageInfo;
 				vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+			}
+			else
+			{
+				assert(0);
 			}
 
 			if (res == VK_SUCCESS)
@@ -5238,6 +5251,10 @@ using namespace Vulkan_Internal;
 				vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
 				internal_state->cbv_index = index;
 			}
+			else
+			{
+				assert(0);
+			}
 			return -1;
 		}
 		break;
@@ -5285,6 +5302,10 @@ using namespace Vulkan_Internal;
 							write.pBufferInfo = &bufferInfo;
 							vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
 						}
+						else
+						{
+							assert(0);
+						}
 
 						if (internal_state->srv == VK_NULL_HANDLE)
 						{
@@ -5311,6 +5332,10 @@ using namespace Vulkan_Internal;
 							write.dstSet = allocationhandler->bindlessUniformTexelBuffers.descriptorSet;
 							write.pTexelBufferView = &view;
 							vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+						}
+						else
+						{
+							assert(0);
 						}
 
 						if (internal_state->srv == VK_NULL_HANDLE)
@@ -5346,6 +5371,10 @@ using namespace Vulkan_Internal;
 							write.pBufferInfo = &bufferInfo;
 							vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
 						}
+						else
+						{
+							assert(0);
+						}
 
 						if (internal_state->uav == VK_NULL_HANDLE)
 						{
@@ -5372,6 +5401,10 @@ using namespace Vulkan_Internal;
 							write.dstSet = allocationhandler->bindlessStorageTexelBuffers.descriptorSet;
 							write.pTexelBufferView = &view;
 							vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+						}
+						else
+						{
+							assert(0);
 						}
 
 						if (internal_state->uav == VK_NULL_HANDLE)
@@ -6245,7 +6278,7 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
-		assert(cs->stage == CS);
+		assert(cs->stage == CS || cs->stage == LIB);
 		if (active_cs[cmd] != cs)
 		{
 			if (active_cs[cmd] == nullptr)
@@ -6264,20 +6297,40 @@ using namespace Vulkan_Internal;
 
 			active_cs[cmd] = cs;
 			auto internal_state = to_internal(cs);
-			vkCmdBindPipeline(GetDirectCommandList(cmd), VK_PIPELINE_BIND_POINT_COMPUTE, internal_state->pipeline_cs);
 
-			if (!internal_state->bindlessSets.empty())
+			if (cs->stage == CS)
 			{
-				vkCmdBindDescriptorSets(
-					GetDirectCommandList(cmd),
-					VK_PIPELINE_BIND_POINT_COMPUTE,
-					internal_state->pipelineLayout_cs,
-					internal_state->bindlessFirstSet,
-					(uint32_t)internal_state->bindlessSets.size(),
-					internal_state->bindlessSets.data(),
-					0,
-					nullptr
-				);
+				vkCmdBindPipeline(GetDirectCommandList(cmd), VK_PIPELINE_BIND_POINT_COMPUTE, internal_state->pipeline_cs);
+
+				if (!internal_state->bindlessSets.empty())
+				{
+					vkCmdBindDescriptorSets(
+						GetDirectCommandList(cmd),
+						VK_PIPELINE_BIND_POINT_COMPUTE,
+						internal_state->pipelineLayout_cs,
+						internal_state->bindlessFirstSet,
+						(uint32_t)internal_state->bindlessSets.size(),
+						internal_state->bindlessSets.data(),
+						0,
+						nullptr
+					);
+				}
+			}
+			else if (cs->stage == LIB)
+			{
+				if (!internal_state->bindlessSets.empty())
+				{
+					vkCmdBindDescriptorSets(
+						GetDirectCommandList(cmd),
+						VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
+						internal_state->pipelineLayout_cs,
+						internal_state->bindlessFirstSet,
+						(uint32_t)internal_state->bindlessSets.size(),
+						internal_state->bindlessSets.data(),
+						0,
+						nullptr
+					);
+				}
 			}
 		}
 	}
@@ -6817,21 +6870,21 @@ using namespace Vulkan_Internal;
 	void GraphicsDevice_Vulkan::BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd)
 	{
 		prev_pipeline_hash[cmd] = 0;
-		GetFrameResources().descriptors[cmd].dirty = true;
-		active_cs[cmd] = rtpso->desc.shaderlibraries.front().shader; // we just take the first shader (todo: better)
 		active_rt[cmd] = rtpso;
+
+		BindComputeShader(rtpso->desc.shaderlibraries.front().shader, cmd);
 
 		vkCmdBindPipeline(GetDirectCommandList(cmd), VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, to_internal(rtpso)->pipeline);
 	}
 	void GraphicsDevice_Vulkan::DispatchRays(const DispatchRaysDesc* desc, CommandList cmd)
 	{
-		preraytrace(cmd);
+		predispatch(cmd);
 
 		VkStridedDeviceAddressRegionKHR raygen = {};
 		raygen.deviceAddress = desc->raygeneration.buffer ? to_internal(desc->raygeneration.buffer)->address : 0;
 		raygen.deviceAddress += desc->raygeneration.offset;
 		raygen.size = desc->raygeneration.size;
-		raygen.stride = desc->raygeneration.stride;
+		raygen.stride = raygen.size; // raygen specifically must be size == stride
 		
 		VkStridedDeviceAddressRegionKHR miss = {};
 		miss.deviceAddress = desc->miss.buffer ? to_internal(desc->miss.buffer)->address : 0;

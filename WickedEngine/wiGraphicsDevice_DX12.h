@@ -282,7 +282,6 @@ namespace wiGraphics
 		void barrier_flush(CommandList cmd);
 		void predraw(CommandList cmd);
 		void predispatch(CommandList cmd);
-		void preraytrace(CommandList cmd);
 
 		struct QueryResolver
 		{

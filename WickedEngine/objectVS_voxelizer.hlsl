@@ -13,7 +13,7 @@ struct VSOut
 VSOut main(VertexInput input)
 {
 	VertexSurface surface;
-	surface.create(g_xMaterial, input);
+	surface.create(GetMaterial(), input);
 
 	VSOut Out;
 	Out.pos = surface.position;
