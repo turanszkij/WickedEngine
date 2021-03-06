@@ -2919,9 +2919,7 @@ void RenderMeshes(
 
 				if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
 				{
-					ShaderMeshSubset push;
-					push.indexOffset = subset.indexOffset;
-					push.indexCount = subset.indexCount;
+					ObjectPushConstants push;
 					push.material = device->GetDescriptorIndex(&material.constantBuffer, CBV);
 					push.mesh = device->GetDescriptorIndex(&mesh.constantBuffer, CBV);
 					device->PushConstants(&push, sizeof(push), cmd);

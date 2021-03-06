@@ -114,6 +114,12 @@ struct ShaderMeshSubset
 	int material;
 };
 
+struct ObjectPushConstants
+{
+	int mesh;
+	int material;
+};
+
 // Warning: the size of this structure directly affects shader performance.
 //	Try to reduce it as much as possible!
 //	Keep it aligned to 16 bytes for best performance!

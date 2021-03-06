@@ -1133,7 +1133,7 @@ using namespace Vulkan_Internal;
 	{
 		if (!dirty)
 			return;
-		dirty = true;
+		dirty = false;
 
 		auto pso_internal = graphics ? to_internal(device->active_pso[cmd]) : nullptr;
 		auto cs_internal = graphics ? nullptr : to_internal(device->active_cs[cmd]);

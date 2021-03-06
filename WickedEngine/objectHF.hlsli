@@ -29,7 +29,7 @@ ConstantBuffer<ShaderMaterial> bindless_materials[] : register(b0, space1);
 ConstantBuffer<ShaderMesh> bindless_meshes[] : register(b0, space2);
 Texture2D<float4> bindless_textures[] : register(t0, space4);
 SamplerState bindless_samplers[] : register(t0, space5);
-PUSHCONSTANT(push, ShaderMeshSubset);
+PUSHCONSTANT(push, ObjectPushConstants);
 
 inline ShaderMesh GetMesh()
 {
