@@ -8,12 +8,11 @@ TEXTURE2D(texture_normals, float3, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(output, unorm float, 0);
 
-ConstantBuffer<ShaderMaterial> bindless_materials[] : register(b0, space1);
-ConstantBuffer<ShaderMesh> bindless_meshes[] : register(b0, space2);
-StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space3);
-Texture2D<float4> bindless_textures[] : register(t0, space4);
-Buffer<uint> bindless_ib[] : register(t0, space5);
-Buffer<float2> bindless_vb_uvset[] : register(t0, space6);
+ByteAddressBuffer bindless_buffers[] : register(t0, space1);
+StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space2);
+Texture2D<float4> bindless_textures[] : register(t0, space3);
+Buffer<uint> bindless_ib[] : register(t0, space4);
+Buffer<float2> bindless_vb_uvset[] : register(t0, space5);
 
 
 struct RayPayload
@@ -71,9 +70,9 @@ void RTAO_ClosestHit(inout RayPayload payload, in BuiltInTriangleIntersectionAtt
 [shader("anyhit")]
 void RTAO_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attr)
 {
-	ShaderMesh mesh = bindless_meshes[InstanceID()];
+	ShaderMesh mesh = bindless_buffers[InstanceID()].Load<ShaderMesh>(0);
 	ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][GeometryIndex()];
-	ShaderMaterial material = bindless_materials[subset.material];
+	ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
 	[branch]
 	if (material.texture_basecolormap_index < 0)
 	{

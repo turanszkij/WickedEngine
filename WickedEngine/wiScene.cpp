@@ -354,11 +354,17 @@ namespace wiScene
 		SubresourceData data;
 		data.pSysMem = &shadermat;
 
+		GraphicsDevice* device = wiRenderer::GetDevice();
 		GPUBufferDesc desc;
 		desc.Usage = USAGE_DEFAULT;
 		desc.BindFlags = BIND_CONSTANT_BUFFER;
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+		{
+			desc.BindFlags |= BIND_SHADER_RESOURCE;
+			desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		}
 		desc.ByteWidth = sizeof(MaterialCB);
-		wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &constantBuffer);
+		device->CreateBuffer(&desc, &data, &constantBuffer);
 	}
 	uint32_t MaterialComponent::GetStencilRef() const
 	{
@@ -779,9 +785,10 @@ namespace wiScene
 			_flags |= DIRTY_BINDLESS;
 
 			GPUBufferDesc desc;
-			desc.BindFlags = BIND_CONSTANT_BUFFER;
+			desc.BindFlags = BIND_SHADER_RESOURCE;
+			desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 			desc.ByteWidth = sizeof(ShaderMesh);
-			bool success = device->CreateBuffer(&desc, nullptr, &constantBuffer);
+			bool success = device->CreateBuffer(&desc, nullptr, &descriptor);
 			assert(success);
 
 			desc.BindFlags = BIND_SHADER_RESOURCE;
@@ -2634,7 +2641,7 @@ namespace wiScene
 					const MaterialComponent* mat = materials.GetComponent(mesh.terrain_material1);
 					if (mat != nullptr)
 					{
-						int index = device->GetDescriptorIndex(&mat->constantBuffer, CBV);
+						int index = device->GetDescriptorIndex(&mat->constantBuffer, SRV);
 						if (mesh.terrain_material1_index != index)
 						{
 							mesh._flags |= MeshComponent::DIRTY_BINDLESS;
@@ -2647,7 +2654,7 @@ namespace wiScene
 					const MaterialComponent* mat = materials.GetComponent(mesh.terrain_material2);
 					if (mat != nullptr)
 					{
-						int index = device->GetDescriptorIndex(&mat->constantBuffer, CBV);
+						int index = device->GetDescriptorIndex(&mat->constantBuffer, SRV);
 						if (mesh.terrain_material2_index != index)
 						{
 							mesh._flags |= MeshComponent::DIRTY_BINDLESS;
@@ -2660,7 +2667,7 @@ namespace wiScene
 					const MaterialComponent* mat = materials.GetComponent(mesh.terrain_material3);
 					if (mat != nullptr)
 					{
-						int index = device->GetDescriptorIndex(&mat->constantBuffer, CBV);
+						int index = device->GetDescriptorIndex(&mat->constantBuffer, SRV);
 						if (mesh.terrain_material3_index != index)
 						{
 							mesh._flags |= MeshComponent::DIRTY_BINDLESS;
@@ -2677,7 +2684,7 @@ namespace wiScene
 				ShaderMesh shadermesh;
 				mesh.WriteShaderMesh(&shadermesh);
 
-				int mesh_descriptor = device->GetDescriptorIndex(&mesh.constantBuffer, CBV);
+				int mesh_descriptor = device->GetDescriptorIndex(&mesh.descriptor, SRV);
 
 				mesh.shadersubsets.resize(mesh.subsets.size());
 				int j = 0;
@@ -2691,12 +2698,12 @@ namespace wiScene
 					const MaterialComponent* material = materials.GetComponent(x.materialID);
 					if (material != nullptr)
 					{
-						shadersubset.material = device->GetDescriptorIndex(&material->constantBuffer, CBV);
+						shadersubset.material = device->GetDescriptorIndex(&material->constantBuffer, SRV);
 					}
 				}
 
 				cmd_locker.lock();
-				device->UpdateBuffer(&mesh.constantBuffer, &shadermesh, cmd);
+				device->UpdateBuffer(&mesh.descriptor, &shadermesh, cmd);
 				device->UpdateBuffer(&mesh.subsetBuffer, mesh.shadersubsets.data(), cmd);
 				cmd_locker.unlock();
 			}
@@ -2920,7 +2927,7 @@ namespace wiScene
 							worldMatrix._12, worldMatrix._22, worldMatrix._32, worldMatrix._42,
 							worldMatrix._13, worldMatrix._23, worldMatrix._33, worldMatrix._43
 						);
-						instance.InstanceID = (uint32_t)device->GetDescriptorIndex(&mesh->constantBuffer, CBV);
+						instance.InstanceID = (uint32_t)device->GetDescriptorIndex(&mesh->descriptor, SRV);
 						instance.InstanceMask = 1;
 						instance.bottomlevel = mesh->BLAS;
 

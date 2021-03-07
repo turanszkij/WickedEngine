@@ -2920,8 +2920,8 @@ void RenderMeshes(
 				if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
 				{
 					ObjectPushConstants push;
-					push.material = device->GetDescriptorIndex(&material.constantBuffer, CBV);
-					push.mesh = device->GetDescriptorIndex(&mesh.constantBuffer, CBV);
+					push.material = device->GetDescriptorIndex(&material.constantBuffer, SRV);
+					push.mesh = device->GetDescriptorIndex(&mesh.descriptor, SRV);
 					device->PushConstants(&push, sizeof(push), cmd);
 				}
 				else

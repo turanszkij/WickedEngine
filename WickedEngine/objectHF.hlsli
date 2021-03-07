@@ -25,31 +25,30 @@
 //////////////////
 
 #ifdef BINDLESS
-ConstantBuffer<ShaderMaterial> bindless_materials[] : register(b0, space1);
-ConstantBuffer<ShaderMesh> bindless_meshes[] : register(b0, space2);
-Texture2D<float4> bindless_textures[] : register(t0, space4);
-SamplerState bindless_samplers[] : register(t0, space5);
+ByteAddressBuffer bindless_buffers[] : register(t0, space1);
+Texture2D<float4> bindless_textures[] : register(t0, space2);
+SamplerState bindless_samplers[] : register(t0, space3);
 PUSHCONSTANT(push, ObjectPushConstants);
 
 inline ShaderMesh GetMesh()
 {
-	return bindless_meshes[push.mesh];
+	return bindless_buffers[push.mesh].Load<ShaderMesh>(0);
 }
 inline ShaderMaterial GetMaterial()
 {
-	return bindless_materials[push.material];
+	return bindless_buffers[push.material].Load<ShaderMaterial>(0);
 }
 inline ShaderMaterial GetMaterial1()
 {
-	return bindless_materials[GetMesh().blendmaterial1];
+	return bindless_buffers[GetMesh().blendmaterial1].Load<ShaderMaterial>(0);
 }
 inline ShaderMaterial GetMaterial2()
 {
-	return bindless_materials[GetMesh().blendmaterial2];
+	return bindless_buffers[GetMesh().blendmaterial2].Load<ShaderMaterial>(0);
 }
 inline ShaderMaterial GetMaterial3()
 {
-	return bindless_materials[GetMesh().blendmaterial3];
+	return bindless_buffers[GetMesh().blendmaterial3].Load<ShaderMaterial>(0);
 }
 
 #define sampler_objectshader			bindless_samplers[g_xFrame_ObjectShaderSamplerIndex]

@@ -18,13 +18,11 @@ RAYTRACINGACCELERATIONSTRUCTURE(scene_acceleration_structure, TEXSLOT_ACCELERATI
 
 RWTEXTURE2D(output, float4, 0);
 
-ConstantBuffer<ShaderMaterial> bindless_materials[] : register(b0, space1);
-ConstantBuffer<ShaderMesh> bindless_meshes[] : register(b0, space2);
-StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space3);
-Texture2D<float4> bindless_textures[] : register(t0, space4);
-Buffer<uint> bindless_ib[] : register(t0, space5);
-Buffer<float2> bindless_vb_uvset[] : register(t0, space6);
-ByteAddressBuffer bindless_vb_RAW[] : register(t0, space7);
+ByteAddressBuffer bindless_buffers[] : register(t0, space1);
+StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space2);
+Texture2D<float4> bindless_textures[] : register(t0, space3);
+Buffer<uint> bindless_ib[] : register(t0, space4);
+Buffer<float2> bindless_vb_uvset[] : register(t0, space5);
 
 struct RayPayload
 {
@@ -112,9 +110,9 @@ void RTReflection_Raygen()
 [shader("closesthit")]
 void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attr)
 {
-	ShaderMesh mesh = bindless_meshes[InstanceID()];
+	ShaderMesh mesh = bindless_buffers[InstanceID()].Load<ShaderMesh>(0);
 	ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][GeometryIndex()];
-	ShaderMaterial material = bindless_materials[subset.material];
+	ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
 	uint primitiveIndex = PrimitiveIndex();
 	uint i0 = bindless_ib[mesh.ib][primitiveIndex * 3 + 0];
 	uint i1 = bindless_ib[mesh.ib][primitiveIndex * 3 + 1];
@@ -139,9 +137,9 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 	if (mesh.vb_pos_nor_wind >= 0)
 	{
 		const uint stride_POS = 16;
-		n0 = unpack_unitvector(bindless_vb_RAW[mesh.vb_pos_nor_wind].Load4(i0 * stride_POS).w);
-		n1 = unpack_unitvector(bindless_vb_RAW[mesh.vb_pos_nor_wind].Load4(i1 * stride_POS).w);
-		n2 = unpack_unitvector(bindless_vb_RAW[mesh.vb_pos_nor_wind].Load4(i2 * stride_POS).w);
+		n0 = unpack_unitvector(bindless_buffers[mesh.vb_pos_nor_wind].Load4(i0 * stride_POS).w);
+		n1 = unpack_unitvector(bindless_buffers[mesh.vb_pos_nor_wind].Load4(i1 * stride_POS).w);
+		n2 = unpack_unitvector(bindless_buffers[mesh.vb_pos_nor_wind].Load4(i2 * stride_POS).w);
 	}
 	else
 	{
@@ -172,9 +170,9 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 	{
 		float4 c0, c1, c2;
 		const uint stride_COL = 4;
-		c0 = unpack_rgba(bindless_vb_RAW[mesh.vb_col].Load(i0 * stride_COL));
-		c1 = unpack_rgba(bindless_vb_RAW[mesh.vb_col].Load(i1 * stride_COL));
-		c2 = unpack_rgba(bindless_vb_RAW[mesh.vb_col].Load(i2 * stride_COL));
+		c0 = unpack_rgba(bindless_buffers[mesh.vb_col].Load(i0 * stride_COL));
+		c1 = unpack_rgba(bindless_buffers[mesh.vb_col].Load(i1 * stride_COL));
+		c2 = unpack_rgba(bindless_buffers[mesh.vb_col].Load(i2 * stride_COL));
 		float4 vertexColor = c0 * w + c1 * u + c2 * v;
 		baseColor *= vertexColor;
 	}
@@ -184,9 +182,9 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 	{
 		float4 t0, t1, t2;
 		const uint stride_TAN = 4;
-		t0 = unpack_utangent(bindless_vb_RAW[mesh.vb_tan].Load(i0 * stride_TAN));
-		t1 = unpack_utangent(bindless_vb_RAW[mesh.vb_tan].Load(i1 * stride_TAN));
-		t2 = unpack_utangent(bindless_vb_RAW[mesh.vb_tan].Load(i2 * stride_TAN));
+		t0 = unpack_utangent(bindless_buffers[mesh.vb_tan].Load(i0 * stride_TAN));
+		t1 = unpack_utangent(bindless_buffers[mesh.vb_tan].Load(i1 * stride_TAN));
+		t2 = unpack_utangent(bindless_buffers[mesh.vb_tan].Load(i2 * stride_TAN));
 		float4 T = t0 * w + t1 * u + t2 * v;
 		T = T * 2 - 1;
 		T.xyz = mul((float3x3)ObjectToWorld3x4(), T.xyz);
@@ -279,9 +277,9 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 [shader("anyhit")]
 void RTReflection_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attr)
 {
-	ShaderMesh mesh = bindless_meshes[InstanceID()];
+	ShaderMesh mesh = bindless_buffers[InstanceID()].Load<ShaderMesh>(0);
 	ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][GeometryIndex()];
-	ShaderMaterial material = bindless_materials[subset.material];
+	ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
 	[branch]
 	if (material.texture_basecolormap_index < 0)
 	{

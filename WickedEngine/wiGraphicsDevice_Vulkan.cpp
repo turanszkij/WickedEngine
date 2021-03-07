@@ -5098,10 +5098,6 @@ using namespace Vulkan_Internal;
 				write.pImageInfo = &imageInfo;
 				vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
 			}
-			else
-			{
-				assert(0);
-			}
 
 			if (res == VK_SUCCESS)
 			{
@@ -5146,10 +5142,6 @@ using namespace Vulkan_Internal;
 				write.dstSet = allocationhandler->bindlessStorageImages.descriptorSet;
 				write.pImageInfo = &imageInfo;
 				vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
-			}
-			else
-			{
-				assert(0);
 			}
 
 			if (res == VK_SUCCESS)
@@ -5271,10 +5263,6 @@ using namespace Vulkan_Internal;
 				vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
 				internal_state->cbv_index = index;
 			}
-			else
-			{
-				assert(0);
-			}
 			return -1;
 		}
 		break;
@@ -5301,10 +5289,6 @@ using namespace Vulkan_Internal;
 					write.dstSet = allocationhandler->bindlessStorageBuffers.descriptorSet;
 					write.pBufferInfo = &bufferInfo;
 					vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
-				}
-				else
-				{
-					assert(0);
 				}
 
 				if (type == SRV)
@@ -5360,10 +5344,6 @@ using namespace Vulkan_Internal;
 							write.pTexelBufferView = &view;
 							vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
 						}
-						else
-						{
-							assert(0);
-						}
 
 						if (internal_state->srv == VK_NULL_HANDLE)
 						{
@@ -5389,10 +5369,6 @@ using namespace Vulkan_Internal;
 							write.dstSet = allocationhandler->bindlessStorageTexelBuffers.descriptorSet;
 							write.pTexelBufferView = &view;
 							vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
-						}
-						else
-						{
-							assert(0);
 						}
 
 						if (internal_state->uav == VK_NULL_HANDLE)
