@@ -37,7 +37,7 @@ void RTReflection_Raygen()
 {
 	uint2 DTid = DispatchRaysIndex().xy;
 	const float2 uv = ((float2)DTid.xy + 0.5) / (float2)DispatchRaysDimensions();
-	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 1);
+	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
 	if (depth == 0)
 		return;
 
@@ -134,11 +134,20 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 		uv1.zw = bindless_vb_uvset[mesh.vb_uv1][i1];
 		uv2.zw = bindless_vb_uvset[mesh.vb_uv1][i2];
 	}
-	float3 n0, n1, n2;
-	const uint stride_POS = 16;
-	n0 = unpack_unitvector(bindless_vb_RAW[mesh.vb_pos_nor_wind].Load4(i0 * stride_POS).w);
-	n1 = unpack_unitvector(bindless_vb_RAW[mesh.vb_pos_nor_wind].Load4(i1 * stride_POS).w);
-	n2 = unpack_unitvector(bindless_vb_RAW[mesh.vb_pos_nor_wind].Load4(i2 * stride_POS).w);
+	float3 n0 = 0, n1 = 0, n2 = 0;
+	[branch]
+	if (mesh.vb_pos_nor_wind >= 0)
+	{
+		const uint stride_POS = 16;
+		n0 = unpack_unitvector(bindless_vb_RAW[mesh.vb_pos_nor_wind].Load4(i0 * stride_POS).w);
+		n1 = unpack_unitvector(bindless_vb_RAW[mesh.vb_pos_nor_wind].Load4(i1 * stride_POS).w);
+		n2 = unpack_unitvector(bindless_vb_RAW[mesh.vb_pos_nor_wind].Load4(i2 * stride_POS).w);
+	}
+	else
+	{
+		payload.color = float3(1, 0, 1); // error, this should always be good
+		return;
+	}
 
 	float u = attr.barycentrics.x;
 	float v = attr.barycentrics.y;
@@ -151,7 +160,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 
 	float4 baseColor = material.baseColor;
 	[branch]
-	if (material.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+	if (material.texture_basecolormap_index >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 	{
 		const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
 		baseColor = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 2);
@@ -171,7 +180,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 	}
 
 	[branch]
-	if (material.normalMapStrength > 0 && material.uvset_normalMap >= 0)
+	if (mesh.vb_tan >= 0 && material.texture_normalmap_index >= 0 && material.normalMapStrength > 0)
 	{
 		float4 t0, t1, t2;
 		const uint stride_TAN = 4;
@@ -193,7 +202,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 
 	float4 surfaceMap = 1;
 	[branch]
-	if (material.uvset_surfaceMap >= 0)
+	if (material.texture_surfacemap_index >= 0)
 	{
 		const float2 UV_surfaceMap = material.uvset_surfaceMap == 0 ? uvsets.xy : uvsets.zw;
 		surfaceMap = bindless_textures[material.texture_surfacemap_index].SampleLevel(sampler_linear_wrap, UV_surfaceMap, 2);
@@ -206,7 +215,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 	surface.screenUV = surface.pixel / (float2)DispatchRaysDimensions().xy;
 
 	[branch]
-	if (material.IsOcclusionEnabled_Secondary() && material.uvset_occlusionMap >= 0)
+	if (material.IsOcclusionEnabled_Secondary() && material.texture_occlusionmap_index >= 0)
 	{
 		const float2 UV_occlusionMap = material.uvset_occlusionMap == 0 ? uvsets.xy : uvsets.zw;
 		surface.occlusion *= bindless_textures[material.texture_occlusionmap_index].SampleLevel(sampler_linear_wrap, UV_occlusionMap, 2).r;
@@ -214,7 +223,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 
 	surface.emissiveColor = material.emissiveColor;
 	[branch]
-	if (material.uvset_emissiveMap >= 0)
+	if (material.texture_emissivemap_index >= 0)
 	{
 		const float2 UV_emissiveMap = material.uvset_emissiveMap == 0 ? uvsets.xy : uvsets.zw;
 		float4 emissiveMap = bindless_textures[material.texture_emissivemap_index].SampleLevel(sampler_linear_wrap, UV_emissiveMap, 2);
@@ -296,6 +305,11 @@ void RTReflection_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectio
 		uv0 = bindless_vb_uvset[mesh.vb_uv1][i0];
 		uv1 = bindless_vb_uvset[mesh.vb_uv1][i1];
 		uv2 = bindless_vb_uvset[mesh.vb_uv1][i2];
+	}
+	else
+	{
+		AcceptHitAndEndSearch();
+		return;
 	}
 
 	float u = attr.barycentrics.x;

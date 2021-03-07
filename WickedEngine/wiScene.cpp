@@ -437,6 +437,10 @@ namespace wiScene
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+			{
+				bd.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
+			}
 			bd.ByteWidth = (uint32_t)(sizeof(Vertex_POS) * vertices.size());
 
 			SubresourceData InitData;
@@ -577,16 +581,20 @@ namespace wiScene
 			bd.CPUAccessFlags = 0;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 
-			bd.ByteWidth = (uint32_t)(sizeof(Vertex_POS) * vertex_positions.size());
-			device->CreateBuffer(&bd, nullptr, &streamoutBuffer_POS);
-			device->SetName(&streamoutBuffer_POS, "streamoutBuffer_POS");
-
 			if (!vertex_tangents.empty())
 			{
 				bd.ByteWidth = (uint32_t)(sizeof(Vertex_TAN) * vertex_tangents.size());
 				device->CreateBuffer(&bd, nullptr, &streamoutBuffer_TAN);
 				device->SetName(&streamoutBuffer_TAN, "streamoutBuffer_TAN");
 			}
+
+			bd.ByteWidth = (uint32_t)(sizeof(Vertex_POS) * vertex_positions.size());
+			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+			{
+				bd.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
+			}
+			device->CreateBuffer(&bd, nullptr, &streamoutBuffer_POS);
+			device->SetName(&streamoutBuffer_POS, "streamoutBuffer_POS");
 		}
 
 		// vertexBuffer - UV SET 0
@@ -2575,6 +2583,7 @@ namespace wiScene
 
 			if (mesh.streamoutBuffer_POS.IsValid() && mesh.vertexBuffer_PRE.IsValid())
 			{
+				mesh._flags |= MeshComponent::DIRTY_BINDLESS;
 				std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
 			}
 

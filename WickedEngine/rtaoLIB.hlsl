@@ -98,6 +98,11 @@ void RTAO_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectionAttribu
 		uv1 = bindless_vb_uvset[mesh.vb_uv1][i1];
 		uv2 = bindless_vb_uvset[mesh.vb_uv1][i2];
 	}
+	else
+	{
+		AcceptHitAndEndSearch();
+		return;
+	}
 
 	float u = attr.barycentrics.x;
 	float v = attr.barycentrics.y;

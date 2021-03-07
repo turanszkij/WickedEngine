@@ -5284,62 +5284,69 @@ using namespace Vulkan_Internal;
 		{
 			if (desc.Format == FORMAT_UNKNOWN)
 			{
-				return -1;
-			}
+				// Raw buffer
+				int index = allocationhandler->bindlessStorageBuffers.allocate();
+				if (index >= 0)
+				{
+					VkDescriptorBufferInfo bufferInfo = {};
+					bufferInfo.buffer = internal_state->resource;
+					bufferInfo.offset = offset;
+					bufferInfo.range = size;
+					VkWriteDescriptorSet write = {};
+					write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+					write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+					write.dstBinding = 0;
+					write.dstArrayElement = index;
+					write.descriptorCount = 1;
+					write.dstSet = allocationhandler->bindlessStorageBuffers.descriptorSet;
+					write.pBufferInfo = &bufferInfo;
+					vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+				}
+				else
+				{
+					assert(0);
+				}
 
-			VkBufferViewCreateInfo srv_desc = {};
-			srv_desc.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-			srv_desc.buffer = internal_state->resource;
-			srv_desc.flags = 0;
-			srv_desc.format = _ConvertFormat(desc.Format);
-			srv_desc.offset = Align(offset, properties2.properties.limits.minTexelBufferOffsetAlignment); // damn, if this needs alignment, that could break a lot of things! (index buffer, index offset?)
-			srv_desc.range = std::min(size, (uint64_t)desc.ByteWidth - srv_desc.offset);
-
-			VkBufferView view;
-			res = vkCreateBufferView(device, &srv_desc, nullptr, &view);
-
-			if (res == VK_SUCCESS)
-			{
 				if (type == SRV)
 				{
-					if (desc.Format == FORMAT_UNKNOWN)
+					if (internal_state->srv_index == -1)
 					{
-						// Raw buffer
-						int index = allocationhandler->bindlessStorageBuffers.allocate();
-						if (index >= 0)
-						{
-							VkDescriptorBufferInfo bufferInfo = {};
-							bufferInfo.buffer = internal_state->resource;
-							bufferInfo.offset = offset;
-							bufferInfo.range = size;
-							VkWriteDescriptorSet write = {};
-							write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-							write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-							write.dstBinding = 0;
-							write.dstArrayElement = index;
-							write.descriptorCount = 1;
-							write.dstSet = allocationhandler->bindlessStorageBuffers.descriptorSet;
-							write.pBufferInfo = &bufferInfo;
-							vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
-						}
-						else
-						{
-							assert(0);
-						}
-
-						if (internal_state->srv == VK_NULL_HANDLE)
-						{
-							internal_state->srv = view;
-							internal_state->srv_index = index;
-							return -1;
-						}
-						internal_state->subresources_srv.push_back(view);
-						internal_state->subresources_srv_index.push_back(index);
-						return int(internal_state->subresources_srv.size() - 1);
+						internal_state->srv_index = index;
+						return -1;
 					}
-					else
+					internal_state->subresources_srv_index.push_back(index);
+					return int(internal_state->subresources_srv_index.size() - 1);
+				}
+				else
+				{
+					if (internal_state->uav_index == -1)
 					{
-						// Typed buffer
+						internal_state->uav_index = index;
+						return -1;
+					}
+					internal_state->subresources_uav_index.push_back(index);
+					return int(internal_state->subresources_uav_index.size() - 1);
+				}
+			}
+			else
+			{
+				// Typed buffer
+
+				VkBufferViewCreateInfo srv_desc = {};
+				srv_desc.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+				srv_desc.buffer = internal_state->resource;
+				srv_desc.flags = 0;
+				srv_desc.format = _ConvertFormat(desc.Format);
+				srv_desc.offset = Align(offset, properties2.properties.limits.minTexelBufferOffsetAlignment); // damn, if this needs alignment, that could break a lot of things! (index buffer, index offset?)
+				srv_desc.range = std::min(size, (uint64_t)desc.ByteWidth - srv_desc.offset);
+
+				VkBufferView view;
+				res = vkCreateBufferView(device, &srv_desc, nullptr, &view);
+
+				if (res == VK_SUCCESS)
+				{
+					if (type == SRV)
+					{
 						int index = allocationhandler->bindlessUniformTexelBuffers.allocate();
 						if (index >= 0)
 						{
@@ -5368,47 +5375,8 @@ using namespace Vulkan_Internal;
 						internal_state->subresources_srv_index.push_back(index);
 						return int(internal_state->subresources_srv.size() - 1);
 					}
-				}
-				else
-				{
-					if (desc.Format == FORMAT_UNKNOWN)
-					{
-						// Raw buffer
-						int index = allocationhandler->bindlessStorageBuffers.allocate();
-						if (index >= 0)
-						{
-							VkDescriptorBufferInfo bufferInfo = {};
-							bufferInfo.buffer = internal_state->resource;
-							bufferInfo.offset = offset;
-							bufferInfo.range = size;
-							VkWriteDescriptorSet write = {};
-							write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-							write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-							write.dstBinding = 0;
-							write.dstArrayElement = index;
-							write.descriptorCount = 1;
-							write.dstSet = allocationhandler->bindlessStorageBuffers.descriptorSet;
-							write.pBufferInfo = &bufferInfo;
-							vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
-						}
-						else
-						{
-							assert(0);
-						}
-
-						if (internal_state->uav == VK_NULL_HANDLE)
-						{
-							internal_state->uav = view;
-							internal_state->uav_index = index;
-							return -1;
-						}
-						internal_state->subresources_uav.push_back(view);
-						internal_state->subresources_uav_index.push_back(index);
-						return int(internal_state->subresources_uav.size() - 1);
-					}
 					else
 					{
-						// Typed buffer
 						int index = allocationhandler->bindlessStorageTexelBuffers.allocate();
 						if (index >= 0)
 						{
@@ -5438,10 +5406,10 @@ using namespace Vulkan_Internal;
 						return int(internal_state->subresources_uav.size() - 1);
 					}
 				}
-			}
-			else
-			{
-				assert(0);
+				else
+				{
+					assert(0);
+				}
 			}
 		}
 		break;

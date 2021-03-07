@@ -34,7 +34,7 @@ for item in root.iter():
         for shaderprofile in item.iter(namespace + "Filter"):
             profile = shaderprofile.text
 
-            #if name != "rtshadow_denoise_temporalCS.hlsl":
+            #if name != "rtreflectionLIB.hlsl":
             #    continue
 
             cmd = "dxc " + name + " -T "
