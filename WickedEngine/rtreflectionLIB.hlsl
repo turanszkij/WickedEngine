@@ -269,6 +269,8 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 		}
 	}
 
+	lighting.indirect.specular += max(0, EnvironmentReflection_Global(surface));
+
 	LightingPart combined_lighting = CombineLighting(surface, lighting);
 	payload.color = surface.albedo * combined_lighting.diffuse + combined_lighting.specular + surface.emissiveColor.rgb * surface.emissiveColor.a;
 
