@@ -214,7 +214,6 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Buffer(&mesh.indexBuffer, BUFFER_STATE_INDEX_BUFFER, BUFFER_STATE_SHADER_RESOURCE),
-				GPUBarrier::Buffer((mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS), BUFFER_STATE_VERTEX_BUFFER, BUFFER_STATE_SHADER_RESOURCE),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -255,7 +254,6 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Buffer(&mesh.indexBuffer, BUFFER_STATE_SHADER_RESOURCE, BUFFER_STATE_INDEX_BUFFER),
-			GPUBarrier::Buffer((mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS), BUFFER_STATE_SHADER_RESOURCE, BUFFER_STATE_VERTEX_BUFFER),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}

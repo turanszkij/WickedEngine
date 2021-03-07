@@ -1009,6 +1009,25 @@ using namespace Vulkan_Internal;
 		this->buffer.desc.Usage = USAGE_DYNAMIC;
 		this->buffer.desc.BindFlags = BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
 		this->buffer.desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+
+		int index = device->allocationhandler->bindlessStorageBuffers.allocate();
+		if (index >= 0)
+		{
+			VkDescriptorBufferInfo bufferInfo = {};
+			bufferInfo.buffer = internal_state->resource;
+			bufferInfo.offset = 0;
+			bufferInfo.range = (VkDeviceSize)size;
+			VkWriteDescriptorSet write = {};
+			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+			write.dstBinding = 0;
+			write.dstArrayElement = index;
+			write.descriptorCount = 1;
+			write.dstSet = device->allocationhandler->bindlessStorageBuffers.descriptorSet;
+			write.pBufferInfo = &bufferInfo;
+			vkUpdateDescriptorSets(device->device, 1, &write, 0, nullptr);
+		}
+		internal_state->srv_index = index;
 	}
 	uint8_t* GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::allocate(size_t dataSize, size_t alignment)
 	{

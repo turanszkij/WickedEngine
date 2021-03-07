@@ -1290,6 +1290,11 @@ void LoadShaders()
 							desc.gs = realGS < SHADERTYPE_COUNT ? &shaders[realGS] : nullptr;
 							desc.ps = realPS < SHADERTYPE_COUNT ? &shaders[realPS] : nullptr;
 
+							if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+							{
+								desc.il = nullptr;
+							}
+
 							switch (blendMode)
 							{
 							case BLENDMODE_OPAQUE:
@@ -2619,6 +2624,7 @@ void RenderMeshes(
 	if (!renderQueue.empty())
 	{
 		device->EventBegin("RenderMeshes", cmd);
+		const bool bindless = device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS);
 
 		tessellation = tessellation && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
 		if (tessellation)
@@ -2807,40 +2813,51 @@ void RenderMeshes(
 
 			device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
 
-			const GPUBuffer* vbs[] = {
-				mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
-				mesh.vertexBuffer_PRE.IsValid() ? &mesh.vertexBuffer_PRE : &mesh.vertexBuffer_POS,
-				&mesh.vertexBuffer_UV0,
-				&mesh.vertexBuffer_UV1,
-				&mesh.vertexBuffer_ATL,
-				&mesh.vertexBuffer_COL,
-				mesh.streamoutBuffer_TAN.IsValid() ? &mesh.streamoutBuffer_TAN : &mesh.vertexBuffer_TAN,
-				instances.buffer
-			};
-			uint32_t strides[] = {
-				sizeof(MeshComponent::Vertex_POS),
-				sizeof(MeshComponent::Vertex_POS),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_COL),
-				sizeof(MeshComponent::Vertex_TAN),
-				instanceDataSize
-			};
-			uint32_t offsets[] = {
-				0,
-				0,
-				0,
-				0,
-				0,
-				0,
-				0,
-				instancedBatch.dataOffset
-			};
-			static_assert(arraysize(vbs) == INPUT_SLOT_COUNT, "This layout must conform to OBJECT_VERTEXINPUT enum!");
-			static_assert(arraysize(vbs) == arraysize(strides), "Mismatch between vertex buffers and strides!");
-			static_assert(arraysize(vbs) == arraysize(offsets), "Mismatch between vertex buffers and offsets!");
-			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+			ObjectPushConstants push; // used with bindless model only
+
+			if (bindless)
+			{
+				push.mesh = device->GetDescriptorIndex(&mesh.descriptor, SRV);
+				push.instances = device->GetDescriptorIndex(instances.buffer, SRV);
+				push.instance_offset = instancedBatch.dataOffset;
+			}
+			else
+			{
+				const GPUBuffer* vbs[] = {
+					mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
+					mesh.vertexBuffer_PRE.IsValid() ? &mesh.vertexBuffer_PRE : &mesh.vertexBuffer_POS,
+					&mesh.vertexBuffer_UV0,
+					&mesh.vertexBuffer_UV1,
+					&mesh.vertexBuffer_ATL,
+					&mesh.vertexBuffer_COL,
+					mesh.streamoutBuffer_TAN.IsValid() ? &mesh.streamoutBuffer_TAN : &mesh.vertexBuffer_TAN,
+					instances.buffer
+				};
+				uint32_t strides[] = {
+					sizeof(MeshComponent::Vertex_POS),
+					sizeof(MeshComponent::Vertex_POS),
+					sizeof(MeshComponent::Vertex_TEX),
+					sizeof(MeshComponent::Vertex_TEX),
+					sizeof(MeshComponent::Vertex_TEX),
+					sizeof(MeshComponent::Vertex_COL),
+					sizeof(MeshComponent::Vertex_TAN),
+					instanceDataSize
+				};
+				uint32_t offsets[] = {
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					instancedBatch.dataOffset
+				};
+				static_assert(arraysize(vbs) == INPUT_SLOT_COUNT, "This layout must conform to OBJECT_VERTEXINPUT enum!");
+				static_assert(arraysize(vbs) == arraysize(strides), "Mismatch between vertex buffers and strides!");
+				static_assert(arraysize(vbs) == arraysize(offsets), "Mismatch between vertex buffers and offsets!");
+				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+			}
 
 			for (const MeshComponent::MeshSubset& subset : mesh.subsets)
 			{
@@ -2917,11 +2934,9 @@ void RenderMeshes(
 					device->BindShadingRate(material.shadingRate, cmd);
 				}
 
-				if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+				if (bindless)
 				{
-					ObjectPushConstants push;
 					push.material = device->GetDescriptorIndex(&material.constantBuffer, SRV);
-					push.mesh = device->GetDescriptorIndex(&mesh.descriptor, SRV);
 					device->PushConstants(&push, sizeof(push), cmd);
 				}
 				else
@@ -3924,8 +3939,8 @@ void UpdateRenderData(
 
 				numBarriers += arraysize(uavs);
 				GPUBarrier* barriers = (GPUBarrier*)GetRenderFrameAllocator(cmd).allocate(sizeof(GPUBarrier) * arraysize(uavs));
-				barriers[0] = GPUBarrier::Buffer(&mesh.streamoutBuffer_POS, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_VERTEX_BUFFER);
-				barriers[1] = GPUBarrier::Buffer(&mesh.streamoutBuffer_TAN, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_VERTEX_BUFFER);
+				barriers[0] = GPUBarrier::Buffer(&mesh.streamoutBuffer_POS, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE);
+				barriers[1] = GPUBarrier::Buffer(&mesh.streamoutBuffer_TAN, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE);
 				// Barriers will be issued later...
 
 				device->BindResources(CS, vbs, SKINNINGSLOT_IN_VERTEX_POS, arraysize(vbs), cmd);
@@ -4022,19 +4037,7 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 			const MeshComponent* mesh = scene.meshes.GetComponent(entity);
 			if (mesh != nullptr && mesh->BLAS.IsValid())
 			{
-				{
-					GPUBarrier barriers[] = {
-						GPUBarrier::Buffer(mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS, BUFFER_STATE_VERTEX_BUFFER, BUFFER_STATE_SHADER_RESOURCE),
-					};
-					device->Barrier(barriers, arraysize(barriers), cmd);
-				}
 				device->BuildRaytracingAccelerationStructure(&mesh->BLAS, cmd, nullptr);
-				{
-					GPUBarrier barriers[] = {
-						GPUBarrier::Buffer(mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS, BUFFER_STATE_SHADER_RESOURCE, BUFFER_STATE_VERTEX_BUFFER),
-					};
-					device->Barrier(barriers, arraysize(barriers), cmd);
-				}
 			}
 		}
 
@@ -6074,42 +6077,54 @@ void DrawDebugWorld(
 			volatile Instance* buff = (volatile Instance*)mem.data;
 			buff->Create(transform.world);
 
-			const GPUBuffer* vbs[] = {
-				mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
-				nullptr,
-				&mesh.vertexBuffer_UV0,
-				&mesh.vertexBuffer_UV1,
-				nullptr,
-				nullptr,
-				nullptr,
-				mem.buffer
-			};
-			uint32_t strides[] = {
-				sizeof(MeshComponent::Vertex_POS),
-				sizeof(MeshComponent::Vertex_POS),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_COL),
-				sizeof(MeshComponent::Vertex_TAN),
-				sizeof(Instance)
-			};
-			uint32_t offsets[] = {
-				0,
-				0,
-				0,
-				0,
-				0,
-				0,
-				0,
-				mem.offset
-			};
-			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+			{
+				ObjectPushConstants push;
+				push.material = device->GetDescriptorIndex(&material.constantBuffer, SRV);
+				push.mesh = device->GetDescriptorIndex(&mesh.descriptor, SRV);
+				push.instances = device->GetDescriptorIndex(mem.buffer, SRV);
+				push.instance_offset = mem.offset;
+				device->PushConstants(&push, sizeof(push), cmd);
+			}
+			else
+			{
+				const GPUBuffer* vbs[] = {
+					mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
+					nullptr,
+					&mesh.vertexBuffer_UV0,
+					&mesh.vertexBuffer_UV1,
+					nullptr,
+					nullptr,
+					nullptr,
+					mem.buffer
+				};
+				uint32_t strides[] = {
+					sizeof(MeshComponent::Vertex_POS),
+					sizeof(MeshComponent::Vertex_POS),
+					sizeof(MeshComponent::Vertex_TEX),
+					sizeof(MeshComponent::Vertex_TEX),
+					sizeof(MeshComponent::Vertex_TEX),
+					sizeof(MeshComponent::Vertex_COL),
+					sizeof(MeshComponent::Vertex_TAN),
+					sizeof(Instance)
+				};
+				uint32_t offsets[] = {
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					mem.offset
+				};
+				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+				device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+				device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+			}
 
 			device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
-
-			device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
-			device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
 
 			PaintRadiusCB cb;
 			cb.xPaintRadResolution = x.dimensions;

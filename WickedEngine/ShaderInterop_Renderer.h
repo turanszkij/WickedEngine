@@ -118,6 +118,8 @@ struct ObjectPushConstants
 {
 	int mesh;
 	int material;
+	int instances;
+	uint instance_offset;
 };
 
 // Warning: the size of this structure directly affects shader performance.

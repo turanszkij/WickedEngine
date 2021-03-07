@@ -28,6 +28,7 @@
 ByteAddressBuffer bindless_buffers[] : register(t0, space1);
 Texture2D<float4> bindless_textures[] : register(t0, space2);
 SamplerState bindless_samplers[] : register(t0, space3);
+Buffer<float2> bindless_vb_uvset[] : register(t0, space4);
 PUSHCONSTANT(push, ObjectPushConstants);
 
 inline ShaderMesh GetMesh()
@@ -228,30 +229,207 @@ TEXTURE2D(texture_rtshadow, uint4, TEXSLOT_RENDERPATH_RTSHADOW);			// bitmask fo
 #define OBJECTSHADER_USE_EMISSIVE
 #endif // OBJECTSHADER_LAYOUT_COMMON
 
+#ifdef BINDLESS
+static const uint instance_stride_matrix_userdata = 16 * 4;
+static const uint instance_stride_atlas = 16;
+static const uint instance_stride_prev = 16 * 3;
+
+#ifdef OBJECTSHADER_INPUT_PRE
+static const uint instance_stride = instance_stride_matrix_userdata + instance_stride_prev;
+#else
+#ifdef OBJECTSHADER_INPUT_ATL
+static const uint instance_stride = instance_stride_matrix_userdata + instance_stride_atlas;
+#else
+static const uint instance_stride = instance_stride_matrix_userdata;
+#endif // OBJECTSHADER_INPUT_ATL
+#endif // OBJECTSHADER_INPUT_PRE
+#endif // BINDLESS
 
 struct VertexInput
 {
+#ifdef BINDLESS
+	// Data coming from bindless fetching:
+	uint vertexID : SV_VertexID;
+	uint instanceID : SV_InstanceID;
+
+	float4 GetPosition()
+	{
+		return float4(bindless_buffers[GetMesh().vb_pos_nor_wind].Load<float3>(vertexID * 16), 1);
+	}
+	float3 GetNormal()
+	{
+		const uint normal_wind = bindless_buffers[GetMesh().vb_pos_nor_wind].Load<uint4>(vertexID * 16).w;
+		float3 normal;
+		normal.x = (float)((normal_wind >> 0) & 0xFF) / 255.0 * 2 - 1;
+		normal.y = (float)((normal_wind >> 8) & 0xFF) / 255.0 * 2 - 1;
+		normal.z = (float)((normal_wind >> 16) & 0xFF) / 255.0 * 2 - 1;
+		return normal;
+	}
+	float GetWindWeight()
+	{
+		const uint normal_wind = bindless_buffers[GetMesh().vb_pos_nor_wind].Load<uint4>(vertexID * 16).w;
+		return ((normal_wind >> 24) & 0xFF) / 255.0;
+	}
+
+#ifdef OBJECTSHADER_INPUT_TEX
+	float2 GetUV0()
+	{
+		[branch]
+		if (GetMesh().vb_uv0 < 0)
+			return 0;
+		return bindless_vb_uvset[GetMesh().vb_uv0][vertexID];
+	}
+	float2 GetUV1()
+	{
+		[branch]
+		if (GetMesh().vb_uv1 < 0)
+			return 0;
+		return bindless_vb_uvset[GetMesh().vb_uv1][vertexID];
+	}
+#endif // OBJECTSHADER_INPUT_TEX
+
+	float4x4 GetInstanceMatrix()
+	{
+		float4 mat0 = bindless_buffers[push.instances].Load<float4>(push.instance_offset + instanceID * instance_stride + 16 * 0);
+		float4 mat1 = bindless_buffers[push.instances].Load<float4>(push.instance_offset + instanceID * instance_stride + 16 * 1);
+		float4 mat2 = bindless_buffers[push.instances].Load<float4>(push.instance_offset + instanceID * instance_stride + 16 * 2);
+		return  float4x4(
+			mat0,
+			mat1,
+			mat2,
+			float4(0, 0, 0, 1)
+			);
+	}
+	uint4 GetInstanceUserdata()
+	{
+		return bindless_buffers[push.instances].Load<uint4>(push.instance_offset + instanceID * instance_stride + 16 * 3);
+	}
+
+#ifdef OBJECTSHADER_INPUT_PRE
+	float4 GetPositionPrev()
+	{
+		int descriptor_index = GetMesh().vb_pre;
+		[branch]
+		if (descriptor_index < 0)
+		{
+			descriptor_index = GetMesh().vb_pos_nor_wind;
+		}
+		return float4(bindless_buffers[descriptor_index].Load<float3>(vertexID * 16), 1);
+	}
+	float4x4 GetInstanceMatrixPrev()
+	{
+		float4 matPrev0 = bindless_buffers[push.instances].Load<float4>(push.instance_offset + instanceID * instance_stride + 16 * 4);
+		float4 matPrev1 = bindless_buffers[push.instances].Load<float4>(push.instance_offset + instanceID * instance_stride + 16 * 5);
+		float4 matPrev2 = bindless_buffers[push.instances].Load<float4>(push.instance_offset + instanceID * instance_stride + 16 * 6);
+		return  float4x4(
+			matPrev0,
+			matPrev1,
+			matPrev2,
+			float4(0, 0, 0, 1)
+			);
+	}
+#endif // OBJECTSHADER_INPUT_PRE
+
+#ifdef OBJECTSHADER_INPUT_ATL
+	float2 GetAtlasUV()
+	{
+		[branch]
+		if (GetMesh().vb_atl < 0)
+			return 0;
+		return bindless_vb_uvset[GetMesh().vb_atl][vertexID];
+	}
+	float4 GetInstanceAtlas()
+	{
+		return bindless_buffers[push.instances].Load<float4>(push.instance_offset + instanceID * instance_stride + 16 * 4);
+	}
+#endif // OBJECTSHADER_INPUT_ATL
+
+#ifdef OBJECTSHADER_INPUT_COL
+	float4 GetVertexColor()
+	{
+		[branch]
+		if (GetMesh().vb_col < 0)
+			return 0;
+		return unpack_rgba(bindless_buffers[GetMesh().vb_col].Load<uint>(vertexID * 4));
+	}
+#endif // OBJECTSHADER_INPUT_COL
+
+#ifdef OBJECTSHADER_INPUT_TAN
+	float4 GetTangent()
+	{
+		return unpack_utangent(bindless_buffers[GetMesh().vb_tan].Load<uint>(vertexID * 4)) * 2 - 1;
+	}
+#endif // OBJECTSHADER_INPUT_TAN
+
+
+
+
+
+#else
+	// Data coming from input layout:
 	float4 pos : POSITION_NORMAL_WIND;
+	float4 GetPosition()
+	{
+		return float4(pos.xyz, 1);
+	}
+	float3 GetNormal()
+	{
+		const uint normal_wind = asuint(pos.w);
+		float3 normal;
+		normal.x = (float)((normal_wind >> 0) & 0xFF) / 255.0 * 2 - 1;
+		normal.y = (float)((normal_wind >> 8) & 0xFF) / 255.0 * 2 - 1;
+		normal.z = (float)((normal_wind >> 16) & 0xFF) / 255.0 * 2 - 1;
+		return normal;
+	}
+	float GetWindWeight()
+	{
+		const uint normal_wind = asuint(pos.w);
+		return ((normal_wind >> 24) & 0xFF) / 255.0;
+	}
 
 #ifdef OBJECTSHADER_INPUT_PRE
 	float4 pre : PREVPOS;
+	float4 GetPositionPrev()
+	{
+		return float4(pre.xyz, 1);
+	}
 #endif // OBJECTSHADER_INPUT_PRE
 
 #ifdef OBJECTSHADER_INPUT_TEX
 	float2 uv0 : UVSET0;
 	float2 uv1 : UVSET1;
+	float2 GetUV0()
+	{
+		return uv0;
+	}
+	float2 GetUV1()
+	{
+		return uv1;
+	}
 #endif // OBJECTSHADER_INPUT_TEX
 
 #ifdef OBJECTSHADER_INPUT_ATL
 	float2 atl : ATLAS;
+	float2 GetAtlasUV()
+	{
+		return atl;
+	}
 #endif // OBJECTSHADER_INPUT_ATL
 
 #ifdef OBJECTSHADER_INPUT_COL
 	float4 col : COLOR;
+	float4 GetVertexColor()
+	{
+		return col;
+	}
 #endif // OBJECTSHADER_INPUT_COL
 
 #ifdef OBJECTSHADER_INPUT_TAN
 	float4 tan : TANGENT;
+	float4 GetTangent()
+	{
+		return tan * 2 - 1;
+	}
 #endif // OBJECTSHADER_INPUT_TAN
 
 	float4 mat0 : INSTANCEMATRIX0;
@@ -276,6 +454,10 @@ struct VertexInput
 
 #ifdef OBJECTSHADER_INPUT_ATL
 	float4 atlasMulAdd : INSTANCEATLAS;
+	float4 GetInstanceAtlas()
+	{
+		return atlasMulAdd;
+	}
 #endif // OBJECTSHADER_INPUT_ATL
 
 	float4x4 GetInstanceMatrix()
@@ -287,6 +469,11 @@ struct VertexInput
 			float4(0, 0, 0, 1)
 			);
 	}
+	uint4 GetInstanceUserdata()
+	{
+		return userdata;
+	}
+#endif // BINDLESS
 };
 
 
@@ -304,12 +491,13 @@ struct VertexSurface
 	inline void create(in ShaderMaterial material, in VertexInput input)
 	{
 		float4x4 WORLD = input.GetInstanceMatrix();
-		position = float4(input.pos.xyz, 1);
-		color = material.baseColor * unpack_rgba(input.userdata.x);
-		emissiveColor = input.userdata.z;
+		uint4 userdata = input.GetInstanceUserdata();
+		position = input.GetPosition();
+		color = material.baseColor * unpack_rgba(userdata.x);
+		emissiveColor = userdata.z;
 
 #ifdef OBJECTSHADER_INPUT_PRE
-		positionPrev = float4(input.pre.xyz, 1);
+		positionPrev = input.GetPositionPrev();
 #else
 		positionPrev = position;
 #endif // OBJECTSHADER_INPUT_PRE
@@ -317,26 +505,21 @@ struct VertexSurface
 #ifdef OBJECTSHADER_INPUT_COL
 		if (material.IsUsingVertexColors())
 		{
-			color *= input.col;
+			color *= input.GetVertexColor();
 		}
 #endif // OBJECTSHADER_INPUT_COL
 		
-		uint normal_wind = asuint(input.pos.w);
-
-		normal.x = (float)((normal_wind >> 0) & 0xFF) / 255.0 * 2 - 1;
-		normal.y = (float)((normal_wind >> 8) & 0xFF) / 255.0 * 2 - 1;
-		normal.z = (float)((normal_wind >> 16) & 0xFF) / 255.0 * 2 - 1;
-		normal = normalize(mul((float3x3)WORLD, normal));
+		normal = normalize(mul((float3x3)WORLD, input.GetNormal()));
 
 #ifdef OBJECTSHADER_INPUT_TAN
-		tangent = input.tan * 2 - 1;
+		tangent = input.GetTangent();
 		tangent.xyz = normalize(mul((float3x3)WORLD, tangent.xyz));
 #endif // OBJECTSHADER_INPUT_TAN
 
 #ifdef OBJECTSHADER_USE_WIND
 		if (material.IsUsingWind())
 		{
-			const float windweight = ((normal_wind >> 24) & 0xFF) / 255.0;
+			const float windweight = input.GetWindWeight();
 			const float waveoffset = dot(position.xyz, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + (position.x + position.y + position.z) * g_xFrame_WindRandomness;
 			const float waveoffsetPrev = dot(positionPrev.xyz, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + (positionPrev.x + positionPrev.y + positionPrev.z) * g_xFrame_WindRandomness;
 			const float3 wavedir = g_xFrame_WindDirection * windweight;
@@ -348,11 +531,12 @@ struct VertexSurface
 #endif // OBJECTSHADER_USE_WIND
 
 #ifdef OBJECTSHADER_INPUT_TEX
-		uvsets = float4(input.uv0 * material.texMulAdd.xy + material.texMulAdd.zw, input.uv1);
+		uvsets = float4(input.GetUV0() * material.texMulAdd.xy + material.texMulAdd.zw, input.GetUV1());
 #endif // OBJECTSHADER_INPUT_TEX
 
 #ifdef OBJECTSHADER_INPUT_ATL
-		atlas = input.atl * input.atlasMulAdd.xy + input.atlasMulAdd.zw;
+		float4 atlasMulAdd = input.GetInstanceAtlas();
+		atlas = input.GetAtlasUV() * atlasMulAdd.xy + atlasMulAdd.zw;
 #endif // OBJECTSHADER_INPUT_ATL
 
 		position = mul(WORLD, position);
@@ -1030,7 +1214,7 @@ PixelInput main(VertexInput input)
 #endif // OBJECTSHADER_USE_EMISSIVE
 
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
-	const uint frustum_index = input.userdata.y;
+	const uint frustum_index = input.GetInstanceUserdata().y;
 	Out.RTIndex = xCubemapRenderCams[frustum_index].properties.x;
 #ifndef OBJECTSHADER_USE_NOCAMERA
 	Out.pos = mul(xCubemapRenderCams[frustum_index].VP, surface.position);
