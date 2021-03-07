@@ -11,10 +11,10 @@ STRUCTUREDBUFFER(EntityTiles, uint, TEXSLOT_RENDERPATH_ENTITYTILES);
 static const uint MAX_RTSHADOWS = 16;
 RWTEXTURE2D(output, uint4, 0);
 
-ConstantBuffer<ShaderMaterial> subsets_material[] : register(b0, space1);
-Texture2D<float4> subsets_textures[] : register(t0, space2);
-Buffer<uint> subsets_indexBuffer[] : register(t0, space3);
-Buffer<float2> subsets_vertexBuffer_UVSETS[] : register(t0, space4);
+ByteAddressBuffer bindless_buffers[] : register(t0, space1);
+StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space2);
+Texture2D<float4> bindless_textures[] : register(t0, space3);
+Buffer<uint> bindless_ib[] : register(t0, space4);
 
 struct RayPayload
 {
@@ -234,38 +234,46 @@ void RTShadow_ClosestHit(inout RayPayload payload, in BuiltInTriangleIntersectio
 [shader("anyhit")]
 void RTShadow_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attr)
 {
-	float u = attr.barycentrics.x;
-	float v = attr.barycentrics.y;
-	float w = 1 - u - v;
-	uint primitiveIndex = PrimitiveIndex();
-	uint geometryOffset = InstanceID();
-	uint geometryIndex = GeometryIndex(); // requires tier_1_1 GeometryIndex feature!!
-	uint descriptorIndex = geometryOffset + geometryIndex;
-	ShaderMaterial material = subsets_material[descriptorIndex];
-	if (material.uvset_baseColorMap < 0)
+	ShaderMesh mesh = bindless_buffers[InstanceID()].Load<ShaderMesh>(0);
+	ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][GeometryIndex()];
+	ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
+	[branch]
+	if (material.texture_basecolormap_index < 0)
 	{
 		AcceptHitAndEndSearch();
+		return;
 	}
-	uint i0 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 0];
-	uint i1 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 1];
-	uint i2 = subsets_indexBuffer[descriptorIndex][primitiveIndex * 3 + 2];
-	float2 uv0, uv1, uv2;
-	if (material.uvset_baseColorMap == 0)
+	uint primitiveIndex = PrimitiveIndex();
+	uint i0 = bindless_ib[mesh.ib][primitiveIndex * 3 + 0];
+	uint i1 = bindless_ib[mesh.ib][primitiveIndex * 3 + 1];
+	uint i2 = bindless_ib[mesh.ib][primitiveIndex * 3 + 2];
+	float2 uv0 = 0, uv1 = 0, uv2 = 0;
+	[branch]
+	if (mesh.vb_uv0 >= 0 && material.uvset_baseColorMap == 0)
 	{
-		uv0 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i0];
-		uv1 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i1];
-		uv2 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0][i2];
+		uv0 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i0 * 4));
+		uv1 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i1 * 4));
+		uv2 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i2 * 4));
+	}
+	else if (mesh.vb_uv1 >= 0 && material.uvset_baseColorMap != 0)
+	{
+		uv0 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i0 * 4));
+		uv1 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i1 * 4));
+		uv2 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i2 * 4));
 	}
 	else
 	{
-		uv0 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i0];
-		uv1 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i1];
-		uv2 = subsets_vertexBuffer_UVSETS[descriptorIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1][i2];
+		AcceptHitAndEndSearch();
+		return;
 	}
 
+	float u = attr.barycentrics.x;
+	float v = attr.barycentrics.y;
+	float w = 1 - u - v;
 	float2 uv = uv0 * w + uv1 * u + uv2 * v;
-	float alpha = subsets_textures[descriptorIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_BASECOLOR].SampleLevel(sampler_point_wrap, uv, 2).a;
+	float alpha = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_point_wrap, uv, 2).a;
 
+	[branch]
 	if (alpha - material.alphaTest > 0)
 	{
 		AcceptHitAndEndSearch();

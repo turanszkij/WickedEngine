@@ -7,9 +7,9 @@ float4 main(PixelInput input) : SV_TARGET
 {
 	float4 color;
 	[branch]
-	if (g_xMaterial.uvset_baseColorMap >= 0)
+	if (GetMaterial().uvset_baseColorMap >= 0)
 	{
-		const float2 UV_baseColorMap = g_xMaterial.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		const float2 UV_baseColorMap = GetMaterial().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 		color = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap);
 		color.rgb = DEGAMMA(color.rgb);
 	}
@@ -22,14 +22,14 @@ float4 main(PixelInput input) : SV_TARGET
 	float opacity = color.a;
 
 	[branch]
-	if (g_xMaterial.transmission > 0)
+	if (GetMaterial().transmission > 0)
 	{
-		float transmission = g_xMaterial.transmission;
+		float transmission = GetMaterial().transmission;
 		[branch]
-		if (g_xMaterial.uvset_transmissionMap >= 0)
+		if (GetMaterial().uvset_transmissionMap >= 0)
 		{
-			const float2 UV_transmissionMap = g_xMaterial.uvset_transmissionMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			float transmissionMap = texture_transmissionmap.Sample(sampler_objectshader, UV_transmissionMap);
+			const float2 UV_transmissionMap = GetMaterial().uvset_transmissionMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			float transmissionMap = texture_transmissionmap.Sample(sampler_objectshader, UV_transmissionMap).r;
 			transmission *= transmissionMap;
 		}
 		opacity *= 1 - transmission;

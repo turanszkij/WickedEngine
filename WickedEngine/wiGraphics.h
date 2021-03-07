@@ -11,7 +11,6 @@ namespace wiGraphics
 	struct GPUResource;
 	struct GPUBuffer;
 	struct Texture;
-	struct RootSignature;
 
 	enum SHADERSTAGE
 	{
@@ -261,10 +260,11 @@ namespace wiGraphics
 	};
 	enum SUBRESOURCE_TYPE
 	{
-		SRV,
-		UAV,
-		RTV,
-		DSV,
+		CBV, // constant buffer view
+		SRV, // shader resource view
+		UAV, // unordered access view
+		RTV, // render target view
+		DSV, // depth stencil view
 	};
 	enum IMAGE_LAYOUT
 	{
@@ -341,7 +341,6 @@ namespace wiGraphics
 		GRAPHICSDEVICE_CAPABILITY_RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS = 1 << 5,
 		GRAPHICSDEVICE_CAPABILITY_RAYTRACING = 1 << 6,
 		GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE = 1 << 7,
-		GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT = 1 << 8,
 		GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING = 1 << 9,
 		GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2 = 1 << 10,
 		GRAPHICSDEVICE_CAPABILITY_MESH_SHADER = 1 << 11,
@@ -487,7 +486,6 @@ namespace wiGraphics
 	};
 	struct PipelineStateDesc
 	{
-		const RootSignature*	rootSignature = nullptr;
 		const Shader*			vs = nullptr;
 		const Shader*			ps = nullptr;
 		const Shader*			hs = nullptr;
@@ -743,7 +741,6 @@ namespace wiGraphics
 	struct Shader : public GraphicsDeviceChild
 	{
 		SHADERSTAGE stage = SHADERSTAGE_COUNT;
-		const RootSignature* rootSignature = nullptr;
 		std::vector<StaticSampler> auto_samplers; // ability to set static samplers without explicit root signature
 	};
 
@@ -915,7 +912,6 @@ namespace wiGraphics
 	};
 	struct RaytracingPipelineStateDesc
 	{
-		const RootSignature* rootSignature = nullptr;
 		std::vector<ShaderLibrary> shaderlibraries;
 		std::vector<ShaderHitGroup> hitgroups;
 		uint32_t max_trace_recursion_depth = 1;
@@ -945,80 +941,6 @@ namespace wiGraphics
 		uint32_t Width = 1;
 		uint32_t Height = 1;
 		uint32_t Depth = 1;
-	};
-
-	enum BINDPOINT
-	{
-		GRAPHICS,
-		COMPUTE,
-		RAYTRACING,
-	};
-	enum RESOURCEBINDING
-	{
-		ROOT_CONSTANTBUFFER,
-		ROOT_RAWBUFFER,
-		ROOT_STRUCTUREDBUFFER,
-		ROOT_RWRAWBUFFER,
-		ROOT_RWSTRUCTUREDBUFFER,
-
-		CONSTANTBUFFER,
-		RAWBUFFER,
-		STRUCTUREDBUFFER,
-		TYPEDBUFFER,
-		TEXTURE1D,
-		TEXTURE1DARRAY,
-		TEXTURE2D,
-		TEXTURE2DARRAY,
-		TEXTURECUBE,
-		TEXTURECUBEARRAY,
-		TEXTURE3D,
-		ACCELERATIONSTRUCTURE,
-		RWRAWBUFFER,
-		RWSTRUCTUREDBUFFER,
-		RWTYPEDBUFFER,
-		RWTEXTURE1D,
-		RWTEXTURE1DARRAY,
-		RWTEXTURE2D,
-		RWTEXTURE2DARRAY,
-		RWTEXTURE3D,
-
-		RESOURCEBINDING_COUNT
-	};
-	struct ResourceRange
-	{
-		RESOURCEBINDING binding = CONSTANTBUFFER;
-		uint32_t slot = 0;
-		uint32_t count = 1;
-	};
-	struct SamplerRange
-	{
-		uint32_t slot = 0;
-		uint32_t count = 1;
-	};
-	struct DescriptorTable : public GraphicsDeviceChild
-	{
-		SHADERSTAGE stage = SHADERSTAGE_COUNT;
-		std::vector<ResourceRange> resources;
-		std::vector<SamplerRange> samplers;
-		std::vector<StaticSampler> staticsamplers;
-	};
-	struct RootConstantRange
-	{
-		SHADERSTAGE stage = SHADERSTAGE_COUNT;
-		uint32_t slot = 0;
-		uint32_t size = 0;
-		uint32_t offset = 0;
-	};
-	struct RootSignature : public GraphicsDeviceChild
-	{
-		enum FLAGS
-		{
-			FLAG_EMPTY = 0,
-			FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT = 1 << 0,
-		};
-		uint32_t _flags = FLAG_EMPTY;
-		std::vector<DescriptorTable> tables;
-		std::vector<RootConstantRange> rootconstants;
 	};
 
 }

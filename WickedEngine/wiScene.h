@@ -202,13 +202,13 @@ namespace wiScene
 			std::shared_ptr<wiResource> resource;
 			const wiGraphics::GPUResource* GetGPUResource() const
 			{
-				if (resource == nullptr)
+				if (resource == nullptr || !resource->texture.IsValid())
 					return nullptr;
 				return &resource->texture;
 			}
 			int GetUVSet() const
 			{
-				if (resource == nullptr)
+				if (resource == nullptr || !resource->texture.IsValid())
 					return -1;
 				return (int)uvset;
 			}
@@ -315,6 +315,8 @@ namespace wiScene
 			DYNAMIC = 1 << 2,
 			TERRAIN = 1 << 3,
 			DIRTY_MORPH = 1 << 4,
+			DIRTY_BINDLESS = 1 << 5,
+			DIRTY_BLAS = 1 << 6,
 		};
 		uint32_t _flags = RENDERABLE;
 
@@ -335,7 +337,6 @@ namespace wiScene
 			wiECS::Entity materialID = wiECS::INVALID_ENTITY;
 			uint32_t indexOffset = 0;
 			uint32_t indexCount = 0;
-			int indexBuffer_subresource = -1;
 		};
 		std::vector<MeshSubset> subsets;
 
@@ -375,10 +376,17 @@ namespace wiScene
 		wiGraphics::GPUBuffer streamoutBuffer_TAN;
 		wiGraphics::GPUBuffer vertexBuffer_SUB;
 		std::vector<uint8_t> vertex_subsets;
+		wiGraphics::GPUBuffer descriptor;
+		wiGraphics::GPUBuffer subsetBuffer;
 
 		wiGraphics::RaytracingAccelerationStructure BLAS;
-		bool BLAS_build_pending = true;
-		uint32_t TLAS_geometryOffset = 0;
+
+		// Only valid for 1 frame material component indices:
+		int terrain_material1_index = -1;
+		int terrain_material2_index = -1;
+		int terrain_material3_index = -1;
+
+		std::vector<ShaderMeshSubset> shadersubsets;
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
@@ -399,6 +407,7 @@ namespace wiScene
 
 		// Recreates GPU resources for index/vertex buffers
 		void CreateRenderData();
+		void WriteShaderMesh(ShaderMesh* dest) const;
 
 		enum COMPUTE_NORMALS
 		{
@@ -794,6 +803,8 @@ namespace wiScene
 		};
 		std::vector<ShaderBoneType> boneData;
 		wiGraphics::GPUBuffer boneBuffer;
+
+		void CreateRenderData();
 
 		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
@@ -1263,24 +1274,23 @@ namespace wiScene
 		wiECS::ComponentManager<SpringComponent> springs;
 
 		// Non-serialized attributes:
+		enum FLAGS
+		{
+			EMPTY = 0,
+			UPDATE_ACCELERATION_STRUCTURES = 1 << 0,
+		};
+		uint32_t flags = EMPTY;
+
 		wiSpinLock locker;
 		AABB bounds;
 		std::vector<AABB> parallel_bounds;
 		WeatherComponent weather;
 		wiGraphics::RaytracingAccelerationStructure TLAS;
-		enum DESCRIPTORTABLE_ENTRY
-		{
-			DESCRIPTORTABLE_SUBSETS_MATERIAL,
-			DESCRIPTORTABLE_SUBSETS_TEXTURES,
-			DESCRIPTORTABLE_SUBSETS_INDEXBUFFER,
-			DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_RAW,
-			DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS,
+		std::vector<uint8_t> TLAS_instances;
+		std::vector<wiECS::Entity> BLAS_builds;
 
-			DESCRIPTORTABLE_COUNT
-		};
-		wiGraphics::DescriptorTable descriptorTables[DESCRIPTORTABLE_COUNT];
-		std::atomic<uint32_t> geometryOffset;
-		uint32_t MAX_SUBSET_DESCRIPTOR_INDEXING = 10000;
+		std::mutex cmd_locker;
+		wiGraphics::CommandList cmd = wiGraphics::INVALID_COMMANDLIST; // for gpu data updates
 
 		wiGraphics::GPUQueryHeap queryHeap[arraysize(ObjectComponent::occlusionQueries)];
 		std::vector<uint64_t> queryResults;

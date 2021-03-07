@@ -328,19 +328,19 @@ function(Generate_Shaders_SPIRV SHADERS_SRC_LIST SHADER_TYPE)
 				-T "${SHADER_TYPE}_6_5"
 				-I "${CMAKE_CURRENT_SOURCE_DIR}/../"
 				-D SPIRV
-				-all-resources-bound
+				#-all-resources-bound
 				#-pack-optimized
 				-res-may-alias
-				-no-legacy-cbuf-layout
+				#-no-legacy-cbuf-layout
 				-spirv
 				-fspv-target-env=${VK_VERSION}
 				-fvk-use-dx-layout
 				-fvk-use-dx-position-w
 				-flegacy-macro-expansion
 				-Fo ${SPIRV_OUTPUT}
-				-fvk-t-shift 1000 all
-				-fvk-u-shift 2000 all
-				-fvk-s-shift 3000 all
+				-fvk-t-shift 1000 0
+				-fvk-u-shift 2000 0
+				-fvk-s-shift 3000 0
 				#-fspv-extension=KHR
 				-Vd #DISABLE VALIDATION: There is currently a validation bug with raytracing RayTCurrent()!!!
 				)
@@ -445,10 +445,10 @@ if (WIN32)
 					-T "${SHADER_TYPE}_6_5"
 					-I "${CMAKE_CURRENT_SOURCE_DIR}/../"
 					-D HLSL6
-					-all-resources-bound
+					#-all-resources-bound
 					#-pack-optimized
 					-res-may-alias
-					-no-legacy-cbuf-layout
+					#-no-legacy-cbuf-layout
 					-flegacy-macro-expansion
 					-Fo ${DXC_OUTPUT}
 			)

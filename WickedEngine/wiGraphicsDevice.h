@@ -9,6 +9,7 @@ namespace wiGraphics
 {
 	typedef uint8_t CommandList;
 	static const CommandList COMMANDLIST_COUNT = 32;
+	static const CommandList INVALID_COMMANDLIST = COMMANDLIST_COUNT;
 
 	class GraphicsDevice
 	{
@@ -40,18 +41,17 @@ namespace wiGraphics
 		virtual bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) = 0;
 		virtual bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) { return false; }
 		virtual bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) { return false; }
-		virtual bool CreateDescriptorTable(DescriptorTable* table) { return false; }
-		virtual bool CreateRootSignature(RootSignature* rootsig) { return false; }
-
+		
 		virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) = 0;
 		virtual int CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) = 0;
+
+		virtual int GetDescriptorIndex(const GPUResource* resource, SUBRESOURCE_TYPE type, int subresource = -1) { return -1; };
+		virtual int GetDescriptorIndex(const Sampler* sampler) { return -1; };
 
 		virtual void WriteShadingRateValue(SHADING_RATE rate, void* dest) {};
 		virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) {}
 		virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) {}
-		virtual void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const GPUResource* resource, int subresource = -1, uint64_t offset = 0) {}
-		virtual void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const Sampler* sampler) {}
-
+		
 		virtual void Map(const GPUResource* resource, Mapping* mapping) = 0;
 		virtual void Unmap(const GPUResource* resource) = 0;
 		virtual void QueryRead(const GPUQueryHeap* heap, uint32_t index, uint32_t count, uint64_t* results) = 0;
@@ -63,8 +63,15 @@ namespace wiGraphics
 		virtual void PresentBegin(CommandList cmd) = 0;
 		virtual void PresentEnd(CommandList cmd) = 0;
 
+		// Begin a new command list for GPU command recording.
+		//	This will be valid until SubmitCommandLists() or StashCommandLists() is called.
 		virtual CommandList BeginCommandList() = 0;
+		// Submit all command list that were used with BeginCommandList before this call.
+		//	This will make every command list to be in "available" state and restarts them
 		virtual void SubmitCommandLists() = 0;
+		// Returns all command lists to "available" state, but doesn't submit or restart them,
+		// however it sets them to default pipeline state
+		virtual void StashCommandLists() = 0;
 
 		virtual void WaitForGPU() = 0;
 		virtual void ClearPipelineStateCache() {};
@@ -153,10 +160,7 @@ namespace wiGraphics
 		virtual void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) {}
 		virtual void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) {}
 		virtual void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) {}
-
-		virtual void BindDescriptorTable(BINDPOINT bindpoint, uint32_t space, const DescriptorTable* table, CommandList cmd) {}
-		virtual void BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd) {}
-		virtual void BindRootConstants(BINDPOINT bindpoint, uint32_t index, const void* srcdata, CommandList cmd) {}
+		virtual void PushConstants(const void* data, uint32_t size, CommandList cmd) {}
 
 		struct GPUAllocation
 		{

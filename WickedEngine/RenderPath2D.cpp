@@ -197,7 +197,10 @@ void RenderPath2D::Render() const
 
 	wiRenderer::ProcessDeferredMipGenRequests(cmd);
 
-	wiRenderer::GetDevice()->BindResource(PS, GetGUIBlurredBackground(), TEXSLOT_IMAGE_BACKGROUND, cmd);
+	if (GetGUIBlurredBackground() != nullptr)
+	{
+		wiImage::SetBackgroundBlurTexture(*GetGUIBlurredBackground(), cmd);
+	}
 
 	// Special care for internal resolution, because stencil buffer is of internal resolution, 
 	//	so we might need to render stencil sprites to separate render target that matches internal resolution!

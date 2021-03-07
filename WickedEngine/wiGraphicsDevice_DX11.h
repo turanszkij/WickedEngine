@@ -110,6 +110,7 @@ namespace wiGraphics
 
 		CommandList BeginCommandList() override;
 		void SubmitCommandLists() override;
+		void StashCommandLists() override;
 
 		void SetResolution(int width, int height) override;
 

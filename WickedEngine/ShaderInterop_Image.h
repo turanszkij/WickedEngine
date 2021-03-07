@@ -10,5 +10,13 @@ CBUFFER(ImageCB, CBSLOT_IMAGE)
 	float4	xColor;
 };
 
+struct PushConstantsImage
+{
+	int texture_base_index;
+	int texture_mask_index;
+	int texture_background_index;
+	int sampler_index;
+};
+
 
 #endif // WI_SHADERINTEROP_IMAGE_H

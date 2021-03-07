@@ -2706,6 +2706,10 @@ void GraphicsDevice_DX11::SubmitCommandLists()
 
 	FRAMECOUNT++;
 }
+void GraphicsDevice_DX11::StashCommandLists()
+{
+	cmd_count.store(0);
+}
 
 void GraphicsDevice_DX11::WaitForGPU()
 {

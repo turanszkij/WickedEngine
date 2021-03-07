@@ -290,6 +290,20 @@ namespace wiScene
 			dest->options |= SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW;
 		}
 
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		dest->texture_basecolormap_index = device->GetDescriptorIndex(textures[BASECOLORMAP].GetGPUResource(), SRV);
+		dest->texture_surfacemap_index = device->GetDescriptorIndex(textures[SURFACEMAP].GetGPUResource(), SRV);
+		dest->texture_emissivemap_index = device->GetDescriptorIndex(textures[EMISSIVEMAP].GetGPUResource(), SRV);
+		dest->texture_normalmap_index = device->GetDescriptorIndex(textures[NORMALMAP].GetGPUResource(), SRV);
+		dest->texture_displacementmap_index = device->GetDescriptorIndex(textures[DISPLACEMENTMAP].GetGPUResource(), SRV);
+		dest->texture_occlusionmap_index = device->GetDescriptorIndex(textures[OCCLUSIONMAP].GetGPUResource(), SRV);
+		dest->texture_transmissionmap_index = device->GetDescriptorIndex(textures[TRANSMISSIONMAP].GetGPUResource(), SRV);
+		dest->texture_sheencolormap_index = device->GetDescriptorIndex(textures[SHEENCOLORMAP].GetGPUResource(), SRV);
+		dest->texture_sheenroughnessmap_index = device->GetDescriptorIndex(textures[SHEENROUGHNESSMAP].GetGPUResource(), SRV);
+		dest->texture_clearcoatmap_index = device->GetDescriptorIndex(textures[CLEARCOATMAP].GetGPUResource(), SRV);
+		dest->texture_clearcoatroughnessmap_index = device->GetDescriptorIndex(textures[CLEARCOATROUGHNESSMAP].GetGPUResource(), SRV);
+		dest->texture_clearcoatnormalmap_index = device->GetDescriptorIndex(textures[CLEARCOATNORMALMAP].GetGPUResource(), SRV);
+
 		dest->baseColorAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
 		dest->surfaceMapAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
 		dest->emissiveMapAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
@@ -340,11 +354,17 @@ namespace wiScene
 		SubresourceData data;
 		data.pSysMem = &shadermat;
 
+		GraphicsDevice* device = wiRenderer::GetDevice();
 		GPUBufferDesc desc;
 		desc.Usage = USAGE_DEFAULT;
 		desc.BindFlags = BIND_CONSTANT_BUFFER;
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+		{
+			desc.BindFlags |= BIND_SHADER_RESOURCE;
+			desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		}
 		desc.ByteWidth = sizeof(MaterialCB);
-		wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &constantBuffer);
+		device->CreateBuffer(&desc, &data, &constantBuffer);
 	}
 	uint32_t MaterialComponent::GetStencilRef() const
 	{
@@ -391,11 +411,6 @@ namespace wiScene
 				device->CreateBuffer(&bd, &initData, &indexBuffer);
 				device->SetName(&indexBuffer, "indexBuffer_16bit");
 			}
-
-			for (MeshSubset& subset : subsets)
-			{
-				subset.indexBuffer_subresource = device->CreateSubresource(&indexBuffer, SRV, subset.indexOffset * GetIndexStride());
-			}
 		}
 
 
@@ -428,6 +443,10 @@ namespace wiScene
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+			{
+				bd.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
+			}
 			bd.ByteWidth = (uint32_t)(sizeof(Vertex_POS) * vertices.size());
 
 			SubresourceData InitData;
@@ -518,7 +537,7 @@ namespace wiScene
 			}
 
 			GPUBufferDesc bd;
-			bd.Usage = USAGE_IMMUTABLE;
+			bd.Usage = USAGE_DEFAULT;
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
@@ -568,16 +587,20 @@ namespace wiScene
 			bd.CPUAccessFlags = 0;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 
-			bd.ByteWidth = (uint32_t)(sizeof(Vertex_POS) * vertex_positions.size());
-			device->CreateBuffer(&bd, nullptr, &streamoutBuffer_POS);
-			device->SetName(&streamoutBuffer_POS, "streamoutBuffer_POS");
-
 			if (!vertex_tangents.empty())
 			{
 				bd.ByteWidth = (uint32_t)(sizeof(Vertex_TAN) * vertex_tangents.size());
 				device->CreateBuffer(&bd, nullptr, &streamoutBuffer_TAN);
 				device->SetName(&streamoutBuffer_TAN, "streamoutBuffer_TAN");
 			}
+
+			bd.ByteWidth = (uint32_t)(sizeof(Vertex_POS) * vertex_positions.size());
+			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+			{
+				bd.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
+			}
+			device->CreateBuffer(&bd, nullptr, &streamoutBuffer_POS);
+			device->SetName(&streamoutBuffer_POS, "streamoutBuffer_POS");
 		}
 
 		// vertexBuffer - UV SET 0
@@ -593,10 +616,9 @@ namespace wiScene
 			bd.Usage = USAGE_IMMUTABLE;
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
-			bd.MiscFlags = 0;
+			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 			bd.StructureByteStride = sizeof(Vertex_TEX);
 			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
-			bd.Format = Vertex_TEX::FORMAT;
 
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();
@@ -617,10 +639,9 @@ namespace wiScene
 			bd.Usage = USAGE_IMMUTABLE;
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
-			bd.MiscFlags = 0;
+			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 			bd.StructureByteStride = sizeof(Vertex_TEX);
 			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
-			bd.Format = Vertex_TEX::FORMAT;
 
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();
@@ -635,10 +656,9 @@ namespace wiScene
 			bd.Usage = USAGE_IMMUTABLE;
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
-			bd.MiscFlags = 0;
+			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 			bd.StructureByteStride = sizeof(Vertex_COL);
 			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertex_colors.size());
-			bd.Format = FORMAT_R8G8B8A8_UNORM;
 
 			SubresourceData InitData;
 			InitData.pSysMem = vertex_colors.data();
@@ -659,10 +679,9 @@ namespace wiScene
 			bd.Usage = USAGE_IMMUTABLE;
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
-			bd.MiscFlags = 0;
+			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 			bd.StructureByteStride = sizeof(Vertex_TEX);
 			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
-			bd.Format = Vertex_TEX::FORMAT;
 
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();
@@ -706,7 +725,7 @@ namespace wiScene
 
 		if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
-			BLAS_build_pending = true;
+			_flags |= DIRTY_BLAS;
 
 			RaytracingAccelerationStructureDesc desc;
 			desc.type = RaytracingAccelerationStructureDesc::BOTTOMLEVEL;
@@ -756,6 +775,56 @@ namespace wiScene
 			assert(success);
 			device->SetName(&BLAS, "BLAS");
 		}
+
+		if(device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+		{
+			_flags |= DIRTY_BINDLESS;
+
+			GPUBufferDesc desc;
+			desc.BindFlags = BIND_SHADER_RESOURCE;
+			desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+			desc.ByteWidth = sizeof(ShaderMesh);
+			bool success = device->CreateBuffer(&desc, nullptr, &descriptor);
+			assert(success);
+
+			desc.BindFlags = BIND_SHADER_RESOURCE;
+			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+			desc.StructureByteStride = sizeof(ShaderMeshSubset);
+			desc.ByteWidth = desc.StructureByteStride * (uint32_t)subsets.size();
+			success = device->CreateBuffer(&desc, nullptr, &subsetBuffer);
+			assert(success);
+		}
+	}
+	void MeshComponent::WriteShaderMesh(ShaderMesh* dest) const
+	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		dest->ib = device->GetDescriptorIndex(&indexBuffer, SRV);
+		if (streamoutBuffer_POS.IsValid())
+		{
+			dest->vb_pos_nor_wind = device->GetDescriptorIndex(&streamoutBuffer_POS, SRV);
+		}
+		else
+		{
+			dest->vb_pos_nor_wind = device->GetDescriptorIndex(&vertexBuffer_POS, SRV);
+		}
+		if (streamoutBuffer_TAN.IsValid())
+		{
+			dest->vb_tan = device->GetDescriptorIndex(&streamoutBuffer_TAN, SRV);
+		}
+		else
+		{
+			dest->vb_tan = device->GetDescriptorIndex(&vertexBuffer_TAN, SRV);
+		}
+		dest->vb_uv0 = device->GetDescriptorIndex(&vertexBuffer_UV0, SRV);
+		dest->vb_uv1 = device->GetDescriptorIndex(&vertexBuffer_UV1, SRV);
+		dest->vb_bon = device->GetDescriptorIndex(&vertexBuffer_BON, SRV);
+		dest->vb_col = device->GetDescriptorIndex(&vertexBuffer_COL, SRV);
+		dest->vb_atl = device->GetDescriptorIndex(&vertexBuffer_ATL, SRV);
+		dest->vb_pre = device->GetDescriptorIndex(&vertexBuffer_PRE, SRV);
+		dest->blendmaterial1 = terrain_material1_index;
+		dest->blendmaterial2 = terrain_material2_index;
+		dest->blendmaterial3 = terrain_material3_index;
+		dest->subsetbuffer = device->GetDescriptorIndex(&subsetBuffer, SRV);
 	}
 	void MeshComponent::ComputeNormals(COMPUTE_NORMALS compute)
 	{
@@ -1160,6 +1229,22 @@ namespace wiScene
 		return FORMAT_UNKNOWN;
 	}
 
+	void ArmatureComponent::CreateRenderData()
+	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
+
+		GPUBufferDesc bd;
+		bd.Usage = USAGE_DYNAMIC;
+		bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+
+		bd.ByteWidth = sizeof(ArmatureComponent::ShaderBoneType) * (uint32_t)boneCollection.size();
+		bd.BindFlags = BIND_SHADER_RESOURCE;
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.StructureByteStride = sizeof(ArmatureComponent::ShaderBoneType);
+
+		device->CreateBuffer(&bd, nullptr, &boneBuffer);
+	}
+
 	void SoftBodyPhysicsComponent::CreateFromMesh(const MeshComponent& mesh)
 	{
 		vertex_positions_simulation.resize(mesh.vertex_positions.size());
@@ -1311,19 +1396,19 @@ namespace wiScene
 	void Scene::Update(float dt)
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT) && !descriptorTables[0].IsValid())
+		if (dt > 0)
 		{
-			descriptorTables[DESCRIPTORTABLE_SUBSETS_MATERIAL].resources.push_back({ CONSTANTBUFFER, 0, MAX_SUBSET_DESCRIPTOR_INDEXING });
-			descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURES].resources.push_back({ TEXTURE2D, 0, MAX_SUBSET_DESCRIPTOR_INDEXING * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT });
-			descriptorTables[DESCRIPTORTABLE_SUBSETS_INDEXBUFFER].resources.push_back({ TYPEDBUFFER, 0, MAX_SUBSET_DESCRIPTOR_INDEXING });
-			descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_RAW].resources.push_back({ RAWBUFFER, 0, MAX_SUBSET_DESCRIPTOR_INDEXING * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT });
-			descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS].resources.push_back({ TYPEDBUFFER, 0, MAX_SUBSET_DESCRIPTOR_INDEXING * VERTEXBUFFER_DESCRIPTOR_UV_COUNT });
+			cmd = device->BeginCommandList();
+			BLAS_builds.clear();
+		}
+		else
+		{
+			cmd = INVALID_COMMANDLIST;
+		}
 
-			for (int i = 0; i < DESCRIPTORTABLE_COUNT; ++i)
-			{
-				bool success = device->CreateDescriptorTable(&descriptorTables[i]);
-				assert(success);
-			}
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		{
+			TLAS_instances.resize(objects.GetCount() * device->GetTopLevelAccelerationStructureInstanceSize());
 		}
 
 		wiJobSystem::context ctx;
@@ -1352,7 +1437,9 @@ namespace wiScene
 
 		RunWeatherUpdateSystem(ctx);
 
-		wiPhysicsEngine::RunPhysicsUpdateSystem(ctx, *this, dt); // this syncs dependencies internally
+		wiPhysicsEngine::RunPhysicsUpdateSystem(ctx, *this, dt);
+
+		wiJobSystem::Wait(ctx); // dependencies
 
 		RunObjectUpdateSystem(ctx);
 
@@ -1400,6 +1487,10 @@ namespace wiScene
 			}
 		}
 
+		if (cmd != INVALID_COMMANDLIST)
+		{
+			device->StashCommandLists();
+		}
 	}
 	void Scene::Clear()
 	{
@@ -2467,133 +2558,154 @@ namespace wiScene
 
 			armature.aabb = AABB(_min, _max);
 
+			if (!armature.boneBuffer.IsValid())
+			{
+				armature.CreateRenderData();
+			}
 		});
 	}
 	void Scene::RunMeshUpdateSystem(wiJobSystem::context& ctx)
 	{
-		geometryOffset.store(0);
-
 		wiJobSystem::Dispatch(ctx, (uint32_t)meshes.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
+			Entity entity = meshes.GetEntity(args.jobIndex);
 			MeshComponent& mesh = meshes[args.jobIndex];
-			mesh.TLAS_geometryOffset = geometryOffset.fetch_add((uint32_t)mesh.subsets.size());
-
 			GraphicsDevice* device = wiRenderer::GetDevice();
-			uint32_t subsetIndex = 0;
-			for (auto& subset : mesh.subsets)
-			{
-				const MaterialComponent* material = materials.GetComponent(subset.materialID);
-				if (material != nullptr)
-				{
-					if (descriptorTables[0].IsValid())
-					{
-						uint32_t global_geometryIndex = mesh.TLAS_geometryOffset + subsetIndex;
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_MATERIAL],
-							0,
-							global_geometryIndex,
-							&material->constantBuffer
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURES],
-							0,
-							global_geometryIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_BASECOLOR,
-							material->textures[MaterialComponent::BASECOLORMAP].GetGPUResource()
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURES],
-							0,
-							global_geometryIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_NORMAL,
-							material->textures[MaterialComponent::NORMALMAP].GetGPUResource()
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURES],
-							0,
-							global_geometryIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_SURFACE,
-							material->textures[MaterialComponent::SURFACEMAP].GetGPUResource()
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURES],
-							0,
-							global_geometryIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_OCCLUSION,
-							material->textures[MaterialComponent::OCCLUSIONMAP].GetGPUResource()
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_TEXTURES],
-							0,
-							global_geometryIndex * MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT + MATERIAL_TEXTURE_SLOT_DESCRIPTOR_EMISSIVE,
-							material->textures[MaterialComponent::EMISSIVEMAP].GetGPUResource()
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_INDEXBUFFER],
-							0,
-							global_geometryIndex,
-							&mesh.indexBuffer,
-							subset.indexBuffer_subresource
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_RAW],
-							0,
-							global_geometryIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_POS,
-							&mesh.vertexBuffer_POS
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_RAW],
-							0,
-							global_geometryIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_TAN,
-							&mesh.vertexBuffer_TAN
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_RAW],
-							0,
-							global_geometryIndex * VERTEXBUFFER_DESCRIPTOR_RAW_COUNT + VERTEXBUFFER_DESCRIPTOR_RAW_COL,
-							&mesh.vertexBuffer_COL
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS],
-							0,
-							global_geometryIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_0,
-							&mesh.vertexBuffer_UV0
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS],
-							0,
-							global_geometryIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_1,
-							&mesh.vertexBuffer_UV1
-						);
-						device->WriteDescriptor(
-							&descriptorTables[DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS],
-							0,
-							global_geometryIndex * VERTEXBUFFER_DESCRIPTOR_UV_COUNT + VERTEXBUFFER_DESCRIPTOR_UV_ATL,
-							&mesh.vertexBuffer_ATL
-						);
-					}
 
-					if (mesh.BLAS.IsValid())
+			if (mesh.IsSkinned() && armatures.Contains(mesh.armatureID))
+			{
+				const SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(entity);
+				if (softbody == nullptr || softbody->vertex_positions_simulation.empty())
+				{
+					if (!mesh.vertexBuffer_PRE.IsValid())
 					{
-						uint32_t flags = mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags;
+						device->CreateBuffer(&mesh.streamoutBuffer_POS.GetDesc(), nullptr, &mesh.vertexBuffer_PRE);
+					}
+				}
+			}
+
+			if (mesh.streamoutBuffer_POS.IsValid() && mesh.vertexBuffer_PRE.IsValid())
+			{
+				mesh._flags |= MeshComponent::DIRTY_BINDLESS;
+				std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
+			}
+
+			if (mesh.BLAS.IsValid())
+			{
+				uint32_t subsetIndex = 0;
+				for (auto& subset : mesh.subsets)
+				{
+					const MaterialComponent* material = materials.GetComponent(subset.materialID);
+					if (material != nullptr)
+					{
+						auto& geometry = mesh.BLAS.desc.bottomlevel.geometries[subsetIndex];
+						uint32_t flags = geometry._flags;
 						if (material->IsAlphaTestEnabled() || (material->GetRenderTypes() & RENDERTYPE_TRANSPARENT))
 						{
-							mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags &=
-								~RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
+							geometry._flags &= ~RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
 						}
 						else
 						{
-							mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags =
-								RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
+							geometry._flags = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
 						}
-						if (flags != mesh.BLAS.desc.bottomlevel.geometries[subsetIndex]._flags)
+						if (flags != geometry._flags)
 						{
-							// New flags invalidate BLAS
-							mesh.BLAS_build_pending = true;
+							mesh._flags |= MeshComponent::DIRTY_BLAS;
+						}
+						if (mesh.streamoutBuffer_POS.IsValid())
+						{
+							mesh._flags |= MeshComponent::DIRTY_BLAS;
+							geometry.triangles.vertexBuffer = mesh.streamoutBuffer_POS;
+						}
+					}
+					subsetIndex++;
+				}
+
+				if ((flags & UPDATE_ACCELERATION_STRUCTURES) && cmd != INVALID_COMMANDLIST && (mesh._flags & MeshComponent::DIRTY_BLAS))
+				{
+					mesh._flags &= ~MeshComponent::DIRTY_BLAS;
+					locker.lock();
+					BLAS_builds.push_back(entity);
+					locker.unlock();
+				}
+			}
+
+			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+			{
+				if (mesh.terrain_material1 != INVALID_ENTITY)
+				{
+					const MaterialComponent* mat = materials.GetComponent(mesh.terrain_material1);
+					if (mat != nullptr)
+					{
+						int index = device->GetDescriptorIndex(&mat->constantBuffer, SRV);
+						if (mesh.terrain_material1_index != index)
+						{
+							mesh._flags |= MeshComponent::DIRTY_BINDLESS;
+							mesh.terrain_material1_index = index;
 						}
 					}
 				}
-				subsetIndex++;
+				if (mesh.terrain_material2 != INVALID_ENTITY)
+				{
+					const MaterialComponent* mat = materials.GetComponent(mesh.terrain_material2);
+					if (mat != nullptr)
+					{
+						int index = device->GetDescriptorIndex(&mat->constantBuffer, SRV);
+						if (mesh.terrain_material2_index != index)
+						{
+							mesh._flags |= MeshComponent::DIRTY_BINDLESS;
+							mesh.terrain_material2_index = index;
+						}
+					}
+				}
+				if (mesh.terrain_material3 != INVALID_ENTITY)
+				{
+					const MaterialComponent* mat = materials.GetComponent(mesh.terrain_material3);
+					if (mat != nullptr)
+					{
+						int index = device->GetDescriptorIndex(&mat->constantBuffer, SRV);
+						if (mesh.terrain_material3_index != index)
+						{
+							mesh._flags |= MeshComponent::DIRTY_BINDLESS;
+							mesh.terrain_material3_index = index;
+						}
+					}
+				}
+			}
+
+			if (cmd != INVALID_COMMANDLIST && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS) && mesh._flags & MeshComponent::DIRTY_BINDLESS)
+			{
+				mesh._flags &= ~MeshComponent::DIRTY_BINDLESS;
+
+				ShaderMesh shadermesh;
+				mesh.WriteShaderMesh(&shadermesh);
+
+				int mesh_descriptor = device->GetDescriptorIndex(&mesh.descriptor, SRV);
+
+				mesh.shadersubsets.resize(mesh.subsets.size());
+				int j = 0;
+				for (auto& x : mesh.subsets)
+				{
+					ShaderMeshSubset& shadersubset = mesh.shadersubsets[j++];
+					shadersubset.indexOffset = x.indexOffset;
+					shadersubset.indexCount = x.indexCount;
+					shadersubset.mesh = mesh_descriptor;
+
+					const MaterialComponent* material = materials.GetComponent(x.materialID);
+					if (material != nullptr)
+					{
+						shadersubset.material = device->GetDescriptorIndex(&material->constantBuffer, SRV);
+					}
+				}
+
+				cmd_locker.lock();
+				device->UpdateBuffer(&mesh.descriptor, &shadermesh, cmd);
+				device->UpdateBuffer(&mesh.subsetBuffer, mesh.shadersubsets.data(), cmd);
+				cmd_locker.unlock();
 			}
 
 			// Update morph targets if needed:
-			if (mesh.IsDirtyMorph() && !mesh.targets.empty())
+			if (cmd != INVALID_COMMANDLIST && mesh.IsDirtyMorph() && !mesh.targets.empty())
 			{
 			    XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
 			    XMFLOAT3 _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
@@ -2628,7 +2740,9 @@ namespace wiScene
 			    mesh.aabb = AABB(_min, _max);
 
 				mesh.SetDirtyMorph(false);
-				wiRenderer::AddDeferredMorphUpdate(meshes.GetEntity(args.jobIndex));
+				cmd_locker.lock();
+				wiRenderer::GetDevice()->UpdateBuffer(&mesh.vertexBuffer_POS, mesh.vertex_positions_morphed.data(), cmd);
+				cmd_locker.unlock();
 			}
 
 		});
@@ -2666,10 +2780,14 @@ namespace wiScene
 				material.engineStencilRef = STENCILREF_CUSTOMSHADER;
 			}
 
-			if (material.IsDirty())
+			if (cmd != INVALID_COMMANDLIST && material.IsDirty())
 			{
 				material.SetDirty(false);
-				wiRenderer::AddDeferredMaterialUpdate(entity);
+				ShaderMaterial shadermaterial;
+				material.WriteShaderMaterial(&shadermaterial);
+				cmd_locker.lock();
+				wiRenderer::GetDevice()->UpdateBuffer(&material.constantBuffer, &shadermaterial, cmd);
+				cmd_locker.unlock();
 			}
 
 		});
@@ -2698,7 +2816,6 @@ namespace wiScene
 			aabb = AABB();
 			object.rendertypeMask = 0;
 			object.SetDynamic(false);
-			object.SetCastShadow(false);
 			object.SetImpostorPlacement(false);
 			object.SetRequestPlanarReflection(false);
 
@@ -2747,8 +2864,6 @@ namespace wiScene
 							{
 								object.SetRequestPlanarReflection(true);
 							}
-
-							object.SetCastShadow(material->IsCastingShadow());
 						}
 					}
 
@@ -2795,6 +2910,25 @@ namespace wiScene
 						// soft bodies have no transform, their vertices are simulated in world space
 						object.transform_index = -1;
 						object.prev_transform_index = -1;
+					}
+
+					if ((flags & UPDATE_ACCELERATION_STRUCTURES) && TLAS.IsValid())
+					{
+						GraphicsDevice* device = wiRenderer::GetDevice();
+						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
+						const XMFLOAT4X4& worldMatrix = object.transform_index >= 0 ? transforms[object.transform_index].world : IDENTITYMATRIX;
+						instance = {};
+						instance.transform = XMFLOAT3X4(
+							worldMatrix._11, worldMatrix._21, worldMatrix._31, worldMatrix._41,
+							worldMatrix._12, worldMatrix._22, worldMatrix._32, worldMatrix._42,
+							worldMatrix._13, worldMatrix._23, worldMatrix._33, worldMatrix._43
+						);
+						instance.InstanceID = (uint32_t)device->GetDescriptorIndex(&mesh->descriptor, SRV);
+						instance.InstanceMask = 1;
+						instance.bottomlevel = mesh->BLAS;
+
+						void* dest = (void*)((size_t)TLAS_instances.data() + (size_t)args.jobIndex * device->GetTopLevelAccelerationStructureInstanceSize());
+						device->WriteTopLevelAccelerationStructureInstance(&instance, dest);
 					}
 				}
 

@@ -34,7 +34,7 @@ for item in root.iter():
         for shaderprofile in item.iter(namespace + "Filter"):
             profile = shaderprofile.text
 
-            #if name != "rtshadow_denoise_temporalCS.hlsl":
+            #if name != "rtreflectionLIB.hlsl":
             #    continue
 
             cmd = "dxc " + name + " -T "
@@ -60,10 +60,10 @@ for item in root.iter():
             
             cmd += "_6_5 "
             
-            cmd += " -all-resources-bound "
+            #cmd += " -all-resources-bound "
             #cmd += " -pack-optimized "
             cmd += " -res-may-alias "
-            cmd += " -no-legacy-cbuf-layout "
+            #cmd += " -no-legacy-cbuf-layout "
             
             cmd += " -spirv "
             cmd += " -fspv-target-env=vulkan1.2 "
@@ -78,10 +78,10 @@ for item in root.iter():
             #if profile == "VS" or profile == "DS" or profile == "GS":
             #    cmd += " -fvk-invert-y "
 
-            #cmd += " -fvk-b-shift 0 all "
-            cmd += " -fvk-t-shift 1000 all "
-            cmd += " -fvk-u-shift 2000 all "
-            cmd += " -fvk-s-shift 3000 all "
+            #cmd += " -fvk-b-shift 0 0 "
+            cmd += " -fvk-t-shift 1000 0 "
+            cmd += " -fvk-u-shift 2000 0 "
+            cmd += " -fvk-s-shift 3000 0 "
 
             cmd += " -Vd " #DISABLE VALIDATION: There is currently a validation bug with raytracing RayTCurrent()!!!
             

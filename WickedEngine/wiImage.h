@@ -9,6 +9,7 @@ struct wiImageParams;
 namespace wiImage
 {
 	void Draw(const wiGraphics::Texture* texture, const wiImageParams& params, wiGraphics::CommandList cmd);
+	void SetBackgroundBlurTexture(const wiGraphics::Texture& texture, wiGraphics::CommandList cmd);
 
 	void Initialize();
 };
