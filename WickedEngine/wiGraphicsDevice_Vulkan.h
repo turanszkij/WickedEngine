@@ -395,6 +395,7 @@ namespace wiGraphics
 						locker.unlock();
 						return index;
 					}
+					locker.unlock();
 					return -1;
 				}
 				void free(int index)
