@@ -119,13 +119,21 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 	uint i0 = bindless_ib[mesh.ib][primitiveIndex * 3 + 0];
 	uint i1 = bindless_ib[mesh.ib][primitiveIndex * 3 + 1];
 	uint i2 = bindless_ib[mesh.ib][primitiveIndex * 3 + 2];
-	float4 uv0, uv1, uv2;
-	uv0.xy = bindless_vb_uvset[mesh.vb_uv0][i0];
-	uv1.xy = bindless_vb_uvset[mesh.vb_uv0][i1];
-	uv2.xy = bindless_vb_uvset[mesh.vb_uv0][i2];
-	uv0.zw = bindless_vb_uvset[mesh.vb_uv1][i0];
-	uv1.zw = bindless_vb_uvset[mesh.vb_uv1][i1];
-	uv2.zw = bindless_vb_uvset[mesh.vb_uv1][i2];
+	float4 uv0 = 0, uv1 = 0, uv2 = 0;
+	[branch]
+	if (mesh.vb_uv0 >= 0)
+	{
+		uv0.xy = bindless_vb_uvset[mesh.vb_uv0][i0];
+		uv1.xy = bindless_vb_uvset[mesh.vb_uv0][i1];
+		uv2.xy = bindless_vb_uvset[mesh.vb_uv0][i2];
+	}
+	[branch]
+	if (mesh.vb_uv1 >= 0)
+	{
+		uv0.zw = bindless_vb_uvset[mesh.vb_uv1][i0];
+		uv1.zw = bindless_vb_uvset[mesh.vb_uv1][i1];
+		uv2.zw = bindless_vb_uvset[mesh.vb_uv1][i2];
+	}
 	float3 n0, n1, n2;
 	const uint stride_POS = 16;
 	n0 = unpack_unitvector(bindless_vb_RAW[mesh.vb_pos_nor_wind].Load4(i0 * stride_POS).w);
@@ -151,7 +159,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 	}
 
 	[branch]
-	if (material.IsUsingVertexColors())
+	if (mesh.vb_col >= 0 && material.IsUsingVertexColors())
 	{
 		float4 c0, c1, c2;
 		const uint stride_COL = 4;
@@ -265,22 +273,25 @@ void RTReflection_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectio
 	ShaderMesh mesh = bindless_meshes[InstanceID()];
 	ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][GeometryIndex()];
 	ShaderMaterial material = bindless_materials[subset.material];
+	[branch]
 	if (material.texture_basecolormap_index < 0)
 	{
 		AcceptHitAndEndSearch();
+		return;
 	}
 	uint primitiveIndex = PrimitiveIndex();
 	uint i0 = bindless_ib[mesh.ib][primitiveIndex * 3 + 0];
 	uint i1 = bindless_ib[mesh.ib][primitiveIndex * 3 + 1];
 	uint i2 = bindless_ib[mesh.ib][primitiveIndex * 3 + 2];
-	float2 uv0, uv1, uv2;
-	if (material.uvset_baseColorMap == 0)
+	float2 uv0 = 0, uv1 = 0, uv2 = 0;
+	[branch]
+	if (mesh.vb_uv0 >= 0 && material.uvset_baseColorMap == 0)
 	{
 		uv0 = bindless_vb_uvset[mesh.vb_uv0][i0];
 		uv1 = bindless_vb_uvset[mesh.vb_uv0][i1];
 		uv2 = bindless_vb_uvset[mesh.vb_uv0][i2];
 	}
-	else
+	else if(mesh.vb_uv1 >= 0)
 	{
 		uv0 = bindless_vb_uvset[mesh.vb_uv1][i0];
 		uv1 = bindless_vb_uvset[mesh.vb_uv1][i1];
@@ -293,6 +304,7 @@ void RTReflection_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectio
 	float2 uv = uv0 * w + uv1 * u + uv2 * v;
 	float alpha = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_point_wrap, uv, 2).a;
 
+	[branch]
 	if (alpha - material.alphaTest < 0)
 	{
 		IgnoreHit();

@@ -74,22 +74,25 @@ void RTAO_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectionAttribu
 	ShaderMesh mesh = bindless_meshes[InstanceID()];
 	ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][GeometryIndex()];
 	ShaderMaterial material = bindless_materials[subset.material];
+	[branch]
 	if (material.texture_basecolormap_index < 0)
 	{
 		AcceptHitAndEndSearch();
+		return;
 	}
 	uint primitiveIndex = PrimitiveIndex();
 	uint i0 = bindless_ib[mesh.ib][primitiveIndex * 3 + 0];
 	uint i1 = bindless_ib[mesh.ib][primitiveIndex * 3 + 1];
 	uint i2 = bindless_ib[mesh.ib][primitiveIndex * 3 + 2];
-	float2 uv0, uv1, uv2;
-	if (material.uvset_baseColorMap == 0)
+	float2 uv0 = 0, uv1 = 0, uv2 = 0;
+	[branch]
+	if (mesh.vb_uv0 >= 0 && material.uvset_baseColorMap == 0)
 	{
 		uv0 = bindless_vb_uvset[mesh.vb_uv0][i0];
 		uv1 = bindless_vb_uvset[mesh.vb_uv0][i1];
 		uv2 = bindless_vb_uvset[mesh.vb_uv0][i2];
 	}
-	else
+	else if(mesh.vb_uv1 >= 0)
 	{
 		uv0 = bindless_vb_uvset[mesh.vb_uv1][i0];
 		uv1 = bindless_vb_uvset[mesh.vb_uv1][i1];
@@ -102,6 +105,7 @@ void RTAO_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectionAttribu
 	float2 uv = uv0 * w + uv1 * u + uv2 * v;
 	float alpha = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_point_wrap, uv, 2).a;
 
+	[branch]
 	if (alpha - material.alphaTest > 0)
 	{
 		AcceptHitAndEndSearch();

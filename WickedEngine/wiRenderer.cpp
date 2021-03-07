@@ -4003,6 +4003,75 @@ void UpdateRenderData(
 		RenderAtmosphericScatteringTextures(cmd);
 	}
 }
+void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
+{
+	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		return;
+
+	if (!scene.TLAS.IsValid())
+		return;
+
+	// BLAS:
+	{
+		auto rangeCPU = wiProfiler::BeginRangeCPU("BLAS Update (CPU)");
+		auto range = wiProfiler::BeginRangeGPU("BLAS Update (GPU)", cmd);
+		device->EventBegin("BLAS Update", cmd);
+
+		for (Entity entity : scene.BLAS_builds)
+		{
+			const MeshComponent* mesh = scene.meshes.GetComponent(entity);
+			if (mesh != nullptr && mesh->BLAS.IsValid())
+			{
+				{
+					GPUBarrier barriers[] = {
+						GPUBarrier::Buffer(mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS, BUFFER_STATE_VERTEX_BUFFER, BUFFER_STATE_SHADER_RESOURCE),
+					};
+					device->Barrier(barriers, arraysize(barriers), cmd);
+				}
+				device->BuildRaytracingAccelerationStructure(&mesh->BLAS, cmd, nullptr);
+				{
+					GPUBarrier barriers[] = {
+						GPUBarrier::Buffer(mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS, BUFFER_STATE_SHADER_RESOURCE, BUFFER_STATE_VERTEX_BUFFER),
+					};
+					device->Barrier(barriers, arraysize(barriers), cmd);
+				}
+			}
+		}
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+		wiProfiler::EndRange(range);
+		wiProfiler::EndRange(rangeCPU);
+	}
+
+	// TLAS:
+	{
+		auto rangeCPU = wiProfiler::BeginRangeCPU("TLAS Update (CPU)");
+		auto range = wiProfiler::BeginRangeGPU("TLAS Update (GPU)", cmd);
+		device->EventBegin("TLAS Update", cmd);
+
+		device->UpdateBuffer(&scene.TLAS.desc.toplevel.instanceBuffer, scene.TLAS_instances.data(), cmd);
+		device->BuildRaytracingAccelerationStructure(&scene.TLAS, cmd, nullptr);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(&scene.TLAS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+		wiProfiler::EndRange(range);
+		wiProfiler::EndRange(rangeCPU);
+	}
+
+}
 void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visibility& vis, CommandList cmd)
 {
 	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
@@ -9953,6 +10022,7 @@ void Postprocess_RTReflection(
 	device->BindRaytracingPipelineState(&RTPSO, cmd);
 
 	BindCommonResources(cmd);
+	BindShadowmaps(LIB, cmd);
 
 	device->BindResource(LIB, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 	device->BindResource(LIB, &depthbuffer, TEXSLOT_DEPTH, cmd);
@@ -9961,16 +10031,19 @@ void Postprocess_RTReflection(
 
 	device->BindResource(LIB, &resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, cmd);
 	device->BindResource(LIB, &resourceBuffers[RBTYPE_MATRIXARRAY], SBSLOT_MATRIXARRAY, cmd);
-	device->BindResource(LIB, &globalLightmap, TEXSLOT_GLOBALLIGHTMAP, cmd);
+	device->BindResource(LIB, GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, cmd);
 	device->BindResource(LIB, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, cmd);
 	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
 	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
 	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
-	device->BindResource(LIB, &shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, cmd);
-	device->BindResource(LIB, &shadowMapArray_Transparent_2D, TEXSLOT_SHADOWARRAY_TRANSPARENT_2D, cmd);
-	device->BindResource(LIB, &shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, cmd);
-	device->BindResource(LIB, &shadowMapArray_Transparent_Cube, TEXSLOT_SHADOWARRAY_TRANSPARENT_CUBE, cmd);
+
+	device->BindResource(LIB, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
+	if (decalAtlas.IsValid())
+	{
+		device->BindResource(LIB, &decalAtlas, TEXSLOT_DECALATLAS, cmd);
+	}
 
 	device->BindResource(LIB, &resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE], TEXSLOT_ONDEMAND1, cmd);
 	device->BindResource(LIB, &resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE], TEXSLOT_ONDEMAND2, cmd);

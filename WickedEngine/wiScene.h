@@ -1287,9 +1287,10 @@ namespace wiScene
 		WeatherComponent weather;
 		wiGraphics::RaytracingAccelerationStructure TLAS;
 		std::vector<uint8_t> TLAS_instances;
+		std::vector<wiECS::Entity> BLAS_builds;
 
 		std::mutex cmd_locker;
-		wiGraphics::CommandList cmd; // for gpu data updates
+		wiGraphics::CommandList cmd = wiGraphics::INVALID_COMMANDLIST; // for gpu data updates
 
 		wiGraphics::GPUQueryHeap queryHeap[arraysize(ObjectComponent::occlusionQueries)];
 		std::vector<uint64_t> queryResults;

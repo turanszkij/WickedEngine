@@ -540,6 +540,10 @@ void RenderPath3D::Update(float dt)
 		{
 			scene->flags |= wiScene::Scene::UPDATE_ACCELERATION_STRUCTURES;
 		}
+		else
+		{
+			scene->flags &= ~wiScene::Scene::UPDATE_ACCELERATION_STRUCTURES;
+		}
 		scene->Update(dt * wiRenderer::GetGameSpeed());
 	}
 
@@ -595,6 +599,14 @@ void RenderPath3D::Render() const
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 		RenderFrameSetUp(cmd);
 		});
+
+	if (getAO() == AO_RTAO || wiRenderer::GetRaytracedShadowsEnabled() || getRaytracedReflectionEnabled())
+	{
+		cmd = device->BeginCommandList();
+		wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+			wiRenderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
+			});
+	}
 
 	static const uint32_t drawscene_flags =
 		wiRenderer::DRAWSCENE_OPAQUE |

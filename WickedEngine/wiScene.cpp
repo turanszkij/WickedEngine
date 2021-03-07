@@ -1388,6 +1388,7 @@ namespace wiScene
 		if (dt > 0)
 		{
 			cmd = device->BeginCommandList();
+			BLAS_builds.clear();
 		}
 		else
 		{
@@ -1472,17 +1473,6 @@ namespace wiScene
 				success = device->CreateRaytracingAccelerationStructure(&desc, &TLAS);
 				assert(success);
 				device->SetName(&TLAS, "TLAS");
-			}
-
-			if (flags & UPDATE_ACCELERATION_STRUCTURES && cmd != INVALID_COMMANDLIST && TLAS.IsValid() && !TLAS_instances.empty())
-			{
-				device->UpdateBuffer(&TLAS.desc.toplevel.instanceBuffer, TLAS_instances.data(), cmd);
-				GPUBarrier barriers[] = {
-					GPUBarrier::Memory(),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-				device->BuildRaytracingAccelerationStructure(&TLAS, cmd, nullptr);
-				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 		}
 
@@ -2588,7 +2578,7 @@ namespace wiScene
 				std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
 			}
 
-			if (flags & UPDATE_ACCELERATION_STRUCTURES && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+			if (mesh.BLAS.IsValid())
 			{
 				uint32_t subsetIndex = 0;
 				for (auto& subset : mesh.subsets)
@@ -2596,36 +2586,35 @@ namespace wiScene
 					const MaterialComponent* material = materials.GetComponent(subset.materialID);
 					if (material != nullptr)
 					{
-						if (mesh.BLAS.IsValid())
+						auto& geometry = mesh.BLAS.desc.bottomlevel.geometries[subsetIndex];
+						uint32_t flags = geometry._flags;
+						if (material->IsAlphaTestEnabled() || (material->GetRenderTypes() & RENDERTYPE_TRANSPARENT))
 						{
-							auto& geometry = mesh.BLAS.desc.bottomlevel.geometries[subsetIndex];
-							uint32_t flags = geometry._flags;
-							if (material->IsAlphaTestEnabled() || (material->GetRenderTypes() & RENDERTYPE_TRANSPARENT))
-							{
-								mesh._flags |= MeshComponent::DIRTY_BLAS;
-								geometry._flags &= ~RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
-							}
-							else
-							{
-								mesh._flags |= MeshComponent::DIRTY_BLAS;
-								geometry._flags = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
-							}
-							if (mesh.streamoutBuffer_POS.IsValid())
-							{
-								mesh._flags |= MeshComponent::DIRTY_BLAS;
-								geometry.triangles.vertexBuffer = mesh.streamoutBuffer_POS;
-							}
+							geometry._flags &= ~RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
+						}
+						else
+						{
+							geometry._flags = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
+						}
+						if (flags != geometry._flags)
+						{
+							mesh._flags |= MeshComponent::DIRTY_BLAS;
+						}
+						if (mesh.streamoutBuffer_POS.IsValid())
+						{
+							mesh._flags |= MeshComponent::DIRTY_BLAS;
+							geometry.triangles.vertexBuffer = mesh.streamoutBuffer_POS;
 						}
 					}
 					subsetIndex++;
 				}
 
-				if (cmd != INVALID_COMMANDLIST && mesh._flags & MeshComponent::DIRTY_BLAS)
+				if ((flags & UPDATE_ACCELERATION_STRUCTURES) && cmd != INVALID_COMMANDLIST && (mesh._flags & MeshComponent::DIRTY_BLAS))
 				{
 					mesh._flags &= ~MeshComponent::DIRTY_BLAS;
-					cmd_locker.lock();
-					device->BuildRaytracingAccelerationStructure(&mesh.BLAS, cmd, nullptr);
-					cmd_locker.unlock();
+					locker.lock();
+					BLAS_builds.push_back(entity);
+					locker.unlock();
 				}
 			}
 
@@ -2914,9 +2903,9 @@ namespace wiScene
 						object.prev_transform_index = -1;
 					}
 
-					GraphicsDevice* device = wiRenderer::GetDevice();
-					if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+					if ((flags & UPDATE_ACCELERATION_STRUCTURES) && TLAS.IsValid())
 					{
+						GraphicsDevice* device = wiRenderer::GetDevice();
 						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
 						const XMFLOAT4X4& worldMatrix = object.transform_index >= 0 ? transforms[object.transform_index].world : IDENTITYMATRIX;
 						instance = {};
@@ -2930,9 +2919,7 @@ namespace wiScene
 						instance.bottomlevel = mesh->BLAS;
 
 						void* dest = (void*)((size_t)TLAS_instances.data() + (size_t)args.jobIndex * device->GetTopLevelAccelerationStructureInstanceSize());
-						cmd_locker.lock();
 						device->WriteTopLevelAccelerationStructureInstance(&instance, dest);
-						cmd_locker.unlock();
 					}
 				}
 
