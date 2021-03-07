@@ -524,7 +524,7 @@ Remarks:
 Some graphics API supports bindless resource management, this can greatly improve performance and removes resource binding constraints to allow great flexibility. This can be queried by `GraphicsDevice::CheckCapability()` and providing the `GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS` flag. If the device supports this feature, the function will return true.
 
 Related functions to this feature:
-- `GetDescriptorIndex()` : returns an `int` that identifies the resource in bindless space. The queried resource can be a `Sampler` or a `GPUResource`. If the resource is not usable (for example if it was not created), then the function returns `-1`. Otherwise, the index can be used by shaders to index into a descriptor heap.
+- `GetDescriptorIndex()` : returns an `int` that identifies the resource in bindless space. The queried resource can be a `Sampler` or a `GPUResource`. If the resource is not usable (for example if it was not created), then the function returns `-1`. **In this case, the shaders must not use the resource, but instead rely on dynamic branching to avoid it, because this would be undefined behaviour and could result in a GPU hang**. Otherwise, the index can be used by shaders to index into a descriptor heap.
 - `PushConstants()` : This is an easy way to set a small amount of 32-bit values on the GPU, usable by shaders that declared a `PUSHCONSTANT(name, type)` block. There can be one push constant block per pipeline (graphics, compute or raytracing).
 
 The shaders can use bindless descriptors with the following syntax example:
@@ -554,6 +554,8 @@ push.materialIndex = device->GetDescriptorIndex(materialCB, CBV);
 push.textureindex = device->GetDescriptorIndex(texture, SRV);
 device->PushConstants(&push, sizeof(push), cmd);
 ```
+
+*Note: a descriptor array of ConstantBuffer<T> could be supported by some hardware/API (eg. Vulkan) in a limited form even though bindless descriptors are supported, so avoid relying on it too much.*
 
 The regular slot based binding model can will work alongside the bindless model seamlessly. The slot based bindings will always use `space0` implicitly, `space1` and greater should be used for the bindless model. Aim to keep space numbers as low as possible.
 
