@@ -15,7 +15,6 @@ ByteAddressBuffer bindless_buffers[] : register(t0, space1);
 StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space2);
 Texture2D<float4> bindless_textures[] : register(t0, space3);
 Buffer<uint> bindless_ib[] : register(t0, space4);
-Buffer<float2> bindless_vb_uvset[] : register(t0, space5);
 
 struct RayPayload
 {
@@ -252,15 +251,15 @@ void RTShadow_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectionAtt
 	[branch]
 	if (mesh.vb_uv0 >= 0 && material.uvset_baseColorMap == 0)
 	{
-		uv0 = bindless_vb_uvset[mesh.vb_uv0][i0];
-		uv1 = bindless_vb_uvset[mesh.vb_uv0][i1];
-		uv2 = bindless_vb_uvset[mesh.vb_uv0][i2];
+		uv0 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i0 * 4));
+		uv1 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i1 * 4));
+		uv2 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i2 * 4));
 	}
-	else if(mesh.vb_uv1 >= 0)
+	else if (mesh.vb_uv1 >= 0 && material.uvset_baseColorMap != 0)
 	{
-		uv0 = bindless_vb_uvset[mesh.vb_uv1][i0];
-		uv1 = bindless_vb_uvset[mesh.vb_uv1][i1];
-		uv2 = bindless_vb_uvset[mesh.vb_uv1][i2];
+		uv0 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i0 * 4));
+		uv1 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i1 * 4));
+		uv2 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i2 * 4));
 	}
 	else
 	{

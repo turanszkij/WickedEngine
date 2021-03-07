@@ -616,10 +616,9 @@ namespace wiScene
 			bd.Usage = USAGE_IMMUTABLE;
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
-			bd.MiscFlags = 0;
+			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 			bd.StructureByteStride = sizeof(Vertex_TEX);
 			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
-			bd.Format = Vertex_TEX::FORMAT;
 
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();
@@ -640,10 +639,9 @@ namespace wiScene
 			bd.Usage = USAGE_IMMUTABLE;
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
-			bd.MiscFlags = 0;
+			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 			bd.StructureByteStride = sizeof(Vertex_TEX);
 			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
-			bd.Format = Vertex_TEX::FORMAT;
 
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();
@@ -658,10 +656,9 @@ namespace wiScene
 			bd.Usage = USAGE_IMMUTABLE;
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
-			bd.MiscFlags = 0;
+			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 			bd.StructureByteStride = sizeof(Vertex_COL);
 			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertex_colors.size());
-			bd.Format = FORMAT_R8G8B8A8_UNORM;
 
 			SubresourceData InitData;
 			InitData.pSysMem = vertex_colors.data();
@@ -682,10 +679,9 @@ namespace wiScene
 			bd.Usage = USAGE_IMMUTABLE;
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
-			bd.MiscFlags = 0;
+			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 			bd.StructureByteStride = sizeof(Vertex_TEX);
 			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
-			bd.Format = Vertex_TEX::FORMAT;
 
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();

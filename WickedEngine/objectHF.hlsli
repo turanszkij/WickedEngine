@@ -28,7 +28,6 @@
 ByteAddressBuffer bindless_buffers[] : register(t0, space1);
 Texture2D<float4> bindless_textures[] : register(t0, space2);
 SamplerState bindless_samplers[] : register(t0, space3);
-Buffer<float2> bindless_vb_uvset[] : register(t0, space4);
 PUSHCONSTANT(push, ObjectPushConstants);
 
 inline ShaderMesh GetMesh()
@@ -277,14 +276,14 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_uv0 < 0)
 			return 0;
-		return bindless_vb_uvset[GetMesh().vb_uv0][vertexID];
+		return unpack_half2(bindless_buffers[GetMesh().vb_uv0].Load<uint>(vertexID * 4));
 	}
 	float2 GetUV1()
 	{
 		[branch]
 		if (GetMesh().vb_uv1 < 0)
 			return 0;
-		return bindless_vb_uvset[GetMesh().vb_uv1][vertexID];
+		return unpack_half2(bindless_buffers[GetMesh().vb_uv1].Load<uint>(vertexID * 4));
 	}
 #endif // OBJECTSHADER_INPUT_TEX
 
@@ -336,7 +335,7 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_atl < 0)
 			return 0;
-		return bindless_vb_uvset[GetMesh().vb_atl][vertexID];
+		return unpack_half2(bindless_buffers[GetMesh().vb_atl].Load<uint>(vertexID * 4));
 	}
 	float4 GetInstanceAtlas()
 	{
@@ -349,7 +348,7 @@ struct VertexInput
 	{
 		[branch]
 		if (GetMesh().vb_col < 0)
-			return 0;
+			return 1;
 		return unpack_rgba(bindless_buffers[GetMesh().vb_col].Load<uint>(vertexID * 4));
 	}
 #endif // OBJECTSHADER_INPUT_COL
@@ -671,7 +670,7 @@ inline float3 PlanarReflection(in Surface surface, in float2 bumpColor)
 inline void ParallaxOcclusionMapping(inout float4 uvsets, in float3 V, in float3x3 TBN)
 {
 	[branch]
-	if (GetMaterial().parallaxOcclusionMapping > 0)
+	if (GetMaterial().parallaxOcclusionMapping > 0 && GetMaterial().uvset_displacementMap >= 0)
 	{
 		V = mul(TBN, V);
 		float layerHeight = 1.0 / NUM_PARALLAX_OCCLUSION_STEPS;
