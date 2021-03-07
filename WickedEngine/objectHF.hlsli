@@ -45,11 +45,11 @@ inline ShaderMaterial GetMaterial1()
 }
 inline ShaderMaterial GetMaterial2()
 {
-	return bindless_materials[GetMesh().blendmaterial1];
+	return bindless_materials[GetMesh().blendmaterial2];
 }
 inline ShaderMaterial GetMaterial3()
 {
-	return bindless_materials[GetMesh().blendmaterial1];
+	return bindless_materials[GetMesh().blendmaterial3];
 }
 
 #define sampler_objectshader			bindless_samplers[g_xFrame_ObjectShaderSamplerIndex]
