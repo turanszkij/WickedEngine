@@ -2804,7 +2804,6 @@ namespace wiScene
 			aabb = AABB();
 			object.rendertypeMask = 0;
 			object.SetDynamic(false);
-			object.SetCastShadow(false);
 			object.SetImpostorPlacement(false);
 			object.SetRequestPlanarReflection(false);
 
@@ -2853,8 +2852,6 @@ namespace wiScene
 							{
 								object.SetRequestPlanarReflection(true);
 							}
-
-							object.SetCastShadow(material->IsCastingShadow());
 						}
 					}
 

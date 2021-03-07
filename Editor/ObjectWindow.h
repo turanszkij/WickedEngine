@@ -14,6 +14,7 @@ public:
 
 	wiLabel nameLabel;
 	wiCheckBox renderableCheckBox;
+	wiCheckBox shadowCheckBox;
 	wiSlider ditherSlider;
 	wiSlider cascadeMaskSlider;
 
