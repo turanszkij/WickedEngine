@@ -4089,10 +4089,9 @@ void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visib
 		const GPUQueryHeap& queryHeap = vis.scene->queryHeap[query_write];
 
 		device->BindPipelineState(&PSO_occlusionquery, cmd);
+		const bool bindless = device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS);
 
 		XMMATRIX VP = camera_previous.GetViewProjection();
-
-		MiscCB cb;
 
 		for (uint32_t instanceIndex : vis.visibleObjects)
 		{
@@ -4107,9 +4106,20 @@ void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visib
 			{
 				const AABB& aabb = vis.scene->aabb_objects[instanceIndex];
 
-				XMStoreFloat4x4(&cb.g_xTransform, aabb.getAsBoxMatrix() * VP);
-				device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &cb, cmd);
-				device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+				const XMMATRIX transform = aabb.getAsBoxMatrix() * VP;
+
+				if (bindless)
+				{
+					device->PushConstants(&transform, sizeof(transform), cmd);
+				}
+				else
+				{
+					MiscCB cb;
+					XMStoreFloat4x4(&cb.g_xTransform, transform);
+					device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &cb, cmd);
+					device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+
+				}
 
 				// render bounding box to later read the occlusion status
 				device->QueryBegin(&queryHeap, queryIndex, cmd);
