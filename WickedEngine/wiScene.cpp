@@ -1395,6 +1395,8 @@ namespace wiScene
 
 	void Scene::Update(float dt)
 	{
+		this->dt = dt;
+
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		if (dt > 0)
 		{
@@ -1411,11 +1413,43 @@ namespace wiScene
 			TLAS_instances.resize(objects.GetCount() * device->GetTopLevelAccelerationStructureInstanceSize());
 		}
 
+		// Occlusion culling read:
+		{
+			if (!queryHeap[0].IsValid())
+			{
+				GPUQueryHeapDesc desc;
+				desc.type = GPU_QUERY_TYPE_OCCLUSION_BINARY;
+				desc.queryCount = 2048;
+				for (int i = 0; i < arraysize(queryHeap); ++i)
+				{
+					bool success = wiRenderer::GetDevice()->CreateQueryHeap(&desc, &queryHeap[i]);
+					assert(success);
+				}
+				queryResults.resize(desc.queryCount);
+			}
+			query_write++;
+			query_read = query_write + 1;
+			query_write %= arraysize(queryHeap);
+			query_read %= arraysize(queryHeap);
+			writtenQueries[query_read] = std::min(queryAllocator.load(), queryHeap[query_read].desc.queryCount);
+			queryAllocator.store(0);
+
+			if (writtenQueries[query_read] > 0)
+			{
+				device->QueryRead(
+					&queryHeap[query_read],
+					0,
+					writtenQueries[query_read],
+					queryResults.data()
+				);
+			}
+		}
+
 		wiJobSystem::context ctx;
 
 		RunPreviousFrameTransformUpdateSystem(ctx);
 
-		RunAnimationUpdateSystem(ctx, dt);
+		RunAnimationUpdateSystem(ctx);
 
 		RunTransformUpdateSystem(ctx);
 
@@ -1423,7 +1457,7 @@ namespace wiScene
 
 		RunHierarchyUpdateSystem(ctx);
 
-		RunSpringUpdateSystem(ctx, dt);
+		RunSpringUpdateSystem(ctx);
 
 		RunInverseKinematicsUpdateSystem(ctx);
 
@@ -1431,7 +1465,7 @@ namespace wiScene
 
 		RunMeshUpdateSystem(ctx);
 
-		RunMaterialUpdateSystem(ctx, dt);
+		RunMaterialUpdateSystem(ctx);
 
 		RunImpostorUpdateSystem(ctx);
 
@@ -1453,7 +1487,7 @@ namespace wiScene
 
 		RunLightUpdateSystem(ctx);
 
-		RunParticleUpdateSystem(ctx, dt);
+		RunParticleUpdateSystem(ctx);
 
 		RunSoundUpdateSystem(ctx);
 
@@ -1988,7 +2022,7 @@ namespace wiScene
 			prev_transform.world_prev = transform.world;
 		});
 	}
-	void Scene::RunAnimationUpdateSystem(wiJobSystem::context& ctx, float dt)
+	void Scene::RunAnimationUpdateSystem(wiJobSystem::context& ctx)
 	{
 		for (size_t i = 0; i < animations.GetCount(); ++i)
 		{
@@ -2322,7 +2356,7 @@ namespace wiScene
 
 		}
 	}
-	void Scene::RunSpringUpdateSystem(wiJobSystem::context& ctx, float dt)
+	void Scene::RunSpringUpdateSystem(wiJobSystem::context& ctx)
 	{
 		static float time = 0;
 		time += dt;
@@ -2747,7 +2781,7 @@ namespace wiScene
 
 		});
 	}
-	void Scene::RunMaterialUpdateSystem(wiJobSystem::context& ctx, float dt)
+	void Scene::RunMaterialUpdateSystem(wiJobSystem::context& ctx)
 	{
 		wiJobSystem::Dispatch(ctx, (uint32_t)materials.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
@@ -2812,6 +2846,23 @@ namespace wiScene
 
 			ObjectComponent& object = objects[args.jobIndex];
 			AABB& aabb = aabb_objects[args.jobIndex];
+
+			// Update occlusion culling status:
+			object.occlusionHistory <<= 1; // advance history by 1 frame
+			int query_id = object.occlusionQueries[query_read];
+			if (query_id >= 0 && (int)writtenQueries[query_read] > query_id)
+			{
+				uint64_t visible = queryResults[query_id];
+				if (visible)
+				{
+					object.occlusionHistory |= 1; // visible
+				}
+			}
+			else
+			{
+				object.occlusionHistory |= 1; // visible
+			}
+			object.occlusionQueries[query_read] = -1; // invalidate query
 
 			aabb = AABB();
 			object.rendertypeMask = 0;
@@ -3089,7 +3140,7 @@ namespace wiScene
 
 		});
 	}
-	void Scene::RunParticleUpdateSystem(wiJobSystem::context& ctx, float dt)
+	void Scene::RunParticleUpdateSystem(wiJobSystem::context& ctx)
 	{
 		wiJobSystem::Dispatch(ctx, (uint32_t)emitters.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 

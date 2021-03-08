@@ -18,9 +18,9 @@ RAYTRACINGACCELERATIONSTRUCTURE(scene_acceleration_structure, TEXSLOT_ACCELERATI
 
 RWTEXTURE2D(output, float4, 0);
 
-ByteAddressBuffer bindless_buffers[] : register(t0, space1);
-StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space2);
-Texture2D<float4> bindless_textures[] : register(t0, space3);
+Texture2D<float4> bindless_textures[] : register(t0, space1);
+ByteAddressBuffer bindless_buffers[] : register(t0, space2);
+StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space3);
 Buffer<uint> bindless_ib[] : register(t0, space4);
 
 struct RayPayload

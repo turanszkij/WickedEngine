@@ -25,9 +25,9 @@
 //////////////////
 
 #ifdef BINDLESS
-ByteAddressBuffer bindless_buffers[] : register(t0, space1);
-Texture2D<float4> bindless_textures[] : register(t0, space2);
-SamplerState bindless_samplers[] : register(t0, space3);
+Texture2D<float4> bindless_textures[] : register(t0, space1);
+SamplerState bindless_samplers[] : register(t0, space2);
+ByteAddressBuffer bindless_buffers[] : register(t0, space3);
 PUSHCONSTANT(push, ObjectPushConstants);
 
 inline ShaderMesh GetMesh()

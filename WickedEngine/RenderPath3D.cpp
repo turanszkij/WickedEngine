@@ -567,10 +567,6 @@ void RenderPath3D::Update(float dt)
 		wiRenderer::UpdateVisibility(visibility_reflection);
 	}
 
-	if (getOcclusionCullingEnabled())
-	{
-		wiRenderer::OcclusionCulling_Read(*scene, visibility_main);
-	}
 	wiRenderer::UpdatePerFrameData(*scene, visibility_main, frameCB, GetInternalResolution(), dt);
 
 	if (wiRenderer::GetTemporalAAEnabled())

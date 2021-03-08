@@ -3390,6 +3390,35 @@ void UpdatePerFrameData(
 
 	wiJobSystem::context ctx;
 
+	// Occlusion query allocation:
+	if (GetOcclusionCullingEnabled() && !GetFreezeCullingCameraEnabled())
+	{
+		wiJobSystem::Dispatch(ctx, (uint32_t)vis.visibleObjects.size(), 64, [&](wiJobArgs args) {
+
+			ObjectComponent& object = scene.objects[args.jobIndex];
+			if (!object.IsRenderable())
+			{
+				return;
+			}
+
+			const AABB& aabb = scene.aabb_objects[args.jobIndex];
+
+			if (aabb.intersects(vis.camera->Eye))
+			{
+				// camera is inside the instance, mark it as visible in this frame:
+				object.occlusionHistory |= 1;
+			}
+			else
+			{
+				const uint32_t writeQuery = scene.queryAllocator.fetch_add(1); // allocate new occlusion query from heap
+				if (writeQuery < scene.queryHeap[scene.query_write].desc.queryCount)
+				{
+					object.occlusionQueries[scene.query_write] = writeQuery;
+				}
+			}
+		});
+	}
+
 	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
 		ManageDecalAtlas(scene);
 	});
@@ -4142,101 +4171,6 @@ void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visib
 	}
 
 	wiProfiler::EndRange(range); // Occlusion Culling Render
-}
-void OcclusionCulling_Read(Scene& scene, const Visibility& vis)
-{
-	assert(&scene == vis.scene);
-
-	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
-	{
-		return;
-	}
-
-	auto range = wiProfiler::BeginRangeCPU("Occlusion Culling Read");
-
-	if (!vis.visibleObjects.empty())
-	{
-		if (scene.queryResults.empty())
-		{
-			GPUQueryHeapDesc desc;
-			desc.type = GPU_QUERY_TYPE_OCCLUSION_BINARY;
-			desc.queryCount = 2048;
-			for (int i = 0; i < arraysize(scene.queryHeap); ++i)
-			{
-				bool success = wiRenderer::GetDevice()->CreateQueryHeap(&desc, &scene.queryHeap[i]);
-				assert(success);
-			}
-			scene.queryResults.resize(desc.queryCount);
-		}
-
-		uint32_t nextQuery = 0;
-		scene.query_write++;
-		scene.query_read = scene.query_write + 1;
-		scene.query_write %= arraysize(scene.queryHeap);
-		scene.query_read %= arraysize(scene.queryHeap);
-
-		device->QueryRead(
-			&scene.queryHeap[scene.query_read],
-			0,
-			scene.writtenQueries[scene.query_read],
-			scene.queryResults.data()
-		);
-		scene.writtenQueries[scene.query_read] = 0;
-
-		for (uint32_t instanceIndex : vis.visibleObjects)
-		{
-			ObjectComponent& object = scene.objects[instanceIndex];
-			if (!object.IsRenderable())
-			{
-				continue;
-			}
-
-			object.occlusionHistory <<= 1; // advance history by 1 frame
-
-			const AABB& aabb = scene.aabb_objects[instanceIndex];
-
-			if (aabb.intersects(vis.camera->Eye))
-			{
-				// camera is inside the instance, mark it as visible in this frame:
-				object.occlusionHistory |= 1;
-			}
-			else
-			{
-				uint32_t writeQuery = nextQuery++; // allocate new occlusion query from heap
-				if(writeQuery < scene.queryHeap[scene.query_write].desc.queryCount)
-				{
-					object.occlusionQueries[scene.query_write] = writeQuery;
-				}
-				else
-				{
-					object.occlusionQueries[scene.query_write] = -1; // query owerflow
-				}
-				int queryIndex = object.occlusionQueries[scene.query_read];
-				if (queryIndex >= 0)
-				{
-					// query exists, read it:
-					uint64_t visible = scene.queryResults[queryIndex];
-					if (visible)
-					{
-						object.occlusionHistory |= 1; // visible
-					}
-					// (else it is left as occluded)
-
-					object.occlusionQueries[scene.query_read] = -1;
-				}
-				else
-				{
-					// query doesn't exist, mark it as visible:
-					object.occlusionHistory |= 1; // visible
-				}
-			}
-		}
-
-		nextQuery = std::min(nextQuery, scene.queryHeap[scene.query_write].desc.queryCount);
-		scene.writtenQueries[scene.query_write] = nextQuery; // save allocated query amount
-	}
-
-	wiProfiler::EndRange(range); // Occlusion Culling Read
 }
 
 void PutWaterRipple(const std::string& image, const XMFLOAT3& pos)

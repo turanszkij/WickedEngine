@@ -8,9 +8,9 @@ TEXTURE2D(texture_normals, float3, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(output, unorm float, 0);
 
-ByteAddressBuffer bindless_buffers[] : register(t0, space1);
-StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space2);
-Texture2D<float4> bindless_textures[] : register(t0, space3);
+Texture2D<float4> bindless_textures[] : register(t0, space1);
+ByteAddressBuffer bindless_buffers[] : register(t0, space2);
+StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space3);
 Buffer<uint> bindless_ib[] : register(t0, space4);
 
 
