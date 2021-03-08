@@ -153,11 +153,8 @@ namespace wiRenderer
 		const FrameCB& frameCB,
 		wiGraphics::CommandList cmd
 	);
-	// Updates all acceleration structures for raytracing API
-	void UpdateRaytracingAccelerationStructures(
-		const wiScene::Scene& scene,
-		wiGraphics::CommandList cmd
-	);
+
+	void UpdateRaytracingAccelerationStructures(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 
 	// Binds all common constant buffers and samplers that may be used in all shaders
 	void BindCommonResources(wiGraphics::CommandList cmd);
@@ -828,8 +825,6 @@ namespace wiRenderer
 
 	// Add a texture that should be mipmapped whenever it is feasible to do so
 	void AddDeferredMIPGen(std::shared_ptr<wiResource> res, bool preserve_coverage = false);
-	void AddDeferredMaterialUpdate(wiECS::Entity entity);
-	void AddDeferredMorphUpdate(wiECS::Entity entity);
 
 	struct CustomShader
 	{

@@ -29,9 +29,9 @@ void main(PSInput input)
 	{
 		float4 baseColor;
 		[branch]
-		if (g_xMaterial.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+		if (GetMaterial().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
-			const float2 UV_baseColorMap = g_xMaterial.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			const float2 UV_baseColorMap = GetMaterial().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			baseColor = texture_basecolormap.Sample(sampler_linear_wrap, UV_baseColorMap);
 			baseColor.rgb = DEGAMMA(baseColor.rgb);
 		}
@@ -41,11 +41,11 @@ void main(PSInput input)
 		}
 		baseColor *= input.color;
 		float4 color = baseColor;
-		float4 emissiveColor = g_xMaterial.emissiveColor;
+		float4 emissiveColor = GetMaterial().emissiveColor;
 		[branch]
-		if (g_xMaterial.emissiveColor.a > 0 && g_xMaterial.uvset_emissiveMap >= 0)
+		if (GetMaterial().emissiveColor.a > 0 && GetMaterial().uvset_emissiveMap >= 0)
 		{
-			const float2 UV_emissiveMap = g_xMaterial.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			const float2 UV_emissiveMap = GetMaterial().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			float4 emissiveMap = texture_emissivemap.Sample(sampler_linear_wrap, UV_emissiveMap);
 			emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
 			emissiveColor *= emissiveMap;
@@ -65,9 +65,9 @@ void main(PSInput input)
 		if (blend_weights.x > 0)
 		{
 			[branch]
-			if (g_xMaterial.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+			if (GetMaterial().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 			{
-				float2 uv = g_xMaterial.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+				float2 uv = GetMaterial().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 				sam = texture_basecolormap.Sample(sampler_objectshader, uv);
 				sam.rgb = DEGAMMA(sam.rgb);
 			}
@@ -75,15 +75,15 @@ void main(PSInput input)
 			{
 				sam = 1;
 			}
-			color += sam * g_xMaterial.baseColor * blend_weights.x;
+			color += sam * GetMaterial().baseColor * blend_weights.x;
 
 			[branch]
-			if (g_xMaterial.uvset_emissiveMap >= 0 && any(g_xMaterial.emissiveColor))
+			if (GetMaterial().uvset_emissiveMap >= 0 && any(GetMaterial().emissiveColor))
 			{
-				float2 uv = g_xMaterial.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+				float2 uv = GetMaterial().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 				sam = texture_emissivemap.Sample(sampler_objectshader, uv);
 				sam.rgb = DEGAMMA(sam.rgb);
-				emissiveColor += sam * g_xMaterial.emissiveColor * blend_weights.x;
+				emissiveColor += sam * GetMaterial().emissiveColor * blend_weights.x;
 			}
 		}
 
@@ -91,9 +91,9 @@ void main(PSInput input)
 		if (blend_weights.y > 0)
 		{
 			[branch]
-			if (g_xMaterial_blend1.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+			if (GetMaterial1().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 			{
-				float2 uv = g_xMaterial_blend1.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+				float2 uv = GetMaterial1().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 				sam = texture_blend1_basecolormap.Sample(sampler_objectshader, uv);
 				sam.rgb = DEGAMMA(sam.rgb);
 			}
@@ -101,15 +101,15 @@ void main(PSInput input)
 			{
 				sam = 1;
 			}
-			color += sam * g_xMaterial_blend1.baseColor * blend_weights.y;
+			color += sam * GetMaterial1().baseColor * blend_weights.y;
 
 			[branch]
-			if (g_xMaterial_blend1.uvset_emissiveMap >= 0 && any(g_xMaterial_blend1.emissiveColor))
+			if (GetMaterial1().uvset_emissiveMap >= 0 && any(GetMaterial1().emissiveColor))
 			{
-				float2 uv = g_xMaterial_blend1.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+				float2 uv = GetMaterial1().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 				sam = texture_blend1_emissivemap.Sample(sampler_objectshader, uv);
 				sam.rgb = DEGAMMA(sam.rgb);
-				emissiveColor += sam * g_xMaterial_blend1.emissiveColor * blend_weights.y;
+				emissiveColor += sam * GetMaterial1().emissiveColor * blend_weights.y;
 			}
 		}
 
@@ -117,9 +117,9 @@ void main(PSInput input)
 		if (blend_weights.z > 0)
 		{
 			[branch]
-			if (g_xMaterial_blend2.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+			if (GetMaterial2().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 			{
-				float2 uv = g_xMaterial_blend2.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+				float2 uv = GetMaterial2().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 				sam = texture_blend2_basecolormap.Sample(sampler_objectshader, uv);
 				sam.rgb = DEGAMMA(sam.rgb);
 			}
@@ -127,15 +127,15 @@ void main(PSInput input)
 			{
 				sam = 1;
 			}
-			color += sam * g_xMaterial_blend2.baseColor * blend_weights.z;
+			color += sam * GetMaterial2().baseColor * blend_weights.z;
 
 			[branch]
-			if (g_xMaterial_blend2.uvset_emissiveMap >= 0 && any(g_xMaterial_blend2.emissiveColor))
+			if (GetMaterial2().uvset_emissiveMap >= 0 && any(GetMaterial2().emissiveColor))
 			{
-				float2 uv = g_xMaterial_blend2.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+				float2 uv = GetMaterial2().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 				sam = texture_blend2_emissivemap.Sample(sampler_objectshader, uv);
 				sam.rgb = DEGAMMA(sam.rgb);
-				emissiveColor += sam * g_xMaterial_blend2.emissiveColor * blend_weights.z;
+				emissiveColor += sam * GetMaterial2().emissiveColor * blend_weights.z;
 			}
 		}
 
@@ -143,9 +143,9 @@ void main(PSInput input)
 		if (blend_weights.w > 0)
 		{
 			[branch]
-			if (g_xMaterial_blend3.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+			if (GetMaterial3().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 			{
-				float2 uv = g_xMaterial_blend3.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+				float2 uv = GetMaterial3().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 				sam = texture_blend3_basecolormap.Sample(sampler_objectshader, uv);
 				sam.rgb = DEGAMMA(sam.rgb);
 			}
@@ -153,15 +153,15 @@ void main(PSInput input)
 			{
 				sam = 1;
 			}
-			color += sam * g_xMaterial_blend3.baseColor * blend_weights.w;
+			color += sam * GetMaterial3().baseColor * blend_weights.w;
 
 			[branch]
-			if (g_xMaterial_blend3.uvset_emissiveMap >= 0 && any(g_xMaterial_blend3.emissiveColor))
+			if (GetMaterial3().uvset_emissiveMap >= 0 && any(GetMaterial3().emissiveColor))
 			{
-				float2 uv = g_xMaterial_blend3.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+				float2 uv = GetMaterial3().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 				sam = texture_blend3_emissivemap.Sample(sampler_objectshader, uv);
 				sam.rgb = DEGAMMA(sam.rgb);
-				emissiveColor += sam * g_xMaterial_blend3.emissiveColor * blend_weights.w;
+				emissiveColor += sam * GetMaterial3().emissiveColor * blend_weights.w;
 			}
 		}
 

@@ -61,10 +61,10 @@ for item in root.iter():
 
             cmd += "_6_5 "
 
-            cmd += " -all-resources-bound "
+            #cmd += " -all-resources-bound "
             #cmd += " -pack-optimized "
             cmd += " -res-may-alias "
-            cmd += " -no-legacy-cbuf-layout "
+            #cmd += " -no-legacy-cbuf-layout "
             
             cmd += " -flegacy-macro-expansion "
             

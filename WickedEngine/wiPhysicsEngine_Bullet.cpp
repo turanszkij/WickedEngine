@@ -426,6 +426,15 @@ namespace wiPhysicsEngine
 			const ArmatureComponent* armature = mesh.IsSkinned() ? scene.armatures.GetComponent(mesh.armatureID) : nullptr;
 			mesh.SetDynamic(true);
 
+			if (!mesh.vertexBuffer_PRE.IsValid())
+			{
+				using namespace wiGraphics;
+				GraphicsDevice* device = wiRenderer::GetDevice();
+				device->CreateBuffer(&mesh.vertexBuffer_POS.desc, nullptr, &mesh.streamoutBuffer_POS);
+				device->CreateBuffer(&mesh.vertexBuffer_POS.desc, nullptr, &mesh.vertexBuffer_PRE);
+				device->CreateBuffer(&mesh.vertexBuffer_TAN.desc, nullptr, &mesh.streamoutBuffer_TAN);
+			}
+
 			if (physicscomponent._flags & SoftBodyPhysicsComponent::FORCE_RESET)
 			{
 				physicscomponent._flags &= ~SoftBodyPhysicsComponent::FORCE_RESET;
@@ -625,6 +634,16 @@ namespace wiPhysicsEngine
 						{
 							physicscomponent->vertex_tangents_simulation[i].FromFULL(physicscomponent->vertex_tangents_tmp[i]);
 						}
+					}
+
+					if (scene.cmd != wiGraphics::INVALID_COMMANDLIST)
+					{
+						using namespace wiGraphics;
+						GraphicsDevice* device = wiRenderer::GetDevice();
+						scene.cmd_locker.lock();
+						device->UpdateBuffer(&mesh.streamoutBuffer_POS, physicscomponent->vertex_positions_simulation.data(), scene.cmd);
+						device->UpdateBuffer(&mesh.streamoutBuffer_TAN, physicscomponent->vertex_tangents_simulation.data(), scene.cmd);
+						scene.cmd_locker.unlock();
 					}
 
 				}

@@ -263,7 +263,7 @@ void ObjectWindow::Create(EditorComponent* editor)
 	this->editor = editor;
 
 	wiWindow::Create("Object Window");
-	SetSize(XMFLOAT2(660, 480));
+	SetSize(XMFLOAT2(660, 500));
 
 	float x = 200;
 	float y = 0;
@@ -289,6 +289,20 @@ void ObjectWindow::Create(EditorComponent* editor)
 		}
 	});
 	AddWidget(&renderableCheckBox);
+
+	shadowCheckBox.Create("Cast Shadow: ");
+	shadowCheckBox.SetTooltip("Set object to be participating in shadows.");
+	shadowCheckBox.SetSize(XMFLOAT2(hei, hei));
+	shadowCheckBox.SetPos(XMFLOAT2(x, y += step));
+	shadowCheckBox.SetCheck(true);
+	shadowCheckBox.OnClick([&](wiEventArgs args) {
+		ObjectComponent* object = wiScene::GetScene().objects.GetComponent(entity);
+		if (object != nullptr)
+		{
+			object->SetCastShadow(args.bValue);
+		}
+		});
+	AddWidget(&shadowCheckBox);
 
 	ditherSlider.Create(0, 1, 0, 1000, "Transparency: ");
 	ditherSlider.SetTooltip("Adjust transparency of the object. Opaque materials will use dithered transparency in this case!");
@@ -325,7 +339,7 @@ void ObjectWindow::Create(EditorComponent* editor)
 	AddWidget(&physicsLabel);
 
 
-	collisionShapeComboBox.Create("Collision Shape:");
+	collisionShapeComboBox.Create("Collision Shape: ");
 	collisionShapeComboBox.SetSize(XMFLOAT2(100, hei));
 	collisionShapeComboBox.SetPos(XMFLOAT2(x, y += step));
 	collisionShapeComboBox.AddItem("DISABLED");
@@ -804,6 +818,7 @@ void ObjectWindow::SetEntity(Entity entity)
 		nameLabel.SetText(name == nullptr ? std::to_string(entity) : name->name);
 
 		renderableCheckBox.SetCheck(object->IsRenderable());
+		shadowCheckBox.SetCheck(object->IsCastingShadow());
 		cascadeMaskSlider.SetValue((float)object->cascadeMask);
 		ditherSlider.SetValue(object->GetTransparency());
 

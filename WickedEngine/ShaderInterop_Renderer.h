@@ -60,12 +60,66 @@ struct ShaderMaterial
 	float4		emissiveMapAtlasMulAdd;
 	float4		normalMapAtlasMulAdd;
 
+	int			texture_basecolormap_index;
+	int			texture_surfacemap_index;
+	int			texture_emissivemap_index;
+	int			texture_normalmap_index;
+
+	int			texture_displacementmap_index;
+	int			texture_occlusionmap_index;
+	int			texture_transmissionmap_index;
+	int			texture_sheencolormap_index;
+
+	int			texture_sheenroughnessmap_index;
+	int			texture_clearcoatmap_index;
+	int			texture_clearcoatroughnessmap_index;
+	int			texture_clearcoatnormalmap_index;
+
 	inline bool IsUsingVertexColors() { return options & SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS; }
 	inline bool IsUsingSpecularGlossinessWorkflow() { return options & SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW; }
 	inline bool IsOcclusionEnabled_Primary() { return options & SHADERMATERIAL_OPTION_BIT_OCCLUSION_PRIMARY; }
 	inline bool IsOcclusionEnabled_Secondary() { return options & SHADERMATERIAL_OPTION_BIT_OCCLUSION_SECONDARY; }
 	inline bool IsUsingWind() { return options & SHADERMATERIAL_OPTION_BIT_USE_WIND; }
 	inline bool IsReceiveShadow() { return options & SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW; }
+};
+
+struct ShaderMesh
+{
+	int ib;
+	int vb_pos_nor_wind;
+	int vb_tan;
+	int vb_uv0;
+
+	int vb_uv1;
+	int vb_bon;
+	int vb_col;
+	int vb_atl;
+
+	int vb_pre;
+	int blendmaterial1;
+	int blendmaterial2;
+	int blendmaterial3;
+
+	int subsetbuffer;
+	int padding0;
+	int padding1;
+	int padding2;
+};
+
+struct ShaderMeshSubset
+{
+	uint indexOffset;
+	uint indexCount;
+	int mesh;
+	int material;
+};
+
+struct ObjectPushConstants
+{
+	int mesh;
+	int material;
+	int instances;
+	uint instance_offset;
 };
 
 // Warning: the size of this structure directly affects shader performance.
@@ -332,7 +386,7 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_ShadowKernel2D;
 	float		g_xFrame_ShadowKernelCube;
 	uint		g_xFrame_RaytracedShadowsSampleCount;
-	float		g_xFrame_padding0;
+	int			g_xFrame_ObjectShaderSamplerIndex;
 };
 
 CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)

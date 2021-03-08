@@ -35,9 +35,14 @@ namespace wiImage
 	RasterizerState			rasterizerState;
 	DepthStencilState		depthStencilStates[STENCILMODE_COUNT][STENCILREFMODE_COUNT];
 	PipelineState			imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT];
+	Texture					backgroundBlurTextures[COMMANDLIST_COUNT];
 
 	std::atomic_bool initialized{ false };
 
+	void SetBackgroundBlurTexture(const Texture& texture, CommandList cmd)
+	{
+		backgroundBlurTextures[cmd] = texture;
+	}
 
 	void Draw(const Texture* texture, const wiImageParams& params, CommandList cmd)
 	{
@@ -49,8 +54,6 @@ namespace wiImage
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		device->EventBegin("Image", cmd);
 
-		device->BindResource(PS, texture, TEXSLOT_IMAGE_BASE, cmd);
-
 		uint32_t stencilRef = params.stencilRef;
 		if (params.stencilRefMode == STENCILREFMODE_USER)
 		{
@@ -58,32 +61,51 @@ namespace wiImage
 		}
 		device->BindStencilRef(stencilRef, cmd);
 
+		const Sampler* sampler = wiRenderer::GetSampler(SSLOT_LINEAR_CLAMP);
+
 		if (params.quality == QUALITY_NEAREST)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_POINT_MIRROR), SSLOT_ONDEMAND0, cmd);
+				sampler = wiRenderer::GetSampler(SSLOT_POINT_MIRROR);
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_POINT_WRAP), SSLOT_ONDEMAND0, cmd);
+				sampler = wiRenderer::GetSampler(SSLOT_POINT_WRAP);
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_POINT_CLAMP), SSLOT_ONDEMAND0, cmd);
+				sampler = wiRenderer::GetSampler(SSLOT_POINT_CLAMP);
 		}
 		else if (params.quality == QUALITY_LINEAR)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_LINEAR_MIRROR), SSLOT_ONDEMAND0, cmd);
+				sampler = wiRenderer::GetSampler(SSLOT_LINEAR_MIRROR);
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_LINEAR_WRAP), SSLOT_ONDEMAND0, cmd);
+				sampler = wiRenderer::GetSampler(SSLOT_LINEAR_WRAP);
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_LINEAR_CLAMP), SSLOT_ONDEMAND0, cmd);
+				sampler = wiRenderer::GetSampler(SSLOT_LINEAR_CLAMP);
 		}
 		else if (params.quality == QUALITY_ANISOTROPIC)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_ANISO_MIRROR), SSLOT_ONDEMAND0, cmd);
+				sampler = wiRenderer::GetSampler(SSLOT_ANISO_MIRROR);
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_ANISO_WRAP), SSLOT_ONDEMAND0, cmd);
+				sampler = wiRenderer::GetSampler(SSLOT_ANISO_WRAP);
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_ANISO_CLAMP), SSLOT_ONDEMAND0, cmd);
+				sampler = wiRenderer::GetSampler(SSLOT_ANISO_CLAMP);
+		}
+
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+		{
+			PushConstantsImage push;
+			push.texture_base_index = device->GetDescriptorIndex(texture, SRV);
+			push.texture_mask_index = device->GetDescriptorIndex(params.maskMap, SRV);
+			push.texture_background_index = device->GetDescriptorIndex(&backgroundBlurTextures[cmd], SRV);
+			push.sampler_index = device->GetDescriptorIndex(sampler);
+			device->PushConstants(&push, sizeof(push), cmd);
+		}
+		else
+		{
+			device->BindResource(PS, texture, TEXSLOT_IMAGE_BASE, cmd);
+			device->BindResource(PS, params.maskMap, TEXSLOT_IMAGE_MASK, cmd);
+			device->BindResource(PS, &backgroundBlurTextures[cmd], TEXSLOT_IMAGE_BACKGROUND, cmd);
+			device->BindSampler(PS, sampler, SSLOT_ONDEMAND0, cmd);
 		}
 
 		ImageCB cb;
@@ -210,8 +232,6 @@ namespace wiImage
 
 		device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
 		device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
-
-		device->BindResource(PS, params.maskMap, TEXSLOT_IMAGE_MASK, cmd);
 
 		device->Draw(4, 0, cmd);
 

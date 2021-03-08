@@ -9,9 +9,9 @@
 STRUCTUREDBUFFER(materialBuffer, ShaderMaterial, TEXSLOT_ONDEMAND0);
 TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND1);
 RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND2);
-TYPEDBUFFER(meshVertexBuffer_UV0, float2, TEXSLOT_ONDEMAND3);
-TYPEDBUFFER(meshVertexBuffer_UV1, float2, TEXSLOT_ONDEMAND4);
-TYPEDBUFFER(meshVertexBuffer_COL, float4, TEXSLOT_ONDEMAND5);
+RAWBUFFER(meshVertexBuffer_UV0, TEXSLOT_ONDEMAND3);
+RAWBUFFER(meshVertexBuffer_UV1, TEXSLOT_ONDEMAND4);
+RAWBUFFER(meshVertexBuffer_COL, TEXSLOT_ONDEMAND5);
 TYPEDBUFFER(meshVertexBuffer_SUB, uint, TEXSLOT_ONDEMAND6);
 
 RWSTRUCTUREDBUFFER(primitiveIDBuffer, uint, 0);
@@ -61,9 +61,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		nor0 = normalize(mul((float3x3)WORLD, nor0));
 		nor1 = normalize(mul((float3x3)WORLD, nor1));
 		nor2 = normalize(mul((float3x3)WORLD, nor2));
-		float4 u0 = float4(meshVertexBuffer_UV0[i0] * material.texMulAdd.xy + material.texMulAdd.zw, meshVertexBuffer_UV1[i0]);
-		float4 u1 = float4(meshVertexBuffer_UV0[i1] * material.texMulAdd.xy + material.texMulAdd.zw, meshVertexBuffer_UV1[i1]);
-		float4 u2 = float4(meshVertexBuffer_UV0[i2] * material.texMulAdd.xy + material.texMulAdd.zw, meshVertexBuffer_UV1[i2]);
+		float4 u0 = float4(unpack_half2(meshVertexBuffer_UV0.Load(i0 * 4)) * material.texMulAdd.xy + material.texMulAdd.zw, unpack_half2(meshVertexBuffer_UV1.Load(i0 * 4)));
+		float4 u1 = float4(unpack_half2(meshVertexBuffer_UV0.Load(i1 * 4)) * material.texMulAdd.xy + material.texMulAdd.zw, unpack_half2(meshVertexBuffer_UV1.Load(i1 * 4)));
+		float4 u2 = float4(unpack_half2(meshVertexBuffer_UV0.Load(i2 * 4)) * material.texMulAdd.xy + material.texMulAdd.zw, unpack_half2(meshVertexBuffer_UV1.Load(i2 * 4)));
 
 		const float4 color = xBVHInstanceColor * material.baseColor;
 		float4 c0 = color;
@@ -73,9 +73,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		[branch]
 		if (material.IsUsingVertexColors())
 		{
-			c0 *= meshVertexBuffer_COL[i0];
-			c1 *= meshVertexBuffer_COL[i1];
-			c2 *= meshVertexBuffer_COL[i2];
+			c0 *= unpack_rgba(meshVertexBuffer_COL.Load(i0 * 4));
+			c1 *= unpack_rgba(meshVertexBuffer_COL.Load(i1 * 4));
+			c2 *= unpack_rgba(meshVertexBuffer_COL.Load(i2 * 4));
 		}
 
 		// Compute tangent vectors:

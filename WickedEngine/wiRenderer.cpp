@@ -374,17 +374,6 @@ struct RenderQueue
 	}
 };
 
-vector<Entity> pendingMaterialUpdates;
-vector<Entity> pendingMorphUpdates;
-
-enum AS_UPDATE_TYPE
-{
-	AS_COMPLETE,
-	AS_REBUILD,
-	AS_UPDATE,
-};
-unordered_map<Entity, AS_UPDATE_TYPE> pendingBottomLevelBuilds;
-
 struct Instance
 {
 	XMFLOAT4 mat0;
@@ -1300,6 +1289,11 @@ void LoadShaders()
 							desc.ds = realDS < SHADERTYPE_COUNT ? &shaders[realDS] : nullptr;
 							desc.gs = realGS < SHADERTYPE_COUNT ? &shaders[realGS] : nullptr;
 							desc.ps = realPS < SHADERTYPE_COUNT ? &shaders[realPS] : nullptr;
+
+							if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+							{
+								desc.il = nullptr;
+							}
 
 							switch (blendMode)
 							{
@@ -2407,10 +2401,6 @@ void ClearWorld(Scene& scene)
 
 	packedDecals.clear();
 	packedLightmaps.clear();
-
-	pendingMaterialUpdates.clear();
-	pendingMorphUpdates.clear();
-	pendingBottomLevelBuilds.clear();
 }
 
 static const uint32_t CASCADE_COUNT = 3;
@@ -2634,13 +2624,13 @@ void RenderMeshes(
 	if (!renderQueue.empty())
 	{
 		device->EventBegin("RenderMeshes", cmd);
+		const bool bindless = device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS);
 
 		tessellation = tessellation && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
 		if (tessellation)
 		{
 			BindConstantBuffers(DS, cmd);
 		}
-
 
 		// Do we need to bind every common buffers or just a reduced amount for this pass?
 		const bool commonVBRequest =
@@ -2823,40 +2813,51 @@ void RenderMeshes(
 
 			device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
 
-			const GPUBuffer* vbs[] = {
-				mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
-				mesh.vertexBuffer_PRE.IsValid() ? &mesh.vertexBuffer_PRE : &mesh.vertexBuffer_POS,
-				&mesh.vertexBuffer_UV0,
-				&mesh.vertexBuffer_UV1,
-				&mesh.vertexBuffer_ATL,
-				&mesh.vertexBuffer_COL,
-				mesh.streamoutBuffer_TAN.IsValid() ? &mesh.streamoutBuffer_TAN : &mesh.vertexBuffer_TAN,
-				instances.buffer
-			};
-			uint32_t strides[] = {
-				sizeof(MeshComponent::Vertex_POS),
-				sizeof(MeshComponent::Vertex_POS),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_COL),
-				sizeof(MeshComponent::Vertex_TAN),
-				instanceDataSize
-			};
-			uint32_t offsets[] = {
-				0,
-				0,
-				0,
-				0,
-				0,
-				0,
-				0,
-				instancedBatch.dataOffset
-			};
-			static_assert(arraysize(vbs) == INPUT_SLOT_COUNT, "This layout must conform to OBJECT_VERTEXINPUT enum!");
-			static_assert(arraysize(vbs) == arraysize(strides), "Mismatch between vertex buffers and strides!");
-			static_assert(arraysize(vbs) == arraysize(offsets), "Mismatch between vertex buffers and offsets!");
-			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+			ObjectPushConstants push; // used with bindless model only
+
+			if (bindless)
+			{
+				push.mesh = device->GetDescriptorIndex(&mesh.descriptor, SRV);
+				push.instances = device->GetDescriptorIndex(instances.buffer, SRV);
+				push.instance_offset = instancedBatch.dataOffset;
+			}
+			else
+			{
+				const GPUBuffer* vbs[] = {
+					mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
+					mesh.vertexBuffer_PRE.IsValid() ? &mesh.vertexBuffer_PRE : &mesh.vertexBuffer_POS,
+					&mesh.vertexBuffer_UV0,
+					&mesh.vertexBuffer_UV1,
+					&mesh.vertexBuffer_ATL,
+					&mesh.vertexBuffer_COL,
+					mesh.streamoutBuffer_TAN.IsValid() ? &mesh.streamoutBuffer_TAN : &mesh.vertexBuffer_TAN,
+					instances.buffer
+				};
+				uint32_t strides[] = {
+					sizeof(MeshComponent::Vertex_POS),
+					sizeof(MeshComponent::Vertex_POS),
+					sizeof(MeshComponent::Vertex_TEX),
+					sizeof(MeshComponent::Vertex_TEX),
+					sizeof(MeshComponent::Vertex_TEX),
+					sizeof(MeshComponent::Vertex_COL),
+					sizeof(MeshComponent::Vertex_TAN),
+					instanceDataSize
+				};
+				uint32_t offsets[] = {
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					instancedBatch.dataOffset
+				};
+				static_assert(arraysize(vbs) == INPUT_SLOT_COUNT, "This layout must conform to OBJECT_VERTEXINPUT enum!");
+				static_assert(arraysize(vbs) == arraysize(strides), "Mismatch between vertex buffers and strides!");
+				static_assert(arraysize(vbs) == arraysize(offsets), "Mismatch between vertex buffers and offsets!");
+				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+			}
 
 			for (const MeshComponent::MeshSubset& subset : mesh.subsets)
 			{
@@ -2933,62 +2934,70 @@ void RenderMeshes(
 					device->BindShadingRate(material.shadingRate, cmd);
 				}
 
-				device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
-				device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
-
-				// Bind all material textures:
-				const GPUResource* materialtextures[MaterialComponent::TEXTURESLOT_COUNT];
-				material.WriteTextures(materialtextures, arraysize(materialtextures));
-				device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
-
-				if (tessellatorRequested)
+				if (bindless)
 				{
-					device->BindResources(DS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
-					device->BindConstantBuffer(DS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+					push.material = device->GetDescriptorIndex(&material.constantBuffer, SRV);
+					device->PushConstants(&push, sizeof(push), cmd);
 				}
-
-				if (terrain)
+				else
 				{
-					if (mesh.terrain_material1 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material1))
+					device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+					device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+
+					// Bind all material textures:
+					const GPUResource* materialtextures[MaterialComponent::TEXTURESLOT_COUNT];
+					material.WriteTextures(materialtextures, arraysize(materialtextures));
+					device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
+
+					if (tessellatorRequested)
 					{
-						device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, 4, cmd);
-						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
-					}
-					else
-					{
-						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material1);
-						const GPUResource* res[4];
-						blendmat.WriteTextures(res, arraysize(res));
-						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, arraysize(res), cmd);
-						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
+						device->BindConstantBuffer(DS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+						device->BindResources(DS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
 					}
 
-					if (mesh.terrain_material2 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material2))
+					if (terrain)
 					{
-						device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, 4, cmd);
-						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
-					}
-					else
-					{
-						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material2);
-						const GPUResource* res[4];
-						blendmat.WriteTextures(res, arraysize(res));
-						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, arraysize(res), cmd);
-						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
-					}
+						if (mesh.terrain_material1 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material1))
+						{
+							device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, 4, cmd);
+							device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
+						}
+						else
+						{
+							const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material1);
+							const GPUResource* res[4];
+							blendmat.WriteTextures(res, arraysize(res));
+							device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, arraysize(res), cmd);
+							device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
+						}
 
-					if (mesh.terrain_material3 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material3))
-					{
-						device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, 4, cmd);
-						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
-					}
-					else
-					{
-						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material3);
-						const GPUResource* res[4];
-						blendmat.WriteTextures(res, arraysize(res));
-						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, arraysize(res), cmd);
-						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
+						if (mesh.terrain_material2 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material2))
+						{
+							device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, 4, cmd);
+							device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
+						}
+						else
+						{
+							const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material2);
+							const GPUResource* res[4];
+							blendmat.WriteTextures(res, arraysize(res));
+							device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, arraysize(res), cmd);
+							device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
+						}
+
+						if (mesh.terrain_material3 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material3))
+						{
+							device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, 4, cmd);
+							device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
+						}
+						else
+						{
+							const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material3);
+							const GPUResource* res[4];
+							blendmat.WriteTextures(res, arraysize(res));
+							device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, arraysize(res), cmd);
+							device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
+						}
 					}
 				}
 
@@ -3381,135 +3390,6 @@ void UpdatePerFrameData(
 
 	wiJobSystem::context ctx;
 
-	// Need to swap prev and current vertex buffers for any dynamic meshes BEFORE render threads are kicked 
-	//	and also create skinning bone buffers:
-	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-		const bool raytracing_api = device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING);
-
-		for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
-		{
-			const SoftBodyPhysicsComponent& softbody = scene.softbodies[i];
-			if (softbody.vertex_positions_simulation.empty())
-			{
-				continue;
-			}
-
-			Entity entity = scene.softbodies.GetEntity(i);
-			MeshComponent& mesh = *scene.meshes.GetComponent(entity);
-
-			if (raytracing_api && !mesh.BLAS_build_pending)
-			{
-				pendingBottomLevelBuilds[entity] = AS_UPDATE;
-			}
-
-			if (!mesh.vertexBuffer_PRE.IsValid())
-			{
-				device->CreateBuffer(&mesh.vertexBuffer_POS.desc, nullptr, &mesh.streamoutBuffer_POS);
-				device->CreateBuffer(&mesh.vertexBuffer_POS.desc, nullptr, &mesh.vertexBuffer_PRE);
-
-				GPUBufferDesc tandesc = mesh.vertexBuffer_TAN.desc;
-				tandesc.Usage = USAGE_DEFAULT;
-				device->CreateBuffer(&tandesc, nullptr, &mesh.streamoutBuffer_TAN);
-
-				if (raytracing_api)
-				{
-					mesh.BLAS.desc._flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
-					device->CreateRaytracingAccelerationStructure(&mesh.BLAS.desc, &mesh.BLAS);
-				}
-			}
-			std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
-		}
-		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
-		{
-			Entity entity = scene.meshes.GetEntity(i);
-			MeshComponent& mesh = scene.meshes[i];
-
-			if (mesh.IsSkinned() && scene.armatures.Contains(mesh.armatureID))
-			{
-				const SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(entity);
-				if (softbody == nullptr || softbody->vertex_positions_simulation.empty())
-				{
-					if (raytracing_api && !mesh.BLAS_build_pending)
-					{
-						pendingBottomLevelBuilds[entity] = AS_UPDATE;
-					}
-
-					ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
-
-					if (!armature.boneBuffer.IsValid())
-					{
-						GPUBufferDesc bd;
-						bd.Usage = USAGE_DYNAMIC;
-						bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-
-						bd.ByteWidth = sizeof(ArmatureComponent::ShaderBoneType) * (uint32_t)armature.boneCollection.size();
-						bd.BindFlags = BIND_SHADER_RESOURCE;
-						bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-						bd.StructureByteStride = sizeof(ArmatureComponent::ShaderBoneType);
-
-						device->CreateBuffer(&bd, nullptr, &armature.boneBuffer);
-					}
-					if (!mesh.vertexBuffer_PRE.IsValid())
-					{
-						device->CreateBuffer(&mesh.streamoutBuffer_POS.GetDesc(), nullptr, &mesh.vertexBuffer_PRE);
-					}
-					std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
-				}
-			}
-
-			if (raytracing_api)
-			{
-				if (mesh.streamoutBuffer_POS.IsValid())
-				{
-					for (auto& geometry : mesh.BLAS.desc.bottomlevel.geometries)
-					{
-						// swapped dynamic vertex buffers in BLAS:
-						geometry.triangles.vertexBuffer = mesh.streamoutBuffer_POS;
-					}
-				}
-
-				if (mesh.BLAS_build_pending)
-				{
-					mesh.BLAS_build_pending = false;
-					pendingBottomLevelBuilds[entity] = AS_REBUILD;
-				}
-			}
-
-		}
-	});
-
-	// Update Voxelization parameters:
-	if (scene.objects.GetCount() > 0)
-	{
-		wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-			// We don't update it if the scene is empty, this even makes it easier to debug
-			const float f = 0.05f / voxelSceneData.voxelsize;
-			XMFLOAT3 center = XMFLOAT3(floorf(vis.camera->Eye.x * f) / f, floorf(vis.camera->Eye.y * f) / f, floorf(vis.camera->Eye.z * f) / f);
-			if (wiMath::DistanceSquared(center, voxelSceneData.center) > 0)
-			{
-				voxelSceneData.centerChangedThisFrame = true;
-			}
-			else
-			{
-				voxelSceneData.centerChangedThisFrame = false;
-			}
-			voxelSceneData.center = center;
-			voxelSceneData.extents = XMFLOAT3(voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize);
-		});
-	}
-
-	if (scene.weather.IsOceanEnabled())
-	{
-		if (ocean == nullptr)
-		{
-			ocean = std::make_unique<wiOcean>(scene.weather);
-		}
-	}
-	else if (ocean != nullptr)
-	{
-		ocean.reset();
-	}
-
 	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
 		ManageDecalAtlas(scene);
 	});
@@ -3529,6 +3409,36 @@ void UpdatePerFrameData(
 		}
 		ManageWaterRipples();
 	});
+
+	// Update Voxelization parameters:
+	if (scene.objects.GetCount() > 0)
+	{
+		// We don't update it if the scene is empty, this even makes it easier to debug
+		const float f = 0.05f / voxelSceneData.voxelsize;
+		XMFLOAT3 center = XMFLOAT3(floorf(vis.camera->Eye.x * f) / f, floorf(vis.camera->Eye.y * f) / f, floorf(vis.camera->Eye.z * f) / f);
+		if (wiMath::DistanceSquared(center, voxelSceneData.center) > 0)
+		{
+			voxelSceneData.centerChangedThisFrame = true;
+		}
+		else
+		{
+			voxelSceneData.centerChangedThisFrame = false;
+		}
+		voxelSceneData.center = center;
+		voxelSceneData.extents = XMFLOAT3(voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize);
+	}
+
+	if (scene.weather.IsOceanEnabled())
+	{
+		if (ocean == nullptr)
+		{
+			ocean = std::make_unique<wiOcean>(scene.weather);
+		}
+	}
+	else if (ocean != nullptr)
+	{
+		ocean.reset();
+	}
 
 	wiJobSystem::Wait(ctx);
 
@@ -3562,6 +3472,7 @@ void UpdatePerFrameData(
 	frameCB.g_xFrame_VoxelRadianceRayStepSize = voxelSceneData.rayStepSize;
 	frameCB.g_xFrame_VoxelRadianceDataCenter = voxelSceneData.center;
 	frameCB.g_xFrame_EntityCullingTileCount = GetEntityCullingTileCount(internalResolution);
+	frameCB.g_xFrame_ObjectShaderSamplerIndex = device->GetDescriptorIndex(&samplers[SSLOT_OBJECTSHADER]);
 
 	// The order is very important here:
 	frameCB.g_xFrame_DecalArrayOffset = 0;
@@ -3690,30 +3601,6 @@ void UpdateRenderData(
 	);
 
 	BindCommonResources(cmd);
-
-	// Update material constant buffers:
-	for (Entity entity : pendingMaterialUpdates)
-	{
-		const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
-		if (material != nullptr)
-		{
-			ShaderMaterial materialGPUData;
-			material->WriteShaderMaterial(&materialGPUData);
-			device->UpdateBuffer(&material->constantBuffer, &materialGPUData, cmd);
-		}
-	}
-	pendingMaterialUpdates.clear();
-
-	// Update mesh morph buffers:
-	for (Entity entity : pendingMorphUpdates)
-	{
-		const MeshComponent* mesh = vis.scene->meshes.GetComponent(entity);
-		if (mesh != nullptr && !mesh->vertex_positions_morphed.empty())
-		{
-			device->UpdateBuffer(&mesh->vertexBuffer_POS, mesh->vertex_positions_morphed.data(), cmd);
-		}
-	}
-	pendingMorphUpdates.clear();
 
 	// Fill Entity Array with decals + envprobes + lights in the frustum:
 	{
@@ -4052,8 +3939,8 @@ void UpdateRenderData(
 
 				numBarriers += arraysize(uavs);
 				GPUBarrier* barriers = (GPUBarrier*)GetRenderFrameAllocator(cmd).allocate(sizeof(GPUBarrier) * arraysize(uavs));
-				barriers[0] = GPUBarrier::Buffer(&mesh.streamoutBuffer_POS, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_VERTEX_BUFFER);
-				barriers[1] = GPUBarrier::Buffer(&mesh.streamoutBuffer_TAN, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_VERTEX_BUFFER);
+				barriers[0] = GPUBarrier::Buffer(&mesh.streamoutBuffer_POS, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE);
+				barriers[1] = GPUBarrier::Buffer(&mesh.streamoutBuffer_TAN, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE);
 				// Barriers will be issued later...
 
 				device->BindResources(CS, vbs, SKINNINGSLOT_IN_VERTEX_POS, arraysize(vbs), cmd);
@@ -4079,25 +3966,6 @@ void UpdateRenderData(
 	}
 	device->EventEnd(cmd);
 	wiProfiler::EndRange(range); // skinning
-
-	// Update soft body vertex buffers:
-	for (size_t i = 0; i < vis.scene->softbodies.GetCount(); ++i)
-	{
-		const SoftBodyPhysicsComponent& softbody = vis.scene->softbodies[i];
-		if (softbody.vertex_positions_simulation.empty())
-		{
-			continue;
-		}
-
-		Entity entity = vis.scene->softbodies.GetEntity(i);
-		const MeshComponent& mesh = *vis.scene->meshes.GetComponent(entity);
-
-		device->UpdateBuffer(&mesh.streamoutBuffer_POS, softbody.vertex_positions_simulation.data(), cmd, 
-			(uint32_t)(sizeof(MeshComponent::Vertex_POS) * softbody.vertex_positions_simulation.size()));
-
-		device->UpdateBuffer(&mesh.streamoutBuffer_TAN, softbody.vertex_tangents_simulation.data(), cmd,
-			(uint32_t)(sizeof(MeshComponent::Vertex_TAN)* softbody.vertex_tangents_simulation.size()));
-	}
 
 	// GPU Particle systems simulation/sorting/culling:
 	if (!vis.visibleEmitters.empty())
@@ -4152,85 +4020,60 @@ void UpdateRenderData(
 }
 void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 {
-	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) || !scene.TLAS.IsValid())
-	{
+	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		return;
-	}
-	auto range = wiProfiler::BeginRangeGPU("Update Raytracing Acceleration Structures", cmd);
-	device->EventBegin("Update Raytracing Acceleration Structures", cmd);
 
-	bool bottomlevel_sync = false;
+	if (!scene.TLAS.IsValid())
+		return;
 
-	// Build bottom level:
-	for(auto& it : pendingBottomLevelBuilds)
+	// BLAS:
 	{
-		AS_UPDATE_TYPE type = it.second;
-		if (type == AS_COMPLETE)
-			continue;
+		auto rangeCPU = wiProfiler::BeginRangeCPU("BLAS Update (CPU)");
+		auto range = wiProfiler::BeginRangeGPU("BLAS Update (GPU)", cmd);
+		device->EventBegin("BLAS Update", cmd);
 
-		Entity entity = it.first;
-		const MeshComponent* mesh = scene.meshes.GetComponent(entity);
-
-		if (mesh != nullptr)
+		for (Entity entity : scene.BLAS_builds)
 		{
-			// If src param is nullptr, rebuild happens, else update (if src == dst, then update happens in place)
-			//device->BuildRaytracingAccelerationStructure(&mesh->BLAS, cmd, type == AS_REBUILD ? nullptr : &mesh->BLAS);
-			device->BuildRaytracingAccelerationStructure(&mesh->BLAS, cmd, nullptr); // DX12 has some problem updating with new driver?
-			bottomlevel_sync = true;
-			it.second = AS_COMPLETE;
+			const MeshComponent* mesh = scene.meshes.GetComponent(entity);
+			if (mesh != nullptr && mesh->BLAS.IsValid())
+			{
+				device->BuildRaytracingAccelerationStructure(&mesh->BLAS, cmd, nullptr);
+			}
 		}
-	}
 
-	// Gather all instances for top level:
-	size_t instanceSize = device->GetTopLevelAccelerationStructureInstanceSize();
-	size_t instanceArraySize = (size_t)scene.TLAS.desc.toplevel.count * instanceSize;
-	void* instanceArray = GetRenderFrameAllocator(cmd).allocate(instanceArraySize);
-	size_t instanceOffset = 0;
-	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
-	{
-		const ObjectComponent& object = scene.objects[i];
-
-		if (object.meshID != INVALID_ENTITY)
 		{
-			const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
-
-			RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
-			const XMFLOAT4X4& transform = object.transform_index >= 0 ? scene.transforms[object.transform_index].world : IDENTITYMATRIX;
-			instance = {};
-			instance.transform = XMFLOAT3X4(
-				transform._11, transform._21, transform._31, transform._41,
-				transform._12, transform._22, transform._32, transform._42,
-				transform._13, transform._23, transform._33, transform._43
-			);
-			instance.InstanceID = mesh.TLAS_geometryOffset;
-			instance.InstanceMask = 1;
-			instance.bottomlevel = mesh.BLAS;
-
-			device->WriteTopLevelAccelerationStructureInstance(&instance, (void*)((size_t)instanceArray + instanceOffset));
-			instanceOffset += instanceSize;
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
-	}
-	device->UpdateBuffer(&scene.TLAS.desc.toplevel.instanceBuffer, instanceArray, cmd, (int)instanceArraySize);
-	GetRenderFrameAllocator(cmd).free(instanceArraySize);
 
-	// Sync with bottom level before building top level:
-	if (bottomlevel_sync)
+		device->EventEnd(cmd);
+		wiProfiler::EndRange(range);
+		wiProfiler::EndRange(rangeCPU);
+	}
+
+	// TLAS:
 	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
+		auto rangeCPU = wiProfiler::BeginRangeCPU("TLAS Update (CPU)");
+		auto range = wiProfiler::BeginRangeGPU("TLAS Update (GPU)", cmd);
+		device->EventBegin("TLAS Update", cmd);
+
+		device->UpdateBuffer(&scene.TLAS.desc.toplevel.instanceBuffer, scene.TLAS_instances.data(), cmd);
+		device->BuildRaytracingAccelerationStructure(&scene.TLAS, cmd, nullptr);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(&scene.TLAS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+		wiProfiler::EndRange(range);
+		wiProfiler::EndRange(rangeCPU);
 	}
 
-	// Build top level:
-	device->BuildRaytracingAccelerationStructure(&scene.TLAS, cmd, nullptr);
-	GPUBarrier barriers[] = {
-		GPUBarrier::Memory(&scene.TLAS),
-	};
-	device->Barrier(barriers, arraysize(barriers), cmd);
-
-	device->EventEnd(cmd);
-	wiProfiler::EndRange(range);
 }
 void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visibility& vis, CommandList cmd)
 {
@@ -4249,10 +4092,9 @@ void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visib
 		const GPUQueryHeap& queryHeap = vis.scene->queryHeap[query_write];
 
 		device->BindPipelineState(&PSO_occlusionquery, cmd);
+		const bool bindless = device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS);
 
 		XMMATRIX VP = camera_previous.GetViewProjection();
-
-		MiscCB cb;
 
 		for (uint32_t instanceIndex : vis.visibleObjects)
 		{
@@ -4267,9 +4109,20 @@ void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visib
 			{
 				const AABB& aabb = vis.scene->aabb_objects[instanceIndex];
 
-				XMStoreFloat4x4(&cb.g_xTransform, aabb.getAsBoxMatrix() * VP);
-				device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &cb, cmd);
-				device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+				const XMMATRIX transform = aabb.getAsBoxMatrix() * VP;
+
+				if (bindless)
+				{
+					device->PushConstants(&transform, sizeof(transform), cmd);
+				}
+				else
+				{
+					MiscCB cb;
+					XMStoreFloat4x4(&cb.g_xTransform, transform);
+					device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &cb, cmd);
+					device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+
+				}
 
 				// render bounding box to later read the occlusion status
 				device->QueryBegin(&queryHeap, queryIndex, cmd);
@@ -6224,42 +6077,54 @@ void DrawDebugWorld(
 			volatile Instance* buff = (volatile Instance*)mem.data;
 			buff->Create(transform.world);
 
-			const GPUBuffer* vbs[] = {
-				mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
-				nullptr,
-				&mesh.vertexBuffer_UV0,
-				&mesh.vertexBuffer_UV1,
-				nullptr,
-				nullptr,
-				nullptr,
-				mem.buffer
-			};
-			uint32_t strides[] = {
-				sizeof(MeshComponent::Vertex_POS),
-				sizeof(MeshComponent::Vertex_POS),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_COL),
-				sizeof(MeshComponent::Vertex_TAN),
-				sizeof(Instance)
-			};
-			uint32_t offsets[] = {
-				0,
-				0,
-				0,
-				0,
-				0,
-				0,
-				0,
-				mem.offset
-			};
-			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+			{
+				ObjectPushConstants push;
+				push.material = device->GetDescriptorIndex(&material.constantBuffer, SRV);
+				push.mesh = device->GetDescriptorIndex(&mesh.descriptor, SRV);
+				push.instances = device->GetDescriptorIndex(mem.buffer, SRV);
+				push.instance_offset = mem.offset;
+				device->PushConstants(&push, sizeof(push), cmd);
+			}
+			else
+			{
+				const GPUBuffer* vbs[] = {
+					mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
+					nullptr,
+					&mesh.vertexBuffer_UV0,
+					&mesh.vertexBuffer_UV1,
+					nullptr,
+					nullptr,
+					nullptr,
+					mem.buffer
+				};
+				uint32_t strides[] = {
+					sizeof(MeshComponent::Vertex_POS),
+					sizeof(MeshComponent::Vertex_POS),
+					sizeof(MeshComponent::Vertex_TEX),
+					sizeof(MeshComponent::Vertex_TEX),
+					sizeof(MeshComponent::Vertex_TEX),
+					sizeof(MeshComponent::Vertex_COL),
+					sizeof(MeshComponent::Vertex_TAN),
+					sizeof(Instance)
+				};
+				uint32_t offsets[] = {
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					mem.offset
+				};
+				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+				device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+				device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+			}
 
 			device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
-
-			device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
-			device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
 
 			PaintRadiusCB cb;
 			cb.xPaintRadResolution = x.dimensions;
@@ -9790,8 +9655,6 @@ void Postprocess_RTAO(
 {
 	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		return;
-	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT))
-		return;
 
 	if (scene.objects.GetCount() <= 0)
 	{
@@ -9801,43 +9664,14 @@ void Postprocess_RTAO(
 	device->EventBegin("Postprocess_RTAO", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("RTAO", cmd);
 
-	BindCommonResources(cmd);
-
 	static RaytracingPipelineState RTPSO;
-	static DescriptorTable descriptorTable;
-	static RootSignature rootSignature;
 
 	auto load_shaders = [&scene](uint64_t userdata) {
 
-		descriptorTable = DescriptorTable();
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_DEPTH });
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_ONDEMAND0 });
-		descriptorTable.resources.push_back({ ACCELERATIONSTRUCTURE, TEXSLOT_ACCELERATION_STRUCTURE });
-		descriptorTable.resources.push_back({ RWTEXTURE2D, 0 });
-		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(FrameCB) });
-		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(CameraCB) });
-		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(PostProcessCB) });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_POINT_CLAMP], SSLOT_POINT_CLAMP });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_LINEAR_CLAMP], SSLOT_LINEAR_CLAMP });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_POINT_WRAP], SSLOT_POINT_WRAP });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_LINEAR_WRAP], SSLOT_LINEAR_WRAP });
-		device->CreateDescriptorTable(&descriptorTable);
-
-		rootSignature = RootSignature();
-		rootSignature.tables.push_back(descriptorTable);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_MATERIAL]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_TEXTURES]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_INDEXBUFFER]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS]);
-		device->CreateRootSignature(&rootSignature);
-
-		shaders[RTTYPE_RTAO].rootSignature = &rootSignature;
 		bool success = LoadShader(LIB, shaders[RTTYPE_RTAO], "rtaoLIB.cso");
 		assert(success);
 
 		RaytracingPipelineStateDesc rtdesc;
-		rtdesc.rootSignature = &rootSignature;
-
 		rtdesc.shaderlibraries.emplace_back();
 		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTAO];
 		rtdesc.shaderlibraries.back().function_name = "RTAO_Raygen";
@@ -9892,11 +9726,22 @@ void Postprocess_RTAO(
 		load_shaders(0);
 	}
 
+	BindCommonResources(cmd);
+
 	Postprocess_NormalsFromDepth(depthbuffer, res.normals, cmd);
 
 	device->EventBegin("Raytrace", cmd);
 
 	const TextureDesc& desc = res.temp.GetDesc();
+
+	device->BindRaytracingPipelineState(&RTPSO, cmd);
+
+	device->BindResource(LIB, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+	device->BindResource(LIB, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(LIB, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(LIB, &res.normals, TEXSLOT_ONDEMAND0, cmd);
+
+	device->BindUAV(LIB, &res.temp, 0, cmd);
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width;
@@ -9906,21 +9751,8 @@ void Postprocess_RTAO(
 	cb.rtao_range = range;
 	cb.rtao_samplecount = (float)samplecount;
 	cb.rtao_power = power;
-	GraphicsDevice::GPUAllocation cb_alloc = device->AllocateGPU(sizeof(cb), cmd);
-	memcpy(cb_alloc.data, &cb, sizeof(cb));
-
-	device->BindRaytracingPipelineState(&RTPSO, cmd);
-	device->WriteDescriptor(&descriptorTable, 0, 0, &depthbuffer);
-	device->WriteDescriptor(&descriptorTable, 1, 0, &res.normals);
-	device->WriteDescriptor(&descriptorTable, 2, 0, &scene.TLAS);
-	device->WriteDescriptor(&descriptorTable, 3, 0, &res.temp);
-	for (size_t i = 0; i < rootSignature.tables.size(); ++i)
-	{
-		device->BindDescriptorTable(RAYTRACING, (uint32_t)i, &rootSignature.tables[i], cmd);
-	}
-	device->BindRootDescriptor(RAYTRACING, 0, &constantBuffers[CBTYPE_FRAME], 0, cmd);
-	device->BindRootDescriptor(RAYTRACING, 1, &constantBuffers[CBTYPE_CAMERA], 0, cmd);
-	device->BindRootDescriptor(RAYTRACING, 2, cb_alloc.buffer, cb_alloc.offset, cmd);
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
 	GraphicsDevice::GPUAllocation shadertable_raygen = device->AllocateGPU(shaderIdentifierSize, cmd);
@@ -10146,8 +9978,6 @@ void Postprocess_RTReflection(
 {
 	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		return;
-	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT))
-		return;
 
 	if (scene.objects.GetCount() <= 0)
 	{
@@ -10158,57 +9988,13 @@ void Postprocess_RTReflection(
 	auto prof_range = wiProfiler::BeginRangeGPU("RTReflection", cmd);
 
 	static RaytracingPipelineState RTPSO;
-	static DescriptorTable descriptorTable;
-	static RootSignature rootSignature;
 
 	auto load_shaders = [&scene](uint64_t userdata) {
 
-		descriptorTable = DescriptorTable();
-		descriptorTable.resources.push_back({ RWTEXTURE2D, 0 });
-		descriptorTable.resources.push_back({ ACCELERATIONSTRUCTURE, TEXSLOT_ACCELERATION_STRUCTURE });
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_DEPTH });
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_GBUFFER0 });
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_GBUFFER1 });
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_GBUFFER2 });
-		descriptorTable.resources.push_back({ TEXTURECUBEARRAY, TEXSLOT_ENVMAPARRAY });
-		descriptorTable.resources.push_back({ TEXTURE2DARRAY, TEXSLOT_SHADOWARRAY_2D });
-		descriptorTable.resources.push_back({ TEXTURECUBEARRAY, TEXSLOT_SHADOWARRAY_CUBE });
-		descriptorTable.resources.push_back({ TEXTURE2DARRAY, TEXSLOT_SHADOWARRAY_TRANSPARENT_2D });
-		descriptorTable.resources.push_back({ TEXTURECUBEARRAY, TEXSLOT_SHADOWARRAY_TRANSPARENT_CUBE });
-		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, SBSLOT_ENTITYARRAY });
-		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, SBSLOT_MATRIXARRAY });
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_SKYVIEWLUT });
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_TRANSMITTANCELUT });
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_MULTISCATTERINGLUT });
-		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, TEXSLOT_ONDEMAND1 });
-		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, TEXSLOT_ONDEMAND2 });
-		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, TEXSLOT_ONDEMAND3 });
-		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(FrameCB) });
-		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(CameraCB) });
-		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(PostProcessCB) });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_POINT_CLAMP], SSLOT_POINT_CLAMP });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_LINEAR_CLAMP], SSLOT_LINEAR_CLAMP });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_POINT_WRAP], SSLOT_POINT_WRAP });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_LINEAR_WRAP], SSLOT_LINEAR_WRAP });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_CMP_DEPTH], SSLOT_CMP_DEPTH });
-		device->CreateDescriptorTable(&descriptorTable);
-
-		rootSignature = RootSignature();
-		rootSignature.tables.push_back(descriptorTable);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_MATERIAL]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_TEXTURES]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_INDEXBUFFER]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_RAW]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS]);
-		device->CreateRootSignature(&rootSignature);
-
-		shaders[RTTYPE_RTREFLECTION].rootSignature = &rootSignature;
 		bool success = LoadShader(LIB, shaders[RTTYPE_RTREFLECTION], "rtreflectionLIB.cso");
 		assert(success);
 
 		RaytracingPipelineStateDesc rtdesc;
-		rtdesc.rootSignature = &rootSignature;
-
 		rtdesc.shaderlibraries.emplace_back();
 		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
 		rtdesc.shaderlibraries.back().function_name = "RTReflection_Raygen";
@@ -10258,42 +10044,46 @@ void Postprocess_RTReflection(
 		load_shaders(0);
 	}
 
+	device->BindRaytracingPipelineState(&RTPSO, cmd);
+
+	BindCommonResources(cmd);
+	BindShadowmaps(LIB, cmd);
+
+	device->BindResource(LIB, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+	device->BindResource(LIB, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(LIB, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(LIB, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
+
+	device->BindResource(LIB, &resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, cmd);
+	device->BindResource(LIB, &resourceBuffers[RBTYPE_MATRIXARRAY], SBSLOT_MATRIXARRAY, cmd);
+	device->BindResource(LIB, GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
+
+	device->BindResource(LIB, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
+	if (decalAtlas.IsValid())
+	{
+		device->BindResource(LIB, &decalAtlas, TEXSLOT_DECALATLAS, cmd);
+	}
+
+	device->BindResource(LIB, &resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE], TEXSLOT_ONDEMAND1, cmd);
+	device->BindResource(LIB, &resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE], TEXSLOT_ONDEMAND2, cmd);
+	device->BindResource(LIB, &resourceBuffers[RBTYPE_BLUENOISE_RANKING_TILE], TEXSLOT_ONDEMAND3, cmd);
+
+	device->BindUAV(LIB, &res.temp, 0, cmd);
+
 	PostProcessCB cb;
 	cb.xPPResolution.x = res.temp.desc.Width;
 	cb.xPPResolution.y = res.temp.desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.rtreflection_range = range;
-	GraphicsDevice::GPUAllocation cb_alloc = device->AllocateGPU(sizeof(cb), cmd);
-	memcpy(cb_alloc.data, &cb, sizeof(cb));
-
-	device->BindRaytracingPipelineState(&RTPSO, cmd);
-	device->WriteDescriptor(&descriptorTable, 0, 0, &res.temp);
-	device->WriteDescriptor(&descriptorTable, 1, 0, &scene.TLAS);
-	device->WriteDescriptor(&descriptorTable, 2, 0, &depthbuffer);
-	device->WriteDescriptor(&descriptorTable, 3, 0, &gbuffer[GBUFFER_COLOR]);
-	device->WriteDescriptor(&descriptorTable, 4, 0, &gbuffer[GBUFFER_NORMAL_ROUGHNESS]);
-	device->WriteDescriptor(&descriptorTable, 5, 0, &gbuffer[GBUFFER_VELOCITY]);
-	device->WriteDescriptor(&descriptorTable, 6, 0, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
-	device->WriteDescriptor(&descriptorTable, 7, 0, &shadowMapArray_2D);
-	device->WriteDescriptor(&descriptorTable, 8, 0, &shadowMapArray_Cube);
-	device->WriteDescriptor(&descriptorTable, 9, 0, &shadowMapArray_Transparent_2D);
-	device->WriteDescriptor(&descriptorTable, 10, 0, &shadowMapArray_Transparent_Cube);
-	device->WriteDescriptor(&descriptorTable, 11, 0, &resourceBuffers[RBTYPE_ENTITYARRAY]);
-	device->WriteDescriptor(&descriptorTable, 12, 0, &resourceBuffers[RBTYPE_MATRIXARRAY]);
-	device->WriteDescriptor(&descriptorTable, 13, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT]);
-	device->WriteDescriptor(&descriptorTable, 14, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT]);
-	device->WriteDescriptor(&descriptorTable, 15, 0, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT]);
-	device->WriteDescriptor(&descriptorTable, 16, 0, &resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE]);
-	device->WriteDescriptor(&descriptorTable, 17, 0, &resourceBuffers[RBTYPE_BLUENOISE_SCRAMBLING_TILE]);
-	device->WriteDescriptor(&descriptorTable, 18, 0, &resourceBuffers[RBTYPE_BLUENOISE_RANKING_TILE]);
-	for (size_t i = 0; i < rootSignature.tables.size(); ++i)
-	{
-		device->BindDescriptorTable(RAYTRACING, (uint32_t)i, &rootSignature.tables[i], cmd);
-	}
-	device->BindRootDescriptor(RAYTRACING, 0, &constantBuffers[CBTYPE_FRAME], 0, cmd);
-	device->BindRootDescriptor(RAYTRACING, 1, &constantBuffers[CBTYPE_CAMERA], 0, cmd);
-	device->BindRootDescriptor(RAYTRACING, 2, cb_alloc.buffer, cb_alloc.offset, cmd);
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
 	GraphicsDevice::GPUAllocation shadertable_raygen = device->AllocateGPU(shaderIdentifierSize, cmd);
@@ -10704,8 +10494,6 @@ void Postprocess_RTShadow(
 {
 	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		return;
-	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT))
-		return;
 
 	if (scene.objects.GetCount() <= 0)
 	{
@@ -10715,44 +10503,14 @@ void Postprocess_RTShadow(
 	device->EventBegin("Postprocess_RTShadow", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("RTShadow", cmd);
 
-	BindCommonResources(cmd);
-
 	static RaytracingPipelineState RTPSO;
-	static DescriptorTable descriptorTable;
-	static RootSignature rootSignature;
 
 	auto load_shaders = [&scene](uint64_t userdata) {
 
-		descriptorTable = DescriptorTable();
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_DEPTH });
-		descriptorTable.resources.push_back({ TEXTURE2D, TEXSLOT_ONDEMAND0 });
-		descriptorTable.resources.push_back({ ACCELERATIONSTRUCTURE, TEXSLOT_ACCELERATION_STRUCTURE });
-		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, SBSLOT_ENTITYARRAY });
-		descriptorTable.resources.push_back({ STRUCTUREDBUFFER, TEXSLOT_RENDERPATH_ENTITYTILES });
-		descriptorTable.resources.push_back({ RWTEXTURE2D, 0 });
-		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(FrameCB) });
-		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(CameraCB) });
-		descriptorTable.resources.push_back({ ROOT_CONSTANTBUFFER, CB_GETBINDSLOT(PostProcessCB) });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_POINT_CLAMP], SSLOT_POINT_CLAMP });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_LINEAR_CLAMP], SSLOT_LINEAR_CLAMP });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_POINT_WRAP], SSLOT_POINT_WRAP });
-		descriptorTable.staticsamplers.push_back({ samplers[SSLOT_LINEAR_WRAP], SSLOT_LINEAR_WRAP });
-		device->CreateDescriptorTable(&descriptorTable);
-
-		rootSignature = RootSignature();
-		rootSignature.tables.push_back(descriptorTable);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_MATERIAL]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_TEXTURES]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_INDEXBUFFER]);
-		rootSignature.tables.push_back(scene.descriptorTables[Scene::DESCRIPTORTABLE_SUBSETS_VERTEXBUFFER_UVSETS]);
-		device->CreateRootSignature(&rootSignature);
-
-		shaders[RTTYPE_RTSHADOW].rootSignature = &rootSignature;
 		bool success = LoadShader(LIB, shaders[RTTYPE_RTSHADOW], "rtshadowLIB.cso");
 		assert(success);
 
 		RaytracingPipelineStateDesc rtdesc;
-		rtdesc.rootSignature = &rootSignature;
 
 		rtdesc.shaderlibraries.emplace_back();
 		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTSHADOW];
@@ -10806,9 +10564,34 @@ void Postprocess_RTShadow(
 		load_shaders(0);
 	}
 
+	BindCommonResources(cmd);
+
 	Postprocess_NormalsFromDepth(depthbuffer, res.normals, cmd);
 
 	device->EventBegin("Raytrace", cmd);
+	device->BindRaytracingPipelineState(&RTPSO, cmd);
+
+	device->BindResource(LIB, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+	device->BindResource(LIB, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(LIB, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(LIB, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
+	device->BindResource(LIB, &res.normals, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(LIB, &entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
+
+	device->BindResource(LIB, &resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, cmd);
+	device->BindResource(LIB, &resourceBuffers[RBTYPE_MATRIXARRAY], SBSLOT_MATRIXARRAY, cmd);
+	device->BindResource(LIB, &globalLightmap, TEXSLOT_GLOBALLIGHTMAP, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
+	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
+	device->BindResource(LIB, &shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, cmd);
+	device->BindResource(LIB, &shadowMapArray_Transparent_2D, TEXSLOT_SHADOWARRAY_TRANSPARENT_2D, cmd);
+	device->BindResource(LIB, &shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, cmd);
+	device->BindResource(LIB, &shadowMapArray_Transparent_Cube, TEXSLOT_SHADOWARRAY_TRANSPARENT_CUBE, cmd);
+
+	device->BindUAV(LIB, &res.temp, 0, cmd);
 
 	const TextureDesc& desc = res.temp.GetDesc();
 
@@ -10817,24 +10600,9 @@ void Postprocess_RTShadow(
 	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	GraphicsDevice::GPUAllocation cb_alloc = device->AllocateGPU(sizeof(cb), cmd);
-	memcpy(cb_alloc.data, &cb, sizeof(cb));
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-	device->BindRaytracingPipelineState(&RTPSO, cmd);
-	device->WriteDescriptor(&descriptorTable, 0, 0, &depthbuffer);
-	device->WriteDescriptor(&descriptorTable, 1, 0, &res.normals);
-	device->WriteDescriptor(&descriptorTable, 2, 0, &scene.TLAS);
-	device->WriteDescriptor(&descriptorTable, 2, 0, &scene.TLAS);
-	device->WriteDescriptor(&descriptorTable, 3, 0, &resourceBuffers[RBTYPE_ENTITYARRAY]);
-	device->WriteDescriptor(&descriptorTable, 4, 0, &entityTiles_Opaque);
-	device->WriteDescriptor(&descriptorTable, 5, 0, &res.temp);
-	for (size_t i = 0; i < rootSignature.tables.size(); ++i)
-	{
-		device->BindDescriptorTable(RAYTRACING, (uint32_t)i, &rootSignature.tables[i], cmd);
-	}
-	device->BindRootDescriptor(RAYTRACING, 0, &constantBuffers[CBTYPE_FRAME], 0, cmd);
-	device->BindRootDescriptor(RAYTRACING, 1, &constantBuffers[CBTYPE_CAMERA], 0, cmd);
-	device->BindRootDescriptor(RAYTRACING, 2, cb_alloc.buffer, cb_alloc.offset, cmd);
 
 	size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
 	GraphicsDevice::GPUAllocation shadertable_raygen = device->AllocateGPU(shaderIdentifierSize, cmd);
@@ -12545,20 +12313,6 @@ void Postprocess_Tonemap(
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_TONEMAP], cmd);
 
-	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
-	device->BindResource(CS, &input_luminance, TEXSLOT_ONDEMAND1, cmd);
-	device->BindResource(CS, &input_distortion, TEXSLOT_ONDEMAND2, cmd);
-
-	if (colorgrade_lookuptable == nullptr)
-	{
-		device->UnbindResources(TEXSLOT_ONDEMAND3, 1, cmd);
-	}
-	else
-	{
-		assert(colorgrade_lookuptable == nullptr || colorgrade_lookuptable->desc.type == TextureDesc::TEXTURE_3D); // This must be a 3D lut
-		device->BindResource(CS, colorgrade_lookuptable, TEXSLOT_ONDEMAND3, cmd);
-	}
-
 	const TextureDesc& desc = output.GetDesc();
 
 	PostProcessCB cb;
@@ -12569,13 +12323,44 @@ void Postprocess_Tonemap(
 	cb.tonemap_exposure = exposure;
 	cb.tonemap_dither = dither ? 1.0f : 0.0f;
 	cb.tonemap_colorgrading = colorgrade_lookuptable == nullptr ? 0.0f : 1.0f;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-	const GPUResource* uavs[] = {
-		&output,
-	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+	{
+		PushConstantsTonemap push = {};
+		push.xPPResolution_rcp = cb.xPPResolution_rcp;
+		push.exposure = cb.tonemap_exposure;
+		push.dither = cb.tonemap_dither;
+		push.colorgrading = cb.tonemap_colorgrading;
+		push.texture_input = device->GetDescriptorIndex(&input, SRV);
+		push.texture_input_luminance = device->GetDescriptorIndex(&input_luminance, SRV);
+		push.texture_input_distortion = device->GetDescriptorIndex(&input_distortion, SRV);
+		push.texture_colorgrade_lookuptable = device->GetDescriptorIndex(colorgrade_lookuptable, SRV);
+		push.texture_output = device->GetDescriptorIndex(&output, UAV);
+		device->PushConstants(&push, sizeof(push), cmd);
+	}
+	else
+	{
+		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &input_luminance, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &input_distortion, TEXSLOT_ONDEMAND2, cmd);
+
+		if (colorgrade_lookuptable == nullptr)
+		{
+			device->UnbindResources(TEXSLOT_ONDEMAND3, 1, cmd);
+		}
+		else
+		{
+			assert(colorgrade_lookuptable == nullptr || colorgrade_lookuptable->desc.type == TextureDesc::TEXTURE_3D); // This must be a 3D lut
+			device->BindResource(CS, colorgrade_lookuptable, TEXSLOT_ONDEMAND3, cmd);
+		}
+		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+		const GPUResource* uavs[] = {
+			&output,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	}
 
 	{
 		GPUBarrier barriers[] = {
@@ -12599,7 +12384,7 @@ void Postprocess_Tonemap(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
+	device->UnbindUAVs(0, 1, cmd);
 
 	device->EventEnd(cmd);
 }
@@ -12934,20 +12719,6 @@ void AddDeferredMIPGen(std::shared_ptr<wiResource> resource, bool preserve_cover
 	deferredMIPGenLock.lock();
 	deferredMIPGens.push_back(std::make_pair(resource, preserve_coverage));
 	deferredMIPGenLock.unlock();
-}
-void AddDeferredMaterialUpdate(Entity entity)
-{
-	static std::mutex locker;
-	locker.lock();
-	pendingMaterialUpdates.push_back(entity);
-	locker.unlock();
-}
-void AddDeferredMorphUpdate(Entity entity)
-{
-	static std::mutex locker;
-	locker.lock();
-	pendingMorphUpdates.push_back(entity);
-	locker.unlock();
 }
 
 

@@ -47,8 +47,8 @@ This is a reference for the C++ features of Wicked Engine
 			3. [Destroying resources](#destroying-resources)
 			4. [Work submission](#work-submission)
 			5. [Presenting to the screen](#presenting-to-the-screen)
-			6. [Resource binding (Simple)](#resource-binding-simple)
-			6. [Resource binding (Advanced)](#resource-binding-advanced)
+			6. [Resource binding](#resource-binding)
+			6. [Bindless resources](#bindless-resources)
 			7. [Subresources](#subresources)
 			8. [Pipeline States and Shaders](#pipeline-states-and-shaders)
 			9. [Render Passes](#render-passes)
@@ -470,7 +470,7 @@ Furthermore, the `BeginCommandList()` is thread safe, so the user can call it fr
 ##### Presenting to the screen
 The `PresentBegin()` and `PresentEnd()` functions are used to prepare for rendering to the back buffer. When the `PresentBegin()` is called, the back buffer will be set as the current active render target or render pass. This means, that rendering commands will draw directly to the screen. This is generally used to draw textures that were previously rendered to, or 2D GUI elements. For example, the `RenderPath3D::Compose()` function is used in the [High Level Interface](#high-level-interface) to draw the results of the `RenderPath3D::Render()`, and the [GUI](#gui) elements. The rendering commands executed between `PresentBegin()` and `PresentEnd()` are still executed by the GPU in the command list beginning order described in the topic: [Work submission](#work-submission).
 
-##### Resource binding (Simple)
+##### Resource binding
 The resource binding model is based on DirectX 11. That means, resources are bound to slot numbers that are simple integers. This makes it easy to share binding information between shaders and C++ code, just define the bind slot number as global constants in [shared header files](#shaderinterop). For sharing, the bind slot numbers can be easily defined as compile time constants using:
 
 ```cpp
@@ -514,32 +514,57 @@ Only `Sampler` can be bound as sampler. Use the `GraphicsDevice::BindSampler()` 
 There are some limitations on the maximum value of slots that can be used, these are defined as compile time constants in [Graphics device SharedInternals](../WickedEngine/wiGraphicsDevice_SharedInternals.h). The user can modify these and recompile the engine if the predefined slots are not enough. This could slightly affect performance.
 
 Remarks:
-- Vulkan and DX12 devices make an effort to combine descriptors across shader stages, so overlapping descriptors will not be supported with those APIs to some extent. For example it is OK, to have a constant buffer on slot 0 (b0) in a vertex shader while having a Texture2D on slot 0 (t0) in pixel shader. However, having a StructuredBuffer on vertex shader slot 0 (t0) and a Texture2D in pixel shader slot 0 (t0) will not work correctly, as only one of them will be bound to a pipeline state. This is made for performance reasons and to retain compatibility with the [advanced binding model](#resource-binding-advanced).
-- Auto samplers can be added to `Shader`s. These sasmplers will always be bound to the shader stage as static samplers. The user doesn't need to use `BindSampler()` function for these.
+- Vulkan and DX12 devices make an effort to combine descriptors across shader stages, so overlapping descriptors will not be supported with those APIs to some extent. For example it is OK, to have a constant buffer on slot 0 (b0) in a vertex shader while having a Texture2D on slot 0 (t0) in pixel shader. However, having a StructuredBuffer on vertex shader slot 0 (t0) and a Texture2D in pixel shader slot 0 (t0) will not work correctly, as only one of them will be bound to a pipeline state. This is made for performance reasons.
+- Auto samplers can be added to `Shader`s. These samplers will always be bound to the shader stage as static samplers. The user doesn't need to use `BindSampler()` function for these.
 - Common Samplers can be set on the graphics device. These samplers will be bound to all shaders that are created after the common sampler have been set. The user doesn't need to use `BindSampler()` function for these.
+- This slot based binding model has a CPU overhead that has to be kept in mind. Avoid binding massive amount of resources. The maximum slot numbers that should be used are: 15 for `BindConstantBuffer()`, 64 for `BindResource()` and 8 for `BindUAV()`. Consider using a [bindless model](#bindless-resources) when you need to bind more than a couple of resources.
 
-##### Resource Binding (Advanced)
-This resource binding model is based on a combination of DirectX 12 and Vulkan resource binding model and allows the developer to use a more fine grained resource management that can be fitted for specific use cases more optimally. For example, a bindless descriptor model could be implemented with descriptor arrays, or a system where descriptors are grouped by update frequency into tables. The developer can query whether the `GraphicsDevice` supports advanced binding model, by querying the `GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT` capability with `GraphicsDevice::CheckCapability()`.
+##### Bindless resources
 
-The following APIs are available:
+Some graphics API supports bindless resource management, this can greatly improve performance and removes resource binding constraints to allow great flexibility. This can be queried by `GraphicsDevice::CheckCapability()` and providing the `GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS` flag. If the device supports this feature, the function will return true.
 
-- `ResourceRange`: Represents an array of descriptors, by specifying the descriptor type (any GPUResource type that is declared within a shader), the binding slot and the number of descriptors in the array.
-- `SamplerRange`: Represents an array of samplers, by specifying the binding slot and the number of sampler desciptors in the array.
-- `StaticSampler`: Represents a static sampler by specifying the sampler description and bind point. Static sampler array is not permitted. The static samplers are samplers that never change and they can result in more efficient shader code being generated.
-- `RootConstantRange`: Root constants are a group of 32 bit values that will be used by a shader without going through a real descriptor, so the access indirfection count is zero, which can make them most efficient to use. However, they take a lot of space from the root signature, so it is advised to use them sparingly. Bounds checking is also not supported on these, so careless use could result in GPU hang.
-- `DescriptorTable`: Descriptors are always grouped within tables. The implementation can remove descriptors from tables and put them into the root of the `RootSignature` if the `ResourceRange` is either `ROOT_CONSTANTBUFFER`, `ROOT_RAWBUFFER`, `ROOT_RWRAWBUFFER`, `ROOT_STRUCTUREDBUFFER` or `ROOT_RWSTRUCTUREDBUFFER`. Root descriptors take additional space in the `RootSignature`, so use them sparingly. Bounds checking is also not supported on root descriptors, so careless use could result in GPU hang.
-- `RootSignature`: This can contain a number of `DescriptorTable`s, `RootConstantRange`s and `StaticSampler`s. `Shader`s, `PipelineState`s and `RaytracingPipelineState` objects can declare that they are using a root signature and by doing so, they will switch to the advanced resource binding model. Specify the `RootSignature::FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT` flag if this is going to be used by a graphics `PipelineState` object.
-- `CreateDescriptorTable()`: Create the underlying GPU resources for the `DescriptorTable`.
-- `CreteRootSignature()`: Create the underlying GPU resources for the `RootSignature`
-- `WriteDescriptor()`: Write actual descriptors into the table (either `GPUResource` or `Sampler`). To write individual `subresource`s, refer to the [Subresources](#subresources) topic. The indexing of the descriptors will match by what order they are declared withing the tables. Root descriptors don't have to be written by this function.
-- `BindDescriptorTable()`: The `DescriptorTable` will be bound to either `GRAPHICS`, `COMPUTE` or `RAYTRACING` pipelines to the specified `space`. The HLSL shader code can declare `space` registers manually, but the default `space` will be `0`. To declare `space` manually, use the `register` keyword like this: `register(t56, space4)` (which would mean slot=56 in descriptor space=4.
-- `BindRootDescriptor()`: Bind the root descriptor to the specified slot in the root signature. The slot is calculated by taking the index of the root descriptor relative to all root descriptors bound to the root signature (within all tables). This must be done after using `BindDescriptorTable()` to first bind the table itself (because Vulkan API will put the root descriptors within the table). After `BindDescriptorTable()` is called, all root descriptors will need to be rebound.
-- `BindRootConstants()`: Write into the specified `RootConstantRange` directly. The index is relative to the array of `RootConstantRange`s declared inside the `RootSignature`.
+Related functions to this feature:
+- `GetDescriptorIndex()` : returns an `int` that identifies the resource in bindless space. The queried resource can be a `Sampler` or a `GPUResource`. If the resource is not usable (for example if it was not created), then the function returns `-1`. **In this case, the shaders must not use the resource, but instead rely on dynamic branching to avoid it, because this would be undefined behaviour and could result in a GPU hang**. Otherwise, the index can be used by shaders to index into a descriptor heap.
+- `PushConstants()` : This is an easy way to set a small amount of 32-bit values on the GPU, usable by shaders that declared a `PUSHCONSTANT(name, type)` block. There can be one push constant block per pipeline (graphics, compute or raytracing).
+
+The shaders can use bindless descriptors with the following syntax example:
+
+```hlsl
+Texture2D<float4> bindless_textures[] : register(t0, space5);
+struct PushConstants
+{
+	uint materialIndex;
+	int textureindex;
+};
+PUSHCONSTANT(push, PushConstants);
+// ...
+float4 color = bindless_textures[push.textureindex].Sample(sam, uv);
+```
+
+The corresponding data can be fed from the CPU like this:
+
+```cpp
+struct PushConstants
+{
+	uint materialIndex;
+	int textureindex;
+};
+PushConstants push;
+push.materialIndex = device->GetDescriptorIndex(materialCB, CBV);
+push.textureindex = device->GetDescriptorIndex(texture, SRV);
+device->PushConstants(&push, sizeof(push), cmd);
+```
+
+*Note: a descriptor array of ConstantBuffer<T> could be supported by some hardware/API (eg. Vulkan) in a limited form even though bindless descriptors are supported, so avoid relying on it too much.*
+
+The regular slot based binding model can will work alongside the bindless model seamlessly. The slot based bindings will always use `space0` implicitly, `space1` and greater should be used for the bindless model. Aim to keep space numbers as low as possible.
 
 ##### Subresources
 Resources like textures can have different views. For example, if a texture contains multiple mip levels, each mip level can be viewed as a separate texture with one mip level, or the whole texture can be viewed as a texture with multiple mip levels. When creating resources, a subresource that views the entire resource will be created. Functions that expect a subresource parameter can be provided with the value `-1` that means the whole resource. Usually, this parameter is optional.
 
-Other subresources can be create with the `GraphicsDevice::CreateSubresource()` function. The function will return an `int` value that can be used to refer to the subresource view that was created. In case the function returns `-1`, the subresource creation failed due to an incorrect parameter. Please use the [debug device](#debug-device) functionality to check for errors in this case.
+Other subresources can be create with the `GraphicsDevice::CreateSubresource()` function. The function will return an `int` value that can be used to refer to the subresource view that was created. In case the function returns `-1`, the subresource creation failed due to an incorrect parameter. Please use the [debug device](#debug-device) functionality to check for errors in this case. The use of `CreateSubresource()` function is thread safe on the device, but not on the resource, so only 1 thread must modify a given resource at a time.
+
+The subresource indices are valid as long as the resource is valid that they were created with.
 
 ##### Pipeline States and Shaders
 `PipelineState`s are used to define the graphics pipeline state, that includes which shaders are used, which blend mode, rasterizer state, input layout, depth stencil state and primitive topology, as well as sample mask are in effect. These states can only be bound atomically in a single call to `GraphicsDevice::SetPipelineState()`. This does not include compute shaders, which do not participate in the graphics pipeline state and can be bound individually using `GraphicsDevice::BindComputeShader()` method.
