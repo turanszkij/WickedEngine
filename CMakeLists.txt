@@ -22,5 +22,13 @@ elseif(UNIX)
 endif()
 
 add_subdirectory(WickedEngine)
-add_subdirectory(Tests)
-add_subdirectory(Editor)
+
+option(WICKED_TESTS "Build WickedEngine tests" ON)
+if (WICKED_TESTS)
+	add_subdirectory(Tests)
+endif()
+
+option(WICKED_EDITOR "Build WickedEngine editor" ON)
+if (WICKED_EDITOR)
+	add_subdirectory(Editor)
+endif()

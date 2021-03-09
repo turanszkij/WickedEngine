@@ -315,65 +315,76 @@ set(SPIRV_OUTPUT_DIR spirv)
 function(Generate_Shaders_SPIRV SHADERS_SRC_LIST SHADER_TYPE)
 	foreach (Shader IN LISTS ${SHADERS_SRC_LIST})
 		get_filename_component(FILE_NAME ${Shader} NAME_WLE)
-		message(STATUS "CALCULATING DEPENDENCIES FOR SHADER ${SHADER_TYPE} ${FILE_NAME}")
-		if(${SHADER_TYPE} STREQUAL lib)
-			set(VK_VERSION "vulkan1.2")
-		else()
-			set(VK_VERSION "vulkan1.1")
-		endif()
+		
 		set(SPIRV_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/${SPIRV_OUTPUT_DIR}/${FILE_NAME}.cso")
 		set(SPIRV_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/../${Shader}")
-		set(COMMAND_PARAMS ${DXC_TARGET}
-				"${SPIRV_SOURCE}"
-				-T "${SHADER_TYPE}_6_5"
-				-I "${CMAKE_CURRENT_SOURCE_DIR}/../"
-				-D SPIRV
-				#-all-resources-bound
-				#-pack-optimized
-				-res-may-alias
-				#-no-legacy-cbuf-layout
-				-spirv
-				-fspv-target-env=${VK_VERSION}
-				-fvk-use-dx-layout
-				-fvk-use-dx-position-w
-				-flegacy-macro-expansion
-				-Fo ${SPIRV_OUTPUT}
-				-fvk-t-shift 1000 0
-				-fvk-u-shift 2000 0
-				-fvk-s-shift 3000 0
-				#-fspv-extension=KHR
-				-Vd #DISABLE VALIDATION: There is currently a validation bug with raytracing RayTCurrent()!!!
-				)
-
-		# Determine include dependencies (recursively)
-		#
-		# This works by compiling the shader with the option -Vi,
-		# which seems to print all inclusion operations done during compilation.
-		# The process is quite slow, it would be nice to have a dedicated option
-		# in dxc to do this properly, like the -MM option in gcc/clang.
-		execute_process(COMMAND ${COMMAND_PARAMS} -Vi
-				ERROR_VARIABLE INCLUDE_DEPENDENCIES
-				OUTPUT_VARIABLE CMD_OUT
-				OUTPUT_STRIP_TRAILING_WHITESPACE
-				ERROR_STRIP_TRAILING_WHITESPACE)
-		if(INCLUDE_DEPENDENCIES)
-			string(REPLACE "\n" ";" INCLUDE_DEPENDENCIES ${INCLUDE_DEPENDENCIES}) # transform lines in cmake list
-			list(FILTER INCLUDE_DEPENDENCIES INCLUDE REGEX "Opening file") # remove non dependencies lines
-			list(LENGTH INCLUDE_DEPENDENCIES INCLUDE_DEPENDENCIES_LENGTH)
-			if(${INCLUDE_DEPENDENCIES_LENGTH} GREATER 0)
-				#filter out [inplace] filename from program output
-				list(TRANSFORM INCLUDE_DEPENDENCIES
-						REPLACE "Opening file \\[(.+)\\], stack top.*"
-								"\\1")
+		
+		# Only do this for shaders that are missing or updated (very slow re-config otherwise)
+		file(TIMESTAMP "${SPIRV_SOURCE}" NEWTIMESTAMP)
+		
+		if((NOT "${NEWTIMESTAMP}" STREQUAL "${${Shader}-LASTMOD}") OR (NOT EXISTS "${SPIRV_OUTPUT}"))
+				
+			set(${Shader}-LASTMOD ${NEWTIMESTAMP} CACHE INTERNAL "")
+		
+			message(STATUS "CALCULATING DEPENDENCIES FOR SHADER ${SHADER_TYPE} ${FILE_NAME}")
+			if(${SHADER_TYPE} STREQUAL lib)
+				set(VK_VERSION "vulkan1.2")
+			else()
+				set(VK_VERSION "vulkan1.1")
 			endif()
-		endif()
 
-		add_custom_command(
-				OUTPUT ${SPIRV_OUTPUT}
-				COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/${SPIRV_OUTPUT_DIR}/"
-				COMMAND ${COMMAND_PARAMS}
-				DEPENDS ${SPIRV_SOURCE} ${INCLUDE_DEPENDENCIES}
-		)
+			set(COMMAND_PARAMS ${DXC_TARGET}
+					"${SPIRV_SOURCE}"
+					-T "${SHADER_TYPE}_6_5"
+					-I "${CMAKE_CURRENT_SOURCE_DIR}/../"
+					-D SPIRV
+					#-all-resources-bound
+					#-pack-optimized
+					-res-may-alias
+					#-no-legacy-cbuf-layout
+					-spirv
+					-fspv-target-env=${VK_VERSION}
+					-fvk-use-dx-layout
+					-fvk-use-dx-position-w
+					-flegacy-macro-expansion
+					-Fo ${SPIRV_OUTPUT}
+					-fvk-t-shift 1000 0
+					-fvk-u-shift 2000 0
+					-fvk-s-shift 3000 0
+					#-fspv-extension=KHR
+					-Vd #DISABLE VALIDATION: There is currently a validation bug with raytracing RayTCurrent()!!!
+					)
+
+			# Determine include dependencies (recursively)
+			#
+			# This works by compiling the shader with the option -Vi,
+			# which seems to print all inclusion operations done during compilation.
+			# The process is quite slow, it would be nice to have a dedicated option
+			# in dxc to do this properly, like the -MM option in gcc/clang.
+			execute_process(COMMAND ${COMMAND_PARAMS} -Vi
+					ERROR_VARIABLE INCLUDE_DEPENDENCIES
+					OUTPUT_VARIABLE CMD_OUT
+					OUTPUT_STRIP_TRAILING_WHITESPACE
+					ERROR_STRIP_TRAILING_WHITESPACE)
+			if(INCLUDE_DEPENDENCIES)
+				string(REPLACE "\n" ";" INCLUDE_DEPENDENCIES ${INCLUDE_DEPENDENCIES}) # transform lines in cmake list
+				list(FILTER INCLUDE_DEPENDENCIES INCLUDE REGEX "Opening file") # remove non dependencies lines
+				list(LENGTH INCLUDE_DEPENDENCIES INCLUDE_DEPENDENCIES_LENGTH)
+				if(${INCLUDE_DEPENDENCIES_LENGTH} GREATER 0)
+					#filter out [inplace] filename from program output
+					list(TRANSFORM INCLUDE_DEPENDENCIES
+							REPLACE "Opening file \\[(.+)\\], stack top.*"
+									"\\1")
+				endif()
+			endif()
+
+			add_custom_command(
+					OUTPUT ${SPIRV_OUTPUT}
+					COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/${SPIRV_OUTPUT_DIR}/"
+					COMMAND ${COMMAND_PARAMS}
+					DEPENDS ${SPIRV_SOURCE} ${INCLUDE_DEPENDENCIES}
+			)
+		endif()
 		list(APPEND SPIRV_BINARY_FILES ${SPIRV_OUTPUT})
 	endforeach()
 	set(SPIRV_BINARY_FILES ${SPIRV_BINARY_FILES} PARENT_SCOPE)
