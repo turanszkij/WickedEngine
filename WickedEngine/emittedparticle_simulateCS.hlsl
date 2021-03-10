@@ -120,18 +120,19 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 #endif // DEPTHCOLLISIONS
 
 			// integrate:
+			particle.force += xParticleGravity;
 			particle.velocity += particle.force * dt;
 			particle.position += particle.velocity * dt;
 
 			// reset force for next frame:
 			particle.force = 0;
 
+			// drag: 
+			particle.velocity *= xParticleDrag;
+
 			[branch]
 			if (xEmitterOptions & EMITTER_OPTION_BIT_SPH_ENABLED)
 			{
-				// drag: 
-				particle.velocity *= 0.98f;
-
 				// debug collisions:
 
 				float elastic = 0.6;

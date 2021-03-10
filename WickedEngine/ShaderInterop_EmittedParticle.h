@@ -79,6 +79,12 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 	float		xEmitterFixedTimestep;	// we can force a fixed timestep (>0) onto the simulation to avoid blowing up
 	float		xParticleEmissive;
 
+	float3		xParticleGravity;
+	float		xParticleDrag;
+
+	float3		xParticleVelocity;
+	float		xParticleRandomColorFactor;
+
 };
 
 static const uint THREADCOUNT_EMIT = 256;
