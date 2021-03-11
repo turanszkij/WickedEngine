@@ -11,7 +11,7 @@ using namespace wiScene;
 void EmitterWindow::Create(EditorComponent* editor)
 {
 	wiWindow::Create("Emitter Window");
-	SetSize(XMFLOAT2(680, 660));
+	SetSize(XMFLOAT2(680, 700));
 
 	float x = 200;
 	float y = 5;
@@ -290,6 +290,97 @@ void EmitterWindow::Create(EditorComponent* editor)
 		});
 	AddWidget(&frameStartInput);
 
+
+
+
+	VelocityXInput.Create("");
+	VelocityXInput.SetValue(0);
+	VelocityXInput.SetDescription("Starting Velocity: ");
+	VelocityXInput.SetTooltip("Vector X component");
+	VelocityXInput.SetPos(XMFLOAT2(x, y += step));
+	VelocityXInput.SetSize(XMFLOAT2(38, itemheight));
+	VelocityXInput.OnInputAccepted([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->velocity.x = args.fValue;
+		}
+		});
+	AddWidget(&VelocityXInput);
+
+	VelocityYInput.Create("");
+	VelocityYInput.SetValue(0);
+	VelocityYInput.SetTooltip("Vector Y component");
+	VelocityYInput.SetPos(XMFLOAT2(x + 40, y));
+	VelocityYInput.SetSize(XMFLOAT2(38, itemheight));
+	VelocityYInput.OnInputAccepted([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->velocity.y = args.fValue;
+		}
+		});
+	AddWidget(&VelocityYInput);
+
+	VelocityZInput.Create("");
+	VelocityZInput.SetValue(0);
+	VelocityZInput.SetTooltip("Vector Z component");
+	VelocityZInput.SetPos(XMFLOAT2(x + 80, y));
+	VelocityZInput.SetSize(XMFLOAT2(38, itemheight));
+	VelocityZInput.OnInputAccepted([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->velocity.z = args.fValue;
+		}
+		});
+	AddWidget(&VelocityZInput);
+
+
+
+	GravityXInput.Create("");
+	GravityXInput.SetValue(0);
+	GravityXInput.SetDescription("Gravity: ");
+	GravityXInput.SetTooltip("Vector X component");
+	GravityXInput.SetPos(XMFLOAT2(x + 200, y));
+	GravityXInput.SetSize(XMFLOAT2(38, itemheight));
+	GravityXInput.OnInputAccepted([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->gravity.x = args.fValue;
+		}
+		});
+	AddWidget(&GravityXInput);
+
+	GravityYInput.Create("");
+	GravityYInput.SetValue(0);
+	GravityYInput.SetTooltip("Vector Y component");
+	GravityYInput.SetPos(XMFLOAT2(x + 240, y));
+	GravityYInput.SetSize(XMFLOAT2(38, itemheight));
+	GravityYInput.OnInputAccepted([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->gravity.y = args.fValue;
+		}
+		});
+	AddWidget(&GravityYInput);
+
+	GravityZInput.Create("");
+	GravityZInput.SetValue(0);
+	GravityZInput.SetTooltip("Vector Z component");
+	GravityZInput.SetPos(XMFLOAT2(x + 280, y));
+	GravityZInput.SetSize(XMFLOAT2(38, itemheight));
+	GravityZInput.OnInputAccepted([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->gravity.z = args.fValue;
+		}
+		});
+	AddWidget(&GravityZInput);
+
 	maxParticlesSlider.Create(100.0f, 1000000.0f, 10000, 100000, "Max particle count: ");
 	maxParticlesSlider.SetSize(XMFLOAT2(360, itemheight));
 	maxParticlesSlider.SetPos(XMFLOAT2(x, y += step));
@@ -416,6 +507,20 @@ void EmitterWindow::Create(EditorComponent* editor)
 	emitLifeRandomnessSlider.SetTooltip("Set the randomness of lifespans for the emitted particles.");
 	AddWidget(&emitLifeRandomnessSlider);
 
+	emitColorRandomnessSlider.Create(0.0f, 2.0f, 0.0f, 100000, "Color randomness: ");
+	emitColorRandomnessSlider.SetSize(XMFLOAT2(360, itemheight));
+	emitColorRandomnessSlider.SetPos(XMFLOAT2(x, y += step));
+	emitColorRandomnessSlider.OnSlide([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->random_color = args.fValue;
+		}
+		});
+	emitColorRandomnessSlider.SetEnabled(false);
+	emitColorRandomnessSlider.SetTooltip("Set the randomness of color for the emitted particles.");
+	AddWidget(&emitColorRandomnessSlider);
+
 	emitMotionBlurSlider.Create(0.0f, 1.0f, 1.0f, 100000, "Motion blur: ");
 	emitMotionBlurSlider.SetSize(XMFLOAT2(360, itemheight));
 	emitMotionBlurSlider.SetPos(XMFLOAT2(x, y += step));
@@ -461,6 +566,20 @@ void EmitterWindow::Create(EditorComponent* editor)
 	AddWidget(&timestepSlider);
 
 
+
+	dragSlider.Create(-1, 0.016f, -1, 100000, "Drag: ");
+	dragSlider.SetSize(XMFLOAT2(360, itemheight));
+	dragSlider.SetPos(XMFLOAT2(x, y += step));
+	dragSlider.OnSlide([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->drag = args.fValue;
+		}
+		});
+	dragSlider.SetEnabled(false);
+	dragSlider.SetTooltip("The velocity will be multiplied with this value, so lower than 1 will slow decelerate the particles.");
+	AddWidget(&dragSlider);
 
 
 
@@ -541,33 +660,7 @@ void EmitterWindow::SetEntity(Entity entity)
 
 	if (emitter != nullptr)
 	{
-		emitterNameField.SetEnabled(true);
-		restartButton.SetEnabled(true);
-		shaderTypeComboBox.SetEnabled(true);
-		meshComboBox.SetEnabled(true);
-		debugCheckBox.SetEnabled(true);
-		volumeCheckBox.SetEnabled(true);
-		frameBlendingCheckBox.SetEnabled(true);
-		sortCheckBox.SetEnabled(true);
-		depthCollisionsCheckBox.SetEnabled(true);
-		sphCheckBox.SetEnabled(true);
-		pauseCheckBox.SetEnabled(true);
-		maxParticlesSlider.SetEnabled(true);
-		emitCountSlider.SetEnabled(true);
-		emitSizeSlider.SetEnabled(true);
-		emitRotationSlider.SetEnabled(true);
-		emitNormalSlider.SetEnabled(true);
-		emitScalingSlider.SetEnabled(true);
-		emitLifeSlider.SetEnabled(true);
-		emitRandomnessSlider.SetEnabled(true);
-		emitLifeRandomnessSlider.SetEnabled(true);
-		emitMotionBlurSlider.SetEnabled(true);
-		emitMassSlider.SetEnabled(true);
-		timestepSlider.SetEnabled(true);
-		sph_h_Slider.SetEnabled(true);
-		sph_K_Slider.SetEnabled(true);
-		sph_p0_Slider.SetEnabled(true);
-		sph_e_Slider.SetEnabled(true);
+		SetEnabled(true);
 
 		shaderTypeComboBox.SetSelected((int)emitter->shaderType);
 
@@ -593,9 +686,17 @@ void EmitterWindow::SetEntity(Entity entity)
 		emitLifeSlider.SetValue(emitter->life);
 		emitRandomnessSlider.SetValue(emitter->random_factor);
 		emitLifeRandomnessSlider.SetValue(emitter->random_life);
+		emitColorRandomnessSlider.SetValue(emitter->random_color);
 		emitMotionBlurSlider.SetValue(emitter->motionBlurAmount);
 		emitMassSlider.SetValue(emitter->mass);
 		timestepSlider.SetValue(emitter->FIXED_TIMESTEP);
+		dragSlider.SetValue(emitter->drag);
+		VelocityXInput.SetValue(emitter->velocity.x);
+		VelocityYInput.SetValue(emitter->velocity.y);
+		VelocityZInput.SetValue(emitter->velocity.z);
+		GravityXInput.SetValue(emitter->gravity.x);
+		GravityYInput.SetValue(emitter->gravity.y);
+		GravityZInput.SetValue(emitter->gravity.z);
 
 		sph_h_Slider.SetValue(emitter->SPH_h);
 		sph_K_Slider.SetValue(emitter->SPH_K);
@@ -608,33 +709,9 @@ void EmitterWindow::SetEntity(Entity entity)
 	{
 		infoLabel.SetText("No emitter object selected.");
 
-		emitterNameField.SetEnabled(false);
-		restartButton.SetEnabled(false);
-		shaderTypeComboBox.SetEnabled(false);
-		meshComboBox.SetEnabled(false);
-		debugCheckBox.SetEnabled(false);
-		volumeCheckBox.SetEnabled(false);
-		frameBlendingCheckBox.SetEnabled(false);
-		sortCheckBox.SetEnabled(false);
-		depthCollisionsCheckBox.SetEnabled(false);
-		sphCheckBox.SetEnabled(false);
-		pauseCheckBox.SetEnabled(false);
-		maxParticlesSlider.SetEnabled(false);
-		emitCountSlider.SetEnabled(false);
-		emitSizeSlider.SetEnabled(false);
-		emitRotationSlider.SetEnabled(false);
-		emitNormalSlider.SetEnabled(false);
-		emitScalingSlider.SetEnabled(false);
-		emitLifeSlider.SetEnabled(false);
-		emitRandomnessSlider.SetEnabled(false);
-		emitLifeRandomnessSlider.SetEnabled(false);
-		emitMotionBlurSlider.SetEnabled(false);
-		emitMassSlider.SetEnabled(false);
-		timestepSlider.SetEnabled(false);
-		sph_h_Slider.SetEnabled(false);
-		sph_K_Slider.SetEnabled(false);
-		sph_p0_Slider.SetEnabled(false);
-		sph_e_Slider.SetEnabled(false);
+		SetEnabled(false);
+
+		addButton.SetEnabled(true);
 	}
 
 }

@@ -92,6 +92,11 @@ public:
 	float rotation = 0.0f;
 	float motionBlurAmount = 0.0f;
 	float mass = 1.0f;
+	float random_color = 0;
+
+	XMFLOAT3 velocity = {}; // starting velocity of all new particles
+	XMFLOAT3 gravity = {}; // constant gravity force
+	float drag = 1.0f; // constant drag (per frame velocity multiplier, reducing it will make particles slow down over time)
 
 	float SPH_h = 1.0f;		// smoothing radius
 	float SPH_K = 250.0f;	// pressure constant

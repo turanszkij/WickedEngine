@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+64: serialized per-emitter gravity, velocity, drag and random_color
 63: serialized wiResourceManager embedded resources
 62: serialized WeatherComponent::colorGradingMapName property
 61: serialized sheen and clearcoat material properties

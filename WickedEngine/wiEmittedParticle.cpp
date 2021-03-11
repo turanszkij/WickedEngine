@@ -272,6 +272,10 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		cb.xEmitterFrameStart = frameStart;
 		cb.xEmitterTexMul = float2(1.0f / (float)cb.xEmitterFramesXY.x, 1.0f / (float)cb.xEmitterFramesXY.y);
 		cb.xEmitterFrameRate = frameRate;
+		cb.xParticleGravity = gravity;
+		cb.xParticleDrag = drag;
+		cb.xParticleVelocity = velocity;
+		cb.xParticleRandomColorFactor = random_color;
 
 		cb.xEmitterOptions = 0;
 		if (IsSPHEnabled())
@@ -813,6 +817,22 @@ void wiEmittedParticle::Serialize(wiArchive& archive, wiECS::EntitySerializer& s
 			uint8_t shadingRate;
 			archive >> shadingRate; // no longer needed
 		}
+
+		if (archive.GetVersion() >= 64)
+		{
+			archive >> velocity;
+			archive >> gravity;
+			archive >> drag;
+			archive >> random_color;
+		}
+		else
+		{
+			if (IsSPHEnabled())
+			{
+				gravity = XMFLOAT3(0, -9.8f * 2, 0);
+				drag = 0.98f;
+			}
+		}
 	}
 	else
 	{
@@ -844,6 +864,14 @@ void wiEmittedParticle::Serialize(wiArchive& archive, wiECS::EntitySerializer& s
 			archive << frameCount;
 			archive << frameStart;
 			archive << frameRate;
+		}
+
+		if (archive.GetVersion() >= 64)
+		{
+			archive << velocity;
+			archive << gravity;
+			archive << drag;
+			archive << random_color;
 		}
 	}
 }

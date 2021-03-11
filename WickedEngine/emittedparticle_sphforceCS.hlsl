@@ -204,11 +204,8 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 		f_a *= -1;
 		f_av *= e;
 
-		// gravity:
-		const float3 G = float3(0, -9.8f * 2, 0);
-
 		// apply all forces:
-		particleA.force += (f_a + f_av) / densityA + G;
+		particleA.force += (f_a + f_av) / densityA;
 
 		particleBuffer[particleIndexA].force = particleA.force;
 
