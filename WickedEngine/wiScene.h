@@ -632,7 +632,7 @@ namespace wiScene
 
 		// occlusion result history bitfield (32 bit->32 frame history)
 		uint32_t occlusionHistory = ~0;
-		int occlusionQueries[wiGraphics::GraphicsDevice::GetBackBufferCount() + 1] = {-1,-1,-1};
+		int occlusionQueries[wiGraphics::GraphicsDevice::GetBackBufferCount() + 1];
 
 		inline bool IsOccluded() const
 		{
