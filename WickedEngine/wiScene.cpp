@@ -1414,6 +1414,7 @@ namespace wiScene
 		}
 
 		// Occlusion culling read:
+		if(!wiRenderer::GetFreezeCullingCameraEnabled())
 		{
 			if (!queryHeap[0].IsValid())
 			{
@@ -1427,11 +1428,15 @@ namespace wiScene
 				}
 				queryResults.resize(desc.queryCount);
 			}
-			queryheap_idx++;
-			queryheap_idx %= arraysize(queryHeap);
+
+			// Previously allocated and written query count (newest one) is saved:
 			writtenQueries[queryheap_idx] = std::min(queryAllocator.load(), queryHeap[queryheap_idx].desc.queryCount);
 			queryAllocator.store(0);
 
+			// Advance to next query heap to use (this will be the oldest one that was written)
+			queryheap_idx = (queryheap_idx + 1) % arraysize(queryHeap);
+
+			// Read back data from the oldest query heap:
 			if (writtenQueries[queryheap_idx] > 0)
 			{
 				device->QueryRead(
@@ -2653,7 +2658,7 @@ namespace wiScene
 					subsetIndex++;
 				}
 
-				if ((flags & UPDATE_ACCELERATION_STRUCTURES) && cmd != INVALID_COMMANDLIST && (mesh._flags & MeshComponent::DIRTY_BLAS))
+				if (IsUpdateAccelerationStructuresEnabled() && cmd != INVALID_COMMANDLIST && (mesh._flags & MeshComponent::DIRTY_BLAS))
 				{
 					mesh._flags &= ~MeshComponent::DIRTY_BLAS;
 					locker.lock();
@@ -2846,21 +2851,24 @@ namespace wiScene
 			AABB& aabb = aabb_objects[args.jobIndex];
 
 			// Update occlusion culling status:
-			object.occlusionHistory <<= 1; // advance history by 1 frame
-			int query_id = object.occlusionQueries[queryheap_idx];
-			if (query_id >= 0 && (int)writtenQueries[queryheap_idx] > query_id)
+			if (!wiRenderer::GetFreezeCullingCameraEnabled())
 			{
-				uint64_t visible = queryResults[query_id];
-				if (visible)
+				object.occlusionHistory <<= 1; // advance history by 1 frame
+				int query_id = object.occlusionQueries[queryheap_idx];
+				if (query_id >= 0 && (int)writtenQueries[queryheap_idx] > query_id)
+				{
+					uint64_t visible = queryResults[query_id];
+					if (visible)
+					{
+						object.occlusionHistory |= 1; // visible
+					}
+				}
+				else
 				{
 					object.occlusionHistory |= 1; // visible
 				}
+				object.occlusionQueries[queryheap_idx] = -1; // invalidate query
 			}
-			else
-			{
-				object.occlusionHistory |= 1; // visible
-			}
-			object.occlusionQueries[queryheap_idx] = -1; // invalidate query
 
 			aabb = AABB();
 			object.rendertypeMask = 0;
@@ -2961,7 +2969,7 @@ namespace wiScene
 						object.prev_transform_index = -1;
 					}
 
-					if ((flags & UPDATE_ACCELERATION_STRUCTURES) && TLAS.IsValid())
+					if (IsUpdateAccelerationStructuresEnabled() && TLAS.IsValid())
 					{
 						GraphicsDevice* device = wiRenderer::GetDevice();
 						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};

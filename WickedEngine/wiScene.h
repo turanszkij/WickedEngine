@@ -1282,6 +1282,9 @@ namespace wiScene
 		};
 		uint32_t flags = EMPTY;
 
+		constexpr void SetUpdateAccelerationStructuresEnabled(bool value){ if (value) { flags |= UPDATE_ACCELERATION_STRUCTURES; } else { flags &= ~UPDATE_ACCELERATION_STRUCTURES; } }
+		constexpr bool IsUpdateAccelerationStructuresEnabled() const { return flags & UPDATE_ACCELERATION_STRUCTURES; }
+
 		wiSpinLock locker;
 		AABB bounds;
 		std::vector<AABB> parallel_bounds;

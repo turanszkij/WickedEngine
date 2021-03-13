@@ -538,11 +538,11 @@ void RenderPath3D::Update(float dt)
 	{
 		if (getAO() == AO_RTAO || wiRenderer::GetRaytracedShadowsEnabled() || getRaytracedReflectionEnabled())
 		{
-			scene->flags |= wiScene::Scene::UPDATE_ACCELERATION_STRUCTURES;
+			scene->SetUpdateAccelerationStructuresEnabled(true);
 		}
 		else
 		{
-			scene->flags &= ~wiScene::Scene::UPDATE_ACCELERATION_STRUCTURES;
+			scene->SetUpdateAccelerationStructuresEnabled(false);
 		}
 		scene->Update(dt * wiRenderer::GetGameSpeed());
 	}
@@ -596,7 +596,7 @@ void RenderPath3D::Render() const
 		RenderFrameSetUp(cmd);
 		});
 
-	if (getAO() == AO_RTAO || wiRenderer::GetRaytracedShadowsEnabled() || getRaytracedReflectionEnabled())
+	if (scene->IsUpdateAccelerationStructuresEnabled())
 	{
 		cmd = device->BeginCommandList();
 		wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
