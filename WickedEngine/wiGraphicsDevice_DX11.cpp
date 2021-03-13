@@ -1578,7 +1578,7 @@ Texture GraphicsDevice_DX11::GetBackBuffer()
 	return result;
 }
 
-bool GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer)
+bool GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) const
 {
 	auto internal_state = std::make_shared<Resource_DX11>();
 	pBuffer->internal_state = internal_state;
@@ -1617,7 +1617,7 @@ bool GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subreso
 
 	return SUCCEEDED(hr);
 }
-bool GraphicsDevice_DX11::CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture)
+bool GraphicsDevice_DX11::CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const
 {
 	auto internal_state = std::make_shared<Texture_DX11>();
 	pTexture->internal_state = internal_state;
@@ -1691,7 +1691,7 @@ bool GraphicsDevice_DX11::CreateTexture(const TextureDesc* pDesc, const Subresou
 
 	return SUCCEEDED(hr);
 }
-bool GraphicsDevice_DX11::CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader)
+bool GraphicsDevice_DX11::CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const
 {
 	pShader->stage = stage;
 
@@ -1749,7 +1749,7 @@ bool GraphicsDevice_DX11::CreateShader(SHADERSTAGE stage, const void *pShaderByt
 
 	return SUCCEEDED(hr);
 }
-bool GraphicsDevice_DX11::CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
+bool GraphicsDevice_DX11::CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) const
 {
 	auto internal_state = std::make_shared<Sampler_DX11>();
 	pSamplerState->internal_state = internal_state;
@@ -1775,7 +1775,7 @@ bool GraphicsDevice_DX11::CreateSampler(const SamplerDesc *pSamplerDesc, Sampler
 
 	return SUCCEEDED(hr);
 }
-bool GraphicsDevice_DX11::CreateQueryHeap(const GPUQueryHeapDesc* pDesc, GPUQueryHeap* pQueryHeap)
+bool GraphicsDevice_DX11::CreateQueryHeap(const GPUQueryHeapDesc* pDesc, GPUQueryHeap* pQueryHeap) const
 {
 	auto internal_state = std::make_shared<QueryHeap_DX11>();
 	pQueryHeap->internal_state = internal_state;
@@ -1811,7 +1811,7 @@ bool GraphicsDevice_DX11::CreateQueryHeap(const GPUQueryHeapDesc* pDesc, GPUQuer
 
 	return true;
 }
-bool GraphicsDevice_DX11::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
+bool GraphicsDevice_DX11::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) const
 {
 	auto internal_state = std::make_shared<PipelineState_DX11>();
 	pso->internal_state = internal_state;
@@ -1835,8 +1835,11 @@ bool GraphicsDevice_DX11::CreatePipelineState(const PipelineStateDesc* pDesc, Pi
 			if (desc[i].AlignedByteOffset == InputLayout::APPEND_ALIGNED_ELEMENT)
 				desc[i].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
 			desc[i].InputSlotClass = _ConvertInputClassification(pDesc->il->elements[i].InputSlotClass);
-			desc[i].InstanceDataStepRate = pDesc->il->elements[i].InstanceDataStepRate;
-
+			desc[i].InstanceDataStepRate = 0;
+			if (desc[i].InputSlotClass == D3D11_INPUT_PER_INSTANCE_DATA)
+			{
+				desc[i].InstanceDataStepRate = 1;
+			}
 		}
 
 		assert(pDesc->vs != nullptr);
@@ -1965,7 +1968,7 @@ bool GraphicsDevice_DX11::CreatePipelineState(const PipelineStateDesc* pDesc, Pi
 
 	return true;
 }
-bool GraphicsDevice_DX11::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
+bool GraphicsDevice_DX11::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) const
 {
 	renderpass->internal_state = emptyresource;
 
@@ -1974,7 +1977,7 @@ bool GraphicsDevice_DX11::CreateRenderPass(const RenderPassDesc* pDesc, RenderPa
 	return true;
 }
 
-int GraphicsDevice_DX11::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount)
+int GraphicsDevice_DX11::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const
 {
 	auto internal_state = to_internal(texture);
 
@@ -2369,7 +2372,7 @@ int GraphicsDevice_DX11::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE ty
 	}
 	return -1;
 }
-int GraphicsDevice_DX11::CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size)
+int GraphicsDevice_DX11::CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size) const
 {
 	auto internal_state = to_internal(buffer);
 	const GPUBufferDesc& desc = buffer->GetDesc();
@@ -2488,7 +2491,7 @@ int GraphicsDevice_DX11::CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE t
 	return -1;
 }
 
-void GraphicsDevice_DX11::Map(const GPUResource* resource, Mapping* mapping)
+void GraphicsDevice_DX11::Map(const GPUResource* resource, Mapping* mapping) const
 {
 	auto internal_state = to_internal(resource);
 
@@ -2522,12 +2525,12 @@ void GraphicsDevice_DX11::Map(const GPUResource* resource, Mapping* mapping)
 		mapping->rowpitch = 0;
 	}
 }
-void GraphicsDevice_DX11::Unmap(const GPUResource* resource)
+void GraphicsDevice_DX11::Unmap(const GPUResource* resource) const
 {
 	auto internal_state = to_internal(resource);
 	immediateContext->Unmap(internal_state->resource.Get(), 0);
 }
-void GraphicsDevice_DX11::QueryRead(const GPUQueryHeap* heap, uint32_t index, uint32_t count, uint64_t* results)
+void GraphicsDevice_DX11::QueryRead(const GPUQueryHeap* heap, uint32_t index, uint32_t count, uint64_t* results) const
 {
 	if (count == 0)
 		return;

@@ -1296,8 +1296,7 @@ namespace wiScene
 		wiGraphics::GPUQueryHeap queryHeap[arraysize(ObjectComponent::occlusionQueries)];
 		std::vector<uint64_t> queryResults;
 		uint32_t writtenQueries[arraysize(queryHeap)] = {};
-		int query_write = 0;
-		int query_read = 0;
+		int queryheap_idx = 0;
 		std::atomic<uint32_t> queryAllocator{ 0 };
 
 		// Update all components by a given timestep (in seconds):

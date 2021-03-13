@@ -47,8 +47,8 @@ namespace wiGraphics
 		VkQueue computeQueue = VK_NULL_HANDLE;
 
 		VkQueue copyQueue = VK_NULL_HANDLE;
-		std::mutex copyQueueLock;
-		bool copyQueueUse = false;
+		mutable std::mutex copyQueueLock;
+		mutable bool copyQueueUse = false;
 		VkSemaphore copySemaphore = VK_NULL_HANDLE;
 
 		VkPhysicalDeviceProperties2 properties2 = {};
@@ -116,7 +116,7 @@ namespace wiGraphics
 
 			VkCommandPool transitionCommandPool = VK_NULL_HANDLE;
 			VkCommandBuffer transitionCommandBuffer = VK_NULL_HANDLE;
-			std::vector<VkImageMemoryBarrier> loadedimagetransitions;
+			mutable std::vector<VkImageMemoryBarrier> loadedimagetransitions;
 
 			VkSemaphore swapchainAcquireSemaphore = VK_NULL_HANDLE;
 			VkSemaphore swapchainReleaseSemaphore = VK_NULL_HANDLE;
@@ -167,6 +167,7 @@ namespace wiGraphics
 			ResourceFrameAllocator resourceBuffer[COMMANDLIST_COUNT];
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
+		const FrameResources& GetFrameResources() const { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
 		inline VkCommandBuffer GetDirectCommandList(CommandList cmd) { return GetFrameResources().commandBuffers[cmd]; }
 
@@ -181,8 +182,8 @@ namespace wiGraphics
 			std::vector<VkDescriptorSet> bindlessSets;
 			uint32_t bindlessFirstSet = 0;
 		};
-		std::unordered_map<size_t, PSOLayout> pso_layout_cache;
-		std::mutex pso_layout_cache_mutex;
+		mutable std::unordered_map<size_t, PSOLayout> pso_layout_cache;
+		mutable std::mutex pso_layout_cache_mutex;
 
 		std::unordered_map<size_t, VkPipeline> pipelines_global;
 		std::vector<std::pair<size_t, VkPipeline>> pipelines_worker[COMMANDLIST_COUNT];
@@ -192,6 +193,9 @@ namespace wiGraphics
 		const RaytracingPipelineState* active_rt[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 		SHADING_RATE prev_shadingrate[COMMANDLIST_COUNT] = {};
+
+		uint32_t vb_strides[COMMANDLIST_COUNT][8] = {};
+		size_t vb_hash[COMMANDLIST_COUNT] = {};
 
 		struct DeferredPushConstantData
 		{
@@ -216,29 +220,29 @@ namespace wiGraphics
 		GraphicsDevice_Vulkan(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false);
 		virtual ~GraphicsDevice_Vulkan();
 
-		bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) override;
-		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) override;
-		bool CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) override;
-		bool CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) override;
-		bool CreateQueryHeap(const GPUQueryHeapDesc* pDesc, GPUQueryHeap* pQueryHeap) override;
-		bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
-		bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
-		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) override;
-		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) override;
+		bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) const override;
+		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const override;
+		bool CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const override;
+		bool CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) const override;
+		bool CreateQueryHeap(const GPUQueryHeapDesc* pDesc, GPUQueryHeap* pQueryHeap) const override;
+		bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) const override;
+		bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) const override;
+		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) const override;
+		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) const override;
 		
-		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
-		int CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) override;
+		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const override;
+		int CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) const override;
 
-		int GetDescriptorIndex(const GPUResource* resource, SUBRESOURCE_TYPE type, int subresource = -1) override;
-		int GetDescriptorIndex(const Sampler* sampler) override;
+		int GetDescriptorIndex(const GPUResource* resource, SUBRESOURCE_TYPE type, int subresource = -1) const override;
+		int GetDescriptorIndex(const Sampler* sampler) const override;
 
-		void WriteShadingRateValue(SHADING_RATE rate, void* dest) override;
-		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
-		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) override;
+		void WriteShadingRateValue(SHADING_RATE rate, void* dest) const override;
+		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const override;
+		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const override;
 		
-		void Map(const GPUResource* resource, Mapping* mapping) override;
-		void Unmap(const GPUResource* resource) override;
-		void QueryRead(const GPUQueryHeap* heap, uint32_t index, uint32_t count, uint64_t* results) override;
+		void Map(const GPUResource* resource, Mapping* mapping) const override;
+		void Unmap(const GPUResource* resource) const override;
+		void QueryRead(const GPUQueryHeap* heap, uint32_t index, uint32_t count, uint64_t* results) const override;
 
 		void SetCommonSampler(const StaticSampler* sam) override;
 

@@ -1427,19 +1427,17 @@ namespace wiScene
 				}
 				queryResults.resize(desc.queryCount);
 			}
-			query_write++;
-			query_read = query_write + 1;
-			query_write %= arraysize(queryHeap);
-			query_read %= arraysize(queryHeap);
-			writtenQueries[query_read] = std::min(queryAllocator.load(), queryHeap[query_read].desc.queryCount);
+			queryheap_idx++;
+			queryheap_idx %= arraysize(queryHeap);
+			writtenQueries[queryheap_idx] = std::min(queryAllocator.load(), queryHeap[queryheap_idx].desc.queryCount);
 			queryAllocator.store(0);
 
-			if (writtenQueries[query_read] > 0)
+			if (writtenQueries[queryheap_idx] > 0)
 			{
 				device->QueryRead(
-					&queryHeap[query_read],
+					&queryHeap[queryheap_idx],
 					0,
-					writtenQueries[query_read],
+					writtenQueries[queryheap_idx],
 					queryResults.data()
 				);
 			}
@@ -2849,8 +2847,8 @@ namespace wiScene
 
 			// Update occlusion culling status:
 			object.occlusionHistory <<= 1; // advance history by 1 frame
-			int query_id = object.occlusionQueries[query_read];
-			if (query_id >= 0 && (int)writtenQueries[query_read] > query_id)
+			int query_id = object.occlusionQueries[queryheap_idx];
+			if (query_id >= 0 && (int)writtenQueries[queryheap_idx] > query_id)
 			{
 				uint64_t visible = queryResults[query_id];
 				if (visible)
@@ -2862,7 +2860,7 @@ namespace wiScene
 			{
 				object.occlusionHistory |= 1; // visible
 			}
-			object.occlusionQueries[query_read] = -1; // invalidate query
+			object.occlusionQueries[queryheap_idx] = -1; // invalidate query
 
 			aabb = AABB();
 			object.rendertypeMask = 0;

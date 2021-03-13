@@ -1056,7 +1056,7 @@ namespace DX12_Internal
 			D3D12_DEPTH_STENCIL_VIEW_DESC dsv;
 		};
 		bool IsValid() const { return handle.ptr != 0; }
-		void init(GraphicsDevice_DX12* device, const D3D12_CONSTANT_BUFFER_VIEW_DESC& cbv)
+		void init(const GraphicsDevice_DX12* device, const D3D12_CONSTANT_BUFFER_VIEW_DESC& cbv)
 		{
 			this->cbv = cbv;
 			this->allocationhandler = device->allocationhandler;
@@ -1079,7 +1079,7 @@ namespace DX12_Internal
 				allocationhandler->device->CopyDescriptorsSimple(1, dst_bindless, handle, type);
 			}
 		}
-		void init(GraphicsDevice_DX12* device, const D3D12_SHADER_RESOURCE_VIEW_DESC& srv, ID3D12Resource* res)
+		void init(const GraphicsDevice_DX12* device, const D3D12_SHADER_RESOURCE_VIEW_DESC& srv, ID3D12Resource* res)
 		{
 			this->srv = srv;
 			this->allocationhandler = device->allocationhandler;
@@ -1102,7 +1102,7 @@ namespace DX12_Internal
 				allocationhandler->device->CopyDescriptorsSimple(1, dst_bindless, handle, type);
 			}
 		}
-		void init(GraphicsDevice_DX12* device, const D3D12_UNORDERED_ACCESS_VIEW_DESC& uav, ID3D12Resource* res)
+		void init(const GraphicsDevice_DX12* device, const D3D12_UNORDERED_ACCESS_VIEW_DESC& uav, ID3D12Resource* res)
 		{
 			this->uav = uav;
 			this->allocationhandler = device->allocationhandler;
@@ -1125,7 +1125,7 @@ namespace DX12_Internal
 				allocationhandler->device->CopyDescriptorsSimple(1, dst_bindless, handle, type);
 			}
 		}
-		void init(GraphicsDevice_DX12* device, const D3D12_SAMPLER_DESC& sam)
+		void init(const GraphicsDevice_DX12* device, const D3D12_SAMPLER_DESC& sam)
 		{
 			this->sam = sam;
 			this->allocationhandler = device->allocationhandler;
@@ -1148,7 +1148,7 @@ namespace DX12_Internal
 				allocationhandler->device->CopyDescriptorsSimple(1, dst_bindless, handle, type);
 			}
 		}
-		void init(GraphicsDevice_DX12* device, const D3D12_RENDER_TARGET_VIEW_DESC& rtv, ID3D12Resource* res)
+		void init(const GraphicsDevice_DX12* device, const D3D12_RENDER_TARGET_VIEW_DESC& rtv, ID3D12Resource* res)
 		{
 			this->rtv = rtv;
 			this->allocationhandler = device->allocationhandler;
@@ -1156,7 +1156,7 @@ namespace DX12_Internal
 			handle = allocationhandler->descriptors_rtv.allocate();
 			allocationhandler->device->CreateRenderTargetView(res, &rtv, handle);
 		}
-		void init(GraphicsDevice_DX12* device, const D3D12_DEPTH_STENCIL_VIEW_DESC& dsv, ID3D12Resource* res)
+		void init(const GraphicsDevice_DX12* device, const D3D12_DEPTH_STENCIL_VIEW_DESC& dsv, ID3D12Resource* res)
 		{
 			this->dsv = dsv;
 			this->allocationhandler = device->allocationhandler;
@@ -2121,11 +2121,14 @@ using namespace DX12_Internal;
 					i--;
 				}
 			}
-			GetDirectCommandList(cmd)->ResourceBarrier(
-				(UINT)barriers.size(),
-				barriers.data()
-			);
-			barriers.clear();
+			if (!barriers.empty())
+			{
+				GetDirectCommandList(cmd)->ResourceBarrier(
+					(UINT)barriers.size(),
+					barriers.data()
+				);
+				barriers.clear();
+			}
 		}
 	}
 	void GraphicsDevice_DX12::predraw(CommandList cmd)
@@ -2735,7 +2738,7 @@ using namespace DX12_Internal;
 		return result;
 	}
 
-	bool GraphicsDevice_DX12::CreateBuffer(const GPUBufferDesc* pDesc, const SubresourceData* pInitialData, GPUBuffer* pBuffer)
+	bool GraphicsDevice_DX12::CreateBuffer(const GPUBufferDesc* pDesc, const SubresourceData* pInitialData, GPUBuffer* pBuffer) const
 	{
 		auto internal_state = std::make_shared<Resource_DX12>();
 		internal_state->allocationhandler = allocationhandler;
@@ -2857,7 +2860,7 @@ using namespace DX12_Internal;
 
 		return SUCCEEDED(hr);
 	}
-	bool GraphicsDevice_DX12::CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture)
+	bool GraphicsDevice_DX12::CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture) const
 	{
 		auto internal_state = std::make_shared<Texture_DX12>();
 		internal_state->allocationhandler = allocationhandler;
@@ -3074,7 +3077,7 @@ using namespace DX12_Internal;
 
 		return SUCCEEDED(hr);
 	}
-	bool GraphicsDevice_DX12::CreateShader(SHADERSTAGE stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader)
+	bool GraphicsDevice_DX12::CreateShader(SHADERSTAGE stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) const
 	{
 		auto internal_state = std::make_shared<PipelineState_DX12>();
 		internal_state->allocationhandler = allocationhandler;
@@ -3602,7 +3605,7 @@ using namespace DX12_Internal;
 
 		return SUCCEEDED(hr);
 	}
-	bool GraphicsDevice_DX12::CreateSampler(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState)
+	bool GraphicsDevice_DX12::CreateSampler(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState) const
 	{
 		auto internal_state = std::make_shared<Sampler_DX12>();
 		internal_state->allocationhandler = allocationhandler;
@@ -3629,7 +3632,7 @@ using namespace DX12_Internal;
 
 		return true;
 	}
-	bool GraphicsDevice_DX12::CreateQueryHeap(const GPUQueryHeapDesc* pDesc, GPUQueryHeap* pQueryHeap)
+	bool GraphicsDevice_DX12::CreateQueryHeap(const GPUQueryHeapDesc* pDesc, GPUQueryHeap* pQueryHeap) const
 	{
 		auto internal_state = std::make_shared<QueryHeap_DX12>();
 		internal_state->allocationhandler = allocationhandler;
@@ -3683,7 +3686,7 @@ using namespace DX12_Internal;
 
 		return SUCCEEDED(hr);
 	}
-	bool GraphicsDevice_DX12::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
+	bool GraphicsDevice_DX12::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) const
 	{
 		auto internal_state = std::make_shared<PipelineState_DX12>();
 		internal_state->allocationhandler = allocationhandler;
@@ -4090,7 +4093,11 @@ using namespace DX12_Internal;
 				if (elements[i].AlignedByteOffset == InputLayout::APPEND_ALIGNED_ELEMENT)
 					elements[i].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
 				elements[i].InputSlotClass = _ConvertInputClassification(pso->desc.il->elements[i].InputSlotClass);
-				elements[i].InstanceDataStepRate = pso->desc.il->elements[i].InstanceDataStepRate;
+				elements[i].InstanceDataStepRate = 0;
+				if (elements[i].InputSlotClass == D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA)
+				{
+					elements[i].InstanceDataStepRate = 1;
+				}
 			}
 		}
 		il.pInputElementDescs = elements.data();
@@ -4125,7 +4132,7 @@ using namespace DX12_Internal;
 
 		return SUCCEEDED(hr);
 	}
-	bool GraphicsDevice_DX12::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
+	bool GraphicsDevice_DX12::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) const
 	{
 		auto internal_state = std::make_shared<RenderPass_DX12>();
 		renderpass->internal_state = internal_state;
@@ -4353,7 +4360,7 @@ using namespace DX12_Internal;
 
 		return true;
 	}
-	bool GraphicsDevice_DX12::CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh)
+	bool GraphicsDevice_DX12::CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) const
 	{
 		auto internal_state = std::make_shared<BVH_DX12>();
 		internal_state->allocationhandler = allocationhandler;
@@ -4488,7 +4495,7 @@ using namespace DX12_Internal;
 
 		return CreateBuffer(&scratch_desc, nullptr, &internal_state->scratch);
 	}
-	bool GraphicsDevice_DX12::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso)
+	bool GraphicsDevice_DX12::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) const
 	{
 		auto internal_state = std::make_shared<RTPipelineState_DX12>();
 		internal_state->allocationhandler = allocationhandler;
@@ -4602,7 +4609,7 @@ using namespace DX12_Internal;
 		return SUCCEEDED(hr);
 	}
 
-	int GraphicsDevice_DX12::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount)
+	int GraphicsDevice_DX12::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const
 	{
 		auto internal_state = to_internal(texture);
 
@@ -4974,7 +4981,7 @@ using namespace DX12_Internal;
 		}
 		return -1;
 	}
-	int GraphicsDevice_DX12::CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size)
+	int GraphicsDevice_DX12::CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size) const
 	{
 		auto internal_state = to_internal(buffer);
 		const GPUBufferDesc& desc = buffer->GetDesc();
@@ -5089,7 +5096,7 @@ using namespace DX12_Internal;
 		return -1;
 	}
 
-	int GraphicsDevice_DX12::GetDescriptorIndex(const GPUResource* resource, SUBRESOURCE_TYPE type, int subresource)
+	int GraphicsDevice_DX12::GetDescriptorIndex(const GPUResource* resource, SUBRESOURCE_TYPE type, int subresource) const
 	{
 		if (resource == nullptr || !resource->IsValid())
 			return -1;
@@ -5126,7 +5133,7 @@ using namespace DX12_Internal;
 
 		return -1;
 	}
-	int GraphicsDevice_DX12::GetDescriptorIndex(const Sampler* sampler)
+	int GraphicsDevice_DX12::GetDescriptorIndex(const Sampler* sampler) const
 	{
 		if (sampler == nullptr || !sampler->IsValid())
 			return -1;
@@ -5135,7 +5142,7 @@ using namespace DX12_Internal;
 		return internal_state->descriptor.index;
 	}
 
-	void GraphicsDevice_DX12::WriteShadingRateValue(SHADING_RATE rate, void* dest)
+	void GraphicsDevice_DX12::WriteShadingRateValue(SHADING_RATE rate, void* dest) const
 	{
 		D3D12_SHADING_RATE _rate = _ConvertShadingRate(rate);
 		if (!features_6.AdditionalShadingRatesSupported)
@@ -5144,7 +5151,7 @@ using namespace DX12_Internal;
 		}
 		*(uint8_t*)dest = _rate;
 	}
-	void GraphicsDevice_DX12::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest)
+	void GraphicsDevice_DX12::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const
 	{
 		D3D12_RAYTRACING_INSTANCE_DESC* desc = (D3D12_RAYTRACING_INSTANCE_DESC*)dest;
 		desc->AccelerationStructure = to_internal(&instance->bottomlevel)->gpu_address;
@@ -5154,7 +5161,7 @@ using namespace DX12_Internal;
 		desc->InstanceContributionToHitGroupIndex = instance->InstanceContributionToHitGroupIndex;
 		desc->Flags = instance->Flags;
 	}
-	void GraphicsDevice_DX12::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest)
+	void GraphicsDevice_DX12::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const
 	{
 		auto internal_state = to_internal(rtpso);
 
@@ -5166,7 +5173,7 @@ using namespace DX12_Internal;
 		memcpy(dest, identifier, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 	}
 	
-	void GraphicsDevice_DX12::Map(const GPUResource* resource, Mapping* mapping)
+	void GraphicsDevice_DX12::Map(const GPUResource* resource, Mapping* mapping) const
 	{
 		auto internal_state = to_internal(resource);
 		D3D12_RANGE read_range = {};
@@ -5187,12 +5194,12 @@ using namespace DX12_Internal;
 			mapping->rowpitch = 0;
 		}
 	}
-	void GraphicsDevice_DX12::Unmap(const GPUResource* resource)
+	void GraphicsDevice_DX12::Unmap(const GPUResource* resource) const
 	{
 		auto internal_state = to_internal(resource);
 		internal_state->resource->Unmap(0, nullptr);
 	}
-	void GraphicsDevice_DX12::QueryRead(const GPUQueryHeap* heap, uint32_t index, uint32_t count, uint64_t* results)
+	void GraphicsDevice_DX12::QueryRead(const GPUQueryHeap* heap, uint32_t index, uint32_t count, uint64_t* results) const
 	{
 		if (count == 0)
 			return;
@@ -5240,7 +5247,9 @@ using namespace DX12_Internal;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		GetDirectCommandList(cmd)->ResourceBarrier(1, &barrier);
+
+		frame_barriers[cmd].push_back(barrier);
+		barrier_flush(cmd);
 
 		const float clearcolor[] = { 0,0,0,1 };
 

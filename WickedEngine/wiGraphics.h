@@ -370,7 +370,6 @@ namespace wiGraphics
 			uint32_t InputSlot = 0;
 			uint32_t AlignedByteOffset = APPEND_ALIGNED_ELEMENT;
 			INPUT_CLASSIFICATION InputSlotClass = INPUT_CLASSIFICATION::INPUT_PER_VERTEX_DATA;
-			uint32_t InstanceDataStepRate = 0;
 		};
 		std::vector<Element> elements;
 	};
