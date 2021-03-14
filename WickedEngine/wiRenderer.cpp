@@ -855,6 +855,11 @@ PipelineState PSO_sss_snow;
 PipelineState PSO_upsample_bilateral;
 PipelineState PSO_outline;
 
+
+RaytracingPipelineState RTPSO_ao;
+RaytracingPipelineState RTPSO_reflection;
+RaytracingPipelineState RTPSO_shadow;
+
 enum SKYRENDERING
 {
 	SKYRENDERING_STATIC,
@@ -1836,6 +1841,165 @@ void LoadShaders()
 
 		device->CreatePipelineState(&desc, &PSO_debug[args.jobIndex]);
 		});
+
+	if(device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	{
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) {
+			bool success = LoadShader(LIB, shaders[RTTYPE_RTSHADOW], "rtshadowLIB.cso");
+			assert(success);
+
+			RaytracingPipelineStateDesc rtdesc;
+
+			rtdesc.shaderlibraries.emplace_back();
+			rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTSHADOW];
+			rtdesc.shaderlibraries.back().function_name = "RTShadow_Raygen";
+			rtdesc.shaderlibraries.back().type = ShaderLibrary::RAYGENERATION;
+
+			rtdesc.shaderlibraries.emplace_back();
+			rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTSHADOW];
+			rtdesc.shaderlibraries.back().function_name = "RTShadow_ClosestHit";
+			rtdesc.shaderlibraries.back().type = ShaderLibrary::CLOSESTHIT;
+
+			rtdesc.shaderlibraries.emplace_back();
+			rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTSHADOW];
+			rtdesc.shaderlibraries.back().function_name = "RTShadow_AnyHit";
+			rtdesc.shaderlibraries.back().type = ShaderLibrary::ANYHIT;
+
+			rtdesc.shaderlibraries.emplace_back();
+			rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTSHADOW];
+			rtdesc.shaderlibraries.back().function_name = "RTShadow_Miss";
+			rtdesc.shaderlibraries.back().type = ShaderLibrary::MISS;
+
+			rtdesc.hitgroups.emplace_back();
+			rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
+			rtdesc.hitgroups.back().name = "RTShadow_Raygen";
+			rtdesc.hitgroups.back().general_shader = 0;
+
+			rtdesc.hitgroups.emplace_back();
+			rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
+			rtdesc.hitgroups.back().name = "RTShadow_Miss";
+			rtdesc.hitgroups.back().general_shader = 3;
+
+			rtdesc.hitgroups.emplace_back();
+			rtdesc.hitgroups.back().type = ShaderHitGroup::TRIANGLES;
+			rtdesc.hitgroups.back().name = "RTShadow_Hitgroup";
+			rtdesc.hitgroups.back().closesthit_shader = 1;
+			rtdesc.hitgroups.back().anyhit_shader = 2;
+
+			rtdesc.max_trace_recursion_depth = 1;
+			rtdesc.max_payload_size_in_bytes = sizeof(float);
+			rtdesc.max_attribute_size_in_bytes = sizeof(XMFLOAT2); // bary
+			success = device->CreateRaytracingPipelineState(&rtdesc, &RTPSO_shadow);
+			assert(success);
+
+			success = LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTSHADOW_DENOISE_TEMPORAL], "rtshadow_denoise_temporalCS.cso");
+			assert(success);
+			});
+
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) {
+
+			bool success = LoadShader(LIB, shaders[RTTYPE_RTREFLECTION], "rtreflectionLIB.cso");
+			assert(success);
+
+			RaytracingPipelineStateDesc rtdesc;
+			rtdesc.shaderlibraries.emplace_back();
+			rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
+			rtdesc.shaderlibraries.back().function_name = "RTReflection_Raygen";
+			rtdesc.shaderlibraries.back().type = ShaderLibrary::RAYGENERATION;
+
+			rtdesc.shaderlibraries.emplace_back();
+			rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
+			rtdesc.shaderlibraries.back().function_name = "RTReflection_ClosestHit";
+			rtdesc.shaderlibraries.back().type = ShaderLibrary::CLOSESTHIT;
+
+			rtdesc.shaderlibraries.emplace_back();
+			rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
+			rtdesc.shaderlibraries.back().function_name = "RTReflection_AnyHit";
+			rtdesc.shaderlibraries.back().type = ShaderLibrary::ANYHIT;
+
+			rtdesc.shaderlibraries.emplace_back();
+			rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
+			rtdesc.shaderlibraries.back().function_name = "RTReflection_Miss";
+			rtdesc.shaderlibraries.back().type = ShaderLibrary::MISS;
+
+			rtdesc.hitgroups.emplace_back();
+			rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
+			rtdesc.hitgroups.back().name = "RTReflection_Raygen";
+			rtdesc.hitgroups.back().general_shader = 0;
+
+			rtdesc.hitgroups.emplace_back();
+			rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
+			rtdesc.hitgroups.back().name = "RTReflection_Miss";
+			rtdesc.hitgroups.back().general_shader = 3;
+
+			rtdesc.hitgroups.emplace_back();
+			rtdesc.hitgroups.back().type = ShaderHitGroup::TRIANGLES;
+			rtdesc.hitgroups.back().name = "RTReflection_Hitgroup";
+			rtdesc.hitgroups.back().closesthit_shader = 1;
+			rtdesc.hitgroups.back().anyhit_shader = 2;
+
+			rtdesc.max_trace_recursion_depth = 1;
+			rtdesc.max_payload_size_in_bytes = sizeof(float4);
+			rtdesc.max_attribute_size_in_bytes = sizeof(float2); // bary
+			success = device->CreateRaytracingPipelineState(&rtdesc, &RTPSO_reflection);
+			assert(success);
+			});
+
+
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) {
+
+			bool success = LoadShader(LIB, shaders[RTTYPE_RTAO], "rtaoLIB.cso");
+			assert(success);
+
+			RaytracingPipelineStateDesc rtdesc;
+			rtdesc.shaderlibraries.emplace_back();
+			rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTAO];
+			rtdesc.shaderlibraries.back().function_name = "RTAO_Raygen";
+			rtdesc.shaderlibraries.back().type = ShaderLibrary::RAYGENERATION;
+
+			rtdesc.shaderlibraries.emplace_back();
+			rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTAO];
+			rtdesc.shaderlibraries.back().function_name = "RTAO_ClosestHit";
+			rtdesc.shaderlibraries.back().type = ShaderLibrary::CLOSESTHIT;
+
+			rtdesc.shaderlibraries.emplace_back();
+			rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTAO];
+			rtdesc.shaderlibraries.back().function_name = "RTAO_AnyHit";
+			rtdesc.shaderlibraries.back().type = ShaderLibrary::ANYHIT;
+
+			rtdesc.shaderlibraries.emplace_back();
+			rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTAO];
+			rtdesc.shaderlibraries.back().function_name = "RTAO_Miss";
+			rtdesc.shaderlibraries.back().type = ShaderLibrary::MISS;
+
+			rtdesc.hitgroups.emplace_back();
+			rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
+			rtdesc.hitgroups.back().name = "RTAO_Raygen";
+			rtdesc.hitgroups.back().general_shader = 0;
+
+			rtdesc.hitgroups.emplace_back();
+			rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
+			rtdesc.hitgroups.back().name = "RTAO_Miss";
+			rtdesc.hitgroups.back().general_shader = 3;
+
+			rtdesc.hitgroups.emplace_back();
+			rtdesc.hitgroups.back().type = ShaderHitGroup::TRIANGLES;
+			rtdesc.hitgroups.back().name = "RTAO_Hitgroup";
+			rtdesc.hitgroups.back().closesthit_shader = 1;
+			rtdesc.hitgroups.back().anyhit_shader = 2;
+
+			rtdesc.max_trace_recursion_depth = 1;
+			rtdesc.max_payload_size_in_bytes = sizeof(float);
+			rtdesc.max_attribute_size_in_bytes = sizeof(XMFLOAT2); // bary
+			success = device->CreateRaytracingPipelineState(&rtdesc, &RTPSO_ao);
+			assert(success);
+
+			success = LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_TEMPORAL], "rtao_denoise_temporalCS.cso");
+			assert(success);
+			success = LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_BLUR], "rtao_denoise_blurCS.cso");
+			assert(success);
+		});
+	};
 
 	wiJobSystem::Wait(ctx);
 
@@ -9598,68 +9762,6 @@ void Postprocess_RTAO(
 	device->EventBegin("Postprocess_RTAO", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("RTAO", cmd);
 
-	static RaytracingPipelineState RTPSO;
-
-	auto load_shaders = [&scene](uint64_t userdata) {
-
-		bool success = LoadShader(LIB, shaders[RTTYPE_RTAO], "rtaoLIB.cso");
-		assert(success);
-
-		RaytracingPipelineStateDesc rtdesc;
-		rtdesc.shaderlibraries.emplace_back();
-		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTAO];
-		rtdesc.shaderlibraries.back().function_name = "RTAO_Raygen";
-		rtdesc.shaderlibraries.back().type = ShaderLibrary::RAYGENERATION;
-
-		rtdesc.shaderlibraries.emplace_back();
-		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTAO];
-		rtdesc.shaderlibraries.back().function_name = "RTAO_ClosestHit";
-		rtdesc.shaderlibraries.back().type = ShaderLibrary::CLOSESTHIT;
-
-		rtdesc.shaderlibraries.emplace_back();
-		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTAO];
-		rtdesc.shaderlibraries.back().function_name = "RTAO_AnyHit";
-		rtdesc.shaderlibraries.back().type = ShaderLibrary::ANYHIT;
-
-		rtdesc.shaderlibraries.emplace_back();
-		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTAO];
-		rtdesc.shaderlibraries.back().function_name = "RTAO_Miss";
-		rtdesc.shaderlibraries.back().type = ShaderLibrary::MISS;
-
-		rtdesc.hitgroups.emplace_back();
-		rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
-		rtdesc.hitgroups.back().name = "RTAO_Raygen";
-		rtdesc.hitgroups.back().general_shader = 0;
-
-		rtdesc.hitgroups.emplace_back();
-		rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
-		rtdesc.hitgroups.back().name = "RTAO_Miss";
-		rtdesc.hitgroups.back().general_shader = 3;
-
-		rtdesc.hitgroups.emplace_back();
-		rtdesc.hitgroups.back().type = ShaderHitGroup::TRIANGLES;
-		rtdesc.hitgroups.back().name = "RTAO_Hitgroup";
-		rtdesc.hitgroups.back().closesthit_shader = 1;
-		rtdesc.hitgroups.back().anyhit_shader = 2;
-
-		rtdesc.max_trace_recursion_depth = 1;
-		rtdesc.max_payload_size_in_bytes = sizeof(float);
-		rtdesc.max_attribute_size_in_bytes = sizeof(XMFLOAT2); // bary
-		success = device->CreateRaytracingPipelineState(&rtdesc, &RTPSO);
-		assert(success);
-
-		success = LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_TEMPORAL], "rtao_denoise_temporalCS.cso");
-		assert(success);
-		success = LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_BLUR], "rtao_denoise_blurCS.cso");
-		assert(success);
-	};
-
-	static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, load_shaders);
-	if (!RTPSO.IsValid())
-	{
-		load_shaders(0);
-	}
-
 	BindCommonResources(cmd);
 
 	Postprocess_NormalsFromDepth(depthbuffer, res.normals, cmd);
@@ -9668,7 +9770,7 @@ void Postprocess_RTAO(
 
 	const TextureDesc& desc = res.temp.GetDesc();
 
-	device->BindRaytracingPipelineState(&RTPSO, cmd);
+	device->BindRaytracingPipelineState(&RTPSO_ao, cmd);
 
 	device->BindResource(LIB, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 	device->BindResource(LIB, &depthbuffer, TEXSLOT_DEPTH, cmd);
@@ -9693,9 +9795,9 @@ void Postprocess_RTAO(
 	GraphicsDevice::GPUAllocation shadertable_miss = device->AllocateGPU(shaderIdentifierSize, cmd);
 	GraphicsDevice::GPUAllocation shadertable_hitgroup = device->AllocateGPU(shaderIdentifierSize, cmd);
 
-	device->WriteShaderIdentifier(&RTPSO, 0, shadertable_raygen.data);
-	device->WriteShaderIdentifier(&RTPSO, 1, shadertable_miss.data);
-	device->WriteShaderIdentifier(&RTPSO, 2, shadertable_hitgroup.data);
+	device->WriteShaderIdentifier(&RTPSO_ao, 0, shadertable_raygen.data);
+	device->WriteShaderIdentifier(&RTPSO_ao, 1, shadertable_miss.data);
+	device->WriteShaderIdentifier(&RTPSO_ao, 2, shadertable_hitgroup.data);
 
 	DispatchRaysDesc dispatchraysdesc;
 	dispatchraysdesc.raygeneration.buffer = shadertable_raygen.buffer;
@@ -9921,64 +10023,7 @@ void Postprocess_RTReflection(
 	device->EventBegin("Postprocess_RTReflection", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("RTReflection", cmd);
 
-	static RaytracingPipelineState RTPSO;
-
-	auto load_shaders = [&scene](uint64_t userdata) {
-
-		bool success = LoadShader(LIB, shaders[RTTYPE_RTREFLECTION], "rtreflectionLIB.cso");
-		assert(success);
-
-		RaytracingPipelineStateDesc rtdesc;
-		rtdesc.shaderlibraries.emplace_back();
-		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
-		rtdesc.shaderlibraries.back().function_name = "RTReflection_Raygen";
-		rtdesc.shaderlibraries.back().type = ShaderLibrary::RAYGENERATION;
-
-		rtdesc.shaderlibraries.emplace_back();
-		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
-		rtdesc.shaderlibraries.back().function_name = "RTReflection_ClosestHit";
-		rtdesc.shaderlibraries.back().type = ShaderLibrary::CLOSESTHIT;
-
-		rtdesc.shaderlibraries.emplace_back();
-		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
-		rtdesc.shaderlibraries.back().function_name = "RTReflection_AnyHit";
-		rtdesc.shaderlibraries.back().type = ShaderLibrary::ANYHIT;
-
-		rtdesc.shaderlibraries.emplace_back();
-		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
-		rtdesc.shaderlibraries.back().function_name = "RTReflection_Miss";
-		rtdesc.shaderlibraries.back().type = ShaderLibrary::MISS;
-
-		rtdesc.hitgroups.emplace_back();
-		rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
-		rtdesc.hitgroups.back().name = "RTReflection_Raygen";
-		rtdesc.hitgroups.back().general_shader = 0;
-
-		rtdesc.hitgroups.emplace_back();
-		rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
-		rtdesc.hitgroups.back().name = "RTReflection_Miss";
-		rtdesc.hitgroups.back().general_shader = 3;
-
-		rtdesc.hitgroups.emplace_back();
-		rtdesc.hitgroups.back().type = ShaderHitGroup::TRIANGLES;
-		rtdesc.hitgroups.back().name = "RTReflection_Hitgroup";
-		rtdesc.hitgroups.back().closesthit_shader = 1;
-		rtdesc.hitgroups.back().anyhit_shader = 2;
-
-		rtdesc.max_trace_recursion_depth = 1;
-		rtdesc.max_payload_size_in_bytes = sizeof(float4);
-		rtdesc.max_attribute_size_in_bytes = sizeof(float2); // bary
-		success = device->CreateRaytracingPipelineState(&rtdesc, &RTPSO);
-		assert(success);
-	};
-
-	static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, load_shaders);
-	if (!RTPSO.IsValid())
-	{
-		load_shaders(0);
-	}
-
-	device->BindRaytracingPipelineState(&RTPSO, cmd);
+	device->BindRaytracingPipelineState(&RTPSO_reflection, cmd);
 
 	BindCommonResources(cmd);
 	BindShadowmaps(LIB, cmd);
@@ -10024,9 +10069,9 @@ void Postprocess_RTReflection(
 	GraphicsDevice::GPUAllocation shadertable_miss = device->AllocateGPU(shaderIdentifierSize, cmd);
 	GraphicsDevice::GPUAllocation shadertable_hitgroup = device->AllocateGPU(shaderIdentifierSize, cmd);
 
-	device->WriteShaderIdentifier(&RTPSO, 0, shadertable_raygen.data);
-	device->WriteShaderIdentifier(&RTPSO, 1, shadertable_miss.data);
-	device->WriteShaderIdentifier(&RTPSO, 2, shadertable_hitgroup.data);
+	device->WriteShaderIdentifier(&RTPSO_reflection, 0, shadertable_raygen.data);
+	device->WriteShaderIdentifier(&RTPSO_reflection, 1, shadertable_miss.data);
+	device->WriteShaderIdentifier(&RTPSO_reflection, 2, shadertable_hitgroup.data);
 
 	DispatchRaysDesc dispatchraysdesc;
 	dispatchraysdesc.raygeneration.buffer = shadertable_raygen.buffer;
@@ -10437,73 +10482,12 @@ void Postprocess_RTShadow(
 	device->EventBegin("Postprocess_RTShadow", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("RTShadow", cmd);
 
-	static RaytracingPipelineState RTPSO;
-
-	auto load_shaders = [&scene](uint64_t userdata) {
-
-		bool success = LoadShader(LIB, shaders[RTTYPE_RTSHADOW], "rtshadowLIB.cso");
-		assert(success);
-
-		RaytracingPipelineStateDesc rtdesc;
-
-		rtdesc.shaderlibraries.emplace_back();
-		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTSHADOW];
-		rtdesc.shaderlibraries.back().function_name = "RTShadow_Raygen";
-		rtdesc.shaderlibraries.back().type = ShaderLibrary::RAYGENERATION;
-
-		rtdesc.shaderlibraries.emplace_back();
-		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTSHADOW];
-		rtdesc.shaderlibraries.back().function_name = "RTShadow_ClosestHit";
-		rtdesc.shaderlibraries.back().type = ShaderLibrary::CLOSESTHIT;
-
-		rtdesc.shaderlibraries.emplace_back();
-		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTSHADOW];
-		rtdesc.shaderlibraries.back().function_name = "RTShadow_AnyHit";
-		rtdesc.shaderlibraries.back().type = ShaderLibrary::ANYHIT;
-
-		rtdesc.shaderlibraries.emplace_back();
-		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTSHADOW];
-		rtdesc.shaderlibraries.back().function_name = "RTShadow_Miss";
-		rtdesc.shaderlibraries.back().type = ShaderLibrary::MISS;
-
-		rtdesc.hitgroups.emplace_back();
-		rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
-		rtdesc.hitgroups.back().name = "RTShadow_Raygen";
-		rtdesc.hitgroups.back().general_shader = 0;
-
-		rtdesc.hitgroups.emplace_back();
-		rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
-		rtdesc.hitgroups.back().name = "RTShadow_Miss";
-		rtdesc.hitgroups.back().general_shader = 3;
-
-		rtdesc.hitgroups.emplace_back();
-		rtdesc.hitgroups.back().type = ShaderHitGroup::TRIANGLES;
-		rtdesc.hitgroups.back().name = "RTShadow_Hitgroup";
-		rtdesc.hitgroups.back().closesthit_shader = 1;
-		rtdesc.hitgroups.back().anyhit_shader = 2;
-
-		rtdesc.max_trace_recursion_depth = 1;
-		rtdesc.max_payload_size_in_bytes = sizeof(float);
-		rtdesc.max_attribute_size_in_bytes = sizeof(XMFLOAT2); // bary
-		success = device->CreateRaytracingPipelineState(&rtdesc, &RTPSO);
-		assert(success);
-
-		success = LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTSHADOW_DENOISE_TEMPORAL], "rtshadow_denoise_temporalCS.cso");
-		assert(success);
-	};
-
-	static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, load_shaders);
-	if (!RTPSO.IsValid())
-	{
-		load_shaders(0);
-	}
-
 	BindCommonResources(cmd);
 
 	Postprocess_NormalsFromDepth(depthbuffer, res.normals, cmd);
 
 	device->EventBegin("Raytrace", cmd);
-	device->BindRaytracingPipelineState(&RTPSO, cmd);
+	device->BindRaytracingPipelineState(&RTPSO_shadow, cmd);
 
 	device->BindResource(LIB, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 	device->BindResource(LIB, &depthbuffer, TEXSLOT_DEPTH, cmd);
@@ -10543,9 +10527,9 @@ void Postprocess_RTShadow(
 	GraphicsDevice::GPUAllocation shadertable_miss = device->AllocateGPU(shaderIdentifierSize, cmd);
 	GraphicsDevice::GPUAllocation shadertable_hitgroup = device->AllocateGPU(shaderIdentifierSize, cmd);
 
-	device->WriteShaderIdentifier(&RTPSO, 0, shadertable_raygen.data);
-	device->WriteShaderIdentifier(&RTPSO, 1, shadertable_miss.data);
-	device->WriteShaderIdentifier(&RTPSO, 2, shadertable_hitgroup.data);
+	device->WriteShaderIdentifier(&RTPSO_shadow, 0, shadertable_raygen.data);
+	device->WriteShaderIdentifier(&RTPSO_shadow, 1, shadertable_miss.data);
+	device->WriteShaderIdentifier(&RTPSO_shadow, 2, shadertable_hitgroup.data);
 
 	DispatchRaysDesc dispatchraysdesc;
 	dispatchraysdesc.raygeneration.buffer = shadertable_raygen.buffer;
