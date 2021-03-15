@@ -99,6 +99,7 @@ add_library(${TARGET_NAME} STATIC
 	wiWidget.cpp
 	wiXInput.cpp
 	wiBlueNoise.cpp
+	wiShaderCompiler.cpp
 )
 
 target_include_directories(${TARGET_NAME} PUBLIC
