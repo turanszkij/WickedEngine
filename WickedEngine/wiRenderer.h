@@ -50,10 +50,14 @@ namespace wiRenderer
 	// Retrieve the main graphics device:
 	wiGraphics::GraphicsDevice* GetDevice();
 
-	// Returns the shader loading directory
+	// Returns the shader binary directory
 	const std::string& GetShaderPath();
-	// Sets the shader loading directory
+	// Sets the shader binary directory
 	void SetShaderPath(const std::string& path);
+	// Returns the shader source directory
+	const std::string& GetShaderSourcePath();
+	// Sets the shader source directory
+	void SetShaderSourcePath(const std::string& path);
 	// Reload shaders
 	void ReloadShaders();
 

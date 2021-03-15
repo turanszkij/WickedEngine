@@ -1137,6 +1137,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\arial.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiShaderCompiler.h">
+      <Filter>ENGINE\Graphics\API</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1885,6 +1888,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiBlueNoise.cpp">
       <Filter>ENGINE\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiShaderCompiler.cpp">
+      <Filter>ENGINE\Graphics\API</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

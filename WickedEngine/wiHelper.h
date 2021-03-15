@@ -64,6 +64,10 @@ namespace wiHelper
 
 	void MakePathRelative(const std::string& rootdir, std::string& path);
 
+	void MakePathAbsolute(std::string& path);
+
+	void DirectoryCreate(const std::string& path);
+
 	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data);
 
 	bool FileWrite(const std::string& fileName, const uint8_t* data, size_t size);

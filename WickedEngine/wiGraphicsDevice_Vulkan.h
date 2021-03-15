@@ -264,6 +264,8 @@ namespace wiGraphics
 
 		void SetVSyncEnabled(bool value) override { VSYNC = value; CreateBackBufferResources(); };
 
+		SHADERFORMAT GetShaderFormat() const override { return SHADERFORMAT_SPIRV; }
+
 		///////////////Thread-sensitive////////////////////////
 
 		void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) override;

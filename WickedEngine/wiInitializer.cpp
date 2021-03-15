@@ -23,6 +23,7 @@ namespace wiInitializer
 		wiBackLog::post(ss.str().c_str());
 
 		wiJobSystem::Initialize();
+		wiShaderCompiler::Initialize();
 
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiFont::Initialize(); });
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiImage::Initialize(); });

@@ -120,6 +120,8 @@ namespace wiGraphics
 		inline uint32_t GetVariableRateShadingTileSize() const { return VARIABLE_RATE_SHADING_TILE_SIZE; }
 		inline uint64_t GetTimestampFrequency() const { return TIMESTAMP_FREQUENCY; }
 
+		virtual SHADERFORMAT GetShaderFormat() const { return SHADERFORMAT_NONE; }
+
 		///////////////Thread-sensitive////////////////////////
 
 		virtual void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) = 0;

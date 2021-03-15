@@ -27,6 +27,7 @@
 #include "wiPlatform.h"
 #include "wiBlueNoise.h"
 #include "wiSheenLUT.h"
+#include "wiShaderCompiler.h"
 
 #include <algorithm>
 #include <unordered_map>
@@ -55,6 +56,7 @@ GPUBuffer			resourceBuffers[RBTYPE_COUNT];
 Sampler				samplers[SSLOT_COUNT];
 
 string SHADERPATH = "../WickedEngine/shaders/";
+string SHADERSOURCEPATH = "../WickedEngine/";
 
 LinearAllocator renderFrameAllocators[COMMANDLIST_COUNT]; // can be used by graphics threads
 inline LinearAllocator& GetRenderFrameAllocator(CommandList cmd)
@@ -897,6 +899,45 @@ bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
 	if (wiHelper::FileRead(SHADERPATH + filename, buffer)) 
 	{
 		return device->CreateShader(stage, buffer.data(), buffer.size(), &shader);
+	}
+	else
+	{
+		std::string sourcefilename = SHADERSOURCEPATH + filename;
+		size_t idx = sourcefilename.rfind('.');
+		if (idx != std::string::npos)
+		{
+			sourcefilename = sourcefilename.substr(0, idx + 1);
+			sourcefilename += "hlsl";
+			std::vector<uint8_t> sourcefiledata;
+			if (wiHelper::FileRead(sourcefilename, sourcefiledata))
+			{
+				wiShaderCompiler::CompilerInput input;
+				input.format = device->GetShaderFormat();
+				input.stage = stage;
+				input.shadersourcedata = sourcefiledata.data();
+				input.shadersourcesize = sourcefiledata.size();
+
+				std::string sourcedir = sourcefilename;
+				wiHelper::MakePathAbsolute(sourcedir);
+				sourcedir = wiHelper::GetDirectoryFromPath(sourcedir);
+				input.include_directories.push_back(sourcedir);
+
+				wiShaderCompiler::CompilerOutput output;
+				wiShaderCompiler::Compile(input, output);
+
+				if (output.success)
+				{
+					wiHelper::DirectoryCreate(SHADERPATH);
+					wiHelper::FileWrite(SHADERPATH + filename, output.shaderbinary.data(), output.shaderbinary.size());
+					wiBackLog::post(("shader compiled: " + SHADERPATH + filename).c_str());
+					return device->CreateShader(stage, output.shaderbinary.data(), output.shaderbinary.size(), &shader);
+				}
+				else
+				{
+					wiBackLog::post(("shader compile FAILED: " + SHADERPATH + filename + "\n" + output.error_message).c_str());
+				}
+			}
+		}
 	}
 	return false;
 }
@@ -2522,6 +2563,14 @@ const std::string& GetShaderPath()
 void SetShaderPath(const std::string& path)
 {
 	SHADERPATH = path;
+}
+const std::string& GetShaderSourcePath()
+{
+	return SHADERSOURCEPATH;
+}
+void SetShaderSourcePath(const std::string& path)
+{
+	SHADERSOURCEPATH = path;
 }
 void ReloadShaders()
 {

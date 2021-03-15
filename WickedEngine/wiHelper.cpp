@@ -367,6 +367,21 @@ namespace wiHelper
 		//}
 	}
 
+	void MakePathAbsolute(std::string& path)
+	{
+		std::filesystem::path filepath = path;
+		std::filesystem::path absolute = std::filesystem::absolute(path);
+		if (!absolute.empty())
+		{
+			path = absolute.string();
+		}
+	}
+
+	void DirectoryCreate(const std::string& path)
+	{
+		std::filesystem::create_directory(path);
+	}
+
 	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data)
 	{
 #ifndef PLATFORM_UWP
