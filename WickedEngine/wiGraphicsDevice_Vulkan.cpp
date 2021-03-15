@@ -6143,6 +6143,10 @@ using namespace Vulkan_Internal;
 				}
 			}
 		}
+		for (int i = count; i < arraysize(vb_strides[cmd]); ++i)
+		{
+			vb_strides[cmd][i] = 0;
+		}
 
 		vkCmdBindVertexBuffers(GetDirectCommandList(cmd), static_cast<uint32_t>(slot), static_cast<uint32_t>(count), vbuffers, voffsets);
 
