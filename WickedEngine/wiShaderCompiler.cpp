@@ -56,6 +56,12 @@ namespace wiShaderCompiler
 			return;
 		}
 
+		std::vector<uint8_t> shadersourcedata;
+		if (!wiHelper::FileRead(input.shadersourcefilename, shadersourcedata))
+		{
+			return;
+		}
+
 		// https://github.com/microsoft/DirectXShaderCompiler/wiki/Using-dxc.exe-and-dxcompiler.dll#dxcompiler-dll-interface
 
 		std::vector<LPCWSTR> args = {
@@ -143,10 +149,11 @@ namespace wiShaderCompiler
 			args.push_back(wstr.c_str());
 		}
 
-		std::vector<uint8_t> shadersourcedata;
-		if (!wiHelper::FileRead(input.shadersourcefilename, shadersourcedata))
+		// Add source file name as last parameter. This will be displayed in error messages
 		{
-			return;
+			std::wstring& wstr = wstrings.emplace_back();
+			wiHelper::StringConvert(wiHelper::GetFileNameFromPath(input.shadersourcefilename), wstr);
+			args.push_back(wstr.c_str());
 		}
 
 		DxcBuffer Source;
