@@ -15,10 +15,9 @@ namespace wiBackLog
 	std::string getText();
 	void clear();
 	void post(const char* input);
-	void input(const char& input);
+	void input(const char input);
 	void acceptInput();
 	void deletefromInput();
-	void save(std::ofstream& file);
 
 	void historyPrev();
 	void historyNext();
