@@ -15,6 +15,7 @@
 #include "wiFont.h"
 #include "wiImage.h"
 #include "wiEvent.h"
+#include "wiSpriteFont.h"
 
 #include "wiGraphicsDevice_DX11.h"
 #include "wiGraphicsDevice_DX12.h"
@@ -73,7 +74,17 @@ void MainComponent::Run()
 		// Until engine is not loaded, present initialization screen...
 		CommandList cmd = wiRenderer::GetDevice()->BeginCommandList();
 		wiRenderer::GetDevice()->PresentBegin(cmd);
-		wiFont::Draw(wiBackLog::getText(), wiFontParams(4, 4, infoDisplay.size), cmd);
+		wiSpriteFont font;
+		font.SetText(wiBackLog::getText());
+		font.params.posX = std::max(font.params.posX, 5.f);
+		font.params.posY = std::max(font.params.posY, 5.f);
+		float textheight = font.textHeight();
+		float screenheight = wiRenderer::GetDevice()->GetScreenHeight();
+		if (textheight > screenheight)
+		{
+			font.params.posY = screenheight - textheight;
+		}
+		font.Draw(cmd);
 		wiRenderer::GetDevice()->PresentEnd(cmd);
 		return;
 	}

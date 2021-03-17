@@ -909,12 +909,12 @@ bool CompileAndLoadShader(SHADERSTAGE stage, Shader& shader, const std::string& 
 	wiShaderCompiler::CompilerOutput output;
 	wiShaderCompiler::Compile(input, output);
 
-	if (output.success)
+	if (output.IsValid())
 	{
 		wiShaderCompiler::SaveShaderAndMetadata(shaderbinaryfilename, output);
 
 		wiBackLog::post(("shader compiled: " + shaderbinaryfilename).c_str());
-		return device->CreateShader(stage, output.shaderbinary.data(), output.shaderbinary.size(), &shader);
+		return device->CreateShader(stage, output.shaderdata, output.shadersize, &shader);
 	}
 	else
 	{
@@ -927,6 +927,7 @@ bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
 {
 	vector<uint8_t> buffer;
 	std::string shaderbinaryfilename = SHADERPATH + filename;
+	wiShaderCompiler::RegisterShader(shaderbinaryfilename);
 	if (wiHelper::FileRead(shaderbinaryfilename, buffer))
 	{
 		if (wiShaderCompiler::IsShaderOutdated(shaderbinaryfilename))

@@ -6,6 +6,8 @@
 
 #ifdef _WIN32
 
+#include <mutex>
+#include <unordered_set>
 #include <filesystem>
 #include <atlbase.h> // ComPtr
 
@@ -47,9 +49,10 @@ namespace wiShaderCompiler
 
 	void Compile(const CompilerInput& input, CompilerOutput& output)
 	{
+		output = CompilerOutput();
+
 		if (dxcCompiler == nullptr)
 		{
-			output.success = false;
 			return;
 		}
 
@@ -143,7 +146,6 @@ namespace wiShaderCompiler
 		std::vector<uint8_t> shadersourcedata;
 		if (!wiHelper::FileRead(input.shadersourcefilename, shadersourcedata))
 		{
-			output.success = false;
 			return;
 		}
 
@@ -162,9 +164,13 @@ namespace wiShaderCompiler
 				_COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource  // Resultant source object for included file, nullptr if not found.
 			) override
 			{
-				std::string& filename = output->dependencies.emplace_back();
-				wiHelper::StringConvert(pFilename, filename);
-				return dxcIncludeHandler->LoadSource(pFilename, ppIncludeSource);
+				HRESULT hr =  dxcIncludeHandler->LoadSource(pFilename, ppIncludeSource);
+				if (SUCCEEDED(hr))
+				{
+					std::string& filename = output->dependencies.emplace_back();
+					wiHelper::StringConvert(pFilename, filename);
+				}
+				return hr;
 			}
 			HRESULT STDMETHODCALLTYPE QueryInterface(
 				/* [in] */ REFIID riid,
@@ -208,7 +214,6 @@ namespace wiShaderCompiler
 		assert(SUCCEEDED(hr));
 		if (FAILED(hrStatus))
 		{
-			output.success = false;
 			return;
 		}
 
@@ -218,9 +223,13 @@ namespace wiShaderCompiler
 		if (pShader != nullptr)
 		{
 			output.dependencies.push_back(input.shadersourcefilename);
-			output.shaderbinary.resize(pShader->GetBufferSize());
-			std::memcpy(output.shaderbinary.data(), pShader->GetBufferPointer(), pShader->GetBufferSize());
-			output.success = true;
+			output.shaderdata = (const uint8_t*)pShader->GetBufferPointer();
+			output.shadersize = pShader->GetBufferSize();
+
+			// keep the blob alive == keep shader pointer valid!
+			auto internal_state = std::make_shared<CComPtr<IDxcBlob>>();
+			*internal_state = pShader;
+			output.internal_state = internal_state;
 		}
 
 		if (input.format == wiGraphics::SHADERFORMAT_HLSL6)
@@ -248,10 +257,16 @@ namespace wiShaderCompiler
 		wiArchive dependencyLibrary(wiHelper::ReplaceExtension(shaderfilename, shadermetaextension), false);
 		if (dependencyLibrary.IsOpen())
 		{
-			dependencyLibrary << output.dependencies;
+			std::string rootdir = dependencyLibrary.GetSourceDirectory();
+			std::vector<std::string> dependencies = output.dependencies;
+			for (auto& x : dependencies)
+			{
+				wiHelper::MakePathRelative(rootdir, x);
+			}
+			dependencyLibrary << dependencies;
 		}
 
-		return wiHelper::FileWrite(shaderfilename, output.shaderbinary.data(), output.shaderbinary.size());
+		return wiHelper::FileWrite(shaderfilename, output.shaderdata, output.shadersize);
 	}
 	bool IsShaderOutdated(const std::string& shaderfilename)
 	{
@@ -260,17 +275,24 @@ namespace wiShaderCompiler
 		{
 			return false;
 		}
+		std::filesystem::path dependencylibrarypath = wiHelper::ReplaceExtension(shaderfilename, shadermetaextension);
+		if (!std::filesystem::exists(dependencylibrarypath))
+		{
+			return false;
+		}
+
 		const auto tim = std::filesystem::last_write_time(filepath);
 
-		wiArchive dependencyLibrary(wiHelper::ReplaceExtension(shaderfilename, shadermetaextension));
+		wiArchive dependencyLibrary(dependencylibrarypath.string());
 		if (dependencyLibrary.IsOpen())
 		{
+			std::string rootdir = dependencyLibrary.GetSourceDirectory();
 			std::vector<std::string> dependencies;
 			dependencyLibrary >> dependencies;
 
 			for (auto& x : dependencies)
 			{
-				std::filesystem::path dependencypath = std::filesystem::absolute(x);
+				std::filesystem::path dependencypath = std::filesystem::absolute(rootdir + x);
 				if (std::filesystem::exists(dependencypath))
 				{
 					const auto dep_tim = std::filesystem::last_write_time(dependencypath);
@@ -281,11 +303,29 @@ namespace wiShaderCompiler
 					}
 				}
 			}
-
-			return false;
 		}
 
-		return true;
+		return false;
+	}
+
+	std::mutex locker;
+	std::unordered_set<std::string> registered_shaders;
+	void RegisterShader(const std::string& shaderfilename)
+	{
+		locker.lock();
+		registered_shaders.insert(shaderfilename);
+		locker.unlock();
+	}
+	bool CheckRegisteredShadersOutdated()
+	{
+		for (auto& x : registered_shaders)
+		{
+			if (IsShaderOutdated(x))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 }
 
@@ -297,6 +337,8 @@ namespace wiShaderCompiler
 	void Compile(const CompilerInput& input, CompilerOutput& output) {}
 	bool SaveShaderAndMetadata(const std::string& shaderfilename, const CompilerOutput& output) { return false; }
 	bool IsShaderOutdated(const std::string& shaderfilename) { return false; }
+	void RegisterShader(const std::string& shaderfilename) {}
+	bool CheckRegisteredShadersOutdated() { return false; }
 }
 
 #endif // WIN32

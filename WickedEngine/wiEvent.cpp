@@ -59,11 +59,14 @@ namespace wiEvent
 
 	void FireEvent(int id, uint64_t userdata)
 	{
-		manager->locker.lock();
 		// Callbacks that only live for once:
 		{
+			manager->locker.lock();
 			auto it = manager->subscribers_once.find(id);
-			if (it != manager->subscribers_once.end())
+			bool found = it != manager->subscribers_once.end();
+			manager->locker.unlock();
+
+			if (found)
 			{
 				auto& callbacks = it->second;
 				for (auto& callback : callbacks)
@@ -75,8 +78,12 @@ namespace wiEvent
 		}
 		// Callbacks that live until deleted:
 		{
+			manager->locker.lock();
 			auto it = manager->subscribers.find(id);
-			if (it != manager->subscribers.end())
+			bool found = it != manager->subscribers.end();
+			manager->locker.unlock();
+
+			if (found)
 			{
 				auto& callbacks = it->second;
 				for (auto& callback : callbacks)
@@ -85,6 +92,5 @@ namespace wiEvent
 				}
 			}
 		}
-		manager->locker.unlock();
 	}
 }

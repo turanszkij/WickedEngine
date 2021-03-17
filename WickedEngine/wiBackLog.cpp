@@ -21,17 +21,9 @@ using namespace wiGraphics;
 
 namespace wiBackLog
 {
-
-	enum State {
-		DISABLED,
-		IDLE,
-		ACTIVATING,
-		DEACTIVATING,
-	};
-
+	bool enabled = false;
 	deque<string> stream;
 	deque<string> history;
-	State state = DISABLED;
 	const float speed = 50.0f;
 	unsigned int deletefromline = 100;
 	float pos = -FLT_MAX;
@@ -40,21 +32,12 @@ namespace wiBackLog
 	int historyPos = 0;
 	wiSpriteFont font;
 	wiSpinLock logLock;
-
-	std::unique_ptr<Texture> backgroundTex;
+	Texture backgroundTex;
+	bool refitscroll = false;
 
 	void Toggle() 
 	{
-		switch (state) 
-		{
-		case IDLE:
-			state = DEACTIVATING;
-			break;
-		case DISABLED:
-			state = ACTIVATING;
-			break;
-		default:break;
-		};
+		enabled = !enabled;
 	}
 	void Scroll(int dir) 
 	{
@@ -91,46 +74,58 @@ namespace wiBackLog
 			}
 		}
 
-		if (state == DEACTIVATING)
-			pos -= speed;
-		else if (state == ACTIVATING)
+		if (enabled)
+		{
 			pos += speed;
-		if (pos <= -wiRenderer::GetDevice()->GetScreenHeight())
-		{
-			state = DISABLED;
-			pos = -(float)wiRenderer::GetDevice()->GetScreenHeight();
 		}
-		else if (pos > 0)
+		else
 		{
-			state = IDLE;
-			pos = 0;
+			pos -= speed;
 		}
+		pos = wiMath::Clamp(pos, -wiRenderer::GetDevice()->GetScreenHeight(), 0);
 
-		if (scroll + font.textHeight() > int(wiRenderer::GetDevice()->GetScreenHeight() * 0.8f))
+		font.SetText(getText());
+		if (refitscroll)
 		{
-			scroll -= 2;
+			refitscroll = false;
+			float textheight = font.textHeight();
+			float limit = wiRenderer::GetDevice()->GetScreenHeight() * 0.9f;
+			if (scroll + textheight > limit)
+			{
+				scroll = limit - textheight;
+			}
 		}
+		font.params.posX = 50;
+		font.params.posY = pos + scroll;
 	}
 	void Draw(CommandList cmd)
 	{
-		if (state != DISABLED) 
+		if (pos > -wiRenderer::GetDevice()->GetScreenHeight())
 		{
-			if (backgroundTex == nullptr)
+			if (!backgroundTex.IsValid())
 			{
 				const uint8_t colorData[] = { 0, 0, 43, 200, 43, 31, 141, 223 };
-				backgroundTex.reset(new Texture);
-				wiTextureHelper::CreateTexture(*backgroundTex.get(), colorData, 1, 2);
+				wiTextureHelper::CreateTexture(backgroundTex, colorData, 1, 2);
 			}
 
 			wiImageParams fx = wiImageParams((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 			fx.pos = XMFLOAT3(0, pos, 0);
 			fx.opacity = wiMath::Lerp(1, 0, -pos / wiRenderer::GetDevice()->GetScreenHeight());
-			wiImage::Draw(backgroundTex.get(), fx, cmd);
-			font.SetText(getText());
-			font.params.posX = 50;
-			font.params.posY = pos + scroll;
-			font.Draw(cmd);
+			wiImage::Draw(&backgroundTex, fx, cmd);
 			wiFont::Draw(inputArea.str(), wiFontParams(10, wiRenderer::GetDevice()->GetScreenHeight() - 10, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_BOTTOM), cmd);
+
+			Rect rect;
+			rect.left = 0;
+			rect.right = (int32_t)wiRenderer::GetDevice()->GetResolutionWidth();
+			rect.top = 0;
+			rect.bottom = int32_t(wiRenderer::GetDevice()->GetResolutionHeight() * 0.9f);
+			wiRenderer::GetDevice()->BindScissorRects(1, &rect, cmd);
+			font.Draw(cmd);
+			rect.left = -INT_MAX;
+			rect.right = INT_MAX;
+			rect.top = -INT_MAX;
+			rect.bottom = INT_MAX;
+			wiRenderer::GetDevice()->BindScissorRects(1, &rect, cmd);
 		}
 	}
 
@@ -160,6 +155,7 @@ namespace wiBackLog
 		if (stream.size() > deletefromline) {
 			stream.pop_front();
 		}
+		refitscroll = true;
 		logLock.unlock();
 
 #ifdef _WIN32
@@ -221,7 +217,7 @@ namespace wiBackLog
 
 	void setBackground(Texture* texture)
 	{
-		backgroundTex.reset(texture);
+		backgroundTex = *texture;
 	}
 	void setFontSize(int value)
 	{
@@ -232,6 +228,6 @@ namespace wiBackLog
 		font.params.spacingY = value;
 	}
 
-	bool isActive() { return state == IDLE; }
+	bool isActive() { return enabled; }
 
 }
