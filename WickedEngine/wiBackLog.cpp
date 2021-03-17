@@ -184,7 +184,8 @@ namespace wiBackLog
 	}
 	void deletefromInput() 
 	{
-		inputArea.pop_back();
+		if(!inputArea.empty())
+			inputArea.pop_back();
 	}
 
 	void historyPrev() 
