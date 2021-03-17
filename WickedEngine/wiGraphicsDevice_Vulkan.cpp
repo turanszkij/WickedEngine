@@ -1124,8 +1124,10 @@ using namespace Vulkan_Internal;
 	{
 		if (descriptorPool != VK_NULL_HANDLE)
 		{
+			device->allocationhandler->destroylocker.lock();
 			device->allocationhandler->destroyer_descriptorPools.push_back(std::make_pair(descriptorPool, device->FRAMECOUNT));
 			descriptorPool = VK_NULL_HANDLE;
+			device->allocationhandler->destroylocker.unlock();
 		}
 	}
 	void GraphicsDevice_Vulkan::FrameResources::DescriptorBinder::reset()
