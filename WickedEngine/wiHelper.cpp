@@ -345,6 +345,18 @@ namespace wiHelper
 		return "";
 	}
 
+	std::string ReplaceExtension(const std::string& filename, const std::string& extension)
+	{
+		size_t idx = filename.rfind('.');
+
+		if (idx != std::string::npos)
+		{
+			return filename.substr(0, idx + 1) + extension;
+		}
+
+		return filename;
+	}
+
 	void MakePathRelative(const std::string& rootdir, std::string& path)
 	{
 		if (rootdir.empty() || path.empty())

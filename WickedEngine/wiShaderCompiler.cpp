@@ -2,10 +2,12 @@
 #include "wiBackLog.h"
 #include "wiPlatform.h"
 #include "wiHelper.h"
+#include "wiArchive.h"
 
 #ifdef _WIN32
 
-#include <atlbase.h>
+#include <filesystem>
+#include <atlbase.h> // ComPtr
 
 #include "Utility/dxcapi.h"
 
@@ -138,17 +140,57 @@ namespace wiShaderCompiler
 			args.push_back(wstr.c_str());
 		}
 
+		std::vector<uint8_t> shadersourcedata;
+		if (!wiHelper::FileRead(input.shadersourcefilename, shadersourcedata))
+		{
+			output.success = false;
+			return;
+		}
+
 		DxcBuffer Source;
-		Source.Ptr = input.shadersourcedata;
-		Source.Size = input.shadersourcesize;
+		Source.Ptr = shadersourcedata.data();
+		Source.Size = shadersourcedata.size();
 		Source.Encoding = DXC_CP_ACP;
+
+		struct IncludeHandler : public IDxcIncludeHandler
+		{
+			const CompilerInput* input = nullptr;
+			CompilerOutput* output = nullptr;
+
+			HRESULT STDMETHODCALLTYPE LoadSource(
+				_In_z_ LPCWSTR pFilename,                                 // Candidate filename.
+				_COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource  // Resultant source object for included file, nullptr if not found.
+			) override
+			{
+				std::string& filename = output->dependencies.emplace_back();
+				wiHelper::StringConvert(pFilename, filename);
+				return dxcIncludeHandler->LoadSource(pFilename, ppIncludeSource);
+			}
+			HRESULT STDMETHODCALLTYPE QueryInterface(
+				/* [in] */ REFIID riid,
+				/* [iid_is][out] */ _COM_Outptr_ void __RPC_FAR* __RPC_FAR* ppvObject) override
+			{
+				return dxcIncludeHandler->QueryInterface(riid, ppvObject);
+			}
+
+			ULONG STDMETHODCALLTYPE AddRef(void) override
+			{
+				return 0;
+			}
+			ULONG STDMETHODCALLTYPE Release(void) override
+			{
+				return 0;
+			}
+		} includehandler;
+		includehandler.input = &input;
+		includehandler.output = &output;
 
 		CComPtr<IDxcResult> pResults;
 		HRESULT hr = dxcCompiler->Compile(
 			&Source,                // Source buffer.
 			args.data(),            // Array of pointers to arguments.
 			(uint32_t)args.size(),	// Number of arguments.
-			dxcIncludeHandler,		// User-provided interface to handle #include directives (optional).
+			&includehandler,		// User-provided interface to handle #include directives (optional).
 			IID_PPV_ARGS(&pResults) // Compiler output status, buffer, and errors.
 		);
 		assert(SUCCEEDED(hr));
@@ -175,6 +217,7 @@ namespace wiShaderCompiler
 		assert(SUCCEEDED(hr));
 		if (pShader != nullptr)
 		{
+			output.dependencies.push_back(input.shadersourcefilename);
 			output.shaderbinary.resize(pShader->GetBufferSize());
 			std::memcpy(output.shaderbinary.data(), pShader->GetBufferPointer(), pShader->GetBufferSize());
 			output.success = true;
@@ -196,6 +239,54 @@ namespace wiShaderCompiler
 		}
 
 	}
+
+	static const char* shadermetaextension = "wishadermeta";
+	bool SaveShaderAndMetadata(const std::string& shaderfilename, const CompilerOutput& output)
+	{
+		wiHelper::DirectoryCreate(wiHelper::GetDirectoryFromPath(shaderfilename));
+
+		wiArchive dependencyLibrary(wiHelper::ReplaceExtension(shaderfilename, shadermetaextension), false);
+		if (dependencyLibrary.IsOpen())
+		{
+			dependencyLibrary << output.dependencies;
+		}
+
+		return wiHelper::FileWrite(shaderfilename, output.shaderbinary.data(), output.shaderbinary.size());
+	}
+	bool IsShaderOutdated(const std::string& shaderfilename)
+	{
+		std::filesystem::path filepath = std::filesystem::absolute(shaderfilename);
+		if (!std::filesystem::exists(filepath))
+		{
+			return false;
+		}
+		const auto tim = std::filesystem::last_write_time(filepath);
+
+		wiArchive dependencyLibrary(wiHelper::ReplaceExtension(shaderfilename, shadermetaextension));
+		if (dependencyLibrary.IsOpen())
+		{
+			std::vector<std::string> dependencies;
+			dependencyLibrary >> dependencies;
+
+			for (auto& x : dependencies)
+			{
+				std::filesystem::path dependencypath = std::filesystem::absolute(x);
+				if (std::filesystem::exists(dependencypath))
+				{
+					const auto dep_tim = std::filesystem::last_write_time(dependencypath);
+
+					if (tim < dep_tim)
+					{
+						return true;
+					}
+				}
+			}
+
+			return false;
+		}
+
+		return true;
+	}
 }
 
 #else
@@ -204,6 +295,8 @@ namespace wiShaderCompiler
 {
 	void Initialize() {}
 	void Compile(const CompilerInput& input, CompilerOutput& output) {}
+	bool SaveShaderAndMetadata(const std::string& shaderfilename, const CompilerOutput& output) { return false; }
+	bool IsShaderOutdated(const std::string& shaderfilename) { return false; }
 }
 
 #endif // WIN32

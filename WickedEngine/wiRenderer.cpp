@@ -892,52 +892,53 @@ enum DEBUGRENDERING
 };
 PipelineState PSO_debug[DEBUGRENDERING_COUNT];
 
+bool CompileAndLoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
+{
+	std::string shaderbinaryfilename = SHADERPATH + filename;
+
+	wiShaderCompiler::CompilerInput input;
+	input.format = device->GetShaderFormat();
+	input.stage = stage;
+	input.shadersourcefilename = wiHelper::ReplaceExtension(SHADERSOURCEPATH + filename, "hlsl");
+
+	std::string sourcedir = input.shadersourcefilename;
+	wiHelper::MakePathAbsolute(sourcedir);
+	sourcedir = wiHelper::GetDirectoryFromPath(sourcedir);
+	input.include_directories.push_back(sourcedir);
+
+	wiShaderCompiler::CompilerOutput output;
+	wiShaderCompiler::Compile(input, output);
+
+	if (output.success)
+	{
+		wiShaderCompiler::SaveShaderAndMetadata(shaderbinaryfilename, output);
+
+		wiBackLog::post(("shader compiled: " + shaderbinaryfilename).c_str());
+		return device->CreateShader(stage, output.shaderbinary.data(), output.shaderbinary.size(), &shader);
+	}
+	else
+	{
+		wiBackLog::post(("shader compile FAILED: " + shaderbinaryfilename + "\n" + output.error_message).c_str());
+	}
+	return false;
+}
 
 bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
 {
 	vector<uint8_t> buffer;
-	if (wiHelper::FileRead(SHADERPATH + filename, buffer)) 
+	std::string shaderbinaryfilename = SHADERPATH + filename;
+	if (wiHelper::FileRead(shaderbinaryfilename, buffer))
 	{
+		if (wiShaderCompiler::IsShaderOutdated(shaderbinaryfilename))
+		{
+			return CompileAndLoadShader(stage, shader, filename);
+		}
+
 		return device->CreateShader(stage, buffer.data(), buffer.size(), &shader);
 	}
 	else
 	{
-		std::string sourcefilename = SHADERSOURCEPATH + filename;
-		size_t idx = sourcefilename.rfind('.');
-		if (idx != std::string::npos)
-		{
-			sourcefilename = sourcefilename.substr(0, idx + 1);
-			sourcefilename += "hlsl";
-			std::vector<uint8_t> sourcefiledata;
-			if (wiHelper::FileRead(sourcefilename, sourcefiledata))
-			{
-				wiShaderCompiler::CompilerInput input;
-				input.format = device->GetShaderFormat();
-				input.stage = stage;
-				input.shadersourcedata = sourcefiledata.data();
-				input.shadersourcesize = sourcefiledata.size();
-
-				std::string sourcedir = sourcefilename;
-				wiHelper::MakePathAbsolute(sourcedir);
-				sourcedir = wiHelper::GetDirectoryFromPath(sourcedir);
-				input.include_directories.push_back(sourcedir);
-
-				wiShaderCompiler::CompilerOutput output;
-				wiShaderCompiler::Compile(input, output);
-
-				if (output.success)
-				{
-					wiHelper::DirectoryCreate(SHADERPATH);
-					wiHelper::FileWrite(SHADERPATH + filename, output.shaderbinary.data(), output.shaderbinary.size());
-					wiBackLog::post(("shader compiled: " + SHADERPATH + filename).c_str());
-					return device->CreateShader(stage, output.shaderbinary.data(), output.shaderbinary.size(), &shader);
-				}
-				else
-				{
-					wiBackLog::post(("shader compile FAILED: " + SHADERPATH + filename + "\n" + output.error_message).c_str());
-				}
-			}
-		}
+		return CompileAndLoadShader(stage, shader, filename);
 	}
 	return false;
 }
