@@ -99,7 +99,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		particle.position = pos;
 		particle.force = 0;
 		particle.mass = xParticleMass;
-		particle.velocity = (nor + (float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) - 0.5f) * xParticleRandomFactor) * xParticleNormalFactor;
+		particle.velocity = xParticleVelocity + (nor + (float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) - 0.5f) * xParticleRandomFactor) * xParticleNormalFactor;
 		particle.rotationalVelocity = xParticleRotation + (rand(seed, uv) - 0.5f) * xParticleRandomFactor;
 		particle.maxLife = xParticleLifeSpan + xParticleLifeSpan * (rand(seed, uv) - 0.5f) * xParticleLifeSpanRandomness;
 		particle.life = particle.maxLife;
@@ -109,10 +109,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		particle.color_mirror |= ((rand(seed, uv) < 0.5f) << 30) & 0x20000000;
 
 		uint color_modifier = 0;
-		//color_modifier |= (uint)(255.0f * lerp(1, rand(seed, uv), xParticleRandomFactor)) << 0;
-		//color_modifier |= (uint)(255.0f * lerp(1, rand(seed, uv), xParticleRandomFactor)) << 8;
-		//color_modifier |= (uint)(255.0f * lerp(1, rand(seed, uv), xParticleRandomFactor)) << 16;
-		color_modifier = 0x00FFFFFF;
+		color_modifier |= (uint)(255.0 * lerp(1, rand(seed, uv), xParticleRandomColorFactor)) << 0;
+		color_modifier |= (uint)(255.0 * lerp(1, rand(seed, uv), xParticleRandomColorFactor)) << 8;
+		color_modifier |= (uint)(255.0 * lerp(1, rand(seed, uv), xParticleRandomColorFactor)) << 16;
 		particle.color_mirror |= xParticleColor & color_modifier;
 
 

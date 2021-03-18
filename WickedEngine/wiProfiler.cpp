@@ -27,8 +27,7 @@ namespace wiProfiler
 	std::vector<uint64_t> queryResults;
 	std::atomic<uint32_t> nextQuery{ 0 };
 	uint32_t writtenQueries[arraysize(queryHeap)] = {};
-	int query_write = 0;
-	int query_read = 0;
+	int queryheap_idx = 0;
 
 	struct Range
 	{
@@ -70,12 +69,6 @@ namespace wiProfiler
 			queryResults.resize(desc.queryCount);
 		}
 
-		nextQuery.store(0);
-		query_write++;
-		query_read = query_write + 1;
-		query_write %= arraysize(queryHeap);
-		query_read %= arraysize(queryHeap);
-
 		cpu_frame = BeginRangeCPU("CPU Frame");
 
 		CommandList cmd = wiRenderer::GetDevice()->BeginCommandList();
@@ -90,16 +83,22 @@ namespace wiProfiler
 
 		// note: read the GPU Frame end range manually because it will be on a separate command list than start point:
 		auto& gpu_range = ranges[gpu_frame];
-		gpu_range.gpuEnd[query_write] = nextQuery.fetch_add(1) % queryHeap[query_write].desc.queryCount;
-		device->QueryEnd(&queryHeap[query_write], gpu_range.gpuEnd[query_write], cmd);
+		gpu_range.gpuEnd[queryheap_idx] = nextQuery.fetch_add(1);
+		device->QueryEnd(&queryHeap[queryheap_idx], gpu_range.gpuEnd[queryheap_idx], cmd);
 
 		EndRange(cpu_frame);
 
 		double gpu_frequency = (double)device->GetTimestampFrequency() / 1000.0;
 
-		writtenQueries[query_write] = nextQuery.load();
-		device->QueryResolve(&queryHeap[query_write], 0, writtenQueries[query_write], cmd);
-		device->QueryRead(&queryHeap[query_read], 0, writtenQueries[query_read], queryResults.data());
+		device->QueryResolve(&queryHeap[queryheap_idx], 0, nextQuery.load(), cmd);
+
+		writtenQueries[queryheap_idx] = nextQuery.load();
+		nextQuery.store(0);
+		queryheap_idx = (queryheap_idx + 1) % arraysize(queryHeap);
+		if (writtenQueries[queryheap_idx] > 0)
+		{
+			wiRenderer::GetDevice()->QueryRead(&queryHeap[queryheap_idx], 0, writtenQueries[queryheap_idx], queryResults.data());
+		}
 
 		for (auto& x : ranges)
 		{
@@ -112,16 +111,16 @@ namespace wiProfiler
 			}
 			else
 			{
-				int begin_query = range.gpuBegin[query_read];
-				int end_query = range.gpuEnd[query_read];
+				int begin_query = range.gpuBegin[queryheap_idx];
+				int end_query = range.gpuEnd[queryheap_idx];
 				if (begin_query >= 0 && end_query >= 0)
 				{
 					uint64_t begin_result = queryResults[begin_query];
 					uint64_t end_result = queryResults[end_query];
 					range.time = (float)abs((double)(end_result - begin_result) / gpu_frequency);
-					range.gpuBegin[query_read] = -1;
-					range.gpuEnd[query_read] = -1;
 				}
+				range.gpuBegin[queryheap_idx] = -1;
+				range.gpuEnd[queryheap_idx] = -1;
 			}
 			range.times[range.avg_counter++ % arraysize(range.times)] = range.time;
 
@@ -185,8 +184,8 @@ namespace wiProfiler
 
 		ranges[id].cmd = cmd;
 
-		ranges[id].gpuBegin[query_write] = nextQuery.fetch_add(1);
-		wiRenderer::GetDevice()->QueryEnd(&queryHeap[query_write], ranges[id].gpuBegin[query_write], cmd);
+		ranges[id].gpuBegin[queryheap_idx] = nextQuery.fetch_add(1);
+		wiRenderer::GetDevice()->QueryEnd(&queryHeap[queryheap_idx], ranges[id].gpuBegin[queryheap_idx], cmd);
 
 		lock.unlock();
 
@@ -208,8 +207,8 @@ namespace wiProfiler
 			}
 			else
 			{
-				ranges[id].gpuEnd[query_write] = nextQuery.fetch_add(1);
-				wiRenderer::GetDevice()->QueryEnd(&queryHeap[query_write], it->second.gpuEnd[query_write], it->second.cmd);
+				ranges[id].gpuEnd[queryheap_idx] = nextQuery.fetch_add(1);
+				wiRenderer::GetDevice()->QueryEnd(&queryHeap[queryheap_idx], it->second.gpuEnd[queryheap_idx], it->second.cmd);
 			}
 		}
 		else

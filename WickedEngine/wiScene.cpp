@@ -1395,6 +1395,8 @@ namespace wiScene
 
 	void Scene::Update(float dt)
 	{
+		this->dt = dt;
+
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		if (dt > 0)
 		{
@@ -1411,11 +1413,46 @@ namespace wiScene
 			TLAS_instances.resize(objects.GetCount() * device->GetTopLevelAccelerationStructureInstanceSize());
 		}
 
+		// Occlusion culling read:
+		if(!wiRenderer::GetFreezeCullingCameraEnabled())
+		{
+			if (!queryHeap[0].IsValid())
+			{
+				GPUQueryHeapDesc desc;
+				desc.type = GPU_QUERY_TYPE_OCCLUSION_BINARY;
+				desc.queryCount = 2048;
+				for (int i = 0; i < arraysize(queryHeap); ++i)
+				{
+					bool success = wiRenderer::GetDevice()->CreateQueryHeap(&desc, &queryHeap[i]);
+					assert(success);
+				}
+				queryResults.resize(desc.queryCount);
+			}
+
+			// Previously allocated and written query count (newest one) is saved:
+			writtenQueries[queryheap_idx] = std::min(queryAllocator.load(), queryHeap[queryheap_idx].desc.queryCount);
+			queryAllocator.store(0);
+
+			// Advance to next query heap to use (this will be the oldest one that was written)
+			queryheap_idx = (queryheap_idx + 1) % arraysize(queryHeap);
+
+			// Read back data from the oldest query heap:
+			if (writtenQueries[queryheap_idx] > 0)
+			{
+				device->QueryRead(
+					&queryHeap[queryheap_idx],
+					0,
+					writtenQueries[queryheap_idx],
+					queryResults.data()
+				);
+			}
+		}
+
 		wiJobSystem::context ctx;
 
 		RunPreviousFrameTransformUpdateSystem(ctx);
 
-		RunAnimationUpdateSystem(ctx, dt);
+		RunAnimationUpdateSystem(ctx);
 
 		RunTransformUpdateSystem(ctx);
 
@@ -1423,7 +1460,7 @@ namespace wiScene
 
 		RunHierarchyUpdateSystem(ctx);
 
-		RunSpringUpdateSystem(ctx, dt);
+		RunSpringUpdateSystem(ctx);
 
 		RunInverseKinematicsUpdateSystem(ctx);
 
@@ -1431,7 +1468,7 @@ namespace wiScene
 
 		RunMeshUpdateSystem(ctx);
 
-		RunMaterialUpdateSystem(ctx, dt);
+		RunMaterialUpdateSystem(ctx);
 
 		RunImpostorUpdateSystem(ctx);
 
@@ -1453,7 +1490,7 @@ namespace wiScene
 
 		RunLightUpdateSystem(ctx);
 
-		RunParticleUpdateSystem(ctx, dt);
+		RunParticleUpdateSystem(ctx);
 
 		RunSoundUpdateSystem(ctx);
 
@@ -1988,7 +2025,7 @@ namespace wiScene
 			prev_transform.world_prev = transform.world;
 		});
 	}
-	void Scene::RunAnimationUpdateSystem(wiJobSystem::context& ctx, float dt)
+	void Scene::RunAnimationUpdateSystem(wiJobSystem::context& ctx)
 	{
 		for (size_t i = 0; i < animations.GetCount(); ++i)
 		{
@@ -2322,7 +2359,7 @@ namespace wiScene
 
 		}
 	}
-	void Scene::RunSpringUpdateSystem(wiJobSystem::context& ctx, float dt)
+	void Scene::RunSpringUpdateSystem(wiJobSystem::context& ctx)
 	{
 		static float time = 0;
 		time += dt;
@@ -2621,7 +2658,7 @@ namespace wiScene
 					subsetIndex++;
 				}
 
-				if ((flags & UPDATE_ACCELERATION_STRUCTURES) && cmd != INVALID_COMMANDLIST && (mesh._flags & MeshComponent::DIRTY_BLAS))
+				if (IsUpdateAccelerationStructuresEnabled() && cmd != INVALID_COMMANDLIST && (mesh._flags & MeshComponent::DIRTY_BLAS))
 				{
 					mesh._flags &= ~MeshComponent::DIRTY_BLAS;
 					locker.lock();
@@ -2747,7 +2784,7 @@ namespace wiScene
 
 		});
 	}
-	void Scene::RunMaterialUpdateSystem(wiJobSystem::context& ctx, float dt)
+	void Scene::RunMaterialUpdateSystem(wiJobSystem::context& ctx)
 	{
 		wiJobSystem::Dispatch(ctx, (uint32_t)materials.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
@@ -2812,6 +2849,26 @@ namespace wiScene
 
 			ObjectComponent& object = objects[args.jobIndex];
 			AABB& aabb = aabb_objects[args.jobIndex];
+
+			// Update occlusion culling status:
+			if (!wiRenderer::GetFreezeCullingCameraEnabled())
+			{
+				object.occlusionHistory <<= 1; // advance history by 1 frame
+				int query_id = object.occlusionQueries[queryheap_idx];
+				if (query_id >= 0 && (int)writtenQueries[queryheap_idx] > query_id)
+				{
+					uint64_t visible = queryResults[query_id];
+					if (visible)
+					{
+						object.occlusionHistory |= 1; // visible
+					}
+				}
+				else
+				{
+					object.occlusionHistory |= 1; // visible
+				}
+				object.occlusionQueries[queryheap_idx] = -1; // invalidate query
+			}
 
 			aabb = AABB();
 			object.rendertypeMask = 0;
@@ -2912,7 +2969,7 @@ namespace wiScene
 						object.prev_transform_index = -1;
 					}
 
-					if ((flags & UPDATE_ACCELERATION_STRUCTURES) && TLAS.IsValid())
+					if (IsUpdateAccelerationStructuresEnabled() && TLAS.IsValid())
 					{
 						GraphicsDevice* device = wiRenderer::GetDevice();
 						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
@@ -3089,7 +3146,7 @@ namespace wiScene
 
 		});
 	}
-	void Scene::RunParticleUpdateSystem(wiJobSystem::context& ctx, float dt)
+	void Scene::RunParticleUpdateSystem(wiJobSystem::context& ctx)
 	{
 		wiJobSystem::Dispatch(ctx, (uint32_t)emitters.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 

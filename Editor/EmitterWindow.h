@@ -39,9 +39,18 @@ public:
 	wiSlider emitLifeSlider;
 	wiSlider emitRandomnessSlider;
 	wiSlider emitLifeRandomnessSlider;
+	wiSlider emitColorRandomnessSlider;
 	wiSlider emitMotionBlurSlider;
 	wiSlider emitMassSlider;
 	wiSlider timestepSlider;
+	wiSlider dragSlider;
+	wiTextInputField VelocityXInput;
+	wiTextInputField VelocityYInput;
+	wiTextInputField VelocityZInput;
+	wiTextInputField GravityXInput;
+	wiTextInputField GravityYInput;
+	wiTextInputField GravityZInput;
+
 	wiSlider sph_h_Slider;
 	wiSlider sph_K_Slider;
 	wiSlider sph_p0_Slider;

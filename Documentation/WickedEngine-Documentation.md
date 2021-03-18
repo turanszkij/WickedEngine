@@ -682,15 +682,15 @@ To read more about variable rate shading, refer to the [DirectX specifications.]
 
 #### GraphicsDevice_DX11
 [[Header]](../WickedEngine/wiGraphicsDevice_DX11.h) [[Cpp]](../WickedEngine/wiGraphicsDevice_DX11.cpp)
-DirectX11 rendering interface
+DirectX11 implementation for rendering interface
 
 #### GraphicsDevice_DX12
 [[Header]](../WickedEngine/wiGraphicsDevice_DX12.h) [[Cpp]](../WickedEngine/wiGraphicsDevice_DX12.cpp)
-DirectX12 rendering interface
+DirectX12 implementation for rendering interface
 
 #### wiGraphicsDevice_Vulkan
 [[Header]](../WickedEngine/wiGraphicsDevice_Vulkan.h) [[Cpp]](../WickedEngine/wiGraphicsDevice_Vulkan.cpp)
-Vulkan rendering interface (It is only compiled if Vulkan SDK is installed and the following environment variable is available: **$(VULKAN_SDK)**)
+Vulkan implementation for rendering interface
 
 #### GraphicsDescriptors
 [[Header]](../WickedEngine/wiGraphicsDescriptors.h) [[Cpp]](../WickedEngine/wiGraphicsDescriptors.cpp)

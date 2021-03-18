@@ -624,8 +624,6 @@ namespace wiRenderer
 
 	// Render occluders against a depth buffer
 	void OcclusionCulling_Render(const wiScene::CameraComponent& camera_previous, const Visibility& vis, wiGraphics::CommandList cmd);
-	// Read the occlusion culling results of the previous call to OcclusionCulling_Render. This must be done on the main thread!
-	void OcclusionCulling_Read(wiScene::Scene& scene, const Visibility& vis);
 
 
 	enum MIPGENFILTER

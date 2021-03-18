@@ -632,7 +632,7 @@ namespace wiScene
 
 		// occlusion result history bitfield (32 bit->32 frame history)
 		uint32_t occlusionHistory = ~0;
-		int occlusionQueries[wiGraphics::GraphicsDevice::GetBackBufferCount() + 1] = {};
+		int occlusionQueries[wiGraphics::GraphicsDevice::GetBackBufferCount() + 1];
 
 		inline bool IsOccluded() const
 		{
@@ -1274,12 +1274,16 @@ namespace wiScene
 		wiECS::ComponentManager<SpringComponent> springs;
 
 		// Non-serialized attributes:
+		float dt = 0;
 		enum FLAGS
 		{
 			EMPTY = 0,
 			UPDATE_ACCELERATION_STRUCTURES = 1 << 0,
 		};
 		uint32_t flags = EMPTY;
+
+		constexpr void SetUpdateAccelerationStructuresEnabled(bool value){ if (value) { flags |= UPDATE_ACCELERATION_STRUCTURES; } else { flags &= ~UPDATE_ACCELERATION_STRUCTURES; } }
+		constexpr bool IsUpdateAccelerationStructuresEnabled() const { return flags & UPDATE_ACCELERATION_STRUCTURES; }
 
 		wiSpinLock locker;
 		AABB bounds;
@@ -1295,8 +1299,8 @@ namespace wiScene
 		wiGraphics::GPUQueryHeap queryHeap[arraysize(ObjectComponent::occlusionQueries)];
 		std::vector<uint64_t> queryResults;
 		uint32_t writtenQueries[arraysize(queryHeap)] = {};
-		int query_write = 0;
-		int query_read = 0;
+		int queryheap_idx = 0;
+		std::atomic<uint32_t> queryAllocator{ 0 };
 
 		// Update all components by a given timestep (in seconds):
 		//	This is an expensive function, prefer to call it only once per frame!
@@ -1376,14 +1380,14 @@ namespace wiScene
 		void Serialize(wiArchive& archive);
 
 		void RunPreviousFrameTransformUpdateSystem(wiJobSystem::context& ctx);
-		void RunAnimationUpdateSystem(wiJobSystem::context& ctx, float dt);
+		void RunAnimationUpdateSystem(wiJobSystem::context& ctx);
 		void RunTransformUpdateSystem(wiJobSystem::context& ctx);
 		void RunHierarchyUpdateSystem(wiJobSystem::context& ctx);
-		void RunSpringUpdateSystem(wiJobSystem::context& ctx, float dt);
+		void RunSpringUpdateSystem(wiJobSystem::context& ctx);
 		void RunInverseKinematicsUpdateSystem(wiJobSystem::context& ctx);
 		void RunArmatureUpdateSystem(wiJobSystem::context& ctx);
 		void RunMeshUpdateSystem(wiJobSystem::context& ctx);
-		void RunMaterialUpdateSystem(wiJobSystem::context& ctx, float dt);
+		void RunMaterialUpdateSystem(wiJobSystem::context& ctx);
 		void RunImpostorUpdateSystem(wiJobSystem::context& ctx);
 		void RunObjectUpdateSystem(wiJobSystem::context& ctx);
 		void RunCameraUpdateSystem(wiJobSystem::context& ctx);
@@ -1391,7 +1395,7 @@ namespace wiScene
 		void RunProbeUpdateSystem(wiJobSystem::context& ctx);
 		void RunForceUpdateSystem(wiJobSystem::context& ctx);
 		void RunLightUpdateSystem(wiJobSystem::context& ctx);
-		void RunParticleUpdateSystem(wiJobSystem::context& ctx, float dt);
+		void RunParticleUpdateSystem(wiJobSystem::context& ctx);
 		void RunWeatherUpdateSystem(wiJobSystem::context& ctx);
 		void RunSoundUpdateSystem(wiJobSystem::context& ctx);
 	};

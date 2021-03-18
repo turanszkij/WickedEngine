@@ -844,9 +844,6 @@ namespace Vulkan_Internal
 
 		VkGraphicsPipelineCreateInfo pipelineInfo = {};
 		VkPipelineShaderStageCreateInfo shaderStages[SHADERSTAGE_COUNT] = {};
-		VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
-		std::vector<VkVertexInputBindingDescription> bindings;
-		std::vector<VkVertexInputAttributeDescription> attributes;
 		VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
 		VkPipelineRasterizationStateCreateInfo rasterizer = {};
 		VkPipelineRasterizationDepthClipStateCreateInfoEXT depthclip = {};
@@ -1127,8 +1124,10 @@ using namespace Vulkan_Internal;
 	{
 		if (descriptorPool != VK_NULL_HANDLE)
 		{
+			device->allocationhandler->destroylocker.lock();
 			device->allocationhandler->destroyer_descriptorPools.push_back(std::make_pair(descriptorPool, device->FRAMECOUNT));
 			descriptorPool = VK_NULL_HANDLE;
+			device->allocationhandler->destroylocker.unlock();
 		}
 	}
 	void GraphicsDevice_Vulkan::FrameResources::DescriptorBinder::reset()
@@ -1551,6 +1550,7 @@ using namespace Vulkan_Internal;
 
 		const PipelineState* pso = active_pso[cmd];
 		size_t pipeline_hash = prev_pipeline_hash[cmd];
+		wiHelper::hash_combine(pipeline_hash, vb_hash[cmd]);
 		auto internal_state = to_internal(pso);
 
 		VkPipeline pipeline = VK_NULL_HANDLE;
@@ -1655,6 +1655,69 @@ using namespace Vulkan_Internal;
 
 				pipelineInfo.pColorBlendState = &colorBlending;
 
+				// Input layout:
+				VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
+				vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+				std::vector<VkVertexInputBindingDescription> bindings;
+				std::vector<VkVertexInputAttributeDescription> attributes;
+				if (pso->desc.il != nullptr)
+				{
+					uint32_t lastBinding = 0xFFFFFFFF;
+					uint32_t i = 0;
+					for (auto& x : pso->desc.il->elements)
+					{
+						VkVertexInputBindingDescription bind = {};
+						bind.binding = x.InputSlot;
+						bind.inputRate = x.InputSlotClass == INPUT_PER_VERTEX_DATA ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
+						bind.stride = vb_strides[cmd][i];
+
+						if (lastBinding != bind.binding)
+						{
+							bindings.push_back(bind);
+							lastBinding = bind.binding;
+						}
+						else
+						{
+							bindings.back().stride += bind.stride;
+						}
+
+						i++;
+					}
+
+					uint32_t offset = 0;
+					i = 0;
+					lastBinding = 0xFFFFFFFF;
+					for (auto& x : pso->desc.il->elements)
+					{
+						VkVertexInputAttributeDescription attr = {};
+						attr.binding = x.InputSlot;
+						if (attr.binding != lastBinding)
+						{
+							lastBinding = attr.binding;
+							offset = 0;
+						}
+						attr.format = _ConvertFormat(x.Format);
+						attr.location = i;
+						attr.offset = x.AlignedByteOffset;
+						if (attr.offset == InputLayout::APPEND_ALIGNED_ELEMENT)
+						{
+							// need to manually resolve this from the format spec.
+							attr.offset = offset;
+							offset += GetFormatStride(x.Format);
+						}
+
+						attributes.push_back(attr);
+
+						i++;
+					}
+
+					vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindings.size());
+					vertexInputInfo.pVertexBindingDescriptions = bindings.data();
+					vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributes.size());
+					vertexInputInfo.pVertexAttributeDescriptions = attributes.data();
+				}
+				pipelineInfo.pVertexInputState = &vertexInputInfo;
+
 				VkResult res = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
 				assert(res == VK_SUCCESS);
 
@@ -1713,28 +1776,34 @@ using namespace Vulkan_Internal;
 				}
 			}
 
-			VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-			VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-
-			if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+			if (!memoryBarriers.empty() ||
+				!bufferBarriers.empty() ||
+				!imageBarriers.empty()
+				)
 			{
-				srcStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
-				dstStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+				VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+				VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
+				if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+				{
+					srcStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+					dstStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+				}
+
+				vkCmdPipelineBarrier(
+					GetDirectCommandList(cmd),
+					srcStage,
+					dstStage,
+					0,
+					(uint32_t)memoryBarriers.size(), memoryBarriers.data(),
+					(uint32_t)bufferBarriers.size(), bufferBarriers.data(),
+					(uint32_t)imageBarriers.size(), imageBarriers.data()
+				);
+
+				memoryBarriers.clear();
+				imageBarriers.clear();
+				bufferBarriers.clear();
 			}
-
-			vkCmdPipelineBarrier(
-				GetDirectCommandList(cmd),
-				srcStage,
-				dstStage,
-				0,
-				(uint32_t)memoryBarriers.size(), memoryBarriers.data(),
-				(uint32_t)bufferBarriers.size(), bufferBarriers.data(),
-				(uint32_t)imageBarriers.size(), imageBarriers.data()
-			);
-
-			memoryBarriers.clear();
-			imageBarriers.clear();
-			bufferBarriers.clear();
 		}
 	}
 	void GraphicsDevice_Vulkan::predraw(CommandList cmd)
@@ -2843,7 +2912,7 @@ using namespace Vulkan_Internal;
 		return result;
 	}
 
-	bool GraphicsDevice_Vulkan::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer)
+	bool GraphicsDevice_Vulkan::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) const
 	{
 		auto internal_state = std::make_shared<Buffer_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
@@ -3092,7 +3161,7 @@ using namespace Vulkan_Internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture)
+	bool GraphicsDevice_Vulkan::CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const
 	{
 		auto internal_state = std::make_shared<Texture_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
@@ -3382,7 +3451,7 @@ using namespace Vulkan_Internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader)
+	bool GraphicsDevice_Vulkan::CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const
 	{
 		auto internal_state = std::make_shared<Shader_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
@@ -3695,7 +3764,7 @@ using namespace Vulkan_Internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
+	bool GraphicsDevice_Vulkan::CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) const
 	{
 		auto internal_state = std::make_shared<Sampler_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
@@ -3900,7 +3969,7 @@ using namespace Vulkan_Internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateQueryHeap(const GPUQueryHeapDesc* pDesc, GPUQueryHeap* pQueryHeap)
+	bool GraphicsDevice_Vulkan::CreateQueryHeap(const GPUQueryHeapDesc* pDesc, GPUQueryHeap* pQueryHeap) const
 	{
 		auto internal_state = std::make_shared<QueryHeap_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
@@ -3929,7 +3998,7 @@ using namespace Vulkan_Internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
+	bool GraphicsDevice_Vulkan::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) const
 	{
 		auto internal_state = std::make_shared<PipelineState_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
@@ -4186,71 +4255,6 @@ using namespace Vulkan_Internal;
 
 		// Fixed function states:
 
-		// Input layout:
-		VkPipelineVertexInputStateCreateInfo& vertexInputInfo = internal_state->vertexInputInfo;
-		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		auto& bindings = internal_state->bindings;
-		auto& attributes = internal_state->attributes;
-		if (pso->desc.il != nullptr)
-		{
-			uint32_t lastBinding = 0xFFFFFFFF;
-			for (auto& x : pso->desc.il->elements)
-			{
-				VkVertexInputBindingDescription bind = {};
-				bind.binding = x.InputSlot;
-				bind.inputRate = x.InputSlotClass == INPUT_PER_VERTEX_DATA ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
-				bind.stride = x.AlignedByteOffset;
-				if (bind.stride == InputLayout::APPEND_ALIGNED_ELEMENT)
-				{
-					// need to manually resolve this from the format spec.
-					bind.stride = GetFormatStride(x.Format);
-				}
-
-				if (lastBinding != bind.binding)
-				{
-					bindings.push_back(bind);
-					lastBinding = bind.binding;
-				}
-				else
-				{
-					bindings.back().stride += bind.stride;
-				}
-			}
-
-			uint32_t offset = 0;
-			uint32_t i = 0;
-			lastBinding = 0xFFFFFFFF;
-			for (auto& x : pso->desc.il->elements)
-			{
-				VkVertexInputAttributeDescription attr = {};
-				attr.binding = x.InputSlot;
-				if (attr.binding != lastBinding)
-				{
-					lastBinding = attr.binding;
-					offset = 0;
-				}
-				attr.format = _ConvertFormat(x.Format);
-				attr.location = i;
-				attr.offset = x.AlignedByteOffset;
-				if (attr.offset == InputLayout::APPEND_ALIGNED_ELEMENT)
-				{
-					// need to manually resolve this from the format spec.
-					attr.offset = offset;
-					offset += GetFormatStride(x.Format);
-				}
-
-				attributes.push_back(attr);
-
-				i++;
-			}
-
-			vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindings.size());
-			vertexInputInfo.pVertexBindingDescriptions = bindings.data();
-			vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributes.size());
-			vertexInputInfo.pVertexAttributeDescriptions = attributes.data();
-		}
-		pipelineInfo.pVertexInputState = &vertexInputInfo;
-
 		// Primitive type:
 		VkPipelineInputAssemblyStateCreateInfo& inputAssembly = internal_state->inputAssembly;
 		inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -4412,7 +4416,7 @@ using namespace Vulkan_Internal;
 
 		return res == VK_TRUE;
 	}
-	bool GraphicsDevice_Vulkan::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
+	bool GraphicsDevice_Vulkan::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) const
 	{
 		auto internal_state = std::make_shared<RenderPass_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
@@ -4726,7 +4730,7 @@ using namespace Vulkan_Internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh)
+	bool GraphicsDevice_Vulkan::CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) const
 	{
 		auto internal_state = std::make_shared<BVH_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
@@ -4918,7 +4922,7 @@ using namespace Vulkan_Internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso)
+	bool GraphicsDevice_Vulkan::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) const
 	{
 		auto internal_state = std::make_shared<RTPipelineState_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
@@ -5018,7 +5022,7 @@ using namespace Vulkan_Internal;
 		return res == VK_SUCCESS;
 	}
 	
-	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount)
+	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const
 	{
 		auto internal_state = to_internal(texture);
 
@@ -5254,7 +5258,7 @@ using namespace Vulkan_Internal;
 		}
 		return -1;
 	}
-	int GraphicsDevice_Vulkan::CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size)
+	int GraphicsDevice_Vulkan::CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size) const
 	{
 		auto internal_state = to_internal(buffer);
 		const GPUBufferDesc& desc = buffer->GetDesc();
@@ -5415,7 +5419,7 @@ using namespace Vulkan_Internal;
 		return -1;
 	}
 
-	int GraphicsDevice_Vulkan::GetDescriptorIndex(const GPUResource* resource, SUBRESOURCE_TYPE type, int subresource)
+	int GraphicsDevice_Vulkan::GetDescriptorIndex(const GPUResource* resource, SUBRESOURCE_TYPE type, int subresource) const
 	{
 		if (resource == nullptr || !resource->IsValid())
 			return -1;
@@ -5491,7 +5495,7 @@ using namespace Vulkan_Internal;
 
 		return -1;
 	}
-	int GraphicsDevice_Vulkan::GetDescriptorIndex(const Sampler* sampler)
+	int GraphicsDevice_Vulkan::GetDescriptorIndex(const Sampler* sampler) const
 	{
 		if (sampler == nullptr || !sampler->IsValid())
 			return -1;
@@ -5500,7 +5504,7 @@ using namespace Vulkan_Internal;
 		return internal_state->index;
 	}
 
-	void GraphicsDevice_Vulkan::WriteShadingRateValue(SHADING_RATE rate, void* dest)
+	void GraphicsDevice_Vulkan::WriteShadingRateValue(SHADING_RATE rate, void* dest) const
 	{
 		// How to compute shading rate value texel data:
 		// https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#primsrast-fragment-shading-rate-attachment
@@ -5532,7 +5536,7 @@ using namespace Vulkan_Internal;
 		}
 
 	}
-	void GraphicsDevice_Vulkan::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest)
+	void GraphicsDevice_Vulkan::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const
 	{
 		VkAccelerationStructureInstanceKHR* desc = (VkAccelerationStructureInstanceKHR*)dest;
 		memcpy(&desc->transform, &instance->transform, sizeof(desc->transform));
@@ -5545,13 +5549,13 @@ using namespace Vulkan_Internal;
 		auto internal_state = to_internal((RaytracingAccelerationStructure*)&instance->bottomlevel);
 		desc->accelerationStructureReference = internal_state->as_address;
 	}
-	void GraphicsDevice_Vulkan::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest)
+	void GraphicsDevice_Vulkan::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const
 	{
 		VkResult res = vkGetRayTracingShaderGroupHandlesKHR(device, to_internal(rtpso)->pipeline, group_index, 1, SHADER_IDENTIFIER_SIZE, dest);
 		assert(res == VK_SUCCESS);
 	}
 	
-	void GraphicsDevice_Vulkan::Map(const GPUResource* resource, Mapping* mapping)
+	void GraphicsDevice_Vulkan::Map(const GPUResource* resource, Mapping* mapping) const
 	{
 		VkDeviceMemory memory = VK_NULL_HANDLE;
 
@@ -5586,7 +5590,7 @@ using namespace Vulkan_Internal;
 			mapping->rowpitch = 0;
 		}
 	}
-	void GraphicsDevice_Vulkan::Unmap(const GPUResource* resource)
+	void GraphicsDevice_Vulkan::Unmap(const GPUResource* resource) const
 	{
 		if (resource->type == GPUResource::GPU_RESOURCE_TYPE::BUFFER)
 		{
@@ -5601,7 +5605,7 @@ using namespace Vulkan_Internal;
 			vkUnmapMemory(device, internal_state->allocation->GetMemory());
 		}
 	}
-	void GraphicsDevice_Vulkan::QueryRead(const GPUQueryHeap* heap, uint32_t index, uint32_t count, uint64_t* results)
+	void GraphicsDevice_Vulkan::QueryRead(const GPUQueryHeap* heap, uint32_t index, uint32_t count, uint64_t* results) const
 	{
 		if (count == 0)
 			return;
@@ -5618,7 +5622,6 @@ using namespace Vulkan_Internal;
 			sizeof(uint64_t),
 			VK_QUERY_RESULT_64_BIT
 		);
-		assert(res == VK_SUCCESS);
 
 		vkResetQueryPool(
 			device,
@@ -5685,6 +5688,7 @@ using namespace Vulkan_Internal;
 				return;
 			}
 		}
+		barrier_flush(cmd);
 
 		VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 		VkRenderPassBeginInfo renderPassInfo = {};
@@ -5811,6 +5815,11 @@ using namespace Vulkan_Internal;
 		dirty_pso[cmd] = false;
 		prev_shadingrate[cmd] = SHADING_RATE_INVALID;
 		pushconstants[cmd] = {};
+		vb_hash[cmd] = 0;
+		for (int i = 0; i < arraysize(vb_strides[cmd]); ++i)
+		{
+			vb_strides[cmd][i] = 0;
+		}
 
 		return cmd;
 	}
@@ -6112,11 +6121,16 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd)
 	{
+		size_t hash = 0;
+
 		VkDeviceSize voffsets[8] = {};
 		VkBuffer vbuffers[8] = {};
 		assert(count <= 8);
 		for (uint32_t i = 0; i < count; ++i)
 		{
+			wiHelper::hash_combine(hash, strides[i]);
+			vb_strides[cmd][i] = strides[i];
+
 			if (vertexBuffers[i] == nullptr || !vertexBuffers[i]->IsValid())
 			{
 				vbuffers[i] = nullBuffer;
@@ -6131,8 +6145,18 @@ using namespace Vulkan_Internal;
 				}
 			}
 		}
+		for (int i = count; i < arraysize(vb_strides[cmd]); ++i)
+		{
+			vb_strides[cmd][i] = 0;
+		}
 
 		vkCmdBindVertexBuffers(GetDirectCommandList(cmd), static_cast<uint32_t>(slot), static_cast<uint32_t>(count), vbuffers, voffsets);
+
+		if (hash != vb_hash[cmd])
+		{
+			vb_hash[cmd] = hash;
+			dirty_pso[cmd] = true;
+		}
 	}
 	void GraphicsDevice_Vulkan::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd)
 	{

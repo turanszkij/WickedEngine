@@ -189,8 +189,8 @@ namespace wiGraphics
 		FORMAT_R32G32_FLOAT,
 		FORMAT_R32G32_UINT,
 		FORMAT_R32G32_SINT,
-		FORMAT_R32G8X24_TYPELESS,		// depth + stencil (alias)
-		FORMAT_D32_FLOAT_S8X24_UINT,	// depth + stencil
+		FORMAT_R32G8X24_TYPELESS,		// depth (32-bit) + stencil (8-bit) + shader resource (32-bit)
+		FORMAT_D32_FLOAT_S8X24_UINT,	// depth (32-bit) + stencil (8-bit)
 
 		FORMAT_R10G10B10A2_UNORM,
 		FORMAT_R10G10B10A2_UINT,
@@ -207,21 +207,21 @@ namespace wiGraphics
 		FORMAT_R16G16_UINT,
 		FORMAT_R16G16_SNORM,
 		FORMAT_R16G16_SINT,
-		FORMAT_R32_TYPELESS,			// depth (alias)
-		FORMAT_D32_FLOAT,				// depth
+		FORMAT_R32_TYPELESS,			// depth (32-bit) + shader resource (32-bit)
+		FORMAT_D32_FLOAT,				// depth (32-bit)
 		FORMAT_R32_FLOAT,
 		FORMAT_R32_UINT,
 		FORMAT_R32_SINT, 
-		FORMAT_R24G8_TYPELESS,			// depth + stencil (alias)
-		FORMAT_D24_UNORM_S8_UINT,		// depth + stencil
+		FORMAT_R24G8_TYPELESS,			// depth (24-bit) + stencil (8-bit) + shader resource (24-bit)
+		FORMAT_D24_UNORM_S8_UINT,		// depth (24-bit) + stencil (8-bit)
 
 		FORMAT_R8G8_UNORM,
 		FORMAT_R8G8_UINT,
 		FORMAT_R8G8_SNORM,
 		FORMAT_R8G8_SINT,
-		FORMAT_R16_TYPELESS,			// depth (alias)
+		FORMAT_R16_TYPELESS,			// depth (16-bit) + shader resource (16-bit)
 		FORMAT_R16_FLOAT,
-		FORMAT_D16_UNORM,				// depth
+		FORMAT_D16_UNORM,				// depth (16-bit)
 		FORMAT_R16_UNORM,
 		FORMAT_R16_UINT,
 		FORMAT_R16_SNORM,
@@ -370,7 +370,6 @@ namespace wiGraphics
 			uint32_t InputSlot = 0;
 			uint32_t AlignedByteOffset = APPEND_ALIGNED_ELEMENT;
 			INPUT_CLASSIFICATION InputSlotClass = INPUT_CLASSIFICATION::INPUT_PER_VERTEX_DATA;
-			uint32_t InstanceDataStepRate = 0;
 		};
 		std::vector<Element> elements;
 	};
