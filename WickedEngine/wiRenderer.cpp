@@ -918,7 +918,7 @@ bool CompileAndLoadShader(SHADERSTAGE stage, Shader& shader, const std::string& 
 	}
 	else
 	{
-		wiBackLog::post(("shader compile FAILED: " + shaderbinaryfilename + "\n" + output.error_message).c_str());
+		wiBackLog::post(("shader compile FAILED: " + input.shadersourcefilename + "\n" + output.error_message).c_str());
 	}
 	return false;
 }

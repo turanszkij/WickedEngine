@@ -72,7 +72,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);$(VULKAN_SDK)/Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <FxCompile>
       <DisableOptimizations>false</DisableOptimizations>
@@ -85,7 +85,8 @@
       <ObjectFileOutput>shaders/%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <PostBuildEvent>
-      <Command>xcopy "$(SolutionDir)WickedEngine\dxcompiler.dll" "$(OutDir)" /c /y</Command>
+      <Command>xcopy "$(SolutionDir)WickedEngine\dxcompiler.dll" "$(OutDir)" /c /y
+xcopy "$(SolutionDir)WickedEngine\dxil.dll" "$(OutDir)" /c /y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -108,14 +109,15 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);$(VULKAN_SDK)/Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
       <ObjectFileOutput>shaders/%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <PostBuildEvent>
-      <Command>xcopy "$(SolutionDir)WickedEngine\dxcompiler.dll" "$(OutDir)" /c /y</Command>
+      <Command>xcopy "$(SolutionDir)WickedEngine\dxcompiler.dll" "$(OutDir)" /c /y
+xcopy "$(SolutionDir)WickedEngine\dxil.dll" "$(OutDir)" /c /y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

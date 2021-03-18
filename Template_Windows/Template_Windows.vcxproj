@@ -72,10 +72,11 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);$(VULKAN_SDK)/Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "$(SolutionDir)WickedEngine\dxcompiler.dll" "$(OutDir)" /c /y</Command>
+      <Command>xcopy "$(SolutionDir)WickedEngine\dxcompiler.dll" "$(OutDir)" /c /y
+xcopy "$(SolutionDir)WickedEngine\dxil.dll" "$(OutDir)" /c /y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -92,10 +93,11 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);$(VULKAN_SDK)/Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "$(SolutionDir)WickedEngine\dxcompiler.dll" "$(OutDir)" /c /y</Command>
+      <Command>xcopy "$(SolutionDir)WickedEngine\dxcompiler.dll" "$(OutDir)" /c /y
+xcopy "$(SolutionDir)WickedEngine\dxil.dll" "$(OutDir)" /c /y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
