@@ -254,6 +254,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXMath.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXMathCommon.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXPackedVector.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dxcapi.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\GLSL.std.450.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\include\spirv\unified1\spirv.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\replace_new.h" />

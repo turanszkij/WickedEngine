@@ -11,6 +11,7 @@ namespace wiShaderCompiler
 	enum FLAGS
 	{
 		FLAG_NONE = 0,
+		FLAG_DISABLE_OPTIMIZATION = 1 << 0,
 	};
 	struct CompilerInput
 	{
@@ -18,6 +19,7 @@ namespace wiShaderCompiler
 		wiGraphics::SHADERFORMAT format = wiGraphics::SHADERFORMAT::SHADERFORMAT_NONE;
 		wiGraphics::SHADERSTAGE stage = wiGraphics::SHADERSTAGE_COUNT;
 		std::string shadersourcefilename;
+		std::string entrypoint = "main";
 		std::vector<std::string> include_directories;
 		std::vector<std::string> defines;
 	};

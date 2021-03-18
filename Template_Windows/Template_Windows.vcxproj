@@ -76,7 +76,8 @@
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(SolutionDir)WickedEngine\dxcompiler.dll" "$(OutDir)" /c /y
-xcopy "$(SolutionDir)WickedEngine\dxil.dll" "$(OutDir)" /c /y</Command>
+xcopy "$(SolutionDir)WickedEngine\dxil.dll" "$(OutDir)" /c /y
+xcopy "$(SolutionDir)WickedEngine\d3dcompiler_47.dll" "$(OutDir)" /c /y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -97,7 +98,8 @@ xcopy "$(SolutionDir)WickedEngine\dxil.dll" "$(OutDir)" /c /y</Command>
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(SolutionDir)WickedEngine\dxcompiler.dll" "$(OutDir)" /c /y
-xcopy "$(SolutionDir)WickedEngine\dxil.dll" "$(OutDir)" /c /y</Command>
+xcopy "$(SolutionDir)WickedEngine\dxil.dll" "$(OutDir)" /c /y
+xcopy "$(SolutionDir)WickedEngine\d3dcompiler_47.dll" "$(OutDir)" /c /y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

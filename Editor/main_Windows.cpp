@@ -249,17 +249,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_SETFOCUS:
 		editor.is_window_active = true;
 		std::thread([] {
-			wiBackLog::post("[Shader check]: Started...");
+			wiBackLog::post("[Shader check] Started...");
 			if (wiShaderCompiler::CheckRegisteredShadersOutdated())
 			{
-				wiBackLog::post("[Shader check]: Changes detected, initiating reload...");
+				wiBackLog::post("[Shader check] Changes detected, initiating reload...");
 				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
 					wiRenderer::ReloadShaders();
 				});
 			}
 			else
 			{
-				wiBackLog::post("[Shader check]: All up to date");
+				wiBackLog::post("[Shader check] All up to date");
 			}
 		}).detach();
 		break;

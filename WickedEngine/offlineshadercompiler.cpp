@@ -333,27 +333,51 @@ int main()
 
 	std::string SHADERSOURCEPATH = std::filesystem::current_path().string() + "/";
 
-	wiGraphics::SHADERFORMAT targets[] = {
-		wiGraphics::SHADERFORMAT_HLSL6,
-		wiGraphics::SHADERFORMAT_SPIRV,
+	struct Target
+	{
+		wiGraphics::SHADERFORMAT format;
+		std::string dir;
 	};
-	std::string target_paths[] = {
-		"shaders/hlsl6/",
-		"shaders/spirv/",
+	Target targets[] = {
+		{wiGraphics::SHADERFORMAT_HLSL5, "shaders/"},
+		{wiGraphics::SHADERFORMAT_HLSL6, "shaders/hlsl6/"},
+		{wiGraphics::SHADERFORMAT_SPIRV, "shaders/spirv/"},
 	};
+
+	std::cout << "[Wicked Engine Offline Shader Compiler] Searching for outdated shaders..." << std::endl;
+	wiTimer timer;
 
 	for (int target = 0; target < arraysize(targets); ++target)
 	{
-		std::string SHADERPATH = target_paths[target];
+		std::string SHADERPATH = targets[target].dir;
 		wiHelper::DirectoryCreate(SHADERPATH);
 
 		for (int i = 0; i < wiGraphics::SHADERSTAGE_COUNT; ++i)
 		{
+			if (targets[target].format == wiGraphics::SHADERFORMAT_HLSL5)
+			{
+				if (
+					i == wiGraphics::MS ||
+					i == wiGraphics::AS ||
+					i == wiGraphics::LIB
+					)
+				{
+					// shader stage not applicable to HLSL5
+					continue;
+				}
+			}
+
 			for (auto& shader : shaders[i])
 			{
 				wiJobSystem::Execute(ctx, [=](wiJobArgs args) {
+					std::string shaderbinaryfilename = wiHelper::ReplaceExtension(SHADERPATH + shader, "cso");
+					if (!wiShaderCompiler::IsShaderOutdated(shaderbinaryfilename))
+					{
+						return;
+					}
+
 					wiShaderCompiler::CompilerInput input;
-					input.format = targets[target];
+					input.format = targets[target].format;
 					input.stage = (wiGraphics::SHADERSTAGE)i;
 					input.shadersourcefilename = shader;
 					input.include_directories.push_back(SHADERSOURCEPATH);
@@ -363,7 +387,6 @@ int main()
 
 					if (output.IsValid())
 					{
-						std::string shaderbinaryfilename = wiHelper::ReplaceExtension(SHADERPATH + shader, "cso");
 						wiShaderCompiler::SaveShaderAndMetadata(shaderbinaryfilename, output);
 						locker.lock();
 						std::cout << "shader compiled: " << shaderbinaryfilename << std::endl;
@@ -374,6 +397,7 @@ int main()
 						locker.lock();
 						std::cerr << "shader compile FAILED: " << input.shadersourcefilename << std::endl << output.error_message;
 						locker.unlock();
+						exit(1);
 					}
 
 				});
@@ -381,6 +405,8 @@ int main()
 		}
 	}
 	wiJobSystem::Wait(ctx);
+
+	std::cout << "[Wicked Engine Offline Shader Compiler] Finished in " << timer.elapsed() / 1000.0 << " seconds" << std::endl;
 
 	return 0;
 }

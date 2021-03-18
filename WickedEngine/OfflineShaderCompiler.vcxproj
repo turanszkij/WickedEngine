@@ -66,7 +66,10 @@
       <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>$(OutDir)OfflineShaderCompiler.exe</Command>
+      <Command>xcopy "$(SolutionDir)WickedEngine\dxcompiler.dll" "$(OutDir)" /c /y
+xcopy "$(SolutionDir)WickedEngine\dxil.dll" "$(OutDir)" /c /y
+xcopy "$(SolutionDir)WickedEngine\d3dcompiler_47.dll" "$(OutDir)" /c /y
+$(OutDir)OfflineShaderCompiler.exe</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -88,13 +91,17 @@
       <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>$(OutDir)OfflineShaderCompiler.exe</Command>
+      <Command>xcopy "$(SolutionDir)WickedEngine\dxcompiler.dll" "$(OutDir)" /c /y
+xcopy "$(SolutionDir)WickedEngine\dxil.dll" "$(OutDir)" /c /y
+xcopy "$(SolutionDir)WickedEngine\d3dcompiler_47.dll" "$(OutDir)" /c /y
+$(OutDir)OfflineShaderCompiler.exe</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="offlineshadercompiler.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="d3dcompiler_47.dll" />
     <None Include="dxcompiler.dll">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
     </None>
