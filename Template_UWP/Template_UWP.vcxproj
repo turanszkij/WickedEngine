@@ -43,7 +43,9 @@
     <Import Project="$(VSINSTALLDIR)\Common7\IDE\Extensions\Microsoft\VsGraphics\MeshContentTask.props" />
     <Import Project="$(VSINSTALLDIR)\Common7\IDE\Extensions\Microsoft\VsGraphics\ShaderGraphContentTask.props" />
   </ImportGroup>
-  <ImportGroup Label="Shared" />
+  <ImportGroup Label="Shared">
+    <Import Project="..\WickedEngine\shaders\Shaders_SOURCE.vcxitems" Label="Shared" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
@@ -80,8 +82,8 @@
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
     </Manifest>
     <PostBuildEvent>
-      <Command>IF NOT EXIST "$(OutDir)AppX\" mkdir "$(OutDir)AppX\
-xcopy "$(SolutionDir)WickedEngine\shaders\" "$(OutDir)AppX\shaders\" /e /c /i /y</Command>
+      <Command>
+      </Command>
       <Message>
       </Message>
     </PostBuildEvent>
@@ -97,7 +99,7 @@ xcopy "$(SolutionDir)WickedEngine\shaders\" "$(OutDir)AppX\shaders\" /e /c /i /y
     </FxCompile>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
-      <ObjectFileOutput>$(OutDir)shaders/%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput>$(OutDir)shaders/hlsl5/%(Filename).cso</ObjectFileOutput>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -119,8 +121,8 @@ xcopy "$(SolutionDir)WickedEngine\shaders\" "$(OutDir)AppX\shaders\" /e /c /i /y
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
     </Manifest>
     <PostBuildEvent>
-      <Command>IF NOT EXIST "$(OutDir)AppX\" mkdir "$(OutDir)AppX\
-xcopy "$(SolutionDir)WickedEngine\shaders\" "$(OutDir)AppX\shaders\" /e /c /i /y</Command>
+      <Command>
+      </Command>
       <Message>
       </Message>
     </PostBuildEvent>
@@ -130,7 +132,7 @@ xcopy "$(SolutionDir)WickedEngine\shaders\" "$(OutDir)AppX\shaders\" /e /c /i /y
     </PreBuildEvent>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
-      <ObjectFileOutput>$(OutDir)shaders/%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput>$(OutDir)shaders/hlsl5/%(Filename).cso</ObjectFileOutput>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

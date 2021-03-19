@@ -20,7 +20,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Template_UWP", "Template_UWP\Template_UWP.vcxproj", "{C222218B-B6D1-406B-B2C0-8C1CED4A8D19}"
 	ProjectSection(ProjectDependencies) = postProject
 		{60DA258F-E95F-4CF4-A46B-17D80644464B} = {60DA258F-E95F-4CF4-A46B-17D80644464B}
-		{3B74A7FE-CED7-4723-8824-AC708A865B98} = {3B74A7FE-CED7-4723-8824-AC708A865B98}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WickedEngine_SOURCE", "WickedEngine\WickedEngine_SOURCE.vcxitems", "{45D41ACC-2C3C-43D2-BC10-02AA73FFC7C7}"
@@ -81,7 +80,9 @@ Global
 		WickedEngine\WickedEngine_SOURCE.vcxitems*{60da258f-e95f-4cf4-a46b-17d80644464b}*SharedItemsImports = 4
 		Editor\Editor_SOURCE.vcxitems*{867febca-09c4-4fe7-8a4c-4d9b1c27e7d0}*SharedItemsImports = 9
 		WickedEngine\shaders\Shaders_SOURCE.vcxitems*{92e86448-0724-4387-abac-96e63edf4190}*SharedItemsImports = 9
+		WickedEngine\shaders\Shaders_SOURCE.vcxitems*{c222218b-b6d1-406b-b2c0-8c1ced4a8d19}*SharedItemsImports = 4
 		Editor\Editor_SOURCE.vcxitems*{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}*SharedItemsImports = 4
+		WickedEngine\shaders\Shaders_SOURCE.vcxitems*{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}*SharedItemsImports = 4
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64

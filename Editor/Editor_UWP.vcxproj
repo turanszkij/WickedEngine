@@ -45,6 +45,7 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
     <Import Project="Editor_SOURCE.vcxitems" Label="Shared" />
+    <Import Project="..\WickedEngine\shaders\Shaders_SOURCE.vcxitems" Label="Shared" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -79,11 +80,8 @@
       <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <PostBuildEvent>
-      <Command>IF NOT EXIST "$(OutDir)AppX\" mkdir "$(OutDir)AppX\
-xcopy "$(SolutionDir)WickedEngine\shaders\" "$(OutDir)AppX\shaders\" /e /c /i /y
-xcopy "$(SolutionDir)Documentation\" "$(OutDir)AppX\Documentation\" /e /c /i /y
-xcopy "$(SolutionDir)scripts\" "$(OutDir)AppX\scripts\" /e /c /i /y
-xcopy "$(SolutionDir)models\" "$(OutDir)AppX\models\" /e /c /i /y</Command>
+      <Command>
+      </Command>
       <Message>
       </Message>
     </PostBuildEvent>
@@ -91,7 +89,7 @@ xcopy "$(SolutionDir)models\" "$(OutDir)AppX\models\" /e /c /i /y</Command>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
     </Manifest>
     <FxCompile>
-      <ObjectFileOutput>$(OutDir)shaders/%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput>$(OutDir)shaders/hlsl5/%(Filename).cso</ObjectFileOutput>
       <ShaderModel>5.0</ShaderModel>
       <DisableOptimizations>false</DisableOptimizations>
       <EnableDebuggingInformation>false</EnableDebuggingInformation>
@@ -117,11 +115,8 @@ xcopy "$(SolutionDir)models\" "$(OutDir)AppX\models\" /e /c /i /y</Command>
       <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <PostBuildEvent>
-      <Command>IF NOT EXIST "$(OutDir)AppX\" mkdir "$(OutDir)AppX\
-xcopy "$(SolutionDir)WickedEngine\shaders\" "$(OutDir)AppX\shaders\" /e /c /i /y
-xcopy "$(SolutionDir)Documentation\" "$(OutDir)AppX\Documentation\" /e /c /i /y
-xcopy "$(SolutionDir)scripts\" "$(OutDir)AppX\scripts\" /e /c /i /y
-xcopy "$(SolutionDir)models\" "$(OutDir)AppX\models\" /e /c /i /y</Command>
+      <Command>
+      </Command>
       <Message>
       </Message>
     </PostBuildEvent>
@@ -129,7 +124,7 @@ xcopy "$(SolutionDir)models\" "$(OutDir)AppX\models\" /e /c /i /y</Command>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
     </Manifest>
     <FxCompile>
-      <ObjectFileOutput>$(OutDir)shaders/%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput>$(OutDir)shaders/hlsl5/%(Filename).cso</ObjectFileOutput>
       <ShaderModel>5.0</ShaderModel>
     </FxCompile>
     <PreBuildEvent>
