@@ -80,8 +80,8 @@
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
     </Manifest>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>IF NOT EXIST "$(OutDir)AppX\" mkdir "$(OutDir)AppX\
+xcopy "$(SolutionDir)WickedEngine\shaders\" "$(OutDir)AppX\shaders\" /e /c /i /y</Command>
       <Message>
       </Message>
     </PostBuildEvent>
@@ -119,8 +119,8 @@
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
     </Manifest>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>IF NOT EXIST "$(OutDir)AppX\" mkdir "$(OutDir)AppX\
+xcopy "$(SolutionDir)WickedEngine\shaders\" "$(OutDir)AppX\shaders\" /e /c /i /y</Command>
       <Message>
       </Message>
     </PostBuildEvent>

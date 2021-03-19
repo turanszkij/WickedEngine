@@ -72,13 +72,17 @@ typedef XMINT4 int4;
 #if defined(HLSL6) || defined(SPIRV)
 #define BINDLESS
 #define RAYTRACINGACCELERATIONSTRUCTURE(name, slot) RaytracingAccelerationStructure name : register(t ## slot)
+#else
+#define DISABLE_WAVE_INTRINSICS
 #endif // HLSL6 || SPIRV
 
 #ifdef SPIRV
 #define PUSHCONSTANT(name, type) [[vk::push_constant]] type name;
-#else
-#define PUSHCONSTANT(name, type) ConstantBuffer<type> name : register(b999)
 #endif // SPIRV
+
+#ifdef HLSL6
+#define PUSHCONSTANT(name, type) ConstantBuffer<type> name : register(b999)
+#endif // HLSL6
 
 #ifdef DISABLE_WAVE_INTRINSICS
 #define WaveReadLaneFirst(a) (a)

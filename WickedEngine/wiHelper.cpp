@@ -546,54 +546,8 @@ namespace wiHelper
 
 	bool FileExists(const std::string& fileName)
 	{
-#ifndef PLATFORM_UWP
 		bool exists = std::filesystem::exists(fileName);
 		return exists;
-#else
-		using namespace winrt::Windows::Storage;
-		using namespace winrt::Windows::Foundation;
-		string directory = GetDirectoryFromPath(fileName);
-		string name = GetFileNameFromPath(fileName);
-		wstring wdir, wname;
-		StringConvert(directory, wdir);
-		StringConvert(name, wname);
-		bool success = false;
-
-		auto async_helper = [&]() -> IAsyncAction {
-			try
-			{
-				auto folder = co_await StorageFolder::GetFolderFromPathAsync(wdir);
-				auto item = co_await folder.TryGetItemAsync(wname);
-				if (item)
-				{
-					success = true;
-				}
-			}
-			catch (winrt::hresult_error const& ex)
-			{
-				switch (ex.code())
-				{
-				case E_ACCESSDENIED:
-					wiBackLog::post(("Opening file failed: " + fileName + " | Reason: Permission Denied!").c_str());
-					break;
-				default:
-					break;
-				}
-			}
-
-		};
-
-		if (winrt::impl::is_sta_thread())
-		{
-			std::thread([&] { async_helper().get(); }).join(); // can't block coroutine from ui thread
-		}
-		else
-		{
-			async_helper().get();
-		}
-
-		return success;
-#endif
 	}
 
 	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess)

@@ -31,7 +31,7 @@
 #define PLATFORM_LINUX
 #define wiLoadLibrary(name) dlopen(name, RTLD_LAZY)
 #define wiGetProcAddress(handle,name) dlsym(handle, name)
-#define HANDLE (void*)
+#define HMODULE (void*)
 
 #endif // _WIN32
 

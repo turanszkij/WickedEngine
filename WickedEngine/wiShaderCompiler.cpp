@@ -9,13 +9,13 @@
 #include <filesystem>
 
 
-#if defined(_WIN32)
+#ifdef PLATFORM_WINDOWS_DESKTOP
 #define SHADERCOMPILER_ENABLED_DXCOMPILER
 #define SHADERCOMPILER_ENABLED_D3DCOMPILER
 #include <atlbase.h> // ComPtr
 #endif // _WIN32
 
-#if defined(PLATFORM_LINUX)
+#ifdef PLATFORM_LINUX
 // TODO: dxcompiler for linux
 //#define SHADERCOMPILER_ENABLED_DXCOMPILER
 #endif // PLATFORM_LINUX
@@ -394,7 +394,7 @@ namespace wiShaderCompiler
 				assert(SUCCEEDED(hr));
 				hr = dxcUtils->CreateDefaultIncludeHandler(&dxcIncludeHandler);
 				assert(SUCCEEDED(hr));
-				wiBackLog::post("wiShaderCompiler: enabled dxcompiler.dll");
+				wiBackLog::post("wiShaderCompiler: loaded dxcompiler.dll");
 			}
 		}
 #endif // SHADERCOMPILER_ENABLED_DXCOMPILER
@@ -406,7 +406,7 @@ namespace wiShaderCompiler
 			D3DCompile = (PFN_D3DCOMPILE)wiGetProcAddress(d3dcompiler, "D3DCompile");
 			if (D3DCompile != nullptr)
 			{
-				wiBackLog::post("wiShaderCompiler: enabled d3dcompiler_47.dll");
+				wiBackLog::post("wiShaderCompiler: loaded d3dcompiler_47.dll");
 			}
 		}
 #endif // SHADERCOMPILER_ENABLED_D3DCOMPILER
