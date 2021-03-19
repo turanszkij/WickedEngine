@@ -389,6 +389,7 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 		else if (use_dx11)
 		{
 #ifdef WICKEDENGINE_BUILD_DX11
+			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl5/");
 			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX11>(window, fullscreen, debugdevice));
 #endif
 		}

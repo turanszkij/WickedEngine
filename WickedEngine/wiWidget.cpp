@@ -6,7 +6,7 @@
 #include "wiHelper.h"
 #include "wiInput.h"
 #include "wiRenderer.h"
-#include "ShaderInterop_Renderer.h"
+#include "shaders/ShaderInterop_Renderer.h"
 #include "wiEvent.h"
 #include "wiBackLog.h"
 

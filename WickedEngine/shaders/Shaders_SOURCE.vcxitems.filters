@@ -1,0 +1,385 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="HF">
+      <UniqueIdentifier>{be5e3922-0e61-434a-92c8-bfaf03c26fb4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CS">
+      <UniqueIdentifier>{c23b3c81-afad-4c4d-a0fd-598f01477820}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VS">
+      <UniqueIdentifier>{1ef621ed-feeb-4b4c-aa96-8dc5f9933634}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PS">
+      <UniqueIdentifier>{993b685a-191e-4ffa-a5e4-66b00eb3eb35}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DS">
+      <UniqueIdentifier>{bdf0867b-8819-4456-998f-296fed10d958}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="HS">
+      <UniqueIdentifier>{d69144c2-e3a3-45c1-b66a-caec6dc22a93}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GS">
+      <UniqueIdentifier>{9f327310-fe88-414c-a23a-22839ea58475}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="LIB">
+      <UniqueIdentifier>{1c9fec3c-c842-4bb0-9e03-69baf6cc090e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MS">
+      <UniqueIdentifier>{92e70786-aab6-48dd-9d04-277448eaa897}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ConstantBufferMapping.h" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)bloomcombineCS.hlsl">
+      <Filter>CS</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectDS.hlsl">
+      <Filter>DS</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)cubeShadowGS_alphatest_emulation.hlsl">
+      <Filter>GS</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)bitonicSortHF.hlsli">
+      <Filter>HF</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectHS.hlsl">
+      <Filter>HS</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)rtaoLIB.hlsl">
+      <Filter>LIB</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticleMS.hlsl">
+      <Filter>MS</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)captureImpostorPS_albedo.hlsl">
+      <Filter>PS</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)cubeShadowVS.hlsl">
+      <Filter>VS</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)brdf.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)circle.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)cone.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)cube.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)cullingShaderHF.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)cylinder.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)depthoffieldHF.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticleHF.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)fxaa.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)globals.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)hairparticleHF.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)icosphere.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)imageHF.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)impostorHF.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)lightingHF.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectHF.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectHF_tessellation.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)oceanSurfaceHF.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)quad.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)raytracingHF.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)skyAtmosphere.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)skyHF.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)stochasticSSRHF.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)uvsphere.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)volumeLightHF.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)volumetricCloudsHF.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)volumetricLightHF.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)voxelConeTracingHF.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)voxelHF.hlsli" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)bloomseparateCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)blur_bilateral_float1CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)blur_bilateral_float3CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)blur_bilateral_float4CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)blur_bilateral_unorm1CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)blur_bilateral_unorm4CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)blur_bilateral_wide_float1CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)blur_bilateral_wide_float3CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)blur_bilateral_wide_float4CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)blur_bilateral_wide_unorm1CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)blur_bilateral_wide_unorm4CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)blur_gaussian_float1CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)blur_gaussian_float3CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)blur_gaussian_float4CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)blur_gaussian_unorm1CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)blur_gaussian_unorm4CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)blur_gaussian_wide_float1CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)blur_gaussian_wide_float3CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)blur_gaussian_wide_float4CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)blur_gaussian_wide_unorm1CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)blur_gaussian_wide_unorm4CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)bvh_hierarchyCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)bvh_primitivesCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)bvh_propagateaabbCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)captureImpostorPS_normal.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)captureImpostorPS_surface.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)chromatic_aberrationCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)circlePS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)copytexture2D_float4CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)copytexture2D_float4_borderexpandCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)copytexture2D_unorm4CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)copytexture2D_unorm4_borderexpandCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)cubeMapPS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)cubeShadowGS_emulation.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)cubeShadowGS_transparent_emulation.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)cubeShadowVS_alphatest.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)cubeShadowVS_alphatest_emulation.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)cubeShadowVS_emulation.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)cubeShadowVS_transparent.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)cubeShadowVS_transparent_emulation.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)cubeVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)depthoffield_kickjobsCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)depthoffield_mainCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)depthoffield_mainCS_cheap.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)depthoffield_mainCS_earlyexit.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)depthoffield_neighborhoodMaxCOCCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)depthoffield_postfilterCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)depthoffield_prepassCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)depthoffield_prepassCS_earlyexit.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)depthoffield_tileMaxCOC_horizontalCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)depthoffield_tileMaxCOC_verticalCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)depthoffield_upsampleCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)downsample4xCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)downsampleDepthBuffer4xPS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)envMapGS_emulation.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)envMapVS_emulation.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)envMap_skyGS_emulation.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)envMap_skyVS_emulation.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)hairparticle_finishUpdateCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)normalsfromdepthCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectDS_prepass.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectDS_prepass_alphatest.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectHS_prepass.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectHS_prepass_alphatest.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_anisotropic.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_cartoon.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_clearcoat.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_cloth.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_cloth_clearcoat.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_prepass.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_transparent_anisotropic.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_transparent_cartoon.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_transparent_clearcoat.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_transparent_cloth.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_transparent_cloth_clearcoat.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_transparent_unlit.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_unlit.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectVS_prepass_alphatest.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectVS_prepass_alphatest_tessellation.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectVS_prepass_tessellation.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)rtao_denoise_blurCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)rtao_denoise_temporalCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)rtshadow_denoise_temporalCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)screenspaceshadowCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)skyAtmosphere_skyLuminanceLutCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)skyPS_velocity.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)upsample_bilateral_uint4CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)rtshadowLIB.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)skyAtmosphere_multiScatteredLuminanceLutCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)skyAtmosphere_skyViewLutCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)skyAtmosphere_transmittanceLutCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)volumetriclight_directionalVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)volumetriclight_pointVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)volumetriclight_spotVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)rtreflectionLIB.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)shadingRateClassificationCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)shadingRateClassificationCS_DEBUG.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)volumetricCloud_curlnoiseCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)volumetricCloud_detailnoiseCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)volumetricCloud_renderCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)volumetricCloud_reprojectCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)volumetricCloud_shapenoiseCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)volumetricCloud_weathermapCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticlePS_simplest.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticlePS_soft.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticlePS_soft_distortion.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticlePS_soft_lighting.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticleVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticle_emitCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticle_emitCS_FROMMESH.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticle_emitCS_volume.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticle_finishUpdateCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticle_kickoffUpdateCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticle_simulateCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticle_simulateCS_DEPTHCOLLISIONS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticle_simulateCS_SORTING.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticle_simulateCS_SORTING_DEPTHCOLLISIONS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticle_sphdensityCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticle_sphforceCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticle_sphpartitionCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticle_sphpartitionoffsetsCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)emittedparticle_sphpartitionoffsetsresetCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)envMapPS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)envMapPS_terrain.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)envMapVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)envMap_skyPS_dynamic.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)envMap_skyPS_static.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)envMap_skyVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)fft_512x512_c2c_CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)fft_512x512_c2c_v2_CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)filterEnvMapCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)fontPS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)fontVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)forceFieldPlaneVisualizerVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)forceFieldPointVisualizerVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)forceFieldVisualizerPS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)fxaaCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)generateMIPChain2DCS_float4.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)generateMIPChain2DCS_unorm4.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)generateMIPChain3DCS_float4.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)generateMIPChain3DCS_unorm4.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)generateMIPChainCubeArrayCS_float4.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)generateMIPChainCubeArrayCS_unorm4.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)generateMIPChainCubeCS_float4.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)generateMIPChainCubeCS_unorm4.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)gpusortlib_kickoffSortCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)gpusortlib_sortCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)gpusortlib_sortInnerCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)gpusortlib_sortStepCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)hairparticlePS_prepass.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)hairparticlePS_simplest.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)hairparticlePS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)hairparticleVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)hairparticle_simulateCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)hbaoCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)imagePS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)imagePS_backgroundblur.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)imagePS_backgroundblur_masked.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)imagePS_masked.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)imagePS_separatenormalmap.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)imagePS_separatenormalmap_bicubic.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)imageVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)impostorPS_prepass.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)impostorPS_simple.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)impostorPS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)impostorPS_wire.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)impostorVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)lensFlareGS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)lensFlarePS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)lensFlareVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)lightCullingCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)lightCullingCS_ADVANCED.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)lightCullingCS_ADVANCED_DEBUG.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)lightCullingCS_DEBUG.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)lightShaftsCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)lightVisualizerPS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)lineardepthCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)luminancePass1CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)luminancePass2CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)motionblurCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)motionblurCS_cheap.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)motionblurCS_earlyexit.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)motionblur_kickjobsCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)motionblur_neighborhoodMaxVelocityCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)motionblur_tileMaxVelocity_horizontalCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)motionblur_tileMaxVelocity_verticalCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)msaoCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)msao_blurupsampleCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)msao_blurupsampleCS_blendout.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)msao_blurupsampleCS_premin.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)msao_blurupsampleCS_premin_blendout.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)msao_interleaveCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)msao_preparedepthbuffers1CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)msao_preparedepthbuffers2CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectGS_voxelizer.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_prepass_alphatest.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_debug.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_hologram.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_paintradius.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_simplest.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_planarreflection.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_pom.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_terrain.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_transparent.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_transparent_planarreflection.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_transparent_pom.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_water.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_voxelizer.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectPS_voxelizer_terrain.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectVS_common.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectVS_common_tessellation.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectVS_debug.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectVS_prepass.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectVS_simple.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)objectVS_voxelizer.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)oceanSimulatorCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)oceanSurfacePS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)oceanSurfaceSimplePS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)oceanSurfaceVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)oceanUpdateDisplacementMapCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)oceanUpdateGradientFoldingCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)outlinePS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)paint_textureCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)raytrace_closesthitCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)raytrace_debugbvhPS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)raytrace_kickjobsCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)raytrace_launchCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)raytrace_screenVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)raytrace_shadeCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)raytrace_tilesortCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)renderlightmapPS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)renderlightmapVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)resolveMSAADepthStencilCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)screenPS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)screenVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)shadowPS_alphatest.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)shadowPS_transparent.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)shadowPS_water.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)shadowVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)shadowVS_alphatest.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)shadowVS_transparent.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)sharpenCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)skinningCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)skinningCS_LDS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)skyPS_dynamic.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)skyPS_static.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)skyVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)sphereVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ssaoCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ssr_medianCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ssr_raytraceCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ssr_resolveCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ssr_temporalCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)sunPS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)temporalaaCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)tileFrustumsCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)tonemapCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)upsample_bilateralPS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)upsample_bilateral_float1CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)upsample_bilateral_float4CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)upsample_bilateral_unorm1CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)upsample_bilateral_unorm4CS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)vertexcolorPS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)vertexcolorVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)volumetricLight_DirectionalPS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)volumetricLight_PointPS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)volumetricLight_SpotPS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)voxelClearOnlyNormalCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)voxelGS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)voxelPS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)voxelRadianceSecondaryBounceCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)voxelSceneCopyClearCS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)voxelSceneCopyClearCS_TemporalSmoothing.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)voxelVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)vPointLightVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)vSpotLightVS.hlsl" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ResourceMapping.h" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)SamplerMapping.h" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ShaderInterop.h" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ShaderInterop_BVH.h" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ShaderInterop_EmittedParticle.h" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ShaderInterop_FFTGenerator.h" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ShaderInterop_Font.h" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ShaderInterop_GPUSortLib.h" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ShaderInterop_HairParticle.h" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ShaderInterop_Image.h" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ShaderInterop_Ocean.h" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ShaderInterop_Paint.h" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ShaderInterop_Postprocess.h" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ShaderInterop_Raytracing.h" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ShaderInterop_Renderer.h" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ShaderInterop_Skinning.h" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)ShaderInterop_Utility.h" />
+  </ItemGroup>
+</Project>

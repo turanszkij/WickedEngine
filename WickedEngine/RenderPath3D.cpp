@@ -3,7 +3,7 @@
 #include "wiImage.h"
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
-#include "ResourceMapping.h"
+#include "shaders/ResourceMapping.h"
 #include "wiProfiler.h"
 
 using namespace wiGraphics;

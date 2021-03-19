@@ -31,7 +31,7 @@ jobs:
       with:
         name: Editor (Windows x64)
         path: |
-          WickedEngine/shaders/*.cso
+          WickedEngine/shaders/hlsl5/*.cso
           WickedEngine/shaders/hlsl6/*.cso
           WickedEngine/shaders/spirv/*.cso
           images/
@@ -55,7 +55,7 @@ jobs:
       with:
         name: Tests (Windows x64)
         path: |
-          WickedEngine/shaders/*.cso
+          WickedEngine/shaders/hlsl5/*.cso
           WickedEngine/shaders/hlsl6/*.cso
           WickedEngine/shaders/spirv/*.cso
           images/
@@ -106,7 +106,7 @@ jobs:
       with:
         name: Editor (Ubuntu 20.04)
         path: |
-          WickedEngine/shaders/
+          WickedEngine/shaders/spirv/*.cso
           images/
           models/
           scripts/
@@ -127,7 +127,7 @@ jobs:
       with:
         name: Tests (Ubuntu 20.04)
         path: |
-          WickedEngine/shaders/
+          WickedEngine/shaders/spirv/*.cso
           images/
           models/
           scripts/

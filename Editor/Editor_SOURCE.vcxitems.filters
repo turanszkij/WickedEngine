@@ -115,4 +115,9 @@
       <Filter>images</Filter>
     </Image>
   </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)..\WickedEngine\d3dcompiler_47.dll" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)..\WickedEngine\dxcompiler.dll" />
+    <CopyFileToFolders Include="$(MSBuildThisFileDirectory)..\WickedEngine\dxil.dll" />
+  </ItemGroup>
 </Project>

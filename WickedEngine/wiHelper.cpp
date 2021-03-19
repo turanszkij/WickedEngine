@@ -547,9 +547,7 @@ namespace wiHelper
 	bool FileExists(const std::string& fileName)
 	{
 #ifndef PLATFORM_UWP
-		ifstream file(fileName);
-		bool exists = file.is_open();
-		file.close();
+		bool exists = std::filesystem::exists(fileName);
 		return exists;
 #else
 		using namespace winrt::Windows::Storage;
@@ -841,10 +839,10 @@ namespace wiHelper
 			MultiByteToWideChar(CP_UTF8, 0, from, -1, &to[0], num);
 		}
 #else
-		int num = 0; // TODO
-		const char * message = "int StringConvert(const char* from, wchar_t* to) not implemented";
-		std::cerr << message << std::endl;
-		throw std::runtime_error(message);
+		std::string sfrom = from;
+		std::wstring wto = std::wstring(sfrom.begin(), sfrom.end());
+		std::wmemcpy(to, wto.c_str(), wto.length());
+		int num = wto.length();
 #endif // _WIN32
 		return num;
 	}
@@ -858,10 +856,10 @@ namespace wiHelper
 			WideCharToMultiByte(CP_UTF8, 0, from, -1, &to[0], num, NULL, NULL);
 		}
 #else
-		int num = 0; // TODO
-		const char * message = "int StringConvert(const wchar_t* from, char* to) not implemented";
-		std::cerr << message << std::endl;
-		throw std::runtime_error(message);
+		std::wstring wfrom = from;
+		std::string sto = std::string(wfrom.begin(), wfrom.end());
+		std::strcpy(to, sto.c_str());
+		int num = sto.length();
 #endif // _WIN32
 		return num;
 	}

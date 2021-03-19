@@ -11,25 +11,25 @@
 
 
 <br/>
-<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/gltfanim.gif"/>
-Wicked Engine is an open-source game engine written in C++. It is easy to use, high performance and feature rich. There are no external dependencies, but some free libraries are included as part of the source code. The MIT license means that anyone is free to download, modify, and share it. This project is hosted on <a href="https://github.com/turanszkij/WickedEngine/">GitHub</a>.
+<img align="right" src="https://turanszkij.files.wordpress.com/2019/02/emitterskinned2.gif"/>
+Wicked Engine is an open-source C++ engine focusing on modern rendering techniques and performance. Here you will need some C++ programming skills to utilize most features effectively, but the aim a simple and efficient architecture, so it a good place to learn. The source code is free to be used for anything good.<br/>
+This project is hosted on <a href="https://github.com/turanszkij/WickedEngine/">GitHub</a>.
 
 - [Documentation](Documentation/WickedEngine-Documentation.md)<br/>
 - [Scripting API Documentation](Documentation/ScriptingAPI-Documentation.md)<br/>
 - [Features](features.txt)<br/>
-- [Devblog](https://turanszkij.wordpress.com/)<br/>
+- [Devblog](https://wickedengine.net/)<br/>
 - [Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
 
-You can download the engine by using Git and cloning the repository, or downloading it as zip. This will give you the full C++ source code that you must build for yourself. Building is simply pressing F5 in Visual Studio. You can also choose to download a pre-built version of the Editor or Tests applications, which will allow you to load content and write LUA scripts. <br/>
+You can download the source code by using Git and cloning the repository, or downloading it as zip. You can also choose to download a pre-built version of the Editor or Tests applications, which will allow you to try out features, load content and execute LUA scripts. <br/>
 
-![Emitter](https://turanszkij.files.wordpress.com/2019/02/emitterskinned2.gif) ![Drone](https://turanszkij.files.wordpress.com/2018/11/drone_anim.gif) <br/>
 
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/physics.gif"/>
 
 ### Platforms:
 - Windows 10 Desktop [Visual Studio 2019]
 - UWP [Visual Studio 2019]
-- Linux [CMake 3.7]
+- Linux (experimental) [CMake 3.7]
 
 ### How to build: 
 
@@ -38,13 +38,13 @@ To build Wicked Engine for Windows 10, use Visual Studio and the provided `Wicke
 
 <img align="right" src="https://turanszkij.files.wordpress.com/2020/08/fighting_game_small-1.gif"/>
 
-If you want to develop an application that uses Wicked Engine, you will have to link to WickedEngine_Windows.lib or WickedEngine_UWP.lib.lib and `#include "WickedEngine.h"` into the source code. For examples, look at the Template, Editor and Tests projects in Visual Studio that do this.
+If you want to develop an application that uses Wicked Engine, you can build the WickedEngine static library project for the appropriate platform, such as `WickedEngine_Windows` and link against it. Including the `"WickedEngine.h"` header will attempt to link the binaries for the appropriate platform, but search directories should be set up beforehand. For example, you can set additional library directories to `$(SolutionDir)BUILD\$(Platform)\$(Configuration)` by default. For examples, see the `Template`, `Tests`, and `Editor` projects. 
 
 You can also dowload prebuilt and packaged versions of the Editor and Tests here: [![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
 
 If you have questions or stuck, please use the `windows` communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
 
-Note: Building 32-bit and ARM versions are possible, but no longer provided by default. The developer will need to configure the solution themselves for these platforms. For ARM platform, also use the `-D BT_USE_DOUBLE_PRECISION=1` definition when compiling.
+Note: Building 32-bit and ARM versions should be possible, but no longer provided by default. You will need to configure the solution for these platforms yourself if you want this. For ARM platform, also use the `-D BT_USE_DOUBLE_PRECISION=1` definition when compiling.
 
 #### Linux
 The Linux support is experimental. You can find a sample build script for Ubuntu 20.04 [here](.github/workflows/build.yml) (in the linux section). You might need to install some dependencies, such as Vulkan SDK 1.2 or greater (to get DirectXShaderCompiler), SDL2, cmake 3.7 and g++ compiler (C++ 17 compliant version). For Ubuntu 20.04, you can use the following commands to install dependencies:
@@ -194,11 +194,10 @@ In addition, the Editor supports the importing of some common model formats (the
 - <b>GLTF 2.0</b>
 
 The preferred workflow is to import models into the Editor, and save them as <b>WISCENE</b>, then any Wicked Engine application can open them.<br/>
-<i>(The old Blender exporter script is now not supported! (from version 0.21.0), because the engine was redesigned with Entity-Component System at its core. The old object oriented version can be found <a href ="https://github.com/turanszkij/WickedEngine/tree/old-system-backup">[here]</a>.)</i>
 
 ### Graphics API:
 
-The default renderer is DirectX 11 on Windows and Vulkan on Linux. There is also an optional DirectX12 renderer for Windows.
+The default renderer is `DirectX 11` on Windows and `Vulkan` on Linux. There is also an optional DirectX12 renderer for Windows.
 You can specify command line arguments (without any prefix) to switch between render devices or other settings. Currently the list of options:
 <table>
   <tr>
@@ -207,11 +206,11 @@ You can specify command line arguments (without any prefix) to switch between re
   </tr>
   <tr>
     <td>dx12</td>
-    <td>Use DirectX 12 rendering device*</td>
+    <td>Use DirectX 12 rendering device</td>
   </tr>
   <tr>
     <td>vulkan</td>
-    <td>Use Vulkan rendering device**</td>
+    <td>Use Vulkan rendering device</td>
   </tr>
   <tr>
     <td>debugdevice</td>
@@ -225,25 +224,6 @@ You can specify command line arguments (without any prefix) to switch between re
 
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/soft.gif"/>
 
-* *DX12 will try to load shaders from WickedEngine/shaders/hlsl6 directory. 
-HLSL6 shaders can be compiled by Rebuilding the Shaders_HLSL6 project from within Visual Studio (Python 3 required for building).
-
-* **Vulkan support will be built into the application if the Vulkan SDK is installed on the build machine. 
-Vulkan will try to load shaders from WickedEngine/shaders/spirv directory. 
-SPIRV shaders can be compiled by Rebuilding the Shaders_SPIRV project from within Visual Studio (Python 3 required for building).
-For Linux builds, spirv shaders will be built by using Cmake system.
-
-<br/>
-
-### Contributions
-
-Contributions can be submitted on Github by following the steps below:
-1) Open an issue and describe the feature or patch in detail
-2) The feature or patch will be discussed in the issue, and determined if it would benefit the project
-3) After the request is accepted, open a pull request and reference the issue with #issue_number
-4) Code review will be conducted and the pull request will be merged when it meets the requirements
-5) When the pull request passes, you will be added to the credits as a contributor and your name shall be remembered by future generations
-
 <br/>
 
 ### Other software using Wicked Engine
@@ -254,7 +234,7 @@ Contributions can be submitted on Github by following the steps below:
 
 <br/>
 
-### Finally, take a look at some screenshots:
+### Screenshots:
 
 Sponza scene with voxel GI enabled:
 ![Sponza](https://turanszkij.files.wordpress.com/2020/08/vxgi_sponza_small.png)

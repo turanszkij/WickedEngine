@@ -193,7 +193,6 @@ ModelManifest.xml
 /WinRT/WickedEngine
 /WickedEngine/WinRT
 /WickedEngine/StoreTest
-/WickedEngine/shaders/
 /WickedEngine/Release_Store/WickedEngine.tlog
 /WickedEngine/Release_RT
 /WickedEngine/Debug_RT
@@ -219,3 +218,6 @@ ModelManifest.xml
 /Editor/Generated Files/winrt
 /Template_UWP/Generated Files/winrt
 /WickedEngine/Generated Files/winrt
+
+*.cso
+*.wishadermeta

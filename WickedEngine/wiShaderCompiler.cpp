@@ -9,8 +9,7 @@
 #include <filesystem>
 
 
-#if defined(_WIN32) && !defined(PLATFORM_UWP)
-// Windows desktop:
+#if defined(_WIN32)
 #define SHADERCOMPILER_ENABLED_DXCOMPILER
 #define SHADERCOMPILER_ENABLED_D3DCOMPILER
 #include <atlbase.h> // ComPtr
@@ -80,7 +79,6 @@ namespace wiShaderCompiler
 			args.push_back(L"-fvk-t-shift"); args.push_back(L"1000"); args.push_back(L"0");
 			args.push_back(L"-fvk-u-shift"); args.push_back(L"2000"); args.push_back(L"0");
 			args.push_back(L"-fvk-s-shift"); args.push_back(L"3000"); args.push_back(L"0");
-			args.push_back(L"-Vd"); // DISABLE VALIDATION: There is currently a validation bug with raytracing RayTCurrent()!!!
 			break;
 		default:
 			assert(0);
@@ -116,6 +114,8 @@ namespace wiShaderCompiler
 			break;
 		case wiGraphics::LIB:
 			args.push_back(L"lib_6_5");
+			args.push_back(L"-D");
+			args.push_back(L"DISABLE_WAVE_INTRINSICS");
 			break;
 		default:
 			assert(0);
@@ -270,6 +270,7 @@ namespace wiShaderCompiler
 
 		D3D_SHADER_MACRO defines[] = {
 			"HLSL5", "1",
+			"DISABLE_WAVE_INTRINSICS", "1",
 			NULL, NULL,
 		};
 
@@ -313,6 +314,8 @@ namespace wiShaderCompiler
 				for (auto& x : input->include_directories)
 				{
 					std::string filename = x + pFileName;
+					if (!wiHelper::FileExists(filename))
+						continue;
 					std::vector<uint8_t>& filedata = filedatas.emplace_back();
 					if (wiHelper::FileRead(filename, filedata))
 					{
@@ -379,31 +382,28 @@ namespace wiShaderCompiler
 	void Initialize()
 	{
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
-		HMODULE dxcompiler = LoadLibraryA("dxcompiler.dll");
+		HMODULE dxcompiler = wiLoadLibrary("dxcompiler.dll");
 		if(dxcompiler != nullptr)
 		{
-			DxcCreateInstance = (DxcCreateInstanceProc)GetProcAddress(dxcompiler, "DxcCreateInstance");
+			DxcCreateInstance = (DxcCreateInstanceProc)wiGetProcAddress(dxcompiler, "DxcCreateInstance");
 			if (DxcCreateInstance != nullptr)
 			{
 				HRESULT hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils));
-				if (!SUCCEEDED(hr))
-					return;
+				assert(SUCCEEDED(hr));
 				hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler));
-				if (!SUCCEEDED(hr))
-					return;
+				assert(SUCCEEDED(hr));
 				hr = dxcUtils->CreateDefaultIncludeHandler(&dxcIncludeHandler);
-				if (!SUCCEEDED(hr))
-					return;
+				assert(SUCCEEDED(hr));
 				wiBackLog::post("wiShaderCompiler: enabled dxcompiler.dll");
 			}
 		}
 #endif // SHADERCOMPILER_ENABLED_DXCOMPILER
 
 #ifdef SHADERCOMPILER_ENABLED_D3DCOMPILER
-		HMODULE d3dcompiler = LoadLibraryA("d3dcompiler_47.dll");
+		HMODULE d3dcompiler = wiLoadLibrary("d3dcompiler_47.dll");
 		if(d3dcompiler != nullptr)
 		{
-			D3DCompile = (PFN_D3DCOMPILE)GetProcAddress(d3dcompiler, "D3DCompile");
+			D3DCompile = (PFN_D3DCOMPILE)wiGetProcAddress(d3dcompiler, "D3DCompile");
 			if (D3DCompile != nullptr)
 			{
 				wiBackLog::post("wiShaderCompiler: enabled d3dcompiler_47.dll");
@@ -459,20 +459,21 @@ namespace wiShaderCompiler
 	}
 	bool IsShaderOutdated(const std::string& shaderfilename)
 	{
-		std::filesystem::path filepath = std::filesystem::absolute(shaderfilename);
-		if (!std::filesystem::exists(filepath))
+		std::string filepath = shaderfilename;
+		wiHelper::MakePathAbsolute(filepath);
+		if (!wiHelper::FileExists(filepath))
 		{
 			return true; // no shader file = outdated shader, apps can attempt to rebuild it
 		}
-		std::filesystem::path dependencylibrarypath = wiHelper::ReplaceExtension(shaderfilename, shadermetaextension);
-		if (!std::filesystem::exists(dependencylibrarypath))
+		std::string dependencylibrarypath = wiHelper::ReplaceExtension(shaderfilename, shadermetaextension);
+		if (!wiHelper::FileExists(dependencylibrarypath))
 		{
 			return false; // no metadata file = no dependency, up to date (for example packaged builds)
 		}
 
 		const auto tim = std::filesystem::last_write_time(filepath);
 
-		wiArchive dependencyLibrary(dependencylibrarypath.string());
+		wiArchive dependencyLibrary(dependencylibrarypath);
 		if (dependencyLibrary.IsOpen())
 		{
 			std::string rootdir = dependencyLibrary.GetSourceDirectory();
@@ -481,8 +482,9 @@ namespace wiShaderCompiler
 
 			for (auto& x : dependencies)
 			{
-				std::filesystem::path dependencypath = std::filesystem::absolute(rootdir + x);
-				if (std::filesystem::exists(dependencypath))
+				std::string dependencypath = rootdir + x;
+				wiHelper::MakePathAbsolute(dependencypath);
+				if (wiHelper::FileExists(dependencypath))
 				{
 					const auto dep_tim = std::filesystem::last_write_time(dependencypath);
 

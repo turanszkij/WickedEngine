@@ -3,7 +3,6 @@
 #ifdef WICKEDENGINE_BUILD_DX11
 
 #include "wiHelper.h"
-#include "ResourceMapping.h"
 #include "wiBackLog.h"
 
 #pragma comment(lib,"dxguid.lib")

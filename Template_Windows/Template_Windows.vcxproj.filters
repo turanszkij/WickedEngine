@@ -47,4 +47,9 @@
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="..\WickedEngine\dxil.dll" />
+    <CopyFileToFolders Include="..\WickedEngine\d3dcompiler_47.dll" />
+    <CopyFileToFolders Include="..\WickedEngine\dxcompiler.dll" />
+  </ItemGroup>
 </Project>

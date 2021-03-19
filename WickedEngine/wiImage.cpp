@@ -2,9 +2,9 @@
 #include "wiResourceManager.h"
 #include "wiRenderer.h"
 #include "wiHelper.h"
-#include "SamplerMapping.h"
-#include "ResourceMapping.h"
-#include "ShaderInterop_Image.h"
+#include "shaders/SamplerMapping.h"
+#include "shaders/ResourceMapping.h"
+#include "shaders/ShaderInterop_Image.h"
 #include "wiBackLog.h"
 #include "wiEvent.h"
 

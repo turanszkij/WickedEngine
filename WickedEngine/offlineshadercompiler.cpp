@@ -331,7 +331,8 @@ int main()
 	wiJobSystem::Initialize();
 	wiJobSystem::context ctx;
 
-	std::string SHADERSOURCEPATH = std::filesystem::current_path().string() + "/";
+	std::string SHADERSOURCEPATH = wiRenderer::GetShaderSourcePath();
+	wiHelper::MakePathAbsolute(SHADERSOURCEPATH);
 
 	struct Target
 	{
@@ -339,7 +340,7 @@ int main()
 		std::string dir;
 	};
 	Target targets[] = {
-		{wiGraphics::SHADERFORMAT_HLSL5, "shaders/"},
+		{wiGraphics::SHADERFORMAT_HLSL5, "shaders/hlsl5/"},
 		{wiGraphics::SHADERFORMAT_HLSL6, "shaders/hlsl6/"},
 		{wiGraphics::SHADERFORMAT_SPIRV, "shaders/spirv/"},
 	};
@@ -379,7 +380,7 @@ int main()
 					wiShaderCompiler::CompilerInput input;
 					input.format = targets[target].format;
 					input.stage = (wiGraphics::SHADERSTAGE)i;
-					input.shadersourcefilename = shader;
+					input.shadersourcefilename = SHADERSOURCEPATH + shader;
 					input.include_directories.push_back(SHADERSOURCEPATH);
 					
 					wiShaderCompiler::CompilerOutput output;
@@ -395,7 +396,7 @@ int main()
 					else
 					{
 						locker.lock();
-						std::cerr << "shader compile FAILED: " << input.shadersourcefilename << std::endl << output.error_message;
+						std::cerr << "shader compile FAILED: " << shaderbinaryfilename << std::endl << output.error_message;
 						locker.unlock();
 						exit(1);
 					}

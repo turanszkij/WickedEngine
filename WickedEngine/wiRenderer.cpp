@@ -12,12 +12,6 @@
 #include "wiBackLog.h"
 #include "wiProfiler.h"
 #include "wiOcean.h"
-#include "ShaderInterop_Postprocess.h"
-#include "ShaderInterop_Skinning.h"
-#include "ShaderInterop_Raytracing.h"
-#include "ShaderInterop_BVH.h"
-#include "ShaderInterop_Utility.h"
-#include "ShaderInterop_Paint.h"
 #include "wiGPUSortLib.h"
 #include "wiAllocators.h"
 #include "wiGPUBVH.h"
@@ -28,6 +22,13 @@
 #include "wiBlueNoise.h"
 #include "wiSheenLUT.h"
 #include "wiShaderCompiler.h"
+
+#include "shaders/ShaderInterop_Postprocess.h"
+#include "shaders/ShaderInterop_Skinning.h"
+#include "shaders/ShaderInterop_Raytracing.h"
+#include "shaders/ShaderInterop_BVH.h"
+#include "shaders/ShaderInterop_Utility.h"
+#include "shaders/ShaderInterop_Paint.h"
 
 #include <algorithm>
 #include <unordered_map>
@@ -56,7 +57,7 @@ GPUBuffer			resourceBuffers[RBTYPE_COUNT];
 Sampler				samplers[SSLOT_COUNT];
 
 string SHADERPATH = "../WickedEngine/shaders/";
-string SHADERSOURCEPATH = "../WickedEngine/";
+string SHADERSOURCEPATH = SHADERPATH;
 
 LinearAllocator renderFrameAllocators[COMMANDLIST_COUNT]; // can be used by graphics threads
 inline LinearAllocator& GetRenderFrameAllocator(CommandList cmd)
@@ -892,54 +893,43 @@ enum DEBUGRENDERING
 };
 PipelineState PSO_debug[DEBUGRENDERING_COUNT];
 
-bool CompileAndLoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
-{
-	std::string shaderbinaryfilename = SHADERPATH + filename;
-
-	wiShaderCompiler::CompilerInput input;
-	input.format = device->GetShaderFormat();
-	input.stage = stage;
-	input.shadersourcefilename = wiHelper::ReplaceExtension(SHADERSOURCEPATH + filename, "hlsl");
-
-	std::string sourcedir = input.shadersourcefilename;
-	wiHelper::MakePathAbsolute(sourcedir);
-	sourcedir = wiHelper::GetDirectoryFromPath(sourcedir);
-	input.include_directories.push_back(sourcedir);
-
-	wiShaderCompiler::CompilerOutput output;
-	wiShaderCompiler::Compile(input, output);
-
-	if (output.IsValid())
-	{
-		wiShaderCompiler::SaveShaderAndMetadata(shaderbinaryfilename, output);
-
-		wiBackLog::post(("shader compiled: " + shaderbinaryfilename).c_str());
-		return device->CreateShader(stage, output.shaderdata, output.shadersize, &shader);
-	}
-	else
-	{
-		wiBackLog::post(("shader compile FAILED: " + input.shadersourcefilename + "\n" + output.error_message).c_str());
-	}
-	return false;
-}
-
 bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
 {
-	vector<uint8_t> buffer;
 	std::string shaderbinaryfilename = SHADERPATH + filename;
+	if (wiShaderCompiler::IsShaderOutdated(shaderbinaryfilename))
+	{
+		wiShaderCompiler::CompilerInput input;
+		input.format = device->GetShaderFormat();
+		input.stage = stage;
+
+		std::string sourcedir = SHADERSOURCEPATH;
+		wiHelper::MakePathAbsolute(sourcedir);
+		input.include_directories.push_back(sourcedir);
+
+		input.shadersourcefilename = wiHelper::ReplaceExtension(sourcedir + filename, "hlsl");
+
+		wiShaderCompiler::CompilerOutput output;
+		wiShaderCompiler::Compile(input, output);
+
+		if (output.IsValid())
+		{
+			wiShaderCompiler::SaveShaderAndMetadata(shaderbinaryfilename, output);
+
+			wiBackLog::post(("shader compiled: " + shaderbinaryfilename).c_str());
+			return device->CreateShader(stage, output.shaderdata, output.shadersize, &shader);
+		}
+		else
+		{
+			wiBackLog::post(("shader compile FAILED: " + shaderbinaryfilename + "\n" + output.error_message).c_str());
+		}
+		return false;
+	}
+
 	wiShaderCompiler::RegisterShader(shaderbinaryfilename);
+	vector<uint8_t> buffer;
 	if (wiHelper::FileRead(shaderbinaryfilename, buffer))
 	{
-		if (wiShaderCompiler::IsShaderOutdated(shaderbinaryfilename))
-		{
-			return CompileAndLoadShader(stage, shader, filename);
-		}
-
 		return device->CreateShader(stage, buffer.data(), buffer.size(), &shader);
-	}
-	else
-	{
-		return CompileAndLoadShader(stage, shader, filename);
 	}
 	return false;
 }

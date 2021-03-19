@@ -64,7 +64,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../WickedEngine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)WickedEngine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -85,9 +85,8 @@
       <ObjectFileOutput>shaders/%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <PostBuildEvent>
-      <Command>xcopy "$(SolutionDir)WickedEngine\dxcompiler.dll" "$(OutDir)" /c /y
-xcopy "$(SolutionDir)WickedEngine\dxil.dll" "$(OutDir)" /c /y
-xcopy "$(SolutionDir)WickedEngine\d3dcompiler_47.dll" "$(OutDir)" /c /y</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -98,7 +97,7 @@ xcopy "$(SolutionDir)WickedEngine\d3dcompiler_47.dll" "$(OutDir)" /c /y</Command
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../WickedEngine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)WickedEngine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
@@ -117,9 +116,8 @@ xcopy "$(SolutionDir)WickedEngine\d3dcompiler_47.dll" "$(OutDir)" /c /y</Command
       <ObjectFileOutput>shaders/%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <PostBuildEvent>
-      <Command>xcopy "$(SolutionDir)WickedEngine\dxcompiler.dll" "$(OutDir)" /c /y
-xcopy "$(SolutionDir)WickedEngine\dxil.dll" "$(OutDir)" /c /y
-xcopy "$(SolutionDir)WickedEngine\d3dcompiler_47.dll" "$(OutDir)" /c /y</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
