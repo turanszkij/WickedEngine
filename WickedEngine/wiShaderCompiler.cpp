@@ -10,6 +10,7 @@
 
 
 #ifdef PLATFORM_WINDOWS_DESKTOP
+#define SHADERCOMPILER_ENABLED
 #define SHADERCOMPILER_ENABLED_DXCOMPILER
 #define SHADERCOMPILER_ENABLED_D3DCOMPILER
 #include <atlbase.h> // ComPtr
@@ -417,6 +418,7 @@ namespace wiShaderCompiler
 	{
 		output = CompilerOutput();
 
+#ifdef SHADERCOMPILER_ENABLED
 		switch (input.format)
 		{
 		default:
@@ -436,11 +438,13 @@ namespace wiShaderCompiler
 #endif // SHADERCOMPILER_ENABLED_D3DCOMPILER
 
 		}
+#endif // SHADERCOMPILER_ENABLED
 	}
 
 	static const char* shadermetaextension = "wishadermeta";
 	bool SaveShaderAndMetadata(const std::string& shaderfilename, const CompilerOutput& output)
 	{
+#ifdef SHADERCOMPILER_ENABLED
 		wiHelper::DirectoryCreate(wiHelper::GetDirectoryFromPath(shaderfilename));
 
 		wiArchive dependencyLibrary(wiHelper::ReplaceExtension(shaderfilename, shadermetaextension), false);
@@ -455,10 +459,17 @@ namespace wiShaderCompiler
 			dependencyLibrary << dependencies;
 		}
 
-		return wiHelper::FileWrite(shaderfilename, output.shaderdata, output.shadersize);
+		if (wiHelper::FileWrite(shaderfilename, output.shaderdata, output.shadersize))
+		{
+			return true;
+		}
+#endif // SHADERCOMPILER_ENABLED
+
+		return false;
 	}
 	bool IsShaderOutdated(const std::string& shaderfilename)
 	{
+#ifdef SHADERCOMPILER_ENABLED
 		std::string filepath = shaderfilename;
 		wiHelper::MakePathAbsolute(filepath);
 		if (!wiHelper::FileExists(filepath))
@@ -495,6 +506,7 @@ namespace wiShaderCompiler
 				}
 			}
 		}
+#endif // SHADERCOMPILER_ENABLED
 
 		return false;
 	}
@@ -503,12 +515,15 @@ namespace wiShaderCompiler
 	std::unordered_set<std::string> registered_shaders;
 	void RegisterShader(const std::string& shaderfilename)
 	{
+#ifdef SHADERCOMPILER_ENABLED
 		locker.lock();
 		registered_shaders.insert(shaderfilename);
 		locker.unlock();
+#endif // SHADERCOMPILER_ENABLED
 	}
 	bool CheckRegisteredShadersOutdated()
 	{
+#ifdef SHADERCOMPILER_ENABLED
 		for (auto& x : registered_shaders)
 		{
 			if (IsShaderOutdated(x))
@@ -516,6 +531,7 @@ namespace wiShaderCompiler
 				return true;
 			}
 		}
+#endif // SHADERCOMPILER_ENABLED
 		return false;
 	}
 }
