@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <mutex>
 #include <unordered_map>
+#include <sstream>
 
 std::mutex locker;
 std::vector<std::string> shaders[wiGraphics::SHADERSTAGE_COUNT];
@@ -13,14 +14,56 @@ struct Target
 	wiGraphics::SHADERFORMAT format;
 	std::string dir;
 };
-Target targets[] = {
-	{wiGraphics::SHADERFORMAT_HLSL5, "shaders/hlsl5/"},
-	{wiGraphics::SHADERFORMAT_HLSL6, "shaders/hlsl6/"},
-	{wiGraphics::SHADERFORMAT_SPIRV, "shaders/spirv/"},
-};
+std::vector<Target> targets;
+std::unordered_map<std::string, wiShaderCompiler::CompilerOutput> results;
+bool shaderdump_enabled = false;
 
-int main()
+int main(int argc, char* argv[])
 {
+	std::cout << "[Wicked Engine Offline Shader Compiler]" << std::endl;
+	std::cout << "Available command arguments:" << std::endl;
+	std::cout << "\thlsl5 : Compile shaders to hlsl5 (dx11) format (using d3dcompiler)" << std::endl;
+	std::cout << "\thlsl6 : Compile shaders to hlsl6 (dx12) format (using dxcompiler)" << std::endl;
+	std::cout << "\tspirv : Compile shaders to spirv (vulkan) format (using dxcompiler)" << std::endl;
+	std::cout << "\tshaderdump : Shaders will be saved to wiShaderDump.h C++ header file" << std::endl;
+	std::cout << "Command arguments used: ";
+
+	wiStartupArguments::Parse(argc, argv);
+
+	if (wiStartupArguments::HasArgument("shaderdump"))
+	{
+		shaderdump_enabled = true;
+		std::cout << "shaderdump ";
+	}
+
+	if (wiStartupArguments::HasArgument("hlsl5"))
+	{
+		targets.push_back({ wiGraphics::SHADERFORMAT_HLSL5, "shaders/hlsl5/" });
+		std::cout << "hlsl5 ";
+	}
+	if (wiStartupArguments::HasArgument("hlsl6"))
+	{
+		targets.push_back({ wiGraphics::SHADERFORMAT_HLSL6, "shaders/hlsl6/" });
+		std::cout << "hlsl6 ";
+	}
+	if (wiStartupArguments::HasArgument("spirv"))
+	{
+		targets.push_back({ wiGraphics::SHADERFORMAT_SPIRV, "shaders/spirv/" });
+		std::cout << "spirv ";
+	}
+
+	std::cout << std::endl;
+
+	if (targets.empty())
+	{
+		targets = {
+			{ wiGraphics::SHADERFORMAT_HLSL5, "shaders/hlsl5/" },
+			{ wiGraphics::SHADERFORMAT_HLSL6, "shaders/hlsl6/" },
+			{ wiGraphics::SHADERFORMAT_SPIRV, "shaders/spirv/" },
+		};
+		std::cout << "No shader formats were specified, assuming command arguments: hlsl5 spirv hlsl6" << std::endl;
+	}
+
 	shaders[wiGraphics::CS] = {
 		"hairparticle_simulateCS.hlsl"								,
 		"hairparticle_finishUpdateCS.hlsl"							,
@@ -344,14 +387,14 @@ int main()
 	std::cout << "[Wicked Engine Offline Shader Compiler] Searching for outdated shaders..." << std::endl;
 	wiTimer timer;
 
-	for (int target = 0; target < arraysize(targets); ++target)
+	for (auto& target : targets)
 	{
-		std::string SHADERPATH = targets[target].dir;
+		std::string SHADERPATH = target.dir;
 		wiHelper::DirectoryCreate(SHADERPATH);
 
 		for (int i = 0; i < wiGraphics::SHADERSTAGE_COUNT; ++i)
 		{
-			if (targets[target].format == wiGraphics::SHADERFORMAT_HLSL5)
+			if (target.format == wiGraphics::SHADERFORMAT_HLSL5)
 			{
 				if (
 					i == wiGraphics::MS ||
@@ -368,13 +411,13 @@ int main()
 			{
 				wiJobSystem::Execute(ctx, [=](wiJobArgs args) {
 					std::string shaderbinaryfilename = wiHelper::ReplaceExtension(SHADERPATH + shader, "cso");
-					if (!wiShaderCompiler::IsShaderOutdated(shaderbinaryfilename))
+					if (!shaderdump_enabled && !wiShaderCompiler::IsShaderOutdated(shaderbinaryfilename))
 					{
 						return;
 					}
 
 					wiShaderCompiler::CompilerInput input;
-					input.format = targets[target].format;
+					input.format = target.format;
 					input.stage = (wiGraphics::SHADERSTAGE)i;
 					input.shadersourcefilename = SHADERSOURCEPATH + shader;
 					input.include_directories.push_back(SHADERSOURCEPATH);
@@ -384,9 +427,17 @@ int main()
 
 					if (output.IsValid())
 					{
-						wiShaderCompiler::SaveShaderAndMetadata(shaderbinaryfilename, output);
+						if (!shaderdump_enabled)
+						{
+							wiShaderCompiler::SaveShaderAndMetadata(shaderbinaryfilename, output);
+						}
+
 						locker.lock();
 						std::cout << "shader compiled: " << shaderbinaryfilename << std::endl;
+						if (shaderdump_enabled)
+						{
+							results[shaderbinaryfilename] = output;
+						}
 						locker.unlock();
 					}
 					else
@@ -403,7 +454,44 @@ int main()
 	}
 	wiJobSystem::Wait(ctx);
 
-	std::cout << "[Wicked Engine Offline Shader Compiler] Finished in " << timer.elapsed() / 1000.0 << " seconds" << std::endl;
+	std::cout << "[Wicked Engine Offline Shader Compiler] Finished in " << std::setprecision(4) << timer.elapsed_seconds() << " seconds" << std::endl;
+
+	if (shaderdump_enabled)
+	{
+		std::cout << "[Wicked Engine Offline Shader Compiler] Creating ShaderDump..." << std::endl;
+		timer.record();
+		std::stringstream ss;
+		for (auto& x : results)
+		{
+			auto& name = x.first;
+			auto& output = x.second;
+
+			std::string name_repl = name;
+			std::replace(name_repl.begin(), name_repl.end(), '/', '_');
+			std::replace(name_repl.begin(), name_repl.end(), '.', '_');
+			ss << "const uint8_t " << name_repl << "[] = {";
+			for (size_t i = 0; i < output.shadersize; ++i)
+			{
+				ss << (uint32_t)output.shaderdata[i] << ",";
+			}
+			ss << "};" << std::endl;
+		}
+		ss << "struct wiShaderDumpEntry{const uint8_t* data; size_t size;};" << std::endl;
+		ss << "const std::unordered_map<std::string, wiShaderDumpEntry> shaderdump = {" << std::endl;
+		for (auto& x : results)
+		{
+			auto& name = x.first;
+			auto& output = x.second;
+
+			std::string name_repl = name;
+			std::replace(name_repl.begin(), name_repl.end(), '/', '_');
+			std::replace(name_repl.begin(), name_repl.end(), '.', '_');
+			ss << "std::pair<std::string, wiShaderDumpEntry>(\"" << name << "\", {" << name_repl << ",sizeof(" << name_repl << ")})," << std::endl;
+		}
+		ss << "};" << std::endl;
+		wiHelper::FileWrite("wiShaderDump.h", (uint8_t*)ss.str().c_str(), ss.str().length());
+		std::cout << "[Wicked Engine Offline Shader Compiler] ShaderDump written to wiShaderDump.h in " << std::setprecision(4) << timer.elapsed_seconds() << " seconds" << std::endl;
+	}
 
 	return 0;
 }

@@ -80,8 +80,8 @@
       <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <PostBuildEvent>
-      <Command>xcopy "$(SolutionDir)WickedEngine\shaders\hlsl5\*.cso" "$(OutDir)AppX\shaders\hlsl5\" /e /c /i /y
-xcopy "$(SolutionDir)WickedEngine\shaders\hlsl6\*.cso" "$(OutDir)AppX\shaders\hlsl6\" /e /c /i /y</Command>
+      <Command>
+      </Command>
       <Message>
       </Message>
     </PostBuildEvent>
@@ -115,8 +115,8 @@ xcopy "$(SolutionDir)WickedEngine\shaders\hlsl6\*.cso" "$(OutDir)AppX\shaders\hl
       <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <PostBuildEvent>
-      <Command>xcopy "$(SolutionDir)WickedEngine\shaders\hlsl5\*.cso" "$(OutDir)AppX\shaders\hlsl5\" /e /c /i /y
-xcopy "$(SolutionDir)WickedEngine\shaders\hlsl6\*.cso" "$(OutDir)AppX\shaders\hlsl6\" /e /c /i /y</Command>
+      <Command>
+      </Command>
       <Message>
       </Message>
     </PostBuildEvent>

@@ -56,8 +56,15 @@ GPUBuffer			constantBuffers[CBTYPE_COUNT];
 GPUBuffer			resourceBuffers[RBTYPE_COUNT];
 Sampler				samplers[SSLOT_COUNT];
 
-string SHADERPATH = "../WickedEngine/shaders/";
-string SHADERSOURCEPATH = SHADERPATH;
+#if __has_include("wiShaderDump.h")
+// In this case, wiShaderDump.h contains precompiled shader binary data
+#include "wiShaderdump.h"
+#define SHADERDUMP_ENABLED
+std::string SHADERPATH = "shaders/";
+#else
+std::string SHADERPATH = "../WickedEngine/shaders/";
+#endif // SHADERDUMP
+std::string SHADERSOURCEPATH = SHADERPATH;
 
 LinearAllocator renderFrameAllocators[COMMANDLIST_COUNT]; // can be used by graphics threads
 inline LinearAllocator& GetRenderFrameAllocator(CommandList cmd)
@@ -896,6 +903,21 @@ PipelineState PSO_debug[DEBUGRENDERING_COUNT];
 bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
 {
 	std::string shaderbinaryfilename = SHADERPATH + filename;
+
+#ifdef SHADERDUMP_ENABLED
+
+	// Loading shader from precompiled dump:
+	auto it = shaderdump.find(shaderbinaryfilename);
+	if (it != shaderdump.end())
+	{
+		return device->CreateShader(stage, it->second.data, it->second.size, &shader);
+	}
+	else
+	{
+		wiBackLog::post(("shader dump doesn't contain shader: " + shaderbinaryfilename).c_str());
+	}
+#endif // SHADERDUMP_ENABLED
+
 	wiShaderCompiler::RegisterShader(shaderbinaryfilename);
 
 	if (wiShaderCompiler::IsShaderOutdated(shaderbinaryfilename))
@@ -932,6 +954,7 @@ bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
 	{
 		return device->CreateShader(stage, buffer.data(), buffer.size(), &shader);
 	}
+
 	return false;
 }
 

@@ -66,7 +66,7 @@
       <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>$(OutDir)$(TargetName)</Command>
+      <Command>$(OutDir)$(TargetName) hlsl5 hlsl6 spirv shaderdump</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -88,7 +88,7 @@
       <AdditionalLibraryDirectories>$(SolutionDir)BUILD\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>$(OutDir)$(TargetName)</Command>
+      <Command>$(OutDir)$(TargetName) hlsl5 hlsl6 spirv shaderdump</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
