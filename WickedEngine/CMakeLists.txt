@@ -94,7 +94,6 @@ add_library(${TARGET_NAME} STATIC
 	wiSpriteFont_BindLua.cpp
 	wiStartupArguments.cpp
 	wiTextureHelper.cpp
-	wiTimer.cpp
 	wiVersion.cpp
 	wiWidget.cpp
 	wiXInput.cpp
