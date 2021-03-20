@@ -65,11 +65,6 @@ This is a reference for the C++ features of Wicked Engine
 		4. [GraphicsDevice_Vulkan](#wigraphicsdevice_vulkan)
 		5. [Graphics Descriptors](#graphics-descriptors)
 		6. [Graphics Resources](#graphics-resources)
-		7. [GPUMapping](#gpumapping)
-			1. [ConstantBufferMapping](#constantbuffermapping)
-			2. [ResourceMapping](#resourcemapping)
-			3. [SamplerMapping](#samplermapping)
-			4. [ShaderInterop](#shaderinterop)
 	2. [wiRenderer](#wirenderer)
 		1. [DrawScene](#drawscene)
 		2. [DrawScene_Transparent](#drawscene_transparent)
@@ -159,6 +154,12 @@ This is a reference for the C++ features of Wicked Engine
 	1. [wiBacklog](#wibacklog)
 	2. [wiProfiler](#wiprofiler)
 12. [Shaders](#shaders)
+	1. [Interop](#interop)
+		1. [ConstantBufferMapping](#constantbuffermapping)
+		2. [ResourceMapping](#resourcemapping)
+		3. [SamplerMapping](#samplermapping)
+		4. [ShaderInterop](#shaderinterop)
+	2. [Shader Compiler](#shader-compiler)
 
 
 ## High Level Interface
@@ -700,36 +701,6 @@ The place for graphics types like COMPARISON_FUNC, STENCIL_OP and descriptors li
 [[Header]](../WickedEngine/wiGraphicsResource.h) [[Cpp]](../WickedEngine/wiGraphicsResource.cpp)
 Graphics resource wrappers for Texture, Shader, GPUBuffer, etc.
 
-#### ConstantBufferMapping
-[[Header]](../WickedEngine/ConstantBufferMapping.h)
-Used to declare shared global constant buffer bind points between C++ code and shaders
-
-#### ResourceMapping
-[[Header]](../WickedEngine/ResourceMapping.h)
-Used to declare shared global resource view bind points between C++ code and shaders
-
-#### SamplerMapping
-[[Header]](../WickedEngine/SamplerMapping.h)
-Used to declare shared global sampler bind points between C++ code and shaders
-
-#### ShaderInterop
-[[Header]](../WickedEngine/ShaderInterop.h)
-Shader Interop is used for declaring shared structures or values between C++ Engine code and shader code. There are several ShaderInterop files, postfixed by the subsystem they are used for to keep them minimal and more readable: <br/>
-[ShaderInterop_BVH.h](../WickedEngine/ShaderInterop_BVH.h) <br/>
-[ShaderInterop_EmittedParticle.h](../WickedEngine/ShaderInterop_EmittedParticle.h) <br/>
-[ShaderInterop_FFTGenerator.h](../WickedEngine/ShaderInterop_FFTGenerator.h) <br/>
-[ShaderInterop_Font.h](../WickedEngine/ShaderInterop_Font.h) <br/>
-[ShaderInterop_GPUSortLib.h](../WickedEngine/ShaderInterop_GPUSortLib.h) <br/>
-[ShaderInterop_HairParticle.h](../WickedEngine/ShaderInterop_HairParticle.h) <br/>
-[ShaderInterop_Image.h](../WickedEngine/ShaderInterop_Image.h) <br/>
-[ShaderInterop_Ocean.h](../WickedEngine/ShaderInterop_Ocean.h) <br/>
-[ShaderInterop_Postprocess.h](../WickedEngine/ShaderInterop_Postprocess.h) <br/>
-[ShaderInterop_Raytracing.h](../WickedEngine/ShaderInterop_Raytracing.h) <br/>
-[ShaderInterop_Renderer.h](../WickedEngine/ShaderInterop_Renderer.h) <br/>
-[ShaderInterop_Skinning.h](../WickedEngine/ShaderInterop_Skinning.h) <br/>
-[ShaderInterop_Utility.h](../WickedEngine/ShaderInterop_Utility.h) <br/>
-[ShaderInterop_Vulkan.h](../WickedEngine/ShaderInterop_Vulkan.h) <br/>
-The ShaderInterop also contains the resource macros to help share code between C++ and HLSL, and portability between shader compilers. Read more about macros in the [Shaders section](#shaders)
 
 ### wiRenderer
 [[Header]](../WickedEngine/wiRenderer.h) [[Cpp]](../WickedEngine/wiRenderer.cpp)
@@ -1289,7 +1260,9 @@ Used to time specific ranges in execution. Support CPU and GPU timing. Can write
 
 
 ## Shaders
-There is a separate project file for shaders in the solution. Shaders are written in HLSL shading language. There are some macros used to declare resources with binding slots that can be read from the C++ application via code sharing. These macros are used to declare resources:
+Shaders are written in HLSL shading language and [compiled](#shader-compiler) into the native shader binary format that can vary based on platform and graphics device requirements. 
+
+There are some macros used to declare resources with binding slots that can be read from the C++ application via code sharing. These macros are used to declare resources:
 
 - CBUFFER(name, slot)<br/>
 Declares a constant buffer
@@ -1509,7 +1482,7 @@ TEXTURECUBEARRAY(myTextureArray, float4, 0);
 float4 color = myTextureArray.Sample(mySampler, float4(0,0,0, 66));
 ```
 
-You can see them all in [ShaderInterop.h](../WickedEngine/ShaderInterop.h)
+You can see them all in [ShaderInterop.h](../WickedEngine/shaders/ShaderInterop.h)
 
 Note: When creating constant buffers, the structure must be strictly padded to 16-byte boundaries according to HLSL rules. Apart from that, the following limitation is in effect for Vulkan compatibility:
 
@@ -1532,3 +1505,41 @@ CBUFFER(cbuf, 0)
 	float4 value2;
 };
 ```
+
+### Interop
+The interop between shaders and C++ code is handled by shared header (.h) files. Modifying the shared header files will need recompilation of both engine and shaders, otherwise undefined behaviour will occur. For cases when only shaders need visibility, consider using shader header files (.hlsli), which should not be shared with the engine C++ code.
+
+#### ConstantBufferMapping
+[[Header]](../WickedEngine/shaders/ConstantBufferMapping.h)
+Used to declare shared global constant buffer bind points between C++ code and shaders
+
+#### ResourceMapping
+[[Header]](../WickedEngine/shaders/ResourceMapping.h)
+Used to declare shared global resource view bind points between C++ code and shaders
+
+#### SamplerMapping
+[[Header]](../WickedEngine/shaders/SamplerMapping.h)
+Used to declare shared global sampler bind points between C++ code and shaders
+
+#### ShaderInterop
+[[Header]](../WickedEngine/shaders/ShaderInterop.h)
+Shader Interop is used for declaring shared structures or values between C++ Engine code and shader code. There are several ShaderInterop files, postfixed by the subsystem they are used for to keep them minimal and more readable: <br/>
+[ShaderInterop_BVH.h](../WickedEngine/ShaderInterop_BVH.h) <br/>
+[ShaderInterop_EmittedParticle.h](../WickedEngine/ShaderInterop_EmittedParticle.h) <br/>
+[ShaderInterop_FFTGenerator.h](../WickedEngine/ShaderInterop_FFTGenerator.h) <br/>
+[ShaderInterop_Font.h](../WickedEngine/ShaderInterop_Font.h) <br/>
+[ShaderInterop_GPUSortLib.h](../WickedEngine/ShaderInterop_GPUSortLib.h) <br/>
+[ShaderInterop_HairParticle.h](../WickedEngine/ShaderInterop_HairParticle.h) <br/>
+[ShaderInterop_Image.h](../WickedEngine/ShaderInterop_Image.h) <br/>
+[ShaderInterop_Ocean.h](../WickedEngine/ShaderInterop_Ocean.h) <br/>
+[ShaderInterop_Postprocess.h](../WickedEngine/ShaderInterop_Postprocess.h) <br/>
+[ShaderInterop_Raytracing.h](../WickedEngine/ShaderInterop_Raytracing.h) <br/>
+[ShaderInterop_Renderer.h](../WickedEngine/ShaderInterop_Renderer.h) <br/>
+[ShaderInterop_Skinning.h](../WickedEngine/ShaderInterop_Skinning.h) <br/>
+[ShaderInterop_Utility.h](../WickedEngine/ShaderInterop_Utility.h) <br/>
+[ShaderInterop_Vulkan.h](../WickedEngine/ShaderInterop_Vulkan.h) <br/>
+The ShaderInterop also contains the resource macros to help share code between C++ and HLSL, and portability between shader compilers. Read more about macros in the [Shaders section](#shaders)
+
+### Shader Compiler
+The built in Visual Studio shader compiler can compile HLSL shaders with the usual visual studio build process. This can be used to some extent, but the recommended way is to use the [[Wicked Engine Shader Compiler Interface (wiShaderCompiler)]](../WickedEngine/wiShaderCompiler.h). This supports various tools to compile shaders to different shader formats (hlsl5, hlsl6, spirv), and can be used at runtime, for example to compile shader permutations easily, and also use engine features like the [job system](wijobsystem) to parallelize compile tasks with more control than a common build system. 
+
