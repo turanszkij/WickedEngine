@@ -1,19 +1,26 @@
-#include "wiShaderCompiler.h"
-#include "wiRenderer.h"
-#include "wiHelper.h"
 #include "WickedEngine.h"
 
 #include <iostream>
 #include <vector>
 #include <filesystem>
 #include <mutex>
+#include <unordered_map>
 
 std::mutex locker;
+std::vector<std::string> shaders[wiGraphics::SHADERSTAGE_COUNT];
+struct Target
+{
+	wiGraphics::SHADERFORMAT format;
+	std::string dir;
+};
+Target targets[] = {
+	{wiGraphics::SHADERFORMAT_HLSL5, "shaders/hlsl5/"},
+	{wiGraphics::SHADERFORMAT_HLSL6, "shaders/hlsl6/"},
+	{wiGraphics::SHADERFORMAT_SPIRV, "shaders/spirv/"},
+};
 
 int main()
 {
-	std::vector<std::string> shaders[wiGraphics::SHADERSTAGE_COUNT];
-
 	shaders[wiGraphics::CS] = {
 		"hairparticle_simulateCS.hlsl"								,
 		"hairparticle_finishUpdateCS.hlsl"							,
@@ -333,17 +340,6 @@ int main()
 
 	std::string SHADERSOURCEPATH = wiRenderer::GetShaderSourcePath();
 	wiHelper::MakePathAbsolute(SHADERSOURCEPATH);
-
-	struct Target
-	{
-		wiGraphics::SHADERFORMAT format;
-		std::string dir;
-	};
-	Target targets[] = {
-		{wiGraphics::SHADERFORMAT_HLSL5, "shaders/hlsl5/"},
-		{wiGraphics::SHADERFORMAT_HLSL6, "shaders/hlsl6/"},
-		{wiGraphics::SHADERFORMAT_SPIRV, "shaders/spirv/"},
-	};
 
 	std::cout << "[Wicked Engine Offline Shader Compiler] Searching for outdated shaders..." << std::endl;
 	wiTimer timer;
