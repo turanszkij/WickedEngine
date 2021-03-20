@@ -46,6 +46,7 @@
   <ImportGroup Label="Shared">
     <Import Project="Editor_SOURCE.vcxitems" Label="Shared" />
     <Import Project="..\WickedEngine\shaders\Shaders_SOURCE.vcxitems" Label="Shared" />
+    <Import Project="..\Content.vcxitems" Label="Shared" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />

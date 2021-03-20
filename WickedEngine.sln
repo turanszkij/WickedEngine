@@ -8,7 +8,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Editor_UWP", "Editor\Editor_UWP.vcxproj", "{FA78BFAD-4B23-4A6B-92FA-A48CE56BED03}"
 	ProjectSection(ProjectDependencies) = postProject
 		{60DA258F-E95F-4CF4-A46B-17D80644464B} = {60DA258F-E95F-4CF4-A46B-17D80644464B}
-		{3B74A7FE-CED7-4723-8824-AC708A865B98} = {3B74A7FE-CED7-4723-8824-AC708A865B98}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Editor_SOURCE", "Editor\Editor_SOURCE.vcxitems", "{867FEBCA-09C4-4FE7-8A4C-4D9B1C27E7D0}"
@@ -72,6 +71,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OfflineShaderCompiler", "Wi
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Shaders_SOURCE", "WickedEngine\shaders\Shaders_SOURCE.vcxitems", "{92E86448-0724-4387-ABAC-96E63EDF4190}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Content", "Content.vcxitems", "{C48F6BFF-F91B-4DB5-98B5-15287DFB7C95}"
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		WickedEngine\WickedEngine_SOURCE.vcxitems*{06163dcb-b183-4ed9-9c62-13ef1658e049}*SharedItemsImports = 4
@@ -81,6 +82,8 @@ Global
 		Editor\Editor_SOURCE.vcxitems*{867febca-09c4-4fe7-8a4c-4d9b1c27e7d0}*SharedItemsImports = 9
 		WickedEngine\shaders\Shaders_SOURCE.vcxitems*{92e86448-0724-4387-abac-96e63edf4190}*SharedItemsImports = 9
 		WickedEngine\shaders\Shaders_SOURCE.vcxitems*{c222218b-b6d1-406b-b2c0-8c1ced4a8d19}*SharedItemsImports = 4
+		Content.vcxitems*{c48f6bff-f91b-4db5-98b5-15287dfb7c95}*SharedItemsImports = 9
+		Content.vcxitems*{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}*SharedItemsImports = 4
 		Editor\Editor_SOURCE.vcxitems*{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}*SharedItemsImports = 4
 		WickedEngine\shaders\Shaders_SOURCE.vcxitems*{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}*SharedItemsImports = 4
 	EndGlobalSection

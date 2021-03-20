@@ -1,0 +1,514 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="models">
+      <UniqueIdentifier>{1e52ef96-0bb7-4391-a08b-70de0073ef4b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="scripts">
+      <UniqueIdentifier>{3dd2f7b1-11bc-47f3-84b7-6a0b1430069c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="models\Sponza">
+      <UniqueIdentifier>{79c15acb-1f18-400c-82b4-846dfdd4ab85}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="models\Sponza\textures">
+      <UniqueIdentifier>{313c5c5a-2029-43a8-99ca-cc56f435121c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="models\Havoc">
+      <UniqueIdentifier>{6f72400d-8b00-4dc0-8015-f88dd5d4c11b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="models\dungeon">
+      <UniqueIdentifier>{2ba616fc-e2c9-4af4-9099-948f45e2dd80}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Documentation">
+      <UniqueIdentifier>{c66293fd-fe0c-444e-9502-f0864bfbf736}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)scripts\camera_animation_clamped.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\camera_animation_repeat.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller_tps.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\debug_draw.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\dungeon_generator.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\emitter_burst.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\fighting_game.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\move_object.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\pick.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\rotate_model.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\set_material_color.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\set_material_emissive.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\Sponza\sponza.wiscene">
+      <Filter>models\Sponza</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\Havoc\havoc.wiscene">
+      <Filter>models\Havoc</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\dungeon\block.wiscene">
+      <Filter>models\dungeon</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\dungeon\corridor.wiscene">
+      <Filter>models\dungeon</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\dungeon\crossjunction.wiscene">
+      <Filter>models\dungeon</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\dungeon\end.wiscene">
+      <Filter>models\dungeon</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\dungeon\oddcorridor.wiscene">
+      <Filter>models\dungeon</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\dungeon\room.wiscene">
+      <Filter>models\dungeon</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\dungeon\smallroomleft.wiscene">
+      <Filter>models\dungeon</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\dungeon\start.wiscene">
+      <Filter>models\dungeon</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\dungeon\tjunction.wiscene">
+      <Filter>models\dungeon</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\dungeon\turnleft.wiscene">
+      <Filter>models\dungeon</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\dungeon\turnright.wiscene">
+      <Filter>models\dungeon</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\dungeon\upcorridor.wiscene">
+      <Filter>models\dungeon</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\cameras.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\CesiumMan.glb">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\cloth_test.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\DamagedHelmet.glb">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\dojo.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\emitter_distortion.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\emitter_dust.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\emitter_fireball.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\emitter_fluid_50k.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\emitter_guardeffect.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\emitter_hiteffect.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\emitter_skinned.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\emitter_smoke.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\emitter_spark.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\girl.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\hairparticle_torus.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\lensflare_light.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\lightmap_bake_test.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\physics_test.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\playground.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\shadows_test.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\sound3D_test.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\suzanne.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\teapot.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\volumetric_test.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\water_plane.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\water_test.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Documentation\ScriptingAPI-Documentation.md">
+      <Filter>Documentation</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Documentation\WickedEngine-Documentation.md">
+      <Filter>Documentation</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\blend_instancing_test.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\shadowspriority_point_test.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\shadowspriority_spot_test.wiscene">
+      <Filter>models</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\background.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\background_bump.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\background_ddn.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\backgroundBGR.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\chain_texture.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\chain_texture_bump.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\chain_texture_ddn.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\chain_texture_mask.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\gi_flag.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\lion.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\lion_bump.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\lion_ddn.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\lion2_bump.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\lion2_ddn.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\particle_dust.dds">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\spnza_bricks_a_bump.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\spnza_bricks_a_ddn.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\spnza_bricks_a_diff.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\spnza_bricks_a_spec.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_arch_bump.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_arch_ddn.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_arch_diff.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_arch_diff_NRM.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_arch_spec.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_ceiling_a_diff.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_ceiling_a_diff_NRM.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_ceiling_a_spec.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_column_a_bump.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_column_a_ddn.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_column_a_diff.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_column_a_spec.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_column_b_bump.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_column_b_ddn.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_column_b_diff.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_column_b_spec.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_column_c_bump.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_column_c_ddn.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_column_c_diff.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_column_c_spec.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_curtain_blue_diff.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_curtain_blue_diff_NRM.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_curtain_diff.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_curtain_green_diff.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_details_diff.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_details_diff_NRM.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_details_spec.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_fabric_blue_diff.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_fabric_blue_diff_NRM.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_fabric_diff.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_fabric_green_diff.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_fabric_spec.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_flagpole_diff.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_flagpole_diff_NRM.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_flagpole_spec.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_floor_a_diff.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_floor_a_diff_NRM.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_floor_a_spec.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_roof_diff.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_roof_diff_NRM.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_thorn_bump.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_thorn_ddn.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_thorn_diff.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_thorn_mask.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\sponza_thorn_spec.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_bump.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_ddn.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_dif.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_hanging.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_hanging_NRM.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_plant.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_plant_mask.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_plant_NRM.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_plant_spec.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_round.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_round_bump.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_round_ddn.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_round_spec.png">
+      <Filter>models\Sponza\textures</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Havoc\baseColor.png">
+      <Filter>models\Havoc</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Havoc\normalMap.png">
+      <Filter>models\Havoc</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\billboardredflowers.png">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\fire.jpg">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\flare0.jpg">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\flare1.jpg">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\flare2.jpg">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\flare3.jpg">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\flare4.jpg">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\flare5.jpg">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\flare6.jpg">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\grassbb.png">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\grid.dds">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\orb.dds">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\repack.png">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\sky.dds">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\smoke0.png">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\waterNormalMap.jpg">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\ripple.png">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\hp_bar.png">
+      <Filter>scripts</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\colorgradinglut_default.png">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\colorgradinglut_filter.png">
+      <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\colorgradinglut_sepia.png">
+      <Filter>models</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Media Include="$(MSBuildThisFileDirectory)models\water.wav">
+      <Filter>models</Filter>
+    </Media>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)models\Sponza\copyright.txt">
+      <Filter>models\Sponza</Filter>
+    </Text>
+  </ItemGroup>
+</Project>
