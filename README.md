@@ -11,8 +11,8 @@
 
 
 <br/>
-<img align="right" src="https://turanszkij.files.wordpress.com/2019/02/emitterskinned2.gif"/>
-Wicked Engine is an open-source C++ engine focusing on modern rendering techniques and performance. Here you will need some C++ programming skills to utilize most features effectively, but the aim a simple and efficient architecture, so it a good place to learn. The source code is free to be used for anything good.<br/>
+<img align="right" src="https://turanszkij.files.wordpress.com/2019/02/emitterskinned2.gif" width="256px"/>
+Wicked Engine is an open-source C++ engine focusing on modern rendering techniques and performance. You will need some programming skills for this. It is free to be used for anything good.<br/>
 This project is hosted on <a href="https://github.com/turanszkij/WickedEngine/">GitHub</a>.
 
 - [Documentation](Documentation/WickedEngine-Documentation.md)<br/>
@@ -21,10 +21,12 @@ This project is hosted on <a href="https://github.com/turanszkij/WickedEngine/">
 - [Devblog](https://wickedengine.net/)<br/>
 - [Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
 
-You can download the source code by using Git and cloning the repository, or downloading it as zip. You can also choose to download a pre-built version of the Editor or Tests applications, which will allow you to try out features, load content and execute LUA scripts. <br/>
+You can download the source code by using Git and cloning the repository, or downloading it as zip. You can also choose to download a pre-built version of the Editor or Tests applications, which will allow you to try out features, load content and execute LUA scripts. 
+<br/>
+<br/>
 
 
-<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/physics.gif"/>
+<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/physics.gif" width="256px"/>
 
 ### Platforms:
 - Windows 10 Desktop [Visual Studio 2019]
@@ -36,7 +38,7 @@ You can download the source code by using Git and cloning the repository, or dow
 #### Windows
 To build Wicked Engine for Windows 10, use Visual Studio and the provided `WickedEngine.sln` solution file. There are a couple of projects that you can run up front: Editor, Tests and Template. You just have to set either as startup project and press F5 in Visual Studio to build and run. For optimal performance, choose `Release` mode, for the best debugging experience, choose `Debug` mode.
 
-<img align="right" src="https://turanszkij.files.wordpress.com/2020/08/fighting_game_small-1.gif"/>
+<img align="right" src="https://turanszkij.files.wordpress.com/2020/08/fighting_game_small-1.gif" width="256px"/>
 
 If you want to develop an application that uses Wicked Engine, you can build the WickedEngine static library project for the appropriate platform, such as `WickedEngine_Windows` and link against it. Including the `"WickedEngine.h"` header will attempt to link the binaries for the appropriate platform, but search directories should be set up beforehand. For example, you can set additional library directories to `$(SolutionDir)BUILD\$(Platform)\$(Configuration)` by default. For examples, see the `Template`, `Tests`, and `Editor` projects. 
 
@@ -76,7 +78,7 @@ If you have questions or stuck, please use the `linux` communication channel on 
 
 #### Initialization (C++):
 
-<img align="right" src="https://turanszkij.files.wordpress.com/2018/05/sphinit.gif"/>
+<img align="right" src="https://turanszkij.files.wordpress.com/2018/05/sphinit.gif" width="256px"/>
 
 ```cpp
 // Include engine headers:
@@ -178,7 +180,7 @@ For more code samples and advanced use cases, please see the example projects, l
 
 ### Scripting API:
 
-<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/hairparticle2.gif"/>
+<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/hairparticle2.gif" width="256px"/>
 
 You can use a great number of engine features through the Lua scripting api, which can even be used real time while the program is running. The included applications, like the Editor,
 contain a scripting input method toggled by the "Home" key. A blue screen will be presented where the user can type in LUA commands. It is very minimal in regards to input methods.
@@ -222,7 +224,7 @@ You can specify command line arguments (without any prefix) to switch between re
   </tr>
 </table>
 
-<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/soft.gif"/>
+<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/soft.gif" width="256px"/>
 
 <br/>
 
