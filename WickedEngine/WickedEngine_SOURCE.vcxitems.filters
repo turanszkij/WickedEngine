@@ -1673,9 +1673,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRandom.cpp">
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiTimer.cpp">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTextureHelper.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>

@@ -692,7 +692,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiStartupArguments.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTextureHelper.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiTimer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiWidget.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiXInput.cpp" />
