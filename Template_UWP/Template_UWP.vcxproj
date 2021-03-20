@@ -43,9 +43,7 @@
     <Import Project="$(VSINSTALLDIR)\Common7\IDE\Extensions\Microsoft\VsGraphics\MeshContentTask.props" />
     <Import Project="$(VSINSTALLDIR)\Common7\IDE\Extensions\Microsoft\VsGraphics\ShaderGraphContentTask.props" />
   </ImportGroup>
-  <ImportGroup Label="Shared">
-    <Import Project="..\WickedEngine\shaders\Shaders_SOURCE.vcxitems" Label="Shared" />
-  </ImportGroup>
+  <ImportGroup Label="Shared" />
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
@@ -82,8 +80,8 @@
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
     </Manifest>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>xcopy "$(SolutionDir)WickedEngine\shaders\hlsl5\*.cso" "$(OutDir)AppX\shaders\hlsl5\" /e /c /i /y
+xcopy "$(SolutionDir)WickedEngine\shaders\hlsl6\*.cso" "$(OutDir)AppX\shaders\hlsl6\" /e /c /i /y</Command>
       <Message>
       </Message>
     </PostBuildEvent>
@@ -121,8 +119,8 @@
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
     </Manifest>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>xcopy "$(SolutionDir)WickedEngine\shaders\hlsl5\*.cso" "$(OutDir)AppX\shaders\hlsl5\" /e /c /i /y
+xcopy "$(SolutionDir)WickedEngine\shaders\hlsl6\*.cso" "$(OutDir)AppX\shaders\hlsl6\" /e /c /i /y</Command>
       <Message>
       </Message>
     </PostBuildEvent>

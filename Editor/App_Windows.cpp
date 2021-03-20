@@ -52,6 +52,8 @@ public:
 		main.infoDisplay.fpsinfo = true;
 
 		wiRenderer::SetShaderPath("shaders/");
+
+		wiStartupArguments::Parse(L"dx12");
 	}
 
 	void Uninitialize() noexcept
@@ -118,11 +120,6 @@ protected:
 	// Event handlers
 	void OnActivated(CoreApplicationView const& /*applicationView*/, IActivatedEventArgs const& args)
 	{
-		if (args.Kind() == ActivationKind::Launch)
-		{
-			auto launchArgs = (const LaunchActivatedEventArgs*)(&args);
-			wiStartupArguments::Parse(launchArgs->Arguments().data());
-		}
 		CoreWindow::GetForCurrentThread().Activate();
 	}
 

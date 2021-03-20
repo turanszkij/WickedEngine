@@ -45,7 +45,6 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
     <Import Project="Editor_SOURCE.vcxitems" Label="Shared" />
-    <Import Project="..\WickedEngine\shaders\Shaders_SOURCE.vcxitems" Label="Shared" />
     <Import Project="..\Content.vcxitems" Label="Shared" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -81,8 +80,8 @@
       <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>xcopy "$(SolutionDir)WickedEngine\shaders\hlsl5\*.cso" "$(OutDir)AppX\shaders\hlsl5\" /e /c /i /y
+xcopy "$(SolutionDir)WickedEngine\shaders\hlsl6\*.cso" "$(OutDir)AppX\shaders\hlsl6\" /e /c /i /y</Command>
       <Message>
       </Message>
     </PostBuildEvent>
@@ -116,8 +115,8 @@
       <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>xcopy "$(SolutionDir)WickedEngine\shaders\hlsl5\*.cso" "$(OutDir)AppX\shaders\hlsl5\" /e /c /i /y
+xcopy "$(SolutionDir)WickedEngine\shaders\hlsl6\*.cso" "$(OutDir)AppX\shaders\hlsl6\" /e /c /i /y</Command>
       <Message>
       </Message>
     </PostBuildEvent>
