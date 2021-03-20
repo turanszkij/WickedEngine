@@ -1,4 +1,4 @@
-<img align="left" src="images/logo_small.png" width="128px"/>
+<img align="left" src="Content/logo_small.png" width="128px"/>
 
 # Wicked Engine
 
@@ -15,8 +15,8 @@
 Wicked Engine is an open-source C++ engine focusing on modern rendering techniques and performance. You will need some programming skills for this. It is free to be used for anything good.<br/>
 This project is hosted on <a href="https://github.com/turanszkij/WickedEngine/">GitHub</a>.
 
-- [Documentation](Documentation/WickedEngine-Documentation.md)<br/>
-- [Scripting API Documentation](Documentation/ScriptingAPI-Documentation.md)<br/>
+- [Documentation](Content/Documentation/WickedEngine-Documentation.md)<br/>
+- [Scripting API Documentation](Content/Documentation/ScriptingAPI-Documentation.md)<br/>
 - [Features](features.txt)<br/>
 - [Devblog](https://wickedengine.net/)<br/>
 - [Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
