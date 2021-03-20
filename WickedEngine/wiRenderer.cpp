@@ -896,6 +896,8 @@ PipelineState PSO_debug[DEBUGRENDERING_COUNT];
 bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
 {
 	std::string shaderbinaryfilename = SHADERPATH + filename;
+	wiShaderCompiler::RegisterShader(shaderbinaryfilename);
+
 	if (wiShaderCompiler::IsShaderOutdated(shaderbinaryfilename))
 	{
 		wiShaderCompiler::CompilerInput input;
@@ -925,7 +927,6 @@ bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
 		return false;
 	}
 
-	wiShaderCompiler::RegisterShader(shaderbinaryfilename);
 	vector<uint8_t> buffer;
 	if (wiHelper::FileRead(shaderbinaryfilename, buffer))
 	{
