@@ -93,7 +93,6 @@ public:
 	wiComboBox saveModeComboBox;
 	wiButton modelButton;
 	wiButton scriptButton;
-	wiButton shaderButton;
 	wiButton clearButton;
 	wiButton helpButton;
 	wiButton exitButton;

@@ -342,29 +342,26 @@ void EditorComponent::ResizeLayout()
 
 	////////////////////////////////////////////////////////////////////////////////////
 
-	translatorCheckBox.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25, 0));
+	translatorCheckBox.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 4 - 25, 0));
 	translatorCheckBox.SetSize(XMFLOAT2(18, 18));
 
-	isScalatorCheckBox.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25 - 40 * 2, 22));
+	isScalatorCheckBox.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 4 - 25 - 40 * 2, 22));
 	isScalatorCheckBox.SetSize(XMFLOAT2(18, 18));
 
-	isRotatorCheckBox.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25 - 40 * 1, 22));
+	isRotatorCheckBox.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 4 - 25 - 40 * 1, 22));
 	isRotatorCheckBox.SetSize(XMFLOAT2(18, 18));
 
-	isTranslatorCheckBox.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25, 22));
+	isTranslatorCheckBox.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 4 - 25, 22));
 	isTranslatorCheckBox.SetSize(XMFLOAT2(18, 18));
 
-	saveButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5, 0));
+	saveButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 4, 0));
 	saveButton.SetSize(XMFLOAT2(100, 40));
 
-	modelButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 4, 0));
+	modelButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 3, 0));
 	modelButton.SetSize(XMFLOAT2(100, 40));
 
-	scriptButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 3, 0));
+	scriptButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 2, 0));
 	scriptButton.SetSize(XMFLOAT2(100, 40));
-
-	shaderButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 2, 0));
-	shaderButton.SetSize(XMFLOAT2(100, 40));
 
 	clearButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 1, 0));
 	clearButton.SetSize(XMFLOAT2(100, 40));
@@ -768,19 +765,6 @@ void EditorComponent::Load()
 		});
 	});
 	GetGUI().AddWidget(&scriptButton);
-
-
-	shaderButton.Create("Reload Shaders");
-	shaderButton.SetTooltip("Reload shaders from the default directory...");
-	shaderButton.SetColor(wiColor(255, 33, 140, 180), wiWidget::WIDGETSTATE::IDLE);
-	shaderButton.SetColor(wiColor(255, 100, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
-	shaderButton.font.params.size -= 2;
-	shaderButton.OnClick([](wiEventArgs args) {
-
-		wiRenderer::ReloadShaders();
-
-	});
-	GetGUI().AddWidget(&shaderButton);
 
 
 	clearButton.Create("Clear World");
