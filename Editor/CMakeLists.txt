@@ -53,17 +53,18 @@ else ()
 		WickedEngine 
 		Threads::Threads
 	)
+	
+	add_custom_command(
+		TARGET WickedEngineEditor POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+				${CMAKE_CURRENT_SOURCE_DIR}/../WickedEngine/shaders/spirv
+				${CMAKE_CURRENT_SOURCE_DIR}/shaders/spirv)
 				
 
 endif ()
 
 
 # Copy content to build folder:
-add_custom_command(
-    TARGET WickedEngineEditor POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
-            ${CMAKE_CURRENT_SOURCE_DIR}/../WickedEngine/shaders/spirv
-            ${CMAKE_CURRENT_BINARY_DIR}/shaders/spirv)
 add_custom_command(
     TARGET WickedEngineEditor POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory

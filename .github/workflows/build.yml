@@ -96,7 +96,7 @@ jobs:
       with:
         name: Editor (Ubuntu 20.04)
         path: |
-          build/Editor/shaders/spirv/*.cso
+          Editor/shaders/spirv/*.cso
           Content/
           README.md
           LICENSE.md
@@ -114,7 +114,7 @@ jobs:
       with:
         name: Tests (Ubuntu 20.04)
         path: |
-          build/Tests/shaders/spirv/*.cso
+          Tests/shaders/spirv/*.cso
           Content/
           README.md
           LICENSE.md
