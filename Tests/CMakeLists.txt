@@ -32,6 +32,15 @@ else()
 		WickedEngine
 		Threads::Threads
 	)
+
+	function(copy_content)
+		cp -R "${CMAKE_CURRENT_SOURCE_DIR}/../WickedEngine/shaders/spirv/*" "${CMAKE_CURRENT_BINARY_DIR}/shaders/spirv"
+		cp -R "${CMAKE_CURRENT_SOURCE_DIR}/images/*" "${CMAKE_CURRENT_BINARY_DIR}/images"
+		cp -R "${CMAKE_CURRENT_SOURCE_DIR}/sound/*" "${CMAKE_CURRENT_BINARY_DIR}/sound"
+		cp -R "${CMAKE_CURRENT_SOURCE_DIR}/../Content/*" "${CMAKE_CURRENT_BINARY_DIR}/../Content"
+	endfunction()
+	copy_content()
+
 endif ()
 
 if (MSVC)

@@ -126,7 +126,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - PutDecal(Decal decal)
 - PutEnvProbe(Vector pos)
 - ClearWorld(opt Scene scene) -- Clears the global scene and the associated renderer resources
-- ReloadShaders(opt string path)
+- ReloadShaders()
 
 ### Sprite
 Render images on the screen.

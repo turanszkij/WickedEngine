@@ -56,12 +56,7 @@ GPUBuffer			constantBuffers[CBTYPE_COUNT];
 GPUBuffer			resourceBuffers[RBTYPE_COUNT];
 Sampler				samplers[SSLOT_COUNT];
 
-#ifdef PLATFORM_LINUX
-// temporary workaround for linux while it still uses cmake shader compilation:
-std::string SHADERPATH = "../WickedEngine/shaders/";
-#else
 std::string SHADERPATH = "shaders/";
-#endif // PLATFORM_LINUX
 std::string SHADERSOURCEPATH = "../WickedEngine/shaders/";
 
 LinearAllocator renderFrameAllocators[COMMANDLIST_COUNT]; // can be used by graphics threads
