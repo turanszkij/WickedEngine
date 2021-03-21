@@ -391,7 +391,7 @@ namespace wiHelper
 
 	void DirectoryCreate(const std::string& path)
 	{
-		std::filesystem::create_directory(path);
+		std::filesystem::create_directories(path);
 	}
 
 	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data)
