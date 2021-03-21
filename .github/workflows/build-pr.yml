@@ -15,29 +15,24 @@ jobs:
     - name: Build
       shell: cmd
       run: |
-        "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /p:Configuration=Release /p:Platform=x64
+        "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /t:OfflineShaderCompiler /m /p:Configuration=Release /p:Platform=x64
+        "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /t:rebuild /m /p:Configuration=Release /p:Platform=x64
     
     - name: Move binaries
       shell: cmd
       run: |
         move BUILD\x64\Release\Editor_Windows\Editor_Windows.exe Editor\
-        xcopy WickedEngine\dxcompiler.dll Editor\
-        
+        xcopy WickedEngine\*.dll Editor\
+
         move BUILD\x64\Release\Tests\Tests.exe Tests\
-        xcopy WickedEngine\dxcompiler.dll Tests\
+        xcopy WickedEngine\*.dll Tests\
         
     - name: Package Editor
       uses: actions/upload-artifact@v2
       with:
         name: Editor (Windows x64)
         path: |
-          WickedEngine/shaders/*.cso
-          WickedEngine/shaders/hlsl6/*.cso
-          WickedEngine/shaders/spirv/*.cso
-          images/
-          models/
-          scripts/
-          Documentation/
+          Content/
           README.md
           LICENSE.md
           other_licenses.txt
@@ -55,13 +50,7 @@ jobs:
       with:
         name: Tests (Windows x64)
         path: |
-          WickedEngine/shaders/*.cso
-          WickedEngine/shaders/hlsl6/*.cso
-          WickedEngine/shaders/spirv/*.cso
-          images/
-          models/
-          scripts/
-          Documentation/
+          Content/
           README.md
           LICENSE.md
           other_licenses.txt
@@ -106,11 +95,8 @@ jobs:
       with:
         name: Editor (Ubuntu 20.04)
         path: |
-          WickedEngine/shaders/
-          images/
-          models/
-          scripts/
-          Documentation/
+          Editor/shaders/spirv/*.cso
+          Content/
           README.md
           LICENSE.md
           other_licenses.txt
@@ -127,11 +113,8 @@ jobs:
       with:
         name: Tests (Ubuntu 20.04)
         path: |
-          WickedEngine/shaders/
-          images/
-          models/
-          scripts/
-          Documentation/
+          Tests/shaders/spirv/*.cso
+          Content/
           README.md
           LICENSE.md
           other_licenses.txt

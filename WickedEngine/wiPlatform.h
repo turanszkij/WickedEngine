@@ -11,17 +11,27 @@
 #define WIN32_LEAN_AND_MEAN
 #include <SDKDDKVer.h>
 #include <windows.h>
+#include <tchar.h>
 
 #if WINAPI_FAMILY == WINAPI_FAMILY_APP
 #define PLATFORM_UWP
+#define wiLoadLibrary(name) LoadPackagedLibrary(_T(name),0)
+#define wiGetProcAddress(handle,name) GetProcAddress(handle, name)
 #include <winrt/Windows.UI.Core.h>
 #include <winrt/Windows.Graphics.Display.h>
 #include <winrt/Windows.ApplicationModel.Core.h>
+#else
+#define PLATFORM_WINDOWS_DESKTOP
+#define wiLoadLibrary(name) LoadLibrary(_T(name))
+#define wiGetProcAddress(handle,name) GetProcAddress(handle, name)
 #endif // UWP
 
 #else
 
 #define PLATFORM_LINUX
+#define wiLoadLibrary(name) dlopen(name, RTLD_LAZY)
+#define wiGetProcAddress(handle,name) dlsym(handle, name)
+#define HMODULE (void*)
 
 #endif // _WIN32
 

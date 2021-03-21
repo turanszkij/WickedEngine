@@ -1,5 +1,0 @@
-#define OBJECTSHADER_COMPILE_PS
-#define OBJECTSHADER_LAYOUT_POS_PREVPOS_TEX
-#define PREPASS
-#include "objectHF.hlsli"
-

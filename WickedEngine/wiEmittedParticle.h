@@ -2,7 +2,7 @@
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiIntersect.h"
-#include "ShaderInterop_EmittedParticle.h"
+#include "shaders/ShaderInterop_EmittedParticle.h"
 #include "wiEnums.h"
 #include "wiScene_Decl.h"
 #include "wiECS.h"

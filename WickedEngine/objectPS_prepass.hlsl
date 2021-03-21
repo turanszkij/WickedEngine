@@ -1,6 +1,0 @@
-#define OBJECTSHADER_COMPILE_PS
-#define OBJECTSHADER_LAYOUT_POS_PREVPOS
-#define PREPASS
-#define DISABLE_ALPHATEST
-#include "objectHF.hlsli"
-

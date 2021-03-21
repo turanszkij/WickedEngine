@@ -49,8 +49,6 @@ public:
 		main.infoDisplay.watermark = true;
 		main.infoDisplay.resolution = true;
 		main.infoDisplay.fpsinfo = true;
-
-		wiRenderer::SetShaderPath("shaders/");
 	}
 
     void Uninitialize() noexcept
@@ -117,11 +115,6 @@ protected:
     // Event handlers
     void OnActivated(CoreApplicationView const & /*applicationView*/, IActivatedEventArgs const & args)
     {
-        if (args.Kind() == ActivationKind::Launch)
-        {
-            auto launchArgs = (const LaunchActivatedEventArgs*)(&args);
-			wiStartupArguments::Parse(launchArgs->Arguments().data());
-        }
 		CoreWindow::GetForCurrentThread().Activate();
     }
 

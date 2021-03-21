@@ -39,7 +39,10 @@ namespace wiLua
 
 		~LuaInternal()
 		{
-			lua_close(m_luaState);
+			if (m_luaState != NULL)
+			{
+				lua_close(m_luaState);
+			}
 		}
 	};
 	LuaInternal luainternal;

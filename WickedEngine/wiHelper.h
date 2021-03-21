@@ -62,7 +62,13 @@ namespace wiHelper
 
 	std::string GetExtensionFromFileName(const std::string& filename);
 
+	std::string ReplaceExtension(const std::string& filename, const std::string& extension);
+
 	void MakePathRelative(const std::string& rootdir, std::string& path);
+
+	void MakePathAbsolute(std::string& path);
+
+	void DirectoryCreate(const std::string& path);
 
 	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data);
 

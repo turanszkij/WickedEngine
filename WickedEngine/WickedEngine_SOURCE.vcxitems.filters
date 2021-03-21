@@ -46,9 +46,6 @@
     <Filter Include="ENGINE\Tools">
       <UniqueIdentifier>{5ac4a1c9-91a8-4d52-9cd6-6139a848a2f3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ENGINE\Graphics\GPUMapping">
-      <UniqueIdentifier>{042fbecf-7b1e-4c61-9b93-f3e5ca541b99}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ENGINE\Graphics\API">
       <UniqueIdentifier>{4cb4ddc4-c5a9-483b-b6cf-2c4382340e7a}</UniqueIdentifier>
     </Filter>
@@ -147,9 +144,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)WickedEngine.h">
       <Filter>ENGINE\Common</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ConstantBufferMapping.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)MainComponent.h">
       <Filter>ENGINE\High level interface</Filter>
     </ClInclude>
@@ -170,12 +164,6 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBackLog_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)SamplerMapping.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ResourceMapping.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
@@ -903,26 +891,14 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRectPacker.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_EmittedParticle.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFFTGenerator.h">
       <Filter>ENGINE\Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Ocean.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_FFTGenerator.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiOcean.h">
       <Filter>ENGINE\Graphics</Filter>
@@ -932,9 +908,6 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\d3dx12.h">
       <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Skinning.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_Vulkan.h">
       <Filter>ENGINE\Graphics\API</Filter>
@@ -951,38 +924,17 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGPUSortLib.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_GPUSortLib.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_BVH.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Utility.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image_write.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiECS.h">
       <Filter>ENGINE\System</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_HairParticle.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Renderer.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Image.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPhysicsEngine.h">
       <Filter>ENGINE\Physics</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGPUBVH.h">
       <Filter>ENGINE\Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Font.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_truetype.h">
       <Filter>UTILITY</Filter>
@@ -1035,12 +987,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersect_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Raytracing.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Postprocess.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAudio.h">
       <Filter>ENGINE\Audio</Filter>
     </ClInclude>
@@ -1082,9 +1028,6 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphics.h">
       <Filter>ENGINE\Graphics\API</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Paint.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\replace_new.h">
       <Filter>UTILITY</Filter>
@@ -1135,6 +1078,12 @@
       <Filter>UTILITY</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\arial.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiShaderCompiler.h">
+      <Filter>ENGINE\Graphics\API</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dxcapi.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
   </ItemGroup>
@@ -1724,9 +1673,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRandom.cpp">
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiTimer.cpp">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTextureHelper.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
@@ -1885,6 +1831,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiBlueNoise.cpp">
       <Filter>ENGINE\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiShaderCompiler.cpp">
+      <Filter>ENGINE\Graphics\API</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

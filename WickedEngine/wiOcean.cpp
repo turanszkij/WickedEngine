@@ -1,7 +1,7 @@
 #include "wiOcean.h"
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
-#include "ShaderInterop_Ocean.h"
+#include "shaders/ShaderInterop_Ocean.h"
 #include "wiScene.h"
 #include "wiBackLog.h"
 #include "wiEvent.h"

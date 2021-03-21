@@ -4,7 +4,7 @@
 #include "wiIntersect.h"
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"
-#include "ShaderInterop_Renderer.h"
+#include "shaders/ShaderInterop_Renderer.h"
 #include "wiJobSystem.h"
 #include "wiAudio.h"
 #include "wiResourceManager.h"

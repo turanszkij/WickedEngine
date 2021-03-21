@@ -59,6 +59,7 @@
 #include "wiJobSystem.h"
 #include "wiNetwork.h"
 #include "wiEvent.h"
+#include "wiShaderCompiler.h"
 
 #ifdef _WIN32
 #ifdef PLATFORM_UWP

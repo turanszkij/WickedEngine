@@ -73,7 +73,17 @@ void MainComponent::Run()
 		// Until engine is not loaded, present initialization screen...
 		CommandList cmd = wiRenderer::GetDevice()->BeginCommandList();
 		wiRenderer::GetDevice()->PresentBegin(cmd);
-		wiFont::Draw(wiBackLog::getText(), wiFontParams(4, 4, infoDisplay.size), cmd);
+		wiFontParams params;
+		params.posX = 5.f;
+		params.posY = 5.f;
+		string text = wiBackLog::getText();
+		float textheight = wiFont::textHeight(text, params);
+		float screenheight = wiRenderer::GetDevice()->GetScreenHeight();
+		if (textheight > screenheight)
+		{
+			params.posY = screenheight - textheight;
+		}
+		wiFont::Draw(text, params, cmd);
 		wiRenderer::GetDevice()->PresentEnd(cmd);
 		return;
 	}
@@ -379,6 +389,7 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 		else if (use_dx11)
 		{
 #ifdef WICKEDENGINE_BUILD_DX11
+			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl5/");
 			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX11>(window, fullscreen, debugdevice));
 #endif
 		}

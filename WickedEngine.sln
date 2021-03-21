@@ -26,12 +26,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WickedEngine_Windows", "WickedEngine\WickedEngine_Windows.vcxproj", "{06163DCB-B183-4ED9-9C62-13EF1658E049}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WickedEngine_UWP", "WickedEngine\WickedEngine_UWP.vcxproj", "{60DA258F-E95F-4CF4-A46B-17D80644464B}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Content", "Content.vcxitems", "{C48F6BFF-F91B-4DB5-98B5-15287DFB7C95}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Shaders_SOURCE", "WickedEngine\Shaders_SOURCE.vcxitems", "{92E86448-0724-4387-ABAC-96E63EDF4190}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Shaders_HLSL6", "WickedEngine\Shaders_HLSL6.vcxproj", "{9C8F8910-CCA3-41CB-A2FA-3545CDD5D8BF}"
+	ProjectSection(ProjectDependencies) = postProject
+		{3B74A7FE-CED7-4723-8824-AC708A865B98} = {3B74A7FE-CED7-4723-8824-AC708A865B98}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Supplementary", "Supplementary", "{BF8FCAB8-D7D3-4DAE-92DE-4B5037E9A0ED}"
 	ProjectSection(SolutionItems) = preProject
@@ -48,44 +45,26 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Supplementary", "Supplement
 		README.md = README.md
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Shaders_SPIRV", "WickedEngine\Shaders_SPIRV.vcxproj", "{DF832DE3-02FA-4D00-B853-1229A9505E14}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documentation", "Documentation", "{6C5B74BD-2300-47A1-8FE1-DB88D6F55959}"
-	ProjectSection(SolutionItems) = preProject
-		Documentation\ScriptingAPI-Documentation.md = Documentation\ScriptingAPI-Documentation.md
-		Documentation\WickedEngine-Documentation.md = Documentation\WickedEngine-Documentation.md
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OfflineShaderCompiler", "WickedEngine\OfflineShaderCompiler.vcxproj", "{3B74A7FE-CED7-4723-8824-AC708A865B98}"
+	ProjectSection(ProjectDependencies) = postProject
+		{06163DCB-B183-4ED9-9C62-13EF1658E049} = {06163DCB-B183-4ED9-9C62-13EF1658E049}
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{3257CB8C-789A-4370-88CB-6DB5D77D300D}"
-	ProjectSection(SolutionItems) = preProject
-		scripts\camera_animation_clamped.lua = scripts\camera_animation_clamped.lua
-		scripts\camera_animation_repeat.lua = scripts\camera_animation_repeat.lua
-		scripts\character_controller_tps.lua = scripts\character_controller_tps.lua
-		scripts\debug_draw.lua = scripts\debug_draw.lua
-		scripts\dungeon_generator.lua = scripts\dungeon_generator.lua
-		scripts\emitter_burst.lua = scripts\emitter_burst.lua
-		scripts\fighting_game.lua = scripts\fighting_game.lua
-		scripts\move_object.lua = scripts\move_object.lua
-		scripts\pick.lua = scripts\pick.lua
-		scripts\rotate_model.lua = scripts\rotate_model.lua
-		scripts\set_material_color.lua = scripts\set_material_color.lua
-		scripts\set_material_emissive.lua = scripts\set_material_emissive.lua
-	EndProjectSection
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Shaders_SOURCE", "WickedEngine\shaders\Shaders_SOURCE.vcxitems", "{92E86448-0724-4387-ABAC-96E63EDF4190}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Content", "Content\Content.vcxitems", "{C48F6BFF-F91B-4DB5-98B5-15287DFB7C95}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		WickedEngine\Shaders_SOURCE.vcxitems*{06163dcb-b183-4ed9-9c62-13ef1658e049}*SharedItemsImports = 4
 		WickedEngine\WickedEngine_SOURCE.vcxitems*{06163dcb-b183-4ed9-9c62-13ef1658e049}*SharedItemsImports = 4
 		WickedEngine\WickedEngine_SOURCE.vcxitems*{45d41acc-2c3c-43d2-bc10-02aa73ffc7c7}*SharedItemsImports = 9
 		Editor\Editor_SOURCE.vcxitems*{5fe97b9b-a445-4eea-a42d-9de60b891d48}*SharedItemsImports = 4
 		WickedEngine\WickedEngine_SOURCE.vcxitems*{60da258f-e95f-4cf4-a46b-17d80644464b}*SharedItemsImports = 4
 		Editor\Editor_SOURCE.vcxitems*{867febca-09c4-4fe7-8a4c-4d9b1c27e7d0}*SharedItemsImports = 9
-		WickedEngine\Shaders_SOURCE.vcxitems*{92e86448-0724-4387-abac-96e63edf4190}*SharedItemsImports = 9
-		WickedEngine\Shaders_SOURCE.vcxitems*{c222218b-b6d1-406b-b2c0-8c1ced4a8d19}*SharedItemsImports = 4
-		Content.vcxitems*{c48f6bff-f91b-4db5-98b5-15287dfb7c95}*SharedItemsImports = 9
-		Content.vcxitems*{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}*SharedItemsImports = 4
+		WickedEngine\shaders\Shaders_SOURCE.vcxitems*{92e86448-0724-4387-abac-96e63edf4190}*SharedItemsImports = 9
+		Content\Content.vcxitems*{c48f6bff-f91b-4db5-98b5-15287dfb7c95}*SharedItemsImports = 9
+		Content\Content.vcxitems*{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}*SharedItemsImports = 4
 		Editor\Editor_SOURCE.vcxitems*{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}*SharedItemsImports = 4
-		WickedEngine\Shaders_SOURCE.vcxitems*{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}*SharedItemsImports = 4
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -124,21 +103,13 @@ Global
 		{60DA258F-E95F-4CF4-A46B-17D80644464B}.Debug|x64.Build.0 = Debug|x64
 		{60DA258F-E95F-4CF4-A46B-17D80644464B}.Release|x64.ActiveCfg = Release|x64
 		{60DA258F-E95F-4CF4-A46B-17D80644464B}.Release|x64.Build.0 = Release|x64
-		{9C8F8910-CCA3-41CB-A2FA-3545CDD5D8BF}.Debug|x64.ActiveCfg = Release|x64
-		{9C8F8910-CCA3-41CB-A2FA-3545CDD5D8BF}.Debug|x64.Build.0 = Release|x64
-		{9C8F8910-CCA3-41CB-A2FA-3545CDD5D8BF}.Release|x64.ActiveCfg = Release|x64
-		{9C8F8910-CCA3-41CB-A2FA-3545CDD5D8BF}.Release|x64.Build.0 = Release|x64
-		{DF832DE3-02FA-4D00-B853-1229A9505E14}.Debug|x64.ActiveCfg = Release|x64
-		{DF832DE3-02FA-4D00-B853-1229A9505E14}.Debug|x64.Build.0 = Release|x64
-		{DF832DE3-02FA-4D00-B853-1229A9505E14}.Release|x64.ActiveCfg = Release|x64
-		{DF832DE3-02FA-4D00-B853-1229A9505E14}.Release|x64.Build.0 = Release|x64
+		{3B74A7FE-CED7-4723-8824-AC708A865B98}.Debug|x64.ActiveCfg = Debug|x64
+		{3B74A7FE-CED7-4723-8824-AC708A865B98}.Debug|x64.Build.0 = Debug|x64
+		{3B74A7FE-CED7-4723-8824-AC708A865B98}.Release|x64.ActiveCfg = Release|x64
+		{3B74A7FE-CED7-4723-8824-AC708A865B98}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{6C5B74BD-2300-47A1-8FE1-DB88D6F55959} = {BF8FCAB8-D7D3-4DAE-92DE-4B5037E9A0ED}
-		{3257CB8C-789A-4370-88CB-6DB5D77D300D} = {BF8FCAB8-D7D3-4DAE-92DE-4B5037E9A0ED}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E3FF044A-B72E-4ED5-BE05-AB641BA048CD}

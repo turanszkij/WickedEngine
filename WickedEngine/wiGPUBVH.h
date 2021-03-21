@@ -3,7 +3,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiScene_Decl.h"
 #include "wiRectPacker.h"
-#include "ShaderInterop_Renderer.h"
+#include "shaders/ShaderInterop_Renderer.h"
 #include "wiResourceManager.h"
 
 #include <vector>

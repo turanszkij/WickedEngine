@@ -3,7 +3,7 @@
 #include "wiRenderer.h"
 #include "wiInput.h"
 #include "wiMath.h"
-#include "ShaderInterop_Renderer.h"
+#include "shaders/ShaderInterop_Renderer.h"
 #include "wiEvent.h"
 
 using namespace wiGraphics;

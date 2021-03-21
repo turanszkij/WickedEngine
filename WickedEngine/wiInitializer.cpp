@@ -1,6 +1,7 @@
 #include "wiInitializer.h"
 #include "WickedEngine.h"
 
+#include <string>
 #include <sstream>
 
 namespace wiInitializer
@@ -23,7 +24,15 @@ namespace wiInitializer
 		wiBackLog::post(ss.str().c_str());
 
 		wiJobSystem::Initialize();
+		wiShaderCompiler::Initialize();
 
+		size_t shaderdump_count = wiRenderer::GetShaderDumpCount();
+		if (shaderdump_count > 0)
+		{
+			wiBackLog::post(("Embedded shaders found: " + std::to_string(shaderdump_count)).c_str());
+		}
+
+		wiBackLog::post("");
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiFont::Initialize(); });
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiImage::Initialize(); });
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiInput::Initialize(); });

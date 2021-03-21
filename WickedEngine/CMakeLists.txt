@@ -94,11 +94,11 @@ add_library(${TARGET_NAME} STATIC
 	wiSpriteFont_BindLua.cpp
 	wiStartupArguments.cpp
 	wiTextureHelper.cpp
-	wiTimer.cpp
 	wiVersion.cpp
 	wiWidget.cpp
 	wiXInput.cpp
 	wiBlueNoise.cpp
+	wiShaderCompiler.cpp
 )
 
 target_include_directories(${TARGET_NAME} PUBLIC
@@ -115,11 +115,7 @@ if (WIN32)
 	target_compile_definitions(${TARGET_NAME} PUBLIC
 		UNICODE _UNICODE
 	)
-
-	add_dependencies(${TARGET_NAME}
-		Shaders_Legacy
-		Shaders_DXC
-	)
+	
 else ()
 	target_link_libraries(${TARGET_NAME} PUBLIC
 		Vulkan::Vulkan
@@ -127,11 +123,12 @@ else ()
 	)
 
 	target_link_libraries(${TARGET_NAME} PRIVATE dl)
+
+	add_dependencies(${TARGET_NAME}
+		Shaders_SPIRV
+	)
 endif()
 
-add_dependencies(${TARGET_NAME}
-	Shaders_SPIRV
-)
 
 if (PLATFORM MATCHES "SDL2")
 	target_compile_definitions(${TARGET_NAME} PUBLIC SDL2=1)

@@ -340,6 +340,8 @@ namespace wiGraphics
 
 		Texture GetBackBuffer() override;
 
+		SHADERFORMAT GetShaderFormat() const override { return SHADERFORMAT_HLSL6; }
+
 		///////////////Thread-sensitive////////////////////////
 
 		void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) override;

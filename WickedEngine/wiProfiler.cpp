@@ -150,9 +150,6 @@ namespace wiProfiler
 			range.name = name;
 			range.time = 0;
 
-			range.cpuBegin.Start();
-			range.cpuEnd.Start();
-
 			ranges[id] = range;
 		}
 

@@ -345,6 +345,18 @@ namespace wiHelper
 		return "";
 	}
 
+	std::string ReplaceExtension(const std::string& filename, const std::string& extension)
+	{
+		size_t idx = filename.rfind('.');
+
+		if (idx != std::string::npos)
+		{
+			return filename.substr(0, idx + 1) + extension;
+		}
+
+		return filename;
+	}
+
 	void MakePathRelative(const std::string& rootdir, std::string& path)
 	{
 		if (rootdir.empty() || path.empty())
@@ -365,6 +377,21 @@ namespace wiHelper
 		//{
 		//	path = path.substr(found + rootdir.length());
 		//}
+	}
+
+	void MakePathAbsolute(std::string& path)
+	{
+		std::filesystem::path filepath = path;
+		std::filesystem::path absolute = std::filesystem::absolute(path);
+		if (!absolute.empty())
+		{
+			path = absolute.string();
+		}
+	}
+
+	void DirectoryCreate(const std::string& path)
+	{
+		std::filesystem::create_directories(path);
 	}
 
 	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data)
@@ -519,56 +546,8 @@ namespace wiHelper
 
 	bool FileExists(const std::string& fileName)
 	{
-#ifndef PLATFORM_UWP
-		ifstream file(fileName);
-		bool exists = file.is_open();
-		file.close();
+		bool exists = std::filesystem::exists(fileName);
 		return exists;
-#else
-		using namespace winrt::Windows::Storage;
-		using namespace winrt::Windows::Foundation;
-		string directory = GetDirectoryFromPath(fileName);
-		string name = GetFileNameFromPath(fileName);
-		wstring wdir, wname;
-		StringConvert(directory, wdir);
-		StringConvert(name, wname);
-		bool success = false;
-
-		auto async_helper = [&]() -> IAsyncAction {
-			try
-			{
-				auto folder = co_await StorageFolder::GetFolderFromPathAsync(wdir);
-				auto item = co_await folder.TryGetItemAsync(wname);
-				if (item)
-				{
-					success = true;
-				}
-			}
-			catch (winrt::hresult_error const& ex)
-			{
-				switch (ex.code())
-				{
-				case E_ACCESSDENIED:
-					wiBackLog::post(("Opening file failed: " + fileName + " | Reason: Permission Denied!").c_str());
-					break;
-				default:
-					break;
-				}
-			}
-
-		};
-
-		if (winrt::impl::is_sta_thread())
-		{
-			std::thread([&] { async_helper().get(); }).join(); // can't block coroutine from ui thread
-		}
-		else
-		{
-			async_helper().get();
-		}
-
-		return success;
-#endif
 	}
 
 	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess)
@@ -771,7 +750,7 @@ namespace wiHelper
 		ss << "const uint8_t " << dataName << "[] = {";
 		for (size_t i = 0; i < size; ++i)
 		{
-			ss << (uint32_t)data[i] << ", ";
+			ss << (uint32_t)data[i] << ",";
 		}
 		ss << "};" << endl;
 		return FileWrite(dst_filename, (uint8_t*)ss.str().c_str(), ss.str().length());
@@ -814,10 +793,10 @@ namespace wiHelper
 			MultiByteToWideChar(CP_UTF8, 0, from, -1, &to[0], num);
 		}
 #else
-		int num = 0; // TODO
-		const char * message = "int StringConvert(const char* from, wchar_t* to) not implemented";
-		std::cerr << message << std::endl;
-		throw std::runtime_error(message);
+		std::string sfrom = from;
+		std::wstring wto = std::wstring(sfrom.begin(), sfrom.end());
+		std::wmemcpy(to, wto.c_str(), wto.length());
+		int num = wto.length();
 #endif // _WIN32
 		return num;
 	}
@@ -831,10 +810,10 @@ namespace wiHelper
 			WideCharToMultiByte(CP_UTF8, 0, from, -1, &to[0], num, NULL, NULL);
 		}
 #else
-		int num = 0; // TODO
-		const char * message = "int StringConvert(const wchar_t* from, char* to) not implemented";
-		std::cerr << message << std::endl;
-		throw std::runtime_error(message);
+		std::wstring wfrom = from;
+		std::string sto = std::string(wfrom.begin(), wfrom.end());
+		std::strcpy(to, sto.c_str());
+		int num = sto.length();
 #endif // _WIN32
 		return num;
 	}

@@ -229,23 +229,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btTransformUtil.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)CommonInclude.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)ConstantBufferMapping.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_BVH.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Font.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_HairParticle.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Image.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Paint.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Postprocess.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Renderer.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Raytracing.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_PathTracing.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_EmittedParticle.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_FFTGenerator.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_GPUSortLib.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Ocean.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Skinning.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Utility.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\arial.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\D3D12MemAlloc.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\d3dx12.h" />
@@ -254,6 +238,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXMath.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXMathCommon.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXPackedVector.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dxcapi.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\GLSL.std.450.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\include\spirv\unified1\spirv.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\replace_new.h" />
@@ -319,8 +304,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath_BindLua.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)ResourceMapping.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)SamplerMapping.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SpriteAnim_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Texture_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Vector_BindLua.h" />
@@ -333,6 +316,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFadeManager.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFont.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSDLInput.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiShaderCompiler.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSpriteFont_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphics.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.h" />
@@ -672,6 +656,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFont.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_Linux.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSDLInput.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiShaderCompiler.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSpriteFont_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGUI.cpp" />
@@ -707,7 +692,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiStartupArguments.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTextureHelper.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiTimer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiWidget.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiXInput.cpp" />

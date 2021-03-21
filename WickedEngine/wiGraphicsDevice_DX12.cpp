@@ -5,7 +5,6 @@
 #include "wiGraphicsDevice_SharedInternals.h"
 #include "wiHelper.h"
 #include "wiMath.h"
-#include "ResourceMapping.h"
 #include "wiBackLog.h"
 #include "wiStartupArguments.h"
 
@@ -2192,13 +2191,12 @@ using namespace DX12_Internal;
 		RESOLUTIONHEIGHT = int(window.Bounds().Height * dpiscale);
 #endif
 
+		HMODULE dxcompiler = wiLoadLibrary("dxcompiler.dll");
 
 #ifdef PLATFORM_UWP
-		HMODULE dxcompiler = LoadPackagedLibrary(L"dxcompiler.dll", 0);
 #else
 		HMODULE dxgi = LoadLibraryEx(L"dxgi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
 		HMODULE dx12 = LoadLibraryEx(L"d3d12.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
-		HMODULE dxcompiler = LoadLibrary(L"dxcompiler.dll");
 
 		CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY_2)GetProcAddress(dxgi, "CreateDXGIFactory2");
 		assert(CreateDXGIFactory2 != nullptr);
