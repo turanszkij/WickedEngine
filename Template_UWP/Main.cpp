@@ -49,8 +49,6 @@ public:
 		main.infoDisplay.watermark = true;
 		main.infoDisplay.resolution = true;
 		main.infoDisplay.fpsinfo = true;
-
-		wiRenderer::SetShaderPath("shaders/");
 	}
 
     void Uninitialize() noexcept

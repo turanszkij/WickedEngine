@@ -51,8 +51,6 @@ public:
 		main.infoDisplay.resolution = true;
 		main.infoDisplay.fpsinfo = true;
 
-		wiRenderer::SetShaderPath("shaders/");
-
 		wiStartupArguments::Parse(L"dx12");
 	}
 

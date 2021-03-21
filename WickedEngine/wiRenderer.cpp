@@ -61,8 +61,17 @@ Sampler				samplers[SSLOT_COUNT];
 #include "wiShaderdump.h"
 #define SHADERDUMP_ENABLED
 std::string SHADERPATH = "shaders/";
+size_t GetShaderDumpCount()
+{
+	return wiShaderDump::shaderdump.size();
+}
 #else
+// In this case, shaders can only be loaded from file
 std::string SHADERPATH = "../WickedEngine/shaders/";
+size_t GetShaderDumpCount()
+{
+	return 0;
+}
 #endif // SHADERDUMP
 std::string SHADERSOURCEPATH = SHADERPATH;
 
@@ -907,8 +916,8 @@ bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
 #ifdef SHADERDUMP_ENABLED
 	
 	// Loading shader from precompiled dump:
-	auto it = shaderdump.find(shaderbinaryfilename);
-	if (it != shaderdump.end())
+	auto it = wiShaderDump::shaderdump.find(shaderbinaryfilename);
+	if (it != wiShaderDump::shaderdump.end())
 	{
 		return device->CreateShader(stage, it->second.data, it->second.size, &shader);
 	}

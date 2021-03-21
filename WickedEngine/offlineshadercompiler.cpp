@@ -16,25 +16,21 @@ struct Target
 };
 std::vector<Target> targets;
 std::unordered_map<std::string, wiShaderCompiler::CompilerOutput> results;
+bool rebuild = false;
 bool shaderdump_enabled = false;
 
 int main(int argc, char* argv[])
 {
 	std::cout << "[Wicked Engine Offline Shader Compiler]" << std::endl;
 	std::cout << "Available command arguments:" << std::endl;
-	std::cout << "\thlsl5 : Compile shaders to hlsl5 (dx11) format (using d3dcompiler)" << std::endl;
-	std::cout << "\thlsl6 : Compile shaders to hlsl6 (dx12) format (using dxcompiler)" << std::endl;
-	std::cout << "\tspirv : Compile shaders to spirv (vulkan) format (using dxcompiler)" << std::endl;
-	std::cout << "\tshaderdump : Shaders will be saved to wiShaderDump.h C++ header file" << std::endl;
+	std::cout << "\thlsl5 : \tCompile shaders to hlsl5 (dx11) format (using d3dcompiler)" << std::endl;
+	std::cout << "\thlsl6 : \tCompile shaders to hlsl6 (dx12) format (using dxcompiler)" << std::endl;
+	std::cout << "\tspirv : \tCompile shaders to spirv (vulkan) format (using dxcompiler)" << std::endl;
+	std::cout << "\trebuild : \tAll shaders will be rebuilt, regardless if they are outdated or not" << std::endl;
+	std::cout << "\tshaderdump : \tShaders will be saved to wiShaderDump.h C++ header file (rebuild is assumed)" << std::endl;
 	std::cout << "Command arguments used: ";
 
 	wiStartupArguments::Parse(argc, argv);
-
-	if (wiStartupArguments::HasArgument("shaderdump"))
-	{
-		shaderdump_enabled = true;
-		std::cout << "shaderdump ";
-	}
 
 	if (wiStartupArguments::HasArgument("hlsl5"))
 	{
@@ -50,6 +46,19 @@ int main(int argc, char* argv[])
 	{
 		targets.push_back({ wiGraphics::SHADERFORMAT_SPIRV, "shaders/spirv/" });
 		std::cout << "spirv ";
+	}
+
+	if (wiStartupArguments::HasArgument("shaderdump"))
+	{
+		shaderdump_enabled = true;
+		rebuild = true;
+		std::cout << "shaderdump ";
+	}
+
+	if (wiStartupArguments::HasArgument("rebuild"))
+	{
+		rebuild = true;
+		std::cout << "rebuild ";
 	}
 
 	std::cout << std::endl;
@@ -411,7 +420,7 @@ int main(int argc, char* argv[])
 			{
 				wiJobSystem::Execute(ctx, [=](wiJobArgs args) {
 					std::string shaderbinaryfilename = wiHelper::ReplaceExtension(SHADERPATH + shader, "cso");
-					if (!shaderdump_enabled && !wiShaderCompiler::IsShaderOutdated(shaderbinaryfilename))
+					if (!rebuild && !wiShaderCompiler::IsShaderOutdated(shaderbinaryfilename))
 					{
 						return;
 					}
@@ -427,10 +436,7 @@ int main(int argc, char* argv[])
 
 					if (output.IsValid())
 					{
-						if (!shaderdump_enabled)
-						{
-							wiShaderCompiler::SaveShaderAndMetadata(shaderbinaryfilename, output);
-						}
+						wiShaderCompiler::SaveShaderAndMetadata(shaderbinaryfilename, output);
 
 						locker.lock();
 						std::cout << "shader compiled: " << shaderbinaryfilename << std::endl;
@@ -461,6 +467,7 @@ int main(int argc, char* argv[])
 		std::cout << "[Wicked Engine Offline Shader Compiler] Creating ShaderDump..." << std::endl;
 		timer.record();
 		std::stringstream ss;
+		ss << "namespace wiShaderDump {" << std::endl;
 		for (auto& x : results)
 		{
 			auto& name = x.first;
@@ -476,8 +483,8 @@ int main(int argc, char* argv[])
 			}
 			ss << "};" << std::endl;
 		}
-		ss << "struct wiShaderDumpEntry{const uint8_t* data; size_t size;};" << std::endl;
-		ss << "const std::unordered_map<std::string, wiShaderDumpEntry> shaderdump = {" << std::endl;
+		ss << "struct ShaderDumpEntry{const uint8_t* data; size_t size;};" << std::endl;
+		ss << "const std::unordered_map<std::string, ShaderDumpEntry> shaderdump = {" << std::endl;
 		for (auto& x : results)
 		{
 			auto& name = x.first;
@@ -486,9 +493,10 @@ int main(int argc, char* argv[])
 			std::string name_repl = name;
 			std::replace(name_repl.begin(), name_repl.end(), '/', '_');
 			std::replace(name_repl.begin(), name_repl.end(), '.', '_');
-			ss << "std::pair<std::string, wiShaderDumpEntry>(\"" << name << "\", {" << name_repl << ",sizeof(" << name_repl << ")})," << std::endl;
+			ss << "std::pair<std::string, ShaderDumpEntry>(\"" << name << "\", {" << name_repl << ",sizeof(" << name_repl << ")})," << std::endl;
 		}
-		ss << "};" << std::endl;
+		ss << "};" << std::endl; // map end
+		ss << "}" << std::endl; // namespace end
 		wiHelper::FileWrite("wiShaderDump.h", (uint8_t*)ss.str().c_str(), ss.str().length());
 		std::cout << "[Wicked Engine Offline Shader Compiler] ShaderDump written to wiShaderDump.h in " << std::setprecision(4) << timer.elapsed_seconds() << " seconds" << std::endl;
 	}

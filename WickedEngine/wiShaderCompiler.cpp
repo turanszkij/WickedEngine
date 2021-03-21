@@ -54,7 +54,7 @@ namespace wiShaderCompiler
 		std::vector<LPCWSTR> args = {
 			L"-res-may-alias",
 			L"-flegacy-macro-expansion",
-			//L"-no-legacy-cbuf-layout",
+			L"-no-legacy-cbuf-layout",
 			//L"-pack-optimized",
 			//L"-all-resources-bound",
 		};
@@ -67,12 +67,11 @@ namespace wiShaderCompiler
 		switch (input.format)
 		{
 		case wiGraphics::SHADERFORMAT_HLSL6:
-			args.push_back(L"-D");
-			args.push_back(L"HLSL6");
+			args.push_back(L"-D"); args.push_back(L"HLSL6");
+			args.push_back(L"-D"); args.push_back(L"DISABLE_WAVE_INTRINSICS"); // random (as in only happening sometimes) validation fails with wave intrinsics :(
 			break;
 		case wiGraphics::SHADERFORMAT_SPIRV:
-			args.push_back(L"-D");
-			args.push_back(L"SPIRV");
+			args.push_back(L"-D"); args.push_back(L"SPIRV");
 			args.push_back(L"-spirv");
 			args.push_back(L"-fspv-target-env=vulkan1.2");
 			args.push_back(L"-fvk-use-dx-layout");
@@ -115,8 +114,6 @@ namespace wiShaderCompiler
 			break;
 		case wiGraphics::LIB:
 			args.push_back(L"lib_6_5");
-			args.push_back(L"-D");
-			args.push_back(L"DISABLE_WAVE_INTRINSICS");
 			break;
 		default:
 			assert(0);
