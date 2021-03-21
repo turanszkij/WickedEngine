@@ -33,11 +33,6 @@ else()
 		Threads::Threads
 	)
 	
-	execute_process(cp -r "${CMAKE_CURRENT_SOURCE_DIR}/../WickedEngine/shaders/spirv/*" "${CMAKE_CURRENT_BINARY_DIR}/shaders/spirv")
-	execute_process(cp -r "${CMAKE_CURRENT_SOURCE_DIR}/images/*" "${CMAKE_CURRENT_BINARY_DIR}/images")
-	execute_process(cp -r "${CMAKE_CURRENT_SOURCE_DIR}/sound/*" "${CMAKE_CURRENT_BINARY_DIR}/sound")
-	execute_process(cp -r "${CMAKE_CURRENT_SOURCE_DIR}/../Content/*" "${CMAKE_CURRENT_BINARY_DIR}/../Content")
-
 endif ()
 
 if (MSVC)
