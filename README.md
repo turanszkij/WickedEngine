@@ -12,7 +12,7 @@
 
 <br/>
 <img align="right" src="https://turanszkij.files.wordpress.com/2019/02/emitterskinned2.gif" width="256px"/>
-Wicked Engine is an open-source C++ engine focusing on modern rendering techniques and performance. You will need some programming skills for this. It is free to be used for anything good.<br/>
+Wicked Engine is an open-source C++ engine focusing on modern rendering techniques and performance. Use this as a framework for your graphics projects, or learning. Some programming skills are required for the best experience, but some simple tools like an Editor are also included. It is free to be used for anything good.<br/>
 This project is hosted on <a href="https://github.com/turanszkij/WickedEngine/">GitHub</a>.
 
 - [Documentation](Content/Documentation/WickedEngine-Documentation.md)<br/>
@@ -21,8 +21,8 @@ This project is hosted on <a href="https://github.com/turanszkij/WickedEngine/">
 - [Devblog](https://wickedengine.net/)<br/>
 - [Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
 
-You can download the source code by using Git and cloning the repository, or downloading it as zip. You can also choose to download a pre-built version of the Editor or Tests applications, which will allow you to try out features, load content and execute LUA scripts. 
-<br/>
+You can download the source code by using Git and cloning the repository, or downloading it as zip. You can also choose to download a pre-built version of the Editor or Tests applications, which will allow you to try out features, load content and execute LUA scripts.<br/>
+Tip: try loading models or scripts from the Content folder using the Editor app to see how everything works.
 <br/>
 
 
@@ -47,6 +47,8 @@ You can also dowload prebuilt and packaged versions of the Editor and Tests here
 If you have questions or stuck, please use the `windows` communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
 
 Note: Building 32-bit and ARM versions should be possible, but no longer provided by default. You will need to configure the solution for these platforms yourself if you want this. For ARM platform, also use the `-D BT_USE_DOUBLE_PRECISION=1` definition when compiling.
+
+Cmake: It is possible to build the windows version with Cmake, but the recommended way is to use the provided WickedEngine.sln file with Visual Studio as this is the most tested method.
 
 #### Linux
 The Linux support is experimental. You can find a sample build script for Ubuntu 20.04 [here](.github/workflows/build.yml) (in the linux section). You might need to install some dependencies, such as Vulkan SDK 1.2 or greater (to get DirectXShaderCompiler), SDL2, cmake 3.7 and g++ compiler (C++ 17 compliant version). For Ubuntu 20.04, you can use the following commands to install dependencies:
