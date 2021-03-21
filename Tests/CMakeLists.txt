@@ -43,3 +43,26 @@ endif ()
 if (MSVC)
 	set_property(TARGET Tests PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 endif ()
+
+
+
+add_custom_command(
+    TARGET Tests POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_SOURCE_DIR}/../WickedEngine/shaders/spirv
+            ${CMAKE_CURRENT_BINARY_DIR}/shaders/spirv)
+add_custom_command(
+    TARGET Tests POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/images
+            ${CMAKE_CURRENT_BINARY_DIR}/images)
+add_custom_command(
+    TARGET Tests POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/sound
+            ${CMAKE_CURRENT_BINARY_DIR}/sound)
+add_custom_command(
+    TARGET Tests POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/../Content
+            ${CMAKE_CURRENT_BINARY_DIR}/../Content)

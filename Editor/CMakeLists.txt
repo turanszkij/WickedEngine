@@ -53,10 +53,20 @@ else ()
 		WickedEngine 
 		Threads::Threads
 	)
-	
-	execute_process(cp -r "${CMAKE_CURRENT_SOURCE_DIR}/../WickedEngine/shaders/spirv/*" "${CMAKE_CURRENT_BINARY_DIR}/shaders/spirv")
-	execute_process(cp -r "${CMAKE_CURRENT_SOURCE_DIR}/images/*" "${CMAKE_CURRENT_BINARY_DIR}/images")
+				
 
 endif ()
+
+
+add_custom_command(
+    TARGET WickedEngineEditor POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_SOURCE_DIR}/../WickedEngine/shaders/spirv
+            ${CMAKE_CURRENT_BINARY_DIR}/shaders/spirv)
+add_custom_command(
+    TARGET WickedEngineEditor POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/images
+            ${CMAKE_CURRENT_BINARY_DIR}/images)
 
 
