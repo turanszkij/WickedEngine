@@ -445,7 +445,7 @@ int main(int argc, char* argv[])
 						locker.lock();
 						std::cerr << "shader compile FAILED: " << shaderbinaryfilename << std::endl << output.error_message;
 						locker.unlock();
-						exit(1);
+						std::exit(1);
 					}
 
 				});

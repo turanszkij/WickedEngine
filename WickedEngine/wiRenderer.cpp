@@ -905,7 +905,7 @@ bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
 	std::string shaderbinaryfilename = SHADERPATH + filename;
 
 #ifdef SHADERDUMP_ENABLED
-
+	
 	// Loading shader from precompiled dump:
 	auto it = shaderdump.find(shaderbinaryfilename);
 	if (it != shaderdump.end())
