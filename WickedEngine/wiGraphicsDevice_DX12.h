@@ -89,7 +89,7 @@ namespace wiGraphics
 			struct CopyCMD
 			{
 				Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator;
-				Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList6> commandList;
+				Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList;
 				uint64_t target = 0;
 				GPUBuffer uploadbuffer;
 			};
@@ -195,7 +195,7 @@ namespace wiGraphics
 		struct FrameResources
 		{
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[COMMANDLIST_COUNT];
-			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList6> commandLists[COMMANDLIST_COUNT];
+			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> commandLists[COMMANDLIST_COUNT];
 
 			struct ResourceFrameAllocator
 			{
@@ -215,7 +215,7 @@ namespace wiGraphics
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
-		inline ID3D12GraphicsCommandList6* GetDirectCommandList(CommandList cmd) { return GetFrameResources().commandLists[cmd].Get(); }
+		inline ID3D12GraphicsCommandList6* GetDirectCommandList(CommandList cmd) { return (ID3D12GraphicsCommandList6*)GetFrameResources().commandLists[cmd].Get(); }
 
 		struct DescriptorBinder
 		{
