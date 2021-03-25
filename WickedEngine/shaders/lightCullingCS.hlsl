@@ -30,7 +30,7 @@ void AppendEntity_Opaque(uint entityIndex)
 {
 	const uint bucket_index = entityIndex / 32;
 	const uint bucket_place = entityIndex % 32;
-	InterlockedOr(tile_opaque[bucket_index], 1 << bucket_place);
+	InterlockedOr(tile_opaque[bucket_index], 1u << bucket_place);
 
 #ifdef DEBUG_TILEDLIGHTCULLING
 	InterlockedAdd(entityCountDebug, 1);
@@ -41,7 +41,7 @@ void AppendEntity_Transparent(uint entityIndex)
 {
 	const uint bucket_index = entityIndex / 32;
 	const uint bucket_place = entityIndex % 32;
-	InterlockedOr(tile_transparent[bucket_index], 1 << bucket_place);
+	InterlockedOr(tile_transparent[bucket_index], 1u << bucket_place);
 }
 
 inline uint ConstructEntityMask(in float depthRangeMin, in float depthRangeRecip, in Sphere bounds)
@@ -62,7 +62,7 @@ inline uint ConstructEntityMask(in float depthRangeMin, in float depthRangeRecip
 	//uint uLightMask = 0;
 	//for (uint c = __entitymaskcellindexSTART; c <= __entitymaskcellindexEND; ++c)
 	//{
-	//	uLightMask |= 1 << c;
+	//	uLightMask |= 1u << c;
 	//}
 
 
@@ -72,7 +72,7 @@ inline uint ConstructEntityMask(in float depthRangeMin, in float depthRangeRecip
 	uint uLightMask = 0xFFFFFFFF;
 	//	- Then Shift right with spare amount to keep mask only:
 	//	0000000000000000000011111111111
-	uLightMask >>= 31 - (__entitymaskcellindexEND - __entitymaskcellindexSTART);
+	uLightMask >>= 31u - (__entitymaskcellindexEND - __entitymaskcellindexSTART);
 	//	- Last, shift left with START amount to correct mask position:
 	//	0000000000111111111110000000000
 	uLightMask <<= __entitymaskcellindexSTART;
@@ -202,7 +202,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	{
 		float realDepthVS = ScreenToView(float4(0, 0, depth[granularity], 1), dim_rcp).z;
 		const uint __depthmaskcellindex = max(0, min(31, floor((realDepthVS - minDepthVS) * __depthRangeRecip)));
-		__depthmaskUnrolled |= 1 << __depthmaskcellindex;
+		__depthmaskUnrolled |= 1u << __depthmaskcellindex;
 	}
 	InterlockedOr(uDepthMask, __depthmaskUnrolled);
 #endif

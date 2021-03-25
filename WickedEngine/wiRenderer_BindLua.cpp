@@ -341,7 +341,7 @@ namespace wiRenderer_BindLua
 			{
 				XMFLOAT3 pos;
 				XMStoreFloat3(&pos, v->vector);
-				wiRenderer::PutWaterRipple(name, pos);
+				wiRenderer::PutWaterRipple(wiLua::GetScriptPath() + name, pos);
 			}
 			else
 				wiLua::SError(L, "PutWaterRipple(String imagename, Vector position) argument is not a Vector!");

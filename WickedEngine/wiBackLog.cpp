@@ -24,7 +24,7 @@ namespace wiBackLog
 	deque<string> stream;
 	deque<string> history;
 	const float speed = 50.0f;
-	unsigned int deletefromline = 100;
+	unsigned int deletefromline = 500;
 	float pos = -FLT_MAX;
 	float scroll = 0;
 	string inputArea;

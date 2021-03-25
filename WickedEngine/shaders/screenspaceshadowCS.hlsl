@@ -119,7 +119,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 				// Retrieve global entity index from local bucket, then remove bit from local bucket:
 				const uint bucket_bit_index = firstbitlow(bucket_bits);
 				const uint entity_index = bucket * 32 + bucket_bit_index;
-				bucket_bits ^= 1 << bucket_bit_index;
+				bucket_bits ^= 1u << bucket_bit_index;
 
 				// Check if it is a light and process:
 				[branch]

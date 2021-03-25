@@ -191,7 +191,7 @@ void main(PSInput input)
 					// Retrieve global entity index from local bucket, then remove bit from local bucket:
 					const uint bucket_bit_index = firstbitlow(bucket_bits);
 					const uint entity_index = bucket * 32 + bucket_bit_index;
-					bucket_bits ^= 1 << bucket_bit_index;
+					bucket_bits ^= 1u << bucket_bit_index;
 
 					ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + entity_index];
 

@@ -11,7 +11,7 @@ using namespace wiGraphics;
 void PostprocessWindow::Create(EditorComponent* editor)
 {
 	wiWindow::Create("PostProcess Window");
-	SetSize(XMFLOAT2(420, 520));
+	SetSize(XMFLOAT2(420, 540));
 
 	float x = 150;
 	float y = 10;
@@ -195,6 +195,26 @@ void PostprocessWindow::Create(EditorComponent* editor)
 		editor->renderPath->setEyeAdaptionEnabled(args.bValue);
 	});
 	AddWidget(&eyeAdaptionCheckBox);
+
+	eyeAdaptionKeySlider.Create(0.01f, 0.5f, 0.1f, 10000, "Key: ");
+	eyeAdaptionKeySlider.SetTooltip("Set the key value for eye adaption.");
+	eyeAdaptionKeySlider.SetSize(XMFLOAT2(100, hei));
+	eyeAdaptionKeySlider.SetPos(XMFLOAT2(x + 100, y));
+	eyeAdaptionKeySlider.SetValue(editor->renderPath->getEyeAdaptionKey());
+	eyeAdaptionKeySlider.OnSlide([=](wiEventArgs args) {
+		editor->renderPath->setEyeAdaptionKey(args.fValue);
+		});
+	AddWidget(&eyeAdaptionKeySlider);
+
+	eyeAdaptionRateSlider.Create(0.01f, 4, 0.5f, 10000, "Rate: ");
+	eyeAdaptionRateSlider.SetTooltip("Set the eye adaption rate (speed of adjustment)");
+	eyeAdaptionRateSlider.SetSize(XMFLOAT2(100, hei));
+	eyeAdaptionRateSlider.SetPos(XMFLOAT2(x + 100, y += step));
+	eyeAdaptionRateSlider.SetValue(editor->renderPath->getEyeAdaptionRate());
+	eyeAdaptionRateSlider.OnSlide([=](wiEventArgs args) {
+		editor->renderPath->setEyeAdaptionRate(args.fValue);
+		});
+	AddWidget(&eyeAdaptionRateSlider);
 
 	motionBlurCheckBox.Create("MotionBlur: ");
 	motionBlurCheckBox.SetTooltip("Enable motion blur for camera movement and animated meshes.");

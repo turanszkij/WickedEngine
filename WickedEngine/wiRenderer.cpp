@@ -949,6 +949,10 @@ bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
 		{
 			wiShaderCompiler::SaveShaderAndMetadata(shaderbinaryfilename, output);
 
+			if (!output.error_message.empty())
+			{
+				wiBackLog::post(output.error_message.c_str());
+			}
 			wiBackLog::post(("shader compiled: " + shaderbinaryfilename).c_str());
 			return device->CreateShader(stage, output.shaderdata, output.shadersize, &shader);
 		}
@@ -956,7 +960,6 @@ bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
 		{
 			wiBackLog::post(("shader compile FAILED: " + shaderbinaryfilename + "\n" + output.error_message).c_str());
 		}
-		return false;
 	}
 
 	vector<uint8_t> buffer;
@@ -8660,108 +8663,86 @@ void UpdateCameraCB(
 void CreateLuminanceResources(LuminanceResources& res, XMUINT2 resolution)
 {
 	TextureDesc desc;
-	desc.Width = 256;
+	desc.Width = 32;
 	desc.Height = desc.Width;
-	desc.MipLevels = 1;
-	desc.ArraySize = 1;
-	desc.Format = FORMAT_R32_FLOAT;
-	desc.SampleCount = 1;
-	desc.Usage = USAGE_DEFAULT;
+	desc.Format = FORMAT_R16_FLOAT;
 	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	desc.CPUAccessFlags = 0;
-	desc.MiscFlags = 0;
+	device->CreateTexture(&desc, nullptr, &res.reductiontex);
 
-	device->CreateTexture(&desc, nullptr, &res.luminance_map);
-
-	res.luminance_avg.clear();
-	while (desc.Width > 1)
-	{
-		desc.Width = std::max(desc.Width / 16, 1u);
-		desc.Height = desc.Width;
-
-		Texture tex;
-		device->CreateTexture(&desc, nullptr, &tex);
-
-		res.luminance_avg.push_back(tex);
-	}
+	desc.Width = 1;
+	desc.Height = desc.Width;
+	device->CreateTexture(&desc, nullptr, &res.luminance);
 }
 const Texture* ComputeLuminance(
 	const LuminanceResources& res,
 	const Texture& sourceImage,
-	CommandList cmd
+	CommandList cmd,
+	float adaption_rate
 )
 {
-	assert(res.luminance_map.IsValid());
-
 	device->EventBegin("Compute Luminance", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Luminance", cmd);
 
-	// Pass 1 : Create luminance map from scene tex
-	TextureDesc luminance_map_desc = res.luminance_map.GetDesc();
-	device->BindComputeShader(&shaders[CSTYPE_LUMINANCE_PASS1], cmd);
-	device->BindResource(CS, &sourceImage, TEXSLOT_ONDEMAND0, cmd);
-	device->BindUAV(CS, &res.luminance_map, 0, cmd);
+	PostProcessCB cb;
+	cb.luminance_adaptionrate = adaption_rate;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
+	// Pass 1 : Compute log luminance and reduction
 	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&res.luminance_map, res.luminance_map.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
-
-	device->Dispatch(luminance_map_desc.Width/16, luminance_map_desc.Height/16, 1, cmd);
-
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-			GPUBarrier::Image(&res.luminance_map, IMAGE_LAYOUT_UNORDERED_ACCESS, res.luminance_map.desc.layout),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
-
-	// Pass 2 : Reduce for average luminance until we got an 1x1 texture
-	TextureDesc luminance_avg_desc;
-	for (size_t i = 0; i < res.luminance_avg.size(); ++i)
-	{
-		luminance_avg_desc = res.luminance_avg[i].GetDesc();
-		device->BindComputeShader(&shaders[CSTYPE_LUMINANCE_PASS2], cmd);
-
-		const GPUResource* uavs[] = {
-			&res.luminance_avg[i]
-		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindComputeShader(&shaders[CSTYPE_LUMINANCE_PASS1], cmd);
+		device->BindResource(CS, &sourceImage, TEXSLOT_ONDEMAND0, cmd);
+		device->BindUAV(CS, &res.reductiontex, 0, cmd);
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.luminance_avg[i], res.luminance_avg[i].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.reductiontex, res.reductiontex.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		if (i > 0)
-		{
-			device->BindResource(CS, &res.luminance_avg[i-1], TEXSLOT_ONDEMAND0, cmd);
-		}
-		else
-		{
-			device->BindResource(CS, &res.luminance_map, TEXSLOT_ONDEMAND0, cmd);
-		}
-		device->Dispatch(luminance_avg_desc.Width, luminance_avg_desc.Height, 1, cmd);
+		device->Dispatch(32, 32, 1, cmd);
 
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
-				GPUBarrier::Image(&res.luminance_avg[i], IMAGE_LAYOUT_UNORDERED_ACCESS, res.luminance_avg[i].desc.layout),
+				GPUBarrier::Image(&res.reductiontex, IMAGE_LAYOUT_UNORDERED_ACCESS, res.reductiontex.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 	}
 
+	// Pass 2 : Reduce into 1x1 texture
+	{
+		device->BindComputeShader(&shaders[CSTYPE_LUMINANCE_PASS2], cmd);
 
-	device->UnbindUAVs(0, 1, cmd);
+		device->BindUAV(CS, &res.luminance, 0, cmd);
+		device->BindResource(CS, &res.reductiontex, TEXSLOT_ONDEMAND0, cmd);
 
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&res.luminance, res.luminance.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->Dispatch(1, 1, 1, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Image(&res.luminance, IMAGE_LAYOUT_UNORDERED_ACCESS, res.luminance.desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->UnbindUAVs(0, 1, cmd);
+	}
+
+	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
 
-	return &res.luminance_avg.back();
+	return &res.luminance;
 }
 
 void ComputeShadingRateClassification(
@@ -12293,13 +12274,14 @@ void Postprocess_Sharpen(
 }
 void Postprocess_Tonemap(
 	const Texture& input,
-	const Texture& input_luminance,
-	const Texture& input_distortion,
 	const Texture& output,
 	CommandList cmd,
 	float exposure,
 	bool dither,
-	const Texture* colorgrade_lookuptable
+	const Texture* texture_colorgradinglut,
+	const Texture* texture_distortion,
+	const Texture* texture_luminance,
+	float eyeadaptionkey
 )
 {
 	device->EventBegin("Postprocess_Tonemap", cmd);
@@ -12315,7 +12297,12 @@ void Postprocess_Tonemap(
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.tonemap_exposure = exposure;
 	cb.tonemap_dither = dither ? 1.0f : 0.0f;
-	cb.tonemap_colorgrading = colorgrade_lookuptable == nullptr ? 0.0f : 1.0f;
+	cb.tonemap_colorgrading = texture_colorgradinglut == nullptr ? 0.0f : 1.0f;
+	cb.tonemap_eyeadaption = texture_luminance == nullptr ? 0.0f : 1.0f;
+	cb.tonemap_distortion = texture_distortion == nullptr ? 0.0f : 1.0f;
+	cb.tonemap_eyeadaptionkey = eyeadaptionkey;
+
+	assert(texture_colorgradinglut == nullptr || texture_colorgradinglut->desc.type == TextureDesc::TEXTURE_3D); // This must be a 3D lut
 
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
 	{
@@ -12323,28 +12310,27 @@ void Postprocess_Tonemap(
 		push.xPPResolution_rcp = cb.xPPResolution_rcp;
 		push.exposure = cb.tonemap_exposure;
 		push.dither = cb.tonemap_dither;
-		push.colorgrading = cb.tonemap_colorgrading;
+		push.eyeadaptionkey = cb.tonemap_eyeadaptionkey;
 		push.texture_input = device->GetDescriptorIndex(&input, SRV);
-		push.texture_input_luminance = device->GetDescriptorIndex(&input_luminance, SRV);
-		push.texture_input_distortion = device->GetDescriptorIndex(&input_distortion, SRV);
-		push.texture_colorgrade_lookuptable = device->GetDescriptorIndex(colorgrade_lookuptable, SRV);
+		push.texture_input_luminance = device->GetDescriptorIndex(texture_luminance, SRV);
+		push.texture_input_distortion = device->GetDescriptorIndex(texture_distortion, SRV);
+		push.texture_colorgrade_lookuptable = device->GetDescriptorIndex(texture_colorgradinglut, SRV);
 		push.texture_output = device->GetDescriptorIndex(&output, UAV);
 		device->PushConstants(&push, sizeof(push), cmd);
 	}
 	else
 	{
 		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &input_luminance, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &input_distortion, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(CS, texture_luminance, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, texture_distortion, TEXSLOT_ONDEMAND2, cmd);
 
-		if (colorgrade_lookuptable == nullptr)
+		if (texture_colorgradinglut == nullptr)
 		{
 			device->UnbindResources(TEXSLOT_ONDEMAND3, 1, cmd);
 		}
 		else
 		{
-			assert(colorgrade_lookuptable == nullptr || colorgrade_lookuptable->desc.type == TextureDesc::TEXTURE_3D); // This must be a 3D lut
-			device->BindResource(CS, colorgrade_lookuptable, TEXSLOT_ONDEMAND3, cmd);
+			device->BindResource(CS, texture_colorgradinglut, TEXSLOT_ONDEMAND3, cmd);
 		}
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);

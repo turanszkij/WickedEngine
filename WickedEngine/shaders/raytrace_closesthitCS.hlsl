@@ -99,7 +99,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 
 	const uint bucket = groupIndex / 32;				// which bitfield bucket does this thread belong to?
 	const uint threadIndexInBucket = groupIndex % 32;	// thread bit offset from bucket start
-	const uint threadMask = 1 << threadIndexInBucket;	// thread bit mask in current bucket
+	const uint threadMask = 1u << threadIndexInBucket;	// thread bit mask in current bucket
 
 	// Count rays that are still active with a bitmask insertion:
 	if (ray_active)

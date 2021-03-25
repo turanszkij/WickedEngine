@@ -72,8 +72,6 @@ typedef XMINT4 int4;
 #if defined(HLSL6) || defined(SPIRV)
 #define BINDLESS
 #define RAYTRACINGACCELERATIONSTRUCTURE(name, slot) RaytracingAccelerationStructure name : register(t ## slot)
-#else
-#define DISABLE_WAVE_INTRINSICS
 #endif // HLSL6 || SPIRV
 
 #ifdef SPIRV

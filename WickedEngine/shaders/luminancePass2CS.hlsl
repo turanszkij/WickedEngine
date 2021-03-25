@@ -1,36 +1,46 @@
 #include "globals.hlsli"
-// Calculate average luminance by reduction
+#include "ShaderInterop_Postprocess.h"
+// Reduce log luminances into 1x1
 
-TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
+TEXTURE2D(input, float, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(output, float, 0);
 
+static const uint DIM = 32;
+static const uint THREADCOUNT = DIM * DIM;
 
-#define SIZEX 16
-#define SIZEY 16
-#define GROUPSIZE SIZEX*SIZEY
-groupshared float accumulator[GROUPSIZE];
+groupshared float shared_sam[THREADCOUNT];
 
-[numthreads(SIZEX, SIZEY, 1)]
+[numthreads(DIM, DIM, 1)]
 void main(
-	uint3 groupId : SV_GroupID,
-	uint3 groupThreadId : SV_GroupThreadID,
-	uint3 dispatchThreadId : SV_DispatchThreadID, // 
-	uint groupIndex : SV_GroupIndex)
+	uint3 DTid : SV_DispatchThreadID,
+	uint3 Gid : SV_GroupID,
+	uint3 GTid : SV_GroupThreadID,
+	uint groupIndex : SV_GroupIndex
+)
 {
-	uint2 dim;
-	input.GetDimensions(dim.x, dim.y);
-	accumulator[groupIndex] = (dispatchThreadId.x > dim.x || dispatchThreadId.y > dim.y)? 0.5 : input[dispatchThreadId.xy].r;
+	float loglum = input[DTid.xy];
+	shared_sam[groupIndex] = loglum;
 	GroupMemoryBarrierWithGroupSync();
 
 	[unroll]
-	for (uint iy = GROUPSIZE >> 1; iy > 0; iy = iy >> 1) {
-		if (groupIndex < iy) {
-			accumulator[groupIndex] += accumulator[groupIndex + iy];
-		}
+	for (uint s = THREADCOUNT >> 1; s > 0; s >>= 1)
+	{
+		if (groupIndex < s)
+			shared_sam[groupIndex] += shared_sam[groupIndex + s];
+
 		GroupMemoryBarrierWithGroupSync();
 	}
-	if (groupIndex != 0) { return; }
 
-	output[groupId.xy] = max(0, lerp(output[groupId.xy], accumulator[0] / (GROUPSIZE), g_xFrame_DeltaTime * 2));
+	if (groupIndex == 0)
+	{
+		loglum = shared_sam[0] / THREADCOUNT;
+		float currentlum = exp(loglum);
+		float lastlum = output[uint2(0, 0)];
+
+		// https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/LuminanceReduction.hlsl
+		float newlum = lastlum + (currentlum - lastlum) * (1 - exp(-g_xFrame_DeltaTime * luminance_adaptionrate));
+
+		output[uint2(0, 0)] = newlum;
+	}
 }

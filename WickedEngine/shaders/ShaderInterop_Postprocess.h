@@ -14,19 +14,6 @@ CBUFFER(PostProcessCB, CBSLOT_RENDERER_POSTPROCESS)
 	float4 xPPParams1;
 };
 
-struct PushConstantsTonemap
-{
-	float2 xPPResolution_rcp;
-	float exposure;
-	float dither;
-	float colorgrading;
-	int texture_input;
-	int texture_input_luminance;
-	int texture_input_distortion;
-	int texture_colorgrade_lookuptable;
-	int texture_output;
-};
-
 #define lineardepth_inputresolution xPPParams0.xy
 #define lineardepth_inputresolution_rcp xPPParams0.zw
 
@@ -93,9 +80,26 @@ static const uint DEPTHOFFIELD_TILESIZE = 32;
 #define dof_aspect xPPParams0.z
 #define dof_maxcoc xPPParams0.w
 
+struct PushConstantsTonemap
+{
+	float2 xPPResolution_rcp;
+	float exposure;
+	float dither;
+	float eyeadaptionkey;
+	int texture_input;
+	int texture_input_luminance;
+	int texture_input_distortion;
+	int texture_colorgrade_lookuptable;
+	int texture_output;
+};
 #define tonemap_exposure xPPParams0.x
 #define tonemap_dither xPPParams0.y
 #define tonemap_colorgrading xPPParams0.z
+#define tonemap_eyeadaption xPPParams0.w
+#define tonemap_distortion xPPParams1.x
+#define tonemap_eyeadaptionkey xPPParams1.y
+
+#define luminance_adaptionrate xPPParams0.x
 
 static const uint TILE_STATISTICS_OFFSET_EARLYEXIT = 0;
 static const uint TILE_STATISTICS_OFFSET_CHEAP = TILE_STATISTICS_OFFSET_EARLYEXIT + 4;

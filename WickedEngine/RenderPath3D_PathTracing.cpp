@@ -165,13 +165,11 @@ void RenderPath3D_PathTracing::Render() const
 
 		wiRenderer::Postprocess_Tonemap(
 			traceResult,
-			*wiTextureHelper::getColor(wiColor::Gray()),
-			*wiTextureHelper::getBlack(),
 			rtPostprocess_LDR[0],
 			cmd,
 			getExposure(),
-			false,
-			nullptr
+			getDitherEnabled(),
+			getColorGradingEnabled() ? (scene->weather.colorGradingMap == nullptr ? nullptr : &scene->weather.colorGradingMap->texture) : nullptr
 		);
 
 		// GUI Background blurring:

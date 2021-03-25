@@ -47,7 +47,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			//	If the previous bucket bit was 0, that means it's the first child to arrive here, this will be discarded, because maybe the second child is not yet computed its AABB.
 			//	Else, this is the second child to arrive, we can continue to parent, because there was already a child that arrived here and been discarded.
 			const uint flag_bucket_index = nodeIndex / 32;
-			const uint flag_bucket_bit = 1 << (nodeIndex % 32);
+			const uint flag_bucket_bit = 1u << (nodeIndex % 32);
 			uint flag_bucket_prev;
 			InterlockedOr(bvhFlagBuffer[flag_bucket_index], flag_bucket_bit, flag_bucket_prev);
 			if (!(flag_bucket_prev & flag_bucket_bit))

@@ -22,6 +22,8 @@ public:
 	wiSlider screenSpaceShadowsStepCountSlider;
 	wiSlider screenSpaceShadowsRangeSlider;
 	wiCheckBox eyeAdaptionCheckBox;
+	wiSlider eyeAdaptionKeySlider;
+	wiSlider eyeAdaptionRateSlider;
 	wiCheckBox motionBlurCheckBox;
 	wiSlider motionBlurStrengthSlider;
 	wiCheckBox depthOfFieldCheckBox;

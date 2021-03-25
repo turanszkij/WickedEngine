@@ -439,6 +439,10 @@ int main(int argc, char* argv[])
 						wiShaderCompiler::SaveShaderAndMetadata(shaderbinaryfilename, output);
 
 						locker.lock();
+						if (!output.error_message.empty())
+						{
+							std::cerr << output.error_message << std::endl;
+						}
 						std::cout << "shader compiled: " << shaderbinaryfilename << std::endl;
 						if (shaderdump_enabled)
 						{

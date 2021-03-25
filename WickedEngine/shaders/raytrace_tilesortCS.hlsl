@@ -7,7 +7,7 @@ STRUCTUREDBUFFER(rayBuffer_READ, RaytracingStoredRay, TEXSLOT_ONDEMAND8);
 RWSTRUCTUREDBUFFER(rayIndexBuffer_WRITE, uint, 0);
 
 static const uint numArray = RAYTRACING_SORT_GROUPSIZE;
-static const uint numArrayPowerOfTwo = 2 << firstbithigh(numArray - 1);
+static const uint numArrayPowerOfTwo = 2u << firstbithigh(numArray - 1);
 groupshared uint2 Array[numArray];
 
 void BitonicSort(in uint localIdxFlattened)

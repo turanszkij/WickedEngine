@@ -37,6 +37,8 @@ private:
 	float chromaticAberrationAmount = 2.0f;
 	uint32_t screenSpaceShadowSampleCount = 16;
 	float screenSpaceShadowRange = 1;
+	float eyeadaptionKey = 0.115f;
+	float eyeadaptionRate = 1;
 
 	AO ao = AO_DISABLED;
 	bool fxaaEnabled = false;
@@ -193,6 +195,8 @@ public:
 	constexpr float getChromaticAberrationAmount() const { return chromaticAberrationAmount; }
 	constexpr uint32_t getScreenSpaceShadowSampleCount() const { return screenSpaceShadowSampleCount; }
 	constexpr float getScreenSpaceShadowRange() const { return screenSpaceShadowRange; }
+	constexpr float getEyeAdaptionKey() const { return eyeadaptionKey; }
+	constexpr float getEyeAdaptionRate() const { return eyeadaptionRate; }
 
 	constexpr bool getAOEnabled() const { return ao != AO_DISABLED; }
 	constexpr AO getAO() const { return ao; }
@@ -235,6 +239,8 @@ public:
 	constexpr void setChromaticAberrationAmount(float value) { chromaticAberrationAmount = value; }
 	constexpr void setScreenSpaceShadowSampleCount(uint32_t value) { screenSpaceShadowSampleCount = value; }
 	constexpr void setScreenSpaceShadowRange(float value) { screenSpaceShadowRange = value; }
+	constexpr void setEyeAdaptionKey(float value) { eyeadaptionKey = value; }
+	constexpr void setEyeAdaptionRate(float value) { eyeadaptionRate = value; }
 
 	constexpr void setAO(AO value) { ao = value; }
 	constexpr void setSSREnabled(bool value){ ssrEnabled = value; }

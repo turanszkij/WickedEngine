@@ -272,15 +272,16 @@ namespace wiRenderer
 
 	struct LuminanceResources
 	{
-		wiGraphics::Texture luminance_map;
-		std::vector<wiGraphics::Texture> luminance_avg;
+		wiGraphics::Texture reductiontex;
+		wiGraphics::Texture luminance;
 	};
 	void CreateLuminanceResources(LuminanceResources& res, XMUINT2 resolution);
 	// Compute the luminance for the source image and return the texture containing the luminance value in pixel [0,0]
 	const wiGraphics::Texture* ComputeLuminance(
 		const LuminanceResources& res,
 		const wiGraphics::Texture& sourceImage,
-		wiGraphics::CommandList cmd
+		wiGraphics::CommandList cmd,
+		float adaption_rate = 1
 	);
 
 	void ComputeShadingRateClassification(
@@ -571,13 +572,14 @@ namespace wiRenderer
 	);
 	void Postprocess_Tonemap(
 		const wiGraphics::Texture& input,
-		const wiGraphics::Texture& input_luminance,
-		const wiGraphics::Texture& input_distortion,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float exposure,
 		bool dither,
-		const wiGraphics::Texture* colorgrade_lookuptable
+		const wiGraphics::Texture* texture_colorgradinglut = nullptr,
+		const wiGraphics::Texture* texture_distortion = nullptr,
+		const wiGraphics::Texture* texture_luminance = nullptr,
+		float eyeadaptionkey = 0.115f
 	);
 	void Postprocess_Chromatic_Aberration(
 		const wiGraphics::Texture& input,
