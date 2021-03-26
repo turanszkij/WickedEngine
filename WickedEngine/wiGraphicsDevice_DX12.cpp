@@ -2332,7 +2332,6 @@ using namespace DX12_Internal;
 		// Create fences for command queue:
 		hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameFence));
 		assert(SUCCEEDED(hr));
-		frameFenceEvent = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
 
 
 		// Create swapchain
@@ -2437,7 +2436,6 @@ using namespace DX12_Internal;
 
 		hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&directFence));
 		assert(SUCCEEDED(hr));
-		directFenceEvent = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
 		directFenceValue = directFence->GetCompletedValue();
 
 		// Query features:
@@ -2697,9 +2695,6 @@ using namespace DX12_Internal;
 	GraphicsDevice_DX12::~GraphicsDevice_DX12()
 	{
 		WaitForGPU();
-
-		CloseHandle(frameFenceEvent);
-		CloseHandle(directFenceEvent);
 	}
 
 	void GraphicsDevice_DX12::SetResolution(int width, int height)
@@ -5453,8 +5448,10 @@ using namespace DX12_Internal;
 		// Wait if too many frames are being incomplete:
 		if (frameFence->GetCompletedValue() < lastFrameToAllowLatency)
 		{
-			hr = frameFence->SetEventOnCompletion(lastFrameToAllowLatency, frameFenceEvent);
-			WaitForSingleObject(frameFenceEvent, INFINITE);
+			// NULL event handle will simply wait immediately:
+			//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12fence-seteventoncompletion#remarks
+			hr = frameFence->SetEventOnCompletion(lastFrameToAllowLatency, NULL);
+			assert(SUCCEEDED(hr));
 		}
 
 		allocationhandler->Update(FRAMECOUNT, BACKBUFFER_COUNT);
@@ -5477,10 +5474,9 @@ using namespace DX12_Internal;
 		assert(SUCCEEDED(hr));
 		if (directFence->GetCompletedValue() < directFenceValue)
 		{
-			hr = directFence->SetEventOnCompletion(directFenceValue, directFenceEvent);
-			WaitForSingleObject(directFenceEvent, INFINITE);
+			hr = directFence->SetEventOnCompletion(directFenceValue, NULL);
+			assert(SUCCEEDED(hr));
 		}
-		assert(SUCCEEDED(hr));
 	}
 	void GraphicsDevice_DX12::ClearPipelineStateCache()
 	{

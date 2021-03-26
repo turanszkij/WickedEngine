@@ -35,7 +35,6 @@ namespace wiGraphics
 		Microsoft::WRL::ComPtr<IDXGIFactory6> factory;
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> directQueue;
 		Microsoft::WRL::ComPtr<ID3D12Fence> frameFence;
-		HANDLE frameFenceEvent;
 
 		uint32_t backbuffer_index = 0;
 		Microsoft::WRL::ComPtr<ID3D12Resource> backBuffers[BACKBUFFER_COUNT];
@@ -187,7 +186,6 @@ namespace wiGraphics
 		mutable CopyAllocator copyAllocator;
 
 		Microsoft::WRL::ComPtr<ID3D12Fence> directFence;
-		HANDLE directFenceEvent;
 		UINT64 directFenceValue = 0;
 
 		RenderPass dummyRenderpass;
