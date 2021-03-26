@@ -60,6 +60,7 @@ public:
 	XMFLOAT4X4 worldPrev;
 	AABB aabb;
 	std::vector<uint32_t> indices; // it is dependent on vertex_lengths and contains triangles with non-zero lengths
+	uint32_t layerMask = ~0u;
 
 	void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 

@@ -8,17 +8,6 @@ RWSTRUCTUREDBUFFER(deadBuffer, uint, 3);
 RWRAWBUFFER(counterBuffer, 4);
 RWSTRUCTUREDBUFFER(distanceBuffer, float, 6);
 
-#define NUM_LDS_FORCEFIELDS 32
-struct LDS_ForceField
-{
-	uint type;
-	float3 position;
-	float gravity;
-	float range_rcp;
-	float3 normal;
-};
-groupshared LDS_ForceField forceFields[NUM_LDS_FORCEFIELDS];
-
 #define SPH_FLOOR_COLLISION
 #define SPH_BOX_COLLISION
 
@@ -28,22 +17,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 {
 	//uint aliveCount = counterBuffer[0].aliveCount;
 	uint aliveCount = counterBuffer.Load(PARTICLECOUNTER_OFFSET_ALIVECOUNT);
-
-	// Load the forcefields into LDS:
-	uint numForceFields = min(g_xFrame_ForceFieldArrayCount, NUM_LDS_FORCEFIELDS);
-	if (Gid < numForceFields)
-	{
-		uint forceFieldID = g_xFrame_ForceFieldArrayOffset + Gid;
-		ShaderEntity forceField = EntityArray[forceFieldID];
-
-		forceFields[Gid].type = (uint)forceField.GetType();
-		forceFields[Gid].position = forceField.position;
-		forceFields[Gid].gravity = forceField.GetEnergy();
-		forceFields[Gid].range_rcp = forceField.GetRange(); // it is actually uploaded from CPU as 1.0f / range
-		forceFields[Gid].normal = forceField.GetDirection();
-	}
-
-	GroupMemoryBarrierWithGroupSync();
 
 	if (DTid.x < aliveCount)
 	{
@@ -56,24 +29,27 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		if (particle.life > 0)
 		{
 			// simulate:
-
-			for (uint i = 0; i < numForceFields; ++i)
+			for (uint i = 0; i < g_xFrame_ForceFieldArrayCount; ++i)
 			{
-				LDS_ForceField forceField = forceFields[i];
+				ShaderEntity forceField = EntityArray[g_xFrame_ForceFieldArrayOffset + i];
 
-				float3 dir = forceField.position - particle.position;
-				float dist;
-				if (forceField.type == ENTITY_TYPE_FORCEFIELD_POINT) // point-based force field
+				[branch]
+				if (forceField.layerMask & xEmitterLayerMask)
 				{
-					dist = length(dir);
-				}
-				else // planar force field
-				{
-					dist = dot(forceField.normal, dir);
-					dir = forceField.normal;
-				}
+					float3 dir = forceField.position - particle.position;
+					float dist;
+					if (forceField.GetType() == ENTITY_TYPE_FORCEFIELD_POINT) // point-based force field
+					{
+						dist = length(dir);
+					}
+					else // planar force field
+					{
+						dist = dot(forceField.GetDirection(), dir);
+						dir = forceField.GetDirection();
+					}
 
-				particle.force += dir * forceField.gravity * (1 - saturate(dist * forceField.range_rcp));
+					particle.force += dir * forceField.GetEnergy() * (1 - saturate(dist * forceField.GetRange())); // GetRange() is actually uploaded as 1.0 / range
+				}
 			}
 
 

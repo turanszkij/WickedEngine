@@ -276,6 +276,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		cb.xParticleDrag = drag;
 		XMStoreFloat3(&cb.xParticleVelocity, XMVector3TransformNormal(XMLoadFloat3(&velocity), XMLoadFloat4x4(&transform.world)));
 		cb.xParticleRandomColorFactor = random_color;
+		cb.xEmitterLayerMask = layerMask;
 
 		cb.xEmitterOptions = 0;
 		if (IsSPHEnabled())

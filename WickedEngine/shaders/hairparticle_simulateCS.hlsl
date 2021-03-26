@@ -10,35 +10,9 @@ TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND0);
 RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND1);
 TYPEDBUFFER(meshVertexBuffer_length, float, TEXSLOT_ONDEMAND2);
 
-#define NUM_LDS_FORCEFIELDS 32
-struct LDS_ForceField
-{
-	uint type;
-	float3 position;
-	float gravity;
-	float range_rcp;
-	float3 normal;
-};
-groupshared LDS_ForceField forceFields[NUM_LDS_FORCEFIELDS];
-
 [numthreads(THREADCOUNT_SIMULATEHAIR, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
-	// Load the forcefields into LDS:
-	uint numForceFields = min(g_xFrame_ForceFieldArrayCount, NUM_LDS_FORCEFIELDS);
-	if (groupIndex < numForceFields)
-	{
-		uint forceFieldID = g_xFrame_ForceFieldArrayOffset + groupIndex;
-		ShaderEntity forceField = EntityArray[forceFieldID];
-
-		forceFields[groupIndex].type = (uint)forceField.GetType();
-		forceFields[groupIndex].position = forceField.position;
-		forceFields[groupIndex].gravity = forceField.GetEnergy();
-		forceFields[groupIndex].range_rcp = forceField.GetRange(); // it is actually uploaded from CPU as 1.0f / range
-		forceFields[groupIndex].normal = forceField.GetDirection();
-	}
-	GroupMemoryBarrierWithGroupSync();
-
 	if (DTid.x >= xHairParticleCount)
 		return;
 
@@ -130,25 +104,29 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		// Accumulate forces:
 		float3 force = 0;
-        for (uint i = 0; i < numForceFields; ++i)
+        for (uint i = 0; i < g_xFrame_ForceFieldArrayCount; ++i)
         {
-            LDS_ForceField forceField = forceFields[i];
+			ShaderEntity forceField = EntityArray[g_xFrame_ForceFieldArrayOffset + i];
 
-			//float3 dir = forceField.position - PointOnLineSegmentNearestPoint(base, tip, forceField.position);
-			float3 dir = forceField.position - tip;
-            float dist;
-            if (forceField.type == ENTITY_TYPE_FORCEFIELD_POINT) // point-based force field
-            {
-                //dist = length(dir);
-				dist = length(forceField.position - ClosestPointOnSegment(base, tip, forceField.position));
-            }
-            else // planar force field
-            {
-                dist = dot(forceField.normal, dir);
-                dir = forceField.normal;
-            }
+			[branch]
+			if (forceField.layerMask & xHairLayerMask)
+			{
+				//float3 dir = forceField.position - PointOnLineSegmentNearestPoint(base, tip, forceField.position);
+				float3 dir = forceField.position - tip;
+				float dist;
+				if (forceField.GetType() == ENTITY_TYPE_FORCEFIELD_POINT) // point-based force field
+				{
+					//dist = length(dir);
+					dist = length(forceField.position - ClosestPointOnSegment(base, tip, forceField.position));
+				}
+				else // planar force field
+				{
+					dist = dot(forceField.GetDirection(), dir);
+					dir = forceField.GetDirection();
+				}
 
-            force += dir * forceField.gravity * (1 - saturate(dist * forceField.range_rcp));
+				force += dir * forceField.GetEnergy() * (1 - saturate(dist * forceField.GetRange())); // GetRange() is actually uploaded as 1.0 / range
+			}
         }
 
 		// Pull back to rest position:

@@ -117,6 +117,7 @@ public:
 	// Non-serialized attributes:
 	XMFLOAT3 center;
 	uint32_t statisticsReadBackIndex = 0;
+	uint32_t layerMask = ~0u;
 
 	inline bool IsDebug() const { return _flags & FLAG_DEBUG; }
 	inline bool IsPaused() const { return _flags & FLAG_PAUSED; }

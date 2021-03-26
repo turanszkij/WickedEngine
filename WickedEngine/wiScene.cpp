@@ -3152,6 +3152,13 @@ namespace wiScene
 
 			wiEmittedParticle& emitter = emitters[args.jobIndex];
 			Entity entity = emitters.GetEntity(args.jobIndex);
+
+			const LayerComponent* layer = layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				emitter.layerMask = layer->GetLayerMask();
+			}
+
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			emitter.UpdateCPU(transform, dt);
 		});
@@ -3159,10 +3166,16 @@ namespace wiScene
 		wiJobSystem::Dispatch(ctx, (uint32_t)hairs.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
 			wiHairParticle& hair = hairs[args.jobIndex];
+			Entity entity = hairs.GetEntity(args.jobIndex);
+
+			const LayerComponent* layer = layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				hair.layerMask = layer->GetLayerMask();
+			}
 
 			if (hair.meshID != INVALID_ENTITY)
 			{
-				Entity entity = hairs.GetEntity(args.jobIndex);
 				const MeshComponent* mesh = meshes.GetComponent(hair.meshID);
 
 				if (mesh != nullptr)

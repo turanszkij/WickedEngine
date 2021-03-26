@@ -3559,9 +3559,8 @@ void UpdateVisibility(Visibility& vis)
 			// Cull emitters:
 			for (size_t i = 0; i < vis.scene->emitters.GetCount(); ++i)
 			{
-				Entity entity = vis.scene->emitters.GetEntity(i);
-				const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-				if (layer != nullptr && !(layer->GetLayerMask() & vis.layerMask))
+				const wiEmittedParticle& emitter = vis.scene->emitters[i];
+				if (!(emitter.layerMask & vis.layerMask))
 				{
 					continue;
 				}
@@ -3576,14 +3575,11 @@ void UpdateVisibility(Visibility& vis)
 			// Cull hairs:
 			for (size_t i = 0; i < vis.scene->hairs.GetCount(); ++i)
 			{
-				Entity entity = vis.scene->hairs.GetEntity(i);
-				const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-				if (layer != nullptr && !(layer->GetLayerMask() & vis.layerMask))
+				const wiHairParticle& hair = vis.scene->hairs[i];
+				if (!(hair.layerMask & vis.layerMask))
 				{
 					continue;
 				}
-
-				const wiHairParticle& hair = vis.scene->hairs[i];
 				if (hair.meshID == INVALID_ENTITY || !vis.frustum.CheckBoxFast(hair.aabb))
 				{
 					continue;

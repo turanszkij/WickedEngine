@@ -62,7 +62,7 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 
 	float2		xEmitterTexMul;
 	float		xEmitterFrameRate;
-	float		padding_xEmitter;
+	uint		xEmitterLayerMask;
 
 	float		xSPH_h;					// smoothing radius
 	float		xSPH_h_rcp;				// 1.0f / smoothing radius

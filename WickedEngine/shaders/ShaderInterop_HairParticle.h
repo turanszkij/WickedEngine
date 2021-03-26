@@ -44,9 +44,8 @@ CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
 	uint xHairFrameStart;
 
 	float2 xHairTexMul;
-
 	float xHairAspect;
-	float3 padding_xHair;
+	uint xHairLayerMask;
 };
 
 #endif // WI_SHADERINTEROP_HAIRPARTICLE_H
