@@ -89,7 +89,6 @@ bool advancedLightCulling = true;
 bool variableRateShadingClassification = false;
 bool variableRateShadingClassificationDebug = false;
 bool ldsSkinningEnabled = true;
-bool scene_bvh_invalid = true;
 float GameSpeed = 1;
 bool debugLightCulling = false;
 bool occlusionCulling = false;
@@ -143,8 +142,6 @@ std::vector<PaintRadius> paintrads;
 
 wiSpinLock deferredMIPGenLock;
 std::vector<std::pair<std::shared_ptr<wiResource>, bool>> deferredMIPGens;
-
-wiGPUBVH sceneBVH;
 
 
 static const int atlasClampBorder = 1;
@@ -1190,7 +1187,14 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_VOXELIZER_TERRAIN], "objectPS_voxelizer_terrain.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_VOXEL], "voxelPS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_FORCEFIELDVISUALIZER], "forceFieldVisualizerPS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_RENDERLIGHTMAP], "renderlightmapPS.cso"); });
+	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
+	{
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_RENDERLIGHTMAP], "renderlightmapPS_rtapi.cso"); });
+	}
+	else
+	{
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_RENDERLIGHTMAP], "renderlightmapPS.cso"); });
+	}
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_RAYTRACE_DEBUGBVH], "raytrace_debugbvhPS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_DOWNSAMPLEDEPTHBUFFER], "downsampleDepthBuffer4xPS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL], "upsample_bilateralPS.cso"); });
@@ -1235,11 +1239,14 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_COPYTEXTURE2D_FLOAT4_BORDEREXPAND], "copytexture2D_float4_borderexpandCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_SKINNING], "skinningCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_SKINNING_LDS], "skinningCS_LDS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_RAYTRACE_LAUNCH], "raytrace_launchCS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_RAYTRACE_KICKJOBS], "raytrace_kickjobsCS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_RAYTRACE_CLOSESTHIT], "raytrace_closesthitCS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_RAYTRACE_SHADE], "raytrace_shadeCS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_RAYTRACE_TILESORT], "raytrace_tilesortCS.cso"); });
+	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
+	{
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_RAYTRACE], "raytraceCS_rtapi.cso"); });
+	}
+	else
+	{
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_RAYTRACE], "raytraceCS.cso"); });
+	}
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_PAINT_TEXTURE], "paint_textureCS.cso"); });
 
@@ -2634,8 +2641,8 @@ void ClearWorld(Scene& scene)
 
 	waterRipples.clear();
 
-	sceneBVH.Clear();
-	scene_bvh_invalid = true;
+	scene.BVH.Clear();
+	scene.BVH_invalid = true;
 
 	deferredMIPGenLock.lock();
 	deferredMIPGens.clear();
@@ -3709,6 +3716,10 @@ void UpdatePerFrameData(
 
 	wiJobSystem::Wait(ctx);
 
+	if (scene.BVH_invalid)
+	{
+		scene.BVH.Update(scene);
+	}
 
 	// Update CPU-side frame constant buffer:
 	frameCB.g_xFrame_ConstantOne = 1;
@@ -4287,60 +4298,80 @@ void UpdateRenderData(
 }
 void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 {
-	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
-		return;
-
-	if (!scene.TLAS.IsValid())
-		return;
-
-	// BLAS:
+	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 	{
-		auto rangeCPU = wiProfiler::BeginRangeCPU("BLAS Update (CPU)");
-		auto range = wiProfiler::BeginRangeGPU("BLAS Update (GPU)", cmd);
-		device->EventBegin("BLAS Update", cmd);
 
-		for (Entity entity : scene.BLAS_builds)
+		if (!scene.TLAS.IsValid())
+			return;
+
+		// BLAS:
 		{
-			const MeshComponent* mesh = scene.meshes.GetComponent(entity);
-			if (mesh != nullptr && mesh->BLAS.IsValid())
+			auto rangeCPU = wiProfiler::BeginRangeCPU("BLAS Update (CPU)");
+			auto range = wiProfiler::BeginRangeGPU("BLAS Update (GPU)", cmd);
+			device->EventBegin("BLAS Update", cmd);
+
+			for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
 			{
-				device->BuildRaytracingAccelerationStructure(&mesh->BLAS, cmd, nullptr);
+				const MeshComponent& mesh = scene.meshes[i];
+				if (mesh.BLAS.IsValid())
+				{
+					switch (mesh.BLAS_state)
+					{
+					default:
+					case MeshComponent::BLAS_STATE_COMPLETE:
+						break;
+					case MeshComponent::BLAS_STATE_NEEDS_REBUILD:
+						device->BuildRaytracingAccelerationStructure(&mesh.BLAS, cmd, nullptr);
+						break;
+					case MeshComponent::BLAS_STATE_NEEDS_REFIT:
+						device->BuildRaytracingAccelerationStructure(&mesh.BLAS, cmd, &mesh.BLAS);
+						break;
+					}
+					mesh.BLAS_state = MeshComponent::BLAS_STATE_COMPLETE;
+				}
 			}
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Memory(),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			device->EventEnd(cmd);
+			wiProfiler::EndRange(range);
+			wiProfiler::EndRange(rangeCPU);
 		}
 
+		// TLAS:
 		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
+			auto rangeCPU = wiProfiler::BeginRangeCPU("TLAS Update (CPU)");
+			auto range = wiProfiler::BeginRangeGPU("TLAS Update (GPU)", cmd);
+			device->EventBegin("TLAS Update", cmd);
+
+			device->UpdateBuffer(&scene.TLAS.desc.toplevel.instanceBuffer, scene.TLAS_instances.data(), cmd);
+			device->BuildRaytracingAccelerationStructure(&scene.TLAS, cmd, nullptr);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Memory(&scene.TLAS),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			device->EventEnd(cmd);
+			wiProfiler::EndRange(range);
+			wiProfiler::EndRange(rangeCPU);
 		}
-
-		device->EventEnd(cmd);
-		wiProfiler::EndRange(range);
-		wiProfiler::EndRange(rangeCPU);
 	}
-
-	// TLAS:
+	else
 	{
-		auto rangeCPU = wiProfiler::BeginRangeCPU("TLAS Update (CPU)");
-		auto range = wiProfiler::BeginRangeGPU("TLAS Update (GPU)", cmd);
-		device->EventBegin("TLAS Update", cmd);
-
-		device->UpdateBuffer(&scene.TLAS.desc.toplevel.instanceBuffer, scene.TLAS_instances.data(), cmd);
-		device->BuildRaytracingAccelerationStructure(&scene.TLAS, cmd, nullptr);
-
+		if (scene.BVH_invalid)
 		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(&scene.TLAS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
+			scene.BVH_invalid = false;
+			scene.BVH.Build(scene, cmd);
 		}
-
-		device->EventEnd(cmd);
-		wiProfiler::EndRange(range);
-		wiProfiler::EndRange(rangeCPU);
 	}
-
 }
 void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visibility& vis, CommandList cmd)
 {
@@ -6386,7 +6417,7 @@ void DrawDebugWorld(
 
 	if (GetRaytraceDebugBVHVisualizerEnabled())
 	{
-		RayTraceSceneBVH(cmd);
+		RayTraceSceneBVH(scene, cmd);
 	}
 
 	device->EventEnd(cmd);
@@ -7826,125 +7857,27 @@ void CopyTexture2D(const Texture& dst, int DstMIP, int DstX, int DstY, const Tex
 }
 
 
-void BuildSceneBVH(const Scene& scene, CommandList cmd)
-{
-	sceneBVH.Build(scene, cmd);
-}
-
-void CreateRayBuffers(RayBuffers& rayBuffers, uint32_t rayCount)
-{
-	rayBuffers.rayCapacity = rayCount;
-
-	GPUBufferDesc desc;
-
-	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	desc.CPUAccessFlags = 0;
-	desc.Format = FORMAT_UNKNOWN;
-	desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	desc.Usage = USAGE_DEFAULT;
-
-	desc.StructureByteStride = sizeof(uint);
-	desc.ByteWidth = desc.StructureByteStride * rayBuffers.rayCapacity;
-	device->CreateBuffer(&desc, nullptr, &rayBuffers.rayIndexBuffer[0]);
-	device->SetName(&rayBuffers.rayIndexBuffer[0], "rayIndexBuffer[0]");
-	device->CreateBuffer(&desc, nullptr, &rayBuffers.rayIndexBuffer[1]);
-	device->SetName(&rayBuffers.rayIndexBuffer[1], "rayIndexBuffer[1]");
-
-#ifdef RAYTRACING_SORT_GLOBAL
-	desc.StructureByteStride = sizeof(float); // sorting needs float now
-	desc.ByteWidth = desc.StructureByteStride * rayBuffers.rayCapacity;
-	device->CreateBuffer(&desc, nullptr, &rayBuffers.raySortBuffer);
-	device->SetName(&rayBuffers.raySortBuffer, "raySortBuffer");
-#endif // RAYTRACING_SORT_GLOBAL
-
-	desc.StructureByteStride = sizeof(RaytracingStoredRay);
-	desc.ByteWidth = desc.StructureByteStride * rayBuffers.rayCapacity;
-	device->CreateBuffer(&desc, nullptr, &rayBuffers.rayBuffer[0]);
-	device->SetName(&rayBuffers.rayBuffer[0], "rayBuffer[0]");
-	device->CreateBuffer(&desc, nullptr, &rayBuffers.rayBuffer[1]);
-	device->SetName(&rayBuffers.rayBuffer[1], "rayBuffer[1]");
-
-	desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-	desc.StructureByteStride = sizeof(uint);
-	desc.ByteWidth = desc.StructureByteStride;
-	device->CreateBuffer(&desc, nullptr, &rayBuffers.rayCountBuffer[0]);
-	device->SetName(&rayBuffers.rayCountBuffer[0], "rayCountBuffer[0]");
-	device->CreateBuffer(&desc, nullptr, &rayBuffers.rayCountBuffer[1]);
-	device->SetName(&rayBuffers.rayCountBuffer[1], "rayCountBuffer[1]");
-}
-void GenerateScreenRayBuffers(const RayBuffers& rayBuffers, const CameraComponent& camera, uint32_t width, uint32_t height, CommandList cmd)
-{
-	device->EventBegin("Launch Screen Rays", cmd);
-	{
-		device->BindComputeShader(&shaders[CSTYPE_RAYTRACE_LAUNCH], cmd);
-
-		const XMFLOAT4& halton = wiMath::GetHaltonSequence((int)device->GetFrameCount());
-		RaytracingCB cb;
-		cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
-		cb.xTraceResolution.x = width;
-		cb.xTraceResolution.y = height;
-		cb.xTraceResolution_rcp.x = 1.0f / cb.xTraceResolution.x;
-		cb.xTraceResolution_rcp.y = 1.0f / cb.xTraceResolution.y;
-		device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
-
-		const GPUResource* uavs[] = {
-			&rayBuffers.rayIndexBuffer[0],
-			&rayBuffers.rayBuffer[0],
-		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-		device->Dispatch(
-			(width + RAYTRACING_LAUNCH_BLOCKSIZE - 1) / RAYTRACING_LAUNCH_BLOCKSIZE,
-			(height + RAYTRACING_LAUNCH_BLOCKSIZE - 1) / RAYTRACING_LAUNCH_BLOCKSIZE,
-			1, 
-			cmd);
-
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
-
-		// write initial ray count:
-		device->UpdateBuffer(&rayBuffers.rayCountBuffer[0], &rayBuffers.rayCapacity, cmd);
-	}
-	device->EventEnd(cmd);
-}
 void RayTraceScene(
 	const Scene& scene,
-	const RayBuffers& rayBuffers, 
-	const Texture* result, 
+	const Texture& output,
 	int accumulation_sample, 
 	CommandList cmd
 )
 {
 	device->EventBegin("RayTraceScene", cmd);
+	auto range = wiProfiler::BeginRangeGPU("RayTraceScene", cmd);
 
-
-	static GPUBuffer indirectBuffer; // GPU job kicks
-	if (!indirectBuffer.IsValid())
-	{
-		GPUBufferDesc desc;
-
-		desc.BindFlags = BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(IndirectDispatchArgs) * 2;
-		desc.ByteWidth = desc.StructureByteStride;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_INDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-		desc.Usage = USAGE_DEFAULT;
-		device->CreateBuffer(&desc, nullptr, &indirectBuffer);
-		device->SetName(&indirectBuffer, "raytrace_indirectBuffer");
-	}
-
-	const TextureDesc& result_desc = result->GetDesc();
-
-	auto range = wiProfiler::BeginRangeGPU("RayTrace - ALL", cmd);
+	const TextureDesc& desc = output.GetDesc();
 
 	// Set up tracing resources:
-	sceneBVH.Bind(CS, cmd);
+	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
+	{
+		device->BindResource(CS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+	}
+	else
+	{
+		scene.BVH.Bind(CS, cmd);
+	}
 
 	if (scene.weather.skyMap != nullptr)
 	{
@@ -7961,197 +7894,44 @@ void RayTraceScene(
 	RaytracingCB cb;
 	cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
 	cb.xTraceAccumulationFactor = 1.0f / ((float)accumulation_sample + 1.0f);
-	cb.xTraceResolution.x = result_desc.Width;
-	cb.xTraceResolution.y = result_desc.Height;
+	cb.xTraceResolution.x = desc.Width;
+	cb.xTraceResolution.y = desc.Height;
 	cb.xTraceResolution_rcp.x = 1.0f / cb.xTraceResolution.x;
 	cb.xTraceResolution_rcp.y = 1.0f / cb.xTraceResolution.y;
+	cb.xTraceUserData.x = raytraceBounceCount;
+	cb.xTraceUserData.y = accumulation_sample;
+	cb.xTraceRandomSeed = (float)accumulation_sample + 1;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
 
-	for (uint32_t bounce = 0; bounce < raytraceBounceCount + 1; ++bounce) // first contact + indirect bounces
-	{
-		const uint32_t __readBufferID = bounce % 2;
-		const uint32_t __writeBufferID = (bounce + 1) % 2;
+	device->BindComputeShader(&shaders[CSTYPE_RAYTRACE], cmd);
 
-		cb.xTraceUserData.x = (bounce == 1 && accumulation_sample == 0) ? 1 : 0; // pre-clear result texture?
-		cb.xTraceUserData.y = bounce == raytraceBounceCount ? 1 : 0; // accumulation step?
-		cb.xTraceRandomSeed = (float)accumulation_sample * (float)(bounce + 1);
-		device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
+	device->Dispatch(
+		(desc.Width + RAYTRACING_LAUNCH_BLOCKSIZE - 1) / RAYTRACING_LAUNCH_BLOCKSIZE,
+		(desc.Height + RAYTRACING_LAUNCH_BLOCKSIZE - 1) / RAYTRACING_LAUNCH_BLOCKSIZE,
+		1,
+		cmd);
 
-		// 1.) Kick off raytracing jobs for this bounce
-		device->EventBegin("Kick Raytrace Jobs", cmd);
-		{
-			// Prepare indirect dispatch based on counter buffer value:
-			device->BindComputeShader(&shaders[CSTYPE_RAYTRACE_KICKJOBS], cmd);
+	GPUBarrier barriers[] = {
+		GPUBarrier::Memory(),
+	};
+	device->Barrier(barriers, arraysize(barriers), cmd);
 
-			const GPUResource* res[] = {
-				&rayBuffers.rayCountBuffer[__readBufferID],
-			};
-			device->BindResources(CS, res, TEXSLOT_UNIQUE0, arraysize(res), cmd);
-			const GPUResource* uavs[] = {
-				&rayBuffers.rayCountBuffer[__writeBufferID],
-				&indirectBuffer,
-			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	device->UnbindUAVs(0, arraysize(uavs), cmd);
 
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Buffer(&indirectBuffer, BUFFER_STATE_INDIRECT_ARGUMENT, BUFFER_STATE_UNORDERED_ACCESS)
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-
-			device->Dispatch(1, 1, 1, cmd);
-
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Memory(),
-					GPUBarrier::Buffer(&indirectBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDIRECT_ARGUMENT)
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-
-			device->UnbindUAVs(0, arraysize(uavs), cmd);
-		}
-		device->EventEnd(cmd);
-
-		// Sorting and shading only after first bounce:
-		if (bounce > 0)
-		{
-			// Sort rays to achieve more coherency:
-			{
-				device->EventBegin("Ray Sorting", cmd);
-
-#ifdef RAYTRACING_SORT_GLOBAL
-				wiGPUSortLib::Sort(rayBuffers.rayCapacity, rayBuffers.raySortBuffer, rayBuffers.rayCountBuffer[__readBufferID], 0, rayBuffers.rayIndexBuffer[__readBufferID], cmd);
-#else
-				device->BindComputeShader(&shaders[CSTYPE_RAYTRACE_TILESORT], cmd);
-
-				const GPUResource* res[] = {
-					&rayBuffers.rayCountBuffer[__readBufferID],
-					&rayBuffers.rayBuffer[__readBufferID],
-				};
-				device->BindResources(CS, res, TEXSLOT_ONDEMAND7, arraysize(res), cmd);
-				const GPUResource* uavs[] = {
-					&rayBuffers.rayIndexBuffer[__readBufferID],
-				};
-				device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-				device->DispatchIndirect(&indirectBuffer, RAYTRACE_INDIRECT_OFFSET_TILESORT, cmd);
-
-				GPUBarrier barriers[] = {
-					GPUBarrier::Memory(),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-
-				device->UnbindUAVs(0, arraysize(uavs), cmd);
-#endif // RAYTRACING_SORT_GLOBAL
-
-				device->EventEnd(cmd);
-			}
-
-			// Shade
-			{
-				device->EventBegin("Shading Rays", cmd);
-
-				wiProfiler::range_id range;
-				if (bounce == 1)
-				{
-					range = wiProfiler::BeginRangeGPU("RayTrace - Shade", cmd);
-				}
-
-				device->BindComputeShader(&shaders[CSTYPE_RAYTRACE_SHADE], cmd);
-
-				const GPUResource* res[] = {
-					&rayBuffers.rayCountBuffer[__readBufferID],
-					&rayBuffers.rayIndexBuffer[__readBufferID],
-				};
-				device->BindResources(CS, res, TEXSLOT_ONDEMAND7, arraysize(res), cmd);
-				const GPUResource* uavs[] = {
-					&rayBuffers.rayBuffer[__readBufferID],
-					result,
-				};
-				device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-				device->DispatchIndirect(&indirectBuffer, RAYTRACE_INDIRECT_OFFSET_TRACE, cmd);
-
-				GPUBarrier barriers[] = {
-					GPUBarrier::Memory(),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-
-				device->UnbindUAVs(0, arraysize(uavs), cmd);
-
-				if (bounce == 1)
-				{
-					wiProfiler::EndRange(range); // RayTrace - Shade
-				}
-				device->EventEnd(cmd);
-			}
-		}
-
-		// Compute Closest hits (skip after last bounce)
-		if(bounce < raytraceBounceCount)
-		{
-			device->EventBegin("Primary Rays", cmd);
-
-			wiProfiler::range_id range;
-			if (bounce == 0)
-			{
-				range = wiProfiler::BeginRangeGPU("RayTrace - First Contact", cmd);
-			}
-			else if (bounce == 1)
-			{
-				range = wiProfiler::BeginRangeGPU("RayTrace - First Bounce", cmd);
-			}
-
-			device->BindComputeShader(&shaders[CSTYPE_RAYTRACE_CLOSESTHIT], cmd);
-
-			const GPUResource* res[] = {
-				&rayBuffers.rayCountBuffer[__readBufferID],
-				&rayBuffers.rayIndexBuffer[__readBufferID],
-				&rayBuffers.rayBuffer[__readBufferID],
-			};
-			device->BindResources(CS, res, TEXSLOT_ONDEMAND7, arraysize(res), cmd);
-			const GPUResource* uavs[] = {
-				&rayBuffers.rayCountBuffer[__writeBufferID],
-				&rayBuffers.rayBuffer[__writeBufferID],
-#ifdef RAYTRACING_SORT_GLOBAL
-				&rayBuffers.rayIndexBuffer[__writeBufferID],
-				&rayBuffers.raySortBuffer,
-#endif // RAYTRACING_SORT_GLOBAL
-			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-			device->DispatchIndirect(&indirectBuffer, RAYTRACE_INDIRECT_OFFSET_TRACE, cmd);
-
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-
-			device->UnbindUAVs(0, arraysize(uavs), cmd);
-
-			if (bounce == 0 || bounce == 1)
-			{
-				wiProfiler::EndRange(range); // RayTrace - First Contact/Bounce
-			}
-			device->EventEnd(cmd);
-		}
-	}
-
-	wiProfiler::EndRange(range); // RayTrace - ALL
-
-
-
-
+	wiProfiler::EndRange(range);
 	device->EventEnd(cmd); // RayTraceScene
 }
-void RayTraceSceneBVH(CommandList cmd)
+void RayTraceSceneBVH(const Scene& scene, CommandList cmd)
 {
 	device->EventBegin("RayTraceSceneBVH", cmd);
 	device->BindPipelineState(&PSO_debug[DEBUGRENDERING_RAYTRACE_BVH], cmd);
-	sceneBVH.Bind(PS, cmd);
+	scene.BVH.Bind(PS, cmd);
 	device->Draw(3, 0, cmd);
 	device->EventEnd(cmd);
 }
@@ -8298,6 +8078,7 @@ void ManageLightmapAtlas(Scene& scene)
 
 		if (object.IsLightmapRenderRequested())
 		{
+			scene.InvalidateBVH();
 			refresh = true;
 
 			if (object.lightmapIterationCount == 0)
@@ -8495,7 +8276,7 @@ void RenderObjectLightMap(const Scene& scene, const ObjectComponent& object, Com
 	cb.xTracePixelOffset.y = (halton.y * 2 - 1) * cb.xTraceResolution_rcp.y;
 	cb.xTracePixelOffset.x *= 1.4f;	// boost the jitter by a bit
 	cb.xTracePixelOffset.y *= 1.4f;	// boost the jitter by a bit
-	cb.xTraceRandomSeed = (float)lightmapIterationCount + 1.2345f; // random seed
+	cb.xTraceRandomSeed = (float)lightmapIterationCount + 1; // random seed
 	cb.xTraceAccumulationFactor = 1.0f / (lightmapIterationCount + 1.0f); // accumulation factor (alpha)
 	cb.xTraceUserData.x = raytraceBounceCount;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
@@ -8528,13 +8309,13 @@ void RefreshLightmapAtlas(const Scene& scene, CommandList cmd)
 		auto range = wiProfiler::BeginRangeGPU("Lightmap Processing", cmd);
 
 		// Update GPU scene and BVH data:
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 		{
-			if (scene_bvh_invalid)
-			{
-				scene_bvh_invalid = false;
-				BuildSceneBVH(scene, cmd);
-			}
-			sceneBVH.Bind(PS, cmd);
+			device->BindResource(PS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+		}
+		else
+		{
+			scene.BVH.Bind(PS, cmd);
 		}
 
 		// Render lightmaps for each object:
@@ -12316,15 +12097,13 @@ void Postprocess_Tonemap(
 	}
 	else
 	{
+		device->UnbindResources(TEXSLOT_ONDEMAND0, 4, cmd);
+
 		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, texture_luminance, TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(CS, texture_distortion, TEXSLOT_ONDEMAND2, cmd);
 
-		if (texture_colorgradinglut == nullptr)
-		{
-			device->UnbindResources(TEXSLOT_ONDEMAND3, 1, cmd);
-		}
-		else
+		if (texture_colorgradinglut != nullptr)
 		{
 			device->BindResource(CS, texture_colorgradinglut, TEXSLOT_ONDEMAND3, cmd);
 		}
@@ -12815,7 +12594,6 @@ void SetVoxelRadianceRayStepSize(float value) { voxelSceneData.rayStepSize = val
 void SetGameSpeed(float value) { GameSpeed = std::max(0.0f, value); }
 float GetGameSpeed() { return GameSpeed; }
 void OceanRegenerate(const WeatherComponent& weather) { if (ocean != nullptr) ocean = std::make_unique<wiOcean>(weather); }
-void InvalidateBVH() { scene_bvh_invalid = true; }
 void SetRaytraceBounceCount(uint32_t bounces)
 {
 	raytraceBounceCount = bounces;

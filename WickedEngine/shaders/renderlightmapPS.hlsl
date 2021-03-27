@@ -2,6 +2,14 @@
 #include "globals.hlsli"
 #include "raytracingHF.hlsli"
 
+#ifdef RTAPI
+RAYTRACINGACCELERATIONSTRUCTURE(scene_acceleration_structure, TEXSLOT_ACCELERATION_STRUCTURE);
+Texture2D<float4> bindless_textures[] : register(t0, space1);
+ByteAddressBuffer bindless_buffers[] : register(t0, space2);
+StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space3);
+Buffer<uint> bindless_ib[] : register(t0, space4);
+#endif // RTAPI
+
 struct Input
 {
 	float4 pos : SV_POSITION;
@@ -18,6 +26,7 @@ float4 main(Input input) : SV_TARGET
 	float seed = xTraceRandomSeed;
 	float3 direction = SampleHemisphere_cos(N, seed, uv);
 	Ray ray = CreateRay(trace_bias_position(P, N), direction);
+	float3 result = 0;
 
 	const uint bounces = xTraceUserData.x;
 	for (uint i = 0; (i < bounces) && any(ray.energy); ++i)
@@ -143,19 +152,52 @@ float4 main(Input input) : SV_TARGET
 
 				Ray newRay;
 				newRay.origin = trace_bias_position(P, N);
-				newRay.direction = L + sampling_offset * 0.025f;
+				newRay.direction = normalize(L + sampling_offset * 0.025f);
 				newRay.direction_rcp = rcp(newRay.direction);
 				newRay.energy = 0;
+#ifdef RTAPI
+				RayDesc apiray;
+				apiray.TMin = 0.001;
+				apiray.TMax = dist;
+				apiray.Origin = newRay.origin;
+				apiray.Direction = newRay.direction;
+				RayQuery<
+					RAY_FLAG_FORCE_OPAQUE |
+					RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
+					RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH
+				> q;
+				q.TraceRayInline(scene_acceleration_structure, 0, 0xFF, apiray);
+				q.Proceed();
+				bool hit = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT;
+#else
 				bool hit = TraceRay_Any(newRay, dist);
+#endif // RTAPI
 				bounceResult += (hit ? 0 : NdotL) * lighting.direct.diffuse / PI;
 			}
 		}
-		ray.color += max(0, ray.energy * bounceResult);
+		result += max(0, ray.energy * bounceResult);
 
 		// Sample primary ray (scene materials, sky, etc):
+
+#ifdef RTAPI
+		RayDesc apiray;
+		apiray.TMin = 0.001;
+		apiray.TMax = FLT_MAX;
+		apiray.Origin = ray.origin;
+		apiray.Direction = ray.direction;
+		RayQuery<
+			RAY_FLAG_FORCE_OPAQUE |
+			RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
+		> q;
+		q.TraceRayInline(scene_acceleration_structure, 0, 0xFF, apiray);
+		q.Proceed();
+		if(q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
+#else
 		RayHit hit = TraceRay_Closest(ray);
 
 		if (hit.distance >= FLT_MAX - 1)
+#endif // RTAPI
+
 		{
 			float3 envColor;
 			[branch]
@@ -168,21 +210,137 @@ float4 main(Input input) : SV_TARGET
 			{
 				envColor = GetDynamicSkyColor(ray.direction, true, true, false, true);
 			}
-			ray.color += max(0, ray.energy * envColor);
+			result += max(0, ray.energy * envColor);
 
 			// Erase the ray's energy
-			ray.energy = 0.0f;
+			ray.energy = 0;
 			break;
 		}
 
+#ifdef RTAPI
+
+		// ray origin updated for next bounce:
+		ray.origin = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
+
+		// RTAPI path: bindless
+		ShaderMesh mesh = bindless_buffers[q.CommittedInstanceID()].Load<ShaderMesh>(0);
+		ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CommittedGeometryIndex()];
+		ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
+		uint primitiveIndex = q.CommittedPrimitiveIndex();
+		uint i0 = bindless_ib[mesh.ib][primitiveIndex * 3 + 0];
+		uint i1 = bindless_ib[mesh.ib][primitiveIndex * 3 + 1];
+		uint i2 = bindless_ib[mesh.ib][primitiveIndex * 3 + 2];
+		float4 uv0 = 0, uv1 = 0, uv2 = 0;
+		[branch]
+		if (mesh.vb_uv0 >= 0)
+		{
+			uv0.xy = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i0 * 4));
+			uv1.xy = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i1 * 4));
+			uv2.xy = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i2 * 4));
+		}
+		[branch]
+		if (mesh.vb_uv1 >= 0)
+		{
+			uv0.zw = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i0 * 4));
+			uv1.zw = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i1 * 4));
+			uv2.zw = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i2 * 4));
+		}
+		float3 n0 = 0, n1 = 0, n2 = 0;
+		[branch]
+		if (mesh.vb_pos_nor_wind >= 0)
+		{
+			const uint stride_POS = 16;
+			n0 = unpack_unitvector(bindless_buffers[mesh.vb_pos_nor_wind].Load4(i0 * stride_POS).w);
+			n1 = unpack_unitvector(bindless_buffers[mesh.vb_pos_nor_wind].Load4(i1 * stride_POS).w);
+			n2 = unpack_unitvector(bindless_buffers[mesh.vb_pos_nor_wind].Load4(i2 * stride_POS).w);
+		}
+		else
+		{
+			return float4(1, 0, 1, 1); // error, this should always be good
+		}
+
+		float2 barycentrics = q.CommittedTriangleBarycentrics();
+		float u = barycentrics.x;
+		float v = barycentrics.y;
+		float w = 1 - u - v;
+		float4 uvsets = uv0 * w + uv1 * u + uv2 * v;
+		float3 N = n0 * w + n1 * u + n2 * v;
+
+		N = mul((float3x3)q.CommittedObjectToWorld3x4(), N);
+		N = normalize(N);
+
+		float4 baseColor = material.baseColor;
+		[branch]
+		if (material.texture_basecolormap_index >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+		{
+			const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
+			baseColor = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 2);
+			baseColor.rgb *= DEGAMMA(baseColor.rgb);
+		}
+
+		[branch]
+		if (mesh.vb_col >= 0 && material.IsUsingVertexColors())
+		{
+			float4 c0, c1, c2;
+			const uint stride_COL = 4;
+			c0 = unpack_rgba(bindless_buffers[mesh.vb_col].Load(i0 * stride_COL));
+			c1 = unpack_rgba(bindless_buffers[mesh.vb_col].Load(i1 * stride_COL));
+			c2 = unpack_rgba(bindless_buffers[mesh.vb_col].Load(i2 * stride_COL));
+			float4 vertexColor = c0 * w + c1 * u + c2 * v;
+			baseColor *= vertexColor;
+		}
+
+		[branch]
+		if (mesh.vb_tan >= 0 && material.texture_normalmap_index >= 0 && material.normalMapStrength > 0)
+		{
+			float4 t0, t1, t2;
+			const uint stride_TAN = 4;
+			t0 = unpack_utangent(bindless_buffers[mesh.vb_tan].Load(i0 * stride_TAN));
+			t1 = unpack_utangent(bindless_buffers[mesh.vb_tan].Load(i1 * stride_TAN));
+			t2 = unpack_utangent(bindless_buffers[mesh.vb_tan].Load(i2 * stride_TAN));
+			float4 T = t0 * w + t1 * u + t2 * v;
+			T = T * 2 - 1;
+			T.xyz = mul((float3x3)q.CommittedObjectToWorld3x4(), T.xyz);
+			T.xyz = normalize(T.xyz);
+			float3 B = normalize(cross(T.xyz, N) * T.w);
+			float3x3 TBN = float3x3(T.xyz, B, N);
+
+			const float2 UV_normalMap = material.uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
+			float3 normalMap = bindless_textures[material.texture_normalmap_index].SampleLevel(sampler_linear_wrap, UV_normalMap, 2).rgb;
+			normalMap = normalMap * 2 - 1;
+			N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
+		}
+
+		float4 surfaceMap = 1;
+		[branch]
+		if (material.texture_surfacemap_index >= 0)
+		{
+			const float2 UV_surfaceMap = material.uvset_surfaceMap == 0 ? uvsets.xy : uvsets.zw;
+			surfaceMap = bindless_textures[material.texture_surfacemap_index].SampleLevel(sampler_linear_wrap, UV_surfaceMap, 2);
+		}
+
+		Surface surface;
+		surface.create(material, baseColor, surfaceMap);
+
+		surface.emissiveColor = material.emissiveColor;
+		[branch]
+		if (material.texture_emissivemap_index >= 0)
+		{
+			const float2 UV_emissiveMap = material.uvset_emissiveMap == 0 ? uvsets.xy : uvsets.zw;
+			float4 emissiveMap = bindless_textures[material.texture_emissivemap_index].SampleLevel(sampler_linear_wrap, UV_emissiveMap, 2);
+			emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
+			surface.emissiveColor *= emissiveMap;
+		}
+
+#else
+
+		// Non-RTAPI path: sampling from texture atlas
 		ray.origin = hit.position;
-		ray.primitiveID = hit.primitiveID;
-		ray.bary = hit.bary;
 
-		TriangleData tri = TriangleData_Unpack(primitiveBuffer[ray.primitiveID], primitiveDataBuffer[ray.primitiveID]);
+		TriangleData tri = TriangleData_Unpack(primitiveBuffer[hit.primitiveID], primitiveDataBuffer[hit.primitiveID]);
 
-		float u = ray.bary.x;
-		float v = ray.bary.y;
+		float u = hit.bary.x;
+		float v = hit.bary.y;
 		float w = 1 - u - v;
 
 		N = normalize(tri.n0 * w + tri.n1 * u + tri.n2 * v);
@@ -229,8 +387,6 @@ float4 main(Input input) : SV_TARGET
 			surface.emissiveColor *= emissiveMap;
 		}
 
-		ray.color += max(0, ray.energy * surface.emissiveColor.rgb * surface.emissiveColor.a);
-
 		[branch]
 		if (material.uvset_normalMap >= 0)
 		{
@@ -240,6 +396,10 @@ float4 main(Input input) : SV_TARGET
 			const float3x3 TBN = float3x3(tri.tangent, tri.binormal, N);
 			N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
 		}
+#endif // RTAPI
+
+		result += max(0, ray.energy * surface.emissiveColor.rgb * surface.emissiveColor.a);
+
 
 		// Calculate chances of reflection types:
 		const float refractChance = 1 - baseColor.a;
@@ -287,5 +447,5 @@ float4 main(Input input) : SV_TARGET
 		ray.Update();
 	}
 
-	return float4(ray.color, xTraceAccumulationFactor);
+	return float4(result, xTraceAccumulationFactor);
 }

@@ -95,22 +95,22 @@ namespace wiShaderCompiler
 			args.push_back(L"as_6_5");
 			break;
 		case wiGraphics::VS:
-			args.push_back(L"vs_6_0");
+			args.push_back(L"vs_6_5");
 			break;
 		case wiGraphics::HS:
-			args.push_back(L"hs_6_0");
+			args.push_back(L"hs_6_5");
 			break;
 		case wiGraphics::DS:
-			args.push_back(L"ds_6_0");
+			args.push_back(L"ds_6_5");
 			break;
 		case wiGraphics::GS:
-			args.push_back(L"gs_6_0");
+			args.push_back(L"gs_6_5");
 			break;
 		case wiGraphics::PS:
-			args.push_back(L"ps_6_0");
+			args.push_back(L"ps_6_5");
 			break;
 		case wiGraphics::CS:
-			args.push_back(L"cs_6_0");
+			args.push_back(L"cs_6_5");
 			break;
 		case wiGraphics::LIB:
 			args.push_back(L"lib_6_5");

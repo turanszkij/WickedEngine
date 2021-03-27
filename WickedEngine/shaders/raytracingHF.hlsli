@@ -15,14 +15,10 @@ inline float3 trace_bias_position(in float3 P, in float3 N)
 
 struct Ray
 {
-	uint pixelID;
 	float3 origin;
 	float3 direction;
 	float3 direction_rcp;
 	float3 energy;
-	uint primitiveID;
-	float2 bary;
-	float3 color;
 
 	inline void Update()
 	{
@@ -30,65 +26,12 @@ struct Ray
 	}
 };
 
-inline uint CreateRaySortCode(in Ray ray)
-{
-	// Sorting purely based on morton code works best so far:
-	return morton3D((ray.origin - g_xFrame_WorldBoundsMin) * g_xFrame_WorldBoundsExtents_rcp);
-
-	//return ray.primitiveID;
-
-	//uint hash = 0;
-
-	//// quantize direction [-1; 1] on 8x4x8 grid (3 + 2 + 3 = 8 bits):
-	//hash |= (uint)clamp(ray.direction.x * 4 + 4, 0, 7) << 0;
-	//hash |= (uint)clamp(ray.direction.y * 2 + 2, 0, 3) << 3;
-	//hash |= (uint)clamp(ray.direction.z * 4 + 4, 0, 7) << 5;
-
-	//// quantize origin [0, 1] on 256x256x256 grid (8 bits per component):
-	//const float3 origin = (ray.origin - g_xFrame_WorldBoundsMin) * g_xFrame_WorldBoundsExtents_rcp;
-	//hash |= ((uint)abs(origin.x * 255) % 256) << 8;
-	//hash |= ((uint)abs(origin.x * 255) % 256) << 16;
-	//hash |= ((uint)abs(origin.x * 255) % 256) << 24;
-
-	//return (float)hash;
-}
-inline RaytracingStoredRay CreateStoredRay(in Ray ray)
-{
-	RaytracingStoredRay storedray;
-
-	storedray.origin = ray.origin;
-	storedray.pixelID = ray.pixelID;
-	storedray.direction_energy = f32tof16(ray.direction) | (f32tof16(ray.energy) << 16);
-	storedray.primitiveID = ray.primitiveID;
-	storedray.bary = ray.bary;
-	storedray.color = pack_half3(ray.color);
-
-	return storedray;
-}
-inline Ray LoadRay(in RaytracingStoredRay storedray)
-{
-	Ray ray;
-	ray.pixelID = storedray.pixelID;
-	ray.origin = storedray.origin;
-	ray.direction = asfloat(f16tof32(storedray.direction_energy));
-	ray.energy = asfloat(f16tof32(storedray.direction_energy >> 16));
-	ray.primitiveID = storedray.primitiveID;
-	ray.bary = storedray.bary;
-	ray.color = unpack_half3(storedray.color);
-	ray.Update();
-	return ray;
-}
-
 inline Ray CreateRay(float3 origin, float3 direction)
 {
 	Ray ray;
 	ray.origin = origin;
 	ray.direction = direction;
 	ray.energy = float3(1, 1, 1);
-	ray.pixelID = 0xFFFFFFFF;
-	ray.primitiveID = 0xFFFFFFFF;
-	ray.bary = 0;
-	ray.color = 0;
 	ray.Update();
 	return ray;
 }
@@ -274,7 +217,7 @@ inline bool IntersectNode(in Ray ray, in BVHNode box)
 
 // have the stack in shared memory instead of registers:
 #ifdef RAYTRACE_STACK_SHARED
-groupshared uint stack[RAYTRACE_STACKSIZE][RAYTRACING_TRACE_GROUPSIZE];
+groupshared uint stack[RAYTRACE_STACKSIZE][RAYTRACING_LAUNCH_BLOCKSIZE * RAYTRACING_LAUNCH_BLOCKSIZE];
 #endif // RAYTRACE_STACK_SHARED
 
 STRUCTUREDBUFFER(materialBuffer, ShaderMaterial, TEXSLOT_ONDEMAND0);
