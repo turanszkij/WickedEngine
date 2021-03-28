@@ -78,10 +78,10 @@ void RTAO_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectionAttribu
 		AcceptHitAndEndSearch();
 		return;
 	}
-	uint primitiveIndex = PrimitiveIndex();
-	uint i0 = bindless_ib[mesh.ib][primitiveIndex * 3 + 0];
-	uint i1 = bindless_ib[mesh.ib][primitiveIndex * 3 + 1];
-	uint i2 = bindless_ib[mesh.ib][primitiveIndex * 3 + 2];
+	uint startIndex = PrimitiveIndex() * 3 + subset.indexOffset;
+	uint i0 = bindless_ib[mesh.ib][startIndex + 0];
+	uint i1 = bindless_ib[mesh.ib][startIndex + 1];
+	uint i2 = bindless_ib[mesh.ib][startIndex + 2];
 	float2 uv0 = 0, uv1 = 0, uv2 = 0;
 	[branch]
 	if (mesh.vb_uv0 >= 0 && material.uvset_baseColorMap == 0)

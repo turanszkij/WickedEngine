@@ -50,58 +50,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 #ifdef RAY_BACKFACE_CULLING
 			RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
 #endif // RAY_BACKFACE_CULLING
+			RAY_FLAG_FORCE_OPAQUE |
 			0,								// uint RayFlags
 			0xFF,							// uint InstanceInclusionMask
 			apiray							// RayDesc Ray
 		);
-		while (q.Proceed())
-		{
-			ShaderMesh mesh = bindless_buffers[q.CandidateInstanceID()].Load<ShaderMesh>(0);
-			ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CandidateGeometryIndex()];
-			ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
-			[branch]
-			if (material.texture_basecolormap_index < 0)
-			{
-				q.CommitNonOpaqueTriangleHit();
-				continue;
-			}
-			uint primitiveIndex = q.CandidatePrimitiveIndex();
-			uint i0 = bindless_ib[mesh.ib][primitiveIndex * 3 + 0];
-			uint i1 = bindless_ib[mesh.ib][primitiveIndex * 3 + 1];
-			uint i2 = bindless_ib[mesh.ib][primitiveIndex * 3 + 2];
-			float2 uv0 = 0, uv1 = 0, uv2 = 0;
-			[branch]
-			if (mesh.vb_uv0 >= 0 && material.uvset_baseColorMap == 0)
-			{
-				uv0 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i0 * 4));
-				uv1 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i1 * 4));
-				uv2 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i2 * 4));
-			}
-			else if (mesh.vb_uv1 >= 0 && material.uvset_baseColorMap != 0)
-			{
-				uv0 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i0 * 4));
-				uv1 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i1 * 4));
-				uv2 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i2 * 4));
-			}
-			else
-			{
-				q.CommitNonOpaqueTriangleHit();
-				continue;
-			}
-
-			float2 barycentrics = q.CandidateTriangleBarycentrics();
-			float u = barycentrics.x;
-			float v = barycentrics.y;
-			float w = 1 - u - v;
-			float2 uv = uv0 * w + uv1 * u + uv2 * v;
-			float alpha = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_point_wrap, uv, 2).a;
-
-			[branch]
-			if (alpha - material.alphaTest > 0)
-			{
-				q.CommitNonOpaqueTriangleHit();
-			}
-		}
+		q.Proceed();
 		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 #else
 		RayHit hit = TraceRay_Closest(ray, groupIndex);
@@ -138,10 +92,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			ShaderMesh mesh = bindless_buffers[q.CommittedInstanceID()].Load<ShaderMesh>(0);
 			ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CommittedGeometryIndex()];
 			ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
-			uint primitiveIndex = q.CommittedPrimitiveIndex();
-			uint i0 = bindless_ib[mesh.ib][primitiveIndex * 3 + 0];
-			uint i1 = bindless_ib[mesh.ib][primitiveIndex * 3 + 1];
-			uint i2 = bindless_ib[mesh.ib][primitiveIndex * 3 + 2];
+			uint startIndex = q.CommittedPrimitiveIndex() * 3 + subset.indexOffset;
+			uint i0 = bindless_ib[mesh.ib][startIndex + 0];
+			uint i1 = bindless_ib[mesh.ib][startIndex + 1];
+			uint i2 = bindless_ib[mesh.ib][startIndex + 2];
 			float4 uv0 = 0, uv1 = 0, uv2 = 0;
 			[branch]
 			if (mesh.vb_uv0 >= 0)
@@ -319,7 +273,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			surface.V = V;
 			surface.update();
 
-			result += ray.energy * surface.emissiveColor.rgb * surface.emissiveColor.a;
+			float3 current_energy = ray.energy;
+			result += max(0, current_energy * surface.emissiveColor.rgb * surface.emissiveColor.a);
+
 
 			float roulette;
 
@@ -334,8 +290,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 				// Add a new bounce iteration, otherwise the transparent effect can disappear:
 				bounces++;
-
-				continue; // skip light sampling
 			}
 			else
 			{
@@ -449,17 +403,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 						[branch]
 						if (NdotL > 0)
 						{
-							const float3 lightColor = light.GetColor().rgb * light.GetEnergy();
-
-							lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
-							lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
-
 							const float range2 = light.GetRange() * light.GetRange();
 							const float att = saturate(1 - (dist2 / range2));
 							const float attenuation = att * att;
 
-							lighting.direct.diffuse *= attenuation;
-							lighting.direct.specular *= attenuation;
+							float3 lightColor = light.GetColor().rgb * light.GetEnergy();
+							lightColor *= attenuation;
+
+							lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
+							lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
 						}
 					}
 				}
@@ -490,18 +442,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 							[branch]
 							if (SpotFactor > spotCutOff)
 							{
-								const float3 lightColor = light.GetColor().rgb * light.GetEnergy();
-
-								lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
-								lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
-
 								const float range2 = light.GetRange() * light.GetRange();
 								const float att = saturate(1 - (dist2 / range2));
 								float attenuation = att * att;
 								attenuation *= saturate((1 - (1 - SpotFactor) * 1 / (1 - spotCutOff)));
 
-								lighting.direct.diffuse *= attenuation;
-								lighting.direct.specular *= attenuation;
+								float3 lightColor = light.GetColor().rgb * light.GetEnergy();
+								lightColor *= attenuation;
+
+								lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
+								lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
 							}
 						}
 					}
@@ -529,23 +479,73 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					apiray.Direction = newRay.direction;
 					q.TraceRayInline(
 						scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
-						RAY_FLAG_FORCE_OPAQUE |			// uint RayFlags
-						RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
+						0,								// uint RayFlags
 						0xFF,							// uint InstanceInclusionMask
 						apiray							// RayDesc Ray
 					);
-					q.Proceed();
+					while (q.Proceed())
+					{
+						ShaderMesh mesh = bindless_buffers[q.CandidateInstanceID()].Load<ShaderMesh>(0);
+						ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CandidateGeometryIndex()];
+						ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
+						[branch]
+						if (material.texture_basecolormap_index < 0)
+						{
+							q.CommitNonOpaqueTriangleHit();
+							continue;
+						}
+						uint startIndex = q.CandidatePrimitiveIndex() * 3 + subset.indexOffset;
+						uint i0 = bindless_ib[mesh.ib][startIndex + 0];
+						uint i1 = bindless_ib[mesh.ib][startIndex + 1];
+						uint i2 = bindless_ib[mesh.ib][startIndex + 2];
+						float2 uv0 = 0, uv1 = 0, uv2 = 0;
+						[branch]
+						if (mesh.vb_uv0 >= 0 && material.uvset_baseColorMap == 0)
+						{
+							uv0 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i0 * 4));
+							uv1 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i1 * 4));
+							uv2 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i2 * 4));
+						}
+						else if (mesh.vb_uv1 >= 0 && material.uvset_baseColorMap != 0)
+						{
+							uv0 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i0 * 4));
+							uv1 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i1 * 4));
+							uv2 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i2 * 4));
+						}
+						else
+						{
+							q.CommitNonOpaqueTriangleHit();
+							continue;
+						}
+
+						float2 barycentrics = q.CandidateTriangleBarycentrics();
+						float u = barycentrics.x;
+						float v = barycentrics.y;
+						float w = 1 - u - v;
+						float2 uv = uv0 * w + uv1 * u + uv2 * v;
+						float alpha = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_point_wrap, uv, 2).a;
+
+						[branch]
+						if (alpha - material.alphaTest > 0)
+						{
+							q.CommitNonOpaqueTriangleHit();
+						}
+					}
 					bool hit = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT;
 #else
 					bool hit = TraceRay_Any(newRay, dist, groupIndex);
 #endif // RTAPI
-					result += max(0, ray.energy * (hit ? 0 : NdotL) * (lighting.direct.diffuse + lighting.direct.specular));
+					if (!hit)
+					{
+						result += max(0, current_energy * NdotL * (surface.albedo * lighting.direct.diffuse + lighting.direct.specular));
+					}
 				}
 			}
+
+
 		}
 
 	}
-
 
 	// Pre-clear result texture for first bounce and first accumulation sample:
 	if (xTraceUserData.y == 0)

@@ -225,10 +225,10 @@ float4 main(Input input) : SV_TARGET
 		ShaderMesh mesh = bindless_buffers[q.CommittedInstanceID()].Load<ShaderMesh>(0);
 		ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CommittedGeometryIndex()];
 		ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
-		uint primitiveIndex = q.CommittedPrimitiveIndex();
-		uint i0 = bindless_ib[mesh.ib][primitiveIndex * 3 + 0];
-		uint i1 = bindless_ib[mesh.ib][primitiveIndex * 3 + 1];
-		uint i2 = bindless_ib[mesh.ib][primitiveIndex * 3 + 2];
+		uint startIndex = q.CommittedPrimitiveIndex() * 3 + subset.indexOffset;
+		uint i0 = bindless_ib[mesh.ib][startIndex + 0];
+		uint i1 = bindless_ib[mesh.ib][startIndex + 1];
+		uint i2 = bindless_ib[mesh.ib][startIndex + 2];
 		float4 uv0 = 0, uv1 = 0, uv2 = 0;
 		[branch]
 		if (mesh.vb_uv0 >= 0)
