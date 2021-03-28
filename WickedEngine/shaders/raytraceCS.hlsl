@@ -82,6 +82,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		}
 		else
 		{
+			float3 facenormal = 0;
 
 #ifdef RTAPI
 
@@ -134,6 +135,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 			N = mul((float3x3)q.CommittedObjectToWorld3x4(), N);
 			N = normalize(N);
+			facenormal = N;
 
 			float4 baseColor = material.baseColor;
 			[branch]
@@ -214,6 +216,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			float4 uvsets = tri.u0 * w + tri.u1 * u + tri.u2 * v;
 			float4 color = tri.c0 * w + tri.c1 * u + tri.c2 * v;
 			uint materialIndex = tri.materialIndex;
+
+			facenormal = N;
 
 			ShaderMaterial material = materialBuffer[materialIndex];
 
@@ -328,10 +332,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 						ray.energy *= surface.albedo / (1 - specChance);
 					}
 
-					if (dot(ray.direction, N) < 0)
+					if (dot(ray.direction, facenormal) <= 0)
 					{
+						// Don't allow normal map to bend over the face normal more than 90 degrees to avoid light leaks
+						//	In this case, we will not allow more bounces,
+						//	but the current light sampling is still fine to avoid abrupt cutoff
 						ray.energy = 0;
-						break;
 					}
 
 					// Ray reflects from surface, so push UP along normal to avoid self-intersection:
