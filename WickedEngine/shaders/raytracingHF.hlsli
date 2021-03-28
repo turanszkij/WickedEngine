@@ -30,7 +30,7 @@ inline Ray CreateRay(float3 origin, float3 direction)
 {
 	Ray ray;
 	ray.origin = origin;
-	ray.direction = direction;
+	ray.direction = normalize(direction);
 	ray.energy = float3(1, 1, 1);
 	ray.Update();
 	return ray;

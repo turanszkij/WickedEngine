@@ -1379,7 +1379,7 @@ namespace wiScene
 
 	void Scene::Update(float dt)
 	{
-		this->dt = dt;
+		this->dt = dt * wiRenderer::GetGameSpeed();
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		if (dt > 0)
@@ -2963,6 +2963,7 @@ namespace wiScene
 						instance.InstanceID = (uint32_t)device->GetDescriptorIndex(&mesh->descriptor, SRV);
 						instance.InstanceMask = 1;
 						instance.bottomlevel = mesh->BLAS;
+						instance.Flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
 
 						void* dest = (void*)((size_t)TLAS_instances.data() + (size_t)args.jobIndex * device->GetTopLevelAccelerationStructureInstanceSize());
 						device->WriteTopLevelAccelerationStructureInstance(&instance, dest);

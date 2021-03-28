@@ -325,11 +325,7 @@ function(Generate_Shaders_SPIRV SHADERS_SRC_LIST SHADER_TYPE)
 			set(${Shader}-LASTMOD ${NEWTIMESTAMP} CACHE INTERNAL "")
 		
 			message(STATUS "CALCULATING DEPENDENCIES FOR SHADER ${SHADER_TYPE} ${FILE_NAME}")
-			if(${SHADER_TYPE} STREQUAL lib)
-				set(VK_VERSION "vulkan1.2")
-			else()
-				set(VK_VERSION "vulkan1.1")
-			endif()
+			set(VK_VERSION "vulkan1.2")
 
 			set(COMMAND_PARAMS ${DXC_TARGET}
 					"${SPIRV_SOURCE}"
@@ -339,7 +335,7 @@ function(Generate_Shaders_SPIRV SHADERS_SRC_LIST SHADER_TYPE)
 					#-all-resources-bound
 					#-pack-optimized
 					-res-may-alias
-					#-no-legacy-cbuf-layout
+					-no-legacy-cbuf-layout
 					-spirv
 					-fspv-target-env=${VK_VERSION}
 					-fvk-use-dx-layout

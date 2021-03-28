@@ -152,9 +152,9 @@ float4 main(Input input) : SV_TARGET
 
 				Ray newRay;
 				newRay.origin = trace_bias_position(P, N);
-				newRay.direction = normalize(L + sampling_offset * 0.025f);
-				newRay.direction_rcp = rcp(newRay.direction);
+				newRay.direction = L + sampling_offset * 0.025f;
 				newRay.energy = 0;
+				newRay.Update();
 #ifdef RTAPI
 				RayDesc apiray;
 				apiray.TMin = 0.001;

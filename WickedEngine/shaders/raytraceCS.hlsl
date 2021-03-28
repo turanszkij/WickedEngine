@@ -40,12 +40,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		apiray.Origin = ray.origin;
 		apiray.Direction = ray.direction;
 		RayQuery<
-#ifdef RAY_BACKFACE_CULLING
-			RAY_FLAG_CULL_FRONT_FACING_TRIANGLES |
-#endif // RAY_BACKFACE_CULLING
 			RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
 		> q;
-		q.TraceRayInline(scene_acceleration_structure, 0, 0xFF, apiray);
+		q.TraceRayInline(
+			scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
+#ifdef RAY_BACKFACE_CULLING
+			RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
+#endif // RAY_BACKFACE_CULLING
+			0,								// uint RayFlags
+			0xFF,							// uint InstanceInclusionMask
+			apiray							// RayDesc Ray
+		);
 		while (q.Proceed())
 		{
 			ShaderMesh mesh = bindless_buffers[q.CandidateInstanceID()].Load<ShaderMesh>(0);
@@ -164,7 +169,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			}
 			else
 			{
-				//return float4(1, 0, 1, 1); // error, this should always be good
+				break; // error, this should always be good
 			}
 
 			float2 barycentrics = q.CommittedTriangleBarycentrics();
@@ -348,6 +353,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					ray.energy *= surface.albedo / (1 - specChance);
 				}
 
+				if (dot(ray.direction, N) < 0)
+				{
+					ray.energy = 0;
+					break;
+				}
+
 				// Ray reflects from surface, so push UP along normal to avoid self-intersection:
 				ray.origin = trace_bias_position(ray.origin, N);
 			}
@@ -496,20 +507,21 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					Ray newRay;
 					newRay.origin = P;
 					newRay.direction = L + sampling_offset * 0.025;
-					newRay.direction_rcp = rcp(newRay.direction);
 					newRay.energy = 0;
+					newRay.Update();
 #ifdef RTAPI
 					RayDesc apiray;
 					apiray.TMin = 0.001;
 					apiray.TMax = dist;
 					apiray.Origin = newRay.origin;
 					apiray.Direction = newRay.direction;
-					RayQuery<
-						RAY_FLAG_FORCE_OPAQUE |
-						RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
-						RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH
-					> q;
-					q.TraceRayInline(scene_acceleration_structure, 0, 0xFF, apiray);
+					q.TraceRayInline(
+						scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
+						RAY_FLAG_FORCE_OPAQUE |			// uint RayFlags
+						RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
+						0xFF,							// uint InstanceInclusionMask
+						apiray							// RayDesc Ray
+					);
 					q.Proceed();
 					bool hit = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT;
 #else
