@@ -346,7 +346,6 @@ function(Generate_Shaders_SPIRV SHADERS_SRC_LIST SHADER_TYPE)
 					-fvk-u-shift 2000 0
 					-fvk-s-shift 3000 0
 					#-fspv-extension=KHR
-					-Vd #DISABLE VALIDATION: There is currently a validation bug with raytracing RayTCurrent()!!!
 					)
 
 			# Determine include dependencies (recursively)
