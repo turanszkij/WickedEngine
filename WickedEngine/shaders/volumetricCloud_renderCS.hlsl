@@ -29,7 +29,7 @@ TEXTURE2D(texture_curlNoise, float4, TEXSLOT_ONDEMAND3);
 TEXTURE2D(texture_weatherMap, float4, TEXSLOT_ONDEMAND4);
 
 RWTEXTURE2D(texture_render, float4, 0);
-RWTEXTURE2D(texture_cloudPosition, float4, 1);
+RWTEXTURE2D(texture_cloudDepth, float, 1);
 
 
 // Octaves for multiple-scattering approximation. 1 means single-scattering only.
@@ -307,11 +307,6 @@ void VolumetricShadow(inout ParticipatingMedia participatingMedia, in Atmosphere
 		}
 
 		float shadowCloudDensity = SampleCloudDensity(samplePoint, heightFraction, weatherData, windOffset, windDirection, lod + lodOffset, true);
-		if (shadowCloudDensity <= 0.0)
-		{
-			continue;
-		}
-		
 
 		float3 shadowExtinction = g_ExtinctionCoefficient * shadowCloudDensity;
 		ParticipatingMedia shadowParticipatingMedia = SampleParticipatingMedia(0.0f, shadowExtinction, g_MultiScatteringScattering, g_MultiScatteringExtinction, 0.0f);
@@ -576,13 +571,16 @@ float CalculateAtmosphereBlend(float tDepth)
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = (DTid.xy + 0.5) * xPPResolution_rcp;
-	const float2 duv = float2(uv.x, 1.0 - uv.y);
-    
-	float3 viewVector = mul(g_xCamera_InvP, float4(duv * 2.0 - 1.0, 0.0, 1.0)).xyz;
-	viewVector = mul(g_xCamera_InvV, float4(viewVector, 0.0)).xyz;
-    
-	float3 rayDirection = normalize(viewVector);
+	
+	float x = uv.x * 2 - 1;
+	float y = (1 - uv.y) * 2 - 1;
+	float2 screenPosition = float2(x, y);
+
+	float4 unprojected = mul(g_xCamera_InvVP, float4(screenPosition, 0, 1));
+	unprojected.xyz /= unprojected.w;
+
 	float3 rayOrigin = g_xCamera_CamPos;
+	float3 rayDirection = normalize(unprojected.xyz - rayOrigin);
 
 
 	float tMin = -FLT_MAX;
@@ -630,14 +628,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		else
 		{
 			texture_render[DTid.xy] = float4(0.0, 0.0, 0.0, 0.0);
-			texture_cloudPosition[DTid.xy] = 0.0;
+			texture_cloudDepth[DTid.xy] = 0.0;
 			return;
 		}
 
 		if (tMax <= tMin || tMin > g_RenderDistance)
 		{
 			texture_render[DTid.xy] = float4(0.0, 0.0, 0.0, 0.0);
-			texture_cloudPosition[DTid.xy] = 0.0;
+			texture_cloudDepth[DTid.xy] = 0.0;
 			return;
 		}
 		
@@ -688,7 +686,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	
 	float tDepth = depthWeightsSum == 0.0 ? tMax : depthWeightedSum / max(depthWeightsSum, 0.0000000001);
-	float3 absoluteWorldPosition = rayOrigin + rayDirection * tDepth;
+	//float3 absoluteWorldPosition = rayOrigin + rayDirection * tDepth; // Could be used for other effects later that require worldPosition
 
 	float approxTransmittance = dot(transmittanceToView.rgb, 1.0 / 3.0);
 	float grayScaleTransmittance = approxTransmittance < g_TransmittanceThreshold ? 0.0 : approxTransmittance;
@@ -709,5 +707,5 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	
     // Output
 	texture_render[DTid.xy] = color;
-	texture_cloudPosition[DTid.xy] = float4(absoluteWorldPosition, 1.0);
+	texture_cloudDepth[DTid.xy] = tDepth; // Linear depth
 }

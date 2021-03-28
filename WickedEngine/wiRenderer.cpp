@@ -11496,12 +11496,14 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 	desc.Format = FORMAT_R16G16B16A16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_cloudRender);
 	device->SetName(&res.texture_cloudRender, "texture_cloudRender");
-	device->CreateTexture(&desc, nullptr, &res.texture_cloudPosition);
-	device->SetName(&res.texture_cloudPosition, "texture_cloudPosition");
 	device->CreateTexture(&desc, nullptr, &res.texture_reproject[0]);
 	device->SetName(&res.texture_reproject[0], "texture_reproject[0]");
 	device->CreateTexture(&desc, nullptr, &res.texture_reproject[1]);
 	device->SetName(&res.texture_reproject[1], "texture_reproject[1]");
+
+	desc.Format = FORMAT_R16_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.texture_cloudDepth);
+	device->SetName(&res.texture_cloudDepth, "texture_cloudDepth");
 }
 void Postprocess_VolumetricClouds(
 	const VolumetricCloudResources& res,
@@ -11524,9 +11526,9 @@ void Postprocess_VolumetricClouds(
 		// Initialize textures:
 		TextureDesc shape_desc;
 		shape_desc.type = TextureDesc::TEXTURE_3D;
-		shape_desc.Width = 128;
-		shape_desc.Height = 128;
-		shape_desc.Depth = 32;
+		shape_desc.Width = 64;
+		shape_desc.Height = 64;
+		shape_desc.Depth = 64;
 		shape_desc.MipLevels = 6;
 		shape_desc.Format = FORMAT_R8G8B8A8_UNORM;
 		shape_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
@@ -11730,14 +11732,14 @@ void Postprocess_VolumetricClouds(
 
 		const GPUResource* uavs[] = {
 			&res.texture_cloudRender,
-			&res.texture_cloudPosition,
+			&res.texture_cloudDepth,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Image(&res.texture_cloudRender, res.texture_cloudRender.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_cloudPosition, res.texture_cloudPosition.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.texture_cloudDepth, res.texture_cloudDepth.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -11753,7 +11755,7 @@ void Postprocess_VolumetricClouds(
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
 				GPUBarrier::Image(&res.texture_cloudRender, IMAGE_LAYOUT_UNORDERED_ACCESS, res.texture_cloudRender.desc.layout),
-				GPUBarrier::Image(&res.texture_cloudPosition, IMAGE_LAYOUT_UNORDERED_ACCESS, res.texture_cloudPosition.desc.layout),
+				GPUBarrier::Image(&res.texture_cloudDepth, IMAGE_LAYOUT_UNORDERED_ACCESS, res.texture_cloudDepth.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -11772,7 +11774,7 @@ void Postprocess_VolumetricClouds(
 
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(CS, &res.texture_cloudRender, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &res.texture_cloudPosition, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &res.texture_cloudDepth, TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(CS, &res.texture_reproject[temporal_history], TEXSLOT_ONDEMAND2, cmd);
 
 		const GPUResource* uavs[] = {

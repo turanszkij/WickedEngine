@@ -4,8 +4,8 @@
 
 RWTEXTURE3D(output, float4, 0);
 
-static const uint texSizeXY = 128;
-static const uint texSizeZ = 32;
+static const uint texSizeXY = 64;
+static const uint texSizeZ = 64;
 
 [numthreads(8, 8, 8)]
 void main(uint3 DTid : SV_DispatchThreadID)

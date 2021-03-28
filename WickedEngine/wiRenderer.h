@@ -535,7 +535,7 @@ namespace wiRenderer
 	struct VolumetricCloudResources
 	{
 		wiGraphics::Texture texture_cloudRender;
-		wiGraphics::Texture texture_cloudPosition;
+		wiGraphics::Texture texture_cloudDepth;
 		wiGraphics::Texture texture_reproject[2];
 	};
 	void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resolution);
