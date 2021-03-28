@@ -33,6 +33,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	uint bounces = xTraceUserData.x;
 	for (uint bounce = 0; ((bounce < bounces) && any(ray.energy)); ++bounce)
 	{
+		ray.Update();
 
 #ifdef RTAPI
 		RayDesc apiray;
@@ -312,64 +313,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 #endif // RTAPI
 
-			bounceResult += surface.emissiveColor.rgb * surface.emissiveColor.a;
-
-			surface.update();
-
-			// Calculate chances of reflection types:
-			const float refractChance = 1 - baseColor.a;
-
-			// Roulette-select the ray's path
-			float roulette = rand(seed, screenUV);
-			if (roulette < refractChance)
-			{
-				// Refraction
-				const float3 R = refract(ray.direction, N, 1 - material.refraction);
-				ray.direction = lerp(R, SampleHemisphere_cos(R, seed, screenUV), surface.roughnessBRDF);
-				ray.energy *= lerp(baseColor.rgb, 1, refractChance);
-
-				// The ray penetrates the surface, so push DOWN along normal to avoid self-intersection:
-				ray.origin = trace_bias_position(ray.origin, -N);
-
-				// Add a new bounce iteration, otherwise the transparent effect can disappear:
-				bounces++;
-			}
-			else
-			{
-				// Calculate chances of reflection types:
-				const float3 F = F_Schlick(surface.f0, saturate(dot(-ray.direction, N)));
-				const float specChance = dot(F, 0.333);
-
-				roulette = rand(seed, screenUV);
-				if (roulette < specChance)
-				{
-					// Specular reflection
-					const float3 R = reflect(ray.direction, N);
-					ray.direction = lerp(R, SampleHemisphere_cos(R, seed, screenUV), surface.roughnessBRDF);
-					ray.energy *= F / specChance;
-				}
-				else
-				{
-					// Diffuse reflection
-					ray.direction = SampleHemisphere_cos(N, seed, screenUV);
-					ray.energy *= surface.albedo / (1 - specChance);
-				}
-
-				if (dot(ray.direction, N) < 0)
-				{
-					ray.energy = 0;
-					break;
-				}
-
-				// Ray reflects from surface, so push UP along normal to avoid self-intersection:
-				ray.origin = trace_bias_position(ray.origin, N);
-			}
-
-			ray.Update();
-
-
-
-			// Light sampling:
 			float3 P = ray.origin;
 			float3 V = normalize(g_xCamera_CamPos - P);
 			surface.P = P;
@@ -377,6 +320,73 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			surface.V = V;
 			surface.update();
 
+			bounceResult += surface.emissiveColor.rgb * surface.emissiveColor.a;
+
+			float roulette;
+
+			const float blendChance = 1 - baseColor.a;
+			roulette = rand(seed, screenUV);
+			if (roulette < blendChance)
+			{
+				// Alpha blending
+
+				// The ray penetrates the surface, so push DOWN along normal to avoid self-intersection:
+				ray.origin = trace_bias_position(ray.origin, -N);
+
+				// Add a new bounce iteration, otherwise the transparent effect can disappear:
+				bounces++;
+
+				continue; // skip light sampling
+			}
+			else
+			{
+				const float refractChance = material.transmission;
+				roulette = rand(seed, screenUV);
+				if (roulette < refractChance)
+				{
+					// Refraction
+					const float3 R = refract(ray.direction, N, 1 - material.refraction);
+					ray.direction = lerp(R, SampleHemisphere_cos(R, seed, screenUV), surface.roughnessBRDF);
+					ray.energy *= surface.albedo;
+
+					// The ray penetrates the surface, so push DOWN along normal to avoid self-intersection:
+					ray.origin = trace_bias_position(ray.origin, -N);
+
+					// Add a new bounce iteration, otherwise the transparent effect can disappear:
+					bounces++;
+				}
+				else
+				{
+					const float3 F = F_Schlick(surface.f0, saturate(dot(-ray.direction, N)));
+					const float specChance = dot(F, 0.333);
+
+					roulette = rand(seed, screenUV);
+					if (roulette < specChance)
+					{
+						// Specular reflection
+						const float3 R = reflect(ray.direction, N);
+						ray.direction = lerp(R, SampleHemisphere_cos(R, seed, screenUV), surface.roughnessBRDF);
+						ray.energy *= F / specChance;
+					}
+					else
+					{
+						// Diffuse reflection
+						ray.direction = SampleHemisphere_cos(N, seed, screenUV);
+						ray.energy *= surface.albedo / (1 - specChance);
+					}
+
+					if (dot(ray.direction, N) < 0)
+					{
+						ray.energy = 0;
+					}
+
+					// Ray reflects from surface, so push UP along normal to avoid self-intersection:
+					ray.origin = trace_bias_position(ray.origin, N);
+				}
+			}
+
+
+			// Light sampling:
 			[loop]
 			for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
 			{

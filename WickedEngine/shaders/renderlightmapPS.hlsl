@@ -398,14 +398,12 @@ float4 main(Input input) : SV_TARGET
 		}
 #endif // RTAPI
 
+		surface.update();
+
 		result += max(0, ray.energy * surface.emissiveColor.rgb * surface.emissiveColor.a);
 
-
 		// Calculate chances of reflection types:
-		const float refractChance = 1 - baseColor.a;
-
-		// Roughness to cone aperture:
-		float alphaRoughness = surface.roughness * surface.roughness;
+		const float refractChance = material.transmission;
 
 		// Roulette-select the ray's path
 		float roulette = rand(seed, uv);
@@ -413,8 +411,8 @@ float4 main(Input input) : SV_TARGET
 		{
 			// Refraction
 			const float3 R = refract(ray.direction, N, 1 - material.refraction);
-			ray.direction = lerp(R, SampleHemisphere_cos(R, seed, uv), alphaRoughness);
-			ray.energy *= lerp(baseColor.rgb, 1, refractChance);
+			ray.direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
+			ray.energy *= surface.albedo;
 
 			// The ray penetrates the surface, so push DOWN along normal to avoid self-intersection:
 			ray.origin = trace_bias_position(ray.origin, -N);
@@ -433,7 +431,7 @@ float4 main(Input input) : SV_TARGET
 			{
 				// Specular reflection
 				const float3 R = reflect(ray.direction, N);
-				ray.direction = lerp(R, SampleHemisphere_cos(R, seed, uv), alphaRoughness);
+				ray.direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
 				ray.energy *= F / specChance;
 			}
 			else
