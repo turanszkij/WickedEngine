@@ -30,8 +30,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	// Create starting ray:
 	Ray ray = CreateCameraRay(screenUV);
 
-	const uint bounces = xTraceUserData.x;
-	for (uint bounce = 0; bounce < bounces && any(ray.energy); ++bounce)
+	uint bounces = xTraceUserData.x;
+	for (uint bounce = 0; ((bounce < bounces) && any(ray.energy)); ++bounce)
 	{
 
 #ifdef RTAPI
@@ -330,6 +330,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 				// The ray penetrates the surface, so push DOWN along normal to avoid self-intersection:
 				ray.origin = trace_bias_position(ray.origin, -N);
+
+				// Add a new bounce iteration, otherwise the transparent effect can disappear:
+				bounces++;
 			}
 			else
 			{

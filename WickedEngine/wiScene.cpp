@@ -1379,17 +1379,9 @@ namespace wiScene
 
 	void Scene::Update(float dt)
 	{
-		this->dt = dt * wiRenderer::GetGameSpeed();
+		this->dt = dt;
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		if (dt > 0)
-		{
-			cmd = device->BeginCommandList();
-		}
-		else
-		{
-			cmd = INVALID_COMMANDLIST;
-		}
 
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
@@ -1489,7 +1481,7 @@ namespace wiScene
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			// Recreate top level acceleration structure if the object count changed:
-			if (dt > 0 && objects.GetCount() > 0 && objects.GetCount() != TLAS.desc.toplevel.count)
+			if (objects.GetCount() > 0 && objects.GetCount() != TLAS.desc.toplevel.count)
 			{
 				RaytracingAccelerationStructureDesc desc;
 				desc._flags = RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
@@ -1505,11 +1497,6 @@ namespace wiScene
 				assert(success);
 				device->SetName(&TLAS, "TLAS");
 			}
-		}
-
-		if (cmd != INVALID_COMMANDLIST)
-		{
-			device->StashCommandLists();
 		}
 	}
 	void Scene::Clear()
@@ -2963,7 +2950,13 @@ namespace wiScene
 						instance.InstanceID = (uint32_t)device->GetDescriptorIndex(&mesh->descriptor, SRV);
 						instance.InstanceMask = 1;
 						instance.bottomlevel = mesh->BLAS;
-						instance.Flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
+
+						if (XMVectorGetX(XMMatrixDeterminant(W)) > 0)
+						{
+							// There is a mismatch between object space winding and BLAS winding:
+							//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_raytracing_instance_flags
+							instance.Flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
+						}
 
 						void* dest = (void*)((size_t)TLAS_instances.data() + (size_t)args.jobIndex * device->GetTopLevelAccelerationStructureInstanceSize());
 						device->WriteTopLevelAccelerationStructureInstance(&instance, dest);

@@ -28,8 +28,8 @@ float4 main(Input input) : SV_TARGET
 	Ray ray = CreateRay(trace_bias_position(P, N), direction);
 	float3 result = 0;
 
-	const uint bounces = xTraceUserData.x;
-	for (uint i = 0; (i < bounces) && any(ray.energy); ++i)
+	uint bounces = xTraceUserData.x;
+	for (uint bounce = 0; ((bounce < bounces) && any(ray.energy)); ++bounce)
 	{
 		P = ray.origin;
 		float3 bounceResult = 0;
@@ -418,6 +418,9 @@ float4 main(Input input) : SV_TARGET
 
 			// The ray penetrates the surface, so push DOWN along normal to avoid self-intersection:
 			ray.origin = trace_bias_position(ray.origin, -N);
+
+			// Add a new bounce iteration, otherwise the transparent effect can disappear:
+			bounces++;
 		}
 		else
 		{
