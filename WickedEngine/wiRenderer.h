@@ -606,30 +606,15 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd
 	);
 
-	// Build the scene BVH on GPU that can be used by ray traced rendering
-	void BuildSceneBVH(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
-
-	struct RayBuffers
-	{
-		uint32_t rayCapacity = 0;
-		wiGraphics::GPUBuffer rayBuffer[2];
-		wiGraphics::GPUBuffer rayIndexBuffer[2];
-		wiGraphics::GPUBuffer rayCountBuffer[2];
-		wiGraphics::GPUBuffer raySortBuffer;
-	};
-	void CreateRayBuffers(RayBuffers& value, uint32_t rayCount);
-	// Generate rays for every pixel of the internal resolution
-	void GenerateScreenRayBuffers(const RayBuffers& rayBuffers, const wiScene::CameraComponent& camera, uint32_t width, uint32_t height, wiGraphics::CommandList cmd);
 	// Render the scene with ray tracing. You provide the ray buffer, where each ray maps to one pixel of the result testure
 	void RayTraceScene(
 		const wiScene::Scene& scene,
-		const RayBuffers& rayBuffers,
-		const wiGraphics::Texture* result,
+		const wiGraphics::Texture& output,
 		int accumulation_sample,
 		wiGraphics::CommandList cmd
 	);
 	// Render the scene BVH with ray tracing to the screen
-	void RayTraceSceneBVH(wiGraphics::CommandList cmd);
+	void RayTraceSceneBVH(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 
 	// Render occluders against a depth buffer
 	void OcclusionCulling_Render(const wiScene::CameraComponent& camera_previous, const Visibility& vis, wiGraphics::CommandList cmd);
@@ -750,7 +735,6 @@ namespace wiRenderer
 	void SetGameSpeed(float value);
 	float GetGameSpeed();
 	void OceanRegenerate(const wiScene::WeatherComponent& weather); // regeenrates ocean if it is already created
-	void InvalidateBVH(); // invalidates scene bvh so if something wants to use it, it will recompute and validate it
 	void SetRaytraceBounceCount(uint32_t bounces);
 	uint32_t GetRaytraceBounceCount();
 	void SetRaytraceDebugBVHVisualizerEnabled(bool value);

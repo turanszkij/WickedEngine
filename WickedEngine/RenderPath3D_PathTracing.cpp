@@ -60,8 +60,6 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 		device->CreateRenderPass(&desc, &renderpass_debugbvh);
 	}
 
-	wiRenderer::CreateRayBuffers(rayBuffers, GetInternalResolution().x * GetInternalResolution().y);
-
 	// also reset accumulation buffer state:
 	sam = -1;
 }
@@ -104,6 +102,11 @@ void RenderPath3D_PathTracing::Update(float dt)
 	}
 	sam++;
 
+	if (sam == 0)
+	{
+		scene->InvalidateBVH();
+	}
+
 	RenderPath3D::Update(dt);
 }
 
@@ -119,10 +122,7 @@ void RenderPath3D_PathTracing::Render() const
 
 		wiRenderer::UpdateRenderData(visibility_main, frameCB, cmd);
 
-		if (sam == 0)
-		{
-			wiRenderer::BuildSceneBVH(*scene, cmd);
-		}
+		wiRenderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
 	});
 
 	// Main scene:
@@ -148,7 +148,7 @@ void RenderPath3D_PathTracing::Render() const
 			vp.Height = (float)traceResult.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
-			wiRenderer::RayTraceSceneBVH(cmd);
+			wiRenderer::RayTraceSceneBVH(*scene, cmd);
 
 			device->RenderPassEnd(cmd);
 		}
@@ -156,8 +156,7 @@ void RenderPath3D_PathTracing::Render() const
 		{
 			auto range = wiProfiler::BeginRangeGPU("Traced Scene", cmd);
 
-			wiRenderer::GenerateScreenRayBuffers(rayBuffers, *camera, GetInternalResolution().x, GetInternalResolution().y, cmd);
-			wiRenderer::RayTraceScene(*scene, rayBuffers, &traceResult, sam, cmd);
+			wiRenderer::RayTraceScene(*scene, traceResult, sam, cmd);
 
 
 			wiProfiler::EndRange(range); // Traced Scene
@@ -178,7 +177,7 @@ void RenderPath3D_PathTracing::Render() const
 			device->EventBegin("GUI Background Blur", cmd);
 			wiRenderer::Postprocess_Downsample4x(rtPostprocess_LDR[0], rtGUIBlurredBackground[0], cmd);
 			wiRenderer::Postprocess_Downsample4x(rtGUIBlurredBackground[0], rtGUIBlurredBackground[2], cmd);
-			wiRenderer::Postprocess_Blur_Gaussian(rtGUIBlurredBackground[2], rtGUIBlurredBackground[1], rtGUIBlurredBackground[2], cmd);
+			wiRenderer::Postprocess_Blur_Gaussian(rtGUIBlurredBackground[2], rtGUIBlurredBackground[1], rtGUIBlurredBackground[2], cmd, -1, -1, true);
 			device->EventEnd(cmd);
 			wiProfiler::EndRange(range);
 		}

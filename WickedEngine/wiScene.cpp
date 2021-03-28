@@ -725,7 +725,7 @@ namespace wiScene
 
 		if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
-			_flags |= DIRTY_BLAS;
+			BLAS_state = BLAS_STATE_NEEDS_REBUILD;
 
 			RaytracingAccelerationStructureDesc desc;
 			desc.type = RaytracingAccelerationStructureDesc::BOTTOMLEVEL;
@@ -740,21 +740,6 @@ namespace wiScene
 				desc._flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE;
 			}
 
-#if 0
-			// Flattened subsets:
-			desc.bottomlevel.geometries.emplace_back();
-			auto& geometry = desc.bottomlevel.geometries.back();
-			geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES;
-			geometry.triangles.vertexBuffer = streamoutBuffer_POS.IsValid() ? streamoutBuffer_POS : vertexBuffer_POS;
-			geometry.triangles.indexBuffer = indexBuffer;
-			geometry.triangles.indexFormat = GetIndexFormat();
-			geometry.triangles.indexCount = (uint32_t)indices.size();
-			geometry.triangles.indexOffset = 0;
-			geometry.triangles.vertexCount = (uint32_t)vertex_positions.size();
-			geometry.triangles.vertexFormat = FORMAT_R32G32B32_FLOAT;
-			geometry.triangles.vertexStride = sizeof(MeshComponent::Vertex_POS);
-#else
-			// One geometry per subset:
 			for (auto& subset : subsets)
 			{
 				desc.bottomlevel.geometries.emplace_back();
@@ -769,7 +754,6 @@ namespace wiScene
 				geometry.triangles.vertexFormat = FORMAT_R32G32B32_FLOAT;
 				geometry.triangles.vertexStride = sizeof(MeshComponent::Vertex_POS);
 			}
-#endif
 
 			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
 			assert(success);
@@ -1398,15 +1382,6 @@ namespace wiScene
 		this->dt = dt;
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		if (dt > 0)
-		{
-			cmd = device->BeginCommandList();
-			BLAS_builds.clear();
-		}
-		else
-		{
-			cmd = INVALID_COMMANDLIST;
-		}
 
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
@@ -1506,7 +1481,7 @@ namespace wiScene
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			// Recreate top level acceleration structure if the object count changed:
-			if (dt > 0 && objects.GetCount() > 0 && objects.GetCount() != TLAS.desc.toplevel.count)
+			if (objects.GetCount() > 0 && objects.GetCount() != TLAS.desc.toplevel.count)
 			{
 				RaytracingAccelerationStructureDesc desc;
 				desc._flags = RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
@@ -1522,11 +1497,6 @@ namespace wiScene
 				assert(success);
 				device->SetName(&TLAS, "TLAS");
 			}
-		}
-
-		if (cmd != INVALID_COMMANDLIST)
-		{
-			device->StashCommandLists();
 		}
 	}
 	void Scene::Clear()
@@ -2647,23 +2617,20 @@ namespace wiScene
 						}
 						if (flags != geometry._flags)
 						{
-							mesh._flags |= MeshComponent::DIRTY_BLAS;
+							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
 						}
 						if (mesh.streamoutBuffer_POS.IsValid())
 						{
-							mesh._flags |= MeshComponent::DIRTY_BLAS;
+							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
 							geometry.triangles.vertexBuffer = mesh.streamoutBuffer_POS;
 						}
 					}
 					subsetIndex++;
 				}
 
-				if (IsUpdateAccelerationStructuresEnabled() && cmd != INVALID_COMMANDLIST && (mesh._flags & MeshComponent::DIRTY_BLAS))
+				if (mesh.IsDirtyMorph())
 				{
-					mesh._flags &= ~MeshComponent::DIRTY_BLAS;
-					locker.lock();
-					BLAS_builds.push_back(entity);
-					locker.unlock();
+					mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
 				}
 			}
 
@@ -2969,7 +2936,7 @@ namespace wiScene
 						object.prev_transform_index = -1;
 					}
 
-					if (IsUpdateAccelerationStructuresEnabled() && TLAS.IsValid())
+					if (TLAS.IsValid())
 					{
 						GraphicsDevice* device = wiRenderer::GetDevice();
 						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
@@ -2983,6 +2950,13 @@ namespace wiScene
 						instance.InstanceID = (uint32_t)device->GetDescriptorIndex(&mesh->descriptor, SRV);
 						instance.InstanceMask = 1;
 						instance.bottomlevel = mesh->BLAS;
+
+						if (XMVectorGetX(XMMatrixDeterminant(W)) > 0)
+						{
+							// There is a mismatch between object space winding and BLAS winding:
+							//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_raytracing_instance_flags
+							instance.Flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
+						}
 
 						void* dest = (void*)((size_t)TLAS_instances.data() + (size_t)args.jobIndex * device->GetTopLevelAccelerationStructureInstanceSize());
 						device->WriteTopLevelAccelerationStructureInstance(&instance, dest);

@@ -29,8 +29,9 @@ enum CSTYPES_BVH
 static Shader computeShaders[CSTYPE_BVH_COUNT];
 static GPUBuffer constantBuffer;
 
+static const int atlasWrapBorder = 1;
 
-void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd)
+void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -69,8 +70,7 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 
 	}
 
-	bool repackAtlas = false;
-	const int atlasWrapBorder = 1;
+	repackAtlas = false;
 	for (auto res : sceneTextures)
 	{
 		if (res == nullptr)
@@ -118,11 +118,6 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 
 			device->CreateTexture(&desc, nullptr, &globalMaterialAtlas);
 			device->SetName(&globalMaterialAtlas, "globalMaterialAtlas");
-
-			for (auto& it : storedTextures)
-			{
-				wiRenderer::CopyTexture2D(globalMaterialAtlas, -1, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, it.first->texture, 0, cmd, wiRenderer::BORDEREXPAND_WRAP);
-			}
 		}
 		else
 		{
@@ -222,11 +217,10 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 
 		device->CreateBuffer(&desc, nullptr, &globalMaterialBuffer);
 	}
-	device->UpdateBuffer(&globalMaterialBuffer, materialArray.data(), cmd, sizeof(ShaderMaterial) * (int)materialArray.size());
 
 }
 
-void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
+void wiGPUBVH::Update(const wiScene::Scene& scene)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -253,7 +247,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 		desc.Usage = USAGE_DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &primitiveCounterBuffer);
-		device->SetName(&primitiveCounterBuffer, "primitiveCounterBuffer"); 
+		device->SetName(&primitiveCounterBuffer, "primitiveCounterBuffer");
 	}
 
 	// Pre-gather scene properties:
@@ -347,18 +341,44 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 		device->SetName(&primitiveMortonBuffer, "primitiveMortonBuffer");
 	}
 
+	UpdateGlobalMaterialResources(scene);
+}
+void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
+{
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	// Pre-gather scene properties:
+	uint totalTriangles = 0;
+	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+	{
+		const ObjectComponent& object = scene.objects[i];
+
+		if (object.meshID != INVALID_ENTITY)
+		{
+			const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+
+			totalTriangles += (uint)mesh.indices.size() / 3;
+		}
+	}
 
 	auto range = wiProfiler::BeginRangeGPU("BVH Rebuild", cmd);
 
-	UpdateGlobalMaterialResources(scene, cmd);
+	if (repackAtlas)
+	{
+		for (auto& it : storedTextures)
+		{
+			wiRenderer::CopyTexture2D(globalMaterialAtlas, -1, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, it.first->texture, 0, cmd, wiRenderer::BORDEREXPAND_WRAP);
+		}
+	}
+	device->UpdateBuffer(&globalMaterialBuffer, materialArray.data(), cmd, sizeof(ShaderMaterial) * (int)materialArray.size());
 
-	primitiveCount = 0;
+	uint32_t primitiveCount = 0;
 	uint32_t materialCount = 0;
 
 	device->EventBegin("BVH - Primitive Builder", cmd);
 	{
 		device->BindComputeShader(&computeShaders[CSTYPE_BVH_PRIMITIVES], cmd);
-		GPUResource* uavs[] = {
+		const GPUResource* uavs[] = {
 			&primitiveIDBuffer,
 			&primitiveBuffer,
 			&primitiveDataBuffer,
@@ -421,14 +441,14 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 	device->EventBegin("BVH - Build Hierarchy", cmd);
 	{
 		device->BindComputeShader(&computeShaders[CSTYPE_BVH_HIERARCHY], cmd);
-		GPUResource* uavs[] = {
+		const GPUResource* uavs[] = {
 			&bvhNodeBuffer,
 			&bvhParentBuffer,
 			&bvhFlagBuffer
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
-		GPUResource* res[] = {
+		const GPUResource* res[] = {
 			&primitiveCounterBuffer,
 			&primitiveIDBuffer,
 			&primitiveMortonBuffer,
@@ -453,13 +473,13 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 		device->Barrier(barriers, arraysize(barriers), cmd);
 
 		device->BindComputeShader(&computeShaders[CSTYPE_BVH_PROPAGATEAABB], cmd);
-		GPUResource* uavs[] = {
+		const GPUResource* uavs[] = {
 			&bvhNodeBuffer,
 			&bvhFlagBuffer,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
-		GPUResource* res[] = {
+		const GPUResource* res[] = {
 			&primitiveCounterBuffer,
 			&primitiveIDBuffer,
 			&primitiveBuffer,
@@ -477,88 +497,88 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 	wiProfiler::EndRange(range); // BVH rebuild
 
 #ifdef BVH_VALIDATE
-
-	GPUBufferDesc readback_desc;
-	bool download_success;
-
-	// Download primitive count:
-	readback_desc = primitiveCounterBuffer.GetDesc();
-	readback_desc.Usage = USAGE_STAGING;
-	readback_desc.CPUAccessFlags = CPU_ACCESS_READ;
-	readback_desc.BindFlags = 0;
-	readback_desc.MiscFlags = 0;
-	GPUBuffer readback_primitiveCounterBuffer;
-	device->CreateBuffer(&readback_desc, nullptr, &readback_primitiveCounterBuffer);
-	uint primitiveCount;
-	download_success = device->DownloadResource(&primitiveCounterBuffer, &readback_primitiveCounterBuffer, &primitiveCount, cmd);
-	assert(download_success);
-
-	if (primitiveCount > 0)
 	{
-		const uint leafNodeOffset = primitiveCount - 1;
+		GPUBufferDesc readback_desc;
+		bool download_success;
 
-		// Validate node buffer:
-		readback_desc = bvhNodeBuffer.GetDesc();
+		// Download primitive count:
+		readback_desc = primitiveCounterBuffer.GetDesc();
 		readback_desc.Usage = USAGE_STAGING;
 		readback_desc.CPUAccessFlags = CPU_ACCESS_READ;
 		readback_desc.BindFlags = 0;
 		readback_desc.MiscFlags = 0;
-		GPUBuffer readback_nodeBuffer;
-		device->CreateBuffer(&readback_desc, nullptr, &readback_nodeBuffer);
-		vector<BVHNode> nodes(readback_desc.ByteWidth / sizeof(BVHNode));
-		download_success = device->DownloadResource(&bvhNodeBuffer, &readback_nodeBuffer, nodes.data(), cmd);
+		GPUBuffer readback_primitiveCounterBuffer;
+		device->CreateBuffer(&readback_desc, nullptr, &readback_primitiveCounterBuffer);
+		uint primitiveCount;
+		download_success = device->DownloadResource(&primitiveCounterBuffer, &readback_primitiveCounterBuffer, &primitiveCount, cmd);
 		assert(download_success);
-		set<uint> visitedLeafs;
-		vector<uint> stack;
-		stack.push_back(0);
-		while (!stack.empty())
-		{
-			uint nodeIndex = stack.back();
-			stack.pop_back();
 
-			if (nodeIndex >= leafNodeOffset)
-			{
-				// leaf node
-				assert(visitedLeafs.count(nodeIndex) == 0); // leaf node was already visited, this must not happen!
-				visitedLeafs.insert(nodeIndex);
-			}
-			else
-			{
-				// internal node
-				BVHNode& node = nodes[nodeIndex];
-				stack.push_back(node.LeftChildIndex);
-				stack.push_back(node.RightChildIndex);
-			}
-		}
-		for (uint i = 0; i < primitiveCount; ++i)
+		if (primitiveCount > 0)
 		{
-			uint nodeIndex = leafNodeOffset + i;
-			BVHNode& leaf = nodes[nodeIndex];
-			assert(leaf.LeftChildIndex == 0 && leaf.RightChildIndex == 0); // a leaf must have no children
-			assert(visitedLeafs.count(nodeIndex) > 0); // every leaf node must have been visited in the traversal above
-		}
+			const uint leafNodeOffset = primitiveCount - 1;
 
-		// Validate flag buffer:
-		readback_desc = bvhFlagBuffer.GetDesc();
-		readback_desc.Usage = USAGE_STAGING;
-		readback_desc.CPUAccessFlags = CPU_ACCESS_READ;
-		readback_desc.BindFlags = 0;
-		readback_desc.MiscFlags = 0;
-		GPUBuffer readback_flagBuffer;
-		device->CreateBuffer(&readback_desc, nullptr, &readback_flagBuffer);
-		vector<uint> flags(readback_desc.ByteWidth / sizeof(uint));
-		download_success = device->DownloadResource(&bvhFlagBuffer, &readback_flagBuffer, flags.data(), cmd);
-		assert(download_success);
-		for (auto& x : flags)
-		{
-			if (x > 2)
+			// Validate node buffer:
+			readback_desc = bvhNodeBuffer.GetDesc();
+			readback_desc.Usage = USAGE_STAGING;
+			readback_desc.CPUAccessFlags = CPU_ACCESS_READ;
+			readback_desc.BindFlags = 0;
+			readback_desc.MiscFlags = 0;
+			GPUBuffer readback_nodeBuffer;
+			device->CreateBuffer(&readback_desc, nullptr, &readback_nodeBuffer);
+			vector<BVHNode> nodes(readback_desc.ByteWidth / sizeof(BVHNode));
+			download_success = device->DownloadResource(&bvhNodeBuffer, &readback_nodeBuffer, nodes.data(), cmd);
+			assert(download_success);
+			set<uint> visitedLeafs;
+			vector<uint> stack;
+			stack.push_back(0);
+			while (!stack.empty())
 			{
-				assert(0); // flagbuffer anomaly detected: node can't have more than two children (AABB propagation step)!
-				break;
+				uint nodeIndex = stack.back();
+				stack.pop_back();
+
+				if (nodeIndex >= leafNodeOffset)
+				{
+					// leaf node
+					assert(visitedLeafs.count(nodeIndex) == 0); // leaf node was already visited, this must not happen!
+					visitedLeafs.insert(nodeIndex);
+				}
+				else
+				{
+					// internal node
+					BVHNode& node = nodes[nodeIndex];
+					stack.push_back(node.LeftChildIndex);
+					stack.push_back(node.RightChildIndex);
+				}
+			}
+			for (uint i = 0; i < primitiveCount; ++i)
+			{
+				uint nodeIndex = leafNodeOffset + i;
+				BVHNode& leaf = nodes[nodeIndex];
+				assert(leaf.LeftChildIndex == 0 && leaf.RightChildIndex == 0); // a leaf must have no children
+				assert(visitedLeafs.count(nodeIndex) > 0); // every leaf node must have been visited in the traversal above
+			}
+
+			// Validate flag buffer:
+			readback_desc = bvhFlagBuffer.GetDesc();
+			readback_desc.Usage = USAGE_STAGING;
+			readback_desc.CPUAccessFlags = CPU_ACCESS_READ;
+			readback_desc.BindFlags = 0;
+			readback_desc.MiscFlags = 0;
+			GPUBuffer readback_flagBuffer;
+			device->CreateBuffer(&readback_desc, nullptr, &readback_flagBuffer);
+			vector<uint> flags(readback_desc.ByteWidth / sizeof(uint));
+			download_success = device->DownloadResource(&bvhFlagBuffer, &readback_flagBuffer, flags.data(), cmd);
+			assert(download_success);
+			for (auto& x : flags)
+			{
+				if (x > 2)
+				{
+					assert(0); // flagbuffer anomaly detected: node can't have more than two children (AABB propagation step)!
+					break;
+				}
 			}
 		}
 	}
-
 #endif // BVH_VALIDATE
 
 }
@@ -580,7 +600,6 @@ void wiGPUBVH::Bind(SHADERSTAGE stage, CommandList cmd) const
 void wiGPUBVH::Clear()
 {
 	primitiveCapacity = 0;
-	primitiveCount = 0;
 	materialArray.clear();
 	storedTextures.clear();
 	sceneTextures.clear();

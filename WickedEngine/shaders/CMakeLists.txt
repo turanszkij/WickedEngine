@@ -39,12 +39,9 @@ set(SHADERS_CS
 		"skinningCS.hlsl"
 		"skinningCS_LDS.hlsl"
 		"resolveMSAADepthStencilCS.hlsl"
-		"raytrace_shadeCS.hlsl"
-		"raytrace_tilesortCS.hlsl"
-		"raytrace_kickjobsCS.hlsl"
-		"raytrace_launchCS.hlsl"
 		"paint_textureCS.hlsl"
-		"raytrace_closesthitCS.hlsl"
+		"raytraceCS.hlsl"
+		"raytraceCS_rtapi.hlsl"
 		"oceanUpdateDisplacementMapCS.hlsl"
 		"oceanUpdateGradientFoldingCS.hlsl"
 		"oceanSimulatorCS.hlsl"
@@ -175,6 +172,7 @@ set(SHADERS_PS
 		"shadowPS_water.hlsl"
 		"shadowPS_alphatest.hlsl"
 		"renderlightmapPS.hlsl"
+		"renderlightmapPS_rtapi.hlsl"
 		"raytrace_debugbvhPS.hlsl"
 		"outlinePS.hlsl"
 		"oceanSurfaceSimplePS.hlsl"
@@ -327,11 +325,7 @@ function(Generate_Shaders_SPIRV SHADERS_SRC_LIST SHADER_TYPE)
 			set(${Shader}-LASTMOD ${NEWTIMESTAMP} CACHE INTERNAL "")
 		
 			message(STATUS "CALCULATING DEPENDENCIES FOR SHADER ${SHADER_TYPE} ${FILE_NAME}")
-			if(${SHADER_TYPE} STREQUAL lib)
-				set(VK_VERSION "vulkan1.2")
-			else()
-				set(VK_VERSION "vulkan1.1")
-			endif()
+			set(VK_VERSION "vulkan1.2")
 
 			set(COMMAND_PARAMS ${DXC_TARGET}
 					"${SPIRV_SOURCE}"
@@ -341,7 +335,7 @@ function(Generate_Shaders_SPIRV SHADERS_SRC_LIST SHADER_TYPE)
 					#-all-resources-bound
 					#-pack-optimized
 					-res-may-alias
-					#-no-legacy-cbuf-layout
+					-no-legacy-cbuf-layout
 					-spirv
 					-fspv-target-env=${VK_VERSION}
 					-fvk-use-dx-layout
@@ -352,7 +346,6 @@ function(Generate_Shaders_SPIRV SHADERS_SRC_LIST SHADER_TYPE)
 					-fvk-u-shift 2000 0
 					-fvk-s-shift 3000 0
 					#-fspv-extension=KHR
-					-Vd #DISABLE VALIDATION: There is currently a validation bug with raytracing RayTCurrent()!!!
 					)
 
 			# Determine include dependencies (recursively)

@@ -133,7 +133,7 @@ inline float shadowTrace(in Surface surface, in float3 L, in float dist)
 		RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH
 	> q;
 
-	float seed = g_xFrame_FrameCount * 0.001;
+	float seed = g_xFrame_Time;
 	float2 uv = surface.screenUV;
 
 	RayDesc ray;

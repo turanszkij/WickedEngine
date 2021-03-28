@@ -9,6 +9,7 @@
 #include "wiAudio.h"
 #include "wiResourceManager.h"
 #include "wiSpinLock.h"
+#include "wiGPUBVH.h"
 
 #include "wiECS.h"
 #include "wiScene_Decl.h"
@@ -316,7 +317,6 @@ namespace wiScene
 			TERRAIN = 1 << 3,
 			DIRTY_MORPH = 1 << 4,
 			DIRTY_BINDLESS = 1 << 5,
-			DIRTY_BLAS = 1 << 6,
 		};
 		uint32_t _flags = RENDERABLE;
 
@@ -380,6 +380,13 @@ namespace wiScene
 		wiGraphics::GPUBuffer subsetBuffer;
 
 		wiGraphics::RaytracingAccelerationStructure BLAS;
+		enum BLAS_STATE
+		{
+			BLAS_STATE_NEEDS_REBUILD,
+			BLAS_STATE_NEEDS_REFIT,
+			BLAS_STATE_COMPLETE,
+		};
+		mutable BLAS_STATE BLAS_state = BLAS_STATE_NEEDS_REBUILD;
 
 		// Only valid for 1 frame material component indices:
 		int terrain_material1_index = -1;
@@ -1278,12 +1285,8 @@ namespace wiScene
 		enum FLAGS
 		{
 			EMPTY = 0,
-			UPDATE_ACCELERATION_STRUCTURES = 1 << 0,
 		};
 		uint32_t flags = EMPTY;
-
-		constexpr void SetUpdateAccelerationStructuresEnabled(bool value){ if (value) { flags |= UPDATE_ACCELERATION_STRUCTURES; } else { flags &= ~UPDATE_ACCELERATION_STRUCTURES; } }
-		constexpr bool IsUpdateAccelerationStructuresEnabled() const { return flags & UPDATE_ACCELERATION_STRUCTURES; }
 
 		wiSpinLock locker;
 		AABB bounds;
@@ -1291,7 +1294,10 @@ namespace wiScene
 		WeatherComponent weather;
 		wiGraphics::RaytracingAccelerationStructure TLAS;
 		std::vector<uint8_t> TLAS_instances;
-		std::vector<wiECS::Entity> BLAS_builds;
+
+		wiGPUBVH BVH; // this is for non-hardware accelerated raytracing
+		mutable bool BVH_invalid = false;
+		void InvalidateBVH() { BVH_invalid = true; }
 
 		std::mutex cmd_locker;
 		wiGraphics::CommandList cmd = wiGraphics::INVALID_COMMANDLIST; // for gpu data updates
