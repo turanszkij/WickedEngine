@@ -172,7 +172,7 @@ void RTShadow_Raygen()
 					[branch]
 					if (ray.TMax > 0)
 					{
-						float seed = g_xFrame_FrameCount * 0.001;
+						float seed = g_xFrame_Time;
 
 						RayPayload payload;
 						payload.color = 0;

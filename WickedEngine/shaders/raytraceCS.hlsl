@@ -24,10 +24,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	float3 result = 0;
 
 	// Compute screen coordinates:
-	float2 uv = float2((pixel + xTracePixelOffset) * xTraceResolution_rcp.xy * 2.0f - 1.0f) * float2(1, -1);
+	float2 screenUV = float2((pixel + xTracePixelOffset) * xTraceResolution_rcp.xy * 2.0f - 1.0f) * float2(1, -1);
+	float seed = xTraceRandomSeed;
 
 	// Create starting ray:
-	Ray ray = CreateCameraRay(uv);
+	Ray ray = CreateCameraRay(screenUV);
 
 	const uint bounces = xTraceUserData.x;
 	for (uint bounce = 0; bounce < bounces && any(ray.energy); ++bounce)
@@ -127,8 +128,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		{
 
 			float3 bounceResult = 0;
-			float2 uv = float2((pixel + xTracePixelOffset) * xTraceResolution_rcp.xy * 2.0f - 1.0f) * float2(1, -1);
-			float seed = xTraceRandomSeed;
 
 #ifdef RTAPI
 
@@ -321,12 +320,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			const float refractChance = 1 - baseColor.a;
 
 			// Roulette-select the ray's path
-			float roulette = rand(seed, uv);
+			float roulette = rand(seed, screenUV);
 			if (roulette < refractChance)
 			{
 				// Refraction
 				const float3 R = refract(ray.direction, N, 1 - material.refraction);
-				ray.direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
+				ray.direction = lerp(R, SampleHemisphere_cos(R, seed, screenUV), surface.roughnessBRDF);
 				ray.energy *= lerp(baseColor.rgb, 1, refractChance);
 
 				// The ray penetrates the surface, so push DOWN along normal to avoid self-intersection:
@@ -338,18 +337,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				const float3 F = F_Schlick(surface.f0, saturate(dot(-ray.direction, N)));
 				const float specChance = dot(F, 0.333);
 
-				roulette = rand(seed, uv);
+				roulette = rand(seed, screenUV);
 				if (roulette < specChance)
 				{
 					// Specular reflection
 					const float3 R = reflect(ray.direction, N);
-					ray.direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
+					ray.direction = lerp(R, SampleHemisphere_cos(R, seed, screenUV), surface.roughnessBRDF);
 					ray.energy *= F / specChance;
 				}
 				else
 				{
 					// Diffuse reflection
-					ray.direction = SampleHemisphere_cos(N, seed, uv);
+					ray.direction = SampleHemisphere_cos(N, seed, screenUV);
 					ray.energy *= surface.albedo / (1 - specChance);
 				}
 
@@ -502,7 +501,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					lighting.direct.diffuse = max(0, lighting.direct.diffuse);
 					lighting.direct.specular = max(0, lighting.direct.specular);
 
-					float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1; // todo: should be specific to light surface
+					float3 sampling_offset = float3(rand(seed, screenUV), rand(seed, screenUV), rand(seed, screenUV)) * 2 - 1; // todo: should be specific to light surface
 
 					Ray newRay;
 					newRay.origin = P;

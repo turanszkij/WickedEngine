@@ -7900,7 +7900,7 @@ void RayTraceScene(
 	cb.xTraceResolution_rcp.y = 1.0f / cb.xTraceResolution.y;
 	cb.xTraceUserData.x = raytraceBounceCount;
 	cb.xTraceUserData.y = accumulation_sample;
-	cb.xTraceRandomSeed = (float)accumulation_sample + 1;
+	cb.xTraceRandomSeed = (accumulation_sample + 1) * 0.0001f;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
 
@@ -8276,7 +8276,7 @@ void RenderObjectLightMap(const Scene& scene, const ObjectComponent& object, Com
 	cb.xTracePixelOffset.y = (halton.y * 2 - 1) * cb.xTraceResolution_rcp.y;
 	cb.xTracePixelOffset.x *= 1.4f;	// boost the jitter by a bit
 	cb.xTracePixelOffset.y *= 1.4f;	// boost the jitter by a bit
-	cb.xTraceRandomSeed = (float)lightmapIterationCount + 1; // random seed
+	cb.xTraceRandomSeed = (lightmapIterationCount + 1) * 0.0001f; // random seed
 	cb.xTraceAccumulationFactor = 1.0f / (lightmapIterationCount + 1.0f); // accumulation factor (alpha)
 	cb.xTraceUserData.x = raytraceBounceCount;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
