@@ -29,10 +29,10 @@ float4 main(Input input) : SV_TARGET
 	float3 result = 0;
 
 	uint bounces = xTraceUserData.x;
-	for (uint bounce = 0; ((bounce < bounces) && any(ray.energy)); ++bounce)
+	const uint bouncelimit = 16;
+	for (uint bounce = 0; ((bounce < min(bounces, bouncelimit)) && any(ray.energy)); ++bounce)
 	{
 		P = ray.origin;
-		float3 bounceResult = 0;
 
 		[loop]
 		for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
@@ -172,10 +172,9 @@ float4 main(Input input) : SV_TARGET
 #else
 				bool hit = TraceRay_Any(newRay, dist);
 #endif // RTAPI
-				bounceResult += (hit ? 0 : NdotL) * lighting.direct.diffuse / PI;
+				result += max(0, ray.energy * (hit ? 0 : NdotL) * lighting.direct.diffuse / PI);
 			}
 		}
-		result += max(0, ray.energy * bounceResult);
 
 		// Sample primary ray (scene materials, sky, etc):
 

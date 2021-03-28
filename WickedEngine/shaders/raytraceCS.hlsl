@@ -31,7 +31,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	Ray ray = CreateCameraRay(screenUV);
 
 	uint bounces = xTraceUserData.x;
-	for (uint bounce = 0; ((bounce < bounces) && any(ray.energy)); ++bounce)
+	const uint bouncelimit = 16;
+	for (uint bounce = 0; ((bounce < min(bounces, bouncelimit)) && any(ray.energy)); ++bounce)
 	{
 		ray.Update();
 
@@ -127,8 +128,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		}
 		else
 		{
-
-			float3 bounceResult = 0;
 
 #ifdef RTAPI
 
@@ -320,7 +319,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			surface.V = V;
 			surface.update();
 
-			bounceResult += surface.emissiveColor.rgb * surface.emissiveColor.a;
+			result += ray.energy * surface.emissiveColor.rgb * surface.emissiveColor.a;
 
 			float roulette;
 
@@ -378,6 +377,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					if (dot(ray.direction, N) < 0)
 					{
 						ray.energy = 0;
+						break;
 					}
 
 					// Ray reflects from surface, so push UP along normal to avoid self-intersection:
@@ -539,10 +539,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 #else
 					bool hit = TraceRay_Any(newRay, dist, groupIndex);
 #endif // RTAPI
-					bounceResult += (hit ? 0 : NdotL) * (lighting.direct.diffuse + lighting.direct.specular);
+					result += max(0, ray.energy * (hit ? 0 : NdotL) * (lighting.direct.diffuse + lighting.direct.specular));
 				}
 			}
-			result += max(0, ray.energy * bounceResult);
 		}
 
 	}
