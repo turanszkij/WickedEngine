@@ -2,7 +2,7 @@
 #include "ShaderInterop_Postprocess.h"
 
 TEXTURE2D(cloud_current, float4, TEXSLOT_ONDEMAND0);
-TEXTURE2D(cloud_positionShaft, float4, TEXSLOT_ONDEMAND1);
+TEXTURE2D(cloud_depth, float, TEXSLOT_ONDEMAND1);
 TEXTURE2D(cloud_history, float4, TEXSLOT_ONDEMAND2);
 
 RWTEXTURE2D(output, float4, 0);
@@ -12,7 +12,7 @@ RWTEXTURE2D(output, float4, 0);
 
 // If the clouds are moving fast, the upsampling will most likely not be able to keep up. You can modify these values to relax the effect:
 static const float temporalResponse = 0.05;
-static const float temporalScale = 10.0;
+static const float temporalScale = 3.0;
 static const float temporalExposure = 10.0;
 
 inline float Luma4(float3 color)
@@ -97,7 +97,7 @@ inline void ResolverAABB(Texture2D<float4> currentColor, SamplerState currentSam
 	currentAverage = mean;
 }
 
-float2 CalculateCustomMotion(float4 worldPosition)
+/*float2 CalculateCustomMotion(float4 worldPosition)
 {
 	float4 thisClip = mul(g_xCamera_VP, worldPosition);
 	float4 prevClip = mul(g_xCamera_PrevVP, worldPosition);
@@ -108,38 +108,58 @@ float2 CalculateCustomMotion(float4 worldPosition)
 	prevScreen = (prevScreen.xy * float2(0.5, -0.5) + 0.5);
     
 	return thisScreen - prevScreen;
+}*/
+
+// Computes post-projection depth from linear depth
+float getInverseLinearDepth(float lin, float near, float far)
+{
+	float z_n = ((lin - 2 * far) * near + far * lin) / (lin * near - far * lin);
+	float z = (z_n + 1) / 2;
+	return z;
 }
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
-	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
     
-#if 1
-        
 #if 0
     
-        // Calculate screen dependant motion vector
-        float4 prevPos = float4(uv * 2.0 - 1.0, 1.0, 1.0);
-        prevPos = mul(g_xCamera_InvP, prevPos);
-        prevPos = prevPos / prevPos.w;
-        
-        prevPos.xyz = mul((float3x3)g_xCamera_InvV, prevPos.xyz);
-        prevPos.xyz = mul((float3x3)g_xCamera_PrevV, prevPos.xyz);
-        
-        float4 reproj = mul(g_xCamera_Proj, prevPos);
-        reproj /= reproj.w;
+    // Calculate screen dependant motion vector
+    float4 prevPos = float4(uv * 2.0 - 1.0, 1.0, 1.0);
+    prevPos = mul(g_xCamera_InvP, prevPos);
+    prevPos = prevPos / prevPos.w;
     
-        float2 prevUV = reproj.xy * 0.5 + 0.5;
+    prevPos.xyz = mul((float3x3)g_xCamera_InvV, prevPos.xyz);
+    prevPos.xyz = mul((float3x3)g_xCamera_PrevV, prevPos.xyz);
+    
+    float4 reproj = mul(g_xCamera_Proj, prevPos);
+    reproj /= reproj.w;
+    
+    float2 prevUV = reproj.xy * 0.5 + 0.5;
             
 #else
-    
-    // Calculate custom motion vector based on cloud/atmosphere world position
-	float4 worldPosition = float4(cloud_positionShaft.SampleLevel(sampler_linear_clamp, uv, 0).xyz, 1.0);
 
-	float2 velocity = CalculateCustomMotion(worldPosition); // CalculateCustomMotion(depth, uv);
-	float2 prevUV = uv - velocity;
+	float x = uv.x * 2 - 1;
+	float y = (1 - uv.y) * 2 - 1;
+	float2 screenPosition = float2(x, y);
+
+	float cloudLinearDepth = cloud_depth.SampleLevel(sampler_linear_clamp, uv, 0).r;
+	float cloudDepth = getInverseLinearDepth(cloudLinearDepth, g_xCamera_ZNearP, g_xCamera_ZFarP);
+	
+	float4 thisClip = float4(screenPosition, cloudDepth, 1.0);
+	
+	float4 prevClip = mul(g_xCamera_InvVP, thisClip);
+	prevClip = mul(g_xCamera_PrevVP, prevClip);
+	
+	//float4 prevClip = mul(g_xCamera_PrevVP, worldPosition);
+	float2 prevScreen = prevClip.xy / prevClip.w;
+	
+	float2 screenVelocity = screenPosition - prevScreen;
+	float2 prevScreenPosition = screenPosition - screenVelocity;
+	
+	// Transform from screen position to uv
+	float2 prevUV = prevScreenPosition * float2(0.5, -0.5) + 0.5;
     
 #endif
     
@@ -155,25 +175,5 @@ void main(uint3 DTid : SV_DispatchThreadID)
     
 	result = is_saturated(prevUV) ? result : current;
 
-#elif 0
-    
-    float4 cloudPositionWS = float4(cloud_positionShaft.SampleLevel(sampler_linear_clamp, uv, 0).xyz, 1.0);
-
-    float2 velocity = CalculateCustomMotion(cloudPositionWS);
-    float2 prevUV = uv - velocity;
-    
-    float4 current = cloud_current.SampleLevel(sampler_linear_clamp, uv, 0);
-    float4 previous = cloud_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
-    
-    float4 result = lerp(previous, current, temporalResponse);
-    
-    result = is_saturated(prevUV) ? result : current;
-    
-#else
-
-    float4 result = cloud_current.SampleLevel(sampler_linear_clamp, uv, 0);
-
-#endif
-    
 	output[DTid.xy] = result;
 }

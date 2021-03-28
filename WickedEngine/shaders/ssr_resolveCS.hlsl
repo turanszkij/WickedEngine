@@ -23,7 +23,7 @@ static const float2 spatialReuseOffsets3x3[9] =
 };
 
 // Not in use, but could perhaps be useful in the future.
-float2 CalculateTailDirection(float3 viewNormal)
+/*float2 CalculateTailDirection(float3 viewNormal)
 {
 	float3 upVector = abs(viewNormal.z) < 0.999 ? float3(0.0, 0.0, 1.0) : float3(1.0, 0.0, 0.0);
 	float3 T = normalize(cross(upVector, viewNormal));
@@ -31,7 +31,7 @@ float2 CalculateTailDirection(float3 viewNormal)
 	float tailDirection = T.x * -viewNormal.y;
     
 	return lerp(float2(1.0, 0.1), float2(0.1, 1.0), tailDirection);
-}
+}*/
 
 float CalculateEdgeFade(float2 hitPixel)
 {
@@ -59,7 +59,7 @@ void GetSampleInfo(float2 velocity, float2 neighborUV, float2 uv, float3 P, floa
 	float sourceMip = clamp(log2(intersectionCircleRadius * ssr_input_resolution_max), 0.0, ssr_input_maxmip) * SSRResolveConeMip;
     
 	sampleColor.rgb = texture_main.SampleLevel(sampler_linear_clamp, hitPixel, sourceMip).rgb; // Scene color
-	sampleColor.a = CalculateEdgeFade(hitPixel); // Opacity
+	sampleColor.a = CalculateEdgeFade(raytraceSource.xy); // Opacity - Since this is used for masking, we can ignore velocity 
     
     // BRDF Weight
     
@@ -123,7 +123,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		
 		float4 sampleColor;
 		sampleColor.rgb = texture_main.SampleLevel(sampler_linear_clamp, hitPixel, 0).rgb; // Scene color
-		sampleColor.a = CalculateEdgeFade(hitPixel); // Opacity
+		sampleColor.a = CalculateEdgeFade(raytraceSource.xy); // Opacity
 		
 		texture_resolve[DTid.xy] = sampleColor;
 		return;
