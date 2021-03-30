@@ -907,7 +907,7 @@ size_t GetShaderDumpCount()
 }
 #endif // SHADERDUMP
 
-bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
+bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename, SHADERMODEL minshadermodel)
 {
 	std::string shaderbinaryfilename = SHADERPATH + filename;
 
@@ -932,6 +932,7 @@ bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename)
 		wiShaderCompiler::CompilerInput input;
 		input.format = device->GetShaderFormat();
 		input.stage = stage;
+		input.minshadermodel = minshadermodel;
 
 		std::string sourcedir = SHADERSOURCEPATH;
 		wiHelper::MakePathAbsolute(sourcedir);
@@ -1189,7 +1190,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_FORCEFIELDVISUALIZER], "forceFieldVisualizerPS.cso"); });
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 	{
-		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_RENDERLIGHTMAP], "renderlightmapPS_rtapi.cso"); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_RENDERLIGHTMAP], "renderlightmapPS_rtapi.cso", SHADERMODEL_6_5); });
 	}
 	else
 	{
@@ -1241,7 +1242,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_SKINNING_LDS], "skinningCS_LDS.cso"); });
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 	{
-		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_RAYTRACE], "raytraceCS_rtapi.cso"); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_RAYTRACE], "raytraceCS_rtapi.cso", SHADERMODEL_6_5); });
 	}
 	else
 	{

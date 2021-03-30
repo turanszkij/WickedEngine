@@ -18,6 +18,9 @@ namespace wiShaderCompiler
 		uint64_t flags = FLAG_NONE;
 		wiGraphics::SHADERFORMAT format = wiGraphics::SHADERFORMAT::SHADERFORMAT_NONE;
 		wiGraphics::SHADERSTAGE stage = wiGraphics::SHADERSTAGE_COUNT;
+		// if the shader relies on a higher shader model feature, it must be declared here.
+		//	But the compiler can also choose a higher one internally, if needed
+		wiGraphics::SHADERMODEL minshadermodel = wiGraphics::SHADERMODEL_5_0;
 		std::string shadersourcefilename;
 		std::string entrypoint = "main";
 		std::vector<std::string> include_directories;
