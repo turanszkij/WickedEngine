@@ -294,6 +294,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 				// Add a new bounce iteration, otherwise the transparent effect can disappear:
 				bounces++;
+
+				continue; // skip light sampling
 			}
 			else
 			{
@@ -494,6 +496,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 						ShaderMesh mesh = bindless_buffers[q.CandidateInstanceID()].Load<ShaderMesh>(0);
 						ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CandidateGeometryIndex()];
 						ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
+						[branch]
+						if (!material.IsCastingShadow())
+						{
+							continue;
+						}
 						[branch]
 						if (material.texture_basecolormap_index < 0)
 						{

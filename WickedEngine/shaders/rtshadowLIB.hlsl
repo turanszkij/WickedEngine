@@ -61,9 +61,6 @@ void RTShadow_Raygen()
 		{
 			uint bucket_bits = EntityTiles[flatTileIndex + bucket];
 
-			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
-			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
-
 			[loop]
 			while (bucket_bits != 0 && shadow_index < MAX_RTSHADOWS)
 			{
@@ -237,6 +234,12 @@ void RTShadow_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectionAtt
 	ShaderMesh mesh = bindless_buffers[InstanceID()].Load<ShaderMesh>(0);
 	ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][GeometryIndex()];
 	ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
+	[branch]
+	if (!material.IsCastingShadow())
+	{
+		IgnoreHit();
+		return;
+	}
 	[branch]
 	if (material.texture_basecolormap_index < 0)
 	{

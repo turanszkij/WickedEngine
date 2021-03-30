@@ -73,6 +73,12 @@ void RTAO_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectionAttribu
 	ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][GeometryIndex()];
 	ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
 	[branch]
+	if (!material.IsCastingShadow())
+	{
+		IgnoreHit();
+		return;
+	}
+	[branch]
 	if (material.texture_basecolormap_index < 0)
 	{
 		AcceptHitAndEndSearch();

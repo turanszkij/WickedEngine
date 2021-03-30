@@ -68,7 +68,6 @@ namespace wiShaderCompiler
 		{
 		case wiGraphics::SHADERFORMAT_HLSL6:
 			args.push_back(L"-D"); args.push_back(L"HLSL6");
-			args.push_back(L"-D"); args.push_back(L"DISABLE_WAVE_INTRINSICS"); // random (as in only happening sometimes) validation fails with wave intrinsics :(
 			break;
 		case wiGraphics::SHADERFORMAT_SPIRV:
 			args.push_back(L"-D"); args.push_back(L"SPIRV");

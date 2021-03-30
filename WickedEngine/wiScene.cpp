@@ -289,6 +289,10 @@ namespace wiScene
 		{
 			dest->options |= SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW;
 		}
+		if (IsCastingShadow())
+		{
+			dest->options |= SHADERMATERIAL_OPTION_BIT_CAST_SHADOW;
+		}
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		dest->texture_basecolormap_index = device->GetDescriptorIndex(textures[BASECOLORMAP].GetGPUResource(), SRV);
@@ -2607,7 +2611,7 @@ namespace wiScene
 					{
 						auto& geometry = mesh.BLAS.desc.bottomlevel.geometries[subsetIndex];
 						uint32_t flags = geometry._flags;
-						if (material->IsAlphaTestEnabled() || (material->GetRenderTypes() & RENDERTYPE_TRANSPARENT))
+						if (material->IsAlphaTestEnabled() || (material->GetRenderTypes() & RENDERTYPE_TRANSPARENT) || !material->IsCastingShadow())
 						{
 							geometry._flags &= ~RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
 						}
