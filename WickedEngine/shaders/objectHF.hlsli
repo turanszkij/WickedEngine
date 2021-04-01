@@ -1321,8 +1321,9 @@ float4 main(PixelInput input) : SV_TARGET
 	if (GetMaterial().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 	{
 		const float2 UV_baseColorMap = GetMaterial().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-		color = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap);
-		color.rgb = DEGAMMA(color.rgb);
+		float4 baseColorMap = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap);
+		baseColorMap.rgb = DEGAMMA(baseColorMap.rgb);
+		color *= baseColorMap;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 

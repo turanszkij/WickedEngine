@@ -112,7 +112,7 @@ void RTAO_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectionAttribu
 	float v = attr.barycentrics.y;
 	float w = 1 - u - v;
 	float2 uv = uv0 * w + uv1 * u + uv2 * v;
-	float alpha = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_point_wrap, uv, 2).a;
+	float alpha = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_linear_wrap, uv, 2).a;
 
 	[branch]
 	if (alpha - material.alphaTest > 0)

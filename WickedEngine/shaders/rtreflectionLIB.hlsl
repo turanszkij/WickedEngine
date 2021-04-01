@@ -160,8 +160,9 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 	if (material.texture_basecolormap_index >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 	{
 		const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
-		baseColor = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 2);
-		baseColor.rgb *= DEGAMMA(baseColor.rgb);
+		float4 baseColorMap = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 2);
+		baseColorMap.rgb *= DEGAMMA(baseColorMap.rgb);
+		baseColor *= baseColorMap;
 	}
 
 	[branch]
@@ -315,7 +316,7 @@ void RTReflection_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectio
 	float v = attr.barycentrics.y;
 	float w = 1 - u - v;
 	float2 uv = uv0 * w + uv1 * u + uv2 * v;
-	float alpha = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_point_wrap, uv, 2).a;
+	float alpha = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_linear_wrap, uv, 2).a;
 
 	[branch]
 	if (alpha - material.alphaTest < 0)

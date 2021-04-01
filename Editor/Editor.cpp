@@ -1058,7 +1058,7 @@ void EditorComponent::Update(float dt)
 			wiInput::HidePointer(false);
 		}
 
-		const float buttonrotSpeed = 2.0f / 60.0f;
+		const float buttonrotSpeed = 2.0f * dt;
 		if (wiInput::Down(wiInput::KEYBOARD_BUTTON_LEFT))
 		{
 			xDif -= buttonrotSpeed;

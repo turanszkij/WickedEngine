@@ -146,7 +146,7 @@ float4 main(Input input) : SV_TARGET
 
 			if (NdotL > 0 && dist > 0)
 			{
-				lighting.direct.diffuse = max(0.0f, lighting.direct.diffuse);
+				float3 shadow = NdotL * ray.energy;
 
 				float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1;
 
@@ -162,17 +162,83 @@ float4 main(Input input) : SV_TARGET
 				apiray.Origin = newRay.origin;
 				apiray.Direction = newRay.direction;
 				RayQuery<
-					RAY_FLAG_FORCE_OPAQUE |
-					RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
-					RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH
+					RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
 				> q;
-				q.TraceRayInline(scene_acceleration_structure, 0, 0xFF, apiray);
-				q.Proceed();
-				bool hit = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT;
+				q.TraceRayInline(
+					scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
+					0,								// uint RayFlags
+					0xFF,							// uint InstanceInclusionMask
+					apiray							// RayDesc Ray
+				);
+				while (q.Proceed())
+				{
+					ShaderMesh mesh = bindless_buffers[q.CandidateInstanceID()].Load<ShaderMesh>(0);
+					ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CandidateGeometryIndex()];
+					ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
+					[branch]
+					if (!material.IsCastingShadow())
+					{
+						continue;
+					}
+					uint startIndex = q.CandidatePrimitiveIndex() * 3 + subset.indexOffset;
+					uint i0 = bindless_ib[mesh.ib][startIndex + 0];
+					uint i1 = bindless_ib[mesh.ib][startIndex + 1];
+					uint i2 = bindless_ib[mesh.ib][startIndex + 2];
+					float4 uv0 = 0, uv1 = 0, uv2 = 0;
+					[branch]
+					if (mesh.vb_uv0 >= 0)
+					{
+						uv0.xy = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i0 * 4));
+						uv1.xy = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i1 * 4));
+						uv2.xy = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i2 * 4));
+					}
+					[branch]
+					if (mesh.vb_uv1 >= 0)
+					{
+						uv0.zw = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i0 * 4));
+						uv1.zw = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i1 * 4));
+						uv2.zw = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i2 * 4));
+					}
+
+					float2 barycentrics = q.CandidateTriangleBarycentrics();
+					float u = barycentrics.x;
+					float v = barycentrics.y;
+					float w = 1 - u - v;
+					float4 uvsets = uv0 * w + uv1 * u + uv2 * v;
+
+					float4 baseColor = material.baseColor;
+					if (material.texture_basecolormap_index >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+					{
+						const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
+						float4 baseColorMap = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 2);
+						baseColorMap.rgb = DEGAMMA(baseColorMap.rgb);
+						baseColor *= baseColorMap;
+					}
+
+					float transmission = material.transmission;
+					if (material.texture_transmissionmap_index >= 0)
+					{
+						const float2 UV_transmissionMap = material.uvset_transmissionMap == 0 ? uvsets.xy : uvsets.zw;
+						float transmissionMap = bindless_textures[material.texture_transmissionmap_index].SampleLevel(sampler_linear_wrap, UV_transmissionMap, 2).r;
+						transmission *= transmissionMap;
+					}
+
+					shadow *= lerp(1, baseColor.rgb * transmission, baseColor.a);
+
+					[branch]
+					if (!any(shadow))
+					{
+						q.CommitNonOpaqueTriangleHit();
+					}
+				}
+				shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
 #else
-				bool hit = TraceRay_Any(newRay, dist);
+				shadow = TraceRay_Any(newRay, dist) ? 0 : shadow;
 #endif // RTAPI
-				result += max(0, ray.energy * (hit ? 0 : NdotL) * lighting.direct.diffuse / PI);
+				if (any(shadow))
+				{
+					result += max(0, shadow * lighting.direct.diffuse / PI);
+				}
 			}
 		}
 
@@ -273,8 +339,9 @@ float4 main(Input input) : SV_TARGET
 		if (material.texture_basecolormap_index >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
 			const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
-			baseColor = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 2);
-			baseColor.rgb *= DEGAMMA(baseColor.rgb);
+			float4 baseColorMap = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 2);
+			baseColorMap.rgb *= DEGAMMA(baseColorMap.rgb);
+			baseColor *= baseColorMap;
 		}
 
 		[branch]
@@ -351,19 +418,15 @@ float4 main(Input input) : SV_TARGET
 
 		uvsets = frac(uvsets); // emulate wrap
 
-		float4 baseColor;
+		float4 baseColor = material.baseColor * color;
 		[branch]
 		if (material.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
 			const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
-			baseColor = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_baseColorMap * material.baseColorAtlasMulAdd.xy + material.baseColorAtlasMulAdd.zw, 0);
-			baseColor.rgb = DEGAMMA(baseColor.rgb);
+			float4 baseColorMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_baseColorMap * material.baseColorAtlasMulAdd.xy + material.baseColorAtlasMulAdd.zw, 0);
+			baseColorMap.rgb = DEGAMMA(baseColorMap.rgb);
+			baseColor *= baseColorMap;
 		}
-		else
-		{
-			baseColor = 1;
-		}
-		baseColor *= color;
 
 		float4 surfaceMap = 1;
 		[branch]

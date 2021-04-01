@@ -142,8 +142,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			if (material.texture_basecolormap_index >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 			{
 				const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
-				baseColor = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 2);
-				baseColor.rgb *= DEGAMMA(baseColor.rgb);
+				float4 baseColorMap = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 2);
+				baseColorMap.rgb *= DEGAMMA(baseColorMap.rgb);
+				baseColor *= baseColorMap;
 			}
 
 			[branch]
@@ -200,6 +201,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				surface.emissiveColor *= emissiveMap;
 			}
 
+			float transmission = material.transmission;
+			if (material.texture_transmissionmap_index >= 0)
+			{
+				const float2 UV_transmissionMap = material.uvset_transmissionMap == 0 ? uvsets.xy : uvsets.zw;
+				float transmissionMap = bindless_textures[material.texture_transmissionmap_index].SampleLevel(sampler_linear_wrap, UV_transmissionMap, 2).r;
+				transmission *= transmissionMap;
+			}
+
 #else
 
 			// ray origin updated for next bounce:
@@ -223,19 +232,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 			uvsets = frac(uvsets); // emulate wrap
 
-			float4 baseColor;
+			float4 baseColor = material.baseColor * color;
 			[branch]
 			if (material.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 			{
 				const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
-				baseColor = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_baseColorMap * material.baseColorAtlasMulAdd.xy + material.baseColorAtlasMulAdd.zw, 0);
-				baseColor.rgb = DEGAMMA(baseColor.rgb);
+				float4 baseColorMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_baseColorMap * material.baseColorAtlasMulAdd.xy + material.baseColorAtlasMulAdd.zw, 0);
+				baseColorMap.rgb = DEGAMMA(baseColorMap.rgb);
+				baseColor *= baseColorMap;
 			}
-			else
-			{
-				baseColor = 1;
-			}
-			baseColor *= color;
 
 			float4 surfaceMap = 1;
 			[branch]
@@ -268,6 +273,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
 			}
 
+			float transmission = material.transmission;
+
 #endif // RTAPI
 
 			float3 P = ray.origin;
@@ -299,7 +306,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			}
 			else
 			{
-				const float refractChance = material.transmission;
+				const float refractChance = transmission;
 				roulette = rand(seed, screenUV);
 				if (roulette < refractChance)
 				{
@@ -469,8 +476,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 				if (NdotL > 0 && dist > 0)
 				{
-					lighting.direct.diffuse = max(0, lighting.direct.diffuse);
-					lighting.direct.specular = max(0, lighting.direct.specular);
+					float3 shadow = NdotL * current_energy;
 
 					float3 sampling_offset = float3(rand(seed, screenUV), rand(seed, screenUV), rand(seed, screenUV)) * 2 - 1; // todo: should be specific to light surface
 
@@ -501,56 +507,64 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 						{
 							continue;
 						}
-						[branch]
-						if (material.texture_basecolormap_index < 0)
-						{
-							q.CommitNonOpaqueTriangleHit();
-							continue;
-						}
 						uint startIndex = q.CandidatePrimitiveIndex() * 3 + subset.indexOffset;
 						uint i0 = bindless_ib[mesh.ib][startIndex + 0];
 						uint i1 = bindless_ib[mesh.ib][startIndex + 1];
 						uint i2 = bindless_ib[mesh.ib][startIndex + 2];
-						float2 uv0 = 0, uv1 = 0, uv2 = 0;
+						float4 uv0 = 0, uv1 = 0, uv2 = 0;
 						[branch]
-						if (mesh.vb_uv0 >= 0 && material.uvset_baseColorMap == 0)
+						if (mesh.vb_uv0 >= 0)
 						{
-							uv0 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i0 * 4));
-							uv1 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i1 * 4));
-							uv2 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i2 * 4));
+							uv0.xy = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i0 * 4));
+							uv1.xy = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i1 * 4));
+							uv2.xy = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i2 * 4));
 						}
-						else if (mesh.vb_uv1 >= 0 && material.uvset_baseColorMap != 0)
+						[branch]
+						if (mesh.vb_uv1 >= 0)
 						{
-							uv0 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i0 * 4));
-							uv1 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i1 * 4));
-							uv2 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i2 * 4));
-						}
-						else
-						{
-							q.CommitNonOpaqueTriangleHit();
-							continue;
+							uv0.zw = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i0 * 4));
+							uv1.zw = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i1 * 4));
+							uv2.zw = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i2 * 4));
 						}
 
 						float2 barycentrics = q.CandidateTriangleBarycentrics();
 						float u = barycentrics.x;
 						float v = barycentrics.y;
 						float w = 1 - u - v;
-						float2 uv = uv0 * w + uv1 * u + uv2 * v;
-						float alpha = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_point_wrap, uv, 2).a;
+						float4 uvsets = uv0 * w + uv1 * u + uv2 * v;
+
+						float4 baseColor = material.baseColor;
+						if (material.texture_basecolormap_index >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+						{
+							const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
+							float4 baseColorMap = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 2);
+							baseColorMap.rgb = DEGAMMA(baseColorMap.rgb);
+							baseColor *= baseColorMap;
+						}
+
+						float transmission = material.transmission;
+						if (material.texture_transmissionmap_index >= 0)
+						{
+							const float2 UV_transmissionMap = material.uvset_transmissionMap == 0 ? uvsets.xy : uvsets.zw;
+							float transmissionMap = bindless_textures[material.texture_transmissionmap_index].SampleLevel(sampler_linear_wrap, UV_transmissionMap, 2).r;
+							transmission *= transmissionMap;
+						}
+
+						shadow *= lerp(1, baseColor.rgb * transmission, baseColor.a);
 
 						[branch]
-						if (alpha - material.alphaTest > 0)
+						if (!any(shadow))
 						{
 							q.CommitNonOpaqueTriangleHit();
 						}
 					}
-					bool hit = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT;
+					shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
 #else
-					bool hit = TraceRay_Any(newRay, dist, groupIndex);
+					shadow = TraceRay_Any(newRay, dist, groupIndex) ? 0 : shadow;
 #endif // RTAPI
-					if (!hit)
+					if (any(shadow))
 					{
-						result += max(0, current_energy * NdotL * (surface.albedo * lighting.direct.diffuse + lighting.direct.specular));
+						result += max(0, shadow * (surface.albedo * lighting.direct.diffuse + lighting.direct.specular));
 					}
 				}
 			}
