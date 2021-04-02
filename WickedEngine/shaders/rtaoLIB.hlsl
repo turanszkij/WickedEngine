@@ -1,17 +1,11 @@
+#define RTAPI
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 #include "raytracingHF.hlsli"
 
-RAYTRACINGACCELERATIONSTRUCTURE(scene_acceleration_structure, TEXSLOT_ACCELERATION_STRUCTURE);
-
 TEXTURE2D(texture_normals, float3, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(output, unorm float, 0);
-
-Texture2D<float4> bindless_textures[] : register(t0, space1);
-ByteAddressBuffer bindless_buffers[] : register(t0, space2);
-StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space3);
-Buffer<uint> bindless_ib[] : register(t0, space4);
 
 
 struct RayPayload
@@ -84,38 +78,21 @@ void RTAO_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectionAttribu
 		AcceptHitAndEndSearch();
 		return;
 	}
-	uint startIndex = PrimitiveIndex() * 3 + subset.indexOffset;
-	uint i0 = bindless_ib[mesh.ib][startIndex + 0];
-	uint i1 = bindless_ib[mesh.ib][startIndex + 1];
-	uint i2 = bindless_ib[mesh.ib][startIndex + 2];
-	float2 uv0 = 0, uv1 = 0, uv2 = 0;
-	[branch]
-	if (mesh.vb_uv0 >= 0 && material.uvset_baseColorMap == 0)
-	{
-		uv0 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i0 * 4));
-		uv1 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i1 * 4));
-		uv2 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i2 * 4));
-	}
-	else if(mesh.vb_uv1 >= 0 && material.uvset_baseColorMap != 0)
-	{
-		uv0 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i0 * 4));
-		uv1 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i1 * 4));
-		uv2 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i2 * 4));
-	}
-	else
-	{
-		AcceptHitAndEndSearch();
-		return;
-	}
 
-	float u = attr.barycentrics.x;
-	float v = attr.barycentrics.y;
-	float w = 1 - u - v;
-	float2 uv = uv0 * w + uv1 * u + uv2 * v;
-	float alpha = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_linear_wrap, uv, 0).a;
+	Surface surface;
+
+	EvaluateObjectSurface(
+		mesh,
+		subset,
+		material,
+		PrimitiveIndex(),
+		attr.barycentrics,
+		ObjectToWorld3x4(),
+		surface
+	);
 
 	[branch]
-	if (alpha - material.alphaTest > 0)
+	if (surface.opacity >= material.alphaTest)
 	{
 		AcceptHitAndEndSearch();
 	}

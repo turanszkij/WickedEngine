@@ -1,27 +1,14 @@
+#define RTAPI
 #define DISABLE_SOFT_SHADOWMAP
 #define DISABLE_TRANSPARENT_SHADOWMAP
 
-#ifndef SPIRV
-// Vulkan shader compiler has problem with this
-//	https://github.com/microsoft/DirectXShaderCompiler/issues/3119
-#define RAYTRACING_INLINE
-#endif // SPIRV
-
 #include "globals.hlsli"
-
-RAYTRACINGACCELERATIONSTRUCTURE(scene_acceleration_structure, TEXSLOT_ACCELERATION_STRUCTURE);
-
 #include "ShaderInterop_Postprocess.h"
 #include "raytracingHF.hlsli"
 #include "stochasticSSRHF.hlsli"
 #include "lightingHF.hlsli"
 
 RWTEXTURE2D(output, float4, 0);
-
-Texture2D<float4> bindless_textures[] : register(t0, space1);
-ByteAddressBuffer bindless_buffers[] : register(t0, space2);
-StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space3);
-Buffer<uint> bindless_ib[] : register(t0, space4);
 
 struct RayPayload
 {
@@ -112,128 +99,25 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 	ShaderMesh mesh = bindless_buffers[InstanceID()].Load<ShaderMesh>(0);
 	ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][GeometryIndex()];
 	ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
-	uint startIndex = PrimitiveIndex() * 3 + subset.indexOffset;
-	uint i0 = bindless_ib[mesh.ib][startIndex + 0];
-	uint i1 = bindless_ib[mesh.ib][startIndex + 1];
-	uint i2 = bindless_ib[mesh.ib][startIndex + 2];
-	float4 uv0 = 0, uv1 = 0, uv2 = 0;
-	[branch]
-	if (mesh.vb_uv0 >= 0)
-	{
-		uv0.xy = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i0 * 4));
-		uv1.xy = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i1 * 4));
-		uv2.xy = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i2 * 4));
-	}
-	[branch]
-	if (mesh.vb_uv1 >= 0)
-	{
-		uv0.zw = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i0 * 4));
-		uv1.zw = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i1 * 4));
-		uv2.zw = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i2 * 4));
-	}
-	float3 n0 = 0, n1 = 0, n2 = 0;
-	[branch]
-	if (mesh.vb_pos_nor_wind >= 0)
-	{
-		const uint stride_POS = 16;
-		n0 = unpack_unitvector(bindless_buffers[mesh.vb_pos_nor_wind].Load4(i0 * stride_POS).w);
-		n1 = unpack_unitvector(bindless_buffers[mesh.vb_pos_nor_wind].Load4(i1 * stride_POS).w);
-		n2 = unpack_unitvector(bindless_buffers[mesh.vb_pos_nor_wind].Load4(i2 * stride_POS).w);
-	}
-	else
-	{
-		payload.color = float3(1, 0, 1); // error, this should always be good
-		return;
-	}
-
-	float u = attr.barycentrics.x;
-	float v = attr.barycentrics.y;
-	float w = 1 - u - v;
-	float4 uvsets = uv0 * w + uv1 * u + uv2 * v;
-	float3 N = n0 * w + n1 * u + n2 * v;
-
-	N = mul((float3x3)ObjectToWorld3x4(), N);
-	N = normalize(N);
-
-	float4 baseColor = material.baseColor;
-	[branch]
-	if (material.texture_basecolormap_index >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
-	{
-		const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
-		float4 baseColorMap = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 0);
-		baseColorMap.rgb *= DEGAMMA(baseColorMap.rgb);
-		baseColor *= baseColorMap;
-	}
-
-	[branch]
-	if (mesh.vb_col >= 0 && material.IsUsingVertexColors())
-	{
-		float4 c0, c1, c2;
-		const uint stride_COL = 4;
-		c0 = unpack_rgba(bindless_buffers[mesh.vb_col].Load(i0 * stride_COL));
-		c1 = unpack_rgba(bindless_buffers[mesh.vb_col].Load(i1 * stride_COL));
-		c2 = unpack_rgba(bindless_buffers[mesh.vb_col].Load(i2 * stride_COL));
-		float4 vertexColor = c0 * w + c1 * u + c2 * v;
-		baseColor *= vertexColor;
-	}
-
-	[branch]
-	if (mesh.vb_tan >= 0 && material.texture_normalmap_index >= 0 && material.normalMapStrength > 0)
-	{
-		float4 t0, t1, t2;
-		const uint stride_TAN = 4;
-		t0 = unpack_utangent(bindless_buffers[mesh.vb_tan].Load(i0 * stride_TAN));
-		t1 = unpack_utangent(bindless_buffers[mesh.vb_tan].Load(i1 * stride_TAN));
-		t2 = unpack_utangent(bindless_buffers[mesh.vb_tan].Load(i2 * stride_TAN));
-		float4 T = t0 * w + t1 * u + t2 * v;
-		T = T * 2 - 1;
-		T.xyz = mul((float3x3)ObjectToWorld3x4(), T.xyz);
-		T.xyz = normalize(T.xyz);
-		float3 B = normalize(cross(T.xyz, N) * T.w);
-		float3x3 TBN = float3x3(T.xyz, B, N);
-
-		const float2 UV_normalMap = material.uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
-		float3 normalMap = bindless_textures[material.texture_normalmap_index].SampleLevel(sampler_linear_wrap, UV_normalMap, 0).rgb;
-		normalMap = normalMap * 2 - 1;
-		N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
-	}
-
-	float4 surfaceMap = 1;
-	[branch]
-	if (material.texture_surfacemap_index >= 0)
-	{
-		const float2 UV_surfaceMap = material.uvset_surfaceMap == 0 ? uvsets.xy : uvsets.zw;
-		surfaceMap = bindless_textures[material.texture_surfacemap_index].SampleLevel(sampler_linear_wrap, UV_surfaceMap, 0);
-	}
 
 	Surface surface;
-	surface.create(material, baseColor, surfaceMap);
+
+	EvaluateObjectSurface(
+		mesh,
+		subset,
+		material,
+		PrimitiveIndex(),
+		attr.barycentrics,
+		ObjectToWorld3x4(),
+		surface
+	);
 
 	surface.pixel = DispatchRaysIndex().xy;
 	surface.screenUV = surface.pixel / (float2)DispatchRaysDimensions().xy;
 
-	[branch]
-	if (material.IsOcclusionEnabled_Secondary() && material.texture_occlusionmap_index >= 0)
-	{
-		const float2 UV_occlusionMap = material.uvset_occlusionMap == 0 ? uvsets.xy : uvsets.zw;
-		surface.occlusion *= bindless_textures[material.texture_occlusionmap_index].SampleLevel(sampler_linear_wrap, UV_occlusionMap, 0).r;
-	}
-
-	surface.emissiveColor = material.emissiveColor;
-	[branch]
-	if (material.texture_emissivemap_index >= 0)
-	{
-		const float2 UV_emissiveMap = material.uvset_emissiveMap == 0 ? uvsets.xy : uvsets.zw;
-		float4 emissiveMap = bindless_textures[material.texture_emissivemap_index].SampleLevel(sampler_linear_wrap, UV_emissiveMap, 0);
-		emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
-		surface.emissiveColor *= emissiveMap;
-	}
-
-
 	// Light sampling:
 	surface.P = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
 	surface.V = -WorldRayDirection();
-	surface.N = N;
 	surface.update();
 
 	Lighting lighting;
@@ -282,44 +166,21 @@ void RTReflection_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectio
 	ShaderMesh mesh = bindless_buffers[InstanceID()].Load<ShaderMesh>(0);
 	ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][GeometryIndex()];
 	ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
-	[branch]
-	if (material.texture_basecolormap_index < 0)
-	{
-		AcceptHitAndEndSearch();
-		return;
-	}
-	uint startIndex = PrimitiveIndex() * 3 + subset.indexOffset;
-	uint i0 = bindless_ib[mesh.ib][startIndex + 0];
-	uint i1 = bindless_ib[mesh.ib][startIndex + 1];
-	uint i2 = bindless_ib[mesh.ib][startIndex + 2];
-	float2 uv0 = 0, uv1 = 0, uv2 = 0;
-	[branch]
-	if (mesh.vb_uv0 >= 0 && material.uvset_baseColorMap == 0)
-	{
-		uv0 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i0 * 4));
-		uv1 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i1 * 4));
-		uv2 = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i2 * 4));
-	}
-	else if (mesh.vb_uv1 >= 0 && material.uvset_baseColorMap != 0)
-	{
-		uv0 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i0 * 4));
-		uv1 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i1 * 4));
-		uv2 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i2 * 4));
-	}
-	else
-	{
-		AcceptHitAndEndSearch();
-		return;
-	}
 
-	float u = attr.barycentrics.x;
-	float v = attr.barycentrics.y;
-	float w = 1 - u - v;
-	float2 uv = uv0 * w + uv1 * u + uv2 * v;
-	float alpha = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_linear_wrap, uv, 0).a;
+	Surface surface;
+
+	EvaluateObjectSurface(
+		mesh,
+		subset,
+		material,
+		PrimitiveIndex(),
+		attr.barycentrics,
+		ObjectToWorld3x4(),
+		surface
+	);
 
 	[branch]
-	if (alpha - material.alphaTest < 0)
+	if (surface.opacity < material.alphaTest)
 	{
 		IgnoreHit();
 	}

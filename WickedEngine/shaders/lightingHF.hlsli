@@ -7,7 +7,6 @@
 
 #ifdef BRDF_CARTOON
 #define DISABLE_SOFT_SHADOWMAP
-#define DISABLE_SOFT_RTSHADOW
 #endif // BRDF_CARTOON
 
 struct LightingPart
@@ -124,52 +123,6 @@ inline float3 shadowCube(in ShaderEntity light, in float3 L, in float3 Lunnormal
 	return shadow;
 }
 
-inline float shadowTrace(in Surface surface, in float3 L, in float dist)
-{
-#ifdef RAYTRACING_INLINE
-	RayQuery<
-		RAY_FLAG_FORCE_OPAQUE | 
-		RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
-		RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH
-	> q;
-
-	float seed = g_xFrame_Time;
-	float2 uv = surface.screenUV;
-
-	RayDesc ray;
-	ray.TMin = 0.001;
-	ray.TMax = dist;
-	ray.Origin = surface.P + surface.N * 0.01;
-
-	float shadow = 0;
-	uint sampleCount = 1;
-
-#ifndef DISABLE_SOFT_RTSHADOW
-	sampleCount = g_xFrame_RaytracedShadowsSampleCount;
-	for (uint i = 0; i < sampleCount; ++i)
-	{
-		float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1; // todo: should be specific to light surface
-		ray.Direction = normalize(L + sampling_offset * 0.025);
-#else
-	{
-		ray.Direction = L;
-#endif // DISABLE_SOFT_RTSHADOW
-
-		q.TraceRayInline(scene_acceleration_structure, 0, 0xFF, ray);
-		q.Proceed();
-
-		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
-		{
-			shadow += 1;
-		}
-	}
-
-	return shadow / sampleCount;
-#endif // RAYTRACING_INLINE
-
-	return 1;
-}
-
 
 inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
@@ -186,14 +139,12 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 		[branch]
 		if (light.IsCastingShadow() && surface.IsReceiveShadow())
 		{
+#ifndef RTAPI
 			[branch]
-			if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
+			if ((g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS) == 0)
+#endif // RTAPI
 			{
-				shadow *= shadowTrace(surface, normalize(L), FLT_MAX);
-			}
-			else
-			{
-				// Loop through cascades from closest (smallest) to furthest (biggest)
+				// Loop through cascades from closest (smallest) to furthest (largest)
 				[loop]
 				for (uint cascade = 0; cascade < g_xFrame_ShadowCascadeCount; ++cascade)
 				{
@@ -263,7 +214,6 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 	}
 
 #ifdef SHADOW_MASK_ENABLED
-#ifndef RAYTRACING_INLINE
 	[branch]
 	if (light.IsCastingShadow())
 	{
@@ -275,7 +225,6 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 		//	Read more about this in rtshadowLIB.hlsl file (**)
 		lighting.shadow_index++;
 	}
-#endif // RAYTRACING_INLINE
 #endif // SHADOW_MASK_ENABLED
 }
 inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
@@ -302,12 +251,10 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 			[branch]
 			if (light.IsCastingShadow() && surface.IsReceiveShadow())
 			{
+#ifndef RTAPI
 				[branch]
-				if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
-				{
-					shadow *= shadowTrace(surface, L, dist);
-				}
-				else
+				if ((g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS) == 0)
+#endif // RTAPI
 				{
 					shadow *= shadowCube(light, L, Lunnormalized);
 				}
@@ -343,7 +290,6 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 	}
 
 #ifdef SHADOW_MASK_ENABLED
-#ifndef RAYTRACING_INLINE
 	[branch]
 	if (light.IsCastingShadow())
 	{
@@ -355,7 +301,6 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 		//	Read more about this in rtshadowLIB.hlsl file (**)
 		lighting.shadow_index++;
 	}
-#endif // RAYTRACING_INLINE
 #endif // SHADOW_MASK_ENABLED
 }
 inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
@@ -387,12 +332,10 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 				[branch]
 				if (light.IsCastingShadow() && surface.IsReceiveShadow())
 				{
+#ifndef RTAPI
 					[branch]
-					if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
-					{
-						shadow *= shadowTrace(surface, L, dist);
-					}
-					else
+					if ((g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS) == 0)
+#endif // RTAPI
 					{
 						float4 ShPos = mul(MatrixArray[light.GetMatrixIndex() + 0], float4(surface.P, 1));
 						ShPos.xyz /= ShPos.w;
@@ -437,7 +380,6 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 	}
 
 #ifdef SHADOW_MASK_ENABLED
-#ifndef RAYTRACING_INLINE
 	[branch]
 	if (light.IsCastingShadow())
 	{
@@ -449,453 +391,8 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 		//	Read more about this in rtshadowLIB.hlsl file (**)
 		lighting.shadow_index++;
 	}
-#endif // RAYTRACING_INLINE
 #endif // SHADOW_MASK_ENABLED
 }
-
-
-
-#if 0 // Currently area lights are disabled
-// AREA LIGHTS
-
-// Based on the Frostbite presentation: 
-//		Moving Frostbite to Physically Based Rendering by Sebastien Lagarde, Charles de Rousiers, Siggraph 2014
-//		http://www.frostbite.com/wp-content/uploads/2014/11/course_notes_moving_frostbite_to_pbr.pdf
-//
-// Representative point technique for speculars based on Brian Karis's Siggraph presentation:
-//		http://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
-//
-// This is not completely physically correct rendering, but nice enough for now.
-
-float cot(float x) { return cos(x) / sin(x); }
-float acot(float x) { return atan(1 / x); }
-
-float RightPyramidSolidAngle(float dist, float halfWidth, float halfHeight)
-{
-	float a = halfWidth;
-	float b = halfHeight;
-	float h = dist;
-
-	return 4 * asin(a * b / sqrt((a * a + h * h) * (b * b + h * h)));
-}
-float RectangleSolidAngle(
-	float3 worldPos,
-	float3 p0, float3 p1,
-	float3 p2, float3 p3)
-{
-	float3 v0 = p0 - worldPos;
-	float3 v1 = p1 - worldPos;
-	float3 v2 = p2 - worldPos;
-	float3 v3 = p3 - worldPos;
-
-	float3 n0 = normalize(cross(v0, v1));
-	float3 n1 = normalize(cross(v1, v2));
-	float3 n2 = normalize(cross(v2, v3));
-	float3 n3 = normalize(cross(v3, v0));
-
-
-	float g0 = acos(dot(-n0, n1));
-	float g1 = acos(dot(-n1, n2));
-	float g2 = acos(dot(-n2, n3));
-	float g3 = acos(dot(-n3, n0));
-
-	return g0 + g1 + g2 + g3 - 2 * PI;
-}
-
-
-inline float3 getDiffuseDominantDir(float3 N, float3 V, float NdotV, float roughness)
-{
-	float a = 1.02341f * roughness - 1.51174f;
-	float b = -0.511705f * roughness + 0.755868f;
-	float lerpFactor = saturate((NdotV * a + b) * roughness);
-
-	return normalize(lerp(N, V, lerpFactor));
-}
-inline float3 getSpecularDominantDirArea(float3 N, float3 R, float roughness)
-{
-	// Simple linear approximation 
-	float lerpFactor = (1 - roughness);
-
-	return normalize(lerp(N, R, lerpFactor));
-}
-
-float illuminanceSphereOrDisk(float cosTheta, float sinSigmaSqr)
-{
-	float sinTheta = sqrt(1.0f - cosTheta * cosTheta);
-
-	float illuminance = 0.0f;
-	// Note: Following test is equivalent to the original formula. 
-	// There is 3 phase in the curve: cosTheta > sqrt(sinSigmaSqr), 
-	// cosTheta > -sqrt(sinSigmaSqr) and else it is 0 
-	// The two outer case can be merge into a cosTheta * cosTheta > sinSigmaSqr 
-	// and using saturate(cosTheta) instead. 
-	if (cosTheta * cosTheta > sinSigmaSqr)
-	{
-		illuminance = PI * sinSigmaSqr * saturate(cosTheta);
-	}
-	else
-	{
-		float x = sqrt(1.0f / sinSigmaSqr - 1.0f); // For a disk this simplify to x = d / r 
-		float y = -x * (cosTheta / sinTheta);
-		float sinThetaSqrtY = sinTheta * sqrt(1.0f - y * y);
-		illuminance = (cosTheta * acos(y) - x * sinThetaSqrtY) * sinSigmaSqr + atan(sinThetaSqrtY / x);
-	}
-
-	return max(illuminance, 0.0f);
-}
-
-inline void SphereLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
-{
-#ifndef DISABLE_AREALIGHT
-	float3 Lunnormalized = light.positionWS - surface.P;
-	float dist = length(Lunnormalized);
-	float3 L = Lunnormalized / dist;
-	float fLight = 1;
-
-	[branch]
-	if (light.IsCastingShadow()) 
-	{
-		[branch]
-		if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
-		{
-			fLight = shadowTrace(surface, L, dist);
-		}
-		else
-		{
-			fLight = shadowCube(light, L, Lunnormalized);
-		}
-	}
-
-	[branch]
-	if (fLight > 0)
-	{
-		float sqrDist = dot(Lunnormalized, Lunnormalized);
-
-		float cosTheta = clamp(dot(surface.N, L), -0.999, 0.999); // Clamp to avoid edge case 
-																// We need to prevent the object penetrating into the surface 
-																// and we must avoid divide by 0, thus the 0.9999f 
-		float sqrLightRadius = light.GetRadius() * light.GetRadius();
-		float sinSigmaSqr = min(sqrLightRadius / sqrDist, 0.9999);
-		fLight *= illuminanceSphereOrDisk(cosTheta, sinSigmaSqr);
-
-		[branch]
-		if (fLight > 0)
-		{
-			// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
-			{
-				float3 r = surface.R;
-				r = getSpecularDominantDirArea(surface.N, r, surface.roughness);
-
-				float3 centerToRay = dot(Lunnormalized, r) * r - Lunnormalized;
-				float3 closestPoint = Lunnormalized + centerToRay * saturate(light.GetRadius() / length(centerToRay));
-				L = normalize(closestPoint);
-			}
-
-			float3 lightColor = light.GetColor().rgb * light.GetEnergy() * fLight;
-
-
-			SurfaceToLight surfaceToLight;
-			surfaceToLight.Create(surface, L);
-
-			lighting.direct.specular += max(0, lightColor * BRDF_GetSpecular(surface, surfaceToLight));
-			lighting.direct.diffuse += max(0, lightColor / PI);
-		}
-	}
-#endif // DISABLE_AREALIGHT
-}
-inline void DiscLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
-{
-#ifndef DISABLE_AREALIGHT
-	float3 Lunnormalized = light.positionWS - surface.P;
-	float dist = length(Lunnormalized);
-	float3 L = Lunnormalized / dist;
-	float fLight = 1;
-
-	[branch]
-	if (light.IsCastingShadow())
-	{
-		[branch]
-		if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
-		{
-			fLight = shadowTrace(surface, L, dist);
-		}
-		else
-		{
-			fLight = shadowCube(light, L, Lunnormalized);
-		}
-	}
-
-	[branch]
-	if (fLight > 0)
-	{
-		float sqrDist = dot(Lunnormalized, Lunnormalized);
-
-		float3 lightPlaneNormal = light.GetFront();
-
-		float cosTheta = clamp(dot(surface.N, L), -0.999, 0.999);
-		float sqrLightRadius = light.GetRadius() * light.GetRadius();
-		// Do not let the surface penetrate the light 
-		float sinSigmaSqr = sqrLightRadius / (sqrLightRadius + max(sqrLightRadius, sqrDist));
-		// Multiply by saturate(dot(planeNormal , -L)) to better match ground truth. 
-		fLight *= illuminanceSphereOrDisk(cosTheta, sinSigmaSqr) * saturate(dot(lightPlaneNormal, -L));
-
-		[branch]
-		if (fLight > 0)
-		{
-			float3 r = surface.R;
-			r = getSpecularDominantDirArea(surface.N, r, surface.roughness);
-			float specularAttenuation = saturate(abs(dot(lightPlaneNormal, r))); // if ray is perpendicular to light plane, it would break specular, so fade in that case
-
-			// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
-			[branch]
-			if(specularAttenuation > 0)
-			{
-				float t = Trace_plane(surface.P, r, light.positionWS, lightPlaneNormal);
-				float3 p = surface.P + r * t;
-				float3 centerToRay = p - light.positionWS;
-				float3 closestPoint = Lunnormalized + centerToRay * saturate(light.GetRadius() / length(centerToRay));
-				L = normalize(closestPoint);
-			}
-
-			float3 lightColor = light.GetColor().rgb * light.GetEnergy() * fLight;
-
-			SurfaceToLight surfaceToLight;
-			surfaceToLight.Create(surface, L);
-
-			lighting.direct.specular += max(0, specularAttenuation * lightColor * BRDF_GetSpecular(surface, surfaceToLight));
-			lighting.direct.diffuse += max(0, lightColor / PI);
-		}
-	}
-#endif // DISABLE_AREALIGHT
-}
-inline void RectangleLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
-{
-#ifndef DISABLE_AREALIGHT
-	float3 L = light.positionWS - surface.P;
-	const float3 Lunnormalized = L;
-	float dist = length(L);
-	L /= dist;
-	float fLight = 1;
-
-	[branch]
-	if (light.IsCastingShadow())
-	{
-		[branch]
-		if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
-		{
-			fLight = shadowTrace(surface, L, dist);
-		}
-		else
-		{
-			fLight = shadowCube(light, L, Lunnormalized);
-		}
-	}
-
-	[branch]
-	if (fLight > 0)
-	{
-		float3 lightPlaneNormal = light.GetFront();
-		float3 lightLeft = light.GetRight();
-		float3 lightUp = light.GetUp();
-		float lightWidth = light.GetWidth();
-		float lightHeight = light.GetHeight();
-		float3 worldPos = surface.P;
-		float3 worldNormal = surface.N;
-
-
-		float halfWidth = lightWidth * 0.5;
-		float halfHeight = lightHeight * 0.5;
-		float3 p0 = light.positionWS + lightLeft * -halfWidth + lightUp * halfHeight;
-		float3 p1 = light.positionWS + lightLeft * -halfWidth + lightUp * -halfHeight;
-
-		float3 p2 = light.positionWS + lightLeft * halfWidth + lightUp * -halfHeight;
-		float3 p3 = light.positionWS + lightLeft * halfWidth + lightUp * halfHeight;
-		float solidAngle = RectangleSolidAngle(worldPos, p0, p1, p2, p3);
-
-		if (dot(worldPos - light.positionWS, lightPlaneNormal) > 0)
-		{
-			fLight *= solidAngle * 0.2 * (
-				saturate(dot(normalize(p0 - worldPos), worldNormal)) +
-				saturate(dot(normalize(p1 - worldPos), worldNormal)) +
-				saturate(dot(normalize(p2 - worldPos), worldNormal)) +
-				saturate(dot(normalize(p3 - worldPos), worldNormal)) +
-				saturate(dot(normalize(light.positionWS - worldPos), worldNormal)));
-		}
-		else
-		{
-			fLight = 0;
-		}
-
-		[branch]
-		if (fLight > 0)
-		{
-			float3 r = surface.R;
-			r = getSpecularDominantDirArea(surface.N, r, surface.roughness);
-			float specularAttenuation = saturate(abs(dot(lightPlaneNormal, r))); // if ray is perpendicular to light plane, it would break specular, so fade in that case
-
-			// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
-			[branch]
-			if(specularAttenuation > 0)
-			{
-				float traced = Trace_rectangle(surface.P, r, p0, p1, p2, p3);
-
-				[branch]
-				if (traced > 0)
-				{
-					// Trace succeeded so the light vector L is the reflection vector itself
-					L = r;
-				}
-				else
-				{
-					// The trace didn't succeed, so we need to find the closest point to the ray on the rectangle
-
-					// We find the intersection point on the plane of the rectangle
-					float3 tracedPlane = surface.P + r * Trace_plane(surface.P, r, light.positionWS, lightPlaneNormal);
-
-					// Then find the closest point along the edges of the rectangle (edge = segment)
-					float3 PC[4] = {
-						ClosestPointOnSegment(p0, p1, tracedPlane),
-						ClosestPointOnSegment(p1, p2, tracedPlane),
-						ClosestPointOnSegment(p2, p3, tracedPlane),
-						ClosestPointOnSegment(p3, p0, tracedPlane),
-					};
-					float dist[4] = {
-						distance(PC[0], tracedPlane),
-						distance(PC[1], tracedPlane),
-						distance(PC[2], tracedPlane),
-						distance(PC[3], tracedPlane),
-					};
-
-					float3 min = PC[0];
-					float minDist = dist[0];
-					[unroll]
-					for (uint iLoop = 1; iLoop < 4; iLoop++)
-					{
-						if (dist[iLoop] < minDist)
-						{
-							minDist = dist[iLoop];
-							min = PC[iLoop];
-						}
-					}
-
-					L = min - surface.P;
-				}
-				L = normalize(L); // TODO: Is it necessary?
-			}
-
-			float3 lightColor = light.GetColor().rgb * light.GetEnergy() * fLight;
-
-			SurfaceToLight surfaceToLight;
-			surfaceToLight.Create(surface, L);
-
-			lighting.direct.specular += max(0, specularAttenuation * lightColor * BRDF_GetSpecular(surface, surfaceToLight));
-			lighting.direct.diffuse += max(0, lightColor / PI);
-		}
-	}
-#endif // DISABLE_AREALIGHT
-}
-inline void TubeLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
-{
-#ifndef DISABLE_AREALIGHT
-	float3 Lunnormalized = light.positionWS - surface.P;
-	float dist = length(Lunnormalized);
-	float3 L = Lunnormalized / dist;
-	float fLight = 1;
-
-	[branch]
-	if (light.IsCastingShadow())
-	{
-		[branch]
-		if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
-		{
-			fLight = shadowTrace(surface, L, dist);
-		}
-		else
-		{
-			fLight = shadowCube(light, L, Lunnormalized);
-		}
-	}
-
-	[branch]
-	if (fLight > 0)
-	{
-		float sqrDist = dot(Lunnormalized, Lunnormalized);
-
-		float3 lightLeft = light.GetRight();
-		float lightWidth = light.GetWidth();
-		float3 worldPos = surface.P;
-		float3 worldNormal = surface.N;
-
-
-		float3 P0 = light.positionWS - lightLeft * lightWidth * 0.5;
-		float3 P1 = light.positionWS + lightLeft * lightWidth * 0.5;
-
-		// The sphere is placed at the nearest point on the segment. 
-		// The rectangular plane is define by the following orthonormal frame: 
-		float3 forward = normalize(ClosestPointOnLine(P0, P1, worldPos) - worldPos);
-		float3 left = lightLeft;
-		float3 up = cross(lightLeft, forward);
-
-		float3 p0 = light.positionWS - left * (0.5 * lightWidth) + light.GetRadius() * up;
-		float3 p1 = light.positionWS - left * (0.5 * lightWidth) - light.GetRadius() * up;
-		float3 p2 = light.positionWS + left * (0.5 * lightWidth) - light.GetRadius() * up;
-		float3 p3 = light.positionWS + left * (0.5 * lightWidth) + light.GetRadius() * up;
-
-
-		float solidAngle = RectangleSolidAngle(worldPos, p0, p1, p2, p3);
-
-		fLight *= solidAngle * 0.2 * (
-			saturate(dot(normalize(p0 - worldPos), worldNormal)) +
-			saturate(dot(normalize(p1 - worldPos), worldNormal)) +
-			saturate(dot(normalize(p2 - worldPos), worldNormal)) +
-			saturate(dot(normalize(p3 - worldPos), worldNormal)) +
-			saturate(dot(normalize(light.positionWS - worldPos), worldNormal)));
-
-		// We then add the contribution of the sphere 
-		float3 spherePosition = ClosestPointOnSegment(P0, P1, worldPos);
-		float3 sphereUnormL = spherePosition - worldPos;
-		float3 sphereL = normalize(sphereUnormL);
-		float sqrSphereDistance = dot(sphereUnormL, sphereUnormL);
-
-		float fLightSphere = PI * saturate(dot(sphereL, worldNormal)) * ((light.GetRadius() * light.GetRadius()) / sqrSphereDistance);
-		fLight += fLightSphere;
-
-		[branch]
-		if (fLight > 0)
-		{
-			// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
-			{
-				float3 r = surface.R;
-				r = getSpecularDominantDirArea(surface.N, r, surface.roughness);
-
-				// First, the closest point to the ray on the segment
-				float3 L0 = P0 - surface.P;
-				float3 L1 = P1 - surface.P;
-				float3 Ld = L1 - L0;
-
-				float t = dot(r, L0) * dot(r, Ld) - dot(L0, Ld);
-				t /= dot(Ld, Ld) - sqr(dot(r, Ld));
-
-				L = (L0 + saturate(t) * Ld);
-
-				// Then I place a sphere on that point and calculate the light vector like for sphere light.
-				float3 centerToRay = dot(L, r) * r - L;
-				float3 closestPoint = L + centerToRay * saturate(light.GetRadius() / length(centerToRay));
-				L = normalize(closestPoint);
-			}
-
-			float3 lightColor = light.GetColor().rgb * light.GetEnergy() * fLight;
-
-			SurfaceToLight surfaceToLight;
-			surfaceToLight.Create(surface, L);
-
-			lighting.direct.specular += max(0, lightColor * BRDF_GetSpecular(surface, surfaceToLight));
-			lighting.direct.diffuse += max(0, lightColor / PI);
-		}
-	}
-#endif // DISABLE_AREALIGHT
-}
-#endif // AREA LIGHTS
 
 
 // VOXEL RADIANCE

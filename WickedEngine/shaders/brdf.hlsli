@@ -135,8 +135,10 @@ struct Surface
 	float3 f0;				// fresnel value (rgb) (reflectance at incidence angle, also known as specular color)
 	float roughness;		// roughness: [0:smooth -> 1:rough] (perceptual)
 	float occlusion;		// occlusion [0 -> 1]
+	float opacity;			// opacity for blending operation [0 -> 1]
 	float4 emissiveColor;	// light emission [0 -> 1]
 	float4 refraction;		// refraction color (rgb), refraction amount (a)
+	float transmission;		// transmission factor
 	float2 pixel;			// pixel coordinate (used for randomization effects)
 	float2 screenUV;		// pixel coordinate in UV space [0 -> 1] (used for randomization effects)
 	float3 T;				// tangent
@@ -146,6 +148,7 @@ struct Surface
 	float4 sss_inv;			// 1 / (1 + sss)
 	uint layerMask;			// the engine-side layer mask
 	bool receiveshadow;
+	float3 facenormal;		// surface normal without normal map
 
 	// These will be computed when calling Update():
 	float roughnessBRDF;	// roughness input for BRDF functions
@@ -167,8 +170,10 @@ struct Surface
 		f0 = 0;
 		roughness = 1;
 		occlusion = 1;
+		opacity = 1;
 		emissiveColor = 0;
 		refraction = 0;
+		transmission = 0;
 		pixel = 0;
 		screenUV = 0;
 		T = 0;
@@ -178,6 +183,7 @@ struct Surface
 		sss_inv = 1;
 		layerMask = ~0;
 		receiveshadow = true;
+		facenormal = 0;
 
 		sheen.color = 0;
 		sheen.roughness = 0;
@@ -195,6 +201,7 @@ struct Surface
 	{
 		init();
 
+		opacity = baseColor.a;
 		roughness = material.roughness;
 		f0 = material.specularColor.rgb * material.specularColor.a;
 
