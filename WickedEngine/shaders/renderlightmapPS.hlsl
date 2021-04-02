@@ -19,15 +19,19 @@ float4 main(Input input) : SV_TARGET
 
 	float2 uv = input.uv;
 	float seed = xTraceRandomSeed;
-	float3 direction = SampleHemisphere_cos(surface.N, seed, uv);
-	Ray ray = CreateRay(trace_bias_position(input.pos3D, surface.N), direction);
+	RayDesc ray;
+	ray.Origin = trace_bias_position(input.pos3D, surface.N);
+	ray.Direction = SampleHemisphere_cos(surface.N, seed, uv);
+	ray.TMin = 0.001;
+	ray.TMax = FLT_MAX;
 	float3 result = 0;
+	float3 energy = 1;
 
 	uint bounces = xTraceUserData.x;
 	const uint bouncelimit = 16;
-	for (uint bounce = 0; ((bounce < min(bounces, bouncelimit)) && any(ray.energy)); ++bounce)
+	for (uint bounce = 0; ((bounce < min(bounces, bouncelimit)) && any(energy)); ++bounce)
 	{
-		surface.P = ray.origin;
+		surface.P = ray.Origin;
 
 		[loop]
 		for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
@@ -141,21 +145,16 @@ float4 main(Input input) : SV_TARGET
 
 			if (NdotL > 0 && dist > 0)
 			{
-				float3 shadow = NdotL * ray.energy;
+				float3 shadow = NdotL * energy;
 
 				float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1;
 
-				Ray newRay;
-				newRay.origin = trace_bias_position(surface.P, surface.N);
-				newRay.direction = L + sampling_offset * 0.025f;
-				newRay.energy = 0;
-				newRay.Update();
+				RayDesc newRay;
+				newRay.Origin = trace_bias_position(surface.P, surface.N);
+				newRay.Direction = normalize(L + sampling_offset * 0.025f);
+				newRay.TMin = 0.001;
+				newRay.TMax = dist;
 #ifdef RTAPI
-				RayDesc apiray;
-				apiray.TMin = 0.001;
-				apiray.TMax = dist;
-				apiray.Origin = newRay.origin;
-				apiray.Direction = newRay.direction;
 				RayQuery<
 					RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
 				> q;
@@ -163,7 +162,7 @@ float4 main(Input input) : SV_TARGET
 					scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
 					0,								// uint RayFlags
 					0xFF,							// uint InstanceInclusionMask
-					apiray							// RayDesc Ray
+					newRay							// RayDesc Ray
 				);
 				while (q.Proceed())
 				{
@@ -197,7 +196,7 @@ float4 main(Input input) : SV_TARGET
 				}
 				shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
 #else
-				shadow = TraceRay_Any(newRay, dist) ? 0 : shadow;
+				shadow = TraceRay_Any(newRay) ? 0 : shadow;
 #endif // RTAPI
 				if (any(shadow))
 				{
@@ -207,20 +206,24 @@ float4 main(Input input) : SV_TARGET
 		}
 
 		// Sample primary ray (scene materials, sky, etc):
+		ray.Direction = normalize(ray.Direction);
 
 #ifdef RTAPI
-		RayDesc apiray;
-		apiray.TMin = 0.001;
-		apiray.TMax = FLT_MAX;
-		apiray.Origin = ray.origin;
-		apiray.Direction = ray.direction;
 		RayQuery<
-			RAY_FLAG_FORCE_OPAQUE |
 			RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
 		> q;
-		q.TraceRayInline(scene_acceleration_structure, 0, 0xFF, apiray);
+		q.TraceRayInline(
+			scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
+#ifdef RAY_BACKFACE_CULLING
+			RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
+#endif // RAY_BACKFACE_CULLING
+			RAY_FLAG_FORCE_OPAQUE |
+			0,								// uint RayFlags
+			0xFF,							// uint InstanceInclusionMask
+			ray								// RayDesc Ray
+		);
 		q.Proceed();
-		if(q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
+		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 #else
 		RayHit hit = TraceRay_Closest(ray);
 
@@ -233,25 +236,24 @@ float4 main(Input input) : SV_TARGET
 			if (IsStaticSky())
 			{
 				// We have envmap information in a texture:
-				envColor = DEGAMMA_SKY(texture_globalenvmap.SampleLevel(sampler_linear_clamp, ray.direction, 0).rgb);
+				envColor = DEGAMMA_SKY(texture_globalenvmap.SampleLevel(sampler_linear_clamp, ray.Direction, 0).rgb);
 			}
 			else
 			{
-				envColor = GetDynamicSkyColor(ray.direction, true, true, false, true);
+				envColor = GetDynamicSkyColor(ray.Direction, true, true, false, true);
 			}
-			result += max(0, ray.energy * envColor);
+			result += max(0, energy * envColor);
 
 			// Erase the ray's energy
-			ray.energy = 0;
+			energy = 0;
 			break;
 		}
 
 		ShaderMaterial material;
 
 #ifdef RTAPI
-
 		// ray origin updated for next bounce:
-		ray.origin = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
+		ray.Origin = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
 
 		ShaderMesh mesh = bindless_buffers[q.CommittedInstanceID()].Load<ShaderMesh>(0);
 		ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CommittedGeometryIndex()];
@@ -268,9 +270,8 @@ float4 main(Input input) : SV_TARGET
 		);
 
 #else
-
-		// Non-RTAPI path: sampling from texture atlas
-		ray.origin = hit.position;
+		// ray origin updated for next bounce:
+		ray.Origin = ray.Origin + ray.Direction * hit.distance;
 
 		EvaluateObjectSurface(
 			hit,
@@ -282,22 +283,20 @@ float4 main(Input input) : SV_TARGET
 
 		surface.update();
 
-		result += max(0, ray.energy * surface.emissiveColor.rgb * surface.emissiveColor.a);
-
 		// Calculate chances of reflection types:
-		const float refractChance = material.transmission;
+		const float refractChance = surface.transmission;
 
 		// Roulette-select the ray's path
 		float roulette = rand(seed, uv);
 		if (roulette < refractChance)
 		{
 			// Refraction
-			const float3 R = refract(ray.direction, surface.N, 1 - material.refraction);
-			ray.direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
-			ray.energy *= surface.albedo;
+			const float3 R = refract(ray.Direction, surface.N, 1 - material.refraction);
+			ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
+			energy *= surface.albedo;
 
 			// The ray penetrates the surface, so push DOWN along normal to avoid self-intersection:
-			ray.origin = trace_bias_position(ray.origin, -surface.N);
+			ray.Origin = trace_bias_position(ray.Origin, -surface.N);
 
 			// Add a new bounce iteration, otherwise the transparent effect can disappear:
 			bounces++;
@@ -305,29 +304,29 @@ float4 main(Input input) : SV_TARGET
 		else
 		{
 			// Calculate chances of reflection types:
-			const float3 F = F_Schlick(surface.f0, saturate(dot(-ray.direction, surface.N)));
+			const float3 F = F_Schlick(surface.f0, saturate(dot(-ray.Direction, surface.N)));
 			const float specChance = dot(F, 0.333f);
 
 			roulette = rand(seed, uv);
 			if (roulette < specChance)
 			{
 				// Specular reflection
-				const float3 R = reflect(ray.direction, surface.N);
-				ray.direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
-				ray.energy *= F / specChance;
+				const float3 R = reflect(ray.Direction, surface.N);
+				ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
+				energy *= F / specChance;
 			}
 			else
 			{
 				// Diffuse reflection
-				ray.direction = SampleHemisphere_cos(surface.N, seed, uv);
-				ray.energy *= surface.albedo / (1 - specChance);
+				ray.Direction = SampleHemisphere_cos(surface.N, seed, uv);
+				energy *= surface.albedo / (1 - specChance);
 			}
 
 			// Ray reflects from surface, so push UP along normal to avoid self-intersection:
-			ray.origin = trace_bias_position(ray.origin, surface.N);
+			ray.Origin = trace_bias_position(ray.Origin, surface.N);
 		}
 
-		ray.Update();
+		result += max(0, energy * surface.emissiveColor.rgb * surface.emissiveColor.a);
 	}
 
 	return float4(result, xTraceAccumulationFactor);

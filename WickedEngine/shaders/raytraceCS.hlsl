@@ -15,26 +15,22 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		return;
 	}
 	float3 result = 0;
+	float3 energy = 1;
 
 	// Compute screen coordinates:
-	float2 screenUV = float2((pixel + xTracePixelOffset) * xTraceResolution_rcp.xy * 2.0f - 1.0f) * float2(1, -1);
+	float2 uv = float2((pixel + xTracePixelOffset) * xTraceResolution_rcp.xy * 2 - 1) * float2(1, -1);
 	float seed = xTraceRandomSeed;
 
 	// Create starting ray:
-	Ray ray = CreateCameraRay(screenUV);
+	RayDesc ray = CreateCameraRay(uv);
 
 	uint bounces = xTraceUserData.x;
 	const uint bouncelimit = 16;
-	for (uint bounce = 0; ((bounce < min(bounces, bouncelimit)) && any(ray.energy)); ++bounce)
+	for (uint bounce = 0; ((bounce < min(bounces, bouncelimit)) && any(energy)); ++bounce)
 	{
-		ray.Update();
+		ray.Direction = normalize(ray.Direction);
 
 #ifdef RTAPI
-		RayDesc apiray;
-		apiray.TMin = 0.001;
-		apiray.TMax = FLT_MAX;
-		apiray.Origin = ray.origin;
-		apiray.Direction = ray.direction;
 		RayQuery<
 			RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
 		> q;
@@ -46,7 +42,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			RAY_FLAG_FORCE_OPAQUE |
 			0,								// uint RayFlags
 			0xFF,							// uint InstanceInclusionMask
-			apiray							// RayDesc Ray
+			ray								// RayDesc Ray
 		);
 		q.Proceed();
 		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
@@ -62,16 +58,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			if (IsStaticSky())
 			{
 				// We have envmap information in a texture:
-				envColor = DEGAMMA_SKY(texture_globalenvmap.SampleLevel(sampler_linear_clamp, ray.direction, 0).rgb);
+				envColor = DEGAMMA_SKY(texture_globalenvmap.SampleLevel(sampler_linear_clamp, ray.Direction, 0).rgb);
 			}
 			else
 			{
-				envColor = GetDynamicSkyColor(ray.direction);
+				envColor = GetDynamicSkyColor(ray.Direction);
 			}
-			result += max(0, ray.energy * envColor);
+			result += max(0, energy * envColor);
 
 			// Erase the ray's energy
-			ray.energy = 0.0f;
+			energy = 0.0f;
 			break;
 		}
 
@@ -80,7 +76,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 #ifdef RTAPI
 		// ray origin updated for next bounce:
-		ray.origin = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
+		ray.Origin = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
 
 		ShaderMesh mesh = bindless_buffers[q.CommittedInstanceID()].Load<ShaderMesh>(0);
 		ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CommittedGeometryIndex()];
@@ -98,7 +94,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 #else
 		// ray origin updated for next bounce:
-		ray.origin = hit.position;
+		ray.Origin = ray.Origin + ray.Direction * hit.distance;
 
 		EvaluateObjectSurface(
 			hit,
@@ -108,24 +104,24 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 #endif // RTAPI
 
-		surface.P = ray.origin;
+		surface.P = ray.Origin;
 		surface.V = normalize(g_xCamera_CamPos - surface.P);
 		surface.update();
 
-		float3 current_energy = ray.energy;
+		float3 current_energy = energy;
 		result += max(0, current_energy * surface.emissiveColor.rgb * surface.emissiveColor.a);
 
 
 		float roulette;
 
 		const float blendChance = 1 - surface.opacity;
-		roulette = rand(seed, screenUV);
+		roulette = rand(seed, uv);
 		if (roulette < blendChance)
 		{
 			// Alpha blending
 
 			// The ray penetrates the surface, so push DOWN along normal to avoid self-intersection:
-			ray.origin = trace_bias_position(ray.origin, -surface.N);
+			ray.Origin = trace_bias_position(ray.Origin, -surface.N);
 
 			// Add a new bounce iteration, otherwise the transparent effect can disappear:
 			bounces++;
@@ -135,54 +131,54 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		else
 		{
 			const float refractChance = surface.transmission;
-			roulette = rand(seed, screenUV);
+			roulette = rand(seed, uv);
 			if (roulette < refractChance)
 			{
 				// Refraction
-				const float3 R = refract(ray.direction, surface.N, 1 - material.refraction);
-				ray.direction = lerp(R, SampleHemisphere_cos(R, seed, screenUV), surface.roughnessBRDF);
-				ray.energy *= surface.albedo;
+				const float3 R = refract(ray.Direction, surface.N, 1 - material.refraction);
+				ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
+				energy *= surface.albedo;
 
 				// The ray penetrates the surface, so push DOWN along normal to avoid self-intersection:
-				ray.origin = trace_bias_position(ray.origin, -surface.N);
+				ray.Origin = trace_bias_position(ray.Origin, -surface.N);
 
 				// Add a new bounce iteration, otherwise the transparent effect can disappear:
 				bounces++;
 			}
 			else
 			{
-				const float3 F = F_Schlick(surface.f0, saturate(dot(-ray.direction, surface.N)));
+				const float3 F = F_Schlick(surface.f0, saturate(dot(-ray.Direction, surface.N)));
 				const float specChance = dot(F, 0.333);
 
-				roulette = rand(seed, screenUV);
+				roulette = rand(seed, uv);
 				if (roulette < specChance)
 				{
 					// Specular reflection
-					const float3 R = reflect(ray.direction, surface.N);
-					ray.direction = lerp(R, SampleHemisphere_cos(R, seed, screenUV), surface.roughnessBRDF);
-					ray.energy *= F / specChance;
+					const float3 R = reflect(ray.Direction, surface.N);
+					ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
+					energy *= F / specChance;
 				}
 				else
 				{
 					// Diffuse reflection
-					ray.direction = SampleHemisphere_cos(surface.N, seed, screenUV);
-					ray.energy *= surface.albedo / (1 - specChance);
+					ray.Direction = SampleHemisphere_cos(surface.N, seed, uv);
+					energy *= surface.albedo / (1 - specChance);
 				}
 
-				if (dot(ray.direction, surface.facenormal) <= 0)
+				if (dot(ray.Direction, surface.facenormal) <= 0)
 				{
 					// Don't allow normal map to bend over the face normal more than 90 degrees to avoid light leaks
 					//	In this case, we will not allow more bounces,
 					//	but the current light sampling is still fine to avoid abrupt cutoff
-					ray.energy = 0;
+					energy = 0;
 				}
 
 				// Ray reflects from surface, so push UP along normal to avoid self-intersection:
-				ray.origin = trace_bias_position(ray.origin, surface.N);
+				ray.Origin = trace_bias_position(ray.Origin, surface.N);
 			}
 		}
 
-		surface.P = ray.origin;
+		surface.P = ray.Origin;
 
 		float3 lightColor = 0;
 		SurfaceToLight surfaceToLight = (SurfaceToLight)0;
@@ -291,24 +287,19 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			{
 				float3 shadow = surfaceToLight.NdotL * current_energy;
 
-				float3 sampling_offset = float3(rand(seed, screenUV), rand(seed, screenUV), rand(seed, screenUV)) * 2 - 1; // todo: should be specific to light surface
+				float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1; // todo: should be specific to light surface
 
-				Ray newRay;
-				newRay.origin = surface.P;
-				newRay.direction = L + sampling_offset * 0.025;
-				newRay.energy = 0;
-				newRay.Update();
+				RayDesc newRay;
+				newRay.Origin = surface.P;
+				newRay.Direction = normalize(L + sampling_offset * 0.025);
+				newRay.TMin = 0.001;
+				newRay.TMax = dist;
 #ifdef RTAPI
-				RayDesc apiray;
-				apiray.TMin = 0.001;
-				apiray.TMax = dist;
-				apiray.Origin = newRay.origin;
-				apiray.Direction = newRay.direction;
 				q.TraceRayInline(
 					scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
 					0,								// uint RayFlags
 					0xFF,							// uint InstanceInclusionMask
-					apiray							// RayDesc Ray
+					newRay							// RayDesc Ray
 				);
 				while (q.Proceed())
 				{
@@ -342,7 +333,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				}
 				shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
 #else
-				shadow = TraceRay_Any(newRay, dist, groupIndex) ? 0 : shadow;
+				shadow = TraceRay_Any(newRay, groupIndex) ? 0 : shadow;
 #endif // RTAPI
 				if (any(shadow))
 				{

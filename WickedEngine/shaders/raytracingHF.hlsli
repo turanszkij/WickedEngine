@@ -13,38 +13,28 @@ inline float3 trace_bias_position(in float3 P, in float3 N)
 	return P + N * 0.0001;
 }
 
-struct Ray
+#ifdef HLSL5
+struct RayDesc
 {
-	float3 origin;
-	float3 direction;
-	float3 direction_rcp;
-	float3 energy;
-
-	inline void Update()
-	{
-		direction_rcp = rcp(direction);
-	}
+	float3 Origin;
+	float TMin;
+	float3 Direction;
+	float TMax;
 };
+#endif // HLSL5
 
-inline Ray CreateRay(float3 origin, float3 direction)
-{
-	Ray ray;
-	ray.origin = origin;
-	ray.direction = normalize(direction);
-	ray.energy = float3(1, 1, 1);
-	ray.Update();
-	return ray;
-}
-
-inline Ray CreateCameraRay(float2 clipspace)
+inline RayDesc CreateCameraRay(float2 clipspace)
 {
 	float4 unprojected = mul(g_xCamera_InvVP, float4(clipspace, 0, 1));
 	unprojected.xyz /= unprojected.w;
 
-	const float3 origin = g_xCamera_CamPos;
-	const float3 direction = normalize(unprojected.xyz - origin);
+	RayDesc ray;
+	ray.Origin = g_xCamera_CamPos;
+	ray.Direction = normalize(unprojected.xyz - ray.Origin);
+	ray.TMin = 0.001;
+	ray.TMax = FLT_MAX;
 
-	return CreateRay(origin, direction);
+	return ray;
 }
 
 #ifdef RTAPI
@@ -211,19 +201,17 @@ STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND5);
 
 struct RayHit
 {
-	float distance;
-	float3 position;
-	uint primitiveID;
 	float2 bary;
+	float distance;
+	uint primitiveID;
 };
 
 inline RayHit CreateRayHit()
 {
 	RayHit hit;
-	hit.distance = FLT_MAX;
-	hit.position = 0;
-	hit.primitiveID = 0xFFFFFFFF;
 	hit.bary = 0;
+	hit.distance = FLT_MAX;
+	hit.primitiveID = ~0u;
 	return hit;
 }
 
@@ -330,7 +318,7 @@ void EvaluateObjectSurface(
 }
 
 inline void IntersectTriangle(
-	in Ray ray,
+	in RayDesc ray,
 	inout RayHit bestHit,
 	in BVHPrimitive prim,
 	uint primitiveID
@@ -338,7 +326,7 @@ inline void IntersectTriangle(
 {
 	float3 v0v1 = prim.v1() - prim.v0();
 	float3 v0v2 = prim.v2() - prim.v0();
-	float3 pvec = cross(ray.direction, v0v2);
+	float3 pvec = cross(ray.Direction, v0v2);
 	float det = dot(v0v1, pvec);
 #ifdef RAY_BACKFACE_CULLING 
 	// if the determinant is negative the triangle is backfacing
@@ -352,60 +340,57 @@ inline void IntersectTriangle(
 #endif 
 	float invDet = 1 / det;
 
-	float3 tvec = ray.origin - prim.v0();
+	float3 tvec = ray.Origin - prim.v0();
 	float u = dot(tvec, pvec) * invDet;
 	if (u < 0 || u > 1)
 		return;
 
 	float3 qvec = cross(tvec, v0v1);
-	float v = dot(ray.direction, qvec) * invDet;
+	float v = dot(ray.Direction, qvec) * invDet;
 	if (v < 0 || u + v > 1)
 		return;
 
 	float t = dot(v0v2, qvec) * invDet;
 
-	if (t > 0 && t < bestHit.distance)
+	if (t >= ray.TMin && t <= bestHit.distance)
 	{
 		bestHit.distance = t;
-		bestHit.position = ray.origin + t * ray.direction;
 		bestHit.primitiveID = primitiveID;
 		bestHit.bary = float2(u, v);
 	}
 }
 
 inline bool IntersectTriangleANY(
-	in Ray ray,
-	in float maxDistance,
+	in RayDesc ray,
 	in BVHPrimitive prim,
 	uint primitiveID
 )
 {
 	float3 v0v1 = prim.v1() - prim.v0();
 	float3 v0v2 = prim.v2() - prim.v0();
-	float3 pvec = cross(ray.direction, v0v2);
+	float3 pvec = cross(ray.Direction, v0v2);
 	float det = dot(v0v1, pvec);
 	// ray and triangle are parallel if det is close to 0
 	if (abs(det) < 0.000001)
 		return false;
 	float invDet = 1 / det;
 
-	float3 tvec = ray.origin - prim.v0();
+	float3 tvec = ray.Origin - prim.v0();
 	float u = dot(tvec, pvec) * invDet;
 	if (u < 0 || u > 1)
 		return false;
 
 	float3 qvec = cross(tvec, v0v1);
-	float v = dot(ray.direction, qvec) * invDet;
+	float v = dot(ray.Direction, qvec) * invDet;
 	if (v < 0 || u + v > 1)
 		return false;
 
 	float t = dot(v0v2, qvec) * invDet;
 
-	if (t > 0 && t < maxDistance)
+	if (t >= ray.TMin && t <= ray.TMax)
 	{
 		RayHit hit;
 		hit.distance = t;
-		hit.position = ray.origin + t * ray.direction;
 		hit.primitiveID = primitiveID;
 		hit.bary = float2(u, v);
 
@@ -440,14 +425,19 @@ inline bool IntersectTriangleANY(
 }
 
 
-inline bool IntersectNode(in Ray ray, in BVHNode box, in float primitive_best_distance)
+inline bool IntersectNode(
+	in RayDesc ray,
+	in BVHNode box,
+	in float3 rcpDirection,
+	in float primitive_best_distance
+)
 {
-	const float t0 = (box.min.x - ray.origin.x) * ray.direction_rcp.x;
-	const float t1 = (box.max.x - ray.origin.x) * ray.direction_rcp.x;
-	const float t2 = (box.min.y - ray.origin.y) * ray.direction_rcp.y;
-	const float t3 = (box.max.y - ray.origin.y) * ray.direction_rcp.y;
-	const float t4 = (box.min.z - ray.origin.z) * ray.direction_rcp.z;
-	const float t5 = (box.max.z - ray.origin.z) * ray.direction_rcp.z;
+	const float t0 = (box.min.x - ray.Origin.x) * rcpDirection.x;
+	const float t1 = (box.max.x - ray.Origin.x) * rcpDirection.x;
+	const float t2 = (box.min.y - ray.Origin.y) * rcpDirection.y;
+	const float t3 = (box.max.y - ray.Origin.y) * rcpDirection.y;
+	const float t4 = (box.min.z - ray.Origin.z) * rcpDirection.z;
+	const float t5 = (box.max.z - ray.Origin.z) * rcpDirection.z;
 	const float tmin = max(max(min(t0, t1), min(t2, t3)), min(t4, t5)); // close intersection point's distance on ray
 	const float tmax = min(min(max(t0, t1), max(t2, t3)), max(t4, t5)); // far intersection point's distance on ray
 
@@ -460,14 +450,18 @@ inline bool IntersectNode(in Ray ray, in BVHNode box, in float primitive_best_di
 		return true;
 	}
 }
-inline bool IntersectNode(in Ray ray, in BVHNode box)
+inline bool IntersectNode(
+	in RayDesc ray,
+	in BVHNode box,
+	in float3 rcpDirection
+)
 {
-	const float t0 = (box.min.x - ray.origin.x) * ray.direction_rcp.x;
-	const float t1 = (box.max.x - ray.origin.x) * ray.direction_rcp.x;
-	const float t2 = (box.min.y - ray.origin.y) * ray.direction_rcp.y;
-	const float t3 = (box.max.y - ray.origin.y) * ray.direction_rcp.y;
-	const float t4 = (box.min.z - ray.origin.z) * ray.direction_rcp.z;
-	const float t5 = (box.max.z - ray.origin.z) * ray.direction_rcp.z;
+	const float t0 = (box.min.x - ray.Origin.x) * rcpDirection.x;
+	const float t1 = (box.max.x - ray.Origin.x) * rcpDirection.x;
+	const float t2 = (box.min.y - ray.Origin.y) * rcpDirection.y;
+	const float t3 = (box.max.y - ray.Origin.y) * rcpDirection.y;
+	const float t4 = (box.min.z - ray.Origin.z) * rcpDirection.z;
+	const float t5 = (box.max.z - ray.Origin.z) * rcpDirection.z;
 	const float tmin = max(max(min(t0, t1), min(t2, t3)), min(t4, t5)); // close intersection point's distance on ray
 	const float tmax = min(min(max(t0, t1), max(t2, t3)), max(t4, t5)); // far intersection point's distance on ray
 
@@ -476,8 +470,10 @@ inline bool IntersectNode(in Ray ray, in BVHNode box)
 
 
 // Returns the closest hit primitive if any (useful for generic trace). If nothing was hit, then rayHit.distance will be equal to FLT_MAX
-inline RayHit TraceRay_Closest(Ray ray, uint groupIndex = 0)
+inline RayHit TraceRay_Closest(RayDesc ray, uint groupIndex = 0)
 {
+	const float3 rcpDirection = rcp(ray.Direction);
+
 	RayHit bestHit = CreateRayHit();
 
 #ifndef RAYTRACE_STACK_SHARED
@@ -498,7 +494,7 @@ inline RayHit TraceRay_Closest(Ray ray, uint groupIndex = 0)
 
 		BVHNode node = bvhNodeBuffer[nodeIndex];
 
-		if (IntersectNode(ray, node, bestHit.distance))
+		if (IntersectNode(ray, node, rcpDirection, bestHit.distance))
 		{
 			if (nodeIndex >= leafNodeOffset)
 			{
@@ -533,8 +529,10 @@ inline RayHit TraceRay_Closest(Ray ray, uint groupIndex = 0)
 }
 
 // Returns true immediately if any primitives were hit, flase if nothing was hit (useful for opaque shadows):
-inline bool TraceRay_Any(Ray ray, float maxDistance, uint groupIndex = 0)
+inline bool TraceRay_Any(RayDesc ray, uint groupIndex = 0)
 {
+	const float3 rcpDirection = rcp(ray.Direction);
+
 	bool shadow = false;
 
 #ifndef RAYTRACE_STACK_SHARED
@@ -555,7 +553,7 @@ inline bool TraceRay_Any(Ray ray, float maxDistance, uint groupIndex = 0)
 
 		BVHNode node = bvhNodeBuffer[nodeIndex];
 
-		if (IntersectNode(ray, node))
+		if (IntersectNode(ray, node, rcpDirection))
 		{
 			if (nodeIndex >= leafNodeOffset)
 			{
@@ -563,7 +561,7 @@ inline bool TraceRay_Any(Ray ray, float maxDistance, uint groupIndex = 0)
 				const uint primitiveID = node.LeftChildIndex;
 				const BVHPrimitive prim = primitiveBuffer[primitiveID];
 
-				if (IntersectTriangleANY(ray, maxDistance, prim, primitiveID))
+				if (IntersectTriangleANY(ray, prim, primitiveID))
 				{
 					shadow = true;
 					break;
@@ -595,8 +593,10 @@ inline bool TraceRay_Any(Ray ray, float maxDistance, uint groupIndex = 0)
 
 // Returns number of BVH nodes that were hit (useful for debug):
 //	returns 0xFFFFFFFF when there was a stack overflow
-inline uint TraceRay_DebugBVH(Ray ray)
+inline uint TraceRay_DebugBVH(RayDesc ray)
 {
+	const float3 rcpDirection = rcp(ray.Direction);
+
 	uint hit_counter = 0;
 
 	// Emulated stack for tree traversal:
@@ -615,7 +615,7 @@ inline uint TraceRay_DebugBVH(Ray ray)
 
 		BVHNode node = bvhNodeBuffer[nodeIndex];
 
-		if (IntersectNode(ray, node))
+		if (IntersectNode(ray, node, rcpDirection))
 		{
 			hit_counter++;
 
