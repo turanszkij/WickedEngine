@@ -72,7 +72,7 @@ void RTReflection_Raygen()
 	RayDesc ray;
 	ray.TMin = 0.05;
 	ray.TMax = rtreflection_range;
-	ray.Origin = trace_bias_position(P, N);
+	ray.Origin = P;
 	ray.Direction = normalize(R);
 
 	RayPayload payload;

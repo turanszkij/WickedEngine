@@ -5,14 +5,6 @@
 #include "ShaderInterop_BVH.h"
 #include "brdf.hlsli"
 
-// returns a position that is sligtly above the surface position to avoid self intersection
-//	P	: surface postion
-//	N	: surface normal
-inline float3 trace_bias_position(in float3 P, in float3 N)
-{
-	return P + N * 0.0001;
-}
-
 #ifdef HLSL5
 struct RayDesc
 {

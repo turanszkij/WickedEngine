@@ -80,7 +80,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	Surface surface;
 	surface.init();
 	surface.pixel = DTid.xy;
-	surface.P = trace_bias_position(P, N);
+	surface.P = P + N * 0.01;
 	surface.N = N;
 
 	const uint2 tileIndex = uint2(floor(surface.pixel * 2 / TILED_CULLING_BLOCKSIZE));

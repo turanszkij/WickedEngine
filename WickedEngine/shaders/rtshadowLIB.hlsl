@@ -40,7 +40,7 @@ void RTShadow_Raygen()
 
 	RayDesc ray;
 	ray.TMin = 0.01;
-	ray.Origin = trace_bias_position(P, N);
+	ray.Origin = P;
 
 	[branch]
 	if (g_xFrame_LightArrayCount > 0)

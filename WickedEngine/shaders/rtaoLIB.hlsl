@@ -29,14 +29,14 @@ void RTAO_Raygen()
 	RayDesc ray;
 	ray.TMin = 0.01;
 	ray.TMax = rtao_range;
-	ray.Origin = trace_bias_position(P, N);
+	ray.Origin = P;
 
 	RayPayload payload;
 	payload.color = 0;
 
 	for (uint i = 0; i < (uint)rtao_samplecount; ++i)
 	{
-		ray.Direction = SampleHemisphere_cos(N, seed, uv);
+		ray.Direction = normalize(SampleHemisphere_cos(N, seed, uv));
 
 		TraceRay(
 			scene_acceleration_structure,         // AccelerationStructure

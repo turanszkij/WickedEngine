@@ -120,9 +120,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		{
 			// Alpha blending
 
-			// The ray penetrates the surface, so push DOWN along normal to avoid self-intersection:
-			ray.Origin = trace_bias_position(ray.Origin, -surface.N);
-
 			// Add a new bounce iteration, otherwise the transparent effect can disappear:
 			bounces++;
 
@@ -138,9 +135,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				const float3 R = refract(ray.Direction, surface.N, 1 - material.refraction);
 				ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
 				energy *= surface.albedo;
-
-				// The ray penetrates the surface, so push DOWN along normal to avoid self-intersection:
-				ray.Origin = trace_bias_position(ray.Origin, -surface.N);
 
 				// Add a new bounce iteration, otherwise the transparent effect can disappear:
 				bounces++;
@@ -172,13 +166,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					//	but the current light sampling is still fine to avoid abrupt cutoff
 					energy = 0;
 				}
-
-				// Ray reflects from surface, so push UP along normal to avoid self-intersection:
-				ray.Origin = trace_bias_position(ray.Origin, surface.N);
 			}
 		}
-
-		surface.P = ray.Origin;
 
 		float3 lightColor = 0;
 		SurfaceToLight surfaceToLight = (SurfaceToLight)0;

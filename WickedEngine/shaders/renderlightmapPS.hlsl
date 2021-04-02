@@ -20,7 +20,7 @@ float4 main(Input input) : SV_TARGET
 	float2 uv = input.uv;
 	float seed = xTraceRandomSeed;
 	RayDesc ray;
-	ray.Origin = trace_bias_position(input.pos3D, surface.N);
+	ray.Origin = input.pos3D;
 	ray.Direction = SampleHemisphere_cos(surface.N, seed, uv);
 	ray.TMin = 0.001;
 	ray.TMax = FLT_MAX;
@@ -150,7 +150,7 @@ float4 main(Input input) : SV_TARGET
 				float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1;
 
 				RayDesc newRay;
-				newRay.Origin = trace_bias_position(surface.P, surface.N);
+				newRay.Origin = surface.P;
 				newRay.Direction = normalize(L + sampling_offset * 0.025f);
 				newRay.TMin = 0.001;
 				newRay.TMax = dist;
@@ -295,9 +295,6 @@ float4 main(Input input) : SV_TARGET
 			ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
 			energy *= surface.albedo;
 
-			// The ray penetrates the surface, so push DOWN along normal to avoid self-intersection:
-			ray.Origin = trace_bias_position(ray.Origin, -surface.N);
-
 			// Add a new bounce iteration, otherwise the transparent effect can disappear:
 			bounces++;
 		}
@@ -321,9 +318,6 @@ float4 main(Input input) : SV_TARGET
 				ray.Direction = SampleHemisphere_cos(surface.N, seed, uv);
 				energy *= surface.albedo / (1 - specChance);
 			}
-
-			// Ray reflects from surface, so push UP along normal to avoid self-intersection:
-			ray.Origin = trace_bias_position(ray.Origin, surface.N);
 		}
 
 		result += max(0, energy * surface.emissiveColor.rgb * surface.emissiveColor.a);
