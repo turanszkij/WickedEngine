@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+65: serialized CameraComponent focal_length, aperture_size and aperture_shape
 64: serialized per-emitter gravity, velocity, drag and random_color
 63: serialized wiResourceManager embedded resources
 62: serialized WeatherComponent::colorGradingMapName property

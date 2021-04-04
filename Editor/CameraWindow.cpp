@@ -24,7 +24,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	camera_transform.MatrixTransform(wiScene::GetCamera().GetInvView());
 	camera_transform.UpdateTransform();
 
-	SetSize(XMFLOAT2(380, 260));
+	SetSize(XMFLOAT2(380, 340));
 
 	float x = 200;
 	float y = 10;
@@ -32,6 +32,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	float step = hei + 2;
 
 	farPlaneSlider.Create(1, 5000, 1000, 100000, "Far Plane: ");
+	farPlaneSlider.SetTooltip("Controls the camera's far clip plane, geometry farther than this will be clipped.");
 	farPlaneSlider.SetSize(XMFLOAT2(100, hei));
 	farPlaneSlider.SetPos(XMFLOAT2(x, y += step));
 	farPlaneSlider.SetValue(wiScene::GetCamera().zFarP);
@@ -40,10 +41,12 @@ void CameraWindow::Create(EditorComponent* editor)
 		CameraComponent& camera = wiScene::GetCamera();
 		camera.zFarP = args.fValue;
 		camera.UpdateCamera();
+		camera.SetDirty();
 	});
 	AddWidget(&farPlaneSlider);
 
 	nearPlaneSlider.Create(0.01f, 10, 0.1f, 10000, "Near Plane: ");
+	nearPlaneSlider.SetTooltip("Controls the camera's near clip plane, geometry closer than this will be clipped.");
 	nearPlaneSlider.SetSize(XMFLOAT2(100, hei));
 	nearPlaneSlider.SetPos(XMFLOAT2(x, y += step));
 	nearPlaneSlider.SetValue(wiScene::GetCamera().zNearP);
@@ -52,10 +55,12 @@ void CameraWindow::Create(EditorComponent* editor)
 		CameraComponent& camera = wiScene::GetCamera();
 		camera.zNearP = args.fValue;
 		camera.UpdateCamera();
+		camera.SetDirty();
 	});
 	AddWidget(&nearPlaneSlider);
 
 	fovSlider.Create(1, 179, 60, 10000, "FOV: ");
+	fovSlider.SetTooltip("Controls the camera's top-down field of view (in degrees)");
 	fovSlider.SetSize(XMFLOAT2(100, hei));
 	fovSlider.SetPos(XMFLOAT2(x, y += step));
 	fovSlider.OnSlide([&](wiEventArgs args) {
@@ -63,8 +68,61 @@ void CameraWindow::Create(EditorComponent* editor)
 		CameraComponent& camera = wiScene::GetCamera();
 		camera.fov = args.fValue / 180.f * XM_PI;
 		camera.UpdateCamera();
+		camera.SetDirty();
 	});
 	AddWidget(&fovSlider);
+
+	focalLengthSlider.Create(0.001f, 100, 1, 10000, "Focal Length: ");
+	focalLengthSlider.SetTooltip("Controls the depth of field effect's focus distance");
+	focalLengthSlider.SetSize(XMFLOAT2(100, hei));
+	focalLengthSlider.SetPos(XMFLOAT2(x, y += step));
+	focalLengthSlider.OnSlide([&](wiEventArgs args) {
+		Scene& scene = wiScene::GetScene();
+		CameraComponent& camera = wiScene::GetCamera();
+		camera.focal_length = args.fValue;
+		camera.UpdateCamera();
+		camera.SetDirty();
+		});
+	AddWidget(&focalLengthSlider);
+
+	apertureSizeSlider.Create(0, 1, 0, 10000, "Aperture Size: ");
+	apertureSizeSlider.SetTooltip("Controls the depth of field effect's strength");
+	apertureSizeSlider.SetSize(XMFLOAT2(100, hei));
+	apertureSizeSlider.SetPos(XMFLOAT2(x, y += step));
+	apertureSizeSlider.OnSlide([&](wiEventArgs args) {
+		Scene& scene = wiScene::GetScene();
+		CameraComponent& camera = wiScene::GetCamera();
+		camera.aperture_size = args.fValue;
+		camera.UpdateCamera();
+		camera.SetDirty();
+		});
+	AddWidget(&apertureSizeSlider);
+
+	apertureShapeXSlider.Create(0, 2, 1, 10000, "Aperture Shape X: ");
+	apertureShapeXSlider.SetTooltip("Controls the depth of field effect's bokeh shape");
+	apertureShapeXSlider.SetSize(XMFLOAT2(100, hei));
+	apertureShapeXSlider.SetPos(XMFLOAT2(x, y += step));
+	apertureShapeXSlider.OnSlide([&](wiEventArgs args) {
+		Scene& scene = wiScene::GetScene();
+		CameraComponent& camera = wiScene::GetCamera();
+		camera.aperture_shape.x = args.fValue;
+		camera.UpdateCamera();
+		camera.SetDirty();
+		});
+	AddWidget(&apertureShapeXSlider);
+
+	apertureShapeYSlider.Create(0, 2, 1, 10000, "Aperture Shape Y: ");
+	apertureShapeYSlider.SetTooltip("Controls the depth of field effect's bokeh shape");
+	apertureShapeYSlider.SetSize(XMFLOAT2(100, hei));
+	apertureShapeYSlider.SetPos(XMFLOAT2(x, y += step));
+	apertureShapeYSlider.OnSlide([&](wiEventArgs args) {
+		Scene& scene = wiScene::GetScene();
+		CameraComponent& camera = wiScene::GetCamera();
+		camera.aperture_shape.y = args.fValue;
+		camera.UpdateCamera();
+		camera.SetDirty();
+		});
+	AddWidget(&apertureShapeYSlider);
 
 	movespeedSlider.Create(1, 100, 10, 10000, "Movement Speed: ");
 	movespeedSlider.SetSize(XMFLOAT2(100, hei));

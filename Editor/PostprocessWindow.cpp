@@ -11,7 +11,7 @@ using namespace wiGraphics;
 void PostprocessWindow::Create(EditorComponent* editor)
 {
 	wiWindow::Create("PostProcess Window");
-	SetSize(XMFLOAT2(420, 540));
+	SetSize(XMFLOAT2(420, 500));
 
 	float x = 150;
 	float y = 10;
@@ -249,38 +249,16 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&depthOfFieldCheckBox);
 
-	depthOfFieldFocusSlider.Create(1.0f, 100, 10, 10000, "Focus: ");
-	depthOfFieldFocusSlider.SetTooltip("Set the focus distance from the camera. The picture will be sharper near the focus, and blurrier further from it.");
-	depthOfFieldFocusSlider.SetScriptTip("RenderPath3D::SetDepthOfFieldFocus(float value)");
-	depthOfFieldFocusSlider.SetSize(XMFLOAT2(100, hei));
-	depthOfFieldFocusSlider.SetPos(XMFLOAT2(x + 100, y));
-	depthOfFieldFocusSlider.SetValue(editor->renderPath->getDepthOfFieldFocus());
-	depthOfFieldFocusSlider.OnSlide([=](wiEventArgs args) {
-		editor->renderPath->setDepthOfFieldFocus(args.fValue);
-	});
-	AddWidget(&depthOfFieldFocusSlider);
-
-	depthOfFieldScaleSlider.Create(1.0f, 20, 100, 1000, "Scale: ");
-	depthOfFieldScaleSlider.SetTooltip("Set depth of field scale/falloff.");
+	depthOfFieldScaleSlider.Create(1.0f, 20, 100, 1000, "Strength: ");
+	depthOfFieldScaleSlider.SetTooltip("Set depth of field strength. This is used to scale the Camera's ApertureSize setting");
 	depthOfFieldScaleSlider.SetScriptTip("RenderPath3D::SetDepthOfFieldStrength(float value)");
 	depthOfFieldScaleSlider.SetSize(XMFLOAT2(100, hei));
-	depthOfFieldScaleSlider.SetPos(XMFLOAT2(x + 100, y += step));
+	depthOfFieldScaleSlider.SetPos(XMFLOAT2(x + 100, y));
 	depthOfFieldScaleSlider.SetValue(editor->renderPath->getDepthOfFieldStrength());
 	depthOfFieldScaleSlider.OnSlide([=](wiEventArgs args) {
 		editor->renderPath->setDepthOfFieldStrength(args.fValue);
 	});
 	AddWidget(&depthOfFieldScaleSlider);
-
-	depthOfFieldAspectSlider.Create(0.01f, 2, 1, 1000, "Aspect: ");
-	depthOfFieldAspectSlider.SetTooltip("Set depth of field bokeh aspect ratio (width/height).");
-	depthOfFieldAspectSlider.SetScriptTip("RenderPath3D::SetDepthOfFieldAspect(float value)");
-	depthOfFieldAspectSlider.SetSize(XMFLOAT2(100, hei));
-	depthOfFieldAspectSlider.SetPos(XMFLOAT2(x + 100, y += step));
-	depthOfFieldAspectSlider.SetValue(editor->renderPath->getDepthOfFieldAspect());
-	depthOfFieldAspectSlider.OnSlide([=](wiEventArgs args) {
-		editor->renderPath->setDepthOfFieldAspect(args.fValue);
-		});
-	AddWidget(&depthOfFieldAspectSlider);
 
 	bloomCheckBox.Create("Bloom: ");
 	bloomCheckBox.SetTooltip("Enable bloom. The effect adds color bleeding to the brightest parts of the scene.");

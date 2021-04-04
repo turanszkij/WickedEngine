@@ -892,6 +892,9 @@ namespace wiScene
 		float zNearP = 0.1f;
 		float zFarP = 800.0f;
 		float fov = XM_PI / 3.0f;
+		float focal_length = 1;
+		float aperture_size = 0;
+		XMFLOAT2 aperture_shape = XMFLOAT2(1, 1);
 
 		// Non-serialized attributes:
 		XMFLOAT3 Eye = XMFLOAT3(0, 0, 0);

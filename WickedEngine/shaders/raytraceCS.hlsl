@@ -24,6 +24,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	// Create starting ray:
 	RayDesc ray = CreateCameraRay(uv);
 
+	// Depth of field setup:
+	float3 focal_point = ray.Origin + ray.Direction * g_xCamera_FocalLength;
+	float3 coc = float3(hemispherepoint_cos(rand(seed, pixel), rand(seed, pixel)).xy, 0);
+	coc.xy *= g_xCamera_ApertureShape.xy;
+	coc = mul(coc, float3x3(cross(g_xCamera_Up, g_xCamera_At), g_xCamera_Up, g_xCamera_At));
+	coc *= g_xCamera_FocalLength;
+	coc *= g_xCamera_ApertureSize;
+	coc *= 0.1f;
+	ray.Origin = ray.Origin + coc;
+	ray.Direction = focal_point - ray.Origin; // will be normalized before tracing!
+
 	uint bounces = xTraceUserData.x;
 	const uint bouncelimit = 16;
 	for (uint bounce = 0; ((bounce < min(bounces, bouncelimit)) && any(energy)); ++bounce)
@@ -169,7 +180,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			}
 		}
 
-		float3 lightColor = 0;
+		float3 lightColor = 1;
 		SurfaceToLight surfaceToLight = (SurfaceToLight)0;
 
 		// Light sampling:
@@ -204,7 +215,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 						atmosphereTransmittance = GetAtmosphericLightTransmittance(Atmosphere, surface.P, L, texture_transmittancelut);
 					}
 
-					lightColor = light.GetColor().rgb * light.GetEnergy() * atmosphereTransmittance;
+					lightColor *= atmosphereTransmittance;
 				}
 			}
 			break;
@@ -229,7 +240,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 						const float att = saturate(1 - (dist2 / range2));
 						const float attenuation = att * att;
 
-						lightColor = light.GetColor().rgb * light.GetEnergy();
 						lightColor *= attenuation;
 					}
 				}
@@ -263,7 +273,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 							float attenuation = att * att;
 							attenuation *= saturate((1 - (1 - SpotFactor) * 1 / (1 - spotCutOff)));
 
-							lightColor = light.GetColor().rgb * light.GetEnergy();
 							lightColor *= attenuation;
 						}
 					}
@@ -326,6 +335,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 #endif // RTAPI
 				if (any(shadow))
 				{
+					lightColor *= light.GetColor().rgb * light.GetEnergy();
 					lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
 					lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
 					result += max(0, shadow * (surface.albedo * lighting.direct.diffuse + lighting.direct.specular));

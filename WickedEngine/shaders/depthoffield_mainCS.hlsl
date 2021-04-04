@@ -46,7 +46,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 
     const uint ringCount = clamp(ceil(pow(maxcoc, 0.5f) * DOF_RING_COUNT), 1, DOF_RING_COUNT);
     const float spreadScale = ringCount / maxcoc;
-    const float2 ringScale = float(ringCount) / float(DOF_RING_COUNT) * maxcoc * float2(max(1, dof_aspect), max(1, 2 - dof_aspect)) * xPPResolution_rcp;
+    const float2 ringScale = float(ringCount) / float(DOF_RING_COUNT) * maxcoc * g_xCamera_ApertureShape * xPPResolution_rcp;
 
     const float3 center_color = texture_prefilter[pixel];
     const float3 center_presort = texture_presort[pixel];
@@ -55,8 +55,6 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
     const float center_foregroundWeight = center_presort.b;
 
     const float2 uv = (pixel + 0.5f) * xPPResolution_rcp;
-
-    float seed = 12345;
 
 #ifdef DEPTHOFFIELD_CHEAP
     color = center_color;

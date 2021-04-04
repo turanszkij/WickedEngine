@@ -749,6 +749,13 @@ namespace wiScene
 			archive >> zFarP;
 			archive >> fov;
 
+			if (archive.GetVersion() >= 65)
+			{
+				archive >> focal_length;
+				archive >> aperture_size;
+				archive >> aperture_shape;
+			}
+
 			SetDirty();
 		}
 		else
@@ -759,6 +766,13 @@ namespace wiScene
 			archive << zNearP;
 			archive << zFarP;
 			archive << fov;
+
+			if (archive.GetVersion() >= 65)
+			{
+				archive << focal_length;
+				archive << aperture_size;
+				archive << aperture_shape;
+			}
 		}
 	}
 	void EnvironmentProbeComponent::Serialize(wiArchive& archive, EntitySerializer& seri)

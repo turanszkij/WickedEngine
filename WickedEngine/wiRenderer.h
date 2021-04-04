@@ -490,10 +490,8 @@ namespace wiRenderer
 		const wiGraphics::Texture& output,
 		const wiGraphics::Texture& lineardepth,
 		wiGraphics::CommandList cmd,
-		float focus = 10.0f,
-		float scale = 1.0f,
-		float aspect = 1.0f,
-		float max_coc = 18.0f
+		float coc_scale = 10,
+		float max_coc = 18
 	);
 	void Postprocess_Outline(
 		const wiGraphics::Texture& input,

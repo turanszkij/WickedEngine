@@ -27,9 +27,7 @@ public:
 	wiCheckBox motionBlurCheckBox;
 	wiSlider motionBlurStrengthSlider;
 	wiCheckBox depthOfFieldCheckBox;
-	wiSlider depthOfFieldFocusSlider;
 	wiSlider depthOfFieldScaleSlider;
-	wiSlider depthOfFieldAspectSlider;
 	wiCheckBox bloomCheckBox;
 	wiSlider bloomStrengthSlider;
 	wiCheckBox fxaaCheckBox;

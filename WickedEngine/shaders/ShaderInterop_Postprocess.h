@@ -75,10 +75,8 @@ static const uint MOTIONBLUR_TILESIZE = 32;
 #define motionblur_strength xPPParams0.x
 
 static const uint DEPTHOFFIELD_TILESIZE = 32;
-#define dof_focus xPPParams0.x
-#define dof_scale xPPParams0.y
-#define dof_aspect xPPParams0.z
-#define dof_maxcoc xPPParams0.w
+#define dof_cocscale xPPParams0.x
+#define dof_maxcoc xPPParams0.y
 
 struct PushConstantsTonemap
 {

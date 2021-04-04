@@ -20,6 +20,10 @@ public:
 	wiSlider farPlaneSlider;
 	wiSlider nearPlaneSlider;
 	wiSlider fovSlider;
+	wiSlider focalLengthSlider;
+	wiSlider apertureSizeSlider;
+	wiSlider apertureShapeXSlider;
+	wiSlider apertureShapeYSlider;
 	wiSlider movespeedSlider;
 	wiSlider rotationspeedSlider;
 	wiButton resetButton;

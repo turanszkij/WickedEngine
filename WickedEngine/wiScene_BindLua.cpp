@@ -1477,6 +1477,12 @@ Luna<CameraComponent_BindLua>::FunctionType CameraComponent_BindLua::methods[] =
 	lunamethod(CameraComponent_BindLua, SetNearPlane),
 	lunamethod(CameraComponent_BindLua, GetFarPlane),
 	lunamethod(CameraComponent_BindLua, SetFarPlane),
+	lunamethod(CameraComponent_BindLua, GetFocalLength),
+	lunamethod(CameraComponent_BindLua, SetFocalLength),
+	lunamethod(CameraComponent_BindLua, GetApertureSize),
+	lunamethod(CameraComponent_BindLua, SetApertureSize),
+	lunamethod(CameraComponent_BindLua, GetApertureShape),
+	lunamethod(CameraComponent_BindLua, SetApertureShape),
 	lunamethod(CameraComponent_BindLua, GetView),
 	lunamethod(CameraComponent_BindLua, GetProjection),
 	lunamethod(CameraComponent_BindLua, GetViewProjection),
@@ -1580,6 +1586,64 @@ int CameraComponent_BindLua::SetFarPlane(lua_State* L)
 	else
 	{
 		wiLua::SError(L, "SetFarPlane(float value) not enough arguments!");
+	}
+	return 0;
+}
+int CameraComponent_BindLua::GetFocalLength(lua_State* L)
+{
+	wiLua::SSetFloat(L, component->focal_length);
+	return 1;
+}
+int CameraComponent_BindLua::SetFocalLength(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->focal_length = wiLua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetFocalLength(float value) not enough arguments!");
+	}
+	return 0;
+}
+int CameraComponent_BindLua::GetApertureSize(lua_State* L)
+{
+	wiLua::SSetFloat(L, component->aperture_size);
+	return 1;
+}
+int CameraComponent_BindLua::SetApertureSize(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->aperture_size = wiLua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetApertureSize(float value) not enough arguments!");
+	}
+	return 0;
+}
+int CameraComponent_BindLua::GetApertureShape(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat2(&component->aperture_shape)));
+	return 1;
+}
+int CameraComponent_BindLua::SetApertureShape(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (param != nullptr)
+		{
+			XMStoreFloat2(&component->aperture_shape, param->vector);
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "SetApertureShape(Vector value) not enough arguments!");
 	}
 	return 0;
 }

@@ -512,6 +512,12 @@ Describes an orientation in 3D space.
 - SetNearPlane(float value)
 - GetFarPlane() : float result
 - SetFarPlane(float value)
+- GetFocalDistance() : float result
+- SetFocalDistance(float value)
+- GetApertureSize() : float result
+- SetApertureSize(float value)
+- GetApertureShape() : float result
+- SetApertureShape(Vector value)
 - GetView() : Matrix result
 - GetProjection() : Matrix result
 - GetViewProjection() : Matrix result
@@ -629,9 +635,9 @@ It can hold Sprites and SpriteFonts and can sort them by layers, update and rend
 - SetFontOrder(SpriteFont font, int order)
 
 #### RenderPath3D
-A 3D scene can either be rendered by a Forward or Deferred render path, or path tracing. 
+This is the default scene render path. 
 It inherits functions from RenderPath2D, so it can render a 2D overlay.
-- [void-constructor]RenderPath3D()
+- [constructor]RenderPath3D()
 - SetAO(int value)  -- Sets up the ambient occlusion effect (possible values below)
 - AO_DISABLED : int  -- turn off AO computation (use in SetAO() function)
 - AO_SSAO : int  -- enable simple brute force screen space ambient occlusion (use in SetAO() function)
@@ -655,31 +661,11 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetSSSEnabled(bool value)
 - SetDitherEnabled(bool value)
 - SetDepthOfFieldEnabled(bool value)
-- SetDepthOfFieldFocus(float value)
 - SetDepthOfFieldStrength(float value)
-- SetDepthOfFieldAspect(float value)
 - SetMSAASampleCount(int count)
 - SetSharpenFilterEnabled(bool value)
 - SetSharpenFilterAmount(float value)
 - SetExposure(float value)
-
-##### RenderPath3D_Forward
-It renders the scene contained by the Renderer in a forward render path. The component does not hold the scene information, 
-only the effects to render the scene. The scene is managed and ultimately rendered by the Renderer.
-It inherits functions from RenderPath3D.
-- [constructor]RenderPath3D_Forward()
-
-##### RenderPath3D_TiledForward
-It renders the scene contained by the Renderer in a tiled forward render path. The component does not hold the scene information, 
-only the effects to render the scene. The scene is managed and ultimately rendered by the Renderer.
-It inherits functions from RenderPath3D_Forward3D.
-- [constructor]RenderPath3D_TiledForward()
-
-##### RenderPath3D_Deferred
-It renders the scene contained by the Renderer in a deferred render path. The component does not hold the scene information, 
-only the effects to render the scene. The scene is managed and ultimately rendered by the Renderer.
-It inherits functions from RenderPath3D.
-- [constructor]RenderPath3D_Deferred()
 
 #### LoadingScreen
 It is a RenderPath2D but one that internally manages resource loading and can display information about the process.

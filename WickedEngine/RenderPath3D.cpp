@@ -1274,7 +1274,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			rt_first = &rtTemporalAA[output];
 		}
 
-		if (getDepthOfFieldEnabled())
+		if (getDepthOfFieldEnabled() && camera->aperture_size > 0 && getDepthOfFieldStrength() > 0)
 		{
 			wiRenderer::Postprocess_DepthOfField(
 				depthoffieldResources,
@@ -1282,9 +1282,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 				*rt_write,
 				rtLinearDepth,
 				cmd,
-				getDepthOfFieldFocus(),
-				getDepthOfFieldStrength(),
-				getDepthOfFieldAspect()
+				getDepthOfFieldStrength()
 			);
 			rt_first = nullptr;
 
@@ -1292,7 +1290,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 
-		if (getMotionBlurEnabled())
+		if (getMotionBlurEnabled() && getMotionBlurStrength() > 0)
 		{
 			wiRenderer::Postprocess_MotionBlur(
 				motionblurResources,

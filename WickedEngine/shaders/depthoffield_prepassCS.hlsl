@@ -47,9 +47,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
     [branch]
     if (backgroundFactor < 1.0f)
     {
-        float seed = 54321;
-
-        const float2 ringScale = 0.5f * coc * float2(max(1, dof_aspect), max(1, 2 - dof_aspect)) * xPPResolution_rcp;
+        const float2 ringScale = 0.5f * coc * g_xCamera_ApertureShape * xPPResolution_rcp;
         [unroll]
         for (uint i = ringSampleCount[0]; i < ringSampleCount[1]; ++i)
         {

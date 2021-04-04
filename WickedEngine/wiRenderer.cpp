@@ -7901,7 +7901,7 @@ void RayTraceScene(
 	cb.xTraceResolution_rcp.y = 1.0f / cb.xTraceResolution.y;
 	cb.xTraceUserData.x = raytraceBounceCount;
 	cb.xTraceUserData.y = accumulation_sample;
-	cb.xTraceRandomSeed = (accumulation_sample + 1) * 0.0001f;
+	cb.xTraceRandomSeed = wiRandom::getRandom(1000000) / 1000000.f;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
 
@@ -8277,7 +8277,7 @@ void RenderObjectLightMap(const Scene& scene, const ObjectComponent& object, Com
 	cb.xTracePixelOffset.y = (halton.y * 2 - 1) * cb.xTraceResolution_rcp.y;
 	cb.xTracePixelOffset.x *= 1.4f;	// boost the jitter by a bit
 	cb.xTracePixelOffset.y *= 1.4f;	// boost the jitter by a bit
-	cb.xTraceRandomSeed = (lightmapIterationCount + 1) * 0.0001f; // random seed
+	cb.xTraceRandomSeed = wiRandom::getRandom(1000000) / 1000000.f;
 	cb.xTraceAccumulationFactor = 1.0f / (lightmapIterationCount + 1.0f); // accumulation factor (alpha)
 	cb.xTraceUserData.x = raytraceBounceCount;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
@@ -8434,6 +8434,10 @@ void UpdateCameraCB(
 	XMStoreFloat4x4(&cb.g_xCamera_PrevVP, camera_previous.GetViewProjection());
 	XMStoreFloat4x4(&cb.g_xCamera_PrevInvVP, camera_previous.GetInvViewProjection());
 	XMStoreFloat4x4(&cb.g_xCamera_ReflVP, camera_reflection.GetViewProjection());
+
+	cb.g_xCamera_FocalLength = camera.focal_length;
+	cb.g_xCamera_ApertureSize = camera.aperture_size;
+	cb.g_xCamera_ApertureShape = camera.aperture_shape;
 
 	device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
 }
@@ -10651,9 +10655,7 @@ void Postprocess_DepthOfField(
 	const Texture& output,
 	const Texture& lineardepth,
 	CommandList cmd,
-	float focus,
-	float scale,
-	float aspect,
+	float coc_scale,
 	float max_coc
 )
 {
@@ -10669,9 +10671,7 @@ void Postprocess_DepthOfField(
 	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.dof_focus = focus;
-	cb.dof_scale = scale;
-	cb.dof_aspect = aspect;
+	cb.dof_cocscale = coc_scale;
 	cb.dof_maxcoc = max_coc;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);

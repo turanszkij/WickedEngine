@@ -434,6 +434,10 @@ CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 	float4x4	g_xCamera_PrevVP;		// PrevView*PrevProjection
 	float4x4	g_xCamera_PrevInvVP;	// Inverse(PrevView*PrevProjection)
 	float4x4	g_xCamera_ReflVP;		// ReflectionView*ReflectionProjection
+
+	float2		g_xCamera_ApertureShape;
+	float		g_xCamera_ApertureSize;
+	float		g_xCamera_FocalLength;
 };
 
 

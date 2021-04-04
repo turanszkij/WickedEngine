@@ -3,7 +3,7 @@
 
 inline float get_coc(in float linear_depth)
 {
-    return min(dof_maxcoc, dof_scale * pow(abs(1 - dof_focus / (linear_depth * g_xCamera_ZFarP)), 2.0f));
+    return min(dof_maxcoc, dof_cocscale * g_xCamera_ApertureSize * pow(abs(1 - g_xCamera_FocalLength / (linear_depth * g_xCamera_ZFarP)), 2.0f));
 }
 
 #define DOF_DEPTH_SCALE_FOREGROUND (g_xCamera_ZFarP * 1.5)
