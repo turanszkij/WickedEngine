@@ -426,7 +426,7 @@ namespace wiScene
 		    if (!targets.empty())
 		    {
 				vertex_positions_morphed.resize(vertex_positions.size());
-				SetDirtyMorph();
+				dirty_morph = true;
 		    }
 
 			std::vector<Vertex_POS> vertices(vertex_positions.size());
@@ -766,7 +766,7 @@ namespace wiScene
 
 		if(device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
 		{
-			_flags |= DIRTY_BINDLESS;
+			dirty_bindless = true;
 
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_SHADER_RESOURCE;
@@ -2283,7 +2283,7 @@ namespace wiScene
 						target_mesh->targets[j].weight = wiMath::Lerp(target_mesh->targets[j].weight, animation.morph_weights_temp[j], t);
 					}
 
-					target_mesh->SetDirtyMorph(true);
+					target_mesh->dirty_morph = true;
 				}
 
 			}
@@ -2597,7 +2597,7 @@ namespace wiScene
 
 			if (mesh.streamoutBuffer_POS.IsValid() && mesh.vertexBuffer_PRE.IsValid())
 			{
-				mesh._flags |= MeshComponent::DIRTY_BINDLESS;
+				mesh.dirty_bindless = true;
 				std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
 			}
 
@@ -2632,7 +2632,7 @@ namespace wiScene
 					subsetIndex++;
 				}
 
-				if (mesh.IsDirtyMorph())
+				if (mesh.dirty_morph)
 				{
 					mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
 				}
@@ -2648,7 +2648,7 @@ namespace wiScene
 						int index = device->GetDescriptorIndex(&mat->constantBuffer, SRV);
 						if (mesh.terrain_material1_index != index)
 						{
-							mesh._flags |= MeshComponent::DIRTY_BINDLESS;
+							mesh.dirty_bindless = true;
 							mesh.terrain_material1_index = index;
 						}
 					}
@@ -2661,7 +2661,7 @@ namespace wiScene
 						int index = device->GetDescriptorIndex(&mat->constantBuffer, SRV);
 						if (mesh.terrain_material2_index != index)
 						{
-							mesh._flags |= MeshComponent::DIRTY_BINDLESS;
+							mesh.dirty_bindless = true;
 							mesh.terrain_material2_index = index;
 						}
 					}
@@ -2674,46 +2674,15 @@ namespace wiScene
 						int index = device->GetDescriptorIndex(&mat->constantBuffer, SRV);
 						if (mesh.terrain_material3_index != index)
 						{
-							mesh._flags |= MeshComponent::DIRTY_BINDLESS;
+							mesh.dirty_bindless = true;
 							mesh.terrain_material3_index = index;
 						}
 					}
 				}
 			}
 
-			if (cmd != INVALID_COMMANDLIST && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS) && mesh._flags & MeshComponent::DIRTY_BINDLESS)
-			{
-				mesh._flags &= ~MeshComponent::DIRTY_BINDLESS;
-
-				ShaderMesh shadermesh;
-				mesh.WriteShaderMesh(&shadermesh);
-
-				int mesh_descriptor = device->GetDescriptorIndex(&mesh.descriptor, SRV);
-
-				mesh.shadersubsets.resize(mesh.subsets.size());
-				int j = 0;
-				for (auto& x : mesh.subsets)
-				{
-					ShaderMeshSubset& shadersubset = mesh.shadersubsets[j++];
-					shadersubset.indexOffset = x.indexOffset;
-					shadersubset.indexCount = x.indexCount;
-					shadersubset.mesh = mesh_descriptor;
-
-					const MaterialComponent* material = materials.GetComponent(x.materialID);
-					if (material != nullptr)
-					{
-						shadersubset.material = device->GetDescriptorIndex(&material->constantBuffer, SRV);
-					}
-				}
-
-				cmd_locker.lock();
-				device->UpdateBuffer(&mesh.descriptor, &shadermesh, cmd);
-				device->UpdateBuffer(&mesh.subsetBuffer, mesh.shadersubsets.data(), cmd);
-				cmd_locker.unlock();
-			}
-
 			// Update morph targets if needed:
-			if (cmd != INVALID_COMMANDLIST && mesh.IsDirtyMorph() && !mesh.targets.empty())
+			if (mesh.dirty_morph && !mesh.targets.empty())
 			{
 			    XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
 			    XMFLOAT3 _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
@@ -2746,11 +2715,6 @@ namespace wiScene
 			    }
 
 			    mesh.aabb = AABB(_min, _max);
-
-				mesh.SetDirtyMorph(false);
-				cmd_locker.lock();
-				wiRenderer::GetDevice()->UpdateBuffer(&mesh.vertexBuffer_POS, mesh.vertex_positions_morphed.data(), cmd);
-				cmd_locker.unlock();
 			}
 
 		});
@@ -2788,14 +2752,10 @@ namespace wiScene
 				material.engineStencilRef = STENCILREF_CUSTOMSHADER;
 			}
 
-			if (cmd != INVALID_COMMANDLIST && material.IsDirty())
+			if (material.IsDirty())
 			{
 				material.SetDirty(false);
-				ShaderMaterial shadermaterial;
-				material.WriteShaderMaterial(&shadermaterial);
-				cmd_locker.lock();
-				wiRenderer::GetDevice()->UpdateBuffer(&material.constantBuffer, &shadermaterial, cmd);
-				cmd_locker.unlock();
+				material.dirty_buffer = true;
 			}
 
 		});

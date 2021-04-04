@@ -221,6 +221,7 @@ namespace wiScene
 		// Non-serialized attributes:
 		wiGraphics::GPUBuffer constantBuffer;
 		uint32_t layerMask = ~0u;
+		mutable bool dirty_buffer = false;
 
 		// User stencil value can be in range [0, 15]
 		inline void SetUserStencilRef(uint8_t value)
@@ -315,8 +316,8 @@ namespace wiScene
 			DOUBLE_SIDED = 1 << 1,
 			DYNAMIC = 1 << 2,
 			TERRAIN = 1 << 3,
-			DIRTY_MORPH = 1 << 4,
-			DIRTY_BINDLESS = 1 << 5,
+			_DEPRECATED_DIRTY_MORPH = 1 << 4,
+			_DEPRECATED_DIRTY_BINDLESS = 1 << 5,
 		};
 		uint32_t _flags = RENDERABLE;
 
@@ -393,19 +394,18 @@ namespace wiScene
 		int terrain_material2_index = -1;
 		int terrain_material3_index = -1;
 
-		std::vector<ShaderMeshSubset> shadersubsets;
+		mutable bool dirty_morph = false;
+		mutable bool dirty_bindless = true;
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
 		inline void SetDynamic(bool value) { if (value) { _flags |= DYNAMIC; } else { _flags &= ~DYNAMIC; } }
 		inline void SetTerrain(bool value) { if (value) { _flags |= TERRAIN; } else { _flags &= ~TERRAIN; } }
-		inline void SetDirtyMorph(bool value = true) { if (value) { _flags |= DIRTY_MORPH; } else { _flags &= ~DIRTY_MORPH; } }
-
+		
 		inline bool IsRenderable() const { return _flags & RENDERABLE; }
 		inline bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
 		inline bool IsDynamic() const { return _flags & DYNAMIC; }
 		inline bool IsTerrain() const { return _flags & TERRAIN; }
-		inline bool IsDirtyMorph() const { return _flags & DIRTY_MORPH; }
 
 		inline float GetTessellationFactor() const { return tessellationFactor; }
 		inline wiGraphics::INDEXBUFFER_FORMAT GetIndexFormat() const { return vertex_positions.size() > 65535 ? wiGraphics::INDEXFORMAT_32BIT : wiGraphics::INDEXFORMAT_16BIT; }
@@ -1301,9 +1301,6 @@ namespace wiScene
 		wiGPUBVH BVH; // this is for non-hardware accelerated raytracing
 		mutable bool BVH_invalid = false;
 		void InvalidateBVH() { BVH_invalid = true; }
-
-		std::mutex cmd_locker;
-		wiGraphics::CommandList cmd = wiGraphics::INVALID_COMMANDLIST; // for gpu data updates
 
 		wiGraphics::GPUQueryHeap queryHeap[arraysize(ObjectComponent::occlusionQueries)];
 		std::vector<uint64_t> queryResults;

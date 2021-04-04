@@ -3881,6 +3881,20 @@ void UpdateRenderData(
 
 	BindCommonResources(cmd);
 
+	// Update dirty material constant buffers:
+	for (size_t i = 0; i < vis.scene->materials.GetCount(); ++i)
+	{
+		const MaterialComponent& material = vis.scene->materials[i];
+		if (material.dirty_buffer)
+		{
+			material.dirty_buffer = false;
+
+			ShaderMaterial shadermaterial;
+			material.WriteShaderMaterial(&shadermaterial);
+			device->UpdateBuffer(&material.constantBuffer, &shadermaterial, cmd);
+		}
+	}
+
 	// Fill Entity Array with decals + envprobes + lights in the frustum:
 	{
 		// Reserve temporary entity array for GPU data upload:
@@ -4161,6 +4175,43 @@ void UpdateRenderData(
 			Entity entity = vis.scene->meshes.GetEntity(i);
 			const MeshComponent& mesh = vis.scene->meshes[i];
 
+			if (mesh.dirty_bindless && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+			{
+				mesh.dirty_bindless = false;
+
+				ShaderMesh shadermesh;
+				mesh.WriteShaderMesh(&shadermesh);
+
+				int mesh_descriptor = device->GetDescriptorIndex(&mesh.descriptor, SRV);
+
+				size_t tmp_alloc = sizeof(ShaderMeshSubset) * mesh.subsets.size();
+				ShaderMeshSubset* subsetarray = (ShaderMeshSubset*)GetRenderFrameAllocator(cmd).allocate(tmp_alloc);
+				int j = 0;
+				for (auto& x : mesh.subsets)
+				{
+					ShaderMeshSubset& shadersubset = subsetarray[j++];
+					shadersubset.indexOffset = x.indexOffset;
+					shadersubset.indexCount = x.indexCount;
+					shadersubset.mesh = mesh_descriptor;
+
+					const MaterialComponent* material = vis.scene->materials.GetComponent(x.materialID);
+					if (material != nullptr)
+					{
+						shadersubset.material = device->GetDescriptorIndex(&material->constantBuffer, SRV);
+					}
+				}
+
+				device->UpdateBuffer(&mesh.descriptor, &shadermesh, cmd);
+				device->UpdateBuffer(&mesh.subsetBuffer, subsetarray, cmd);
+				GetRenderFrameAllocator(cmd).free(tmp_alloc);
+			}
+
+			if (mesh.dirty_morph)
+			{
+				mesh.dirty_morph = false;
+				wiRenderer::GetDevice()->UpdateBuffer(&mesh.vertexBuffer_POS, mesh.vertex_positions_morphed.data(), cmd);
+			}
+
 			if (mesh.IsSkinned() && vis.scene->armatures.Contains(mesh.armatureID))
 			{
 				const SoftBodyPhysicsComponent* softbody = vis.scene->softbodies.GetComponent(entity);
@@ -4245,6 +4296,20 @@ void UpdateRenderData(
 	}
 	device->EventEnd(cmd);
 	wiProfiler::EndRange(range); // skinning
+
+	// Soft body updates:
+	for (size_t i = 0; i < vis.scene->softbodies.GetCount(); ++i)
+	{
+		Entity entity = vis.scene->softbodies.GetEntity(i);
+		const SoftBodyPhysicsComponent& softbody = vis.scene->softbodies[i];
+
+		const MeshComponent* mesh = vis.scene->meshes.GetComponent(entity);
+		if (mesh != nullptr)
+		{
+			device->UpdateBuffer(&mesh->streamoutBuffer_POS, softbody.vertex_positions_simulation.data(), cmd);
+			device->UpdateBuffer(&mesh->streamoutBuffer_TAN, softbody.vertex_tangents_simulation.data(), cmd);
+		}
+	}
 
 	// GPU Particle systems simulation/sorting/culling:
 	if (!vis.visibleEmitters.empty())

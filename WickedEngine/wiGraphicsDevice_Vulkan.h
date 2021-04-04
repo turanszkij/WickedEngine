@@ -212,7 +212,6 @@ namespace wiGraphics
 		void predispatch(CommandList cmd);
 
 		std::atomic<CommandList> cmd_count{ 0 };
-		bool stashed[COMMANDLIST_COUNT] = {};
 
 		std::vector<StaticSampler> common_samplers;
 
@@ -253,7 +252,6 @@ namespace wiGraphics
 
 		CommandList BeginCommandList() override;
 		void SubmitCommandLists() override;
-		void StashCommandLists() override;
 
 		void WaitForGPU() override;
 		void ClearPipelineStateCache() override;

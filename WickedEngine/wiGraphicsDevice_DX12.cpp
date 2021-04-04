@@ -5321,23 +5321,20 @@ using namespace DX12_Internal;
 			descriptors[cmd].init(this);
 		}
 
-		if (!stashed[cmd])
-		{
-			// Start the command list in a default state:
-			HRESULT hr = GetFrameResources().commandAllocators[cmd]->Reset();
-			assert(SUCCEEDED(hr));
-			hr = GetDirectCommandList(cmd)->Reset(GetFrameResources().commandAllocators[cmd].Get(), nullptr);
-			assert(SUCCEEDED(hr));
+		// Start the command list in a default state:
+		HRESULT hr = GetFrameResources().commandAllocators[cmd]->Reset();
+		assert(SUCCEEDED(hr));
+		hr = GetDirectCommandList(cmd)->Reset(GetFrameResources().commandAllocators[cmd].Get(), nullptr);
+		assert(SUCCEEDED(hr));
 
-			ID3D12DescriptorHeap* heaps[2] = {
-				descriptorheap_res.heap_GPU.Get(),
-				descriptorheap_sam.heap_GPU.Get()
-			};
-			GetDirectCommandList(cmd)->SetDescriptorHeaps(arraysize(heaps), heaps);
+		ID3D12DescriptorHeap* heaps[2] = {
+			descriptorheap_res.heap_GPU.Get(),
+			descriptorheap_sam.heap_GPU.Get()
+		};
+		GetDirectCommandList(cmd)->SetDescriptorHeaps(arraysize(heaps), heaps);
 
-			descriptors[cmd].reset();
-			GetFrameResources().resourceBuffer[cmd].clear();
-		}
+		descriptors[cmd].reset();
+		GetFrameResources().resourceBuffer[cmd].clear();
 
 		D3D12_VIEWPORT vp = {};
 		vp.Width = (float)RESOLUTIONWIDTH;
@@ -5394,7 +5391,6 @@ using namespace DX12_Internal;
 			cmd_count.store(0);
 			for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
 			{
-				stashed[cmd] = false;
 				query_flush(cmd);
 				barrier_flush(cmd);
 
@@ -5456,15 +5452,6 @@ using namespace DX12_Internal;
 
 		allocationhandler->Update(FRAMECOUNT, BACKBUFFER_COUNT);
 
-	}
-	void GraphicsDevice_DX12::StashCommandLists()
-	{
-		CommandList active_count = cmd_count.load();
-		cmd_count.store(0);
-		for (CommandList cmd = 0; cmd < active_count; ++cmd)
-		{
-			stashed[cmd] = true;
-		}
 	}
 
 	void GraphicsDevice_DX12::WaitForGPU()

@@ -636,16 +636,6 @@ namespace wiPhysicsEngine
 						}
 					}
 
-					if (scene.cmd != wiGraphics::INVALID_COMMANDLIST)
-					{
-						using namespace wiGraphics;
-						GraphicsDevice* device = wiRenderer::GetDevice();
-						scene.cmd_locker.lock();
-						device->UpdateBuffer(&mesh.streamoutBuffer_POS, physicscomponent->vertex_positions_simulation.data(), scene.cmd);
-						device->UpdateBuffer(&mesh.streamoutBuffer_TAN, physicscomponent->vertex_tangents_simulation.data(), scene.cmd);
-						scene.cmd_locker.unlock();
-					}
-
 				}
 			}
 		}

@@ -536,13 +536,7 @@ void RenderPath3D::Update(float dt)
 
 	if (getSceneUpdateEnabled())
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
-		scene->cmd = device->BeginCommandList();
-
 		scene->Update(dt * wiRenderer::GetGameSpeed());
-
-		device->StashCommandLists();
-		scene->cmd = INVALID_COMMANDLIST;
 	}
 
 	// Frustum culling for main camera:

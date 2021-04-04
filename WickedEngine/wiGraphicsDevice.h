@@ -69,9 +69,6 @@ namespace wiGraphics
 		// Submit all command list that were used with BeginCommandList before this call.
 		//	This will make every command list to be in "available" state and restarts them
 		virtual void SubmitCommandLists() = 0;
-		// Returns all command lists to "available" state, but doesn't submit or restart them,
-		// however it sets them to default pipeline state
-		virtual void StashCommandLists() = 0;
 
 		virtual void WaitForGPU() = 0;
 		virtual void ClearPipelineStateCache() {};
