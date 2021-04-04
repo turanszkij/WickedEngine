@@ -180,7 +180,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			}
 		}
 
-		float3 lightColor = 1;
+		float3 lightColor = 0;
 		SurfaceToLight surfaceToLight = (SurfaceToLight)0;
 
 		// Light sampling:
@@ -208,13 +208,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				[branch]
 				if (surfaceToLight.NdotL > 0)
 				{
+					lightColor = light.GetColor().rgb * light.GetEnergy();
+
 					float3 atmosphereTransmittance = 1;
 					if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
 					{
 						AtmosphereParameters Atmosphere = GetAtmosphereParameters();
 						atmosphereTransmittance = GetAtmosphericLightTransmittance(Atmosphere, surface.P, L, texture_transmittancelut);
 					}
-
 					lightColor *= atmosphereTransmittance;
 				}
 			}
@@ -236,10 +237,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					[branch]
 					if (surfaceToLight.NdotL > 0)
 					{
+						lightColor = light.GetColor().rgb * light.GetEnergy();
+
 						const float range2 = light.GetRange() * light.GetRange();
 						const float att = saturate(1 - (dist2 / range2));
 						const float attenuation = att * att;
-
 						lightColor *= attenuation;
 					}
 				}
@@ -268,11 +270,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 						[branch]
 						if (SpotFactor > spotCutOff)
 						{
+							lightColor = light.GetColor().rgb * light.GetEnergy();
+
 							const float range2 = light.GetRange() * light.GetRange();
 							const float att = saturate(1 - (dist2 / range2));
 							float attenuation = att * att;
 							attenuation *= saturate((1 - (1 - SpotFactor) * 1 / (1 - spotCutOff)));
-
 							lightColor *= attenuation;
 						}
 					}
@@ -335,7 +338,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 #endif // RTAPI
 				if (any(shadow))
 				{
-					lightColor *= light.GetColor().rgb * light.GetEnergy();
 					lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
 					lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
 					result += max(0, shadow * (surface.albedo * lighting.direct.diffuse + lighting.direct.specular));

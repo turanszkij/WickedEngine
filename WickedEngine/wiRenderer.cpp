@@ -1081,10 +1081,6 @@ void LoadShaders()
 		{
 			{ "POSITION_NORMAL_WIND",		0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA },
 			{ "ATLAS",						0, MeshComponent::Vertex_TEX::FORMAT, 1, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA },
-
-			{ "INSTANCEMATRIXPREV",			0, FORMAT_R32G32B32A32_FLOAT, 2, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA },
-			{ "INSTANCEMATRIXPREV",			1, FORMAT_R32G32B32A32_FLOAT, 2, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA },
-			{ "INSTANCEMATRIXPREV",			2, FORMAT_R32G32B32A32_FLOAT, 2, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA },
 		};
 		LoadShader(VS, shaders[VSTYPE_RENDERLIGHTMAP], "renderlightmapVS.cso");
 		});
@@ -8309,25 +8305,22 @@ void RenderObjectLightMap(const Scene& scene, const ObjectComponent& object, Com
 
 	const TransformComponent& transform = scene.transforms[object.transform_index];
 
-	// Note: using InstancePrev, because we just need the matrix, nothing else here...
-	GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(InstancePrev), cmd);
-	volatile InstancePrev* instance = (volatile InstancePrev*)mem.data;
-	instance->Create(transform.world);
+	MiscCB misccb;
+	misccb.g_xTransform = transform.world;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &misccb, cmd);
+	device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 	const GPUBuffer* vbs[] = {
 		&mesh.vertexBuffer_POS,
 		&mesh.vertexBuffer_ATL,
-		mem.buffer,
 	};
 	uint32_t strides[] = {
 		sizeof(MeshComponent::Vertex_POS),
 		sizeof(MeshComponent::Vertex_TEX),
-		sizeof(InstancePrev),
 	};
 	uint32_t offsets[] = {
 		0,
 		0,
-		mem.offset,
 	};
 	device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 	device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
