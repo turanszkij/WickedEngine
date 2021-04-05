@@ -180,9 +180,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			}
 		}
 
-		float3 lightColor = 0;
-		SurfaceToLight surfaceToLight = (SurfaceToLight)0;
-
 		// Light sampling:
 		[loop]
 		for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
@@ -194,6 +191,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 			float3 L = 0;
 			float dist = 0;
+			float3 lightColor = 0;
+			SurfaceToLight surfaceToLight = (SurfaceToLight)0;
 
 			switch (light.GetType())
 			{
