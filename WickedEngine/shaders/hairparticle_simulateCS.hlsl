@@ -39,7 +39,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	float length2 = meshVertexBuffer_length[i2];
 
 	// random barycentric coords:
-	float2 uv = float2((Gid.x + 1.0f) / (float)xHairNumDispatchGroups, (DTid.x + 1.0f) / (float)THREADCOUNT_SIMULATEHAIR);
+	float2 uv = hammersley2d(DTid.x, xHairNumDispatchGroups * THREADCOUNT_SIMULATEHAIR);
 	float seed = xHairRandomSeed;
 	float f = rand(seed, uv);
 	float g = rand(seed, uv);
@@ -53,7 +53,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	// compute final surface position on triangle from barycentric coords:
 	float3 position = pos_nor0.xyz + f * (pos_nor1.xyz - pos_nor0.xyz) + g * (pos_nor2.xyz - pos_nor0.xyz);
 	float3 target = normalize(nor0 + f * (nor1 - nor0) + g * (nor2 - nor0));
-	float3 tangent = normalize((rand(seed, uv) < 0.5f ? pos_nor0.xyz : pos_nor2.xyz) - pos_nor1.xyz);
+	float3 tangent = normalize(mul(float3(hemispherepoint_cos(rand(seed, uv), rand(seed, uv)).xy, 0), GetTangentSpace(target)));
 	float3 binormal = cross(target, tangent);
 	float strand_length = length0 + f * (length1 - length0) + g * (length2 - length0);
 
@@ -163,15 +163,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 
 		// Frustum culling:
-		float3 sphereCenter = base + tip * 0.5f;
-		float sphereRadius = length(sphereCenter - base);
-		bool infrustum = true;
-		infrustum = distance(sphereCenter, g_xCamera_CamPos.xyz) > xHairViewDistance ? false : infrustum;
-		infrustum = dot(g_xCamera_FrustumPlanes[0], float4(sphereCenter, 1)) < -sphereRadius ? false : infrustum;
-		infrustum = dot(g_xCamera_FrustumPlanes[2], float4(sphereCenter, 1)) < -sphereRadius ? false : infrustum;
-		infrustum = dot(g_xCamera_FrustumPlanes[3], float4(sphereCenter, 1)) < -sphereRadius ? false : infrustum;
-		infrustum = dot(g_xCamera_FrustumPlanes[4], float4(sphereCenter, 1)) < -sphereRadius ? false : infrustum;
-		infrustum = dot(g_xCamera_FrustumPlanes[5], float4(sphereCenter, 1)) < -sphereRadius ? false : infrustum;
+		uint infrustum = 1;
+		infrustum &= distance(base, g_xCamera_CamPos.xyz) < xHairViewDistance;
+		infrustum &= dot(g_xCamera_FrustumPlanes[0], float4(base, 1)) > -len;
+		infrustum &= dot(g_xCamera_FrustumPlanes[2], float4(base, 1)) > -len;
+		infrustum &= dot(g_xCamera_FrustumPlanes[3], float4(base, 1)) > -len;
+		infrustum &= dot(g_xCamera_FrustumPlanes[4], float4(base, 1)) > -len;
+		infrustum &= dot(g_xCamera_FrustumPlanes[5], float4(base, 1)) > -len;
 
 		if (infrustum)
 		{
