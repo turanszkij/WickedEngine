@@ -1662,8 +1662,12 @@ using namespace Vulkan_Internal;
 				std::vector<VkVertexInputAttributeDescription> attributes;
 				if (pso->desc.il != nullptr)
 				{
+					uint32_t lastBinding = 0xFFFFFFFF;
 					for (auto& x : pso->desc.il->elements)
 					{
+						if (x.InputSlot == lastBinding)
+							continue;
+						lastBinding = x.InputSlot;
 						VkVertexInputBindingDescription& bind = bindings.emplace_back();
 						bind.binding = x.InputSlot;
 						bind.inputRate = x.InputSlotClass == INPUT_PER_VERTEX_DATA ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
@@ -1672,7 +1676,7 @@ using namespace Vulkan_Internal;
 
 					uint32_t offset = 0;
 					uint32_t i = 0;
-					uint32_t lastBinding = 0xFFFFFFFF;
+					lastBinding = 0xFFFFFFFF;
 					for (auto& x : pso->desc.il->elements)
 					{
 						VkVertexInputAttributeDescription attr = {};
