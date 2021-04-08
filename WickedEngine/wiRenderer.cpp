@@ -296,18 +296,16 @@ struct RenderBatch
 {
 	uint32_t hash;
 	uint32_t instance;
-	float distance;
 
-	inline void Create(size_t meshIndex, size_t instanceIndex, float _distance)
+	inline void Create(size_t meshIndex, size_t instanceIndex, float distance)
 	{
 		hash = 0;
 
 		assert(meshIndex < 0x00FFFFFF);
 		hash |= (uint32_t)(meshIndex & 0x00FFFFFF);
-		hash |= ((uint32_t)_distance & 0xFF) << 24;
+		hash |= ((uint32_t)distance & 0xFF) << 24;
 
 		instance = (uint32_t)instanceIndex;
-		distance = _distance;
 	}
 
 	inline uint32_t GetMeshIndex() const
@@ -317,10 +315,6 @@ struct RenderBatch
 	inline uint32_t GetInstanceIndex() const
 	{
 		return instance;
-	}
-	inline float GetDistance() const
-	{
-		return distance;
 	}
 };
 
@@ -2950,6 +2944,7 @@ void RenderMeshes(
 			const uint32_t meshIndex = batch.GetMeshIndex();
 			const uint32_t instanceIndex = batch.GetInstanceIndex();
 			const ObjectComponent& instance = vis.scene->objects[instanceIndex];
+			const AABB& instanceAABB = vis.scene->aabb_objects[instanceIndex];
 			const uint8_t userStencilRefOverride = instance.userStencilRef;
 
 			// When we encounter a new mesh inside the global instance array, we begin a new InstancedBatch:
@@ -2978,7 +2973,7 @@ void RenderMeshes(
 
 			if (instance.IsImpostorPlacement())
 			{
-				float distance = batch.GetDistance();
+				float distance = wiMath::Distance(instanceAABB.getCenter(), vis.camera->Eye);
 				float swapDistance = instance.impostorSwapDistance;
 				float fadeThreshold = instance.impostorFadeThresholdRadius;
 				dither = std::max(0.0f, distance - swapDistance) / fadeThreshold;
@@ -2988,8 +2983,6 @@ void RenderMeshes(
 			{
 				current_batch.forceAlphatestForDithering = 1;
 			}
-
-			const AABB& instanceAABB = vis.scene->aabb_objects[instanceIndex];
 
 			if (forwardLightmaskRequest)
 			{
